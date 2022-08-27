@@ -11,16 +11,16 @@ However, if you wish to run in isolation, run the following:
 
 The web server is built using the following technologies:
 
-- roslibjs
-- rosbridge
+- [roslibjs](http://wiki.ros.org/roslibjs)
+- [rosbridge](http://wiki.ros.org/rosbridge_suite)
 - websocket
-- Flask
+- [Flask](https://flask.palletsprojects.com/en/2.2.x/)
 - Bootstrap, HTML, CSS, JavaScript
 
 ## Requirements
 
-- rosbridge_suite
-- web_video_server
+- [rosbridge_suite](http://wiki.ros.org/rosbridge_suite)
+- [web_video_server](http://wiki.ros.org/web_video_server)
 
 The following topics are maintained by the web server:
 
