@@ -1,0 +1,6 @@
+std_msgs/String task
+std_msgs/String action
+std_msgs/String query_text
+---
+std_msgs/String result
+std_msgs/Bool success

@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>TIAGO Website</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet"
+            href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css"
+            integrity="sha384-xOolHFLEh07PJGoPkLv1IbcEPTNtaed2xpHsD9ESMhqIYd0nLMwNLD69Npy4HI+N"
+            crossorigin="anonymous">
+        <link rel="stylesheet" type="text/css" href="{{
+            url_for('static',filename='styles/styles.css') }}">
+        <script
+            src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js"
+            integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj"
+            crossorigin="anonymous"></script>
+        <script
+            src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"
+            integrity="sha384-Fy6S3B9q64WdZWQUiU+q4/2Lc9npb8tCaSX9FK7E8HnRr0Jz8D6OP9dO5Vg3Q9ct"
+            crossorigin="anonymous"></script>
+        <script type="text/javascript"
+            src="http://static.robotwebtools.org/EventEmitter2/current/eventemitter2.min.js"></script>
+        <script type="text/javascript"
+            src="http://static.robotwebtools.org/roslibjs/current/roslib.min.js"></script>
+        <link rel="stylesheet"
+            href="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.2.1/themes/default/style.min.css"
+            />
+        <script
+            src="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.2.1/jstree.min.js"></script>
+        <script>
+         window.onload = function(){ 
+
+            var ros = new ROSLIB.Ros({
+                 url : 'ws://localhost:8090'
+             });
+         
+             ros.on('connection', function() {
+                 console.log('Connected to websocket server.');
+             });
+         
+             ros.on('error', function(error) {
+                 console.log('Error connecting to websocket server: ', error);
+             });
+         
+             ros.on('close', function() {
+                 console.log('Connection to websocket server closed.');
+             });
+         
+             var toggler = document.getElementsByClassName("caret");
+             var i;
+         
+             for (i = 0; i < toggler.length; i++) {
+                 toggler[i].addEventListener("click", function() {
+                     this.parentElement.querySelector(".nested").classList.toggle("active");
+                     this.classList.toggle("caret-down");
+                 });
+             }
+         
+             var pose_listener = new ROSLIB.Topic({
+                 ros : ros,
+                 name : '/amcl_pose',
+                 messageType : 'geometry_msgs/PoseWithCovarianceStamped'
+             });
+         
+             pose_listener.subscribe(function(message) {
+         
+                 console.log(message);
+         
+                 const robot_position_x_text = document.querySelector("#robot_position_x");
+                 robot_position_x_text.innerText = "x: " + message.pose.pose.position.x;
+         
+                 const robot_position_y_text = document.querySelector("#robot_position_y");
+                 robot_position_y_text.innerText = "y: " + message.pose.pose.position.y;
+         
+                 const robot_position_z_text = document.querySelector("#robot_position_z");
+                 robot_position_z_text.innerText = "z: " + message.pose.pose.position.z;
+         
+                 const robot_orientation_x_text = document.querySelector("#robot_orientation_x");
+                 robot_orientation_x_text.innerText = "x: " + message.pose.pose.orientation.x;
+         
+                 const robot_orientation_y_text = document.querySelector("#robot_orientation_y");
+                 robot_orientation_y_text.innerText = "y: " + message.pose.pose.orientation.y;
+         
+                 const robot_orientation_z_text = document.querySelector("#robot_orientation_z");
+                 robot_orientation_z_text.innerText = "z: " + message.pose.pose.orientation.z;
+         
+                 const robot_orientation_w_text = document.querySelector("#robot_orientation_w");
+                 robot_orientation_w_text.innerText = "w: " + message.pose.pose.orientation.w;
+         
+             });
+
+        var clock_listener = new ROSLIB.Topic({
+            ros : ros,
+            name : '/clock',
+            messageType : 'rosgraph_msgs/Clock'
+        });
+
+
+        clock_listener.subscribe(function(message) {
+            const clock_secs_text = document.querySelector("#clock_secs");
+            clock_secs_text.innerText = "secs: " + message.clock.secs;
+
+            const clock_nsecs_text = document.querySelector('#clock_nsecs');
+            clock_nsecs_text.innerText = "nsecs: " + message.clock.nsecs;
+        });
+
+
+        var log_listener = new ROSLIB.Topic({
+            ros : ros,
+            name : '/rosout',
+            messageType : 'rosgraph_msgs/Log'
+        });
+
+        log_listener.subscribe(function(message) {
+            const logging = document.getElementById("logs");
+            
+            var node = document.createElement("div");
+            
+            let level_colors = {
+                1 : "black",
+                2: "green",
+                3: "orange",
+                4: "red",
+                5: "red"
+            }
+
+            node.style = `color: ${level_colors[message.level]};`
+            node.appendChild(document.createTextNode(`[${message.name}] ${message.msg}`));
+
+            logging.appendChild(node);
+            logging.scrollTop = logging.scrollHeight;
+        });
+
+        document.querySelector("#text_input").value = "";
+
+        var textSetterSubscriber = new ROSLIB.Topic({
+            ros : ros,
+            name : '/lasr_web_server/set_input_text',
+            messageType: 'std_msgs/String'
+        });
+
+        textSetterSubscriber.subscribe(function(message) {
+            document.querySelector("#text_input").value = message.data;
+        });
+
+        var textPublisher = new ROSLIB.Topic({
+            ros : ros,
+            name : '/lasr_web_server/text_input',
+            messageType: 'std_msgs/String'
+        });
+
+        document.querySelector("#text_submit").addEventListener("click", function() {
+            var text = document.querySelector("#text_input").value;
+
+            if (text.length > 0) {
+                
+                var message = new ROSLIB.Message({
+                    data : text
+                });
+                textPublisher.publish(message);
+                document.querySelector("#text_input").value = "";
+                document.querySelector("#text_input").style.borderColor="";
+
+                const conversation_history = document.getElementById("conversation_history");
+                var node = document.createElement("div");
+                node.style = "color: black";
+                node.appendChild(document.createTextNode("[PARTNER] : " + text));
+                conversation_history.appendChild(node);
+                conversation_history.scrollTop = conversation_history.scrollHeight;
+
+            }
+            else {
+                document.querySelector("#text_input").style.borderColor="red";
+            }
+            
+        });
+
+        document.querySelector("#text_yes_submit").addEventListener("click", function() {
+
+            var message = new ROSLIB.Message({
+                data : "yes"
+            });
+            textPublisher.publish(message);
+            const conversation_history = document.getElementById("conversation_history");
+            var node = document.createElement("div");
+            node.style = "color: black";
+            node.appendChild(document.createTextNode("[PARTNER] : yes"));
+            conversation_history.appendChild(node);
+            conversation_history.scrollTop = conversation_history.scrollHeight;
+
+        });
+
+
+        document.querySelector("#text_no_submit").addEventListener("click", function() {
+
+            var message = new ROSLIB.Message({
+                data : "no"
+            });
+            textPublisher.publish(message);
+            const conversation_history = document.getElementById("conversation_history");
+            var node = document.createElement("div");
+            node.style = "color: black";
+            node.appendChild(document.createTextNode("[PARTNER] : no"));
+            conversation_history.appendChild(node);
+            conversation_history.scrollTop = conversation_history.scrollHeight;
+
+        });
+
+        document.querySelector("#clear_conversation_history").addEventListener("click", function() {
+
+            const conversation_history = document.getElementById("conversation_history");
+            while (conversation_history.firstChild) {
+                conversation_history.removeChild(conversation_history.firstChild);
+            }
+
+        });
+
+    }
+         
+      </script>
+    </head>
+    <body style="background-color: lightgray;">
+        <div class="container-fluid">
+            <h1>TIAGo Webpage</h1>
+            <p>Provides text-based interaction as well as dignostics and logs.</p>
+            <div class="container-fluid">
+            <div class="row justify-content-between">
+                <div class="col-md-3" style="background-color: whitesmoke;">
+                    <h2>Topic Information</h2>
+                    <ul id="myUL">
+                        <li>
+                            <span class="caret">Robot Pose</span>
+                            <ul class="nested">
+                                <li>
+                                    <span class="caret">Position</span>
+                                    <ul class="nested">
+                                        <li id="robot_position_x">x: 0</li>
+                                        <li id="robot_position_y">y: 0</li>
+                                        <li id="robot_position_z">z: 0</li>
+                                    </ul>
+                                </li>
+                                <li>
+                                    <span class="caret">Orientation</span>
+                                    <ul class="nested">
+                                        <li id="robot_orientation_x">x: 0</li>
+                                        <li id="robot_orientation_y">y: 0</li>
+                                        <li id="robot_orientation_z">z: 0</li>
+                                        <li id="robot_orientation_w">w: 0</li>
+                                    </ul>
+                                </li>
+
+                            </li>
+                        </ul>
+                        <li><span class="caret">Clock</span>
+                            <ul class="nested">
+                                <li id="clock_secs">secs: 0</li>
+                                <li id="clock_nsecs">nsecs: 0</li>
+                            </ul>
+                        </li>
+                        <li><span class="caret">RGB Image</span>
+                            <ul class="nested">
+                                <li id="clock_secs"><img src="http://localhost:8080/stream?topic=/xtion/rgb/image_raw" class="img-fluid"/></li>
+                            </ul>
+                        </li>
+                </div>
+                <div class="col-md-4" style="background-color: whitesmoke">
+                    <h2>Text Interaction</h2>
+                    <div class="input-group mb-3">
+                        <input id="text_input" type="text" class="form-control"
+                            placeholder="Send input to TIAGo..">
+                        <div class="input-group-append">
+                            <button id="text_submit" class="btn btn-outline-secondary"
+                                type="button">Send</button>
+                        </div>
+                    </div>
+                    <button id="text_yes_submit" type="button" class="btn btn-success">Yes</button>
+                    <button id="text_no_submit" type="button" class="btn btn-danger">No</button>
+                    <h3>Conversation History <button id="clear_conversation_history" class="btn btn-outline-secondary">Clear</button></h3>
+                    <p id="conversation_history"></p>
+                </div>
+                <div class="col-md-4" style="background-color: whitesmoke; overflow: auto; max-height: 100vh;">
+                    <h2 >Logs</h2>
+                    <p id="logs"></p>
+                </div>
+            </div>
+            </div>
+        </div>
+    </body>
+</html>

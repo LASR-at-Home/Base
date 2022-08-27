@@ -1,0 +1,12 @@
+{
+    "type": "service_account",
+    "project_id": "robocup-receptionist-evnn",
+    "private_key_id": "3f47fce2b6f0762851f49f3791c4175d43347e41",
+    "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCqRhC+ruDGYnei\nuk0qONLe2dN8n6YTF3hO0rBB69O+FQCHwGMDjLNN9jUJiVyz3PrJqMNpYukWm/i0\nzvlJ3X0S5tfsq39DJjz28aLlt99lQ+XdkZdbbtZF/tM2KmuBmD86lB8nH53l03WE\nmVFcV1neeEu7/8ySiX9q3CPBtlyotQ3P4ZbGcVhOgErSrFWpBCVk61rM3uMR23W3\niWb9yiseYkhcf5yxv6H/AbM5q31X2kg6+a9AEamtFcEvG1xU0uygo3lOs/eU6a09\nvNORkH0e6uZNyN7FSHX1B035uzxXWK5GrHGsn47M54ZwkxQXjW3pg9pp2uugBbKb\nuzXuKLsvAgMBAAECggEAKLXJyR1cpnHicqiiTGb7m8Zutwwgk833uLjM5WXx4S96\nSfqoca/RKuGjupz56hL6bv6Hggng+sPdybT2iz+GaN+CXpZ+PdrFlrEdJlk48ygx\nrDDkBDtSxbdwXjH0NC7nZyUE8cCwasONBF/3wOEtnnAag19cVOjE6xKpBeaI7ti+\nPJpNwJ5TakVKRbMxGd5Btkw9YV+L5fqk0jDxneINf39UH7UgJNhFqjuVvXaUBotL\nps7elpPKLhFrJdkTjUd7b4epENeY+1/hukziYffzgxO5txiAESxYBaP2GEqcVG+p\n7v1fGBhSugsCsO6rRNaNJYM1T7hMGuscicrYSipgeQKBgQDt+Pe6mba8wtRqThR1\nnSaadklBdDKcMAx8R1uVPdYpj2R3fsbiD7I5p/YdnBD2C4aAH9hhuxMHlKfMAetQ\nPXoIIGk/wMh8tNuyzo1XStyAyfIYf0JaVvQPRbMLBQ655BmWH50RlIMz3Kiwbfzs\nAXi6vPVBpzksU++k9xKy3okDmwKBgQC3LDSRYXNKrdr0SX281kVcdTXEXMqUVPdV\nHQW+0SE5Ml/NDwq7WjUZvvvFC0Z+hcyQs8BIBcwWYA/UvcJINY49pAnrhBLTIi07\nLcZGIm1hoIPPm1nx0bT89kTb8MpMx3PcKkYOqHM6LL/UKjNGmOseta0NuaLP5KFk\nf15imOax/QKBgQDUzElaR5ItAVvJI8EP21Nl1Fh1e162ZBEGIRk4P29/AoaohGl8\nROTuwc9HcwOHwY6oi9GGsy61HK1ftGej/RVepvz20YF2YpQDNMkXQg4j7HHcjg/b\nkN31ujH8rK0adWqb3/Eog1E/0xXVjsUYlchL1CTMbKinhvdI4NeLs4t5+QKBgHCi\n8kBj2G2Xswh9GKDCciyEtudk1/2WsfDYw+uu1etCGr8R/NtwgS6vzkpAwLyUslJY\n9mhTiEhKEfIULiARLsKg2KjGsny6i23UnBQMn45lEijbsteMyOq01WsaCoxkKc69\nAA+Lbi/bzKo+uQE0j4B230+NU5zbTpNp7zRaKaJRAoGBAIZvtlXe6kIhzWMqgITl\nodR09+OLr0wZIBhR+ukxstqlxdmayDi8Z/oM9ZESsAqA7e8ZbM5jT2oRaSMpz5sZ\nQxF35UjInaz4zOX3ArJL570pVlNl6lIaEamA/6tSN+FIigUc6w8TPlW3khoSZF5p\nLDTE8apSysn7qyeDX1esZ/uT\n-----END PRIVATE KEY-----\n",
+    "client_email": "client@robocup-receptionist-evnn.iam.gserviceaccount.com",
+    "client_id": "112435261923692293364",
+    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+    "token_uri": "https://oauth2.googleapis.com/token",
+    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+    "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/client%40robocup-receptionist-evnn.iam.gserviceaccount.com"
+  }

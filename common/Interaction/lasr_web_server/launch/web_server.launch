@@ -1,0 +1,8 @@
+<launch>
+  <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch" > 
+     <arg name="port" value="8090"/>
+  </include>
+  <!-- <node pkg="lasr_web_server" name="web_client" type="web_client.py" /> -->
+  <node pkg="lasr_web_server" name="web_server" type="web_server.py" />
+  <node pkg="web_video_server" name="web_video_server" type="web_video_server"/>
+</launch>

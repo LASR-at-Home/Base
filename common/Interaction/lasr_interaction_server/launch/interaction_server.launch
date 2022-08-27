@@ -1,0 +1,7 @@
+<launch>
+
+    <include file="$(find lasr_web_server)/launch/web_server.launch"/>
+    <node pkg="lasr_dialogflow" name="dialogflow_server" type="dialogflow_server.py"/>
+    <node pkg="lasr_interaction_server" name="interaction_server" type="interaction_server.py"/>
+
+</launch>
