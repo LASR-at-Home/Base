@@ -1,0 +1,4 @@
+<launch>
+    <rosparam command="load" file="$(find input_string_to_location)/config/positions.yaml" />
+     <node name="input_string_to_location" pkg="input_string_to_location" type="string_to_location.py" required="true" output="screen"/>
+</launch>

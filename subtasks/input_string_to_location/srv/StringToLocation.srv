@@ -1,0 +1,3 @@
+std_msgs/String location
+---
+std_msgs/Bool is_reached
