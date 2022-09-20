@@ -17,7 +17,5 @@ def client(location: String):
         
 if __name__ == '__main__':
     rospy.init_node("string_to_location_client", anonymous=True)
-    rospy.sleep(5)
-    input = String()
-    input.data = "/loc_1"
+    input = rospy.wait_for_message('/lasr_web_server/text_input', String)
     client(input)
