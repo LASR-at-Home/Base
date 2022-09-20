@@ -17,5 +17,9 @@ def client(location: String):
         
 if __name__ == '__main__':
     rospy.init_node("string_to_location_client", anonymous=True)
-    input = rospy.wait_for_message('/lasr_web_server/text_input', String)
-    client(input)
+    try:
+        while not rospy.is_shutdown():
+            input = rospy.wait_for_message('/lasr_web_server/text_input', String)
+            client(input)
+    except rospy.ROSInterruptException:
+        pass
