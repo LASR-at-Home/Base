@@ -16,6 +16,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## System dependencies are found with CMake's conventions
 find_package(catkin REQUIRED COMPONENTS message_generation message_runtime rospy std_msgs)
 
+find_package(lasr_perception_server)
 
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
@@ -47,10 +48,10 @@ catkin_python_setup()
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
 ## Generate messages in the 'msg' folder
-add_message_files(
-   FILES
-   Detection.msg
-)
+# add_message_files(
+#   FILES
+#   Detection.msg
+# )
 
 ## Generate services in the 'srv' folder
 add_service_files(
@@ -70,6 +71,7 @@ generate_messages(
    DEPENDENCIES
    std_msgs
    sensor_msgs
+   lasr_perception_server
 )
 
 ################################################

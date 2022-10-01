@@ -16,7 +16,7 @@ from darknet_pytorch.darknet import Darknet
 from darknet_pytorch.utils import post_processing
 
 from lasr_object_detection_yolo.srv import YoloDetection, YoloDetectionResponse
-from lasr_object_detection_yolo.msg import Detection
+from lasr_perception_server.msg import Detection
 
 import nvidia_smi
 
@@ -89,7 +89,7 @@ class YoloObjectDetectionServer():
 
                 # Shutdown nvidia-smi
                 nvidia_smi.nvmlShutdown()
-
+            print(self.device)
             self.yolov4.to(self.device)
 
             rospy.loginfo('Time to load {} model: {:.2f} seconds'.format(model_name, time.time() - start_time))

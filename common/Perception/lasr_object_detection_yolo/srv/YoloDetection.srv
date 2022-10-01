@@ -5,4 +5,4 @@ float32 confidence
 float32 nms
 ---
 #bounding box image for testing, name and coords of each object detected
-Detection[] detected_objects
+lasr_perception_server/Detection[] detected_objects
