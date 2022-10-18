@@ -1,0 +1,7 @@
+sensor_msgs/Image image
+string dataset
+float32 confidence
+float32 nms
+string[] filter
+---
+Detection[] detected_objects
