@@ -22,6 +22,13 @@ import nvidia_smi
 
 MODEL_ROOT = os.path.join(rospkg.RosPack().get_path('lasr_object_detection_yolo'), 'models')
 
+
+def transform():
+    return transforms.Compose([
+        transforms.Resize((416, 416)),
+        transforms.ToTensor(),
+    ])
+
 class YoloObjectDetectionServer():
 
     def __init__(self):
@@ -30,13 +37,6 @@ class YoloObjectDetectionServer():
         self.yolov4 = None
         self.labels = []
         self.device = 'cpu'
-    
-    def transform(self):
-        return transforms.Compose([
-            transforms.Resize((416, 416)),
-            transforms.ToTensor(),
-        ])
-
 
     def load_model(self, model_name):
         model_path = os.path.join(MODEL_ROOT, model_name)
@@ -58,7 +58,7 @@ class YoloObjectDetectionServer():
             try:
 
                 with open(os.path.join(model_path, 'yolov4.cfg')) as fp:
-                    self.yolov4 = Darknet()
+                    self.yolov4 = Darknet(os.path.join(model_path, 'yolov4.cfg'))
 
             except FileNotFoundError:
                 rospy.logerr(f"Couldn't load {self.model_name}, 'yolov4.cfg' does not exist in {model_path}.")
@@ -89,6 +89,7 @@ class YoloObjectDetectionServer():
 
                 # Shutdown nvidia-smi
                 nvidia_smi.nvmlShutdown()
+
             print(self.device)
             self.yolov4.to(self.device)
 
@@ -113,7 +114,7 @@ class YoloObjectDetectionServer():
         # Perform pre-processing.
         frame = np.frombuffer(req.image_raw.data, dtype=np.uint8).reshape(req.image_raw.height, req.image_raw.width, -1)
         image = PIL_Image.fromarray(frame)
-        image = torch.stack([self.transform(image)]).to(self.device)
+        image = torch.stack([transform()(image)]).to(self.device)
 
         # net forward and non-mean suppression
         outputs = self.yolov4(image)

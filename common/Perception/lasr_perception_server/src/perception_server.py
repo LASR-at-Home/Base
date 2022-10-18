@@ -13,11 +13,11 @@ class PerceptionServer():
 
         self.detect_objects_image = rospy.Service("lasr_perception_server/detect_objects_image", DetectImage, self.detect_image)
 
-    def detect_image(self, image, dataset, confidence=0.7, nms=0.3, filter=[]):
-        if filter:
-            return DetectImageResponse([det for det in self.yolo_detect(image, dataset, confidence, nms).detected_objects if det.name in filter])
+    def detect_image(self, req):
+        if len(req.filter):
+            return DetectImageResponse([det for det in self.yolo_detect(req.image, req.dataset, req.confidence, req.nms).detected_objects if det.name in req.filter])
         else:
-            return DetectImageResponse(self.yolo_detect(image, dataset, confidence, nms).detected_objects)
+            return DetectImageResponse(self.yolo_detect(req.image, req.dataset, req.confidence, req.nms).detected_objects)
 
 if __name__ == "__main__":
     rospy.init_node("lasr_perception_server")

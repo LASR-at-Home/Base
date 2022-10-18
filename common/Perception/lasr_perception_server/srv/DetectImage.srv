@@ -1,7 +1,7 @@
 sensor_msgs/Image image
-std_msgs/String dataset
+string dataset
 float32 confidence
 float32 nms
-std_msgs/String[] filter
+string[] filter
 ---
 Detection[] detected_objects
