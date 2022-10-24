@@ -1,0 +1,6 @@
+<launch>
+    <rosparam command="load" file="$(find find_person_and_ask_open_door)/config/map_points.yaml" />
+    <node name="lasr_object_detection_yolo" pkg="lasr_object_detection_yolo" type="yolo_object_detection_server.py" output="screen" respawn="true"/>
+    <node name="find_person_and_ask_open_door" pkg="find_person_and_ask_open_door" type="find_person_and_ask.py" output="screen" required="true"/>
+
+</launch>
