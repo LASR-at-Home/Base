@@ -9,10 +9,9 @@ from actionlib_msgs.msg import GoalStatus
 class Voice:
     def __init__(self):
         self._tts_client = actionlib.SimpleActionClient('/tts', TtsAction)
-        print(rospy.get_published_topics(namespace='/tts'))
+        self._tts_client.wait_for_server()
 
     def __tts(self, text: str):
-        self._tts_client.wait_for_server()
         goal = TtsGoal()
         goal.rawtext.text = text
         goal.rawtext.lang_id = 'en_GB'
