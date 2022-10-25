@@ -12,6 +12,10 @@ from cv_bridge3 import cv2
 import random
 import string
 
+import sys
+from smach_ros import IntrospectionServer
+
+
 IMAGE_NUMBER = 10
 SLEEP_TIME = 0.8
 MAX_DURATION = IMAGE_NUMBER*SLEEP_TIME + 2
@@ -20,17 +24,16 @@ MAX_DURATION = IMAGE_NUMBER*SLEEP_TIME + 2
    To be able to train, the dataset must contain at least 2 people
 '''
 class CreateDatasetState(smach.State):
-    def __init__(self, base_contoller):
+    def __init__(self):
         smach.State.__init__(self,
                              outcomes=['finished_scan', 'scan_failed'],
-                             output_keys=['path']
+                             output_keys=['dataset_path']
         )
         self.name = ""
         self.path = ""
-        self.dir_path = self.path = os.path.join(rospkg.RosPack().get_path('face_detection'), 'dataset')
+        self.dir_path = self.path = os.path.join(rospkg.RosPack().get_path('create_dataset'), 'src', 'dataset')
         self.bridge = CvBridge()
         self.images_taken = 0
-        self.base_controller = base_contoller
         self.semaphore = False
 
         # Choose topic
@@ -54,7 +57,7 @@ class CreateDatasetState(smach.State):
 
     def execute(self, userdata):
         rand = ''.join(random.choice(string.ascii_lowercase) for _ in range(7))
-        userdata.path = self.path = os.path.join(rospkg.RosPack().get_path('face_detection'),  'dataset', rand)
+        userdata.dataset_path = self.path = os.path.join(rospkg.RosPack().get_path('create_dataset'), 'src', 'dataset', rand)
 
         if os.path.isdir(self.path):
             shutil.rmtree(self.path)
@@ -66,3 +69,13 @@ class CreateDatasetState(smach.State):
             pass
         self.images_taken = 0
         return 'finished_scan'
+
+
+if __name__ == "__main__":
+    rospy.init_node("collect_and_scan_sm", sys.argv, anonymous=True)
+    sm = CreateDatasetState()
+    sis = IntrospectionServer('iserver', sm, 'SM_ROOT')
+    sis.start()
+    outcome = sm.execute()
+    sis.stop()
+    rospy.loginfo(f'I have completed execution with outcome {outcome}')
