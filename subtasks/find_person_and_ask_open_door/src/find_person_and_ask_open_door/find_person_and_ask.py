@@ -9,13 +9,25 @@ from lasr_object_detection_yolo.person_detection import detect_person
 
 # TODO: spin 180 degrees if no people found
 # TODO: aim head at person
+
+HORIZONTAL = 0.8
+VERTICAL = 0.3
 class FindPersonAndAsk:
     def __init__(self):
         self.base_controller = BaseController()
         self.head_controller = HeadController()
         self.head_controller.sync_reach_to(0, 0)  # start by centering the head
-        # self.voice = Voice()
-        self.search_points = [(-1, 0.5), (1, 0.5), (1, -0.5), (-1, -0.5), (0, 0)]
+        self.voice = Voice()
+        self.search_points = [(-1*HORIZONTAL, VERTICAL),
+                              (0, VERTICAL),
+                              (HORIZONTAL, VERTICAL),
+                              (HORIZONTAL, 0),
+                              (0, 0),
+                              (-1*HORIZONTAL, 0),
+                              (-1*HORIZONTAL, -1*VERTICAL),
+                              (0, -1*VERTICAL),
+                              (HORIZONTAL, -1*VERTICAL),
+                              (0, 0)]
 
     def search_for_person(self):
         for point in self.search_points:
@@ -26,10 +38,14 @@ class FindPersonAndAsk:
         return None
 
     def main(self):
-        door_pos = get_pose_from_param('/door_simu')
+        # door_pos = get_pose_from_param('/door_simu')
+        door_pos = get_pose_from_param('/door')
         self.base_controller.sync_to_pose(door_pos)
         closest_person = self.search_for_person()
-        print(closest_person)
+        if closest_person:
+            self.voice.sync_tts("Can you please open the door for me?")
+        else:
+            self.voice.sync_tts("I can't see anyone!")
 
 
 if __name__ == '__main__':
