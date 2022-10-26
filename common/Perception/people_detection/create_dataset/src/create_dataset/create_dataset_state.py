@@ -20,18 +20,19 @@ IMAGE_NUMBER = 10
 SLEEP_TIME = 0.8
 MAX_DURATION = IMAGE_NUMBER*SLEEP_TIME + 2
 
-'''Creates a dataset of a person and trains a model to redetect that individual. 
-   To be able to train, the dataset must contain at least 2 people
-'''
 class CreateDatasetState(smach.State):
+    '''
+    Creates a dataset of a person and trains a model to redetect that individual.
+    To be able to train, the dataset must contain at least 2 people
+    '''
     def __init__(self):
         smach.State.__init__(self,
-                             outcomes=['finished_scan', 'scan_failed'],
+                             outcomes=['finished_scan'],
                              output_keys=['dataset_path']
         )
         self.name = ""
         self.path = ""
-        self.dir_path = self.path = os.path.join(rospkg.RosPack().get_path('create_dataset'), 'src', 'dataset')
+        self.dir_path = self.path = os.path.join(rospkg.RosPack().get_path('create_dataset'),  'dataset')
         self.bridge = CvBridge()
         self.images_taken = 0
         self.semaphore = False
@@ -57,7 +58,7 @@ class CreateDatasetState(smach.State):
 
     def execute(self, userdata):
         rand = ''.join(random.choice(string.ascii_lowercase) for _ in range(7))
-        userdata.dataset_path = self.path = os.path.join(rospkg.RosPack().get_path('create_dataset'), 'src', 'dataset', rand)
+        userdata.dataset_path = self.path = os.path.join(rospkg.RosPack().get_path('create_dataset'),  'dataset', rand)
 
         if os.path.isdir(self.path):
             shutil.rmtree(self.path)
@@ -71,11 +72,13 @@ class CreateDatasetState(smach.State):
         return 'finished_scan'
 
 
-if __name__ == "__main__":
-    rospy.init_node("collect_and_scan_sm", sys.argv, anonymous=True)
-    sm = CreateDatasetState()
-    sis = IntrospectionServer('iserver', sm, 'SM_ROOT')
-    sis.start()
-    outcome = sm.execute()
-    sis.stop()
-    rospy.loginfo(f'I have completed execution with outcome {outcome}')
+if __name__ == '__main__':
+   rospy.init_node('smach_example_state_machine')
+   sm = smach.StateMachine(outcomes=['success'])
+   with sm:
+      smach.StateMachine.add('CREATE_DATASET', CreateDatasetState(),
+                              transitions={'finished_scan':'success'},
+                              remapping={'dataset_path':'dataset_path'})
+   outcome = sm.execute()
+   rospy.loginfo('I have completed execution with outcome: ')
+   rospy.loginfo(outcome)
