@@ -127,3 +127,6 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+/common/Perception/lasr_object_detection_yolo/models/
+/common/custom_worlds/
