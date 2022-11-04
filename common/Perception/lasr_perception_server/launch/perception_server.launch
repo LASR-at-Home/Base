@@ -1,6 +1,7 @@
 <launch>
 
     <node pkg="lasr_object_detection_yolo" name="yolo_object_detection_server" type="yolo_object_detection_server.py"/>
+    <node pkg="face_detection" name="face_detection_server" type="face_detection_server.py"/>
     <node pkg="lasr_perception_server" name="perception_server" type="perception_server.py"/>
 
 </launch>

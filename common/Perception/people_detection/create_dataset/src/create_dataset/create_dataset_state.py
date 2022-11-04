@@ -12,9 +12,6 @@ from cv_bridge3 import cv2
 import random
 import string
 
-import sys
-from smach_ros import IntrospectionServer
-
 
 IMAGE_NUMBER = 10
 SLEEP_TIME = 0.8

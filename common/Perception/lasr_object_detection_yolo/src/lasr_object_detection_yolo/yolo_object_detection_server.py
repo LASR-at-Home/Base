@@ -20,6 +20,7 @@ from lasr_perception_server.msg import Detection
 
 import nvidia_smi
 
+
 MODEL_ROOT = os.path.join(rospkg.RosPack().get_path('lasr_object_detection_yolo'), 'models')
 
 
@@ -168,3 +169,6 @@ if __name__ == '__main__':
     serv = rospy.Service('yolo_object_detection_server/detect_objects', YoloDetection, server.detect)
     rospy.loginfo('YOLOv4 object detection service initialised')
     rospy.spin()
+
+
+

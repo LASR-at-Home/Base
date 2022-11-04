@@ -3,8 +3,8 @@ import rospy
 import os
 import shutil
 import smach
-from extract_embeddings import extract
-from train_model import train_model as train
+from .extract_embeddings import extract
+from .train_model import train_model as train
 
 
 class TrainModelState(smach.State):
@@ -30,3 +30,15 @@ class TrainModelState(smach.State):
         else:
             rospy.logwarn("At least 2 datasets are required for training.")
             return 'training_failed'
+
+if __name__ == '__main__':
+    rospy.init_node('smach_example_state_machine')
+    sm = smach.StateMachine(outcomes=['success'])
+    with sm:
+        smach.StateMachine.add('TRAIN_MODEL', TrainModelState(),
+                               transitions={'finished_training':'success'},
+                               remapping={'dataset_path':'dataset_path',
+                                          'current_person':'current_person'})
+    outcome = sm.execute()
+    rospy.loginfo('I have completed execution with outcome: ')
+    rospy.loginfo(outcome)
