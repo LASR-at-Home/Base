@@ -64,3 +64,44 @@ class BaseController:
         if done and state == GoalStatus.SUCCEEDED:
             return True
         return state
+
+
+from geometry_msgs.msg import Twist
+from math import radians
+
+
+class CmdVelController:
+    def __init__(self):
+        self._vel_pub = rospy.Publisher('mobile_base_controller/cmd_vel', Twist, queue_size=1)
+        rospy.sleep(0.1)  # wait for publisher to activate
+
+    def rotate(self, angular_velocity: int, angle: int, clockwise: bool):
+        vel_msg = Twist()
+        angular_velocity = radians(angular_velocity)
+        angle = radians(angle)
+        if clockwise:
+            vel_msg.angular.z = -abs(angular_velocity)
+        else:
+            vel_msg.angular.z = abs(angular_velocity)
+
+        curr_ang = 0.0
+        t0 = rospy.Time.now().to_sec()
+
+        while curr_ang < angle:
+            print("current angle: ", curr_ang, "needed ang: ", angle)
+            self._vel_pub.publish(vel_msg)
+            t1 = rospy.Time.now().to_sec()
+            curr_ang = angular_velocity * (t1 - t0)
+
+    def linear_movement(self, speed: float, distance: float, is_forward: bool):
+        vel_msg = Twist()
+        if is_forward:
+            vel_msg.linear.x = abs(speed)
+        else:
+            vel_msg.linear.x = -abs(speed)
+        curr_dist = 0
+        t0 = rospy.Time.now().to_sec()
+        while curr_dist < distance:
+            t1 = rospy.Time.now().to_sec()
+            curr_dist = curr_dist + speed * (t1 - t0)
+            self._vel_pub.publish(vel_msg)
