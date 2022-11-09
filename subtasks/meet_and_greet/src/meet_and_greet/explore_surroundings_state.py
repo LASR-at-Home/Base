@@ -27,17 +27,18 @@ def test():
     # print(perception(imgs[0],'coco', 0.7, 0.3,['person'],'known_people'))
 
     rospy.init_node("test")
-    im = rospy.wait_for_message("/xtion/rgb/image_raw", Image)
     imgs = []
-    imgs.append(im)
-    im = rospy.wait_for_message("/xtion/rgb/image_raw", Image)
-    imgs.append(im)
-    print(len(imgs))
+    rate = rospy.Rate(3)
+    for i in range(10):
+        imgs.append(rospy.wait_for_message("/xtion/rgb/image_raw", Image))
+        rate.sleep()
+    print('img len', len(imgs))
+
     # * show the output image
     print("I GOT HERE!!! ------------------------------")
     bridge = CvBridge()
-    cv_image = bridge.imgmsg_to_cv2(im, desired_encoding='passthrough')
-    cv2.imshow("Image", cv_image)
+    cv_image = bridge.imgmsg_to_cv2(imgs[len(imgs)-1], desired_encoding='passthrough')
+    # cv2.imshow("Image", cv_image)
     path_output = os.path.join(rospkg.RosPack().get_path('face_detection'), "output")
     cv2.imwrite(path_output + "/images/random" + str(random.random())+".jpg", cv_image)
     cv2.waitKey(0)
@@ -45,7 +46,7 @@ def test():
     # * show the output image
 
     det = rospy.ServiceProxy("lasr_perception_server/detect_objects_image", DetectImage)
-    resp = det(im, "coco", 0.7, 0.3, ["person"],'open_cv').detected_objects
+    resp = det(imgs, "coco", 0.7, 0.3, ["person"],'open_cv').detected_objects
 
 
 class ExploreSurroundingsState(smach.State):
