@@ -163,7 +163,7 @@ class FaceDetectionServer:
 if __name__ == "__main__":
     rospy.init_node("face_detection_server")
     server = FaceDetectionServer()
-    service = rospy.Service('face_detection', FaceDetection, server)
+    service = rospy.Service('face_detection_server', FaceDetection, server)
     # service_pcl = rospy.Service('face_detection_pcl', FaceDetectionPCL, server)
     rospy.loginfo("Face Detection Service initialised")
     rospy.spin()
