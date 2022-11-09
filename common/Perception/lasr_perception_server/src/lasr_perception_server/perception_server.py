@@ -25,13 +25,14 @@ class PerceptionServer():
         self.face_detect = rospy.ServiceProxy("face_detection_server", FaceDetection)
         self.recogniser = rospy.ServiceProxy('recognise_people', RecognisePeople)
 
-        self.handler = rospy.Service("lasr_perception_server/detect_images", DetectImage,
+        self.handler = rospy.Service("lasr_perception_server/detect_images", DetectImages,
                                      self.handle_task)
 
-        self.detect_objects_image = rospy.Service("lasr_perception_server/detect_objects_image", DetectImages,
-                                                  self.detect_image)
+        self.detect_objects_image = rospy.Service("lasr_perception_server/detect_objects_image", DetectImage,
+                                                  self.handle_task)
 
     def detect_image(self, req):
+        print(req.task, 'the task')
         if len(req.filter):
             return DetectImageResponse(
                 [det for det in self.yolo_detect(req.image, req.dataset, req.confidence, req.nms).detected_objects if
@@ -46,7 +47,7 @@ class PerceptionServer():
 
     # returns bbox of known and unknown people
     def face_and_yolo(self, req):
-        print(req)
+        print(len(req), 'hi')
         # take opencv detection
         # face_detection_resp = self.face_detect(req).detected_objects
         # take the yolo detection of people
@@ -59,26 +60,17 @@ class PerceptionServer():
         resp = None
         if req.task == 'open_cv':
             resp = self.face_detection(req)
-
         elif req.task == 'known_people':
             resp = self.face_and_yolo(req)
         else:
             resp = self.detect_image(req)
+        # resp = self.detect_image(req)
+        print(resp, 'printing resp')
         return resp
-
-    # def main(self):
-    #     rate = rospy.Rate(10)
-    #     while not rospy.is_shutdown():
-    #         rate.sleep()
-
-
-
 
 
 if __name__ == "__main__":
     rospy.init_node("lasr_perception_server")
-    # while not rospy.is_shutdown():
-    #     pass
+    rospy.loginfo("initialising the perception server")
     perception_server = PerceptionServer()
-    # perception_server.main()
     rospy.spin()
