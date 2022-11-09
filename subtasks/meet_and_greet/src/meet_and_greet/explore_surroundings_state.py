@@ -7,7 +7,7 @@ from sensor_msgs.msg import Image
 import rospkg
 from cv_bridge3 import CvBridge
 from cv_bridge3 import cv2
-#
+import random
 # import random
 # import string
 from tiago_controllers.base_controller import BaseController
@@ -27,16 +27,25 @@ def test():
     # print(perception(imgs[0],'coco', 0.7, 0.3,['person'],'known_people'))
 
     rospy.init_node("test")
-    im = rospy.wait_for_message("/usb_cam/image_raw", Image)
+    im = rospy.wait_for_message("/xtion/rgb/image_raw", Image)
     imgs = []
     imgs.append(im)
-    im = rospy.wait_for_message("/usb_cam/image_raw", Image)
+    im = rospy.wait_for_message("/xtion/rgb/image_raw", Image)
     imgs.append(im)
     print(len(imgs))
+    # * show the output image
+    print("I GOT HERE!!! ------------------------------")
+    bridge = CvBridge()
+    cv_image = bridge.imgmsg_to_cv2(im, desired_encoding='passthrough')
+    cv2.imshow("Image", cv_image)
+    path_output = os.path.join(rospkg.RosPack().get_path('face_detection'), "output")
+    cv2.imwrite(path_output + "/images/random" + str(random.random())+".jpg", cv_image)
+    cv2.waitKey(0)
+    print("DETECTION TIME!!! ------------------------------")
+    # * show the output image
 
-    det = rospy.ServiceProxy("lasr_perception_server/detect_images", DetectImages)
-    resp = det(imgs, "coco", 0.7, 0.3, ["person"],'yolo').detected_objects
-    # print(len(resp))
+    det = rospy.ServiceProxy("lasr_perception_server/detect_objects_image", DetectImage)
+    resp = det(im, "coco", 0.7, 0.3, ["person"],'open_cv').detected_objects
 
 
 class ExploreSurroundingsState(smach.State):

@@ -130,3 +130,4 @@ dmypy.json
 
 /common/Perception/lasr_object_detection_yolo/models/
 /common/custom_worlds/
+common/Perception/face_detection/output/

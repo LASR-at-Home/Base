@@ -3,10 +3,6 @@ string dataset
 float32 confidence
 float32 nms
 string[] filter
-int8 task
-int8 YOLO=0
-int8 OPENCV=1
-
 string task
 ---
 lasr_perception_server/Detection[] detected_objects

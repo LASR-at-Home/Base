@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
-from recognise_people.srv import RecognisePeople, RecognisePeoplePCL,\
-    RecognisePeopleResponse, RecognisePeoplePCLResponse
+from recognise_people.srv import RecognisePeople,  RecognisePeopleResponse
+    # RecognisePeopleResponse, RecognisePeoplePCLResponse, RecognisePeoplePCL
 
 import rospy
 from cv_bridge3 import CvBridge
