@@ -9,6 +9,14 @@ from face_detection.srv import FaceDetection, FaceDetectionResponse,  \
 
 from recognise_people.srv import RecognisePeople, RecognisePeopleResponse
 
+# for debugging
+
+from cv_bridge3 import CvBridge
+from cv_bridge3 import cv2
+
+import os, random
+import rospkg
+
 #TODO: extend msg for pcl
 #TODO: a func that takes yolo detections and returns with a ceratin param for instance person in the form of Detection
 #TODO: what do we do when there is nothing on the photo -> in an optimasided way see if the task is executable with tiny face
@@ -43,10 +51,9 @@ class PerceptionServer():
         if len(req.image) > 0:
             detected_obj = []
             for i in req.image:
-                detected_obj.append(self.face_detect(req.image[0]).detected_objects)
+                detected_obj.append(self.face_detect(i).detected_objects)
                 print('printing detected obj', detected_obj)
             flat_list = [item for sublist in detected_obj for item in sublist]
-            print(flat_list, 'here as well')
             return DetectImageResponse(flat_list)
 
         else:
@@ -55,13 +62,25 @@ class PerceptionServer():
     # returns bbox of known and unknown people
     def face_and_yolo(self, req):
         # print(len(req), 'hi')
-        # take opencv detection
-        # face_detection_resp = self.face_detect(req).detected_objects
-        # take the yolo detection of people
-        # yolo_resp = self.yolo_detect(req.image, req.dataset, req.confidence, req.nms).detected_objects
-        #recogniser
-        return DetectImageResponse(
-            self.yolo_detect(req.image[0], req.dataset, req.confidence, req.nms).detected_objects)
+        if(len(req.image) > 0):
+            detected_obj = []
+            # take opencv detection
+            for i in req.image:
+                detected_obj.append(self.face_detect(i).detected_objects)
+                detected_obj.append(self.yolo_detect(i, req.dataset, req.confidence, req.nms).detected_objects)
+                print('printing detected obj len ', len(detected_obj))
+            flat_list = [item for sublist in detected_obj for item in sublist]
+            return DetectImageResponse(flat_list)
+
+    def save_images_debugger(self, imgs):
+        # * show the output image
+        bridge = CvBridge()
+        for im in imgs:
+            cv_image = bridge.imgmsg_to_cv2(im, desired_encoding='passthrough')
+            path_output = os.path.join(rospkg.RosPack().get_path('face_detection'), "output")
+            cv2.imwrite(path_output + "/images/random" + str(random.random())+".jpg", cv_image)
+            print("next image ------------------------------")
+
 
     def handle_task(self, req):
         resp = None
