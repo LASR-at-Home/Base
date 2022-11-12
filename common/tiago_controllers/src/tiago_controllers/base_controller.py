@@ -5,6 +5,8 @@ import rospy
 from tiago_controllers.helpers import is_running, is_terminated
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from actionlib_msgs.msg import GoalStatus
+from geometry_msgs.msg import PoseWithCovarianceStamped
+
 
 
 class BaseController:
@@ -24,6 +26,13 @@ class BaseController:
                     break
                 rospy.sleep(0.5)
                 self._goal_sent = False
+
+    def get_current_pose(self):
+        msg = rospy.wait_for_message('/amcl_pose', PoseWithCovarianceStamped)
+        x = round(msg.pose.pose.position.x, 2)
+        y = round(msg.pose.pose.position.y, 2)
+        quat = msg.pose.pose.orientation
+        return x, y, quat
 
     def is_running(self):
         return is_running(self._client)
@@ -88,7 +97,6 @@ class CmdVelController:
         t0 = rospy.Time.now().to_sec()
 
         while curr_ang < angle:
-            print("current angle: ", curr_ang, "needed ang: ", angle)
             self._vel_pub.publish(vel_msg)
             t1 = rospy.Time.now().to_sec()
             curr_ang = angular_velocity * (t1 - t0)
