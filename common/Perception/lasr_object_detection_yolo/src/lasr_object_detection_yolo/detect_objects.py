@@ -2,14 +2,17 @@
 
 import rospy
 from lasr_object_detection_yolo.srv import YoloDetection, YoloDetectionRequest
-from sensor_msgs.msg import PointCloud2, Image
+from sensor_msgs.msg import Image
 
 
-def detect_person(model="coco"):
+def detect_objects(object_names: [str], model="coco"):
     """
     Detects all persons in an image
     """
     rospy.wait_for_service('yolo_object_detection_server/detect_objects')
+
+    if not isinstance(object_names, list):
+        raise ValueError("please input a list of strings")
 
     try:
         detect_objects = rospy.ServiceProxy('yolo_object_detection_server/detect_objects', YoloDetection)
@@ -26,18 +29,18 @@ def detect_person(model="coco"):
         print("Service call failed: %s" % e)
         return []
 
-    people = []
+    objects = []
     for obj in yolo_resp.detected_objects:
-        if obj.name == 'person':
-            people.append(obj)
-    return people
+        if obj.name in object_names:
+            objects.append(obj)
+    return objects
 
 
 if __name__ == '__main__':
-    rospy.init_node("person_detection", anonymous=True)
-    people = detect_person()
-    for p in people:
-        print("object name: ", p.name)
-        print("object confidence: ", p.confidence)
-        print("object position: ", p.xywh)
+    rospy.init_node("objects_detection", anonymous=True)
+    objects = detect_objects(["person", "mug", "phone"])
+    for o in objects:
+        print("object name: ", o.name)
+        print("object confidence: ", o.confidence)
+        print("object position: ", o.xywh)
 
