@@ -7,6 +7,7 @@ from smach import Concurrence
 from smach_ros import IntrospectionServer
 from create_dataset import CreateDatasetState, TalkCreateDatasetState
 from train_dataset_model import TrainModelState
+from meet_and_greet.explore_surroundings_state import ExploreSurroundingsState
 
 
 class MeetAndGreetSM(smach.StateMachine):
@@ -28,12 +29,8 @@ class MeetAndGreetSM(smach.StateMachine):
                 smach.Concurrence.add('TALK_CREATE_DATASET', TalkCreateDatasetState(), remapping={'current_person' : 'current_person'})
                 smach.Concurrence.add('CREATE_DATASET', CreateDatasetState(), remapping={'dataset_path': 'dataset_path'})
 
-            smach.StateMachine.add('EXPLORE_SURROUNDINGS', ExploreSurroundings())
-            smach.StateMachine.add('CREATE_DATASET_AND_TALK', cc,
-                                   transitions={
-                                       'finished_dataset_collection' : 'TRAIN_MODEL',
-                                       'not_finished_dataset_collection' : 'CREATE_DATASET_AND_TALK'
-                                   })
+            smach.StateMachine.add('EXPLORE_SURROUNDINGS', ExploreSurroundingsState())
+            
         # smach.StateMachine.add('CREATE_DATASET', CreateDatasetState,
         #                        transitions={'finished_scan': 'TRAIN_MODEL'},
         #                        remapping={'dataset_path': 'dataset_path'}

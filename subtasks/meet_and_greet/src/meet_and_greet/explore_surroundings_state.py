@@ -18,43 +18,37 @@ from lasr_perception_server.srv import DetectImages, DetectImage
 
 
 
-def test():
-    # rospy.init_node('test')
-    # head_controller = HeadController()
-    # imgs = looking_around(head_controller)
-    # print('images -> ', len(imgs))
-    # perception = rospy.ServiceProxy('lasr_perception_server/detect_object_image', DetectImages)
-    # print(perception(imgs[0],'coco', 0.7, 0.3,['person'],'known_people'))
+def find_faces():
+    rospy.init_node('test')
 
-    rospy.init_node("test")
     imgs = []
     rate = rospy.Rate(3)
-    for i in range(10):
-        imgs.append(rospy.wait_for_message("/xtion/rgb/image_raw", Image))
+    for i in range(2):
+        imgs.append(rospy.wait_for_message("/usb_cam/image_raw", Image))
         rate.sleep()
     print('img len', len(imgs))
 
-    # * show the output image
-    print("I GOT HERE!!! ------------------------------")
-    bridge = CvBridge()
-    cv_image = bridge.imgmsg_to_cv2(imgs[len(imgs)-1], desired_encoding='passthrough')
-    # cv2.imshow("Image", cv_image)
-    path_output = os.path.join(rospkg.RosPack().get_path('face_detection'), "output")
-    cv2.imwrite(path_output + "/images/random" + str(random.random())+".jpg", cv_image)
-    cv2.waitKey(0)
-    print("DETECTION TIME!!! ------------------------------")
-    # * show the output image
+    # # * show the output image
+    # print("I GOT HERE!!! ------------------------------")
+    # bridge = CvBridge()
+    # cv_image = bridge.imgmsg_to_cv2(imgs[len(imgs)-1], desired_encoding='passthrough')
+    # # cv2.imshow("Image", cv_image)
+    # path_output = os.path.join(rospkg.RosPack().get_path('face_detection'), "output")
+    # cv2.imwrite(path_output + "/images/random" + str(random.random())+".jpg", cv_image)
+    # cv2.waitKey(0)
+    # print("DETECTION TIME!!! ------------------------------")
+    # # * show the output image
 
     det = rospy.ServiceProxy("lasr_perception_server/detect_objects_image", DetectImage)
-    resp = det(imgs, "coco", 0.7, 0.3, ["person"],'open_cv').detected_objects
+    resp = det(imgs, "coco", 0.7, 0.3, ['person'],'known_people').detected_objects
+    print(resp)
+    # return resp if len(resp) > 0 else None
 
 
 class ExploreSurroundingsState(smach.State):
     '''
         Wonders around and detects people
     '''
-
-
 
     def __init__(self):
         smach.State.__init__(self,
@@ -63,23 +57,21 @@ class ExploreSurroundingsState(smach.State):
 
         self.base_controller = BaseController()
         self.head_controller = HeadController()
-        self.search_points = [(-1, 0.5), (1, 0.5), (1, -0.5), (-1, -0.5), (0, 0)]
+        self.map_points = [] # pos on map
 
 
     def execute(self, userdata):
-        imgs = looking_around(self.head_controller)
-        print('images -> ', len(imgs))
-        self.perception = rospy.ServiceProxy('lasr_perception_server/detect_objects_image', DetectImages)
-        print(self.perception(imgs,'coco', 0.7, 0.3, '','known_people'))
-
-
-
-
-        return 'finished_scan'
-
+        while not rospy.shutdown:
+            for i in random(self.search_points):
+                imgs = looking_around(self.head_controller)
+                print('images -> ', len(imgs))
+                if find_faces():
+                    return 'finished_scan'
+                self.base_controller.sync_to_pose(i)
+        return 
 
 if __name__ == '__main__':
-    test()
+    find_faces()
     # rospy.init_node('smach_example_state_machine')
     # sm = smach.StateMachine(outcomes=['success'])
     # with sm:

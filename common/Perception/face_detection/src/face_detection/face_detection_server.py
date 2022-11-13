@@ -5,8 +5,7 @@ import rospkg
 
 from face_detection.srv import FaceDetection, FaceDetectionResponse, \
     FaceDetectionRequest
-from face_detection.msg import Detection
-
+from lasr_perception_server.msg import Detection
 import os
 import numpy as np
 import cv2
@@ -78,7 +77,7 @@ class FaceDetectionServer:
             response = FaceDetectionResponse()
 
             # Convert sensor_msgs/Image to cv2 image.
-            print('iam here')
+            print('i am here')
             cv_image = self.bridge.imgmsg_to_cv2_np(req.image_raw)
 
         # else:
@@ -109,7 +108,7 @@ class FaceDetectionServer:
         self.detector.setInput(blob)
         detections = self.detector.forward()
 
-        print(detections)
+        print(detections, 'the face detections')
 
         # Iterate detections
         for detection in detections[0][0]:
@@ -149,14 +148,15 @@ class FaceDetectionServer:
                 j = np.argmax(predictions)
                 prob = predictions[j]
                 name = self.le.classes_[j]
-                print(name, prob)
+                print(name, prob, 'hello there')
 
                 # Append the detection to the response.
                 if isinstance(req, FaceDetectionRequest):
-                    response.detections.append(Detection(name, prob, [x1, y1, x2, y2]))
+                    response.detected_objects.append(Detection(name, prob, [x1, y1, x2, y2]))
                 # else:
                 #     centroid = bb_to_centroid(req.cloud, x1, y1, x2 - x1, y2 - y1)
                 #     response.detections.append(DetectionPCL(name, prob, [x1, y1, x2, y2], centroid))
+        # print('the resp is ', response)
         return response
 
 

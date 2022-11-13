@@ -153,6 +153,7 @@ class YoloObjectDetectionServer():
                     xywh = [x1, y1, x2 - x1, y2 - y1]
                     
                     # Append detection.
+                    print(name, 'i am in yolo name')
                     response.detected_objects.append(
                         Detection(
                             name=name,

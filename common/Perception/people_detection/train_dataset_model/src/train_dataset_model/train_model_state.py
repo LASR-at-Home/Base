@@ -1,10 +1,10 @@
-# !/usr/bin/env python3
+#!/usr/bin/env python3
 import rospy
-import os
+import os, rospkg
 import shutil
 import smach
-from .extract_embeddings import extract
-from .train_model import train_model as train
+from extract_embeddings import extract
+from train_model import train_model as train
 
 
 class TrainModelState(smach.State):
@@ -14,16 +14,18 @@ class TrainModelState(smach.State):
                              input_keys=['current_person', 'dataset_path'],  # ! comment for tesing purposes
                              output_keys=['current_person'])  # ! comment for tesing purposes
 
+
     def execute(self, userdata):
-        print("I'm saving your face, so I can recognise you again later. You can stop moving your head.")
-        new = userdata.dataset_path.replace(userdata.dataset_path.split(os.path.sep)[-1], userdata.current_person.name)
+        name = 'alice'
+        dataset_path = os.path.join(rospkg.RosPack().get_path('create_dataset'),  'dataset', 'brbffnt')
+        new = dataset_path.replace(dataset_path.split(os.path.sep)[-1], name)
         if os.path.exists(new):
             shutil.rmtree(new)
 
-        os.renames(userdata.dataset_path,
-                   userdata.dataset_path.replace(userdata.dataset_path.split(os.path.sep)[-1], userdata.current_person.name))
+        os.renames(dataset_path,
+                   dataset_path.replace(dataset_path.split(os.path.sep)[-1], name))
 
-        if len(next(os.walk(os.path.dirname(userdata.dataset_path)))[1]) > 1:
+        if len(next(os.walk(os.path.dirname(dataset_path)))[1]) > 1:
             extract()
             train()
             return 'finished_training'
@@ -33,10 +35,12 @@ class TrainModelState(smach.State):
 
 if __name__ == '__main__':
     rospy.init_node('smach_example_state_machine')
-    sm = smach.StateMachine(outcomes=['success'])
+    name = 'alice'
+    dataset_path = os.path.join(rospkg.RosPack().get_path('create_dataset'),  'dataset', 'alice')
+    sm = smach.StateMachine(outcomes=['success', 'failed'])
     with sm:
         smach.StateMachine.add('TRAIN_MODEL', TrainModelState(),
-                               transitions={'finished_training':'success'},
+                               transitions={'finished_training':'success', 'training_failed':'failed'},
                                remapping={'dataset_path':'dataset_path',
                                           'current_person':'current_person'})
     outcome = sm.execute()
