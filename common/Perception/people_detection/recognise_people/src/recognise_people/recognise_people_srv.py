@@ -45,7 +45,7 @@ class RecognisePeopleServer():
 
                 head_x = (x1 + x2) / 2
                 body_x = (yolo.xywh[0] + yolo.xywh[2]) / 2 # center of the body in the x axis
-                self.image_show(yolo.name, yolo.confidence,yolo.xywh, i)
+                # self.image_show(yolo.name, yolo.confidence,yolo.xywh, i)
                 i = i+1
 
                 if abs(head_x - body_x) < 20:
@@ -87,6 +87,7 @@ class RecognisePeopleServer():
         else:
             response = []
 
+        print(response)
         return response
 
     def image_show(self, name, proba, dim, i):

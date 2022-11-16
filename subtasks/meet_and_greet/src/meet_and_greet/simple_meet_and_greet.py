@@ -2,7 +2,7 @@
 import rospy
 import os
 import rospkg
-# from lasr_voice.voice import Voice
+from lasr_voice.voice import Voice
 from tiago_controllers.helpers import get_pose_from_param, is_running
 from sensor_msgs.msg import Image
 from cv_bridge3 import CvBridge, cv2
@@ -23,7 +23,7 @@ class SimpleMeetGreet:
             self.topic = '/usb_cam/image_raw'
 
 
-        # self.voice = Voice()
+        self.voice = Voice()
         self.map_points = ['/point1', '/point2']  # pos on map
 
     def find_person(self):
@@ -34,11 +34,11 @@ class SimpleMeetGreet:
             rate.sleep()
 
         # print("I GOT HERE!!! ------------------------------")
-        bridge = CvBridge()
-        cv_image = bridge.imgmsg_to_cv2(imgs[0], desired_encoding='passthrough')
-        # # cv2.imshow("Image", cv_image)
-        path_output = os.path.join(rospkg.RosPack().get_path('face_detection'), "output")
-        cv2.imwrite(path_output + "/images/random" + ".jpg", cv_image)
+        # bridge = CvBridge()
+        # cv_image = bridge.imgmsg_to_cv2(imgs[0], desired_encoding='passthrough')
+        # # # cv2.imshow("Image", cv_image)
+        # path_output = os.path.join(rospkg.RosPack().get_path('face_detection'), "output")
+        # cv2.imwrite(path_output + "/images/random" + ".jpg", cv_image)
         # cv2.waitKey(0)
         # print("DETECTION TIME!!! ------------------------------")
         # # * show the output image
@@ -57,13 +57,16 @@ class SimpleMeetGreet:
                 if human.name == 'person':
                     counter = counter + 1
                 else:
-                    # self.voice.sync_tts("Hi", human.name)
+                    self.voice.sync_tts("Hi" +str(human.name))
+
                     print('hi, ', human.name)
             if counter > 0:
                 # self.voice.sync_tts(' there are new people. I have not met ' + str(counter) + 'people')
                 if counter == 1:
+                    # self.voice.sync_tts("there are new people. I have not met you before")
                     print(' there are new people. I have not met you before')
                 else:
+                    # self.voice.sync_tts(' there are new people. I have not met ' + str(counter) + 'people')
                     print(' there are new people. I have not met ' + str(counter) + 'people')
 
 
@@ -78,6 +81,7 @@ class SimpleMeetGreet:
                 return
 
         # self.voice.sync_tts("Hi, i don't know anyone")
+        print("Hi, i don't know anyone")
         print('I dont known anyone')
 
 
