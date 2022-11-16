@@ -46,22 +46,23 @@ class FindPersonAndAsk:
     # ! State machine 3: turn
     # ! State machine 4: talk
     def main(self):
-        door_pos = get_pose_from_param('/door_simu')
+        # door_pos = get_pose_from_param('/door_simu')
         # door_pos = get_pose_from_param('/door')
-        self.base_controller.sync_to_pose(door_pos)
+        # self.base_controller.sync_to_pose(door_pos)
         cmd_vel = CmdVelController()
         turns = 3
         for i in range(turns):
-            closest_person, head_rot = self.search_for_person()
-            if closest_person:
-                print("FOUND PERSON")
-                look_at = LookAt(self.head_controller, self.base_controller, self.cmd_vel_controller, "person")
-                look_at.look_at(closest_person.xywh, head_rot)
-                print("CAN YOU PLEASE OPEN THE DOOR")
-                # self.voice.sync_tts("Can you please open the door for me?")
-                return
-
-            cmd_vel.rotate(60, 360/turns, True)
+            try:
+                closest_person, head_rot = self.search_for_person()
+                if closest_person:
+                    print("FOUND PERSON")
+                    look_at = LookAt(self.head_controller, self.base_controller, self.cmd_vel_controller, "person")
+                    look_at.look_at(closest_person.xywh, head_rot)
+                    print("CAN YOU PLEASE OPEN THE DOOR")
+                    # self.voice.sync_tts("Can you please open the door for me?")
+                    return
+            except TypeError:
+                cmd_vel.rotate(60, 360/turns, True)
 
         print("I CANT SEE ANYONE")
         # self.voice.sync_tts("I can't see anyone!")
