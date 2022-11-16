@@ -105,6 +105,7 @@ class YoloObjectDetectionServer():
         # Only load model if it is not already loaded.
         if not self.model_name == req.dataset:
             if not self.load_model(req.dataset):
+                print('i fail in loading the coco model, you probably dont have the model')
                 # If loading the model fails, then return an empty response.
                 return response
         
@@ -153,7 +154,6 @@ class YoloObjectDetectionServer():
                     xywh = [x1, y1, x2 - x1, y2 - y1]
                     
                     # Append detection.
-                    print(name, 'i am in yolo name')
                     response.detected_objects.append(
                         Detection(
                             name=name,
@@ -161,7 +161,7 @@ class YoloObjectDetectionServer():
                             xywh=xywh
                         )
                     )
-
+        print(response.detected_objects, 'i am in yolo detect ')
         return response
 
 if __name__ == '__main__':        

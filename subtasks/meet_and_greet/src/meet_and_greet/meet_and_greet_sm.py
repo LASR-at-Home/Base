@@ -5,100 +5,59 @@ import smach
 import sys
 from smach import Concurrence
 from smach_ros import IntrospectionServer
-from create_dataset import CreateDatasetState, TalkCreateDatasetState
-from train_dataset_model import TrainModelState
-from meet_and_greet.explore_surroundings_state import ExploreSurroundingsState
+from explore_surroundings_state import ExploreSurroundingsState
+from look_around_state import LookAroundState
+from models.controllers import Controllers
+import smach_ros
+from std_msgs.msg import Empty
 
 
+def out_cb(outcome_map):
+    if outcome_map['LOOK_AROUND'] == 'finished_with_known_ppl':
+        return 'finished_wandering'
+    if outcome_map['LOOK_AROUND'] == 'finished_with_unknown_ppl':
+        return 'finished_wandering'
+    else:
+        return 'wander_around'
+
+def child_term_cb(outcome_map):
+    if outcome_map['LOOK_AROUND'] == 'finished_with_known_ppl':
+        return True
+    elif outcome_map['LOOK_AROUND'] == 'finished_with_unknown_ppl':
+        return True
+    elif outcome_map['MONITORING'] == 'invalid':
+        return True
+    else:
+        return False
+def monitoring_cb(ud, msg):
+    return False
 class MeetAndGreetSM(smach.StateMachine):
     def __init__(self):
-        # smach.StateMachine.__init__(self, outcomes=['finished_meet_and_greet', 'wonder_around'])
-        smach.StateMachine.__init__(self, outcomes=['finished_meet_and_greet', 'wonder_around'], output_keys=['current_person'])
+        smach.StateMachine.__init__(self, outcomes=['finished_meet_and_greet', 'aborted'])
+        self.controllers = Controllers()
 
         with self:
-            cc = Concurrence(outcomes=['finished_dataset_collection', 'not_finished_dataset_collection'],
-                             default_outcome='not_finished_dataset_collection',
-                             output_keys=['current_person', 'dataset_path'],
-                             outcome_map={
-                                 'finished_dataset_collection':
-                                     {
-                                         'TALK_CREATE_DATASET': 'finished_collecting',
-                                         'CREATE_DATASET': 'finished_scan'}
-                             })
+            cc = Concurrence(outcomes=['finished_wandering','wander_around'],
+                             default_outcome='wander_around',
+                             output_keys=['detection_map'],
+                             outcome_cb=out_cb,
+                             child_termination_cb=child_term_cb
+                             )
             with cc:
-                smach.Concurrence.add('TALK_CREATE_DATASET', TalkCreateDatasetState(), remapping={'current_person' : 'current_person'})
-                smach.Concurrence.add('CREATE_DATASET', CreateDatasetState(), remapping={'dataset_path': 'dataset_path'})
+                smach.Concurrence.add('EXPLORE_SURROUNDINGS', ExploreSurroundingsState(self.controllers))
+                smach.Concurrence.add('LOOK_AROUND', LookAroundState(self.controllers))
+                smach.Concurrence.add('MONITORING', smach_ros.MonitorState("/sm_reset", Empty, monitoring_cb))
 
-            smach.StateMachine.add('EXPLORE_SURROUNDINGS', ExploreSurroundingsState())
-            
-        # smach.StateMachine.add('CREATE_DATASET', CreateDatasetState,
-        #                        transitions={'finished_scan': 'TRAIN_MODEL'},
-        #                        remapping={'dataset_path': 'dataset_path'}
-        #                        )
+            smach.StateMachine.add('WANDERING', cc,
+                                   transitions={'finished_wandering': 'finished_meet_and_greet', 'wander_around':'WANDERING'})
 
-            smach.StateMachine.add('TRAIN_MODEL', TrainModelState(), transitions={'finished_training' : 'finished_meet_and_greet', 'training_failed' : 'CREATE_DATASET_AND_TALK'},
-                                                                     remapping={'current_person' : 'current_person', 'dataset_path' : 'dataset_path'})
+
 
 if __name__ == "__main__":
-    rospy.init_node("collect_and_scan_sm", sys.argv, anonymous=True)
+    rospy.init_node("meet_and_greet", sys.argv, anonymous=True)
     sm = MeetAndGreetSM()
     sis = IntrospectionServer('iserver', sm, 'SM_ROOT')
     sis.start()
     outcome = sm.execute()
     sis.stop()
     rospy.loginfo(f'I have completed execution with outcome {outcome}')
-
-
-# BACKUP
-# #!/usr/bin/env python3
-# # coding=utf-8
-# import rospy
-# import smach
-# import sys
-# from smach import Concurrence
-# from smach_ros import IntrospectionServer
-# from create_dataset import CreateDatasetState, TalkCreateDatasetState
-# from train_dataset_model import TrainModelState
-#
-#
-# class MeetAndGreetSM(smach.StateMachine):
-#     def __init__(self):
-#         # smach.StateMachine.__init__(self, outcomes=['finished_meet_and_greet', 'wonder_around'])
-#         smach.StateMachine.__init__(self, outcomes=['finished_meet_and_greet', 'wonder_around'], output_keys=['current_person'])
-#
-#         with self:
-#             cc = Concurrence(outcomes=['finished_dataset_collection', 'not_finished_dataset_collection'],
-#                              default_outcome='not_finished_dataset_collection',
-#                              output_keys=['current_person', 'dataset_path'],
-#                              outcome_map={
-#                                  'finished_dataset_collection':
-#                                      {
-#                                          'TALK_CREATE_DATASET': 'finished_collecting',
-#                                          'CREATE_DATASET': 'finished_scan'}
-#                              })
-#             with cc:
-#                 smach.Concurrence.add('TALK_CREATE_DATASET', TalkCreateDatasetState(), remapping={'current_person' : 'current_person'})
-#                 smach.Concurrence.add('CREATE_DATASET', CreateDatasetState(), remapping={'dataset_path': 'dataset_path'})
-#
-#
-#             smach.StateMachine.add('CREATE_DATASET_AND_TALK', cc,
-#                                    transitions={
-#                                        'finished_dataset_collection' : 'TRAIN_MODEL',
-#                                        'not_finished_dataset_collection' : 'CREATE_DATASET_AND_TALK'
-#                                    })
-#             # smach.StateMachine.add('CREATE_DATASET', CreateDatasetState,
-#             #                        transitions={'finished_scan': 'TRAIN_MODEL'},
-#             #                        remapping={'dataset_path': 'dataset_path'}
-#             #                        )
-#
-#             smach.StateMachine.add('TRAIN_MODEL', TrainModelState(), transitions={'finished_training' : 'finished_meet_and_greet', 'training_failed' : 'CREATE_DATASET_AND_TALK'},
-#                                    remapping={'current_person' : 'current_person', 'dataset_path' : 'dataset_path'})
-#
-# if __name__ == "__main__":
-#     rospy.init_node("collect_and_scan_sm", sys.argv, anonymous=True)
-#     sm = MeetAndGreetSM()
-#     sis = IntrospectionServer('iserver', sm, 'SM_ROOT')
-#     sis.start()
-#     outcome = sm.execute()
-#     sis.stop()
-#     rospy.loginfo(f'I have completed execution with outcome {outcome}')

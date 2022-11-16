@@ -32,7 +32,7 @@ class PerceptionServer():
 
         self.yolo_detect = rospy.ServiceProxy("yolo_object_detection_server/detect_objects", YoloDetection)
         self.face_detect = rospy.ServiceProxy("face_detection_server", FaceDetection)
-        self.recogniser = rospy.ServiceProxy('recognise_people_server', RecognisePeople)
+        self.recogniser_srv = rospy.ServiceProxy('recognise_people_server', RecognisePeople)
 
         self.handler = rospy.Service("lasr_perception_server/detect_objects_image", DetectImage,
                                      self.handle_task)
@@ -40,15 +40,18 @@ class PerceptionServer():
     def detect_image(self, req):
         print(req.task, 'the task')
         if len(req.filter):
-            return DetectImageResponse(
-                [det for det in self.yolo_detect(req.image[0], req.dataset, req.confidence, req.nms).detected_objects if
-                 det.name in req.filter])
+            print('in the yolo filter')
+            print(self.yolo_detect(req.image[0], req.dataset, req.confidence, req.nms).detected_objects)
+            print('in the yolo filter')
+            resp = [det for det in self.yolo_detect(req.image[0], req.dataset, req.confidence, req.nms).detected_objects if
+                 det.name in req.filter]
+            return DetectImageResponse(resp)
         else:
             return DetectImageResponse(
                 self.yolo_detect(req.image[0], req.dataset, req.confidence, req.nms).detected_objects)
 
     def face_detection(self, req):
-        if len(req.image) > 0:
+        if isinstance(req.image, list):
             detected_obj = []
             for i in req.image:
                 detected_obj.append(self.face_detect(i).detected_objects)
@@ -69,17 +72,17 @@ class PerceptionServer():
                 # take opencv detection
                 detected_obj_open_cv.append(self.face_detect(i).detected_objects)
                 # take yolo detection
-                detected_obj_yolo.append(self.yolo_detect(i, req.dataset, req.confidence, req.nms).detected_objects)
-            # flat_list = [item for sublist in detected_obj for item in sublist]
-            # print(type(detected_obj_yolo))
-            print('i am breaking here')
-            print(detected_obj_yolo)
-            req = RecognisePeopleRequest()
-            req.detected_objects_yolo = detected_obj_yolo
-            req.detected_objects_opencv = detected_obj_open_cv
+                # detected_obj_yolo.append(self.yolo_detect(i, req.dataset, req.confidence, req.nms).detected_objects)
+                detected_obj_yolo.append(det for det in self.yolo_detect(req.image[0], req.dataset, req.confidence, req.nms).detected_objects if
+                    det.name in req.filter)
 
-            return DetectImageResponse([])
-            # print(len(self.recogniser(req).detected_objects))
+
+            resp = RecognisePeopleRequest()
+            detected_obj_yolo = [item for sublist in detected_obj_yolo for item in sublist]
+            detected_obj_open_cv = [item for sublist in detected_obj_open_cv for item in sublist]
+            resp.detected_objects_yolo = detected_obj_yolo
+            resp.detected_objects_opencv = detected_obj_open_cv
+            return DetectImageResponse(self.recogniser_srv(resp).detected_objects)
         else:
             resp = self.face_detect(req.image).detected_objects
             return DetectImageResponse(resp)
@@ -95,15 +98,12 @@ class PerceptionServer():
 
     def handle_task(self, req):
         resp = None
-        print("IA AM IN HANDLING TASKS")
         if req.task == 'open_cv':
             resp = self.face_detection(req)
         elif req.task == 'known_people':
-            print('tea time')
             resp = self.face_and_yolo(req)
         else:
             resp = self.detect_image(req)
-        print(resp, 'printing resp')
         return resp
 
 
