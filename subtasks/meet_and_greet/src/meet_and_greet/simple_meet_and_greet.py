@@ -61,7 +61,10 @@ class SimpleMeetGreet:
                     print('hi, ', human.name)
             if counter > 0:
                 # self.voice.sync_tts(' there are new people. I have not met ' + str(counter) + 'people')
-                print(' there are new people. I have not met ' + str(counter) + 'people')
+                if counter == 1:
+                    print(' there are new people. I have not met you before')
+                else:
+                    print(' there are new people. I have not met ' + str(counter) + 'people')
 
 
 
