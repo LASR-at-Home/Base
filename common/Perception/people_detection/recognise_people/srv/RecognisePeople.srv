@@ -1,0 +1,4 @@
+lasr_perception_server/Detection[] detected_objects_yolo
+lasr_perception_server/Detection[] detected_objects_opencv
+---
+lasr_perception_server/Detection[] detected_objects
