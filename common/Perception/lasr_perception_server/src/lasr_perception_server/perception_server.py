@@ -25,7 +25,6 @@ import rospkg
 # and then give it to everything else! or move the head in another pos
 # decide pcl or not
 # TODO: refactor to call an outside function
-# def rotate(self, head_controller):
 class PerceptionServer():
 
     def __init__(self):
@@ -37,12 +36,9 @@ class PerceptionServer():
         self.handler = rospy.Service("lasr_perception_server/detect_objects_image", DetectImage,
                                      self.handle_task)
 
-    def detect_image(self, req):
+    def yolo_detection(self, req):
         print(req.task, 'the task')
         if len(req.filter):
-            print('in the yolo filter')
-            print(self.yolo_detect(req.image[0], req.dataset, req.confidence, req.nms).detected_objects)
-            print('in the yolo filter')
             resp = [det for det in self.yolo_detect(req.image[0], req.dataset, req.confidence, req.nms).detected_objects if
                  det.name in req.filter]
             return DetectImageResponse(resp)
@@ -55,7 +51,6 @@ class PerceptionServer():
             detected_obj = []
             for i in req.image:
                 detected_obj.append(self.face_detect(i).detected_objects)
-                print('printing detected obj', detected_obj)
             flat_list = [item for sublist in detected_obj for item in sublist]
             return DetectImageResponse(flat_list)
 
@@ -72,7 +67,6 @@ class PerceptionServer():
                 # take opencv detection
                 detected_obj_open_cv.append(self.face_detect(i).detected_objects)
                 # take yolo detection
-                # detected_obj_yolo.append(self.yolo_detect(i, req.dataset, req.confidence, req.nms).detected_objects)
                 detected_obj_yolo.append(det for det in self.yolo_detect(req.image[0], req.dataset, req.confidence, req.nms).detected_objects if
                     det.name in req.filter)
 
@@ -102,8 +96,8 @@ class PerceptionServer():
             resp = self.face_detection(req)
         elif req.task == 'known_people':
             resp = self.face_and_yolo(req)
-        else:
-            resp = self.detect_image(req)
+        elif req.task == 'yolo':
+            resp = self.yolo_detection(req)
         return resp
 
 

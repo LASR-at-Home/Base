@@ -3,7 +3,7 @@
     <rosparam command="load" file="$(find meet_and_greet)/config/map_points.yaml" />
     <node pkg="lasr_object_detection_yolo" name="yolo_object_detection_server" type="yolo_object_detection_server.py"/>
     <node pkg="face_detection" name="face_detection_server" type="face_detection_server.py"/>
-<!--     <node pkg="recognise_people" name="recognise_people" type="recognise_people_srv.py"/> -->
+    <node pkg="recognise_people" name="recognise_people" type="recognise_people_srv.py"/>
     <node pkg="lasr_perception_server" name="perception_server" type="perception_server.py"/>
 
 </launch>

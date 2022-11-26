@@ -20,7 +20,6 @@ class ExploreSurroundingsState(smach.State):
         self.map_points = ['/point1', '/point2'] # pos on map
 
     def execute(self, userdata):
-        # return 'finished_exploring'
         # wonder between points
         index = 0
         while not rospy.is_shutdown():
@@ -38,7 +37,6 @@ class ExploreSurroundingsState(smach.State):
                     index = 0
                 else:
                     index = 1
-                # rospy.sleep(10)
 
 
 if __name__ == '__main__':

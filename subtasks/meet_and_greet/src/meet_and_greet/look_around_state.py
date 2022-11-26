@@ -31,17 +31,6 @@ class LookAroundState(smach.State):
             imgs.append(rospy.wait_for_message("/xtion/rgb/image_raw", Image))
             rate.sleep()
 
-        # # * show the output image
-        # print("I GOT HERE!!! ------------------------------")
-        bridge = CvBridge()
-        cv_image = bridge.imgmsg_to_cv2(imgs[0], desired_encoding='passthrough')
-        # # cv2.imshow("Image", cv_image)
-        path_output = os.path.join(rospkg.RosPack().get_path('face_detection'), "output")
-        cv2.imwrite(path_output + "/images/random" +".jpg", cv_image)
-        # cv2.waitKey(0)
-        # print("DETECTION TIME!!! ------------------------------")
-        # # * show the output image
-
         det = rospy.ServiceProxy("lasr_perception_server/detect_objects_image", DetectImage)
         resp = det(imgs, "coco", 0.7, 0.3, ["person"],'known_people').detected_objects
         return resp
