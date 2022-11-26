@@ -1,0 +1,8 @@
+<launch>
+    <node pkg="robocup_receptionist" name="navigation_master" type="navigation_master.py" required="true" output="screen"/>
+    
+    <!--RGBD Scan-->
+    <include file="$(find lasr_rgbd_scan)/launch/lasr_rgbd_scan.launch" /> 
+
+    <include file="$(find point_to_person)/launch/point_to_person.launch" />
+</launch>
