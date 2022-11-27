@@ -5,7 +5,11 @@ import rospy
 from tiago_controllers.helpers import is_running, is_terminated
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from actionlib_msgs.msg import GoalStatus
-from geometry_msgs.msg import PoseWithCovarianceStamped
+from geometry_msgs.msg import PoseWithCovarianceStamped, Pose, Point, Quaternion
+from tiago_controllers.base_planner import plan_to_radius as _plan_to_radius
+from math import atan2, radians
+from geometry_msgs.msg import Twist
+from common_math.transformations import quaternion_from_euler
 
 
 class BaseController:
@@ -74,10 +78,6 @@ class BaseController:
         return state
 
 
-from geometry_msgs.msg import Twist
-from math import radians
-
-
 class CmdVelController:
     def __init__(self):
         self._vel_pub = rospy.Publisher('mobile_base_controller/cmd_vel', Twist, queue_size=1)
@@ -112,3 +112,45 @@ class CmdVelController:
             t1 = rospy.Time.now().to_sec()
             curr_dist = curr_dist + speed * (t1 - t0)
             self._vel_pub.publish(vel_msg)
+
+
+class ReachToRadius(BaseController):
+    def __init__(self):
+        pass
+
+    def sync_to_radius(self, x, y, radius=0.5, tol=0.1):
+        points = self.plan_to_radius(x, y, radius, tol)
+        print(points)
+        for point in points:
+            print(point)
+            result = self.sync_to_pose(point)
+            if result:
+                return result
+
+    def plan_to_radius(self, x, y, radius=0.5, tol=0.1):
+        robot_x, robot_y, quaternion = self.get_current_pose()
+
+        return _plan_to_radius(
+            Pose(
+                position=Point(robot_x, robot_y, 0.0),
+                orientation=quaternion
+            ),
+            (x, y), radius, tol
+        )
+
+    def sync_face_to(self, x, y):
+        return self.sync_to_pose(self.compute_face_quat(x, y))
+
+    def compute_face_quat(self, x, y):
+        robot_x, robot_y, quat = self.get_current_pose()
+
+        dist_x = x - robot_x
+        dist_y = y - robot_y
+        angle = atan2(dist_y, dist_x)
+
+        (x, y, z, w) = quaternion_from_euler(0, 0, angle)
+        quaternion = Quaternion(x, y, z, w)
+
+        pose = Pose(position=Point(robot_x, robot_y, 0.0), orientation=quaternion)
+
+        return pose
