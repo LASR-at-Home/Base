@@ -20,6 +20,7 @@ from lasr_perception_server.msg import Detection
 
 import nvidia_smi
 
+
 MODEL_ROOT = os.path.join(rospkg.RosPack().get_path('lasr_object_detection_yolo'), 'models')
 
 
@@ -104,6 +105,7 @@ class YoloObjectDetectionServer():
         # Only load model if it is not already loaded.
         if not self.model_name == req.dataset:
             if not self.load_model(req.dataset):
+                print('i fail in loading the coco model, you probably dont have the model')
                 # If loading the model fails, then return an empty response.
                 return response
         
@@ -159,7 +161,7 @@ class YoloObjectDetectionServer():
                             xywh=xywh
                         )
                     )
-
+        print(response.detected_objects, 'i am in yolo detect ')
         return response
 
 if __name__ == '__main__':        
@@ -168,3 +170,6 @@ if __name__ == '__main__':
     serv = rospy.Service('yolo_object_detection_server/detect_objects', YoloDetection, server.detect)
     rospy.loginfo('YOLOv4 object detection service initialised')
     rospy.spin()
+
+
+

@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 import rospy
-from tiago_controllers.base_controller import BaseController, CmdVelController
-from tiago_controllers.head_controller import HeadController
-from tiago_controllers.look_at import LookAt
-from lasr_voice.voice import Voice
+from tiago_controllers.controllers.base_controller import CmdVelController
+# from tiago_controllers.head_controller import HeadController
+from tiago_controllers.controllers.look_at import LookAt
+# from lasr_voice.voice import Voice
 from tiago_controllers.helpers import get_pose_from_param
 from lasr_object_detection_yolo.detect_objects import detect_objects
+from tiago_controllers.controllers import Controllers
 
 # TODO: make statemachine
 # TODO: add simulation:= true/false in launch file
@@ -16,8 +17,9 @@ VERTICAL = 0.3
 
 class FindPersonAndAsk:
     def __init__(self):
-        self.base_controller = BaseController()
-        self.head_controller = HeadController()
+        self.controllers = Controllers()
+        self.base_controller = self.controllers.base_controller
+        self.head_controller = self.controllers.head_controller
         self.cmd_vel_controller = CmdVelController()
 
         self.head_controller.sync_reach_to(0, 0)  # start by centering the head
@@ -59,13 +61,13 @@ class FindPersonAndAsk:
                     look_at = LookAt(self.head_controller, self.base_controller, self.cmd_vel_controller, "person")
                     look_at.look_at(closest_person.xywh, head_rot)
                     print("CAN YOU PLEASE OPEN THE DOOR")
-                    # self.voice.sync_tts("Can you please open the door for me?")
+                    self.voice.sync_tts("Can you please open the door for me?")
                     return
             except TypeError:
                 cmd_vel.rotate(60, 360/turns, True)
 
         print("I CANT SEE ANYONE")
-        # self.voice.sync_tts("I can't see anyone!")
+        self.voice.sync_tts("I can't see anyone!")
 
 
 if __name__ == '__main__':

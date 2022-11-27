@@ -1,0 +1,5 @@
+float32 torso_goals
+float32[] arm_goals
+bool plan
+---
+bool result

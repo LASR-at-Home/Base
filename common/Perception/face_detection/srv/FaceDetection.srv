@@ -1,0 +1,3 @@
+sensor_msgs/Image image_raw
+---
+lasr_perception_server/Detection[] detected_objects
