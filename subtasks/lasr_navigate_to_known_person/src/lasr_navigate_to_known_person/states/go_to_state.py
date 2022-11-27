@@ -2,10 +2,10 @@
 import rospy
 import smach
 from tiago_controllers.utils import activate_robot_navigation
-
+from tiago_controllers.controllers import ReachToRadius
 
 class GoTo(smach.State):
-    def __init__(self, base_controller):
+    def __init__(self, base_controller: ReachToRadius):
         smach.State.__init__(self, outcomes=['succeeded', 'failed'], input_keys=['location', 'prev'],
                              output_keys=['prev'])
         self.base_controller = base_controller

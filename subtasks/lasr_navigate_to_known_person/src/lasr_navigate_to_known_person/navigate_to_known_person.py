@@ -1,69 +1,45 @@
 #!/usr/bin/env python3
 import rospy
 import smach
+from lasr_navigate_to_known_person.states import GoTo, Scan
+from tiago_controllers.controllers import ReachToRadius, HeadController
 
-class ScanAndGoToHostSM():
-    def __init__(self, base_controller, head_controller):
-        self.s m =smach.StateMachine(outcomes=['succeeded', 'failed'], input_keys=['guest_list'], output_keys=['guest_list'])
 
-        if rospy.has_param('/room'):
-            pose = rospy.get_param('/room')
-        else:
-            pose = {
-                'position' : {
-                    'x' : 2.91,
-                    'y' : -2.12,
-                    'z' : 0
-                },
-                'orientation' : {
-                    'x' : 0,
-                    'y' : 0,
-                    'z' : 0.7,
-                    'w' : 0.7
-                }
-            }
-        self.sm.userdata.location = Pose(Point(pose['position']['x'],
-                                               pose['position']['y'],
-                                               pose['position']['z']),
-                                         Quaternion(pose['orientation']['x'],
-                                                    pose['orientation']['y'],
-                                                    pose['orientation']['z'],
-                                                    pose['orientation']['w']))
-
-        self.sm.userdata.prev = 'CollectInfoAndScan'
+class ScanAndGoTo(smach.StateMachine):
+    def __init__(self, base_controller: ReachToRadius, head_controller: HeadController):
+        smach.StateMachine.__init__(self, outcomes=['succeeded', 'failed'])
 
         self.base_controller = base_controller
         self.head_controller = head_controller
+        self.userdata.prev = 'Scan'
 
-        with self.sm:
-            self.sm.add('GO_TO_ROOM', GoTo(self.base_controller),
-                        transitions={
-                            'succeeded' : 'SCAN_ROOM',
-                            'failed'    : 'failed'
-                        },
-                        remapping={
-                            'location': 'location',
-                            'prev' : 'prev'
-                        })
+        with self:
+            smach.StateMachine.add('SCAN_ROOM', Scan(self.head_controller),
+                                   transitions={
+                                       'succeeded': 'GO_TO_HOST',
+                                       'failed': 'failed'
+                                   },
+                                   remapping={
+                                       'location': 'location',
+                                       'prev': 'prev'
+                                   })
+
+            smach.StateMachine.add('GO_TO_HOST', GoTo(self.base_controller),
+                                   transitions={
+                                       'succeeded': 'succeeded',
+                                       'failed': 'failed'
+                                   },
+                                   remapping={
+                                       'location': 'location',
+                                       'prev': 'prev'
+                                   })
 
 
-            self.sm.add('SCAN_ROOM', Scan(self.head_controller),
-                        transitions={
-                            'succeeded' : 'GO_TO_HOST',
-                            'failed'    : 'failed'
-                        },
-                        remapping={
-                            'location': 'location',
-                            'prev' : 'prev'
-                        })
-
-
-            self.sm.add('GO_TO_HOST', GoTo(self.base_controller),
-                        transitions={
-                            'succeeded' : 'succeeded',
-                            'failed'    : 'failed'
-                        },
-                        remapping={
-                            'location': 'location',
-                            'prev' : 'prev'
-                        })
+if __name__ == '__main__':
+    rospy.init_node("navigate_to_person_node", anonymous=True)
+    base_controller = ReachToRadius()
+    head_controller = HeadController()
+    sm = ScanAndGoTo(base_controller, head_controller)
+    outcome = sm.execute()
+    rospy.loginfo('I have completed execution with outcome: ')
+    rospy.loginfo(outcome)
