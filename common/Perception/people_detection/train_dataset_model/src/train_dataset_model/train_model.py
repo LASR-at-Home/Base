@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from sklearn.preprocessing import LabelEncoder
 from sklearn.svm import SVC
 import pickle

@@ -2,11 +2,10 @@
 
 import rospy
 import rosservice
-from geometry_msgs.msg import Pose, PoseWithCovarianceStamped, Point, Quaternion, PoseStamped, Vector3
+from geometry_msgs.msg import Pose, Point, PoseStamped
 from std_msgs.msg import Header
 from nav_msgs.srv import GetPlan
 import numpy as np
-from nav_msgs.msg import Path
 from visualization_msgs.msg import Marker
 
 
