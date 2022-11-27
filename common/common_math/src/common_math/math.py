@@ -5,7 +5,7 @@ import numpy as np
 import ros_numpy as rnp
 from geometry_msgs.msg import PointStamped, Point
 from std_msgs.msg import Header
-from robocup_receptionist.srv import TfTransform, TfTransformRequest
+from common_math.srv import TfTransform, TfTransformRequest
 
 def pcl_msg_to_cv2(pcl_msg):
     """
