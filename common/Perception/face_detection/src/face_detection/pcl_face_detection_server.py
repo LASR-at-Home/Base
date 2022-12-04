@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-from genericpath import exists
+# from genericpath import exists
 import rospy
 import rospkg
 
-from face_detection.srv import FaceDetection, FaceDetectionResponse, \
-    FaceDetectionRequest, FaceDetectionPCL, FaceDetectionPCLResponse
+from face_detection.srv import FaceDetectionPCL, FaceDetectionPCLResponse, FaceDetectionPCLRequest
 import os
 import numpy as np
 import cv2
@@ -13,7 +12,7 @@ import imutils
 from cv_bridge3 import CvBridge
 from common_math import bb_to_centroid
 
-from lasr_perception_server.msg import Detection, DetectionPCL
+from lasr_perception_server.msg import DetectionPCL
 
 NET = os.path.join(rospkg.RosPack().get_path('face_detection'), 'nn4', "nn4.small2.v1.t7")
 PROTO_PATH = os.path.join(rospkg.RosPack().get_path('face_detection'), 'caffe_model', "deploy.prototxt")
@@ -68,23 +67,18 @@ class FaceDetectionServer:
                 raise rospy.ServiceException("No model to load from.")
 
         # Construct empty response.
-        if isinstance(req, FaceDetectionRequest):
-            response = FaceDetectionResponse()
+        if not isinstance(req, FaceDetectionPCLRequest):
+            raise rospy.ServiceException("Wrong request type.")
 
-            # Convert sensor_msgs/Image to cv2 image.
-            print('i am here')
-            cv_image = self.bridge.imgmsg_to_cv2_np(req.image_raw)
+        response = FaceDetectionPCLResponse()
 
-        else:
-            response = FaceDetectionPCLResponse()
+        # Extract rgb image from pointcloud
+        cv_image = np.fromstring(req.cloud.data, dtype=np.uint8)
+        cv_image = cv_image.reshape(req.cloud.height, req.cloud.width, 32)
+        cv_image = cv_image[:, :, 16:19]
 
-            # Extract rgb image from pointcloud
-            cv_image = np.fromstring(req.cloud.data, dtype=np.uint8)
-            cv_image = cv_image.reshape(req.cloud.height, req.cloud.width, 32)
-            cv_image = cv_image[:, :, 16:19]
-
-            # Ensure array is contiguous
-            cv_image = np.ascontiguousarray(cv_image, dtype=np.uint8)
+        # Ensure array is contiguous
+        cv_image = np.ascontiguousarray(cv_image, dtype=np.uint8)
 
         # Resize for input to the network.
         cv_image = imutils.resize(cv_image, width=600)
@@ -143,22 +137,21 @@ class FaceDetectionServer:
                 j = np.argmax(predictions)
                 prob = predictions[j]
                 name = self.le.classes_[j]
-                print(name, prob, 'hello there')
-
                 # Append the detection to the response.
-                if isinstance(req, FaceDetectionRequest):
-                    response.detected_objects.append(Detection(name, prob, [x1, y1, x2, y2]))
-                else:
-                    centroid = bb_to_centroid(req.cloud, x1, y1, x2 - x1, y2 - y1)
-                    response.detections.append(DetectionPCL(name, prob, [x1, y1, x2, y2], centroid))
-        # print('the resp is ', response)
+
+                centroid = bb_to_centroid(req.cloud, x1, y1, x2 - x1, y2 - y1)
+                curr_detection = DetectionPCL()
+                curr_detection.name = name
+                curr_detection.confidence = prob
+                curr_detection.bb = [x1, y1, x2, y2]
+                curr_detection.centroid = centroid
+                response.detections.append(curr_detection)
         return response
 
 
 if __name__ == "__main__":
-    rospy.init_node("face_detection_server")
+    rospy.init_node("pcl_face_detection_server")
     server = FaceDetectionServer()
-    # service = rospy.Service('face_detection_server', FaceDetection, server)
-    service_pcl = rospy.Service('face_detection_pcl', FaceDetectionPCL, server)
+    service_pcl = rospy.Service('pcl_face_detection_server', FaceDetectionPCL, server)
     rospy.loginfo("Face Detection Service initialised")
     rospy.spin()
