@@ -39,7 +39,14 @@ if __name__ == '__main__':
     rospy.init_node("navigate_to_person_node", anonymous=True)
     base_controller = ReachToRadius()
     head_controller = HeadController()
-    sm = ScanAndGoTo(base_controller, head_controller)
+    sm = smach.StateMachine(outcomes=['success', 'no_people'])
+
+    with sm:
+        smach.StateMachine.add('SCAN_AND_GO_TO',
+                               ScanAndGoTo(base_controller, head_controller),
+                               transitions={'succeeded': 'success',
+                                            'failed': 'SCAN_AND_GO_TO'})
+
     outcome = sm.execute()
     rospy.loginfo('I have completed execution with outcome: ')
     rospy.loginfo(outcome)
