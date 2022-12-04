@@ -13,8 +13,8 @@ class Scan(smach.State):
         smach.State.__init__(self, outcomes=['succeeded', 'failed'], input_keys=['prev'],
                              output_keys=['location', 'prev'])
         self.head_controller = head_controller
-        rospy.wait_for_service("face_detection_pcl")
-        self.face_detection = rospy.ServiceProxy("face_detection_pcl", FaceDetectionPCL)
+        rospy.wait_for_service("pcl_face_detection_server")
+        self.face_detection = rospy.ServiceProxy("pcl_face_detection_server", FaceDetectionPCL)
 
     def execute(self, userdata):
         userdata.prev = 'Scan'
@@ -34,11 +34,12 @@ class Scan(smach.State):
             pcl_msg = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
 
             resp = self.face_detection(pcl_msg)
+            print(resp, "my response")
             if resp.detections:
                 for detection in resp.detections:
-                    print(detection.name)
-                    if detection.name == "man_doll":
-                        print(detection.centroid.point)
-                        userdata.location = Pose(detection.centroid.point, Quaternion(0, 0, 0, 1))
-                        return 'succeeded'
+                    # print(detection.name)
+                    # if detection.name == "female_doll":
+                    print(detection.centroid.point)
+                    userdata.location = Pose(detection.centroid.point, Quaternion(0, 0, 0, 1))
+                    return 'succeeded'
         return 'failed'
