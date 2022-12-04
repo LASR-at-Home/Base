@@ -11,6 +11,9 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   std_msgs
   message_generation
+  geometry_msgs
+  sensor_msgs
+  std_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -57,6 +60,7 @@ catkin_python_setup()
 add_service_files(
    FILES
    ArmTorsoPos.srv
+   TfTransform.srv
 )
 
 ## Generate actions in the 'action' folder
@@ -69,6 +73,8 @@ add_service_files(
 ## Generate added messages and services with any dependencies listed here
 generate_messages(
   DEPENDENCIES
+  geometry_msgs
+  sensor_msgs
   std_msgs  # Or other packages containing msgs
 )
 
