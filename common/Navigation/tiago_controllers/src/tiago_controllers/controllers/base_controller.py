@@ -15,17 +15,17 @@ from common_math.transformations import quaternion_from_euler
 class BaseController:
     def __init__(self):
         self._goal_sent = False
-        self._client = actionlib.SimpleActionClient("move_base", MoveBaseAction)
-        self._client.wait_for_server()
+        self.__client = actionlib.SimpleActionClient("move_base", MoveBaseAction)
+        self.__client.wait_for_server()
 
     def cancel_goal(self):
         if self._goal_sent is True:
-            state = self._client.get_state()
+            state = self.__client.get_state()
             if state == GoalStatus.PENDING or state == GoalStatus.ACTIVE:
-                self._client.cancel_goal()
+                self.__client.cancel_goal()
             while True:
-                if (self._client.get_state() in [GoalStatus.PREEMPTED, GoalStatus.ABORTED, GoalStatus.REJECTED,
-                                                 GoalStatus.RECALLED, GoalStatus.SUCCEEDED]):
+                if (self.__client.get_state() in [GoalStatus.PREEMPTED, GoalStatus.ABORTED, GoalStatus.REJECTED,
+                                                  GoalStatus.RECALLED, GoalStatus.SUCCEEDED]):
                     break
                 rospy.sleep(0.5)
                 self._goal_sent = False
@@ -38,16 +38,16 @@ class BaseController:
         return x, y, quat
 
     def is_running(self):
-        return is_running(self._client)
+        return is_running(self.__client)
 
     def get_status(self):
-        return self._client.get_state()
+        return self.__client.get_state()
 
     def is_active(self):
-        return self._client.get_state() == GoalStatus.PENDING or self._client.get_state() == GoalStatus.ACTIVE
+        return self.__client.get_state() == GoalStatus.PENDING or self.__client.get_state() == GoalStatus.ACTIVE
 
     def is_terminated(self):
-        return is_terminated(self._client)
+        return is_terminated(self.__client)
 
     def __to_pose(self, pose, done_cb=None):
         if pose:
@@ -59,20 +59,20 @@ class BaseController:
             rospy.loginfo("base is going to (%.2f, %.2f, %.2f) pose", pose.position.x, pose.position.y, pose.position.z)
 
             self._goal_sent = True
-            self._client.send_goal(goal, done_cb=done_cb)
+            self.__client.send_goal(goal, done_cb=done_cb)
 
     def async_to_pose(self, pose):
         self.__to_pose(pose)
 
     def get_client(self):
-        return self._client
+        return self.__client
 
     def sync_to_pose(self, pose, wait=60):
         self.__to_pose(pose)
-        done = self._client.wait_for_result(rospy.Duration(wait))
+        done = self.__client.wait_for_result(rospy.Duration(wait))
         self._goal_sent = False
 
-        state = self._client.get_state()
+        state = self.__client.get_state()
         if done and state == GoalStatus.SUCCEEDED:
             return True
         return state
@@ -116,7 +116,7 @@ class CmdVelController:
 
 class ReachToRadius(BaseController):
     def __init__(self):
-        pass
+        super().__init__()
 
     def sync_to_radius(self, x, y, radius=0.5, tol=0.1):
         points = self.plan_to_radius(x, y, radius, tol)
