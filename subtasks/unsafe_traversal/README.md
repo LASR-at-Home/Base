@@ -23,3 +23,18 @@ Switch back:
 ```bash
 rosservice call /unsafe_traversal/set_unsafe_traversal false
 ```
+
+Or use the helper script:
+
+```bash
+rosrun unsafe_traversal test_service
+```
+
+## Action Usage
+
+This node provides two actions:
+
+- `/unsafe_traversal/move_to_goal` (`unsafe_traversal.msg.MoveToGoalAction`): move to start pose aligned to the end pose then move to the end pose
+- `/unsafe_traversal/align_to_goal` (`unsafe_traversal.msg.AlignToGoalAction`): align from start pose to end pose
+
+You can test these by editing `test_move_action` or `test_align_action` in the scripts folder.

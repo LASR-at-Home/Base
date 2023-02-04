@@ -54,7 +54,10 @@
   <exec_depend>message_runtime</exec_depend>
   <depend>rospy</depend>
   <depend>rosservice</depend>
+  <depend>actionlib</depend>
   <depend>dynamic_reconfigure</depend>
+  <depend>geometry_msgs</depend>
+  <depend>actionlib_msgs</depend>
 
 
   <!-- The export tag contains other, unspecified, tags -->

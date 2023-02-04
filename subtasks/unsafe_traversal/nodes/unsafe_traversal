@@ -2,8 +2,7 @@
 import rospy
 import rosservice
 from time import sleep
-
-from unsafe_traversal import get_planner_controller
+from unsafe_traversal import get_planner_controller, TraversalActionServer
 from unsafe_traversal.srv import ChangeTraversalParameters, ChangeTraversalParametersRequest, ChangeTraversalParametersResponse
 
 # init node, only one must exist
@@ -14,7 +13,7 @@ controller = get_planner_controller()
 
 # crash out if we can't find a planner
 if controller is None:
-    raise "Could not find an appropriate planner."
+    raise Exception("Could not find an appropriate planner.")
 
 
 # build service
@@ -27,5 +26,11 @@ def set_parameters(request):
 rospy.Service('/unsafe_traversal/set_unsafe_traversal',
               ChangeTraversalParameters, set_parameters)
 
+# start action server
+TraversalActionServer()
+
 # run indefinitely
 rospy.spin()
+
+# restore parameters
+controller.set_unsafe(False)
