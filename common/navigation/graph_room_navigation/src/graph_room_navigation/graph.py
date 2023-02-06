@@ -37,6 +37,7 @@ class Graph:
     def localise(self, x, y):
         for room in self.adjLists.keys():
             if room.isin(x, y):
+                print(room.name)
                 return room
         return None
 
@@ -50,7 +51,6 @@ class Graph:
         if not self.hasVertex(vertex):
             self.size +=1
             self.adjLists[vertex] = []
-            print(self.adjLists)
             return True
         else:
             return False
@@ -71,22 +71,44 @@ class Graph:
         For now, simple dfs. In future, extend to Dijkstra's?
         """
         if visited is None:
-            visited = set()
-        visited.add(u)
+            visited = []
+        if not u in visited:
+            visited.append(u)
         if u == v:
-            print("==")
             return visited
         for x in self.adjLists[u]:
             if not x in visited:
                 self.dfs(x, v, visited=visited)
         return visited
     
+    def bfs(self, u, v):
+        # maintain a queue of paths
+        queue = []
+        # push the first path into the queue
+        queue.append([u])
+        while queue:
+            # get the first path from the queue
+            path = queue.pop(0)
+            # get the last node from the path
+            node = path[-1]
+            # path found
+            if node == v:
+                return path
+            # enumerate all adjacent nodes, construct a 
+            # new path and push it into the queue
+            for adjacent in self.adjLists[node]:
+                new_path = list(path)
+                new_path.append(adjacent)
+                queue.append(new_path)
+
     def points_from_path(self, path):
+        print([p.name for p in path])
         points = []
-        for u, v in zip(list(path)[:-1],list(path)[1:]):
+        for u, v in zip(list(path),list(path)[1:]):
+            print(u.name, v.name)
             points.append(u.doorways[v])
             points.append(v.doorways[u])
-        return points[:1]
+        return points
                
 
 if __name__ == "__main__":
