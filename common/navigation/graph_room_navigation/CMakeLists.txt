@@ -58,7 +58,8 @@ add_service_files(
    FILES
    AddRoom.srv
    AddCrossing.srv
-   PlanToRoom.srv
+   PlanToRoom.srv 
+   PlanToPose.srv
 )
 
 ## Generate actions in the 'action' folder

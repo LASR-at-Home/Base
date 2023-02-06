@@ -2,7 +2,7 @@
 import rospy
 
 from graph_room_navigation import Graph, Room
-from graph_room_navigation.srv import AddRoom, AddRoomResponse, AddCrossing, AddCrossingResponse, PlanToRoom, PlanToRoomResponse
+from graph_room_navigation.srv import AddRoom, AddRoomResponse, AddCrossing, AddCrossingResponse, PlanToRoom, PlanToRoomResponse, PlanToPose, PlanToPoseResponse
 from geometry_msgs.msg import PoseWithCovarianceStamped, Point
 class GraphNavigationServer():
 
@@ -36,6 +36,17 @@ class GraphNavigationServer():
             response.success = True
         return response
 
+    def plan_to_pose(self, req):
+        """
+        Given a pose, generate a plan to that pose.
+        """
+        response = PlanToRoomResponse()
+        path = self.graph.points_from_path(self.graph.dfs(self.current_room()), self.graph.localise(req.x, req.y))
+        response.points = [Point(*p, 0) for p in path]
+        if path:
+            response.success = True
+        return response
+    
     def current_room(self):
         robot_pose = rospy.wait_for_message("/robot_pose", PoseWithCovarianceStamped)
         x = robot_pose.pose.pose.position.x
