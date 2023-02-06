@@ -1,0 +1,9 @@
+# first point to start at
+geometry_msgs/PoseStamped start_pose
+
+# second point to move to
+geometry_msgs/PoseStamped end_pose
+---
+# empty result
+---
+# empty feedback
