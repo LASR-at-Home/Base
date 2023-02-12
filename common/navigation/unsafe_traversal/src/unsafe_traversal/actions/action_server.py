@@ -43,10 +43,15 @@ class TraversalActionServer(MoveBaseClient):
         '''
 
         align_poses(msg.start_pose, msg.end_pose)
-
+        print('align poses')
         self.move(msg.start_pose)
+        print('move to start')
+
         self._proxy(True)
+        print('after proxy true')
         self.move(msg.end_pose)
+        print('move to end')
         self._proxy(False)
+        print('after proxy false')
 
         self._move_server.set_succeeded(MoveToGoalResult())
