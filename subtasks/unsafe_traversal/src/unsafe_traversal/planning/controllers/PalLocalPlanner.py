@@ -1,6 +1,7 @@
 from ..controller import PlannerController
 from ...parameter_controller import ParameterOverrideController
 
+TARGET_MAX_VEL_X = 0.2
 TARGET_SECURITY_DIST = 0.015
 TARGET_INFLATION_RADIUS = 0.08
 
@@ -23,6 +24,8 @@ class PalPlannerController(PlannerController):
         if unsafe:
             self.planner_overrides.set_double_param(
                 'security_dist', TARGET_SECURITY_DIST)
+            self.planner_overrides.set_double_param(
+                'max_vel_x', TARGET_MAX_VEL_X)
             self.global_costmap_overrides.set_double_param(
                 'inflation_radius', TARGET_INFLATION_RADIUS)
         else:

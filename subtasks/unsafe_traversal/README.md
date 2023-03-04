@@ -8,7 +8,7 @@ rosrun unsafe_traversal unsafe_traversal
 
 > **Warning** Any interactions with this node should be done in a "stop the world" fashion whereby all other processes which have the potential to move the robot must cease in order to minimise the potential of a crash.
 
-> **Warning** ❗ This service does not currently tuck the arm or change the speed of the robot.
+> **Warning** ❗ This service does not currently tuck the arm.
 
 ## Basic Service Usage
 
