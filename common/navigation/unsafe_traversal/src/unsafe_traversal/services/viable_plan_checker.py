@@ -56,7 +56,7 @@ class ViablePlanCheckerService:
         # calculate the distance of the plan
         dist = 0
         for cur, next in zip(plan.poses, plan.poses[1:]):
-            dist += self.euclid_dist(cur.pose.position, next.pose.position)
+            dist += euclidian(cur.pose.position, next.pose.position)
 
         # calculate our target distance
         max_dist = euclidian(request.start_pose.pose.position, request.end_pose.pose.position)

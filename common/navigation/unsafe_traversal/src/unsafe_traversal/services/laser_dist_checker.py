@@ -85,5 +85,5 @@ class LaserDistCheckerService:
         """
         scan = rospy.wait_for_message(self.laser_topic, LaserScan)
         filtered_scan = self.filter_by_fov_degrees(scan, req.fov_degrees)
-        mean_distance = self.nanmean_without_outliers(filtered_scan.ranges)
+        mean_distance = self.nanmean_without_outliers(np.array(filtered_scan.ranges))
         return LaserDistResponse(mean_distance)

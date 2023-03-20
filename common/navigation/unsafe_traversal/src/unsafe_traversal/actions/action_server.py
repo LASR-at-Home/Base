@@ -55,9 +55,9 @@ class TraversalActionServer(MoveBaseClient):
         self.move(msg.start_pose)
 
         viable = self.viable_plan_srv(msg.start_pose, msg.end_pose).viable
-        laser_dist = self.laser_dist_srv(60.)
+        laser_dist = self.laser_dist_srv(60.).dist
 
-        if not viable or laser_dist < .8 * euclidian(msg.start_pose.position, msg.end_pose.position):
+        if not viable or laser_dist < .8 * euclidian(msg.start_pose.pose.position, msg.end_pose.pose.position):
             result.success = False
             self._move_server.set_aborted(result)
             return result
