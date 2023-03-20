@@ -15,6 +15,7 @@ find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   actionlib_msgs
   actionlib
+  nav_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -61,6 +62,7 @@ catkin_python_setup()
 add_service_files(
   FILES
   ChangeTraversalParameters.srv
+  DeterminePathViability.srv
 )
 
 ## Generate actions in the 'action' folder
@@ -169,6 +171,7 @@ catkin_install_python(PROGRAMS
   scripts/test_service
   scripts/test_move_action
   scripts/test_align_action
+  scripts/test_viability_service
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

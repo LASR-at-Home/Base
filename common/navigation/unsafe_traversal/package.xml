@@ -58,6 +58,7 @@
   <depend>dynamic_reconfigure</depend>
   <depend>geometry_msgs</depend>
   <depend>actionlib_msgs</depend>
+  <depend>nav_msgs</depend>
 
 
   <!-- The export tag contains other, unspecified, tags -->
