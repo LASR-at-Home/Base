@@ -1,10 +1,11 @@
 import rospy
 import actionlib
-from unsafe_traversal.srv import ChangeTraversalParameters
+from unsafe_traversal.srv import ChangeTraversalParameters, DeterminePathViability, LaserDist
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from unsafe_traversal.msg import MoveToGoalAction, AlignToGoalAction, MoveToGoalGoal, AlignToGoalGoal, MoveToGoalResult, AlignToGoalResult
 from sensor_msgs.msg import LaserScan
 import numpy as np
+from common_math import euclidian
 
 from ..quaternion import align_poses
 from .move_base_client import MoveBaseClient
@@ -29,6 +30,11 @@ class TraversalActionServer(MoveBaseClient):
         self._align_server.start()
         self._move_server.start()
 
+        self.viable_plan_srv = rospy.ServiceProxy("/unsafe_traversal/check_if_plan_is_viable", DeterminePathViability)
+        self.laser_dist_srv = rospy.ServiceProxy("/unsafe_traversal/laser_dist_checker", LaserDist)
+
+
+
     def align_action_cb(self, msg):
         '''
         Align action server callback
@@ -43,31 +49,22 @@ class TraversalActionServer(MoveBaseClient):
         '''
         Move action server callback
         '''
-        print("in")
         result = MoveToGoalResult()
 
         align_poses(msg.start_pose, msg.end_pose)
-        print('align poses')
         self.move(msg.start_pose)
-        print('at start pose')
 
-        rospy.sleep(3)
+        viable = self.viable_plan_srv(msg.start_pose, msg.end_pose).viable
+        laser_dist = self.laser_dist_srv(60.)
 
-        laser_scan = rospy.wait_for_message("/scan", LaserScan)
-        filtered_ranges = laser_scan.ranges[len(laser_scan.ranges)//3 : 2*len(laser_scan.ranges)//3]
-        mean_distance = np.nanmean(filtered_ranges)
-        print(mean_distance)
-        if mean_distance < 2.0:
+        if not viable or laser_dist < .8 * euclidian(msg.start_pose.position, msg.end_pose.position):
             result.success = False
             self._move_server.set_aborted(result)
             return result
 
         self._proxy(True)
-        print('after proxy true')
         self.move(msg.end_pose)
-        print('move to end')
         self._proxy(False)
-        print('after proxy false')
 
         result.success = True
         self._move_server.set_succeeded(result)

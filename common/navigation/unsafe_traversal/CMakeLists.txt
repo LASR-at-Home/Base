@@ -63,6 +63,7 @@ add_service_files(
   FILES
   ChangeTraversalParameters.srv
   DeterminePathViability.srv
+  LaserDist.srv
 )
 
 ## Generate actions in the 'action' folder

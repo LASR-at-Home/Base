@@ -6,6 +6,7 @@ from ..quaternion import align_poses
 
 from nav_msgs.srv import GetPlan
 from unsafe_traversal.srv import DeterminePathViability
+from common_math import euclidian
 
 MOVE_BASE_TOLERANCE = 0.01
 PLAN_TOLERANCE = 0.01
@@ -58,7 +59,7 @@ class ViablePlanCheckerService:
             dist += self.euclid_dist(cur.pose.position, next.pose.position)
 
         # calculate our target distance
-        max_dist = self.euclid_dist(request.start_pose.pose.position, request.end_pose.pose.position)
+        max_dist = euclidian(request.start_pose.pose.position, request.end_pose.pose.position)
 
         # check if this is within acceptable bounds
         diff = abs(dist - max_dist)
@@ -66,13 +67,3 @@ class ViablePlanCheckerService:
             return True, diff
 
         return False, diff
-    
-    def euclid_dist(self, a, b):
-        '''
-        Get the Euclidean distance between two positions
-        '''
-        return math.sqrt(
-            math.pow(a.x - b.x, 2) +
-            math.pow(a.y - b.y, 2) +
-            math.pow(a.z - b.z, 2)
-        )

@@ -2,7 +2,7 @@
 import rospy
 import rosservice
 from time import sleep
-from unsafe_traversal import get_planner_controller, ViablePlanCheckerService, TraversalActionServer
+from unsafe_traversal import get_planner_controller, ViablePlanCheckerService, TraversalActionServer, LaserDistCheckerService
 from unsafe_traversal.srv import ChangeTraversalParameters, ChangeTraversalParametersRequest, ChangeTraversalParametersResponse
 
 # init node, only one must exist
@@ -16,6 +16,7 @@ if controller is None:
     raise Exception("Could not find an appropriate planner.")
 
 ViablePlanCheckerService()
+LaserDistCheckerService()
 
 # build service
 def set_parameters(request):
