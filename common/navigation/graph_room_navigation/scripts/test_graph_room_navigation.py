@@ -22,10 +22,10 @@ move_to_goal_client.wait_for_server()
 
 
 # add_room("1", Point(-0.35, -3.68, 0.0), Point(4.03, 3.23, 0.0))
-add_room("1", Point(-1.76380491257, -3.56575369835, 0.0), Point(4.3143992424, 7.95149612427, 0.0))
-add_room("2", Point(-4.05348014832, 7.96238422394, 0.0), Point(6.91570901871, 10.0123577118, 0.0))
+add_room("1", Point(-4.09056949615, 7.93803453445, 0.0), Point(6.9501953125, 10.0224742889, 0.0))
+add_room("2", Point(-1.75154161453, -3.51443386078, 0.0), Point(4.0252828598, 7.61349916458, 0.0))
 
-add_doorway("1", Point(1.19725847244, 6.47509098053, 0.0), "2", Point(1.18122410774, 9.49891471863, -0.000810146331787))
+add_doorway("1", Point(1.51952576637, 9.26592350006, 0.0), "2", Point(1.56058132648, 7.16878604889, 0.0))
 
 # add_room("2", Point(1.79, 3.24, 0.0), Point(5.02, 7.77, 0.0))
 # add_room("3", Point(-0.65, 6.53, 0.0), Point(12.32, 29.9, 0.0))
@@ -35,13 +35,23 @@ add_doorway("1", Point(1.19725847244, 6.47509098053, 0.0), "2", Point(1.18122410
 # add_doorway("2", Point(4.62, 7.01, 0.0), "3", Point(4.11, 8.37, 0.0))
 # add_doorway("3", Point(5.14, 27.38, 0.0), "4", Point(4.75, 29.71, 0.0))
 
-plan = plan_to_room("2")
+plan = plan_to_room("1")
 print(plan)
+asked_for_help = False
+tries = 0
+max_tries = 3
+
+phrases = [
+    "Could someone please open this door for me?",
+    "Open sesame",
+    "This door is not going to open itself!"
+]
+
 for p1, p2 in zip(plan.points[0::2], plan.points[1::2]):
 
     result = False
+    tries = 0
     while not result:
-        print("g")
         goal = MoveToGoalGoal()
         goal.start_pose.header.stamp = rospy.get_rostime()
         goal.start_pose.header.frame_id = 'map'
@@ -56,7 +66,13 @@ for p1, p2 in zip(plan.points[0::2], plan.points[1::2]):
         result = move_to_goal_client.get_result().success
 
         if not result:
-            print("This door isn't going to open itself!")
-            rospy.sleep(5)
-
-    # rospy.sleep(5)
+            if not asked_for_help and tries < max_tries:
+                print(phrases[tries])
+                asked_for_help = True
+                tries+=1
+            elif asked_for_help and tries < max_tries:
+                asked_for_help = False
+            elif tries >= max_tries:
+                print("I give up...")
+                exit(0)
+            rospy.sleep(10)
