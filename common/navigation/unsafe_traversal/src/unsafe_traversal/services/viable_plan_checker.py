@@ -57,10 +57,10 @@ class ViablePlanCheckerService:
         # calculate the distance of the plan
         dist = 0
         for cur, next in zip(plan.poses, plan.poses[1:]):
-            dist += euclidian(cur.pose.position, next.pose.position)
+            dist += self.euclidian_distance(cur.pose.position, next.pose.position)
 
         # calculate our target distance
-        max_dist = euclidian(request.start_pose.pose.position, request.end_pose.pose.position)
+        max_dist = self.euclidian_distance(request.start_pose.pose.position, request.end_pose.pose.position)
 
         # check if this is within acceptable bounds
         diff = abs(dist - max_dist)
@@ -68,3 +68,10 @@ class ViablePlanCheckerService:
             return True, diff
 
         return False, diff
+
+    def euclidian_distance(self, a, b):
+        return math.sqrt(
+            math.pow(a.x - b.x, 2) +
+            math.pow(a.y - b.y, 2) +
+            math.pow(a.z - b.z, 2)
+        )
