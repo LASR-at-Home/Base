@@ -26,20 +26,6 @@ add_room("2", Point(-0.149731636047, 8.49707221985, 0.0), Point(12.5422954559, 2
 add_doorway("1", Point(4.10271644592, 8.13961029053, 0.0), "2", Point(3.62456274033, 10.1467380524, 0.0))
 
 
-# add_room("1", Point(-0.35, -3.68, 0.0), Point(4.03, 3.23, 0.0))
-# add_room("1", Point(-4.09056949615, 7.93803453445, 0.0), Point(6.9501953125, 10.0224742889, 0.0))
-# add_room("2", Point(-1.75154161453, -3.51443386078, 0.0), Point(4.0252828598, 7.61349916458, 0.0))
-
-# add_doorway("1", Point(1.51952576637, 9.26592350006, 0.0), "2", Point(1.56058132648, 7.16878604889, 0.0))
-
-# add_room("2", Point(1.79, 3.24, 0.0), Point(5.02, 7.77, 0.0))
-# add_room("3", Point(-0.65, 6.53, 0.0), Point(12.32, 29.9, 0.0))
-# add_room("4", Point(2.36436057091, 28.147977829, 0.0), Point(6.12658166885, 31.6530075073, 0.0))
-
-# add_doorway("1", Point(2.63982193767, 2.27391396633, 0.0), "2", Point(2.33113836267, 3.36879451667, 0.0))
-# add_doorway("2", Point(4.62, 7.01, 0.0), "3", Point(4.11, 8.37, 0.0))
-# add_doorway("3", Point(5.14, 27.38, 0.0), "4", Point(4.75, 29.71, 0.0))
-
 plan = plan_to_room("2")
 print(plan)
 asked_for_help = False
@@ -52,6 +38,8 @@ phrases = [
     "This door is not going to open itself!"
 ]
 
+
+voice = Voice()
 for p1, p2 in zip(plan.points[0::2], plan.points[1::2]):
 
     result = False
@@ -72,12 +60,12 @@ for p1, p2 in zip(plan.points[0::2], plan.points[1::2]):
 
         if not result:
             if not asked_for_help and tries < max_tries:
-                print(phrases[tries])
+                voice.sync_tts(phrases[tries])
                 asked_for_help = True
                 tries+=1
             elif asked_for_help and tries < max_tries:
                 asked_for_help = False
             elif tries >= max_tries:
-                print("I give up...")
+                voice.sync_tts("I give up...")
                 exit(0)
             rospy.sleep(10)
