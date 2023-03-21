@@ -1,3 +1,4 @@
+#!/usr/bin/env python2
 #from abc import ABC, abstractmethod
 
 
@@ -7,5 +8,5 @@ class PlannerController:  # (ABC):
     '''
 
     # @abstractmethod
-    def set_unsafe(self, state: bool):
+    def set_unsafe(self, state):
         pass

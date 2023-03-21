@@ -10,16 +10,13 @@ class PalPlannerController(PlannerController):
     Parameters needed for physical TIAGo robot.
     '''
 
-    planner_overrides: ParameterOverrideController
-    global_costmap_overrides: ParameterOverrideController
-
     def __init__(self):
         self.planner_overrides = ParameterOverrideController(
             "/move_base/PalLocalPlanner")
         self.global_costmap_overrides = ParameterOverrideController(
             "/move_base/global_costmap/inflation_layer")
 
-    def set_unsafe(self, unsafe: bool):
+    def set_unsafe(self, unsafe):
         if unsafe:
             self.planner_overrides.set_double_param(
                 'security_dist', TARGET_SECURITY_DIST)

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python2
 import rospy
 
 from graph_room_navigation import Graph, Room
@@ -32,7 +32,7 @@ class GraphNavigationServer():
         #print(self.graph.dfs(self.current_room().name, req.goal_room))
         path = self.graph.points_from_path(self.graph.bfs(self.current_room(), self.graph.getRoom(req.goal_room)))
         print(path)
-        response.points = [Point(*p, 0) for p in path]
+        response.points = [Point(p[0], p[1], 0) for p in path]
         if path:
             response.success = True
         return response
@@ -43,7 +43,7 @@ class GraphNavigationServer():
         """
         response = PlanToPointResponse()
         path = self.graph.points_from_path(self.graph.bfs(self.current_room(), self.graph.localise(req.goal.x, req.goal.y)))
-        response.points = [Point(*p, 0) for p in path]
+        response.points = [Point(p[0], p[1], 0) for p in path]
         if path:
             response.success = True
         return response

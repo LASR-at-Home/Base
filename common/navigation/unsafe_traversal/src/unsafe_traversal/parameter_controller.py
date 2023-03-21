@@ -1,3 +1,4 @@
+#!/usr/bin/env python2
 import rospy
 # from typing import Set, Tuple
 from dynamic_reconfigure.srv import Reconfigure
@@ -15,7 +16,7 @@ class ParameterOverrideController:
 
     def __init__(self, namespace):
         self.proxy = rospy.ServiceProxy(
-            f'{namespace}/set_parameters', Reconfigure)
+            namespace + '/set_parameters', Reconfigure)
         self.original_values = None
         self.overwritten = set()
 

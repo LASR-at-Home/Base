@@ -9,14 +9,11 @@ class TebPlannerController(PlannerController):
     '''
     Parameters needed for TIAGo simulation.
     '''
-
-    planner_overrides: ParameterOverrideController
-
     def __init__(self):
         self.planner_overrides = ParameterOverrideController(
             "/move_base/TebLocalPlannerROS")
 
-    def set_unsafe(self, unsafe: bool):
+    def set_unsafe(self, unsafe):
         if unsafe:
             self.planner_overrides.set_double_param(
                 'inflation_dist', TARGET_INFLATION_DIST)

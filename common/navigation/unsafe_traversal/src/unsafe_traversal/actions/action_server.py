@@ -1,3 +1,4 @@
+#!/usr/bin/env python2
 import rospy
 import actionlib
 from unsafe_traversal.srv import ChangeTraversalParameters, DeterminePathViability, LaserDist

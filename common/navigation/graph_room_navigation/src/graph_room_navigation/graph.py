@@ -1,9 +1,6 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python2
 
 import numpy as np
-import json
-import rospy
-import rospkg
 class Room:
 
     def __init__(self, name, corners):
@@ -109,12 +106,3 @@ class Graph:
             points.append(u.doorways[v])
             points.append(v.doorways[u])
         return points
-               
-
-if __name__ == "__main__":
-    g = Graph()
-    g.addVertex(Room('room1', [[0, 1], [1,0]]))
-    g.addVertex(Room('room2', [[1, 2], [2,1]]))
-    g.addEdge('room1', 'room2', [69, 70], [70, 69])
-    #print(g.dfs(g.getRoom("room1"), g.getRoom("room2")))
-    print(g.points_from_path(g.dfs(g.getRoom("room1"), g.getRoom("room2"))))

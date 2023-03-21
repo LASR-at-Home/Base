@@ -1,3 +1,4 @@
+#!/usr/bin/env python2
 import rospy
 import numpy as np
 from unsafe_traversal.srv import LaserDist, LaserDistResponse
