@@ -57,8 +57,8 @@ class TraversalActionServer(MoveBaseClient):
 
         viable = self.viable_plan_srv(msg.start_pose, msg.end_pose).viable
         laser_dist = self.laser_dist_srv(60.).dist
-
-        if not viable and laser_dist < 1.5:
+        print(viable, laser_dist)
+        if not viable or laser_dist < 1.5:
             result.success = False
             self._move_server.set_aborted(result)
             return result
