@@ -11,10 +11,12 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   std_msgs
   sensor_msgs
+  message_runtime
+  message_generation
 )
 
 ## System dependencies are found with CMake's conventions
-find_package(catkin REQUIRED COMPONENTS message_generation message_runtime rospy std_msgs)
+# find_package(Boost REQUIRED COMPONENTS system)
 
 
 ## Uncomment this if the package has a setup.py. This macro ensures
