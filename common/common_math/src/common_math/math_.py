@@ -1,8 +1,7 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 import numpy as np
 import rospy
 import numpy as np
-import ros_numpy as rnp
 # from geometry_msgs.msg import PointStamped, Point
 # from std_msgs.msg import Header
 # from robocup_receptionist.srv import TfTransform, TfTransformRequest

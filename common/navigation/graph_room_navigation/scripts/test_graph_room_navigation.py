@@ -3,17 +3,14 @@ import rospy
 from geometry_msgs.msg import Point, Pose, Quaternion, PoseStamped
 from std_msgs.msg import Header
 from graph_room_navigation.srv import AddRoom, AddCrossing, PlanToPoint, PlanToRoom
-from tiago_controllers import BaseController
 import actionlib
 from unsafe_traversal.msg import MoveToGoalAction, MoveToGoalGoal
-from lasr_voice.voice import Voice
 
 rospy.init_node("test_graph_room_navigation")
 add_room = rospy.ServiceProxy("graph_navigation_server/add_room", AddRoom)
 add_doorway = rospy.ServiceProxy("graph_navigation_server/add_doorway", AddCrossing)
 plan_to_room = rospy.ServiceProxy("graph_navigation_server/plan_to_room", PlanToRoom)
 plan_to_pose = rospy.ServiceProxy("graph_navigation_server/plan_to_point", PlanToPoint)
-bc = BaseController()
 
 # setup action client
 move_to_goal_client = actionlib.SimpleActionClient(
@@ -38,8 +35,6 @@ phrases = [
     "This door is not going to open itself!"
 ]
 
-
-voice = Voice()
 for p1, p2 in zip(plan.points[0::2], plan.points[1::2]):
 
     result = False
