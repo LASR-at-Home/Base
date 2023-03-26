@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 import rospy
 # from typing import Set, Tuple
 from dynamic_reconfigure.srv import Reconfigure
