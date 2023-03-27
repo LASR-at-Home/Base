@@ -7,7 +7,6 @@ from ..quaternion import align_poses
 
 from nav_msgs.srv import GetPlan
 from unsafe_traversal.srv import DeterminePathViability
-from common_math import euclidian
 
 MOVE_BASE_TOLERANCE = 0.01
 PLAN_TOLERANCE = 0.1
