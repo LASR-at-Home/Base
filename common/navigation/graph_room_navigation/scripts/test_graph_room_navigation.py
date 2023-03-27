@@ -5,6 +5,7 @@ from std_msgs.msg import Header
 from graph_room_navigation.srv import AddRoom, AddCrossing, PlanToPoint, PlanToRoom
 import actionlib
 from unsafe_traversal.msg import MoveToGoalAction, MoveToGoalGoal
+from lasr_voice.voice import Voice
 
 rospy.init_node("test_graph_room_navigation")
 add_room = rospy.ServiceProxy("graph_navigation_server/add_room", AddRoom)
@@ -35,6 +36,8 @@ phrases = [
     "This door is not going to open itself!"
 ]
 
+voice = Voice()
+
 for p1, p2 in zip(plan.points[0::2], plan.points[1::2]):
 
     result = False
@@ -55,12 +58,14 @@ for p1, p2 in zip(plan.points[0::2], plan.points[1::2]):
 
         if not result:
             if not asked_for_help and tries < max_tries:
+                voice.sync_tts(phrases[tries])
                 rospy.loginfo(phrases[tries])
                 asked_for_help = True
                 tries+=1
             elif asked_for_help and tries < max_tries:
                 asked_for_help = False
             elif tries >= max_tries:
+                voice.sync_tts("I give up...")
                 rospy.logwarn("I give up...")
                 exit(0)
             rospy.sleep(10)
