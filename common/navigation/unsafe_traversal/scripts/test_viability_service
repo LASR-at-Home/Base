@@ -1,0 +1,86 @@
+#!/usr/bin/env python3
+# this uses the default TIAGo map
+# run `roslaunch tiago_2dnav_gazebo tiago_navigation.launch`
+# (start the unsafe_traversal node)
+# then run `rosrun unsafe_traversal test_viability_service`
+
+import rospy
+import actionlib
+
+from time import sleep
+
+from unsafe_traversal.srv import DeterminePathViability
+from geometry_msgs.msg import PoseStamped
+
+# initialise node
+rospy.init_node('test_viability_service', anonymous=True)
+
+# prepare service proxy
+check_plan = rospy.ServiceProxy(
+    '/unsafe_traversal/check_if_plan_is_viable', DeterminePathViability)
+
+def get_result(start, end):
+    # start pose
+    start_pose = PoseStamped()
+    start_pose.header.stamp = rospy.get_rostime()
+    start_pose.header.frame_id = 'map'
+
+    start_pose.pose.position.x = start[0]
+    start_pose.pose.position.y = start[1]
+    start_pose.pose.position.z = 0
+
+    # end pose
+    end_pose = PoseStamped()
+    end_pose.header.stamp = rospy.get_rostime()
+    end_pose.header.frame_id = 'map'
+
+    end_pose.pose.position.x = end[0]
+    end_pose.pose.position.y = end[1]
+    end_pose.pose.position.z = 0
+
+    # send goal
+    return check_plan(start_pose, end_pose)
+
+class bcolors:
+    '''
+    Colours for test output
+    '''
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKCYAN = '\033[96m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
+def assert_result(desc, a, b, success):
+    result = get_result(a, b)
+
+    # construct debug output
+    if result.viable:
+        text_viable = bcolors.OKGREEN + 'viable' + bcolors.ENDC
+    else:
+        text_viable = bcolors.FAIL + 'invalid' + bcolors.ENDC
+
+    text_debug = '(' + text_viable + ', raw_error = ' + str(round(result.raw_error, 2)) + ')'
+
+    # check if this matches our expectation
+    if result.viable == success:
+        print(bcolors.OKGREEN + 'PASS' + bcolors.ENDC, desc, text_debug)
+    else:
+        print(bcolors.FAIL + 'FAIL' + bcolors.ENDC, desc, text_debug)
+    
+    # delay before next test for visual output
+    sleep(0.8)
+
+assert_result('straight line no walls', (0,0), (-4, 0), True)
+assert_result('through walls', (0,0), (0, -4), False)
+assert_result('traverse through door', (0,0), (2, -4), True)
+assert_result('straight line no walls', (0,0), (4, 0), True)
+assert_result('no possible path', (0,0), (0, 3), False)
+assert_result('around obstacle', (0,0), (3, 1), False)
+assert_result('traverse through door', (1, -2), (1, -4), True)
+assert_result('traverse long distance', (1, 1), (1, -11), True)
+assert_result('traverse around obstacle', (-2.4, -2.4), (-2.4, -0.7), False)

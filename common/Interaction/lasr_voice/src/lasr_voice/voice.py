@@ -11,23 +11,23 @@ class Voice:
         self._tts_client = actionlib.SimpleActionClient('/tts', TtsAction)
         self._tts_client.wait_for_server()
 
-    def __tts(self, text: str):
+    def __tts(self, text):
         goal = TtsGoal()
         goal.rawtext.text = text
         goal.rawtext.lang_id = 'en_GB'
         self._tts_client.send_goal(goal)
 
-    def sync_tts(self, text: str) -> bool:
+    def sync_tts(self, text):
         self.__tts(text)
         return self._tts_client.wait_for_result()
 
-    def async_tts(self, text: str):
+    def async_tts(self, text):
         self.__tts(text)
 
-    def get_tts_status(self) -> int:
+    def get_tts_status(self):
         return self._tts_client.get_state()
 
-    def is_running(self) -> bool:
+    def is_running(self):
         return self._tts_client.get_state() == GoalStatus.PENDING or \
                self._tts_client.get_state() == GoalStatus.ACTIVE
 
