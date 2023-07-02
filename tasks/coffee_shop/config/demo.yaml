@@ -1,0 +1,24 @@
+tables:
+  table0:
+    num_persons: 0
+    status: "unvisited"
+    order: []
+    location: 
+      position: {x:, y:, z:}
+      orientation: {x:, y:, z:, w:}
+    objects_cubiod:
+      min: []
+      max: []
+    persons_cuboid:
+      min: []
+      max: []
+  table1:
+    num_persons: 0
+    status: "unvisited"
+    order: []
+    location:
+      position: {x:, y:, z:}
+      orientation: {x:, y:, z:, w:}
+    objects_cuboid:
+      min: []
+      max: []
