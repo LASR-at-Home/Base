@@ -9,6 +9,8 @@ class GoToTable(smach.State):
         self.base_controller = base_controller
     def execute(self, userdata):
         tables = rospy.get_param("/tables")
+        print(tables, "-"*30)
+        print(tables.keys())
         unvisited = [(label, table) for label, table in tables.items() if table["status"] == "unvisited"]
         label, next_table = unvisited[0]
         position, orientation = next_table["location"]["position"], next_table["location"]["orientation"]

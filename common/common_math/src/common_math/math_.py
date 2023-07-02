@@ -65,7 +65,7 @@ def pcl_msg_to_cv2(pcl_msg):
 #         print("Service call failed: %s" % e)
 
 
-# def bb_to_centroid(pcl_msg, x, y, w, h):
+def bb_to_centroid(pcl_msg, x, y, w, h):
 #     """
 #     Computes a centroid in the map plane from a given bounding box.
 #     Performs this by extracting the bounding box from the pointcloud,
@@ -121,6 +121,7 @@ def pcl_msg_to_cv2(pcl_msg):
 #     centroid_ = tf_transform('map', point=centroid_).target_point
 
 #     return centroid_
+    pass
 
 def euclidian(a, b):
     '''
