@@ -4,15 +4,15 @@ tables:
     status: "unvisited"
     order: []
     location: 
-      position: {x:, y:, z:}
-      orientation: {x:, y:, z:, w:}
+      position: {x: 1.14578607803, y: 1.00757782153, z: 0.0}
+      orientation: {x: 0.0, y: 0.0, z: 0.746444684543, w: 0.665447468188}
     objects_cubiod:
       min: [0.615044414997, 1.39581489563, -0.0013427734375]
       max: [1.47426867485,  2.16378450394, -0.0013427734375 ]
     persons_cuboid:
       min: [-1.615044414997, 0.39581489563, -1.0013427734375]
       max: [2.47426867485,  3.16378450394, 1.0013427734375 ]
-      
+
   table1:
     num_persons: 0
     status: "unvisited"
