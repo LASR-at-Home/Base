@@ -9,7 +9,7 @@ import cv2
 from lasr_perception_server.srv import DetectImage
 from lasr_voice.voice import Voice
 
-OBJECTS = ["banana"]
+OBJECTS = ["cup", "mug"]
 
 class CheckTable(smach.State):
     def __init__(self, head_controller):
@@ -45,4 +45,4 @@ class CheckTable(smach.State):
         status = "needs cleaning" if len(detections) > 0 else "ready"
         rospy.set_param(f"/tables/{current_table}/status/", status)
         voice.sync_tts(f"The status of this table is {status}")
-        return 'finished'
+        return 'finished' if len([(label, table) for label, table in tables.items() if table["status"] == "unvisited"]) == 0 else 'not_finished'
