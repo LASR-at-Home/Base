@@ -21,12 +21,20 @@ class CheckTable(smach.State):
         self.voice_controller = voice_controller
         self.mask_from_cuboid = rospy.ServiceProxy("/pcl_segmentation_server/segment_cuboid", SegmentCuboid)
         self.bridge = CvBridge()
+
+    def perform_detection(self, min_xyz, max_xyz):
+        pcl_msg = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
+        mask = self.mask_from_cuboid(pcl_msg, Point(*min_xyz), Point(*max_xyz)).mask
+        cv_im = pcl_msg_to_cv2(pcl_msg)
+        cv_mask = self.bridge.imgmsg_to_cv2_np(mask)
+        
+        img_msg = self.bridge.cv2_to_imgmsg(cv2.bitwise_and(cv_im, cv_im, mask=cv_mask))
+        detections = self.detect(img_msg, "coco", 0.7, 0.3)
+        detections = [det for det in detections.detected_objects if det.name in OBJECTS]
+        return detections
+
     def execute(self, userdata):
 
-        """
-        Look down at table, segment pointcloud by the defined cuboid and then perform object detection.
-        Then return to home and look left and right, looking for people in the other defined cuboid
-        """
         current_table = rospy.get_param("current_table")
         min_xyz, max_xyz = rospy.get_param(f"/tables/{current_table}/objects_cuboid/min"), rospy.get_param(f"/tables/{current_table}/objects_cuboid/max")
         self.play_motion_client.wait_for_server(rospy.Duration(15.0))
@@ -35,18 +43,16 @@ class CheckTable(smach.State):
         pm_goal = PlayMotionGoal(motion_name="check_table", skip_planning=True)
         self.play_motion_client.send_goal_and_wait(pm_goal)
 
+        detections = self.perform_detection(min_xyz, max_xyz)
         
-        pcl_msg = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
-        mask = self.mask_from_cuboid(pcl_msg, Point(*min_xyz), Point(*max_xyz)).mask
-        cv_im = pcl_msg_to_cv2(pcl_msg)
-        cv_mask = self.bridge.imgmsg_to_cv2_np(mask)
-        
-        img_msg = self.bridge.cv2_to_imgmsg(cv2.bitwise_and(cv_im, cv_im, mask=cv_mask))
+        pm_goal = PlayMotionGoal(motion_name="look_down_left", skip_planning=True)
+        self.play_motion_client.send_goal_and_wait(pm_goal)
+        detections.extend(self.perform_detection(min_xyz, max_xyz))
 
+        pm_goal = PlayMotionGoal(motion_name="look_down_right", skip_planning=True)
+        self.play_motion_client.send_goal_and_wait(pm_goal)
+        detections.extend(self.perform_detection(min_xyz, max_xyz))
 
-        detections = self.detect(img_msg, "coco", 0.7, 0.3)
-        detections = [det for det in detections.detected_objects if det.name in OBJECTS]
-        print(detections)
         pm_goal = PlayMotionGoal(motion_name="back_to_default", skip_planning=True)
         self.play_motion_client.send_goal_and_wait(pm_goal)
 
