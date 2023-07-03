@@ -14,5 +14,7 @@ class WaitForPerson(smach.State):
         while not person_found:
             img_msg = rospy.wait_for_message("/xtion/rgb/image_raw", Image)
             detections = self.detect(img_msg, "coco", 0.7, 0.3)
-            person_found == "person" in [det.name for det in detections.detected_objects]
+            if len([det for det in detections.detected_objects if det.name == "person"]) > 0:
+                person_found = True
+            rospy.sleep(rospy.Duration(3.0))
         return 'done'

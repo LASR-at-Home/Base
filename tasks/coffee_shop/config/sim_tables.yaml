@@ -6,7 +6,8 @@ tables:
     location: 
       position: {x: -0.74, y: -3.57, z: 0.0}
       orientation: {x: 0.0, y: 0.0, z: -0.99, w: 0.03}
-    objects_cubiod:
+      semantic: "end"
+    objects_cuboid:
       min: [-3.3, -3.4, 0.0]
       max: [-1.54, -3.1, 8.0]
     persons_cuboid:
@@ -19,6 +20,7 @@ tables:
     location:
       position: {x: -1.17, y: -6.0, z: 0.0}
       orientation: {x: 0.0, y: 0.0, z: -1.0, w: 0.02}
+      semantic: "end"        
     objects_cuboid:
       min: [-3.43, -6.72, 0.0]
       max: [-1.67, -5.11, 8.0]
@@ -29,6 +31,7 @@ tables:
     location:
       position: {x: -1.11, y: -8.60, z: 0.0}
       orientation: {x: 0.0, y: 0.0, z: -1.0, w: 0.02}
+      semantic: "end"
     objects_cuboid:
       min: [-3.30, -9.45, 0.0]
       max: [-1.42, -7.95, 8.0]
@@ -42,6 +45,7 @@ tables:
     location:
       position: {x: 0.49, y: -8.67, z: 0.0}
       orientation: {x: 0.0, y: 0.0, z: -0.67, w: 1.0}
+      semantic: "end"
     objects_cuboid:
       min: [0.73, -9.14, 0.0]
       max: [3.07, -7.97, 8.0]
@@ -55,6 +59,7 @@ tables:
     location:
       position: {x: 0.58, y: -5.92, z: 0.0}
       orientation: {x: 0.0, y: 0.0, z: -0.15, w: 0.99}
+      semantic: "end"
     objects_cuboid:
       min: [1.07, -6.58, 0.0]
       max: [2.69, -5.48, 8.0]
@@ -68,6 +73,7 @@ tables:
     location:
       position: {x: 0.61, y: -3.61, z: 0.0}
       orientation: {x: 0.0, y: 0.0, z: -0.05, w: 1.0}
+      semantic: "end"
     objects_cuboid:
       min: [1.13, -4.10, 0.0]
       max: [2.63, -2.92, 8.0]
@@ -81,6 +87,7 @@ tables:
     location:
       position: {x: 0.86, y: -0.94, z: 0.0}
       orientation: {x: 0.0, y: 0.0, z: 0.04, w: 1.0}
+      semantic: "end"
     objects_cuboid:
       min: [1.25, -1.28, 0.0]
       max: [2.84, -0.34, 8.0]
