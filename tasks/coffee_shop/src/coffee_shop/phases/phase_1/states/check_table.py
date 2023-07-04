@@ -29,7 +29,7 @@ class CheckTable(smach.State):
         cv_mask = self.bridge.imgmsg_to_cv2_np(mask)
         
         img_msg = self.bridge.cv2_to_imgmsg(cv2.bitwise_and(cv_im, cv_im, mask=cv_mask))
-        detections = self.detect(img_msg, "coco", 0.7, 0.3)
+        detections = self.detect(img_msg, "coco", 0.5, 0.3)
         detections = [det for det in detections.detected_objects if det.name in OBJECTS]
         return detections
 
@@ -44,7 +44,6 @@ class CheckTable(smach.State):
         self.play_motion_client.send_goal_and_wait(pm_goal)
 
         detections = self.perform_detection(min_xyz, max_xyz)
-        
         pm_goal = PlayMotionGoal(motion_name="look_down_left", skip_planning=True)
         self.play_motion_client.send_goal_and_wait(pm_goal)
         detections.extend(self.perform_detection(min_xyz, max_xyz))
