@@ -8,13 +8,15 @@ class WaitForPerson(smach.State):
     def __init__(self):
         smach.State.__init__(self, outcomes=['done'])
         self.detect = rospy.ServiceProxy("yolo_object_detection_server/detect_objects", YoloDetection)
-    def execute(self, userdata):
+
+def execute(self, userdata):
         person_found = False
 
-        while not person_found:
+        while not rospy.is_shutdown():
             img_msg = rospy.wait_for_message("/xtion/rgb/image_raw", Image)
-            detections = self.detect(img_msg, "coco", 0.7, 0.3)
-            if len([det for det in detections.detected_objects if det.name == "person"]) > 0:
-                person_found = True
-            rospy.sleep(rospy.Duration(3.0))
+            detections = self.detect(img_msg, "coco", 0.3, 0.3)
+            for detection in detections:
+                if detection.name == "person":
+                    break
+            rospy.sleep(1)
         return 'done'
