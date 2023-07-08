@@ -43,8 +43,8 @@ tables:
     status: "unvisited"
     order: []
     location:
-      position: {x: 0.49, y: -8.67, z: 0.0}
-      orientation: {x: 0.0, y: 0.0, z: -0.67, w: 1.0}
+      position: {x: 0.45, y: -8.67, z: 0.0}
+      orientation: {x: 0.0, y: 0.0, z: -0.02, w: 1.0}
       semantic: "end"
     objects_cuboid:
       min: [0.73, -9.14, 0.0]
