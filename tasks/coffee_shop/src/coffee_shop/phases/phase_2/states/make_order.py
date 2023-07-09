@@ -3,6 +3,10 @@ import smach
 import rospy
 
 class MakeOrder(smach.State):
-    def execute(self, userdata):
-        pass
 
+    def __init__(self, voice_controller):
+        smach.StateMachine.__init__(self, outcomes=['done'])
+        self.voice_controller = voice_controller
+
+    def execute(self, userdata):
+        return 'done'

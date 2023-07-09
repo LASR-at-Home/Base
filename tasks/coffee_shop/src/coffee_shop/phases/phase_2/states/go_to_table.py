@@ -3,6 +3,11 @@ import smach
 import rospy
 
 class GoToTable(smach.State):
-    def execute(self, userdata, outcomes='done'):
+    
+    def __init__(self, base_controller):
+        smach.State.__init_-(self, outcomes=['done'])
+        self.base_controller = base_controller
+
+    def execute(self, userdata):
         return 'done'
 
