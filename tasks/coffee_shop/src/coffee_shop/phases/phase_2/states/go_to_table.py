@@ -5,7 +5,7 @@ import rospy
 class GoToTable(smach.State):
     
     def __init__(self, base_controller):
-        smach.State.__init_-(self, outcomes=['done'])
+        smach.State.__init__(self, outcomes=['done'])
         self.base_controller = base_controller
 
     def execute(self, userdata):

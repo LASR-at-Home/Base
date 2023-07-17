@@ -32,19 +32,9 @@ bool segment_cuboid(
 	mask.encoding = "mono8";
 	mask.is_bigendian = 0;
 	mask.data = std::vector<uint8_t>(mask.width * mask.height);
-	ROS_INFO_STREAM("There are " << indices.size() << " points");
+	//ROS_INFO_STREAM("There are " << indices.size() << " points");
 	for (const auto& idx : indices)
 		mask.data[idx] = 255;
-	/*
-	pass.setInputCloud (out_cloud);
-	pass.setFilterFieldName ("y");
-	pass.setFilterLimits (min.y, max.y);
-	pass.filter (*out_cloud);
-
-	pass.setInputCloud (out_cloud);
-	pass.setFilterFieldName ("z");
-	pass.setFilterLimits (min.z, max.z);
-	pass.filter (*out_cloud); */
 
 	return true;
 }

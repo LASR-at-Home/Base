@@ -15,6 +15,7 @@
 #include "sensor_msgs/Image.h"
 #include "pcl_segmentation_server.h"
 #include "segment_cuboid.h"
+#include "centroid.h"
 
 tf2_ros::Buffer * transformBuffer;
 tf2_ros::TransformListener * transformListener;
@@ -36,7 +37,7 @@ int main(int argc, char** argv)
 
 bool handle_segment_cuboid(pcl_segmentation::SegmentCuboid::Request& req, pcl_segmentation::SegmentCuboid::Response &res)
 {
-	ROS_INFO("segment_cuboid called");
+	//ROS_INFO("segment_cuboid called");
 	geometry_msgs::PointStamped min, max;
 	sensor_msgs::PointCloud2::Ptr ros_cloud_tf(new sensor_msgs::PointCloud2);
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_tf(new pcl::PointCloud<pcl::PointXYZ>);
@@ -54,12 +55,31 @@ bool handle_segment_cuboid(pcl_segmentation::SegmentCuboid::Request& req, pcl_se
 	tf2::doTransform(ros_cloud, *ros_cloud_tf, transform);	
 	pcl::moveFromROSMsg(*ros_cloud_tf, *cloud_tf);
 
-/*	transformListener->transformPoint(req.points.header.frame_id, min, minT);
-	transformListener->transformPoint(req.points.header.frame_id, max, maxT); 
-	ROS_INFO_STREAM("Transformed points to camera frame" << minT.point.x << " " << minT.point.y << " " << minT.point.z << " " << maxT.point.x << " " << maxT.point.y << " " << maxT.point.z); */
-
-	ROS_INFO_STREAM("PCL SIZE " << cloud_tf->size());
+	//ROS_INFO_STREAM("PCL SIZE " << cloud_tf->size());
 	auto result = segment_cuboid(cloud_tf, *ros_cloud_tf, min.point, max.point, res.mask);
-	ROS_INFO_STREAM("IMG SIZE " << res.mask.width * res.mask.height);
+//	ROS_INFO_STREAM("IMG SIZE " << res.mask.width * res.mask.height);
 	return result;
 }
+
+/*bool handle_centroid(pcl_segmentation::Centroid::Request& req, pcl_segmentation::Centroid::Response& res)
+{
+	pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
+
+	pcl::fromROSMsg(req.points, *cloud);
+
+	pcl::PointXYZRGB centroid_;
+
+	auto result = centroid(cloud, centroid_);
+
+	geometry_msgs::PointStamped point, point_tf;
+	point.header.frame_id = req.points.header.frame_id;
+	point.header.stamp = req.points.header.stamp;
+	point.point.x = centroid_.x;
+	point.point.y = centroid_.y;
+	point.point.z = centroid_.z;
+
+	//geometry_msgs::TransformStamped transform = transformBuffer->lookupTransform("map", point.header.frame_id, point.header.stamp, ros::Duration(2.0));
+	//tf2::doTransform(point, point_tf, transform);	
+
+	return result;
+}*/
