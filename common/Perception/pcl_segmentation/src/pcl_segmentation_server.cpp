@@ -7,7 +7,7 @@
 #include <pcl/common/eigen.h>
 #include <tf2_sensor_msgs/tf2_sensor_msgs.h>
 #include <tf2_ros/transform_listener.h>
-#include <tf2_ros/buffer.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include "geometry_msgs/Point.h"
 #include "geometry_msgs/TransformStamped.h"
 #include "geometry_msgs/PointStamped.h"
@@ -15,6 +15,7 @@
 #include "sensor_msgs/Image.h"
 #include "pcl_segmentation_server.h"
 #include "segment_cuboid.h"
+#include "mask_from_cuboid.h"
 #include "centroid.h"
 
 tf2_ros::Buffer * transformBuffer;
@@ -31,13 +32,25 @@ int main(int argc, char** argv)
 
 	ros::NodeHandle n;
 	ros::ServiceServer segment_cuboid_service = n.advertiseService("/pcl_segmentation_server/segment_cuboid", handle_segment_cuboid);
-
+	ros::ServiceServer mask_from_cuboid_service = n.advertiseService("/pcl_segmentation_server/mask_from_cuboid", handle_mask_from_cuboid);
+	ros::ServiceServer centroid_service = n.advertiseService("/pcl_segmentation_server/centroid", handle_centroid);
 	ros::spin();
 }
 
 bool handle_segment_cuboid(pcl_segmentation::SegmentCuboid::Request& req, pcl_segmentation::SegmentCuboid::Response &res)
 {
-	//ROS_INFO("segment_cuboid called");
+	pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
+	pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_out(new pcl::PointCloud<pcl::PointXYZRGB>);
+
+	pcl::fromROSMsg(req.points, *cloud);
+
+	auto result =  segment_cuboid(cloud, req.min, req.max, cloud_out);
+	pcl::toROSMsg(*cloud_out, res.points);
+	return result;
+}
+
+bool handle_mask_from_cuboid(pcl_segmentation::MaskFromCuboid::Request& req, pcl_segmentation::MaskFromCuboid::Response &res)
+{
 	geometry_msgs::PointStamped min, max;
 	sensor_msgs::PointCloud2::Ptr ros_cloud_tf(new sensor_msgs::PointCloud2);
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_tf(new pcl::PointCloud<pcl::PointXYZ>);
@@ -55,13 +68,11 @@ bool handle_segment_cuboid(pcl_segmentation::SegmentCuboid::Request& req, pcl_se
 	tf2::doTransform(ros_cloud, *ros_cloud_tf, transform);	
 	pcl::moveFromROSMsg(*ros_cloud_tf, *cloud_tf);
 
-	//ROS_INFO_STREAM("PCL SIZE " << cloud_tf->size());
-	auto result = segment_cuboid(cloud_tf, *ros_cloud_tf, min.point, max.point, res.mask);
-//	ROS_INFO_STREAM("IMG SIZE " << res.mask.width * res.mask.height);
+	auto result = mask_from_cuboid(cloud_tf, *ros_cloud_tf, min.point, max.point, res.mask);
 	return result;
 }
 
-/*bool handle_centroid(pcl_segmentation::Centroid::Request& req, pcl_segmentation::Centroid::Response& res)
+bool handle_centroid(pcl_segmentation::Centroid::Request& req, pcl_segmentation::Centroid::Response& res)
 {
 	pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
 
@@ -77,9 +88,7 @@ bool handle_segment_cuboid(pcl_segmentation::SegmentCuboid::Request& req, pcl_se
 	point.point.x = centroid_.x;
 	point.point.y = centroid_.y;
 	point.point.z = centroid_.z;
-
-	//geometry_msgs::TransformStamped transform = transformBuffer->lookupTransform("map", point.header.frame_id, point.header.stamp, ros::Duration(2.0));
-	//tf2::doTransform(point, point_tf, transform);	
+	transformBuffer->transform(point, res.centroid, "map");
 
 	return result;
-}*/
+}
