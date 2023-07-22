@@ -13,7 +13,7 @@ bool segment_cuboid(
 )
 {
 	pcl::CropBox<pcl::PointXYZRGB> cropBoxFilter(false);
-
+	std::vector<int> indices;
 	Eigen::Vector4f min_vec (min.x, min.y, min.z, 1.0);
 	Eigen::Vector4f max_vec (max.x, max.y, max.z, 1.0);
 	cropBoxFilter.setMin(min_vec);

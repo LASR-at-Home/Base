@@ -7,4 +7,5 @@ bool centroid(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, pcl::PointXYZRGB &ce
     for (auto it = cloud->begin(); it != cloud->end(); ++it)
         centroid_point.add(*it);
     centroid_point.get(centroid);
+    return true;
 }

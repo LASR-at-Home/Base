@@ -20,6 +20,7 @@ find_package(catkin REQUIRED COMPONENTS
 add_service_files(
   FILES
   SegmentCuboid.srv
+  SegmentBB.srv
   Centroid.srv
   MaskFromCuboid.srv
 )
@@ -79,7 +80,7 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
 )
 
-add_executable(pcl_segmentation_server src/pcl_segmentation_server.cpp src/segment_cuboid.cpp src/centroid.cpp src/mask_from_cuboid.cpp)
+add_executable(pcl_segmentation_server src/pcl_segmentation_server.cpp src/segment_cuboid.cpp src/centroid.cpp src/mask_from_cuboid.cpp src/segment_bb.cpp)
 
 add_dependencies(pcl_segmentation_server ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
