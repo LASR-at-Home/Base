@@ -64,8 +64,8 @@ class CheckTable(smach.State):
         detections_people_, raw_im, people_mask = self.perform_detection(pcl_msg, self.min_xyz_people, self.max_xyz_people, ["person"])
         self.detections_people.extend(detections_people_)
         if self.debug:
-            cv2.imwrite(os.path.join(self.debug_path, f"objects_{self.num_detections}_mask.png"), people_mask)
-            cv2.imwrite(os.path.join(self.debug_path, f"objects_{self.num_detections}.png"), raw_im)
+            cv2.imwrite(os.path.join(self.debug_path, f"people_{self.num_detections}_mask.png"), people_mask)
+            cv2.imwrite(os.path.join(self.debug_path, f"peolple_{self.num_detections}.png"), raw_im)
             with open(os.path.join(self.debug_path, f"people_{self.num_detections}.txt"), "w+") as fp:
                 fp.write(f"{len(detections_people_)}")
 
@@ -105,8 +105,5 @@ class CheckTable(smach.State):
             status = "ready"
 
         rospy.set_param(f"/tables/{self.current_table}/status/", status)
-        if self.debug:
-            with open(os.path.join(self.debug_path, "status.txt",), "w+") as fp:
-                fp.write(f"{status}, {len(self.detections_objects)}, {len(self.detections_people)}")
         self.voice_controller.sync_tts(f"The status of this table is {status}. There were {len(self.detections_objects)} objects and {len(self.detections_people)} people")
         return 'finished' if len([(label, table) for label, table in rospy.get_param("/tables").items() if table["status"] == "unvisited"]) == 0 else 'not_finished'
