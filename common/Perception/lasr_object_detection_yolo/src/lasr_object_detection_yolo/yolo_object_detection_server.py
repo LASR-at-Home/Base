@@ -105,9 +105,7 @@ class YoloObjectDetectionServer():
         # Only load model if it is not already loaded.
         if not self.model_name == req.dataset:
             if not self.load_model(req.dataset):
-                print('i fail in loading the coco model, you probably dont have the model')
-                # If loading the model fails, then return an empty response.
-                return response
+                raise rospy.ServiceException(f"Couldn't load model '{req.dataset}'")
         
         # Random colours for bounding boxes.
         np.random.seed(42)
