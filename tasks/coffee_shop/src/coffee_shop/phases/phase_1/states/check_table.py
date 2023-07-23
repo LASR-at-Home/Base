@@ -93,6 +93,7 @@ class CheckTable(smach.State):
             self.play_motion_client.send_goal_and_wait(pm_goal)
             pcl_msg = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
             self.check_table(pcl_msg)
+            pcl_msg = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
             self.check_people(pcl_msg)
 
         if len(self.detections_objects) > 0 and len(self.detections_people) == 0:
