@@ -54,7 +54,8 @@ class CheckTable(smach.State):
         detections_objects_, raw_im, objects_mask = self.perform_detection(pcl_msg, self.min_xyz_objects, self.max_xyz_objects, OBJECTS)
         self.detections_objects.extend(detections_objects_)
         if self.debug:
-            cv2.imwrite(os.path.join(self.debug_path, f"objects_{self.num_detections}.png"), np.hstack((raw_im, objects_mask)))
+            cv2.imwrite(os.path.join(self.debug_path, f"objects_{self.num_detections}_mask.png"), objects_mask)
+            cv2.imwrite(os.path.join(self.debug_path, f"objects_{self.num_detections}.png"), raw_im)
             with open(os.path.join(self.debug_path, f"objects_{self.num_detections}.txt"), "w+") as fp:
                 for detection in detections_objects_:
                     fp.write(f"{detection.name}\n")
@@ -63,9 +64,10 @@ class CheckTable(smach.State):
         detections_people_, raw_im, people_mask = self.perform_detection(pcl_msg, self.min_xyz_people, self.max_xyz_people, ["person"])
         self.detections_people.extend(detections_people_)
         if self.debug:
+            cv2.imwrite(os.path.join(self.debug_path, f"objects_{self.num_detections}_mask.png"), people_mask)
+            cv2.imwrite(os.path.join(self.debug_path, f"objects_{self.num_detections}.png"), raw_im)
             with open(os.path.join(self.debug_path, f"people_{self.num_detections}.txt"), "w+") as fp:
                 fp.write(f"{len(detections_people_)}")
-            cv2.imwrite(os.path.join(self.debug_path, f"people_{self.num_detections}.png"), np.hstack((raw_im, people_mask)))
 
     def execute(self, userdata):
         self.current_table = rospy.get_param("current_table")
