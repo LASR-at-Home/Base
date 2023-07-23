@@ -1,0 +1,5 @@
+<launch>
+	<include file="$(find lasr_perception_server)/launch/perception_server.launch"/>
+	<node pkg="pcl_segmentation" type="pcl_segmentation_server" name="pcl_segmentation_server" output="screen" />
+	<node pkg="coffee_shop" type="test_wait_for_person.py" name="test_wait_for_person" output="screen"/>
+</launch>
