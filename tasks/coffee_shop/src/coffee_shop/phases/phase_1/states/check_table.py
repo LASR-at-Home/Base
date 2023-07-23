@@ -7,11 +7,12 @@ import shutil
 import actionlib
 from play_motion_msgs.msg import PlayMotionAction, PlayMotionGoal
 from sensor_msgs.msg import PointCloud2, Image
-from geometry_msgs.msg import Point
+from geometry_msgs.msg import Point, Point
+from visualization_msgs.msg import Marker
 from cv_bridge3 import CvBridge, cv2
 from lasr_object_detection_yolo.srv import YoloDetection
 from lasr_voice.voice import Voice
-from pcl_segmentation.srv import SegmentCuboid
+from pcl_segmentation.srv import SegmentCuboid, Centroid, MaskFromCuboid, SegmentBB
 from common_math import pcl_msg_to_cv2
 import numpy as np
 from actionlib_msgs.msg import GoalStatus
@@ -27,22 +28,27 @@ class CheckTable(smach.State):
         self.play_motion_client.wait_for_server(rospy.Duration(15.0))
         self.detect = rospy.ServiceProxy("yolo_object_detection_server/detect_objects", YoloDetection)
         self.voice_controller = voice_controller
-        self.mask_from_cuboid = rospy.ServiceProxy("/pcl_segmentation_server/segment_cuboid", SegmentCuboid)
+        self.mask_from_cuboid = rospy.ServiceProxy("/pcl_segmentation_server/mask_from_cuboid", MaskFromCuboid)
+        self.segment_bb = rospy.ServiceProxy("/pcl_segmentation_server/segment_bb", SegmentBB)
+        self.centroid = rospy.ServiceProxy("/pcl_segmentation_server/centroid", Centroid)
         self.bridge = CvBridge()
         self.detections_objects = []
         self.detections_people = []
         self.num_detections = 0
+        self.person_location_pub = rospy.Publisher("/person_locations", Marker, queue_size=69)
 
     def perform_detection(self, pcl_msg, min_xyz, max_xyz, filter):
         mask = self.mask_from_cuboid(pcl_msg, Point(*min_xyz), Point(*max_xyz)).mask
         cv_im = pcl_msg_to_cv2(pcl_msg)
         cv_mask = self.bridge.imgmsg_to_cv2_np(mask)
-        img_msg = self.bridge.cv2_to_imgmsg(cv2.bitwise_and(cv_im, cv_im, mask=cv_mask))
+        masked_im = cv2.bitwise_and(cv_im, cv_im, mask=cv_mask)
+        #cv2.imshow("mask", masked_im)
+        #cv2.waitKey(1)
+        img_msg = self.bridge.cv2_to_imgmsg(masked_im)
         detections = self.detect(img_msg, "coco", 0.25, 0.3)
         detections = [det for det in detections.detected_objects if det.name in filter]
         self.num_detections += 1
         return detections, cv_im, cv2.bitwise_and(cv_im, cv_im, mask=cv_mask)
-
 
     def check_table(self, pcl_msg):
         detections_objects_, raw_im, objects_mask = self.perform_detection(pcl_msg, self.min_xyz_objects, self.max_xyz_objects, OBJECTS)
@@ -52,7 +58,6 @@ class CheckTable(smach.State):
             with open(os.path.join(self.debug_path, f"objects_{self.num_detections}.txt"), "w+") as fp:
                 for detection in detections_objects_:
                     fp.write(f"{detection.name}\n")
-
 
     def check_people(self, pcl_msg):
         detections_people_, raw_im, people_mask = self.perform_detection(pcl_msg, self.min_xyz_people, self.max_xyz_people, ["person"])
@@ -86,7 +91,6 @@ class CheckTable(smach.State):
             self.play_motion_client.send_goal_and_wait(pm_goal)
             pcl_msg = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
             self.check_table(pcl_msg)
-            pcl_msg = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
             self.check_people(pcl_msg)
 
         if len(self.detections_objects) > 0 and len(self.detections_people) == 0:
