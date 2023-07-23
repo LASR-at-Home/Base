@@ -65,7 +65,7 @@ class CheckTable(smach.State):
         self.detections_people.extend(detections_people_)
         if self.debug:
             cv2.imwrite(os.path.join(self.debug_path, f"people_{self.num_detections}_mask.png"), people_mask)
-            cv2.imwrite(os.path.join(self.debug_path, f"peolple_{self.num_detections}.png"), raw_im)
+            cv2.imwrite(os.path.join(self.debug_path, f"people_{self.num_detections}.png"), raw_im)
             with open(os.path.join(self.debug_path, f"people_{self.num_detections}.txt"), "w+") as fp:
                 fp.write(f"{len(detections_people_)}")
 
