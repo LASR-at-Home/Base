@@ -1,6 +1,8 @@
+#image topic to subscribe, confidence for object detection, non-maximum suppression
 sensor_msgs/Image image_raw
 string dataset
 float32 confidence
 float32 nms
 ---
+#bounding box image for testing, name and coords of each object detected
 lasr_perception_server/Detection[] detected_objects

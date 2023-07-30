@@ -1,1 +1,0 @@
-from .feeder import looking_around_and_taking_imgs

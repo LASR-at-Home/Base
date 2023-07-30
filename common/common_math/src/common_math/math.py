@@ -2,7 +2,7 @@
 import numpy as np
 import rospy
 import numpy as np
-import ros_numpy as rnp
+# import ros_numpy as rnp
 from geometry_msgs.msg import PointStamped, Point
 from std_msgs.msg import Header
 from common_math.srv import TfTransform, TfTransformRequest

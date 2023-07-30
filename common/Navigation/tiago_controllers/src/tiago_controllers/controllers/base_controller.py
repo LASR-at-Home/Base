@@ -81,7 +81,7 @@ class BaseController:
 class CmdVelController:
     def __init__(self):
         self._vel_pub = rospy.Publisher('mobile_base_controller/cmd_vel', Twist, queue_size=1)
-        rospy.sleep(0.1)  # wait for publisher to activate
+        # rospy.sleep(0.1)  # wait for publisher to activate
 
     def rotate(self, angular_velocity: int, angle: int, clockwise: bool):
         vel_msg = Twist()
