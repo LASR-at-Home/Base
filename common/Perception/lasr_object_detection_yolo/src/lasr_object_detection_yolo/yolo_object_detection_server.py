@@ -73,7 +73,7 @@ class YoloObjectDetectionServer():
                 return False
             
             self.yolov4.eval()
-
+            """
             if torch.cuda.is_available():
 
                 # Initialise nvidia-smi
@@ -90,6 +90,8 @@ class YoloObjectDetectionServer():
 
                 # Shutdown nvidia-smi
                 nvidia_smi.nvmlShutdown()
+            """
+            self.device = "cpu"
 
             print(self.device)
             self.yolov4.to(self.device)
@@ -116,8 +118,17 @@ class YoloObjectDetectionServer():
         image = PIL_Image.fromarray(frame)
         image = torch.stack([transform()(image)]).to(self.device)
 
-        # net forward and non-mean suppression
         outputs = self.yolov4(image)
+
+        # net forward and non-mean suppression
+        #try:
+        #except RuntimeError:
+        #    if self.device != 'cpu':
+        #        self.device = 'cpu'
+                #self.yolov4.to(self.device)
+        #        return self.detect(req)
+        #    else:
+        #        raise rospy.ServiceException("Couldn't use CUDA or CPU....")
         outputs = post_processing(image, req.confidence, req.nms, outputs)
 
         if not outputs[0] is None:
