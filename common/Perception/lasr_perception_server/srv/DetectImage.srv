@@ -1,7 +1,8 @@
-sensor_msgs/Image image
+sensor_msgs/Image[] image
 string dataset
 float32 confidence
 float32 nms
 string[] filter
+string task
 ---
-Detection[] detected_objects
+lasr_perception_server/Detection[] detected_objects
