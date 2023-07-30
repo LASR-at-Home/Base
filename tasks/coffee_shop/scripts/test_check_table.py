@@ -9,5 +9,6 @@ if __name__ == "__main__":
     rospy.init_node("test_check_table")
     sm = smach.StateMachine(outcomes=['end', 'not_finished'])
     with sm:
-        sm.add('CHECK_TABLE', CheckTable(HeadController(), Voice(), debug=True), transitions={'finished' : 'end'})
+        sm.add('CHECK_TABLE', CheckTable(HeadController(), Voice(), True), transitions={'finished' : 'end'})
     sm.execute()
+    rospy.signal_shutdown("down")
