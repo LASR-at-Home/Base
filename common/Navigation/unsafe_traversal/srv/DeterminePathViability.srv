@@ -1,0 +1,11 @@
+# starting position
+geometry_msgs/PoseStamped start_pose
+
+# end position
+geometry_msgs/PoseStamped end_pose
+---
+# check if viable
+bool viable
+
+# the difference between ideal and real plans
+float64 raw_error

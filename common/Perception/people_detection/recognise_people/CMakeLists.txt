@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(lasr_object_detection_yolo)
+project(recognise_people)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
@@ -57,7 +57,7 @@ catkin_python_setup()
 ## Generate services in the 'srv' folder
 add_service_files(
    FILES
-   YoloDetection.srv
+   RecognisePeople.srv
 )
 
 ## Generate actions in the 'action' folder

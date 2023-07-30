@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(lasr_object_detection_yolo)
+project(face_detection)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
@@ -49,15 +49,15 @@ catkin_python_setup()
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
 ## Generate messages in the 'msg' folder
-# add_message_files(
-#   FILES
-#   Detection.msg
-# )
+#add_message_files(
+# FILES
+# Detection.msg
+#)
 
 ## Generate services in the 'srv' folder
 add_service_files(
    FILES
-   YoloDetection.srv
+   FaceDetection.srv
 )
 
 ## Generate actions in the 'action' folder

@@ -1,25 +1,26 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>lasr_object_detection_yolo</name>
+  <name>unsafe_traversal</name>
   <version>0.0.0</version>
-  <description>The lasr_object_detection_yolo package</description>
+  <description>Includes action to move between two points unsafely and service to switch to unsafe
+    parameters.</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag -->
   <!-- Example:  -->
   <!-- <maintainer email="jane.doe@example.com">Jane Doe</maintainer> -->
-  <maintainer email="jared@todo.todo">jared</maintainer>
+  <maintainer email="me@insrt.uk">Paul Makles</maintainer>
 
 
   <!-- One license tag required, multiple allowed, one license per tag -->
   <!-- Commonly used license strings: -->
   <!--   BSD, MIT, Boost Software License, GPLv2, GPLv3, LGPLv2.1, LGPLv3 -->
-  <license>TODO</license>
+  <license>MIT</license>
 
 
   <!-- Url tags are optional, but multiple are allowed, one per tag -->
   <!-- Optional attribute type can be: website, bugtracker, or repository -->
   <!-- Example: -->
-  <!-- <url type="website">http://wiki.ros.org/lasr_object_detection_yolo</url> -->
+  <!-- <url type="website">http://wiki.ros.org/unsafe_traversal</url> -->
 
 
   <!-- Author tags are optional, multiple are allowed, one per tag -->
@@ -49,13 +50,15 @@
   <!-- Use doc_depend for packages you need only for building documentation: -->
   <!--   <doc_depend>doxygen</doc_depend> -->
   <buildtool_depend>catkin</buildtool_depend>
-  <build_depend>rospy</build_depend>
-  <build_depend>std_msgs</build_depend>
-  <build_export_depend>rospy</build_export_depend>
-  <build_export_depend>std_msgs</build_export_depend>
-  <exec_depend>rospy</exec_depend>
-  <exec_depend>std_msgs</exec_depend>
-  <depend>lasr_perception_server</depend>
+  <build_depend>message_generation</build_depend>
+  <exec_depend>message_runtime</exec_depend>
+  <depend>rospy</depend>
+  <depend>rosservice</depend>
+  <depend>actionlib</depend>
+  <depend>dynamic_reconfigure</depend>
+  <depend>geometry_msgs</depend>
+  <depend>actionlib_msgs</depend>
+  <depend>nav_msgs</depend>
 
 
   <!-- The export tag contains other, unspecified, tags -->

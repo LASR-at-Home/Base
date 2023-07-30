@@ -1,0 +1,4 @@
+string goal_room
+---
+geometry_msgs/Point[] points
+bool success

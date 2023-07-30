@@ -62,8 +62,13 @@
   <exec_depend>rospy</exec_depend>
   <exec_depend>sensor_msgs</exec_depend>
   <exec_depend>std_msgs</exec_depend>
+<<<<<<< HEAD:common/Navigation/tiago_controllers/package.xml
   <exec_depend>message_runtime</exec_depend>
   <exec_depend>message_generation</exec_depend>
+=======
+  <depend>lasr_perception_server</depend>
+
+>>>>>>> main:common/Perception/people_detection/recognise_people/package.xml
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>
