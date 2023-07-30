@@ -1,6 +1,0 @@
-string room1
-geometry_msgs/Point door1
-string room2
-geometry_msgs/Point door2
----
-bool success

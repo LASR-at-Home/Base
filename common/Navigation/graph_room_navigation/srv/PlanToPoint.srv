@@ -1,4 +1,0 @@
-geometry_msgs/Point goal
----
-geometry_msgs/Point[] points
-bool success
