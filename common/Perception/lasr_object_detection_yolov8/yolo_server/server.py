@@ -81,6 +81,7 @@ while True:
                 conn.send(plotted)
 
             conn.send(detected_objects)
+
     except KeyboardInterrupt:
         listener.close()
         break

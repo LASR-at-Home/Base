@@ -2,11 +2,68 @@
 
 This is an object detection service which uses YOLOv8 as the backend.
 
+## Usage
+
+This package provides the `/yolov8/detect` service which uses the `YoloDetection` service definition from `lasr_object_detection_yolo`.
+
+```python
+from lasr_object_detection_yolo.srv import YoloDetection, YoloDetectionRequest
+
+# create service proxy
+detect_service = rospy.ServiceProxy('/yolov8/detect', YoloDetection)
+
+# create request
+request = YoloDetectionRequest()
+request.image_raw = image # sensor_msgs/Image
+request.dataset = "yolov8n.pt" # YOLOv8 model, auto-downloads
+request.confidence = 0.0 # minimum confidence to include in results
+
+# send request
+response = detect_service(request)
+# .. use request.detections
+```
+
+Before using the service, you must install required packages, see "Installing YOLOv8 Server".
+
+To start the service:
+
+```python
+# outside of TIAGo container:
+cd src/lasr-base/common/Perception/lasr_object_detection_yolov8/yolo_server
+source venv/bin/activate.bash
+python3 server.py
+
+# inside of TIAGo container & LASR workspace:
+rosrun lasr_object_detection_yolov8 service
+# .. or also write to /yolov8/debug topic:
+DEBUG=1 rosrun lasr_object_detection_yolov8 service
+```
+
+## Platform-Specific Notes
+
+When running GUI applications on macOS with Orbstack, ensure the follow environment variables are set:
+
+```bash
+# connect to XQuartz over the network
+export DISPLAY=<lan ip>:0
+
+# force use of iglx
+export LIBGL_ALWAYS_INDIRECT=1
+```
+
+To run the YOLO server on Nix, use the shell:
+
+```bash
+nix-shell -p python311 python311Packages.numpy python311Packages.pillow python311Packages.opencv4
+```
+
+Nvidia driver support works out of the box.
+
 ## Installing YOLOv8 Server
 
 ```bash
 # enter source directory
-roscd lasr_object_detection_yolov8/yolo_server
+cd src/lasr-base/common/Perception/lasr_object_detection_yolov8/yolo_server
 
 # create a new virtualenv if not already
 python3 -m venv venv
@@ -44,7 +101,7 @@ pip install -r requirements.txt
 5. Start the YOLO server.
 
    ```bash
-   roscd lasr_object_detection_yolov8/yolo_server
+   cd src/lasr-base/common/Perception/lasr_object_detection_yolov8/yolo_server
    source venv/bin/activate.bash
    python3 server.py
    ```
