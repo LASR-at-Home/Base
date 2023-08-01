@@ -23,6 +23,10 @@ response = detect_service(request)
 # .. use request.detections
 ```
 
+> You can find [all available (on-demand) models here](https://docs.ultralytics.com/models/yolov8/#supported-tasks).
+>
+> Place additional models into the `yolo_server/models` folder.
+
 Before using the service, you must install required packages, see "Installing YOLOv8 Server".
 
 To start the service:
