@@ -86,7 +86,7 @@ pip install -r requirements.txt
 
 1. Find a video to test on, or otherwise acquire an image topic.
 
-   My test video is `https://www.youtube.com/watch?v=ng8Wivt52K0`, [download it using Cobalt](https://www.youtube.com/watch?v=ng8Wivt52K0) then place it in a directory such as `~/test_video.mp4`.
+   My test video is `https://www.youtube.com/watch?v=ng8Wivt52K0`, [download it using Cobalt](https://co.wukko.me/) then place it in a directory such as `~/test_video.mp4`.
 
 2. Start ROS master if not started already.
 
