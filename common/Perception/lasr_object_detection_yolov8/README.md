@@ -126,4 +126,7 @@ pip install -r requirements.txt
    # pick a different model:
    rosrun lasr_object_detection_yolov8 relay /camera/image_raw yolov8n-seg.pt
    rosrun lasr_object_detection_yolov8 relay /camera/image_raw yolov8l.pt
+
+   # example: re-create the mask on the client end:
+   rosrun lasr_object_detection_yolov8 construct_mask /camera/image_raw
    ```
