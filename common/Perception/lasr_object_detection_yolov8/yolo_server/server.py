@@ -65,16 +65,17 @@ while True:
             # Receive parameters
             dataset = conn.recv()
             min_confidence = conn.recv()
+            nms = conn.recv()
             debug = conn.recv()
             encoding = conn.recv()
             width = conn.recv()
             height = conn.recv()
             image_data = conn.recv()
             
-            print(f'Received {encoding} image with dim {width}x{height}, using dataset {dataset} and minimum confidence of {min_confidence}, debugging? {debug}.')
+            print(f'Received {encoding} image with dim {width}x{height}, using dataset {dataset}, minimum confidence of {min_confidence}, and NMS of {nms}, debugging? {debug}.')
 
             # Call the detection subroutine
-            plotted, detected_objects = yolo.detect(dataset, min_confidence, debug, encoding, width, height, image_data)
+            plotted, detected_objects = yolo.detect(dataset, min_confidence, nms, debug, encoding, width, height, image_data)
 
             # Send the data back
             if debug:

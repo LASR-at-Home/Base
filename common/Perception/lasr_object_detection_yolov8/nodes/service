@@ -49,6 +49,7 @@ def detect(request):
 
     conn.send(request.dataset)
     conn.send(request.confidence)
+    conn.send(request.nms)
     conn.send(DEBUG)
     conn.send(request.image_raw.encoding)
     conn.send(request.image_raw.width)

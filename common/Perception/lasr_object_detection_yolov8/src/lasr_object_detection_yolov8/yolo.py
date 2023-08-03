@@ -6,7 +6,7 @@ from ultralytics import YOLO
 # model cache
 loaded_models = {}
 
-def detect(dataset, min_confidence, debug, encoding, width, height, image_data):
+def detect(dataset, min_confidence, nms, debug, encoding, width, height, image_data):
     # decode the image
     print('Decoding')
     if encoding == 'bgr8':
@@ -30,7 +30,7 @@ def detect(dataset, min_confidence, debug, encoding, width, height, image_data):
 
     # run inference
     print('Running inference')
-    results = model(img)
+    results = model(img, conf=min_confidence, iou=nms)
     result = results[0]
     print('Inference complete')
 
@@ -39,19 +39,17 @@ def detect(dataset, min_confidence, debug, encoding, width, height, image_data):
     object_count = result.boxes.cls.size(dim=0)
     has_segment_masks = result.masks is not None
     for i in range(0, object_count):
-        confidence = float(result.boxes.conf.numpy()[i])
-        if confidence >= min_confidence:
-            detection = {
-                'name': result.names[int(result.boxes.cls[i])],
-                'confidence': confidence,
-                'xywh': result.boxes.xywh[i].numpy().astype(int).tolist(),
-            }
+        detection = {
+            'name': result.names[int(result.boxes.cls[i])],
+            'confidence': float(result.boxes.conf.numpy()[i]),
+            'xywh': result.boxes.xywh[i].numpy().astype(int).tolist(),
+        }
 
-            # copy segmented mask if available
-            if has_segment_masks:
-                detection['xyseg'] = result.masks.xy[i].flatten().astype(int).tolist()
+        # copy segmented mask if available
+        if has_segment_masks:
+            detection['xyseg'] = result.masks.xy[i].flatten().astype(int).tolist()
 
-            detected_objects.append(detection)
+        detected_objects.append(detection)
     
     plotted = None
     if debug:

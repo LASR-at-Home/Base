@@ -32,8 +32,8 @@ def detect(image):
         req = YoloDetectionRequest()
         req.image_raw = image
         req.dataset = model
-        req.confidence = 0.0
-        req.nms = 0.0
+        req.confidence = 0.25
+        req.nms = 0.4
         resp = detect_service(req)
         print(resp)
     except rospy.ServiceException as e:
