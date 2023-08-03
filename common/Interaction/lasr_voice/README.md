@@ -1,10 +1,38 @@
 # Voice
-running the sound play dependencies e.g. recordings, demands running the sound play node
-This is done by typing the following
-```commandline
-roslaunch sound_play soundplay_node.launch
+
+Python library providing an abstraction over TIAGo's TTS engine.
+
+## Usage
+
+```python
+from lasr_voice.voice import Voice
+
+voice = Voice()
+
+# play something to tts and wait for it to end
+voice.sync_tts("hello world")
+
+# play something to tts and let it run in the background
+voice.async_tts("hello world")
+
+# wait until we stop talking
+while voice.is_running():
+    print("still talking")
 ```
-testing if sound play is set up correctly can be done by running
-```commandline
-roslaunch sound_play test.launch 
-```
+
+## Running in Simulation
+
+TIAGo's TTS action server is not available while in simulation, so we need to roll our own.
+
+- Avoid playing back TTS and just log actions:
+
+  ```python
+  rosrun lasr_voice log_tts_events
+  ```
+
+- Use `sound_play` as the backend for TTS:
+
+  ```python
+  rosrun sound_play soundplay_node.py &
+  rosrun lasr_voice sound_play_tts
+  ```

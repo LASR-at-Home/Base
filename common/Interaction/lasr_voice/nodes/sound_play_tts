@@ -1,0 +1,22 @@
+#!/usr/bin/env python3
+
+import rospy
+import actionlib
+
+from sound_play.msg import SoundRequest
+from sound_play.libsoundplay import SoundClient
+from pal_interaction_msgs.msg import TtsGoal, TtsAction
+
+class TtsNode:
+    def __init__(self):
+        self._server = actionlib.SimpleActionServer('/tts', TtsAction, self.execute, False)
+        self._server.start()
+        self._soundhandle = SoundClient()
+    
+    def execute(self, goal):
+        self._soundhandle.say(goal.rawtext.text, 'voice_kal_diphone', 1.0)
+        self._server.set_succeeded()
+
+rospy.init_node("sound_play_tts", anonymous=True)
+TtsNode()
+rospy.spin()
