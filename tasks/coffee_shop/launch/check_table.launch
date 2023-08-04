@@ -1,8 +1,7 @@
 <launch>
 	<node pkg="lasr_object_detection_yolov8" type="service" name="service" output="screen"/>
 	<node pkg="coffee_shop" type="tf_transform.py" name="tf_transform" output="screen"/>
-	<rosparam command="load" file="$(find coffee_shop)/config/test_check_table.yaml" />
+	<rosparam command="load" file="$(find coffee_shop)/config/test_check_table_sim.yaml" />
 	<rosparam command="load" file="$(find coffee_shop)/config/motions.yaml" />
-	<node pkg="pcl_segmentation" type="pcl_segmentation_server" name="pcl_segmentation_server" output="screen" />
 	<node pkg="coffee_shop" type="test_check_table.py" name="test_check_table" output="screen"/>
 </launch>

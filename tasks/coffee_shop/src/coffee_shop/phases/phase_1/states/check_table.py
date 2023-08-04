@@ -23,12 +23,12 @@ import ros_numpy as rnp
 OBJECTS = ["cup", "mug"]
 
 
-def create_point_marker(x, y, z, idx, frame):
+def create_point_marker(x, y, z, idx, frame, text):
     marker_msg = Marker()
     marker_msg.header.frame_id = frame
     marker_msg.header.stamp = rospy.Time.now()
     marker_msg.id = idx
-    marker_msg.type = Marker.SPHERE
+    marker_msg.type = Marker.TEXT_VIEW_FACING
     marker_msg.action = Marker.ADD
     marker_msg.pose.position.x = x
     marker_msg.pose.position.y = y
@@ -41,6 +41,7 @@ def create_point_marker(x, y, z, idx, frame):
     marker_msg.color.r = 1.0
     marker_msg.color.g = 0.0
     marker_msg.color.b = 0.0
+    marker_msg.text = text
     return marker_msg
 
 class CheckTable(smach.State):
@@ -52,9 +53,6 @@ class CheckTable(smach.State):
         self.play_motion_client = actionlib.SimpleActionClient('/play_motion', PlayMotionAction)
         self.play_motion_client.wait_for_server(rospy.Duration(15.0))
         self.detect = rospy.ServiceProxy('/yolov8/detect', YoloDetection)
-        self.mask_from_cuboid = rospy.ServiceProxy("/pcl_segmentation_server/mask_from_cuboid", MaskFromCuboid)
-        self.segment_bb = rospy.ServiceProxy("/pcl_segmentation_server/segment_bb", SegmentBB)
-        self.centroid = rospy.ServiceProxy("/pcl_segmentation_server/centroid", Centroid)
         self.tf = rospy.ServiceProxy("/tf_transform", TfTransform)
         self.bridge = CvBridge()
         self.detections_objects = []
@@ -68,7 +66,7 @@ class CheckTable(smach.State):
         cv2.fillPoly(mask, pts=[contours], color=(255, 255, 255))
         indices = np.argwhere(mask)
         if indices.shape[0] == 0:
-            return Point(np.inf, np.inf, np.inf)
+            return np.array([np.nan, np.nan, np.nan])
         pcl_xyz = rnp.point_cloud2.pointcloud2_to_xyz_array(pcl_msg, remove_nans=False)
 
         xyz_points = []
@@ -84,36 +82,35 @@ class CheckTable(smach.State):
         tf_req.target_frame = String("map")
         tf_req.point  = centroid
         response = self.tf(tf_req)
-        return response.target_point.point
+        return np.array([response.target_point.point.x, response.target_point.point.y, response.target_point.point.z])
 
     def publish_object_points(self):
-        for i, (_, point) in enumerate(self.detections_objects):
-            marker = create_point_marker(point.x, point.y, point.z, i, "map")
+        for i, (det, point) in enumerate(self.detections_objects):
+            marker = create_point_marker(*point, i, "map", f"{det.name}, {det.confidence}")
             self.object_pose_pub.publish(marker)
 
     def publish_people_points(self):
-        for i, (_, point) in enumerate(self.detections_people):
-            marker = create_point_marker(point.x, point.y, point.z, i, "map")
+        for i, (det, point) in enumerate(self.detections_people):
+            marker = create_point_marker(*point, i, "map", f"{det.name}, {det.confidence}")
             self.people_pose_pub.publish(marker)
 
     def filter_detections_by_pose(self, detections, threshold=0.2):
         filtered = []
 
         for i, (detection, point) in enumerate(detections):
-            distances = np.array([np.sqrt(np.sum((np.array([point.x, point.y, point.z]) - np.array([ref_point.x, ref_point.y, ref_point.z])) ** 2)) for _, ref_point in filtered])
+            distances = np.array([np.sqrt(np.sum((point - ref_point) ** 2)) for _, ref_point in filtered])
             if not np.any(distances < threshold):
                 filtered.append((detection, point))
 
         return filtered
 
     def perform_detection(self, pcl_msg, min_xyz, max_xyz, filter):
-        mask = self.mask_from_cuboid(pcl_msg, Point(*min_xyz), Point(*max_xyz)).mask
         cv_im = pcl_msg_to_cv2(pcl_msg)
-        cv_mask = self.bridge.imgmsg_to_cv2_np(mask)
-        masked_im = cv2.bitwise_and(cv_im, cv_im, mask=cv_mask)
-        img_msg = self.bridge.cv2_to_imgmsg(masked_im)
-        detections = self.detect(img_msg, "yolov8n-seg.pt", 0.5, 0.3)
+        img_msg = self.bridge.cv2_to_imgmsg(cv_im)
+        detections = self.detect(img_msg, "yolov8n-seg.pt", 0.6, 0.3)
         detections = [(det, self.estimate_pose(pcl_msg, cv_im, det)) for det in detections.detected_objects if det.name in filter]
+        print([pose for _, pose in detections], min_xyz, max_xyz)
+        detections = [(det, pose) for (det, pose) in detections if np.all(np.array(min_xyz) <= pose) and np.all(pose <= np.array(max_xyz))]
         return detections
 
     def check(self, pcl_msg):
@@ -133,7 +130,6 @@ class CheckTable(smach.State):
         self.object_debug_images = []
         self.people_debug_images = []
 
-
         rospy.loginfo(self.current_table)
         objects_corners = rospy.get_param(f"/tables/{self.current_table}/objects_cuboid")
         persons_corners = rospy.get_param(f"/tables/{self.current_table}/persons_cuboid")
@@ -144,10 +140,7 @@ class CheckTable(smach.State):
         self.detections_objects = []
         self.detections_people = []
 
-        motions = ["back_to_default", "check_table", "check_table_low", "look_left", "look_down_left",  "look_down_right", "look_right", "back_to_default"]
-        """
-        It's better to continually detect, but the depth and image data become mis aligned..
-        """
+        motions = ["back_to_default", "check_table", "check_table_low", "look_left", "look_right", "back_to_default"]
         #self.detection_sub = rospy.Subscriber("/xtion/depth_registered/points", PointCloud2, self.check)
         for motion in motions:
             pm_goal = PlayMotionGoal(motion_name=motion, skip_planning=True)
@@ -169,7 +162,7 @@ class CheckTable(smach.State):
         #self.detection_sub.unregister()
  
         self.detections_objects = self.filter_detections_by_pose(self.detections_objects, threshold=0.1)
-        self.detections_people = self.filter_detections_by_pose(self.detections_people, threshold=0.5)
+        self.detections_people = self.filter_detections_by_pose(self.detections_people, threshold=0.50)
 
         if self.debug:
             self.publish_object_points()
