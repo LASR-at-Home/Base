@@ -9,7 +9,7 @@ loaded_models = {}
 def detect(dataset, min_confidence, nms, debug, encoding, width, height, image_data):
     # decode the image
     print('Decoding')
-    if encoding == 'bgr8':
+    if encoding in ['bgr8', '8UC3']:
         img = Image.frombytes('RGB', (width, height), image_data, 'raw')
 
         # BGR => RGB
