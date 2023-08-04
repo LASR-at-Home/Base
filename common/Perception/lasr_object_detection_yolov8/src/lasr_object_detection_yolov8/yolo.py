@@ -41,8 +41,8 @@ def detect(dataset, min_confidence, nms, debug, encoding, width, height, image_d
     for i in range(0, object_count):
         detection = {
             'name': result.names[int(result.boxes.cls[i])],
-            'confidence': float(result.boxes.conf.numpy()[i]),
-            'xywh': result.boxes.xywh[i].numpy().astype(int).tolist(),
+            'confidence': float(result.boxes.conf.cpu().numpy()[i]),
+            'xywh': result.boxes.xywh[i].cpu().numpy().astype(int).tolist(),
         }
 
         # copy segmented mask if available
