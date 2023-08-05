@@ -14,7 +14,7 @@ from cv_bridge3 import CvBridge, cv2
 from lasr_object_detection_yolo.srv import YoloDetection
 from lasr_voice.voice import Voice
 from pcl_segmentation.srv import SegmentCuboid, Centroid, MaskFromCuboid, SegmentBB
-from common_math import pcl_msg_to_cv2
+from common_math import pcl_msg_to_cv2, seg_to_centroid
 from coffee_shop.srv import TfTransform, TfTransformRequest
 import numpy as np
 from actionlib_msgs.msg import GoalStatus
@@ -60,38 +60,26 @@ class CheckTable(smach.State):
         self.object_pose_pub = rospy.Publisher("/object_poses", Marker, queue_size=100)
         self.people_pose_pub = rospy.Publisher("/people_poses", Marker, queue_size=100)
 
-    def estimate_pose(self, pcl_msg, cv_im, detection):
-        contours = np.array(detection.xyseg).reshape(-1, 2)
-        mask = np.zeros((cv_im.shape[0], cv_im.shape[1]), np.uint8)
-        cv2.fillPoly(mask, pts=[contours], color=(255, 255, 255))
-        indices = np.argwhere(mask)
-        if indices.shape[0] == 0:
-            return np.array([np.nan, np.nan, np.nan])
-        pcl_xyz = rnp.point_cloud2.pointcloud2_to_xyz_array(pcl_msg, remove_nans=False)
 
-        xyz_points = []
-        for x, y in indices:
-            x, y, z = pcl_xyz[x][y]
-            xyz_points.append([x, y, z])
-
-        x, y, z = np.nanmean(xyz_points, axis=0)
+    def estimate_pose(self, pcl_msg, detection):
+        centroid_xyz = seg_to_centroid(pcl_msg, np.array(detection.xyseg))
         centroid = PointStamped()
-        centroid.point = Point(x,y,z)
+        centroid.point = Point(*centroid_xyz)
         centroid.header = pcl_msg.header
         tf_req = TfTransformRequest()
         tf_req.target_frame = String("map")
-        tf_req.point  = centroid
+        tf_req.point = centroid
         response = self.tf(tf_req)
         return np.array([response.target_point.point.x, response.target_point.point.y, response.target_point.point.z])
 
     def publish_object_points(self):
-        for i, (det, point) in enumerate(self.detections_objects):
-            marker = create_point_marker(*point, i, "map", f"{det.name}, {det.confidence}")
+        for i, (_, point) in enumerate(self.detections_objects):
+            marker = create_point_marker(*point, i, "map")
             self.object_pose_pub.publish(marker)
 
     def publish_people_points(self):
-        for i, (det, point) in enumerate(self.detections_people):
-            marker = create_point_marker(*point, i, "map", f"{det.name}, {det.confidence}")
+        for i, (_, point) in enumerate(self.detections_people):
+            marker = create_point_marker(*point, i, "map")
             self.people_pose_pub.publish(marker)
 
     def filter_detections_by_pose(self, detections, threshold=0.2):
@@ -106,11 +94,11 @@ class CheckTable(smach.State):
 
     def perform_detection(self, pcl_msg, min_xyz, max_xyz, filter):
         cv_im = pcl_msg_to_cv2(pcl_msg)
-        img_msg = self.bridge.cv2_to_imgmsg(cv_im)
-        detections = self.detect(img_msg, "yolov8n-seg.pt", 0.6, 0.3)
-        detections = [(det, self.estimate_pose(pcl_msg, cv_im, det)) for det in detections.detected_objects if det.name in filter]
-        print([pose for _, pose in detections], min_xyz, max_xyz)
-        detections = [(det, pose) for (det, pose) in detections if np.all(np.array(min_xyz) <= pose) and np.all(pose <= np.array(max_xyz))]
+        cv_mask = self.bridge.imgmsg_to_cv2_np(mask)
+        masked_im = cv2.bitwise_and(cv_im, cv_im, mask=cv_mask)
+        img_msg = self.bridge.cv2_to_imgmsg(masked_im)
+        detections = self.detect(img_msg, "yolov8n-seg.pt", 0.5, 0.3)
+        detections = [(det, self.estimate_pose(pcl_msg, det)) for det in detections.detected_objects if det.name in filter]
         return detections
 
     def check(self, pcl_msg):
