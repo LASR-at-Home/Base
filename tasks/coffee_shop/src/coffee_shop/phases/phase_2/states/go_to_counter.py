@@ -10,7 +10,7 @@ class GoToCounter(smach.State):
         self.base_controller = base_controller
 
     def execute(self, userdata):
-        position = rospy.get_param("counter/position")
-        orientation = rospy.get_param("counter/orientation")
+        position = rospy.get_param("counter/location/position")
+        orientation = rospy.get_param("counter/location/orientation")
         self.base_controller.sync_to_pose(Pose(position=Point(**position), orientation=Quaternion(**orientation)))
         return 'done'

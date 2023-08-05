@@ -11,7 +11,7 @@ from lasr_object_detection_yolo.srv import YoloDetection
 from coffee_shop.srv import TfTransform, TfTransformRequest
 from cv_bridge3 import CvBridge, cv2
 
-OBJECTS = ["cup", "mug"]
+OBJECTS = ["cup", "mug", "bowl"]
 
 class CheckOrder(smach.State):
     def __init__(self, voice_controller):
@@ -55,8 +55,9 @@ class CheckOrder(smach.State):
         pcl_msg = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
         cv_im = pcl_msg_to_cv2(pcl_msg)
         img_msg = self.bridge.cv2_to_imgmsg(cv_im)
-        detections = self.detect(img_msg, "yolov8n-seg.pt", 0.6, 0.3)
-        detections = [(det, self.estimate_pose(pcl_msg, cv_im, det)) for det in detections.detected_objects if det.name in OBJECTS]
-        given_order = [det.name for (det, pose) in detections if np.all(min_xyz <= pose) and np.all(pose <= max_xyz)]
+        detections = self.detect(img_msg, "yolov8n-seg.pt", 0.5, 0.3)
+        given_order = [det.name for det in detections.detected_objects if det.name in OBJECTS]
+        #detections = [(det, self.estimate_pose(pcl_msg, cv_im, det)) for det in detections.detected_objects if det.name in OBJECTS]
+        #given_order = [det.name for (det, pose) in detections if np.all(min_xyz <= pose) and np.all(pose <= max_xyz)]
         rospy.set_param(f"/tables/{rospy.get_param('current_table')}/given_order", given_order)
         return 'correct' if sorted(order) == sorted(given_order) else 'incorrect'
