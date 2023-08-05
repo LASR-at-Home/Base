@@ -6,7 +6,7 @@ import ros_numpy as rnp
 from sensor_msgs.msg import PointCloud2
 from geometry_msgs.msg import Point, PointStamped
 from std_msgs.msg import String
-from common_math import pcl_msg_to_cv2
+from common_math import pcl_msg_to_cv2, seg_to_centroid
 from lasr_object_detection_yolo.srv import YoloDetection
 from coffee_shop.srv import TfTransform, TfTransformRequest
 from cv_bridge3 import CvBridge, cv2
@@ -21,23 +21,10 @@ class CheckOrder(smach.State):
         self.tf = rospy.ServiceProxy("/tf_transform", TfTransform)
         self.bridge = CvBridge()
 
-    def estimate_pose(self, pcl_msg, cv_im, detection):
-        contours = np.array(detection.xyseg).reshape(-1, 2)
-        mask = np.zeros((cv_im.shape[0], cv_im.shape[1]), np.uint8)
-        cv2.fillPoly(mask, pts=[contours], color=(255, 255, 255))
-        indices = np.argwhere(mask)
-        if indices.shape[0] == 0:
-            return np.array([np.nan, np.nan, np.nan])
-        pcl_xyz = rnp.point_cloud2.pointcloud2_to_xyz_array(pcl_msg, remove_nans=False)
-
-        xyz_points = []
-        for x, y in indices:
-            x, y, z = pcl_xyz[x][y]
-            xyz_points.append([x, y, z])
-
-        x, y, z = np.nanmean(xyz_points, axis=0)
+    def estimate_pose(self, pcl_msg, detection):
+        centroid_xyz = seg_to_centroid(pcl_msg, np.array(detection.xyseg))
         centroid = PointStamped()
-        centroid.point = Point(x,y,z)
+        centroid.point = Point(*centroid_xyz)
         centroid.header = pcl_msg.header
         tf_req = TfTransformRequest()
         tf_req.target_frame = String("map")
@@ -56,8 +43,7 @@ class CheckOrder(smach.State):
         cv_im = pcl_msg_to_cv2(pcl_msg)
         img_msg = self.bridge.cv2_to_imgmsg(cv_im)
         detections = self.detect(img_msg, "yolov8n-seg.pt", 0.5, 0.3)
-        given_order = [det.name for det in detections.detected_objects if det.name in OBJECTS]
-        #detections = [(det, self.estimate_pose(pcl_msg, cv_im, det)) for det in detections.detected_objects if det.name in OBJECTS]
-        #given_order = [det.name for (det, pose) in detections if np.all(min_xyz <= pose) and np.all(pose <= max_xyz)]
+        detections = [(det, self.estimate_pose(pcl_msg, det)) for det in detections.detected_objects if det.name in OBJECTS]
+        given_order = [det.name for (det, pose) in detections if np.all(min_xyz <= pose) and np.all(pose <= max_xyz)]
         rospy.set_param(f"/tables/{rospy.get_param('current_table')}/given_order", given_order)
         return 'correct' if sorted(order) == sorted(given_order) else 'incorrect'
