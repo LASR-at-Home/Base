@@ -26,7 +26,7 @@ class LookForPerson(smach.State):
         cv2.fillPoly(mask, pts=[contours], color=(255, 255, 255))
         indices = np.argwhere(mask)
         if indices.shape[0] == 0:
-            return Point(np.inf, np.inf, np.inf)
+            return np.array([np.inf, np.inf, np.inf])
         pcl_xyz = rnp.point_cloud2.pointcloud2_to_xyz_array(pcl_msg, remove_nans=False)
 
         xyz_points = []
@@ -42,35 +42,39 @@ class LookForPerson(smach.State):
         tf_req.target_frame = String("map")
         tf_req.point  = centroid
         response = self.tf(tf_req)
-        return response.target_point.point
+        return np.array([response.target_point.point.x, response.target_point.point.y, response.target_point.point.z])
 
     def execute(self, userdata):
-            pcl_msg = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
-            cv_im = pcl_msg_to_cv2(pcl_msg)
-            img_msg = self.bridge.cv2_to_imgmsg(cv_im)
-            detections = self.detect(img_msg, "yolov8n-seg.pt", 0.3, 0.3)
-            detections = [(det, self.estimate_pose(pcl_msg, cv_im, det)) for det in detections.detected_objects if det.name == "person"]
-            if len(detections):
-                pose = detections[0][1]
-                rospy.set_param("/person/position", [pose.x, pose.y, pose.z])
-                marker_msg = Marker()
-                marker_msg.header.frame_id = "map"
-                marker_msg.header.stamp = rospy.Time.now()
-                marker_msg.id = 0
-                marker_msg.type = Marker.SPHERE
-                marker_msg.action = Marker.ADD
-                marker_msg.pose.position.x = pose.x
-                marker_msg.pose.position.y = pose.y
-                marker_msg.pose.position.z = pose.z
-                marker_msg.pose.orientation.w = 1.0
-                marker_msg.scale.x = 0.1
-                marker_msg.scale.y = 0.1
-                marker_msg.scale.z = 0.1
-                marker_msg.color.a = 1.0
-                marker_msg.color.r = 1.0
-                marker_msg.color.g = 0.0
-                marker_msg.color.b = 0.0
-                self.people_pose_pub.publish(marker_msg)
-                return 'found'
-            else:
-                return 'not found'
+        corners = rospy.get_param("/wait/cuboid")
+        min_xyz = np.array([min([x for x, _ in corners]), min([y for _, y in corners]), 0.0])
+        max_xyz = np.array([max([x for x, _ in corners]), max([y for _, y in corners]), 10.0])
+        pcl_msg = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
+        cv_im = pcl_msg_to_cv2(pcl_msg)
+        img_msg = self.bridge.cv2_to_imgmsg(cv_im)
+        detections = self.detect(img_msg, "yolov8n-seg.pt", 0.3, 0.3)
+        detections = [(det, self.estimate_pose(pcl_msg, cv_im, det)) for det in detections.detected_objects if det.name == "person"]
+        if len(detections):
+            for detection in detections:
+                pose = np.array(detection[1])
+                if np.all(min_xyz <= pose) and np.all(pose <= max_xyz):
+                    rospy.set_param("/person/position", pose.tolist())
+                    marker_msg = Marker()
+                    marker_msg.header.frame_id = "map"
+                    marker_msg.header.stamp = rospy.Time.now()
+                    marker_msg.id = 0
+                    marker_msg.type = Marker.SPHERE
+                    marker_msg.action = Marker.ADD
+                    marker_msg.pose.position.x = pose[0]
+                    marker_msg.pose.position.y = pose[1]
+                    marker_msg.pose.position.z = pose[2]
+                    marker_msg.pose.orientation.w = 1.0
+                    marker_msg.scale.x = 0.1
+                    marker_msg.scale.y = 0.1
+                    marker_msg.scale.z = 0.1
+                    marker_msg.color.a = 1.0
+                    marker_msg.color.r = 1.0
+                    marker_msg.color.g = 0.0
+                    marker_msg.color.b = 0.0
+                    self.people_pose_pub.publish(marker_msg)
+                    return 'found'
+        return 'not found'
