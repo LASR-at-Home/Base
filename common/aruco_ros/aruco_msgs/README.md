@@ -3,10 +3,10 @@
 The aruco_msgs package
 
 This package is maintained by:
-- [Sai Kishor Kothakota](sai.kishor@pal-robotics.com)
+- [Sai Kishor Kothakota](mailto:sai.kishor@pal-robotics.com)
 
 The following people have contributed to this package:
-- [Bence Magyar](bence.magyar@pal-robotics.com)
+- [Bence Magyar](mailto:bence.magyar@pal-robotics.com)
 
 ## Prerequisites
 

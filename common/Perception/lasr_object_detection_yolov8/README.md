@@ -3,7 +3,7 @@
 YOLOv8 object detection service
 
 This package is maintained by:
-- [Paul Makles](me@insrt.uk)
+- [Paul Makles](mailto:me@insrt.uk)
 
 ## Prerequisites
 

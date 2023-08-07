@@ -4,7 +4,7 @@ Goes to a specified door and searches for a person. When person is found, ask pe
     to open the door.
 
 This package is maintained by:
-- [elisabeth](elisabeth@todo.todo)
+- [elisabeth](mailto:elisabeth@todo.todo)
 
 ## Prerequisites
 

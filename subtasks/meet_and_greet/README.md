@@ -3,7 +3,7 @@
 The meet_and_greet package
 
 This package is maintained by:
-- [nicole](nicole@todo.todo)
+- [nicole](mailto:nicole@todo.todo)
 
 ## Prerequisites
 

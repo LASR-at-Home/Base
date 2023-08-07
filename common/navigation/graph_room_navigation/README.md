@@ -3,7 +3,7 @@
 The graph_room_navigation package
 
 This package is maintained by:
-- [jared](jared@todo.todo)
+- [jared](mailto:jared@todo.todo)
 
 ## Prerequisites
 

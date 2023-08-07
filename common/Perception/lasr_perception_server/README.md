@@ -3,7 +3,7 @@
 The lasr_perception_server package
 
 This package is maintained by:
-- [jared](jared@todo.todo)
+- [jared](mailto:jared@todo.todo)
 
 ## Prerequisites
 
@@ -47,7 +47,7 @@ Ask the package maintainer to write a `doc/TECHNICAL.md` for their package!
 | name | string | Detected Object Class |
 | confidence | float32 | How certain we are this is what we think it is |
 | xywh | int32[] | Bounding box mask defined in pixel-space |
-| xyseg | int32[] | Segmentation mask defined in pixel-space<br><br>This will be empty if a segmentation model was not used |
+| xyseg | int32[] | Segmentation mask defined in pixel-space<br/><br/>This will be empty if a segmentation model was not used |
 
 
 ### Services

@@ -3,7 +3,7 @@
 The aruco_service package
 
 This package is maintained by:
-- [peter](peter@todo.todo)
+- [peter](mailto:peter@todo.todo)
 
 ## Prerequisites
 

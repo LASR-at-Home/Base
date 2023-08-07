@@ -3,7 +3,7 @@
 The lasr_voice package
 
 This package is maintained by:
-- [elisabeth](elisabeth@todo.todo)
+- [elisabeth](mailto:elisabeth@todo.todo)
 
 ## Prerequisites
 
