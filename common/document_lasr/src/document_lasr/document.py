@@ -43,7 +43,7 @@ def generate_readme(pkg_dir):
     for maintainer in data['maintainers']:
         name = maintainer['name']
         email = maintainer['email']
-        MAINTAINERS += f'\n- [{name}]({email})'
+        MAINTAINERS += f'\n- [{name}](mailto:{email})'
 
     data['maintainers'] = MAINTAINERS
 
@@ -56,7 +56,7 @@ def generate_readme(pkg_dir):
         for author in data['authors']:
             name = author['name']
             email = author['email']
-            AUTHORS += f'\n- [{name}]({email})'
+            AUTHORS += f'\n- [{name}](mailto:{email})'
         
         AUTHORS += '\n'
 
@@ -145,7 +145,7 @@ def generate_readme(pkg_dir):
         table = '| Field | Type | Description |\n|:-:|:-:|---|\n'
         for name, definition in fields.items():
             var_type = definition['type']
-            comment = '<br>'.join(definition['comment'].split('\n'))
+            comment = '<br/>'.join(definition['comment'].split('\n'))
             table += f'| {name} | {var_type} | {comment} |\n'
         
         return table
