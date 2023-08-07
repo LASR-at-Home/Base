@@ -1,17 +1,14 @@
-# find_person_and_ask_open_door
+# cv_bridge3
 
-Goes to a specified door and searches for a person. When person is found, ask person
-    to open the door.
+The cv_bridge3 package
 
 This package is maintained by:
-- [elisabeth](elisabeth@todo.todo)
+- [jared](jared@todo.todo)
 
 ## Prerequisites
 
 This package depends on the following ROS packages:
 - catkin (buildtool)
-- rospy (build)
-- rospy (exec)
 
 Ask the package maintainer to write or create a blank `doc/PREREQUISITES.md` for their package!
 

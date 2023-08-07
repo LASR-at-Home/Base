@@ -208,7 +208,7 @@ def generate_readme(pkg_dir):
             if not action.endswith('.action'):
                 continue
                 
-            name = action[:-4]
+            name = action[:-7]
             data['actions'] += f'#### `{name}`\n\n'
 
             with open(os.path.join(pkg_dir, 'action', action), 'r') as f:
@@ -226,7 +226,7 @@ def generate_readme(pkg_dir):
                 feedback_fields = parse_message_definition(result)
                 data['actions'] += definition_to_table(feedback_fields)
 
-            data['services'] += '\n'
+            data['actions'] += '\n'
 
     # Generate the README
     README = '''# {package_name}

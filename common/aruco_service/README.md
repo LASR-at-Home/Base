@@ -1,17 +1,26 @@
-# find_person_and_ask_open_door
+# aruco_service
 
-Goes to a specified door and searches for a person. When person is found, ask person
-    to open the door.
+The aruco_service package
 
 This package is maintained by:
-- [elisabeth](elisabeth@todo.todo)
+- [peter](peter@todo.todo)
 
 ## Prerequisites
 
 This package depends on the following ROS packages:
 - catkin (buildtool)
+- aruco_msgs (build)
+- geometry_msgs (build)
+- roscpp (build)
 - rospy (build)
+- std_msgs (build)
+- message_generation (build)
+- aruco_msgs (exec)
+- geometry_msgs (exec)
+- roscpp (exec)
 - rospy (exec)
+- std_msgs (exec)
+- message_runtime (exec)
 
 Ask the package maintainer to write or create a blank `doc/PREREQUISITES.md` for their package!
 
@@ -35,7 +44,20 @@ This package has no messages.
 
 ### Services
 
-This package has no services.
+#### `TableNumber`
+
+Request
+
+| Field | Type | Description |
+|:-:|:-:|---|
+| table | uint8 |  |
+
+Response
+
+| Field | Type | Description |
+|:-:|:-:|---|
+| success | bool |  |
+
 
 ### Actions
 

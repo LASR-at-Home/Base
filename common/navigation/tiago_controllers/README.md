@@ -1,17 +1,18 @@
-# find_person_and_ask_open_door
+# tiago_controllers
 
-Goes to a specified door and searches for a person. When person is found, ask person
-    to open the door.
+The tiago_controllers package
 
 This package is maintained by:
-- [elisabeth](elisabeth@todo.todo)
+- [juancm](juancm@todo.todo)
 
 ## Prerequisites
 
 This package depends on the following ROS packages:
 - catkin (buildtool)
 - rospy (build)
+- message_generation (build)
 - rospy (exec)
+- message_runtime (exec)
 
 Ask the package maintainer to write or create a blank `doc/PREREQUISITES.md` for their package!
 
@@ -35,7 +36,22 @@ This package has no messages.
 
 ### Services
 
-This package has no services.
+#### `ArmTorsoPos`
+
+Request
+
+| Field | Type | Description |
+|:-:|:-:|---|
+| torso_goals | float32 |  |
+| arm_goals | float32[] |  |
+| plan | bool |  |
+
+Response
+
+| Field | Type | Description |
+|:-:|:-:|---|
+| result | bool |  |
+
 
 ### Actions
 

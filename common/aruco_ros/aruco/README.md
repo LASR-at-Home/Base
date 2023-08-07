@@ -1,17 +1,23 @@
-# find_person_and_ask_open_door
+# aruco
 
-Goes to a specified door and searches for a person. When person is found, ask person
-    to open the door.
+
+    The ARUCO Library has been developed by the Ava group of the Univeristy of Cordoba(Spain).
+    It provides real-time marker based 3D pose estimation using AR markers.
+  
 
 This package is maintained by:
-- [elisabeth](elisabeth@todo.todo)
+- [Sai Kishor Kothakota](sai.kishor@pal-robotics.com)
+
+The following people have contributed to this package:
+- [Rafael Muñoz Salinas](rmsalinas@uco.es)
+- [Bence Magyar](bence.magyar@pal-robotics.com)
 
 ## Prerequisites
 
 This package depends on the following ROS packages:
 - catkin (buildtool)
-- rospy (build)
-- rospy (exec)
+- cv_bridge
+- eigen
 
 Ask the package maintainer to write or create a blank `doc/PREREQUISITES.md` for their package!
 
