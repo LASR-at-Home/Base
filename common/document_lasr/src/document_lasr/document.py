@@ -211,7 +211,7 @@ def generate_readme(pkg_dir):
             name = action[:-4]
             data['actions'] += f'#### `{name}`\n\n'
 
-            with open(os.path.join(pkg_dir, 'action', service), 'r') as f:
+            with open(os.path.join(pkg_dir, 'action', action), 'r') as f:
                 goal, result, feedback = f.read().split('---')
 
                 data['actions'] += 'Goal\n\n'
