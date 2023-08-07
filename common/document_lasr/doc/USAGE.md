@@ -1,3 +1,9 @@
+View workspace documentation in the browser:
+
+```bash
+rosrun document_lasr view.py
+```
+
 Your `package.xml` should define:
 
 - A description
