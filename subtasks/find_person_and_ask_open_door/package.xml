@@ -2,7 +2,8 @@
 <package format="2">
   <name>find_person_and_ask_open_door</name>
   <version>0.0.0</version>
-  <description>The find_person_and_ask_open_door package</description>
+  <description>Goes to a specified door and searches for a person. When person is found, ask person
+    to open the door.</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag -->
   <!-- Example:  -->

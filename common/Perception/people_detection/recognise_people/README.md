@@ -1,17 +1,19 @@
-# find_person_and_ask_open_door
+# recognise_people
 
-Goes to a specified door and searches for a person. When person is found, ask person
-    to open the door.
+The recognise_people package
 
 This package is maintained by:
-- [elisabeth](elisabeth@todo.todo)
+- [nicole](nicole@todo.todo)
 
 ## Prerequisites
 
 This package depends on the following ROS packages:
 - catkin (buildtool)
 - rospy (build)
+- std_msgs (build)
 - rospy (exec)
+- std_msgs (exec)
+- lasr_perception_server
 
 Ask the package maintainer to write or create a blank `doc/PREREQUISITES.md` for their package!
 
@@ -35,7 +37,21 @@ This package has no messages.
 
 ### Services
 
-This package has no services.
+#### `RecognisePeople`
+
+Request
+
+| Field | Type | Description |
+|:-:|:-:|---|
+| detected_objects_yolo | lasr_perception_server/Detection[] |  |
+| detected_objects_opencv | lasr_perception_server/Detection[] |  |
+
+Response
+
+| Field | Type | Description |
+|:-:|:-:|---|
+| detected_objects | lasr_perception_server/Detection[] |  |
+
 
 ### Actions
 
