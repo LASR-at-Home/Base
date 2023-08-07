@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import yaml
 import rospy
 import datetime
 from aruco_service.srv import TableNumber, TableNumberResponse
@@ -35,8 +36,15 @@ def generate_table_cuboid(number):
         now = str(datetime.datetime.now())
         rospy.set_param("/tables/table" + str(table) + "/last_updated", now)
         rospy.loginfo("Cuboid for table %d saved to parameter server", table)
-        #TO TEST
-        rosparam.dump_params(FILENAME, "/tables")
+
+        # Dump rosparams to file
+        data = {
+            'tables': rosparam.get_param('/tables')
+        }
+
+        with open(FILENAME, 'w') as file:
+            yaml.dump(data, file)
+
         return TableNumberResponse(True)
     else:
         rospy.logerr("No pose data available to generate cuboid for table %d, please check if the marker is on the table", table)
