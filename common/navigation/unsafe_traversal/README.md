@@ -4,7 +4,7 @@ Includes action to move between two points unsafely and service to switch to uns
     parameters.
 
 This package is maintained by:
-- [Paul Makles](me@insrt.uk)
+- [Paul Makles](mailto:me@insrt.uk)
 
 ## Prerequisites
 

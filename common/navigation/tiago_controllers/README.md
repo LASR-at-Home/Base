@@ -3,7 +3,7 @@
 The tiago_controllers package
 
 This package is maintained by:
-- [juancm](juancm@todo.todo)
+- [juancm](mailto:juancm@todo.todo)
 
 ## Prerequisites
 

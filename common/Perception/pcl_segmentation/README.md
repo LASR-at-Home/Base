@@ -3,7 +3,7 @@
 The pcl_segmentation package
 
 This package is maintained by:
-- [jared](jared@todo.todo)
+- [jared](mailto:jared@todo.todo)
 
 ## Prerequisites
 

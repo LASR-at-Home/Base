@@ -6,11 +6,11 @@
   
 
 This package is maintained by:
-- [Sai Kishor Kothakota](sai.kishor@pal-robotics.com)
+- [Sai Kishor Kothakota](mailto:sai.kishor@pal-robotics.com)
 
 The following people have contributed to this package:
-- [Rafael Muñoz Salinas](rmsalinas@uco.es)
-- [Bence Magyar](bence.magyar@pal-robotics.com)
+- [Rafael Muñoz Salinas](mailto:rmsalinas@uco.es)
+- [Bence Magyar](mailto:bence.magyar@pal-robotics.com)
 
 ## Prerequisites
 
