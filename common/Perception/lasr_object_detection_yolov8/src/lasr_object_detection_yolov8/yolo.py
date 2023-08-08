@@ -14,6 +14,8 @@ def detect(dataset, min_confidence, nms, debug, encoding, width, height, image_d
 
         # BGR => RGB
         img = Image.fromarray(np.array(img)[:,:,::-1])
+    elif encoding == 'rgb8':
+        img = Image.frombytes('RGB', (width, height), image_data, 'raw')
     else:
         raise Exception("Unsupported format.")
     
