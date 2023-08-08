@@ -60,7 +60,6 @@ class CheckTable(smach.State):
         self.object_pose_pub = rospy.Publisher("/object_poses", Marker, queue_size=100)
         self.people_pose_pub = rospy.Publisher("/people_poses", Marker, queue_size=100)
 
-
     def estimate_pose(self, pcl_msg, detection):
         centroid_xyz = seg_to_centroid(pcl_msg, np.array(detection.xyseg))
         centroid = PointStamped()
@@ -73,13 +72,13 @@ class CheckTable(smach.State):
         return np.array([response.target_point.point.x, response.target_point.point.y, response.target_point.point.z])
 
     def publish_object_points(self):
-        for i, (_, point) in enumerate(self.detections_objects):
-            marker = create_point_marker(*point, i, "map")
+        for i, (det, point) in enumerate(self.detections_objects):
+            marker = create_point_marker(*point, i, "map", f"{det.name}, {det.confidence}")
             self.object_pose_pub.publish(marker)
 
     def publish_people_points(self):
-        for i, (_, point) in enumerate(self.detections_people):
-            marker = create_point_marker(*point, i, "map")
+        for i, (det, point) in enumerate(self.detections_people):
+            marker = create_point_marker(*point, i, "map", f"{det.name}, {det.confidence}")
             self.people_pose_pub.publish(marker)
 
     def filter_detections_by_pose(self, detections, threshold=0.2):
@@ -94,11 +93,11 @@ class CheckTable(smach.State):
 
     def perform_detection(self, pcl_msg, min_xyz, max_xyz, filter):
         cv_im = pcl_msg_to_cv2(pcl_msg)
-        cv_mask = self.bridge.imgmsg_to_cv2_np(mask)
-        masked_im = cv2.bitwise_and(cv_im, cv_im, mask=cv_mask)
-        img_msg = self.bridge.cv2_to_imgmsg(masked_im)
-        detections = self.detect(img_msg, "yolov8n-seg.pt", 0.5, 0.3)
-        detections = [(det, self.estimate_pose(pcl_msg, det)) for det in detections.detected_objects if det.name in filter]
+        img_msg = self.bridge.cv2_to_imgmsg(cv_im)
+        detections = self.detect(img_msg, "yolov8n-seg.pt", 0.6, 0.3)
+        detections = [(det, self.estimate_pose(pcl_msg, cv_im, det)) for det in detections.detected_objects if det.name in filter]
+        print([pose for _, pose in detections], min_xyz, max_xyz)
+        detections = [(det, pose) for (det, pose) in detections if np.all(np.array(min_xyz) <= pose) and np.all(pose <= np.array(max_xyz))]
         return detections
 
     def check(self, pcl_msg):
