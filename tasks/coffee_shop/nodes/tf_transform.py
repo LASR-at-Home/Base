@@ -18,7 +18,7 @@ import copy
 def tf_transform(msg):
     tf_response = TfTransformResponse()
     if msg.pose_array.header.frame_id != '':
-        transformation = get_transform(source_frame=msg.pose_array.header.frame_id, target_frame=msg.target_frame.data)
+        transformation = get_transform(source_frame=msg.pose_array.header.frame_id, target_frame=msg.target_frame.data, stamp = msg.pose_array.header.stamp)
         if transformation:
             pose_array = PoseArray()
             pose_array.header.frame_id = msg.target_frame.data
@@ -32,14 +32,14 @@ def tf_transform(msg):
         else:
             print('Error: No transformation')
     if msg.pointcloud.header.frame_id != '':
-        transformation = get_transform(source_frame=msg.pointcloud.header.frame_id, target_frame=msg.target_frame.data)
+        transformation = get_transform(source_frame=msg.pointcloud.header.frame_id, target_frame=msg.target_frame.data, stamp = msg.pointcloud.header.stamp)
         if transformation:
             new_pointcloud = tf2_sensor_msgs.do_transform_cloud(msg.pointcloud, transformation)
             tf_response.target_pointcloud = new_pointcloud
         else:
             print('Error: No transformation')
     if msg.point.header.frame_id != '':
-        transformation = get_transform(source_frame=msg.point.header.frame_id, target_frame=msg.target_frame.data)
+        transformation = get_transform(source_frame=msg.point.header.frame_id, target_frame=msg.target_frame.data,stamp = msg.point.header.stamp)
         if transformation:
             new_point = do_transform_point(msg.point, transformation)
             tf_response.target_point = new_point
@@ -49,7 +49,7 @@ def tf_transform(msg):
    
     return tf_response
 
-def get_transform(source_frame, target_frame):
+def get_transform(source_frame, target_frame, stamp):
     """
         Converts to target frame
         Returns the pose in the target frame
@@ -58,7 +58,7 @@ def get_transform(source_frame, target_frame):
     # print('source_frame', source_frame)
     # print('target_frame', target_frame)
     try:
-        transformation = tfBuffer.lookup_transform(target_frame, source_frame, rospy.Time(0), rospy.Duration(0.1))
+        transformation = tfBuffer.lookup_transform(target_frame, source_frame, stamp, rospy.Duration(0.1))
         return transformation
     except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
         print(e)
