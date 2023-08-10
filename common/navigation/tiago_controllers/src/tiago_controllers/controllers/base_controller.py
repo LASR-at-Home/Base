@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 # from abc import abstractmethod
-# import math
+import math
 import time
 import actionlib
 import rospy
@@ -12,6 +12,7 @@ from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from actionlib_msgs.msg import GoalStatus
 from tiago_controllers.base_planner import plan_to_radius as _plan_to_radius
 from tiago_controllers.base_planner import get_journey_points as _get_journey_points
+from common_math import quaternion_from_euler
 
 
 class BaseController:
@@ -117,6 +118,26 @@ class BaseController:
                     break
                 time.sleep(0.5)
                 self._goal_sent = False
+
+    def compute_face_quat(self, x, y):
+        robot_x, robot_y, _ = self.get_current_pose()
+
+        dist_x = x - robot_x
+        dist_y = y - robot_y
+        angle = math.atan2(dist_y, dist_x)
+
+        (x, y, z, w) = quaternion_from_euler(0, 0, angle)
+        quaternion = Quaternion(x, y, z, w)
+
+        pose = Pose(position=Point(robot_x, robot_y, 0.0), orientation=quaternion)
+
+        return pose
+
+    def sync_face_to(self, x, y):
+        return self.sync_to_pose(self.compute_face_quat(x, y))
+
+    def async_face_to(self, x, y):
+        return self.async_to_pose(self.compute_face_quat(x, y))
 
 # if __name__ == '__main__':
 #     rospy.init_node("base_test", anonymous=True)
