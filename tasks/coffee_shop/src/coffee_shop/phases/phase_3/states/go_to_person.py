@@ -10,5 +10,6 @@ class GoToPerson(smach.State):
 
     def execute(self, userdata):
         pose = rospy.get_param("/person/position")
-        self.base_controller.sync_to_radius(pose[0], pose[1], radius = 1.0)
+        self.base_controller.sync_to_radius(pose[0], pose[1], radius = 2.5)
+        self.base_controller.sync_face_to(pose[0], pose[1])
         return 'done'
