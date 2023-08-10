@@ -12,8 +12,7 @@ from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from actionlib_msgs.msg import GoalStatus
 from tiago_controllers.base_planner import plan_to_radius as _plan_to_radius
 from tiago_controllers.base_planner import get_journey_points as _get_journey_points
-from common_math import quaternion_from_euler
-
+import numpy as np
 
 class BaseController:
     def __init__(self):
@@ -120,17 +119,17 @@ class BaseController:
                 self._goal_sent = False
 
     def compute_face_quat(self, x, y):
-        robot_x, robot_y, _ = self.get_current_pose()
-
+        robot_x, robot_y, robot_quat = self.get_current_pose()
         dist_x = x - robot_x
         dist_y = y - robot_y
-        angle = math.atan2(dist_y, dist_x)
-
-        (x, y, z, w) = quaternion_from_euler(0, 0, angle)
-        quaternion = Quaternion(x, y, z, w)
-
+        theta_deg = np.degrees(math.atan2(dist_y, dist_x))
+        try:
+            from scipy.spatial.transform import Rotation as R
+            (x, y, z, w) = R.from_euler("z", theta_deg, degrees=True).as_quat()
+            quaternion = Quaternion(x, y, z, w)
+        except ImportError:
+            quaternion = robot_quat
         pose = Pose(position=Point(robot_x, robot_y, 0.0), orientation=quaternion)
-
         return pose
 
     def sync_face_to(self, x, y):
@@ -139,6 +138,7 @@ class BaseController:
     def async_face_to(self, x, y):
         return self.async_to_pose(self.compute_face_quat(x, y))
 
-# if __name__ == '__main__':
-#     rospy.init_node("base_test", anonymous=True)
-#     _base = BaseC
+if __name__ == '__main__':
+    rospy.init_node("base_test", anonymous=True)
+    b = BaseController()
+    b.sync_face_to(2.84, 6.7)
