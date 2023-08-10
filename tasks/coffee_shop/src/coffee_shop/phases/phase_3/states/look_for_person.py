@@ -55,6 +55,7 @@ class LookForPerson(smach.State):
         detections = [(det, self.estimate_pose(pcl_msg, cv_im, det)) for det in detections.detected_objects if det.name == "person"]
         if len(detections):
             for detection in detections:
+                pose = np.array(detection[1])
                 marker_msg = Marker()
                 marker_msg.header.frame_id = "map"
                 marker_msg.header.stamp = rospy.Time.now()
@@ -73,7 +74,6 @@ class LookForPerson(smach.State):
                 marker_msg.color.g = 0.0
                 marker_msg.color.b = 0.0
                 self.people_pose_pub.publish(marker_msg)
-                pose = np.array(detection[1])
                 if np.all(min_xyz <= pose) and np.all(pose <= max_xyz):
                     rospy.set_param("/person/position", pose.tolist())
                     return 'found'
