@@ -1,0 +1,41 @@
+certifi==2023.7.22        # via requests
+charset-normalizer==3.2.0  # via requests
+cmake==3.27.1             # via triton
+ffmpeg-python==0.2.0      # via openai-whisper
+filelock==3.12.2          # via torch, triton
+future==0.18.3            # via ffmpeg-python
+idna==3.4                 # via requests
+jinja2==3.1.2             # via torch
+lit==16.0.6               # via triton
+llvmlite==0.40.1          # via numba
+markupsafe==2.1.3         # via jinja2
+more-itertools==10.1.0    # via openai-whisper
+mpmath==1.3.0             # via sympy
+networkx==3.1             # via torch
+numba==0.57.1             # via openai-whisper
+numpy==1.24.4             # via numba, openai-whisper
+nvidia-cublas-cu11==11.10.3.66  # via nvidia-cudnn-cu11, nvidia-cusolver-cu11, torch
+nvidia-cuda-cupti-cu11==11.7.101  # via torch
+nvidia-cuda-nvrtc-cu11==11.7.99  # via torch
+nvidia-cuda-runtime-cu11==11.7.99  # via torch
+nvidia-cudnn-cu11==8.5.0.96  # via torch
+nvidia-cufft-cu11==10.9.0.58  # via torch
+nvidia-curand-cu11==10.2.10.91  # via torch
+nvidia-cusolver-cu11==11.4.0.1  # via torch
+nvidia-cusparse-cu11==11.7.4.91  # via torch
+nvidia-nccl-cu11==2.14.3  # via torch
+nvidia-nvtx-cu11==11.7.91  # via torch
+openai-whisper==20230314  # via -r requirements.in
+regex==2023.8.8           # via tiktoken
+requests==2.31.0          # via tiktoken
+sympy==1.12               # via torch
+tiktoken==0.3.1           # via openai-whisper
+torch==2.0.1              # via openai-whisper, triton
+tqdm==4.66.0              # via openai-whisper
+triton==2.0.0             # via openai-whisper, torch
+typing-extensions==4.7.1  # via torch
+urllib3==2.0.4            # via requests
+wheel==0.41.1             # via nvidia-cublas-cu11, nvidia-cuda-cupti-cu11, nvidia-cuda-runtime-cu11, nvidia-curand-cu11, nvidia-cusparse-cu11, nvidia-nvtx-cu11
+
+# The following packages are considered to be unsafe in a requirements file:
+# setuptools
