@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-import rospy
 
+import rospy
+import rospkg
 import lasr_object_detection_yolov8 as yolo
 
-from lasr_object_detection_yolo.srv import YoloDetection, YoloDetectionRequest, YoloDetectionResponse
-from lasr_perception_server.msg import Detection
 from sensor_msgs.msg import Image
+from lasr_object_detection_yolo.srv import YoloDetection, YoloDetectionRequest, YoloDetectionResponse
 
 # Determine DEBUG variables
 from os import environ
@@ -15,60 +15,27 @@ if "DEBUG" in environ:
 else:
     DEBUG = False
 
+# Put ourselves in the model folder
+import os
+import rospkg
+rp = rospkg.RosPack()
+package_path = rp.get_path('lasr_object_detection_yolov8')
+os.chdir(os.path.abspath(os.path.join(package_path, 'models')))
+
 # Initialise rospy
 rospy.init_node('yolov8_service')
 
+# Prepare publisher
+debug_publisher = None
 if DEBUG:
     debug_publisher = rospy.Publisher('/yolov8/debug', Image, queue_size=1)
 
-def detect(request):
-    print('Received new service request, sending to process server...')
-
-    
-
-    plotted_img, detected_objects_dict = yolo.detect(
-        request.dataset,
-        request.confidence,
-        request.nms,
-        DEBUG,
-        request.image_raw.encoding,
-        request.image_raw.width,
-        request.image_raw.height,
-        request.image_raw.data
-    )
-
-    # Publish debug message if enabled
-    if DEBUG:
-        msg = Image()
-        msg.header.stamp = rospy.Time.now()
-        msg.width = request.image_raw.width
-        msg.height = request.image_raw.height
-        msg.encoding = 'bgr8'
-        msg.is_bigendian = 1
-        msg.step = 3 * request.image_raw.width
-        msg.data = plotted_img
-        debug_publisher.publish(msg)
-
-    # Convert dictionary back to rospy message format
-    detected_objects = []
-
-    for obj in detected_objects_dict:
-        detection = Detection()
-        detection.name = obj['name']
-        detection.confidence = obj['confidence']
-        detection.xywh = obj['xywh']
-
-        if 'xyseg' in obj:
-            detection.xyseg = obj['xyseg']
-
-        detected_objects.append(detection)
-
-    print('Request complete, responding.')
-
-    resp = YoloDetectionResponse()
-    resp.detected_objects = detected_objects
-    return resp
+def detect(request: YoloDetectionRequest) -> YoloDetectionResponse:
+    '''
+    Hand off detection request to yolo library
+    '''
+    return yolo.detect(request, debug_publisher)
 
 rospy.Service('/yolov8/detect', YoloDetection, detect)
-rospy.loginfo('yolo service started')
+rospy.loginfo('YOLOv8 service started')
 rospy.spin()
