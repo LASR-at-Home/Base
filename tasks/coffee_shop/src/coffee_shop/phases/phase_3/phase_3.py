@@ -1,5 +1,5 @@
 import smach
-from .states import GoToWaitLocation, WaitForPerson, GoToPerson, GreetPerson, GuidePerson
+from .states import GoToWaitLocation, LookForPerson, GoToPerson, GreetPerson, GuidePerson
 
 class Phase3(smach.StateMachine):
     def __init__(self, base_controller, voice_controller):
@@ -7,11 +7,11 @@ class Phase3(smach.StateMachine):
 
         with self:
             
-            smach.StateMachine.add('GO_TO_WAIT_LOCATION', GoToWaitLocation(base_controller), transitions={'done' : 'WAIT_FOR_PERSON'})
+            smach.StateMachine.add('GO_TO_WAIT_LOCATION', GoToWaitLocation(base_controller), transitions={'done' : 'LOOK_FOR_PERSON'})
             
-            smach.StateMachine.add('WAIT_FOR_PERSON', WaitForPerson(), transitions={'done' : 'GREET_PERSON'})
+            smach.StateMachine.add('LOOK_FOR_PERSON', LookForPerson(), transitions={'found' : 'GO_TO_PERSON', 'not found' : 'LOOK_FOR_PERSON'})
 
-            #smach.StateMachine.add('GO_TO_PERSON', GoToPerson(base_controller), transitions={'done' : 'GREET_PERSON'})
+            smach.StateMachine.add('GO_TO_PERSON', GoToPerson(base_controller), transitions={'done' : 'GREET_PERSON'})
 
             smach.StateMachine.add('GREET_PERSON', GreetPerson(voice_controller), transitions={'done' : 'GUIDE_PERSON'})
 

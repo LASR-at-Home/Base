@@ -18,4 +18,3 @@ class GuidePerson(smach.State):
         self.base_controller.sync_to_pose(Pose(position=Point(**position), orientation=Quaternion(**orientation)))
         self.voice_controller.sync_tts("Please be seated!")
         return 'done'
-

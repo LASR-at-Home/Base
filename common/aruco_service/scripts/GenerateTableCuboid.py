@@ -7,13 +7,40 @@ from aruco_service.srv import TableNumber, TableNumberResponse
 from geometry_msgs.msg import PoseStamped
 from visualization_msgs.msg import Marker
 import rosparam
+import tf2_ros
+import tf2_geometry_msgs
 
 # Units are in meters
 # The marker should be placed on the bottom left corner of the table, with the x axis pointing to the right and the y axis pointing up
+# Use 0 to inf for tables, use -1 for counter, use -2 for waiting area
 TABLE_LONG_SIDE = 1.2
 TABLE_SHORT_SIDE = 0.6
 PADDING = 0.5
-FILENAME = "/home/peter/robocup_ws/src/aruco_service/test_check_table_sim.yaml"
+
+WAITING_AREA_LONG_SIDE = 1.2
+WAITING_AREA_SHORT_SIDE = 0.6
+
+# TODO: Load filename from rosparam, with default being this one.
+FILENAME = "/home/peter/robocup_ws/src/Base/common/aruco_service/test_check_table_sim.yaml"
+
+def get_transform_to_marker(from_frame, to_frame):
+    tf_buffer = tf2_ros.Buffer()
+    tf_listener = tf2_ros.TransformListener(tf_buffer)
+    try:
+        t = tf_buffer.lookup_transform(to_frame, from_frame, rospy.Time(0), rospy.Duration(5))
+        return t
+    except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+        raise
+
+def get_map_frame_pose(input_xy, transform):
+    pose_stamped = PoseStamped()
+    pose_stamped.pose.position.x = input_xy[0]
+    pose_stamped.pose.position.y = input_xy[1]
+    pose_stamped.header.frame_id = "aruco_marker_frame"
+    pose_stamped.header.stamp = rospy.Time.now()
+
+    transformed_pose = tf2_geometry_msgs.do_transform_pose(pose_stamped, transform)
+    return [transformed_pose.pose.position.x, transformed_pose.pose.position.y]
 
 def create_marker_msg(point, idx):
     marker_msg = Marker()
@@ -33,41 +60,79 @@ def create_marker_msg(point, idx):
     marker_msg.color.a = 1.0
     return marker_msg
 
-def generate_table_cuboid(number):
+def generate_cuboid(number):
     table = number.table
     seconds = rospy.get_time()
-    objects_marker_pub = rospy.Publisher("/table/objects_cuboid", Marker, queue_size=10)
-    persons_marker_pub = rospy.Publisher("/table/persons_cuboid", Marker, queue_size=10)
+    objects_marker_pub = rospy.Publisher("/table/objects_cuboid", Marker, queue_size=4)
+    persons_marker_pub = rospy.Publisher("/table/persons_cuboid", Marker, queue_size=4)
 
     if latest_pose is not None and (seconds - latest_pose.header.stamp.secs < 1.0):
 
-        corner_1 = [latest_pose.pose.position.x - 0.05, latest_pose.pose.position.y - 0.05] # subtract 5cm because of marker size to get corner
-        corner_2 = [latest_pose.pose.position.x - 0.05 + TABLE_LONG_SIDE, latest_pose.pose.position.y - 0.05]
-        corner_3 = [latest_pose.pose.position.x - 0.05 + TABLE_LONG_SIDE, latest_pose.pose.position.y - 0.05 + TABLE_SHORT_SIDE]
-        corner_4 = [latest_pose.pose.position.x - 0.05, latest_pose.pose.position.y - 0.05 + TABLE_SHORT_SIDE]
+        tr = get_transform_to_marker("aruco_marker_frame", "map")
+
+        # THESE POINTS ARE IN MARKER COORDINATE FRAME [LOCATION OF ARUCO MARKER IS (0,0) IN THIS FRAME]
+        local_corner_1 = [0, 0] 
+        local_corner_2 = [TABLE_LONG_SIDE, 0] if table >= 0 else [WAITING_AREA_LONG_SIDE, 0]
+        local_corner_3 = [TABLE_LONG_SIDE, TABLE_SHORT_SIDE] if table >= 0 else [WAITING_AREA_LONG_SIDE, WAITING_AREA_SHORT_SIDE]
+        local_corner_4 = [0, TABLE_SHORT_SIDE] if table >= 0 else [0, WAITING_AREA_SHORT_SIDE]
+
+
+        # TRANSFORM TO MAP FRAME
+        corner_1 = get_map_frame_pose(local_corner_1, tr)
+        corner_2 = get_map_frame_pose(local_corner_2, tr)
+        corner_3 = get_map_frame_pose(local_corner_3, tr)
+        corner_4 = get_map_frame_pose(local_corner_4, tr)
+
         objects_marker_pub.publish(create_marker_msg(corner_1, 0))
         objects_marker_pub.publish(create_marker_msg(corner_2, 1))
         objects_marker_pub.publish(create_marker_msg(corner_3, 2))
         objects_marker_pub.publish(create_marker_msg(corner_4, 3))
-        rospy.set_param("/tables/table" + str(table) + "/objects_cuboid", [corner_1, corner_2, corner_3, corner_4])
 
-        padded_corner_1 = [corner_1[0] - PADDING, corner_1[1] - PADDING]
-        padded_corner_2 = [corner_2[0] + PADDING, corner_2[1] - PADDING]
-        padded_corner_3 = [corner_3[0] + PADDING, corner_3[1] + PADDING]
-        padded_corner_4 = [corner_4[0] - PADDING, corner_4[1] + PADDING]
-        persons_marker_pub.publish(create_marker_msg(padded_corner_1, 0))
-        persons_marker_pub.publish(create_marker_msg(padded_corner_2, 1))
-        persons_marker_pub.publish(create_marker_msg(padded_corner_3, 2))
-        persons_marker_pub.publish(create_marker_msg(padded_corner_4, 3))
-        rospy.set_param("/tables/table" + str(table) + "/persons_cuboid", [padded_corner_1, padded_corner_2, padded_corner_3, padded_corner_4])
+        if table >= 0: 
 
-        now = str(datetime.datetime.now())
-        rospy.set_param("/tables/table" + str(table) + "/last_updated", now)
-        rospy.loginfo("Cuboid for table %d saved to parameter server", table)
+            local_padded_corner_1 = [local_corner_1[0] - PADDING, local_corner_1[1] - PADDING]
+            local_padded_corner_2 = [local_corner_2[0] + PADDING, local_corner_2[1] - PADDING]
+            local_padded_corner_3 = [local_corner_3[0] + PADDING, local_corner_3[1] + PADDING]
+            local_padded_corner_4 = [local_corner_4[0] - PADDING, local_corner_4[1] + PADDING]
+
+            padded_corner_1 = get_map_frame_pose(local_padded_corner_1, tr)
+            padded_corner_2 = get_map_frame_pose(local_padded_corner_2, tr)
+            padded_corner_3 = get_map_frame_pose(local_padded_corner_3, tr)
+            padded_corner_4 = get_map_frame_pose(local_padded_corner_4, tr)
+
+            persons_marker_pub.publish(create_marker_msg(padded_corner_1, 0))
+            persons_marker_pub.publish(create_marker_msg(padded_corner_2, 1))
+            persons_marker_pub.publish(create_marker_msg(padded_corner_3, 2))
+            persons_marker_pub.publish(create_marker_msg(padded_corner_4, 3))
+
+            rospy.set_param("/tables/table" + str(table) + "/objects_cuboid", [corner_1, corner_2, corner_3, corner_4])
+            rospy.set_param("/tables/table" + str(table) + "/persons_cuboid", [padded_corner_1, padded_corner_2, padded_corner_3, padded_corner_4])
+            now = str(datetime.datetime.now())
+            rospy.set_param("/tables/table" + str(table) + "/last_updated", now)
+            rospy.loginfo("Cuboid for table %d saved to parameter server", table)
+
+        elif table == -1:
+            rospy.set_param("/counter/cuboid", [corner_1, corner_2, corner_3, corner_4])
+            now = str(datetime.datetime.now())
+            rospy.set_param("/counter/last_updated", now)
+            rospy.loginfo("Cuboid for the counter saved to parameter server")
+
+        elif table == -2:
+            rospy.set_param("/wait/cuboid", [corner_1, corner_2, corner_3, corner_4])
+            now = str(datetime.datetime.now())
+            rospy.set_param("/wait/last_updated", now)
+            rospy.loginfo("Cuboid for the waiting area saved to parameter server")
+
+        else:
+            rospy.logerr("Invalid table number %d", table)
+            return TableNumberResponse(False)
 
         # Dump rosparams to file
         data = {
-            'tables': rosparam.get_param('/tables')
+            'tables': rosparam.get_param('/tables'),
+            'current_table': rosparam.get_param('/current_table'),
+            'counter': rosparam.get_param('/counter'),
+            'wait': rosparam.get_param('/wait')
         }
 
         with open(FILENAME, 'w') as file:
@@ -86,7 +151,12 @@ if __name__ == "__main__":
 
     rospy.init_node("generate_table_cuboid")
     sub = rospy.Subscriber("/aruco_single/pose", PoseStamped, get_latest_pose)
-    s = rospy.Service("generate_table_cuboid", TableNumber, generate_table_cuboid)
+    s = rospy.Service("generate_table_cuboid", TableNumber, generate_cuboid)
+
+    els = rosparam.load_file(FILENAME)
+    for param, ns in els:
+        rosparam.upload_params(ns, param)
+    
     rospy.loginfo("Cuboid Generator Service Ready")
     
     while not rospy.is_shutdown():
