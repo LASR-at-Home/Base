@@ -1,4 +1,28 @@
-# Unsafe Traversal
+# unsafe_traversal
+
+Includes action to move between two points unsafely and service to switch to unsafe
+    parameters.
+
+This package is maintained by:
+- [Paul Makles](mailto:me@insrt.uk)
+
+## Prerequisites
+
+This package depends on the following ROS packages:
+- catkin (buildtool)
+- message_generation (build)
+- message_runtime (exec)
+- rospy
+- rosservice
+- actionlib
+- dynamic_reconfigure
+- geometry_msgs
+- actionlib_msgs
+- nav_msgs
+
+
+
+## Usage
 
 Run the node:
 
@@ -10,7 +34,7 @@ rosrun unsafe_traversal unsafe_traversal
 
 > **Warning** ❗ This service does not currently tuck the arm or change the speed of the robot.
 
-## Basic Service Usage
+### Basic Service Usage
 
 Switch to unsafe mode:
 
@@ -30,7 +54,7 @@ Or use the helper script:
 rosrun unsafe_traversal test_service
 ```
 
-## Action Usage
+### Action Usage
 
 This node provides two actions:
 
@@ -39,7 +63,7 @@ This node provides two actions:
 
 You can test these by editing `test_move_action` or `test_align_action` in the scripts folder.
 
-## Test Plan Viability
+### Test Plan Viability
 
 To test whether a plan is viable (can be traversed in a straight line), you can use the viability service.
 
@@ -64,3 +88,104 @@ bool viable
 # the difference between ideal and real plans
 float64 raw_error
 ```
+
+## Example
+
+Ask the package maintainer to write a `doc/EXAMPLE.md` for their package!
+
+## Technical Overview
+
+Ask the package maintainer to write a `doc/TECHNICAL.md` for their package!
+
+## ROS Definitions
+
+### Messages
+
+This package has no messages.
+
+### Services
+
+#### `ChangeTraversalParameters`
+
+Request
+
+| Field | Type | Description |
+|:-:|:-:|---|
+| unsafe | bool |  |
+
+Response
+
+| Field | Type | Description |
+|:-:|:-:|---|
+
+#### `DeterminePathViability`
+
+Request
+
+| Field | Type | Description |
+|:-:|:-:|---|
+| start_pose | geometry_msgs/PoseStamped | starting position |
+| end_pose | geometry_msgs/PoseStamped | end position |
+
+Response
+
+| Field | Type | Description |
+|:-:|:-:|---|
+| viable | bool | check if viable |
+| raw_error | float64 | the difference between ideal and real plans |
+
+#### `LaserDist`
+
+Request
+
+| Field | Type | Description |
+|:-:|:-:|---|
+| fov_degrees | float32 |  |
+
+Response
+
+| Field | Type | Description |
+|:-:|:-:|---|
+| dist | float32 |  |
+
+
+### Actions
+
+#### `AlignToGoal`
+
+Goal
+
+| Field | Type | Description |
+|:-:|:-:|---|
+| fov_degrees | float32 |  |
+
+Result
+
+| Field | Type | Description |
+|:-:|:-:|---|
+
+Feedback
+
+| Field | Type | Description |
+|:-:|:-:|---|
+
+#### `MoveToGoal`
+
+Goal
+
+| Field | Type | Description |
+|:-:|:-:|---|
+| fov_degrees | float32 |  |
+
+Result
+
+| Field | Type | Description |
+|:-:|:-:|---|
+| success | bool | result |
+
+Feedback
+
+| Field | Type | Description |
+|:-:|:-:|---|
+| success | bool | result |
+

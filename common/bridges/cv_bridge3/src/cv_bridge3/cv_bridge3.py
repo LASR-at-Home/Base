@@ -15,9 +15,13 @@ import rospy
 
 # Hack to import cv2 from https://answers.ros.org/question/290660/import-cv2-error-caused-by-ros/?answer=331764#post-id-331764
 import sys
-sys.path.remove('/opt/ros/melodic/lib/python2.7/dist-packages') # in order to import cv2 under python3
+melodic_dist_pkg = '/opt/ros/melodic/lib/python2.7/dist-packages'
+is_melodic = melodic_dist_pkg in sys.path
+if is_melodic:
+    sys.path.remove(melodic_dist_pkg) # in order to import cv2 under python3
 import cv2
-sys.path.append('/opt/ros/melodic/lib/python2.7/dist-packages') # append back in order to import rospy
+if is_melodic:
+    sys.path.append(melodic_dist_pkg) # append back in order to import rospy
 
 
 class CvBridge:
