@@ -118,20 +118,6 @@ Response
 | Field | Type | Description |
 |:-:|:-:|---|
 
-#### `LaserDist`
-
-Request
-
-| Field | Type | Description |
-|:-:|:-:|---|
-| fov_degrees | float32 |  |
-
-Response
-
-| Field | Type | Description |
-|:-:|:-:|---|
-| dist | float32 |  |
-
 #### `DeterminePathViability`
 
 Request
@@ -148,29 +134,22 @@ Response
 | viable | bool | check if viable |
 | raw_error | float64 | the difference between ideal and real plans |
 
+#### `LaserDist`
+
+Request
+
+| Field | Type | Description |
+|:-:|:-:|---|
+| fov_degrees | float32 |  |
+
+Response
+
+| Field | Type | Description |
+|:-:|:-:|---|
+| dist | float32 |  |
+
 
 ### Actions
-
-#### `MoveToGoal`
-
-Goal
-
-| Field | Type | Description |
-|:-:|:-:|---|
-| start_pose | geometry_msgs/PoseStamped | starting position |
-| end_pose | geometry_msgs/PoseStamped | end position |
-
-Result
-
-| Field | Type | Description |
-|:-:|:-:|---|
-| success | bool | result |
-
-Feedback
-
-| Field | Type | Description |
-|:-:|:-:|---|
-| success | bool | result |
 
 #### `AlignToGoal`
 
@@ -178,8 +157,7 @@ Goal
 
 | Field | Type | Description |
 |:-:|:-:|---|
-| start_pose | geometry_msgs/PoseStamped | starting position |
-| end_pose | geometry_msgs/PoseStamped | end position |
+| fov_degrees | float32 |  |
 
 Result
 
@@ -190,4 +168,24 @@ Feedback
 
 | Field | Type | Description |
 |:-:|:-:|---|
+
+#### `MoveToGoal`
+
+Goal
+
+| Field | Type | Description |
+|:-:|:-:|---|
+| fov_degrees | float32 |  |
+
+Result
+
+| Field | Type | Description |
+|:-:|:-:|---|
+| success | bool | result |
+
+Feedback
+
+| Field | Type | Description |
+|:-:|:-:|---|
+| success | bool | result |
 

@@ -37,20 +37,6 @@ This package has no messages.
 
 ### Services
 
-#### `FaceDetectionPCL`
-
-Request
-
-| Field | Type | Description |
-|:-:|:-:|---|
-| cloud | sensor_msgs/PointCloud2 |  |
-
-Response
-
-| Field | Type | Description |
-|:-:|:-:|---|
-| detections | face_detection/DetectionPCL[] |  |
-
 #### `FaceDetection`
 
 Request
@@ -64,6 +50,20 @@ Response
 | Field | Type | Description |
 |:-:|:-:|---|
 | detected_objects | lasr_perception_server/Detection[] |  |
+
+#### `FaceDetectionPCL`
+
+Request
+
+| Field | Type | Description |
+|:-:|:-:|---|
+| cloud | sensor_msgs/PointCloud2 |  |
+
+Response
+
+| Field | Type | Description |
+|:-:|:-:|---|
+| detections | face_detection/DetectionPCL[] |  |
 
 
 ### Actions

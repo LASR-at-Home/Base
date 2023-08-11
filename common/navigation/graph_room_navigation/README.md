@@ -32,21 +32,34 @@ This package has no messages.
 
 ### Services
 
-#### `AddCrossing`
+#### `PlanToPoint`
 
 Request
 
 | Field | Type | Description |
 |:-:|:-:|---|
-| room1 | string |  |
-| door1 | geometry_msgs/Point |  |
-| room2 | string |  |
-| door2 | geometry_msgs/Point |  |
+| goal | geometry_msgs/Point |  |
 
 Response
 
 | Field | Type | Description |
 |:-:|:-:|---|
+| points | geometry_msgs/Point[] |  |
+| success | bool |  |
+
+#### `PlanToRoom`
+
+Request
+
+| Field | Type | Description |
+|:-:|:-:|---|
+| goal_room | string |  |
+
+Response
+
+| Field | Type | Description |
+|:-:|:-:|---|
+| points | geometry_msgs/Point[] |  |
 | success | bool |  |
 
 #### `AddRoom`
@@ -65,34 +78,21 @@ Response
 |:-:|:-:|---|
 | success | bool |  |
 
-#### `PlanToRoom`
+#### `AddCrossing`
 
 Request
 
 | Field | Type | Description |
 |:-:|:-:|---|
-| goal_room | string |  |
+| room1 | string |  |
+| door1 | geometry_msgs/Point |  |
+| room2 | string |  |
+| door2 | geometry_msgs/Point |  |
 
 Response
 
 | Field | Type | Description |
 |:-:|:-:|---|
-| points | geometry_msgs/Point[] |  |
-| success | bool |  |
-
-#### `PlanToPoint`
-
-Request
-
-| Field | Type | Description |
-|:-:|:-:|---|
-| goal | geometry_msgs/Point |  |
-
-Response
-
-| Field | Type | Description |
-|:-:|:-:|---|
-| points | geometry_msgs/Point[] |  |
 | success | bool |  |
 
 

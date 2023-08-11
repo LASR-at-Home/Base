@@ -32,14 +32,6 @@ Ask the package maintainer to write a `doc/TECHNICAL.md` for their package!
 
 ### Messages
 
-#### `Detections`
-
-| Field | Type | Description |
-|:-:|:-:|---|
-| name | string |  |
-| confidence | float32 |  |
-| xywh | int32[] |  |
-
 #### `Detection`
 
 | Field | Type | Description |
@@ -49,10 +41,18 @@ Ask the package maintainer to write a `doc/TECHNICAL.md` for their package!
 | xywh | int32[] | Bounding box mask defined in pixel-space |
 | xyseg | int32[] | Segmentation mask defined in pixel-space<br/><br/>This will be empty if a segmentation model was not used |
 
+#### `Detections`
+
+| Field | Type | Description |
+|:-:|:-:|---|
+| name | string |  |
+| confidence | float32 |  |
+| xywh | int32[] |  |
+
 
 ### Services
 
-#### `DetectImages`
+#### `DetectImage`
 
 Request
 
@@ -71,7 +71,7 @@ Response
 |:-:|:-:|---|
 | detected_objects | lasr_perception_server/Detection[] |  |
 
-#### `DetectImage`
+#### `DetectImages`
 
 Request
 
