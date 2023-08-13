@@ -1,0 +1,5 @@
+<launch>
+    <node pkg="lasr_rasa" name="rasa" type="service" output="screen">
+        <param name="api_url" command="sh $(find lasr_rasa)/scripts/run_rasa.sh"/>
+    </node>
+</launch>

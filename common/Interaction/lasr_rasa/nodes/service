@@ -1,0 +1,27 @@
+#!/usr/bin/env python3
+import rospy
+import requests
+from lasr_rasa.srv import Rasa, RasaResponse
+
+
+class RasaWrapper:
+    def __init__(self, api_url):
+        self.api = api_url
+        print(self.api)
+
+    def __call__(self, req):
+        response = RasaResponse()
+        resp = requests.post(self.api, json={"data": req.text})
+        if resp.status_code == 200:
+            response.json_response = resp.json()
+            response.success = True
+        else:
+            response.success = False
+        return response
+
+
+if __name__ == "__main__":
+    rospy.init_node("lasr_rasa")
+    rasa = RasaWrapper(rospy.get_param("/rasa/api_url"))
+    rospy.Service("/lasr_rasa/parse", Rasa, rasa)
+    rospy.spin()
