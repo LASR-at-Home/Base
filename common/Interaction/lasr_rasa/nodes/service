@@ -3,17 +3,17 @@ import rospy
 import requests
 from lasr_rasa.srv import Rasa, RasaResponse
 
+PORT = 5005
 
 class RasaWrapper:
     def __init__(self, api_url):
         self.api = api_url
-        print(self.api)
 
     def __call__(self, req):
         response = RasaResponse()
-        resp = requests.post(self.api, json={"data": req.text})
+        resp = requests.post(self.api, json={"text": req.text})
         if resp.status_code == 200:
-            response.json_response = resp.json()
+            response.json_response = str(resp.json())
             response.success = True
         else:
             response.success = False
@@ -22,6 +22,6 @@ class RasaWrapper:
 
 if __name__ == "__main__":
     rospy.init_node("lasr_rasa")
-    rasa = RasaWrapper(rospy.get_param("/rasa/api_url"))
+    rasa = RasaWrapper(f"http://localhost:{PORT}/model/parse")
     rospy.Service("/lasr_rasa/parse", Rasa, rasa)
     rospy.spin()
