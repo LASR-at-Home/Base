@@ -9,13 +9,17 @@ from actionlib_msgs.msg import GoalStatus
 class Voice:
     def __init__(self):
         self._tts_client = actionlib.SimpleActionClient('/tts', TtsAction)
-        self._tts_client.wait_for_server()
+        self.can_tts = self._tts_client.wait_for_server(rospy.Duration(10.0))
+
 
     def __tts(self, text):
-        goal = TtsGoal()
-        goal.rawtext.text = text
-        goal.rawtext.lang_id = 'en_GB'
-        self._tts_client.send_goal(goal)
+        if self.can_tts:
+            goal = TtsGoal()
+            goal.rawtext.text = text
+            goal.rawtext.lang_id = 'en_GB'
+            self._tts_client.send_goal(goal)
+        else:
+            rospy.loginfo(f"TIAGO: {text}")
 
     def sync_tts(self, text):
         self.__tts(text)

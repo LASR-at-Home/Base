@@ -1,0 +1,5 @@
+sensor_msgs/PointCloud2 points
+geometry_msgs/Point min
+geometry_msgs/Point max
+---
+sensor_msgs/Image mask
