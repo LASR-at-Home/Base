@@ -2,8 +2,7 @@
 import rospy
 import requests
 from lasr_rasa.srv import Rasa, RasaResponse
-
-PORT = 5005
+import sys
 
 class RasaWrapper:
     def __init__(self, api_url):
@@ -21,6 +20,15 @@ class RasaWrapper:
 
 
 if __name__ == "__main__":
+    if len(sys.argv) > 1:
+        try:
+            PORT = int(sys.argv[1])
+        except ValueError:
+            print("Usage: rosrun lasr_rasa service [PORT]")
+            sys.exit()
+    else:
+        PORT = 5005
+
     rospy.init_node("lasr_rasa")
     rasa = RasaWrapper(f"http://localhost:{PORT}/model/parse")
     rospy.Service("/lasr_rasa/parse", Rasa, rasa)
