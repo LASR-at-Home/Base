@@ -1,17 +1,14 @@
-# find_person_and_ask_open_door
+# coffee_shop
 
-Goes to a specified door and searches for a person. When person is found, ask person
-    to open the door.
+The coffee_shop package
 
 This package is maintained by:
-- [elisabeth](mailto:elisabeth@todo.todo)
+- [jared](mailto:jared@todo.todo)
 
 ## Prerequisites
 
 This package depends on the following ROS packages:
 - catkin (buildtool)
-- rospy (build)
-- rospy (exec)
 
 Ask the package maintainer to write or create a blank `doc/PREREQUISITES.md` for their package!
 
@@ -35,7 +32,25 @@ This package has no messages.
 
 ### Services
 
-This package has no services.
+#### `TfTransform`
+
+Request
+
+| Field | Type | Description |
+|:-:|:-:|---|
+| pose_array | geometry_msgs/PoseArray |  |
+| pointcloud | sensor_msgs/PointCloud2 |  |
+| point | geometry_msgs/PointStamped |  |
+| target_frame | std_msgs/String |  |
+
+Response
+
+| Field | Type | Description |
+|:-:|:-:|---|
+| target_pose_array | geometry_msgs/PoseArray |  |
+| target_pointcloud | sensor_msgs/PointCloud2 |  |
+| target_point | geometry_msgs/PointStamped |  |
+
 
 ### Actions
 
