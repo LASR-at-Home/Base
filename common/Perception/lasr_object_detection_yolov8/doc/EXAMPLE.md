@@ -16,27 +16,19 @@
 
 4. Install the YOLO server if not already, see "Installing YOLOv8 Server" section.
 
-5. Start the YOLO server.
-
-   ```bash
-   cd src/lasr-base/common/Perception/lasr_object_detection_yolov8/yolo_server
-   source venv/bin/activate.bash
-   python3 server.py
-   ```
-
-6. Start the YOLO service.
+5. Start the YOLO service.
 
    ```bash
    DEBUG=1 rosrun lasr_object_detection_yolov8 service
    ```
 
-7. Launch image view to preview the debug output.
+6. Launch image view to preview the debug output.
 
    ```bash
    rqt_image_view
    ```
 
-8. Start the relay script to start processing images.
+7. Start the relay script to start processing images.
 
    ```bash
    rosrun lasr_object_detection_yolov8 relay /camera/image_raw

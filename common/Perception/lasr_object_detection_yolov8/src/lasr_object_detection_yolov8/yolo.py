@@ -17,34 +17,35 @@ def detect(request: YoloDetectionRequest, debug_publisher: rospy.Publisher | Non
     '''
 
     # decode the image
-    rospy.logdebug('Decoding')
+    rospy.loginfo('Decoding')
     size = (request.image_raw.width, request.image_raw.height)
     if request.image_raw.encoding in ['bgr8', '8UC3']:
-        img = Image.frombytes('RGB', size, request.image_raw.image_data, 'raw')
+        img = Image.frombytes('RGB', size, request.image_raw.data, 'raw')
 
         # BGR => RGB
         img = Image.fromarray(np.array(img)[:,:,::-1])
     elif request.image_raw.encoding == 'rgb8':
-        img = Image.frombytes('RGB', size, request.image_raw.image_data, 'raw')
+        img = Image.frombytes('RGB', size, request.image_raw.data, 'raw')
     else:
         raise Exception("Unsupported format.")
     
     # load model
-    rospy.logdebug('Loading model')
+    rospy.loginfo('Loading model')
     model = None
-    if request.dataset in loaded_models:
-        model = loaded_models[request.dataset]
+    dataset = request.dataset
+    if dataset in loaded_models:
+        model = loaded_models[dataset]
     else:
-        model = YOLO(request.dataset)
-        rospy.loginfo('Loaded', request.dataset, 'model')
+        model = YOLO(dataset)
+        rospy.loginfo(f'Loaded {dataset} model')
 
-        loaded_models[request.dataset] = model
+        loaded_models[dataset] = model
 
     # run inference
-    rospy.logdebug('Running inference')
+    rospy.loginfo('Running inference')
     results = model(img, conf=request.confidence, iou=request.nms)
     result = results[0]
-    rospy.logdebug('Inference complete')
+    rospy.loginfo('Inference complete')
 
     # construct response
     detected_objects = []
