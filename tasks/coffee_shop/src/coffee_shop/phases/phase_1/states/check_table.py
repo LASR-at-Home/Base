@@ -97,7 +97,7 @@ class CheckTable(smach.State):
         img_msg = self.bridge.cv2_to_imgmsg(cv_im)
         detections = self.detect(img_msg, "yolov8n-seg.pt", 0.6, 0.3)
         detections = [(det, self.estimate_pose(pcl_msg, det)) for det in detections.detected_objects if det.name in filter]
-        rospy.loginfo([(pose, det.name) for det, pose in detections], min_xyz, max_xyz)
+        rospy.loginfo(f"{[(det.name, pose) for det, pose in detections], min_xyz, max_xyz}")
         detections = [(det, pose) for (det, pose) in detections if np.all(np.array(min_xyz) <= pose) and np.all(pose <= np.array(max_xyz))]
         return detections
 
