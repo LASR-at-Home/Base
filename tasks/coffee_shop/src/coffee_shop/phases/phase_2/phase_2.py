@@ -13,7 +13,7 @@ class Phase2(smach.StateMachine):
             smach.StateMachine.add('TAKE_ORDER', TakeOrder(head_controller, voice_controller), transitions={'done' : 'GO_TO_COUNTER'})
             smach.StateMachine.add('GO_TO_COUNTER', GoToCounter(base_controller), transitions={'done' : 'MAKE_ORDER'})
             smach.StateMachine.add('MAKE_ORDER', MakeOrder(voice_controller), transitions={'done' : 'CHECK_ORDER'})
-            smach.StateMachine.add('CHECK_ORDER', CheckOrder(voice_controller), transitions={'valid' : 'GO_TO_TABLE', 'invalid' : 'INVALIDATE_ORDER'})
+            smach.StateMachine.add('CHECK_ORDER', CheckOrder(voice_controller), transitions={'correct' : 'GO_TO_TABLE', 'incorrect' : 'INVALIDATE_ORDER'})
             smach.StateMachine.add('INVALIDATE_ORDER', InvalidateOrder(voice_controller), transitions={'done' : 'CHECK_ORDER'})
             smach.StateMachine.add('GO_TO_TABLE', GoToTable(base_controller), transitions={'done' : 'DELIVER_ORDER'})
             smach.StateMachine.add('DELIVER_ORDER', DeliverOrder(base_controller, voice_controller), transitions={'done' : 'done'})
