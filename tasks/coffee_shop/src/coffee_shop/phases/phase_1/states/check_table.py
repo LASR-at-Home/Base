@@ -16,6 +16,8 @@ from lasr_voice.voice import Voice
 from pcl_segmentation.srv import SegmentCuboid, Centroid, MaskFromCuboid, SegmentBB
 from common_math import pcl_msg_to_cv2, seg_to_centroid
 from coffee_shop.srv import TfTransform, TfTransformRequest
+from shapely.geometry import Point
+from shapely.geometry.polygon import Polygon
 import numpy as np
 from actionlib_msgs.msg import GoalStatus
 import ros_numpy as rnp
@@ -92,13 +94,15 @@ class CheckTable(smach.State):
 
         return filtered
 
-    def perform_detection(self, pcl_msg, min_xyz, max_xyz, filter):
+    def perform_detection(self, pcl_msg, polygon: Polygon, filter):
         cv_im = pcl_msg_to_cv2(pcl_msg)
         img_msg = self.bridge.cv2_to_imgmsg(cv_im)
         detections = self.detect(img_msg, "yolov8n-seg.pt", 0.6, 0.3)
         detections = [(det, self.estimate_pose(pcl_msg, det)) for det in detections.detected_objects if det.name in filter]
-        rospy.loginfo(f"{[(det.name, pose) for det, pose in detections], min_xyz, max_xyz}")
-        detections = [(det, pose) for (det, pose) in detections if np.all(np.array(min_xyz) <= pose) and np.all(pose <= np.array(max_xyz))]
+        rospy.loginfo(f"All: {[(det.name, pose) for det, pose in detections]}")
+        rospy.loginfo(f"Boundary: {polygon}")
+        detections = [(det, pose) for (det, pose) in detections if polygon.contains(Point(pose[0], pose[1]))]
+        rospy.loginfo(f"Filtered: {[(det.name, pose) for det, pose in detections]}")
         return detections
 
     def check(self, pcl_msg):
@@ -106,11 +110,11 @@ class CheckTable(smach.State):
         self.check_people(pcl_msg)
 
     def check_table(self, pcl_msg):
-        detections_objects_ = self.perform_detection(pcl_msg, self.min_xyz_objects, self.max_xyz_objects, OBJECTS)
+        detections_objects_ = self.perform_detection(pcl_msg, self.object_polygon, OBJECTS)
         self.detections_objects.extend(detections_objects_)
 
     def check_people(self, pcl_msg):
-        detections_people_ = self.perform_detection(pcl_msg, self.min_xyz_people, self.max_xyz_people, ["person"])
+        detections_people_ = self.perform_detection(pcl_msg, self.people_polygon, ["person"])
         self.detections_people.extend(detections_people_)
 
     def execute(self, userdata):
@@ -121,10 +125,8 @@ class CheckTable(smach.State):
         rospy.loginfo(self.current_table)
         objects_corners = rospy.get_param(f"/tables/{self.current_table}/objects_cuboid")
         persons_corners = rospy.get_param(f"/tables/{self.current_table}/persons_cuboid")
-        self.min_xyz_objects = [min([x for x, _ in objects_corners]), min([y for _, y in objects_corners]), 0.0]
-        self.max_xyz_objects = [max([x for x, _ in objects_corners]), max([y for _, y in objects_corners]), 10.0]
-        self.min_xyz_people = [min([x for x, _ in persons_corners]), min([y for _, y in persons_corners]), 0.0]
-        self.max_xyz_people = [max([x for x, _ in persons_corners]), max([y for _, y in persons_corners]), 10.0]
+        self.object_polygon = Polygon([(x, y) for x, y in objects_corners])
+        self.person_polygon = Polygon([(x, y) for x, y in persons_corners])
         self.detections_objects = []
         self.detections_people = []
 
