@@ -60,10 +60,6 @@ if __name__ == "__main__":
 
     rospy.init_node("point_publisher")
     s = rospy.Service("publish_table_points", TableNumber, publish_points)
-
-    els = rosparam.load_file(FILENAME)
-    for param, ns in els:
-        rosparam.upload_params(ns, param)
     
     rospy.loginfo("Point Publisher Service Ready")
     
