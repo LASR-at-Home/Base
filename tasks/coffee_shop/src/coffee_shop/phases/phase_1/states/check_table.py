@@ -52,6 +52,7 @@ class CheckTable(smach.State):
         self.debug = debug
         self.play_motion_client = actionlib.SimpleActionClient('/play_motion', PlayMotionAction)
         self.play_motion_client.wait_for_server(rospy.Duration(15.0))
+        rospy.wait_for_service("/yolov8/detect", rospy.Duration(15.0))
         self.detect = rospy.ServiceProxy('/yolov8/detect', YoloDetection)
         self.tf = rospy.ServiceProxy("/tf_transform", TfTransform)
         self.bridge = CvBridge()
@@ -96,7 +97,7 @@ class CheckTable(smach.State):
         img_msg = self.bridge.cv2_to_imgmsg(cv_im)
         detections = self.detect(img_msg, "yolov8n-seg.pt", 0.6, 0.3)
         detections = [(det, self.estimate_pose(pcl_msg, det)) for det in detections.detected_objects if det.name in filter]
-        print([pose for _, pose in detections], min_xyz, max_xyz)
+        rospy.loginfo(f"{[(det.name, pose) for det, pose in detections], min_xyz, max_xyz}")
         detections = [(det, pose) for (det, pose) in detections if np.all(np.array(min_xyz) <= pose) and np.all(pose <= np.array(max_xyz))]
         return detections
 

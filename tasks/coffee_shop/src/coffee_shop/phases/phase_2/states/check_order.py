@@ -17,6 +17,7 @@ class CheckOrder(smach.State):
     def __init__(self, voice_controller):
         smach.State.__init__(self, outcomes=['correct', 'incorrect'])
         self.voice_controller = voice_controller
+        rospy.wait_for_service("/yolov8/detect", rospy.Duration(15.0))
         self.detect = rospy.ServiceProxy('/yolov8/detect', YoloDetection)
         self.tf = rospy.ServiceProxy("/tf_transform", TfTransform)
         self.bridge = CvBridge()

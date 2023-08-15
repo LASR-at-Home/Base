@@ -15,6 +15,7 @@ from common_math import pcl_msg_to_cv2
 class LookForPerson(smach.State):
     def __init__(self):
         smach.State.__init__(self, outcomes=['found', 'not found'])
+        rospy.wait_for_service("/yolov8/detect", rospy.Duration(15.0))
         self.detect = rospy.ServiceProxy('/yolov8/detect', YoloDetection)
         self.tf = rospy.ServiceProxy("/tf_transform", TfTransform)
         self.people_pose_pub = rospy.Publisher("/people_poses", Marker, queue_size=100)
