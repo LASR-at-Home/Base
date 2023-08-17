@@ -1,0 +1,16 @@
+tables:
+
+wait:
+  location:
+    position:
+    orientation:
+
+counter:
+  location:
+    position:
+    orientation:
+  cuboid:
+    - []
+    - []
+    - []
+    - []

@@ -1,0 +1,8 @@
+<launch>
+    <node pkg="lasr_rasa" type="service" name="service" output="screen"/>
+	<node pkg="lasr_object_detection_yolov8" type="service" name="service" output="screen"/>
+	<node pkg="coffee_shop" type="tf_transform.py" name="tf_transform" output="screen"/>
+	<rosparam command="load" file="$(find coffee_shop)/config/full_test.yaml" />
+	<rosparam command="load" file="$(find coffee_shop)/config/motions.yaml" />
+	<node pkg="coffee_shop" type="main.py" name="main" output="screen"/>
+</launch>
