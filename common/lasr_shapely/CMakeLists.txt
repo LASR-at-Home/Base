@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(coffee_shop)
+project(lasr_shapely)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
@@ -7,7 +7,7 @@ project(coffee_shop)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED std_msgs sensor_msgs geometry_msgs message_generation)
+find_package(catkin REQUIRED COMPONENTS catkin_virtualenv message_generation)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -17,6 +17,10 @@ find_package(catkin REQUIRED std_msgs sensor_msgs geometry_msgs message_generati
 ## modules and global scripts declared therein get installed
 ## See http://ros.org/doc/api/catkin/html/user_guide/setup_dot_py.html
 catkin_python_setup()
+catkin_generate_virtualenv(
+  INPUT_REQUIREMENTS requirements.in
+  PYTHON_INTERPRETER python3.10
+)
 
 ################################################
 ## Declare ROS messages, services and actions ##
@@ -51,8 +55,8 @@ catkin_python_setup()
 
 ## Generate services in the 'srv' folder
 add_service_files(
-   FILES
-   TfTransform.srv
+  FILES
+  PointInPolygon2D.srv
 )
 
 ## Generate actions in the 'action' folder
@@ -65,9 +69,7 @@ add_service_files(
 ## Generate added messages and services with any dependencies listed here
 generate_messages(
   DEPENDENCIES
-  std_msgs  # Or other packages containing msgs
-  geometry_msgs
-  sensor_msgs
+#   std_msgs  # Or other packages containing msgs
 )
 
 ################################################
@@ -101,8 +103,8 @@ generate_messages(
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 #  INCLUDE_DIRS include
-#  LIBRARIES coffee_shop
-#  CATKIN_DEPENDS other_catkin_pkg
+#  LIBRARIES lasr_shapely
+ CATKIN_DEPENDS message_runtime
 #  DEPENDS system_lib
 )
 
@@ -119,7 +121,7 @@ include_directories(
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/coffee_shop.cpp
+#   src/${PROJECT_NAME}/lasr_shapely.cpp
 # )
 
 ## Add cmake target dependencies of the library
@@ -130,7 +132,7 @@ include_directories(
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-# add_executable(${PROJECT_NAME}_node src/coffee_shop_node.cpp)
+# add_executable(${PROJECT_NAME}_node src/lasr_shapely_node.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -157,10 +159,7 @@ include_directories(
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
 catkin_install_python(PROGRAMS
-  scripts/test_check_table.py
-  scripts/test_make_order.py
-  scripts/test_phase3.py
-  scripts/test_wait_for_person.py
+  nodes/service
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
@@ -186,17 +185,17 @@ catkin_install_python(PROGRAMS
 # )
 
 ## Mark other files for installation (e.g. launch and bag files, etc.)
-# install(FILES
-#   requirements.txt
-#   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
-# )
+install(FILES
+  requirements.txt
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+)
 
 #############
 ## Testing ##
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_coffee_shop.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_lasr_shapely.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()

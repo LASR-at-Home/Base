@@ -16,11 +16,12 @@ from lasr_voice.voice import Voice
 from pcl_segmentation.srv import SegmentCuboid, Centroid, MaskFromCuboid, SegmentBB
 from common_math import pcl_msg_to_cv2, seg_to_centroid
 from coffee_shop.srv import TfTransform, TfTransformRequest
-from shapely.geometry import Point
-from shapely.geometry.polygon import Polygon
 import numpy as np
 from actionlib_msgs.msg import GoalStatus
 import ros_numpy as rnp
+
+from lasr_shapely import LasrShapely
+shapely = LasrShapely()
 
 OBJECTS = ["cup", "mug"]
 
@@ -94,14 +95,14 @@ class CheckTable(smach.State):
 
         return filtered
 
-    def perform_detection(self, pcl_msg, polygon: Polygon, filter):
+    def perform_detection(self, pcl_msg, polygon, filter):
         cv_im = pcl_msg_to_cv2(pcl_msg)
         img_msg = self.bridge.cv2_to_imgmsg(cv_im)
         detections = self.detect(img_msg, "yolov8n-seg.pt", 0.6, 0.3)
         detections = [(det, self.estimate_pose(pcl_msg, det)) for det in detections.detected_objects if det.name in filter]
         rospy.loginfo(f"All: {[(det.name, pose) for det, pose in detections]}")
         rospy.loginfo(f"Boundary: {polygon}")
-        detections = [(det, pose) for (det, pose) in detections if polygon.contains(Point(pose[0], pose[1]))]
+        detections = [(det, pose) for (det, pose) in detections if shapely.is_point_in_polygon_2d(polygon, pose[0], pose[1])]
         rospy.loginfo(f"Filtered: {[(det.name, pose) for det, pose in detections]}")
         return detections
 
@@ -123,10 +124,8 @@ class CheckTable(smach.State):
         self.people_debug_images = []
 
         rospy.loginfo(self.current_table)
-        objects_corners = rospy.get_param(f"/tables/{self.current_table}/objects_cuboid")
-        persons_corners = rospy.get_param(f"/tables/{self.current_table}/persons_cuboid")
-        self.object_polygon = Polygon([(x, y) for x, y in objects_corners])
-        self.person_polygon = Polygon([(x, y) for x, y in persons_corners])
+        self.object_polygon = rospy.get_param(f"/tables/{self.current_table}/objects_cuboid")
+        self.person_polygon = rospy.get_param(f"/tables/{self.current_table}/persons_cuboid")
         self.detections_objects = []
         self.detections_people = []
 
