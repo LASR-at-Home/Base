@@ -3,12 +3,7 @@ import smach
 import rospy
 import random
 
-MOCK_ORDERS = [
-    ["cup"],
-    ["cup", "cup"],
-    ["cup", "cup", "cup"]
-]
-
+MOCK_ORDER = ["cup", "cup"]
 class TakeOrder(smach.State):
     
     def __init__(self, head_controller, voice_controller):
@@ -18,7 +13,6 @@ class TakeOrder(smach.State):
 
     def execute(self, userdata):
         self.voice_controller.sync_tts("Can I please take your order?")
-        mock = random.choice(MOCK_ORDERS)
-        self.voice_controller.sync_tts(f"MOCK ORDER: {mock.join(' ')}")
-        rospy.set_param(f"/tables/{rospy.get_param('/current_table')}/order", mock)
+        self.voice_controller.sync_tts(f"MOCK ORDER: {' '.join(MOCK_ORDER)}")
+        rospy.set_param(f"/tables/{rospy.get_param('/current_table')}/order", MOCK_ORDER)
         return 'done'

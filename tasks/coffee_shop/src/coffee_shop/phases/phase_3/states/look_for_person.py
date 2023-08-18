@@ -77,4 +77,5 @@ class LookForPerson(smach.State):
                 if np.all(min_xyz <= pose) and np.all(pose <= max_xyz):
                     rospy.set_param("/person/position", pose.tolist())
                     return 'found'
+        rospy.sleep(rospy.Duration(1.0))
         return 'not found'
