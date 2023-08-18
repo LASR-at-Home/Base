@@ -11,7 +11,9 @@ class GoToTable(smach.State):
         self.base_controller = base_controller
 
     def execute(self, userdata):
-        position = rospy.get_param(f"/tables/{rospy.get_param('/current_table')}/position")
-        orientation = rospy.get_param(f"/tables/{rospy.get_param('/current_table')}/orientation")
+        table, data = [(table, data) for table, data in rospy.get_param("/tables").items() if data["status"] == "needs_serving"][0]
+        position = data["location"]["position"]
+        orientation = data["location"]["orientation"]
         self.base_controller.sync_to_pose(Pose(position=Point(**position), orientation=Quaternion(**orientation)))
+        rospy.set_param("/current_table", table)
         return 'done'

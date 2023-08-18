@@ -9,4 +9,8 @@ class DeliverOrder(smach.State):
         self.voice_controller = voice_controller
 
     def execute(self, userdata):
+        location = rospy.get_param(f"/tables/{rospy.get_param('/current_table')}/location")
+        position = location["position"]
+        orientation = location["orientation"]
+        self.base_controller.sync_to_pose(Pose(position=Point(**position), orientation=Quaternion(**orientation)))
         return 'done'
