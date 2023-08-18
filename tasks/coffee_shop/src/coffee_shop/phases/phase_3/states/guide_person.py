@@ -13,8 +13,9 @@ class GuidePerson(smach.State):
     def execute(self, userdata):
         tables = rospy.get_param("/tables")
         empty_tables = [(label, table) for label, table in tables.items() if table["status"] == "ready"]
-        target_table = empty_tables[0][1]
-        position, orientation = target_table["location"]["position"], target_table["location"]["orientation"]
+        table, data = empty_tables[0]
+        position, orientation = data["location"]["position"], data["location"]["orientation"]
         self.base_controller.sync_to_pose(Pose(position=Point(**position), orientation=Quaternion(**orientation)))
         self.voice_controller.sync_tts("Please be seated!")
+        rospy.set_param(f"/tables/{table}/status", "needs serving")
         return 'done'
