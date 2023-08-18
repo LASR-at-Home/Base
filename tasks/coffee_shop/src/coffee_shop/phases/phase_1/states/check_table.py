@@ -48,16 +48,14 @@ def create_point_marker(x, y, z, idx, frame, text):
     return marker_msg
 
 class CheckTable(smach.State):
-    def __init__(self, head_controller, voice_controller, debug = False):
+    def __init__(self, head_controller, voice_controller, yolo, tf, pm, debug = False):
         smach.State.__init__(self, outcomes=['not_finished', 'finished'])
         self.head_controller = head_controller
         self.voice_controller = voice_controller
         self.debug = debug
-        self.play_motion_client = actionlib.SimpleActionClient('/play_motion', PlayMotionAction)
-        self.play_motion_client.wait_for_server(rospy.Duration(15.0))
-        rospy.wait_for_service("/yolov8/detect", rospy.Duration(15.0))
-        self.detect = rospy.ServiceProxy('/yolov8/detect', YoloDetection)
-        self.tf = rospy.ServiceProxy("/tf_transform", TfTransform)
+        self.play_motion_client = pm
+        self.detect = yolo
+        self.tf = tf
         self.bridge = CvBridge()
         self.detections_objects = []
         self.detections_people = []
@@ -159,5 +157,12 @@ class CheckTable(smach.State):
             self.publish_people_points()
 
         rospy.set_param(f"/tables/{self.current_table}/status/", status)
-        self.voice_controller.sync_tts(f"The status of this table is {status}. There were {len(self.detections_objects)} objects and {len(self.detections_people)} people")
+
+        object_count = len(self.detections_objects)
+        people_count = len(self.detections_people)
+        object_text = "object" if object_count == 1 else "objects"
+        people_text = "person" if people_count == 1 else "people"
+        status_text = f"The status of this table is {status}."
+        count_text = f"There {'is' if object_count == 1 else 'are'} {object_count} {object_text} and {people_count} {people_text}."
+        self.voice_controller.sync_tts(f"The status of this table is {status}. There {'is' if object_count == 1 else 'are'} {object_count} {object_text} and {people_count} {people_text}.")
         return 'finished' if len([(label, table) for label, table in rospy.get_param("/tables").items() if table["status"] == "unvisited"]) == 0 else 'not_finished'

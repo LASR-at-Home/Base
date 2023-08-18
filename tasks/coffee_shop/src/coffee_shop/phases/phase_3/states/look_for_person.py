@@ -16,11 +16,10 @@ from lasr_shapely import LasrShapely
 shapely = LasrShapely()
 
 class LookForPerson(smach.State):
-    def __init__(self):
+    def __init__(self, yolo, tf):
         smach.State.__init__(self, outcomes=['found', 'not found'])
-        rospy.wait_for_service("/yolov8/detect", rospy.Duration(15.0))
-        self.detect = rospy.ServiceProxy('/yolov8/detect', YoloDetection)
-        self.tf = rospy.ServiceProxy("/tf_transform", TfTransform)
+        self.detect = yolo
+        self.tf = tf
         self.people_pose_pub = rospy.Publisher("/people_poses", Marker, queue_size=100)
         self.bridge = CvBridge()
 
@@ -80,4 +79,5 @@ class LookForPerson(smach.State):
                 if satisfied_points[i]:
                     rospy.set_param("/person/position", pose.tolist())
                     return 'found'
+        rospy.sleep(rospy.Duration(1.0))
         return 'not found'

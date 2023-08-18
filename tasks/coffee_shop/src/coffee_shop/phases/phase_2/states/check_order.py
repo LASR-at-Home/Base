@@ -17,12 +17,12 @@ shapely = LasrShapely()
 OBJECTS = ["cup", "mug", "bowl"]
 
 class CheckOrder(smach.State):
-    def __init__(self, voice_controller):
+    def __init__(self, voice_controller, yolo, tf, pm):
         smach.State.__init__(self, outcomes=['correct', 'incorrect'])
         self.voice_controller = voice_controller
-        rospy.wait_for_service("/yolov8/detect", rospy.Duration(15.0))
-        self.detect = rospy.ServiceProxy('/yolov8/detect', YoloDetection)
-        self.tf = rospy.ServiceProxy("/tf_transform", TfTransform)
+        self.detect = yolo
+        self.tf = tf
+        self.play_motion_client = pm
         self.bridge = CvBridge()
 
     def estimate_pose(self, pcl_msg, detection):
