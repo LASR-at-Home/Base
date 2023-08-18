@@ -6,7 +6,7 @@ class Phase2(smach.StateMachine):
         smach.StateMachine.__init__(self, outcomes=['done'])
     
         with self:
-            smach.StateMachine.add('GO_TO_TABLE', GoToTable(base_controller), transitions={'done' : 'TAKE_ORDER'})
+            smach.StateMachine.add('GO_TO_TABLE_P2', GoToTable(base_controller), transitions={'done' : 'TAKE_ORDER'})
             smach.StateMachine.add('TAKE_ORDER', TakeOrder(head_controller, voice_controller), transitions={'done' : 'GO_TO_COUNTER'})
             smach.StateMachine.add('GO_TO_COUNTER', GoToCounter(base_controller), transitions={'done' : 'MAKE_ORDER'})
             smach.StateMachine.add('MAKE_ORDER', MakeOrder(voice_controller), transitions={'done' : 'CHECK_ORDER'})

@@ -7,5 +7,5 @@ class CoffeeShop(smach.StateMachine):
         smach.StateMachine.__init__(self, outcomes=['end'])
         with self:
             smach.StateMachine.add('PHASE_1', Phase1(base_controller, head_controller, voice_controller, yolo, tf, pm), transitions={'done' : 'PHASE_2'})
-            smach.StateMachine.add('PHASE_2', Phase2(base_controller, head_controller, yolo, tf, pm), transitions={'done' : 'PHASE_3'})
-            smach.StateMachine.add('PHASE_3', Phase3(base_controller, voice_controller, yolo, tf), transitions={'done' : 'end'})
+            smach.StateMachine.add('PHASE_2', Phase2(base_controller, head_controller, voice_controller, yolo, tf, pm), transitions={'done' : 'PHASE_3'})
+            smach.StateMachine.add('PHASE_3', Phase3(base_controller, voice_controller, yolo, tf, pm), transitions={'done' : 'end'})
