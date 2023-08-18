@@ -6,7 +6,7 @@ To run the table cuboid service:
 	- First, run the arUco marker recognition service with the custom launchfile:
 	
 	```bash
-	rosrun aruco_ros singleTiago.launch
+	roslaunch aruco_ros singleTiago.launch
 	```
 	
 	- Then, run the service node:
@@ -25,7 +25,7 @@ To run the table cuboid service:
 	- You can visualize the points using RViz with the configuration set up to show all relevant points:
 
 	```bash
-	rosrun rviz rviz -d path/to/file/service_debug.rviz
+	rosrun rviz rviz -d $(rospack find aruco_service)/service_debug.rviz
 	```
 	
 To run the points publisher:

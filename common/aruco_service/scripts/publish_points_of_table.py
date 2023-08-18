@@ -1,17 +1,8 @@
 #!/usr/bin/env python
 
-import yaml
 import rospy
-import datetime
 from aruco_service.srv import TableNumber, TableNumberResponse
-from geometry_msgs.msg import PoseStamped
 from visualization_msgs.msg import Marker
-import rosparam
-import tf2_ros
-import tf2_geometry_msgs
-
-# TODO: Load filename from rosparam, with default being this one.
-FILENAME = "/home/peter/robocup_ws/src/Base/common/aruco_service/test_check_table_sim.yaml"
 
 def create_marker_msg(point, idx):
     marker_msg = Marker()
@@ -33,7 +24,6 @@ def create_marker_msg(point, idx):
 
 def publish_points(number):
     table = number.table
-    seconds = rospy.get_time()
     objects_marker_pub = rospy.Publisher("/table/objects_cuboid", Marker, queue_size=4)
     persons_marker_pub = rospy.Publisher("/table/persons_cuboid", Marker, queue_size=4)
 
