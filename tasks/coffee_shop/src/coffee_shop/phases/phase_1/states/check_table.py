@@ -102,7 +102,7 @@ class CheckTable(smach.State):
         detections = [(det, self.estimate_pose(pcl_msg, det)) for det in detections.detected_objects if det.name in filter]
         rospy.loginfo(f"All: {[(det.name, pose) for det, pose in detections]}")
         rospy.loginfo(f"Boundary: {polygon}")
-        satisfied_points = shapely.are_points_in_polygon_2d(polygon, [[pose[0], pose[1]] for (_, pose) in detections])
+        satisfied_points = shapely.are_points_in_polygon_2d(polygon, [[pose[0], pose[1]] for (_, pose) in detections]).inside
         detections = [detections[i] for i in range(0, len(detections)) if satisfied_points[i]]
         rospy.loginfo(f"Filtered: {[(det.name, pose) for det, pose in detections]}")
         return detections
