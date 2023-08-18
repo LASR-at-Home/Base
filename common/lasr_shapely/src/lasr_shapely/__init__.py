@@ -8,6 +8,8 @@ class LasrShapely:
     '''
 
     def __init__(self):
+        rospy.wait_for_service('/lasr_shapely/point_in_polygon_2d')
+
         self.point_proxy = rospy.ServiceProxy('/lasr_shapely/point_in_polygon_2d', PointInPolygon2D)
         self.points_proxy = rospy.ServiceProxy('/lasr_shapely/points_in_polygon_2d', PointsInPolygon2D)
     

@@ -11,6 +11,9 @@ from lasr_object_detection_yolo.srv import YoloDetection
 from coffee_shop.srv import TfTransform, TfTransformRequest
 from cv_bridge3 import CvBridge, cv2
 
+from lasr_shapely import LasrShapely
+shapely = LasrShapely()
+
 OBJECTS = ["cup", "mug", "bowl"]
 
 class CheckOrder(smach.State):
@@ -37,14 +40,13 @@ class CheckOrder(smach.State):
         order = rospy.get_param(f"/tables/{rospy.get_param('current_table')}/order")
 
         counter_corners = rospy.get_param(f"/counter/cuboid")
-        min_xyz = np.array([min([x for x, _ in counter_corners]), min([y for _, y in counter_corners]), 0.0])
-        max_xyz = np.array([max([x for x, _ in counter_corners]), max([y for _, y in counter_corners]), 10.0])
 
         pcl_msg = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
         cv_im = pcl_msg_to_cv2(pcl_msg)
         img_msg = self.bridge.cv2_to_imgmsg(cv_im)
         detections = self.detect(img_msg, "yolov8n-seg.pt", 0.5, 0.3)
         detections = [(det, self.estimate_pose(pcl_msg, det)) for det in detections.detected_objects if det.name in OBJECTS]
-        given_order = [det.name for (det, pose) in detections if np.all(min_xyz <= pose) and np.all(pose <= max_xyz)]
+        satisfied_points = shapely.are_points_in_polygon_2d(counter_corners, [[pose[0], pose[1]] for (_, pose) in detections]).inside
+        given_order = [detections[i][0].name for i in range(0, len(detections)) if satisfied_points[i]]
         rospy.set_param(f"/tables/{rospy.get_param('current_table')}/given_order", given_order)
         return 'correct' if sorted(order) == sorted(given_order) else 'incorrect'
