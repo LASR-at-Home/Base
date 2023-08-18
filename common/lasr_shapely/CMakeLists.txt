@@ -57,6 +57,7 @@ catkin_generate_virtualenv(
 add_service_files(
   FILES
   PointInPolygon2D.srv
+  PointsInPolygon2D.srv
 )
 
 ## Generate actions in the 'action' folder

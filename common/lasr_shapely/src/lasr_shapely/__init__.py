@@ -12,3 +12,12 @@ class LasrShapely:
     
     def is_point_in_polygon_2d(self, polygon_2d_array, x, y):
         return self.point_proxy(polygon=[item for sublist in polygon_2d_array for item in sublist], x=x, y=y)
+    
+    def are_points_in_polygon_2d(self, polygon_2d_array, points_2d_array):
+        return self.point_proxy(polygon=[item for sublist in polygon_2d_array for item in sublist],
+                                points=[item for sublist in points_2d_array for item in sublist])
+
+if __name__=='__main__':
+    print('grdfgdf')
+    rospy.init_node('gfdgdfgd')
+    print(LasrShapely().is_point_in_polygon_2d([[0, 0], [5,0], [10, 10], [0, 5]], 6, 6))

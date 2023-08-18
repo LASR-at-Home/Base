@@ -102,7 +102,8 @@ class CheckTable(smach.State):
         detections = [(det, self.estimate_pose(pcl_msg, det)) for det in detections.detected_objects if det.name in filter]
         rospy.loginfo(f"All: {[(det.name, pose) for det, pose in detections]}")
         rospy.loginfo(f"Boundary: {polygon}")
-        detections = [(det, pose) for (det, pose) in detections if shapely.is_point_in_polygon_2d(polygon, pose[0], pose[1])]
+        satisfied_points = shapely.are_points_in_2d_polygon(polygon, [[pose[0], pose[1]] for (_, pose) in detections])
+        detections = [detections[i] for i in range(0, len(detections)) if satisfied_points[i]]
         rospy.loginfo(f"Filtered: {[(det.name, pose) for det, pose in detections]}")
         return detections
 
@@ -115,7 +116,7 @@ class CheckTable(smach.State):
         self.detections_objects.extend(detections_objects_)
 
     def check_people(self, pcl_msg):
-        detections_people_ = self.perform_detection(pcl_msg, self.people_polygon, ["person"])
+        detections_people_ = self.perform_detection(pcl_msg, self.person_polygon, ["person"])
         self.detections_people.extend(detections_people_)
 
     def execute(self, userdata):
