@@ -133,7 +133,6 @@ class CheckTable(smach.State):
         for motion in motions:
             pm_goal = PlayMotionGoal(motion_name=motion, skip_planning=True)
             self.play_motion_client.send_goal_and_wait(pm_goal)
-            rospy.sleep(2.0)
             pcl_msg = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
             self.check(pcl_msg)
 
