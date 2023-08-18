@@ -1,0 +1,9 @@
+# 1D-array of ordered pairs of points (connected by edge) that define the polygon
+float32[] polygon
+# X coordinate of point
+float32 x
+# Y coordinate of point
+float32 y
+---
+# Whether the point is inside the polygon
+bool inside

@@ -12,6 +12,9 @@ from coffee_shop.srv import TfTransform, TfTransformRequest
 from visualization_msgs.msg import Marker
 from common_math import pcl_msg_to_cv2
 
+from lasr_shapely import LasrShapely
+shapely = LasrShapely()
+
 class LookForPerson(smach.State):
     def __init__(self):
         smach.State.__init__(self, outcomes=['found', 'not found'])
@@ -47,16 +50,15 @@ class LookForPerson(smach.State):
 
     def execute(self, userdata):
         corners = rospy.get_param("/wait/cuboid")
-        min_xyz = np.array([min([x for x, _ in corners]), min([y for _, y in corners]), 0.0])
-        max_xyz = np.array([max([x for x, _ in corners]), max([y for _, y in corners]), 10.0])
         pcl_msg = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
         cv_im = pcl_msg_to_cv2(pcl_msg)
         img_msg = self.bridge.cv2_to_imgmsg(cv_im)
         detections = self.detect(img_msg, "yolov8n-seg.pt", 0.3, 0.3)
         detections = [(det, self.estimate_pose(pcl_msg, cv_im, det)) for det in detections.detected_objects if det.name == "person"]
+        satisfied_points = shapely.are_points_in_polygon_2d(corners, [[pose[0], pose[1]] for (_, pose) in detections]).inside
         if len(detections):
-            for detection in detections:
-                pose = np.array(detection[1])
+            for i in range(0, len(detections)):
+                pose = detections[i][1]
                 marker_msg = Marker()
                 marker_msg.header.frame_id = "map"
                 marker_msg.header.stamp = rospy.Time.now()
@@ -75,7 +77,7 @@ class LookForPerson(smach.State):
                 marker_msg.color.g = 0.0
                 marker_msg.color.b = 0.0
                 self.people_pose_pub.publish(marker_msg)
-                if np.all(min_xyz <= pose) and np.all(pose <= max_xyz):
+                if satisfied_points[i]:
                     rospy.set_param("/person/position", pose.tolist())
                     return 'found'
         return 'not found'
