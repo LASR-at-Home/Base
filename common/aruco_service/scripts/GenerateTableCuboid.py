@@ -21,8 +21,8 @@ PADDING = 0.5
 WAITING_AREA_LONG_SIDE = 1.2
 WAITING_AREA_SHORT_SIDE = 0.6
 
-path = rospkg.get_ros_package_path()
-FILENAME = path + "/test_check_table_sim.yaml"
+r = rospkg.RosPack()
+FILENAME = r.get_path('aruco_service') + "/test_check_table_sim.yaml"
 
 def get_transform_to_marker(from_frame, to_frame):
     tf_buffer = tf2_ros.Buffer()

@@ -7,28 +7,28 @@ from geometry_msgs.msg import PoseWithCovarianceStamped
 import rosparam
 import rospkg
 
-path = rospkg.get_ros_package_path()
-FILENAME = path + "/test_check_table_sim.yaml"
+r = rospkg.RosPack()
+FILENAME = r.get_path('aruco_service') + "/test_check_table_sim.yaml"
 
 def save_points(number):
     table = number.table
 
-    position = latest_pose.pose.position
-    orientation = latest_pose.pose.orientation
+    position = latest_pose.pose.pose.position
+    orientation = latest_pose.pose.pose.orientation
 
     if table >= 0:
-        rospy.set_param("/tables/table" + str(table) + "/location/position", position)
-        rospy.set_param("/tables/table" + str(table) + "/location/orientation", orientation)
+        rospy.set_param("/tables/table" + str(table) + "/location/position", {"x": position.x, "y": position.y, "z": 0.})
+        rospy.set_param("/tables/table" + str(table) + "/location/orientation", {"x": orientation.x, "y": orientation.y, "z": orientation.z, "w": orientation.w})
         rospy.loginfo("Navigation point for table %d saved to parameter server", table)
 
     elif table == -1:
-        rospy.set_param("/counter/location/position", position)
-        rospy.set_param("counter/location/orientation", orientation)
+        rospy.set_param("/counter/location/position", {"x": position.x, "y": position.y, "z": 0.})
+        rospy.set_param("counter/location/orientation",  {"x": orientation.x, "y": orientation.y, "z": orientation.z, "w": orientation.w})
         rospy.loginfo("Navigation point for the counter saved to parameter server")
 
     elif table == -2:
-        rospy.set_param("/wait/location/position", position)
-        rospy.set_param("wait/location/orientation", orientation)
+        rospy.set_param("/wait/location/position", {"x": position.x, "y": position.y, "z": 0.})
+        rospy.set_param("wait/location/orientation",  {"x": orientation.x, "y": orientation.y, "z": orientation.z, "w": orientation.w})
         rospy.loginfo("Navigation point for the waiting area saved to parameter server")
 
     else:
