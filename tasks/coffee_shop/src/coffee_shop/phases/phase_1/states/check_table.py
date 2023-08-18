@@ -157,11 +157,9 @@ class CheckTable(smach.State):
 
         rospy.set_param(f"/tables/{self.current_table}/status/", status)
 
-        object_count = len(self.detections_objects)
         people_count = len(self.detections_people)
-        object_text = "object" if object_count == 1 else "objects"
         people_text = "person" if people_count == 1 else "people"
         status_text = f"The status of this table is {status}."
-        count_text = f"There {'is' if object_count == 1 else 'are'} {object_count} {object_text} and {people_count} {people_text}."
-        self.voice_controller.sync_tts(f"The status of this table is {status}. There {'is' if object_count == 1 else 'are'} {object_count} {object_text} and {people_count} {people_text}.")
+        count_text = f"There {'is' if person_count == 1 else 'are'} {people_count} {people_text}."
+        self.voice_controller.sync_tts(f"{status_text} {count_text}")
         return 'finished' if len([(label, table) for label, table in rospy.get_param("/tables").items() if table["status"] == "unvisited"]) == 0 else 'not_finished'
