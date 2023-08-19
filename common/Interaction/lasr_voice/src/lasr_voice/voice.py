@@ -19,7 +19,7 @@ class Voice:
             goal.rawtext.lang_id = 'en_GB'
             self._tts_client.send_goal(goal)
         else:
-            rospy.loginfo(f"TIAGO: {text}")
+            rospy.loginfo(f"\033[32mTIAGO: {text}\033[0m")
 
     def sync_tts(self, text):
         self.__tts(text)
