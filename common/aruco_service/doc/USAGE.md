@@ -54,4 +54,3 @@ To run the navigation points storing service:
 	rosservice call /save_navigation_points table: "N"
 	``` 
 	Where you replace N with -2 for the waiting area, -1 for the counter, and 1-Inf for tables.
-
