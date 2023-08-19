@@ -73,12 +73,12 @@ class CheckTable(smach.State):
 
     def publish_object_points(self):
         for i, (det, point) in enumerate(self.detections_objects):
-            marker = create_point_marker(*point, i, 0.0, 1.0, 0.0)
+            marker = create_point_marker(*point, i, "map",0.0, 1.0, 0.0)
             self.object_pose_pub.publish(marker)
 
     def publish_people_points(self):
         for i, (det, point) in enumerate(self.detections_people):
-            marker = create_point_marker(*point, i, 1.0, 0.0, 0.0)
+            marker = create_point_marker(*point, i, "map",1.0, 0.0, 0.0)
             self.people_pose_pub.publish(marker)
 
     def filter_detections_by_pose(self, detections, threshold=0.2):
