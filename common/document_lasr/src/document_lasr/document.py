@@ -347,14 +347,14 @@ def generate_readme(pkg_dir):
 
                 data['actions'] += 'Goal\n\n'
                 goal_fields = parse_rosmsg_definition(goal)
-                data['actions'] += rosmsg_definition_to_table(request_fields)
+                data['actions'] += rosmsg_definition_to_table(goal_fields)
 
                 data['actions'] += '\nResult\n\n'
                 result_fields = parse_rosmsg_definition(result)
                 data['actions'] += rosmsg_definition_to_table(result_fields)
 
                 data['actions'] += '\nFeedback\n\n'
-                feedback_fields = parse_rosmsg_definition(result)
+                feedback_fields = parse_rosmsg_definition(feedback)
                 data['actions'] += rosmsg_definition_to_table(feedback_fields)
 
             data['actions'] += '\n'
