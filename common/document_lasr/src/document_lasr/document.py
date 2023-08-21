@@ -82,7 +82,7 @@ def generate_readme(pkg_dir):
     # Try to detect required Python version if using catkin_virtualenv
     with open(join(pkg_dir, 'CMakeLists.txt')) as f:
         cmakelists = f.read()
-        match = re.search('PYTHON_INTERPRETER ([\w\d\.]+)', cmakelists)
+        match = re.search(r'PYTHON_INTERPRETER ([\w\d\.]+)', cmakelists)
         if match is not None:
             python = match.group(1)
             if python.startswith('python'):
