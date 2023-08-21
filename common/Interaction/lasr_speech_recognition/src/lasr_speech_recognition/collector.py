@@ -1,9 +1,11 @@
+import rospy
+
 import speech_recognition as sr
 
 from queue import Queue
 from abc import ABC, abstractmethod
 
-from .source import AudioTopic
+# from .source import AudioTopic
 
 class AbstractPhraseCollector(ABC):
     '''
@@ -50,7 +52,7 @@ class RecognizerPhraseCollector(AbstractPhraseCollector):
         '''
         self.data.put(audio.get_raw_data())
 
-    def __init__(self, energy_threshold: int = 100, phrase_time_limit: float = 2) -> None:
+    def __init__(self, energy_threshold: int = 500, phrase_time_limit: float = 2) -> None:
         super().__init__()
         self._recorder = sr.Recognizer()
         self._recorder.dynamic_energy_threshold = False
@@ -59,9 +61,11 @@ class RecognizerPhraseCollector(AbstractPhraseCollector):
 
     @abstractmethod
     def start(self, source: sr.AudioSource):
+        rospy.loginfo('Adjusting for background noise...')
         with self._source:
             self._recorder.adjust_for_ambient_noise(self._source)
         
+        rospy.loginfo('Started source listen thread')
         self._recorder.listen_in_background(self._source, self._record_callback, phrase_time_limit=self._phrase_time_limit)
 
     def sample_rate(self):
@@ -77,23 +81,23 @@ class MicrophonePhraseCollector(RecognizerPhraseCollector):
 
     _source: sr.Microphone
 
-    def __init__(self, energy_threshold: int = 100, phrase_time_limit: float = 2) -> None:
-        self._source = sr.Microphone()
+    def __init__(self, energy_threshold: int = 100, phrase_time_limit: float = 2, device_index: int = None) -> None:
+        self._source = sr.Microphone(device_index=device_index)
         super().__init__(energy_threshold, phrase_time_limit)
 
     def start(self):
         return super().start(self._source)
 
-class AudioTopicPhraseCollector(RecognizerPhraseCollector):
-    '''
-    Collect phrases from an audio topic
-    '''
+# class AudioTopicPhraseCollector(RecognizerPhraseCollector):
+#     '''
+#     Collect phrases from an audio topic
+#     '''
 
-    _source: AudioTopic
+#     _source: AudioTopic
 
-    def __init__(self, topic: str, energy_threshold: int = 100, phrase_time_limit: float = 2) -> None:
-        self._source = AudioTopic(topic)
-        super().__init__(energy_threshold, phrase_time_limit)
+#     def __init__(self, topic: str, energy_threshold: int = 100, phrase_time_limit: float = 2) -> None:
+#         self._source = AudioTopic(topic)
+#         super().__init__(energy_threshold, phrase_time_limit)
 
-    def start(self):
-        return super().start(self._source)
+#     def start(self):
+#         return super().start(self._source)

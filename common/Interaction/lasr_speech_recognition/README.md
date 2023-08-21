@@ -10,6 +10,8 @@ This package is maintained by:
 This package depends on the following ROS packages:
 - catkin (buildtool)
 - catkin_virtualenv (build)
+- message_generation (build)
+- message_runtime (exec)
 
 This packages requires Python 3.10 to be present.
 
@@ -21,15 +23,31 @@ This package has 48 Python dependencies:
 - [rospkg](https://pypi.org/project/rospkg)==1.5.0
 - .. and 46 sub dependencies
 
-
+This package requires that [ffmpeg](https://ffmpeg.org/) is available during runtime.
 
 ## Usage
 
+> **Warning**: this package is not complete, this is subject to change.
 
+List available microphones:
+
+```bash
+rosrun lasr_speech_recognition list_microphones.py
+```
+
+Start the example script:
+
+```bash
+rosrun lasr_speech_recognition transcribe_microphone <microphone_index>
+```
+
+Select microphone when prompted then wait for it to start.
+
+You can now listen on `/transcription` for a live transcription.
 
 ## Example
 
-
+Ask the package maintainer to write a `doc/EXAMPLE.md` for their package!
 
 ## Technical Overview
 
@@ -65,7 +83,13 @@ This package has no launch files.
 
 ### Messages
 
-This package has no messages.
+#### `Transcription`
+
+| Field | Type | Description |
+|:-:|:-:|---|
+| phrase | string |  |
+| finished | bool |  |
+
 
 ### Services
 

@@ -75,6 +75,8 @@ class SpeechRecognitionWorker(ABC):
         Indefinitely perform inference on the given data
         '''
 
+        rospy.loginfo('Started inference worker')
+
         while not self._stopped:
             try:
                 # Check whether the current phrase has timed out
@@ -106,7 +108,9 @@ class SpeechRecognitionWorker(ABC):
 
                 sleep(0.2)
             except KeyboardInterrupt:
-                return
+                self._stopped = True
+
+        rospy.loginfo('Worker finished')        
 
     def start(self):
         '''
@@ -146,7 +150,8 @@ class SpeechRecognitionToTopic(SpeechRecognitionToStdout):
 
     def __init__(self, collector: AbstractPhraseCollector, model: str, topic: str, maximum_phrase_length=timedelta(seconds=3), infer_partial=True) -> None:
         super().__init__(collector, model, maximum_phrase_length, infer_partial)
-        self._pub = rospy.Publisher('transcription', Transcription)
+        rospy.loginfo(f'Will be publishing transcription to {topic}')
+        self._pub = rospy.Publisher(topic, Transcription, queue_size=5)
     
     def on_phrase(self, phrase: str, finished: bool) -> None:
         super().on_phrase(phrase, finished)
