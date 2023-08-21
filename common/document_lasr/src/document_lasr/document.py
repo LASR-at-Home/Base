@@ -120,8 +120,9 @@ def generate_readme(pkg_dir):
 
             # determine package name and restriction
             for restriction in ['==', '>', '<']:
-                name, ver = input.split(restriction)
-                return (name, f'{restriction}{ver}')
+                if restriction in input:
+                    name, ver = input.split(restriction)
+                    return (name, f'{restriction}{ver}')
 
             # otherwise just return everything as the package name
             return (input, None)
