@@ -26,12 +26,12 @@ shapely = LasrShapely()
 OBJECTS = ["cup", "mug"]
 
 
-def create_point_marker(x, y, z, idx, frame, text):
+def create_point_marker(x, y, z, idx, frame, r,g,b):
     marker_msg = Marker()
     marker_msg.header.frame_id = frame
     marker_msg.header.stamp = rospy.Time.now()
     marker_msg.id = idx
-    marker_msg.type = Marker.TEXT_VIEW_FACING
+    marker_msg.type = Marker.SPHERE
     marker_msg.action = Marker.ADD
     marker_msg.pose.position.x = x
     marker_msg.pose.position.y = y
@@ -41,18 +41,16 @@ def create_point_marker(x, y, z, idx, frame, text):
     marker_msg.scale.y = 0.1
     marker_msg.scale.z = 0.1
     marker_msg.color.a = 1.0
-    marker_msg.color.r = 1.0
-    marker_msg.color.g = 0.0
-    marker_msg.color.b = 0.0
-    marker_msg.text = text
+    marker_msg.color.r = r
+    marker_msg.color.g = g
+    marker_msg.color.b = b
     return marker_msg
 
 class CheckTable(smach.State):
-    def __init__(self, head_controller, voice_controller, yolo, tf, pm, debug = False):
+    def __init__(self, head_controller, voice_controller, yolo, tf, pm):
         smach.State.__init__(self, outcomes=['not_finished', 'finished'])
         self.head_controller = head_controller
         self.voice_controller = voice_controller
-        self.debug = debug
         self.play_motion_client = pm
         self.detect = yolo
         self.tf = tf
@@ -75,12 +73,12 @@ class CheckTable(smach.State):
 
     def publish_object_points(self):
         for i, (det, point) in enumerate(self.detections_objects):
-            marker = create_point_marker(*point, i, "map", f"{det.name}, {det.confidence}")
+            marker = create_point_marker(*point, i, "map",0.0, 1.0, 0.0)
             self.object_pose_pub.publish(marker)
 
     def publish_people_points(self):
         for i, (det, point) in enumerate(self.detections_people):
-            marker = create_point_marker(*point, i, "map", f"{det.name}, {det.confidence}")
+            marker = create_point_marker(*point, i, "map",1.0, 0.0, 0.0)
             self.people_pose_pub.publish(marker)
 
     def filter_detections_by_pose(self, detections, threshold=0.2):
@@ -96,7 +94,7 @@ class CheckTable(smach.State):
     def perform_detection(self, pcl_msg, polygon, filter):
         cv_im = pcl_msg_to_cv2(pcl_msg)
         img_msg = self.bridge.cv2_to_imgmsg(cv_im)
-        detections = self.detect(img_msg, "yolov8n-seg.pt", 0.6, 0.3)
+        detections = self.detect(img_msg, "yolov8n-seg.pt", 0.3, 0.3)
         detections = [(det, self.estimate_pose(pcl_msg, det)) for det in detections.detected_objects if det.name in filter]
         rospy.loginfo(f"All: {[(det.name, pose) for det, pose in detections]}")
         rospy.loginfo(f"Boundary: {polygon}")
@@ -133,7 +131,6 @@ class CheckTable(smach.State):
         for motion in motions:
             pm_goal = PlayMotionGoal(motion_name=motion, skip_planning=True)
             self.play_motion_client.send_goal_and_wait(pm_goal)
-            rospy.sleep(2.0)
             pcl_msg = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
             self.check(pcl_msg)
 
@@ -152,17 +149,14 @@ class CheckTable(smach.State):
         self.detections_objects = self.filter_detections_by_pose(self.detections_objects, threshold=0.1)
         self.detections_people = self.filter_detections_by_pose(self.detections_people, threshold=0.50)
 
-        if self.debug:
-            self.publish_object_points()
-            self.publish_people_points()
+        self.publish_object_points()
+        self.publish_people_points()
 
         rospy.set_param(f"/tables/{self.current_table}/status/", status)
 
-        object_count = len(self.detections_objects)
         people_count = len(self.detections_people)
-        object_text = "object" if object_count == 1 else "objects"
         people_text = "person" if people_count == 1 else "people"
         status_text = f"The status of this table is {status}."
-        count_text = f"There {'is' if object_count == 1 else 'are'} {object_count} {object_text} and {people_count} {people_text}."
-        self.voice_controller.sync_tts(f"The status of this table is {status}. There {'is' if object_count == 1 else 'are'} {object_count} {object_text} and {people_count} {people_text}.")
+        count_text = f"There {'is' if people_count == 1 else 'are'} {people_count} {people_text}."
+        self.voice_controller.sync_tts(f"{status_text} {count_text}")
         return 'finished' if len([(label, table) for label, table in rospy.get_param("/tables").items() if table["status"] == "unvisited"]) == 0 else 'not_finished'

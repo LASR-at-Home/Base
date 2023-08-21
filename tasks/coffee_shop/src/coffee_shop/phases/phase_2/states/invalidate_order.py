@@ -10,7 +10,7 @@ class InvalidateOrder(smach.State):
 
     def execute(self, userdata):
         order = rospy.get_param(f"/tables/{rospy.get_param('current_table')}/order")
-        previous_given_order = rospy.get_param(f"/tables/{rospy.get_param('current_table')}/previous_given_order", [])
+        previous_given_order = rospy.get_param(f"/tables/{rospy.get_param('current_table')}/previous_given_order", None)
         given_order = rospy.get_param(f"/tables/{rospy.get_param('current_table')}/given_order")
 
         if previous_given_order == given_order:
