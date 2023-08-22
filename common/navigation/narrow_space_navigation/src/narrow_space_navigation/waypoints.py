@@ -348,7 +348,7 @@ class Waypoint:
 
         return np.array(midpoints)
 
-    def local_to_global_points(self, M=None, points=None):
+    def local_to_global_points(self, M=None, points=None, is_lift=False):
         """
         Transforms local points to global points, given the transformation matrix.
 
@@ -366,10 +366,12 @@ class Waypoint:
         # x, y = points.flatten()[0], points.flatten()[1]
 
         # Loop through all the points and add each point to the new_points list
-        new_points.append([points[0], points[1]])
-        # for i in range(points.shape[0]):
-        #     print(points[i][0], points[i][1])
-        #     new_points.append([points[i][0], points[i][1], 1])
+        if is_lift:
+            new_points.append([points[0], points[1]])
+        else:
+            for i in range(points.shape[0]):
+                print(points[i][0], points[i][1])
+                new_points.append([points[i][0], points[i][1], 1])
 
         # Invert the transformation matrix
         _, IM = cv2.invert(M)
@@ -844,28 +846,46 @@ class Waypoint:
         #     self.get_global_costmap_window(isRobot=False,_x=elevator_center[0],_y=elevator_center[1])
         #     warped, M = self.extract_given_elevator_warping(points=points, msg=self._msg)
 
-    def get_lift_information(self):
+    def get_lift_information(self, is_lift, is_sim=True):
         # sim elevator
-        elevator_center = 5.353797912597656, -4.50060510635376
-        points = [[4.282492637634277, -3.5537350177764893],
-                  [4.353395938873291, -5.352860927581787],
-                  [6.462785720825195, -5.264233589172363],
-                  [6.569140911102295, -3.4651081562042236]]
-        # elevator_center = 3.127023935317993, -4.532418251037598
-        # points = [[2.0859310626983643, -3.3872008323669434],
-        #           [4.024967670440674, -3.3741872310638428],
-        #           [4.011953830718994, -5.768733024597168],
-        #           [1.7605891227722168, -5.794760704040527]]
+        if is_lift:
+            if is_sim:
+                #sim
+                elevator_center = 5.46206521987915, -4.357753753662109
+                points = [[4.442041397094727, -5.306999683380127],
+                          [6.458549976348877, -5.189324855804443],
+                          [6.387932300567627, -3.4948019981384277],
+                          [4.504811763763428, -3.5497169494628906]]
+            else:
+                # real
+                elevator_center = 4.25867843628, -1.98845565319
+                points = [[4.63600158691, -1.35065078735],
+                          [4.87020158768, -2.30084991455],
+                          [3.86834454536, -2.61324429512],
+                          [3.50403380394, -1.44176590443]]
+        else:
+            if is_sim:
+                #sim
+                elevator_center = 3.127023935317993, -4.532418251037598
+                points = [[2.0859310626983643, -3.3872008323669434],
+                          [4.024967670440674, -3.3741872310638428],
+                          [4.011953830718994, -5.768733024597168],
+                          [1.7605891227722168, -5.794760704040527]]
+            else:
+                #real
+                elevator_center = 3.24403572083, -0.0620246045291
+                points = [[3.68647170067, 0.510698020458],
+                          [3.88166356087, -0.543632388115],
+                          [2.82762503624, -0.686813175678],
+                          [2.42422771454, 0.354500830173]]
 
 
         self.get_global_costmap_window(isRobot=False,_x=elevator_center[0],_y=elevator_center[1])
         warped, M = self.extract_given_elevator_warping(points=points, msg=self._msg)
         centers, num_clusters, midpoints, dilation = self.find_clusters(warped)
-        analytics = [centers, num_clusters, midpoints]
+        analytics = [centers, num_clusters, midpoints, elevator_center]
         return warped, analytics, M
 
-    def loc_to_glob(self, ):
-        global_cnp = self.local_to_global_points(M=M, points=cnps)
 
 
 if __name__ == '__main__':

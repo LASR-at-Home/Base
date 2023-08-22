@@ -7,7 +7,7 @@ import torchvision
 from torchvision.models.detection.rpn import AnchorGenerator
 from torchvision.transforms import functional as F
 
-import albumentations as A # Library for augmentations
+# import albumentations as A # Library for augmentations
 
 
 def train_transform():

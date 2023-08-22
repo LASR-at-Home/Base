@@ -8,7 +8,7 @@ from torchvision.transforms import functional as F
 from narrow_space_navigation.waypoints import *
 
 import glob
-from common_tools import get_model
+from choosing_wait_position.final_lift_key_point.common_tools import get_model
 import os, sys
 
 FWD = os.path.dirname(os.path.realpath(__file__))
@@ -22,6 +22,7 @@ def make_prediction(image_path):
     model = get_model(1, weights_path='keypointsrcnn_weights.pth')
 
     origin_list = glob.glob(image_path)
+    print(image_path)
 
     # origin_list = [image_path]
     print(origin_list)
@@ -42,8 +43,11 @@ def make_prediction(image_path):
             print("predict boxes: ", predict_boxes)
             predict_classes = predictions["labels"].to("cpu").numpy()
             predict_keypoints = predictions["keypoints"].to("cpu").numpy()
-            bbox = predict_boxes[0]
-            keypoint = predict_keypoints[0]
+            try:
+                bbox = predict_boxes[0]
+                keypoint = predict_keypoints[0]
+            except:
+                return None, None
 
         return bbox,keypoint
 
@@ -68,44 +72,45 @@ def visualise_predictions(image, bbox, keypoint):
     plt.imshow(image)
     plt.show()
 
-from geometry_msgs.msg import PoseWithCovarianceStamped, Pose, Point, Quaternion
-from tiago_controllers.controllers.controllers import Controllers
-
-#EXAMPLE: 
-import rospy
-rospy.init_node('predict_pos')
-print(os.getcwd())
-#We create an image object using the image path:
-w = Waypoint()
-warped, analysis, M = w.get_lift_information()
-plt.imshow(warped, cmap='gray')
-plt.show()
-image = Image.fromarray(warped)
-image.save("test.jpg")
-
-image_path = "test.jpg"
-# image_path = '../834.jpg'
-
-print(image_path)
-
-# image_sample = Image.open(image_path)
-# base/src/Base/common/navigation/choosing_wait_position/src/choosing_wait_position/final_lift_key_point/data/834.jpg
-
-#Then we predict the bounding box and the keypoint using the make predictions class
-bbox, keypoint = make_prediction(image_path)
-print(f"keypoint: {keypoint}")
-global_points = w.local_to_global_points(M=M, points=keypoint)
-p = Pose()
-p.position.x =  global_points[0][0]
-p.position.y =  global_points[0][1]
-p.orientation.w = 1
-c = Controllers()
-c.base_controller.sync_to_pose(p)
-
-
-
-
-#We create an image object using the image path:
-image = cv2.imread(image_path)
-#We pass the bounding boxes and keypoints to this function to visualise: 
-visualise_predictions(image, bbox,keypoint)
+# from geometry_msgs.msg import PoseWithCovarianceStamped, Pose, Point, Quaternion
+# from tiago_controllers.controllers.controllers import Controllers
+#
+# #EXAMPLE:
+# import rospy
+# rospy.init_node('predict_pos')
+# print(os.getcwd())
+# #We create an image object using the image path:
+# w = Waypoint()
+# warped, analysis, M = w.get_lift_information()
+# plt.imshow(warped, cmap='gray')
+# plt.show()
+# image = Image.fromarray(warped)
+# image.save("test.jpg")
+#
+# image_path = "test.jpg"
+# # image_path = '../834.jpg'
+#
+# print(image_path)
+#
+# # image_sample = Image.open(image_path)
+# # base/src/Base/common/navigation/choosing_wait_position/src/choosing_wait_position/final_lift_key_point/data/834.jpg
+#
+# #Then we predict the bounding box and the keypoint using the make predictions class
+# bbox, keypoint = make_prediction(image_path)
+# print(f"keypoint: {keypoint}")
+# print(type(keypoint))
+# global_points = w.local_to_global_points(M=M, points=keypoint)
+# p = Pose()
+# p.position.x =  global_points[0][0]
+# p.position.y =  global_points[0][1]
+# p.orientation.w = 1
+# c = Controllers()
+# c.base_controller.sync_to_pose(p)
+#
+#
+#
+#
+# #We create an image object using the image path:
+# image = cv2.imread(image_path)
+# #We pass the bounding boxes and keypoints to this function to visualise:
+# visualise_predictions(image, bbox,keypoint)
