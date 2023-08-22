@@ -9,21 +9,24 @@ This package is maintained by:
 
 This package depends on the following ROS packages:
 - catkin (buildtool)
+- catkin_virtualenv (build)
 - rospy (build)
 - std_msgs (build)
 - rospy (exec)
 - std_msgs (exec)
 
-Install Rasa
+This packages requires Python 3.10 to be present.
 
-```bash
-python3 -m pip install rasa==3.6.4
-```
+This package has 150 Python dependencies:
+- [requests](https://pypi.org/project/requests)==2.31.0
+- [rasa](https://pypi.org/project/rasa)==3.6.5
+- .. and 148 sub dependencies
+
+
 
 ## Usage
 
 This package provides the `/lasr_rasa/parse` service which uses the `Rasa` service definition from `lasr_rasa`.
-
 
 ```python
 from lasr_rasa.srv import Rasa, RasaRequest
@@ -44,22 +47,23 @@ response = rasa_service(request)
 1. Create a Rasa assistant.
     
     ```bash
-    mkdir lasr_rasa/assistants/my_new_assistant
-    cd lasr_rasa/assistants/my_new_assistant
-    rasa init
+    roscd lasr_rasa
+    mkdir -p assistants/my_new_assistant
+    cd assistants/my_new_assistant
+    rosrun lasr_rasa rasa init
     ```
 
 2. Create a NLU dataset, by defining training examples in `/lasr_rasa/assistants/my_new_assistant/data/nlu.yml`, for more information see the [Rasa docs](https://rasa.com/docs/rasa/nlu-training-data/).
 
 3. Train the NLU assistant.
     ```bash
-    rasa train nlu
+    rosrun lasr_rasa rasa train nlu
     ```
     This will produce a `.tar.gz` file in `lasr_rasa/assistants/my_new_assistant/models`.
     
 4. Run Rasa as an API with our newly trained assistant.
     ```bash
-    rasa run --enable-api
+    rosrun lasr_rasa rasa run --enable-api
     ```
     The API is run on `localhost:5005` by default, but you can change the port using the `-p` argument.
     The endpoint that we are interested in is `/model/parse`.
@@ -90,6 +94,10 @@ response = rasa_service(request)
 Ask the package maintainer to write a `doc/TECHNICAL.md` for their package!
 
 ## ROS Definitions
+
+### Launch Files
+
+This package has no launch files.
 
 ### Messages
 
