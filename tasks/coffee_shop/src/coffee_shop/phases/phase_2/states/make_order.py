@@ -13,4 +13,5 @@ class MakeOrder(smach.State):
         order = rospy.get_param(f"/tables/{rospy.get_param('/current_table')}/order")
         order_string = ', '.join([f"{count} {item if count == 1 else item+'s'}" for item, count in Counter(order).items()]).replace(', ', ', and ', len(order)-2)
         self.voice_controller.sync_tts(f"Please get me {order_string}")
+        rospy.sleep(rospy.Duration(5.0))
         return 'done'
