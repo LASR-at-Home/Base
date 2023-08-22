@@ -57,7 +57,7 @@ Begin by configuring your package to use catkin_virtualenv, add the following en
 </package>
 ```
 
-> We add a dependency on the tool so the package won't ever build without it, and we add a new export to indicate that other packages with virtual environments should inherit dependencies from this package.
+> We add a dependency on the tool so the package won't ever build without it, we also add a new export to inform the wrapper script where to find the requirements file at runtime and to indicate that other packages with virtual environments should inherit dependencies from this package.
 
 :::info
 
@@ -134,6 +134,12 @@ install(FILES
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 )
 ```
+
+:::note
+
+This step is optional but recommended, you might as well add it.
+
+:::
 
 Finally, create a `requirements.in` file (or `requirements.txt` if you did not set `INPUT_REQUIREMENTS`):
 
