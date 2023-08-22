@@ -39,6 +39,8 @@ const config = {
         docs: {
           routeBasePath: "/",
           sidebarPath: require.resolve("./sidebars.js"),
+          editUrl:
+          'https://github.com/lasr-at-home/base/blob/main/common/document_lasr/web',
         },
       }),
     ],

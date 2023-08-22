@@ -10,17 +10,16 @@ Strongly advised against unless if you cannot migrate your code to a virtual env
 
 :::
 
-Find the line in the definition file where Python dependencies are declared, adjust as required and include a new comment:
+Find the line in the definition file where Python dependencies are declared:
 
 ```diff
 # Additional Python packages
-#
-# rosnumpy: conversion helper between ROS and numpy
-# scipy: mathematics library
 + # pyyaml: yaml library
 - python3.6 -m pip install rosnumpy==0.0.5.2 scipy==1.5.4
 + python3.6 -m pip install rosnumpy==0.0.5.2 scipy==1.5.4 pyyaml==6.0.1
 ```
+
+Then update the container maintenance document accordingly, you can do this by going to [Container Maintenance](/guides/container) and then clicking edit page at the bottom.
 
 ## (B) Setting up a virtual environment using catkin_virtualenv
 

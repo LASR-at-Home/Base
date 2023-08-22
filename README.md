@@ -1,4 +1,5 @@
 # Base
+
 The main repository for the LASR codebase.
 
                             +------------------+                      
@@ -27,3 +28,13 @@ The main repository for the LASR codebase.
         |    |             |     |             |     |             |   |
         |    +-------------+     +-------------+     +-------------+   |
         +--------------------------------------------------------------+
+
+## Documentation
+
+You can view documentation for this repository by running:
+
+```bash
+rosrun document_lasr view.py
+```
+
+This requires Node.js which is already provided in the RoboCup container.
