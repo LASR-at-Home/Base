@@ -21,3 +21,4 @@ yarn-error.log*
 
 # Ignore auto-generated
 docs/packages
+docs/tasks

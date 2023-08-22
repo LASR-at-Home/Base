@@ -156,6 +156,7 @@ include_directories(
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
 catkin_install_python(PROGRAMS
+  scripts/dev.py
   scripts/view.py
   scripts/generate_readme.py
   scripts/generate_all_lasr.py

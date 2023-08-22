@@ -1,0 +1,23 @@
+#!/usr/bin/env python3
+import rospy
+from shapely.geometry import Point
+from shapely.geometry.polygon import Polygon
+
+from lasr_shapely.srv import PointInPolygon2D, PointsInPolygon2D, PointInPolygon2DResponse, PointsInPolygon2DResponse
+
+def handle_point_in_polygon_2d(req):
+    point = Point(req.x, req.y)
+    polygon = Polygon([(req.polygon[i], req.polygon[i+1]) for i in range(0, len(req.polygon), 2)])
+    return PointInPolygon2DResponse(polygon.contains(point))
+
+def handle_points_in_polygon_2d(req):
+    polygon = Polygon([(req.polygon[i], req.polygon[i+1]) for i in range(0, len(req.polygon), 2)])
+    return PointsInPolygon2DResponse([
+        polygon.contains(Point(req.points[i], req.points[i+1])) for i in range(0, len(req.points), 2)
+    ])
+
+rospy.init_node('lasr_shapely')
+rospy.Service('/lasr_shapely/point_in_polygon_2d', PointInPolygon2D, handle_point_in_polygon_2d)
+rospy.Service('/lasr_shapely/points_in_polygon_2d', PointsInPolygon2D, handle_points_in_polygon_2d)
+rospy.loginfo("lasr_shapely service running")
+rospy.spin()

@@ -9,6 +9,7 @@ from visualization_msgs.msg import Marker
 import rosparam
 import tf2_ros
 import tf2_geometry_msgs
+import rospkg
 
 # Units are in meters
 # The marker should be placed on the bottom left corner of the table, with the x axis pointing to the right and the y axis pointing up
@@ -20,8 +21,8 @@ PADDING = 0.5
 WAITING_AREA_LONG_SIDE = 1.2
 WAITING_AREA_SHORT_SIDE = 0.6
 
-# TODO: Load filename from rosparam, with default being this one.
-FILENAME = "/home/peter/robocup_ws/src/Base/common/aruco_service/test_check_table_sim.yaml"
+r = rospkg.RosPack()
+FILENAME = r.get_path('aruco_service') + "/test_check_table_sim.yaml"
 
 def get_transform_to_marker(from_frame, to_frame):
     tf_buffer = tf2_ros.Buffer()
