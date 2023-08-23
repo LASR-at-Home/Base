@@ -31,7 +31,7 @@ class LookForPerson(smach.State):
         # This should allow simulation runs as well, as i don't think the head manager is running in simulation
         if "/pal_startup_control/stop" in service_list:
             self.stop_head_manager = rospy.ServiceProxy("/pal_startup_control/stop", StartupStop)
-            self.start_head_manager = rospy.ServiceProxy("/pal_startup_control/stop", StartupStart)
+            self.start_head_manager = rospy.ServiceProxy("/pal_startup_control/start", StartupStart)
 
     def estimate_pose(self, pcl_msg, cv_im, detection):
         contours = np.array(detection.xyseg).reshape(-1, 2)
