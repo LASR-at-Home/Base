@@ -125,6 +125,8 @@ class CheckTable(smach.State):
 
     def execute(self, userdata):
         result = self.stop_head_manager.call("head_manager")
+        
+        self.voice_controller.sync_tts("I am going to check the table")
         self.current_table = rospy.get_param("current_table")
         self.object_debug_images = []
         self.people_debug_images = []

@@ -20,9 +20,8 @@ shapely = LasrShapely()
 OBJECTS = ["cup", "mug", "bowl"]
 
 class CheckOrder(smach.State):
-    def __init__(self, voice_controller, yolo, tf, pm):
+    def __init__(self, yolo, tf, pm):
         smach.State.__init__(self, outcomes=['correct', 'incorrect'])
-        self.voice_controller = voice_controller
         self.detect = yolo
         self.tf = tf
         self.play_motion_client = pm
