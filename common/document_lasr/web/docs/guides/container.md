@@ -15,18 +15,31 @@ cd ~/containers
 sudo apptainer build robocup_container.sif robocup_container.def
 ```
 
-:::caution
+:::note
 
-This should work with the open source container but it has not been battle-tested yet.
+This also works with the open source container.
 
 :::
 
 ### Debugging build process
 
-You can save a lot of the entire build by redirecting all output to a file:
+You can save a lot of time debugging build errors by redirecting all output to a file:
 
 ```bash
-sudo apptainer build robocup_container.sif robocup_container.def 2>&1 | tee build.log
+rm build.log 2>/dev/null; sudo apptainer build robocup_container.sif robocup_container.def 2>&1 | tee build.log
+```
+
+### Testing new dependencies
+
+If you'd like to test new dependencies without rebuilding the entire container, you can use the `stage2` definition file.
+
+After building the RoboCup container, you can then run:
+
+```bash
+sudo apptainer build stage2.sif stage2.def
+
+# .. with log:
+rm build.log 2>/dev/null; sudo apptainer build stage2.sif stage2.def 2>&1 | tee build.log
 ```
 
 ## Container
@@ -71,8 +84,17 @@ We use the TIAGo Melodic container as a base which uses Ubuntu 18.04 as a base i
    |:-:|:-:|---|
    | rosnumpy | 0.0.5.2 | conversion helper between ROS and numpy † |
    | scipy | 1.5.4 | mathematics library |
+   | black | 22.8.0 | Python code formatter |
+   | scikit-build | 0.16.7 | build system for CPython C/C++/Fortran/Cython extensions using CMake |
+   | scikit-learn | 0.24.2 | machine learning and data mining |
+   | nvidia-ml-py3 | 7.352.0 | bindings for NVIDIA Management Library |
+   | torch | 1.9.1+cpu | neural networks |
+   | torchvision | 0.10.1+cpu | torch extension for vision |
+   | torchaudio | 0.9.1 | torch extension for audio |
 
    † This library does not work on Python 3.10, ROS packages upgrading to newer Python versions must find a substitute.
+
+   ‡ Installed with CPU support only, [see this page for more information](https://pytorch.org/get-started/previous-versions/#linux-and-windows-17).
 
 5. Create a temporary `/deps` folder which will be used to build additional dependencies in.
 
