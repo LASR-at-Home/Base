@@ -9,7 +9,7 @@ class Phase3(smach.StateMachine):
             
             smach.StateMachine.add('GO_TO_WAIT_LOCATION', GoToWaitLocation(base_controller), transitions={'done' : 'done', 'not done' : 'LOOK_FOR_PERSON'})
             
-            smach.StateMachine.add('LOOK_FOR_PERSON', LookForPerson(yolo, tf), transitions={'found' : 'GO_TO_PERSON', 'not found' : 'LOOK_FOR_PERSON'})
+            smach.StateMachine.add('LOOK_FOR_PERSON', LookForPerson(yolo, tf, pm), transitions={'found' : 'GO_TO_PERSON', 'not found' : 'LOOK_FOR_PERSON'})
 
             smach.StateMachine.add('GO_TO_PERSON', GoToPerson(base_controller), transitions={'done' : 'GREET_PERSON'})
 
