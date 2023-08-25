@@ -11,3 +11,5 @@ nlu:
     - [no]{"entity" : "choice", "value" : 0}
     - That's [correct]{"entity" : "choice", "value" : 1}
     - That's [incorrect]{"entity" : "choice", "value" : 0}
+- intent: wake_word
+    - [all done]{wake}
