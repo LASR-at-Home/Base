@@ -1,1 +1,1 @@
-from .yolo import detect
+from .yolo import detect, load_model

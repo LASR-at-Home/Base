@@ -11,6 +11,22 @@ from lasr_object_detection_yolo.srv import YoloDetectionRequest, YoloDetectionRe
 # model cache
 loaded_models = {}
 
+def load_model(dataset: str) -> None:
+    '''
+    Load a model into cache
+    '''
+
+    model = None
+    if dataset in loaded_models:
+        model = loaded_models[dataset]
+    else:
+        model = YOLO(dataset)
+        rospy.loginfo(f'Loaded {dataset} model')
+
+        loaded_models[dataset] = model
+    
+    return model
+
 def detect(request: YoloDetectionRequest, debug_publisher: rospy.Publisher | None) -> YoloDetectionResponse:
     '''
     Run YOLO inference on given detection request
@@ -31,15 +47,7 @@ def detect(request: YoloDetectionRequest, debug_publisher: rospy.Publisher | Non
     
     # load model
     rospy.loginfo('Loading model')
-    model = None
-    dataset = request.dataset
-    if dataset in loaded_models:
-        model = loaded_models[dataset]
-    else:
-        model = YOLO(dataset)
-        rospy.loginfo(f'Loaded {dataset} model')
-
-        loaded_models[dataset] = model
+    model = load_model(request.dataset)
 
     # run inference
     rospy.loginfo('Running inference')
