@@ -11,11 +11,11 @@ class RasaWrapper:
     def __call__(self, req):
         response = RasaResponse()
         resp = requests.post(self.api, json={"text": req.text})
-        if resp.status_code == 200:
+        if resp.status_code != 200 or not resp.json()["entities"]:
+            response.success = False
+        else:
             response.json_response = str(resp.json())
             response.success = True
-        else:
-            response.success = False
         return response
 
 

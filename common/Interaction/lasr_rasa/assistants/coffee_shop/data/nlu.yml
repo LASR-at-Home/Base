@@ -7,7 +7,7 @@ nlu:
     - Get me [two]{"entity" : "quantity", "value" : 2} [cups]{"entity": "item", "value" : "cup"}
 - intent: affirm
   examples: |
-    - [yes]{"entity" : "choice", "value" : "yes"}
-    - [no]{"entity" : "choice", "value" : "no"}
-    - That's [correct]{"entity" : "choice", "value" : "yes"}
-    - That's [incorrect]{"entity" : "choice", "value" : "no"}
+    - [yes]{"entity" : "choice", "value" : 1}
+    - [no]{"entity" : "choice", "value" : 0}
+    - That's [correct]{"entity" : "choice", "value" : 1}
+    - That's [incorrect]{"entity" : "choice", "value" : 0}
