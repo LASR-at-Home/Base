@@ -1,0 +1,1 @@
+This package requires that [ffmpeg](https://ffmpeg.org/) is available during runtime.
