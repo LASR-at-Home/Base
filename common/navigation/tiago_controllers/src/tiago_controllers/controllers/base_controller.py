@@ -13,6 +13,7 @@ from actionlib_msgs.msg import GoalStatus
 from tiago_controllers.base_planner import plan_to_radius as _plan_to_radius
 from tiago_controllers.base_planner import get_journey_points as _get_journey_points
 import numpy as np
+from scipy.spatial.transform import Rotation as R
 
 class BaseController:
     def __init__(self):
@@ -27,6 +28,7 @@ class BaseController:
         x = round(msg.pose.pose.position.x, 2)
         y = round(msg.pose.pose.position.y, 2)
         return x, y
+
 
     def reg_callback(self, callback):
         self._callback = callback
@@ -137,6 +139,18 @@ class BaseController:
 
     def async_face_to(self, x, y):
         return self.async_to_pose(self.compute_face_quat(x, y))
+
+    def rotate(self, radians):
+        x, y, current_orientation = self.get_current_pose()
+        current_orientation = np.array([current_orientation.x, current_orientation.orientation.y,
+                                        current_orientation.z, current_orientation.w])
+        r = R.from_quat(current_orientation)
+        rotated_r = r * R.from_euler('z', radians, degrees=False)
+
+        pose = Pose(position=Point(x, y, 0.0), orientation=Quaternion(**rotated_r.as_quat()))
+
+        return self.sync_to_pose(pose)
+
 
 if __name__ == '__main__':
     rospy.init_node("base_test", anonymous=True)
