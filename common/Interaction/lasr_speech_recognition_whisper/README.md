@@ -1,6 +1,6 @@
-# lasr_speech_recognition
+# lasr_speech_recognition_whisper
 
-The lasr_speech_recognition package
+Speech recognition implemented using OpenAI Whisper
 
 This package is maintained by:
 - [Paul Makles](mailto:me@insrt.uk)
@@ -10,8 +10,7 @@ This package is maintained by:
 This package depends on the following ROS packages:
 - catkin (buildtool)
 - catkin_virtualenv (build)
-- message_generation (build)
-- message_runtime (exec)
+- lasr_speech_recognition_common
 
 This packages requires Python 3.10 to be present.
 
@@ -41,8 +40,6 @@ Start the example script:
 rosrun lasr_speech_recognition transcribe_microphone by-index <microphone_index>
 rosrun lasr_speech_recognition transcribe_microphone by-name <substring_of_name>
 ```
-
-Select microphone when prompted then wait for it to start.
 
 You can now listen on `/transcription` for a live transcription.
 
@@ -84,13 +81,7 @@ This package has no launch files.
 
 ### Messages
 
-#### `Transcription`
-
-| Field | Type | Description |
-|:-:|:-:|---|
-| phrase | string |  |
-| finished | bool |  |
-
+This package has no messages.
 
 ### Services
 

@@ -15,8 +15,9 @@ else:
         import speech_recognition as sr
         microphones = enumerate(sr.Microphone.list_microphone_names())
 
+        target_name = ' '.join(sys.argv[2:])
         for index, name in microphones:
-            if sys.argv[2] in name:
+            if target_name in name:
                 device_index = index
                 break
         
@@ -30,5 +31,5 @@ else:
 import rospy
 rospy.init_node('transcribe_mic', anonymous=True)
 
-from lasr_speech_recognition import SpeechRecognitionToTopic, MicrophonePhraseCollector
+from lasr_speech_recognition_whisper import SpeechRecognitionToTopic, MicrophonePhraseCollector
 SpeechRecognitionToTopic(MicrophonePhraseCollector(device_index=device_index), "base.en", "transcription").start()
