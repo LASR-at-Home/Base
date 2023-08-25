@@ -7,6 +7,7 @@ from lasr_voice import Voice
 import actionlib
 from play_motion_msgs.msg import PlayMotionAction, PlayMotionGoal
 from lasr_object_detection_yolo.srv import YoloDetection
+from lasr_speech.srv import Speech
 from coffee_shop.srv import TfTransform, TfTransformRequest
 
 if __name__ == "__main__":
@@ -20,7 +21,9 @@ if __name__ == "__main__":
     rospy.wait_for_service("/tf_transform", rospy.Duration(15.0))
     tf = rospy.ServiceProxy("/tf_transform", TfTransform)
     voice = Voice()
-    coffee_shop = CoffeeShop(BaseController(), HeadController(), voice, yolo, tf, play_motion_client)
+    rospy.wait_for_service("/lasr_speech/transcribe_and_parse")
+    speech = rospy.ServiceProxy("/lasr_speech/transcribe_and_parse", Speech)
+    coffee_shop = CoffeeShop(BaseController(), HeadController(), voice, yolo, tf, play_motion_client, speech)
     outcome = coffee_shop.execute()
     voice.sync_tts("I am done.")
     rospy.spin()
