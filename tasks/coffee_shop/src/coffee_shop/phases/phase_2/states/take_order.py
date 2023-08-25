@@ -11,7 +11,6 @@ class TakeOrder(smach.State):
         self.head_controller = head_controller
         self.voice_controller = voice_controller
         self.speech = speech
-        self.order = []
 
     def listen(self):
         resp = self.speech()
