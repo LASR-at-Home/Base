@@ -1,0 +1,6 @@
+<launch>
+    <arg name="port" default="5005" />
+    <arg name="model" default=""/>
+    <node pkg="lasr_rasa" type="rasa.sh" name="rasa" output="screen" args="$(arg port) $(arg model)"/>
+    <node pkg="lasr_rasa" type="service" name="rasa_service" output="screen" args="$(arg port)"/>
+</launch>
