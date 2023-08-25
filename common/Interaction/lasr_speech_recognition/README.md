@@ -38,7 +38,8 @@ rosrun lasr_speech_recognition list_microphones.py
 Start the example script:
 
 ```bash
-rosrun lasr_speech_recognition transcribe_microphone <microphone_index>
+rosrun lasr_speech_recognition transcribe_microphone by-index <microphone_index>
+rosrun lasr_speech_recognition transcribe_microphone by-name <substring_of_name>
 ```
 
 Select microphone when prompted then wait for it to start.
