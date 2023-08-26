@@ -3,6 +3,8 @@ import rospy
 import requests
 from lasr_rasa.srv import Rasa, RasaResponse
 import sys
+import json
+from collections import defaultdict
 
 class RasaWrapper:
     def __init__(self, api_url):
@@ -20,7 +22,13 @@ class RasaWrapper:
         if resp.status_code != 200 or not resp.json()["entities"]:
             response.success = False
         else:
-            response.json_response = str(resp.json())
+            json_response = resp.json()
+            entities_dict = defaultdict(list)
+            for entity_info in json_response["entities"]:
+                entity_dict = {k: v for k, v in entity_info.items() if k != "entity"}
+                entities_dict[entity_info["entity"]].append(entity_dict)
+            json_response["entities"] = entities_dict
+            response.json_response = json.dumps(json_response)
             response.success = True
         return response
 
