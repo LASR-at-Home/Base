@@ -43,5 +43,5 @@ play_motion:
     load_unload:
       joints: [torso_lift_joint]
       points:
-      - positions: [0.0]
+      - positions: [0.02]
         time_from_start: 0.0
