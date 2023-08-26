@@ -4,7 +4,7 @@ import rospy
 from geometry_msgs.msg import Pose, Point, Quaternion
 import numpy as np
 from play_motion_msgs.msg import PlayMotionAction, PlayMotionGoal
-
+import json
 
 class DeliverOrder(smach.State):
     def __init__(self, base_controller, voice_controller, pm, speech):
@@ -23,10 +23,16 @@ class DeliverOrder(smach.State):
         self.base_controller.rotate(np.pi)
         pm_goal = PlayMotionGoal(motion_name="load_unload", skip_planning=True)
         self.play_motion_client.send_goal_and_wait(pm_goal)
-        self.voice_controller.sync_tts(
-            "Please unload the order and say `all done` when you are ready for me to deliver it.")
+        self.voice_controller.sync_tts("Please unload the order and say `all done` when you are ready for me to deliver it.")
         while True:
             resp = self.speech()
-            if [entity["wake"]["value"] for entity in resp["entities"]]:
+            if not resp.success:
+                continue
+            resp = json.loads(resp.json_response)
+            if resp["intent"]["name"] != "wake_word":
+                continue
+            if resp["entities"].get("wake", None):
                 break
+        pm_goal = PlayMotionGoal(motion_name="back_to_default", skip_planning=True)
+        self.play_motion_client.send_goal_and_wait(pm_goal)
         return 'done'
