@@ -15,7 +15,7 @@ class MakeOrder(smach.State):
 
     def execute(self, userdata):
         self.base_controller.rotate(np.pi)
-        pm_goal = PlayMotionGoal(motion_name="load", skip_planning=True)
+        pm_goal = PlayMotionGoal(motion_name="load_unload", skip_planning=True)
         self.play_motion_client.send_goal_and_wait(pm_goal)
         self.voice_controller.sync_tts("Please load the order and say `all done` when you are ready for me to deliver it.")
         while True:
