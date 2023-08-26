@@ -4,7 +4,7 @@ nlu:
 - intent: make_order
   examples: |
     - Can I have a [cup](item) please.
-    - Get me [two]{"entity" : "quantity", "value" : 2} [cups]{"entity": "item", "value" : "cup"}
+    - Get me a [cup](item) please.
 - intent: affirm
   examples: |
     - [yes]{"entity" : "choice", "value" : 1}
@@ -12,4 +12,6 @@ nlu:
     - That's [correct]{"entity" : "choice", "value" : 1}
     - That's [incorrect]{"entity" : "choice", "value" : 0}
 - intent: wake_word
-    - [all done]{wake}
+  examples: |
+    - [all done](wake)
+    - [all done](wake), thanks
