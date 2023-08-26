@@ -7,7 +7,7 @@ from lasr_speech_recognition_common.msg import Transcription
 class TranscribeAndParse:
 
     def __init__(self):
-        rospy.wait_for_service("/lasr_rasa/parse", rospy.Duration(10.0))
+        rospy.wait_for_service("/lasr_rasa/parse")
         self.rasa = rospy.ServiceProxy("/lasr_rasa/parse", Rasa)
         self.transcription_topic = "/transcription"
 

@@ -7,6 +7,12 @@ import sys
 class RasaWrapper:
     def __init__(self, api_url):
         self.api = api_url
+        while True:
+            try:
+                resp = requests.post(self.api)
+                break
+            except requests.RequestException:
+                pass
 
     def __call__(self, req):
         response = RasaResponse()
@@ -31,5 +37,6 @@ if __name__ == "__main__":
 
     rospy.init_node("lasr_rasa")
     rasa = RasaWrapper(f"http://localhost:{PORT}/model/parse")
+    rospy.loginfo("Rasa service is ready!")
     rospy.Service("/lasr_rasa/parse", Rasa, rasa)
     rospy.spin()
