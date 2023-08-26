@@ -142,12 +142,12 @@ class BaseController:
 
     def rotate(self, radians):
         x, y, current_orientation = self.get_current_pose()
-        current_orientation = np.array([current_orientation.x, current_orientation.orientation.y,
+        current_orientation = np.array([current_orientation.x, current_orientation.y,
                                         current_orientation.z, current_orientation.w])
         r = R.from_quat(current_orientation)
         rotated_r = r * R.from_euler('z', radians, degrees=False)
 
-        pose = Pose(position=Point(x, y, 0.0), orientation=Quaternion(**rotated_r.as_quat()))
+        pose = Pose(position=Point(x, y, 0.0), orientation=Quaternion(*rotated_r.as_quat()))
 
         return self.sync_to_pose(pose)
 
