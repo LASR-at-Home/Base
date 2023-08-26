@@ -4,7 +4,7 @@ import numpy as np
 from play_motion_msgs.msg import PlayMotionAction, PlayMotionGoal
 
 
-class MakeOrder(smach.State):
+class LoadOrder(smach.State):
 
     def __init__(self, base_controller, voice_controller, pm, speech):
         smach.StateMachine.__init__(self, outcomes=['done'])
