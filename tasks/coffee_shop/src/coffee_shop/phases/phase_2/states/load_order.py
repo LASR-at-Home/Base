@@ -2,7 +2,7 @@
 import smach
 import numpy as np
 from play_motion_msgs.msg import PlayMotionAction, PlayMotionGoal
-
+import json
 
 class LoadOrder(smach.State):
 
@@ -20,6 +20,13 @@ class LoadOrder(smach.State):
         self.voice_controller.sync_tts("Please load the order and say `all done` when you are ready for me to deliver it.")
         while True:
             resp = self.speech()
-            if [entity["wake"]["value"] for entity in resp["entities"]]:
+            if not resp.success:
+                continue
+            resp = json.loads(resp.json_response)
+            if resp["intent"]["name"] != "wake_word":
+                continue
+            if resp["entities"].get("wake", None):
                 break
+        pm_goal = PlayMotionGoal(motion_name="back_to_default", skip_planning=True)
+        self.play_motion_client.send_goal_and_wait(pm_goal)
         return 'done'
