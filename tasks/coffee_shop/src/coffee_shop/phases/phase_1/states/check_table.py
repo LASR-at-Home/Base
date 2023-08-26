@@ -22,9 +22,6 @@ import ros_numpy as rnp
 from pal_startup_msgs.srv import StartupStart, StartupStop
 import rosservice
 
-from lasr_shapely import LasrShapely
-shapely = LasrShapely()
-
 OBJECTS = ["cup", "mug"]
 
 
@@ -49,13 +46,14 @@ def create_point_marker(x, y, z, idx, frame, r,g,b):
     return marker_msg
 
 class CheckTable(smach.State):
-    def __init__(self, head_controller, voice_controller, yolo, tf, pm):
+    def __init__(self, head_controller, voice_controller, yolo, tf, pm, shapely):
         smach.State.__init__(self, outcomes=['not_finished', 'finished'])
         self.head_controller = head_controller
         self.voice_controller = voice_controller
         self.play_motion_client = pm
         self.detect = yolo
         self.tf = tf
+        self.shapely = shapely
         self.bridge = CvBridge()
         self.detections_objects = []
         self.detections_people = []
@@ -106,7 +104,7 @@ class CheckTable(smach.State):
         detections = [(det, self.estimate_pose(pcl_msg, det)) for det in detections.detected_objects if det.name in filter]
         rospy.loginfo(f"All: {[(det.name, pose) for det, pose in detections]}")
         rospy.loginfo(f"Boundary: {polygon}")
-        satisfied_points = shapely.are_points_in_polygon_2d(polygon, [[pose[0], pose[1]] for (_, pose) in detections]).inside
+        satisfied_points = self.shapely.are_points_in_polygon_2d(polygon, [[pose[0], pose[1]] for (_, pose) in detections]).inside
         detections = [detections[i] for i in range(0, len(detections)) if satisfied_points[i]]
         rospy.loginfo(f"Filtered: {[(det.name, pose) for det, pose in detections]}")
         return detections
@@ -125,7 +123,6 @@ class CheckTable(smach.State):
 
     def execute(self, userdata):
         result = self.stop_head_manager.call("head_manager")
-        
         self.voice_controller.sync_tts("I am going to check the table")
         self.current_table = rospy.get_param("current_table")
         self.object_debug_images = []
