@@ -30,4 +30,3 @@ class DeliverOrder(smach.State):
             if [entity["wake"]["value"] for entity in resp["entities"]]:
                 break
         return 'done'
-        return 'done'
