@@ -3,6 +3,7 @@ import smach
 import rospy
 import random
 import json
+from collections import Counter
 
 MOCK_ORDER = ["cup", "cup"]
 class TakeOrder(smach.State):
@@ -26,11 +27,27 @@ class TakeOrder(smach.State):
             self.voice_controller.sync_tts("Sorry, I didn't get that")
             return self.get_order()
         items = resp["entities"].get("item", [])
-        items = [item["value"] for item in items]
         if not items:
             self.voice_controller.sync_tts("Sorry, I didn't get that")
             return self.get_order()
-        self.voice_controller.sync_tts(f"You asked for {items}, is that correct?")
+        quantities = resp["entities"].get("quantity", [])
+        quantified_items = []
+        if len(items) == len(quantities) == 1:
+            quantified_items.append((int(quantities[0]["value"]), items[0]["value"]))
+        else:
+            for item in items:
+                quantified = False
+                for quantity in quantities:
+                    if quantity["end"] == item["start"] - 1:
+                        quantified_items.append((int(quantity["value"]), item["value"]))
+                        quantified = True
+                        break
+                if not quantified:
+                    quantified_items.append((1, item["value"]))
+        items = [[item]*quantity for quantity, item in quantified_items]
+        items_string = ', '.join([f"{count} {item if count == 1 else item+'s'}" for item, count in Counter(order).items()]).replace(', ', ', and ', len(order)-2)
+
+        self.voice_controller.sync_tts(f"You asked for {items_string}, is that correct?")
         if not self.affirm():
             self.voice_controller.sync_tts("Okay, could you repeat please?")
             return self.get_order()

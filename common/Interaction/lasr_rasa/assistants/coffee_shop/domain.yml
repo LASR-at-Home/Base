@@ -6,6 +6,7 @@ intents:
   - wake_word
 entities:
   - item
+  - quantity
   - choice
   - wake
 session_config:

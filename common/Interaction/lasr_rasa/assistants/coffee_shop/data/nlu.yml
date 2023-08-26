@@ -5,6 +5,8 @@ nlu:
   examples: |
     - Can I have a [cup](item) please.
     - Get me a [cup](item) please.
+    - Get me [two]{"entity" : "quantity", "value" : 2} [cups]{"entity" : "item", "value": "cup"}
+    - Can I have [three]{"entity" : "quantity", "value" : 3} [cups]{"entity" : "item", "value": "cup"}
 - intent: affirm
   examples: |
     - [yes]{"entity" : "choice", "value" : 1}
