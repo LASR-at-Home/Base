@@ -49,7 +49,7 @@ class TakeOrder(smach.State):
             items.extend([item]*quantity)
         items_string = ', '.join([f"{count} {item if count == 1 else item+'s'}" for item, count in Counter(items).items()]).replace(', ', ', and ', len(items)-2)
 
-        self.voice_controller.sync_tts(f"You asked for {items_string}, is that correct?")
+        self.voice_controller.sync_tts(f"You asked for {items_string}, is that correct? Please answer yes or no")
         if not self.affirm():
             self.voice_controller.sync_tts("Okay, could you repeat please?")
             return self.get_order()
