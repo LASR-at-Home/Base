@@ -3,6 +3,12 @@ import rospy
 from lasr_speech.srv import Speech, SpeechResponse
 from lasr_rasa.srv import Rasa
 from lasr_speech_recognition_common.msg import Transcription
+import sounddevice
+import soundfile
+import pyaudio
+from multiprocessing import Process
+import rospkg
+import os
 
 class TranscribeAndParse:
 
@@ -10,8 +16,21 @@ class TranscribeAndParse:
         rospy.wait_for_service("/lasr_rasa/parse")
         self.rasa = rospy.ServiceProxy("/lasr_rasa/parse", Rasa)
         self.transcription_topic = "/transcription"
+        self.sound_data = soundfile.read(os.path.join(rospkg.RosPack().get_path("lasr_speech"), "sounds", "beep.wav"))[0]
+
+    def play_sound(self):
+        def play():
+            audio_interface = pyaudio.PyAudio()
+            sample_rate = int(audio_interface.get_default_output_device_info()["defaultSampleRate"])
+            sounddevice.play(self.sound_data, sample_rate,
+                             device=audio_interface.get_default_output_device_info()["index"])  # device=None is default for TIAGo. Modify to match your device.
+            sounddevice.wait()
+        p = Process(target=play)
+        p.start()
+        p.join()
 
     def __call__(self, req):
+        self.play_sound()
         while True:
             transcription = rospy.wait_for_message(self.transcription_topic, Transcription)
             print(transcription)
