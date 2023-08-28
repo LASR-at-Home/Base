@@ -44,8 +44,10 @@ class TakeOrder(smach.State):
                         break
                 if not quantified:
                     quantified_items.append((1, item["value"]))
-        items = [[item]*quantity for quantity, item in quantified_items]
-        items_string = ', '.join([f"{count} {item if count == 1 else item+'s'}" for item, count in Counter(order).items()]).replace(', ', ', and ', len(order)-2)
+        items = []
+        for quantity, item in quantified_items:
+            items.extend([item]*quantity)
+        items_string = ', '.join([f"{count} {item if count == 1 else item+'s'}" for item, count in Counter(items).items()]).replace(', ', ', and ', len(items)-2)
 
         self.voice_controller.sync_tts(f"You asked for {items_string}, is that correct?")
         if not self.affirm():
@@ -66,11 +68,11 @@ class TakeOrder(smach.State):
         return bool(int(choice))
 
     def execute(self, userdata):
-        self.voice_controller.sync_tts("Can I please take your order?")
+        self.voice_controller.sync_tts("Can I please take your order, please answer after the beep?")
         order = []
         while True:
             order.extend(self.get_order())
-            self.voice_controller.sync_tts("Can I get you anything else?")
+            self.voice_controller.sync_tts("Can I get you anything else? Please answer yes or no")
             if not self.affirm():
                 break
             self.voice_controller.sync_tts("What else can I get for you?")
