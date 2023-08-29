@@ -11,10 +11,12 @@ from lasr_object_detection_yolo.srv import YoloDetection
 from coffee_shop.srv import TfTransform, TfTransformRequest
 from visualization_msgs.msg import Marker
 from common_math import pcl_msg_to_cv2
+from pal_startup_msgs.srv import StartupStart, StartupStop
+import rosservice
 from play_motion_msgs.msg import PlayMotionAction, PlayMotionGoal
 
 class LookForPerson(smach.State):
-    def __init__(self, yolo, tf, pm, shapely, start_head_mgr, stop_head_mgr):
+    def __init__(self, yolo, tf, pm, shapely):
         smach.State.__init__(self, outcomes=['found', 'not found'])
         self.detect = yolo
         self.tf = tf
@@ -22,8 +24,12 @@ class LookForPerson(smach.State):
         self.people_pose_pub = rospy.Publisher("/people_poses", Marker, queue_size=100)
         self.bridge = CvBridge()
         self.play_motion_client = pm
-        self.start_head_mgr = start_head_mgr
-        self.stop_head_mgr = stop_head_mgr
+
+        service_list = rosservice.get_service_list()
+        # This should allow simulation runs as well, as i don't think the head manager is running in simulation
+        if "/pal_startup_control/stop" in service_list:
+            self.stop_head_manager = rospy.ServiceProxy("/pal_startup_control/stop", StartupStop)
+            self.start_head_manager = rospy.ServiceProxy("/pal_startup_control/start", StartupStart)
 
     def estimate_pose(self, pcl_msg, cv_im, detection):
         contours = np.array(detection.xyseg).reshape(-1, 2)
@@ -50,7 +56,7 @@ class LookForPerson(smach.State):
         return np.array([response.target_point.point.x, response.target_point.point.y, response.target_point.point.z])
 
     def execute(self, userdata):
-        self.stop_head_mgr("head_manager")
+        result = self.stop_head_manager.call("head_manager")
 
         pm_goal = PlayMotionGoal(motion_name="back_to_default", skip_planning=True)
         self.play_motion_client.send_goal_and_wait(pm_goal)
@@ -88,6 +94,6 @@ class LookForPerson(smach.State):
                     return 'found'
         rospy.sleep(rospy.Duration(1.0))
 
-        self.start_head_mgr("head_manager", '')
+        res = self.start_head_manager.call("head_manager", '')
 
         return 'not found'

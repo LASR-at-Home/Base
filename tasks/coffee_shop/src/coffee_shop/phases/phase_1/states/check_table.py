@@ -19,6 +19,8 @@ from coffee_shop.srv import TfTransform, TfTransformRequest
 import numpy as np
 from actionlib_msgs.msg import GoalStatus
 import ros_numpy as rnp
+from pal_startup_msgs.srv import StartupStart, StartupStop
+import rosservice
 
 OBJECTS = ["cup", "mug"]
 
@@ -44,7 +46,7 @@ def create_point_marker(x, y, z, idx, frame, r,g,b):
     return marker_msg
 
 class CheckTable(smach.State):
-    def __init__(self, head_controller, voice_controller, yolo, tf, pm, shapely, start_head_mgr, stop_head_mgr):
+    def __init__(self, head_controller, voice_controller, yolo, tf, pm, shapely):
         smach.State.__init__(self, outcomes=['not_finished', 'finished'])
         self.head_controller = head_controller
         self.voice_controller = voice_controller
@@ -53,12 +55,16 @@ class CheckTable(smach.State):
         self.tf = tf
         self.shapely = shapely
         self.bridge = CvBridge()
-        self.start_head_mgr = start_head_mgr
-        self.stop_head_mgr = stop_head_mgr
         self.detections_objects = []
         self.detections_people = []
         self.object_pose_pub = rospy.Publisher("/object_poses", Marker, queue_size=100)
         self.people_pose_pub = rospy.Publisher("/people_poses", Marker, queue_size=100)
+
+        service_list = rosservice.get_service_list()
+        # This should allow simulation runs as well, as i don't think the head manager is running in simulation
+        if "/pal_startup_control/stop" in service_list:
+            self.stop_head_manager = rospy.ServiceProxy("/pal_startup_control/stop", StartupStop)
+            self.start_head_manager = rospy.ServiceProxy("/pal_startup_control/start", StartupStart)
 
     def estimate_pose(self, pcl_msg, detection):
         centroid_xyz = seg_to_centroid(pcl_msg, np.array(detection.xyseg))
@@ -116,9 +122,7 @@ class CheckTable(smach.State):
         self.detections_people.extend(detections_people_)
 
     def execute(self, userdata):
-
-        self.stop_head_mgr("head_manager")
-
+        result = self.stop_head_manager.call("head_manager")
         self.voice_controller.sync_tts("I am going to check the table")
         self.current_table = rospy.get_param("current_table")
         self.object_debug_images = []
@@ -164,6 +168,6 @@ class CheckTable(smach.State):
         count_text = f"There {'is' if people_count == 1 else 'are'} {people_count} {people_text}."
         self.voice_controller.sync_tts(f"{status_text} {count_text}")
 
-        self.start_head_mgr("head_manager", '')
+        res = self.start_head_manager.call("head_manager", '')
 
         return 'finished' if len([(label, table) for label, table in rospy.get_param("/tables").items() if table["status"] == "unvisited"]) == 0 else 'not_finished'
