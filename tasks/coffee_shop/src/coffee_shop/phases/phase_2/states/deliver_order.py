@@ -23,7 +23,7 @@ class DeliverOrder(smach.State):
         self.base_controller.rotate(np.pi)
         pm_goal = PlayMotionGoal(motion_name="load_unload", skip_planning=True)
         self.play_motion_client.send_goal_and_wait(pm_goal)
-        self.voice_controller.sync_tts("Please unload the order and say `all done` when you are ready for me to deliver it.")
+        self.voice_controller.sync_tts("Please unload the order and say `all done` when you are finished.")
         while True:
             resp = self.speech()
             if not resp.success:
