@@ -5,6 +5,5 @@ from .take_order import TakeOrder
 from .check_order import CheckOrder
 from .go_to_counter import GoToCounter
 from .invalidate_order import InvalidateOrder
-from .hand_over_order import HandOverOrder
 from .start import Start
 from .load_order import LoadOrder
