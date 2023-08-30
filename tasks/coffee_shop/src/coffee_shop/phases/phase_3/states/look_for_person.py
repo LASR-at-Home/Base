@@ -3,7 +3,7 @@ import smach
 import rospy
 import numpy as np
 import ros_numpy as rnp
-from sensor_msgs.msg import PointCloud2, Image
+from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import Point, PointStamped
 from std_msgs.msg import String
 from cv_bridge3 import CvBridge, cv2
@@ -14,8 +14,8 @@ from common_math import pcl_msg_to_cv2
 from pal_startup_msgs.srv import StartupStart, StartupStop
 import rosservice
 from play_motion_msgs.msg import PlayMotionAction, PlayMotionGoal
-
 from lasr_shapely import LasrShapely
+import laser_geometry.laser_geometry as lg
 shapely = LasrShapely()
 
 class LookForPerson(smach.State):
@@ -64,7 +64,8 @@ class LookForPerson(smach.State):
         self.play_motion_client.send_goal_and_wait(pm_goal)
 
         corners = rospy.get_param("/wait/cuboid")
-        pcl_msg = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
+        lsr_scan = rospy.wait_for_message("/scan", LaserScan)
+        pcl_msg = lg.LaserProjection().projectLaser(lsr_scan)
         cv_im = pcl_msg_to_cv2(pcl_msg)
         img_msg = self.bridge.cv2_to_imgmsg(cv_im)
         detections = self.detect(img_msg, "yolov8n-seg.pt", 0.3, 0.3)
