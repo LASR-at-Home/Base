@@ -1,0 +1,235 @@
+version: "3.1"
+
+nlu:
+- intent: make_order
+  examples: |
+    - I'd like to order a [coffee](item), please.
+    - Could you get me some [bananas](item)?
+    - Can I have [two]{"entity": "quantity", "value": 2} [cups of coffee]{"entity": "item", "value": "coffee"}?
+    - Get me [three]{"entity": "quantity", "value": 3} [bananas]{"entity": "item", "value": "banana"} and [a coffee](item), please.
+    - I'm in the mood for [two cups of coffee]{"entity": "quantity", "value": 2} and [a banana](item).
+    - Please add [a can of pringles]{"entity": "item", "value": "pringles"} to my order.
+    - I want [a banana](item) and [three cups of coffee]{"entity": "quantity", "value": 3}.
+    - How about getting me [two bananas]{"entity": "quantity", "value": 2} and [a coffee]?
+    - I'm craving [a coffee](item) and [pringles]{"entity": "item", "value": "pringles"}.
+    - Add [two cans of pringles]{"entity": "quantity", "value": 2} to my cart, along with [a banana](item).
+    - One [banana](item) and [a coffee], please.
+    - Get me [two]{"entity": "quantity", "value": 2} [bananas]{"entity": "item", "value": "banana"} and [three cups of coffee]{"entity": "quantity", "value": 3}.
+    - I'd like [a coffee](item) and [a banana], please.
+    - Please include [three]{"entity": "quantity", "value": 3} [cups of coffee]{"entity": "item", "value": "coffee"} in my order.
+    - I'm ordering [a banana](item) and [a coffee].
+    - Could I get [two bananas]{"entity": "quantity", "value": 2} and [a can of pringles]{"entity": "item", "value": "pringles"}?
+    - Add [two]{"entity": "quantity", "value": 2} [cups of coffee]{"entity": "item", "value": "coffee"} to my cart.
+    - I'll take [three bananas]{"entity": "quantity", "value": 3} and [a coffee] please.
+    - How about [a banana](item) and [two cups of coffee]{"entity": "quantity", "value": 2}?
+    - Get me [two bananas]{"entity": "quantity", "value": 2} and [a can of pringles]{"entity": "item", "value": "pringles"}.
+    - I want [three cups of coffee]{"entity": "quantity", "value": 3} and [a banana](item), thanks.
+    - I'd like to order [a coffee](item) and [a can of pringles]{"entity": "item", "value": "pringles"}.
+    - Can you get me [a banana](item) and [three cups of coffee]{"entity": "quantity", "value": 3}?
+    - Add [a can of pringles]{"entity": "item", "value": "pringles"} to my order, along with [two bananas]{"entity": "quantity", "value": 2}.
+    - I'll take [a coffee](item) and [two bananas]{"entity": "quantity", "value": 2}.
+    - How about [two cups of coffee]{"entity": "quantity", "value": 2} and [a can of pringles]{"entity": "item", "value": "pringles"}?
+    - I want [a banana](item) and [three]{"entity": "quantity", "value": 3} [cups of coffee]{"entity": "item", "value": "coffee"}.
+    - Please include [two bananas]{"entity": "quantity", "value": 2} and [a can of pringles]{"entity": "item", "value": "pringles"}.
+    - Get me [three bananas]{"entity": "quantity", "value": 3} and [two cups of coffee]{"entity": "quantity", "value": 2}, please.
+    - I'd like [a can of pringles]{"entity": "item", "value": "pringles"} and [a coffee](item).
+    - Could I get [two bananas]{"entity": "quantity", "value": 2} and [three cups of coffee]{"entity": "quantity", "value": 3}, please?
+    - Add [a can of pringles]{"entity": "item", "value": "pringles"} and [a coffee](item) to my order.
+    - I want [three bananas]{"entity": "quantity", "value": 3} and [two cups of coffee]{"entity": "quantity", "value": 2}.
+    - I'll take [a can of pringles]{"entity": "item", "value": "pringles"} and [a banana](item), thanks.
+    - How about [two bananas]{"entity": "quantity", "value": 2} and [three cups of coffee]{"entity": "quantity", "value": 3}?
+    - I want [two cups of coffee]{"entity": "quantity", "value": 2} and [three bananas]{"entity": "quantity", "value": 3}, please.
+    - Get me [a can of pringles]{"entity": "item", "value": "pringles"} and [two cups of coffee]{"entity": "quantity", "value": 2}.
+    - I'd like [three cups of coffee]{"entity": "quantity", "value": 3} and [a can of pringles]{"entity": "item", "value": "pringles"}.
+    - Could I get [two bananas]{"entity": "quantity", "value": 2} and [a banana](item), please?
+    - Add [a can of pringles]{"entity": "item", "value": "pringles"} and [three cups of coffee]{"entity": "quantity", "value": 3} to my order.
+    - I want [a banana](item) and [two cups of coffee]{"entity": "quantity", "value": 2}, thanks.
+    - I'll take [two bananas]{"entity": "quantity", "value": 2} and [a can of pringles]{"entity": "item", "value": "pringles"}.
+    - How about [three cups of coffee]{"entity": "quantity", "value": 3} and [two bananas]{"entity": "quantity", "value": 2}?
+    - I want [a can of pringles]{"entity": "item", "value": "pringles"} and [a banana](item), please.
+    - Get me [a banana](item) and [two cups of coffee]{"entity": "quantity", "value": 2}, please.
+    - I'd like [three cups of coffee]{"entity": "quantity", "value": 3} and [a can of pringles]{"entity": "item", "value": "pringles"}.
+    - Could I get [two bananas]{"entity": "quantity", "value": 2} and [three cups of coffee]{"entity": "quantity", "value": 3}?
+    - Add [a can of pringles]{"entity": "item", "value": "pringles"} and [two bananas]{"entity": "quantity", "value": 2} to my order.
+    - I want [a banana](item) and [two cups of coffee]{"entity": "quantity", "value": 2}.
+    - I'll take [two bananas]{"entity": "quantity", "value": 2} and [three cups of coffee]{"entity": "quantity", "value": 3}, thanks.
+    - How about [a can of pringles]{"entity": "item", "value": "pringles"} and [a banana](item)?
+    - I want [two cups of coffee]{"entity": "quantity", "value": 2} and [three cups of coffee]{"entity": "quantity", "value": 3}, please.
+    - Get me [a banana](item) and [a can of pringles]{"entity": "item", "value": "pringles"}.
+    - I'd like [two bananas]{"entity": "quantity", "value": 2} and [two cups of coffee]{"entity": "quantity", "value": 2}, please.
+    - Could I get [three cups of coffee]{"entity": "quantity", "value": 3} and [a banana](item), please?
+    - Add [a can of pringles]{"entity": "item", "value": "pringles"} and [three cups of coffee]{"entity": "quantity", "value": 3} to my order.
+    - I want [two cups of coffee]{"entity": "quantity", "value": 2} and [a can of pringles]{"entity": "item", "value": "pringles"}, thanks.
+    - I'll take [two bananas]{"entity": "quantity", "value": 2} and [three cups of coffee]{"entity": "quantity", "value": 3}.
+    - How about [a banana](item) and [a can of pringles]{"entity": "item", "value": "pringles"}?
+    - I want [three cups of coffee]{"entity": "quantity", "value": 3} and [two cups of coffee]{"entity": "quantity", "value": 2}, please.
+    - Get me [a banana](item) and [three cups of coffee]{"entity": "quantity", "value": 3}, please.
+    - I'd like [two cups of coffee]{"entity": "quantity", "value": 2} and [two bananas]{"entity": "quantity", "value": 2}.
+    - Could I get [a can of pringles]{"entity": "item", "value": "pringles"} and [a banana](item), please?
+    - Add [two cups of coffee]{"entity": "quantity", "value": 2} and [a can of pringles]{"entity": "item", "value": "pringles"} to my order.
+    - I want [three cups of coffee]{"entity": "quantity", "value": 3} and [a banana](item), thanks.
+    - I'll take [two cups of coffee]{"entity": "quantity", "value": 2} and [a can of pringles]{"entity": "item", "value": "pringles"}.
+    - How about [two bananas]{"entity": "quantity", "value": 2} and [three cups of coffee]{"entity": "quantity", "value": 3}, please?
+    - I want [a banana](item) and [two cups of coffee]{"entity": "quantity", "value": 2}.
+    - Get me [three cups of coffee]{"entity": "quantity", "value": 3} and [a can of pringles]{"entity": "item", "value": "pringles"}.
+    - I'd like [two bananas]{"entity": "quantity", "value": 2} and [a banana](item), please.
+    - Could I get [a can of pringles]{"entity": "item", "value": "pringles"} and [two cups of coffee]{"entity": "quantity", "value": 2}?
+    - Add [two cups of coffee]{"entity": "quantity", "value": 2} and [three cups of coffee]{"entity": "quantity", "value": 3} to my order.
+    - I want [a banana](item) and [two bananas]{"entity": "quantity", "value": 2}, thanks.
+    - I'll take [a can of pringles]{"entity": "item", "value": "pringles"} and [a banana](item).
+    - How about [a can of pringles]{"entity": "item", "value": "pringles"} and [three cups of coffee]{"entity": "quantity", "value": 3}?
+    - I want [two bananas]{"entity": "quantity", "value": 2} and [two cups of coffee]{"entity": "quantity", "value": 2}, please.
+    - Get me [a banana](item) and [a can of pringles]{"entity": "item", "value": "pringles"}.
+    - I'd like [three cups of coffee]{"entity": "quantity", "value": 3} and [two bananas]{"entity": "quantity", "value": 2}.
+    - Could I get [a banana](item) and [three cups of coffee]{"entity": "quantity", "value": 3}, please?
+    - Add [two cups of coffee]{"entity": "quantity", "value": 2} and [a banana](item) to my order.
+    - I want [a can of pringles]{"entity": "item", "value": "pringles"} and [three cups of coffee]{"entity": "quantity", "value": 3}, please.
+    - I'll take [two bananas]{"entity": "quantity", "value": 2} and [a banana](item), thanks.
+    - How about [a can of pringles]{"entity": "item", "value": "pringles"} and [two cups of coffee]{"entity": "quantity", "value": 2}?
+    - I want [three cups of coffee]{"entity": "quantity", "value": 3} and [a banana](item), please.
+    - Get me [a banana](item) and [a can of pringles]{"entity": "item", "value": "pringles"}, please.
+    - I'd like [two bananas]{"entity": "quantity", "value": 2} and [two cups of coffee]{"entity": "quantity", "value": 2}.
+    - Could I get [three cups of coffee]{"entity": "quantity", "value": 3} and [a banana](item), please?
+    - Add [a can of pringles]{"entity": "item", "value": "pringles"} and [two bananas]{"entity": "quantity", "value": 2} to my order.
+    - I want [two cups of coffee]{"entity": "quantity", "value": 2} and [three cups of coffee]{"entity": "quantity", "value": 3}, thanks.
+    - I'll take [a can of pringles]{"entity": "item", "value": "pringles"} and [a banana](item).
+    - How about [a can of pringles]{"entity": "item", "value": "pringles"} and [three cups of coffee]{"entity": "quantity", "value": 3}?
+    - I want [two bananas]{"entity": "quantity", "value": 2} and [two cups of coffee]{"entity": "quantity", "value": 2}, please.
+    - Get me [a banana](item) and [a can of pringles]{"entity": "item", "value": "pringles"}.
+    - I'd like [three cups of coffee]{"entity": "quantity", "value": 3} and [two bananas]{"entity": "quantity", "value": 2}.
+    - Could I get [a banana](item) and [three cups of coffee]{"entity": "quantity", "value": 3}, please?
+    - Add [a can of pringles]{"entity": "item", "value": "pringles"} and [two cups of coffee]{"entity": "quantity", "value": 2} to my order.
+    - I want [two cups of coffee]{"entity": "quantity", "value": 2} and [a banana](item), thanks.
+    - I'll take [a can of pringles]{"entity": "item", "value": "pringles"} and [three cups of coffee]{"entity": "quantity", "value": 3}.
+    - How about [a can of pringles]{"entity": "item", "value": "pringles"} and [two bananas]{"entity": "quantity", "value": 2}?
+    - I want [two cups of coffee]{"entity": "quantity", "value": 2} and [three cups of coffee]{"entity": "quantity", "value": 3}, please.
+    - Get me [a banana](item) and [a can of pringles]{"entity": "item", "value": "pringles"}, please.
+    - I'd like [three cups of coffee]{"entity": "quantity", "value": 3} and [a banana](item).
+    - Could I get [two bananas]{"entity": "quantity", "value": 2} and [two cups of coffee]{"entity": "quantity", "value": 2}?
+    - Add [a can of pringles]{"entity": "item", "value": "pringles"} and [three cups of coffee]{"entity": "quantity", "value": 3} to my order.
+    - I want [two cups of coffee]{"entity": "quantity", "value": 2} and [a banana](item), thanks.
+    - I'll take [a can of pringles]{"entity": "item", "value": "pringles"} and [a can of pringles]{"entity": "item", "value": "pringles"}.
+    - How about [a can of pringles]{"entity": "item", "value": "pringles"} and [a banana](item), please?
+    - I want [three cups of coffee]{"entity": "quantity", "value": 3} and [two cups of coffee]{"entity": "quantity", "value": 2}, please.
+    - Get me [a banana](item) and [three cups of coffee]{"entity": "quantity", "value": 3}, please.
+    - I'd like [two cups of coffee]{"entity": "quantity", "value": 2} and [two bananas]{"entity": "quantity", "value": 2}.
+    - Could I get [a can of pringles]{"entity": "item", "value": "pringles"} and [a banana](item), please?
+    - Add [two cups of coffee]{"entity": "quantity", "value": 2} and [a can of pringles]{"entity": "item", "value": "pringles"} to my order.
+    - I want [three cups of coffee]{"entity": "quantity", "value": 3} and [a banana](item), thanks.
+    - I'll take [two cups of coffee]{"entity": "quantity", "value": 2} and [a can of pringles]{"entity": "item", "value": "pringles"}.
+    - How about [two bananas]{"entity": "quantity", "value": 2} and [three cups of coffee]{"entity": "quantity", "value": 3}?
+    - I want [a banana](item) and [a can of pringles]{"entity": "item", "value": "pringles"}.
+    - Get me [three cups of coffee]{"entity": "quantity", "value": 3} and [two cups of coffee]{"entity": "quantity", "value": 2}.
+    - I'd like [a can of pringles]{"entity": "item", "value": "pringles"} and [a banana](item), please.
+    - Could I get [a banana](item) and [three cups of coffee]{"entity": "quantity", "value": 3}, please?
+    - Add [a can of pringles]{"entity": "item", "value": "pringles"} and [two cups of coffee]{"entity": "quantity", "value": 2} to my order.
+    - I want [two cups of coffee]{"entity": "quantity", "value": 2} and [three cups of coffee]{"entity": "quantity", "value": 3}, thanks.
+    - I'll take [a can of pringles]{"entity": "item", "value": "pringles"} and [a banana](item).
+    - How about [a can of pringles]{"entity": "item", "value": "pringles"} and [three cups of coffee]{"entity": "quantity", "value": 3}?
+    - I want [two bananas]{"entity": "quantity", "value": 2} and [two cups of coffee]{"entity": "quantity", "value": 2}.
+    - Get me [a banana](item) and [a can of pringles]{"entity": "item", "value": "pringles"}.
+    - I'd like [three cups of coffee]{"entity": "quantity", "value": 3} and [two bananas]{"entity": "quantity", "value": 2}.
+    - Could I get [a banana](item) and [three cups of coffee]{"entity": "quantity", "value": 3}, please?
+    - Add [a can of pringles]{"entity": "item", "value": "pringles"} and [two cups of coffee]{"entity": "quantity", "value": 2} to my order.
+    - I want [three cups of coffee]{"entity": "quantity", "value": 3} and [a banana](item), thanks.
+    - I'll take [two cups of coffee]{"entity": "quantity", "value": 2} and [a can of pringles]{"entity": "item", "value": "pringles"}.
+    - How about [two bananas]{"entity": "quantity", "value": 2} and [three cups of coffee]{"entity": "quantity", "value": 3}, please?
+    - I want [a banana](item) and [a can of pringles]{"entity": "item", "value": "pringles"}.
+    - Get me [three cups of coffee]{"entity": "quantity", "value": 3} and [two cups of coffee]{"entity": "quantity", "value": 2}.
+    - I'd like [a can of pringles]{"entity": "item", "value": "pringles"} and [a banana](item), please.
+    - Could I get [a banana](item) and [three cups of coffee]{"entity": "quantity", "value": 3}, please?
+    - Add [a can of pringles]{"entity": "item", "value": "pringles"} and [two cups of coffee]{"entity": "quantity", "value": 2} to my order.
+    - I want [two cups of coffee]{"entity": "quantity", "value": 2} and [three cups of coffee]{"entity": "quantity", "value": 3}, thanks.
+    - I'll take [a can of pringles]{"entity": "item", "value": "pringles"} and [a banana](item).
+    - How about [a can of pringles]{"entity": "item", "value": "pringles"} and [three cups of coffee]{"entity": "quantity", "value": 3}?
+    - I want [two bananas]{"entity": "quantity", "value": 2} and [two cups of coffee]{"entity": "quantity", "value": 2}, please.
+    - Get me [a banana](item) and [three cups of coffee]{"entity": "quantity", "value": 3}, please.
+    - I'd like [two cups of coffee]{"entity": "quantity", "value": 2} and [two bananas]{"entity": "quantity", "value": 2}.
+    - Could I get [a can of pringles]{"entity": "item", "value": "pringles"} and [a banana](item), please?
+    - Add [two cups of coffee]{"entity": "quantity", "value": 2} and [a can of pringles]{"entity": "item", "value": "pringles"} to my order.
+    - I want [three cups of coffee]{"entity": "quantity", "value": 3} and [a banana](item), thanks.
+    - I'll take [two cups of coffee]{"entity": "quantity", "value": 2} and [a can of pringles]{"entity": "item", "value": "pringles"}.
+    - How about [two bananas]{"entity": "quantity", "value": 2} and [three cups of coffee]{"entity": "quantity", "value": 3}?
+    - I want [a banana](item) and [a can of pringles]{"entity": "item", "value": "pringles"}.
+    - Get me [three cups of coffee]{"entity": "quantity", "value": 3} and [two cups of coffee]{"entity": "quantity", "value": 2}.
+    - I'd like [a can of pringles]{"entity": "item", "value": "pringles"} and [a banana](item), please.
+    - Could I get [a banana](item) and [three cups of coffee]{"entity": "quantity", "value": 3}, please?
+    - Add [a can of pringles]{"entity": "item", "value": "pringles"} and [two cups of coffee]{"entity": "quantity", "value": 2} to my order.
+    - I want [two cups of coffee]{"entity": "quantity", "value": 2} and [three cups of coffee]{"entity": "quantity", "value": 3}, thanks.
+    - I'll take [a can of pringles]{"entity": "item", "value": "pringles"} and [a banana](item).
+    - How about [a can of pringles]{"entity": "item", "value": "pringles"} and [three cups of coffee]{"entity": "quantity", "value": 3}?
+    - I want [two bananas]{"entity": "quantity", "value": 2} and [two cups of coffee]{"entity": "quantity", "value": 2}, please.
+    - Get me [a banana](item) and [three cups of coffee]{"entity": "quantity", "value": 3}, please.
+    - I'd like [two cups of coffee]{"entity": "quantity", "value": 2} and [two bananas]{"entity": "quantity", "value": 2}.
+    - Could I get [a can of pringles]{"entity": "item", "value": "pringles"} and [a banana](item), please?
+    - Add [two cups of coffee]{"entity": "quantity", "value": 2} and [a can of pringles]{"entity": "item", "value": "pringles"} to my order.
+    - I want [three cups of coffee]{"entity": "quantity", "value": 3} and [a banana](item), thanks.
+    - I'll take [two cups of coffee]{"entity": "quantity", "value": 2} and [a can of pringles]{"entity": "item", "value": "pringles"}.
+    - How about [two bananas]{"entity": "quantity", "value": 2} and [three cups of coffee]{"entity": "quantity", "value": 3}?
+    - I want [a banana](item) and [a can of pringles]{"entity": "item", "value": "pringles"}.
+    - Get me [three cups of coffee]{"entity": "quantity", "value": 3} and [two cups of coffee]{"entity": "quantity", "value": 2}.
+    - I'd like [a can of pringles]{"entity": "item", "value": "pringles"} and [a banana](item), please.
+    - Could I get [a banana](item) and [three cups of coffee]{"entity": "quantity", "value": 3}, please?
+    - Add [a can of pringles]{"entity": "item", "value": "pringles"} and [two cups of coffee]{"entity": "quantity", "value": 2} to my order.
+    - I want [two cups of coffee]{"entity": "quantity", "value": 2} and [three cups of coffee]{"entity": "quantity", "value": 3}, thanks.
+    - I'll take [a can of pringles]{"entity": "item", "value": "pringles"} and [a banana](item).
+    - How about [a can of pringles]{"entity": "item", "value": "pringles"} and [three cups of coffee]{"entity": "quantity", "value": 3}?
+    - I want [two bananas]{"entity": "quantity", "value": 2} and [two cups of coffee]{"entity": "quantity", "value": 2}, please.
+    - Get me [a banana](item) and [three cups of coffee]{"entity": "quantity", "value": 3}, please.
+    - I'd like [two cups of coffee]{"entity": "quantity", "value": 2} and [two bananas]{"entity": "quantity", "value": 2}.
+    - Could I get [a can of pringles]{"entity": "item", "value": "pringles"} and [a banana](item), please?
+    - Add [two cups of coffee]{"entity": "quantity", "value": 2} and [a can of pringles]{"entity": "item", "value": "pringles"} to my order.
+    - I want [three cups of coffee]{"entity": "quantity", "value": 3} and [a banana](item), thanks.
+    - I'll take [two cups of coffee]{"entity": "quantity", "value": 2} and [a can of pringles]{"entity": "item", "value": "pringles"}.
+    - How about [two bananas]{"entity": "quantity", "value": 2} and [three cups of coffee]{"entity": "quantity", "value": 3}?
+    - I want [a banana](item) and [a can of pringles]{"entity": "item", "value": "pringles"}.
+    - Get me [three cups of coffee]{"entity": "quantity", "value": 3} and [two cups of coffee]{"entity": "quantity", "value": 2}.
+    - I'd like [a can of pringles]{"entity": "item", "value": "pringles"} and [a banana](item), please.
+    - Could I get [a banana](item) and [three cups of coffee]{"entity": "quantity", "value": 3}, please?
+    - Add [a can of pringles]{"entity": "item", "value": "pringles"} and [two cups of coffee]{"entity": "quantity", "value": 2} to my order.
+    - I want [two cups of coffee]{"entity": "quantity", "value": 2} and [three cups of coffee]{"entity": "quantity", "value": 3}, thanks.
+    - I'll take [a can of pringles]{"entity": "item", "value": "pringles"} and [a banana](item).
+    - How about [a can of pringles]{"entity": "item", "value": "pringles"} and [three cups of coffee]{"entity": "quantity", "value": 3}?
+    - I want [two bananas]{"entity": "quantity", "value": 2} and [two cups of coffee]{"entity": "quantity", "value": 2}, please.
+    - Get me [a banana](item) and [three cups of coffee]{"entity": "quantity", "value": 3}, please.
+    - I'd like [two cups of coffee]{"entity": "quantity", "value": 2} and [two bananas]{"entity": "quantity", "value": 2}.
+    - Could I get [a can of pringles]{"entity": "item", "value": "pringles"} and [a banana](item), please?
+    - Add [two cups of coffee]{"entity": "quantity", "value": 2} and [a can of pringles]{"entity": "item", "value": "pringles"} to my order.
+    - I want [three cups of coffee]{"entity": "quantity", "value": 3} and [a banana](item), thanks.
+- intent: affirm
+  examples: |
+    - [Yes](choice)
+    - [Yep]{"entity" : "choice", "value" : "yes"}
+    - [Yah]{"entity" : "choice", "value" : "yes"}
+    - [No](choice)
+    - [Nope]{"entity" : "choice", "value" : "no"}
+    - [Nah]{"entity" : "choice", "value" : "no"}
+    - That's [correct]{"entity" : "choice", "value" : "yes"}
+    - That's [incorrect]{"entity" : "choice", "value" : "no"}
+    - [Absolutely]{"entity" : "choice", "value" : "yes"}
+    - [Definitely]{"entity" : "choice", "value" : "yes"}
+    - [Certainly]{"entity" : "choice", "value" : "yes"}
+    - [Sure thing]{"entity" : "choice", "value" : "yes"}
+    - [Indeed]{"entity" : "choice", "value" : "yes"}
+    - [Of course]{"entity" : "choice", "value" : "yes"}
+    - [Absolutely not]{"entity" : "choice", "value" : "no"}
+    - [Definitely not]{"entity" : "choice", "value" : "no"}
+    - [Certainly not]{"entity" : "choice", "value" : "no"}
+    - [No way]{"entity" : "choice", "value" : "no"}
+    - [Absolutely no]{"entity" : "choice", "value" : "no"}
+    - [Of course not]{"entity" : "choice", "value" : "no"}
+    - [That's right]{"entity" : "choice", "value" : "yes"}
+    - [That's wrong]{"entity" : "choice", "value" : "no"}
+    - [You got it]{"entity" : "choice", "value" : "yes"}
+    - [You're correct]{"entity" : "choice", "value" : "yes"}
+    - [You're right]{"entity" : "choice", "value" : "yes"}
+    - [You're mistaken]{"entity" : "choice", "value" : "no"}
+    - [You're wrong]{"entity" : "choice", "value" : "no"}
+    - [Not exactly]{"entity" : "choice", "value" : "no"}
+    - [Absolutely correct]{"entity" : "choice", "value" : "yes"}
+    - [Not at all]{"entity" : "choice", "value" : "no"}
+    - [No doubt]{"entity" : "choice", "value" : "yes"}
+- intent: wake_word
+  examples: |
+    - [all done](wake)
+    - [all done](wake), thanks
