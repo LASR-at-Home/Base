@@ -4,9 +4,9 @@ import rospy
 from collections import Counter
 
 class InvalidateOrder(smach.State):
-    def __init__(self, voice_controller):
+    def __init__(self, context):
         smach.State.__init__(self, outcomes=['done'])
-        self.voice_controller = voice_controller
+        self.context = context
 
     def execute(self, userdata):
         order = rospy.get_param(f"/tables/{rospy.get_param('current_table')}/order")
@@ -19,9 +19,11 @@ class InvalidateOrder(smach.State):
         print(order, given_order)
 
         if not len(invalid_items):
-            self.voice_controller.sync_tts(f"You didn't give me {missing_items_string} which I asked for. Please correct the order, and say 'all done' when you are ready for me to check it again.")
+            self.context.voice_controller.sync_tts(f"You didn't give me {missing_items_string} which I asked for. Please correct the order.")
         elif not len(missing_items):
-            self.voice_controller.sync_tts(f"You have given me {invalid_items_string} which I didn't ask for. Please correct the order, and say 'all done' when you are ready for me to check it again.")
+            self.context.voice_controller.sync_tts(f"You have given me {invalid_items_string} which I didn't ask for. Please correct the order.")
         else:
-            self.voice_controller.sync_tts(f"You have given me {invalid_items_string} which I didn't ask for, and didn't give me {missing_items_string} which I asked for. Please correct the order, and say 'all done' when you are ready for me to check it again.")
+            self.context.voice_controller.sync_tts(f"You have given me {invalid_items_string} which I didn't ask for, and didn't give me {missing_items_string} which I asked for. Please correct the order.")
+        rospy.sleep(rospy.Duration(5.0))
+        rospy.set_param(f"/tables/{rospy.get_param('current_table')}/previous_given_order", given_order)
         return 'done'

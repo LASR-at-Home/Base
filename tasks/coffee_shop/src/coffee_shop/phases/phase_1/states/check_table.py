@@ -46,14 +46,9 @@ def create_point_marker(x, y, z, idx, frame, r,g,b):
     return marker_msg
 
 class CheckTable(smach.State):
-    def __init__(self, head_controller, voice_controller, yolo, tf, pm, shapely):
+    def __init__(self, context):
         smach.State.__init__(self, outcomes=['not_finished', 'finished'])
-        self.head_controller = head_controller
-        self.voice_controller = voice_controller
-        self.play_motion_client = pm
-        self.detect = yolo
-        self.tf = tf
-        self.shapely = shapely
+        self.context = context
         self.bridge = CvBridge()
         self.detections_objects = []
         self.detections_people = []
@@ -74,7 +69,7 @@ class CheckTable(smach.State):
         tf_req = TfTransformRequest()
         tf_req.target_frame = String("map")
         tf_req.point = centroid
-        response = self.tf(tf_req)
+        response = self.context.tf(tf_req)
         return np.array([response.target_point.point.x, response.target_point.point.y, response.target_point.point.z])
 
     def publish_object_points(self):
@@ -100,7 +95,7 @@ class CheckTable(smach.State):
     def perform_detection(self, pcl_msg, polygon, filter):
         cv_im = pcl_msg_to_cv2(pcl_msg)
         img_msg = self.bridge.cv2_to_imgmsg(cv_im)
-        detections = self.detect(img_msg, "yolov8n-seg.pt", 0.3, 0.3)
+        detections = self.context.yolo(img_msg, "yolov8n-seg.pt", 0.3, 0.3)
         detections = [(det, self.estimate_pose(pcl_msg, det)) for det in detections.detected_objects if det.name in filter]
         rospy.loginfo(f"All: {[(det.name, pose) for det, pose in detections]}")
         rospy.loginfo(f"Boundary: {polygon}")
@@ -123,7 +118,8 @@ class CheckTable(smach.State):
 
     def execute(self, userdata):
         result = self.stop_head_manager.call("head_manager")
-        self.voice_controller.sync_tts("I am going to check the table")
+        
+        self.context.voice_controller.sync_tts("I am going to check the table")
         self.current_table = rospy.get_param("current_table")
         self.object_debug_images = []
         self.people_debug_images = []
@@ -138,7 +134,7 @@ class CheckTable(smach.State):
         #self.detection_sub = rospy.Subscriber("/xtion/depth_registered/points", PointCloud2, self.check)
         for motion in motions:
             pm_goal = PlayMotionGoal(motion_name=motion, skip_planning=True)
-            self.play_motion_client.send_goal_and_wait(pm_goal)
+            self.context.play_motion_client.send_goal_and_wait(pm_goal)
             pcl_msg = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
             self.check(pcl_msg)
 
@@ -166,7 +162,7 @@ class CheckTable(smach.State):
         people_text = "person" if people_count == 1 else "people"
         status_text = f"The status of this table is {status}."
         count_text = f"There {'is' if people_count == 1 else 'are'} {people_count} {people_text}."
-        self.voice_controller.sync_tts(f"{status_text} {count_text}")
+        self.context.voice_controller.sync_tts(f"{status_text} {count_text}")
 
         res = self.start_head_manager.call("head_manager", '')
 

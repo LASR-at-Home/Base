@@ -4,9 +4,10 @@ import rospy
 from lasr_voice.voice import Voice
 
 class GreetPerson(smach.State):
-    def __init__(self, voice_controller):
+    def __init__(self, context):
         smach.State.__init__(self, outcomes=['done'])
-        self.voice_controller = voice_controller
+        self.context = context
+
     def execute(self, userdata):
-        self.voice_controller.sync_tts("Hi there! My name is TIAGO. Please follow me, I'll guide you to a table.")
+        self.context.voice_controller.sync_tts("Hi there! My name is TIAGO. Please follow me, I'll guide you to a table.")
         return 'done'

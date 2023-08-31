@@ -17,12 +17,9 @@ from play_motion_msgs.msg import PlayMotionAction, PlayMotionGoal
 OBJECTS = ["cup", "mug", "bowl"]
 
 class CheckOrder(smach.State):
-    def __init__(self, yolo, tf, pm, shapely):
+    def __init__(self, context):
         smach.State.__init__(self, outcomes=['correct', 'incorrect'])
-        self.detect = yolo
-        self.tf = tf
-        self.shapely = shapely
-        self.play_motion_client = pm
+        self.context = context
         self.bridge = CvBridge()
 
         service_list = rosservice.get_service_list()
@@ -39,14 +36,14 @@ class CheckOrder(smach.State):
         tf_req = TfTransformRequest()
         tf_req.target_frame = String("map")
         tf_req.point = centroid
-        response = self.tf(tf_req)
+        response = self.context.tf(tf_req)
         return np.array([response.target_point.point.x, response.target_point.point.y, response.target_point.point.z])
 
     def execute(self, userdata):
         result = self.stop_head_manager.call("head_manager")
 
         pm_goal = PlayMotionGoal(motion_name="back_to_default", skip_planning=True)
-        self.play_motion_client.send_goal_and_wait(pm_goal)
+        self.context.play_motion_client.send_goal_and_wait(pm_goal)
         order = rospy.get_param(f"/tables/{rospy.get_param('current_table')}/order")
 
         counter_corners = rospy.get_param(f"/counter/cuboid")
@@ -54,7 +51,7 @@ class CheckOrder(smach.State):
         pcl_msg = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
         cv_im = pcl_msg_to_cv2(pcl_msg)
         img_msg = self.bridge.cv2_to_imgmsg(cv_im)
-        detections = self.detect(img_msg, "yolov8n-seg.pt", 0.5, 0.3)
+        detections = self.context.yolo(img_msg, "yolov8n-seg.pt", 0.5, 0.3)
         detections = [(det, self.estimate_pose(pcl_msg, det)) for det in detections.detected_objects if det.name in OBJECTS]
         satisfied_points = self.shapely.are_points_in_polygon_2d(counter_corners, [[pose[0], pose[1]] for (_, pose) in detections]).inside
         given_order = [detections[i][0].name for i in range(0, len(detections)) if satisfied_points[i]]

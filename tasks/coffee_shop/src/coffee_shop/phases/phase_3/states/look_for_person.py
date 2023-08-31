@@ -16,14 +16,10 @@ import rosservice
 from play_motion_msgs.msg import PlayMotionAction, PlayMotionGoal
 
 class LookForPerson(smach.State):
-    def __init__(self, yolo, tf, pm, shapely):
+    def __init__(self, context):
         smach.State.__init__(self, outcomes=['found', 'not found'])
-        self.detect = yolo
-        self.tf = tf
-        self.shapely = shapely
-        self.people_pose_pub = rospy.Publisher("/people_poses", Marker, queue_size=100)
+        self.context = context
         self.bridge = CvBridge()
-        self.play_motion_client = pm
 
         service_list = rosservice.get_service_list()
         # This should allow simulation runs as well, as i don't think the head manager is running in simulation
@@ -51,21 +47,21 @@ class LookForPerson(smach.State):
         centroid.header = pcl_msg.header
         tf_req = TfTransformRequest()
         tf_req.target_frame = String("map")
-        tf_req.point  = centroid
-        response = self.tf(tf_req)
+        tf_req.point = centroid
+        response = self.context.tf(tf_req)
         return np.array([response.target_point.point.x, response.target_point.point.y, response.target_point.point.z])
 
     def execute(self, userdata):
         result = self.stop_head_manager.call("head_manager")
 
         pm_goal = PlayMotionGoal(motion_name="back_to_default", skip_planning=True)
-        self.play_motion_client.send_goal_and_wait(pm_goal)
+        self.context.play_motion_client.send_goal_and_wait(pm_goal)
 
         corners = rospy.get_param("/wait/cuboid")
         pcl_msg = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
         cv_im = pcl_msg_to_cv2(pcl_msg)
         img_msg = self.bridge.cv2_to_imgmsg(cv_im)
-        detections = self.detect(img_msg, "yolov8n-seg.pt", 0.3, 0.3)
+        detections = self.context.yolo(img_msg, "yolov8n-seg.pt", 0.3, 0.3)
         detections = [(det, self.estimate_pose(pcl_msg, cv_im, det)) for det in detections.detected_objects if det.name == "person"]
         satisfied_points = self.shapely.are_points_in_polygon_2d(corners, [[pose[0], pose[1]] for (_, pose) in detections]).inside
         if len(detections):
@@ -88,7 +84,7 @@ class LookForPerson(smach.State):
                 marker_msg.color.r = 1.0
                 marker_msg.color.g = 0.0
                 marker_msg.color.b = 0.0
-                self.people_pose_pub.publish(marker_msg)
+                self.context.people_pose_pub.publish(marker_msg)
                 if satisfied_points[i]:
                     rospy.set_param("/person/position", pose.tolist())
                     return 'found'
