@@ -55,9 +55,14 @@ class CheckOrder(smach.State):
         cv_im = pcl_msg_to_cv2(pcl_msg)
         img_msg = self.bridge.cv2_to_imgmsg(cv_im)
         detections = self.context.yolo(img_msg, "yolov8n-seg.pt", 0.5, 0.3)
-        detections = [(det, self.estimate_pose(pcl_msg, det)) for det in detections.detected_objects if det.name in OBJECTS]
+        detections = [(det, self.estimate_pose(pcl_msg, det)) for det in detections.detected_objects if det.name in self.context.target_objects]
         satisfied_points = self.context.shapely.are_points_in_polygon_2d(counter_corners, [[pose[0], pose[1]] for (_, pose) in detections]).inside
-        given_order = [detections[i][0].name for i in range(0, len(detections)) if satisfied_points[i]]
+        given_order = [detections[i] for i in range(0, len(detections)) if satisfied_points[i]]
+
+        for _, pose in given_order:
+            self.context.publish_object_pose(*pose, "map")
+
+        given_order = [detection[0].name for detection in given_order]
 
         if sorted(order) == sorted(given_order):
             res = self.start_head_manager.call("head_manager", '')

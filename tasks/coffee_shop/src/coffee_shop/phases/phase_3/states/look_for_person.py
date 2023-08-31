@@ -67,24 +67,7 @@ class LookForPerson(smach.State):
         if len(detections):
             for i in range(0, len(detections)):
                 pose = detections[i][1]
-                marker_msg = Marker()
-                marker_msg.header.frame_id = "map"
-                marker_msg.header.stamp = rospy.Time.now()
-                marker_msg.id = 0
-                marker_msg.type = Marker.SPHERE
-                marker_msg.action = Marker.ADD
-                marker_msg.pose.position.x = pose[0]
-                marker_msg.pose.position.y = pose[1]
-                marker_msg.pose.position.z = pose[2]
-                marker_msg.pose.orientation.w = 1.0
-                marker_msg.scale.x = 0.1
-                marker_msg.scale.y = 0.1
-                marker_msg.scale.z = 0.1
-                marker_msg.color.a = 1.0
-                marker_msg.color.r = 1.0
-                marker_msg.color.g = 0.0
-                marker_msg.color.b = 0.0
-                self.context.people_pose_pub.publish(marker_msg)
+                self.context.publish_person_pose(*pose, "map")
                 if satisfied_points[i]:
                     rospy.set_param("/person/position", pose.tolist())
                     return 'found'

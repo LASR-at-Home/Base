@@ -9,6 +9,7 @@ from lasr_shapely import LasrShapely
 from lasr_speech.srv import Speech
 import actionlib
 import yaml
+from visualization_msgs.msg import Marker
 
 
 
@@ -39,3 +40,37 @@ class Context:
         rosparam.load_file(config_path)
 
         self.current_table = None
+
+        self._people_pose_pub = rospy.Publisher("/people_poses", Marker, queue_size=100)
+        self._people_idx = 0
+        self._object_pose_pub = rospy.Publisher("/object_poses", Marker, queue_size=100)
+        self._objects_idx = 0
+
+    @staticmethod
+    def _create_point_marker(idx, x, y, z, frame_id, r, g, b):
+        marker_msg = Marker()
+        marker_msg.header.frame_id = frame_id
+        marker_msg.header.stamp = rospy.Time.now()
+        marker_msg.id = idx
+        marker_msg.type = Marker.SPHERE
+        marker_msg.action = Marker.ADD
+        marker_msg.pose.position.x = x
+        marker_msg.pose.position.y = y
+        marker_msg.pose.position.z = z
+        marker_msg.pose.orientation.w = 1.0
+        marker_msg.scale.x = 0.1
+        marker_msg.scale.y = 0.1
+        marker_msg.scale.z = 0.1
+        marker_msg.color.a = 1.0
+        marker_msg.color.r = r
+        marker_msg.color.g = g
+        marker_msg.color.b = b
+        return marker_msg
+
+    def publish_person_pose(self, x, y, z, frame_id):
+        self._people_pose_pub.publish(self._create_point_marker(self._people_idx, x, y, z, frame_id, 1.0, 0.0, 0.0))
+        self._people_idx += 1
+
+    def publish_object_pose(self, x, y, z, frame_id):
+        self._object_pose_pub.publish(self._create_point_marker(self._objects_idx, x, y, z, frame_id, 0.0, 1.0, 0.0))
+        self._objects_idx += 1

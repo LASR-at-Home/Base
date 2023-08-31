@@ -24,27 +24,6 @@ import rosservice
 
 OBJECTS = ["cup", "mug"]
 
-
-def create_point_marker(x, y, z, idx, frame, r,g,b):
-    marker_msg = Marker()
-    marker_msg.header.frame_id = frame
-    marker_msg.header.stamp = rospy.Time.now()
-    marker_msg.id = idx
-    marker_msg.type = Marker.SPHERE
-    marker_msg.action = Marker.ADD
-    marker_msg.pose.position.x = x
-    marker_msg.pose.position.y = y
-    marker_msg.pose.position.z = z
-    marker_msg.pose.orientation.w = 1.0
-    marker_msg.scale.x = 0.1
-    marker_msg.scale.y = 0.1
-    marker_msg.scale.z = 0.1
-    marker_msg.color.a = 1.0
-    marker_msg.color.r = r
-    marker_msg.color.g = g
-    marker_msg.color.b = b
-    return marker_msg
-
 class CheckTable(smach.State):
     def __init__(self, context):
         smach.State.__init__(self, outcomes=['not_finished', 'finished'])
@@ -52,8 +31,6 @@ class CheckTable(smach.State):
         self.bridge = CvBridge()
         self.detections_objects = []
         self.detections_people = []
-        self.object_pose_pub = rospy.Publisher("/object_poses", Marker, queue_size=100)
-        self.people_pose_pub = rospy.Publisher("/people_poses", Marker, queue_size=100)
 
         service_list = rosservice.get_service_list()
         # This should allow simulation runs as well, as i don't think the head manager is running in simulation
@@ -73,14 +50,12 @@ class CheckTable(smach.State):
         return np.array([response.target_point.point.x, response.target_point.point.y, response.target_point.point.z])
 
     def publish_object_points(self):
-        for i, (det, point) in enumerate(self.detections_objects):
-            marker = create_point_marker(*point, i, "map",0.0, 1.0, 0.0)
-            self.object_pose_pub.publish(marker)
+        for _, point in self.detections_objects:
+            self.context.publish_object_pose(*point)
 
     def publish_people_points(self):
-        for i, (det, point) in enumerate(self.detections_people):
-            marker = create_point_marker(*point, i, "map",1.0, 0.0, 0.0)
-            self.people_pose_pub.publish(marker)
+        for _, point in self.detections_people:
+            self.context.publish_person_pose(*point, "map")
 
     def filter_detections_by_pose(self, detections, threshold=0.2):
         filtered = []
