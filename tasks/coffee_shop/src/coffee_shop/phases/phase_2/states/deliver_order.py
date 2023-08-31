@@ -13,7 +13,7 @@ class DeliverOrder(smach.State):
 
     def execute(self, userdata):
         self.context.voice_controller.sync_tts("I am going to deliver the order")
-        location = rospy.get_param(f"/tables/{rospy.get_param('/current_table')}/location")
+        location = rospy.get_param(f"/tables/{self.context.current_table}/location")
         position = location["position"]
         orientation = location["orientation"]
         self.context.base_controller.sync_to_pose(Pose(position=Point(**position), orientation=Quaternion(**orientation)))

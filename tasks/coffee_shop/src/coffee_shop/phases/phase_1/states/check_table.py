@@ -109,7 +109,7 @@ class CheckTable(smach.State):
         self.check_people(pcl_msg)
 
     def check_table(self, pcl_msg):
-        detections_objects_ = self.perform_detection(pcl_msg, self.object_polygon, OBJECTS)
+        detections_objects_ = self.perform_detection(pcl_msg, self.object_polygon, self.context.target_objects)
         self.detections_objects.extend(detections_objects_)
 
     def check_people(self, pcl_msg):
@@ -120,7 +120,6 @@ class CheckTable(smach.State):
         result = self.stop_head_manager.call("head_manager")
         
         self.context.voice_controller.sync_tts("I am going to check the table")
-        self.current_table = rospy.get_param("current_table")
         self.object_debug_images = []
         self.people_debug_images = []
 
@@ -156,7 +155,8 @@ class CheckTable(smach.State):
         self.publish_object_points()
         self.publish_people_points()
 
-        rospy.set_param(f"/tables/{self.current_table}/status/", status)
+        self.context.tables[self.context.current_table]["status"] = status
+        self.context.tables[self.context.current_table]["people"] = [pose for _, pose in self.detections_people]
 
         people_count = len(self.detections_people)
         people_text = "person" if people_count == 1 else "people"

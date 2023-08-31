@@ -11,13 +11,14 @@ class GoToTable(smach.State):
         self.context = context
 
     def execute(self, userdata):
-        tables_need_serving = [(table, data) for table, data in rospy.get_param("/tables").items() if data["status"] == "needs serving"]
+        tables_need_serving = [(label, rospy.get_param(f"/tables/{label}")) for label, table in self.context.tables.items() if table["status"] == "needs serving"]
         if not tables_need_serving:
             return 'skip'
-        table, data = tables_need_serving[0]
+        label, table = tables_need_serving[0]
         self.context.voice_controller.sync_tts(f"I am going to {table}, which needs serving")
-        position = data["location"]["position"]
-        orientation = data["location"]["orientation"]
+        position = table["location"]["position"]
+        orientation = table["location"]["orientation"]
         self.context.base_controller.sync_to_pose(Pose(position=Point(**position), orientation=Quaternion(**orientation)))
-        rospy.set_param("/current_table", table)
+        self.context.tables[label]["status"] = "currently serving"
+        self.context.current_table = label
         return 'done'

@@ -30,8 +30,12 @@ class Context:
             data = yaml.safe_load(fp)
 
         self.tables = {
-            table: {"status" : "unvisited", "people": dict()} for table in data["tables"].keys()
+            table: {"status" : "unvisited", "people": list(), "order": list()} for table in data["tables"].keys()
         }
+
+        self.target_objects = data["objects"]
 
         rosparam.delete_param("tables")
         rosparam.load_file(config_path)
+
+        self.current_table = None

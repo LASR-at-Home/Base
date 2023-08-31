@@ -13,6 +13,8 @@ from cv_bridge3 import CvBridge, cv2
 from pal_startup_msgs.srv import StartupStart, StartupStop
 import rosservice
 from play_motion_msgs.msg import PlayMotionAction, PlayMotionGoal
+from collections import Counter
+
 
 OBJECTS = ["cup", "mug", "bowl"]
 
@@ -27,6 +29,7 @@ class CheckOrder(smach.State):
         if "/pal_startup_control/stop" in service_list:
             self.stop_head_manager = rospy.ServiceProxy("/pal_startup_control/stop", StartupStop)
             self.start_head_manager = rospy.ServiceProxy("/pal_startup_control/start", StartupStart)
+        self.previous_given_order = []
 
     def estimate_pose(self, pcl_msg, detection):
         centroid_xyz = seg_to_centroid(pcl_msg, np.array(detection.xyseg))
@@ -44,7 +47,7 @@ class CheckOrder(smach.State):
 
         pm_goal = PlayMotionGoal(motion_name="back_to_default", skip_planning=True)
         self.context.play_motion_client.send_goal_and_wait(pm_goal)
-        order = rospy.get_param(f"/tables/{rospy.get_param('current_table')}/order")
+        order = self.context.tables[self.context.current_table]["order"]
 
         counter_corners = rospy.get_param(f"/counter/cuboid")
 
@@ -53,10 +56,29 @@ class CheckOrder(smach.State):
         img_msg = self.bridge.cv2_to_imgmsg(cv_im)
         detections = self.context.yolo(img_msg, "yolov8n-seg.pt", 0.5, 0.3)
         detections = [(det, self.estimate_pose(pcl_msg, det)) for det in detections.detected_objects if det.name in OBJECTS]
-        satisfied_points = self.shapely.are_points_in_polygon_2d(counter_corners, [[pose[0], pose[1]] for (_, pose) in detections]).inside
+        satisfied_points = self.context.shapely.are_points_in_polygon_2d(counter_corners, [[pose[0], pose[1]] for (_, pose) in detections]).inside
         given_order = [detections[i][0].name for i in range(0, len(detections)) if satisfied_points[i]]
-        rospy.set_param(f"/tables/{rospy.get_param('current_table')}/given_order", given_order)
 
-        res = self.start_head_manager.call("head_manager", '')
+        if sorted(order) == sorted(given_order):
+            res = self.start_head_manager.call("head_manager", '')
+            return 'correct'
 
-        return 'correct' if sorted(order) == sorted(given_order) else 'incorrect'
+        if self.previous_given_order == given_order:
+            rospy.sleep(rospy.Duration(5.0))
+            return 'incorrect'
+
+        missing_items = list((Counter(order) - Counter(given_order)).elements())
+        missing_items_string = ', '.join([f"{count} {item if count == 1 else item+'s'}" for item, count in Counter(missing_items).items()]).replace(', ', ', and ', len(missing_items) - 2)
+        invalid_items = list((Counter(given_order) - Counter(order)).elements())
+        invalid_items_string = ', '.join([f"{count} {item if count == 1 else item+'s'}" for item, count in Counter(invalid_items).items()]).replace(', ', ', and ', len(invalid_items) - 2)
+        rospy.loginfo(f"Order: {order}, Given order: {given_order}")
+
+        if not len(invalid_items):
+            self.context.voice_controller.sync_tts(f"You didn't give me {missing_items_string} which I asked for. Please correct the order.")
+        elif not len(missing_items):
+            self.context.voice_controller.sync_tts(f"You have given me {invalid_items_string} which I didn't ask for. Please correct the order.")
+        else:
+            self.context.voice_controller.sync_tts(f"You have given me {invalid_items_string} which I didn't ask for, and didn't give me {missing_items_string} which I asked for. Please correct the order.")
+        rospy.sleep(rospy.Duration(5.0))
+        self.previous_given_order = given_order
+        return 'incorrect'
