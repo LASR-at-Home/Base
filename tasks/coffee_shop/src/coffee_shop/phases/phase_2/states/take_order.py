@@ -64,8 +64,11 @@ class TakeOrder(smach.State):
         if choices is None:
             self.voice_controller.sync_tts("Sorry, I didn't get that")
             return self.affirm()
-        choice = choices[0]["value"]
-        return bool(int(choice))
+        choice = choices[0]["value"].lower()
+        if choice not in ["yes", "no"]:
+            self.voice_controller.sync_tts("Sorry, I didn't get that")
+            return self.affirm()
+        return choice == "yes"
 
     def execute(self, userdata):
         self.voice_controller.sync_tts("Can I please take your order, please answer after the beep?")
