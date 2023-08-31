@@ -69,7 +69,7 @@ class LookForPerson(smach.State):
                 pose = detections[i][1]
                 self.context.publish_person_pose(*pose, "map")
                 if satisfied_points[i]:
-                    rospy.set_param("/person/position", pose.tolist())
+                    self.context.new_customer_pose = pose.tolist()
                     return 'found'
         rospy.sleep(rospy.Duration(1.0))
 

@@ -40,6 +40,7 @@ class Context:
         rosparam.load_file(config_path)
 
         self.current_table = None
+        self.new_customer_pose = None
 
         self._people_pose_pub = rospy.Publisher("/people_poses", Marker, queue_size=100)
         self._people_idx = 0
