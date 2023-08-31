@@ -5,7 +5,7 @@ import numpy as np
 import ros_numpy as rnp
 from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import Point, PointStamped
-from std_msgs.msg import String
+from std_msgs.msg import String, Header
 from cv_bridge3 import CvBridge, cv2
 from lasr_object_detection_yolo.srv import YoloDetection
 from coffee_shop.srv import TfTransform, TfTransformRequest
@@ -16,6 +16,7 @@ import rosservice
 from play_motion_msgs.msg import PlayMotionAction, PlayMotionGoal
 from lasr_shapely import LasrShapely
 import laser_geometry.laser_geometry as lg
+import sensor_msgs.point_cloud2 as pc2
 shapely = LasrShapely()
 
 class LookForPerson(smach.State):
@@ -56,6 +57,21 @@ class LookForPerson(smach.State):
         tf_req.point  = centroid
         response = self.tf(tf_req)
         return np.array([response.target_point.point.x, response.target_point.point.y, response.target_point.point.z])
+    
+    def get_pcl_from_laser(self, msg):
+        pcl_msg = lg.LaserProjection().projectLaser(msg)
+        pcl_points = [p for p in pc2.read_points(pcl_msg, field_names=("x, y, z"), skip_nans=True)]
+        
+        padded_points = []
+        for point in pcl_points:
+            for z in np.linspace(0., 2., 10):
+                padded_points.append((point[0], point[1], z))
+
+        h = Header()
+        h.stamp = rospy.Time.now()
+        h.frame_id = "base_link"
+        padded_pcl = pc2.create_cloud_xyz32(h, padded_points)
+        return padded_pcl
 
     def execute(self, userdata):
         result = self.stop_head_manager.call("head_manager")
@@ -65,7 +81,7 @@ class LookForPerson(smach.State):
 
         corners = rospy.get_param("/wait/cuboid")
         lsr_scan = rospy.wait_for_message("/scan", LaserScan)
-        pcl_msg = lg.LaserProjection().projectLaser(lsr_scan)
+        pcl_msg = self.get_pcl_from_laser(lsr_scan)
         cv_im = pcl_msg_to_cv2(pcl_msg)
         img_msg = self.bridge.cv2_to_imgmsg(cv_im)
         detections = self.detect(img_msg, "yolov8n-seg.pt", 0.3, 0.3)
