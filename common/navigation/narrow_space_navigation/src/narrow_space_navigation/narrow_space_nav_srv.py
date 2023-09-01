@@ -42,6 +42,14 @@ class NarrowSpaceNavSrv:
         SIZE_Y, SIZE_X = occupancy_array.shape
         heights = np.zeros_like(occupancy_array, dtype=float)
 
+        EDGE_VALUE = 1.0
+
+        # Set the edges of the occupancy_array to be walls (occupied)
+        occupancy_array[0, :] = EDGE_VALUE
+        occupancy_array[SIZE_Y - 1, :] = EDGE_VALUE
+        occupancy_array[:, 0] = EDGE_VALUE
+        occupancy_array[:, SIZE_X - 1] = EDGE_VALUE
+
         for x in range(SIZE_X):
             for y in range(SIZE_Y):
                 if occupancy_array[y][x] == 0:

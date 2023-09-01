@@ -1,18 +1,24 @@
 <launch>
 
+<!--     TASK  -->
    <node name="" pkg="lift" type="main.py" output="screen" required="true"/>
 
-<!--     interaction -->
-<!--&lt;!&ndash;   <node pkg="listen_module" name="dialogflow_srv" type="dialogflow_srv.py"/>&ndash;&gt;-->
+
+<!--     INTERACTION  -->
+<!--   <node pkg="listen_module" name="dialogflow_srv" type="dialogflow_srv.py"/>&ndash;&gt;-->
 <!--   <node pkg="interaction_module" name="interaction_module_srv" type="interaction_module_srv.py"/>-->
 <!--   <node name="soundplay_node" pkg="sound_play" type="soundplay_node.py"/>-->
 
-<!--      lift points  -->
-  <rosparam command="load" file="$(find lift)/config/demo_sim.yaml" />
-<!--    <include file="$(find lasr_perception_server)/launch/perception_server.launch"/>-->
 
-<!--    <node pkg="lasr_object_detection_yolo" name="yolo_object_detection_server" type="yolo_object_detection_server.py"/>-->
-    <node name="lasr_object_detection_yolo" pkg="lasr_object_detection_yolo" type="yolo_object_detection_server.py" output="screen" respawn="true"/>
+<!--     STATIC POINTS  -->
+  <rosparam command="load" file="$(find lift)/config/demo_sim.yaml" />
+
+
+<!--      PERCEPTION     -->
+<!--    <include file="$(find lasr_perception_server)/launch/perception_server.launch"/>-->
+<!--    <node name="lasr_object_detection_yolo" pkg="lasr_object_detection_yolo" type="yolo_object_detection_server.py" output="screen" respawn="true"/>-->
+    <node pkg="lasr_object_detection_yolov8" type="service" name="yolo_service" output="screen"/>
     <node pkg="lasr_perception_server" name="perception_server" type="perception_server.py"/>
+
 
 </launch>

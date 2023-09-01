@@ -30,6 +30,11 @@ class Voice:
     def is_running(self):
         return self._tts_client.get_state() == GoalStatus.PENDING or \
                self._tts_client.get_state() == GoalStatus.ACTIVE
+    def speak(self, text):
+        if rospy.get_param('/is_simulation'):
+            rospy.loginfo(text)
+        else:
+            self.sync_tts(text)
 
 if __name__ == '__main__':
     rospy.init_node("voice_node", anonymous=True)

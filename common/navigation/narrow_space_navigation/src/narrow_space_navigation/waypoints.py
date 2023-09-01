@@ -9,7 +9,6 @@ import rospy
 import rosservice
 from nav_msgs.msg import OccupancyGrid
 import cv2
-
 from geometry_msgs.msg import PoseWithCovarianceStamped, Pose, Point, Quaternion
 from sklearn.cluster import DBSCAN, KMeans
 from narrow_space_navigation.waypoint_helpers import *
@@ -452,10 +451,12 @@ class Waypoint:
         centers = self.find_center_clusters(db=db, points=points)
 
         midpoints = self.find_midpoints(cluster_centers=centers)
-        plot_clusters(points=points, labels=cluster_labels, dilation=dilation, centers=midpoints, msg=self._msg)
+        try:
+            plot_clusters(points=points, labels=cluster_labels, dilation=dilation, centers=midpoints, msg=self._msg)
 
-        # Plot clusters
-        plot_clusters(points=points, labels=cluster_labels, dilation=dilation, centers=centers, msg= self._msg)
+            # Plot clusters
+            plot_clusters(points=points, labels=cluster_labels, dilation=dilation, centers=centers, msg= self._msg)
+        except Inde
 
         return centers, num_clusters, midpoints, dilation
 

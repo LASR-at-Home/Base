@@ -18,8 +18,9 @@ class GoToLift(smach.State):
         self.voice = voice
 
     def execute(self, userdata):
-        # result = self.controllers.base_controller.sync_to_pose(get_pose_from_param('/lift/pose'))
-        # get the point from zoe
+        # position robot in front of the lift waiting area
+
+        # do zoe's stuff
         w = Waypoint()
         warped, analysis, M = w.get_lift_information(is_lift=False)
         image = Image.fromarray(warped)
@@ -34,10 +35,12 @@ class GoToLift(smach.State):
         print(type(keypoint))
         global_points = w.local_to_global_points(M=M, points=keypoint, is_lift=True)
         p = Pose()
-        p.position.x =  global_points[0][0]
-        p.position.y =  global_points[0][1]
+        p.position.x = global_points[0][0]
+        p.position.y = global_points[0][1]
         p.orientation.w = 1
-        c = Controllers()
-        c.base_controller.sync_to_pose(p)
+        result = self.controllers.base_controller.sync_to_pose(p)
+
+        # if it fails go to predetermined place
+        result = self.controllers.base_controller.sync_to_pose(get_pose_from_param('/wait_centre'))
 
         return 'success'

@@ -13,3 +13,12 @@ def get_pose_from_param(name):
                            pose['orientation']['y'],
                            pose['orientation']['z'],
                            pose['orientation']['w']))
+
+def get_pose_from_param_new(name, col='location'):
+    if not rospy.has_param(name):
+        return None
+    pose = rospy.get_param(name)
+    position, orientation = pose[col]["position"], pose[col]["orientation"]
+    return Pose(position=Point(**position), orientation=Quaternion(**orientation))
+
+
