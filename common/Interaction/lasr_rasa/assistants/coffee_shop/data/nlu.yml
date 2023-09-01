@@ -10,36 +10,9 @@ nlu:
 - intent: affirm
   examples: |
     - [Yes](choice)
-    - [Yep]{"entity" : "choice", "value" : "yes"}
-    - [Yah]{"entity" : "choice", "value" : "yes"}
+    - [yes](choice)
     - [No](choice)
-    - [Nope]{"entity" : "choice", "value" : "no"}
-    - [Nah]{"entity" : "choice", "value" : "no"}
-    - That's [correct]{"entity" : "choice", "value" : "yes"}
-    - That's [incorrect]{"entity" : "choice", "value" : "no"}
-    - [Absolutely]{"entity" : "choice", "value" : "yes"}
-    - [Definitely]{"entity" : "choice", "value" : "yes"}
-    - [Certainly]{"entity" : "choice", "value" : "yes"}
-    - [Sure thing]{"entity" : "choice", "value" : "yes"}
-    - [Indeed]{"entity" : "choice", "value" : "yes"}
-    - [Of course]{"entity" : "choice", "value" : "yes"}
-    - [Absolutely not]{"entity" : "choice", "value" : "no"}
-    - [Definitely not]{"entity" : "choice", "value" : "no"}
-    - [Certainly not]{"entity" : "choice", "value" : "no"}
-    - [No way]{"entity" : "choice", "value" : "no"}
-    - [Absolutely no]{"entity" : "choice", "value" : "no"}
-    - [Of course not]{"entity" : "choice", "value" : "no"}
-    - [That's right]{"entity" : "choice", "value" : "yes"}
-    - [That's wrong]{"entity" : "choice", "value" : "no"}
-    - [You got it]{"entity" : "choice", "value" : "yes"}
-    - [You're correct]{"entity" : "choice", "value" : "yes"}
-    - [You're right]{"entity" : "choice", "value" : "yes"}
-    - [You're mistaken]{"entity" : "choice", "value" : "no"}
-    - [You're wrong]{"entity" : "choice", "value" : "no"}
-    - [Not exactly]{"entity" : "choice", "value" : "no"}
-    - [Absolutely correct]{"entity" : "choice", "value" : "yes"}
-    - [Not at all]{"entity" : "choice", "value" : "no"}
-    - [No doubt]{"entity" : "choice", "value" : "yes"}
+    - [no](choice)
 - intent: wake_word
   examples: |
     - [all done](wake)
