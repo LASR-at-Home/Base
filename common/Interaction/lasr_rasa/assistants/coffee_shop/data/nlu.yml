@@ -3,10 +3,10 @@ version: "3.1"
 nlu:
 - intent: make_order
   examples: |
-    - Can I have a [cup](item) please.
-    - Get me a [cup](item) please.
-    - Get me [two]{"entity" : "quantity", "value" : 2} [cups]{"entity" : "item", "value": "cup"}
-    - Can I have [three]{"entity" : "quantity", "value" : 3} [cups]{"entity" : "item", "value": "cup"}
+    - Can I have a [coffee]{"entity" : "item", "value" : "coffee_cup"} please.
+    - Get me a [coffee]{"entity" : "item", "value" : "coffee_cup"} please.
+    - Get me [two]{"entity" : "quantity", "value" : 2} [coffees]{"entity" : "item", "value" : "coffee_cup"}
+    - Can I have [three]{"entity" : "quantity", "value" : 3} [coffees]{"entity" : "item", "value" : "coffee_cup"}
 - intent: affirm
   examples: |
     - [Yes](choice)
