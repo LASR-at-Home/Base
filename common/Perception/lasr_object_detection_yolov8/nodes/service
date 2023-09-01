@@ -19,7 +19,7 @@ rospy.init_node('yolov8_service')
 
 # Determine variables
 DEBUG = rospy.get_param('~debug', False)
-PRELOAD = rospy.get_param('~preload', "[]")
+PRELOAD = rospy.get_param('~preload', [])
 
 for model in PRELOAD:
     yolo.load_model(model)
