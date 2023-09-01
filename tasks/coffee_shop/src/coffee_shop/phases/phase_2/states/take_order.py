@@ -19,7 +19,9 @@ class TakeOrder(smach.State):
         if not resp.success:
             self.voice_controller.sync_tts("Sorry, I didn't get that")
             return self.listen()
-        return json.loads(resp.json_response)
+        resp = json.loads(resp.json_response)
+        rospy.loginfo(resp)
+        return resp
 
     def get_order(self):
         resp = self.listen()
@@ -79,6 +81,8 @@ class TakeOrder(smach.State):
             if not self.affirm():
                 break
             self.voice_controller.sync_tts("What else can I get for you?")
-        self.voice_controller.sync_tts(f"Your order is {order}")
+        order_string = ', '.join([f"{count} {item if count == 1 else item+'s'}" for item, count in Counter(order).items()]).replace(', ', ', and ', len(order)-2)
+
+        self.voice_controller.sync_tts(f"Your order is {order_string}")
         rospy.set_param(f"/tables/{rospy.get_param('/current_table')}/order", order)
         return 'done'
