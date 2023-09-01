@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import smach
-from coffee_shop.phases.phase_2.states import MakeOrder, CheckOrder, InvalidateOrder, LoadOrder
+from coffee_shop.phases.phase_2.states import MakeOrder, CheckOrder, InvalidateOrder, LoadOrder, WaitForOrder
 import rospy
 from lasr_voice import Voice
 import actionlib
@@ -27,9 +27,10 @@ if __name__ == "__main__":
     speech = rospy.ServiceProxy("/lasr_speech/transcribe_and_parse", Speech)
 
     with sm:
-        sm.add('MAKE_ORDER', MakeOrder(voice_controller), transitions={'done' : 'CHECK_ORDER'})
+        sm.add('MAKE_ORDER', MakeOrder(voice_controller), transitions={'done' : 'WAIT_FOR_ORDER'})
+        smach.StateMachine.add('WAIT_FOR_ORDER', WaitForOrder(speech), transitions={'done': 'CHECK_ORDER'})
         sm.add('CHECK_ORDER', CheckOrder(yolo, tf, play_motion_client, shapely), transitions={'correct': 'LOAD_ORDER', 'incorrect': 'INVALIDATE_ORDER'})
-        sm.add('INVALIDATE_ORDER', InvalidateOrder(voice_controller), transitions={'done': 'CHECK_ORDER'})
+        sm.add('INVALIDATE_ORDER', InvalidateOrder(voice_controller), transitions={'done': 'WAIT_FOR_ORDER'})
         sm.add('LOAD_ORDER', LoadOrder(base_controller, voice_controller, play_motion_client, speech), transitions={'done':'end'})
 
     sm.execute()
