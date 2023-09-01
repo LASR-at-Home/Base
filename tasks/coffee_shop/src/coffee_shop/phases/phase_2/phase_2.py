@@ -15,4 +15,4 @@ class Phase2(smach.StateMachine):
             smach.StateMachine.add('CHECK_ORDER', CheckOrder(yolo, tf, pm, shapely), transitions={'correct' : 'LOAD_ORDER', 'incorrect' : 'INVALIDATE_ORDER'})
             smach.StateMachine.add('INVALIDATE_ORDER', InvalidateOrder(voice_controller), transitions={'done' : 'WAIT_FOR_ORDER'})
             smach.StateMachine.add('LOAD_ORDER', LoadOrder(base_controller, voice_controller, pm, speech), transitions={'done' : 'DELIVER_ORDER'})
-            smach.StateMachine.add('DELIVER_ORDER', DeliverOrder(base_controller, voice_controller), transitions={'done' : 'done'})
+            smach.StateMachine.add('DELIVER_ORDER', DeliverOrder(base_controller, voice_controller, pm, speech), transitions={'done' : 'done'})
