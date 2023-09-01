@@ -1,7 +1,7 @@
 <launch>
     <description>Start the YOLOv8 service</description>
-    <usage doc="YOLOv8 service">roslaunch lasr_object_detection_yolov8 service.launch</usage>
-    <usage doc="Preload models and enable debug topic">roslaunch lasr_object_detection_yolov8 service.launch debug:=true preload:=['yolov8n.pt','yolov8n-seg.pt']</usage>
+    <usage doc="YOLOv8 service"></usage>
+    <usage doc="Preload models and enable debug topic">debug:=true preload:=['yolov8n.pt','yolov8n-seg.pt']</usage>
 
     <arg name="debug" default="false" doc="Whether to publish plotted images to /yolov8/debug" />
     <arg name="preload" default="[]" doc="Array of models to preload when starting the service" />

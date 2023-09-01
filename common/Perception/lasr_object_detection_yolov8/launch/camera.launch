@@ -1,11 +1,10 @@
 <launch>
-    <description>Run a YOLOv8 model on a video file</description>
-    <usage doc="Run the demo">file:=$HOME/video.mp4</usage>
-    <usage doc="Run the demo with a different model">model:=yolov8n.pt file:=$HOME/video.mp4</usage>
+    <description>Run a YOLOv8 model using the camera</description>
+    <usage doc="Run the demo"></usage>
+    <usage doc="Run the demo with a different model">model:=yolov8n.pt</usage>
 
     <!-- arguments -->
     <arg name="model" default="yolov8n-seg.pt" doc="Model to use for the demo" />
-    <arg name="file" doc="Video file to run inference on" />
 
     <!-- yolo service -->
     <include file="$(find lasr_object_detection_yolov8)/launch/service.launch">
@@ -21,8 +20,6 @@
 
     <!-- launch video stream -->
    <include file="$(find video_stream_opencv)/launch/camera.launch">
-        <arg name="video_stream_provider" value="$(arg file)" />
-        <arg name="loop_videofile" value="true" />
         <arg name="visualize" value="true" />
    </include>
 </launch>

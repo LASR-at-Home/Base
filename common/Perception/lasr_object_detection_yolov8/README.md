@@ -122,16 +122,33 @@ The actual YOLO detection routine works as follows:
 
 ### Launch Files
 
+#### `camera`
+
+Run a YOLOv8 model using the camera
+
+```bash
+# Run the demo
+roslaunch lasr_object_detection_yolov8 camera.launch 
+
+# Run the demo with a different model
+roslaunch lasr_object_detection_yolov8 camera.launch model:=yolov8n.pt
+```
+
+| Argument | Default | Description |
+|:-:|:-:|---|
+| model | yolov8n-seg.pt | Model to use for the demo |
+
+
 #### `service`
 
 Start the YOLOv8 service
 
 ```bash
 # YOLOv8 service
-roslaunch lasr_object_detection_yolov8 service.launch roslaunch lasr_object_detection_yolov8 service.launch
+roslaunch lasr_object_detection_yolov8 service.launch 
 
 # Preload models and enable debug topic
-roslaunch lasr_object_detection_yolov8 service.launch roslaunch lasr_object_detection_yolov8 service.launch debug:=true preload:=['yolov8n.pt','yolov8n-seg.pt']
+roslaunch lasr_object_detection_yolov8 service.launch debug:=true preload:=['yolov8n.pt','yolov8n-seg.pt']
 ```
 
 | Argument | Default | Description |
@@ -146,10 +163,10 @@ Run a YOLOv8 model on a video file
 
 ```bash
 # Run the demo
-roslaunch lasr_object_detection_yolov8 demo.launch roslaunch lasr_object_detection_yolov8 demo.launch file:=$HOME/video.mp4
+roslaunch lasr_object_detection_yolov8 demo.launch file:=$HOME/video.mp4
 
 # Run the demo with a different model
-roslaunch lasr_object_detection_yolov8 demo.launch roslaunch lasr_object_detection_yolov8 demo.launch model:=yolov8n.pt file:=$HOME/video.mp4
+roslaunch lasr_object_detection_yolov8 demo.launch model:=yolov8n.pt file:=$HOME/video.mp4
 ```
 
 | Argument | Default | Description |
