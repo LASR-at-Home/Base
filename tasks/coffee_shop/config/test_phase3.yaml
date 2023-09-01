@@ -1,0 +1,16 @@
+tables:
+  table0:
+    status: "ready"
+    location:
+      position: {x: 0.45, y: -8.67, z: 0.0}
+      orientation: {x: 0.0, y: 0.0, z: -0.02, w: 1.0}
+      semantic: "end"
+wait:
+  location:
+    position: {x: 2.71006066106, y: 2.12491014098, z: 0.0}
+    orientation: {x: 0.0, y: 0.0, z: 0.752734065, w: 0.658324712318}
+  cuboid:
+    - [-0.28, 3.12]
+    - [3.78, 2.97]
+    - [3.94, 7.37]
+    - [-0.84, 7.19]

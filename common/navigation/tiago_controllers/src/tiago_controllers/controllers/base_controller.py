@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 
+# from abc import abstractmethod
+import math
+import time
 import actionlib
 import rospy
 from tiago_controllers.helpers import is_running, is_terminated
@@ -11,6 +14,8 @@ from math import atan2, radians
 from geometry_msgs.msg import Twist
 from common_math.transformations import quaternion_from_euler
 
+from tiago_controllers.base_planner import get_journey_points as _get_journey_points
+import numpy as np
 
 class BaseController:
     def __init__(self):
@@ -76,6 +81,25 @@ class BaseController:
         if done and state == GoalStatus.SUCCEEDED:
             return True
         return state
+    def compute_face_quat(self, x, y):
+        robot_x, robot_y, robot_quat = self.get_current_pose()
+        dist_x = x - robot_x
+        dist_y = y - robot_y
+        theta_deg = np.degrees(math.atan2(dist_y, dist_x))
+        try:
+            from scipy.spatial.transform import Rotation as R
+            (x, y, z, w) = R.from_euler("z", theta_deg, degrees=True).as_quat()
+            quaternion = Quaternion(x, y, z, w)
+        except ImportError:
+            quaternion = robot_quat
+        pose = Pose(position=Point(robot_x, robot_y, 0.0), orientation=quaternion)
+        return pose
+
+    def sync_face_to(self, x, y):
+        return self.sync_to_pose(self.compute_face_quat(x, y))
+
+    def async_face_to(self, x, y):
+        return self.async_to_pose(self.compute_face_quat(x, y))
 
 
 class CmdVelController:
@@ -153,4 +177,8 @@ class ReachToRadius(BaseController):
 
         pose = Pose(position=Point(robot_x, robot_y, 0.0), orientation=quaternion)
 
-        return pose
+
+if __name__ == '__main__':
+    rospy.init_node("base_test", anonymous=True)
+    b = BaseController()
+    b.sync_face_to(2.84, 6.7)

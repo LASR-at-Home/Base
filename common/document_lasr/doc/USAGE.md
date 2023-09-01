@@ -4,18 +4,7 @@ View workspace documentation in the browser:
 rosrun document_lasr view.py
 ```
 
-Your `package.xml` should define:
-
-- A description
-- Maintainers and authors
-- A full list of ROS dependencies
-
-You should write or create blank files for:
-
-- `doc/PREREQUISITES.md`: Additional requirements for using the package.
-- `doc/USAGE.md`: Instructions for using the package.
-- `doc/EXAMPLE.md`: Demonstration of how the package works.
-- `doc/TECHNICAL.md`: An overview of how the package works.
+Please see the [example section](#example) to see how to document your package.
 
 Document a single package from your current workspace:
 

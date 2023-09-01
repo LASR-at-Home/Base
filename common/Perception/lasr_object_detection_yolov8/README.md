@@ -9,27 +9,11 @@ This package is maintained by:
 
 This package depends on the following ROS packages:
 - catkin (buildtool)
+- catkin_virtualenv (build)
 - lasr_object_detection_yolo
 - lasr_perception_server
 
-Install the YOLOv8 server dependencies:
 
-```bash
-# enter source directory
-cd src/lasr-base/common/Perception/lasr_object_detection_yolov8/yolo_server
-
-# create a new virtualenv if not already
-python3 -m venv venv
-
-# activate it
-# bash:
-source venv/bin/activate.bash
-# fish:
-source venv/bin/activate.fish
-
-# install requirements
-pip install -r requirements.txt
-```
 
 ## Usage
 
@@ -60,11 +44,6 @@ response = detect_service(request)
 To start the service:
 
 ```python
-# outside of TIAGo container:
-cd src/lasr-base/common/Perception/lasr_object_detection_yolov8/yolo_server
-source venv/bin/activate.bash
-python3 server.py
-
 # inside of TIAGo container & LASR workspace:
 rosrun lasr_object_detection_yolov8 service
 # .. or also write to /yolov8/debug topic:
@@ -91,27 +70,19 @@ DEBUG=1 rosrun lasr_object_detection_yolov8 service
 
 4. Install the YOLO server if not already, see "Installing YOLOv8 Server" section.
 
-5. Start the YOLO server.
-
-   ```bash
-   cd src/lasr-base/common/Perception/lasr_object_detection_yolov8/yolo_server
-   source venv/bin/activate.bash
-   python3 server.py
-   ```
-
-6. Start the YOLO service.
+5. Start the YOLO service.
 
    ```bash
    DEBUG=1 rosrun lasr_object_detection_yolov8 service
    ```
 
-7. Launch image view to preview the debug output.
+6. Launch image view to preview the debug output.
 
    ```bash
    rqt_image_view
    ```
 
-8. Start the relay script to start processing images.
+7. Start the relay script to start processing images.
 
    ```bash
    rosrun lasr_object_detection_yolov8 relay /camera/image_raw
@@ -150,7 +121,7 @@ The actual YOLO detection routine works as follows:
 
 - Load the appropriate YOLO model
 
-  Models are loaded from the `yolo_server/models` folder. Standard v8 models are loaded on-demand and saved to the directory as well.
+  Models are loaded from the `models` folder. Standard v8 models are loaded on-demand and saved to the directory as well.
 
   > [!IMPORTANT]  
   > If you would like to train your own model, [a full guide is available here](https://github.com/insertish/yolov8_training_workspace).

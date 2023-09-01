@@ -1,6 +1,0 @@
-# keep models folder
-models/**
-!models/.gitkeep
-
-# ignore venv
-venv

@@ -10,6 +10,7 @@ class Negotiate(smach.State):
     def execute(self, userdata):
         # call and count the people objects
         self.voice.speak(" I can see {} people in front of me".format(2))
+        closer_to_door = True
         if closer_to_door:
             self.voice.speak("I am the closest to the door so I have to exit first")
             # clear costmap
@@ -19,18 +20,20 @@ class Negotiate(smach.State):
             self.voice.speak("I can wait for you to exit the lift. Just say 'Tiago, wait' if you need more time.")
             rospy.sleep(5)
             # hear
+            hear_wait = True
             if hear_wait:
                 self.voice.speak("I will wait more")
                 rospy.sleep(5)
             else:
                 # goint back to the door
-            pass
+                pass
 
             return 'success'
 
 
         else:
             counter = 0
+            people_in_front_of_door = True
             while ready_to_exit or counter < 3:
                 self.voice.speak("I am not the closest to the door so I will wait for you to exit first")
                 self.voice.speak("I will tell you a joke while I wait")
