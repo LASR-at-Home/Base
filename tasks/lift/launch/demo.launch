@@ -11,13 +11,15 @@
 
 
 <!--     STATIC POINTS  -->
-  <rosparam command="load" file="$(find lift)/config/demo_sim.yaml" />
+<!--  <rosparam command="load" file="$(find lift)/config/demo_sim.yaml" />-->
+<!--    <rosparam command="load" file="$(find lift)/config/final_lift_sim.yaml" />-->
+    <rosparam command="load" file="$(find lift)/config/final_lift.yaml" />
 
 
 <!--      PERCEPTION     -->
 <!--    <include file="$(find lasr_perception_server)/launch/perception_server.launch"/>-->
 <!--    <node name="lasr_object_detection_yolo" pkg="lasr_object_detection_yolo" type="yolo_object_detection_server.py" output="screen" respawn="true"/>-->
-    <node pkg="lasr_object_detection_yolov8" type="service" name="yolo_service" output="screen"/>
+    <node pkg="lasr_object_detection_yolov8" type="service" name="service" output="screen"/>
     <node pkg="lasr_perception_server" name="perception_server" type="perception_server.py"/>
 
 

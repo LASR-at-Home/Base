@@ -6,6 +6,7 @@ def get_pose_from_param(name):
     if not rospy.has_param(name):
         return None
     pose = rospy.get_param(name)
+    print(pose)
     return Pose(Point(pose['position']['x'],
                       pose['position']['y'],
                       pose['position']['z']),

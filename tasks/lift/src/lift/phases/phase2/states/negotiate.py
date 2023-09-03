@@ -13,10 +13,6 @@ class Negotiate(smach.State):
         closer_to_door = True
         if closer_to_door:
             self.voice.speak("I am the closest to the door so I have to exit first")
-            # clear costmap
-            # go to centre waiting area
-            # turn around
-            # wait for the person to exit
             self.voice.speak("I can wait for you to exit the lift. Just say 'Tiago, wait' if you need more time.")
             rospy.sleep(5)
             # hear

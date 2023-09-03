@@ -13,6 +13,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from cv_bridge import CvBridge
 import cv2
 
+
 # Constants for the height map
 
 
@@ -74,13 +75,18 @@ class NarrowSpaceNavSrv:
     def choose_target_point(self, occupancy_array):
         heights = self.build_height_map(occupancy_array)
         self.plot_height(heights)
-        min_height = np.min(heights)
+        print(f"heights: {heights}")
+        non_zero_heights = heights[heights > 0]
+        min_height = np.min(non_zero_heights)
+        print(f"heights: {heights}")
         target_indices = np.where(heights == min_height)
         target_x = target_indices[1][0]
         target_y = target_indices[0][0]
+        rospy.loginfo("Target point: ({}, {})".format(target_x, target_y))
         return (target_x, target_y)
 
     def plot_height(self, heights):
+        rospy.loginfo("Plotting height map")
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
         x, y = np.meshgrid(np.arange(heights.shape[1]), np.arange(heights.shape[0]))
@@ -89,8 +95,12 @@ class NarrowSpaceNavSrv:
         ax.set_ylabel('Y')
         ax.set_zlabel('Height')
         plt.title('3D Height Map')
-        plt.show()
 
+        from lift.defaults import PLOT_SAVE, PLOT_SHOW, TEST, DEBUG_PATH
+        if PLOT_SHOW:
+            plt.show()
+        if PLOT_SAVE:
+            plt.savefig(DEBUG_PATH + "/heightmap" + str(TEST) + ".jpg")
 
 
 if __name__ == "__main__":

@@ -2,18 +2,19 @@
 import smach
 from tiago_controllers.controllers.look_at import LookAt
 from tiago_controllers.controllers.base_controller import CmdVelController
-from lasr_object_detection_yolov8.detect_objects import detect_objects
+from lasr_object_detection_yolo.detect_objects_v8 import detect_objects
 import rospy
 
 HORIZONTAL = 0.8
 VERTICAL = 0.3
 
 class FacePerson(smach.State):
-    def __init__(self, controllers, voice, yolo):
+    def __init__(self, controllers, voice, yolo, cmd):
         smach.State.__init__(self, outcomes=['success', 'failed'])
         self.controllers = controllers
         self.voice = voice
         self.yolo = yolo
+        self.cmd_vel = cmd
 
         self.search_points = [(-1 * HORIZONTAL, VERTICAL),
                               (0, VERTICAL),

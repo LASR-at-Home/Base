@@ -5,6 +5,7 @@ from tiago_controllers.controllers import Controllers
 from lasr_voice.voice import Voice
 from lasr_object_detection_yolo.srv import YoloDetection
 import rospy
+from tiago_controllers.controllers.base_controller import CmdVelController
 
 class Lift(smach.StateMachine):
     def __init__(self):
@@ -13,13 +14,16 @@ class Lift(smach.StateMachine):
         self.yolo = rospy.ServiceProxy('/yolov8/detect', YoloDetection)
 
         self.controllers = Controllers()
-        # self.voice = Voice()
-        self.voice = "hello"
+        self.cmd = CmdVelController()
+        self.voice = Voice()
+        # self.voice = "hello"
 
         if not rospy.get_published_topics(namespace='/pal_head_manager'):
             rospy.set_param("/is_simulation", True)
+        else:
+            rospy.set_param("/is_simulation", False)
 
         with self:
-            smach.StateMachine.add('PHASE1', Phase1(self.controllers, self.voice), transitions={'success' : 'PHASE2'})
-            smach.StateMachine.add('PHASE2', Phase2(self.controllers, self.voice, self.yolo), transitions={'success' : 'PHASE3'})
+            smach.StateMachine.add('PHASE1', Phase1(self.controllers, self.voice, self.cmd), transitions={'success' : 'PHASE2'})
+            smach.StateMachine.add('PHASE2', Phase2(self.controllers, self.voice, self.yolo, self.cmd), transitions={'success' : 'PHASE3'})
             smach.StateMachine.add('PHASE3', Phase3(self.controllers, self.voice), transitions={'success' : 'success'})

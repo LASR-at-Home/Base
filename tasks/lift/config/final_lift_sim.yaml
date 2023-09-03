@@ -1,0 +1,65 @@
+start:
+  pose:
+    position: {x: 2.71006066106, y: 2.12491014098, z: 0.0}
+    orientation: {x: 0.0, y: 0.0, z: 0.752734065, w: 0.658324712318}
+
+finish:
+  pose:
+    position: {x: 2.71006066106, y: 2.12491014098, z: 0.0}
+    orientation: {x: 0.0, y: 0.0, z: 0.752734065, w: 0.658324712318}
+
+
+wait:
+  pose:
+    position: {  x: 1.52014112473, y: -4.45748567581, z: 0.0}
+    orientation: {x: 0.0, y: 0.0, z: -0.151568158509, w: 0.988446808547}
+
+wait_centre:
+  pose:
+    position: {x: 2.71006066106, y: 2.12491014098, z: 0.0}
+    orientation: {x: 0.0, y: 0.0, z: 0.752734065, w: 0.658324712318}
+
+
+lift_centre:
+  pose:
+    position: {  x: 5.42446279526, y: -4.42278385162, z: -0.00143432617188}
+    orientation: {x: 0.0, y: 0.0, z: 0.752734065, w: 1.0}
+
+
+lift:
+  pose:
+    position:
+      x: 3.38024333356
+      y: -0.707694082116
+      z: 0.0
+    orientation:
+      x: 0.0
+      y: 0.0
+      z: -0.59235272545
+      w: 0.805678750279
+
+floor:
+  status: "unknown"
+  number: 0
+
+counter_door:
+  counter: 0
+
+in_lift:
+  status: False
+
+
+counter_lift:
+  counter: 0
+  
+door:
+  pose:
+    position: { x: -1.21927762032, y: -4.9453663826, z: -0.00143432617188 }
+    orientation: { x: 0.0, y: 0.0, z: 0.0, w: 0.0 }
+
+lift_in_front:
+  pose:
+    position: {     x: 3.74506759644, y: -5.12129688263, z: -0.00143432617188}
+    orientation: { x: 0.0, y: 0.0, z: 0.0, w: 0.0 }
+
+

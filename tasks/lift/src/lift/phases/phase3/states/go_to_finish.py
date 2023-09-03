@@ -14,8 +14,7 @@ class GoToFinish(smach.State):
 
     def execute(self, userdata):
         rospy.loginfo('Executing state GoToFinish')
-        pos = get_pose_from_param('/door')
-        self.controllers.base_controller.sync_to_pose(pos)
+        self.controllers.base_controller.sync_to_pose(get_pose_from_param('/door/pose'))
         p = Pose()
         p.position.x = 0.0
         p.position.y =  0.0

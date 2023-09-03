@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+import random
+
 import cv2, matplotlib.pyplot as plt
 
 import torch
@@ -11,13 +13,14 @@ import glob
 from choosing_wait_position.final_lift_key_point.common_tools import get_model
 import os, sys
 
+from lift.defaults import PLOT_SAVE, PLOT_SHOW, TEST, DEBUG_PATH
+
 FWD = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.abspath(os.path.join(FWD, "../src/choosing_wait_position")))
 os.chdir(os.path.abspath(os.path.join(FWD, 'models')))
 
 
 def make_prediction(image_path):
-
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = get_model(1, weights_path='keypointsrcnn_weights.pth')
 
@@ -31,10 +34,14 @@ def make_prediction(image_path):
         original_img = Image.open(img_name)
 
         plt.imshow(original_img, cmap='gray')
-        plt.show()
+
+        if PLOT_SHOW:
+            plt.show()
+        if PLOT_SAVE:
+            plt.savefig(DEBUG_PATH + "/predict_pos_zoe" + str(TEST) + ".jpg")
 
         img = F.to_tensor(original_img)
-        img = torch.unsqueeze(img,dim=0)
+        img = torch.unsqueeze(img, dim=0)
 
         model.eval()
         with torch.no_grad():
@@ -49,28 +56,29 @@ def make_prediction(image_path):
             except:
                 return None, None
 
-        return bbox,keypoint
+        return bbox, keypoint
 
 
-def visualise_predictions(image, bbox, keypoint): 
+def visualise_predictions(image, bbox, keypoint):
     print("bbox:", bbox)
     print("keypoint: ", keypoint)
 
-
-    start_point = (int(bbox[0]),int(bbox[1]))
-    end_point = (int(bbox[2]),int(bbox[3]))
+    start_point = (int(bbox[0]), int(bbox[1]))
+    end_point = (int(bbox[2]), int(bbox[3]))
     target_pos = (int(keypoint[0][0]), int(keypoint[0][1]))
     window_name = "prediction"
-    color = (255,0,0)
+    color = (255, 0, 0)
     thickness = 1
 
-    image = cv2.rectangle(image, start_point,end_point,color,thickness)
-    image = cv2.circle(image, target_pos, 1, (255,0,0), 1)
+    image = cv2.rectangle(image, start_point, end_point, color, thickness)
+    image = cv2.circle(image, target_pos, 1, (255, 0, 0), 1)
 
-
-    plt.figure(figsize=(40,40))
+    plt.figure(figsize=(40, 40))
     plt.imshow(image)
-    plt.show()
+    if PLOT_SHOW:
+        plt.show()
+    if PLOT_SAVE:
+        plt.savefig(DEBUG_PATH + "/predict_pos_viz_test" + str(TEST) + ".jpg")
 
 # from geometry_msgs.msg import PoseWithCovarianceStamped, Pose, Point, Quaternion
 # from tiago_controllers.controllers.controllers import Controllers

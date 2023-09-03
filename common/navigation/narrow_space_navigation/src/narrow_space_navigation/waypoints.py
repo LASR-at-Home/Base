@@ -15,6 +15,7 @@ from narrow_space_navigation.waypoint_helpers import *
 import math
 from std_msgs.msg import Empty
 from tiago_controllers.controllers.controllers import Controllers
+from lift.defaults import TEST, PLOT_SHOW, PLOT_SAVE, DEBUG_PATH
 
 np.set_printoptions(threshold=np.inf)
 
@@ -293,7 +294,6 @@ class Waypoint:
         warped = cv2.convertScaleAbs(warped)
         plt.imshow(warped, cmap='gray')
 
-        TEST = random.randint(0, 1000)
         plt.savefig('/home/nicole/robocup/rexy/zoe/' + str(TEST) + '.jpg', dpi=300,
                     bbox_inches='tight')
         plt.axis('off')
@@ -365,8 +365,12 @@ class Waypoint:
         # x, y = points.flatten()[0], points.flatten()[1]
 
         # Loop through all the points and add each point to the new_points list
+        print(f'points: {points}')
         if is_lift:
-            new_points.append([points[0], points[1]])
+            try:
+                new_points.append([points[0], points[1]])
+            except:
+                new_points.append([points[0][0], points[0][1]])
         else:
             for i in range(points.shape[0]):
                 print(points[i][0], points[i][1])
@@ -383,10 +387,11 @@ class Waypoint:
             global_points.append((x / z, y / z))
 
         # Get the x and y coordinates of each transformed point
-        plt.imshow(self.np_grid(self._msg), cmap='gray')
+
+        # plt.imshow(self.np_grid(self._msg), cmap='gray', aspect='auto')
         for i in range(len(global_points)):
             x, y = global_points[i][0], global_points[i][1]
-            plt.scatter(x, y, c='r')
+            # plt.scatter(x, y, c='r')
 
         robot_points = []
         x, y = 0, 0
@@ -401,13 +406,13 @@ class Waypoint:
 
             robot_points.append([x, y])
 
-        print(robot_points)
-        plt.title('local_global' + str(TEST) + '.jpg')
-        # plt.savefig('/home/nicole/robocup/rexy/waypoints/waypoints' + str(TEST) + '-2.jpg', dpi=300,
-        #             bbox_inches='tight')
-
-        # Show the plot with all the transformed points and robot points
-        # plt.show()
+        print("robot points  {}".format(robot_points))
+        # plt.title('local_global' + str(TEST) + '.jpg')
+        #
+        # if PLOT_SHOW:
+        #     plt.show()
+        # if PLOT_SAVE:
+        #     plt.savefig(DEBUG_PATH + "/waypoints" + str(TEST) + ".jpg")
 
         return robot_points
 
@@ -431,7 +436,12 @@ class Waypoint:
         # Display the dilation
         plt.imshow(dilation, cmap='gray')
         plt.title('dilation')
-        plt.show()
+
+        if PLOT_SHOW:
+            plt.show()
+        if PLOT_SAVE:
+            plt.savefig(DEBUG_PATH + "/dilation" + str(TEST) + ".jpg")
+
 
         # Get non-black pixels
         non_black_pixels = self.get_white_pxl(pixels=dilation, threshold=55)
@@ -456,7 +466,8 @@ class Waypoint:
 
             # Plot clusters
             plot_clusters(points=points, labels=cluster_labels, dilation=dilation, centers=centers, msg= self._msg)
-        except Inde
+        except IndexError:
+            print('IndexError')
 
         return centers, num_clusters, midpoints, dilation
 
@@ -851,6 +862,7 @@ class Waypoint:
         # sim elevator
         if is_lift:
             if is_sim:
+                rospy.loginfo('SIMULATION')
                 #sim
                 elevator_center = 5.46206521987915, -4.357753753662109
                 points = [[4.442041397094727, -5.306999683380127],
@@ -874,11 +886,21 @@ class Waypoint:
                           [1.7605891227722168, -5.794760704040527]]
             else:
                 #real
-                elevator_center = 3.24403572083, -0.0620246045291
-                points = [[3.68647170067, 0.510698020458],
-                          [3.88166356087, -0.543632388115],
-                          [2.82762503624, -0.686813175678],
-                          [2.42422771454, 0.354500830173]]
+
+                elevator_center = 2.81842398643, -0.141454875469
+                points = [[ 3.79584240913, 0.724112570286],
+                          [ 1.32902395725, 0.370439916849],
+                          [ 1.81307899952, -1.20247292519],
+                          [ 4.12164831161, -0.839492976665]]
+                
+
+
+                # previous
+                # elevator_center = 3.24403572083, -0.0620246045291
+                # points = [[3.68647170067, 0.510698020458],
+                #           [3.88166356087, -0.543632388115],
+                #           [2.82762503624, -0.686813175678],
+                #           [2.42422771454, 0.354500830173]]
 
 
         self.get_global_costmap_window(isRobot=False,_x=elevator_center[0],_y=elevator_center[1])

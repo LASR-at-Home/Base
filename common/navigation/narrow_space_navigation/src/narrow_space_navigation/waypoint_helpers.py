@@ -9,8 +9,8 @@ import cv2
 from geometry_msgs.msg import Pose, Point, Quaternion, PoseStamped, PolygonStamped, Polygon, Point32
 
 np.set_printoptions(threshold=np.inf)
-import random
-TEST = random.randint(0, 1000)
+
+from lift.defaults import TEST
 
 def draw_edges_on_window(window, edges):
     plt.imshow(window, cmap='gray')
@@ -168,6 +168,7 @@ def area_with_shoelace(msg, elevator_points):
     area_pixel_count_robot = polygon_area / (msg.info.resolution * msg.info.resolution)
     return area_pixel_count_robot * 3
 
+from lift.defaults import PLOT_SAVE, PLOT_SHOW, TEST, DEBUG_PATH
 def plot_clusters(points=None, labels=None, dilation=None, centers=None, msg=None):
     """
     This function plots clusters.
@@ -205,21 +206,24 @@ def plot_clusters(points=None, labels=None, dilation=None, centers=None, msg=Non
     # for combination in combinations:
     #     plt.plot([combination[0][0], combination[1][0]], [combination[0][1], combination[1][1]], 'k-', color='r')
 
-    plt.show()
-    # plt.savefig('/home/nicole/robocup/rexy/clusters' + str(TEST) + '.jpg', dpi=300,
-    #             bbox_inches='tight')
-    # plt.imshow(dilation, cmap='gray')
+    if PLOT_SHOW:
+        plt.show()
+    if PLOT_SAVE:
+        plt.savefig(DEBUG_PATH + "/clusters" + str(TEST) + ".jpg")
 
     # line_intersect_poly(centers, dilation)
 
     plt.imshow(dilation, cmap='gray')
-    #
+
     # inters = find_intersections(combinations, msg)
     #
     # for inter in inters:
     #     plt.plot([inter[0][0], inter[1][0]], [inter[0][1], inter[1][1]], 'k-', color='r')
     #
-    # plt.show()
+    if PLOT_SHOW:
+        plt.show()
+    if PLOT_SAVE:
+        plt.savefig(DEBUG_PATH + "/dilation_in_plot_" + str(TEST) + ".jpg")
 
 # from shapely.geometry import LineString, Polygon
 

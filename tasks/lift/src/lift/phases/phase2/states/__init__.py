@@ -8,3 +8,5 @@ from .declare_floor import DeclareFloor
 from .start_phase_2 import StartPhase2
 from .check_available_exit import CheckAvailableExit
 from .negotiate import Negotiate
+from .schedule_going_out import ScheduleGoingOut
+from .inside_lift_sm import InsideLiftSM
