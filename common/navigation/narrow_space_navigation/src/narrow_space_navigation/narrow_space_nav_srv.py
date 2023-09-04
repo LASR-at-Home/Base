@@ -40,16 +40,25 @@ class NarrowSpaceNavSrv:
         return min_distance
 
     def build_height_map(self, occupancy_array):
+        print(f"occupancy_array: {occupancy_array.shape}")
         SIZE_Y, SIZE_X = occupancy_array.shape
         heights = np.zeros_like(occupancy_array, dtype=float)
 
-        EDGE_VALUE = 1.0
+        WALL_VALUE = 1
+        heights[0, :] = WALL_VALUE
+        heights[SIZE_Y - 1, :] = WALL_VALUE
+        heights[:, 0] = WALL_VALUE
+        heights[:, SIZE_X - 1] = WALL_VALUE
 
+        EDGE_VALUE = 100
         # Set the edges of the occupancy_array to be walls (occupied)
         occupancy_array[0, :] = EDGE_VALUE
         occupancy_array[SIZE_Y - 1, :] = EDGE_VALUE
         occupancy_array[:, 0] = EDGE_VALUE
         occupancy_array[:, SIZE_X - 1] = EDGE_VALUE
+
+        print(f"occupancy_array: {occupancy_array}")
+
 
         for x in range(SIZE_X):
             for y in range(SIZE_Y):
@@ -69,6 +78,9 @@ class NarrowSpaceNavSrv:
                                                   + math.pow(SIZE_Y - y, 2) / (2 * math.pow(SPREAD_WALLS, 2))
                                           )
                     heights[y][x] += height_contribution
+
+
+        print(f"heights: {heights}")
 
         return heights
 

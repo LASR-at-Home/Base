@@ -858,49 +858,23 @@ class Waypoint:
         #     self.get_global_costmap_window(isRobot=False,_x=elevator_center[0],_y=elevator_center[1])
         #     warped, M = self.extract_given_elevator_warping(points=points, msg=self._msg)
 
+
     def get_lift_information(self, is_lift, is_sim=True):
         # sim elevator
         if is_lift:
-            if is_sim:
-                rospy.loginfo('SIMULATION')
-                #sim
-                elevator_center = 5.46206521987915, -4.357753753662109
-                points = [[4.442041397094727, -5.306999683380127],
-                          [6.458549976348877, -5.189324855804443],
-                          [6.387932300567627, -3.4948019981384277],
-                          [4.504811763763428, -3.5497169494628906]]
-            else:
-                # real
-                elevator_center = 4.25867843628, -1.98845565319
-                points = [[4.63600158691, -1.35065078735],
-                          [4.87020158768, -2.30084991455],
-                          [3.86834454536, -2.61324429512],
-                          [3.50403380394, -1.44176590443]]
+            c = rospy.get_param('lift_position_center_point')
+            print(f"center 1: {c}")
+            print(f"center x: {c[0]} and the type {type(c[0])}")
+            print(f"center y : {c[1]}")
+            elevator_center = c[0], c[1]
+            points = rospy.get_param('lift_position_points')
         else:
-            if is_sim:
-                #sim
-                elevator_center = 3.127023935317993, -4.532418251037598
-                points = [[2.0859310626983643, -3.3872008323669434],
-                          [4.024967670440674, -3.3741872310638428],
-                          [4.011953830718994, -5.768733024597168],
-                          [1.7605891227722168, -5.794760704040527]]
-            else:
-                #real
-
-                elevator_center = 2.81842398643, -0.141454875469
-                points = [[ 3.79584240913, 0.724112570286],
-                          [ 1.32902395725, 0.370439916849],
-                          [ 1.81307899952, -1.20247292519],
-                          [ 4.12164831161, -0.839492976665]]
-                
-
-
-                # previous
-                # elevator_center = 3.24403572083, -0.0620246045291
-                # points = [[3.68647170067, 0.510698020458],
-                #           [3.88166356087, -0.543632388115],
-                #           [2.82762503624, -0.686813175678],
-                #           [2.42422771454, 0.354500830173]]
+            c = rospy.get_param('wait_position_center_point')
+            print(f"center: {c}")
+            print(f"center x: {c[0]} and the type {type(c[0])}")
+            print(f"center y : {c[1]}")
+            elevator_center = c[0], c[1]
+            points = rospy.get_param('wait_position_points')
 
 
         self.get_global_costmap_window(isRobot=False,_x=elevator_center[0],_y=elevator_center[1])

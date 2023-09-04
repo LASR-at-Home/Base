@@ -6,7 +6,7 @@ from tiago_controllers.controllers.controllers import Controllers
 
 def get_narrow_space():
         w = Waypoint()
-        warped, analytics, M = w.get_lift_information()
+        warped, analytics, M = w.get_lift_information(is_lift=True, is_sim=True)
         s = NarrowSpaceNavSrv()
         occupancy_array = warped
         thresh = np.mean(occupancy_array.flatten())
@@ -16,7 +16,7 @@ def get_narrow_space():
         # get the min point to go to
         p = s.choose_target_point(occupancy_array)
         # get the global point
-        global_points = w.local_to_global_points(M=M, points=p)
+        global_points = w.local_to_global_points(M=M, points=p, is_lift=True)
         # get tiago there
         p = Pose()
         p.position.x = global_points[0][0]
