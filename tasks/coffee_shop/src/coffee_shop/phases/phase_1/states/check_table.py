@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import smach
 import rospy
+
 from std_msgs.msg import String
 from play_motion_msgs.msg import PlayMotionGoal
 from sensor_msgs.msg import PointCloud2
@@ -9,8 +10,6 @@ from cv_bridge3 import CvBridge, cv2
 from common_math import pcl_msg_to_cv2, seg_to_centroid
 from coffee_shop.srv import TfTransform, TfTransformRequest
 import numpy as np
-from pal_startup_msgs.srv import StartupStart, StartupStop
-import rosservice
 
 OBJECTS = ["cup", "mug"]
 
@@ -21,12 +20,6 @@ class CheckTable(smach.State):
         self.bridge = CvBridge()
         self.detections_objects = []
         self.detections_people = []
-
-        service_list = rosservice.get_service_list()
-        # This should allow simulation runs as well, as i don't think the head manager is running in simulation
-        if "/pal_startup_control/stop" in service_list:
-            self.stop_head_manager = rospy.ServiceProxy("/pal_startup_control/stop", StartupStop)
-            self.start_head_manager = rospy.ServiceProxy("/pal_startup_control/start", StartupStart)
 
     def estimate_pose(self, pcl_msg, detection):
         centroid_xyz = seg_to_centroid(pcl_msg, np.array(detection.xyseg))
@@ -82,7 +75,7 @@ class CheckTable(smach.State):
         self.detections_people.extend(detections_people_)
 
     def execute(self, userdata):
-        result = self.stop_head_manager.call("head_manager")
+        self.context.stop_head_manager("head_manager")
 
         self.context.voice_controller.sync_tts("I am going to check the table")
         self.object_debug_images = []
@@ -129,5 +122,5 @@ class CheckTable(smach.State):
         count_text = f"There {'is' if people_count == 1 else 'are'} {people_count} {people_text}."
         self.context.voice_controller.sync_tts(f"{status_text} {count_text}")
 
-        res = self.start_head_manager.call("head_manager", '')
+        self.context.start_head_manager("head_manager", '')
         return 'finished' if len([(label, table) for label, table in self.context.tables.items() if table["status"] == "unvisited"]) else 'not finished'

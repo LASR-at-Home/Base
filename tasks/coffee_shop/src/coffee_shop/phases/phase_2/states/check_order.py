@@ -8,8 +8,7 @@ from std_msgs.msg import String
 from common_math import pcl_msg_to_cv2, seg_to_centroid
 from coffee_shop.srv import TfTransform, TfTransformRequest
 from cv_bridge3 import CvBridge, cv2
-from pal_startup_msgs.srv import StartupStart, StartupStop
-import rosservice
+
 from play_motion_msgs.msg import PlayMotionGoal
 from collections import Counter
 
@@ -22,11 +21,6 @@ class CheckOrder(smach.State):
         self.context = context
         self.bridge = CvBridge()
 
-        service_list = rosservice.get_service_list()
-        # This should allow simulation runs as well, as i don't think the head manager is running in simulation
-        if "/pal_startup_control/stop" in service_list:
-            self.stop_head_manager = rospy.ServiceProxy("/pal_startup_control/stop", StartupStop)
-            self.start_head_manager = rospy.ServiceProxy("/pal_startup_control/start", StartupStart)
         self.previous_given_order = []
 
     def estimate_pose(self, pcl_msg, detection):
@@ -41,7 +35,6 @@ class CheckOrder(smach.State):
         return np.array([response.target_point.point.x, response.target_point.point.y, response.target_point.point.z])
 
     def execute(self, userdata):
-        result = self.stop_head_manager.call("head_manager")
 
         pm_goal = PlayMotionGoal(motion_name="back_to_default", skip_planning=True)
         self.context.play_motion_client.send_goal_and_wait(pm_goal)
@@ -63,7 +56,6 @@ class CheckOrder(smach.State):
         given_order = [detection[0].name for detection in given_order]
 
         if sorted(order) == sorted(given_order):
-            res = self.start_head_manager.call("head_manager", '')
             return 'correct'
 
         if self.previous_given_order == given_order:

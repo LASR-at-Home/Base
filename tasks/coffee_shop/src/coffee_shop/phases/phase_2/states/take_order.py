@@ -69,6 +69,7 @@ class TakeOrder(smach.State):
         return choice == "yes"
 
     def execute(self, userdata):
+        self.context.stop_head_manager("head_manager")
         self.context.voice_controller.sync_tts("Can I please take your order, please answer after the beep?")
         order = []
         while True:
@@ -81,4 +82,5 @@ class TakeOrder(smach.State):
 
         self.context.voice_controller.sync_tts(f"Your order is {order_string}")
         self.context.tables[self.context.current_table]["order"] = order
+        self.context.start_head_manager("head_manager", '')
         return 'done'

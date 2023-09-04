@@ -10,6 +10,7 @@ class MakeOrder(smach.State):
         self.context = context
 
     def execute(self, userdata):
+        self.context.stop_head_manager("head_manager")
         order = self.context.tables[self.context.current_table]["order"]
         order_string = ', '.join([f"{count} {item if count == 1 else item+'s'}" for item, count in Counter(order).items()]).replace(', ', ', and ', len(order)-2)
         self.context.voice_controller.sync_tts(f"Please get me {order_string}")

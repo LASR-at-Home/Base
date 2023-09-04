@@ -12,7 +12,6 @@ import yaml
 from visualization_msgs.msg import Marker
 
 
-
 class Context:
 
     def __init__(self, config_path):
@@ -24,6 +23,15 @@ class Context:
         self.tf = rospy.ServiceProxy("/tf_transform", TfTransform)
         self.shapely = LasrShapely()
         self.speech = rospy.ServiceProxy("/lasr_speech/transcribe_and_parse", Speech)
+
+        try:
+            from pal_startup_msgs.srv import StartupStart, StartupStop
+            self.start_head_manager = rospy.ServiceProxy("/pal_startup_control/start", StartupStart)
+            self.stop_head_manager = rospy.ServiceProxy("/pal_startup_control/stop", StartupStop)
+        except ImportError:
+            self.start_head_manager = lambda a, b : None
+            self.stop_head_manager = lambda a : None
+
 
         self.tables = dict()
 
