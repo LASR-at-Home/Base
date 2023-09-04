@@ -28,12 +28,20 @@ class GoToLift(smach.State):
         print("getting lift information  {} ".format(rospy.get_param("/is_simulation")))
         warped, analysis, M = w.get_lift_information(is_lift=False, is_sim=rospy.get_param("/is_simulation"))
         image = Image.fromarray(warped)
+
+        print("Debug Path: ", DEBUG_PATH)
+        
         print(os.getcwd())
+        if PLOT_SAVE:
+            image.save(DEBUG_PATH + "/zoe_predict_pos_test_before_rotate" + str(TEST) + ".jpg")
+
+        #image = image.rotate(180)
 
         if PLOT_SAVE:
-            image.save(DEBUG_PATH + "/zoe_predict_pos_test" + str(TEST) + ".jpg")
+            image.save(DEBUG_PATH + "/zoe_predict_pos_test_after_rotate" + str(TEST) + ".jpg")
 
-        image_path = DEBUG_PATH + "/zoe_predict_pos_test" + str(TEST) + ".jpg"
+        image_path = DEBUG_PATH + "/zoe_predict_pos_test_after_rotate" + str(TEST) + ".jpg"
+        print("image_path: ", image_path)
         bbox, keypoint = make_prediction(image_path)
         visualise_predictions(warped, bbox, keypoint)
         if keypoint is None and bbox is None:

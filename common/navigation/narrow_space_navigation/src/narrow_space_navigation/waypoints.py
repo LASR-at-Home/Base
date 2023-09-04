@@ -294,8 +294,8 @@ class Waypoint:
         warped = cv2.convertScaleAbs(warped)
         plt.imshow(warped, cmap='gray')
 
-        plt.savefig('/home/nicole/robocup/rexy/zoe/' + str(TEST) + '.jpg', dpi=300,
-                    bbox_inches='tight')
+        #plt.savefig('/home/nicole/robocup/rexy/zoe/' + str(TEST) + '.jpg', dpi=300,
+         #           bbox_inches='tight')
         plt.axis('off')
         # plt.imshow(warped, cmap='gray')
         # plt.show()
@@ -887,11 +887,25 @@ class Waypoint:
             else:
                 #real
 
+                #real lift: 
+                #elevator_center = -2.03464794159,33.6637153625
+                #points = [[1.22704672813,34.685760498],
+                 #         [-1.00751376152, 33.0373535156],
+                  #        [-2.52714395523,32.8638191223],
+                   #       [-3.14254808426, 34.5485877991]]
+                
+               # robot room:
+                #elevator_center = 2.81842398643, -0.141454875469
+                #points = [[ 3.79584240913, 0.724112570286],
+                 #         [ 1.32902395725, 0.370439916849],
+                  #        [ 1.81307899952, -1.20247292519],
+                   #       [ 4.12164831161, -0.839492976665]]
+                
                 elevator_center = 2.81842398643, -0.141454875469
-                points = [[ 3.79584240913, 0.724112570286],
-                          [ 1.32902395725, 0.370439916849],
-                          [ 1.81307899952, -1.20247292519],
-                          [ 4.12164831161, -0.839492976665]]
+                points = [[3.9606051445,-0.823928892612],
+                          [0.93388146162,-1.63129329681],
+                          [0.742438554764,0.47995492816],
+                          [4.23744726181,1.03043222427]]
                 
 
 
