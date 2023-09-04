@@ -57,9 +57,6 @@ class NarrowSpaceNavSrv:
         occupancy_array[:, 0] = EDGE_VALUE
         occupancy_array[:, SIZE_X - 1] = EDGE_VALUE
 
-        print(f"occupancy_array: {occupancy_array}")
-
-
         for x in range(SIZE_X):
             for y in range(SIZE_Y):
                 if occupancy_array[y][x] == 0:
@@ -78,9 +75,6 @@ class NarrowSpaceNavSrv:
                                                   + math.pow(SIZE_Y - y, 2) / (2 * math.pow(SPREAD_WALLS, 2))
                                           )
                     heights[y][x] += height_contribution
-
-
-        print(f"heights: {heights}")
 
         return heights
 

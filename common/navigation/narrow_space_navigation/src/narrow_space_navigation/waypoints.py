@@ -217,7 +217,68 @@ class Waypoint:
     def get_black_pxl(pixels, threshold=60):
         return np.where(pixels <= threshold)
 
-    def is_narrow_space(self, elevator: List[List[float]] = None):
+    def has_enough_free_space(self, window):
+
+
+        num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(window, connectivity=4, ltype=cv2.CV_32S)
+        print(f"num_labels: {num_labels}, labels: {labels}, stats: {stats}")
+
+        mask = np.zeros(window.shape, dtype=np.uint8)
+
+        for i in range(num_labels):
+            componentMask = (labels == i).astype(np.uint8) * 255
+            mask = cv2.bitwise_or(mask, componentMask)
+            plt.figure(figsize=(8, 8))
+            plt.subplot(121)
+            plt.imshow(window, cmap='gray')
+            plt.title("Image")
+            plt.axis("off")
+
+            # Display the mask image
+            plt.subplot(122)
+            plt.imshow(mask, cmap='gray')
+            plt.title("componentMask")
+            plt.axis("off")
+
+            plt.show()
+
+        min_required_area = 1000  # Adjust this value as needed
+        area = stats[0, cv2.CC_STAT_AREA]
+        if area >= min_required_area:
+            # Check if the polygon can fit within the connected component
+            if self.can_fit_polygon_in_connected_component(labels == 0):
+                print("Found a connected component that can fit the polygon")
+                return True
+        # for label in range(num_labels):  # Skip background label 0
+        #     area = stats[label, cv2.CC_STAT_AREA]
+        #     if area >= min_required_area:
+        #         Check if the polygon can fit within the connected component
+                # if self.can_fit_polygon_in_connected_component(labels == label):
+                #     print("Found a connected component that can fit the polygon")
+                #     return True
+
+        return False
+
+    def can_fit_polygon_in_connected_component(self, connected_component_mask):
+        footprint = get_footprint(self._msg)
+        polygon_points = np.array(footprint, dtype=np.int32)
+        from shapely.geometry import Point, Polygon
+        polygon = Polygon(polygon_points)
+
+        for y in range(connected_component_mask.shape[0]):
+            for x in range(connected_component_mask.shape[1]):
+                if connected_component_mask[y, x] == 0:  # Check if it's a black pixel
+                    # Check if the point (x, y) is inside the polygon
+                    point = Point(x, y)
+                    if not polygon.contains(point):
+                        print("Point ({}, {}) is outside the polygon".format(x, y))
+                        return False
+
+        return True
+
+
+
+    def is_narrow_space(self, points):
         """
         Checks if the robot can fit in a narrow space of elevator
 
@@ -226,11 +287,6 @@ class Waypoint:
         :return: True if the robot can fit, False otherwise
 
         """
-        # get the elevator points
-        points = [[4.282492637634277, -3.5537350177764893],
-                  [4.353395938873291, -5.352860927581787],
-                  [6.462785720825195, -5.264233589172363],
-                  [6.569140911102295, -3.4651081562042236]]
         # get the window
         self.global_costmap_cb()
         window = np.array(self._msg.data).astype(np.int32).reshape(self._msg.info.height, self._msg.info.width)
@@ -881,6 +937,7 @@ class Waypoint:
         warped, M = self.extract_given_elevator_warping(points=points, msg=self._msg)
         centers, num_clusters, midpoints, dilation = self.find_clusters(warped)
         analytics = [centers, num_clusters, midpoints, elevator_center]
+        # return warped, analytics, M, dilation
         return warped, analytics, M
 
 

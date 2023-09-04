@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
-import os, rospkg, shutil
+import os, rospkg, shutil, rospy, sys
 
-DEBUG = 3
-DEBUG_WITH_IMAGES = True
+DEBUG = rospy.get_param('debug') # 3
+DEBUG_WITH_IMAGES = rospy.get_param('debug_with_images')
 
 
 # for matplotlib
-PLOT_SHOW = False
-PLOT_SAVE = True
+PLOT_SHOW = rospy.get_param('plot_show')
+PLOT_SAVE = rospy.get_param('plot_save')
 DEBUG_PATH = os.getcwd()
+
+rospy.logwarn(f"DEBUG: {DEBUG}, DEBUG_WITH_IMAGES: {DEBUG_WITH_IMAGES}, PLOT_SHOW: {PLOT_SHOW}, PLOT_SAVE: {PLOT_SAVE}")
 
 if DEBUG_WITH_IMAGES:
     if not os.path.exists(os.path.join(rospkg.RosPack().get_path("lift"), "debug_lift")):

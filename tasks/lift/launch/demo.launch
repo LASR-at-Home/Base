@@ -1,7 +1,11 @@
 <launch>
+<!--   DEFAULTS  -->
+<!--    export LIBGL_ALWAYS_SOFTWARE=1-->
+    <arg name="is_sim" default="false" />
 
 <!--     TASK  -->
    <node name="" pkg="lift" type="main.py" output="screen" required="true"/>
+
 
 
 <!--     INTERACTION  -->
@@ -11,9 +15,14 @@
 
 
 <!--     STATIC POINTS  -->
-<!--  <rosparam command="load" file="$(find lift)/config/demo_sim.yaml" />-->
-<!--    <rosparam command="load" file="$(find lift)/config/final_lift_sim.yaml" />-->
-    <rosparam command="load" file="$(find lift)/config/final_lift.yaml" />
+
+    <group if="$(arg is_sim)">
+        <!--  <rosparam command="load" file="$(find lift)/config/demo_sim.yaml" />-->
+        <rosparam command="load" file="$(find lift)/config/final_lift_sim.yaml" />
+    </group>
+    <group unless="$(arg is_sim)">
+        <rosparam command="load" file="$(find lift)/config/final_lift.yaml" />
+    </group>
 
 
 <!--      PERCEPTION     -->
