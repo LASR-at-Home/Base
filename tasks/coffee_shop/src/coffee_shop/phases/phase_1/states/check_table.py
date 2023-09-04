@@ -1,24 +1,14 @@
 #!/usr/bin/env python3
 import smach
 import rospy
-import rospkg
-import os
-import shutil
-import actionlib
 from std_msgs.msg import String
-from play_motion_msgs.msg import PlayMotionAction, PlayMotionGoal
-from sensor_msgs.msg import PointCloud2, Image
+from play_motion_msgs.msg import PlayMotionGoal
+from sensor_msgs.msg import PointCloud2
 from geometry_msgs.msg import PointStamped, Point
-from visualization_msgs.msg import Marker
 from cv_bridge3 import CvBridge, cv2
-from lasr_object_detection_yolo.srv import YoloDetection
-from lasr_voice.voice import Voice
-from pcl_segmentation.srv import SegmentCuboid, Centroid, MaskFromCuboid, SegmentBB
 from common_math import pcl_msg_to_cv2, seg_to_centroid
 from coffee_shop.srv import TfTransform, TfTransformRequest
 import numpy as np
-from actionlib_msgs.msg import GoalStatus
-import ros_numpy as rnp
 from pal_startup_msgs.srv import StartupStart, StartupStop
 import rosservice
 
@@ -93,14 +83,14 @@ class CheckTable(smach.State):
 
     def execute(self, userdata):
         result = self.stop_head_manager.call("head_manager")
-        
+
         self.context.voice_controller.sync_tts("I am going to check the table")
         self.object_debug_images = []
         self.people_debug_images = []
 
-        rospy.loginfo(self.current_table)
-        self.object_polygon = rospy.get_param(f"/tables/{self.current_table}/objects_cuboid")
-        self.person_polygon = rospy.get_param(f"/tables/{self.current_table}/persons_cuboid")
+        rospy.loginfo(self.context.current_table)
+        self.object_polygon = rospy.get_param(f"/tables/{self.context.current_table}/objects_cuboid")
+        self.person_polygon = rospy.get_param(f"/tables/{self.context.current_table}/persons_cuboid")
         self.detections_objects = []
         self.detections_people = []
 
@@ -140,5 +130,4 @@ class CheckTable(smach.State):
         self.context.voice_controller.sync_tts(f"{status_text} {count_text}")
 
         res = self.start_head_manager.call("head_manager", '')
-
-        return 'finished' if len([(label, table) for label, table in rospy.get_param("/tables").items() if table["status"] == "unvisited"]) == 0 else 'not_finished'
+        return 'finished' if len([(label, table) for label, table in self.context.tables.items() if table["status"] == "unvisited"]) else 'not finished'

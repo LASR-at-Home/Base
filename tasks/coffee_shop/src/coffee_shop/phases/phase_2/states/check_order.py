@@ -2,17 +2,15 @@
 import smach
 import rospy
 import numpy as np
-import ros_numpy as rnp
 from sensor_msgs.msg import PointCloud2
 from geometry_msgs.msg import Point, PointStamped
 from std_msgs.msg import String
 from common_math import pcl_msg_to_cv2, seg_to_centroid
-from lasr_object_detection_yolo.srv import YoloDetection
 from coffee_shop.srv import TfTransform, TfTransformRequest
 from cv_bridge3 import CvBridge, cv2
 from pal_startup_msgs.srv import StartupStart, StartupStop
 import rosservice
-from play_motion_msgs.msg import PlayMotionAction, PlayMotionGoal
+from play_motion_msgs.msg import PlayMotionGoal
 from collections import Counter
 
 
@@ -79,11 +77,11 @@ class CheckOrder(smach.State):
         rospy.loginfo(f"Order: {order}, Given order: {given_order}")
 
         if not len(invalid_items):
-            self.context.voice_controller.sync_tts(f"You didn't give me {missing_items_string} which I asked for. Please correct the order.")
+            self.context.voice_controller.sync_tts(f"You didn't give me {missing_items_string} which I asked for. Please correct the order and say `all done` when you are ready for me to check it again.")
         elif not len(missing_items):
-            self.context.voice_controller.sync_tts(f"You have given me {invalid_items_string} which I didn't ask for. Please correct the order.")
+            self.context.voice_controller.sync_tts(f"You have given me {invalid_items_string} which I didn't ask for. Please correct the order and say `all done` when you are ready for me to check it again.")
         else:
-            self.context.voice_controller.sync_tts(f"You have given me {invalid_items_string} which I didn't ask for, and didn't give me {missing_items_string} which I asked for. Please correct the order.")
+            self.context.voice_controller.sync_tts(f"You have given me {invalid_items_string} which I didn't ask for, and didn't give me {missing_items_string} which I asked for. Please correct the order and say `all done` when you are ready for me to check it again.")
         rospy.sleep(rospy.Duration(5.0))
         self.previous_given_order = given_order
         return 'incorrect'

@@ -9,9 +9,10 @@ class GoToWaitLocation(smach.State):
         self.context = context
 
     def execute(self, userdata):
-        self.context.voice_controller.sync_tts("I am going to the wait for a new customer")
         wait_location = rospy.get_param("/wait")
         position, orientation = wait_location["location"]["position"], wait_location["location"]["orientation"]
+        done = not len([(label, table) for label, table in self.context.tables.items() if table["status"] == "ready"])
+        if not done:
+            self.context.voice_controller.sync_tts("I am going to the wait for a new customer")
         self.context.base_controller.sync_to_pose(Pose(position=Point(**position), orientation=Quaternion(**orientation)))
-        tables = rospy.get_param("/tables")
-        return 'not done' if len([table for table in tables.values() if table["status"] == "ready"]) else 'done'
+        return 'done' if done else 'not done'

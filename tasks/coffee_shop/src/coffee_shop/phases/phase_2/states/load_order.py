@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import smach
 import numpy as np
-from play_motion_msgs.msg import PlayMotionAction, PlayMotionGoal
+from play_motion_msgs.msg import PlayMotionGoal
 import json
 
 class LoadOrder(smach.State):

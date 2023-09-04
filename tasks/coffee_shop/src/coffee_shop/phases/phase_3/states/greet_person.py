@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 import smach
-import rospy
-from lasr_voice.voice import Voice
 
 class GreetPerson(smach.State):
     def __init__(self, context):

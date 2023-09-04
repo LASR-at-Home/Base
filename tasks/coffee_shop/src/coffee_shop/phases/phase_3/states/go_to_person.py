@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 import smach
-import rospy
-from geometry_msgs.msg import Point
 
 class GoToPerson(smach.State):
     def __init__(self, context):

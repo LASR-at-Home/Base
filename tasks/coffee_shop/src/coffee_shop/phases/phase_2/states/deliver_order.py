@@ -3,7 +3,7 @@ import smach
 import rospy
 from geometry_msgs.msg import Pose, Point, Quaternion
 import numpy as np
-from play_motion_msgs.msg import PlayMotionAction, PlayMotionGoal
+from play_motion_msgs.msg import PlayMotionGoal
 import json
 
 class DeliverOrder(smach.State):

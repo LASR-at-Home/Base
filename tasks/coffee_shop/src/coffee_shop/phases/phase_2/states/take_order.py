@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 import smach
 import rospy
-import random
 import json
 from collections import Counter
 
-MOCK_ORDER = ["cup", "cup"]
 class TakeOrder(smach.State):
     
     def __init__(self, context):
@@ -82,5 +80,5 @@ class TakeOrder(smach.State):
         order_string = ', '.join([f"{count} {item if count == 1 else item+'s'}" for item, count in Counter(order).items()]).replace(', ', ', and ', len(order)-2)
 
         self.context.voice_controller.sync_tts(f"Your order is {order_string}")
-        rospy.set_param(f"/tables/{rospy.get_param('/current_table')}/order", order)
+        self.context.tables[self.context.current_table]["order"] = order
         return 'done'

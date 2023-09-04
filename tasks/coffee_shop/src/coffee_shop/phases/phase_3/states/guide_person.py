@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 import smach
 import rospy
-from lasr_voice.voice import Voice
 from geometry_msgs.msg import Pose, Point, Quaternion
 
 class GuidePerson(smach.State):

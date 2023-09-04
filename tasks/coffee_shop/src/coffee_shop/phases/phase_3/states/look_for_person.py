@@ -3,17 +3,15 @@ import smach
 import rospy
 import numpy as np
 import ros_numpy as rnp
-from sensor_msgs.msg import PointCloud2, Image
+from sensor_msgs.msg import PointCloud2
 from geometry_msgs.msg import Point, PointStamped
 from std_msgs.msg import String
 from cv_bridge3 import CvBridge, cv2
-from lasr_object_detection_yolo.srv import YoloDetection
 from coffee_shop.srv import TfTransform, TfTransformRequest
-from visualization_msgs.msg import Marker
 from common_math import pcl_msg_to_cv2
 from pal_startup_msgs.srv import StartupStart, StartupStop
 import rosservice
-from play_motion_msgs.msg import PlayMotionAction, PlayMotionGoal
+from play_motion_msgs.msg import PlayMotionGoal
 
 class LookForPerson(smach.State):
     def __init__(self, context):
