@@ -14,16 +14,14 @@ from pal_startup_msgs.srv import StartupStart, StartupStop
 import rosservice
 from play_motion_msgs.msg import PlayMotionAction, PlayMotionGoal
 
-from lasr_shapely import LasrShapely
-shapely = LasrShapely()
-
 OBJECTS = ["cup", "mug", "bowl"]
 
 class CheckOrder(smach.State):
-    def __init__(self, yolo, tf, pm):
+    def __init__(self, yolo, tf, pm, shapely):
         smach.State.__init__(self, outcomes=['correct', 'incorrect'])
         self.detect = yolo
         self.tf = tf
+        self.shapely = shapely
         self.play_motion_client = pm
         self.bridge = CvBridge()
 
@@ -58,7 +56,7 @@ class CheckOrder(smach.State):
         img_msg = self.bridge.cv2_to_imgmsg(cv_im)
         detections = self.detect(img_msg, "yolov8n-seg.pt", 0.5, 0.3)
         detections = [(det, self.estimate_pose(pcl_msg, det)) for det in detections.detected_objects if det.name in OBJECTS]
-        satisfied_points = shapely.are_points_in_polygon_2d(counter_corners, [[pose[0], pose[1]] for (_, pose) in detections]).inside
+        satisfied_points = self.shapely.are_points_in_polygon_2d(counter_corners, [[pose[0], pose[1]] for (_, pose) in detections]).inside
         given_order = [detections[i][0].name for i in range(0, len(detections)) if satisfied_points[i]]
         rospy.set_param(f"/tables/{rospy.get_param('current_table')}/given_order", given_order)
 

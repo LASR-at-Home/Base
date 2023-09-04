@@ -1,0 +1,13 @@
+<launch>
+    <arg name="whisper_matcher" default="by-index" />
+    <arg name="whisper_device_param" default="18" />
+    <arg name="rasa_port" default="5005"/>
+    <arg name="rasa_model" default="$(find lasr_rasa)/assistants/coffee_shop/models"/>
+    <node pkg="coffee_shop" type="test_take_order.py" name="test_take_order" output="screen"/>
+    <include file = "$(find lasr_speech)/launch/speech.launch">
+        <arg name="matcher" value="$(arg whisper_matcher)"/>
+        <arg name="device_param" value="$(arg whisper_device_param)"/>
+        <arg name="rasa_port" value="$(arg rasa_port)"/>
+        <arg name="rasa_model" value="$(arg rasa_model)"/>
+    </include>
+</launch>
