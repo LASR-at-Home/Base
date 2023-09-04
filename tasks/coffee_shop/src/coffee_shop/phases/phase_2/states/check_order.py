@@ -7,13 +7,10 @@ from geometry_msgs.msg import Point, PointStamped
 from std_msgs.msg import String
 from common_math import pcl_msg_to_cv2, seg_to_centroid
 from coffee_shop.srv import TfTransform, TfTransformRequest
-from cv_bridge3 import CvBridge, cv2
 
 from play_motion_msgs.msg import PlayMotionGoal
 from collections import Counter
 
-
-OBJECTS = ["cup", "mug", "bowl"]
 
 class CheckOrder(smach.State):
     def __init__(self, context):
@@ -45,7 +42,7 @@ class CheckOrder(smach.State):
         cv_im = pcl_msg_to_cv2(pcl_msg)
         img_msg = self.context.bridge.cv2_to_imgmsg(cv_im)
         detections = self.context.yolo(img_msg, "yolov8n-seg.pt", 0.5, 0.3)
-        detections = [(det, self.estimate_pose(pcl_msg, det)) for det in detections.detected_objects if det.name in self.context.target_objects]
+        detections = [(det, self.estimate_pose(pcl_msg, det)) for det in detections.detected_objects if det.name in self.context.target_objects.keys()]
         satisfied_points = self.context.shapely.are_points_in_polygon_2d(counter_corners, [[pose[0], pose[1]] for (_, pose) in detections]).inside
         given_order = [detections[i] for i in range(0, len(detections)) if satisfied_points[i]]
 

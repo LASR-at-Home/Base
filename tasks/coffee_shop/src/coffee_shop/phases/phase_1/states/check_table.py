@@ -10,8 +10,6 @@ from common_math import pcl_msg_to_cv2, seg_to_centroid
 from coffee_shop.srv import TfTransform, TfTransformRequest
 import numpy as np
 
-OBJECTS = ["cup", "mug"]
-
 class CheckTable(smach.State):
     def __init__(self, context):
         smach.State.__init__(self, outcomes=['not_finished', 'finished'])
@@ -65,7 +63,7 @@ class CheckTable(smach.State):
         self.check_people(pcl_msg)
 
     def check_table(self, pcl_msg):
-        detections_objects_ = self.perform_detection(pcl_msg, self.object_polygon, self.context.target_objects)
+        detections_objects_ = self.perform_detection(pcl_msg, self.object_polygon, self.context.target_objects.keys())
         self.detections_objects.extend(detections_objects_)
 
     def check_people(self, pcl_msg):
