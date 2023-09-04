@@ -44,8 +44,10 @@ worker = SpeechRecognitionToTopic(MicrophonePhraseCollector(device_index=device_
 
 def start_listening(_):
     worker.start_listening()
+    return EmptyResponse()
 def stop_listening(_):
     worker.stop_listening()
+    return EmptyResponse()
 
 rospy.Service('/whisper/start_listening', Empty, start_listening)
 rospy.Service('/whisper/stop_listening', Empty, stop_listening)
