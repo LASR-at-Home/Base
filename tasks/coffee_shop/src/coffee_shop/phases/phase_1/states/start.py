@@ -1,4 +1,5 @@
 import smach
+import rospy
 
 class Start(smach.State):
     def __init__(self, context):
@@ -6,4 +7,5 @@ class Start(smach.State):
         self.context = context
     def execute(self, userdata):
         self.context.voice_controller.sync_tts("Starting Phase 1.")
+        rospy.loginfo(f"Context: {str(self.context)}")
         return 'done'
