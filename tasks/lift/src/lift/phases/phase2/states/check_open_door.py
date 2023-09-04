@@ -62,6 +62,8 @@ class CheckOpenDoor(smach.State):
         robot_pose = rospy.wait_for_message("/robot_pose", PoseWithCovarianceStamped)
         return robot_pose.pose.pose
 
+    def is_robot_close(self, pose, doorPose, minimumDistance):
+        return np.linalg.norm(pose, doorPose) < minimumDistance
 
     # maybe move to base_controller
     def calculate_angle(self, robot_pose, door_position):
