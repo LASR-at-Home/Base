@@ -1,11 +1,9 @@
 <launch>
     <arg name="matcher" default="by-index" />
     <arg name="device_param" default="" />
-    <arg name="rasa_port" default="5005"/>
     <arg name="rasa_model" default=""/>
     <node pkg="lasr_speech_recognition_whisper" type="transcribe_microphone" name="whisper_service" output="screen" args="$(arg matcher) $(arg device_param)"/>
     <include file = "$(find lasr_rasa)/launch/rasa.launch">
-        <arg name="port" value="$(arg rasa_port)"/>
         <arg name="model" value="$(arg rasa_model)"/>
     </include>
     <node pkg="lasr_speech" type="service" name="speech_service" output="screen"/>

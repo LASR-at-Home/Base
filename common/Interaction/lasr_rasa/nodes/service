@@ -1,50 +1,34 @@
 #!/usr/bin/env python3
 import rospy
-import requests
 from lasr_rasa.srv import Rasa, RasaResponse
 import sys
 import json
+from rasa.core.agent import Agent
 from collections import defaultdict
+import asyncio
 
 class RasaWrapper:
-    def __init__(self, api_url):
-        self.api = api_url
-        while True:
-            try:
-                resp = requests.post(self.api)
-                break
-            except requests.RequestException:
-                pass
+    def __init__(self, model_path):
+        self.agent = Agent.load(model_path)
 
     def __call__(self, req):
         response = RasaResponse()
-        resp = requests.post(self.api, json={"text": req.text})
-        if resp.status_code != 200 or not resp.json()["entities"]:
-            response.success = False
-        else:
-            json_response = resp.json()
-            entities_dict = defaultdict(list)
-            for entity_info in json_response["entities"]:
-                entity_dict = {k: v for k, v in entity_info.items() if k != "entity"}
-                entities_dict[entity_info["entity"]].append(entity_dict)
-            json_response["entities"] = entities_dict
-            response.json_response = json.dumps(json_response)
-            response.success = True
+        resp = asyncio.run(self.agent.parse_message(req.text))
+        entities_dict = defaultdict(list)
+        for entity_info in resp["entities"]:
+            entity_dict = {k: v for k, v in entity_info.items() if k != "entity"}
+            entities_dict[entity_info["entity"]].append(entity_dict)
+            resp["entities"] = entities_dict
+        response.json_response = json.dumps(resp)
+        response.success = True
         return response
 
 
 if __name__ == "__main__":
-    if len(sys.argv) > 1:
-        try:
-            PORT = int(sys.argv[1])
-        except ValueError:
-            print("Usage: rosrun lasr_rasa service [PORT]")
-            sys.exit()
-    else:
-        PORT = 5005
-
+    if len(sys.argv) < 2:
+        print("Usage: rosrun lasr_rasa service [model_path]")
     rospy.init_node("lasr_rasa")
-    rasa = RasaWrapper(f"http://localhost:{PORT}/model/parse")
+    rasa = RasaWrapper(sys.argv[1])
     rospy.loginfo("Rasa service is ready!")
     rospy.Service("/lasr_rasa/parse", Rasa, rasa)
     rospy.spin()
