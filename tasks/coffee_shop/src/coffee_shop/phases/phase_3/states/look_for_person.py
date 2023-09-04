@@ -6,7 +6,7 @@ import ros_numpy as rnp
 from sensor_msgs.msg import PointCloud2
 from geometry_msgs.msg import Point, PointStamped
 from std_msgs.msg import String
-from cv_bridge3 import CvBridge, cv2
+import cv2
 from coffee_shop.srv import TfTransform, TfTransformRequest
 from common_math import pcl_msg_to_cv2
 from play_motion_msgs.msg import PlayMotionGoal
@@ -15,7 +15,6 @@ class LookForPerson(smach.State):
     def __init__(self, context):
         smach.State.__init__(self, outcomes=['found', 'not found'])
         self.context = context
-        self.bridge = CvBridge()
 
     def estimate_pose(self, pcl_msg, cv_im, detection):
         contours = np.array(detection.xyseg).reshape(-1, 2)
@@ -50,7 +49,7 @@ class LookForPerson(smach.State):
         corners = rospy.get_param("/wait/cuboid")
         pcl_msg = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
         cv_im = pcl_msg_to_cv2(pcl_msg)
-        img_msg = self.bridge.cv2_to_imgmsg(cv_im)
+        img_msg = self.context.bridge.cv2_to_imgmsg(cv_im)
         detections = self.context.yolo(img_msg, "yolov8n-seg.pt", 0.3, 0.3)
         detections = [(det, self.estimate_pose(pcl_msg, cv_im, det)) for det in detections.detected_objects if det.name == "person"]
         satisfied_points = self.shapely.are_points_in_polygon_2d(corners, [[pose[0], pose[1]] for (_, pose) in detections]).inside

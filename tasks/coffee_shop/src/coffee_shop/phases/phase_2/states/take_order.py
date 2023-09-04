@@ -45,7 +45,7 @@ class TakeOrder(smach.State):
         items = []
         for quantity, item in quantified_items:
             items.extend([item]*quantity)
-        items_string = ', '.join([f"{count} {item if count == 1 else item+'s'}" for item, count in Counter(items).items()]).replace(', ', ', and ', len(items)-2)
+        items_string = ', '.join([f"{count} {self.context.target_object_remappings[item] if count == 1 else self.context.target_object_remappings[item]+'s'}" for item, count in Counter(items).items()]).replace(', ', ', and ', len(items)-2)
 
         self.context.voice_controller.sync_tts(f"You asked for {items_string}, is that correct? Please answer yes or no")
         if not self.affirm():
@@ -78,7 +78,7 @@ class TakeOrder(smach.State):
             if not self.affirm():
                 break
             self.context.voice_controller.sync_tts("What else can I get for you?")
-        order_string = ', '.join([f"{count} {item if count == 1 else item+'s'}" for item, count in Counter(order).items()]).replace(', ', ', and ', len(order)-2)
+        order_string = ', '.join([f"{count} {self.context.target_object_remappings[item] if count == 1 else self.context.target_object_remappings[item]+'s'}" for item, count in Counter(order).items()]).replace(', ', ', and ', len(order)-2)
 
         self.context.voice_controller.sync_tts(f"Your order is {order_string}")
         self.context.tables[self.context.current_table]["order"] = order

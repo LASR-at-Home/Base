@@ -6,7 +6,6 @@ from std_msgs.msg import String
 from play_motion_msgs.msg import PlayMotionGoal
 from sensor_msgs.msg import PointCloud2
 from geometry_msgs.msg import PointStamped, Point
-from cv_bridge3 import CvBridge, cv2
 from common_math import pcl_msg_to_cv2, seg_to_centroid
 from coffee_shop.srv import TfTransform, TfTransformRequest
 import numpy as np
@@ -17,7 +16,6 @@ class CheckTable(smach.State):
     def __init__(self, context):
         smach.State.__init__(self, outcomes=['not_finished', 'finished'])
         self.context = context
-        self.bridge = CvBridge()
         self.detections_objects = []
         self.detections_people = []
 
@@ -52,7 +50,7 @@ class CheckTable(smach.State):
 
     def perform_detection(self, pcl_msg, polygon, filter):
         cv_im = pcl_msg_to_cv2(pcl_msg)
-        img_msg = self.bridge.cv2_to_imgmsg(cv_im)
+        img_msg = self.context.bridge.cv2_to_imgmsg(cv_im)
         detections = self.context.yolo(img_msg, "yolov8n-seg.pt", 0.3, 0.3)
         detections = [(det, self.estimate_pose(pcl_msg, det)) for det in detections.detected_objects if det.name in filter]
         rospy.loginfo(f"All: {[(det.name, pose) for det, pose in detections]}")

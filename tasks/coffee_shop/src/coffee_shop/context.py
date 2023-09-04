@@ -7,6 +7,7 @@ from lasr_object_detection_yolo.srv import YoloDetection
 from coffee_shop.srv import TfTransform
 from lasr_shapely import LasrShapely
 from lasr_speech.srv import Speech
+from cv_bridge3 import CvBridge
 import actionlib
 import yaml
 from visualization_msgs.msg import Marker
@@ -22,6 +23,7 @@ class Context:
         self.yolo = rospy.ServiceProxy('/yolov8/detect', YoloDetection)
         self.tf = rospy.ServiceProxy("/tf_transform", TfTransform)
         self.shapely = LasrShapely()
+        self.bridge = CvBridge()
         self.speech = rospy.ServiceProxy("/lasr_speech/transcribe_and_parse", Speech)
 
         try:
@@ -42,7 +44,7 @@ class Context:
             table: {"status" : "unvisited", "people": list(), "order": list()} for table in data["tables"].keys()
         }
 
-        self.target_objects = data["objects"]
+        self.target_object_remappings = data["objects"]
 
         self.current_table = None
         self.new_customer_pose = None
