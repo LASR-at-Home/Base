@@ -27,6 +27,7 @@ class Context:
         self.speech = rospy.ServiceProxy("/lasr_speech/transcribe_and_parse", Speech)
 
         try:
+            # Assume that if the messages are available, then the services are running.
             from pal_startup_msgs.srv import StartupStart, StartupStop
             self.start_head_manager = rospy.ServiceProxy("/pal_startup_control/start", StartupStart)
             self.stop_head_manager = rospy.ServiceProxy("/pal_startup_control/stop", StartupStop)
