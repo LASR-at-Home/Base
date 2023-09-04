@@ -36,7 +36,7 @@ else:
         exit(1)
 
 import rospy
-from std_srvs.srv import Empty
+from std_srvs.srv import Empty, EmptyResponse
 rospy.init_node('transcribe_mic', anonymous=True)
 
 from lasr_speech_recognition_whisper import SpeechRecognitionToTopic, MicrophonePhraseCollector
