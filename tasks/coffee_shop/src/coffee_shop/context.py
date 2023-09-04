@@ -72,3 +72,13 @@ class Context:
     def publish_object_pose(self, x, y, z, frame_id):
         self._object_pose_pub.publish(self._create_point_marker(self._objects_idx, x, y, z, frame_id, 0.0, 1.0, 0.0))
         self._objects_idx += 1
+
+    def __str__(self):
+        table_summary = []
+        for table, table_info in self.tables.items():
+            status = table_info["status"]
+            people = table_info["people"]
+            order = table_info["order"]
+            table_summary.append(f"Table {table}: Status={status}, People={people}, Order={order}")
+
+        return "\n".join(table_summary)
