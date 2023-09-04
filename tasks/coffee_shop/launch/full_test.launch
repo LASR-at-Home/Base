@@ -2,6 +2,7 @@
 	<node pkg="lasr_object_detection_yolov8" type="service" name="yolo_service" output="screen"/>
 	<node pkg="lasr_shapely" type="service" name="shapely_service" output="screen"/>
 	<node pkg="coffee_shop" type="tf_transform.py" name="tf_transform" output="screen"/>
+	<rosparam command="load" file="$(find coffee_shop)/config/full_test.yaml" />
 	<rosparam command="load" file="$(find coffee_shop)/config/motions.yaml" />
 	    <arg name="whisper_matcher" default="by-index" />
     <arg name="whisper_device_param" default="18" />
