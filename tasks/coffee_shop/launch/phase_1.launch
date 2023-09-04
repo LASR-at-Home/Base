@@ -1,0 +1,5 @@
+<launch>
+	<arg name="config" default="test_phase_1"/>
+    <rosparam command="load" file="$(find coffee_shop)/config/$(arg config).yaml" />
+	<node pkg="coffee_shop" type="test_phase_1.py" name="test_phase_1" output="screen" args="$(find coffee_shop)/config/$(arg config).yaml"/>
+</launch>
