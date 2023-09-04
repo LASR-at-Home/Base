@@ -36,9 +36,6 @@ class Context:
 
         self.target_objects = data["objects"]
 
-        rosparam.delete_param("tables")
-        rosparam.load_file(config_path)
-
         self.current_table = None
         self.new_customer_pose = None
 
