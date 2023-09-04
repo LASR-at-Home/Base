@@ -5,7 +5,7 @@ import tf2_geometry_msgs
 import tf2_sensor_msgs
 
 from geometry_msgs.msg import PoseStamped, PoseArray
-from robocup_receptionist.srv import TfTransform, TfTransformResponse
+from coffee_shop.srv import TfTransform, TfTransformResponse
 
 
 from geometry_msgs.msg import PoseStamped, Vector3Stamped, PointStamped, WrenchStamped
