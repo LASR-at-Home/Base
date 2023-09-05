@@ -44,10 +44,10 @@ class Context:
                 data = yaml.safe_load(fp)
 
             self.tables = {
-                table: {"status" : "unvisited", "people": list(), "order": list()} for table in data["tables"].keys()
+                table: {"status" : "unvisited", "people": list(), "order": list()} for table in data.get("tables", dict()).keys()
             }
 
-            self.target_object_remappings = data["objects"]
+            self.target_object_remappings = data.get("objects", dict())
         else:
             rospy.logwarn("No config_path was given.")
 
