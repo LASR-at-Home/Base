@@ -12,14 +12,19 @@ class DeclareFloor(smach.State):
         rospy.set_param("/in_lift/status", True)
         if floor == 0:
             floor = 1
+
+        # maybe add the counter here as well
         self.voice.speak("I would love to go to the floor {}.".format(floor))
+        self.voice.speak("Can you help me by pressing the button?")
+        rospy.sleep(1)
         self.voice.speak(" Is the button for the floor {} selected?".format(floor))
 
         # get the answer
         answer = "yes"
         if answer == "yes":
-            self.voice.speak("Great!")
+            self.voice.speak("Great! Thank you for pressing the button!")
             return 'success'
         else:
             self.voice.speak("I will wait more")
+            rospy.sleep(1)
             return 'failed'

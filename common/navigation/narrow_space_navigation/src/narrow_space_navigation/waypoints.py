@@ -140,7 +140,6 @@ class Waypoint:
         rospy.wait_for_service('/move_base/clear_costmaps')
         try:
             clear_costmaps = rospy.ServiceProxy('/move_base/clear_costmaps', Empty)
-            clear_costmaps()
         except rospy.ServiceException as e:
             print("Service call failed: %s" % e)
 
@@ -348,13 +347,15 @@ class Waypoint:
 
         # apply erosion
         warped = cv2.convertScaleAbs(warped)
-        plt.imshow(warped, cmap='gray')
-
-        plt.savefig('/home/nicole/robocup/rexy/zoe/' + str(TEST) + '.jpg', dpi=300,
-                    bbox_inches='tight')
+        plt.imshow(warped, cmap='gray', aspect='auto')
         plt.axis('off')
-        # plt.imshow(warped, cmap='gray')
-        # plt.show()
+
+        if PLOT_SHOW:
+            plt.show()
+        if PLOT_SAVE:
+            plt.savefig(DEBUG_PATH + "/warped_in_extract" + str(TEST) + ".jpg")
+
+
         self.window = warped
         return warped, M
 
@@ -490,7 +491,7 @@ class Waypoint:
         dilation = cv2.dilate(erosion, kernel, iterations=self.dilation_iterations)
 
         # Display the dilation
-        plt.imshow(dilation, cmap='gray')
+        plt.imshow(dilation, cmap='gray', aspect='auto')
         plt.title('dilation')
 
         if PLOT_SHOW:
@@ -517,13 +518,13 @@ class Waypoint:
         centers = self.find_center_clusters(db=db, points=points)
 
         midpoints = self.find_midpoints(cluster_centers=centers)
-        try:
-            plot_clusters(points=points, labels=cluster_labels, dilation=dilation, centers=midpoints, msg=self._msg)
-
-            # Plot clusters
-            plot_clusters(points=points, labels=cluster_labels, dilation=dilation, centers=centers, msg= self._msg)
-        except IndexError:
-            print('IndexError')
+        # try:
+        #     plot_clusters(points=points, labels=cluster_labels, dilation=dilation, centers=midpoints, msg=self._msg)
+        #
+        #     # Plot clusters
+        #     plot_clusters(points=points, labels=cluster_labels, dilation=dilation, centers=centers, msg= self._msg)
+        # except IndexError or NotImplementedError as e:
+        #     rospy.logerr("the error is {}".format(e))
 
         return centers, num_clusters, midpoints, dilation
 

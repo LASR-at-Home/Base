@@ -16,10 +16,9 @@ wait:
 
 wait_centre:
   pose:
-    position: {  x: 3.6238360405, y: -0.465535610914, z: -0.0013427734375}
-    orientation: {x: 0.0, y: 0.0, z: 0.752734065, w: 0.658324712318}
-
-
+    position: {   x: 3.31266808156, y: -0.483950084911, z: 0.0}
+    orientation: {x: 0.0, y: 0.0,  z: -0.585323801347, w: 0.810799634668}
+    
 lift_centre:
   pose:
     position: {  x: 4.06678438187, y: -2.04051423073, z: 0.00247192382812}
@@ -57,7 +56,7 @@ lift:
 
 floor:
   status: "unknown"
-  number: 0
+  number: 2
 
 counter_door:
   counter: 0

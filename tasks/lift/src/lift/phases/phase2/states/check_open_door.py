@@ -20,7 +20,7 @@ from tf_module.transformations import euler_from_quaternion, quaternion_from_eul
 # from tf_module.tf_transforms import tranform_pose
 
 door_open = False
-MEAN_DISTANCE_THRESHOLD = 1.5
+MEAN_DISTANCE_THRESHOLD = 0.5
 RANDOM_LIFT_JOKES = [
     "It seems like this button is feeling a bit neglected. ",
     "Would you mind giving the button some attention?",
@@ -40,14 +40,6 @@ RANDOM_LIFT_JOKES = [
     "Why did the elevator break up with the escalator? It just couldn't keep up with the ups and downs of the "
     "relationship!",
 ]
-# Constants for door detection (you can adjust these)
-DOOR_WIDTH_MIN = 0.05  # Minimum door width in meters
-DOOR_WIDTH_MAX = 0.07  # Maximum door width in meters
-DISTANCE_THRESHOLD = 1.5  # Maximum distance to consider an opening as a potential door
-EXPECTED_DOOR_X = 4.21764755249
-EXPECTED_DOOR_Y = -4.48686313629
-EXPECTED_DOOR_ANGLE_DEG = 90.0
-
 
 class CheckOpenDoor(smach.State):
     def __init__(self, controllers, voice):
@@ -99,127 +91,39 @@ class CheckOpenDoor(smach.State):
     def counter(self, topic="/counter_lift/counter"):
         count = rospy.get_param(topic)
         rospy.loginfo("count: " + str(topic) + "---> " + str(count))
-        if count > 3:
-            return 'success'
+        print(type(count))
+        if int(count) > 3:
+            return "counter"
 
-        # set the param to count how many times it has failed in this state
+        # set the param talo count how many times it has failed in this state
         count += 1
         rospy.set_param(topic, count)
 
-
-    # def preprocess_laser_data(self, ranges):
-    #     window_size = 5
-    #     smoothed_ranges = np.convolve(ranges, np.ones(window_size) / window_size, mode='same')
-    #     return smoothed_ranges
-    #
-    # def segment_laser_data(self, ranges):
-    #     openings = []
-    #     current_opening = None
-    #     for i, range_measurement in enumerate(ranges):
-    #         if range_measurement > DISTANCE_THRESHOLD:
-    #             if current_opening is not None:
-    #                 current_opening['end_index'] = i
-    #                 openings.append(current_opening)
-    #                 current_opening = None
-    #         else:
-    #             if current_opening is None:
-    #                 current_opening = {'start_index': i, 'end_index': i}
-    #             else:
-    #                 current_opening['end_index'] = i
-    #
-    #     return openings
-
-    # def is_door(self, msg, ranges, opening, current_time):
-    #     global door_open
-    #
-    #     width = (opening['end_index'] - opening['start_index']) * msg.angle_increment * msg.range_max
-    #
-    #     if DOOR_WIDTH_MIN <= width <= DOOR_WIDTH_MAX:
-    #         distance = (ranges[opening['start_index']] + ranges[opening['end_index']]) / 2.0
-    #
-    #         if distance <= DISTANCE_THRESHOLD:
-    #             opening_angle = (opening['start_index'] + opening[
-    #                 'end_index']) / 2.0 * msg.angle_increment + msg.angle_min
-    #
-    #             expected_door_angle = np.radians(EXPECTED_DOOR_ANGLE_DEG)
-    #
-    #             expected_door_pose = PoseStamped()
-    #             expected_door_pose.header.stamp = current_time
-    #             expected_door_pose.header.frame_id = msg.header.frame_id
-    #             expected_door_pose.pose.position.x = EXPECTED_DOOR_X
-    #             expected_door_pose.pose.position.y = EXPECTED_DOOR_Y
-    #             expected_door_pose.pose.orientation.x, expected_door_pose.pose.orientation.y, expected_door_pose.pose.orientation.z, expected_door_pose.pose.orientation.w = euler_from_quaternion(
-    #                 [0, 0, expected_door_angle])
-    #
-    #
-    #             expected_door_pose_transformed = tranform_pose(expected_door_pose, msg.header.frame_id, current_time)
-    #
-    #             # Calculate the distance and angle between the detected opening and the expected door pose
-    #             distance_to_expected_door = np.sqrt(
-    #                 (expected_door_pose_transformed.pose.position.x - msg.pose.pose.position.x) ** 2 + (
-    #                             expected_door_pose_transformed.pose.position.y - msg.pose.pose.position.y) ** 2)
-    #             angle_to_expected_door = np.arctan2(
-    #                 expected_door_pose_transformed.pose.position.y - msg.pose.pose.position.y,
-    #                 expected_door_pose_transformed.pose.position.x - msg.pose.pose.position.x)
-    #
-    #             # Check if the detected opening is close to the expected door location and angle
-    #             if distance_to_expected_door < DISTANCE_THRESHOLD and abs(angle_to_expected_door) < np.radians(
-    #                     15):  # Adjust angle threshold as needed
-    #                 return True
-    #
-    #     return False
-    #
-    # def laser_callback(self, msg):
-    #     global door_open  # Access the global door_open variable
-    #     # Extract the laser scan data
-    #     ranges = msg.ranges  # List of range measurements
-    #
-    #     # Preprocess the LaserScan data (smoothing)
-    #     smoothed_ranges = self.preprocess_laser_data(ranges)
-    #
-    #     # Perform segmentation to detect openings (potential doors)
-    #     openings = self.segment_laser_data(smoothed_ranges)
-    #
-    #     # Analyze the detected openings
-    #     for opening in openings:
-    #         if self.is_door(msg, ranges, opening):
-    #             rospy.loginfo("Potential door detected at distance {:.2f} meters with width {:.2f} meters".format(
-    #                 opening['distance'], opening['width']))
-    #             return True
-    #
-    #     return False
-
-    # to add in execute
-     # laser_scan = rospy.wait_for_message("/scan", LaserScan)
-        # sub = rospy.Subscriber("/scan", LaserScan, self.laser_callback)
-        # while not rospy.is_shutdown():
-        #     # Access the door_open variable to check if a door is open
-        #     if door_open:
-        #         rospy.loginfo("The door is open!")
-        #         return 'success'
-        #     else:
-        #         rospy.loginfo("The door is closed!")
-
-
     def execute(self, userdata):
         in_lift = rospy.get_param("/in_lift/status")
-        if in_lift:
-            # face the door
-            # self.rotate_to_face_door()
-            self.rotate_to_face_door_new()
-            self.counter(topic="/counter_lift/counter")
-            self.voice.speak("Just a quick update... I am checking if the doors are open.")
-        else:
-            self.counter(topic="/counter_door/counter")
-            self.voice.speak("Just a quick update... I arrived at the lift. Waiting for the doors to open")
-
-        # tell a joke
-        self.voice.speak(random.choice(RANDOM_LIFT_JOKES))
-        rospy.sleep(2)
-
         self.voice.speak("Rotating to face the door")
         self.rotate_to_face_door_new()
-        self.voice.speak("Checking the door now")
+        if in_lift:
+            # face the door
+            res = self.counter(topic="/counter_lift/counter")
+            if res == "counter":
+                return 'success'
+            self.voice.speak("I am checking if the doors are open.")
+            # self.voice.speak("Just a quick update... I am checking if the doors are open.")
+        else:
+            res = self.counter(topic="/counter_door/counter")
+            if res == "counter":
+                return 'success'
+            self.voice.speak("I arrived at the lift. Waiting for the doors to open")
+            # self.voice.speak("Just a quick update... I arrived at the lift. Waiting for the doors to open")
+
+        self.rotate_to_face_door_new()
+        # tell a joke
+        self.voice.speak("I will tell you a joke in the meantime.")
+        self.voice.speak(random.choice(RANDOM_LIFT_JOKES))
+        rospy.sleep(1)
+
+        self.voice.speak("Now checking the door")
 
         # check for open door
         laser_scan = rospy.wait_for_message("/scan", LaserScan)

@@ -15,17 +15,18 @@ class CheckAvailableExit(smach.State):
         self.voice.speak(" Is that floor {}?".format(floor))
 
         # get the answer
-        answer = "yes"
-        new_answer = "no"
+        answer = "no"
+
+        new_answer = "yes"
+
         if answer == "yes":
             self.voice.speak("Great! Let's finally exit to floor {}.".format(floor))
             return 'success'
-        elif answer == "no":
-            self.voice.speak("Some people")
         else:
-            # self.voice.speak("I will wait more")
             self.voice.speak("Does anyone want to exit on this floor?")
             if new_answer == "yes":
                 self.voice.speak("Great! Let's see how this will happen.")
                 return 'wait'
+
+            self.voice.speak("We can continue this lift journey")
             return 'failed'

@@ -16,12 +16,31 @@ class NavigateInLift(smach.State):
         self.controllers = controllers
         self.voice = voice
 
+    def safe_clusters_info(self, analytics, global_centers):
+        centers, num_clusters, midpoints, _ = analytics
+        global_centers = np.array(global_centers)
+
+
+        rospy.set_param("/lift/num_clusters", num_clusters)
+        print("num clusters in safe")
+        print(rospy.get_param("/lift/num_clusters"))
+        print(global_centers)
+        print(type(global_centers))
+        rospy.set_param("/lift/centers", global_centers.tolist())
+        print("centers in safe")
+        print(rospy.get_param("/lift/centers"))
+
+
     def execute(self, userdata):
         w = Waypoint()
         clear_costmap()
         result = self.controllers.base_controller.sync_to_pose(get_pose_from_param('/lift_in_front/pose'))
         rospy.sleep(1)
         warped, analytics, M = w.get_lift_information(is_lift=True, is_sim=True)
+        global_centers = analytics[0]
+        global_centers = w.local_to_global_points(M=M, points=global_centers, is_lift=False)
+
+        self.safe_clusters_info(analytics, global_centers)
         if analytics[1] == 0:
             # if the lift is empty
             # go to predetermined place

@@ -7,6 +7,14 @@ from tiago_controllers.controllers.controllers import Controllers
 def get_narrow_space():
         w = Waypoint()
         warped, analytics, M = w.get_lift_information(is_lift=True, is_sim=True)
+        # warped, analytics, M, dilation = w.get_lift_information(is_lift=True, is_sim=True)
+        points = rospy.get_param('lift_position_points')
+        print(f"the narrow space is {w.is_narrow_space(points)}")
+        res = w.has_enough_free_space(warped)
+        # print(f"has enough free space: {res}")
+
+        return
+
         s = NarrowSpaceNavSrv()
         occupancy_array = warped
         thresh = np.mean(occupancy_array.flatten())

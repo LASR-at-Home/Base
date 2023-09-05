@@ -1,7 +1,7 @@
 start:
   pose:
-    position: {x: 2.71006066106, y: 2.12491014098, z: 0.0}
-    orientation: {x: 0.0, y: 0.0, z: 0.752734065, w: 0.658324712318}
+    position: { x: -0.89295363384, y: -4.34396101132, z: 0.0}
+    orientation: {x: 0.0, y: 0.0, z: 0.203241335237, w: 0.979128673695}
 
 finish:
   pose:
@@ -16,8 +16,8 @@ wait:
 
 wait_centre:
   pose:
-    position: {x: 2.71006066106, y: 2.12491014098, z: 0.0}
-    orientation: {x: 0.0, y: 0.0, z: 0.752734065, w: 0.658324712318}
+    position: {x: 3.8297624588, y: -4.5714597702, z: -0.00143432617188}
+    orientation: {x: 0.0, y: 0.0, z: 0.271253999152, w: 0.962507801498 }
 
 lift_centre:
   pose:
@@ -55,7 +55,7 @@ lift:
 
 floor:
   status: "unknown"
-  number: 0
+  number: 2
 
 counter_door:
   counter: 0

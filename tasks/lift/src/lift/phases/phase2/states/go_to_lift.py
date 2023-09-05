@@ -35,7 +35,7 @@ class GoToLift(smach.State):
 
         image_path = DEBUG_PATH + "/zoe_predict_pos_test" + str(TEST) + ".jpg"
         bbox, keypoint = make_prediction(image_path)
-        visualise_predictions(warped, bbox, keypoint)
+        # visualise_predictions(warped, bbox, keypoint)
         if keypoint is None and bbox is None:
             keypoint = analysis[3]
 

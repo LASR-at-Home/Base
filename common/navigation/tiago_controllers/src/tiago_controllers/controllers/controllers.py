@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from tiago_controllers.controllers import BaseController, HeadController
+from tiago_controllers.controllers import BaseController, HeadController, TorsoController
 
 class Controllers:
     """
@@ -9,3 +9,4 @@ class Controllers:
     def __init__(self):
         self.base_controller = BaseController()
         self.head_controller = HeadController()
+        self.torso_controller = TorsoController()

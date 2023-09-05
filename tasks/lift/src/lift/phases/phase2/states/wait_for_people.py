@@ -16,10 +16,10 @@ class WaitForPeople(smach.State):
         self.voice.speak("How many people are thinking to go in the lift?")
 
         # get the answer
-        count = 2
+        count = 1
 
         result = self.controllers.base_controller.sync_to_pose(get_pose_from_param('/wait_centre/pose'))
-        rospy.sleep(1)
+        rospy.sleep(0.5)
 
         # send request - image, dataset, confidence, nms
         image = rospy.wait_for_message('/xtion/rgb/image_raw', Image)

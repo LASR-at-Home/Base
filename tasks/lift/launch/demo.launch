@@ -2,7 +2,15 @@
 <!--   DEFAULTS  -->
 <!--    export LIBGL_ALWAYS_SOFTWARE=1-->
     <arg name="is_sim" default="false" />
+    <arg name="plot_show" default="false" />
+    <arg name="plot_save" default="true" />
+    <arg name="debug_with_images" default="true" />
+    <arg name="debug" default="3" />
 
+    <param name="plot_show" value="$(arg plot_show)" />
+    <param name="plot_save" value="$(arg plot_save)" />
+    <param name="debug" value="$(arg debug)" />
+    <param name="debug_with_images" value="$(arg debug_with_images)" />
 <!--     TASK  -->
    <node name="" pkg="lift" type="main.py" output="screen" required="true"/>
 
@@ -17,7 +25,6 @@
 <!--     STATIC POINTS  -->
 
     <group if="$(arg is_sim)">
-        <!--  <rosparam command="load" file="$(find lift)/config/demo_sim.yaml" />-->
         <rosparam command="load" file="$(find lift)/config/final_lift_sim.yaml" />
     </group>
     <group unless="$(arg is_sim)">
