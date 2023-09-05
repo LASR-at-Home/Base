@@ -12,7 +12,8 @@ import numpy as np
 from tiago_controllers.controllers.base_controller import CmdVelController
 from geometry_msgs.msg import PoseWithCovarianceStamped, PoseStamped, Quaternion, Point
 import random
-
+import angles
+from scipy.spatial.transform import Rotation
 import rospy
 import math
 from geometry_msgs.msg import Twist
@@ -64,6 +65,17 @@ class CheckOpenDoor(smach.State):
 
     def is_robot_close(self, pose, doorPose, minimumDistance):
         return np.linalg.norm(pose, doorPose) < minimumDistance
+
+    def robot_door_theta(pose, doorPose):
+
+        diff = (doorPose.position.x - pose.position.x, doorPose.position.y - pose.position.y)
+
+        quatRotation = Rotation.from_quat(doorPose.orientation)
+        eulerRotation = quatRotation.as_euler('xyz', degrees=False)
+        projTheta = eulerRotation[2]
+
+        return angles.shortest_angular_distance(projTheta, math.atan2(diff[1], diff[0]))
+
 
     # maybe move to base_controller
     def calculate_angle(self, robot_pose, door_position):
