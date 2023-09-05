@@ -1,8 +1,5 @@
 tables:
   table0:
-    num_persons: 0
-    status: "unvisited"
-    order: []
     location:
       position: { x: 0.364359882046, y: -1.03919352489, z: 0.0 }
       orientation: { x: 0.0, y: 0.0, z: 0.0822628621128, w: 0.996610666969 }
@@ -17,9 +14,6 @@ tables:
       - [2.99670791626, -1.98438620567]
       - [0.78549849987, -2.07048726082]
   table1:
-    num_persons: 0
-    status: "unvisited"
-    order: []
     location:
       position: { x: 0.57512783565, y: -3.7654016801, z: 0.0 }
       orientation: { x: 0.0, y: 0.0, z: -0.0241369397019, w: 0.9997086616328 }
@@ -34,9 +28,6 @@ tables:
       - [3.0000629425, -4.50194168091]
       - [0.926423072815, -4.54075145721]
   table2:
-    num_persons: 0
-    status: "unvisited"
-    order: []
     location:
       position: { x: 0.445212981931, y: -6.10343204214, z: 0.0 }
       orientation: { x: 0.0, y: 0.0, z: 0.01347502469469, w: 0.999909207733 }
@@ -51,9 +42,6 @@ tables:
       - [2.71208786964, -7.23757743835]
       - [0.813235580921, -7.37757730484]
   table3:
-    num_persons: 0
-    status: "unvisited"
-    order: []
     location:
       position: { x: 0.618052102239, y: -8.67521440187, z: 0.0 }
       orientation: { x: 0.0, y: 0.0, z: -0.0179980234174, w: 0.999838022458 }
@@ -68,9 +56,6 @@ tables:
       - [2.71534633636, -9.95570373535]
       - [0.589002728462, -9.77713012695]
   table4:
-    num_persons: 0
-    status: "unvisited"
-    order: []
     location:
       position: { x: -0.743379793752, y: -8.59013052371, z: 0.0 }
       orientation: { x: 0.0, y: 0.0, z: -0.999204252521, w: 0.0398856082301 }
@@ -85,9 +70,6 @@ tables:
       - [-3.31974482536, -7.40650844574]
       - [-0.863789737225, -7.49725246429]
   table5:
-    num_persons: 0
-    status: "unvisited"
-    order: []
     location:
       position: { x: -0.884366100406, y: -5.89808299861, z: 0.0 }
       orientation: { x: 0.0, y: 0.0, z: 0.99991828027, w: 0.0127840831252 }
@@ -102,9 +84,6 @@ tables:
       - [-1.16637969017, -5.08021831512]
       - [-3.37601089478, -4.7870759964]
   table6:
-    num_persons: 0
-    status: "unvisited"
-    order: []
     location:
       position: { x: -1.09850383626, y: -3.45696459259, z: 0.0 }
       orientation: { x: 0.0, y: 0.0, z: -0.991977616707, w: 0.126413638314 }
@@ -138,3 +117,5 @@ counter:
       - [-1.98666930199, 3.57624530792]
       - [-0.631086707115, 6.58276844025]
       - [-1.82701158524, 6.51631641388]
+
+objects: {"coffee_cup" : "coffee", "small_pringles" : "small pringles", "pringles" : "pringles"}

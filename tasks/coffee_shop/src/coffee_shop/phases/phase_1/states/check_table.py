@@ -53,7 +53,7 @@ class CheckTable(smach.State):
         detections = [(det, self.estimate_pose(pcl_msg, det)) for det in detections.detected_objects if det.name in filter]
         rospy.loginfo(f"All: {[(det.name, pose) for det, pose in detections]}")
         rospy.loginfo(f"Boundary: {polygon}")
-        satisfied_points = self.shapely.are_points_in_polygon_2d(polygon, [[pose[0], pose[1]] for (_, pose) in detections]).inside
+        satisfied_points = self.context.shapely.are_points_in_polygon_2d(polygon, [[pose[0], pose[1]] for (_, pose) in detections]).inside
         detections = [detections[i] for i in range(0, len(detections)) if satisfied_points[i]]
         rospy.loginfo(f"Filtered: {[(det.name, pose) for det, pose in detections]}")
         return detections
@@ -63,7 +63,7 @@ class CheckTable(smach.State):
         self.check_people(pcl_msg)
 
     def check_table(self, pcl_msg):
-        detections_objects_ = self.perform_detection(pcl_msg, self.object_polygon, self.context.target_objects.keys())
+        detections_objects_ = self.perform_detection(pcl_msg, self.object_polygon, self.context.target_object_remappings.keys())
         self.detections_objects.extend(detections_objects_)
 
     def check_people(self, pcl_msg):
@@ -119,4 +119,4 @@ class CheckTable(smach.State):
         self.context.voice_controller.sync_tts(f"{status_text} {count_text}")
 
         self.context.start_head_manager("head_manager", '')
-        return 'finished' if len([(label, table) for label, table in self.context.tables.items() if table["status"] == "unvisited"]) else 'not finished'
+        return 'not_finished' if len([(label, table) for label, table in self.context.tables.items() if table["status"] == "unvisited"]) else 'finished'

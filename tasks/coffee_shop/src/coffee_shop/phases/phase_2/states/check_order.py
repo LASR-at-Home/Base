@@ -17,7 +17,7 @@ class CheckOrder(smach.State):
         smach.State.__init__(self, outcomes=['correct', 'incorrect'])
         self.context = context
 
-        self.previous_given_order = []
+        self.previous_given_order = None
 
     def estimate_pose(self, pcl_msg, detection):
         centroid_xyz = seg_to_centroid(pcl_msg, np.array(detection.xyseg))
@@ -42,7 +42,7 @@ class CheckOrder(smach.State):
         cv_im = pcl_msg_to_cv2(pcl_msg)
         img_msg = self.context.bridge.cv2_to_imgmsg(cv_im)
         detections = self.context.yolo(img_msg, "yolov8n-seg.pt", 0.5, 0.3)
-        detections = [(det, self.estimate_pose(pcl_msg, det)) for det in detections.detected_objects if det.name in self.context.target_objects.keys()]
+        detections = [(det, self.estimate_pose(pcl_msg, det)) for det in detections.detected_objects if det.name in self.context.target_object_remappings.keys()]
         satisfied_points = self.context.shapely.are_points_in_polygon_2d(counter_corners, [[pose[0], pose[1]] for (_, pose) in detections]).inside
         given_order = [detections[i] for i in range(0, len(detections)) if satisfied_points[i]]
 

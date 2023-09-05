@@ -1,4 +1,5 @@
 import smach
+import rospy
 
 class Start(smach.State):
     def __init__(self, context):

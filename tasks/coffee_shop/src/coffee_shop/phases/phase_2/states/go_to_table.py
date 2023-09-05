@@ -15,7 +15,7 @@ class GoToTable(smach.State):
         if not tables_need_serving:
             return 'skip'
         label, table = tables_need_serving[0]
-        self.context.voice_controller.sync_tts(f"I am going to {table}, which needs serving")
+        self.context.voice_controller.sync_tts(f"I am going to {label}, which needs serving")
         position = table["location"]["position"]
         orientation = table["location"]["orientation"]
         self.context.base_controller.sync_to_pose(Pose(position=Point(**position), orientation=Quaternion(**orientation)))

@@ -22,7 +22,7 @@ class DeliverOrder(smach.State):
         self.play_motion_client.send_goal_and_wait(pm_goal)
         self.voice_controller.sync_tts("Please unload the order and say `all done` when you are finished.")
         while True:
-            resp = self.speech()
+            resp = self.context.speech()
             if not resp.success:
                 continue
             resp = json.loads(resp.json_response)

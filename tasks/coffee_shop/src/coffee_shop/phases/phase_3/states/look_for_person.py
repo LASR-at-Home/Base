@@ -52,7 +52,7 @@ class LookForPerson(smach.State):
         img_msg = self.context.bridge.cv2_to_imgmsg(cv_im)
         detections = self.context.yolo(img_msg, "yolov8n-seg.pt", 0.3, 0.3)
         detections = [(det, self.estimate_pose(pcl_msg, cv_im, det)) for det in detections.detected_objects if det.name == "person"]
-        satisfied_points = self.shapely.are_points_in_polygon_2d(corners, [[pose[0], pose[1]] for (_, pose) in detections]).inside
+        satisfied_points = self.context.shapely.are_points_in_polygon_2d(corners, [[pose[0], pose[1]] for (_, pose) in detections]).inside
         if len(detections):
             for i in range(0, len(detections)):
                 pose = detections[i][1]
