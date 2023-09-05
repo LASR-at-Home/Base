@@ -11,9 +11,10 @@ class RasaWrapper:
     def __init__(self, model_path):
         self.agent = Agent.load(model_path)
 
-    def __call__(self, req):
+    async def __call__(self, req):
         response = RasaResponse()
-        resp = asyncio.run(self.agent.parse_message(req.text))
+        resp = await self.agent.parse_message(req.text)
+        print(resp)
         entities_dict = defaultdict(list)
         for entity_info in resp["entities"]:
             entity_dict = {k: v for k, v in entity_info.items() if k != "entity"}
@@ -30,5 +31,5 @@ if __name__ == "__main__":
     rospy.init_node("lasr_rasa")
     rasa = RasaWrapper(sys.argv[1])
     rospy.loginfo("Rasa service is ready!")
-    rospy.Service("/lasr_rasa/parse", Rasa, rasa)
+    rospy.Service("/lasr_rasa/parse", Rasa, lambda req : asyncio.run(rasa(req)))
     rospy.spin()
