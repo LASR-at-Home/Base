@@ -48,8 +48,12 @@ class Context:
             }
 
             self.target_object_remappings = data.get("objects", dict())
+
+            self.YOLO_person_model = data.get("yolo_person_model", "yolov8n-seg.pt")
+            self.YOLO_objects_model = data.get("yolo_objects_model", "yolov8n-seg.pt")
+
         else:
-            rospy.logwarn("No config_path was given.")
+            rospy.logerr("No config_path was given.")
 
         self.current_table = None
         self.new_customer_pose = None

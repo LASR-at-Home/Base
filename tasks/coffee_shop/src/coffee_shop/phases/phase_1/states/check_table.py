@@ -46,10 +46,10 @@ class CheckTable(smach.State):
 
         return filtered
 
-    def perform_detection(self, pcl_msg, polygon, filter):
+    def perform_detection(self, pcl_msg, polygon, filter, model):
         cv_im = pcl_msg_to_cv2(pcl_msg)
         img_msg = self.context.bridge.cv2_to_imgmsg(cv_im)
-        detections = self.context.yolo(img_msg, "yolov8n-seg.pt", 0.3, 0.3)
+        detections = self.context.yolo(img_msg, model, 0.3, 0.3)
         detections = [(det, self.estimate_pose(pcl_msg, det)) for det in detections.detected_objects if det.name in filter]
         rospy.loginfo(f"All: {[(det.name, pose) for det, pose in detections]}")
         rospy.loginfo(f"Boundary: {polygon}")
@@ -63,11 +63,11 @@ class CheckTable(smach.State):
         self.check_people(pcl_msg)
 
     def check_table(self, pcl_msg):
-        detections_objects_ = self.perform_detection(pcl_msg, self.object_polygon, self.context.target_object_remappings.keys())
+        detections_objects_ = self.perform_detection(pcl_msg, self.object_polygon, self.context.target_object_remappings.keys(), self.context.YOLO_objects_model)
         self.detections_objects.extend(detections_objects_)
 
     def check_people(self, pcl_msg):
-        detections_people_ = self.perform_detection(pcl_msg, self.person_polygon, ["person"])
+        detections_people_ = self.perform_detection(pcl_msg, self.person_polygon, ["person"], self.context.YOLO_person_model)
         self.detections_people.extend(detections_people_)
 
     def execute(self, userdata):

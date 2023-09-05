@@ -41,7 +41,7 @@ class CheckOrder(smach.State):
         pcl_msg = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
         cv_im = pcl_msg_to_cv2(pcl_msg)
         img_msg = self.context.bridge.cv2_to_imgmsg(cv_im)
-        detections = self.context.yolo(img_msg, "yolov8n-seg.pt", 0.5, 0.3)
+        detections = self.context.yolo(img_msg, self.context.YOLO_objects_model, 0.5, 0.3)
         detections = [(det, self.estimate_pose(pcl_msg, det)) for det in detections.detected_objects if det.name in self.context.target_object_remappings.keys()]
         satisfied_points = self.context.shapely.are_points_in_polygon_2d(counter_corners, [[pose[0], pose[1]] for (_, pose) in detections]).inside
         given_order = [detections[i] for i in range(0, len(detections)) if satisfied_points[i]]
