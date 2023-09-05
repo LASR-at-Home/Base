@@ -119,3 +119,6 @@ counter:
       - [-1.82701158524, 6.51631641388]
 
 objects: {"coffee_cup" : "coffee", "small_pringles" : "small pringles", "pringles" : "pringles"}
+
+yolo_person_model: "yolov8n-seg.pt"
+yolo_objects_model: "yolov8n-seg.pt"
