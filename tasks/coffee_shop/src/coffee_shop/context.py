@@ -15,7 +15,7 @@ from visualization_msgs.msg import Marker
 
 class Context:
 
-    def __init__(self, config_path):
+    def __init__(self, config_path=None):
         self.base_controller = BaseController()
         self.head_controller = HeadController()
         self.voice_controller = Voice()
@@ -37,15 +37,19 @@ class Context:
 
 
         self.tables = dict()
+        self.target_object_remappings = dict()
 
-        with open(config_path, "r") as fp:
-            data = yaml.safe_load(fp)
+        if config_path is not None:
+            with open(config_path, "r") as fp:
+                data = yaml.safe_load(fp)
 
-        self.tables = {
-            table: {"status" : "unvisited", "people": list(), "order": list()} for table in data["tables"].keys()
-        }
+            self.tables = {
+                table: {"status" : "unvisited", "people": list(), "order": list()} for table in data["tables"].keys()
+            }
 
-        self.target_object_remappings = data["objects"]
+            self.target_object_remappings = data["objects"]
+        else:
+            rospy.logwarn("No config_path was given.")
 
         self.current_table = None
         self.new_customer_pose = None
