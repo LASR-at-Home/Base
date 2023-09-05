@@ -11,7 +11,6 @@ import sensor_msgs.point_cloud2 as pc2
 from image_geometry import PinholeCameraModel
 import tf2_ros
 import tf2_geometry_msgs
-import rosparam
 
 def create_point_marker(x, y, z, idx):
     marker_msg = Marker()
