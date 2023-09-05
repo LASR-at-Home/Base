@@ -30,7 +30,7 @@ class CheckTable(smach.State):
 
     def publish_object_points(self):
         for _, point in self.detections_objects:
-            self.context.publish_object_pose(*point)
+            self.context.publish_object_pose(*point, "map")
 
     def publish_people_points(self):
         for _, point in self.detections_people:
