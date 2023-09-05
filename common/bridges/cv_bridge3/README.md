@@ -9,6 +9,13 @@ This package is maintained by:
 
 This package depends on the following ROS packages:
 - catkin (buildtool)
+- catkin_virtualenv (build)
+
+This packages requires Python 3.10 to be present.
+
+This package has 2 Python dependencies:
+- [opencv-python](https://pypi.org/project/opencv-python)==4.8.0.76
+- .. and 1 sub dependencies
 
 Ask the package maintainer to write or create a blank `doc/PREREQUISITES.md` for their package!
 
@@ -25,6 +32,10 @@ Ask the package maintainer to write a `doc/EXAMPLE.md` for their package!
 Ask the package maintainer to write a `doc/TECHNICAL.md` for their package!
 
 ## ROS Definitions
+
+### Launch Files
+
+This package has no launch files.
 
 ### Messages
 

@@ -1,0 +1,19 @@
+tables:
+  table0:
+    num_persons: 0
+    status: "needs serving"
+    order: ["bowl", "bowl", "bowl"]
+    location:
+      position: {x: -0.74, y: -3.57, z: 0.0}
+      orientation: {x: 0.0, y: 0.0, z: -0.99, w: 0.03}
+      semantic: "end"
+current_table: "table0"
+counter:
+    location:
+      position: {x: 0.222374471246, y: 5.10986001747, z: 0.0}
+      orientation: {x: 0.0, y: 0.0, z: -0.99, w: 0.0173693114911}
+    cuboid:
+      - [-0.209220409393, 3.5077354908]
+      - [-1.98666930199, 3.57624530792]
+      - [-0.631086707115, 6.58276844025]
+      - [-1.82701158524, 6.51631641388]

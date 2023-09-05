@@ -1,1 +1,1 @@
-from .math_ import euclidian
+from .math_ import *

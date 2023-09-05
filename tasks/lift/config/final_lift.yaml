@@ -1,0 +1,83 @@
+
+#Robot room: 
+start:
+  pose:
+    position: { x: 3.09560757362, y: 0.974404310171, z: 0.0}
+    orientation: {x: 0.0, y: 0.0, z: -0.591061635968, w: 0.806626395853}
+
+
+#
+#start:
+ # pose:
+  #  position: {    x: 0.508800501232, y: 33.8344979691,z: 0.0
+#}
+ #   orientation: { x: 0.0,y: 0.0,z: 0.637510283355,w: 0.770441846356
+#}
+
+finish:
+  pose:
+    position: {  x: 0.0151059264317, y: 1.16150856018, z: -0.00143432617188}
+    orientation: {x: 0.0, y: 0.0, z: 0.752734065, w: 0.658324712318}
+
+#Robot Room
+wait:
+  pose:
+    position: {    x: 2.67279863358, y: -0.270290255547, z: -0.00143432617188}
+    orientation: {x: 0.0, y: 0.0, z: -0.151568158509, w: 0.988446808547}
+
+wait_centre:
+  pose:
+    position: {  x: 3.6238360405, y: -0.465535610914, z: -0.0013427734375}
+    orientation: {x: 0.0, y: 0.0, z: 0.752734065, w: 0.658324712318}
+
+#Real Lift
+#wait:
+ # pose:
+  #  position: {    x: 0.508800501232, y: 33.8344979691,z: 0.0}
+   # orientation: { x: 0.0,y: 0.0,z: 0.637510283355,w: 0.770441846356}
+
+
+
+lift_centre:
+  pose:
+    position: {  x: 4.06678438187, y: -2.04051423073, z: 0.00247192382812}
+    orientation: {x: 0.0, y: 0.0, z: 0.752734065, w: 1.0}
+
+
+lift:
+  pose:
+    position:
+      x: 3.38024333356
+      y: -0.707694082116
+      z: 0.0
+    orientation:
+      x: 0.0
+      y: 0.0
+      z: -0.59235272545
+      w: 0.805678750279
+
+floor:
+  status: "unknown"
+  number: 0
+
+counter_door:
+  counter: 0
+
+in_lift:
+  status: False
+
+
+counter_lift:
+  counter: 0
+
+door:
+  pose:
+    position: {  x: 3.61080789566, y: -0.999205946922, z: -0.00143432617188}
+    orientation: { x: 0.0, y: 0.0, z: 0.0, w: 0.0 }
+
+lift_in_front:
+  pose:
+    position: {  x: 3.05060815811, y: -0.478551894426, z: -0.00143432617188}
+    orientation: { x: 0.0, y: 0.0, z: 0.0, w: 0.0 }
+
+

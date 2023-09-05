@@ -1,0 +1,1 @@
+This package is just a service wrapper around a Python 3.7+ library.

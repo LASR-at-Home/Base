@@ -2,19 +2,18 @@
 
 import rospy
 import smach
-from lasr_object_detection_yolo.detect_objects import detect_objects
+from lasr_object_detection_yolo.detect_objects_v8 import detect_objects
 from tiago_controllers.controllers.look_at import LookAt
-from tiago_controllers.controllers.base_controller import CmdVelController
 
 
 HORIZONTAL = 0.8
 VERTICAL = 0.3
 class SpeakWithGroup(smach.State):
-    def __init__(self, controllers, voice):
+    def __init__(self, controllers, voice, cmd):
         smach.State.__init__(self, outcomes=['success', 'failed'])
-        # self.voice = voice
+        self.voice = voice
         self.controllers = controllers
-        self.cmd_vel = CmdVelController()
+        self.cmd_vel = cmd
         self.controllers.head_controller.sync_reach_to(0, 0)  # start by centering the head
         self.search_points = [(-1 * HORIZONTAL, VERTICAL),
                               (0, VERTICAL),
@@ -30,7 +29,7 @@ class SpeakWithGroup(smach.State):
     def search_for_person(self):
         for point in self.search_points:
             self.controllers.head_controller.sync_reach_to(point[0], point[1])
-            people = detect_objects(["person"], "coco")
+            people = detect_objects(["person"])
             if people:
                 return people[0], point[0]
         return None
@@ -48,8 +47,7 @@ class SpeakWithGroup(smach.State):
             except TypeError:
                 self.cmd_vel.rotate(60, 360/turns, True)
 
-        print("I CANT SEE ANYONE")
-        # self.voice.sync_tts("I can't see anyone!")
+        self.voice.speak("I can't see anyone!")
         return 'failed'
 
 

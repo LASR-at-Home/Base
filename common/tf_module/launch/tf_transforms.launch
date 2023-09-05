@@ -1,0 +1,10 @@
+<launch>
+<node name="tf_module" pkg="tf_module" type="tf_transforms.py" output="screen" respawn="true"/>
+
+<!--     teleport points -->
+  <rosparam command="load" file="$(find input_to_location)/config/spaces.yaml" />
+  <rosparam command="load" file="$(find simulation_controller)/config/teleport_points_world.yaml" />
+  <rosparam command="load" file="$(find simulation_controller)/config/teleport.yaml" />
+  <rosparam command="load" file="$(find simulation_controller)/config/teleport_points.yaml" />
+
+</launch>
