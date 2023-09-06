@@ -33,9 +33,10 @@ class TranscribeAndParse:
         self.play_sound()
         while True:
             transcription = rospy.wait_for_message(self.transcription_topic, Transcription)
-            print(transcription)
+            rospy.loginfo(transcription)
             if transcription.finished:
                 rasa_response = self.rasa(transcription.phrase)
+                rospy.loginfo(rasa_response)
                 return SpeechResponse(rasa_response.json_response, rasa_response.success)
 
 if __name__ == "__main__":
