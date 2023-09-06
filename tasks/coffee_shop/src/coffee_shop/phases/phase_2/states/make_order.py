@@ -5,13 +5,15 @@ from collections import Counter
 
 class MakeOrder(smach.State):
 
-    def __init__(self, voice_controller):
+    def __init__(self, context):
         smach.StateMachine.__init__(self, outcomes=['done'])
-        self.voice_controller = voice_controller
+        self.context = context
 
     def execute(self, userdata):
-        order = rospy.get_param(f"/tables/{rospy.get_param('/current_table')}/order")
-        order_string = ', '.join([f"{count} {item if count == 1 else item+'s'}" for item, count in Counter(order).items()]).replace(', ', ', and ', len(order)-2)
-        self.voice_controller.sync_tts(f"Please get me {order_string}")
-        self.voice_controller.sync_tts(f"Say 'all done' when you are ready for me to check the contents of the order")
+        self.context.stop_head_manager("head_manager")
+        order = self.context.tables[self.context.current_table]["order"]
+        order_string = ', '.join([f"{count} {self.context.target_object_remappings[item] if count == 1 else self.context.target_object_remappings[item]+'s'}" for item, count in Counter(order).items()]).replace(', ', ', and ', len(order)-2)
+        self.context.voice_controller.sync_tts(f"Please get me {order_string}")
+        self.context.voice_controller.sync_tts(f"Say 'all done' when you are ready for me to check the contents of the order")
+        rospy.sleep(rospy.Duration(5.0))
         return 'done'

@@ -7,6 +7,25 @@ nlu:
     - Get me a [coffee]{"entity" : "item", "value" : "coffee_cup"} please.
     - Get me [two]{"entity" : "quantity", "value" : 2} [coffees]{"entity" : "item", "value" : "coffee_cup"}
     - Can I have [three]{"entity" : "quantity", "value" : 3} [coffees]{"entity" : "item", "value" : "coffee_cup"}
+    - Can I have a [small pringles]{"entity" : "item", "value" : "small_pringles"} please.
+    - Get me a [small pringles]{"entity" : "item", "value" : "small_pringles"} please.
+    - Get me [two]{"entity" : "quantity", "value" : 2} [small pringles]{"entity" : "item", "value" : "small_pringles"}
+    - Can I have [three]{"entity" : "quantity", "value" : 3} [small pringles]{"entity" : "item", "value" : "small_pringles"}
+    - Get me some [pringles]{"entity" : "item", "value" : "pringles"} please.
+    - Get me [two]{"entity" : "quantity", "value" : 2} [pringles]{"entity" : "item", "value" : "pringles"}
+    - Can I have [three]{"entity" : "quantity", "value" : 3} [pringles]{"entity" : "item", "value" : "pringles"}
+    - One [coffee]{"entity" : "item", "value" : "coffee_cup"}
+    - A [coffee]{"entity" : "item", "value" : "coffee_cup"}
+    - [Small pringles]{"entity" : "item", "value" : "small_pringles"}
+    - [Pringles]{"entity" : "item", "value" : "pringles"}
+    - A [small pringles]{"entity" : "item", "value" : "small_pringles"}
+    - Some [pringles]{"entity" : "item", "value" : "pringles"}
+    - A [coffee]{"entity" : "item", "value" : "coffee_cup"} and some [pringles]{"entity" : "item", "value" : "pringles"}
+    - One [coffee], one [pringles]{"entity" : "item", "value" : "pringles"} and one [small pringles]{"entity" : "item", "value" : "small_pringles"}
+    - [Two]{"entity" : "quantity", "value" : 2} [coffees]{"entity" : "item", "value" : "coffee_cup"} and some [pringles]{"entity" : "item", "value" : "pringles"}
+    - [Three]{"entity" : "quantity", "value" : 3} [coffees]{"entity" : "item", "value" : "coffee_cup"}, one [pringles]{"entity" : "item", "value" : "pringles"} and one [small pringles]{"entity" : "item", "value" : "small_pringles"}
+    - Just a [coffee]{"entity" : "item", "value" : "coffee_cup"} and some [pringles]{"entity" : "item", "value" : "pringles"}
+    - [pringles]{"entity" : "item", "value" : "pringles"} and a [coffee]{"entity" : "item", "value" : "coffee_cup"}
 - intent: affirm
   examples: |
     - [Yes](choice)

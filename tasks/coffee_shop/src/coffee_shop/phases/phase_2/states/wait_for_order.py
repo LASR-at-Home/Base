@@ -5,13 +5,13 @@ import rospy
 
 class WaitForOrder(smach.State):
 
-    def __init__(self, speech):
+    def __init__(self, context):
         smach.StateMachine.__init__(self, outcomes=['done'])
-        self.speech = speech
+        self.context = context
 
     def execute(self, userdata):
         while True:
-            resp = self.speech()
+            resp = self.context.speech()
             if not resp.success:
                 continue
             resp = json.loads(resp.json_response)
