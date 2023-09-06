@@ -44,7 +44,7 @@ class TakeOrder(smach.State):
                     quantified_items.append((1, item["value"]))
         items = []
         for quantity, item in quantified_items:
-            items.extend([item]*quantity)
+            items.extend([item.lower()]*quantity)
         items_string = ', '.join([f"{count} {self.context.target_object_remappings[item] if count == 1 else self.context.target_object_remappings[item]+'s'}" for item, count in Counter(items).items()]).replace(', ', ', and ', len(items)-2)
 
         self.context.voice_controller.sync_tts(f"You asked for {items_string}, is that correct? Please answer yes or no")
