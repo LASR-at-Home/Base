@@ -70,7 +70,7 @@ class TakeOrder(smach.State):
 
     def execute(self, userdata):
         self.context.stop_head_manager("head_manager")
-        self.context.voice_controller.sync_tts("I'm TIAGo, I'll be server today. Please state your order after the beep - this indicates that I am listening.")
+        self.context.voice_controller.sync_tts("I'm TIAGo, I'll be your server today. Please state your order after the beep - this indicates that I am listening.")
         order = []
         while True:
             order.extend(self.get_order())
