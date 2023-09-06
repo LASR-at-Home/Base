@@ -1,1 +1,2 @@
-ultralytics==8.0.150
+ultralytics==8.0.168
+dill==0.3.7
