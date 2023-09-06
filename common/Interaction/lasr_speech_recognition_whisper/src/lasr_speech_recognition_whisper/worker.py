@@ -49,7 +49,10 @@ class SpeechRecognitionWorker(ABC):
         Complete the current phrase and clear the sample
         '''
 
-        self.on_phrase(self._perform_inference(), True)
+        text = self._perform_inference()
+        if text is not None:
+            self.on_phrase(text, True)
+
         self._current_sample = bytes()
         self._phrase_start = None
 
@@ -67,7 +70,16 @@ class SpeechRecognitionWorker(ABC):
 
         rospy.loginfo('Running inference')        
         result = self._model.transcribe(self._tmp_file, fp16=torch.cuda.is_available())
-        return result['text'].strip()
+        text = result['text'].strip()
+
+        # Detect and drop garbage
+        if len(text) == 0 or text.lower() in ['.', 'you']:
+            self._phrase_start = None
+            self._current_sample = bytes()
+            rospy.loginfo('Skipping garbage...')
+            return None
+    
+        return text
 
     def _worker(self):
         '''
@@ -81,6 +93,7 @@ class SpeechRecognitionWorker(ABC):
                 # Check whether the current phrase has timed out
                 now = datetime.utcnow()
                 if self._phrase_start and now - self._phrase_start > self._maximum_phrase_length:
+                    rospy.loginfo('Reached timeout for phrase, ending now.')
                     self._finish_phrase()
 
                 # Start / continue phrase if data is coming in
@@ -91,19 +104,15 @@ class SpeechRecognitionWorker(ABC):
                     while not self._collector.data.empty():
                         self._current_sample += self._collector.data.get()
 
+                    rospy.loginfo('Received and added more data to current audio sample.')
+
                     # Run inference on partial sample if enabled
                     if self._infer_partial:
                         text = self._perform_inference()
 
-                        # Detect and drop garbage
-                        if len(text) == 0 or text.lower() in ['.', 'you']:
-                            self._phrase_start = None
-                            self._current_sample = bytes()
-                            rospy.loginfo('Skipping garbage...')
-                            continue
-
                         # Handle partial transcription
-                        self.on_phrase(text, False)
+                        if text is not None:
+                            self.on_phrase(text, False)
 
                 sleep(0.2)
             except KeyboardInterrupt:
@@ -121,7 +130,6 @@ class SpeechRecognitionWorker(ABC):
         self._collector.start()
         worker_thread = Thread(target=self._worker)
         worker_thread.start()
-        worker_thread.join()
     
     def stop(self):
         '''
@@ -152,7 +160,7 @@ class SpeechRecognitionToTopic(SpeechRecognitionToStdout):
 
     _pub: rospy.Publisher
 
-    def __init__(self, collector: AbstractPhraseCollector, model: whisper.Whisper, topic: str, maximum_phrase_length=timedelta(seconds=3), infer_partial=True) -> None:
+    def __init__(self, collector: AbstractPhraseCollector, model: whisper.Whisper, topic: str, maximum_phrase_length=timedelta(seconds=1), infer_partial=True) -> None:
         super().__init__(collector, model, maximum_phrase_length, infer_partial)
         rospy.loginfo(f'Will be publishing transcription to {topic}')
         self._pub = rospy.Publisher(topic, Transcription, queue_size=5)
