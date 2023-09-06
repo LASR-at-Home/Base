@@ -3,9 +3,9 @@ import smach
 import rospy
 import json
 from collections import Counter
+import difflib
 
 class TakeOrder(smach.State):
-    
     def __init__(self, context):
         smach.State.__init__(self, outcomes=['done'])
         self.context = context
@@ -28,6 +28,7 @@ class TakeOrder(smach.State):
         if not items:
             self.context.voice_controller.sync_tts("Sorry, I didn't get that")
             return self.get_order()
+
         quantities = resp["entities"].get("quantity", [])
         quantified_items = []
         if len(items) == len(quantities) == 1:
@@ -44,8 +45,17 @@ class TakeOrder(smach.State):
                     quantified_items.append((1, item["value"]))
         items = []
         for quantity, item in quantified_items:
-            items.extend([item.lower()]*quantity)
-        items_string = ', '.join([f"{count} {self.context.target_object_remappings[item] if count == 1 else self.context.target_object_remappings[item]+'s'}" for item, count in Counter(items).items()]).replace(', ', ', and ', len(items)-2)
+            if item not in self.context.target_object_remappings.keys():
+                matches = difflib.get_close_matches(item.lower(), self.context.target_object_remappings.keys())
+                if matches:
+                    item = matches[0]
+                else:
+                    continue
+            items.extend([item.lower()] * quantity)
+        if not items:
+            self.context.voice_controller.sync_tts("Sorry, I didn't get that")
+            return self.get_order()
+        items_string = ', '.join([f"{count} {self.context.target_object_remappings[item] if count == 1 else self.context.target_object_remappings[item]+'s'}"for item, count in Counter(items).items()]).replace(', ', ', and ', len(items)-2)
 
         self.context.voice_controller.sync_tts(f"You asked for {items_string}, is that correct? Please answer yes or no")
         if not self.affirm():
