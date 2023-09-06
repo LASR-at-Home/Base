@@ -10,7 +10,6 @@ from abc import ABC, abstractmethod
 from tempfile import NamedTemporaryFile
 from datetime import datetime, timedelta
 
-from .cache import load_model
 from .collector import AbstractPhraseCollector
 
 from lasr_speech_recognition_common.msg import Transcription
@@ -28,17 +27,15 @@ class SpeechRecognitionWorker(ABC):
     _maximum_phrase_length: timedelta
     _infer_partial: bool
     _stopped = True
-    _run_inference = True
 
-    def __init__(self, collector: AbstractPhraseCollector, model: str, maximum_phrase_length = timedelta(seconds=3), infer_partial = True, run_inference = True) -> None:
+    def __init__(self, collector: AbstractPhraseCollector, model: whisper.Whisper, maximum_phrase_length = timedelta(seconds=3), infer_partial = True) -> None:
         self._collector = collector
         self._tmp_file = NamedTemporaryFile().name
-        self._model = load_model(model)
+        self._model = model
         self._current_sample = bytes()
         self._phrase_start = None
         self._maximum_phrase_length = maximum_phrase_length
         self._infer_partial = infer_partial
-        self._run_inference = run_inference
 
     @abstractmethod
     def on_phrase(self, phrase: str, finished: bool) -> None:
@@ -94,11 +91,6 @@ class SpeechRecognitionWorker(ABC):
                     while not self._collector.data.empty():
                         self._current_sample += self._collector.data.get()
 
-                    # Discard data if not listening
-                    if not self._run_inference:
-                        self._phrase_start = None
-                        self._current_sample = bytes()
-
                     # Run inference on partial sample if enabled
                     if self._infer_partial:
                         text = self._perform_inference()
@@ -137,16 +129,13 @@ class SpeechRecognitionWorker(ABC):
         '''
 
         assert not self._stopped, "Not currently running"
-        # TODO: stop collector
+        self._collector.stop()
         self._stopped = True
-    
-    def start_listening(self):
-        rospy.loginfo("Now listening and running inference...")
-        self._run_inference = True
-    
-    def stop_listening(self):
-        rospy.loginfo("Stopped listening.")
-        self._run_inference = False
+
+        # clear next phrase
+        self._current_sample = bytes()
+        while not self._collector.data.empty():
+            self._current_sample += self._collector.data.get()
 
 class SpeechRecognitionToStdout(SpeechRecognitionWorker):
     '''
@@ -163,8 +152,8 @@ class SpeechRecognitionToTopic(SpeechRecognitionToStdout):
 
     _pub: rospy.Publisher
 
-    def __init__(self, collector: AbstractPhraseCollector, model: str, topic: str, maximum_phrase_length=timedelta(seconds=3), infer_partial=True, run_inference=True) -> None:
-        super().__init__(collector, model, maximum_phrase_length, infer_partial, run_inference)
+    def __init__(self, collector: AbstractPhraseCollector, model: whisper.Whisper, topic: str, maximum_phrase_length=timedelta(seconds=3), infer_partial=True) -> None:
+        super().__init__(collector, model, maximum_phrase_length, infer_partial)
         rospy.loginfo(f'Will be publishing transcription to {topic}')
         self._pub = rospy.Publisher(topic, Transcription, queue_size=5)
     

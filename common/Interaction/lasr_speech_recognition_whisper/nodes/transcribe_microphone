@@ -39,17 +39,24 @@ import rospy
 from std_srvs.srv import Empty, EmptyResponse
 rospy.init_node('transcribe_mic', anonymous=True)
 
-from lasr_speech_recognition_whisper import SpeechRecognitionToTopic, MicrophonePhraseCollector
-worker = SpeechRecognitionToTopic(MicrophonePhraseCollector(device_index=device_index), "base.en", "transcription", infer_partial = False, run_inference = False)
+from lasr_speech_recognition_whisper import SpeechRecognitionToTopic, MicrophonePhraseCollector, load_model
+
+collector = MicrophonePhraseCollector(device_index=device_index)
+collector.adjust_for_noise()
+
+model = load_model("base.en")
+worker = SpeechRecognitionToTopic(collector, model, "transcription", infer_partial = False)
 
 def start_listening(_):
-    worker.start_listening()
+    worker.start()
     return EmptyResponse()
+
 def stop_listening(_):
-    worker.stop_listening()
+    worker.stop()
     return EmptyResponse()
 
 rospy.Service('/whisper/start_listening', Empty, start_listening)
 rospy.Service('/whisper/stop_listening', Empty, stop_listening)
 
-worker.start()
+rospy.loginfo("Starting the Whisper worker!")
+rospy.spin()
