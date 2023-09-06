@@ -19,7 +19,7 @@ class RasaWrapper:
         for entity_info in resp["entities"]:
             entity_dict = {k: v for k, v in entity_info.items() if k != "entity"}
             entities_dict[entity_info["entity"]].append(entity_dict)
-            resp["entities"] = entities_dict
+        resp["entities"] = entities_dict
         response.json_response = json.dumps(resp)
         response.success = True
         return response
