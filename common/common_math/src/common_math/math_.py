@@ -3,7 +3,7 @@ import numpy as np
 import rospy
 import numpy as np
 import ros_numpy as rnp
-import cv2
+# import cv2
 # from geometry_msgs.msg import PointStamped, Point
 # from std_msgs.msg import Header
 # from robocup_receptionist.srv import TfTransform, TfTransformRequest
@@ -94,3 +94,9 @@ def euclidian(a, b):
         math.pow(a.y - b.y, 2) +
         math.pow(a.z - b.z, 2)
     )
+def euclidian_distance(p1, p2):
+        x1, y1 = p1
+        x2, y2 = p2
+        a = np.array((x1, y1))
+        b = np.array((x2, y2))
+        return np.linalg.norm(a - b)

@@ -7,13 +7,16 @@ from geometry_msgs.msg import PoseWithCovarianceStamped
 from std_msgs.msg import Empty
 from visualization_msgs.msg import Marker
 from tiago_controllers.helpers.nav_map_helpers import clear_costmap
+from interaction_module.srv import AudioAndTextInteraction, AudioAndTextInteractionRequest, \
+    AudioAndTextInteractionResponse
 
 
 class ScheduleGoingOut(smach.State):
-    def __init__(self, controllers, voice):
+    def __init__(self, controllers, voice, speech):
         smach.State.__init__(self, outcomes=['success', 'failed'])
         self.voice = voice
         self.controllers = controllers
+        self.speech = speech
 
     # import this from base planner
     def euclidian_distance(self, p1, p2):
@@ -114,24 +117,43 @@ class ScheduleGoingOut(smach.State):
     # the door is open here!!!
     def execute(self, userdata):
         self.voice.speak("How many people are thinking to go out of the lift?")
+
+        req = AudioAndTextInteractionRequest()
+        req.action = "ROOM_REQUEST"
+        req.subaction = "ask_location"
+        req.query_text = "SOUND:PLAYING:PLEASE"
+        resp = self.speech(req)
+
+        print("The response of asking the people in schedule going out is {}".format(resp.result))
+
+
+        req = AudioAndTextInteractionRequest()
+        req.action = "BUTTON_PRESSED"
+        req.subaction = "confirm_button"
+        req.query_text = "SOUND:PLAYING:PLEASE"
+        resp = self.speech(req)
+
+        # do more complex things here
+        if resp.result == "yes":
+            self.voice.speak("Great! Let's see how this will happen.")
+
         self.voice.speak("I know there are {} people in the lift".format(rospy.get_param("/lift/num_clusters")))
 
         is_robot_closest_rank = self.rank()
         print("is robot closest rank->>> {}".format(is_robot_closest_rank))
 
         is_closer_to_door = is_robot_closest_rank
-        # is_closer_to_door = self.get_how_close_to_door(is_robot=True)
         if is_closer_to_door:
             self.voice.speak("I am the closest to the door so I have to exit first")
             # clear costmap
             clear_costmap()
             # go to centre waiting area
-            result = self.controllers.base_controller.sync_to_pose(get_pose_from_param('/wait_centre/pose'))
-            if not result:
+            state = self.controllers.base_controller.sync_to_pose(get_pose_from_param('/wait_centre/pose'))
+            if not state:
                 return 'failed'
             # turn around
             self.voice.speak("Just minding my own business!")
-            self.rotate_to_face_door_new()
+            self.controllers.base_controller.rotate_to_face_object(object_name='/door/pose')
             # wait for the person to exit
             rospy.sleep(2)
             self.voice.speak("Should I wait more for you?")

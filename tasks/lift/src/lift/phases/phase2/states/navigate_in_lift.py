@@ -58,6 +58,7 @@ class NavigateInLift(smach.State):
         rospy.loginfo("The point to go to is {}".format(p))
         # get the global point
         global_points = w.local_to_global_points(M=M, points=p, is_lift=True)
+
         # get tiago there
         p = Pose()
         p.position.x = global_points[0][0]
@@ -65,6 +66,7 @@ class NavigateInLift(smach.State):
         p.orientation.w = 1
         c = Controllers()
         c.base_controller.sync_to_pose(p)
+
         return 'success'
 
 

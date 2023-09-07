@@ -13,6 +13,7 @@ from tiago_controllers.base_planner import plan_to_radius as _plan_to_radius
 from math import atan2, radians
 from geometry_msgs.msg import Twist
 from common_math.transformations import quaternion_from_euler
+from tiago_controllers.helpers.pose_helpers import get_pose_from_param
 
 from tiago_controllers.base_planner import get_journey_points as _get_journey_points
 import numpy as np
@@ -100,6 +101,38 @@ class BaseController:
 
     def async_face_to(self, x, y):
         return self.async_to_pose(self.compute_face_quat(x, y))
+
+    def ensure_sync_to_pose(self, pose, wait=60):
+        state = self.sync_to_pose(pose)
+        print("State of the robot is {}".format(state))
+        while state == 8 or state == 4 or state == 0:
+            rospy.loginfo("Retrying to reach pose - prev state is {}".format(state))
+            rospy.sleep(0.5)
+            state = self.sync_to_pose(pose)
+        return state
+
+    def rotate_to_face_object(self, object_name='/door/pose'):
+        object_pos = get_pose_from_param(object_name)
+        rotation_angle = self.compute_face_quat(object_pos.position.x, object_pos.position.y)
+        state = self.sync_to_pose(rotation_angle)
+
+        return state
+
+    # to be tested more remove if unnecessary
+    def calculate_angle_of_rot(self, robot_pose, door_position):
+        delta_x = door_position.position.x - robot_pose.position.x
+        delta_y = door_position.position.y - robot_pose.position.y
+        angle_to_door = math.atan2(delta_y, delta_x)
+
+        if angle_to_door > math.pi / 2:
+            angle_to_door -= math.pi
+        elif angle_to_door < -math.pi / 2:
+            angle_to_door += math.pi
+
+        (x, y, z, w) = quaternion_from_euler(0, 0, angle_to_door)
+        quaternion = Quaternion(x, y, z, w)
+        pose = Pose(position=Point(robot_pose.position.x, robot_pose.position.y, 0.0), orientation=quaternion)
+        return pose
 
 
 class CmdVelController:

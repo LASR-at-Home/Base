@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 import smach
 import rospy
+from interaction_module.srv import AudioAndTextInteraction, AudioAndTextInteractionRequest, \
+    AudioAndTextInteractionResponse
 
 class DeclareFloor(smach.State):
-    def __init__(self, controllers, voice):
+    def __init__(self, controllers, voice, speech):
         smach.State.__init__(self, outcomes=['success', 'failed'])
         self.voice = voice
+        self.speech = speech
 
     def execute(self, userdata):
         floor = rospy.get_param("/floor/number")
@@ -16,12 +19,17 @@ class DeclareFloor(smach.State):
         # maybe add the counter here as well
         self.voice.speak("I would love to go to the floor {}.".format(floor))
         self.voice.speak("Can you help me by pressing the button?")
+        self.voice.speak("Please answer yes or no.")
         rospy.sleep(1)
-        self.voice.speak(" Is the button for the floor {} selected?".format(floor))
+
+        req = AudioAndTextInteractionRequest()
+        req.action = "BUTTON_PRESSED"
+        req.subaction = "confirm_button"
+        req.query_text = "SOUND:PLAYING:PLEASE"
+        resp = self.speech(req)
 
         # get the answer
-        answer = "yes"
-        if answer == "yes":
+        if resp.result == 'yes':
             self.voice.speak("Great! Thank you for pressing the button!")
             return 'success'
         else:
