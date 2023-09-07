@@ -21,6 +21,8 @@ PADDING = 0.5
 WAITING_AREA_LONG_SIDE = 1.2
 WAITING_AREA_SHORT_SIDE = 0.6
 
+LIFT_WAITING_AREA = 3
+
 r = rospkg.RosPack()
 FILENAME = r.get_path('aruco_service') + "/test_check_table_sim.yaml"
 
@@ -77,6 +79,11 @@ def generate_cuboid(number):
         local_corner_3 = [TABLE_LONG_SIDE, TABLE_SHORT_SIDE] if table >= 0 else [WAITING_AREA_LONG_SIDE, WAITING_AREA_SHORT_SIDE]
         local_corner_4 = [0, TABLE_SHORT_SIDE] if table >= 0 else [0, WAITING_AREA_SHORT_SIDE]
 
+        if table == -3: 
+            local_corner_1 = [0,0]
+            local_corner_2 = [LIFT_WAITING_AREA,0]
+            local_corner_3 = [LIFT_WAITING_AREA,-LIFT_WAITING_AREA]
+            local_corner_4 = [0,-LIFT_WAITING_AREA]
 
         # TRANSFORM TO MAP FRAME
         corner_1 = get_map_frame_pose(local_corner_1, tr)
@@ -123,6 +130,23 @@ def generate_cuboid(number):
             now = str(datetime.datetime.now())
             rospy.set_param("/wait/last_updated", now)
             rospy.loginfo("Cuboid for the waiting area saved to parameter server")
+
+        elif table == -3:
+            #This is where I would put code for lift waiting area 
+            #rospy.set_param("/lift_wait/cuboid", [corner_1, corner_2, corner_3, corner_4])
+            #now = str(datetime.datetime.now())
+            #rospy.set_param("/lift_wait/last_updated", now)
+            #rospy.loginfo("Cuboid for the lift waiting area saved to parameter server")
+            data = {
+                'corner 1' : corner_1,
+                'corner 2' : corner_2,
+                'corner 3' : corner_3,
+                'corner 4' : corner_4
+            }
+            FILENAME_LIFT = r.get_path('aruco_service') + "/test_lift_wait_position.yaml"
+
+            with open(FILENAME_LIFT, 'w') as file: 
+                yaml.dump(data,file)
 
         else:
             rospy.logerr("Invalid table number %d", table)
