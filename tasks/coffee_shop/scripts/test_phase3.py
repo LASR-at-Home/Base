@@ -2,23 +2,16 @@
 import smach
 from coffee_shop.phases.phase_3 import Phase3
 import rospy
-from lasr_voice import Voice
-from tiago_controllers import BaseController
-import actionlib
-from play_motion_msgs.msg import PlayMotionAction, PlayMotionGoal
-from lasr_object_detection_yolo.srv import YoloDetection
-from coffee_shop.srv import TfTransform, TfTransformRequest
+from coffee_shop.context import Context
+import sys
 
 if __name__ == "__main__":
     rospy.init_node("test_wait_for_person")
     sm = smach.StateMachine(outcomes=['end'])
-    play_motion_client = actionlib.SimpleActionClient('/play_motion', PlayMotionAction)
-    play_motion_client.wait_for_server(rospy.Duration(15.0))
-    rospy.wait_for_service("/yolov8/detect", rospy.Duration(15.0))
-    yolo = rospy.ServiceProxy('/yolov8/detect', YoloDetection)
-    rospy.wait_for_service("/tf_transform", rospy.Duration(15.0))
-    tf = rospy.ServiceProxy("/tf_transform", TfTransform)
+    context = Context(sys.argv[1])
+    context.current_table = "table0"
+    context.tables[context.current_table]["status"] = "ready"
 
     with sm:
-        sm.add('PHASE_3', Phase3(BaseController(), Voice(), yolo, tf, play_motion_client), transitions={'done' : 'end'})
+        sm.add('PHASE_3', Phase3(context), transitions={'done' : 'end'})
     sm.execute()

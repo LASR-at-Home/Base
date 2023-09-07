@@ -1,0 +1,52 @@
+#!/usr/bin/env python3
+import rospy
+from std_srvs.srv import Empty
+from lasr_speech.srv import Speech, SpeechResponse
+from lasr_rasa.srv import Rasa
+from lasr_speech_recognition_common.msg import Transcription
+import sounddevice
+import soundfile
+import pyaudio
+from time import sleep
+from multiprocessing import Process
+import rospkg
+import os
+
+class TranscribeAndParse:
+
+    def __init__(self):
+        rospy.wait_for_service("/lasr_rasa/parse")
+        self.rasa = rospy.ServiceProxy("/lasr_rasa/parse", Rasa)
+        self.start_listening = rospy.ServiceProxy("/whisper/start_listening", Empty)
+        self.stop_listening = rospy.ServiceProxy("/whisper/stop_listening", Empty)
+        self.transcription_topic = "/transcription"
+        self.sound_data = soundfile.read(os.path.join(rospkg.RosPack().get_path("lasr_speech"), "sounds", "beep.wav"))[0]
+
+    def play_sound(self):
+        def play():
+            audio_interface = pyaudio.PyAudio()
+            sample_rate = int(audio_interface.get_default_output_device_info()["defaultSampleRate"])
+            sounddevice.play(self.sound_data, sample_rate,
+                             device=audio_interface.get_default_output_device_info()["index"])  # device=None is default for TIAGo. Modify to match your device.
+            sounddevice.wait()
+        p = Process(target=play)
+        p.start()
+        sleep(0.5)
+
+    def __call__(self, req):
+        self.play_sound()
+        self.start_listening()
+        while True:
+            transcription = rospy.wait_for_message(self.transcription_topic, Transcription)
+            rospy.loginfo(transcription)
+            if transcription.finished:
+                self.stop_listening()
+                rasa_response = self.rasa(transcription.phrase)
+                rospy.loginfo(rasa_response)
+                return SpeechResponse(rasa_response.json_response, rasa_response.success)
+
+if __name__ == "__main__":
+    rospy.init_node("lasr_speech")
+    worker = TranscribeAndParse()
+    rospy.Service("/lasr_speech/transcribe_and_parse", Speech, worker)
+    rospy.spin()

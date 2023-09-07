@@ -3,96 +3,36 @@ version: "3.1"
 nlu:
 - intent: make_order
   examples: |
-    - I'd like an [Italian biscotti](item) please.
-    - Get me a [smoothie](item).
-    - Can I have a [mango juice](item)?
-    - I'll take some [crisps](item).
-    - Could I get a bottle of [water](item)?
-    - Please prepare a [sandwich](item) for me.
-    - I'd like a [toastie](item), please.
-    - May I have a [veggie pot](item)?
-    - Get me a [wrap](item) to go.
-    - One [espresso](item), please.
-    - A [cappuccino](item) would be great.
-    - I need an [americano](item), please.
-    - I'd like an [Italian biscotti](item) and a [cappuccino](item), please.
-    - Get me a [smoothie](item) with extra strawberries.
-    - Can I have a [mango juice](item) and a [veggie pot](item)?
-    - I'll take some [crisps](item) and a [water](item).
-    - Could I get a [sandwich](item) with turkey?
-    - Please prepare a [toastie](item) with ham and cheese.
-    - I'd like a [wrap](item) with chicken and avocado.
-    - May I have a [espresso](item) and an [americano](item)?
-    - Get me a [cappuccino](item) to go, please.
-    - One [smoothie](item) and a [mango juice](item), please.
-    - A [veggie pot](item) with extra veggies would be great.
-    - I need a [wrap](item) with no onions, please.
-    - I'd like a [sandwich](item) with lettuce and tomato.
-    - Could I get a [crisps](item) and a [water](item)?
-    - Can I have an [Italian biscotti](item) and a [toastie](item)?
-    - I'll take an [espresso](item) and a [cappuccino](item).
-    - Please prepare a [mango juice](item) and a [smoothie](item).
-    - I'd like a [veggie pot](item) and a [wrap](item), please.
-    - May I have a [toastie](item) with bacon?
-    - Get me a [cappuccino](item) and an [americano](item).
-    - One [espresso](item) and a [water](item), please.
-    - A [crisps](item) and a [sandwich](item) would be great.
-    - I need a [smoothie](item) and a [mango juice](item).
-    - I'd like a [veggie pot](item) and a [toastie](item), please.
-    - Could I get a [wrap](item) with extra sauce?
-    - Can I have an [Italian biscotti](item) and a [cappuccino](item)?
-    - I'll take a [mango juice](item) and a [smoothie](item).
-    - Please prepare a [sandwich](item) with turkey and cheese.
-    - I'd like a [crisps](item) and a [water](item), please.
-    - May I have a [toastie](item) with ham and tomato?
-    - Get me a [espresso](item) and a [americano](item).
-    - One [cappuccino](item) and a [smoothie](item), please.
-    - A [veggie pot](item) with extra protein would be great.
-    - I need a [wrap](item) and a [mango juice](item).
-    - I'd like a [sandwich](item) and a [toastie](item), please.
-    - Could I get a [crisps](item) and a [water](item)?
-    - Can I have an [Italian biscotti](item) and an [espresso](item)?
-    - I'll take a [mango juice](item) and a [veggie pot](item).
-    - Please prepare a [smoothie](item) and a [sandwich](item).
-    - I'd like a [cappuccino](item) and a [americano](item), please.
-    - May I have a [toastie](item) and a [wrap](item)?
-    - Get me a [water](item) and an [Italian biscotti](item).
-    - One [crisps](item) and a [smoothie](item), please.
-    - A [veggie pot](item) with extra veggies would be great.
-    - I need a [espresso](item) and a [mango juice](item).
-    - I'd like a [cappuccino](item) and a [toastie](item), please.
-    - Could I get a [wrap](item) with no onions?
-    - Can I have a [sandwich](item) and a [americano](item)?
-    - I'll take a [smoothie](item) and a [water](item), please.
-    - Please prepare a [mango juice](item) and a [crisps](item).
-    - I'd like a [veggie pot](item) and a [toastie](item).
-    - May I have an [Italian biscotti](item) and a [espresso](item), please.
-    - Get me a [sandwich](item) and a [smoothie](item).
-    - One [cappuccino](item) and a [mango juice](item), please.
-    - A [veggie pot](item) with extra protein would be great.
-    - I need a [wrap](item) and a [water](item).
-    - I'd like a [toastie](item) and a [americano](item), please.
-    - Could I get a [crisps](item) and a [water](item)?
-    - Can I have an [Italian biscotti](item) and a [toastie](item)?
-    - I'll take a [mango juice](item) and a [cappuccino](item).
-    - Please prepare a [smoothie](item) and an [espresso](item).
-    - I'd like a [veggie pot](item) and a [wrap](item), please.
-    - May I have a [sandwich](item) and a [water](item)?
-    - Get me a [toastie](item) and a [smoothie](item), please.
-    - One [cappuccino](item) and a [mango juice](item), please.
-    - A [veggie pot](item) with extra veggies would be great.
-    - I need a [wrap](item) and a [espresso](item).
-    - I'd like a [crisps](item) and an [americano](item), please.
-    - Could I get a [sandwich](item) and a [mango juice](item)?
-    - Can I have an [Italian biscotti](item) and a [smoothie](item)?
-    - I'll take a [veggie pot](item) and a [cappuccino](item).
-    - Please prepare a [toastie](item) and a [water](item).
-    - I'd like a [wrap](item) and a [toastie](item), please.
-    - May I have a [sandwich](item) and an [espresso](item)?
-    - I'll have [three]{"entity" : "quantity", "value" : 3} [espressos]{"entity" : "item", "value" : "espresso"}
-    - Can I have [two]{"entity" : "quantity", "value" : 2} [americanos]{"entity" : "item", "value" : "americano"}
-- intent: greet
+    - Can I have a [coffee]{"entity" : "item", "value" : "coffee_cup"} please.
+    - Get me a [coffee]{"entity" : "item", "value" : "coffee_cup"} please.
+    - Get me [two]{"entity" : "quantity", "value" : 2} [coffees]{"entity" : "item", "value" : "coffee_cup"}
+    - Can I have [three]{"entity" : "quantity", "value" : 3} [coffees]{"entity" : "item", "value" : "coffee_cup"}
+    - Can I have a [small pringles]{"entity" : "item", "value" : "small_pringles"} please.
+    - Get me a [small pringles]{"entity" : "item", "value" : "small_pringles"} please.
+    - Get me [two]{"entity" : "quantity", "value" : 2} [small pringles]{"entity" : "item", "value" : "small_pringles"}
+    - Can I have [three]{"entity" : "quantity", "value" : 3} [small pringles]{"entity" : "item", "value" : "small_pringles"}
+    - Get me some [pringles]{"entity" : "item", "value" : "pringles"} please.
+    - Get me [two]{"entity" : "quantity", "value" : 2} [pringles]{"entity" : "item", "value" : "pringles"}
+    - Can I have [three]{"entity" : "quantity", "value" : 3} [pringles]{"entity" : "item", "value" : "pringles"}
+    - One [coffee]{"entity" : "item", "value" : "coffee_cup"}
+    - A [coffee]{"entity" : "item", "value" : "coffee_cup"}
+    - [Small pringles]{"entity" : "item", "value" : "small_pringles"}
+    - [Pringles]{"entity" : "item", "value" : "pringles"}
+    - A [small pringles]{"entity" : "item", "value" : "small_pringles"}
+    - Some [pringles]{"entity" : "item", "value" : "pringles"}
+    - A [coffee]{"entity" : "item", "value" : "coffee_cup"} and some [pringles]{"entity" : "item", "value" : "pringles"}
+    - One [coffee], one [pringles]{"entity" : "item", "value" : "pringles"} and one [small pringles]{"entity" : "item", "value" : "small_pringles"}
+    - [Two]{"entity" : "quantity", "value" : 2} [coffees]{"entity" : "item", "value" : "coffee_cup"} and some [pringles]{"entity" : "item", "value" : "pringles"}
+    - [Three]{"entity" : "quantity", "value" : 3} [coffees]{"entity" : "item", "value" : "coffee_cup"}, one [pringles]{"entity" : "item", "value" : "pringles"} and one [small pringles]{"entity" : "item", "value" : "small_pringles"}
+    - Just a [coffee]{"entity" : "item", "value" : "coffee_cup"} and some [pringles]{"entity" : "item", "value" : "pringles"}
+    - [pringles]{"entity" : "item", "value" : "pringles"} and a [coffee]{"entity" : "item", "value" : "coffee_cup"}
+- intent: affirm
   examples: |
-    - Hi
-    - Hello there
-    - Wassup
+    - [Yes](choice)
+    - [yes](choice)
+    - [No](choice)
+    - [no](choice)
+- intent: wake_word
+  examples: |
+    - [all done](wake)
+    - [all done](wake), thanks

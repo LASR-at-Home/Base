@@ -51,6 +51,7 @@ def image_callback(image):
 
 def listener():
     rospy.init_node('image_listener', anonymous=True)
+    rospy.wait_for_service('/yolov8/detect')
     rospy.Subscriber(listen_topic, Image, image_callback)
     rospy.spin()
 

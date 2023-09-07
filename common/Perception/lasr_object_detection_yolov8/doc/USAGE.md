@@ -25,8 +25,8 @@ response = detect_service(request)
 To start the service:
 
 ```python
-# inside of TIAGo container & LASR workspace:
-rosrun lasr_object_detection_yolov8 service
-# .. or also write to /yolov8/debug topic:
-DEBUG=1 rosrun lasr_object_detection_yolov8 service
+# use the launch file:
+roslaunch lasr_object_detection_yolov8 service.launch
+# .. optionally configure debug / preload:
+roslaunch lasr_object_detection_yolov8 service.launch debug:=true preload:=["yolov8n-seg.pt"]
 ```
