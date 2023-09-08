@@ -84,6 +84,9 @@ def generate_cuboid(number):
             local_corner_2 = [LIFT_WAITING_AREA,0]
             local_corner_3 = [LIFT_WAITING_AREA,-LIFT_WAITING_AREA]
             local_corner_4 = [0,-LIFT_WAITING_AREA]
+            local_wait_position = [0,-LIFT_WAITING_AREA - 0.4]
+            wait_position = get_map_frame_pose(local_wait_position, tr)
+
 
         # TRANSFORM TO MAP FRAME
         corner_1 = get_map_frame_pose(local_corner_1, tr)
@@ -142,6 +145,7 @@ def generate_cuboid(number):
                 'corner 2' : corner_2,
                 'corner 3' : corner_3,
                 'corner 4' : corner_4
+                'wait position': wait_position
             }
             FILENAME_LIFT = r.get_path('aruco_service') + "/test_lift_wait_position.yaml"
 

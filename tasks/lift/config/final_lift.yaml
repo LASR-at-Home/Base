@@ -6,7 +6,7 @@ start:
     orientation: {x: 0.0, y: 0.0, z: -0.591061635968, w: 0.806626395853}
 
 
-#
+#Heavy Goods Lift: 
 #start:
  # pose:
   #  position: {    x: 0.508800501232, y: 33.8344979691,z: 0.0
@@ -31,10 +31,10 @@ wait_centre:
     orientation: {x: 0.0, y: 0.0, z: 0.752734065, w: 0.658324712318}
 
 #Real Lift
-#wait:
- # pose:
-  #  position: {    x: 0.508800501232, y: 33.8344979691,z: 0.0}
-   # orientation: { x: 0.0,y: 0.0,z: 0.637510283355,w: 0.770441846356}
+wait:
+  pose:
+    position: {    x: 0.508800501232, y: 33.8344979691,z: 0.0}
+    orientation: { x: 0.0,y: 0.0,z: 0.637510283355,w: 0.770441846356}
 
 
 

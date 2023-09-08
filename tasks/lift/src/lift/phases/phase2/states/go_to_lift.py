@@ -68,7 +68,7 @@ class GoToLift(smach.State):
         warped, analysis, M = w.get_lift_information(is_lift=False, is_sim=rospy.get_param("/is_simulation"))
         image = Image.fromarray(warped)
         #Make the white space bigger to make it harder for the network: 
-        image = image.filter(ImageFIlter.MinFilter(3))
+        image = image.filter(ImageFilter.MinFilter(3))
 
         print("Debug Path: ", DEBUG_PATH)
         
@@ -77,9 +77,9 @@ class GoToLift(smach.State):
             image.save(DEBUG_PATH + "/zoe_predict_pos_test_before_rotate" + str(TEST) + ".jpg")
         
         #Rotate the image to make sure the door is the bottom of the image when we pass to NN: 
-        degrees = 90
-        image_rotated = image.rotate(degrees)
-        image_rotated = ImageOps.mirror(image_rotated)
+        #degrees = 90
+        #image_rotated = image.rotate(degrees)
+        #image_rotated = ImageOps.mirror(image_rotated)
 
         if PLOT_SAVE:
             image_rotated.save(DEBUG_PATH + "/zoe_predict_pos_test_after_rotate" + str(TEST) + ".jpg")
@@ -91,8 +91,8 @@ class GoToLift(smach.State):
             keypoint = analysis[3]
 
         #rotating keypoint to match image: 
-        keypoint = self.mirror_keypoint(keypoint,image_rotated)
-        keypoint = self.rotate_keypoint(keypoint,(360-degrees),image_rotated,image)
+        #keypoint = self.mirror_keypoint(keypoint,image_rotated)
+        #keypoint = self.rotate_keypoint(keypoint,(360-degrees),image_rotated,image)
 
         
         visualise_predictions(warped, bbox, keypoint)
