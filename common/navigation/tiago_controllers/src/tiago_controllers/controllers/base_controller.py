@@ -13,9 +13,10 @@ from tiago_controllers.base_planner import plan_to_radius as _plan_to_radius
 from math import atan2, radians
 from geometry_msgs.msg import Twist
 from common_math.transformations import quaternion_from_euler
-
 from tiago_controllers.base_planner import get_journey_points as _get_journey_points
 import numpy as np
+import numpy as np
+from scipy.spatial.transform import Rotation as R
 
 class BaseController:
     def __init__(self):
@@ -34,6 +35,13 @@ class BaseController:
                     break
                 rospy.sleep(0.5)
                 self._goal_sent = False
+
+    def check_active_state(self):
+        return self._client.get_state() == GoalStatus.PENDING or self._client.get_state() == GoalStatus.ACTIVE
+
+    def check_terminated_state(self):
+        return self._client.get_state() == GoalStatus.LOST or self._client.get_state() == GoalStatus.PREEMPTED or \
+               self._client.get_state() == GoalStatus.ABORTED
 
     def get_current_pose(self):
         msg = rospy.wait_for_message('/amcl_pose', PoseWithCovarianceStamped)
@@ -100,6 +108,17 @@ class BaseController:
 
     def async_face_to(self, x, y):
         return self.async_to_pose(self.compute_face_quat(x, y))
+
+    def rotate(self, radians):
+        x, y, current_orientation = self.get_current_pose()
+        current_orientation = np.array([current_orientation.x, current_orientation.y,
+                                        current_orientation.z, current_orientation.w])
+        r = R.from_quat(current_orientation)
+        rotated_r = r * R.from_euler('z', radians, degrees=False)
+
+        pose = Pose(position=Point(x, y, 0.0), orientation=Quaternion(*rotated_r.as_quat()))
+
+        return self.sync_to_pose(pose)
 
 
 class CmdVelController:

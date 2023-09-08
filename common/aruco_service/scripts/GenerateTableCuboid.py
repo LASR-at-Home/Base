@@ -4,7 +4,7 @@ import yaml
 import rospy
 import datetime
 from aruco_service.srv import TableNumber, TableNumberResponse
-from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import PointStamped, PoseStamped
 from visualization_msgs.msg import Marker
 import rosparam
 import tf2_ros
@@ -36,14 +36,14 @@ def get_transform_to_marker(from_frame, to_frame):
         raise
 
 def get_map_frame_pose(input_xy, transform):
-    pose_stamped = PoseStamped()
-    pose_stamped.pose.position.x = input_xy[0]
-    pose_stamped.pose.position.y = input_xy[1]
-    pose_stamped.header.frame_id = "aruco_marker_frame"
-    pose_stamped.header.stamp = rospy.Time.now()
+    ps = PointStamped()
+    ps.point.x = input_xy[0]
+    ps.point.y = input_xy[1]
+    ps.header.frame_id = "aruco_marker_frame"
+    ps.header.stamp = rospy.Time.now()
 
-    transformed_pose = tf2_geometry_msgs.do_transform_pose(pose_stamped, transform)
-    return [transformed_pose.pose.position.x, transformed_pose.pose.position.y]
+    tr_point = tf2_geometry_msgs.do_transform_point(ps, transform)
+    return (tr_point.point.x, tr_point.point.y)
 
 def create_marker_msg(point, idx):
     marker_msg = Marker()

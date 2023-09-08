@@ -3,6 +3,10 @@ charset-normalizer==3.2.0  # via requests
 cmake==3.27.2             # via triton
 contourpy==1.1.0          # via matplotlib
 cycler==0.11.0            # via matplotlib
+<<<<<<< HEAD
+=======
+dill==0.3.7               # via -r requirements.in
+>>>>>>> coffee-shop
 filelock==3.12.3          # via torch, triton
 fonttools==4.42.1         # via matplotlib
 idna==3.4                 # via requests
@@ -46,7 +50,7 @@ tqdm==4.66.1              # via ultralytics
 triton==2.0.0             # via torch
 typing-extensions==4.7.1  # via filelock, torch
 tzdata==2023.3            # via pandas
-ultralytics==8.0.150      # via -r requirements.in
+ultralytics==8.0.168      # via -r requirements.in
 urllib3==2.0.4            # via requests
 wheel==0.41.2             # via nvidia-cublas-cu11, nvidia-cuda-cupti-cu11, nvidia-cuda-runtime-cu11, nvidia-curand-cu11, nvidia-cusparse-cu11, nvidia-nvtx-cu11
 
