@@ -12,6 +12,36 @@ import rospy
 import tf2_ros
 
 
+# start from peter
+def apply_transform(input_xyz, transform, target="xtion_rgb_optical_frame"):
+    ps = PointStamped()
+    ps.point.x = input_xyz[0]
+    ps.point.y = input_xyz[1]
+    ps.point.z = input_xyz[2]
+    ps.header.frame_id = target
+    ps.header.stamp = rospy.Time.now()
+
+    tr_point = tf2_geometry_msgs.do_transform_point(ps, transform)
+    return (tr_point.point.x, tr_point.point.y, tr_point.point.z)
+
+
+def get_transform(from_frame, to_frame):
+    try:
+        t = tf_buffer.lookup_transform(to_frame, from_frame, rospy.Time(0), rospy.Duration(0.5))
+        return t
+    except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+        raise
+    
+def get_transform_(from_frame, to_frame):
+    tf_buffer = tf2_ros.Buffer()
+    tf_listener = tf2_ros.TransformListener(tf_buffer)
+    try:
+        t = tf_buffer.lookup_transform(to_frame, from_frame, rospy.Time(0), rospy.Duration(5))
+        return t
+    except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+        raise
+
+# stop from peter
 def tf_transform(msg):
     tf_response = TfTransformResponse()
     if msg.pose_array.header.frame_id != '':
