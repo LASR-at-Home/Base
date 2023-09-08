@@ -30,7 +30,7 @@ wait_centre:
     position: {  x: 3.6238360405, y: -0.465535610914, z: -0.0013427734375}
     orientation: {x: 0.0, y: 0.0, z: 0.752734065, w: 0.658324712318}
 
-#Real Lift
+#Heav Lift
 wait:
   pose:
     position: {    x: 0.508800501232, y: 33.8344979691,z: 0.0}

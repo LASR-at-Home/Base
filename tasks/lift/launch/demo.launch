@@ -9,6 +9,17 @@
 <!--   <node pkg="interaction_module" name="interaction_module_srv" type="interaction_module_srv.py"/>-->
 <!--   <node name="soundplay_node" pkg="sound_play" type="soundplay_node.py"/>-->
 
+    <arg name="whisper_matcher" default="by-index" />
+    <arg name="whisper_device_param" default="0" />
+    <arg name="rasa_model" default="$(find lasr_rasa)/assistants/coffee_shop/models"/>
+    <arg name="rasa_model_lift" default="$(find lasr_rasa)/assistants/lift/models"/>
+
+    <include file = "$(find lasr_speech)/launch/speech.launch">
+        <arg name="matcher" value="$(arg whisper_matcher)"/>
+        <arg name="device_param" value="$(arg whisper_device_param)"/>
+        <arg name="rasa_model" value="$(arg rasa_model)"/>
+    </include>
+
 
 <!--     STATIC POINTS  -->
 <!--  <rosparam command="load" file="$(find lift)/config/demo_sim.yaml" />-->

@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import os
-
 import smach
 import rospy
 from geometry_msgs.msg import Pose, Point, Quaternion
@@ -82,7 +81,7 @@ class GoToLift(smach.State):
         #image_rotated = ImageOps.mirror(image_rotated)
 
         if PLOT_SAVE:
-            image_rotated.save(DEBUG_PATH + "/zoe_predict_pos_test_after_rotate" + str(TEST) + ".jpg")
+            image.save(DEBUG_PATH + "/zoe_predict_pos_test_after_rotate" + str(TEST) + ".jpg")
 
         #predicting with rotated image: 
         image_path = DEBUG_PATH + "/zoe_predict_pos_test_after_rotate" + str(TEST) + ".jpg"
