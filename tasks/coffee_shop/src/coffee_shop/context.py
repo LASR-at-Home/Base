@@ -27,7 +27,7 @@ class Context:
         self.tf_apply = rospy.ServiceProxy("/apply_transform", ApplyTransform)
         self.shapely = LasrShapely()
         self.bridge = CvBridge()
-        self.speech = None #rospy.ServiceProxy("/lasr_speech/transcribe_and_parse", Speech)
+        self.speech = rospy.ServiceProxy("/lasr_speech/transcribe_and_parse", Speech)
 
         if '/pal_startup_control/start' in rosservice.get_service_list():
             # Assume that if the topics are available, then the services are running.
