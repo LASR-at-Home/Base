@@ -40,9 +40,11 @@ class LookForPersonLaser(smach.State):
 
         padded_converted_points = []
         pixels = []
+        tic = time.time()
         for point in pcl_points:
             # Pad out the points to add vertical "pillars" to the point cloud
             for z in np.linspace(0., 1., 5):
+                tic2 = time.time()
                 apply_req = ApplyTransformRequest()
                 apply_req.point.x = point[0]
                 apply_req.point.y = point[1]
@@ -51,11 +53,16 @@ class LookForPersonLaser(smach.State):
                 res = self.context.tf_apply(apply_req)
                 p = (res.new_point.x, res.new_point.y, res.new_point.z)
                 u,v = self.camera.project3dToPixel(p)
+                toc2 = time.time() - tic2
+                rospy.loginfo("Time taken to convert point: ", toc2)
                 # Filter out points that are outside the camera frame
                 if u >= 0 and u < 640 and v >= 0 and v < 480:
                     padded_converted_points.append(p)
                     pixels.append(u)
                     pixels.append(v)
+
+        toc = time.time() - tic
+        rospy.loginfo("Time taken to convert points: ", toc)
 
         return padded_converted_points, pixels
     
