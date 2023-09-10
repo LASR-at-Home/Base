@@ -34,7 +34,8 @@ class TranscribeAndParse:
         sleep(0.5)
 
     def __call__(self, req):
-        self.play_sound()
+        if req.play_sound:
+            self.play_sound()
         self.start_listening()
         while True:
             transcription = rospy.wait_for_message(self.transcription_topic, Transcription)
