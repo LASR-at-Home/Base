@@ -1,31 +1,53 @@
 version: "3.1"
 
 nlu:
+- synonym: coffee_cup
+  examples: |
+    - coffee
+    - coffees
+- synonym: small_pringles
+  examples: |
+    - small pringles
+    - small bringles 
+- synonym: pringles
+  examples: |
+    - pringles
+    - bringles
+- synonym: "1"
+  examples: |
+    - one
+- synonym: "2"
+  examples: |
+    - two
+- synonym: "3"
+  examples: |
+    - three
 - intent: make_order
   examples: |
-    - Can I have a [coffee]{"entity" : "item", "value" : "coffee_cup"} please.
-    - Get me a [coffee]{"entity" : "item", "value" : "coffee_cup"} please.
-    - Get me [two]{"entity" : "quantity", "value" : 2} [coffees]{"entity" : "item", "value" : "coffee_cup"}
-    - Can I have [three]{"entity" : "quantity", "value" : 3} [coffees]{"entity" : "item", "value" : "coffee_cup"}
-    - Can I have a [small pringles]{"entity" : "item", "value" : "small_pringles"} please.
-    - Get me a [small pringles]{"entity" : "item", "value" : "small_pringles"} please.
-    - Get me [two]{"entity" : "quantity", "value" : 2} [small pringles]{"entity" : "item", "value" : "small_pringles"}
-    - Can I have [three]{"entity" : "quantity", "value" : 3} [small pringles]{"entity" : "item", "value" : "small_pringles"}
-    - Get me some [pringles]{"entity" : "item", "value" : "pringles"} please.
-    - Get me [two]{"entity" : "quantity", "value" : 2} [pringles]{"entity" : "item", "value" : "pringles"}
-    - Can I have [three]{"entity" : "quantity", "value" : 3} [pringles]{"entity" : "item", "value" : "pringles"}
-    - One [coffee]{"entity" : "item", "value" : "coffee_cup"}
-    - A [coffee]{"entity" : "item", "value" : "coffee_cup"}
-    - [Small pringles]{"entity" : "item", "value" : "small_pringles"}
-    - [Pringles]{"entity" : "item", "value" : "pringles"}
-    - A [small pringles]{"entity" : "item", "value" : "small_pringles"}
-    - Some [pringles]{"entity" : "item", "value" : "pringles"}
-    - A [coffee]{"entity" : "item", "value" : "coffee_cup"} and some [pringles]{"entity" : "item", "value" : "pringles"}
-    - One [coffee], one [pringles]{"entity" : "item", "value" : "pringles"} and one [small pringles]{"entity" : "item", "value" : "small_pringles"}
-    - [Two]{"entity" : "quantity", "value" : 2} [coffees]{"entity" : "item", "value" : "coffee_cup"} and some [pringles]{"entity" : "item", "value" : "pringles"}
-    - [Three]{"entity" : "quantity", "value" : 3} [coffees]{"entity" : "item", "value" : "coffee_cup"}, one [pringles]{"entity" : "item", "value" : "pringles"} and one [small pringles]{"entity" : "item", "value" : "small_pringles"}
-    - Just a [coffee]{"entity" : "item", "value" : "coffee_cup"} and some [pringles]{"entity" : "item", "value" : "pringles"}
-    - [pringles]{"entity" : "item", "value" : "pringles"} and a [coffee]{"entity" : "item", "value" : "coffee_cup"}
+    - Can I have a [coffee](item) please.
+    - Get me a [coffee](item) please.
+    - Get me two [coffees](item)
+    - Can I have three [coffees](item)
+    - Can I have a [small pringles](item) please.
+    - Get me a [small pringles](item) please.
+    - Get me two [small pringles](item)
+    - Can I have three [small pringles](item)
+    - Get me some [pringles](item) please.
+    - Get me two [pringles](item)
+    - Can I have three [pringles](item)
+    - One [coffee](item)
+    - A [coffee](item)
+    - [Small pringles](item)
+    - [Pringles](item)
+    - A [small pringles](item)
+    - Some [pringles](item)
+    - A [coffee](item) and some [pringles](item)
+    - One [coffee](item), one [pringles](item) and one [small pringles](item)
+    - Two [coffees](item) and some [pringles](item)
+    - Three [coffees](item), one [pringles](item) and one [small pringles](item)
+    - Just a [coffee](item) and some [pringles](item)
+    - [pringles](item) and a [coffee](item)
+    - some [bringles](item)
 - intent: affirm
   examples: |
     - Accept

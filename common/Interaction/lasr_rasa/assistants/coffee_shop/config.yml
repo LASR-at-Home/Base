@@ -11,10 +11,13 @@ assistant_id: 20230812-164106-quadratic-model
 language: en
 
 pipeline:
-  - name: WhitespaceTokenizer
-  - name: RegexFeaturizer
-  - name: LexicalSyntacticFeaturizer
-  - name: CountVectorsFeaturizer
+  - name: SpacyNLP
+    model: "en_core_web_md"
+  - name: SpacyTokenizer
+  - name: SpacyEntityExtractor
+    dimensions: ["CARDINAL"]
+  - name: SpacyFeaturizer
+    pooling: mean
   - name: CountVectorsFeaturizer
     analyzer: "char_wb"
     min_ngram: 1
@@ -22,8 +25,7 @@ pipeline:
   - name: DIETClassifier
     epochs: 100
   - name: EntitySynonymMapper
-  - name: ResponseSelector
-    epochs: 100
+
 
 # Configuration for Rasa Core.
 # https://rasa.com/docs/rasa/core/policies/
