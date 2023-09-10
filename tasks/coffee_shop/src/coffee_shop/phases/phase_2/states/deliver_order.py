@@ -20,15 +20,13 @@ class DeliverOrder(smach.State):
         self.context.base_controller.rotate(np.pi)
         pm_goal = PlayMotionGoal(motion_name="load_unload", skip_planning=True)
         self.play_motion_client.send_goal_and_wait(pm_goal)
-        self.voice_controller.sync_tts("Please unload the order and say `all done` when you are finished.")
+        self.voice_controller.sync_tts("Please unload the order and say `done` when you are finished.")
         while True:
             resp = self.context.speech()
             if not resp.success:
                 continue
             resp = json.loads(resp.json_response)
-            if resp["intent"]["name"] != "wake_word":
-                continue
-            if resp["entities"].get("wake", None):
+            if resp["intent"]["name"] == "affirm":
                 break
         pm_goal = PlayMotionGoal(motion_name="back_to_default", skip_planning=True)
         self.play_motion_client.send_goal_and_wait(pm_goal)
