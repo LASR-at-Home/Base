@@ -28,7 +28,7 @@ class TakeOrder(smach.State):
         if not items:
             self.context.voice_controller.sync_tts("Sorry, I didn't get that")
             return self.get_order()
-        quantities = resp["entities"].get("quantity", [])
+        quantities = resp["entities"].get("CARDINAL", [])
         quantified_items = []
         if len(items) == len(quantities) == 1:
             quantified_items.append((int(quantities[0]["value"]), items[0]["value"]))
