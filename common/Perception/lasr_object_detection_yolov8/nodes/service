@@ -7,14 +7,6 @@ import lasr_object_detection_yolov8 as yolo
 from sensor_msgs.msg import Image
 from lasr_object_detection_yolo.srv import YoloDetection, YoloDetectionRequest, YoloDetectionResponse
 
-# Determine DEBUG variables
-from os import environ
-
-if "DEBUG" in environ:
-    DEBUG = environ.get("DEBUG") == '1'
-else:
-    DEBUG = False
-
 # Put ourselves in the model folder
 import os
 import rospkg
@@ -24,6 +16,13 @@ os.chdir(os.path.abspath(os.path.join(package_path, 'models')))
 
 # Initialise rospy
 rospy.init_node('yolov8_service')
+
+# Determine variables
+DEBUG = rospy.get_param('~debug', False)
+PRELOAD = rospy.get_param('~preload', [])
+
+for model in PRELOAD:
+    yolo.load_model(model)
 
 # Prepare publisher
 debug_publisher = None

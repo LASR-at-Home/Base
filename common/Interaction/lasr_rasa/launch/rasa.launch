@@ -1,0 +1,4 @@
+<launch>
+    <arg name="model" default=""/>
+    <node pkg="lasr_rasa" type="service" name="rasa_service" output="screen" args="$(arg model)"/>
+</launch>

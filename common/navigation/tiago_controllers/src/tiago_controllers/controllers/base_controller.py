@@ -17,6 +17,7 @@ from tiago_controllers.helpers.pose_helpers import get_pose_from_param
 
 from tiago_controllers.base_planner import get_journey_points as _get_journey_points
 import numpy as np
+from scipy.spatial.transform import Rotation as R
 
 class BaseController:
     def __init__(self):
@@ -45,6 +46,9 @@ class BaseController:
 
     def is_running(self):
         return is_running(self.__client)
+
+    def reg_callback(self, callback):
+        self._callback = callback
 
     def get_status(self):
         return self.__client.get_state()
@@ -133,6 +137,16 @@ class BaseController:
         quaternion = Quaternion(x, y, z, w)
         pose = Pose(position=Point(robot_pose.position.x, robot_pose.position.y, 0.0), orientation=quaternion)
         return pose
+    def rotate(self, radians):
+        x, y, current_orientation = self.get_current_pose()
+        current_orientation = np.array([current_orientation.x, current_orientation.y,
+                                        current_orientation.z, current_orientation.w])
+        r = R.from_quat(current_orientation)
+        rotated_r = r * R.from_euler('z', radians, degrees=False)
+
+        pose = Pose(position=Point(x, y, 0.0), orientation=Quaternion(*rotated_r.as_quat()))
+
+        return self.sync_to_pose(pose)
 
 
 class CmdVelController:
@@ -209,7 +223,6 @@ class ReachToRadius(BaseController):
         quaternion = Quaternion(x, y, z, w)
 
         pose = Pose(position=Point(robot_x, robot_y, 0.0), orientation=quaternion)
-
 
 if __name__ == '__main__':
     rospy.init_node("base_test", anonymous=True)
