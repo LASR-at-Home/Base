@@ -16,6 +16,7 @@ class WaitForOrder(smach.State):
                 continue
             resp = json.loads(resp.json_response)
             rospy.loginfo(resp)
-            if resp["intent"]["name"] == "affirm":
+            if resp["intent"]["name"] == "affirm" and resp["text"].lower() == "done":
                 break
         return 'done'
+    

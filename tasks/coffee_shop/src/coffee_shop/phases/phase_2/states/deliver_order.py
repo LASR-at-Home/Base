@@ -26,7 +26,7 @@ class DeliverOrder(smach.State):
             if not resp.success:
                 continue
             resp = json.loads(resp.json_response)
-            if resp["intent"]["name"] == "affirm":
+            if resp["intent"]["name"] == "affirm" and resp["text"].lower() == "done":
                 break
         pm_goal = PlayMotionGoal(motion_name="back_to_default", skip_planning=True)
         self.play_motion_client.send_goal_and_wait(pm_goal)
