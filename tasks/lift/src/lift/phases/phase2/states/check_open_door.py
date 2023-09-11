@@ -47,12 +47,18 @@ RANDOM_LIFT_JOKES = [
 ]
 
 used_jokes = []
+from std_msgs.msg import Bool
+door_detected = False
+
 class CheckOpenDoor(smach.State):
     def __init__(self, controllers, voice):
         # smach.State.__init__(self, outcomes=['success'])
         smach.State.__init__(self, outcomes=['success', 'failed'])
 
         self.controllers = controllers
+
+        self.sub = rospy.Subscriber('/door_detected', Bool, self.door_detected_callback)
+        print("door detected {}".format(door_detected))
         self.voice = voice
         self.cmd_vel = CmdVelController()
 
@@ -61,6 +67,10 @@ class CheckOpenDoor(smach.State):
             used_jokes.extend(RANDOM_LIFT_JOKES)
             random.shuffle(used_jokes)
         return used_jokes.pop()
+
+    def door_detected_callback(self, msg):
+        global door_detected
+        door_detected = msg.data
         
 
     def execute(self, userdata):
@@ -75,7 +85,7 @@ class CheckOpenDoor(smach.State):
         self.controllers.base_controller.rotate_to_face_object(object_name='/door/pose')
 
         topic = "/counter_lift/counter" if in_lift else "/counter_door/counter"
-        message = "I arrived at the lift. Waiting for the doors to open" if in_lift else "I arrived at the door. Waiting for the doors to open"
+        message = "I am in the lift. Waiting for the doors to open" if in_lift else "I arrived at the door. Waiting for the doors to open"
         res = counter(topic=topic)
 
         if res == "counter":
@@ -91,7 +101,24 @@ class CheckOpenDoor(smach.State):
 
         self.voice.speak("Now checking the door")
 
+
         # check for open door
+        while door_detected:
+            rospy.logerr("the door detected {}".format(door_detected))
+            self.voice.speak("I am still waiting for the door to open")
+            rospy.sleep(1)
+            if door_detected:
+                self.voice.speak("The door is open. I will give the way to the humans now, because I am a good robot.")
+                return 'success'
+
+
+        if door_detected:
+            return 'failed'
+        else:
+            return 'success'
+
+
+
         laser_scan = rospy.wait_for_message("/scan", LaserScan)
         filtered_ranges = laser_scan.ranges[len(laser_scan.ranges) // 3: 2 * len(laser_scan.ranges) // 3]
         mean_distance = np.nanmean(filtered_ranges)

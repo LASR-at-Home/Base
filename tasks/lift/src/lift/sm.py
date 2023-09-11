@@ -27,6 +27,6 @@ class Lift(smach.StateMachine):
             rospy.set_param("/is_simulation", False)
 
         with self:
-            # smach.StateMachine.add('PHASE1', Phase1(self.controllers, self.voice, self.cmd, self.pm), transitions={'success' : 'PHASE2'})
+            smach.StateMachine.add('PHASE1', Phase1(self.controllers, self.voice, self.cmd, self.pm), transitions={'success' : 'PHASE2'})
             smach.StateMachine.add('PHASE2', Phase2(self.controllers, self.voice, self.yolo, self.cmd, self.speech, self.pm), transitions={'success' : 'PHASE3'})
             smach.StateMachine.add('PHASE3', Phase3(self.controllers, self.voice), transitions={'success' : 'success'})

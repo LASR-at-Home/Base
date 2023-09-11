@@ -116,21 +116,26 @@ class ScheduleGoingOut(smach.State):
 
     # the door is open here!!!
     def execute(self, userdata):
-        self.voice.speak("How many people are thinking to go out of the lift?")
+        # self.voice.speak("How many people are thinking to go out of the lift?")
+        # self.voice.speak("Please answer with a number.")
+        #
+        # req = AudioAndTextInteractionRequest()
+        # req.action = "ROOM_REQUEST"
+        # req.subaction = "ask_location"
+        # req.query_text = "SOUND:PLAYING:PLEASE"
+        # resp = self.speech(req)
+        #
+        # self.voice.speak("The response of asking the people in schedule going out is {}".format(resp.result))
 
-        req = AudioAndTextInteractionRequest()
-        req.action = "ROOM_REQUEST"
-        req.subaction = "ask_location"
-        req.query_text = "SOUND:PLAYING:PLEASE"
-        resp = self.speech(req)
 
-        print("The response of asking the people in schedule going out is {}".format(resp.result))
-
-
+        self.voice.speak("Is there anyone who wants to go out of the lift?")
+        self.voice.speak("Please answer with yes or no.")
         req = AudioAndTextInteractionRequest()
         req.action = "BUTTON_PRESSED"
         req.subaction = "confirm_button"
         req.query_text = "SOUND:PLAYING:PLEASE"
+
+        self.voice.speak("I stopped listening")
         resp = self.speech(req)
 
         # do more complex things here
