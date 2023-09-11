@@ -85,7 +85,7 @@ def get_latest_transform(msg):
     to_frame = msg.target_frame
     from_frame = msg.from_frame
     try:
-        t = tfBuffer.lookup_transform(to_frame, from_frame, rospy.Time(0), rospy.Duration(0.1))
+        t = tfBuffer.lookup_transform(to_frame, from_frame, rospy.Time(0), rospy.Duration(5))
         return t
     except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
         raise

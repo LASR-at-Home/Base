@@ -40,15 +40,19 @@ class LookForPersonLaser(smach.State):
 
         padded_converted_points = []
         pixels = []
-        tic = time.time()
         for point in pcl_points:
-            # Filter out points we can't see
-            u,v = self.camera.project3dToPixel(point)
-            if u < 0 or u >= 640 or v < 0 or v >= 480:
-                continue
-            else:
-                for z in np.linspace(0., 1., 5):
-                    p = self.convert_point((point[0], point[1], z), t.transform)
+            # Pad out the points to add vertical "pillars" to the point cloud
+            for z in np.linspace(0., 1., 5):
+                apply_req = ApplyTransformRequest()
+                apply_req.point.x = point[0]
+                apply_req.point.y = point[1]
+                apply_req.point.z = z
+                apply_req.transform = t.transform
+                res = self.context.tf_apply(apply_req)
+                p = (res.new_point.x, res.new_point.y, res.new_point.z)
+                u,v = self.camera.project3dToPixel(p)
+                # Filter out points that are outside the camera frame
+                if u >= 0 and u < 640 and v >= 0 and v < 480:
                     padded_converted_points.append(p)
                     pixels.append(u)
                     pixels.append(v)
