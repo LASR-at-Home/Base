@@ -9,10 +9,12 @@ nlu:
   examples: |
     - small pringles
     - small bringles 
+    - small pringle
 - synonym: pringles
   examples: |
     - pringles
     - bringles
+    - pringle
 - synonym: "1"
   examples: |
     - one
