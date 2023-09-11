@@ -18,7 +18,7 @@ def timeit_rospy(method):
             ts = time.time()
             result = method(*args, **kw)
             te = time.time()
-            rospy.loginfo('%r  %2.2f ss' % (method.__name__, (te - ts)))
+            rospy.loginfo('%r  %2.2f s' % (method.__name__, (te - ts)))
             return result
         return timed
 
