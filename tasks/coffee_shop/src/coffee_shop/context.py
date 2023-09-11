@@ -4,13 +4,14 @@ from tiago_controllers import BaseController, HeadController
 from lasr_voice import Voice
 from play_motion_msgs.msg import PlayMotionAction
 from lasr_object_detection_yolo.srv import YoloDetection
-from coffee_shop.srv import TfTransform
+from coffee_shop.srv import TfTransform, LatestTransform, ApplyTransform
 from lasr_shapely import LasrShapely
 from lasr_speech.srv import Speech
 from cv_bridge3 import CvBridge
 import actionlib
 import yaml
 from visualization_msgs.msg import Marker
+import rosservice
 
 
 class Context:
@@ -22,16 +23,18 @@ class Context:
         self.play_motion_client = actionlib.SimpleActionClient('/play_motion', PlayMotionAction)
         self.yolo = rospy.ServiceProxy('/yolov8/detect', YoloDetection)
         self.tf = rospy.ServiceProxy("/tf_transform", TfTransform)
+        self.tf_latest = rospy.ServiceProxy("/get_latest_transform", LatestTransform)
+        self.tf_apply = rospy.ServiceProxy("/apply_transform", ApplyTransform)
         self.shapely = LasrShapely()
         self.bridge = CvBridge()
         self.speech = rospy.ServiceProxy("/lasr_speech/transcribe_and_parse", Speech)
 
-        try:
-            # Assume that if the messages are available, then the services are running.
+        if '/pal_startup_control/start' in rosservice.get_service_list():
+            # Assume that if the topics are available, then the services are running.
             from pal_startup_msgs.srv import StartupStart, StartupStop
             self.start_head_manager = rospy.ServiceProxy("/pal_startup_control/start", StartupStart)
             self.stop_head_manager = rospy.ServiceProxy("/pal_startup_control/stop", StartupStop)
-        except ImportError:
+        else:
             self.start_head_manager = lambda a, b : None
             self.stop_head_manager = lambda a : None
 

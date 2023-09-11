@@ -5,7 +5,7 @@ import tf2_geometry_msgs
 import tf2_sensor_msgs
 
 from geometry_msgs.msg import PoseStamped, PoseArray
-from coffee_shop.srv import TfTransform, TfTransformResponse
+from coffee_shop.srv import TfTransform, TfTransformResponse, LatestTransform, LatestTransformResponse, ApplyTransform, ApplyTransformResponse
 
 
 from geometry_msgs.msg import PoseStamped, Vector3Stamped, PointStamped, WrenchStamped
@@ -63,8 +63,6 @@ def get_transform(source_frame, target_frame, stamp):
     except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
         print(e)
 
-
-
 def do_transform_point(point, transform):
     p = transform_to_kdl(transform) * PyKDL.Vector(point.point.x, point.point.y, point.point.z)
     res = PointStamped()
@@ -83,10 +81,31 @@ def transform_to_kdl(t):
                                     t.transform.translation.y,
                                     t.transform.translation.z))
 
+def get_latest_transform(msg):
+    to_frame = msg.target_frame
+    from_frame = msg.from_frame
+    try:
+        t = tfBuffer.lookup_transform(to_frame, from_frame, rospy.Time(0), rospy.Duration(5))
+        return t
+    except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+        raise
+
+def apply_transform(msg):
+    rospy.logwarn('Applying transform')
+    new_p = []
+    for p in msg.points:
+        ps = PointStamped()
+        ps.point = p
+        p_tf = do_transform_point(ps, msg.transform)
+        new_p.append(p_tf.point)
+    return ApplyTransformResponse(new_p)
+
 if __name__ == '__main__':
     
     rospy.init_node('tf_transform_node')
     s = rospy.Service('tf_transform', TfTransform, tf_transform)
+    s2 = rospy.Service('get_latest_transform', LatestTransform, get_latest_transform)
+    s3 = rospy.Service('apply_transform', ApplyTransform, apply_transform)
     tfBuffer = tf2_ros.Buffer()
     listener = tf2_ros.TransformListener(tfBuffer)
 
