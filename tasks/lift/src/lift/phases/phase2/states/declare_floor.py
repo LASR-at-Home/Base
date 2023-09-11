@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import smach
 import rospy
+import json
+
 
 class DeclareFloor(smach.State):
     def __init__(self, controllers, voice, speech):
@@ -22,8 +24,8 @@ class DeclareFloor(smach.State):
         resp = self.listen()
         #Response in intent can either be yes or no.
         #Making sure that the response belongs to "affirm", not any other intent: 
-        if resp["intent"]["name"] != "affirm":
-            self.voice.speak("Sorry, I didn't get that")
+        if resp['intent']['name'] != 'affirm':
+            self.voice.speak("Sorry, I didn't get that, please say yes or no")
             return self.affirm()
         choices = resp["entities"].get("choice", None)
         if choices is None:
@@ -43,8 +45,8 @@ class DeclareFloor(smach.State):
         rospy.set_param("/in_lift/status", True)
         if floor == 0:
             floor = 1
-        #self.voice.speak("I would love to go to the floor {}.".format(floor))
-        #self.voice.speak(" Is the button for the floor {} selected?".format(floor))
+        self.voice.speak("I would love to go to the floor {}.".format(floor))
+        self.voice.speak(" Is the button for the floor {} selected?".format(floor))
         
         answer = self.affirm()
 
@@ -52,7 +54,6 @@ class DeclareFloor(smach.State):
         #rasa get answer: 
 
         # From answer: 
-        answer = "yes"
         if answer == "yes":
             self.voice.speak("Great!")
             return 'success'

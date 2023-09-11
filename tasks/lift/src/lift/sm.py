@@ -19,6 +19,7 @@ class Lift(smach.StateMachine):
         self.controllers = Controllers()
         self.cmd = CmdVelController()
         self.voice = Voice()
+        rospy.wait_for_service("/lasr_speech/transcribe_and_parse")
         self.speech = rospy.ServiceProxy("/lasr_speech/transcribe_and_parse", Speech)
         # self.voice = "hello"
 

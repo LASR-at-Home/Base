@@ -1,11 +1,41 @@
 #!/usr/bin/env python3
 import smach
 import rospy
+import json 
 
 class Negotiate(smach.State):
-    def __init__(self, controllers, voice):
+    def __init__(self, controllers, voice,speech):
         smach.State.__init__(self, outcomes=['success', 'failed'])
         self.voice = voice
+        self.speech = speech
+
+    def listen(self):
+        resp = self.speech()
+        if not resp.success:
+            self.voice.speak("Sorry, I didn't get that")
+            return self.listen()
+        resp = json.loads(resp.json_response)
+        rospy.loginfo(resp)
+        return resp
+
+
+    def hear_if_wait(self):
+        resp = self.listen()
+
+        if resp["intent"]["name"] == "negotiate_lift":
+            #I'm going to wait 
+            wait = resp["entities"].get("wait_command",[])
+            if not wait:
+                self.voice.speak("Sorry, did you say wait? I didn't understand.")
+                return self.hear_if_wait()
+            else:
+                return True 
+        else: 
+
+            return False
+
+
+
 
     def execute(self, userdata):
         # call and count the people objects
@@ -17,6 +47,8 @@ class Negotiate(smach.State):
             rospy.sleep(5)
             # hear
             hear_wait = True
+            hear_wait = self.hear_if_wait()
+
             if hear_wait:
                 self.voice.speak("I will wait more")
                 rospy.sleep(5)
