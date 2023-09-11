@@ -44,7 +44,11 @@ class TakeOrder(smach.State):
                     quantified_items.append((1, item["value"]))
         items = []
         for quantity, item in quantified_items:
-            items.extend([item.lower()]*quantity)
+            if item in self.context.target_object_remappings.keys():
+                items.extend([item.lower()]*quantity)
+        if not items:
+            self.context.voice_controller.sync_tts("Sorry, I didn't get that")
+            return self.get_order()
         items_string = ', '.join([f"{count} {self.context.target_object_remappings[item] if count == 1 else self.context.target_object_remappings[item]+'s'}" for item, count in Counter(items).items()]).replace(', ', ', and ', len(items)-2)
 
         self.context.voice_controller.sync_tts(f"You asked for {items_string}, is that correct? Please answer yes or no")
@@ -55,7 +59,7 @@ class TakeOrder(smach.State):
 
     def affirm(self):
         resp = self.listen()
-        if not resp["intent"]["name"] not in ["affirm", "deny"]:
+        if resp["intent"]["name"] not in ["affirm", "deny"]:
             self.context.voice_controller.sync_tts("Sorry, I didn't get that")
             return self.affirm()
         return resp["intent"]["name"] == "affirm"
