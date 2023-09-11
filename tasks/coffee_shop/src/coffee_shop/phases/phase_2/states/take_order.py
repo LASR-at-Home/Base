@@ -11,7 +11,7 @@ class TakeOrder(smach.State):
         self.context = context
 
     def listen(self):
-        resp = self.context.speech()
+        resp = self.context.speech(True)
         if not resp.success:
             self.context.voice_controller.sync_tts("Sorry, I didn't get that")
             return self.listen()

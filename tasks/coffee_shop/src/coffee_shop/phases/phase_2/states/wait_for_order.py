@@ -19,4 +19,3 @@ class WaitForOrder(smach.State):
             if resp["intent"]["name"] == "affirm" and resp["text"].lower() == "done":
                 break
         return 'done'
-    

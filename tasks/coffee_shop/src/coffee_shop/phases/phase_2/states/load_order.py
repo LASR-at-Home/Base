@@ -16,7 +16,7 @@ class LoadOrder(smach.State):
         self.context.play_motion_client.send_goal_and_wait(pm_goal)
         self.context.voice_controller.sync_tts("Please load the order and say `done` when you are ready for me to deliver it.")
         while True:
-            resp = self.context.speech()
+            resp = self.context.speech(True)
             if not resp.success:
                 continue
             resp = json.loads(resp.json_response)
