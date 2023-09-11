@@ -11,7 +11,7 @@ class TakeOrder(smach.State):
         self.context = context
 
     def listen(self):
-        resp = self.context.speech()
+        resp = self.context.speech(True)
         if not resp.success:
             self.context.voice_controller.sync_tts("Sorry, I didn't get that")
             return self.listen()
@@ -28,7 +28,7 @@ class TakeOrder(smach.State):
         if not items:
             self.context.voice_controller.sync_tts("Sorry, I didn't get that")
             return self.get_order()
-        quantities = resp["entities"].get("quantity", [])
+        quantities = resp["entities"].get("CARDINAL", [])
         quantified_items = []
         if len(items) == len(quantities) == 1:
             quantified_items.append((int(quantities[0]["value"]), items[0]["value"]))
@@ -55,18 +55,10 @@ class TakeOrder(smach.State):
 
     def affirm(self):
         resp = self.listen()
-        if resp["intent"]["name"] != "affirm":
+        if not resp["intent"]["name"] not in ["affirm", "deny"]:
             self.context.voice_controller.sync_tts("Sorry, I didn't get that")
             return self.affirm()
-        choices = resp["entities"].get("choice", None)
-        if choices is None:
-            self.context.voice_controller.sync_tts("Sorry, I didn't get that")
-            return self.affirm()
-        choice = choices[0]["value"].lower()
-        if choice not in ["yes", "no"]:
-            self.context.voice_controller.sync_tts("Sorry, I didn't get that")
-            return self.affirm()
-        return choice == "yes"
+        return resp["intent"]["name"] == "affirm"
 
     def execute(self, userdata):
         self.context.stop_head_manager("head_manager")
