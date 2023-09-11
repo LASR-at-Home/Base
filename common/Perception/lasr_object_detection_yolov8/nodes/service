@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import re
 import rospy
 import rospkg
 import lasr_object_detection_yolov8 as yolo
@@ -25,7 +26,7 @@ for model in PRELOAD:
     yolo.load_model(model)
 
 # Prepare publisher
-debug_publisher = None
+debug_publishers = {}
 if DEBUG:
     debug_publisher = rospy.Publisher('/yolov8/debug', Image, queue_size=1)
 
@@ -33,6 +34,13 @@ def detect(request: YoloDetectionRequest) -> YoloDetectionResponse:
     '''
     Hand off detection request to yolo library
     '''
+    debug_publisher = None
+    if DEBUG:
+        if request.dataset in debug_publishers:
+            debug_publisher = debug_publishers[request.dataset]
+        else:
+            topic_name = re.sub(r'[\W_]+', '', request.dataset)
+            debug_publisher = rospy.Publisher(f'/yolov8/debug/{topic_name}', Image, queue_size=1)
     return yolo.detect(request, debug_publisher)
 
 rospy.Service('/yolov8/detect', YoloDetection, detect)
