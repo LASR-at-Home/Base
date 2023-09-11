@@ -11,7 +11,7 @@ class WaitForOrder(smach.State):
 
     def execute(self, userdata):
         while True:
-            resp = self.context.speech(False)
+            resp = self.context.speech(self.context.should_beep)
             if not resp.success:
                 continue
             resp = json.loads(resp.json_response)

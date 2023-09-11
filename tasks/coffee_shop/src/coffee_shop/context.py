@@ -66,6 +66,8 @@ class Context:
         self._object_pose_pub = rospy.Publisher("/object_poses", Marker, queue_size=100)
         self._objects_idx = 0
 
+        self.should_beep = True
+
     @staticmethod
     def _create_point_marker(idx, x, y, z, frame_id, r, g, b):
         marker_msg = Marker()

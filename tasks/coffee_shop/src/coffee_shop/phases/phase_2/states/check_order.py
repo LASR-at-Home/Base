@@ -51,7 +51,7 @@ class CheckOrder(smach.State):
             return 'correct'
 
         if self.previous_given_order == given_order:
-            rospy.sleep(rospy.Duration(5.0))
+            self.should_beep = False
             return 'incorrect'
 
         missing_items = list((Counter(order) - Counter(given_order)).elements())
@@ -67,4 +67,5 @@ class CheckOrder(smach.State):
         else:
             self.context.voice_controller.sync_tts(f"You have given me {invalid_items_string} which I didn't ask for, and didn't give me {missing_items_string} which I asked for. Please correct the order and say `finished` when you are ready for me to check it again.")
         self.previous_given_order = given_order
+        self.should_beep = True
         return 'incorrect'
