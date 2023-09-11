@@ -3,6 +3,7 @@ import smach
 import rospy
 import json
 from collections import Counter
+import difflib
 
 class TakeOrder(smach.State):
     
@@ -44,8 +45,13 @@ class TakeOrder(smach.State):
                     quantified_items.append((1, item["value"]))
         items = []
         for quantity, item in quantified_items:
-            if item in self.context.target_object_remappings.keys():
-                items.extend([item.lower()]*quantity)
+            if item not in self.context.target_object_remappings.keys():
+                matches = difflib.get_close_matches(item.lower(), self.context.target_object_remappings.keys())
+                if matches:
+                    item = matches[0]
+                else:
+                    continue
+            items.extend([item.lower()]*quantity)
         if not items:
             self.context.voice_controller.sync_tts("Sorry, I didn't get that")
             return self.get_order()
