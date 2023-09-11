@@ -91,8 +91,15 @@ def get_latest_transform(msg):
         raise
 
 def apply_transform(msg):
-    new_p = do_transform_point(msg, msg.transform) # this is abuse and needs to be fixed/cleaned up
-    return ApplyTransformResponse(new_p.point)
+    rospy.logwarn('Applying transform')
+    new_p = []
+    for p in msg.points:
+        ps = PointStamped()
+        ps.point = p
+        p_tf = do_transform_point(ps, msg.transform)
+        new_p.append(p_tf.point)
+    return ApplyTransformResponse(new_p)
+
 if __name__ == '__main__':
     
     rospy.init_node('tf_transform_node')

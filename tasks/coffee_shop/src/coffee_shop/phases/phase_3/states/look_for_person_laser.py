@@ -3,7 +3,7 @@ import smach
 import rospy
 from sensor_msgs.msg import LaserScan, CameraInfo, Image
 from std_msgs.msg import String
-from geometry_msgs.msg import PointStamped
+from geometry_msgs.msg import Point
 import numpy as np
 import laser_geometry.laser_geometry as lg
 import sensor_msgs.point_cloud2 as pc2
@@ -12,7 +12,18 @@ from play_motion_msgs.msg import PlayMotionGoal
 from coffee_shop.srv import LatestTransformRequest, ApplyTransformRequest
 import time
 
+def timeit_rospy(method):
+        """Decorator for timing ROS methods"""
+        def timed(*args, **kw):
+            ts = time.time()
+            result = method(*args, **kw)
+            te = time.time()
+            rospy.loginfo('%r  %2.2f ss' % (method.__name__, (te - ts)))
+            return result
+        return timed
+
 class LookForPersonLaser(smach.State):
+
     def __init__(self, context):
         smach.State.__init__(self, outcomes=['found', 'not found'])
         self.context = context
@@ -20,6 +31,7 @@ class LookForPersonLaser(smach.State):
         self.camera.fromCameraInfo(rospy.wait_for_message("/xtion/rgb/camera_info", CameraInfo))
         self.corners = rospy.get_param("/wait/cuboid")
 
+    @timeit_rospy
     def get_points_and_pixels_from_laser(self, msg):
         """ Converts a LaserScan message to a collection of points in camera frame, with their corresponding pixel values in a flat array. The method pads out the points to add vertical "pillars" to the point cloud.
 
@@ -38,27 +50,31 @@ class LookForPersonLaser(smach.State):
         tf_req.from_frame= "base_laser_link"
         t = self.context.tf_latest(tf_req)
 
-        padded_converted_points = []
+        padded_points = []
         pixels = []
         for point in pcl_points:
             # Pad out the points to add vertical "pillars" to the point cloud
             for z in np.linspace(0., 1., 5):
-                apply_req = ApplyTransformRequest()
-                apply_req.point.x = point[0]
-                apply_req.point.y = point[1]
-                apply_req.point.z = z
-                apply_req.transform = t.transform
-                res = self.context.tf_apply(apply_req)
-                p = (res.new_point.x, res.new_point.y, res.new_point.z)
-                u,v = self.camera.project3dToPixel(p)
-                # Filter out points that are outside the camera frame
-                if u >= 0 and u < 640 and v >= 0 and v < 480:
-                    padded_converted_points.append(p)
-                    pixels.append(u)
-                    pixels.append(v)
+                padded_points.append(Point(x=point[0], y=point[1], z=z))
+    
+        apply_req = ApplyTransformRequest()
+        apply_req.points = padded_points
+        apply_req.transform = t.transform
+        res = self.context.tf_apply(apply_req)
+
+        padded_converted_points = []
+        for p in res.new_points:
+            pt = (p.x, p.y, p.z)
+            u,v = self.camera.project3dToPixel(pt)
+            # Filter out points that are outside the camera frame
+            if u >= 0 and u < 640 and v >= 0 and v < 480:
+                pixels.append(u)
+                pixels.append(v)
+                padded_converted_points.append(pt)
 
         return padded_converted_points, pixels
     
+    @timeit_rospy
     def convert_points_to_map_frame(self, points, from_frame="xtion_rgb_optical_frame"):
         """ Converts a list of points in camera frame to a list of points in map frame.
 
@@ -72,28 +88,13 @@ class LookForPersonLaser(smach.State):
         tf_req.from_frame= from_frame
         t = self.context.tf_latest(tf_req)
 
-        converted_points = []
-        for point in points:
-            apply_req = ApplyTransformRequest()
-            apply_req.point.x = point[0]
-            apply_req.point.y = point[1]
-            apply_req.point.z = point[2]
-            apply_req.transform = t.transform
-            res = self.context.tf_apply(apply_req)
-            p = (res.new_point.x, res.new_point.y, res.new_point.z)
-            converted_points.append(p)
+        apply_req = ApplyTransformRequest()
+        apply_req.points = [Point(x=point[0], y=point[1], z=point[2]) for point in points]
+        apply_req.transform = t.transform
+        res = self.context.tf_apply(apply_req)
+        converted_points = [(point.x, point.y, point.z) for point in res.new_points]
 
         return converted_points
-    
-    def convert_point(self, point, transform):
-        apply_req = ApplyTransformRequest()
-        apply_req.point.x = point[0]
-        apply_req.point.y = point[1]
-        apply_req.point.z = point[2]
-        apply_req.transform = transform
-        res = self.context.tf_apply(apply_req)
-        return (res.new_point.x, res.new_point.y, res.new_point.z)
-
 
     def execute(self, userdata):
         self.context.stop_head_manager("head_manager")
