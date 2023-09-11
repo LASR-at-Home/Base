@@ -5,8 +5,7 @@ class Phase2(smach.StateMachine):
         smach.StateMachine.__init__(self, outcomes=['success'])
 
         with self:
-            pass
-            # smach.StateMachine.add('START_PHASE_2', StartPhase2(controllers, voice, pm), transitions={'success': 'GO_TO_LIFT'})
+            smach.StateMachine.add('START_PHASE_2', StartPhase2(controllers, voice, pm), transitions={'success': 'GO_TO_LIFT'})
             smach.StateMachine.add('GO_TO_LIFT', GoToLift(controllers, voice), transitions={'success': 'ANNOUNCE_ARRIVAL'})
             smach.StateMachine.add('ANNOUNCE_ARRIVAL', AnnounceArrival(controllers, voice), transitions={'success': 'CHECK_OPEN_DOOR'})
             smach.StateMachine.add('CHECK_OPEN_DOOR', CheckOpenDoor(controllers, voice), transitions={'success': 'WAIT_FOR_PEOPLE', 'failed': 'CHECK_OPEN_DOOR'})
@@ -19,4 +18,5 @@ class Phase2(smach.StateMachine):
             # smach.StateMachine.add('DECLARE_FLOOR', DeclareFloor(controllers, voice), transitions={'success': 'success', 'failed': 'DECLARE_FLOOR'})
 
             smach.StateMachine.add('INSIDE_LIFT_SM', InsideLiftSM(controllers, voice, yolo, cmd, speech), transitions={'success': 'success'})
+
 

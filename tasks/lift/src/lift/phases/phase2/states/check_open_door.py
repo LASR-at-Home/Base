@@ -8,6 +8,8 @@ from tiago_controllers.controllers.base_controller import CmdVelController
 from tiago_controllers.helpers.pose_helpers import get_pose_from_param
 from tiago_controllers.helpers.nav_map_helpers import counter
 from narrow_space_navigation.waypoints import *
+import rospy
+# from tf_module.tf_transforms import tranform_pose
 
 door_open = False
 MEAN_DISTANCE_THRESHOLD = 0.5
@@ -72,7 +74,6 @@ class CheckOpenDoor(smach.State):
         global door_detected
         door_detected = msg.data
         
-
     def execute(self, userdata):
 
         in_lift = rospy.get_param("/in_lift/status")

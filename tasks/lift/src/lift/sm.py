@@ -8,18 +8,26 @@ import rospy, actionlib
 from tiago_controllers.controllers.base_controller import CmdVelController
 from interaction_module.srv import AudioAndTextInteraction
 from play_motion_msgs.msg import PlayMotionGoal, PlayMotionAction
+from lasr_speech.srv import Speech
 
+rasa = True
 class Lift(smach.StateMachine):
     def __init__(self):
         smach.StateMachine.__init__(self, outcomes=['success'])
 
         self.yolo = rospy.ServiceProxy('/yolov8/detect', YoloDetection)
-        self.speech = rospy.ServiceProxy("/interaction_module", AudioAndTextInteraction)
         self.pm = actionlib.SimpleActionClient('/play_motion', PlayMotionAction)
 
         self.controllers = Controllers()
         self.cmd = CmdVelController()
         self.voice = Voice()
+
+        if rasa:
+            rospy.wait_for_service("/lasr_speech/transcribe_and_parse")
+            self.speech = rospy.ServiceProxy("/lasr_speech/transcribe_and_parse", Speech)
+        else:
+            self.speech = rospy.ServiceProxy("/interaction_module", AudioAndTextInteraction)
+
 
         if not rospy.get_published_topics(namespace='/pal_head_manager'):
             rospy.set_param("/is_simulation", True)

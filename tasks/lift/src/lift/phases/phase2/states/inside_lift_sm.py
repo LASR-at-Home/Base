@@ -1,10 +1,12 @@
-import rospy, smach, sys
+import rospy
+import smach
+import sys
+from .check_available_exit import CheckAvailableExit
 from .check_open_door import CheckOpenDoor
 from .face_person import FacePerson
-from .check_available_exit import CheckAvailableExit
+from .navigate_in_lift import NavigateInLift
 from .negotiate import Negotiate
 from .schedule_going_out import ScheduleGoingOut
-from .navigate_in_lift import NavigateInLift
 
 
 class InsideLiftSM(smach.StateMachine):
@@ -20,7 +22,6 @@ class InsideLiftSM(smach.StateMachine):
             smach.StateMachine.add('NAVIGATE_IN_LIFT', NavigateInLift(controllers, voice), transitions={'success': 'CHECK_OPEN_DOOR'})
 
             smach.StateMachine.add('NEGOTIATE', Negotiate(controllers, voice), transitions={'success':'success', 'failed': 'NEGOTIATE'})
-
 
 
 if __name__ == "__main__":

@@ -14,10 +14,11 @@ from math import atan2, radians
 from geometry_msgs.msg import Twist
 from common_math.transformations import quaternion_from_euler
 from tiago_controllers.helpers.pose_helpers import get_pose_from_param
-
 from tiago_controllers.base_planner import get_journey_points as _get_journey_points
 import numpy as np
+import numpy as np
 from scipy.spatial.transform import Rotation as R
+
 
 class BaseController:
     def __init__(self):
@@ -36,6 +37,13 @@ class BaseController:
                     break
                 rospy.sleep(0.5)
                 self._goal_sent = False
+
+    def check_active_state(self):
+        return self._client.get_state() == GoalStatus.PENDING or self._client.get_state() == GoalStatus.ACTIVE
+
+    def check_terminated_state(self):
+        return self._client.get_state() == GoalStatus.LOST or self._client.get_state() == GoalStatus.PREEMPTED or \
+               self._client.get_state() == GoalStatus.ABORTED
 
     def get_current_pose(self):
         msg = rospy.wait_for_message('/amcl_pose', PoseWithCovarianceStamped)
@@ -86,6 +94,7 @@ class BaseController:
         if done and state == GoalStatus.SUCCEEDED:
             return True
         return state
+
     def compute_face_quat(self, x, y):
         robot_x, robot_y, robot_quat = self.get_current_pose()
         dist_x = x - robot_x
@@ -137,6 +146,7 @@ class BaseController:
         quaternion = Quaternion(x, y, z, w)
         pose = Pose(position=Point(robot_pose.position.x, robot_pose.position.y, 0.0), orientation=quaternion)
         return pose
+
     def rotate(self, radians):
         x, y, current_orientation = self.get_current_pose()
         current_orientation = np.array([current_orientation.x, current_orientation.y,
@@ -223,6 +233,7 @@ class ReachToRadius(BaseController):
         quaternion = Quaternion(x, y, z, w)
 
         pose = Pose(position=Point(robot_x, robot_y, 0.0), orientation=quaternion)
+
 
 if __name__ == '__main__':
     rospy.init_node("base_test", anonymous=True)

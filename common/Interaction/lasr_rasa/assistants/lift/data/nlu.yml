@@ -1,0 +1,140 @@
+version: "3.1"
+
+nlu:
+- intent: greet
+  examples: |
+    - hey
+    - hello
+    - hi
+    - hello there
+    - good morning
+    - good evening
+    - moin
+    - hey there
+    - let's go
+    - hey dude
+    - goodmorning
+    - goodevening
+    - good afternoon
+
+- intent: goodbye
+  examples: |
+    - cu
+    - good by
+    - cee you later
+    - good night
+    - bye
+    - goodbye
+    - have a nice day
+    - see you around
+    - bye bye
+    - see you later
+
+
+- intent: affirm
+  examples: |
+    - [Yes](choice)
+    - [yes](choice)
+    - [No](choice)
+    - [no](choice)
+
+- intent: deny
+  examples: |
+    - no
+    - n
+    - never
+    - I don't think so
+    - don't like that
+    - no way
+    - not really
+
+- intent: mood_great
+  examples: |
+    - perfect
+    - great
+    - amazing
+    - feeling like a king
+    - wonderful
+    - I am feeling very good
+    - I am great
+    - I am amazing
+    - I am going to save the world
+    - super stoked
+    - extremely good
+    - so so perfect
+    - so good
+    - so perfect
+
+- intent: mood_unhappy
+  examples: |
+    - my day was horrible
+    - I am sad
+    - I don't feel very well
+    - I am disappointed
+    - super sad
+    - I'm so sad
+    - sad
+    - very sad
+    - unhappy
+    - not good
+    - not very good
+    - extremly sad
+    - so saad
+    - so sad
+
+- intent: bot_challenge
+  examples: |
+    - are you a bot?
+    - are you a human?
+    - am I talking to a bot?
+    - am I talking to a human?
+
+
+- intent: greet
+  examples: |
+    - Hi
+    - Hello there
+    - Wassup
+
+- intent: negotiate_lift
+  examples: |
+    - I'd like [to leave](wait_command) please 
+    - Can you wait 
+    - [Wait](wait_command)
+    - I am waiting 
+    - I am staying in the lift 
+    - [three]{"entity":"people", "value":3} people want to go in. 
+    - [two]{"entity":"people", "value":2} people want to go in. 
+    - [one]{"entity":"people", "value":1} person wants to go in. 
+    - There are [three]{"entity":"people", "value":3} of us who want to go in 
+    - There's [two]{"entity":"people", "value":2} of us who want to go in 
+    - Only [one]{"entity":"people", "value":1} person. 
+    - There are [three]{"entity":"people", "value":3} of us. 
+    - There are [two]{"entity":"people", "value":2} of us. 
+    - [three]{"entity":"people", "value":3} people
+    - [two]{"entity":"people", "value":2} people.
+    - [just me]{"entity":"people", "value":1}. 
+    - Tiago [wait](wait_command)
+    - Tiago [wait](wait_command) please 
+
+
+
+- intent: check_floor_number
+  examples: |
+    - What floor is this?
+    - This is the [ground]{"entity":"floor","value":0} floor.
+    - This is the [first]{"entity":"floor","value":1} floor.
+    - This is the [second]{"entity":"floor","value":2} floor.
+    - This is the [third]{"entity":"floor","value":3} floor.
+    - This is the [fourth]{"entity":"floor","value":4} floor.
+    - This is the [fifth]{"entity":"floor","value":5} floor.
+    - Floor [one]{"entity":"floor","value":1}.
+    - Floor [two]{"entity":"floor","value":2}.
+    - Floor [three]{"entity":"floor","value":3}.
+    - Floor [four]{"entity":"floor","value":4}.
+    - Floor [five]{"entity":"floor","value":5}.
+    - Floor [six]{"entity":"floor","value":6}.
+    - [one]{"entity":"floor", "value":1}
+  
+
+

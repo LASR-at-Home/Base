@@ -1,12 +1,16 @@
 certifi==2023.7.22        # via requests
 charset-normalizer==3.2.0  # via requests
-cmake==3.27.2             # via triton
+cmake==3.27.4.1           # via triton
 contourpy==1.1.0          # via matplotlib
 cycler==0.11.0            # via matplotlib
+<<<<<<< HEAD
 <<<<<<< HEAD
 =======
 dill==0.3.7               # via -r requirements.in
 >>>>>>> coffee-shop
+=======
+dill==0.3.7               # via -r requirements.in
+>>>>>>> elevator-task-template
 filelock==3.12.3          # via torch, triton
 fonttools==4.42.1         # via matplotlib
 idna==3.4                 # via requests
@@ -37,7 +41,7 @@ psutil==5.9.5             # via ultralytics
 py-cpuinfo==9.0.0         # via ultralytics
 pyparsing==3.0.9          # via matplotlib
 python-dateutil==2.8.2    # via matplotlib, pandas
-pytz==2023.3              # via pandas
+pytz==2023.3.post1        # via pandas
 pyyaml==6.0.1             # via ultralytics
 requests==2.31.0          # via torchvision, ultralytics
 scipy==1.11.2             # via ultralytics

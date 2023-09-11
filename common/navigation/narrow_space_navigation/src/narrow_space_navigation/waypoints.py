@@ -15,7 +15,7 @@ from narrow_space_navigation.waypoint_helpers import *
 import math
 from std_msgs.msg import Empty
 from tiago_controllers.controllers.controllers import Controllers
-from lift.defaults import TEST, PLOT_SHOW, PLOT_SAVE, DEBUG_PATH
+from lift.defaults import TEST, PLOT_SHOW, PLOT_SAVE, DEBUG_PATH, DEBUG
 
 np.set_printoptions(threshold=np.inf)
 
@@ -920,25 +920,23 @@ class Waypoint:
         # sim elevator
         if is_lift:
             c = rospy.get_param('lift_position_center_point')
-            print(f"center 1: {c}")
-            print(f"center x: {c[0]} and the type {type(c[0])}")
-            print(f"center y : {c[1]}")
             elevator_center = c[0], c[1]
             points = rospy.get_param('lift_position_points')
         else:
             c = rospy.get_param('wait_position_center_point')
-            print(f"center: {c}")
-            print(f"center x: {c[0]} and the type {type(c[0])}")
-            print(f"center y : {c[1]}")
             elevator_center = c[0], c[1]
             points = rospy.get_param('wait_position_points')
 
+        if DEBUG > 3:
+            print(f"center 1: {c}")
+            print(f"center x: {c[0]} and the type {type(c[0])}")
+            print(f"center y : {c[1]}")
 
         self.get_global_costmap_window(isRobot=False,_x=elevator_center[0],_y=elevator_center[1])
         warped, M = self.extract_given_elevator_warping(points=points, msg=self._msg)
         centers, num_clusters, midpoints, dilation = self.find_clusters(warped)
         analytics = [centers, num_clusters, midpoints, elevator_center]
-        # return warped, analytics, M, dilation
+        
         return warped, analytics, M
 
 

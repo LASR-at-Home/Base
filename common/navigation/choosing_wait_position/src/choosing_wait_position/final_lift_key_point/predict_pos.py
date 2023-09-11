@@ -5,7 +5,7 @@ import cv2, matplotlib.pyplot as plt
 
 import torch
 from PIL import Image
-
+import numpy as np
 from torchvision.transforms import functional as F
 from narrow_space_navigation.waypoints import *
 
@@ -63,16 +63,16 @@ def visualise_predictions(image, bbox, keypoint):
     print("bbox:", bbox)
     print("keypoint: ", keypoint)
 
+
+
     start_point = (int(bbox[0]), int(bbox[1]))
     end_point = (int(bbox[2]), int(bbox[3]))
     target_pos = (int(keypoint[0][0]), int(keypoint[0][1]))
     window_name = "prediction"
     color = (255, 0, 0)
     thickness = 1
-
     image = cv2.rectangle(image, start_point, end_point, color, thickness)
     image = cv2.circle(image, target_pos, 1, (255, 0, 0), 1)
-
     plt.figure(figsize=(40, 40))
     plt.imshow(image)
     if PLOT_SHOW:
