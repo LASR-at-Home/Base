@@ -10,7 +10,7 @@ class WaitForOrder(smach.State):
         self.context = context
 
     def execute(self, userdata):
-        resp = self.context.speech(self.context.should_beep)
+        resp = self.context.speech(True)
         while True:
             if not resp.success:
                 continue

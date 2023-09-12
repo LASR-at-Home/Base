@@ -67,8 +67,6 @@ class Context:
         self._object_pose_pub = rospy.Publisher("/object_poses", Marker, queue_size=100)
         self._objects_idx = 0
 
-        self.should_beep = True
-
         self.retry_utterances = [
             "Sorry, I didn't get that. Could you repeat, please?",
             "I didn't quite get that. Please repeat!",

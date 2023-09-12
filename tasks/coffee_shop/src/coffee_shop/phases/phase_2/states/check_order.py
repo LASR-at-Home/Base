@@ -16,8 +16,6 @@ class CheckOrder(smach.State):
         smach.State.__init__(self, outcomes=['correct', 'incorrect'])
         self.context = context
 
-        self.previous_given_order = None
-
     def estimate_pose(self, pcl_msg, detection):
         centroid_xyz = seg_to_centroid(pcl_msg, np.array(detection.xyseg))
         centroid = PointStamped()
@@ -50,10 +48,6 @@ class CheckOrder(smach.State):
         if sorted(order) == sorted(given_order):
             return 'correct'
 
-        if self.previous_given_order == given_order:
-            self.should_beep = False
-            return 'incorrect'
-
         missing_items = list((Counter(order) - Counter(given_order)).elements())
         missing_items_string = ', '.join([f"{count} {item if count == 1 else item+'s'}" for item, count in Counter(missing_items).items()]).replace(', ', ', and ', len(missing_items) - 2)
         invalid_items = list((Counter(given_order) - Counter(order)).elements())
@@ -66,6 +60,4 @@ class CheckOrder(smach.State):
             self.context.voice_controller.sync_tts(f"You have given me {invalid_items_string} which I didn't ask for. Please correct the order and say `finished` when you are ready for me to check it again.")
         else:
             self.context.voice_controller.sync_tts(f"You have given me {invalid_items_string} which I didn't ask for, and didn't give me {missing_items_string} which I asked for. Please correct the order and say `finished` when you are ready for me to check it again.")
-        self.previous_given_order = given_order
-        self.should_beep = True
         return 'incorrect'
