@@ -69,7 +69,10 @@ class SpeechRecognitionWorker(ABC):
             f.write(wav_data.read())
 
         rospy.loginfo('Running inference')        
-        result = self._model.transcribe(self._tmp_file, fp16=torch.cuda.is_available())
+        try:
+            result = self._model.transcribe(self._tmp_file, fp16=torch.cuda.is_available())
+        except RuntimeError:
+            return None
         text = result['text'].strip()
 
         # Detect and drop garbage
