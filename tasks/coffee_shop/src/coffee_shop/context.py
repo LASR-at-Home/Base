@@ -12,7 +12,8 @@ import actionlib
 import yaml
 from visualization_msgs.msg import Marker
 import rosservice
-
+import time
+import random
 
 class Context:
 
@@ -68,6 +69,15 @@ class Context:
 
         self.should_beep = True
 
+        self.retry_utterances = [
+            "Sorry, I didn't get that. Could you repeat, please?",
+            "I didn't quite get that. Please repeat!",
+            "Can you say that again, please?",
+            "I think my ears need cleaning, could you say that again?",
+            "Please could you repeat that",
+            "Can you repeat yourself, and possibly speak louder, please?"
+        ]
+
     @staticmethod
     def _create_point_marker(idx, x, y, z, frame_id, r, g, b):
         marker_msg = Marker()
@@ -106,3 +116,8 @@ class Context:
             table_summary.append(f"Table {table}: Status={status}, People={people}, Order={order}")
 
         return "\n".join(table_summary)
+
+    def get_random_retry_utterance(self):
+        # Seed the random number generator with the current time
+        random.seed(time.time())
+        return random.choice(self.retry_utterances)
