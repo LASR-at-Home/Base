@@ -77,7 +77,8 @@ class GoToLift(smach.State):
             print("Debug Path: ", DEBUG_PATH)
         if PLOT_SAVE:
             print(os.getcwd())
-            image.save(DEBUG_PATH + "/zoe_predict_pos_test_before_rotate" + str(TEST) + ".jpg")
+            image.save(DEBUG_PATH + "/zoe_predict_pos_test" + str(TEST) + ".jpg")
+            # image.save(DEBUG_PATH + "/zoe_predict_pos_test_before_rotate" + str(TEST) + ".jpg")
 
         # transformations for the image
         # Rotate the image to make sure the door is the bottom of the image when we pass to NN:

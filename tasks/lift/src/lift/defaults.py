@@ -9,6 +9,7 @@ DEBUG_WITH_IMAGES = rospy.get_param('debug_with_images')
 PLOT_SHOW = rospy.get_param('plot_show')
 PLOT_SAVE = rospy.get_param('plot_save')
 DEBUG_PATH = os.getcwd()
+RASA = rospy.get_param('rasa')
 
 rospy.logwarn(f"DEBUG: {DEBUG}, DEBUG_WITH_IMAGES: {DEBUG_WITH_IMAGES}, PLOT_SHOW: {PLOT_SHOW}, PLOT_SAVE: {PLOT_SAVE}")
 

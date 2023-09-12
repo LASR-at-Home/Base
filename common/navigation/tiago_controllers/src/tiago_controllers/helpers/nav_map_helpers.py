@@ -36,7 +36,7 @@ def how_close_to_object(object_name='/door/pose'):
     """
     robot_pose = rospy.wait_for_message("/robot_pose", PoseWithCovarianceStamped)
     door_position = get_pose_from_param(object_name)
-    r = (robot_pose.position.x, robot_pose.position.y)
+    r = (robot_pose.pose.pose.position.x, robot_pose.pose.pose.position.y)
     d = (door_position.position.x, door_position.position.y)
     dist = euclidian_distance(r, d)
     return dist

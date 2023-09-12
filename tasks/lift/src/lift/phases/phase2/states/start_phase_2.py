@@ -12,6 +12,6 @@ class StartPhase2(smach.State):
         self.voice.speak("Quickest update ever... I am starting Phase 2. I am going to the lift.")
 
         # ensure home pos
-        play_motion_goal(self.pm, 'home')
+        # play_motion_goal(self.pm, 'home')
 
         return 'success'

@@ -4,6 +4,7 @@ import rospy
 from interaction_module.srv import AudioAndTextInteraction, AudioAndTextInteractionRequest, \
     AudioAndTextInteractionResponse
 import json
+from lift.defaults import TEST, PLOT_SHOW, PLOT_SAVE, DEBUG_PATH, DEBUG, RASA
 
 class DeclareFloor(smach.State):
     def __init__(self, controllers, voice, speech):

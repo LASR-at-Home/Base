@@ -38,6 +38,7 @@ class Voice:
         if rospy.get_param('/is_simulation'):
             rospy.loginfo(text)
         else:
+            rospy.loginfo(text)
             self.sync_tts(text)
 
 if __name__ == '__main__':

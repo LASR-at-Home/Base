@@ -6,10 +6,12 @@
     <arg name="plot_save" default="true" />
     <arg name="debug_with_images" default="true" />
     <arg name="debug" default="3" />
+    <arg name="rasa" default="true" />
 
     <param name="plot_show" value="$(arg plot_show)" />
     <param name="plot_save" value="$(arg plot_save)" />
     <param name="debug" value="$(arg debug)" />
+    <param name="rasa" value="$(arg rasa)" />
     <param name="debug_with_images" value="$(arg debug_with_images)" />
 <!--     TASK  -->
    <node name="" pkg="lift" type="main.py" output="screen" required="true"/>
@@ -22,7 +24,7 @@
     <node pkg="interaction_module" name="interaction_module_srv" type="interaction_module_srv.py"/>
 
     <arg name="whisper_matcher" default="by-index" />
-    <arg name="whisper_device_param" default="0" />
+    <arg name="whisper_device_param" default="13" />
     <arg name="rasa_model" default="$(find lasr_rasa)/assistants/lift/models"/>
 
     <include file = "$(find lasr_speech)/launch/speech.launch">

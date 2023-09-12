@@ -936,7 +936,7 @@ class Waypoint:
         warped, M = self.extract_given_elevator_warping(points=points, msg=self._msg)
         centers, num_clusters, midpoints, dilation = self.find_clusters(warped)
         analytics = [centers, num_clusters, midpoints, elevator_center]
-        
+
         return warped, analytics, M
 
 

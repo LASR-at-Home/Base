@@ -10,6 +10,7 @@ from tiago_controllers.helpers.nav_map_helpers import clear_costmap
 from interaction_module.srv import AudioAndTextInteraction, AudioAndTextInteractionRequest, \
     AudioAndTextInteractionResponse
 from tiago_controllers.helpers.nav_map_helpers import is_close_to_object
+from lift.defaults import TEST, PLOT_SHOW, PLOT_SAVE, DEBUG_PATH, DEBUG, RASA
 
 
 class Negotiate(smach.State):

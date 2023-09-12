@@ -21,7 +21,7 @@ class InsideLiftSM(smach.StateMachine):
             smach.StateMachine.add('SCHEDULE_GOING_OUT', ScheduleGoingOut(controllers, voice, speech), transitions={'success':'NAVIGATE_IN_LIFT', 'failed': 'CHECK_OPEN_DOOR'})
             smach.StateMachine.add('NAVIGATE_IN_LIFT', NavigateInLift(controllers, voice), transitions={'success': 'CHECK_OPEN_DOOR'})
 
-            smach.StateMachine.add('NEGOTIATE', Negotiate(controllers, voice), transitions={'success':'success', 'failed': 'NEGOTIATE'})
+            smach.StateMachine.add('NEGOTIATE', Negotiate(controllers, voice, speech), transitions={'success':'success', 'failed': 'NEGOTIATE'})
 
 
 if __name__ == "__main__":

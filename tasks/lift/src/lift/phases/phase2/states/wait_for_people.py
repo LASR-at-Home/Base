@@ -5,6 +5,7 @@ from tiago_controllers.helpers.pose_helpers import get_pose_from_param
 import json
 from interaction_module.srv import AudioAndTextInteraction, AudioAndTextInteractionRequest, \
     AudioAndTextInteractionResponse
+from lift.defaults import TEST, PLOT_SHOW, PLOT_SAVE, DEBUG_PATH, DEBUG, RASA
 
 class WaitForPeople(smach.State):
     def __init__(self, controllers, voice, yolo, speech):

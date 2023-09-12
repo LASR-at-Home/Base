@@ -3,6 +3,7 @@ import smach
 import rospy
 from interaction_module.srv import AudioAndTextInteraction, AudioAndTextInteractionRequest, \
     AudioAndTextInteractionResponse
+from lift.defaults import TEST, PLOT_SHOW, PLOT_SAVE, DEBUG_PATH, DEBUG, RASA
 import json
 class CheckAvailableExit(smach.State):
     def __init__(self, controllers, voice, speech):

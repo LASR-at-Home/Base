@@ -50,7 +50,7 @@ RANDOM_LIFT_JOKES = [
 
 used_jokes = []
 from std_msgs.msg import Bool
-door_detected = False
+door_detected = True
 
 class CheckOpenDoor(smach.State):
     def __init__(self, controllers, voice):
@@ -108,7 +108,7 @@ class CheckOpenDoor(smach.State):
             rospy.logerr("the door detected {}".format(door_detected))
             self.voice.speak("I am still waiting for the door to open")
             rospy.sleep(1)
-            if door_detected:
+            if not door_detected:
                 self.voice.speak("The door is open. I will give the way to the humans now, because I am a good robot.")
                 return 'success'
 

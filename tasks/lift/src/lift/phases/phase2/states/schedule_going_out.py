@@ -9,7 +9,8 @@ from visualization_msgs.msg import Marker
 from tiago_controllers.helpers.nav_map_helpers import clear_costmap
 from interaction_module.srv import AudioAndTextInteraction, AudioAndTextInteractionRequest, \
     AudioAndTextInteractionResponse
-
+from lift.defaults import TEST, PLOT_SHOW, PLOT_SAVE, DEBUG_PATH, DEBUG, RASA
+import json
 
 class ScheduleGoingOut(smach.State):
     def __init__(self, controllers, voice, speech):
@@ -113,35 +114,33 @@ class ScheduleGoingOut(smach.State):
         else:
             return False
 
+    def listen(self):
+        resp = self.speech()
+        if not resp.success:
+            self.voice.speak("Sorry, I didn't get that")
+            return self.listen()
+        resp = json.loads(resp.json_response)
+        rospy.loginfo(resp)
+        return resp
+
+    def hear_wait(self):
+        resp = self.listen()
+
+        if resp["intent"]["name"] == "negotiate_lift":
+            # I'm going to wait
+            wait = resp["entities"].get("wait_command", [])
+            if not wait:
+                self.voice.speak("Sorry, did you say wait? I didn't understand.")
+                return self.hear_wait()
+            else:
+                return True
+        else:
+
+            return False
+
 
     # the door is open here!!!
     def execute(self, userdata):
-        # self.voice.speak("How many people are thinking to go out of the lift?")
-        # self.voice.speak("Please answer with a number.")
-        #
-        # req = AudioAndTextInteractionRequest()
-        # req.action = "ROOM_REQUEST"
-        # req.subaction = "ask_location"
-        # req.query_text = "SOUND:PLAYING:PLEASE"
-        # resp = self.speech(req)
-        #
-        # self.voice.speak("The response of asking the people in schedule going out is {}".format(resp.result))
-
-
-        self.voice.speak("Is there anyone who wants to go out of the lift?")
-        self.voice.speak("Please answer with yes or no.")
-        req = AudioAndTextInteractionRequest()
-        req.action = "BUTTON_PRESSED"
-        req.subaction = "confirm_button"
-        req.query_text = "SOUND:PLAYING:PLEASE"
-
-        self.voice.speak("I stopped listening")
-        resp = self.speech(req)
-
-        # do more complex things here
-        if resp.result == "yes":
-            self.voice.speak("Great! Let's see how this will happen.")
-
         self.voice.speak("I know there are {} people in the lift".format(rospy.get_param("/lift/num_clusters")))
 
         is_robot_closest_rank = self.rank()
@@ -163,10 +162,18 @@ class ScheduleGoingOut(smach.State):
             rospy.sleep(2)
             self.voice.speak("Should I wait more for you?")
             # hear
-            hear_wait = False
-            if hear_wait:
-                self.voice.speak("I will wait more")
-                rospy.sleep(2)
+            hear_wait = True
+            count = 0
+            while hear_wait and count < 5:
+                if RASA:
+                    hear_wait = self.hear_wait()
+                    if hear_wait:
+                        self.voice.speak("I will wait more")
+                        rospy.sleep(5)
+                    else:
+                        self.voice.speak("i am done with waiting")
+                        break
+                    count += 1
             return 'success'
         else:
             self.voice.speak("I am not the closest to the door.")
