@@ -47,6 +47,10 @@ collector.adjust_for_noise()
 model = load_model("base.en")
 worker = SpeechRecognitionToTopic(collector, model, "transcription", infer_partial = False)
 
+def adjust_for_noise(_):
+    collector.adjust_for_noise()
+    return EmptyResponse()
+
 def start_listening(_):
     worker.start()
     return EmptyResponse()
@@ -55,6 +59,7 @@ def stop_listening(_):
     worker.stop()
     return EmptyResponse()
 
+rospy.Service('/whisper/adjust_for_noise', Empty, adjust_for_noise)
 rospy.Service('/whisper/start_listening', Empty, start_listening)
 rospy.Service('/whisper/stop_listening', Empty, stop_listening)
 

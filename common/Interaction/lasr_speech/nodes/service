@@ -17,6 +17,7 @@ class TranscribeAndParse:
     def __init__(self):
         rospy.wait_for_service("/lasr_rasa/parse")
         self.rasa = rospy.ServiceProxy("/lasr_rasa/parse", Rasa)
+        self.adjust_for_noise = rospy.ServiceProxy("/whisper/adjust_for_noise", Empty)
         self.start_listening = rospy.ServiceProxy("/whisper/start_listening", Empty)
         self.stop_listening = rospy.ServiceProxy("/whisper/stop_listening", Empty)
         self.transcription_topic = "/transcription"
@@ -34,6 +35,7 @@ class TranscribeAndParse:
         sleep(0.5)
 
     def __call__(self, req):
+        self.adjust_for_noise()
         if req.play_sound:
             self.play_sound()
         self.start_listening()
