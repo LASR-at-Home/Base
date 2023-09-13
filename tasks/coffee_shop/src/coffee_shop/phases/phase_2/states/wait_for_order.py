@@ -14,7 +14,7 @@ class WaitForOrder(smach.State):
         resp = json.loads(resp.json_response)
         while True:
             rospy.loginfo(resp)
-            if "finished" in resp["text"].lower():
+            if "finish" in resp["text"].lower():
                 break
             resp = self.context.speech(False)
             resp = json.loads(resp.json_response)
