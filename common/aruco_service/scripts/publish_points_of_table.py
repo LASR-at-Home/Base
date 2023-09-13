@@ -27,20 +27,43 @@ def publish_points(number):
     objects_marker_pub = rospy.Publisher("/table/objects_cuboid", Marker, queue_size=4)
     persons_marker_pub = rospy.Publisher("/table/persons_cuboid", Marker, queue_size=4)
 
-    obj = rospy.get_param("/tables/table" + str(table) + "/objects_cuboid")
-    
-    objects_marker_pub.publish(create_marker_msg(obj[0], 0))
-    objects_marker_pub.publish(create_marker_msg(obj[1], 1))
-    objects_marker_pub.publish(create_marker_msg(obj[2], 2))
-    objects_marker_pub.publish(create_marker_msg(obj[3], 3))
+
 
     if table >= 0:
+
+        obj = rospy.get_param("/tables/table" + str(table) + "/objects_cuboid")
+        
+        objects_marker_pub.publish(create_marker_msg(obj[0], 0))
+        objects_marker_pub.publish(create_marker_msg(obj[1], 1))
+        objects_marker_pub.publish(create_marker_msg(obj[2], 2))
+        objects_marker_pub.publish(create_marker_msg(obj[3], 3))
+
+
         per = rospy.get_param("/tables/table" + str(table) + "/persons_cuboid")
 
         persons_marker_pub.publish(create_marker_msg(per[0], 0))
         persons_marker_pub.publish(create_marker_msg(per[1], 1))
         persons_marker_pub.publish(create_marker_msg(per[2], 2))
         persons_marker_pub.publish(create_marker_msg(per[3], 3))
+
+    else:
+        if table == -1:
+
+            cuboid = rospy.get_param("/counter/cuboid")
+            
+            objects_marker_pub.publish(create_marker_msg(cuboid[0], 0))
+            objects_marker_pub.publish(create_marker_msg(cuboid[1], 1))
+            objects_marker_pub.publish(create_marker_msg(cuboid[2], 2))
+            objects_marker_pub.publish(create_marker_msg(cuboid[3], 3))
+
+        elif table == -2:
+            cuboid = rospy.get_param("/wait/cuboid")
+            
+            objects_marker_pub.publish(create_marker_msg(cuboid[0], 0))
+            objects_marker_pub.publish(create_marker_msg(cuboid[1], 1))
+            objects_marker_pub.publish(create_marker_msg(cuboid[2], 2))
+            objects_marker_pub.publish(create_marker_msg(cuboid[3], 3))
+
 
     rospy.loginfo("Published points for table " + str(table))
 

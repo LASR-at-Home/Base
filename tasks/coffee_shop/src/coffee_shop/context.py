@@ -3,6 +3,7 @@ import rosparam
 from tiago_controllers import BaseController, HeadController
 from lasr_voice import Voice
 from play_motion_msgs.msg import PlayMotionAction
+from control_msgs.msg import PointHeadAction
 from lasr_object_detection_yolo.srv import YoloDetection
 from coffee_shop.srv import TfTransform, LatestTransform, ApplyTransform
 from lasr_shapely import LasrShapely
@@ -19,22 +20,38 @@ class Context:
 
     def __init__(self, config_path=None):
         self.base_controller = BaseController()
+        rospy.loginfo("Got base controller")
         self.head_controller = HeadController()
+        rospy.loginfo("Got head controller")
         self.voice_controller = Voice()
+        rospy.loginfo("Got voice controller")
         self.play_motion_client = actionlib.SimpleActionClient('/play_motion', PlayMotionAction)
+        self.play_motion_client.wait_for_server()
+        rospy.loginfo("Got PM")
+        self.point_head_client = actionlib.SimpleActionClient('/head_controller/point_head_action', PointHeadAction)
+        self.point_head_client.wait_for_server()
         self.yolo = rospy.ServiceProxy('/yolov8/detect', YoloDetection)
+        rospy.loginfo("Got YOLO")
         self.tf = rospy.ServiceProxy("/tf_transform", TfTransform)
         self.tf_latest = rospy.ServiceProxy("/get_latest_transform", LatestTransform)
         self.tf_apply = rospy.ServiceProxy("/apply_transform", ApplyTransform)
+        rospy.loginfo("Got TF")
         self.shapely = LasrShapely()
+        rospy.loginfo("Got shapely")
         self.bridge = CvBridge()
+        rospy.loginfo("CV Bridge")
         self.speech = rospy.ServiceProxy("/lasr_speech/transcribe_and_parse", Speech)
+        rospy.loginfo("Speech")
 
         if '/pal_startup_control/start' in rosservice.get_service_list():
             # Assume that if the topics are available, then the services are running.
-            from pal_startup_msgs.srv import StartupStart, StartupStop
-            self.start_head_manager = rospy.ServiceProxy("/pal_startup_control/start", StartupStart)
-            self.stop_head_manager = rospy.ServiceProxy("/pal_startup_control/stop", StartupStop)
+            try:
+                from pal_startup_msgs.srv import StartupStart, StartupStop
+                self.start_head_manager = rospy.ServiceProxy("/pal_startup_control/start", StartupStart)
+                self.stop_head_manager = rospy.ServiceProxy("/pal_startup_control/stop", StartupStop)
+            except ModuleNotFoundError:
+                self.start_head_manager = lambda a, b : None
+                self.stop_head_manager = lambda a : None   
         else:
             self.start_head_manager = lambda a, b : None
             self.stop_head_manager = lambda a : None
