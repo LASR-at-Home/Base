@@ -11,28 +11,18 @@ from geometry_msgs.msg import PoseStamped, PointStamped, Pose
 import rospy
 import tf2_ros
 
-
-# start from peter
-def apply_transform(input_xyz, transform, target="xtion_rgb_optical_frame"):
-    ps = PointStamped()
-    ps.point.x = input_xyz[0]
-    ps.point.y = input_xyz[1]
-    ps.point.z = input_xyz[2]
-    ps.header.frame_id = target
-    ps.header.stamp = rospy.Time.now()
-
-    tr_point = tf2_geometry_msgs.do_transform_point(ps, transform)
-    return (tr_point.point.x, tr_point.point.y, tr_point.point.z)
-
-
-def get_transform(from_frame, to_frame):
-    try:
-        t = tf_buffer.lookup_transform(to_frame, from_frame, rospy.Time(0), rospy.Duration(0.5))
-        return t
-    except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
-        raise
-    
 def get_transform_(from_frame, to_frame):
+    """
+    Converts to target frame using tf2_ros buffer
+    Parameters
+    ----------
+    from_frame
+    to_frame
+
+    Returns
+    -------
+
+    """
     tf_buffer = tf2_ros.Buffer()
     tf_listener = tf2_ros.TransformListener(tf_buffer)
     try:
@@ -43,6 +33,17 @@ def get_transform_(from_frame, to_frame):
 
 # stop from peter
 def tf_transform(msg):
+    """
+    Converts to target frame using the
+
+    Parameters
+    ----------
+    msg
+
+    Returns
+    -------
+
+    """
     tf_response = TfTransformResponse()
     if msg.pose_array.header.frame_id != '':
         transformation = get_transform(source_frame=msg.pose_array.header.frame_id, target_frame=msg.target_frame.data)
@@ -98,10 +99,9 @@ def get_transform(source_frame, target_frame):
     """
         Converts to target frame
         Returns the pose in the target frame
+        code from old codebase when virtualenv wasnt a thing
     """
     assert (source_frame and target_frame)
-    # print('source_frame', source_frame)
-    # print('target_frame', target_frame)
     try:
         transformation = tfBuffer.lookup_transform(target_frame, source_frame, rospy.Time(0), rospy.Duration(0.1))
         return transformation
@@ -110,6 +110,17 @@ def get_transform(source_frame, target_frame):
 
 
 def do_transform_point(point, transform):
+    """
+    Converts to kdl frame and transforms point
+    Parameters
+    ----------
+    point
+    transform
+
+    Returns
+    -------
+
+    """
     p = transform_to_kdl(transform) * PyKDL.Vector(point.point.x, point.point.y, point.point.z)
     res = PointStamped()
     res.point.x = p[0]
@@ -122,6 +133,18 @@ def strip_leading_slash(s):
     return s[1:] if s.startswith("/") else s
 
 def lookupTransform(target_frame=None, source_frame=None, time=None):
+    """
+    Converts to target frame using tf2_ros buffer, used it for deciding which elevator
+    Parameters
+    ----------
+    target_frame
+    source_frame
+    time
+
+    Returns
+    -------
+
+    """
     assert (source_frame and target_frame)
     try:
         msg = tfBuffer.lookup_transform(strip_leading_slash(target_frame), strip_leading_slash(source_frame), time)
@@ -137,6 +160,16 @@ tf2_ros.TransformRegistration().add(PointStamped, do_transform_point)
 
 
 def transform_to_kdl(t):
+    """
+    Converts to kdl frame, old codebase
+    Parameters
+    ----------
+    t
+
+    Returns
+    -------
+
+    """
     return PyKDL.Frame(PyKDL.Rotation.Quaternion(t.transform.rotation.x, t.transform.rotation.y,
                                                  t.transform.rotation.z, t.transform.rotation.w),
                        PyKDL.Vector(t.transform.translation.x,
@@ -144,6 +177,18 @@ def transform_to_kdl(t):
                                     t.transform.translation.z))
 
 def tranform_pose(pose, target_frame, stamp):
+    """
+    Transforms pose to target frame, used for deciding which lift to use
+    Parameters
+    ----------
+    pose
+    target_frame
+    stamp
+
+    Returns
+    -------
+
+    """
     try:
         listener.waitForTransform(target_frame, "map", stamp, rospy.Duration(1.0))
         expected_door_pose_transformed = tfBuffer.transform(pose, target_frame)

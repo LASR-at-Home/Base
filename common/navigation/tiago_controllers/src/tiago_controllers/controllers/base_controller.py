@@ -233,6 +233,8 @@ class ReachToRadius(BaseController):
         quaternion = Quaternion(x, y, z, w)
 
         pose = Pose(position=Point(robot_x, robot_y, 0.0), orientation=quaternion)
+        return pose
+
 
 
 if __name__ == '__main__':

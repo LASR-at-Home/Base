@@ -52,6 +52,7 @@ used_jokes = []
 from std_msgs.msg import Bool
 door_detected = True
 
+
 class CheckOpenDoor(smach.State):
     def __init__(self, controllers, voice):
         # smach.State.__init__(self, outcomes=['success'])
@@ -73,7 +74,6 @@ class CheckOpenDoor(smach.State):
     def door_detected_callback(self, msg):
         global door_detected
         door_detected = msg.data
-        
     def execute(self, userdata):
 
         in_lift = rospy.get_param("/in_lift/status")
@@ -88,20 +88,19 @@ class CheckOpenDoor(smach.State):
         topic = "/counter_lift/counter" if in_lift else "/counter_door/counter"
         message = "I am in the lift. Waiting for the doors to open" if in_lift else "I arrived at the door. Waiting for the doors to open"
         res = counter(topic=topic)
+        self.voice.speak(message)
 
         if res == "counter":
             return 'success'
-        self.voice.speak(message)
 
         self.controllers.base_controller.rotate_to_face_object(object_name='/door/pose')
 
         # tell a joke
         self.voice.speak("I will tell you a joke in the meantime.")
         self.voice.speak(self.get_joke())
-        rospy.sleep(1)
+        rospy.sleep(0.5)
 
         self.voice.speak("Now checking the door")
-
 
         # check for open door
         while door_detected:
@@ -112,24 +111,12 @@ class CheckOpenDoor(smach.State):
                 self.voice.speak("The door is open. I will give the way to the humans now, because I am a good robot.")
                 return 'success'
 
+            # ensure you get out of the loop and go to the next state
+            counter_door_open = counter(topic="/counter_door_open/counter", count_default=10)
+            if counter_door_open == "counter":
+                # TODO: maybe change to success :)
+                return 'failed'
 
-        if door_detected:
-            return 'failed'
-        else:
-            return 'success'
-
-
-
-        laser_scan = rospy.wait_for_message("/scan", LaserScan)
-        filtered_ranges = laser_scan.ranges[len(laser_scan.ranges) // 3: 2 * len(laser_scan.ranges) // 3]
-        mean_distance = np.nanmean(filtered_ranges)
-        rospy.loginfo('mean distance =====> {}'.format(mean_distance))
-        if mean_distance < MEAN_DISTANCE_THRESHOLD or mean_distance == np.inf or mean_distance == np.nan:
-            # if no, go back to waiting and a new joke
-            rospy.loginfo(" the mean distance = {} is less than thres = {}".format(mean_distance, MEAN_DISTANCE_THRESHOLD))
-            return 'failed'
-        else:
-            self.voice.speak("Oh its open! I will give the way to the humans now, because I am a good robot.")
-            return 'success'
-
-
+            if not door_detected:
+                self.voice.speak("The door is open. I will give the way to the humans now, because I am a good robot.")
+                return 'success'

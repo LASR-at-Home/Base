@@ -5,6 +5,10 @@ class Phase2(smach.StateMachine):
         smach.StateMachine.__init__(self, outcomes=['success'])
 
         with self:
+<<<<<<< Updated upstream
+=======
+            pass
+>>>>>>> Stashed changes
             smach.StateMachine.add('START_PHASE_2', StartPhase2(controllers, voice, pm), transitions={'success': 'GO_TO_LIFT'})
             smach.StateMachine.add('GO_TO_LIFT', GoToLift(controllers, voice), transitions={'success': 'ANNOUNCE_ARRIVAL'})
             smach.StateMachine.add('ANNOUNCE_ARRIVAL', AnnounceArrival(controllers, voice), transitions={'success': 'CHECK_OPEN_DOOR'})
@@ -13,9 +17,6 @@ class Phase2(smach.StateMachine):
             smach.StateMachine.add('NAVIGATE_IN_LIFT', NavigateInLift(controllers, voice), transitions={'success': 'FACE_PERSON'})
             smach.StateMachine.add('FACE_PERSON', FacePerson(controllers, voice, yolo, cmd), transitions={'success': 'DECLARE_FLOOR', 'failed': 'FACE_PERSON'})
             smach.StateMachine.add('DECLARE_FLOOR', DeclareFloor(controllers, voice, speech), transitions={'success': 'INSIDE_LIFT_SM', 'failed': 'DECLARE_FLOOR'})
-
-            # without negotiation
-            # smach.StateMachine.add('DECLARE_FLOOR', DeclareFloor(controllers, voice), transitions={'success': 'success', 'failed': 'DECLARE_FLOOR'})
 
             smach.StateMachine.add('INSIDE_LIFT_SM', InsideLiftSM(controllers, voice, yolo, cmd, speech), transitions={'success': 'success'})
 

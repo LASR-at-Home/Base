@@ -12,20 +12,18 @@ class StartPhase1(smach.State):
         self.pm = pm
 
     def execute(self, userdata):
-        if rospy.get_param("/is_simulation"):
-            rospy.loginfo("Hi, my name is Tiago and I am starting Phase 1.")
-        else:
-            self.voice.sync_tts("Hi, my name is Tiago and I am starting Phase 1.")
-            # self.voice.sync_tts("starting Phase 1.")
-
         res = self.controllers.base_controller.ensure_sync_to_pose(get_pose_from_param('/start/pose'))
         rospy.logerr(res)
-        print("I AM HERE IN PHASE 1")
+
+        self.voice.speak("Hi, my name is Tiago.")
+        play_motion_goal(self.pm, 'wave')
+        self.voice.speak("I am the robot that knows how to take the lift.")
+        self.voice.sync_tts("Nice to meet you")
 
         # ensure home pos
-        self.voice.sync_tts("Nice to meet you")
-        play_motion_goal(self.pm, 'wave')
-
         play_motion_goal(self.pm, 'home')
+
+        self.voice.speak("I will now start Phase 1!")
+
 
         return 'success'

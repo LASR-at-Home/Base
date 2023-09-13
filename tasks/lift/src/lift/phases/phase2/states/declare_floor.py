@@ -65,6 +65,8 @@ class DeclareFloor(smach.State):
             resp = self.speech(req)
             answer = resp.result
 
+        self.voice.speak("I got your answer.")
+
         # get the answer
         if answer == 'yes':
             self.voice.speak("Great! Thank you for pressing the button!")

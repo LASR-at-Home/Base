@@ -57,11 +57,11 @@ def is_close_to_object(object_name='/door/pose', min_dist=0.5):
 def get_current_robot_pose():
         robot_pose = rospy.wait_for_message("/robot_pose", PoseWithCovarianceStamped)
         return robot_pose.pose.pose
-def counter(topic="/counter_lift/counter"):
+def counter(topic="/counter_lift/counter", count_default=3):
     count = rospy.get_param(topic)
     rospy.loginfo("count: " + str(topic) + "---> " + str(count))
 
-    if int(count) > 3:
+    if int(count) > count_default:
         return "counter"
 
     # set the param to count how many times it has failed in this state

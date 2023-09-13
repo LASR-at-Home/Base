@@ -5,13 +5,18 @@
     <arg name="plot_show" default="false" />
     <arg name="plot_save" default="true" />
     <arg name="debug_with_images" default="true" />
+    <arg name="publish_markers" default="true" />
     <arg name="debug" default="3" />
     <arg name="rasa" default="true" />
 
     <param name="plot_show" value="$(arg plot_show)" />
     <param name="plot_save" value="$(arg plot_save)" />
     <param name="debug" value="$(arg debug)" />
+<<<<<<< Updated upstream
     <param name="rasa" value="$(arg rasa)" />
+=======
+    <param name="publish_markers" value="$(arg publish_markers)" />
+>>>>>>> Stashed changes
     <param name="debug_with_images" value="$(arg debug_with_images)" />
 <!--     TASK  -->
    <node name="" pkg="lift" type="main.py" output="screen" required="true"/>

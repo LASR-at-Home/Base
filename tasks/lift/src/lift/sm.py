@@ -17,7 +17,6 @@ class Lift(smach.StateMachine):
 
         self.yolo = rospy.ServiceProxy('/yolov8/detect', YoloDetection)
         self.pm = actionlib.SimpleActionClient('/play_motion', PlayMotionAction)
-
         self.controllers = Controllers()
         self.cmd = CmdVelController()
         self.voice = Voice()

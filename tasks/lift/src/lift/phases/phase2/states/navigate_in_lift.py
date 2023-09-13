@@ -8,6 +8,7 @@ from tiago_controllers.helpers.pose_helpers import get_pose_from_param
 from tiago_controllers.helpers.nav_map_helpers import clear_costmap
 import numpy as np
 import rospy
+from lift.defaults import DEBUG
 
 class NavigateInLift(smach.State):
     def __init__(self, controllers, voice):
@@ -16,36 +17,43 @@ class NavigateInLift(smach.State):
         self.controllers = controllers
         self.voice = voice
 
-    def safe_clusters_info(self, analytics, global_centers):
+    def safe_clusters_info(self, analytics, w, M):
         centers, num_clusters, midpoints, _ = analytics
+        global_centers = w.local_to_global_points(M=M, points=centers, is_lift=False)
         global_centers = np.array(global_centers)
 
-
         rospy.set_param("/lift/num_clusters", num_clusters)
-        print("num clusters in safe")
-        print(rospy.get_param("/lift/num_clusters"))
-        print(global_centers)
-        print(type(global_centers))
         rospy.set_param("/lift/centers", global_centers.tolist())
-        print("centers in safe")
-        print(rospy.get_param("/lift/centers"))
+
+        if DEBUG > 3:
+            print("num clusters in safe")
+            print(rospy.get_param("/lift/num_clusters"))
+            print(global_centers)
+            print(type(global_centers))
+            print("centers in safe")
+            print(rospy.get_param("/lift/centers"))
 
 
     def execute(self, userdata):
         w = Waypoint()
-        clear_costmap()
-        result = self.controllers.base_controller.sync_to_pose(get_pose_from_param('/lift_in_front/pose'))
-        rospy.sleep(1)
-        warped, analytics, M = w.get_lift_information(is_lift=True, is_sim=True)
-        global_centers = analytics[0]
-        global_centers = w.local_to_global_points(M=M, points=global_centers, is_lift=False)
 
-        self.safe_clusters_info(analytics, global_centers)
+        clear_costmap()
+
+        status = self.controllers.base_controller.ensure_sync_to_pose(get_pose_from_param('/lift_in_front/pose'))
+        rospy.loginfo("Status of the robot in front of the lift is {}".format(status))
+
+        # get the lift information
+        warped, analytics, M = w.get_lift_information(is_lift=True, is_sim=True)
+
+        self.safe_clusters_info(analytics, w, M)
+
         if analytics[1] == 0:
             # if the lift is empty
             # go to predetermined place
-            result = self.controllers.base_controller.sync_to_pose(get_pose_from_param('/lift_centre/pose'))
+            state = self.controllers.base_controller.ensure_sync_to_pose(get_pose_from_param('/lift_centre/pose'))
             return 'success'
+
+        # get the narrow space navigation service
         s = NarrowSpaceNavSrv()
         occupancy_array = warped
         thresh = np.mean(occupancy_array.flatten())
@@ -64,16 +72,8 @@ class NavigateInLift(smach.State):
         p.position.x = global_points[0][0]
         p.position.y = global_points[0][1]
         p.orientation.w = 1
-        c = Controllers()
-        c.base_controller.sync_to_pose(p)
+        self.controllers.base_controller.ensure_sync_to_pose(p)
+
+        self.voice.speak("I have arrived at the lift.")
 
         return 'success'
-
-
-        # speak that you arrive at the lift
-
-
-        # get into the lift
-
-
-        # turn and speak

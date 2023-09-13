@@ -8,10 +8,11 @@ DEBUG_WITH_IMAGES = rospy.get_param('debug_with_images')
 # for matplotlib
 PLOT_SHOW = rospy.get_param('plot_show')
 PLOT_SAVE = rospy.get_param('plot_save')
+PUBLISH_MARKERS = rospy.get_param('publish_markers')
 DEBUG_PATH = os.getcwd()
 RASA = rospy.get_param('rasa')
 
-rospy.logwarn(f"DEBUG: {DEBUG}, DEBUG_WITH_IMAGES: {DEBUG_WITH_IMAGES}, PLOT_SHOW: {PLOT_SHOW}, PLOT_SAVE: {PLOT_SAVE}")
+rospy.logwarn("DEBUG: {DEBUG}, DEBUG_WITH_IMAGES: {DEBUG_WITH_IMAGES}, PLOT_SHOW: {PLOT_SHOW}, PLOT_SAVE: {PLOT_SAVE}".format(**locals()))
 
 if DEBUG_WITH_IMAGES:
     if not os.path.exists(os.path.join(rospkg.RosPack().get_path("lift"), "debug_lift")):

@@ -78,5 +78,8 @@ lift_in_front:
     orientation: { x: 0.0, y: 0.0, z: 0.0, w: 0.0 }
 
 
+counter_door_open:
+  counter: 0
 
+door_location: [-5.379326820373535 -1.0147719383239746]
 
