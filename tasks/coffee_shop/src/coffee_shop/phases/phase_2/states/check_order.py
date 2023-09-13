@@ -8,7 +8,6 @@ from std_msgs.msg import String
 from common_math import pcl_msg_to_cv2, seg_to_centroid
 from coffee_shop.srv import TfTransform, TfTransformRequest
 
-from play_motion_msgs.msg import PlayMotionGoal
 from collections import Counter
 
 
@@ -16,8 +15,6 @@ class CheckOrder(smach.State):
     def __init__(self, context):
         smach.State.__init__(self, outcomes=['correct', 'incorrect'])
         self.context = context
-
-        self.previous_given_order = None
 
     def estimate_pose(self, pcl_msg, detection):
         centroid_xyz = seg_to_centroid(pcl_msg, np.array(detection.xyseg))
@@ -31,9 +28,6 @@ class CheckOrder(smach.State):
         return np.array([response.target_point.point.x, response.target_point.point.y, response.target_point.point.z])
 
     def execute(self, userdata):
-
-        pm_goal = PlayMotionGoal(motion_name="back_to_default", skip_planning=True)
-        self.context.play_motion_client.send_goal_and_wait(pm_goal)
         order = self.context.tables[self.context.current_table]["order"]
 
         counter_corners = rospy.get_param(f"/counter/cuboid")
@@ -54,10 +48,6 @@ class CheckOrder(smach.State):
         if sorted(order) == sorted(given_order):
             return 'correct'
 
-        if self.previous_given_order == given_order:
-            rospy.sleep(rospy.Duration(5.0))
-            return 'incorrect'
-
         missing_items = list((Counter(order) - Counter(given_order)).elements())
         missing_items_string = ', '.join([f"{count} {item if count == 1 else item+'s'}" for item, count in Counter(missing_items).items()]).replace(', ', ', and ', len(missing_items) - 2)
         invalid_items = list((Counter(given_order) - Counter(order)).elements())
@@ -65,11 +55,9 @@ class CheckOrder(smach.State):
         rospy.loginfo(f"Order: {order}, Given order: {given_order}")
 
         if not len(invalid_items):
-            self.context.voice_controller.sync_tts(f"You didn't give me {missing_items_string} which I asked for. Please correct the order and say `done` when you are ready for me to check it again.")
+            self.context.voice_controller.sync_tts(f"You didn't give me {missing_items_string} which I asked for. Please correct the order and say `finished` when you are ready for me to check it again.")
         elif not len(missing_items):
-            self.context.voice_controller.sync_tts(f"You have given me {invalid_items_string} which I didn't ask for. Please correct the order and say `done` when you are ready for me to check it again.")
+            self.context.voice_controller.sync_tts(f"You have given me {invalid_items_string} which I didn't ask for. Please correct the order and say `finished` when you are ready for me to check it again.")
         else:
-            self.context.voice_controller.sync_tts(f"You have given me {invalid_items_string} which I didn't ask for, and didn't give me {missing_items_string} which I asked for. Please correct the order and say `done` when you are ready for me to check it again.")
-        rospy.sleep(rospy.Duration(5.0))
-        self.previous_given_order = given_order
+            self.context.voice_controller.sync_tts(f"You have given me {invalid_items_string} which I didn't ask for, and didn't give me {missing_items_string} which I asked for. Please correct the order and say `finished` when you are ready for me to check it again.")
         return 'incorrect'

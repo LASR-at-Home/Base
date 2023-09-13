@@ -3,6 +3,7 @@ import smach
 import rospy
 import json
 from collections import Counter
+import difflib
 
 class TakeOrder(smach.State):
     
@@ -13,7 +14,7 @@ class TakeOrder(smach.State):
     def listen(self):
         resp = self.context.speech(True)
         if not resp.success:
-            self.context.voice_controller.sync_tts("Sorry, I didn't get that")
+            self.context.voice_controller.sync_tts(self.context.get_random_retry_utterance())
             return self.listen()
         resp = json.loads(resp.json_response)
         rospy.loginfo(resp)
@@ -22,11 +23,11 @@ class TakeOrder(smach.State):
     def get_order(self):
         resp = self.listen()
         if resp["intent"]["name"] != "make_order":
-            self.context.voice_controller.sync_tts("Sorry, I didn't get that")
+            self.context.voice_controller.sync_tts(self.context.get_random_retry_utterance())
             return self.get_order()
         items = resp["entities"].get("item", [])
         if not items:
-            self.context.voice_controller.sync_tts("Sorry, I didn't get that")
+            self.context.voice_controller.sync_tts(self.context.get_random_retry_utterance())
             return self.get_order()
         quantities = resp["entities"].get("CARDINAL", [])
         quantified_items = []
@@ -44,7 +45,16 @@ class TakeOrder(smach.State):
                     quantified_items.append((1, item["value"]))
         items = []
         for quantity, item in quantified_items:
+            if item not in self.context.target_object_remappings.keys():
+                matches = difflib.get_close_matches(item.lower(), self.context.target_object_remappings.keys())
+                if matches:
+                    item = matches[0]
+                else:
+                    continue
             items.extend([item.lower()]*quantity)
+        if not items:
+            self.context.voice_controller.sync_tts(self.context.get_random_retry_utterance())
+            return self.get_order()
         items_string = ', '.join([f"{count} {self.context.target_object_remappings[item] if count == 1 else self.context.target_object_remappings[item]+'s'}" for item, count in Counter(items).items()]).replace(', ', ', and ', len(items)-2)
 
         self.context.voice_controller.sync_tts(f"You asked for {items_string}, is that correct? Please answer yes or no")
@@ -55,8 +65,8 @@ class TakeOrder(smach.State):
 
     def affirm(self):
         resp = self.listen()
-        if not resp["intent"]["name"] not in ["affirm", "deny"]:
-            self.context.voice_controller.sync_tts("Sorry, I didn't get that")
+        if resp["intent"]["name"] not in ["affirm", "deny"]:
+            self.context.voice_controller.sync_tts(self.context.get_random_retry_utterance())
             return self.affirm()
         return resp["intent"]["name"] == "affirm"
 

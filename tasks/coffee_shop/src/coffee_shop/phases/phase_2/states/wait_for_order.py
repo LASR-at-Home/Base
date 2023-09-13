@@ -10,12 +10,13 @@ class WaitForOrder(smach.State):
         self.context = context
 
     def execute(self, userdata):
+        resp = self.context.speech(True)
         while True:
-            resp = self.context.speech(False)
             if not resp.success:
                 continue
             resp = json.loads(resp.json_response)
             rospy.loginfo(resp)
-            if resp["intent"]["name"] == "affirm" and resp["text"].lower() == "done":
+            if "finished" in resp["text"].lower():
                 break
+            resp = self.context.speech(False)
         return 'done'
