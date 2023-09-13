@@ -49,7 +49,7 @@ class CheckTable(smach.State):
     def perform_detection(self, pcl_msg, polygon, filter, model):
         cv_im = pcl_msg_to_cv2(pcl_msg)
         img_msg = self.context.bridge.cv2_to_imgmsg(cv_im)
-        detections = self.context.yolo(img_msg, model, 0.3, 0.3)
+        detections = self.context.yolo(img_msg, model, 0.5, 0.3)
         detections = [(det, self.estimate_pose(pcl_msg, det)) for det in detections.detected_objects if det.name in filter]
         rospy.loginfo(f"All: {[(det.name, pose) for det, pose in detections]}")
         rospy.loginfo(f"Boundary: {polygon}")

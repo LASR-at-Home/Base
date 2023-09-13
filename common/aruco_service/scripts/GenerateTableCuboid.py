@@ -131,7 +131,6 @@ def generate_cuboid(number):
         # Dump rosparams to file
         data = {
             'tables': rosparam.get_param('/tables'),
-            'current_table': rosparam.get_param('/current_table'),
             'counter': rosparam.get_param('/counter'),
             'wait': rosparam.get_param('/wait')
         }

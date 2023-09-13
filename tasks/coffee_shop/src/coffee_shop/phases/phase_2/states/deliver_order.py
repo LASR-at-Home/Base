@@ -19,16 +19,9 @@ class DeliverOrder(smach.State):
         self.context.base_controller.sync_to_pose(Pose(position=Point(**position), orientation=Quaternion(**orientation)))
         self.context.base_controller.rotate(np.pi)
         pm_goal = PlayMotionGoal(motion_name="load_unload", skip_planning=True)
-        self.play_motion_client.send_goal_and_wait(pm_goal)
-        self.voice_controller.sync_tts("Please unload the order and say `finished` when you are finished.")
-        resp = self.context.speech(True)
-        while True:
-            if not resp.success:
-                continue
-            resp = json.loads(resp.json_response)
-            if "finished" in resp["text"].lower():
-                break
-            resp = self.context.speech(False)
+        self.context.play_motion_client.send_goal_and_wait(pm_goal)
+        self.context.voice_controller.sync_tts("I'll give you some time to unload the order...")
+        rospy.sleep(rospy.Duration(10.0))
         pm_goal = PlayMotionGoal(motion_name="back_to_default", skip_planning=True)
-        self.play_motion_client.send_goal_and_wait(pm_goal)
+        self.context.play_motion_client.send_goal_and_wait(pm_goal)
         return 'done'
