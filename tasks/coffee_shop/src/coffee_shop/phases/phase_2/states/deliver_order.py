@@ -16,7 +16,9 @@ class DeliverOrder(smach.State):
         location = rospy.get_param(f"/tables/{self.context.current_table}/location")
         position = location["position"]
         orientation = location["orientation"]
-        self.context.base_controller.sync_to_pose(Pose(position=Point(**position), orientation=Quaternion(**orientation)))
+        self.context.base_controller.sync_to_radius(self.context.tables[self.context.current_table]["people"][0][0], self.context.tables[self.context.current_table]["people"][0][1], 0.5)
+        self.context.base_controller.sync_face_to(self.context.tables[self.context.current_table]["people"][0][0], self.context.tables[self.context.current_table]["people"][0][1])
+        #self.context.base_controller.sync_to_pose(Pose(position=Point(**position), orientation=Quaternion(**orientation)))
         self.context.base_controller.rotate(np.pi)
         pm_goal = PlayMotionGoal(motion_name="load_unload", skip_planning=True)
         self.context.play_motion_client.send_goal_and_wait(pm_goal)
