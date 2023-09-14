@@ -13,19 +13,25 @@ import tf2_ros
 from std_msgs.msg import Bool
 import laser_geometry.laser_geometry as lg
 import sensor_msgs.point_cloud2 as pc2
-from tf_module.tf_transforms_base import transform_point, apply_transform, get_transform, transform_point_2, transform_point_from_given
+# from tf_module.tf_transforms_base import transform_point, apply_transform, get_transform, transform_point_2, transform_point_from_given
+from tf_module.srv import BaseTransformRequest, ApplyTransformRequest, LatestTransformRequest, BaseTransform, LatestTransform, ApplyTransform
 from lift.defaults import PUBLISH_MARKERS
 from geometry_msgs.msg import Pose
 from markers.markers_helpers import create_point_marker
+from image_geometry import PinholeCameraModel
 
 MEAN_DISTANCE_THRESHOLD = 0.5
 DIST_THRESHOLD = 0.1
 # sim
-door_location = Point(x=-5.379326820373535, y=-1.0147719383239746)
+door_location = Point(x=-5.3076634407,y=-1.26610350609)
+
 # door_location = Point(x=3.78017091751, y=-0.921108067036)
 object_location = None
 door_detected = False
 prev_door_detected = False
+camera = PinholeCameraModel()
+
+# set up the tf module
 
 
 # get pointcloud
@@ -103,6 +109,11 @@ def laser_callback(laser_data):
     mean, filtered_points = filter_laser_scan(laser_data)
     print("filtered_points: {}".format(filtered_points))
 
+    # set up the tf module
+    rospy.wait_for_service('base_transform')
+
+
+
     final_points = []
     for i, range_val in enumerate(filtered_points):
         # print(f"i: {i}, range_val: {range_val}")
@@ -112,7 +123,12 @@ def laser_callback(laser_data):
         final_points.append((x, y, angle))
 
     for i, range_val in enumerate(final_points):
-        x, y, z = transform_point_from_given(range_val[0], range_val[1])
+        req = BaseTransformRequest()
+        req.point = Point(x=range_val[0], y=range_val[1], z=0.0)
+        req.frame = String('base_laser_link')
+        req.target_frame = String('map')
+
+        x, y, z = tf_base(req)
         door_pose_laser.publish(create_point_marker(x, y, 0.0, i))
 
     to_present = []
@@ -131,7 +147,11 @@ def laser_callback(laser_data):
     if PUBLISH_MARKERS:
         for i, point in enumerate(to_present):
             if point[0] != np.nan:
-                x, y, z = transform_point(point)
+                req = BaseTransformRequest()
+                req.point = Point(x=point[0], y=point[1], z=0.0)
+                req.frame = "base_laser_link"
+                req.target_frame = "map"
+                x, y, z = tf_base(req)
                 door_pose_laser.publish(create_point_marker(x, y, z, i))
 
 def point_cloud_callback(pcl_data):
@@ -145,7 +165,8 @@ def point_cloud_callback(pcl_data):
     # Check if any points match the expected door location
     if filtered_points:
         door_detected = True
-        
+
+from std_msgs.msg import String
 
 def laser_scan_to_points(laser_data):
     points_in_map_frame = []
@@ -156,18 +177,14 @@ def laser_scan_to_points(laser_data):
         x = range_val * cos(angle)
         y = range_val * sin(angle)
 
-        point_laser = PointStamped()
-        point_laser.header.stamp = rospy.Time.now()
-        point_laser.header.frame_id = "base_laser_link"
-        point_laser.point.x = x
-        point_laser.point.y = y
-        point_laser.point.z = 0.0
+        # set up the tf module
+        # rospy.wait_for_service('base_transform')
+        req = BaseTransformRequest()
+        req.point = Point(x=x, y=y, z=0.0)
+        req.frame = String('base_laser_link')
+        req.target_frame = String('map')
 
-        try:
-            points = transform_point_2(point_source=point_laser, from_frame="base_laser_link", to_frame="map")
-        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
-            rospy.logwarn("Failed to transform point.")
-            rospy.logwarn(e)
+        points = tf_base(req)
 
         points_in_map_frame.append(points.point)
 
@@ -213,24 +230,37 @@ def get_pcl_from_laser(msg):
     -------
 
     """
-
-    pcl_msg = lg.LaserProjection().projecget_transformtLaser(msg)
+    pcl_msg = lg.LaserProjection().projectLaser(msg)
     pcl_points = [p for p in pc2.read_points(pcl_msg, field_names=("x, y, z"), skip_nans=True)]
-    tr = get_transform("base_laser_link", "xtion_rgb_optical_frame")
+
+    tf_req = LatestTransformRequest()
+    tf_req.from_frame = "base_laser_link"
+    tf_req.target_frame = "xtion_rgb_optical_frame"
+    tr = tf_latest(tf_req)
+
+    padded_points = []
+    pixels = []
+    for point in pcl_points:
+        # Pad out the points to add vertical "pillars" to the point cloud
+        for z in np.linspace(0., 1., 5):
+            padded_points.append(Point(x=point[0], y=point[1], z=z))
+
+    apply_req = ApplyTransformRequest()
+    apply_req.points = padded_points
+    apply_req.transform = t.transform
+    res = tf_apply(apply_req)
 
     padded_converted_points = []
-    for point in pcl_points:
-        for z in np.linspace(0., 2., 10):
-            tr_point = apply_transform((point[0], point[1], z), tr)
-            p = (tr_point.point.x, tr_point.point.y, tr_point.point.z)
-            padded_converted_points.append(p)
+    for p in res.new_points:
+        pt = (p.x, p.y, p.z)
+        u, v = camera.project3dToPixel(pt)
+        # Filter out points that are outside the camera frame
+        if u >= 0 and u < 640 and v >= 0 and v < 480:
+            pixels.append(u)
+            pixels.append(v)
+            padded_converted_points.append(pt)
 
-    h = Header()
-    h.stamp = rospy.Time.now()
-    h.frame_id = "xtion_rgb_optical_frame"
-    padded_pcl = pc2.create_cloud_xyz32(h, padded_converted_points)
-
-    return padded_pcl
+    return padded_converted_points, pixels
 
 
 
@@ -266,6 +296,9 @@ def door_detected_callback(msg):
 if __name__ == "__main__":
     rospy.init_node("pcl_helpers")
     print("Waiting for the door location")
+
+    tf_base = rospy.ServiceProxy('base_transform', BaseTransform)
+    tf_latest = rospy.ServiceProxy('latest_transform', LatestTransform)
 
 
     pcl_to_point = rospy.Publisher("/pcl_to_point", Marker, queue_size=100)

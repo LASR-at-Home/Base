@@ -5,10 +5,6 @@ class Phase2(smach.StateMachine):
         smach.StateMachine.__init__(self, outcomes=['success'])
 
         with self:
-<<<<<<< Updated upstream
-=======
-            pass
->>>>>>> Stashed changes
             smach.StateMachine.add('START_PHASE_2', StartPhase2(controllers, voice, pm), transitions={'success': 'GO_TO_LIFT'})
             smach.StateMachine.add('GO_TO_LIFT', GoToLift(controllers, voice), transitions={'success': 'ANNOUNCE_ARRIVAL'})
             smach.StateMachine.add('ANNOUNCE_ARRIVAL', AnnounceArrival(controllers, voice), transitions={'success': 'CHECK_OPEN_DOOR'})
