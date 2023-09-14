@@ -136,3 +136,8 @@ class Context:
         # Seed the random number generator with the current time
         random.seed(time.time())
         return random.choice(self.retry_utterances)
+
+    def get_interaction_person(self):
+        # Seed the random number generator with the current time
+        random.seed(time.time())
+        return random.choice(self.tables[self.current_table]["people"])
