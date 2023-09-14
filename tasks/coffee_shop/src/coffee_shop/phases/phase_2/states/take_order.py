@@ -87,7 +87,7 @@ class TakeOrder(smach.State):
         if len(self.context.tables[self.context.current_table]["people"]) == 1:
             self.context.point_head_client.send_goal_and_wait(ph_goal)
             self.context.voice_controller.sync_tts("Hello, I'm TIAGo, I'll be serving you today.")
-            self.context.voice_controller.sync_tts("You're looking lonely here, sat all by yourself")
+            #self.context.voice_controller.sync_tts("You're looking lonely here, sat all by yourself")
             self.context.voice_controller.sync_tts("Please state your order after the beep - this indicates that I am listening.")
         elif len(self.context.tables[self.context.current_table]["people"]) == 2:
             self.context.voice_controller.sync_tts("Greetings to both of you, I'm TIAGo, I'll be serving you today.")
