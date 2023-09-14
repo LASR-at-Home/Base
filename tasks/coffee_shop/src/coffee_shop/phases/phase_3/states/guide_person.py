@@ -2,6 +2,10 @@
 import smach
 import rospy
 from geometry_msgs.msg import Pose, Point, Quaternion
+from play_motion_msgs.msg import PlayMotionGoal
+import numpy as np
+from common_math import pcl_msg_to_cv2
+
 
 class GuidePerson(smach.State):
     def __init__(self, context):

@@ -2,6 +2,7 @@
 import smach
 from play_motion_msgs.msg import PlayMotionGoal
 from control_msgs.msg import PointHeadGoal
+from geometry_msgs.msg import Point
 
 
 class GreetPerson(smach.State):
