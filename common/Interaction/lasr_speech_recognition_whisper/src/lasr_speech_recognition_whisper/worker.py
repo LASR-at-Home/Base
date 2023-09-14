@@ -76,7 +76,7 @@ class SpeechRecognitionWorker(ABC):
         text = result['text'].strip()
 
         # Detect and drop garbage
-        if len(text) == 0 or text.lower() in ['.', 'you']:
+        if len(text) == 0 or text.lower() in ['.', 'you', 'thanks for watching!']:
             self._phrase_start = None
             self._current_sample = bytes()
             rospy.loginfo('Skipping garbage...')
