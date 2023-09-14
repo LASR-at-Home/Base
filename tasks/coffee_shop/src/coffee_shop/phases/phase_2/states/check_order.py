@@ -49,9 +49,9 @@ class CheckOrder(smach.State):
             return 'correct'
 
         missing_items = list((Counter(order) - Counter(given_order)).elements())
-        missing_items_string = ', '.join([f"{count} {item if count == 1 else item+'s'}" for item, count in Counter(missing_items).items()]).replace(', ', ', and ', len(missing_items) - 2)
+        missing_items_string = ', '.join([f"{count} {self.context.target_object_remappings[item] if count == 1 else self.context.target_object_remappings[item]+'s'}" for item, count in Counter(missing_items).items()]).replace(', ', ', and ', len(missing_items) - 2)
         invalid_items = list((Counter(given_order) - Counter(order)).elements())
-        invalid_items_string = ', '.join([f"{count} {item if count == 1 else item+'s'}" for item, count in Counter(invalid_items).items()]).replace(', ', ', and ', len(invalid_items) - 2)
+        invalid_items_string = ', '.join([f"{count} {self.context.target_object_remappings[item] if count == 1 else self.context.target_object_remappings[item]+'s'}" for item, count in Counter(invalid_items).items()]).replace(', ', ', and ', len(invalid_items) - 2)
         rospy.loginfo(f"Order: {order}, Given order: {given_order}")
 
         if not len(invalid_items):

@@ -13,6 +13,6 @@ class GoToWaitLocation(smach.State):
         position, orientation = wait_location["location"]["position"], wait_location["location"]["orientation"]
         done = not len([(label, table) for label, table in self.context.tables.items() if table["status"] == "ready"])
         if not done:
-            self.context.voice_controller.sync_tts("I am going to the wait for a new customer")
+            self.context.voice_controller.sync_tts("I am going to wait for a new customer")
         self.context.base_controller.sync_to_pose(Pose(position=Point(**position), orientation=Quaternion(**orientation)))
         return 'done' if done else 'not done'
