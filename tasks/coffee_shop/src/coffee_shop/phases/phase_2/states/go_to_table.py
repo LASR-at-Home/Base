@@ -2,7 +2,7 @@
 import smach
 import rospy
 from geometry_msgs.msg import Pose, Point, Quaternion
-
+import numpy as np
 
 class GoToTable(smach.State):
     
