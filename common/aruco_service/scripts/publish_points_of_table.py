@@ -46,23 +46,22 @@ def publish_points(number):
         persons_marker_pub.publish(create_marker_msg(per[2], 2))
         persons_marker_pub.publish(create_marker_msg(per[3], 3))
 
-    else:
-        if table == -1:
+    elif table == -1:
 
-            cuboid = rospy.get_param("/counter/cuboid")
-            
-            objects_marker_pub.publish(create_marker_msg(cuboid[0], 0))
-            objects_marker_pub.publish(create_marker_msg(cuboid[1], 1))
-            objects_marker_pub.publish(create_marker_msg(cuboid[2], 2))
-            objects_marker_pub.publish(create_marker_msg(cuboid[3], 3))
+        cuboid = rospy.get_param("/counter/cuboid")
 
-        elif table == -2:
-            cuboid = rospy.get_param("/wait/cuboid")
-            
-            objects_marker_pub.publish(create_marker_msg(cuboid[0], 0))
-            objects_marker_pub.publish(create_marker_msg(cuboid[1], 1))
-            objects_marker_pub.publish(create_marker_msg(cuboid[2], 2))
-            objects_marker_pub.publish(create_marker_msg(cuboid[3], 3))
+        objects_marker_pub.publish(create_marker_msg(cuboid[0], 0))
+        objects_marker_pub.publish(create_marker_msg(cuboid[1], 1))
+        objects_marker_pub.publish(create_marker_msg(cuboid[2], 2))
+        objects_marker_pub.publish(create_marker_msg(cuboid[3], 3))
+
+    elif table == -2:
+        cuboid = rospy.get_param("/wait/cuboid")
+
+        objects_marker_pub.publish(create_marker_msg(cuboid[0], 0))
+        objects_marker_pub.publish(create_marker_msg(cuboid[1], 1))
+        objects_marker_pub.publish(create_marker_msg(cuboid[2], 2))
+        objects_marker_pub.publish(create_marker_msg(cuboid[3], 3))
 
 
     rospy.loginfo("Published points for table " + str(table))
