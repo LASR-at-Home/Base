@@ -2,6 +2,8 @@
 import smach
 import json
 import rospy
+from play_motion_msgs.msg import PlayMotionGoal
+
 
 class WaitForOrder(smach.State):
 
@@ -10,6 +12,8 @@ class WaitForOrder(smach.State):
         self.context = context
 
     def execute(self, userdata):
+        pm_goal = PlayMotionGoal(motion_name="back_to_default", skip_planning=True)
+        self.context.play_motion_client.send_goal_and_wait(pm_goal)
         resp = self.context.speech(True)
         resp = json.loads(resp.json_response)
         while True:

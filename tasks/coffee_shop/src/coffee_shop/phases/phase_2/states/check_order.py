@@ -7,7 +7,7 @@ from geometry_msgs.msg import Point, PointStamped
 from std_msgs.msg import String
 from common_math import pcl_msg_to_cv2, seg_to_centroid
 from coffee_shop.srv import TfTransform, TfTransformRequest
-
+from play_motion_msgs.msg import PlayMotionGoal
 from collections import Counter
 
 
@@ -28,6 +28,8 @@ class CheckOrder(smach.State):
         return np.array([response.target_point.point.x, response.target_point.point.y, response.target_point.point.z])
 
     def execute(self, userdata):
+        pm_goal = PlayMotionGoal(motion_name="check_table_low", skip_planning=True)
+        self.context.play_motion_client.send_goal_and_wait(pm_goal)
         order = self.context.tables[self.context.current_table]["order"]
 
         counter_corners = rospy.get_param(f"/counter/cuboid")
