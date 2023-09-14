@@ -31,7 +31,6 @@ class GuidePerson(smach.State):
 
         pm_goal = PlayMotionGoal(motion_name="back_to_default", skip_planning=True)
         self.context.play_motion_client.send_goal_and_wait(pm_goal)
-        pcl_msg = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
 
         self.context.voice_controller.sync_tts("Please be seated, I will wait for you to sit down!")
 
