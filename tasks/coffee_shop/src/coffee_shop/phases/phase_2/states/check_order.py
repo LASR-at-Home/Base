@@ -65,9 +65,9 @@ class CheckOrder(smach.State):
         rospy.loginfo(f"Order: {order}, Given order: {given_order}")
 
         if not len(invalid_items):
-            self.context.voice_controller.sync_tts(f"You didn't give me {missing_items_string} which I asked for. Please correct the order and say `Check order` when you are ready for me to check it again.")
+            self.context.voice_controller.sync_tts(f"You didn't give me {missing_items_string} which I asked for. Please correct the order.")
         elif not len(missing_items):
-            self.context.voice_controller.sync_tts(f"You have given me {invalid_items_string} which I didn't ask for. Please correct the order and say `Check order` when you are ready for me to check it again.")
+            self.context.voice_controller.sync_tts(f"You have given me {invalid_items_string} which I didn't ask for. Please correct the order.")
         else:
-            self.context.voice_controller.sync_tts(f"You have given me {invalid_items_string} which I didn't ask for, and didn't give me {missing_items_string} which I asked for. Please correct the order and say `Check order` when you are ready for me to check it again.")
+            self.context.voice_controller.sync_tts(f"You have given me {invalid_items_string} which I didn't ask for, and didn't give me {missing_items_string} which I asked for. Please correct the order.")
         return 'incorrect'
