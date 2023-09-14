@@ -60,7 +60,9 @@ catkin_python_setup()
  add_service_files(
    FILES
    TfTransform.srv
-#   Service2.srv
+   BaseTransform.srv
+   LatestTransform.srv
+   ApplyTransform.srv
  )
 
 ## Generate actions in the 'action' folder
