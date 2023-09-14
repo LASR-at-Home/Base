@@ -1,235 +1,723 @@
 version: "3.1"
 
 nlu:
+- synonym: coffee_cup
+  examples: |
+    - coffee
+    - coffees
+- synonym: small_pringles
+  examples: |
+    - small pringles
+    - small bringles 
+    - small pringle
+    - small bringle
+- synonym: pringles
+  examples: |
+    - pringles
+    - bringles
+    - pringle
+    - bringle
+- synonym: "1"
+  examples: |
+    - one
+- synonym: "2"
+  examples: |
+    - two
+- synonym: "3"
+  examples: |
+    - three
 - intent: make_order
   examples: |
-    - I'd like to order a [coffee](item), please.
-    - Could you get me some [bananas](item)?
-    - Can I have [two]{"entity": "quantity", "value": 2} [cups of coffee]{"entity": "item", "value": "coffee"}?
-    - Get me [three]{"entity": "quantity", "value": 3} [bananas]{"entity": "item", "value": "banana"} and [a coffee](item), please.
-    - I'm in the mood for [two cups of coffee]{"entity": "quantity", "value": 2} and [a banana](item).
-    - Please add [a can of pringles]{"entity": "item", "value": "pringles"} to my order.
-    - I want [a banana](item) and [three cups of coffee]{"entity": "quantity", "value": 3}.
-    - How about getting me [two bananas]{"entity": "quantity", "value": 2} and [a coffee]?
-    - I'm craving [a coffee](item) and [pringles]{"entity": "item", "value": "pringles"}.
-    - Add [two cans of pringles]{"entity": "quantity", "value": 2} to my cart, along with [a banana](item).
-    - One [banana](item) and [a coffee], please.
-    - Get me [two]{"entity": "quantity", "value": 2} [bananas]{"entity": "item", "value": "banana"} and [three cups of coffee]{"entity": "quantity", "value": 3}.
-    - I'd like [a coffee](item) and [a banana], please.
-    - Please include [three]{"entity": "quantity", "value": 3} [cups of coffee]{"entity": "item", "value": "coffee"} in my order.
-    - I'm ordering [a banana](item) and [a coffee].
-    - Could I get [two bananas]{"entity": "quantity", "value": 2} and [a can of pringles]{"entity": "item", "value": "pringles"}?
-    - Add [two]{"entity": "quantity", "value": 2} [cups of coffee]{"entity": "item", "value": "coffee"} to my cart.
-    - I'll take [three bananas]{"entity": "quantity", "value": 3} and [a coffee] please.
-    - How about [a banana](item) and [two cups of coffee]{"entity": "quantity", "value": 2}?
-    - Get me [two bananas]{"entity": "quantity", "value": 2} and [a can of pringles]{"entity": "item", "value": "pringles"}.
-    - I want [three cups of coffee]{"entity": "quantity", "value": 3} and [a banana](item), thanks.
-    - I'd like to order [a coffee](item) and [a can of pringles]{"entity": "item", "value": "pringles"}.
-    - Can you get me [a banana](item) and [three cups of coffee]{"entity": "quantity", "value": 3}?
-    - Add [a can of pringles]{"entity": "item", "value": "pringles"} to my order, along with [two bananas]{"entity": "quantity", "value": 2}.
-    - I'll take [a coffee](item) and [two bananas]{"entity": "quantity", "value": 2}.
-    - How about [two cups of coffee]{"entity": "quantity", "value": 2} and [a can of pringles]{"entity": "item", "value": "pringles"}?
-    - I want [a banana](item) and [three]{"entity": "quantity", "value": 3} [cups of coffee]{"entity": "item", "value": "coffee"}.
-    - Please include [two bananas]{"entity": "quantity", "value": 2} and [a can of pringles]{"entity": "item", "value": "pringles"}.
-    - Get me [three bananas]{"entity": "quantity", "value": 3} and [two cups of coffee]{"entity": "quantity", "value": 2}, please.
-    - I'd like [a can of pringles]{"entity": "item", "value": "pringles"} and [a coffee](item).
-    - Could I get [two bananas]{"entity": "quantity", "value": 2} and [three cups of coffee]{"entity": "quantity", "value": 3}, please?
-    - Add [a can of pringles]{"entity": "item", "value": "pringles"} and [a coffee](item) to my order.
-    - I want [three bananas]{"entity": "quantity", "value": 3} and [two cups of coffee]{"entity": "quantity", "value": 2}.
-    - I'll take [a can of pringles]{"entity": "item", "value": "pringles"} and [a banana](item), thanks.
-    - How about [two bananas]{"entity": "quantity", "value": 2} and [three cups of coffee]{"entity": "quantity", "value": 3}?
-    - I want [two cups of coffee]{"entity": "quantity", "value": 2} and [three bananas]{"entity": "quantity", "value": 3}, please.
-    - Get me [a can of pringles]{"entity": "item", "value": "pringles"} and [two cups of coffee]{"entity": "quantity", "value": 2}.
-    - I'd like [three cups of coffee]{"entity": "quantity", "value": 3} and [a can of pringles]{"entity": "item", "value": "pringles"}.
-    - Could I get [two bananas]{"entity": "quantity", "value": 2} and [a banana](item), please?
-    - Add [a can of pringles]{"entity": "item", "value": "pringles"} and [three cups of coffee]{"entity": "quantity", "value": 3} to my order.
-    - I want [a banana](item) and [two cups of coffee]{"entity": "quantity", "value": 2}, thanks.
-    - I'll take [two bananas]{"entity": "quantity", "value": 2} and [a can of pringles]{"entity": "item", "value": "pringles"}.
-    - How about [three cups of coffee]{"entity": "quantity", "value": 3} and [two bananas]{"entity": "quantity", "value": 2}?
-    - I want [a can of pringles]{"entity": "item", "value": "pringles"} and [a banana](item), please.
-    - Get me [a banana](item) and [two cups of coffee]{"entity": "quantity", "value": 2}, please.
-    - I'd like [three cups of coffee]{"entity": "quantity", "value": 3} and [a can of pringles]{"entity": "item", "value": "pringles"}.
-    - Could I get [two bananas]{"entity": "quantity", "value": 2} and [three cups of coffee]{"entity": "quantity", "value": 3}?
-    - Add [a can of pringles]{"entity": "item", "value": "pringles"} and [two bananas]{"entity": "quantity", "value": 2} to my order.
-    - I want [a banana](item) and [two cups of coffee]{"entity": "quantity", "value": 2}.
-    - I'll take [two bananas]{"entity": "quantity", "value": 2} and [three cups of coffee]{"entity": "quantity", "value": 3}, thanks.
-    - How about [a can of pringles]{"entity": "item", "value": "pringles"} and [a banana](item)?
-    - I want [two cups of coffee]{"entity": "quantity", "value": 2} and [three cups of coffee]{"entity": "quantity", "value": 3}, please.
-    - Get me [a banana](item) and [a can of pringles]{"entity": "item", "value": "pringles"}.
-    - I'd like [two bananas]{"entity": "quantity", "value": 2} and [two cups of coffee]{"entity": "quantity", "value": 2}, please.
-    - Could I get [three cups of coffee]{"entity": "quantity", "value": 3} and [a banana](item), please?
-    - Add [a can of pringles]{"entity": "item", "value": "pringles"} and [three cups of coffee]{"entity": "quantity", "value": 3} to my order.
-    - I want [two cups of coffee]{"entity": "quantity", "value": 2} and [a can of pringles]{"entity": "item", "value": "pringles"}, thanks.
-    - I'll take [two bananas]{"entity": "quantity", "value": 2} and [three cups of coffee]{"entity": "quantity", "value": 3}.
-    - How about [a banana](item) and [a can of pringles]{"entity": "item", "value": "pringles"}?
-    - I want [three cups of coffee]{"entity": "quantity", "value": 3} and [two cups of coffee]{"entity": "quantity", "value": 2}, please.
-    - Get me [a banana](item) and [three cups of coffee]{"entity": "quantity", "value": 3}, please.
-    - I'd like [two cups of coffee]{"entity": "quantity", "value": 2} and [two bananas]{"entity": "quantity", "value": 2}.
-    - Could I get [a can of pringles]{"entity": "item", "value": "pringles"} and [a banana](item), please?
-    - Add [two cups of coffee]{"entity": "quantity", "value": 2} and [a can of pringles]{"entity": "item", "value": "pringles"} to my order.
-    - I want [three cups of coffee]{"entity": "quantity", "value": 3} and [a banana](item), thanks.
-    - I'll take [two cups of coffee]{"entity": "quantity", "value": 2} and [a can of pringles]{"entity": "item", "value": "pringles"}.
-    - How about [two bananas]{"entity": "quantity", "value": 2} and [three cups of coffee]{"entity": "quantity", "value": 3}, please?
-    - I want [a banana](item) and [two cups of coffee]{"entity": "quantity", "value": 2}.
-    - Get me [three cups of coffee]{"entity": "quantity", "value": 3} and [a can of pringles]{"entity": "item", "value": "pringles"}.
-    - I'd like [two bananas]{"entity": "quantity", "value": 2} and [a banana](item), please.
-    - Could I get [a can of pringles]{"entity": "item", "value": "pringles"} and [two cups of coffee]{"entity": "quantity", "value": 2}?
-    - Add [two cups of coffee]{"entity": "quantity", "value": 2} and [three cups of coffee]{"entity": "quantity", "value": 3} to my order.
-    - I want [a banana](item) and [two bananas]{"entity": "quantity", "value": 2}, thanks.
-    - I'll take [a can of pringles]{"entity": "item", "value": "pringles"} and [a banana](item).
-    - How about [a can of pringles]{"entity": "item", "value": "pringles"} and [three cups of coffee]{"entity": "quantity", "value": 3}?
-    - I want [two bananas]{"entity": "quantity", "value": 2} and [two cups of coffee]{"entity": "quantity", "value": 2}, please.
-    - Get me [a banana](item) and [a can of pringles]{"entity": "item", "value": "pringles"}.
-    - I'd like [three cups of coffee]{"entity": "quantity", "value": 3} and [two bananas]{"entity": "quantity", "value": 2}.
-    - Could I get [a banana](item) and [three cups of coffee]{"entity": "quantity", "value": 3}, please?
-    - Add [two cups of coffee]{"entity": "quantity", "value": 2} and [a banana](item) to my order.
-    - I want [a can of pringles]{"entity": "item", "value": "pringles"} and [three cups of coffee]{"entity": "quantity", "value": 3}, please.
-    - I'll take [two bananas]{"entity": "quantity", "value": 2} and [a banana](item), thanks.
-    - How about [a can of pringles]{"entity": "item", "value": "pringles"} and [two cups of coffee]{"entity": "quantity", "value": 2}?
-    - I want [three cups of coffee]{"entity": "quantity", "value": 3} and [a banana](item), please.
-    - Get me [a banana](item) and [a can of pringles]{"entity": "item", "value": "pringles"}, please.
-    - I'd like [two bananas]{"entity": "quantity", "value": 2} and [two cups of coffee]{"entity": "quantity", "value": 2}.
-    - Could I get [three cups of coffee]{"entity": "quantity", "value": 3} and [a banana](item), please?
-    - Add [a can of pringles]{"entity": "item", "value": "pringles"} and [two bananas]{"entity": "quantity", "value": 2} to my order.
-    - I want [two cups of coffee]{"entity": "quantity", "value": 2} and [three cups of coffee]{"entity": "quantity", "value": 3}, thanks.
-    - I'll take [a can of pringles]{"entity": "item", "value": "pringles"} and [a banana](item).
-    - How about [a can of pringles]{"entity": "item", "value": "pringles"} and [three cups of coffee]{"entity": "quantity", "value": 3}?
-    - I want [two bananas]{"entity": "quantity", "value": 2} and [two cups of coffee]{"entity": "quantity", "value": 2}, please.
-    - Get me [a banana](item) and [a can of pringles]{"entity": "item", "value": "pringles"}.
-    - I'd like [three cups of coffee]{"entity": "quantity", "value": 3} and [two bananas]{"entity": "quantity", "value": 2}.
-    - Could I get [a banana](item) and [three cups of coffee]{"entity": "quantity", "value": 3}, please?
-    - Add [a can of pringles]{"entity": "item", "value": "pringles"} and [two cups of coffee]{"entity": "quantity", "value": 2} to my order.
-    - I want [two cups of coffee]{"entity": "quantity", "value": 2} and [a banana](item), thanks.
-    - I'll take [a can of pringles]{"entity": "item", "value": "pringles"} and [three cups of coffee]{"entity": "quantity", "value": 3}.
-    - How about [a can of pringles]{"entity": "item", "value": "pringles"} and [two bananas]{"entity": "quantity", "value": 2}?
-    - I want [two cups of coffee]{"entity": "quantity", "value": 2} and [three cups of coffee]{"entity": "quantity", "value": 3}, please.
-    - Get me [a banana](item) and [a can of pringles]{"entity": "item", "value": "pringles"}, please.
-    - I'd like [three cups of coffee]{"entity": "quantity", "value": 3} and [a banana](item).
-    - Could I get [two bananas]{"entity": "quantity", "value": 2} and [two cups of coffee]{"entity": "quantity", "value": 2}?
-    - Add [a can of pringles]{"entity": "item", "value": "pringles"} and [three cups of coffee]{"entity": "quantity", "value": 3} to my order.
-    - I want [two cups of coffee]{"entity": "quantity", "value": 2} and [a banana](item), thanks.
-    - I'll take [a can of pringles]{"entity": "item", "value": "pringles"} and [a can of pringles]{"entity": "item", "value": "pringles"}.
-    - How about [a can of pringles]{"entity": "item", "value": "pringles"} and [a banana](item), please?
-    - I want [three cups of coffee]{"entity": "quantity", "value": 3} and [two cups of coffee]{"entity": "quantity", "value": 2}, please.
-    - Get me [a banana](item) and [three cups of coffee]{"entity": "quantity", "value": 3}, please.
-    - I'd like [two cups of coffee]{"entity": "quantity", "value": 2} and [two bananas]{"entity": "quantity", "value": 2}.
-    - Could I get [a can of pringles]{"entity": "item", "value": "pringles"} and [a banana](item), please?
-    - Add [two cups of coffee]{"entity": "quantity", "value": 2} and [a can of pringles]{"entity": "item", "value": "pringles"} to my order.
-    - I want [three cups of coffee]{"entity": "quantity", "value": 3} and [a banana](item), thanks.
-    - I'll take [two cups of coffee]{"entity": "quantity", "value": 2} and [a can of pringles]{"entity": "item", "value": "pringles"}.
-    - How about [two bananas]{"entity": "quantity", "value": 2} and [three cups of coffee]{"entity": "quantity", "value": 3}?
-    - I want [a banana](item) and [a can of pringles]{"entity": "item", "value": "pringles"}.
-    - Get me [three cups of coffee]{"entity": "quantity", "value": 3} and [two cups of coffee]{"entity": "quantity", "value": 2}.
-    - I'd like [a can of pringles]{"entity": "item", "value": "pringles"} and [a banana](item), please.
-    - Could I get [a banana](item) and [three cups of coffee]{"entity": "quantity", "value": 3}, please?
-    - Add [a can of pringles]{"entity": "item", "value": "pringles"} and [two cups of coffee]{"entity": "quantity", "value": 2} to my order.
-    - I want [two cups of coffee]{"entity": "quantity", "value": 2} and [three cups of coffee]{"entity": "quantity", "value": 3}, thanks.
-    - I'll take [a can of pringles]{"entity": "item", "value": "pringles"} and [a banana](item).
-    - How about [a can of pringles]{"entity": "item", "value": "pringles"} and [three cups of coffee]{"entity": "quantity", "value": 3}?
-    - I want [two bananas]{"entity": "quantity", "value": 2} and [two cups of coffee]{"entity": "quantity", "value": 2}.
-    - Get me [a banana](item) and [a can of pringles]{"entity": "item", "value": "pringles"}.
-    - I'd like [three cups of coffee]{"entity": "quantity", "value": 3} and [two bananas]{"entity": "quantity", "value": 2}.
-    - Could I get [a banana](item) and [three cups of coffee]{"entity": "quantity", "value": 3}, please?
-    - Add [a can of pringles]{"entity": "item", "value": "pringles"} and [two cups of coffee]{"entity": "quantity", "value": 2} to my order.
-    - I want [three cups of coffee]{"entity": "quantity", "value": 3} and [a banana](item), thanks.
-    - I'll take [two cups of coffee]{"entity": "quantity", "value": 2} and [a can of pringles]{"entity": "item", "value": "pringles"}.
-    - How about [two bananas]{"entity": "quantity", "value": 2} and [three cups of coffee]{"entity": "quantity", "value": 3}, please?
-    - I want [a banana](item) and [a can of pringles]{"entity": "item", "value": "pringles"}.
-    - Get me [three cups of coffee]{"entity": "quantity", "value": 3} and [two cups of coffee]{"entity": "quantity", "value": 2}.
-    - I'd like [a can of pringles]{"entity": "item", "value": "pringles"} and [a banana](item), please.
-    - Could I get [a banana](item) and [three cups of coffee]{"entity": "quantity", "value": 3}, please?
-    - Add [a can of pringles]{"entity": "item", "value": "pringles"} and [two cups of coffee]{"entity": "quantity", "value": 2} to my order.
-    - I want [two cups of coffee]{"entity": "quantity", "value": 2} and [three cups of coffee]{"entity": "quantity", "value": 3}, thanks.
-    - I'll take [a can of pringles]{"entity": "item", "value": "pringles"} and [a banana](item).
-    - How about [a can of pringles]{"entity": "item", "value": "pringles"} and [three cups of coffee]{"entity": "quantity", "value": 3}?
-    - I want [two bananas]{"entity": "quantity", "value": 2} and [two cups of coffee]{"entity": "quantity", "value": 2}, please.
-    - Get me [a banana](item) and [three cups of coffee]{"entity": "quantity", "value": 3}, please.
-    - I'd like [two cups of coffee]{"entity": "quantity", "value": 2} and [two bananas]{"entity": "quantity", "value": 2}.
-    - Could I get [a can of pringles]{"entity": "item", "value": "pringles"} and [a banana](item), please?
-    - Add [two cups of coffee]{"entity": "quantity", "value": 2} and [a can of pringles]{"entity": "item", "value": "pringles"} to my order.
-    - I want [three cups of coffee]{"entity": "quantity", "value": 3} and [a banana](item), thanks.
-    - I'll take [two cups of coffee]{"entity": "quantity", "value": 2} and [a can of pringles]{"entity": "item", "value": "pringles"}.
-    - How about [two bananas]{"entity": "quantity", "value": 2} and [three cups of coffee]{"entity": "quantity", "value": 3}?
-    - I want [a banana](item) and [a can of pringles]{"entity": "item", "value": "pringles"}.
-    - Get me [three cups of coffee]{"entity": "quantity", "value": 3} and [two cups of coffee]{"entity": "quantity", "value": 2}.
-    - I'd like [a can of pringles]{"entity": "item", "value": "pringles"} and [a banana](item), please.
-    - Could I get [a banana](item) and [three cups of coffee]{"entity": "quantity", "value": 3}, please?
-    - Add [a can of pringles]{"entity": "item", "value": "pringles"} and [two cups of coffee]{"entity": "quantity", "value": 2} to my order.
-    - I want [two cups of coffee]{"entity": "quantity", "value": 2} and [three cups of coffee]{"entity": "quantity", "value": 3}, thanks.
-    - I'll take [a can of pringles]{"entity": "item", "value": "pringles"} and [a banana](item).
-    - How about [a can of pringles]{"entity": "item", "value": "pringles"} and [three cups of coffee]{"entity": "quantity", "value": 3}?
-    - I want [two bananas]{"entity": "quantity", "value": 2} and [two cups of coffee]{"entity": "quantity", "value": 2}, please.
-    - Get me [a banana](item) and [three cups of coffee]{"entity": "quantity", "value": 3}, please.
-    - I'd like [two cups of coffee]{"entity": "quantity", "value": 2} and [two bananas]{"entity": "quantity", "value": 2}.
-    - Could I get [a can of pringles]{"entity": "item", "value": "pringles"} and [a banana](item), please?
-    - Add [two cups of coffee]{"entity": "quantity", "value": 2} and [a can of pringles]{"entity": "item", "value": "pringles"} to my order.
-    - I want [three cups of coffee]{"entity": "quantity", "value": 3} and [a banana](item), thanks.
-    - I'll take [two cups of coffee]{"entity": "quantity", "value": 2} and [a can of pringles]{"entity": "item", "value": "pringles"}.
-    - How about [two bananas]{"entity": "quantity", "value": 2} and [three cups of coffee]{"entity": "quantity", "value": 3}?
-    - I want [a banana](item) and [a can of pringles]{"entity": "item", "value": "pringles"}.
-    - Get me [three cups of coffee]{"entity": "quantity", "value": 3} and [two cups of coffee]{"entity": "quantity", "value": 2}.
-    - I'd like [a can of pringles]{"entity": "item", "value": "pringles"} and [a banana](item), please.
-    - Could I get [a banana](item) and [three cups of coffee]{"entity": "quantity", "value": 3}, please?
-    - Add [a can of pringles]{"entity": "item", "value": "pringles"} and [two cups of coffee]{"entity": "quantity", "value": 2} to my order.
-    - I want [two cups of coffee]{"entity": "quantity", "value": 2} and [three cups of coffee]{"entity": "quantity", "value": 3}, thanks.
-    - I'll take [a can of pringles]{"entity": "item", "value": "pringles"} and [a banana](item).
-    - How about [a can of pringles]{"entity": "item", "value": "pringles"} and [three cups of coffee]{"entity": "quantity", "value": 3}?
-    - I want [two bananas]{"entity": "quantity", "value": 2} and [two cups of coffee]{"entity": "quantity", "value": 2}, please.
-    - Get me [a banana](item) and [three cups of coffee]{"entity": "quantity", "value": 3}, please.
-    - I'd like [two cups of coffee]{"entity": "quantity", "value": 2} and [two bananas]{"entity": "quantity", "value": 2}.
-    - Could I get [a can of pringles]{"entity": "item", "value": "pringles"} and [a banana](item), please?
-    - Add [two cups of coffee]{"entity": "quantity", "value": 2} and [a can of pringles]{"entity": "item", "value": "pringles"} to my order.
-    - I want [three cups of coffee]{"entity": "quantity", "value": 3} and [a banana](item), thanks.
-    - I'll take [two cups of coffee]{"entity": "quantity", "value": 2} and [a can of pringles]{"entity": "item", "value": "pringles"}.
-    - How about [two bananas]{"entity": "quantity", "value": 2} and [three cups of coffee]{"entity": "quantity", "value": 3}?
-    - I want [a banana](item) and [a can of pringles]{"entity": "item", "value": "pringles"}.
-    - Get me [three cups of coffee]{"entity": "quantity", "value": 3} and [two cups of coffee]{"entity": "quantity", "value": 2}.
-    - I'd like [a can of pringles]{"entity": "item", "value": "pringles"} and [a banana](item), please.
-    - Could I get [a banana](item) and [three cups of coffee]{"entity": "quantity", "value": 3}, please?
-    - Add [a can of pringles]{"entity": "item", "value": "pringles"} and [two cups of coffee]{"entity": "quantity", "value": 2} to my order.
-    - I want [two cups of coffee]{"entity": "quantity", "value": 2} and [three cups of coffee]{"entity": "quantity", "value": 3}, thanks.
-    - I'll take [a can of pringles]{"entity": "item", "value": "pringles"} and [a banana](item).
-    - How about [a can of pringles]{"entity": "item", "value": "pringles"} and [three cups of coffee]{"entity": "quantity", "value": 3}?
-    - I want [two bananas]{"entity": "quantity", "value": 2} and [two cups of coffee]{"entity": "quantity", "value": 2}, please.
-    - Get me [a banana](item) and [three cups of coffee]{"entity": "quantity", "value": 3}, please.
-    - I'd like [two cups of coffee]{"entity": "quantity", "value": 2} and [two bananas]{"entity": "quantity", "value": 2}.
-    - Could I get [a can of pringles]{"entity": "item", "value": "pringles"} and [a banana](item), please?
-    - Add [two cups of coffee]{"entity": "quantity", "value": 2} and [a can of pringles]{"entity": "item", "value": "pringles"} to my order.
-    - I want [three cups of coffee]{"entity": "quantity", "value": 3} and [a banana](item), thanks.
+    - Can I have a [coffee](item) please.
+    - Get me a [coffee](item) please.
+    - Get me two [coffees](item)
+    - Can I have three [coffees](item)
+    - Can I have a [small pringles](item) please.
+    - Get me a [small pringles](item) please.
+    - Get me two [small pringles](item)
+    - Can I have three [small pringles](item)
+    - Get me some [pringles](item) please.
+    - Get me two [pringles](item)
+    - Can I have three [pringles](item)
+    - One [coffee](item)
+    - A [coffee](item)
+    - [Small pringles](item)
+    - [Pringles](item)
+    - A [small pringles](item)
+    - Some [pringles](item)
+    - A [coffee](item) and some [pringles](item)
+    - One [coffee](item), one [pringles](item) and one [small pringles](item)
+    - Two [coffees](item) and some [pringles](item)
+    - Three [coffees](item), one [pringles](item) and one [small pringles](item)
+    - Just a [coffee](item) and some [pringles](item)
+    - [pringles](item) and a [coffee](item)
+    - Can I have a [coffee](item) please.
+    - May I have a [coffee](item)?
+    - I'd like to order a [small pringles](item).
+    - Get me a [small pringles](item), please.
+    - I'll take a [coffee](item).
+    - Can you add a [small pringles](item) to my order?
+    - Give me two [coffees](item) and a [pringles](item).
+    - I'd like three [small pringles](item) and a [coffee](item).
+    - One [coffee](item), please.
+    - A cup of [coffee](item) for me.
+    - I want a [pringles](item) with my [coffee](item).
+    - Get me two [pringles](item) and a [small pringles](item).
+    - Can I have a cup of [coffee](item) and a [pringles](item)?
+    - Add three [coffees](item) to my order.
+    - I'll take a [coffee](item) and a [small pringles](item).
+    - One [small pringles](item) for now.
+    - A cup of [coffee](item) and two [pringles](item), please.
+    - I'd like a [pringles](item) and a [small pringles](item).
+    - Give me a [coffee](item) and three [pringles](item).
+    - Can I get two [small pringles](item)?
+    - May I have a cup of [coffee](item) and a [small pringles](item)?
+    - I want three [coffees](item) and a [small pringles](item).
+    - Get me a [small pringles](item) and a [pringles](item), please.
+    - I'll take a [coffee](item) and two [small pringles](item).
+    - One [pringles](item) and one [small pringles](item), please.
+    - A cup of [coffee](item) and three [pringles](item), please.
+    - Add two [coffees](item) and a [small pringles](item) to my order.
+    - I'd like four [small pringles](item) and a [coffee](item).
+    - Can you give me a [coffee](item) and a [pringles](item)?
+    - Get me three [pringles](item) and two [small pringles](item).
+    - I'll take a cup of [coffee](item) and a [small pringles](item).
+    - One [coffee](item) and two [pringles](item), please.
+    - A [small pringles](item) and three [coffees](item), please.
+    - May I have a [pringles](item) and a [small pringles](item)?
+    - I want four [coffees](item) and a [small pringles](item).
+    - Get me a [coffee](item) and four [pringles](item), please.
+    - I'd like five [small pringles](item) and a [coffee](item).
+    - Can I have a [small pringles](item) and two [pringles](item)?
+    - Give me three [coffees](item) and a [small pringles](item).
+    - I'll take a [coffee](item) and three [small pringles](item).
+    - One [small pringles](item) and three [pringles](item), please.
+    - A cup of [coffee](item) and four [pringles](item), please.
+    - May I have a [pringles](item) and two [small pringles](item)?
+    - I want five [coffees](item) and two [small pringles](item).
+    - Get me two [coffees](item) and three [pringles](item), please.
+    - I'd like four [small pringles](item) and two [coffees](item).
+    - Can you give me a [coffee](item) and three [small pringles](item)?
+    - Get me four [pringles](item) and four [small pringles](item).
+    - I'll take a cup of [coffee](item) and four [coffees](item).
+    - One [coffee](item) and four [pringles](item), please.
+    - A [small pringles](item) and five [coffees](item), please.
+    - May I have a [pringles](item) and three [small pringles](item)?
+    - I want five [coffees](item) and three [pringles](item).
+    - Get me a [coffee](item) and five [small pringles](item), please.
+    - I'd like six [small pringles](item) and a [coffee](item).
+    - Can I have a [small pringles](item) and four [pringles](item)?
+    - Give me four [coffees](item) and two [small pringles](item).
+    - I'll take a [coffee](item) and four [small pringles](item).
+    - One [small pringles](item) and four [pringles](item), please.
+    - A cup of [coffee](item) and five [pringles](item), please.
+    - May I have a [pringles](item) and three [small pringles](item)?
+    - I want six [coffees](item) and two [small pringles](item).
+    - Get me two [coffees](item) and four [pringles](item), please.
+    - I'd like five [small pringles](item) and three [coffees](item).
+    - Can you give me a [coffee](item) and four [small pringles](item)?
+    - Get me four [pringles](item) and five [small pringles](item).
+    - I'll take a cup of [coffee](item) and five [coffees](item).
+    - One [coffee](item) and five [pringles](item), please.
+    - A [small pringles](item) and six [coffees](item), please.
+    - May I have a [pringles](item) and four [small pringles](item)?
+    - I want six [coffees](item) and four [pringles](item).
+    - Get me a [coffee](item) and six [small pringles](item), please.
+    - I'd like seven [small pringles](item) and a [coffee](item).
+    - Can I have a [small pringles](item) and five [pringles](item)?
+    - Give me five [coffees](item) and three [small pringles](item).
+    - I'll take a [coffee](item) and five [small pringles](item).
+    - One [small pringles](item) and five [pringles](item), please.
+    - A cup of [coffee](item) and six [pringles](item), please.
+    - May I have a [pringles](item) and four [small pringles](item)?
+    - I want seven [coffees](item) and four [small pringles](item).
+    - Get me two [coffees](item) and five [pringles](item), please.
+    - I'd like six [small pringles](item) and four [coffees](item).
+    - Can you give me a [coffee](item) and five [small pringles](item)?
+    - Get me five [pringles](item) and six [small pringles](item).
+    - I'll take a cup of [coffee](item) and six [coffees](item).
+    - One [coffee](item) and six [pringles](item), please.
+    - A [small pringles](item) and seven [coffees](item), please.
+    - May I have a [pringles](item) and five [small pringles](item)?
+    - I want seven [coffees](item) and five [pringles](item).
+    - Get me a [coffee](item) and seven [small pringles](item), please.
+    - I'd like eight [small pringles](item) and a [coffee](item).
+    - Can I have a [small pringles](item) and six [pringles](item)?
+    - Give me six [coffees](item) and four [small pringles](item).
+    - I'll take a [coffee](item) and six [small pringles](item).
+    - One [small pringles](item) and six [pringles](item), please.
+    - A cup of [coffee](item) and seven [pringles](item), please.
+    - May I have a [pringles](item) and five [small pringles](item)?
+    - I want eight [coffees](item) and five [small pringles](item).
+    - Get me two [coffees](item) and six [pringles](item), please.
+    - I'd like seven [small pringles](item) and five [coffees](item).
+    - Can you give me a [coffee](item) and six [small pringles](item)?
+    - Get me six [pringles](item) and seven [small pringles](item).
+    - I'll take a cup of [coffee](item) and seven [coffees](item).
+    - One [coffee](item) and seven [pringles](item), please.
+    - A [small pringles](item) and eight [coffees](item), please.
+    - May I have a [pringles](item) and six [small pringles](item)?
+    - I want eight [coffees](item) and six [pringles](item).
+    - Get me a [coffee](item) and eight [small pringles](item), please.
+    - I'd like nine [small pringles](item) and a [coffee](item).
+    - Can I have a [small pringles](item) and seven [pringles](item)?
+    - Give me seven [coffees](item) and five [small pringles](item).
+    - I'll take a [coffee](item) and seven [small pringles](item).
+    - One [small pringles](item) and seven [pringles](item), please.
+    - A cup of [coffee](item) and eight [pringles](item), please.
+    - May I have a [pringles](item) and six [small pringles](item)?
+    - I want nine [coffees](item) and six [small pringles](item).
+    - Get me two [coffees](item) and seven [pringles](item), please.
+    - I'd like eight [small pringles](item) and six [coffees](item).
+    - Can you give me a [coffee](item) and seven [small pringles](item)?
+    - Get me seven [pringles](item) and eight [small pringles](item).
+    - I'll take a cup of [coffee](item) and eight [coffees](item).
+    - One [coffee](item) and eight [pringles](item), please.
+    - A [small pringles](item) and nine [coffees](item), please.
+    - May I have a [pringles](item) and seven [small pringles](item)?
+    - I want nine [coffees](item) and seven [pringles](item).
+    - Get me a [coffee](item) and nine [small pringles](item), please.
+    - I'd like ten [small pringles](item) and a [coffee](item).
+    - Can I have a [small pringles](item) and eight [pringles](item)?
+    - Give me eight [coffees](item) and six [small pringles](item).
+    - I'll take a [coffee](item) and eight [small pringles](item).
+    - One [small pringles](item) and eight [pringles](item), please.
+    - A cup of [coffee](item) and nine [pringles](item), please.
+    - May I have a [pringles](item) and seven [small pringles](item)?
+    - I want ten [coffees](item) and seven [small pringles](item).
+    - Get me two [coffees](item) and eight [pringles](item), please.
+    - I'd like eight [small pringles](item) and seven [coffees](item).
+    - Can you give me a [coffee](item) and eight [small pringles](item)?
+    - Get me seven [pringles](item) and nine [small pringles](item).
+    - I'll take a cup of [coffee](item) and nine [coffees](item).
+    - One [coffee](item) and nine [pringles](item), please.
+    - A [small pringles](item) and ten [coffees](item), please.
+    - May I have a [pringles](item) and eight [small pringles](item)?
+    - I want ten [coffees](item) and eight [pringles](item).
+    - Get me a [coffee](item) and ten [small pringles](item), please.
+    - I'd like eleven [small pringles](item) and a [coffee](item).
+    - Can I have a [small pringles](item) and nine [pringles](item)?
+    - Give me eight [coffees](item) and seven [small pringles](item).
+    - I'll take a [coffee](item) and eight [small pringles](item).
+    - One [small pringles](item) and eight [pringles](item), please.
+    - A cup of [coffee](item) and nine [pringles](item), please.
+    - May I have a [pringles](item) and seven [small pringles](item)?
+    - I want eleven [coffees](item) and seven [small pringles](item).
+    - Get me two [coffees](item) and eight [pringles](item), please.
+    - I'd like eight [small pringles](item) and nine [coffees](item).
+    - Can you give me a [coffee](item) and eight [small pringles](item)?
+    - Get me seven [pringles](item) and ten [small pringles](item).
+    - I'll take a cup of [coffee](item) and nine [coffees](item).
+    - One [coffee](item) and nine [pringles](item), please.
+    - A [small pringles](item) and eleven [coffees](item), please.
+    - May I have a [pringles](item) and eight [small pringles](item)?
+    - I want eleven [coffees](item) and eight [pringles](item).
+    - Get me a [coffee](item) and eleven [small pringles](item), please.
+    - I'd like twelve [small pringles](item) and a [coffee](item).
+    - Can I have a [small pringles](item) and ten [pringles](item)?
+    - Give me eight [coffees](item) and nine [small pringles](item).
+    - I'll take a [coffee](item) and eight [small pringles](item).
+    - One [small pringles](item) and eight [pringles](item), please.
+    - A cup of [coffee](item) and nine [pringles](item), please.
+    - May I have a [pringles](item) and seven [small pringles](item)?
+    - I want twelve [coffees](item) and seven [small pringles](item).
+    - Get me two [coffees](item) and nine [pringles](item), please.
+    - I'd like eight [small pringles](item) and ten [coffees](item).
+    - Can you give me a [coffee](item) and eight [small pringles](item)?
+    - Get me seven [pringles](item) and eleven [small pringles](item).
+    - I'll take a cup of [coffee](item) and nine [coffees](item).
+    - One [coffee](item) and nine [pringles](item), please.
+    - A [small pringles](item) and twelve [coffees](item), please.
+    - May I have a [pringles](item) and eight [small pringles](item)?
+    - I want twelve [coffees](item) and eight [pringles](item).
+    - Get me a [coffee](item) and twelve [small pringles](item), please.
+    - I'd like thirteen [small pringles](item) and a [coffee](item).
+    - Can I have a [small pringles](item) and eleven [pringles](item)?
+    - Give me eight [coffees](item) and ten [small pringles](item).
+    - I'll take a [coffee](item) and eight [small pringles](item).
+    - One [small pringles](item) and eight [pringles](item), please.
+    - A cup of [coffee](item) and nine [pringles](item), please.
+    - May I have a [pringles](item) and seven [small pringles](item)?
+    - I want thirteen [coffees](item) and seven [small pringles](item).
+    - Get me two [coffees](item) and ten [pringles](item), please.
+    - I'd like eight [small pringles](item) and eleven [coffees](item).
+    - Can you give me a [coffee](item) and eight [small pringles](item)?
+    - Get me seven [pringles](item) and twelve [small pringles](item).
+    - I'll take a cup of [coffee](item) and nine [coffees](item).
+    - One [coffee](item) and nine [pringles](item), please.
+    - A [small pringles](item) and thirteen [coffees](item), please.
+    - May I have a [pringles](item) and eight [small pringles](item)?
+    - I want thirteen [coffees](item) and eight [pringles](item).
+    - Get me a [coffee](item) and thirteen [small pringles](item), please.
+    - I'd like fourteen [small pringles](item) and a [coffee](item).
+    - Can I have a [small pringles](item) and twelve [pringles](item)?
+    - Give me eight [coffees](item) and eleven [small pringles](item).
+    - I'll take a [coffee](item) and eight [small pringles](item).
+    - One [small pringles](item) and eight [pringles](item), please.
+    - A cup of [coffee](item) and nine [pringles](item), please.
+    - May I have a [pringles](item) and seven [small pringles](item)?
+    - I want fourteen [coffees](item) and seven [small pringles](item).
+    - Get me two [coffees](item) and twelve [pringles](item), please.
+    - I'd like eight [small pringles](item) and twelve [coffees](item).
+    - Can you give me a [coffee](item) and eight [small pringles](item)?
+    - Get me seven [pringles](item) and thirteen [small pringles](item).
+    - I'll take a cup of [coffee](item) and nine [coffees](item).
+    - One [coffee](item) and nine [pringles](item), please.
+    - A [small pringles](item) and fourteen [coffees](item), please.
+    - May I have a [pringles](item) and eight [small pringles](item)?
+    - I want fourteen [coffees](item) and eight [pringles](item).
+    - Get me a [coffee](item) and fourteen [small pringles](item), please.
+    - I'd like fifteen [small pringles](item) and a [coffee](item).
+    - Can I have a [small pringles](item) and thirteen [pringles](item)?
+    - Give me eight [coffees](item) and twelve [small pringles](item).
+    - I'll take a [coffee](item) and eight [small pringles](item).
+    - One [small pringles](item) and eight [pringles](item), please.
+    - A cup of [coffee](item) and nine [pringles](item), please.
+    - May I have a [pringles](item) and seven [small pringles](item)?
+    - I want fifteen [coffees](item) and seven [small pringles](item).
+    - Get me two [coffees](item) and thirteen [pringles](item), please.
+    - I'd like eight [small pringles](item) and thirteen [coffees](item).
+    - Can you give me a [coffee](item) and eight [small pringles](item)?
+    - Get me seven [pringles](item) and fourteen [small pringles](item).
+    - I'll take a cup of [coffee](item) and nine [coffees](item).
+    - One [coffee](item) and nine [pringles](item), please.
+    - A [small pringles](item) and fifteen [coffees](item), please.
+    - May I have a [pringles](item) and eight [small pringles](item)?
+    - I want fifteen [coffees](item) and eight [pringles](item).
+    - Get me a [coffee](item) and fifteen [small pringles](item), please.
+    - I'd like sixteen [small pringles](item) and a [coffee](item).
+    - Can I have a [small pringles](item) and fourteen [pringles](item)?
+    - Give me eight [coffees](item) and thirteen [small pringles](item).
+    - I'll take a [coffee](item) and eight [small pringles](item).
+    - One [small pringles](item) and eight [pringles](item), please.
+    - A cup of [coffee](item) and nine [pringles](item), please.
+    - May I have a [pringles](item) and seven [small pringles](item)?
+    - I want sixteen [coffees](item) and seven [small pringles](item).
+    - Get me two [coffees](item) and fourteen [pringles](item), please.
+    - I'd like eight [small pringles](item) and fourteen [coffees](item).
+    - Can you give me a [coffee](item) and eight [small pringles](item)?
+    - Get me seven [pringles](item) and fifteen [small pringles](item).
+    - I'll take a cup of [coffee](item) and nine [coffees](item).
+    - One [coffee](item) and nine [pringles](item), please.
+    - A [small pringles](item) and sixteen [coffees](item), please.
+    - May I have a [pringles](item) and eight [small pringles](item)?
+    - I want sixteen [coffees](item) and eight [pringles](item).
+    - Get me a [coffee](item) and sixteen [small pringles](item), please.
+    - I'd like seventeen [small pringles](item) and a [coffee](item).
+    - Can I have a [small pringles](item) and fifteen [pringles](item)?
+    - Give me eight [coffees](item) and fourteen [small pringles](item).
+    - I'll take a [coffee](item) and eight [small pringles](item).
+    - One [small pringles](item) and eight [pringles](item), please.
+    - A cup of [coffee](item) and nine [pringles](item), please.
+    - May I have a [pringles](item) and seven [small pringles](item)?
+    - I want seventeen [coffees](item) and seven [small pringles](item).
+    - Get me two [coffees](item) and fifteen [pringles](item), please.
+    - I'd like eight [small pringles](item) and fifteen [coffees](item).
+    - Can you give me a [coffee](item) and eight [small pringles](item)?
+    - Get me seven [pringles](item) and sixteen [small pringles](item).
+    - I'll take a cup of [coffee](item) and nine [coffees](item).
+    - One [coffee](item) and nine [pringles](item), please.
+    - A [small pringles](item) and seventeen [coffees](item), please.
+    - May I have a [pringles](item) and eight [small pringles](item)?
+    - I want seventeen [coffees](item) and eight [pringles](item).
+    - Get me a [coffee](item) and seventeen [small pringles](item), please.
+    - I'd like eighteen [small pringles](item) and a [coffee](item).
+    - Can I have a [small pringles](item) and sixteen [pringles](item)?
+    - Give me eight [coffees](item) and fifteen [small pringles](item).
+    - I'll take a [coffee](item) and eight [small pringles](item).
+    - One [small pringles](item) and eight [pringles](item), please.
+    - A cup of [coffee](item) and nine [pringles](item), please.
+    - May I have a [pringles](item) and seven [small pringles](item)?
+    - I want eighteen [coffees](item) and seven [small pringles](item).
+    - Get me two [coffees](item) and sixteen [pringles](item), please.
+    - I'd like eight [small pringles](item) and sixteen [coffees](item).
+    - Can you give me a [coffee](item) and eight [small pringles](item)?
+    - Get me seven [pringles](item) and seventeen [small pringles](item).
+    - I'll take a cup of [coffee](item) and nine [coffees](item).
+    - One [coffee](item) and nine [pringles](item), please.
+    - A [small pringles](item) and eighteen [coffees](item), please.
+    - May I have a [pringles](item) and eight [small pringles](item)?
+    - I want eighteen [coffees](item) and eight [pringles](item).
+    - Get me a [coffee](item) and eighteen [small pringles](item), please.
+    - I'd like nineteen [small pringles](item) and a [coffee](item).
+    - Can I have a [small pringles](item) and seventeen [pringles](item)?
+    - Give me eight [coffees](item) and sixteen [small pringles](item).
+    - I'll take a [coffee](item) and eight [small pringles](item).
+    - One [small pringles](item) and eight [pringles](item), please.
+    - A cup of [coffee](item) and nine [pringles](item), please.
+    - May I have a [pringles](item) and seven [small pringles](item)?
+    - I want nineteen [coffees](item) and seven [small pringles](item).
+    - Get me two [coffees](item) and seventeen [pringles](item), please.
+    - I'd like eight [small pringles](item) and seventeen [coffees](item).
+    - Can you give me a [coffee](item) and eight [small pringles](item)?
+    - Get me seven [pringles](item) and eighteen [small pringles](item).
+    - I'll take a cup of [coffee](item) and nine [coffees](item).
+    - One [coffee](item) and nine [pringles](item), please.
+    - A [small pringles](item) and nineteen [coffees](item), please.
+    - May I have a [pringles](item) and eight [small pringles](item)?
+    - I want nineteen [coffees](item) and eight [pringles](item).
+    - Get me a [coffee](item) and nineteen [small pringles](item), please.
+    - I'd like twenty [small pringles](item) and a [coffee](item).
+    - Can I have a [small pringles](item) and eighteen [pringles](item)?
+    - Give me eight [coffees](item) and seventeen [small pringles](item).
+    - I'll take a [coffee](item) and eight [small pringles](item).
+    - One [small pringles](item) and eight [pringles](item), please.
+    - A cup of [coffee](item) and nine [pringles](item), please.
+    - May I have a [pringles](item) and seven [small pringles](item)?
+    - I want twenty [coffees](item) and seven [small pringles](item).
+    - Get me two [coffees](item) and eighteen [pringles](item), please.
+    - I'd like eight [small pringles](item) and eighteen [coffees](item).
+    - Can you give me a [coffee](item) and eight [small pringles](item)?
+    - Get me seven [pringles](item) and nineteen [small pringles](item).
+    - I'll take a cup of [coffee](item) and nine [coffees](item).
+    - One [coffee](item) and nine [pringles](item), please.
+    - A [small pringles](item) and twenty [coffees](item), please.
+    - May I have a [pringles](item) and eight [small pringles](item)?
+    - I want twenty [coffees](item) and eight [pringles](item).
+    - Get me a [coffee](item) and twenty [small pringles](item), please.
+    - I'd like twenty-one [small pringles](item) and a [coffee](item).
+    - Can I have a [small pringles](item) and nineteen [pringles](item)?
+    - Give me eight [coffees](item) and eighteen [small pringles](item).
+    - I'll take a [coffee](item) and eight [small pringles](item).
+    - One [small pringles](item) and eight [pringles](item), please.
+    - A cup of [coffee](item) and nine [pringles](item), please.
+    - May I have a [pringles](item) and seven [small pringles](item)?
+    - I want twenty-one [coffees](item) and seven [small pringles](item).
+    - Get me two [coffees](item) and nineteen [pringles](item), please.
+    - I'd like eight [small pringles](item) and nineteen [coffees](item).
+    - Can you give me a [coffee](item) and eight [small pringles](item)?
+    - Get me seven [pringles](item) and twenty [small pringles](item).
+    - I'll take a cup of [coffee](item) and nine [coffees](item).
+    - One [coffee](item) and nine [pringles](item), please.
+    - A [small pringles](item) and twenty-one [coffees](item), please.
+    - May I have a [pringles](item) and eight [small pringles](item)?
+    - I want twenty-one [coffees](item) and eight [pringles](item).
+    - Get me a [coffee](item) and twenty-one [small pringles](item), please.
 - intent: affirm
   examples: |
-    - [Yes](choice)
-    - [Yep]{"entity" : "choice", "value" : "yes"}
-    - [Yah]{"entity" : "choice", "value" : "yes"}
-    - [No](choice)
-    - [Nope]{"entity" : "choice", "value" : "no"}
-    - [Nah]{"entity" : "choice", "value" : "no"}
-    - That's [correct]{"entity" : "choice", "value" : "yes"}
-    - That's [incorrect]{"entity" : "choice", "value" : "no"}
-    - [Absolutely]{"entity" : "choice", "value" : "yes"}
-    - [Definitely]{"entity" : "choice", "value" : "yes"}
-    - [Certainly]{"entity" : "choice", "value" : "yes"}
-    - [Sure thing]{"entity" : "choice", "value" : "yes"}
-    - [Indeed]{"entity" : "choice", "value" : "yes"}
-    - [Of course]{"entity" : "choice", "value" : "yes"}
-    - [Absolutely not]{"entity" : "choice", "value" : "no"}
-    - [Definitely not]{"entity" : "choice", "value" : "no"}
-    - [Certainly not]{"entity" : "choice", "value" : "no"}
-    - [No way]{"entity" : "choice", "value" : "no"}
-    - [Absolutely no]{"entity" : "choice", "value" : "no"}
-    - [Of course not]{"entity" : "choice", "value" : "no"}
-    - [That's right]{"entity" : "choice", "value" : "yes"}
-    - [That's wrong]{"entity" : "choice", "value" : "no"}
-    - [You got it]{"entity" : "choice", "value" : "yes"}
-    - [You're correct]{"entity" : "choice", "value" : "yes"}
-    - [You're right]{"entity" : "choice", "value" : "yes"}
-    - [You're mistaken]{"entity" : "choice", "value" : "no"}
-    - [You're wrong]{"entity" : "choice", "value" : "no"}
-    - [Not exactly]{"entity" : "choice", "value" : "no"}
-    - [Absolutely correct]{"entity" : "choice", "value" : "yes"}
-    - [Not at all]{"entity" : "choice", "value" : "no"}
-    - [No doubt]{"entity" : "choice", "value" : "yes"}
-- intent: wake_word
+    - Accept
+    - Awesome!
+    - Good
+    - Great
+    - I accept
+    - I accept.
+    - I agree
+    - I am using it
+    - I changed my mind. I want to accept it
+    - I do
+    - I get it
+    - I guess so
+    - I have used it in the past
+    - I will
+    - I'd absolutely love that
+    - I'm sure I will!
+    - I'm using it
+    - Nice
+    - OK
+    - Ofcourse
+    - Oh yes
+    - Oh, ok
+    - Ok
+    - Ok let's start
+    - Ok.
+    - Okay
+    - Okay!
+    - PLEASE
+    - SURE
+    - Sure
+    - Sweet
+    - That would be great
+    - YES
+    - YUP
+    - Yea
+    - Yeah
+    - Yeah sure
+    - Yep
+    - Yep that's fine
+    - Yep!
+    - Yepp
+    - Yes
+    - Yes I do
+    - Yes please
+    - Yes please!
+    - Yes, I accept
+    - Yes.
+    - Yup
+    - a little
+    - absolutely
+    - accept
+    - accepted
+    - agreed
+    - ah ok
+    - alright
+    - alright, cool
+    - amayzing
+    - amazing!
+    - awesome
+    - awesome!
+    - confirm
+    - cool story bro
+    - definitely yes without a doubt
+    - done
+    - fair enough
+    - fcourse
+    - fine
+    - fuck yeah!
+    - go
+    - go ahead
+    - go for it
+    - going super well
+    - good.
+    - great
+    - great lets do that
+    - great!
+    - hell yeah
+    - hell yes
+    - hm, i'd like that
+    - how nice!
+    - i accept
+    - i agree
+    - i am!
+    - i want that
+    - i will!
+    - it is ok
+    - its okay
+    - ja
+    - ja cool
+    - ja thats great
+    - jezz
+    - jo
+    - k
+    - kk
+    - lets do it
+    - lets do this
+    - not bad
+    - of course
+    - ofcoure i do
+    - ofcourse
+    - oh awesome!
+    - oh cool
+    - oh good !!
+    - oh super
+    - ok
+    - ok cool
+    - ok fine
+    - ok friend
+    - ok good
+    - ok great
+    - ok i accept
+    - ok sara
+    - ok, I behave now
+    - ok, I understood
+    - ok, Sara
+    - ok...
+    - okay
+    - okay cool
+    - okay sure
+    - okay..
+    - oki doki
+    - okie
+    - ook
+    - oui
+    - perfect
+    - please
+    - si
+    - sort of
+    - sure
+    - sure thing
+    - sure!
+    - that is cool
+    - that ok
+    - that sounds fine
+    - that's great
+    - thats fine
+    - thats good
+    - thats great
+    - top
+    - uh-huh
+    - very much
+    - well yes
+    - y
+    - ya
+    - ya cool
+    - ya go for it
+    - ya i want
+    - ya please
+    - ya thats cool
+    - yaah
+    - yap
+    - yaps
+    - yas
+    - yay
+    - ye
+    - ye splease
+    - yea
+    - yeah
+    - yeah do that
+    - yeah sure
+    - yeah'=
+    - yeah, why not
+    - yeeeeezzzzz
+    - yeeees
+    - yep
+    - yep i want that
+    - yep if i have to
+    - yep please
+    - yep that's nice
+    - yep thats cool
+    - yep, will do thank you
+    - yep. :/
+    - yes
+    - yes ...
+    - yes I do
+    - yes accept please
+    - yes baby
+    - yes cool
+    - yes give me information
+    - yes go ahead
+    - yes go for it
+    - yes great
+    - yes i accept
+    - yes i agree
+    - yes i have built a bot before
+    - yes i have!
+    - yes it is
+    - yes it was okay
+    - yes of course
+    - yes pleae
+    - yes please
+    - yes please!
+    - yes pls
+    - yes sirfr
+    - yes that's great
+    - yes that's what i want
+    - yes you can
+    - yes'
+    - yes, I'd love to
+    - yes, cool
+    - yes, give me information, please
+    - yes,i am
+    - yes.
+    - yesh
+    - yess
+    - yessoo
+    - yesss
+    - yesssss
+    - yesyestyes
+    - yesyesyes
+    - yez
+    - yop
+    - you asked me a yes or no question, which i answered with yes
+    - you got me, I accept, if you want me to
+    - yres
+    - ys
+    - yup
+    - yyeeeh
+    - Okay cool
+    - ok..
+    - considering
+    - More a less
+    - sounds good!
+    - really
+- intent: deny
   examples: |
-    - [all done](wake)
-    - [all done](wake), thanks
+    - I don't want to
+    - I don't want to give it to you
+    - I don't want to say
+    - I dont want to tell
+    - I'm not giving you my email address
+    - I'm not going to give it to you
+    - NEIN
+    - NO
+    - NO DON"T WANT THIS!
+    - Nah
+    - Neither
+    - Never
+    - Nevermind
+    - No
+    - No thank you
+    - No, not really.
+    - No, thank you
+    - No.
+    - Nopes
+    - Not really
+    - absolutely not
+    - decline
+    - definitely not
+    - deny
+    - i decline
+    - i don not like this
+    - i don't think so
+    - i don't want either of those
+    - i don't want to
+    - i don't want to give you my email
+    - i dont want to
+    - i dont want to accept :P lol
+    - i guess it means - no
+    - i'm afraid not
+    - i'm not sure
+    - it is going pretty badly
+    - it sucks
+    - it sux
+    - n
+    - na
+    - nah
+    - nah I'm good
+    - nah not for me
+    - nah, first time
+    - nah, i'm good
+    - nehi
+    - nein
+    - neither
+    - never
+    - never mind
+    - no
+    - no :(
+    - no I dont want
+    - no I haven't decided yet if I want to sign up
+    - no and no again
+    - no bots at all
+    - no go
+    - no i can't
+    - no i don't accept
+    - no i dont want to
+    - no i dont want to accept :P lol
+    - no i won't
+    - no ma'am
+    - no sir
+    - no sorry
+    - no thank s
+    - no thank you
+    - no thanks
+    - no way
+    - no you did it wrong
+    - no!!!!
+    - no, i hate it
+    - no, my frst time
+    - no, thank you
+    - no, thanks
+    - no, thankyou
+    - no. u r idiot
+    - non
+    - noooooooooo
+    - noooooooooooooooooooooooooooooooooooooooo
+    - nop
+    - nope
+    - nope!
+    - nope. i am good
+    - not going well at all
+    - not really
+    - not right now
+    - not yet
+    - nö
+    - sorry not right now
+    - still dont want to tell
+    - thanks but no thanks
+    - this sucks
+    - very bad
+    - I do not need help installing
+    - I don't wanna tell the name of my company
+    - no stop
+    - stop it, i do not care!!!
+    - none of them
+    - I don't agree
