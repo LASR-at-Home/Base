@@ -66,6 +66,7 @@ class Context:
         self.tables = dict()
         self.target_object_remappings = dict()
 
+
         if config_path is not None:
             with open(config_path, "r") as fp:
                 data = yaml.safe_load(fp)
@@ -83,7 +84,7 @@ class Context:
             if rosparam.list_params("/mmap"):
                 rosparam.delete_param("mmap")
 
-            mmap_dict = {"vo": dict()}
+            mmap_dict = {"vo": {"submap_0": dict()}, "numberOfSubMaps" : 1}
             rospy.loginfo(f"There are {len(data['tables'].keys())}, should be {len(data['tables'].keys()) * 4} VOs")
 
             for i, table in enumerate(data["tables"].keys()):
@@ -91,10 +92,9 @@ class Context:
                     vo = f"vo_{(i*4)+j}"
                     mmap_dict["vo"][vo] = ["submap_0", f"table{i}", *corner, 0.0]
 
-
             for j, corner in enumerate(data["counter"]["cuboid"]):
-                vo = f"vo_{len(mmap_dict['vo'].keys())+ j}"
-                mmap_dict["vo"][vo] = ["submap_0", f"counter", *corner, 0.0]
+                vo = f"vo_00{j}"
+                mmap_dict["vo"]["submap_0"][vo] = ["submap_0", f"counter", *corner, 0.0]
 
             rosparam.upload_params("mmap", mmap_dict)
 
