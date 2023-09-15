@@ -12,7 +12,7 @@ class WaitForOrder(smach.State):
         self.context = context
 
     def listen(self):
-        resp = self.context.speech(True)
+        resp = self.context.speech(True, False)
         if not resp.success:
             self.context.voice_controller.sync_tts(self.context.get_random_retry_utterance())
             return self.listen()
