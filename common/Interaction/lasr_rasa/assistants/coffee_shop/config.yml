@@ -4,7 +4,7 @@ recipe: default.v1
 
 # The assistant project unique identifier
 # This default value must be replaced with a unique assistant name within your deployment
-assistant_id: 20230812-164106-quadratic-model
+assistant_id: coffee_shop
 
 # Configuration for Rasa NLU.
 # https://rasa.com/docs/rasa/nlu/components/

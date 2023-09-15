@@ -7,8 +7,10 @@ from geometry_msgs.msg import Point, PointStamped
 from std_msgs.msg import String
 from common_math import pcl_msg_to_cv2, seg_to_centroid
 from coffee_shop.srv import TfTransform, TfTransformRequest
-
+from play_motion_msgs.msg import PlayMotionGoal
 from collections import Counter
+from control_msgs.msg import PointHeadGoal
+from geometry_msgs.msg import Point
 
 
 class CheckOrder(smach.State):
@@ -31,7 +33,15 @@ class CheckOrder(smach.State):
         order = self.context.tables[self.context.current_table]["order"]
 
         counter_corners = rospy.get_param(f"/counter/cuboid")
-
+        counter_centroid = np.mean(counter_corners, axis=0)
+        ph_goal = PointHeadGoal()
+        ph_goal.max_velocity = 1.0
+        ph_goal.pointing_frame = 'head_2_link'
+        ph_goal.pointing_axis = Point(1.0, 0.0, 0.0)
+        ph_goal.target.header.frame_id = 'map'
+        ph_goal.target.point = Point(*counter_centroid, 0.7)
+        self.context.point_head_client.send_goal_and_wait(ph_goal)
+        rospy.sleep(rospy.Duration(1.0))
         pcl_msg = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
         cv_im = pcl_msg_to_cv2(pcl_msg)
         img_msg = self.context.bridge.cv2_to_imgmsg(cv_im)
@@ -44,7 +54,7 @@ class CheckOrder(smach.State):
             self.context.publish_object_pose(*pose, "map")
 
         given_order = [detection[0].name for detection in given_order]
-
+    
         if sorted(order) == sorted(given_order):
             return 'correct'
 
@@ -55,9 +65,9 @@ class CheckOrder(smach.State):
         rospy.loginfo(f"Order: {order}, Given order: {given_order}")
 
         if not len(invalid_items):
-            self.context.voice_controller.sync_tts(f"You didn't give me {missing_items_string} which I asked for. Please correct the order and say `I am finished` when you are ready for me to check it again.")
+            self.context.voice_controller.sync_tts(f"You didn't give me {missing_items_string} which I asked for. Please correct the order.")
         elif not len(missing_items):
-            self.context.voice_controller.sync_tts(f"You have given me {invalid_items_string} which I didn't ask for. Please correct the order and say `I am finished` when you are ready for me to check it again.")
+            self.context.voice_controller.sync_tts(f"You have given me {invalid_items_string} which I didn't ask for. Please correct the order.")
         else:
-            self.context.voice_controller.sync_tts(f"You have given me {invalid_items_string} which I didn't ask for, and didn't give me {missing_items_string} which I asked for. Please correct the order and say `I am finished` when you are ready for me to check it again.")
+            self.context.voice_controller.sync_tts(f"You have given me {invalid_items_string} which I didn't ask for, and didn't give me {missing_items_string} which I asked for. Please correct the order.")
         return 'incorrect'

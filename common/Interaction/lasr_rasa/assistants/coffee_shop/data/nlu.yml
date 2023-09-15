@@ -5,18 +5,21 @@ nlu:
   examples: |
     - coffee
     - coffees
-- synonym: small_pringles
+- synonym: smoothie
   examples: |
-    - small pringles
-    - small bringles 
-    - small pringle
-    - small bringle
-- synonym: pringles
+    - smoothies
+- synonym: granola
   examples: |
-    - pringles
-    - bringles
-    - pringle
-    - bringle
+    - granolas
+- synonym: biscuits
+  examples: |
+    - biscuit
+- synonym: sandwich
+  examples: |
+    - sandwiches
+- synonym: orange_juice
+  examples: |
+    - orange juice
 - synonym: "1"
   examples: |
     - one
@@ -28,371 +31,241 @@ nlu:
     - three
 - intent: make_order
   examples: |
-    - Can I have a [coffee](item) please.
-    - Get me a [coffee](item) please.
-    - Get me two [coffees](item)
-    - Can I have three [coffees](item)
-    - Can I have a [small pringles](item) please.
-    - Get me a [small pringles](item) please.
-    - Get me two [small pringles](item)
-    - Can I have three [small pringles](item)
-    - Get me some [pringles](item) please.
-    - Get me two [pringles](item)
-    - Can I have three [pringles](item)
-    - One [coffee](item)
-    - A [coffee](item)
-    - [Small pringles](item)
-    - [Pringles](item)
-    - A [small pringles](item)
-    - Some [pringles](item)
-    - A [coffee](item) and some [pringles](item)
-    - One [coffee](item), one [pringles](item) and one [small pringles](item)
-    - Two [coffees](item) and some [pringles](item)
-    - Three [coffees](item), one [pringles](item) and one [small pringles](item)
-    - Just a [coffee](item) and some [pringles](item)
-    - [pringles](item) and a [coffee](item)
-    - Can I have a [coffee](item) please.
-    - May I have a [coffee](item)?
-    - I'd like to order a [small pringles](item).
-    - Get me a [small pringles](item), please.
-    - I'll take a [coffee](item).
-    - Can you add a [small pringles](item) to my order?
-    - Give me two [coffees](item) and a [pringles](item).
-    - I'd like three [small pringles](item) and a [coffee](item).
-    - One [coffee](item), please.
-    - A cup of [coffee](item) for me.
-    - I want a [pringles](item) with my [coffee](item).
-    - Get me two [pringles](item) and a [small pringles](item).
-    - Can I have a cup of [coffee](item) and a [pringles](item)?
-    - Add three [coffees](item) to my order.
-    - I'll take a [coffee](item) and a [small pringles](item).
-    - One [small pringles](item) for now.
-    - A cup of [coffee](item) and two [pringles](item), please.
-    - I'd like a [pringles](item) and a [small pringles](item).
-    - Give me a [coffee](item) and three [pringles](item).
-    - Can I get two [small pringles](item)?
-    - May I have a cup of [coffee](item) and a [small pringles](item)?
-    - I want three [coffees](item) and a [small pringles](item).
-    - Get me a [small pringles](item) and a [pringles](item), please.
-    - I'll take a [coffee](item) and two [small pringles](item).
-    - One [pringles](item) and one [small pringles](item), please.
-    - A cup of [coffee](item) and three [pringles](item), please.
-    - Add two [coffees](item) and a [small pringles](item) to my order.
-    - I'd like four [small pringles](item) and a [coffee](item).
-    - Can you give me a [coffee](item) and a [pringles](item)?
-    - Get me three [pringles](item) and two [small pringles](item).
-    - I'll take a cup of [coffee](item) and a [small pringles](item).
-    - One [coffee](item) and two [pringles](item), please.
-    - A [small pringles](item) and three [coffees](item), please.
-    - May I have a [pringles](item) and a [small pringles](item)?
-    - I want four [coffees](item) and a [small pringles](item).
-    - Get me a [coffee](item) and four [pringles](item), please.
-    - I'd like five [small pringles](item) and a [coffee](item).
-    - Can I have a [small pringles](item) and two [pringles](item)?
-    - Give me three [coffees](item) and a [small pringles](item).
-    - I'll take a [coffee](item) and three [small pringles](item).
-    - One [small pringles](item) and three [pringles](item), please.
-    - A cup of [coffee](item) and four [pringles](item), please.
-    - May I have a [pringles](item) and two [small pringles](item)?
-    - I want five [coffees](item) and two [small pringles](item).
-    - Get me two [coffees](item) and three [pringles](item), please.
-    - I'd like four [small pringles](item) and two [coffees](item).
-    - Can you give me a [coffee](item) and three [small pringles](item)?
-    - Get me four [pringles](item) and four [small pringles](item).
-    - I'll take a cup of [coffee](item) and four [coffees](item).
-    - One [coffee](item) and four [pringles](item), please.
-    - A [small pringles](item) and five [coffees](item), please.
-    - May I have a [pringles](item) and three [small pringles](item)?
-    - I want five [coffees](item) and three [pringles](item).
-    - Get me a [coffee](item) and five [small pringles](item), please.
-    - I'd like six [small pringles](item) and a [coffee](item).
-    - Can I have a [small pringles](item) and four [pringles](item)?
-    - Give me four [coffees](item) and two [small pringles](item).
-    - I'll take a [coffee](item) and four [small pringles](item).
-    - One [small pringles](item) and four [pringles](item), please.
-    - A cup of [coffee](item) and five [pringles](item), please.
-    - May I have a [pringles](item) and three [small pringles](item)?
-    - I want six [coffees](item) and two [small pringles](item).
-    - Get me two [coffees](item) and four [pringles](item), please.
-    - I'd like five [small pringles](item) and three [coffees](item).
-    - Can you give me a [coffee](item) and four [small pringles](item)?
-    - Get me four [pringles](item) and five [small pringles](item).
-    - I'll take a cup of [coffee](item) and five [coffees](item).
-    - One [coffee](item) and five [pringles](item), please.
-    - A [small pringles](item) and six [coffees](item), please.
-    - May I have a [pringles](item) and four [small pringles](item)?
-    - I want six [coffees](item) and four [pringles](item).
-    - Get me a [coffee](item) and six [small pringles](item), please.
-    - I'd like seven [small pringles](item) and a [coffee](item).
-    - Can I have a [small pringles](item) and five [pringles](item)?
-    - Give me five [coffees](item) and three [small pringles](item).
-    - I'll take a [coffee](item) and five [small pringles](item).
-    - One [small pringles](item) and five [pringles](item), please.
-    - A cup of [coffee](item) and six [pringles](item), please.
-    - May I have a [pringles](item) and four [small pringles](item)?
-    - I want seven [coffees](item) and four [small pringles](item).
-    - Get me two [coffees](item) and five [pringles](item), please.
-    - I'd like six [small pringles](item) and four [coffees](item).
-    - Can you give me a [coffee](item) and five [small pringles](item)?
-    - Get me five [pringles](item) and six [small pringles](item).
-    - I'll take a cup of [coffee](item) and six [coffees](item).
-    - One [coffee](item) and six [pringles](item), please.
-    - A [small pringles](item) and seven [coffees](item), please.
-    - May I have a [pringles](item) and five [small pringles](item)?
-    - I want seven [coffees](item) and five [pringles](item).
-    - Get me a [coffee](item) and seven [small pringles](item), please.
-    - I'd like eight [small pringles](item) and a [coffee](item).
-    - Can I have a [small pringles](item) and six [pringles](item)?
-    - Give me six [coffees](item) and four [small pringles](item).
-    - I'll take a [coffee](item) and six [small pringles](item).
-    - One [small pringles](item) and six [pringles](item), please.
-    - A cup of [coffee](item) and seven [pringles](item), please.
-    - May I have a [pringles](item) and five [small pringles](item)?
-    - I want eight [coffees](item) and five [small pringles](item).
-    - Get me two [coffees](item) and six [pringles](item), please.
-    - I'd like seven [small pringles](item) and five [coffees](item).
-    - Can you give me a [coffee](item) and six [small pringles](item)?
-    - Get me six [pringles](item) and seven [small pringles](item).
-    - I'll take a cup of [coffee](item) and seven [coffees](item).
-    - One [coffee](item) and seven [pringles](item), please.
-    - A [small pringles](item) and eight [coffees](item), please.
-    - May I have a [pringles](item) and six [small pringles](item)?
-    - I want eight [coffees](item) and six [pringles](item).
-    - Get me a [coffee](item) and eight [small pringles](item), please.
-    - I'd like nine [small pringles](item) and a [coffee](item).
-    - Can I have a [small pringles](item) and seven [pringles](item)?
-    - Give me seven [coffees](item) and five [small pringles](item).
-    - I'll take a [coffee](item) and seven [small pringles](item).
-    - One [small pringles](item) and seven [pringles](item), please.
-    - A cup of [coffee](item) and eight [pringles](item), please.
-    - May I have a [pringles](item) and six [small pringles](item)?
-    - I want nine [coffees](item) and six [small pringles](item).
-    - Get me two [coffees](item) and seven [pringles](item), please.
-    - I'd like eight [small pringles](item) and six [coffees](item).
-    - Can you give me a [coffee](item) and seven [small pringles](item)?
-    - Get me seven [pringles](item) and eight [small pringles](item).
-    - I'll take a cup of [coffee](item) and eight [coffees](item).
-    - One [coffee](item) and eight [pringles](item), please.
-    - A [small pringles](item) and nine [coffees](item), please.
-    - May I have a [pringles](item) and seven [small pringles](item)?
-    - I want nine [coffees](item) and seven [pringles](item).
-    - Get me a [coffee](item) and nine [small pringles](item), please.
-    - I'd like ten [small pringles](item) and a [coffee](item).
-    - Can I have a [small pringles](item) and eight [pringles](item)?
-    - Give me eight [coffees](item) and six [small pringles](item).
-    - I'll take a [coffee](item) and eight [small pringles](item).
-    - One [small pringles](item) and eight [pringles](item), please.
-    - A cup of [coffee](item) and nine [pringles](item), please.
-    - May I have a [pringles](item) and seven [small pringles](item)?
-    - I want ten [coffees](item) and seven [small pringles](item).
-    - Get me two [coffees](item) and eight [pringles](item), please.
-    - I'd like eight [small pringles](item) and seven [coffees](item).
-    - Can you give me a [coffee](item) and eight [small pringles](item)?
-    - Get me seven [pringles](item) and nine [small pringles](item).
-    - I'll take a cup of [coffee](item) and nine [coffees](item).
-    - One [coffee](item) and nine [pringles](item), please.
-    - A [small pringles](item) and ten [coffees](item), please.
-    - May I have a [pringles](item) and eight [small pringles](item)?
-    - I want ten [coffees](item) and eight [pringles](item).
-    - Get me a [coffee](item) and ten [small pringles](item), please.
-    - I'd like eleven [small pringles](item) and a [coffee](item).
-    - Can I have a [small pringles](item) and nine [pringles](item)?
-    - Give me eight [coffees](item) and seven [small pringles](item).
-    - I'll take a [coffee](item) and eight [small pringles](item).
-    - One [small pringles](item) and eight [pringles](item), please.
-    - A cup of [coffee](item) and nine [pringles](item), please.
-    - May I have a [pringles](item) and seven [small pringles](item)?
-    - I want eleven [coffees](item) and seven [small pringles](item).
-    - Get me two [coffees](item) and eight [pringles](item), please.
-    - I'd like eight [small pringles](item) and nine [coffees](item).
-    - Can you give me a [coffee](item) and eight [small pringles](item)?
-    - Get me seven [pringles](item) and ten [small pringles](item).
-    - I'll take a cup of [coffee](item) and nine [coffees](item).
-    - One [coffee](item) and nine [pringles](item), please.
-    - A [small pringles](item) and eleven [coffees](item), please.
-    - May I have a [pringles](item) and eight [small pringles](item)?
-    - I want eleven [coffees](item) and eight [pringles](item).
-    - Get me a [coffee](item) and eleven [small pringles](item), please.
-    - I'd like twelve [small pringles](item) and a [coffee](item).
-    - Can I have a [small pringles](item) and ten [pringles](item)?
-    - Give me eight [coffees](item) and nine [small pringles](item).
-    - I'll take a [coffee](item) and eight [small pringles](item).
-    - One [small pringles](item) and eight [pringles](item), please.
-    - A cup of [coffee](item) and nine [pringles](item), please.
-    - May I have a [pringles](item) and seven [small pringles](item)?
-    - I want twelve [coffees](item) and seven [small pringles](item).
-    - Get me two [coffees](item) and nine [pringles](item), please.
-    - I'd like eight [small pringles](item) and ten [coffees](item).
-    - Can you give me a [coffee](item) and eight [small pringles](item)?
-    - Get me seven [pringles](item) and eleven [small pringles](item).
-    - I'll take a cup of [coffee](item) and nine [coffees](item).
-    - One [coffee](item) and nine [pringles](item), please.
-    - A [small pringles](item) and twelve [coffees](item), please.
-    - May I have a [pringles](item) and eight [small pringles](item)?
-    - I want twelve [coffees](item) and eight [pringles](item).
-    - Get me a [coffee](item) and twelve [small pringles](item), please.
-    - I'd like thirteen [small pringles](item) and a [coffee](item).
-    - Can I have a [small pringles](item) and eleven [pringles](item)?
-    - Give me eight [coffees](item) and ten [small pringles](item).
-    - I'll take a [coffee](item) and eight [small pringles](item).
-    - One [small pringles](item) and eight [pringles](item), please.
-    - A cup of [coffee](item) and nine [pringles](item), please.
-    - May I have a [pringles](item) and seven [small pringles](item)?
-    - I want thirteen [coffees](item) and seven [small pringles](item).
-    - Get me two [coffees](item) and ten [pringles](item), please.
-    - I'd like eight [small pringles](item) and eleven [coffees](item).
-    - Can you give me a [coffee](item) and eight [small pringles](item)?
-    - Get me seven [pringles](item) and twelve [small pringles](item).
-    - I'll take a cup of [coffee](item) and nine [coffees](item).
-    - One [coffee](item) and nine [pringles](item), please.
-    - A [small pringles](item) and thirteen [coffees](item), please.
-    - May I have a [pringles](item) and eight [small pringles](item)?
-    - I want thirteen [coffees](item) and eight [pringles](item).
-    - Get me a [coffee](item) and thirteen [small pringles](item), please.
-    - I'd like fourteen [small pringles](item) and a [coffee](item).
-    - Can I have a [small pringles](item) and twelve [pringles](item)?
-    - Give me eight [coffees](item) and eleven [small pringles](item).
-    - I'll take a [coffee](item) and eight [small pringles](item).
-    - One [small pringles](item) and eight [pringles](item), please.
-    - A cup of [coffee](item) and nine [pringles](item), please.
-    - May I have a [pringles](item) and seven [small pringles](item)?
-    - I want fourteen [coffees](item) and seven [small pringles](item).
-    - Get me two [coffees](item) and twelve [pringles](item), please.
-    - I'd like eight [small pringles](item) and twelve [coffees](item).
-    - Can you give me a [coffee](item) and eight [small pringles](item)?
-    - Get me seven [pringles](item) and thirteen [small pringles](item).
-    - I'll take a cup of [coffee](item) and nine [coffees](item).
-    - One [coffee](item) and nine [pringles](item), please.
-    - A [small pringles](item) and fourteen [coffees](item), please.
-    - May I have a [pringles](item) and eight [small pringles](item)?
-    - I want fourteen [coffees](item) and eight [pringles](item).
-    - Get me a [coffee](item) and fourteen [small pringles](item), please.
-    - I'd like fifteen [small pringles](item) and a [coffee](item).
-    - Can I have a [small pringles](item) and thirteen [pringles](item)?
-    - Give me eight [coffees](item) and twelve [small pringles](item).
-    - I'll take a [coffee](item) and eight [small pringles](item).
-    - One [small pringles](item) and eight [pringles](item), please.
-    - A cup of [coffee](item) and nine [pringles](item), please.
-    - May I have a [pringles](item) and seven [small pringles](item)?
-    - I want fifteen [coffees](item) and seven [small pringles](item).
-    - Get me two [coffees](item) and thirteen [pringles](item), please.
-    - I'd like eight [small pringles](item) and thirteen [coffees](item).
-    - Can you give me a [coffee](item) and eight [small pringles](item)?
-    - Get me seven [pringles](item) and fourteen [small pringles](item).
-    - I'll take a cup of [coffee](item) and nine [coffees](item).
-    - One [coffee](item) and nine [pringles](item), please.
-    - A [small pringles](item) and fifteen [coffees](item), please.
-    - May I have a [pringles](item) and eight [small pringles](item)?
-    - I want fifteen [coffees](item) and eight [pringles](item).
-    - Get me a [coffee](item) and fifteen [small pringles](item), please.
-    - I'd like sixteen [small pringles](item) and a [coffee](item).
-    - Can I have a [small pringles](item) and fourteen [pringles](item)?
-    - Give me eight [coffees](item) and thirteen [small pringles](item).
-    - I'll take a [coffee](item) and eight [small pringles](item).
-    - One [small pringles](item) and eight [pringles](item), please.
-    - A cup of [coffee](item) and nine [pringles](item), please.
-    - May I have a [pringles](item) and seven [small pringles](item)?
-    - I want sixteen [coffees](item) and seven [small pringles](item).
-    - Get me two [coffees](item) and fourteen [pringles](item), please.
-    - I'd like eight [small pringles](item) and fourteen [coffees](item).
-    - Can you give me a [coffee](item) and eight [small pringles](item)?
-    - Get me seven [pringles](item) and fifteen [small pringles](item).
-    - I'll take a cup of [coffee](item) and nine [coffees](item).
-    - One [coffee](item) and nine [pringles](item), please.
-    - A [small pringles](item) and sixteen [coffees](item), please.
-    - May I have a [pringles](item) and eight [small pringles](item)?
-    - I want sixteen [coffees](item) and eight [pringles](item).
-    - Get me a [coffee](item) and sixteen [small pringles](item), please.
-    - I'd like seventeen [small pringles](item) and a [coffee](item).
-    - Can I have a [small pringles](item) and fifteen [pringles](item)?
-    - Give me eight [coffees](item) and fourteen [small pringles](item).
-    - I'll take a [coffee](item) and eight [small pringles](item).
-    - One [small pringles](item) and eight [pringles](item), please.
-    - A cup of [coffee](item) and nine [pringles](item), please.
-    - May I have a [pringles](item) and seven [small pringles](item)?
-    - I want seventeen [coffees](item) and seven [small pringles](item).
-    - Get me two [coffees](item) and fifteen [pringles](item), please.
-    - I'd like eight [small pringles](item) and fifteen [coffees](item).
-    - Can you give me a [coffee](item) and eight [small pringles](item)?
-    - Get me seven [pringles](item) and sixteen [small pringles](item).
-    - I'll take a cup of [coffee](item) and nine [coffees](item).
-    - One [coffee](item) and nine [pringles](item), please.
-    - A [small pringles](item) and seventeen [coffees](item), please.
-    - May I have a [pringles](item) and eight [small pringles](item)?
-    - I want seventeen [coffees](item) and eight [pringles](item).
-    - Get me a [coffee](item) and seventeen [small pringles](item), please.
-    - I'd like eighteen [small pringles](item) and a [coffee](item).
-    - Can I have a [small pringles](item) and sixteen [pringles](item)?
-    - Give me eight [coffees](item) and fifteen [small pringles](item).
-    - I'll take a [coffee](item) and eight [small pringles](item).
-    - One [small pringles](item) and eight [pringles](item), please.
-    - A cup of [coffee](item) and nine [pringles](item), please.
-    - May I have a [pringles](item) and seven [small pringles](item)?
-    - I want eighteen [coffees](item) and seven [small pringles](item).
-    - Get me two [coffees](item) and sixteen [pringles](item), please.
-    - I'd like eight [small pringles](item) and sixteen [coffees](item).
-    - Can you give me a [coffee](item) and eight [small pringles](item)?
-    - Get me seven [pringles](item) and seventeen [small pringles](item).
-    - I'll take a cup of [coffee](item) and nine [coffees](item).
-    - One [coffee](item) and nine [pringles](item), please.
-    - A [small pringles](item) and eighteen [coffees](item), please.
-    - May I have a [pringles](item) and eight [small pringles](item)?
-    - I want eighteen [coffees](item) and eight [pringles](item).
-    - Get me a [coffee](item) and eighteen [small pringles](item), please.
-    - I'd like nineteen [small pringles](item) and a [coffee](item).
-    - Can I have a [small pringles](item) and seventeen [pringles](item)?
-    - Give me eight [coffees](item) and sixteen [small pringles](item).
-    - I'll take a [coffee](item) and eight [small pringles](item).
-    - One [small pringles](item) and eight [pringles](item), please.
-    - A cup of [coffee](item) and nine [pringles](item), please.
-    - May I have a [pringles](item) and seven [small pringles](item)?
-    - I want nineteen [coffees](item) and seven [small pringles](item).
-    - Get me two [coffees](item) and seventeen [pringles](item), please.
-    - I'd like eight [small pringles](item) and seventeen [coffees](item).
-    - Can you give me a [coffee](item) and eight [small pringles](item)?
-    - Get me seven [pringles](item) and eighteen [small pringles](item).
-    - I'll take a cup of [coffee](item) and nine [coffees](item).
-    - One [coffee](item) and nine [pringles](item), please.
-    - A [small pringles](item) and nineteen [coffees](item), please.
-    - May I have a [pringles](item) and eight [small pringles](item)?
-    - I want nineteen [coffees](item) and eight [pringles](item).
-    - Get me a [coffee](item) and nineteen [small pringles](item), please.
-    - I'd like twenty [small pringles](item) and a [coffee](item).
-    - Can I have a [small pringles](item) and eighteen [pringles](item)?
-    - Give me eight [coffees](item) and seventeen [small pringles](item).
-    - I'll take a [coffee](item) and eight [small pringles](item).
-    - One [small pringles](item) and eight [pringles](item), please.
-    - A cup of [coffee](item) and nine [pringles](item), please.
-    - May I have a [pringles](item) and seven [small pringles](item)?
-    - I want twenty [coffees](item) and seven [small pringles](item).
-    - Get me two [coffees](item) and eighteen [pringles](item), please.
-    - I'd like eight [small pringles](item) and eighteen [coffees](item).
-    - Can you give me a [coffee](item) and eight [small pringles](item)?
-    - Get me seven [pringles](item) and nineteen [small pringles](item).
-    - I'll take a cup of [coffee](item) and nine [coffees](item).
-    - One [coffee](item) and nine [pringles](item), please.
-    - A [small pringles](item) and twenty [coffees](item), please.
-    - May I have a [pringles](item) and eight [small pringles](item)?
-    - I want twenty [coffees](item) and eight [pringles](item).
-    - Get me a [coffee](item) and twenty [small pringles](item), please.
-    - I'd like twenty-one [small pringles](item) and a [coffee](item).
-    - Can I have a [small pringles](item) and nineteen [pringles](item)?
-    - Give me eight [coffees](item) and eighteen [small pringles](item).
-    - I'll take a [coffee](item) and eight [small pringles](item).
-    - One [small pringles](item) and eight [pringles](item), please.
-    - A cup of [coffee](item) and nine [pringles](item), please.
-    - May I have a [pringles](item) and seven [small pringles](item)?
-    - I want twenty-one [coffees](item) and seven [small pringles](item).
-    - Get me two [coffees](item) and nineteen [pringles](item), please.
-    - I'd like eight [small pringles](item) and nineteen [coffees](item).
-    - Can you give me a [coffee](item) and eight [small pringles](item)?
-    - Get me seven [pringles](item) and twenty [small pringles](item).
-    - I'll take a cup of [coffee](item) and nine [coffees](item).
-    - One [coffee](item) and nine [pringles](item), please.
-    - A [small pringles](item) and twenty-one [coffees](item), please.
-    - May I have a [pringles](item) and eight [small pringles](item)?
-    - I want twenty-one [coffees](item) and eight [pringles](item).
-    - Get me a [coffee](item) and twenty-one [small pringles](item), please.
+    - I'd like to order a [coffee](item).
+    - Get me a [sandwich](item) and a [smoothie](item) please.
+    - Can I get [biscuits](item) and [granola](item)?
+    - I'll have two [coffees](item) and an [orange juice](item).
+    - Get me a [coffee](item), [sandwich](item), and [smoothie](item).
+    - I'd like a [coffee](item) and [biscuits](item), please.
+    - Can I have [biscuits](item), [coffee](item), and [granola](item)?
+    - Get me a [smoothie](item) and two [coffees](item).
+    - I'll take a [sandwich](item) and [orange juice](item).
+    - I'd like [biscuits](item) and a [sandwich](item).
+    - Can I get [coffee](item), [smoothie](item), and [biscuits](item)?
+    - I'll have two [granolas](item) and an [orange juice](item).
+    - Get me a [coffee](item) and a [sandwich](item), please.
+    - I'd like a [biscuits](item) and [coffee](item).
+    - Can I have [biscuits](item), [coffee](item), and [granola](item)?
+    - Get me a [smoothie](item) and two [coffees](item).
+    - I'll take a [sandwich](item) and [orange juice](item).
+    - I'd like [biscuits](item) and a [sandwich](item).
+    - Can I get [coffee](item), [smoothie](item), and [biscuits](item)?
+    - I'll have two [granolas](item) and an [orange juice](item).
+    - Get me a [coffee](item) and a [sandwich](item), please.
+    - I'd like a [biscuits](item) and [coffee](item).
+    - Can I have [biscuits](item), [coffee](item), and [granola](item)?
+    - Get me a [smoothie](item) and two [coffees](item).
+    - I'll take a [sandwich](item) and [orange juice](item).
+    - I'd like [biscuits](item) and a [sandwich](item).
+    - Can I get [coffee](item), [smoothie](item), and [biscuits](item)?
+    - I'll have two [granolas](item) and an [orange juice](item).
+    - Get me a [coffee](item) and a [sandwich](item), please.
+    - I'd like a [biscuits](item) and [coffee](item).
+    - Can I have [biscuits](item), [coffee](item), and [granola](item)?
+    - Get me a [smoothie](item) and two [coffees](item).
+    - I'll take a [sandwich](item) and [orange juice](item).
+    - I'd like [biscuits](item) and a [sandwich](item).
+    - Can I get [coffee](item), [smoothie](item), and [biscuits](item)?
+    - I'll have two [granolas](item) and an [orange juice](item).
+    - Get me a [coffee](item) and a [sandwich](item), please.
+    - I'd like a [biscuits](item) and [coffee](item).
+    - Can I have [biscuits](item), [coffee](item), and [granola](item)?
+    - Get me a [smoothie](item) and two [coffees](item).
+    - I'll take a [sandwich](item) and [orange juice](item).
+    - I'd like [biscuits](item) and a [sandwich](item).
+    - Can I get [coffee](item), [smoothie](item), and [biscuits](item)?
+    - I'll have two [granolas](item) and an [orange juice](item).
+    - Get me a [coffee](item) and a [sandwich](item), please.
+    - I'd like a [biscuits](item) and [coffee](item).
+    - Can I have [biscuits](item), [coffee](item), and [granola](item)?
+    - Get me a [smoothie](item) and two [coffees](item).
+    - I'll take a [sandwich](item) and [orange juice](item).
+    - I'd like [biscuits](item) and a [sandwich](item).
+    - Can I get [coffee](item), [smoothie](item), and [biscuits](item)?
+    - I'll have two [granolas](item) and an [orange juice](item).
+    - Get me a [coffee](item) and a [sandwich](item), please.
+    - I'd like a [biscuits](item) and [coffee](item).
+    - Can I have [biscuits](item), [coffee](item), and [granola](item)?
+    - Get me a [smoothie](item) and two [coffees](item).
+    - I'll take a [sandwich](item) and [orange juice](item).
+    - I'd like [biscuits](item) and a [sandwich](item).
+    - Can I get [coffee](item), [smoothie](item), and [biscuits](item)?
+    - I'll have two [granolas](item) and an [orange juice](item).
+    - [coffee](item)
+    - [sandwich](item) [smoothie](item)
+    - [biscuits](item) [granola](item)
+    - [coffees](item) [orange](item)
+    - [coffee](item) [sandwich](item) [smoothie](item)
+    - [coffee](item) [biscuits](item)
+    - [biscuits](item) [coffee](item) [granola](item)
+    - [smoothie](item) [coffees](item)
+    - [sandwich](item) [orange](item)
+    - [biscuits](item) [sandwich](item)
+    - [coffee](item) [smoothie](item) [biscuits](item)
+    - [granola](item) [oranges](item)
+    - [coffee](item) [sandwich](item) [smoothie](item)
+    - [biscuits](item) [coffee](item)
+    - [biscuits](item) [coffee](item) [granola](item)
+    - [smoothie](item) [coffees](item)
+    - [sandwich](item) [orange](item)
+    - [biscuits](item) [sandwich](item)
+    - [coffee](item) [smoothie](item) [biscuits](item)
+    - [granola](item) [oranges](item)
+    - [coffee](item) [sandwich](item) [smoothie](item)
+    - [biscuits](item) [coffee](item)
+    - [biscuits](item) [coffee](item) [granola](item)
+    - [smoothie](item) [coffees](item)
+    - [sandwich](item) [orange](item)
+    - [biscuits](item) [sandwich](item)
+    - [coffee](item) [smoothie](item) [biscuits](item)
+    - [granola](item) [oranges](item)
+    - [coffee](item) [sandwich](item) [smoothie](item)
+    - [biscuits](item) [coffee](item)
+    - [biscuits](item) [coffee](item) [granola](item)
+    - [smoothie](item) [coffees](item)
+    - [sandwich](item) [orange](item)
+    - [biscuits](item) [sandwich](item)
+    - [coffee](item) [smoothie](item) [biscuits](item)
+    - [granola](item) [oranges](item)
+    - [coffee](item) [sandwich](item) [smoothie](item)
+    - [biscuits](item) [coffee](item)
+    - [biscuits](item) [coffee](item) [granola](item)
+    - [smoothie](item) [coffees](item)
+    - [sandwich](item) [orange](item)
+    - [biscuits](item) [sandwich](item)
+    - [coffee](item) [smoothie](item) [biscuits](item)
+    - [granola](item) [oranges](item)
+    - [coffee](item) [sandwich](item) [smoothie](item)
+    - [biscuits](item) [coffee](item)
+    - [biscuits](item) [coffee](item) [granola](item)
+    - [smoothie](item) [coffees](item)
+    - [sandwich](item) [orange](item)
+    - [biscuits](item) [sandwich](item)
+    - [coffee](item) [smoothie](item) [biscuits](item)
+    - [granola](item) [oranges](item)
+    - [granola](item), [coffee](item), and a [smoothie](item)
+    - [granola](item), [coffee](item), and [sandwich](item)
+    - [granola](item), [coffee](item), and [orange juice](item)
+    - [granola](item), [coffee](item), [sandwich](item), and a [smoothie](item)
+    - [granola](item), [coffee](item), [sandwich](item), and [orange juice](item)
+    - [granola](item), [coffee](item), [orange juice](item), and a [smoothie](item)
+    - [granola](item), [coffee](item), [orange juice](item), [sandwich](item), and a [smoothie](item)
+    - [coffee](item), [granola](item), and a [smoothie](item)
+    - [coffee](item), [granola](item), and [sandwich](item)
+    - [coffee](item), [granola](item), and [orange juice](item)
+    - [coffee](item), [granola](item), [sandwich](item), and a [smoothie](item)
+    - [coffee](item), [granola](item), [sandwich](item), and [orange juice](item)
+    - [coffee](item), [granola](item), [orange juice](item), and a [smoothie](item)
+    - [coffee](item), [granola](item), [orange juice](item), [sandwich](item), and a [smoothie](item)
+    - [sandwich](item), [coffee](item), and a [smoothie](item)
+    - [sandwich](item), [coffee](item), and [granola](item)
+    - [sandwich](item), [coffee](item), and [orange juice](item)
+    - [sandwich](item), [coffee](item), [granola](item), and a [smoothie](item)
+    - [sandwich](item), [coffee](item), [granola](item), and [orange juice](item)
+    - [sandwich](item), [coffee](item), [granola](item), [orange juice](item), and a [smoothie](item)
+    - [orange juice](item), [granola](item), and a [smoothie](item)
+    - [orange juice](item), [granola](item), and [sandwich](item)
+    - [orange juice](item), [granola](item), and [coffee](item)
+    - [orange juice](item), [granola](item), [sandwich](item), and a [smoothie](item)
+    - [orange juice](item), [granola](item), [sandwich](item), and [coffee](item)
+    - [orange juice](item), [granola](item), [coffee](item), and a [smoothie](item)
+    - [orange juice](item), [granola](item), [coffee](item), [sandwich](item), and a [smoothie](item)
+    - [smoothie](item), [coffee](item), and [granola](item)
+    - [smoothie](item), [coffee](item), and [sandwich](item)
+    - [smoothie](item), [coffee](item), and [orange juice](item)
+    - [smoothie](item), [coffee](item), [granola](item), and [sandwich](item)
+    - [smoothie](item), [coffee](item), [granola](item), and [orange juice](item)
+    - [smoothie](item), [coffee](item), [granola](item), [orange juice](item), and [sandwich](item)
+    - Can I have a [coffee](item), please?
+    - I'd like some [biscuits](item), please.
+    - May I get a [smoothie](item), please?
+    - I'll take a [coffee](item) and [biscuits](item), please.
+    - I'd love [biscuits](item) and a [coffee](item), please.
+    - I'm in the mood for [smoothie](item), please.
+    - Get me a [granola](item) and an [orange juice](item), please.
+    - Could you bring me [coffee](item) and [sandwich](item), please?
+    - How about a [smoothie](item) and a [granola](item), please?
+    - I'd like a [coffee](item) and [smoothie](item), please.
+    - Can I get [biscuits](item) and [sandwich](item), please?
+    - May I have [sandwich](item) and [coffee](item), please?
+    - I'd like some [granola](item) and [smoothie](item), please.
+    - Please bring me [orange juice](item) and [biscuits](item), please.
+    - I'll have [sandwich](item) and [smoothie](item), please.
+    - Get me [coffee](item), [granola](item), and [orange juice](item), please.
+    - Could I get a [sandwich](item) and [biscuits](item), please?
+    - How about [orange juice](item) and [smoothie](item), please?
+    - I'd like [biscuits](item) and [smoothie](item), please.
+    - I'm in the mood for [granola](item), [coffee](item), and [smoothie](item), please.
+    - I'd love a [sandwich](item), [coffee](item), and [biscuits](item), please.
+    - Can I have [sandwich](item), [biscuits](item), and [granola](item), please?
+    - May I get [smoothie](item), [coffee](item), and [biscuits](item), please?
+    - I'll take [biscuits](item), [granola](item), and [orange juice](item), please.
+    - Get me [coffee](item), [sandwich](item), [granola](item), and [smoothie](item), please.
+    - Could you bring [biscuits](item), [coffee](item), [sandwich](item), and [smoothie](item), please?
+    - How about [orange juice](item), [biscuits](item), [coffee](item), and [sandwich](item), please?
+    - I'd like [sandwich](item), [granola](item), [coffee](item), [biscuits](item), and [smoothie](item), please.
+    - I'm in the mood for [coffee](item), [biscuits](item), [sandwich](item), [smoothie](item), [granola](item), and [orange juice](item), please.
+    - I'd love [orange juice](item), [sandwich](item), [coffee](item), [smoothie](item), [biscuits](item), and [granola](item), please.
+    - I'd like one [coffee](item), please.
+    - Can I have two [biscuits](item), please?
+    - May I get three [smoothies](item), please?
+    - I'll take one [coffee](item) and two [biscuits](item), please.
+    - I'd love two [biscuits](item) and one [coffee](item), please.
+    - I'm in the mood for three [smoothies](item), please.
+    - Get me one [granola](item) and one [orange juice](item), please.
+    - Could you bring two [coffees](item) and one [sandwich](item), please?
+    - How about three [smoothies](item) and one [granola](item), please?
+    - I'd like one [coffee](item) and two [smoothies](item), please.
+    - Can I get two [biscuits](item) and one [sandwich](item), please?
+    - May I have one [sandwich](item) and one [coffee](item), please?
+    - I'd like three [granolas](item) and one [smoothie](item), please.
+    - Please bring me one [orange juice](item) and two [biscuits](item), please.
+    - I'll have two [sandwiches](item) and one [smoothie](item), please.
+    - Get me one [coffee](item), two [granolas](item), and one [orange juice](item), please.
+    - Could I get two [sandwiches](item) and two [biscuits](item), please?
+    - How about one [orange juice](item) and three [smoothies](item), please?
+    - I'd like two [biscuits](item) and three [smoothies](item), please.
+    - I'm in the mood for three [granolas](item), two [coffees](item), and one [smoothie](item), please.
+    - I'd love two [sandwiches](item), one [coffee](item), and three [biscuits](item), please.
+    - Can I have one [sandwich](item), three [biscuits](item), and two [granolas](item), please?
+    - May I get three [smoothies](item), two [coffees](item), and one [biscuits](item), please?
+    - I'll take two [biscuits](item), three [granolas](item), and one [orange juice](item), please.
+    - Get me one [coffee](item), two [sandwiches](item), three [granolas](item), and one [smoothie](item), please.
+    - Could you bring three [biscuits](item), two [coffees](item), two [sandwiches](item), and three [smoothies](item), please?
+    - How about one [orange juice](item), two [biscuits](item), three [coffees](item), and two [sandwiches](item), please?
+    - I'd like two [sandwiches](item), three [granolas](item), three [coffees](item), two [biscuits](item), and one [smoothie](item), please.
+    - I'm in the mood for three [coffees](item), two [biscuits](item), three [sandwiches](item), one [smoothie](item), one [granola](item), and two [orange juices](item), please.
+    - I'd love three [sandwiches](item), one [coffee](item), three [biscuits](item), two [granolas](item), and one [smoothie](item), please.
+    - I'd like one [coffee](item), please.
+    - Can I have two [biscuits](item), please?
+    - May I get three [smoothies](item), please?
+    - I'll take one [coffee](item) and two [biscuits](item), please.
+    - I'd love two [biscuits](item) and one [coffee](item), please.
+    - I'm in the mood for three [smoothies](item), please.
+    - Get me one [granola](item) and one [orange juice](item), please.
+    - Could you bring two [coffees](item) and one [sandwich](item), please?
+    - How about three [smoothies](item) and one [granola](item), please?
+    - I'd like one [coffee](item) and two [smoothies](item), please.
+    - Can I get two [biscuits](item) and one [sandwich](item), please?
+    - May I have one [sandwich](item) and one [coffee](item), please?
+    - I'd like three [granolas](item) and one [smoothie](item), please.
+    - Please bring me one [orange juice](item) and two [biscuits](item), please.
+    - I'll have two [sandwiches](item) and one [smoothie](item), please.
+    - Get me one [coffee](item), two [granolas](item), and one [orange juice](item), please.
+    - Could I get two [sandwiches](item) and two [biscuits](item), please?
+    - How about one [orange juice](item) and three [smoothies](item), please?
+    - I'd like two [biscuits](item) and three [smoothies](item), please.
+    - I'm in the mood for three [granolas](item), two [coffees](item), and one [smoothie](item), please.
+    - I'd love two [sandwiches](item), one [coffee](item), and three [biscuits](item), please.
+    - Can I have one [sandwich](item), three [biscuits](item), and two [granolas](item), please?
+    - May I get three [smoothies](item), two [coffees](item), and one [biscuits](item), please?
+    - I'll take two [biscuits](item), three [granolas](item), and one [orange juice](item), please.
+    - Get me one [coffee](item), two [sandwiches](item), three [granolas](item), and one [smoothie](item), please.
+    - Could you bring three [biscuits](item), two [coffees](item), two [sandwiches](item), and three [smoothies](item), please?
+    - How about one [orange juice](item), two [biscuits](item), three [coffees](item), and two [sandwiches](item), please?
+    - I'd like two [sandwiches](item), three [granolas](item), three [coffees](item), two [biscuits](item), and one [smoothie](item), please.
+    - I'm in the mood for three [coffees](item), two [biscuits](item), three [sandwiches](item), one [smoothie](item), one [granola](item), and two [orange juices](item), please.
+    - I'd love three [sandwiches](item), one [coffee](item), three [biscuits](item), two [granolas](item), and one [smoothie](item), please.
 - intent: affirm
   examples: |
     - Accept
