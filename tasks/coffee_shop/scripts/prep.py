@@ -39,8 +39,6 @@ for i in range(n_tables):
     input(f"Take me to the unload position for table {i}, then press Enter.")
     save_load_point(i)
 
-
-
     while True:
         input(f"Place an Aruco marker in the corner of table {i}, adjust me so that I can see it, then press Enter.")
         try:
@@ -64,6 +62,5 @@ while True:
         break
     except rospy.service.ServiceException:
         rospy.logwarn("Something went wrong - is the Aruco marker in view?")
-
 
 rospy.loginfo("ALL OK.")
