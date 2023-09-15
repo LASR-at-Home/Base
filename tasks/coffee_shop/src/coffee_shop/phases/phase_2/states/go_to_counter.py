@@ -10,7 +10,7 @@ class GoToCounter(smach.State):
         self.context = context
 
     def execute(self, userdata):
-        self.context.voice_controller.sync_tts("I am going to the counter to retrieve the order")
+        self.context.voice_controller.async_tts("I am going to the counter to retrieve the order")
         position = rospy.get_param("counter/location/position")
         orientation = rospy.get_param("counter/location/orientation")
         self.context.base_controller.sync_to_pose(Pose(position=Point(**position), orientation=Quaternion(**orientation)))
