@@ -4,7 +4,6 @@ import json
 import rospy
 from play_motion_msgs.msg import PlayMotionGoal
 import difflib
-from lasr_speech_recognition_common.msg import Transcription
 
 class WaitForOrder(smach.State):
 
