@@ -24,17 +24,11 @@ if not os.path.exists(OUTPUT_PATH):
     open(OUTPUT_PATH, "w").close()
 
 rosparam.set_param("/config_path", OUTPUT_PATH)
-els = rosparam.load_file(OUTPUT_PATH)
-for param, ns in els:
-    rosparam.upload_params(ns, param)
 
 n_tables = int(input("Enter the number of tables: "))
 rospy.loginfo(f"There are {n_tables} tables.")
 
 for i in range(n_tables):
-
-    input(f"Take me to the search position for table {i}, then press Enter.")
-    save_navigation_point(i)
 
     while True:
         input(f"Place an Aruco marker in the corner of table {i}, adjust me so that I can see it, then press Enter.")
@@ -44,12 +38,19 @@ for i in range(n_tables):
         except rospy.service.ServiceException:
             rospy.logwarn("Something went wrong - is the Aruco marker in view?")
 
+    input(f"Take me to the search position for table {i}, then press Enter.")
+    save_navigation_point(i)
 
+while True:
+    input(f"Place an Aruco marker in the corner of counter, adjust me so that I can see it, then press Enter.")
+    try:
+        save_table_cuboid(-1)
+        break
+    except rospy.service.ServiceException:
+        rospy.logwarn("Something went wrong - is the Aruco marker in view?")
 input("Take me to the search position for the counter, then press Enter.")
 save_navigation_point(-1)
 
-input("Take me to the search position for the waiting area, then press Enter.")
-save_navigation_point(-2)
 while True:
     input(f"Place an Aruco marker to indicate the waiting area, adjust me so that I can see it, then press Enter.")
     try:
@@ -59,3 +60,8 @@ while True:
         rospy.logwarn("Something went wrong - is the Aruco marker in view?")
 
 rospy.loginfo("ALL OK.")
+els = rosparam.load_file(OUTPUT_PATH)
+for param, ns in els:
+    rosparam.upload_params(ns, param)
+input("Take me to the search position for the waiting area, then press Enter.")
+save_navigation_point(-2)
