@@ -19,6 +19,7 @@ import random
 class Context:
 
     def __init__(self, config_path=None):
+
         self.base_controller = BaseController()
         rospy.loginfo("Got base controller")
         self.head_controller = HeadController()
@@ -62,7 +63,6 @@ class Context:
             self.start_head_manager = lambda a, b : None
             self.stop_head_manager = lambda a : None
 
-
         self.tables = dict()
         self.target_object_remappings = dict()
 
@@ -78,6 +78,26 @@ class Context:
 
             self.YOLO_person_model = data.get("yolo_person_model", "yolov8n-seg.pt")
             self.YOLO_objects_model = data.get("yolo_objects_model", "yolov8n-seg.pt")
+
+
+            if rosparam.list_params("/mmap"):
+                rosparam.delete_param("mmap")
+
+            mmap_dict = {"vo": dict()}
+            rospy.loginfo(f"There are {len(data['tables'].keys())}, should be {len(data['tables'].keys()) * 4} VOs")
+
+            for i, table in enumerate(data["tables"].keys()):
+                for j, corner in enumerate(data["tables"][table]["objects_cuboid"]):
+                    vo = f"vo_{(i*4)+j}"
+                    mmap_dict["vo"][vo] = ["submap_0", f"table{i}", *corner, 0.0]
+
+
+            for j, corner in enumerate(data["counter"]["cuboid"]):
+                vo = f"vo_{len(mmap_dict['vo'].keys())+ j}"
+                mmap_dict["vo"][vo] = ["submap_0", f"counter", *corner, 0.0]
+
+            rosparam.upload_params("mmap", mmap_dict)
+
 
         else:
             rospy.logerr("No config_path was given.")
