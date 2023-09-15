@@ -1,7 +1,7 @@
 version: "3.1"
 
 nlu:
-- synonym: coffee_cup
+- synonym: coffee
   examples: |
     - coffee
     - coffees
