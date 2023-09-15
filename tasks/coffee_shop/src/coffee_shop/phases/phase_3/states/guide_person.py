@@ -36,7 +36,7 @@ class GuidePerson(smach.State):
         pm_goal = PlayMotionGoal(motion_name="back_to_default", skip_planning=True)
         self.context.play_motion_client.send_goal_and_wait(pm_goal)
 
-        self.context.voice_controller.sync_tts("Please be seated, I will wait for you to sit down!")
+        self.context.voice_controller.async_tts("Please be seated, I will wait for you to sit down!")
 
         self.person_polygon = rospy.get_param(f"/tables/{self.context.current_table}/persons_cuboid")
 
