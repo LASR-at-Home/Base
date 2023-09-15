@@ -89,13 +89,11 @@ class Context:
 
             for i, table in enumerate(data["tables"].keys()):
                 for j, corner in enumerate(data["tables"][table]["objects_cuboid"]):
-                    vo = f"vo_{(i*4)+j}"
-                    mmap_dict["vo"][vo] = ["submap_0", f"table{i}", *corner, 0.0]
-
+                    vo = f"vo_00{(i*4)+j}"
+                    mmap_dict["vo"]["submap_0"][vo] = ["submap_0", "tables", *corner, 0.0]
             for j, corner in enumerate(data["counter"]["cuboid"]):
-                vo = f"vo_00{j}"
+                vo = f"vo_00{((i+1)*4) + j}"
                 mmap_dict["vo"]["submap_0"][vo] = ["submap_0", f"counter", *corner, 0.0]
-
             rosparam.upload_params("mmap", mmap_dict)
 
 
