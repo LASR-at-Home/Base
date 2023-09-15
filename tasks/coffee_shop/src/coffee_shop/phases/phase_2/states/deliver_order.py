@@ -24,6 +24,6 @@ class DeliverOrder(smach.State):
         self.context.play_motion_client.send_goal_and_wait(pm_goal)
         self.context.voice_controller.sync_tts("I'll give you some time to unload the order...")
         rospy.sleep(rospy.Duration(10.0))
-        pm_goal = PlayMotionGoal(motion_name="back_to_default", skip_planning=True)
-        self.context.play_motion_client.send_goal_and_wait(pm_goal)
+        #pm_goal = PlayMotionGoal(motion_name="back_to_default", skip_planning=True)
+        #self.context.play_motion_client.send_goal_and_wait(pm_goal)
         return 'done'
