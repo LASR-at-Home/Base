@@ -35,7 +35,9 @@ class TranscribeAndParse:
         sleep(0.5)
 
     def __call__(self, req):
-        self.adjust_for_noise()
+        if req.adjust_for_noise:
+            rospy.loginfo("Requested to adjust for noise...")
+            self.adjust_for_noise()
         if req.play_sound:
             self.play_sound()
         self.start_listening()
