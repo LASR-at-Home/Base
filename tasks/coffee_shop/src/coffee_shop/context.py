@@ -15,7 +15,6 @@ from visualization_msgs.msg import Marker
 import rosservice
 import time
 import random
-from std_msgs.srv import Empty
 
 class Context:
 
@@ -48,12 +47,6 @@ class Context:
         rospy.loginfo("CV Bridge")
         rospy.wait_for_service("/lasr_speech/transcribe_and_parse")
         self.speech = rospy.ServiceProxy("/lasr_speech/transcribe_and_parse", Speech)
-        rospy.wait_for_service("/whisper/start_listening")
-        self.start_listening = rospy.ServiceProxy("/whisper/start_listening", Empty)
-        rospy.wait_for_service("/whisper/stop_listening")
-        self.stop_listening = rospy.ServiceProxy("/whisper/stop_listening", Empty)
-        rospy.wait_for_service("/whisper/adjust_for_noise")
-        self.adjust_for_noise = rospy.ServiceProxy("/whisper/adjust_for_noise", Empty)
         rospy.loginfo("Speech")
 
         if '/pal_startup_control/start' in rosservice.get_service_list():
