@@ -150,9 +150,10 @@ if __name__ == "__main__":
     sub = rospy.Subscriber("/aruco_single/pose", PoseStamped, get_latest_pose)
     s = rospy.Service("generate_table_cuboid", TableNumber, generate_cuboid)
 
-    els = rosparam.load_file(rosparam.get_param('/config_path'))
-    for param, ns in els:
-        rosparam.upload_params(ns, param)
+    if rospy.has_param("/config_path"):
+        els = rosparam.load_file(rosparam.get_param('/config_path'))
+        for param, ns in els:
+            rosparam.upload_params(ns, param)
     
     rospy.loginfo("Cuboid Generator Service Ready")
     
