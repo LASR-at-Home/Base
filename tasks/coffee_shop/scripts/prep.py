@@ -13,6 +13,7 @@ if len(sys.argv) < 1:
 rospy.init_node("coffee_shop_prep")
 
 save_navigation_point = rospy.ServiceProxy("/save_navigation_points", TableNumber)
+save_pre_navigation_point = rospy.ServiceProxy("/save_pre_navigation_points", TableNumber)
 save_table_cuboid = rospy.ServiceProxy("/generate_table_cuboid", TableNumber)
 
 
@@ -40,6 +41,8 @@ for i in range(n_tables):
 
     input(f"Take me to the search position for table {i}, then press Enter.")
     save_navigation_point(i)
+    input(f"Take me to the pre-search position for table {i}, then press Enter.")
+    save_pre_navigation_point(i)
 
 while True:
     input(f"Place an Aruco marker in the corner of counter, adjust me so that I can see it, then press Enter.")
