@@ -9,6 +9,7 @@ from visualization_msgs.msg import Marker
 import rosparam
 import tf2_ros
 import tf2_geometry_msgs
+from math import sqrt
 
 # Units are in meters
 # The marker should be placed on the bottom left corner of the table, with the x axis pointing to the right and the y axis pointing up
@@ -138,13 +139,13 @@ def generate_cuboid(msg):
         else:
             # assume circular, and aruco marker is placed in the centre of the table
             local_r1 = [-radius, 0]
-            local_r2 = [-radius/2., +radius/2.]
+            local_r2 = [(sqrt(2.)*-radius)/2., (sqrt(2.)*+radius)/2.]
             local_r3 = [0, +radius]
-            local_r4 = [+radius/2., +radius/2.]
+            local_r4 = [(sqrt(2.)*+radius)/2., (sqrt(2.)*+radius)/2.]
             local_r5 = [+radius, 0]
-            local_r6 = [+radius/2., -radius/2.]
+            local_r6 = [(sqrt(2.)*+radius)/2., (sqrt(2.)*-radius)/2.]
             local_r7 = [0, -radius]
-            local_r8 = [-radius/2., -radius/2.]
+            local_r8 = [(sqrt(2.)*-radius)/2., (sqrt(2.)*-radius)/2.]
 
             r1 = get_map_frame_pose(local_r1, tr)
             r2 = get_map_frame_pose(local_r2, tr)
@@ -164,14 +165,14 @@ def generate_cuboid(msg):
             objects_marker_pub.publish(create_marker_msg(r7, 6))
             objects_marker_pub.publish(create_marker_msg(r8, 7))
 
-            local_padded_r1 = [-radius - padding, 0]
-            local_padded_r2 = [-radius/2. - padding,+radius/2. + padding]
-            local_padded_r3 = [0, +radius + padding]
-            local_padded_r4 = [+radius/2. + padding, +radius/2. + padding]
-            local_padded_r5 = [+radius+padding, 0]
-            local_padded_r6 = [+radius/2. + padding, -radius/2. - padding]
-            local_padded_r7 = [0, -radius - padding]
-            local_padded_r8 = [-radius/2. - padding, -radius/2. - padding]
+            local_padded_r1 = [local_r1[0] - padding, 0]
+            local_padded_r2 = [local_r2[0] - padding, local_r2[1] + padding]
+            local_padded_r3 = [0, local_r3[1] + padding]
+            local_padded_r4 = [local_r4[0] + padding, local_r4[1] + padding]
+            local_padded_r5 = [local_r5[0] + padding, 0]
+            local_padded_r6 = [local_r6[0] + padding, local_r6[1] - padding]
+            local_padded_r7 = [0, local_r7[1] - padding]
+            local_padded_r8 = [local_r8[0] - padding, local_r8[1] - padding]
 
             r1p = get_map_frame_pose(local_padded_r1, tr)
             r2p = get_map_frame_pose(local_padded_r2, tr)
