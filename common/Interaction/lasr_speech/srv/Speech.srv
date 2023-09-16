@@ -1,5 +1,4 @@
 bool play_sound
-bool adjust_for_noise
 ---
 string json_response
 bool success

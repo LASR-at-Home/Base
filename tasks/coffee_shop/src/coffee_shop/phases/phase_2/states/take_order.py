@@ -14,8 +14,8 @@ class TakeOrder(smach.State):
         smach.State.__init__(self, outcomes=['done'])
         self.context = context
 
-    def listen(self, adjust_for_noise=False):
-        resp = self.context.speech(True, adjust_for_noise)
+    def listen(self):
+        resp = self.context.speech(True)
         if not resp.success:
             self.context.voice_controller.sync_tts(self.context.get_random_retry_utterance())
             return self.listen()
@@ -24,7 +24,7 @@ class TakeOrder(smach.State):
         return resp
 
     def get_order(self):
-        resp = self.listen(True)
+        resp = self.listen()
         if resp["intent"]["name"] != "make_order":
             self.context.voice_controller.sync_tts(self.context.get_random_retry_utterance())
             return self.get_order()

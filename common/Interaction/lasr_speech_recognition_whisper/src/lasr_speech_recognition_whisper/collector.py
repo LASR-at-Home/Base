@@ -71,7 +71,6 @@ class RecognizerPhraseCollector(AbstractPhraseCollector):
         rospy.loginfo('Adjusting for background noise...')
         with source:
             self._recorder.adjust_for_ambient_noise(source)
-            rospy.loginfo(f"New energy threshold: {self._recorder.energy_threshold}")
 
     @abstractmethod
     def start(self, source: sr.AudioSource):        
