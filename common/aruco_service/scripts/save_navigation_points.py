@@ -2,7 +2,7 @@
 
 import yaml
 import rospy
-from aruco_service.srv import TableNumber, TableNumberResponse
+from aruco_service.srv import SaveNavigationPoint, SaveNavigationPointResponse
 from geometry_msgs.msg import PoseWithCovarianceStamped
 import rosparam
 
@@ -29,7 +29,7 @@ def save_navigation_points(number):
 
     else:
         rospy.loginfo("Invalid table number.")
-        return TableNumberResponse(False)
+        return SaveNavigationPointResponse(False)
     
 # Dump rosparams to file
     data = {
@@ -41,7 +41,7 @@ def save_navigation_points(number):
     with open(rosparam.get_param("/config_path"), 'w') as file:
         yaml.dump(data, file)
 
-    return TableNumberResponse(True)
+    return SaveNavigationPointResponse(True)
 
 def save_pre_navigation_points(number):
     table = number.table
@@ -56,7 +56,7 @@ def save_pre_navigation_points(number):
 
     else:
         rospy.loginfo("Invalid table number.")
-        return TableNumberResponse(False)
+        return SaveNavigationPointResponse(False)
     
     # Dump rosparams to file
     data = {
@@ -68,7 +68,7 @@ def save_pre_navigation_points(number):
     with open(rosparam.get_param("/config_path"), 'w') as file:
         yaml.dump(data, file)
 
-    return TableNumberResponse(True)
+    return SaveNavigationPointResponse(True)
 
 def get_latest_pose(msg):
     global latest_pose
@@ -78,8 +78,8 @@ if __name__ == "__main__":
 
     rospy.init_node("save_navigation_points")
     sub = rospy.Subscriber("/amcl_pose", PoseWithCovarianceStamped, get_latest_pose)
-    rospy.Service("save_navigation_points", TableNumber, save_navigation_points)
-    rospy.Service("save_pre_navigation_points", TableNumber, save_pre_navigation_points)    
+    rospy.Service("save_navigation_points", SaveNavigationPoint, save_navigation_points)
+    rospy.Service("save_pre_navigation_points", SaveNavigationPoint, save_pre_navigation_points)    
     rospy.loginfo("Navigation Points Saver Ready")
     
     while not rospy.is_shutdown():
