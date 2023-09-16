@@ -17,10 +17,12 @@ class GoToTable(smach.State):
             return 'skip'
         closest_table = min(tables_need_serving, key=lambda table: np.linalg.norm([table[1]["location"]["position"]["x"] - robot_x, table[1]["location"]["position"]["y"] - robot_y]))
         label, table = closest_table
-        self.context.voice_controller.sync_tts(f"I am going to {label}, which needs serving")
-        position = table["location"]["position"]
-        orientation = table["location"]["orientation"]
-        self.context.base_controller.sync_to_pose(Pose(position=Point(**position), orientation=Quaternion(**orientation)))
-        self.context.tables[label]["status"] = "currently serving"
+        if label == self.context.current_table:
+            self.context.voice_controller.sync_tts("Lucky me, I am already at the table which needs serving!")
+        else:
+            self.context.voice_controller.sync_tts(f"I am going to {label}, which needs serving")
+            position = table["location"]["position"]
+            orientation = table["location"]["orientation"]
+            self.context.base_controller.sync_to_pose(Pose(position=Point(**position), orientation=Quaternion(**orientation)))
         self.context.current_table = label
         return 'done'
