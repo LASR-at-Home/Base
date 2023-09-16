@@ -85,7 +85,7 @@ class Context:
                 rosparam.delete_param("mmap")
 
             mmap_dict = {"vo": {"submap_0": dict()}, "numberOfSubMaps" : 1}
-            rospy.loginfo(f"There are {len(data['tables'].keys())}, should be {len(data['tables'].keys()) * 4} VOs")
+            rospy.loginfo(f"There are {len(data['tables'].keys())}, should be {len(data['tables'].keys()) + 1} VOs")
 
             for i, table in enumerate(data["tables"].keys()):
                 for j, corner in enumerate(data["tables"][table]["objects_cuboid"]):
