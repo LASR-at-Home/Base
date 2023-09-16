@@ -45,6 +45,7 @@ class GuidePerson(smach.State):
         return detections
 
     def execute(self, userdata):
+        self.context.stop_head_manager("head_manager")
         robot_x, robot_y = self.context.base_controller.get_pose()
         empty_tables = [(label, rospy.get_param(f"/tables/{label}")) for label, table in self.context.tables.items() if table["status"] == "ready"]
         closest_table = min(empty_tables, key=lambda table: np.linalg.norm([table[1]["location"]["position"]["x"] - robot_x, table[1]["location"]["position"]["y"] - robot_y]))
@@ -75,4 +76,5 @@ class GuidePerson(smach.State):
         self.context.play_motion_client.send_goal_and_wait(pm_goal)
 
         self.context.tables[label]["status"] = "needs serving"
+        self.context.start_head_manager("head_manager", '')
         return 'done'
