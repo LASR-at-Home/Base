@@ -2,15 +2,35 @@
 import smach
 import rospy
 from geometry_msgs.msg import Pose, Point, Quaternion
+from sensor_msgs.msg import PointCloud2
 from play_motion_msgs.msg import PlayMotionGoal
 import numpy as np
 from common_math import pcl_msg_to_cv2
 
+from std_msgs.msg import String
+from play_motion_msgs.msg import PlayMotionGoal
+from sensor_msgs.msg import PointCloud2
+from geometry_msgs.msg import PointStamped, Point
+from common_math import pcl_msg_to_cv2, seg_to_centroid
+from coffee_shop.srv import TfTransform, TfTransformRequest
+import numpy as np
 
 class GuidePerson(smach.State):
     def __init__(self, context):
         smach.State.__init__(self, outcomes=['done'])
         self.context = context
+
+    def estimate_pose(self, pcl_msg, detection):
+        centroid_xyz = seg_to_centroid(pcl_msg, np.array(detection.xyseg))
+        centroid = PointStamped()
+        centroid.point = Point(*centroid_xyz)
+        centroid.header = pcl_msg.header
+        tf_req = TfTransformRequest()
+        tf_req.target_frame = String("map")
+        tf_req.point = centroid
+        response = self.context.tf(tf_req)
+        return np.array([response.target_point.point.x, response.target_point.point.y, response.target_point.point.z])
+
 
     def perform_detection(self, pcl_msg, polygon, filter, model):
         cv_im = pcl_msg_to_cv2(pcl_msg)
