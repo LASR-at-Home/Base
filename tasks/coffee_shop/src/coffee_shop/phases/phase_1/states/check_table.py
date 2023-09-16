@@ -103,7 +103,7 @@ class CheckTable(smach.State):
 
         #self.detection_sub.unregister()
  
-        self.detections_objects = self.filter_detections_by_pose(self.detections_objects, threshold=0.1)
+        #self.detections_objects = self.filter_detections_by_pose(self.detections_objects, threshold=0.1)
         self.detections_people = self.filter_detections_by_pose(self.detections_people, threshold=0.50)
 
         self.publish_object_points()

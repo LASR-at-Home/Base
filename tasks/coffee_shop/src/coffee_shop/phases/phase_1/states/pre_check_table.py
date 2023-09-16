@@ -73,11 +73,21 @@ class PreCheckTable(smach.State):
         self.person_polygon = rospy.get_param(f"/tables/{self.context.current_table}/persons_cuboid")
         self.detections_people = []
 
-        pm_goal = PlayMotionGoal(motion_name="back_to_default", skip_planning=True)
-        self.context.play_motion_client.send_goal_and_wait(pm_goal)
+        motions = ["back_to_default", "look_left", "look_right", "back_to_default"]
+        #self.detection_sub = rospy.Subscriber("/xtion/depth_registered/points", PointCloud2, self.check)
+        for motion in motions:
+            pm_goal = PlayMotionGoal(motion_name=motion, skip_planning=True)
+            self.context.play_motion_client.send_goal_and_wait(pm_goal)
+            pcl_msg = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
+            self.check(pcl_msg)
 
-        pcl_msg = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
-        self.check(pcl_msg)
+        self.detections_people = self.filter_detections_by_pose(self.detections_people, threshold=0.50)
+
+
+        people_count = len(self.detections_people)
+        people_text = "person" if people_count == 1 else "people"
+
+        self.context.voice_controller.async_tts(f"I saw {people_count} {people_text} so far")
 
         self.context.tables[self.context.current_table]["pre_people"] = self.detections_people
         self.context.start_head_manager("head_manager", '')
