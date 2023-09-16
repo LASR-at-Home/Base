@@ -9,7 +9,6 @@ from visualization_msgs.msg import Marker
 import rosparam
 import tf2_ros
 import tf2_geometry_msgs
-import rospkg
 
 # Units are in meters
 # The marker should be placed on the bottom left corner of the table, with the x axis pointing to the right and the y axis pointing up
@@ -21,8 +20,6 @@ PADDING = 0.5
 WAITING_AREA_LONG_SIDE = 1.2
 WAITING_AREA_SHORT_SIDE = 0.6
 
-r = rospkg.RosPack()
-FILENAME = r.get_path('aruco_service') + "/test_check_table_sim.yaml"
 
 def get_transform_to_marker(from_frame, to_frame):
     tf_buffer = tf2_ros.Buffer()
@@ -135,7 +132,7 @@ def generate_cuboid(number):
             'wait': rosparam.get_param('/wait')
         }
 
-        with open(FILENAME, 'w') as file:
+        with open(rosparam.get_param('/config_path'), 'w') as file:
             yaml.dump(data, file)
 
         return TableNumberResponse(True)
@@ -153,7 +150,7 @@ if __name__ == "__main__":
     sub = rospy.Subscriber("/aruco_single/pose", PoseStamped, get_latest_pose)
     s = rospy.Service("generate_table_cuboid", TableNumber, generate_cuboid)
 
-    els = rosparam.load_file(FILENAME)
+    els = rosparam.load_file(rosparam.get_param('/config_path'))
     for param, ns in els:
         rosparam.upload_params(ns, param)
     

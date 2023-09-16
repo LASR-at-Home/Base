@@ -5,10 +5,6 @@ import rospy
 from aruco_service.srv import TableNumber, TableNumberResponse
 from geometry_msgs.msg import PoseWithCovarianceStamped
 import rosparam
-import rospkg
-
-r = rospkg.RosPack()
-FILENAME = r.get_path('aruco_service') + "/test_check_table_sim.yaml"
 
 def save_points(number):
     table = number.table
@@ -42,7 +38,7 @@ def save_points(number):
         'wait': rosparam.get_param('/wait')
     }
 
-    with open(FILENAME, 'w') as file:
+    with open(rosparam.get_param("/config_path"), 'w') as file:
         yaml.dump(data, file)
 
     return TableNumberResponse(True)
@@ -55,12 +51,7 @@ if __name__ == "__main__":
 
     rospy.init_node("save_navigation_points")
     sub = rospy.Subscriber("/amcl_pose", PoseWithCovarianceStamped, get_latest_pose)
-    s = rospy.Service("save_navigation_points", TableNumber, save_points)
-
-    els = rosparam.load_file(FILENAME)
-    for param, ns in els:
-        rosparam.upload_params(ns, param)
-    
+    rospy.Service("save_navigation_points", TableNumber, save_points)    
     rospy.loginfo("Navigation Points Saver Ready")
     
     while not rospy.is_shutdown():

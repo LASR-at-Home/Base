@@ -73,7 +73,7 @@ class CheckTable(smach.State):
     def execute(self, userdata):
         self.context.stop_head_manager("head_manager")
 
-        self.context.voice_controller.sync_tts("I am going to check the table")
+        self.context.voice_controller.async_tts("I am going to check the table")
         self.object_debug_images = []
         self.people_debug_images = []
 
