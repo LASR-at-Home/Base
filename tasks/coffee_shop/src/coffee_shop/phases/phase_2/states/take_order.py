@@ -79,7 +79,7 @@ class TakeOrder(smach.State):
             self.context.play_motion_client.send_goal_and_wait(pm_goal)
             pub = rospy.Publisher("/tablet/screen", String, queue_size=1)
             pub.publish("order")
-            order = rospy.wait_for_message("/tablet/done", Order).products 
+            order = rospy.wait_for_message("/tablet/order", Order).products 
         else:
             ph_goal = PointHeadGoal()
             ph_goal.max_velocity = 1.0

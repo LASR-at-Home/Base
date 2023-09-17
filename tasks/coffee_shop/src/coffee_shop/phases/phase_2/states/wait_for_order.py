@@ -31,7 +31,7 @@ class WaitForOrder(smach.State):
     def execute(self, userdata):
         if self.context.tablet:
             self.context.voice_controller.sync_tts("Please press 'ready' when you are ready for me to check the order.")
-            rospy.wait_for_message("/tablet/ready", Empty)
+            rospy.wait_for_message("/tablet/done", Empty)
             return 'done'
         else:
             pm_goal = PlayMotionGoal(motion_name="back_to_default", skip_planning=True)

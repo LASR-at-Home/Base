@@ -17,5 +17,5 @@ class MakeOrder(smach.State):
         self.context.voice_controller.sync_tts(f"Please get me {order_string}")
         if self.context.tablet:
             pub = rospy.Publisher("/tablet/screen", String, queue_size=1)
-            pub.publish("ready")
+            pub.publish("done")
         return 'done'
