@@ -2,15 +2,35 @@
 import smach
 import rospy
 from geometry_msgs.msg import Pose, Point, Quaternion
+from sensor_msgs.msg import PointCloud2
 from play_motion_msgs.msg import PlayMotionGoal
 import numpy as np
 from common_math import pcl_msg_to_cv2
 
+from std_msgs.msg import String
+from play_motion_msgs.msg import PlayMotionGoal
+from sensor_msgs.msg import PointCloud2
+from geometry_msgs.msg import PointStamped, Point
+from common_math import pcl_msg_to_cv2, seg_to_centroid
+from coffee_shop.srv import TfTransform, TfTransformRequest
+import numpy as np
 
 class GuidePerson(smach.State):
     def __init__(self, context):
         smach.State.__init__(self, outcomes=['done'])
         self.context = context
+
+    def estimate_pose(self, pcl_msg, detection):
+        centroid_xyz = seg_to_centroid(pcl_msg, np.array(detection.xyseg))
+        centroid = PointStamped()
+        centroid.point = Point(*centroid_xyz)
+        centroid.header = pcl_msg.header
+        tf_req = TfTransformRequest()
+        tf_req.target_frame = String("map")
+        tf_req.point = centroid
+        response = self.context.tf(tf_req)
+        return np.array([response.target_point.point.x, response.target_point.point.y, response.target_point.point.z])
+
 
     def perform_detection(self, pcl_msg, polygon, filter, model):
         cv_im = pcl_msg_to_cv2(pcl_msg)
@@ -25,6 +45,7 @@ class GuidePerson(smach.State):
         return detections
 
     def execute(self, userdata):
+        self.context.stop_head_manager("head_manager")
         robot_x, robot_y = self.context.base_controller.get_pose()
         empty_tables = [(label, rospy.get_param(f"/tables/{label}")) for label, table in self.context.tables.items() if table["status"] == "ready"]
         closest_table = min(empty_tables, key=lambda table: np.linalg.norm([table[1]["location"]["position"]["x"] - robot_x, table[1]["location"]["position"]["y"] - robot_y]))
@@ -55,4 +76,5 @@ class GuidePerson(smach.State):
         self.context.play_motion_client.send_goal_and_wait(pm_goal)
 
         self.context.tables[label]["status"] = "needs serving"
+        self.context.start_head_manager("head_manager", '')
         return 'done'

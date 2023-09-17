@@ -26,10 +26,12 @@ class TakeOrder(smach.State):
     def get_order(self):
         resp = self.listen()
         if resp["intent"]["name"] != "make_order":
+            rospy.logwarn("The intent was wrong")
             self.context.voice_controller.sync_tts(self.context.get_random_retry_utterance())
             return self.get_order()
         items = resp["entities"].get("item", [])
         if not items:
+            rospy.logwarn("There were no items")
             self.context.voice_controller.sync_tts(self.context.get_random_retry_utterance())
             return self.get_order()
         quantities = resp["entities"].get("CARDINAL", [])
