@@ -94,7 +94,6 @@ class TakeOrder(smach.State):
             if len(self.context.tables[self.context.current_table]["people"]) == 1:
                 self.context.point_head_client.send_goal_and_wait(ph_goal)
                 self.context.voice_controller.sync_tts("Hello, I'm TIAGo, I'll be serving you today.")
-                #self.context.voice_controller.sync_tts("You're looking lonely here, sat all by yourself")
                 self.context.voice_controller.sync_tts("Please state your order after the beep - this indicates that I am listening.")
             elif len(self.context.tables[self.context.current_table]["people"]) == 2:
                 self.context.voice_controller.sync_tts("Greetings to both of you, I'm TIAGo, I'll be serving you today.")
@@ -114,9 +113,9 @@ class TakeOrder(smach.State):
 
                 items_string = ', '.join([f"{count} {self.context.target_object_remappings[item] if count == 1 else self.context.target_object_remappings[item]+'s'}" for item, count in Counter(order).items()]).replace(', ', ', and ', len(order)-2)
 
-                self.context.voice_controller.sync_tts(f"You asked for {items_string} so far, can I get you anything else? Please answer yes or no")
+                self.context.voice_controller.sync_tts(f"You asked for {items_string} so far, can I get you anything else? Please answer yes or no after the beep.")
                 if self.affirm():
-                    self.context.voice_controller.sync_tts("Okay, please state the additional items after the beep")
+                    self.context.voice_controller.sync_tts("Okay, please state the additional items after the beep.")
                 else:
                     break
         order_string = ', '.join([f"{count} {self.context.target_object_remappings[item] if count == 1 else self.context.target_object_remappings[item]+'s'}" for item, count in Counter(order).items()]).replace(', ', ', and ', len(order)-2)

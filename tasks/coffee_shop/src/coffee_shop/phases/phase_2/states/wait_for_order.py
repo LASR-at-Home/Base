@@ -38,6 +38,6 @@ class WaitForOrder(smach.State):
             self.context.play_motion_client.send_goal_and_wait(pm_goal)
             while True:
                 rospy.sleep(rospy.Duration(5.0))
-                self.context.voice_controller.sync_tts("Is the order ready to be checked? Please answer with yes or no.")
+                self.context.voice_controller.sync_tts("Is the order ready to be checked? Please answer with yes or no after the beep.")
                 if self.affirm():
                     return 'done'
