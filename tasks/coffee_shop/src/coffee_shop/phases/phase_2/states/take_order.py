@@ -60,12 +60,6 @@ class TakeOrder(smach.State):
         if not items:
             self.context.voice_controller.sync_tts(self.context.get_random_retry_utterance())
             return self.get_order()
-        items_string = ', '.join([f"{count} {self.context.target_object_remappings[item] if count == 1 else self.context.target_object_remappings[item]+'s'}" for item, count in Counter(items).items()]).replace(', ', ', and ', len(items)-2)
-
-        self.context.voice_controller.sync_tts(f"You asked for {items_string}, is that correct? Please answer yes or no")
-        if not self.affirm():
-            self.context.voice_controller.sync_tts("Okay, could you repeat please?")
-            return self.get_order()
         return items
 
     def affirm(self):
@@ -102,7 +96,17 @@ class TakeOrder(smach.State):
             self.context.voice_controller.sync_tts("I choose you to be the one in charge.")
             self.context.voice_controller.sync_tts("Please state the order for the group after the beep - this indicates that I am listening.")
 
-        order = self.get_order()
+        order = []
+
+        while True:
+            order.extend(self.get_order())
+
+            items_string = ', '.join([f"{count} {self.context.target_object_remappings[item] if count == 1 else self.context.target_object_remappings[item]+'s'}" for item, count in Counter(order).items()]).replace(', ', ', and ', len(order)-2)
+
+            self.context.voice_controller.sync_tts(f"You asked for {items_string} so far, can I get you anything else? Please answer yes or no")
+            if self.affirm():
+                self.context.voice_controller.sync_tts("Okay, please state the additional items after the beep")
+
         order_string = ', '.join([f"{count} {self.context.target_object_remappings[item] if count == 1 else self.context.target_object_remappings[item]+'s'}" for item, count in Counter(order).items()]).replace(', ', ', and ', len(order)-2)
 
         self.context.voice_controller.sync_tts(f"Your order is {order_string}")
