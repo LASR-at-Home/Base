@@ -116,7 +116,8 @@ class TakeOrder(smach.State):
                 self.context.voice_controller.sync_tts(f"You asked for {items_string} so far, can I get you anything else? Please answer yes or no")
                 if self.affirm():
                     self.context.voice_controller.sync_tts("Okay, please state the additional items after the beep")
-
+                else:
+                    break
         order_string = ', '.join([f"{count} {self.context.target_object_remappings[item] if count == 1 else self.context.target_object_remappings[item]+'s'}" for item, count in Counter(order).items()]).replace(', ', ', and ', len(order)-2)
 
         self.context.voice_controller.sync_tts(f"Your order is {order_string}")
