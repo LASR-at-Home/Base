@@ -75,6 +75,7 @@ class TakeOrder(smach.State):
         self.context.stop_head_manager("head_manager")
 
         if self.context.tablet:
+            self.context.voice_controller.sync_tts("Hello, I'm TIAGo, I'll be serving you today. Please use the tablet to make your order.")  
             pm_goal = PlayMotionGoal(motion_name="tablet", skip_planning=True)
             self.context.play_motion_client.send_goal_and_wait(pm_goal)
             pub = rospy.Publisher("/tablet/screen", String, queue_size=1)
