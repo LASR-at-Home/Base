@@ -1,18 +1,16 @@
 #!/usr/bin/env python3
-import smach
+import smach, rospy
 from tiago_controllers.controllers.look_at import LookAt
-from lasr_object_detection_yolo.detect_objects_v8 import detect_objects
+from lasr_object_detection_yolo.detect_objects_v8 import detect_objects, perform_detection, debug
+from sensor_msgs.msg import PointCloud2
 
 HORIZONTAL = 0.8
 VERTICAL = 0.3
 
 class FacePerson(smach.State):
-    def __init__(self, controllers, voice, yolo, cmd):
+    def __init__(self, default):
         smach.State.__init__(self, outcomes=['success', 'failed'])
-        self.controllers = controllers
-        self.voice = voice
-        self.yolo = yolo
-        self.cmd_vel = cmd
+        self.default = default
 
         self.search_points = [(-1 * HORIZONTAL, VERTICAL),
                               (0, VERTICAL),
@@ -28,7 +26,11 @@ class FacePerson(smach.State):
 
     def search_for_person(self):
         for point in self.search_points:
-            self.controllers.head_controller.sync_reach_to(point[0], point[1])
+            self.default.controllers.head_controller.sync_reach_to(point[0], point[1])
+            # polygon = rospy.get_param('test_lift_points')
+            # pcl_msg = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
+            # detections, im = perform_detection(self.yolo, tf, bridge, shapely, pcl_msg, polygon, ["person"], "yolov8n-seg.pt")
+            # debug(im, detections)
             people = detect_objects(["person"])
             if people:
                 return people[0], point[0]
@@ -40,13 +42,13 @@ class FacePerson(smach.State):
         for i in range(turns):
             try:
                 closest_person, head_rot = self.search_for_person()
-                self.controllers.torso_controller.sync_reach_to(0.25)
+                self.default.controllers.torso_controller.sync_reach_to(0.25)
                 if closest_person:
-                    look_at = LookAt(self.controllers.head_controller, self.controllers.base_controller, self.cmd_vel, "person")
+                    look_at = LookAt(self.default.controllers.head_controller, self.default.controllers.base_controller, self.default.cmd, "person")
                     look_at.look_at(closest_person.xywh, head_rot)
                     return 'success'
             except TypeError:
-                self.cmd_vel.rotate(60, 360/turns, True)
+                self.default.cmd.rotate(60, 360/turns, True)
 
-        self.voice.speak("I can't see anyone!")
+        self.default.voice.speak("I can't see anyone!")
         return 'failed'

@@ -11,11 +11,12 @@ import rospy
 from lift.defaults import DEBUG
 
 class NavigateInLift(smach.State):
-    def __init__(self, controllers, voice):
+    def __init__(self, default):
         smach.State.__init__(self, outcomes=['success'])
 
-        self.controllers = controllers
-        self.voice = voice
+        # self.controllers = controllers
+        # self.voice = voice
+        self.default = default
 
     def safe_clusters_info(self, analytics, w, M):
         centers, num_clusters, midpoints, _ = analytics
@@ -39,7 +40,7 @@ class NavigateInLift(smach.State):
 
         clear_costmap()
 
-        status = self.controllers.base_controller.ensure_sync_to_pose(get_pose_from_param('/lift_in_front/pose'))
+        status = self.default.controllers.base_controller.ensure_sync_to_pose(get_pose_from_param('/lift_in_front/pose'))
         rospy.loginfo("Status of the robot in front of the lift is {}".format(status))
 
         # get the lift information
@@ -50,7 +51,7 @@ class NavigateInLift(smach.State):
         if analytics[1] == 0:
             # if the lift is empty
             # go to predetermined place
-            state = self.controllers.base_controller.ensure_sync_to_pose(get_pose_from_param('/lift_centre/pose'))
+            state = self.default.controllers.base_controller.ensure_sync_to_pose(get_pose_from_param('/lift_centre/pose'))
             return 'success'
 
         # get the narrow space navigation service
@@ -72,8 +73,8 @@ class NavigateInLift(smach.State):
         p.position.x = global_points[0][0]
         p.position.y = global_points[0][1]
         p.orientation.w = 1
-        self.controllers.base_controller.ensure_sync_to_pose(p)
+        self.default.controllers.base_controller.ensure_sync_to_pose(p)
 
-        self.voice.speak("I have arrived at the lift.")
+        self.default.voice.speak("I have arrived at the lift.")
 
         return 'success'

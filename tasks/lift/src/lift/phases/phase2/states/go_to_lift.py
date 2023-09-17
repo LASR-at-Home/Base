@@ -14,11 +14,12 @@ import math
 
 
 class GoToLift(smach.State):
-    def __init__(self, controllers, voice):
+    def __init__(self, default):
         smach.State.__init__(self, outcomes=['success'])
+        self.default = default
 
-        self.controllers = controllers
-        self.voice = voice
+        # self.controllers = controllers
+        # self.voice = voice
 
     def rotate_keypoint(self, keypoint, degrees, image_o, image_r):
 
@@ -115,7 +116,7 @@ class GoToLift(smach.State):
         p.position.z = -0.5923
         p.orientation.w = 0.8056
 
-        state = self.controllers.base_controller.sync_to_pose(p)
+        state = self.default.controllers.base_controller.sync_to_pose(p)
 
         if DEBUG > 3:
             print(f" The sync to pose res in go to lift: {state}")
@@ -123,7 +124,7 @@ class GoToLift(smach.State):
         # ensure sync to pose
         if not state:
             # if it fails go to predetermined place
-            state = self.controllers.base_controller.ensure_sync_to_pose(get_pose_from_param('/wait_centre/pose'))
+            state = self.default.controllers.base_controller.ensure_sync_to_pose(get_pose_from_param('/wait_centre/pose'))
             rospy.loginfo("The sync to pose res in go to lift wait centre is {}".format(state))
 
         return 'success'

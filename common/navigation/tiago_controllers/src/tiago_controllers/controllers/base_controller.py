@@ -14,6 +14,7 @@ from math import atan2, radians
 from geometry_msgs.msg import Twist
 from common_math.transformations import quaternion_from_euler
 from tiago_controllers.helpers.pose_helpers import get_pose_from_param
+
 from tiago_controllers.base_planner import get_journey_points as _get_journey_points
 import numpy as np
 import numpy as np
@@ -132,20 +133,20 @@ class BaseController:
         return state
 
     # to be tested more remove if unnecessary
-    def calculate_angle_of_rot(self, robot_pose, door_position):
-        delta_x = door_position.position.x - robot_pose.position.x
-        delta_y = door_position.position.y - robot_pose.position.y
-        angle_to_door = math.atan2(delta_y, delta_x)
-
-        if angle_to_door > math.pi / 2:
-            angle_to_door -= math.pi
-        elif angle_to_door < -math.pi / 2:
-            angle_to_door += math.pi
-
-        (x, y, z, w) = quaternion_from_euler(0, 0, angle_to_door)
-        quaternion = Quaternion(x, y, z, w)
-        pose = Pose(position=Point(robot_pose.position.x, robot_pose.position.y, 0.0), orientation=quaternion)
-        return pose
+    # def calculate_angle_of_rot(self, robot_pose, door_position):
+    #     delta_x = door_position.position.x - robot_pose.position.x
+    #     delta_y = door_position.position.y - robot_pose.position.y
+    #     angle_to_door = math.atan2(delta_y, delta_x)
+    #
+    #     if angle_to_door > math.pi / 2:
+    #         angle_to_door -= math.pi
+    #     elif angle_to_door < -math.pi / 2:
+    #         angle_to_door += math.pi
+    #
+    #     (x, y, z, w) = quaternion_from_euler(0, 0, angle_to_door)
+    #     quaternion = Quaternion(x, y, z, w)
+    #     pose = Pose(position=Point(robot_pose.position.x, robot_pose.position.y, 0.0), orientation=quaternion)
+    #     return pose
 
     def rotate(self, radians):
         x, y, current_orientation = self.get_current_pose()
@@ -164,7 +165,7 @@ class CmdVelController:
         self._vel_pub = rospy.Publisher('mobile_base_controller/cmd_vel', Twist, queue_size=1)
         # rospy.sleep(0.1)  # wait for publisher to activate
 
-    def rotate(self, angular_velocity: int, angle: int, clockwise: bool):
+    def rotate(self, angular_velocity, angle, clockwise):
         vel_msg = Twist()
         angular_velocity = radians(angular_velocity)
         angle = radians(angle)
@@ -181,7 +182,7 @@ class CmdVelController:
             t1 = rospy.Time.now().to_sec()
             curr_ang = angular_velocity * (t1 - t0)
 
-    def linear_movement(self, speed: float, distance: float, is_forward: bool):
+    def linear_movement(self, speed, distance, is_forward):
         vel_msg = Twist()
         if is_forward:
             vel_msg.linear.x = abs(speed)

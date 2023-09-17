@@ -1,15 +1,22 @@
 #!/usr/bin/env python3
 import os, rospkg, shutil, rospy, sys
 
+rospy.loginfo("setting debug")
 DEBUG = rospy.get_param('debug') # 3
+rospy.loginfo("setting Debug with images ")
 DEBUG_WITH_IMAGES = rospy.get_param('debug_with_images')
 
 
 # for matplotlib
+rospy.loginfo("setting Plot SHOW ")
 PLOT_SHOW = rospy.get_param('plot_show')
+rospy.loginfo("setting Plot Save ")
 PLOT_SAVE = rospy.get_param('plot_save')
+rospy.loginfo("setting Publish Markers ")
 PUBLISH_MARKERS = rospy.get_param('publish_markers')
+rospy.loginfo("setting Debug Path ")
 DEBUG_PATH = os.getcwd()
+rospy.loginfo("setting Rasa ")
 RASA = rospy.get_param('rasa')
 
 rospy.logwarn("DEBUG: {DEBUG}, DEBUG_WITH_IMAGES: {DEBUG_WITH_IMAGES}, PLOT_SHOW: {PLOT_SHOW}, PLOT_SAVE: {PLOT_SAVE}".format(**locals()))
@@ -26,20 +33,3 @@ if DEBUG_WITH_IMAGES:
 # for plots in waypoitns
 import random
 TEST = random.randint(0, 1000)
-
-
-
-
-# if self.debug:
-#             cv2.imwrite(os.path.join(self.debug_path, f"objects_{self.num_detections}_mask.png"), objects_mask)
-#             cv2.imwrite(os.path.join(self.debug_path, f"objects_{self.num_detections}.png"), raw_im)
-#             with open(os.path.join(self.debug_path, f"objects_{self.num_detections}.txt"), "w+") as fp:
-#                 for detection in detections_objects_:
-#                     fp.write(f"{detection.name}\n")
-
-
-# from lift.defaults import PLOT_SAVE, PLOT_SHOW, TEST, DEBUG_PATH
-# if PLOT_SHOW:
-#     plt.show()
-# if PLOT_SAVE:
-#     plt.savefig(DEBUG_PATH + "/dilation" + str(TEST) + ".jpg")

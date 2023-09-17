@@ -1,56 +1,6 @@
 <launch>
-<!--   DEFAULTS  -->
-<!--    export LIBGL_ALWAYS_SOFTWARE=1-->
-    <arg name="is_sim" default="false" />
-    <arg name="plot_show" default="false" />
-    <arg name="plot_save" default="true" />
-    <arg name="debug_with_images" default="true" />
-    <arg name="publish_markers" default="true" />
-    <arg name="debug" default="3" />
-    <arg name="rasa" default="true" />
 
-    <param name="plot_show" value="$(arg plot_show)" />
-    <param name="plot_save" value="$(arg plot_save)" />
-    <param name="debug" value="$(arg debug)" />
-    <param name="rasa" value="$(arg rasa)" />
-    <param name="publish_markers" value="$(arg publish_markers)" />
-    <param name="debug_with_images" value="$(arg debug_with_images)" />
 <!--     TASK  -->
    <node name="" pkg="lift" type="main.py" output="screen" required="true"/>
-
-
-
-<!--     INTERACTION  -->
-<!--   <node name="soundplay_node" pkg="sound_play" type="soundplay_node.py"/>-->
-<!--    <node pkg="listen_module" name="dialogflow_srv" type="dialogflow_srv.py"/>-->
-    <node pkg="interaction_module" name="interaction_module_srv" type="interaction_module_srv.py"/>
-
-    <arg name="whisper_matcher" default="by-index" />
-    <arg name="whisper_device_param" default="13" />
-    <arg name="rasa_model" default="$(find lasr_rasa)/assistants/lift/models"/>
-
-    <include file = "$(find lasr_speech)/launch/speech.launch">
-        <arg name="matcher" value="$(arg whisper_matcher)"/>
-        <arg name="device_param" value="$(arg whisper_device_param)"/>
-        <arg name="rasa_model" value="$(arg rasa_model)"/>
-    </include>
-
-
-<!--     STATIC POINTS  -->
-
-    <group if="$(arg is_sim)">
-        <rosparam command="load" file="$(find lift)/config/final_lift_sim.yaml" />
-    </group>
-    <group unless="$(arg is_sim)">
-        <rosparam command="load" file="$(find lift)/config/final_lift.yaml" />
-    </group>
-
-
-<!--      PERCEPTION     -->
-<!--    <include file="$(find lasr_perception_server)/launch/perception_server.launch"/>-->
-<!--    <node name="lasr_object_detection_yolo" pkg="lasr_object_detection_yolo" type="yolo_object_detection_server.py" output="screen" respawn="true"/>-->
-    <node pkg="lasr_object_detection_yolov8" type="service" name="service" output="screen"/>
-    <node pkg="lasr_perception_server" name="perception_server" type="perception_server.py"/>
-
 
 </launch>

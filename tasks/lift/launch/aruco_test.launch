@@ -1,0 +1,14 @@
+<launch>
+
+   <arg name="is_sim" default="false" />
+
+   <group if="$(arg is_sim)">
+      <rosparam command="load" file="$(find lift)/config/final_lift_sim.yaml" />
+   </group>
+   <group unless="$(arg is_sim)">
+      <rosparam command="load" file="$(find lift)/config/final_lift.yaml"  />
+   </group>
+   <node name="tf_module" pkg="tf_module" type="tf_transforms_base.py" output="screen" respawn="true"/>
+
+
+</launch>

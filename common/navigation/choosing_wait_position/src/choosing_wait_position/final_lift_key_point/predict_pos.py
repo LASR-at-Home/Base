@@ -63,22 +63,25 @@ def visualise_predictions(image, bbox, keypoint):
     print("bbox:", bbox)
     print("keypoint: ", keypoint)
 
-
-
-    start_point = (int(bbox[0]), int(bbox[1]))
-    end_point = (int(bbox[2]), int(bbox[3]))
-    target_pos = (int(keypoint[0][0]), int(keypoint[0][1]))
     window_name = "prediction"
     color = (255, 0, 0)
     thickness = 1
-    image = cv2.rectangle(image, start_point, end_point, color, thickness)
-    image = cv2.circle(image, target_pos, 1, (255, 0, 0), 1)
-    plt.figure(figsize=(40, 40))
-    plt.imshow(image)
+
+    try:
+        start_point = (int(bbox[0]), int(bbox[1]))
+        end_point = (int(bbox[2]), int(bbox[3]))
+        image = cv2.rectangle(image, start_point, end_point, color, thickness)
+        target_pos = (int(keypoint[0][0]), int(keypoint[0][1]))
+        image = cv2.circle(image, target_pos, 1, (255, 0, 0), 1)
+    except Exception as e:
+        print(e)
+
+    plt.imshow(image, cmap='gray', aspect='auto')
+    plt.title('visualisation of the prediction')
     if PLOT_SHOW:
         plt.show()
     if PLOT_SAVE:
-        plt.savefig(DEBUG_PATH + "/predict_pos_viz_test" + str(TEST) + ".jpg")
+        plt.savefig(DEBUG_PATH + "/predict_pos_viz_test_test" + str(TEST) + ".jpg")
 
 # from geometry_msgs.msg import PoseWithCovarianceStamped, Pose, Point, Quaternion
 # from tiago_controllers.controllers.controllers import Controllers

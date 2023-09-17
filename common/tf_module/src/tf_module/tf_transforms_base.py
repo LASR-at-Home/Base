@@ -4,7 +4,7 @@ import tf2_ros
 import tf2_geometry_msgs
 import tf2_sensor_msgs
 
-from geometry_msgs.msg import PoseStamped, PoseArray, Pose
+from geometry_msgs.msg import PoseStamped, PoseArray, Pose, TransformStamped
 from tf_module.srv import TfTransform, TfTransformResponse, LatestTransform, LatestTransformResponse, ApplyTransform, \
     ApplyTransformResponse, BaseTransform, BaseTransformResponse
 
@@ -16,6 +16,7 @@ import copy
 
 
 def tf_transform(msg):
+    print(msg)
     tf_response = TfTransformResponse()
     if msg.pose_array.header.frame_id != '':
         transformation = get_transform(source_frame=msg.pose_array.header.frame_id, target_frame=msg.target_frame.data)
@@ -32,23 +33,27 @@ def tf_transform(msg):
         else:
             print('Error: No transformation')
     if msg.pointcloud.header.frame_id != '':
-        transformation = get_transform(source_frame=msg.pointcloud.header.frame_id, target_frame=msg.target_frame.data)
+        transformation = get_transform(source_frame=msg.pointcloud.header.frame_id, target_frame=msg.target_frame.data, stamp=rospy.Time(0))
         if transformation:
             new_pointcloud = tf2_sensor_msgs.do_transform_cloud(msg.pointcloud, transformation)
             tf_response.target_pointcloud = new_pointcloud
         else:
             print('Error: No trasnformation')
     if msg.point.header.frame_id != '':
-        transformation = get_transform(source_frame=msg.point.header.frame_id, target_frame=msg.target_frame.data)
+        transformation = get_transform(source_frame=msg.point.header.frame_id, target_frame=msg.target_frame.data, stamp=rospy.Time(0))
         if transformation:
-            new_point = do_transform_point(msg.point, transformation)
-            tf_response.target_point = new_point
+            try:
+                new_point = do_transform_point(msg.point, transformation)
+                tf_response.target_point = new_point
+            except Exception as e:
+                print(e)
+                print("---")
         else:
             print('Error: No trasnformation')
 
     p = None
     if msg.source_frame.data != '':
-        transformation = get_transform(source_frame=msg.source_frame.data, target_frame=msg.target_frame.data)
+        transformation = get_transform(source_frame=msg.source_frame.data, target_frame=msg.target_frame.data, stamp=rospy.Time(0))
         print(transformation, '  theirs')
         # return [t.x, t.y, t.z], [r.x, r.y, r.z, r.w]
         lt_trans, lt_rot = lookupTransform(target_frame=msg.target_frame.data, source_frame=msg.source_frame.data,
@@ -63,7 +68,7 @@ def tf_transform(msg):
         p.orientation.y = lt_rot[1]
         p.orientation.z = lt_rot[2]
         p.orientation.w = lt_rot[3]
-    tf_response.translation_and_rotation = p
+        tf_response.translation_and_rotation = p
 
     return tf_response
 
@@ -100,24 +105,23 @@ tf2_ros.TransformRegistration().add(PointStamped, do_transform_point)
 
 def transform_to_kdl(t):
     return PyKDL.Frame(PyKDL.Rotation.Quaternion(t.transform.rotation.x, t.transform.rotation.y,
-                                                 t.transform.rotation.z, t.transform.rotation.w),
-                       PyKDL.Vector(t.transform.translation.x,
-                                    t.transform.translation.y,
-                                    t.transform.translation.z))
+                                                     t.transform.rotation.z, t.transform.rotation.w),
+                           PyKDL.Vector(t.transform.translation.x,
+                                        t.transform.translation.y,
+                                        t.transform.translation.z))
 
 
 # KDL stuff end
 
 # base functions for transformations
 def transform_point_from_given(point, from_frame="base_laser_link", to_frame="map"):
-    assert point
-    new_point = None
     try:
         tr = get_transform(from_frame, to_frame, rospy.Time(0))
         new_point = apply_transform(point, tr, is_input_ps=False)
     except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
         rospy.logwarn("Failed to transform point.")
         rospy.logwarn(e)
+        new_point = PointStamped()
 
     return new_point
 
@@ -126,14 +130,19 @@ def apply_transform(ps_, transform, is_input_ps=True, target="xtion_rgb_optical_
     """
         Apply transform of PointStamped or Point, with a given transform
     """
-    assert (ps_ and transform)
+    # assert (ps_ and transform)
     if is_input_ps:
-        tr_point = tf2_geometry_msgs.do_transform_point(ps_, transform)
+        tr_point = do_transform_point(ps_, transform)
     else:
         ps = PointStamped()
         ps.point = ps_
-        ps.header.stamp = rospy.Time.now()
-        tr_point = do_transform_point(ps, transform)
+        try:
+            tr_point = do_transform_point(ps, transform)
+        except Exception as e:
+            rospy.logwarn("Failed to transform point.")
+            rospy.logwarn(e)
+            print(transform)
+            return PointStamped()
 
     return tr_point
 
@@ -143,12 +152,14 @@ def get_transform(source_frame, target_frame, stamp):
         Converts to target frame
         Returns the pose in the target frame
     """
-    assert (source_frame and target_frame)
+    # assert (source_frame and target_frame)
     try:
         transformation = tfBuffer.lookup_transform(target_frame, source_frame, stamp, rospy.Duration(0.1))
-        return transformation
     except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
         print(e)
+        transformation = TransformStamped()
+
+    return transformation
 
 # base functions for transformations
 
@@ -157,12 +168,15 @@ def transform_point_cb(msg):
     """
        Simply transform a point given the point and the frame
     """
-    point = msg.point
-    from_frame = msg.frame
-    to_frame = msg.target_frame
+    points = msg.points
+    from_frame = msg.frame.data
+    to_frame = msg.target_frame.data
 
-    new_point = transform_point_from_given(point, from_frame, to_frame)
-    return BaseTransform(new_point)
+    new_points = []
+    for p in points:
+        new_point = transform_point_from_given(p, from_frame, to_frame)
+        new_points.append(new_point)
+    return BaseTransformResponse(new_points)
 
 
 def apply_transform_cb(msg):
@@ -183,18 +197,20 @@ def get_latest_transform_cb(msg):
     """
     to_frame = msg.target_frame
     from_frame = msg.from_frame
+    t = TransformStamped()
     try:
         t = get_transform(source_frame=from_frame, target_frame=to_frame, stamp=rospy.Time(0))
-        return t
     except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
         print(e)
+
+    return LatestTransformResponse(t)
 
 # callbacks end
 
 if __name__ == '__main__':
     rospy.init_node('tf_transform_node')
     s = rospy.Service('tf_transform', TfTransform, tf_transform)
-    s2 = rospy.Service('get_latest_transform', LatestTransform, get_latest_transform_cb)
+    s2 = rospy.Service('latest_transform', LatestTransform, get_latest_transform_cb)
     s3 = rospy.Service('apply_transform', ApplyTransform, apply_transform_cb)
     s4 = rospy.Service('base_transform', BaseTransform, transform_point_cb)
 

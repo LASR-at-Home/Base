@@ -1,38 +1,48 @@
 #!/usr/bin/env python
+from std_msgs.msg import Bool, String, Header
 import rospy
-from sensor_msgs.msg import PointCloud2
 from visualization_msgs.msg import Marker
-from sensor_msgs.msg import LaserScan
 import numpy as np
-from std_msgs.msg import Header
 from sensor_msgs.msg import LaserScan, PointCloud2
 from sensor_msgs import point_cloud2
 from geometry_msgs.msg import Point, PointStamped
 from math import sqrt, cos, sin
-import tf2_ros
-from std_msgs.msg import Bool
 import laser_geometry.laser_geometry as lg
 import sensor_msgs.point_cloud2 as pc2
-# from tf_module.tf_transforms_base import transform_point, apply_transform, get_transform, transform_point_2, transform_point_from_given
-from tf_module.srv import BaseTransformRequest, ApplyTransformRequest, LatestTransformRequest, BaseTransform, LatestTransform, ApplyTransform
+from tf_module.srv import BaseTransformRequest, ApplyTransformRequest, LatestTransformRequest, BaseTransform, \
+    LatestTransform, ApplyTransform
 from lift.defaults import PUBLISH_MARKERS
 from geometry_msgs.msg import Pose
 from markers.markers_helpers import create_point_marker
 from image_geometry import PinholeCameraModel
+# from tiago_controllers.helpers.pose_helpers import get_pose_from_param
+from geometry_msgs.msg import Pose, Point, Quaternion
 
 MEAN_DISTANCE_THRESHOLD = 0.5
 DIST_THRESHOLD = 0.1
-# sim
-door_location = Point(x=-5.3076634407,y=-1.26610350609)
 
-# door_location = Point(x=3.78017091751, y=-0.921108067036)
-object_location = None
+def get_pose_from_param(name):
+    if not rospy.has_param(name):
+        return None
+    pose = rospy.get_param(name)
+    print(pose)
+    return Pose(Point(pose['position']['x'],
+                      pose['position']['y'],
+                      pose['position']['z']),
+                Quaternion(pose['orientation']['x'],
+                           pose['orientation']['y'],
+                           pose['orientation']['z'],
+                           pose['orientation']['w']))
+
+object_pos = get_pose_from_param("/door/pose")
+door = (object_pos.position.x, object_pos.position.y)
+# door = rospy.get_param('door_location')
+print("door location: {}".format(door))
+door_location = Point(x=door[0], y=door[1])
+
+object_location = door_location
 door_detected = False
 prev_door_detected = False
-camera = PinholeCameraModel()
-
-# set up the tf module
-
 
 # get pointcloud
 def get_pointcloud():
@@ -48,14 +58,7 @@ def get_laser_scan():
 
 def filter_laser_scan(laser_scan):
     """
-    Filter the laser scan data based on angle and range
-    Parameters
-    ----------
-    laser_scan
-
-    Returns
-    -------
-
+        Filter the laser scan data based on angle and range
     """
     middle_part = laser_scan.ranges[len(laser_scan.ranges) // 3: 2 * len(laser_scan.ranges) // 3]
     filtered_ranges = [np.nan] * len(laser_scan.ranges)
@@ -67,17 +70,9 @@ def filter_laser_scan(laser_scan):
 
 def limit_laser_scan(laser_scan, is_pub_markers=True, is_publish=False, is_pcl=False):
     """
-    Filter the laser scan data based on angle and range and publish it
-    Parameters
-    ----------
-    laser_scan
-    is_publish
-    is_pcl
-
-    Returns
-    -------
-
+        Filter the laser scan data based on angle and range and publish it
     """
+    # def limit_laser_scan(laser_scan, tf_base,tf_latest, tf_apply, tf, is_pub_markers=True, is_publish=False, is_pcl=False):
     print("Door detected!{}".format(door_detected))
     mean_distance, filtered_ranges = filter_laser_scan(laser_scan)
     limited_scan = laser_scan
@@ -86,21 +81,20 @@ def limit_laser_scan(laser_scan, is_pub_markers=True, is_publish=False, is_pcl=F
     limited_scan.header.stamp = rospy.Time.now()
     limited_scan.ranges = filtered_ranges
 
-    if is_pub_markers:
-        pub_laser_markers(limited_scan)
+    is_door_detected(limited_scan)
+    # is_door_detected(limited_scan, tf_base)
 
     if is_publish:
-        pub.publish(limited_scan)
+        pub_filtered.publish(limited_scan)
         rospy.loginfo("published the filtered laser scan")
         rospy.sleep(1)
 
     if is_pcl:
         padded_pcl = get_pcl_from_laser(limited_scan)
         poses = transform_pointcloud_to_map(padded_pcl)
-        for i, pose in enumerate(poses):
-            pcl_to_point.publish(create_point_marker(pose.position.x, pose.position.y, pose.position.z, i))
+        pub_markers(poses, is_point=False)
+        pub_pcl.publish(padded_pcl)
 
-        pub.publish(padded_pcl)
 
 
 def laser_callback(laser_data):
@@ -108,11 +102,6 @@ def laser_callback(laser_data):
     # Filter the laser scan data based on angle and range
     mean, filtered_points = filter_laser_scan(laser_data)
     print("filtered_points: {}".format(filtered_points))
-
-    # set up the tf module
-    rospy.wait_for_service('base_transform')
-
-
 
     final_points = []
     for i, range_val in enumerate(filtered_points):
@@ -122,7 +111,10 @@ def laser_callback(laser_data):
         y = range_val * sin(angle)
         final_points.append((x, y, angle))
 
+    print("final_points: {}".format(final_points))
+
     for i, range_val in enumerate(final_points):
+        print("i: {}, range_val: {}, testing".format(i, range_val))
         req = BaseTransformRequest()
         req.point = Point(x=range_val[0], y=range_val[1], z=0.0)
         req.frame = String('base_laser_link')
@@ -154,6 +146,7 @@ def laser_callback(laser_data):
                 x, y, z = tf_base(req)
                 door_pose_laser.publish(create_point_marker(x, y, z, i))
 
+
 def point_cloud_callback(pcl_data):
     # Filter the point cloud data based on range and height
     filtered_points = []
@@ -166,51 +159,62 @@ def point_cloud_callback(pcl_data):
     if filtered_points:
         door_detected = True
 
-from std_msgs.msg import String
 
 def laser_scan_to_points(laser_data):
-    points_in_map_frame = []
+    # def laser_scan_to_points(laser_data, tf_base):
+    req = BaseTransformRequest()
+    req.frame = String('base_laser_link')
+    req.target_frame = String('map')
 
+    points = []
     for i, range_val in enumerate(laser_data.ranges):
-        angle = laser_data.angle_min + i * laser_data.angle_increment
+        if not np.isnan(range_val):
+            angle = laser_data.angle_min + i * laser_data.angle_increment
 
-        x = range_val * cos(angle)
-        y = range_val * sin(angle)
+            x = range_val * cos(angle)
+            y = range_val * sin(angle)
 
-        # set up the tf module
-        # rospy.wait_for_service('base_transform')
-        req = BaseTransformRequest()
-        req.point = Point(x=x, y=y, z=0.0)
-        req.frame = String('base_laser_link')
-        req.target_frame = String('map')
+            points.append(Point(x=x, y=y, z=0.0))
 
-        points = tf_base(req)
-
-        points_in_map_frame.append(points.point)
+    req.points = points
+    points = tf_base(req)
+    # print("points here mmfmfmf: {}".format(points))
+    points_in_map_frame = [p.point for p in points.new_points]
 
     return points_in_map_frame
 
-def pub_markers(points):
-    for i in range(len(points)):
-        door_pose_laser.publish(create_point_marker(points[i].x, points[i].y, points[i].z, i))
 
-def pub_laser_markers(laser_data):
-    global door_detected, object_location, prev_door_detected
+def pub_markers(points, is_point=True):
+    if is_point:
+        for i in range(len(points)):
+            door_pose_laser.publish(create_point_marker(points[i].x, points[i].y, points[i].z, i))
+    else:
+        for i, pose in enumerate(points):
+            pcl_to_point.publish(create_point_marker(pose.position.x, pose.position.y, pose.position.z, i))
 
+def is_door_detected(laser_data):
+    global door_detected, door_location, prev_door_detected
+
+    # def is_door_detected(laser_data, tf_base):
+    # points = laser_scan_to_points(laser_data, tf_base)
     points = laser_scan_to_points(laser_data)
-    pub_markers(points)
+
+    # if PUBLISH_MARKERS:
+    #     pub_markers(points)
 
     for point in points:
         x = point.x
         y = point.y
-        dist = sqrt((x - object_location.x) ** 2 + (y - object_location.y) ** 2)
+        dist = sqrt((x - door_location.x) ** 2 + (y - door_location.y) ** 2)
 
-        if dist < 0.1:
+        if dist < DIST_THRESHOLD:
             door_detected = True
+            rospy.set_param("/door_detected_official", True)
             door_pose.publish(True)
             break
     else:
         door_pose.publish(False)
+        rospy.set_param("/door_detected_official", False)
         door_detected = False
 
     if door_detected != prev_door_detected:
@@ -218,28 +222,25 @@ def pub_laser_markers(laser_data):
 
     prev_door_detected = door_detected
 
-
 def get_pcl_from_laser(msg):
-    """
-    Get the point cloud from the laser scan
-    Parameters
-    ----------
-    msg
+    """ Converts a LaserScan message to a collection of points in camera frame, with their corresponding pixel values in a flat array. The method pads out the points to add vertical "pillars" to the point cloud.
 
-    Returns
-    -------
-
+    Args:
+        msg (LaserScan): ROS Laser Scan message from /scan topic.
+    Returns:
+        List: A list of tuples containing all the filtered and padded points in camera frame.
+        List: A list of pixel values corresponding to the points in the first list.
     """
+    # First get the laser scan points, and then convert to camera frame
     pcl_msg = lg.LaserProjection().projectLaser(msg)
     pcl_points = [p for p in pc2.read_points(pcl_msg, field_names=("x, y, z"), skip_nans=True)]
 
     tf_req = LatestTransformRequest()
-    tf_req.from_frame = "base_laser_link"
     tf_req.target_frame = "xtion_rgb_optical_frame"
-    tr = tf_latest(tf_req)
+    tf_req.from_frame = "base_laser_link"
+    t = tf_latest(tf_req)
 
     padded_points = []
-    pixels = []
     for point in pcl_points:
         # Pad out the points to add vertical "pillars" to the point cloud
         for z in np.linspace(0., 1., 5):
@@ -250,62 +251,75 @@ def get_pcl_from_laser(msg):
     apply_req.transform = t.transform
     res = tf_apply(apply_req)
 
-    padded_converted_points = []
-    for p in res.new_points:
-        pt = (p.x, p.y, p.z)
-        u, v = camera.project3dToPixel(pt)
-        # Filter out points that are outside the camera frame
-        if u >= 0 and u < 640 and v >= 0 and v < 480:
-            pixels.append(u)
-            pixels.append(v)
-            padded_converted_points.append(pt)
+    h = Header()
+    h.stamp = rospy.Time.now()
+    h.frame_id = "xtion_rgb_optical_frame"
+    r = [(p.x, p.y, p.z) for p in res.new_points]
+    padded_pcl = pc2.create_cloud_xyz32(h, r)
 
-    return padded_converted_points, pixels
+    return padded_pcl
+
+
 
 
 
 def transform_pointcloud_to_map(pcl, source_frame="xtion_rgb_optical_frame"):
-    poses_in_map_frame = []
-
+    pss = []
     for point in point_cloud2.read_points(pcl, field_names=("x", "y", "z"), skip_nans=True):
-        point_source = PointStamped()
-        point_source.header.frame_id = source_frame
-        point_source.header.stamp = rospy.Time(0)
-        point_source.point.x = point[0]
-        point_source.point.y = point[1]
-        point_source.point.z = point[2]
+        pss.append(Point(x=point[0], y=point[1], z=point[2]))
 
-        try:
-            point_map = transform_point(point_source=point_source, source_frame=source_frame, to_frame="map")
+    req = BaseTransformRequest()
+    req.frame = String(source_frame)
+    req.target_frame = String('map')
+    req.points = pss
 
-        except IndexError as e:
-            rospy.logwarn("Failed to transform point in PointCloud, warning: %s", str(e))
-            point_map = None
+    points_map = tf_base(req)
 
+    poses_in_map_frame = []
+    for point_map in points_map.new_points:
         pose_in_map_frame = Pose()
         pose_in_map_frame.position = point_map.point
         poses_in_map_frame.append(pose_in_map_frame)
 
     return poses_in_map_frame
 
+
 def door_detected_callback(msg):
     global door_detected
     door_detected = msg.data
-    rospy.logerr("the door detected {}".format(door_detected))
+    # rospy.loginfo("the door detected {}".format(door_detected))
+
 
 if __name__ == "__main__":
     rospy.init_node("pcl_helpers")
     print("Waiting for the door location")
+    camera = PinholeCameraModel()
 
+    # tf
     tf_base = rospy.ServiceProxy('base_transform', BaseTransform)
     tf_latest = rospy.ServiceProxy('latest_transform', LatestTransform)
+    tf_apply = rospy.ServiceProxy('apply_transform', ApplyTransform)
 
+    # door detected
+    door_pose = rospy.Publisher("/door_detected", Bool, queue_size=100)
+    door_pose_laser = rospy.Publisher("/door_pose_laser", Marker, queue_size=100)
+    sub_door_detected = rospy.Subscriber('/door_detected', Bool, door_detected_callback)
 
     pcl_to_point = rospy.Publisher("/pcl_to_point", Marker, queue_size=100)
-    pub = rospy.Publisher('/filtered_laser_scan', LaserScan, queue_size=10)
-    sub = rospy.Subscriber('/scan', LaserScan, limit_laser_scan)
-    door_pose_laser = rospy.Publisher("/door_pose_laser", Marker, queue_size=100)
-    door_pose = rospy.Publisher("/door_detected", Bool, queue_size=100)
+    pub_pcl = rospy.Publisher("/pcl_from_laser_debug", PointCloud2, queue_size=10)
+
+    # laser
+    pub_filtered = rospy.Publisher('/filtered_laser_scan', LaserScan, queue_size=10)
+    laser = rospy.wait_for_message('/scan', LaserScan)
+    limit_laser_scan(laser)
+    print(door_detected, " door_detected++")
+    while True:
+        laser = rospy.wait_for_message('/scan', LaserScan)
+        limit_laser_scan(laser)
+        print(door_detected, " door_detected----")
+        rospy.sleep(5)
+    # sub_laser = rospy.Subscriber('/scan', LaserScan, limit_laser_scan)
+    # pcl
 
     while not rospy.is_shutdown():
         rospy.spin()

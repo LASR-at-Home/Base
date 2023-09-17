@@ -21,7 +21,7 @@ PADDING = 0.5
 WAITING_AREA_LONG_SIDE = 1.2
 WAITING_AREA_SHORT_SIDE = 0.6
 
-LIFT_WAITING_AREA = 3
+LIFT_WAITING_AREA = 1.75
 
 r = rospkg.RosPack()
 FILENAME = r.get_path('aruco_service') + "/test_check_table_sim.yaml"
@@ -144,7 +144,7 @@ def generate_cuboid(number):
                 'corner 1' : corner_1,
                 'corner 2' : corner_2,
                 'corner 3' : corner_3,
-                'corner 4' : corner_4
+                'corner 4' : corner_4,
                 'wait position': wait_position
             }
             FILENAME_LIFT = r.get_path('aruco_service') + "/test_lift_wait_position.yaml"

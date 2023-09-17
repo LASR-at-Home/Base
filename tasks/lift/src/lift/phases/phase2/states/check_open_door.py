@@ -8,6 +8,7 @@ from tiago_controllers.controllers.base_controller import CmdVelController
 from tiago_controllers.helpers.pose_helpers import get_pose_from_param
 from tiago_controllers.helpers.nav_map_helpers import counter
 from narrow_space_navigation.waypoints import *
+from read_pcl_info.pcl_helpers import limit_laser_scan
 import rospy
 # from tf_module.tf_transforms import tranform_pose
 
@@ -50,20 +51,15 @@ RANDOM_LIFT_JOKES = [
 
 used_jokes = []
 from std_msgs.msg import Bool
-door_detected = True
 
 
 class CheckOpenDoor(smach.State):
-    def __init__(self, controllers, voice):
+    def __init__(self, default):
         # smach.State.__init__(self, outcomes=['success'])
         smach.State.__init__(self, outcomes=['success', 'failed'])
 
-        self.controllers = controllers
+        self.default = default
 
-        self.sub = rospy.Subscriber('/door_detected', Bool, self.door_detected_callback)
-        print("door detected {}".format(door_detected))
-        self.voice = voice
-        self.cmd_vel = CmdVelController()
 
     def get_joke(self):
         if not used_jokes:
@@ -71,44 +67,51 @@ class CheckOpenDoor(smach.State):
             random.shuffle(used_jokes)
         return used_jokes.pop()
 
-    def door_detected_callback(self, msg):
-        global door_detected
-        door_detected = msg.data
-    def execute(self, userdata):
+    # @staticmethod
+    # def door_detected_callback(msg):
+    #     global door_detected
+    #     print("door detected {}".format(msg.data))
+    #     door_detected = msg.data
 
+    def execute(self, userdata):
+        door_detected = True
         in_lift = rospy.get_param("/in_lift/status")
 
         # ensure the head is straight
-        self.controllers.head_controller.look_straight()
+        self.default.controllers.head_controller.look_straight()
 
         # rotate to face the door
-        self.voice.speak("Rotating to face the door")
-        self.controllers.base_controller.rotate_to_face_object(object_name='/door/pose')
+        self.default.voice.speak("Rotating to face the door")
+        self.default.controllers.base_controller.rotate_to_face_object(object_name='/door/pose')
 
         topic = "/counter_lift/counter" if in_lift else "/counter_door/counter"
         message = "I am in the lift. Waiting for the doors to open" if in_lift else "I arrived at the door. Waiting for the doors to open"
         res = counter(topic=topic)
-        self.voice.speak(message)
+        self.default.voice.speak(message)
 
         if res == "counter":
             return 'success'
 
-        self.controllers.base_controller.rotate_to_face_object(object_name='/door/pose')
+        self.default.controllers.base_controller.rotate_to_face_object(object_name='/door/pose')
 
         # tell a joke
-        self.voice.speak("I will tell you a joke in the meantime.")
-        self.voice.speak(self.get_joke())
+        self.default.voice.speak("I will tell you a joke in the meantime.")
+        # self.default.voice.speak(self.get_joke())
         rospy.sleep(0.5)
 
-        self.voice.speak("Now checking the door")
+        self.default.voice.speak("Now checking the door")
+        # door_detected = rospy.get_param("/door_detected_official")
+        # print(door_detected, " door_detected++")
+
 
         # check for open door
         while door_detected:
-            rospy.logerr("the door detected {}".format(door_detected))
-            self.voice.speak("I am still waiting for the door to open")
-            rospy.sleep(1)
+            door_detected = rospy.get_param("/door_detected_official")
+            print("the door detections gives me {} ".format(door_detected))
+            self.default.voice.speak("I am still waiting for the door to open")
             if not door_detected:
-                self.voice.speak("The door is open. I will give the way to the humans now, because I am a good robot.")
+                message = "The door is open." if in_lift else "The door is open. I will give the way to the humans now, because I am a good robot."
+                self.default.voice.speak(message)
                 return 'success'
 
             # ensure you get out of the loop and go to the next state
@@ -118,5 +121,10 @@ class CheckOpenDoor(smach.State):
                 return 'failed'
 
             if not door_detected:
-                self.voice.speak("The door is open. I will give the way to the humans now, because I am a good robot.")
+                self.default.voice.speak("The door is open. I will give the way to the humans now, because I am a good robot.")
                 return 'success'
+            rospy.sleep(1)
+
+        return 'success'
+
+

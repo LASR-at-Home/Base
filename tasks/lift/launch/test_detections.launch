@@ -8,28 +8,19 @@
     <arg name="publish_markers" default="true" />
     <arg name="debug" default="3" />
     <arg name="rasa" default="true" />
+    <!--    <arg name="publish_markers" default="true" />-->
 
     <param name="plot_show" value="$(arg plot_show)" />
     <param name="plot_save" value="$(arg plot_save)" />
     <param name="debug" value="$(arg debug)" />
     <param name="rasa" value="$(arg rasa)" />
-    <param name="debug_with_images" value="$(arg debug_with_images)" />
     <param name="publish_markers" value="$(arg publish_markers)" />
+    <param name="debug_with_images" value="$(arg debug_with_images)" />
+    <!--    <param name="publish_markers" value="$(arg publish_markers)" />-->
 
+     <!--     TASK  -->
+<!--     <node name="detect_objects_v8" pkg="lasr_object_detection_yolo" type="detect_objects_v8.py" output="screen" required="true"/>-->
 
-    <!--     INTERACTION  -->
-    <node pkg="interaction_module" name="interaction_module_srv" type="interaction_module_srv.py"/>
-
-    <arg name="whisper_matcher" default="by-index" />
-    <!--    <arg name="whisper_device_param" default="0" />-->
-    <arg name="whisper_device_param" default="13" />
-    <arg name="rasa_model" default="$(find lasr_rasa)/assistants/lift/models"/>
-
-    <include file = "$(find lasr_speech)/launch/speech.launch">
-        <arg name="matcher" value="$(arg whisper_matcher)"/>
-        <arg name="device_param" value="$(arg whisper_device_param)"/>
-        <arg name="rasa_model" value="$(arg rasa_model)"/>
-    </include>
 
 
     <!--     STATIC POINTS  -->
@@ -42,15 +33,19 @@
     </group>
 
 
-    <!--    PCL and clear     -->
-    <node pkg="read_pcl_info" type="pcl_helpers.py" name="pcl_helpers" output="screen"/>
-    <node pkg="read_pcl_info" name="clear_continuosly" type="clear_continuosly.py"/>
-
-
     <!--      PERCEPTION     -->
+    <!--    <include file="$(find lasr_perception_server)/launch/perception_server.launch"/>-->
+    <!--    <node name="lasr_object_detection_yolo" pkg="lasr_object_detection_yolo" type="yolo_object_detection_server.py" output="screen" respawn="true"/>-->
     <node pkg="lasr_object_detection_yolov8" type="service" name="service" output="screen"/>
+
+    <include file="$(find lasr_object_detection_yolov8)/launch/service.launch">
+        <arg name="debug" value="true" />
+        <arg name="preload" value="['yolov8n-seg.pt']" />
+    </include>
+
+
     <node pkg="lasr_perception_server" name="perception_server" type="perception_server.py"/>
-    <node pkg="tf_module" name="tf_transforms_base" type="tf_transforms_base.py"/>
+    <node name="tf_module" pkg="tf_module" type="tf_transforms_base.py" output="screen" respawn="true"/>
 
 
 </launch>

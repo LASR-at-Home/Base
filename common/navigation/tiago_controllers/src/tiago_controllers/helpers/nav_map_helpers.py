@@ -5,6 +5,9 @@ from geometry_msgs.msg import PoseWithCovarianceStamped
 from tiago_controllers.helpers.pose_helpers import get_pose_from_param
 from common_math.math_ import euclidian_distance
 from play_motion_msgs.msg import PlayMotionGoal, PlayMotionAction
+from common_math.helpers.common_math_helpers import get_dist_to_door
+from visualization_msgs.msg import Marker
+from markers.markers_helpers import create_point_marker
 
 
 def clear_costmap():
@@ -57,6 +60,41 @@ def is_close_to_object(object_name='/door/pose', min_dist=0.5):
 def get_current_robot_pose():
         robot_pose = rospy.wait_for_message("/robot_pose", PoseWithCovarianceStamped)
         return robot_pose.pose.pose
+def get_random_rgb():
+    import random
+    r = random.randint(0, 255)
+    g = random.randint(0, 255)
+    b = random.randint(0, 255)
+    print(f"Random RGB: ({r}, {g}, {b})")
+    return (r, g, b), "This is {}, {}, {}".format(r, g, b)
+def rank(points_name="lift/centers"):
+        centers = rospy.get_param(points_name)
+
+        # get the distance of each center to the door
+        distances = []
+        for center in centers:
+            distances.append((get_dist_to_door(False, center[0], center[1]), center))
+
+        # rank the distances (dist, center-person) and add the robot
+        distances.append((get_dist_to_door(True), (0, 0)))
+
+        # sort the distances
+        sorted_distances = sorted(distances, key=lambda x: x[0])
+        print("sorted distances")
+        print(sorted_distances)
+        # random_colour, random_text = get_random_rgb()
+        people_pose_pub = rospy.Publisher("/people_poses", Marker, queue_size=100)
+        for i, dist in enumerate(sorted_distances):
+            mk = create_point_marker(dist[1][0], dist[1][1], 0, i)
+            people_pose_pub.publish(mk)
+
+        # mk = self.create_point_marker(sorted_distances[0][1][0], sorted_distances[0][1][1], 0, 0, random_colour, random_text)
+        # people_pose_pub.publish(mk)
+        # oif the robot is closest or second to closest return true
+        if sorted_distances[0][1] == (0, 0) or sorted_distances[1][1] == (0, 0):
+            return True
+        else:
+            return False
 def counter(topic="/counter_lift/counter", count_default=3):
     count = rospy.get_param(topic)
     rospy.loginfo("count: " + str(topic) + "---> " + str(count))

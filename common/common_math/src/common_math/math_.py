@@ -8,6 +8,8 @@ import ros_numpy as rnp
 # from std_msgs.msg import Header
 # from robocup_receptionist.srv import TfTransform, TfTransformRequest
 import math
+import cv2
+
 
 
 def pcl_msg_to_cv2(pcl_msg):
