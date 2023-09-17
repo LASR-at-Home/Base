@@ -14,6 +14,15 @@ type Item =
   | "smoothie"
   | "granola";
 
+const items: Item[] = [
+  "coffee",
+  "biscuits",
+  "sandwich",
+  "orange_juice",
+  "smoothie",
+  "granola"
+]
+
 export function CreateOrder({ finish }: { finish: (order: Item[]) => void }) {
   const [state, setState] = useState<State>("edit");
   const [order, setOrder] = useState<Item[]>([]);
@@ -48,10 +57,11 @@ function ConfirmMode({
 }) {
   return (
     <>
-      <div className="flex flex-col gap-4 flex-[4] min-h-0 overflow-y-scroll">
+      <div className="flex flex-col gap-4 flex-[4]">
         <h1 className="text-5xl">Your Order</h1>
-        <div>{JSON.stringify(order)}</div>
-        <div>i will make this look nice later</div>
+        <div className="flex flex-col flex-grow overflow-y-scroll min-h-0">
+          {items.filter(item => order.includes(item)).map(item => <div className="p-4 flex flex-row text-3xl items-center gap-4" key={item}><span className="tracking-wide text-right w-[86px]">{order.filter(x => x === item).length}x</span> <img className="h-[64px] w-[64px] object-contain" src={`/objects/${item}.png`} /> <span className="capitalize">{item.replace(/_/g, ' ')}</span></div>)}
+        </div>
       </div>
       <div className="flex flex-row gap-4 flex-1">
         <div
@@ -94,8 +104,8 @@ function EditMode({
       </div>
       <div className="flex flex-row gap-4 flex-1">
         <div
-          className="flex-1 bg-green-400 grid place-items-center text-white text-5xl"
-          onClick={confirm}
+          className={"flex-1 bg-green-400 grid place-items-center text-white text-5xl transition-colors" + (order.length ? '' : ' bg-green-200 disabled')}
+          onClick={order.length ? confirm : undefined}
         >
           Continue
         </div>
