@@ -15,6 +15,7 @@ class TakeOrder(smach.State):
     def __init__(self, context):
         smach.State.__init__(self, outcomes=['done'])
         self.context = context
+        self.tablet_pub = rospy.Publisher("/tablet/screen", String, queue_size=10) 
 
     def listen(self):
         resp = self.context.speech(True)
@@ -78,8 +79,7 @@ class TakeOrder(smach.State):
             self.context.voice_controller.sync_tts("Hello, I'm TIAGo, I'll be serving you today. Please use the tablet to make your order.")  
             pm_goal = PlayMotionGoal(motion_name="tablet", skip_planning=True)
             self.context.play_motion_client.send_goal_and_wait(pm_goal)
-            pub = rospy.Publisher("/tablet/screen", String, queue_size=1)
-            pub.publish("order")
+            self.tablet_pub.publish(String("order"))
             order = rospy.wait_for_message("/tablet/order", Order).products 
         else:
             ph_goal = PointHeadGoal()

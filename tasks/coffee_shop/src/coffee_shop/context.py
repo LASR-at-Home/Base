@@ -49,8 +49,13 @@ class Context:
         rospy.loginfo("Got shapely")
         self.bridge = CvBridge()
         rospy.loginfo("CV Bridge")
-        rospy.wait_for_service("/lasr_speech/transcribe_and_parse")
-        self.speech = rospy.ServiceProxy("/lasr_speech/transcribe_and_parse", Speech)
+
+
+        if not tablet:
+            rospy.wait_for_service("/lasr_speech/transcribe_and_parse")
+            self.speech = rospy.ServiceProxy("/lasr_speech/transcribe_and_parse", Speech)
+        else:
+            self.speech = None
         rospy.loginfo("Speech")
 
         if '/pal_startup_control/start' in rosservice.get_service_list():
