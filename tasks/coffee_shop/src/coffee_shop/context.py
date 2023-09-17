@@ -18,8 +18,11 @@ import random
 
 class Context:
 
-    def __init__(self, config_path=None):
+    def __init__(self, config_path=None, tablet=False):
 
+
+        self.tablet = tablet
+        
         self.base_controller = BaseController()
         rospy.loginfo("Got base controller")
         self.head_controller = HeadController()

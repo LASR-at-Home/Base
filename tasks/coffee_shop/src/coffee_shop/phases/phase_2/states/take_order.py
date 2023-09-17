@@ -7,6 +7,8 @@ import difflib
 from play_motion_msgs.msg import PlayMotionGoal
 from control_msgs.msg import PointHeadGoal
 from geometry_msgs.msg import Point
+from coffee_shop_ui.msg import Order
+from std_msgs.msg import String
 
 class TakeOrder(smach.State):
     
@@ -71,41 +73,49 @@ class TakeOrder(smach.State):
 
     def execute(self, userdata):
         self.context.stop_head_manager("head_manager")
-        ph_goal = PointHeadGoal()
-        ph_goal.max_velocity = 1.0
-        ph_goal.pointing_frame = 'head_2_link'
-        ph_goal.pointing_axis = Point(1.0, 0.0, 0.0)
-        ph_goal.target.header.frame_id = 'map'
-        ph_goal.target.point = Point(*self.context.get_interaction_person())
-        pm_goal = PlayMotionGoal(motion_name="back_to_default", skip_planning=True)
-        self.context.play_motion_client.send_goal_and_wait(pm_goal)
 
-        if len(self.context.tables[self.context.current_table]["people"]) == 1:
-            self.context.point_head_client.send_goal_and_wait(ph_goal)
-            self.context.voice_controller.sync_tts("Hello, I'm TIAGo, I'll be serving you today.")
-            #self.context.voice_controller.sync_tts("You're looking lonely here, sat all by yourself")
-            self.context.voice_controller.sync_tts("Please state your order after the beep - this indicates that I am listening.")
-        elif len(self.context.tables[self.context.current_table]["people"]) == 2:
-            self.context.voice_controller.sync_tts("Greetings to both of you, I'm TIAGo, I'll be serving you today.")
-            self.context.point_head_client.send_goal_and_wait(ph_goal)
-            self.context.voice_controller.sync_tts("I choose you to be the one in charge.")
-            self.context.voice_controller.sync_tts("Please state the order for the two of you after the beep - this indicates that I am listening.")
+        if self.context.tablet:
+            pm_goal = PlayMotionGoal(motion_name="tablet", skip_planning=True)
+            self.context.play_motion_client.send_goal_and_wait(pm_goal)
+            pub = rospy.Publisher("/tablet/screen", String, queue_size=1)
+            pub.publish("order")
+            order = rospy.wait_for_message("/tablet/done", Order).products 
         else:
-            self.context.voice_controller.sync_tts("Salutations to all of you, I'm TIAGo, I'll be serving you today.")
-            self.context.point_head_client.send_goal_and_wait(ph_goal)
-            self.context.voice_controller.sync_tts("I choose you to be the one in charge.")
-            self.context.voice_controller.sync_tts("Please state the order for the group after the beep - this indicates that I am listening.")
+            ph_goal = PointHeadGoal()
+            ph_goal.max_velocity = 1.0
+            ph_goal.pointing_frame = 'head_2_link'
+            ph_goal.pointing_axis = Point(1.0, 0.0, 0.0)
+            ph_goal.target.header.frame_id = 'map'
+            ph_goal.target.point = Point(*self.context.get_interaction_person())
+            pm_goal = PlayMotionGoal(motion_name="back_to_default", skip_planning=True)
+            self.context.play_motion_client.send_goal_and_wait(pm_goal)
 
-        order = []
+            if len(self.context.tables[self.context.current_table]["people"]) == 1:
+                self.context.point_head_client.send_goal_and_wait(ph_goal)
+                self.context.voice_controller.sync_tts("Hello, I'm TIAGo, I'll be serving you today.")
+                #self.context.voice_controller.sync_tts("You're looking lonely here, sat all by yourself")
+                self.context.voice_controller.sync_tts("Please state your order after the beep - this indicates that I am listening.")
+            elif len(self.context.tables[self.context.current_table]["people"]) == 2:
+                self.context.voice_controller.sync_tts("Greetings to both of you, I'm TIAGo, I'll be serving you today.")
+                self.context.point_head_client.send_goal_and_wait(ph_goal)
+                self.context.voice_controller.sync_tts("I choose you to be the one in charge.")
+                self.context.voice_controller.sync_tts("Please state the order for the two of you after the beep - this indicates that I am listening.")
+            else:
+                self.context.voice_controller.sync_tts("Salutations to all of you, I'm TIAGo, I'll be serving you today.")
+                self.context.point_head_client.send_goal_and_wait(ph_goal)
+                self.context.voice_controller.sync_tts("I choose you to be the one in charge.")
+                self.context.voice_controller.sync_tts("Please state the order for the group after the beep - this indicates that I am listening.")
 
-        while True:
-            order.extend(self.get_order())
+            order = []
 
-            items_string = ', '.join([f"{count} {self.context.target_object_remappings[item] if count == 1 else self.context.target_object_remappings[item]+'s'}" for item, count in Counter(order).items()]).replace(', ', ', and ', len(order)-2)
+            while True:
+                order.extend(self.get_order())
 
-            self.context.voice_controller.sync_tts(f"You asked for {items_string} so far, can I get you anything else? Please answer yes or no")
-            if self.affirm():
-                self.context.voice_controller.sync_tts("Okay, please state the additional items after the beep")
+                items_string = ', '.join([f"{count} {self.context.target_object_remappings[item] if count == 1 else self.context.target_object_remappings[item]+'s'}" for item, count in Counter(order).items()]).replace(', ', ', and ', len(order)-2)
+
+                self.context.voice_controller.sync_tts(f"You asked for {items_string} so far, can I get you anything else? Please answer yes or no")
+                if self.affirm():
+                    self.context.voice_controller.sync_tts("Okay, please state the additional items after the beep")
 
         order_string = ', '.join([f"{count} {self.context.target_object_remappings[item] if count == 1 else self.context.target_object_remappings[item]+'s'}" for item, count in Counter(order).items()]).replace(', ', ', and ', len(order)-2)
 
