@@ -14,6 +14,15 @@ type Item =
   | "smoothie"
   | "granola";
 
+const items: Item[] = [
+  "coffee",
+  "biscuits",
+  "sandwich",
+  "orange_juice",
+  "smoothie",
+  "granola",
+];
+
 export function CreateOrder({ finish }: { finish: (order: Item[]) => void }) {
   const [state, setState] = useState<State>("edit");
   const [order, setOrder] = useState<Item[]>([]);
@@ -48,20 +57,37 @@ function ConfirmMode({
 }) {
   return (
     <>
-      <div className="flex flex-col gap-4 flex-[4] min-h-0 overflow-y-scroll">
+      <div className="flex flex-col gap-4 flex-[4]">
         <h1 className="text-5xl">Your Order</h1>
-        <div>{JSON.stringify(order)}</div>
-        <div>i will make this look nice later</div>
+        <div className="flex flex-col flex-grow overflow-y-scroll min-h-0">
+          {items
+            .filter((item) => order.includes(item))
+            .map((item) => (
+              <div
+                className="p-4 flex flex-row text-3xl items-center gap-4"
+                key={item}
+              >
+                <span className="tracking-wide text-right w-[86px]">
+                  {order.filter((x) => x === item).length}x
+                </span>{" "}
+                <img
+                  className="h-[64px] w-[64px] object-contain"
+                  src={`/objects/${item}.png`}
+                />{" "}
+                <span className="capitalize">{item.replace(/_/g, " ")}</span>
+              </div>
+            ))}
+        </div>
       </div>
       <div className="flex flex-row gap-4 flex-1">
         <div
-          className="flex-1 bg-green-400 grid place-items-center text-white text-5xl"
+          className="flex-1 bg-green-400 grid place-items-center text-white text-5xl cursor-pointer"
           onClick={finish}
         >
           Confirm
         </div>
         <div
-          className="flex-1 bg-red-400 grid place-items-center text-white text-5xl"
+          className="flex-1 bg-red-400 grid place-items-center text-white text-5xl cursor-pointer"
           onClick={cancel}
         >
           Back
@@ -94,13 +120,16 @@ function EditMode({
       </div>
       <div className="flex flex-row gap-4 flex-1">
         <div
-          className="flex-1 bg-green-400 grid place-items-center text-white text-5xl"
-          onClick={confirm}
+          className={
+            "flex-1 bg-green-400 grid place-items-center text-white text-5xl transition-colors cursor-pointer" +
+            (order.length ? "" : " bg-green-200 disabled")
+          }
+          onClick={order.length ? confirm : undefined}
         >
           Continue
         </div>
         <div
-          className="flex-1 bg-red-400 grid place-items-center text-white text-5xl"
+          className="flex-1 bg-red-400 grid place-items-center text-white text-5xl cursor-pointer"
           onClick={() => setOrder([])}
         >
           Reset
@@ -109,6 +138,8 @@ function EditMode({
     </>
   );
 }
+
+const NEW_DESIGN = true;
 
 function Card({
   item,
@@ -134,6 +165,47 @@ function Card({
     });
 
   const inc = () => setOrder((order) => [...order, item]);
+
+  if (NEW_DESIGN) {
+    return (
+      <div className="flex-1 flex flex-col bg-slate-400">
+        <div className="flex-[6] min-h-0 grid">
+          <img
+            style={{
+              gridArea: "1/1",
+            }}
+            className="p-4 w-full h-full object-contain"
+            src={`/objects/${item}.png`}
+          />
+          <div
+            style={{
+              gridArea: "1/1",
+            }}
+            className="w-full h-full flex flex-row"
+          >
+            <div className="flex-1 grid place-items-center cursor-pointer" onClick={dec}>
+              <div className="p-4 rounded-full opacity-75 pr-16 hover:opacity-100 transition-all">
+                <FontAwesomeIcon icon={faMinusCircle} size={"5x"} color="#ed3e32" />
+              </div>
+            </div>
+            <div className="flex-1 grid place-items-center cursor-pointer" onClick={inc}>
+              <div className="p-4 rounded-full opacity-75 pl-16 hover:opacity-100 transition-all">
+                <FontAwesomeIcon icon={faPlusCircle} size={"5x"} color="#2e632e" />
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="flex-[2] flex flex-row bg-slate-500 text-5xl">
+          <div className="flex-grow capitalize text-white flex flex-row items-center p-4 tracking-tighter">
+            {item.split("_").join(" ")}
+          </div>
+          <div className="w-[64px] grid place-items-center text-white">
+            {count}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 flex flex-col bg-slate-400">

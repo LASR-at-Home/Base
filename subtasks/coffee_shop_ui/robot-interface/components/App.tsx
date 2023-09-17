@@ -43,11 +43,15 @@ export function App({ rosIp }: { rosIp: string }) {
         messageType: "std_msgs/Empty",
       });
 
+      confirmTopicRef.current.advertise();
+
       orderTopicRef.current = new Topic<ProductTopic>({
         ros,
         name: "/tablet/order",
         messageType: "coffee_shop_ui/Order",
       });
+
+      orderTopicRef.current.advertise();
     });
   }, []);
 
