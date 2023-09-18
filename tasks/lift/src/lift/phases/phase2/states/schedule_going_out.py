@@ -10,6 +10,8 @@ from interaction_module.srv import AudioAndTextInteraction, AudioAndTextInteract
 from lift.defaults import TEST, PLOT_SHOW, PLOT_SAVE, DEBUG_PATH, DEBUG, RASA
 from tiago_controllers.helpers.nav_map_helpers import is_close_to_object, rank
 import json
+from lasr_object_detection_yolo.detect_objects_v8 import detect_objects, perform_detection, debug
+from sensor_msgs.msg import PointCloud2
 
 
 class ScheduleGoingOut(smach.State):
@@ -41,11 +43,17 @@ class ScheduleGoingOut(smach.State):
 
             return False
 
-    def execute(self, userdata):
+    def is_anyone_in_front_of_me(self):
+        pcl_msg = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
+        polygon = rospy.get_param('arena')
+        detections, im = perform_detection(self.default, pcl_msg, polygon, filter)
+        return len(detections) > 0
 
+
+    def execute(self, userdata):
         self.default.voice.speak("I know there are {} people in the lift".format(rospy.get_param("/lift/num_clusters")))
 
-        is_robot_closest_rank = rank()
+        is_robot_closest_rank = rank(points_name="/lift/pos_persons") and self.is_anyone_in_front_of_me()
         print("is robot closest rank->>> {}".format(is_robot_closest_rank))
 
         is_closer_to_door = is_robot_closest_rank

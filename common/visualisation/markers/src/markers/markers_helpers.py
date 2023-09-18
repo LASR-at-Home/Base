@@ -40,18 +40,18 @@ if __name__ == '__main__':
     #     wait_pos_cen.publish(create_point_marker(point[0], point[1], 0, 0))
 
 
-    lift_pos = rospy.Publisher("/lift_pos_debugger", Marker, queue_size=100)
-    lift_pose = rospy.get_param("/lift_position_points")
-    for i, point in enumerate(lift_pose):
-         rospy.sleep(1)
-         lift_pos.publish(create_point_marker(point[0], point[1], 0, i))
+    # lift_pos = rospy.Publisher("/lift_pos_debugger", Marker, queue_size=100)
+    # lift_pose = rospy.get_param("/lift_position_points")
+    # for i, point in enumerate(lift_pose):
+    #      rospy.sleep(1)
+    #      lift_pos.publish(create_point_marker(point[0], point[1], 0, i))
 
-    lift_center = rospy.get_param("/lift_position_center_point")
-    print(lift_center)
-    lift_cen = rospy.Publisher("/lift_pos_center_debugger", Marker, queue_size=100)
-    # for i, point in enumerate(lift_center):
-    #     print(i, point,"center lift")
-    lift_cen.publish(create_point_marker(lift_center[0], lift_center[1], 0, 100, g=0.1))
+    # lift_center = rospy.get_param("/lift_position_center_point")
+    # print(lift_center)
+    # lift_cen = rospy.Publisher("/lift_pos_center_debugger", Marker, queue_size=100)
+    # # for i, point in enumerate(lift_center):
+    # #     print(i, point,"center lift")
+    # lift_cen.publish(create_point_marker(lift_center[0], lift_center[1], 0, 100, g=0.1))
 
     while not rospy.is_shutdown():
         rospy.spin()

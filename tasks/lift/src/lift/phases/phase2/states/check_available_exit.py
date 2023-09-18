@@ -9,9 +9,6 @@ class CheckAvailableExit(smach.State):
     def __init__(self, default):
         smach.State.__init__(self, outcomes=['success', 'failed', 'wait'])
         self.default = default
-        # self.voice = voice
-        # self.controllers = controllers
-        # self.speech = speech
     def listen(self):
         resp = self.default.speech()
         print("Resp success: ", resp.success)

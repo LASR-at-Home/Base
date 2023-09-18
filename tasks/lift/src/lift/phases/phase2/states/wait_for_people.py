@@ -6,6 +6,8 @@ import json
 from interaction_module.srv import AudioAndTextInteraction, AudioAndTextInteractionRequest, \
     AudioAndTextInteractionResponse
 from lift.defaults import TEST, PLOT_SHOW, PLOT_SAVE, DEBUG_PATH, DEBUG, RASA
+from sensor_msgs.msg import PointCloud2
+from lasr_object_detection_yolo.detect_objects_v8 import detect_objects, perform_detection, debug
 
 class WaitForPeople(smach.State):
     def __init__(self, default):
@@ -40,6 +42,26 @@ class WaitForPeople(smach.State):
         self.default.voice.speak("I hear that there are {} people".format(people_number))
         return people_number
 
+    def safe_seg_info(self, detections):
+
+        pos_people = []
+        for i, person in detections:
+            print(person)
+            pos_people.append([person[0], person[1]])
+
+        num_people = len(detections)
+
+        rospy.set_param("/lift/num_people", num_people)
+        rospy.set_param("/lift/pos_persons", pos_people)
+
+        if DEBUG > 3:
+            print("num clusters in safe")
+            print(rospy.get_param("/lift/num_people"))
+            print(pos_people)
+            print(type(pos_people))
+            print("centers in safe")
+            print(rospy.get_param("/lift/pos_persons"))
+
 
     def execute(self, userdata):
         # wait and ask
@@ -68,9 +90,18 @@ class WaitForPeople(smach.State):
         rospy.loginfo("State of the robot in wait for people is {}".format(state))
         rospy.sleep(0.5)
 
+        # prev start   only yolo
         # send request - image, dataset, confidence, nms
-        image = rospy.wait_for_message('/xtion/rgb/image_raw', Image)
-        detections = self.default.yolo(image, "yolov8n.pt", 0.3, 0.3)
+        # image = rospy.wait_for_message('/xtion/rgb/image_raw', Image)
+        # detections = self.default.yolo(image, "yolov8n-seg.pt", 0.3, 0.3)
+        # prev end
+
+        polygon = rospy.get_param('test_lift_points')
+        pcl_msg = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
+        detections, im = perform_detection(self.default, pcl_msg, polygon, ["person"], "yolov8n-seg.pt")
+        debug(im, detections)
+        people = detect_objects(["person"])
+
 
         # segment them as well and count them
         count_people = 0

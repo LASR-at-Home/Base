@@ -14,8 +14,6 @@ class NavigateInLift(smach.State):
     def __init__(self, default):
         smach.State.__init__(self, outcomes=['success'])
 
-        # self.controllers = controllers
-        # self.voice = voice
         self.default = default
 
     def safe_clusters_info(self, analytics, w, M):

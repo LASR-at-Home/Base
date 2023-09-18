@@ -68,33 +68,33 @@ def get_random_rgb():
     print(f"Random RGB: ({r}, {g}, {b})")
     return (r, g, b), "This is {}, {}, {}".format(r, g, b)
 def rank(points_name="lift/centers"):
-        centers = rospy.get_param(points_name)
+    centers = rospy.get_param(points_name)
 
-        # get the distance of each center to the door
-        distances = []
-        for center in centers:
-            distances.append((get_dist_to_door(False, center[0], center[1]), center))
+    # get the distance of each center to the door
+    distances = []
+    for center in centers:
+        distances.append((get_dist_to_door(False, center[0], center[1]), center))
 
-        # rank the distances (dist, center-person) and add the robot
-        distances.append((get_dist_to_door(True), (0, 0)))
+    # rank the distances (dist, center-person) and add the robot
+    distances.append((get_dist_to_door(True), (0, 0)))
 
-        # sort the distances
-        sorted_distances = sorted(distances, key=lambda x: x[0])
-        print("sorted distances")
-        print(sorted_distances)
-        # random_colour, random_text = get_random_rgb()
-        people_pose_pub = rospy.Publisher("/people_poses", Marker, queue_size=100)
-        for i, dist in enumerate(sorted_distances):
-            mk = create_point_marker(dist[1][0], dist[1][1], 0, i)
-            people_pose_pub.publish(mk)
+    # sort the distances
+    sorted_distances = sorted(distances, key=lambda x: x[0])
+    print("sorted distances")
+    print(sorted_distances)
+    # random_colour, random_text = get_random_rgb()
+    people_pose_pub = rospy.Publisher("/people_poses", Marker, queue_size=100)
+    for i, dist in enumerate(sorted_distances):
+        mk = create_point_marker(dist[1][0], dist[1][1], 0, i)
+        people_pose_pub.publish(mk)
 
-        # mk = self.create_point_marker(sorted_distances[0][1][0], sorted_distances[0][1][1], 0, 0, random_colour, random_text)
-        # people_pose_pub.publish(mk)
-        # oif the robot is closest or second to closest return true
-        if sorted_distances[0][1] == (0, 0) or sorted_distances[1][1] == (0, 0):
-            return True
-        else:
-            return False
+    # mk = self.create_point_marker(sorted_distances[0][1][0], sorted_distances[0][1][1], 0, 0, random_colour, random_text)
+    # people_pose_pub.publish(mk)
+    # oif the robot is closest or second to closest return true
+    if sorted_distances[0][1] == (0, 0) or sorted_distances[1][1] == (0, 0):
+        return True
+    else:
+        return False
 def counter(topic="/counter_lift/counter", count_default=3):
     count = rospy.get_param(topic)
     rospy.loginfo("count: " + str(topic) + "---> " + str(count))

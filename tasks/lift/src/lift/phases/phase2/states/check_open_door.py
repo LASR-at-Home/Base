@@ -96,13 +96,10 @@ class CheckOpenDoor(smach.State):
 
         # tell a joke
         self.default.voice.speak("I will tell you a joke in the meantime.")
-        # self.default.voice.speak(self.get_joke())
+        self.default.voice.speak(self.get_joke())
         rospy.sleep(0.5)
 
         self.default.voice.speak("Now checking the door")
-        # door_detected = rospy.get_param("/door_detected_official")
-        # print(door_detected, " door_detected++")
-
 
         # check for open door
         while door_detected:

@@ -1,6 +1,9 @@
 <launch>
 
 <!--     TASK  -->
-   <node name="" pkg="lift" type="main.py" output="screen" required="true"/>
+<!--   <node name="" pkg="lift" type="main.py" output="screen" required="true"/>-->
+
+   <rosparam command="load" file="$(find lift)/config/mk_test.yaml" />
+   <node pkg="tf_module" name="tf_transforms_base" type="tf_transforms_base.py" required="true"/>
 
 </launch>
