@@ -23,6 +23,6 @@ def get_dist_to_door(is_robot, x=None, y=None):
     print(f"distance to door: {dist}")
     return dist
 
-def get_how_close_to_door(is_robot, min_dist=0.5):
-        dist = self.get_dist_to_door(is_robot)
-        return round(dist, 1) < min_dist
+# def get_how_close_to_door(is_robot, min_dist=0.5):
+#         dist = self.get_dist_to_door(is_robot)
+#         return round(dist, 1) < min_dist

@@ -3,13 +3,26 @@ import rospy
 from std_srvs.srv import Empty
 from geometry_msgs.msg import PoseWithCovarianceStamped
 from tiago_controllers.helpers.pose_helpers import get_pose_from_param
-from common_math.math_ import euclidian_distance
 from play_motion_msgs.msg import PlayMotionGoal, PlayMotionAction
-from common_math.helpers.common_math_helpers import get_dist_to_door
 from visualization_msgs.msg import Marker
 from markers.markers_helpers import create_point_marker
+from common_math.math_ import euclidian_distance
 
+def get_dist_to_door(is_robot, x=None, y=None):
+    if is_robot:
+        robot_pose = rospy.wait_for_message("/robot_pose", PoseWithCovarianceStamped)
+        print(f"robot pose: {robot_pose}")
+        r = (robot_pose.pose.pose.position.x, robot_pose.pose.pose.position.y)
+    else:
+        r = (x, y)
 
+    door_position = get_pose_from_param("/door/pose")
+    print(f"door pose: {door_position}")
+    d = (door_position.position.x, door_position.position.y)
+
+    dist = euclidian_distance(r, d)
+    print(f"distance to door: {dist}")
+    return dist
 def clear_costmap():
     """
         Clears costmap using clear_octomap server
@@ -69,6 +82,8 @@ def get_random_rgb():
     return (r, g, b), "This is {}, {}, {}".format(r, g, b)
 def rank(points_name="lift/centers"):
     centers = rospy.get_param(points_name)
+    print("centers")
+    print(centers)
 
     # get the distance of each center to the door
     distances = []
@@ -77,6 +92,8 @@ def rank(points_name="lift/centers"):
 
     # rank the distances (dist, center-person) and add the robot
     distances.append((get_dist_to_door(True), (0, 0)))
+    print("distances")
+    print(distances)
 
     # sort the distances
     sorted_distances = sorted(distances, key=lambda x: x[0])
@@ -87,6 +104,7 @@ def rank(points_name="lift/centers"):
     for i, dist in enumerate(sorted_distances):
         mk = create_point_marker(dist[1][0], dist[1][1], 0, i)
         people_pose_pub.publish(mk)
+        rospy.sleep(2)
 
     # mk = self.create_point_marker(sorted_distances[0][1][0], sorted_distances[0][1][1], 0, 0, random_colour, random_text)
     # people_pose_pub.publish(mk)

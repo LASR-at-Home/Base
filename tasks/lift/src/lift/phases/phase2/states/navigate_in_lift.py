@@ -37,9 +37,8 @@ class NavigateInLift(smach.State):
         w = Waypoint()
 
         clear_costmap()
-
-        status = self.default.controllers.base_controller.ensure_sync_to_pose(get_pose_from_param('/lift_in_front/pose'))
-        rospy.loginfo("Status of the robot in front of the lift is {}".format(status))
+        status = self.default.controllers.base_controller.ensure_sync_to_pose(get_pose_from_param('/wait_in_front_lift_centre/pose'))
+        # rospy.loginfo("Status of the robot in front of the lift is {}".format(status))
 
         # get the lift information
         warped, analytics, M = w.get_lift_information(is_lift=True, is_sim=True)

@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-# from abc import abstractmethod
 import math
 import time
 import actionlib

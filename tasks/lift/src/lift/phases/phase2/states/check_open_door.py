@@ -105,9 +105,8 @@ class CheckOpenDoor(smach.State):
         while door_detected:
             door_detected = rospy.get_param("/door_detected_official")
             print("the door detections gives me {} ".format(door_detected))
-            self.default.voice.speak("I am still waiting for the door to open")
             if not door_detected:
-                message = "The door is open." if in_lift else "The door is open. I will give the way to the humans now, because I am a good robot."
+                message = "The door is open." if in_lift else "The door is open."
                 self.default.voice.speak(message)
                 return 'success'
 
@@ -121,6 +120,8 @@ class CheckOpenDoor(smach.State):
                 self.default.voice.speak("Great stuff! The door is open.")
                 # self.default.voice.speak("The door is open. I will give the way to the humans now, because I am a good robot.")
                 return 'success'
+
+            self.default.voice.speak("I am still waiting for the door to open")
             rospy.sleep(1)
 
         return 'success'

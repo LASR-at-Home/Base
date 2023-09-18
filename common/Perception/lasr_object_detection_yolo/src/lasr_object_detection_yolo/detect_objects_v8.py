@@ -63,8 +63,8 @@ def estimate_pose(tf, pcl_msg, detection):
     tf_req.target_frame = String("map")
     tf_req.point = centroid
     response = tf(tf_req)
-    print("response")
-    print(response)
+    # print("response")
+    # print(response)
     return np.array([response.target_point.point.x, response.target_point.point.y, response.target_point.point.z])
 # def perform_detection(yolo,tf, bridge, shapely, pcl_msg, polygon, filter, model="yolov8n-seg.pt"):
 #     cv_im = pcl_msg_to_cv2(pcl_msg)
@@ -85,20 +85,19 @@ def estimate_pose(tf, pcl_msg, detection):
 
 # for the comp
 def perform_detection(default, pcl_msg, polygon, filter, model="yolov8n-seg.pt"):
-# def perform_detection(yolo,tf, bridge, shapely, pcl_msg, polygon, filter, model="yolov8n-seg.pt"):
     cv_im = pcl_msg_to_cv2(pcl_msg)
     img_msg = default.bridge.cv2_to_imgmsg(cv_im)
     detections = default.yolo(img_msg, model, 0.5, 0.3)
-    rospy.loginfo(detections)
+    # rospy.loginfo(detections)
     detections = [(det, estimate_pose(default.tf, pcl_msg, det)) for det in detections.detected_objects if
                   det.name in filter]
-    rospy.loginfo(f"All: {[(det.name, pose) for det, pose in detections]}")
-    rospy.loginfo(f"Boundary: {polygon}")
+    # rospy.loginfo(f"All: {[(det.name, pose) for det, pose in detections]}")
+    # rospy.loginfo(f"Boundary: {polygon}")
     satisfied_points = default.shapely.are_points_in_polygon_2d(polygon, [[pose[0], pose[1]] for (_, pose) in
                                                                           detections]).inside
     detections = [detections[i] for i in range(0, len(detections)) if satisfied_points[i]]
-    rospy.loginfo(f"Filtered: {[(det.name, pose) for det, pose in detections]}")
-    print(len(detections))
+    # rospy.loginfo(f"Filtered: {[(det.name, pose) for det, pose in detections]}")
+    # print(len(detections))
     return detections, img_msg
 
 
@@ -231,7 +230,7 @@ def phase1(yolo, tf, bridge, shapely, pcl_msg, polygon, filter, model):
             else:
                 not_matching.append(j)
 
-    print(not_matching)
+    # print(not_matching)
 
 
 
@@ -288,9 +287,9 @@ if __name__ == '__main__':
 
     pos_people = []
     for i, person in detections:
-        print(person)
+        # print(person)
         person = person.tolist()
-        print(type(person))
+        # print(type(person))
         pos_people.append([person[0], person[1]])
 
     num_people = len(detections)
@@ -300,9 +299,9 @@ if __name__ == '__main__':
 
     pcl_msg = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
     polygon = rospy.get_param('test_lift_points')
-    print("is anyone in front of me >")
-    print(is_anyone_in_front_of_me(yolo, tf, bridge, shapely, pcl_msg, polygon, ["person"], "yolov8n-seg.pt"))
-    print("is anyone in front of me")
+    # print("is anyone in front of me >")
+    # print(is_anyone_in_front_of_me(yolo, tf, bridge, shapely, pcl_msg, polygon, ["person"], "yolov8n-seg.pt"))
+    # print("is anyone in front of me")
 
     # detections of i and then th esecond from the tuple
     # print(detections[0][1])

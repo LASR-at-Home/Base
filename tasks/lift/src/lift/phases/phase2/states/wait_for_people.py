@@ -81,6 +81,7 @@ class WaitForPeople(smach.State):
 
     def execute(self, userdata):
         # wait and ask
+        self.default.voice.speak("Exciting stuff, we are going to the lift! But let me aks you something first.")
         self.default.voice.speak("How many people are thinking to go in the lift?")
         self.default.voice.speak("Please answer with a number of people.")
 
@@ -101,11 +102,12 @@ class WaitForPeople(smach.State):
             print("The response of asking the people is {}".format(resp.result))
             # count = resp.result
 
-        self.default.voice.speak("I will give way to the people now, because I am a good robot!")
+        self.default.voice.speak("Thank you for your answer!")
+        self.default.voice.speak("I will give way to the people now, because I am a very very good robot!")
         rospy.sleep(5)
 
         self.default.voice.speak("I will now move to the center of the lift waiting area")
-        state = self.default.controllers.base_controller.ensure_sync_to_pose(get_pose_from_param('/wait_centre/pose'))
+        state = self.default.controllers.base_controller.ensure_sync_to_pose(get_pose_from_param('/wait_in_front_lift_centre/pose'))
         rospy.loginfo("State of the robot in wait for people is {}".format(state))
         rospy.sleep(0.5)
 
