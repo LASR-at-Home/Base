@@ -19,7 +19,7 @@
 
     <node pkg="lasr_shapely" type="service" name="shapely_service" output="screen"/>
     <node pkg="coffee_shop" type="tf_transform.py" name="tf_transform" output="screen"/>
-
+    <node pkg="coffee_shop" type="datahub.py" name="datahub"/>
 
     <rosparam command="load" file="$(find coffee_shop)/config/motions.yaml" />
 
