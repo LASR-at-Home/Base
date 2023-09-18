@@ -40,7 +40,8 @@
         <rosparam command="load" file="$(find lift)/config/final_lift_sim.yaml" />
     </group>
     <group unless="$(arg is_sim)">
-        <rosparam command="load" file="$(find lift)/config/final_lift.yaml" />
+<!--        <rosparam command="load" file="$(find lift)/config/final_lift.yaml" />-->
+        <rosparam command="load" file="$(find lift)/config/mk_test.yaml" />
     </group>
 
 
@@ -52,6 +53,10 @@
     <!--      PERCEPTION     -->
     <node pkg="lasr_object_detection_yolov8" type="service" name="service" output="screen"/>
     <node pkg="lasr_perception_server" name="perception_server" type="perception_server.py"/>
+
+
+    <!--      Yousef     -->
+    <node pkg="object_interest_tracking" name="object_interest_tracking" type="detect_interest_srv.py"/>
 
 
 </launch>

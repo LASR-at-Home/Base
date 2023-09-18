@@ -81,15 +81,6 @@ class GoToLift(smach.State):
             image.save(DEBUG_PATH + "/zoe_predict_pos_test" + str(TEST) + ".jpg")
             # image.save(DEBUG_PATH + "/zoe_predict_pos_test_before_rotate" + str(TEST) + ".jpg")
 
-        # transformations for the image
-        # Rotate the image to make sure the door is the bottom of the image when we pass to NN:
-        # degrees = 90
-        # image_rotated = image.rotate(degrees)
-        # image_rotated = ImageOps.mirror(image_rotated)
-        # if PLOT_SAVE:
-        #     image_rotated.save(DEBUG_PATH + "/zoe_predict_pos_test_after_rotate" + str(TEST) + ".jpg")
-        # predicting with rotated image:
-        # image_path = DEBUG_PATH + "/zoe_predict_pos_test_after_rotate" + str(TEST) + ".jpg"
 
         bbox, keypoint = make_prediction(image_path)
         if keypoint is None and bbox is None:
@@ -101,10 +92,6 @@ class GoToLift(smach.State):
             print(f"keypoint: {keypoint}")
             print(type(keypoint))
 
-        # transformations for the image
-        # rotating keypoint to match image:
-        # keypoint = self.mirror_keypoint(keypoint,image_rotated)
-        # keypoint = self.rotate_keypoint(keypoint,(360-degrees),image_rotated,image)
 
         # transform to the global frame
         global_points = w.local_to_global_points(M=M, points=keypoint, is_lift=True)

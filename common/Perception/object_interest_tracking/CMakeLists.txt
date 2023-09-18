@@ -59,7 +59,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## Generate services in the 'srv' folder
 add_service_files(
   FILES
-  EngagementScore.srv
+  Tdr.srv
 )
 
 ## Generate actions in the 'action' folder

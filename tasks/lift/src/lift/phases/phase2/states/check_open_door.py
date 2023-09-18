@@ -118,7 +118,8 @@ class CheckOpenDoor(smach.State):
                 return 'failed'
 
             if not door_detected:
-                self.default.voice.speak("The door is open. I will give the way to the humans now, because I am a good robot.")
+                self.default.voice.speak("Great stuff! The door is open.")
+                # self.default.voice.speak("The door is open. I will give the way to the humans now, because I am a good robot.")
                 return 'success'
             rospy.sleep(1)
 

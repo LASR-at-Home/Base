@@ -47,31 +47,36 @@ class DeclareFloor(smach.State):
 
         # maybe add the counter here as well
         self.default.voice.speak("I would love to go to the floor {}.".format(floor))
-        self.default.voice.speak("Please press the button for the floor {}.".format(floor))
-        self.default.voice.speak(" Is the button selected?")
-        self.default.voice.speak("Please answer yes or no.")
-        rospy.sleep(1)
-        if RASA:
-            answer = self.affirm()
-            print("Answer from Speech: ", answer)
-            #rasa get answer:
+        self.default.voice.speak("I don't see a button around, so I will assume the non-existent button is pressed.")
 
-        else:
-            req = AudioAndTextInteractionRequest()
-            req.action = "BUTTON_PRESSED"
-            req.subaction = "confirm_button"
-            req.query_text = "SOUND:PLAYING:PLEASE"
-            resp = self.default.speech(req)
-            answer = resp.result
+        return 'success'
 
-        self.default.voice.speak("I got your answer.")
+        # from lab
+        # self.default.voice.speak(" Is the button selected?")
+        # self.default.voice.speak("Please answer yes or no.")
+        # rospy.sleep(1)
+        # if RASA:
+        #     answer = self.affirm()
+        #     print("Answer from Speech: ", answer)
+        #     #rasa get answer:
+        #
+        # else:
+        #     req = AudioAndTextInteractionRequest()
+        #     req.action = "BUTTON_PRESSED"
+        #     req.subaction = "confirm_button"
+        #     req.query_text = "SOUND:PLAYING:PLEASE"
+        #     resp = self.default.speech(req)
+        #     answer = resp.result
 
-        # get the answer
-        if answer == 'yes':
-            self.default.voice.speak("Great! Thank you for pressing the button!")
-            self.default.controllers.torso_controller.sync_reach_to(0.2)
-            return 'success'
-        else:
-            self.default.voice.speak("I will wait more")
-            rospy.sleep(1)
-            return 'failed'
+        # self.default.voice.speak("I got your answer.")
+        # # get the answer
+        # if answer == 'yes':
+        #     self.default.voice.speak("Great! Thank you for pressing the button!")
+        #     self.default.controllers.torso_controller.sync_reach_to(0.2)
+        #     return 'success'
+        # else:
+        #     self.default.voice.speak("I will wait more")
+        #     rospy.sleep(1)
+        #     return 'failed'
+
+

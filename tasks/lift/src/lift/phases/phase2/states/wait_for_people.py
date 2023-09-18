@@ -14,10 +14,6 @@ class WaitForPeople(smach.State):
         smach.State.__init__(self, outcomes=['success', 'failed'])
         self.default = default
 
-        # self.controllers = controllers
-        # self.voice = voice
-        # self.yolo = yolo
-        # self.speech = speech
 
     def listen(self):
         resp = self.default.speech()
@@ -62,11 +58,29 @@ class WaitForPeople(smach.State):
             print("centers in safe")
             print(rospy.get_param("/lift/pos_persons"))
 
+    def affirm(self):
+        # Listen to person:
+        resp = self.listen()
+        # Response in intent can either be yes or no.
+        # Making sure that the response belongs to "affirm", not any other intent:
+        if resp['intent']['name'] != 'affirm':
+            self.default.voice.speak("Sorry, I didn't get that, please say yes or no")
+            return self.affirm()
+        choices = resp["entities"].get("choice", None)
+        if choices is None:
+            self.default.voice.speak("Sorry, I didn't get that")
+            return self.affirm()
+        choice = choices[0]["value"].lower()
+        if choice not in ["yes", "no"]:
+            self.default.voice.speak("Sorry, I didn't get that")
+            return self.affirm()
+        return choice
+
 
     def execute(self, userdata):
         # wait and ask
         self.default.voice.speak("How many people are thinking to go in the lift?")
-        self.default.voice.speak("Please answer with a number.")
+        self.default.voice.speak("Please answer with a number of people.")
 
         count = 2
         if RASA:
@@ -85,6 +99,9 @@ class WaitForPeople(smach.State):
             print("The response of asking the people is {}".format(resp.result))
             # count = resp.result
 
+        self.default.voice.speak("I will give way to the people now, because I am a good robot!")
+        rospy.sleep(5)
+
         self.default.voice.speak("I will now move to the center of the lift waiting area")
         state = self.default.controllers.base_controller.ensure_sync_to_pose(get_pose_from_param('/wait_centre/pose'))
         rospy.loginfo("State of the robot in wait for people is {}".format(state))
@@ -99,20 +116,37 @@ class WaitForPeople(smach.State):
         polygon = rospy.get_param('test_lift_points')
         pcl_msg = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
         detections, im = perform_detection(self.default, pcl_msg, polygon, ["person"], "yolov8n-seg.pt")
-        debug(im, detections)
-        people = detect_objects(["person"])
+        # debug(im, detections)
+        # people = detect_objects(["person"])
+        # count_people = 0
+        # count_people = sum(1 for det in detections.detected_objects if det.name == "person")
 
 
         # segment them as well and count them
-        count_people = 0
-        count_people = sum(1 for det in detections.detected_objects if det.name == "person")
+        count_people = len(detections)
 
         self.default.voice.speak("I can see beautiful people around. Only {} of them to be exact.".format(count_people))
 
+        # lab dev
+        # if count_people < count:
+        #     return 'failed'
+        # else:
+        #     return 'success'
+
+        # new things
         if count_people < count:
             return 'failed'
         else:
-            return 'success'
+            self.voice.speak("Are you ready for me to enter the lift?")
+            self.voice.speak("Please answer with a yes or no")
+            answer = 'no'
+            if RASA:
+                answer = self.affirm()
+                print("Answer from Speech: ", answer)
+                if answer == 'yes':
+                    self.voice.speak("Good stuff!")
+                    return 'success'
+                else:
+                    return 'failed'
 
 
-        # check if they are static with the frames

@@ -43,6 +43,26 @@ class ScheduleGoingOut(smach.State):
 
             return False
 
+    def affirm(self):
+        # Listen to person:
+        resp = self.listen()
+        # Response in intent can either be yes or no.
+        # Making sure that the response belongs to "affirm", not any other intent:
+        if resp['intent']['name'] != 'affirm':
+            self.default.voice.speak("Sorry, I didn't get that, please say yes or no")
+            return self.affirm()
+        choices = resp["entities"].get("choice", None)
+        if choices is None:
+            self.default.voice.speak("Sorry, I didn't get that")
+            return self.affirm()
+        choice = choices[0]["value"].lower()
+        if choice not in ["yes", "no"]:
+            self.default.voice.speak("Sorry, I didn't get that")
+            return self.affirm()
+        return choice
+
+
+
     def is_anyone_in_front_of_me(self):
         pcl_msg = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
         polygon = rospy.get_param('arena')
@@ -53,7 +73,7 @@ class ScheduleGoingOut(smach.State):
     def execute(self, userdata):
         self.default.voice.speak("I know there are {} people in the lift".format(rospy.get_param("/lift/num_clusters")))
 
-        is_robot_closest_rank = rank(points_name="/lift/pos_persons") and self.is_anyone_in_front_of_me()
+        is_robot_closest_rank = rank(points_name="/lift/pos_persons") or self.is_anyone_in_front_of_me()
         print("is robot closest rank->>> {}".format(is_robot_closest_rank))
 
         is_closer_to_door = is_robot_closest_rank
@@ -84,6 +104,24 @@ class ScheduleGoingOut(smach.State):
                         self.default.voice.speak("i am done with waiting")
                         break
                     count += 1
+
+            # untested
+            # hear_wait = "yes"
+            # count = 0
+            # while hear_wait and count < 5:
+            #     if RASA:
+            #         hear_wait = self.affirm()
+            #         if hear_wait == "yes":
+            #             self.voice.speak("I will wait more!")
+            #             rospy.sleep(5)
+            #         else:
+            #             self.voice.speak("I think I've finished waiting!")
+            #             break
+            #         count += 1
+
+
+
+
             return 'success'
         else:
             self.default.voice.speak("I am not the closest to the door.")

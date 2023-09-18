@@ -29,6 +29,24 @@ class Negotiate(smach.State):
         rospy.loginfo(resp)
         return resp
 
+    def affirm(self):
+        # Listen to person:
+        resp = self.listen()
+        # Response in intent can either be yes or no.
+        # Making sure that the response belongs to "affirm", not any other intent:
+        if resp['intent']['name'] != 'affirm':
+            self.default.voice.speak("Sorry, I didn't get that, please say yes or no")
+            return self.affirm()
+        choices = resp["entities"].get("choice", None)
+        if choices is None:
+            self.default.voice.speak("Sorry, I didn't get that")
+            return self.affirm()
+        choice = choices[0]["value"].lower()
+        if choice not in ["yes", "no"]:
+            self.default.voice.speak("Sorry, I didn't get that")
+            return self.affirm()
+        return choice
+
     def hear_wait(self):
         resp = self.listen()
 
@@ -63,7 +81,8 @@ class Negotiate(smach.State):
             rospy.sleep(1)
 
         self.default.voice.speak("Should I wait more for you?")
-        self.default.voice.speak("Just say 'Tiago, wait' if you need more time.")
+        self.voice.speak("Please say yes or no.")
+        # self.default.voice.speak("Just say 'Tiago, wait' if you need more time.")
         hear_wait = True
         count = 0
         while hear_wait or count < 5:
@@ -75,6 +94,19 @@ class Negotiate(smach.State):
                 else:
                     self.default.voice.speak("i am done with waiting")
                     break
+
+        # untested
+        # hear_wait = "yes"
+        # count = 0
+        # while (hear_wait == "yes") or count < 5:
+        #     if RASA:
+        #         hear_wait = self.affirm()
+        #         if hear_wait == "yes":
+        #             self.voice.speak("I will wait more")
+        #             rospy.sleep(5)
+        #         else:
+        #             self.voice.speak("i am done with waiting")
+        #             break
 
             else:
                 req = AudioAndTextInteractionRequest()

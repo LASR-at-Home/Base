@@ -50,6 +50,26 @@ class CheckAvailableExit(smach.State):
         self.default.voice.speak("I heard that we are on floor {}".format(floor_number))
         return floor_number
 
+    # untested
+    # def get_floor(self):
+    #     resp = self.listen()
+    #     if resp["intent"]["name"] != "check_floor_number":
+    #         self.voice.speak("Sorry, I misheard you")
+    #         return self.get_floor()
+    #     floor = resp["entities"].get("floor", [])
+    #     if not floor:
+    #         self.voice.speak("Sorry, I can't figure out that we're talking about floors")
+    #         return self.get_floor()
+    #     floor_number = int(floor[0]["value"])
+    #     self.voice.speak("I heard that we are on floor {}".format(floor_number))
+    #     self.voice.speak("Is this correct? Please answer yes or no")
+    #     answer = self.affirm()
+    #     if answer == "yes":
+    #         self.voice.speak("Cool stuff!")
+    #         return floor_number
+    #     else:
+    #         return self.get_floor()
+
     def execute(self, userdata):
         floor = rospy.get_param("/floor/number")
         if floor == 0:
