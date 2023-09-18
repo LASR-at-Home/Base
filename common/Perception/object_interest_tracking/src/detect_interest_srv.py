@@ -14,6 +14,9 @@ from tiago_controllers import BaseController
 from math import acos
 from lasr_shapely import LasrShapely
 
+from tiago_controllers.helpers.pose_helpers import get_pose_from_param
+
+from lasr_object_detection_yolo.detect_objects_v8 import detect_objects, perform_detection, debug
 
 def estimate_pose(pcl_msg, cv_im, detection):
     tf = rospy.ServiceProxy("/tf_transform", TfTransform)
@@ -62,7 +65,7 @@ def orderIndices(current, previous):
 def getPoseDiff(lastRecorded, x, y):
     distances = []
     for i in lastRecorded:
-        distances.append(np.linalg.norm(toNPArray([i.x, i.y]) - np.array([x, y])))
+        distances.append(np.linalg.norm(toNPArray(i) - np.array([x, y])))
     return distances
 
 
@@ -72,12 +75,14 @@ def v2(req):
     cvBridge = CvBridge()
     shapley = LasrShapely()
     rospy.wait_for_service('/yolov8/detect')
+    corners = rospy.get_param("/corners_arena")
+    print(corners, "corners")
 
     objectRecognitionService = rospy.ServiceProxy('/yolov8/detect', YoloDetection)
-    corners = rospy.get_param("/corners_arena")
-    basePose = rospy.get_param("/phase3_lift")
+    basePose = get_pose_from_param("/phase3_lift/pose")
+    print(basePose, "base pose")
 
-    BaseController().sync_to_pose(basePose)
+    # BaseController().sync_to_pose(basePose)
 
     headPoint = None
     found = False
@@ -91,10 +96,13 @@ def v2(req):
             img_msg = rospy.wait_for_message('/xtion/rgb/image_raw', Image)
             img_depth_msg = rospy.wait_for_message('/xtion/depth_registered/points', PointCloud2)
 
+
             currentLocs = list(filter(lambda i: i.name == "person",
                                       objectRecognitionService(img_msg, 'yolov8n-seg.pt', 0.7, 0.3).detected_objects))
 
             cm = []
+            rospy.logwarn("0")
+
             for i2 in range(len(currentLocs)):
                 # Assume 2 ppl!
                 pose = estimate_pose(img_depth_msg, cvBridge.imgmsg_to_cv2_np(img_msg), currentLocs[i2].xyseg)
@@ -102,6 +110,9 @@ def v2(req):
                     cm.append(pose)
 
             locs.append(cm)
+            rospy.logwarn(len(locs[0]))
+
+            print("vecs11")
 
             if i == 1 and len(locs[0]) > 0 and len(locs[0]) == len(locs[1]):
                 # swap if needed
@@ -114,25 +125,34 @@ def v2(req):
 
                 # CALC VECS
                 vecs = []
-                for i in range(locs[1]):
+                for i in range(len(locs[1])):
+                    rospy.logerr(locs[1][i])
                     a2 = toNPArray(locs[1][i]) - toNPArray(locs[0][i])
-                    vecs.append(toNPArray([a2.x, a2.y]))
+                    vecs.append(a2)
+                print("vecs")
+
+                print(vecs)
 
                 # CALC ANGLES
                 [x, y, q] = BaseController().get_current_pose()
 
                 angles = []
-                for i in len(vecs):
-                    angles.append(acos((vecs[i] - np.array([x, y]))) / (
-                                np.linalg.norm(vecs[i]) * np.linalg.norm(np.array([x, y]))))
+                print(vecs)
+                for i1 in len(vecs):
+                    angles.append(acos((vecs[i1] - np.array([x, y]))) / (
+                                np.linalg.norm(vecs[i1]) * np.linalg.norm(np.array([x, y]))))
 
                 distances = getPoseDiff(locs[1], x, y)
+                rospy.logwarn("dis ANG")
+                rospy.logwarn(min(angles))
+                rospy.logwarn(distances[angles.index(min(angles))])
 
                 # FACE PERSON
                 if min(angles) < ANGLE_THRESHOLD and distances[angles.index(min(angles))] < REACHING_THRESHOLDS:
                     headPoint = locs[angles.index(min(angles))]
                     found = True
 
+    print(headPoint)
     BaseController().sync_face_to(headPoint.x, headPoint.y)
     return TdrResponse()
 

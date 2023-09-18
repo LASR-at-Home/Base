@@ -14,7 +14,7 @@ from cv_bridge3 import CvBridge
 from lasr_shapely import LasrShapely
 
 
-rasa = True
+rasa = False
 
 class Default:
     def __init__(self):
@@ -42,8 +42,9 @@ class Default:
             rospy.loginfo("SPEECH RASA is here")
             self.speech = rospy.ServiceProxy("/lasr_speech/transcribe_and_parse", Speech)
         else:
-            rospy.loginfo("SPEECH Dialogflow is here")
-            self.speech = rospy.ServiceProxy("/interaction_module", AudioAndTextInteraction)
+            pass
+            # rospy.loginfo("SPEECH Dialogflow is here")
+            # self.speech = rospy.ServiceProxy("/interaction_module", AudioAndTextInteraction)
 
         if not rospy.get_published_topics(namespace='/pal_head_manager'):
             rospy.loginfo("Is SIM ---> True")
