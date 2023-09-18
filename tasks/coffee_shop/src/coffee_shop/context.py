@@ -15,6 +15,7 @@ from visualization_msgs.msg import Marker
 import rosservice
 import time
 import random
+from std_msgs.msg import Empty, Int16
 
 class Context:
 
@@ -49,6 +50,13 @@ class Context:
         rospy.loginfo("Got shapely")
         self.bridge = CvBridge()
         rospy.loginfo("CV Bridge")
+
+
+        self.datahub_ping = rospy.Publisher("/datahub/ping", Empty, queue_size=10)
+        self.datahub_start_episode = rospy.Publisher("/datahub/start_episode", Empty, queue_size=10)
+        self.datahub_stop_epsiode = rospy.Publisher("/datahub/stop_episode", Empty, queue_size=10)
+        self.datahub_start_phase = rospy.Publisher("/datahub/start_phase", Int16, queue_size=10)
+        self.dathub_stop_phase = rospy.Publisher("/datahub/stop_phase", Int16, queue_size=10)
 
 
         if not tablet:
