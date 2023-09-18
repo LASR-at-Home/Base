@@ -94,16 +94,17 @@ class Context:
 
             mmap_dict = {"vo": {"submap_0": dict()}, "numberOfSubMaps" : 1}
             rospy.loginfo(f"There are {len(data['tables'].keys())}, should be {len(data['tables'].keys()) + 1} VOs")
-
+            count = 0
             for i, table in enumerate(data["tables"].keys()):
                 for j, corner in enumerate(data["tables"][table]["objects_cuboid"]):
-                    vo = f"vo_00{(i*4)+j}"
-                    mmap_dict["vo"]["submap_0"][vo] = ["submap_0", "tables", *corner, 0.0]
+                    vo = f"vo_00{count}"
+                    mmap_dict["vo"]["submap_0"][vo] = ["submap_0", f"table{i}", *corner, 0.0]
+                    count +=1
             for j, corner in enumerate(data["counter"]["cuboid"]):
-                vo = f"vo_00{((i+1)*4) + j}"
+                vo = f"vo_00{count}"
                 mmap_dict["vo"]["submap_0"][vo] = ["submap_0", f"counter", *corner, 0.0]
+                count +=1
             rosparam.upload_params("mmap", mmap_dict)
-
 
         else:
             rospy.logerr("No config_path was given.")
