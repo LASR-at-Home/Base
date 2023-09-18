@@ -88,7 +88,7 @@ class Encounter(smach.State):
 
                 rospy.logwarn("0")
 
-                # cm = []
+                # cm = []ddd
                 # for i2 in range(len(currentLocs)):
                 #     # Assume 2 ppl!
                 #     pose = estimate_pose(self.default.tf, self.default.bridge.imgmsg_to_cv2_np(img_msg), detections)
