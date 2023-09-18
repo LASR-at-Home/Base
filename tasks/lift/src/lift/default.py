@@ -10,6 +10,9 @@ from lasr_speech.srv import Speech
 from tf_module.srv import BaseTransformRequest, ApplyTransformRequest, LatestTransformRequest, BaseTransform, \
     LatestTransform, ApplyTransform, TfTransform, TfTransformRequest
 
+from cv_bridge3 import CvBridge
+from lasr_shapely import LasrShapely
+
 
 rasa = True
 
@@ -25,6 +28,10 @@ class Default:
         self.cmd = CmdVelController()
         rospy.loginfo("Voice is here")
         self.voice = Voice()
+        self.bridge = CvBridge()
+        rospy.loginfo("CV Bridge")
+        self.shapely = LasrShapely()
+        rospy.loginfo("Got shapely")
 
         self.tf = rospy.ServiceProxy('tf_transform', TfTransform)
         self.tf_base = rospy.ServiceProxy('base_transform', BaseTransform)

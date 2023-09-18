@@ -81,7 +81,7 @@ class Negotiate(smach.State):
             rospy.sleep(1)
 
         self.default.voice.speak("Should I wait more for you?")
-        self.voice.speak("Please say yes or no.")
+        self.default.voice.speak("Please say yes or no.")
         # self.default.voice.speak("Just say 'Tiago, wait' if you need more time.")
         hear_wait = True
         count = 0

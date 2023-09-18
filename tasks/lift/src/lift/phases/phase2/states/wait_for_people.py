@@ -40,9 +40,11 @@ class WaitForPeople(smach.State):
 
     def safe_seg_info(self, detections):
 
+        # detections = np.array(detections)
+
         pos_people = []
         for i, person in detections:
-            print(person)
+            person = person.tolist()
             pos_people.append([person[0], person[1]])
 
         num_people = len(detections)
@@ -50,13 +52,13 @@ class WaitForPeople(smach.State):
         rospy.set_param("/lift/num_people", num_people)
         rospy.set_param("/lift/pos_persons", pos_people)
 
-        if DEBUG > 3:
-            print("num clusters in safe")
-            print(rospy.get_param("/lift/num_people"))
-            print(pos_people)
-            print(type(pos_people))
-            print("centers in safe")
-            print(rospy.get_param("/lift/pos_persons"))
+        # if DEBUG > 3:
+        #     print("num clusters in safe")
+        #     print(rospy.get_param("/lift/num_people"))
+        #     print(pos_people)
+        #     print(type(pos_people))
+        #     print("centers in safe")
+        #     print(rospy.get_param("/lift/pos_persons"))
 
     def affirm(self):
         # Listen to person:
@@ -116,6 +118,9 @@ class WaitForPeople(smach.State):
         polygon = rospy.get_param('test_lift_points')
         pcl_msg = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
         detections, im = perform_detection(self.default, pcl_msg, polygon, ["person"], "yolov8n-seg.pt")
+
+
+        self.safe_seg_info(detections)
         # debug(im, detections)
         # people = detect_objects(["person"])
         # count_people = 0
@@ -137,14 +142,14 @@ class WaitForPeople(smach.State):
         if count_people < count:
             return 'failed'
         else:
-            self.voice.speak("Are you ready for me to enter the lift?")
-            self.voice.speak("Please answer with a yes or no")
+            self.default.voice.speak("Are you ready for me to enter the lift?")
+            self.default.voice.speak("Please answer with a yes or no")
             answer = 'no'
             if RASA:
                 answer = self.affirm()
                 print("Answer from Speech: ", answer)
                 if answer == 'yes':
-                    self.voice.speak("Good stuff!")
+                    self.default.voice.speak("Good stuff!")
                     return 'success'
                 else:
                     return 'failed'

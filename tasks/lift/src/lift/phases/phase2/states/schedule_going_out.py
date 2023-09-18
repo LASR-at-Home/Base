@@ -65,7 +65,7 @@ class ScheduleGoingOut(smach.State):
 
     def is_anyone_in_front_of_me(self):
         pcl_msg = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
-        polygon = rospy.get_param('arena')
+        polygon = rospy.get_param('/corners_arena')
         detections, im = perform_detection(self.default, pcl_msg, polygon, filter)
         return len(detections) > 0
 

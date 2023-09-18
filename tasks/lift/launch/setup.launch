@@ -41,7 +41,7 @@
     </group>
     <group unless="$(arg is_sim)">
 <!--        <rosparam command="load" file="$(find lift)/config/final_lift.yaml" />-->
-        <rosparam command="load" file="$(find lift)/config/mk_test.yaml" />
+        <rosparam command="load" file="$(find lift)/config/final_mk.yaml" />
     </group>
 
 

@@ -12,7 +12,7 @@ from lasr_shapely import LasrShapely
 from cv_bridge3 import CvBridge
 from sensor_msgs.msg import PointCloud2
 import cv2
-from tiago_controllers.helpers.nav_map_helpers import is_close_to_object, rank
+# from tiago_controllers.helpers.nav_map_helpers import is_close_to_object, rank
 
 
 
@@ -66,40 +66,40 @@ def estimate_pose(tf, pcl_msg, detection):
     print("response")
     print(response)
     return np.array([response.target_point.point.x, response.target_point.point.y, response.target_point.point.z])
-def perform_detection(yolo,tf, bridge, shapely, pcl_msg, polygon, filter, model="yolov8n-seg.pt"):
-    cv_im = pcl_msg_to_cv2(pcl_msg)
-    img_msg = bridge.cv2_to_imgmsg(cv_im)
-    detections = yolo(img_msg, model, 0.5, 0.3)
-    rospy.loginfo(detections)
-    detections = [(det, estimate_pose(tf, pcl_msg, det)) for det in detections.detected_objects if
-                  det.name in filter]
-    rospy.loginfo(f"All: {[(det.name, pose) for det, pose in detections]}")
-    rospy.loginfo(f"Boundary: {polygon}")
-    satisfied_points = shapely.are_points_in_polygon_2d(polygon, [[pose[0], pose[1]] for (_, pose) in
-                                                                               detections]).inside
-    detections = [detections[i] for i in range(0, len(detections)) if satisfied_points[i]]
-    rospy.loginfo(f"Filtered: {[(det.name, pose) for det, pose in detections]}")
-    print(len(detections))
-    return detections, img_msg
-
-
-# for the comp
-# def perform_detection(default, pcl_msg, polygon, filter, model="yolov8n-seg.pt"):
-#     # def perform_detection(yolo,tf, bridge, shapely, pcl_msg, polygon, filter, model="yolov8n-seg.pt"):
+# def perform_detection(yolo,tf, bridge, shapely, pcl_msg, polygon, filter, model="yolov8n-seg.pt"):
 #     cv_im = pcl_msg_to_cv2(pcl_msg)
-#     img_msg = default.bridge.cv2_to_imgmsg(cv_im)
-#     detections = default.yolo(img_msg, model, 0.5, 0.3)
+#     img_msg = bridge.cv2_to_imgmsg(cv_im)
+#     detections = yolo(img_msg, model, 0.5, 0.3)
 #     rospy.loginfo(detections)
-#     detections = [(det, estimate_pose(default.tf, pcl_msg, det)) for det in detections.detected_objects if
+#     detections = [(det, estimate_pose(tf, pcl_msg, det)) for det in detections.detected_objects if
 #                   det.name in filter]
 #     rospy.loginfo(f"All: {[(det.name, pose) for det, pose in detections]}")
 #     rospy.loginfo(f"Boundary: {polygon}")
-#     satisfied_points = default.shapely.are_points_in_polygon_2d(polygon, [[pose[0], pose[1]] for (_, pose) in
-#                                                                           detections]).inside
+#     satisfied_points = shapely.are_points_in_polygon_2d(polygon, [[pose[0], pose[1]] for (_, pose) in
+#                                                                                detections]).inside
 #     detections = [detections[i] for i in range(0, len(detections)) if satisfied_points[i]]
 #     rospy.loginfo(f"Filtered: {[(det.name, pose) for det, pose in detections]}")
 #     print(len(detections))
 #     return detections, img_msg
+
+
+# for the comp
+def perform_detection(default, pcl_msg, polygon, filter, model="yolov8n-seg.pt"):
+# def perform_detection(yolo,tf, bridge, shapely, pcl_msg, polygon, filter, model="yolov8n-seg.pt"):
+    cv_im = pcl_msg_to_cv2(pcl_msg)
+    img_msg = default.bridge.cv2_to_imgmsg(cv_im)
+    detections = default.yolo(img_msg, model, 0.5, 0.3)
+    rospy.loginfo(detections)
+    detections = [(det, estimate_pose(default.tf, pcl_msg, det)) for det in detections.detected_objects if
+                  det.name in filter]
+    rospy.loginfo(f"All: {[(det.name, pose) for det, pose in detections]}")
+    rospy.loginfo(f"Boundary: {polygon}")
+    satisfied_points = default.shapely.are_points_in_polygon_2d(polygon, [[pose[0], pose[1]] for (_, pose) in
+                                                                          detections]).inside
+    detections = [detections[i] for i in range(0, len(detections)) if satisfied_points[i]]
+    rospy.loginfo(f"Filtered: {[(det.name, pose) for det, pose in detections]}")
+    print(len(detections))
+    return detections, img_msg
 
 
 def debug(image, resp):
@@ -154,57 +154,57 @@ DIST_THRESH = 0.1
 
 def euclidean_distance(point1, point2):
     return np.sqrt((point1[0] - point2[0]) ** 2 + (point1[1] - point2[1]) ** 2 + (point1[2] - point2[2]) ** 2)
-def match_detections_between_frames(det1, det2):
-    matches = {}
-
-    for i, position1 in enumerate(det1):
-        closest_distance = float('inf')
-        closest_position = None
-
-        for j, position2 in enumerate(det2):
-            distance = euclidean_distance(position1, position2)
-            if distance < closest_distance:
-                closest_distance = distance
-                closest_position = position2
-
-        if closest_position is not None:
-            matches[i] = closest_position
-
-    robot_position = [robot_x, robot_y, robot_z]
-
-    for i, position2 in matches.values():
-        vector = np.array(position2) - np.array(det1[i])
-
-        vector_to_robot = np.array(robot_position) - np.array(det1[i])
-        dot_product = np.dot(vector, vector_to_robot)
-
-        if dot_product > 0:
-            print(f"Position {i + 1} in frame 1 faces the robot.")
-        else:
-            print(f"Position {i + 1} in frame 1 does not face the robot.")
-
-    static_pos = []
-    moving_pos = []
-
-    for i, position2 in matches.items():
-        initial_position = det1[i]
-        final_position = position2
-
-        initial_distance_to_robot = euclidean_distance(initial_position, robot_position)
-        final_distance_to_robot = euclidean_distance(final_position, robot_position)
-
-        if final_distance_to_robot < initial_distance_to_robot:
-            # moved closer
-            moving_pos.append(i)
-        elif final_distance_to_robot > initial_distance_to_robot:
-            #mode further
-            pass
-        else:
-            # remained the same
-            static_pos.append(i)
-
-    # face the quat
-    return static_pos, moving_pos
+# def match_detections_between_frames(det1, det2):
+#     matches = {}
+#
+#     for i, position1 in enumerate(det1):
+#         closest_distance = float('inf')
+#         closest_position = None
+#
+#         for j, position2 in enumerate(det2):
+#             distance = euclidean_distance(position1, position2)
+#             if distance < closest_distance:
+#                 closest_distance = distance
+#                 closest_position = position2
+#
+#         if closest_position is not None:
+#             matches[i] = closest_position
+#
+#     robot_position = [robot_x, robot_y, robot_z]
+#
+#     for i, position2 in matches.values():
+#         vector = np.array(position2) - np.array(det1[i])
+#
+#         vector_to_robot = np.array(robot_position) - np.array(det1[i])
+#         dot_product = np.dot(vector, vector_to_robot)
+#
+#         if dot_product > 0:
+#             print(f"Position {i + 1} in frame 1 faces the robot.")
+#         else:
+#             print(f"Position {i + 1} in frame 1 does not face the robot.")
+#
+#     static_pos = []
+#     moving_pos = []
+#
+#     for i, position2 in matches.items():
+#         initial_position = det1[i]
+#         final_position = position2
+#
+#         initial_distance_to_robot = euclidean_distance(initial_position, robot_position)
+#         final_distance_to_robot = euclidean_distance(final_position, robot_position)
+#
+#         if final_distance_to_robot < initial_distance_to_robot:
+#             # moved closer
+#             moving_pos.append(i)
+#         elif final_distance_to_robot > initial_distance_to_robot:
+#             #mode further
+#             pass
+#         else:
+#             # remained the same
+#             static_pos.append(i)
+#
+#     # face the quat
+#     return static_pos, moving_pos
 
 
 def phase1(yolo, tf, bridge, shapely, pcl_msg, polygon, filter, model):
@@ -281,6 +281,22 @@ if __name__ == '__main__':
     #
     # print(pos_people)
     # yolo seg only
+
+    pcl_msg = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
+    polygon = rospy.get_param('test_lift_points')
+    detections, im = perform_detection(yolo, tf, bridge, shapely, pcl_msg, polygon, ["person"], "yolov8n-seg.pt")
+
+    pos_people = []
+    for i, person in detections:
+        print(person)
+        person = person.tolist()
+        print(type(person))
+        pos_people.append([person[0], person[1]])
+
+    num_people = len(detections)
+
+    rospy.set_param("/lift/num_people", num_people)
+    rospy.set_param("/lift/pos_persons", pos_people)
 
     pcl_msg = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
     polygon = rospy.get_param('test_lift_points')
