@@ -8,10 +8,10 @@ import sys
 if __name__ == "__main__":
     rospy.init_node("test_make_order")
     sm = smach.StateMachine(outcomes=['end'])
-    context = Context(sys.argv[1])
+    context = Context(sys.argv[1], sys.argv[2])
     context.current_table = "table0"
     context.tables[context.current_table]["status"] = "currently serving"
-    context.tables[context.current_table]["order"] = ["coffee_cup", "coffee_cup"]
+    context.tables[context.current_table]["order"] = ["coffee", "coffee"]
 
     with sm:
         sm.add('MAKE_ORDER', MakeOrder(context), transitions={'done' : 'WAIT_FOR_ORDER'})

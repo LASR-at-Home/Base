@@ -4,13 +4,14 @@ import json
 import rospy
 from play_motion_msgs.msg import PlayMotionGoal
 import difflib
-from std_msgs.msg import Empty
+from std_msgs.msg import Empty, String
 
 class WaitForOrder(smach.State):
 
     def __init__(self, context):
         smach.StateMachine.__init__(self, outcomes=['done'])
         self.context = context
+        self.tablet_pub = rospy.Publisher("/tablet/screen", String, queue_size=10) 
 
     def listen(self):
         resp = self.context.speech(True)
@@ -30,7 +31,11 @@ class WaitForOrder(smach.State):
 
     def execute(self, userdata):
         if self.context.tablet:
+            if self.context.tablet:
+                self.tablet_pub.publish(String("done"))
             self.context.voice_controller.sync_tts("Please press 'ready' when you are ready for me to check the order.")
+            pm_goal = PlayMotionGoal(motion_name="tablet", skip_planning=True)
+            self.context.play_motion_client.send_goal_and_wait(pm_goal)
             rospy.wait_for_message("/tablet/done", Empty)
             return 'done'
         else:

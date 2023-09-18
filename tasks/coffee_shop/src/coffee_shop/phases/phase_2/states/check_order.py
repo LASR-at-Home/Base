@@ -31,7 +31,8 @@ class CheckOrder(smach.State):
 
     def execute(self, userdata):
         order = self.context.tables[self.context.current_table]["order"]
-
+        pm_goal = PlayMotionGoal(motion_name="back_to_default", skip_planning=True)
+        self.context.play_motion_client.send_goal_and_wait(pm_goal)
         counter_corners = rospy.get_param(f"/counter/cuboid")
         counter_centroid = np.mean(counter_corners, axis=0)
         ph_goal = PointHeadGoal()

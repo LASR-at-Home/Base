@@ -15,6 +15,7 @@ from visualization_msgs.msg import Marker
 import rosservice
 import time
 import random
+from std_msgs.msg import Empty, Int16
 
 class Context:
 
@@ -49,6 +50,13 @@ class Context:
         rospy.loginfo("Got shapely")
         self.bridge = CvBridge()
         rospy.loginfo("CV Bridge")
+
+
+        self.datahub_ping = rospy.Publisher("/datahub/ping", Empty, queue_size=10)
+        self.datahub_start_episode = rospy.Publisher("/datahub/start_episode", Empty, queue_size=10)
+        self.datahub_stop_epsiode = rospy.Publisher("/datahub/stop_episode", Empty, queue_size=10)
+        self.datahub_start_phase = rospy.Publisher("/datahub/start_phase", Int16, queue_size=10)
+        self.datahub_stop_phase = rospy.Publisher("/datahub/stop_phase", Int16, queue_size=10)
 
 
         if not tablet:
@@ -94,16 +102,17 @@ class Context:
 
             mmap_dict = {"vo": {"submap_0": dict()}, "numberOfSubMaps" : 1}
             rospy.loginfo(f"There are {len(data['tables'].keys())}, should be {len(data['tables'].keys()) + 1} VOs")
-
+            count = 0
             for i, table in enumerate(data["tables"].keys()):
                 for j, corner in enumerate(data["tables"][table]["objects_cuboid"]):
-                    vo = f"vo_00{(i*4)+j}"
-                    mmap_dict["vo"]["submap_0"][vo] = ["submap_0", "tables", *corner, 0.0]
+                    vo = f"vo_00{count}"
+                    mmap_dict["vo"]["submap_0"][vo] = ["submap_0", f"table{i}", *corner, 0.0]
+                    count +=1
             for j, corner in enumerate(data["counter"]["cuboid"]):
-                vo = f"vo_00{((i+1)*4) + j}"
+                vo = f"vo_00{count}"
                 mmap_dict["vo"]["submap_0"][vo] = ["submap_0", f"counter", *corner, 0.0]
+                count +=1
             rosparam.upload_params("mmap", mmap_dict)
-
 
         else:
             rospy.logerr("No config_path was given.")
