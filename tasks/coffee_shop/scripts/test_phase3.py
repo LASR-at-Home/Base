@@ -8,7 +8,7 @@ import sys
 if __name__ == "__main__":
     rospy.init_node("test_wait_for_person")
     sm = smach.StateMachine(outcomes=['end'])
-    context = Context(sys.argv[1])
+    context = Context(sys.argv[1],True)
     context.current_table = "table0"
     context.tables[context.current_table]["status"] = "ready"
 
