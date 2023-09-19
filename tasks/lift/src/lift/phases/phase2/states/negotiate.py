@@ -78,22 +78,23 @@ class Negotiate(smach.State):
         else:
             self.default.voice.speak("I am not the closest to the door.")
             self.default.voice.speak("I will wait for you to exit first")
-            rospy.sleep(1)
+            rospy.sleep(5)
 
-        self.default.voice.speak("Should I wait more for you?")
-        self.default.voice.speak("Please say yes or no.")
-        # self.default.voice.speak("Just say 'Tiago, wait' if you need more time.")
-        hear_wait = True
-        count = 0
-        while hear_wait or count < 5:
-            if RASA:
-                hear_wait = self.hear_wait()
-                if hear_wait:
-                    self.default.voice.speak("I will wait more")
-                    rospy.sleep(5)
-                else:
-                    self.default.voice.speak("i am done with waiting")
-                    break
+        # commented after the successful run
+        # self.default.voice.speak("Should I wait more for you?")
+        # self.default.voice.speak("Please say yes or no.")
+        # # self.default.voice.speak("Just say 'Tiago, wait' if you need more time.")
+        # hear_wait = True
+        # count = 0
+        # while hear_wait or count < 5:
+        #     if RASA:
+        #         hear_wait = self.hear_wait()
+        #         if hear_wait:
+        #             self.default.voice.speak("I will wait more")
+        #             rospy.sleep(5)
+        #         else:
+        #             self.default.voice.speak("i am done with waiting")
+        #             break
 
         # untested
         # hear_wait = "yes"

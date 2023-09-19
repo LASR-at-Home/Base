@@ -114,10 +114,10 @@ class ScheduleGoingOut(smach.State):
                 if RASA:
                     hear_wait = self.affirm()
                     if hear_wait == "yes":
-                        self.voice.speak("I will wait more!")
+                        self.default.voice.speak("I will wait more!")
                         rospy.sleep(5)
                     else:
-                        self.voice.speak("I think I've finished waiting!")
+                        self.default.voice.speak("I think I've finished waiting!")
                         break
                     count += 1
 

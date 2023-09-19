@@ -33,24 +33,18 @@ class Encounter(smach.State):
             for person_i in range(len(current)):
                 diffs = list(map(lambda lo: np.linalg.norm(np.array(current[person_i]) - np.array(lo)), previous))
                 indices.append(diffs.index(min(diffs)))
-        #
-        # print("indices")
-        # print(indices)
+
         return indices
 
     def execute(self, userdata):
         self.default.controllers.head_controller.look_straight()
-        # result = self.controllers.base_controller.sync_to_pose(get_pose_from_param('/lift/pose'))
         self.default.controllers.torso_controller.sync_reach_to(0.25)
 
-        # self.default.controllers.head_controller.look_straight()
-        # self.default.controllers.head_controller.look_right()
-        # self.default.controllers.head_controller.look_left()
         movement = [self.default.controllers.head_controller.look_straight,
                     self.default.controllers.head_controller.look_right,
                     self.default.controllers.head_controller.look_left]
 
-        self.default.voice.speak("Hi")
+        self.default.voice.speak("This is the encounter situation. I will be looking for someone who is excited to see me!!")
 
         pose = get_pose_from_param("/phase3_lift/pose")
         polygon = rospy.get_param("/corners_arena")
@@ -109,6 +103,8 @@ class Encounter(smach.State):
 
         self.default.controllers.torso_controller.sync_reach_to(0.2)
         self.default.controllers.head_controller.look_straight()
+
+        self.default.voice.speak("You seem very excited to see me. I am also excited to see you.")
         return 'success'
 
 if __name__ == '__main__':
