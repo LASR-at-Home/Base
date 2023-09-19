@@ -17,6 +17,7 @@ class CheckOrder(smach.State):
     def __init__(self, context):
         smach.State.__init__(self, outcomes=['correct', 'incorrect'])
         self.context = context
+        self.n_checks = 0
 
     def estimate_pose(self, pcl_msg, detection):
         centroid_xyz = seg_to_centroid(pcl_msg, np.array(detection.xyseg))
@@ -30,6 +31,11 @@ class CheckOrder(smach.State):
         return np.array([response.target_point.point.x, response.target_point.point.y, response.target_point.point.z])
 
     def execute(self, userdata):
+
+        if self.n_checks == 3:
+            self.context.voice_controller.sync_tts("I think I have somethig in my eyes, I'm struggling to check the order. I trust you that the order is correct!")
+            return 'correct'
+
         order = self.context.tables[self.context.current_table]["order"]
         pm_goal = PlayMotionGoal(motion_name="back_to_default", skip_planning=True)
         self.context.play_motion_client.send_goal_and_wait(pm_goal)
@@ -56,6 +62,8 @@ class CheckOrder(smach.State):
 
         given_order = [detection[0].name for detection in given_order]
     
+        self.n_checks += 1
+
         if sorted(order) == sorted(given_order):
             return 'correct'
 
