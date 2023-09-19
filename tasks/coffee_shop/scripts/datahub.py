@@ -18,7 +18,7 @@ def start_phase(msg):
     requests.post(DATAHUB_API, json={"RobotId" : ROBOT_ID, "Competition" : "ERL", "Action" : "STARTPHASE", "Episode" : 1, "Phase" : msg.data})
 
 def stop_phase(msg):
-    requests.post(DATAHUB_API, json={"RobotId" : ROBOT_ID, "Competition" : "ERL", "Action" : "STARTPHASE", "Episode" : 1, "Phase" : msg.data})
+    requests.post(DATAHUB_API, json={"RobotId" : ROBOT_ID, "Competition" : "ERL", "Action" : "STOPPHASE", "Episode" : 1, "Phase" : msg.data})
 
 def ping(_):
     requests.post(DATAHUB_API, json={"RobotId" : ROBOT_ID, "Competition" : "ERL", "Action" : "PING"})
