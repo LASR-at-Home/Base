@@ -39,12 +39,16 @@ class Encounter(smach.State):
         return indices
 
     def execute(self, userdata):
+        self.default.controllers.head_controller.look_straight()
         # result = self.controllers.base_controller.sync_to_pose(get_pose_from_param('/lift/pose'))
         self.default.controllers.torso_controller.sync_reach_to(0.25)
 
         # self.default.controllers.head_controller.look_straight()
         # self.default.controllers.head_controller.look_right()
         # self.default.controllers.head_controller.look_left()
+        movement = [self.default.controllers.head_controller.look_straight,
+                    self.default.controllers.head_controller.look_right,
+                    self.default.controllers.head_controller.look_left]
 
         self.default.voice.speak("Hi")
 
@@ -53,7 +57,10 @@ class Encounter(smach.State):
         headPoint = None
         is_found = False
 
+        currentFrame = 0
+        FRAME_PER_FACE = 10
         frames_locations = []
+        current_head_pose = 0
 
         while not is_found:
             rospy.sleep(2)
@@ -90,10 +97,18 @@ class Encounter(smach.State):
             if len(frames_locations) > 1:
                 frames_locations = frames_locations[1:]
 
+            if currentFrame >= FRAME_PER_FACE:
+                currentFrame = 0
+                current_head_pose += 1
+                movement[current_head_pose]()
+            else:
+                currentFrame += 1
+
         print(headPoint)
         self.default.controllers.base_controller.sync_face_to(headPoint[0], headPoint[1])
 
         self.default.controllers.torso_controller.sync_reach_to(0.2)
+        self.default.controllers.head_controller.look_straight()
         return 'success'
 
 if __name__ == '__main__':
