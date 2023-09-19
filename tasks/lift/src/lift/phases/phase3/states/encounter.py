@@ -39,6 +39,18 @@ class Encounter(smach.State):
         return indices
 
     def execute(self, userdata):
+
+        '''
+        For each head motion:
+        - Create a function that gives you 2-5 frames (sleep for some time inbetween calls)
+        - Function returns a list of positions of people it detects
+        - If the list is empty, return to the original position
+        - If the list is not empty, calculate the vector between the first and second frame
+        - If the vector is greater than threshold, the person is moving, exit as success
+        - If not, move on to the next motion
+        '''
+
+
         # result = self.controllers.base_controller.sync_to_pose(get_pose_from_param('/lift/pose'))
         self.default.controllers.torso_controller.sync_reach_to(0.25)
 
