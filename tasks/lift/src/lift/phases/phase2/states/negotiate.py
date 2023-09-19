@@ -78,7 +78,7 @@ class Negotiate(smach.State):
         else:
             self.default.voice.speak("I am not the closest to the door.")
             self.default.voice.speak("I will wait for you to exit first")
-            rospy.sleep(5)
+            rospy.sleep(10)
 
         # commented after the successful run
         # self.default.voice.speak("Should I wait more for you?")
@@ -108,26 +108,26 @@ class Negotiate(smach.State):
         #         else:
         #             self.voice.speak("i am done with waiting")
         #             break
+        #
+        #     else:
+        #         req = AudioAndTextInteractionRequest()
+        #         req.action = "BUTTON_PRESSED"
+        #         req.subaction = "confirm_button"
+        #         req.query_text = "SOUND:PLAYING:PLEASE"
+        #         resp = self.default.speech(req)
+        #         rospy.logwarn('the response of input to loc srv is: {}'.format(resp))
+        #         if resp.result == 'yes':
+        #             self.default.voice.speak("I will wait more")
+        #             rospy.sleep(5)
+        #         else:
+        #             self.default.voice.speak("i am done with waiting")
+        #             break
 
-            else:
-                req = AudioAndTextInteractionRequest()
-                req.action = "BUTTON_PRESSED"
-                req.subaction = "confirm_button"
-                req.query_text = "SOUND:PLAYING:PLEASE"
-                resp = self.default.speech(req)
-                rospy.logwarn('the response of input to loc srv is: {}'.format(resp))
-                if resp.result == 'yes':
-                    self.default.voice.speak("I will wait more")
-                    rospy.sleep(5)
-                else:
-                    self.default.voice.speak("i am done with waiting")
-                    break
+            # count += 1
+            # rospy.sleep(0.5)
 
-            count += 1
-            rospy.sleep(0.5)
-
-        if count >= 5:
-            return 'failed'
+        # if count >= 5:
+        #     return 'failed'
 
 
         if is_closer_to_door:

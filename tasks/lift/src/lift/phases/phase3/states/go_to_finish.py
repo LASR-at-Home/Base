@@ -15,6 +15,7 @@ class GoToFinish(smach.State):
     def execute(self, userdata):
         rospy.loginfo('Executing state GoToFinish')
         self.default.controllers.base_controller.sync_to_pose(get_pose_from_param('/starting/pose'))
+        self.default.voice.speak("Thank you for the ride!")
 
         # self.default.datahub_stop_phase.publish(Int16(3))
         # self.default.datahub_stop_episode.publish(Empty())

@@ -154,3 +154,11 @@ phase3_lift:
 
 #done
 door_detected_official: True
+
+
+# done
+phase2:
+  pose:
+    position: {  x: 5.69486485433, y: 1.59074780667, z: 0.0}
+    orientation: { x: 0.0, y: 0.0, z: 0.999060178219, w: 0.0433446686099}
+
