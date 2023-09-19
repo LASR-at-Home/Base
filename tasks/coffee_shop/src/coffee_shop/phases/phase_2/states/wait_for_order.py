@@ -31,7 +31,7 @@ class WaitForOrder(smach.State):
 
     def execute(self, userdata):
         if self.context.tablet:
-            self.context.voice_controller.sync_tts("Please press 'ready' when you are ready for me to check the order.")
+            self.context.voice_controller.sync_tts("Please press 'done' when you are ready for me to check the order.")
             pm_goal = PlayMotionGoal(motion_name="tablet", skip_planning=True)
             self.context.play_motion_client.send_goal_and_wait(pm_goal)
             self.tablet_pub.publish(String("done"))
