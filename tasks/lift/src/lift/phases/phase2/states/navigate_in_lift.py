@@ -37,41 +37,44 @@ class NavigateInLift(smach.State):
         w = Waypoint()
 
         clear_costmap()
-        status = self.default.controllers.base_controller.ensure_sync_to_pose(get_pose_from_param('/wait_in_front_lift_centre/pose'))
-        # rospy.loginfo("Status of the robot in front of the lift is {}".format(status))
+        is_from_schedule = rospy.get_param("/from_schedule")
 
-        # get the lift information
-        warped, analytics, M = w.get_lift_information(is_lift=True, is_sim=True)
+        if not is_from_schedule:
+            status = self.default.controllers.base_controller.ensure_sync_to_pose(get_pose_from_param('/wait_in_front_lift_centre/pose'))
+            # rospy.loginfo("Status of the robot in front of the lift is {}".format(status))
 
-        self.safe_clusters_info(analytics, w, M)
+            # get the lift information
+            warped, analytics, M = w.get_lift_information(is_lift=True, is_sim=True)
 
-        if analytics[1] == 0:
-            # if the lift is empty
-            # go to predetermined place
-            state = self.default.controllers.base_controller.ensure_sync_to_pose(get_pose_from_param('/lift_centre/pose'))
-            return 'success'
+            self.safe_clusters_info(analytics, w, M)
 
-        # get the narrow space navigation service
-        s = NarrowSpaceNavSrv()
-        occupancy_array = warped
-        thresh = np.mean(occupancy_array.flatten())
-        occupancy_array[occupancy_array < thresh] = 0  # Black regions - Free space
-        occupancy_array[occupancy_array >= thresh] = 100  # White regions - Occupied
+            if analytics[1] == 0:
+                # if the lift is empty
+                # go to predetermined place
+                state = self.default.controllers.base_controller.ensure_sync_to_pose(get_pose_from_param('/lift_centre/pose'))
+                return 'success'
 
-        # the height map
-        # get the min point to go to
-        p = s.choose_target_point(occupancy_array)
-        rospy.loginfo("The point to go to is {}".format(p))
-        # get the global point
-        global_points = w.local_to_global_points(M=M, points=p, is_lift=True)
+            # get the narrow space navigation service
+            s = NarrowSpaceNavSrv()
+            occupancy_array = warped
+            thresh = np.mean(occupancy_array.flatten())
+            occupancy_array[occupancy_array < thresh] = 0  # Black regions - Free space
+            occupancy_array[occupancy_array >= thresh] = 100  # White regions - Occupied
 
-        # get tiago there
-        p = Pose()
-        p.position.x = global_points[0][0]
-        p.position.y = global_points[0][1]
-        p.orientation.w = 1
-        self.default.controllers.base_controller.ensure_sync_to_pose(p)
+            # the height map
+            # get the min point to go to
+            p = s.choose_target_point(occupancy_array)
+            rospy.loginfo("The point to go to is {}".format(p))
+            # get the global point
+            global_points = w.local_to_global_points(M=M, points=p, is_lift=True)
 
-        self.default.voice.speak("I have arrived at the lift.")
+            # get tiago there
+            p = Pose()
+            p.position.x = global_points[0][0]
+            p.position.y = global_points[0][1]
+            p.orientation.w = 1
+            self.default.controllers.base_controller.ensure_sync_to_pose(p)
+
+            self.default.voice.speak("I have arrived at the lift.")
 
         return 'success'

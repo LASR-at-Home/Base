@@ -81,6 +81,8 @@ class WaitForPeople(smach.State):
 
     def execute(self, userdata):
         # wait and ask
+
+        rospy.set_param("/from_schedule", False)
         self.default.voice.speak("Exciting stuff, we are going to the lift! But let me aks you something first.")
         self.default.voice.speak("How many people are thinking to go in the lift?")
         self.default.voice.speak("Please answer with a number of people.")
@@ -119,7 +121,9 @@ class WaitForPeople(smach.State):
 
         polygon = rospy.get_param('test_lift_points')
         pcl_msg = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
-        detections, im = perform_detection(self.default, pcl_msg, polygon, ["person"], "yolov8n-seg.pt")
+        detections, im = perform_detection(self.default, pcl_msg, None, ["person"], "yolov8n-seg.pt")
+        print("len detections")
+        print(len(detections))
 
 
         self.safe_seg_info(detections)

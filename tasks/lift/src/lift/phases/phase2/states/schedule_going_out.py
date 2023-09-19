@@ -72,7 +72,7 @@ class ScheduleGoingOut(smach.State):
 
     def execute(self, userdata):
         self.default.voice.speak("I know there are {} people in the lift".format(rospy.get_param("/lift/num_clusters")))
-
+        print("rank")
         print(rank(points_name="/lift/pos_persons"))
         is_robot_closest_rank = self.is_anyone_in_front_of_me()
         # is_robot_closest_rank = rank(points_name="/lift/pos_persons") or self.is_anyone_in_front_of_me()
@@ -94,32 +94,32 @@ class ScheduleGoingOut(smach.State):
             rospy.sleep(2)
             self.default.voice.speak("Should I wait more for you?")
             # hear
-            hear_wait = True
-            count = 0
-            while hear_wait and count < 5:
-                if RASA:
-                    hear_wait = self.hear_wait()
-                    if hear_wait:
-                        self.default.voice.speak("I will wait more")
-                        rospy.sleep(5)
-                    else:
-                        self.default.voice.speak("i am done with waiting")
-                        break
-                    count += 1
-
-            # untested
-            # hear_wait = "yes"
+            # hear_wait = True
             # count = 0
             # while hear_wait and count < 5:
             #     if RASA:
-            #         hear_wait = self.affirm()
-            #         if hear_wait == "yes":
-            #             self.voice.speak("I will wait more!")
+            #         hear_wait = self.hear_wait()
+            #         if hear_wait:
+            #             self.default.voice.speak("I will wait more")
             #             rospy.sleep(5)
             #         else:
-            #             self.voice.speak("I think I've finished waiting!")
+            #             self.default.voice.speak("i am done with waiting")
             #             break
             #         count += 1
+
+            # untested
+            hear_wait = "yes"
+            count = 0
+            while hear_wait and count < 5:
+                if RASA:
+                    hear_wait = self.affirm()
+                    if hear_wait == "yes":
+                        self.voice.speak("I will wait more!")
+                        rospy.sleep(5)
+                    else:
+                        self.voice.speak("I think I've finished waiting!")
+                        break
+                    count += 1
 
 
 
@@ -128,4 +128,5 @@ class ScheduleGoingOut(smach.State):
         else:
             self.default.voice.speak("I am not the closest to the door.")
             self.default.voice.speak("I will wait inside the lift because this is not my floor")
+            rospy.set_param("/from_schedule", True)
             return 'success'

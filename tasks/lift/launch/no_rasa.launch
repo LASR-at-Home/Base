@@ -59,8 +59,11 @@
     <node pkg="lasr_perception_server" name="perception_server" type="perception_server.py"/>
 
 
-    <!--      Yousef     -->
+    <!--      Phase 3     -->
     <node pkg="object_interest_tracking" name="object_interest_tracking" type="detect_interest_srv.py"/>
+
+    <!--     Datahub    -->
+    <node pkg="lift" type="datahub.py" name="datahub"/>
 
 
 </launch>

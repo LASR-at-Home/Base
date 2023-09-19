@@ -74,7 +74,7 @@ class Negotiate(smach.State):
             # go to centre waiting area
             self.default.voice.speak("I will wait by the lift for you.")
             # TODO: here maybe switch to the wait_centre
-            res = self.default.controllers.base_controller.sync_to_pose(get_pose_from_param('/start/pose'))
+            res = self.default.controllers.base_controller.sync_to_pose(get_pose_from_param('/wait/pose'))
         else:
             self.default.voice.speak("I am not the closest to the door.")
             self.default.voice.speak("I will wait for you to exit first")

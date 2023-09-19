@@ -91,13 +91,18 @@ def perform_detection(default, pcl_msg, polygon, filter, model="yolov8n-seg.pt")
     # rospy.loginfo(detections)
     detections = [(det, estimate_pose(default.tf, pcl_msg, det)) for det in detections.detected_objects if
                   det.name in filter]
+
     # rospy.loginfo(f"All: {[(det.name, pose) for det, pose in detections]}")
     # rospy.loginfo(f"Boundary: {polygon}")
-    satisfied_points = default.shapely.are_points_in_polygon_2d(polygon, [[pose[0], pose[1]] for (_, pose) in
-                                                                          detections]).inside
-    detections = [detections[i] for i in range(0, len(detections)) if satisfied_points[i]]
-    # rospy.loginfo(f"Filtered: {[(det.name, pose) for det, pose in detections]}")
-    # print(len(detections))
+    if polygon is None:
+        return detections, img_msg
+    else:
+        satisfied_points = default.shapely.are_points_in_polygon_2d(polygon, [[pose[0], pose[1]] for (_, pose) in
+                                                                              detections]).inside
+        detections = [detections[i] for i in range(0, len(detections)) if satisfied_points[i]]
+    # rospy.loginfo(f"Filtoprintered: {[(det.name, pose) for det, pose in detections]}")
+    print("len detections --->")
+    print(len(detections))
     return detections, img_msg
 
 

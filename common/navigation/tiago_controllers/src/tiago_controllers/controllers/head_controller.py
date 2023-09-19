@@ -77,10 +77,10 @@ class HeadController:
         self.async_reach_to(0.0, -1.0)
 
     def look_right(self):
-        self.async_reach_to(-1,-1.0)
+        self.async_reach_to(-1,0.0)
 
     def look_left(self):
-        self.async_reach_to(1, -1.0)
+        self.async_reach_to(1, 0.0)
 
 if __name__ == '__main__':
     rospy.init_node("head_test", anonymous=True)

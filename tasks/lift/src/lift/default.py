@@ -12,9 +12,10 @@ from tf_module.srv import BaseTransformRequest, ApplyTransformRequest, LatestTra
 
 from cv_bridge3 import CvBridge
 from lasr_shapely import LasrShapely
+from std_msgs.msg import Int16, Empty
 
 
-rasa = False
+rasa = True
 
 class Default:
     def __init__(self):
@@ -33,7 +34,15 @@ class Default:
         self.cmd = CmdVelController()
         rospy.loginfo("Voice is here")
 
+        # self.datahub_ping = rospy.Publisher("/datahub/ping", Empty, queue_size=10)
+        # self.datahub_start_episode = rospy.Publisher("/datahub/start_episode", Empty, queue_size=10)
+        # self.datahub_stop_epsiode = rospy.Publisher("/datahub/stop_episode", Empty, queue_size=10)
+        # self.datahub_start_phase = rospy.Publisher("/datahub/start_phase", Int16, queue_size=10)
+        # self.datahub_stop_phase = rospy.Publisher("/datahub/stop_phase", Int16, queue_size=10)
+
+
         self.tf = rospy.ServiceProxy('tf_transform', TfTransform)
+        print("TF is here")
         self.tf_base = rospy.ServiceProxy('base_transform', BaseTransform)
         self.tf_latest = rospy.ServiceProxy('latest_transform', LatestTransform)
         self.tf_apply = rospy.ServiceProxy('apply_transform', ApplyTransform)
@@ -43,8 +52,8 @@ class Default:
             self.speech = rospy.ServiceProxy("/lasr_speech/transcribe_and_parse", Speech)
         else:
             pass
-            # rospy.loginfo("SPEECH Dialogflow is here")
-            # self.speech = rospy.ServiceProxy("/interaction_module", AudioAndTextInteraction)
+            rospy.loginfo("SPEECH Dialogflow is here")
+            self.speech = rospy.ServiceProxy("/interaction_module", AudioAndTextInteraction)
 
         if not rospy.get_published_topics(namespace='/pal_head_manager'):
             rospy.loginfo("Is SIM ---> True")
