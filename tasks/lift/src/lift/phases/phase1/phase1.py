@@ -1,5 +1,5 @@
 import smach
-from .states import SpeakWithGroup, StartPhase1
+from .states import  StartPhase1
 
 class Phase1(smach.StateMachine):
     def __init__(self, default):

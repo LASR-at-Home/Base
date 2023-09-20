@@ -13,6 +13,7 @@ from tiago_controllers.helpers.nav_map_helpers import is_close_to_object, rank
 from lift.defaults import TEST, PLOT_SHOW, PLOT_SAVE, DEBUG_PATH, DEBUG, RASA
 from lasr_object_detection_yolo.detect_objects_v8 import detect_objects, perform_detection, debug
 from sensor_msgs.msg import PointCloud2
+from speech_helper import listen, affirm, hear_wait
 
 
 class Negotiate(smach.State):
@@ -25,45 +26,6 @@ class Negotiate(smach.State):
             'look_right': self.default.controllers.head_controller.look_right,
             'look_left': self.default.controllers.head_controller.look_left
         }
-
-    def listen(self):
-        resp = self.default.speech()
-        if not resp.success:
-            self.default.voice.speak("Sorry, I didn't get that")
-            return self.listen()
-        resp = json.loads(resp.json_response)
-        rospy.loginfo(resp)
-        return resp
-
-    def affirm(self):
-        resp = self.listen()
-        if resp['intent']['name'] != 'affirm':
-            self.default.voice.speak("Sorry, I didn't get that, please say yes or no")
-            return self.affirm()
-        choices = resp["entities"].get("choice", None)
-        if choices is None:
-            self.default.voice.speak("Sorry, I didn't get that")
-            return self.affirm()
-        choice = choices[0]["value"].lower()
-        if choice not in ["yes", "no"]:
-            self.default.voice.speak("Sorry, I didn't get that")
-            return self.affirm()
-        return choice
-
-    def hear_wait(self):
-        resp = self.listen()
-
-        if resp["intent"]["name"] == "negotiate_lift":
-            # I'm going to wait
-            wait = resp["entities"].get("wait_command", [])
-            if not wait:
-                self.default.voice.speak("Sorry, did you say wait? I didn't understand.")
-                return self.hear_wait()
-            else:
-                return True
-        else:
-
-            return False
 
     def is_anyone_in_front_of_me(self):
         detections = 0
