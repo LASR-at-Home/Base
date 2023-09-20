@@ -27,10 +27,6 @@ class FacePerson(smach.State):
     def search_for_person(self):
         for point in self.search_points:
             self.default.controllers.head_controller.sync_reach_to(point[0], point[1])
-            # polygon = rospy.get_param('test_lift_points')
-            # pcl_msg = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
-            # detections, im = perform_detection(self.yolo, tf, bridge, shapely, pcl_msg, polygon, ["person"], "yolov8n-seg.pt")
-            # debug(im, detections)
             people = detect_objects(["person"])
             if people:
                 return people[0], point[0]

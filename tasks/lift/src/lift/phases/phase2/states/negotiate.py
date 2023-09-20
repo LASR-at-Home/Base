@@ -19,8 +19,6 @@ class Negotiate(smach.State):
     def __init__(self, default):
         smach.State.__init__(self, outcomes=['success', 'failed'])
         self.default = default
-        # self.voice = voice
-        # self.speech = speech
 
         self.head_motions = {
             'look_straight': self.default.controllers.head_controller.look_straight,
@@ -38,10 +36,7 @@ class Negotiate(smach.State):
         return resp
 
     def affirm(self):
-        # Listen to person:
         resp = self.listen()
-        # Response in intent can either be yes or no.
-        # Making sure that the response belongs to "affirm", not any other intent:
         if resp['intent']['name'] != 'affirm':
             self.default.voice.speak("Sorry, I didn't get that, please say yes or no")
             return self.affirm()
@@ -84,11 +79,9 @@ class Negotiate(smach.State):
         return False
 
     def execute(self, userdata):
-        # call and count the people objects
         self.default.voice.speak("Let's negotiate who is going out first")
         is_closer_to_door = not self.is_anyone_in_front_of_me()
 
-        # is_closer_to_door = rank()
         if is_closer_to_door:
             self.default.voice.speak("I am the closest to the door so I have to exit first")
             # clear costmap
@@ -101,55 +94,6 @@ class Negotiate(smach.State):
             self.default.voice.speak("I am not the closest to the door.")
             self.default.voice.speak("I will wait for you to exit first")
             rospy.sleep(10)
-
-        # commented after the successful run
-        # self.default.voice.speak("Should I wait more for you?")
-        # self.default.voice.speak("Please say yes or no.")
-        # # self.default.voice.speak("Just say 'Tiago, wait' if you need more time.")
-        # hear_wait = True
-        # count = 0
-        # while hear_wait or count < 5:
-        #     if RASA:
-        #         hear_wait = self.hear_wait()
-        #         if hear_wait:
-        #             self.default.voice.speak("I will wait more")
-        #             rospy.sleep(5)
-        #         else:
-        #             self.default.voice.speak("i am done with waiting")
-        #             break
-
-        # untested
-        # hear_wait = "yes"
-        # count = 0
-        # while (hear_wait == "yes") or count < 5:
-        #     if RASA:
-        #         hear_wait = self.affirm()
-        #         if hear_wait == "yes":
-        #             self.voice.speak("I will wait more")
-        #             rospy.sleep(5)
-        #         else:
-        #             self.voice.speak("i am done with waiting")
-        #             break
-        #
-        #     else:
-        #         req = AudioAndTextInteractionRequest()
-        #         req.action = "BUTTON_PRESSED"
-        #         req.subaction = "confirm_button"
-        #         req.query_text = "SOUND:PLAYING:PLEASE"
-        #         resp = self.default.speech(req)
-        #         rospy.logwarn('the response of input to loc srv is: {}'.format(resp))
-        #         if resp.result == 'yes':
-        #             self.default.voice.speak("I will wait more")
-        #             rospy.sleep(5)
-        #         else:
-        #             self.default.voice.speak("i am done with waiting")
-        #             break
-
-            # count += 1
-            # rospy.sleep(0.5)
-
-        # if count >= 5:
-        #     return 'failed'
 
 
         if is_closer_to_door:

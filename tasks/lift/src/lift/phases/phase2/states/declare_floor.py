@@ -21,10 +21,7 @@ class DeclareFloor(smach.State):
         return resp
 
     def affirm(self):
-        # Listen to person:
         resp = self.listen()
-        # Response in intent can either be yes or no.
-        # Making sure that the response belongs to "affirm", not any other intent:
         if resp['intent']['name'] != 'affirm':
             self.default.voice.speak("Sorry, I didn't get that, please say yes or no")
             return self.affirm()
@@ -51,32 +48,5 @@ class DeclareFloor(smach.State):
 
         return 'success'
 
-        # from lab
-        # self.default.voice.speak(" Is the button selected?")
-        # self.default.voice.speak("Please answer yes or no.")
-        # rospy.sleep(1)
-        # if RASA:
-        #     answer = self.affirm()
-        #     print("Answer from Speech: ", answer)
-        #     #rasa get answer:
-        #
-        # else:
-        #     req = AudioAndTextInteractionRequest()
-        #     req.action = "BUTTON_PRESSED"
-        #     req.subaction = "confirm_button"
-        #     req.query_text = "SOUND:PLAYING:PLEASE"
-        #     resp = self.default.speech(req)
-        #     answer = resp.result
-
-        # self.default.voice.speak("I got your answer.")
-        # # get the answer
-        # if answer == 'yes':
-        #     self.default.voice.speak("Great! Thank you for pressing the button!")
-        #     self.default.controllers.torso_controller.sync_reach_to(0.2)
-        #     return 'success'
-        # else:
-        #     self.default.voice.speak("I will wait more")
-        #     rospy.sleep(1)
-        #     return 'failed'
 
 

@@ -67,12 +67,6 @@ class CheckOpenDoor(smach.State):
             random.shuffle(used_jokes)
         return used_jokes.pop()
 
-    # @staticmethod
-    # def door_detected_callback(msg):
-    #     global door_detected
-    #     print("door detected {}".format(msg.data))
-    #     door_detected = msg.data
-
     def execute(self, userdata):
         door_detected = True
         in_lift = rospy.get_param("/in_lift/status")
@@ -118,7 +112,6 @@ class CheckOpenDoor(smach.State):
 
             if not door_detected:
                 self.default.voice.speak("Great stuff! The door is open.")
-                # self.default.voice.speak("The door is open. I will give the way to the humans now, because I am a good robot.")
                 return 'success'
 
             self.default.voice.speak("I am still waiting for the door to open")

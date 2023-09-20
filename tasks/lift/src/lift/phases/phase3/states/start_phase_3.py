@@ -9,11 +9,7 @@ class StartPhase3(smach.State):
         self.default = default
 
     def execute(self, userdata):
-        # self.default.datahub_stop_phase.publish(Int16(2))
-        if rospy.get_param("/is_simulation"):
-            rospy.loginfo(" A final update - I am starting Phase 3.")
-        else:
-            self.default.voice.sync_tts(" A final update - I am starting Phase 3.")
+        self.default.voice.speak("A final update - I am starting Phase 3.")
 
         res = self.default.controllers.base_controller.sync_to_pose(get_pose_from_param('/wait/pose'))
 

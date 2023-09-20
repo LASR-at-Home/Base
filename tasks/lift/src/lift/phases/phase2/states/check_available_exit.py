@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 import smach
 import rospy
-from interaction_module.srv import AudioAndTextInteraction, AudioAndTextInteractionRequest, \
-    AudioAndTextInteractionResponse
 from lift.defaults import TEST, PLOT_SHOW, PLOT_SAVE, DEBUG_PATH, DEBUG, RASA
 import json
 class CheckAvailableExit(smach.State):
@@ -20,10 +18,7 @@ class CheckAvailableExit(smach.State):
         return resp
 
     def affirm(self):
-        #Listen to person:
         resp = self.listen()
-        #Response in intent can either be yes or no.
-        #Making sure that the response belongs to "affirm", not any other intent: 
         if resp['intent']['name'] != 'affirm':
             self.default.voice.speak("Sorry, I didn't get that, please say yes or no")
             return self.affirm()
@@ -37,20 +32,6 @@ class CheckAvailableExit(smach.State):
             return self.affirm()
         return choice 
 
-    # def get_floor(self):
-    #     resp = self.listen()
-    #     if resp["intent"]["name"] != "check_floor_number":
-    #         self.default.voice.speak("Sorry, I misheard you")
-    #         return self.get_floor()
-    #     floor = resp["entities"].get("floor",[])
-    #     if not floor:
-    #         self.default.voice.speak("Sorry, I can't figure out that we're talking about floors")
-    #         return self.get_floor()
-    #     floor_number = int(floor[0]["value"])
-    #     self.default.voice.speak("I heard that we are on floor {}".format(floor_number))
-    #     return floor_number
-
-    # untested
     def get_floor(self):
         resp = self.listen()
         if resp["intent"]["name"] != "check_floor_number":
@@ -63,7 +44,6 @@ class CheckAvailableExit(smach.State):
         floor_number = int(floor[0]["value"])
         self.default.voice.speak("I heard that we are on floor {}".format(floor_number))
         self.default.voice.speak("Is this correct? Please answer yes, that is correct or no, that is wrong")
-        # self.default.voice.speak("Is this correct? Please answer yes or no")
 
         answer = self.affirm()
         if answer == "yes":
@@ -77,7 +57,6 @@ class CheckAvailableExit(smach.State):
         if floor == 0:
             floor = 1
 
-        # ensure the head is straight
         self.default.controllers.head_controller.look_straight()
 
         self.default.voice.speak("I really really want to go to the floor {}.".format(floor))
@@ -91,21 +70,7 @@ class CheckAvailableExit(smach.State):
 
             if (floor_number==floor):
                 answer = "yes"
-        else:
-            self.default.voice.speak("Is this the floor {}?".format(floor))
-            # get the answer
-            req = AudioAndTextInteractionRequest()
-            req.action = "BUTTON_PRESSED"
-            req.subaction = "confirm_button"
-            req.query_text = "SOUND:PLAYING:PLEASE"
-            resp = self.default.speech(req)
-            rospy.loginfo("The response of asking the people in check available exit is {}".format(resp.result))
-            answer = resp.result
 
-
-        
-
-        # get the answer
         new_answer = "no"
         if answer == "yes":
             self.default.voice.speak("Great! Let's finally exit to floor {}.".format(floor))
@@ -118,15 +83,6 @@ class CheckAvailableExit(smach.State):
                     new_answer = self.affirm()
                 except:
                     new_answer = "yes"
-            else:
-                # get the new_answer
-                req = AudioAndTextInteractionRequest()
-                req.action = "BUTTON_PRESSED"
-                req.subaction = "confirm_button"
-                req.query_text = "SOUND:PLAYING:PLEASE"
-                resp = self.default.speech(req)
-                new_answer = resp.result
-                rospy.loginfo("The response of asking the people in check available exit  new_answer is {}".format(resp.result))
 
             if new_answer == "yes":
                 self.default.voice.speak("Great! Let's see how this will happen.")

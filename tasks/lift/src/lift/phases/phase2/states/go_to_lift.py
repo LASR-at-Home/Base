@@ -93,6 +93,8 @@ class GoToLift(smach.State):
             print(type(keypoint))
 
 
+        # self.default.voice.speak("Let me talk to the audience.")
+
 
         # transform to the global frame
         global_points = w.local_to_global_points(M=M, points=keypoint, is_lift=True)
@@ -105,7 +107,6 @@ class GoToLift(smach.State):
         p.orientation.w = 0.8056
 
         state = self.default.controllers.base_controller.sync_to_pose(p)
-        self.default.voice.speak("Let me talk to the audience.")
 
 
         if DEBUG > 3:
@@ -113,7 +114,6 @@ class GoToLift(smach.State):
 
         # ensure sync to pose
         if not state:
-            # if it fails go to predetermined place
             state = self.default.controllers.base_controller.ensure_sync_to_pose(get_pose_from_param('/wait_centre/pose'))
             rospy.loginfo("The sync to pose res in go to lift wait centre is {}".format(state))
 

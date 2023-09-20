@@ -34,13 +34,6 @@ class Default:
         self.cmd = CmdVelController()
         rospy.loginfo("Voice is here")
 
-        # self.datahub_ping = rospy.Publisher("/datahub/ping", Empty, queue_size=10)
-        # self.datahub_start_episode = rospy.Publisher("/datahub/start_episode", Empty, queue_size=10)
-        # self.datahub_stop_epsiode = rospy.Publisher("/datahub/stop_episode", Empty, queue_size=10)
-        # self.datahub_start_phase = rospy.Publisher("/datahub/start_phase", Int16, queue_size=10)
-        # self.datahub_stop_phase = rospy.Publisher("/datahub/stop_phase", Int16, queue_size=10)
-
-
         self.tf = rospy.ServiceProxy('tf_transform', TfTransform)
         print("TF is here")
         self.tf_base = rospy.ServiceProxy('base_transform', BaseTransform)
