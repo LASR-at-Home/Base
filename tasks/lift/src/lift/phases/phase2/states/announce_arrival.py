@@ -7,5 +7,6 @@ class AnnounceArrival(smach.State):
         self.default = default
 
     def execute(self, userdata):
-        self.default.voice.speak("For your information - I arrived at the lift. Waiting for the doors to open")
+        self.default.voice.speak("I arrived at the lift.")
+
         return 'success'

@@ -18,6 +18,11 @@ class ScheduleGoingOut(smach.State):
     def __init__(self, default):
         smach.State.__init__(self, outcomes=['success', 'failed'])
         self.default = default
+        self.head_motions = {
+            'look_straight': self.default.controllers.head_controller.look_straight,
+            'look_right': self.default.controllers.head_controller.look_right,
+            'look_left': self.default.controllers.head_controller.look_left
+        }
 
     def listen(self):
         resp = self.default.speech()
@@ -62,29 +67,43 @@ class ScheduleGoingOut(smach.State):
         return choice
 
 
-
     def is_anyone_in_front_of_me(self):
-        pcl_msg = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
-        polygon = rospy.get_param('/corners_arena')
-        detections, im = perform_detection(self.default, pcl_msg, polygon, ['person'])
-        return len(detections) > 0
+        detections = 0
+        for motion in self.head_motions:
+            self.head_motions[motion]()
+            rospy.sleep(1)
+            pcl_msg = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
+            polygon = rospy.get_param('/corners_lift')
+            detections, im = perform_detection(self.default, pcl_msg, polygon, ['person'])
+            if len(detections) > 0:
+                self.default.controllers.head_controller.look_straight()
+                return True
+        return False
+
+    # def is_anyone_in_front_of_me(self):
+    #     pcl_msg = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
+    #     polygon = rospy.get_param('/corners_arena')
+    #     detections, im = perform_detection(self.default, pcl_msg, polygon, ['person'])
+    #     return len(detections) > 0
 
 
     def execute(self, userdata):
         self.default.voice.speak("I know there are {} people in the lift".format(rospy.get_param("/lift/num_clusters")))
         print("rank")
         print(rank(points_name="/lift/pos_persons"))
-        is_robot_closest_rank = self.is_anyone_in_front_of_me()
-        # is_robot_closest_rank = rank(points_name="/lift/pos_persons") or self.is_anyone_in_front_of_me()
-        print("is robot closest rank->>> {}".format(is_robot_closest_rank))
 
-        is_closer_to_door = is_robot_closest_rank
+        # is_robot_closest_rank = rank(points_name="/lift/pos_persons") or self.is_anyone_in_front_of_me()
+
+        is_closer_to_door = not self.is_anyone_in_front_of_me()
+        print("front of ")
+        print(is_closer_to_door)
+        print("is robot closest to door->>> {}".format(is_closer_to_door))
         if is_closer_to_door:
             self.default.voice.speak("I am the closest to the door so I have to exit first")
             # clear costmap
             clear_costmap()
             # go to centre waiting area
-            state = self.default.controllers.base_controller.sync_to_pose(get_pose_from_param('/wait_centre/pose'))
+            state = self.default.controllers.base_controller.ensure_sync_to_pose(get_pose_from_param('/wait_in_front_lift_centre/pose'))
             if not state:
                 return 'failed'
             # turn around
@@ -93,6 +112,7 @@ class ScheduleGoingOut(smach.State):
             # wait for the person to exit
             rospy.sleep(2)
             self.default.voice.speak("Should I wait more for you?")
+
             # hear
             # hear_wait = True
             # count = 0

@@ -93,6 +93,7 @@ class GoToLift(smach.State):
             print(type(keypoint))
 
 
+
         # transform to the global frame
         global_points = w.local_to_global_points(M=M, points=keypoint, is_lift=True)
         p = Pose()
@@ -104,6 +105,8 @@ class GoToLift(smach.State):
         p.orientation.w = 0.8056
 
         state = self.default.controllers.base_controller.sync_to_pose(p)
+        self.default.voice.speak("Let me talk to the audience.")
+
 
         if DEBUG > 3:
             print(f" The sync to pose res in go to lift: {state}")

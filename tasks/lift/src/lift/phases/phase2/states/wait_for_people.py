@@ -83,8 +83,8 @@ class WaitForPeople(smach.State):
         # wait and ask
 
         rospy.set_param("/from_schedule", False)
-        self.default.voice.speak("Exciting stuff, we are going to the lift! But let me aks you something first.")
-        self.default.voice.speak("How many people are thinking to go in the lift?")
+        self.default.voice.speak("Exciting stuff, we are going to the lift! But let me ask you something first.")
+        self.default.voice.speak("How many people are going in the lift?")
         self.default.voice.speak("Please answer with a number of people.")
 
         count = 2
@@ -105,7 +105,8 @@ class WaitForPeople(smach.State):
             # count = resp.result
 
         self.default.voice.speak("Thank you for your answer!")
-        self.default.voice.speak("I will give way to the people now, because I am a very very good robot!")
+        self.default.voice.speak("Please go inside the lift. You see, I am a very very good robot!")
+        # self.default.voice.speak("I will give way to the people now, because I am a very very good robot!")
         rospy.sleep(5)
 
         self.default.voice.speak("I will now move to the center of the lift waiting area")

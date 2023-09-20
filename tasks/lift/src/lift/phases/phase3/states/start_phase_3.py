@@ -1,6 +1,7 @@
 import smach
 import rospy
 from std_msgs.msg import Int16
+from tiago_controllers.helpers.pose_helpers import get_pose_from_param
 
 class StartPhase3(smach.State):
     def __init__(self, default):
@@ -13,6 +14,8 @@ class StartPhase3(smach.State):
             rospy.loginfo(" A final update - I am starting Phase 3.")
         else:
             self.default.voice.sync_tts(" A final update - I am starting Phase 3.")
+
+        res = self.default.controllers.base_controller.sync_to_pose(get_pose_from_param('/wait/pose'))
 
         # self.default.datahub_start_phase.publish(Int16(3))
 

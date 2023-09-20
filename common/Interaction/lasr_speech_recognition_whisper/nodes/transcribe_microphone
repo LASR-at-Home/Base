@@ -43,7 +43,6 @@ from lasr_speech_recognition_whisper import SpeechRecognitionToTopic, Microphone
 
 collector = MicrophonePhraseCollector(device_index=device_index)
 collector.adjust_for_noise()
-
 model = load_model("base.en")
 worker = SpeechRecognitionToTopic(collector, model, "transcription", infer_partial = False)
 

@@ -37,6 +37,15 @@ nlu:
       - [yes](choice)
       - [No](choice)
       - [no](choice)
+      - [Yes](choice) that is correct!
+      - [yes](choice) that is correct! 
+      - [yes] that is right!
+      - [Yes] that's right! 
+      - [No](choice) that is wrong
+      - [no](choice) that is wrong
+      - [no](choice) that is not right
+      - [No](choice) that is not right 
+    
 
   - intent: deny
     examples: |
@@ -231,4 +240,13 @@ nlu:
       - [two]{"entity":"floor", "value":2}
       - [three]{"entity":"floor", "value":3}
       - [1]{"entity":"floor", "value":1}
+      - This is [four three]{"entity":"floor","value":3}
+      - This is floor [too]{"entity":"floor","value":2}
+      - This is floor [to]{"entity":"floor","value":2}
+      - This is fall [one]{"entity":"floor","value":1}
+      - This is fall [two]{"entity":"floor","value":2}
+      - This is fall [three]{"entity":"floor","value":3}
+      - This is fall [four]{"entity":"floor","value":4}
+      - This is fall [five]{"entity":"floor","value":5}
+      - This is [tranflor]{"entity":"floor","value":4}
       

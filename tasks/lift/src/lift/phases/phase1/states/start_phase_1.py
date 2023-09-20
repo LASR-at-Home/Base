@@ -17,12 +17,12 @@ class StartPhase1(smach.State):
         rospy.logerr(res)
 
         self.default.voice.speak("Hi, my name is Tiago.")
-        play_motion_goal(self.default.pm, 'wave')
+        # play_motion_goal(self.default.pm, 'wave')
         self.default.voice.speak("I am the robot that knows how to take the lift.")
         self.default.voice.sync_tts("Nice to meet you")
 
         # ensure home pos
-        play_motion_goal(self.default.pm, 'home')
+        # play_motion_goal(self.default.pm, 'home')
 
         self.default.voice.speak("Phase 1 is really short so let's continue!")
         self.default.controllers.torso_controller.sync_reach_to(0.2)
