@@ -122,5 +122,7 @@ class TakeOrder(smach.State):
 
         self.context.voice_controller.sync_tts(f"Your order is {order_string}")
         self.context.tables[self.context.current_table]["order"] = order
+        pm_goal = PlayMotionGoal(motion_name="back_to_default", skip_planning=True)
+        self.context.play_motion_client.send_goal_and_wait(pm_goal)
         self.context.start_head_manager("head_manager", '')
         return 'done'

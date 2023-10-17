@@ -23,6 +23,15 @@ const items: Item[] = [
   "granola",
 ];
 
+const NAMES: { [key in Item]: string } = {
+  coffee: 'Coffee',
+  biscuits: 'Biscuits',
+  sandwich: 'Sandwich',
+  orange_juice: 'Juice',
+  smoothie: 'Smoothie',
+  granola: 'Granola'
+}
+
 export function CreateOrder({ finish }: { finish: (order: Item[]) => void }) {
   const [state, setState] = useState<State>("edit");
   const [order, setOrder] = useState<Item[]>([]);
@@ -74,7 +83,7 @@ function ConfirmMode({
                   className="h-[64px] w-[64px] object-contain"
                   src={`/objects/${item}.png`}
                 />{" "}
-                <span className="capitalize">{item.replace(/_/g, " ")}</span>
+                <span className="capitalize">{NAMES[item]}</span>
               </div>
             ))}
         </div>
@@ -110,13 +119,13 @@ function EditMode({
     <>
       <div className="flex flex-row gap-4 flex-[2] min-h-0">
         <Card item="coffee" order={order} setOrder={setOrder} />
-        <Card item="biscuits" order={order} setOrder={setOrder} />
         <Card item="sandwich" order={order} setOrder={setOrder} />
+        <Card item="smoothie" order={order} setOrder={setOrder} />
       </div>
       <div className="flex flex-row gap-4 flex-[2] min-h-0">
         <Card item="orange_juice" order={order} setOrder={setOrder} />
-        <Card item="smoothie" order={order} setOrder={setOrder} />
         <Card item="granola" order={order} setOrder={setOrder} />
+        <Card item="biscuits" order={order} setOrder={setOrder} />
       </div>
       <div className="flex flex-row gap-4 flex-1">
         <div
@@ -197,7 +206,7 @@ function Card({
         </div>
         <div className="flex-[2] flex flex-row bg-slate-500 text-5xl">
           <div className="flex-grow capitalize text-white flex flex-row items-center p-4 tracking-tighter">
-            {item.split("_").join(" ")}
+            {NAMES[item]}
           </div>
           <div className="w-[64px] grid place-items-center text-white">
             {count}
@@ -211,7 +220,7 @@ function Card({
     <div className="flex-1 flex flex-col bg-slate-400">
       <div className="relative">
         <div className="absolute p-4 text-2xl text-white capitalize">
-          {item.split("_").join(" ")}
+          {NAMES[item]}
         </div>
       </div>
       <div className="flex-[4] grid place-items-center min-h-0 p-4">

@@ -16,6 +16,7 @@ class CheckTable(smach.State):
         self.context = context
         self.detections_objects = []
         self.detections_people = []
+        self.biscuits = False
 
     def estimate_pose(self, pcl_msg, detection):
         centroid_xyz = seg_to_centroid(pcl_msg, np.array(detection.xyseg))
@@ -65,7 +66,10 @@ class CheckTable(smach.State):
         self.check_people(pcl_msg)
 
     def check_table(self, pcl_msg):
-        detections_objects_ = self.perform_detection(pcl_msg, self.object_polygon, self.context.target_object_remappings.keys(), self.context.YOLO_objects_model)
+        target_objects = list(self.context.target_object_remappings.keys())
+        if not self.biscuits and "biscuits" in target_objects:
+            target_objects.remove("biscuits")
+        detections_objects_ = self.perform_detection(pcl_msg, self.object_polygon, target_objects, self.context.YOLO_objects_model)
         self.detections_objects.extend(detections_objects_)
 
     def check_people(self, pcl_msg):
@@ -85,13 +89,43 @@ class CheckTable(smach.State):
         self.arena_polygon = rospy.get_param(f"/arena/cuboid")
         self.detections_objects = []
         self.detections_people = []
-        motions = ["back_to_default", "check_table", "check_table_low", "look_left", "look_right", "back_to_default"]
+
+
+        if self.context.current_table == "table0":
+            motions = ["back_to_default", "check_annoying_table", "check_annoying_table_low", "look_left", "look_right", "back_to_default"]
+        else:
+            motions = ["back_to_default", "check_table", "check_table_low", "look_left", "look_right", "back_to_default"]
         #self.detection_sub = rospy.Subscriber("/xtion/depth_registered/points", PointCloud2, self.check)
-        for motion in motions:
-            pm_goal = PlayMotionGoal(motion_name=motion, skip_planning=True)
+        
+        if self.context.current_table == "table2":
+            pm_goal = PlayMotionGoal(motion_name="back_to_default", skip_planning=True)
+            self.context.play_motion_client.send_goal_and_wait(pm_goal)
+
+            pm_goal = PlayMotionGoal(motion_name="check_annoying_table_low", skip_planning=True)
             self.context.play_motion_client.send_goal_and_wait(pm_goal)
             pcl_msg = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
-            self.check(pcl_msg)
+            self.check_table(pcl_msg)
+
+
+            pm_goal = PlayMotionGoal(motion_name="look_left", skip_planning=True)
+            self.context.play_motion_client.send_goal_and_wait(pm_goal)
+            pcl_msg = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
+            self.check_people(pcl_msg)
+
+            pm_goal = PlayMotionGoal(motion_name="look_right", skip_planning=True)
+            self.context.play_motion_client.send_goal_and_wait(pm_goal)
+            pcl_msg = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
+            self.check_people(pcl_msg)
+
+            pm_goal = PlayMotionGoal(motion_name="back_to_default", skip_planning=True)
+            self.context.play_motion_client.send_goal_and_wait(pm_goal)
+
+        else:
+            for motion in motions:
+                pm_goal = PlayMotionGoal(motion_name=motion, skip_planning=True)
+                self.context.play_motion_client.send_goal_and_wait(pm_goal)
+                pcl_msg = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
+                self.check(pcl_msg)
 
         status = "unknown"
         if len(self.detections_objects) > 0 and len(self.detections_people) == 0:
@@ -106,7 +140,7 @@ class CheckTable(smach.State):
         #self.detection_sub.unregister()
  
         #self.detections_objects = self.filter_detections_by_pose(self.detections_objects, threshold=0.1)
-        self.detections_people = self.filter_detections_by_pose(self.detections_people, threshold=0.50)
+        self.detections_people = self.filter_detections_by_pose(self.detections_people, threshold=0.6)
 
         self.publish_object_points()
         self.publish_people_points()

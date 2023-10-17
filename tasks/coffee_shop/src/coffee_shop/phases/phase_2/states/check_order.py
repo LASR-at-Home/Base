@@ -33,13 +33,19 @@ class CheckOrder(smach.State):
     def execute(self, userdata):
 
         if self.n_checks == 3:
-            self.context.voice_controller.sync_tts("I think I have somethig in my eyes, I'm struggling to check the order. I trust you that the order is correct!")
+            self.context.voice_controller.sync_tts("I think I have something in my eyes, I'm struggling to check the order. I trust you that the order is correct!")
             return 'correct'
 
+        self.n_checks += 1
+
+        pm_goal = PlayMotionGoal(motion_name="check_table_low", skip_planning=True)
+        self.context.play_motion_client.send_goal_and_wait(pm_goal)
+
         order = self.context.tables[self.context.current_table]["order"]
+        counter_corners = rospy.get_param(f"/counter/cuboid")
+        """
         pm_goal = PlayMotionGoal(motion_name="back_to_default", skip_planning=True)
         self.context.play_motion_client.send_goal_and_wait(pm_goal)
-        counter_corners = rospy.get_param(f"/counter/cuboid")
         counter_centroid = np.mean(counter_corners, axis=0)
         ph_goal = PointHeadGoal()
         ph_goal.max_velocity = 1.0
@@ -48,21 +54,21 @@ class CheckOrder(smach.State):
         ph_goal.target.header.frame_id = 'map'
         ph_goal.target.point = Point(*counter_centroid, 0.7)
         self.context.point_head_client.send_goal_and_wait(ph_goal)
-        rospy.sleep(rospy.Duration(1.0))
+        """
+        rospy.sleep(rospy.Duration(2.0))
         pcl_msg = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
         cv_im = pcl_msg_to_cv2(pcl_msg)
         img_msg = self.context.bridge.cv2_to_imgmsg(cv_im)
-        detections = self.context.yolo(img_msg, self.context.YOLO_objects_model, 0.5, 0.3)
+        detections = self.context.yolo(img_msg, self.context.YOLO_counter_model, 0.6, 0.3)
         detections = [(det, self.estimate_pose(pcl_msg, det)) for det in detections.detected_objects if det.name in self.context.target_object_remappings.keys()]
         satisfied_points = self.context.shapely.are_points_in_polygon_2d(counter_corners, [[pose[0], pose[1]] for (_, pose) in detections]).inside
         given_order = [detections[i] for i in range(0, len(detections)) if satisfied_points[i]]
-
-        for _, pose in given_order:
+        rospy.loginfo(detections)
+        for _, pose in detections:
             self.context.publish_object_pose(*pose, "map")
 
         given_order = [detection[0].name for detection in given_order]
-    
-        self.n_checks += 1
+        given_order[:] = [x if x != "biscuits" else "granola" for x in given_order]
 
         if sorted(order) == sorted(given_order):
             return 'correct'
