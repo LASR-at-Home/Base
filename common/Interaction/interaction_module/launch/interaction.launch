@@ -1,0 +1,4 @@
+<launch>
+    <node pkg="listen_module" name="dialogflow_srv" type="dialogflow_srv.py"/>
+    <node pkg="interaction_module" name="interaction_module_srv" type="interaction_module_srv.py"/>
+</launch>

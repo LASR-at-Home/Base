@@ -1,0 +1,5 @@
+<launch>
+    <node name="face_detection" pkg="face_detection" type="pcl_face_detection_server.py" output="screen" respawn="true"/>
+    <node name="tiago_controllers" pkg="tiago_controllers" type="tf_transforms.py" output="screen" respawn="true"/>
+    <node name="lasr_navigate_to_known_person" pkg="lasr_navigate_to_known_person" type="navigate_to_known_person.py" output="screen" required="true"/>
+</launch>

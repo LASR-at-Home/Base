@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 import rospy
-from tiago_controllers.base_controller import  CmdVelController
+from tiago_controllers.controllers.base_controller import CmdVelController
 # from tiago_controllers.head_controller import HeadController
-from tiago_controllers.look_at import LookAt
-from lasr_voice.voice import Voice
+from tiago_controllers.controllers.look_at import LookAt
+# from lasr_voice.voice import Voice
 from tiago_controllers.helpers import get_pose_from_param
 from lasr_object_detection_yolo.detect_objects import detect_objects
-from models.controllers import Controllers
+from tiago_controllers.controllers import Controllers
 
 # TODO: make statemachine
 # TODO: add simulation:= true/false in launch file
@@ -23,7 +23,7 @@ class FindPersonAndAsk:
         self.cmd_vel_controller = CmdVelController()
 
         self.head_controller.sync_reach_to(0, 0)  # start by centering the head
-        self.voice = Voice()
+        # self.voice = Voice()
         self.search_points = [(-1 * HORIZONTAL, VERTICAL),
                               (0, VERTICAL),
                               (HORIZONTAL, VERTICAL),

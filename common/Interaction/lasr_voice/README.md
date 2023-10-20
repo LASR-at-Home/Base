@@ -1,6 +1,18 @@
-# Voice
+# lasr_voice
 
-Python library providing an abstraction over TIAGo's TTS engine.
+The lasr_voice package
+
+This package is maintained by:
+- [elisabeth](mailto:elisabeth@todo.todo)
+
+## Prerequisites
+
+This package depends on the following ROS packages:
+- catkin (buildtool)
+- rospy (build)
+- rospy (exec)
+
+The `sound_play` package must be available to run the `sound_play_tts` node!
 
 ## Usage
 
@@ -20,7 +32,7 @@ while voice.is_running():
     print("still talking")
 ```
 
-## Running in Simulation
+### In Simulation
 
 TIAGo's TTS action server is not available while in simulation, so we need to roll our own.
 
@@ -36,3 +48,29 @@ TIAGo's TTS action server is not available while in simulation, so we need to ro
   rosrun sound_play soundplay_node.py &
   rosrun lasr_voice sound_play_tts
   ```
+
+## Example
+
+Ask the package maintainer to write a `doc/EXAMPLE.md` for their package!
+
+## Technical Overview
+
+Ask the package maintainer to write a `doc/TECHNICAL.md` for their package!
+
+## ROS Definitions
+
+### Launch Files
+
+This package has no launch files.
+
+### Messages
+
+This package has no messages.
+
+### Services
+
+This package has no services.
+
+### Actions
+
+This package has no actions.

@@ -7,7 +7,7 @@ from smach import Concurrence
 from smach_ros import IntrospectionServer
 from explore_surroundings_state import ExploreSurroundingsState
 from look_around_state import LookAroundState
-from models.controllers import Controllers
+from tiago_controllers.controllers import Controllers
 import smach_ros
 from std_msgs.msg import Empty
 

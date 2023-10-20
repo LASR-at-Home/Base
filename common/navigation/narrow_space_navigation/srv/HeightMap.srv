@@ -1,0 +1,8 @@
+int32[] points
+int32[] warped
+time timestamp
+# nav_msgs/OccupancyGrid warped
+---
+bool status
+geometry_msgs/Pose pose
+

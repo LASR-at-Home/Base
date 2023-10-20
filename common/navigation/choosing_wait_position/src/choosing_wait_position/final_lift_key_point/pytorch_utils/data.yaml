@@ -1,0 +1,13 @@
+train: ../train/images
+val: ../valid/images
+test: ../test/images
+
+nc: 1
+names: ['position']
+
+roboflow:
+  workspace: robot-club
+  project: lift_position_detection
+  version: 1
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/robot-club/lift_position_detection/dataset/1

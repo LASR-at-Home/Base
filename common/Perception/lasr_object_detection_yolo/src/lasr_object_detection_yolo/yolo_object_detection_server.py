@@ -73,7 +73,7 @@ class YoloObjectDetectionServer():
                 return False
             
             self.yolov4.eval()
-
+            """
             if torch.cuda.is_available():
 
                 # Initialise nvidia-smi
@@ -90,6 +90,8 @@ class YoloObjectDetectionServer():
 
                 # Shutdown nvidia-smi
                 nvidia_smi.nvmlShutdown()
+            """
+            self.device = "cpu"
 
             print(self.device)
             self.yolov4.to(self.device)
@@ -105,9 +107,7 @@ class YoloObjectDetectionServer():
         # Only load model if it is not already loaded.
         if not self.model_name == req.dataset:
             if not self.load_model(req.dataset):
-                print('i fail in loading the coco model, you probably dont have the model')
-                # If loading the model fails, then return an empty response.
-                return response
+                raise rospy.ServiceException(f"Couldn't load model '{req.dataset}'")
         
         # Random colours for bounding boxes.
         np.random.seed(42)
@@ -118,8 +118,17 @@ class YoloObjectDetectionServer():
         image = PIL_Image.fromarray(frame)
         image = torch.stack([transform()(image)]).to(self.device)
 
-        # net forward and non-mean suppression
         outputs = self.yolov4(image)
+
+        # net forward and non-mean suppression
+        #try:
+        #except RuntimeError:
+        #    if self.device != 'cpu':
+        #        self.device = 'cpu'
+                #self.yolov4.to(self.device)
+        #        return self.detect(req)
+        #    else:
+        #        raise rospy.ServiceException("Couldn't use CUDA or CPU....")
         outputs = post_processing(image, req.confidence, req.nms, outputs)
 
         if not outputs[0] is None:

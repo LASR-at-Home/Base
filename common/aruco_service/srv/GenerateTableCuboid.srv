@@ -1,0 +1,8 @@
+int8 table
+float64 long_side
+float64 short_side
+float64 padding
+bool is_rect
+float64 radius
+---
+bool success
