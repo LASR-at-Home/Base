@@ -1,0 +1,5 @@
+SpeechRecognition==3.10.0
+openai-whisper==20230314
+PyAudio==0.2.13
+PyYaml==6.0.1
+rospkg==1.5.0

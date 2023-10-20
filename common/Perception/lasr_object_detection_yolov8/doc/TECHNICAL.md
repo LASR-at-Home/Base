@@ -22,7 +22,7 @@ The actual YOLO detection routine works as follows:
 
 - Load the appropriate YOLO model
 
-  Models are loaded from the `yolo_server/models` folder. Standard v8 models are loaded on-demand and saved to the directory as well.
+  Models are loaded from the `models` folder. Standard v8 models are loaded on-demand and saved to the directory as well.
 
   > [!IMPORTANT]  
   > If you would like to train your own model, [a full guide is available here](https://github.com/insertish/yolov8_training_workspace).

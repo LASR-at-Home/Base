@@ -9,27 +9,17 @@ This package is maintained by:
 
 This package depends on the following ROS packages:
 - catkin (buildtool)
+- catkin_virtualenv (build)
 - lasr_object_detection_yolo
 - lasr_perception_server
 
-Install the YOLOv8 server dependencies:
+This packages requires Python 3.10 to be present.
 
-```bash
-# enter source directory
-cd src/lasr-base/common/Perception/lasr_object_detection_yolov8/yolo_server
+This package has 51 Python dependencies:
+- [ultralytics](https://pypi.org/project/ultralytics)==8.0.150
+- .. and 50 sub dependencies
 
-# create a new virtualenv if not already
-python3 -m venv venv
 
-# activate it
-# bash:
-source venv/bin/activate.bash
-# fish:
-source venv/bin/activate.fish
-
-# install requirements
-pip install -r requirements.txt
-```
 
 ## Usage
 
@@ -60,68 +50,25 @@ response = detect_service(request)
 To start the service:
 
 ```python
-# outside of TIAGo container:
-cd src/lasr-base/common/Perception/lasr_object_detection_yolov8/yolo_server
-source venv/bin/activate.bash
-python3 server.py
-
-# inside of TIAGo container & LASR workspace:
-rosrun lasr_object_detection_yolov8 service
-# .. or also write to /yolov8/debug topic:
-DEBUG=1 rosrun lasr_object_detection_yolov8 service
+# use the launch file:
+roslaunch lasr_object_detection_yolov8 service.launch
+# .. optionally configure debug / preload:
+roslaunch lasr_object_detection_yolov8 service.launch debug:=true preload:=["yolov8n-seg.pt"]
 ```
 
 ## Example
 
 1. Find a video to test on, or otherwise acquire an image topic.
 
-   My test video is `https://www.youtube.com/watch?v=ng8Wivt52K0`, [download it using Cobalt](https://co.wukko.me/) then place it in a directory such as `~/test_video.mp4`.
+   My test video is `https://www.youtube.com/watch?v=ng8Wivt52K0`, [download it using Cobalt](https://co.wukko.me/) then place it in a directory such as `~/v.mp4`.
 
-2. Start ROS master if not started already.
-
-   ```bash
-   roscore &
-   ```
-
-3. Start a video stream using the example video. (skip if using another topic / source)
+2. Then launch the demo:
 
    ```bash
-   roslaunch video_stream_opencv camera.launch video_stream_provider:=$HOME/test_video.mp4 loop_videofile:=true visualize:=true
-   ```
+   roslaunch lasr_object_detection_yolov8 demo.launch file:=$HOME/v.mp4
 
-4. Install the YOLO server if not already, see "Installing YOLOv8 Server" section.
-
-5. Start the YOLO server.
-
-   ```bash
-   cd src/lasr-base/common/Perception/lasr_object_detection_yolov8/yolo_server
-   source venv/bin/activate.bash
-   python3 server.py
-   ```
-
-6. Start the YOLO service.
-
-   ```bash
-   DEBUG=1 rosrun lasr_object_detection_yolov8 service
-   ```
-
-7. Launch image view to preview the debug output.
-
-   ```bash
-   rqt_image_view
-   ```
-
-8. Start the relay script to start processing images.
-
-   ```bash
-   rosrun lasr_object_detection_yolov8 relay /camera/image_raw
-
-   # pick a different model:
-   rosrun lasr_object_detection_yolov8 relay /camera/image_raw yolov8n-seg.pt
-   rosrun lasr_object_detection_yolov8 relay /camera/image_raw yolov8l.pt
-
-   # example: re-create the mask on the client end:
-   rosrun lasr_object_detection_yolov8 construct_mask /camera/image_raw
+   # .. you can also try other models:
+   roslaunch lasr_object_detection_yolov8 demo.launch model:=yolov8n.pt file:=$HOME/v.mp4
    ```
 
 ## Technical Overview
@@ -150,7 +97,7 @@ The actual YOLO detection routine works as follows:
 
 - Load the appropriate YOLO model
 
-  Models are loaded from the `yolo_server/models` folder. Standard v8 models are loaded on-demand and saved to the directory as well.
+  Models are loaded from the `models` folder. Standard v8 models are loaded on-demand and saved to the directory as well.
 
   > [!IMPORTANT]  
   > If you would like to train your own model, [a full guide is available here](https://github.com/insertish/yolov8_training_workspace).
@@ -172,6 +119,62 @@ The actual YOLO detection routine works as follows:
   > Tensors may not be stored in CPU memory, so they may have to be moved first using `.cpu()`.
 
 ## ROS Definitions
+
+### Launch Files
+
+#### `camera`
+
+Run a YOLOv8 model using the camera
+
+```bash
+# Run the demo
+roslaunch lasr_object_detection_yolov8 camera.launch 
+
+# Run the demo with a different model
+roslaunch lasr_object_detection_yolov8 camera.launch model:=yolov8n.pt
+```
+
+| Argument | Default | Description |
+|:-:|:-:|---|
+| model | yolov8n-seg.pt | Model to use for the demo |
+
+
+#### `service`
+
+Start the YOLOv8 service
+
+```bash
+# YOLOv8 service
+roslaunch lasr_object_detection_yolov8 service.launch 
+
+# Preload models and enable debug topic
+roslaunch lasr_object_detection_yolov8 service.launch debug:=true preload:=['yolov8n.pt','yolov8n-seg.pt']
+```
+
+| Argument | Default | Description |
+|:-:|:-:|---|
+| debug | false | Whether to publish plotted images to /yolov8/debug |
+| preload | [] | Array of models to preload when starting the service |
+
+
+#### `demo`
+
+Run a YOLOv8 model on a video file
+
+```bash
+# Run the demo
+roslaunch lasr_object_detection_yolov8 demo.launch file:=$HOME/video.mp4
+
+# Run the demo with a different model
+roslaunch lasr_object_detection_yolov8 demo.launch model:=yolov8n.pt file:=$HOME/video.mp4
+```
+
+| Argument | Default | Description |
+|:-:|:-:|---|
+| model | yolov8n-seg.pt | Model to use for the demo |
+| file |  | Video file to run inference on |
+
+
 
 ### Messages
 

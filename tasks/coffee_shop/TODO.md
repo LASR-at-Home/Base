@@ -1,0 +1,2 @@
+- State machine template
+- Implementation of final stage states.

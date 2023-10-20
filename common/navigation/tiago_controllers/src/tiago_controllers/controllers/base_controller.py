@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 # from abc import abstractmethod
-# import math
+import math
 import time
 import actionlib
 import rospy
@@ -12,7 +12,8 @@ from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from actionlib_msgs.msg import GoalStatus
 from tiago_controllers.base_planner import plan_to_radius as _plan_to_radius
 from tiago_controllers.base_planner import get_journey_points as _get_journey_points
-
+import numpy as np
+from scipy.spatial.transform import Rotation as R
 
 class BaseController:
     def __init__(self):
@@ -27,6 +28,7 @@ class BaseController:
         x = round(msg.pose.pose.position.x, 2)
         y = round(msg.pose.pose.position.y, 2)
         return x, y
+
 
     def reg_callback(self, callback):
         self._callback = callback
@@ -118,6 +120,39 @@ class BaseController:
                 time.sleep(0.5)
                 self._goal_sent = False
 
-# if __name__ == '__main__':
-#     rospy.init_node("base_test", anonymous=True)
-#     _base = BaseC
+    def compute_face_quat(self, x, y):
+        robot_x, robot_y, robot_quat = self.get_current_pose()
+        dist_x = x - robot_x
+        dist_y = y - robot_y
+        theta_deg = np.degrees(math.atan2(dist_y, dist_x))
+        try:
+            from scipy.spatial.transform import Rotation as R
+            (x, y, z, w) = R.from_euler("z", theta_deg, degrees=True).as_quat()
+            quaternion = Quaternion(x, y, z, w)
+        except ImportError:
+            quaternion = robot_quat
+        pose = Pose(position=Point(robot_x, robot_y, 0.0), orientation=quaternion)
+        return pose
+
+    def sync_face_to(self, x, y):
+        return self.sync_to_pose(self.compute_face_quat(x, y))
+
+    def async_face_to(self, x, y):
+        return self.async_to_pose(self.compute_face_quat(x, y))
+
+    def rotate(self, radians):
+        x, y, current_orientation = self.get_current_pose()
+        current_orientation = np.array([current_orientation.x, current_orientation.y,
+                                        current_orientation.z, current_orientation.w])
+        r = R.from_quat(current_orientation)
+        rotated_r = r * R.from_euler('z', radians, degrees=False)
+
+        pose = Pose(position=Point(x, y, 0.0), orientation=Quaternion(*rotated_r.as_quat()))
+
+        return self.sync_to_pose(pose)
+
+
+if __name__ == '__main__':
+    rospy.init_node("base_test", anonymous=True)
+    b = BaseController()
+    b.sync_face_to(2.84, 6.7)

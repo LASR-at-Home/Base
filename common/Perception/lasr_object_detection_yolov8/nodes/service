@@ -1,94 +1,48 @@
 #!/usr/bin/env python3
+
+import re
 import rospy
+import rospkg
+import lasr_object_detection_yolov8 as yolo
 
-from multiprocessing.connection import Client
-
-from lasr_object_detection_yolo.srv import YoloDetection, YoloDetectionRequest, YoloDetectionResponse
-from lasr_perception_server.msg import Detection
 from sensor_msgs.msg import Image
+from lasr_object_detection_yolo.srv import YoloDetection, YoloDetectionRequest, YoloDetectionResponse
 
-# Determine DEBUG, HOST, PORT, and SECRET_KEY variables
-
-import socket
-from os import environ
-
-if "DEBUG" in environ:
-    DEBUG = environ.get("DEBUG") == '1'
-else:
-    DEBUG = False
-
-if "HOST" in environ:
-    HOST = environ.get("HOST")
-elif "ROS_IP" in environ:
-    HOST = environ.get("ROS_IP")
-else:
-    raise Exception("ROS_IP was not set")
-
-if "PORT" in environ:
-    PORT = int(environ.get('PORT'))
-else:
-    PORT = 42405
-
-if "SECRET_KEY" in environ:
-    SECRET_KEY = bytearray(environ.get('SECRET_KEY'), 'ascii')
-else:
-    SECRET_KEY = b'ros yolov8 package'
-
-print(f'Debug mode? {DEBUG}')
-print(f'Connecting to {HOST}:{PORT}')
-conn = Client((HOST, PORT), authkey=SECRET_KEY)
+# Put ourselves in the model folder
+import os
+import rospkg
+rp = rospkg.RosPack()
+package_path = rp.get_path('lasr_object_detection_yolov8')
+os.chdir(os.path.abspath(os.path.join(package_path, 'models')))
 
 # Initialise rospy
 rospy.init_node('yolov8_service')
 
+# Determine variables
+DEBUG = rospy.get_param('~debug', False)
+PRELOAD = rospy.get_param('~preload', [])
+
+for model in PRELOAD:
+    yolo.load_model(model)
+
+# Prepare publisher
+debug_publishers = {}
 if DEBUG:
     debug_publisher = rospy.Publisher('/yolov8/debug', Image, queue_size=1)
 
-def detect(request):
-    print('Received new service request, sending to process server...')
-
-    conn.send(request.dataset)
-    conn.send(request.confidence)
-    conn.send(request.nms)
-    conn.send(DEBUG)
-    conn.send(request.image_raw.encoding)
-    conn.send(request.image_raw.width)
-    conn.send(request.image_raw.height)
-    conn.send(request.image_raw.data)
-
-    # Publish debug message if enabled
+def detect(request: YoloDetectionRequest) -> YoloDetectionResponse:
+    '''
+    Hand off detection request to yolo library
+    '''
+    debug_publisher = None
     if DEBUG:
-        msg = Image()
-        msg.header.stamp = rospy.Time.now()
-        msg.width = request.image_raw.width
-        msg.height = request.image_raw.height
-        msg.encoding = 'bgr8'
-        msg.is_bigendian = 1
-        msg.step = 3 * request.image_raw.width
-        msg.data = conn.recv()
-        debug_publisher.publish(msg)
-
-    # Convert dictionary back to rospy message format
-    detected_objects_dict = conn.recv()
-    detected_objects = []
-
-    for obj in detected_objects_dict:
-        detection = Detection()
-        detection.name = obj['name']
-        detection.confidence = obj['confidence']
-        detection.xywh = obj['xywh']
-
-        if 'xyseg' in obj:
-            detection.xyseg = obj['xyseg']
-
-        detected_objects.append(detection)
-
-    print('Request complete, responding.')
-
-    resp = YoloDetectionResponse()
-    resp.detected_objects = detected_objects
-    return resp
+        if request.dataset in debug_publishers:
+            debug_publisher = debug_publishers[request.dataset]
+        else:
+            topic_name = re.sub(r'[\W_]+', '', request.dataset)
+            debug_publisher = rospy.Publisher(f'/yolov8/debug/{topic_name}', Image, queue_size=1)
+    return yolo.detect(request, debug_publisher)
 
 rospy.Service('/yolov8/detect', YoloDetection, detect)
+rospy.loginfo('YOLOv8 service started')
 rospy.spin()
-conn.close()

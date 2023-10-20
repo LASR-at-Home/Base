@@ -1,0 +1,6 @@
+<launch>
+	<arg name="config" default="test_phase3"/>
+	<arg name="tablet" default="true"/>
+    <rosparam command="load" file="$(find coffee_shop)/config/$(arg config).yaml" />
+	<node pkg="coffee_shop" type="test_phase3.py" name="test_phase3" output="screen" args="$(find coffee_shop)/config/$(arg config).yaml $(arg tablet)"/>
+</launch>

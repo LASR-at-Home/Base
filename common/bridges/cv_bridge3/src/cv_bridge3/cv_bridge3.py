@@ -99,7 +99,7 @@ class CvBridge:
         print(img_msg.encoding)
         if img_msg.encoding == 'rgb8':
             return cv2.cvtColor(im, cv2.COLOR_RGB2BGR)
-        elif img_msg.encoding in ["bgr8", "8UC3"]:
+        elif img_msg.encoding in ["bgr8", "8UC3", "mono8"]:
             return im
 
 

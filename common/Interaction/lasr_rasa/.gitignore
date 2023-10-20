@@ -1,0 +1,8 @@
+# working directory
+.rasa
+
+# trained models
+models
+
+# evaluation results
+results

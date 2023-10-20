@@ -7,7 +7,7 @@ project(lasr_object_detection_yolov8)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED)
+find_package(catkin REQUIRED catkin_virtualenv)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -17,6 +17,10 @@ find_package(catkin REQUIRED)
 ## modules and global scripts declared therein get installed
 ## See http://ros.org/doc/api/catkin/html/user_guide/setup_dot_py.html
 catkin_python_setup()
+catkin_generate_virtualenv(
+  INPUT_REQUIREMENTS requirements.in
+  PYTHON_INTERPRETER python3.10
+)
 
 ################################################
 ## Declare ROS messages, services and actions ##

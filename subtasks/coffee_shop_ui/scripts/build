@@ -1,0 +1,9 @@
+#!/usr/bin/env python3
+import rospkg
+import os
+
+r = rospkg.RosPack()
+os.chdir(os.path.join(r.get_path('coffee_shop_ui'), 'robot-interface'))
+
+import subprocess
+subprocess.call("npm run build", shell=True)
