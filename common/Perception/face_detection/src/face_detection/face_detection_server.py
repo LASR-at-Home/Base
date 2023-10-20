@@ -12,7 +12,6 @@ import cv2
 import pickle
 import imutils
 from cv_bridge3 import CvBridge
-from common_math import bb_to_centroid
 
 NET = os.path.join(rospkg.RosPack().get_path('face_detection'),'nn4', "nn4.small2.v1.t7")
 PROTO_PATH = os.path.join(rospkg.RosPack().get_path('face_detection'), 'caffe_model', "deploy.prototxt")

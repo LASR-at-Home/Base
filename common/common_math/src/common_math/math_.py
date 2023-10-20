@@ -3,21 +3,24 @@ import numpy as np
 import rospy
 import numpy as np
 import ros_numpy as rnp
-import cv2
+# import cv2
 # from geometry_msgs.msg import PointStamped, Point
 # from std_msgs.msg import Header
 # from robocup_receptionist.srv import TfTransform, TfTransformRequest
 import math
+import cv2
+
+
 
 def pcl_msg_to_cv2(pcl_msg):
     """
     Constructs a cv2 image from a PointCloud2 message.
-    
+
     Parameters
     ----------
     pcl_msg : sensor_msgs/PointCloud2
         Input pointcloud (organised)
-    
+
     Returns
     -------
     np.array : cv2 image
@@ -26,12 +29,13 @@ def pcl_msg_to_cv2(pcl_msg):
     # Extract rgb image from pointcloud
     frame = np.fromstring(pcl_msg.data, dtype=np.uint8)
     frame = frame.reshape(pcl_msg.height, pcl_msg.width, 32)
-    frame = frame[:,:,16:19]
+    frame = frame[:, :, 16:19]
 
     # Ensure array is contiguous
     frame = np.ascontiguousarray(frame, dtype=np.uint8)
 
     return frame
+
 
 def seg_to_centroid(pcl_msg, xyseg):
     # Convert xyseg to contours
@@ -56,6 +60,7 @@ def seg_to_centroid(pcl_msg, xyseg):
     xyz_points = [pcl_xyz[x][y] for x, y in indices]
 
     return np.nanmean(xyz_points, axis=0)
+
 
 def bb_to_centroid(pcl_msg, x, y, w, h):
     # Convert xywh to bounding box coordinates.
@@ -91,3 +96,9 @@ def euclidian(a, b):
         math.pow(a.y - b.y, 2) +
         math.pow(a.z - b.z, 2)
     )
+def euclidian_distance(p1, p2):
+        x1, y1 = p1
+        x2, y2 = p2
+        a = np.array((x1, y1))
+        b = np.array((x2, y2))
+        return np.linalg.norm(a - b)

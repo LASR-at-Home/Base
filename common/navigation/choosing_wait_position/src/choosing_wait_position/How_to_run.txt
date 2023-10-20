@@ -1,0 +1,12 @@
+How to run: 
+
+1. I uploaded everything to a shared folder - the code in general is very messy and not very efficient to use - I'm going to fix it up later. 
+2. Important: To run this, we need Pytorch version 1.9.1 (so: torch==1.9.1, torchvision==0.10.1, torchaudio==0.10.0) (If these versions throw up errors let me know)
+3. All the train, test and valid images should be in the data folder. 
+4. All the functions used to do training are in "common_tools.py" 
+5. All the functions used to do prediction are in "predict_pos.py" (with an example) 
+6. To train a new model, just run "training_lift_models.py" for now, this shouldn't be necessary. The model will save as 'keypointsrcnn_weights.pth'
+7. To use a model to predict, there is a function in predict_pos.py. The function is "make_prediction". Here, you just need to pass it an Image object and it should return a vector with the image coordinates for the bounding box and the keypoint. 
+8. The bounding box can be visualised with the visualisation method in predict_pos 
+
+9. So essentially, all the methods in the folder should be needed for loading the model to do prediction etc. Buy you should be able to pass the black and white image to make_prediction, and it should return coordinates for the image bounding box and keypoint. Then these should be able to be converted back to map coordinates, which then can be used to find the position to send tiago to wait? I think that's how it works ahah. 

@@ -7,7 +7,7 @@ from tiago_controllers.helpers import get_pose_from_param, is_running
 from sensor_msgs.msg import Image
 from cv_bridge3 import CvBridge, cv2
 from lasr_perception_server.srv import DetectImage
-from models.controllers import Controllers
+from tiago_controllers.controllers import Controllers
 
 IMAGES = 1
 

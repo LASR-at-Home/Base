@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
 import rospy
-from tiago_controllers.base_controller import BaseController, CmdVelController
-from tiago_controllers.head_controller import HeadController
+from tiago_controllers.controllers.base_controller import BaseController, CmdVelController
+from tiago_controllers.controllers.head_controller import HeadController
 from sensor_msgs.msg import Image
-from lasr_object_detection_yolo.detect_objects import detect_objects
+from lasr_object_detection_yolo.detect_objects_v8 import detect_objects
 import numpy as np
 from math import atan
 
@@ -76,6 +76,8 @@ class LookAt:
                     moving_incr_x,
                     moving_incr_y
                 )
+                if moving_incr_x is None:
+                    return
                 self._head_controller.sync_reach_to(moving_incr_x, moving_incr_y)
                 hum_x, hum_y, xywh = self.__human_detected(robot_pos)
                 print("the new human centroid x is = ", xywh)
@@ -99,10 +101,11 @@ class LookAt:
             return moving_incr_x, moving_incr_y
         except:
             rospy.logwarn(" Cannot move the head ")
-            return _moving_incr_x, _moving_incr_y
+            return None, None
+            # return _moving_incr_x, _moving_incr_y
 
     def __human_detected(self, robot_pos):
-        detections = detect_objects(["person"], self._model)
+        detections = detect_objects(["person"])
         if detections:
             first = detections[0]
             return first.xywh[0], first.xywh[1], first.xywh

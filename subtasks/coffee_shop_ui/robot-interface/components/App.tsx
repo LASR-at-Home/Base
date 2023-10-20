@@ -16,7 +16,6 @@ export function App({ rosIp }: { rosIp: string }) {
 
   const confirmTopicRef = useRef<Topic>();
   const orderTopicRef = useRef<Topic<ProductTopic>>();
-
   useEffect(() => {
     let ros = new Ros({
       url: rosIp ? `ws://${rosIp}:9090` : "ws://127.0.0.1:9090",

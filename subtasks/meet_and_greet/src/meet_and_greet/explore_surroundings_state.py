@@ -4,7 +4,7 @@ import smach
 import rospy
 import random
 from tiago_controllers.helpers import get_pose_from_param, is_running
-from models.controllers import Controllers
+from tiago_controllers.controllers import Controllers
 
 class ExploreSurroundingsState(smach.State):
     '''

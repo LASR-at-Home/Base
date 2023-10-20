@@ -1,0 +1,69 @@
+<launch>
+    <node pkg="tf_module" name="tf_transforms_base" type="tf_transforms_base.py" required="true"/>
+
+    <!--   DEFAULTS  -->
+    <!--    export LIBGL_ALWAYS_SOFTWARE=1-->
+    <arg name="is_sim" default="false" />
+    <arg name="plot_show" default="false" />
+    <arg name="plot_save" default="true" />
+    <arg name="debug_with_images" default="true" />
+    <arg name="publish_markers" default="true" />
+    <arg name="debug" default="3" />
+    <arg name="rasa" default="true" />
+
+    <param name="plot_show" value="$(arg plot_show)" />
+    <param name="plot_save" value="$(arg plot_save)" />
+    <param name="debug" value="$(arg debug)" />
+    <param name="rasa" value="$(arg rasa)" />
+    <param name="debug_with_images" value="$(arg debug_with_images)" />
+    <param name="publish_markers" value="$(arg publish_markers)" />
+
+
+    <!--     INTERACTION  -->
+    <node pkg="interaction_module" name="interaction_module_srv" type="interaction_module_srv.py"/>
+
+<!--    <arg name="whisper_matcher" default="by-index" />-->
+<!--    &lt;!&ndash;    <arg name="whisper_device_param" default="0" />&ndash;&gt;-->
+<!--    <arg name="whisper_device_param" default="13" />-->
+<!--    <arg name="rasa_model" default="$(find lasr_rasa)/assistants/lift/models"/>-->
+
+<!--    <include file = "$(find lasr_speech)/launch/speech.launch">-->
+<!--        <arg name="matcher" value="$(arg whisper_matcher)"/>-->
+<!--        <arg name="device_param" value="$(arg whisper_device_param)"/>-->
+<!--        <arg name="rasa_model" value="$(arg rasa_model)"/>-->
+<!--    </include>-->
+
+
+    <!--     STATIC POINTS  -->
+
+    <group if="$(arg is_sim)">
+        <rosparam command="load" file="$(find lift)/config/final_lift_sim.yaml" />
+    </group>
+    <group unless="$(arg is_sim)">
+<!--        <rosparam command="load" file="$(find lift)/config/final_lift.yaml" />-->
+        <rosparam command="load" file="$(find lift)/config/final_mk.yaml" />
+    </group>
+
+
+    <!--    PCL and clear     -->
+    <node pkg="read_pcl_info" type="pcl_helpers.py" name="pcl_helpers" output="screen"/>
+    <node pkg="read_pcl_info" name="clear_continuosly" type="clear_continuosly.py"/>
+
+
+
+        <node pkg="lasr_shapely" name="shapely" type="service"/>
+
+
+    <!--      PERCEPTION     -->
+    <node pkg="lasr_object_detection_yolov8" type="service" name="service" output="screen"/>
+    <node pkg="lasr_perception_server" name="perception_server" type="perception_server.py"/>
+
+
+    <!--      Phase 3     -->
+    <node pkg="object_interest_tracking" name="object_interest_tracking" type="detect_interest_srv.py"/>
+
+    <!--     Datahub    -->
+    <node pkg="lift" type="datahub.py" name="datahub"/>
+
+
+</launch>

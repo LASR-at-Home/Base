@@ -54,7 +54,7 @@ class HeadController:
 
     def nod_head(self):
         current_pos = self.current_joint_values()
-        self.sync_reach_to(0.5,0);
+        self.sync_reach_to(0.5,0)
         self.sync_reach_to(current_pos[0], current_pos[1])
 
     @staticmethod
@@ -65,11 +65,22 @@ class HeadController:
         self._client_disable_head.wait_for_server()
         self._client_disable_head.cancel_goal()
 
-
     def deactivate_head_manager(self, deactivate=True):
         self._client_disable_head.wait_for_server()
         goal = DisableActionGoal()
         self._client_disable_head.send_goal(goal)
+
+    def look_straight(self):
+        self.sync_reach_to(0.0, 0.0)
+
+    def look_down(self):
+        self.sync_reach_to(0.0, -1.0)
+
+    def look_right(self):
+        self.sync_reach_to(-1,0.0)
+
+    def look_left(self):
+        self.sync_reach_to(1, 0.0)
 
 if __name__ == '__main__':
     rospy.init_node("head_test", anonymous=True)

@@ -15,6 +15,21 @@ from math import sqrt
 # The marker should be placed on the bottom left corner of the table, with the x axis pointing to the right and the y axis pointing up
 # Use 0 to inf for tables, use -1 for counter, use -2 for waiting area
 
+#<<<<<<< final-mk-fixed-alsa
+TABLE_LONG_SIDE = 1.2
+TABLE_SHORT_SIDE = 0.6
+PADDING = 0.5
+
+WAITING_AREA_LONG_SIDE = 1.2
+WAITING_AREA_SHORT_SIDE = 0.6
+
+LIFT_WAITING_AREA = 1.75
+
+r = rospkg.RosPack()
+FILENAME = r.get_path('aruco_service') + "/test_check_table_sim.yaml"
+#=======
+#>>>>>>> main
+
 def get_transform_to_marker(from_frame, to_frame):
     tf_buffer = tf2_ros.Buffer()
     tf_listener = tf2_ros.TransformListener(tf_buffer)
@@ -67,6 +82,45 @@ def generate_cuboid(msg):
 
         tr = get_transform_to_marker("aruco_marker_frame", "map")
 
+#<<<<<<< final-mk-fixed-alsa
+        # THESE POINTS ARE IN MARKER COORDINATE FRAME [LOCATION OF ARUCO MARKER IS (0,0) IN THIS FRAME]
+        local_corner_1 = [0, 0] 
+        local_corner_2 = [TABLE_LONG_SIDE, 0] if table >= 0 else [WAITING_AREA_LONG_SIDE, 0]
+        local_corner_3 = [TABLE_LONG_SIDE, TABLE_SHORT_SIDE] if table >= 0 else [WAITING_AREA_LONG_SIDE, WAITING_AREA_SHORT_SIDE]
+        local_corner_4 = [0, TABLE_SHORT_SIDE] if table >= 0 else [0, WAITING_AREA_SHORT_SIDE]
+
+        if table == -3: 
+            local_corner_1 = [0,0]
+            local_corner_2 = [LIFT_WAITING_AREA,0]
+            local_corner_3 = [LIFT_WAITING_AREA,-LIFT_WAITING_AREA]
+            local_corner_4 = [0,-LIFT_WAITING_AREA]
+            local_wait_position = [0,-LIFT_WAITING_AREA - 0.4]
+            wait_position = get_map_frame_pose(local_wait_position, tr)
+
+
+        # TRANSFORM TO MAP FRAME
+        corner_1 = get_map_frame_pose(local_corner_1, tr)
+        corner_2 = get_map_frame_pose(local_corner_2, tr)
+        corner_3 = get_map_frame_pose(local_corner_3, tr)
+        corner_4 = get_map_frame_pose(local_corner_4, tr)
+
+        objects_marker_pub.publish(create_marker_msg(corner_1, 0))
+        objects_marker_pub.publish(create_marker_msg(corner_2, 1))
+        objects_marker_pub.publish(create_marker_msg(corner_3, 2))
+        objects_marker_pub.publish(create_marker_msg(corner_4, 3))
+
+        if table >= 0: 
+
+            local_padded_corner_1 = [local_corner_1[0] - PADDING, local_corner_1[1] - PADDING]
+            local_padded_corner_2 = [local_corner_2[0] + PADDING, local_corner_2[1] - PADDING]
+            local_padded_corner_3 = [local_corner_3[0] + PADDING, local_corner_3[1] + PADDING]
+            local_padded_corner_4 = [local_corner_4[0] - PADDING, local_corner_4[1] + PADDING]
+
+            padded_corner_1 = get_map_frame_pose(local_padded_corner_1, tr)
+            padded_corner_2 = get_map_frame_pose(local_padded_corner_2, tr)
+            padded_corner_3 = get_map_frame_pose(local_padded_corner_3, tr)
+            padded_corner_4 = get_map_frame_pose(local_padded_corner_4, tr)
+#=======
         if is_rect:
 
             # THESE POINTS ARE IN MARKER COORDINATE FRAME [LOCATION OF ARUCO MARKER IS (0,0) IN THIS FRAME]
@@ -135,6 +189,7 @@ def generate_cuboid(msg):
 
             with open(rosparam.get_param('/config_path'), 'w') as file:
                 yaml.dump(data, file)
+#>>>>>>> main
 
         else:
             # assume circular, and aruco marker is placed in the centre of the table
@@ -199,6 +254,50 @@ def generate_cuboid(msg):
             rospy.set_param("/tables/table" + str(table) + "/last_updated", now)
             rospy.loginfo("Cuboid for table %d saved to parameter server", table)
 
+#<<<<<<< final-mk-fixed-alsa
+        elif table == -1:
+            rospy.set_param("/counter/cuboid", [corner_1, corner_2, corner_3, corner_4])
+            now = str(datetime.datetime.now())
+            rospy.set_param("/counter/last_updated", now)
+            rospy.loginfo("Cuboid for the counter saved to parameter server")
+
+        elif table == -2:
+            rospy.set_param("/wait/cuboid", [corner_1, corner_2, corner_3, corner_4])
+            now = str(datetime.datetime.now())
+            rospy.set_param("/wait/last_updated", now)
+            rospy.loginfo("Cuboid for the waiting area saved to parameter server")
+
+        elif table == -3:
+            #This is where I would put code for lift waiting area 
+            #rospy.set_param("/lift_wait/cuboid", [corner_1, corner_2, corner_3, corner_4])
+            #now = str(datetime.datetime.now())
+            #rospy.set_param("/lift_wait/last_updated", now)
+            #rospy.loginfo("Cuboid for the lift waiting area saved to parameter server")
+            data = {
+                'corner 1' : corner_1,
+                'corner 2' : corner_2,
+                'corner 3' : corner_3,
+                'corner 4' : corner_4,
+                'wait position': wait_position
+            }
+            FILENAME_LIFT = r.get_path('aruco_service') + "/test_lift_wait_position.yaml"
+
+            with open(FILENAME_LIFT, 'w') as file: 
+                yaml.dump(data,file)
+
+        else:
+            rospy.logerr("Invalid table number %d", table)
+            return TableNumberResponse(False)
+
+        # Dump rosparams to file
+        data = {
+            'tables': rosparam.get_param('/tables'),
+            'current_table': rosparam.get_param('/current_table'),
+            'counter': rosparam.get_param('/counter'),
+            'wait': rosparam.get_param('/wait')
+        }
+#=======
+#>>>>>>> main
 
 
         return GenerateTableCuboidResponse(True)

@@ -1,0 +1,4 @@
+geometry_msgs/Point[] points # point we want to transform
+geometry_msgs/TransformStamped transform #the transform we want to use
+---
+geometry_msgs/Point[] new_points # the transformed point

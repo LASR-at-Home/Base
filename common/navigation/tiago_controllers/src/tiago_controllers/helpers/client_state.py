@@ -22,3 +22,7 @@ def cancel_goal(topic, client):
         print("you need to input a valid topic in the form of a string")
     except Exception:
         print("you need a valid topic to cancel the goal")
+
+def is_terminated(client):
+    return client.get_state() == GoalStatus.LOST or client.get_state() == GoalStatus.PREEMPTED or \
+           client.get_state() == GoalStatus.ABORTED

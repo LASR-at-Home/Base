@@ -1,0 +1,6 @@
+<launch>
+
+<!--     TASK  -->
+   <node name="" pkg="lift" type="main.py" output="screen" required="true"/>
+
+</launch>
