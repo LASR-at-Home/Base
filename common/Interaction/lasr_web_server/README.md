@@ -43,6 +43,13 @@ The web server is built using the following technologies:
 
 ## ROS Definitions
 
+### Launch Files
+
+#### `web_server`
+
+No description provided.
+
+
 ### Messages
 
 This package has no messages.

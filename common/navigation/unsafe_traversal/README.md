@@ -99,6 +99,10 @@ Ask the package maintainer to write a `doc/TECHNICAL.md` for their package!
 
 ## ROS Definitions
 
+### Launch Files
+
+This package has no launch files.
+
 ### Messages
 
 This package has no messages.
@@ -157,7 +161,8 @@ Goal
 
 | Field | Type | Description |
 |:-:|:-:|---|
-| fov_degrees | float32 |  |
+| start_pose | geometry_msgs/PoseStamped | first point to position at |
+| end_pose | geometry_msgs/PoseStamped | second point to face towards |
 
 Result
 
@@ -175,7 +180,8 @@ Goal
 
 | Field | Type | Description |
 |:-:|:-:|---|
-| fov_degrees | float32 |  |
+| start_pose | geometry_msgs/PoseStamped | first point to start at |
+| end_pose | geometry_msgs/PoseStamped | second point to move to |
 
 Result
 
@@ -187,5 +193,4 @@ Feedback
 
 | Field | Type | Description |
 |:-:|:-:|---|
-| success | bool | result |
 

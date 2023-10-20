@@ -15,8 +15,9 @@ This package depends on the following ROS packages:
 
 This packages requires Python 3.10 to be present.
 
-This package has 51 Python dependencies:
-- [ultralytics](https://pypi.org/project/ultralytics)==8.0.150
+This package has 52 Python dependencies:
+- [ultralytics](https://pypi.org/project/ultralytics)==8.0.168
+- [dill](https://pypi.org/project/dill)==0.3.7
 - .. and 50 sub dependencies
 
 

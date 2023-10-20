@@ -1,16 +1,23 @@
-# lasr_navigate_to_known_person
+# read_pcl_info
 
-The lasr_navigate_to_known_person package
+The read_pcl_info package
 
 This package is maintained by:
-- [elisabeth](mailto:elisabeth@todo.todo)
+- [nicole](mailto:nicole@todo.todo)
 
 ## Prerequisites
 
 This package depends on the following ROS packages:
 - catkin (buildtool)
+- geometry_msgs (build)
+- message_generation (build)
+- roscpp (build)
 - rospy (build)
+- std_msgs (build)
+- geometry_msgs (exec)
+- roscpp (exec)
 - rospy (exec)
+- std_msgs (exec)
 
 Ask the package maintainer to write or create a blank `doc/PREREQUISITES.md` for their package!
 
@@ -30,9 +37,23 @@ Ask the package maintainer to write a `doc/TECHNICAL.md` for their package!
 
 ### Launch Files
 
-#### `navigate_to_known_person`
+#### `pcl_helpers`
 
 No description provided.
+
+| Argument | Default | Description |
+|:-:|:-:|---|
+| is_sim | false |  |
+| plot_show | false |  |
+| plot_save | true |  |
+| debug_with_images | true |  |
+| publish_markers | true |  |
+| debug | 3 |  |
+| rasa | true |  |
+| whisper_matcher | by-index |  |
+| whisper_device_param | 13 |  |
+| rasa_model | $(find lasr_rasa)/assistants/lift/models |  |
+
 
 
 ### Messages

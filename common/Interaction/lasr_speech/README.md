@@ -1,15 +1,21 @@
-# lasr_navigate_to_known_person
+# lasr_speech
 
-The lasr_navigate_to_known_person package
+The lasr_speech package
 
 This package is maintained by:
-- [elisabeth](mailto:elisabeth@todo.todo)
+- [Jared](mailto:j.w.swift@outlook.com)
 
 ## Prerequisites
 
 This package depends on the following ROS packages:
 - catkin (buildtool)
+- lasr_rasa (build)
+- lasr_speech_recognition_common (build)
+- lasr_speech_recognition_whisper (build)
 - rospy (build)
+- lasr_rasa (exec)
+- lasr_speech_recognition_common (exec)
+- lasr_speech_recognition_whisper (exec)
 - rospy (exec)
 
 Ask the package maintainer to write or create a blank `doc/PREREQUISITES.md` for their package!
@@ -30,9 +36,16 @@ Ask the package maintainer to write a `doc/TECHNICAL.md` for their package!
 
 ### Launch Files
 
-#### `navigate_to_known_person`
+#### `speech`
 
 No description provided.
+
+| Argument | Default | Description |
+|:-:|:-:|---|
+| matcher | by-index |  |
+| device_param |  |  |
+| rasa_model |  |  |
+
 
 
 ### Messages
@@ -41,7 +54,21 @@ This package has no messages.
 
 ### Services
 
-This package has no services.
+#### `Speech`
+
+Request
+
+| Field | Type | Description |
+|:-:|:-:|---|
+| play_sound | bool |  |
+
+Response
+
+| Field | Type | Description |
+|:-:|:-:|---|
+| json_response | string |  |
+| success | bool |  |
+
 
 ### Actions
 

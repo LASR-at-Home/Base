@@ -28,29 +28,15 @@ Ask the package maintainer to write a `doc/TECHNICAL.md` for their package!
 
 ## ROS Definitions
 
+### Launch Files
+
+This package has no launch files.
+
 ### Messages
 
 This package has no messages.
 
 ### Services
-
-#### `SegmentBB`
-
-Request
-
-| Field | Type | Description |
-|:-:|:-:|---|
-| points | sensor_msgs/PointCloud2 |  |
-| x1 | int32 |  |
-| y1 | int32 |  |
-| x2 | int32 |  |
-| y2 | int32 |  |
-
-Response
-
-| Field | Type | Description |
-|:-:|:-:|---|
-| points | sensor_msgs/PointCloud2 |  |
 
 #### `Centroid`
 
@@ -81,6 +67,24 @@ Response
 | Field | Type | Description |
 |:-:|:-:|---|
 | mask | sensor_msgs/Image |  |
+
+#### `SegmentBB`
+
+Request
+
+| Field | Type | Description |
+|:-:|:-:|---|
+| points | sensor_msgs/PointCloud2 |  |
+| x1 | int32 |  |
+| y1 | int32 |  |
+| x2 | int32 |  |
+| y2 | int32 |  |
+
+Response
+
+| Field | Type | Description |
+|:-:|:-:|---|
+| points | sensor_msgs/PointCloud2 |  |
 
 #### `SegmentCuboid`
 

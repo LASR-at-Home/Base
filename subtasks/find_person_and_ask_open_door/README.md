@@ -29,6 +29,13 @@ Ask the package maintainer to write a `doc/TECHNICAL.md` for their package!
 
 ## ROS Definitions
 
+### Launch Files
+
+#### `find_person_and_ask`
+
+No description provided.
+
+
 ### Messages
 
 This package has no messages.

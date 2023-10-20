@@ -20,6 +20,7 @@ This packages requires Python 3.10 to be present.
 This package has 150 Python dependencies:
 - [requests](https://pypi.org/project/requests)==2.31.0
 - [rasa](https://pypi.org/project/rasa)==3.6.5
+- [spacy](https://pypi.org/project/spacy)==3.6.1
 - .. and 148 sub dependencies
 
 
@@ -97,7 +98,15 @@ Ask the package maintainer to write a `doc/TECHNICAL.md` for their package!
 
 ### Launch Files
 
-This package has no launch files.
+#### `rasa`
+
+No description provided.
+
+| Argument | Default | Description |
+|:-:|:-:|---|
+| model |  |  |
+
+
 
 ### Messages
 

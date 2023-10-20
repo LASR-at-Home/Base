@@ -1,16 +1,26 @@
-# lasr_navigate_to_known_person
+# object_interest_tracking
 
-The lasr_navigate_to_known_person package
+The object_interest_tracking package
 
 This package is maintained by:
-- [elisabeth](mailto:elisabeth@todo.todo)
+- [yousef](mailto:yousef@todo.todo)
 
 ## Prerequisites
 
 This package depends on the following ROS packages:
 - catkin (buildtool)
+- geometry_msgs (build)
+- message_generation (build)
 - rospy (build)
+- sensor_msgs (build)
+- std_msgs (build)
+- message_runtime (build)
+- geometry_msgs (exec)
+- message_runtime (exec)
 - rospy (exec)
+- sensor_msgs (exec)
+- std_msgs (exec)
+- message_generation (exec)
 
 Ask the package maintainer to write or create a blank `doc/PREREQUISITES.md` for their package!
 
@@ -30,10 +40,7 @@ Ask the package maintainer to write a `doc/TECHNICAL.md` for their package!
 
 ### Launch Files
 
-#### `navigate_to_known_person`
-
-No description provided.
-
+This package has no launch files.
 
 ### Messages
 
@@ -41,7 +48,18 @@ This package has no messages.
 
 ### Services
 
-This package has no services.
+#### `Tdr`
+
+Request
+
+| Field | Type | Description |
+|:-:|:-:|---|
+
+Response
+
+| Field | Type | Description |
+|:-:|:-:|---|
+
 
 ### Actions
 

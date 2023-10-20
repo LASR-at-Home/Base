@@ -26,6 +26,13 @@ Ask the package maintainer to write a `doc/TECHNICAL.md` for their package!
 
 ## ROS Definitions
 
+### Launch Files
+
+#### `interaction_server`
+
+No description provided.
+
+
 ### Messages
 
 This package has no messages.

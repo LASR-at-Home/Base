@@ -1,16 +1,22 @@
-# lasr_navigate_to_known_person
+# interaction_module
 
-The lasr_navigate_to_known_person package
+The interaction_module package
 
 This package is maintained by:
-- [elisabeth](mailto:elisabeth@todo.todo)
+- [nicole](mailto:nicole@todo.todo)
 
 ## Prerequisites
 
 This package depends on the following ROS packages:
 - catkin (buildtool)
+- geometry_msgs (build)
+- roscpp (build)
 - rospy (build)
+- std_msgs (build)
+- geometry_msgs (exec)
+- roscpp (exec)
 - rospy (exec)
+- std_msgs (exec)
 
 Ask the package maintainer to write or create a blank `doc/PREREQUISITES.md` for their package!
 
@@ -30,7 +36,7 @@ Ask the package maintainer to write a `doc/TECHNICAL.md` for their package!
 
 ### Launch Files
 
-#### `navigate_to_known_person`
+#### `interaction`
 
 No description provided.
 
@@ -41,7 +47,23 @@ This package has no messages.
 
 ### Services
 
-This package has no services.
+#### `AudioAndTextInteraction`
+
+Request
+
+| Field | Type | Description |
+|:-:|:-:|---|
+| action | string |  |
+| subaction | string |  |
+| query_text | string |  |
+
+Response
+
+| Field | Type | Description |
+|:-:|:-:|---|
+| status | bool |  |
+| result | string |  |
+
 
 ### Actions
 
