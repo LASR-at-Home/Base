@@ -59,6 +59,10 @@ Ask the package maintainer to write a `doc/TECHNICAL.md` for their package!
 
 ## ROS Definitions
 
+### Launch Files
+
+This package has no launch files.
+
 ### Messages
 
 This package has no messages.

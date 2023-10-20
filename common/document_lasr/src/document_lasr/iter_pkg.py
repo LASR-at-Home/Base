@@ -42,7 +42,7 @@ def is_lasr_pkg(path):
         parts.pop(0)
     
     # Guess if this is part of LASR
-    return parts[0] in ['base', 'lasr-base']
+    return parts[0] in ['base', 'lasr-base', 'lasr_base']
 
 # List out all LASR packages
 def pkg_lasr_list():

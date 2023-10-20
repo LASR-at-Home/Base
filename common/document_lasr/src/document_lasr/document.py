@@ -259,7 +259,7 @@ def generate_readme(pkg_dir):
                     definition = line
 
                 # destruct the type and name
-                var_type, var_name = definition.strip().split(' ')
+                var_type, var_name = [seg for seg in definition.strip().split(' ') if len(seg) > 0]
                 MESSAGE[var_name] = {
                     'type': var_type,
                     'comment': COMMENT_BUFFER.strip()
