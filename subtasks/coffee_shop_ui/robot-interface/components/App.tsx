@@ -5,11 +5,9 @@ import { CreateOrder } from "./screens/CreateOrder";
 
 import { Message, Ros, Topic } from "roslib";
 import { Done } from "./screens/Done";
-import { YesNo } from "./screens/YesNo";
 
-type Screen = "home" | "order" | "done" | "confirm" | "debug";
+type Screen = "home" | "order" | "done" | "debug";
 type ProductTopic = { products: string[] };
-type ConfirmTopic = { value: boolean };
 
 export function App({ rosIp }: { rosIp: string }) {
   const [ros, setROS] = useState<Ros>();
@@ -18,8 +16,6 @@ export function App({ rosIp }: { rosIp: string }) {
 
   const confirmTopicRef = useRef<Topic>();
   const orderTopicRef = useRef<Topic<ProductTopic>>();
-  const ynTopicRef = useRef<Topic<ConfirmTopic>>();
-
   useEffect(() => {
     let ros = new Ros({
       url: rosIp ? `ws://${rosIp}:9090` : "ws://127.0.0.1:9090",
@@ -55,33 +51,10 @@ export function App({ rosIp }: { rosIp: string }) {
       });
 
       orderTopicRef.current.advertise();
-
-      ynTopicRef.current = new Topic<ConfirmTopic>({
-        ros,
-        name: "/tablet/confirm",
-        messageType: "coffee_shop_ui/Confirm",
-      });
-
-      ynTopicRef.current.advertise();
     });
   }, []);
 
-  if (screen === "confirm") {
-    return (
-      <YesNo
-        yes={() => {
-          let msg = new Message({ value: true });
-          ynTopicRef.current!.publish(msg as ConfirmTopic);
-          setScreen("home");
-        }}
-        no={() => {
-          let msg = new Message({ value: false });
-          ynTopicRef.current!.publish(msg as ConfirmTopic);
-          setScreen("home");
-        }}
-      />
-    );
-  } else if (screen === "done") {
+  if (screen === "done") {
     return (
       <Done
         done={() => {

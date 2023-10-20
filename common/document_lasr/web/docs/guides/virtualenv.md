@@ -10,17 +10,16 @@ Strongly advised against unless if you cannot migrate your code to a virtual env
 
 :::
 
-Find the line in the definition file where Python dependencies are declared, adjust as required and include a new comment:
+Find the line in the definition file where Python dependencies are declared:
 
 ```diff
 # Additional Python packages
-#
-# rosnumpy: conversion helper between ROS and numpy
-# scipy: mathematics library
 + # pyyaml: yaml library
 - python3.6 -m pip install rosnumpy==0.0.5.2 scipy==1.5.4
 + python3.6 -m pip install rosnumpy==0.0.5.2 scipy==1.5.4 pyyaml==6.0.1
 ```
+
+Then update the container maintenance document accordingly, you can do this by going to [Container Maintenance](/guides/container) and then clicking edit page at the bottom.
 
 ## (B) Setting up a virtual environment using catkin_virtualenv
 
@@ -57,7 +56,7 @@ Begin by configuring your package to use catkin_virtualenv, add the following en
 </package>
 ```
 
-> We add a dependency on the tool so the package won't ever build without it, and we add a new export to indicate that other packages with virtual environments should inherit dependencies from this package.
+> We add a dependency on the tool so the package won't ever build without it, we also add a new export to inform the wrapper script where to find the requirements file at runtime and to indicate that other packages with virtual environments should inherit dependencies from this package.
 
 :::info
 
@@ -134,6 +133,12 @@ install(FILES
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 )
 ```
+
+:::note
+
+This step is optional but recommended, you might as well add it.
+
+:::
 
 Finally, create a `requirements.in` file (or `requirements.txt` if you did not set `INPUT_REQUIREMENTS`):
 

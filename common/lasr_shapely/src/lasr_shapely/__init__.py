@@ -19,6 +19,10 @@ class LasrShapely:
     def are_points_in_polygon_2d(self, polygon_2d_array, points_2d_array):
         return self.points_proxy(polygon=[item for sublist in polygon_2d_array for item in sublist],
                                 points=[item for sublist in points_2d_array for item in sublist])
+    
+    def are_points_in_polygon_2d_flatarr(self, polygon_2d_array, points_2d_array):
+        return self.points_proxy(polygon=polygon_2d_array,
+                                points=points_2d_array)
 
 if __name__=='__main__':
     rospy.init_node('testgkfdp', anonymous=True)

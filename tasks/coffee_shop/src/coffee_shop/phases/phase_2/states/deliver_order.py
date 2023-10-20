@@ -16,20 +16,14 @@ class DeliverOrder(smach.State):
         location = rospy.get_param(f"/tables/{self.context.current_table}/location")
         position = location["position"]
         orientation = location["orientation"]
+        #self.context.base_controller.sync_to_radius(self.context.tables[self.context.current_table]["people"][0][0], self.context.tables[self.context.current_table]["people"][0][1], 0.5)
+        #self.context.base_controller.sync_face_to(self.context.tables[self.context.current_table]["people"][0][0], self.context.tables[self.context.current_table]["people"][0][1])
         self.context.base_controller.sync_to_pose(Pose(position=Point(**position), orientation=Quaternion(**orientation)))
         self.context.base_controller.rotate(np.pi)
         pm_goal = PlayMotionGoal(motion_name="load_unload", skip_planning=True)
-        self.play_motion_client.send_goal_and_wait(pm_goal)
-        self.voice_controller.sync_tts("Please unload the order and say `all done` when you are finished.")
-        while True:
-            resp = self.context.speech()
-            if not resp.success:
-                continue
-            resp = json.loads(resp.json_response)
-            if resp["intent"]["name"] != "wake_word":
-                continue
-            if resp["entities"].get("wake", None):
-                break
+        self.context.play_motion_client.send_goal_and_wait(pm_goal)
+        self.context.voice_controller.async_tts("I'll give you some time to unload the order...")
+        rospy.sleep(rospy.Duration(10.0))
         pm_goal = PlayMotionGoal(motion_name="back_to_default", skip_planning=True)
-        self.play_motion_client.send_goal_and_wait(pm_goal)
+        self.context.play_motion_client.send_goal_and_wait(pm_goal)
         return 'done'

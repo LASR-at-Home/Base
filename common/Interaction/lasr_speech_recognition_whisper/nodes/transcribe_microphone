@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 import os
+import torch
+import rospkg
 from pathlib import Path
 
 WHISPER_CACHE = os.path.join(str(Path.home()), '.cache', 'whisper')
@@ -43,8 +45,20 @@ from lasr_speech_recognition_whisper import SpeechRecognitionToTopic, Microphone
 
 collector = MicrophonePhraseCollector(device_index=device_index)
 collector.adjust_for_noise()
-model = load_model("base.en")
+
+model = load_model("medium.en")
+
+# try to run inference on the example file
+r = rospkg.RosPack()
+EXAMPLE_FILE = r.get_path('lasr_speech_recognition_whisper') + "/test.m4a"
+rospy.loginfo("Running transcription on example file to ensure model is loaded...")
+rospy.loginfo(model.transcribe(EXAMPLE_FILE, fp16=torch.cuda.is_available()))
+
 worker = SpeechRecognitionToTopic(collector, model, "transcription", infer_partial = False)
+
+def adjust_for_noise(_):
+    collector.adjust_for_noise()
+    return EmptyResponse()
 
 def start_listening(_):
     worker.start()
@@ -54,6 +68,7 @@ def stop_listening(_):
     worker.stop()
     return EmptyResponse()
 
+rospy.Service('/whisper/adjust_for_noise', Empty, adjust_for_noise)
 rospy.Service('/whisper/start_listening', Empty, start_listening)
 rospy.Service('/whisper/stop_listening', Empty, stop_listening)
 

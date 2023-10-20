@@ -1,17 +1,25 @@
 <launch>
+    <arg name="tablet" default="true"/>
     <arg name="whisper_matcher" default="by-index" />
     <arg name="whisper_device_param" default="18" />
     <arg name="rasa_model" default="$(find lasr_rasa)/assistants/coffee_shop/models"/>
 
-    <node pkg="lasr_object_detection_yolov8" type="service" name="yolo_service" output="screen"/>
-	<node pkg="lasr_shapely" type="service" name="shapely_service" output="screen"/>
-	<node pkg="coffee_shop" type="tf_transform.py" name="tf_transform" output="screen"/>
+    <group unless="$(arg tablet)">
+        <include file = "$(find lasr_speech)/launch/speech.launch">
+            <arg name="matcher" value="$(arg whisper_matcher)"/>
+            <arg name="device_param" value="$(arg whisper_device_param)"/>
+            <arg name="rasa_model" value="$(arg rasa_model)"/>
+        </include>        
+    </group>
 
-    <include file = "$(find lasr_speech)/launch/speech.launch">
-        <arg name="matcher" value="$(arg whisper_matcher)"/>
-        <arg name="device_param" value="$(arg whisper_device_param)"/>
-        <arg name="rasa_model" value="$(arg rasa_model)"/>
+    <include file="$(find lasr_object_detection_yolov8)/launch/service.launch">
+        <arg name="debug" value="true" />
+        <arg name="preload" value="['yolov8n-seg.pt', 'final-mk-model-fine-tuned-with-val.pt', 'MK_COUNTER.pt']" />
     </include>
+
+    <node pkg="lasr_shapely" type="service" name="shapely_service" output="screen"/>
+    <node pkg="coffee_shop" type="tf_transform.py" name="tf_transform" output="screen"/>
+    <node pkg="coffee_shop" type="datahub.py" name="datahub"/>
 
     <rosparam command="load" file="$(find coffee_shop)/config/motions.yaml" />
 

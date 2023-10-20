@@ -93,7 +93,7 @@ class MicrophonePhraseCollector(RecognizerPhraseCollector):
 
     _source: sr.Microphone
 
-    def __init__(self, energy_threshold: int = 100, phrase_time_limit: float = 2, device_index: int = None) -> None:
+    def __init__(self, energy_threshold: int = 500, phrase_time_limit: float = 2, device_index: int = None) -> None:
         self._source = sr.Microphone(device_index=device_index)
         super().__init__(energy_threshold, phrase_time_limit)
 

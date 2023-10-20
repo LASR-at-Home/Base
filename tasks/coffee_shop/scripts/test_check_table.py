@@ -8,7 +8,7 @@ import sys
 if __name__ == "__main__":
     rospy.init_node("test_check_table")
     sm = smach.StateMachine(outcomes=['end', 'not_finished'])
-    context = Context(sys.argv[1])
+    context = Context(sys.argv[1], sys.argv[2])
     context.current_table = "table0"
 
     with sm:

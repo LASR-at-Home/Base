@@ -10,13 +10,7 @@ This package is maintained by:
 This package depends on the following ROS packages:
 - catkin (buildtool)
 
-If you would like to view the documentation in the browser, ensure you have at least [Node.js 18 LTS](https://nodejs.org/en).
-
-```bash
-# install Node.js 18 LTS on Ubuntu:
-curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash - &&\
-sudo apt-get install -y nodejs
-```
+If you would like to view the documentation in the browser, ensure you have at [Node.js v16.x](https://nodejs.org/en) installed.
 
 ## Usage
 
@@ -178,24 +172,7 @@ to generate a README file for the package.
 
 ### Launch Files
 
-#### `document_pkg`
-
-Generate documentation for a single package
-
-```bash
-# Document this package
-roslaunch document_lasr document_pkg.launch 
-
-# Document coffee_shop package
-roslaunch document_lasr document_pkg.launch package:=coffee_shop
-```
-
-| Argument | Default | Description |
-|:-:|:-:|---|
-| package | document_lasr | Package to document |
-| set_me_to_anything |  | This is an example argument without a default |
-
-
+This package has no launch files.
 
 ### Messages
 

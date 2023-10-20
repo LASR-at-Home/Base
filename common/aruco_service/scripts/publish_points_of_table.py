@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import rospy
-from aruco_service.srv import TableNumber, TableNumberResponse
+from aruco_service.srv import PublishTablePoints, PublishTablePointsResponse
 from visualization_msgs.msg import Marker
 
 def create_marker_msg(point, idx):
@@ -24,32 +24,52 @@ def create_marker_msg(point, idx):
 
 def publish_points(number):
     table = number.table
-    objects_marker_pub = rospy.Publisher("/table/objects_cuboid", Marker, queue_size=4)
-    persons_marker_pub = rospy.Publisher("/table/persons_cuboid", Marker, queue_size=4)
+    objects_marker_pub = rospy.Publisher("/table/objects_cuboid", Marker, queue_size=8)
+    persons_marker_pub = rospy.Publisher("/table/persons_cuboid", Marker, queue_size=8)
 
-    obj = rospy.get_param("/tables/table" + str(table) + "/objects_cuboid")
-    
-    objects_marker_pub.publish(create_marker_msg(obj[0], 0))
-    objects_marker_pub.publish(create_marker_msg(obj[1], 1))
-    objects_marker_pub.publish(create_marker_msg(obj[2], 2))
-    objects_marker_pub.publish(create_marker_msg(obj[3], 3))
+
 
     if table >= 0:
+
+        obj = rospy.get_param("/tables/table" + str(table) + "/objects_cuboid")
+        
+        for i, p in enumerate(obj):
+
+            objects_marker_pub.publish(create_marker_msg(p, i))
+
         per = rospy.get_param("/tables/table" + str(table) + "/persons_cuboid")
 
-        persons_marker_pub.publish(create_marker_msg(per[0], 0))
-        persons_marker_pub.publish(create_marker_msg(per[1], 1))
-        persons_marker_pub.publish(create_marker_msg(per[2], 2))
-        persons_marker_pub.publish(create_marker_msg(per[3], 3))
+
+        for i, p in enumerate(per):
+
+            persons_marker_pub.publish(create_marker_msg(p, i))
+
+    elif table == -1:
+
+        cuboid = rospy.get_param("/counter/cuboid")
+
+        objects_marker_pub.publish(create_marker_msg(cuboid[0], 0))
+        objects_marker_pub.publish(create_marker_msg(cuboid[1], 1))
+        objects_marker_pub.publish(create_marker_msg(cuboid[2], 2))
+        objects_marker_pub.publish(create_marker_msg(cuboid[3], 3))
+
+    elif table == -2:
+        cuboid = rospy.get_param("/wait/cuboid")
+
+        objects_marker_pub.publish(create_marker_msg(cuboid[0], 0))
+        objects_marker_pub.publish(create_marker_msg(cuboid[1], 1))
+        objects_marker_pub.publish(create_marker_msg(cuboid[2], 2))
+        objects_marker_pub.publish(create_marker_msg(cuboid[3], 3))
+
 
     rospy.loginfo("Published points for table " + str(table))
 
-    return TableNumberResponse(True)
+    return PublishTablePointsResponse(True)
 
 if __name__ == "__main__":
 
     rospy.init_node("point_publisher")
-    s = rospy.Service("publish_table_points", TableNumber, publish_points)
+    s = rospy.Service("publish_table_points", PublishTablePoints, publish_points)
     
     rospy.loginfo("Point Publisher Service Ready")
     
