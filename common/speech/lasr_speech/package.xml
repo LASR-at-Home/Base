@@ -50,15 +50,15 @@
   <!--   <doc_depend>doxygen</doc_depend> -->
   <buildtool_depend>catkin</buildtool_depend>
   <build_depend>lasr_rasa</build_depend>
-  <build_depend>lasr_speech_recognition_common</build_depend>
+  <build_depend>lasr_speech_recognition_msgs</build_depend>
   <build_depend>lasr_speech_recognition_whisper</build_depend>
   <build_depend>rospy</build_depend>
   <build_export_depend>lasr_rasa</build_export_depend>
-  <build_export_depend>lasr_speech_recognition_common</build_export_depend>
+  <build_export_depend>lasr_speech_recognition_msgs</build_export_depend>
   <build_export_depend>lasr_speech_recognition_whisper</build_export_depend>
   <build_export_depend>rospy</build_export_depend>
   <exec_depend>lasr_rasa</exec_depend>
-  <exec_depend>lasr_speech_recognition_common</exec_depend>
+  <exec_depend>lasr_speech_recognition_msgs</exec_depend>
   <exec_depend>lasr_speech_recognition_whisper</exec_depend>
   <exec_depend>rospy</exec_depend>
 

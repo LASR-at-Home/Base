@@ -12,7 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   message_generation
   lasr_rasa
-  lasr_speech_recognition_common
+  lasr_speech_recognition_msgs
   lasr_speech_recognition_whisper
 )
 
@@ -107,7 +107,7 @@ generate_messages(
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES lasr_speech
-#  CATKIN_DEPENDS lasr_rasa lasr_speech_recognition_common lasr_speech_recognition_whisper rospy
+#  CATKIN_DEPENDS lasr_rasa lasr_speech_recognition_msgs lasr_speech_recognition_whisper rospy
 #  DEPENDS system_lib
 )
 
