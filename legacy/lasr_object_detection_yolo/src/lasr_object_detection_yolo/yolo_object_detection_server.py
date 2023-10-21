@@ -15,8 +15,8 @@ import time
 from darknet_pytorch.darknet import Darknet
 from darknet_pytorch.utils import post_processing
 
-from lasr_object_detection_yolo.srv import YoloDetection, YoloDetectionResponse
-from lasr_perception_server.msg import Detection
+from lasr_vision_msgs.srv import YoloDetection, YoloDetectionResponse
+from lasr_vision_msgs.msg import Detection
 
 import nvidia_smi
 

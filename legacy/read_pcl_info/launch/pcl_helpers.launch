@@ -48,8 +48,7 @@
 
 
     <!--      PERCEPTION     -->
-    <node pkg="lasr_object_detection_yolov8" type="service" name="service" output="screen"/>
-    <node pkg="lasr_perception_server" name="perception_server" type="perception_server.py"/>
+    <node pkg="lasr_vision_yolov8" type="service" name="service" output="screen"/>
     <node pkg="tf_module" name="tf_transforms_base" type="tf_transforms_base.py"/>
 
 

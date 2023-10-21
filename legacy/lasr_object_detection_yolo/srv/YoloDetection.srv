@@ -3,4 +3,4 @@ string dataset
 float32 confidence
 float32 nms
 ---
-lasr_perception_server/Detection[] detected_objects
+lasr_vision_msgs/Detection[] detected_objects

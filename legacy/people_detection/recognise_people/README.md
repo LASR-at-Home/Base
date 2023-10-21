@@ -13,7 +13,7 @@ This package depends on the following ROS packages:
 - std_msgs (build)
 - rospy (exec)
 - std_msgs (exec)
-- lasr_perception_server
+- lasr_vision_msgs
 
 Ask the package maintainer to write or create a blank `doc/PREREQUISITES.md` for their package!
 
@@ -47,14 +47,14 @@ Request
 
 | Field | Type | Description |
 |:-:|:-:|---|
-| detected_objects_yolo | lasr_perception_server/Detection[] |  |
-| detected_objects_opencv | lasr_perception_server/Detection[] |  |
+| detected_objects_yolo | lasr_vision_msgs/Detection[] |  |
+| detected_objects_opencv | lasr_vision_msgs/Detection[] |  |
 
 Response
 
 | Field | Type | Description |
 |:-:|:-:|---|
-| detected_objects | lasr_perception_server/Detection[] |  |
+| detected_objects | lasr_vision_msgs/Detection[] |  |
 
 
 ### Actions

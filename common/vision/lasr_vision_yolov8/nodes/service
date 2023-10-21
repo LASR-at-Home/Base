@@ -1,0 +1,48 @@
+#!/usr/bin/env python3
+
+import re
+import rospy
+import rospkg
+import lasr_vision_yolov8 as yolo
+
+from sensor_msgs.msg import Image
+from lasr_vision_msgs.srv import YoloDetection, YoloDetectionRequest, YoloDetectionResponse
+
+# Put ourselves in the model folder
+import os
+import rospkg
+rp = rospkg.RosPack()
+package_path = rp.get_path('lasr_vision_yolov8')
+os.chdir(os.path.abspath(os.path.join(package_path, 'models')))
+
+# Initialise rospy
+rospy.init_node('yolov8_service')
+
+# Determine variables
+DEBUG = rospy.get_param('~debug', False)
+PRELOAD = rospy.get_param('~preload', [])
+
+for model in PRELOAD:
+    yolo.load_model(model)
+
+# Prepare publisher
+debug_publishers = {}
+if DEBUG:
+    debug_publisher = rospy.Publisher('/yolov8/debug', Image, queue_size=1)
+
+def detect(request: YoloDetectionRequest) -> YoloDetectionResponse:
+    '''
+    Hand off detection request to yolo library
+    '''
+    debug_publisher = None
+    if DEBUG:
+        if request.dataset in debug_publishers:
+            debug_publisher = debug_publishers[request.dataset]
+        else:
+            topic_name = re.sub(r'[\W_]+', '', request.dataset)
+            debug_publisher = rospy.Publisher(f'/yolov8/debug/{topic_name}', Image, queue_size=1)
+    return yolo.detect(request, debug_publisher)
+
+rospy.Service('/yolov8/detect', YoloDetection, detect)
+rospy.loginfo('YOLOv8 service started')
+rospy.spin()

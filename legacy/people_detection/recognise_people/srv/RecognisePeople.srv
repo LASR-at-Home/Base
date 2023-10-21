@@ -1,4 +1,4 @@
-lasr_perception_server/Detection[] detected_objects_yolo
-lasr_perception_server/Detection[] detected_objects_opencv
+lasr_vision_msgs/Detection[] detected_objects_yolo
+lasr_vision_msgs/Detection[] detected_objects_opencv
 ---
-lasr_perception_server/Detection[] detected_objects
+lasr_vision_msgs/Detection[] detected_objects

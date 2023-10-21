@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 from tiago_controllers.controllers import Controllers
 from lasr_voice.voice import Voice
-from lasr_object_detection_yolo.srv import YoloDetection
+from lasr_vision_msgs.srv import YoloDetection
 import rospy, actionlib
 from tiago_controllers.controllers.base_controller import CmdVelController
 from interaction_module.srv import AudioAndTextInteraction
