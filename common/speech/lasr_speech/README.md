@@ -3,18 +3,20 @@
 The lasr_speech package
 
 This package is maintained by:
+
 - [Jared](mailto:j.w.swift@outlook.com)
 
 ## Prerequisites
 
 This package depends on the following ROS packages:
+
 - catkin (buildtool)
 - lasr_rasa (build)
-- lasr_speech_recognition_common (build)
+- lasr_speech_recognition_msgs (build)
 - lasr_speech_recognition_whisper (build)
 - rospy (build)
 - lasr_rasa (exec)
-- lasr_speech_recognition_common (exec)
+- lasr_speech_recognition_msgs (exec)
 - lasr_speech_recognition_whisper (exec)
 - rospy (exec)
 
@@ -40,13 +42,11 @@ Ask the package maintainer to write a `doc/TECHNICAL.md` for their package!
 
 No description provided.
 
-| Argument | Default | Description |
-|:-:|:-:|---|
-| matcher | by-index |  |
-| device_param |  |  |
-| rasa_model |  |  |
-
-
+|   Argument   | Default  | Description |
+| :----------: | :------: | ----------- |
+|   matcher    | by-index |             |
+| device_param |          |             |
+|  rasa_model  |          |             |
 
 ### Messages
 
@@ -58,17 +58,16 @@ This package has no messages.
 
 Request
 
-| Field | Type | Description |
-|:-:|:-:|---|
-| play_sound | bool |  |
+|   Field    | Type | Description |
+| :--------: | :--: | ----------- |
+| play_sound | bool |             |
 
 Response
 
-| Field | Type | Description |
-|:-:|:-:|---|
-| json_response | string |  |
-| success | bool |  |
-
+|     Field     |  Type  | Description |
+| :-----------: | :----: | ----------- |
+| json_response | string |             |
+|    success    |  bool  |             |
 
 ### Actions
 

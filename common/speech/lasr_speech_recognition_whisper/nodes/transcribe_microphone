@@ -46,7 +46,7 @@ from lasr_speech_recognition_whisper import SpeechRecognitionToTopic, Microphone
 collector = MicrophonePhraseCollector(device_index=device_index)
 collector.adjust_for_noise()
 
-model = load_model("medium.en")
+model = load_model("base.en")
 
 # try to run inference on the example file
 r = rospkg.RosPack()
