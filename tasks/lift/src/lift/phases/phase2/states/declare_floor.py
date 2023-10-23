@@ -5,7 +5,7 @@ from interaction_module.srv import AudioAndTextInteraction, AudioAndTextInteract
     AudioAndTextInteractionResponse
 import json
 from lift.defaults import TEST, PLOT_SHOW, PLOT_SAVE, DEBUG_PATH, DEBUG, RASA
-from speech_helper import listen, affirm
+#from speech_helper import listen, affirm
 
 class DeclareFloor(smach.State):
     def __init__(self, default):
