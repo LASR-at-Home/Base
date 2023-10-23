@@ -13,7 +13,7 @@
 
     To pick our own points, we pick the points from RVIZ. 
 
-    All required points will be in the demo.yaml file. 
+    All required points will be in the final_lift.yaml file. 
        
 
 2. How to Run:
@@ -33,12 +33,16 @@
       \`\`\`
    ```
 
+    Note: Setup may take some time. Give it 2 or 3 minutes to do this, and it's finished when it's only outputing "Door status:" and nothing else. 
+
 
 3. Common Issues: 
     1. RASA doesn't detect speech/breaks/doesn't work: 
         It may be that there isn't a RASA model for the lift task. 
-        Please see common/Interaction/lasr_rasa/doc to train the RASA model for the lift. The required data should be in common/Interaction/lasr_rasa/assistants/lift/data
+        Please see common/speech/lasr_rasa/doc to train the RASA model for the lift. The required data should be in common/speech/lasr_rasa/assistants/lift/data
     2. There is no model for the keypoints: 
         The model is too big to be uploaded to git, please contact Zoe for the "lift_position" keypoint model. 
+        Coming soon: Ideally there will be some shared folder with important models that are too big for git. Will share a link soon. 
     3. The microphone isn't working when attempting to do speech/whisper: 
-        This may be a problem with the laptops microphone drives. Please see common/Interaction/lasr_speech_recognition_whisper for general whisper usage. Please make sure no other application (including the settings) is using the microphone while running the episode. 
+        This may be a problem with the laptops microphone drivers. Please make sure no other application (including the settings UI) is using the microphone while running the episode. 
+        Please make sure that the microphone set in the setup.launch file has the same index as the microphone you want to use. See common/speech/lasr_speech_recognition_whisper for general whisper and microphone usage. 
