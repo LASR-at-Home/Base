@@ -23,8 +23,8 @@
     <node pkg="interaction_module" name="interaction_module_srv" type="interaction_module_srv.py"/>
 
     <arg name="whisper_matcher" default="by-index" />
-    <!--    <arg name="whisper_device_param" default="0" />-->
-    <arg name="whisper_device_param" default="13" />
+    <arg name="whisper_device_param" default="0" />
+    <!--<arg name="whisper_device_param" default="13" />-->
     <arg name="rasa_model" default="$(find lasr_rasa)/assistants/lift/models"/>
 
     <include file = "$(find lasr_speech)/launch/speech.launch">
@@ -40,8 +40,8 @@
         <rosparam command="load" file="$(find lift)/config/final_lift_sim.yaml" />
     </group>
     <group unless="$(arg is_sim)">
-<!--        <rosparam command="load" file="$(find lift)/config/final_lift.yaml" />-->
-        <rosparam command="load" file="$(find lift)/config/final_mk.yaml" />
+        <rosparam command="load" file="$(find lift)/config/final_lift.yaml" />
+<!--       <rosparam command="load" file="$(find lift)/config/final_mk.yaml" />--> 
     </group>
 
 
