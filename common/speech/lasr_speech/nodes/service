@@ -3,7 +3,7 @@ import rospy
 from std_srvs.srv import Empty
 from lasr_speech.srv import Speech, SpeechResponse
 from lasr_rasa.srv import Rasa
-from lasr_speech_recognition_common.msg import Transcription
+from lasr_speech_recognition_msgs.msg import Transcription
 import sounddevice
 import soundfile
 import pyaudio

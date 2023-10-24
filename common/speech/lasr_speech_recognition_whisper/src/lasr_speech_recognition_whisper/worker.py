@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 
 from .collector import AbstractPhraseCollector
 
-from lasr_speech_recognition_common.msg import Transcription
+from lasr_speech_recognition_msgs.msg import Transcription
 
 class SpeechRecognitionWorker(ABC):
     '''
