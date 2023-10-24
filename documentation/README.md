@@ -1,4 +1,4 @@
-# document_lasr
+# documentation
 
 Package for documenting ROS packages in your current workspace.
 
@@ -17,7 +17,7 @@ If you would like to view the documentation in the browser, ensure you have at [
 View workspace documentation in the browser:
 
 ```bash
-rosrun document_lasr view.py
+rosrun documentation view.py
 ```
 
 Please see the [example section](#example) to see how to document your package.
@@ -25,13 +25,13 @@ Please see the [example section](#example) to see how to document your package.
 Document a single package from your current workspace:
 
 ```bash
-rosrun document_lasr generate_readme.py ros_package_name
+rosrun documentation generate_readme.py ros_package_name
 ```
 
 Document all LASR packages in current workspace:
 
 ```bash
-rosrun document_lasr generate_all.py
+rosrun documentation generate_all_lasr.py
 ```
 
 ## Example
@@ -103,7 +103,7 @@ For this example, let's suppose you have a package `my_package`.
       \`\`\`bash
       roslaunch my_package my_service.launch
       \`\`\`
-   
+
    2. Start the example script
 
       \`\`\`bash
@@ -113,19 +113,19 @@ For this example, let's suppose you have a package `my_package`.
 
 5. Create the `doc/TECHNICAL.md` file.
 
-    This is up to you to figure out, but in this file you should provide a technical overview of how the package works. Include whatever you think is required for someone who would want to contribute to the package.
+   This is up to you to figure out, but in this file you should provide a technical overview of how the package works. Include whatever you think is required for someone who would want to contribute to the package.
 
 6. Describe fields in messages / services / actions.
 
-    You should go through all of your `.msg`, `.srv`, and `.action` files in their respective folders, and add comments to each field.
+   You should go through all of your `.msg`, `.srv`, and `.action` files in their respective folders, and add comments to each field.
 
-    ```
-    # the table we to check
-    uint8 table
-    ---
-    # whether the table is ready
-    bool result # (you can also put comments here)
-    ```
+   ```
+   # the table we are going to check
+   uint8 table
+   ---
+   # whether the table is ready
+   bool result # (you can also put comments here)
+   ```
 
 7. Add descriptions, examples and documentation to launch files.
 
@@ -144,7 +144,7 @@ For this example, let's suppose you have a package `my_package`.
 
    ```xml
    <launch>
-     <arg name="package" default="document_lasr" doc="Package to document" />
+     <arg name="package" default="documentation" doc="Package to document" />
      <arg name="set_me_to_anything" doc="This is an example argument without a default" />
      <arg name="hidden_arg" value="this won't show up" />
    </launch>
@@ -153,7 +153,7 @@ For this example, let's suppose you have a package `my_package`.
 Finally, regenerate the README file:
 
 ```bash
-rosrun document_lasr generate_readme.py my_package
+rosrun documentation generate_readme.py my_package
 ```
 
 ## Technical Overview

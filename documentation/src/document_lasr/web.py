@@ -7,7 +7,7 @@ r = rospkg.RosPack()
 
 def configure_web():
     # Determine dest folder
-    PKG = r.get_path('document_lasr')
+    PKG = r.get_path('documentation')
     WEB_DIR = os.path.abspath(os.path.join(PKG, 'web'))
     DOC_DIR = os.path.join(WEB_DIR, 'docs', 'packages')
     TASK_DIR = os.path.join(WEB_DIR, 'docs', 'tasks')

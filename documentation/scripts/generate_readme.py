@@ -4,7 +4,7 @@ import os, sys
 
 # Determine package name
 if len(sys.argv) < 2:
-    print('Usage: rosrun document_lasr generate_readme.py ros_package_name')
+    print('Usage: rosrun documentation generate_readme.py ros_package_name')
     exit()
 else:
     package = sys.argv[1]
