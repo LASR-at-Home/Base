@@ -12,7 +12,7 @@ Packages are organised into the following folders:
   - **vision**: object recognition
 - **documentation** (package): package containing scripts for generating READMEs and also the documentation site itself
 - **legacy**: packages intended to be removed / rewritten and adapted into the new structure
-- **skills**: commonly used states (for smach) which implement various actions
+- **skills**: commonly used states and small state machines (for smach) which implement various actions
 - **tasks**: implementations of robot demos / tasks / challenges
 
 ## Documentation
