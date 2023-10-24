@@ -82,7 +82,7 @@ For this example, let's suppose you have a package `my_package`.
    You should go through all of your `.msg`, `.srv`, and `.action` files in their respective folders, and add comments to each field.
 
    ```
-   # the table we to check
+   # the table we are going to check
    uint8 table
    ---
    # whether the table is ready
