@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import rospy
-from lasr_object_detection_yolo.srv import YoloDetection, YoloDetectionRequest
+from lasr_vision_msgs.srv import YoloDetection, YoloDetectionRequest
 from sensor_msgs.msg import Image
 from common_math import pcl_msg_to_cv2, seg_to_centroid
 from std_msgs.msg import String

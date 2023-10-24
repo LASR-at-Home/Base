@@ -1,0 +1,25 @@
+<launch>
+    <description>Run a YOLOv8 model using the camera</description>
+    <usage doc="Run the demo"></usage>
+    <usage doc="Run the demo with a different model">model:=yolov8n.pt</usage>
+
+    <!-- arguments -->
+    <arg name="model" default="yolov8n-seg.pt" doc="Model to use for the demo" />
+
+    <!-- yolo service -->
+    <include file="$(find lasr_vision_yolov8)/launch/service.launch">
+        <arg name="debug" value="true" />
+        <arg name="preload" value="['$(arg model)']" />
+    </include>
+    
+    <!-- show debug topic -->
+    <node name="image_view" pkg="rqt_image_view" type="rqt_image_view" respawn="false" output="screen" args="/yolov8/debug" />
+
+    <!-- start relay service -->
+    <node name="relay" pkg="lasr_vision_yolov8" type="relay" respawn="false" output="screen" args="/camera/image_raw $(arg model)" />
+
+    <!-- launch video stream -->
+   <include file="$(find video_stream_opencv)/launch/camera.launch">
+        <arg name="visualize" value="true" />
+   </include>
+</launch>

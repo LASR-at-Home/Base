@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(recognise_people)
+project(lasr_vision_msgs)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
@@ -7,22 +7,16 @@ project(recognise_people)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED COMPONENTS
-  rospy
-  std_msgs
-  sensor_msgs
-  message_runtime
-  message_generation
-  lasr_vision_msgs
-)
+find_package(catkin REQUIRED COMPONENTS message_generation message_runtime sensor_msgs)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
 
+
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
 ## See http://ros.org/doc/api/catkin/html/user_guide/setup_dot_py.html
-catkin_python_setup()
+# catkin_python_setup()
 
 ################################################
 ## Declare ROS messages, services and actions ##
@@ -49,15 +43,15 @@ catkin_python_setup()
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
 ## Generate messages in the 'msg' folder
-# add_message_files(
-#   FILES
-#   Detection.msg
-# )
+add_message_files(
+  FILES
+  Detection.msg
+)
 
 ## Generate services in the 'srv' folder
 add_service_files(
-   FILES
-   RecognisePeople.srv
+  FILES
+  YoloDetection.srv
 )
 
 ## Generate actions in the 'action' folder
@@ -69,10 +63,8 @@ add_service_files(
 
 ## Generate added messages and services with any dependencies listed here
 generate_messages(
-   DEPENDENCIES
-   std_msgs
-   sensor_msgs
-   lasr_vision_msgs
+  DEPENDENCIES
+  sensor_msgs
 )
 
 ################################################
@@ -106,8 +98,8 @@ generate_messages(
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 #  INCLUDE_DIRS include
-#  LIBRARIES lasr_object_detection_yolo
-#  CATKIN_DEPENDS rospy std_msgs
+#  LIBRARIES lasr_vision_msgs
+#  CATKIN_DEPENDS other_catkin_pkg
 #  DEPENDS system_lib
 )
 
@@ -119,12 +111,12 @@ catkin_package(
 ## Your package locations should be listed before other locations
 include_directories(
 # include
-  ${catkin_INCLUDE_DIRS}
+# ${catkin_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/lasr_object_detection_yolo.cpp
+#   src/${PROJECT_NAME}/lasr_vision_msgs.cpp
 # )
 
 ## Add cmake target dependencies of the library
@@ -135,7 +127,7 @@ include_directories(
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-# add_executable(${PROJECT_NAME}_node src/lasr_object_detection_yolo_node.cpp)
+# add_executable(${PROJECT_NAME}_node src/lasr_vision_msgs_node.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -199,7 +191,7 @@ include_directories(
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_lasr_object_detection_yolo.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_lasr_vision_msgs.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()

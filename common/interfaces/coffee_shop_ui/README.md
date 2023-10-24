@@ -63,17 +63,17 @@ This package has no launch files.
 
 ### Messages
 
-#### `Confirm`
-
-| Field | Type | Description |
-|:-:|:-:|---|
-| value | bool | confirmation |
-
 #### `Order`
 
 | Field | Type | Description |
 |:-:|:-:|---|
 | products | string[] | list of products being ordered |
+
+#### `Confirm`
+
+| Field | Type | Description |
+|:-:|:-:|---|
+| value | bool | confirmation |
 
 
 ### Services

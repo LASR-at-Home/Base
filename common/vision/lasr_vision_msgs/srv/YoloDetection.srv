@@ -1,0 +1,16 @@
+# Image to run inference on
+sensor_msgs/Image image_raw
+
+# YOLO model to use
+string dataset
+
+# How certain the detection should be to include
+float32 confidence
+
+# Non-maximum Supression
+#
+# Guiding value to remove overlapping bounding boxes
+float32 nms
+---
+# Detection result
+lasr_vision_msgs/Detection[] detected_objects

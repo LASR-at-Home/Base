@@ -4,7 +4,7 @@ from tiago_controllers import BaseController, HeadController
 from lasr_voice import Voice
 from play_motion_msgs.msg import PlayMotionAction
 from control_msgs.msg import PointHeadAction
-from lasr_object_detection_yolo.srv import YoloDetection
+from lasr_vision_msgs.srv import YoloDetection
 from coffee_shop.srv import TfTransform, LatestTransform, ApplyTransform
 from lasr_shapely import LasrShapely
 from lasr_speech.srv import Speech

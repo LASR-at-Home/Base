@@ -18,11 +18,6 @@
     <param name="debug_with_images" value="$(arg debug_with_images)" />
     <!--    <param name="publish_markers" value="$(arg publish_markers)" />-->
 
-     <!--     TASK  -->
-<!--     <node name="detect_objects_v8" pkg="lasr_object_detection_yolo" type="detect_objects_v8.py" output="screen" required="true"/>-->
-
-
-
     <!--     STATIC POINTS  -->
 
     <group if="$(arg is_sim)">
@@ -34,17 +29,15 @@
 
 
     <!--      PERCEPTION     -->
-    <!--    <include file="$(find lasr_perception_server)/launch/perception_server.launch"/>-->
     <!--    <node name="lasr_object_detection_yolo" pkg="lasr_object_detection_yolo" type="yolo_object_detection_server.py" output="screen" respawn="true"/>-->
-    <node pkg="lasr_object_detection_yolov8" type="service" name="service" output="screen"/>
+    <node pkg="lasr_vision_yolov8" type="service" name="service" output="screen"/>
 
-    <include file="$(find lasr_object_detection_yolov8)/launch/service.launch">
+    <include file="$(find lasr_vision_yolov8)/launch/service.launch">
         <arg name="debug" value="true" />
         <arg name="preload" value="['yolov8n-seg.pt']" />
     </include>
 
 
-    <node pkg="lasr_perception_server" name="perception_server" type="perception_server.py"/>
     <node name="tf_module" pkg="tf_module" type="tf_transforms_base.py" output="screen" respawn="true"/>
 
 

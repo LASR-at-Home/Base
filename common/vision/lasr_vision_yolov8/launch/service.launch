@@ -1,0 +1,13 @@
+<launch>
+    <description>Start the YOLOv8 service</description>
+    <usage doc="YOLOv8 service"></usage>
+    <usage doc="Preload models and enable debug topic">debug:=true preload:=['yolov8n.pt','yolov8n-seg.pt']</usage>
+
+    <arg name="debug" default="false" doc="Whether to publish plotted images to /yolov8/debug" />
+    <arg name="preload" default="[]" doc="Array of models to preload when starting the service" />
+
+    <node name="yolo_service" pkg="lasr_vision_yolov8" type="service" output="screen">
+        <param name="debug" type="bool" value="$(arg debug)" />
+        <param name="preload" type="yaml" value="$(arg preload)" />
+    </node>
+</launch>

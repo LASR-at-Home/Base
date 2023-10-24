@@ -3,7 +3,7 @@
 from recognise_people.srv import RecognisePeople,  RecognisePeopleResponse
 import rospy
 from cv_bridge3 import CvBridge
-from lasr_perception_server.msg import Detection
+from lasr_vision_msgs.msg import Detection
 
 from cv_bridge3 import cv2
 import random, os, rospkg

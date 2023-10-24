@@ -109,6 +109,19 @@ This package has no messages.
 
 ### Services
 
+#### `ChangeTraversalParameters`
+
+Request
+
+| Field | Type | Description |
+|:-:|:-:|---|
+| unsafe | bool |  |
+
+Response
+
+| Field | Type | Description |
+|:-:|:-:|---|
+
 #### `DeterminePathViability`
 
 Request
@@ -139,21 +152,27 @@ Response
 |:-:|:-:|---|
 | dist | float32 |  |
 
-#### `ChangeTraversalParameters`
-
-Request
-
-| Field | Type | Description |
-|:-:|:-:|---|
-| unsafe | bool |  |
-
-Response
-
-| Field | Type | Description |
-|:-:|:-:|---|
-
 
 ### Actions
+
+#### `AlignToGoal`
+
+Goal
+
+| Field | Type | Description |
+|:-:|:-:|---|
+| start_pose | geometry_msgs/PoseStamped | first point to position at |
+| end_pose | geometry_msgs/PoseStamped | second point to face towards |
+
+Result
+
+| Field | Type | Description |
+|:-:|:-:|---|
+
+Feedback
+
+| Field | Type | Description |
+|:-:|:-:|---|
 
 #### `MoveToGoal`
 
@@ -169,25 +188,6 @@ Result
 | Field | Type | Description |
 |:-:|:-:|---|
 | success | bool | result |
-
-Feedback
-
-| Field | Type | Description |
-|:-:|:-:|---|
-
-#### `AlignToGoal`
-
-Goal
-
-| Field | Type | Description |
-|:-:|:-:|---|
-| start_pose | geometry_msgs/PoseStamped | first point to position at |
-| end_pose | geometry_msgs/PoseStamped | second point to face towards |
-
-Result
-
-| Field | Type | Description |
-|:-:|:-:|---|
 
 Feedback
 
