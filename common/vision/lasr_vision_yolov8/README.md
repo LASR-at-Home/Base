@@ -122,23 +122,6 @@ The actual YOLO detection routine works as follows:
 
 ### Launch Files
 
-#### `camera`
-
-Run a YOLOv8 model using the camera
-
-```bash
-# Run the demo
-roslaunch lasr_vision_yolov8 camera.launch 
-
-# Run the demo with a different model
-roslaunch lasr_vision_yolov8 camera.launch model:=yolov8n.pt
-```
-
-| Argument | Default | Description |
-|:-:|:-:|---|
-| model | yolov8n-seg.pt | Model to use for the demo |
-
-
 #### `service`
 
 Start the YOLOv8 service
@@ -155,6 +138,23 @@ roslaunch lasr_vision_yolov8 service.launch debug:=true preload:=['yolov8n.pt','
 |:-:|:-:|---|
 | debug | false | Whether to publish plotted images to /yolov8/debug |
 | preload | [] | Array of models to preload when starting the service |
+
+
+#### `camera`
+
+Run a YOLOv8 model using the camera
+
+```bash
+# Run the demo
+roslaunch lasr_vision_yolov8 camera.launch 
+
+# Run the demo with a different model
+roslaunch lasr_vision_yolov8 camera.launch model:=yolov8n.pt
+```
+
+| Argument | Default | Description |
+|:-:|:-:|---|
+| model | yolov8n-seg.pt | Model to use for the demo |
 
 
 #### `demo`

@@ -52,6 +52,22 @@ Response
 |:-:|:-:|---|
 | centroid | geometry_msgs/PointStamped |  |
 
+#### `SegmentCuboid`
+
+Request
+
+| Field | Type | Description |
+|:-:|:-:|---|
+| points | sensor_msgs/PointCloud2 |  |
+| min | geometry_msgs/Point |  |
+| max | geometry_msgs/Point |  |
+
+Response
+
+| Field | Type | Description |
+|:-:|:-:|---|
+| points | sensor_msgs/PointCloud2 |  |
+
 #### `MaskFromCuboid`
 
 Request
@@ -79,22 +95,6 @@ Request
 | y1 | int32 |  |
 | x2 | int32 |  |
 | y2 | int32 |  |
-
-Response
-
-| Field | Type | Description |
-|:-:|:-:|---|
-| points | sensor_msgs/PointCloud2 |  |
-
-#### `SegmentCuboid`
-
-Request
-
-| Field | Type | Description |
-|:-:|:-:|---|
-| points | sensor_msgs/PointCloud2 |  |
-| min | geometry_msgs/Point |  |
-| max | geometry_msgs/Point |  |
 
 Response
 

@@ -36,6 +36,22 @@ This package has no messages.
 
 ### Services
 
+#### `DialogflowAudio`
+
+Request
+
+| Field | Type | Description |
+|:-:|:-:|---|
+| task | std_msgs/String |  |
+| action | std_msgs/String |  |
+
+Response
+
+| Field | Type | Description |
+|:-:|:-:|---|
+| result | std_msgs/String |  |
+| success | std_msgs/Bool |  |
+
 #### `DialogflowText`
 
 Request
@@ -45,22 +61,6 @@ Request
 | task | std_msgs/String |  |
 | action | std_msgs/String |  |
 | query_text | std_msgs/String |  |
-
-Response
-
-| Field | Type | Description |
-|:-:|:-:|---|
-| result | std_msgs/String |  |
-| success | std_msgs/Bool |  |
-
-#### `DialogflowAudio`
-
-Request
-
-| Field | Type | Description |
-|:-:|:-:|---|
-| task | std_msgs/String |  |
-| action | std_msgs/String |  |
 
 Response
 

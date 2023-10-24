@@ -3,13 +3,11 @@
 Speech recognition implemented using OpenAI Whisper
 
 This package is maintained by:
-
 - [Paul Makles](mailto:me@insrt.uk)
 
 ## Prerequisites
 
 This package depends on the following ROS packages:
-
 - catkin (buildtool)
 - catkin_virtualenv (build)
 - lasr_speech_recognition_msgs
@@ -17,7 +15,6 @@ This package depends on the following ROS packages:
 This packages requires Python 3.10 to be present.
 
 This package has 48 Python dependencies:
-
 - [SpeechRecognition](https://pypi.org/project/SpeechRecognition)==3.10.0
 - [openai-whisper](https://pypi.org/project/openai-whisper)==20230314
 - [PyAudio](https://pypi.org/project/PyAudio)==0.2.13

@@ -37,24 +37,6 @@ Ask the package maintainer to write a `doc/TECHNICAL.md` for their package!
 
 ### Launch Files
 
-#### `setup`
-
-No description provided.
-
-| Argument | Default | Description |
-|:-:|:-:|---|
-| is_sim | false |  |
-| plot_show | false |  |
-| plot_save | true |  |
-| debug_with_images | true |  |
-| publish_markers | true |  |
-| debug | 3 |  |
-| rasa | true |  |
-| whisper_matcher | by-index |  |
-| whisper_device_param | 13 |  |
-| rasa_model | $(find lasr_rasa)/assistants/lift/models |  |
-
-
 #### `no_rasa`
 
 No description provided.
@@ -73,6 +55,24 @@ No description provided.
 #### `demo`
 
 No description provided.
+
+#### `setup`
+
+No description provided.
+
+| Argument | Default | Description |
+|:-:|:-:|---|
+| is_sim | false |  |
+| plot_show | false |  |
+| plot_save | true |  |
+| debug_with_images | true |  |
+| publish_markers | true |  |
+| debug | 3 |  |
+| rasa | true |  |
+| whisper_matcher | by-index |  |
+| whisper_device_param | 13 |  |
+| rasa_model | $(find lasr_rasa)/assistants/lift/models |  |
+
 
 
 ### Messages

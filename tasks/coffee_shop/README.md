@@ -42,6 +42,10 @@ No description provided.
 | tablet | true |  |
 
 
+#### `people_poses`
+
+No description provided.
+
 #### `make_order`
 
 No description provided.
@@ -50,6 +54,15 @@ No description provided.
 |:-:|:-:|---|
 | config | test_make_order |  |
 | tablet | true |  |
+
+
+#### `check_table`
+
+No description provided.
+
+| Argument | Default | Description |
+|:-:|:-:|---|
+| config | test_check_table |  |
 
 
 #### `core`
@@ -72,19 +85,6 @@ No description provided.
 |:-:|:-:|---|
 | config | test_take_order |  |
 | tablet | true |  |
-
-
-#### `people_poses`
-
-No description provided.
-
-#### `check_table`
-
-No description provided.
-
-| Argument | Default | Description |
-|:-:|:-:|---|
-| config | test_check_table |  |
 
 
 #### `wait_for_person`
@@ -113,20 +113,20 @@ This package has no messages.
 
 ### Services
 
-#### `LatestTransform`
+#### `ApplyTransform`
 
 Request
 
 | Field | Type | Description |
 |:-:|:-:|---|
-| from_frame | string | source frame |
-| target_frame | string | target frame |
+| points | geometry_msgs/Point[] | point we want to transform |
+| transform | geometry_msgs/TransformStamped | the transform we want to use |
 
 Response
 
 | Field | Type | Description |
 |:-:|:-:|---|
-| transform | geometry_msgs/TransformStamped | transform |
+| new_points | geometry_msgs/Point[] | the transformed point |
 
 #### `TfTransform`
 
@@ -147,20 +147,20 @@ Response
 | target_pointcloud | sensor_msgs/PointCloud2 |  |
 | target_point | geometry_msgs/PointStamped |  |
 
-#### `ApplyTransform`
+#### `LatestTransform`
 
 Request
 
 | Field | Type | Description |
 |:-:|:-:|---|
-| points | geometry_msgs/Point[] | point we want to transform |
-| transform | geometry_msgs/TransformStamped | the transform we want to use |
+| from_frame | string | source frame |
+| target_frame | string | target frame |
 
 Response
 
 | Field | Type | Description |
 |:-:|:-:|---|
-| new_points | geometry_msgs/Point[] | the transformed point |
+| transform | geometry_msgs/TransformStamped | transform |
 
 
 ### Actions
