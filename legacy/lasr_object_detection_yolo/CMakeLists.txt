@@ -13,7 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
   sensor_msgs
   message_runtime
   message_generation
-  lasr_perception_server
+  lasr_vision_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -72,7 +72,7 @@ generate_messages(
    DEPENDENCIES
    std_msgs
    sensor_msgs
-   lasr_perception_server
+   lasr_vision_msgs
 )
 
 ################################################
