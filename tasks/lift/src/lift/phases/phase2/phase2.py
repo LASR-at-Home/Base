@@ -13,7 +13,6 @@ class Phase2(smach.StateMachine):
             smach.StateMachine.add('NAVIGATE_IN_LIFT', NavigateInLift(default), transitions={'success': 'FACE_PERSON'})
             smach.StateMachine.add('FACE_PERSON', FacePerson(default), transitions={'success': 'DECLARE_FLOOR', 'failed': 'FACE_PERSON'})
             smach.StateMachine.add('DECLARE_FLOOR', DeclareFloor(default), transitions={'success': 'INSIDE_LIFT_SM', 'failed': 'DECLARE_FLOOR'})
-
             smach.StateMachine.add('INSIDE_LIFT_SM', InsideLiftSM(default), transitions={'success': 'success'})
 
 
