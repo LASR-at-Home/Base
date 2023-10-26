@@ -5,7 +5,7 @@ import cv2
 from sensor_msgs.msg import Image, PointCloud2
 from object_interest_tracking.srv import Tdr, TdrResponse
 from cv_bridge3 import CvBridge
-from lasr_object_detection_yolo.srv import YoloDetection
+from lasr_vision_msgs.srv import YoloDetection
 from geometry_msgs.msg import Point, PointStamped
 import ros_numpy as rnp
 from std_msgs.msg import String

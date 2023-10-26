@@ -4,7 +4,7 @@ from common_math import pcl_msg_to_cv2, seg_to_centroid
 from sensor_msgs.msg import PointCloud2
 from std_msgs.msg import String
 from geometry_msgs.msg import PointStamped, Point
-from lasr_object_detection_yolo.srv import YoloDetection
+from lasr_vision_msgs.srv import YoloDetection
 from coffee_shop.srv import TfTransform, TfTransformRequest
 from visualization_msgs.msg import Marker
 from cv_bridge3 import CvBridge

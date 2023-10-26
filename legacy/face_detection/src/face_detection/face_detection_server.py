@@ -5,7 +5,7 @@ import rospkg
 
 from face_detection.srv import FaceDetection, FaceDetectionResponse, \
     FaceDetectionRequest
-from lasr_perception_server.msg import Detection
+from lasr_vision_msgs.msg import Detection
 import os
 import numpy as np
 import cv2

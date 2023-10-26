@@ -3,16 +3,16 @@
 Common messages used for speech recognition
 
 This package is maintained by:
-
 - [Paul Makles](mailto:me@insrt.uk)
 
 ## Prerequisites
 
 This package depends on the following ROS packages:
-
 - catkin (buildtool)
 - message_generation (build)
 - message_runtime (exec)
+
+
 
 ## Usage
 
@@ -36,10 +36,11 @@ This package has no launch files.
 
 #### `Transcription`
 
-|  Field   |  Type  | Description |
-| :------: | :----: | ----------- |
-|  phrase  | string |             |
-| finished |  bool  |             |
+| Field | Type | Description |
+|:-:|:-:|---|
+| phrase | string |  |
+| finished | bool |  |
+
 
 ### Services
 

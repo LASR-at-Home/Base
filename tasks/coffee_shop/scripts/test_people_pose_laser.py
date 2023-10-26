@@ -2,7 +2,7 @@
 import rospy
 from sensor_msgs.msg import LaserScan, CameraInfo, Image
 from geometry_msgs.msg import PointStamped
-from lasr_object_detection_yolo.srv import YoloDetection
+from lasr_vision_msgs.srv import YoloDetection
 from lasr_shapely.srv import PointsInPolygon2D
 from visualization_msgs.msg import Marker
 import numpy as np
