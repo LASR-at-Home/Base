@@ -4,7 +4,7 @@ import rosparam
 import sys
 import os
 import rospkg
-from aruco_service.srv import TableNumber, GenerateTableCuboid
+from aruco_service.srv import SaveNavigationPoint, GenerateTableCuboid
 
 if len(sys.argv) < 1:
     print("Usage: rosrun coffee_shop prep.py <config_name>")
@@ -12,8 +12,7 @@ if len(sys.argv) < 1:
 
 rospy.init_node("coffee_shop_prep")
 
-save_navigation_point = rospy.ServiceProxy("/save_navigation_points", TableNumber)
-save_pre_navigation_point = rospy.ServiceProxy("/save_pre_navigation_points", TableNumber)
+save_navigation_point = rospy.ServiceProxy("/save_navigation_points", SaveNavigationPoint)
 save_table_cuboid = rospy.ServiceProxy("/generate_table_cuboid", GenerateTableCuboid)
 
 
@@ -50,8 +49,6 @@ for i in range(n_tables):
 
     input(f"Take me to the search position for table {i}, then press Enter.")
     save_navigation_point(i)
-    input(f"Take me to the pre-search position for table {i}, then press Enter.")
-    save_pre_navigation_point(i)
 
 while True:
     padding_sz = 0.0

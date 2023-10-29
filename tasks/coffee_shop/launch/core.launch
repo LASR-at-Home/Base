@@ -14,7 +14,7 @@
 
     <include file="$(find lasr_vision_yolov8)/launch/service.launch">
         <arg name="debug" value="true" />
-        <arg name="preload" value="['yolov8n-seg.pt', 'final-mk-model-fine-tuned-with-val.pt', 'MK_COUNTER.pt']" />
+        <arg name="preload" value="['yolov8n-seg.pt', 'MK_COUNTER.pt']" />
     </include>
 
     <node pkg="lasr_shapely" type="service" name="shapely_service" output="screen"/>

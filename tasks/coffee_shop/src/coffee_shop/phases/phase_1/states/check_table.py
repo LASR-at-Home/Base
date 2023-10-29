@@ -54,8 +54,8 @@ class CheckTable(smach.State):
         detections = [(det, self.estimate_pose(pcl_msg, det)) for det in detections.detected_objects if det.name in filter]
         rospy.loginfo(f"All: {[(det.name, pose) for det, pose in detections]}")
         rospy.loginfo(f"Boundary: {polygon}")
-        satisfied_points = self.context.shapely.are_points_in_polygon_2d(self.arena_polygon, [[pose[0], pose[1]] for (_, pose) in detections]).inside
-        detections = [detections[i] for i in range(0, len(detections)) if satisfied_points[i]]
+        #satisfied_points = self.context.shapely.are_points_in_polygon_2d(self.arena_polygon, [[pose[0], pose[1]] for (_, pose) in detections]).inside
+        #detections = [detections[i] for i in range(0, len(detections)) if satisfied_points[i]]
         satisfied_points = self.context.shapely.are_points_in_polygon_2d(polygon, [[pose[0], pose[1]] for (_, pose) in detections]).inside
         detections = [detections[i] for i in range(0, len(detections)) if satisfied_points[i]]
         rospy.loginfo(f"Filtered: {[(det.name, pose) for det, pose in detections]}")
@@ -86,15 +86,12 @@ class CheckTable(smach.State):
         rospy.loginfo(self.context.current_table)
         self.object_polygon = rospy.get_param(f"/tables/{self.context.current_table}/objects_cuboid")
         self.person_polygon = rospy.get_param(f"/tables/{self.context.current_table}/persons_cuboid")
-        self.arena_polygon = rospy.get_param(f"/arena/cuboid")
+        #self.arena_polygon = rospy.get_param(f"/arena/cuboid")
         self.detections_objects = []
         self.detections_people = []
 
 
-        if self.context.current_table == "table0":
-            motions = ["back_to_default", "check_annoying_table", "check_annoying_table_low", "look_left", "look_right", "back_to_default"]
-        else:
-            motions = ["back_to_default", "check_table", "check_table_low", "look_left", "look_right", "back_to_default"]
+        motions = ["back_to_default", "check_table", "check_table_low", "look_left", "look_right", "back_to_default"]
         #self.detection_sub = rospy.Subscriber("/xtion/depth_registered/points", PointCloud2, self.check)
         
         if self.context.current_table == "table2":
