@@ -9,7 +9,7 @@
         - The starting position 
         - The position we wait to view the lift waiting area 
 
-    If running in the development room (given that a lift is set up correctly) the points should already be correctly in the demo.yaml file. It is worth checking that these points are correct. 
+    If running in the development room (given that a lift is set up correctly) the points should already be correctly in the final_lift.yaml file. It is worth checking that these points are correct. 
 
     To pick our own points, we pick the points from RVIZ. 
 
