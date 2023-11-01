@@ -13,18 +13,19 @@ from math import atan2, radians
 from geometry_msgs.msg import Twist
 from common_math.transformations import quaternion_from_euler
 from tiago_controllers.helpers.pose_helpers import get_pose_from_param
-
+from scipy.spatial.transform import Rotation as R
 from tiago_controllers.base_planner import get_journey_points as _get_journey_points
 import numpy as np
 import numpy as np
-from scipy.spatial.transform import Rotation as R
-
 
 class BaseController:
     def __init__(self):
         self._goal_sent = False
         self.__client = actionlib.SimpleActionClient("move_base", MoveBaseAction)
         self.__client.wait_for_server()
+
+    def get_pose(self):
+        return self.get_current_pose()[:2]
 
     def cancel_goal(self):
         if self._goal_sent is True:

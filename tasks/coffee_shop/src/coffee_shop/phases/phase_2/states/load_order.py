@@ -16,7 +16,7 @@ class LoadOrder(smach.State):
         self.context.base_controller.rotate(np.pi)
         pm_goal = PlayMotionGoal(motion_name="load_unload", skip_planning=True)
         self.context.play_motion_client.send_goal_and_wait(pm_goal)
-        self.context.voice_controller.sync_tts("I'll give you some time to load the order, please remember to take the tray...")
+        self.context.voice_controller.sync_tts("I'll give you some time to load the order...")
         rospy.sleep(rospy.Duration(10.0))
         self.context.start_head_manager("head_manager", '')
         return 'done'

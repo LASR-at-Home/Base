@@ -16,5 +16,5 @@ class MakeOrder(smach.State):
         self.context.stop_head_manager("head_manager")
         order = self.context.tables[self.context.current_table]["order"]
         order_string = ', '.join([f"{count} {self.context.target_object_remappings[item] if count == 1 else self.context.target_object_remappings[item]+'s'}" for item, count in Counter(order).items()]).replace(', ', ', and ', len(order)-2)
-        self.context.voice_controller.sync_tts(f"Please get me {order_string}. Make sure you place the tray clearly in the view of the robot, please")
+        self.context.voice_controller.sync_tts(f"Please get me {order_string}. Make sure you place the items in clear view of the robot.")
         return 'done'

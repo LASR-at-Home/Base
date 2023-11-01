@@ -27,8 +27,6 @@ def publish_points(number):
     objects_marker_pub = rospy.Publisher("/table/objects_cuboid", Marker, queue_size=8)
     persons_marker_pub = rospy.Publisher("/table/persons_cuboid", Marker, queue_size=8)
 
-
-
     if table >= 0:
 
         obj = rospy.get_param("/tables/table" + str(table) + "/objects_cuboid")
