@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 import smach
-from lift.phases import Phase1, Phase2, Phase3
-from lift.default import Default
-from receptionist.states import Start
+from receptionist.states import Start, WaitForPerson, AskForDrink
+from receptionist.default import Default
+
 
 class Receptionist(smach.StateMachine):
     def __init__(self):
@@ -10,5 +10,7 @@ class Receptionist(smach.StateMachine):
         self.default = Default()
 
         with self:
-            smach.StateMachine.add('START', Phase1(self.default), transitions={'success' : 'success'})
+            smach.StateMachine.add('START', Start(self.default), transitions={'success' : 'WAIT_FOR_PERSON'})
+            smach.StateMachine.add('WAIT_FOR_PERSON', WaitForPerson(self.default),transitions={'success':'ASK_FOR_DRINK'})
+            smach.StateMachine.add('ASK_FOR_DRINK',AskForDrink(self.default),transitions={'success':'success'})
   

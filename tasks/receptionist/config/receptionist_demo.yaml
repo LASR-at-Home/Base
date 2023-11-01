@@ -3,4 +3,17 @@ start:
     position: { x: 3.09560757362, y: 0.974404310171, z: 0.0}
     orientation: {x: 0.0, y: 0.0, z: -0.591061635968, w: 0.806626395853}
 
-    
+host:
+  name: "zoe"
+
+guest1: 
+  name: "unknown"
+  drink: "unknown"
+
+guest2: 
+  name: "unknown"
+  drink: "unknown"
+
+  
+
+

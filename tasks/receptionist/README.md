@@ -26,7 +26,7 @@ Ask the package maintainer to write or create a blank `doc/PREREQUISITES.md` for
 Ask the package maintainer to write a `doc/USAGE.md` for their package!
 
 ## Example
-
+ 
 Ask the package maintainer to write a `doc/EXAMPLE.md` for their package!
 
 ## Technical Overview
