@@ -9,6 +9,7 @@ project(lasr_skills)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   rospy
+  lasr_vision_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -195,7 +196,7 @@ include_directories(
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_skills.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_lasr_skills.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()
