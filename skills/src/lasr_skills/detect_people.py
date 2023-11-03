@@ -7,7 +7,7 @@ from lasr_vision_msgs.srv import YoloDetection
 class DetectPeople(smach.State):
 
     def __init__(self):
-        smach.StateMachine.__init__(self, outcomes=['succeeded', 'failed'], input_keys=['img_msg'], output_keys=['people_detections'])
+        smach.State.__init__(self, outcomes=['succeeded', 'failed'], input_keys=['img_msg'], output_keys=['people_detections'])
         self.yolo = rospy.ServiceProxy('/yolov8/detect', YoloDetection)
 
     def execute(self, userdata):
@@ -26,7 +26,7 @@ if __name__ == "__main__":
     class MockA(smach.State):
 
         def __init__(self):
-            smach.StateMachine.__init__(self, outcomes=['1'], output_keys=['img_msg'])
+            smach.State.__init__(self, outcomes=['1'], output_keys=['img_msg'])
 
         def execute(self, userdata):
             from sensor_msgs.msg import Image
@@ -37,7 +37,7 @@ if __name__ == "__main__":
     class MockC(smach.State):
 
         def __init__(self):
-            smach.StateMachine.__init__(self, outcomes=['1'], input_keys=['people_detections'])
+            smach.State.__init__(self, outcomes=['1'], input_keys=['people_detections'])
 
         def execute(self, userdata):
             print(userdata.people_detections)

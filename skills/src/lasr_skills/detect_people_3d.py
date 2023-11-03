@@ -14,7 +14,7 @@ import numpy as np
 class DetectPeople3D(smach.State):
 
     def __init__(self):
-        smach.StateMachine.__init__(self, outcomes=['succeeded', 'failed'], input_keys=['pcl_msg'], output_keys=['people_detections_3d'])
+        smach.State.__init__(self, outcomes=['succeeded', 'failed'], input_keys=['pcl_msg'], output_keys=['people_detections_3d'])
         self.yolo = rospy.ServiceProxy('/yolov8/detect', YoloDetection)
         self.tf = rospy.ServiceProxy("/tf_transform", TfTransform)
         self.bridge = CvBridge()
@@ -49,7 +49,7 @@ if __name__ == "__main__":
     class MockA(smach.State):
 
         def __init__(self):
-            smach.StateMachine.__init__(self, outcomes=['1'], output_keys=['pcl_msg'])
+            smach.State.__init__(self, outcomes=['1'], output_keys=['pcl_msg'])
 
         def execute(self, userdata):
             from sensor_msgs.msg import PointCloud2
@@ -60,7 +60,7 @@ if __name__ == "__main__":
     class MockC(smach.State):
 
         def __init__(self):
-            smach.StateMachine.__init__(self, outcomes=['1'], input_keys=['people_detections_3d'])
+            smach.State.__init__(self, outcomes=['1'], input_keys=['people_detections_3d'])
 
         def execute(self, userdata):
             print(userdata.people_detections)
