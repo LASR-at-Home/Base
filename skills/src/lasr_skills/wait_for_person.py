@@ -14,7 +14,7 @@ class WaitForPerson(smach.StateMachine):
             smach.State.__init__(self, outcomes=['succeeded'], output_keys=['img_msg'])
         
         def execute(self, userdata):
-            userdata.img_msg = rospy.wait_for_message("/usb_cam/image_raw", Image)
+            userdata.img_msg = rospy.wait_for_message("/xtion/rgb/image_raw", Image)
             return 'succeeded'
 
     class CheckForPerson(smach.State):
