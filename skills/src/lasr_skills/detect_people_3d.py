@@ -35,6 +35,7 @@ class DetectPeople3D(smach.State):
             cv_im = pcl_msg_to_cv2(userdata.pcl_msg)
             img_msg = self.bridge.cv2_to_imgmsg(cv_im)
             result = self.yolo(img_msg, "yolov8n-seg.pt", 0.5, 0.3)
+            result.detected_objects = [det for det in result.detected_objects if det.name == "person"]
             result = [(detection, self.estimate_pose(userdata.pcl_msg, detection)) for detection in result.detections]
             userdata.people_detections_3d = result
             return 'succeeded'

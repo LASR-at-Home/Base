@@ -13,6 +13,7 @@ class DetectPeople(smach.State):
     def execute(self, userdata):
         try:
             result = self.yolo(userdata.img_msg, "yolov8n.pt", 0.5, 0.3)
+            result.detected_objects = [det for det in result.detected_objects if det.name == "person"]
             userdata.people_detections = result
             return 'succeeded'
         except rospy.ServiceException as e:
@@ -30,7 +31,7 @@ if __name__ == "__main__":
 
         def execute(self, userdata):
             from sensor_msgs.msg import Image
-            img_msg = rospy.wait_for_message("/usb_cam/image_raw", Image)
+            img_msg = rospy.wait_for_message("/xtion/rgb/image_raw", Image)
             userdata.img_msg = img_msg
             return '1' 
 
