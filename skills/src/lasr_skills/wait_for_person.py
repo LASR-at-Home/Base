@@ -36,22 +36,3 @@ class WaitForPerson(smach.StateMachine):
             smach.StateMachine.add('GET_IMAGE', self.GetImage(), transitions={'succeeded' : 'DETECT_PEOPLE'})
             smach.StateMachine.add('DETECT_PEOPLE', DetectPeople(), transitions={'succeeded' : 'CHECK_FOR_PERSON', 'failed' : 'failed'})
             smach.StateMachine.add('CHECK_FOR_PERSON', self.CheckForPerson(), transitions={'done' : 'succeeded', 'not_done' : 'GET_IMAGE'})
-
-if __name__ == "__main__":
-    rospy.init_node("test_wait_for_person")
-    sm = smach.StateMachine(outcomes=['end'])
-
-    class MockC(smach.State):
-
-        def __init__(self):
-            smach.State.__init__(self, outcomes=['1'], input_keys=['people_detections'])
-
-        def execute(self, userdata):
-            print(userdata.people_detections)
-            return '1'
-
-    with sm:
-        sm.add('WAIT_FOR_PERSON', WaitForPerson(), transitions={'succeeded' : 'C', 'failed' : 'end'})
-        sm.add('C', MockC(), transitions={'1' : 'end'})
-
-    sm.execute()

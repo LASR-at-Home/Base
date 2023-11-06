@@ -42,34 +42,3 @@ class DetectPeople3D(smach.State):
         except rospy.ServiceException as e:
             rospy.logwarn(f"Unable to perform inference. ({str(e)})")
             return 'failed'
-
-if __name__ == "__main__":
-    rospy.init_node("test_detect_people")
-    sm = smach.StateMachine(outcomes=['end'])
-
-    class MockA(smach.State):
-
-        def __init__(self):
-            smach.State.__init__(self, outcomes=['1'], output_keys=['pcl_msg'])
-
-        def execute(self, userdata):
-            from sensor_msgs.msg import PointCloud2
-            pcl_msg = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
-            userdata.pcl_msg = pcl_msg
-            return '1' 
-
-    class MockC(smach.State):
-
-        def __init__(self):
-            smach.State.__init__(self, outcomes=['1'], input_keys=['people_detections_3d'])
-
-        def execute(self, userdata):
-            print(userdata.people_detections_3d)
-            return '1'
-
-    with sm:
-        sm.add('A', MockA(), transitions={'1' : 'DETECT_PEOPLE_3D'})
-        sm.add('DETECT_PEOPLE_3D', DetectPeople3D(), transitions={'succeeded' : 'C', 'failed' : 'end'})
-        sm.add('C', MockC(), transitions={'1' : 'A'})
-
-    sm.execute()
