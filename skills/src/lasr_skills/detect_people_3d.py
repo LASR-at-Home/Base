@@ -36,7 +36,7 @@ class DetectPeople3D(smach.State):
             img_msg = self.bridge.cv2_to_imgmsg(cv_im)
             result = self.yolo(img_msg, "yolov8n-seg.pt", 0.5, 0.3)
             result.detected_objects = [det for det in result.detected_objects if det.name == "person"]
-            result = [(detection, self.estimate_pose(userdata.pcl_msg, detection)) for detection in result.detections]
+            result = [(detection, self.estimate_pose(userdata.pcl_msg, detection)) for detection in result.detected_objects]
             userdata.people_detections_3d = result
             return 'succeeded'
         except rospy.ServiceException as e:
@@ -64,7 +64,7 @@ if __name__ == "__main__":
             smach.State.__init__(self, outcomes=['1'], input_keys=['people_detections_3d'])
 
         def execute(self, userdata):
-            print(userdata.people_detections)
+            print(userdata.people_detections_3d)
             return '1'
 
     with sm:
