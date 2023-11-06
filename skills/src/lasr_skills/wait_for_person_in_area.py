@@ -2,8 +2,7 @@
 import rospy
 import smach
 
-from lasr_skills import DetectPeople3D
-from lasr_shapely import LasrShapely
+from lasr_skills import DetectPeopleInArea3D
 
 from sensor_msgs.msg import PointCloud2
 
@@ -21,13 +20,10 @@ class WaitForPersonInArea(smach.StateMachine):
     class CheckForPerson(smach.State):
 
         def __init__(self):
-            smach.State.__init__(self, outcomes=['done', 'not_done'], input_keys=['area_polygon', 'people_detections'], output_keys=['filtered_people_detections'])
+            smach.State.__init__(self, outcomes=['done', 'not_done'], input_keys=['people_detections'])
 
         def execute(self, userdata):
-            satisfied_points = self.shapely.are_points_in_polygon_2d(userdata.area_polygon, [[pose[0], pose[1]] for (_, pose) in userdata.people_detections]).inside
-            filtered_detections = [userdata.people_detections[i] for i in range(0, len(userdata.people_detections)) if satisfied_points[i]]
-            userdata.filtered_people_detections = filtered_detections
-            if len(filtered_detections):
+            if len(userdata.people_detections):
                 return 'done'
             else:
                 return 'not done'
@@ -35,11 +31,10 @@ class WaitForPersonInArea(smach.StateMachine):
     def __init__(self):
         smach.StateMachine.__init__(self, outcomes=['succeeded', 'failed'], input_keys=['area_polygon'], output_keys=['people_detections'])
 
-        self.shapely = LasrShapely()
 
         with self:
             smach.StateMachine.add('GET_POINTCLOUD', self.GetPointCloud(), transitions={'succeeded' : 'DETECT_PEOPLE_3D'})
-            smach.StateMachine.add('DETECT_PEOPLE_3D', DetectPeople3D(), transitions={'succeeded' : 'CHECK_FOR_PERSON', 'failed' : 'failed'})
+            smach.StateMachine.add('DETECT_PEOPLE_3D', DetectPeopleInArea3D(), transitions={'succeeded' : 'CHECK_FOR_PERSON', 'failed' : 'failed'})
             smach.StateMachine.add('CHECK_FOR_PERSON', self.CheckForPerson(), transitions={'done' : 'succeeded', 'not_done' : 'GET_POINTCLOUD'})
 
 if __name__ == "__main__":
