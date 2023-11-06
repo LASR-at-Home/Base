@@ -10,7 +10,7 @@ This worksheet will get you setup with the LASR container and codebase, and get 
 ### Why?
 
 ### Installation
-
+If you have not already acquired the container, you will need to build it yourself. In future, you will be able to simply pull it from NextCloud.
 #### Building from Source
 1. Install [Apptainer](https://apptainer.org/), instructions are available [here](https://apptainer.org/docs/admin/main/installation.html).
 2. Pull the *base noetic container* from NextCloud:
@@ -25,10 +25,10 @@ git clone git@github.com:LASR-at-Home/Containers.git
 ```
 sudo apptainer build robocup_container.sif Containers/robocup_container.def
 ```
-#### Pull from Nextcloud (recommended)
-```
-wget https://nextcloud.nms.kcl.ac.uk/... -O robocup_container.sif -q --show-progress
-```
+<!-- #### Pull from Nextcloud (coming soon) -->
+<!-- ``` -->
+<!-- wget https://nextcloud.nms.kcl.ac.uk/... -O robocup_container.sif -q --show-progress -->
+<!-- ``` -->
 ### Usage
 Whenever you want to use ROS, you **must** enter the container. Trying to run ROS code/commands outside of the container is a very common mistake. However, you can develop code outside of the container. You can enter the container natively as such:
 ```
