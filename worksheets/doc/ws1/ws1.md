@@ -93,6 +93,10 @@ git remote update
 git checkout main # main on origin
 git <rebase/merge> base/main
 ```
+5. You can also checkout the main branch on the original repository:
+```
+git checkout base/main
+```
 
 You can also keep your branches synced through the GitHub web interface, through the `Sync fork` button:
 
