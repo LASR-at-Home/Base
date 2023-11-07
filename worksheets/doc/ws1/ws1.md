@@ -6,9 +6,6 @@ This worksheet will get you setup with the LASR container and codebase, and get 
 - Create a fork of the repository.
 - Understand contribution guidelines.
 ## The Container
-
-### Why?
-
 ### Installation
 If you have not already acquired the container, you will need to build it yourself. In future, you will be able to simply pull it from NextCloud.
 #### Building from Source
@@ -98,6 +95,8 @@ git <rebase/merge> base/main
 ```
 
 You can also keep your branches synced through the GitHub web interface, through the `Sync fork` button:
+
+
 ![Sync Fork](sync-fork.png)
 
 ### Building
