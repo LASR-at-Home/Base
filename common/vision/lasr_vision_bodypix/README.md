@@ -1,9 +1,9 @@
 # lasr_vision_bodypix
 
-The lasr_person_detection_bodypix package
+BodyPix 2.0 vision service
 
 This package is maintained by:
-- [insert](mailto:insert@todo.todo)
+- [Paul Makles](mailto:me@insrt.uk)
 
 ## Prerequisites
 
