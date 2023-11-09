@@ -11,7 +11,7 @@ class WaitForPerson(smach.State):
     def execute(self, userdata):
         self.default.voice.speak("I'm waiting for a person.")
         self.default.controllers.torso_controller.sync_reach_to(0.25)
-        res = self.default.controllers.base_controller.ensure_sync_to_pose(get_pose_from_param('/start/pose'))
-        rospy.logerr(res)
+        #res = self.default.controllers.base_controller.ensure_sync_to_pose(get_pose_from_param('/start/pose'))
+       # rospy.logerr(res)
 
         return 'success'

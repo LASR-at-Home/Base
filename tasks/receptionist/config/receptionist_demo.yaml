@@ -14,6 +14,8 @@ guest2:
   name: "unknown"
   drink: "unknown"
 
-  
+
+guestcount: 
+  count: 0
 
 

@@ -3,6 +3,7 @@ import json
 
 
 def listen(default):
+    print("trying to listen!")
     resp = default.speech()
     print("Resp success: ", resp.success)
     if not resp.success:
@@ -32,14 +33,14 @@ def affirm(default):
 
 def get_drink(default):
     resp = listen(default)
-    if resp['intent']['name'] != 'drink':
+    if resp['intent']['name'] != 'make_order':
         return "unknown"
-    drink = resp["entities"].get("drink",[])
+    drink = resp["entities"].get("item",[])
     if drink is None: 
         return "unknown"
     drink = drink[0]["value"].lower()
     return str(drink)
 
-        
+ 
 
 
