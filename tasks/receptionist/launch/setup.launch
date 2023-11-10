@@ -23,7 +23,7 @@
     <node pkg="interaction_module" name="interaction_module_srv" type="interaction_module_srv.py"/>
 
     <arg name="whisper_matcher" default="by-index" />
-    <arg name="whisper_device_param" default="0" />
+    <arg name="whisper_device_param" default="5" />
     <!--<arg name="whisper_device_param" default="13" />-->
     <arg name="rasa_model" default="$(find lasr_rasa)/assistants/lift/models"/>
 
@@ -40,14 +40,14 @@
         <rosparam command="load" file="$(find lift)/config/final_lift_sim.yaml" />
     </group>
     <group unless="$(arg is_sim)">
-        <rosparam command="load" file="$(find lift)/config/final_lift.yaml" />
+        <rosparam command="load" file="$(find receptionist)/config/receptionist_demo.yaml" />
 <!--       <rosparam command="load" file="$(find lift)/config/final_mk.yaml" />--> 
     </group>
 
 
     <!--    PCL and clear     -->
-    <node pkg="read_pcl_info" type="pcl_helpers.py" name="pcl_helpers" output="screen"/>
-    <node pkg="read_pcl_info" name="clear_continuosly" type="clear_continuosly.py"/>
+   <!-- <node pkg="read_pcl_info" type="pcl_helpers.py" name="pcl_helpers" output="screen"/> -->
+   <!-- <node pkg="read_pcl_info" name="clear_continuosly" type="clear_continuosly.py"/>-->
     <node pkg="lasr_shapely" name="shapely" type="service"/>
 
 
@@ -55,11 +55,11 @@
     <node pkg="lasr_vision_yolov8" type="service" name="service" output="screen"/>
 
 
-    <!--      Phase 3     -->
-    <node pkg="object_interest_tracking" name="object_interest_tracking" type="detect_interest_srv.py"/>
 
     <!--     Datahub    -->
     <node pkg="lift" type="datahub.py" name="datahub"/>
 
+
+   
 
 </launch>

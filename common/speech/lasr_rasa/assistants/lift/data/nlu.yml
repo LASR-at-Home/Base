@@ -148,8 +148,6 @@ nlu:
       - [Wait](wait_command) a second while I check on that for you.
       - If you don't mind, I'd like you to  [wait](wait_command) briefly.
 
-
-
   - intent: check_floor_number
     examples: |
       - What floor is this?
@@ -250,3 +248,240 @@ nlu:
       - This is fall [five]{"entity":"floor","value":5}
       - This is [tranflor]{"entity":"floor","value":4}
       
+  - intent: make_order
+    examples: |
+      - I'd like to order a [coffee](item).
+      - Get me a [sandwich](item) and a [smoothie](item) please.
+      - Can I get [biscuits](item) and [granola](item)?
+      - I'll have two [coffees](item) and an [orange juice](item).
+      - Get me a [coffee](item), [sandwich](item), and [smoothie](item).
+      - I'd like a [coffee](item) and [biscuits](item), please.
+      - Can I have [biscuits](item), [coffee](item), and [granola](item)?
+      - Get me a [smoothie](item) and two [coffees](item).
+      - I'll take a [sandwich](item) and [orange juice](item).
+      - I'd like [biscuits](item) and a [sandwich](item).
+      - Can I get [coffee](item), [smoothie](item), and [biscuits](item)?
+      - I'll have two [granolas](item) and an [orange juice](item).
+      - Get me a [coffee](item) and a [sandwich](item), please.
+      - I'd like a [biscuits](item) and [coffee](item).
+      - Can I have [biscuits](item), [coffee](item), and [granola](item)?
+      - Get me a [smoothie](item) and two [coffees](item).
+      - I'll take a [sandwich](item) and [orange juice](item).
+      - I'd like [biscuits](item) and a [sandwich](item).
+      - Can I get [coffee](item), [smoothie](item), and [biscuits](item)?
+      - I'll have two [granolas](item) and an [orange juice](item).
+      - Get me a [coffee](item) and a [sandwich](item), please.
+      - I'd like a [biscuits](item) and [coffee](item).
+      - Can I have [biscuits](item), [coffee](item), and [granola](item)?
+      - Get me a [smoothie](item) and two [coffees](item).
+      - I'll take a [sandwich](item) and [orange juice](item).
+      - I'd like [biscuits](item) and a [sandwich](item).
+      - Can I get [coffee](item), [smoothie](item), and [biscuits](item)?
+      - I'll have two [granolas](item) and an [orange juice](item).
+      - Get me a [coffee](item) and a [sandwich](item), please.
+      - I'd like a [biscuits](item) and [coffee](item).
+      - Can I have [biscuits](item), [coffee](item), and [granola](item)?
+      - Get me a [smoothie](item) and two [coffees](item).
+      - I'll take a [sandwich](item) and [orange juice](item).
+      - I'd like [biscuits](item) and a [sandwich](item).
+      - Can I get [coffee](item), [smoothie](item), and [biscuits](item)?
+      - I'll have two [granolas](item) and an [orange juice](item).
+      - Get me a [coffee](item) and a [sandwich](item), please.
+      - I'd like a [biscuits](item) and [coffee](item).
+      - Can I have [biscuits](item), [coffee](item), and [granola](item)?
+      - Get me a [smoothie](item) and two [coffees](item).
+      - I'll take a [sandwich](item) and [orange juice](item).
+      - I'd like [biscuits](item) and a [sandwich](item).
+      - Can I get [coffee](item), [smoothie](item), and [biscuits](item)?
+      - I'll have two [granolas](item) and an [orange juice](item).
+      - Get me a [coffee](item) and a [sandwich](item), please.
+      - I'd like a [biscuits](item) and [coffee](item).
+      - Can I have [biscuits](item), [coffee](item), and [granola](item)?
+      - Get me a [smoothie](item) and two [coffees](item).
+      - I'll take a [sandwich](item) and [orange juice](item).
+      - I'd like [biscuits](item) and a [sandwich](item).
+      - Can I get [coffee](item), [smoothie](item), and [biscuits](item)?
+      - I'll have two [granolas](item) and an [orange juice](item).
+      - Get me a [coffee](item) and a [sandwich](item), please.
+      - I'd like a [biscuits](item) and [coffee](item).
+      - Can I have [biscuits](item), [coffee](item), and [granola](item)?
+      - Get me a [smoothie](item) and two [coffees](item).
+      - I'll take a [sandwich](item) and [orange juice](item).
+      - I'd like [biscuits](item) and a [sandwich](item).
+      - Can I get [coffee](item), [smoothie](item), and [biscuits](item)?
+      - I'll have two [granolas](item) and an [orange juice](item).
+      - [coffee](item)
+      - [sandwich](item) [smoothie](item)
+      - [biscuits](item) [granola](item)
+      - [coffees](item) [orange](item)
+      - [coffee](item) [sandwich](item) [smoothie](item)
+      - [coffee](item) [biscuits](item)
+      - [biscuits](item) [coffee](item) [granola](item)
+      - [smoothie](item) [coffees](item)
+      - [sandwich](item) [orange](item)
+      - [biscuits](item) [sandwich](item)
+      - [coffee](item) [smoothie](item) [biscuits](item)
+      - [granola](item) [oranges](item)
+      - [coffee](item) [sandwich](item) [smoothie](item)
+      - [biscuits](item) [coffee](item)
+      - [biscuits](item) [coffee](item) [granola](item)
+      - [smoothie](item) [coffees](item)
+      - [sandwich](item) [orange](item)
+      - [biscuits](item) [sandwich](item)
+      - [coffee](item) [smoothie](item) [biscuits](item)
+      - [granola](item) [oranges](item)
+      - [coffee](item) [sandwich](item) [smoothie](item)
+      - [biscuits](item) [coffee](item)
+      - [biscuits](item) [coffee](item) [granola](item)
+      - [smoothie](item) [coffees](item)
+      - [sandwich](item) [orange](item)
+      - [biscuits](item) [sandwich](item)
+      - [coffee](item) [smoothie](item) [biscuits](item)
+      - [granola](item) [oranges](item)
+      - [coffee](item) [sandwich](item) [smoothie](item)
+      - [biscuits](item) [coffee](item)
+      - [biscuits](item) [coffee](item) [granola](item)
+      - [smoothie](item) [coffees](item)
+      - [sandwich](item) [orange](item)
+      - [biscuits](item) [sandwich](item)
+      - [coffee](item) [smoothie](item) [biscuits](item)
+      - [granola](item) [oranges](item)
+      - [coffee](item) [sandwich](item) [smoothie](item)
+      - [biscuits](item) [coffee](item)
+      - [biscuits](item) [coffee](item) [granola](item)
+      - [smoothie](item) [coffees](item)
+      - [sandwich](item) [orange](item)
+      - [biscuits](item) [sandwich](item)
+      - [coffee](item) [smoothie](item) [biscuits](item)
+      - [granola](item) [oranges](item)
+      - [coffee](item) [sandwich](item) [smoothie](item)
+      - [biscuits](item) [coffee](item)
+      - [biscuits](item) [coffee](item) [granola](item)
+      - [smoothie](item) [coffees](item)
+      - [sandwich](item) [orange](item)
+      - [biscuits](item) [sandwich](item)
+      - [coffee](item) [smoothie](item) [biscuits](item)
+      - [granola](item) [oranges](item)
+      - [granola](item), [coffee](item), and a [smoothie](item)
+      - [granola](item), [coffee](item), and [sandwich](item)
+      - [granola](item), [coffee](item), and [orange juice](item)
+      - [granola](item), [coffee](item), [sandwich](item), and a [smoothie](item)
+      - [granola](item), [coffee](item), [sandwich](item), and [orange juice](item)
+      - [granola](item), [coffee](item), [orange juice](item), and a [smoothie](item)
+      - [granola](item), [coffee](item), [orange juice](item), [sandwich](item), and a [smoothie](item)
+      - [coffee](item), [granola](item), and a [smoothie](item)
+      - [coffee](item), [granola](item), and [sandwich](item)
+      - [coffee](item), [granola](item), and [orange juice](item)
+      - [coffee](item), [granola](item), [sandwich](item), and a [smoothie](item)
+      - [coffee](item), [granola](item), [sandwich](item), and [orange juice](item)
+      - [coffee](item), [granola](item), [orange juice](item), and a [smoothie](item)
+      - [coffee](item), [granola](item), [orange juice](item), [sandwich](item), and a [smoothie](item)
+      - [sandwich](item), [coffee](item), and a [smoothie](item)
+      - [sandwich](item), [coffee](item), and [granola](item)
+      - [sandwich](item), [coffee](item), and [orange juice](item)
+      - [sandwich](item), [coffee](item), [granola](item), and a [smoothie](item)
+      - [sandwich](item), [coffee](item), [granola](item), and [orange juice](item)
+      - [sandwich](item), [coffee](item), [granola](item), [orange juice](item), and a [smoothie](item)
+      - [orange juice](item), [granola](item), and a [smoothie](item)
+      - [orange juice](item), [granola](item), and [sandwich](item)
+      - [orange juice](item), [granola](item), and [coffee](item)
+      - [orange juice](item), [granola](item), [sandwich](item), and a [smoothie](item)
+      - [orange juice](item), [granola](item), [sandwich](item), and [coffee](item)
+      - [orange juice](item), [granola](item), [coffee](item), and a [smoothie](item)
+      - [orange juice](item), [granola](item), [coffee](item), [sandwich](item), and a [smoothie](item)
+      - [smoothie](item), [coffee](item), and [granola](item)
+      - [smoothie](item), [coffee](item), and [sandwich](item)
+      - [smoothie](item), [coffee](item), and [orange juice](item)
+      - [smoothie](item), [coffee](item), [granola](item), and [sandwich](item)
+      - [smoothie](item), [coffee](item), [granola](item), and [orange juice](item)
+      - [smoothie](item), [coffee](item), [granola](item), [orange juice](item), and [sandwich](item)
+      - Can I have a [coffee](item), please?
+      - I'd like some [biscuits](item), please.
+      - May I get a [smoothie](item), please?
+      - I'll take a [coffee](item) and [biscuits](item), please.
+      - I'd love [biscuits](item) and a [coffee](item), please.
+      - I'm in the mood for [smoothie](item), please.
+      - Get me a [granola](item) and an [orange juice](item), please.
+      - Could you bring me [coffee](item) and [sandwich](item), please?
+      - How about a [smoothie](item) and a [granola](item), please?
+      - I'd like a [coffee](item) and [smoothie](item), please.
+      - Can I get [biscuits](item) and [sandwich](item), please?
+      - May I have [sandwich](item) and [coffee](item), please?
+      - I'd like some [granola](item) and [smoothie](item), please.
+      - Please bring me [orange juice](item) and [biscuits](item), please.
+      - I'll have [sandwich](item) and [smoothie](item), please.
+      - Get me [coffee](item), [granola](item), and [orange juice](item), please.
+      - Could I get a [sandwich](item) and [biscuits](item), please?
+      - How about [orange juice](item) and [smoothie](item), please?
+      - I'd like [biscuits](item) and [smoothie](item), please.
+      - I'm in the mood for [granola](item), [coffee](item), and [smoothie](item), please.
+      - I'd love a [sandwich](item), [coffee](item), and [biscuits](item), please.
+      - Can I have [sandwich](item), [biscuits](item), and [granola](item), please?
+      - May I get [smoothie](item), [coffee](item), and [biscuits](item), please?
+      - I'll take [biscuits](item), [granola](item), and [orange juice](item), please.
+      - Get me [coffee](item), [sandwich](item), [granola](item), and [smoothie](item), please.
+      - Could you bring [biscuits](item), [coffee](item), [sandwich](item), and [smoothie](item), please?
+      - How about [orange juice](item), [biscuits](item), [coffee](item), and [sandwich](item), please?
+      - I'd like [sandwich](item), [granola](item), [coffee](item), [biscuits](item), and [smoothie](item), please.
+      - I'm in the mood for [coffee](item), [biscuits](item), [sandwich](item), [smoothie](item), [granola](item), and [orange juice](item), please.
+      - I'd love [orange juice](item), [sandwich](item), [coffee](item), [smoothie](item), [biscuits](item), and [granola](item), please.
+      - I'd like one [coffee](item), please.
+      - Can I have two [biscuits](item), please?
+      - May I get three [smoothies](item), please?
+      - I'll take one [coffee](item) and two [biscuits](item), please.
+      - I'd love two [biscuits](item) and one [coffee](item), please.
+      - I'm in the mood for three [smoothies](item), please.
+      - Get me one [granola](item) and one [orange juice](item), please.
+      - Could you bring two [coffees](item) and one [sandwich](item), please?
+      - How about three [smoothies](item) and one [granola](item), please?
+      - I'd like one [coffee](item) and two [smoothies](item), please.
+      - Can I get two [biscuits](item) and one [sandwich](item), please?
+      - May I have one [sandwich](item) and one [coffee](item), please?
+      - I'd like three [granolas](item) and one [smoothie](item), please.
+      - Please bring me one [orange juice](item) and two [biscuits](item), please.
+      - I'll have two [sandwiches](item) and one [smoothie](item), please.
+      - Get me one [coffee](item), two [granolas](item), and one [orange juice](item), please.
+      - Could I get two [sandwiches](item) and two [biscuits](item), please?
+      - How about one [orange juice](item) and three [smoothies](item), please?
+      - I'd like two [biscuits](item) and three [smoothies](item), please.
+      - I'm in the mood for three [granolas](item), two [coffees](item), and one [smoothie](item), please.
+      - I'd love two [sandwiches](item), one [coffee](item), and three [biscuits](item), please.
+      - Can I have one [sandwich](item), three [biscuits](item), and two [granolas](item), please?
+      - May I get three [smoothies](item), two [coffees](item), and one [biscuits](item), please?
+      - I'll take two [biscuits](item), three [granolas](item), and one [orange juice](item), please.
+      - Get me one [coffee](item), two [sandwiches](item), three [granolas](item), and one [smoothie](item), please.
+      - Could you bring three [biscuits](item), two [coffees](item), two [sandwiches](item), and three [smoothies](item), please?
+      - How about one [orange juice](item), two [biscuits](item), three [coffees](item), and two [sandwiches](item), please?
+      - I'd like two [sandwiches](item), three [granolas](item), three [coffees](item), two [biscuits](item), and one [smoothie](item), please.
+      - I'm in the mood for three [coffees](item), two [biscuits](item), three [sandwiches](item), one [smoothie](item), one [granola](item), and two [orange juices](item), please.
+      - I'd love three [sandwiches](item), one [coffee](item), three [biscuits](item), two [granolas](item), and one [smoothie](item), please.
+      - I'd like one [coffee](item), please.
+      - Can I have two [biscuits](item), please?
+      - May I get three [smoothies](item), please?
+      - I'll take one [coffee](item) and two [biscuits](item), please.
+      - I'd love two [biscuits](item) and one [coffee](item), please.
+      - I'm in the mood for three [smoothies](item), please.
+      - Get me one [granola](item) and one [orange juice](item), please.
+      - Could you bring two [coffees](item) and one [sandwich](item), please?
+      - How about three [smoothies](item) and one [granola](item), please?
+      - I'd like one [coffee](item) and two [smoothies](item), please.
+      - Can I get two [biscuits](item) and one [sandwich](item), please?
+      - May I have one [sandwich](item) and one [coffee](item), please?
+      - I'd like three [granolas](item) and one [smoothie](item), please.
+      - Please bring me one [orange juice](item) and two [biscuits](item), please.
+      - I'll have two [sandwiches](item) and one [smoothie](item), please.
+      - Get me one [coffee](item), two [granolas](item), and one [orange juice](item), please.
+      - Could I get two [sandwiches](item) and two [biscuits](item), please?
+      - How about one [orange juice](item) and three [smoothies](item), please?
+      - I'd like two [biscuits](item) and three [smoothies](item), please.
+      - I'm in the mood for three [granolas](item), two [coffees](item), and one [smoothie](item), please.
+      - I'd love two [sandwiches](item), one [coffee](item), and three [biscuits](item), please.
+      - Can I have one [sandwich](item), three [biscuits](item), and two [granolas](item), please?
+      - May I get three [smoothies](item), two [coffees](item), and one [biscuits](item), please?
+      - I'll take two [biscuits](item), three [granolas](item), and one [orange juice](item), please.
+      - Get me one [coffee](item), two [sandwiches](item), three [granolas](item), and one [smoothie](item), please.
+      - Could you bring three [biscuits](item), two [coffees](item), two [sandwiches](item), and three [smoothies](item), please?
+      - How about one [orange juice](item), two [biscuits](item), three [coffees](item), and two [sandwiches](item), please?
+      - I'd like two [sandwiches](item), three [granolas](item), three [coffees](item), two [biscuits](item), and one [smoothie](item), please.
+      - I'm in the mood for three [coffees](item), two [biscuits](item), three [sandwiches](item), one [smoothie](item), one [granola](item), and two [orange juices](item), please.
+      - I'd love three [sandwiches](item), one [coffee](item), three [biscuits](item), two [granolas](item), and one [smoothie](item), please.

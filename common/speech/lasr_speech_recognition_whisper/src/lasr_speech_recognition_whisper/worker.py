@@ -23,8 +23,8 @@ class SpeechRecognitionWorker(ABC):
     _tmp_file: NamedTemporaryFile
     _model: whisper.Whisper
     _current_sample: bytes
-    _phrase_start: datetime | None
-    _maximum_phrase_length: timedelta
+    _phrase_start: datetime 
+    _maximum_phrase_length: timedelta | None
     _infer_partial: bool
     _stopped = True
 
