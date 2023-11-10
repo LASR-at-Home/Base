@@ -5,7 +5,7 @@ import smach
 from lasr_vision_msgs.srv import YoloDetection
 from common_math import pcl_msg_to_cv2, seg_to_centroid
 from cv_bridge3 import CvBridge
-from coffee_shop.srv import TfTransform, TfTransformRequest
+from tf_module.srv import TfTransform, TfTransformRequest
 from std_msgs.msg import String
 from geometry_msgs.msg import PointStamped, Point
 import numpy as np
