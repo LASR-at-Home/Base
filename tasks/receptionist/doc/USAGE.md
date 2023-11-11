@@ -29,13 +29,13 @@
    1. Firstly, set up RASA, YOLO and other models/dependencies: 
 
       \`\`\`bash    
-      rosrun receptionist setup.launch
+      roslaunch receptionist setup.launch
       \`\`\`
    
    2. When the setup has finished, launch the demo: 
 
       \`\`\`bash
-      rosrun receptionist demo.launch
+      roslaunch receptionist demo.launch
       \`\`\`
    ```
 
