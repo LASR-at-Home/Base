@@ -1,0 +1,40 @@
+name: Build & Deploy Documentation
+
+on:
+  push:
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    container:
+      image: ubuntu:jammy
+
+    steps:
+      - name: Checkout repository and submodules
+        uses: actions/checkout@v3
+        with:
+          path: "src/lasr-base"
+          submodules: recursive
+
+      - name: Use Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+
+      - uses: ros-tooling/setup-ros@v0.7
+        with:
+          required-ros-distributions: noetic
+
+      - run: "source /opt/ros/noetic/setup.bash && rosnode --help"
+
+      - name: Build documentation package
+        run: catkin build documentation
+
+      - run: "source devel/setup.bash"
+
+      - name: Build documentation
+        run: rosrun documentation build.py
+# if: github.event_name != 'pull_request' && github.ref_name == 'master'
