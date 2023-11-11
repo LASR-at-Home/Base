@@ -7,16 +7,19 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
-
-    container:
-      image: ros:noetic
+    runs-on: ubuntu-20.04
 
     steps:
       - name: Checkout repository and submodules
         uses: actions/checkout@v3
         with:
           path: "src/lasr-base"
+
+      - name: Install ROS
+        run: |
+          wget -c https://raw.githubusercontent.com/qboticslabs/ros_install_noetic/master/ros_install_noetic.sh && chmod +x ./ros_install_noetic.sh && ./ros_install_noetic.sh
+
+      - run: "source /opt/ros/noetic/setup.bash"
 
       - name: Build documentation package
         run: catkin_make --pkg documentation
