@@ -33,8 +33,8 @@ wait_position:
 #Hardcoded, TODO remove: 
 talk_position: 
   pose: 
-    position: {x: 1.3519540966, y: -0.506950905366, z: 0.0}
-    orientation: {x: 0.0, y: 0.0, z: 0.053238028971, w: 0.998581850562}
+    position: {x: 1.69204045276 ,y: -0.443946185376, z: 0.0}
+    orientation: {x: 0.0, y: 0.0, z: 0.187839273022, w: 0.982199779836}
 
 
 

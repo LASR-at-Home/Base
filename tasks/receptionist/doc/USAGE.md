@@ -5,15 +5,24 @@
         - The four corners of the area we expect the guests to wait (where the door is)
         - Where the robot should wait for the guest 
 
-       
 
     If running in the development room, the points should already be correctly in the receptionist_demo.yaml file. It is worth checking that these points are correct. 
 
     To pick our own points, we pick the points from RVIZ. 
 
+
+2. Setting up the microphone: 
+        - Currently, microphone may be set to "0" (laptops defautl microphone), "5" (Zoe's laptop+gomic) or "13" (development laptop+gomic) in the setup.launch file. 
+        - Double check microphone index is the correct one for the microphone you want to use by doing: 
+            \`\`\`bash    
+            rosrun lasr_speech_recognition_whisper list_microphones.py
+            \`\`\`
+   
+
+
        
 
-2. How to Run:
+3. How to Run:
     To run the receptionist task, we need to run two launch files: 
 
     ```md
@@ -33,7 +42,7 @@
     Note: Setup may take some time. Give it 2 or 3 minutes to do this, and it's finished when it's outputs "RASA is ready!". 
 
 
-3. Common Issues: 
+4. Common Issues: 
     1. RASA doesn't detect speech/breaks/doesn't work: 
         It may be that there isn't a RASA model for the receptionist task. 
         Please see common/speech/lasr_rasa/doc to train the RASA model for the receptionist. The required data should be in common/speech/lasr_rasa/assistants/lift/data (note: Currently, due to some issues with RASA dependencies, all models for receptionist task and all data to train receptionist task models are in the "assistants/lift" folder in RASA)
