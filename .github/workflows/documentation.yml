@@ -29,12 +29,12 @@ jobs:
           curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | sudo apt-key add -
 
           sudo apt update
-          sudo apt install ros-noetic-ros-base
+          sudo apt install ros-noetic-ros-base python3-catkin-tools
 
       - run: "source /opt/ros/noetic/setup.bash"
 
       - name: Build documentation package
-        run: catkin_make --pkg documentation
+        run: catkin build documentation
 
       - run: "source devel/setup.bash"
 
