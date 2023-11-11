@@ -7,7 +7,7 @@ from tiago_controllers.helpers.nav_map_helpers import clear_costmap
 from lift.defaults import TEST, PLOT_SHOW, PLOT_SAVE, DEBUG_PATH, DEBUG, RASA
 from lasr_object_detection_yolo.detect_objects_v8 import detect_objects, perform_detection, debug
 from sensor_msgs.msg import PointCloud2
-from speech_helper import listen, affirm, hear_wait
+from lift.speech_helper import listen, affirm, hear_wait
 
 
 class ScheduleGoingOut(smach.State):

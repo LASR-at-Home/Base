@@ -5,7 +5,7 @@ import json
 from lift.defaults import TEST, PLOT_SHOW, PLOT_SAVE, DEBUG_PATH, DEBUG, RASA
 from sensor_msgs.msg import PointCloud2
 from lasr_object_detection_yolo.detect_objects_v8 import detect_objects, perform_detection, debug
-from speech_helper import listen, affirm, hear_wait, get_people_number
+#from speech_helper import listen, affirm, hear_wait, get_people_number
 
 
 

@@ -2,7 +2,7 @@
 import smach
 import rospy
 from lift.defaults import TEST, PLOT_SHOW, PLOT_SAVE, DEBUG_PATH, DEBUG, RASA
-from speech_helper import listen, affirm, hear_wait, get_people_number, get_floor
+from lift.speech_helper import listen, affirm, hear_wait, get_people_number, get_floor
 import json
 
 
