@@ -5,7 +5,7 @@ from tiago_controllers.helpers.pose_helpers import get_pose_from_param
 
 class End(smach.State):
     def __init__(self, default):
-        smach.State.__init__(self, outcomes=['success'])
+        smach.State.__init__(self, outcomes=['succeeded'])
         self.default = default
 
     def execute(self, userdata):
@@ -19,4 +19,6 @@ class End(smach.State):
 
         print(guest1drink)
         print(guest2drink)
-        return 'success'
+        return 'succeeded'
+
+
