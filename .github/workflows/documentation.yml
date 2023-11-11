@@ -50,7 +50,7 @@ jobs:
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          deploy_key: ${{ secrets.DOCS_DEPLOY_KEY }}
           publish_dir: ./src/lasr-base/documentation/web/build
           external_repository: lasr-at-home/docs
 # if: github.event_name != 'pull_request' && github.ref_name == 'master'
