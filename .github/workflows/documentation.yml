@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     container:
-      image: ubuntu:jammy
+      image: ubuntu:hirsute
 
     steps:
       - name: Checkout repository and submodules
