@@ -39,7 +39,41 @@ Ask the package maintainer to write a `doc/TECHNICAL.md` for their package!
 
 ### Launch Files
 
-This package has no launch files.
+#### `camera`
+
+Run a BodyPix model using the camera
+
+```bash
+# Run the demo
+roslaunch lasr_vision_bodypix camera.launch 
+
+# Run the demo with a different model
+roslaunch lasr_vision_bodypix camera.launch model:=mobilenet50
+```
+
+| Argument | Default | Description |
+|:-:|:-:|---|
+| model | resnet50 | Model to use for the demo |
+
+
+#### `service`
+
+Start the BodyPix service
+
+```bash
+# BodyPix service
+roslaunch lasr_vision_bodypix service.launch 
+
+# Preload models and enable debug topic
+roslaunch lasr_vision_bodypix service.launch debug:=true preload:=['resnet50', 'mobilenet50']
+```
+
+| Argument | Default | Description |
+|:-:|:-:|---|
+| debug | false | Whether to publish plotted images to /bodypix/debug/model_name |
+| preload | [] | Array of models to preload when starting the service |
+
+
 
 ### Messages
 

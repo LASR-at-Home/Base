@@ -46,12 +46,16 @@ find_package(catkin REQUIRED COMPONENTS message_generation message_runtime senso
 add_message_files(
   FILES
   Detection.msg
+  BodyPixPose.msg
+  BodyPixMask.msg
+  BodyPixMaskRequest.msg
 )
 
 ## Generate services in the 'srv' folder
 add_service_files(
   FILES
   YoloDetection.srv
+  BodyPixDetection.srv
 )
 
 ## Generate actions in the 'action' folder
