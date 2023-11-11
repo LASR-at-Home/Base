@@ -17,7 +17,6 @@ jobs:
         uses: actions/checkout@v3
         with:
           path: "src/lasr-base"
-          submodules: recursive
 
       - name: Use Node.js
         uses: actions/setup-node@v3
