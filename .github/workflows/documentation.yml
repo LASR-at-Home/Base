@@ -18,8 +18,6 @@ jobs:
         with:
           path: "src/lasr-base"
 
-      - run: "source /opt/ros/noetic/setup.bash && rosnode --help"
-
       - name: Build documentation package
         run: catkin_make --pkg documentation
 
