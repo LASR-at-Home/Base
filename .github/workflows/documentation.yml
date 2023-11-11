@@ -15,9 +15,21 @@ jobs:
         with:
           path: "src/lasr-base"
 
-      - name: Install ROS
+      - name: Install ROS Noetic
         run: |
-          wget -c https://raw.githubusercontent.com/qboticslabs/ros_install_noetic/master/ros_install_noetic.sh && chmod +x ./ros_install_noetic.sh && ./ros_install_noetic.sh
+          sudo add-apt-repository universe
+          sudo add-apt-repository restricted
+          sudo add-apt-repository multiverse
+
+          sudo apt update
+
+          sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list'
+
+          sudo apt install curl # if you haven't already installed curl
+          curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | sudo apt-key add -
+
+          sudo apt update
+          sudo apt install ros-noetic-ros-base
 
       - run: "source /opt/ros/noetic/setup.bash"
 
