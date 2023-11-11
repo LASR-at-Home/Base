@@ -31,12 +31,10 @@ jobs:
           sudo apt update
           sudo apt install ros-noetic-ros-base python3-catkin-tools
 
-      - run: "source /opt/ros/noetic/setup.bash"
-
       - name: Build documentation package
-        run: catkin build documentation
-
-      - run: "source devel/setup.bash"
+        run: |
+          source /opt/ros/noetic/setup.bash
+          catkin build documentation
 
       - name: Use Node.js
         uses: actions/setup-node@v3
@@ -44,5 +42,9 @@ jobs:
           node-version: 20
 
       - name: Build documentation
-        run: rosrun documentation build.py
+        run: |
+          source /opt/ros/noetic/setup.bash
+          source devel/setup.bash
+          rosrun documentation build.py
+
 # if: github.event_name != 'pull_request' && github.ref_name == 'master'
