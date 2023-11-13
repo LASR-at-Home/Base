@@ -20,17 +20,17 @@ class WaitForPerson(smach.StateMachine):
     class CheckForPerson(smach.State):
 
         def __init__(self):
-            smach.State.__init__(self, outcomes=['done', 'not_done'], input_keys=['people_detections'])
+            smach.State.__init__(self, outcomes=['done', 'not_done'], input_keys=['detections'])
 
         def execute(self, userdata):
-            if len(userdata.people_detections.detected_objects):
+            if len(userdata.detections.detected_objects):
                 return 'done'
             else:
                 return 'not_done'
             
     def __init__(self):
 
-        smach.StateMachine.__init__(self, outcomes=['succeeded', 'failed'], output_keys=['people_detections'])
+        smach.StateMachine.__init__(self, outcomes=['succeeded', 'failed'], output_keys=['detections'])
 
         with self:
             smach.StateMachine.add('GET_IMAGE', self.GetImage(), transitions={'succeeded' : 'DETECT_PEOPLE'})
