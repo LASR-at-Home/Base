@@ -23,7 +23,7 @@
     <node pkg="interaction_module" name="interaction_module_srv" type="interaction_module_srv.py"/>
 
     <arg name="whisper_matcher" default="by-index" />
-    <arg name="whisper_device_param" default="5" />
+    <arg name="whisper_device_param" default="0" />
     <!--<arg name="whisper_device_param" default="13" />-->
     <arg name="rasa_model" default="$(find lasr_rasa)/assistants/lift/models"/>
 
@@ -43,6 +43,8 @@
         <rosparam command="load" file="$(find receptionist)/config/receptionist_demo.yaml" />
 <!--       <rosparam command="load" file="$(find lift)/config/final_mk.yaml" />--> 
     </group>
+
+    <rosparam command="load" file="$(find receptionist)/config/motions.yaml"/>
 
 
     <!--    PCL and clear     -->
