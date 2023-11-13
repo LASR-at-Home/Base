@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 import smach
-from receptionist.states.start import Start
-from tasks.receptionist.src.receptionist.states.ask_for_drink import AskForDrink
-from receptionist.states.end import End
-from receptionist.default import Default
-from tasks.receptionist.src.receptionist.states.go_to_person import GoToPerson
-from tasks.receptionist.src.receptionist.states.go_to_wait_for_person import GoToWaitForPerson
+from receptionist import Start
+from receptionist import AskForDrink
+from receptionist import End
+from receptionist import Default
+from receptionist import GoToPerson
+from receptionist import LookForSeats
+from tasks import GoToWaitForPerson
 from lasr_skills import WaitForPersonInArea
 #from receptionist.states.end import End
 
@@ -17,6 +18,7 @@ class Receptionist(smach.StateMachine):
         self.userdata.area_polygon = [[1.94, 0.15], [2.98, 0.28], [3.08, -0.68], [2.06, -0.84]]
         with self:
             smach.StateMachine.add('START', Start(self.default), transitions={'succeeded' : 'GO_TO_WAIT_FOR_PERSON'})
+            smach.StateMachine.add('LOOK_FOR_SEATS', LookForSeats(), transitions={'succeeded' : 'GO_TO_WAIT_FOR_PERSON', 'failed' : 'failed'})
             smach.StateMachine.add("GO_TO_WAIT_FOR_PERSON",GoToWaitForPerson(self.default), transitions={'succeeded': 'WAIT_FOR_PERSON'})
             smach.StateMachine.add('WAIT_FOR_PERSON', WaitForPersonInArea() ,transitions={'succeeded' : 'GO_TO_PERSON', 'failed' : 'failed'})
             smach.StateMachine.add('GO_TO_PERSON', GoToPerson(self.default),transitions={'succeeded':'ASK_FOR_DRINK'})
