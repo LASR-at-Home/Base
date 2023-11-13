@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 import smach
 from receptionist.states.start import Start
-from receptionist.states.askfordrink import AskForDrink
+from tasks.receptionist.src.receptionist.states.ask_for_drink import AskForDrink
 from receptionist.states.end import End
 from receptionist.default import Default
-from receptionist.states.gotoperson import GoToPerson
-from receptionist.states.gotowaitforperson import GoToWaitForPerson
+from tasks.receptionist.src.receptionist.states.go_to_person import GoToPerson
+from tasks.receptionist.src.receptionist.states.go_to_wait_for_person import GoToWaitForPerson
 from lasr_skills import WaitForPersonInArea
 #from receptionist.states.end import End
 
