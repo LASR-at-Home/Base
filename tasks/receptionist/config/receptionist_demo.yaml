@@ -1,7 +1,7 @@
 start:
-  pose:
-    position: { x: 3.09560757362, y: 0.974404310171, z: 0.0}
-    orientation: {x: 0.0, y: 0.0, z: -0.591061635968, w: 0.806626395853}
+  pose: 
+    position: {x: 0.888781567543, y: 0.420513674488, z: 0.0}
+    orientation: {x: 0.0,y: 0.0, z: 0.156788726133, w: 0.98763216602}
 
 host:
   name: "zoe"
@@ -18,4 +18,24 @@ guest2:
 guestcount: 
   count: 0
 
+wait_area: 
+  polygon: [[1.94, 0.15], [2.98, 0.28], [3.08, -0.68], [2.06, -0.84]]
 
+
+
+wait_position: 
+  pose: 
+    position: {x: 1.03285344327,y: -0.529733618692,z: 0.0}
+    orientation: {x: 0.0,y: 0.0,z: 0.0848562321287,w: 0.996393205451}
+
+
+
+#Hardcoded, TODO remove: 
+talk_position: 
+  pose: 
+    position: {x: 1.69204045276 ,y: -0.443946185376, z: 0.0}
+    orientation: {x: 0.0, y: 0.0, z: 0.187839273022, w: 0.982199779836}
+
+
+
+    

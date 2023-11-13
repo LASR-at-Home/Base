@@ -9,7 +9,7 @@ import json
 
 class AskForDrink(smach.State):
     def __init__(self, default):
-        smach.State.__init__(self, outcomes=['success','waitforguest2','failed'])
+        smach.State.__init__(self, outcomes=['succeeded','waitforguest2','failed'])
         self.default = default
 
 
@@ -73,16 +73,7 @@ class AskForDrink(smach.State):
                         self.default.voice.speak("So, I heard your favourite drink was {}".format(drink))
                         rospy.set_param("guest2/drink",drink)
                         rospy.set_param("guestcount/count",2)
-            
-                        guest1drink = rospy.get_param('guest1/drink')
-                        guest2drink = rospy.get_param('guest2/drink')
-
-
-                        self.default.voice.speak("Guest 1 favourite drink was {}".format(guest1drink))
-                        self.default.voice.speak("Guest 2 favourite drink was {}".format(guest2drink))
-
-
-                        return 'success'
+                        return 'succeeded'
         else: 
             self.default.voice.speak("What is going on")
 
