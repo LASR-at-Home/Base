@@ -18,6 +18,8 @@ class AskForName(smach.State):
             name = get_name(self.default)
         except:
             name = "unknown"
+
+        if name == "unknown":
             return 'failed'
 
         self.default.voice.speak(f"It's great to meet you {name}!")
