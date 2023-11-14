@@ -18,6 +18,8 @@ class AskForDrink(smach.State):
             drink = get_drink(self.default)
         except:
             drink = "unknown"
+        
+        if drink == "unknown":
             return 'failed'
 
         rospy.set_param(f"guest{guestcount+1}/drink", drink)
