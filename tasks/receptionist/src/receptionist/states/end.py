@@ -18,5 +18,3 @@ class End(smach.State):
         self.default.voice.speak(f"{guest2name}'s favourite drink was {guest2drink}")
 
         return 'succeeded'
-
-
