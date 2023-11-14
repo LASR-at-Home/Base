@@ -37,6 +37,6 @@ talk_position:
 
 
 seating_area_position:
-  pose: 
+  pose:
     position: {x: 2.12474401462, y: -2.2094874081, z: 0.0}
     orientation: {x: 0.0, y: 0.0, z: -0.527834895731, w: 0.849346997904}
