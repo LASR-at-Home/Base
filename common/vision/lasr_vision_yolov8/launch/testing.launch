@@ -1,0 +1,18 @@
+<launch>
+    <include file="$(find lasr_vision_yolov8)/launch/service.launch">
+        <arg name="debug" value="true" />
+        <arg name="preload" value="['yolov8n-seg.pt']" />
+    </include>
+
+    <include file="$(find lasr_vision_bodypix)/launch/service.launch">
+        <arg name="debug" value="true" />
+        <arg name="preload" value="['resnet50']" />
+    </include>
+    
+    <node name="image_view_yolo" pkg="rqt_image_view" type="rqt_image_view" respawn="false" output="screen" args="/yolov8/debug/yolov8nsegpt" />
+    <node name="image_view_bodypix" pkg="rqt_image_view" type="rqt_image_view" respawn="false" output="screen" args="/bodypix/debug/resnet50" />
+
+   <include file="$(find video_stream_opencv)/launch/camera.launch">
+        <arg name="visualize" value="true" />
+   </include>
+</launch>
