@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import smach
 from receptionist import Start
+from receptionist import AskForName
 from receptionist import AskForDrink
 from receptionist import End
 from receptionist import Default
@@ -21,8 +22,9 @@ class Receptionist(smach.StateMachine):
             smach.StateMachine.add('START', Start(self.default), transitions={'succeeded' : 'GO_TO_WAIT_FOR_PERSON'})
             smach.StateMachine.add("GO_TO_WAIT_FOR_PERSON",GoToWaitForPerson(self.default), transitions={'succeeded': 'WAIT_FOR_PERSON'})
             smach.StateMachine.add('WAIT_FOR_PERSON', WaitForPersonInArea() ,transitions={'succeeded' : 'GO_TO_PERSON', 'failed' : 'failed'})
-            smach.StateMachine.add('GO_TO_PERSON', GoToPerson(self.default),transitions={'succeeded':'ASK_FOR_DRINK'})
+            smach.StateMachine.add('GO_TO_PERSON', GoToPerson(self.default),transitions={'succeeded':'ASK_FOR_NAME'})
+            smach.StateMachine.add('ASK_FOR_NAME', AskForName(self.default),transitions={'failed':'ASK_FOR_NAME','succeeded':'ASK_FOR_DRINK'})
             smach.StateMachine.add('ASK_FOR_DRINK', AskForDrink(self.default),transitions={'failed':'ASK_FOR_DRINK','succeeded':'GO_TO_SEATING_AREA'})
             smach.StateMachine.add('GO_TO_SEATING_AREA', GoToSeatingArea(self.default), transitions={'succeeded' : 'LOOK_FOR_SEATS'})
-            smach.StateMachine.add('LOOK_FOR_SEATS', LookForSeats(self.default), transitions={'succeeded' : 'END'})
+            smach.StateMachine.add('LOOK_FOR_SEATS', LookForSeats(self.default), transitions={'succeeded' : 'GO_TO_WAIT_FOR_PERSON'})
             smach.StateMachine.add('END', End(self.default),transitions={'succeeded':'succeeded'})

@@ -1,8 +1,8 @@
 import smach
 import rospy
-from receptionist.speech_helper import get_drink
+from receptionist.speech_helper import get_name
 
-class AskForDrink(smach.State):
+class AskForName(smach.State):
     def __init__(self, default):
         smach.State.__init__(self, outcomes=['succeeded','failed'])
         self.default = default
@@ -12,14 +12,15 @@ class AskForDrink(smach.State):
         
         guestcount = rospy.get_param("guestcount/count", 0)
 
-        self.default.voice.speak("What is your favourite drink?")
+        self.default.voice.speak("What is your favourite name?")
 
         try: 
-            drink = get_drink(self.default)
+            name = get_name(self.default)
         except:
-            drink = "unknown"
+            name = "unknown"
             return 'failed'
 
-        rospy.set_param(f"guest{guestcount+1}/drink", drink)
-        rospy.set_param("guestcount/count", guestcount+1)
+        self.default.voice.speak(f"It's great to meet you {name}!")
+
+        rospy.set_param(f"guest{guestcount+1}/name", name)
         return 'succeeded'
