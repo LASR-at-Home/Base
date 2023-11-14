@@ -1,3 +1,4 @@
+from .ask_for_name import AskForName
 from .ask_for_drink import AskForDrink
 from .end import End
 from .go_to_person import GoToPerson

@@ -13,7 +13,6 @@ def listen(default):
     rospy.loginfo(resp)
     return resp
 
-
 def affirm(default):
     resp = listen(default)
     if resp['intent']['name'] != 'affirm':
@@ -29,18 +28,22 @@ def affirm(default):
         return affirm(default)
     return choice
 
-
-
 def get_drink(default):
     resp = listen(default)
-    if resp['intent']['name'] != 'make_order':
+    if resp['intent']['name'] != 'fav_drink':
         return "unknown"
-    drink = resp["entities"].get("item",[])
+    drink = resp["entities"].get("drink",[])
     if drink is None: 
         return "unknown"
     drink = drink[0]["value"].lower()
     return str(drink)
 
- 
-
-
+def get_name(default):
+    resp = listen(default)
+    if resp['intent']['name'] != 'name':
+        return "unknown"
+    name = resp["entities"].get("name",[])
+    if name is None: 
+        return "unknown"
+    name = name[0]["value"].lower()
+    return str(name)
