@@ -9,16 +9,14 @@ class End(smach.State):
         self.default = default
 
     def execute(self, userdata):
+        guest1name = rospy.get_param('guest1/name')
         guest1drink = rospy.get_param('guest1/drink')
         guest2drink = rospy.get_param('guest2/drink')
+        guest2name = rospy.get_param('guest2/name')
 
+        self.default.voice.speak(f"{guest1name}'s favourite drink was {guest1drink}")
+        self.default.voice.speak(f"{guest2name}'s favourite drink was {guest2drink}")
 
-        self.default.voice.speak("Guest 1 favourite drink was {}".format(guest1drink))
-        self.default.voice.speak("Guest 2 favourite drink was {}".format(guest2drink))
-
-
-        print(guest1drink)
-        print(guest2drink)
         return 'succeeded'
 
 
