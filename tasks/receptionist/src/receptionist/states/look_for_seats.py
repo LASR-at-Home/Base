@@ -56,7 +56,7 @@ class LookForSeats(smach.StateMachine):
                 userdata.point = Point(*p1)
                 print(f"Chair at {p1} is free!")
                 return 'succeeded'
-            for (det2, p2) in userdata.bulk_people_detections_3d:
+            for (det2, _) in userdata.bulk_people_detections_3d:
                 if not self.is_person_sitting_in_chair(np.array(det2.xyseg).reshape(-1, 2), np.array(det1.xyseg).reshape(-1, 2)):
                     userdata.free_seat = [det1, p1]
                     userdata.point = Point(*p1)
