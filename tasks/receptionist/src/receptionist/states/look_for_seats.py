@@ -3,6 +3,7 @@
 import smach
 import rospy
 import numpy as np
+import math
 from play_motion_msgs.msg import PlayMotionGoal
 from geometry_msgs.msg import Point
 from shapely.geometry import Polygon
@@ -61,7 +62,15 @@ class LookForSeats(smach.StateMachine):
                     userdata.free_seat = [det1, p1]
                     userdata.point = Point(*p1)
                     print(f"Chair at {p1} is free!")
-                    self.default.voice.speak("Please sit down on this chair")
+                    robot_x, robot_y, _ = self.default.base_controller.get_current_pose()
+                    dist_x, dist_y = robot_x - p1[0], robot_y - p1[1]
+                    theta_deg = np.degrees(math.atan2(dist_y, dist_x))
+                    if theta_deg > 25:
+                        self.default.voice.speak("Please sit down on this chair to my right")
+                    elif theta_deg < -25:
+                        self.default.voice.speak("Please sit down on this chair to my left")
+                    else:
+                        self.default.voice.speak("Please sit down on this chair")
                     return 'succeeded'
             return 'not_done'
 
