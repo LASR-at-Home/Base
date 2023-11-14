@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import smach
+import rospy
 from play_motion_msgs.msg import PlayMotionGoal
 
 from lasr_skills import DetectObjects3D
@@ -20,6 +21,7 @@ class LookForSeats(smach.StateMachine):
                 return 'done'
             pm_goal = PlayMotionGoal(motion_name=self.motions.pop(0), skip_planning=True)
             self.default.pm.send_goal_and_wait(pm_goal)
+            rospy.sleep(1.0)
             return 'not_done'
 
     class ProcessDetections(smach.State):
@@ -45,7 +47,6 @@ class LookForSeats(smach.StateMachine):
             smach.StateMachine.add('PROCESS_DETECTIONS', self.ProcessDetections(), transitions={'succeeded' : 'LOOK'})
 
 if __name__ == "__main__":
-    import rospy
     from receptionist import Default
     rospy.init_node("test_look_for_seats")
     default = Default()
