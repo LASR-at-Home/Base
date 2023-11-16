@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 import smach
-from receptionist import Start
-from receptionist import AskForName
-from receptionist import AskForDrink
-from receptionist import End
+from receptionist.states import Start
+from receptionist.states import AskForName
+from receptionist.states import AskForDrink
+from receptionist.states import End
 from receptionist import Default
-from receptionist import GoToPerson
-from receptionist import GoToSeatingArea
-from receptionist import LookForSeats
-from tasks import GoToWaitForPerson
+from receptionist.states import GoToPerson
+from receptionist.states import GoToSeatingArea
+from receptionist.states import LookForSeats
+from receptionist.states import GoToWaitForPerson
 from lasr_skills import WaitForPersonInArea
 #from receptionist.states.end import End
 
@@ -18,8 +18,9 @@ class Receptionist(smach.StateMachine):
         smach.StateMachine.__init__(self, outcomes=['succeeded', 'failed'])
         self.default = Default()
         self.userdata.area_polygon = [[1.94, 0.15], [2.98, 0.28], [3.08, -0.68], [2.06, -0.84]]
+        self.userdata.depth_topic = "/xtion/depth_registered/points"
         with self:
-            smach.StateMachine.add('START', Start(self.default), transitions={'succeeded' : 'GO_TO_WAIT_FOR_PERSON'})
+            # smach.StateMachine.add('START', Start(self.default), transitions={'succeeded' : 'GO_TO_WAIT_FOR_PERSON'})
             smach.StateMachine.add("GO_TO_WAIT_FOR_PERSON",GoToWaitForPerson(self.default), transitions={'succeeded': 'WAIT_FOR_PERSON'})
             smach.StateMachine.add('WAIT_FOR_PERSON', WaitForPersonInArea() ,transitions={'succeeded' : 'GO_TO_PERSON', 'failed' : 'failed'})
             smach.StateMachine.add('GO_TO_PERSON', GoToPerson(self.default),transitions={'succeeded':'ASK_FOR_NAME'})

@@ -39,7 +39,7 @@ class DetectObjects3D(smach.State):
         return np.array([response.target_point.point.x, response.target_point.point.y, response.target_point.point.z])
 
     def execute(self, userdata):
-        pcl_msg = rospy.wait_for_message(userdata.depth_topic, PointCloud2)
+        pcl_msg = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
         try:
             cv_im = pcl_msg_to_cv2(pcl_msg)
             img_msg = self.bridge.cv2_to_imgmsg(cv_im)

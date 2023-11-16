@@ -30,8 +30,8 @@ def affirm(default):
 
 def get_drink(default):
     resp = listen(default)
-    if resp['intent']['name'] != 'fav_drink':
-        return "unknown"
+    # if resp['intent']['name'] != 'fav_drink':
+    #     return "unknown"
     drink = resp["entities"].get("drink",[])
     if drink is None: 
         return "unknown"
@@ -40,8 +40,8 @@ def get_drink(default):
 
 def get_name(default):
     resp = listen(default)
-    if resp['intent']['name'] != 'name':
-        return "unknown"
+    # if resp['intent']['name'] != 'name':
+    #     return "unknown"
     name = resp["entities"].get("name",[])
     if name is None: 
         return "unknown"
