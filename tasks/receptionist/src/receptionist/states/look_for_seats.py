@@ -56,21 +56,34 @@ class LookForSeats(smach.StateMachine):
                 userdata.free_seat = [det1, p1]
                 userdata.point = Point(*p1)
                 print(f"Chair at {p1} is free!")
+                robot_x, robot_y, _ = self.default.controllers.base_controller.get_current_pose()
+                r = np.array([robot_x, robot_y])
+                p = np.array([p1[0], p1[1]])
+                theta = np.degrees(np.arccos(np.dot(r, p) / (np.linalg.norm(r) * np.linalg.norm(p))))
+                print(theta)
+                if theta > 10.0:
+                    self.default.voice.sync_tts("Please sit down on this chair to my right")
+                elif theta < -10.0:
+                    self.default.voice.sync_tts("Please sit down on this chair to my left")
+                else:
+                    self.default.voice.sync_tts("Please sit down on this chair")
                 return 'succeeded'
             for (det2, _) in userdata.bulk_people_detections_3d:
                 if not self.is_person_sitting_in_chair(np.array(det2.xyseg).reshape(-1, 2), np.array(det1.xyseg).reshape(-1, 2)):
                     userdata.free_seat = [det1, p1]
                     userdata.point = Point(*p1)
                     print(f"Chair at {p1} is free!")
-                    robot_x, robot_y, _ = self.default.base_controller.get_current_pose()
-                    dist_x, dist_y = robot_x - p1[0], robot_y - p1[1]
-                    theta_deg = np.degrees(math.atan2(dist_y, dist_x))
-                    if theta_deg > 25:
-                        self.default.voice.speak("Please sit down on this chair to my right")
-                    elif theta_deg < -25:
-                        self.default.voice.speak("Please sit down on this chair to my left")
+                    robot_x, robot_y, _ = self.default.controllers.base_controller.get_current_pose()
+                    r = np.array([robot_x, robot_y])
+                    p = np.array([p1[0], p1[1]])
+                    theta = np.degrees(np.arccos(np.dot(r, p) / (np.linalg.norm(r) * np.linalg.norm(p))))
+                    print(theta)
+                    if theta > 10.0:
+                        self.default.voice.sync_tts("Please sit down on this chair to my right")
+                    elif theta < -10.0:
+                        self.default.voice.sync_tts("Please sit down on this chair to my left")
                     else:
-                        self.default.voice.speak("Please sit down on this chair")
+                        self.default.voice.sync_tts("Please sit down on this chair")
                     return 'succeeded'
             return 'not_done'
 
