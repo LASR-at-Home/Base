@@ -14,13 +14,21 @@ class AskForDrink(smach.State):
 
         self.default.voice.speak("What is your favourite drink?")
 
-        try: 
-            drink = get_drink(self.default)
-        except:
-            drink = "unknown"
+
+        for _ in range(3):
+            try:
+                drink = get_drink(self.default)
+            except:
+                drink = "unknown    "
+            if drink == "unknown":
+                self.default.voice.speak("Sorry, I didn't get that. Could you repeat, please?")
+            else:
+                break
         
-        # if drink == "unknown":
-        #     return 'failed'
+        if drink == "unknown":
+            self.default.voice.speak("Sadly, I couldn't understand your favourite drink. You might go thirsty this evening.")
+        else:
+            self.default.voice.speak(f"{drink}, what a great drink!")
 
         rospy.set_param(f"guest{guestcount+1}/drink", drink)
         rospy.set_param("guestcount/count", guestcount+1)

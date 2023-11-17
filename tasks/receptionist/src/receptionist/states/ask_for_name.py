@@ -14,13 +14,20 @@ class AskForName(smach.State):
 
         self.default.voice.speak("What is your name?")
 
-        try: 
-            name = get_name(self.default)
-        except:
-            name = "unknown"
-
-
-        self.default.voice.speak(f"It's great to meet you {name}!")
+        for _ in range(3):
+            try:
+                name = get_name(self.default)
+            except:
+                name = "unknown"
+            if name == "unknown":
+                self.default.voice.speak("Sorry, I didn't get that. Could you repeat, please?")
+            else:
+                break
+        
+        if name == "unknown":
+            self.default.voice.speak("I couldn't understand your name, but it's great to meet you!")
+        else:
+            self.default.voice.speak(f"It's great to meet you {name}!")
 
         rospy.set_param(f"guest{guestcount+1}/name", name)
         return 'succeeded'
