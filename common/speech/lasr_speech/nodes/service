@@ -26,6 +26,7 @@ class TranscribeAndParse:
             sounddevice.play(self.sound_data, sample_rate,
                              device=audio_interface.get_default_output_device_info()["index"])
             sounddevice.wait()
+            audio_interface.terminate()
         p = Process(target=play)
         p.start()
         sleep(0.5)
