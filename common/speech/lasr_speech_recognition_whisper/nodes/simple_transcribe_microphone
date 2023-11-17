@@ -51,17 +51,18 @@ rospy.init_node('transcribe_mic', anonymous=True)
 device = "cuda" if torch.cuda.is_available() else "cpu"
 model = load_model("medium.en", device=device)
 
+microphone = sr.Microphone(device_index=device_index, sample_rate=16000)
+r = sr.Recognizer()
+
 def handle_transcribe_audio(_):
-    r = sr.Recognizer()
-    with sr.Microphone(device_index=device_index, sample_rate=16000) as source:
+    with microphone as source:
+
         r.adjust_for_ambient_noise(source)
 
         wav_data = r.listen(source, timeout=TIMEOUT, phrase_time_limit=PHRASE_TIME_LIMIT).get_wav_data()
+        float_data = np.frombuffer(wav_data, dtype=np.int16).astype(np.float32, order='C') / 32768.0
 
-        data_s16 = np.frombuffer(wav_data, dtype=np.int16, count=len(wav_data)//2, offset=0)
-        float_data = data_s16.astype(np.float32, order='C') / 32768.0
-
-        phrase = model.transcribe(float_data, fp16=device == "cuda")
+        phrase = model.transcribe(float_data, fp16=device == "cuda")["text"]
         return TranscribeAudioResponse(phrase=phrase)
 
 rospy.Service('/whisper/transcribe_audio', TranscribeAudio, handle_transcribe_audio)
