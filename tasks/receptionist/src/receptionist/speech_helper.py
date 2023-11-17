@@ -4,7 +4,7 @@ import json
 
 def listen(default):
     print("trying to listen!")
-    resp = default.speech()
+    resp = default.speech(True)
     print("Resp success: ", resp.success)
     if not resp.success:
         default.voice.speak("Sorry, I didn't get that")
