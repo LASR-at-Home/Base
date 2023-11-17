@@ -1,0 +1,70 @@
+#!/usr/bin/env python3
+import os
+import torch
+import rospy
+import sys
+from pathlib import Path
+import speech_recognition as sr
+import numpy as np
+
+from lasr_speech_recognition_msgs.srv import TranscribeAudio, TranscribeAudioResponse
+from lasr_speech_recognition_whisper import load_model
+
+
+MODEL = "medium.en" # Whisper model
+TIMEOUT = 5.0 # Timeout for listening for the start of a phrase
+PHRASE_TIME_LIMIT = None # Timeout for listening for the end of a phrase
+
+WHISPER_CACHE = os.path.join(str(Path.home()), '.cache', 'whisper')
+os.makedirs(WHISPER_CACHE, exist_ok=True)
+os.environ["TIKTOKEN_CACHE_DIR"] = WHISPER_CACHE
+
+if len(sys.argv) < 3:
+    print('Usage:')
+    print('rosrun lasr_speech_recognition transcribe_microphone by-index <device_index>')
+    print('rosrun lasr_speech_recognition transcribe_microphone by-name <substring>')
+    exit(1)
+else:
+    matcher = sys.argv[1]
+    device_index = None
+    if matcher == 'by-index':
+        device_index = int(sys.argv[2])
+    elif matcher == 'by-name':
+        import speech_recognition as sr
+        microphones = enumerate(sr.Microphone.list_microphone_names())
+
+        target_name = sys.argv[2]
+        for index, name in microphones:
+            if target_name in name:
+                device_index = index
+                break
+        
+        if device_index is None:
+            print('Could not find device!')
+            exit(1)
+    else:
+        print('Invalid matcher')
+        exit(1)
+
+rospy.init_node('transcribe_mic', anonymous=True)
+
+device = "cuda" if torch.cuda.is_available() else "cpu"
+model = load_model("medium.en", device=device)
+
+def handle_transcribe_audio(_):
+    r = sr.Recognizer()
+    with sr.Microphone(device_index=device_index, sample_rate=16000) as source:
+        r.adjust_for_ambient_noise(source)
+
+        wav_data = r.listen(source, timeout=TIMEOUT, phrase_time_limit=PHRASE_TIME_LIMIT).get_wav_data()
+
+        data_s16 = np.frombuffer(wav_data, dtype=np.int16, count=len(wav_data)//2, offset=0)
+        float_data = data_s16.astype(np.float32, order='C') / 32768.0
+
+        phrase = model.transcribe(float_data, fp16=device == "cuda")
+        return TranscribeAudioResponse(phrase=phrase)
+
+rospy.Service('/whisper/transcribe_audio', TranscribeAudio, handle_transcribe_audio)
+
+rospy.loginfo("Whisper service ready")
+rospy.spin()
