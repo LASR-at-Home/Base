@@ -2,7 +2,7 @@
     <arg name="matcher" default="by-index" />
     <arg name="device_param" default="" />
     <arg name="rasa_model" default=""/>
-    <node pkg="lasr_speech_recognition_whisper" type="transcribe_microphone" name="whisper_service" output="screen" args="$(arg matcher) $(arg device_param)"/>
+    <node pkg="lasr_speech_recognition_whisper" type="simple_transcribe_microphone" name="whisper_service" output="screen" args="$(arg matcher) $(arg device_param)"/>
     <include file = "$(find lasr_rasa)/launch/rasa.launch">
         <arg name="model" value="$(arg rasa_model)"/>
     </include>
