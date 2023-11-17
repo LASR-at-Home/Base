@@ -32,7 +32,6 @@ class TranscribeAndParse:
         sleep(0.5)
 
     def __call__(self, req):
-        self.adjust_for_noise()
         if req.play_sound:
             self.play_sound()
         transcription = self.transcribe_audio()
