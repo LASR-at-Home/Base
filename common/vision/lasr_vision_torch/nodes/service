@@ -1,0 +1,231 @@
+import lasr_vision_torch
+model = lasr_vision_torch.load_face_classifier_model()
+
+## 
+## WARNING: THIS CODE STILL NEEDS TO BE CLEANED UP
+##                   - paul
+## 
+
+import rospy
+
+# import cv2
+import torch
+import numpy as np
+from PIL import Image as PillowImage
+import torch.nn.functional as F
+
+from sensor_msgs.msg import Image
+from lasr_vision_msgs.msg import FeatureWithColour, ColourPrediction
+from lasr_vision_msgs.srv import TorchFaceFeatureDetection, TorchFaceFeatureDetectionRequest, TorchFaceFeatureDetectionResponse
+
+# START COPY PASTE
+COLORS = {
+        "red": [255, 0, 0],
+        "green": [0, 255, 0],
+        "blue": [0, 0, 255],
+        "white": [255, 255, 255],
+        "black": [0, 0, 0],
+        "yellow": [255, 255, 0],
+        "cyan": [0, 255, 255],
+        "magenta": [255, 0, 255],
+        "gray": [128, 128, 128],
+        "orange": [255, 165, 0],
+        "purple": [128, 0, 128],
+        "brown": [139, 69, 19],
+        "pink": [255, 182, 193],
+        "beige": [245, 245, 220],
+        "maroon": [128, 0, 0],
+        "olive": [128, 128, 0],
+        "navy": [0, 0, 128],
+        "lime": [50, 205, 50],
+        "golden": [255, 223, 0],
+        "teal": [0, 128, 128],
+        "coral": [255, 127, 80],
+        "salmon": [250, 128, 114],
+        "turquoise": [64, 224, 208],
+        "violet": [238, 130, 238],
+        "platinum": [229, 228, 226],
+        "ochre": [204, 119, 34],
+        "burntsienna": [233, 116, 81],
+        "chocolate": [210, 105, 30],
+        "tan": [210, 180, 140],
+        "ivory": [255, 255, 240],
+        "goldenrod": [218, 165, 32],
+        "orchid": [218, 112, 214],
+        "honey": [238, 220, 130]
+    }
+
+HAIR_COLORS = {
+        'midnight black': (9, 8, 6),
+        'off black': (44, 34, 43),
+        'strong dark brown': (58, 48, 36),
+        'medium dark brown': (78, 67, 63),
+
+        'chestnut brown': (106, 78, 66),
+        'light chestnut brown': (106, 78, 66),
+        'dark golden brown': (95, 72, 56),
+        'light golden brown': (167, 133, 106),
+
+        'dark honey blonde': (184, 151, 128),
+        'bleached blonde': (220, 208, 186),
+        'light ash blonde': (222, 288, 153),
+        'light ash brown': (151, 121, 97),
+
+        'lightest blonde': (230, 206, 168),
+        'pale golden blonde': (229, 200, 168),
+        'strawberry blonde': (165, 137, 70),
+        'light auburn': (145, 85, 61),
+
+        'dark auburn': (83, 61, 53),
+        'darkest gray': (113, 99, 93),
+        'medium gray': (183, 166, 158),
+        'light gray': (214, 196, 194),
+
+        'white blonde': (255, 24, 225),
+        'platinum blonde': (202, 191, 177),
+        'russet red': (145, 74, 67),
+        'terra cotta': (181, 82, 57) }
+
+def closest_colours(requested_color, colours):
+    distances = {color: np.linalg.norm(np.array(rgb_val) - requested_color) for color, rgb_val in colours.items()}
+    sorted_colors = sorted(distances.items(), key=lambda x: x[1])
+    top_three_colors = sorted_colors[:3]
+    formatted_colors = [(color_name, distance) for color_name, distance in top_three_colors]
+    return formatted_colors
+
+# END COPY PASTE
+
+def binary_erosion_dilation(tensor, thresholds, erosion_iterations=1, dilation_iterations=1):
+    """
+    Apply binary threshold, followed by erosion and dilation to a tensor.
+
+    :param tensor: Input tensor (N, C, H, W)
+    :param thresholds: List of threshold values for each channel
+    :param erosion_iterations: Number of erosion iterations
+    :param dilation_iterations: Number of dilation iterations
+    :return: Processed tensor
+    """
+    
+    # Check if the length of thresholds matches the number of channels
+    if len(thresholds) != tensor.size(1):
+        raise ValueError("Length of thresholds must match the number of channels")
+    
+    # Binary thresholding
+    for i, threshold in enumerate(thresholds):
+        tensor[:, i] = (tensor[:, i] > threshold/2).float() / 4
+        tensor[:, i] += (tensor[:, i] > threshold).float()
+        tensor[:, i] /= max(tensor[:, i].clone())
+
+    # Define the 3x3 kernel for erosion and dilation
+    kernel = torch.tensor([[1, 1, 1],
+                           [1, 1, 1],
+                           [1, 1, 1]], dtype=torch.float32).unsqueeze(0).unsqueeze(0)
+    
+    # Replicate the kernel for each channel
+    kernel = kernel.repeat(tensor.size(1), 1, 1, 1).to(tensor.device)
+
+    # Erosion
+    for _ in range(erosion_iterations):
+        tensor = F.conv2d(tensor, kernel, padding=1, groups=tensor.size(1))  # 3x3 convolution with groups
+        tensor = (tensor == 9).float()  # Check if all neighboring pixels are 1
+
+    # Dilation
+    for _ in range(dilation_iterations):
+        tensor_dilated = F.conv2d(tensor, kernel, padding=1, groups=tensor.size(1))  # 3x3 convolution with groups
+        tensor = torch.clamp(tensor + tensor_dilated, 0, 1)  # Combine the original and dilated tensors
+
+    return tensor
+
+
+def median_color_float(rgb_image: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
+    mask = mask.bool()
+    median_colors = torch.zeros((rgb_image.size(0), mask.size(1), rgb_image.size(1)), device=rgb_image.device)
+    for i in range(rgb_image.size(0)):
+        for j in range(mask.size(1)):
+            for k in range(rgb_image.size(1)):
+                valid_pixels = torch.masked_select(rgb_image[i, k], mask[i, j])
+                if valid_pixels.numel() > 0:
+                    median_value = valid_pixels.median()
+                else:
+                    median_value = torch.tensor(0.0, device=rgb_image.device)
+                median_colors[i, j, k] = median_value
+    return median_colors  # / 255.0
+
+rospy.init_node('torch_service')
+def detect(request: TorchFaceFeatureDetectionRequest) -> TorchFaceFeatureDetectionResponse:
+    # decode the image
+    # TODO: turn this into a common utility
+    rospy.loginfo('Decoding')
+    size = (request.image_raw.width, request.image_raw.height)
+    if request.image_raw.encoding in ['bgr8', '8UC3']:
+        img = PillowImage.frombytes('RGB', size, request.image_raw.data, 'raw')
+
+        # BGR => RGB
+        img = PillowImage.fromarray(np.array(img)[:,:,::-1])
+    elif request.image_raw.encoding == 'rgb8':
+        img = PillowImage.frombytes('RGB', size, request.image_raw.data, 'raw')
+    else:
+        raise Exception("Unsupported format.")
+    
+    # now bring it back into OpenCV format
+    frame = np.array(img)
+
+    # frame = img[:, :, ::-1].copy() 
+
+    # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    # frame = cv2.resize(frame, expected_frame_shape)
+
+    # 'hair', 'hat', 'glasses', 'face'
+    input_image = torch.from_numpy(frame).permute(2, 0, 1).unsqueeze(0).float()
+    input_image /= 255.0
+    masks_batch_pred, pred_classes = model(input_image)
+    # print(pred_classes.detach().numpy())
+    # print(masks_batch_pred)
+
+    face_th_rate = 0.05
+    thresholds_mask = [
+        0.5, 0.75, 0.25, 0.5,  # 0.5, 0.5, 0.5, 0.5,
+    ]
+    thresholds_pred = [
+        0.6, 0.8, 0.1, 0.5,
+    ]
+    erosion_iterations = 1
+    dilation_iterations = 1
+    colour_distance_rate = 1.2
+    categories = ['hair', 'hat', 'glasses', 'face',]
+
+    masks_batch_pred = binary_erosion_dilation(
+        masks_batch_pred, thresholds=thresholds_mask, 
+        erosion_iterations=erosion_iterations, dilation_iterations=dilation_iterations
+    )
+    median_colours = (median_color_float(input_image, masks_batch_pred).detach().squeeze(0)*255).numpy().astype(np.uint8)
+    masks = masks_batch_pred.detach().squeeze(0).numpy().astype(np.uint8)
+    # discard: mask_list = [masks[i,:,:] for i in range(masks.shape[0])]
+    pred_classes = pred_classes.detach().squeeze(0).numpy()  # .astype(np.uint8)
+    class_list = [categories[i] for i in range(pred_classes.shape[0]) if pred_classes[i].item() > thresholds_pred[i]]
+    colour_list = [median_colours[i,:] for i in range(median_colours.shape[0])]
+
+    print(class_list)
+    print(colour_list)
+
+    # print('\n\nDetected hair colour:')
+    # print(closest_colours(colour_list[0]))
+    # print('Detected segments:', class_list)
+
+    response = TorchFaceFeatureDetectionResponse()
+    response.detected_features = [
+        FeatureWithColour(categories[i], [
+            ColourPrediction(colour, distance)
+                for colour, distance
+                in closest_colours(colour_list[i], HAIR_COLORS if categories[i] == 'hair' else COLORS)
+        ])
+            for i
+            in range(pred_classes.shape[0])
+            if pred_classes[i].item() > thresholds_pred[i]
+    ]
+
+    return response
+
+rospy.Service('/torch/detect/face_features', TorchFaceFeatureDetection, detect)
+rospy.loginfo('Torch service started')
+rospy.spin()

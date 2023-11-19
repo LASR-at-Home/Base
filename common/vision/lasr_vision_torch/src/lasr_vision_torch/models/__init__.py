@@ -1,0 +1,1 @@
+from .model_face_classifier import load_face_classifier_model

@@ -73,6 +73,7 @@ def detect(request: YoloDetectionRequest, debug_publisher: rospy.Publisher | Non
     
     # publish to debug topic
     if debug_publisher is not None:
+        # TODO: move to common package
         msg = SensorImage()
         msg.header.stamp = rospy.Time.now()
         msg.width = request.image_raw.width

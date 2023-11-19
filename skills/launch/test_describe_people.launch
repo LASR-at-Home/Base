@@ -8,6 +8,8 @@
         <arg name="debug" value="true" />
         <arg name="preload" value="['resnet50']" />
     </include>
+
+    <include file="$(find lasr_vision_torch)/launch/service.launch" />
     
     <node name="image_view_yolo" pkg="rqt_image_view" type="rqt_image_view" respawn="false" output="screen" args="/yolov8/debug/yolov8nsegpt" />
     <node name="image_view_bodypix" pkg="rqt_image_view" type="rqt_image_view" respawn="false" output="screen" args="/bodypix/debug/resnet50" />
@@ -15,4 +17,10 @@
    <include file="$(find video_stream_opencv)/launch/camera.launch">
         <arg name="visualize" value="true" />
    </include>
+    <!-- <arg name="file" doc="Video file to run inference on" />
+   <include file="$(find video_stream_opencv)/launch/camera.launch">
+        <arg name="video_stream_provider" value="$(arg file)" />
+        <arg name="loop_videofile" value="true" />
+        <arg name="visualize" value="true" />
+   </include> -->
 </launch>
