@@ -87,6 +87,27 @@ class LookForSeats(smach.StateMachine):
                     return 'succeeded'
             return 'not_done'
 
+    class PointToChair(smach.State):
+        
+        def __init__(self, default):
+            smach.State.__init__(self, outcomes=['succeeded'], input_keys=['point'])
+            self.default = default
+        
+        def execute(self, userdata):
+            pm_goal = PlayMotionGoal(motion_name="raise_torso", skip_planning=True)
+            self.default.pm.send_goal_and_wait(pm_goal)
+
+            pm_goal = PlayMotionGoal(motion_name="point", skip_planning=False)
+            self.default.pm.send_goal_and_wait(pm_goal)
+
+            rospy.sleep(5.0)
+
+            pm_goal = PlayMotionGoal(motion_name="home", skip_planning=False)
+            self.default.pm.send_goal_and_wait(pm_goal)
+
+            return 'succeeded'
+
+
     def __init__(self, default):
         smach.StateMachine.__init__(self, outcomes=['succeeded', 'failed'])
         self.default = default
@@ -100,7 +121,7 @@ class LookForSeats(smach.StateMachine):
             smach.StateMachine.add('DETECT_OBJECTS_3D', DetectObjects3D(), transitions={'succeeded' : 'PROCESS_DETECTIONS', 'failed' : 'failed'})
             smach.StateMachine.add('PROCESS_DETECTIONS', self.ProcessDetections(), transitions={'succeeded' : 'LOOK'})
             smach.StateMachine.add('CHECK_SEAT', self.CheckSeat(self.default), transitions={'succeeded' : 'FINALISE_SEAT', 'failed' : 'failed', 'not_done': 'CHECK_SEAT'})
-            smach.StateMachine.add('FINALISE_SEAT', LookToPoint(), transitions={'succeeded' : 'succeeded'})
+            smach.StateMachine.add('FINALISE_SEAT', self.PointToChair(self.default), transitions={'succeeded' : 'succeeded'})
 
 if __name__ == "__main__":
     from receptionist import Default
