@@ -8,6 +8,7 @@ from play_motion_msgs.msg import PlayMotionGoal
 from geometry_msgs.msg import Point
 from shapely.geometry import Polygon
 from lasr_skills import DetectObjects3D, LookToPoint
+from copy import copy
 
 class LookForSeats(smach.StateMachine):
 
@@ -17,10 +18,12 @@ class LookForSeats(smach.StateMachine):
         def __init__(self, default):
             smach.State.__init__(self, outcomes=['done', 'not_done'], input_keys=['look_motion'])
             self.default = default
-            self.motions = ['look_down_center']
+            self.motions = ['look_down_left', 'look_down_center', 'look_down_right']
+            self.remaining_motions = copy(self.motions)
 
         def execute(self, userdata):
             if not self.motions:
+                self.remaining_motions = self.motions
                 return 'done'
             pm_goal = PlayMotionGoal(motion_name=self.motions.pop(0), skip_planning=True)
             self.default.pm.send_goal_and_wait(pm_goal)
@@ -94,6 +97,12 @@ class LookForSeats(smach.StateMachine):
             self.default = default
         
         def execute(self, userdata):
+
+            pm_goal = PlayMotionGoal(motion_name="back_to_default_head", skip_planning=True)
+            self.default.pm.send_goal_and_wait(pm_goal)
+
+            self.default.controllers.base_controller.sync_face_to(userdata.point.x, userdata.point.y)
+
             pm_goal = PlayMotionGoal(motion_name="raise_torso", skip_planning=True)
             self.default.pm.send_goal_and_wait(pm_goal)
 
