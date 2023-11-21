@@ -22,8 +22,8 @@ class LookForSeats(smach.StateMachine):
             self.remaining_motions = copy(self.motions)
 
         def execute(self, userdata):
-            if not self.motions:
-                self.remaining_motions = self.motions
+            if not self.remaining_motions:
+                self.remaining_motions = copy(self.motions)
                 return 'done'
             pm_goal = PlayMotionGoal(motion_name=self.motions.pop(0), skip_planning=True)
             self.default.pm.send_goal_and_wait(pm_goal)
@@ -70,6 +70,7 @@ class LookForSeats(smach.StateMachine):
                     self.default.voice.sync_tts("Please sit down on this chair to my left")
                 else:
                     self.default.voice.sync_tts("Please sit down on this chair")
+                    self.remaining_motions = []
                 return 'succeeded'
             for (det2, _) in userdata.bulk_people_detections_3d:
                 if not self.is_person_sitting_in_chair(np.array(det2.xyseg).reshape(-1, 2), np.array(det1.xyseg).reshape(-1, 2)):
@@ -87,6 +88,7 @@ class LookForSeats(smach.StateMachine):
                         self.default.voice.sync_tts("Please sit down on this chair to my left")
                     else:
                         self.default.voice.sync_tts("Please sit down on this chair")
+                    self.remaining_motions = []
                     return 'succeeded'
             return 'not_done'
 
