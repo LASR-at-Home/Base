@@ -3,8 +3,6 @@ version: "3.1"
 intents:
   - fav_drink
   - name
-  - affirm
-  - deny
 entities:
   - drink
   - name
