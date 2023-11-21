@@ -40,3 +40,8 @@ play_motion:
       points:
       - positions: [1.46, -1.47, -3.01, 1.73, -1.62, -0.12, -0.03]
         time_from_start: 0.0
+    back_to_default_head:
+      joints: [head_1_joint, head_2_joint]
+      points:
+      - positions: [0.0, 0.0]
+        time_from_start: 0.0
