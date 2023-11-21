@@ -33,7 +33,7 @@ def get_drink(default):
     # if resp['intent']['name'] != 'fav_drink':
     #     return "unknown"
     drink = resp["entities"].get("drink",[])
-    if drink is None: 
+    if drink is None or not drink: 
         return "unknown"
     drink = drink[0]["value"].lower()
     return str(drink)
@@ -43,7 +43,7 @@ def get_name(default):
     # if resp['intent']['name'] != 'name':
     #     return "unknown"
     name = resp["entities"].get("name",[])
-    if name is None: 
+    if name is None or not name: 
         return "unknown"
     name = name[0]["value"].lower()
     return str(name)
