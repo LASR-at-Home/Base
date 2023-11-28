@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import rospy
+import cv2_img
 import numpy as np
 
 from PIL import Image
@@ -35,42 +36,14 @@ def load_model_cached(dataset: str) -> None:
     
     return model
 
-def cv2_img_to_msg(img):
-    # TODO: turn this into a common utility
-    height, width, _ = img.shape
-
-    msg = SensorImage()
-    msg.header.stamp = rospy.Time.now()
-    msg.width = width
-    msg.height = height
-    msg.encoding = 'bgr8'
-    msg.is_bigendian = 1
-    msg.step = 3 * width
-    msg.data = img.tobytes()
-    return msg
-
 def detect(request: BodyPixDetectionRequest, debug_publisher: rospy.Publisher | None) -> BodyPixDetectionResponse:
     '''
     Run BodyPix inference on given detection request
     '''
 
     # decode the image
-    # TODO: turn this into a common utility
     rospy.loginfo('Decoding')
-    size = (request.image_raw.width, request.image_raw.height)
-    if request.image_raw.encoding in ['bgr8', '8UC3']:
-        img = Image.frombytes('RGB', size, request.image_raw.data, 'raw')
-
-        # BGR => RGB
-        img = Image.fromarray(np.array(img)[:,:,::-1])
-    elif request.image_raw.encoding == 'rgb8':
-        img = Image.frombytes('RGB', size, request.image_raw.data, 'raw')
-    else:
-        raise Exception("Unsupported format.")
-    
-    # now bring it back into OpenCV format
-    img = np.array(img)
-    img = img[:, :, ::-1].copy() 
+    img = cv2_img.msg_to_cv2_img(request.image_raw)
 
     # load model
     rospy.loginfo('Loading model')
@@ -108,7 +81,7 @@ def detect(request: BodyPixDetectionRequest, debug_publisher: rospy.Publisher | 
             skeleton_color=(100, 100, 255),
         )
 
-        debug_publisher.publish(cv2_img_to_msg(coloured_mask))
+        debug_publisher.publish(cv2_img.cv2_img_to_msg(coloured_mask))
     
     response = BodyPixDetectionResponse()
     response.masks = masks

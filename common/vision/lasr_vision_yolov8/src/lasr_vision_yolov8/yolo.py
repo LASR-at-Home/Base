@@ -1,4 +1,5 @@
 import rospy
+import cv2_img
 import numpy as np
 
 from PIL import Image
@@ -34,16 +35,7 @@ def detect(request: YoloDetectionRequest, debug_publisher: rospy.Publisher | Non
 
     # decode the image
     rospy.loginfo('Decoding')
-    size = (request.image_raw.width, request.image_raw.height)
-    if request.image_raw.encoding in ['bgr8', '8UC3']:
-        img = Image.frombytes('RGB', size, request.image_raw.data, 'raw')
-
-        # BGR => RGB
-        img = Image.fromarray(np.array(img)[:,:,::-1])
-    elif request.image_raw.encoding == 'rgb8':
-        img = Image.frombytes('RGB', size, request.image_raw.data, 'raw')
-    else:
-        raise Exception("Unsupported format.")
+    img = cv2_img.msg_to_pillow_img(request.image_raw)
     
     # load model
     rospy.loginfo('Loading model')
@@ -73,16 +65,7 @@ def detect(request: YoloDetectionRequest, debug_publisher: rospy.Publisher | Non
     
     # publish to debug topic
     if debug_publisher is not None:
-        # TODO: move to common package
-        msg = SensorImage()
-        msg.header.stamp = rospy.Time.now()
-        msg.width = request.image_raw.width
-        msg.height = request.image_raw.height
-        msg.encoding = 'bgr8'
-        msg.is_bigendian = 1
-        msg.step = 3 * request.image_raw.width
-        msg.data = result.plot().tobytes()
-        debug_publisher.publish(msg)
+        debug_publisher.publish(cv2_img.cv2_img_to_msg(result.plot()))
     
     response = YoloDetectionResponse()
     response.detected_objects = detected_objects

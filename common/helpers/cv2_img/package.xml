@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>lasr_vision_bodypix</name>
+  <name>cv2_img</name>
   <version>0.0.0</version>
-  <description>BodyPix 2.0 vision service</description>
+  <description>Helper methods for converting between sensor_msgs and cv2/Pillow format.</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag -->
   <!-- Example:  -->
@@ -19,7 +19,7 @@
   <!-- Url tags are optional, but multiple are allowed, one per tag -->
   <!-- Optional attribute type can be: website, bugtracker, or repository -->
   <!-- Example: -->
-  <!-- <url type="website">http://wiki.ros.org/lasr_person_detection_bodypix</url> -->
+  <!-- <url type="website">http://wiki.ros.org/cv2_img</url> -->
 
 
   <!-- Author tags are optional, multiple are allowed, one per tag -->
@@ -49,14 +49,12 @@
   <!-- Use doc_depend for packages you need only for building documentation: -->
   <!--   <doc_depend>doxygen</doc_depend> -->
   <buildtool_depend>catkin</buildtool_depend>
-  <build_depend>catkin_virtualenv</build_depend>
-  <depend>lasr_vision_msgs</depend>
-  <exec_depend>cv2_img</exec_depend>
+  <depend>sensor_msgs</depend>
 
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>
     <!-- Other tools can request additional information be placed here -->
-    <pip_requirements>requirements.txt</pip_requirements>
+
   </export>
 </package>

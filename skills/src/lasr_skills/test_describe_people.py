@@ -8,6 +8,7 @@
 import cv2
 import rospy
 import smach
+import cv2_img
 import numpy as np
 
 from sensor_msgs.msg import Image
@@ -390,26 +391,9 @@ class TestDescribePeople(smach.StateMachine):
             else:
                 print(f"There are {len(userdata.people_detections)} people.")
 
-            # BEGIN COPY PASTE ===========================
             # decode the image
-            # TODO: turn this into a common utility
             rospy.loginfo('Decoding')
-            size = (userdata.img_msg.width, userdata.img_msg.height)
-            if userdata.img_msg.encoding in ['bgr8', '8UC3']:
-                img = PillowImage.frombytes('RGB', size, userdata.img_msg.data, 'raw')
-
-                # BGR => RGB
-                img = PillowImage.fromarray(np.array(img)[:,:,::-1])
-            elif userdata.img_msg.encoding == 'rgb8':
-                img = PillowImage.frombytes('RGB', size, userdata.img_msg.data, 'raw')
-            else:
-                raise Exception("Unsupported format.")
-            
-            # now bring it back into OpenCV format
-            img = np.array(img)
-            img = img[:, :, ::-1].copy() 
-            # END COPY PASTE ===========================
-
+            img = cv2_img.msg_to_cv2_img(userdata.img_msg)
             height, width, _ = img.shape
 
             people = []
@@ -465,7 +449,7 @@ class TestDescribePeople(smach.StateMachine):
                         pass
 
                 # THIS IS FROM SegmentFace state but I am lazy for now because i dont have neough time to clean this up properly right now ok
-                mask_image = np.zeros((size[1], size[0]), np.uint8)
+                mask_image = np.zeros((height, width), np.uint8)
                 contours = np.array(person.xyseg).reshape(-1, 2)
                 cv2.fillPoly(mask_image, pts = np.int32([contours]), color = (255,255,255))
                 # mask_bin = mask_image > 128
