@@ -2,7 +2,7 @@
 <package format="2">
   <name>cv2_img</name>
   <version>0.0.0</version>
-  <description>Python utilities for converting between sensor_msgs and cv2/Pillow format.</description>
+  <description>Various Python utilities for working with cv2 and ROS.</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag -->
   <!-- Example:  -->
