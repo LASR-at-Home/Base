@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
-## 
-## IGNORE THIS FILE IT WILL BE DELETED ON MERGE
-##                   - paul
-## 
+##
+# IGNORE THIS FILE IT WILL BE DELETED ON MERGE
+# - paul
+##
 
 import smach
 import rospy
@@ -16,7 +16,8 @@ if __name__ == "__main__":
     sm = smach.StateMachine(outcomes=['end'], output_keys=['people'])
 
     with sm:
-        sm.add('DESCRIBE', TestDescribePeople(), transitions={'succeeded' : 'end', 'failed': 'end'})
+        sm.add('DESCRIBE', TestDescribePeople(), transitions={
+               'succeeded': 'end', 'failed': 'end'})
 
     sm.execute()
 
