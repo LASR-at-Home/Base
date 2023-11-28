@@ -162,8 +162,6 @@ include_directories(
 catkin_install_python(PROGRAMS
   nodes/service
   examples/relay
-  scripts/test.py
-  scripts/test-face.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
