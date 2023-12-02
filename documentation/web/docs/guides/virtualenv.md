@@ -15,8 +15,8 @@ Find the line in the definition file where Python dependencies are declared:
 ```diff
 # Additional Python packages
 + # pyyaml: yaml library
-- python3.6 -m pip install rosnumpy==0.0.5.2 scipy==1.5.4
-+ python3.6 -m pip install rosnumpy==0.0.5.2 scipy==1.5.4 pyyaml==6.0.1
+- python3.8 -m pip install rosnumpy==0.0.5.2 scipy==1.5.4
++ python3.8 -m pip install rosnumpy==0.0.5.2 scipy==1.5.4 pyyaml==6.0.1
 ```
 
 Then update the container maintenance document accordingly, you can do this by going to [Container Maintenance](/guides/container) and then clicking edit page at the bottom.
@@ -25,7 +25,7 @@ Then update the container maintenance document accordingly, you can do this by g
 
 :::caution
 
-Using catkin_virtualenv requires that catkin itself uses Python 3.7 or later during the build process, this is already managed for you by the container however may prove to be an issue if building a new container.
+Using catkin_virtualenv requires that catkin itself uses Python 3.8 or later during the build process, this is already managed for you by the container however may prove to be an issue if building a new container.
 
 :::
 
@@ -33,8 +33,9 @@ Using catkin_virtualenv requires that catkin itself uses Python 3.7 or later dur
 
 The following Python versions are available in the container:
 
-- Python 2.7
-- Python 3.6
+- Python 2.7 (do not use)
+- Python 3.8 (from TIAGo container)
+- Python 3.9
 - Python 3.10 (recommended)
 
 :::
@@ -159,6 +160,6 @@ If you want to update packages or install new packages, delete the `requirements
 
 :::tip
 
-This also integrates with the `document_lasr` package, you can regenerate your README to include / update your Python dependencies. 
+This also integrates with the `documentation` package, you can regenerate your README to include / update your Python dependencies.
 
 :::
