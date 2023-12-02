@@ -14,11 +14,31 @@ Ensure numpy is available wherever this package is imported.
 
 ## Usage
 
-Ask the package maintainer to write a `doc/USAGE.md` for their package!
+Find the closest colours to a given colour:
+
+```python
+import numpy as np
+from colour_estimation import closest_colours, RGB_COLOURS, RGB_HAIR_COLOURS
+
+# find the closest colour from RGB_COLOURS dict
+closest_colours(np.array([255, 0, 0]), RGB_COLOURS)
+
+# find the closest colour from RGB_HAIR_COLOURS dict
+closest_colours(np.array([200, 150, 0]), RGB_HAIR_COLOURS)
+```
 
 ## Example
 
-Ask the package maintainer to write a `doc/EXAMPLE.md` for their package!
+Find the name of the median colour in an image:
+
+```python
+import numpy as np
+from colour_estimation import closest_colours, RGB_COLOURS
+
+# let `img` be a cv2 image / numpy array
+
+closest_colours(np.median(img, axis=0), RGB_COLOURS)
+```
 
 ## Technical Overview
 
