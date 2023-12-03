@@ -20,7 +20,7 @@ from lasr_vision_msgs.srv import YoloDetection, BodyPixDetection, TorchFaceFeatu
 from .vision import GetImage, ImageMsgToCv2
 
 
-class TestDescribePeople(smach.StateMachine):
+class DescribePeople(smach.StateMachine):
 
     def __init__(self):
         smach.StateMachine.__init__(
