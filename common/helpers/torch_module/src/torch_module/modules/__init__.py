@@ -5,7 +5,7 @@ import torchvision.models as models
 
 
 class CombinedModelNoRegression(nn.Module):
-    def __init__(self, segment_model: nn.Module, predict_model: nn.Module, cat_layers:int=None):
+    def __init__(self, segment_model: nn.Module, predict_model: nn.Module, cat_layers: int = None):
         super(CombinedModelNoRegression, self).__init__()
         self.segment_model = segment_model
         self.predict_model = predict_model
@@ -14,7 +14,7 @@ class CombinedModelNoRegression(nn.Module):
     def forward(self, x: torch.Tensor):
         seg_masks = self.segment_model(x)
         if self.cat_layers:
-            seg_masks_ = seg_masks[:,0:self.cat_layers]
+            seg_masks_ = seg_masks[:, 0:self.cat_layers]
             x = torch.cat((x, seg_masks_), dim=1)
         else:
             x = torch.cat((x, seg_masks), dim=1)
@@ -26,9 +26,12 @@ class ASPP(nn.Module):
     def __init__(self, in_channels, out_channels):
         super(ASPP, self).__init__()
         self.atrous_block1 = nn.Conv2d(in_channels, out_channels, 1, 1)
-        self.atrous_block6 = nn.Conv2d(in_channels, out_channels, 3, padding=6, dilation=6)
-        self.atrous_block12 = nn.Conv2d(in_channels, out_channels, 3, padding=12, dilation=12)
-        self.atrous_block18 = nn.Conv2d(in_channels, out_channels, 3, padding=18, dilation=18)
+        self.atrous_block6 = nn.Conv2d(
+            in_channels, out_channels, 3, padding=6, dilation=6)
+        self.atrous_block12 = nn.Conv2d(
+            in_channels, out_channels, 3, padding=12, dilation=12)
+        self.atrous_block18 = nn.Conv2d(
+            in_channels, out_channels, 3, padding=18, dilation=18)
         self.conv_out = nn.Conv2d(out_channels * 4, out_channels, 1, 1)
 
     def forward(self, x):
@@ -38,6 +41,7 @@ class ASPP(nn.Module):
         x18 = self.atrous_block18(x)
         x = torch.cat([x1, x6, x12, x18], dim=1)
         return self.conv_out(x)
+
 
 class DeepLabV3PlusMobileNetV3(nn.Module):
     def __init__(self, num_classes, in_channels=3, sigmoid=True):
@@ -52,11 +56,12 @@ class DeepLabV3PlusMobileNetV3(nn.Module):
 
         self.encoder = mobilenet_v3.features
 
-        intermediate_channel = self.encoder[-1].out_channels 
+        intermediate_channel = self.encoder[-1].out_channels
         self.aspp = ASPP(intermediate_channel, 256)
 
         self.decoder = nn.Sequential(
-            nn.Conv2d(256 + in_channels, 256, kernel_size=3, padding=1),  # Concatenated with original input
+            # Concatenated with original input
+            nn.Conv2d(256 + in_channels, 256, kernel_size=3, padding=1),
             nn.ReLU(inplace=True),
             nn.Conv2d(256, 256, kernel_size=3, padding=1),
             nn.ReLU(inplace=True),
@@ -64,19 +69,21 @@ class DeepLabV3PlusMobileNetV3(nn.Module):
         )
 
     def forward(self, x):
-        original_input = x 
+        original_input = x
         x_encoded = self.encoder(x)
         x_aspp = self.aspp(x_encoded)
 
-        x = F.interpolate(x_aspp, size=original_input.shape[2:], mode='bilinear', align_corners=False)
-        x = torch.cat([x, original_input], dim=1)  # Concatenate with original input
+        x = F.interpolate(
+            x_aspp, size=original_input.shape[2:], mode='bilinear', align_corners=False)
+        # Concatenate with original input
+        x = torch.cat([x, original_input], dim=1)
         x = self.decoder(x)
 
         if self.sigmoid:
             x = torch.sigmoid(x)
 
         return x
-    
+
 
 class MultiLabelMobileNetV3Small(nn.Module):
     def __init__(self, num_labels, input_channels=3, sigmoid=True, pretrained=True):
@@ -99,7 +106,7 @@ class MultiLabelMobileNetV3Small(nn.Module):
         if self.sigmoid:
             x = torch.sigmoid(x)
         return x
-    
+
 
 class MultiLabelMobileNetV3Large(nn.Module):
     def __init__(self, num_labels, input_channels=3, sigmoid=True, pretrained=True):
@@ -122,15 +129,3 @@ class MultiLabelMobileNetV3Large(nn.Module):
         if self.sigmoid:
             x = torch.sigmoid(x)
         return x
-
-def load_torch_model(model, optimizer, path="model.pth", cpu_only=False):
-    if cpu_only:
-        checkpoint = torch.load(path, map_location=torch.device('cpu'))
-    else:
-        checkpoint = torch.load(path)
-    model.load_state_dict(checkpoint['model_state_dict'])
-    if optimizer is not None:
-        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-    epoch = checkpoint['epoch']
-    best_val_loss = checkpoint.get('best_val_loss', float('inf'))
-    return model, optimizer, epoch, best_val_loss
