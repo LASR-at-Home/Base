@@ -8,7 +8,7 @@
 import smach
 import rospy
 
-from lasr_skills import TestDescribePeople
+from lasr_skills import DescribePeople
 
 if __name__ == "__main__":
     rospy.init_node("test_describe")
@@ -16,7 +16,7 @@ if __name__ == "__main__":
     sm = smach.StateMachine(outcomes=['end'], output_keys=['people'])
 
     with sm:
-        sm.add('DESCRIBE', TestDescribePeople(), transitions={
+        sm.add('DESCRIBE', DescribePeople(), transitions={
                'succeeded': 'end', 'failed': 'end'})
 
     sm.execute()
