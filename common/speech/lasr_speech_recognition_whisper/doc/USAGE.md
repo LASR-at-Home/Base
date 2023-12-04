@@ -26,3 +26,19 @@ Stop listening whenever:
 ```bash
 rosservice call /whisper/stop_listening "{}"
 ```
+
+Run an actionlib server to transcribe the microphone:
+
+```bash
+rosrun lasr_speech_recognition_whisper transcribe_microphone_server
+```
+
+The response from the request is a `string` containing the transcribed text.
+
+Several command line configuration options exist, which can be viewed with:
+
+```bash
+rosrun lasr_speech_recognition_whisper transcribe_microphone_server --help
+```
+
+
