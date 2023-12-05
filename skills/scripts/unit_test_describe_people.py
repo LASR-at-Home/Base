@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
 
-##
-# IGNORE THIS FILE IT WILL BE DELETED ON MERGE
-# - paul
-##
-
 import smach
 import rospy
 
