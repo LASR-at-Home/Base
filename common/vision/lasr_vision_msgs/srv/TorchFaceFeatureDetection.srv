@@ -1,5 +1,6 @@
 # Image to run inference on
 sensor_msgs/Image image_raw
+
 ---
 # Detection result
 lasr_vision_msgs/FeatureWithColour[] detected_features
