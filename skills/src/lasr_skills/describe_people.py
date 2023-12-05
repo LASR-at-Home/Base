@@ -184,7 +184,7 @@ class DescribePeople(smach.StateMachine):
 
                             msg = cv2_img.cv2_img_to_msg(face_region)
                             features.extend(self.torch_face_features(
-                                msg).detected_features)
+                                msg, False).detected_features)
                         except Exception as e:
                             rospy.logerr(f"Failed to process extraction: {e}")
 
