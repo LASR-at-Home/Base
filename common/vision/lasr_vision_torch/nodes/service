@@ -62,7 +62,7 @@ def detect(request: TorchFaceFeatureDetectionRequest) -> TorchFaceFeatureDetecti
     ]
 
     return response
-
+#test test
 
 rospy.init_node('torch_service')
 rospy.Service('/torch/detect/face_features', TorchFaceFeatureDetection, detect)
