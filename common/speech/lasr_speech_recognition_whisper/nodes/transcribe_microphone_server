@@ -59,7 +59,6 @@ class TranscribeSpeechAction(object):
             self._model_params.model_name, device=self._model_params.device
         )
         self.recogniser = self._configure_recogniser()
-        self._feedback_sequence: Optional[list[str]] = None
         self._action_server = actionlib.SimpleActionServer(
             self._action_name,
             lasr_speech_recognition_msgs.msg.TranscribeSpeechAction,
@@ -120,7 +119,6 @@ class TranscribeSpeechAction(object):
         self._action_server.set_preempted()
 
     def execute_cb(self, goal) -> None:
-        self._feedback_sequence = []
         with self._configure_microphone() as src:
             wav_data = self.recogniser.listen(
                 src,
@@ -139,7 +137,6 @@ class TranscribeSpeechAction(object):
             fp16=self._model_params.device == "cuda",
         )["text"]
 
-        self._feedback_sequence.append(phrase)
         self._result.sequence = phrase
         rospy.loginfo(f"Transcribed phrase: {phrase}")
         rospy.loginfo(f"{self._action_name} has succeeded")
