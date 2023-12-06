@@ -9,6 +9,7 @@ import numpy as np
 from colour_estimation import closest_colours, RGB_COLOURS
 from lasr_vision_msgs.msg import BodyPixMaskRequest, ColourPrediction, FeatureWithColour
 from lasr_vision_msgs.srv import YoloDetection, BodyPixDetection, TorchFaceFeatureDetection
+from numpy2message import numpy2message
 
 from .vision import GetImage, ImageMsgToCv2
 
@@ -135,6 +136,40 @@ class DescribePeople(smach.StateMachine):
 
                 # keep track
                 features = []
+
+                # process part masks
+                for (bodypix_mask, part) in zip(userdata.bodypix_masks, ['torso', 'head']):
+                    part_mask = np.array(bodypix_mask.mask).reshape(
+                        bodypix_mask.shape[0], bodypix_mask.shape[1])
+                    
+                    # filter out part for current person segmentation
+                    try:
+                        part_mask[mask_bin == 0] = 0
+                    except Exception:
+                        rospy.logdebug('|> Failed to check {part} is visible')
+                        continue
+
+                    if part_mask.any():
+                        rospy.logdebug(f'|> Person has {part} visible')
+                    else:
+                        rospy.logdebug(
+                            f'|> Person does not have {part} visible')
+                        continue
+
+                if part == 'torso':
+                    torso_mask = part_mask
+                elif part == 'head':
+                    head_mask = part_mask
+
+                torso_mask_data, torso_mask_shape, torso_mask_dtype = numpy2message(torso_mask)
+                head_mask_data, head_mask_shape, head_mask_dtype = numpy2message(head_mask)
+
+                full_frame = cv2_img.cv2_img_to_msg(face_region)
+                features.extend(self.torch_face_features(
+                    full_frame, 
+                    torso_mask_data, torso_mask_shape, torso_mask_dtype,
+                    head_mask_data, head_mask_shape, head_mask_dtype,
+                ).detected_features)
 
                 # process part masks
                 for (bodypix_mask, part) in zip(userdata.bodypix_masks, ['torso', 'head']):
