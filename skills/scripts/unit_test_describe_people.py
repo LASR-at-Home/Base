@@ -19,6 +19,6 @@ if __name__ == "__main__":
 
     sm.execute()
 
-    print("\n\nDetected people:", sm.userdata["people"][0]["features"])
+    # print('\n\nDetected people:', sm.userdata['people'])
 
     rospy.signal_shutdown("down")
