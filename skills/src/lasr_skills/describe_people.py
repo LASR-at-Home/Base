@@ -6,7 +6,7 @@ import smach
 import cv2_img
 import numpy as np
 
-from colour_estimation import closest_colours, RGB_COLOURS
+# from colour_estimation import closest_colours, RGB_COLOURS
 from lasr_vision_msgs.msg import BodyPixMaskRequest, ColourPrediction, FeatureWithColour
 from lasr_vision_msgs.srv import YoloDetection, BodyPixDetection, TorchFaceFeatureDetection
 from numpy2message import numpy2message
@@ -171,57 +171,57 @@ class DescribePeople(smach.StateMachine):
                     head_mask_data, head_mask_shape, head_mask_dtype,
                 ).detected_features)
 
-                # process part masks
-                for (bodypix_mask, part) in zip(userdata.bodypix_masks, ['torso', 'head']):
-                    part_mask = np.array(bodypix_mask.mask).reshape(
-                        bodypix_mask.shape[0], bodypix_mask.shape[1])
+                # # process part masks
+                # for (bodypix_mask, part) in zip(userdata.bodypix_masks, ['torso', 'head']):
+                #     part_mask = np.array(bodypix_mask.mask).reshape(
+                #         bodypix_mask.shape[0], bodypix_mask.shape[1])
 
-                    # filter out part for current person segmentation
-                    try:
-                        part_mask[mask_bin == 0] = 0
-                    except Exception:
-                        rospy.logdebug('|> Failed to check {part} is visible')
-                        continue
+                #     # filter out part for current person segmentation
+                #     try:
+                #         part_mask[mask_bin == 0] = 0
+                #     except Exception:
+                #         rospy.logdebug('|> Failed to check {part} is visible')
+                #         continue
 
-                    if part_mask.any():
-                        rospy.logdebug(f'|> Person has {part} visible')
-                    else:
-                        rospy.logdebug(
-                            f'|> Person does not have {part} visible')
-                        continue
+                #     if part_mask.any():
+                #         rospy.logdebug(f'|> Person has {part} visible')
+                #     else:
+                #         rospy.logdebug(
+                #             f'|> Person does not have {part} visible')
+                #         continue
 
-                    # do colour processing on the torso
-                    if part == 'torso':
-                        try:
-                            features.append(FeatureWithColour("torso", [
-                                ColourPrediction(colour, distance)
-                                for colour, distance
-                                in closest_colours(np.median(img[part_mask == 1], axis=0), RGB_COLOURS)
-                            ]))
-                        except Exception as e:
-                            rospy.logerr(f"Failed to process colour: {e}")
+                #     # do colour processing on the torso
+                #     if part == 'torso':
+                #         try:
+                #             features.append(FeatureWithColour("torso", [
+                #                 ColourPrediction(colour, distance)
+                #                 for colour, distance
+                #                 in closest_colours(np.median(img[part_mask == 1], axis=0), RGB_COLOURS)
+                #             ]))
+                #         except Exception as e:
+                #             rospy.logerr(f"Failed to process colour: {e}")
 
-                    # do feature extraction on the head
-                    if part == 'head':
-                        try:
-                            # crop out face
-                            face_mask = np.array(userdata.bodypix_masks[1].mask).reshape(
-                                userdata.bodypix_masks[1].shape[0], userdata.bodypix_masks[1].shape[1])
+                #     # do feature extraction on the head
+                #     if part == 'head':
+                #         try:
+                #             # crop out face
+                #             face_mask = np.array(userdata.bodypix_masks[1].mask).reshape(
+                #                 userdata.bodypix_masks[1].shape[0], userdata.bodypix_masks[1].shape[1])
 
-                            mask_image_only_face = mask_image.copy()
-                            mask_image_only_face[face_mask == 0] = 0
+                #             mask_image_only_face = mask_image.copy()
+                #             mask_image_only_face[face_mask == 0] = 0
 
-                            face_region = cv2_img.extract_mask_region(
-                                img, mask_image_only_face)
-                            if face_region is None:
-                                raise Exception(
-                                    "Failed to extract mask region")
+                #             face_region = cv2_img.extract_mask_region(
+                #                 img, mask_image_only_face)
+                #             if face_region is None:
+                #                 raise Exception(
+                #                     "Failed to extract mask region")
 
-                            msg = cv2_img.cv2_img_to_msg(face_region)
-                            features.extend(self.torch_face_features(
-                                msg, False).detected_features)
-                        except Exception as e:
-                            rospy.logerr(f"Failed to process extraction: {e}")
+                #             msg = cv2_img.cv2_img_to_msg(face_region)
+                #             features.extend(self.torch_face_features(
+                #                 msg, False).detected_features)
+                #         except Exception as e:
+                #             rospy.logerr(f"Failed to process extraction: {e}")
 
                 people.append({
                     'detection': person,
