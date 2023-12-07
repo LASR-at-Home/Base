@@ -156,10 +156,10 @@ class DescribePeople(smach.StateMachine):
                             f'|> Person does not have {part} visible')
                         continue
 
-                if part == 'torso':
-                    torso_mask = part_mask
-                elif part == 'head':
-                    head_mask = part_mask
+                    if part == 'torso':
+                        torso_mask = part_mask
+                    elif part == 'head':
+                        head_mask = part_mask
 
                 torso_mask_data, torso_mask_shape, torso_mask_dtype = numpy2message(torso_mask)
                 head_mask_data, head_mask_shape, head_mask_dtype = numpy2message(head_mask)

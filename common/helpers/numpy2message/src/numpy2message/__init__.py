@@ -1,14 +1,14 @@
 import numpy as np
 
 
-def numpy2message(np_array: np.ndarray) -> list[bytes, list[int], str]:
+def numpy2message(np_array: np.ndarray) -> list:
     data = np_array.tobytes()
     shape = list(np_array.shape)
     dtype = str(np_array.dtype)
     return data, shape, dtype
 
 
-def message2numpy(data:bytes, shape:list[int], dtype:str) -> np.ndarray:
+def message2numpy(data:bytes, shape:list, dtype:str) -> np.ndarray:
     array_shape = tuple(shape)
     array_dtype = np.dtype(dtype)
 
