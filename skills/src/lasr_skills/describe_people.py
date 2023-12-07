@@ -164,7 +164,7 @@ class DescribePeople(smach.StateMachine):
                 torso_mask_data, torso_mask_shape, torso_mask_dtype = numpy2message(torso_mask)
                 head_mask_data, head_mask_shape, head_mask_dtype = numpy2message(head_mask)
 
-                full_frame = cv2_img.cv2_img_to_msg(face_region)
+                full_frame = cv2_img.cv2_img_to_msg(img)
                 features.extend(self.torch_face_features(
                     full_frame, 
                     torso_mask_data, torso_mask_shape, torso_mask_dtype,

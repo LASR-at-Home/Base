@@ -22,8 +22,8 @@ def detect(request: TorchFaceFeatureDetectionRequest) -> TorchFaceFeatureDetecti
     head_mask_data, head_mask_shape, head_mask_dtype = request.head_mask_data, request.head_mask_shape, request.head_mask_dtype 
     torsal_mask = message2numpy(torso_mask_data, torso_mask_shape, torso_mask_dtype)
     head_mask = message2numpy(head_mask_data, head_mask_shape, head_mask_dtype)
-    print(torso_mask_shape)
-    print(head_mask_shape)
+    # print(torso_mask_shape)
+    # print(head_mask_shape)
 
     # 'hair', 'hat', 'glasses', 'face'
     input_image = torch.from_numpy(frame).permute(2, 0, 1).unsqueeze(0).float()
