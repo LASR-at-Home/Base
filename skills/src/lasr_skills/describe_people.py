@@ -167,8 +167,8 @@ class DescribePeople(smach.StateMachine):
                 full_frame = cv2_img.cv2_img_to_msg(img)
                 features.extend(self.torch_face_features(
                     full_frame, 
-                    torso_mask_data, torso_mask_shape, torso_mask_dtype,
                     head_mask_data, head_mask_shape, head_mask_dtype,
+                    torso_mask_data, torso_mask_shape, torso_mask_dtype,
                 ).detected_features)
 
                 # # process part masks
