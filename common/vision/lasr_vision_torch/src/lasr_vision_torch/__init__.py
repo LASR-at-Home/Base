@@ -228,19 +228,23 @@ def predict_frame(head_frame, torso_frame, full_frame, head_mask, torso_mask, mo
         'cloth': {},
     }
 
+    full_frame = cv2.cvtColor(full_frame, cv2.COLOR_BGR2RGB)
+    head_frame = cv2.cvtColor(head_frame, cv2.COLOR_BGR2RGB)
+    torso_frame = cv2.cvtColor(torso_frame, cv2.COLOR_BGR2RGB)
+
     head_frame = pad_image_to_even_dims(head_frame)
     torso_frame = pad_image_to_even_dims(torso_frame)
     
-    try:
-        r = rospkg.RosPack()
-        _full_frame_bgr = cv2.cvtColor(full_frame, cv2.COLOR_RGB2BGR)
-        cv2.imwrite(path.join(r.get_path("lasr_vision_torch"), 'full_frame.jpg'), _full_frame_bgr)
-        _head_frame_bgr = cv2.cvtColor(head_frame, cv2.COLOR_RGB2BGR)
-        cv2.imwrite(path.join(r.get_path("lasr_vision_torch"), 'head_frame.jpg'), _head_frame_bgr)
-        _torso_frame_bgr = cv2.cvtColor(torso_frame, cv2.COLOR_RGB2BGR)
-        cv2.imwrite(path.join(r.get_path("lasr_vision_torch"), 'torso_frame.jpg'), _torso_frame_bgr)
-    except Exception as ignore:
-        pass
+    # try:
+    #     r = rospkg.RosPack()
+    #     _full_frame_bgr = cv2.cvtColor(full_frame, cv2.COLOR_RGB2BGR)
+    #     cv2.imwrite(path.join(r.get_path("lasr_vision_torch"), 'full_frame.jpg'), _full_frame_bgr)
+    #     _head_frame_bgr = cv2.cvtColor(head_frame, cv2.COLOR_RGB2BGR)
+    #     cv2.imwrite(path.join(r.get_path("lasr_vision_torch"), 'head_frame.jpg'), _head_frame_bgr)
+    #     _torso_frame_bgr = cv2.cvtColor(torso_frame, cv2.COLOR_RGB2BGR)
+    #     cv2.imwrite(path.join(r.get_path("lasr_vision_torch"), 'torso_frame.jpg'), _torso_frame_bgr)
+    # except Exception as ignore:
+    #     pass
 
     # Process head and cloth separately for the single frame
     head_class_count, head_class_colours = process_head(head_frame, model, thresholds_mask, erosion_iterations, dilation_iterations, thresholds_pred)
