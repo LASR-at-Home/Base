@@ -235,6 +235,7 @@ def predict_frame(head_frame, torso_frame, full_frame, head_mask, torso_mask, mo
     head_frame = pad_image_to_even_dims(head_frame)
     torso_frame = pad_image_to_even_dims(torso_frame)
     
+    # cv2 imshow is currently not working, not knowing why...
     # try:
     #     r = rospkg.RosPack()
     #     _full_frame_bgr = cv2.cvtColor(full_frame, cv2.COLOR_RGB2BGR)
