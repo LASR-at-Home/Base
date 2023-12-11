@@ -9,7 +9,9 @@ from receptionist.states import GoToPerson
 from receptionist.states import GoToSeatingArea
 from receptionist.states import LookForSeats
 from receptionist.states import GoToWaitForPerson
+from receptionist.states import SpeakDescriptions
 from lasr_skills import WaitForPersonInArea
+from lasr_skills import DescribePeople
 #from receptionist.states.end import End
 
 
@@ -25,7 +27,9 @@ class Receptionist(smach.StateMachine):
             smach.StateMachine.add('WAIT_FOR_PERSON', WaitForPersonInArea() ,transitions={'succeeded' : 'GO_TO_PERSON', 'failed' : 'failed'})
             smach.StateMachine.add('GO_TO_PERSON', GoToPerson(self.default),transitions={'succeeded':'ASK_FOR_NAME'})
             smach.StateMachine.add('ASK_FOR_NAME', AskForName(self.default),transitions={'failed':'ASK_FOR_NAME','succeeded':'ASK_FOR_DRINK'})
-            smach.StateMachine.add('ASK_FOR_DRINK', AskForDrink(self.default),transitions={'failed':'ASK_FOR_DRINK','succeeded':'GO_TO_SEATING_AREA'})
-            smach.StateMachine.add('GO_TO_SEATING_AREA', GoToSeatingArea(self.default), transitions={'succeeded' : 'LOOK_FOR_SEATS'})
+            smach.StateMachine.add('ASK_FOR_DRINK', AskForDrink(self.default),transitions={'failed':'ASK_FOR_DRINK','succeeded':'DESCRIBE_PEOPLE'})
+            smach.StateMachine.add('DESCRIBE_PEOPLE', DescribePeople(),transitions={'succeeded':'SPEAK_DESCRIPTIONS','failed':'GO_TO_SEATING_AREA'})
+            smach.StateMachine.add('SPEAK_DESCRIPTIONS', SpeakDescriptions(self.default), transitions={'failed':'GO_TO_SEATING_AREA','succeeded':'GO_TO_SEATING_AREA'})
+            smach.StateMachine.add('GO_TO_SEATING_AREA', GoToSeatingArea(self.default), transitions={'succeeded' : 'LOOK_FOR_SEATS'})            
             smach.StateMachine.add('LOOK_FOR_SEATS', LookForSeats(self.default), transitions={'succeeded' : 'GO_TO_WAIT_FOR_PERSON'})
             smach.StateMachine.add('END', End(self.default),transitions={'succeeded':'succeeded'})

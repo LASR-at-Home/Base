@@ -6,3 +6,4 @@ from .go_to_seating_area import GoToSeatingArea
 from .go_to_wait_for_person import GoToWaitForPerson
 from .look_for_seats import LookForSeats
 from .start import Start
+from .speakdescriptions import SpeakDescriptions
