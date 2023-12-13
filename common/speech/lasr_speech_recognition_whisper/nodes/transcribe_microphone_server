@@ -28,6 +28,7 @@ class speech_model_params:
         end_timeout (Optional[float]): Max number of seconds of silence after starting listening before stopping. Defaults to None.
         sample_rate (int): Sample rate of the microphone. Defaults to 16000Hz.
         mic_device (Optional[str]): Microphone device index or name. Defaults to None.
+        timer_duration (Optional[int]): Duration of the timer for adjusting the microphone for ambient noise. Defaults to 20 seconds.
     """
 
     model_name: str = "medium.en"
@@ -36,6 +37,7 @@ class speech_model_params:
     end_timeout: Optional[float] = None
     sample_rate: int = 16000
     mic_device: Optional[str] = None
+    timer_duration: Optional[int] = 20
 
 
 class TranscribeSpeechAction(object):
@@ -62,7 +64,9 @@ class TranscribeSpeechAction(object):
         rospy.loginfo(
             f"Loaded model: {self._model_params.model_name} on {self._model_params.device}"
         )
+        # Configure the speech recogniser object and adjust for ambient noise
         self.recogniser = self._configure_recogniser()
+        # Setup the action server and register execution callback
         self._action_server = actionlib.SimpleActionServer(
             self._action_name,
             lasr_speech_recognition_msgs.msg.TranscribeSpeechAction,
@@ -70,7 +74,24 @@ class TranscribeSpeechAction(object):
             auto_start=False,
         )
         self._action_server.register_preempt_callback(self.prempt_cb)
+        # Setup the timer for adjusting the microphone for ambient noise every x seconds
+        self._timer_duration = self._model_params.timer_duration
+        self._timer = rospy.Timer(rospy.Duration(self._timer_duration), self._timer_cb)
+        self._listening = False
+
         self._action_server.start()
+
+    def _timer_cb(self) -> None:
+        """Adjusts the microphone for ambient noise, unless the action server is listening."""
+        if self._listening:
+            return
+        with self._configure_microphone() as source:
+            self.recogniser.adjust_for_ambient_noise(source)
+
+    def _reset_timer(self) -> None:
+        """Resets the timer for adjusting the microphone for ambient noise."""
+        self._timer.shutdown()
+        self._timer = rospy.Timer(rospy.Duration(self._timer_duration), self._timer_cb)
 
     def _configure_microphone(self) -> sr.Microphone:
         """Configures the microphone for listening to speech based on the
@@ -108,11 +129,12 @@ class TranscribeSpeechAction(object):
         Returns:
             sr.Recognizer: speech recogniser object.
         """
-
+        self._listening = True
         recogniser = sr.Recognizer()
         if ambient_adj:
             with self._configure_microphone() as source:
                 recogniser.adjust_for_ambient_noise(source)
+        self._listening = False
         return recogniser
 
     def prempt_cb(self) -> None:
@@ -135,10 +157,10 @@ class TranscribeSpeechAction(object):
             goal: UNUSED - actionlib requires a goal argument in the execute callback, but
             this action server does not use a goal.
         """
-
         if self._action_server.is_preempt_requested():
             return
         with self._configure_microphone() as src:
+            self._listening = True
             wav_data = self.recogniser.listen(
                 src,
                 timeout=self._model_params.start_timeout,
@@ -151,6 +173,7 @@ class TranscribeSpeechAction(object):
         )
 
         if self._action_server.is_preempt_requested():
+            self._listening = False
             return
 
         rospy.loginfo(f"Transcribing phrase with Whisper...")
@@ -167,12 +190,16 @@ class TranscribeSpeechAction(object):
         )
 
         if self._action_server.is_preempt_requested():
+            self._listening = False
             return
 
         self._result.sequence = phrase
         rospy.loginfo(f"Transcribed phrase: {phrase}")
         rospy.loginfo(f"{self._action_name} has succeeded")
         self._action_server.set_succeeded(self._result)
+
+        # Have this at the very end to not disrupt the action server
+        self._listening = False
 
 
 def parse_args() -> dict:
