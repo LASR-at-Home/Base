@@ -233,22 +233,27 @@ def generate_colour_table(image_dict: dict, colour_map: dict):
     return colour_table
 
 
-def compare_colour_distributions(averaged_colours_list, colour_table_dict):
+def compare_colour_distributions(avg_colours_dict, colour_table_dict):
     """
-    Compares colour distributions between an averaged colours list and a dictionary of colour tables by calculating the Euclidean distance.
+    Compares colour distributions between a dictionary of averaged colours and a dictionary of colour tables for individual images.
+    The comparison is based on calculating the Euclidean distance between the colour proportions in avg_colours_dict and each image's colour distribution in the colour_table_dict.
 
     Parameters:
-    averaged_colours_list (list): A list of tuples, where each tuple contains a colour name and its proportion. This is typically the output from 'average_colours_by_label'.
-    colour_table_dict (dict): A dictionary where keys are image identifiers and values are colour tables. Each colour table is a list of tuples, each containing a colour name, its proportion in the image, and the pixel count.
+    avg_colours_dict (dict): A dictionary where keys are colour names and values are their averaged proportions. 
+                             This dictionary represents the averaged colour distribution over a set of images or a specific category.
+    colour_table_dict (dict): A dictionary where keys are image identifiers and values are colour tables for each image.
+                              Each colour table is a list of tuples, with each tuple containing a colour name, its proportion in that specific image, and the pixel count.
 
     Returns:
-    dict: A dictionary where keys are image identifiers and values are the Euclidean distances between the colour distribution in the image and the averaged_colours_list.
+    dict: A dictionary where keys are image identifiers and values are the Euclidean distances between the averaged colour distribution and the image's colour distribution.
 
-    The function iterates over each image's colour table in colour_table_dict. For each image, it calculates the Euclidean distance between the colour proportions in averaged_colours_list and the colour proportions in the image's colour table. The results are stored in a dictionary, mapping each image identifier to the calculated distance.
+    The function calculates the Euclidean distance between the colour proportions in avg_colours_dict and those in each image's colour table within the colour_table_dict. 
+    It accounts for common colours between the averaged dictionary and each image's table, using zero for missing colour proportions in either distribution.
+    The distances are stored in a dictionary, mapping each image identifier to the calculated distance. These distances represent how similar or different each image's colour distribution is compared to the averaged colour distribution.
     """
     distances = {}
 
-    avg_colours_dict = {colour: proportion for colour, proportion in averaged_colours_list}
+    # avg_colours_dict = {colour: proportion for colour, proportion in averaged_colours_list}
 
     for image_name, colour_data in colour_table_dict.items():
         colour_proportions = {colour: proportion for colour, proportion, _ in colour_data[1]}
@@ -259,9 +264,9 @@ def compare_colour_distributions(averaged_colours_list, colour_table_dict):
 
         distances[image_name] = np.linalg.norm(np.array(avg_values) - np.array(prop_values))
 
-    sorted_distances = sorted(distances.items(), key=lambda item: item[1])
+    # sorted_distances = sorted(distances.items(), key=lambda item: item[1])
 
-    return sorted_distances
+    return distances
 
 # Example usage
 # sorted_distances = compare_colour_distributions(averaged_colours, colour_table)
@@ -311,34 +316,6 @@ def find_nearest_colour_family(colour, colour_families):
     for family, representative_colours in colour_families.items():
         for rep_colour in representative_colours:
             distance = np.linalg.norm(np.array(colour) - np.array(rep_colour))
-            if distance < min_distance:
-                min_distance = distance
-                nearest_family = family
-
-    return nearest_family
-
-
-def find_nearest_colour_family(colour, colour_families):
-    """
-    Determines the nearest colour family for a given colour based on the minimum Euclidean distance.
-
-    Parameters:
-    colour (tuple): The colour in RGB format.
-    colour_families (dict): A dictionary where keys are family names and values are lists of representative RGB colours for each family.
-
-    Returns:
-    str: The name of the nearest colour family.
-    """
-    min_distance = float('inf')
-    nearest_family = None
-
-    # Convert colour to numpy array for distance calculation
-    colour = np.array(colour)
-
-    for family, family_colours in colour_families.items():
-        for rep_colour in family_colours:
-            # Calculate the Euclidean distance
-            distance = np.linalg.norm(colour - np.array(rep_colour))
             if distance < min_distance:
                 min_distance = distance
                 nearest_family = family

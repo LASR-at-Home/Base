@@ -1,8 +1,8 @@
 from torch_module.modules import UNetWithResnet18Encoder, MultiLabelResNet, CombinedModel  # DeepLabV3PlusMobileNetV3, MultiLabelMobileNetV3Large, CombinedModelNoRegression
 from torch_module.helpers import load_torch_model, binary_erosion_dilation
 
-from colour_estimation import closest_colours, load_images_to_dict, generate_colour_table, average_colours_by_label, count_colours_in_masked_area
-from colour_estimation import COLOURS, HAIR_COLOURS, SPESIFIC_COLOURS, DETAILED_COLOURS
+from colour_estimation import load_images_to_dict, generate_colour_table, count_colours_in_masked_area, compare_colour_distributions
+from colour_estimation import SPESIFIC_COLOURS, DETAILED_COLOURS
 
 import numpy as np
 import cv2
@@ -34,7 +34,7 @@ thresholds_mask = [
     0.5, 0.75, 0.25, 0.5,  # 0.5, 0.5, 0.5, 0.5,
 ]
 thresholds_pred = [
-    0.6, 0.8, 0.1, 0.5,
+    0.6, 0.8, 0.05, 0.5,
 ]
 erosion_iterations = 1
 dilation_iterations = 1
@@ -152,11 +152,13 @@ def process_head(head_frame, model, thresholds_mask, erosion_iterations, dilatio
         # Update class colours
         for f, each_mask, k, c_map in zip([head_frame, head_frame, head_frame], mask_list[0:2], ['hair', 'hat', 'glasses'], [SPESIFIC_COLOURS, DETAILED_COLOURS, DETAILED_COLOURS]):
             colours = count_colours_in_masked_area(f, each_mask, c_map, sort=True)[1]
+                # colours = [c in ]
             for colour in colours:
-                if colour[0] not in head_class_colours[k]:
-                    head_class_colours[k][colour[0]] = [colour[1]]
-                else:
-                    head_class_colours[k][colour[0]].append(colour[1])
+                head_class_colours[k][colour[0]] = colour[1]
+                # if colour[0] not in head_class_colours[k]:
+                #     head_class_colours[k][colour[0]] = [colour[1]]
+                # else:
+                #     head_class_colours[k][colour[0]].append(colour[1])
 
     return head_class_count, head_class_colours
 
@@ -188,10 +190,11 @@ def process_cloth(full_frame, torso_mask):
         # Update cloth colours
         colours = count_colours_in_masked_area(full_frame, torso_mask, DETAILED_COLOURS, sort=True)[1]
         for colour in colours:
-            if colour[0] not in cloth_class_colours['cloth']:
-                cloth_class_colours['cloth'][colour[0]] = [colour[1]]
-            else:
-                cloth_class_colours['cloth'][colour[0]].append(colour[1])
+            cloth_class_colours['cloth'][colour[0]] = colour[1]
+            # if colour[0] not in cloth_class_colours['cloth']:
+            #     cloth_class_colours['cloth'][colour[0]] = [colour[1]]
+            # else:
+            #     cloth_class_colours['cloth'][colour[0]].append(colour[1])
 
     return cloth_class_count, cloth_class_colours
 
@@ -262,6 +265,12 @@ def predict_frame(head_frame, torso_frame, full_frame, head_mask, torso_mask, mo
     # Compute final class predictions and colors for the single frame
     class_pred = {k: bool(class_count[k]) for k in class_count}
     colour_pred = {k: v for k, v in class_colours.items()}
+
+    rospy.loginfo(str(class_colours['hair']))
+    rospy.loginfo(str(hair_colour_table))
+
+    # compare_colour_distributions([k,v class_colours['hair']], hair_colour_table)
+    colour_pred['hair'] = compare_colour_distributions(class_colours['hair'], hair_colour_table)
 
     # class_pred, colour_pred = None, None
 
