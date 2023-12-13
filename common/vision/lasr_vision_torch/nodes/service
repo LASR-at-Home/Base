@@ -30,9 +30,9 @@ def detect(request: TorchFaceFeatureDetectionRequest) -> TorchFaceFeatureDetecti
     # response.detected_features = str(class_pred) + str(colour_pred)
     response.detected_features = []
     for c in ['hair', 'hat', 'glasses', 'cloth',]:
-        colour_pred[c] = {k: v[0] for k, v in colour_pred[c].items()}
+        # colour_pred[c] = {k: v[0] for k, v in colour_pred[c].items()}
         sorted_list = sorted(colour_pred[c].items(), key=lambda item: item[1], reverse=True)
-        rospy.loginfo(str(sorted_list))
+        # rospy.loginfo(str(sorted_list))
         if len(sorted_list) > 3:
             sorted_list = sorted_list[0:3]
         sorted_list = [k for k, v in sorted_list]
