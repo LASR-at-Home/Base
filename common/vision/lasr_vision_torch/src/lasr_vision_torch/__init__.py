@@ -34,7 +34,7 @@ thresholds_mask = [
     0.5, 0.75, 0.25, 0.5,  # 0.5, 0.5, 0.5, 0.5,
 ]
 thresholds_pred = [
-    0.6, 0.8, 0.05, 0.5,
+    0.6, 0.8, 0.1, 0.5,
 ]
 erosion_iterations = 1
 dilation_iterations = 1
