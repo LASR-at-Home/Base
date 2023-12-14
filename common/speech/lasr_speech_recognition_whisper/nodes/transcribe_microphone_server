@@ -2,7 +2,7 @@
 
 import os
 import argparse
-from typing import Optional, Union
+from typing import Optional
 from dataclasses import dataclass
 from pathlib import Path
 from timeit import default_timer as timer
@@ -160,6 +160,9 @@ class TranscribeSpeechAction(object):
         """
         if self._action_server.is_preempt_requested():
             return
+        # Since we are about to listen, reset the timer for adjusting the microphone for ambient noise
+        # as this assumes self_timer_duration seconds of silence before adjusting
+        self._reset_timer()
         with self._configure_microphone() as src:
             self._listening = True
             wav_data = self.recogniser.listen(
