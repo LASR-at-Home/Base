@@ -85,6 +85,7 @@ class TranscribeSpeechAction(object):
         """Adjusts the microphone for ambient noise, unless the action server is listening."""
         if self._listening:
             return
+        rospy.loginfo("Adjusting microphone for ambient noise...")
         with self._configure_microphone() as source:
             self.recogniser.adjust_for_ambient_noise(source)
 
@@ -254,6 +255,12 @@ def parse_args() -> dict:
         default=None,
         help="Microphone device index or name",
     )
+    parser.add_argument(
+        "--timer_duration",
+        type=int,
+        default=20,
+        help="Number of seconds of silence before the ambient noise adjustment is called.",
+    )
 
     return vars(parser.parse_args())
 
@@ -281,6 +288,8 @@ def configure_model_params(config: dict) -> speech_model_params:
         model_params.sample_rate = config["sample_rate"]
     if config["mic_device"]:
         model_params.mic_device = config["mic_device"]
+    if config["timer_duration"]:
+        model_params.timer_duration = config["timer_duration"]
 
     return model_params
 
