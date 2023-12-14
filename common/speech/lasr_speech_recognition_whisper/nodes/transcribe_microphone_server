@@ -29,6 +29,7 @@ class speech_model_params:
         sample_rate (int): Sample rate of the microphone. Defaults to 16000Hz.
         mic_device (Optional[str]): Microphone device index or name. Defaults to None.
         timer_duration (Optional[int]): Duration of the timer for adjusting the microphone for ambient noise. Defaults to 20 seconds.
+        warmup (bool): Whether to warmup the model by running inference on a test file. Defaults to True.
     """
 
     model_name: str = "medium.en"
@@ -38,6 +39,7 @@ class speech_model_params:
     sample_rate: int = 16000
     mic_device: Optional[str] = None
     timer_duration: Optional[int] = 20
+    warmup: bool = True
 
 
 class TranscribeSpeechAction(object):
@@ -59,10 +61,9 @@ class TranscribeSpeechAction(object):
         self._action_name = action_name
         self._model_params = model_params
         self._model = load_model(
-            self._model_params.model_name, device=self._model_params.device
-        )
-        rospy.loginfo(
-            f"Loaded model: {self._model_params.model_name} on {self._model_params.device}"
+            self._model_params.model_name,
+            self._model_params.device,
+            self._model_params.warmup,
         )
         # Configure the speech recogniser object and adjust for ambient noise
         self.recogniser = self._configure_recogniser()
@@ -264,6 +265,11 @@ def parse_args() -> dict:
         default=20,
         help="Number of seconds of silence before the ambient noise adjustment is called.",
     )
+    parser.add_argument(
+        "--no_warmup",
+        action="store_true",
+        help="Disable warming up the model by running inference on a test file.",
+    )
 
     return vars(parser.parse_args())
 
@@ -293,6 +299,8 @@ def configure_model_params(config: dict) -> speech_model_params:
         model_params.mic_device = config["mic_device"]
     if config["timer_duration"]:
         model_params.timer_duration = config["timer_duration"]
+    if config["no_warmup"]:
+        model_params.warmup = False
 
     return model_params
 
