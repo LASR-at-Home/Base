@@ -59,6 +59,7 @@ add_service_files(
   YoloDetection.srv
   BodyPixDetection.srv
   TorchFaceFeatureDetection.srv
+  Recognise.srv
 )
 
 ## Generate actions in the 'action' folder
