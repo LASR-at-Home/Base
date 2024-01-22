@@ -1,0 +1,68 @@
+absl-py==2.1.0            # via tensorboard, tensorflow
+astunparse==1.6.3         # via tensorflow
+beautifulsoup4==4.12.3    # via gdown
+blinker==1.7.0            # via flask
+cachetools==5.3.2         # via google-auth
+certifi==2023.11.17       # via requests
+charset-normalizer==3.3.2  # via requests
+click==8.1.7              # via flask
+deepface==0.0.81          # via -r requirements.in
+deprecated==1.2.14        # via deepface
+filelock==3.13.1          # via gdown
+fire==0.5.0               # via deepface
+flask==3.0.1              # via deepface
+flatbuffers==23.5.26      # via tensorflow
+gast==0.5.4               # via tensorflow
+gdown==5.0.0              # via deepface, retina-face
+google-auth==2.26.2       # via google-auth-oauthlib, tensorboard
+google-auth-oauthlib==1.2.0  # via tensorboard
+google-pasta==0.2.0       # via tensorflow
+grpcio==1.60.0            # via tensorboard, tensorflow
+gunicorn==21.2.0          # via deepface
+h5py==3.10.0              # via tensorflow
+idna==3.6                 # via requests
+importlib-metadata==7.0.1  # via flask, markdown
+itsdangerous==2.1.2       # via flask
+jinja2==3.1.3             # via flask
+keras==2.15.0             # via deepface, mtcnn, tensorflow
+libclang==16.0.6          # via tensorflow
+markdown==3.5.2           # via tensorboard
+markupsafe==2.1.4         # via jinja2, werkzeug
+ml-dtypes==0.2.0          # via tensorflow
+mtcnn==0.1.1              # via deepface
+numpy==1.26.3             # via deepface, h5py, ml-dtypes, opencv-python, opt-einsum, pandas, retina-face, tensorboard, tensorflow
+oauthlib==3.2.2           # via requests-oauthlib
+opencv-python==4.9.0.80   # via deepface, mtcnn, retina-face
+opt-einsum==3.3.0         # via tensorflow
+packaging==23.2           # via gunicorn, tensorflow
+pandas==2.2.0             # via deepface
+pillow==10.2.0            # via deepface, retina-face
+protobuf==4.23.4          # via tensorboard, tensorflow
+pyasn1==0.5.1             # via pyasn1-modules, rsa
+pyasn1-modules==0.3.0     # via google-auth
+pysocks==1.7.1            # via requests
+python-dateutil==2.8.2    # via pandas
+pytz==2023.3.post1        # via pandas
+requests[socks]==2.31.0   # via gdown, requests-oauthlib, tensorboard
+requests-oauthlib==1.3.1  # via google-auth-oauthlib
+retina-face==0.0.13       # via deepface
+rsa==4.9                  # via google-auth
+six==1.16.0               # via astunparse, fire, google-pasta, python-dateutil, tensorboard, tensorflow
+soupsieve==2.5            # via beautifulsoup4
+tensorboard==2.15.1       # via tensorflow
+tensorboard-data-server==0.7.2  # via tensorboard
+tensorflow==2.15.0.post1  # via deepface, retina-face
+tensorflow-estimator==2.15.0  # via tensorflow
+tensorflow-io-gcs-filesystem==0.35.0  # via tensorflow
+termcolor==2.4.0          # via fire, tensorflow
+tqdm==4.66.1              # via deepface, gdown
+typing-extensions==4.9.0  # via tensorflow
+tzdata==2023.4            # via pandas
+urllib3==2.1.0            # via requests
+werkzeug==3.0.1           # via flask, tensorboard
+wheel==0.42.0             # via astunparse
+wrapt==1.14.1             # via deprecated, tensorflow
+zipp==3.17.0              # via importlib-metadata
+
+# The following packages are considered to be unsafe in a requirements file:
+# setuptools
