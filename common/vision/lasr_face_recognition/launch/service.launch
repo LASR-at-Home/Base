@@ -1,0 +1,11 @@
+<launch>
+    <description>Start the Face Recognition service</description>
+    <usage doc="Face Recognition service"></usage>
+    <usage doc="Enable debug topic">debug:=true</usage>
+
+    <arg name="debug" default="false" doc="Whether to publish plotted images to /recognise/debug" />
+
+    <node name="face_recognition_service" pkg="lasr_face_recognition" type="service" output="screen">
+        <param name="debug" type="bool" value="$(arg debug)" />
+    </node>
+</launch>
