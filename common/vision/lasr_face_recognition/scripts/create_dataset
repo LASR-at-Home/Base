@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 
 import sys
+import lasr_face_recognition as face_recognition
 
 if len(sys.argv) < 3:
-    print("usage: rosrun lasr_face_recognition create_dataset.py <dataset> <name> [size=20]")
+    print("usage: rosrun lasr_face_recognition create_dataset.py <dataset> <name> [size=50]")
     exit(0)
 
 dataset = sys.argv[1]
@@ -12,7 +13,7 @@ name = sys.argv[2]
 if len(sys.argv) > 3:
     size = sys.argv[3]
 else:
-    size = 20
+    size = 50
 
 import rospy
 import rospkg
@@ -32,6 +33,8 @@ rospy.loginfo(f"Taking {size} pictures of {name} and saving to {DATASET_PATH}")
 for i in range(size):
     img_msg = rospy.wait_for_message("/xtion/rgb/image_raw", Image)
     cv_im = cv2_img.msg_to_cv2_img(img_msg)
-    cv2.imwrite(os.path.join(DATASET_PATH), f"{name}_{i+1}.png", cv_im)
-    rospy.loginfo(f"Took picutre {i+1}")
-    rospy.sleep(rospy.Duration(1.0))
+    face_cropped_cv_im = face_recognition.detect_face(cv_im)
+    if face_cropped_cv_im is None:
+        continue
+    cv2.imwrite(os.path.join(DATASET_PATH, f"{name}_{i+1}.png"), face_cropped_cv_im)
+    rospy.loginfo(f"Took picture {i+1}")

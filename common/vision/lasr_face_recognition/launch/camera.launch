@@ -11,7 +11,7 @@
     </include>
     
     <!-- show debug topic -->
-    <node name="image_view" pkg="rqt_image_view" type="rqt_image_view" respawn="false" output="screen" args="/yolov8/debug" />
+    <node name="image_view" pkg="rqt_image_view" type="rqt_image_view" respawn="false" output="screen" args="/recognise/debug" />
 
     <!-- start relay service -->
     <node name="relay" pkg="lasr_face_recognition" type="relay" respawn="false" output="screen" args="/camera/image_raw $(arg dataset)" />

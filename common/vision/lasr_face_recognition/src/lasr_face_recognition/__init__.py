@@ -1,1 +1,1 @@
-from .deepface import detect
+from .deepface import detect, detect_face
