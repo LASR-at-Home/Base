@@ -4,7 +4,6 @@ import cv2_img
 import rospkg
 import rospy
 import os
-from collections import defaultdict
 
 from lasr_vision_msgs.msg import Detection
 from lasr_vision_msgs.srv import RecogniseRequest, RecogniseResponse
@@ -17,8 +16,6 @@ def detect(request : RecogniseRequest, debug_publisher: rospy.Publisher | None) 
     rospy.loginfo("Decoding")
     cv_im = cv2_img.msg_to_cv2_img(request.image_raw)
 
-
-    
     # Run inference
     rospy.loginfo("Running inference")
     result = DeepFace.find(cv_im, os.path.join(DATASET_ROOT, request.dataset), enforce_detection=False)
