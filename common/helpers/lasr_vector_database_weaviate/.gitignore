@@ -1,0 +1,5 @@
+bin/**
+!bin/.gitkeep
+
+data/**
+!data/.gitkeep

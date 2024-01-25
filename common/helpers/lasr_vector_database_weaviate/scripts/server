@@ -1,0 +1,68 @@
+#!/usr/bin/env python3
+import os
+import tarfile
+import urllib.request
+
+import rospy
+import rospkg
+
+# Initialise rospy (required for params)
+rospy.init_node('weaviate_vector_database', anonymous=True)
+
+# Determine variables
+VERSION = rospy.get_param('~version', "1.22.11")
+HTTP_PORT = rospy.get_param('~http_port', "50050")
+GRPC_PORT = rospy.get_param('~grpc_port', "50051")
+
+# Hardcode platform & arch, we never change these for our purposes
+PLATFORM="linux"
+ARCH="amd64"
+
+assert PLATFORM == "linux", "No support for Windows / Darwin currently."
+
+# Change directory to bin folder
+rp = rospkg.RosPack()
+package_path = rp.get_path("lasr_vector_database_weaviate")
+os.chdir(os.path.abspath(os.path.join(package_path, 'bin')))
+
+# Also select database folder
+DB_PATH = os.path.abspath(os.path.join(package_path, 'data', 'weaviate'))
+# TODO: allow multiple vector databases
+
+# Determine constants
+ARCHIVE_FORMAT = "tar.gz"
+FILENAME=f"weaviate-v{VERSION}-{PLATFORM}-{ARCH}"
+FILENAME_ARCHIVE=f"weaviate-v{VERSION}-{PLATFORM}-{ARCH}.{ARCHIVE_FORMAT}"
+DOWNLOAD_URL=f"https://github.com/weaviate/weaviate/releases/download/v{VERSION}/weaviate-v{VERSION}-{PLATFORM}-{ARCH}.tar.gz"
+
+# Check if the binary we want exists already
+if not os.path.exists(FILENAME):
+    rospy.loginfo(f"Downloading Weaviate v{VERSION}...")
+
+    # Download the binary
+    urllib.request.urlretrieve(DOWNLOAD_URL, FILENAME_ARCHIVE)
+
+    # Extract the binary
+    tar = tarfile.open(FILENAME_ARCHIVE, "r:gz")
+    tar.extract("weaviate")
+
+    # Move the file
+    os.rename("weaviate", FILENAME)
+
+    # Delete the archive
+    os.unlink(FILENAME_ARCHIVE)
+
+    rospy.loginfo("Successfully installed Weaviate binary.")
+
+# Execute and redir stdout
+os.environ["QUERY_DEFAULTS_LIMIT"] = "25"
+os.environ["AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED"] = "true"
+os.environ["PERSISTENCE_DATA_PATH"] = DB_PATH
+os.environ["DEFAULT_VECTORIZER_MODULE"] = "none"
+os.environ["ENABLE_MODULES"] = ""
+os.environ["CLUSTER_HOSTNAME"] = "node1"
+os.environ["GRPC_PORT"] = GRPC_PORT
+
+# Hand over to weaviate
+print(f"Starting Weaviate v{VERSION}")
+os.execlp(os.path.abspath(FILENAME), '--host', '0.0.0.0', '--port', HTTP_PORT, '--scheme', 'http')
