@@ -47,7 +47,7 @@ def detect(
             cv_im,
             os.path.join(DATASET_ROOT, request.dataset),
             enforce_detection=True,
-            silent=False,
+            silent=True,
             detector_backend="mtcnn",
             threshold=request.confidence,
         )
