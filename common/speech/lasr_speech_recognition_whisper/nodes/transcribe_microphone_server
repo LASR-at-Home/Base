@@ -15,6 +15,29 @@ import speech_recognition as sr  # type: ignore
 import lasr_speech_recognition_msgs.msg  # type: ignore
 from lasr_speech_recognition_whisper import load_model  # type: ignore
 
+# Error handler to remove ALSA error messages taken from:
+# https://stackoverflow.com/questions/7088672/pyaudio-working-but-spits-out-error-messages-each-time/17673011#17673011
+
+from ctypes import *
+from contextlib import contextmanager
+
+ERROR_HANDLER_FUNC = CFUNCTYPE(None, c_char_p, c_int, c_char_p, c_int, c_char_p)
+
+
+def py_error_handler(filename, line, function, err, fmt):
+    pass
+
+
+c_error_handler = ERROR_HANDLER_FUNC(py_error_handler)
+
+
+@contextmanager
+def noalsaerr():
+    asound = cdll.LoadLibrary("libasound.so")
+    asound.snd_lib_error_set_handler(c_error_handler)
+    yield
+    asound.snd_lib_error_set_handler(None)
+
 
 @dataclass
 class speech_model_params:
@@ -60,35 +83,40 @@ class TranscribeSpeechAction(object):
 
         self._action_name = action_name
         self._model_params = model_params
-        self._model = load_model(
-            self._model_params.model_name,
-            self._model_params.device,
-            self._model_params.warmup,
-        )
-        # Configure the speech recogniser object and adjust for ambient noise
-        self.recogniser = self._configure_recogniser()
-        # Setup the action server and register execution callback
-        self._action_server = actionlib.SimpleActionServer(
-            self._action_name,
-            lasr_speech_recognition_msgs.msg.TranscribeSpeechAction,
-            execute_cb=self.execute_cb,
-            auto_start=False,
-        )
-        self._action_server.register_preempt_callback(self.prempt_cb)
-        # Setup the timer for adjusting the microphone for ambient noise every x seconds
-        self._timer_duration = self._model_params.timer_duration
-        self._timer = rospy.Timer(rospy.Duration(self._timer_duration), self._timer_cb)
-        self._listening = False
 
-        self._action_server.start()
+        with noalsaerr():
+            self._model = load_model(
+                self._model_params.model_name,
+                self._model_params.device,
+                self._model_params.warmup,
+            )
+            # Configure the speech recogniser object and adjust for ambient noise
+            self.recogniser = self._configure_recogniser()
+            # Setup the action server and register execution callback
+            self._action_server = actionlib.SimpleActionServer(
+                self._action_name,
+                lasr_speech_recognition_msgs.msg.TranscribeSpeechAction,
+                execute_cb=self.execute_cb,
+                auto_start=False,
+            )
+            self._action_server.register_preempt_callback(self.prempt_cb)
+            # Setup the timer for adjusting the microphone for ambient noise every x seconds
+            self._timer_duration = self._model_params.timer_duration
+            self._timer = rospy.Timer(
+                rospy.Duration(self._timer_duration), self._timer_cb
+            )
+            self._listening = False
 
-    def _timer_cb(self) -> None:
+            self._action_server.start()
+
+    def _timer_cb(self, _) -> None:
         """Adjusts the microphone for ambient noise, unless the action server is listening."""
         if self._listening:
             return
         rospy.loginfo("Adjusting microphone for ambient noise...")
-        with self._configure_microphone() as source:
-            self.recogniser.adjust_for_ambient_noise(source)
+        with noalsaerr():
+            with self._configure_microphone() as source:
+                self.recogniser.adjust_for_ambient_noise(source)
 
     def _reset_timer(self) -> None:
         """Resets the timer for adjusting the microphone for ambient noise."""
@@ -159,18 +187,20 @@ class TranscribeSpeechAction(object):
             goal: UNUSED - actionlib requires a goal argument in the execute callback, but
             this action server does not use a goal.
         """
+        rospy.loginfo("Request Received")
         if self._action_server.is_preempt_requested():
             return
         # Since we are about to listen, reset the timer for adjusting the microphone for ambient noise
         # as this assumes self_timer_duration seconds of silence before adjusting
         self._reset_timer()
-        with self._configure_microphone() as src:
-            self._listening = True
-            wav_data = self.recogniser.listen(
-                src,
-                timeout=self._model_params.start_timeout,
-                phrase_time_limit=self._model_params.end_timeout,
-            ).get_wav_data()
+        with noalsaerr():
+            with self._configure_microphone() as src:
+                self._listening = True
+                wav_data = self.recogniser.listen(
+                    src,
+                    timeout=self._model_params.start_timeout,
+                    phrase_time_limit=self._model_params.end_timeout,
+                ).get_wav_data()
         # Magic number 32768.0 is the maximum value of a 16-bit signed integer
         float_data = (
             np.frombuffer(wav_data, dtype=np.int16).astype(np.float32, order="C")
