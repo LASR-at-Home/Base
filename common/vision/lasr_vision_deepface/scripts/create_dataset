@@ -8,7 +8,7 @@ if len(sys.argv) < 3:
         "usage: rosrun lasr_vision_deepface create_dataset.py <topic> <dataset> <name> [size=50]"
     )
     exit(0)
-print(sys.argv)
+
 topic = sys.argv[1]
 dataset = sys.argv[2]
 name = sys.argv[3]
