@@ -5,15 +5,16 @@ import lasr_vision_deepface as face_recognition
 
 if len(sys.argv) < 3:
     print(
-        "usage: rosrun lasr_vision_deepface create_dataset.py <dataset> <name> [size=50]"
+        "usage: rosrun lasr_vision_deepface create_dataset.py <topic> <dataset> <name> [size=50]"
     )
     exit(0)
+print(sys.argv)
+topic = sys.argv[1]
+dataset = sys.argv[2]
+name = sys.argv[3]
 
-dataset = sys.argv[1]
-name = sys.argv[2]
-
-if len(sys.argv) > 3:
-    size = sys.argv[3]
+if len(sys.argv) > 4:
+    size = int(sys.argv[4])
 else:
     size = 50
 
@@ -35,7 +36,7 @@ rospy.init_node("create_dataset")
 rospy.loginfo(f"Taking {size} pictures of {name} and saving to {DATASET_PATH}")
 
 for i in range(size):
-    img_msg = rospy.wait_for_message("/xtion/rgb/image_raw", Image)
+    img_msg = rospy.wait_for_message(topic, Image)
     cv_im = cv2_img.msg_to_cv2_img(img_msg)
     face_cropped_cv_im = face_recognition.detect_face(cv_im)
     if face_cropped_cv_im is None:
