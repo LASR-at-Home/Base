@@ -34,16 +34,20 @@ def detect(
     rospy.loginfo("Decoding")
     cv_im = cv2_img.msg_to_cv2_img(request.image_raw)
 
+    response = RecogniseResponse()
+
     # Run inference
     rospy.loginfo("Running inference")
-    result = DeepFace.find(
-        cv_im,
-        os.path.join(DATASET_ROOT, request.dataset),
-        enforce_detection=False,
-        silent=True,
-    )
-
-    response = RecogniseResponse()
+    try:
+        result = DeepFace.find(
+            cv_im,
+            os.path.join(DATASET_ROOT, request.dataset),
+            enforce_detection=True,
+            silent=True,
+            detector_backend="mtcnn",
+        )
+    except ValueError:
+        return response
 
     for row in result:
         if row.empty:
