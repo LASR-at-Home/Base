@@ -4,7 +4,7 @@ sensor_msgs/Image image_raw
 # Dataset to use
 string dataset
 
-# How certain the detection should be to include
+# Confidence threshold for filtering detections
 float32 confidence
 
 ---
