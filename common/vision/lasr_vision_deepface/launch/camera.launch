@@ -1,0 +1,23 @@
+<launch>
+    <description>Perform face recognition using the camera</description>
+    <usage doc="Run the demo"></usage>
+
+    <!-- arguments -->
+    <arg name="dataset" default="lab" doc="Dataset to use for the demo" />
+
+    <!-- yolo service -->
+    <include file="$(find lasr_vision_deepface)/launch/service.launch">
+        <arg name="debug" value="true" />
+    </include>
+    
+    <!-- show debug topic -->
+    <node name="image_view" pkg="rqt_image_view" type="rqt_image_view" respawn="false" output="screen" args="/recognise/debug" />
+
+    <!-- start relay service -->
+    <node name="relay" pkg="lasr_vision_deepface" type="relay" respawn="false" output="screen" args="/camera/image_raw $(arg dataset)" />
+
+    <!-- launch video stream -->
+   <include file="$(find video_stream_opencv)/launch/camera.launch">
+        <arg name="visualize" value="true" />
+   </include>
+</launch>

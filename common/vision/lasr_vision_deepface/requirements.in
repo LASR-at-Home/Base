@@ -1,0 +1,2 @@
+deepface==0.0.81
+numpy>=1.2.1
