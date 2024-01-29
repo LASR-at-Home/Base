@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(lasr_face_recognition)
+project(lasr_vision_deepface)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
@@ -104,7 +104,7 @@ catkin_generate_virtualenv(
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 #  INCLUDE_DIRS include
-#  LIBRARIES lasr_face_recognition
+#  LIBRARIES lasr_vision_deepface
 #  CATKIN_DEPENDS rospy
 #  DEPENDS system_lib
 )
@@ -122,7 +122,7 @@ include_directories(
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/lasr_face_recognition.cpp
+#   src/${PROJECT_NAME}/lasr_vision_deepface.cpp
 # )
 
 ## Add cmake target dependencies of the library
@@ -133,7 +133,7 @@ include_directories(
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-# add_executable(${PROJECT_NAME}_node src/lasr_face_recognition_node.cpp)
+# add_executable(${PROJECT_NAME}_node src/lasr_vision_deepface_node.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -200,7 +200,7 @@ catkin_install_python(PROGRAMS
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_lasr_face_recognition.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_lasr_vision_deepface.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()

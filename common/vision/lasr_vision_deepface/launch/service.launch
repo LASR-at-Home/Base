@@ -5,7 +5,7 @@
 
     <arg name="debug" default="false" doc="Whether to publish plotted images to /recognise/debug" />
 
-    <node name="face_recognition_service" pkg="lasr_face_recognition" type="service" output="screen">
+    <node name="face_recognition_service" pkg="lasr_vision_deepface" type="service" output="screen">
         <param name="debug" type="bool" value="$(arg debug)" />
     </node>
 </launch>

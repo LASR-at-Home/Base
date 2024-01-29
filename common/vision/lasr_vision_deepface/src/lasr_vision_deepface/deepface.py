@@ -10,7 +10,7 @@ from lasr_vision_msgs.msg import Detection
 from lasr_vision_msgs.srv import RecogniseRequest, RecogniseResponse
 
 DATASET_ROOT = os.path.join(
-    rospkg.RosPack().get_path("lasr_face_recognition"), "datasets"
+    rospkg.RosPack().get_path("lasr_vision_deepface"), "datasets"
 )
 
 Mat = int  # np.typing.NDArray[np.uint8]

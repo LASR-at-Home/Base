@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 
 import sys
-import lasr_face_recognition as face_recognition
+import lasr_vision_deepface as face_recognition
 
 if len(sys.argv) < 3:
-    print("usage: rosrun lasr_face_recognition create_dataset.py <dataset> <name> [size=50]")
+    print(
+        "usage: rosrun lasr_vision_deepface create_dataset.py <dataset> <name> [size=50]"
+    )
     exit(0)
 
 dataset = sys.argv[1]
@@ -22,7 +24,9 @@ import os
 import cv2_img
 import cv2
 
-DATASET_ROOT = os.path.join(rospkg.RosPack().get_path("lasr_face_recognition"), "datasets")
+DATASET_ROOT = os.path.join(
+    rospkg.RosPack().get_path("lasr_vision_deepface"), "datasets"
+)
 DATASET_PATH = os.path.join(DATASET_ROOT, dataset, name)
 if not os.path.exists(DATASET_PATH):
     os.makedirs(DATASET_PATH)
