@@ -170,6 +170,7 @@ catkin_install_python(PROGRAMS
   nodes/transcribe_microphone_server
   scripts/list_microphones.py
   scripts/test_microphones.py
+  scripts/repeat_after_me.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
