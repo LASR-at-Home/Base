@@ -28,6 +28,13 @@ def detect_face(cv_im: Mat) -> Mat | None:
         return None
     facial_area = faces[0]["facial_area"]
     x, y, w, h = facial_area["x"], facial_area["y"], facial_area["w"], facial_area["h"]
+
+    # add padding to the face
+    x -= 10
+    y -= 10
+    w += 20
+    h += 20
+
     return cv_im[:][y : y + h, x : x + w]
 
 
