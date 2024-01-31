@@ -9,9 +9,12 @@ import os
 from lasr_vision_msgs.msg import Detection
 from lasr_vision_msgs.srv import RecogniseRequest, RecogniseResponse
 
+from sensor_msgs.msg import Image
+
 DATASET_ROOT = os.path.join(
     rospkg.RosPack().get_path("lasr_vision_deepface"), "datasets"
 )
+
 
 Mat = int  # np.typing.NDArray[np.uint8]
 
@@ -36,6 +39,22 @@ def detect_face(cv_im: Mat) -> Mat | None:
     h += 20
 
     return cv_im[:][y : y + h, x : x + w]
+
+
+def create_dataset(topic: str, dataset: str, name: str, size=50) -> None:
+    dataset_path = os.path.join(DATASET_ROOT, dataset, name)
+    if not os.path.exists(dataset_path):
+        os.makedirs(dataset_path)
+    rospy.loginfo(f"Taking {size} pictures of {name} and saving to {dataset_path}")
+
+    for i in range(size):
+        img_msg = rospy.wait_for_message(topic, Image)
+        cv_im = cv2_img.msg_to_cv2_img(img_msg)
+        face_cropped_cv_im = detect_face(cv_im)
+        if face_cropped_cv_im is None:
+            continue
+        cv2.imwrite(os.path.join(dataset_path, f"{name}_{i+1}.png"), face_cropped_cv_im)  # type: ignore
+        rospy.loginfo(f"Took picture {i+1}")
 
 
 def detect(
