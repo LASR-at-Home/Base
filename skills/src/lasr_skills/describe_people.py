@@ -90,6 +90,9 @@ class DescribePeople(smach.StateMachine):
 
                 result = self.bodypix(userdata.img_msg, "resnet50", 0.7, masks)
                 userdata.bodypix_masks = result.masks
+                rospy.loginfo("Found:::%s" % str(len(result.poses)))
+                neck_coord = (result.poses[0].coord[0], result.poses[0].coord[1])
+                rospy.loginfo("COORD:::%s" % str(neck_coord))
                 return 'succeeded'
             except rospy.ServiceException as e:
                 rospy.logwarn(f"Unable to perform inference. ({str(e)})")
