@@ -44,6 +44,8 @@ from tiago_controllers.controllers import BaseController
 
 import random
 
+# import qualification.command_similarity as command_similarity
+
 voice = Voice()
 rospy.loginfo("Got voice")
 recognise = rospy.ServiceProxy("/recognise", Recognise)
@@ -55,8 +57,8 @@ rospy.loginfo("Got learn_face")
 transcribe = actionlib.SimpleActionClient("transcribe_speech", TranscribeSpeechAction)
 transcribe.wait_for_server()
 rospy.loginfo("Got transcribe_speech")
-base_controller = BaseController()
-rospy.loginfo("Got base_controller")
+# base_controller = BaseController()
+# rospy.loginfo("Got base_controller")
 
 
 def do_recognise(image):
@@ -72,7 +74,7 @@ def do_transcribe_speech():
     transcribe.send_goal(TranscribeSpeechGoal())
     transcribe.wait_for_result()
     result = transcribe.get_result()
-    return result.sequence
+    return result.sequence.lower()
 
 
 poses = {
@@ -84,17 +86,17 @@ poses = {
 
 def greet():
     # TODO: greet the person, if they are not in the database, ask them to introduce themselves and learn their face
-    im = rospy.wait_for_message("/xtion/rgb/image_raw", Image)
+    im = rospy.wait_for_message("/camera/image_raw", Image)
     face_recognition_result = do_recognise(im)
     if not face_recognition_result:
         # unknown person
-        voice.speak("Hello, I don't know who you are. What is your name?")
+        rospy.loginfo("Hello, I don't know who you are. What is your name?")
         name = do_transcribe_speech().split(" ")[
             -1
         ]  # assume the last word is the name :)
-        voice.speak(f"Thank you, {name}, I will remember your face now")
+        rospy.loginfo(f"Thank you, {name}, I will remember your face now")
         # TODO: learn face and associate with name
-        learn_face("/xtion/rgb/image_raw", "qualification", name, 50)
+        learn_face(name, "qualification", 50)
         # just perform an inference for visualisation purposes
         do_recognise(im)
     else:
@@ -103,15 +105,15 @@ def greet():
             "it's nice to see you",
             "it's good to see you",
         ]
-        voice.speak(
+        rospy.loginfo(
             f"Hello, {face_recognition_result[0].name} {random.choice(suffixes)}"
         )
 
 
-def guide():
-    # TODO: guide person to location, at landmarks, check if they are still following, if they're not, look for them
-    base_controller.sync_to_pose(poses["lab"])
-    pass
+# def guide():
+#     # TODO: guide person to location, at landmarks, check if they are still following, if they're not, look for them
+#     base_controller.sync_to_pose(poses["lab"])
+#     pass
 
 
 # Phase 1: wait for a person to greet the robot
@@ -121,10 +123,11 @@ while not rospy.is_shutdown():
         greet()
 
 # Phase 2: receive command from person
-voice.speak("What can I do for you?")
+rospy.loginfo("What can I do for you?")
 command = do_transcribe_speech()
-if "guide" in command:
-    guide()
+print(command)
+# if "guide" in command:
+#     guide()
 
 
 # Phase 2: guide the person to the lab, for now just go to the lab, assume the person is following
