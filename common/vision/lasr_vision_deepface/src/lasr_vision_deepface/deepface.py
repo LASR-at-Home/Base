@@ -56,6 +56,15 @@ def create_dataset(topic: str, dataset: str, name: str, size=50) -> None:
         cv2.imwrite(os.path.join(dataset_path, f"{name}_{i+1}.png"), face_cropped_cv_im)  # type: ignore
         rospy.loginfo(f"Took picture {i+1}")
 
+    # Force retraining
+    DeepFace.find(
+        cv_im,
+        os.path.join(DATASET_ROOT, dataset),
+        enforce_detection=False,
+        silent=True,
+        detector_backend="mtcnn",
+    )
+
 
 def detect(
     request: RecogniseRequest, debug_publisher: rospy.Publisher | None
