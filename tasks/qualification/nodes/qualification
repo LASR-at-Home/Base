@@ -25,7 +25,12 @@ Visualisation:
 import rospy
 
 rospy.init_node("qualification")
-from lasr_vision_msgs.srv import Recognise, RecogniseRequest
+from lasr_vision_msgs.srv import (
+    Recognise,
+    RecogniseRequest,
+    LearnFace,
+    LearnFaceRequest,
+)
 from sensor_msgs.msg import Image
 from lasr_voice import Voice
 
@@ -35,17 +40,23 @@ from lasr_speech_recognition_msgs.msg import (
     TranscribeSpeechAction,
     TranscribeSpeechGoal,
 )
-import lasr_vision_deepface as face_recognition
 from tiago_controllers.controllers import BaseController
 
 import random
 
 voice = Voice()
+rospy.loginfo("Got voice")
 recognise = rospy.ServiceProxy("/recognise", Recognise)
 recognise.wait_for_service()
+rospy.loginfo("Got recognise")
+learn_face = rospy.ServiceProxy("/learn_face", LearnFace)
+learn_face.wait_for_service()
+rospy.loginfo("Got learn_face")
 transcribe = actionlib.SimpleActionClient("transcribe_speech", TranscribeSpeechAction)
 transcribe.wait_for_server()
+rospy.loginfo("Got transcribe_speech")
 base_controller = BaseController()
+rospy.loginfo("Got base_controller")
 
 
 def do_recognise(image):
@@ -83,9 +94,9 @@ def greet():
         ]  # assume the last word is the name :)
         voice.speak(f"Thank you, {name}, I will remember your face now")
         # TODO: learn face and associate with name
-        face_recognition.create_dataset("/xtion/rgb/image_raw", "qualification", name)
+        learn_face("/xtion/rgb/image_raw", "qualification", name, 50)
         # just perform an inference for visualisation purposes
-        face_recognition(im)
+        do_recognise(im)
     else:
         suffixes = [
             "it's great to see you again",
