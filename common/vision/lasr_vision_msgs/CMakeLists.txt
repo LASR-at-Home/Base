@@ -60,6 +60,7 @@ add_service_files(
   BodyPixDetection.srv
   TorchFaceFeatureDetection.srv
   Recognise.srv
+  LearnFace.srv
 )
 
 ## Generate actions in the 'action' folder

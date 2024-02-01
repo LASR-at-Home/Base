@@ -4,7 +4,15 @@ import re
 import rospy
 import lasr_vision_deepface as face_recognition
 from sensor_msgs.msg import Image
-from lasr_vision_msgs.srv import Recognise, RecogniseRequest, RecogniseResponse
+from lasr_vision_msgs.srv import (
+    Recognise,
+    RecogniseRequest,
+    RecogniseResponse,
+    LearnFace,
+    LearnFaceRequest,
+    LearnFaceResponse,
+)
+
 
 rospy.init_node("recognise_service")
 
@@ -29,6 +37,14 @@ def detect(request: RecogniseRequest) -> RecogniseResponse:
     return face_recognition.detect(request, debug_publisher)
 
 
+def learn_face(request: LearnFaceRequest) -> LearnFaceResponse:
+    face_recognition.learn_face(
+        "/xtion/rgb/image_raw", request.dataset, request.name, request.n_images
+    )
+    return LearnFaceResponse()
+
+
 rospy.Service("/recognise", Recognise, detect)
-rospy.loginfo("Face Recognition service starter")
+rospy.Service("/learn_face", LearnFace, learn_face)
+rospy.loginfo("Face Recognition service started")
 rospy.spin()
