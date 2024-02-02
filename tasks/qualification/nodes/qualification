@@ -21,8 +21,11 @@ Visualisation:
 - object, person detection
 - grasping
 """
-
 import rospy
+import rospkg
+import os
+
+COMMAND_ROOT = os.path.join(rospkg.RosPack().get_path("qualification"), "data")
 
 rospy.init_node("qualification")
 from lasr_vision_msgs.srv import (
@@ -33,6 +36,7 @@ from lasr_vision_msgs.srv import (
 )
 from sensor_msgs.msg import Image
 from lasr_voice import Voice
+from std_srvs.srv import Empty
 
 import actionlib
 from lasr_speech_recognition_msgs.srv import TranscribeAudio, TranscribeAudioResponse
@@ -44,7 +48,9 @@ from tiago_controllers.controllers import BaseController
 
 import random
 
-# import qualification.command_similarity as command_similarity
+import qualification.command_similarity as command_similarity
+
+from geometry_msgs.msg import Pose, Quaternion, Point
 
 voice = Voice()
 rospy.loginfo("Got voice")
@@ -57,8 +63,8 @@ rospy.loginfo("Got learn_face")
 transcribe = actionlib.SimpleActionClient("transcribe_speech", TranscribeSpeechAction)
 transcribe.wait_for_server()
 rospy.loginfo("Got transcribe_speech")
-# base_controller = BaseController()
-# rospy.loginfo("Got base_controller")
+base_controller = BaseController()
+rospy.loginfo("Got base_controller")
 
 
 def do_recognise(image):
@@ -77,55 +83,119 @@ def do_transcribe_speech():
     return result.sequence.lower()
 
 
-poses = {
-    "kitchen": None,
-    "lab": None,
-    "lab_center": None,
-}
+pre_door_pose = Pose(
+    position=Point(4.15944400458617, 8.87898068920585, 0.0),
+    orientation=Quaternion(0.0, 0.0, -0.5685040400615354, 0.8226804704341244),
+)
+
+door_wait_pose = Pose(
+    position=Point(3.5908463546596536, 8.55637964340359, 0.0),
+    orientation=Quaternion(0.0, 0.0, -0.40530666046961816, 0.9141807868135086),
+)
+
+
+lab_pose = Pose(
+    position=Point(4.564212770348313, 7.033843500398589, 0.0),
+    orientation=Quaternion(0.0, 0.0, -0.7733597054145271, 0.6339674802709961),
+)
+
+
+# position:
+#   x: 6.352746636123507
+#   y: 6.541654277104855
+#   z: 0.0
+# orientation:
+#   x: 0.0
+#   y: 0.0
+#   z: -0.9957544956125615
+#   w: 0.09204881567610324
 
 
 def greet():
     # TODO: greet the person, if they are not in the database, ask them to introduce themselves and learn their face
-    im = rospy.wait_for_message("/camera/image_raw", Image)
+    im = rospy.wait_for_message("/xtion/rgb/image_raw", Image)
     face_recognition_result = do_recognise(im)
     if not face_recognition_result:
         # unknown person
-        rospy.loginfo("Hello, I don't know who you are. What is your name?")
-        name = do_transcribe_speech().split(" ")[
-            -1
-        ]  # assume the last word is the name :)
-        rospy.loginfo(f"Thank you, {name}, I will remember your face now")
+        voice.speak("Hello, I don't know who you are. What is your name?")
+        name = (
+            do_transcribe_speech().replace(".", "").split(" ")[-1]
+        )  # assume the last word is the name :)
+        voice.speak(f"Thank you, {name}, I will remember your face now")
         # TODO: learn face and associate with name
         learn_face(name, "qualification", 50)
         # just perform an inference for visualisation purposes
         do_recognise(im)
+        return name
     else:
         suffixes = [
             "it's great to see you again",
             "it's nice to see you",
             "it's good to see you",
         ]
-        rospy.loginfo(
+        name = face_recognition_result[0].name
+        voice.speak(
             f"Hello, {face_recognition_result[0].name} {random.choice(suffixes)}"
         )
+    return name
 
 
-# def guide():
-#     # TODO: guide person to location, at landmarks, check if they are still following, if they're not, look for them
-#     base_controller.sync_to_pose(poses["lab"])
-#     pass
+def clear_costmap():
+    """
+    Clears costmap using clear_octomap server
+    """
+
+    rospy.loginfo("waiting for clear_costmap")
+    rospy.wait_for_service("/move_base/clear_costmaps", timeout=10)
+    try:
+        _clear_costmap = rospy.ServiceProxy("/move_base/clear_costmaps", Empty)
+        response = _clear_costmap()
+        rospy.loginfo("clearing costmap done!")
+        return response
+    except rospy.ServiceException as e:
+        print("Service call failed: %s" % e)
+
+
+def guide(name):
+    # TODO: guide person to the lab, at landmarks, check if they are still following, if they're not, look for them
+    base_controller.sync_to_pose(pre_door_pose)
+    # wait for the door to open
+    voice.async_tts(f"{name}, could you open the door for me please?")
+    base_controller.sync_to_pose(door_wait_pose)
+    rospy.sleep(rospy.Duration(10.0))
+    clear_costmap()
+    base_controller.sync_to_pose(lab_pose)
 
 
 # Phase 1: wait for a person to greet the robot
 while not rospy.is_shutdown():
     speech = do_transcribe_speech()
     if "hello" in speech or "hi" in speech:
-        greet()
+        name = greet()
+        break
 
-# Phase 2: receive command from person
-rospy.loginfo("What can I do for you?")
-command = do_transcribe_speech()
-print(command)
+# # Phase 2: receive command from person
+voice.speak(f"What can I do for you {name}?")
+while True:
+    command = do_transcribe_speech()
+    nearest_commands, distances = command_similarity.get_similar_commands(
+        command,
+        os.path.join(COMMAND_ROOT, "command_index"),
+        os.path.join(COMMAND_ROOT, "command_list.txt"),
+    )
+    voice.speak(f"Did you mean {nearest_commands[0]}?")
+    speech = do_transcribe_speech()
+    if "yes" in speech:
+        command = nearest_commands[0]
+        break
+    else:
+        voice.speak("Sorry, could you please repeat that for me?")
+
+
+if "guide" in command:
+    guide(name)
+
+
 # if "guide" in command:
 #     guide()
 
