@@ -39,7 +39,7 @@ def detect(request: RecogniseRequest) -> RecogniseResponse:
 
 def learn_face(request: LearnFaceRequest) -> LearnFaceResponse:
     face_recognition.create_dataset(
-        "/camera/image_raw", request.dataset, request.name, request.n_images
+        "/xtion/rgb/image_raw", request.dataset, request.name, request.n_images
     )
     return LearnFaceResponse()
 
