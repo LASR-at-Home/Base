@@ -32,6 +32,5 @@ class Receptionist(smach.StateMachine):
             # smach.StateMachine.add('SPEAK_DESCRIPTIONS', SpeakDescriptions(self.default), transitions={'failed':'GO_TO_SEATING_AREA','succeeded':'GO_TO_SEATING_AREA'})
             # smach.StateMachine.add('GO_TO_SEATING_AREA', GoToSeatingArea(self.default), transitions={'succeeded' : 'LOOK_FOR_SEATS'})            
             # smach.StateMachine.add('LOOK_FOR_SEATS', LookForSeats(self.default), transitions={'succeeded' : 'GO_TO_WAIT_FOR_PERSON'})
-            # smach.StateMachine.add('END', End(self.default),transitions={'succeeded':'succeeded'})
             smach.StateMachine.add('DESCRIBE_PEOPLE', DescribePeople(),transitions={'succeeded':'SPEAK_DESCRIPTIONS','failed':'DESCRIBE_PEOPLE'})
             smach.StateMachine.add('SPEAK_DESCRIPTIONS', SpeakDescriptions(self.default), transitions={'failed':'DESCRIBE_PEOPLE','succeeded':'DESCRIBE_PEOPLE'})

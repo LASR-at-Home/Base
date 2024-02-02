@@ -11,7 +11,7 @@ from lasr_vision_msgs.msg import BodyPixMaskRequest, ColourPrediction, FeatureWi
 from lasr_vision_msgs.srv import YoloDetection, BodyPixDetection, TorchFaceFeatureDetection
 from numpy2message import numpy2message
 
-from .vision import GetImage, ImageMsgToCv2
+from .vision import GetImage, ImageMsgToCv2, Get3DImage, PclMsgToCv2, Get2DAnd3DImages
 
 
 class DescribePeople(smach.StateMachine):
@@ -21,16 +21,21 @@ class DescribePeople(smach.StateMachine):
             self, outcomes=['succeeded', 'failed'], input_keys=[], output_keys=['people'])
 
         with self:
-            smach.StateMachine.add('GET_IMAGE', GetImage(), transitions={
+            # smach.StateMachine.add('GET_IMAGE', GetImage(), transitions={
+            #                        'succeeded': 'CONVERT_IMAGE'})
+            # smach.StateMachine.add('CONVERT_IMAGE', ImageMsgToCv2(), transitions={
+            #                        'succeeded': 'SEGMENT'})
+
+            smach.StateMachine.add('GET_IMAGE', Get2DAnd3DImages(), transitions={
                                    'succeeded': 'CONVERT_IMAGE'})
-            smach.StateMachine.add('CONVERT_IMAGE', ImageMsgToCv2(), transitions={
+            smach.StateMachine.add('CONVERT_IMAGE', PclMsgToCv2(), transitions={
                                    'succeeded': 'SEGMENT'})
 
             sm_con = smach.Concurrence(outcomes=['succeeded', 'failed'],
                                        default_outcome='failed',
                                        outcome_map={'succeeded': {
                                            'SEGMENT_YOLO': 'succeeded', 'SEGMENT_BODYPIX': 'succeeded'}},
-                                       input_keys=['img', 'img_msg'],
+                                       input_keys=['img', 'img_msg_2d', 'img_msg_3d', 'xyz'],
                                        output_keys=['people_detections', 'bodypix_masks'])
 
             with sm_con:
@@ -51,13 +56,13 @@ class DescribePeople(smach.StateMachine):
 
         def __init__(self):
             smach.State.__init__(self, outcomes=['succeeded', 'failed'], input_keys=[
-                                 'img_msg'], output_keys=['people_detections'])
+                                 'img_msg_2d'], output_keys=['people_detections'])
             self.yolo = rospy.ServiceProxy('/yolov8/detect', YoloDetection)
 
         def execute(self, userdata):
             try:
                 result = self.yolo(
-                    userdata.img_msg, "yolov8n-seg.pt", 0.5, 0.3)
+                    userdata.img_msg_2d, "yolov8n-seg.pt", 0.5, 0.3)
                 userdata.people_detections = [
                     det for det in result.detected_objects if det.name == "person"]
                 return 'succeeded'
@@ -74,7 +79,7 @@ class DescribePeople(smach.StateMachine):
 
         def __init__(self):
             smach.State.__init__(self, outcomes=['succeeded', 'failed'], input_keys=[
-                                 'img_msg'], output_keys=['bodypix_masks'])
+                                 'img_msg_2d', 'xyz'], output_keys=['bodypix_masks'])
             self.bodypix = rospy.ServiceProxy(
                 '/bodypix/detect', BodyPixDetection)
 
@@ -88,11 +93,14 @@ class DescribePeople(smach.StateMachine):
 
                 masks = [torso, head]
 
-                result = self.bodypix(userdata.img_msg, "resnet50", 0.7, masks)
+                result = self.bodypix(userdata.img_msg_2d, "resnet50", 0.7, masks)
                 userdata.bodypix_masks = result.masks
                 rospy.loginfo("Found:::%s" % str(len(result.poses)))
-                neck_coord = (result.poses[0].coord[0], result.poses[0].coord[1])
-                rospy.loginfo("COORD:::%s" % str(neck_coord))
+                neck_coord = (int(result.poses[0].coord[0]), int(result.poses[0].coord[1]))
+                rospy.loginfo("COORD_XY:::%s" % str(neck_coord))
+                xyz = userdata.xyz
+                xyz = np.nanmean(xyz, axis=2)
+                rospy.loginfo("COORD_Z:::%s" % str(xyz[neck_coord[0]][neck_coord[1]]))
                 return 'succeeded'
             except rospy.ServiceException as e:
                 rospy.logwarn(f"Unable to perform inference. ({str(e)})")

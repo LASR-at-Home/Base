@@ -95,16 +95,16 @@ def detect(request: BodyPixDetectionRequest, debug_publisher: rospy.Publisher | 
             neck_y = right_shoulder.y
             neck_score = right_shoulder_keypoint.score
 
-        # Convert neck coordinates to relative positions (0-1)
-        rel_neck_x = neck_x / img_width
-        rel_neck_y = neck_y / img_height
+        # # Convert neck coordinates to relative positions (0-1)
+        # rel_neck_x = neck_x / img_width
+        # rel_neck_y = neck_y / img_height
+
+        # pose = BodyPixPose()
+        # pose.coord = np.array([rel_neck_x, rel_neck_y]).astype(np.float32)
+        # neck_coordinates.append(pose)
 
         pose = BodyPixPose()
-        pose.coord = np.array([rel_neck_x, rel_neck_y]).astype(np.float32)
-        neck_coordinates.append(pose)
-
-        pose = BodyPixPose()
-        pose.coord = np.array([neck_x, neck_y]).astype(np.float32)
+        pose.coord = np.array([neck_x, neck_y]).astype(np.int32)
         neck_coordinates.append(pose)
     
     # publish to debug topic
