@@ -8,19 +8,52 @@ from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from pal_interaction_msgs.msg import TtsGoal, TtsAction
 from actionlib import SimpleActionClient
 
+from geometry_msgs.msg import Pose, Point, Quaternion
+
+from copy import deepcopy
+
 
 class Guide:
 
     KB = {
-        "lab": {"pose": None, "edges": {"corridor": [0, 0]}},
-        "corridor": {"pose": None, "edges": {"lab": [0, 0], "kitchen": None}},
-        "kitchen": {"pose": None, "edges": {"corridor": None}},
+        "lab": {
+            "pose": Pose(
+                position=Point(2.58, 2.07, 0.0),
+                orientation=Quaternion(0.0, 0.0, 0.94, 0.50),
+            ),
+            "edges": {
+                "corridor": Pose(
+                    position=Point(4.53, 6.26, 0.0),
+                    orientation=Quaternion(0.0, 0.0, 0.59, 0.80),
+                )
+            },
+        },
+        "corridor": {
+            "pose": Pose(
+                position=Point(4.35, 11.12, 0.0),
+                orientation=Quaternion(0.0, 0.0, 0.28, 0.96),
+            ),
+            "edges": {
+                "lab": Pose(
+                    position=Point(3.98, 9.07, 0.0),
+                    orientation=Quaternion(0.0, 0.0, -0.75, 0.66),
+                ),
+                "kitchen": None,
+            },
+        },
+        "kitchen": {
+            "pose": Pose(
+                position=Point(10.51, 26.60, 0.0),
+                orientation=Quaternion(0.0, 0.0, -0.82, 0.56),
+            ),
+            "edges": {"corridor": None},
+        },
     }
 
     def __init__(self):
 
         self.move_base = SimpleActionClient("move_base", MoveBaseAction)
-        self.__client.wait_for_server()
+        self.move_base.wait_for_server()
 
         self.tts = SimpleActionClient("/tts", TtsAction)
         self.tts.wait_for_server()
@@ -33,6 +66,7 @@ class Guide:
         )
 
         self._action_server.start()
+        print(self.KB)
 
     def bfs(self, a, b):
         queue = []
@@ -49,33 +83,42 @@ class Guide:
                 queue.append(new_path)
 
     def execute_cb(self, goal):
+        rospy.loginfo(goal)
         tts_goal = TtsGoal()
         tts_goal.rawtext.lang_id = "en_GB"
-        tts_goal.rawtext.text = f"{goal.guidee}, I will guide you to the {goal.B}."
+        tts_goal.rawtext.text = (
+            f"{goal.guidee}, I will guide you to the {goal.B}. Please follow me."
+        )
+        self.tts.send_goal_and_wait(tts_goal)
 
         poses = []
         path = self.bfs(goal.A, goal.B)
+        rospy.loginfo(path)
         for u, v in zip(list(path), list(path)[1:]):
             if self.KB[u]["edges"][v] is not None:
-                poses.append((self.KB[u]["edges"][v], True))
-                poses.append((self.KB[v]["edges"][u], False))
+                u_pose = self.KB[u]["edges"][v]
+                poses.append((u_pose, True))
+                v_pose = deepcopy(self.KB[v]["edges"][u])
+                v_pose.orientation = u_pose.orientation
+                poses.append((v_pose, False))
         poses.append((self.KB[goal.B]["pose"], False))
 
         for pose, could_be_closed in poses:
-            goal = MoveBaseGoal()
-            goal.target_pose.header.stamp = rospy.Time.now()
-            goal.target_pose.header.frame_id = "map"
-            goal.target_pose.pose = pose
+            move_base_goal = MoveBaseGoal()
+            move_base_goal.target_pose.header.stamp = rospy.Time.now()
+            move_base_goal.target_pose.header.frame_id = "map"
+            move_base_goal.target_pose.pose = pose
 
-            self.move_base.send_goal_and_wait(goal)
+            self.move_base.send_goal_and_wait(move_base_goal)
 
             if could_be_closed:
                 tts_goal.rawtext.text = (
                     f"{goal.guidee}, could you please get the door for me?"
                 )
+                self.tts.send_goal_and_wait(tts_goal)
                 rospy.sleep(5.0)
                 # assume it is closed, ask for it to be opened
-
+        tts_goal.rawtext.text = f"We have arrived in the {goal.B}"
         self._action_server.set_succeeded(GuideResult())
 
 
