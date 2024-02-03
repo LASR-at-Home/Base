@@ -6,6 +6,8 @@ import actionlib
 
 from qualification.msg import LearnFaceAction, LearnFaceResult
 from lasr_vision_msgs.srv import LearnFace as LF, LearnFaceRequest as LFRequest
+from pal_interaction_msgs.msg import TtsGoal, TtsAction
+from actionlib import SimpleActionClient
 
 
 class LearnFace:
@@ -15,6 +17,10 @@ class LearnFace:
         self.learn_face = rospy.ServiceProxy("/learn_face", LF)
         self.learn_face.wait_for_service()
         rospy.loginfo("got learn_face")
+
+        self.tts = SimpleActionClient("/tts", TtsAction)
+        self.tts.wait_for_server()
+
         self._action_server = actionlib.SimpleActionServer(
             "learn_face",
             LearnFaceAction,
@@ -26,6 +32,12 @@ class LearnFace:
 
     def execute_cb(self, goal):
         rospy.loginfo("Learning face!")
+
+        tts_goal = TtsGoal()
+        tts_goal.rawtext.lang_id = "en_GB"
+        tts_goal.rawtext.text = f"{goal.name}, give me a moment to learn your face"
+        self.tts.send_goal_and_wait(tts_goal)
+
         req = LFRequest()
         req.dataset = "qualification"
         req.name = goal.name
