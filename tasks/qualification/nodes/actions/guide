@@ -1,0 +1,85 @@
+#!/usr/bin/env python3
+
+import rospy
+import actionlib
+
+from qualification.msg import GuideAction, GuideResult
+from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
+from pal_interaction_msgs.msg import TtsGoal, TtsAction
+from actionlib import SimpleActionClient
+
+
+class Guide:
+
+    KB = {
+        "lab": {"pose": None, "edges": {"corridor": [0, 0]}},
+        "corridor": {"pose": None, "edges": {"lab": [0, 0], "kitchen": None}},
+        "kitchen": {"pose": None, "edges": {"corridor": None}},
+    }
+
+    def __init__(self):
+
+        self.move_base = SimpleActionClient("move_base", MoveBaseAction)
+        self.__client.wait_for_server()
+
+        self.tts = SimpleActionClient("/tts", TtsAction)
+        self.tts.wait_for_server()
+
+        self._action_server = actionlib.SimpleActionServer(
+            "guide",
+            GuideAction,
+            execute_cb=self.execute_cb,
+            auto_start=False,
+        )
+
+        self._action_server.start()
+
+    def bfs(self, a, b):
+        queue = []
+        queue.append([a])
+        while queue:
+            path = queue.pop(0)
+            node = path[-1]
+            if node == b:
+                return path
+
+            for adj in self.KB[node]["edges"].keys():
+                new_path = list(path)
+                new_path.append(adj)
+                queue.append(new_path)
+
+    def execute_cb(self, goal):
+        tts_goal = TtsGoal()
+        tts_goal.rawtext.lang_id = "en_GB"
+        tts_goal.rawtext.text = f"{goal.guidee}, I will guide you to the {goal.B}."
+
+        poses = []
+        path = self.bfs(goal.A, goal.B)
+        for u, v in zip(list(path), list(path)[1:]):
+            if self.KB[u]["edges"][v] is not None:
+                poses.append((self.KB[u]["edges"][v], True))
+                poses.append((self.KB[v]["edges"][u], False))
+        poses.append((self.KB[goal.B]["pose"], False))
+
+        for pose, could_be_closed in poses:
+            goal = MoveBaseGoal()
+            goal.target_pose.header.stamp = rospy.Time.now()
+            goal.target_pose.header.frame_id = "map"
+            goal.target_pose.pose = pose
+
+            self.move_base.send_goal_and_wait(goal)
+
+            if could_be_closed:
+                tts_goal.rawtext.text = (
+                    f"{goal.guidee}, could you please get the door for me?"
+                )
+                rospy.sleep(5.0)
+                # assume it is closed, ask for it to be opened
+
+        self._action_server.set_succeeded(GuideResult())
+
+
+if __name__ == "__main__":
+    rospy.init_node("guide")
+    Guide()
+    rospy.spin()

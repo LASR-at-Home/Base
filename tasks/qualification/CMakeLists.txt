@@ -62,7 +62,7 @@ catkin_generate_virtualenv(
 # Generate actions in the 'action' folder
 add_action_files(
   DIRECTORY action
-  FILES WaitGreet.action Identify.action Greet.action GetName.action LearnFace.action
+  FILES WaitGreet.action Identify.action Greet.action GetName.action LearnFace.action GetCommand.action Guide.action
 )
 
 # Generate added messages and services with any dependencies listed here
@@ -164,6 +164,8 @@ catkin_install_python(PROGRAMS
   nodes/actions/greet
   nodes/actions/get_name
   nodes/actions/learn_face
+  nodes/actions/get_command
+  nodes/actions/guide
   nodes/better_qualification
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
