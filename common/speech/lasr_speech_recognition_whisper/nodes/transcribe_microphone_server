@@ -344,6 +344,11 @@ def configure_whisper_cache() -> None:
 
 
 if __name__ == "__main__":
+    import sys
+
+    print(sys.argv)
+    # remove everything starting with __ from sys.argv
+    sys.argv = [arg for arg in sys.argv if not arg.startswith("__")]
     configure_whisper_cache()
     config = parse_args()
     rospy.init_node(config["action_name"])
