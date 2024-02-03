@@ -1,0 +1,47 @@
+#!/usr/bin/env python3
+
+import rospy
+import actionlib
+
+from lasr_speech_recognition_msgs.msg import (
+    TranscribeSpeechAction,
+    TranscribeSpeechGoal,
+)
+from qualification.msg import WaitGreetAction, WaitGreetResult
+
+
+class WaitGreet:
+
+    def __init__(self):
+
+        self.transcribe_speech = actionlib.SimpleActionClient(
+            "transcribe_speech",
+            TranscribeSpeechAction,
+        )
+        self.transcribe_speech.wait_for_server()
+        rospy.loginfo("got transcribe_speech")
+        self._action_server = actionlib.SimpleActionServer(
+            "wait_greet",
+            WaitGreetAction,
+            execute_cb=self.execute_cb,
+            auto_start=False,
+        )
+
+        self._action_server.start()
+
+    def execute_cb(self, _):
+        rospy.loginfo("Beginning to wait!")
+        while not rospy.is_shutdown():
+            self.transcribe_speech.send_goal(TranscribeSpeechGoal())
+            self.transcribe_speech.wait_for_result()
+            result = self.transcribe_speech.get_result().sequence.lower()
+            if "hello" in result.split(" ") or "hi" in result.split(" "):
+                self._action_server.set_succeeded(WaitGreetResult())
+                rospy.loginfo("Finished waiting")
+                return
+
+
+if __name__ == "__main__":
+    rospy.init_node("wait_greet")
+    WaitGreet()
+    rospy.spin()

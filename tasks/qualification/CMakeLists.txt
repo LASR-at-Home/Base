@@ -7,7 +7,7 @@ project(qualification)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED catkin_virtualenv)
+find_package(catkin REQUIRED catkin_virtualenv message_generation genmsg actionlib_msgs actionlib)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -59,18 +59,17 @@ catkin_generate_virtualenv(
 #   Service2.srv
 # )
 
-## Generate actions in the 'action' folder
-# add_action_files(
-#   FILES
-#   Action1.action
-#   Action2.action
-# )
+# Generate actions in the 'action' folder
+add_action_files(
+  DIRECTORY action
+  FILES WaitGreet.action Identify.action Greet.action GetName.action LearnFace.action
+)
 
-## Generate added messages and services with any dependencies listed here
-# generate_messages(
-#   DEPENDENCIES
-#   std_msgs  # Or other packages containing msgs
-# )
+# Generate added messages and services with any dependencies listed here
+generate_messages(
+  DEPENDENCIES
+  actionlib_msgs
+)
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -104,7 +103,7 @@ catkin_generate_virtualenv(
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES qualification
-#  CATKIN_DEPENDS rospy
+ CATKIN_DEPENDS message_runtime
 #  DEPENDS system_lib
 )
 
@@ -160,6 +159,12 @@ include_directories(
 ## in contrast to setup.py, you can choose the destination
 catkin_install_python(PROGRAMS
   nodes/qualification
+  nodes/actions/wait_greet
+  nodes/actions/identify
+  nodes/actions/greet
+  nodes/actions/get_name
+  nodes/actions/learn_face
+  nodes/better_qualification
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

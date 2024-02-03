@@ -100,17 +100,6 @@ lab_pose = Pose(
 )
 
 
-# position:
-#   x: 6.352746636123507
-#   y: 6.541654277104855
-#   z: 0.0
-# orientation:
-#   x: 0.0
-#   y: 0.0
-#   z: -0.9957544956125615
-#   w: 0.09204881567610324
-
-
 def greet():
     # TODO: greet the person, if they are not in the database, ask them to introduce themselves and learn their face
     im = rospy.wait_for_message("/xtion/rgb/image_raw", Image)
@@ -157,14 +146,39 @@ def clear_costmap():
 
 
 def guide(name):
+    voice.speak(f"Follow me, {name}, I will take you to the lab.")
     # TODO: guide person to the lab, at landmarks, check if they are still following, if they're not, look for them
     base_controller.sync_to_pose(pre_door_pose)
     # wait for the door to open
     voice.async_tts(f"{name}, could you open the door for me please?")
     base_controller.sync_to_pose(door_wait_pose)
-    rospy.sleep(rospy.Duration(10.0))
-    clear_costmap()
     base_controller.sync_to_pose(lab_pose)
+
+
+def end():
+    pass
+
+
+def offer_assistance(name):
+    voice.speak(f"Hello, {name}, do you need any assistance")
+    while True:
+        command = do_transcribe_speech()
+        if "that is all" in command:
+            voice.speak("Goodbye")
+            end()
+            break
+        nearest_commands, distances = command_similarity.get_similar_commands(
+            command,
+            os.path.join(COMMAND_ROOT, "command_index"),
+            os.path.join(COMMAND_ROOT, "command_list.txt"),
+        )
+        voice.speak(f"Did you mean {nearest_commands[0]}?")
+        speech = do_transcribe_speech()
+        if "yes" in speech:
+            command = nearest_commands[0]
+            break
+        else:
+            voice.speak("Sorry, could you please repeat that for me?")
 
 
 # Phase 1: wait for a person to greet the robot
@@ -178,6 +192,10 @@ while not rospy.is_shutdown():
 voice.speak(f"What can I do for you {name}?")
 while True:
     command = do_transcribe_speech()
+    if "that is all" in command:
+        voice.speak("Goodbye")
+        end()
+        break
     nearest_commands, distances = command_similarity.get_similar_commands(
         command,
         os.path.join(COMMAND_ROOT, "command_index"),
@@ -194,6 +212,21 @@ while True:
 
 if "guide" in command:
     guide(name)
+
+while True:
+    command = do_transcribe_speech()
+    nearest_commands, distances = command_similarity.get_similar_commands(
+        command,
+        os.path.join(COMMAND_ROOT, "command_index"),
+        os.path.join(COMMAND_ROOT, "command_list.txt"),
+    )
+    voice.speak(f"Did you mean {nearest_commands[0]}?")
+    speech = do_transcribe_speech()
+    if "yes" in speech:
+        command = nearest_commands[0]
+        break
+    else:
+        voice.speak("Sorry, could you please repeat that for me?")
 
 
 # if "guide" in command:

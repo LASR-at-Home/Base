@@ -4,5 +4,8 @@
     </include>
     <node pkg="lasr_speech_recognition_whisper" type="transcribe_microphone_server" name="transcribe_microphone_server" output="screen" args="--mic_device 10"/>
 
+    <node pkg="qualification" type="wait_greet" name="wait_greet" output="screen"/>
+
+    <node pkg="qualification" type="better_qualification" name="better_qualification" output="screen"/>
 </launch>
 
