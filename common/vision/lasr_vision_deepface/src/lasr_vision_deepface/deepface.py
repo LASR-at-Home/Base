@@ -5,6 +5,7 @@ import cv2_img
 import rospkg
 import rospy
 import os
+import numpy as np
 
 from lasr_vision_msgs.msg import Detection
 from lasr_vision_msgs.srv import RecogniseRequest, RecogniseResponse
@@ -41,12 +42,49 @@ def detect_face(cv_im: Mat) -> Mat | None:
     return cv_im[:][y : y + h, x : x + w]
 
 
-def create_dataset(topic: str, dataset: str, name: str, size=50) -> None:
+def create_dataset(
+    topic: str,
+    dataset: str,
+    name: str,
+    size: int,
+    debug_publisher: rospy.Publisher | None,
+) -> None:
     dataset_path = os.path.join(DATASET_ROOT, dataset, name)
     if not os.path.exists(dataset_path):
         os.makedirs(dataset_path)
     rospy.loginfo(f"Taking {size} pictures of {name} and saving to {dataset_path}")
 
+    def create_image_collage(images, output_size=(640, 480)):
+
+        # Calculate grid dimensions
+        num_images = len(images)
+        rows = int(np.sqrt(num_images))
+        cols = (num_images + rows - 1) // rows  # Ceiling division
+
+        # Resize images to fit in the grid
+        resized_images = [
+            cv2.resize(img, (output_size[0] // cols, output_size[1] // rows))
+            for img in images
+        ]
+
+        # Create the final image grid
+        grid_image = np.zeros((output_size[1], output_size[0], 3), dtype=np.uint8)
+
+        # Populate the grid with resized images
+        for i in range(rows):
+            for j in range(cols):
+                idx = i * cols + j
+                if idx < num_images:
+                    y_start = i * (output_size[1] // rows)
+                    y_end = (i + 1) * (output_size[1] // rows)
+                    x_start = j * (output_size[0] // cols)
+                    x_end = (j + 1) * (output_size[0] // cols)
+
+                    grid_image[y_start:y_end, x_start:x_end] = resized_images[idx]
+
+        return grid_image
+
+    images = []
     for i in range(size):
         img_msg = rospy.wait_for_message(topic, Image)
         cv_im = cv2_img.msg_to_cv2_img(img_msg)
@@ -55,6 +93,11 @@ def create_dataset(topic: str, dataset: str, name: str, size=50) -> None:
             continue
         cv2.imwrite(os.path.join(dataset_path, f"{name}_{i+1}.png"), face_cropped_cv_im)  # type: ignore
         rospy.loginfo(f"Took picture {i+1}")
+        images.append(face_cropped_cv_im)
+        if debug_publisher is not None:
+            debug_publisher.publish(
+                cv2_img.cv2_img_to_msg(create_image_collage(images))
+            )
 
     # Force retraining
     DeepFace.find(

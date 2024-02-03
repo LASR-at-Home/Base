@@ -19,16 +19,20 @@ rospy.init_node("recognise_service")
 # Determine variables
 DEBUG = rospy.get_param("~debug", False)
 
-debug_publishers = {}
+recognise_debug_publishers = {}
+learn_face_debug_publishers = {}
 if DEBUG:
-    debug_publisher = rospy.Publisher("/recognise/debug", Image, queue_size=1)
+    recognise_debug_publisher = rospy.Publisher("/recognise/debug", Image, queue_size=1)
+    learn_face_debug_publisher = rospy.Publisher(
+        "/learn_face/debug", Image, queue_size=1
+    )
 
 
 def detect(request: RecogniseRequest) -> RecogniseResponse:
     debug_publisher = None
     if DEBUG:
-        if request.dataset in debug_publishers:
-            debug_publisher = debug_publishers[request.dataset]
+        if request.dataset in recognise_debug_publishers:
+            debug_publisher = recognise_debug_publishers[request.dataset]
         else:
             topic_name = re.sub(r"[\W_]+", "", request.dataset)
             debug_publisher = rospy.Publisher(
@@ -38,8 +42,21 @@ def detect(request: RecogniseRequest) -> RecogniseResponse:
 
 
 def learn_face(request: LearnFaceRequest) -> LearnFaceResponse:
+    debug_publisher = None
+    if DEBUG:
+        if request.dataset in learn_face_debug_publishers:
+            debug_publisher = learn_face_debug_publishers[request.dataset]
+        else:
+            topic_name = re.sub(r"[\W_]+", "", request.dataset)
+            debug_publisher = rospy.Publisher(
+                f"/learn_face/debug/{topic_name}", Image, queue_size=1
+            )
     face_recognition.create_dataset(
-        "/xtion/rgb/image_raw", request.dataset, request.name, request.n_images
+        "/xtion/rgb/image_raw",
+        request.dataset,
+        request.name,
+        request.n_images,
+        debug_publisher,
     )
     return LearnFaceResponse()
 
