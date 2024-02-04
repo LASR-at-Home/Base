@@ -6,6 +6,7 @@ import rospkg
 import rospy
 import os
 import numpy as np
+import pandas as pd
 
 from lasr_vision_msgs.msg import Detection
 from lasr_vision_msgs.srv import RecogniseRequest, RecogniseResponse
@@ -42,6 +43,37 @@ def detect_face(cv_im: Mat) -> Mat | None:
     return cv_im[:][y : y + h, x : x + w]
 
 
+def create_image_collage(images, output_size=(640, 480)):
+
+    # Calculate grid dimensions
+    num_images = len(images)
+    rows = int(np.sqrt(num_images))
+    cols = (num_images + rows - 1) // rows  # Ceiling division
+
+    # Resize images to fit in the grid
+    resized_images = [
+        cv2.resize(img, (output_size[0] // cols, output_size[1] // rows))
+        for img in images
+    ]
+
+    # Create the final image grid
+    grid_image = np.zeros((output_size[1], output_size[0], 3), dtype=np.uint8)
+
+    # Populate the grid with resized images
+    for i in range(rows):
+        for j in range(cols):
+            idx = i * cols + j
+            if idx < num_images:
+                y_start = i * (output_size[1] // rows)
+                y_end = (i + 1) * (output_size[1] // rows)
+                x_start = j * (output_size[0] // cols)
+                x_end = (j + 1) * (output_size[0] // cols)
+
+                grid_image[y_start:y_end, x_start:x_end] = resized_images[idx]
+
+    return grid_image
+
+
 def create_dataset(
     topic: str,
     dataset: str,
@@ -53,36 +85,6 @@ def create_dataset(
     if not os.path.exists(dataset_path):
         os.makedirs(dataset_path)
     rospy.loginfo(f"Taking {size} pictures of {name} and saving to {dataset_path}")
-
-    def create_image_collage(images, output_size=(640, 480)):
-
-        # Calculate grid dimensions
-        num_images = len(images)
-        rows = int(np.sqrt(num_images))
-        cols = (num_images + rows - 1) // rows  # Ceiling division
-
-        # Resize images to fit in the grid
-        resized_images = [
-            cv2.resize(img, (output_size[0] // cols, output_size[1] // rows))
-            for img in images
-        ]
-
-        # Create the final image grid
-        grid_image = np.zeros((output_size[1], output_size[0], 3), dtype=np.uint8)
-
-        # Populate the grid with resized images
-        for i in range(rows):
-            for j in range(cols):
-                idx = i * cols + j
-                if idx < num_images:
-                    y_start = i * (output_size[1] // rows)
-                    y_end = (i + 1) * (output_size[1] // rows)
-                    x_start = j * (output_size[0] // cols)
-                    x_end = (j + 1) * (output_size[0] // cols)
-
-                    grid_image[y_start:y_end, x_start:x_end] = resized_images[idx]
-
-        return grid_image
 
     images = []
     for i in range(size):
@@ -132,6 +134,9 @@ def detect(
     except ValueError:
         return response
 
+    # combine list of dataframes into one df
+    print(f"Number of results: {len(result)}")
+
     for row in result:
         if row.empty:
             continue
@@ -162,5 +167,11 @@ def detect(
     # publish to debug topic
     if debug_publisher is not None:
         debug_publisher.publish(cv2_img.cv2_img_to_msg(cv_im))
+        result = pd.concat(result)
+        result_paths = list(result["identity"])
+        result_images = [cv2.imread(path) for path in result_paths]
+        debug_publisher.publish(
+            cv2_img.cv2_img_to_msg(create_image_collage(result_images))
+        )
 
     return response
