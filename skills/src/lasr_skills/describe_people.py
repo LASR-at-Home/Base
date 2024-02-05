@@ -13,6 +13,41 @@ from numpy2message import numpy2message
 
 from .vision import GetImage, ImageMsgToCv2, Get3DImage, PclMsgToCv2, Get2DAnd3DImages
 
+import actionlib
+import numpy as np
+# from sensor_msgs.msg import PointCloud2
+# from control_msgs.msg import PointHeadAction, PointHeadGoal
+# from geometry_msgs.msg import PointStamped
+
+def point_head_client(xyz_array, u, v):
+    # rospy.init_node('point_head_client')
+    
+    rospy.logwarn('making client')
+    client = actionlib.SimpleActionClient('/head_controller/point_head_action', PointHeadAction)    
+    client.wait_for_server()
+
+    target_point = xyz_array[v, u]
+
+    point_camera = PointStamped()
+    point_camera.header.frame_id = "xtion_rgb_optical_frame"
+    point_camera.header.stamp = rospy.Time.now()
+    point_camera.point.x = target_point[0]
+    point_camera.point.y = target_point[1]
+    point_camera.point.z = target_point[2]
+
+    goal = PointHeadGoal()
+    goal.target = point_camera
+    goal.max_velocity = 1.0
+    # goal.min_duration = rospy.Duration(1.0)
+    goal.pointing_frame = "/head_2_link"
+    goal.pointing_axis.x = 1.0
+    goal.pointing_axis.y = 0.0
+    goal.pointing_axis.z = 0.0
+
+    rospy.logwarn('sending the goal and waiting')
+    client.send_goal_and_wait(goal)
+    rospy.logwarn('end')
+
 
 class DescribePeople(smach.StateMachine):
 
@@ -99,8 +134,9 @@ class DescribePeople(smach.StateMachine):
                 neck_coord = (int(result.poses[0].coord[0]), int(result.poses[0].coord[1]))
                 rospy.loginfo("COORD_XY:::%s" % str(neck_coord))
                 xyz = userdata.xyz
-                xyz = np.nanmean(xyz, axis=2)
+                # xyz = np.nanmean(xyz, axis=2)
                 rospy.loginfo("COORD_Z:::%s" % str(xyz[neck_coord[0]][neck_coord[1]]))
+                # point_head_client(xyz, neck_coord[0], neck_coord[1])
                 return 'succeeded'
             except rospy.ServiceException as e:
                 rospy.logwarn(f"Unable to perform inference. ({str(e)})")
