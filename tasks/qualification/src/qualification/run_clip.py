@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-import clip
 import torch
+from sentence_transformers import SentenceTransformer, util
 
 
-def load_model(model_name: str, device: str = "cuda"):
+def load_model(device: str = "cuda"):
     """Load the CLIP model.
 
     Args:
@@ -13,11 +13,11 @@ def load_model(model_name: str, device: str = "cuda"):
     Returns:
         Any: the model and preprocess function
     """
-    model, preprocess = clip.load(model_name, device=device)
-    return model, preprocess
+    model = SentenceTransformer("clip-ViT-B-32")
+    return model
 
 
-def run_clip(model, preprocess, labels, device, img):
+def run_clip(model, labels, device, img):
     """Run the CLIP model.
 
     Args:
@@ -28,9 +28,8 @@ def run_clip(model, preprocess, labels, device, img):
     Returns:
         List[float]: the probabilities
     """
-    txt = clip.tokenize(labels).to(device)
-    img = preprocess(img).unsqueeze(0).to(device)
+    txt = model.encode(labels)
+    img = model.encode(img)
     with torch.no_grad():
-        logits_per_image, logits_per_text = model(img, txt)
-        probs = logits_per_image.softmax(dim=-1).cpu().numpy()
-    return probs
+        cos_scores = util.cos_sim(img, txt)
+    return cos_scores

@@ -32,9 +32,7 @@ class LearnFace:
             auto_start=False,
         )
         self._device = "cuda" if torch.cuda.is_available() else "cpu"
-        self._model, self._preprocess = run_clip.load_model(
-            "ViT-B/32", device=self._device
-        )
+        self._model = run_clip.load_model(device=self._device)
         self._action_server.start()
 
     def _check_for_glasses(self) -> bool:
@@ -50,9 +48,7 @@ class LearnFace:
         # Get image from camera
         img_msg = rospy.wait_for_message("/xtion/rgb/image_raw", Image)
         img = cv2_img.msg_to_pillow_img(img_msg)
-        probs = run_clip.run_clip(
-            self._model, self._preprocess, labels, self._device, img
-        )
+        probs = run_clip.run_clip(self._model, labels, self._device, img)
 
         return probs[0, 0] > probs[0, 1]
 
@@ -65,13 +61,20 @@ class LearnFace:
         self.tts.send_goal_and_wait(tts_goal)
 
         # Check for glasses and ask to remove
-        glasses_detected = self.check_for_glasses()
+        glasses_detected = self._check_for_glasses()
         if glasses_detected:
             tts_goal.rawtext.text = "Please remove your glasses"
             self.tts.send_goal_and_wait(tts_goal)
             rospy.sleep(1)
+            checks = 0
             while glasses_detected:
                 glasses_detected = self._check_for_glasses()
+                checks += 1
+                if checks % 5 == 0:
+                    tts_goal.rawtext.text = (
+                        "I see you're still wearing glasses, please remove them"
+                    )
+                    self.tts.send_goal_and_wait(tts_goal)
                 rospy.sleep(1)
             tts_goal.rawtext.text = "Thanks for removing your glasses!"
             self.tts.send_goal_and_wait(tts_goal)
@@ -79,7 +82,7 @@ class LearnFace:
         req = LFRequest()
         req.dataset = "qualification"
         req.name = goal.name
-        req.n_images = 50
+        req.n_images = 25
         self.learn_face(req)
 
         self._action_server.set_succeeded(LearnFaceResult())

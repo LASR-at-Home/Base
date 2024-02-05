@@ -2,7 +2,8 @@
 import os
 import torch
 import numpy as np
-import matplotlib.pyplot as plt
+
+# import matplotlib.pyplot as plt
 from sklearn.manifold import TSNE
 
 # import rospy
@@ -149,46 +150,46 @@ if __name__ == "__main__":
         return_embeddings=True,
     )
     command_embeddings = np.concatenate((command_embeddings, query_embedding))
-    tsne = TSNE(
-        n_components=2,
-        perplexity=3,
-        verbose=1,
-        n_iter=1000,
-        n_iter_without_progress=1000,
-    )
-    print("Fitting tsne")
-    tsne_embed = tsne.fit_transform(command_embeddings)
-    # plot the embeddings
-    plt.scatter(tsne_embed[:-1, 0], tsne_embed[:-1, 1], label="Commands")
-    plt.scatter(tsne_embed[-1, 0], tsne_embed[-1, 1], label="Query")
-    # Annotate the query
-    plt.annotate(
-        command,
-        (tsne_embed[-1, 0], tsne_embed[-1, 1]),
-    )
-    # Set title
-    plt.title("t-SNE plot of 1000 closest command embeddings")
-    # Label axes
-    plt.xlabel("t-SNE Dimension 1")
-    plt.ylabel("t-SNE Dimension 2")
-    print(f"Command: {command}")
-    for i in range(3):
-        # decide if it should be th or st
-        if i == 0:
-            suffix = "st"
-        elif i == 1:
-            suffix = "nd"
-        elif i == 2:
-            suffix = "rd"
-        else:
-            suffix = "th"
-        print(
-            f"The {i+1}{suffix} closest command is {result[i]} with a similarity of {distances[i]:.2f}"
-        )
-        # Annotate the points
-        plt.annotate(
-            result[i],
-            (tsne_embed[i, 0], tsne_embed[i, 1]),
-        )
+    # tsne = TSNE(
+    #     n_components=2,
+    #     perplexity=3,
+    #     verbose=1,
+    #     n_iter=1000,
+    #     n_iter_without_progress=1000,
+    # )
+    # print("Fitting tsne")
+    # tsne_embed = tsne.fit_transform(command_embeddings)
+    # # plot the embeddings
+    # plt.scatter(tsne_embed[:-1, 0], tsne_embed[:-1, 1], label="Commands")
+    # plt.scatter(tsne_embed[-1, 0], tsne_embed[-1, 1], label="Query")
+    # # Annotate the query
+    # plt.annotate(
+    #     command,
+    #     (tsne_embed[-1, 0], tsne_embed[-1, 1]),
+    # )
+    # # Set title
+    # plt.title("t-SNE plot of 1000 closest command embeddings")
+    # # Label axes
+    # plt.xlabel("t-SNE Dimension 1")
+    # plt.ylabel("t-SNE Dimension 2")
+    # print(f"Command: {command}")
+    # for i in range(3):
+    #     # decide if it should be th or st
+    #     if i == 0:
+    #         suffix = "st"
+    #     elif i == 1:
+    #         suffix = "nd"
+    #     elif i == 2:
+    #         suffix = "rd"
+    #     else:
+    #         suffix = "th"
+    #     print(
+    #         f"The {i+1}{suffix} closest command is {result[i]} with a similarity of {distances[i]:.2f}"
+    #     )
+    #     # Annotate the points
+    #     plt.annotate(
+    #         result[i],
+    #         (tsne_embed[i, 0], tsne_embed[i, 1]),
+    #     )
 
-    plt.show()
+    # plt.show()

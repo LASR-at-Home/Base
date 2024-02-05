@@ -24,29 +24,31 @@ class FindPerson:
     KB = {"lab": {"pose": Pose()}}
 
     def __init__(self):
-
+        rospy.loginfo("Waiting for action servers...")
+        rospy.loginfo("move_base")
         self.move_base = SimpleActionClient("move_base", MoveBaseAction)
         self.move_base.wait_for_server()
-
+        rospy.loginfo("head_controller")
         self.head_controller = actionlib.SimpleActionClient(
             "/head_controller/follow_joint_trajectory", FollowJointTrajectoryAction
         )
-
+        self.head_controller.wait_for_server()
+        rospy.loginfo("tts")
         self.tts = SimpleActionClient("/tts", TtsAction)
         self.tts.wait_for_server()
-
+        rospy.loginfo("identify")
         self.identify = SimpleActionClient(
             "identify",
             IdentifyAction,
         )
         self.identify.wait_for_server()
-
+        rospy.loginfo("detect_people")
         self.detect_people = SimpleActionClient(
             "detect_people",
             DetectPeopleAction,
         )
         self.detect_people.wait_for_server()
-
+        rospy.loginfo("find_person")
         self._action_server = SimpleActionServer(
             "find_person",
             FindPersonAction,
@@ -55,6 +57,7 @@ class FindPerson:
         )
 
         self._action_server.start()
+        rospy.loginfo("Ready")
 
     def execute_cb(self, goal):
         tts_goal = TtsGoal()
@@ -105,7 +108,7 @@ class FindPerson:
         self._action_server.set_succeeded(FindPersonResult())
 
 
-if __name__ == "__name__":
+if __name__ == "__main__":
     rospy.init_node("find_person")
     FindPerson()
     rospy.spin()

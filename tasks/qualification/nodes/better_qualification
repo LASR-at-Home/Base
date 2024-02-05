@@ -27,40 +27,48 @@ from pal_interaction_msgs.msg import TtsGoal, TtsAction
 
 from actionlib import SimpleActionClient
 
-current_location = "corridor"
-current_person = "unknown"
+# supress warnings
+import warnings
 
+warnings.filterwarnings("ignore")
+
+location = "corridor"
+name = "unknown"
+
+print("Waiting for action servers...")
+print("tts")
 tts = SimpleActionClient("/tts", TtsAction)
 tts.wait_for_server()
-
+print("wait_greet")
 wait_greet = SimpleActionClient("wait_greet", WaitGreetAction)
 wait_greet.wait_for_server()
-
+print("identify")
 identify = SimpleActionClient("identify", IdentifyAction)
 identify.wait_for_server()
-
+print("greet")
 greet = SimpleActionClient("greet", GreetAction)
 greet.wait_for_server()
-
+print("get_name")
 get_name = SimpleActionClient("get_name", GetNameAction)
 get_name.wait_for_server()
-
+print("learn_face")
 learn_face = SimpleActionClient("learn_face", LearnFaceAction)
 learn_face.wait_for_server()
-
+print("get_command")
 get_command = SimpleActionClient("get_command", GetCommandAction)
 get_command.wait_for_server()
-
+print("guide")
 guide = SimpleActionClient("guide", GuideAction)
 guide.wait_for_server()
-
+print("find_person")
 find_person = SimpleActionClient("find_person", FindPersonAction)
 find_person.wait_for_server()
+print("All action servers are ready")
 
 
 def after_guiding(to):
-    global current_location
-    current_location = to
+    global location
+    location = to
 
 
 commands = {
@@ -70,8 +78,8 @@ commands = {
         guide,
         GuideGoal,
         [
-            current_person,
-            current_location,
+            name,
+            location,
             "lab",
         ],
     ),
@@ -81,8 +89,8 @@ commands = {
         guide,
         GuideGoal,
         [
-            current_person,
-            current_location,
+            name,
+            location,
             "kitchen",
         ],
     ),
@@ -91,7 +99,7 @@ commands = {
         [],
         find_person,
         FindPersonGoal,
-        ["jared", current_location],
+        ["jared", location],
     ),
 }
 
@@ -113,8 +121,6 @@ if not identify_result.success:
     learn_face.send_goal_and_wait(LearnFaceGoal(name))
 else:
     name = identify_result.name
-
-current_person = name
 
 while not rospy.is_shutdown():
 
