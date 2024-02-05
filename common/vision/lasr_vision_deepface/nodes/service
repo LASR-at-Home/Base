@@ -30,15 +30,28 @@ if DEBUG:
 
 def detect(request: RecogniseRequest) -> RecogniseResponse:
     debug_publisher = None
+    similar_face_debug_publisher = None
     if DEBUG:
         if request.dataset in recognise_debug_publishers:
-            debug_publisher = recognise_debug_publishers[request.dataset]
+            debug_publisher = recognise_debug_publishers[request.dataset][0]
+            similar_face_debug_publisher = recognise_debug_publishers[request.dataset][
+                1
+            ]
         else:
             topic_name = re.sub(r"[\W_]+", "", request.dataset)
             debug_publisher = rospy.Publisher(
                 f"/recognise/debug/{topic_name}", Image, queue_size=1
             )
-    return face_recognition.detect(request, debug_publisher)
+            similar_face_debug_publisher = rospy.Publisher(
+                f"/recognise/debug/{topic_name}/similar_face", Image, queue_size=1
+            )
+            recognise_debug_publishers[request.dataset] = (
+                debug_publisher,
+                similar_face_debug_publisher,
+            )
+    return face_recognition.detect(
+        request, debug_publisher, similar_face_debug_publisher
+    )
 
 
 def learn_face(request: LearnFaceRequest) -> LearnFaceResponse:

@@ -48,6 +48,7 @@ def create_image_collage(images, output_size=(640, 480)):
     # Calculate grid dimensions
     num_images = len(images)
     rows = int(np.sqrt(num_images))
+    print(num_images, rows)
     cols = (num_images + rows - 1) // rows  # Ceiling division
 
     # Resize images to fit in the grid
@@ -112,7 +113,9 @@ def create_dataset(
 
 
 def detect(
-    request: RecogniseRequest, debug_publisher: rospy.Publisher | None
+    request: RecogniseRequest,
+    debug_publisher: rospy.Publisher | None,
+    debug_inference_pub: rospy.Publisher | None,
 ) -> RecogniseResponse:
     # Decode the image
     rospy.loginfo("Decoding")
@@ -133,9 +136,6 @@ def detect(
         )
     except ValueError:
         return response
-
-    # combine list of dataframes into one df
-    print(f"Number of results: {len(result)}")
 
     for row in result:
         if row.empty:
@@ -167,11 +167,15 @@ def detect(
     # publish to debug topic
     if debug_publisher is not None:
         debug_publisher.publish(cv2_img.cv2_img_to_msg(cv_im))
+    if debug_inference_pub is not None:
         result = pd.concat(result)
-        result_paths = list(result["identity"])
-        result_images = [cv2.imread(path) for path in result_paths]
-        debug_publisher.publish(
-            cv2_img.cv2_img_to_msg(create_image_collage(result_images))
-        )
+        # check for empty result
+        if not result.empty:
+            result_paths = list(result["identity"])
+            result_images = [cv2.imread(path) for path in result_paths]
+            print(len(result_images))
+            debug_inference_pub.publish(
+                cv2_img.cv2_img_to_msg(create_image_collage(result_images))
+            )
 
     return response
