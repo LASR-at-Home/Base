@@ -91,7 +91,7 @@ class TranscribeSpeechAction(object):
                 self._model_params.warmup,
             )
             # Configure the speech recogniser object and adjust for ambient noise
-            self.recogniser = self._configure_recogniser()
+            self.recogniser = self._configure_recogniser(ambient_adj=False)
             # Setup the action server and register execution callback
             self._action_server = actionlib.SimpleActionServer(
                 self._action_name,
@@ -110,6 +110,7 @@ class TranscribeSpeechAction(object):
             self._action_server.start()
 
     def _timer_cb(self, _) -> None:
+        return
         """Adjusts the microphone for ambient noise, unless the action server is listening."""
         if self._listening:
             return
