@@ -103,3 +103,9 @@ class FindPerson:
                 break
 
         self._action_server.set_succeeded(FindPersonResult())
+
+
+if __name__ == "__name__":
+    rospy.init_node("find_person")
+    FindPerson()
+    rospy.spin()

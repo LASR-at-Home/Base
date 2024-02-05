@@ -55,3 +55,9 @@ class DetectPeople:
         ]
 
         self._action_server.set_succeeded(result)
+
+
+if __name__ == "__main__":
+    rospy.init_node("detect_people")
+    DetectPeople()
+    rospy.spin()
