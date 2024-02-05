@@ -23,7 +23,8 @@ from qualification.msg import (
 )
 
 from pal_interaction_msgs.msg import TtsGoal, TtsAction
-
+from control_msgs.msg import FollowJointTrajectoryAction, FollowJointTrajectoryGoal
+from trajectory_msgs.msg import JointTrajectoryPoint
 
 from actionlib import SimpleActionClient
 
@@ -82,6 +83,27 @@ def exec_command(command):
         find_person.send_goal_and_wait(goal)
 
 
+torso_controller = SimpleActionClient(
+    "torso_controller/follow_joint_trajectory", FollowJointTrajectoryAction
+)
+torso_raise_goal = FollowJointTrajectoryGoal()
+torso_raise_goal.trajectory.joint_names = ["torso_lift_joint"]
+point = JointTrajectoryPoint()
+point.positions = [0.35]
+point.time_from_start = rospy.Duration(1)
+torso_raise_goal.trajectory.points.append(point)
+
+
+torso_lower_goal = FollowJointTrajectoryGoal()
+torso_lower_goal.trajectory.joint_names = ["torso_lift_joint"]
+point = JointTrajectoryPoint()
+point.positions = [0.15]
+point.time_from_start = rospy.Duration(1)
+torso_lower_goal.trajectory.points.append(point)
+
+
+# Raise the torso
+torso_controller.send_goal_and_wait(torso_raise_goal)
 # Wait to be greeted
 wait_greet.send_goal_and_wait(WaitGreetGoal())
 
@@ -101,7 +123,7 @@ else:
     name = identify_result.name
 
 while not rospy.is_shutdown():
-
+    torso_controller.send_goal_and_wait(torso_lower_goal)
     # Get a command from the person
     get_command.send_goal_and_wait(GetCommandGoal(name))
     command_result = get_command.get_result()
