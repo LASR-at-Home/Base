@@ -167,6 +167,8 @@ catkin_install_python(PROGRAMS
   nodes/actions/learn_face
   nodes/actions/get_command
   nodes/actions/guide
+  nodes/actions/find_person
+  nodes/actions/detect_people
   nodes/better_qualification
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
