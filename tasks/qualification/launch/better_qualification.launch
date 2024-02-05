@@ -8,6 +8,8 @@
         <arg name="debug" value="true" />
     </include>
 
+    <node pkg="unsafe_traversal" type="unsafe_traversal" name="unsafe_traversal"/>
+
     <node pkg="qualification" type="wait_greet" name="wait_greet_action" output="screen"/>
     <node pkg="qualification" type="detect_people" name="detect_people_action" output="screen"/>
     <node pkg="qualification" type="find_person" name="find_person_action" output="screen"/>
@@ -18,6 +20,8 @@
     <node pkg="qualification" type="identify" name="identify_action" output="screen"/>
     <node pkg="qualification" type="learn_face" name="learn_face_action" output="screen"/>
     
+
+
     <!-- <node pkg="qualification" type="better_qualification" name="better_qualification" output="screen"/> -->
 
 </launch>
