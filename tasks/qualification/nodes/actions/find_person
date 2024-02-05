@@ -8,19 +8,44 @@ from qualification.msg import (
     FindPersonResult,
     IdentifyAction,
     IdentifyGoal,
+    DetectPeopleAction,
+    DetectPeopleGoal,
 )
+from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from actionlib import SimpleActionClient, SimpleActionServer
+from pal_interaction_msgs.msg import TtsGoal, TtsAction
+from geometry_msgs.msg import Pose, Point, Quaternion
+from control_msgs.msg import FollowJointTrajectoryAction, FollowJointTrajectoryGoal
+from trajectory_msgs.msg import JointTrajectoryPoint
 
 
 class FindPerson:
 
+    KB = {"lab": {"pose": Pose()}}
+
     def __init__(self):
+
+        self.move_base = SimpleActionClient("move_base", MoveBaseAction)
+        self.move_base.wait_for_server()
+
+        self.head_controller = actionlib.SimpleActionClient(
+            "/head_controller/follow_joint_trajectory", FollowJointTrajectoryAction
+        )
+
+        self.tts = SimpleActionClient("/tts", TtsAction)
+        self.tts.wait_for_server()
 
         self.identify = SimpleActionClient(
             "identify",
             IdentifyAction,
         )
         self.identify.wait_for_server()
+
+        self.detect_people = SimpleActionClient(
+            "detect_people",
+            DetectPeopleAction,
+        )
+        self.detect_people.wait_for_server()
 
         self._action_server = SimpleActionServer(
             "find_person",
@@ -32,5 +57,49 @@ class FindPerson:
         self._action_server.start()
 
     def execute_cb(self, goal):
-        rospy.loginfo(f"Finding person {goal.person}")
+        tts_goal = TtsGoal()
+        tts_goal.rawtext.lang_id = "en_GB"
+        move_base_goal = MoveBaseGoal()
+        move_base_goal.target_pose.header.frame_id = "map"
+        head_goal = FollowJointTrajectoryGoal()
+        head_goal.trajectory.joint_names = ["head_1_joint", "head_2_joint"]
+
+        tts_goal.rawtext.text = f"Finding person {goal.name} in the {goal.location}..."
+        self.tts.send_goal_and_wait(tts_goal)
+
+        move_base_goal.target_pose.header.stamp = rospy.Time.now()
+        move_base_goal.target_pose.pose = self.KB[goal.location]["pose"]
+        self.move_base.send_goal_and_wait(move_base_goal)
+
+        joint_positions = [[0.0, 0.5], [0.0, 0.0], [0.0, -0.5]]
+
+        for joint_position in joint_positions:
+            point = JointTrajectoryPoint()
+            point.positions = joint_position
+            point.time_from_start = rospy.Duration(1)
+            head_goal.trajectory.points = [(point)]
+            self.head_controller.send_goal_and_wait(head_goal)
+
+            self.identify.send_goal_and_wait(IdentifyGoal())
+            identify_result = self.identify.get_result()
+            if identify_result.name == goal.name:
+                self.detect_people.send_goal_and_wait(DetectPeopleGoal())
+                detect_people_result = self.detect_people.get_result()
+                # Assume there is a single person
+                person_point = detect_people_result.points[0]
+
+                point = JointTrajectoryPoint()
+                point.positions = [0.0, 0.0]
+                point.time_from_start = rospy.Duration(1)
+                head_goal.trajectory.points = [(point)]
+                self.head_controller.send_goal_and_wait(head_goal)
+
+                move_base_goal.target_pose.header.stamp = rospy.Time.now()
+                move_base_goal.target_pose = Pose(
+                    position=Point(person_point.x - 2.0, person_point.y, 0.0),
+                    orientation=self.KB[goal.location]["pose"].orientation,
+                )
+                self.move_base.send_goal_and_wait(move_base_goal)
+                break
+
         self._action_server.set_succeeded(FindPersonResult())
