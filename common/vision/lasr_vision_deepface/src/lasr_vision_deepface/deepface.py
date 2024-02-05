@@ -172,6 +172,8 @@ def detect(
         # check for empty result
         if not result.empty:
             result_paths = list(result["identity"])
+            if len(result_paths) > 5:
+                result_paths = result_paths[:5]
             result_images = [cv2.imread(path) for path in result_paths]
             print(len(result_images))
             debug_inference_pub.publish(

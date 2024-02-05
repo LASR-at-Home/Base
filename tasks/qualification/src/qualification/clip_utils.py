@@ -3,6 +3,7 @@ import torch
 import rospy
 import cv2
 import cv2_img
+from copy import deepcopy
 from sentence_transformers import SentenceTransformer, util
 
 from sensor_msgs.msg import Image
@@ -40,7 +41,7 @@ def run_clip(model, labels, img):
     return cos_scores
 
 
-def vqa(model, answers: list[str]) -> tuple(str, torch.Tensor, Image):
+def vqa(model, answers: list[str]) -> tuple[str, torch.Tensor, Image]:
     """Queries
 
     Args:
@@ -50,23 +51,39 @@ def vqa(model, answers: list[str]) -> tuple(str, torch.Tensor, Image):
         tuple(str, torch.Tensor, Image): the answer, the scores, and the annotated image msg
     """
     img_msg = rospy.wait_for_message("/xtion/rgb/image_raw", Image)
-    img = cv2_img.msg_to_pillow_img(img_msg)
+    img_pil = cv2_img.msg_to_pillow_img(img_msg)
 
-    cos_scores = run_clip(model, answers, img)
-
+    cos_scores = run_clip(model, answers, img_pil)
     max_score = cos_scores.argmax()
-    second_max_score = cos_scores.argsort()[-2]  # second highest score
+    # get second highest score in tensor
+    max_val = deepcopy(cos_scores[0, max_score])
+    cos_scores[0, max_score] = 0
+    second_max_score = cos_scores.argmax()
+    cos_scores[0, max_score] = max_val
     # Annotate the image
-    cv2_im = cv2_img.pillow_img_to_cv2_img(img)
+    cv2_im = cv2_img.msg_to_cv2_img(img_msg)
+    # normalise the scores
     cv2.putText(
         cv2_im,
-        f"{answers[max_score]}: {cos_scores[max_score]:.2f}\n{answers[second_max_score]}: {cos_scores[second_max_score]:.2f}",
+        f"Most likely caption: {answers[max_score]}",
         (10, 30),
         cv2.FONT_HERSHEY_SIMPLEX,
-        1,
+        0.5,
         (0, 255, 0),
         2,
         cv2.LINE_AA,
     )
+    # add second score below
+    cv2.putText(
+        cv2_im,
+        f"Second most likely caption: {answers[second_max_score]}",
+        (10, 60),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.5,
+        (0, 255, 0),
+        2,
+        cv2.LINE_AA,
+    )
+
     img = cv2_img.cv2_img_to_msg(cv2_im)
     return answers[max_score], cos_scores, img

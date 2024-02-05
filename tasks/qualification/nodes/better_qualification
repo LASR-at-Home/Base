@@ -64,10 +64,16 @@ guide.wait_for_server()
 print("find_person")
 find_person = SimpleActionClient("find_person", FindPersonAction)
 find_person.wait_for_server()
+print("torso_controller")
+torso_controller = SimpleActionClient(
+    "torso_controller/follow_joint_trajectory", FollowJointTrajectoryAction
+)
+torso_controller.wait_for_server()
 print("All action servers are ready")
 
 
 def exec_command(command):
+    torso_controller.send_goal_and_wait(torso_lower_goal)
     global name
     global location
     if command == "Please guide me to the lab.":
@@ -83,9 +89,6 @@ def exec_command(command):
         find_person.send_goal_and_wait(goal)
 
 
-torso_controller = SimpleActionClient(
-    "torso_controller/follow_joint_trajectory", FollowJointTrajectoryAction
-)
 torso_raise_goal = FollowJointTrajectoryGoal()
 torso_raise_goal.trajectory.joint_names = ["torso_lift_joint"]
 point = JointTrajectoryPoint()
@@ -123,7 +126,6 @@ else:
     name = identify_result.name
 
 while not rospy.is_shutdown():
-    torso_controller.send_goal_and_wait(torso_lower_goal)
     # Get a command from the person
     get_command.send_goal_and_wait(GetCommandGoal(name))
     command_result = get_command.get_result()
