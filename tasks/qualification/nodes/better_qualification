@@ -66,42 +66,20 @@ find_person.wait_for_server()
 print("All action servers are ready")
 
 
-def after_guiding(to):
+def exec_command(command):
+    global name
     global location
-    location = to
-
-
-commands = {
-    "Please guide me to the lab.": (
-        after_guiding,
-        ["lab"],
-        guide,
-        GuideGoal,
-        [
-            name,
-            location,
-            "lab",
-        ],
-    ),
-    "Please guide me to the kitchen.": (
-        after_guiding,
-        ["kitchen"],
-        guide,
-        GuideGoal,
-        [
-            name,
-            location,
-            "kitchen",
-        ],
-    ),
-    "Could you please find Jared and ask if they need assistance.": (
-        lambda: None,
-        [],
-        find_person,
-        FindPersonGoal,
-        ["jared", location],
-    ),
-}
+    if command == "Please guide me to the lab.":
+        goal = GuideGoal(name, location, "lab")
+        guide.send_goal_and_wait(goal)
+        location = "lab"
+    if command == "Please guide me to the kitchen.":
+        goal = GuideGoal(name, location, "kitchen")
+        guide.send_goal_and_wait(goal)
+        location = "kitchen"
+    if command == "Could you please find Jared and ask if they need assistance.":
+        goal = FindPersonGoal("jared", location)
+        find_person.send_goal_and_wait(goal)
 
 
 # Wait to be greeted
@@ -133,7 +111,4 @@ while not rospy.is_shutdown():
 
     # Execute the command
     command = command_result.command
-    post_cmd, post_cmd_args, action, goal, goal_args = commands[command]
-    goal = goal(*goal_args)
-    action.send_goal_and_wait(goal)
-    post_cmd(*post_cmd_args)
+    exec_command(command)
