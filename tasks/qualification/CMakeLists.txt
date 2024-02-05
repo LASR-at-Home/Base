@@ -170,6 +170,7 @@ catkin_install_python(PROGRAMS
   nodes/actions/find_person
   nodes/actions/detect_people
   nodes/actions/receive_object
+  nodes/actions/handover_object
   nodes/better_qualification
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )

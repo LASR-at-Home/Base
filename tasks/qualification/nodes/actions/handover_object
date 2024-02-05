@@ -1,0 +1,57 @@
+#!/usr/bin/env python3
+import rospy
+from actionlib import SimpleActionServer, SimpleActionClient
+
+from lasr_speech_msgs.msg import TranscribeSpeechAction, TranscribeSpeechGoal
+
+from qualification.msg import HandoverObjectAction, HandoverObjectResult
+from play_motion_msgs.msg import PlayMotionAction, PlayMotionGoal
+from pal_interaction_msgs.msg import TtsGoal, TtsAction
+
+
+class HandoverObject:
+
+    def __init__(self):
+        self.transcribe_speech = SimpleActionClient(
+            "transcribe_speech", TranscribeSpeechAction
+        )
+        self.transcribe_speech.wait_for_server()
+
+        self.play_motion = SimpleActionClient("play_motion", PlayMotionAction)
+        self.play_motion.wait_for_server()
+
+        self.tts = SimpleActionClient("/tts", TtsAction)
+        self.tts.wait_for_server()
+
+        self._action_server = SimpleActionServer(
+            "receive_object",
+            ReceiveObjectAction,
+            execute_cb=self.execute_cb,
+            auto_start=False,
+        )
+
+    def execute_cb(self, goal):
+        tts_goal = TtsGoal()
+        tts_goal.rawtext.lang_id = "en_GB"
+        pm_goal = PlayMotionGoal(motion_name="reach_arm", skip_planning=False)
+        self.play_motion.send_goal_and_wait(pm_goal)
+
+        tts_goal.rawtext.text = "Please grab the object in my hand, and say 'Done' when you are rady for me to release it."
+        self.tts.send_goal_and_wait(tts_goal)
+        while True:
+            self.transcribe_speech.send_goal(TranscribeSpeechGoal())
+            self.transcribe_speech.wait_for_result()
+            result = self.transcribe_speech.get_result()
+            if "done" in result.sequence.lower():
+                break
+        pm_goal = PlayMotionGoal(motion_name="open_gripper", skip_planning=False)
+        self.play_motion.send_goal_and_wait(pm_goal)
+        pm_goal = PlayMotionGoal(motion_name="back_to_default", skip_planning=False)
+        self.play_motion.send_goal_and_wait(pm_goal)
+        self._action_server.set_succeeded(HandoverObjectResult())
+
+
+if __name__ == "__main__":
+    rospy.init_node("handover_object")
+    HandoverObject()
+    rospy.spin()
