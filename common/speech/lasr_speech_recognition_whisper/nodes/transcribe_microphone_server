@@ -351,6 +351,8 @@ if __name__ == "__main__":
     sys.argv = [arg for arg in sys.argv if not arg.startswith("__")]
     configure_whisper_cache()
     config = parse_args()
-    rospy.init_node(config["action_name"])
-    server = TranscribeSpeechAction(rospy.get_name(), configure_model_params(config))
+    rospy.init_node("aksdkasbdkjsabd")
+    server = TranscribeSpeechAction(
+        config["action_name"], configure_model_params(config)
+    )
     rospy.spin()
