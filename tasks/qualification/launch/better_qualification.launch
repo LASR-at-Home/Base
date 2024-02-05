@@ -2,10 +2,23 @@
     <include file="$(find lasr_vision_deepface)/launch/service.launch">
         <arg name="debug" value="true" />
     </include>
+
     <node pkg="lasr_speech_recognition_whisper" type="transcribe_microphone_server" name="transcribe_microphone_server" output="screen" args="--mic_device 10"/>
+    <include file="$(find lasr_vision_yolov8)/launch/service.launch">
+        <arg name="debug" value="true" />
+    </include>
 
     <node pkg="qualification" type="wait_greet" name="wait_greet" output="screen"/>
-
+    <node pkg="qualification" type="detect_people" name="detect_people" output="screen"/>
+    <node pkg="qualification" type="find_person" name="find_person" output="screen"/>
+    <node pkg="qualification" type="get_command" name="get_command" output="screen"/>
+    <node pkg="qualification" type="get_name" name="get_name" output="screen"/>
+    <node pkg="qualification" type="greet" name="greet" output="screen"/>
+    <node pkg="qualification" type="guide" name="guide" output="screen"/>
+    <node pkg="qualification" type="identify" name="identify" output="screen"/>
+    <node pkg="qualification" type="learn_face" name="learn_face" output="screen"/>
+    
     <node pkg="qualification" type="better_qualification" name="better_qualification" output="screen"/>
+
 </launch>
 
