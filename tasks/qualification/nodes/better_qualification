@@ -16,10 +16,14 @@ from qualification.msg import (
     LearnFaceGoal,
     GetCommandAction,
     GetCommandGoal,
+    GuideAction,
+    GuideGoal,
 )
 
 from actionlib import SimpleActionClient
 
+current_location = "corridor"
+current_person = "unknown"
 
 wait_greet = SimpleActionClient("wait_greet", WaitGreetAction)
 wait_greet.wait_for_server()
@@ -37,6 +41,28 @@ learn_face = SimpleActionClient("learn_face", LearnFaceAction)
 learn_face.wait_for_server()
 
 get_command = SimpleActionClient("get_command", GetCommandAction)
+get_command.wait_for_server()
+
+guide = SimpleActionClient("guide", GuideAction)
+guide.wait_for_server()
+
+commands = {
+    "Please guide me to the lab.": (
+        guide,
+        GuideGoal,
+        current_person,
+        current_location,
+        "lab",
+    ),
+    "Please guide me to the kitchen.": (
+        guide,
+        GuideGoal,
+        current_person,
+        current_location,
+        "kitchen",
+    ),
+}
+
 
 # Wait to be greeted
 wait_greet.send_goal_and_wait(WaitGreetGoal())
@@ -56,11 +82,17 @@ if not identify_result.success:
 else:
     name = identify_result.name
 
+current_person = name
+
 # Get a command from the person
 get_command.send_goal_and_wait(GetCommandGoal(name))
 command_result = get_command.get_result()
 if not command_result.command:
     ## FINISH
-    rospy.signal_shutdown()
+    rospy.signal_shutdown(0)
 
 # Execute the command
+command = command_result.command
+action, goal, *args = commands[command]
+goal = goal(*args)
+action.send_goal_and_wait(goal)

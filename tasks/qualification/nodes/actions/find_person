@@ -1,0 +1,36 @@
+#!/usr/bin/env python3
+
+import rospy
+import actionlib
+
+from qualification.msg import (
+    FindPersonAction,
+    FindPersonResult,
+    IdentifyAction,
+    IdentifyGoal,
+)
+from actionlib import SimpleActionClient, SimpleActionServer
+
+
+class FindPerson:
+
+    def __init__(self):
+
+        self.identify = SimpleActionClient(
+            "identify",
+            IdentifyAction,
+        )
+        self.identify.wait_for_server()
+
+        self._action_server = SimpleActionServer(
+            "find_person",
+            FindPersonAction,
+            execute_cb=self.execute_cb,
+            auto_start=False,
+        )
+
+        self._action_server.start()
+
+    def execute_cb(self, goal):
+        rospy.loginfo(f"Finding person {goal.person}")
+        self._action_server.set_succeeded(FindPersonResult())
