@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
 
+from typing import Any
 import rospy
 import actionlib
-
+import cv2_img
+import clip
+import torch
 
 from qualification.msg import LearnFaceAction, LearnFaceResult
 from lasr_vision_msgs.srv import LearnFace as LF, LearnFaceRequest as LFRequest
 from pal_interaction_msgs.msg import TtsGoal, TtsAction
+from sensor_msgs.msg import Image
 from actionlib import SimpleActionClient
 
 
@@ -27,8 +31,31 @@ class LearnFace:
             execute_cb=self.execute_cb,
             auto_start=False,
         )
-
+        self._device = "cuda" if torch.cuda.is_available() else "cpu"
+        self._model, self._preprocess = clip.load("ViT-B/32", device=self._device)
         self._action_server.start()
+
+    def _check_for_glasses(self) -> bool:
+        """Checks if the person is wearing glasses using CLIP.
+
+        Returns:
+            bool: if the person is wearing glasses
+        """
+        labels = [
+            "a person wearing glasses",
+            "a person not wearing glasses",
+        ]
+        txt = clip.tokenize(labels).to(self._device)
+        # Get image from camera
+        img_msg = rospy.wait_for_message("/xtion/rgb/image_raw", Image)
+        img = cv2_img.msg_to_pillow_img(img_msg)
+        img = self._preprocess(img).unsqueeze(0).to(self._device)
+
+        with torch.no_grad():
+            logits_per_image, logits_per_text = self._model(img, txt)
+            probs = logits_per_image.softmax(dim=-1).cpu().numpy()
+
+        return probs[0, 0] > probs[0, 1]
 
     def execute_cb(self, goal):
         rospy.loginfo("Learning face!")
@@ -37,6 +64,18 @@ class LearnFace:
         tts_goal.rawtext.lang_id = "en_GB"
         tts_goal.rawtext.text = f"{goal.name}, give me a moment to learn your face"
         self.tts.send_goal_and_wait(tts_goal)
+
+        # Check for glasses and ask to remove
+        glasses_detected = self.check_for_glasses()
+        if glasses_detected:
+            tts_goal.rawtext.text = "Please remove your glasses"
+            self.tts.send_goal_and_wait(tts_goal)
+            rospy.sleep(1)
+            while glasses_detected:
+                glasses_detected = self._check_for_glasses()
+                rospy.sleep(1)
+            tts_goal.rawtext.text = "Thanks for removing your glasses!"
+            self.tts.send_goal_and_wait(tts_goal)
 
         req = LFRequest()
         req.dataset = "qualification"

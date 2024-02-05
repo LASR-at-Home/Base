@@ -7,7 +7,7 @@ project(qualification)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED catkin_virtualenv message_generation genmsg actionlib_msgs actionlib)
+find_package(catkin REQUIRED catkin_virtualenv message_generation genmsg actionlib_msgs actionlib geometry_msgs)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -62,13 +62,14 @@ catkin_generate_virtualenv(
 # Generate actions in the 'action' folder
 add_action_files(
   DIRECTORY action
-  FILES WaitGreet.action Identify.action Greet.action GetName.action LearnFace.action GetCommand.action Guide.action
+  FILES WaitGreet.action Identify.action Greet.action GetName.action LearnFace.action GetCommand.action Guide.action FindPerson.action
 )
 
 # Generate added messages and services with any dependencies listed here
 generate_messages(
   DEPENDENCIES
   actionlib_msgs
+  geometry_msgs
 )
 
 ################################################
@@ -166,6 +167,8 @@ catkin_install_python(PROGRAMS
   nodes/actions/learn_face
   nodes/actions/get_command
   nodes/actions/guide
+  nodes/actions/find_person
+  nodes/actions/detect_people
   nodes/better_qualification
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
