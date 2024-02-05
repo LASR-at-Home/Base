@@ -8,15 +8,15 @@
         <arg name="debug" value="true" />
     </include>
 
-    <node pkg="qualification" type="wait_greet" name="wait_greet" output="screen"/>
-    <node pkg="qualification" type="detect_people" name="detect_people" output="screen"/>
-    <node pkg="qualification" type="find_person" name="find_person" output="screen"/>
-    <node pkg="qualification" type="get_command" name="get_command" output="screen"/>
-    <node pkg="qualification" type="get_name" name="get_name" output="screen"/>
-    <node pkg="qualification" type="greet" name="greet" output="screen"/>
-    <node pkg="qualification" type="guide" name="guide" output="screen"/>
-    <node pkg="qualification" type="identify" name="identify" output="screen"/>
-    <node pkg="qualification" type="learn_face" name="learn_face" output="screen"/>
+    <node pkg="qualification" type="wait_greet" name="wait_greet_action" output="screen"/>
+    <node pkg="qualification" type="detect_people" name="detect_people_action" output="screen"/>
+    <node pkg="qualification" type="find_person" name="find_person_action" output="screen"/>
+    <node pkg="qualification" type="get_command" name="get_command_action" output="screen"/>
+    <node pkg="qualification" type="get_name" name="get_name_action" output="screen"/>
+    <node pkg="qualification" type="greet" name="greet_action" output="screen"/>
+    <node pkg="qualification" type="guide" name="guide_action" output="screen"/>
+    <node pkg="qualification" type="identify" name="identify_action" output="screen"/>
+    <node pkg="qualification" type="learn_face" name="learn_face_action" output="screen"/>
     
     <node pkg="qualification" type="better_qualification" name="better_qualification" output="screen"/>
 
