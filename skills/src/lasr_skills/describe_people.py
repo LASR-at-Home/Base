@@ -15,9 +15,9 @@ from .vision import GetImage, ImageMsgToCv2, Get3DImage, PclMsgToCv2, Get2DAnd3D
 
 import actionlib
 import numpy as np
-# from sensor_msgs.msg import PointCloud2
-# from control_msgs.msg import PointHeadAction, PointHeadGoal
-# from geometry_msgs.msg import PointStamped
+from sensor_msgs.msg import PointCloud2
+from control_msgs.msg import PointHeadAction, PointHeadGoal
+from geometry_msgs.msg import PointStamped
 
 def point_head_client(xyz_array, u, v):
     # rospy.init_node('point_head_client')
@@ -136,7 +136,7 @@ class DescribePeople(smach.StateMachine):
                 xyz = userdata.xyz
                 # xyz = np.nanmean(xyz, axis=2)
                 rospy.loginfo("COORD_Z:::%s" % str(xyz[neck_coord[0]][neck_coord[1]]))
-                # point_head_client(xyz, neck_coord[0], neck_coord[1])
+                point_head_client(xyz, neck_coord[0], neck_coord[1])
                 return 'succeeded'
             except rospy.ServiceException as e:
                 rospy.logwarn(f"Unable to perform inference. ({str(e)})")
