@@ -7,12 +7,8 @@ from qualification.msg import GuideAction, GuideResult
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from pal_interaction_msgs.msg import TtsGoal, TtsAction
 from actionlib import SimpleActionClient
-import qualification.clip_utils as clip
-import cv2_img
-import torch
 from geometry_msgs.msg import Pose, Point, Quaternion
-from sensor_msgs.msg import Image
-from copy import deepcopy
+from unsafe_traversal.srv import LaserDist
 
 
 class Guide:
@@ -56,12 +52,10 @@ class Guide:
 
         self.move_base = SimpleActionClient("move_base", MoveBaseAction)
         self.move_base.wait_for_server()
-        self._device = "cuda" if torch.cuda.is_available() else "cpu"
-        self._model = clip.load_model(device=self._device)
-        self.door_pub = rospy.Publisher("/guide/door", Image, queue_size=1)
         self.tts = SimpleActionClient("/tts", TtsAction)
         self.tts.wait_for_server()
-
+        self.laser_dist = rospy.ServiceProxy("/unsafe_traversal/laser_dist_checker")
+        self.laser_dist.wait_for_service()
         self._action_server = actionlib.SimpleActionServer(
             "guide",
             GuideAction,
@@ -87,11 +81,7 @@ class Guide:
                 queue.append(new_path)
 
     def check_for_door(self):
-        labels = ["a closed door", "an open door"]
-        # Get image from camera
-        answer, probs, image = clip.vqa(self._model, labels)
-        self.door_pub.publish(image)
-        return answer == "a closed door"
+        return self.laser_dist().dist < 2.0
 
     def execute_cb(self, goal):
         rospy.loginfo(goal)
