@@ -11,7 +11,7 @@ from lasr_vision_msgs.srv import LearnFace as LF, LearnFaceRequest as LFRequest
 from pal_interaction_msgs.msg import TtsGoal, TtsAction
 from sensor_msgs.msg import Image
 from actionlib import SimpleActionClient
-import qualification.run_clip as run_clip
+import qualification.clip_utils as clip
 
 
 class LearnFace:
@@ -20,6 +20,7 @@ class LearnFace:
 
         self.learn_face = rospy.ServiceProxy("/learn_face", LF)
         self.learn_face.wait_for_service()
+        self.glasses_pub = rospy.Publisher("/learn_face/glasses", Image, queue_size=1)
         rospy.loginfo("got learn_face")
 
         self.tts = SimpleActionClient("/tts", TtsAction)
@@ -32,7 +33,7 @@ class LearnFace:
             auto_start=False,
         )
         self._device = "cuda" if torch.cuda.is_available() else "cpu"
-        self._model = run_clip.load_model(device=self._device)
+        self._model = clip.load_model(device=self._device)
         self._action_server.start()
 
     def _check_for_glasses(self) -> bool:
@@ -45,12 +46,9 @@ class LearnFace:
             "a person wearing glasses",
             "a person not wearing glasses",
         ]
-        # Get image from camera
-        img_msg = rospy.wait_for_message("/xtion/rgb/image_raw", Image)
-        img = cv2_img.msg_to_pillow_img(img_msg)
-        probs = run_clip.run_clip(self._model, labels, self._device, img)
-
-        return probs[0, 0] > probs[0, 1]
+        answer, probs, image = clip.vqa(self._model, labels)
+        self.glasses_pub.publish((image))
+        return answer == "a person wearing glasses"
 
     def execute_cb(self, goal):
         rospy.loginfo("Learning face!")
