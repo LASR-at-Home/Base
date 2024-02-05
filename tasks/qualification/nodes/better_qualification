@@ -18,12 +18,20 @@ from qualification.msg import (
     GetCommandGoal,
     GuideAction,
     GuideGoal,
+    FindPersonAction,
+    FindPersonGoal,
 )
+
+from pal_interaction_msgs.msg import TtsGoal, TtsAction
+
 
 from actionlib import SimpleActionClient
 
 current_location = "corridor"
 current_person = "unknown"
+
+tts = SimpleActionClient("/tts", TtsAction)
+tts.wait_for_server()
 
 wait_greet = SimpleActionClient("wait_greet", WaitGreetAction)
 wait_greet.wait_for_server()
@@ -46,20 +54,44 @@ get_command.wait_for_server()
 guide = SimpleActionClient("guide", GuideAction)
 guide.wait_for_server()
 
+find_person = SimpleActionClient("find_person", FindPersonAction)
+find_person.wait_for_server()
+
+
+def after_guiding(to):
+    global current_location
+    current_location = to
+
+
 commands = {
     "Please guide me to the lab.": (
+        after_guiding,
+        ["lab"],
         guide,
         GuideGoal,
-        current_person,
-        current_location,
-        "lab",
+        [
+            current_person,
+            current_location,
+            "lab",
+        ],
     ),
     "Please guide me to the kitchen.": (
+        after_guiding,
+        ["kitchen"],
         guide,
         GuideGoal,
-        current_person,
-        current_location,
-        "kitchen",
+        [
+            current_person,
+            current_location,
+            "kitchen",
+        ],
+    ),
+    "Could you please find Jared and ask if they need assistance.": (
+        lambda: None,
+        [],
+        find_person,
+        FindPersonGoal,
+        ["jared", current_location],
     ),
 }
 
@@ -84,15 +116,18 @@ else:
 
 current_person = name
 
-# Get a command from the person
-get_command.send_goal_and_wait(GetCommandGoal(name))
-command_result = get_command.get_result()
-if not command_result.command:
-    ## FINISH
-    rospy.signal_shutdown(0)
+while not rospy.is_shutdown():
 
-# Execute the command
-command = command_result.command
-action, goal, *args = commands[command]
-goal = goal(*args)
-action.send_goal_and_wait(goal)
+    # Get a command from the person
+    get_command.send_goal_and_wait(GetCommandGoal(name))
+    command_result = get_command.get_result()
+    if not command_result.command:
+        ## FINISH
+        rospy.signal_shutdown(0)
+
+    # Execute the command
+    command = command_result.command
+    post_cmd, post_cmd_args, action, goal, goal_args = commands[command]
+    goal = goal(*goal_args)
+    action.send_goal_and_wait(goal)
+    post_cmd(*post_cmd_args)
