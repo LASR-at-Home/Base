@@ -1,1 +1,2 @@
 weaviate-client==v4.4b2
+requests==2.31.0

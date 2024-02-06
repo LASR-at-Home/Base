@@ -1,10 +1,17 @@
 #!/usr/bin/env python3
 import os
 import tarfile
+import subprocess
 import urllib.request
+
+import weaviate
+import weaviate.classes as wvc
 
 import rospy
 import rospkg
+
+from lasr_vector_database_msgs.msg import Property, SearchResult
+from lasr_vector_database_msgs.srv import CreateCollection, CreateCollectionRequest, CreateCollectionResponse, InsertVector, InsertVectorRequest, InsertVectorResponse, QueryVector, QueryVectorRequest, QueryVectorResponse
 
 # Initialise rospy (required for params)
 rospy.init_node('weaviate_vector_database', anonymous=True)
@@ -13,6 +20,7 @@ rospy.init_node('weaviate_vector_database', anonymous=True)
 VERSION = rospy.get_param('~version', "1.22.11")
 HTTP_PORT = rospy.get_param('~http_port', "50050")
 GRPC_PORT = rospy.get_param('~grpc_port', "50051")
+DB_NAME = rospy.get_param('~db_name', "weaviate")
 
 # Hardcode platform & arch, we never change these for our purposes
 PLATFORM="linux"
@@ -26,8 +34,7 @@ package_path = rp.get_path("lasr_vector_database_weaviate")
 os.chdir(os.path.abspath(os.path.join(package_path, 'bin')))
 
 # Also select database folder
-DB_PATH = os.path.abspath(os.path.join(package_path, 'data', 'weaviate'))
-# TODO: allow multiple vector databases
+DB_PATH = os.path.abspath(os.path.join(package_path, 'data', DB_NAME))
 
 # Determine constants
 ARCHIVE_FORMAT = "tar.gz"
@@ -63,6 +70,81 @@ os.environ["ENABLE_MODULES"] = ""
 os.environ["CLUSTER_HOSTNAME"] = "node1"
 os.environ["GRPC_PORT"] = GRPC_PORT
 
-# Hand over to weaviate
-print(f"Starting Weaviate v{VERSION}")
-os.execlp(os.path.abspath(FILENAME), '--host', '0.0.0.0', '--port', HTTP_PORT, '--scheme', 'http')
+# Boot up Weaviate
+rospy.loginfo(f"Starting Weaviate v{VERSION}")
+subprocess.Popen([os.path.abspath(FILENAME), '--host', '0.0.0.0', '--port', HTTP_PORT, '--scheme', 'http'])
+
+# Wait for it to be ready
+import requests
+import time
+
+while True:
+    try:
+        requests.head(f"http://localhost:{HTTP_PORT}")
+        break
+    except requests.exceptions.ConnectionError:
+        time.sleep(0.5)
+        rospy.logdebug("Waiting for server to go up...")
+
+client = weaviate.connect_to_local(
+    port=int(HTTP_PORT),
+    grpc_port=int(GRPC_PORT),
+)
+
+# Now we can initialise the service
+def create_collection(request: CreateCollectionRequest) -> CreateCollectionResponse:
+    if client.collections.exists(request.name):
+        if request.skip_if_exists:
+            return CreateCollectionResponse()
+
+        if request.clear_if_exists:
+            client.collections.delete(request.name)
+    
+    client.collections.create(
+        request.name,
+        vectorizer_config=wvc.Configure.Vectorizer.none(),
+    )
+
+    return CreateCollectionResponse()
+
+def insert_vector(request: InsertVectorRequest) -> InsertVectorResponse:
+    properties = {}
+    for property in request.properties:
+        properties[property.key] = property.value
+
+    col = client.collections.get(request.name)
+    col.data.insert(
+        properties=properties,
+        vector=list(request.vector)
+    )
+    
+    return InsertVectorResponse()
+
+def query_vector(request: QueryVectorRequest) -> QueryVectorResponse:
+    col = client.collections.get(request.name)
+    result = col.query.near_vector(
+        near_vector=request.vector,
+        limit=request.limit,
+        return_metadata=wvc.MetadataQuery(certainty=True)
+    )
+
+    results = []
+    for object in result.objects:
+        results.append(
+            SearchResult(
+                certainty=object.metadata.certainty,
+                properties=[
+                    Property(key=key, value=object.properties[key])
+                        for key
+                        in object.properties.keys()
+                ]
+            )
+        )
+    
+    return QueryVectorResponse(results)
+
+rospy.Service(f'/database/vectors/{DB_NAME}/create_collection', CreateCollection, create_collection)
+rospy.Service(f'/database/vectors/{DB_NAME}/insert', InsertVector, insert_vector)
+rospy.Service(f'/database/vectors/{DB_NAME}/query', QueryVector, query_vector)
+rospy.loginfo('Weaviate database service ready!')
+rospy.spin()
