@@ -2,8 +2,10 @@
 import rospy
 from actionlib import SimpleActionServer, SimpleActionClient
 
-from lasr_speech_msgs.msg import TranscribeSpeechAction, TranscribeSpeechGoal
-
+from lasr_speech_recognition_msgs.msg import (
+    TranscribeSpeechAction,
+    TranscribeSpeechGoal,
+)
 from qualification.msg import HandoverObjectAction, HandoverObjectResult
 from play_motion_msgs.msg import PlayMotionAction, PlayMotionGoal
 from pal_interaction_msgs.msg import TtsGoal, TtsAction
@@ -30,6 +32,8 @@ class HandoverObject:
             auto_start=False,
         )
 
+        self._action_server.start()
+
     def execute_cb(self, goal):
         tts_goal = TtsGoal()
         tts_goal.rawtext.lang_id = "en_GB"
@@ -46,7 +50,7 @@ class HandoverObject:
                 break
         pm_goal = PlayMotionGoal(motion_name="open_gripper", skip_planning=False)
         self.play_motion.send_goal_and_wait(pm_goal)
-        pm_goal = PlayMotionGoal(motion_name="back_to_default", skip_planning=False)
+        pm_goal = PlayMotionGoal(motion_name="home", skip_planning=False)
         self.play_motion.send_goal_and_wait(pm_goal)
         self._action_server.set_succeeded(HandoverObjectResult())
 

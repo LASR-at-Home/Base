@@ -20,6 +20,10 @@ from qualification.msg import (
     GuideGoal,
     FindPersonAction,
     FindPersonGoal,
+    ReceiveObjectAction,
+    ReceiveObjectGoal,
+    HandoverObjectAction,
+    HandoverObjectGoal,
 )
 
 from pal_interaction_msgs.msg import TtsGoal, TtsAction
@@ -69,6 +73,14 @@ torso_controller = SimpleActionClient(
     "torso_controller/follow_joint_trajectory", FollowJointTrajectoryAction
 )
 torso_controller.wait_for_server()
+print("receive_object")
+receive_object = SimpleActionClient("receive_object", ReceiveObjectAction)
+receive_object.wait_for_server()
+print("handover_object")
+handover_object = SimpleActionClient("handover_object", HandoverObjectAction)
+handover_object.wait_for_server()
+
+
 print("All action servers are ready")
 
 

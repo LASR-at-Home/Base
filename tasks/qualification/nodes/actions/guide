@@ -54,7 +54,9 @@ class Guide:
         self.move_base.wait_for_server()
         self.tts = SimpleActionClient("/tts", TtsAction)
         self.tts.wait_for_server()
-        self.laser_dist = rospy.ServiceProxy("/unsafe_traversal/laser_dist_checker")
+        self.laser_dist = rospy.ServiceProxy(
+            "/unsafe_traversal/laser_dist_checker", LaserDist
+        )
         self.laser_dist.wait_for_service()
         self._action_server = actionlib.SimpleActionServer(
             "guide",

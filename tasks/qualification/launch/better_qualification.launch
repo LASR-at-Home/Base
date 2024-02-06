@@ -19,7 +19,8 @@
     <node pkg="qualification" type="guide" name="guide_action" output="screen"/>
     <node pkg="qualification" type="identify" name="identify_action" output="screen"/>
     <node pkg="qualification" type="learn_face" name="learn_face_action" output="screen"/>
-    
+    <node pkg="qualification" type="receive_object" name="receive_object_action" output="screen"/>
+    <node pkg="qualification" type="handover_object" name="handover_object_action" output="screen"/>
 
 
     <!-- <node pkg="qualification" type="better_qualification" name="better_qualification" output="screen"/> -->
