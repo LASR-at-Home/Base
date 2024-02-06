@@ -249,13 +249,13 @@ def parse_args() -> dict:
     )
 
     parser.add_argument(
-        "--action-name",
+        "--action_name",
         type=str,
         default="transcribe_speech",
         help="Name of the action server.",
     )
     parser.add_argument(
-        "--model-name",
+        "--model_name",
         type=str,
         default="medium.en",
         help="Name of the speech recognition model.",
