@@ -1,0 +1,7 @@
+# name of collection
+string name
+# properties
+lasr_vector_database_msgs/Property[] properties
+# vector data
+float64[] vector
+---
