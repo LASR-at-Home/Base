@@ -3,7 +3,7 @@
         <arg name="debug" value="true" />
     </include>
 
-    <node pkg="lasr_speech_recognition_whisper" type="transcribe_microphone_server" name="transcribe_microphone_server" output="screen" args="--mic_device 9"/>
+    <node pkg="lasr_speech_recognition_whisper" type="transcribe_microphone_server" name="transcribe_microphone_server" output="screen" args="--mic_device 9 --end_timeout 2.0"/>
     <include file="$(find lasr_vision_yolov8)/launch/service.launch">
         <arg name="debug" value="true" />
     </include>
