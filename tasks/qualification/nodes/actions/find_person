@@ -21,7 +21,14 @@ from trajectory_msgs.msg import JointTrajectoryPoint
 
 class FindPerson:
 
-    KB = {"lab": {"pose": Pose()}}
+    KB = {
+        "lab": {
+            "pose": Pose(
+                position=Point(1.7, -0.72, 0.0),
+                orientation=Quaternion(0.0, 0.0, -0.45, 0.89),
+            )
+        }
+    }
 
     def __init__(self):
         rospy.loginfo("Waiting for action servers...")
@@ -74,7 +81,7 @@ class FindPerson:
         move_base_goal.target_pose.pose = self.KB[goal.location]["pose"]
         self.move_base.send_goal_and_wait(move_base_goal)
 
-        joint_positions = [[0.0, 0.5], [0.0, 0.0], [0.0, -0.5]]
+        joint_positions = [[0.5, 0.0], [0.0, 0.0], [-0.5, 0.00]]
 
         for joint_position in joint_positions:
             point = JointTrajectoryPoint()
@@ -98,8 +105,8 @@ class FindPerson:
                 self.head_controller.send_goal_and_wait(head_goal)
 
                 move_base_goal.target_pose.header.stamp = rospy.Time.now()
-                move_base_goal.target_pose = Pose(
-                    position=Point(person_point.x - 2.0, person_point.y, 0.0),
+                move_base_goal.target_pose.pose = Pose(
+                    position=Point(person_point.x, person_point.y + 1.0, 0.0),
                     orientation=self.KB[goal.location]["pose"].orientation,
                 )
                 self.move_base.send_goal_and_wait(move_base_goal)
