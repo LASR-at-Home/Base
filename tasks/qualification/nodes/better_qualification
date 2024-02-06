@@ -92,11 +92,11 @@ def exec_command(command):
         goal = GuideGoal(name, location, "lab")
         guide.send_goal_and_wait(goal)
         location = "lab"
-    if command == "Please guide me to the kitchen.":
+    elif command == "Please guide me to the kitchen.":
         goal = GuideGoal(name, location, "kitchen")
         guide.send_goal_and_wait(goal)
         location = "kitchen"
-    if command == "Could you please find Jared and ask if they need assistance.":
+    elif command == "Could you please find Jared and ask if they need assistance.":
         goal = FindPersonGoal("jared", location)
         find_person.send_goal_and_wait(goal)
 
