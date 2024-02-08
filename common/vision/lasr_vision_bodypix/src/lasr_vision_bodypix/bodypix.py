@@ -25,9 +25,13 @@ def load_model_cached(dataset: str) -> None:
         model = loaded_models[dataset]
     else:
         if dataset == 'resnet50':
-            model = load_model(download_model(BodyPixModelPaths.RESNET50_FLOAT_STRIDE_16))
+            name = download_model(BodyPixModelPaths.RESNET50_FLOAT_STRIDE_16)
+            rospy.logwarn(name)
+            model = load_model(name)
         elif dataset == 'mobilenet50':
-            model = load_model(download_model(BodyPixModelPaths.MOBILENET_FLOAT_50_STRIDE_16))
+            name = download_model(BodyPixModelPaths.MOBILENET_FLOAT_50_STRIDE_16)
+            rospy.logwarn(name)
+            model = load_model(name)
         else:
             model = load_model(dataset)
 
