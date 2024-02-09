@@ -150,7 +150,7 @@ def detect(
             row["source_h"][0],
         )
         detection.xywh = [x, y, w, h]
-        detection.confidence = 1.0 - row["distance"][0]
+        detection.confidence = row["distance"][0]
         response.detections.append(detection)
 
         cropped_image = cv_im[:][y : y + h, x : x + w]
@@ -162,7 +162,7 @@ def detect(
         cv2.rectangle(cv_im, (x, y), (x + w, y + h), (0, 0, 255), 2)
         cv2.putText(
             cv_im,
-            f"{detection.name} ({detection.confidence})",
+            f"{detection.name} Distance: ({detection.confidence:.2f})",
             (x, y - 5),
             cv2.FONT_HERSHEY_SIMPLEX,
             0.5,

@@ -51,7 +51,7 @@ def detect(request: RecogniseRequest) -> RecogniseResponse:
                 f"/recognise/debug/{topic_name}/similar_face", Image, queue_size=1
             )
             cropped_face_publisher = rospy.Publisher(
-                "/learn_face/debug/cropped_query_face", Image, queue_size=1
+                "/recognise/debug/cropped_query_face", Image, queue_size=1
             )
             recognise_debug_publishers[request.dataset] = (
                 debug_publisher,
