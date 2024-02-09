@@ -38,13 +38,14 @@ from geometry_msgs.msg import (
 )
 from actionlib import SimpleActionClient
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
+from std_msgs.msg import String
 
 # supress warnings
 import warnings
 
 warnings.filterwarnings("ignore")
 
-location = "corridor"
+location = "lab"
 name = "unknown"
 person_pose = None
 
@@ -143,6 +144,8 @@ def exec_command(command):
         handover_object.send_goal_and_wait(goal)
 
 
+command_publisher = rospy.Publisher("/goal_string", String)
+
 
 def exec_command(command):
     torso_controller.send_goal_and_wait(torso_lower_goal)
@@ -164,6 +167,8 @@ def exec_command(command):
         name = "jared"
         goal = FindPersonGoal("jared", location)
         find_person.send_goal_and_wait(goal)
+    elif command == "Find the black tea at the desk and take it to Matt.":
+        command_publisher.publish(String("black-tea person matt"))
     elif command == "Take the protein bars to Matt.":
         goal = ReceiveObjectGoal("protein bars")
         receive_object.send_goal_and_wait(goal)
@@ -228,17 +233,19 @@ command = command_result.command
 print(command)
 exec_command(command)
 
-# go home, the end
-tts_goal = TtsGoal()
-tts_goal.rawtext.lang_id = "en_GB"
-tts_goal.rawtext.text = (
-    "I'll go home now, if you need any more assistance, just come let me know!"
-)
-tts.send_goal_and_wait(tts_goal)
+rospy.spin()
 
-move_base_goal = MoveBaseGoal()
-move_base_goal.target_pose.header.stamp = rospy.Time.now()
-move_base_goal.target_pose.header.frame_id = "map"
-move_base_goal.target_pose.pose.position = Point(0, 0, 0)
-move_base_goal.target_pose.pose.orientation = Quaternion(0, 0, 0, 1)
-move_base.send_goal_and_wait(move_base_goal)
+# # go home, the end
+# tts_goal = TtsGoal()
+# tts_goal.rawtext.lang_id = "en_GB"
+# tts_goal.rawtext.text = (
+#     "I'll go home now, if you need any more assistance, just come let me know!"
+# )
+# tts.send_goal_and_wait(tts_goal)
+
+# move_base_goal = MoveBaseGoal()
+# move_base_goal.target_pose.header.stamp = rospy.Time.now()
+# move_base_goal.target_pose.header.frame_id = "map"
+# move_base_goal.target_pose.pose.position = Point(0, 0, 0)
+# move_base_goal.target_pose.pose.orientation = Quaternion(0, 0, 0, 1)
+# move_base.send_goal_and_wait(move_base_goal)
