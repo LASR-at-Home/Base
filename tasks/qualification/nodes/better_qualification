@@ -143,6 +143,42 @@ def exec_command(command):
         handover_object.send_goal_and_wait(goal)
 
 
+
+def exec_command(command):
+    torso_controller.send_goal_and_wait(torso_lower_goal)
+    global name
+    global location
+    global person_pose
+    if (
+        command == "Please guide me to the lab."
+        or command == "Navigate to the couch, meet Mary, and guide her"
+    ):
+        goal = GuideGoal(name, location, "lab")
+        guide.send_goal_and_wait(goal)
+        location = "lab"
+    elif command == "Please guide me to the kitchen.":
+        goal = GuideGoal(name, location, "kitchen")
+        guide.send_goal_and_wait(goal)
+        location = "kitchen"
+    elif command == "Go help Jared.":
+        name = "jared"
+        goal = FindPersonGoal("jared", location)
+        find_person.send_goal_and_wait(goal)
+    elif command == "Take the protein bars to Nicole.":
+        goal = ReceiveObjectGoal("protein bars")
+        receive_object.send_goal_and_wait(goal)
+
+        if person_pose is not None:
+            move_base_goal = MoveBaseGoal()
+            move_base_goal.target_pose.header.stamp = rospy.Time.now()
+            move_base_goal.target_pose.header.frame_id = "map"
+            move_base_goal.target_pose.pose = person_pose
+            move_base.send_goal_and_wait(move_base_goal)
+
+        goal = HandoverObjectGoal("nicole", "protein bars")
+        handover_object.send_goal_and_wait(goal)
+
+
 # Wait to be greeted
 wait_greet.send_goal_and_wait(WaitGreetGoal())
 
