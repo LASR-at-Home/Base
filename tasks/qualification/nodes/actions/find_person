@@ -93,7 +93,7 @@ class FindPerson:
             point.time_from_start = rospy.Duration(1)
             head_goal.trajectory.points = [(point)]
             self.head_controller.send_goal_and_wait(head_goal)
-
+            rospy.sleep(rospy.Duration(1.0))
             self.identify.send_goal_and_wait(IdentifyGoal())
             identify_result = self.identify.get_result()
             if identify_result.name == goal.name:

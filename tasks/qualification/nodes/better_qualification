@@ -164,7 +164,7 @@ def exec_command(command):
         name = "jared"
         goal = FindPersonGoal("jared", location)
         find_person.send_goal_and_wait(goal)
-    elif command == "Take the protein bars to Nicole.":
+    elif command == "Take the protein bars to Matt.":
         goal = ReceiveObjectGoal("protein bars")
         receive_object.send_goal_and_wait(goal)
 
@@ -175,7 +175,7 @@ def exec_command(command):
             move_base_goal.target_pose.pose = person_pose
             move_base.send_goal_and_wait(move_base_goal)
 
-        goal = HandoverObjectGoal("nicole", "protein bars")
+        goal = HandoverObjectGoal("matt", "protein bars")
         handover_object.send_goal_and_wait(goal)
 
 

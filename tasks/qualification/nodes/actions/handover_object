@@ -24,7 +24,6 @@ class HandoverObject:
 
         self.tts = SimpleActionClient("/tts", TtsAction)
         self.tts.wait_for_server()
-
         self._action_server = SimpleActionServer(
             "handover_object",
             HandoverObjectAction,
