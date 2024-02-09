@@ -120,7 +120,6 @@ class Guide:
                     f"{goal.guidee}, could you please get the door for me?"
                 )
                 self.tts.send_goal_and_wait(tts_goal)
-                # TODO: check if the door is open using CLIP
                 door_closed = self.check_for_door()
                 counter = 1
                 while door_closed:

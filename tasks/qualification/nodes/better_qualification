@@ -108,6 +108,11 @@ point.positions = [0.15]
 point.time_from_start = rospy.Duration(1)
 torso_lower_goal.trajectory.points.append(point)
 
+tts_goal = TtsGoal()
+tts_goal.rawtext.lang_id = "en_GB"
+tts_goal.rawtext.text = "Begin"
+tts.send_goal_and_wait(tts_goal)
+
 
 def exec_command(command):
     torso_controller.send_goal_and_wait(torso_lower_goal)
