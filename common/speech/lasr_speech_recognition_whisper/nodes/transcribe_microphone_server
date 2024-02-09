@@ -13,6 +13,7 @@ import torch
 import actionlib
 import speech_recognition as sr  # type: ignore
 import lasr_speech_recognition_msgs.msg  # type: ignore
+from std_msgs.msg import String  # type: ignore
 from lasr_speech_recognition_whisper import load_model  # type: ignore
 
 # Error handler to remove ALSA error messages taken from:
@@ -83,7 +84,9 @@ class TranscribeSpeechAction(object):
 
         self._action_name = action_name
         self._model_params = model_params
-
+        self._transcription_server = rospy.Publisher(
+            "/live_speech_transcription", String, queue_size=10
+        )
         with noalsaerr():
             self._model = load_model(
                 self._model_params.model_name,
@@ -224,7 +227,7 @@ class TranscribeSpeechAction(object):
         rospy.loginfo(
             f"Time taken: {transcription_end_time - transcription_start_time:.2f}s"
         )
-
+        self._transcription_server.publish(phrase)
         if self._action_server.is_preempt_requested():
             self._listening = False
             return
