@@ -44,7 +44,7 @@ class ReceiveObject:
         pm_goal = PlayMotionGoal(motion_name="open_gripper", skip_planning=False)
         self.play_motion.send_goal_and_wait(pm_goal)
         tts_goal.rawtext.text = (
-            "Please place the object in my hand, and say 'Done' afterwards."
+            f"Please place the {goal.object} in my hand, and say 'Done' afterwards."
         )
         self.tts.send_goal_and_wait(tts_goal)
         # Wait for speech

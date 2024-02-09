@@ -38,8 +38,11 @@ class Identify:
         print(resp.detections)
         result = IdentifyResult()
         if resp.detections:
-            result.name = resp.detections[0].name
-            result.success = True
+            if resp.detections[0].confidence > 0.55:
+                result.name = resp.detections[0].name
+                result.success = True
+            else:
+                result.success = False
         else:
             result.success = False
 

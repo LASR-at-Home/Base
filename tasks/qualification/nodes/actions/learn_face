@@ -80,7 +80,7 @@ class LearnFace:
         req = LFRequest()
         req.dataset = "qualification"
         req.name = goal.name
-        req.n_images = 25
+        req.n_images = 10
         self.learn_face(req)
 
         self._action_server.set_succeeded(LearnFaceResult())

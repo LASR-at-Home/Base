@@ -34,20 +34,24 @@ class Greet:
             auto_start=False,
         )
 
+        self.greeted = []
+
         self._action_server.start()
 
     def execute_cb(self, goal):
+        if goal.name in self.greeted:
+            return
         tts_goal = TtsGoal()
         tts_goal.rawtext.lang_id = "en_GB"
         if goal.name:
             tts_goal.rawtext.text = (
                 f"Hello, {goal.name}. {random.choice(self.known_greeting_suffixes)}"
             )
+            self.greeted.append(goal.name)
         else:
             tts_goal.rawtext.text = random.choice(self.unknown_greetings)
 
         self.tts.send_goal_and_wait(tts_goal)
-
         self._action_server.set_succeeded(GreetResult())
 
 

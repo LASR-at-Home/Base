@@ -34,7 +34,13 @@ class WaitGreet:
         while not rospy.is_shutdown():
             self.transcribe_speech.send_goal(TranscribeSpeechGoal())
             self.transcribe_speech.wait_for_result()
-            result = self.transcribe_speech.get_result().sequence.lower()
+            result = (
+                self.transcribe_speech.get_result()
+                .sequence.lower()
+                .replace(".", "")
+                .replace("!", "")
+                .replace(",", "")
+            )
             if "hello" in result.split(" ") or "hi" in result.split(" "):
                 self._action_server.set_succeeded(WaitGreetResult())
                 rospy.loginfo("Finished waiting")

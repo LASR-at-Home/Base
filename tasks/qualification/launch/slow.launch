@@ -1,0 +1,7 @@
+<launch>
+    <node pkg="lasr_speech_recognition_whisper" type="transcribe_microphone_server" name="transcribe_microphone_server" output="screen" args="--mic_device 5 --end_timeout 2.0 --model_name small.en"/>
+    <include file="$(find lasr_vision_yolov8)/launch/service.launch">
+        <arg name="debug" value="true" />
+        <arg name="preload" value="['yolov8n-seg.pt']" />
+    </include>
+</launch>

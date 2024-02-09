@@ -3,12 +3,6 @@
         <arg name="debug" value="true" />
     </include>
 
-    <node pkg="lasr_speech_recognition_whisper" type="transcribe_microphone_server" name="transcribe_microphone_server" output="screen" args="--mic_device 9 --end_timeout 2.0 --model_name small.en"/>
-    <include file="$(find lasr_vision_yolov8)/launch/service.launch">
-        <arg name="debug" value="true" />
-        <arg name="preload" value="['yolov8n-seg.pt']" />
-    </include>
-
     <node pkg="unsafe_traversal" type="unsafe_traversal" name="unsafe_traversal"/>
     <node pkg="tf_module" type="tf_transforms_base.py" name="tf_module" output="screen"/>
 

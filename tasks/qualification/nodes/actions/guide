@@ -16,13 +16,13 @@ class Guide:
     KB = {
         "lab": {
             "pose": Pose(
-                position=Point(2.58, 2.07, 0.0),
-                orientation=Quaternion(0.0, 0.0, 0.94, 0.50),
+                position=Point(2.61, 1.33, 0.0),
+                orientation=Quaternion(0.0, 0.0, 0.77, 0.63),
             ),
             "edges": {
                 "corridor": Pose(
-                    position=Point(4.68, 6.87, 0.0),
-                    orientation=Quaternion(0.0, 0.0, 0.59, 0.80),
+                    position=Point(4.27, 5.80, 0.0),
+                    orientation=Quaternion(0.0, 0.0, -0.89, 0.45),
                 )
             },
         },
@@ -33,8 +33,8 @@ class Guide:
             ),
             "edges": {
                 "lab": Pose(
-                    position=Point(4.09, 8.21, 0.0),
-                    orientation=Quaternion(0.0, 0.0, 0.91, 0.40),
+                    position=Point(4.29, 8.81, 0.0),
+                    orientation=Quaternion(0.0, 0.0, -0.59, 0.81),
                 ),
                 "kitchen": None,
             },

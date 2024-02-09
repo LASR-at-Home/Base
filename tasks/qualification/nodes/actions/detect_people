@@ -41,6 +41,7 @@ class DetectPeople:
         tf_req.target_frame = String("map")
         tf_req.point = centroid
         response = self.tf(tf_req)
+        print(response.target_point.point)
         return response.target_point.point
 
     def execute_cb(self, _):
