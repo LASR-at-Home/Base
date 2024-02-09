@@ -26,6 +26,9 @@ if DEBUG:
     learn_face_debug_publisher = rospy.Publisher(
         "/learn_face/debug", Image, queue_size=1
     )
+    cropped_face_publisher = rospy.Publisher(
+        "/learn_face/debug/cropped_query_face", Image, queue_size=1
+    )
 
 
 def detect(request: RecogniseRequest) -> RecogniseResponse:
@@ -37,6 +40,7 @@ def detect(request: RecogniseRequest) -> RecogniseResponse:
             similar_face_debug_publisher = recognise_debug_publishers[request.dataset][
                 1
             ]
+            cropped_face_publisher = recognise_debug_publisher[request.dataset][2]
         else:
             topic_name = re.sub(r"[\W_]+", "", request.dataset)
             debug_publisher = rospy.Publisher(
@@ -45,12 +49,16 @@ def detect(request: RecogniseRequest) -> RecogniseResponse:
             similar_face_debug_publisher = rospy.Publisher(
                 f"/recognise/debug/{topic_name}/similar_face", Image, queue_size=1
             )
+            cropped_face_publisher = rospy.Publisher(
+                "/learn_face/debug/cropped_query_face", Image, queue_size=1
+            )
             recognise_debug_publishers[request.dataset] = (
                 debug_publisher,
                 similar_face_debug_publisher,
+                cropped_face_publisher,
             )
     return face_recognition.detect(
-        request, debug_publisher, similar_face_debug_publisher
+        request, debug_publisher, similar_face_debug_publisher, cropped_face_publisher
     )
 
 

@@ -116,6 +116,7 @@ def detect(
     request: RecogniseRequest,
     debug_publisher: rospy.Publisher | None,
     debug_inference_pub: rospy.Publisher | None,
+    cropped_detect_pub: rospy.Publisher | None,
 ) -> RecogniseResponse:
     # Decode the image
     rospy.loginfo("Decoding")
@@ -151,6 +152,11 @@ def detect(
         detection.xywh = [x, y, w, h]
         detection.confidence = 1.0 - row["distance"][0]
         response.detections.append(detection)
+
+        cropped_image = cv_im[:][y : y + h, x : x + w]
+
+        if cropped_detect_pub is not None:
+            cropped_detect_pub.publish(cv2_img.cv2_img_to_msg(cropped_image))
 
         # Draw bounding boxes and labels for debugging
         cv2.rectangle(cv_im, (x, y), (x + w, y + h), (0, 0, 255), 2)
