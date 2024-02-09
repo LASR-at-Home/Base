@@ -34,6 +34,7 @@ if DEBUG:
 def detect(request: RecogniseRequest) -> RecogniseResponse:
     debug_publisher = None
     similar_face_debug_publisher = None
+    cropped_face_publisher = None
     if DEBUG:
         if request.dataset in recognise_debug_publishers:
             debug_publisher = recognise_debug_publishers[request.dataset][0]
