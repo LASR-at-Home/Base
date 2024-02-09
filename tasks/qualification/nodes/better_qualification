@@ -45,7 +45,7 @@ import warnings
 
 warnings.filterwarnings("ignore")
 
-location = "lab"
+location = "corridor"
 name = "unknown"
 person_pose = None
 
@@ -85,9 +85,12 @@ torso_controller.wait_for_server()
 print("receive_object")
 receive_object = SimpleActionClient("receive_object", ReceiveObjectAction)
 receive_object.wait_for_server()
-print("handover_object")
-handover_object = SimpleActionClient("handover_object", HandoverObjectAction)
-handover_object.wait_for_server()
+# print("handover_object")
+from std_srvs.srv import Empty
+
+handover_object = rospy.ServiceProxy("handover_object", Empty)
+# handover_object = SimpleActionClient("handover_object", HandoverObjectAction)
+# handover_object.wait_for_server()
 move_base = SimpleActionClient("move_base", MoveBaseAction)
 move_base.wait_for_server()
 
@@ -113,7 +116,7 @@ tts_goal.rawtext.lang_id = "en_GB"
 tts_goal.rawtext.text = "Begin"
 tts.send_goal_and_wait(tts_goal)
 
-command_publisher = rospy.Publisher("/goal_string", String)
+command_publisher = rospy.Publisher("/goal_string", String, queue_size=1)
 
 
 def exec_command(command):
@@ -137,20 +140,19 @@ def exec_command(command):
         goal = FindPersonGoal("jared", location)
         find_person.send_goal_and_wait(goal)
     elif command == "Find the black tea at the desk and take it to Matt.":
-        command_publisher.publish(String("black-tea person matt"))
-        # elif command == "Take the protein bars to Matt.":
-        goal = ReceiveObjectGoal("black-tea")
-        receive_object.send_goal_and_wait(goal)
+        if True:
+            command_publisher.publish(String("black-tea person matt"))
+        else:
+            goal = ReceiveObjectGoal("black-tea")
+            receive_object.send_goal_and_wait(goal)
 
-        if person_pose is not None:
-            move_base_goal = MoveBaseGoal()
-            move_base_goal.target_pose.header.stamp = rospy.Time.now()
-            move_base_goal.target_pose.header.frame_id = "map"
-            move_base_goal.target_pose.pose = person_pose
-            move_base.send_goal_and_wait(move_base_goal)
-
-        goal = HandoverObjectGoal("matt", "black-tea")
-        handover_object.send_goal_and_wait(goal)
+            if person_pose is not None:
+                move_base_goal = MoveBaseGoal()
+                move_base_goal.target_pose.header.stamp = rospy.Time.now()
+                move_base_goal.target_pose.header.frame_id = "map"
+                move_base_goal.target_pose.pose = person_pose
+                move_base.send_goal_and_wait(move_base_goal)
+            handover_object()
 
 
 # Wait to be greeted

@@ -38,14 +38,13 @@ class Identify:
         print(resp.detections)
         result = IdentifyResult()
         if resp.detections:
-            if resp.detections[0].confidence > 0.55:
+            if resp.detections[0].confidence < 0.4:
                 result.name = resp.detections[0].name
                 result.success = True
             else:
                 result.success = False
         else:
             result.success = False
-
         self._action_server.set_succeeded(result)
 
 
