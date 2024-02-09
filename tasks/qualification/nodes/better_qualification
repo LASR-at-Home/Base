@@ -113,42 +113,6 @@ tts_goal.rawtext.lang_id = "en_GB"
 tts_goal.rawtext.text = "Begin"
 tts.send_goal_and_wait(tts_goal)
 
-
-def exec_command(command):
-    torso_controller.send_goal_and_wait(torso_lower_goal)
-    global name
-    global location
-    global person_pose
-    if (
-        command == "Please guide me to the lab."
-        or command == "Navigate to the couch, meet Mary, and guide her"
-    ):
-        goal = GuideGoal(name, location, "lab")
-        guide.send_goal_and_wait(goal)
-        location = "lab"
-    elif command == "Please guide me to the kitchen.":
-        goal = GuideGoal(name, location, "kitchen")
-        guide.send_goal_and_wait(goal)
-        location = "kitchen"
-    elif command == "Go help Jared.":
-        name = "jared"
-        goal = FindPersonGoal("jared", location)
-        find_person.send_goal_and_wait(goal)
-    elif command == "Take the protein bars to Nicole.":
-        goal = ReceiveObjectGoal("protein bars")
-        receive_object.send_goal_and_wait(goal)
-
-        if person_pose is not None:
-            move_base_goal = MoveBaseGoal()
-            move_base_goal.target_pose.header.stamp = rospy.Time.now()
-            move_base_goal.target_pose.header.frame_id = "map"
-            move_base_goal.target_pose.pose = person_pose
-            move_base.send_goal_and_wait(move_base_goal)
-
-        goal = HandoverObjectGoal("nicole", "protein bars")
-        handover_object.send_goal_and_wait(goal)
-
-
 command_publisher = rospy.Publisher("/goal_string", String)
 
 
@@ -174,8 +138,8 @@ def exec_command(command):
         find_person.send_goal_and_wait(goal)
     elif command == "Find the black tea at the desk and take it to Matt.":
         command_publisher.publish(String("black-tea person matt"))
-    elif command == "Take the protein bars to Matt.":
-        goal = ReceiveObjectGoal("protein bars")
+        # elif command == "Take the protein bars to Matt.":
+        goal = ReceiveObjectGoal("black-tea")
         receive_object.send_goal_and_wait(goal)
 
         if person_pose is not None:
@@ -185,7 +149,7 @@ def exec_command(command):
             move_base_goal.target_pose.pose = person_pose
             move_base.send_goal_and_wait(move_base_goal)
 
-        goal = HandoverObjectGoal("matt", "protein bars")
+        goal = HandoverObjectGoal("matt", "black-tea")
         handover_object.send_goal_and_wait(goal)
 
 
