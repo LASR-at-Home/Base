@@ -133,7 +133,7 @@ def detect(
             enforce_detection=True,
             silent=True,
             detector_backend="mtcnn",
-            threshold=request.confidence,
+            # threshold=request.confidence,
         )
     except ValueError:
         return response
