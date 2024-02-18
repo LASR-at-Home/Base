@@ -1,0 +1,34 @@
+#!/usr/bin/env python3
+
+import re
+import rospy
+import lasr_vision_deepface as face_recognition
+from sensor_msgs.msg import Image
+from lasr_vision_msgs.srv import Recognise, RecogniseRequest, RecogniseResponse
+
+rospy.init_node("recognise_service")
+
+# Determine variables
+DEBUG = rospy.get_param("~debug", False)
+
+debug_publishers = {}
+if DEBUG:
+    debug_publisher = rospy.Publisher("/recognise/debug", Image, queue_size=1)
+
+
+def detect(request: RecogniseRequest) -> RecogniseResponse:
+    debug_publisher = None
+    if DEBUG:
+        if request.dataset in debug_publishers:
+            debug_publisher = debug_publishers[request.dataset]
+        else:
+            topic_name = re.sub(r"[\W_]+", "", request.dataset)
+            debug_publisher = rospy.Publisher(
+                f"/recognise/debug/{topic_name}", Image, queue_size=1
+            )
+    return face_recognition.detect(request, debug_publisher)
+
+
+rospy.Service("/recognise", Recognise, detect)
+rospy.loginfo("Face Recognition service starter")
+rospy.spin()
