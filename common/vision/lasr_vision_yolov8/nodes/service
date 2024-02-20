@@ -80,6 +80,6 @@ def detect_3d(request: YoloDetection3DRequest) -> YoloDetection3DResponse:
 
 
 rospy.Service("/yolov8/detect", YoloDetection, detect)
-rospy.Service("yolov8/detect3d", YoloDetection3D, detect_3d)
+rospy.Service("/yolov8/detect3d", YoloDetection3D, detect_3d)
 rospy.loginfo("YOLOv8 service started")
 rospy.spin()
