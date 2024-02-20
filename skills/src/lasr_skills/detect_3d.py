@@ -15,12 +15,16 @@ import numpy as np
 from lasr_vision_msgs.srv import YoloDetection
 
 
-
-class DetectObjects3D(smach.State):
+class Detect3D(smach.State):
 
     def __init__(self):
-        smach.State.__init__(self, outcomes=['succeeded', 'failed'], input_keys=['depth_topic', 'filter'], output_keys=['detections_3d'])
-        self.yolo = rospy.ServiceProxy('/yolov8/detect', YoloDetection)
+        smach.State.__init__(
+            self,
+            outcomes=["succeeded", "failed"],
+            input_keys=["depth_topic", "filter"],
+            output_keys=["detections_3d"],
+        )
+        self.yolo = rospy.ServiceProxy("/yolov8/detect", YoloDetection)
         self.tf = rospy.ServiceProxy("/tf_transform", TfTransform)
         self.bridge = CvBridge()
         self.n_published_markers = 0
@@ -36,7 +40,13 @@ class DetectObjects3D(smach.State):
         tf_req.target_frame = String("map")
         tf_req.point = centroid
         response = self.tf(tf_req)
-        return np.array([response.target_point.point.x, response.target_point.point.y, response.target_point.point.z])
+        return np.array(
+            [
+                response.target_point.point.x,
+                response.target_point.point.y,
+                response.target_point.point.z,
+            ]
+        )
 
     def execute(self, userdata):
         pcl_msg = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
@@ -44,8 +54,13 @@ class DetectObjects3D(smach.State):
             cv_im = pcl_msg_to_cv2(pcl_msg)
             img_msg = self.bridge.cv2_to_imgmsg(cv_im)
             result = self.yolo(img_msg, "yolov8n-seg.pt", 0.5, 0.3)
-            result.detected_objects = [det for det in result.detected_objects if det.name in userdata.filter]
-            result = [(detection, self.estimate_pose(pcl_msg, detection)) for detection in result.detected_objects]
+            result.detected_objects = [
+                det for det in result.detected_objects if det.name in userdata.filter
+            ]
+            result = [
+                (detection, self.estimate_pose(pcl_msg, detection))
+                for detection in result.detected_objects
+            ]
             for detection, point in result:
                 marker_point_msg = Marker()
                 marker_point_msg.header.frame_id = "map"
@@ -84,11 +99,10 @@ class DetectObjects3D(smach.State):
                 marker_text_msg.color.a = 1.0
                 self.marker_text_pub.publish(marker_text_msg)
 
-
                 self.n_published_markers += 1
 
             userdata.detections_3d = result
-            return 'succeeded'
+            return "succeeded"
         except rospy.ServiceException as e:
             rospy.logwarn(f"Unable to perform inference. ({str(e)})")
-            return 'failed'
+            return "failed"
