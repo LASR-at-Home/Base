@@ -1,5 +1,6 @@
 import rospy
 import cv2_img
+import cv2_pcl
 import numpy as np
 
 from PIL import Image
@@ -131,12 +132,7 @@ def detect_3d(
 
     # Extract rgb image from pointcloud
     rospy.loginfo("Decoding")
-    img = np.fromstring(request.pcl.data, dtype=np.uint8)
-    img = img.reshape(request.pcl.height, request.pcl.width, 32)
-    img = img[:, :, 16:19]
-
-    # Ensure array is contiguous
-    img = np.ascontiguousarray(img, dtype=np.uint8)
+    img = cv2_pcl.pcl_to_cv2(request.pcl)
 
     # load model
     rospy.loginfo("Loading model")
@@ -162,28 +158,10 @@ def detect_3d(
         if has_segment_masks:
             detection.xyseg = result.masks.xy[i].flatten().astype(int).tolist()
 
-            # Convert xyseg to contours
-            contours = np.array(detection.xyseg).reshape(-1, 2)
+            # xyz_points = [pcl_xyz[x][y] for x, y in indices]
+            centroid = cv2_pcl.seg_to_centroid(request.pcl, np.array(detection.xyseg))
 
-            # Compute mask from contours
-            mask = np.zeros(shape=img.shape[:2])
-            cv2.fillPoly(mask, pts=[contours], color=(255, 255, 255))
-
-            # Extract mask indices from bounding box
-            indices = np.argwhere(mask)
-
-            if indices.shape[0] == 0:
-                return np.full(3, np.nan)
-
-            # Unpack pointcloud into xyz array
-            pcl_xyz = rnp.point_cloud2.pointcloud2_to_xyz_array(
-                request.pcl, remove_nans=False
-            )
-
-            # Extract points of interest
-            xyz_points = [pcl_xyz[x][y] for x, y in indices]
-
-            point = Point(*np.nanmean(xyz_points, axis=0))
+            point = Point(*centroid)
             point_stamped = PointStamped()
             point_stamped.point = point
             point_stamped.header.frame_id = request.pcl.header.frame_id
