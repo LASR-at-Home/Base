@@ -46,6 +46,7 @@ find_package(catkin REQUIRED COMPONENTS message_generation message_runtime senso
 add_message_files(
   FILES
   Detection.msg
+  Detection3D.msg
   BodyPixPose.msg
   BodyPixMask.msg
   BodyPixMaskRequest.msg
@@ -57,6 +58,7 @@ add_message_files(
 add_service_files(
   FILES
   YoloDetection.srv
+  YoloDetection3D.srv
   BodyPixDetection.srv
   TorchFaceFeatureDetection.srv
   Recognise.srv
