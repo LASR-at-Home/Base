@@ -187,7 +187,9 @@ def detect_3d(
             point_stamped = PointStamped()
             point_stamped.point = point
             point_stamped.header.frame_id = request.pcl.header.frame_id
-            detection.point = tf_buffer.transform(point_stamped, "map").point
+            detection.point = tf_buffer.transform(
+                point_stamped, request.target_frame
+            ).point
 
             if debug_point_publisher is not None:
                 marker = create_point_marker(
