@@ -2,14 +2,7 @@
 import rospy
 import smach
 
-from std_msgs.msg import String
-from geometry_msgs.msg import PointStamped, Point
 from sensor_msgs.msg import PointCloud2
-from geometry_msgs.msg import PointStamped
-from visualization_msgs.msg import Marker
-import numpy as np
-import cv2_pcl
-import cv2_img
 from lasr_vision_msgs.srv import YoloDetection3D
 
 
