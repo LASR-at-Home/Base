@@ -25,7 +25,7 @@ class LookForSeats(smach.StateMachine):
             if not self.remaining_motions:
                 self.remaining_motions = copy(self.motions)
                 return 'done'
-            pm_goal = PlayMotionGoal(motion_name=self.motions.pop(0), skip_planning=True)
+            pm_goal = PlayMotionGoal(motion_name=self.remaining_motions.pop(0), skip_planning=True)
             self.default.pm.send_goal_and_wait(pm_goal)
             rospy.sleep(1.0)
             return 'not_done'
