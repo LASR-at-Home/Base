@@ -27,7 +27,7 @@ def detect(request: TorchFaceFeatureDetectionDescriptionRequest) -> TorchFaceFea
     # class_pred, colour_pred = lasr_vision_torch.predict_frame(head_frame, torso_frame, full_frame, head_mask, torso_mask, lasr_vision_torch.model, lasr_vision_torch.thresholds_mask, lasr_vision_torch.erosion_iterations, lasr_vision_torch.dilation_iterations, lasr_vision_torch.thresholds_pred)
     rst_str = lasr_vision_torch.predict_frame(head_frame, torso_frame, full_frame, head_mask, torso_mask,)
     
-    response = TorchFaceFeatureDetectionDescriptionRequest()
+    response = TorchFaceFeatureDetectionDescriptionResponse()
     response.description = rst_str
     # response.detected_features = str(class_pred) + str(colour_pred)
     # response.detected_features = []
