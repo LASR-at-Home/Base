@@ -251,7 +251,7 @@ def extract_mask_region(frame, mask, expand_x=0.5, expand_y=0.5):
 p = Predictor(model, torch.device('cpu'), CelebAMaskHQCategoriesAndAttributes)
 
 
-def predict_frame(head_frame, torso_frame, full_frame, head_mask, torso_mask, model, thresholds_mask, erosion_iterations, dilation_iterations, thresholds_pred):
+def predict_frame(head_frame, torso_frame, full_frame, head_mask, torso_mask,):
     full_frame = cv2.cvtColor(full_frame, cv2.COLOR_BGR2RGB)
     head_frame = cv2.cvtColor(head_frame, cv2.COLOR_BGR2RGB)
     torso_frame = cv2.cvtColor(torso_frame, cv2.COLOR_BGR2RGB)

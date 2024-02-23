@@ -1,4 +1,4 @@
-from lasr_vision_msgs.srv import TorchFaceFeatureDetection, TorchFaceFeatureDetectionRequest, TorchFaceFeatureDetectionResponse, TorchFaceFeatureDetectionDescriptionRequest, TorchFaceFeatureDetectionDescriptionResponse
+from lasr_vision_msgs.srv import TorchFaceFeatureDetection, TorchFaceFeatureDetectionRequest, TorchFaceFeatureDetectionResponse, TorchFaceFeatureDetectionDescription, TorchFaceFeatureDetectionDescriptionRequest, TorchFaceFeatureDetectionDescriptionResponse
 from lasr_vision_msgs.msg import FeatureWithColour, ColourPrediction
 from cv2_img import msg_to_cv2_img
 from torch_module.helpers import binary_erosion_dilation, median_color_float
@@ -25,7 +25,7 @@ def detect(request: TorchFaceFeatureDetectionDescriptionRequest) -> TorchFaceFea
     torso_frame = lasr_vision_torch.extract_mask_region(full_frame, torso_mask.astype(np.uint8), expand_x=0.2, expand_y=0.0)
 
     # class_pred, colour_pred = lasr_vision_torch.predict_frame(head_frame, torso_frame, full_frame, head_mask, torso_mask, lasr_vision_torch.model, lasr_vision_torch.thresholds_mask, lasr_vision_torch.erosion_iterations, lasr_vision_torch.dilation_iterations, lasr_vision_torch.thresholds_pred)
-    rst_str = lasr_vision_torch.predict_frame(head_frame, torso_frame, full_frame, head_mask, torso_mask, lasr_vision_torch.model, lasr_vision_torch.thresholds_mask, lasr_vision_torch.erosion_iterations, lasr_vision_torch.dilation_iterations, lasr_vision_torch.thresholds_pred)
+    rst_str = lasr_vision_torch.predict_frame(head_frame, torso_frame, full_frame, head_mask, torso_mask,)
     
     response = TorchFaceFeatureDetectionDescriptionRequest()
     response.description = rst_str
@@ -97,6 +97,6 @@ def detect(request: TorchFaceFeatureDetectionDescriptionRequest) -> TorchFaceFea
 # test test
 
 rospy.init_node('torch_service')
-rospy.Service('/torch/detect/face_features', TorchFaceFeatureDetection, detect)
+rospy.Service('/torch/detect/face_features', TorchFaceFeatureDetectionDescription, detect)
 rospy.loginfo('Torch service started')
 rospy.spin()
