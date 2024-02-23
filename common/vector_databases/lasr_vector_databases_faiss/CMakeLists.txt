@@ -104,7 +104,6 @@ catkin_generate_virtualenv(
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES qualification
- CATKIN_DEPENDS message_runtime
 #  DEPENDS system_lib
 )
 
