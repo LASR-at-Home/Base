@@ -133,7 +133,6 @@ def detect(
             enforce_detection=True,
             silent=True,
             detector_backend="mtcnn",
-            # threshold=request.confidence,
         )
     except ValueError:
         return response
@@ -181,7 +180,6 @@ def detect(
             if len(result_paths) > 5:
                 result_paths = result_paths[:5]
             result_images = [cv2.imread(path) for path in result_paths]
-            print(len(result_images))
             debug_inference_pub.publish(
                 cv2_img.cv2_img_to_msg(create_image_collage(result_images))
             )
