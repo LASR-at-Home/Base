@@ -3,8 +3,8 @@ from torch_module.helpers import load_torch_model, binary_erosion_dilation
 
 from colour_estimation import load_images_to_dict, generate_colour_table, count_colours_in_masked_area, compare_colour_distributions
 from colour_estimation import SPESIFIC_COLOURS, DETAILED_COLOURS
-from categories_and_attributes import CelebAMaskHQCategoriesAndAttributes
-from image_with_masks_and_attributes import ImageWithMasksAndAttributes, ImageOfPerson
+from lasr_vision_torch.categories_and_attributes import CategoriesAndAttributes, CelebAMaskHQCategoriesAndAttributes
+from lasr_vision_torch.image_with_masks_and_attributes import ImageWithMasksAndAttributes, ImageOfPerson
 
 import numpy as np
 import cv2

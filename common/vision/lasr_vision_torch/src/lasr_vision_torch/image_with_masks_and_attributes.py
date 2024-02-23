@@ -1,5 +1,5 @@
 import numpy as np
-from categories_and_attributes import CategoriesAndAttributes
+from lasr_vision_torch.categories_and_attributes import CategoriesAndAttributes
 
 
 def _softmax(x: list[float]) -> list[float]:

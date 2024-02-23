@@ -141,7 +141,7 @@ class DescribePeople(smach.StateMachine):
                 xyz = userdata.xyz
                 # xyz = np.nanmean(xyz, axis=2)
                 # rospy.loginfo("COORD_Z:::%s" % str(xyz[neck_coord[0]][neck_coord[1]]))
-                point_head_client(xyz, neck_coord[0], neck_coord[1], client)
+                # point_head_client(xyz, neck_coord[0], neck_coord[1], client)
                 return 'succeeded'
             except rospy.ServiceException as e:
                 rospy.logwarn(f"Unable to perform inference. ({str(e)})")
