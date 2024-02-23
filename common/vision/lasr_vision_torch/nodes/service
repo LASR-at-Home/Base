@@ -1,4 +1,4 @@
-from lasr_vision_msgs.srv import TorchFaceFeatureDetection, TorchFaceFeatureDetectionRequest, TorchFaceFeatureDetectionResponse
+from lasr_vision_msgs.srv import TorchFaceFeatureDetection, TorchFaceFeatureDetectionRequest, TorchFaceFeatureDetectionResponse, TorchFaceFeatureDetectionDescription, TorchFaceFeatureDetectionDescriptionRequest, TorchFaceFeatureDetectionDescriptionResponse
 from lasr_vision_msgs.msg import FeatureWithColour, ColourPrediction
 from cv2_img import msg_to_cv2_img
 from torch_module.helpers import binary_erosion_dilation, median_color_float
@@ -13,7 +13,7 @@ import lasr_vision_torch
 from os import path
 
 
-def detect(request: TorchFaceFeatureDetectionRequest) -> TorchFaceFeatureDetectionResponse:
+def detect(request: TorchFaceFeatureDetectionDescriptionRequest) -> TorchFaceFeatureDetectionDescriptionRequest:
     # decode the image
     rospy.loginfo('Decoding')
     full_frame = msg_to_cv2_img(request.image_raw)
@@ -24,20 +24,22 @@ def detect(request: TorchFaceFeatureDetectionRequest) -> TorchFaceFeatureDetecti
     head_frame = lasr_vision_torch.extract_mask_region(full_frame, head_mask.astype(np.uint8), expand_x=0.4, expand_y=0.5)
     torso_frame = lasr_vision_torch.extract_mask_region(full_frame, torso_mask.astype(np.uint8), expand_x=0.2, expand_y=0.0)
 
-    class_pred, colour_pred = lasr_vision_torch.predict_frame(head_frame, torso_frame, full_frame, head_mask, torso_mask, lasr_vision_torch.model, lasr_vision_torch.thresholds_mask, lasr_vision_torch.erosion_iterations, lasr_vision_torch.dilation_iterations, lasr_vision_torch.thresholds_pred)
+    # class_pred, colour_pred = lasr_vision_torch.predict_frame(head_frame, torso_frame, full_frame, head_mask, torso_mask, lasr_vision_torch.model, lasr_vision_torch.thresholds_mask, lasr_vision_torch.erosion_iterations, lasr_vision_torch.dilation_iterations, lasr_vision_torch.thresholds_pred)
+    rst_str = lasr_vision_torch.predict_frame(head_frame, torso_frame, full_frame, head_mask, torso_mask,)
     
-    response = TorchFaceFeatureDetectionResponse()
+    response = TorchFaceFeatureDetectionDescriptionResponse()
+    response.description = rst_str
     # response.detected_features = str(class_pred) + str(colour_pred)
-    response.detected_features = []
-    for c in ['hair', 'hat', 'glasses', 'cloth',]:
-        # colour_pred[c] = {k: v[0] for k, v in colour_pred[c].items()}
-        sorted_list = sorted(colour_pred[c].items(), key=lambda item: item[1], reverse=True)
-        # rospy.loginfo(str(sorted_list))
-        if len(sorted_list) > 3:
-            sorted_list = sorted_list[0:3]
-        sorted_list = [k for k, v in sorted_list]
-        # rospy.loginfo(str(colour_pred[c]))
-        response.detected_features.append(FeatureWithColour(c, class_pred[c], sorted_list))
+    # response.detected_features = []
+    # for c in ['hair', 'hat', 'glasses', 'cloth',]:
+    #     # colour_pred[c] = {k: v[0] for k, v in colour_pred[c].items()}
+    #     sorted_list = sorted(colour_pred[c].items(), key=lambda item: item[1], reverse=True)
+    #     # rospy.loginfo(str(sorted_list))
+    #     if len(sorted_list) > 3:
+    #         sorted_list = sorted_list[0:3]
+    #     sorted_list = [k for k, v in sorted_list]
+    #     # rospy.loginfo(str(colour_pred[c]))
+    #     response.detected_features.append(FeatureWithColour(c, class_pred[c], sorted_list))
     return response
 
 
@@ -95,6 +97,6 @@ def detect(request: TorchFaceFeatureDetectionRequest) -> TorchFaceFeatureDetecti
 # test test
 
 rospy.init_node('torch_service')
-rospy.Service('/torch/detect/face_features', TorchFaceFeatureDetection, detect)
+rospy.Service('/torch/detect/face_features', TorchFaceFeatureDetectionDescription, detect)
 rospy.loginfo('Torch service started')
 rospy.spin()

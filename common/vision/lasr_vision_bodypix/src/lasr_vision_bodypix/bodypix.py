@@ -25,10 +25,15 @@ def load_model_cached(dataset: str) -> None:
         model = loaded_models[dataset]
     else:
         if dataset == 'resnet50':
+#             name = download_model(BodyPixModelPaths.RESNET50_FLOAT_STRIDE_16)
+#             rospy.logwarn(name)
+#             model = load_model(name)
             model = load_model('/home/rexy/.keras/tf-bodypix/3fe1b130a0f20e98340612c099b50c18--tfjs-models-savedmodel-bodypix-resnet50-float-model-stride16')
             # model = load_model(download_model(BodyPixModelPaths.RESNET50_FLOAT_STRIDE_16))
         elif dataset == 'mobilenet50':
-            model = load_model(download_model(BodyPixModelPaths.MOBILENET_FLOAT_50_STRIDE_16))
+            name = download_model(BodyPixModelPaths.MOBILENET_FLOAT_50_STRIDE_16)
+            rospy.logwarn(name)
+            model = load_model(name)
         else:
             model = load_model(dataset)
 

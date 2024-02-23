@@ -57,7 +57,7 @@ class Get3DImage(smach.State):
 
 class Get2DAnd3DImages(smach.State):
     """
-    State for reading an sensor_msgs Image message
+    State for reading an sensor_msgs Image message, get 2d and 3d messages simutainously 
     """
 
     def __init__(self, topic: str = None):
