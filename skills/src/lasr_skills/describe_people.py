@@ -8,7 +8,7 @@ import numpy as np
 
 # from colour_estimation import closest_colours, RGB_COLOURS
 from lasr_vision_msgs.msg import BodyPixMaskRequest, ColourPrediction, FeatureWithColour
-from lasr_vision_msgs.srv import YoloDetection, BodyPixDetection, TorchFaceFeatureDetection
+from lasr_vision_msgs.srv import YoloDetection, BodyPixDetection, TorchFaceFeatureDetection, TorchFaceFeatureDetectionDescription
 from numpy2message import numpy2message
 
 from .vision import GetImage, ImageMsgToCv2, Get3DImage, PclMsgToCv2, Get2DAnd3DImages
@@ -158,7 +158,7 @@ class DescribePeople(smach.StateMachine):
             smach.State.__init__(self, outcomes=['succeeded', 'failed'], input_keys=[
                                  'img', 'people_detections', 'bodypix_masks'], output_keys=['people'])
             self.torch_face_features = rospy.ServiceProxy(
-                '/torch/detect/face_features', TorchFaceFeatureDetection)
+                '/torch/detect/face_features', TorchFaceFeatureDetectionDescription)
 
         def execute(self, userdata):
             try:
@@ -187,8 +187,8 @@ class DescribePeople(smach.StateMachine):
                         [contours]), color=(255, 255, 255))
                     mask_bin = mask_image > 128
 
-                    # keep track
-                    features = []
+                    # # keep track
+                    # features = []
 
                     # process part masks
                     for (bodypix_mask, part) in zip(userdata.bodypix_masks, ['torso', 'head']):
@@ -218,11 +218,17 @@ class DescribePeople(smach.StateMachine):
                     head_mask_data, head_mask_shape, head_mask_dtype = numpy2message(head_mask)
 
                     full_frame = cv2_img.cv2_img_to_msg(img)
-                    features.extend(self.torch_face_features(
+                    # features.extend(self.torch_face_features(
+                    #     full_frame, 
+                    #     head_mask_data, head_mask_shape, head_mask_dtype,
+                    #     torso_mask_data, torso_mask_shape, torso_mask_dtype,
+                    # ).detected_features)
+
+                    rst = self.torch_face_features(
                         full_frame, 
                         head_mask_data, head_mask_shape, head_mask_dtype,
                         torso_mask_data, torso_mask_shape, torso_mask_dtype,
-                    ).detected_features)
+                    ).description
 
                     # # process part masks
                     # for (bodypix_mask, part) in zip(userdata.bodypix_masks, ['torso', 'head']):
@@ -278,7 +284,7 @@ class DescribePeople(smach.StateMachine):
 
                     people.append({
                         'detection': person,
-                        'features': features
+                        'features': rst
                     })
 
                 # Userdata:
