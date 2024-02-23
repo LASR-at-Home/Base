@@ -200,7 +200,7 @@ class UNetWithResnet18Encoder(nn.Module):
     def __init__(self, num_classes, in_channels=3, freeze_bn=False, sigmoid=True):
         super(UNetWithResnet18Encoder, self).__init__()
         self.sigmoid = sigmoid
-        resnet18 = models.resnet18(pretrained=True)
+        resnet18 = models.resnet18(pretrained=False)
         
         if in_channels != 3:
             resnet18.conv1 = nn.Conv2d(in_channels, 64, kernel_size=7, stride=2, padding=3, bias=False)
@@ -258,7 +258,7 @@ class UNetWithResnet18Encoder(nn.Module):
 
 
 class MultiLabelResNet(nn.Module):
-    def __init__(self, num_labels, input_channels=3, sigmoid=True, pretrained=True,):
+    def __init__(self, num_labels, input_channels=3, sigmoid=True, pretrained=False,):
         super(MultiLabelResNet, self).__init__()
         self.model = models.resnet18(pretrained=pretrained)
         self.sigmoid = sigmoid

@@ -25,7 +25,8 @@ def load_model_cached(dataset: str) -> None:
         model = loaded_models[dataset]
     else:
         if dataset == 'resnet50':
-            model = load_model(download_model(BodyPixModelPaths.RESNET50_FLOAT_STRIDE_16))
+            model = load_model('/home/rexy/.keras/tf-bodypix/3fe1b130a0f20e98340612c099b50c18--tfjs-models-savedmodel-bodypix-resnet50-float-model-stride16')
+            # model = load_model(download_model(BodyPixModelPaths.RESNET50_FLOAT_STRIDE_16))
         elif dataset == 'mobilenet50':
             model = load_model(download_model(BodyPixModelPaths.MOBILENET_FLOAT_50_STRIDE_16))
         else:
@@ -44,6 +45,7 @@ def detect(request: BodyPixDetectionRequest, debug_publisher: rospy.Publisher | 
     # decode the image
     rospy.loginfo('Decoding')
     img = cv2_img.msg_to_cv2_img(request.image_raw)
+    # rospy.logwarn(str(type(img)))
     img_height, img_width, _ = img.shape  # Get image dimensions
 
     # load model

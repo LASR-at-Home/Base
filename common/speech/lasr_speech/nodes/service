@@ -10,13 +10,23 @@ from time import sleep
 from multiprocessing import Process
 import rospkg
 import os
+import actionlib
+
+from lasr_speech_recognition_msgs.msg import (  # type: ignore
+    TranscribeSpeechAction,
+    TranscribeSpeechGoal,
+)
+
 
 class TranscribeAndParse:
 
     def __init__(self):
         rospy.wait_for_service("/lasr_rasa/parse")
         self.rasa = rospy.ServiceProxy("/lasr_rasa/parse", Rasa)
-        self.transcribe_audio = rospy.ServiceProxy("/whisper/transcribe_audio", TranscribeAudio) 
+       # self.transcribe_audio = rospy.ServiceProxy("/whisper/transcribe_audio", TranscribeAudio) 
+        self.speech_client = actionlib.SimpleActionClient("transcribe_speech", TranscribeSpeechAction)
+        self.speech_client.wait_for_server()
+
        # self.sound_data = soundfile.read(os.path.join(rospkg.RosPack().get_path("lasr_speech"), "sounds", "beep.wav"))[0]
 
  #   def play_sound(self):
@@ -34,9 +44,13 @@ class TranscribeAndParse:
     def __call__(self, req):
      #   if req.play_sound:
       #      self.play_sound()
-        transcription = self.transcribe_audio()
-        rospy.loginfo(transcription)
-        rasa_response = self.rasa(transcription.phrase)
+        goal = TranscribeSpeechGoal()
+        self.speech_client.send_goal(goal)
+        self.speech_client.wait_for_result()
+        result = self.speech_client.get_result()
+        text = result.sequence
+        rospy.loginfo(text)
+        rasa_response = self.rasa(text)
         rospy.loginfo(rasa_response)
         return SpeechResponse(rasa_response.json_response, rasa_response.success)
 
