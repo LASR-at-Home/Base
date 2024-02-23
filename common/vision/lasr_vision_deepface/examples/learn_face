@@ -1,0 +1,60 @@
+#!/usr/bin/env python3
+
+import rospy
+import actionlib
+import cv2_img
+import torch
+
+from lasr_vision_msgs.msg import (
+    LearnFaceAction,
+    LearnFaceResult,
+)
+from lasr_vision_msgs.srv import (
+    LearnFace as LF,
+    LearnFaceRequest as LFRequest,
+)
+from pal_interaction_msgs.msg import TtsGoal, TtsAction
+from sensor_msgs.msg import Image
+from actionlib import SimpleActionClient
+
+
+class LearnFace:
+
+    def __init__(self):
+
+        self.learn_face = rospy.ServiceProxy("/learn_face", LF)
+        self.learn_face.wait_for_service()
+        rospy.loginfo("got learn_face")
+
+        self.tts = SimpleActionClient("/tts", TtsAction)
+        self.tts.wait_for_server()
+
+        self._action_server = actionlib.SimpleActionServer(
+            "learn_face",
+            LearnFaceAction,
+            execute_cb=self.execute_cb,
+            auto_start=False,
+        )
+
+        self._action_server.start()
+
+    def execute_cb(self, goal):
+        rospy.loginfo("Learning face!")
+
+        tts_goal = TtsGoal()
+        tts_goal.rawtext.lang_id = "en_GB"
+        tts_goal.rawtext.text = f"{goal.name}, give me a moment to learn your face"
+        self.tts.send_goal_and_wait(tts_goal)
+        req = LFRequest()
+        req.dataset = "learn_face_example_dataset"
+        req.name = goal.name
+        req.n_images = 10
+        self.learn_face(req)
+
+        self._action_server.set_succeeded(LearnFaceResult())
+
+
+if __name__ == "__main__":
+    rospy.init_node("learn_face")
+    LearnFace()
+    rospy.spin()
