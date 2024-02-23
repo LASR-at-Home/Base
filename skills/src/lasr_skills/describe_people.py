@@ -140,7 +140,7 @@ class DescribePeople(smach.StateMachine):
                 rospy.loginfo("COORD_XY:::%s" % str(neck_coord))
                 xyz = userdata.xyz
                 # xyz = np.nanmean(xyz, axis=2)
-                # rospy.loginfo("COORD_Z:::%s" % str(xyz[neck_coord[0]][neck_coord[1]]))
+                rospy.loginfo("COORD_Z:::%s" % str(xyz[neck_coord[0]][neck_coord[1]]))
                 # point_head_client(xyz, neck_coord[0], neck_coord[1], client)
                 return 'succeeded'
             except rospy.ServiceException as e:
