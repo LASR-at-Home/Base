@@ -1,0 +1,59 @@
+#!/usr/bin/env python3
+
+import rospy
+import actionlib
+
+from lasr_speech_recognition_msgs.msg import (
+    TranscribeSpeechAction,
+    TranscribeSpeechGoal,
+)
+from lasr_vision_msgs.msg import GetNameAction, GetNameResult
+from pal_interaction_msgs.msg import TtsGoal, TtsAction
+from actionlib import SimpleActionClient
+
+
+class GetName:
+
+    def __init__(self):
+
+        self.transcribe_speech = actionlib.SimpleActionClient(
+            "transcribe_speech",
+            TranscribeSpeechAction,
+        )
+        self.transcribe_speech.wait_for_server()
+        rospy.loginfo("got transcribe_speech")
+
+        self.tts = SimpleActionClient("/tts", TtsAction)
+        self.tts.wait_for_server()
+
+        self._action_server = actionlib.SimpleActionServer(
+            "get_name",
+            GetNameAction,
+            execute_cb=self.execute_cb,
+            auto_start=False,
+        )
+
+        self._action_server.start()
+
+    def execute_cb(self, _):
+        tts_goal = TtsGoal()
+        tts_goal.rawtext.lang_id = "en_GB"
+        tts_goal.rawtext.text = "Could you please tell me your name?"
+        self.tts.send_goal_and_wait(tts_goal)
+
+        self.transcribe_speech.send_goal(TranscribeSpeechGoal())
+        self.transcribe_speech.wait_for_result()
+        result = (
+            self.transcribe_speech.get_result()
+            .sequence.lower()
+            .replace(".", "")
+            .split(" ")[-1]
+        )
+
+        self._action_server.set_succeeded(GetNameResult(result))
+
+
+if __name__ == "__main__":
+    rospy.init_node("get_name")
+    GetName()
+    rospy.spin()

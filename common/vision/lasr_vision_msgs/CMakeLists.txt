@@ -68,6 +68,9 @@ add_action_files(
   DIRECTORY action
   FILES 
   LearnFace.action
+  GetName.action
+  Identify.action
+  Greet.action
 )
 
 ## Generate added messages and services with any dependencies listed here

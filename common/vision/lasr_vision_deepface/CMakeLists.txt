@@ -163,7 +163,11 @@ catkin_install_python(PROGRAMS
   scripts/create_dataset
   examples/relay
   examples/greet
-  examples/learn_face
+  examples/greet_and_identify
+  nodes/actions/get_name
+  nodes/actions/greet
+  nodes/actions/identify
+  nodes/actions/learn_face
   nodes/service
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )

@@ -2,8 +2,6 @@
 
 import rospy
 import actionlib
-import cv2_img
-import torch
 
 from lasr_vision_msgs.msg import (
     LearnFaceAction,
@@ -14,7 +12,6 @@ from lasr_vision_msgs.srv import (
     LearnFaceRequest as LFRequest,
 )
 from pal_interaction_msgs.msg import TtsGoal, TtsAction
-from sensor_msgs.msg import Image
 from actionlib import SimpleActionClient
 
 

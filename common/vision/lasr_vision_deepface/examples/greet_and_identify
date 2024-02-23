@@ -1,0 +1,61 @@
+#!/usr/bin/env python3
+import rospy
+
+rospy.init_node("better_qualification")
+
+from lasr_vision_msgs.msg import (
+    IdentifyAction,
+    IdentifyGoal,
+    GreetAction,
+    GreetGoal,
+    GetNameAction,
+    GetNameGoal,
+    LearnFaceAction,
+    LearnFaceGoal,
+)
+
+from pal_interaction_msgs.msg import TtsGoal, TtsAction
+from actionlib import SimpleActionClient
+
+# supress warnings
+import warnings
+
+warnings.filterwarnings("ignore")
+
+location = "corridor"
+name = "unknown"
+person_pose = None
+
+print("Waiting for action servers...")
+print("tts")
+tts = SimpleActionClient("/tts", TtsAction)
+tts.wait_for_server()
+print("identify")
+identify = SimpleActionClient("identify", IdentifyAction)
+identify.wait_for_server()
+print("greet")
+greet = SimpleActionClient("greet", GreetAction)
+greet.wait_for_server()
+print("get_name")
+get_name = SimpleActionClient("get_name", GetNameAction)
+get_name.wait_for_server()
+print("learn_face")
+learn_face = SimpleActionClient("learn_face", LearnFaceAction)
+learn_face.wait_for_server()
+
+
+# Try and identify the person
+identify.send_goal_and_wait(IdentifyGoal())
+identify_result = identify.get_result()
+
+if identify_result.name != name or not identify_result.name:
+    # Greet the person
+    greet.send_goal_and_wait(GreetGoal(name=identify_result.name))
+
+if not identify_result.success:
+    get_name.send_goal_and_wait(GetNameGoal())
+    get_name_result = get_name.get_result()
+    name = get_name_result.name
+    learn_face.send_goal_and_wait(LearnFaceGoal(name))
+else:
+    name = identify_result.name

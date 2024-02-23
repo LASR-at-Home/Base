@@ -1,0 +1,61 @@
+#!/usr/bin/env python3
+
+import rospy
+import actionlib
+import random
+
+from lasr_vision_msgs.msg import GreetAction, GreetResult
+from pal_interaction_msgs.msg import TtsGoal, TtsAction
+from actionlib import SimpleActionClient
+
+
+class Greet:
+
+    unknown_greetings = [
+        "Hello, it's nice to meet you",
+        "Hi there, it's a pleasure to meet you",
+    ]
+
+    known_greeting_suffixes = [
+        "It's great to see you again.",
+        "Lovely to see your face again.",
+        "It's a pleasure to see you again.",
+    ]
+
+    def __init__(self):
+
+        self.tts = SimpleActionClient("/tts", TtsAction)
+        self.tts.wait_for_server()
+
+        self._action_server = actionlib.SimpleActionServer(
+            "greet",
+            GreetAction,
+            execute_cb=self.execute_cb,
+            auto_start=False,
+        )
+
+        self.greeted = []
+
+        self._action_server.start()
+
+    def execute_cb(self, goal):
+        if goal.name in self.greeted:
+            return
+        tts_goal = TtsGoal()
+        tts_goal.rawtext.lang_id = "en_GB"
+        if goal.name:
+            tts_goal.rawtext.text = (
+                f"Hello, {goal.name}. {random.choice(self.known_greeting_suffixes)}"
+            )
+            self.greeted.append(goal.name)
+        else:
+            tts_goal.rawtext.text = random.choice(self.unknown_greetings)
+
+        self.tts.send_goal_and_wait(tts_goal)
+        self._action_server.set_succeeded(GreetResult())
+
+
+if __name__ == "__main__":
+    rospy.init_node("greet")
+    Greet()
+    rospy.spin()
