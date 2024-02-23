@@ -1,0 +1,57 @@
+#!/usr/bin/env python3
+
+import sys
+import rospy
+from copy import deepcopy
+
+from sensor_msgs.msg import Image
+
+from lasr_vision_msgs.srv import Recognise, RecogniseRequest
+
+if len(sys.argv) < 3:
+    print('Usage: rosrun lase_recognition greet <source_topic> <dataset>')
+    exit()
+
+listen_topic = sys.argv[1]
+dataset = sys.argv[2]
+people_in_frame = []
+last_received_time = None
+
+
+def detect(image):
+    rospy.loginfo("Received image message")
+    global people_in_frame
+    people_in_frame = []
+    try:
+        detect_service = rospy.ServiceProxy('/recognise', Recognise)
+        req = RecogniseRequest()
+        req.image_raw = image
+        req.dataset = dataset
+        req.confidence = 0.5
+        resp = detect_service(req)
+        for detection in resp.detections:
+            people_in_frame.append(detection.name)
+        print(resp)
+    except rospy.ServiceException as e:
+        rospy.logerr("Service call failed: %s" % e)
+
+def greet():
+    print(f"Hello, {' '.join(people_in_frame)}")
+
+def image_callback(image):
+    global last_received_time
+    if last_received_time is None or rospy.Time.now() - last_received_time >= rospy.Duration(5.0):
+        prev_people_in_frame = deepcopy(people_in_frame)
+        detect(image)
+        if people_in_frame != prev_people_in_frame:
+            greet()
+        last_received_time = rospy.Time.now()
+
+def listener():
+    rospy.init_node('image_listener', anonymous=True)
+    rospy.wait_for_service('/recognise')
+    rospy.Subscriber(listen_topic, Image, image_callback)
+    rospy.spin()
+
+if __name__ == '__main__':
+    listener()

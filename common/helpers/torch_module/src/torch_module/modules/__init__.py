@@ -36,7 +36,6 @@ class UNetWithResnetEncoder(nn.Module):
         super(UNetWithResnetEncoder, self).__init__()
         self.sigmoid = sigmoid
         self.resnet = models.resnet34(pretrained=True)  # Initialize with a ResNet model
-
         if in_channels != 3:
             self.resnet.conv1 = nn.Conv2d(in_channels, 64, kernel_size=7, stride=2, padding=3, bias=False)
 
@@ -98,7 +97,7 @@ class UNetWithResnetEncoder(nn.Module):
 
 
 class MultiLabelResNet(nn.Module):
-    def __init__(self, num_labels, input_channels=3, sigmoid=True, pretrained=True, ):
+    def __init__(self, num_labels, input_channels=3, sigmoid=True, pretrained=False,):
         super(MultiLabelResNet, self).__init__()
         self.model = models.resnet34(pretrained=pretrained)
         self.sigmoid = sigmoid
@@ -118,7 +117,7 @@ class MultiLabelResNet(nn.Module):
 
 
 class CombinedModel(nn.Module):
-    def __init__(self, segment_model: nn.Module, predict_model: nn.Module, cat_layers: int = None):
+    def __init__(self, segment_model: nn.Module, predict_model: nn.Module, cat_layers: int=None):
         super(CombinedModel, self).__init__()
         self.segment_model = segment_model
         self.predict_model = predict_model

@@ -8,6 +8,7 @@ class SpeakDescriptions(smach.State):
         self.default = default
 
     def execute(self, userdata):
+
         for person in userdata['people']:
             self.default.voice.speak(person['features'])
         # for person in userdata['people']:
@@ -21,5 +22,6 @@ class SpeakDescriptions(smach.State):
         #                 continue
                     
         #             self.default.voice.speak(f'They have {feature.name} and it has the colour {feature.colours[0]}')
+
 
         return 'succeeded'
