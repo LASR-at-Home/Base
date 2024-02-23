@@ -1,0 +1,10 @@
+# Name to associate
+string name
+
+# Dataset to add face to
+string dataset
+
+# Number of images to take
+int32 n_images
+
+---

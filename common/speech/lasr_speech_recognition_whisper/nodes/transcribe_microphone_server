@@ -13,6 +13,7 @@ import torch
 import actionlib
 import speech_recognition as sr  # type: ignore
 import lasr_speech_recognition_msgs.msg  # type: ignore
+from std_msgs.msg import String  # type: ignore
 from lasr_speech_recognition_whisper import load_model  # type: ignore
 
 # Error handler to remove ALSA error messages taken from:
@@ -83,7 +84,9 @@ class TranscribeSpeechAction(object):
 
         self._action_name = action_name
         self._model_params = model_params
-
+        self._transcription_server = rospy.Publisher(
+            "/live_speech_transcription", String, queue_size=10
+        )
         with noalsaerr():
             self._model = load_model(
                 self._model_params.model_name,
@@ -91,7 +94,7 @@ class TranscribeSpeechAction(object):
                 self._model_params.warmup,
             )
             # Configure the speech recogniser object and adjust for ambient noise
-            self.recogniser = self._configure_recogniser()
+            self.recogniser = self._configure_recogniser(ambient_adj=True)
             # Setup the action server and register execution callback
             self._action_server = actionlib.SimpleActionServer(
                 self._action_name,
@@ -110,6 +113,7 @@ class TranscribeSpeechAction(object):
             self._action_server.start()
 
     def _timer_cb(self, _) -> None:
+        return
         """Adjusts the microphone for ambient noise, unless the action server is listening."""
         if self._listening:
             return
@@ -223,7 +227,7 @@ class TranscribeSpeechAction(object):
         rospy.loginfo(
             f"Time taken: {transcription_end_time - transcription_start_time:.2f}s"
         )
-
+        self._transcription_server.publish(phrase)
         if self._action_server.is_preempt_requested():
             self._listening = False
             return
@@ -248,13 +252,13 @@ def parse_args() -> dict:
     )
 
     parser.add_argument(
-        "--action-name",
+        "--action_name",
         type=str,
         default="transcribe_speech",
         help="Name of the action server.",
     )
     parser.add_argument(
-        "--model-name",
+        "--model_name",
         type=str,
         default="medium.en",
         help="Name of the speech recognition model.",
@@ -300,8 +304,8 @@ def parse_args() -> dict:
         action="store_true",
         help="Disable warming up the model by running inference on a test file.",
     )
-
-    return vars(parser.parse_args())
+    args, unknown = parser.parse_known_args()
+    return vars(args)
 
 
 def configure_model_params(config: dict) -> speech_model_params:
@@ -346,6 +350,8 @@ def configure_whisper_cache() -> None:
 if __name__ == "__main__":
     configure_whisper_cache()
     config = parse_args()
-    rospy.init_node(config["action_name"])
-    server = TranscribeSpeechAction(rospy.get_name(), configure_model_params(config))
+    rospy.init_node("speech_transcription_node")
+    server = TranscribeSpeechAction(
+        config["action_name"], configure_model_params(config)
+    )
     rospy.spin()
