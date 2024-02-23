@@ -297,4 +297,4 @@ class DescribePeople(smach.StateMachine):
             userdata['people'] = people
             # except Exception:
             #     return 'failed'
-            # return 'succeeded'
+            return 'succeeded'

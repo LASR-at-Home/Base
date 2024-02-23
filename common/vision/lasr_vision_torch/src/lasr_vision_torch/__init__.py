@@ -259,7 +259,7 @@ def predict_frame(head_frame, torso_frame, full_frame, head_mask, torso_mask,):
     head_frame = pad_image_to_even_dims(head_frame)
     torso_frame = pad_image_to_even_dims(torso_frame)
 
-    rst = ImageOfPerson.from_parent_instance(p.predict(full_frame))
+    rst = ImageOfPerson.from_parent_instance(p.predict(head_frame))
 
     return rst.describe()
 
