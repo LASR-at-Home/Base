@@ -7,7 +7,7 @@ project(lasr_vision_clip)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED catkin_virtualenv message_generation genmsg actionlib_msgs actionlib geometry_msgs)
+find_package(catkin REQUIRED catkin_virtualenv)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)

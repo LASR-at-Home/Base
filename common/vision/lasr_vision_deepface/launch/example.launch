@@ -3,11 +3,9 @@
         <arg name="debug" value="true" />
     </include>
 
-    <node pkg="lasr_vision_deepface" type="get_name" name="get_name_action" output="screen"/>
-    <node pkg="lasr_vision_deepface" type="greet" name="greet_action" output="screen"/>
-    <node pkg="lasr_vision_deepface" type="identify" name="identify_action" output="screen"/>
-    <node pkg="lasr_vision_deepface" type="learn_face" name="learn_face_action" output="screen"/>
-    <node pkg="lasr_vision_deepface" type="greet_and_identify" name="greet_and_identify_node" output="screen"/>
+    <arg topic="/xtion/rgb/image_raw"/>
+    <arg dataset=""/>
+    <node pkg="lasr_vision_deepface" type="gree" name="greet" output="screen" args="$(arg topic) $(arg dataset)"/>
 
 
 </launch>

@@ -17,13 +17,6 @@ listen_topic = sys.argv[1]
 dataset = sys.argv[2]
 people_in_frame = []
 
-# store a dict of people and their last seen time
-# if a person hasn't been seen for a while, remove them from the dict
-# if a person is seen, update their last seen time
-# if a person is seen and they are not in the dict, add them to the dict
-# if the dict is empty, don't greet
-# if the dict is not empty, greet the people in the dict
-
 
 people_in_frame = {}
 
@@ -48,7 +41,6 @@ def greet():
     voice = Voice()
     voice.speak(f"Hello, {' '.join(people_in_frame)}")
 
-    # print(f"Hello, {' '.join(people_in_frame)}\033[0m")
 
 
 def image_callback(image):
