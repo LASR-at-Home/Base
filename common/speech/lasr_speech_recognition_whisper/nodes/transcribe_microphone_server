@@ -304,8 +304,8 @@ def parse_args() -> dict:
         action="store_true",
         help="Disable warming up the model by running inference on a test file.",
     )
-
-    return vars(parser.parse_args())
+    args, unknown = parser.parse_known_args()
+    return vars(args)
 
 
 def configure_model_params(config: dict) -> speech_model_params:
@@ -348,14 +348,9 @@ def configure_whisper_cache() -> None:
 
 
 if __name__ == "__main__":
-    import sys
-
-    print(sys.argv)
-    # remove everything starting with __ from sys.argv
-    sys.argv = [arg for arg in sys.argv if not arg.startswith("__")]
     configure_whisper_cache()
     config = parse_args()
-    rospy.init_node("aksdkasbdkjsabd")
+    rospy.init_node("speech_transcription_node")
     server = TranscribeSpeechAction(
         config["action_name"], configure_model_params(config)
     )
