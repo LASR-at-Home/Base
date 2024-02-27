@@ -69,10 +69,11 @@ class Get2DAnd3DImages(smach.State):
 
     def execute(self, userdata):
         try:
-            userdata.img_msg_2d = rospy.wait_for_message(
-                self.topic1, Image)
-            userdata.img_msg_3d = rospy.wait_for_message(
-                self.topic2, PointCloud2)
+            for _ in range(5):  # This is a little change, see if helps avoid having delayed frame issue.
+                userdata.img_msg_2d = rospy.wait_for_message(
+                    self.topic1, Image)
+                userdata.img_msg_3d = rospy.wait_for_message(
+                    self.topic2, PointCloud2)
         except Exception as e:
             print(e)
             return 'failed'
