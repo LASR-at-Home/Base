@@ -1,5 +1,6 @@
 import rospy
 import numpy as np
+import ros_numpy as rnp
 
 from PIL import Image
 from sensor_msgs.msg import Image as SensorImage
@@ -64,7 +65,45 @@ def msg_to_cv2_img(msg: SensorImage):
     img = np.array(img)
     img = img[:, :, ::-1].copy()
 
+    rospy.logwarn('shape of the image: ' + str(img.shape))
+
     return img
+
+
+# pcl_xyz = rnp.point_cloud2.pointcloud2_to_xyz_array(pcl_msg, remove_nans=False)
+def pcl_msg_to_xyz(pcl_msg):
+    pcl_xyz = rnp.point_cloud2.pointcloud2_to_xyz_array(pcl_msg, remove_nans=False)
+
+    rospy.logwarn('shape of the image: ' + str(pcl_xyz.shape))
+
+    return pcl_xyz
+
+
+def pcl_msg_to_cv2(pcl_msg):
+    """
+    Constructs a cv2 image from a PointCloud2 message.
+    
+    Parameters
+    ----------
+    pcl_msg : sensor_msgs/PointCloud2
+        Input pointcloud (organised)
+    
+    Returns
+    -------
+    np.array : cv2 image
+    """
+
+    # Extract rgb image from pointcloud
+    frame = np.fromstring(pcl_msg.data, dtype=np.uint8)
+    frame = frame.reshape(pcl_msg.height, pcl_msg.width, 32)
+    frame = frame[:,:,16:19]
+
+    # Ensure array is contiguous
+    frame = np.ascontiguousarray(frame, dtype=np.uint8)
+
+    rospy.logwarn('shape of the image: ' + str(frame.shape))
+
+    return frame
 
 
 def extract_mask_region(frame, mask, expand_x=0.5, expand_y=0.5):

@@ -1,5 +1,8 @@
 # Feature name
 string name
 
+# Feature label
+bool label
+
 # Colour predictions
-lasr_vision_msgs/ColourPrediction[] colours
+string[] colours
