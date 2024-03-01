@@ -15,5 +15,5 @@ class DetectFaces(smach.State):
 
     def execute(self, userdata):
         
-        # Here we will learn faces
+        # Here we will detect faces
         return 'succeeded'
