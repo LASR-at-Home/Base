@@ -6,4 +6,12 @@ from .detect_people_3d import DetectPeople3D
 from .detect_people_in_area_3d import DetectPeopleInArea3D
 from .wait_for_person import WaitForPerson
 from .wait_for_person_in_area import WaitForPersonInArea
+<<<<<<< HEAD
 from .look_to_point import LookToPoint
+=======
+from .describe_people import DescribePeople
+from .look_to_point import LookToPoint
+from .look_to_point import LookToPoint
+from .go_to_location import GoToLocation
+from .go_to_semantic_location import GoToSemanticLocation
+>>>>>>> 1b3a96145d766f4f3987aed8be596454322fb0f7

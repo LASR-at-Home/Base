@@ -1,0 +1,357 @@
+#!/usr/bin/env python3
+
+import os
+import argparse
+from typing import Optional
+from dataclasses import dataclass
+from pathlib import Path
+from timeit import default_timer as timer
+
+import rospy
+import numpy as np
+import torch
+import actionlib
+import speech_recognition as sr  # type: ignore
+import lasr_speech_recognition_msgs.msg  # type: ignore
+from std_msgs.msg import String  # type: ignore
+from lasr_speech_recognition_whisper import load_model  # type: ignore
+
+# Error handler to remove ALSA error messages taken from:
+# https://stackoverflow.com/questions/7088672/pyaudio-working-but-spits-out-error-messages-each-time/17673011#17673011
+
+from ctypes import *
+from contextlib import contextmanager
+
+ERROR_HANDLER_FUNC = CFUNCTYPE(None, c_char_p, c_int, c_char_p, c_int, c_char_p)
+
+
+def py_error_handler(filename, line, function, err, fmt):
+    pass
+
+
+c_error_handler = ERROR_HANDLER_FUNC(py_error_handler)
+
+
+@contextmanager
+def noalsaerr():
+    asound = cdll.LoadLibrary("libasound.so")
+    asound.snd_lib_error_set_handler(c_error_handler)
+    yield
+    asound.snd_lib_error_set_handler(None)
+
+
+@dataclass
+class speech_model_params:
+    """Class for storing speech recognition model parameters.
+
+    Args:
+        model_name (str, optional): Name of the speech recognition model. Defaults to "medium.en".
+        Must be a valid Whisper model name.
+        device (str, optional): Device to run the model on. Defaults to "cuda" if available, otherwise "cpu".
+        start_timeout (float): Max number of seconds of silence when starting listening before stopping. Defaults to 5.0.
+        end_timeout (Optional[float]): Max number of seconds of silence after starting listening before stopping. Defaults to None.
+        sample_rate (int): Sample rate of the microphone. Defaults to 16000Hz.
+        mic_device (Optional[str]): Microphone device index or name. Defaults to None.
+        timer_duration (Optional[int]): Duration of the timer for adjusting the microphone for ambient noise. Defaults to 20 seconds.
+        warmup (bool): Whether to warmup the model by running inference on a test file. Defaults to True.
+    """
+
+    model_name: str = "medium.en"
+    device: str = "cuda" if torch.cuda.is_available() else "cpu"
+    start_timeout: float = 5.0
+    end_timeout: Optional[float] = None
+    sample_rate: int = 16000
+    mic_device: Optional[str] = None
+    timer_duration: Optional[int] = 20
+    warmup: bool = True
+
+
+class TranscribeSpeechAction(object):
+    # create messages that are used to publish feedback/result
+    _feedback = lasr_speech_recognition_msgs.msg.TranscribeSpeechFeedback()
+    _result = lasr_speech_recognition_msgs.msg.TranscribeSpeechResult()
+
+    def __init__(
+        self,
+        action_name: str,
+        model_params: speech_model_params,
+    ) -> None:
+        """Starts an action server for transcribing speech.
+
+        Args:
+            action_name (str): Name of the action server.
+        """
+
+        self._action_name = action_name
+        self._model_params = model_params
+        self._transcription_server = rospy.Publisher(
+            "/live_speech_transcription", String, queue_size=10
+        )
+        with noalsaerr():
+            self._model = load_model(
+                self._model_params.model_name,
+                self._model_params.device,
+                self._model_params.warmup,
+            )
+            # Configure the speech recogniser object and adjust for ambient noise
+            self.recogniser = self._configure_recogniser(ambient_adj=True)
+            # Setup the action server and register execution callback
+            self._action_server = actionlib.SimpleActionServer(
+                self._action_name,
+                lasr_speech_recognition_msgs.msg.TranscribeSpeechAction,
+                execute_cb=self.execute_cb,
+                auto_start=False,
+            )
+            self._action_server.register_preempt_callback(self.prempt_cb)
+            # Setup the timer for adjusting the microphone for ambient noise every x seconds
+            self._timer_duration = self._model_params.timer_duration
+            self._timer = rospy.Timer(
+                rospy.Duration(self._timer_duration), self._timer_cb
+            )
+            self._listening = False
+
+            self._action_server.start()
+
+    def _timer_cb(self, _) -> None:
+        return
+        """Adjusts the microphone for ambient noise, unless the action server is listening."""
+        if self._listening:
+            return
+        rospy.loginfo("Adjusting microphone for ambient noise...")
+        with noalsaerr():
+            with self._configure_microphone() as source:
+                self.recogniser.adjust_for_ambient_noise(source)
+
+    def _reset_timer(self) -> None:
+        """Resets the timer for adjusting the microphone for ambient noise."""
+        self._timer.shutdown()
+        self._timer = rospy.Timer(rospy.Duration(self._timer_duration), self._timer_cb)
+
+    def _configure_microphone(self) -> sr.Microphone:
+        """Configures the microphone for listening to speech based on the
+        microphone device index or name.
+
+        Returns: microphone object
+        """
+
+        if self._model_params.mic_device is None:
+            # If no microphone device is specified, use the system default microphone
+            return sr.Microphone(sample_rate=self._model_params.sample_rate)
+        elif self._model_params.mic_device.isdigit():
+            return sr.Microphone(
+                device_index=int(self._model_params.mic_device),
+                sample_rate=self._model_params.sample_rate,
+            )
+        else:
+            microphones = enumerate(sr.Microphone.list_microphone_names())
+            for index, name in microphones:
+                if self._model_params.mic_device in name:
+                    return sr.Microphone(
+                        device_index=index,
+                        sample_rate=self._model_params.sample_rate,
+                    )
+            raise ValueError(
+                f"Could not find microphone with name: {self._model_params.mic_device}"
+            )
+
+    def _configure_recogniser(self, ambient_adj: bool = True) -> sr.Recognizer:
+        """Configures the speech recogniser object.
+
+        Args:
+            ambient_adj (bool, optional): Whether to adjust for ambient noise. Defaults to True.
+
+        Returns:
+            sr.Recognizer: speech recogniser object.
+        """
+        self._listening = True
+        recogniser = sr.Recognizer()
+        if ambient_adj:
+            with self._configure_microphone() as source:
+                recogniser.adjust_for_ambient_noise(source)
+        self._listening = False
+        return recogniser
+
+    def prempt_cb(self) -> None:
+        """Callback for preempting the action server.
+
+        Sets server to preempted state.
+        """
+        preempted_str = f"{self._action_name} has been preempted"
+        rospy.loginfo(preempted_str)
+        self._result.sequence = preempted_str
+        self._action_server.set_preempted(result=self._result, text=preempted_str)
+
+    def execute_cb(self, goal) -> None:
+        """Callback for executing the action server.
+
+        Checks for preemption before listening and before and after transcribing, returning
+        if preemption is requested.
+
+        Args:
+            goal: UNUSED - actionlib requires a goal argument in the execute callback, but
+            this action server does not use a goal.
+        """
+        rospy.loginfo("Request Received")
+        if self._action_server.is_preempt_requested():
+            return
+        # Since we are about to listen, reset the timer for adjusting the microphone for ambient noise
+        # as this assumes self_timer_duration seconds of silence before adjusting
+        self._reset_timer()
+        with noalsaerr():
+            with self._configure_microphone() as src:
+                self._listening = True
+                wav_data = self.recogniser.listen(
+                    src,
+                    timeout=self._model_params.start_timeout,
+                    phrase_time_limit=self._model_params.end_timeout,
+                ).get_wav_data()
+        # Magic number 32768.0 is the maximum value of a 16-bit signed integer
+        float_data = (
+            np.frombuffer(wav_data, dtype=np.int16).astype(np.float32, order="C")
+            / 32768.0
+        )
+
+        if self._action_server.is_preempt_requested():
+            self._listening = False
+            return
+
+        rospy.loginfo(f"Transcribing phrase with Whisper...")
+        transcription_start_time = timer()
+        # Cast to fp16 if using GPU
+        phrase = self._model.transcribe(
+            float_data,
+            fp16=self._model_params.device == "cuda",
+        )["text"]
+        transcription_end_time = timer()
+        rospy.loginfo(f"Transcription finished!")
+        rospy.loginfo(
+            f"Time taken: {transcription_end_time - transcription_start_time:.2f}s"
+        )
+        self._transcription_server.publish(phrase)
+        if self._action_server.is_preempt_requested():
+            self._listening = False
+            return
+
+        self._result.sequence = phrase
+        rospy.loginfo(f"Transcribed phrase: {phrase}")
+        rospy.loginfo(f"{self._action_name} has succeeded")
+        self._action_server.set_succeeded(self._result)
+
+        # Have this at the very end to not disrupt the action server
+        self._listening = False
+
+
+def parse_args() -> dict:
+    """Parses the command line arguments into a name: value dictinoary.
+
+    Returns:
+        dict: Dictionary of name: value pairs of command line arguments.
+    """
+    parser = argparse.ArgumentParser(
+        description="Starts an action server for transcribing speech."
+    )
+
+    parser.add_argument(
+        "--action_name",
+        type=str,
+        default="transcribe_speech",
+        help="Name of the action server.",
+    )
+    parser.add_argument(
+        "--model_name",
+        type=str,
+        default="medium.en",
+        help="Name of the speech recognition model.",
+    )
+    parser.add_argument(
+        "--device",
+        type=str,
+        default="cuda" if torch.cuda.is_available() else "cpu",
+        help="Device to run the model on.",
+    )
+    parser.add_argument(
+        "--start_timeout",
+        type=float,
+        default=5.0,
+        help="Timeout for listening for the start of a phrase.",
+    )
+    parser.add_argument(
+        "--end_timeout",
+        type=float,
+        default=None,
+        help="Timeout for listening for the end of a phrase.",
+    )
+    parser.add_argument(
+        "--sample_rate",
+        type=int,
+        default=16000,
+        help="Sample rate of the microphone.",
+    )
+    parser.add_argument(
+        "--mic_device",
+        type=str,
+        default=None,
+        help="Microphone device index or name",
+    )
+    parser.add_argument(
+        "--timer_duration",
+        type=int,
+        default=20,
+        help="Number of seconds of silence before the ambient noise adjustment is called.",
+    )
+    parser.add_argument(
+        "--no_warmup",
+        action="store_true",
+        help="Disable warming up the model by running inference on a test file.",
+    )
+    args, unknown = parser.parse_known_args()
+    return vars(args)
+
+
+def configure_model_params(config: dict) -> speech_model_params:
+    """Configures the speech model parameters based on the provided
+    command line parameters.
+
+    Args:
+        config (dict): Command line parameters parsed in dictionary form.
+
+    Returns:
+        speech_model_params: dataclass containing the speech model parameters
+    """
+    model_params = speech_model_params()
+    if config["model_name"]:
+        model_params.model_name = config["model_name"]
+    if config["device"]:
+        model_params.device = config["device"]
+    if config["start_timeout"]:
+        model_params.start_timeout = config["start_timeout"]
+    if config["end_timeout"]:
+        model_params.end_timeout = config["end_timeout"]
+    if config["sample_rate"]:
+        model_params.sample_rate = config["sample_rate"]
+    if config["mic_device"]:
+        model_params.mic_device = config["mic_device"]
+    if config["timer_duration"]:
+        model_params.timer_duration = config["timer_duration"]
+    if config["no_warmup"]:
+        model_params.warmup = False
+
+    return model_params
+
+
+def configure_whisper_cache() -> None:
+    """Configures the whisper cache directory."""
+    whisper_cache = os.path.join(str(Path.home()), ".cache", "whisper")
+    os.makedirs(whisper_cache, exist_ok=True)
+    # Environemntal variable required to run whisper locally
+    os.environ["TIKTOKEN_CACHE_DIR"] = whisper_cache
+
+
+if __name__ == "__main__":
+    configure_whisper_cache()
+    config = parse_args()
+    rospy.init_node("speech_transcription_node")
+    server = TranscribeSpeechAction(
+        config["action_name"], configure_model_params(config)
+    )
+    rospy.spin()
