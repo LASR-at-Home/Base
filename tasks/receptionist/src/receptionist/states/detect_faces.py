@@ -16,12 +16,8 @@ class DetectFaces(smach.State):
         self.listen_topic = sys.argv[1]
 
     def execute(self, userdata):
-<<<<<<< HEAD
-        
-        # Here we will detect faces
-=======
+        self.default.voice.speak("I'm about to guess who you are")
         self.listener()
->>>>>>> aaliyah_fork/main
         return 'succeeded'
     
     def listener(self):
