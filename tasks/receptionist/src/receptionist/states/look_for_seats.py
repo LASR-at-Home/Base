@@ -100,21 +100,21 @@ class LookForSeats(smach.StateMachine):
         
         def execute(self, userdata):
 
-            pm_goal = PlayMotionGoal(motion_name="back_to_default_head", skip_planning=True)
-            self.default.pm.send_goal_and_wait(pm_goal)
+           # pm_goal = PlayMotionGoal(motion_name="back_to_default_head", skip_planning=True)
+            #self.default.pm.send_goal_and_wait(pm_goal)
 
-            self.default.controllers.base_controller.sync_face_to(userdata.point.x, userdata.point.y)
+#            self.default.controllers.base_controller.sync_face_to(userdata.point.x, userdata.point.y)
 
-            pm_goal = PlayMotionGoal(motion_name="raise_torso", skip_planning=True)
-            self.default.pm.send_goal_and_wait(pm_goal)
+ #           pm_goal = PlayMotionGoal(motion_name="raise_torso", skip_planning=True)
+  #          self.default.pm.send_goal_and_wait(pm_goal)
+            
+   #         pm_goal = PlayMotionGoal(motion_name="point", skip_planning=False)
+    #        self.default.pm.send_goal_and_wait(pm_goal)
 
-            pm_goal = PlayMotionGoal(motion_name="point", skip_planning=False)
-            self.default.pm.send_goal_and_wait(pm_goal)
+     #       rospy.sleep(5.0)
 
-            rospy.sleep(5.0)
-
-            pm_goal = PlayMotionGoal(motion_name="home", skip_planning=False)
-            self.default.pm.send_goal_and_wait(pm_goal)
+      #      pm_goal = PlayMotionGoal(motion_name="home", skip_planning=False)
+       #     self.default.pm.send_goal_and_wait(pm_goal)
 
             return 'succeeded'
 
