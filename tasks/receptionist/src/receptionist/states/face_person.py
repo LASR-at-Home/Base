@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import smach, rospy
 from tiago_controllers.controllers.look_at import LookAt
 from lasr_object_detection_yolo.detect_objects_v8 import detect_objects, perform_detection, debug

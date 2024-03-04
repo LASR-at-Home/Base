@@ -5,7 +5,7 @@ from torch_module.helpers import binary_erosion_dilation, median_color_float
 from numpy2message import message2numpy
 
 import numpy as np
-import cv2
+#import cv2
 import torch
 import rospy
 import rospkg

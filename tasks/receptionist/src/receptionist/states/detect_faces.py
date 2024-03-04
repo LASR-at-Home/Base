@@ -4,7 +4,7 @@ import rospy
 
 from sensor_msgs.msg import Image
 
-from common.vision.lasr_vision_msgs.srv import Recognise, RecogniseRequest
+from lasr_vision_msgs.srv import Recognise, RecogniseRequest
 from lasr_voice import Voice
 
 class DetectFaces(smach.State):
@@ -17,7 +17,7 @@ class DetectFaces(smach.State):
 
     def execute(self, userdata):
         self.default.voice.speak("I'm about to guess who you are")
-        self.listener()
+        #self.listener()
         return 'succeeded'
     
     def listener(self):
@@ -43,7 +43,8 @@ class DetectFaces(smach.State):
     def greet():
         voice = Voice()
         voice.speak(f"Hello, {' '.join(people_in_frame)}")
-    
+        voice.speak("I know your favourite drink is: ")
+            
     def image_callback(self, image):
         global people_in_frame
         prev_people_in_frame = list(people_in_frame.keys())
