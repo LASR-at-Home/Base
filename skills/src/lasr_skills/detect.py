@@ -6,16 +6,18 @@ from sensor_msgs.msg import Image
 
 from lasr_vision_msgs.srv import YoloDetection
 
+from typing import List
+
 
 class Detect(smach.State):
 
     def __init__(
         self,
-        image_topic="/xtion/rgb/image_raw",
-        model="yolov8n.pt",
-        filter=None,
-        confidence=0.5,
-        nms=0.3,
+        image_topic: str = "/xtion/rgb/image_raw",
+        model: str = "yolov8n.pt",
+        filter: List[str] | None = None,
+        confidence: float = 0.5,
+        nms: float = 0.3,
     ):
         smach.State.__init__(
             self,

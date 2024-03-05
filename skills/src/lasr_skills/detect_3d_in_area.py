@@ -39,7 +39,7 @@ class Detect3DInArea(smach.StateMachine):
 
     def __init__(
         self,
-        area_polygon,
+        area_polygon: List[List[float]],
         depth_topic: str = "/xtion/depth_registered/points",
         model: str = "yolov8n-seg.pt",
         filter: List[str] | None = None,

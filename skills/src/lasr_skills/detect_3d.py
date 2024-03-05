@@ -5,16 +5,18 @@ import smach
 from sensor_msgs.msg import PointCloud2
 from lasr_vision_msgs.srv import YoloDetection3D
 
+from typing import List
+
 
 class Detect3D(smach.State):
 
     def __init__(
         self,
-        depth_topic="/xtion/depth_registered/points",
-        model="yolov8n-seg.pt",
-        filter=None,
-        confidence=0.5,
-        nms=0.3,
+        depth_topic: str = "/xtion/depth_registered/points",
+        model: str = "yolov8n-seg.pt",
+        filter: List[str] | None = None,
+        confidence: float = 0.5,
+        nms: float = 0.3,
     ):
         smach.State.__init__(
             self,
