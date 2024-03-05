@@ -7,7 +7,7 @@ from pal_interaction_msgs.msg import TtsGoal, TtsAction, TtsText
 from lasr_skills import ListenWakeWord
 
 
-class ReceiveObject(smach.StateMachine):
+class HandoverObject(smach.StateMachine):
 
     def __init__(self):
         smach.StateMachine.__init__(
@@ -17,12 +17,12 @@ class ReceiveObject(smach.StateMachine):
         with self:
             # TODO: clear octomap and look around
             smach.StateMachine.add(
-                "RECEIVE_OBJECT",
+                "HANDOVER_OBJECT",
                 SimpleActionState(
                     "play_motion",
                     PlayMotionAction,
                     goal=PlayMotionGoal(
-                        motion_name="receive_object", skip_planning=False
+                        motion_name="handover_object", skip_planning=False
                     ),
                 ),
                 transitions={"succeeded": "succeeded", "aborted": "failed"},
@@ -34,7 +34,7 @@ class ReceiveObject(smach.StateMachine):
                     TtsAction,
                     goal_cb=lambda ud, _: TtsGoal(
                         rawtext=TtsText(
-                            text=f"Please place the {ud.object_name} in my hand, and say 'done' when you are ready.",
+                            text=f"Please grab the {ud.object_name} in my hand, and say 'done' when you are ready for me to release it.",
                             lang_id="en_GB",
                         )
                     ),
@@ -44,16 +44,16 @@ class ReceiveObject(smach.StateMachine):
             smach.StateMachine.add(
                 "WAIT_FOR_SPEECH",
                 ListenWakeWord("done"),
-                transitions={"succeeded": "CLOSE_GRIPPER", "failed": "failed"},
+                transitions={"succeeded": "OPEN_GRIPPER", "failed": "failed"},
             )
 
             smach.StateMachine.add(
-                "CLOSE_GRIPPER",
+                "OPEN_GRIPPER",
                 SimpleActionState(
                     "play_motion",
                     PlayMotionAction,
                     goal=PlayMotionGoal(
-                        motion_name="close_gripper", skip_planning=False
+                        motion_name="open_gripper", skip_planning=False
                     ),
                 ),
                 transitions={"succeeded": "succeeded", "aborted": "failed"},
