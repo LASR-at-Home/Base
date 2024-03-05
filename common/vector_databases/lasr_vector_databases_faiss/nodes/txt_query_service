@@ -1,1 +1,40 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
+import rospy
+import numpy as np
+from lasr_vector_databases_faiss.srv import TxtQueryRequest, TxtQueryResponse
+from lasr_vector_databases_faiss import (
+    load_model,
+    parse_txt_file,
+    get_sentence_embeddings,
+    load_vector_database,
+    query_database,
+)
+
+
+class TxtQueryService:
+    def __init__(self):
+        rospy.Service("lasr_faiss/txt_query", TxtQueryResponse, self.execute_cb)
+        self._sentence_embedding_model = load_model()
+        rospy.loginfo("Text Query service started")
+        rospy.spin()
+
+    def execute_cb(self, req: TxtQueryRequest) -> TxtQueryResponse:
+        txt_fp: str = req.txt_path
+        index_path: str = req.index_path
+        index = load_vector_database(index_path)
+        query_sentence: str = req.query_sentence
+        possible_matches: list[str] = parse_txt_file(txt_fp)
+        query_embedding: np.ndarray = get_sentence_embeddings(
+            [query_sentence], self._sentence_embedding_model  # requires list of strings
+        )
+        distances, indices = query_database(index, query_embedding, req.k)
+        nearest_matches = [possible_matches[i] for i in indices[0]]
+
+        return TxtQueryResponse(
+            closest_sentences=nearest_matches,
+            distances=distances[0].tolist(),
+        )
+
+
+if __name__ == "__main__":
+    TxtQueryService()

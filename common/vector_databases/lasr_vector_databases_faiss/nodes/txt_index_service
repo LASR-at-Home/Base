@@ -25,6 +25,7 @@ class TxtIndexService:
         )
         index_path: str = req.index_path
         create_vector_database(sentence_embeddings, index_path)
+        return TextIndexResponse()
 
 
 if __name__ == "__main__":

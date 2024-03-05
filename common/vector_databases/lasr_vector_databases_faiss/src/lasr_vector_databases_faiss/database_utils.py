@@ -56,7 +56,10 @@ def load_vector_database(index_path: str, use_gpu: bool = False) -> faiss.Index:
 
 
 def query_database(
-    index_path: str, query_vectors: np.ndarray, normalise: bool = True
+    index_path: str,
+    query_vectors: np.ndarray,
+    normalise: bool = True,
+    k: int = 1,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Queries the given index with the given query vectors
 
@@ -65,6 +68,7 @@ def query_database(
         query_vectors (np.ndarray): query vectors of shape (n_queries, vector_dim)
         normalise (bool, optional): Whether to normalise the query vectors.
         Defaults to True.
+        k (int, optional): Number of nearest neighbours to return. Defaults to 1.
 
     Returns:
         tuple[np.ndarray, np.ndarray]: (distances, indices) of the nearest neighbours
@@ -73,5 +77,5 @@ def query_database(
     index = load_vector_database(index_path)
     if normalise:
         faiss.normalize_L2(query_vectors)
-    distances, indices = index.search(query_vectors, 1)
+    distances, indices = index.search(query_vectors, k)
     return distances, indices
