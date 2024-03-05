@@ -41,6 +41,7 @@ class FindPerson(smach.StateMachine):
                 it_label="location",
                 input_keys=[],
                 output_keys=[],
+                exhausted_outcome="failed",
             )
 
             with waypoint_iterator:
@@ -59,12 +60,19 @@ class FindPerson(smach.StateMachine):
                             MoveBaseAction,
                             goal_cb=lambda ud, _: MoveBaseGoal(target_pose=ud.location),
                         ),
-                        transitions={"succeeded": "DETECT"},
+                        transitions={
+                            "succeeded": "DETECT3D",
+                            "preempted": "continue",
+                            "aborted": "continue",
+                        },
                     )
                     smach.StateMachine.add(
                         "DETECT3D",
                         Detect3D(filter=["person"]),
-                        transitions={"succeeded": "succeeded", "failed": "failed"},
+                        transitions={
+                            "succeeded": "HANDLE_DETECTIONS",
+                            "failed": "failed",
+                        },
                     )
                     smach.StateMachine.add(
                         "HANDLE_DETECTIONS",
@@ -79,6 +87,14 @@ class FindPerson(smach.StateMachine):
                         LookToPoint(),
                         transitions={"succeeded": "succeeded"},
                     )
+                waypoint_iterator.set_contained_state(
+                    "CONTAINER_STATE", container_sm, loop_outcomes=["continue"]
+                )
+            smach.StateMachine.add(
+                "WAYPOINT_ITERATOR",
+                waypoint_iterator,
+                {"succeeded": "succeeded", "failed": "failed"},
+            )
 
 
 if __name__ == "__main__":
