@@ -162,6 +162,7 @@ include_directories(
 catkin_install_python(PROGRAMS
   nodes/service
   examples/relay
+  examples/relay_3d
   examples/construct_mask
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
