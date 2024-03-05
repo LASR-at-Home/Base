@@ -7,7 +7,11 @@ project(lasr_vector_databases_faiss)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED catkin_virtualenv genmsg std_msgs)
+find_package(catkin REQUIRED catkin_virtualenv COMPONENTS
+rospy
+std_msgs
+message_generation
+)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -159,6 +163,8 @@ include_directories(
 catkin_install_python(PROGRAMS
   nodes/txt_index_service
   nodes/txt_query_service
+  scripts/test_index_service.py
+  scripts/test_query_service.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

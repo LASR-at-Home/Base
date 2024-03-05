@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import rospy
 import numpy as np
 from lasr_vector_databases_faiss.srv import TxtQueryRequest, TxtQueryResponse, TxtQuery
@@ -21,18 +21,17 @@ class TxtQueryService:
     def execute_cb(self, req: TxtQueryRequest) -> TxtQueryResponse:
         txt_fp: str = req.txt_path
         index_path: str = req.index_path
-        index = load_vector_database(index_path)
         query_sentence: str = req.query_sentence
         possible_matches: list[str] = parse_txt_file(txt_fp)
         query_embedding: np.ndarray = get_sentence_embeddings(
             [query_sentence], self._sentence_embedding_model  # requires list of strings
         )
-        distances, indices = query_database(index, query_embedding, req.k)
+        distances, indices = query_database(index_path, query_embedding, k=req.k)
         nearest_matches = [possible_matches[i] for i in indices[0]]
 
         return TxtQueryResponse(
             closest_sentences=nearest_matches,
-            distances=distances[0].tolist(),
+            cosine_similarities=distances[0].tolist(),
         )
 
 

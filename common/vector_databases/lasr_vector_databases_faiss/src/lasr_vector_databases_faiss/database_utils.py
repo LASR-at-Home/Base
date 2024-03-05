@@ -8,7 +8,7 @@ def create_vector_database(
     vectors: np.ndarray,
     index_path: str,
     overwrite: bool = False,
-    index_type: str = "IndexFlatIP",
+    index_type: str = "Flat",
     normalise_vecs: bool = True,
 ) -> None:
     """Creates a FAISS Index using the factor constructor and the given
@@ -31,7 +31,9 @@ def create_vector_database(
             f"Index already exists at {index_path}. Set overwrite=True to replace it."
         )
 
-    index = faiss.index_factory(vectors.shape[1], index_type)
+    index = faiss.index_factory(
+        vectors.shape[1], index_type, faiss.METRIC_INNER_PRODUCT
+    )
     if normalise_vecs:
         faiss.normalize_L2(vectors)
     index.add(vectors)
@@ -49,7 +51,9 @@ def load_vector_database(index_path: str, use_gpu: bool = False) -> faiss.Index:
     Returns:
         faiss.Index: FAISS Index object
     """
+    print("Loading index from", index_path)
     index = faiss.read_index(index_path)
+    print("Loaded index with ntotal:", index.ntotal)
     if use_gpu:
         index = faiss.index_cpu_to_all_gpus(index)
     return index
