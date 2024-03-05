@@ -6,7 +6,7 @@ from sentence_transformers import SentenceTransformer
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 
-def load_model(model_name: str) -> SentenceTransformer:
+def load_model(model_name: str = "all-MiniLM-L6-v2") -> SentenceTransformer:
     """Loads the sentence transformer model
     Args:
         model_name (str): name of the model to load
