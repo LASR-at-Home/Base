@@ -7,7 +7,7 @@ project(lasr_vector_databases_faiss)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED catkin_virtualenv)
+find_package(catkin REQUIRED catkin_virtualenv genmsg std_msgs)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -53,11 +53,11 @@ catkin_generate_virtualenv(
 # )
 
 ## Generate services in the 'srv' folder
-# add_service_files(
-#   FILES
-#   Service1.srv
-#   Service2.srv
-# )
+add_service_files(
+  FILES
+  TxtIndex.srv
+  TxtQuery.srv
+)
 
 # Generate actions in the 'action' folder
 # add_action_files(
@@ -66,11 +66,10 @@ catkin_generate_virtualenv(
 # )
 
 # Generate added messages and services with any dependencies listed here
-# generate_messages(
-#   DEPENDENCIES
-#   actionlib_msgs
-#   geometry_msgs
-# )
+generate_messages(
+  DEPENDENCIES
+  std_msgs
+)
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -157,22 +156,11 @@ include_directories(
 
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
-# catkin_install_python(PROGRAMS
-#   nodes/qualification
-#   nodes/actions/wait_greet
-#   nodes/actions/identify
-#   nodes/actions/greet
-#   nodes/actions/get_name
-#   nodes/actions/learn_face
-#   nodes/actions/get_command
-#   nodes/actions/guide
-#   nodes/actions/find_person
-#   nodes/actions/detect_people
-#   nodes/actions/receive_object
-#   nodes/actions/handover_object
-#   nodes/better_qualification
-#   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-# )
+catkin_install_python(PROGRAMS
+  nodes/txt_index_service
+  nodes/txt_query_service
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
 
 ## Mark executables for installation
 ## See http://docs.ros.org/melodic/api/catkin/html/howto/format1/building_executables.html

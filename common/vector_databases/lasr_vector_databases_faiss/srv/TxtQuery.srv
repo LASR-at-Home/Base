@@ -8,12 +8,12 @@ string index_path
 string query_sentence
 
 # Number of nearest sentences to return
-int k
+uint8 k
 
 ---
 # Nearest sentence
-string [] closest_sentences
+string[] closest_sentences
 
 # Cosine similarity of distances
-float32 [] cosine_similarities
+float32[] cosine_similarities
 
