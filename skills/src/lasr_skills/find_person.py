@@ -3,7 +3,8 @@
 import smach
 from smach_ros import SimpleActionState
 
-from geometry_msgs.msg import Pose
+from geometry_msgs.msg import Pose, PoseStamped
+from std_msgs.msg import Header
 
 from typing import List
 
@@ -19,15 +20,15 @@ class FindPerson(smach.StateMachine):
             smach.State.__init__(
                 self,
                 outcomes=["succeeded", "failed"],
-                input_keys=["detections"],
+                input_keys=["detections_3d"],
                 output_keys=["point"],
             )
 
         def execute(self, userdata):
-            if len(userdata.detections.detected_objects) == 0:
+            if len(userdata.detections_3d.detected_objects) == 0:
                 return "failed"
 
-            userdata.point = userdata.detections.detected_objects[0].point
+            userdata.point = userdata.detections_3d.detected_objects[0].point
             return "succeeded"
 
     def __init__(self, waypoints: List[Pose]):
@@ -58,7 +59,12 @@ class FindPerson(smach.StateMachine):
                         SimpleActionState(
                             "move_base",
                             MoveBaseAction,
-                            goal_cb=lambda ud, _: MoveBaseGoal(target_pose=ud.location),
+                            goal_cb=lambda ud, _: MoveBaseGoal(
+                                target_pose=PoseStamped(
+                                    pose=ud.location, header=Header(frame_id="map")
+                                )
+                            ),
+                            input_keys=["location"],
                         ),
                         transitions={
                             "succeeded": "DETECT3D",
@@ -100,9 +106,21 @@ class FindPerson(smach.StateMachine):
 if __name__ == "__main__":
     import rospy
     from smach_ros import IntrospectionServer
+    from geometry_msgs.msg import Pose, Point, Quaternion
 
     rospy.init_node("find_person")
-    sm = FindPerson([])
+    sm = FindPerson(
+        [
+            Pose(
+                position=Point(4.5, 6.4, 0.0),
+                orientation=Quaternion(0.0, 0.0, 0.759, 0.650),
+            ),
+            Pose(
+                position=Point(3.2, 5.0, 0.0),
+                orientation=Quaternion(0.0, 0.0, -0.992, 0.121),
+            ),
+        ]
+    )
     sis = IntrospectionServer("find_person", sm, "/FIND_PERSON")
     sis.start()
     sm.execute()
