@@ -8,7 +8,7 @@ from std_msgs.msg import Header
 
 from typing import List
 
-from lasr_skills import Detect3D, LookToPoint
+from lasr_skills import Detect3D, LookToPoint, GoToPerson
 
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 
@@ -87,6 +87,11 @@ class FindPerson(smach.StateMachine):
                             "succeeded": "LOOK_AT_PERSON",
                             "failed": "continue",
                         },
+                    )
+                    smach.StateMachine.add(
+                        "GO_TO_PERSON",
+                        GoToPerson(),
+                        transitions={"succeeded": "LOOK_AT_PERSON", "failed": "failed"},
                     )
                     smach.StateMachine.add(
                         "LOOK_AT_PERSON",
