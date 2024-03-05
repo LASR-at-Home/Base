@@ -1,1 +1,1 @@
-from .yolo import detect, load_model
+from .yolo import detect, detect_3d, load_model

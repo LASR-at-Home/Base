@@ -1,3 +1,0 @@
-[submodule "common/third_party/aruco_ros"]
-	path = common/third_party/aruco_ros
-	url = git@github.com:pal-robotics/aruco_ros.git
