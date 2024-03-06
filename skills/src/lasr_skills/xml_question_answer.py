@@ -4,7 +4,7 @@ import rospy
 import smach
 import xml.etree.ElementTree as ET
 
-from lasr_vector_databases_faiss.srv import TxtQuery, TxtQueryRequest
+from lasr_vector_databases_msgs.srv import TxtQuery, TxtQueryRequest
 
 
 def parse_question_xml(xml_file_path: str) -> dict:
@@ -45,6 +45,7 @@ class XmlQuestionAnswer(smach.State):
         self.txt_query = rospy.ServiceProxy("/lasr_faiss/txt_query", TxtQuery)
 
     def execute(self, userdata):
+        rospy.wait_for_service("/lasr_faiss/txt_query")
         q_a_dict: dict = parse_question_xml(userdata.xml_path)
         try:
             request = TxtQueryRequest(
@@ -62,4 +63,5 @@ class XmlQuestionAnswer(smach.State):
             return "succeeded"
         except rospy.ServiceException as e:
             rospy.logwarn(f"Unable to perform Index Query. ({str(e)})")
+            userdata.closest_answers = []
             return "failed"

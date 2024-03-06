@@ -1,0 +1,87 @@
+#!/usr/bin/env python3
+import rospy
+import argparse
+import smach
+from lasr_skills.xml_question_answer import XmlQuestionAnswer
+
+
+class QuestionAnswerStateMachine(smach.StateMachine):
+    def __init__(self, input_data: dict):
+        smach.StateMachine.__init__(
+            self,
+            outcomes=["succeeded", "failed"],
+            output_keys=["closest_answers"],
+        )
+        self.userdata.query_sentence = input_data["question"]
+        self.userdata.k = input_data["k"]
+        self.userdata.index_path = input_data["index_path"]
+        self.userdata.txt_path = input_data["txt_path"]
+        self.userdata.xml_path = input_data["xml_path"]
+        print(self.userdata)
+
+        with self:
+            smach.StateMachine.add(
+                "XML_QUESTION_ANSWER",
+                XmlQuestionAnswer(),
+                transitions={"succeeded": "succeeded", "failed": "failed"},
+                remapping={
+                    "query_sentence": "query_sentence",
+                    "k": "k",
+                    "index_path": "index_path",
+                    "txt_path": "txt_path",
+                    "xml_path": "xml_path",
+                    "closest_answers": "closest_answers",
+                },
+            )
+
+
+def parse_args() -> dict:
+    parser = argparse.ArgumentParser(description="GPSR Question Answer")
+    parser.add_argument(
+        "--question",
+        type=str,
+        help="The question to query",
+        required=True,
+    )
+    parser.add_argument(
+        "--k",
+        type=int,
+        help="The number of closest answers to return",
+        required=True,
+    )
+    parser.add_argument(
+        "--index_path",
+        type=str,
+        help="The path to the index file that is populated with the sentences embeddings of the questions",
+        required=True,
+    )
+    parser.add_argument(
+        "--txt_path",
+        type=str,
+        help="The path to the txt file containing a list of questions.",
+        required=True,
+    )
+    parser.add_argument(
+        "--xml_path",
+        type=str,
+        help="The path to the xml file containing question/answer pairs",
+        required=True,
+    )
+    args, _ = parser.parse_known_args()
+    args.k = int(args.k)
+    return vars(args)
+
+
+if __name__ == "__main__":
+    rospy.init_node("gpsr_question_answer")
+    args: dict = parse_args()
+    print(args)
+    q_a_sm = QuestionAnswerStateMachine(args)
+    outcome = q_a_sm.execute()
+    if outcome == "succeeded":
+        rospy.loginfo(f"Question: {args['question']}")
+        rospy.loginfo(f"Closest Answers: {q_a_sm.userdata.closest_answers}")
+    else:
+        rospy.logerr("Question Answer State Machine failed")
+
+    rospy.spin()

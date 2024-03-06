@@ -1,0 +1,23 @@
+<launch> 
+    <arg name="question" default='"Do the French like snails?"'/>
+    <arg name="k" default="1"/>
+    <arg name="index_path" default="/home/mattbarker/LASR/lasr_ws/src/lasr-base/tasks/gpsr/data/questions.index"/>
+    <arg name="text_path" default="/home/mattbarker/LASR/lasr_ws/src/lasr-base/tasks/gpsr/data/questions.txt"/>
+    <arg name="xml_path" default="/home/mattbarker/LASR/lasr_ws/src/lasr-base/tasks/gpsr/data/Questions.xml"/>
+
+    <node 
+        pkg="lasr_vector_databases_faiss" 
+        type="txt_query_service" 
+        name="txt_query" 
+        output="screen"
+    />
+
+    <node 
+        pkg="gpsr" 
+        type="question_answer" 
+        name="question_answer" 
+        output="screen" 
+        args="--question $(arg question) --k $(arg k) --index_path $(arg index_path) --txt_path $(arg text_path) --xml_path $(arg xml_path)"
+    />
+
+</launch>
