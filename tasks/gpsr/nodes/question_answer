@@ -2,7 +2,9 @@
 import rospy
 import argparse
 import smach
+from lasr_voice import Voice
 from lasr_skills.xml_question_answer import XmlQuestionAnswer
+from gpsr.states.get_question import GetQuestion
 
 
 class QuestionAnswerStateMachine(smach.StateMachine):
@@ -12,7 +14,6 @@ class QuestionAnswerStateMachine(smach.StateMachine):
             outcomes=["succeeded", "failed"],
             output_keys=["closest_answers"],
         )
-        self.userdata.query_sentence = input_data["question"]
         self.userdata.k = input_data["k"]
         self.userdata.index_path = input_data["index_path"]
         self.userdata.txt_path = input_data["txt_path"]
@@ -21,9 +22,15 @@ class QuestionAnswerStateMachine(smach.StateMachine):
 
         with self:
             smach.StateMachine.add(
+                "GET_QUESTION",
+                GetQuestion(),
+                transitions={"succeeded": "XML_QUESTION_ANSWER", "failed": "failed"},
+                remapping={"question": "query_sentence"},
+            )
+            smach.StateMachine.add(
                 "XML_QUESTION_ANSWER",
                 XmlQuestionAnswer(),
-                transitions={"succeeded": "succeeded", "failed": "failed"},
+                transitions={"succeeded": "succeeded", "failed": "GET_QUESTION"},
                 remapping={
                     "query_sentence": "query_sentence",
                     "k": "k",
@@ -37,12 +44,6 @@ class QuestionAnswerStateMachine(smach.StateMachine):
 
 def parse_args() -> dict:
     parser = argparse.ArgumentParser(description="GPSR Question Answer")
-    parser.add_argument(
-        "--question",
-        type=str,
-        help="The question to query",
-        required=True,
-    )
     parser.add_argument(
         "--k",
         type=int,
@@ -78,10 +79,15 @@ if __name__ == "__main__":
     print(args)
     q_a_sm = QuestionAnswerStateMachine(args)
     outcome = q_a_sm.execute()
+    voice = Voice()
     if outcome == "succeeded":
         rospy.loginfo(f"Question: {args['question']}")
         rospy.loginfo(f"Closest Answers: {q_a_sm.userdata.closest_answers}")
+        voice.sync_tts(
+            f"The answer to your question is: {q_a_sm.userdata.closest_answers[0]}"
+        )
     else:
         rospy.logerr("Question Answer State Machine failed")
+        voice.sync_tts(f"Sorry, I wasn't able to find an answer to your question")
 
     rospy.spin()

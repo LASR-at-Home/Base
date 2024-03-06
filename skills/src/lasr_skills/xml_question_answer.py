@@ -3,6 +3,7 @@
 import rospy
 import smach
 import xml.etree.ElementTree as ET
+from lasr_voice import Voice
 
 from lasr_vector_databases_msgs.srv import TxtQuery, TxtQueryRequest
 
@@ -64,4 +65,8 @@ class XmlQuestionAnswer(smach.State):
         except rospy.ServiceException as e:
             rospy.logwarn(f"Unable to perform Index Query. ({str(e)})")
             userdata.closest_answers = []
+            voice = Voice()
+            voice.sync_tts(
+                "I'm sorry, I couldn't find an answer to your question. Please ask me another question."
+            )
             return "failed"
