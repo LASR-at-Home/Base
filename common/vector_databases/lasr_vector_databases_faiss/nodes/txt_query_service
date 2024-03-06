@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
 import rospy
 import numpy as np
-from lasr_vector_databases_faiss.srv import TxtQueryRequest, TxtQueryResponse, TxtQuery
+
+from lasr_vector_databases_msgs.srv import (
+    TxtQueryRequest,
+    TxtQueryResponse,
+    TxtQuery,
+)
 from lasr_vector_databases_faiss import (
     load_model,
     parse_txt_file,
@@ -14,8 +19,9 @@ from lasr_vector_databases_faiss import (
 class TxtQueryService:
     def __init__(self):
         rospy.init_node("txt_query_service")
-        rospy.Service("lasr_faiss/txt_query", TxtQuery, self.execute_cb)
         self._sentence_embedding_model = load_model()
+        print(self._sentence_embedding_model)
+        rospy.Service("lasr_faiss/txt_query", TxtQuery, self.execute_cb)
         rospy.loginfo("Text Query service started")
 
     def execute_cb(self, req: TxtQueryRequest) -> TxtQueryResponse:
