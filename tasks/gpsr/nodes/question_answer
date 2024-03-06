@@ -76,18 +76,17 @@ def parse_args() -> dict:
 if __name__ == "__main__":
     rospy.init_node("gpsr_question_answer")
     args: dict = parse_args()
-    print(args)
-    q_a_sm = QuestionAnswerStateMachine(args)
-    outcome = q_a_sm.execute()
-    voice = Voice()
-    if outcome == "succeeded":
-        rospy.loginfo(f"Question: {args['question']}")
-        rospy.loginfo(f"Closest Answers: {q_a_sm.userdata.closest_answers}")
-        voice.sync_tts(
-            f"The answer to your question is: {q_a_sm.userdata.closest_answers[0]}"
-        )
-    else:
-        rospy.logerr("Question Answer State Machine failed")
-        voice.sync_tts(f"Sorry, I wasn't able to find an answer to your question")
+    while not rospy.is_shutdown():
+        q_a_sm = QuestionAnswerStateMachine(args)
+        outcome = q_a_sm.execute()
+        voice = Voice()
+        if outcome == "succeeded":
+            rospy.loginfo(f"Closest Answers: {q_a_sm.userdata.closest_answers}")
+            voice.sync_tts(
+                f"The answer to your question is: {q_a_sm.userdata.closest_answers[0]}"
+            )
+        else:
+            rospy.logerr("Question Answer State Machine failed")
+            voice.sync_tts(f"Sorry, I wasn't able to find an answer to your question")
 
     rospy.spin()
