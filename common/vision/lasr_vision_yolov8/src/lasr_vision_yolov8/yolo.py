@@ -3,10 +3,8 @@ import cv2_img
 import cv2_pcl
 import numpy as np
 
-from PIL import Image
 from ultralytics import YOLO
 
-from sensor_msgs.msg import Image as SensorImage
 from lasr_vision_msgs.msg import Detection, Detection3D
 from lasr_vision_msgs.srv import (
     YoloDetectionRequest,
@@ -14,36 +12,13 @@ from lasr_vision_msgs.srv import (
     YoloDetection3DRequest,
     YoloDetection3DResponse,
 )
-import cv2
-import ros_numpy as rnp
+
+import markers
 
 from geometry_msgs.msg import Point, PointStamped
 
 import tf2_ros as tf
-import tf2_geometry_msgs
-
-from visualization_msgs.msg import Marker
-
-
-def create_point_marker(x, y, z, idx, g=1.0):
-    marker_msg = Marker()
-    marker_msg.header.frame_id = "map"
-    marker_msg.header.stamp = rospy.Time.now()
-    marker_msg.id = idx
-    marker_msg.type = Marker.SPHERE
-    marker_msg.action = Marker.ADD
-    marker_msg.pose.position.x = x
-    marker_msg.pose.position.y = y
-    marker_msg.pose.position.z = z
-    marker_msg.pose.orientation.w = 1.0
-    marker_msg.scale.x = 0.1
-    marker_msg.scale.y = 0.1
-    marker_msg.scale.z = 0.1
-    marker_msg.color.a = 1.0
-    marker_msg.color.r = 0.0
-    marker_msg.color.g = g
-    marker_msg.color.b = 0.0
-    return marker_msg
+import tf2_geometry_msgs  # noqa
 
 
 # model cache
@@ -121,14 +96,7 @@ def detect_3d(
     """
     Run YOLO 3D inference on given detection request
     """
-
-    rospy.loginfo("Waiting for transformation to become available")
     tf_buffer = tf.Buffer()
-    # Wait for the transformation to become available
-    while not tf_buffer.can_transform(
-        "map", request.pcl.header.frame_id, rospy.Time(0)
-    ):
-        rospy.sleep(0.01)
 
     # Extract rgb image from pointcloud
     rospy.loginfo("Decoding")
@@ -154,26 +122,31 @@ def detect_3d(
         detection.confidence = float(result.boxes.conf.cpu().numpy()[i])
         detection.xywh = result.boxes.xywh[i].cpu().numpy().astype(int).tolist()
 
-        # copy segmented mask if available
+        # copy segmented mask if available, and estimate 3D position
         if has_segment_masks:
             detection.xyseg = result.masks.xy[i].flatten().astype(int).tolist()
 
-            # xyz_points = [pcl_xyz[x][y] for x, y in indices]
             centroid = cv2_pcl.seg_to_centroid(request.pcl, np.array(detection.xyseg))
 
             point = Point(*centroid)
             point_stamped = PointStamped()
             point_stamped.point = point
             point_stamped.header.frame_id = request.pcl.header.frame_id
-            detection.point = tf_buffer.transform(
-                point_stamped, request.target_frame
-            ).point
+            point_stamped.header.stamp = rospy.Time(0)
 
+            # TODO: handle tf errors properly
+            while not rospy.is_shutdown():
+                try:
+                    detection.point = tf_buffer.transform(point_stamped, "map").point
+                    break
+                except Exception:
+                    continue
+
+            # publish to debug topic
             if debug_point_publisher is not None:
-                marker = create_point_marker(
-                    detection.point.x, detection.point.y, detection.point.z, i
+                markers.create_and_publish_marker(
+                    debug_point_publisher, detection.point
                 )
-                debug_point_publisher.publish(marker)
 
         detected_objects.append(detection)
 
