@@ -6,7 +6,7 @@ from sensor_msgs.msg import Image
 
 from lasr_vision_msgs.srv import YoloDetection
 
-from typing import List
+from typing import List, Union
 
 
 class Detect(smach.State):
@@ -15,7 +15,7 @@ class Detect(smach.State):
         self,
         image_topic: str = "/xtion/rgb/image_raw",
         model: str = "yolov8n.pt",
-        filter: List[str] | None = None,
+        filter: Union[List[str], None] = None,
         confidence: float = 0.5,
         nms: float = 0.3,
     ):

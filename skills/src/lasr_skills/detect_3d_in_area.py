@@ -2,7 +2,7 @@ import smach
 
 from lasr_skills import Detect3D
 
-from typing import List
+from typing import List, Union
 
 from shapely.geometry import Point
 from shapely.geometry.polygon import Polygon
@@ -40,7 +40,7 @@ class Detect3DInArea(smach.StateMachine):
         area_polygon: Polygon,
         depth_topic: str = "/xtion/depth_registered/points",
         model: str = "yolov8n-seg.pt",
-        filter: List[str] | None = None,
+        filter: Union[List[str], None] = None,
         confidence: float = 0.5,
         nms: float = 0.3,
     ):
