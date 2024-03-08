@@ -1,18 +1,19 @@
+#!/usr/bin/env python3
+
 import smach
 
 from lasr_skills import Detect3D
+from lasr_shapely import LasrShapely
+
 
 from typing import List, Union
-
-from shapely.geometry import Point
-from shapely.geometry.polygon import Polygon
 
 
 class Detect3DInArea(smach.StateMachine):
 
     class FilterDetections(smach.State):
 
-        def __init__(self, area_polygon: Polygon):
+        def __init__(self, area_polygon):
             smach.State.__init__(
                 self,
                 outcomes=["succeeded", "failed"],
@@ -20,24 +21,25 @@ class Detect3DInArea(smach.StateMachine):
                 output_keys=["detections_3d"],
             )
             self.area_polygon = area_polygon
+            self.shapely = LasrShapely()
 
         def execute(self, userdata):
-            satisfied_points = [
-                self.area_polygon.contains(Point(pose[0], pose[1]))
-                for (_, pose) in userdata.detections_3d
-            ]
+            satisfied_points = self.shapely.are_points_in_polygon_2d(
+                userdata.area_polygon,
+                [[pose[0], pose[1]] for (_, pose) in userdata.detections_3d],
+            ).inside
             filtered_detections = [
                 userdata.detections_3d[i]
                 for i in range(0, len(userdata.detections_3d))
                 if satisfied_points[i]
             ]
-
             userdata.detections_3d = filtered_detections
+
             return "succeeded"
 
     def __init__(
         self,
-        area_polygon: Polygon,
+        area_polygon: List[List[float]],
         depth_topic: str = "/xtion/depth_registered/points",
         model: str = "yolov8n-seg.pt",
         filter: Union[List[str], None] = None,

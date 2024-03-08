@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import smach
 
 from lasr_skills import Detect
@@ -23,6 +25,7 @@ class WaitForPerson(smach.StateMachine):
         smach.StateMachine.__init__(
             self,
             outcomes=["succeeded", "failed"],
+            input_keys=["depth_topic"],
             output_keys=["detections"],
         )
 

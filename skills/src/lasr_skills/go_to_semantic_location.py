@@ -1,28 +1,30 @@
+#!/usr/bin/env python3
+
 import rospy
-import smach_ros
+import smach
+from tiago_controllers.controllers import Controllers
+from geometry_msgs.msg import Point, Quaternion, Pose
 
-from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
-from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion
-from std_msgs.msg import Header
-
-
-class GoToSemanticLocation(smach_ros.SimpleActionState):
+class GoToSemanticLocation(smach.State):
 
     def __init__(self):
-        super(GoToSemanticLocation, self).__init__(
-            "move_base",
-            MoveBaseAction,
-            goal_cb=lambda ud, _: MoveBaseGoal(
-                target_pose=PoseStamped(
-                    pose=self._to_pose(rospy.get_param(f"{ud.location}/location")),
-                    header=Header(frame_id="map"),
-                )
-            ),
-            input_keys=["location"],
-        )
+        smach.State.__init__(self, outcomes=['succeeded', 'failed'], input_keys=['location'])
+        self.controllers = Controllers()
 
-    def _to_pose(self, location):
-        return Pose(
-            position=Point(**location["position"]),
-            orientation=Quaternion(**location["orientation"]),
-        )
+    def execute(self, userdata):
+        loc = rospy.get_param(f"{userdata.location}/location")
+        try:
+            status = self.controllers.base_controller.sync_to_pose(Pose(position=Point(**loc['position']), orientation=Quaternion(**loc['orientation'])))
+            if status:
+                return 'succeeded'
+            return 'failed'
+        except rospy.ERROR as e:
+            rospy.logwarn(f"Unable to go to location. {loc} -> ({str(e)})")
+            return 'failed'
+if __name__ == '__main__':
+    rospy.init_node('go_to_semantic_location')
+    sm = smach.StateMachine(outcomes=['succeeded', 'failed'])
+    sm.userdata.location = '/living_room/table'
+    with sm:
+        smach.StateMachine.add('GoToSemanticLocation', GoToSemanticLocation(), transitions={'succeeded': 'succeeded', 'failed': 'failed'})
+    sm.execute()

@@ -1,22 +1,20 @@
-import smach_ros
-from control_msgs.msg import PointHeadGoal, PointHeadAction
-from geometry_msgs.msg import Point, PointStamped
-from std_msgs.msg import Header
+import smach
+import actionlib
+from control_msgs.msg import PointHeadGoal
+from control_msgs.msg import PointHeadAction
+from geometry_msgs.msg import Point
 
-
-class LookToPoint(smach_ros.SimpleActionState):
+class LookToPoint(smach.State):
     def __init__(self):
-        super(LookToPoint, self).__init__(
-            "/head_controller/point_head_action",
-            PointHeadAction,
-            goal_cb=lambda ud, _: PointHeadGoal(
-                pointing_frame="head_2_link",
-                pointing_axis=Point(1.0, 0.0, 0.0),
-                max_velocity=1.0,
-                target=PointStamped(
-                    header=Header(frame_id="map"),
-                    point=ud.point,
-                ),
-            ),
-            input_keys=["point"],
-        )
+        smach.State.__init__(self, outcomes=['succeeded'], input_keys=['point'])
+        self.point_head_client = actionlib.SimpleActionClient('/head_controller/point_head_action', PointHeadAction)
+
+    def execute(self, userdata):
+        ph_goal = PointHeadGoal()
+        ph_goal.max_velocity = 1.0
+        ph_goal.pointing_frame = 'head_2_link'
+        ph_goal.pointing_axis = Point(1.0, 0.0, 0.0)
+        ph_goal.target.header.frame_id = 'map'
+        ph_goal.target.point = userdata.point
+        self.point_head_client.send_goal_and_wait(ph_goal)
+        return 'succeeded'

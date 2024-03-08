@@ -1,8 +1,8 @@
+#!/usr/bin/env python3
+
 import smach
 
 from lasr_skills import Detect3DInArea
-
-from shapely.geometry.polygon import Polygon
 
 
 class WaitForPersonInArea(smach.StateMachine):
@@ -20,17 +20,18 @@ class WaitForPersonInArea(smach.StateMachine):
             else:
                 return "not_done"
 
-    def __init__(self, area_polygon: Polygon):
+    def __init__(self):
         smach.StateMachine.__init__(
             self,
             outcomes=["succeeded", "failed"],
+            input_keys=["depth_topic", "area_polygon"],
             output_keys=["detections_3d"],
         )
 
         with self:
             smach.StateMachine.add(
                 "DETECT_PEOPLE_3D",
-                Detect3DInArea(area_polygon=area_polygon, filter=["person"]),
+                Detect3DInArea(),
                 transitions={"succeeded": "CHECK_FOR_PERSON", "failed": "failed"},
             )
             smach.StateMachine.add(
