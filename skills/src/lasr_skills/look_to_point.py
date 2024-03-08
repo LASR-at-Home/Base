@@ -1,6 +1,5 @@
 import smach_ros
-from control_msgs.msg import PointHeadGoal
-from control_msgs.msg import PointHeadAction
+from control_msgs.msg import PointHeadGoal, PointHeadAction
 from geometry_msgs.msg import Point, PointStamped
 from std_msgs.msg import Header
 
