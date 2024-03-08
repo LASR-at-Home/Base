@@ -35,7 +35,7 @@ class UNetWithResnetEncoder(nn.Module):
     def __init__(self, num_classes, in_channels=3, freeze_bn=False, sigmoid=True):
         super(UNetWithResnetEncoder, self).__init__()
         self.sigmoid = sigmoid
-        self.resnet = models.resnet34(pretrained=True)  # Initialize with a ResNet model
+        self.resnet = models.resnet34(pretrained=False)  # Initialize with a ResNet model
         if in_channels != 3:
             self.resnet.conv1 = nn.Conv2d(in_channels, 64, kernel_size=7, stride=2, padding=3, bias=False)
 

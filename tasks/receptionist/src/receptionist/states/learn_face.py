@@ -24,19 +24,20 @@ class LearnFaces(smach.State):
 
 
     def execute(self, userdata):
-        print("here we will learn faces")
-        self.default.voice.speak("I'm about to learn your face")
+      print("here we will learn faces")
+      self.default.voice.speak("I'm about to learn your face")
 
 
         # Here we will learn faces
-      #  try:
-       #     learn_service = rospy.ServiceProxy("/learn_face", LearnFace)
-        #    req = LearnFaceRequest()
-         #   req.name = "Jane"
-          #  req.dataset = self.dataset
-           # req.n_images = 10
-            #resp = learn_service(req)
-        #except rospy.ServiceException as e:
-         #   rospy.logerr("Service call failed: %s" % e)
-          #  return 'failed'
-        return 'succeeded'
+      try:
+        learn_service = rospy.ServiceProxy("/learn_face", LearnFace)
+        req = LearnFaceRequest()
+        req.name = "Jane"
+        req.dataset = '/home/rexy/Documents/robotclub/robocup_ws/src/base_zoe_fork/common/vision/lasr_vision_deepface/datasets'
+        req.n_images = 10
+        resp = learn_service(req)
+      except rospy.ServiceException as e:
+          rospy.logerr("Service call failed: %s" % e)
+          return 'failed'
+        
+      return 'succeeded'

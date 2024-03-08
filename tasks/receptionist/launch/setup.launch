@@ -24,7 +24,7 @@
 
     <arg name="whisper_matcher" default="by-index" />
    <!-- <arg name="whisper_device_param" default="9" />-->
-    <arg name="whisper_device_param" default="5" />
+    <arg name="whisper_device_param" default="13" />
 
     <arg name="rasa_model" default="$(find lasr_rasa)/assistants/receptionist/models"/>
 
