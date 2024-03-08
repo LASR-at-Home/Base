@@ -4,7 +4,7 @@ import smach
 from sensor_msgs.msg import PointCloud2
 from lasr_vision_msgs.srv import YoloDetection3D
 
-from typing import List
+from typing import List, Union
 
 
 class Detect3D(smach.State):
@@ -13,7 +13,7 @@ class Detect3D(smach.State):
         self,
         depth_topic: str = "/xtion/depth_registered/points",
         model: str = "yolov8n-seg.pt",
-        filter: List[str] | None = None,
+        filter: Union[List[str], None] = None,
         confidence: float = 0.5,
         nms: float = 0.3,
     ):
