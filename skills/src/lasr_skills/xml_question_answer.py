@@ -36,13 +36,17 @@ def parse_question_xml(xml_file_path: str) -> dict:
 
 class XmlQuestionAnswer(smach.State):
 
-    def __init__(self):
+    def __init__(self, index_path: str, txt_path: str, xml_path: str, k: int = 1):
         smach.State.__init__(
             self,
             outcomes=["succeeded", "failed"],
-            input_keys=["query_sentence", "k", "index_path", "txt_path", "xml_path"],
+            input_keys=["query_sentence", "k"],
             output_keys=["closest_answers"],
         )
+        self.index_path = index_path
+        self.txt_path = txt_path
+        self.xml_path = xml_path
+        self.k = k
         self.txt_query = rospy.ServiceProxy("/lasr_faiss/txt_query", TxtQuery)
 
     def execute(self, userdata):
@@ -50,10 +54,10 @@ class XmlQuestionAnswer(smach.State):
         q_a_dict: dict = parse_question_xml(userdata.xml_path)
         try:
             request = TxtQueryRequest(
-                userdata.txt_path,
-                userdata.index_path,
+                self.txt_path,
+                self.index_path,
                 userdata.query_sentence,
-                userdata.k,
+                self.k,
             )
             result = self.txt_query(request)
             answers = [
@@ -63,10 +67,4 @@ class XmlQuestionAnswer(smach.State):
             userdata.closest_answers = answers
             return "succeeded"
         except rospy.ServiceException as e:
-            rospy.logwarn(f"Unable to perform Index Query. ({str(e)})")
-            userdata.closest_answers = []
-            voice = Voice()
-            voice.sync_tts(
-                "I'm sorry, I couldn't find an answer to your question. Please ask me another question."
-            )
             return "failed"

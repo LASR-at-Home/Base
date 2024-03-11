@@ -39,7 +39,7 @@ def get_sentence_embeddings(
     """Converts the list of string sentences into an array of sentence
     embeddings
     Args:
-        sentece_list (list[str]): list of string sentences, where each
+        sentence_list (list[str]): list of string sentences, where each
         entry in the list is assumed to be a separate sentence
         model (SentenceTransformer): model used to perform the embedding.
         Assumes a method called encode that takes a list of strings
@@ -47,7 +47,6 @@ def get_sentence_embeddings(
     Returns:
         np.ndarray: array of shape (n_commands, embedding_dim)
     """
-
     return model.encode(
         sentence_list,
         convert_to_numpy=True,

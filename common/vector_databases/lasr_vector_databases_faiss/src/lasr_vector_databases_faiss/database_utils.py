@@ -11,7 +11,7 @@ def create_vector_database(
     index_type: str = "Flat",
     normalise_vecs: bool = True,
 ) -> None:
-    """Creates a FAISS Index using the factor constructor and the given
+    """Creates a FAISS Index using the factory constructor and the given
     index type, and adds the given vector to the index, and then saves
     it to disk using the given path.
 

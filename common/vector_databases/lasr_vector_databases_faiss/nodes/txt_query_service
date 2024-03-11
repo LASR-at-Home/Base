@@ -20,7 +20,6 @@ class TxtQueryService:
     def __init__(self):
         rospy.init_node("txt_query_service")
         self._sentence_embedding_model = load_model()
-        print(self._sentence_embedding_model)
         rospy.Service("lasr_faiss/txt_query", TxtQuery, self.execute_cb)
         rospy.loginfo("Text Query service started")
 
