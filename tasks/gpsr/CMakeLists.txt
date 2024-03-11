@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(lasr_vector_databases_faiss)
+project(gpsr)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
@@ -7,10 +7,7 @@ project(lasr_vector_databases_faiss)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED catkin_virtualenv COMPONENTS
-rospy
-lasr_vector_databases_msgs
-)
+find_package(catkin REQUIRED)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -20,10 +17,7 @@ lasr_vector_databases_msgs
 ## modules and global scripts declared therein get installed
 ## See http://ros.org/doc/api/catkin/html/user_guide/setup_dot_py.html
 catkin_python_setup()
-catkin_generate_virtualenv(
-  INPUT_REQUIREMENTS requirements.in
-  PYTHON_INTERPRETER python3.9
-)
+
 ################################################
 ## Declare ROS messages, services and actions ##
 ################################################
@@ -57,16 +51,17 @@ catkin_generate_virtualenv(
 
 ## Generate services in the 'srv' folder
 # add_service_files(
-#   FILES
+#    FILES
 # )
 
-# Generate actions in the 'action' folder
+## Generate actions in the 'action' folder
 # add_action_files(
-#   DIRECTORY action
-#   FILES WaitGreet.action Identify.action Greet.action GetName.action LearnFace.action GetCommand.action Guide.action DetectPeople.action FindPerson.action ReceiveObject.action HandoverObject.action
+#   FILES
+#   Action1.action
+#   Action2.action
 # )
 
-# Generate added messages and services with any dependencies listed here
+## Generate added messages and services with any dependencies listed here
 # generate_messages(
 #   DEPENDENCIES
 #   std_msgs
@@ -103,7 +98,8 @@ catkin_generate_virtualenv(
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 #  INCLUDE_DIRS include
-#  LIBRARIES qualification
+#  LIBRARIES coffee_shop
+#  CATKIN_DEPENDS other_catkin_pkg
 #  DEPENDS system_lib
 )
 
@@ -115,12 +111,12 @@ catkin_package(
 ## Your package locations should be listed before other locations
 include_directories(
 # include
-  ${catkin_INCLUDE_DIRS}
+# ${catkin_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/qualification.cpp
+#   src/${PROJECT_NAME}/coffee_shop.cpp
 # )
 
 ## Add cmake target dependencies of the library
@@ -131,7 +127,7 @@ include_directories(
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-# add_executable(${PROJECT_NAME}_node src/qualification_node.cpp)
+# add_executable(${PROJECT_NAME}_node src/coffee_shop_node.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -158,10 +154,8 @@ include_directories(
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
 catkin_install_python(PROGRAMS
-  nodes/txt_index_service
-  nodes/txt_query_service
-  scripts/test_index_service.py
-  scripts/test_query_service.py
+  scripts/parse_gpsr_xmls.py
+  nodes/commands/question_answer
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
@@ -187,17 +181,17 @@ catkin_install_python(PROGRAMS
 # )
 
 ## Mark other files for installation (e.g. launch and bag files, etc.)
-install(FILES
-  requirements.txt
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
-)
+# install(FILES
+#   requirements.txt
+#   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+# )
 
 #############
 ## Testing ##
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_qualification.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_coffee_shop.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()
