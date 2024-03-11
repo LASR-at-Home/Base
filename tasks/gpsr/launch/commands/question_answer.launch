@@ -24,7 +24,7 @@
         type="transcribe_microphone_server"
         name="transcribe_speech"
         output="screen"
-        args="--mic_device 5"
+        args="--mic_device 9"
     />
 
 </launch>

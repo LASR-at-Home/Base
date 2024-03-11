@@ -1,6 +1,6 @@
 import smach
-from listen import Listen
-from skills.src.lasr_skills.say import Say
+from lasr_skills import Listen
+from lasr_skills import Say
 
 
 class AskAndListen(smach.StateMachine):
@@ -15,12 +15,20 @@ class AskAndListen(smach.StateMachine):
             smach.StateMachine.add(
                 "SAY",
                 Say(),
-                transitions={"succeeded": "LISTEN", "failed": "failed"},
-                remapping={"tts_phrase": "text"},
+                transitions={
+                    "succeeded": "LISTEN",
+                    "aborted": "failed",
+                    "preempted": "failed",
+                },
+                remapping={"text": "tts_phrase"},
             )
             smach.StateMachine.add(
                 "LISTEN",
                 Listen(),
-                transitions={"succeeded": "succeeded", "failed": "failed"},
-                remapping={"transcribed_speech": "transcribed_speech"},
+                transitions={
+                    "succeeded": "succeeded",
+                    "aborted": "failed",
+                    "preempted": "failed",
+                },
+                remapping={"sequence": "transcribed_speech"},
             )

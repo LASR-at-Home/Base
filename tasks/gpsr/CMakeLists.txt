@@ -155,7 +155,7 @@ include_directories(
 ## in contrast to setup.py, you can choose the destination
 catkin_install_python(PROGRAMS
   scripts/parse_gpsr_xmls.py
-  nodes/question_answer
+  nodes/commands/question_answer
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

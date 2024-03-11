@@ -22,7 +22,7 @@ class QuestionAnswerStateMachine(smach.StateMachine):
                 transitions={"succeeded": "XML_QUESTION_ANSWER", "failed": "failed"},
                 remapping={
                     "tts_phrase:": "tts_phrase",
-                    "transcribed_speech": "query_sentence",
+                    "transcribed_speech": "transcribed_speech",
                 },
             )
             smach.StateMachine.add(
@@ -33,16 +33,20 @@ class QuestionAnswerStateMachine(smach.StateMachine):
                     input_data["xml_path"],
                     input_data["k"],
                 ),
-                transitions={"succeeded": "succeeded", "failed": "failed"},
+                transitions={"succeeded": "SAY_ANSWER", "failed": "failed"},
                 remapping={
-                    "query_sentence": "query_sentence",
+                    "query_sentence": "transcribed_speech",
                     "closest_answers": "closest_answers",
                 },
             )
             smach.StateMachine.add(
                 "SAY_ANSWER",
                 Say(format_str="The answer to your question is: {}"),
-                transitions={"succeeded": "succeeded", "failed": "failed"},
+                transitions={
+                    "succeeded": "succeeded",
+                    "aborted": "failed",
+                    "preempted": "failed",
+                },
                 remapping={"placeholders": "closest_answers"},
             )
 

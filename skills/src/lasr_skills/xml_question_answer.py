@@ -51,7 +51,7 @@ class XmlQuestionAnswer(smach.State):
 
     def execute(self, userdata):
         rospy.wait_for_service("/lasr_faiss/txt_query")
-        q_a_dict: dict = parse_question_xml(userdata.xml_path)
+        q_a_dict: dict = parse_question_xml(self.xml_path)
         try:
             request = TxtQueryRequest(
                 self.txt_path,
