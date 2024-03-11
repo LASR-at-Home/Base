@@ -1,5 +1,0 @@
-<launch>
-<!--     TASK  -->
-   <node name="" pkg="receptionist" type="head_direction_test.py" output="screen" required="true"/>
-</launch>
-

@@ -6,8 +6,8 @@ import smach
 import cv2_img
 import numpy as np
 
-from lasr_vision_msgs.msg import BodyPixMaskRequest, ColourPrediction, FeatureWithColour
-from lasr_vision_msgs.srv import YoloDetection, BodyPixDetection, TorchFaceFeatureDetection, TorchFaceFeatureDetectionDescription
+from lasr_vision_msgs.msg import BodyPixMaskRequest
+from lasr_vision_msgs.srv import YoloDetection, BodyPixDetection, TorchFaceFeatureDetectionDescription
 from numpy2message import numpy2message
 
 from .vision import GetImage, ImageMsgToCv2, Get3DImage, PclMsgToCv2, Get2DAnd3DImages
@@ -24,30 +24,31 @@ from pal_common_msgs.msg import DisableActionGoal, DisableAction
 client = actionlib.SimpleActionClient("/head_controller/point_head_action", PointHeadAction)   #
 rospy.logwarn('making client')
 
-def point_head_client(xyz_array, u, v, client):
-    u = 480 - 1 if u > 480 else u
-    v = 640 - 1 if v > 640 else u
-    target_point = xyz_array[v, u]
+# Todo: This one not cleaned for now because it might be moved somewhere else.
+# def point_head_client(xyz_array, u, v, client):
+#     u = 480 - 1 if u > 480 else u
+#     v = 640 - 1 if v > 640 else u
+#     target_point = xyz_array[v, u]
 
-    point_camera = PointStamped()
-    point_camera.header.frame_id = "xtion_rgb_optical_frame"
-    # point_camera.header.stamp = rospy.Time.now()
-    point_camera.point.x = target_point[0] if target_point[0] != np.nan else 0
-    point_camera.point.y = target_point[1] if target_point[1] != np.nan else 0
-    point_camera.point.z = target_point[2] if target_point[2] != np.nan else 0
+#     point_camera = PointStamped()
+#     point_camera.header.frame_id = "xtion_rgb_optical_frame"
+#     # point_camera.header.stamp = rospy.Time.now()
+#     point_camera.point.x = target_point[0] if target_point[0] != np.nan else 0
+#     point_camera.point.y = target_point[1] if target_point[1] != np.nan else 0
+#     point_camera.point.z = target_point[2] if target_point[2] != np.nan else 0
 
-    goal = PointHeadGoal()
-    goal.target = point_camera
-    goal.max_velocity = 0.3
-    # goal.min_duration = rospy.Duration(1.0)
-    goal.pointing_frame = "head_2_link"
-    goal.pointing_axis.x = 1.0
-    goal.pointing_axis.y = 0.0
-    goal.pointing_axis.z = 0.0
+#     goal = PointHeadGoal()
+#     goal.target = point_camera
+#     goal.max_velocity = 0.3
+#     # goal.min_duration = rospy.Duration(1.0)
+#     goal.pointing_frame = "head_2_link"
+#     goal.pointing_axis.x = 1.0
+#     goal.pointing_axis.y = 0.0
+#     goal.pointing_axis.z = 0.0
 
-    rospy.logwarn('sending the goal and waiting, moving to: %s' % str(list(target_point)))
-    client.send_goal(goal)
-    rospy.logwarn('end')
+#     rospy.logwarn('sending the goal and waiting, moving to: %s' % str(list(target_point)))
+#     client.send_goal(goal)
+#     rospy.logwarn('end')
 
 
 class DescribePeople(smach.StateMachine):
