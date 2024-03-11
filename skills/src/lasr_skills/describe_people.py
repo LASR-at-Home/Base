@@ -6,7 +6,6 @@ import smach
 import cv2_img
 import numpy as np
 
-# from colour_estimation import closest_colours, RGB_COLOURS
 from lasr_vision_msgs.msg import BodyPixMaskRequest, ColourPrediction, FeatureWithColour
 from lasr_vision_msgs.srv import YoloDetection, BodyPixDetection, TorchFaceFeatureDetection, TorchFaceFeatureDetectionDescription
 from numpy2message import numpy2message

@@ -1,8 +1,5 @@
 from feature_extractor.modules import UNetWithResnetEncoder, MultiLabelResNet, CombinedModel  # DeepLabV3PlusMobileNetV3, MultiLabelMobileNetV3Large, CombinedModelNoRegression
 from feature_extractor.helpers import load_torch_model, binary_erosion_dilation
-
-from colour_estimation import load_images_to_dict, generate_colour_table, count_colours_in_masked_area, compare_colour_distributions
-from colour_estimation import SPESIFIC_COLOURS, DETAILED_COLOURS
 from lasr_vision_feature_extraction.categories_and_attributes import CategoriesAndAttributes, CelebAMaskHQCategoriesAndAttributes
 from lasr_vision_feature_extraction.image_with_masks_and_attributes import ImageWithMasksAndAttributes, ImageOfPerson
 
