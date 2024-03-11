@@ -1,10 +1,9 @@
 import smach
 import smach_ros
 
-from play_motion_msgs.msg import PlayMotionAction, PlayMotionGoal
 from std_srvs.srv import Empty
 
-from lasr_skills import Say, ListenFor
+from lasr_skills import Say, ListenFor, PlayMotion
 
 
 class ReceiveObject(smach.StateMachine):
@@ -22,13 +21,7 @@ class ReceiveObject(smach.StateMachine):
             )
             smach.StateMachine.add(
                 "RECEIVE_OBJECT",
-                smach_ros.SimpleActionState(
-                    "play_motion",
-                    PlayMotionAction,
-                    goal=PlayMotionGoal(
-                        motion_name="receive_object", skip_planning=False
-                    ),
-                ),
+                PlayMotion(motion_name="receive_object"),
                 transitions={"succeeded": "succeeded", "aborted": "failed"},
             )
             smach.StateMachine.add(
@@ -57,10 +50,6 @@ class ReceiveObject(smach.StateMachine):
             )
             smach.StateMachine.add(
                 "FOLD_ARM",
-                smach_ros.SimpleActionState(
-                    "play_motion",
-                    PlayMotionAction,
-                    goal=PlayMotionGoal(motion_name="fold_arm", skip_planning=False),
-                ),
+                PlayMotion(motion_name="fold_arm"),
                 transitions={"succeeded": "succeeded", "aborted": "failed"},
             )

@@ -1,10 +1,9 @@
 import smach
 import smach_ros
 
-from play_motion_msgs.msg import PlayMotionAction, PlayMotionGoal
 from std_srvs.srv import Empty
 
-from lasr_skills import Say, ListenFor
+from lasr_skills import Say, ListenFor, PlayMotion
 
 
 class HandoverObject(smach.StateMachine):
@@ -22,13 +21,7 @@ class HandoverObject(smach.StateMachine):
             )
             smach.StateMachine.add(
                 "HANDOVER_OBJECT",
-                smach_ros.SimpleActionState(
-                    "play_motion",
-                    PlayMotionAction,
-                    goal=PlayMotionGoal(
-                        motion_name="handover_object", skip_planning=False
-                    ),
-                ),
+                PlayMotion(motion_name="handover_object"),
                 transitions={"succeeded": "succeeded", "aborted": "failed"},
             )
             smach.StateMachine.add(
@@ -50,19 +43,11 @@ class HandoverObject(smach.StateMachine):
             )
             smach.StateMachine.add(
                 "OPEN_GRIPPER",
-                smach_ros.SimpleActionState(
-                    "play_motion",
-                    PlayMotionAction,
-                    goal=PlayMotionGoal(motion_name="open_gripper", skip_planning=True),
-                ),
+                PlayMotion(motion_name="open_gripper"),
                 transitions={"succeeded": "succeeded", "aborted": "failed"},
             )
             smach.StateMachine.add(
                 "FOLD_ARM",
-                smach_ros.SimpleActionState(
-                    "play_motion",
-                    PlayMotionAction,
-                    goal=PlayMotionGoal(motion_name="fold_arm", skip_planning=False),
-                ),
+                PlayMotion(motion_name="fold_arm"),
                 transitions={"succeeded": "succeeded", "aborted": "failed"},
             )
