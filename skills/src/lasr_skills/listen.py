@@ -2,7 +2,6 @@
 import smach_ros
 from lasr_speech_recognition_msgs.msg import (
     TranscribeSpeechAction,
-    TranscribeSpeechGoal,
 )
 
 
@@ -12,6 +11,5 @@ class Listen(smach_ros.SimpleActionState):
             self,
             "transcribe_speech",
             TranscribeSpeechAction,
-            goal=TranscribeSpeechGoal(),
             result_slots=["sequence"],
         )
