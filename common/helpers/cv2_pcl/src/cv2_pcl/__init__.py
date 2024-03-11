@@ -48,7 +48,7 @@ def seg_to_centroid(pcl: PointCloud2, xyseg: np.ndarray) -> np.ndarray:
     # Extract points of interest
     xyz_points = [pcl_xyz[x][y] for x, y in indices]
 
-    return np.mean(xyz_points, axis=0)
+    return np.nanmean(xyz_points, axis=0)
 
 
 def bb_to_centroid(pcl: PointCloud2, x: int, y: int, w: int, h: int) -> np.ndarray:
