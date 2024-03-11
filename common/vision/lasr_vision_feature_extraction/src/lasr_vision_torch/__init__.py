@@ -3,15 +3,15 @@ from feature_extractor.helpers import load_torch_model, binary_erosion_dilation
 
 from colour_estimation import load_images_to_dict, generate_colour_table, count_colours_in_masked_area, compare_colour_distributions
 from colour_estimation import SPESIFIC_COLOURS, DETAILED_COLOURS
-from lasr_vision_torch.categories_and_attributes import CategoriesAndAttributes, CelebAMaskHQCategoriesAndAttributes
-from lasr_vision_torch.image_with_masks_and_attributes import ImageWithMasksAndAttributes, ImageOfPerson
+from lasr_vision_feature_extraction.categories_and_attributes import CategoriesAndAttributes, CelebAMaskHQCategoriesAndAttributes
+from lasr_vision_feature_extraction.image_with_masks_and_attributes import ImageWithMasksAndAttributes, ImageOfPerson
 
 import numpy as np
 import cv2
 import torch
 import rospy
 import rospkg
-import lasr_vision_torch
+import lasr_vision_feature_extraction
 from os import path
 # import matplotlib.pyplot as plt
 
@@ -71,7 +71,7 @@ def load_face_classifier_model():
 
     r = rospkg.RosPack()
     model, _, _, _ = load_torch_model(model, None, path=path.join(r.get_path(
-        "lasr_vision_torch"), "models", "model.pth"), cpu_only=True)
+        "lasr_vision_feature_extraction"), "models", "model.pth"), cpu_only=True)
     return model
 
 
@@ -174,7 +174,7 @@ def extract_mask_region(frame, mask, expand_x=0.5, expand_y=0.5):
 #         # try:
 #         #     r = rospkg.RosPack()
 #         #     _head_frame_bgr = cv2.cvtColor(head_frame, cv2.COLOR_RGB2BGR)
-#         #     cv2.imwrite(path.join(r.get_path("lasr_vision_torch"), 'head_frame.jpg'), _head_frame_bgr)
+#         #     cv2.imwrite(path.join(r.get_path("lasr_vision_feature_extraction"), 'head_frame.jpg'), _head_frame_bgr)
 #         # except Exception as ignore:
 #         #     pass
 
@@ -307,11 +307,11 @@ def predict_frame(head_frame, torso_frame, full_frame, head_mask, torso_mask,):
 #     # try:
 #     #     r = rospkg.RosPack()
 #     #     _full_frame_bgr = cv2.cvtColor(full_frame, cv2.COLOR_RGB2BGR)
-#     #     cv2.imwrite(path.join(r.get_path("lasr_vision_torch"), 'full_frame.jpg'), _full_frame_bgr)
+#     #     cv2.imwrite(path.join(r.get_path("lasr_vision_feature_extraction"), 'full_frame.jpg'), _full_frame_bgr)
 #     #     _head_frame_bgr = cv2.cvtColor(head_frame, cv2.COLOR_RGB2BGR)
-#     #     cv2.imwrite(path.join(r.get_path("lasr_vision_torch"), 'head_frame.jpg'), _head_frame_bgr)
+#     #     cv2.imwrite(path.join(r.get_path("lasr_vision_feature_extraction"), 'head_frame.jpg'), _head_frame_bgr)
 #     #     _torso_frame_bgr = cv2.cvtColor(torso_frame, cv2.COLOR_RGB2BGR)
-#     #     cv2.imwrite(path.join(r.get_path("lasr_vision_torch"), 'torso_frame.jpg'), _torso_frame_bgr)
+#     #     cv2.imwrite(path.join(r.get_path("lasr_vision_feature_extraction"), 'torso_frame.jpg'), _torso_frame_bgr)
 #     # except Exception as ignore:
 #     #     pass
 

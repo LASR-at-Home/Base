@@ -9,7 +9,7 @@ import cv2
 import torch
 import rospy
 import rospkg
-import lasr_vision_torch
+import lasr_vision_feature_extraction
 from os import path
 
 
@@ -21,11 +21,11 @@ def detect(request: TorchFaceFeatureDetectionDescriptionRequest) -> TorchFaceFea
     head_mask_data, head_mask_shape, head_mask_dtype = request.head_mask_data, request.head_mask_shape, request.head_mask_dtype 
     torso_mask = message2numpy(torso_mask_data, torso_mask_shape, torso_mask_dtype)
     head_mask = message2numpy(head_mask_data, head_mask_shape, head_mask_dtype)
-    head_frame = lasr_vision_torch.extract_mask_region(full_frame, head_mask.astype(np.uint8), expand_x=0.4, expand_y=0.5)
-    torso_frame = lasr_vision_torch.extract_mask_region(full_frame, torso_mask.astype(np.uint8), expand_x=0.2, expand_y=0.0)
+    head_frame = lasr_vision_feature_extraction.extract_mask_region(full_frame, head_mask.astype(np.uint8), expand_x=0.4, expand_y=0.5)
+    torso_frame = lasr_vision_feature_extraction.extract_mask_region(full_frame, torso_mask.astype(np.uint8), expand_x=0.2, expand_y=0.0)
 
-    # class_pred, colour_pred = lasr_vision_torch.predict_frame(head_frame, torso_frame, full_frame, head_mask, torso_mask, lasr_vision_torch.model, lasr_vision_torch.thresholds_mask, lasr_vision_torch.erosion_iterations, lasr_vision_torch.dilation_iterations, lasr_vision_torch.thresholds_pred)
-    rst_str = lasr_vision_torch.predict_frame(head_frame, torso_frame, full_frame, head_mask, torso_mask,)
+    # class_pred, colour_pred = lasr_vision_feature_extraction.predict_frame(head_frame, torso_frame, full_frame, head_mask, torso_mask, lasr_vision_feature_extraction.model, lasr_vision_feature_extraction.thresholds_mask, lasr_vision_feature_extraction.erosion_iterations, lasr_vision_feature_extraction.dilation_iterations, lasr_vision_feature_extraction.thresholds_pred)
+    rst_str = lasr_vision_feature_extraction.predict_frame(head_frame, torso_frame, full_frame, head_mask, torso_mask,)
     
     response = TorchFaceFeatureDetectionDescriptionResponse()
     response.description = rst_str
@@ -51,7 +51,7 @@ def detect(request: TorchFaceFeatureDetectionDescriptionRequest) -> TorchFaceFea
 #     # 'hair', 'hat', 'glasses', 'face'
 #     input_image = torch.from_numpy(frame).permute(2, 0, 1).unsqueeze(0).float()
 #     input_image /= 255.0
-#     masks_batch_pred, pred_classes = lasr_vision_torch.model(input_image)
+#     masks_batch_pred, pred_classes = lasr_vision_feature_extraction.model(input_image)
 
 #     thresholds_mask = [
 #         0.5, 0.75, 0.25, 0.5,  # 0.5, 0.5, 0.5, 0.5,
