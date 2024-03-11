@@ -11,3 +11,4 @@ from .go_to_semantic_location import GoToSemanticLocation
 from .say import Say
 from .listen_for import ListenFor
 from .receive_object import ReceiveObject
+from .handover_object import HandoverObject
