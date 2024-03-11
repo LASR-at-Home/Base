@@ -1,5 +1,5 @@
-from torch_module.modules import UNetWithResnetEncoder, MultiLabelResNet, CombinedModel  # DeepLabV3PlusMobileNetV3, MultiLabelMobileNetV3Large, CombinedModelNoRegression
-from torch_module.helpers import load_torch_model, binary_erosion_dilation
+from feature_extractor.modules import UNetWithResnetEncoder, MultiLabelResNet, CombinedModel  # DeepLabV3PlusMobileNetV3, MultiLabelMobileNetV3Large, CombinedModelNoRegression
+from feature_extractor.helpers import load_torch_model, binary_erosion_dilation
 
 from colour_estimation import load_images_to_dict, generate_colour_table, count_colours_in_masked_area, compare_colour_distributions
 from colour_estimation import SPESIFIC_COLOURS, DETAILED_COLOURS

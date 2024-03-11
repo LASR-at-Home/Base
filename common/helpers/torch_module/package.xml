@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>torch_module</name>
+  <name>feature_extractor</name>
   <version>0.0.0</version>
   <description>Various PyTorch helpers and utilties</description>
 
@@ -19,7 +19,7 @@
   <!-- Url tags are optional, but multiple are allowed, one per tag -->
   <!-- Optional attribute type can be: website, bugtracker, or repository -->
   <!-- Example: -->
-  <!-- <url type="website">http://wiki.ros.org/torch_module</url> -->
+  <!-- <url type="website">http://wiki.ros.org/feature_extractor</url> -->
 
 
   <!-- Author tags are optional, multiple are allowed, one per tag -->
