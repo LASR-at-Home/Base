@@ -26,7 +26,7 @@ class ReceiveObject(smach.StateMachine):
                     "play_motion",
                     PlayMotionAction,
                     goal=PlayMotionGoal(
-                        motion_name="receive_object", skip_planning=True
+                        motion_name="receive_object", skip_planning=False
                     ),
                 ),
                 transitions={"succeeded": "succeeded", "aborted": "failed"},
