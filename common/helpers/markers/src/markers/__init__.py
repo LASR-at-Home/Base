@@ -5,6 +5,8 @@ from geometry_msgs.msg import PointStamped
 
 from collections import defaultdict
 
+from typing import Union
+
 publisher_counts = defaultdict(int)
 
 
@@ -36,7 +38,7 @@ def create_marker(
 def create_and_publish_marker(
     publisher: rospy.Publisher,
     point_stamped: PointStamped,
-    idx: int | None = None,
+    idx: Union[int, None] = None,
     r: float = 0.0,
     g: float = 1.0,
     b: float = 0.0,

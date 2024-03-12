@@ -52,6 +52,8 @@
   <build_depend>catkin_virtualenv</build_depend>
   <depend>lasr_vision_msgs</depend>
   <exec_depend>markers</exec_depend>
+  <exec_depend>cv2_img</exec_depend>
+  <exec_depend>cv2_pcl</exec_depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>
