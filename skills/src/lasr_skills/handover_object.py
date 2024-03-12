@@ -62,7 +62,8 @@ class HandoverObject(smach.StateMachine):
                 transitions={
                     "succeeded": "OPEN_GRIPPER",
                     "not_done": "LISTEN_DONE",
-                    "failed": "failed",
+                    "aborted": "failed",
+                    "preempted": "failed",
                 },
             )
             smach.StateMachine.add(
