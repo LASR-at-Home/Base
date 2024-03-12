@@ -22,17 +22,19 @@ class Detect3DInArea(smach.StateMachine):
             self.area_polygon = area_polygon
 
         def execute(self, userdata):
+            detected_objects = userdata["detections_3d"].detected_objects
+
             satisfied_points = [
-                self.area_polygon.contains(Point(pose[0], pose[1]))
-                for (_, pose) in userdata.detections_3d
+                self.area_polygon.contains(Point(object.point.x, object.point.y))
+                for object in detected_objects
             ]
             filtered_detections = [
-                userdata.detections_3d[i]
-                for i in range(0, len(userdata.detections_3d))
+                detected_objects[i]
+                for i in range(0, len(detected_objects))
                 if satisfied_points[i]
             ]
 
-            userdata.detections_3d = filtered_detections
+            userdata["detections_3d"] = filtered_detections
             return "succeeded"
 
     def __init__(
