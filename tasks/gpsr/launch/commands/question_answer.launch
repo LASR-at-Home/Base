@@ -19,12 +19,4 @@
         args="--k $(arg k) --index_path $(arg index_path) --txt_path $(arg text_path) --xml_path $(arg xml_path)"
     />
 
-    <node
-        pkg="lasr_speech_recognition_whisper"
-        type="transcribe_microphone_server"
-        name="transcribe_speech"
-        output="screen"
-        args="--mic_device 9"
-    />
-
 </launch>
