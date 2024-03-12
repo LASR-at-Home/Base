@@ -12,14 +12,15 @@ class ListenFor(smach_ros.SimpleActionState):
 
         def speech_result_cb(userdata, status, result):
             if status == GoalStatus.SUCCEEDED:
-                if wake_word in result.transcription.lower().split():
+                if wake_word in result.sequence.lower():
                     return "succeeded"
                 return "not_done"
-            return "failed"
+            return "aborted"
 
         smach_ros.SimpleActionState.__init__(
             self,
             "transcribe_speech",
             TranscribeSpeechAction,
             result_cb=speech_result_cb,
+            outcomes=["succeeded", "preempted", "aborted", "not_done"],
         )
