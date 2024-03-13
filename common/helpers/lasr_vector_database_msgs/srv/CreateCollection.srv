@@ -1,0 +1,7 @@
+# name of collection
+string name
+# skip if exists
+bool skip_if_exists
+# clear if exists
+bool clear_if_exists
+---

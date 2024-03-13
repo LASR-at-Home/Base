@@ -1,0 +1,9 @@
+# name of collection
+string name
+# vector data
+float64[] vector
+# number of results to return
+int32 limit
+---
+# search results
+lasr_vector_database_msgs/SearchResult[] results

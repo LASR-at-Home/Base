@@ -1,0 +1,18 @@
+<launch>
+    <description>Start the Weviate vector database</description>
+    <usage doc="Default directory and ports"></usage>
+    <usage doc="Customise the ports used">http_port:=40050 grpc_port:=40051</usage>
+    <usage doc="Create a separate database instance">db_name:=your_database_name</usage>
+
+    <arg name="version" default="1.22.11" doc="Version of Weaviate to download and run" />
+    <arg name="http_port" default="50050" doc="Port to bind HTTP service to" />
+    <arg name="grpc_port" default="50051" doc="Port to bind GRPC service to" />
+    <arg name="db_name" default="weaviate" doc="Custom database name" />
+
+    <node name="$(anon weaviate_vector_database)" pkg="lasr_vector_database_weaviate" type="server" output="screen">
+        <param name="version" type="str" value="$(arg version)" />
+        <param name="http_port" type="str" value="$(arg http_port)" />
+        <param name="grpc_port" type="str" value="$(arg grpc_port)" />
+        <param name="db_name" type="str" value="$(arg db_name)" />
+    </node>
+</launch>
