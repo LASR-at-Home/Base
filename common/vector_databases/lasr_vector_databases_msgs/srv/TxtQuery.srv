@@ -1,0 +1,19 @@
+# Path to input text file
+string txt_path
+
+# Path to index file to load
+string index_path
+
+# Sentence to query index with
+string query_sentence
+
+# Number of nearest sentences to return
+uint8 k
+
+---
+# Nearest sentence
+string[] closest_sentences
+
+# Cosine similarity of distances
+float32[] cosine_similarities
+

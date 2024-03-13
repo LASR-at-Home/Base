@@ -79,6 +79,7 @@ def detect_3d(request: YoloDetection3DRequest) -> YoloDetection3DResponse:
     return yolo.detect_3d(request, debug_inference_publisher, debug_point_publisher)
 
 
+yolo.start_tf_buffer()
 rospy.Service("/yolov8/detect", YoloDetection, detect)
 rospy.Service("/yolov8/detect3d", YoloDetection3D, detect_3d)
 rospy.loginfo("YOLOv8 service started")
