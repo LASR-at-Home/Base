@@ -2,29 +2,21 @@ from geometry_msgs.msg import (
     Point,
     PoseWithCovarianceStamped,
     Pose,
-    Quaternion,
     PoseStamped,
 )
 from nav_msgs.srv import GetPlan
 import rospy
+import rosservice
 
 from typing import Union, List, Tuple
 
 import math
+import numpy as np
+
+from itertools import permutations
 
 
 def points_on_radius(point: Point, radius: float = 0.5) -> List[Point]:
-    # return [
-    #     Point(x=point.x + 0.0, y=point.y - radius, z=point.z),
-    #     Point(x=point.x + 0.0, y=point.y + radius, z=point.z),
-    #     Point(x=point.x - radius, y=point.y + 0.0, z=point.z),
-    #     Point(x=point.x + radius, y=point.y + 0.0, z=point.z),
-    #     Point(x=point.x + radius, y=point.y + radius, z=point.z),
-    #     Point(x=point.x - radius, y=point.y - radius, z=point.z),
-    #     Point(x=point.x - radius, y=point.y + radius, z=point.z),
-    #     Point(x=point.x + radius, y=point.y - radius, z=point.z),
-    # ]
-    # the above code makes a square, I want a circle
     points = []
     for i in range(0, 360, 45):
         points.append(
@@ -52,7 +44,10 @@ def make_plan(
         pose=Pose(position=point, orientation=robot_pose.pose.pose.orientation),
         header=robot_pose.header,
     )
-    make_plan = rospy.ServiceProxy("/move_base/make_plan", GetPlan)
+    if "/move_base/NavfnROS/make_plan" in rosservice.get_service_list():
+        make_plan = rospy.ServiceProxy("/move_base/NavfnROS/make_plan", GetPlan)
+    else:
+        make_plan = rospy.ServiceProxy("/move_base/make_plan", GetPlan)
     plan = make_plan(start, goal, tol).plan
     if len(plan.poses) > 0:
         dist = 0.0
@@ -79,3 +74,20 @@ def plan_to_radius(
 
     picked_points = sorted(picked_points, key=lambda x: x[1])
     return [point[0] for point in picked_points] if picked_points else []
+
+
+def min_hamiltonian_path(start: Pose, poses: List[Pose]) -> List[Pose]:
+    best_order = None
+    min_distance = np.inf
+
+    # TODO: make this smarter (i.e. plan length rather than euclidian distance)
+    for perm in permutations(poses):
+        dist = euclidian_distance(start.position, perm[0].position)
+        for i in range(len(poses) - 1):
+            dist += euclidian_distance(perm[i].position, perm[i + 1].position)
+
+        if dist < min_distance:
+            min_distance = dist
+            best_order = perm
+
+    return best_order
