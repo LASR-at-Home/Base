@@ -3,7 +3,7 @@
 import smach
 from smach_ros import SimpleActionState
 
-from geometry_msgs.msg import Pose, PoseStamped
+from geometry_msgs.msg import Pose, PoseStamped, PoseWithCovarianceStamped
 from std_msgs.msg import Header
 
 from typing import List
@@ -11,6 +11,8 @@ from typing import List
 from lasr_skills import Detect3D, LookToPoint, GoToPerson
 
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
+
+import navigation_helpers
 
 
 class FindPerson(smach.StateMachine):
@@ -33,7 +35,12 @@ class FindPerson(smach.StateMachine):
 
     def __init__(self, waypoints: List[Pose]):
         smach.StateMachine.__init__(self, outcomes=["succeeded", "failed"])
-        self.waypoints = waypoints
+        current_point = rospy.wait_for_message(
+            "/amcl_pose", PoseWithCovarianceStamped
+        ).pose.pose
+        self.waypoints = navigation_helpers.min_hamiltonian_path(
+            current_point, waypoints
+        )
 
         with self:
             waypoint_iterator = smach.Iterator(

@@ -4,27 +4,16 @@ from smach_ros import SimpleActionState
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 
 
-from navigation_helpers import plan_to_radius, points_on_radius
+from navigation_helpers import plan_to_radius
 
 from geometry_msgs.msg import (
     PoseStamped,
-    Pose,
     PoseWithCovarianceStamped,
-    Quaternion,
-    Point,
-    PointStamped,
 )
 from std_msgs.msg import Header
 import rospy
-from tf.transformations import quaternion_about_axis
-import math
-import numpy as np
-from scipy.spatial.transform import Rotation
-import markers
 
-from visualization_msgs.msg import Marker
-from tf.transformations import euler_from_quaternion
-from math import sin, cos, pi
+from lasr_skills import GoToLocation
 
 
 class GoToPerson(smach.StateMachine):
@@ -37,30 +26,13 @@ class GoToPerson(smach.StateMachine):
                 input_keys=["point"],
                 output_keys=["target_location"],
             )
-            self.marker_pub = rospy.Publisher("/points", Marker, queue_size=100)
 
         def execute(self, userdata):
-            robot_pose = rospy.wait_for_message(
-                "/amcl_pose", PoseWithCovarianceStamped
-            )  # Pose
-            point = userdata.point  # Point
-            points = plan_to_radius(robot_pose, point, 2.0)
-            for candidate in points:
-                markers.create_and_publish_marker(
-                    self.marker_pub,
-                    PointStamped(
-                        header=Header(frame_id="map"), point=candidate.position
-                    ),
-                )
-
+            robot_pose = rospy.wait_for_message("/amcl_pose", PoseWithCovarianceStamped)
+            points = plan_to_radius(robot_pose, userdata.point, 2.0)
+            if not points:
+                return "failed"
             userdata.target_location = points[0]
-            # candidates = points_on_radius(point, 2.0)
-            # for candidate in candidates:
-            #     markers.create_and_publish_marker(
-            #         self.marker_pub,
-            #         PointStamped(header=Header(frame_id="map"), point=candidate),
-            #     )
-
             return "succeeded"
 
     def __init__(self):
@@ -80,16 +52,8 @@ class GoToPerson(smach.StateMachine):
 
             smach.StateMachine.add(
                 "GO_TO_LOCATION",
-                SimpleActionState(
-                    "move_base",
-                    MoveBaseAction,
-                    goal_cb=lambda ud, _: MoveBaseGoal(
-                        target_pose=PoseStamped(
-                            pose=ud.target_location, header=Header(frame_id="map")
-                        )
-                    ),
-                    input_keys=["target_location"],
-                ),
+                GoToLocation(),
+                remapping={"location": "target_location"},
                 transitions={
                     "succeeded": "succeeded",
                     "aborted": "failed",
