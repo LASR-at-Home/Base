@@ -10,18 +10,31 @@ import rospy
 
 from typing import Union, List, Tuple
 
+import math
+
 
 def points_on_radius(point: Point, radius: float = 0.5) -> List[Point]:
-    return [
-        Point(x=point.x + 0.0, y=point.y - radius, z=point.z),
-        Point(x=point.x + 0.0, y=point.y + radius, z=point.z),
-        Point(x=point.x - radius, y=point.y + 0.0, z=point.z),
-        Point(x=point.x + radius, y=point.y + 0.0, z=point.z),
-        Point(x=point.x + radius, y=point.y + radius, z=point.z),
-        Point(x=point.x - radius, y=point.y - radius, z=point.z),
-        Point(x=point.x - radius, y=point.y + radius, z=point.z),
-        Point(x=point.x + radius, y=point.y - radius, z=point.z),
-    ]
+    # return [
+    #     Point(x=point.x + 0.0, y=point.y - radius, z=point.z),
+    #     Point(x=point.x + 0.0, y=point.y + radius, z=point.z),
+    #     Point(x=point.x - radius, y=point.y + 0.0, z=point.z),
+    #     Point(x=point.x + radius, y=point.y + 0.0, z=point.z),
+    #     Point(x=point.x + radius, y=point.y + radius, z=point.z),
+    #     Point(x=point.x - radius, y=point.y - radius, z=point.z),
+    #     Point(x=point.x - radius, y=point.y + radius, z=point.z),
+    #     Point(x=point.x + radius, y=point.y - radius, z=point.z),
+    # ]
+    # the above code makes a square, I want a circle
+    points = []
+    for i in range(0, 360, 45):
+        points.append(
+            Point(
+                x=point.x + radius * math.cos(math.radians(i)),
+                y=point.y + radius * math.sin(math.radians(i)),
+                z=point.z,
+            )
+        )
+    return points
 
 
 def euclidian_distance(p1: Point, p2: Point) -> float:
@@ -39,17 +52,17 @@ def make_plan(
         pose=Pose(position=point, orientation=robot_pose.pose.pose.orientation),
         header=robot_pose.header,
     )
-    make_plan = rospy.ServiceProxy("/move_base/NavfnROS/make_plan", GetPlan)
+    make_plan = rospy.ServiceProxy("/move_base/make_plan", GetPlan)
     plan = make_plan(start, goal, tol).plan
     if len(plan.poses) > 0:
+        dist = 0.0
+        for current, next in zip(plan.poses, plan.poses[1:]):
+            dist += euclidian_distance(current.pose.position, next.pose.position)
         if max_dist is not None:
-            dist = 0.0
-            for current, next in zip(plan.poses, plan.poses[1:]):
-                dist += euclidian_distance(current.pose.position, next.pose.position)
             if dist > max_dist:
                 return False, None, None, dist
         return True, plan.poses[-1].pose, plan.poses, dist
-    return False, None, None
+    return False, None, None, 0.0
 
 
 def plan_to_radius(

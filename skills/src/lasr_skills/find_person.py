@@ -84,10 +84,15 @@ class FindPerson(smach.StateMachine):
                         "HANDLE_DETECTIONS",
                         self.HandleDetections(),
                         transitions={
-                            "succeeded": "LOOK_AT_PERSON",
+                            "succeeded": "GO_TO_PERSON",
                             "failed": "continue",
                         },
                     )
+                    # TODO: better approach person.
+                    ## Figure out direction vector of person, assume the person is facing us
+                    ## move to the person's location + 1m in the direction of the person
+                    ## turn to face the person
+                    ## Detect their eyes, and look into them
                     smach.StateMachine.add(
                         "GO_TO_PERSON",
                         GoToPerson(),
@@ -96,7 +101,11 @@ class FindPerson(smach.StateMachine):
                     smach.StateMachine.add(
                         "LOOK_AT_PERSON",
                         LookToPoint(),
-                        transitions={"succeeded": "succeeded"},
+                        transitions={
+                            "succeeded": "succeeded",
+                            "aborted": "failed",
+                            "preempted": "failed",
+                        },
                     )
                 waypoint_iterator.set_contained_state(
                     "CONTAINER_STATE", container_sm, loop_outcomes=["continue"]
@@ -114,15 +123,20 @@ if __name__ == "__main__":
     from geometry_msgs.msg import Pose, Point, Quaternion
 
     rospy.init_node("find_person")
+
     sm = FindPerson(
         [
             Pose(
-                position=Point(4.5, 6.4, 0.0),
-                orientation=Quaternion(0.0, 0.0, 0.759, 0.650),
+                position=Point(1.446509335239015, -2.2460076897430974, 0.0),
+                orientation=Quaternion(
+                    0.0, 0.0, -0.6459923698644408, 0.763343866207703
+                ),
             ),
             Pose(
-                position=Point(3.2, 5.0, 0.0),
-                orientation=Quaternion(0.0, 0.0, -0.992, 0.121),
+                position=Point(-2.196456229125565, -0.27387058028873024, 0.0),
+                orientation=Quaternion(
+                    0.0, 0.0, 0.9778384065708362, 0.20936105329073992
+                ),
             ),
         ]
     )
