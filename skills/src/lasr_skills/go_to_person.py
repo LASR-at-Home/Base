@@ -12,6 +12,8 @@ from geometry_msgs.msg import (
 )
 from std_msgs.msg import Header
 import rospy
+import math
+from scipy.spatial.transform import Rotation as R
 
 from lasr_skills import GoToLocation
 
@@ -32,6 +34,15 @@ class GoToPerson(smach.StateMachine):
             points = plan_to_radius(robot_pose, userdata.point, 2.0)
             if not points:
                 return "failed"
+
+            dist_x = points[0].position.x - robot_pose.pose.pose.position.x
+            dist_y = points[0].position.y - robot_pose.pose.pose.position.y
+            theta_deg = math.degrees(math.atan2(dist_y, dist_x))
+            x, y, z, w = R.from_euler("z", theta_deg, degrees=True).as_quat()
+            points[0].orientation.x = x
+            points[0].orientation.y = y
+            points[0].orientation.z = z
+            points[0].orientation.w = w
             userdata.target_location = points[0]
             return "succeeded"
 
