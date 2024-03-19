@@ -22,14 +22,17 @@ class FindPerson(smach.StateMachine):
                 self,
                 outcomes=["succeeded", "failed"],
                 input_keys=["detections_3d"],
-                output_keys=["point"],
+                output_keys=["person_point", "person_max_point"],
             )
 
         def execute(self, userdata):
             if len(userdata.detections_3d.detected_objects) == 0:
                 return "failed"
 
-            userdata.point = userdata.detections_3d.detected_objects[0].point
+            userdata.person_point = userdata.detections_3d.detected_objects[0].point
+            userdata.person_max_point = userdata.detections_3d.detected_objects[
+                0
+            ].max_point
             return "succeeded"
 
     def __init__(self, waypoints: List[Pose]):
@@ -85,15 +88,11 @@ class FindPerson(smach.StateMachine):
                             "failed": "continue",
                         },
                     )
-                    # TODO: better approach person.
-                    ## Figure out direction vector of person, assume the person is facing us
-                    ## move to the person's location + 1m in the direction of the person
-                    ## turn to face the person
-                    ## Detect their eyes, and look into them
                     smach.StateMachine.add(
                         "GO_TO_PERSON",
                         GoToPerson(),
                         transitions={"succeeded": "LOOK_AT_PERSON", "failed": "failed"},
+                        remapping={"point": "person_point"},
                     )
                     smach.StateMachine.add(
                         "LOOK_AT_PERSON",
@@ -103,7 +102,11 @@ class FindPerson(smach.StateMachine):
                             "aborted": "failed",
                             "preempted": "failed",
                         },
+                        remapping={
+                            "point": "person_max_point",
+                        },
                     )
+
                 waypoint_iterator.set_contained_state(
                     "CONTAINER_STATE", container_sm, loop_outcomes=["continue"]
                 )
@@ -133,6 +136,12 @@ if __name__ == "__main__":
                 position=Point(-2.196456229125565, -0.27387058028873024, 0.0),
                 orientation=Quaternion(
                     0.0, 0.0, 0.9778384065708362, 0.20936105329073992
+                ),
+            ),
+            Pose(
+                position=Point(-0.8129574905602319, -5.8536586556997445, 0.0),
+                orientation=Quaternion(
+                    0.0, 0.0, -0.9982013547068731, 0.05995044171116081
                 ),
             ),
         ]
