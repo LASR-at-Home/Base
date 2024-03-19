@@ -16,3 +16,5 @@ string target_frame
 int32[] xyseg
 
 geometry_msgs/Point point
+geometry_msgs/Point max_point
+geometry_msgs/Point min_point
