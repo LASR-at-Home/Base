@@ -8,9 +8,8 @@ from std_msgs.msg import Header
 
 from typing import List
 
-from lasr_skills import Detect3D, LookToPoint, GoToPerson
+from lasr_skills import Detect3D, LookToPoint, GoToPerson, GoToLocation
 
-from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 
 import navigation_helpers
 
@@ -63,16 +62,7 @@ class FindPerson(smach.StateMachine):
 
                     smach.StateMachine.add(
                         "GO_TO_LOCATION",
-                        SimpleActionState(
-                            "move_base",
-                            MoveBaseAction,
-                            goal_cb=lambda ud, _: MoveBaseGoal(
-                                target_pose=PoseStamped(
-                                    pose=ud.location, header=Header(frame_id="map")
-                                )
-                            ),
-                            input_keys=["location"],
-                        ),
+                        GoToLocation(),
                         transitions={
                             "succeeded": "DETECT3D",
                             "preempted": "continue",
