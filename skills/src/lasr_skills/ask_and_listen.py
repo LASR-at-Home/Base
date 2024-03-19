@@ -2,25 +2,35 @@ import smach
 from lasr_skills import Listen
 from lasr_skills import Say
 
+from typing import Union
+
 
 class AskAndListen(smach.StateMachine):
-    def __init__(self):
-        smach.StateMachine.__init__(
-            self,
-            outcomes=["succeeded", "failed"],
-            output_keys=["transcribed_speech"],
-            input_keys=["tts_phrase"],
-        )
+    def __init__(self, question: Union[str, None] = None):
+        if question is not None:
+            smach.StateMachine.__init__(
+                self,
+                outcomes=["succeeded", "failed"],
+                output_keys=["transcribed_speech"],
+            )
+        else:
+            smach.StateMachine.__init__(
+                self,
+                outcomes=["succeeded", "failed"],
+                input_keys=["tts_phrase"],
+                output_keys=["transcribed_speech"],
+            )
+
         with self:
             smach.StateMachine.add(
                 "SAY",
-                Say(),
+                Say(question),
                 transitions={
                     "succeeded": "LISTEN",
                     "aborted": "failed",
                     "preempted": "failed",
                 },
-                remapping={"text": "tts_phrase"},
+                remapping={"text": "tts_phrase"} if question is None else {},
             )
             smach.StateMachine.add(
                 "LISTEN",
