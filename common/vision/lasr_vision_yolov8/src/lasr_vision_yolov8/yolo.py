@@ -18,7 +18,8 @@ import markers
 from geometry_msgs.msg import Point, PointStamped
 
 import tf2_ros as tf
-import tf2_geometry_msgs  # noqa
+import tf2_sensor_msgs  # noqa
+from tf2_sensor_msgs.tf2_sensor_msgs import do_transform_cloud
 
 # global tf buffer
 tf_buffer = tf.Buffer(cache_time=rospy.Duration(10))
@@ -108,6 +109,12 @@ def detect_3d(
     rospy.loginfo("Decoding")
     img = cv2_pcl.pcl_to_cv2(request.pcl)
 
+    # transform pcl to map frame
+    trans = tf_buffer.lookup_transform(
+        "map", request.pcl.header.frame_id, rospy.Time(0), rospy.Duration(1.0)
+    )
+    pcl_map = do_transform_cloud(request.pcl, trans)
+
     # load model
     rospy.loginfo("Loading model")
     model = load_model(request.dataset)
@@ -132,26 +139,25 @@ def detect_3d(
         if has_segment_masks:
             detection.xyseg = result.masks.xy[i].flatten().astype(int).tolist()
 
-            centroid = cv2_pcl.seg_to_centroid(request.pcl, np.array(detection.xyseg))
+            centroid = cv2_pcl.seg_to_centroid(pcl_map, np.array(detection.xyseg))
+            detection.point = Point(*centroid)
+            min_max = cv2_pcl.seg_to_minmax_z(pcl_map, np.array(detection.xyseg))
+            detection.min_point = Point(*min_max[0])
+            detection.max_point = Point(*min_max[1])
 
-            point_stamped = PointStamped()
-            point_stamped.point = Point(*centroid)
-            point_stamped.header.frame_id = request.pcl.header.frame_id
-            point_stamped.header.stamp = rospy.Time(0)
-
-            # TODO: handle tf errors properly
-            while not rospy.is_shutdown():
-                try:
-                    point_stamped = tf_buffer.transform(point_stamped, "map")
-                    detection.point = point_stamped.point
-                    break
-                except Exception as e:
-                    rospy.logerr(e)
-                    continue
-
-            # publish to debug topic
-            if debug_point_publisher is not None:
-                markers.create_and_publish_marker(debug_point_publisher, point_stamped)
+        if debug_point_publisher is not None:
+            markers.create_and_publish_marker(
+                debug_point_publisher,
+                PointStamped(point=detection.point, header=pcl_map.header),
+            )
+            markers.create_and_publish_marker(
+                debug_point_publisher,
+                PointStamped(point=detection.min_point, header=pcl_map.header),
+            )
+            markers.create_and_publish_marker(
+                debug_point_publisher,
+                PointStamped(point=detection.max_point, header=pcl_map.header),
+            )
 
         detected_objects.append(detection)
 
