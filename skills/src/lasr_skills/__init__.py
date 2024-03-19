@@ -7,6 +7,7 @@ from .describe_people import DescribePeople
 from .look_to_point import LookToPoint
 from .go_to_location import GoToLocation
 from .go_to_person import GoToPerson
+from .ask_and_listen import AskAndListen
 from .find_person import FindPerson
 from .go_to_semantic_location import GoToSemanticLocation
 from .say import Say
