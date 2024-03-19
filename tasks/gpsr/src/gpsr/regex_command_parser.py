@@ -351,12 +351,22 @@ def gpsr_parse(matches: Dict[str, str]):
             write_into[actual_key] = value
         else:
             write_into[key] = value
-
     return result
 
 
 def gpsr_compile_and_parse(config: Configuration, input: str) -> dict:
-    return gpsr_parse(re.compile(gpsr_regex(config)).match(input).groupdict())
+    input = input.lower()
+    # remove punctuation
+    input = re.sub(r"[^\w\s]", "", input)
+    print(input)
+    if input[0] == " ":
+        input = input[1:]
+
+    regex_str = gpsr_regex(config)
+    regex = re.compile(regex_str)
+    matches = regex.match(input)
+    matches = matches.groupdict()
+    return gpsr_parse(matches)
 
 
 if __name__ == "__main__":

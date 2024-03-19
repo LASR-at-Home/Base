@@ -99,8 +99,7 @@ class GPSRDataLoader:
         for location, attributes in locations.items():
             if attributes["placeable"]:
                 placeable_locations.append(location)
-            else:
-                non_placeable_locations.append(location)
+            non_placeable_locations.append(location)
 
         return placeable_locations, non_placeable_locations
 

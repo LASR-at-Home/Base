@@ -156,6 +156,7 @@ include_directories(
 catkin_install_python(PROGRAMS
   scripts/parse_gpsr_xmls.py
   nodes/commands/question_answer
+  nodes/command_parser
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
