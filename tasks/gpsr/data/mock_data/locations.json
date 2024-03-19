@@ -1,0 +1,102 @@
+{
+    "bed": {
+        "placeable": true,
+        "object_category": null
+    },
+    "bedside table": {
+        "placeable": true,
+        "object_category": null
+    },
+    "shelf": {
+        "placeable": true,
+        "object_category": "cleaning supplies"
+    },
+    "trashbin": {
+        "placeable": false,
+        "object_category": null
+    },
+    "dishwasher": {
+        "placeable": true,
+        "object_category": null
+    },
+    "potted plant": {
+        "placeable": false,
+        "object_category": null
+    },
+    "kitchen table": {
+        "placeable": true,
+        "object_category": "dishes"
+    },
+    "chairs": {
+        "placeable": false,
+        "object_category": null
+    },
+    "pantry": {
+        "placeable": true,
+        "object_category": "food"
+    },
+    "refigerator": {
+        "placeable": true,
+        "object_category": null
+    },
+    "sink": {
+        "placeable": true,
+        "object_category": null
+    },
+    "cabinet": {
+        "placeable": true,
+        "object_category": "drinks"
+    },
+    "coatrack": {
+        "placeable": false,
+        "object_category": null
+    },
+    "desk": {
+        "placeable": true,
+        "object_category": "fruits"
+    },
+    "armchair": {
+        "placeable": false,
+        "object_category": null
+    },
+    "desk lamp": {
+        "placeable": false,
+        "object_category": null
+    },
+    "waste basket": {
+        "placeable": false,
+        "object_category": null
+    },
+    "tv stand": {
+        "placeable": true,
+        "object_category": null
+    },
+    "storage rack": {
+        "placeable": true,
+        "object_category": null
+    },
+    "lamp": {
+        "placeable": false,
+        "object_category": null
+    },
+    "side tables": {
+        "placeable": true,
+        "object_category": "snacks"
+    },
+    "sofa": {
+        "placeable": true,
+        "object_category": null
+    },
+    "bookshelf": {
+        "placeable": true,
+        "object_category": "toys"
+    },
+    "entrance": {
+        "placeable": false,
+        "object_category": null
+    },
+    "exit": {
+        "placeable": false,
+        "object_category": null
+    }
+}

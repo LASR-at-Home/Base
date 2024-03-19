@@ -1,0 +1,76 @@
+{
+    "drinks": {
+        "items": [
+            "orange juice",
+            "red wine",
+            "milk",
+            "iced tea",
+            "cola",
+            "tropical juice",
+            "juice pack"
+        ],
+        "singular": "drink"
+    },
+    "fruits": {
+        "items": [
+            "apple",
+            "pear",
+            "lemon",
+            "peach",
+            "banana",
+            "strawberry",
+            "orange",
+            "plum"
+        ],
+        "singular": "fruit"
+    },
+    "snacks": {
+        "items": [
+            "cheezit",
+            "cornflakes",
+            "pringles"
+        ],
+        "singular": "snack"
+    },
+    "foods": {
+        "items": [
+            "tuna",
+            "sugar",
+            "strawberry jello",
+            "tomato soup",
+            "mustard",
+            "chocolate jello",
+            "spam",
+            "coffee grounds"
+        ],
+        "singular": "food"
+    },
+    "dishes": {
+        "items": [
+            "plate",
+            "fork",
+            "spoon",
+            "cup",
+            "knife",
+            "bowl"
+        ],
+        "singular": "dish"
+    },
+    "toys": {
+        "items": [
+            "rubiks cube",
+            "soccer ball",
+            "dice",
+            "tennis ball",
+            "baseball"
+        ],
+        "singular": "toy"
+    },
+    "cleaning supplies": {
+        "items": [
+            "cleanser",
+            "sponge"
+        ],
+        "singular": "cleaning supply"
+    }
+}
