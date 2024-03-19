@@ -139,9 +139,19 @@ def detect_3d(
         if has_segment_masks:
             detection.xyseg = result.masks.xy[i].flatten().astype(int).tolist()
 
-            centroid = cv2_pcl.seg_to_centroid(pcl_map, np.array(detection.xyseg))
+            centroid = cv2_pcl.seg_to_centroid(
+                pcl_map,
+                np.array(detection.xyseg),
+                height=request.pcl.height,
+                width=request.pcl.width,
+            )
             detection.point = Point(*centroid)
-            min_max = cv2_pcl.seg_to_minmax_z(pcl_map, np.array(detection.xyseg))
+            min_max = cv2_pcl.seg_to_minmax_z(
+                pcl_map,
+                np.array(detection.xyseg),
+                height=request.pcl.height,
+                width=request.pcl.width,
+            )
             detection.min_point = Point(*min_max[0])
             detection.max_point = Point(*min_max[1])
 
