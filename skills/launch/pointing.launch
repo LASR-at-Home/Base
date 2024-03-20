@@ -1,0 +1,4 @@
+<launch>
+    <node pkg="lasr_vision_yolov8" name="service" type="service" output="screen"/>
+    <node pkg="lasr_vision_pointing" name="detect_pointing_service" type="detect_pointing.py" output="screen"/>
+</launch>
