@@ -10,15 +10,16 @@ const config = {
   tagline: "LASR Web Documentation",
 
   // Set the production url of your site here
-  url: "https://your-docusaurus-test-site.com",
+  url: "https://lasr-at-home.github.io/",
   // Set the /<baseUrl>/ pathname under which your site is served
   // For GitHub pages deployment, it is often '/<projectName>/'
-  baseUrl: "/",
+  baseUrl: "/docs/",
 
   // GitHub pages deployment config.
   // If you aren't using GitHub pages, you don't need these.
-  organizationName: "facebook", // Usually your GitHub org/user name.
-  projectName: "docusaurus", // Usually your repo name.
+  organizationName: "lasr-at-home", // Usually your GitHub org/user name.
+  projectName: "docs", // Usually your repo name.
+  trailingSlash: false,
 
   onBrokenLinks: "throw",
   onBrokenMarkdownLinks: "warn",
@@ -40,7 +41,7 @@ const config = {
           routeBasePath: "/",
           sidebarPath: require.resolve("./sidebars.js"),
           editUrl:
-          'https://github.com/lasr-at-home/base/blob/main/common/document_lasr/web',
+            "https://github.com/lasr-at-home/base/blob/main/common/document_lasr/web",
         },
       }),
     ],

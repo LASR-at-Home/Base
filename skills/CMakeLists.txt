@@ -10,6 +10,7 @@ project(lasr_skills)
 find_package(catkin REQUIRED COMPONENTS
   rospy
   lasr_vision_msgs
+  lasr_vector_databases_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -158,10 +159,10 @@ include_directories(
 
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
-# catkin_install_python(PROGRAMS
-#   scripts/my_python_script
-#   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-# )
+catkin_install_python(PROGRAMS
+  scripts/unit_test_describe_people.py
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
 
 ## Mark executables for installation
 ## See http://docs.ros.org/melodic/api/catkin/html/howto/format1/building_executables.html

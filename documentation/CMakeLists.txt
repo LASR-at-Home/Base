@@ -158,6 +158,7 @@ include_directories(
 catkin_install_python(PROGRAMS
   scripts/dev.py
   scripts/view.py
+  scripts/build.py
   scripts/generate_readme.py
   scripts/generate_all_lasr.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}

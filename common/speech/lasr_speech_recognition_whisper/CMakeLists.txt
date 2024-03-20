@@ -7,7 +7,11 @@ project(lasr_speech_recognition_whisper)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED catkin_virtualenv)
+find_package(catkin REQUIRED catkin_virtualenv genmsg actionlib_msgs actionlib std_msgs)
+# add_action_files(
+#   DIRECTORY action
+#   FILES TranscribeSpeech.action
+# )
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -70,7 +74,8 @@ catkin_generate_virtualenv(
 ## Generate added messages and services with any dependencies listed here
 # generate_messages(
 #   DEPENDENCIES
-#   std_msgs  # Or other packages containing msgs
+#   std_msgs
+#   actionlib_msgs  # Or other packages containing msgs
 # )
 
 ################################################
@@ -160,8 +165,13 @@ include_directories(
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
 catkin_install_python(PROGRAMS
+  nodes/simple_transcribe_microphone
   nodes/transcribe_microphone
+  nodes/transcribe_microphone_server
   scripts/list_microphones.py
+  scripts/test_microphones.py
+  scripts/repeat_after_me.py
+  scripts/test_speech_server.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

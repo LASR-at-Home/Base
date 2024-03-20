@@ -1,0 +1,17 @@
+# Image to run inference on
+sensor_msgs/Image image_raw
+
+# BodyPix model to use
+string dataset
+
+# How certain the detection should be to include
+float32 confidence
+
+# The masks that should be generated
+lasr_vision_msgs/BodyPixMaskRequest[] masks
+---
+# Generated masks
+lasr_vision_msgs/BodyPixMask[] masks
+
+# Pose information
+lasr_vision_msgs/BodyPixPose[] poses

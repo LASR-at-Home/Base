@@ -4,18 +4,17 @@ from pal_interaction_msgs.msg import TtsGoal, TtsAction
 import actionlib
 from actionlib_msgs.msg import GoalStatus
 
-# TODO: input is real life or simulation, as it will voice will not play otherwise
 
 class Voice:
     def __init__(self):
-        self._tts_client = actionlib.SimpleActionClient('/tts', TtsAction)
-        self.can_tts = self._tts_client.wait_for_server(rospy.Duration(10.0))
+        self._tts_client = actionlib.SimpleActionClient("/tts", TtsAction)
+        self._can_tts = self._tts_client.wait_for_server(rospy.Duration(10.0))
 
     def __tts(self, text):
-        if self.can_tts:
+        if self._can_tts:
             goal = TtsGoal()
             goal.rawtext.text = text
-            goal.rawtext.lang_id = 'en_GB'
+            goal.rawtext.lang_id = "en_GB"
             self._tts_client.send_goal(goal)
         rospy.loginfo(f"\033[32mTIAGO: {text}\033[0m")
 
@@ -30,19 +29,7 @@ class Voice:
         return self._tts_client.get_state()
 
     def is_running(self):
-        return self._tts_client.get_state() == GoalStatus.PENDING or \
-               self._tts_client.get_state() == GoalStatus.ACTIVE
-    def speak(self, text):
-        if rospy.get_param('/is_simulation'):
-            rospy.loginfo(text)
-        else:
-            rospy.loginfo(text)
-            self.sync_tts(text)
-
-if __name__ == '__main__':
-    rospy.init_node("voice_node", anonymous=True)
-    voice = Voice()
-    voice.sync_tts("hello world nr 1")
-    voice.async_tts("hello world nr 2")
-    while voice.is_running():
-        print("still talking")
+        return (
+            self._tts_client.get_state() == GoalStatus.PENDING
+            or self._tts_client.get_state() == GoalStatus.ACTIVE
+        )
