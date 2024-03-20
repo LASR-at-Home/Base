@@ -63,6 +63,7 @@ add_service_files(
   TorchFaceFeatureDetection.srv
   Recognise.srv
   LearnFace.srv
+  PointingDirection.srv
 )
 
 # Generate actions in the 'action' folder
