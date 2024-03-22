@@ -12,8 +12,12 @@ from sensor_msgs.msg import Image as SensorImage
 from lasr_vision_msgs.msg import BodyPixMask, BodyPixPose
 from lasr_vision_msgs.srv import BodyPixDetectionRequest, BodyPixDetectionResponse
 
+import rospkg
+from os import path
+
 # model cache
 loaded_models = {}
+r = rospkg.RosPack()
 
 def load_model_cached(dataset: str) -> None:
     '''
@@ -26,9 +30,9 @@ def load_model_cached(dataset: str) -> None:
     else:
         if dataset == 'resnet50':
 #             name = download_model(BodyPixModelPaths.RESNET50_FLOAT_STRIDE_16)
-#             rospy.logwarn(name)
+#             rospy.logwarn(name)  /home/bentengma/keras_model/tf-bodypix/tfjs-models-savedmodel-bodypix-resnet50-float-model-stride16
 #             model = load_model(name)
-            model = load_model('/home/rexy/.keras/tf-bodypix/3fe1b130a0f20e98340612c099b50c18--tfjs-models-savedmodel-bodypix-resnet50-float-model-stride16')
+            model = load_model(path.join(r.get_path("lasr_vision_bodypix"), "models", "keras_model", "tf-bodypix", "tfjs-models-savedmodel-bodypix-resnet50-float-model-stride16"))
             # model = load_model(download_model(BodyPixModelPaths.RESNET50_FLOAT_STRIDE_16))
         elif dataset == 'mobilenet50':
             name = download_model(BodyPixModelPaths.MOBILENET_FLOAT_50_STRIDE_16)
