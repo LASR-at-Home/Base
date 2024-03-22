@@ -17,6 +17,7 @@ class AskForName(smach.State):
         for _ in range(3):
             try:
                 name = get_name(self.default)
+                rospy.loginfo(f"Name is {name}")
             except:
                 name = "unknown"
             if name == "unknown":
@@ -29,5 +30,8 @@ class AskForName(smach.State):
         else:
             self.default.voice.speak(f"It's great to meet you {name}!")
 
+        # rospy.loginfo(f"gurstcount: {guestcount}")
+        # rospy.loginfo(f"guest{guestcount+1}/name")
+        # rospy.loginfo(f"name to save: {name}")
         rospy.set_param(f"guest{guestcount+1}/name", name)
         return 'succeeded'

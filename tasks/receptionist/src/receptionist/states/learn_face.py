@@ -33,7 +33,10 @@ class LearnFaces(smach.State):
         try:
             learn_service = rospy.ServiceProxy("/learn_face", LearnFace)
             req = LearnFaceRequest()
-            req.name = rospy.get_param(f"guest{guestcount+1}/name", "Jane")
+            req.name = rospy.get_param(f"guest{guestcount}/name", "Jane")
+            # rospy.loginfo(f"gurstcount: {guestcount}")
+            # rospy.loginfo(f"guest{guestcount}/name")
+            # rospy.loginfo(f"name received: {req.name}")
             req.dataset = '/home/rexy/Documents/robotclub/robocup_ws/src/base_zoe_fork/common/vision/lasr_vision_deepface/datasets'
             req.n_images = 10
             resp = learn_service(req)

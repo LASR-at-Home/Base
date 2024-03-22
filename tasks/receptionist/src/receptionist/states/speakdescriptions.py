@@ -8,9 +8,10 @@ class SpeakDescriptions(smach.State):
         self.default = default
 
     def execute(self, userdata):
-
+        rospy.loginfo(f"num people found: {len(userdata['people'])}")
         for person in userdata['people']:
             self.default.voice.speak(person['features'])
+            break
         # for person in userdata['people']:
         #     self.default.voice.speak('I see a person')
         # self.default.voice.speak('Yes I do see you. I am trying to turn to you. But if I do not move my head, it is your own issue, not mine.')
