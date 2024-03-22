@@ -1,13 +1,18 @@
-from .detect_objects import DetectObjects
-from .detect_objects_3d import DetectObjects3D
-from .detect_objects_in_area_3d import DetectObjectsInArea3D
-from .detect_people import DetectPeople
-from .detect_people_3d import DetectPeople3D
-from .detect_people_in_area_3d import DetectPeopleInArea3D
+from .detect import Detect
+from .detect_3d import Detect3D
+from .detect_3d_in_area import Detect3DInArea
 from .wait_for_person import WaitForPerson
 from .wait_for_person_in_area import WaitForPersonInArea
 from .describe_people import DescribePeople
 from .look_to_point import LookToPoint
-from .look_to_point import LookToPoint
 from .go_to_location import GoToLocation
 from .go_to_semantic_location import GoToSemanticLocation
+<<<<<<< HEAD
+=======
+from .say import Say
+from .listen import Listen
+from .listen_for import ListenFor
+from .play_motion import PlayMotion
+from .receive_object import ReceiveObject
+from .handover_object import HandoverObject
+>>>>>>> 5cb0ba5fd2d082edaee1ee0a86f869d1e0b47456
