@@ -23,6 +23,7 @@ class DetectFaces(smach.State):
     def execute(self, userdata):
         self.default.voice.speak("I'm about to guess who you are")
         result = self.detect()
+        print("DETECT PHASES RESULT: ", result)
         if result == "recognised":
             self.greet()
         return result
