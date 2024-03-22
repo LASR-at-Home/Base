@@ -19,7 +19,7 @@ find_package(catkin REQUIRED catkin_virtualenv)
 catkin_python_setup()
 catkin_generate_virtualenv(
   INPUT_REQUIREMENTS requirements.in
-  PYTHON_INTERPRETER python3.10
+  PYTHON_INTERPRETER python3.8
 )
 
 ################################################
@@ -162,6 +162,7 @@ include_directories(
 catkin_install_python(PROGRAMS
   nodes/service
   examples/relay
+  examples/relay_3d
   examples/construct_mask
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )

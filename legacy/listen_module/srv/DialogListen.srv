@@ -1,7 +1,0 @@
-string action
-string subaction
-string query_text
----
-bool status
-string result
-

@@ -10,6 +10,7 @@ project(lasr_skills)
 find_package(catkin REQUIRED COMPONENTS
   rospy
   lasr_vision_msgs
+  lasr_vector_databases_msgs
 )
 
 ## System dependencies are found with CMake's conventions

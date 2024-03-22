@@ -1,4 +1,0 @@
-lasr_vision_msgs/Detection[] detected_objects_yolo
-lasr_vision_msgs/Detection[] detected_objects_opencv
----
-lasr_vision_msgs/Detection[] detected_objects
