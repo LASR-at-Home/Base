@@ -8,8 +8,8 @@ class SpeakDescriptions(smach.State):
         self.default = default
 
     def execute(self, userdata):
-        # don't worry, this works.
         for person in userdata['people']:
             self.default.voice.speak(person['features'])
+            break  # only speak for the first person in the frame
         
         return 'succeeded'
