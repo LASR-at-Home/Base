@@ -6,7 +6,8 @@ import numpy as np
 import math
 from play_motion_msgs.msg import PlayMotionGoal
 from geometry_msgs.msg import Point
-from shapely.geometry import Polygon
+from shapely.geometry import Point
+from shapely.geometry.polygon import Polygon
 from lasr_skills import DetectObjects3D, LookToPoint
 from copy import copy
 

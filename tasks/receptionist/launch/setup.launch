@@ -1,6 +1,4 @@
 <launch>
-    <node pkg="tf_module" name="tf_transforms_base" type="tf_transforms_base.py" required="true"/>
-
     <!--   DEFAULTS  -->
     <!--    export LIBGL_ALWAYS_SOFTWARE=1-->
     <arg name="is_sim" default="false" />
@@ -20,7 +18,7 @@
 
 
     <!--     INTERACTION  -->
-    <node pkg="interaction_module" name="interaction_module_srv" type="interaction_module_srv.py"/>
+    <!-- <node pkg="interaction_module" name="interaction_module_srv" type="interaction_module_srv.py"/> -->
 
     <arg name="whisper_matcher" default="by-index" />
    <!-- <arg name="whisper_device_param" default="9" />-->
@@ -28,11 +26,19 @@
 
     <arg name="rasa_model" default="$(find lasr_rasa)/assistants/receptionist/models"/>
 
-    <include file = "$(find lasr_speech)/launch/speech.launch">
+    <!-- <include file = "$(find lasr_speech)/launch/speech.launch">
         <arg name="matcher" value="$(arg whisper_matcher)"/>
         <arg name="device_param" value="$(arg whisper_device_param)"/>
         <arg name="rasa_model" value="$(arg rasa_model)"/>
-    </include>
+    </include> -->
+
+    <node 
+        pkg="lasr_speech_recognition_whisper"
+        type="transcribe_microphone_server"
+        name="transcribe_speech"
+        output="screen"
+        args="--mic_device 13"
+    />
 
 
     <!--     STATIC POINTS  -->
@@ -51,7 +57,7 @@
     <!--    PCL and clear     -->
    <!-- <node pkg="read_pcl_info" type="pcl_helpers.py" name="pcl_helpers" output="screen"/> -->
    <!-- <node pkg="read_pcl_info" name="clear_continuosly" type="clear_continuosly.py"/>-->
-    <node pkg="lasr_shapely" name="shapely" type="service"/>
+    <!-- <node pkg="lasr_shapely" name="shapely" type="service"/> -->
 
 
     <!--      PERCEPTION     -->
@@ -61,11 +67,5 @@
 
 
    <node pkg="lasr_vision_deepface" type="service" name="deepface_service" output="screen"/>
-
-    <!--     Datahub    -->
-    <node pkg="lift" type="datahub.py" name="datahub"/>
-
-
-   
 
 </launch>

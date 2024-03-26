@@ -1,6 +1,6 @@
 import smach
 import rospy
-from tiago_controllers.helpers.pose_helpers import get_pose_from_param
+#from tiago_controllers.helpers.pose_helpers import get_pose_from_param
 
 
 class End(smach.State):

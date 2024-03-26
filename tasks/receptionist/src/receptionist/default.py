@@ -1,18 +1,20 @@
 #!/usr/bin/env python3
-from tiago_controllers.controllers import Controllers
+#from tiago_controllers.controllers import Controllers
 from lasr_voice.voice import Voice
 from lasr_vision_msgs.srv import YoloDetection
 import rospy, actionlib
-from tiago_controllers.controllers.base_controller import CmdVelController
-from interaction_module.srv import AudioAndTextInteraction
+#from tiago_controllers.controllers.base_controller import CmdVelController
+#from interaction_module.srv import AudioAndTextInteraction
 from play_motion_msgs.msg import PlayMotionGoal, PlayMotionAction
-from lasr_speech.srv import Speech
-from tf_module.srv import BaseTransformRequest, ApplyTransformRequest, LatestTransformRequest, BaseTransform, \
-    LatestTransform, ApplyTransform, TfTransform, TfTransformRequest
+#from lasr_speech.srv import Speech
+#from tf_module.srv import BaseTransformRequest, ApplyTransformRequest, LatestTransformRequest, BaseTransform, \
+  #  LatestTransform, ApplyTransform, TfTransform, TfTransformRequest
 
-from cv_bridge3 import CvBridge
-from lasr_shapely import LasrShapely
+#from cv_bridge3 import CvBridge
+#from lasr_shapely import LasrShapely
 from std_msgs.msg import Int16, Empty
+#import shapely
+
 
 
 rasa = True
@@ -27,18 +29,18 @@ class Default:
         self.voice = Voice()
         self.bridge = CvBridge()
         rospy.loginfo("CV Bridge")
-        self.shapely = LasrShapely()
+        self.shapely = None
         rospy.loginfo("Got shapely")
-        self.controllers = Controllers()
+        self.controllers = None
         rospy.loginfo("CMD is here")
-        self.cmd = CmdVelController()
+        self.cmd = None
         rospy.loginfo("Voice is here")
 
-        self.tf = rospy.ServiceProxy('tf_transform', TfTransform)
+       # self.tf = rospy.ServiceProxy('tf_transform', TfTransform)
         print("TF is here")
-        self.tf_base = rospy.ServiceProxy('base_transform', BaseTransform)
-        self.tf_latest = rospy.ServiceProxy('latest_transform', LatestTransform)
-        self.tf_apply = rospy.ServiceProxy('apply_transform', ApplyTransform)
+       # self.tf_base = rospy.ServiceProxy('base_transform', BaseTransform)
+        #self.tf_latest = rospy.ServiceProxy('latest_transform', LatestTransform)
+        #self.tf_apply = rospy.ServiceProxy('apply_transform', ApplyTransform)
         if rasa:
             rospy.wait_for_service("/lasr_speech/transcribe_and_parse")
             rospy.loginfo("SPEECH RASA is here")
