@@ -13,10 +13,10 @@ play_motion:
     pre_navigation:
       joints: [torso_lift_joint]
       points:
-      - positions: [0.35]
+      - positions: [0.15]
         time_from_start: 0.0
     post_navigation:
-      joints: [torso_lift_joint]
+      joints: [torso_lift_joint, head_1_joint, head_2_joint]
       points:
-      - positions: [0.35]
+      - positions: [0.25, 0.0, 0.0]
         time_from_start: 0.0

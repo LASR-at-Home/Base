@@ -28,19 +28,21 @@ class GoToLocation(smach.StateMachine):
     def __init__(self, location: Union[Pose, None] = None):
         super(GoToLocation, self).__init__(outcomes=["succeeded", "failed"])
 
+        IS_SIMULATION = (
+            "/pal_startup_control/start" not in rosservice.get_service_list()
+        )
+
         with self:
             smach.StateMachine.add(
                 "LOWER_BASE",
                 PlayMotion("pre_navigation"),
                 transitions={
-                    "succeeded": "ENABLE_HEAD_MANAGER",
+                    "succeeded": (
+                        "ENABLE_HEAD_MANAGER" if not IS_SIMULATION else "GO_TO_LOCATION"
+                    ),
                     "aborted": "failed",
                     "preempted": "failed",
                 },
-            )
-
-            IS_SIMULATION = (
-                "/pal_startup_control/start" in rosservice.get_service_list()
             )
 
             if not IS_SIMULATION:
@@ -51,11 +53,17 @@ class GoToLocation(smach.StateMachine):
                     )
                 else:
                     smach.StateMachine.add(
-                        smach_ros.SimpleServiceState(
+                        "ENABLE_HEAD_MANAGER",
+                        smach_ros.ServiceState(
                             "/pal_startup_control/start",
                             StartupStart,
                             request=StartupStartRequest("head_manager", ""),
                         ),
+                        transitions={
+                            "succeeded": "GO_TO_LOCATION",
+                            "preempted": "failed",
+                            "aborted": "failed",
+                        },
                     )
 
             if location is not None:
@@ -71,7 +79,11 @@ class GoToLocation(smach.StateMachine):
                         ),
                     ),
                     transitions={
-                        "succeeded": "DISABLE_HEAD_MANAGER",
+                        "succeeded": (
+                            "DISABLE_HEAD_MANAGER"
+                            if not IS_SIMULATION
+                            else "RAISE_BASE"
+                        ),
                         "aborted": "failed",
                         "preempted": "failed",
                     },
@@ -90,7 +102,11 @@ class GoToLocation(smach.StateMachine):
                         input_keys=["location"],
                     ),
                     transitions={
-                        "succeeded": "DISABLE_HEAD_MANAGER",
+                        "succeeded": (
+                            "DISABLE_HEAD_MANAGER"
+                            if not IS_SIMULATION
+                            else "RAISE_BASE"
+                        ),
                         "aborted": "failed",
                         "preempted": "failed",
                     },
@@ -105,14 +121,26 @@ class GoToLocation(smach.StateMachine):
                 else:
                     smach.StateMachine.add(
                         "DISABLE_HEAD_MANAGER",
-                        smach_ros.SimpleServiceState(
+                        smach_ros.ServiceState(
                             "/pal_startup_control/stop",
                             StartupStop,
                             request=StartupStopRequest("head_manager"),
                         ),
                         transitions={
-                            "succeeded": "succeeded",
-                            "aborted": "succeeded",
-                            "preempted": "succeeded",
+                            "succeeded": "RAISE_BASE",
+                            "aborted": "failed",
+                            "preempted": "failed",
                         },
                     )
+
+            smach.StateMachine.add(
+                "RAISE_BASE",
+                PlayMotion("post_navigation"),
+                transitions={
+                    "succeeded": (
+                        "ENABLE_HEAD_MANAGER" if not IS_SIMULATION else "GO_TO_LOCATION"
+                    ),
+                    "aborted": "failed",
+                    "preempted": "failed",
+                },
+            )
