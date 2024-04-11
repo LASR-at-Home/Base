@@ -94,6 +94,25 @@ class Receptionist(smach.StateMachine):
                 },
             )
 
+            smach.StateMachine.add(
+                "GO_TO_SEAT_LOCATION",
+                GoToLocation(seat_pose),
+                transitions={
+                    "succeeded": "SAY_WAIT",
+                    "failed": "failed",
+                },
+            )
+
+            smach.StateMachine.add(
+                "SAY_WAIT",
+                Say(text="Please wait here on my left"),
+                transitions={
+                    "succeeded": "succeeded",
+                    "preempted": "failed",
+                    "aborted": "failed",
+                },
+            )
+
 
 if __name__ == "__main__":
     rospy.init_node("receptionist")
