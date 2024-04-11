@@ -154,6 +154,19 @@ if __name__ == "__main__":
     seat_area = Polygon(seat_area_param)
 
     sm = Receptionist(
-        wait_pose, wait_area, seat_pose, seat_area, {"name": "John", "drink": "beer"}
+        wait_pose,
+        wait_area,
+        seat_pose,
+        seat_area,
+        {
+            "name": "John",
+            "drink": "beer",
+            "attributes": {
+                "hair_colour": "strawberry blonde",
+                "glasses": False,
+                "hat": True,
+                "height": "tall",
+            },
+        },
     )
     outcome = sm.execute()

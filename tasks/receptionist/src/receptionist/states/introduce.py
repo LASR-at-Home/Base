@@ -28,10 +28,10 @@ def stringify_guest_data(guest_data: Dict[str, Any], guest_id: str) -> str:
     guest_str = ""
 
     guest_str += f"{relevant_guest_data['name']}, their favourite drink is {relevant_guest_data['drink']}. "
-    guest_str += f"They have {relevant_guest_data['hair_colour']} hair, their height is {relevant_guest_data['height']}, "
-    guest_str += f"they are {'wearing glasses' if relevant_guest_data['glasses'] else 'not wearing glasses'}, and they are "
+    guest_str += f"They have {relevant_guest_data["attributes"]['hair_colour']} hair, their height is {relevant_guest_data["attributes"]['height']}, "
+    guest_str += f"they are {'wearing glasses' if relevant_guest_data["attributes"]['glasses'] else 'not wearing glasses'}, and they are "
     guest_str += (
-        f"{'wearing a hat' if relevant_guest_data['hat'] else 'not wearing a hat'}."
+        f"{'wearing a hat' if relevant_guest_data["attributes"]['hat'] else 'not wearing a hat'}."
     )
 
     return guest_str
