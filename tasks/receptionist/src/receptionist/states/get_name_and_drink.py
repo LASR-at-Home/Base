@@ -1,17 +1,32 @@
+"""
+State for parsing the transcription of the guests' name and favourite drink, and adding this
+to the guest data userdata.
+"""
+
 import rospy
 import smach
 from typing import List, Dict, Any
 
 
 class ParseNameAndDrink(smach.State):
-    def __init__(self, param_key: str = "priors"):
+    def __init__(
+        self,
+        param_key: str = "priors",
+        outcomes: List[str] = ["succeeded", "failed"],
+        input_keys: List[str] = ["guest transcription", "guest id", "guest data"],
+        output_keys: List[str] = ["guest data"],
+    ):
         """Parses the transcription of the guests' name and favourite drink.
 
         Args:
             param_key (str, optional): Name of the parameter that contains the list of
             possible . Defaults to "priors".
         """
-
+        super().__init__(
+            outcomes=outcomes,
+            input_keys=input_keys,
+            output_keys=output_keys,
+        )
         prior_data: Dict[str, List[str]] = rospy.get_param(param_key)
         self._possible_names = prior_data["names"]
         self._possible_drinks = prior_data["drinks"]
