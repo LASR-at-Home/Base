@@ -13,9 +13,6 @@ class ParseNameAndDrink(smach.State):
     def __init__(
         self,
         param_key: str = "priors",
-        outcomes: List[str] = ["succeeded", "failed"],
-        input_keys: List[str] = ["guest_transcription", "guest_id", "guest_data"],
-        output_keys: List[str] = ["guest data"],
     ):
         """Parses the transcription of the guests' name and favourite drink.
 
@@ -23,10 +20,11 @@ class ParseNameAndDrink(smach.State):
             param_key (str, optional): Name of the parameter that contains the list of
             possible . Defaults to "priors".
         """
-        super().__init__(
-            outcomes=outcomes,
-            input_keys=input_keys,
-            output_keys=output_keys,
+        smach.State.__init__(
+            self,
+            outcomes=["succeeded", "failed"],
+            input_keys=["guest_transcription", "guest_id", "guest_data"],
+            output_keys=["guest data", "guest_transcription"],
         )
         prior_data: Dict[str, List[str]] = rospy.get_param(param_key)
         self._possible_names = [name.lower() for name in prior_data["names"]]
@@ -46,22 +44,25 @@ class ParseNameAndDrink(smach.State):
         """
 
         outcome = "succeeded"
-        guest_id = userdata["guest_id"]
+        guest_id = userdata.guest_id
         name_found = False
         drink_found = False
+        print(userdata)
+        print(type(userdata.guest_transcription))
+        transcription = userdata.guest_transcription.lower()
 
         transcription = userdata["guest_transcription"].lower()
 
         for name in self._possible_names:
             if name in transcription:
-                userdata["guest_data"][guest_id]["name"] = name
+                userdata.guest_data[guest_id]["name"] = name
                 rospy.loginfo(f"Guest Name identified as: {name}")
                 name_found = True
                 break
 
         for drink in self._possible_drinks:
             if drink in transcription:
-                userdata["guest_data"][guest_id]["drink"] = drink
+                userdata.guest_data[guest_id]["drink"] = drink
                 rospy.loginfo(f"Guest Drink identified as: {drink}")
                 drink_found = True
                 break
