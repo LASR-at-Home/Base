@@ -28,6 +28,16 @@ class AskAndListen(smach.StateMachine):
                         "preempted": "failed",
                     },
                 )
+                smach.StateMachine.add(
+                    "LISTEN",
+                    Listen(),
+                    transitions={
+                        "succeeded": "succeeded",
+                        "aborted": "failed",
+                        "preempted": "failed",
+                    },
+                    remapping={"sequence": "transcribed_speech"},
+                )
         elif tts_phrase_format_str is not None:
             smach.StateMachine.__init__(
                 self,
@@ -46,6 +56,17 @@ class AskAndListen(smach.StateMachine):
                     },
                     remapping={"placeholders": "tts_phrase_placeholders"},
                 )
+                smach.StateMachine.add(
+                    "LISTEN",
+                    Listen(),
+                    transitions={
+                        "succeeded": "succeeded",
+                        "aborted": "failed",
+                        "preempted": "failed",
+                    },
+                    remapping={"sequence": "transcribed_speech"},
+                )
+
         else:
             smach.StateMachine.__init__(
                 self,
@@ -64,15 +85,13 @@ class AskAndListen(smach.StateMachine):
                     },
                     remapping={"text": "tts_phrase"},
                 )
-
-        with self:
-            smach.StateMachine.add(
-                "LISTEN",
-                Listen(),
-                transitions={
-                    "succeeded": "succeeded",
-                    "aborted": "failed",
-                    "preempted": "failed",
-                },
-                remapping={"sequence": "transcribed_speech"},
-            )
+                smach.StateMachine.add(
+                    "LISTEN",
+                    Listen(),
+                    transitions={
+                        "succeeded": "succeeded",
+                        "aborted": "failed",
+                        "preempted": "failed",
+                    },
+                    remapping={"sequence": "transcribed_speech"},
+                )
