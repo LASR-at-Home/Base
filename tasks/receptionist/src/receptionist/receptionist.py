@@ -12,14 +12,14 @@ from lasr_skills import GoToLocation, WaitForPersonInArea, Say, AskAndListen
 
 class Receptionist(smach.StateMachine):
 
-    def __init__(self, wait_pose: Pose, wait_area: Polygon):
+    def __init__(self, wait_pose: Pose, wait_area: Polygon, host_data: dict):
 
         smach.StateMachine.__init__(self, outcomes=["succeeded", "failed"])
 
         with self:
 
             self.userdata.guest_id = "guest1"
-            self.userdata.guest_data = {}
+            self.userdata.guest_data = {"host": host_data}
 
             smach.StateMachine.add(
                 "GO_TO_WAIT_LOCATION",
