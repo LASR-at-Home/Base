@@ -19,7 +19,7 @@ class Receptionist(smach.StateMachine):
         with self:
 
             self.userdata.guest_id = "guest1"
-            self.userdata.guest_data = {"host": host_data}
+            self.userdata.guest_data = {"host": host_data, "guest1": {}, "guest2": {}}
 
             # smach.StateMachine.add(
             #     "GO_TO_WAIT_LOCATION",
@@ -65,7 +65,7 @@ class Receptionist(smach.StateMachine):
                     "succeeded": "GET_GUEST_ATTRIBUTES",
                     "failed": "failed",
                 },
-                remapping={"guest_transcription", "transcribed_speech"},
+                remapping={"guest_transcription": "transcribed_speech"},
             )
 
             smach.StateMachine.add(
