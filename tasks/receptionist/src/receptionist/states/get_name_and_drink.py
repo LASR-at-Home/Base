@@ -29,8 +29,8 @@ class ParseNameAndDrink(smach.State):
             output_keys=output_keys,
         )
         prior_data: Dict[str, List[str]] = rospy.get_param(param_key)
-        self._possible_names = prior_data["names"]
-        self._possible_drinks = prior_data["drinks"]
+        self._possible_names = [name.lower() for name in prior_data["names"]]
+        self._possible_drinks = [drink.lower() for drink in prior_data["drinks"]]
 
     def execute(self, userdata: UserData) -> str:
         """Parses the transcription of the guests' name and favourite drink.
@@ -50,15 +50,17 @@ class ParseNameAndDrink(smach.State):
         name_found = False
         drink_found = False
 
+        transcription = userdata["guest_transcription"].lower()
+
         for name in self._possible_names:
-            if name in userdata["guest_transcription"]:
+            if name in transcription:
                 userdata["guest_data"][guest_id]["name"] = name
                 rospy.loginfo(f"Guest Name identified as: {name}")
                 name_found = True
                 break
 
         for drink in self._possible_drinks:
-            if drink in userdata["guest_transcription"]:
+            if drink in transcription:
                 userdata["guest_data"][guest_id]["drink"] = drink
                 rospy.loginfo(f"Guest Drink identified as: {drink}")
                 drink_found = True
