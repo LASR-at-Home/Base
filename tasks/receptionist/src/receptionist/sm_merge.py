@@ -21,33 +21,33 @@ class Receptionist(smach.StateMachine):
             self.userdata.guest_id = "guest1"
             self.userdata.guest_data = {"host": host_data, "guest1": {}, "guest2": {}}
 
-            # smach.StateMachine.add(
-            #     "GO_TO_WAIT_LOCATION",
-            #     GoToLocation(wait_pose),
-            #     transitions={
-            #         "succeeded": "SAY_WAITING",
-            #         "failed": "failed",
-            #     },
-            # )
+            smach.StateMachine.add(
+                "GO_TO_WAIT_LOCATION",
+                GoToLocation(wait_pose),
+                transitions={
+                    "succeeded": "SAY_WAITING",
+                    "failed": "failed",
+                },
+            )
 
-            # smach.StateMachine.add(
-            #     "SAY_WAITING",
-            #     Say("I am waiting for a guest."),
-            #     transitions={
-            #         "succeeded": "WAIT_FOR_PERSON",
-            #         "aborted": "failed",
-            #         "preempted": "failed",
-            #     },
-            # )
+            smach.StateMachine.add(
+                "SAY_WAITING",
+                Say("I am waiting for a guest."),
+                transitions={
+                    "succeeded": "WAIT_FOR_PERSON",
+                    "aborted": "failed",
+                    "preempted": "failed",
+                },
+            )
 
-            # smach.StateMachine.add(
-            #     "WAIT_FOR_PERSON",
-            #     WaitForPersonInArea(wait_area),
-            #     transitions={
-            #         "succeeded": "succeeded",
-            #         "failed": "failed",
-            #     },
-            # )
+            smach.StateMachine.add(
+                "WAIT_FOR_PERSON",
+                WaitForPersonInArea(wait_area),
+                transitions={
+                    "succeeded": "succeeded",
+                    "failed": "failed",
+                },
+            )
 
             smach.StateMachine.add(
                 "GET_NAME_AND_DRINK",
