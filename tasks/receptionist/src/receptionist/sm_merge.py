@@ -5,7 +5,7 @@ import rospy
 from geometry_msgs.msg import Pose, Point, Quaternion
 from shapely.geometry import Polygon
 
-from receptionist.states import ParseNameAndDrink, GetGuestAttributes
+from receptionist.states import ParseNameAndDrink, GetGuestAttributes, Introduce
 
 from lasr_skills import GoToLocation, WaitForPersonInArea, Say, AskAndListen
 
@@ -107,9 +107,27 @@ class Receptionist(smach.StateMachine):
                 "SAY_WAIT",
                 Say(text="Please wait here on my left"),
                 transitions={
-                    "succeeded": "succeeded",
+                    "succeeded": "INTRODUCE_GUEST_1_TO_HOST",
                     "preempted": "failed",
                     "aborted": "failed",
+                },
+            )
+
+            smach.StateMachine.add(
+                "INTRODUCE_GUEST_1_TO_HOST",
+                Introduce(guest_to_introduce="guest1", guest_to_introduce_to="host"),
+                transitions={
+                    "succeeded": "INTRODUCE_HOST_TO_GUEST_1",
+                    "failed": "failed",
+                },
+            )
+
+            smach.StateMachine.add(
+                "INTRODUCE_HOST_TO_GUEST_1",
+                Introduce(guest_to_introduce="host", guest_to_introduce_to="guest1"),
+                transitions={
+                    "succeeded": "succeeded",
+                    "failed": "failed",
                 },
             )
 
