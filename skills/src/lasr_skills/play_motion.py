@@ -28,8 +28,8 @@ class PlayMotion(smach_ros.SimpleActionState):
                     motion_name=ud.motion_name,
                     skip_planning=rospy.get_param(
                         f"/play_motion/motions/{ud.motion_name}/joints"
-                        == ["torso_lift_joint"]
-                    ),
+                    )
+                    == ["torso_lift_joint"],
                 ),
                 input_keys=["motion_name"],
             )
