@@ -5,6 +5,7 @@ to the guest data userdata
 
 import rospy
 import smach
+from smach import UserData
 from typing import List, Dict, Any
 
 
@@ -31,11 +32,11 @@ class ParseNameAndDrink(smach.State):
         self._possible_names = prior_data["names"]
         self._possible_drinks = prior_data["drinks"]
 
-    def execute(self, userdata: Dict[str, Any]) -> str:
+    def execute(self, userdata: UserData) -> str:
         """Parses the transcription of the guests' name and favourite drink.
 
         Args:
-            userdata (Dict[str, Any]): State machine userdata assumed to contain a key
+            userdata (UserData): State machine userdata assumed to contain a key
             called "guest transcription" with the transcription of the guest's name and
             favourite drink.
 

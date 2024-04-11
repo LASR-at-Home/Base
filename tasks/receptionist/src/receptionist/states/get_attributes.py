@@ -5,6 +5,7 @@ Currently incomplete.
 
 import rospy
 import smach
+from smach import UserData
 from typing import List, Any, Dict
 
 
@@ -34,6 +35,6 @@ class GetGuestAttributes(smach.State):
         # TODO
         pass
 
-    def execute(self, userdata: Dict[str, Any]) -> str:
+    def execute(self, userdata: UserData) -> str:
         outcome = "succeeded"
         return outcome
