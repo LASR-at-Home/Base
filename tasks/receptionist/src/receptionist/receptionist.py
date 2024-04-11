@@ -5,7 +5,9 @@ import rospy
 from geometry_msgs.msg import Pose, Point, Quaternion
 from shapely.geometry import Polygon
 
-from lasr_skills import GoToLocation, WaitForPersonInArea, Say
+from receptionist.states import ParseNameAndDrink, GetGuestAttributes
+
+from lasr_skills import GoToLocation, WaitForPersonInArea, Say, AskAndListen
 
 
 class Receptionist(smach.StateMachine):
@@ -15,6 +17,9 @@ class Receptionist(smach.StateMachine):
         smach.StateMachine.__init__(self, outcomes=["succeeded", "failed"])
 
         with self:
+
+            self.userdata.guest_id = "guest1"
+            self.userdata.guest_data = {}
 
             smach.StateMachine.add(
                 "GO_TO_WAIT_LOCATION",
@@ -38,6 +43,34 @@ class Receptionist(smach.StateMachine):
             smach.StateMachine.add(
                 "WAIT_FOR_PERSON",
                 WaitForPersonInArea(wait_area),
+                transitions={
+                    "succeeded": "succeeded",
+                    "failed": "failed",
+                },
+            )
+
+            smach.StateMachine.add(
+                "GET_NAME_AND_DRINK",
+                AskAndListen("What is your name and favourite drink?"),
+                transitions={
+                    "succeeded": "PARSE_NAME_AND_DRINK",
+                    "failed": "failed",
+                },
+            )
+
+            smach.StateMachine.add(
+                "PARSE_NAME_AND_DRINK",
+                ParseNameAndDrink(),
+                transitions={
+                    "succeeded": "GET_GUEST_ATTRIBUTES",
+                    "failed": "failed",
+                },
+                remapping={"guest_transcription", "transcribed_speech"},
+            )
+
+            smach.StateMachine.add(
+                "GET_GUEST_ATTRIBUTES",
+                GetGuestAttributes(),
                 transitions={
                     "succeeded": "succeeded",
                     "failed": "failed",
