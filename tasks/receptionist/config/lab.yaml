@@ -18,3 +18,14 @@ priors:
     - orange juice
     - red wine
     - tropical juice
+wait_pose: 
+  position: 
+    x: 3.2824578880033908
+    y: 4.963056410576257
+    z: 0.0
+  orientation: 
+    x: 0.0
+    y: 0.0
+    z: -0.9807539914265795
+    w: 0.19524755645291134
+wait_area: [[2.8, 4.27], [1.64, 4.03], [1.41, 5.25], [2.51, 5.53]]
