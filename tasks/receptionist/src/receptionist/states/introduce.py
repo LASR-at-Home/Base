@@ -28,11 +28,9 @@ def stringify_guest_data(guest_data: Dict[str, Any], guest_id: str) -> str:
     guest_str = ""
 
     guest_str += f"{relevant_guest_data['name']}, their favourite drink is {relevant_guest_data['drink']}. "
-    guest_str += f"They have {relevant_guest_data["attributes"]['hair_colour']} hair, their height is {relevant_guest_data["attributes"]['height']}, "
-    guest_str += f"they are {'wearing glasses' if relevant_guest_data["attributes"]['glasses'] else 'not wearing glasses'}, and they are "
-    guest_str += (
-        f"{'wearing a hat' if relevant_guest_data["attributes"]['hat'] else 'not wearing a hat'}."
-    )
+    guest_str += f"They have {relevant_guest_data['attributes']['hair_colour']} hair, their height is {relevant_guest_data['attributes']['height']}, "
+    guest_str += f"they are {'wearing glasses' if relevant_guest_data['attributes']['glasses'] else 'not wearing glasses'}, and they are "
+    guest_str += f"{'wearing a hat' if relevant_guest_data['attributes']['hat'] else 'not wearing a hat'}."
 
     return guest_str
 
@@ -97,26 +95,34 @@ class Introduce(smach.StateMachine):
         assert not (guest_to_introduce_to is None and not everyone)
 
         with self:
-            smach.StateMachine.add(
-                "GetStrGuestData",
-                GetStrGuestData(guest_id=guest_to_introduce),
-                transitions={"succeeded": "SayIntroduce"},
-            )
-
             if everyone:
+                smach.StateMachine.add(
+                    "GetStrGuestData",
+                    GetStrGuestData(guest_id=guest_to_introduce),
+                    transitions={"succeeded": "SayIntroduce"},
+                )
                 smach.StateMachine.add(
                     "SayIntroduce",
                     Say(
                         format_str="Hello everyone, this is {}.",
-                        input_keys=["guest_str"],
                     ),
-                    transitions={"succeeded": "succeeded"},
+                    transitions={
+                        "succeeded": "succeeded",
+                        "preempted": "failed",
+                        "aborted": "failed",
+                    },
                     remapping={"placeholders": "guest_str"},
                 )
 
             else:
                 smach.StateMachine.add(
-                    "GetStrGuestDataTo",
+                    "GetStrGuestData",
+                    GetStrGuestData(guest_id=guest_to_introduce),
+                    transitions={"succeeded": "GetGuestName"},
+                )
+
+                smach.StateMachine.add(
+                    "GetGuestName",
                     GetGuestName(guest_id=guest_to_introduce_to),
                     transitions={"succeeded": "GetIntroductionString"},
                 )
@@ -124,7 +130,7 @@ class Introduce(smach.StateMachine):
                 smach.StateMachine.add(
                     "GetIntroductionString",
                     GetIntroductionString(),
-                    transitions={"succeeded": "succeeded"},
+                    transitions={"succeeded": "SayIntroduce"},
                     remapping={
                         "guest_str": "guest_str",
                         "requested_name": "requested_name",
@@ -133,9 +139,11 @@ class Introduce(smach.StateMachine):
 
                 smach.StateMachine.add(
                     "SayIntroduce",
-                    Say(
-                        input_keys=["introduction_str"],
-                    ),
-                    transitions={"succeeded": "succeeded"},
+                    Say(),
+                    transitions={
+                        "succeeded": "succeeded",
+                        "preempted": "failed",
+                        "aborted": "failed",
+                    },
                     remapping={"text": "introduction_str"},
                 )

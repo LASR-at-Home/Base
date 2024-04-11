@@ -46,6 +46,6 @@ class GetGuestAttributes(smach.State):
                 "height": "short",
             }
 
-        userdata.guest_data[userdata.guest_id].update(attributes)
+        userdata.guest_data[userdata.guest_id]["attributes"] = attributes
 
         return "succeeded"

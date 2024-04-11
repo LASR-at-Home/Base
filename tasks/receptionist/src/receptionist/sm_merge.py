@@ -79,7 +79,7 @@ class Receptionist(smach.StateMachine):
                 "GET_GUEST_ATTRIBUTES",
                 GetGuestAttributes(),
                 transitions={
-                    "succeeded": "succeeded",
+                    "succeeded": "SAY_FOLLOW",
                     "failed": "failed",
                 },
             )
@@ -88,7 +88,7 @@ class Receptionist(smach.StateMachine):
                 "SAY_FOLLOW",
                 Say(text="Please follow me, I will guide you to the other guests"),
                 transitions={
-                    "succeeded": "succeeded",
+                    "succeeded": "GO_TO_SEAT_LOCATION",
                     "preempted": "failed",
                     "aborted": "failed",
                 },
@@ -143,6 +143,9 @@ if __name__ == "__main__":
 
     wait_area_param = rospy.get_param("/receptionist/wait_area")
     wait_area = Polygon(wait_area_param)
+
+    seat_pose = Pose()
+    seat_area = Polygon()
 
     seat_pose_param = rospy.get_param("/receptionist/seat_pose")
     seat_pose = Pose(
