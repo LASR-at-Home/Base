@@ -1,6 +1,6 @@
 """
 State for parsing the transcription of the guests' name and favourite drink, and adding this
-to the guest data userdata.
+to the guest data userdata
 """
 
 import rospy
