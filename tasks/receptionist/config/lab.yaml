@@ -1,0 +1,20 @@
+priors:
+  names:
+    - Adel
+    - Angel
+    - Axel
+    - Charlie
+    - Jane
+    - Jules
+    - Morgan
+    - Paris
+    - Robin
+    - Simone
+  drinks:
+    - cola
+    - iced tea
+    - juice pack
+    - milk
+    - orange juice
+    - red wine
+    - tropical juice
