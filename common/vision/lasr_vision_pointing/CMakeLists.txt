@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(lasr_vision_msgs)
+project(lasr_vision_pointing)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
@@ -7,7 +7,14 @@ project(lasr_vision_msgs)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED COMPONENTS message_generation message_runtime sensor_msgs)
+find_package(catkin REQUIRED COMPONENTS
+  geometry_msgs
+  sensor_msgs
+  roscpp
+  rospy
+  std_msgs
+  catkin_virtualenv
+)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -16,7 +23,11 @@ find_package(catkin REQUIRED COMPONENTS message_generation message_runtime senso
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
 ## See http://ros.org/doc/api/catkin/html/user_guide/setup_dot_py.html
-# catkin_python_setup()
+catkin_python_setup()
+catkin_generate_virtualenv(
+  INPUT_REQUIREMENTS requirements.in
+  PYTHON_INTERPRETER python3.10
+)
 
 ################################################
 ## Declare ROS messages, services and actions ##
@@ -43,36 +54,32 @@ find_package(catkin REQUIRED COMPONENTS message_generation message_runtime senso
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
 ## Generate messages in the 'msg' folder
-add_message_files(
-  FILES
-  Detection.msg
-  Detection3D.msg
-  BodyPixPose.msg
-  BodyPixMask.msg
-  BodyPixMaskRequest.msg
-  ColourPrediction.msg
-  FeatureWithColour.msg
-)
+# add_message_files(
+#   FILES
+#   Message1.msg
+#   Message2.msg
+# )
 
 ## Generate services in the 'srv' folder
-add_service_files(
-  FILES
-  YoloDetection.srv
-  YoloDetection3D.srv
-  BodyPixDetection.srv
-  TorchFaceFeatureDetection.srv
-  Recognise.srv
-  LearnFace.srv
-  PointingDirection.srv
-)
+# add_service_files(
+#   FILES
+#   PointingDirection.srv
+# )
 
-# Generate actions in the 'action' folder
+## Generate actions in the 'action' folder
+# add_action_files(
+#   FILES
+#   Action1.action
+#   Action2.action
+# )
 
 ## Generate added messages and services with any dependencies listed here
-generate_messages(
-  DEPENDENCIES
-  sensor_msgs
-)
+# generate_messages(
+#   DEPENDENCIES
+#   geometry_msgs 
+#   std_msgs
+#   sensor_msgs
+# )
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -105,8 +112,8 @@ generate_messages(
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 #  INCLUDE_DIRS include
-#  LIBRARIES lasr_vision_msgs
-#  CATKIN_DEPENDS other_catkin_pkg
+#  LIBRARIES lasr_vision_pointing
+ CATKIN_DEPENDS geometry_msgs roscpp rospy std_msgs sensor_msgs
 #  DEPENDS system_lib
 )
 
@@ -118,12 +125,12 @@ catkin_package(
 ## Your package locations should be listed before other locations
 include_directories(
 # include
-# ${catkin_INCLUDE_DIRS}
+  ${catkin_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/lasr_vision_msgs.cpp
+#   src/${PROJECT_NAME}/lasr_vision_pointing.cpp
 # )
 
 ## Add cmake target dependencies of the library
@@ -134,7 +141,7 @@ include_directories(
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-# add_executable(${PROJECT_NAME}_node src/lasr_vision_msgs_node.cpp)
+# add_executable(${PROJECT_NAME}_node src/lasr_vision_pointing_node.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -160,10 +167,10 @@ include_directories(
 
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
-# catkin_install_python(PROGRAMS
-#   scripts/my_python_script
-#   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-# )
+catkin_install_python(PROGRAMS
+  scripts/detect_pointing.py
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
 
 ## Mark executables for installation
 ## See http://docs.ros.org/melodic/api/catkin/html/howto/format1/building_executables.html
@@ -187,18 +194,17 @@ include_directories(
 # )
 
 ## Mark other files for installation (e.g. launch and bag files, etc.)
-# install(FILES
-#   # myfile1
-#   # myfile2
-#   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
-# )
+install(FILES
+  requirements.txt  
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+)
 
 #############
 ## Testing ##
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_lasr_vision_msgs.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_lasr_vision_pointing.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()
