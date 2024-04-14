@@ -8,8 +8,7 @@ import mediapipe as mp
 from cv_bridge import CvBridge
 from lasr_vision_msgs.srv import YoloDetectionRequest, YoloDetection, PointingDirection, PointingDirectionResponse, PointingDirectionRequest
 
-'''using this rather than openpose because it is faster and more accurate'''
-class PointingDetecor:
+class PointingDetector:
     def __init__(self):
         self.detect_service = rospy.ServiceProxy('/yolov8/detect', YoloDetection)
         self.service = rospy.Service('/pointing_detection_service', PointingDirection, self.excute)
@@ -143,6 +142,6 @@ class PointingDetecor:
 
 if __name__ == '__main__':
     rospy.init_node("pointing_detector")
-    pointer = PointingDetecor()
+    pointer = PointingDetector()
     rospy.loginfo("Pointing Detector is running")
     rospy.spin()

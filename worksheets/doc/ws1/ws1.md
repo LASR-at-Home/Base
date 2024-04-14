@@ -71,7 +71,7 @@ As mentioned in the contributions guideline, working in forks is required for no
 ![Fork](fork.png)
 3. Clone your fork:
 ```
-git clone git@github.com:<username>/Base.git ~/catkin_ws/src/lasr-base // shouldn't this be laster_ws?
+git clone git@github.com:<username>/Base.git ~/catkin_ws/src/lasr-base
 ```
 ### Maintaining your Fork
 1. Check the current remotes
