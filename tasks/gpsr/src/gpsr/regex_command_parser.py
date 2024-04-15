@@ -1,7 +1,7 @@
 import itertools
 import re
 
-from typing import List, Union, TypedDict, Dict
+from typing import List, Union, TypedDict, Dict, Any
 
 counter = 0
 sub_command_counter = 0
@@ -469,7 +469,6 @@ def gpsr_regex(configuration: Configuration):
     def command(key: str, matcher: str):
         matcher = re.sub("\(\?P\<", f"(?P<CMD{key}_", matcher)
         commands.append(f"(?P<command_{key}>{matcher})")
-        print(commands)
 
     def get_possible_sub_commands(type: str) -> str:
         sub_commands = []
@@ -625,31 +624,41 @@ def gpsr_regex(configuration: Configuration):
     return "|".join(commands)
 
 
-def gpsr_parse(matches: Dict[str, str]):
-    result = {}
+def gpsr_parse(matches: Dict[str, str], input: str) -> dict[str, Any]:
+    result: dict[str, Any] = {
+        "commands": [],
+        "command_params": [],
+    }
     for key in matches.keys():
         value = matches[key]
         if value is None:
             continue
+        key_to_check = key.split("_")[-1]
+        while key_to_check.isnumeric():
+            key = "_".join(key.split("_")[:-1])
+            key_to_check = key.split("_")[-1]
+        if key_to_check == "verb":
+            result["commands"].append(value)
+            result["command_params"].append({})
+        elif key_to_check in ["object", "location", "gesture", "room", "name"]:
+            value_to_add = value
+            result["command_params"][-1][key_to_check] = value_to_add
 
-        write_into = result
-        key = re.sub("uniq\d+_", "", key)
+        # write_into = result
+        # key = re.sub("uniq\d+_", "", key)
+        # while key.startswith("CMD"):
+        #     cmd, rest = key.split("_", 1)
+        #     cmd = cmd[3:]  # remove CMD prefix
+        #     if cmd not in write_into:
+        #         write_into[cmd] = {}
 
-        while key.startswith("CMD"):
-            cmd, rest = key.split("_", 1)
-            cmd = cmd[3:]  # remove CMD prefix
-
-            if cmd not in write_into:
-                write_into[cmd] = {}
-
-            write_into = write_into[cmd]
-            key = rest
-
-        if "_" in key:
-            actual_key, value = key.split("_")
-            write_into[actual_key] = value
-        else:
-            write_into[key] = value
+        #     write_into = write_into[cmd]
+        #     key = rest
+        # if "_" in key:
+        #     actual_key, value = key.split("_")
+        #     write_into[actual_key] = value
+        # else:
+        #     write_into[key] = value
     return result
 
 
@@ -671,7 +680,7 @@ def gpsr_compile_and_parse(config: Configuration, input: str) -> dict:
 if __name__ == "__main__":
     config: Configuration = {
         "person_names": ["guest1", "guest2"],
-        "location_names": ["sofa", "piano"],
+        "location_names": ["sofa", "piano, kitchen table"],
         "placement_location_names": ["kitchen table"],
         "room_names": ["living room", "kitchen"],
         "object_names": ["cup", "television"],
@@ -685,11 +694,23 @@ if __name__ == "__main__":
 
     def execute(input: str):
         matches = regex.match(input).groupdict()
-        return gpsr_parse(matches)
+        return gpsr_parse(matches, input)
 
     # subcommands aren't implemented but are caught:
     print(
         execute(
             "locate a cup in the kitchen then fetch it and bring it to the person raising their right arm in the living room"
+        )
+    )
+
+    print(
+        execute(
+            "navigate to the kitchen then find a cup and get it and bring it to the person pointing to the right in the kitchen"
+        )
+    )
+
+    print(
+        execute(
+            "navigate to the kitchen then find a cup and fetch it and deliver it to guest1 in the living room"
         )
     )
