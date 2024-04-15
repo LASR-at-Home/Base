@@ -4,6 +4,8 @@ import re
 from typing import List, Union, TypedDict, Dict
 
 counter = 0
+sub_command_counter = 0
+seen_sub_command_group_names = []
 
 
 def uniq(i: str) -> str:
@@ -467,9 +469,11 @@ def gpsr_regex(configuration: Configuration):
     def command(key: str, matcher: str):
         matcher = re.sub("\(\?P\<", f"(?P<CMD{key}_", matcher)
         commands.append(f"(?P<command_{key}>{matcher})")
+        print(commands)
 
     def get_possible_sub_commands(type: str) -> str:
         sub_commands = []
+        assertion_check = False
         if type == "atLoc":
             sub_commands.append(
                 f"{verb('find')} {art} {Configuration.pick(configuration, 'object', ['obj', 'singCat'])} and {get_possible_sub_commands('foundObj')}"
@@ -505,10 +509,27 @@ def gpsr_regex(configuration: Configuration):
             sub_commands.append(
                 f"{verb('take')} it and {get_possible_sub_commands('hasObj')}"
             )
+            assertion_check = True
 
         union = "|".join(sub_commands)
-        return union
+        group_names = re.findall(r"\(\?P<([a-zA-Z0-9_]+)>", union)
+        global seen_sub_command_group_names
+        global sub_command_counter
+        for index, name in enumerate(group_names):
+            if name in seen_sub_command_group_names:
+                # make name unique
+                new_name = f"{name}_{sub_command_counter}"
+                seen_sub_command_group_names.append(new_name)
+                sub_command_counter += 1
+                union = re.sub(rf"\(\?P<{name}>", f"(?P<{new_name}>", union)
+            else:
+                seen_sub_command_group_names.append(name)
 
+        # groups = re.search(r"(\b[A-Z]+\b).+(\b\d+)", union)
+        return f"(?:{union})"
+        # return f"(?P<{uniq(key)}>{'|'.join(union)})"
+
+    # print(get_possible_sub_commands("atLoc"))
     command(
         "goToLoc",
         f"{verb('go')} {prep('toLocPrep')} the {Configuration.pick(configuration, 'location', ['loc', 'room'])} then {get_possible_sub_commands('atLoc')}",
@@ -523,7 +544,7 @@ def gpsr_regex(configuration: Configuration):
     )
     command(
         "findObjInRoom",
-        f"{verb('find')} {art} {Configuration.pick(configuration, 'object', ['obj', 'singCat'])} {prep('inLocPrep')} the {Configuration.pick(configuration, 'location', ['room'])} and {get_possible_sub_commands('foundObj')}",
+        f"{verb('find')} {art} {Configuration.pick(configuration, 'object', ['obj', 'singCat'])} {prep('inLocPrep')} the {Configuration.pick(configuration, 'location', ['room'])} then {get_possible_sub_commands('foundObj')}",
     )
     command(
         "meetPrsAtBeac",
@@ -669,6 +690,6 @@ if __name__ == "__main__":
     # subcommands aren't implemented but are caught:
     print(
         execute(
-            "locate a cup in the kitchen then fetch it and bring it to the person raising their right arm in the kitchen"
+            "locate a cup in the kitchen then fetch it and bring it to the person raising their right arm in the living room"
         )
     )
