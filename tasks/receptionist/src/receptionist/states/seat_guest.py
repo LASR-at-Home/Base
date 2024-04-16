@@ -11,6 +11,8 @@ from lasr_skills import PlayMotion, Detect3DInArea, LookToPoint, Say
 
 class SeatGuest(smach.StateMachine):
 
+    _motions: List[str] = ["look_down_left", "look_down_right", "look_down_center"]
+
     class ProcessDetections(smach.State):
 
         def __init__(self):
@@ -76,7 +78,6 @@ class SeatGuest(smach.StateMachine):
 
     def __init__(
         self,
-        motions: List[str],
         seat_area: Polygon,
     ):
         smach.StateMachine.__init__(self, outcomes=["succeeded", "failed"])
@@ -84,7 +85,7 @@ class SeatGuest(smach.StateMachine):
 
             motion_iterator = smach.Iterator(
                 outcomes=["succeeded", "failed"],
-                it=motions,
+                it=self._motions,
                 it_label="motion",
                 input_keys=["people_detections", "seat_detections"],
                 output_keys=[],
@@ -160,7 +161,6 @@ if __name__ == "__main__":
 
     rospy.init_node("test_find_empty_seat")
     sm = SeatGuest(
-        motions=["look_down_left", "look_down_right", "look_down_center"],
         seat_area=Polygon([[-0.39, 0.87], [-0.74, 2.18], [1.26, 2.64], [1.54, 1.26]]),
     )
     # TODO: stop doing this
