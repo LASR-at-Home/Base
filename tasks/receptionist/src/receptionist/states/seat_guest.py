@@ -149,6 +149,16 @@ class SeatGuest(smach.StateMachine):
                 "SAY_SIT",
                 Say("Please sit in the seat that I am looking at."),
                 transitions={
+                    "succeeded": "RESET_HEAD",
+                    "aborted": "failed",
+                    "preempted": "failed",
+                },
+            )
+
+            smach.StateMachine.add(
+                "RESET_HEAD",
+                PlayMotion("look_centre"),
+                transitions={
                     "succeeded": "succeeded",
                     "aborted": "failed",
                     "preempted": "failed",
