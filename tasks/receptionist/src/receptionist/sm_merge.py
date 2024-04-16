@@ -12,8 +12,6 @@ from receptionist.states import (
     SeatGuest,
 )
 
-from lasr_skills import GoToLocation, WaitForPersonInArea, Say, AskAndListen
-
 
 class Receptionist(smach.StateMachine):
 
