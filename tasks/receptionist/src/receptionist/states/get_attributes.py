@@ -12,6 +12,7 @@ from typing import List, Any, Dict, Union
 class GetGuestAttributes(smach.State):
     def __init__(
         self,
+        guest_id: str,
         attribute_service: Union[str, None] = None,
         outcomes: List[str] = ["succeeded", "failed"],
         input_keys: List[str] = ["guest_id", "guest_data"],
@@ -28,7 +29,7 @@ class GetGuestAttributes(smach.State):
             input_keys=input_keys,
             output_keys=output_keys,
         )
-
+        self._guest_id: str = guest_id
         self._attribute_service: Union[str, None] = attribute_service
 
     def _call_attribute_service(self):
@@ -46,6 +47,6 @@ class GetGuestAttributes(smach.State):
                 "height": "short",
             }
 
-        userdata.guest_data[userdata.guest_id]["attributes"] = attributes
+        userdata.guest_data[self._guest_id]["attributes"] = attributes
 
         return "succeeded"
