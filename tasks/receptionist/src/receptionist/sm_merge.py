@@ -258,7 +258,7 @@ class Receptionist(smach.StateMachine):
             smach.StateMachine.add(
                 "SEAT_GUEST_2",
                 SeatGuest(seat_area),
-                transitions={"succeeded": "succeeded", "failed": "failed"},
+                transitions={"succeeded": "GO_TO_FINISH_LOCATION", "failed": "failed"},
             )
 
             """
