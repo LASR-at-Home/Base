@@ -18,50 +18,41 @@ class SeatGuest(smach.StateMachine):
         def __init__(self):
             smach.State.__init__(
                 self,
-                outcomes=["succeeded"],
+                outcomes=["succeeded", "failed"],
                 input_keys=[
                     "detections_3d",
-                    "people_detections",
-                    "seat_detections",
                 ],
-                output_keys=["people_detections", "seat_detections"],
-            )
-
-        def execute(self, userdata):
-            for det in userdata.detections_3d:
-                if det.name == "person":
-                    userdata.people_detections.append(det)
-                else:
-                    userdata.seat_detections.append(det)
-            return "succeeded"
-
-    class DetermineSeat(smach.State):
-
-        def __init__(self):
-            smach.State.__init__(
-                self,
-                outcomes=["succeeded", "failed"],
-                input_keys=["people_detections", "seat_detections"],
                 output_keys=["seat_position"],
             )
 
         def execute(self, userdata) -> str:
-            for seat in userdata.seat_detections:
+            seat_detections = [
+                det for det in userdata.detections_3d if det.name == "chair"
+            ]
+            person_detections = [
+                det for det in userdata.detections_3d if det.name == "person"
+            ]
 
-                seat_is_free: bool = True
-                seat_contours: np.ndarray = np.array(seat.xyseg).reshape(-1, 2)
-                seat_polygon: Polygon = Polygon(seat_contours)
+            person_polygons: List[Polygon] = [
+                Polygon(np.array(person.xyseg).reshape(-1, 2))
+                for person in person_detections
+            ]
 
-                for person in userdata.people_detections:
+            print(
+                f"There are {len(seat_detections)} seats and {len(person_detections)} people."
+            )
 
-                    person_contours: np.ndarray = np.array(person.xyseg).reshape(-1, 2)
-                    person_polygon: Polygon = Polygon(person_contours)
+            for seat in seat_detections:
 
+                seat_polygon: Polygon = Polygon(np.array(seat.xyseg).reshape(-1, 2))
+                seat_is_empty: bool = True
+                for person_polygon in person_polygons:
                     if person_polygon.intersects(seat_polygon):
-                        seat_is_free = False
+                        seat_is_empty = False
+                        print(person_polygon.intersection(seat_polygon))
                         break
 
-                if seat_is_free:
+                if seat_is_empty:
                     userdata.seat_position = seat.point
                     print(seat.point)
                     return "succeeded"
@@ -75,13 +66,17 @@ class SeatGuest(smach.StateMachine):
         smach.StateMachine.__init__(self, outcomes=["succeeded", "failed"])
         with self:
 
+            # TODO: stop doing this
+            self.userdata.people_detections = []
+            self.userdata.seat_detections = []
+
             motion_iterator = smach.Iterator(
                 outcomes=["succeeded", "failed"],
                 it=self._motions,
                 it_label="motion",
                 input_keys=["people_detections", "seat_detections"],
-                output_keys=[],
-                exhausted_outcome="succeeded",
+                output_keys=["seat_position"],
+                exhausted_outcome="failed",
             )
 
             with motion_iterator:
@@ -89,6 +84,7 @@ class SeatGuest(smach.StateMachine):
                 container_sm = smach.StateMachine(
                     outcomes=["succeeded", "failed", "continue"],
                     input_keys=["motion", "people_detections", "seat_detections"],
+                    output_keys=["seat_position"],
                 )
 
                 with container_sm:
@@ -105,12 +101,12 @@ class SeatGuest(smach.StateMachine):
                     smach.StateMachine.add(
                         "DETECT",
                         Detect3DInArea(seat_area, filter=["chair", "person"]),
-                        transitions={"succeeded": "PROCESS", "failed": "failed"},
+                        transitions={"succeeded": "CHECK", "failed": "failed"},
                     )
                     smach.StateMachine.add(
-                        "PROCESS",
+                        "CHECK",
                         self.ProcessDetections(),
-                        transitions={"succeeded": "continue"},
+                        transitions={"succeeded": "succeeded", "failed": "continue"},
                     )
 
                 smach.Iterator.set_contained_state(
@@ -120,11 +116,6 @@ class SeatGuest(smach.StateMachine):
             smach.StateMachine.add(
                 "MOTION_ITERATOR",
                 motion_iterator,
-                transitions={"succeeded": "DETERMINE_SEAT", "failed": "failed"},
-            )
-            smach.StateMachine.add(
-                "DETERMINE_SEAT",
-                self.DetermineSeat(),
                 transitions={"succeeded": "LOOK_TO_POINT", "failed": "failed"},
             )
             smach.StateMachine.add(
