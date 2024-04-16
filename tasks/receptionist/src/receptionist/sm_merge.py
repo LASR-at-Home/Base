@@ -7,7 +7,7 @@ from shapely.geometry import Polygon
 
 from receptionist.states import ParseNameAndDrink, GetGuestAttributes, Introduce
 
-from lasr_skills import GoToLocation, WaitForPersonInArea, Say, AskAndListen
+from lasr_skills import GoToLocation, WaitForPersonInArea, Say, AskAndListen, SeatGuest
 
 
 class Receptionist(smach.StateMachine):
@@ -126,9 +126,15 @@ class Receptionist(smach.StateMachine):
                 "INTRODUCE_HOST_TO_GUEST_1",
                 Introduce(guest_to_introduce="host", guest_to_introduce_to="guest1"),
                 transitions={
-                    "succeeded": "succeeded",
+                    "succeeded": "SEAT_GUEST",
                     "failed": "failed",
                 },
+            )
+
+            smach.StateMachine.add(
+                "SEAT_GUEST",
+                SeatGuest(seat_area),
+                transitions={"succeeded": "succeeded", "failed": "failed"},
             )
 
 
