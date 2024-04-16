@@ -30,8 +30,8 @@ class Receptionist(smach.StateMachine):
 
         with self:
 
-            # TODO: correctly set guest_id
             self.userdata.guest_data = {"host": host_data, "guest1": {}, "guest2": {}}
+
             smach.StateMachine.add(
                 "GO_TO_WAIT_LOCATION_GUEST_1",
                 GoToLocation(wait_pose),
