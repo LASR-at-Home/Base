@@ -91,13 +91,12 @@ class GetGuestAttributes(smach.State):
         elif hair_colour_response == "a person with grey hair":
             hair_colour = "grey"
 
-        else:
-            attributes = {
-                "hair_colour": hair_colour,
-                "glasses": glasses,
-                "hat": hat,
-                "height": height,
-            }
+        attributes = {
+            "hair_colour": hair_colour,
+            "glasses": glasses,
+            "hat": hat,
+            "height": height,
+        }
 
         userdata.guest_data[self._guest_id]["attributes"] = attributes
 

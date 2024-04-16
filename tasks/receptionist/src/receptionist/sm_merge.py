@@ -4,7 +4,7 @@ import rospy
 
 from geometry_msgs.msg import Pose, Point, Quaternion
 from shapely.geometry import Polygon
-
+from lasr_skills import GoToLocation, WaitForPersonInArea, Say, AskAndListen
 from receptionist.states import (
     ParseNameAndDrink,
     GetGuestAttributes,
