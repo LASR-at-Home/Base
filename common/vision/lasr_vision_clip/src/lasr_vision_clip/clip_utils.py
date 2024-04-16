@@ -97,4 +97,4 @@ def query_image_stream(
         )
 
     img = cv2_img.cv2_img_to_msg(cv2_im)
-    return answers[max_score], cos_scores, img
+    return answers[max_score], cos_scores[0, max_score], img
