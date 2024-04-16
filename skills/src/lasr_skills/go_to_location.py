@@ -137,9 +137,7 @@ class GoToLocation(smach.StateMachine):
                 "RAISE_BASE",
                 PlayMotion("post_navigation"),
                 transitions={
-                    "succeeded": (
-                        "ENABLE_HEAD_MANAGER" if not IS_SIMULATION else "GO_TO_LOCATION"
-                    ),
+                    "succeeded": "succeeded",
                     "aborted": "failed",
                     "preempted": "failed",
                 },
