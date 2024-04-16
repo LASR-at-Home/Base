@@ -21,246 +21,6 @@ def list_to_regex(list: List[str], key: Union[str, None] = None):
     return f"(?P<{uniq(key)}>{'|'.join(list)})"
 
 
-def generate_command_start(self, cmd_category="", difficulty=0):
-    cmd_list = []
-    # cmd_list = ["goToLoc", "takeObjFromPlcmt", "findPrsInRoom", "findObjInRoom", "meetPrsAtBeac", "countObjOnPlcmt",
-    #             "countPrsInRoom", "tellPrsInfoInLoc", "tellObjPropOnPlcmt", "talkInfoToGestPrsInRoom",
-    #             "answerToGestPrsInRoom", "followNameFromBeacToRoom", "guideNameFromBeacToBeac",
-    #             "guidePrsFromBeacToBeac", "guideClothPrsFromBeacToBeac", "bringMeObjFromPlcmt",
-    #             "tellCatPropOnPlcmt", "greetClothDscInRm", "greetNameInRm", "meetNameAtLocThenFindInRm",
-    #             "countClothPrsInRoom", "countClothPrsInRoom", "tellPrsInfoAtLocToPrsAtLoc", "followPrsAtLoc"]
-
-    # HRI and people perception commands
-    person_cmd_list = [
-        "goToLoc",
-        "findPrsInRoom",
-        "meetPrsAtBeac",
-        "countPrsInRoom",
-        "tellPrsInfoInLoc",
-        "talkInfoToGestPrsInRoom",
-        "answerToGestPrsInRoom",
-        "followNameFromBeacToRoom",
-        "guideNameFromBeacToBeac",
-        "guidePrsFromBeacToBeac",
-        "guideClothPrsFromBeacToBeac",
-        "greetClothDscInRm",
-        "greetNameInRm",
-        "meetNameAtLocThenFindInRm",
-        "countClothPrsInRoom",
-        "countClothPrsInRoom",
-        "tellPrsInfoAtLocToPrsAtLoc",
-        "followPrsAtLoc",
-    ]
-    # Object manipulation and perception commands
-    object_cmd_list = [
-        "goToLoc",
-        "takeObjFromPlcmt",
-        "findObjInRoom",
-        "countObjOnPlcmt",
-        "tellObjPropOnPlcmt",
-        "bringMeObjFromPlcmt",
-        "tellCatPropOnPlcmt",
-    ]
-
-    if cmd_category == "people":
-        cmd_list = person_cmd_list
-    elif cmd_category == "objects":
-        cmd_list = object_cmd_list
-    else:
-        cmd_list = person_cmd_list if random.random() > 0.5 else object_cmd_list
-
-    command = random.choice(cmd_list)
-    # command = "" # To debug commands
-    command_string = ""
-    if command == "goToLoc":
-        command_string = (
-            "{goVerb} {toLocPrep} the {loc_room} then "
-            + self.generate_command_followup("atLoc", cmd_category, difficulty)
-        )
-    elif command == "takeObjFromPlcmt":
-        command_string = (
-            "{takeVerb} {art} {obj_singCat} {fromLocPrep} the {plcmtLoc} and "
-            + self.generate_command_followup("hasObj", cmd_category, difficulty)
-        )
-    elif command == "findPrsInRoom":
-        command_string = (
-            "{findVerb} a {gestPers_posePers} {inLocPrep} the {room} and "
-            + self.generate_command_followup("foundPers", cmd_category, difficulty)
-        )
-    elif command == "findObjInRoom":
-        command_string = (
-            "{findVerb} {art} {obj_singCat} {inLocPrep} the {room} then "
-            + self.generate_command_followup("foundObj", cmd_category, difficulty)
-        )
-    elif command == "meetPrsAtBeac":
-        command_string = (
-            "{meetVerb} {name} {inLocPrep} the {room} and "
-            + self.generate_command_followup("foundPers", cmd_category, difficulty)
-        )
-    elif command == "countObjOnPlcmt":
-        command_string = "{countVerb} {plurCat} there are {onLocPrep} the {plcmtLoc}"
-    elif command == "countPrsInRoom":
-        command_string = (
-            "{countVerb} {gestPersPlur_posePersPlur} are {inLocPrep} the {room}"
-        )
-    elif command == "tellPrsInfoInLoc":
-        command_string = "{tellVerb} me the {persInfo} of the person {inRoom_atLoc}"
-    elif command == "tellObjPropOnPlcmt":
-        command_string = (
-            "{tellVerb} me what is the {objComp} object {onLocPrep} the {plcmtLoc}"
-        )
-    elif command == "talkInfoToGestPrsInRoom":
-        command_string = (
-            "{talkVerb} {talk} {talkPrep} the {gestPers} {inLocPrep} the {room}"
-        )
-    elif command == "answerToGestPrsInRoom":
-        command_string = "{answerVerb} the {question} {ofPrsPrep} the {gestPers} {inLocPrep} the {room}"
-    elif command == "followNameFromBeacToRoom":
-        command_string = (
-            "{followVerb} {name} {fromLocPrep} the {loc} {toLocPrep} the {room}"
-        )
-    elif command == "guideNameFromBeacToBeac":
-        command_string = (
-            "{guideVerb} {name} {fromLocPrep} the {loc} {toLocPrep} the {loc_room}"
-        )
-    elif command == "guidePrsFromBeacToBeac":
-        command_string = "{guideVerb} the {gestPers_posePers} {fromLocPrep} the {loc} {toLocPrep} the {loc_room}"
-    elif command == "guideClothPrsFromBeacToBeac":
-        command_string = "{guideVerb} the person wearing a {colorClothe} {fromLocPrep} the {loc} {toLocPrep} the {loc_room}"
-    elif command == "bringMeObjFromPlcmt":
-        command_string = "{bringVerb} me {art} {obj} {fromLocPrep} the {plcmtLoc}"
-    elif command == "tellCatPropOnPlcmt":
-        command_string = (
-            "{tellVerb} me what is the {objComp} {singCat} {onLocPrep} the {plcmtLoc}"
-        )
-    elif command == "greetClothDscInRm":
-        command_string = (
-            "{greetVerb} the person wearing {art} {colorClothe} {inLocPrep} the {room} and "
-            + self.generate_command_followup("foundPers", cmd_category, difficulty)
-        )
-    elif command == "greetNameInRm":
-        command_string = (
-            "{greetVerb} {name} {inLocPrep} the {room} and "
-            + self.generate_command_followup("foundPers", cmd_category, difficulty)
-        )
-    elif command == "meetNameAtLocThenFindInRm":
-        command_string = "{meetVerb} {name} {atLocPrep} the {loc} then {findVerb} them {inLocPrep} the {room}"
-    elif command == "countClothPrsInRoom":
-        command_string = (
-            "{countVerb} people {inLocPrep} the {room} are wearing {colorClothes}"
-        )
-    elif command == "countClothPrsInRoom":
-        command_string = (
-            "{countVerb} people {inLocPrep} the {room} are wearing {colorClothes}"
-        )
-    elif command == "tellPrsInfoAtLocToPrsAtLoc":
-        command_string = "{tellVerb} the {persInfo} of the person {atLocPrep} the {loc} to the person {atLocPrep} the {loc2}"
-    elif command == "followPrsAtLoc":
-        command_string = "{followVerb} the {gestPers_posePers} {inRoom_atLoc}"
-    else:
-        warnings.warn("Command type not covered: " + command)
-        return "WARNING"
-
-    for ph in re.findall(r"(\{\w+\})", command_string, re.DOTALL):
-        command_string = command_string.replace(ph, self.insert_placeholders(ph))
-
-    # TODO allow multiple articles
-    art_ph = re.findall(r"\{(art)\}\s*([A-Za-z])", command_string, re.DOTALL)
-    if art_ph:
-        command_string = command_string.replace(
-            "art", "an" if art_ph[0][1].lower() in ["a", "e", "i", "o", "u"] else "a"
-        )
-    # TODO eliminate double mentions of location
-    if "loc2" in command_string:
-        command_string = command_string.replace(
-            "loc2",
-            random.choice([x for x in self.location_names if x not in command_string]),
-        )
-    elif "room2" in command_string:
-        command_string = command_string.replace(
-            "room2",
-            random.choice([x for x in self.room_names if x not in command_string]),
-        )
-    elif "plcmtLoc2" in command_string:
-        command_string = command_string.replace(
-            "plcmtLoc2",
-            random.choice(
-                [x for x in self.placement_location_names if x not in command_string]
-            ),
-        )
-    return command_string.replace("{", "").replace("}", "")
-
-
-def generate_command_followup(self, type, cmd_category="", difficulty=0):
-    if type == "atLoc":
-        person_cmd_list = ["findPrs", "meetName"]
-        object_cmd_list = ["findObj"]
-        if cmd_category == "people":
-            cmd_list = person_cmd_list
-        elif cmd_category == "objects":
-            cmd_list = object_cmd_list
-        else:
-            cmd_list = person_cmd_list if random.random() > 0.5 else object_cmd_list
-    elif type == "hasObj":
-        cmd_list = [
-            "placeObjOnPlcmt",
-            "deliverObjToMe",
-            "deliverObjToPrsInRoom",
-            "deliverObjToNameAtBeac",
-        ]
-    elif type == "foundPers":
-        cmd_list = [
-            "talkInfo",
-            "answerQuestion",
-            "followPrs",
-            "followPrsToRoom",
-            "guidePrsToBeacon",
-        ]
-    elif type == "foundObj":
-        cmd_list = ["takeObj"]
-
-    command = random.choice(cmd_list)
-    command_string = ""
-    if command == "findObj":
-        command_string = (
-            "{findVerb} {art} {obj_singCat} and "
-            + self.generate_command_followup("foundObj")
-        )
-    elif command == "findPrs":
-        command_string = (
-            "{findVerb} the {gestPers_posePers} and "
-            + self.generate_command_followup("foundPers")
-        )
-    elif command == "meetName":
-        command_string = "{meetVerb} {name} and " + self.generate_command_followup(
-            "foundPers"
-        )
-    elif command == "placeObjOnPlcmt":
-        command_string = "{placeVerb} it {onLocPrep} the {plcmtLoc2}"
-    elif command == "deliverObjToMe":
-        command_string = "{deliverVerb} it to me"
-    elif command == "deliverObjToPrsInRoom":
-        command_string = "{deliverVerb} it {deliverPrep} the {gestPers_posePers} {inLocPrep} the {room}"
-    elif command == "deliverObjToNameAtBeac":
-        command_string = "{deliverVerb} it {deliverPrep} {name} {inLocPrep} the {room}"
-    elif command == "talkInfo":
-        command_string = "{talkVerb} {talk}}"
-    elif command == "answerQuestion":
-        command_string = "{answerVerb} a {question}"
-    elif command == "followPrs":
-        command_string = "{followVerb} them"
-    elif command == "followPrsToRoom":
-        command_string = "{followVerb} them {toLocPrep} the {loc2_room2}"
-    elif command == "guidePrsToBeacon":
-        command_string = "{guideVerb} them {toLocPrep} the {loc2_room2}"
-    elif command == "takeObj":
-        command_string = "{takeVerb} it and " + self.generate_command_followup("hasObj")
-    else:
-        warnings.warn("Command type not covered: " + command)
-        return "WARNING"
-    return command_string
-
-
 # data from gpsr_commands
 verb_dict = {
     "take": ["take", "get", "grasp", "fetch"],
@@ -286,7 +46,8 @@ verb_dict = {
 
 def verb(v):
     # return list_to_regex(verb_dict[v], f"verb_{v}")
-    return list_to_regex(verb_dict[v], None if len(verb_dict[v]) == 1 else "verb")
+    return list_to_regex(verb_dict[v], "verb")
+    # return list_to_regex(verb_dict[v], None if len(verb_dict[v]) == 1 else "verb")
 
 
 prep_dict = {
@@ -358,7 +119,6 @@ class Configuration(TypedDict):
                 )
             else:
                 union = union + Configuration.key_to_list(self, list)
-
         return f"(?P<{uniq(key)}>{'|'.join(union)})"
 
 
@@ -638,27 +398,26 @@ def gpsr_parse(matches: Dict[str, str], input: str) -> dict[str, Any]:
             key = "_".join(key.split("_")[:-1])
             key_to_check = key.split("_")[-1]
         if key_to_check == "verb":
-            result["commands"].append(value)
+            result["commands"].append(reverse_translate_verb_dict(value))
             result["command_params"].append({})
-        elif key_to_check in ["object", "location", "gesture", "room", "name"]:
+        elif key_to_check in [
+            "object",
+            "location",
+            "gesture",
+            "room",
+            "name",
+            "start",
+            "end",
+            "objectcomp",
+            "clothes",
+        ]:
             value_to_add = value
-            result["command_params"][-1][key_to_check] = value_to_add
-
-        # write_into = result
-        # key = re.sub("uniq\d+_", "", key)
-        # while key.startswith("CMD"):
-        #     cmd, rest = key.split("_", 1)
-        #     cmd = cmd[3:]  # remove CMD prefix
-        #     if cmd not in write_into:
-        #         write_into[cmd] = {}
-
-        #     write_into = write_into[cmd]
-        #     key = rest
-        # if "_" in key:
-        #     actual_key, value = key.split("_")
-        #     write_into[actual_key] = value
-        # else:
-        #     write_into[key] = value
+            try:
+                result["command_params"][-1][key_to_check] = value_to_add
+            except:
+                continue
+        else:
+            print(f"Unhandled key: {key_to_check}")
     return result
 
 
@@ -677,10 +436,66 @@ def gpsr_compile_and_parse(config: Configuration, input: str) -> dict:
     return gpsr_parse(matches)
 
 
+def parse_result_dict(result: dict, object_categories: list[str]) -> dict:
+    """Parses the result dictionary output by the gpsr parse to
+    handle missing parameters.
+
+    Args:
+        result (dict): _description_
+
+    Returns:
+        dict: _description_
+    """
+
+    for i, command in enumerate(result["commands"]):
+        if "object" in result["command_params"][i]:
+            if result["command_params"][i]["object"] in object_categories:
+                # rename object to object category
+                result["command_params"][i]["object_category"] = result[
+                    "command_params"
+                ][i]["object"]
+                del result["command_params"][i]["object"]
+        # Update command params based on the previous commands params
+        if i > 0:
+            if "location" not in result["command_params"][i]:
+                if "location" in result["command_params"][i - 1]:
+                    result["command_params"][i]["location"] = result["command_params"][
+                        i - 1
+                    ]["location"]
+            if "room" not in result["command_params"][i]:
+                if "room" in result["command_params"][i - 1]:
+                    result["command_params"][i - 1]["room"] = result["command_params"][
+                        i - 1
+                    ]["room"]
+                    del result["command_params"][i]["room"]
+            if "name" not in result["command_params"][i]:
+                if "name" in result["command_params"][i - 1]:
+                    result["command_params"][i]["name"] = result["command_params"][
+                        i - 1
+                    ]["name"]
+            if "object" not in result["command_params"][i]:
+                if "object" in result["command_params"][i - 1]:
+                    result["command_params"][i]["object"] = result["command_params"][
+                        i - 1
+                    ]["object"]
+
+    return result
+
+
+def reverse_translate_verb_dict(verb: str) -> str:
+    for master_verb, verbs in verb_dict.items():
+        if verb in verbs:
+            return master_verb
+    return verb
+
+
 if __name__ == "__main__":
+    object_categories_plural = ["sticks"]
+    object_categories_singular = ["stick"]
+    object_categories = object_categories_singular + object_categories_plural
     config: Configuration = {
         "person_names": ["guest1", "guest2"],
-        "location_names": ["sofa", "piano, kitchen table"],
+        "location_names": ["sofa", "piano", "kitchen table"],
         "placement_location_names": ["kitchen table"],
         "room_names": ["living room", "kitchen"],
         "object_names": ["cup", "television"],
@@ -692,25 +507,47 @@ if __name__ == "__main__":
 
     regex = re.compile(regex_str)
 
-    def execute(input: str):
+    def execute(input: str, object_categories: List[str]):
         matches = regex.match(input).groupdict()
-        return gpsr_parse(matches, input)
+        return parse_result_dict(gpsr_parse(matches, input), object_categories)
 
-    # subcommands aren't implemented but are caught:
     print(
         execute(
-            "locate a cup in the kitchen then fetch it and bring it to the person raising their right arm in the living room"
+            "locate a cup in the kitchen then fetch it and bring it to the person raising their right arm in the living room",
+            object_categories,
         )
     )
 
     print(
         execute(
-            "navigate to the kitchen then find a cup and get it and bring it to the person pointing to the right in the kitchen"
+            "navigate to the kitchen then find a cup and get it and bring it to the person pointing to the right in the kitchen",
+            object_categories,
         )
     )
 
     print(
         execute(
-            "navigate to the kitchen then find a cup and fetch it and deliver it to guest1 in the living room"
+            "navigate to the kitchen then find a cup and get it and bring it to me",
+            object_categories,
+        )
+    )
+    print(
+        execute(
+            "navigate to the kitchen table then find a stick and fetch it and deliver it to guest1 in the living room",
+            object_categories,
+        )
+    )
+
+    print(
+        execute(
+            "lead the person wearing a red shirt from the sofa to the living room",
+            object_categories,
+        )
+    )
+
+    print(
+        execute(
+            "tell me what is the biggest stick on the kitchen table",
+            object_categories,
         )
     )
