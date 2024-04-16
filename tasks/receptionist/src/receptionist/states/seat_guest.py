@@ -11,7 +11,7 @@ from lasr_skills import PlayMotion, Detect3DInArea, LookToPoint, Say
 
 class SeatGuest(smach.StateMachine):
 
-    _motions: List[str] = ["look_down_left", "look_down_right", "look_down_center"]
+    _motions: List[str] = ["look_down_left", "look_down_right", "look_down_centre"]
 
     class ProcessDetections(smach.State):
 
