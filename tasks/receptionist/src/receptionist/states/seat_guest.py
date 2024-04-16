@@ -45,11 +45,6 @@ class SeatGuest(smach.StateMachine):
                 output_keys=["seat_position"],
             )
 
-        def _intersects(
-            self, person_contours: np.ndarray, seat_contours: np.ndarray
-        ) -> bool:
-            return Polygon(person_contours).intersects(Polygon(seat_contours))
-
         def execute(self, userdata) -> str:
             for seat in userdata.seat_detections:
 
