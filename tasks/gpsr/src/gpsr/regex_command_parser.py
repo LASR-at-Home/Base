@@ -384,7 +384,7 @@ def gpsr_regex(configuration: Configuration):
     return "|".join(commands)
 
 
-def gpsr_parse(matches: Dict[str, str], input: str) -> dict[str, Any]:
+def gpsr_parse(matches: Dict[str, str]) -> Dict[str, Any]:
     result: dict[str, Any] = {
         "commands": [],
         "command_params": [],
@@ -421,22 +421,24 @@ def gpsr_parse(matches: Dict[str, str], input: str) -> dict[str, Any]:
     return result
 
 
-def gpsr_compile_and_parse(config: Configuration, input: str) -> dict:
+def gpsr_compile_and_parse(config: Configuration, input: str) -> Dict:
     input = input.lower()
     # remove punctuation
     input = re.sub(r"[^\w\s]", "", input)
-    print(input)
     if input[0] == " ":
         input = input[1:]
-
+    print(f"Parsed input: {input}")
     regex_str = gpsr_regex(config)
     regex = re.compile(regex_str)
     matches = regex.match(input)
     matches = matches.groupdict()
-    return gpsr_parse(matches)
+    object_categories = (
+        config["object_categories_singular"] + config["object_categories_plural"]
+    )
+    return parse_result_dict(gpsr_parse(matches), object_categories)
 
 
-def parse_result_dict(result: dict, object_categories: list[str]) -> dict:
+def parse_result_dict(result: Dict, object_categories: List[str]) -> Dict:
     """Parses the result dictionary output by the gpsr parse to
     handle missing parameters.
 
@@ -509,7 +511,7 @@ if __name__ == "__main__":
 
     def execute(input: str, object_categories: List[str]):
         matches = regex.match(input).groupdict()
-        return parse_result_dict(gpsr_parse(matches, input), object_categories)
+        return parse_result_dict(gpsr_parse(matches), object_categories)
 
     print(
         execute(
