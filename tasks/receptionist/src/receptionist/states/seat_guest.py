@@ -59,9 +59,6 @@ class SeatGuest(smach.StateMachine):
 
                     if person_polygon.intersects(seat_polygon):
                         seat_is_free = False
-                        print(
-                            f"Intersection between person at point {person.point} and seat at point {seat.point}"
-                        )
                         break
 
                 if seat_is_free:
@@ -148,7 +145,7 @@ class SeatGuest(smach.StateMachine):
                     "aborted": "failed",
                     "preempted": "failed",
                 },
-            )
+            )  # TODO: sleep after this.
 
             smach.StateMachine.add(
                 "RESET_HEAD",
