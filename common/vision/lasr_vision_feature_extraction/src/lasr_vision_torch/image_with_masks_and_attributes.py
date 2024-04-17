@@ -1,5 +1,6 @@
 import numpy as np
 from lasr_vision_feature_extraction.categories_and_attributes import CategoriesAndAttributes
+import json
 
 
 def _softmax(x: list[float]) -> list[float]:
@@ -91,20 +92,26 @@ class ImageOfPerson(ImageWithMasksAndAttributes):
             self.attributes['Wearing_Necktie'])
 
         description = "This customer has "
+        hair_colour_str = 'None'
+        hair_shape_str = 'None'
         if has_hair[0]:
             hair_shape_str = ''
             if hair_shape[0] == 'Straight_Hair':
-                hair_shape_str = ' straight'
+                hair_shape_str = 'straight'
             elif hair_shape[0] == 'Wavy_Hair':
-                hair_shape_str = ' wavy'
+                hair_shape_str = 'wavy'
             if hair_colour[0] == 'Black_Hair':
-                description += 'black%s hair, ' % hair_shape_str
+                description += 'black %s hair, ' % hair_shape_str
+                hair_colour_str = 'black'
             elif hair_colour[0] == 'Blond_Hair':
-                description += 'blond%s hair, ' % hair_shape_str
+                description += 'blond %s hair, ' % hair_shape_str
+                hair_colour_str = 'blond'
             elif hair_colour[0] == 'Brown_Hair':
-                description += 'brown%s hair, ' % hair_shape_str
+                description += 'brown %s hair, ' % hair_shape_str
+                hair_colour_str = 'brown'
             elif hair_colour[0] == 'Gray_Hair':
-                description += 'gray%s hair, ' % hair_shape_str
+                description += 'gray %s hair, ' % hair_shape_str
+                hair_colour_str = 'gray'
 
         if male:  # here 'male' is only used to determine whether it is confident to decide whether the person has beard
             if not facial_hair[0] == 'No_Beard':
@@ -130,4 +137,25 @@ class ImageOfPerson(ImageWithMasksAndAttributes):
                 wearables.append('a necktie')
             description += ", ".join(wearables[:-2] + [" and ".join(wearables[-2:])]) + '. '
 
-        return description if description != "This customer has " else ""
+        if description != "This customer has ":
+            description = "I didn't manage to get any attributes from this customer, I'm sorry."
+        
+        result = {
+            'attributes': {
+                'has_hair': has_hair[0],
+                'hair_colour': hair_colour_str,
+                'hair_shape': hair_shape_str,
+                'male': male[0],
+                'facial_hair': facial_hair[0],
+                'hat': hat[0],
+                'glasses': glasses[0],
+                'earrings': earrings[0],
+                'necklace': necklace[0],
+                'necktie': necktie[0],
+            },
+            'description': description
+        }
+
+        result = json.dumps(result, indent=4)
+
+        return result
