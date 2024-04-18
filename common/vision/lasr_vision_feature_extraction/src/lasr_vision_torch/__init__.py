@@ -1,4 +1,4 @@
-from feature_extractor.modules import UNetWithResnetEncoder, MultiLabelResNet, CombinedModel  # DeepLabV3PlusMobileNetV3, MultiLabelMobileNetV3Large, CombinedModelNoRegression
+from feature_extractor.modules import UNetWithResnetEncoder, MultiLabelResNet, CombinedModel
 from feature_extractor.helpers import load_torch_model, binary_erosion_dilation
 from lasr_vision_feature_extraction.categories_and_attributes import CategoriesAndAttributes, CelebAMaskHQCategoriesAndAttributes
 from lasr_vision_feature_extraction.image_with_masks_and_attributes import ImageWithMasksAndAttributes, ImageOfPerson
@@ -6,11 +6,8 @@ from lasr_vision_feature_extraction.image_with_masks_and_attributes import Image
 import numpy as np
 import cv2
 import torch
-import rospy
 import rospkg
-import lasr_vision_feature_extraction
 from os import path
-# import matplotlib.pyplot as plt
 
 
 class Predictor:
@@ -72,9 +69,6 @@ def load_face_classifier_model():
     return model
 
 
-model = load_face_classifier_model()
-
-
 def pad_image_to_even_dims(image):
     # Get the current shape of the image
     height, width, _ = image.shape
@@ -121,10 +115,7 @@ def extract_mask_region(frame, mask, expand_x=0.5, expand_y=0.5):
     return None
 
 
-p = Predictor(model, torch.device('cpu'), CelebAMaskHQCategoriesAndAttributes)
-
-
-def predict_frame(head_frame, torso_frame, full_frame, head_mask, torso_mask,):
+def predict_frame(head_frame, torso_frame, full_frame, head_mask, torso_mask, predictor):
     full_frame = cv2.cvtColor(full_frame, cv2.COLOR_BGR2RGB)
     head_frame = cv2.cvtColor(head_frame, cv2.COLOR_BGR2RGB)
     torso_frame = cv2.cvtColor(torso_frame, cv2.COLOR_BGR2RGB)
@@ -132,6 +123,6 @@ def predict_frame(head_frame, torso_frame, full_frame, head_mask, torso_mask,):
     head_frame = pad_image_to_even_dims(head_frame)
     torso_frame = pad_image_to_even_dims(torso_frame)
 
-    rst = ImageOfPerson.from_parent_instance(p.predict(head_frame))
+    rst = ImageOfPerson.from_parent_instance(predictor.predict(head_frame))
 
     return rst.describe()

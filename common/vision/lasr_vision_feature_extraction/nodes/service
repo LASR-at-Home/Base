@@ -1,7 +1,8 @@
 from lasr_vision_msgs.srv import TorchFaceFeatureDetectionDescription, TorchFaceFeatureDetectionDescriptionRequest, TorchFaceFeatureDetectionDescriptionResponse
+from lasr_vision_feature_extraction.categories_and_attributes import CategoriesAndAttributes, CelebAMaskHQCategoriesAndAttributes
+
 from cv2_img import msg_to_cv2_img
 from numpy2message import message2numpy
-
 import numpy as np
 import cv2
 import torch
@@ -21,16 +22,17 @@ def detect(request: TorchFaceFeatureDetectionDescriptionRequest) -> TorchFaceFea
     head_mask = message2numpy(head_mask_data, head_mask_shape, head_mask_dtype)
     head_frame = lasr_vision_feature_extraction.extract_mask_region(full_frame, head_mask.astype(np.uint8), expand_x=0.4, expand_y=0.5)
     torso_frame = lasr_vision_feature_extraction.extract_mask_region(full_frame, torso_mask.astype(np.uint8), expand_x=0.2, expand_y=0.0)
-
-    # class_pred, colour_pred = lasr_vision_feature_extraction.predict_frame(head_frame, torso_frame, full_frame, head_mask, torso_mask, lasr_vision_feature_extraction.model, lasr_vision_feature_extraction.thresholds_mask, lasr_vision_feature_extraction.erosion_iterations, lasr_vision_feature_extraction.dilation_iterations, lasr_vision_feature_extraction.thresholds_pred)
-    rst_str = lasr_vision_feature_extraction.predict_frame(head_frame, torso_frame, full_frame, head_mask, torso_mask,)
-    
+    rst_str = lasr_vision_feature_extraction.predict_frame(head_frame, torso_frame, full_frame, head_mask, torso_mask, predictor=predictor)
     response = TorchFaceFeatureDetectionDescriptionResponse()
     response.description = rst_str
     return response
 
 
-rospy.init_node('torch_service')
-rospy.Service('/torch/detect/face_features', TorchFaceFeatureDetectionDescription, detect)
-rospy.loginfo('Torch service started')
-rospy.spin()
+if __name__ == '__main__':
+    # predictor will be global when inited, thus will be used within the function above.
+    model = lasr_vision_feature_extraction.load_face_classifier_model()
+    predictor = lasr_vision_feature_extraction.Predictor(model, torch.device('cpu'), CelebAMaskHQCategoriesAndAttributes)
+    rospy.init_node('torch_service')
+    rospy.Service('/torch/detect/face_features', TorchFaceFeatureDetectionDescription, detect)
+    rospy.loginfo('Torch service started')
+    rospy.spin()
