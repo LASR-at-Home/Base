@@ -1,8 +1,8 @@
-# Path to input text file
-string txt_path
+# Path to input text files
+string[] txt_paths
 
-# Path to index file to load
-string index_path
+# Path to corresponding index files
+string[] index_paths
 
 # Sentence to query index with
 string query_sentence

@@ -1,7 +1,7 @@
-# Path to input text file
-string txt_path
+# Path to input text files
+string[] txt_paths
 
-# Output path to save index
-string index_path
+# Output path to save created indices
+string[] index_paths
 
 ---

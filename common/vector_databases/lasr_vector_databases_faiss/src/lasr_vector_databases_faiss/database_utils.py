@@ -9,7 +9,7 @@ def create_vector_database(
     index_path: str,
     overwrite: bool = False,
     index_type: str = "Flat",
-    normalise_vecs: bool = True,
+    normalise_vecs: bool = False,
 ) -> None:
     """Creates a FAISS Index using the factory constructor and the given
     index type, and adds the given vector to the index, and then saves
@@ -23,7 +23,7 @@ def create_vector_database(
         index_type (str, optional): FAISS Index Factory string. Defaults to "IndexFlatIP".
         normalise_vecs (bool, optional): Whether to normalise the vectors before
         adding them to the Index. This converts the IP metric to Cosine Similarity.
-        Defaults to True.
+        Defaults to False.
     """
 
     if os.path.exists(index_path) and not overwrite:
@@ -31,11 +31,13 @@ def create_vector_database(
             f"Index already exists at {index_path}. Set overwrite=True to replace it."
         )
 
-    index = faiss.index_factory(
-        vectors.shape[1], index_type, faiss.METRIC_INNER_PRODUCT
-    )
     if normalise_vecs:
+        index = faiss.index_factory(
+            vectors.shape[1], index_type, faiss.METRIC_INNER_PRODUCT
+        )
         faiss.normalize_L2(vectors)
+    else:
+        index = faiss.index_factory(vectors.shape[1], index_type)
     index.add(vectors)
     faiss.write_index(index, index_path)
 

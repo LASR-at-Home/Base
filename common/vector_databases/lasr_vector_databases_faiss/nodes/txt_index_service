@@ -8,6 +8,7 @@ from lasr_vector_databases_faiss import (
     get_sentence_embeddings,
     create_vector_database,
 )
+from typing import List
 
 
 class TxtIndexService:
@@ -18,13 +19,16 @@ class TxtIndexService:
         rospy.loginfo("Text index service started")
 
     def execute_cb(self, req: TxtIndexRequest):
-        txt_fp: str = req.txt_path
-        sentences_to_embed: list[str] = parse_txt_file(txt_fp)
-        sentence_embeddings: np.ndarray = get_sentence_embeddings(
-            sentences_to_embed, self._sentence_embedding_model
-        )
-        index_path: str = req.index_path
-        create_vector_database(sentence_embeddings, index_path)
+        txt_fps: List[str] = req.txt_paths
+        index_paths: List[str] = req.index_paths
+
+        for txt_fp, index_path in zip(txt_fps, index_paths):
+            sentences_to_embed: list[str] = parse_txt_file(txt_fp)
+            sentence_embeddings: np.ndarray = get_sentence_embeddings(
+                sentences_to_embed, self._sentence_embedding_model
+            )
+            create_vector_database(sentence_embeddings, index_path)
+
         return TxtIndexResponse()
 
 
