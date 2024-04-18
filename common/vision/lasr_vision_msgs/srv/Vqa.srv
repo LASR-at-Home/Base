@@ -1,0 +1,9 @@
+string[] possible_answers
+
+---
+
+# most likely answer
+string answer
+
+# cosine similarity
+float32 similarity

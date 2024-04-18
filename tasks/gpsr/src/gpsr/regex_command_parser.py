@@ -1,9 +1,11 @@
 import itertools
 import re
 
-from typing import List, Union, TypedDict, Dict
+from typing import List, Union, TypedDict, Dict, Any
 
 counter = 0
+sub_command_counter = 0
+seen_sub_command_group_names = []
 
 
 def uniq(i: str) -> str:
@@ -32,7 +34,7 @@ verb_dict = {
     "meet": ["meet"],
     "tell": ["tell"],
     "greet": ["greet", "salute", "say hello to", "introduce yourself to"],
-    "remember": ["meet", "contact", "get to know", "get acquainted with"],
+    # "remember": ["meet", "contact", "get to know", "get acquainted with"], <--- LOOKS UNUSED
     "count": ["tell me how many"],
     "describe": ["tell me how", "describe"],
     "offer": ["offer"],
@@ -44,7 +46,8 @@ verb_dict = {
 
 def verb(v):
     # return list_to_regex(verb_dict[v], f"verb_{v}")
-    return list_to_regex(verb_dict[v], None if len(verb_dict[v]) == 1 else "verb")
+    return list_to_regex(verb_dict[v], "verb")
+    # return list_to_regex(verb_dict[v], None if len(verb_dict[v]) == 1 else "verb")
 
 
 prep_dict = {
@@ -116,7 +119,6 @@ class Configuration(TypedDict):
                 )
             else:
                 union = union + Configuration.key_to_list(self, list)
-
         return f"(?P<{uniq(key)}>{'|'.join(union)})"
 
 
@@ -228,28 +230,84 @@ def gpsr_regex(configuration: Configuration):
         matcher = re.sub("\(\?P\<", f"(?P<CMD{key}_", matcher)
         commands.append(f"(?P<command_{key}>{matcher})")
 
-    def SUB_COMMAND_TODO_UNIMPLEMENTED():
-        return f'(?P<{uniq("subcommand")}>.*)'
+    def get_possible_sub_commands(type: str) -> str:
+        sub_commands = []
+        assertion_check = False
+        if type == "atLoc":
+            sub_commands.append(
+                f"{verb('find')} {art} {Configuration.pick(configuration, 'object', ['obj', 'singCat'])} and {get_possible_sub_commands('foundObj')}"
+            )
+            sub_commands.append(
+                f"{verb('find')} the (?:{gesture_person_list}|{pose_person_list}) and {get_possible_sub_commands('foundPers')}"
+            )
+            sub_commands.append(
+                f"{verb('meet')} {Configuration.pick(configuration, 'name', ['name'])} and {get_possible_sub_commands('foundPers')}"
+            )
+        elif type == "hasObj":
+            sub_commands.append(
+                f"{verb('place')} it {prep('onLocPrep')} the {Configuration.pick(configuration, 'location', ['plcmtLoc'])}"
+            )
+            sub_commands.append(f"{verb('deliver')} it to me")
+            sub_commands.append(
+                f"{verb('deliver')} it {prep('deliverPrep')} the (?:{gesture_person_list}|{pose_person_list}) {prep('inLocPrep')} the {Configuration.pick(configuration, 'location', ['room'])}"
+            )
+            sub_commands.append(
+                f"{verb('deliver')} it {prep('deliverPrep')} {Configuration.pick(configuration, 'name', ['name'])} {prep('inLocPrep')} the {Configuration.pick(configuration, 'location', ['room'])}"
+            )
+        elif type == "foundPers":
+            sub_commands.append(f"{verb('talk')} {talk_list}")
+            sub_commands.append(f"{verb('answer')} a {question_list}")
+            sub_commands.append(f"{verb('follow')} them")
+            sub_commands.append(
+                f"{verb('follow')} them {prep('toLocPrep')} the {Configuration.pick(configuration, 'location', ['room'])}"
+            )
+            sub_commands.append(
+                f"{verb('guide')} them {prep('toLocPrep')} the {Configuration.pick(configuration, 'location', ['room'])}"
+            )
+        elif type == "foundObj":
+            sub_commands.append(
+                f"{verb('take')} it and {get_possible_sub_commands('hasObj')}"
+            )
+            assertion_check = True
 
+        union = "|".join(sub_commands)
+        group_names = re.findall(r"\(\?P<([a-zA-Z0-9_]+)>", union)
+        global seen_sub_command_group_names
+        global sub_command_counter
+        for index, name in enumerate(group_names):
+            if name in seen_sub_command_group_names:
+                # make name unique
+                new_name = f"{name}_{sub_command_counter}"
+                seen_sub_command_group_names.append(new_name)
+                sub_command_counter += 1
+                union = re.sub(rf"\(\?P<{name}>", f"(?P<{new_name}>", union)
+            else:
+                seen_sub_command_group_names.append(name)
+
+        # groups = re.search(r"(\b[A-Z]+\b).+(\b\d+)", union)
+        return f"(?:{union})"
+        # return f"(?P<{uniq(key)}>{'|'.join(union)})"
+
+    # print(get_possible_sub_commands("atLoc"))
     command(
         "goToLoc",
-        f"{verb('go')} {prep('toLocPrep')} the {Configuration.pick(configuration, 'location', ['loc', 'room'])} then {SUB_COMMAND_TODO_UNIMPLEMENTED()}",
+        f"{verb('go')} {prep('toLocPrep')} the {Configuration.pick(configuration, 'location', ['loc', 'room'])} then {get_possible_sub_commands('atLoc')}",
     )
     command(
         "takeObjFromPlcmt",
-        f"{verb('take')} {art} {Configuration.pick(configuration, 'object', ['obj', 'singCat'])} {prep('fromLocPrep')} the {Configuration.pick(configuration, 'location', ['plcmtLoc'])} and {SUB_COMMAND_TODO_UNIMPLEMENTED()}",
+        f"{verb('take')} {art} {Configuration.pick(configuration, 'object', ['obj', 'singCat'])} {prep('fromLocPrep')} the {Configuration.pick(configuration, 'location', ['plcmtLoc'])} and {get_possible_sub_commands('hasObj')}",
     )
     command(
         "findPrsInRoom",
-        f"{verb('find')} a (?:{gesture_person_list}|{pose_person_list}) {prep('inLocPrep')} the {Configuration.pick(configuration, 'location', ['room'])} and {SUB_COMMAND_TODO_UNIMPLEMENTED()}",
+        f"{verb('find')} a (?:{gesture_person_list}|{pose_person_list}) {prep('inLocPrep')} the {Configuration.pick(configuration, 'location', ['room'])} and {get_possible_sub_commands('foundPers')}",
     )
     command(
         "findObjInRoom",
-        f"{verb('find')} {art} {Configuration.pick(configuration, 'object', ['obj', 'singCat'])} {prep('inLocPrep')} the {Configuration.pick(configuration, 'location', ['room'])} and {SUB_COMMAND_TODO_UNIMPLEMENTED()}",
+        f"{verb('find')} {art} {Configuration.pick(configuration, 'object', ['obj', 'singCat'])} {prep('inLocPrep')} the {Configuration.pick(configuration, 'location', ['room'])} then {get_possible_sub_commands('foundObj')}",
     )
     command(
         "meetPrsAtBeac",
-        f"{verb('meet')} {Configuration.pick(configuration, 'name', ['name'])} {prep('inLocPrep')} the {Configuration.pick(configuration, 'location', ['room'])} and {SUB_COMMAND_TODO_UNIMPLEMENTED()}",
+        f"{verb('meet')} {Configuration.pick(configuration, 'name', ['name'])} {prep('inLocPrep')} the {Configuration.pick(configuration, 'location', ['room'])} and {get_possible_sub_commands('foundPers')}",
     )
     command(
         "countObjOnPlcmt",
@@ -301,11 +359,11 @@ def gpsr_regex(configuration: Configuration):
     )
     command(
         "greetClothDscInRm",
-        f"{verb('greet')} the person wearing {art} {color_clothe_list} {prep('inLocPrep')} the {Configuration.pick(configuration, 'location', ['room'])} and {SUB_COMMAND_TODO_UNIMPLEMENTED()}",
+        f"{verb('greet')} the person wearing {art} {color_clothe_list} {prep('inLocPrep')} the {Configuration.pick(configuration, 'location', ['room'])} and {get_possible_sub_commands('foundPers')}",
     )
     command(
         "greetNameInRm",
-        f"{verb('greet')} {Configuration.pick(configuration, 'name', ['name'])} {prep('inLocPrep')} the {Configuration.pick(configuration, 'location', ['room'])} and {SUB_COMMAND_TODO_UNIMPLEMENTED()}",
+        f"{verb('greet')} {Configuration.pick(configuration, 'name', ['name'])} {prep('inLocPrep')} the {Configuration.pick(configuration, 'location', ['room'])} and {get_possible_sub_commands('foundPers')}",
     )
     command(
         "meetNameAtLocThenFindInRm",
@@ -326,53 +384,121 @@ def gpsr_regex(configuration: Configuration):
     return "|".join(commands)
 
 
-def gpsr_parse(matches: Dict[str, str]):
-    result = {}
+def gpsr_parse(matches: Dict[str, str]) -> Dict[str, Any]:
+    result: dict[str, Any] = {
+        "commands": [],
+        "command_params": [],
+    }
     for key in matches.keys():
         value = matches[key]
         if value is None:
             continue
-
-        write_into = result
-        key = re.sub("uniq\d+_", "", key)
-
-        while key.startswith("CMD"):
-            cmd, rest = key.split("_", 1)
-            cmd = cmd[3:]  # remove CMD prefix
-
-            if cmd not in write_into:
-                write_into[cmd] = {}
-
-            write_into = write_into[cmd]
-            key = rest
-
-        if "_" in key:
-            actual_key, value = key.split("_")
-            write_into[actual_key] = value
+        key_to_check = key.split("_")[-1]
+        while key_to_check.isnumeric():
+            key = "_".join(key.split("_")[:-1])
+            key_to_check = key.split("_")[-1]
+        if key_to_check == "verb":
+            result["commands"].append(reverse_translate_verb_dict(value))
+            result["command_params"].append({})
+        elif key_to_check in [
+            "object",
+            "location",
+            "gesture",
+            "room",
+            "name",
+            "start",
+            "end",
+            "objectcomp",
+            "clothes",
+            "talk",
+        ]:
+            value_to_add = value
+            try:
+                result["command_params"][-1][key_to_check] = value_to_add
+            except:
+                continue
         else:
-            write_into[key] = value
+            print(f"Unhandled key: {key_to_check}")
     return result
 
 
-def gpsr_compile_and_parse(config: Configuration, input: str) -> dict:
+def gpsr_compile_and_parse(config: Configuration, input: str) -> Dict:
     input = input.lower()
     # remove punctuation
     input = re.sub(r"[^\w\s]", "", input)
-    print(input)
     if input[0] == " ":
         input = input[1:]
-
+    print(f"Parsed input: {input}")
     regex_str = gpsr_regex(config)
     regex = re.compile(regex_str)
     matches = regex.match(input)
     matches = matches.groupdict()
-    return gpsr_parse(matches)
+    object_categories = (
+        config["object_categories_singular"] + config["object_categories_plural"]
+    )
+    return parse_result_dict(gpsr_parse(matches), object_categories)
+
+
+def parse_result_dict(result: Dict, object_categories: List[str]) -> Dict:
+    """Parses the result dictionary output by the gpsr parse to
+    handle missing parameters.
+
+    Args:
+        result (dict): _description_
+
+    Returns:
+        dict: _description_
+    """
+
+    for i, command in enumerate(result["commands"]):
+        if "object" in result["command_params"][i]:
+            if result["command_params"][i]["object"] in object_categories:
+                # rename object to object category
+                result["command_params"][i]["object_category"] = result[
+                    "command_params"
+                ][i]["object"]
+                del result["command_params"][i]["object"]
+        # Update command params based on the previous commands params
+        if i > 0:
+            if "location" not in result["command_params"][i]:
+                if "location" in result["command_params"][i - 1]:
+                    result["command_params"][i]["location"] = result["command_params"][
+                        i - 1
+                    ]["location"]
+            if "room" not in result["command_params"][i]:
+                if "room" in result["command_params"][i - 1]:
+                    result["command_params"][i - 1]["room"] = result["command_params"][
+                        i - 1
+                    ]["room"]
+                    del result["command_params"][i]["room"]
+            if "name" not in result["command_params"][i]:
+                if "name" in result["command_params"][i - 1]:
+                    result["command_params"][i]["name"] = result["command_params"][
+                        i - 1
+                    ]["name"]
+            if "object" not in result["command_params"][i]:
+                if "object" in result["command_params"][i - 1]:
+                    result["command_params"][i]["object"] = result["command_params"][
+                        i - 1
+                    ]["object"]
+
+    return result
+
+
+def reverse_translate_verb_dict(verb: str) -> str:
+    for master_verb, verbs in verb_dict.items():
+        if verb in verbs:
+            return master_verb
+    return verb
 
 
 if __name__ == "__main__":
+    object_categories_plural = ["sticks"]
+    object_categories_singular = ["stick"]
+    object_categories = object_categories_singular + object_categories_plural
     config: Configuration = {
         "person_names": ["guest1", "guest2"],
-        "location_names": ["sofa", "piano"],
+        "location_names": ["sofa", "piano", "kitchen table"],
         "placement_location_names": ["kitchen table"],
         "room_names": ["living room", "kitchen"],
         "object_names": ["cup", "television"],
@@ -384,9 +510,47 @@ if __name__ == "__main__":
 
     regex = re.compile(regex_str)
 
-    def execute(input: str):
+    def execute(input: str, object_categories: List[str]):
         matches = regex.match(input).groupdict()
-        return gpsr_parse(matches)
+        return parse_result_dict(gpsr_parse(matches), object_categories)
 
-    # subcommands aren't implemented but are caught:
-    print(execute("go to the sofa then do something here"))
+    print(
+        execute(
+            "go to the kitchen then meet guest1 and tell the time",
+            object_categories,
+        )
+    )
+
+    # print(
+    #     execute(
+    #         "navigate to the kitchen then find a cup and get it and bring it to the person pointing to the right in the kitchen",
+    #         object_categories,
+    #     )
+    # )
+
+    # print(
+    #     execute(
+    #         "navigate to the kitchen then find a cup and get it and bring it to me",
+    #         object_categories,
+    #     )
+    # )
+    # print(
+    #     execute(
+    #         "navigate to the kitchen table then find a stick and fetch it and deliver it to guest1 in the living room",
+    #         object_categories,
+    #     )
+    # )
+
+    # print(
+    #     execute(
+    #         "lead the person wearing a red shirt from the sofa to the living room",
+    #         object_categories,
+    #     )
+    # )
+
+    # print(
+    #     execute(
+    #         "tell me what is the biggest stick on the kitchen table",
+    #         object_categories,
+    #     )
+    # )
