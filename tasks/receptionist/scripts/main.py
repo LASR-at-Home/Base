@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import rospy
-from receptionist.sm import Receptionist
+from receptionist.state_machine import Receptionist
 
 from geometry_msgs.msg import Pose, Point, Quaternion
 from shapely.geometry import Polygon
