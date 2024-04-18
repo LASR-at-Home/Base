@@ -8,32 +8,6 @@ from gpsr.load_known_data import GPSRDataLoader
 from gpsr.regex_command_parser import Configuration, gpsr_compile_and_parse
 from lasr_skills import AskAndListen, Say
 
-ENGISH_MAPPING = {
-    "goToLoc": "Go to location",
-    "findPrsInRoom": "Find people in room",
-    "meetPrsAtBeac": "Meet person at beacon",
-    "countPrsInRoom": "Count people in room",
-    "tellPrsInfoInLoc": "Tell person information in location",
-    "talkInfoToGestPrsInRoom": "Talk information to guest in room",
-    "answerToGestPrsInRoom": "Answer to guest in room",
-    "followNameFromBeacToRoom": "Follow name from beacon to room",
-    "guideNameFromBeacToBeac": "Guide name from beacon to beacon",
-    "guidePrsFromBeacToBeac": "Guide person from beacon to beacon",
-    "guideClothPrsFromBeacToBeac": "Guide clothed person from beacon to beacon",
-    "greetClothDscInRm": "Greet clothed description in room",
-    "greetNameInRm": "Greet name in room",
-    "meetNameAtLocThenFindInRm": "Meet name at location then find in room",
-    "countClothPrsInRoom": "Count clothed people in room",
-    "tellPrsInfoAtLocToPrsAtLoc": "Tell person information at location to person at location",
-    "followPrsAtLoc": "Follow person at location",
-    "takeObjFromPlcmt": "Take object from placement",
-    "findObjInRoom": "Find object in room",
-    "countObjOnPlcmt": "Count object on placement",
-    "tellObjPropOnPlcmt": "Tell object properties on placement",
-    "bringMeObjFromPlcmt": "Bring me object from placement",
-    "tellCatPropOnPlcmt": "Tell category properties on placement",
-}
-
 
 def parse_args() -> Dict:
     parser = argparse.ArgumentParser(description="GPSR Command Parser")
@@ -58,6 +32,7 @@ class ParseCommand(smach.State):
         self.data_config = data_config
 
     def execute(self, userdata):
+        rospy.loginfo(f"Received command : {userdata.transcribed_speech.lower()}")
         try:
             userdata.command = gpsr_compile_and_parse(
                 self.data_config, userdata.transcribed_speech.lower()
@@ -77,18 +52,96 @@ class OutputParsedCommand(smach.State):
             output_keys=["command_string"],
         )
 
+    def _get_english_translation(self, command_dict: Dict) -> str:
+        translation_str = ""
+
+        for index, command in enumerate(command_dict["commands"]):
+            command_paramaters = command_dict["command_params"][index]
+            print(f"Command: {command}, parameters: {command_paramaters}")
+            if index == 0:
+                translation_str += "First, you want me to "
+            else:
+                translation_str += "Then, you want me to "
+            guide = False
+            if command == "take":
+                if "object" in command_paramaters:
+                    translation_str += f"take the {command_paramaters['object']} "
+                    if "location" in command_paramaters:
+                        translation_str += f"from the {command_paramaters['location']} "
+                    elif "person" in command_paramaters:
+                        translation_str += f"from {command_paramaters['person']} "
+                    elif "room" in command_paramaters:
+                        translation_str += f"from the {command_paramaters['room']} "
+                else:  # take corresponds to guiding
+                    guide = True
+            elif command == "place":
+                translation_str += f"place the {command_paramaters['object']} on the {command_paramaters['location']} "
+            elif command == "deliver":
+                translation_str += f"deliver the {command_paramaters['object']} "
+                if "name" in command_paramaters:
+                    translation_str += f"to {command_paramaters['name']} "
+                    translation_str += f"in the {command_paramaters['location']} "
+                elif "gesture" in command_paramaters:
+                    translation_str += (
+                        f"to the person who is {command_paramaters['gesture']} "
+                    )
+                    translation_str += f"in the {command_paramaters['location']} "
+                else:
+                    translation_str += f"to you."
+            elif command == "go":
+                translation_str += f"go to the "
+                if "location" in command_paramaters:
+                    translation_str += f"{command_paramaters['location']} "
+                elif "room" in command_paramaters:
+                    translation_str += f"{command_paramaters['room']} "
+            elif command == "find":
+                if "gesture" in command_paramaters:
+                    translation_str += (
+                        f"find the person who is {command_paramaters['gesture']} "
+                    )
+                    translation_str += f"in the {command_paramaters['location']} "
+                elif "object" in command_paramaters:
+                    translation_str += f"find the {command_paramaters['object']} "
+                    translation_str += f"in the {command_paramaters['location']} "
+            elif command == "talk":
+                pass
+            elif command == "answer":
+                pass
+            elif command == "meet":
+                translation_str += f"meet {command_paramaters['name']} "
+                if "location" in command_paramaters:
+                    translation_str += f"in the {command_paramaters['location']} "
+            elif command == "tell":
+                pass
+            elif command == "answer":
+                pass
+            elif command == "meet":
+                pass
+            elif command == "tell":
+                pass
+            elif command == "greet":
+                pass
+            elif command == "remember":
+                pass
+            elif command == "count":
+                pass
+            elif command == "describe":
+                pass
+            elif command == "offer":
+                pass
+            elif command == "follow":
+                pass
+            elif command == "accompany":
+                pass
+            if command == "guide" or guide:
+                pass
+
+        return translation_str
+
     def execute(self, userdata):
         try:
-            command = userdata.command
-            english_command = ENGISH_MAPPING[command["command"]]
-            command_parameters = command[command["command"]]
-            rospy.loginfo(f"Command: {english_command}")
-            rospy.loginfo(f"Parameters: {command_parameters}")
-            tts_phrase = f"I parsed the command as you want me to: {english_command}, with the following parameters:"
-            for key, value in command_parameters.items():
-                if isinstance(value, list):
-                    value = " and ".join(value)
-                tts_phrase += f" {key}: {value},"
+            command: Dict = userdata.command
+            tts_phrase = self._get_english_translation(command)
         except Exception as e:
             rospy.logerr(e)
             return "failed"
