@@ -1,16 +1,13 @@
-#!/usr/bin/env python3
-
 import smach
+import rospy
+
+from lasr_skills import Detect3D, GoToLocation, AskAndListen
+import navigation_helpers
 
 from geometry_msgs.msg import Pose, PoseWithCovarianceStamped
 
+
 from typing import List
-
-from lasr_skills import Detect3D, GoToLocation, AskAndListen
-
-import navigation_helpers
-
-import rospy
 
 
 class FindNamedPerson(smach.StateMachine):
@@ -177,24 +174,3 @@ class FindNamedPerson(smach.StateMachine):
                 waypoint_iterator,
                 {"succeeded": "succeeded", "failed": "failed"},
             )
-
-
-if __name__ == "__main__":
-    import rospy
-    from geometry_msgs.msg import Pose, Point, Quaternion
-
-    rospy.init_node("find_person")
-
-    waypoint_1 = Pose(
-        position=Point(3.8245355618457264, 5.595770760841352, 0.0),
-        orientation=Quaternion(0.0, 0.0, 0.5435425452381222, 0.839381618524056),
-    )
-
-    waypoint_2 = Pose(
-        position=Point(3.164070035864635, 4.948389303521395, 0.0),
-        orientation=Quaternion(0.0, 0.0, -0.9943331707955987, 0.10630872709035108),
-    )
-
-    sm = FindNamedPerson([waypoint_1, waypoint_2], "jared")
-    sm.execute()
-    rospy.spin()
