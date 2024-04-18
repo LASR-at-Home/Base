@@ -15,6 +15,19 @@ import rospy
 
 class FindNamedPerson(smach.StateMachine):
 
+    class GetLocation(smach.State):
+        def __init__(self):
+            smach.State.__init__(
+                self,
+                outcomes=["succeeded", "failed"],
+                input_keys=["location_index", "waypoints"],
+                output_keys=["location"],
+            )
+
+        def execute(self, userdata):
+            userdata.location = userdata.waypoints[userdata.location_index]
+            return "succeeded"
+
     class GetPose(smach.State):
         def __init__(self):
             smach.State.__init__(
@@ -57,6 +70,7 @@ class FindNamedPerson(smach.StateMachine):
         def execute(self, userdata):
             if len(userdata.detections_3d.detected_objects) == 0:
                 return "failed"
+            userdata.person_point = userdata.detections_3d.detected_objects[0].point
             return "succeeded"
 
     class HandleResponse(smach.State):
@@ -75,7 +89,7 @@ class FindNamedPerson(smach.StateMachine):
 
     def __init__(self, waypoints: List[Pose], name: str):
         smach.StateMachine.__init__(
-            self, outcomes=["succeeded", "failed"], input_keys=["person_point"]
+            self, outcomes=["succeeded", "failed"], output_keys=["person_point"]
         )
 
         with self:
@@ -94,9 +108,9 @@ class FindNamedPerson(smach.StateMachine):
 
             waypoint_iterator = smach.Iterator(
                 outcomes=["succeeded", "failed"],
-                it=self.userdata.waypoints,
-                it_label="location",
-                input_keys=[],
+                it=lambda: range(len(waypoints)),
+                it_label="location_index",
+                input_keys=["waypoints"],
                 output_keys=["person_point"],
                 exhausted_outcome="failed",
             )
@@ -105,11 +119,17 @@ class FindNamedPerson(smach.StateMachine):
 
                 container_sm = smach.StateMachine(
                     outcomes=["succeeded", "failed", "continue"],
-                    input_keys=["location"],
+                    input_keys=["location_index", "waypoints"],
                     output_keys=["person_point"],
                 )
 
                 with container_sm:
+
+                    smach.StateMachine.add(
+                        "GET_LOCATION",
+                        self.GetLocation(),
+                        transitions={"succeeded": "GO_TO_LOCATION", "failed": "failed"},
+                    )
 
                     smach.StateMachine.add(
                         "GO_TO_LOCATION",
@@ -157,3 +177,24 @@ class FindNamedPerson(smach.StateMachine):
                 waypoint_iterator,
                 {"succeeded": "succeeded", "failed": "failed"},
             )
+
+
+if __name__ == "__main__":
+    import rospy
+    from geometry_msgs.msg import Pose, Point, Quaternion
+
+    rospy.init_node("find_person")
+
+    waypoint_1 = Pose(
+        position=Point(3.8245355618457264, 5.595770760841352, 0.0),
+        orientation=Quaternion(0.0, 0.0, 0.5435425452381222, 0.839381618524056),
+    )
+
+    waypoint_2 = Pose(
+        position=Point(3.164070035864635, 4.948389303521395, 0.0),
+        orientation=Quaternion(0.0, 0.0, -0.9943331707955987, 0.10630872709035108),
+    )
+
+    sm = FindNamedPerson([waypoint_1, waypoint_2], "jared")
+    sm.execute()
+    rospy.spin()

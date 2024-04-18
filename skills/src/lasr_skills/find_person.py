@@ -15,6 +15,19 @@ import rospy
 
 class FindPerson(smach.StateMachine):
 
+    class GetLocation(smach.State):
+        def __init__(self):
+            smach.State.__init__(
+                self,
+                outcomes=["succeeded", "failed"],
+                input_keys=["location_index", "waypoints"],
+                output_keys=["location"],
+            )
+
+        def execute(self, userdata):
+            userdata.location = userdata.waypoints[userdata.location_index]
+            return "succeeded"
+
     class GetPose(smach.State):
         def __init__(self):
             smach.State.__init__(
@@ -57,11 +70,12 @@ class FindPerson(smach.StateMachine):
         def execute(self, userdata):
             if len(userdata.detections_3d.detected_objects) == 0:
                 return "failed"
+            userdata.person_point = userdata.detections_3d.detected_objects[0].point
             return "succeeded"
 
     def __init__(self, waypoints: List[Pose]):
         smach.StateMachine.__init__(
-            self, outcomes=["succeeded", "failed"], input_keys=["person_point"]
+            self, outcomes=["succeeded", "failed"], output_keys=["person_point"]
         )
 
         with self:
@@ -80,9 +94,9 @@ class FindPerson(smach.StateMachine):
 
             waypoint_iterator = smach.Iterator(
                 outcomes=["succeeded", "failed"],
-                it=self.userdata.waypoints,
-                it_label="location",
-                input_keys=[],
+                it=lambda: range(len(waypoints)),
+                it_label="location_index",
+                input_keys=["waypoints"],
                 output_keys=["person_point"],
                 exhausted_outcome="failed",
             )
@@ -91,11 +105,17 @@ class FindPerson(smach.StateMachine):
 
                 container_sm = smach.StateMachine(
                     outcomes=["succeeded", "failed", "continue"],
-                    input_keys=["location"],
+                    input_keys=["location_index", "waypoints"],
                     output_keys=["person_point"],
                 )
 
                 with container_sm:
+
+                    smach.StateMachine.add(
+                        "GET_LOCATION",
+                        self.GetLocation(),
+                        transitions={"succeeded": "GO_TO_LOCATION", "failed": "failed"},
+                    )
 
                     smach.StateMachine.add(
                         "GO_TO_LOCATION",
