@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import smach
 
 from typing import List
@@ -147,16 +146,3 @@ class SeatGuest(smach.StateMachine):
                     "preempted": "failed",
                 },
             )
-
-
-if __name__ == "__main__":
-    import rospy
-
-    rospy.init_node("test_find_empty_seat")
-    sm = SeatGuest(
-        seat_area=Polygon([[-0.39, 0.87], [-0.74, 2.18], [1.26, 2.64], [1.54, 1.26]]),
-    )
-    # TODO: stop doing this
-    sm.userdata.people_detections = []
-    sm.userdata.seat_detections = []
-    sm.execute()
