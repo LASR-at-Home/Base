@@ -2,7 +2,7 @@
 import rospy
 from typing import List
 from lasr_vision_clip.clip_utils import load_model, query_image_stream
-from lasr_vision_clip.srv import VqaRequest, VqaResponse, Vqa
+from lasr_vision_msgs.srv import VqaRequest, VqaResponse, Vqa
 from sensor_msgs.msg import Image
 
 
