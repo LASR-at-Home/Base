@@ -185,13 +185,3 @@ def detect(
             )
 
     return response
-
-if __name__ =="__main__":
-    cv_im = cv2.imread("/home/rexy/Documents/robotclub/robocup_ws/src/base_zoe_fork/common/vision/lasr_vision_deepface/datasets/Jane/Jane_2.png")
-    DeepFace.find(
-    cv_im,
-    os.path.join(DATASET_ROOT, "."),
-    enforce_detection=False,
-    silent=True,
-    detector_backend="mtcnn",
-)

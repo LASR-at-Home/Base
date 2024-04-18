@@ -1,0 +1,9 @@
+<launch>
+
+    <include file="$(find aruco_service)/launch/singleTiago.launch" />
+    <node name="cuboid_service" pkg="aruco_service" type="GenerateTableCuboid.py" output="screen" />
+    <node name="publisher_service" pkg="aruco_service" type="publish_points_of_table.py" output="screen" />
+    <node name="navigation_points_service" pkg="aruco_service" type="save_navigation_points.py" output="screen" />
+    <node type="rviz" name="rviz" pkg="rviz" args="-d $(find aruco_service)/service_debug.rviz" />
+
+</launch>

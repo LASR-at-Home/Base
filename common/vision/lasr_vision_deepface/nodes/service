@@ -2,8 +2,7 @@
 
 import re
 import rospy
-#import lasr_vision_deepface as face_recognition
-import lasr_vision_deepface.deepface as face_recognition
+import lasr_vision_deepface as face_recognition
 from sensor_msgs.msg import Image
 from lasr_vision_msgs.srv import (
     Recognise,
