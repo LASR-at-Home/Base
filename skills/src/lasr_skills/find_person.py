@@ -1,20 +1,49 @@
 #!/usr/bin/env python3
 
 import smach
-from smach_ros import SimpleActionState
 
-from geometry_msgs.msg import Pose, PoseStamped, PoseWithCovarianceStamped
-from std_msgs.msg import Header
+from geometry_msgs.msg import Pose, PoseWithCovarianceStamped
 
 from typing import List
 
-from lasr_skills import Detect3D, LookToPoint, GoToPerson, GoToLocation
-
+from lasr_skills import Detect3D, GoToLocation
 
 import navigation_helpers
 
+import rospy
+
 
 class FindPerson(smach.StateMachine):
+
+    class GetPose(smach.State):
+        def __init__(self):
+            smach.State.__init__(
+                self,
+                outcomes=["succeeded", "failed"],
+                output_keys=["current_pose"],
+            )
+
+        def execute(self, userdata):
+            userdata.current_pose = rospy.wait_for_message(
+                "/amcl_pose", PoseWithCovarianceStamped
+            ).pose.pose
+            return "succeeded"
+
+    class ComputePath(smach.State):
+        def __init__(self, waypoints: List[Pose]):
+            smach.State.__init__(
+                self,
+                outcomes=["succeeded", "failed"],
+                input_keys=["current_pose"],
+                output_keys=["waypoints"],
+            )
+            self._waypoints = waypoints
+
+        def execute(self, userdata):
+            userdata.waypoints = navigation_helpers.min_hamiltonian_path(
+                userdata.current_pose, self._waypoints
+            )
+            return "succeeded"
 
     class HandleDetections(smach.State):
         def __init__(self):
@@ -22,35 +51,39 @@ class FindPerson(smach.StateMachine):
                 self,
                 outcomes=["succeeded", "failed"],
                 input_keys=["detections_3d"],
-                output_keys=["person_point", "person_max_point"],
+                output_keys=["person_point"],
             )
 
         def execute(self, userdata):
             if len(userdata.detections_3d.detected_objects) == 0:
                 return "failed"
-
-            userdata.person_point = userdata.detections_3d.detected_objects[0].point
-            userdata.person_max_point = userdata.detections_3d.detected_objects[
-                0
-            ].max_point
             return "succeeded"
 
     def __init__(self, waypoints: List[Pose]):
-        smach.StateMachine.__init__(self, outcomes=["succeeded", "failed"])
-        current_point = rospy.wait_for_message(
-            "/amcl_pose", PoseWithCovarianceStamped
-        ).pose.pose
-        self.waypoints = navigation_helpers.min_hamiltonian_path(
-            current_point, waypoints
+        smach.StateMachine.__init__(
+            self, outcomes=["succeeded", "failed"], input_keys=["person_point"]
         )
 
         with self:
+
+            smach.StateMachine.add(
+                "GET_POSE",
+                self.GetPose(),
+                transitions={"succeeded": "COMPUTE_PATH", "failed": "failed"},
+            )
+
+            smach.StateMachine.add(
+                "COMPUTE_PATH",
+                self.ComputePath(waypoints),
+                transitions={"succeeded": "WAYPOINT_ITERATOR", "failed": "failed"},
+            )
+
             waypoint_iterator = smach.Iterator(
                 outcomes=["succeeded", "failed"],
-                it=self.waypoints,
+                it=self.userdata.waypoints,
                 it_label="location",
                 input_keys=[],
-                output_keys=[],
+                output_keys=["person_point"],
                 exhausted_outcome="failed",
             )
 
@@ -59,6 +92,7 @@ class FindPerson(smach.StateMachine):
                 container_sm = smach.StateMachine(
                     outcomes=["succeeded", "failed", "continue"],
                     input_keys=["location"],
+                    output_keys=["person_point"],
                 )
 
                 with container_sm:
@@ -68,8 +102,7 @@ class FindPerson(smach.StateMachine):
                         GoToLocation(),
                         transitions={
                             "succeeded": "DETECT3D",
-                            "preempted": "continue",
-                            "aborted": "continue",
+                            "failed": "failed",
                         },
                     )
                     smach.StateMachine.add(
@@ -84,26 +117,8 @@ class FindPerson(smach.StateMachine):
                         "HANDLE_DETECTIONS",
                         self.HandleDetections(),
                         transitions={
-                            "succeeded": "GO_TO_PERSON",
-                            "failed": "continue",
-                        },
-                    )
-                    smach.StateMachine.add(
-                        "GO_TO_PERSON",
-                        GoToPerson(),
-                        transitions={"succeeded": "LOOK_AT_PERSON", "failed": "failed"},
-                        remapping={"point": "person_point"},
-                    )
-                    smach.StateMachine.add(
-                        "LOOK_AT_PERSON",
-                        LookToPoint(),
-                        transitions={
                             "succeeded": "succeeded",
-                            "aborted": "failed",
-                            "preempted": "failed",
-                        },
-                        remapping={
-                            "point": "person_max_point",
+                            "failed": "continue",
                         },
                     )
 
@@ -119,35 +134,20 @@ class FindPerson(smach.StateMachine):
 
 if __name__ == "__main__":
     import rospy
-    from smach_ros import IntrospectionServer
     from geometry_msgs.msg import Pose, Point, Quaternion
 
     rospy.init_node("find_person")
 
-    sm = FindPerson(
-        [
-            Pose(
-                position=Point(1.446509335239015, -2.2460076897430974, 0.0),
-                orientation=Quaternion(
-                    0.0, 0.0, -0.6459923698644408, 0.763343866207703
-                ),
-            ),
-            Pose(
-                position=Point(-2.196456229125565, -0.27387058028873024, 0.0),
-                orientation=Quaternion(
-                    0.0, 0.0, 0.9778384065708362, 0.20936105329073992
-                ),
-            ),
-            Pose(
-                position=Point(-0.8129574905602319, -5.8536586556997445, 0.0),
-                orientation=Quaternion(
-                    0.0, 0.0, -0.9982013547068731, 0.05995044171116081
-                ),
-            ),
-        ]
+    waypoint_1 = Pose(
+        position=Point(3.8245355618457264, 5.595770760841352, 0.0),
+        orientation=Quaternion(0.0, 0.0, 0.5435425452381222, 0.839381618524056),
     )
-    sis = IntrospectionServer("find_person", sm, "/FIND_PERSON")
-    sis.start()
+
+    waypoint_2 = Pose(
+        position=Point(3.164070035864635, 4.948389303521395, 0.0),
+        orientation=Quaternion(0.0, 0.0, -0.9943331707955987, 0.10630872709035108),
+    )
+
+    sm = FindPerson([waypoint_1, waypoint_2])
     sm.execute()
     rospy.spin()
-    sis.stop()
