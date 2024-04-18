@@ -1,3 +1,0 @@
-sensor_msgs/Image image_raw
----
-lasr_vision_msgs/Detection[] detected_objects

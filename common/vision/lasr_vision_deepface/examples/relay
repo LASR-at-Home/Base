@@ -28,7 +28,7 @@ def detect(image):
         req = RecogniseRequest()
         req.image_raw = image
         req.dataset = dataset
-        req.confidence = 0.7
+        req.confidence = 0.4
         resp = detect_service(req)
         print(resp)
     except rospy.ServiceException as e:

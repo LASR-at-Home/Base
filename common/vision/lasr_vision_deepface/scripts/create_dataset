@@ -19,27 +19,7 @@ else:
     size = 50
 
 import rospy
-import rospkg
-from sensor_msgs.msg import Image
-import os
-import cv2_img
-import cv2
-
-DATASET_ROOT = os.path.join(
-    rospkg.RosPack().get_path("lasr_vision_deepface"), "datasets"
-)
-DATASET_PATH = os.path.join(DATASET_ROOT, dataset, name)
-if not os.path.exists(DATASET_PATH):
-    os.makedirs(DATASET_PATH)
 
 rospy.init_node("create_dataset")
-rospy.loginfo(f"Taking {size} pictures of {name} and saving to {DATASET_PATH}")
 
-for i in range(size):
-    img_msg = rospy.wait_for_message(topic, Image)
-    cv_im = cv2_img.msg_to_cv2_img(img_msg)
-    face_cropped_cv_im = face_recognition.detect_face(cv_im)
-    if face_cropped_cv_im is None:
-        continue
-    cv2.imwrite(os.path.join(DATASET_PATH, f"{name}_{i+1}.png"), face_cropped_cv_im)
-    rospy.loginfo(f"Took picture {i+1}")
+face_recognition.create_dataset(topic, dataset, name, size)
