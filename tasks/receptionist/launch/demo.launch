@@ -1,5 +1,0 @@
-<launch>
-<!--     TASK  -->
-   <node name="" pkg="receptionist" type="main.py" output="screen" required="true"/>
-</launch>
-
