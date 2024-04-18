@@ -15,4 +15,5 @@ string target_frame
 # This will be empty if a segmentation model was not used
 int32[] xyseg
 
+# Point in map frame
 geometry_msgs/Point point
