@@ -34,7 +34,7 @@ verb_dict = {
     "meet": ["meet"],
     "tell": ["tell"],
     "greet": ["greet", "salute", "say hello to", "introduce yourself to"],
-    "remember": ["meet", "contact", "get to know", "get acquainted with"],
+    # "remember": ["meet", "contact", "get to know", "get acquainted with"], <--- LOOKS UNUSED
     "count": ["tell me how many"],
     "describe": ["tell me how", "describe"],
     "offer": ["offer"],
@@ -410,6 +410,7 @@ def gpsr_parse(matches: Dict[str, str]) -> Dict[str, Any]:
             "end",
             "objectcomp",
             "clothes",
+            "talk",
         ]:
             value_to_add = value
             try:
@@ -515,41 +516,41 @@ if __name__ == "__main__":
 
     print(
         execute(
-            "locate a cup in the kitchen then fetch it and bring it to the person raising their right arm in the living room",
+            "go to the kitchen then meet guest1 and tell the time",
             object_categories,
         )
     )
 
-    print(
-        execute(
-            "navigate to the kitchen then find a cup and get it and bring it to the person pointing to the right in the kitchen",
-            object_categories,
-        )
-    )
+    # print(
+    #     execute(
+    #         "navigate to the kitchen then find a cup and get it and bring it to the person pointing to the right in the kitchen",
+    #         object_categories,
+    #     )
+    # )
 
-    print(
-        execute(
-            "navigate to the kitchen then find a cup and get it and bring it to me",
-            object_categories,
-        )
-    )
-    print(
-        execute(
-            "navigate to the kitchen table then find a stick and fetch it and deliver it to guest1 in the living room",
-            object_categories,
-        )
-    )
+    # print(
+    #     execute(
+    #         "navigate to the kitchen then find a cup and get it and bring it to me",
+    #         object_categories,
+    #     )
+    # )
+    # print(
+    #     execute(
+    #         "navigate to the kitchen table then find a stick and fetch it and deliver it to guest1 in the living room",
+    #         object_categories,
+    #     )
+    # )
 
-    print(
-        execute(
-            "lead the person wearing a red shirt from the sofa to the living room",
-            object_categories,
-        )
-    )
+    # print(
+    #     execute(
+    #         "lead the person wearing a red shirt from the sofa to the living room",
+    #         object_categories,
+    #     )
+    # )
 
-    print(
-        execute(
-            "tell me what is the biggest stick on the kitchen table",
-            object_categories,
-        )
-    )
+    # print(
+    #     execute(
+    #         "tell me what is the biggest stick on the kitchen table",
+    #         object_categories,
+    #     )
+    # )
