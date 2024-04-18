@@ -66,6 +66,7 @@ class FindNamedPerson(smach.StateMachine):
 
         def execute(self, userdata):
             if len(userdata.detections_3d.detected_objects) == 0:
+                rospy.logwarn("No person detected, returning failed.")
                 return "failed"
             userdata.person_point = userdata.detections_3d.detected_objects[0].point
             return "succeeded"
