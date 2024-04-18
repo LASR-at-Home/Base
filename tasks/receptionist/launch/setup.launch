@@ -24,7 +24,7 @@
 
     <arg name="whisper_matcher" default="by-index" />
    <!-- <arg name="whisper_device_param" default="9" />-->
-    <arg name="whisper_device_param" default="13" />
+    <arg name="whisper_device_param" default="9" />
 
     <arg name="rasa_model" default="$(find lasr_rasa)/assistants/receptionist/models"/>
 
@@ -56,7 +56,7 @@
 
     <!--      PERCEPTION     -->
     <node pkg="lasr_vision_yolov8" type="service" name="yolo_service" output="screen"/>
-    <node pkg="lasr_vision_torch" type="service" name="torch_service" output="screen"/>
+    <node pkg="lasr_vision_feature_extraction" type="service" name="torch_service" output="screen"/>
     <node pkg="lasr_vision_bodypix" type="service" name="bodypix_service" output="screen"/>
 
 
