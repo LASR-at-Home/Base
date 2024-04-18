@@ -1,6 +1,4 @@
-#!/usr/bin/env python3
 import smach
-import rospy
 
 from geometry_msgs.msg import Pose
 from shapely.geometry import Polygon
