@@ -146,27 +146,11 @@ def detect_3d(
                 width=request.pcl.width,
             )
             detection.point = Point(*centroid)
-            min_max = cv2_pcl.seg_to_minmax_z(
-                pcl_map,
-                np.array(detection.xyseg),
-                height=request.pcl.height,
-                width=request.pcl.width,
-            )
-            detection.min_point = Point(*min_max[0])
-            detection.max_point = Point(*min_max[1])
 
         if debug_point_publisher is not None:
             markers.create_and_publish_marker(
                 debug_point_publisher,
                 PointStamped(point=detection.point, header=pcl_map.header),
-            )
-            markers.create_and_publish_marker(
-                debug_point_publisher,
-                PointStamped(point=detection.min_point, header=pcl_map.header),
-            )
-            markers.create_and_publish_marker(
-                debug_point_publisher,
-                PointStamped(point=detection.max_point, header=pcl_map.header),
             )
 
         detected_objects.append(detection)
