@@ -50,6 +50,8 @@ class TxtQueryService:
                     best_distances, best_matches = zip(
                         *sorted(zip(best_distances, best_matches))
                     )
+                    best_distances = list(best_distances)
+                    best_matches = list(best_matches)
                     best_distances.sort()
 
         return TxtQueryResponse(

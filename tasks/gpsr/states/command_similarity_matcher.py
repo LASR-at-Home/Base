@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import smach
 import rospy
 import rospkg
@@ -9,7 +10,7 @@ class CommandSimilarityMatcher(smach.State):
     def __init__(self):
         smach.State.__init__(
             self,
-            outcomes=["success"],
+            outcomes=["succeeded", "failed"],
             input_keys=["command"],
             output_keys=["matched_command"],
         )
@@ -19,7 +20,7 @@ class CommandSimilarityMatcher(smach.State):
             rospkg.RosPack().get_path("gpsr"), "data", "command_data"
         )
         self._index_directory = os.path.join(
-            rospkg.RosPack().get_path("gpsr"), "data", "index_data"
+            rospkg.RosPack().get_path("gpsr"), "data", "faiss_indices"
         )
         self._text_paths = [
             os.path.join(self._text_directory, f"all_gpsr_commands_chunk_{i+1}.txt")
@@ -38,4 +39,37 @@ class CommandSimilarityMatcher(smach.State):
         request.k = 1
         response = self._query_service(request)
         userdata.matched_command = response.closest_sentences[0]
-        return "success"
+        return "succeeded"
+
+
+if __name__ == "__main__":
+    rospy.init_node("command_similarity_matcher")
+    from lasr_skills import AskAndListen, Say
+
+    sm = smach.StateMachine(outcomes=["succeeded", "failed"])
+    with sm:
+        sm.userdata.tts_phrase = "Please tell me your command."
+        smach.StateMachine.add(
+            "ASK_FOR_COMMAND",
+            AskAndListen(),
+            transitions={"succeeded": "COMMAND_SIMILARITY_MATCHER", "failed": "failed"},
+            remapping={"transcribed_speech": "command"},
+        )
+        smach.StateMachine.add(
+            "COMMAND_SIMILARITY_MATCHER",
+            CommandSimilarityMatcher(),
+            transitions={"succeeded": "SAY_MATCHED_COMMAND"},
+        )
+        smach.StateMachine.add(
+            "SAY_MATCHED_COMMAND",
+            Say(),
+            transitions={
+                "succeeded": "ASK_FOR_COMMAND",
+                "aborted": "failed",
+                "preempted": "failed",
+            },
+            remapping={"text": "matched_command"},
+        )
+
+    sm.execute()
+    rospy.spin()
