@@ -31,5 +31,4 @@ class PclMsgToCv2(smach.State):
         userdata.img = cv2_img.pcl_msg_to_cv2(userdata.img_msg_3d)
         userdata.xyz = cv2_img.pcl_msg_to_xyz(userdata.img_msg_3d)
         rospy.logwarn('succeeded on image converge.')
-        # print('succeeded on image converge.')
         return 'succeeded'

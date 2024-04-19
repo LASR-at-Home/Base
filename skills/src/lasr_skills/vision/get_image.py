@@ -2,8 +2,6 @@ import os
 import smach
 import rospy
 from sensor_msgs.msg import Image, PointCloud2
-# PointCloud2
-# topic: /xtion/depth_registered/points
 
 class GetImage(smach.State):
     """
