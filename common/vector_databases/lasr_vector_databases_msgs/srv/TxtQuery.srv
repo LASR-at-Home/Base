@@ -10,6 +10,10 @@ string query_sentence
 # Number of nearest sentences to return
 uint8 k
 
+# Number of vectors per txt file -- used to speed
+# up lookup.
+int32[] vecs_per_txt_file
+
 ---
 # Nearest sentence
 string[] closest_sentences

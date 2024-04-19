@@ -30,29 +30,60 @@ class TxtQueryService:
         txt_fps: List[str] = req.txt_paths
         index_paths: List[str] = req.index_paths
         query_sentence: str = req.query_sentence
+        vecs_per_txt_file: List[int] = req.vecs_per_txt_file
 
-        best_distances: list[float] = [inf] * req.k
-        best_matches: list[str] = [""] * req.k
-
-        for txt_fp, index_path in zip(txt_fps, index_paths):
-            possible_matches: list[str] = parse_txt_file(txt_fp)
-            query_embedding: np.ndarray = get_sentence_embeddings(
-                [query_sentence],
-                self._sentence_embedding_model,  # requires list of strings
+        if len(index_paths) == 1 and len(txt_fps) > 1:
+            distances, indices = query_database(
+                index_paths[0],
+                get_sentence_embeddings(
+                    [query_sentence],
+                    self._sentence_embedding_model,  # requires list of strings
+                ),
+                k=req.k,
             )
-            distances, indices = query_database(index_path, query_embedding, k=req.k)
-            current_nearest_matches = [possible_matches[i] for i in indices[0]]
+            closest_sentences: List[str] = []
+            for i, index in enumerate(indices[0]):
+                for j, n_vecs in enumerate(vecs_per_txt_file):
+                    if index < n_vecs:
+                        break
+                    index -= n_vecs
+                closest_sentences.append(parse_txt_file(txt_fps[j])[index])
 
-            for i, match in enumerate(current_nearest_matches):
-                if distances[0][i] < best_distances[-1]:
-                    best_distances[-1] = distances[0][i]
-                    best_matches[-1] = match
-                    best_distances, best_matches = zip(
-                        *sorted(zip(best_distances, best_matches))
-                    )
-                    best_distances = list(best_distances)
-                    best_matches = list(best_matches)
-                    best_distances.sort()
+            return TxtQueryResponse(
+                closest_sentences=closest_sentences,
+                cosine_similarities=distances[0],
+            )
+
+        elif len(index_paths) != len(txt_fps):
+            rospy.logerr(
+                "Number of txt files and index files must be equal or index files must be 1"
+            )
+            return TxtQueryResponse()
+
+        else:
+            best_distances: list[float] = [inf] * req.k
+            best_matches: list[str] = [""] * req.k
+            for txt_fp, index_path in zip(txt_fps, index_paths):
+                possible_matches: list[str] = parse_txt_file(txt_fp)
+                query_embedding: np.ndarray = get_sentence_embeddings(
+                    [query_sentence],
+                    self._sentence_embedding_model,  # requires list of strings
+                )
+                distances, indices = query_database(
+                    index_path, query_embedding, k=req.k
+                )
+                current_nearest_matches = [possible_matches[i] for i in indices[0]]
+
+                for i, match in enumerate(current_nearest_matches):
+                    if distances[0][i] < best_distances[-1]:
+                        best_distances[-1] = distances[0][i]
+                        best_matches[-1] = match
+                        best_distances, best_matches = zip(
+                            *sorted(zip(best_distances, best_matches))
+                        )
+                        best_distances = list(best_distances)
+                        best_matches = list(best_matches)
+                        best_distances.sort()
 
         return TxtQueryResponse(
             closest_sentences=best_matches,

@@ -10,7 +10,7 @@ from lasr_vector_databases_faiss import (
     add_vectors_to_index,
     save_index_to_disk,
 )
-from typing import List, Dict
+from typing import List
 
 
 class TxtIndexService:
