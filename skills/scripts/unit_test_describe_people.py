@@ -14,7 +14,6 @@ if __name__ == "__main__":
         sm.add('DESCRIBE', DescribePeople(), transitions={
                'succeeded': 'end', 'failed': 'end'})
 
-    # while True:
     sm.execute()
 
     print('\n\nDetected people:', sm.userdata['people'])

@@ -28,7 +28,7 @@ class DescribePeople(smach.StateMachine):
                                        default_outcome='failed',
                                        outcome_map={'succeeded': {
                                            'SEGMENT_YOLO': 'succeeded', 'SEGMENT_BODYPIX': 'succeeded'}},
-                                       input_keys=['img', 'img_msg_2d', 'img_msg_3d', 'xyz'],
+                                       input_keys=['img', 'img_msg',],
                                        output_keys=['people_detections', 'bodypix_masks'])
 
             with sm_con:
@@ -49,13 +49,13 @@ class DescribePeople(smach.StateMachine):
 
         def __init__(self):
             smach.State.__init__(self, outcomes=['succeeded', 'failed'], input_keys=[
-                                 'img_msg_2d'], output_keys=['people_detections'])
+                                 'img_msg'], output_keys=['people_detections'])
             self.yolo = rospy.ServiceProxy('/yolov8/detect', YoloDetection)
 
         def execute(self, userdata):
             try:
                 result = self.yolo(
-                    userdata.img_msg_2d, "yolov8n-seg.pt", 0.5, 0.3)
+                    userdata.img_msg, "yolov8n-seg.pt", 0.5, 0.3)
                 userdata.people_detections = [
                     det for det in result.detected_objects if det.name == "person"]
                 return 'succeeded'
@@ -72,7 +72,7 @@ class DescribePeople(smach.StateMachine):
 
         def __init__(self):
             smach.State.__init__(self, outcomes=['succeeded', 'failed'], input_keys=[
-                                 'img_msg_2d', 'xyz'], output_keys=['bodypix_masks'])
+                                 'img_msg',], output_keys=['bodypix_masks'])
             self.bodypix = rospy.ServiceProxy(
                 '/bodypix/detect', BodyPixDetection)
 
@@ -80,13 +80,10 @@ class DescribePeople(smach.StateMachine):
             try:
                 torso = BodyPixMaskRequest()
                 torso.parts = ["torso_front", "torso_back"]
-
                 head = BodyPixMaskRequest()
                 head.parts = ["left_face", "right_face"]
-
                 masks = [torso, head]
-
-                result = self.bodypix(userdata.img_msg_2d, "resnet50", 0.7, masks)
+                result = self.bodypix(userdata.img_msg, "resnet50", 0.7, masks)
                 userdata.bodypix_masks = result.masks
                 rospy.loginfo("Found poses: %s" % str(len(result.poses)))
                 try:
@@ -126,7 +123,6 @@ class DescribePeople(smach.StateMachine):
             height, width, _ = img.shape
 
             people = []
-
             for person in userdata.people_detections:
                 rospy.logdebug(
                     f"\n\nFound person with confidence {person.confidence}!")
