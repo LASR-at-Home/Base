@@ -50,8 +50,6 @@ add_message_files(
   BodyPixPose.msg
   BodyPixMask.msg
   BodyPixMaskRequest.msg
-  ColourPrediction.msg
-  FeatureWithColour.msg
 )
 
 ## Generate services in the 'srv' folder
