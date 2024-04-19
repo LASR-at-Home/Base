@@ -25,7 +25,14 @@ class TxtIndexService:
         index_paths: List[str] = req.index_paths
         factory_string: str = req.index_factory_string
         vecs_per_txt_file: List[int] = []
+        n_train_vecs = 5000000
         if len(index_paths) == 1 and len(txt_fps) > 1:
+            xn = np.memmap(
+                f"/tmp/xn.dat",
+                dtype="float32",
+                mode="w+",
+                shape=(11779430, 384),
+            )
             for i, txt_fp in enumerate(txt_fps):
                 sentences_to_embed: List[str] = parse_txt_file(txt_fp)
                 sentence_embeddings: np.ndarray = get_sentence_embeddings(
@@ -33,10 +40,25 @@ class TxtIndexService:
                 )
                 if i == 0:
                     index = construct_faiss_index(
-                        sentence_embeddings, factory_string=factory_string
+                        index_factory_string=factory_string,
+                        vector_dim=sentence_embeddings.shape[1],
                     )
-                add_vectors_to_index(index, sentence_embeddings, add_with_ids=True)
+                    xt = np.empty(
+                        (n_train_vecs, sentence_embeddings.shape[1]), dtype=np.float32
+                    )
+                sentences_for_training = sentence_embeddings[:100000]
+                xt[i * 100000 : (i + 1) * 100000] = sentences_for_training
+                xn[
+                    i
+                    * sentence_embeddings.shape[0] : (i + 1)
+                    * sentence_embeddings.shape[0],
+                ] = sentence_embeddings
                 vecs_per_txt_file.append(sentence_embeddings.shape[0])
+            rospy.loginfo("Training index")
+            index.train(xt)
+            rospy.loginfo("Adding vectors to index")
+            add_vectors_to_index(index, xn)
+            rospy.loginfo("Saving index to disk")
             save_index_to_disk(index, index_paths[0])
 
         elif len(index_paths) != len(txt_fps):
@@ -52,7 +74,8 @@ class TxtIndexService:
                     sentences_to_embed, self._sentence_embedding_model
                 )
                 index = construct_faiss_index(
-                    sentence_embeddings, factory_string=factory_string
+                    index_factory_string=factory_string,
+                    vector_dim=sentence_embeddings.shape[1],
                 )
                 add_vectors_to_index(index, sentence_embeddings)
                 save_index_to_disk(index, index_path)
