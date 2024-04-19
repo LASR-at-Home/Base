@@ -52,7 +52,6 @@ add_message_files(
   BodyPixMaskRequest.msg
   ColourPrediction.msg
   FeatureWithColour.msg
-  # Description.msg
 )
 
 ## Generate services in the 'srv' folder
@@ -61,13 +60,11 @@ add_service_files(
   YoloDetection.srv
   YoloDetection3D.srv
   BodyPixDetection.srv
-  # TorchFaceFeatureDetection.srv
   Recognise.srv
   LearnFace.srv
   Vqa.srv
   PointingDirection.srv
   TorchFaceFeatureDetectionDescription.srv
-  # Recognise.srv
 )
 
 # Generate actions in the 'action' folder
