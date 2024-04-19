@@ -7,6 +7,7 @@ request = TxtIndexRequest()
 request.txt_paths = [
     "/home/mattbarker/LASR/lasr_ws/src/lasr-base/tasks/gpsr/data/questions.txt"
 ]
+request.index_factory_string = "Flat"
 
 request.index_paths = [
     "/home/mattbarker/LASR/lasr_ws/src/lasr-base/tasks/gpsr/data/questions.index"

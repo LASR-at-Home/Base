@@ -6,9 +6,11 @@ from lasr_vector_databases_faiss import (
     load_model,
     parse_txt_file,
     get_sentence_embeddings,
-    create_vector_database,
+    construct_faiss_index,
+    add_vectors_to_index,
+    save_index_to_disk,
 )
-from typing import List
+from typing import List, Dict
 
 
 class TxtIndexService:
@@ -21,15 +23,42 @@ class TxtIndexService:
     def execute_cb(self, req: TxtIndexRequest):
         txt_fps: List[str] = req.txt_paths
         index_paths: List[str] = req.index_paths
+        factory_string: str = req.index_factory_string
+        vecs_per_txt_file: List[int] = []
+        if len(index_paths) == 1 and len(txt_fps) > 1:
+            for i, txt_fp in enumerate(txt_fps):
+                sentences_to_embed: List[str] = parse_txt_file(txt_fp)
+                sentence_embeddings: np.ndarray = get_sentence_embeddings(
+                    sentences_to_embed, self._sentence_embedding_model
+                )
+                if i == 0:
+                    index = construct_faiss_index(
+                        sentence_embeddings, factory_string=factory_string
+                    )
+                add_vectors_to_index(index, sentence_embeddings, add_with_ids=True)
+                vecs_per_txt_file.append(sentence_embeddings.shape[0])
+            save_index_to_disk(index, index_paths[0])
 
-        for txt_fp, index_path in zip(txt_fps, index_paths):
-            sentences_to_embed: list[str] = parse_txt_file(txt_fp)
-            sentence_embeddings: np.ndarray = get_sentence_embeddings(
-                sentences_to_embed, self._sentence_embedding_model
+        elif len(index_paths) != len(txt_fps):
+            rospy.logerr(
+                "Number of txt files and index paths must be the same, or only one index "
+                "path must be provided."
+                f"Got {len(txt_fps)} txt files and {len(index_paths)} index paths."
             )
-            create_vector_database(sentence_embeddings, index_path)
+        else:
+            for txt_fp, index_path in zip(txt_fps, index_paths):
+                sentences_to_embed: list[str] = parse_txt_file(txt_fp)
+                sentence_embeddings: np.ndarray = get_sentence_embeddings(
+                    sentences_to_embed, self._sentence_embedding_model
+                )
+                index = construct_faiss_index(
+                    sentence_embeddings, factory_string=factory_string
+                )
+                add_vectors_to_index(index, sentence_embeddings)
+                save_index_to_disk(index, index_path)
+                vecs_per_txt_file.append(sentence_embeddings.shape[0])
 
-        return TxtIndexResponse()
+        return TxtIndexResponse(vecs_per_txt_file=vecs_per_txt_file)
 
 
 if __name__ == "__main__":

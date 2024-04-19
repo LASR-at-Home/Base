@@ -2,6 +2,13 @@
 string[] txt_paths
 
 # Output path to save created indices
+# If multiple text files are provided, but one 
+# index file path is provided, this index will contain
+# all of the vectors from all of the txt files. 
 string[] index_paths
 
+# Specifies the type of index to create
+# see https://github.com/facebookresearch/faiss/wiki/The-index-factory
+string index_factory_string
 ---
+int32[] vecs_per_txt_file
