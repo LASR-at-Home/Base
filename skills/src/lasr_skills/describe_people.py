@@ -170,7 +170,6 @@ class DescribePeople(smach.StateMachine):
                     'detection': person,
                     'features': rst
                 })
-                print(people)
 
             # Userdata:
             # - people
