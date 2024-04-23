@@ -106,7 +106,7 @@ class GoToLocation(smach.StateMachine):
                         MoveBaseAction,
                         goal=MoveBaseGoal(
                             target_pose=PoseStamped(
-                                pose=Pose(**rospy.get_param(f"location_param/pose")),
+                                pose=Pose(**rospy.get_param(location_param)),
                                 header=Header(frame_id="map"),
                             )
                         ),
