@@ -26,14 +26,14 @@ def build_state_machine(parsed_command: Dict) -> smach.StateMachine:
         smach.StateMachine: paramaterized state machine ready to be executed.
     """
     command_verbs: List[str] = parsed_command["commands"]
-    command_params: List[Dict] = parsed_command["params"]
+    command_params: List[Dict] = parsed_command["command_params"]
     sm = smach.StateMachine(outcomes=["succeeded", "failed"])
     with sm:
         for command_verb, command_param in zip(command_verbs, command_params):
             if command_verb == "greet":
                 if "name" in command_param:
                     location_param_room = (
-                        f"/gpsr/arena/rooms/{command_param['location']}/room"
+                        f"/gpsr/arena/rooms/{command_param['location']}"
                     )
                     location_param_pose = f"{location_param_room}/pose"
                     sm.add(
@@ -68,7 +68,7 @@ def build_state_machine(parsed_command: Dict) -> smach.StateMachine:
                     sm.add(
                         f"STATE_{increment_state_count()}",
                         Talk(command_param["talk"]),
-                        transitions={"succeeded": "succeded", "failed": "failed"},
+                        transitions={"succeeded": "succeeded", "failed": "failed"},
                     )
                 else:
                     raise ValueError(

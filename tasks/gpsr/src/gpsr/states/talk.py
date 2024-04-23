@@ -65,6 +65,10 @@ class Talk(smach.StateMachine):
             smach.StateMachine.add(
                 "SAY_RESPONSE",
                 Say(),
-                transitions={"succeeded": "succeeded", "failed": "failed"},
+                transitions={
+                    "succeeded": "succeeded",
+                    "aborted": "failed",
+                    "preempted": "failed",
+                },
                 remapping={"text": "response"},
             )
