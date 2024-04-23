@@ -3,7 +3,7 @@ import smach
 import rospy
 import rosservice
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
-from geometry_msgs.msg import Pose, PoseStamped
+from geometry_msgs.msg import Pose, PoseStamped, Point, Quaternion
 from std_msgs.msg import Header
 
 from typing import Union
@@ -106,7 +106,16 @@ class GoToLocation(smach.StateMachine):
                         MoveBaseAction,
                         goal=MoveBaseGoal(
                             target_pose=PoseStamped(
-                                pose=Pose(**rospy.get_param(location_param)),
+                                pose=Pose(
+                                    position=Point(
+                                        **rospy.get_param(f"{location_param}/position")
+                                    ),
+                                    orientation=Quaternion(
+                                        **rospy.get_param(
+                                            f"{location_param}/orientation"
+                                        )
+                                    ),
+                                ),
                                 header=Header(frame_id="map"),
                             )
                         ),
