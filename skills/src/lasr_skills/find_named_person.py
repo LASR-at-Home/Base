@@ -4,7 +4,7 @@ import rospy
 from lasr_skills import Detect3D, GoToLocation, AskAndListen
 import navigation_helpers
 
-from geometry_msgs.msg import Pose, PoseWithCovarianceStamped
+from geometry_msgs.msg import Pose, PoseWithCovarianceStamped, Point, Quaternion
 
 
 from typing import List, Union
@@ -104,7 +104,13 @@ class FindNamedPerson(smach.StateMachine):
             room = rospy.get_param(location_param)
             beacons = room["beacons"]
             for beacon in beacons:
-                waypoints_to_iterate.append(beacon["near_pose"])
+                waypoint: Pose = Pose(
+                    position=Point(**beacons[beacon]["near_pose"]["position"]),
+                    orientation=Quaternion(
+                        **beacons[beacon]["near_pose"]["orientation"]
+                    ),
+                )
+                waypoints_to_iterate.append(waypoint)
         else:
             waypoints_to_iterate: List[Pose] = waypoints
 
