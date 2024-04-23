@@ -52,7 +52,6 @@ if __name__ == "__main__":
     sm = smach.StateMachine(outcomes=["succeeded", "failed"])
     with sm:
         sm.userdata.tts_phrase = "Please tell me your command."
-        sm.userdata.n_vecs_per_txt_file = [1177943] * 10
         # smach.StateMachine.add(
         #     "ASK_FOR_COMMAND",
         #     AskAndListen(),
@@ -71,7 +70,7 @@ if __name__ == "__main__":
         )
         sm.add(
             "COMMAND_SIMILARITY_MATCHER",
-            CommandSimilarityMatcher(),
+            CommandSimilarityMatcher([1177943] * 10),
             transitions={"succeeded": "LISTEN"},
         )
         # smach.StateMachine.add(
