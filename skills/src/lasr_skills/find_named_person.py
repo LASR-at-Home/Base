@@ -7,7 +7,7 @@ import navigation_helpers
 from geometry_msgs.msg import Pose, PoseWithCovarianceStamped
 
 
-from typing import List
+from typing import List, Union
 
 
 class FindNamedPerson(smach.StateMachine):
@@ -85,10 +85,28 @@ class FindNamedPerson(smach.StateMachine):
                 return "succeeded"
             return "failed"
 
-    def __init__(self, waypoints: List[Pose], name: str):
+    def __init__(
+        self,
+        name: str,
+        waypoints: Union[List[Pose], None] = None,
+        location_param: Union[str, None] = None,
+    ):
         smach.StateMachine.__init__(
             self, outcomes=["succeeded", "failed"], output_keys=["person_point"]
         )
+
+        if waypoints is None and location_param is None:
+            raise ValueError("Either waypoints or location_param must be provided")
+
+        if waypoints is None:
+            waypoints_to_iterate: List[Pose] = []
+
+            room = rospy.get_param(location_param)
+            beacons = room["beacons"]
+            for beacon in beacons:
+                waypoints_to_iterate.append(beacon["near_pose"])
+        else:
+            waypoints_to_iterate: List[Pose] = waypoints
 
         with self:
 
@@ -100,13 +118,13 @@ class FindNamedPerson(smach.StateMachine):
 
             smach.StateMachine.add(
                 "COMPUTE_PATH",
-                self.ComputePath(waypoints),
+                self.ComputePath(waypoints_to_iterate),
                 transitions={"succeeded": "WAYPOINT_ITERATOR", "failed": "failed"},
             )
 
             waypoint_iterator = smach.Iterator(
                 outcomes=["succeeded", "failed"],
-                it=lambda: range(len(waypoints)),
+                it=lambda: range(len(waypoints_to_iterate)),
                 it_label="location_index",
                 input_keys=["waypoints"],
                 output_keys=["person_point"],
