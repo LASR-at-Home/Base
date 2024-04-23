@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
-import argparse
 import smach
 import rospy
 
-from gpsr.load_known_data import GPSRDataLoader
 from gpsr.regex_command_parser import Configuration, gpsr_compile_and_parse
 from gpsr.states import CommandSimilarityMatcher
-from lasr_skills import AskAndListen, Say
+from lasr_skills import AskAndListen
 
 
 class ParseCommand(smach.State):
@@ -29,7 +27,7 @@ class ParseCommand(smach.State):
         rospy.loginfo(f"Received command : {userdata.raw_command.lower()}")
         try:
             userdata.parsed_command = gpsr_compile_and_parse(
-                self.data_config, userdata.transcribed_speech.lower()
+                self.data_config, userdata.raw_command.lower()
             )
         except Exception as e:
             rospy.logerr(e)
@@ -58,7 +56,7 @@ class CommandParserStateMachine(smach.StateMachine):
         with self:
             smach.StateMachine.add(
                 "ASK_FOR_COMMAND",
-                AskAndListen(),
+                AskAndListen(tts_phrase="Hello, please tell me your command."),
                 transitions={"succeeded": "PARSE_COMMAND", "failed": "failed"},
                 remapping={"transcribed_speech": "raw_command"},
             )
@@ -78,7 +76,7 @@ class CommandParserStateMachine(smach.StateMachine):
                 CommandSimilarityMatcher([n_vecs_per_txt_file] * total_txt_files),
                 transitions={"succeeded": "PARSE_COMMAND", "failed": "failed"},
                 remapping={
-                    "command": "parsed_command",
-                    "matched_command": "matched_command",
+                    "command": "raw_command",
+                    "matched_command": "raw_command",
                 },
             )
