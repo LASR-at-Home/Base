@@ -30,7 +30,7 @@ class GetImage(smach.State):
 
 class GetPointCloud(smach.State):
     """
-    State for reading an sensor_msgs Image message
+    State for acquiring a PointCloud2 message.
     """
 
     def __init__(self, topic: str = None):
