@@ -87,7 +87,6 @@ class LookAtPerson(smach.StateMachine):
                         "aborted": "failed",
                         "preempted": "failed",
                     },
-                    remapping={"img_msg": "img_msg", "masks": "masks", "poses": "poses"},
                 )
                 # smach.StateMachine.add(
                 #     "CHECK_EYES",
