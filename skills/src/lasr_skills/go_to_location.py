@@ -26,7 +26,13 @@ except ModuleNotFoundError:
 class GoToLocation(smach.StateMachine):
 
     def __init__(self, location: Union[Pose, None] = None):
-        super(GoToLocation, self).__init__(outcomes=["succeeded", "failed"])
+
+        if location is not None:
+            super(GoToLocation, self).__init__(outcomes=["succeeded", "failed"])
+        else:
+            super(GoToLocation, self).__init__(
+                outcomes=["succeeded", "failed"], input_keys=["location"]
+            )
 
         IS_SIMULATION = (
             "/pal_startup_control/start" not in rosservice.get_service_list()

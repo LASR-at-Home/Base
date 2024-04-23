@@ -4,11 +4,12 @@ from lasr_vector_databases_faiss.srv import TxtIndex, TxtIndexRequest
 
 request = TxtIndexRequest()
 
-request.txt_path = (
+request.txt_paths = [
     "/home/mattbarker/LASR/lasr_ws/src/lasr-base/tasks/gpsr/data/questions.txt"
-)
+]
+request.index_factory_string = "Flat"
 
-request.index_path = (
+request.index_paths = [
     "/home/mattbarker/LASR/lasr_ws/src/lasr-base/tasks/gpsr/data/questions.index"
-)
+]
 rospy.ServiceProxy("lasr_faiss/txt_index", TxtIndex)(request)

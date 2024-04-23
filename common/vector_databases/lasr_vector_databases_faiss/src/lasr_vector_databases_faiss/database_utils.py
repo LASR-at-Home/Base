@@ -3,40 +3,80 @@ import os
 import numpy as np
 import faiss
 
+from typing import Union
 
-def create_vector_database(
-    vectors: np.ndarray,
-    index_path: str,
-    overwrite: bool = False,
-    index_type: str = "Flat",
-    normalise_vecs: bool = True,
-) -> None:
-    """Creates a FAISS Index using the factory constructor and the given
-    index type, and adds the given vector to the index, and then saves
-    it to disk using the given path.
+
+def construct_faiss_index(
+    index_factory_string: str,
+    vector_dim: int,
+    normalise: bool = False,
+    use_gpu: bool = False,
+) -> faiss.Index:
+    """Constructs the faiss vector datbase object.
 
     Args:
-        vectors (np.ndarray): vector of shape (n_vectors, vector_dim)
-        index_path (str): path to save the index
-        overwrite (bool, optional): Whether to replace an existing index
-        at the same filepath if it exists. Defaults to False.
-        index_type (str, optional): FAISS Index Factory string. Defaults to "IndexFlatIP".
-        normalise_vecs (bool, optional): Whether to normalise the vectors before
-        adding them to the Index. This converts the IP metric to Cosine Similarity.
-        Defaults to True.
+        index_factory_string (str): Index factory string
+        vector_dim (int): constant dim of each vector to be added to the db.
+        normalise (bool, optional): whether to use inner product instead of Euclidean distance.
+        Defaults to False.
+        use_gpu (bool, optional): whether to move the index to the GPU. Defaults to False.
+
+    Returns:
+        faiss.Index: constructed faiss index object.
     """
 
+    metric = faiss.METRIC_INNER_PRODUCT if normalise else faiss.METRIC_L2
+    index = faiss.index_factory(vector_dim, index_factory_string, metric)
+    if use_gpu:
+        index = faiss.index_cpu_to_all_gpus(index)
+    return index
+
+
+def add_vectors_to_index(
+    index: faiss.Index,
+    vectors: np.ndarray,
+    normalise: bool = False,
+    add_with_ids: bool = False,
+) -> Union[None, np.ndarray]:
+    """Adds a set of vectors to the index, optionally normalising vectors
+    or adding them with Ids.
+
+    Args:
+        index (faiss.Index): index to add the vectors to.
+        vectors (np.ndarray): vectors to add to the index of shape (n_vecs, vec_dim)
+        normalise (bool, optional): whether to normalise the vectors. Defaults to False.
+        add_with_ids (bool, optional): whether to add the vectors with ids. Defaults to False.
+
+    Returns:
+        Union[None, np.ndarray]: None or the ids of the vectors added.
+    """
+
+    if normalise:
+        faiss.normalize_L2(vectors)
+    if add_with_ids:
+        ids = np.arange(index.ntotal, index.ntotal + vectors.shape[0])
+        index.add_with_ids(vectors, ids)
+        return ids
+    else:
+        index.add(vectors)
+    return None
+
+
+def save_index_to_disk(
+    index: faiss.Index, index_path: str, overwrite: bool = False
+) -> None:
+    """Saves the index to disk.
+
+    Args:
+        index (faiss.Index): index to save
+        index_path (str): path to save the index
+        overwrite (bool, optional): whether to overwrite the index if it already exists.
+        Defaults to False.
+    """
     if os.path.exists(index_path) and not overwrite:
         raise FileExistsError(
             f"Index already exists at {index_path}. Set overwrite=True to replace it."
         )
-
-    index = faiss.index_factory(
-        vectors.shape[1], index_type, faiss.METRIC_INNER_PRODUCT
-    )
-    if normalise_vecs:
-        faiss.normalize_L2(vectors)
-    index.add(vectors)
     faiss.write_index(index, index_path)
 
 
@@ -62,7 +102,7 @@ def load_vector_database(index_path: str, use_gpu: bool = False) -> faiss.Index:
 def query_database(
     index_path: str,
     query_vectors: np.ndarray,
-    normalise: bool = True,
+    normalise: bool = False,
     k: int = 1,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Queries the given index with the given query vectors
