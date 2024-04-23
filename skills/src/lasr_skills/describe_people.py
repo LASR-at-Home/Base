@@ -5,12 +5,11 @@ import rospy
 import smach
 import cv2_img
 import numpy as np
-
-from colour_estimation import closest_colours, RGB_COLOURS
-from lasr_vision_msgs.msg import BodyPixMaskRequest, ColourPrediction, FeatureWithColour
-from lasr_vision_msgs.srv import YoloDetection, BodyPixDetection, TorchFaceFeatureDetection
-
+from lasr_vision_msgs.msg import BodyPixMaskRequest
+from lasr_vision_msgs.srv import YoloDetection, BodyPixDetection, TorchFaceFeatureDetectionDescription
+from numpy2message import numpy2message
 from .vision import GetImage, ImageMsgToCv2
+import numpy as np
 
 
 class DescribePeople(smach.StateMachine):
@@ -29,7 +28,7 @@ class DescribePeople(smach.StateMachine):
                                        default_outcome='failed',
                                        outcome_map={'succeeded': {
                                            'SEGMENT_YOLO': 'succeeded', 'SEGMENT_BODYPIX': 'succeeded'}},
-                                       input_keys=['img', 'img_msg'],
+                                       input_keys=['img', 'img_msg',],
                                        output_keys=['people_detections', 'bodypix_masks'])
 
             with sm_con:
@@ -40,7 +39,7 @@ class DescribePeople(smach.StateMachine):
                                    'succeeded': 'FEATURE_EXTRACTION'})
             smach.StateMachine.add('FEATURE_EXTRACTION', self.FeatureExtraction(), transitions={
                                    'succeeded': 'succeeded'})
-
+    
     class SegmentYolo(smach.State):
         '''
         Segment using YOLO
@@ -73,7 +72,7 @@ class DescribePeople(smach.StateMachine):
 
         def __init__(self):
             smach.State.__init__(self, outcomes=['succeeded', 'failed'], input_keys=[
-                                 'img_msg'], output_keys=['bodypix_masks'])
+                                 'img_msg',], output_keys=['bodypix_masks'])
             self.bodypix = rospy.ServiceProxy(
                 '/bodypix/detect', BodyPixDetection)
 
@@ -81,17 +80,17 @@ class DescribePeople(smach.StateMachine):
             try:
                 torso = BodyPixMaskRequest()
                 torso.parts = ["torso_front", "torso_back"]
-
                 head = BodyPixMaskRequest()
                 head.parts = ["left_face", "right_face"]
-
                 masks = [torso, head]
-
                 result = self.bodypix(userdata.img_msg, "resnet50", 0.7, masks)
                 userdata.bodypix_masks = result.masks
+                rospy.logdebug("Found poses: %s" % str(len(result.poses)))
+                neck_coord = (int(result.poses[0].coord[0]), int(result.poses[0].coord[1]))
+                rospy.logdebug("Coordinate of the neck is: %s" % str(neck_coord))
                 return 'succeeded'
             except rospy.ServiceException as e:
-                rospy.logwarn(f"Unable to perform inference. ({str(e)})")
+                rospy.logerr(f"Unable to perform inference. ({str(e)})")
                 return 'failed'
 
     class FeatureExtraction(smach.State):
@@ -105,7 +104,7 @@ class DescribePeople(smach.StateMachine):
             smach.State.__init__(self, outcomes=['succeeded', 'failed'], input_keys=[
                                  'img', 'people_detections', 'bodypix_masks'], output_keys=['people'])
             self.torch_face_features = rospy.ServiceProxy(
-                '/torch/detect/face_features', TorchFaceFeatureDetection)
+                '/torch/detect/face_features', TorchFaceFeatureDetectionDescription)
 
         def execute(self, userdata):
             if len(userdata.people_detections) == 0:
@@ -121,7 +120,6 @@ class DescribePeople(smach.StateMachine):
             height, width, _ = img.shape
 
             people = []
-
             for person in userdata.people_detections:
                 rospy.logdebug(
                     f"\n\nFound person with confidence {person.confidence}!")
@@ -132,15 +130,12 @@ class DescribePeople(smach.StateMachine):
                 cv2.fillPoly(mask_image, pts=np.int32(
                     [contours]), color=(255, 255, 255))
                 mask_bin = mask_image > 128
-
-                # keep track
-                features = []
-
+                
                 # process part masks
                 for (bodypix_mask, part) in zip(userdata.bodypix_masks, ['torso', 'head']):
                     part_mask = np.array(bodypix_mask.mask).reshape(
                         bodypix_mask.shape[0], bodypix_mask.shape[1])
-
+                    
                     # filter out part for current person segmentation
                     try:
                         part_mask[mask_bin == 0] = 0
@@ -155,42 +150,25 @@ class DescribePeople(smach.StateMachine):
                             f'|> Person does not have {part} visible')
                         continue
 
-                    # do colour processing on the torso
                     if part == 'torso':
-                        try:
-                            features.append(FeatureWithColour("torso", [
-                                ColourPrediction(colour, distance)
-                                for colour, distance
-                                in closest_colours(np.median(img[part_mask == 1], axis=0), RGB_COLOURS)
-                            ]))
-                        except Exception as e:
-                            rospy.logerr(f"Failed to process colour: {e}")
+                        torso_mask = part_mask
+                    elif part == 'head':
+                        head_mask = part_mask
 
-                    # do feature extraction on the head
-                    if part == 'head':
-                        try:
-                            # crop out face
-                            face_mask = np.array(userdata.bodypix_masks[1].mask).reshape(
-                                userdata.bodypix_masks[1].shape[0], userdata.bodypix_masks[1].shape[1])
+                torso_mask_data, torso_mask_shape, torso_mask_dtype = numpy2message(torso_mask)
+                head_mask_data, head_mask_shape, head_mask_dtype = numpy2message(head_mask)
 
-                            mask_image_only_face = mask_image.copy()
-                            mask_image_only_face[face_mask == 0] = 0
+                full_frame = cv2_img.cv2_img_to_msg(img)
 
-                            face_region = cv2_img.extract_mask_region(
-                                img, mask_image_only_face)
-                            if face_region is None:
-                                raise Exception(
-                                    "Failed to extract mask region")
-
-                            msg = cv2_img.cv2_img_to_msg(face_region)
-                            features.extend(self.torch_face_features(
-                                msg).detected_features)
-                        except Exception as e:
-                            rospy.logerr(f"Failed to process extraction: {e}")
+                rst = self.torch_face_features(
+                    full_frame, 
+                    head_mask_data, head_mask_shape, head_mask_dtype,
+                    torso_mask_data, torso_mask_shape, torso_mask_dtype,
+                ).description
 
                 people.append({
                     'detection': person,
-                    'features': features
+                    'features': rst
                 })
 
             # Userdata:
@@ -199,6 +177,5 @@ class DescribePeople(smach.StateMachine):
             #     - parts
             #       - - part
             #         - mask
-
             userdata['people'] = people
             return 'succeeded'

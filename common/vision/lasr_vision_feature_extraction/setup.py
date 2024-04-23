@@ -4,8 +4,8 @@ from distutils.core import setup
 from catkin_pkg.python_setup import generate_distutils_setup
 
 setup_args = generate_distutils_setup(
-    packages=['torch_module'],
-    package_dir={'': 'src'}
+  packages=['lasr_vision_feature_extraction'],
+  package_dir={'': 'src'}
 )
 
 setup(**setup_args)
