@@ -2,7 +2,7 @@
 <package format="2">
   <name>lasr_vision_feature_extraction</name>
   <version>0.0.0</version>
-  <description>Custormer attribute extraction, encluding face and cloth, implemented with PyTorch customed models.</description>
+  <description>Person attribute extraction, including face and clothes, implemented with PyTorch custom models.</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag -->
   <!-- Example:  -->
