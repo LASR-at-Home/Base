@@ -7,13 +7,14 @@ from lasr_vector_databases_msgs.srv import TxtQuery, TxtQueryRequest
 
 
 class CommandSimilarityMatcher(smach.State):
-    def __init__(self):
+    def __init__(self, n_vecs_per_txt_file):
         smach.State.__init__(
             self,
             outcomes=["succeeded", "failed"],
             input_keys=["command", "n_vecs_per_txt_file"],
             output_keys=["matched_command"],
         )
+        self._n_vecs_per_txt_file = n_vecs_per_txt_file
 
         self._query_service = rospy.ServiceProxy("lasr_faiss/txt_query", TxtQuery)
         self._text_directory = os.path.join(
