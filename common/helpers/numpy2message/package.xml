@@ -2,7 +2,7 @@
 <package format="2">
   <name>numpy2message</name>
   <version>0.0.0</version>
-  <description>Helper functions transfering between numpy arrays and ros messages.</description>
+  <description>Helper functions converting between numpy arrays and ROS messages.</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag -->
   <!-- Example:  -->
