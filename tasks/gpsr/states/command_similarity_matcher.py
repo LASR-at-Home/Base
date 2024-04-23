@@ -38,7 +38,7 @@ class CommandSimilarityMatcher(smach.State):
         request.index_paths = self._index_paths
         request.query_sentence = userdata.command
         request.k = 1
-        request.vecs_per_txt_file = userdata.n_vecs_per_txt_file
+        request.vecs_per_txt_file = self._n_vecs_per_txt_file
         response = self._query_service(request)
         userdata.matched_command = response.closest_sentences[0]
         rospy.loginfo(f"Matched command: {response.closest_sentences[0]}")
