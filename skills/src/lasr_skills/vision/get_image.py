@@ -55,7 +55,7 @@ class GetPointCloud(smach.State):
 
 class GetImageAndPointCloud(smach.State):
     """
-    State for reading an sensor_msgs Image message, get 2d and 3d messages simutainously 
+    State for acquiring Image and PointCloud2 messages simultaneously.
     """
 
     def __init__(self, topic: str = None):
