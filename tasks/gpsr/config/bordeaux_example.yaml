@@ -8,9 +8,13 @@ arena:
       polygon: [[0.0, 0.0], [0.0, 1.0], [1.0, 1.0], [1.0, 0.0]] # Vertices composing the polygon of the room
       beacons: # Beacons in the room
         bed: # Beacon name
-          pose: # Fixed pose in the room
+          pose: # Fixed pose in the room, will be used for navigating to the beacon
             position: {x: 0.5, y: 0.5, z: 0.0}
             orientation: {x: 0.0, y: 0.0, z: 0.0, w: 1.0}
+          search_pose: # Pose to search for the beacon for objects
+            position: {x: 0.5, y: 0.5, z: 0.0}
+            orientation: {x: 0.0, y: 0.0, z: 0.0, w: 1.0}
+          polygon: [[0.4, 0.4], [0.4, 0.6], [0.6, 0.6], [0.6, 0.4]] # Vertices composing the polygon of the beacon, for search
     kitchen:
       pose:
         orientation: {}
