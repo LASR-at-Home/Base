@@ -5,6 +5,7 @@ import cv2_img
 import numpy as np
 
 from PIL import Image
+import re
 import tensorflow as tf
 from tf_bodypix.api import download_model, load_model, BodyPixModelPaths
 
@@ -14,6 +15,12 @@ from lasr_vision_msgs.srv import BodyPixDetectionRequest, BodyPixDetectionRespon
 
 # model cache
 loaded_models = {}
+
+def snake_to_camel(snake_str):
+    components = snake_str.split('_')
+    return components[0] + ''.join(x.title() for x in components[1:])
+def camel_to_snake(name):
+    return re.sub(r'(?<!^)(?=[A-Z])', '_', name).lower()
 
 def load_model_cached(dataset: str) -> None:
     '''
@@ -85,16 +92,18 @@ def detect(request: BodyPixDetectionRequest, debug_publisher: rospy.Publisher | 
         debug_publisher.publish(cv2_img.cv2_img_to_msg(coloured_mask))
     
     output_poses = []
+
     for pose in poses:
         pose_msg = BodyPixPose()
         keypoints_msg = []
 
         for i, keypoint in pose.keypoints.items():
-            keypoint_msg = BodyPixKeypoint()
-            keypoint_msg.xy = [int(keypoint.position.x), int(keypoint.position.y)]
-            keypoint_msg.score = keypoint.score
-            keypoint_msg.part = keypoint.part
-            keypoints_msg.append(keypoint_msg)
+            if camel_to_snake(keypoint.part) in request.masks[0].parts:
+                keypoint_msg = BodyPixKeypoint()
+                keypoint_msg.xy = [int(keypoint.position.x), int(keypoint.position.y)]
+                keypoint_msg.score = keypoint.score
+                keypoint_msg.part = keypoint.part
+                keypoints_msg.append(keypoint_msg)
 
         pose_msg.keypoints = keypoints_msg
         pose_msg.score = pose.score
