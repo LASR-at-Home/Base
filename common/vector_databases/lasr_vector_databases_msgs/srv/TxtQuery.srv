@@ -1,14 +1,18 @@
-# Path to input text file
-string txt_path
+# Path to input text files
+string[] txt_paths
 
-# Path to index file to load
-string index_path
+# Path to corresponding index files
+string[] index_paths
 
 # Sentence to query index with
 string query_sentence
 
 # Number of nearest sentences to return
 uint8 k
+
+# Number of vectors per txt file -- used to speed
+# up lookup.
+int32[] vecs_per_txt_file
 
 ---
 # Nearest sentence

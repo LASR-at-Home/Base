@@ -10,11 +10,15 @@ import tensorflow as tf
 from tf_bodypix.api import download_model, load_model, BodyPixModelPaths
 
 from sensor_msgs.msg import Image as SensorImage
+
 from lasr_vision_msgs.msg import BodyPixMask, BodyPixPose, BodyPixKeypoint
 from lasr_vision_msgs.srv import BodyPixDetectionRequest, BodyPixDetectionResponse
 
+import rospkg
+
 # model cache
 loaded_models = {}
+r = rospkg.RosPack()
 
 def snake_to_camel(snake_str):
     components = snake_str.split('_')
@@ -26,21 +30,20 @@ def load_model_cached(dataset: str) -> None:
     '''
     Load a model into cache
     '''
-
     model = None
     if dataset in loaded_models:
         model = loaded_models[dataset]
     else:
         if dataset == 'resnet50':
-            model = load_model(download_model(BodyPixModelPaths.RESNET50_FLOAT_STRIDE_16))
+            name = download_model(BodyPixModelPaths.RESNET50_FLOAT_STRIDE_16)
+            model = load_model(name)
         elif dataset == 'mobilenet50':
-            model = load_model(download_model(BodyPixModelPaths.MOBILENET_FLOAT_50_STRIDE_16))
+            name = download_model(BodyPixModelPaths.MOBILENET_FLOAT_50_STRIDE_16)
+            model = load_model(name)
         else:
             model = load_model(dataset)
-
         rospy.loginfo(f'Loaded {dataset} model')
         loaded_models[dataset] = model
-    
     return model
 
 def detect(request: BodyPixDetectionRequest, debug_publisher: rospy.Publisher | None) -> BodyPixDetectionResponse:
@@ -88,7 +91,6 @@ def detect(request: BodyPixDetectionRequest, debug_publisher: rospy.Publisher | 
             keypoints_color=(255, 100, 100),
             skeleton_color=(100, 100, 255),
         )
-
         debug_publisher.publish(cv2_img.cv2_img_to_msg(coloured_mask))
     
     output_poses = []
@@ -112,4 +114,5 @@ def detect(request: BodyPixDetectionRequest, debug_publisher: rospy.Publisher | 
     response = BodyPixDetectionResponse()
     response.poses = output_poses
     response.masks = masks
+    response.poses = neck_coordinates
     return response
