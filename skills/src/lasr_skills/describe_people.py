@@ -86,10 +86,7 @@ class DescribePeople(smach.StateMachine):
                 result = self.bodypix(userdata.img_msg, "resnet50", 0.7, masks)
                 userdata.bodypix_masks = result.masks
                 rospy.logdebug("Found poses: %s" % str(len(result.poses)))
-                try:
-                    neck_coord = (int(result.poses[0].coord[0]), int(result.poses[0].coord[1]))
-                except Exception:
-                    neck_coord = (240, 320)
+                neck_coord = (int(result.poses[0].coord[0]), int(result.poses[0].coord[1]))
                 rospy.logdebug("Coordinate of the neck is: %s" % str(neck_coord))
                 return 'succeeded'
             except rospy.ServiceException as e:
