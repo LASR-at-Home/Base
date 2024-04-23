@@ -53,7 +53,7 @@ class GetPointCloud(smach.State):
         return 'succeeded'
 
 
-class GetImageAndPCLImage(smach.State):
+class GetImageAndPointCloud(smach.State):
     """
     State for reading an sensor_msgs Image message, get 2d and 3d messages simutainously 
     """
