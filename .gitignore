@@ -128,6 +128,7 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
+common/helpers/models/src/models
 /common/worlds/
 common/Perception/face_detection/output/
 common/Perception/lasr_object_detection_yolo/models
