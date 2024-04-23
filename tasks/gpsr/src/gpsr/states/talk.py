@@ -8,13 +8,13 @@ import rospy
 # In future we might want to add looking at person talking to the state machine.
 class Talk(smach.StateMachine):
     class GenerateResponse(smach.State):
-        def __init__(self):
+        def __init__(self, talk_phrase: str):
             smach.State.__init__(
                 self,
                 outcomes=["succeeded", "failed"],
-                input_keys=["talk_phrase"],
                 output_keys=["response"],
             )
+            self._talk_phrase = talk_phrase
 
         def _create_responses(self) -> Dict[str, str]:
             response = {}
@@ -43,23 +43,23 @@ class Talk(smach.StateMachine):
 
         def execute(self, userdata):
             try:
-                userdata.response = self._create_responses()[userdata.talk_phrase]
+                userdata.response = self._create_responses()[self._talk_phrase]
             except KeyError:
                 rospy.loginfo(
-                    f"Failed to generate response for {userdata.talk_phrase} as it is not in the list of possible questions."
+                    f"Failed to generate response for {self._talk_phrase} as it is not in the list of possible questions."
                 )
                 return "failed"
             return "succeeded"
 
-    def __init__(self):
+    def __init__(self, talk_phrase: str):
         smach.StateMachine.__init__(self, outcomes=["succeeded", "failed"])
 
         with self:
             smach.StateMachine.add(
                 "GENERATE_RESPONSE",
-                self.GenerateResponse(),
+                self.GenerateResponse(talk_phrase),
                 transitions={"succeeded": "SAY_RESPONSE", "failed": "failed"},
-                remapping={"talk_phrase": "talk_phrase", "response": "response"},
+                remapping={"response": "response"},
             )
 
             smach.StateMachine.add(
