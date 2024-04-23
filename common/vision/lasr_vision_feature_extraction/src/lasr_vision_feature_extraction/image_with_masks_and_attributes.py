@@ -137,7 +137,7 @@ class ImageOfPerson(ImageWithMasksAndAttributes):
                 wearables.append('a necktie')
             description += ", ".join(wearables[:-2] + [" and ".join(wearables[-2:])]) + '. '
 
-        if description != "This customer has ":
+        if description == "This customer has ":
             description = "I didn't manage to get any attributes from this customer, I'm sorry."
         
         result = {

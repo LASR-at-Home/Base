@@ -9,7 +9,7 @@
         <arg name="preload" value="['resnet50']" />
     </include>
 
-    <include file="$(find lasr_vision_feature_extraction)/launch/service.launch" />
+    <node pkg="lasr_vision_feature_extraction" type="service" name="torch_service" output="screen"/>
     
     <node name="image_view_yolo" pkg="rqt_image_view" type="rqt_image_view" respawn="false" output="screen" args="/yolov8/debug/yolov8nsegpt" />
     <node name="image_view_bodypix" pkg="rqt_image_view" type="rqt_image_view" respawn="false" output="screen" args="/bodypix/debug/resnet50" />
