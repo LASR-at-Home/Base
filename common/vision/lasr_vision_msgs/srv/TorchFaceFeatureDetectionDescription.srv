@@ -11,5 +11,4 @@ string torso_mask_dtype
 ---
 
 # Detection result
-lasr_vision_msgs/FeatureWithColour[] detected_features
-# string detected_features
+string description

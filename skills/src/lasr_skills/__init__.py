@@ -13,7 +13,6 @@ from .listen_for import ListenFor
 from .ask_and_listen import AskAndListen
 from .find_person import FindPerson
 from .find_named_person import FindNamedPerson
-from .go_to_semantic_location import GoToSemanticLocation
 from .receive_object import ReceiveObject
 from .handover_object import HandoverObject
 from .ask_and_listen import AskAndListen

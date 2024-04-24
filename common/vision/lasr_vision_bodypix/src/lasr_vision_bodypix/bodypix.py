@@ -9,31 +9,33 @@ import tensorflow as tf
 from tf_bodypix.api import download_model, load_model, BodyPixModelPaths
 
 from sensor_msgs.msg import Image as SensorImage
-from lasr_vision_msgs.msg import BodyPixMask
+from lasr_vision_msgs.msg import BodyPixMask, BodyPixPose
 from lasr_vision_msgs.srv import BodyPixDetectionRequest, BodyPixDetectionResponse
+
+import rospkg
 
 # model cache
 loaded_models = {}
+r = rospkg.RosPack()
 
 def load_model_cached(dataset: str) -> None:
     '''
     Load a model into cache
     '''
-
     model = None
     if dataset in loaded_models:
         model = loaded_models[dataset]
     else:
         if dataset == 'resnet50':
-            model = load_model(download_model(BodyPixModelPaths.RESNET50_FLOAT_STRIDE_16))
+            name = download_model(BodyPixModelPaths.RESNET50_FLOAT_STRIDE_16)
+            model = load_model(name)
         elif dataset == 'mobilenet50':
-            model = load_model(download_model(BodyPixModelPaths.MOBILENET_FLOAT_50_STRIDE_16))
+            name = download_model(BodyPixModelPaths.MOBILENET_FLOAT_50_STRIDE_16)
+            model = load_model(name)
         else:
             model = load_model(dataset)
-
         rospy.loginfo(f'Loaded {dataset} model')
         loaded_models[dataset] = model
-    
     return model
 
 def detect(request: BodyPixDetectionRequest, debug_publisher: rospy.Publisher | None) -> BodyPixDetectionResponse:
@@ -65,8 +67,35 @@ def detect(request: BodyPixDetectionRequest, debug_publisher: rospy.Publisher | 
         bodypix_mask.shape = list(part_mask.shape)
         masks.append(bodypix_mask)
 
-    # construct pose response
-    # TODO
+    # construct poses response and neck coordinates
+    poses = result.get_poses()
+    rospy.loginfo(str(poses))
+
+    neck_coordinates = []
+    for pose in poses:
+        left_shoulder_keypoint = pose.keypoints.get(5)  # 5 is the typical index for left shoulder
+        right_shoulder_keypoint = pose.keypoints.get(6)  # 6 is the typical index for right shoulder
+
+        if left_shoulder_keypoint and right_shoulder_keypoint:
+            # If both shoulders are detected, calculate neck as midpoint
+            left_shoulder = left_shoulder_keypoint.position
+            right_shoulder = right_shoulder_keypoint.position
+            neck_x = (left_shoulder.x + right_shoulder.x) / 2
+            neck_y = (left_shoulder.y + right_shoulder.y) / 2
+        elif left_shoulder_keypoint:
+            # Only left shoulder detected, use it as neck coordinate
+            left_shoulder = left_shoulder_keypoint.position
+            neck_x = left_shoulder.x
+            neck_y = left_shoulder.y
+        elif right_shoulder_keypoint:
+            # Only right shoulder detected, use it as neck coordinate
+            right_shoulder = right_shoulder_keypoint.position
+            neck_x = right_shoulder.x
+            neck_y = right_shoulder.y
+
+        pose = BodyPixPose()
+        pose.coord = np.array([neck_x, neck_y]).astype(np.int32)
+        neck_coordinates.append(pose)
     
     # publish to debug topic
     if debug_publisher is not None:
@@ -80,9 +109,9 @@ def detect(request: BodyPixDetectionRequest, debug_publisher: rospy.Publisher | 
             keypoints_color=(255, 100, 100),
             skeleton_color=(100, 100, 255),
         )
-
         debug_publisher.publish(cv2_img.cv2_img_to_msg(coloured_mask))
     
     response = BodyPixDetectionResponse()
     response.masks = masks
+    response.poses = neck_coordinates
     return response
