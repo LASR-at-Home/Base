@@ -1,0 +1,8 @@
+<launch>
+
+    <!--     PARAMS     -->
+    <arg name="config" default="lab"/>
+
+    <!--     STATIC POINTS     -->
+    <rosparam command="load" file="$(find carry_my_luggage)/config/$(arg config).yaml" />
+</launch>
