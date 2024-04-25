@@ -4,6 +4,7 @@ import rospy
 from aruco_service.srv import PublishTablePoints, PublishTablePointsResponse
 from visualization_msgs.msg import Marker
 
+
 def create_marker_msg(point, idx):
     marker_msg = Marker()
     marker_msg.header.frame_id = "map"
@@ -22,6 +23,7 @@ def create_marker_msg(point, idx):
     marker_msg.color.a = 1.0
     return marker_msg
 
+
 def publish_points(number):
     table = number.table
     objects_marker_pub = rospy.Publisher("/table/objects_cuboid", Marker, queue_size=8)
@@ -30,13 +32,12 @@ def publish_points(number):
     if table >= 0:
 
         obj = rospy.get_param("/tables/table" + str(table) + "/objects_cuboid")
-        
+
         for i, p in enumerate(obj):
 
             objects_marker_pub.publish(create_marker_msg(p, i))
 
         per = rospy.get_param("/tables/table" + str(table) + "/persons_cuboid")
-
 
         for i, p in enumerate(per):
 
@@ -59,17 +60,17 @@ def publish_points(number):
         objects_marker_pub.publish(create_marker_msg(cuboid[2], 2))
         objects_marker_pub.publish(create_marker_msg(cuboid[3], 3))
 
-
     rospy.loginfo("Published points for table " + str(table))
 
     return PublishTablePointsResponse(True)
+
 
 if __name__ == "__main__":
 
     rospy.init_node("point_publisher")
     s = rospy.Service("publish_table_points", PublishTablePoints, publish_points)
-    
+
     rospy.loginfo("Point Publisher Service Ready")
-    
+
     while not rospy.is_shutdown():
         rospy.sleep(1.0)

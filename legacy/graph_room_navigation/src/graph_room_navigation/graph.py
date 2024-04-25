@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 
 import numpy as np
+
+
 class Room:
 
     def __init__(self, name, corners):
-        self.name = name 
+        self.name = name
         self.corners = corners
         self.doorways = {}
 
@@ -18,6 +20,7 @@ class Room:
     def __str__(self):
         return self.name
 
+
 class Graph:
 
     def __init__(self):
@@ -25,7 +28,7 @@ class Graph:
         self.size = 0
         self.adjLists = {}
 
-    def getRoom(self,name):
+    def getRoom(self, name):
         for room in self.adjLists.keys():
             if room.name == name:
                 return room
@@ -46,7 +49,7 @@ class Graph:
 
     def addVertex(self, vertex):
         if not self.hasVertex(vertex):
-            self.size +=1
+            self.size += 1
             self.adjLists[vertex] = []
             return True
         else:
@@ -77,7 +80,7 @@ class Graph:
             if not x in visited:
                 self.dfs(x, v, visited=visited)
         return visited
-    
+
     def bfs(self, u, v):
         # maintain a queue of paths
         queue = []
@@ -91,7 +94,7 @@ class Graph:
             # path found
             if node == v:
                 return path
-            # enumerate all adjacent nodes, construct a 
+            # enumerate all adjacent nodes, construct a
             # new path and push it into the queue
             for adjacent in self.adjLists[node]:
                 new_path = list(path)
@@ -101,7 +104,7 @@ class Graph:
     def points_from_path(self, path):
         print([p.name for p in path])
         points = []
-        for u, v in zip(list(path),list(path)[1:]):
+        for u, v in zip(list(path), list(path)[1:]):
             print(u.name, v.name)
             points.append(u.doorways[v])
             points.append(v.doorways[u])

@@ -15,14 +15,22 @@ from math import sqrt
 # The marker should be placed on the bottom left corner of the table, with the x axis pointing to the right and the y axis pointing up
 # Use 0 to inf for tables, use -1 for counter, use -2 for waiting area
 
+
 def get_transform_to_marker(from_frame, to_frame):
     tf_buffer = tf2_ros.Buffer()
     tf_listener = tf2_ros.TransformListener(tf_buffer)
     try:
-        t = tf_buffer.lookup_transform(to_frame, from_frame, rospy.Time(0), rospy.Duration(5))
+        t = tf_buffer.lookup_transform(
+            to_frame, from_frame, rospy.Time(0), rospy.Duration(5)
+        )
         return t
-    except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+    except (
+        tf2_ros.LookupException,
+        tf2_ros.ConnectivityException,
+        tf2_ros.ExtrapolationException,
+    ):
         raise
+
 
 def get_map_frame_pose(input_xy, transform):
     ps = PointStamped()
@@ -33,6 +41,7 @@ def get_map_frame_pose(input_xy, transform):
 
     tr_point = tf2_geometry_msgs.do_transform_point(ps, transform)
     return (tr_point.point.x, tr_point.point.y)
+
 
 def create_marker_msg(point, idx):
     marker_msg = Marker()
@@ -52,6 +61,7 @@ def create_marker_msg(point, idx):
     marker_msg.color.a = 1.0
     return marker_msg
 
+
 def generate_cuboid(msg):
     table = msg.table
     long_side = msg.long_side
@@ -60,8 +70,12 @@ def generate_cuboid(msg):
     is_rect = msg.is_rect
     radius = msg.radius
     seconds = rospy.get_time()
-    objects_marker_pub = rospy.Publisher("/table/objects_cuboid", Marker, queue_size= 4 if is_rect else 8)
-    persons_marker_pub = rospy.Publisher("/table/persons_cuboid", Marker, queue_size=4 if is_rect else 8)
+    objects_marker_pub = rospy.Publisher(
+        "/table/objects_cuboid", Marker, queue_size=4 if is_rect else 8
+    )
+    persons_marker_pub = rospy.Publisher(
+        "/table/persons_cuboid", Marker, queue_size=4 if is_rect else 8
+    )
 
     if latest_pose is not None and (seconds - latest_pose.header.stamp.secs < 1.0):
 
@@ -70,11 +84,10 @@ def generate_cuboid(msg):
         if is_rect:
 
             # THESE POINTS ARE IN MARKER COORDINATE FRAME [LOCATION OF ARUCO MARKER IS (0,0) IN THIS FRAME]
-            local_corner_1 = [0, 0] 
+            local_corner_1 = [0, 0]
             local_corner_2 = [long_side, 0]
             local_corner_3 = [long_side, short_side]
             local_corner_4 = [0, short_side]
-
 
             # TRANSFORM TO MAP FRAME
             corner_1 = get_map_frame_pose(local_corner_1, tr)
@@ -87,12 +100,24 @@ def generate_cuboid(msg):
             objects_marker_pub.publish(create_marker_msg(corner_3, 2))
             objects_marker_pub.publish(create_marker_msg(corner_4, 3))
 
-            if table >= 0: 
+            if table >= 0:
 
-                local_padded_corner_1 = [local_corner_1[0] - padding, local_corner_1[1] - padding]
-                local_padded_corner_2 = [local_corner_2[0] + padding, local_corner_2[1] - padding]
-                local_padded_corner_3 = [local_corner_3[0] + padding, local_corner_3[1] + padding]
-                local_padded_corner_4 = [local_corner_4[0] - padding, local_corner_4[1] + padding]
+                local_padded_corner_1 = [
+                    local_corner_1[0] - padding,
+                    local_corner_1[1] - padding,
+                ]
+                local_padded_corner_2 = [
+                    local_corner_2[0] + padding,
+                    local_corner_2[1] - padding,
+                ]
+                local_padded_corner_3 = [
+                    local_corner_3[0] + padding,
+                    local_corner_3[1] + padding,
+                ]
+                local_padded_corner_4 = [
+                    local_corner_4[0] - padding,
+                    local_corner_4[1] + padding,
+                ]
 
                 padded_corner_1 = get_map_frame_pose(local_padded_corner_1, tr)
                 padded_corner_2 = get_map_frame_pose(local_padded_corner_2, tr)
@@ -104,20 +129,35 @@ def generate_cuboid(msg):
                 persons_marker_pub.publish(create_marker_msg(padded_corner_3, 2))
                 persons_marker_pub.publish(create_marker_msg(padded_corner_4, 3))
 
-                rospy.set_param("/tables/table" + str(table) + "/objects_cuboid", [corner_1, corner_2, corner_3, corner_4])
-                rospy.set_param("/tables/table" + str(table) + "/persons_cuboid", [padded_corner_1, padded_corner_2, padded_corner_3, padded_corner_4])
+                rospy.set_param(
+                    "/tables/table" + str(table) + "/objects_cuboid",
+                    [corner_1, corner_2, corner_3, corner_4],
+                )
+                rospy.set_param(
+                    "/tables/table" + str(table) + "/persons_cuboid",
+                    [
+                        padded_corner_1,
+                        padded_corner_2,
+                        padded_corner_3,
+                        padded_corner_4,
+                    ],
+                )
                 now = str(datetime.datetime.now())
                 rospy.set_param("/tables/table" + str(table) + "/last_updated", now)
                 rospy.loginfo("Cuboid for table %d saved to parameter server", table)
 
             elif table == -1:
-                rospy.set_param("/counter/cuboid", [corner_1, corner_2, corner_3, corner_4])
+                rospy.set_param(
+                    "/counter/cuboid", [corner_1, corner_2, corner_3, corner_4]
+                )
                 now = str(datetime.datetime.now())
                 rospy.set_param("/counter/last_updated", now)
                 rospy.loginfo("Cuboid for the counter saved to parameter server")
 
             elif table == -2:
-                rospy.set_param("/wait/cuboid", [corner_1, corner_2, corner_3, corner_4])
+                rospy.set_param(
+                    "/wait/cuboid", [corner_1, corner_2, corner_3, corner_4]
+                )
                 now = str(datetime.datetime.now())
                 rospy.set_param("/wait/last_updated", now)
                 rospy.loginfo("Cuboid for the waiting area saved to parameter server")
@@ -128,23 +168,23 @@ def generate_cuboid(msg):
 
             # Dump rosparams to file
             data = {
-                'tables': rosparam.get_param('/tables'),
-                'counter': rosparam.get_param('/counter'),
-                'wait': rosparam.get_param('/wait')
+                "tables": rosparam.get_param("/tables"),
+                "counter": rosparam.get_param("/counter"),
+                "wait": rosparam.get_param("/wait"),
             }
 
-            with open(rosparam.get_param('/config_path'), 'w') as file:
+            with open(rosparam.get_param("/config_path"), "w") as file:
                 yaml.dump(data, file)
         else:
             # assume circular, and aruco marker is placed in the centre of the table
             local_r1 = [-radius, 0]
-            local_r2 = [(sqrt(2.)*-radius)/2., (sqrt(2.)*+radius)/2.]
+            local_r2 = [(sqrt(2.0) * -radius) / 2.0, (sqrt(2.0) * +radius) / 2.0]
             local_r3 = [0, +radius]
-            local_r4 = [(sqrt(2.)*+radius)/2., (sqrt(2.)*+radius)/2.]
+            local_r4 = [(sqrt(2.0) * +radius) / 2.0, (sqrt(2.0) * +radius) / 2.0]
             local_r5 = [+radius, 0]
-            local_r6 = [(sqrt(2.)*+radius)/2., (sqrt(2.)*-radius)/2.]
+            local_r6 = [(sqrt(2.0) * +radius) / 2.0, (sqrt(2.0) * -radius) / 2.0]
             local_r7 = [0, -radius]
-            local_r8 = [(sqrt(2.)*-radius)/2., (sqrt(2.)*-radius)/2.]
+            local_r8 = [(sqrt(2.0) * -radius) / 2.0, (sqrt(2.0) * -radius) / 2.0]
 
             r1 = get_map_frame_pose(local_r1, tr)
             r2 = get_map_frame_pose(local_r2, tr)
@@ -191,21 +231,31 @@ def generate_cuboid(msg):
             persons_marker_pub.publish(create_marker_msg(r7p, 6))
             persons_marker_pub.publish(create_marker_msg(r8p, 7))
 
-
-            rospy.set_param("/tables/table" + str(table) + "/objects_cuboid", [r1, r2, r3, r4, r5, r6, r7, r8])
-            rospy.set_param("/tables/table" + str(table) + "/persons_cuboid", [r1p, r2p, r3p, r4p, r5p, r6p, r7p, r8p])
+            rospy.set_param(
+                "/tables/table" + str(table) + "/objects_cuboid",
+                [r1, r2, r3, r4, r5, r6, r7, r8],
+            )
+            rospy.set_param(
+                "/tables/table" + str(table) + "/persons_cuboid",
+                [r1p, r2p, r3p, r4p, r5p, r6p, r7p, r8p],
+            )
             now = str(datetime.datetime.now())
             rospy.set_param("/tables/table" + str(table) + "/last_updated", now)
             rospy.loginfo("Cuboid for table %d saved to parameter server", table)
 
         return GenerateTableCuboidResponse(True)
     else:
-        rospy.logerr("No pose data available to generate cuboid for table %d, please check if the marker is on the table", table)
+        rospy.logerr(
+            "No pose data available to generate cuboid for table %d, please check if the marker is on the table",
+            table,
+        )
         return GenerateTableCuboidResponse(False)
+
 
 def get_latest_pose(msg):
     global latest_pose
     latest_pose = msg
+
 
 if __name__ == "__main__":
 
@@ -214,11 +264,11 @@ if __name__ == "__main__":
     s = rospy.Service("generate_table_cuboid", GenerateTableCuboid, generate_cuboid)
 
     if rospy.has_param("/config_path"):
-        els = rosparam.load_file(rosparam.get_param('/config_path'))
+        els = rosparam.load_file(rosparam.get_param("/config_path"))
         for param, ns in els:
             rosparam.upload_params(ns, param)
-    
+
     rospy.loginfo("Cuboid Generator Service Ready")
-    
+
     while not rospy.is_shutdown():
         rospy.sleep(1.0)
