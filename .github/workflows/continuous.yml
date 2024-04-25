@@ -1,0 +1,18 @@
+name: Pull Request
+
+on:
+  push:
+    branches:
+    - [main]
+jobs:
+  QC:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Repository and Submodules
+      uses: actions/checkout@v4
+      with:
+        path: "src/lasr-base"
+    - name: Build & Deploy Documentation
+      uses: "./.github/workflows/docs"
+    - name: Quality Control
+      uses: "./.github/workflows/qc"

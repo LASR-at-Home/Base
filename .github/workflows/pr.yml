@@ -1,0 +1,16 @@
+name: Pull Request
+
+on:
+  pull_request:
+    branches:
+    - '*'
+jobs:
+  QC:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        path: "src/lasr-base"
+    - name: Quality Control
+      uses: "./.github/workflows/qc"
