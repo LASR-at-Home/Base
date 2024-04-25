@@ -3,7 +3,7 @@ name: Continuous
 on:
   push:
     branches:
-    - main
+    - '*'
 jobs:
   QC:
     runs-on: ubuntu-latest
