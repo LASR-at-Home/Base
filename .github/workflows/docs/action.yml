@@ -1,6 +1,7 @@
 name: Build & Deploy Documentation
 
 runs:
+  using: "composite"
   steps:
 
     - name: Install ROS Noetic

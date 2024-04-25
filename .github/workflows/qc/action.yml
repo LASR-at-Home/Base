@@ -1,6 +1,7 @@
 name: Quality Control
 
 runs:
+  using: "composite"
   steps:
 
   - name: Python Formatting
