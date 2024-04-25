@@ -25,14 +25,17 @@ import matplotlib.pyplot as plt
 # axs[0].imshow(template, cmap='gray')
 # axs[1].imshow(roi, cmap='gray')
 
+
 def draw_cnp(grid, cnp):
-    plt.imshow(grid, cmap='gray')
-    plt.title('CNP' + str(TEST))
-    plt.axis('off')
-    plt.plot(cnp[0], cnp[1], 'ro')
+    plt.imshow(grid, cmap="gray")
+    plt.title("CNP" + str(TEST))
+    plt.axis("off")
+    plt.plot(cnp[0], cnp[1], "ro")
     # plt.savefig('/home/nicole/robocup/rexy/waypoints/waypoints' + str(TEST) + '-3.jpg', dpi=300,
     #             bbox_inches='tight')
     plt.show()
+
+
 def plot_clusters_1(points=None, labels=None, dilation=None, centers=None, msg=None):
     """
     This function plots clusters.
@@ -43,16 +46,16 @@ def plot_clusters_1(points=None, labels=None, dilation=None, centers=None, msg=N
      :param centers: The centers of the clusters.
     """
     # Set up color map
-    cmap = plt.get_cmap('jet')
+    cmap = plt.get_cmap("jet")
 
     # Show dilation image
     # plt.imshow(dilation, cmap='gray')
     # AXS[0].imshow(dilation, cmap='gray')
 
     # Set title and axis off
-    plt.title('midpoints of clusters_' + str(TEST))
+    plt.title("midpoints of clusters_" + str(TEST))
 
-    plt.axis('off')
+    plt.axis("off")
 
     # Plot points with color according to their cluster label
     for label in set(labels):
@@ -60,10 +63,16 @@ def plot_clusters_1(points=None, labels=None, dilation=None, centers=None, msg=N
             mask = labels == label
             cluster_points = points[mask]
             color = cmap(label / len(set(labels)))
-            plt.plot(cluster_points[:, 0], cluster_points[:, 1], '.', markersize=2, color=color)
+            plt.plot(
+                cluster_points[:, 0],
+                cluster_points[:, 1],
+                ".",
+                markersize=2,
+                color=color,
+            )
 
     # Show image with clusters centers
-    plt.scatter(centers[:, 0], centers[:, 1], c='r', s=10)
+    plt.scatter(centers[:, 0], centers[:, 1], c="r", s=10)
 
     combinations = list(itertools.combinations(centers, 2))
     combinations = [list(elem) for elem in combinations]
@@ -86,6 +95,8 @@ def plot_clusters_1(points=None, labels=None, dilation=None, centers=None, msg=N
     # plt.savefig('/home/nicole/robocup/rexy/intersects' + str(TEST) + '.png', dpi=300,
     #             bbox_inches='tight')
     # plt.show()
+
+
 class Waypoint:
     def __init__(self):
         self._msg = None
@@ -107,18 +118,22 @@ class Waypoint:
 
     def global_costmap_cb(self):
         """
-            This function waits for a message on '/move_base/global_costmap/costmap' topic
-            and returns it.
+        This function waits for a message on '/move_base/global_costmap/costmap' topic
+        and returns it.
         """
-        self._msg = rospy.wait_for_message('/move_base/global_costmap/costmap', OccupancyGrid)
+        self._msg = rospy.wait_for_message(
+            "/move_base/global_costmap/costmap", OccupancyGrid
+        )
         return self._msg
 
     def local_costmap_cb(self):
         """
-            This function waits for a message on '/move_base/global_costmap/costmap' topic
-            and returns it.
+        This function waits for a message on '/move_base/global_costmap/costmap' topic
+        and returns it.
         """
-        self._msg = rospy.wait_for_message('/move_base/local_costmap/costmap', OccupancyGrid)
+        self._msg = rospy.wait_for_message(
+            "/move_base/local_costmap/costmap", OccupancyGrid
+        )
         return self._msg
 
     def get_pose(self, _x: float, _y: float, msg: OccupancyGrid, isRobot: bool):
@@ -127,8 +142,9 @@ class Waypoint:
             x, y = robot_pose.position.x, robot_pose.position.y
         else:
             x, y = _x, _y
-        x, y = (x - msg.info.origin.position.x) / msg.info.resolution, \
-               (y - msg.info.origin.position.y) / msg.info.resolution
+        x, y = (x - msg.info.origin.position.x) / msg.info.resolution, (
+            y - msg.info.origin.position.y
+        ) / msg.info.resolution
 
         return x, y
 
@@ -137,25 +153,33 @@ class Waypoint:
 
     @staticmethod
     def clear_costmap():
-        rospy.wait_for_service('/move_base/clear_costmaps')
+        rospy.wait_for_service("/move_base/clear_costmaps")
         try:
-            clear_costmaps = rospy.ServiceProxy('/move_base/clear_costmaps', Empty)
+            clear_costmaps = rospy.ServiceProxy("/move_base/clear_costmaps", Empty)
         except rospy.ServiceException as e:
             print("Service call failed: %s" % e)
 
     def get_global_costmap_window(self, isRobot=True, _x=None, _y=None):
-        return self.create_window(msg=self.global_costmap_cb(), isRobot=isRobot, _x=_x, _y=_y)
+        return self.create_window(
+            msg=self.global_costmap_cb(), isRobot=isRobot, _x=_x, _y=_y
+        )
 
     # def get_local_costmap_window(self, isRobot=True, _x=None, _y=None):
     #     return self.local_costmap_cb(msg=self.local_costmap_cb(), isRobot=isRobot, _x=_x, _y=_y)
 
     @staticmethod
     def current_pose():
-        msg = rospy.wait_for_message('/amcl_pose', PoseWithCovarianceStamped)
+        msg = rospy.wait_for_message("/amcl_pose", PoseWithCovarianceStamped)
         pose = msg.pose.pose
         return pose
 
-    def create_window(self, msg: OccupancyGrid = None, isRobot: bool = True, _x: float = None, _y: float = None):
+    def create_window(
+        self,
+        msg: OccupancyGrid = None,
+        isRobot: bool = True,
+        _x: float = None,
+        _y: float = None,
+    ):
         x, y = self.get_pose(_x, _y, msg, isRobot=isRobot)
         ind = y * msg.info.width + x
         x, y, ind = int(x), int(y), int(ind)
@@ -163,24 +187,30 @@ class Waypoint:
         w_x_max = min(msg.info.width, int(x + self.window_size))
         w_y_min = max(0, int(y - self.window_size))
         w_y_max = min(msg.info.height, int(y + self.window_size))
-        window = np.array(msg.data).reshape(msg.info.height, msg.info.width)[w_y_min:w_y_max, w_x_min:w_x_max]
+        window = np.array(msg.data).reshape(msg.info.height, msg.info.width)[
+            w_y_min:w_y_max, w_x_min:w_x_max
+        ]
         # plt.imshow(window, cmap='gray')
         # plt.show()
         # plt.savefig('/home/nicole/robocup/rexy/window' + str(TEST) + '.png', dpi=300, bbox_inches='tight')
         return window
 
     @staticmethod
-    def mask_polygon(window: np = None, poly_points: List[List[float]] = None, threshold: int = 60,
-                     is_white_mask: bool = True):
+    def mask_polygon(
+        window: np = None,
+        poly_points: List[List[float]] = None,
+        threshold: int = 60,
+        is_white_mask: bool = True,
+    ):
         """
-           Masks a polygon in an image using bitwise or and white mask or black mask with bitwise and.
+        Masks a polygon in an image using bitwise or and white mask or black mask with bitwise and.
 
-           :param window: The image to mask.
-           :param poly_points: The points of the polygon to mask.
-           :param threshold: The threshold value for masking.
-           :param is_white_mask: If true, the mask will be white, otherwise it will be black.
+        :param window: The image to mask.
+        :param poly_points: The points of the polygon to mask.
+        :param threshold: The threshold value for masking.
+        :param is_white_mask: If true, the mask will be white, otherwise it will be black.
 
-           :return: The masked image.
+        :return: The masked image.
         """
         try:
             temp_window = np.array(window).astype(np.int32)
@@ -217,9 +247,9 @@ class Waypoint:
         return np.where(pixels <= threshold)
 
     def has_enough_free_space(self, window):
-
-
-        num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(window, connectivity=4, ltype=cv2.CV_32S)
+        num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(
+            window, connectivity=4, ltype=cv2.CV_32S
+        )
         print(f"num_labels: {num_labels}, labels: {labels}, stats: {stats}")
 
         mask = np.zeros(window.shape, dtype=np.uint8)
@@ -229,13 +259,13 @@ class Waypoint:
             mask = cv2.bitwise_or(mask, componentMask)
             plt.figure(figsize=(8, 8))
             plt.subplot(121)
-            plt.imshow(window, cmap='gray')
+            plt.imshow(window, cmap="gray")
             plt.title("Image")
             plt.axis("off")
 
             # Display the mask image
             plt.subplot(122)
-            plt.imshow(mask, cmap='gray')
+            plt.imshow(mask, cmap="gray")
             plt.title("componentMask")
             plt.axis("off")
 
@@ -252,9 +282,9 @@ class Waypoint:
         #     area = stats[label, cv2.CC_STAT_AREA]
         #     if area >= min_required_area:
         #         Check if the polygon can fit within the connected component
-                # if self.can_fit_polygon_in_connected_component(labels == label):
-                #     print("Found a connected component that can fit the polygon")
-                #     return True
+        # if self.can_fit_polygon_in_connected_component(labels == label):
+        #     print("Found a connected component that can fit the polygon")
+        #     return True
 
         return False
 
@@ -262,6 +292,7 @@ class Waypoint:
         footprint = get_footprint(self._msg)
         polygon_points = np.array(footprint, dtype=np.int32)
         from shapely.geometry import Point, Polygon
+
         polygon = Polygon(polygon_points)
 
         for y in range(connected_component_mask.shape[0]):
@@ -275,8 +306,6 @@ class Waypoint:
 
         return True
 
-
-
     def is_narrow_space(self, points):
         """
         Checks if the robot can fit in a narrow space of elevator
@@ -288,17 +317,25 @@ class Waypoint:
         """
         # get the window
         self.global_costmap_cb()
-        window = np.array(self._msg.data).astype(np.int32).reshape(self._msg.info.height, self._msg.info.width)
+        window = (
+            np.array(self._msg.data)
+            .astype(np.int32)
+            .reshape(self._msg.info.height, self._msg.info.width)
+        )
         elevator_sides = self.transform_points(points, self._msg)
         # mask a polygon area from the window
-        black_pixels = self.mask_polygon(window=window, poly_points=elevator_sides, threshold=60)
+        black_pixels = self.mask_polygon(
+            window=window, poly_points=elevator_sides, threshold=60
+        )
         # get the number of black pixels
         pixels_count = self.get_black_pxl_count(black_pixels)
         # get robot footprint
         footprint = get_footprint(self._msg)
         # show_robot_footprint(footprint=footprint, window=window)
         # calculate if the robot fits
-        return not is_robot_fit_in_elevator(window=window, footprint=footprint, pixels=pixels_count)
+        return not is_robot_fit_in_elevator(
+            window=window, footprint=footprint, pixels=pixels_count
+        )
 
     @staticmethod
     def transform_points(points, msg):
@@ -313,8 +350,9 @@ class Waypoint:
 
         pxl_pts = []
         for pt in points:
-            x, y = (pt[0] - msg.info.origin.position.x) / msg.info.resolution, \
-                   (pt[1] - msg.info.origin.position.y) / msg.info.resolution
+            x, y = (pt[0] - msg.info.origin.position.x) / msg.info.resolution, (
+                pt[1] - msg.info.origin.position.y
+            ) / msg.info.resolution
             x, y = int(x), int(y)
             pxl_pts.append([x, y])
         return pxl_pts
@@ -326,40 +364,59 @@ class Waypoint:
         pxl_pts = self.transform_points(points, msg)
         pxl_pts = np.array(pxl_pts, dtype=np.float32)
 
-        h_ab = np.sqrt(((pxl_pts[0][0] - pxl_pts[1][0]) ** 2) + ((pxl_pts[0][1] - pxl_pts[1][1]) ** 2))
-        h_cd = np.sqrt(((pxl_pts[2][0] - pxl_pts[3][0]) ** 2) + ((pxl_pts[2][1] - pxl_pts[3][1]) ** 2))
-        w_ad = np.sqrt(((pxl_pts[0][0] - pxl_pts[3][0]) ** 2) + ((pxl_pts[0][1] - pxl_pts[3][1]) ** 2))
-        w_bc = np.sqrt(((pxl_pts[2][0] - pxl_pts[1][0]) ** 2) + ((pxl_pts[2][1] - pxl_pts[1][1]) ** 2))
+        h_ab = np.sqrt(
+            ((pxl_pts[0][0] - pxl_pts[1][0]) ** 2)
+            + ((pxl_pts[0][1] - pxl_pts[1][1]) ** 2)
+        )
+        h_cd = np.sqrt(
+            ((pxl_pts[2][0] - pxl_pts[3][0]) ** 2)
+            + ((pxl_pts[2][1] - pxl_pts[3][1]) ** 2)
+        )
+        w_ad = np.sqrt(
+            ((pxl_pts[0][0] - pxl_pts[3][0]) ** 2)
+            + ((pxl_pts[0][1] - pxl_pts[3][1]) ** 2)
+        )
+        w_bc = np.sqrt(
+            ((pxl_pts[2][0] - pxl_pts[1][0]) ** 2)
+            + ((pxl_pts[2][1] - pxl_pts[1][1]) ** 2)
+        )
 
         max_height = max(h_ab, h_cd).astype(int)
         max_width = max(w_bc, w_ad).astype(int)
 
-        dest_pts = np.array([[0, 0],
-                             [0, max_height - 1],
-                             [max_width - 1, max_height - 1],
-                             [max_width - 1, 0]], dtype=np.float32)
+        dest_pts = np.array(
+            [
+                [0, 0],
+                [0, max_height - 1],
+                [max_width - 1, max_height - 1],
+                [max_width - 1, 0],
+            ],
+            dtype=np.float32,
+        )
 
         # do the warp perspective
         M = cv2.getPerspectiveTransform(pxl_pts, dest_pts)
         grid = np.array(msg.data).reshape(msg.info.height, msg.info.width)
-        warped = cv2.warpPerspective(grid, M, (max_width, max_height), flags=cv2.INTER_NEAREST)
-
+        warped = cv2.warpPerspective(
+            grid, M, (max_width, max_height), flags=cv2.INTER_NEAREST
+        )
 
         # apply erosion
         warped = cv2.convertScaleAbs(warped)
-        plt.imshow(warped, cmap='gray', aspect='auto')
-        plt.axis('off')
+        plt.imshow(warped, cmap="gray", aspect="auto")
+        plt.axis("off")
 
         if PLOT_SHOW:
             plt.show()
         if PLOT_SAVE:
             plt.savefig(DEBUG_PATH + "/warped_in_extract" + str(TEST) + ".jpg")
 
-
         self.window = warped
         return warped, M
 
-    def find_free_location_in_elevator(self, M=None, warped=None, elevator_number=None, is_cnp=False):
+    def find_free_location_in_elevator(
+        self, M=None, warped=None, elevator_number=None, is_cnp=False
+    ):
         # self.find_number_clusters(warped)
         centers, num_clusters, midpoints, dilation = self.find_clusters(warped)
         if num_clusters == 0:
@@ -422,7 +479,7 @@ class Waypoint:
         # x, y = points.flatten()[0], points.flatten()[1]
 
         # Loop through all the points and add each point to the new_points list
-        print(f'points: {points}')
+        print(f"points: {points}")
         if is_lift:
             try:
                 new_points.append([points[0], points[1]])
@@ -458,8 +515,11 @@ class Waypoint:
             _x, _y = global_points[i][0], global_points[i][1]
 
             # Calculate the x and y coordinates of each point
-            x, y = (_x * self._msg.info.resolution) + self._msg.info.origin.position.x, \
-                   (_y * self._msg.info.resolution) + self._msg.info.origin.position.y
+            x, y = (
+                _x * self._msg.info.resolution
+            ) + self._msg.info.origin.position.x, (
+                _y * self._msg.info.resolution
+            ) + self._msg.info.origin.position.y
 
             robot_points.append([x, y])
 
@@ -491,14 +551,13 @@ class Waypoint:
         dilation = cv2.dilate(erosion, kernel, iterations=self.dilation_iterations)
 
         # Display the dilation
-        plt.imshow(dilation, cmap='gray', aspect='auto')
-        plt.title('dilation')
+        plt.imshow(dilation, cmap="gray", aspect="auto")
+        plt.title("dilation")
 
         if PLOT_SHOW:
             plt.show()
         if PLOT_SAVE:
             plt.savefig(DEBUG_PATH + "/dilation" + str(TEST) + ".jpg")
-
 
         # Get non-black pixels
         non_black_pixels = self.get_white_pxl(pixels=dilation, threshold=55)
@@ -510,9 +569,8 @@ class Waypoint:
         try:
             num_clusters, cluster_labels, db = self.dbscan(points=points)
         except ValueError:
-            rospy.logerr('No clusters found')
+            rospy.logerr("No clusters found")
             return 0, 0, 0, dilation
-
 
         # Find centers
         centers = self.find_center_clusters(db=db, points=points)
@@ -540,7 +598,7 @@ class Waypoint:
         db = DBSCAN(eps=self.eps, min_samples=self.min_samples).fit(points)
         labels = db.labels_
         num_clusters = len(set(labels)) - (1 if -1 in labels else 0)
-        rospy.loginfo('Estimated number of clusters== people: %d' % num_clusters)
+        rospy.loginfo("Estimated number of clusters== people: %d" % num_clusters)
         return num_clusters, labels, db
 
     def find_center_clusters(self, db=None, points=None):
@@ -551,7 +609,7 @@ class Waypoint:
          :param points: The points to find centers for.
 
          :return: The centers of the clusters.
-       """
+        """
         centers = []
 
         # Find center of each cluster
@@ -566,23 +624,25 @@ class Waypoint:
         return np.array(centers)
 
     # assume it is called only around elevator
-    def local_costmap_window(self, msg: OccupancyGrid, _x: float = None, _y: float = None):
+    def local_costmap_window(
+        self, msg: OccupancyGrid, _x: float = None, _y: float = None
+    ):
         w, h = msg.info.width, msg.info.height
         grid = np.array(msg.data).reshape(msg.info.height, msg.info.width)
-        window = grid[0:(3 * h // 4), w // 2:w]
+        window = grid[0 : (3 * h // 4), w // 2 : w]
         fig, ax = plt.subplots(1, 2)
         ax[0].imshow(grid)
         # plt.show()
-        ax[1].imshow(window, cmap='gray')
-        plt.title('local_costmap and window' + str(TEST))
+        ax[1].imshow(window, cmap="gray")
+        plt.title("local_costmap and window" + str(TEST))
         # plt.savefig('/home/nicole/robocup/rexy/waypoints/local_costmap' + str(TEST) + '-1.png', dpi=300,
         #             bbox_inches='tight')
         # plt.show()
         edges = self.find_edges(window)
-        print('Edges: {}'.format(len(edges)))
+        print("Edges: {}".format(len(edges)))
         # draw_edges(edges)
         contours = self.find_contours(edges)
-        print('SHAPEEE: {}'.format(window.shape))
+        print("SHAPEEE: {}".format(window.shape))
 
         # Loop through each contour and check if it's above/below the threshold
         filtered_contours = []
@@ -593,15 +653,17 @@ class Waypoint:
             center_x, center_y = x + w // 2, y + h // 2
 
             # check if the contour is above or below the threshold point
-            if threshold_point[1] - 35 < center_y < threshold_point[1] + 35:  # contour is above the threshold point
+            if (
+                threshold_point[1] - 35 < center_y < threshold_point[1] + 35
+            ):  # contour is above the threshold point
                 if threshold_point[0] - 25 < center_x < threshold_point[0] + 25:
                     filtered_contours.append(contour)
 
-        print('Filtered Contours LEN: {}'.format(len(filtered_contours) // 2))
+        print("Filtered Contours LEN: {}".format(len(filtered_contours) // 2))
         draw_contours(filtered_contours)
-        print('Contours: {}'.format(len(contours)))
+        print("Contours: {}".format(len(contours)))
         filtered_contours = self.filter_contours(filtered_contours, window)
-        print('Filtered Contours LEN: {}'.format(len(filtered_contours) // 2))
+        print("Filtered Contours LEN: {}".format(len(filtered_contours) // 2))
         return window
 
     @staticmethod
@@ -624,7 +686,9 @@ class Waypoint:
 
     @staticmethod
     def find_contours(edges):
-        contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        contours, _ = cv2.findContours(
+            edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+        )
         return contours
 
     @staticmethod
@@ -684,7 +748,7 @@ class Waypoint:
                     if distance < min_distance:
                         min_distance = distance
                         closest_points = self.find_extreme_points(ei, ej)
-                        print(f'Closest points: {closest_points}')
+                        print(f"Closest points: {closest_points}")
         return closest_points
 
     @staticmethod
@@ -703,13 +767,16 @@ class Waypoint:
         for c in contours:
             contour = []
             for i in c:
-                if 2 < i[0][0] < window.shape[0] - 2 and 2 < i[0][1] < window.shape[1] - 2:
+                if (
+                    2 < i[0][0] < window.shape[0] - 2
+                    and 2 < i[0][1] < window.shape[1] - 2
+                ):
                     contour.append(i[0])
             if len(contour) > min_contour_length:
                 filtered_contours.append(contour)
-        print('Filtered contours: {}'.format(len(filtered_contours)))
-        with open('/home/nicole/robocup/rexy/waypoint-filtered.txt', 'a') as f:
-            f.write(str(len(filtered_contours) // 2) + str(TEST) + '\n')
+        print("Filtered contours: {}".format(len(filtered_contours)))
+        with open("/home/nicole/robocup/rexy/waypoint-filtered.txt", "a") as f:
+            f.write(str(len(filtered_contours) // 2) + str(TEST) + "\n")
         # plot(filtered_contours, window)
         return filtered_contours
 
@@ -728,13 +795,16 @@ class Waypoint:
         for c in contours:
             contour = []
             for i in c:
-                if 2 < i[0][0] < window.shape[0] - 2 and 2 < i[0][1] < window.shape[1] - 2:
+                if (
+                    2 < i[0][0] < window.shape[0] - 2
+                    and 2 < i[0][1] < window.shape[1] - 2
+                ):
                     contour.append(i[0])
             filtered_contours.append(contour)
 
-        print('Filtered contours: {}'.format(len(filtered_contours)))
-        with open('/home/nicole/robocup/rexy/waypoint-filtered.txt', 'a') as f:
-            f.write(str(len(filtered_contours) // 2) + str(TEST) + '\n')
+        print("Filtered contours: {}".format(len(filtered_contours)))
+        with open("/home/nicole/robocup/rexy/waypoint-filtered.txt", "a") as f:
+            f.write(str(len(filtered_contours) // 2) + str(TEST) + "\n")
         # plot(filtered_contours, self.window)
         return filtered_contours
 
@@ -783,7 +853,9 @@ class Waypoint:
             elif len(selected_contours) == 1:
                 # add contour and get min_dist
                 selected_contours.append(c)
-                min_d, Pcenter = self.min_dist_two_contours(selected_contours[0], selected_contours[1])
+                min_d, Pcenter = self.min_dist_two_contours(
+                    selected_contours[0], selected_contours[1]
+                )
             else:
                 # keep only the two contours with min distance between them
                 min_d0, Pcenter0 = self.min_dist_two_contours(selected_contours[0], c)
@@ -805,7 +877,6 @@ class Waypoint:
         return Pcenter
 
     def find_multiple_cnp(self, window, threshold=60):
-
         window = np.where(window <= threshold, 0, 255).astype(np.uint8)
         # plt.imshow(window, cmap='gray')
         # plt.title('dilation in find multiple cnp')
@@ -822,9 +893,9 @@ class Waypoint:
 
         # filter the contours in the correct type
         contours = self.filter_contours_type(contours=contours, window=self.window)
-        print('Number of contours: {}'.format(len(contours)))
-        with open('/home/nicole/robocup/rexy/waypoint-original.txt', 'a') as f:
-            f.write(str("len contours ") + str(len(contours)) + str(TEST) + '\n')
+        print("Number of contours: {}".format(len(contours)))
+        with open("/home/nicole/robocup/rexy/waypoint-original.txt", "a") as f:
+            f.write(str("len contours ") + str(len(contours)) + str(TEST) + "\n")
 
         # create combinations of contours 1:1
         combinations = list(itertools.combinations(contours, 2))
@@ -836,7 +907,9 @@ class Waypoint:
         for filtered_contours in combinations:
             pcenter = self.min_dist_contours(filtered_contours=filtered_contours)
             Dx = self._msg.info.origin.position.x
-            Dy = self._msg.info.height * self._msg.info.resolution - abs(self._msg.info.origin.position.y)
+            Dy = self._msg.info.height * self._msg.info.resolution - abs(
+                self._msg.info.origin.position.y
+            )
             T = np.array([(1, 0, 0, Dx), (0, 1, 0, Dy), (0, 0, 1, 0), (0, 0, 0, 1)])
             cnps.append(pcenter)
 
@@ -857,12 +930,14 @@ class Waypoint:
         # find contours within window
         contours = self.find_contours(edges=edges)
         draw_contours(contours)
-        print('Number of contours: {}'.format(len(contours)))
+        print("Number of contours: {}".format(len(contours)))
         # print('Number of contours: {}'.format(len(contours)))
         filtered_contours = self.filter_contours(contours=contours, window=window)
         pcenter = self.min_dist_contours(filtered_contours=filtered_contours)
         Dx = self._msg.info.origin.position.x
-        Dy = self._msg.info.height * self._msg.info.resolution - abs(self._msg.info.origin.position.y)
+        Dy = self._msg.info.height * self._msg.info.resolution - abs(
+            self._msg.info.origin.position.y
+        )
         T = np.array([(1, 0, 0, Dx), (0, -1, 0, Dy), (0, 0, -1, 0), (0, 0, 0, 1)])
 
         # TODO: local to global coordinates
@@ -891,20 +966,26 @@ class Waypoint:
         #           [5.05235815048, -2.76944160461],
         #           [3.45198941231, -3.251049757]]
         elevator_center = 5.353797912597656, -4.50060510635376
-        points = [[4.282492637634277, -3.5537350177764893],
-                  [4.353395938873291, -5.352860927581787],
-                  [6.462785720825195, -5.264233589172363],
-                  [6.569140911102295, -3.4651081562042236]]
+        points = [
+            [4.282492637634277, -3.5537350177764893],
+            [4.353395938873291, -5.352860927581787],
+            [6.462785720825195, -5.264233589172363],
+            [6.569140911102295, -3.4651081562042236],
+        ]
 
         # uncomment to test with local costmap
         # self.local_costmap_cb()
         # self.local_costmap_cp_window(self._msg,_x=elevator_center[0],_y=elevator_center[1])
         # self.global_costmap_cb()
-        self.get_global_costmap_window(isRobot=False,_x=elevator_center[0],_y=elevator_center[1])
+        self.get_global_costmap_window(
+            isRobot=False, _x=elevator_center[0], _y=elevator_center[1]
+        )
         warped, M = self.extract_given_elevator_warping(points=points, msg=self._msg)
         print(warped)
         print(type(warped))
-        l = self.find_free_location_in_elevator(M=M, warped=warped, elevator_number=elevator_number)
+        l = self.find_free_location_in_elevator(
+            M=M, warped=warped, elevator_number=elevator_number
+        )
         # p = Pose()
         # p.position.x =  l[0][0]
         # p.position.y =  l[0][1]
@@ -915,24 +996,25 @@ class Waypoint:
         #     self.get_global_costmap_window(isRobot=False,_x=elevator_center[0],_y=elevator_center[1])
         #     warped, M = self.extract_given_elevator_warping(points=points, msg=self._msg)
 
-
     def get_lift_information(self, is_lift, is_sim=True):
         # sim elevator
         if is_lift:
-            c = rospy.get_param('lift_position_center_point')
+            c = rospy.get_param("lift_position_center_point")
             elevator_center = c[0], c[1]
-            points = rospy.get_param('lift_position_points')
+            points = rospy.get_param("lift_position_points")
         else:
-            c = rospy.get_param('wait_position_center_point')
+            c = rospy.get_param("wait_position_center_point")
             elevator_center = c[0], c[1]
-            points = rospy.get_param('wait_position_points')
+            points = rospy.get_param("wait_position_points")
 
         if DEBUG > 3:
             print(f"center 1: {c}")
             print(f"center x: {c[0]} and the type {type(c[0])}")
             print(f"center y : {c[1]}")
 
-        self.get_global_costmap_window(isRobot=False,_x=elevator_center[0],_y=elevator_center[1])
+        self.get_global_costmap_window(
+            isRobot=False, _x=elevator_center[0], _y=elevator_center[1]
+        )
         warped, M = self.extract_given_elevator_warping(points=points, msg=self._msg)
         centers, num_clusters, midpoints, dilation = self.find_clusters(warped)
         analytics = [centers, num_clusters, midpoints, elevator_center]
@@ -940,9 +1022,8 @@ class Waypoint:
         return warped, analytics, M
 
 
-
-if __name__ == '__main__':
-    rospy.init_node('waypoint_node')
+if __name__ == "__main__":
+    rospy.init_node("waypoint_node")
     wp = Waypoint()
     # is narrow space working
     # print(wp.is_narrow_space())

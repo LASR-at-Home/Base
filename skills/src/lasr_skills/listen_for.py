@@ -9,7 +9,6 @@ from actionlib_msgs.msg import GoalStatus
 
 class ListenFor(smach_ros.SimpleActionState):
     def __init__(self, wake_word: str):
-
         def speech_result_cb(userdata, status, result):
             if status == GoalStatus.SUCCEEDED:
                 if wake_word in result.sequence.lower():

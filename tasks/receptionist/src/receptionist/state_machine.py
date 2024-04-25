@@ -12,7 +12,6 @@ from receptionist.states import (
 
 
 class Receptionist(smach.StateMachine):
-
     def __init__(
         self,
         wait_pose: Pose,
@@ -21,11 +20,9 @@ class Receptionist(smach.StateMachine):
         seat_area: Polygon,
         host_data: dict,
     ):
-
         smach.StateMachine.__init__(self, outcomes=["succeeded", "failed"])
 
         with self:
-
             self.userdata.guest_data = {"host": host_data, "guest1": {}, "guest2": {}}
 
             smach.StateMachine.add(

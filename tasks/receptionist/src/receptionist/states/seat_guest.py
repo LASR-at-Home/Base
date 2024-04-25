@@ -9,11 +9,9 @@ from lasr_skills import PlayMotion, Detect3DInArea, LookToPoint, Say
 
 
 class SeatGuest(smach.StateMachine):
-
     _motions: List[str] = ["look_down_left", "look_down_right", "look_down_centre"]
 
     class ProcessDetections(smach.State):
-
         def __init__(self):
             smach.State.__init__(
                 self,
@@ -42,7 +40,6 @@ class SeatGuest(smach.StateMachine):
             )
 
             for seat in seat_detections:
-
                 seat_polygon: Polygon = Polygon(np.array(seat.xyseg).reshape(-1, 2))
                 seat_is_empty: bool = True
                 for person_polygon in person_polygons:
@@ -64,7 +61,6 @@ class SeatGuest(smach.StateMachine):
     ):
         smach.StateMachine.__init__(self, outcomes=["succeeded", "failed"])
         with self:
-
             # TODO: stop doing this
             self.userdata.people_detections = []
             self.userdata.seat_detections = []
@@ -79,7 +75,6 @@ class SeatGuest(smach.StateMachine):
             )
 
             with motion_iterator:
-
                 container_sm = smach.StateMachine(
                     outcomes=["succeeded", "failed", "continue"],
                     input_keys=["motion", "people_detections", "seat_detections"],

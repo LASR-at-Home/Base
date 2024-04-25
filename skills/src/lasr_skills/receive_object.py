@@ -12,7 +12,6 @@ import os
 
 
 class ReceiveObject(smach.StateMachine):
-
     def __init__(self):
         smach.StateMachine.__init__(
             self, outcomes=["succeeded", "failed"], input_keys=["object_name"]

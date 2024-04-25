@@ -35,7 +35,6 @@ def parse_question_xml(xml_file_path: str) -> dict:
 
 
 class XmlQuestionAnswer(smach.State):
-
     def __init__(self, index_path: str, txt_path: str, xml_path: str, k: int = 1):
         smach.State.__init__(
             self,

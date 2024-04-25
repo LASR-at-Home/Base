@@ -11,7 +11,6 @@ from typing import List, Union
 
 
 class FindNamedPerson(smach.StateMachine):
-
     class GetLocation(smach.State):
         def __init__(self):
             smach.State.__init__(
@@ -115,7 +114,6 @@ class FindNamedPerson(smach.StateMachine):
             waypoints_to_iterate: List[Pose] = waypoints
 
         with self:
-
             smach.StateMachine.add(
                 "GET_POSE",
                 self.GetPose(),
@@ -138,7 +136,6 @@ class FindNamedPerson(smach.StateMachine):
             )
 
             with waypoint_iterator:
-
                 container_sm = smach.StateMachine(
                     outcomes=["succeeded", "failed", "continue"],
                     input_keys=["location_index", "waypoints"],
@@ -146,7 +143,6 @@ class FindNamedPerson(smach.StateMachine):
                 )
 
                 with container_sm:
-
                     smach.StateMachine.add(
                         "GET_LOCATION",
                         self.GetLocation(),
