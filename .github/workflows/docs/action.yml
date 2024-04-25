@@ -5,6 +5,7 @@ runs:
   steps:
 
     - name: Install ROS Noetic
+      shell: bash
       run: |
         sudo add-apt-repository universe
         sudo add-apt-repository restricted
@@ -21,16 +22,19 @@ runs:
         sudo apt install ros-noetic-ros-base python3-catkin-tools
 
     - name: Build documentation package
+      shell: bash
       run: |
         source /opt/ros/noetic/setup.bash
         catkin build documentation
 
     - name: Use Node.js
+      shell: bash
       uses: actions/setup-node@v3
       with:
         node-version: 20
 
     - name: Build documentation
+      shell: bash
       run: |
         source /opt/ros/noetic/setup.bash
         source devel/setup.bash
