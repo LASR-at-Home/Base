@@ -5,9 +5,6 @@ runs:
   steps:
 
   - name: Python Formatting
-    uses: rickstaa/action-black@v1
-    with:
-      black_args: ". --check --diff"
     uses: psf/black@stable
     with:
       options: "--check --verbose"
