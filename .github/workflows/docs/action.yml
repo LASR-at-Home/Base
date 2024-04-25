@@ -28,7 +28,6 @@ runs:
         catkin build documentation
 
     - name: Use Node.js
-      shell: bash
       uses: actions/setup-node@v3
       with:
         node-version: 20
