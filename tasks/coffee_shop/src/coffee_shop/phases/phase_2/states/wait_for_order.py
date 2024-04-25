@@ -8,7 +8,6 @@ from std_msgs.msg import Empty, String
 
 
 class WaitForOrder(smach.State):
-
     def __init__(self, context):
         smach.StateMachine.__init__(self, outcomes=["done"])
         self.context = context

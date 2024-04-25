@@ -4,9 +4,7 @@ from lasr_skills import Detect
 
 
 class WaitForPerson(smach.StateMachine):
-
     class CheckForPerson(smach.State):
-
         def __init__(self):
             smach.State.__init__(
                 self, outcomes=["done", "not_done"], input_keys=["detections"]
@@ -19,7 +17,6 @@ class WaitForPerson(smach.StateMachine):
                 return "not_done"
 
     def __init__(self):
-
         smach.StateMachine.__init__(
             self,
             outcomes=["succeeded", "failed"],

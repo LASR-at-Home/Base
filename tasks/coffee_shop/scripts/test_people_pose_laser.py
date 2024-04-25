@@ -92,7 +92,6 @@ def get_points_and_pixels_from_laser(msg):
 
 
 if __name__ == "__main__":
-
     rospy.init_node("test_people_pose_laser")
 
     people_pose_pub = rospy.Publisher("/people_poses_laser", Marker, queue_size=100)

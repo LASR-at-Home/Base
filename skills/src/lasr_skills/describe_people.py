@@ -17,7 +17,6 @@ import numpy as np
 
 
 class DescribePeople(smach.StateMachine):
-
     def __init__(self):
         smach.StateMachine.__init__(
             self,

@@ -18,7 +18,6 @@ from visualization_msgs.msg import Marker
 
 
 def make_plan(current_pose, x, y, tol=0.01, max_dist=None):
-
     if "/move_base/NavfnROS/make_plan" in rosservice.get_service_list():
         make_plan_service = "/move_base/NavfnROS/make_plan"
     elif "/move_base/GlobalPlanner/make_plan" in rosservice.get_service_list():

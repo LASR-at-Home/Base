@@ -217,7 +217,6 @@ def visualize(
 
 
 def get_model(num_keypoints, weights_path=None):
-
     anchor_generator = AnchorGenerator(
         sizes=(32, 64, 128, 256, 512),
         aspect_ratios=(0.25, 0.5, 0.75, 1.0, 2.0, 3.0, 4.0),

@@ -19,9 +19,7 @@ from std_msgs.msg import Empty, Int16
 
 
 class Context:
-
     def __init__(self, config_path=None, tablet=False):
-
         self.tablet = tablet
 
         self.base_controller = BaseController()

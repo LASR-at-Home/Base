@@ -31,7 +31,6 @@ n_tables = int(input("Enter the number of tables: "))
 rospy.loginfo(f"There are {n_tables} tables.")
 
 for i in range(n_tables):
-
     while True:
         long_side_length = short_side_length = radius = 0.0
         input(
@@ -39,7 +38,6 @@ for i in range(n_tables):
         )
         is_rect = bool(int(input("Is rect (0/1): ")))
         if is_rect:
-
             long_side_length = float(input(f"Long side length: "))
             short_side_length = float(input(f"Short side length: "))
         else:

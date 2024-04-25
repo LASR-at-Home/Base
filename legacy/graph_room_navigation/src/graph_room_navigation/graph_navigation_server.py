@@ -16,7 +16,6 @@ from geometry_msgs.msg import PoseWithCovarianceStamped, Point
 
 
 class GraphNavigationServer:
-
     def __init__(self, path=""):
         self.graph = Graph()
 

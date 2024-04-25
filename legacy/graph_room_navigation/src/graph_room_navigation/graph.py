@@ -4,7 +4,6 @@ import numpy as np
 
 
 class Room:
-
     def __init__(self, name, corners):
         self.name = name
         self.corners = corners
@@ -22,9 +21,7 @@ class Room:
 
 
 class Graph:
-
     def __init__(self):
-
         self.size = 0
         self.adjLists = {}
 

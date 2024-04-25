@@ -27,7 +27,6 @@ def timeit_rospy(method):
 
 
 class LookForPersonLaser(smach.State):
-
     def __init__(self, context):
         smach.State.__init__(self, outcomes=["found", "not found"])
         self.context = context

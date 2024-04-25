@@ -247,7 +247,6 @@ class Waypoint:
         return np.where(pixels <= threshold)
 
     def has_enough_free_space(self, window):
-
         num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(
             window, connectivity=4, ltype=cv2.CV_32S
         )
@@ -878,7 +877,6 @@ class Waypoint:
         return Pcenter
 
     def find_multiple_cnp(self, window, threshold=60):
-
         window = np.where(window <= threshold, 0, 255).astype(np.uint8)
         # plt.imshow(window, cmap='gray')
         # plt.title('dilation in find multiple cnp')

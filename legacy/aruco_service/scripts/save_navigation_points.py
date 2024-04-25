@@ -123,7 +123,6 @@ def get_latest_pose(msg):
 
 
 if __name__ == "__main__":
-
     rospy.init_node("save_navigation_points")
     sub = rospy.Subscriber("/amcl_pose", PoseWithCovarianceStamped, get_latest_pose)
     rospy.Service("save_navigation_points", SaveNavigationPoint, save_navigation_points)

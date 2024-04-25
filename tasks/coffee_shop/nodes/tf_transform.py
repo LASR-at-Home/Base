@@ -152,7 +152,6 @@ def apply_transform(msg):
 
 
 if __name__ == "__main__":
-
     rospy.init_node("tf_transform_node")
     s = rospy.Service("tf_transform", TfTransform, tf_transform)
     s2 = rospy.Service("get_latest_transform", LatestTransform, get_latest_transform)

@@ -30,21 +30,17 @@ def publish_points(number):
     persons_marker_pub = rospy.Publisher("/table/persons_cuboid", Marker, queue_size=8)
 
     if table >= 0:
-
         obj = rospy.get_param("/tables/table" + str(table) + "/objects_cuboid")
 
         for i, p in enumerate(obj):
-
             objects_marker_pub.publish(create_marker_msg(p, i))
 
         per = rospy.get_param("/tables/table" + str(table) + "/persons_cuboid")
 
         for i, p in enumerate(per):
-
             persons_marker_pub.publish(create_marker_msg(p, i))
 
     elif table == -1:
-
         cuboid = rospy.get_param("/counter/cuboid")
 
         objects_marker_pub.publish(create_marker_msg(cuboid[0], 0))
@@ -66,7 +62,6 @@ def publish_points(number):
 
 
 if __name__ == "__main__":
-
     rospy.init_node("point_publisher")
     s = rospy.Service("publish_table_points", PublishTablePoints, publish_points)
 

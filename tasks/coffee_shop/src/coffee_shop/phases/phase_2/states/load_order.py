@@ -7,7 +7,6 @@ import rospy
 
 
 class LoadOrder(smach.State):
-
     def __init__(self, context):
         smach.StateMachine.__init__(self, outcomes=["done"])
         self.context = context

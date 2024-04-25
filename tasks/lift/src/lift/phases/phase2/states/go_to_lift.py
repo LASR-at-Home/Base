@@ -25,7 +25,6 @@ class GoToLift(smach.State):
         # self.voice = voice
 
     def rotate_keypoint(self, keypoint, degrees, image_o, image_r):
-
         width_o, height_o = image_o.size
         image_origin = [width_o / 2, height_o / 2]
         width_r, height_r = image_r.size

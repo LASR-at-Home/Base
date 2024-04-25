@@ -12,7 +12,6 @@ from std_msgs.msg import String
 
 
 class TakeOrder(smach.State):
-
     def __init__(self, context):
         smach.State.__init__(self, outcomes=["done"])
         self.context = context

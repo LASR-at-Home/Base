@@ -39,7 +39,6 @@ def hear_wait(default):
         else:
             return True
     else:
-
         return False
 
 

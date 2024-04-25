@@ -53,7 +53,6 @@ phrases = [
 voice = Voice()
 
 for p1, p2 in zip(plan.points[0::2], plan.points[1::2]):
-
     result = False
     tries = 0
     while not result:

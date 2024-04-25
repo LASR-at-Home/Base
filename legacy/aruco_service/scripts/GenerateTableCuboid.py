@@ -78,11 +78,9 @@ def generate_cuboid(msg):
     )
 
     if latest_pose is not None and (seconds - latest_pose.header.stamp.secs < 1.0):
-
         tr = get_transform_to_marker("aruco_marker_frame", "map")
 
         if is_rect:
-
             # THESE POINTS ARE IN MARKER COORDINATE FRAME [LOCATION OF ARUCO MARKER IS (0,0) IN THIS FRAME]
             local_corner_1 = [0, 0]
             local_corner_2 = [long_side, 0]
@@ -101,7 +99,6 @@ def generate_cuboid(msg):
             objects_marker_pub.publish(create_marker_msg(corner_4, 3))
 
             if table >= 0:
-
                 local_padded_corner_1 = [
                     local_corner_1[0] - padding,
                     local_corner_1[1] - padding,
@@ -258,7 +255,6 @@ def get_latest_pose(msg):
 
 
 if __name__ == "__main__":
-
     rospy.init_node("generate_table_cuboid")
     sub = rospy.Subscriber("/aruco_single/pose", PoseStamped, get_latest_pose)
     s = rospy.Service("generate_table_cuboid", GenerateTableCuboid, generate_cuboid)

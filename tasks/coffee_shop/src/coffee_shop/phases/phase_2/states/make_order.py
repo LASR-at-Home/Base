@@ -7,7 +7,6 @@ from std_msgs.msg import String
 
 
 class MakeOrder(smach.State):
-
     def __init__(self, context):
         smach.StateMachine.__init__(self, outcomes=["done"])
         self.context = context

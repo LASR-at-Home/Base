@@ -10,7 +10,6 @@ from typing import List
 
 
 class FindPerson(smach.StateMachine):
-
     class GetLocation(smach.State):
         def __init__(self):
             smach.State.__init__(
@@ -76,7 +75,6 @@ class FindPerson(smach.StateMachine):
         )
 
         with self:
-
             smach.StateMachine.add(
                 "GET_POSE",
                 self.GetPose(),
@@ -99,7 +97,6 @@ class FindPerson(smach.StateMachine):
             )
 
             with waypoint_iterator:
-
                 container_sm = smach.StateMachine(
                     outcomes=["succeeded", "failed", "continue"],
                     input_keys=["location_index", "waypoints"],
@@ -107,7 +104,6 @@ class FindPerson(smach.StateMachine):
                 )
 
                 with container_sm:
-
                     smach.StateMachine.add(
                         "GET_LOCATION",
                         self.GetLocation(),

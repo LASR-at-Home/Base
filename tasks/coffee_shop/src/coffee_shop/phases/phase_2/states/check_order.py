@@ -37,7 +37,6 @@ class CheckOrder(smach.State):
         )
 
     def execute(self, userdata):
-
         if self.n_checks == 3:
             self.context.voice_controller.sync_tts(
                 "I think I have something in my eyes, I'm struggling to check the order. I trust you that the order is correct!"

@@ -21,7 +21,6 @@ PIXEL_DIST_CONST_MM = 0.2645833333
 
 
 class LookAt:
-
     def __init__(
         self,
         head_controller: HeadController,

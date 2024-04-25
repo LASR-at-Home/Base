@@ -6,7 +6,6 @@ import numpy as np
 
 
 class GoToTable(smach.State):
-
     def __init__(self, context):
         smach.State.__init__(self, outcomes=["done", "skip"])
         self.context = context

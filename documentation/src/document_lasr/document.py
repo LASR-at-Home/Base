@@ -161,18 +161,18 @@ def generate_readme(pkg_dir):
     data["dependencies"] = DEPENDENCIES
 
     # Load additional markdown files
-    data["prerequisites"] = (
-        "Ask the package maintainer to write or create a blank `doc/PREREQUISITES.md` for their package!"
-    )
-    data["usage"] = (
-        "Ask the package maintainer to write a `doc/USAGE.md` for their package!"
-    )
-    data["example"] = (
-        "Ask the package maintainer to write a `doc/EXAMPLE.md` for their package!"
-    )
-    data["technical"] = (
-        "Ask the package maintainer to write a `doc/TECHNICAL.md` for their package!"
-    )
+    data[
+        "prerequisites"
+    ] = "Ask the package maintainer to write or create a blank `doc/PREREQUISITES.md` for their package!"
+    data[
+        "usage"
+    ] = "Ask the package maintainer to write a `doc/USAGE.md` for their package!"
+    data[
+        "example"
+    ] = "Ask the package maintainer to write a `doc/EXAMPLE.md` for their package!"
+    data[
+        "technical"
+    ] = "Ask the package maintainer to write a `doc/TECHNICAL.md` for their package!"
 
     for key, file in [
         ("prerequisites", "PREREQUISITES"),
