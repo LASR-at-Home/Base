@@ -14,9 +14,10 @@ jobs:
       uses: "./.github/workflows/qc"
   Documentation:
     runs-on: ubuntu-latest
+    env:
+      DOCS_DEPLOY_KEY: ${{ secrets.DOCS_DEPLOY_KEY }}
     steps:
     - name: Checkout Repository and Submodules
       uses: actions/checkout@v4
     - name: Build & Deploy Documentation
       uses: "./.github/workflows/docs"
-      secrets: inherit
