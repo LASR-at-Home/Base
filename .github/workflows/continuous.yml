@@ -22,4 +22,4 @@ jobs:
       with:
         path: "src/lasr-base"
     - name: Build & Deploy Documentation
-      uses: "./.github/workflows/docs"
+      uses: "./src/lasr-base/.github/workflows/docs"
