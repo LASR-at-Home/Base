@@ -19,5 +19,7 @@ jobs:
     steps:
     - name: Checkout Repository and Submodules
       uses: actions/checkout@v4
+      with:
+        path: "src/lasr-base"
     - name: Build & Deploy Documentation
       uses: "./.github/workflows/docs"

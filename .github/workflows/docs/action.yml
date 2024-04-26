@@ -44,5 +44,5 @@ runs:
       if: github.event_name != 'pull_request' && github.ref_name == 'main'
       with:
         deploy_key: ${{ env.DOCS_DEPLOY_KEY }}
-        publish_dir: ./documentation/web/build
+        publish_dir: ./src/lasr-base/documentation/web/build
         external_repository: lasr-at-home/docs
