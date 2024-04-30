@@ -18,6 +18,7 @@ from tiago_controllers.base_planner import get_journey_points as _get_journey_po
 import numpy as np
 import numpy as np
 
+
 class BaseController:
     def __init__(self):
         self._goal_sent = False
@@ -33,21 +34,32 @@ class BaseController:
             if state == GoalStatus.PENDING or state == GoalStatus.ACTIVE:
                 self.__client.cancel_goal()
             while True:
-                if (self.__client.get_state() in [GoalStatus.PREEMPTED, GoalStatus.ABORTED, GoalStatus.REJECTED,
-                                                  GoalStatus.RECALLED, GoalStatus.SUCCEEDED]):
+                if self.__client.get_state() in [
+                    GoalStatus.PREEMPTED,
+                    GoalStatus.ABORTED,
+                    GoalStatus.REJECTED,
+                    GoalStatus.RECALLED,
+                    GoalStatus.SUCCEEDED,
+                ]:
                     break
                 rospy.sleep(0.5)
                 self._goal_sent = False
 
     def check_active_state(self):
-        return self._client.get_state() == GoalStatus.PENDING or self._client.get_state() == GoalStatus.ACTIVE
+        return (
+            self._client.get_state() == GoalStatus.PENDING
+            or self._client.get_state() == GoalStatus.ACTIVE
+        )
 
     def check_terminated_state(self):
-        return self._client.get_state() == GoalStatus.LOST or self._client.get_state() == GoalStatus.PREEMPTED or \
-               self._client.get_state() == GoalStatus.ABORTED
+        return (
+            self._client.get_state() == GoalStatus.LOST
+            or self._client.get_state() == GoalStatus.PREEMPTED
+            or self._client.get_state() == GoalStatus.ABORTED
+        )
 
     def get_current_pose(self):
-        msg = rospy.wait_for_message('/amcl_pose', PoseWithCovarianceStamped)
+        msg = rospy.wait_for_message("/amcl_pose", PoseWithCovarianceStamped)
         x = round(msg.pose.pose.position.x, 2)
         y = round(msg.pose.pose.position.y, 2)
         quat = msg.pose.pose.orientation
@@ -63,7 +75,10 @@ class BaseController:
         return self.__client.get_state()
 
     def is_active(self):
-        return self.__client.get_state() == GoalStatus.PENDING or self.__client.get_state() == GoalStatus.ACTIVE
+        return (
+            self.__client.get_state() == GoalStatus.PENDING
+            or self.__client.get_state() == GoalStatus.ACTIVE
+        )
 
     def is_terminated(self):
         return is_terminated(self.__client)
@@ -71,11 +86,16 @@ class BaseController:
     def __to_pose(self, pose, done_cb=None):
         if pose:
             goal = MoveBaseGoal()
-            goal.target_pose.header.frame_id = 'map'
+            goal.target_pose.header.frame_id = "map"
             goal.target_pose.header.stamp = rospy.Time.now()
             goal.target_pose.pose = pose
 
-            rospy.loginfo("base is going to (%.2f, %.2f, %.2f) pose", pose.position.x, pose.position.y, pose.position.z)
+            rospy.loginfo(
+                "base is going to (%.2f, %.2f, %.2f) pose",
+                pose.position.x,
+                pose.position.y,
+                pose.position.z,
+            )
 
             self._goal_sent = True
             self.__client.send_goal(goal, done_cb=done_cb)
@@ -103,6 +123,7 @@ class BaseController:
         theta_deg = np.degrees(math.atan2(dist_y, dist_x))
         try:
             from scipy.spatial.transform import Rotation as R
+
             (x, y, z, w) = R.from_euler("z", theta_deg, degrees=True).as_quat()
             quaternion = Quaternion(x, y, z, w)
         except ImportError:
@@ -125,9 +146,11 @@ class BaseController:
             state = self.sync_to_pose(pose)
         return state
 
-    def rotate_to_face_object(self, object_name='/door/pose'):
+    def rotate_to_face_object(self, object_name="/door/pose"):
         object_pos = get_pose_from_param(object_name)
-        rotation_angle = self.compute_face_quat(object_pos.position.x, object_pos.position.y)
+        rotation_angle = self.compute_face_quat(
+            object_pos.position.x, object_pos.position.y
+        )
         state = self.sync_to_pose(rotation_angle)
 
         return state
@@ -150,19 +173,29 @@ class BaseController:
 
     def rotate(self, radians):
         x, y, current_orientation = self.get_current_pose()
-        current_orientation = np.array([current_orientation.x, current_orientation.y,
-                                        current_orientation.z, current_orientation.w])
+        current_orientation = np.array(
+            [
+                current_orientation.x,
+                current_orientation.y,
+                current_orientation.z,
+                current_orientation.w,
+            ]
+        )
         r = R.from_quat(current_orientation)
-        rotated_r = r * R.from_euler('z', radians, degrees=False)
+        rotated_r = r * R.from_euler("z", radians, degrees=False)
 
-        pose = Pose(position=Point(x, y, 0.0), orientation=Quaternion(*rotated_r.as_quat()))
+        pose = Pose(
+            position=Point(x, y, 0.0), orientation=Quaternion(*rotated_r.as_quat())
+        )
 
         return self.sync_to_pose(pose)
 
 
 class CmdVelController:
     def __init__(self):
-        self._vel_pub = rospy.Publisher('mobile_base_controller/cmd_vel', Twist, queue_size=1)
+        self._vel_pub = rospy.Publisher(
+            "mobile_base_controller/cmd_vel", Twist, queue_size=1
+        )
         # rospy.sleep(0.1)  # wait for publisher to activate
 
     def rotate(self, angular_velocity, angle, clockwise):
@@ -213,11 +246,10 @@ class ReachToRadius(BaseController):
         robot_x, robot_y, quaternion = self.get_current_pose()
 
         return _plan_to_radius(
-            Pose(
-                position=Point(robot_x, robot_y, 0.0),
-                orientation=quaternion
-            ),
-            (x, y), radius, tol
+            Pose(position=Point(robot_x, robot_y, 0.0), orientation=quaternion),
+            (x, y),
+            radius,
+            tol,
         )
 
     def sync_face_to(self, x, y):
@@ -237,8 +269,7 @@ class ReachToRadius(BaseController):
         return pose
 
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     rospy.init_node("base_test", anonymous=True)
     b = BaseController()
     b.sync_face_to(2.84, 6.7)

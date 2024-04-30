@@ -8,7 +8,7 @@ def numpy2message(np_array: np.ndarray) -> list:
     return data, shape, dtype
 
 
-def message2numpy(data:bytes, shape:list, dtype:str) -> np.ndarray:
+def message2numpy(data: bytes, shape: list, dtype: str) -> np.ndarray:
     array_shape = tuple(shape)
     array_dtype = np.dtype(dtype)
 
@@ -16,4 +16,3 @@ def message2numpy(data:bytes, shape:list, dtype:str) -> np.ndarray:
     deserialized_array = deserialized_array.reshape(array_shape)
 
     return deserialized_array
-

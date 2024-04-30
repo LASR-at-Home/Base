@@ -17,12 +17,12 @@ from lift.defaults import PLOT_SAVE, PLOT_SHOW, TEST, DEBUG_PATH
 
 FWD = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.abspath(os.path.join(FWD, "../src/choosing_wait_position")))
-os.chdir(os.path.abspath(os.path.join(FWD, 'models')))
+os.chdir(os.path.abspath(os.path.join(FWD, "models")))
 
 
 def make_prediction(image_path):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    model = get_model(1, weights_path='keypointsrcnn_weights.pth')
+    model = get_model(1, weights_path="keypointsrcnn_weights.pth")
 
     origin_list = glob.glob(image_path)
     print(image_path)
@@ -33,7 +33,7 @@ def make_prediction(image_path):
     for i, img_name in enumerate(origin_list):
         original_img = Image.open(img_name)
 
-        plt.imshow(original_img, cmap='gray')
+        plt.imshow(original_img, cmap="gray")
 
         if PLOT_SHOW:
             plt.show()
@@ -76,12 +76,13 @@ def visualise_predictions(image, bbox, keypoint):
     except Exception as e:
         print(e)
 
-    plt.imshow(image, cmap='gray', aspect='auto')
-    plt.title('visualisation of the prediction')
+    plt.imshow(image, cmap="gray", aspect="auto")
+    plt.title("visualisation of the prediction")
     if PLOT_SHOW:
         plt.show()
     if PLOT_SAVE:
         plt.savefig(DEBUG_PATH + "/predict_pos_viz_test_test" + str(TEST) + ".jpg")
+
 
 # from geometry_msgs.msg import PoseWithCovarianceStamped, Pose, Point, Quaternion
 # from tiago_controllers.controllers.controllers import Controllers

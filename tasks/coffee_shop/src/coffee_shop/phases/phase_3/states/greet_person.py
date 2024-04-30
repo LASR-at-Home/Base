@@ -7,7 +7,7 @@ from geometry_msgs.msg import Point
 
 class GreetPerson(smach.State):
     def __init__(self, context):
-        smach.State.__init__(self, outcomes=['done'])
+        smach.State.__init__(self, outcomes=["done"])
         self.context = context
 
     def execute(self, userdata):
@@ -21,8 +21,10 @@ class GreetPerson(smach.State):
         ph_goal.target.point = Point(*self.context.new_customer_pose)
         self.context.point_head_client.send_goal_and_wait(ph_goal)
         """
-        self.context.voice_controller.sync_tts("Hi there! My name is TIAGO. Please follow me, I'll guide you to a table.")
+        self.context.voice_controller.sync_tts(
+            "Hi there! My name is TIAGO. Please follow me, I'll guide you to a table."
+        )
         pm_goal = PlayMotionGoal(motion_name="back_to_default", skip_planning=True)
         self.context.play_motion_client.send_goal_and_wait(pm_goal)
-        self.context.start_head_manager("head_manager", '')
-        return 'done'
+        self.context.start_head_manager("head_manager", "")
+        return "done"

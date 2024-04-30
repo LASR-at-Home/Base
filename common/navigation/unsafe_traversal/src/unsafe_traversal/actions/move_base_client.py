@@ -5,12 +5,11 @@ from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 
 
 class MoveBaseClient:
-    '''
+    """
     Configure a client for move_base
-    '''
+    """
 
-    _move_base_client = actionlib.SimpleActionClient(
-        'move_base', MoveBaseAction)
+    _move_base_client = actionlib.SimpleActionClient("move_base", MoveBaseAction)
 
     def __init__(self):
         self._move_base_client.wait_for_server()

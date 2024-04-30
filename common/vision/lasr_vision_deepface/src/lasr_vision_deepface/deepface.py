@@ -44,7 +44,6 @@ def detect_face(cv_im: Mat) -> Mat | None:
 
 
 def create_image_collage(images, output_size=(640, 480)):
-
     # Calculate grid dimensions
     num_images = len(images)
     rows = int(np.sqrt(num_images))
