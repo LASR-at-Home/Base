@@ -6,7 +6,7 @@ from lasr_vision_msgs.srv import PointingDirection
 from lasr_vision_msgs.msg import Direction
 
 
-class PointingDetector(smach.State):
+class DetectPointingDirection(smach.State):
     def __init__(self, image_topic: str = "/xtion/rgb/image_raw"):
         smach.State.__init__(
             self, outcomes=["succeeded", "failed"], output_keys=["pointing_direction"]
