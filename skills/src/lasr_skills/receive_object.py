@@ -10,12 +10,18 @@ import rospkg
 import rosparam
 import os
 
+from typing import Union
+
 
 class ReceiveObject(smach.StateMachine):
-    def __init__(self):
-        smach.StateMachine.__init__(
-            self, outcomes=["succeeded", "failed"], input_keys=["object_name"]
-        )
+    def __init__(self, object_name: Union[str, None] = None):
+
+        if object_name is not None:
+            super(ReceiveObject, self).__init__(outcomes=["succeeded", "failed"])
+        else:
+            smach.StateMachine.__init__(
+                self, outcomes=["succeeded", "failed"], input_keys=["object_name"]
+            )
 
         r = rospkg.RosPack()
         els = rosparam.load_file(
@@ -29,11 +35,32 @@ class ReceiveObject(smach.StateMachine):
                 "CLEAR_OCTOMAP",
                 smach_ros.ServiceState("clear_octomap", Empty),
                 transitions={
+                    "succeeded": "LOOK_LEFT",
+                    "aborted": "failed",
+                    "preempted": "failed",
+                },
+            )
+
+            smach.StateMachine.add(
+                "LOOK_LEFT",
+                PlayMotion(motion_name="look_left"),
+                transitions={
+                    "succeeded": "LOOK_RIGHT",
+                    "aborted": "failed",
+                    "preempted": "failed",
+                },
+            )
+
+            smach.StateMachine.add(
+                "LOOK_RIGHT",
+                PlayMotion(motion_name="look_right"),
+                transitions={
                     "succeeded": "REACH_ARM",
                     "aborted": "failed",
                     "preempted": "failed",
                 },
             )
+
             smach.StateMachine.add(
                 "REACH_ARM",
                 PlayMotion(motion_name="reach_arm"),
@@ -52,18 +79,32 @@ class ReceiveObject(smach.StateMachine):
                     "preempted": "failed",
                 },
             )
-            smach.StateMachine.add(
-                "SAY_PLACE",
-                Say(
-                    format_str="Please place the {} in my end-effector, and say `I am done`.",
-                ),
-                transitions={
-                    "succeeded": "LISTEN_DONE",
-                    "aborted": "failed",
-                    "preempted": "failed",
-                },
-                remapping={"placeholders": "object_name"},
-            )
+
+            if object_name is not None:
+                smach.StateMachine.add(
+                    "SAY_PLACE",
+                    Say(
+                        text=f"Please place the {object_name} in my end-effector, and say `I am done`.",
+                    ),
+                    transitions={
+                        "succeeded": "LISTEN_DONE",
+                        "aborted": "failed",
+                        "preempted": "failed",
+                    },
+                )
+            else:
+                smach.StateMachine.add(
+                    "SAY_PLACE",
+                    Say(
+                        format_str="Please place the {} in my end-effector, and say `I am done`.",
+                    ),
+                    transitions={
+                        "succeeded": "LISTEN_DONE",
+                        "aborted": "failed",
+                        "preempted": "failed",
+                    },
+                    remapping={"placeholders": "object_name"},
+                )
             smach.StateMachine.add(
                 "LISTEN_DONE",
                 ListenFor("done"),
