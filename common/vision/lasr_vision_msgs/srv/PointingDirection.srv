@@ -2,4 +2,4 @@
 
 sensor_msgs/Image image_raw
 ---
-string direction
+Direction direction

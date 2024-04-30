@@ -3,6 +3,7 @@ import smach
 from sensor_msgs.msg import Image
 
 from lasr_vision_msgs.srv import PointingDirection
+from lasr_vision_msgs.msg import Direction
 
 
 class PointingDetector(smach.State):
@@ -19,4 +20,4 @@ class PointingDetector(smach.State):
         resp = self.service(self.image_raw)
         userdata.direction = resp.direction
 
-        return "succeeded" if resp.direction != "Err" else "failed"
+        return "succeeded" if resp.direction != Direction.NONE else "failed"

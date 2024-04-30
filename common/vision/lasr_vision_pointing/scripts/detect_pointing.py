@@ -13,6 +13,7 @@ from lasr_vision_msgs.srv import (
     PointingDirectionResponse,
     PointingDirectionRequest,
 )
+from lasr_vision_msgs.msg import Direction
 
 
 class PointingDetector:
@@ -117,16 +118,16 @@ class PointingDetector:
 
                 # Determine pointing direction based on the difference in x-coordinates
                 if abs(left_diff - right_diff) < buffer_width:
-                    return "Front"
+                    return Direction.FORWARDS
                 elif abs(left_diff) > buffer_width and abs(left_diff) > abs(right_diff):
-                    return "Left" if left_diff > 0 else "Right"
+                    return Direction.LEFT if left_diff > 0 else Direction.RIGHT
                 elif abs(right_diff) > buffer_width and abs(right_diff) > abs(
                     left_diff
                 ):
-                    return "Right" if right_diff > 0 else "Left"
+                    return Direction.RIGHT if right_diff > 0 else Direction.LEFT
 
         # Default: Determine direction based on the relative position to the center of the image
-        return "Front"
+        return Direction.NONE
 
     def visualize_pointing_direction_with_landmarks(
         self, image_path, person_bbox, pointing_direction, keypoints
@@ -142,12 +143,14 @@ class PointingDetector:
 
         # Calculate endpoint of arrow based on pointing direction
         arrow_length = min(w, h) // 2
-        if pointing_direction == "Left":
+        if pointing_direction == Direction.LEFT:
             endpoint = (center_x - arrow_length, center_y)
-        elif pointing_direction == "Right":
+        elif pointing_direction == Direction.RIGHT:
             endpoint = (center_x + arrow_length, center_y)
-        else:
+        elif pointing_direction == Direction.FORWARDS:
             endpoint = (center_x, center_y)
+        else:
+            return  # No pointing direction detected
 
         # Draw arrow on image
         color = (0, 255, 0)  # Green color
