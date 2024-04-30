@@ -9,6 +9,7 @@ from lasr_skills import (
 )
 
 from lasr_vision_msgs.msg import Direction
+import rospy
 
 
 class CarryMyLuggage(smach.StateMachine):
@@ -23,10 +24,13 @@ class CarryMyLuggage(smach.StateMachine):
             )
 
         def execute(self, userdata):
+            rospy.logwarn(f"Pointing direction is {userdata.pointing_direction}")
             if userdata.pointing_direction == Direction.LEFT:
                 userdata.pointing_direction_str = "left"
+                rospy.logwarn(f"This equals left")
             elif userdata.pointing_direction == Direction.RIGHT:
                 userdata.pointing_direction_str = "right"
+                rospy.logwarn("This equals right")
             else:
                 return "failed"
             return "succeeded"
@@ -48,22 +52,22 @@ class CarryMyLuggage(smach.StateMachine):
                 "DETECT_POINTING_DIRECTION",
                 DetectPointingDirection(),
                 transitions={
-                    "succeeded": "HANDLE_POINTING_DIRECTION",
+                    "succeeded": "SAY_BAG",
                     "failed": "SAY_FAILED_POINTING",
                 },
             )
 
-            smach.StateMachine.add(
-                "HANDLE_POINTING_DIRECTION",
-                self.HandlePointingDirection(),
-                transitions={
-                    "succeeded": "SAY_BAG",
-                    "failed": "SAY_FAILED_POINTING",
-                },
-                remapping={
-                    "pointing_direction_str": "pointing_direction_str",
-                },
-            )
+            # smach.StateMachine.add(
+            #     "HANDLE_POINTING_DIRECTION",
+            #     self.HandlePointingDirection(),
+            #     transitions={
+            #         "succeeded": "SAY_BAG",
+            #         "failed": "SAY_FAILED_POINTING",
+            #     },
+            #     remapping={
+            #         "pointing_direction_str": "pointing_direction_str",
+            #     },
+            # )
 
             smach.StateMachine.add(
                 "SAY_FAILED_POINTING",
@@ -85,7 +89,7 @@ class CarryMyLuggage(smach.StateMachine):
                     "aborted": "failed",
                     "preempted": "failed",
                 },
-                remapping={"placeholders": "pointing_direction_str"},
+                remapping={"placeholders": "pointing_direction"},
             )
 
             smach.StateMachine.add(

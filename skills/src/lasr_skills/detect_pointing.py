@@ -21,6 +21,15 @@ class DetectPointingDirection(smach.State):
 
         img_msg = rospy.wait_for_message(self._image_topic, Image)
         resp = self._pointing_service(img_msg)
-        userdata.pointing_direction = resp.direction
+        if resp.direction == Direction.NONE:
+            userdata.pointing_direction = "None"
+        elif resp.direction == Direction.RIGHT:
+            userdata.pointing_direction = "Right"
+        elif resp.direction == Direction.LEFT:
+            userdata.pointing_direction = "Left"
+        else:
+            userdata.pointing_direction = "None"
 
-        return "succeeded" if resp.direction != Direction.NONE else "failed"
+        if resp.direction == Direction.NONE:
+            return "failed"
+        return "succeeded"

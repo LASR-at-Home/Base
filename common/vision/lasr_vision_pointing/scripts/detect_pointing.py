@@ -38,7 +38,9 @@ class PointingDetector:
                 keypoints = self.detect_keypoints(
                     img
                 )  # Detect keypoints using MediaPipe
-                direction = self.determine_pointing_direction(keypoints)
+                direction = self.determine_pointing_direction(
+                    keypoints, buffer_width=25
+                )
                 rospy.loginfo(f"Person detected pointing: {direction}")
 
                 # Visualize pointing direction with landmarks
@@ -53,7 +55,7 @@ class PointingDetector:
 
                 resp.direction = direction
         else:
-            resp.direction = "Err"
+            resp.direction = Direction.NONE
 
         self.counter += 1
         return resp
