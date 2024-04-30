@@ -1,6 +1,12 @@
 import smach
 
-from lasr_skills import WaitForPerson, DetectPointingDirection, Say
+from lasr_skills import (
+    WaitForPerson,
+    DetectPointingDirection,
+    Say,
+    PlayMotion,
+    ReceiveObject,
+)
 
 from lasr_vision_msgs.msg import Direction
 
@@ -11,18 +17,18 @@ class CarryMyLuggage(smach.StateMachine):
         def __init__(self):
             smach.State.__init__(
                 self,
-                outcomes=["succeeded"],
+                outcomes=["succeeded", "failed"],
                 input_keys=["pointing_direction"],
                 output_keys=["pointing_direction_str"],
             )
 
         def execute(self, userdata):
             if userdata.pointing_direction == Direction.LEFT:
-                userdata.pointing_direction_str = "to the left"
+                userdata.pointing_direction_str = "left"
             elif userdata.pointing_direction == Direction.RIGHT:
-                userdata.pointing_direction_str = "to the right"
+                userdata.pointing_direction_str = "right"
             else:
-                userdata.pointing_direction_str = "forwards"
+                return "failed"
             return "succeeded"
 
     def __init__(self):
@@ -42,20 +48,21 @@ class CarryMyLuggage(smach.StateMachine):
                 "DETECT_POINTING_DIRECTION",
                 DetectPointingDirection(),
                 transitions={
-                    "succeeded": "SAY_DIRECTION",
+                    "succeeded": "HANDLE_POINTING_DIRECTION",
                     "failed": "SAY_FAILED_POINTING",
                 },
             )
 
             smach.StateMachine.add(
-                "SAY_DIRECTION",
-                Say(format_str="I see you are pointing {}"),
+                "HANDLE_POINTING_DIRECTION",
+                self.HandlePointingDirection(),
                 transitions={
-                    "succeeded": "succeeded",
-                    "aborted": "failed",
-                    "preempted": "failed",
+                    "succeeded": "SAY_BAG",
+                    "failed": "SAY_FAILED_POINTING",
                 },
-                remapping={"placeholders": "pointing_direction_str"},
+                remapping={
+                    "pointing_direction_str": "pointing_direction_str",
+                },
             )
 
             smach.StateMachine.add(
@@ -67,5 +74,25 @@ class CarryMyLuggage(smach.StateMachine):
                     "succeeded": "DETECT_POINTING_DIRECTION",
                     "aborted": "failed",
                     "preempted": "failed",
+                },
+            )
+
+            smach.StateMachine.add(
+                "SAY_BAG",
+                Say(format_str="I need you to give me the bag on your {}."),
+                transitions={
+                    "succeeded": "RECEIVE_BAG",
+                    "aborted": "failed",
+                    "preempted": "failed",
+                },
+                remapping={"placeholders": "pointing_direction_str"},
+            )
+
+            smach.StateMachine.add(
+                "RECEIVE_BAG",
+                ReceiveObject("bag"),
+                transitions={
+                    "succeeded": "succeeded",
+                    "failed": "failed",
                 },
             )
