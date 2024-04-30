@@ -14,7 +14,7 @@ from typing import Union
 
 
 class ReceiveObject(smach.StateMachine):
-    def __init__(self, object_name: Union[str, None] = None):
+    def __init__(self, object_name: Union[str, None] = None, vertical: bool = True):
 
         if object_name is not None:
             super(ReceiveObject, self).__init__(outcomes=["succeeded", "failed"])
@@ -61,15 +61,27 @@ class ReceiveObject(smach.StateMachine):
                 },
             )
 
-            smach.StateMachine.add(
-                "REACH_ARM",
-                PlayMotion(motion_name="reach_arm"),
-                transitions={
-                    "succeeded": "OPEN_GRIPPER",
-                    "aborted": "failed",
-                    "preempted": "failed",
-                },
-            )
+            if vertical:
+                smach.StateMachine.add(
+                    "REACH_ARM",
+                    PlayMotion(motion_name="reach_arm_vertical_gripper"),
+                    transitions={
+                        "succeeded": "OPEN_GRIPPER",
+                        "aborted": "failed",
+                        "preempted": "failed",
+                    },
+                )
+            else:
+                smach.StateMachine.add(
+                    "REACH_ARM",
+                    PlayMotion(motion_name="reach_arm_horizontal_gripper"),
+                    transitions={
+                        "succeeded": "OPEN_GRIPPER",
+                        "aborted": "failed",
+                        "preempted": "failed",
+                    },
+                )
+
             smach.StateMachine.add(
                 "OPEN_GRIPPER",
                 PlayMotion(motion_name="open_gripper"),
