@@ -5,4 +5,12 @@
 
     <!--     STATIC POINTS     -->
     <rosparam command="load" file="$(find carry_my_luggage)/config/$(arg config).yaml" />
+
+    <!--     MOTIONS     -->
+    <rosparam command="load" file="$(find lasr_skills)/config/motions.yaml"/>
+
+    <!--      PERCEPTION     -->
+    <include file="$(find lasr_vision_yolov8)/launch/service.launch" />
+    <node pkg="lasr_vision_pointing" type="detect_pointing.py" name="pointing_service" output="screen"/>
+
 </launch>
