@@ -41,7 +41,10 @@ class CarryMyLuggage(smach.StateMachine):
             smach.StateMachine.add(
                 "DETECT_POINTING_DIRECTION",
                 DetectPointingDirection(),
-                transitions={"succeeded": "SAY_DIRECTION", "failed": "failed"},
+                transitions={
+                    "succeeded": "SAY_DIRECTION",
+                    "failed": "SAY_FAILED_POINTING",
+                },
             )
 
             smach.StateMachine.add(
@@ -53,4 +56,16 @@ class CarryMyLuggage(smach.StateMachine):
                     "preempted": "failed",
                 },
                 remapping={"placeholders": "pointing_direction_str"},
+            )
+
+            smach.StateMachine.add(
+                "SAY_FAILED_POINTING",
+                Say(
+                    text="I could not detect the direction that you are pointing. I'll try again."
+                ),
+                transitions={
+                    "succeeded": "DETECT_POINTING_DIRECTION",
+                    "aborted": "failed",
+                    "preempted": "failed",
+                },
             )
