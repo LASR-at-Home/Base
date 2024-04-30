@@ -90,7 +90,7 @@ class CarryMyLuggage(smach.StateMachine):
 
             smach.StateMachine.add(
                 "RECEIVE_BAG",
-                ReceiveObject("bag"),
+                ReceiveObject(object_name="bag", vertical=False),
                 transitions={
                     "succeeded": "succeeded",
                     "failed": "failed",
