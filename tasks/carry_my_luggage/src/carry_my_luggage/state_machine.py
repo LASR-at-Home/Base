@@ -18,9 +18,9 @@ class CarryMyLuggage(smach.StateMachine):
 
         def execute(self, userdata):
             if userdata.pointing_direction == Direction.LEFT:
-                userdata.pointing_direction_str = "left"
+                userdata.pointing_direction_str = "to the left"
             elif userdata.pointing_direction == Direction.RIGHT:
-                userdata.pointing_direction_str = "right"
+                userdata.pointing_direction_str = "to the right"
             else:
                 userdata.pointing_direction_str = "forwards"
             return "succeeded"
