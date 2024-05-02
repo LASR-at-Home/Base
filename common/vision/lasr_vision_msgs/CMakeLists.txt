@@ -50,7 +50,6 @@ add_message_files(
   BodyPixPose.msg
   BodyPixMask.msg
   BodyPixMaskRequest.msg
-  Direction.msg
 )
 
 ## Generate services in the 'srv' folder

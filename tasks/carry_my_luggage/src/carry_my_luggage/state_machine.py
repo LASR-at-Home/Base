@@ -14,27 +14,6 @@ import rospy
 
 class CarryMyLuggage(smach.StateMachine):
 
-    class HandlePointingDirection(smach.State):
-        def __init__(self):
-            smach.State.__init__(
-                self,
-                outcomes=["succeeded", "failed"],
-                input_keys=["pointing_direction"],
-                output_keys=["pointing_direction_str"],
-            )
-
-        def execute(self, userdata):
-            rospy.logwarn(f"Pointing direction is {userdata.pointing_direction}")
-            if userdata.pointing_direction == Direction.LEFT:
-                userdata.pointing_direction_str = "left"
-                rospy.logwarn(f"This equals left")
-            elif userdata.pointing_direction == Direction.RIGHT:
-                userdata.pointing_direction_str = "right"
-                rospy.logwarn("This equals right")
-            else:
-                return "failed"
-            return "succeeded"
-
     def __init__(self):
         smach.StateMachine.__init__(self, outcomes=["succeeded", "failed"])
 
@@ -56,18 +35,6 @@ class CarryMyLuggage(smach.StateMachine):
                     "failed": "SAY_FAILED_POINTING",
                 },
             )
-
-            # smach.StateMachine.add(
-            #     "HANDLE_POINTING_DIRECTION",
-            #     self.HandlePointingDirection(),
-            #     transitions={
-            #         "succeeded": "SAY_BAG",
-            #         "failed": "SAY_FAILED_POINTING",
-            #     },
-            #     remapping={
-            #         "pointing_direction_str": "pointing_direction_str",
-            #     },
-            # )
 
             smach.StateMachine.add(
                 "SAY_FAILED_POINTING",
