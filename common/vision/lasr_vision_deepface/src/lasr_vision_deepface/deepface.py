@@ -21,28 +21,6 @@ DATASET_ROOT = os.path.join(
 Mat = np.typing.NDArray[np.uint8]
 
 
-def detect_face(cv_im: Mat) -> Mat | None:
-    try:
-        faces = DeepFace.extract_faces(
-            cv_im,
-            target_size=(224, 244),
-            detector_backend="mtcnn",
-            enforce_detection=True,
-        )
-    except ValueError:
-        return None
-    facial_area = faces[0]["facial_area"]
-    x, y, w, h = facial_area["x"], facial_area["y"], facial_area["w"], facial_area["h"]
-
-    # add padding to the face
-    x -= 10
-    y -= 10
-    w += 20
-    h += 20
-
-    return cv_im[:][y : y + h, x : x + w]
-
-
 def create_image_collage(images, output_size=(640, 480)):
     # Calculate grid dimensions
     num_images = len(images)
@@ -74,6 +52,28 @@ def create_image_collage(images, output_size=(640, 480)):
     return grid_image
 
 
+def _extract_face(cv_im: Mat) -> Mat | None:
+    try:
+        faces = DeepFace.extract_faces(
+            cv_im,
+            target_size=(224, 244),
+            detector_backend="mtcnn",
+            enforce_detection=True,
+        )
+    except ValueError:
+        return None
+    facial_area = faces[0]["facial_area"]
+    x, y, w, h = facial_area["x"], facial_area["y"], facial_area["w"], facial_area["h"]
+
+    # add padding to the face
+    x -= 10
+    y -= 10
+    w += 20
+    h += 20
+
+    return cv_im[:][y : y + h, x : x + w]
+
+
 def create_dataset(
     topic: str,
     dataset: str,
@@ -90,7 +90,7 @@ def create_dataset(
     for i in range(size):
         img_msg = rospy.wait_for_message(topic, Image)
         cv_im = cv2_img.msg_to_cv2_img(img_msg)
-        face_cropped_cv_im = detect_face(cv_im)
+        face_cropped_cv_im = _extract_face(cv_im)
         if face_cropped_cv_im is None:
             continue
         cv2.imwrite(os.path.join(dataset_path, f"{name}_{i+1}.png"), face_cropped_cv_im)  # type: ignore
