@@ -18,7 +18,7 @@ DATASET_ROOT = os.path.join(
 )
 
 
-Mat = int  # np.typing.NDArray[np.uint8]
+Mat = np.typing.NDArray[np.uint8]
 
 
 def detect_face(cv_im: Mat) -> Mat | None:
@@ -111,7 +111,7 @@ def create_dataset(
     )
 
 
-def detect(
+def recognise(
     request: RecogniseRequest,
     debug_publisher: rospy.Publisher | None,
     debug_inference_pub: rospy.Publisher | None,

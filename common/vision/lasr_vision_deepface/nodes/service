@@ -31,7 +31,7 @@ if DEBUG:
     )
 
 
-def detect(request: RecogniseRequest) -> RecogniseResponse:
+def recognise(request: RecogniseRequest) -> RecogniseResponse:
     debug_publisher = None
     similar_face_debug_publisher = None
     cropped_face_publisher = None
@@ -58,7 +58,7 @@ def detect(request: RecogniseRequest) -> RecogniseResponse:
                 similar_face_debug_publisher,
                 cropped_face_publisher,
             )
-    return face_recognition.detect(
+    return face_recognition.recognise(
         request, debug_publisher, similar_face_debug_publisher, cropped_face_publisher
     )
 
@@ -83,7 +83,7 @@ def learn_face(request: LearnFaceRequest) -> LearnFaceResponse:
     return LearnFaceResponse()
 
 
-rospy.Service("/recognise", Recognise, detect)
+rospy.Service("/recognise", Recognise, recognise)
 rospy.Service("/learn_face", LearnFace, learn_face)
 rospy.loginfo("Face Recognition service started")
 rospy.spin()
