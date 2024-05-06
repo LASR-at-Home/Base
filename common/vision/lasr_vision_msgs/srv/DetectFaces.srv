@@ -1,0 +1,4 @@
+sensor_msgs/Image image_raw
+---
+lasr_vision_msgs/Detection[] detections
+#TODO: wtf is going on with this???
