@@ -11,7 +11,7 @@ from lasr_vision_msgs.srv import (
     LearnFace,
     LearnFaceRequest,
     LearnFaceResponse,
-    DetectFace,
+    DetectFaces,
     DetectFacesRequest,
     DetectFacesResponse,
 )
@@ -90,18 +90,11 @@ def learn_face(request: LearnFaceRequest) -> LearnFaceResponse:
 
 
 def detect_faces(request: DetectFacesRequest) -> DetectFacesResponse:
-    response = face_recognition.detect_faces(request, detect_faces_debug_publisher)
-    print(response)
-    print(len(response.detections))
-    print(type(response.detections))
-    print(type(response.detections[0]))
-    print(type(response.detections[0].xywh))
-    return response
     return face_recognition.detect_faces(request, detect_faces_debug_publisher)
 
 
 rospy.Service("/recognise", Recognise, recognise)
 rospy.Service("/learn_face", LearnFace, learn_face)
-rospy.Service("/detect_faces", DetectFace, detect_faces)
+rospy.Service("/detect_faces", DetectFaces, detect_faces)
 rospy.loginfo("Face Recognition service started")
 rospy.spin()

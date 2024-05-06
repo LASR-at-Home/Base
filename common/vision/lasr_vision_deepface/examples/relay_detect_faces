@@ -6,7 +6,7 @@ import threading
 
 from sensor_msgs.msg import Image
 
-from lasr_vision_msgs.srv import DetectFace, DetectFacesRequest
+from lasr_vision_msgs.srv import DetectFaces, DetectFacesRequest
 
 if len(sys.argv) < 2:
     print("Usage: rosrun lasr_vision_deepface relay <source_topic>")
@@ -23,7 +23,7 @@ def detect(image):
     rospy.loginfo("Received image message")
 
     try:
-        detect_service = rospy.ServiceProxy("/detect_faces", DetectFace)
+        detect_service = rospy.ServiceProxy("/detect_faces", DetectFaces)
         req = DetectFacesRequest()
         req.image_raw = image
         resp = detect_service(req)
