@@ -17,3 +17,5 @@ from .receive_object import ReceiveObject
 from .handover_object import HandoverObject
 from .ask_and_listen import AskAndListen
 from .clip_vqa import QueryImage
+from .detect_faces import DetectFaces
+from .recognise import Recognise
