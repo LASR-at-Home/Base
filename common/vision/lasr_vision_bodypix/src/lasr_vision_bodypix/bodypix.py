@@ -52,13 +52,14 @@ def load_model_cached(dataset: str) -> None:
 
 
 def detect(
-    request: BodyPixDetectionRequest, debug_publisher: rospy.Publisher | None
+    request: BodyPixDetectionRequest,
+    debug_publisher: rospy.Publisher = rospy.Publisher(
+        "/bodypix/debug", SensorImage, queue_size=1
+    ),
 ) -> BodyPixDetectionResponse:
     """
     Run BodyPix inference on given detection request
     """
-
-    debug_publisher = rospy.Publisher("/bodypix/debug", SensorImage, queue_size=1)
 
     # decode the image
     rospy.loginfo("Decoding")
