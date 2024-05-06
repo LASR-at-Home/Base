@@ -17,3 +17,4 @@ from .receive_object import ReceiveObject
 from .handover_object import HandoverObject
 from .ask_and_listen import AskAndListen
 from .clip_vqa import QueryImage
+from .detect_gesture import DetectGesture

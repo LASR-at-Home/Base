@@ -58,6 +58,8 @@ def detect(
     Run BodyPix inference on given detection request
     """
 
+    debug_publisher = rospy.Publisher("/bodypix/debug", SensorImage, queue_size=1)
+
     # decode the image
     rospy.loginfo("Decoding")
     img = cv2_img.msg_to_cv2_img(request.image_raw)
@@ -69,6 +71,7 @@ def detect(
     # run inference
     rospy.loginfo("Running inference")
     result = model.predict_single(img)
+
     mask = result.get_mask(threshold=request.confidence)
     rospy.loginfo("Inference complete")
 
@@ -110,6 +113,7 @@ def detect(
         keypoints_msg = []
 
         for i, keypoint in pose.keypoints.items():
+
             if camel_to_snake(keypoint.part) in request.masks[0].parts:
                 keypoint_msg = BodyPixKeypoint()
                 keypoint_msg.xy = [int(keypoint.position.x), int(keypoint.position.y)]
@@ -118,7 +122,6 @@ def detect(
                 keypoints_msg.append(keypoint_msg)
 
         pose_msg.keypoints = keypoints_msg
-        pose_msg.score = pose.score
         output_poses.append(pose_msg)
 
     response = BodyPixDetectionResponse()
