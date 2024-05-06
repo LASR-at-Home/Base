@@ -35,3 +35,8 @@ play_motion:
       points:
       - positions: [-0.5, 0.0]
         time_from_start: 0.0
+    look_centre:
+      joints: [head_1_joint, head_2_joint]
+      points:
+      - positions: [0.0, 0.0]
+        time_from_start: 0.0

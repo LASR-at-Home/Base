@@ -3,7 +3,6 @@ import smach
 from sensor_msgs.msg import Image
 
 from lasr_vision_msgs.srv import PointingDirection
-from lasr_vision_msgs.msg import Direction
 
 
 class DetectPointingDirection(smach.State):
@@ -21,7 +20,7 @@ class DetectPointingDirection(smach.State):
 
         img_msg = rospy.wait_for_message(self._image_topic, Image)
         resp = self._pointing_service(img_msg)
-        if resp.direction == "NONE":
+        if resp.direction == "NONE" or resp.direction == "FORWARDS":
             return "failed"
         userdata.pointing_direction = resp.direction
         return "succeeded"

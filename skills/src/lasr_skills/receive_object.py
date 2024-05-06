@@ -55,6 +55,16 @@ class ReceiveObject(smach.StateMachine):
                 "LOOK_RIGHT",
                 PlayMotion(motion_name="look_right"),
                 transitions={
+                    "succeeded": "LOOK_CENTRE",
+                    "aborted": "failed",
+                    "preempted": "failed",
+                },
+            )
+
+            smach.StateMachine.add(
+                "LOOK_CENTRE",
+                PlayMotion(motion_name="look_centre"),
+                transitions={
                     "succeeded": "REACH_ARM",
                     "aborted": "failed",
                     "preempted": "failed",

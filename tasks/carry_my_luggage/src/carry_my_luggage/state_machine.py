@@ -8,7 +8,6 @@ from lasr_skills import (
     ReceiveObject,
 )
 
-from lasr_vision_msgs.msg import Direction
 import rospy
 
 
