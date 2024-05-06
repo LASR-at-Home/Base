@@ -13,7 +13,6 @@ from lasr_vision_msgs.srv import (
     PointingDirectionResponse,
     PointingDirectionRequest,
 )
-from lasr_vision_msgs.msg import Direction
 
 
 class PointingDetector:
@@ -149,7 +148,7 @@ class PointingDetector:
             endpoint = (center_x - arrow_length, center_y)
         elif pointing_direction == "RIGHT":
             endpoint = (center_x + arrow_length, center_y)
-        elif pointing_direction == Direction.FORWARDS:
+        elif pointing_direction == "FORWARDS":
             endpoint = (center_x, center_y)
         else:
             return  # No pointing direction detected
