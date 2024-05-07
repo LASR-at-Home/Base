@@ -1,2 +1,2 @@
-# x and y coordinates
-float32[] coord
+# keypoints
+BodyPixKeypoint[] keypoints
