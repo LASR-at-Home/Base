@@ -36,11 +36,11 @@ verb_dict = {
     "greet": ["greet", "salute", "say hello to", "introduce yourself to"],
     # "remember": ["meet", "contact", "get to know", "get acquainted with"], <--- LOOKS UNUSED
     "count": ["tell me how many"],
-    "describe": ["tell me how", "describe"],
-    "offer": ["offer"],
+    # "describe": ["tell me how", "describe"], <---- LOOKS UNUSED
+    # "offer": ["offer"], <---- LOOKS UNUSED
     "follow": ["follow"],
     "guide": ["guide", "escort", "take", "lead"],
-    "accompany": ["accompany"],
+    # "accompany": ["accompany"], <---- LOOKS UNUSED
 }
 
 
