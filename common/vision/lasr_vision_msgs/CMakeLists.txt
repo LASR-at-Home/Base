@@ -48,6 +48,7 @@ add_message_files(
   Detection.msg
   Detection3D.msg
   BodyPixPose.msg
+  BodyPixKeypoint.msg
   BodyPixMask.msg
   BodyPixMaskRequest.msg
 )
@@ -63,6 +64,7 @@ add_service_files(
   Vqa.srv
   PointingDirection.srv
   TorchFaceFeatureDetectionDescription.srv
+  DetectFaces.srv
 )
 
 # Generate actions in the 'action' folder
