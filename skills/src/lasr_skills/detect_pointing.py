@@ -5,18 +5,22 @@ from sensor_msgs.msg import Image
 from lasr_vision_msgs.srv import PointingDirection
 
 
-class PointingDetector(smach.State):
-    def __init__(self):
+class DetectPointingDirection(smach.State):
+    def __init__(self, image_topic: str = "/xtion/rgb/image_raw"):
         smach.State.__init__(
-            self, outcomes=["succeeded", "failed"], output_keys=["direction"]
+            self, outcomes=["succeeded", "failed"], output_keys=["pointing_direction"]
         )
-        self.service = rospy.ServiceProxy(
+        self._image_topic = image_topic
+        self._pointing_service = rospy.ServiceProxy(
             "/pointing_detection_service", PointingDirection
         )
-        self.image_raw = rospy.wait_for_message("/xtion/rgb/image_raw", Image)
+        self._pointing_service.wait_for_service()
 
     def execute(self, userdata):
-        resp = self.service(self.image_raw)
-        userdata.direction = resp.direction
 
-        return "succeeded" if resp.direction != "Err" else "failed"
+        img_msg = rospy.wait_for_message(self._image_topic, Image)
+        resp = self._pointing_service(img_msg)
+        if resp.direction == "NONE" or resp.direction == "FORWARDS":
+            return "failed"
+        userdata.pointing_direction = resp.direction
+        return "succeeded"

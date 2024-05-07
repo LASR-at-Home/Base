@@ -18,7 +18,7 @@ class GetImage(smach.State):
             self.topic = (
                 "/xtion/rgb/image_raw"
                 if "tiago" in os.environ["ROS_MASTER_URI"]
-                else "/camera/image_raw"
+                else "/usb_cam/image_raw"
             )
         else:
             self.topic = topic

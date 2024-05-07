@@ -16,7 +16,10 @@ class WaitForPerson(smach.StateMachine):
             else:
                 return "not_done"
 
-    def __init__(self):
+    def __init__(
+        self,
+        image_topic: str = "/xtion/rgb/image_raw",
+    ):
         smach.StateMachine.__init__(
             self,
             outcomes=["succeeded", "failed"],
@@ -26,7 +29,7 @@ class WaitForPerson(smach.StateMachine):
         with self:
             smach.StateMachine.add(
                 "DETECT_PEOPLE",
-                Detect(filter=["person"]),
+                Detect(image_topic=image_topic, filter=["person"]),
                 transitions={"succeeded": "CHECK_FOR_PERSON", "failed": "failed"},
             )
             smach.StateMachine.add(
