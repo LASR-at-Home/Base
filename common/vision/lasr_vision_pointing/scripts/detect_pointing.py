@@ -37,7 +37,9 @@ class PointingDetector:
                 keypoints = self.detect_keypoints(
                     img
                 )  # Detect keypoints using MediaPipe
-                direction = self.determine_pointing_direction(keypoints)
+                direction = self.determine_pointing_direction(
+                    keypoints, buffer_width=25
+                )
                 rospy.loginfo(f"Person detected pointing: {direction}")
 
                 # Visualize pointing direction with landmarks
@@ -52,7 +54,7 @@ class PointingDetector:
 
                 resp.direction = direction
         else:
-            resp.direction = "Err"
+            resp.direction = "NONE"
 
         self.counter += 1
         return resp
@@ -117,16 +119,16 @@ class PointingDetector:
 
                 # Determine pointing direction based on the difference in x-coordinates
                 if abs(left_diff - right_diff) < buffer_width:
-                    return "Front"
+                    return "FORWARDS"
                 elif abs(left_diff) > buffer_width and abs(left_diff) > abs(right_diff):
-                    return "Left" if left_diff > 0 else "Right"
+                    return "LEFT" if left_diff > 0 else "RIGHT"
                 elif abs(right_diff) > buffer_width and abs(right_diff) > abs(
                     left_diff
                 ):
-                    return "Right" if right_diff > 0 else "Left"
+                    return "RIGHT" if right_diff > 0 else "LEFT"
 
         # Default: Determine direction based on the relative position to the center of the image
-        return "Front"
+        return "NONE"
 
     def visualize_pointing_direction_with_landmarks(
         self, image_path, person_bbox, pointing_direction, keypoints
@@ -142,12 +144,14 @@ class PointingDetector:
 
         # Calculate endpoint of arrow based on pointing direction
         arrow_length = min(w, h) // 2
-        if pointing_direction == "Left":
+        if pointing_direction == "LEFT":
             endpoint = (center_x - arrow_length, center_y)
-        elif pointing_direction == "Right":
+        elif pointing_direction == "RIGHT":
             endpoint = (center_x + arrow_length, center_y)
-        else:
+        elif pointing_direction == "FORWARDS":
             endpoint = (center_x, center_y)
+        else:
+            return  # No pointing direction detected
 
         # Draw arrow on image
         color = (0, 255, 0)  # Green color
