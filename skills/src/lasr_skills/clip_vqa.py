@@ -5,9 +5,7 @@ from typing import List, Union
 
 
 class QueryImage(smach_ros.ServiceState):
-
     def __init__(self, possible_answers: Union[None, List[str]] = None):
-
         if possible_answers is not None:
             super(QueryImage, self).__init__(
                 "/clip_vqa/query_service",

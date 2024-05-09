@@ -2,7 +2,7 @@
 
 import re
 import rospy
-import lasr_vision_deepface as face_recognition
+import lasr_vision_deepface.deepface as face_recognition
 from sensor_msgs.msg import Image
 from lasr_vision_msgs.srv import (
     Recognise,
@@ -11,6 +11,9 @@ from lasr_vision_msgs.srv import (
     LearnFace,
     LearnFaceRequest,
     LearnFaceResponse,
+    DetectFaces,
+    DetectFacesRequest,
+    DetectFacesResponse,
 )
 
 
@@ -21,6 +24,8 @@ DEBUG = rospy.get_param("~debug", False)
 
 recognise_debug_publishers = {}
 learn_face_debug_publishers = {}
+detect_faces_debug_publisher = None
+
 if DEBUG:
     recognise_debug_publisher = rospy.Publisher("/recognise/debug", Image, queue_size=1)
     learn_face_debug_publisher = rospy.Publisher(
@@ -29,19 +34,20 @@ if DEBUG:
     cropped_face_publisher = rospy.Publisher(
         "/learn_face/debug/cropped_query_face", Image, queue_size=1
     )
+    detect_faces_debug_publisher = rospy.Publisher(
+        "/detect_faces/debug", Image, queue_size=1
+    )
 
 
-def detect(request: RecogniseRequest) -> RecogniseResponse:
+def recognise(request: RecogniseRequest) -> RecogniseResponse:
     debug_publisher = None
     similar_face_debug_publisher = None
     cropped_face_publisher = None
     if DEBUG:
         if request.dataset in recognise_debug_publishers:
-            debug_publisher = recognise_debug_publishers[request.dataset][0]
-            similar_face_debug_publisher = recognise_debug_publishers[request.dataset][
-                1
-            ]
-            cropped_face_publisher = recognise_debug_publisher[request.dataset][2]
+            debug_publisher, similar_face_debug_publisher, cropped_face_publisher = (
+                recognise_debug_publishers[request.dataset]
+            )
         else:
             topic_name = re.sub(r"[\W_]+", "", request.dataset)
             debug_publisher = rospy.Publisher(
@@ -58,7 +64,7 @@ def detect(request: RecogniseRequest) -> RecogniseResponse:
                 similar_face_debug_publisher,
                 cropped_face_publisher,
             )
-    return face_recognition.detect(
+    return face_recognition.recognise(
         request, debug_publisher, similar_face_debug_publisher, cropped_face_publisher
     )
 
@@ -83,7 +89,12 @@ def learn_face(request: LearnFaceRequest) -> LearnFaceResponse:
     return LearnFaceResponse()
 
 
-rospy.Service("/recognise", Recognise, detect)
+def detect_faces(request: DetectFacesRequest) -> DetectFacesResponse:
+    return face_recognition.detect_faces(request, detect_faces_debug_publisher)
+
+
+rospy.Service("/recognise", Recognise, recognise)
 rospy.Service("/learn_face", LearnFace, learn_face)
+rospy.Service("/detect_faces", DetectFaces, detect_faces)
 rospy.loginfo("Face Recognition service started")
 rospy.spin()

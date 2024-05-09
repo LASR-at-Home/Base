@@ -10,4 +10,3 @@ float64 score
 
 # the x and y coordinates of the body part
 int32[] xy
-

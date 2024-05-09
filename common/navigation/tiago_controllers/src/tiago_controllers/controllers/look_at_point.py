@@ -21,6 +21,7 @@ camera_info_topic = "/xtion/rgb/camera_info"
 # Intrinsic parameters of the camera
 camera_intrinsics = None
 
+
 # Callback for every new image received
 def image_callback(img_msg):
     global camera_intrinsics
@@ -32,11 +33,14 @@ def image_callback(img_msg):
     cv2.waitKey(0)
 
     camera_intrinsics = cv2.getOptimalNewCameraMatrix(
-        camera_intrinsics, camera_intrinsics, (img_msg.width, img_msg.height), 0)
+        camera_intrinsics, camera_intrinsics, (img_msg.width, img_msg.height), 0
+    )
 
     if camera_intrinsics is not None:
         u, v = cv2.selectROI(cv_img)
-        rospy.loginfo("Pixel selected ({}, {}). Making TIAGo look to that direction".format(u, v))
+        rospy.loginfo(
+            "Pixel selected ({}, {}). Making TIAGo look to that direction".format(u, v)
+        )
 
         point_stamped = PointStamped()
         point_stamped.header.frame_id = camera_frame
@@ -61,12 +65,15 @@ def image_callback(img_msg):
         point_head_client.send_goal(goal)
         rospy.sleep(0.5)
 
+
 # OpenCV callback function for mouse events on a window
 def onMouse(event, u, v, flags, param):
     if event != cv2.EVENT_LBUTTONDOWN:
         return
 
-    rospy.loginfo("Pixel selected ({}, {}). Making TIAGo look in that direction".format(u, v))
+    rospy.loginfo(
+        "Pixel selected ({}, {}). Making TIAGo look in that direction".format(u, v)
+    )
 
     point_stamped = PointStamped()
     point_stamped.header.frame_id = camera_frame
@@ -92,24 +99,33 @@ def onMouse(event, u, v, flags, param):
     point_head_client.send_goal(goal)
     rospy.sleep(0.5)
 
+
 # Set mouse handler for the window
 cv2.setMouseCallback(window_name, onMouse)
 
 if __name__ == "__main__":
-    rospy.init_node('look_to_point')
+    rospy.init_node("look_to_point")
     rospy.loginfo("Starting look_to_point application ...")
     # Create a ROS action client to move TIAGo's head
-    point_head_client = SimpleActionClient("/head_controller/point_head_action", PointHeadAction)
+    point_head_client = SimpleActionClient(
+        "/head_controller/point_head_action", PointHeadAction
+    )
     rospy.loginfo("Creating action client to head controller ...")
 
     iterations = 0
     max_iterations = 3
-    while (not point_head_client.wait_for_server(rospy.Duration(2.0))) and rospy.is_shutdown() and iterations < max_iterations:
+    while (
+        (not point_head_client.wait_for_server(rospy.Duration(2.0)))
+        and rospy.is_shutdown()
+        and iterations < max_iterations
+    ):
         rospy.logdebug("Waiting for the point_head_action server to come up")
         iterations += 1
 
     if iterations == max_iterations:
-        raise RuntimeError("Error in createPointHeadClient: head controller action server not available")
+        raise RuntimeError(
+            "Error in createPointHeadClient: head controller action server not available"
+        )
 
     # Create the window to show TIAGo's camera images
     cv2.namedWindow(window_name, cv2.WINDOW_AUTOSIZE)
@@ -122,7 +138,9 @@ if __name__ == "__main__":
     transport_hint = TransportHints("compressed")
 
     rospy.loginfo("Subscribing to {} ...".format(image_topic))
-    image_subscriber = image_transporter.subscribe(image_topic, Image, image_callback, transport_hint)
+    image_subscriber = image_transporter.subscribe(
+        image_topic, Image, image_callback, transport_hint
+    )
 
     # Enter a loop that processes ROS callbacks. Press CTRL+C to exit the loop
     rospy.spin()

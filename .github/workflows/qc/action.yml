@@ -1,0 +1,12 @@
+name: Quality Control
+
+runs:
+  using: "composite"
+  steps:
+
+  - name: Python Formatting
+    uses: psf/black@stable
+    with:
+      options: "--check --verbose"
+      jupyter: true
+      version: "24.3.0"

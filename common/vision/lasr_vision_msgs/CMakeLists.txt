@@ -64,6 +64,7 @@ add_service_files(
   Vqa.srv
   PointingDirection.srv
   TorchFaceFeatureDetectionDescription.srv
+  DetectFaces.srv
 )
 
 # Generate actions in the 'action' folder
