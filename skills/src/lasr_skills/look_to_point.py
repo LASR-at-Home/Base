@@ -13,7 +13,7 @@ class LookToPoint(smach_ros.SimpleActionState):
                 pointing_frame="head_2_link",
                 pointing_axis=Point(1.0, 0.0, 0.0),
                 max_velocity=1.0,
-                target=ud.pointstampted,
+                target=ud.pointstamped,
             ),
-            input_keys=["pointstampted"],
+            input_keys=["pointstamped"],
         )
