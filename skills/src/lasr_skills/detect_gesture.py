@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from typing import Optional
 import smach
 import rospy
 from lasr_skills.vision import GetImage
@@ -11,8 +12,12 @@ class DetectGesture(smach.State):
     State for detecting gestures.
     """
 
-    def __init__(self, gesture_to_detect: str = "person raising their left arm"):
-        self.gesture_to_detect = gesture_to_detect
+    def __init__(
+        self,
+        gesture_to_detect: Optional[str] = None,
+        buffer_width: int = 50,
+    ):
+        """Optionally stores the gesture to detect. If None, it will infer the gesture from the keypoints."""
         smach.State.__init__(
             self,
             outcomes=["succeeded", "failed"],
@@ -20,7 +25,9 @@ class DetectGesture(smach.State):
             output_keys=["gesture_detected"],
         )
 
+        self.gesture_to_detect = gesture_to_detect
         self.body_pix_client = rospy.ServiceProxy("/bodypix/detect", BodyPixDetection)
+        self.buffer_width = buffer_width
 
     def execute(self, userdata):
 
@@ -54,29 +61,70 @@ class DetectGesture(smach.State):
                     "y": keypoint.xy[1],
                     "score": keypoint.score,
                 }
-
-        if self.gesture_to_detect == "person raising their left arm":
+        print(f"Gesture to detect: {self.gesture_to_detect}")
+        if (
+            self.gesture_to_detect == "person raising their left arm"
+            or self.gesture_to_detect is None
+        ):
             if part_info["leftWrist"]["y"] < part_info["leftShoulder"]["y"]:
-                userdata.gesture_detected = True
-            else:
-                userdata.gesture_detected = False
-        elif self.gesture_to_detect == "person raising their right arm":
+                self.gesture_to_detect = "person raising their left arm"
+        if (
+            self.gesture_to_detect == "person raising their right arm"
+            or self.gesture_to_detect is None
+        ):
             if part_info["rightWrist"]["y"] < part_info["rightShoulder"]["y"]:
-                userdata.gesture_detected = True
-            else:
-                userdata.gesture_detected = False
-        else:
-            raise ValueError("Invalid gesture to detect")
+                self.gesture_to_detect = "person raising their right arm"
+        if (
+            self.gesture_to_detect == "person pointing to the left"
+            or self.gesture_to_detect is None
+        ):
+            if (
+                part_info["leftWrist"]["x"] - self.buffer_width
+                > part_info["leftShoulder"]["x"]
+            ):
+                self.gesture_to_detect = "person pointing to the left"
+        if (
+            self.gesture_to_detect == "person pointing to the right"
+            or self.gesture_to_detect is None
+        ):
+            if (
+                part_info["rightShoulder"]["x"] - self.buffer_width
+                > part_info["rightWrist"]["x"]
+            ):
+                self.gesture_to_detect = "person pointing to the right"
+        if (
+            self.gesture_to_detect == "person pointing forwards"
+            or self.gesture_to_detect is None
+        ):
+            if (
+                part_info["leftWrist"]["y"] > part_info["leftShoulder"]["y"]
+                and part_info["rightWrist"]["y"] > part_info["rightShoulder"]["y"]
+                and (
+                    abs(part_info["leftWrist"]["x"] - part_info["leftShoulder"]["x"])
+                    > self.buffer_width
+                    or abs(
+                        part_info["rightWrist"]["x"] - part_info["rightShoulder"]["x"]
+                    )
+                    > self.buffer_width
+                )
+            ):
+                self.gesture_to_detect = "person pointing forwards"
+
+        if self.gesture_to_detect is None:
+            self.gesture_to_detect = "none"
+
+        userdata.gesture_detected = self.gesture_to_detect
 
         return "succeeded"
 
 
+### For example usage:
 class GestureDetectionSM(smach.StateMachine):
     """
     State machine for detecting gestures.
     """
 
-    def __init__(self, gesture_to_detect: str = "person raising their left arm"):
+    def __init__(self, gesture_to_detect: Optional[str] = None):
         smach.StateMachine.__init__(self, outcomes=["succeeded", "failed"])
         self.gesture_to_detect = gesture_to_detect
         with self:
@@ -94,10 +142,21 @@ class GestureDetectionSM(smach.StateMachine):
 
 
 if __name__ == "__main__":
+    import random
+
     rospy.init_node("gesture_detection_sm")
+    gestures_to_detect = [
+        # "person raising their left arm",
+        # "person raising their right arm",
+        "person pointing to the left",
+        "person pointing to the right",
+        "person pointing forwards",
+    ]
+    ### Example usage:
     while not rospy.is_shutdown():
+        gesture = random.choice(gestures_to_detect)
         sm = GestureDetectionSM()
         sm.execute()
-        print("Raising Left Hand Detected:", sm.userdata.gesture_detected)
+        print("Gesture detected:", sm.userdata.gesture_detected)
 
     rospy.spin()
