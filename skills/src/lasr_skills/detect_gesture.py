@@ -11,7 +11,7 @@ class DetectGesture(smach.State):
     State for detecting gestures.
     """
 
-    def __init__(self, gesture_to_detect: str = "raising_left_hand"):
+    def __init__(self, gesture_to_detect: str = "person raising their left arm"):
         self.gesture_to_detect = gesture_to_detect
         smach.State.__init__(
             self,
@@ -55,12 +55,12 @@ class DetectGesture(smach.State):
                     "score": keypoint.score,
                 }
 
-        if self.gesture_to_detect == "raising_left_hand":
+        if self.gesture_to_detect == "person raising their left arm":
             if part_info["leftWrist"]["y"] < part_info["leftShoulder"]["y"]:
                 userdata.gesture_detected = True
             else:
                 userdata.gesture_detected = False
-        elif self.gesture_to_detect == "raising_right_hand":
+        elif self.gesture_to_detect == "person raising their right arm":
             if part_info["rightWrist"]["y"] < part_info["rightShoulder"]["y"]:
                 userdata.gesture_detected = True
             else:
@@ -76,7 +76,7 @@ class GestureDetectionSM(smach.StateMachine):
     State machine for detecting gestures.
     """
 
-    def __init__(self, gesture_to_detect: str = "raising_left_hand"):
+    def __init__(self, gesture_to_detect: str = "person raising their left arm"):
         smach.StateMachine.__init__(self, outcomes=["succeeded", "failed"])
         self.gesture_to_detect = gesture_to_detect
         with self:

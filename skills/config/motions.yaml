@@ -40,3 +40,8 @@ play_motion:
       points:
       - positions: [0.0, 0.0]
         time_from_start: 0.0
+    raise_torso:
+      joints: [torso_lift_joint]
+      points:
+      - positions: [0.5]
+        time_from_start: 0.0
