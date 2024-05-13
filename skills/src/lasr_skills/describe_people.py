@@ -141,7 +141,7 @@ class DescribePeople(smach.StateMachine):
                 input_keys=["img", "people_detections", "bodypix_masks"],
                 output_keys=["people"],
             )
-            self.torch_face_features = rospy.ServiceProxy(
+            self.face_features = rospy.ServiceProxy(
                 "/torch/detect/face_features", TorchFaceFeatureDetectionDescription
             )
 
@@ -204,7 +204,7 @@ class DescribePeople(smach.StateMachine):
 
                 full_frame = cv2_img.cv2_img_to_msg(img)
 
-                rst = self.torch_face_features(
+                rst = self.face_features(
                     full_frame,
                     head_mask_data,
                     head_mask_shape,
