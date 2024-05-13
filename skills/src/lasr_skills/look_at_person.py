@@ -16,6 +16,8 @@ from cv2_pcl import pcl_to_img_msg
 import ros_numpy as rnp
 import rosservice
 from smach import CBState
+from std_msgs.msg import String
+from geometry_msgs.msg import Point
 
 PUBLIC_CONTAINER = False
 
@@ -28,6 +30,9 @@ try:
     )
 except ModuleNotFoundError:
     PUBLIC_CONTAINER = True
+
+import actionlib
+from control_msgs.msg import PointHeadAction, PointHeadGoal
 
 
 class LookAtPerson(smach.StateMachine):
@@ -42,107 +47,14 @@ class LookAtPerson(smach.StateMachine):
             self.DEBUG = debug
             self.img_pub = rospy.Publisher("/debug/image", Image, queue_size=1)
             self.marker_pub = rospy.Publisher("eyes", Marker, queue_size=1)
+            self.look_at_pub = actionlib.SimpleActionClient(
+                "/head_controller/point_head_action", PointHeadAction
+            )
 
         def execute(self, userdata):
-            # check the detections from yolo and choose the bbox with the highest confidence
-            # if len(userdata.detections.detections) == 0 or userdata.poses is None:
-            #     return "no_detection"
-
-            # max_confidence_det = None
-            # for detection in userdata.detections.detections:
-            #     if (
-            #         max_confidence_det is None
-            #         or detection.confidence > max_confidence_det.confidence
-            #     ):
-            #         max_confidence_det = detection
-
-            # left_eye, right_eye, eye_point = [], [], []
-
-            # for pose in userdata.poses:
-            #     for keypoint in pose.keypoints:
-            #         if (
-            #             keypoint.part == "leftEye"
-            #             and max_confidence_det.xywh[0]
-            #             < keypoint.xy[0]
-            #             < max_confidence_det.xywh[0] + max_confidence_det.xywh[2]
-            #             and max_confidence_det.xywh[1]
-            #             < keypoint.xy[1]
-            #             < max_confidence_det.xywh[1] + max_confidence_det.xywh[3]
-            #         ):
-            #             left_eye = keypoint.xy
-            #
-            #         if (
-            #             keypoint.part == "rightEye"
-            #             and max_confidence_det.xywh[0]
-            #             < keypoint.xy[0]
-            #             < max_confidence_det.xywh[0] + max_confidence_det.xywh[2]
-            #             and max_confidence_det.xywh[1]
-            #             < keypoint.xy[1]
-            #             < max_confidence_det.xywh[1] + max_confidence_det.xywh[3]
-            #         ):
-            #             right_eye = keypoint.xy
-
-            # if self.DEBUG:
-            #     print("Eyes found:", left_eye, right_eye)
-            #     print("Number of detections:")
-            #     print(len(userdata.detections.detections))
-            #     img = msg_to_cv2_img(pcl_to_img_msg(userdata.pcl_msg))
-            #     for det in userdata.detections.detections:
-            #         cv2.rectangle(
-            #             img,
-            #             (det.xywh[0], det.xywh[1]),
-            #             (det.xywh[0] + det.xywh[2], det.xywh[1] + det.xywh[3]),
-            #             (0, 255, 0),
-            #             2,
-            #         )
-            #         cv2.putText(
-            #             img,
-            #             f"{det.confidence:.2f}",
-            #             (det.xywh[0], det.xywh[1]),
-            #             cv2.FONT_HERSHEY_SIMPLEX,
-            #             0.5,
-            #             (0, 250, 0),
-            #             2,
-            #         )
-            #
-            #     if len(left_eye) == 2:
-            #         cv2.circle(img, (left_eye[0], left_eye[1]), 5, (0, 255, 0), -1)
-            #     if len(right_eye) == 2:
-            #         cv2.circle(img, (right_eye[0], right_eye[1]), 5, (0, 255, 0), -1)
-            #
-            #     img_msg1 = cv2_img_to_msg(img)
-            #
-            #     self.img_pub.publish(img_msg1)
-            #
-            # if len(left_eye) == 0 or len(right_eye) == 0:
-            #     return "failed"
-            #
-            # if len(left_eye) == 2 and len(right_eye) == 2:
-            #     eye_point = (left_eye[0] + right_eye[0]) / 2, (
-            #         left_eye[1] + right_eye[1]
-            #     ) / 2
-            #
-            # if len(left_eye) == 2 and len(right_eye) == 0:
-            #     eye_point = left_eye
-            #
-            # elif len(left_eye) == 0 and len(right_eye) == 2:
-            #     eye_point = right_eye
-            #
-            # pcl_xyz = rnp.point_cloud2.pointcloud2_to_xyz_array(
-            #     userdata.pcl_msg, remove_nans=False
-            # )
-            # eye_point_pcl = pcl_xyz[int(eye_point[1]), int(eye_point[0])]
-            #
-            # look_at = PointStamped()
-            # look_at.header = userdata.pcl_msg.header
-            # look_at.point.x = eye_point_pcl[0]
-            # look_at.point.y = eye_point_pcl[1]
-            # look_at.point.z = eye_point_pcl[2]
-            #
-            # if self.DEBUG:
-            #     create_and_publish_marker(self.marker_pub, look_at, r=0, g=1, b=0)
-            #
-            # userdata.pointstamped = look_at
+            rospy.loginfo("Checking eyes")
+            print("bbox eyes", userdata.bbox_eyes)
+            rospy.sleep(3)
             if len(userdata.bbox_eyes) < 1 and len(userdata.detections.detections) > 0:
                 return "succeeded"
             elif (
@@ -156,6 +68,7 @@ class LookAtPerson(smach.StateMachine):
                 eye_point = (left_eye[0] + right_eye[0]) / 2, (
                     left_eye[1] + right_eye[1]
                 ) / 2
+                print("EYE POINT", eye_point)
 
                 if self.DEBUG:
                     img = msg_to_cv2_img(pcl_to_img_msg(userdata.pcl_msg))
@@ -168,6 +81,12 @@ class LookAtPerson(smach.StateMachine):
                     userdata.pcl_msg, remove_nans=False
                 )
                 eye_point_pcl = pcl_xyz[int(eye_point[1]), int(eye_point[0])]
+                print("EYE POINT PCL", eye_point_pcl)
+                # check if the list contains nan, if it does then take one of the eyes
+                if any([True for i in eye_point_pcl if i != i]):
+                    eye_point_pcl = pcl_xyz[int(left_eye[1]), int(left_eye[0])]
+                    eye_point_pcl = pcl_xyz[int(right_eye[1]), int(right_eye[0])]
+                    print("EYE POINT PCL", eye_point_pcl)
 
                 look_at = PointStamped()
                 look_at.header = userdata.pcl_msg.header
@@ -181,6 +100,14 @@ class LookAtPerson(smach.StateMachine):
                 userdata.bbox_eyes.remove(det)
                 print("LOOK AT POINT", look_at)
                 userdata.pointstamped = look_at
+
+                self.look_at_pub.wait_for_server()
+                goal = PointHeadGoal()
+                goal.pointing_frame = "head_2_link"
+                goal.pointing_axis = Point(1.0, 0.0, 0.0)
+                goal.max_velocity = 1.0
+                goal.target = look_at
+                self.look_at_pub.send_goal(goal)
 
                 return "succeeded"
 
@@ -316,9 +243,9 @@ class LookAtPerson(smach.StateMachine):
                 "CHECK_EYES",
                 self.CheckEyes(self.DEBUG),
                 transitions={
-                    "succeeded": "LOOK_TO_POINT",
+                    "succeeded": "LOOP",
                     "failed": "failed",
-                    "no_detection": "CHECK_EYES",
+                    "no_detection": "succeeded",
                 },
                 remapping={
                     "pcl_msg": "pcl_msg",
@@ -331,11 +258,22 @@ class LookAtPerson(smach.StateMachine):
                 "LOOK_TO_POINT",
                 LookToPoint(),
                 transitions={
-                    "succeeded": "succeeded",
+                    "succeeded": "LOOP",
                     "aborted": "failed",
                     "preempted": "failed",
                 },
                 remapping={"pointstamped": "pointstamped"},
+            )
+            # if the len of bbox_eyes is not 0 then loop back to check eyes
+            smach.StateMachine.add(
+                "LOOP",
+                smach.CBState(
+                    lambda ud: "succeeded" if len(ud.bbox_eyes) > 0 else "finish",
+                    input_keys=["bbox_eyes"],
+                    output_keys=["bbox_eyes"],
+                    outcomes=["succeeded", "finish"],
+                ),
+                transitions={"succeeded": "CHECK_EYES", "finish": "succeeded"},
             )
             # TODO: do sweeping maybe with iterator
 
