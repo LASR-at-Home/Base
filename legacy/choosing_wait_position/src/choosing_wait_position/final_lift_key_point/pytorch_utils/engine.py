@@ -5,8 +5,12 @@ import time
 import torch
 import torchvision.models.detection.mask_rcnn
 import utils
-from base.src.Base.common.navigation.choosing_wait_position.src.choosing_wait_position.final_lift_key_point.pytorch_utils.coco_eval import CocoEvaluator
-from base.src.Base.common.navigation.choosing_wait_position.src.choosing_wait_position.final_lift_key_point.pytorch_utils.coco_utils import get_coco_api_from_dataset
+from base.src.Base.common.navigation.choosing_wait_position.src.choosing_wait_position.final_lift_key_point.pytorch_utils.coco_eval import (
+    CocoEvaluator,
+)
+from base.src.Base.common.navigation.choosing_wait_position.src.choosing_wait_position.final_lift_key_point.pytorch_utils.coco_utils import (
+    get_coco_api_from_dataset,
+)
 
 
 def train_one_epoch(model, optimizer, data_loader, device, epoch, print_freq):
@@ -93,7 +97,10 @@ def evaluate(model, data_loader, device):
         outputs = [{k: v.to(cpu_device) for k, v in t.items()} for t in outputs]
         model_time = time.time() - model_time
 
-        res = {target["image_id"].item(): output for target, output in zip(targets, outputs)}
+        res = {
+            target["image_id"].item(): output
+            for target, output in zip(targets, outputs)
+        }
         evaluator_time = time.time()
         coco_evaluator.update(res)
         evaluator_time = time.time() - evaluator_time

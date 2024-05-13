@@ -19,7 +19,7 @@ find_package(catkin REQUIRED catkin_virtualenv)
 catkin_python_setup()
 catkin_generate_virtualenv(
   INPUT_REQUIREMENTS requirements.in
-  PYTHON_INTERPRETER python3.10
+  PYTHON_INTERPRETER python3.8
 )
 
 ################################################
@@ -161,7 +161,8 @@ include_directories(
 ## in contrast to setup.py, you can choose the destination
 catkin_install_python(PROGRAMS
   scripts/create_dataset
-  examples/relay
+  examples/relay_recognise
+  examples/relay_detect_faces
   examples/greet
   nodes/service
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}

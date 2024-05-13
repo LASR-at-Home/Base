@@ -103,7 +103,9 @@ class RandomIoUCrop(nn.Module):
 
         if isinstance(image, torch.Tensor):
             if image.ndimension() not in {2, 3}:
-                raise ValueError(f"image should be 2/3 dimensional. Got {image.ndimension()} dimensions.")
+                raise ValueError(
+                    f"image should be 2/3 dimensional. Got {image.ndimension()} dimensions."
+                )
             elif image.ndimension() == 2:
                 image = image.unsqueeze(0)
 
@@ -113,7 +115,9 @@ class RandomIoUCrop(nn.Module):
             # sample an option
             idx = int(torch.randint(low=0, high=len(self.options), size=(1,)))
             min_jaccard_overlap = self.options[idx]
-            if min_jaccard_overlap >= 1.0:  # a value larger than 1 encodes the leave as-is option
+            if (
+                min_jaccard_overlap >= 1.0
+            ):  # a value larger than 1 encodes the leave as-is option
                 return image, target
 
             for _ in range(self.trials):
@@ -137,14 +141,21 @@ class RandomIoUCrop(nn.Module):
                 # check for any valid boxes with centers within the crop area
                 cx = 0.5 * (target["boxes"][:, 0] + target["boxes"][:, 2])
                 cy = 0.5 * (target["boxes"][:, 1] + target["boxes"][:, 3])
-                is_within_crop_area = (left < cx) & (cx < right) & (top < cy) & (cy < bottom)
+                is_within_crop_area = (
+                    (left < cx) & (cx < right) & (top < cy) & (cy < bottom)
+                )
                 if not is_within_crop_area.any():
                     continue
 
                 # check at least 1 box with jaccard limitations
                 boxes = target["boxes"][is_within_crop_area]
                 ious = torchvision.ops.boxes.box_iou(
-                    boxes, torch.tensor([[left, top, right, bottom]], dtype=boxes.dtype, device=boxes.device)
+                    boxes,
+                    torch.tensor(
+                        [[left, top, right, bottom]],
+                        dtype=boxes.dtype,
+                        device=boxes.device,
+                    ),
                 )
                 if ious.max() < min_jaccard_overlap:
                     continue
@@ -163,7 +174,10 @@ class RandomIoUCrop(nn.Module):
 
 class RandomZoomOut(nn.Module):
     def __init__(
-        self, fill: Optional[List[float]] = None, side_range: Tuple[float, float] = (1.0, 4.0), p: float = 0.5
+        self,
+        fill: Optional[List[float]] = None,
+        side_range: Tuple[float, float] = (1.0, 4.0),
+        p: float = 0.5,
     ):
         super().__init__()
         if fill is None:
@@ -185,7 +199,9 @@ class RandomZoomOut(nn.Module):
     ) -> Tuple[Tensor, Optional[Dict[str, Tensor]]]:
         if isinstance(image, torch.Tensor):
             if image.ndimension() not in {2, 3}:
-                raise ValueError(f"image should be 2/3 dimensional. Got {image.ndimension()} dimensions.")
+                raise ValueError(
+                    f"image should be 2/3 dimensional. Got {image.ndimension()} dimensions."
+                )
             elif image.ndimension() == 2:
                 image = image.unsqueeze(0)
 
@@ -194,7 +210,9 @@ class RandomZoomOut(nn.Module):
 
         orig_w, orig_h = F.get_image_size(image)
 
-        r = self.side_range[0] + torch.rand(1) * (self.side_range[1] - self.side_range[0])
+        r = self.side_range[0] + torch.rand(1) * (
+            self.side_range[1] - self.side_range[0]
+        )
         canvas_width = int(orig_w * r)
         canvas_height = int(orig_h * r)
 
@@ -211,10 +229,12 @@ class RandomZoomOut(nn.Module):
 
         image = F.pad(image, [left, top, right, bottom], fill=fill)
         if isinstance(image, torch.Tensor):
-            v = torch.tensor(self.fill, device=image.device, dtype=image.dtype).view(-1, 1, 1)
-            image[..., :top, :] = image[..., :, :left] = image[..., (top + orig_h) :, :] = image[
-                ..., :, (left + orig_w) :
-            ] = v
+            v = torch.tensor(self.fill, device=image.device, dtype=image.dtype).view(
+                -1, 1, 1
+            )
+            image[..., :top, :] = image[..., :, :left] = image[
+                ..., (top + orig_h) :, :
+            ] = image[..., :, (left + orig_w) :] = v
 
         if target is not None:
             target["boxes"][:, 0::2] += left
@@ -244,7 +264,9 @@ class RandomPhotometricDistort(nn.Module):
     ) -> Tuple[Tensor, Optional[Dict[str, Tensor]]]:
         if isinstance(image, torch.Tensor):
             if image.ndimension() not in {2, 3}:
-                raise ValueError(f"image should be 2/3 dimensional. Got {image.ndimension()} dimensions.")
+                raise ValueError(
+                    f"image should be 2/3 dimensional. Got {image.ndimension()} dimensions."
+                )
             elif image.ndimension() == 2:
                 image = image.unsqueeze(0)
 
