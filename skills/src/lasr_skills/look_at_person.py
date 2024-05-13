@@ -52,9 +52,6 @@ class LookAtPerson(smach.StateMachine):
             )
 
         def execute(self, userdata):
-            rospy.loginfo("Checking eyes")
-            print("bbox eyes", userdata.bbox_eyes)
-            rospy.sleep(3)
             if len(userdata.bbox_eyes) < 1 and len(userdata.detections.detections) > 0:
                 return "succeeded"
             elif (
@@ -68,7 +65,6 @@ class LookAtPerson(smach.StateMachine):
                 eye_point = (left_eye[0] + right_eye[0]) / 2, (
                     left_eye[1] + right_eye[1]
                 ) / 2
-                print("EYE POINT", eye_point)
 
                 if self.DEBUG:
                     img = msg_to_cv2_img(pcl_to_img_msg(userdata.pcl_msg))
@@ -81,12 +77,8 @@ class LookAtPerson(smach.StateMachine):
                     userdata.pcl_msg, remove_nans=False
                 )
                 eye_point_pcl = pcl_xyz[int(eye_point[1]), int(eye_point[0])]
-                print("EYE POINT PCL", eye_point_pcl)
-                # check if the list contains nan, if it does then take one of the eyes
                 if any([True for i in eye_point_pcl if i != i]):
-                    eye_point_pcl = pcl_xyz[int(left_eye[1]), int(left_eye[0])]
                     eye_point_pcl = pcl_xyz[int(right_eye[1]), int(right_eye[0])]
-                    print("EYE POINT PCL", eye_point_pcl)
 
                 look_at = PointStamped()
                 look_at.header = userdata.pcl_msg.header
@@ -98,7 +90,6 @@ class LookAtPerson(smach.StateMachine):
                     create_and_publish_marker(self.marker_pub, look_at, r=0, g=1, b=0)
 
                 userdata.bbox_eyes.remove(det)
-                print("LOOK AT POINT", look_at)
                 userdata.pointstamped = look_at
 
                 self.look_at_pub.wait_for_server()
@@ -115,7 +106,6 @@ class LookAtPerson(smach.StateMachine):
 
     @smach.cb_interface(input_keys=["poses", "detections"], output_keys=["bbox_eyes"])
     def match_poses_and_detections(ud):
-        # a map for bbox : list of left eye and right eye keypoints
         bbox_eyes = []
         for pose in ud.poses:
             for detection in ud.detections.detections:
@@ -132,7 +122,6 @@ class LookAtPerson(smach.StateMachine):
                         < keypoint.xy[1]
                         < detection.xywh[1] + detection.xywh[3]
                     ):
-                        print("LEFT EYE", keypoint.xy)
                         temp["left_eye"] = keypoint.xy
                     if (
                         keypoint.part == "rightEye"
@@ -143,14 +132,11 @@ class LookAtPerson(smach.StateMachine):
                         < keypoint.xy[1]
                         < detection.xywh[1] + detection.xywh[3]
                     ):
-                        print("RIGHT EYE", keypoint.xy)
                         temp["right_eye"] = keypoint.xy
 
                     if "left_eye" in temp and "right_eye" in temp:
                         bbox_eyes.append(temp)
 
-        print("BBOX EYES")
-        print(bbox_eyes)
         ud.bbox_eyes = bbox_eyes
 
         return "succeeded"
@@ -227,7 +213,6 @@ class LookAtPerson(smach.StateMachine):
                 remapping={"pcl_msg": "pcl_msg", "detections": "detections"},
             )
 
-            # match the poses of the eyes and the bbox of the detections of the person
             smach.StateMachine.add(
                 "MATCH_POSES_AND_DETECTIONS",
                 CBState(
@@ -243,7 +228,7 @@ class LookAtPerson(smach.StateMachine):
                 "CHECK_EYES",
                 self.CheckEyes(self.DEBUG),
                 transitions={
-                    "succeeded": "LOOP",
+                    "succeeded": "LOOK_TO_POINT",
                     "failed": "failed",
                     "no_detection": "succeeded",
                 },
@@ -264,7 +249,6 @@ class LookAtPerson(smach.StateMachine):
                 },
                 remapping={"pointstamped": "pointstamped"},
             )
-            # if the len of bbox_eyes is not 0 then loop back to check eyes
             smach.StateMachine.add(
                 "LOOP",
                 smach.CBState(
@@ -273,10 +257,11 @@ class LookAtPerson(smach.StateMachine):
                     output_keys=["bbox_eyes"],
                     outcomes=["succeeded", "finish"],
                 ),
-                transitions={"succeeded": "CHECK_EYES", "finish": "succeeded"},
+                transitions={
+                    "succeeded": "CHECK_EYES",
+                    "finish": "ENABLE_HEAD_MANAGER",
+                },
             )
-            # TODO: do sweeping maybe with iterator
-
             if not IS_SIMULATION:
                 if PUBLIC_CONTAINER:
                     rospy.logwarn(
