@@ -1,23 +1,13 @@
 <?xml version="1.0"?>
 <package format="2">
-<<<<<<<< HEAD:common/helpers/numpy2message/package.xml
-  <name>numpy2message</name>
-  <version>0.0.0</version>
-  <description>Helper functions converting between numpy arrays and ROS messages.</description>
-========
   <name>navigation_helpers</name>
   <version>0.0.0</version>
   <description>The navigation_helpers package</description>
->>>>>>>> upstream/main:common/helpers/navigation_helpers/package.xml
 
   <!-- One maintainer tag required, multiple allowed, one person per tag -->
   <!-- Example:  -->
   <!-- <maintainer email="jane.doe@example.com">Jane Doe</maintainer> -->
-<<<<<<<< HEAD:common/helpers/numpy2message/package.xml
-  <maintainer email="benteng.ma@kcl.ac.uk">Benteng Ma</maintainer>
-========
   <maintainer email="jared.swift@kcl.ac.uk">Jared Swift</maintainer>
->>>>>>>> upstream/main:common/helpers/navigation_helpers/package.xml
 
 
   <!-- One license tag required, multiple allowed, one license per tag -->
@@ -29,17 +19,13 @@
   <!-- Url tags are optional, but multiple are allowed, one per tag -->
   <!-- Optional attribute type can be: website, bugtracker, or repository -->
   <!-- Example: -->
-<<<<<<<< HEAD:common/helpers/numpy2message/package.xml
-  <!-- <url type="website">http://wiki.ros.org/numpy2message</url> -->
-========
   <!-- <url type="website">http://wiki.ros.org/navigation_helpers</url> -->
->>>>>>>> upstream/main:common/helpers/navigation_helpers/package.xml
 
 
   <!-- Author tags are optional, multiple are allowed, one per tag -->
   <!-- Authors do not have to be maintainers, but could be -->
   <!-- Example: -->
-  <author email="benteng.ma@kcl.ac.uk">Benteng Ma</author>
+  <!-- <author email="jane.doe@example.com">Jane Doe</author> -->
 
 
   <!-- The *depend tags are used to specify dependencies -->
