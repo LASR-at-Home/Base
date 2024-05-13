@@ -7,7 +7,6 @@ from typing import Union, List
 
 
 class PlayMotion(smach_ros.SimpleActionState):
-
     def _needs_planning(self, motion_name: str) -> bool:
         joints: List[str] = rospy.get_param(
             f"/play_motion/motions/{motion_name}/joints"

@@ -17,10 +17,12 @@ class ArmTorsoController:
         self._scene = moveit_commander.PlanningSceneInterface()
         _group_name = "arm_torso"
         self._group_names = self._robot.get_group_names()
-        self._move_group = moveit_commander.MoveGroupCommander(name=_group_name, wait_for_servers=0)
-        self._display_trajectory_publisher = rospy.Publisher('/move_group/display_planned_path',
-                                                             DisplayTrajectory,
-                                                             queue_size=20)
+        self._move_group = moveit_commander.MoveGroupCommander(
+            name=_group_name, wait_for_servers=0
+        )
+        self._display_trajectory_publisher = rospy.Publisher(
+            "/move_group/display_planned_path", DisplayTrajectory, queue_size=20
+        )
 
     def get_joint_values(self):
         return self._move_group.get_current_joint_values()
@@ -97,17 +99,17 @@ class ArmTorsoController:
         print("")
 
     def clear_octomap(self):
-        rospy.wait_for_service('/clear_octomap')
+        rospy.wait_for_service("/clear_octomap")
         try:
-            clear = rospy.ServiceProxy('/clear_octomap', Empty)
+            clear = rospy.ServiceProxy("/clear_octomap", Empty)
             clear()
         except rospy.ServiceException as e:
             print("Service call failed: %s" % e)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     rospy.init_node("move_group_python_interface_tutorial", anonymous=True)
-    if rospy.get_published_topics(namespace='/move_group/display_planned_path'):
+    if rospy.get_published_topics(namespace="/move_group/display_planned_path"):
         a = ArmTorsoController()
         a.get_base_info()
         a.sync_reach_joint_space(0.1, INITIAL_POSITION)
@@ -115,4 +117,4 @@ if __name__ == '__main__':
         a.clear_octomap()
         a.execute_plan(0.15, GRAB_OBJECT)
     else:
-        rospy.loginfo('*'*50, "You are not running TIAGO", '*'*50)
+        rospy.loginfo("*" * 50, "You are not running TIAGO", "*" * 50)

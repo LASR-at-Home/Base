@@ -10,8 +10,9 @@ class ImageCv2ToMsg(smach.State):
 
     def __init__(self):
         smach.State.__init__(
-            self, outcomes=['succeeded'], input_keys=['img'], output_keys=['img_msg'])
+            self, outcomes=["succeeded"], input_keys=["img"], output_keys=["img_msg"]
+        )
 
     def execute(self, userdata):
         userdata.img_msg = cv2_img.cv2_img_to_msg(userdata.img)
-        return 'succeeded'
+        return "succeeded"

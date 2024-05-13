@@ -8,7 +8,6 @@ from typing import List, Union
 
 
 class Detect3D(smach.State):
-
     def __init__(
         self,
         depth_topic: str = "/xtion/depth_registered/points",

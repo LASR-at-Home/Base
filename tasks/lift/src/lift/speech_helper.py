@@ -15,7 +15,7 @@ def listen(default):
 
 def affirm(default):
     resp = listen(default)
-    if resp['intent']['name'] != 'affirm':
+    if resp["intent"]["name"] != "affirm":
         default.voice.speak("Sorry, I didn't get that, please say yes or no")
         return affirm(default)
     choices = resp["entities"].get("choice", None)
@@ -39,14 +39,15 @@ def hear_wait(default):
         else:
             return True
     else:
-
         return False
 
 
 def get_people_number(default):
     resp = listen(default)
     if resp["intent"]["name"] != "negotiate_lift":
-        default.voice.speak("Sorry, I misheard you, could you say again how many people?")
+        default.voice.speak(
+            "Sorry, I misheard you, could you say again how many people?"
+        )
         return get_people_number(default)
     people = resp["entities"].get("people", [])
     if not people:
@@ -68,11 +69,13 @@ def get_floor(default):
         return get_floor()
     floor_number = int(floor[0]["value"])
     default.voice.speak("I heard that we are on floor {}".format(floor_number))
-    default.voice.speak("Is this correct? Please answer yes, that is correct or no, that is wrong")
+    default.voice.speak(
+        "Is this correct? Please answer yes, that is correct or no, that is wrong"
+    )
 
     answer = affirm(default)
     if answer == "yes":
         default.voice.speak("Cool stuff!")
         return floor_number
     else:
-        return 'failed'
+        return "failed"

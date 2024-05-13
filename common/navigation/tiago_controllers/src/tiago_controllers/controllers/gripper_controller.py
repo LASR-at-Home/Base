@@ -10,13 +10,17 @@ class GripperController:
     JOINT_MAX = 0.045
 
     def __init__(self):
-        self._client = actionlib.SimpleActionClient("gripper_controller/follow_joint_trajectory",
-                                                    FollowJointTrajectoryAction)
+        self._client = actionlib.SimpleActionClient(
+            "gripper_controller/follow_joint_trajectory", FollowJointTrajectoryAction
+        )
         self._client.wait_for_server()
 
     def sync_reach_to(self, joint1, joint2=None, time_from_start=1):
         goal = FollowJointTrajectoryGoal()
-        goal.trajectory.joint_names = ["gripper_left_finger_joint", "gripper_right_finger_joint"]
+        goal.trajectory.joint_names = [
+            "gripper_left_finger_joint",
+            "gripper_right_finger_joint",
+        ]
         point = JointTrajectoryPoint()
         if not joint2:
             joint2 = joint1
@@ -31,10 +35,12 @@ class GripperController:
         return state
 
     def cancel_goal(self):
-        return cancel_goal(self, '/torso_controller/follow_joint_trajectory/cancel', self._client)
+        return cancel_goal(
+            self, "/torso_controller/follow_joint_trajectory/cancel", self._client
+        )
 
     def is_running(self):
         return is_running(self._client)
 
     def get_gripper_state(self):
-        return get_joint_values('/gripper_controller/query_state')
+        return get_joint_values("/gripper_controller/query_state")

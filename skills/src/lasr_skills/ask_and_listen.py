@@ -11,7 +11,6 @@ class AskAndListen(smach.StateMachine):
         tts_phrase: Union[str, None] = None,
         tts_phrase_format_str: Union[str, None] = None,
     ):
-
         if tts_phrase is not None:
             smach.StateMachine.__init__(
                 self,

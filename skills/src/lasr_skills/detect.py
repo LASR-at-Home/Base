@@ -10,7 +10,6 @@ from typing import List, Union
 
 
 class Detect(smach.State):
-
     def __init__(
         self,
         image_topic: str = "/xtion/rgb/image_raw",

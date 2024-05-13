@@ -8,20 +8,62 @@ rospy.init_node("datahub_shit")
 DATAHUB_API = "https://ecs-mnemosyne.azurewebsites.net/api/Hub"
 ROBOT_ID = "019b1442-728d-48c4-1de7-08dbb68bfcf1"
 
+
 def start_episode(_):
-    requests.post(DATAHUB_API, json={"RobotId" : ROBOT_ID, "Competition" : "ERL", "Action" : "STARTEPISODE", "Episode" : 1})
+    requests.post(
+        DATAHUB_API,
+        json={
+            "RobotId": ROBOT_ID,
+            "Competition": "ERL",
+            "Action": "STARTEPISODE",
+            "Episode": 1,
+        },
+    )
+
 
 def stop_episode(_):
-    requests.post(DATAHUB_API, json={"RobotId" : ROBOT_ID, "Competition" : "ERL", "Action" : "STOPEPISODE", "Episode" : 1})
+    requests.post(
+        DATAHUB_API,
+        json={
+            "RobotId": ROBOT_ID,
+            "Competition": "ERL",
+            "Action": "STOPEPISODE",
+            "Episode": 1,
+        },
+    )
+
 
 def start_phase(msg):
-    requests.post(DATAHUB_API, json={"RobotId" : ROBOT_ID, "Competition" : "ERL", "Action" : "STARTPHASE", "Episode" : 1, "Phase" : msg.data})
+    requests.post(
+        DATAHUB_API,
+        json={
+            "RobotId": ROBOT_ID,
+            "Competition": "ERL",
+            "Action": "STARTPHASE",
+            "Episode": 1,
+            "Phase": msg.data,
+        },
+    )
+
 
 def stop_phase(msg):
-    requests.post(DATAHUB_API, json={"RobotId" : ROBOT_ID, "Competition" : "ERL", "Action" : "STOPPHASE", "Episode" : 1, "Phase" : msg.data})
+    requests.post(
+        DATAHUB_API,
+        json={
+            "RobotId": ROBOT_ID,
+            "Competition": "ERL",
+            "Action": "STOPPHASE",
+            "Episode": 1,
+            "Phase": msg.data,
+        },
+    )
+
 
 def ping(_):
-    requests.post(DATAHUB_API, json={"RobotId" : ROBOT_ID, "Competition" : "ERL", "Action" : "PING"})
+    requests.post(
+        DATAHUB_API, json={"RobotId": ROBOT_ID, "Competition": "ERL", "Action": "PING"}
+    )
+
 
 rospy.Subscriber("/datahub/start_episode", Empty, start_episode)
 rospy.Subscriber("/datahub/stop_episode", Empty, stop_episode)

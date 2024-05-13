@@ -10,6 +10,7 @@ from visualization_msgs.msg import Marker
 from cv_bridge3 import CvBridge
 import numpy as np
 
+
 def create_point_marker(x, y, z, idx):
     marker_msg = Marker()
     marker_msg.header.frame_id = "map"
@@ -30,12 +31,13 @@ def create_point_marker(x, y, z, idx):
     marker_msg.color.b = 0.0
     return marker_msg
 
+
 rospy.init_node("test_people_pose")
 
 people_pose_pub = rospy.Publisher("/people_poses", Marker, queue_size=100)
 
 rospy.wait_for_service("/yolov8/detect", rospy.Duration(15.0))
-yolo = rospy.ServiceProxy('/yolov8/detect', YoloDetection)
+yolo = rospy.ServiceProxy("/yolov8/detect", YoloDetection)
 tf = rospy.ServiceProxy("/tf_transform", TfTransform)
 bridge = CvBridge()
 
@@ -56,7 +58,9 @@ while not rospy.is_shutdown():
             tf_req.target_frame = String("map")
             tf_req.point = centroid
             centroid_tf = tf(tf_req).target_point.point
-            people_pose_pub.publish(create_point_marker(centroid_tf.x, centroid_tf.y, centroid_tf.z, idx))
+            people_pose_pub.publish(
+                create_point_marker(centroid_tf.x, centroid_tf.y, centroid_tf.z, idx)
+            )
             idx += 1
             prev_xyz = centroid_xyz
 

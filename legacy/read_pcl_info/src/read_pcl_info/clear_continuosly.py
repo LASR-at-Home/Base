@@ -3,11 +3,16 @@
 import rospy
 from std_srvs.srv import Empty
 
+
 class ClearCostmapNode:
     def __init__(self):
-        rospy.init_node('clear_costmap_node')
-        self.clear_costmap_service = rospy.ServiceProxy('/move_base/clear_costmaps', Empty)
-        self.clear_interval = rospy.Duration(30.0)  # Adjust the clear interval as needed
+        rospy.init_node("clear_costmap_node")
+        self.clear_costmap_service = rospy.ServiceProxy(
+            "/move_base/clear_costmaps", Empty
+        )
+        self.clear_interval = rospy.Duration(
+            30.0
+        )  # Adjust the clear interval as needed
         self.last_clear_time = rospy.Time.now()
 
     def run(self):
@@ -26,7 +31,8 @@ class ClearCostmapNode:
         except rospy.ServiceException as e:
             rospy.logerr("Failed to clear costmap: {}".format(e))
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     try:
         clear_costmap_node = ClearCostmapNode()
         clear_costmap_node.run()
