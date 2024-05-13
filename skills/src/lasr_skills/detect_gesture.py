@@ -5,6 +5,7 @@ import rospy
 import cv2
 import cv2_img
 from lasr_skills.vision import GetImage
+from lasr_skills import PlayMotion
 from lasr_vision_msgs.srv import BodyPixDetection, BodyPixDetectionRequest
 from lasr_vision_msgs.msg import BodyPixMaskRequest
 from sensor_msgs.msg import Image
@@ -70,35 +71,35 @@ class DetectGesture(smach.State):
                     "score": keypoint.score,
                 }
         if (
-            self.gesture_to_detect == "person raising their left arm"
+            self.gesture_to_detect == "raising_left_arm"
             or self.gesture_to_detect is None
         ):
             if part_info["leftWrist"]["y"] < part_info["leftShoulder"]["y"]:
-                self.gesture_to_detect = "person raising their left arm"
+                self.gesture_to_detect = "raising_left_arm"
         if (
-            self.gesture_to_detect == "person raising their right arm"
+            self.gesture_to_detect == "raising_right_arm"
             or self.gesture_to_detect is None
         ):
             if part_info["rightWrist"]["y"] < part_info["rightShoulder"]["y"]:
-                self.gesture_to_detect = "person raising their right arm"
+                self.gesture_to_detect = "raising_right_arm"
         if (
-            self.gesture_to_detect == "person pointing to the left"
+            self.gesture_to_detect == "pointing_to_the_left"
             or self.gesture_to_detect is None
         ):
             if (
                 part_info["leftWrist"]["x"] - self.buffer_width
                 > part_info["leftShoulder"]["x"]
             ):
-                self.gesture_to_detect = "person pointing to the left"
+                self.gesture_to_detect = "pointing_to_the_left"
         if (
-            self.gesture_to_detect == "person pointing to the right"
+            self.gesture_to_detect == "pointing_to_the_right"
             or self.gesture_to_detect is None
         ):
             if (
                 part_info["rightShoulder"]["x"] - self.buffer_width
                 > part_info["rightWrist"]["x"]
             ):
-                self.gesture_to_detect = "person pointing to the right"
+                self.gesture_to_detect = "pointing_to_the_right"
 
         if self.gesture_to_detect is None:
             self.gesture_to_detect = "none"
@@ -153,6 +154,13 @@ if __name__ == "__main__":
     while not rospy.is_shutdown():
         sm = GestureDetectionSM()
         sm.execute()
-        print("Gesture detected:", sm.userdata.gesture_detected)
+        gesture_state = PlayMotion(motion_name=sm.userdata.gesture_detected)
+        gesture_sm = smach.StateMachine(outcomes=["succeeded", "failed"])
+        with gesture_sm:
+            smach.StateMachine.add(
+                "GESTURE_STATE",
+                gesture_state,
+                transitions={"succeeded": "succeeded", "failed": "failed"},
+            )
 
     rospy.spin()
