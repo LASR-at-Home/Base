@@ -160,7 +160,12 @@ if __name__ == "__main__":
             smach.StateMachine.add(
                 "GESTURE_STATE",
                 gesture_state,
-                transitions={"succeeded": "succeeded", "failed": "failed"},
+                transitions={
+                    "succeeded": "succeeded",
+                    "aborted": "failed",
+                    "preempted": "failed",
+                },
             )
+        gesture_sm.execute()
 
     rospy.spin()

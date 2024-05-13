@@ -93,9 +93,19 @@ class FindGesturePerson(smach.StateMachine):
         smach.StateMachine.__init__(
             self, outcomes=["succeeded", "failed"], output_keys=["person_point"]
         )
-        self.gesture = gesture
         if waypoints is None and location_param is None:
             raise ValueError("Either waypoints or location_param must be provided")
+
+        if gesture == "person raising their left arm":
+            self.gesture = "raising_left_arm"
+        elif gesture == "person raising their right arm":
+            self.gesture = "raising_right_arm"
+        elif gesture == "person pointing to the right":
+            self.gesture == "pointing_to_the_right"
+        elif gesture == "person pointing to the left":
+            self.gesture == "pointing_to_the_left"
+        else:
+            raise ValueError(f"Gesture {gesture} not recognized")
 
         if waypoints is None:
             waypoints_to_iterate: List[Pose] = []
