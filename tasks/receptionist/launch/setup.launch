@@ -8,7 +8,8 @@
     <node pkg="lasr_speech_recognition_whisper" type="transcribe_microphone_server" name="transcribe_speech" output="screen" args="--mic_device $(arg whisper_device_param)"/>
 
     <!--     STATIC POINTS     -->
-    <rosparam command="load" file="$(find receptionist)/config/$(arg config).yaml" />
+    <!--<rosparam command="load" file="$(find receptionist)/config/$(arg config).yaml" />-->
+    <rosparam command="load" file="$(find receptionist)/config/lab.yaml"/>
 
     <!--     MOTIONS     -->
     <rosparam command="load" file="$(find lasr_skills)/config/motions.yaml"/>

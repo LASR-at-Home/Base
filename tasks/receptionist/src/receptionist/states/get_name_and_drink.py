@@ -13,7 +13,7 @@ class ParseNameAndDrink(smach.State):
     def __init__(
         self,
         guest_id: str,
-        param_key: str = "receptionist/priors",
+        param_key: str = "/priors",
     ):
         """Parses the transcription of the guests' name and favourite drink.
 
@@ -70,9 +70,11 @@ class ParseNameAndDrink(smach.State):
 
         if not name_found:
             rospy.loginfo("Name not found in transcription")
+            userdata.guest_data[self._guest_id]["name"] = "unknown"
             outcome = "failed"
         if not drink_found:
             rospy.loginfo("Drink not found in transcription")
+            userdata.guest_data[self._guest_id]["drink"] = "unknown"
             outcome = "failed"
 
         return outcome
