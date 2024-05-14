@@ -20,7 +20,6 @@ class DetectGesture(smach.State):
         self,
         gesture_to_detect: Optional[str] = None,
         buffer_width: int = 50,
-        debug: bool = True,
     ):
         """Optionally stores the gesture to detect. If None, it will infer the gesture from the keypoints."""
         smach.State.__init__(
@@ -32,10 +31,9 @@ class DetectGesture(smach.State):
         self.debug = debug
         self.gesture_to_detect = gesture_to_detect
         self.body_pix_client = rospy.ServiceProxy("/bodypix/detect", BodyPixDetection)
-        if self.debug:
-            self.debug_publisher = rospy.Publisher(
-                "/gesture_detection/debug", Image, queue_size=1
-            )
+        self.debug_publisher = rospy.Publisher(
+            "/gesture_detection/debug", Image, queue_size=1
+        )
         self.buffer_width = buffer_width
 
     def execute(self, userdata):
@@ -106,21 +104,20 @@ class DetectGesture(smach.State):
 
         userdata.gesture_detected = self.gesture_to_detect
 
-        if self.debug:
-            cv2_gesture_img = cv2_img.msg_to_cv2_img(userdata.img_msg)
-            # Add text to the image
-            cv2.putText(
-                cv2_gesture_img,
-                self.gesture_to_detect,
-                (10, 30),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                1,
-                (0, 255, 0),
-                2,
-                cv2.LINE_AA,
-            )
-            # Publish the image
-            self.debug_publisher.publish(cv2_img.cv2_img_to_msg(cv2_gesture_img))
+        cv2_gesture_img = cv2_img.msg_to_cv2_img(userdata.img_msg)
+        # Add text to the image
+        cv2.putText(
+            cv2_gesture_img,
+            self.gesture_to_detect,
+            (10, 30),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            1,
+            (0, 255, 0),
+            2,
+            cv2.LINE_AA,
+        )
+        # Publish the image
+        self.debug_publisher.publish(cv2_img.cv2_img_to_msg(cv2_gesture_img))
 
         return "succeeded"
 
