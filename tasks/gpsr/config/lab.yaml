@@ -9,8 +9,8 @@ arena:
       beacons:
         tv_desk:
           near_pose:
-            position: {x: 0.96, y: 0.82, z: 0.0}
-            orientation: {x: 0.0, y: 0.0, z: 0.76, w: 0.65}
+            position:  {x: 0.989603867147269, y: 0.47950265241289325, z: 0.0}
+            orientation: {x: 0.0, y: 0.0, z: 0.738945375913055, w: 0.6737653385391044}
           near_polygon: [[-0.11, 0.00], [-0.08, 2.36], [1.84, 2.75], [2.02, 1.31]]
           search_pose:
             position: {x: 0.97, y: 1.60, z: 0.0}
@@ -18,8 +18,8 @@ arena:
           search_polygon: [[0.40, 1.92], [0.31, 2.45], [1.36, 2.70], [1.456, 2.17]]
         window_desk:
           near_pose:
-            position: {x: 2.38, y: -3.0, z: 0.0}
-            orientation: {x: 0.0, y: 0.0, z: -0.62, w: 0.79}
+            position: {x: 2.6771759491107954, y: -2.2998999761206105, z: 0.0}
+            orientation: {x: 0.0, y: 0.0, z: -0.6148810103509047, w: 0.7886198977389871}
           near_polygon: [[3.34, -3.27], [3.75, -4.80], [2.47, -5.20], [1.75, -3.58]]
           search_pose:
             position: {x: 2.47, y: -3.73, z: 0.0}
