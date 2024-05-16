@@ -1,6 +1,6 @@
 import smach
 
-from .states import Start, GoToTable, CheckTable, GoToPreTable, PreCheckTable
+from .states import Start, GoToTable, CheckTable
 
 
 class Phase1(smach.StateMachine):

@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import smach
 import numpy as np
 from play_motion_msgs.msg import PlayMotionGoal

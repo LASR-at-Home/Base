@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import smach
 import rospy
 from geometry_msgs.msg import Pose, Point, Quaternion
@@ -7,12 +6,10 @@ from play_motion_msgs.msg import PlayMotionGoal
 import numpy as np
 from common_math import pcl_msg_to_cv2
 
-from std_msgs.msg import String
 from play_motion_msgs.msg import PlayMotionGoal
 from sensor_msgs.msg import PointCloud2
 from geometry_msgs.msg import PointStamped, Point
 from common_math import pcl_msg_to_cv2, seg_to_centroid
-from coffee_shop.srv import TfTransform, TfTransformRequest
 import numpy as np
 from shapely.geometry import Point as ShapelyPoint, Polygon
 
@@ -27,15 +24,12 @@ class GuidePerson(smach.State):
         centroid = PointStamped()
         centroid.point = Point(*centroid_xyz)
         centroid.header = pcl_msg.header
-        tf_req = TfTransformRequest()
-        tf_req.target_frame = String("map")
-        tf_req.point = centroid
-        response = self.context.tf(tf_req)
+        centroid = self.context.tf_pose(centroid, "map")
         return np.array(
             [
-                response.target_point.point.x,
-                response.target_point.point.y,
-                response.target_point.point.z,
+                centroid.target_point.point.x,
+                centroid.target_point.point.y,
+                centroid.target_point.point.z,
             ]
         )
 

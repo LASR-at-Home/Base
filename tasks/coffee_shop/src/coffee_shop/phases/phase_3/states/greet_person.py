@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import smach
 from play_motion_msgs.msg import PlayMotionGoal
 from control_msgs.msg import PointHeadGoal
@@ -12,15 +11,6 @@ class GreetPerson(smach.State):
 
     def execute(self, userdata):
         self.context.stop_head_manager("head_manager")
-        """
-        ph_goal = PointHeadGoal()
-        ph_goal.max_velocity = 1.0
-        ph_goal.pointing_frame = 'head_2_link'
-        ph_goal.pointing_axis = Point(1.0, 0.0, 0.0)
-        ph_goal.target.header.frame_id = 'map'
-        ph_goal.target.point = Point(*self.context.new_customer_pose)
-        self.context.point_head_client.send_goal_and_wait(ph_goal)
-        """
         self.context.voice_controller.sync_tts(
             "Hi there! My name is TIAGO. Please follow me, I'll guide you to a table."
         )

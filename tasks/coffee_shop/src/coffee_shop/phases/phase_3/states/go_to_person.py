@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import smach
 from geometry_msgs.msg import Pose, Point, Quaternion
 import rospy

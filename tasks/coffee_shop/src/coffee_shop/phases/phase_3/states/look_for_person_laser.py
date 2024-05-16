@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import smach
 import rospy
 from sensor_msgs.msg import LaserScan, CameraInfo, Image

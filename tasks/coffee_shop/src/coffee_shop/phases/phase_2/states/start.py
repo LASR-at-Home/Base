@@ -1,6 +1,5 @@
 import smach
 import rospy
-from std_msgs.msg import Int16
 
 
 class Start(smach.State):

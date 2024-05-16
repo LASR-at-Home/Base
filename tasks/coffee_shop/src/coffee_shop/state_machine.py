@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import smach
 from coffee_shop.phases import Phase1, Phase2, Phase3
 
