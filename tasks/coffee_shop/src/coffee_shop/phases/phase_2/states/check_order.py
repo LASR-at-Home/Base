@@ -8,6 +8,7 @@ from common_math import pcl_msg_to_cv2, seg_to_centroid
 from play_motion_msgs.msg import PlayMotionGoal
 from collections import Counter
 from geometry_msgs.msg import Point
+from shapely.geometry import Point as ShapelyPoint, Polygon
 
 
 class CheckOrder(smach.State):
@@ -68,9 +69,11 @@ class CheckOrder(smach.State):
             for det in detections.detected_objects
             if det.name in self.context.target_object_remappings.keys()
         ]
-        satisfied_points = self.context.shapely.are_points_in_polygon_2d(
-            counter_corners, [[pose[0], pose[1]] for (_, pose) in detections]
-        ).inside
+        shapely_polygon = Polygon(counter_corners)
+        satisfied_points = [
+            shapely_polygon.contains(ShapelyPoint(pose[0], pose[1]))
+            for _, pose in detections
+        ]
         given_order = [
             detections[i] for i in range(0, len(detections)) if satisfied_points[i]
         ]

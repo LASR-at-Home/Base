@@ -14,6 +14,7 @@ from geometry_msgs.msg import PointStamped, Point
 from common_math import pcl_msg_to_cv2, seg_to_centroid
 from coffee_shop.srv import TfTransform, TfTransformRequest
 import numpy as np
+from shapely.geometry import Point as ShapelyPoint, Polygon
 
 
 class GuidePerson(smach.State):
@@ -49,9 +50,11 @@ class GuidePerson(smach.State):
         ]
         rospy.loginfo(f"All: {[(det.name, pose) for det, pose in detections]}")
         rospy.loginfo(f"Boundary: {polygon}")
-        satisfied_points = self.context.shapely.are_points_in_polygon_2d(
-            polygon, [[pose[0], pose[1]] for (_, pose) in detections]
-        ).inside
+        shapely_polygon = Polygon(polygon)
+        satisfied_points = [
+            shapely_polygon.contains(ShapelyPoint(pose[0], pose[1]))
+            for _, pose in detections
+        ]
         detections = [
             detections[i] for i in range(0, len(detections)) if satisfied_points[i]
         ]

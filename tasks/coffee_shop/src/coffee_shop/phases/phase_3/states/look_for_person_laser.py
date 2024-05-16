@@ -11,6 +11,7 @@ from image_geometry import PinholeCameraModel
 from play_motion_msgs.msg import PlayMotionGoal
 from coffee_shop.srv import LatestTransformRequest, ApplyTransformRequest
 import time
+from shapely.geometry import Point as ShapelyPoint, Polygon
 
 
 def timeit_rospy(method):
@@ -117,21 +118,29 @@ class LookForPersonLaser(smach.State):
         detections = self.context.yolo(
             img_msg, self.context.YOLO_person_model, 0.3, 0.3
         )
+        shapely_polygon = Polygon(np.array(detection.xyseg).reshape(-1, 2))
+        waiting_area = Polygon(self.corners)
+        pixels_2d = np.array(pixels).reshape(-1, 2)
 
         for detection in detections.detected_objects:
             if detection.name == "person":
-                decision = self.context.shapely.are_points_in_polygon_2d_flatarr(
-                    detection.xyseg, pixels
-                )
-                idx = [idx for idx, el in enumerate(decision.inside) if el]
+                satisfied_points = [
+                    shapely_polygon.contains(ShapelyPoint(x, y)) for x, y in pixels_2d
+                ]
+                idx = [idx for idx, el in enumerate(satisfied_points) if el]
                 filtered_points = self.convert_points_to_map_frame(
                     [points[i] for i in idx]
                 )
                 if self.corners is not None:
-                    waiting_area = self.context.shapely.are_points_in_polygon_2d(
-                        self.corners, [[p[0], p[1]] for p in filtered_points]
-                    )
-                    idx = [idx for idx, el in enumerate(waiting_area.inside) if el]
+                    waiting_area_satisfied_points = [
+                        waiting_area.contains(ShapelyPoint(*point))
+                        for point in filtered_points
+                    ]
+                    idx = [
+                        idx
+                        for idx, el in enumerate(waiting_area_satisfied_points)
+                        if el
+                    ]
                     points_inside_area = [filtered_points[i] for i in idx]
                     if len(points_inside_area):
                         point = np.mean(points_inside_area, axis=0)

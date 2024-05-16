@@ -8,6 +8,7 @@ from geometry_msgs.msg import Point, PointStamped
 import cv2
 from common_math import pcl_msg_to_cv2
 from play_motion_msgs.msg import PlayMotionGoal
+from shapely.geometry import Point as ShapelyPoint, Polygon
 
 
 class LookForPerson(smach.State):
@@ -60,9 +61,11 @@ class LookForPerson(smach.State):
             for det in detections.detected_objects
             if det.name == "person"
         ]
-        satisfied_points = self.context.shapely.are_points_in_polygon_2d(
-            corners, [[pose[0], pose[1]] for (_, pose) in detections]
-        ).inside
+        shapely_polygon = Polygon(corners)
+        satisfied_points = [
+            shapely_polygon.contains(ShapelyPoint(pose[0], pose[1]))
+            for _, pose in detections
+        ]
         if len(detections):
             for i in range(0, len(detections)):
                 pose = detections[i][1]
