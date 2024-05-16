@@ -5,7 +5,6 @@ from lasr_voice import Voice
 from play_motion_msgs.msg import PlayMotionAction
 from control_msgs.msg import PointHeadAction
 from lasr_vision_msgs.srv import YoloDetection
-from coffee_shop.srv import TfTransform, LatestTransform, ApplyTransform
 from lasr_shapely import LasrShapely
 from lasr_speech.srv import Speech
 from cv_bridge3 import CvBridge
@@ -17,7 +16,7 @@ import time
 import random
 import tf2_ros as tf2
 import tf2_geometry_msgs
-from tf2_geometry_msgs.tf2_geometry_msgs import do_transform_pose
+from tf2_geometry_msgs.tf2_geometry_msgs import do_transform_pose, do_transform_point
 
 
 class Context:
@@ -207,3 +206,10 @@ class Context:
             target_frame, pose_stamped.header.frame_id, rospy.Time(0)
         )
         return do_transform_pose(pose_stamped, trans)
+
+    def tf_point_list(self, points, source_frame, target_frame):
+        trans = self.tf_buffer.lookup_transform(
+            target_frame, source_frame, rospy.Time(0)
+        )
+
+        return [do_transform_point(point, trans) for point in points]

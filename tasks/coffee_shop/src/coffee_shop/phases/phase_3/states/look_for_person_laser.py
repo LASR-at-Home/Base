@@ -9,7 +9,6 @@ import laser_geometry.laser_geometry as lg
 import sensor_msgs.point_cloud2 as pc2
 from image_geometry import PinholeCameraModel
 from play_motion_msgs.msg import PlayMotionGoal
-from coffee_shop.srv import LatestTransformRequest, ApplyTransformRequest
 import time
 from shapely.geometry import Point as ShapelyPoint, Polygon
 
@@ -53,11 +52,6 @@ class LookForPersonLaser(smach.State):
             p for p in pc2.read_points(pcl_msg, field_names=("x, y, z"), skip_nans=True)
         ]
 
-        tf_req = LatestTransformRequest()
-        tf_req.target_frame = "xtion_rgb_optical_frame"
-        tf_req.from_frame = "base_laser_link"
-        t = self.context.tf_latest(tf_req)
-
         padded_points = []
         pixels = []
         for point in pcl_points:
@@ -65,13 +59,12 @@ class LookForPersonLaser(smach.State):
             for z in np.linspace(0.0, 1.0, 5):
                 padded_points.append(Point(x=point[0], y=point[1], z=z))
 
-        apply_req = ApplyTransformRequest()
-        apply_req.points = padded_points
-        apply_req.transform = t.transform
-        res = self.context.tf_apply(apply_req)
+        tf_points = self.context.tf_point_list(
+            padded_points, "base_laser_link", "xtion_rgb_optical_frame"
+        )
 
         padded_converted_points = []
-        for p in res.new_points:
+        for p in tf_points:
             pt = (p.x, p.y, p.z)
             u, v = self.camera.project3dToPixel(pt)
             # Filter out points that are outside the camera frame
@@ -91,18 +84,8 @@ class LookForPersonLaser(smach.State):
         Returns:
             List: A list of tuples containing points in map frame.
         """
-        tf_req = LatestTransformRequest()
-        tf_req.target_frame = "map"
-        tf_req.from_frame = from_frame
-        t = self.context.tf_latest(tf_req)
-
-        apply_req = ApplyTransformRequest()
-        apply_req.points = [
-            Point(x=point[0], y=point[1], z=point[2]) for point in points
-        ]
-        apply_req.transform = t.transform
-        res = self.context.tf_apply(apply_req)
-        converted_points = [(point.x, point.y, point.z) for point in res.new_points]
+        tf_points = self.context.tf_point_list(points, from_frame, "map")
+        converted_points = [(p.x, p.y, p.z) for p in tf_points]
 
         return converted_points
 
