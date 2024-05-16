@@ -112,7 +112,6 @@ class CheckTable(smach.State):
         self.person_polygon = rospy.get_param(
             f"/tables/{self.context.current_table}/persons_cuboid"
         )
-        # self.arena_polygon = rospy.get_param(f"/arena/cuboid")
         self.detections_objects = []
         self.detections_people = []
 
@@ -124,46 +123,14 @@ class CheckTable(smach.State):
             "look_right",
             "back_to_default",
         ]
-        # self.detection_sub = rospy.Subscriber("/xtion/depth_registered/points", PointCloud2, self.check)
 
-        if self.context.current_table == "table2":
-            pm_goal = PlayMotionGoal(motion_name="back_to_default", skip_planning=True)
-            self.context.play_motion_client.send_goal_and_wait(pm_goal)
-
-            pm_goal = PlayMotionGoal(
-                motion_name="check_annoying_table_low", skip_planning=True
-            )
+        for motion in motions:
+            pm_goal = PlayMotionGoal(motion_name=motion, skip_planning=True)
             self.context.play_motion_client.send_goal_and_wait(pm_goal)
             pcl_msg = rospy.wait_for_message(
                 "/xtion/depth_registered/points", PointCloud2
             )
-            self.check_table(pcl_msg)
-
-            pm_goal = PlayMotionGoal(motion_name="look_left", skip_planning=True)
-            self.context.play_motion_client.send_goal_and_wait(pm_goal)
-            pcl_msg = rospy.wait_for_message(
-                "/xtion/depth_registered/points", PointCloud2
-            )
-            self.check_people(pcl_msg)
-
-            pm_goal = PlayMotionGoal(motion_name="look_right", skip_planning=True)
-            self.context.play_motion_client.send_goal_and_wait(pm_goal)
-            pcl_msg = rospy.wait_for_message(
-                "/xtion/depth_registered/points", PointCloud2
-            )
-            self.check_people(pcl_msg)
-
-            pm_goal = PlayMotionGoal(motion_name="back_to_default", skip_planning=True)
-            self.context.play_motion_client.send_goal_and_wait(pm_goal)
-
-        else:
-            for motion in motions:
-                pm_goal = PlayMotionGoal(motion_name=motion, skip_planning=True)
-                self.context.play_motion_client.send_goal_and_wait(pm_goal)
-                pcl_msg = rospy.wait_for_message(
-                    "/xtion/depth_registered/points", PointCloud2
-                )
-                self.check(pcl_msg)
+            self.check(pcl_msg)
 
         status = "unknown"
         if len(self.detections_objects) > 0 and len(self.detections_people) == 0:
@@ -175,9 +142,6 @@ class CheckTable(smach.State):
         elif len(self.detections_objects) == 0 and len(self.detections_people) == 0:
             status = "ready"
 
-        # self.detection_sub.unregister()
-
-        # self.detections_objects = self.filter_detections_by_pose(self.detections_objects, threshold=0.1)
         self.detections_people = self.filter_detections_by_pose(
             self.detections_people, threshold=0.6
         )
