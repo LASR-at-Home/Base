@@ -1,6 +1,6 @@
 import smach
 import rospy
-from geometry_msgs.msg import Pose, Point, Quaternion
+from geometry_msgs.msg import Pose, Point, Quaternion, PoseWithCovarianceStamped
 from sensor_msgs.msg import PointCloud2
 from play_motion_msgs.msg import PlayMotionGoal
 import numpy as np
@@ -11,6 +11,7 @@ import cv2_pcl
 import cv2_img
 import numpy as np
 from shapely.geometry import Point as ShapelyPoint, Polygon
+from move_base_msgs.msg import MoveBaseGoal
 
 
 class GuidePerson(smach.State):
@@ -56,7 +57,10 @@ class GuidePerson(smach.State):
 
     def execute(self, userdata):
         self.context.stop_head_manager("head_manager")
-        robot_x, robot_y = self.context.base_controller.get_pose()
+        robot_pose = rospy.wait_for_message(
+            "/amcl_pose", PoseWithCovarianceStamped
+        ).pose.pose
+        robot_x, robot_y = robot_pose.position.x, robot_pose.position.y
         utter_clean_phrase = False
         empty_tables = [
             (label, rospy.get_param(f"/tables/{label}"))
@@ -102,9 +106,13 @@ class GuidePerson(smach.State):
             table["location"]["position"],
             table["location"]["orientation"],
         )
-        self.context.base_controller.sync_to_pose(
-            Pose(position=Point(**position), orientation=Quaternion(**orientation))
+
+        move_base_goal = MoveBaseGoal()
+        move_base_goal.target_pose.header.frame_id = "map"
+        move_base_goal.target_pose.pose = Pose(
+            position=Point(**position), orientation=Quaternion(**orientation)
         )
+        self.context.move_base_client.send_goal_and_wait(move_base_goal)
 
         pm_goal = PlayMotionGoal(motion_name="back_to_default", skip_planning=True)
         self.context.play_motion_client.send_goal_and_wait(pm_goal)

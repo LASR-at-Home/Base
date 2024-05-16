@@ -8,6 +8,7 @@ from lasr_vision_msgs.srv import YoloDetection
 from lasr_shapely import LasrShapely
 from lasr_speech.srv import Speech
 import actionlib
+from move_base_msgs.msg import MoveBaseAction
 import yaml
 from visualization_msgs.msg import Marker
 import rosservice
@@ -22,10 +23,11 @@ class Context:
     def __init__(self, config_path=None, tablet=False):
         self.tablet = tablet
 
-        self.base_controller = BaseController()
-        rospy.loginfo("Got base controller")
-        self.head_controller = HeadController()
-        rospy.loginfo("Got head controller")
+        self.move_base_client = actionlib.SimpleActionClient(
+            "/move_base", MoveBaseAction
+        )
+        self.move_base_client.wait_for_server()
+        rospy.loginfo("Got MoveBase")
         self.voice_controller = Voice()
         rospy.loginfo("Got voice controller")
         self.play_motion_client = actionlib.SimpleActionClient(
