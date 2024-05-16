@@ -15,7 +15,9 @@ from visualization_msgs.msg import Marker
 import rosservice
 import time
 import random
-from std_msgs.msg import Empty, Int16
+import tf2_ros as tf2
+import tf2_geometry_msgs
+from tf2_geometry_msgs.tf2_geometry_msgs import do_transform_pose
 
 
 class Context:
@@ -44,9 +46,8 @@ class Context:
         rospy.wait_for_service("/tf_transform")
         rospy.wait_for_service("/get_latest_transform")
         rospy.wait_for_service("/apply_transform")
-        self.tf = rospy.ServiceProxy("/tf_transform", TfTransform)
-        self.tf_latest = rospy.ServiceProxy("/get_latest_transform", LatestTransform)
-        self.tf_apply = rospy.ServiceProxy("/apply_transform", ApplyTransform)
+        self.tf_buffer = tf2.Buffer()
+        self.tf_listener = tf2.TransformListener(self.tf_buffer)
         rospy.loginfo("Got TF")
         self.shapely = LasrShapely()
         rospy.loginfo("Got shapely")
@@ -200,3 +201,9 @@ class Context:
         # Seed the random number generator with the current time
         random.seed(time.time())
         return random.choice(self.tables[self.current_table]["people"])
+
+    def tf_pose(self, pose_stamped, target_frame):
+        trans = self.tf_buffer.lookup_transform(
+            target_frame, pose_stamped.header.frame_id, rospy.Time(0)
+        )
+        return do_transform_pose(pose_stamped, trans)
