@@ -9,8 +9,6 @@ class Start(smach.State):
         self.context = context
 
     def execute(self, userdata):
-        self.context.datahub_stop_phase.publish(Int16(1))
         self.context.voice_controller.sync_tts("Starting Phase 2.")
-        self.context.datahub_start_phase.publish(Int16(2))
         rospy.loginfo(f"Context: {str(self.context)}")
         return "done"

@@ -53,20 +53,6 @@ class Context:
         self.bridge = CvBridge()
         rospy.loginfo("CV Bridge")
 
-        self.datahub_ping = rospy.Publisher("/datahub/ping", Empty, queue_size=10)
-        self.datahub_start_episode = rospy.Publisher(
-            "/datahub/start_episode", Empty, queue_size=10
-        )
-        self.datahub_stop_epsiode = rospy.Publisher(
-            "/datahub/stop_episode", Empty, queue_size=10
-        )
-        self.datahub_start_phase = rospy.Publisher(
-            "/datahub/start_phase", Int16, queue_size=10
-        )
-        self.datahub_stop_phase = rospy.Publisher(
-            "/datahub/stop_phase", Int16, queue_size=10
-        )
-
         if not tablet:
             rospy.wait_for_service("/lasr_speech/transcribe_and_parse")
             self.speech = rospy.ServiceProxy(
