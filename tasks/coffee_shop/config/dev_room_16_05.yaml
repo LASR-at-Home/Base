@@ -105,6 +105,7 @@ tables:
         y: 2.3564053436919483
         z: 0.0
 wait:
+  #TODO: fill these out
   approach1:
     orientation:
       w: 0.762626824091
@@ -155,3 +156,9 @@ wait:
       x: 10.3656408799
       y: 25.7369664143
       z: 0.0
+
+objects: {"cup" : "coffee", "banana": "banana", "bottle": "cocacola"}
+
+yolo_person_model: "yolov8n-seg.pt"
+yolo_objects_model: "yolov8n-seg.pt"
+yolo_counter_model: "yolov8n-seg.pt"

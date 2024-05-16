@@ -1,8 +1,7 @@
 import smach
 import rospy
 from sensor_msgs.msg import LaserScan, CameraInfo, Image
-from std_msgs.msg import String
-from geometry_msgs.msg import Point
+from geometry_msgs.msg import Point, PointStamped
 import numpy as np
 import laser_geometry.laser_geometry as lg
 import sensor_msgs.point_cloud2 as pc2
@@ -56,7 +55,11 @@ class LookForPersonLaser(smach.State):
         for point in pcl_points:
             # Pad out the points to add vertical "pillars" to the point cloud
             for z in np.linspace(0.0, 1.0, 5):
-                padded_points.append(Point(x=point[0], y=point[1], z=z))
+                padded_points.append(
+                    PointStamped(
+                        point=Point(x=point[0], y=point[1], z=z), header=msg.header
+                    )
+                )
 
         tf_points = self.context.tf_point_list(
             padded_points, "base_laser_link", "xtion_rgb_optical_frame"
@@ -64,13 +67,13 @@ class LookForPersonLaser(smach.State):
 
         padded_converted_points = []
         for p in tf_points:
-            pt = (p.x, p.y, p.z)
+            pt = (p.point.x, p.point.y, p.point.z)
             u, v = self.camera.project3dToPixel(pt)
             # Filter out points that are outside the camera frame
             if u >= 0 and u < 640 and v >= 0 and v < 480:
                 pixels.append(u)
                 pixels.append(v)
-                padded_converted_points.append(pt)
+                padded_converted_points.append(p)
 
         return padded_converted_points, pixels
 
@@ -84,7 +87,7 @@ class LookForPersonLaser(smach.State):
             List: A list of tuples containing points in map frame.
         """
         tf_points = self.context.tf_point_list(points, from_frame, "map")
-        converted_points = [(p.x, p.y, p.z) for p in tf_points]
+        converted_points = [(p.point.x, p.point.y, p.point.z) for p in tf_points]
 
         return converted_points
 
@@ -100,12 +103,12 @@ class LookForPersonLaser(smach.State):
         detections = self.context.yolo(
             img_msg, self.context.YOLO_person_model, 0.3, 0.3
         )
-        shapely_polygon = Polygon(np.array(detection.xyseg).reshape(-1, 2))
         waiting_area = Polygon(self.corners)
         pixels_2d = np.array(pixels).reshape(-1, 2)
 
         for detection in detections.detected_objects:
             if detection.name == "person":
+                shapely_polygon = Polygon(np.array(detection.xyseg).reshape(-1, 2))
                 satisfied_points = [
                     shapely_polygon.contains(ShapelyPoint(x, y)) for x, y in pixels_2d
                 ]

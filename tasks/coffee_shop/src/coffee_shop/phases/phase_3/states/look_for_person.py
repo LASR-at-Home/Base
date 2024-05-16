@@ -42,7 +42,7 @@ class LookForPerson(smach.State):
             img_msg, self.context.YOLO_person_model, 0.3, 0.3
         )
         detections = [
-            (det, self.estimate_pose(pcl_msg, cv_im, det))
+            (det, self.estimate_pose(pcl_msg, det))
             for det in detections.detected_objects
             if det.name == "person"
         ]

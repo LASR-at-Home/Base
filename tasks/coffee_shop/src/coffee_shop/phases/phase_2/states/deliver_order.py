@@ -24,7 +24,8 @@ class DeliverOrder(smach.State):
         move_base_goal = MoveBaseGoal()
         move_base_goal.target_pose.header.frame_id = "map"
         move_base_goal.target_pose.pose = Pose(
-            position=Point(**position), orientation=Quaternion(*target_orientation)
+            position=Point(**position),
+            orientation=Quaternion(*target_orientation.as_quat()),
         )
         self.context.move_base_client.send_goal_and_wait(move_base_goal)
 
