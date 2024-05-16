@@ -1,12 +1,9 @@
 import rospy
 import rosparam
-from tiago_controllers import BaseController, HeadController
 from lasr_voice import Voice
 from play_motion_msgs.msg import PlayMotionAction
 from control_msgs.msg import PointHeadAction
 from lasr_vision_msgs.srv import YoloDetection
-from lasr_shapely import LasrShapely
-from lasr_speech.srv import Speech
 import actionlib
 from move_base_msgs.msg import MoveBaseAction
 import yaml
@@ -195,11 +192,11 @@ class Context:
         random.seed(time.time())
         return random.choice(self.tables[self.current_table]["people"])
 
-    def tf_pose(self, pose_stamped, target_frame):
+    def tf_point(self, point_stamped, target_frame):
         trans = self.tf_buffer.lookup_transform(
-            target_frame, pose_stamped.header.frame_id, rospy.Time(0)
+            target_frame, point_stamped.header.frame_id, rospy.Time(0)
         )
-        return do_transform_pose(pose_stamped, trans)
+        return do_transform_point(point_stamped, trans)
 
     def tf_point_list(self, points, source_frame, target_frame):
         trans = self.tf_buffer.lookup_transform(

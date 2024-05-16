@@ -22,12 +22,12 @@ class CheckOrder(smach.State):
         centroid = PointStamped()
         centroid.point = Point(*centroid_xyz)
         centroid.header = pcl_msg.header
-        centroid = self.context.tf_pose(centroid, "map")
+        centroid = self.context.tf_point(centroid, "map")
         return np.array(
             [
-                centroid.target_point.point.x,
-                centroid.target_point.point.y,
-                centroid.target_point.point.z,
+                centroid.point.x,
+                centroid.point.y,
+                centroid.point.z,
             ]
         )
 

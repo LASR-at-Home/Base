@@ -58,7 +58,7 @@ while not rospy.is_shutdown():
             tf_req = TfTransformRequest()
             tf_req.target_frame = String("map")
             tf_req.point = centroid
-            centroid_tf = tf(tf_req).target_point.point
+            centroid_tf = tf(tf_req).point
             people_pose_pub.publish(
                 create_point_marker(centroid_tf.x, centroid_tf.y, centroid_tf.z, idx)
             )
