@@ -1,11 +1,11 @@
 import smach
 import rospy
 
-from std_msgs.msg import String
 from play_motion_msgs.msg import PlayMotionGoal
 from sensor_msgs.msg import PointCloud2
 from geometry_msgs.msg import PointStamped, Point
-from common_math import pcl_msg_to_cv2, seg_to_centroid
+import cv2_pcl
+import cv2_img
 import numpy as np
 from shapely.geometry import Point as ShapelyPoint
 from shapely.geometry.polygon import Polygon
@@ -18,7 +18,7 @@ class PreCheckTable(smach.State):
         self.detections_people = []
 
     def estimate_pose(self, pcl_msg, detection):
-        centroid_xyz = seg_to_centroid(pcl_msg, np.array(detection.xyseg))
+        centroid_xyz = cv2_pcl.seg_to_centroid(pcl_msg, np.array(detection.xyseg))
         centroid = PointStamped()
         centroid.point = Point(*centroid_xyz)
         centroid.header = pcl_msg.header
@@ -52,8 +52,8 @@ class PreCheckTable(smach.State):
         return filtered
 
     def perform_detection(self, pcl_msg, polygon, filter, model):
-        cv_im = pcl_msg_to_cv2(pcl_msg)
-        img_msg = self.context.bridge.cv2_to_imgmsg(cv_im)
+        cv_im = cv2_pcl.pcl_to_cv2(pcl_msg)
+        img_msg = cv2_img.cv2_img_to_msg(cv_im)
         detections = self.context.yolo(img_msg, model, 0.5, 0.3)
         detections = [
             (det, self.estimate_pose(pcl_msg, det))

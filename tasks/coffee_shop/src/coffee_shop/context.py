@@ -7,7 +7,6 @@ from control_msgs.msg import PointHeadAction
 from lasr_vision_msgs.srv import YoloDetection
 from lasr_shapely import LasrShapely
 from lasr_speech.srv import Speech
-from cv_bridge3 import CvBridge
 import actionlib
 import yaml
 from visualization_msgs.msg import Marker
@@ -15,7 +14,7 @@ import rosservice
 import time
 import random
 import tf2_ros as tf2
-import tf2_geometry_msgs
+import tf2_geometry_msgs  # noqa
 from tf2_geometry_msgs.tf2_geometry_msgs import do_transform_pose, do_transform_point
 
 
@@ -45,10 +44,6 @@ class Context:
         self.tf_buffer = tf2.Buffer()
         self.tf_listener = tf2.TransformListener(self.tf_buffer)
         rospy.loginfo("Got TF")
-        self.shapely = LasrShapely()
-        rospy.loginfo("Got shapely")
-        self.bridge = CvBridge()
-        rospy.loginfo("CV Bridge")
 
         if not tablet:
             rospy.wait_for_service("/lasr_speech/transcribe_and_parse")

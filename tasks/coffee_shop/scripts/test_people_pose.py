@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import rospy
-from common_math import pcl_msg_to_cv2, seg_to_centroid
+import cv2_pcl
+import cv2_img
 from sensor_msgs.msg import PointCloud2
 from std_msgs.msg import String
 from geometry_msgs.msg import PointStamped, Point
@@ -45,12 +46,12 @@ idx = 0
 
 while not rospy.is_shutdown():
     pcl_msg = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
-    cv_im = pcl_msg_to_cv2(pcl_msg)
-    img_msg = bridge.cv2_to_imgmsg(cv_im)
+    cv_im = cv2_pcl.pcl_to_cv2(pcl_msg)
+    img_msg = cv2_img.cv2_img_to_msg(cv_im)
     detections = yolo(img_msg, "yolov8n-seg.pt", 0.3, 0.3)
     for detection in detections.detected_objects:
         if detection.name == "person":
-            centroid_xyz = seg_to_centroid(pcl_msg, np.array(detection.xyseg))
+            centroid_xyz = cv2_pcl.seg_to_centroid(pcl_msg, np.array(detection.xyseg))
             centroid = PointStamped()
             centroid.point = Point(*centroid_xyz)
             centroid.header = pcl_msg.header
