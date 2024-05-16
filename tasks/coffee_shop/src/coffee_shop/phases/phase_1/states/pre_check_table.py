@@ -95,7 +95,6 @@ class PreCheckTable(smach.State):
         self.detections_people = []
 
         motions = ["back_to_default", "look_left", "look_right", "back_to_default"]
-        # self.detection_sub = rospy.Subscriber("/xtion/depth_registered/points", PointCloud2, self.check)
         for motion in motions:
             pm_goal = PlayMotionGoal(motion_name=motion, skip_planning=True)
             self.context.play_motion_client.send_goal_and_wait(pm_goal)

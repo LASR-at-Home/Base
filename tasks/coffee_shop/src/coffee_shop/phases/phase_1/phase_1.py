@@ -11,8 +11,6 @@ class Phase1(smach.StateMachine):
             smach.StateMachine.add(
                 "START_PHASE_1", Start(context), transitions={"done": "GO_TO_TABLE"}
             )
-            # smach.StateMachine.add('GO_TO_TABLE', GoToPreTable(context), transitions={'done' : 'GO_TO_TABLE'})
-            # smach.StateMachine.add('PRE_CHECK_TABLE', PreCheckTable(context), transitions={'done' : 'GO_TO_TABLE'})
             smach.StateMachine.add(
                 "GO_TO_TABLE", GoToTable(context), transitions={"done": "CHECK_TABLE"}
             )
