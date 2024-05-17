@@ -2,7 +2,6 @@ import numpy as np
 from lasr_vision_feature_extraction.categories_and_attributes import (
     CategoriesAndAttributes,
 )
-import json
 
 
 def _softmax(x: list[float]) -> list[float]:
@@ -205,6 +204,60 @@ class ImageOfPerson(ImageWithMasksAndAttributes):
             "description": description,
         }
 
-        result = json.dumps(result, indent=4)
+        return result
+
+
+class ImageOfCloth(ImageWithMasksAndAttributes):
+    def __init__(
+        self,
+        image: np.ndarray,
+        masks: dict[str, np.ndarray],
+        attributes: dict[str, float],
+        categories_and_attributes: CategoriesAndAttributes,
+    ):
+        super().__init__(image, masks, attributes, categories_and_attributes)
+
+    @classmethod
+    def from_parent_instance(
+        cls, parent_instance: ImageWithMasksAndAttributes
+    ) -> "ImageOfCloth":
+        """
+        Creates an instance of ImageOfCloth using the properties of an
+        instance of ImageWithMasksAndAttributes.
+        """
+        return cls(
+            image=parent_instance.image,
+            masks=parent_instance.masks,
+            attributes=parent_instance.attributes,
+            categories_and_attributes=parent_instance.categories_and_attributes,
+        )
+
+    def describe(self) -> str:
+        result = {
+            # not in a loop for now, likely to add more logic combined with a classifier of more specific cloth classes.
+            "attributes": {
+                "top": self.attributes["top"] > self.categories_and_attributes.thresholds_pred["top"],
+                "down": self.attributes["down"] > self.categories_and_attributes.thresholds_pred["down"],
+                "outwear": self.attributes["outwear"] > self.categories_and_attributes.thresholds_pred["outwear"],
+                "dress": self.attributes["dress"] > self.categories_and_attributes.thresholds_pred["dress"],
+                
+                "short sleeve top": self.attributes["short sleeve top"] > self.categories_and_attributes.thresholds_pred["short sleeve top"],
+                "long sleeve top": self.attributes["long sleeve top"] > self.categories_and_attributes.thresholds_pred["long sleeve top"],
+                "short sleeve outwear": self.attributes["short sleeve outwear"] > self.categories_and_attributes.thresholds_pred["short sleeve outwear"],
+                "long sleeve outwear": self.attributes["long sleeve outwear"] > self.categories_and_attributes.thresholds_pred["long sleeve outwear"],
+                "vest": self.attributes["vest"] > self.categories_and_attributes.thresholds_pred["vest"],
+                "sling": self.attributes["sling"] > self.categories_and_attributes.thresholds_pred["sling"],
+                "outwear": self.attributes["outwear"] > self.categories_and_attributes.thresholds_pred["outwear"],
+                "shorts": self.attributes["shorts"] > self.categories_and_attributes.thresholds_pred["shorts"],
+                "trousers": self.attributes["trousers"] > self.categories_and_attributes.thresholds_pred["trousers"],
+                "skirt": self.attributes["skirt"] > self.categories_and_attributes.thresholds_pred["skirt"],
+                "short sleeve dress": self.attributes["short sleeve dress"] > self.categories_and_attributes.thresholds_pred["short sleeve dress"],
+                "long sleeve dress": self.attributes["long sleeve dress"] > self.categories_and_attributes.thresholds_pred["long sleeve dress"],
+                "vest dress": self.attributes["vest dress"] > self.categories_and_attributes.thresholds_pred["vest dress"],
+                "sling dress": self.attributes["sling dress"] > self.categories_and_attributes.thresholds_pred["sling dress"],
+            },
+            "description": "this descrcription will be completed if we find out it is better to do it here.",
+        }
 
         return result
+

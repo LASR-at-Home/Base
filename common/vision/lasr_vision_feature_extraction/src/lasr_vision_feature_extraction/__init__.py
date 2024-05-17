@@ -1,10 +1,12 @@
 from lasr_vision_feature_extraction.categories_and_attributes import (
     CategoriesAndAttributes,
     CelebAMaskHQCategoriesAndAttributes,
+    DeepFashion2GeneralizedCategoriesAndAttributes,
 )
 from lasr_vision_feature_extraction.image_with_masks_and_attributes import (
     ImageWithMasksAndAttributes,
     ImageOfPerson,
+    ImageOfCloth,
 )
 
 import numpy as np
@@ -15,6 +17,7 @@ from os import path
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.models as models
+import json
 
 
 def X2conv(in_channels, out_channels, inner_channels=None):
@@ -385,12 +388,27 @@ def load_face_classifier_model():
         model,
         None,
         path=path.join(
-            r.get_path("lasr_vision_feature_extraction"), "models", "model.pth"
+            r.get_path("lasr_vision_feature_extraction"), "models", "face_model.pth"
         ),
         cpu_only=True,
     )
     return model
 
+def load_cloth_classidifer_model():
+    num_classes = len(DeepFashion2GeneralizedCategoriesAndAttributes.attributes)
+    model = SegmentPredictorBbox(num_masks=num_classes + 4, num_labels=num_classes + 4, num_bbox_classes=4)
+    model.eval()
+
+    r = rospkg.RosPack()
+    model, _, _, _ = load_torch_model(
+        model,
+        None,
+        path=path.join(
+            r.get_path("lasr_vision_feature_extraction"), "models", "cloth_model.pth"
+        ),
+        cpu_only=True,
+    )
+    return model
 
 def pad_image_to_even_dims(image):
     # Get the current shape of the image
@@ -444,7 +462,7 @@ def extract_mask_region(frame, mask, expand_x=0.5, expand_y=0.5):
 
 
 def predict_frame(
-    head_frame, torso_frame, full_frame, head_mask, torso_mask, predictor
+    head_frame, torso_frame, full_frame, head_mask, torso_mask, head_predictor, cloth_predictor,
 ):
     full_frame = cv2.cvtColor(full_frame, cv2.COLOR_BGR2RGB)
     head_frame = cv2.cvtColor(head_frame, cv2.COLOR_BGR2RGB)
@@ -453,9 +471,18 @@ def predict_frame(
     head_frame = pad_image_to_even_dims(head_frame)
     torso_frame = pad_image_to_even_dims(torso_frame)
 
-    rst = ImageOfPerson.from_parent_instance(predictor.predict(head_frame))
+    rst_person = ImageOfPerson.from_parent_instance(head_predictor.predict(head_frame)).describe()
+    rst_cloth = ImageOfCloth.from_parent_instance(torso_frame.predict(torso_frame)).describe()
 
-    return rst.describe()
+    # results from two dictionaries are currently merged but might got separated again in the future if needed.
+    result = {
+        'attributes': rst_person['rst_person'] + rst_cloth['rst_person'],
+        'description': rst_person['rst_person'] + rst_cloth['rst_person'],
+    }
+
+    result = json.dumps(result, indent=4)
+
+    return result
 
 
 def load_torch_model(model, optimizer, path="model.pth", cpu_only=False):
