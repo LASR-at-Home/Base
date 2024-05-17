@@ -14,7 +14,9 @@ from shapely.geometry.polygon import Polygon
 
 class CheckTable(smach.State):
     def __init__(self, context):
-        smach.State.__init__(self, outcomes=["not_finished", "finished"])
+        smach.State.__init__(
+            self, outcomes=["not_finished", "has_free_tables", "no_free_tables"]
+        )
         self.context = context
         self.detections_objects = []
         self.detections_people = []
@@ -161,14 +163,21 @@ class CheckTable(smach.State):
         self.context.voice_controller.sync_tts(f"{status_text} {count_text}")
 
         self.context.start_head_manager("head_manager", "")
-        return (
-            "not_finished"
-            if len(
-                [
-                    (label, table)
-                    for label, table in self.context.tables.items()
-                    if table["status"] == "unvisited"
-                ]
-            )
-            else "finished"
-        )
+
+        unvisited_tables = [
+            (label, table)
+            for label, table in self.context.tables.items()
+            if table["status"] == "unvisited"
+        ]
+        free_tables = [
+            (label, table)
+            for label, table in self.context.tables.items()
+            if table["status"] == "ready"
+        ]
+
+        if len(unvisited_tables) > 0:
+            return "not_finished"
+        elif len(free_tables) > 0:
+            return "has_free_tables"
+        else:
+            return "no_free_tables"
