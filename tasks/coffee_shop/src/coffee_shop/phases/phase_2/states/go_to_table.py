@@ -32,21 +32,13 @@ class GoToTable(smach.State):
             ),
         )
         label, table = closest_table
-        if label == self.context.current_table:
-            self.context.voice_controller.sync_tts(
-                "Lucky me, I am already at the table which needs serving!"
-            )
-        else:
-            self.context.voice_controller.sync_tts(
-                f"I am going to {label}, which needs serving"
-            )
-            position = table["location"]["position"]
-            orientation = table["location"]["orientation"]
-            move_base_goal = MoveBaseGoal()
-            move_base_goal.target_pose.header.frame_id = "map"
-            move_base_goal.target_pose.pose = Pose(
-                position=Point(**position), orientation=Quaternion(**orientation)
-            )
-            self.context.move_base_client.send_goal_and_wait(move_base_goal)
+        position = table["location"]["position"]
+        orientation = table["location"]["orientation"]
+        move_base_goal = MoveBaseGoal()
+        move_base_goal.target_pose.header.frame_id = "map"
+        move_base_goal.target_pose.pose = Pose(
+            position=Point(**position), orientation=Quaternion(**orientation)
+        )
+        self.context.move_base_client.send_goal_and_wait(move_base_goal)
         self.context.current_table = label
         return "done"

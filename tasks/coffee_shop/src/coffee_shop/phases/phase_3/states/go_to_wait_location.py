@@ -22,8 +22,4 @@ class GoToWaitLocation(smach.State):
             position=Point(**position), orientation=Quaternion(**orientation)
         )
         self.context.move_base_client.send_goal_and_wait(move_base_goal)
-        if not self.done:
-            self.done = True
-            return "not done"
-        else:
-            return "done"
+        return "not done"
