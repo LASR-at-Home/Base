@@ -180,7 +180,7 @@ class SegmentPredictor(nn.Module):
     def __init__(self, num_masks, num_labels, in_channels=3, sigmoid=True):
         super(SegmentPredictor, self).__init__()
         self.sigmoid = sigmoid
-        self.resnet = models.resnet18(pretrained=True)
+        self.resnet = models.resnet18(pretrained=False)
 
         # Adapt ResNet to handle different input channel sizes
         if in_channels != 3:
@@ -476,8 +476,8 @@ def predict_frame(
 
     # results from two dictionaries are currently merged but might got separated again in the future if needed.
     result = {
-        'attributes': rst_person['rst_person'] + rst_cloth['rst_person'],
-        'description': rst_person['rst_person'] + rst_cloth['rst_person'],
+        'attributes': rst_person['attributes'] + rst_person['description'],
+        'description': rst_cloth['attributes'] + rst_cloth['description'],
     }
 
     result = json.dumps(result, indent=4)
