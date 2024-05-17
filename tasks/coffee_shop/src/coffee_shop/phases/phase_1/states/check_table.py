@@ -15,7 +15,13 @@ from shapely.geometry.polygon import Polygon
 class CheckTable(smach.State):
     def __init__(self, context):
         smach.State.__init__(
-            self, outcomes=["not_finished", "has_free_tables", "no_free_tables"]
+            self,
+            outcomes=[
+                "not_finished",
+                "has_free_tables",
+                "has_needs_serving_tables",
+                "idle",
+            ],
         )
         self.context = context
         self.detections_objects = []
@@ -174,10 +180,17 @@ class CheckTable(smach.State):
             for label, table in self.context.tables.items()
             if table["status"] == "ready"
         ]
+        needs_serving_tables = [
+            (label, table)
+            for label, table in self.context.tables.items()
+            if table["status"] == "needs serving"
+        ]
 
         if len(unvisited_tables) > 0:
             return "not_finished"
         elif len(free_tables) > 0:
             return "has_free_tables"
+        elif len(needs_serving_tables) > 0:
+            return "has_needs_serving_tables"
         else:
-            return "no_free_tables"
+            return "idle"

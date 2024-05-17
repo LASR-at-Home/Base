@@ -156,6 +156,8 @@ class TakeOrder(smach.State):
                     )
                 else:
                     break
+        print(self.context.target_object_remappings)
+        print(order)
         order_string = ", ".join(
             [
                 f"{count} {self.context.target_object_remappings[item] if count == 1 else self.context.target_object_remappings[item]+'s'}"

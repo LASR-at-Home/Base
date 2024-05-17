@@ -130,14 +130,18 @@ class LookForPersonLaser(smach.State):
                     if len(points_inside_area):
                         point = np.mean(points_inside_area, axis=0)
                         self.context.publish_person_pose(*point, "map")
-                        self.context.new_customer_pose = point.tolist()
+                        self.context.new_customer_pose = PointStamped(
+                            point=Point(*point)
+                        )
+                        self.context.new_customer_pose.header.frame_id = "map"
 
                         return "found"
                 else:
                     # mean of filtered points
                     point = np.mean(filtered_points, axis=0)
                     self.context.publish_person_pose(*point, "map")
-                    self.context.new_customer_pose = point.tolist()
+                    self.context.new_customer_pose = PointStamped(point=Point(*point))
+                    self.context.new_customer_pose.header.frame_id = "map"
 
                     return "found"
 

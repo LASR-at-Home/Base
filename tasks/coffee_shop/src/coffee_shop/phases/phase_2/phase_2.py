@@ -49,6 +49,21 @@ class Phase2(smach.StateMachine):
             smach.StateMachine.add(
                 "LOAD_ORDER", LoadOrder(context), transitions={"done": "DELIVER_ORDER"}
             )
+
+            @smach.cb_interface(input_keys=[], output_keys=[], outcomes=["done"])
+            def reset_tables(ud):
+                for table in context.tables.keys():
+                    context.tables[table]["status"] = "unvisited"
+                return "done"
+
             smach.StateMachine.add(
-                "DELIVER_ORDER", DeliverOrder(context), transitions={"done": "done"}
+                "DELIVER_ORDER",
+                DeliverOrder(context),
+                transitions={"done": "RESET_TABLES"},
+            )
+
+            smach.StateMachine.add(
+                "RESET_TABLES",
+                smach.CBState(reset_tables),
+                transitions={"done": "done"},
             )

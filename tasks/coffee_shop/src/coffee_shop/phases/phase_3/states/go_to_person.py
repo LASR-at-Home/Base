@@ -27,8 +27,8 @@ class GoToPerson(smach.State):
             ).pose.pose
             robot_x, robot_y = robot_pose.position.x, robot_pose.position.y
             customer_x, customer_y = (
-                self.context.new_customer_pose.position.x,
-                self.context.new_customer_pose.position.y,
+                self.context.new_customer_pose.point.x,
+                self.context.new_customer_pose.point.y,
             )
             dx, dy = customer_x - robot_x, customer_y - robot_y
             theta_deg = np.degrees(math.atan2(dy, dx))

@@ -7,7 +7,9 @@ class CoffeeShop(smach.StateMachine):
         smach.StateMachine.__init__(self, outcomes=["end"])
         with self:
             smach.StateMachine.add(
-                "PHASE_1", Phase1(context), transitions={"done": "PHASE_3"}
+                "PHASE_1",
+                Phase1(context),
+                transitions={"greet_new_customer": "PHASE_3", "serve": "PHASE_2"},
             )
             smach.StateMachine.add(
                 "PHASE_3", Phase3(context), transitions={"done": "PHASE_2"}

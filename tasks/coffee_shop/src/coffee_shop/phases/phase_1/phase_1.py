@@ -9,7 +9,7 @@ from geometry_msgs.msg import Pose, Point, Quaternion
 
 class Phase1(smach.StateMachine):
 
-    class GoIdle(smach.StataMachine):
+    class GoIdle(smach.StateMachine):
 
         def __init__(self):
 
@@ -56,12 +56,26 @@ class Phase1(smach.StateMachine):
                 )
 
     def __init__(self, context):
-        smach.StateMachine.__init__(self, outcomes=["done"])
+        smach.StateMachine.__init__(self, outcomes=["greet_new_customer", "serve"])
 
         with self:
+
+            @smach.cb_interface(input_keys=[], output_keys=[], outcomes=["done"])
+            def reset_tables(ud):
+                for table in context.tables.keys():
+                    context.tables[table]["status"] = "unvisited"
+                return "done"
+
             smach.StateMachine.add(
-                "GO_IDLE", self.GoIdle(), transitions={"done": "GO_TO_TABLE"}
+                "GO_IDLE", self.GoIdle(), transitions={"done": "RESET_TABLES"}
             )
+
+            smach.StateMachine.add(
+                "RESET_TABLES",
+                smach.CBState(reset_tables),
+                transitions={"done": "GO_TO_TABLE"},
+            )
+
             smach.StateMachine.add(
                 "GO_TO_TABLE", GoToTable(context), transitions={"done": "CHECK_TABLE"}
             )
@@ -70,7 +84,8 @@ class Phase1(smach.StateMachine):
                 CheckTable(context),
                 transitions={
                     "not_finished": "GO_TO_TABLE",
-                    "has_free_tables": "done",
-                    "no_free_tables": "GO_IDLE",
+                    "has_free_tables": "greet_new_customer",
+                    "has_needs_serving_tables": "serve",
+                    "idle": "GO_IDLE",
                 },
             )
