@@ -146,19 +146,6 @@ wait:
       x: 3.5465994344446736
       y: -1.2831174246384893
       z: 0.0
-  pose:
-    orientation:
-      w: 0.992020738813
-      x: 0.0
-      y: 0.0
-      z: 0.126074794327
-    position:
-      x: 10.3656408799
-      y: 25.7369664143
-      z: 0.0
-# TODO: this is where the robot will wait idle
-idle:
-  pose:....
 objects: {"cup" : "coffee", "banana": "banana", "bottle": "cocacola"}
 
 yolo_person_model: "yolov8n-seg.pt"
