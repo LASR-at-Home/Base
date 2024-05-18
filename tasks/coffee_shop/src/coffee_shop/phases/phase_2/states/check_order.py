@@ -36,6 +36,7 @@ class CheckOrder(smach.State):
             self.context.voice_controller.sync_tts(
                 "I think I have something in my eyes, I'm struggling to check the order. I trust you that the order is correct!"
             )
+            self.n_checks = 0
             return "correct"
 
         self.n_checks += 1
@@ -73,6 +74,7 @@ class CheckOrder(smach.State):
         given_order[:] = [x if x != "biscuits" else "granola" for x in given_order]
 
         if sorted(order) == sorted(given_order):
+            self.n_checks = 0
             return "correct"
 
         missing_items = list((Counter(order) - Counter(given_order)).elements())
@@ -103,4 +105,5 @@ class CheckOrder(smach.State):
             self.context.voice_controller.sync_tts(
                 f"You have given me {invalid_items_string} which I didn't ask for, and didn't give me {missing_items_string} which I asked for. Please correct the order."
             )
+        self.n_checks = 0
         return "incorrect"
