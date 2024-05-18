@@ -105,5 +105,4 @@ class CheckOrder(smach.State):
             self.context.voice_controller.sync_tts(
                 f"You have given me {invalid_items_string} which I didn't ask for, and didn't give me {missing_items_string} which I asked for. Please correct the order."
             )
-        self.n_checks = 0
         return "incorrect"
