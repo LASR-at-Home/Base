@@ -20,6 +20,7 @@ import rospkg
 loaded_models = {}
 r = rospkg.RosPack()
 
+
 def snake_to_camel(snake_str):
     components = snake_str.split("_")
     return components[0] + "".join(x.title() for x in components[1:])
@@ -27,6 +28,7 @@ def snake_to_camel(snake_str):
 
 def camel_to_snake(name):
     return re.sub(r"(?<!^)(?=[A-Z])", "_", name).lower()
+
 
 def load_model_cached(dataset: str) -> None:
     """
@@ -112,8 +114,6 @@ def detect(
         keypoints_msg = []
 
         for i, keypoint in pose.keypoints.items():
-
-
             if camel_to_snake(keypoint.part) in request.masks[0].parts:
                 keypoint_msg = BodyPixKeypoint()
                 keypoint_msg.xy = [int(keypoint.position.x), int(keypoint.position.y)]

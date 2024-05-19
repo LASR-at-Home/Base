@@ -32,7 +32,7 @@ class GetImage(smach.State):
 
         return "succeeded"
 
-      
+
 class GetPointCloud(smach.State):
     """
     State for acquiring a PointCloud2 message.
@@ -57,7 +57,7 @@ class GetPointCloud(smach.State):
 
         return "succeeded"
 
-      
+
 class GetImageAndPointCloud(smach.State):
     """
     State for acquiring Image and PointCloud2 messages simultaneously.

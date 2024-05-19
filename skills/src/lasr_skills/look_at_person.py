@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import smach_ros
 from geometry_msgs.msg import PointStamped
 import smach
@@ -17,6 +16,8 @@ import ros_numpy as rnp
 import rosservice
 from smach import CBState
 from std_msgs.msg import String
+import actionlib
+from control_msgs.msg import PointHeadAction, PointHeadGoal
 from geometry_msgs.msg import Point
 
 PUBLIC_CONTAINER = False
@@ -30,9 +31,6 @@ try:
     )
 except ModuleNotFoundError:
     PUBLIC_CONTAINER = True
-
-import actionlib
-from control_msgs.msg import PointHeadAction, PointHeadGoal
 
 
 class LookAtPerson(smach.StateMachine):
@@ -52,6 +50,7 @@ class LookAtPerson(smach.StateMachine):
             )
 
         def execute(self, userdata):
+            rospy.sleep(1)
             if len(userdata.bbox_eyes) < 1 and len(userdata.detections.detections) > 0:
                 return "succeeded"
             elif (
@@ -281,11 +280,3 @@ class LookAtPerson(smach.StateMachine):
                             "aborted": "failed",
                         },
                     )
-
-
-if __name__ == "__main__":
-    rospy.init_node("look_at_person")
-    sm = LookAtPerson()
-    outcome = sm.execute()
-    rospy.loginfo("Outcome: " + outcome)
-    rospy.spin()
