@@ -24,7 +24,6 @@ DATASET_ROOT = os.path.join(
     rospkg.RosPack().get_path("lasr_vision_deepface"), "datasets"
 )
 
-
 Mat = np.ndarray
 
 
@@ -63,7 +62,7 @@ def _extract_face(cv_im: Mat) -> Union[Mat, None]:
     try:
         faces = DeepFace.extract_faces(
             cv_im,
-            target_size=(224, 244),
+            # target_size=(224, 244),
             detector_backend="mtcnn",
             enforce_detection=True,
         )
@@ -89,6 +88,7 @@ def create_dataset(
     debug_publisher: Union[rospy.Publisher, None],
 ) -> None:
     dataset_path = os.path.join(DATASET_ROOT, dataset, name)
+    print(dataset_path)
     if not os.path.exists(dataset_path):
         os.makedirs(dataset_path)
     rospy.loginfo(f"Taking {size} pictures of {name} and saving to {dataset_path}")
@@ -100,8 +100,8 @@ def create_dataset(
         face_cropped_cv_im = _extract_face(cv_im)
         if face_cropped_cv_im is None:
             continue
-        cv2.imwrite(os.path.join(dataset_path, f"{name}_{i+1}.png"), face_cropped_cv_im)  # type: ignore
-        rospy.loginfo(f"Took picture {i+1}")
+        cv2.imwrite(os.path.join(dataset_path, f"{name}_{i + 1}.png"), face_cropped_cv_im)  # type: ignore
+        rospy.loginfo(f"Took picture {i + 1}")
         images.append(face_cropped_cv_im)
         if debug_publisher is not None:
             debug_publisher.publish(
@@ -197,7 +197,6 @@ def detect_faces(
     request: DetectFacesRequest,
     debug_publisher: Union[rospy.Publisher, None],
 ) -> DetectFacesResponse:
-
     cv_im = cv2_img.msg_to_cv2_img(request.image_raw)
 
     response = DetectFacesResponse()

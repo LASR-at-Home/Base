@@ -16,7 +16,6 @@ from lasr_vision_msgs.srv import (
     DetectFacesResponse,
 )
 
-
 rospy.init_node("recognise_service")
 
 # Determine variables
@@ -80,7 +79,8 @@ def learn_face(request: LearnFaceRequest) -> LearnFaceResponse:
                 f"/learn_face/debug/{topic_name}", Image, queue_size=1
             )
     face_recognition.create_dataset(
-        "/xtion/rgb/image_raw",
+        "/usb_cam/image_raw",
+        # "/xtion/rgb/image_raw",
         request.dataset,
         request.name,
         request.n_images,

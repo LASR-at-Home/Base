@@ -21,3 +21,4 @@ from .detect_faces import DetectFaces
 from .recognise import Recognise
 from .detect_pointing import DetectPointingDirection
 from .detect_gesture import DetectGesture
+from .learn_face import LearnFace
