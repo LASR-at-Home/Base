@@ -109,6 +109,7 @@ class Receptionist(smach.StateMachine):
                     "aborted": "failed",
                 },
             )
+            # look to host - recognises a known person
 
             smach.StateMachine.add(
                 "INTRODUCE_GUEST_1_TO_HOST",
