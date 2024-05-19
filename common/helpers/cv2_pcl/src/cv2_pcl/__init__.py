@@ -8,6 +8,7 @@ from typing import Tuple, Union
 
 Mat = np.ndarray
 
+
 def pcl_to_img_msg(pcl: PointCloud2) -> Mat:
     """
     Convert a given PointCloud2 message to img_msg
@@ -16,7 +17,6 @@ def pcl_to_img_msg(pcl: PointCloud2) -> Mat:
     cv2 = pcl_to_cv2(pcl)
 
     return cv2_img_to_msg(cv2, pcl.header.stamp)
-
 
 
 def pcl_to_cv2(
