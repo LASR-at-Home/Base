@@ -34,7 +34,8 @@ from lasr_skills.look_at_person import LookAtPerson
 from typing import List, Union
 from geometry_msgs.msg import Point
 from lasr_vision_msgs.srv import Recognise, RecogniseRequest
-from lasr_skills.vision import GetImage
+from lasr_skills.vision import GetPointCloud
+from cv2_pcl import pcl_to_img_msg
 
 
 class FindAndLookAt(smach.StateMachine):
@@ -69,12 +70,11 @@ class FindAndLookAt(smach.StateMachine):
             # if not fail
             smach.StateMachine.add(
                 "GET_IMAGE",
-                GetImage(),
+                GetPointCloud("/xtion/depth_registered/points"),
                 transitions={
                     "succeeded": "RECOGNISE",
-                    "failed": "failed",
                 },
-                remapping={"img_msg": "img_msg"},
+                remapping={"pcl_msg": "pcl_msg"},
             )
 
             smach.StateMachine.add(
@@ -82,9 +82,9 @@ class FindAndLookAt(smach.StateMachine):
                 smach_ros.ServiceState(
                     "/recognise",
                     Recognise,
-                    input_keys=["img_msg", "dataset", "confidence"],
+                    input_keys=["pcl_msg", "dataset", "confidence"],
                     request_cb=lambda ud, _: RecogniseRequest(
-                        image_raw=ud.img_msg,
+                        image_raw=pcl_to_img_msg(ud.pcl_msg),
                         dataset=ud.dataset,
                         confidence=ud.confidence,
                     ),
@@ -92,14 +92,15 @@ class FindAndLookAt(smach.StateMachine):
                     output_keys=["detections"],
                 ),
                 transitions={
-                    "succeeded": "succeeded",
+                    "succeeded": "LOOK_AT_PERSON",
                     "aborted": "failed",
                     "preempted": "failed",
                 },
+                remapping={"pcl_msg": "pcl_msg", "detections": "deepface_detection"},
             )
             smach.StateMachine.add(
                 "LOOK_AT_PERSON",
-                LookAtPerson(),
+                LookAtPerson(filter=True),
                 transitions={
                     "succeeded": "succeeded",
                     "failed": "failed",
@@ -125,4 +126,3 @@ if __name__ == "__main__":
     outcome = sm.execute()
 
     rospy.loginfo(f"Outcome: {outcome}")
-    print(sm.userdata.detections)

@@ -1,7 +1,7 @@
 import smach_ros
 from geometry_msgs.msg import PointStamped
 import smach
-from vision import GetPointCloud
+from .vision import GetPointCloud
 from lasr_vision_msgs.srv import BodyPixDetection, BodyPixDetectionRequest
 from lasr_vision_msgs.msg import BodyPixMaskRequest
 from lasr_skills import LookToPoint, DetectFaces
@@ -15,7 +15,6 @@ from cv2_pcl import pcl_to_img_msg
 import ros_numpy as rnp
 import rosservice
 from smach import CBState
-from std_msgs.msg import String
 import actionlib
 from control_msgs.msg import PointHeadAction, PointHeadGoal
 from geometry_msgs.msg import Point
@@ -35,11 +34,17 @@ except ModuleNotFoundError:
 
 class LookAtPerson(smach.StateMachine):
     class CheckEyes(smach.State):
-        def __init__(self, debug=True):
+        def __init__(self, debug=True, filter=False):
             smach.State.__init__(
                 self,
                 outcomes=["succeeded", "failed", "no_detection"],
-                input_keys=["bbox_eyes", "pcl_msg", "masks", "detections"],
+                input_keys=[
+                    "bbox_eyes",
+                    "pcl_msg",
+                    "masks",
+                    "detections",
+                    "deepface_detection",
+                ],
                 output_keys=["pointstamped"],
             )
             self.DEBUG = debug
@@ -57,6 +62,14 @@ class LookAtPerson(smach.StateMachine):
                 len(userdata.bbox_eyes) < 1 and len(userdata.detections.detections) < 1
             ):
                 return "no_detection"
+
+            deepface = userdata.deepface_detection[0]
+            if filter:
+                for bbox in userdata.bbox_eyes:
+                    # rougly check if the bbox is the same
+                    if bbox["bbox"] == deepface:
+                        userdata.bbox_eyes = [bbox]
+                        break
 
             for det in userdata.bbox_eyes:
                 left_eye = det["left_eye"]
@@ -140,12 +153,14 @@ class LookAtPerson(smach.StateMachine):
 
         return "succeeded"
 
-    def __init__(self):
-        super(LookAtPerson, self).__init__(
+    def __init__(self, filter=False):
+        smach.StateMachine.__init__(
+            self,
             outcomes=["succeeded", "failed"],
-            input_keys=[],
+            input_keys=["pcl_msg", "deepface_detection"],
             output_keys=["masks", "poses", "pointstamped"],
         )
+
         self.DEBUG = rospy.get_param("/debug", True)
         IS_SIMULATION = (
             "/pal_startup_control/start" not in rosservice.get_service_list()
@@ -166,19 +181,11 @@ class LookAtPerson(smach.StateMachine):
                             request=StartupStopRequest("head_manager"),
                         ),
                         transitions={
-                            "succeeded": "GET_IMAGE",
+                            "succeeded": "SEGMENT_PERSON",
                             "aborted": "failed",
                             "preempted": "failed",
                         },
                     )
-            smach.StateMachine.add(
-                "GET_IMAGE",
-                GetPointCloud("/xtion/depth_registered/points"),
-                transitions={
-                    "succeeded": "SEGMENT_PERSON",
-                },
-                remapping={"pcl_msg": "pcl_msg"},
-            )
 
             eyes = BodyPixMaskRequest()
             eyes.parts = ["left_eye", "right_eye"]
@@ -225,7 +232,7 @@ class LookAtPerson(smach.StateMachine):
             )
             smach.StateMachine.add(
                 "CHECK_EYES",
-                self.CheckEyes(self.DEBUG),
+                self.CheckEyes(self.DEBUG, filter=filter),
                 transitions={
                     "succeeded": "LOOK_TO_POINT",
                     "failed": "failed",
@@ -235,6 +242,7 @@ class LookAtPerson(smach.StateMachine):
                     "pcl_msg": "pcl_msg",
                     "bbox_eyes": "bbox_eyes",
                     "pointstamped": "pointstamped",
+                    "deepface_detection": "deepface_detection",
                 },
             )
 
