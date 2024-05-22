@@ -34,7 +34,7 @@ except ModuleNotFoundError:
 
 class LookAtPerson(smach.StateMachine):
     class CheckEyes(smach.State):
-        def __init__(self, debug=True, filter=False):
+        def __init__(self, debug=True, _filter=False):
             smach.State.__init__(
                 self,
                 outcomes=["succeeded", "failed", "no_detection"],
@@ -53,6 +53,7 @@ class LookAtPerson(smach.StateMachine):
             self.look_at_pub = actionlib.SimpleActionClient(
                 "/head_controller/point_head_action", PointHeadAction
             )
+            self._filter = _filter
 
         def execute(self, userdata):
             rospy.sleep(1)
@@ -62,14 +63,19 @@ class LookAtPerson(smach.StateMachine):
                 len(userdata.bbox_eyes) < 1 and len(userdata.detections.detections) < 1
             ):
                 return "no_detection"
+            print("THE DEEPFACE")
+            print(userdata.deepface_detection)
 
-            deepface = userdata.deepface_detection[0]
-            if filter:
-                for bbox in userdata.bbox_eyes:
-                    # rougly check if the bbox is the same
-                    if bbox["bbox"] == deepface:
-                        userdata.bbox_eyes = [bbox]
-                        break
+            if self._filter:
+                if userdata.deepface_detection:
+                    deepface = userdata.deepface_detection[0]
+                    for bbox in userdata.bbox_eyes:
+                        # rougly check if the bbox is the same
+                        if bbox["bbox"] == deepface:
+                            userdata.bbox_eyes = [bbox]
+                            break
+                else:
+                    return "failed"
 
             for det in userdata.bbox_eyes:
                 left_eye = det["left_eye"]
@@ -232,7 +238,7 @@ class LookAtPerson(smach.StateMachine):
             )
             smach.StateMachine.add(
                 "CHECK_EYES",
-                self.CheckEyes(self.DEBUG, filter=filter),
+                self.CheckEyes(self.DEBUG, _filter=filter),
                 transitions={
                     "succeeded": "LOOK_TO_POINT",
                     "failed": "failed",
