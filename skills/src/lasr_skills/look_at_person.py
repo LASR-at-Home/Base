@@ -1,7 +1,8 @@
+#!/usr/bin/env python3
 import smach_ros
 from geometry_msgs.msg import PointStamped
 import smach
-from .vision import GetPointCloud
+from vision import GetPointCloud
 from lasr_vision_msgs.srv import BodyPixDetection, BodyPixDetectionRequest
 from lasr_vision_msgs.msg import BodyPixMaskRequest
 from lasr_skills import LookToPoint, DetectFaces
@@ -294,3 +295,27 @@ class LookAtPerson(smach.StateMachine):
                             "aborted": "failed",
                         },
                     )
+
+
+if __name__ == "__main__":
+    rospy.init_node("look_at_person")
+    sm = smach.StateMachine(outcomes=["succeeded", "failed"])
+    with sm:
+        smach.StateMachine.add(
+            "GET_POINTCLOUD",
+            GetPointCloud("/xtion/depth_registered/points"),
+            transitions={"succeeded": "succeeded"},
+            remapping={"pcl_msg": "pcl_msg"},
+        )
+
+    sis = smach_ros.IntrospectionServer("pointcloud_server", sm, "/LOOK_AT_PERSON")
+    sis.start()
+    sm.execute()
+    pcl = sm.userdata.pcl_msg
+    sis.stop()
+
+    sm = LookAtPerson(filter=False)
+    sm.userdata.pcl_msg = pcl
+    sm.userdata.deepface_detection = []
+    outcome = sm.execute()
+    print(outcome)
