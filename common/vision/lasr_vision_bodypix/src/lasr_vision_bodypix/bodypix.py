@@ -114,7 +114,6 @@ def detect(
         keypoints_msg = []
 
         for i, keypoint in pose.keypoints.items():
-
             if camel_to_snake(keypoint.part) in request.masks[0].parts:
                 keypoint_msg = BodyPixKeypoint()
                 keypoint_msg.xy = [int(keypoint.position.x), int(keypoint.position.y)]
