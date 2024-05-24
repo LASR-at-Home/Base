@@ -41,11 +41,14 @@ from std_msgs.msg import Header
 import actionlib
 from control_msgs.msg import PointHeadAction, PointHeadGoal
 from geometry_msgs.msg import Point
+from control_msgs.msg import FollowJointTrajectoryAction, FollowJointTrajectoryGoal
+from trajectory_msgs.msg import JointTrajectoryPoint
 
 
 class FindAndLookAt(smach.StateMachine):
     class GetLookPoint(smach.State):
-        def __init__(self, look_positions: List[Point]):
+        def __init__(self, look_positions: List[List[float]]):
+            # def __init__(self, look_positions: List[Point]):
             smach.State.__init__(
                 self,
                 outcomes=["succeeded", "failed"],
@@ -67,33 +70,45 @@ class FindAndLookAt(smach.StateMachine):
                 output_keys=["pointstamped"],
             )
             self.look_at_pub = actionlib.SimpleActionClient(
-                "/head_controller/point_head_action", PointHeadAction
+                "/head_controller/follow_joint_trajectory", FollowJointTrajectoryAction
             )
 
         def execute(self, userdata):
-            point = userdata.look_positions[userdata.point_index]
-            userdata.pointstamped = PointStamped(point=point)
-            target = PointStamped()
-            target.header = Header()
-            target.header.frame_id = "head_2_link"
-            target.point = point
-            self.look_at_pub.wait_for_server()
-            goal = PointHeadGoal()
-            goal.pointing_frame = "head_2_link"
-            goal.pointing_axis = Point(1.0, 0.0, 0.0)
-            goal.max_velocity = 1.0
-            goal.target = target
+            rospy.sleep(2.0)
+            _point = userdata.look_positions[userdata.point_index]
+            print(f"Looking at {_point}")
+            userdata.pointstamped = PointStamped(
+                point=Point(x=_point[0], y=_point[1], z=1.0)
+            )
+            # target = PointStamped()
+            # target.header = Header()
+            # target.header.frame_id = "head_2_link"
+            # target.point = point
+            # self.look_at_pub.wait_for_server()
+            # goal = PointHeadGoal()
+            # goal.pointing_frame = "head_2_link"
+            # goal.pointing_axis = Point(1.0, 0.0, 0.0)
+            # goal.max_velocity = 1.0
+            # goal.target = target
+            # self.look_at_pub.send_goal(goal)
+            # self.look_at_pub.wait_for_result()
+            # print(self.look_at_pub.get_state())
+            # print(f"Looking at {point}")
+            goal = FollowJointTrajectoryGoal()
+            goal.trajectory.joint_names = ["head_1_joint", "head_2_joint"]
+            point = JointTrajectoryPoint()
+            point.positions = _point
+            point.time_from_start = rospy.Duration(1)
+            goal.trajectory.points.append(point)
             self.look_at_pub.send_goal(goal)
-            self.look_at_pub.wait_for_result()
-            print(self.look_at_pub.get_state())
-            print(f"Looking at {point}")
-            rospy.sleep(1.0)
+
             return "succeeded"
 
     def __init__(
         self,
         guest_name: str,
-        look_positions: Union[List[Point], None] = None,
+        look_positions: Union[List[List[float]], None] = None,
+        # look_positions: Union[List[Point], None] = None,
     ):
         smach.StateMachine.__init__(
             self,
@@ -103,12 +118,13 @@ class FindAndLookAt(smach.StateMachine):
         )
 
         if look_positions is None:
-            all_look_positions: List[Point] = []
+            all_look_positions: List[List[float]] = []
+            # all_look_positions: List[Point] = []
             # look straight, left, right
             look_positions = [
-                # Point(0.0, 0.0, 0.0),
-                Point(1.0, -1.0, 0.0),
-                Point(-1.0, -1.0, 0.0),
+                # Point(-0.5, 0.0, 1.0),
+                # Point(0.0, 0.0, 1.0),
+                # Point(-0.5, 0.0, 1.0),
             ]
 
         all_look_positions = look_positions
@@ -143,7 +159,7 @@ class FindAndLookAt(smach.StateMachine):
                         "confidence",
                         "guest_name",
                     ],
-                    output_keys=["pointstamped"],
+                    output_keys=[],
                 )
 
                 with container_sm:
@@ -199,6 +215,7 @@ class FindAndLookAt(smach.StateMachine):
                         LookAtPerson(filter=True),
                         transitions={
                             "succeeded": "succeeded",
+                            "no_detection": "continue",
                             "failed": "failed",
                         },
                     )
@@ -218,9 +235,12 @@ if __name__ == "__main__":
     sm = FindAndLookAt(
         "Nicole",
         [
-            Point(-0.5, 0.0, 1.0),
-            Point(0.0, 0.0, 1.0),
-            Point(-0.5, 0.0, 1.0),
+            [0.0, 0.0],
+            [-1.0, 0.0],
+            [1.0, 0.0],
+            # Point(0.0, 0.0, 1.0),
+            # Point(-0.25, 0.0, 1.0),
+            # Point(-0.5, 0.0, 1.0),
         ],
     )
     sm.userdata.guest_name = "Nicole"
