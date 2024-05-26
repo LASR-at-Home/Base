@@ -10,11 +10,24 @@ from geometry_msgs.msg import Point, PointStamped
 from lasr_vision_msgs.srv import Recognise, RecogniseRequest
 from lasr_skills.vision import GetPointCloud
 from cv2_pcl import pcl_to_img_msg
-
 import actionlib
 from geometry_msgs.msg import Point
 from control_msgs.msg import FollowJointTrajectoryAction, FollowJointTrajectoryGoal
 from trajectory_msgs.msg import JointTrajectoryPoint
+from smach import CBState
+import rosservice
+
+PUBLIC_CONTAINER = False
+
+try:
+    from pal_startup_msgs.srv import (
+        StartupStart,
+        StartupStop,
+        StartupStartRequest,
+        StartupStopRequest,
+    )
+except ModuleNotFoundError:
+    PUBLIC_CONTAINER = True
 
 
 def send_head_goal(_point, look_at_pub):
@@ -55,19 +68,30 @@ class FindAndLookAt(smach.StateMachine):
             )
 
         def execute(self, userdata):
-            rospy.sleep(2.0)
+            rospy.sleep(3.0)
             _point = userdata.look_positions[userdata.point_index]
             print(f"Looking at {_point}")
             userdata.pointstamped = PointStamped(
                 point=Point(x=_point[0], y=_point[1], z=1.0)
             )
             send_head_goal(_point, self.look_at_pub)
+            rospy.sleep(3.0)
 
             return "succeeded"
 
+    def check_name(self, ud):
+        rospy.logwarn(
+            f"Checking name {ud.guest_name} in detections {ud.deepface_detection}"
+        )
+        if len(ud.deepface_detection) == 0:
+            return "no_detection"
+        for detection in ud.deepface_detection:
+            if detection.name == ud.guest_name and detection.confidence > ud.confidence:
+                return "succeeded"
+        return "failed"
+
     def __init__(
         self,
-        guest_name: str,
         look_positions: Union[List[List[float]], None] = None,
     ):
         smach.StateMachine.__init__(
@@ -86,7 +110,9 @@ class FindAndLookAt(smach.StateMachine):
             ]
 
         all_look_positions = look_positions
-        print(all_look_positions)
+        IS_SIMULATION = (
+            "/pal_startup_control/start" not in rosservice.get_service_list()
+        )
 
         with self:
             smach.StateMachine.add(
@@ -116,6 +142,25 @@ class FindAndLookAt(smach.StateMachine):
                 )
 
                 with container_sm:
+                    if not IS_SIMULATION:
+                        if PUBLIC_CONTAINER:
+                            rospy.logwarn(
+                                "You are using a public container. The head manager will not be stopped during navigation."
+                            )
+                        else:
+                            smach.StateMachine.add(
+                                "DISABLE_HEAD_MANAGER",
+                                smach_ros.ServiceState(
+                                    "/pal_startup_control/stop",
+                                    StartupStop,
+                                    request=StartupStopRequest("head_manager"),
+                                ),
+                                transitions={
+                                    "succeeded": "GET_POINT",
+                                    "aborted": "failed",
+                                    "preempted": "failed",
+                                },
+                            )
                     smach.StateMachine.add(
                         "GET_POINT",
                         self.GetPoint(),
@@ -154,13 +199,30 @@ class FindAndLookAt(smach.StateMachine):
                             output_keys=["detections"],
                         ),
                         transitions={
-                            "succeeded": "LOOK_AT_PERSON",
+                            "succeeded": "CHECK_NAME",
                             "aborted": "failed",
                             "preempted": "failed",
                         },
                         remapping={
                             "pcl_msg": "pcl_msg",
                             "detections": "deepface_detection",
+                        },
+                    )
+                    smach.StateMachine.add(
+                        "CHECK_NAME",
+                        CBState(
+                            self.check_name,
+                            outcomes=["succeeded", "failed", "no_detection"],
+                            input_keys=[
+                                "deepface_detection",
+                                "guest_name",
+                                "confidence",
+                            ],
+                        ),
+                        transitions={
+                            "succeeded": "LOOK_AT_PERSON",
+                            "failed": "GET_IMAGE",
+                            "no_detection": "continue",
                         },
                     )
                     smach.StateMachine.add(
