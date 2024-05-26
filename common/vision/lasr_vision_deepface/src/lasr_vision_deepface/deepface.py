@@ -88,7 +88,6 @@ def create_dataset(
     debug_publisher: Union[rospy.Publisher, None],
 ) -> None:
     dataset_path = os.path.join(DATASET_ROOT, dataset, name)
-    print(dataset_path)
     if not os.path.exists(dataset_path):
         os.makedirs(dataset_path)
     rospy.loginfo(f"Taking {size} pictures of {name} and saving to {dataset_path}")
@@ -132,6 +131,8 @@ def recognise(
 
     # Run inference
     rospy.loginfo("Running inference")
+    import smach
+
     try:
         result = DeepFace.find(
             cv_im,

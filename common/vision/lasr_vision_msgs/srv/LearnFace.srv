@@ -1,8 +1,8 @@
-# Name to associate
-string name
-
 # Dataset to add face to
 string dataset
+
+# Name to associate
+string name
 
 # Number of images to take
 int32 n_images

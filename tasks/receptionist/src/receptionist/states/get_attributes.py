@@ -7,7 +7,7 @@ import rospy
 import smach
 from smach import UserData
 from typing import List, Any, Dict, Union
-from lasr_vision_clip.srv import VqaRequest, VqaResponse, Vqa
+from lasr_vision_msgs.srv import VqaRequest, VqaResponse, Vqa
 
 
 class GetGuestAttributes(smach.State):
