@@ -70,7 +70,6 @@ class LookAtPerson(smach.StateMachine):
                 if userdata.deepface_detection:
                     deepface = userdata.deepface_detection[0]
                     for bbox in userdata.bbox_eyes:
-                        # rougly check if the bbox is the same
                         if bbox["bbox"] == deepface:
                             userdata.bbox_eyes = [bbox]
                             break
@@ -111,12 +110,23 @@ class LookAtPerson(smach.StateMachine):
                 userdata.pointstamped = look_at
 
                 self.look_at_pub.wait_for_server()
+                if any(
+                    [
+                        True
+                        for i in [look_at.point.x, look_at.point.y, look_at.point.z]
+                        if i != i
+                    ]
+                ):
+                    look_at.point.x = 0.0
+                    look_at.point.y = 0.0
+                    look_at.point.z = 0.0
+
                 goal = PointHeadGoal()
                 goal.pointing_frame = "head_2_link"
                 goal.pointing_axis = Point(1.0, 0.0, 0.0)
                 goal.max_velocity = 1.0
                 goal.target = look_at
-                print(
+                rospy.loginfo(
                     f"LOOKING AT POINT {look_at.point.x}, {look_at.point.y}, {look_at.point.z}"
                 )
                 self.look_at_pub.send_goal(goal)
