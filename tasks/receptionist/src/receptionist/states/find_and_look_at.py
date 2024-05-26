@@ -1,30 +1,4 @@
-#!/usr/bin/env python3
-# # looks at one direction left
-# ~recognise
-# returns
-# bbox
-# for eveyrone known in the fram e
-# # greps the host(name) if it can see then otherwise fail
-# look
-# at
-# them
-# got
-# to
-# next
-# motion
-# of
-# failed
-#
-# #
-# # add speeing look once recognise given
-#
-# in look
-# to
-# point
-# 192
-
-
-""" 
+"""
 State machine for the nicole task. It finds a person by given name and then looks at them.
 """
 import rospy
@@ -36,19 +10,26 @@ from geometry_msgs.msg import Point, PointStamped
 from lasr_vision_msgs.srv import Recognise, RecogniseRequest
 from lasr_skills.vision import GetPointCloud
 from cv2_pcl import pcl_to_img_msg
-from std_msgs.msg import Header
 
 import actionlib
-from control_msgs.msg import PointHeadAction, PointHeadGoal
 from geometry_msgs.msg import Point
 from control_msgs.msg import FollowJointTrajectoryAction, FollowJointTrajectoryGoal
 from trajectory_msgs.msg import JointTrajectoryPoint
 
 
+def send_head_goal(_point, look_at_pub):
+    goal = FollowJointTrajectoryGoal()
+    goal.trajectory.joint_names = ["head_1_joint", "head_2_joint"]
+    point = JointTrajectoryPoint()
+    point.positions = _point
+    point.time_from_start = rospy.Duration(1)
+    goal.trajectory.points.append(point)
+    look_at_pub.send_goal(goal)
+
+
 class FindAndLookAt(smach.StateMachine):
     class GetLookPoint(smach.State):
         def __init__(self, look_positions: List[List[float]]):
-            # def __init__(self, look_positions: List[Point]):
             smach.State.__init__(
                 self,
                 outcomes=["succeeded", "failed"],
@@ -80,27 +61,7 @@ class FindAndLookAt(smach.StateMachine):
             userdata.pointstamped = PointStamped(
                 point=Point(x=_point[0], y=_point[1], z=1.0)
             )
-            # target = PointStamped()
-            # target.header = Header()
-            # target.header.frame_id = "head_2_link"
-            # target.point = point
-            # self.look_at_pub.wait_for_server()
-            # goal = PointHeadGoal()
-            # goal.pointing_frame = "head_2_link"
-            # goal.pointing_axis = Point(1.0, 0.0, 0.0)
-            # goal.max_velocity = 1.0
-            # goal.target = target
-            # self.look_at_pub.send_goal(goal)
-            # self.look_at_pub.wait_for_result()
-            # print(self.look_at_pub.get_state())
-            # print(f"Looking at {point}")
-            goal = FollowJointTrajectoryGoal()
-            goal.trajectory.joint_names = ["head_1_joint", "head_2_joint"]
-            point = JointTrajectoryPoint()
-            point.positions = _point
-            point.time_from_start = rospy.Duration(1)
-            goal.trajectory.points.append(point)
-            self.look_at_pub.send_goal(goal)
+            send_head_goal(_point, self.look_at_pub)
 
             return "succeeded"
 
@@ -108,7 +69,6 @@ class FindAndLookAt(smach.StateMachine):
         self,
         guest_name: str,
         look_positions: Union[List[List[float]], None] = None,
-        # look_positions: Union[List[Point], None] = None,
     ):
         smach.StateMachine.__init__(
             self,
@@ -119,23 +79,16 @@ class FindAndLookAt(smach.StateMachine):
 
         if look_positions is None:
             all_look_positions: List[List[float]] = []
-            # all_look_positions: List[Point] = []
-            # look straight, left, right
             look_positions = [
-                # Point(-0.5, 0.0, 1.0),
-                # Point(0.0, 0.0, 1.0),
-                # Point(-0.5, 0.0, 1.0),
+                [0.0, 0.0],
+                [-1.0, 0.0],
+                [1.0, 0.0],
             ]
 
         all_look_positions = look_positions
         print(all_look_positions)
 
         with self:
-            # look straight
-            # check if name is in the frame
-            # if not look left
-            # if not look right
-            # if not fail
             smach.StateMachine.add(
                 "GET_LOOK_POINT",
                 self.GetLookPoint(all_look_positions),
@@ -227,26 +180,3 @@ class FindAndLookAt(smach.StateMachine):
                 look_iterator,
                 transitions={"succeeded": "succeeded", "failed": "failed"},
             )
-
-
-if __name__ == "__main__":
-    rospy.init_node("test_find_and_look_at")
-
-    sm = FindAndLookAt(
-        "Nicole",
-        [
-            [0.0, 0.0],
-            [-1.0, 0.0],
-            [1.0, 0.0],
-            # Point(0.0, 0.0, 1.0),
-            # Point(-0.25, 0.0, 1.0),
-            # Point(-0.5, 0.0, 1.0),
-        ],
-    )
-    sm.userdata.guest_name = "Nicole"
-    sm.userdata.dataset = "receptionist"
-    sm.userdata.confidence = 0.5
-
-    outcome = sm.execute()
-
-    rospy.loginfo(f"Outcome: {outcome}")

@@ -1,8 +1,7 @@
-#!/usr/bin/env python3
 import smach_ros
 from geometry_msgs.msg import PointStamped
 import smach
-from vision import GetPointCloud
+from .vision import GetPointCloud
 from lasr_vision_msgs.srv import BodyPixDetection, BodyPixDetectionRequest
 from lasr_vision_msgs.msg import BodyPixMaskRequest
 from lasr_skills import LookToPoint, DetectFaces
@@ -117,6 +116,9 @@ class LookAtPerson(smach.StateMachine):
                 goal.pointing_axis = Point(1.0, 0.0, 0.0)
                 goal.max_velocity = 1.0
                 goal.target = look_at
+                print(
+                    f"LOOKING AT POINT {look_at.point.x}, {look_at.point.y}, {look_at.point.z}"
+                )
                 self.look_at_pub.send_goal(goal)
 
                 return "succeeded"
@@ -163,9 +165,9 @@ class LookAtPerson(smach.StateMachine):
     def __init__(self, filter=False):
         smach.StateMachine.__init__(
             self,
-            outcomes=["succeeded", "failed"],
+            outcomes=["succeeded", "failed", "no_detection"],
             input_keys=["pcl_msg", "deepface_detection"],
-            output_keys=["masks", "poses", "pointstamped"],
+            output_keys=[],
         )
 
         self.DEBUG = rospy.get_param("/debug", True)
@@ -241,9 +243,9 @@ class LookAtPerson(smach.StateMachine):
                 "CHECK_EYES",
                 self.CheckEyes(self.DEBUG, _filter=filter),
                 transitions={
-                    "succeeded": "LOOK_TO_POINT",
+                    "succeeded": "LOOP",
                     "failed": "failed",
-                    "no_detection": "succeeded",
+                    "no_detection": "no_detection",
                 },
                 remapping={
                     "pcl_msg": "pcl_msg",
@@ -295,27 +297,3 @@ class LookAtPerson(smach.StateMachine):
                             "aborted": "failed",
                         },
                     )
-
-
-if __name__ == "__main__":
-    rospy.init_node("look_at_person")
-    sm = smach.StateMachine(outcomes=["succeeded", "failed"])
-    with sm:
-        smach.StateMachine.add(
-            "GET_POINTCLOUD",
-            GetPointCloud("/xtion/depth_registered/points"),
-            transitions={"succeeded": "succeeded"},
-            remapping={"pcl_msg": "pcl_msg"},
-        )
-
-    sis = smach_ros.IntrospectionServer("pointcloud_server", sm, "/LOOK_AT_PERSON")
-    sis.start()
-    sm.execute()
-    pcl = sm.userdata.pcl_msg
-    sis.stop()
-
-    sm = LookAtPerson(filter=False)
-    sm.userdata.pcl_msg = pcl
-    sm.userdata.deepface_detection = []
-    outcome = sm.execute()
-    print(outcome)
