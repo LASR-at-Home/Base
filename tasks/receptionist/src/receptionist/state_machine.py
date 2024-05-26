@@ -8,6 +8,7 @@ from receptionist.states import (
     GetGuestAttributes,
     Introduce,
     SeatGuest,
+    FindAndLookAt,
 )
 
 
@@ -23,7 +24,14 @@ class Receptionist(smach.StateMachine):
         smach.StateMachine.__init__(self, outcomes=["succeeded", "failed"])
 
         with self:
-            self.userdata.guest_data = {"host": host_data, "guest1": {}, "guest2": {}}
+            self.userdata.guest_data = {
+                "host": host_data,
+                "guest1": {"name": ""},
+                "guest2": {"name": ""},
+            }
+            self.userdata.guest_name = "nicole"
+            self.userdata.dataset = "receptionist"
+            self.userdata.confidence = 0.2
 
             smach.StateMachine.add(
                 "GO_TO_WAIT_LOCATION_GUEST_1",
@@ -66,20 +74,20 @@ class Receptionist(smach.StateMachine):
                 "PARSE_NAME_AND_DRINK_GUEST_1",
                 ParseNameAndDrink("guest1"),
                 transitions={
-                    "succeeded": "GET_GUEST_ATTRIBUTES_GUEST_1",
+                    "succeeded": "SAY_FOLLOW_GUEST_1",
                     "failed": "failed",
                 },
                 remapping={"guest_transcription": "transcribed_speech"},
             )
 
-            smach.StateMachine.add(
-                "GET_GUEST_ATTRIBUTES_GUEST_1",
-                GetGuestAttributes("guest1"),
-                transitions={
-                    "succeeded": "SAY_FOLLOW_GUEST_1",
-                    "failed": "failed",
-                },
-            )
+            # smach.StateMachine.add(
+            #     "GET_GUEST_ATTRIBUTES_GUEST_1",
+            #     GetGuestAttributes("guest1"),
+            #     transitions={
+            #         "succeeded": "SAY_FOLLOW_GUEST_1",
+            #         "failed": "failed",
+            #     },
+            # )
 
             smach.StateMachine.add(
                 "SAY_FOLLOW_GUEST_1",
@@ -104,12 +112,26 @@ class Receptionist(smach.StateMachine):
                 "SAY_WAIT_GUEST_1",
                 Say(text="Please wait here on my left"),
                 transitions={
-                    "succeeded": "INTRODUCE_GUEST_1_TO_HOST",
+                    "succeeded": "FIND_AND_LOOK_AT",
                     "preempted": "failed",
                     "aborted": "failed",
                 },
             )
-            # look to host - recognises a known person
+            smach.StateMachine.add(
+                "FIND_AND_LOOK_AT",
+                FindAndLookAt(
+                    self.userdata.guest_data["host"]["name"],
+                    [
+                        [0.0, 0.0],
+                        [-1.0, 0.0],
+                        [1.0, 0.0],
+                    ],
+                ),
+                transitions={
+                    "succeeded": "INTRODUCE_GUEST_1_TO_HOST",
+                    "failed": "failed",
+                },
+            )
 
             smach.StateMachine.add(
                 "INTRODUCE_GUEST_1_TO_HOST",
@@ -183,20 +205,20 @@ class Receptionist(smach.StateMachine):
                 "PARSE_NAME_AND_DRINK_GUEST_2",
                 ParseNameAndDrink("guest2"),
                 transitions={
-                    "succeeded": "GET_GUEST_ATTRIBUTES_GUEST_2",
+                    "succeeded": "SAY_FOLLOW_GUEST_2",
                     "failed": "failed",
                 },
                 remapping={"guest_transcription": "transcribed_speech"},
             )
 
-            smach.StateMachine.add(
-                "GET_GUEST_ATTRIBUTES_GUEST_2",
-                GetGuestAttributes("guest2"),
-                transitions={
-                    "succeeded": "SAY_FOLLOW_GUEST_2",
-                    "failed": "failed",
-                },
-            )
+            # smach.StateMachine.add(
+            #     "GET_GUEST_ATTRIBUTES_GUEST_2",
+            #     GetGuestAttributes("guest2"),
+            #     transitions={
+            #         "succeeded": "SAY_FOLLOW_GUEST_2",
+            #         "failed": "failed",
+            #     },
+            # )
 
             smach.StateMachine.add(
                 "SAY_FOLLOW_GUEST_2",
@@ -231,6 +253,21 @@ class Receptionist(smach.StateMachine):
                 "INTRODUCE_GUEST_2_TO_EVERYONE",
                 Introduce(guest_to_introduce="guest2", everyone=True),
                 transitions={
+                    "succeeded": "FIND_AND_LOOK_AT_2",
+                    "failed": "failed",
+                },
+            )
+            smach.StateMachine.add(
+                "FIND_AND_LOOK_AT_2",
+                FindAndLookAt(
+                    self.userdata.guest_data["host"]["name"],
+                    [
+                        [0.0, 0.0],
+                        [-1.0, 0.0],
+                        [1.0, 0.0],
+                    ],
+                ),
+                transitions={
                     "succeeded": "INTRODUCE_HOST_TO_GUEST_2",
                     "failed": "failed",
                 },
@@ -239,6 +276,21 @@ class Receptionist(smach.StateMachine):
             smach.StateMachine.add(
                 "INTRODUCE_HOST_TO_GUEST_2",
                 Introduce(guest_to_introduce="host", guest_to_introduce_to="guest2"),
+                transitions={
+                    "succeeded": "FIND_AND_LOOK_AT_3",
+                    "failed": "failed",
+                },
+            )
+            smach.StateMachine.add(
+                "FIND_AND_LOOK_AT_3",
+                FindAndLookAt(
+                    self.userdata.guest_data["guest1"]["name"],
+                    [
+                        [0.0, 0.0],
+                        [-1.0, 0.0],
+                        [1.0, 0.0],
+                    ],
+                ),
                 transitions={
                     "succeeded": "INTRODUCE_GUEST_1_TO_GUEST_2",
                     "failed": "failed",

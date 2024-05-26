@@ -92,12 +92,13 @@ class FindAndLookAt(smach.StateMachine):
 
     def __init__(
         self,
+        guest_name_in: str,
         look_positions: Union[List[List[float]], None] = None,
     ):
         smach.StateMachine.__init__(
             self,
             outcomes=["succeeded", "failed"],
-            input_keys=["guest_name", "dataset", "confidence"],
+            input_keys=["dataset", "confidence"],
             output_keys=[],
         )
 
@@ -115,6 +116,7 @@ class FindAndLookAt(smach.StateMachine):
         )
 
         with self:
+            self.userdata.guest_name = guest_name_in
             smach.StateMachine.add(
                 "GET_LOOK_POINT",
                 self.GetLookPoint(all_look_positions),

@@ -31,7 +31,7 @@ if __name__ == "__main__":
         seat_pose,
         seat_area,
         {
-            "name": "John",
+            "name": "nicole",
             "drink": "beer",
             "attributes": {
                 "hair_colour": "strawberry blonde",
@@ -39,6 +39,8 @@ if __name__ == "__main__":
                 "hat": True,
                 "height": "tall",
             },
+            "dataset": "receptionist",
+            "confidence": 0.5,
         },
     )
     outcome = receptionist.execute()

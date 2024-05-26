@@ -8,6 +8,7 @@ if __name__ == "__main__":
     rospy.init_node("test_find_and_look_at")
 
     sm = FindAndLookAt(
+        "nicole",
         [
             [0.0, 0.0],
             [-1.0, 0.0],
