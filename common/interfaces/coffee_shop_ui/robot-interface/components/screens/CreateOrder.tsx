@@ -8,18 +8,18 @@ type State = "edit" | "confirm";
 
 type Item =
   | "cup"
-  | "banana"
+  // | "banana"
   | "bottle";
 
 const items: Item[] = [
   "cup",
-  "banana",
+  // "banana",
   "bottle",
 ];
 
 const NAMES: { [key in Item]: string } = {
   cup: 'Coffee',
-  banana: 'Banana',
+  // banana: 'Banana',
   bottle: 'Coca Cola'
 }
 
@@ -110,7 +110,7 @@ function EditMode({
     <>
       <div className="flex flex-row gap-4 flex-[2] min-h-0">
         <Card item="cup" order={order} setOrder={setOrder} />
-        <Card item="banana" order={order} setOrder={setOrder} />
+        {/* <Card item="banana" order={order} setOrder={setOrder} /> */}
         <Card item="bottle" order={order} setOrder={setOrder} />
       </div>
       <div className="flex flex-row gap-4 flex-1">

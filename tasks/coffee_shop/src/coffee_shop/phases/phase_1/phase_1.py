@@ -46,7 +46,7 @@ class Phase1(smach.StateMachine):
                     input_keys=[], output_keys=[], outcomes=["succeeded"]
                 )
                 def idle_cb(_):
-                    rospy.sleep(rospy.Duration(30.0))
+                    rospy.sleep(rospy.Duration(15.0))
                     return "succeeded"
 
                 smach.StateMachine.add(

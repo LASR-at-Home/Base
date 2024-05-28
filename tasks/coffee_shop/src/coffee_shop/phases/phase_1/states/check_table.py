@@ -188,9 +188,9 @@ class CheckTable(smach.State):
 
         if len(unvisited_tables) > 0:
             return "not_finished"
-        elif len(free_tables) > 0:
-            return "has_free_tables"
         elif len(needs_serving_tables) > 0:
             return "has_needs_serving_tables"
+        elif len(free_tables) > 0:
+            return "has_free_tables"
         else:
             return "idle"
