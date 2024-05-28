@@ -70,6 +70,11 @@ class GetGuestAttributes(smach.State):
                 height_response = self._send_vqa_request(height_answers)
                 hair_colour_response = self._send_vqa_request(hair_colour_answers)
 
+                print("glasses response: ", glasses_response)
+                print("hat response", hat_response)
+                print("height response", height_response)
+                print("hair colour: ", hair_colour)
+
                 if glasses_response == "a person wearing glasses":
                     glasses = True
                 else:
@@ -102,6 +107,7 @@ class GetGuestAttributes(smach.State):
 
             userdata.guest_data[self._guest_id]["attributes"] = attributes
         except: 
+            print("SOmething broke")
             attributes = {
                 "hair_colour": "unknown",
                 "glasses": "unknown",
