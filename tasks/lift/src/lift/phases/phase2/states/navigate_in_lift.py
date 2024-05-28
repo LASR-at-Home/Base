@@ -10,9 +10,10 @@ import numpy as np
 import rospy
 from lift.defaults import DEBUG
 
+
 class NavigateInLift(smach.State):
     def __init__(self, default):
-        smach.State.__init__(self, outcomes=['success'])
+        smach.State.__init__(self, outcomes=["success"])
 
         self.default = default
 
@@ -32,7 +33,6 @@ class NavigateInLift(smach.State):
             print("centers in safe")
             print(rospy.get_param("/lift/centers"))
 
-
     def execute(self, userdata):
         w = Waypoint()
 
@@ -40,7 +40,9 @@ class NavigateInLift(smach.State):
         is_from_schedule = rospy.get_param("/from_schedule")
 
         if not is_from_schedule:
-            status = self.default.controllers.base_controller.ensure_sync_to_pose(get_pose_from_param('/wait_in_front_lift_centre/pose'))
+            status = self.default.controllers.base_controller.ensure_sync_to_pose(
+                get_pose_from_param("/wait_in_front_lift_centre/pose")
+            )
 
             # get the lift information
             warped, analytics, M = w.get_lift_information(is_lift=True, is_sim=True)
@@ -50,8 +52,10 @@ class NavigateInLift(smach.State):
             if analytics[1] == 0:
                 # if the lift is empty
                 # go to predetermined place
-                state = self.default.controllers.base_controller.ensure_sync_to_pose(get_pose_from_param('/lift_centre/pose'))
-                return 'success'
+                state = self.default.controllers.base_controller.ensure_sync_to_pose(
+                    get_pose_from_param("/lift_centre/pose")
+                )
+                return "success"
 
             # get the narrow space navigation service
             s = NarrowSpaceNavSrv()
@@ -76,4 +80,4 @@ class NavigateInLift(smach.State):
 
             self.default.voice.speak("I have arrived at the lift.")
 
-        return 'success'
+        return "success"

@@ -24,13 +24,11 @@ except ModuleNotFoundError:
 
 
 class GoToLocation(smach.StateMachine):
-
     def __init__(
         self,
         location: Union[Pose, None] = None,
         location_param: Union[str, None] = None,
     ):
-
         if location is not None or location_param is not None:
             super(GoToLocation, self).__init__(outcomes=["succeeded", "failed"])
         else:
@@ -56,7 +54,6 @@ class GoToLocation(smach.StateMachine):
             )
 
             if not IS_SIMULATION:
-
                 if PUBLIC_CONTAINER:
                     rospy.logwarn(
                         "You are using a public container. The head manager will not be stopped during navigation."
@@ -155,7 +152,6 @@ class GoToLocation(smach.StateMachine):
                 )
 
             if not IS_SIMULATION:
-
                 if PUBLIC_CONTAINER:
                     rospy.logwarn(
                         "You are using a public container. The head manager will not be start following navigation."

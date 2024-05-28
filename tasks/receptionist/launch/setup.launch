@@ -19,5 +19,4 @@
     <node pkg="lasr_vision_feature_extraction" type="service" name="torch_service" output="screen"/>
     <node pkg="lasr_vision_bodypix" type="service" name="bodypix_service" output="screen"/>
 
-
 </launch>

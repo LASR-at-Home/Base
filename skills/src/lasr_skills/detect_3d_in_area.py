@@ -9,9 +9,7 @@ from shapely.geometry.polygon import Polygon
 
 
 class Detect3DInArea(smach.StateMachine):
-
     class FilterDetections(smach.State):
-
         def __init__(self, area_polygon: Polygon):
             smach.State.__init__(
                 self,
@@ -53,7 +51,6 @@ class Detect3DInArea(smach.StateMachine):
         )
 
         with self:
-
             smach.StateMachine.add(
                 "DETECT_OBJECTS_3D",
                 Detect3D(

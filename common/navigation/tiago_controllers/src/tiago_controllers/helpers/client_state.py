@@ -6,7 +6,10 @@ from actionlib_msgs.msg import GoalID
 
 
 def is_running(client):
-    return client.get_state() == GoalStatus.PENDING or client.get_state() == GoalStatus.ACTIVE
+    return (
+        client.get_state() == GoalStatus.PENDING
+        or client.get_state() == GoalStatus.ACTIVE
+    )
 
 
 def cancel_goal(topic, client):
@@ -14,8 +17,16 @@ def cancel_goal(topic, client):
         pub = rospy.Publisher(topic, GoalID, queue_size=1)
         goal_id = GoalID()
         pub.publish(goal_id)
-        while not (client.get_state() in [GoalStatus.PREEMPTED, GoalStatus.ABORTED, GoalStatus.REJECTED,
-                                          GoalStatus.RECALLED, GoalStatus.SUCCEEDED]):
+        while not (
+            client.get_state()
+            in [
+                GoalStatus.PREEMPTED,
+                GoalStatus.ABORTED,
+                GoalStatus.REJECTED,
+                GoalStatus.RECALLED,
+                GoalStatus.SUCCEEDED,
+            ]
+        ):
             print("canceling the goal...")
             rospy.sleep(0.5)
     except AttributeError:
@@ -23,6 +34,10 @@ def cancel_goal(topic, client):
     except Exception:
         print("you need a valid topic to cancel the goal")
 
+
 def is_terminated(client):
-    return client.get_state() == GoalStatus.LOST or client.get_state() == GoalStatus.PREEMPTED or \
-           client.get_state() == GoalStatus.ABORTED
+    return (
+        client.get_state() == GoalStatus.LOST
+        or client.get_state() == GoalStatus.PREEMPTED
+        or client.get_state() == GoalStatus.ABORTED
+    )
