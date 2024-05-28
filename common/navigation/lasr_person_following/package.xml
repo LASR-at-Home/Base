@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>person_following</name>
+  <name>lasr_person_following</name>
   <version>0.0.0</version>
-  <description>The person_following package</description>
+  <description>The lasr_person_following package</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag -->
   <!-- Example:  -->
