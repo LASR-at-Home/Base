@@ -1,12 +1,29 @@
 import smach
+import rospy
 
 from typing import List
 from shapely.geometry import Polygon
 
 import numpy as np
 
-from lasr_skills import PlayMotion, Detect3DInArea, LookToPoint, Say
+from lasr_skills import PlayMotion, Detect3DInArea, LookToPoint, Say, WaitForPerson
 
+
+class GuestSeatWait(smach.State):
+    def __init__(self):
+        smach.State.__init__(self, outcomes=["succeeded", "failed"])
+
+    def execute(self, userdata) -> str:
+        # Wait 5 seconds for user to sit down
+        try:
+            wait_time = 5
+            print(f"Waiting for {wait_time} seconds for the user to sit down.")
+            Say("Waiting for the guest to sit down.")
+            rospy.sleep(wait_time)
+            return "succeeded"
+        except:
+            print("Waiting for the guest to sit down failed")
+            return "failed"
 
 class SeatGuest(smach.StateMachine):
     _motions: List[str] = ["look_down_left", "look_down_right", "look_down_centre"]
@@ -119,6 +136,7 @@ class SeatGuest(smach.StateMachine):
                     "succeeded": "SAY_SIT",
                     "aborted": "failed",
                     "preempted": "failed",
+                    "timed_out": "SAY_SIT"
                 },
                 remapping={"point": "seat_position"},
             )
@@ -126,11 +144,20 @@ class SeatGuest(smach.StateMachine):
                 "SAY_SIT",
                 Say("Please sit in the seat that I am looking at."),
                 transitions={
-                    "succeeded": "RESET_HEAD",
+                    "succeeded": "WAIT_FOR_GUEST_SEAT",
                     "aborted": "failed",
                     "preempted": "failed",
                 },
-            )  # TODO: sleep after this.
+            )  
+
+            smach.StateMachine.add(
+                "WAIT_FOR_GUEST_SEAT",
+                GuestSeatWait(),
+                transitions={
+                    "succeeded": "RESET_HEAD",
+                    "failed": "RESET_HEAD",
+                },
+            )
 
             smach.StateMachine.add(
                 "RESET_HEAD",
