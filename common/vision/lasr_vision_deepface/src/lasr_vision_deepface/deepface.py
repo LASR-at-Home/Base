@@ -9,38 +9,22 @@ import numpy as np
 import pandas as pd
 
 from lasr_vision_msgs.msg import Detection
-from lasr_vision_msgs.srv import RecogniseRequest, RecogniseResponse
+from lasr_vision_msgs.srv import (
+    RecogniseRequest,
+    RecogniseResponse,
+    DetectFacesRequest,
+    DetectFacesResponse,
+)
 
 from sensor_msgs.msg import Image
+
+from typing import Union
 
 DATASET_ROOT = os.path.join(
     rospkg.RosPack().get_path("lasr_vision_deepface"), "datasets"
 )
 
-
-Mat = int  # np.typing.NDArray[np.uint8]
-
-
-def detect_face(cv_im: Mat) -> Mat | None:
-    try:
-        faces = DeepFace.extract_faces(
-            cv_im,
-            target_size=(224, 244),
-            detector_backend="mtcnn",
-            enforce_detection=True,
-        )
-    except ValueError:
-        return None
-    facial_area = faces[0]["facial_area"]
-    x, y, w, h = facial_area["x"], facial_area["y"], facial_area["w"], facial_area["h"]
-
-    # add padding to the face
-    x -= 10
-    y -= 10
-    w += 20
-    h += 20
-
-    return cv_im[:][y : y + h, x : x + w]
+Mat = np.ndarray
 
 
 def create_image_collage(images, output_size=(640, 480)):
@@ -74,12 +58,34 @@ def create_image_collage(images, output_size=(640, 480)):
     return grid_image
 
 
+def _extract_face(cv_im: Mat) -> Union[Mat, None]:
+    try:
+        faces = DeepFace.extract_faces(
+            cv_im,
+            # target_size=(224, 244),
+            detector_backend="mtcnn",
+            enforce_detection=True,
+        )
+    except ValueError:
+        return None
+    facial_area = faces[0]["facial_area"]
+    x, y, w, h = facial_area["x"], facial_area["y"], facial_area["w"], facial_area["h"]
+
+    # add padding to the face
+    x -= 10
+    y -= 10
+    w += 20
+    h += 20
+
+    return cv_im[:][y : y + h, x : x + w]
+
+
 def create_dataset(
     topic: str,
     dataset: str,
     name: str,
     size: int,
-    debug_publisher: rospy.Publisher | None,
+    debug_publisher: Union[rospy.Publisher, None],
 ) -> None:
     dataset_path = os.path.join(DATASET_ROOT, dataset, name)
     if not os.path.exists(dataset_path):
@@ -90,11 +96,11 @@ def create_dataset(
     for i in range(size):
         img_msg = rospy.wait_for_message(topic, Image)
         cv_im = cv2_img.msg_to_cv2_img(img_msg)
-        face_cropped_cv_im = detect_face(cv_im)
+        face_cropped_cv_im = _extract_face(cv_im)
         if face_cropped_cv_im is None:
             continue
-        cv2.imwrite(os.path.join(dataset_path, f"{name}_{i+1}.png"), face_cropped_cv_im)  # type: ignore
-        rospy.loginfo(f"Took picture {i+1}")
+        cv2.imwrite(os.path.join(dataset_path, f"{name}_{i + 1}.png"), face_cropped_cv_im)  # type: ignore
+        rospy.loginfo(f"Took picture {i + 1}")
         images.append(face_cropped_cv_im)
         if debug_publisher is not None:
             debug_publisher.publish(
@@ -111,11 +117,11 @@ def create_dataset(
     )
 
 
-def detect(
+def recognise(
     request: RecogniseRequest,
-    debug_publisher: rospy.Publisher | None,
-    debug_inference_pub: rospy.Publisher | None,
-    cropped_detect_pub: rospy.Publisher | None,
+    debug_publisher: Union[rospy.Publisher, None],
+    debug_inference_pub: Union[rospy.Publisher, None],
+    cropped_detect_pub: Union[rospy.Publisher, None],
 ) -> RecogniseResponse:
     # Decode the image
     rospy.loginfo("Decoding")
@@ -125,6 +131,8 @@ def detect(
 
     # Run inference
     rospy.loginfo("Running inference")
+    import smach
+
     try:
         result = DeepFace.find(
             cv_im,
@@ -182,5 +190,52 @@ def detect(
             debug_inference_pub.publish(
                 cv2_img.cv2_img_to_msg(create_image_collage(result_images))
             )
+
+    return response
+
+
+def detect_faces(
+    request: DetectFacesRequest,
+    debug_publisher: Union[rospy.Publisher, None],
+) -> DetectFacesResponse:
+    cv_im = cv2_img.msg_to_cv2_img(request.image_raw)
+
+    response = DetectFacesResponse()
+
+    try:
+        faces = DeepFace.extract_faces(
+            cv_im, detector_backend="mtcnn", enforce_detection=True
+        )
+    except ValueError:
+        return response
+
+    for i, face in enumerate(faces):
+        detection = Detection()
+        detection.name = f"face_{i}"
+        x, y, w, h = (
+            face["facial_area"]["x"],
+            face["facial_area"]["y"],
+            face["facial_area"]["w"],
+            face["facial_area"]["h"],
+        )
+        detection.xywh = [x, y, w, h]
+        detection.confidence = 1.0
+        response.detections.append(detection)
+
+        # Draw bounding boxes and labels for debugging
+        cv2.rectangle(cv_im, (x, y), (x + w, y + h), (0, 0, 255), 2)
+        cv2.putText(
+            cv_im,
+            f"face_{i}",
+            (x, y - 5),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.5,
+            (0, 255, 0),
+            2,
+        )
+
+    # publish to debug topic
+    if debug_publisher is not None:
+        debug_publisher.publish(cv2_img.cv2_img_to_msg(cv_im))
 
     return response

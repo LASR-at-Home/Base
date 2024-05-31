@@ -24,6 +24,10 @@ def stringify_guest_data(guest_data: Dict[str, Any], guest_id: str) -> str:
     """
 
     relevant_guest_data = guest_data[guest_id]
+    relevant_guest_data.setdefault(
+        "attributes",
+        {"hair_colour": "unknown", "height": "unknown", "glasses": False, "hat": False},
+    )
 
     guest_str = ""
 

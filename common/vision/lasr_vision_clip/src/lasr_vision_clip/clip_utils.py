@@ -10,7 +10,7 @@ from sentence_transformers import SentenceTransformer, util
 from sensor_msgs.msg import Image
 
 
-def load_model(device: str = "cuda"):
+def load_model(device: str = "cpu"):
     """Load the CLIP model.
 
     Args:
@@ -33,13 +33,16 @@ def run_clip(
         model (Any): clip model loaded into memory
         labels (List[str]): list of string labels to query image similarity to.
         img (np.ndarray): the image to query
+        ensure that it runs on cpu for now
 
     Returns:
         List[float]: the cosine similarity scores between the image and label embeddings.
     """
+
     txt = model.encode(labels)
     img = model.encode(img)
     with torch.no_grad():
+        torch
         cos_scores = util.cos_sim(img, txt)
     return cos_scores
 

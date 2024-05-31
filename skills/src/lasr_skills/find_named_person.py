@@ -6,7 +6,6 @@ import navigation_helpers
 
 from geometry_msgs.msg import Pose, PoseWithCovarianceStamped, Point, Quaternion
 
-
 from typing import List, Union
 
 
