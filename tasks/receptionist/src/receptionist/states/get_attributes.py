@@ -43,7 +43,7 @@ class GetGuestAttributes(smach.StateMachine):
                 DescribePeople(),
                 transitions={
                     "succeeded": "HANDLE_GUEST_ATTRIBUTES",
-                    "failed": "HANDLE_GUEST_ATTRIBUTES",
+                    "failed": "failed",
                 },
             )
             smach.StateMachine.add(

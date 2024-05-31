@@ -37,14 +37,6 @@ if __name__ == "__main__":
         {
             "name": "nicole",
             "drink": "beer",
-            "attributes": {
-                "hair_colour": "strawberry blonde",
-                "glasses": False,
-                "hat": True,
-                "height": "tall",
-            },
-            "dataset": "receptionist",
-            "confidence": 0.5,
         },
     )
 

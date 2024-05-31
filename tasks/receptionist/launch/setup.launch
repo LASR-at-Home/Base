@@ -21,6 +21,4 @@
     <arg name="debug" default="true" />
     <node pkg="lasr_vision_bodypix" type="service" name="bodypix_service" output="screen" args="--debug $(arg debug)"/>
 
-    <node pkg="lasr_vision_deepface" type="service" name="deepface_service" output="screen"/>
-
 </launch>
