@@ -9,7 +9,7 @@ from sensor_msgs.msg import Image
 from lasr_vision_msgs.srv import Recognise, RecogniseRequest
 
 if len(sys.argv) < 3:
-    print("Usage: rosrun lase_recognition relay <source_topic> <dataset>")
+    print("Usage: rosrun lasr_vision_deepface relay <source_topic> <dataset>")
     exit()
 
 listen_topic = sys.argv[1]

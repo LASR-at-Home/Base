@@ -17,3 +17,9 @@ from .receive_object import ReceiveObject
 from .handover_object import HandoverObject
 from .ask_and_listen import AskAndListen
 from .clip_vqa import QueryImage
+from .detect_faces import DetectFaces
+from .recognise import Recognise
+from .detect_pointing import DetectPointingDirection
+from .detect_gesture import DetectGesture
+from .learn_face import LearnFace
+from .look_at_person import LookAtPerson

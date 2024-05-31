@@ -14,7 +14,7 @@ class ListenFor(smach_ros.SimpleActionState):
                 if wake_word in result.sequence.lower():
                     return "succeeded"
                 return "not_done"
-            return "aborted"
+            return "not_done"
 
         smach_ros.SimpleActionState.__init__(
             self,
