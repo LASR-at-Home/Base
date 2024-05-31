@@ -27,10 +27,14 @@ def stringify_guest_data(guest_data: Dict[str, Any], guest_id: str) -> str:
 
     guest_str = ""
 
-    guest_str += f"{relevant_guest_data['name']}, their favourite drink is {relevant_guest_data['drink']}. "
-    guest_str += f"They have {relevant_guest_data['attributes']['hair_colour']} hair, their height is {relevant_guest_data['attributes']['height']}, "
-    guest_str += f"they are {'wearing glasses' if relevant_guest_data['attributes']['glasses'] else 'not wearing glasses'}, and they are "
-    guest_str += f"{'wearing a hat' if relevant_guest_data['attributes']['hat'] else 'not wearing a hat'}."
+    if "attributes" in relevant_guest_data.keys():
+        guest_str += f"They have {relevant_guest_data['attributes']['hair_shape']} {relevant_guest_data['attributes']['hair_colour']} hair, and they "
+        guest_str += f"{'have facial hair' if relevant_guest_data['attributes']['facial_hair'] else 'do not have facial hair'}. "
+        guest_str += f"They are {'wearing glasses' if relevant_guest_data['attributes']['glasses'] else 'not wearing glasses'}, "
+        guest_str += f"{'wearing earrings' if relevant_guest_data['attributes']['earrings'] else 'not wearing earrings'}, and "
+        guest_str += f"{'wearing a hat' if relevant_guest_data['attributes']['hat'] else 'not wearing a hat'}. "
+        guest_str += f"They are {'wearing a necklace' if relevant_guest_data['attributes']['necklace'] else 'not wearing a necklace'}, and "
+        guest_str += f"{'wearing a necktie' if relevant_guest_data['attributes']['necktie'] else 'not wearing a necktie'}. "
 
     return guest_str
 
