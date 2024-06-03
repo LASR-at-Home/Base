@@ -57,5 +57,5 @@ class Phase3(smach.StateMachine):
             smach.StateMachine.add(
                 "GUIDE_PERSON",
                 GuidePerson(context),
-                transitions={"done": "GO_TO_WAIT_LOCATION"},
+                transitions={"done": "done"},
             )
