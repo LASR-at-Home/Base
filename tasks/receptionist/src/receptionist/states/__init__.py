@@ -4,3 +4,4 @@ from .introduce import Introduce
 from .seat_guest import SeatGuest
 from .get_name import ParseName 
 from .get_drink import ParseDrink
+from .learn_face import LearnFaces

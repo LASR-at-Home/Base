@@ -16,9 +16,14 @@
     <rosparam command="load" file="$(find receptionist)/config/motions.yaml"/>
 
     <!--      PERCEPTION     -->
-    <include file="$(find lasr_vision_yolov8)/launch/service.launch" />
+    <include file="$(find lasr_vision_yolov8)/launch/service.launch">
+        <param name="debug" value="true" />
+    </include>
+    
     <node pkg="lasr_vision_feature_extraction" type="service" name="torch_service" output="screen"/>
     <node pkg="lasr_vision_bodypix" type="service" name="bodypix_service" output="screen"/>
+
+    <node pkg="lasr_vision_deepface" type="service" name="deepface_service" output="screen"/>
 
 
 </launch>

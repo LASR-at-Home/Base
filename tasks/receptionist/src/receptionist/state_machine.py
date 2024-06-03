@@ -10,7 +10,10 @@ from receptionist.states import (
     GetGuestAttributes,
     Introduce,
     SeatGuest,
+    LearnFaces,
+
 )
+
 
 
 class Receptionist(smach.StateMachine):
@@ -26,6 +29,16 @@ class Receptionist(smach.StateMachine):
 
         with self:
             self.userdata.guest_data = {"host": host_data, "guest1": {}, "guest2": {}}
+
+            smach.StateMachine.add(
+                "SAY_START",
+                Say(text="Start of receptionist task. Going to waiting area."),
+                transitions={
+                    "succeeded": "GO_TO_WAIT_LOCATION_GUEST_1",
+                    "aborted": "GO_TO_WAIT_LOCATION_GUEST_1",
+                    "preempted": "GO_TO_WAIT_LOCATION_GUEST_1",
+                },
+            )
 
             smach.StateMachine.add(
                 "GO_TO_WAIT_LOCATION_GUEST_1",
@@ -167,8 +180,28 @@ class Receptionist(smach.StateMachine):
                 "GET_GUEST_ATTRIBUTES_GUEST_1",
                 GetGuestAttributes("guest1"),
                 transitions={
-                    "succeeded": "SAY_FOLLOW_GUEST_1",
-                    "failed": "SAY_FOLLOW_GUEST_1",
+                    "succeeded": "SAY_LEARN_FACES",
+                    "failed": "SAY_LEARN_FACES",
+                },
+            )
+
+
+            smach.StateMachine.add(
+                "SAY_LEARN_FACES",
+                Say(text="Please look into my eyes, I'm about to learn your face"),
+                transitions={
+                    "succeeded": "LEARN_FACES",
+                    "preempted": "LEARN_FACES",
+                    "aborted": "LEARN_FACES",
+                },
+            )
+
+            smach.StateMachine.add(
+                'LEARN_FACES', 
+                LearnFaces(),
+                transitions={
+                    'succeeded':'SAY_FOLLOW_GUEST_1',
+                    'failed':'SAY_FOLLOW_GUEST_1'
                 },
             )
 
@@ -223,14 +256,24 @@ class Receptionist(smach.StateMachine):
                 "SEAT_GUEST_1",
                 SeatGuest(seat_area),
                 transitions={
-                    "succeeded": "GO_TO_WAIT_LOCATION_GUEST_2",
-                    "failed": "GO_TO_WAIT_LOCATION_GUEST_2",
+                    "succeeded": "SAY_RETURN_WAITING_AREA",
+                    "failed": "SAY_RETURN_WAITING_AREA",
                 },
             )
 
             """
             Guest 2
             """
+
+            smach.StateMachine.add(
+                "SAY_RETURN_WAITING_AREA",
+                Say(text="Let me go back to the waiting area."),
+                transitions={
+                    "succeeded": "GO_TO_WAIT_LOCATION_GUEST_2",
+                    "aborted": "GO_TO_WAIT_LOCATION_GUEST_2",
+                    "preempted": "GO_TO_WAIT_LOCATION_GUEST_2",
+                },
+            )
 
             smach.StateMachine.add(
                 "GO_TO_WAIT_LOCATION_GUEST_2",

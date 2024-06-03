@@ -63,7 +63,7 @@ def _extract_face(cv_im: Mat) -> Union[Mat, None]:
     try:
         faces = DeepFace.extract_faces(
             cv_im,
-            target_size=(224, 244),
+            # target_size=(224, 244),
             detector_backend="mtcnn",
             enforce_detection=True,
         )
