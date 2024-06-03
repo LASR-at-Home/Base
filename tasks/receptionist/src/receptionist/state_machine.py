@@ -5,6 +5,8 @@ from shapely.geometry import Polygon
 from lasr_skills import GoToLocation, WaitForPersonInArea, Say, AskAndListen
 from receptionist.states import (
     ParseNameAndDrink,
+    ParseName,
+    ParseDrink,
     GetGuestAttributes,
     Introduce,
     SeatGuest,
@@ -71,6 +73,8 @@ class Receptionist(smach.StateMachine):
                 transitions={
                     "succeeded": "GET_GUEST_ATTRIBUTES_GUEST_1",
                     "failed": "REPEAT_GET_NAME_AND_DRINK_GUEST_1",
+                    "failed_name": "REPEAT_GET_NAME_GUEST_1",
+                    "failed_drink": "REPEAT_GET_DRINK_GUEST_1",
                 },
                 remapping={"guest_transcription": "transcribed_speech"},
             )
@@ -85,10 +89,53 @@ class Receptionist(smach.StateMachine):
                 },
             )
 
-
             smach.StateMachine.add(
                 "REPEAT_PARSE_NAME_AND_DRINK_GUEST_1",
                 ParseNameAndDrink("guest1"),
+                transitions={
+                    "succeeded": "GET_GUEST_ATTRIBUTES_GUEST_1",
+                    "failed": "SAY_CONTINUE",
+                    "failed_name": "SAY_CONTINUE",
+                    "failed_drink": "SAY_CONTINUE",
+                },
+                remapping={"guest_transcription": "transcribed_speech"},
+            )
+
+            # Recovery for only name not recognised
+
+            smach.StateMachine.add(
+                "REPEAT_GET_NAME_GUEST_1",
+                AskAndListen("Sorry, I didn't get your name. What is your name?"),
+                transitions={
+                    "succeeded": "REPEAT_PARSE_NAME_GUEST_1",
+                    "failed": "SAY_CONTINUE",
+                },
+            )
+
+            smach.StateMachine.add(
+                "REPEAT_PARSE_NAME_GUEST_1",
+                ParseName("guest1"),
+                transitions={
+                    "succeeded": "GET_GUEST_ATTRIBUTES_GUEST_1",
+                    "failed": "SAY_CONTINUE",
+                },
+                remapping={"guest_transcription": "transcribed_speech"},
+            )
+
+            # Recovery for only drink not recognised
+
+            smach.StateMachine.add(
+                "REPEAT_GET_DRINK_GUEST_1",
+                AskAndListen("Sorry, I didn't get your favourite drink. What is your favourite drink?"),
+                transitions={
+                    "succeeded": "REPEAT_PARSE_DRINK_GUEST_1",
+                    "failed": "SAY_CONTINUE",
+                },
+            )
+
+            smach.StateMachine.add(
+                "REPEAT_PARSE_DRINK_GUEST_1",
+                ParseDrink("guest1"),
                 transitions={
                     "succeeded": "GET_GUEST_ATTRIBUTES_GUEST_1",
                     "failed": "SAY_CONTINUE",
@@ -216,6 +263,7 @@ class Receptionist(smach.StateMachine):
 
             ####### Asking second guest for drink and name #######
 
+            
             smach.StateMachine.add(
                 "GET_NAME_AND_DRINK_GUEST_2",
                 AskAndListen("What is your name and favourite drink?"),
@@ -231,10 +279,11 @@ class Receptionist(smach.StateMachine):
                 transitions={
                     "succeeded": "GET_GUEST_ATTRIBUTES_GUEST_2",
                     "failed": "REPEAT_GET_NAME_AND_DRINK_GUEST_2",
+                    "failed_name": "REPEAT_GET_NAME_GUEST_2",
+                    "failed_drink": "REPEAT_GET_DRINK_GUEST_2",
                 },
                 remapping={"guest_transcription": "transcribed_speech"},
             )
-
 
 
             smach.StateMachine.add(
@@ -242,23 +291,66 @@ class Receptionist(smach.StateMachine):
                 AskAndListen("Sorry, I didn't get that. What is your name and favourite drink?"),
                 transitions={
                     "succeeded": "REPEAT_PARSE_NAME_AND_DRINK_GUEST_2",
-                    "failed": "SAY_CONTINUE_2",
+                    "failed": "SAY_CONTINUE_GUEST_2",
                 },
             )
 
             smach.StateMachine.add(
                 "REPEAT_PARSE_NAME_AND_DRINK_GUEST_2",
-                ParseNameAndDrink("guest1"),
+                ParseNameAndDrink("guest2"),
                 transitions={
                     "succeeded": "GET_GUEST_ATTRIBUTES_GUEST_2",
-                    "failed": "SAY_CONTINUE_2",
+                    "failed": "SAY_CONTINUE_GUEST_2",
+                    "failed_name": "SAY_CONTINUE_GUEST_2",
+                    "failed_drink": "SAY_CONTINUE_GUEST_2",
                 },
                 remapping={"guest_transcription": "transcribed_speech"},
             )
 
+            # Recovery for only name not recognised
 
             smach.StateMachine.add(
-                "SAY_CONTINUE_2",
+                "REPEAT_GET_NAME_GUEST_2",
+                AskAndListen("Sorry, I didn't get your name. What is your name?"),
+                transitions={
+                    "succeeded": "REPEAT_PARSE_NAME_GUEST_2",
+                    "failed": "SAY_CONTINUE_GUEST_2",
+                },
+            )
+
+            smach.StateMachine.add(
+                "REPEAT_PARSE_NAME_GUEST_2",
+                ParseName("guest2"),
+                transitions={
+                    "succeeded": "GET_GUEST_ATTRIBUTES_GUEST_2",
+                    "failed": "SAY_CONTINUE_GUEST_2",
+                },
+                remapping={"guest_transcription": "transcribed_speech"},
+            )
+
+            # Recovery for only drink not recognised
+
+            smach.StateMachine.add(
+                "REPEAT_GET_DRINK_GUEST_2",
+                AskAndListen("Sorry, I didn't get your favourite drink. What is your favourite drink?"),
+                transitions={
+                    "succeeded": "REPEAT_PARSE_DRINK_GUEST_2",
+                    "failed": "SAY_CONTINUE_GUEST_2",
+                },
+            )
+
+            smach.StateMachine.add(
+                "REPEAT_PARSE_DRINK_GUEST_2",
+                ParseDrink("guest2"),
+                transitions={
+                    "succeeded": "GET_GUEST_ATTRIBUTES_GUEST_2",
+                    "failed": "SAY_CONTINUE_GUEST_2",
+                },
+                remapping={"guest_transcription": "transcribed_speech"},
+            )
+
+            smach.StateMachine.add(
+                "SAY_CONTINUE_GUEST_2",
                 Say(text="Sorry, I didn't get that. I will carry on."),
                 transitions={
                     "succeeded": "GET_GUEST_ATTRIBUTES_GUEST_2",
@@ -266,6 +358,8 @@ class Receptionist(smach.StateMachine):
                     "preempted": "GET_GUEST_ATTRIBUTES_GUEST_2",
                 },
             )
+
+
 
             smach.StateMachine.add(
                 "GET_GUEST_ATTRIBUTES_GUEST_2",

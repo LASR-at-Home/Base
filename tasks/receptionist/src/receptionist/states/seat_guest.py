@@ -18,7 +18,6 @@ class GuestSeatWait(smach.State):
         try:
             wait_time = 5
             print(f"Waiting for {wait_time} seconds for the user to sit down.")
-            Say("Waiting for the guest to sit down.")
             rospy.sleep(wait_time)
             return "succeeded"
         except:

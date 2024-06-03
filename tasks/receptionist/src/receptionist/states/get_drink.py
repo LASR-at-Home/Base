@@ -1,5 +1,5 @@
 """
-State for parsing the transcription of the guests' name and favourite drink, and adding this
+State for parsing the transcription of the guests' favourite drink, and adding this
 to the guest data userdata
 """
 
@@ -9,7 +9,7 @@ from smach import UserData
 from typing import List, Dict, Any
 
 
-class ParseNameAndDrink(smach.State):
+class ParseDrink(smach.State):
     def __init__(
         self,
         guest_id: str,
@@ -23,7 +23,7 @@ class ParseNameAndDrink(smach.State):
         """
         smach.State.__init__(
             self,
-            outcomes=["succeeded", "failed", "failed_name", "failed_drink"],
+            outcomes=["succeeded", "failed"],
             input_keys=["guest_transcription", "guest_data"],
             output_keys=["guest data", "guest_transcription"],
         )
@@ -33,7 +33,7 @@ class ParseNameAndDrink(smach.State):
         self._possible_drinks = [drink.lower() for drink in prior_data["drinks"]]
 
     def execute(self, userdata: UserData) -> str:
-        """Parses the transcription of the guests' name and favourite drink.
+        """Handle the recovery behaviour and attempts to parse the guest's drink.
 
         Args:
             userdata (UserData): State machine userdata assumed to contain a key
@@ -45,21 +45,12 @@ class ParseNameAndDrink(smach.State):
             the parameter "guest data".
         """
         outcome = "succeeded"
-        name_found = False
         drink_found = False
         print(userdata)
         print(type(userdata.guest_transcription))
         transcription = userdata.guest_transcription.lower()
 
         transcription = userdata["guest_transcription"].lower()
-
-        for name in self._possible_names:
-            if name in transcription:
-                userdata.guest_data[self._guest_id]["name"] = name
-                rospy.loginfo(f"Guest Name identified as: {name}")
-                name_found = True
-                break
-
         for drink in self._possible_drinks:
             print(self._possible_drinks)
             print(transcription)
@@ -68,33 +59,9 @@ class ParseNameAndDrink(smach.State):
                 rospy.loginfo(f"Guest Drink identified as: {drink}")
                 drink_found = True
                 break
-
-        if not name_found:
-            rospy.loginfo("Name not found in transcription")
-            userdata.guest_data[self._guest_id]["name"] = "unknown"
-            outcome = "failed"
         if not drink_found:
             rospy.loginfo("Drink not found in transcription")
             userdata.guest_data[self._guest_id]["drink"] = "unknown"
             outcome = "failed"
 
-        if outcome == "failed":
-            if not self._recovery_name_and_drink_required(userdata):
-                if userdata.guest_data[self._guest_id]["name"] == "unknown":
-                    outcome = "failed_name"
-                else:
-                    outcome = "failed_drink"
-
         return outcome
-
-    def _recovery_name_and_drink_required(self, userdata: UserData) -> bool:
-        """Determine whetehr both the name and drink requires recovery.
-
-        Returns: 
-            bool: True if both attributes require recovery.
-        """
-        if userdata.guest_data[self._guest_id]["name"] == "unknown":
-            if userdata.guest_data[self._guest_id]["drink"] == "unknown":
-                return True
-        else:
-            return False
