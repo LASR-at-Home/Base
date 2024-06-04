@@ -5,7 +5,8 @@ import rospy
 from sensor_msgs.msg import Image
 
 from lasr_vision_msgs.srv import Recognise, RecogniseRequest
-from lasr_voice import Voice
+
+from lasr_skills import Say
 
 
 class DetectFaces(smach.State):
@@ -25,8 +26,8 @@ class DetectFaces(smach.State):
     def listener(self):
         # rospy.init_node("image_listener", anonymous=True)
         rospy.wait_for_service("/recognise")
-        rospy.Subscriber(self.listen_topic, Image, self.image_callback, queue_size=1)
-        rospy.spin()
+        self.subscriber = rospy.Subscriber(self.listen_topic, Image, self.image_callback, queue_size=1)
+        rospy.sleep(10)
 
     def detect(self, image):
         rospy.loginfo("Received image message")
@@ -44,12 +45,34 @@ class DetectFaces(smach.State):
         except rospy.ServiceException as e:
             rospy.logerr("Service call failed: %s" % e)
 
+    # def greet(self):
+    #     voice = Voice()
+    #     voice.speak(f"Hello, {' '.join(self.people_in_frame)}")
+    #     guestcount = rospy.get_param("guestcount/count", 0)
+    #     drink = rospy.get_param(f"guest{guestcount + 1}/drink", "Orange")
+    #     voice.speak(f"I know your favourite drink is: {drink}")
+
     def greet(self):
-        voice = Voice()
-        voice.speak(f"Hello, {' '.join(self.people_in_frame)}")
-        guestcount = rospy.get_param("guestcount/count", 0)
-        drink = rospy.get_param(f"guest{guestcount + 1}/drink", "Orange")
-        voice.speak(f"I know your favourite drink is: {drink}")
+        sm = smach.StateMachine(outcomes=['succeeded', 'aborted', 'preempted'])
+        with sm:
+            smach.StateMachine.add(
+                "SAY_HELLO_TO_EVERYONE_IN_SEATING_AREA",
+                Say(text=f"I am detecting people. Hello, {' '.join(self.people_in_frame.keys())}"),
+                transitions={"succeeded": "succeeded", "aborted": "aborted", "preempted": "preempted"}
+            )
+
+            # guestcount = rospy.get_param("guestcount/count", 0)
+            # userdata.guest_data[self._guest_id]["name"]
+            # drink = rospy.get_param(f"guest{guestcount + 1}/drink", "Orange")
+            # smach.StateMachine.add(
+            #     "SAY_DRINK",
+            #     Say(text=f"I know your favourite drink is: {drink}"),
+            #     transitions={"succeeded": "succeeded", "aborted": "aborted", "preempted": "preempted"}
+            # )
+
+        outcome = sm.execute()
+        if self.subscriber:
+            self.subscriber.unregister()
 
     def image_callback(self, image):
         prev_people_in_frame = list(self.people_in_frame.keys())

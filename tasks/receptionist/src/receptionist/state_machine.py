@@ -219,8 +219,18 @@ class Receptionist(smach.StateMachine):
                 "GO_TO_SEAT_LOCATION_GUEST_1",
                 GoToLocation(seat_pose),
                 transitions={
+                    "succeeded": "SAY_DETECT_FACES",
+                    "failed": "SAY_DETECT_FACES",
+                },
+            )
+
+            smach.StateMachine.add(
+                "SAY_DETECT_FACES",
+                Say(text="Please look into my eyes, I'm about to detect your face"),
+                transitions={
                     "succeeded": "DETECT_FACES",
-                    "failed": "DETECT_FACES",
+                    "preempted": "DETECT_FACES",
+                    "aborted": "DETECT_FACES",
                 },
             )
 
@@ -436,8 +446,27 @@ class Receptionist(smach.StateMachine):
                 "GO_TO_SEAT_LOCATION_GUEST_2",
                 GoToLocation(seat_pose),
                 transitions={
-                    "succeeded": "SAY_WAIT_GUEST_2",
-                    "failed": "SAY_WAIT_GUEST_2",
+                    "succeeded": "SAY_DETECT_FACES_GUEST_2",
+                    "failed": "SAY_DETECT_FACES_GUEST_2",
+                },
+            )
+
+            smach.StateMachine.add(
+                "SAY_DETECT_FACES_GUEST_2",
+                Say(text="Please look into my eyes, I'm about to detect your face"),
+                transitions={
+                    "succeeded": "DETECT_FACES_GUEST_2",
+                    "preempted": "DETECT_FACES_GUEST_2",
+                    "aborted": "DETECT_FACES_GUEST_2",
+                },
+            )
+
+            smach.StateMachine.add(
+                'DETECT_FACES_GUEST_2', 
+                DetectFaces(), 
+                transitions={
+                    'recognised':'SAY_WAIT_GUEST_2',
+                    'unrecognised':'SAY_WAIT_GUEST_2'
                 },
             )
 
