@@ -427,8 +427,27 @@ class Receptionist(smach.StateMachine):
                 "GET_GUEST_ATTRIBUTES_GUEST_2",
                 GetGuestAttributes("guest2"),
                 transitions={
-                    "succeeded": "SAY_FOLLOW_GUEST_2",
-                    "failed": "SAY_FOLLOW_GUEST_2",
+                    "succeeded": "SAY_LEARN_FACES_GUEST_2",
+                    "failed": "SAY_LEARN_FACES_GUEST_2",
+                },
+            )
+
+            smach.StateMachine.add(
+                "SAY_LEARN_FACES_GUEST_2",
+                Say(text="Please look into my eyes, I'm about to learn your face"),
+                transitions={
+                    "succeeded": "LEARN_FACES_GUEST_2",
+                    "preempted": "LEARN_FACES_GUEST_2",
+                    "aborted": "LEARN_FACES_GUEST_2",
+                },
+            )
+
+            smach.StateMachine.add(
+                'LEARN_FACES_GUEST_2', 
+                LearnFaces("guest2"),
+                transitions={
+                    'succeeded':'SAY_FOLLOW_GUEST_2',
+                    'failed':'SAY_FOLLOW_GUEST_2'
                 },
             )
 

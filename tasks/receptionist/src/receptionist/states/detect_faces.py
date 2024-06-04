@@ -28,6 +28,8 @@ class DetectFaces(smach.State):
         rospy.wait_for_service("/recognise")
         self.subscriber = rospy.Subscriber(self.listen_topic, Image, self.image_callback, queue_size=1)
         rospy.sleep(10)
+        if self.subscriber:
+            self.subscriber.unregister()
 
     def detect(self, image):
         rospy.loginfo("Received image message")
@@ -71,8 +73,7 @@ class DetectFaces(smach.State):
             # )
 
         outcome = sm.execute()
-        if self.subscriber:
-            self.subscriber.unregister()
+        
 
     def image_callback(self, image):
         prev_people_in_frame = list(self.people_in_frame.keys())
