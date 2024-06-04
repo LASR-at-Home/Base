@@ -11,7 +11,7 @@ from receptionist.states import (
     Introduce,
     SeatGuest,
     LearnFaces,
-
+    DetectFaces,
 )
 
 
@@ -198,7 +198,7 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 'LEARN_FACES', 
-                LearnFaces(),
+                LearnFaces("guest1"),
                 transitions={
                     'succeeded':'SAY_FOLLOW_GUEST_1',
                     'failed':'SAY_FOLLOW_GUEST_1'
@@ -219,8 +219,17 @@ class Receptionist(smach.StateMachine):
                 "GO_TO_SEAT_LOCATION_GUEST_1",
                 GoToLocation(seat_pose),
                 transitions={
-                    "succeeded": "SAY_WAIT_GUEST_1",
-                    "failed": "SAY_WAIT_GUEST_1",
+                    "succeeded": "DETECT_FACES",
+                    "failed": "DETECT_FACES",
+                },
+            )
+
+            smach.StateMachine.add(
+                'DETECT_FACES', 
+                DetectFaces(), 
+                transitions={
+                    'recognised':'SAY_WAIT_GUEST_1',
+                    'unrecognised':'SAY_WAIT_GUEST_1'
                 },
             )
 

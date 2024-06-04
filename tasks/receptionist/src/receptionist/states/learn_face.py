@@ -12,8 +12,9 @@ from lasr_vision_msgs.srv import (
 
 
 class LearnFaces(smach.State):
-    def __init__(self):
-        smach.State.__init__(self, outcomes=['succeeded','failed'])
+    def __init__(self, guest_id: str):
+        smach.State.__init__(self, outcomes=['succeeded','failed'], input_keys=['guest_data'])
+        self._guest_id = guest_id
 
     def execute(self, userdata):
         guestcount = rospy.get_param("guestcount/count", 0)
@@ -23,13 +24,15 @@ class LearnFaces(smach.State):
         # Here we will learn faces
         try:
             learn_service = rospy.ServiceProxy("/learn_face", LearnFace)
+            guest_name = userdata.guest_data[self._guest_id]["name"]
+            print(guest_name)
             req = LearnFaceRequest()
-            req.name = rospy.get_param(f"guest{guestcount+1}/name", "Jane")
-            req.dataset = '/home/rexy/lasr_robotclub/workspaces/haiwei_ws/src/Base/common/vision/lasr_vision_deepface/datasets'
+            req.name = guest_name
+            req.dataset = 'receptionist'
             req.n_images = 10
             resp = learn_service(req)
         except ValueError as e:
-            print("No face detected. Error:" + e)
+            print("No face detected. Error:" + str(e))
             return 'failed'
         except rospy.ServiceException as e:
             rospy.logerr("Service call failed: %s" % e)
