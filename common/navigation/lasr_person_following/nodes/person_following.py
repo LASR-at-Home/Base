@@ -48,5 +48,6 @@ class PersonFollowingServer:
 
 if __name__ == "__main__":
     rospy.init_node("person_following_server")
+    rospy.loginfo("Person following server started")
     server = PersonFollowingServer()
     rospy.spin()
