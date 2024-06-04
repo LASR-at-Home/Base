@@ -1,7 +1,7 @@
-#!/usr/bin/env python3
 import smach
 import rospy
-from geometry_msgs.msg import Pose, Point, Quaternion
+from geometry_msgs.msg import Pose, Point, Quaternion, PoseWithCovarianceStamped
+from move_base_msgs.msg import MoveBaseGoal
 import numpy as np
 
 
@@ -11,7 +11,10 @@ class GoToTable(smach.State):
         self.context = context
 
     def execute(self, userdata):
-        robot_x, robot_y = self.context.base_controller.get_pose()
+        robot_pose = rospy.wait_for_message(
+            "/amcl_pose", PoseWithCovarianceStamped
+        ).pose.pose
+        robot_x, robot_y = robot_pose.position.x, robot_pose.position.y
         unvisited = [
             (label, rospy.get_param(f"/tables/{label}"))
             for label, table in self.context.tables.items()
@@ -32,9 +35,12 @@ class GoToTable(smach.State):
             next_table["location"]["position"],
             next_table["location"]["orientation"],
         )
-        self.context.base_controller.sync_to_pose(
-            Pose(position=Point(**position), orientation=Quaternion(**orientation))
+        move_base_goal = MoveBaseGoal()
+        move_base_goal.target_pose.header.frame_id = "map"
+        move_base_goal.target_pose.pose = Pose(
+            position=Point(**position), orientation=Quaternion(**orientation)
         )
+        self.context.move_base_client.send_goal_and_wait(move_base_goal)
         self.context.tables[label]["status"] = "currently visiting"
         self.context.current_table = label
         return "done"

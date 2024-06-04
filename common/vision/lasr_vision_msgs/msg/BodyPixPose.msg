@@ -1,2 +1,1 @@
-# keypoints
 BodyPixKeypoint[] keypoints

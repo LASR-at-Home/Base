@@ -33,12 +33,6 @@ if __name__ == "__main__":
         {
             "name": "John",
             "drink": "beer",
-            "attributes": {
-                "hair_colour": "strawberry blonde",
-                "glasses": False,
-                "hat": True,
-                "height": "tall",
-            },
         },
     )
     outcome = receptionist.execute()
