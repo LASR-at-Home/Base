@@ -116,12 +116,6 @@ class DescribePeople(smach.StateMachine):
                 masks = [torso, head]
                 result = self.bodypix(userdata.img_msg, "resnet50", 0.7, masks)
                 userdata.bodypix_masks = result.masks
-                rospy.logdebug("Found poses: %s" % str(len(result.poses)))
-                neck_coord = (
-                    int(result.poses[0].coord[0]),
-                    int(result.poses[0].coord[1]),
-                )
-                rospy.logdebug("Coordinate of the neck is: %s" % str(neck_coord))
                 return "succeeded"
             except rospy.ServiceException as e:
                 rospy.logerr(f"Unable to perform inference. ({str(e)})")
@@ -203,6 +197,8 @@ class DescribePeople(smach.StateMachine):
                 )
 
                 full_frame = cv2_img.cv2_img_to_msg(img)
+                rospy.loginfo(type(img))
+                rospy.loginfo(type(full_frame))
 
                 rst = self.face_features(
                     full_frame,

@@ -338,7 +338,7 @@ class Predictor:
         image_tensor = (
             torch.from_numpy(rgb_image).permute(2, 0, 1).unsqueeze(0).float() / 255.0
         )
-        pred_masks, pred_classes = self.model(image_tensor)
+        pred_masks, pred_classes = self.model(image_tensor)  # todo: too many fucking values to unpack (expected 2)
         # Apply binary erosion and dilation to the masks
         pred_masks = binary_erosion_dilation(
             pred_masks,
@@ -472,7 +472,7 @@ def predict_frame(
     torso_frame = pad_image_to_even_dims(torso_frame)
 
     rst_person = ImageOfPerson.from_parent_instance(head_predictor.predict(head_frame)).describe()
-    rst_cloth = ImageOfCloth.from_parent_instance(torso_frame.predict(torso_frame)).describe()
+    rst_cloth = ImageOfCloth.from_parent_instance(cloth_predictor.predict(torso_frame)).describe()
 
     # results from two dictionaries are currently merged but might got separated again in the future if needed.
     result = {
