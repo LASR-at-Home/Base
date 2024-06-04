@@ -206,5 +206,7 @@ class DeepFashion2GeneralizedCategoriesAndAttributes(CategoriesAndAttributes):
     # set default thresholds:
     for key in sorted(merged_categories.keys()):
         thresholds_mask[key] = 0.5
+    for key in sorted(mask_categories):
+        thresholds_mask[key] = 0.5
     for key in attributes + mask_labels:
         thresholds_pred[key] = 0.5

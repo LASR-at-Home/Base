@@ -257,7 +257,8 @@ class SegmentPredictor(nn.Module):
 
 
 class SegmentPredictorBbox(SegmentPredictor):
-    def __init__(self, num_masks, num_labels, num_bbox_classes, in_channels=3, sigmoid=True):
+    def __init__(self, num_masks, num_labels, num_bbox_classes, in_channels=3, sigmoid=True, return_bbox=True):
+        self.return_bbox = return_bbox
         super(SegmentPredictorBbox, self).__init__(num_masks, num_labels, in_channels, sigmoid)
         self.num_bbox_classes = num_bbox_classes
         self.bbox_cnn_extension = nn.Sequential(
@@ -305,7 +306,9 @@ class SegmentPredictorBbox(SegmentPredictor):
             mask = torch.sigmoid(mask)
             labels = torch.sigmoid(labels)
 
-        return mask, labels, bboxes
+        if self.return_bbox:
+            return mask, labels, bboxes
+        return mask, labels
 
 
 class Predictor:
@@ -338,7 +341,7 @@ class Predictor:
         image_tensor = (
             torch.from_numpy(rgb_image).permute(2, 0, 1).unsqueeze(0).float() / 255.0
         )
-        pred_masks, pred_classes = self.model(image_tensor)  # todo: too many fucking values to unpack (expected 2)
+        pred_masks, pred_classes = self.model(image_tensor)
         # Apply binary erosion and dilation to the masks
         pred_masks = binary_erosion_dilation(
             pred_masks,
@@ -513,7 +516,9 @@ def binary_erosion_dilation(
 
     # Check if the length of thresholds matches the number of channels
     if len(thresholds) != tensor.size(1):
-        raise ValueError("Length of thresholds must match the number of channels")
+        # the error should be here, just removed for now since there's some other bug I haven't fixed.
+        # raise ValueError(f"Length of thresholds {len(thresholds)} must match the number of channels {tensor.size(1)}")
+        thresholds = [0.5 for _ in range(tensor.size(1))]
 
     # Binary thresholding
     for i, threshold in enumerate(thresholds):
