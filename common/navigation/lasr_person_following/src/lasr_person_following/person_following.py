@@ -76,9 +76,7 @@ class PersonFollower:
         """
         Chooses the closest person as the target
         """
-        people: PersonArray = rospy.wait_for_message(
-            "/people_tracked_throttled", PersonArray
-        )
+        people: PersonArray = rospy.wait_for_message("/people_tracked", PersonArray)
 
         if len(people.people) == 0:
             return False
@@ -100,9 +98,7 @@ class PersonFollower:
     def _recover_track(self) -> bool:
         self._track_sub.unregister()
 
-        people: PersonArray = rospy.wait_for_message(
-            "/people_tracked_throttled", PersonArray
-        )
+        people: PersonArray = rospy.wait_for_message("/people_tracked", PersonArray)
 
         if len(people.people) == 0:
             return False
@@ -134,7 +130,7 @@ class PersonFollower:
         self._update_breadcrumbs(people)
 
         self._track_sub = rospy.Subscriber(
-            "/people_tracked_throttled", PersonArray, self._update_breadcrumbs
+            "/people_tracked", PersonArray, self._update_breadcrumbs
         )
 
         return True
@@ -176,7 +172,7 @@ class PersonFollower:
         prev_goal: Union[None, MoveBaseActionGoal] = None
         poses = []
         while not rospy.is_shutdown():
-            tracks = rospy.wait_for_message("/people_tracked_throttled", PersonArray)
+            tracks = rospy.wait_for_message("/people_tracked", PersonArray)
             current_track = next(
                 filter(lambda track: track.id == self._track_id, tracks.people), None
             )
@@ -192,7 +188,7 @@ class PersonFollower:
 
             robot_pose = self._robot_pose_in_odom()
 
-            if self._euclidian_distance(robot_pose.pose, current_track.pose) < 0.5:
+            if self._euclidian_distance(robot_pose.pose, current_track.pose) < 1.0:
                 rospy.loginfo("Person too close to robot, skipping")
                 continue
 
