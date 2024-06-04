@@ -47,12 +47,6 @@ class DetectFaces(smach.State):
         except rospy.ServiceException as e:
             rospy.logerr("Service call failed: %s" % e)
 
-    # def greet(self):
-    #     voice = Voice()
-    #     voice.speak(f"Hello, {' '.join(self.people_in_frame)}")
-    #     guestcount = rospy.get_param("guestcount/count", 0)
-    #     drink = rospy.get_param(f"guest{guestcount + 1}/drink", "Orange")
-    #     voice.speak(f"I know your favourite drink is: {drink}")
 
     def greet(self):
         sm = smach.StateMachine(outcomes=['succeeded', 'aborted', 'preempted'])
@@ -62,15 +56,6 @@ class DetectFaces(smach.State):
                 Say(text=f"I am detecting people. Hello, {' '.join(self.people_in_frame.keys())}"),
                 transitions={"succeeded": "succeeded", "aborted": "aborted", "preempted": "preempted"}
             )
-
-            # guestcount = rospy.get_param("guestcount/count", 0)
-            # userdata.guest_data[self._guest_id]["name"]
-            # drink = rospy.get_param(f"guest{guestcount + 1}/drink", "Orange")
-            # smach.StateMachine.add(
-            #     "SAY_DRINK",
-            #     Say(text=f"I know your favourite drink is: {drink}"),
-            #     transitions={"succeeded": "succeeded", "aborted": "aborted", "preempted": "preempted"}
-            # )
 
         outcome = sm.execute()
         
