@@ -17,19 +17,29 @@ class DetectFaces(smach.State):
             {}
         )  # dict of people in frame and the time they were detected
         self.listen_topic = "/xtion/rgb/image_raw"
+        self.detected_people = False
 
     def execute(self, userdata):
         print("I'm about to guess who you are")
         self.listener()
-        return "recognised"
+        if self.subscriber:
+            self.subscriber.unregister()
+        if not self.detected_people:
+            self.say_nobody_detected()
+            rospy.sleep(2)
+            return "unrecognised"
+        else:
+            self.greet()
+            rospy.sleep(3)
+            return "recognised"
+        
 
     def listener(self):
         # rospy.init_node("image_listener", anonymous=True)
         rospy.wait_for_service("/recognise")
         self.subscriber = rospy.Subscriber(self.listen_topic, Image, self.image_callback, queue_size=1)
-        rospy.sleep(10)
-        if self.subscriber:
-            self.subscriber.unregister()
+        rospy.sleep(7)
+        
 
     def detect(self, image):
         rospy.loginfo("Received image message")
@@ -52,8 +62,19 @@ class DetectFaces(smach.State):
         sm = smach.StateMachine(outcomes=['succeeded', 'aborted', 'preempted'])
         with sm:
             smach.StateMachine.add(
-                "SAY_HELLO_TO_EVERYONE_IN_SEATING_AREA",
-                Say(text=f"I am detecting people. Hello, {' '.join(self.people_in_frame.keys())}"),
+                "SAY_DETECTIONS_IN_SEATING_AREA",
+                Say(text=f"I have detected people. Hello, {' '.join(self.people_in_frame.keys())}"),
+                transitions={"succeeded": "succeeded", "aborted": "aborted", "preempted": "preempted"}
+            )
+
+        outcome = sm.execute()
+
+    def say_nobody_detected(self):
+        sm = smach.StateMachine(outcomes=['succeeded', 'aborted', 'preempted'])
+        with sm:
+            smach.StateMachine.add(
+                "SAY_NOBODY_DETECTED_IN_SEATING_AREA",
+                Say(text="I didn't detect anyone that I know."),
                 transitions={"succeeded": "succeeded", "aborted": "aborted", "preempted": "preempted"}
             )
 
@@ -61,6 +82,7 @@ class DetectFaces(smach.State):
         
 
     def image_callback(self, image):
+        
         prev_people_in_frame = list(self.people_in_frame.keys())
         # remove detections from people_in_frame that are older than 5 seconds long
         self.detect(image)
@@ -71,4 +93,4 @@ class DetectFaces(smach.State):
             list(self.people_in_frame.keys()) != prev_people_in_frame
             and len(self.people_in_frame) > 0
         ) or (len(prev_people_in_frame) == 0 and len(self.people_in_frame) > 0):
-            self.greet()
+            self.detected_people = True
