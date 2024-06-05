@@ -1,3 +1,13 @@
+import json
+from os import path
+
+import cv2
+import numpy as np
+import rospkg
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torchvision.models as models
 from lasr_vision_feature_extraction.categories_and_attributes import (
     CategoriesAndAttributes,
     CelebAMaskHQCategoriesAndAttributes,
@@ -8,16 +18,6 @@ from lasr_vision_feature_extraction.image_with_masks_and_attributes import (
     ImageOfPerson,
     ImageOfCloth,
 )
-
-import numpy as np
-import cv2
-import torch
-import rospkg
-from os import path
-import torch.nn as nn
-import torch.nn.functional as F
-import torchvision.models as models
-import json
 
 
 def X2conv(in_channels, out_channels, inner_channels=None):
@@ -150,7 +150,7 @@ class MultiLabelResNet(nn.Module):
 
 class CombinedModel(nn.Module):
     def __init__(
-        self, segment_model: nn.Module, predict_model: nn.Module, cat_layers: int = None
+            self, segment_model: nn.Module, predict_model: nn.Module, cat_layers: int = None
     ):
         super(CombinedModel, self).__init__()
         self.segment_model = segment_model
@@ -162,7 +162,7 @@ class CombinedModel(nn.Module):
         seg_masks = self.segment_model(x)
         seg_masks_ = seg_masks.detach()
         if self.cat_layers:
-            seg_masks_ = seg_masks_[:, 0 : self.cat_layers]
+            seg_masks_ = seg_masks_[:, 0: self.cat_layers]
             x = torch.cat((x, seg_masks_), dim=1)
         else:
             x = torch.cat((x, seg_masks_), dim=1)
@@ -313,10 +313,10 @@ class SegmentPredictorBbox(SegmentPredictor):
 
 class Predictor:
     def __init__(
-        self,
-        model: torch.nn.Module,
-        device: torch.device,
-        categories_and_attributes: CategoriesAndAttributes,
+            self,
+            model: torch.nn.Module,
+            device: torch.device,
+            categories_and_attributes: CategoriesAndAttributes,
     ):
         self.model = model
         self.device = device
@@ -325,7 +325,7 @@ class Predictor:
         self._thresholds_mask: list[float] = []
         self._thresholds_pred: list[float] = []
         for key in sorted(
-            list(self.categories_and_attributes.merged_categories.keys())
+                list(self.categories_and_attributes.merged_categories.keys())
         ):
             self._thresholds_mask.append(
                 self.categories_and_attributes.thresholds_mask[key]
@@ -339,7 +339,7 @@ class Predictor:
     def predict(self, rgb_image: np.ndarray) -> ImageWithMasksAndAttributes:
         mean_val = np.mean(rgb_image)
         image_tensor = (
-            torch.from_numpy(rgb_image).permute(2, 0, 1).unsqueeze(0).float() / 255.0
+                torch.from_numpy(rgb_image).permute(2, 0, 1).unsqueeze(0).float() / 255.0
         )
         pred_masks, pred_classes = self.model(image_tensor)
         # Apply binary erosion and dilation to the masks
@@ -373,9 +373,9 @@ def load_face_classifier_model():
     cat_layers = CelebAMaskHQCategoriesAndAttributes.merged_categories.keys().__len__()
     segment_model = UNetWithResnetEncoder(num_classes=cat_layers)
     predictions = (
-        len(CelebAMaskHQCategoriesAndAttributes.attributes)
-        - len(CelebAMaskHQCategoriesAndAttributes.avoided_attributes)
-        + len(CelebAMaskHQCategoriesAndAttributes.mask_labels)
+            len(CelebAMaskHQCategoriesAndAttributes.attributes)
+            - len(CelebAMaskHQCategoriesAndAttributes.avoided_attributes)
+            + len(CelebAMaskHQCategoriesAndAttributes.mask_labels)
     )
     predict_model = MultiLabelResNet(
         num_labels=predictions, input_channels=cat_layers + 3
@@ -394,6 +394,7 @@ def load_face_classifier_model():
     )
     return model
 
+
 def load_cloth_classidifer_model():
     num_classes = len(DeepFashion2GeneralizedCategoriesAndAttributes.attributes)
     model = SegmentPredictorBbox(num_masks=num_classes + 4, num_labels=num_classes + 4, num_bbox_classes=4)
@@ -409,6 +410,7 @@ def load_cloth_classidifer_model():
         cpu_only=True,
     )
     return model
+
 
 def pad_image_to_even_dims(image):
     # Get the current shape of the image
@@ -456,13 +458,13 @@ def extract_mask_region(frame, mask, expand_x=0.5, expand_y=0.5):
         new_w = min(frame.shape[1] - x, new_w)
         new_h = min(frame.shape[0] - y, new_h)
 
-        face_region = frame[y : y + int(new_h), x : x + int(new_w)]
+        face_region = frame[y: y + int(new_h), x: x + int(new_w)]
         return face_region
     return None
 
 
 def predict_frame(
-    head_frame, torso_frame, full_frame, head_mask, torso_mask, head_predictor, cloth_predictor,
+        head_frame, torso_frame, full_frame, head_mask, torso_mask, head_predictor, cloth_predictor,
 ):
     full_frame = cv2.cvtColor(full_frame, cv2.COLOR_BGR2RGB)
     head_frame = cv2.cvtColor(head_frame, cv2.COLOR_BGR2RGB)
@@ -499,7 +501,7 @@ def load_torch_model(model, optimizer, path="model.pth", cpu_only=False):
 
 
 def binary_erosion_dilation(
-    tensor, thresholds, erosion_iterations=1, dilation_iterations=1
+        tensor, thresholds, erosion_iterations=1, dilation_iterations=1
 ):
     """
     Apply binary threshold, followed by erosion and dilation to a tensor.
