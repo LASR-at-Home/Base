@@ -171,6 +171,7 @@ class CelebAMaskHQCategoriesAndAttributes(CategoriesAndAttributes):
 
 class DeepFashion2GeneralizedCategoriesAndAttributes(CategoriesAndAttributes):
     mask_categories = [
+        'top', 'down', 'outwear', 'dress',
         'short sleeve top', 'long sleeve top', 'short sleeve outwear',
         'long sleeve outwear', 'vest', 'sling', 'shorts',
         'trousers', 'skirt', 'short sleeve dress',
@@ -189,7 +190,7 @@ class DeepFashion2GeneralizedCategoriesAndAttributes(CategoriesAndAttributes):
     for key in mask_categories:
         if key not in _categories_to_merge:
             merged_categories[key] = [key]
-    mask_labels = []
+    mask_labels = ['top', 'down', 'outwear', 'dress',]
     selective_attributes = {}
     plane_attributes = []
     avoided_attributes = []

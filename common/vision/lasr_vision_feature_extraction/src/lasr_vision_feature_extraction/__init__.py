@@ -353,9 +353,6 @@ class Predictor:
         mask_list = [pred_masks[i, :, :] for i in range(pred_masks.shape[0])]
         pred_classes = pred_classes.detach().squeeze(0).numpy()
         class_list = [pred_classes[i].item() for i in range(pred_classes.shape[0])]
-        # print(rgb_image)
-        print(mean_val)
-        print(pred_classes)
         mask_dict = {}
         for i, mask in enumerate(mask_list):
             mask_dict[self.categories_and_attributes.mask_categories[i]] = mask
@@ -479,8 +476,8 @@ def predict_frame(
 
     # results from two dictionaries are currently merged but might got separated again in the future if needed.
     result = {
-        'attributes': rst_person['attributes'] + rst_person['description'],
-        'description': rst_cloth['attributes'] + rst_cloth['description'],
+        'attributes': {**rst_person['attributes'], **rst_cloth['attributes']},
+        'description': rst_person['description'] + rst_cloth['description'],
     }
 
     result = json.dumps(result, indent=4)
