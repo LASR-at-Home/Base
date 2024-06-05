@@ -16,10 +16,10 @@
     <node name="image_view" pkg="rqt_image_view" type="rqt_image_view" respawn="false" output="screen" args="/yolov8/debug" />
 
     <!-- start relay service -->
-    <node name="relay" pkg="lasr_vision_yolov8" type="relay" respawn="false" output="screen" args="/camera/image_raw $(arg model)" />
+    <node name="relay" pkg="lasr_vision_yolov8" type="relay" respawn="false" output="screen" args="/xtion/rgb/image_raw $(arg model)" />
 
     <!-- launch video stream -->
-   <include file="$(find video_stream_opencv)/launch/camera.launch">
+   <!-- <include file="$(find video_stream_opencv)/launch/camera.launch">
         <arg name="visualize" value="true" />
-   </include>
+   </include> -->
 </launch>
