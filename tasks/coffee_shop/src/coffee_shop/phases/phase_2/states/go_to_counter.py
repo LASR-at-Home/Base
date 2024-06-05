@@ -1,7 +1,7 @@
-#!/usr/bin/env python3
 import smach
 import rospy
 from geometry_msgs.msg import Pose, Point, Quaternion
+from move_base_msgs.msg import MoveBaseGoal
 
 
 class GoToCounter(smach.State):
@@ -15,7 +15,10 @@ class GoToCounter(smach.State):
         )
         position = rospy.get_param("counter/location/position")
         orientation = rospy.get_param("counter/location/orientation")
-        self.context.base_controller.sync_to_pose(
-            Pose(position=Point(**position), orientation=Quaternion(**orientation))
+        move_base_goal = MoveBaseGoal()
+        move_base_goal.target_pose.header.frame_id = "map"
+        move_base_goal.target_pose.pose = Pose(
+            position=Point(**position), orientation=Quaternion(**orientation)
         )
+        self.context.move_base_client.send_goal_and_wait(move_base_goal)
         return "done"

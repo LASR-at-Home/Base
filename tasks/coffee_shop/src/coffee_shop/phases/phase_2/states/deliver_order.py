@@ -1,10 +1,10 @@
-#!/usr/bin/env python3
 import smach
 import rospy
 from geometry_msgs.msg import Pose, Point, Quaternion
 import numpy as np
 from play_motion_msgs.msg import PlayMotionGoal
-import json
+from move_base_msgs.msg import MoveBaseGoal
+from scipy.spatial.transform import Rotation as R
 
 
 class DeliverOrder(smach.State):
@@ -17,12 +17,18 @@ class DeliverOrder(smach.State):
         location = rospy.get_param(f"/tables/{self.context.current_table}/location")
         position = location["position"]
         orientation = location["orientation"]
-        # self.context.base_controller.sync_to_radius(self.context.tables[self.context.current_table]["people"][0][0], self.context.tables[self.context.current_table]["people"][0][1], 0.5)
-        # self.context.base_controller.sync_face_to(self.context.tables[self.context.current_table]["people"][0][0], self.context.tables[self.context.current_table]["people"][0][1])
-        self.context.base_controller.sync_to_pose(
-            Pose(position=Point(**position), orientation=Quaternion(**orientation))
+        target_orientation = R.from_quat(
+            [orientation["x"], orientation["y"], orientation["z"], orientation["w"]]
         )
-        self.context.base_controller.rotate(np.pi)
+        target_orientation *= R.from_euler("z", np.pi, degrees=False)
+        move_base_goal = MoveBaseGoal()
+        move_base_goal.target_pose.header.frame_id = "map"
+        move_base_goal.target_pose.pose = Pose(
+            position=Point(**position),
+            orientation=Quaternion(*target_orientation.as_quat()),
+        )
+        self.context.move_base_client.send_goal_and_wait(move_base_goal)
+
         pm_goal = PlayMotionGoal(motion_name="load_unload", skip_planning=True)
         self.context.play_motion_client.send_goal_and_wait(pm_goal)
         self.context.voice_controller.async_tts(

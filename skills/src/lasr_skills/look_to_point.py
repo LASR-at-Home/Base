@@ -41,6 +41,7 @@ class LookToPoint(smach.State):
                 header=Header(frame_id="map"),
                 point=userdata.point,
             ),
+
         )
         
         # Send the goal

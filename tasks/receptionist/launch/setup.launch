@@ -25,5 +25,4 @@
 
     <node pkg="lasr_vision_deepface" type="service" name="deepface_service" output="screen"/>
 
-
 </launch>
