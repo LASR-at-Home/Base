@@ -150,7 +150,7 @@ class MultiLabelResNet(nn.Module):
 
 class CombinedModel(nn.Module):
     def __init__(
-            self, segment_model: nn.Module, predict_model: nn.Module, cat_layers: int = None
+        self, segment_model: nn.Module, predict_model: nn.Module, cat_layers: int = None
     ):
         super(CombinedModel, self).__init__()
         self.segment_model = segment_model
@@ -162,7 +162,7 @@ class CombinedModel(nn.Module):
         seg_masks = self.segment_model(x)
         seg_masks_ = seg_masks.detach()
         if self.cat_layers:
-            seg_masks_ = seg_masks_[:, 0: self.cat_layers]
+            seg_masks_ = seg_masks_[:, 0 : self.cat_layers]
             x = torch.cat((x, seg_masks_), dim=1)
         else:
             x = torch.cat((x, seg_masks_), dim=1)
@@ -184,10 +184,14 @@ class SegmentPredictor(nn.Module):
 
         # Adapt ResNet to handle different input channel sizes
         if in_channels != 3:
-            self.resnet.conv1 = nn.Conv2d(in_channels, 64, kernel_size=7, stride=2, padding=3, bias=False)
+            self.resnet.conv1 = nn.Conv2d(
+                in_channels, 64, kernel_size=7, stride=2, padding=3, bias=False
+            )
 
         # Encoder layers
-        self.encoder1 = nn.Sequential(self.resnet.conv1, self.resnet.bn1, self.resnet.relu)
+        self.encoder1 = nn.Sequential(
+            self.resnet.conv1, self.resnet.bn1, self.resnet.relu
+        )
         self.encoder2 = self.resnet.layer1
         self.encoder3 = self.resnet.layer2
         self.encoder4 = self.resnet.layer3
@@ -225,7 +229,7 @@ class SegmentPredictor(nn.Module):
             nn.Linear(256, 256),
             nn.LeakyReLU(negative_slope=0.01),
             nn.Dropout(p=0.5),
-            nn.Linear(256, num_labels)
+            nn.Linear(256, num_labels),
         )
 
     def forward(self, x):
@@ -239,13 +243,17 @@ class SegmentPredictor(nn.Module):
         x = self.up2(x3, x)
         x = self.up3(x2, x)
         x = self.up4(x1, x)
-        x = F.interpolate(x, size=(x.size(2) * 2, x.size(3) * 2), mode='bilinear', align_corners=True)
+        x = F.interpolate(
+            x, size=(x.size(2) * 2, x.size(3) * 2), mode="bilinear", align_corners=True
+        )
 
         mask = self.final_conv(x)
 
         # Predicting the labels using features from the last encoder output
         x_cls = self.predictor_cnn_extension(x5)
-        x_cls = self.global_pool(x_cls)  # Use the feature map from the last encoder layer
+        x_cls = self.global_pool(
+            x_cls
+        )  # Use the feature map from the last encoder layer
         x_cls = x_cls.view(x_cls.size(0), -1)
         labels = self.classifier(x_cls)
 
@@ -257,9 +265,19 @@ class SegmentPredictor(nn.Module):
 
 
 class SegmentPredictorBbox(SegmentPredictor):
-    def __init__(self, num_masks, num_labels, num_bbox_classes, in_channels=3, sigmoid=True, return_bbox=True):
+    def __init__(
+        self,
+        num_masks,
+        num_labels,
+        num_bbox_classes,
+        in_channels=3,
+        sigmoid=True,
+        return_bbox=True,
+    ):
         self.return_bbox = return_bbox
-        super(SegmentPredictorBbox, self).__init__(num_masks, num_labels, in_channels, sigmoid)
+        super(SegmentPredictorBbox, self).__init__(
+            num_masks, num_labels, in_channels, sigmoid
+        )
         self.num_bbox_classes = num_bbox_classes
         self.bbox_cnn_extension = nn.Sequential(
             nn.Conv2d(512, 2048, kernel_size=3, padding=1),  # resnet18/34
@@ -273,7 +291,7 @@ class SegmentPredictorBbox(SegmentPredictor):
             nn.LeakyReLU(negative_slope=0.01),
             nn.Linear(256, 256),
             nn.LeakyReLU(negative_slope=0.01),
-            nn.Linear(256, num_bbox_classes * 4)
+            nn.Linear(256, num_bbox_classes * 4),
         )
 
     def forward(self, x):
@@ -287,13 +305,17 @@ class SegmentPredictorBbox(SegmentPredictor):
         x = self.up2(x3, x)
         x = self.up3(x2, x)
         x = self.up4(x1, x)
-        x = F.interpolate(x, size=(x.size(2) * 2, x.size(3) * 2), mode='bilinear', align_corners=True)
+        x = F.interpolate(
+            x, size=(x.size(2) * 2, x.size(3) * 2), mode="bilinear", align_corners=True
+        )
 
         mask = self.final_conv(x)
 
         # Predicting the labels using features from the last encoder output
         x_cls = self.predictor_cnn_extension(x5)
-        x_cls = self.global_pool(x_cls)  # Use the feature map from the last encoder layer
+        x_cls = self.global_pool(
+            x_cls
+        )  # Use the feature map from the last encoder layer
         x_cls = x_cls.view(x_cls.size(0), -1)
         labels = self.classifier(x_cls)
         x_bbox = self.bbox_cnn_extension(x5)
@@ -313,10 +335,10 @@ class SegmentPredictorBbox(SegmentPredictor):
 
 class Predictor:
     def __init__(
-            self,
-            model: torch.nn.Module,
-            device: torch.device,
-            categories_and_attributes: CategoriesAndAttributes,
+        self,
+        model: torch.nn.Module,
+        device: torch.device,
+        categories_and_attributes: CategoriesAndAttributes,
     ):
         self.model = model
         self.device = device
@@ -325,7 +347,7 @@ class Predictor:
         self._thresholds_mask: list[float] = []
         self._thresholds_pred: list[float] = []
         for key in sorted(
-                list(self.categories_and_attributes.merged_categories.keys())
+            list(self.categories_and_attributes.merged_categories.keys())
         ):
             self._thresholds_mask.append(
                 self.categories_and_attributes.thresholds_mask[key]
@@ -339,7 +361,7 @@ class Predictor:
     def predict(self, rgb_image: np.ndarray) -> ImageWithMasksAndAttributes:
         mean_val = np.mean(rgb_image)
         image_tensor = (
-                torch.from_numpy(rgb_image).permute(2, 0, 1).unsqueeze(0).float() / 255.0
+            torch.from_numpy(rgb_image).permute(2, 0, 1).unsqueeze(0).float() / 255.0
         )
         pred_masks, pred_classes = self.model(image_tensor)
         # Apply binary erosion and dilation to the masks
@@ -373,9 +395,9 @@ def load_face_classifier_model():
     cat_layers = CelebAMaskHQCategoriesAndAttributes.merged_categories.keys().__len__()
     segment_model = UNetWithResnetEncoder(num_classes=cat_layers)
     predictions = (
-            len(CelebAMaskHQCategoriesAndAttributes.attributes)
-            - len(CelebAMaskHQCategoriesAndAttributes.avoided_attributes)
-            + len(CelebAMaskHQCategoriesAndAttributes.mask_labels)
+        len(CelebAMaskHQCategoriesAndAttributes.attributes)
+        - len(CelebAMaskHQCategoriesAndAttributes.avoided_attributes)
+        + len(CelebAMaskHQCategoriesAndAttributes.mask_labels)
     )
     predict_model = MultiLabelResNet(
         num_labels=predictions, input_channels=cat_layers + 3
@@ -397,7 +419,9 @@ def load_face_classifier_model():
 
 def load_cloth_classidifer_model():
     num_classes = len(DeepFashion2GeneralizedCategoriesAndAttributes.attributes)
-    model = SegmentPredictorBbox(num_masks=num_classes + 4, num_labels=num_classes + 4, num_bbox_classes=4)
+    model = SegmentPredictorBbox(
+        num_masks=num_classes + 4, num_labels=num_classes + 4, num_bbox_classes=4
+    )
     model.eval()
 
     r = rospkg.RosPack()
@@ -458,13 +482,19 @@ def extract_mask_region(frame, mask, expand_x=0.5, expand_y=0.5):
         new_w = min(frame.shape[1] - x, new_w)
         new_h = min(frame.shape[0] - y, new_h)
 
-        face_region = frame[y: y + int(new_h), x: x + int(new_w)]
+        face_region = frame[y : y + int(new_h), x : x + int(new_w)]
         return face_region
     return None
 
 
 def predict_frame(
-        head_frame, torso_frame, full_frame, head_mask, torso_mask, head_predictor, cloth_predictor,
+    head_frame,
+    torso_frame,
+    full_frame,
+    head_mask,
+    torso_mask,
+    head_predictor,
+    cloth_predictor,
 ):
     full_frame = cv2.cvtColor(full_frame, cv2.COLOR_BGR2RGB)
     head_frame = cv2.cvtColor(head_frame, cv2.COLOR_BGR2RGB)
@@ -473,13 +503,17 @@ def predict_frame(
     head_frame = pad_image_to_even_dims(head_frame)
     torso_frame = pad_image_to_even_dims(torso_frame)
 
-    rst_person = ImageOfPerson.from_parent_instance(head_predictor.predict(head_frame)).describe()
-    rst_cloth = ImageOfCloth.from_parent_instance(cloth_predictor.predict(torso_frame)).describe()
+    rst_person = ImageOfPerson.from_parent_instance(
+        head_predictor.predict(head_frame)
+    ).describe()
+    rst_cloth = ImageOfCloth.from_parent_instance(
+        cloth_predictor.predict(torso_frame)
+    ).describe()
 
     # results from two dictionaries are currently merged but might got separated again in the future if needed.
     result = {
-        'attributes': {**rst_person['attributes'], **rst_cloth['attributes']},
-        'description': rst_person['description'] + rst_cloth['description'],
+        "attributes": {**rst_person["attributes"], **rst_cloth["attributes"]},
+        "description": rst_person["description"] + rst_cloth["description"],
     }
 
     result = json.dumps(result, indent=4)
@@ -501,7 +535,7 @@ def load_torch_model(model, optimizer, path="model.pth", cpu_only=False):
 
 
 def binary_erosion_dilation(
-        tensor, thresholds, erosion_iterations=1, dilation_iterations=1
+    tensor, thresholds, erosion_iterations=1, dilation_iterations=1
 ):
     """
     Apply binary threshold, followed by erosion and dilation to a tensor.
