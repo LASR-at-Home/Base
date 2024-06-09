@@ -26,7 +26,7 @@ class LoadOrder(smach.State):
                 robot_pose.orientation.z,
                 robot_pose.orientation.w,
             ]
-        ) * R.from_euler("z", np.pi, degrees=False)
+        ) * R.from_euler("z", 180.0, degrees=True)
         move_base_goal = MoveBaseGoal()
         move_base_goal.target_pose.header.frame_id = "map"
         move_base_goal.target_pose.pose = Pose(

@@ -20,7 +20,5 @@ class MakeOrder(smach.State):
                 for item, count in Counter(order).items()
             ]
         ).replace(", ", ", and ", len(order) - 2)
-        self.context.voice_controller.sync_tts(
-            f"Please get me {order_string}. Make sure you place the items in clear view of the robot."
-        )
+        self.context.voice_controller.sync_tts(f"Please get me {order_string}.")
         return "done"
