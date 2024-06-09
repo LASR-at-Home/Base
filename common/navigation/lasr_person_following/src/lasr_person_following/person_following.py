@@ -166,6 +166,7 @@ class PersonFollower:
             self._move_base_client.cancel_goal()
 
     def _check_finished(self) -> bool:
+        # TODO: ask the person if they are finished via speech.
         return True
 
     def follow(self) -> None:
@@ -184,7 +185,7 @@ class PersonFollower:
             )
             if current_track is None:
                 rospy.loginfo(f"Lost track of person with ID {self._track_id}")
-                # TODO: recovery behaviour
+                # TODO: recovery behaviour, maybe begin_tracking with a reduced radius?
                 break
 
             robot_pose = self._robot_pose_in_odom()
