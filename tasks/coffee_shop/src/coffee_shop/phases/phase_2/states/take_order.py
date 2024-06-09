@@ -116,6 +116,10 @@ class TakeOrder(smach.State):
                     orientation=Quaternion(*target_orientation.as_quat()),
                 )
                 self.context.move_base_client.send_goal_and_wait(move_base_goal)
+                pm_goal = PlayMotionGoal(
+                    motion_name="tablet_no_head", skip_planning=True
+                )
+                self.context.play_motion_client.send_goal_and_wait(pm_goal)
 
             self.tablet_pub.publish(String("order"))
             order = rospy.wait_for_message("/tablet/order", Order).products
