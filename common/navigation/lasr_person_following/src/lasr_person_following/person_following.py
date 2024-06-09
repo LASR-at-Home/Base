@@ -97,7 +97,7 @@ class PersonFollower:
             return False
 
         robot_pose = self._robot_pose_in_odom()
-
+        # TODO: filter to only include people in front of the robot (use a cone?)
         closest_person: Person = min(
             people.people,
             key=lambda person: self._euclidian_distance(person.pose, robot_pose.pose),
@@ -147,6 +147,7 @@ class PersonFollower:
             )
             if current_track is None:
                 rospy.loginfo(f"Lost track of person with ID {self._track_id}")
+                # TODO: recovery behaviour
                 break
 
             robot_pose = self._robot_pose_in_odom()
@@ -190,6 +191,7 @@ class PersonFollower:
                     rospy.loginfo(
                         f"Person has been static for {static_for} seconds, finishing"
                     )
+                    # TODO: check if we are actually finished
                     return
                 rospy.loginfo("Person too close to previous, skipping")
                 continue
