@@ -285,7 +285,7 @@ class PersonFollower:
 
             print(plan.poses)
 
-            # select a pose that is 1m away from the goal_pose
+            # select a pose that is stopping_distance away from the goal_pose
             for pose in reversed(plan.poses):
                 if (
                     self._euclidian_distance(pose.pose, current_track_pose_map.pose)
