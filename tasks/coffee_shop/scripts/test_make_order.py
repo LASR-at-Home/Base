@@ -17,7 +17,7 @@ if __name__ == "__main__":
     context = Context(sys.argv[1], sys.argv[2])
     context.current_table = "table0"
     context.tables[context.current_table]["status"] = "currently serving"
-    context.tables[context.current_table]["order"] = ["cup", "cup"]
+    context.tables[context.current_table]["order"] = ["banana"]
 
     with sm:
         sm.add(

@@ -7,8 +7,9 @@ import cv2_pcl
 import cv2_img
 from play_motion_msgs.msg import PlayMotionGoal
 from collections import Counter
-from geometry_msgs.msg import Point
+from geometry_msgs.msg import Point, Pose, Quaternion
 from shapely.geometry import Point as ShapelyPoint, Polygon
+from move_base_msgs.msg import MoveBaseGoal
 
 
 class CheckOrder(smach.State):
@@ -40,6 +41,15 @@ class CheckOrder(smach.State):
             return "correct"
 
         self.n_checks += 1
+
+        position = rospy.get_param("counter/location/position")
+        orientation = rospy.get_param("counter/location/orientation")
+        move_base_goal = MoveBaseGoal()
+        move_base_goal.target_pose.header.frame_id = "map"
+        move_base_goal.target_pose.pose = Pose(
+            position=Point(**position), orientation=Quaternion(**orientation)
+        )
+        self.context.move_base_client.send_goal_and_wait(move_base_goal)
 
         pm_goal = PlayMotionGoal(motion_name="check_table_low", skip_planning=True)
         self.context.play_motion_client.send_goal_and_wait(pm_goal)

@@ -96,8 +96,9 @@ class TakeOrder(smach.State):
             if self.context.tablet_on_head:
                 pm_goal = PlayMotionGoal(motion_name="tablet", skip_planning=True)
                 self.context.play_motion_client.send_goal_and_wait(pm_goal)
+                rospy.loginfo("Tablet is on the head")
             else:
-
+                rospy.loginfo("Tablet is not on the head")
                 robot_pose = rospy.wait_for_message(
                     "/amcl_pose", PoseWithCovarianceStamped
                 ).pose.pose
