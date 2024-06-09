@@ -15,7 +15,6 @@ from receptionist.states import (
 )
 
 
-
 class Receptionist(smach.StateMachine):
     def __init__(
         self,
@@ -68,7 +67,6 @@ class Receptionist(smach.StateMachine):
                 },
             )
 
-
             ######## Asking first Guest for Drink and Name ######
 
             smach.StateMachine.add(
@@ -92,10 +90,11 @@ class Receptionist(smach.StateMachine):
                 remapping={"guest_transcription": "transcribed_speech"},
             )
 
-
             smach.StateMachine.add(
                 "REPEAT_GET_NAME_AND_DRINK_GUEST_1",
-                AskAndListen("Sorry, I didn't get that. What is your name and favourite drink?"),
+                AskAndListen(
+                    "Sorry, I didn't get that. What is your name and favourite drink?"
+                ),
                 transitions={
                     "succeeded": "REPEAT_PARSE_NAME_AND_DRINK_GUEST_1",
                     "failed": "SAY_CONTINUE",
@@ -139,7 +138,9 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "REPEAT_GET_DRINK_GUEST_1",
-                AskAndListen("Sorry, I didn't get your favourite drink. What is your favourite drink?"),
+                AskAndListen(
+                    "Sorry, I didn't get your favourite drink. What is your favourite drink?"
+                ),
                 transitions={
                     "succeeded": "REPEAT_PARSE_DRINK_GUEST_1",
                     "failed": "SAY_CONTINUE",
@@ -166,14 +167,6 @@ class Receptionist(smach.StateMachine):
                 },
             )
 
-
-          
-
-
-
-
-
-
             ####### GET GUEST ATTRIBUTES ######
 
             smach.StateMachine.add(
@@ -184,7 +177,6 @@ class Receptionist(smach.StateMachine):
                     "failed": "SAY_LEARN_FACES",
                 },
             )
-
 
             smach.StateMachine.add(
                 "SAY_LEARN_FACES",
@@ -197,11 +189,11 @@ class Receptionist(smach.StateMachine):
             )
 
             smach.StateMachine.add(
-                'LEARN_FACES', 
+                "LEARN_FACES",
                 LearnFaces("guest1"),
                 transitions={
-                    'succeeded':'SAY_FOLLOW_GUEST_1',
-                    'failed':'SAY_FOLLOW_GUEST_1'
+                    "succeeded": "SAY_FOLLOW_GUEST_1",
+                    "failed": "SAY_FOLLOW_GUEST_1",
                 },
             )
 
@@ -235,11 +227,11 @@ class Receptionist(smach.StateMachine):
             )
 
             smach.StateMachine.add(
-                'DETECT_FACES', 
-                DetectFaces(), 
+                "DETECT_FACES",
+                DetectFaces(),
                 transitions={
-                    'recognised':'SAY_WAIT_GUEST_1',
-                    'unrecognised':'SAY_WAIT_GUEST_1'
+                    "recognised": "SAY_WAIT_GUEST_1",
+                    "unrecognised": "SAY_WAIT_GUEST_1",
                 },
             )
 
@@ -322,10 +314,8 @@ class Receptionist(smach.StateMachine):
                 },
             )
 
-
             ####### Asking second guest for drink and name #######
 
-            
             smach.StateMachine.add(
                 "GET_NAME_AND_DRINK_GUEST_2",
                 AskAndListen("What is your name and favourite drink?"),
@@ -347,10 +337,11 @@ class Receptionist(smach.StateMachine):
                 remapping={"guest_transcription": "transcribed_speech"},
             )
 
-
             smach.StateMachine.add(
                 "REPEAT_GET_NAME_AND_DRINK_GUEST_2",
-                AskAndListen("Sorry, I didn't get that. What is your name and favourite drink?"),
+                AskAndListen(
+                    "Sorry, I didn't get that. What is your name and favourite drink?"
+                ),
                 transitions={
                     "succeeded": "REPEAT_PARSE_NAME_AND_DRINK_GUEST_2",
                     "failed": "SAY_CONTINUE_GUEST_2",
@@ -394,7 +385,9 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "REPEAT_GET_DRINK_GUEST_2",
-                AskAndListen("Sorry, I didn't get your favourite drink. What is your favourite drink?"),
+                AskAndListen(
+                    "Sorry, I didn't get your favourite drink. What is your favourite drink?"
+                ),
                 transitions={
                     "succeeded": "REPEAT_PARSE_DRINK_GUEST_2",
                     "failed": "SAY_CONTINUE_GUEST_2",
@@ -421,8 +414,6 @@ class Receptionist(smach.StateMachine):
                 },
             )
 
-
-
             smach.StateMachine.add(
                 "GET_GUEST_ATTRIBUTES_GUEST_2",
                 GetGuestAttributes("guest2"),
@@ -443,11 +434,11 @@ class Receptionist(smach.StateMachine):
             )
 
             smach.StateMachine.add(
-                'LEARN_FACES_GUEST_2', 
+                "LEARN_FACES_GUEST_2",
                 LearnFaces("guest2"),
                 transitions={
-                    'succeeded':'SAY_FOLLOW_GUEST_2',
-                    'failed':'SAY_FOLLOW_GUEST_2'
+                    "succeeded": "SAY_FOLLOW_GUEST_2",
+                    "failed": "SAY_FOLLOW_GUEST_2",
                 },
             )
 
@@ -481,11 +472,11 @@ class Receptionist(smach.StateMachine):
             )
 
             smach.StateMachine.add(
-                'DETECT_FACES_GUEST_2', 
-                DetectFaces(), 
+                "DETECT_FACES_GUEST_2",
+                DetectFaces(),
                 transitions={
-                    'recognised':'SAY_WAIT_GUEST_2',
-                    'unrecognised':'SAY_WAIT_GUEST_2'
+                    "recognised": "SAY_WAIT_GUEST_2",
+                    "unrecognised": "SAY_WAIT_GUEST_2",
                 },
             )
 
@@ -499,7 +490,7 @@ class Receptionist(smach.StateMachine):
                 },
             )
 
-            # Look at guest 2 
+            # Look at guest 2
 
             smach.StateMachine.add(
                 "INTRODUCE_GUEST_2_TO_EVERYONE",
@@ -510,9 +501,8 @@ class Receptionist(smach.StateMachine):
                 },
             )
 
-
-            # Check if host is sat where they are sat 
-            # Look at the host 
+            # Check if host is sat where they are sat
+            # Look at the host
 
             smach.StateMachine.add(
                 "INTRODUCE_HOST_TO_GUEST_2",
@@ -523,8 +513,7 @@ class Receptionist(smach.StateMachine):
                 },
             )
 
-
-            # Look at guest 1 
+            # Look at guest 1
             smach.StateMachine.add(
                 "INTRODUCE_GUEST_1_TO_GUEST_2",
                 Introduce(guest_to_introduce="guest1", guest_to_introduce_to="guest2"),
@@ -537,7 +526,10 @@ class Receptionist(smach.StateMachine):
             smach.StateMachine.add(
                 "SEAT_GUEST_2",
                 SeatGuest(seat_area),
-                transitions={"succeeded": "GO_TO_FINISH_LOCATION", "failed": "GO_TO_FINISH_LOCATION"},
+                transitions={
+                    "succeeded": "GO_TO_FINISH_LOCATION",
+                    "failed": "GO_TO_FINISH_LOCATION",
+                },
             )
 
             """

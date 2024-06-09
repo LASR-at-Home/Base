@@ -37,7 +37,6 @@ class GetGuestAttributes(smach.StateMachine):
             output_keys=["guest_data"],
         )
         self._guest_id: str = guest_id
-          
 
         with self:
             smach.StateMachine.add(

@@ -13,7 +13,9 @@ from lasr_vision_msgs.srv import (
 
 class LearnFaces(smach.State):
     def __init__(self, guest_id: str):
-        smach.State.__init__(self, outcomes=['succeeded','failed'], input_keys=['guest_data'])
+        smach.State.__init__(
+            self, outcomes=["succeeded", "failed"], input_keys=["guest_data"]
+        )
         self._guest_id = guest_id
 
     def execute(self, userdata):
@@ -28,15 +30,14 @@ class LearnFaces(smach.State):
             print(guest_name)
             req = LearnFaceRequest()
             req.name = guest_name
-            req.dataset = 'receptionist'
+            req.dataset = "receptionist"
             req.n_images = 10
             resp = learn_service(req)
         except ValueError as e:
             print("No face detected. Error:" + str(e))
-            return 'failed'
+            return "failed"
         except rospy.ServiceException as e:
             rospy.logerr("Service call failed: %s" % e)
-            return 'failed'
-        
+            return "failed"
 
-        return 'succeeded'
+        return "succeeded"

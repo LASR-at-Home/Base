@@ -32,14 +32,14 @@ class DetectFaces(smach.State):
             self.greet()
             rospy.sleep(3)
             return "recognised"
-        
 
     def listener(self):
         # rospy.init_node("image_listener", anonymous=True)
         rospy.wait_for_service("/recognise")
-        self.subscriber = rospy.Subscriber(self.listen_topic, Image, self.image_callback, queue_size=1)
+        self.subscriber = rospy.Subscriber(
+            self.listen_topic, Image, self.image_callback, queue_size=1
+        )
         rospy.sleep(7)
-        
 
     def detect(self, image):
         rospy.loginfo("Received image message")
@@ -47,7 +47,7 @@ class DetectFaces(smach.State):
             detect_service = rospy.ServiceProxy("/recognise", Recognise)
             req = RecogniseRequest()
             req.image_raw = image
-            req.dataset = 'receptionist'
+            req.dataset = "receptionist"
             req.confidence = 0.4
             resp = detect_service(req)
             for detection in resp.detections:
@@ -57,32 +57,40 @@ class DetectFaces(smach.State):
         except rospy.ServiceException as e:
             rospy.logerr("Service call failed: %s" % e)
 
-
     def greet(self):
-        sm = smach.StateMachine(outcomes=['succeeded', 'aborted', 'preempted'])
+        sm = smach.StateMachine(outcomes=["succeeded", "aborted", "preempted"])
         with sm:
             smach.StateMachine.add(
                 "SAY_DETECTIONS_IN_SEATING_AREA",
-                Say(text=f"I have detected people. Hello, {' '.join(self.people_in_frame.keys())}"),
-                transitions={"succeeded": "succeeded", "aborted": "aborted", "preempted": "preempted"}
+                Say(
+                    text=f"I have detected people. Hello, {' '.join(self.people_in_frame.keys())}"
+                ),
+                transitions={
+                    "succeeded": "succeeded",
+                    "aborted": "aborted",
+                    "preempted": "preempted",
+                },
             )
 
         outcome = sm.execute()
 
     def say_nobody_detected(self):
-        sm = smach.StateMachine(outcomes=['succeeded', 'aborted', 'preempted'])
+        sm = smach.StateMachine(outcomes=["succeeded", "aborted", "preempted"])
         with sm:
             smach.StateMachine.add(
                 "SAY_NOBODY_DETECTED_IN_SEATING_AREA",
                 Say(text="I didn't detect anyone that I know."),
-                transitions={"succeeded": "succeeded", "aborted": "aborted", "preempted": "preempted"}
+                transitions={
+                    "succeeded": "succeeded",
+                    "aborted": "aborted",
+                    "preempted": "preempted",
+                },
             )
 
         outcome = sm.execute()
-        
 
     def image_callback(self, image):
-        
+
         prev_people_in_frame = list(self.people_in_frame.keys())
         # remove detections from people_in_frame that are older than 5 seconds long
         self.detect(image)

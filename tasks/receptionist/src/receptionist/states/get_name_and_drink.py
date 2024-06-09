@@ -90,7 +90,7 @@ class ParseNameAndDrink(smach.State):
     def _recovery_name_and_drink_required(self, userdata: UserData) -> bool:
         """Determine whetehr both the name and drink requires recovery.
 
-        Returns: 
+        Returns:
             bool: True if both attributes require recovery.
         """
         if userdata.guest_data[self._guest_id]["name"] == "unknown":

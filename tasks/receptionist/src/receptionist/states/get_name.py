@@ -64,4 +64,3 @@ class ParseName(smach.State):
             outcome = "failed"
 
         return outcome
-    

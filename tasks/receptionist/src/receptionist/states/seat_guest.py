@@ -24,6 +24,7 @@ class GuestSeatWait(smach.State):
             print("Waiting for the guest to sit down failed")
             return "failed"
 
+
 class SeatGuest(smach.StateMachine):
     _motions: List[str] = ["look_down_left", "look_down_right", "look_down_centre"]
 
@@ -135,7 +136,7 @@ class SeatGuest(smach.StateMachine):
                     "succeeded": "SAY_SIT",
                     "aborted": "failed",
                     "preempted": "failed",
-                    "timed_out": "SAY_SIT"
+                    "timed_out": "SAY_SIT",
                 },
                 remapping={"point": "seat_position"},
             )
@@ -147,7 +148,7 @@ class SeatGuest(smach.StateMachine):
                     "aborted": "failed",
                     "preempted": "failed",
                 },
-            )  
+            )
 
             smach.StateMachine.add(
                 "WAIT_FOR_GUEST_SEAT",
