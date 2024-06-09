@@ -31,23 +31,31 @@ from scipy.spatial.transform import Rotation as R
 
 class PersonFollower:
 
-    _track_sub: Union[None, rospy.Subscriber]
     _track_id: Union[None, int]
-    _breadcrumbs: List[PoseStamped]
-    _epsilon: float = 0.1
-    _n_secs_static: float = 5.0
-    _min_time_between_goals: float = 2.0
-    _stopping_distance: float = 0.5
+    _min_distance_between_tracks: float
+    _n_secs_static: float
+    _min_time_between_goals: float
+    _stopping_distance: float
     _move_base_client: actionlib.SimpleActionClient
     _buffer: tf.Buffer
     _listener: tf.TransformListener
     _goal_pose_pub: rospy.Publisher
     _make_plan: rospy.ServiceProxy
 
-    def __init__(self):
-        self._track_sub = None
+    def __init__(
+        self,
+        min_distance_between_tracks: float = 0.1,
+        n_secs_static: float = 15.0,
+        min_time_between_goals: float = 2.0,
+        stopping_distance: float = 1.0,
+    ):
+
+        self._min_distance_between_tracks = min_distance_between_tracks
+        self._n_secs_static = n_secs_static
+        self._min_time_between_goals = min_time_between_goals
+        self._stopping_distance = stopping_distance
+
         self._track_id = None
-        self._breadcrumbs = []
 
         self._move_base_client = actionlib.SimpleActionClient(
             "move_base", MoveBaseAction
@@ -60,13 +68,8 @@ class PersonFollower:
             "/follow_poses", PoseArray, queue_size=1000000, latch=True
         )
 
-        make_plan_service = (
-            "/move_base/NavfnROS/make_plan"
-            if "/move_base/NavfnROS/make_plan" in rosservice.get_service_list()
-            else "/move_base/GlobalPlanner/make_plan"
-        )
-        rospy.wait_for_service(make_plan_service)
-        self._make_plan = rospy.ServiceProxy(make_plan_service, GetPlan)
+        rospy.wait_for_service("/move_base/make_plan")
+        self._make_plan = rospy.ServiceProxy("/move_base/make_plan", GetPlan)
 
     def _tf_pose(self, pose: PoseStamped, target_frame: str):
         trans = self._buffer.lookup_transform(
@@ -103,60 +106,10 @@ class PersonFollower:
         self._track_id = closest_person.id
 
         rospy.loginfo(f"Tracking person with ID {self._track_id}")
-        self._update_breadcrumbs(people)
-
         return True
 
     def _recover_track(self) -> bool:
-        self._track_sub.unregister()
-
-        people: PersonArray = rospy.wait_for_message("/people_tracked", PersonArray)
-
-        if len(people.people) == 0:
-            return False
-
-        if self._breadcrumbs:
-
-            closest_person: Person = min(
-                people.people,
-                key=lambda person: self._euclidian_distance(
-                    person.pose, self._breadcrumbs[0].pose
-                ),
-            )
-
-        else:
-
-            robot_pose: PoseStamped = self._robot_pose_in_odom()
-
-            closest_person: Person = min(
-                people.people,
-                key=lambda person: self._euclidian_distance(
-                    person.pose, robot_pose.pose
-                ),
-            )
-
-        self._track_id = closest_person.id
-
-        rospy.loginfo(f"Recovery: tracking person with ID {self._track_id}")
-        self._breadcrumbs = []
-        self._update_breadcrumbs(people)
-
-        self._track_sub = rospy.Subscriber(
-            "/people_tracked", PersonArray, self._update_breadcrumbs
-        )
-
         return True
-
-    def _update_breadcrumbs(self, tracks: PersonArray) -> None:
-        relevant_tracks: List[Person] = [
-            track for track in tracks.people if track.id == self._track_id
-        ]
-        poses = [
-            (PoseStamped(pose=track.pose, header=tracks.header))
-            for track in relevant_tracks
-        ]
-
-        self._breadcrumbs.extend(poses)
 
     def _euclidian_distance(self, p1: Pose, p2: Pose) -> float:
         return np.linalg.norm(
@@ -183,6 +136,10 @@ class PersonFollower:
         prev_track: Union[None, Person] = None
         prev_goal: Union[None, MoveBaseActionGoal] = None
         poses = []
+
+        static_time: Union[None, rospy.Time] = None
+        static_for: Union[None, float] = None
+
         while not rospy.is_shutdown():
             tracks = rospy.wait_for_message("/people_tracked", PersonArray)
             current_track = next(
@@ -192,19 +149,59 @@ class PersonFollower:
                 rospy.loginfo(f"Lost track of person with ID {self._track_id}")
                 break
 
-            if prev_goal is not None:
-                if (
-                    rospy.Time.now() - prev_goal.target_pose.header.stamp
-                    < rospy.Duration(self._min_time_between_goals)
-                ):
-                    rospy.loginfo("Too soon to send another goal, skipping")
-                    continue
-
             robot_pose = self._robot_pose_in_odom()
 
-            # If the poses are significantly different, update the most recent pose
+            too_soon: bool = False
+            too_close: bool = False
+            too_close_to_prev: bool = False
 
-            if self._euclidian_distance(robot_pose.pose, current_track.pose) < 1.2:
+            time_since_last_goal: float = (
+                rospy.Time.now().secs - prev_goal.target_pose.header.stamp.secs
+                if prev_goal is not None
+                else np.inf
+            )
+            too_soon = time_since_last_goal < self._min_time_between_goals
+
+            dist_to_goal: float = self._euclidian_distance(
+                robot_pose.pose, current_track.pose
+            )
+
+            too_close = dist_to_goal < self._stopping_distance
+
+            dist_to_prev = (
+                self._euclidian_distance(current_track.pose, prev_track.pose)
+                if prev_track is not None
+                else np.inf
+            )
+
+            too_close_to_prev = dist_to_prev < self._min_distance_between_tracks
+
+            if too_close_to_prev:
+                if static_time is None:
+                    static_time = rospy.Time.now()
+                static_for = rospy.Time.now().secs - static_time.secs
+
+            rospy.loginfo(
+                f"Too soon: {too_soon} ({time_since_last_goal}), too close: {too_close} ({dist_to_goal}), too close to prev: {too_close_to_prev} ({dist_to_prev} for {static_for})"
+            )
+
+            if too_close_to_prev:
+                if static_for >= self._n_secs_static:
+                    rospy.loginfo(
+                        f"Person has been static for {static_for} seconds, finishing"
+                    )
+                    return
+                rospy.loginfo("Person too close to previous, skipping")
+                continue
+
+            if too_soon:
+                rospy.loginfo("Too soon, skipping")
+                continue
+
+            static_time = None
+            static_for = None
+
+            if too_close:
                 rospy.loginfo("Person too close to robot, facing them and skipping")
                 pose = PoseStamped(header=tracks.header)
                 pose.pose = robot_pose.pose
@@ -219,40 +216,51 @@ class PersonFollower:
                 prev_goal = goal
                 continue
 
-            if (
-                prev_track is not None
-                and self._euclidian_distance(prev_track.pose, current_track.pose) < 0.5
-            ):
-                rospy.loginfo("Person too close to previous one, skipping")
-                prev_track = current_track
-                continue
-
-            start_pose = self._tf_pose(robot_pose, "map")
-            goal_pose = self._tf_pose(
+            robot_pose_map = self._tf_pose(robot_pose, "map")
+            current_track_pose_map = self._tf_pose(
                 PoseStamped(pose=current_track.pose, header=tracks.header), "map"
             )
-            plan = self._make_plan(start_pose, goal_pose, 0.01).plan
-            print(plan)
+
+            if self._move_base_client.get_state() in [
+                GoalStatus.PENDING,
+                GoalStatus.ACTIVE,
+            ]:
+                rospy.loginfo("Robot is already moving, skipping")
+                # prev_track = current_track
+                rospy.loginfo(robot_pose_map)
+                rospy.loginfo(current_track_pose_map)
+                continue
+
+            plan = self._make_plan(robot_pose_map, current_track_pose_map, 0.5).plan
             if len(plan.poses) == 0:
                 rospy.loginfo("Failed to find a plan, skipping")
                 # prev_track = current_track
+                rospy.loginfo(robot_pose_map)
+                rospy.loginfo(current_track_pose_map)
                 continue
+
+            print(plan.poses)
 
             # select a pose that is 1m away from the goal_pose
             for pose in reversed(plan.poses):
-                if self._euclidian_distance(pose.pose, goal_pose.pose) > 1.0:
+                if (
+                    self._euclidian_distance(pose.pose, current_track_pose_map.pose)
+                    > self._stopping_distance
+                ):
                     goal_pose = pose
+                    print(f"Selected pose {goal_pose.pose.position}")
                     break
-            goal_pose.pose.orientation = self._compute_face_quat(
-                robot_pose.pose, current_track.pose
-            )
+
             goal = MoveBaseGoal()
+            goal_pose.pose.orientation = self._compute_face_quat(
+                robot_pose_map.pose, current_track_pose_map.pose
+            )
+            goal.target_pose = goal_pose
             goal.target_pose.header.stamp = rospy.Time.now()
 
             poses.append(goal.target_pose.pose)
             self._move_base_client.send_goal(goal)
-            prev_track = current_track
-            prev_goal = goal
+            rospy.loginfo(f"Sent goal to {goal.target_pose.pose.position}")
 
             prev_track = current_track
             prev_goal = goal
