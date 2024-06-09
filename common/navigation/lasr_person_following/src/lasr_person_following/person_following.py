@@ -270,7 +270,7 @@ class PersonFollower:
                 GoalStatus.ACTIVE,
             ]:
                 rospy.loginfo("Robot is already moving, skipping")
-                # prev_track = current_track
+                # prev_track = current_track # TODO: check if this is necessary
                 rospy.loginfo(robot_pose_map)
                 rospy.loginfo(current_track_pose_map)
                 continue
@@ -278,7 +278,7 @@ class PersonFollower:
             plan = self._make_plan(robot_pose_map, current_track_pose_map, 0.5).plan
             if len(plan.poses) == 0:
                 rospy.loginfo("Failed to find a plan, skipping")
-                # prev_track = current_track
+                # prev_track = current_track # TODO: check if this is necessary
                 rospy.loginfo(robot_pose_map)
                 rospy.loginfo(current_track_pose_map)
                 continue
