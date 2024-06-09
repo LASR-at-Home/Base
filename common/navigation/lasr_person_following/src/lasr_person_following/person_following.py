@@ -45,11 +45,11 @@ class PersonFollower:
 
     def __init__(
         self,
-        start_following_radius: float = 1.0,
+        start_following_radius: float = 2.0,
         start_following_angle: float = 45.0,
-        min_distance_between_tracks: float = 0.1,
+        min_distance_between_tracks: float = 0.05,
         n_secs_static: float = 15.0,
-        min_time_between_goals: float = 2.0,
+        min_time_between_goals: float = 1.0,
         stopping_distance: float = 1.0,
     ):
         self._start_following_radius = start_following_radius
@@ -199,7 +199,14 @@ class PersonFollower:
                 if prev_goal is not None
                 else np.inf
             )
-            too_soon = time_since_last_goal < self._min_time_between_goals
+            too_soon = (
+                time_since_last_goal < self._min_time_between_goals
+                and self._move_base_client.get_state()
+                in [
+                    GoalStatus.PENDING,
+                    GoalStatus.ACTIVE,
+                ]
+            )
 
             dist_to_goal: float = self._euclidian_distance(
                 robot_pose.pose, current_track.pose
@@ -239,13 +246,6 @@ class PersonFollower:
                 rospy.loginfo("Person too close to previous, skipping")
                 continue
 
-            if too_soon:
-                rospy.loginfo("Too soon, skipping")
-                continue
-
-            static_time = None
-            static_for = None
-
             if too_close:
                 rospy.loginfo("Person too close to robot, facing them and skipping")
                 pose = PoseStamped(header=tracks.header)
@@ -261,6 +261,13 @@ class PersonFollower:
                 prev_goal = goal
                 continue
 
+            if too_soon:
+                rospy.loginfo("Too soon, skipping")
+                continue
+
+            static_time = None
+            static_for = None
+
             robot_pose_map = self._tf_pose(robot_pose, "map")
             current_track_pose_map = self._tf_pose(
                 PoseStamped(pose=current_track.pose, header=tracks.header), "map"
@@ -270,13 +277,16 @@ class PersonFollower:
                 GoalStatus.PENDING,
                 GoalStatus.ACTIVE,
             ]:
+                # self._cancel_goal()
                 rospy.loginfo("Robot is already moving, skipping")
                 # prev_track = current_track # TODO: check if this is necessary
                 rospy.loginfo(robot_pose_map)
                 rospy.loginfo(current_track_pose_map)
                 continue
 
-            plan = self._make_plan(robot_pose_map, current_track_pose_map, 0.5).plan
+            plan = self._make_plan(
+                robot_pose_map, current_track_pose_map, self._stopping_distance
+            ).plan
             if len(plan.poses) == 0:
                 rospy.loginfo("Failed to find a plan, skipping")
                 # prev_track = current_track # TODO: check if this is necessary
@@ -298,7 +308,7 @@ class PersonFollower:
 
             goal = MoveBaseGoal()
             goal_pose.pose.orientation = self._compute_face_quat(
-                robot_pose_map.pose, current_track_pose_map.pose
+                goal_pose.pose, current_track_pose_map.pose
             )
             goal.target_pose = goal_pose
             goal.target_pose.header.stamp = rospy.Time.now()
