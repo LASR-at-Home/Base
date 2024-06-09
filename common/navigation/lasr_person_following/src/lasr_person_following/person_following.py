@@ -32,6 +32,7 @@ from scipy.spatial.transform import Rotation as R
 class PersonFollower:
 
     _track_id: Union[None, int]
+    _start_following_radius: float
     _min_distance_between_tracks: float
     _n_secs_static: float
     _min_time_between_goals: float
@@ -44,12 +45,15 @@ class PersonFollower:
 
     def __init__(
         self,
+        start_following_radius: float = 1.0,
+        start_following_angle: float = 45.0,
         min_distance_between_tracks: float = 0.1,
         n_secs_static: float = 15.0,
         min_time_between_goals: float = 2.0,
         stopping_distance: float = 1.0,
     ):
-
+        self._start_following_radius = start_following_radius
+        self._start_following_angle = start_following_angle
         self._min_distance_between_tracks = min_distance_between_tracks
         self._n_secs_static = n_secs_static
         self._min_time_between_goals = min_time_between_goals
@@ -96,12 +100,27 @@ class PersonFollower:
         if len(people.people) == 0:
             return False
 
+        min_dist = np.inf
+        closest_person = None
         robot_pose = self._robot_pose_in_odom()
-        # TODO: filter to only include people in front of the robot (use a cone?)
-        closest_person: Person = min(
-            people.people,
-            key=lambda person: self._euclidian_distance(person.pose, robot_pose.pose),
-        )
+        for person in people.people:
+            dist = self._euclidian_distance(person.pose, robot_pose.pose)
+
+            face_quat = self._compute_face_quat(robot_pose.pose, person.pose)
+            robot_dir = self._quat_to_dir(robot_pose.pose.orientation)
+            person_dir = self._quat_to_dir(face_quat)
+            angle = np.degrees(self._angle_between_vectors(robot_dir, person_dir))
+            rospy.loginfo(f"Person {person.id} is at {dist}m and {angle} degrees")
+            if (
+                dist < self._start_following_radius
+                and abs(angle) < self._start_following_angle
+            ):
+                if dist < min_dist:
+                    min_dist = dist
+                    closest_person = person
+
+        if not closest_person:
+            return False
 
         self._track_id = closest_person.id
 
@@ -117,6 +136,21 @@ class PersonFollower:
             - np.array([p2.position.x, p2.position.y])
         ).astype(float)
 
+    def _quat_to_dir(self, q: Quaternion):
+        x, y, z, w = q.x, q.y, q.z, q.w
+        forward = np.array(
+            [1 - 2 * (y**2 + z**2), 2 * (x * y - z * w), 2 * (x * z + y * w)]
+        )
+        return forward
+
+    def _angle_between_vectors(self, v1, v2):
+        dot_product = np.dot(v1, v2)
+        norms_product = np.linalg.norm(v1) * np.linalg.norm(v2)
+        cos_theta = dot_product / norms_product
+        cos_theta = np.clip(cos_theta, -1.0, 1.0)
+        angle = np.arccos(cos_theta)
+        return angle
+
     def _compute_face_quat(self, p1: Pose, p2: Pose) -> Quaternion:
         dx: float = p2.position.x - p1.position.x
         dy: float = p2.position.y - p1.position.y
@@ -130,6 +164,9 @@ class PersonFollower:
             GoalStatus.ACTIVE,
         ]:
             self._move_base_client.cancel_goal()
+
+    def _check_finished(self) -> bool:
+        return True
 
     def follow(self) -> None:
 
@@ -189,10 +226,15 @@ class PersonFollower:
             if too_close_to_prev:
                 if static_for >= self._n_secs_static:
                     rospy.loginfo(
-                        f"Person has been static for {static_for} seconds, finishing"
+                        f"Person has been static for {static_for} seconds, checking if finished"
                     )
-                    # TODO: check if we are actually finished
-                    return
+                    if self._check_finished():
+                        rospy.loginfo("Stopping...")
+                        return
+                    else:
+                        rospy.loginfo("Person not finished, continuing")
+                        static_time = rospy.Time.now()
+
                 rospy.loginfo("Person too close to previous, skipping")
                 continue
 
