@@ -7,10 +7,10 @@ import sys
 if __name__ == "__main__":
     rospy.init_node("coffee_shop")
 
-    if len(sys.argv) < 3:
+    if len(sys.argv) < 4:
         rospy.signal_shutdown("No configuration was provided")
         sys.exit()
-    context = Context(sys.argv[1], sys.argv[2])
+    context = Context(sys.argv[1], sys.argv[2], sys.argv[3])
 
     coffee_shop = CoffeeShop(context)
     outcome = coffee_shop.execute()

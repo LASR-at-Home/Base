@@ -17,8 +17,9 @@ from tf2_geometry_msgs.tf2_geometry_msgs import do_transform_pose, do_transform_
 
 
 class Context:
-    def __init__(self, config_path=None, tablet=False):
+    def __init__(self, config_path=None, tablet=False, tablet_on_head=False):
         self.tablet = tablet
+        self.tablet_on_head = tablet_on_head
 
         self.move_base_client = actionlib.SimpleActionClient(
             "/move_base", MoveBaseAction
