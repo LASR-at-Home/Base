@@ -172,6 +172,7 @@ catkin_install_python(PROGRAMS
   scripts/test_microphones.py
   scripts/repeat_after_me.py
   scripts/test_speech_server.py
+  scripts/microphone_tuning_test.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
