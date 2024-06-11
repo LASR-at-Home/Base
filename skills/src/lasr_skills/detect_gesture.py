@@ -28,7 +28,6 @@ class DetectGesture(smach.State):
             input_keys=["img_msg"],
             output_keys=["gesture_detected"],
         )
-        self.debug = debug
         self.gesture_to_detect = gesture_to_detect
         self.body_pix_client = rospy.ServiceProxy("/bodypix/detect", BodyPixDetection)
         self.debug_publisher = rospy.Publisher(
