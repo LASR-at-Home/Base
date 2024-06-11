@@ -216,5 +216,5 @@ class DescribePeople(smach.StateMachine):
             #     - parts
             #       - - part
             #         - mask
-            userdata["people"] = people
+            userdata.people = people
             return "succeeded"
