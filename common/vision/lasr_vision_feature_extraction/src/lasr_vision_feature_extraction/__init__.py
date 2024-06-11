@@ -510,7 +510,6 @@ def predict_frame(
         cloth_predictor.predict(torso_frame)
     ).describe()
 
-    # results from two dictionaries are currently merged but might got separated again in the future if needed.
     result = {
         "attributes": {**rst_person["attributes"], **rst_cloth["attributes"]},
         "description": rst_person["description"] + rst_cloth["description"],
