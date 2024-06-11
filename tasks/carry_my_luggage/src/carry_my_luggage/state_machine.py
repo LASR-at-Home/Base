@@ -5,9 +5,22 @@ from lasr_skills import WaitForPerson, Say, DetectGesture, ReceiveObject, Handov
 
 import rospy
 from lasr_person_following.msg import FollowAction
+from sensor_msgs.msg import Image
 
 
 class CarryMyLuggage(smach.StateMachine):
+
+    class GetImage(smach.State):
+        def __init__(self):
+            smach.State.__init__(
+                self,
+                outcomes=["succeeded", "failed"],
+                output_keys=["img_msg"],
+            )
+
+        def execute(self, userdata):
+            userdata.img_msg = rospy.wait_for_message("/xtion/rgb/image_raw", Image)
+            return "succeeded"
 
     class ProcessPointingDirection(smach.State):
         def __init__(self):
@@ -34,6 +47,25 @@ class CarryMyLuggage(smach.StateMachine):
             smach.StateMachine.add(
                 "WAIT_FOR_PERSON",
                 WaitForPerson(),
+                transitions={
+                    "succeeded": "SAY_POINT_TO_BAG",
+                    "failed": "failed",
+                },
+            )
+
+            smach.StateMachine.add(
+                "SAY_POINT_TO_BAG",
+                Say(text="Please point to the bag that you wish me to carry."),
+                transitions={
+                    "succeeded": "GET_IMAGE",
+                    "aborted": "failed",
+                    "preempted": "failed",
+                },
+            )
+
+            smach.StateMachine.add(
+                "GET_IMAGE",
+                CarryMyLuggage.GetImage(),
                 transitions={
                     "succeeded": "DETECT_POINTING_DIRECTION",
                     "failed": "failed",
@@ -64,7 +96,7 @@ class CarryMyLuggage(smach.StateMachine):
                     text="I could not detect the direction that you are pointing. I'll try again."
                 ),
                 transitions={
-                    "succeeded": "DETECT_POINTING_DIRECTION",
+                    "succeeded": "GET_IMAGE",
                     "aborted": "failed",
                     "preempted": "failed",
                 },
@@ -83,9 +115,9 @@ class CarryMyLuggage(smach.StateMachine):
 
             smach.StateMachine.add(
                 "RECEIVE_BAG",
-                ReceiveObject(object_name="bag", vertical=False),
+                ReceiveObject(object_name="bag", vertical=True),
                 transitions={
-                    "succeeded": "succeeded",
+                    "succeeded": "SAY_FOLLOW",
                     "failed": "failed",
                 },
             )
@@ -125,7 +157,7 @@ class CarryMyLuggage(smach.StateMachine):
 
             smach.StateMachine.add(
                 "HANDOVER",
-                HandoverObject(object_name="bag", vertical=False),
+                HandoverObject(object_name="bag", vertical=True),
                 transitions={
                     "succeeded": "succeeded",
                     "failed": "failed",
