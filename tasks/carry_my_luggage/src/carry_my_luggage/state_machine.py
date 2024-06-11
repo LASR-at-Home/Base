@@ -1,14 +1,10 @@
 import smach
+import smach_ros
 
-from lasr_skills import (
-    WaitForPerson,
-    DetectPointingDirection,
-    Say,
-    DetectGesture,
-    ReceiveObject,
-)
+from lasr_skills import WaitForPerson, Say, DetectGesture, ReceiveObject, HandoverObject
 
 import rospy
+from lasr_person_following.msg import FollowAction
 
 
 class CarryMyLuggage(smach.StateMachine):
@@ -88,6 +84,48 @@ class CarryMyLuggage(smach.StateMachine):
             smach.StateMachine.add(
                 "RECEIVE_BAG",
                 ReceiveObject(object_name="bag", vertical=False),
+                transitions={
+                    "succeeded": "succeeded",
+                    "failed": "failed",
+                },
+            )
+
+            smach.StateMachine.add(
+                "SAY_FOLLOW",
+                Say(text="I will follow you now."),
+                transitions={
+                    "succeeded": "FOLLOW",
+                    "aborted": "failed",
+                    "preempted": "failed",
+                },
+            )
+
+            smach.StateMachine.add(
+                "FOLLOW",
+                smach_ros.SimpleActionState(
+                    "follow_person",
+                    FollowAction,
+                ),
+                transitions={
+                    "succeeded": "SAY_HANDOVER",
+                    "aborted": "failed",
+                    "preempted": "failed",
+                },
+            )
+
+            smach.StateMachine.add(
+                "SAY_HANDOVER",
+                Say(text="I will hand over the bag to you now."),
+                transitions={
+                    "succeeded": "HANDOVER",
+                    "aborted": "failed",
+                    "preempted": "failed",
+                },
+            )
+
+            smach.StateMachine.add(
+                "HANDOVER",
+                HandoverObject(object_name="bag", vertical=False),
                 transitions={
                     "succeeded": "succeeded",
                     "failed": "failed",
