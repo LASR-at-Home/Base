@@ -45,6 +45,16 @@ class HandoverObject(smach.StateMachine):
                 "LOOK_LEFT",
                 PlayMotion(motion_name="look_left"),
                 transitions={
+                    "succeeded": "LOOK_DOWN_LEFT",
+                    "aborted": "failed",
+                    "preempted": "failed",
+                },
+            )
+
+            smach.StateMachine.add(
+                "LOOK_DOWN_LEFT",
+                PlayMotion(motion_name="look_down_left"),
+                transitions={
                     "succeeded": "LOOK_RIGHT",
                     "aborted": "failed",
                     "preempted": "failed",
@@ -54,6 +64,26 @@ class HandoverObject(smach.StateMachine):
             smach.StateMachine.add(
                 "LOOK_RIGHT",
                 PlayMotion(motion_name="look_right"),
+                transitions={
+                    "succeeded": "LOOK_DOWN_RIGHT",
+                    "aborted": "failed",
+                    "preempted": "failed",
+                },
+            )
+
+            smach.StateMachine.add(
+                "LOOK_DOWN_RIGHT",
+                PlayMotion(motion_name="look_down_right"),
+                transitions={
+                    "succeeded": "LOOK_DOWN_CENTRE",
+                    "aborted": "failed",
+                    "preempted": "failed",
+                },
+            )
+
+            smach.StateMachine.add(
+                "LOOK_DOWN_CENTRE",
+                PlayMotion(motion_name="look_centre"),
                 transitions={
                     "succeeded": "LOOK_CENTRE",
                     "aborted": "failed",
@@ -96,7 +126,7 @@ class HandoverObject(smach.StateMachine):
                 smach.StateMachine.add(
                     "SAY_TAKE",
                     Say(
-                        text=f"Please place the {object_name} in my end-effector, and say `I am done`.",
+                        text=f"Please grab the {object_name} in my end-effector, and say `I am done`.",
                     ),
                     transitions={
                         "succeeded": "LISTEN_DONE",
