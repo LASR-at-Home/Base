@@ -197,8 +197,6 @@ class DescribePeople(smach.StateMachine):
                 )
 
                 full_frame = cv2_img.cv2_img_to_msg(img)
-                rospy.loginfo(type(img))
-                rospy.loginfo(type(full_frame))
 
                 rst = self.face_features(
                     full_frame,

@@ -417,7 +417,7 @@ def load_face_classifier_model():
     return model
 
 
-def load_cloth_classidifer_model():
+def load_cloth_classifier_model():
     num_classes = len(DeepFashion2GeneralizedCategoriesAndAttributes.attributes)
     model = SegmentPredictorBbox(
         num_masks=num_classes + 4, num_labels=num_classes + 4, num_bbox_classes=4
