@@ -47,7 +47,7 @@ class PersonFollower:
         self,
         start_following_radius: float = 2.0,
         start_following_angle: float = 45.0,
-        min_distance_between_tracks: float = 0.05,
+        min_distance_between_tracks: float = 1.0,
         n_secs_static: float = 15.0,
         min_time_between_goals: float = 1.0,
         stopping_distance: float = 1.0,
@@ -167,7 +167,7 @@ class PersonFollower:
 
     def _check_finished(self) -> bool:
         # TODO: ask the person if they are finished via speech.
-        return True
+        return False
 
     def follow(self) -> None:
 
@@ -263,6 +263,7 @@ class PersonFollower:
 
             if too_soon:
                 rospy.loginfo("Too soon, skipping")
+                prev_track = current_track
                 continue
 
             static_time = None
@@ -277,16 +278,19 @@ class PersonFollower:
                 GoalStatus.PENDING,
                 GoalStatus.ACTIVE,
             ]:
-                # self._cancel_goal()
-                rospy.loginfo("Robot is already moving, skipping")
-                # prev_track = current_track # TODO: check if this is necessary
-                rospy.loginfo(robot_pose_map)
-                rospy.loginfo(current_track_pose_map)
+                self._cancel_goal()
+            #     rospy.loginfo("Robot is already moving, skipping")
+            #     # prev_track = current_track # TODO: check if this is necessary
+            #     rospy.loginfo(robot_pose_map)
+            #     rospy.loginfo(current_track_pose_map)
+            #     continue
+            try:
+                plan = self._make_plan(
+                    robot_pose_map, current_track_pose_map, self._stopping_distance
+                ).plan
+            except rospy.ServiceException:
+                rospy.loginfo("Failed to find a plan, skipping")
                 continue
-
-            plan = self._make_plan(
-                robot_pose_map, current_track_pose_map, self._stopping_distance
-            ).plan
             if len(plan.poses) == 0:
                 rospy.loginfo("Failed to find a plan, skipping")
                 # prev_track = current_track # TODO: check if this is necessary
