@@ -30,15 +30,30 @@ play_motion:
       points:
       - positions: [0.5, 0.0]
         time_from_start: 0.0
+    look_down_left:
+      joints: [head_1_joint, head_2_joint]
+      points:
+      - positions: [0.5, -0.5]
+        time_from_start: 0.0
     look_right:
       joints: [head_1_joint, head_2_joint]
       points:
       - positions: [-0.5, 0.0]
         time_from_start: 0.0
+    look_down_right:
+      joints: [head_1_joint, head_2_joint]
+      points:
+      - positions: [-0.5, -0.5]
+        time_from_start: 0.0
     look_centre:
       joints: [head_1_joint, head_2_joint]
       points:
       - positions: [0.0, 0.0]
+        time_from_start: 0.0
+    look_down_centre:
+      joints: [head_1_joint, head_2_joint]
+      points:
+      - positions: [0.0, -0.50]
         time_from_start: 0.0
     raise_torso:
       joints: [torso_lift_joint]
