@@ -142,6 +142,7 @@ class DescribePeople(smach.StateMachine):
         def execute(self, userdata):
             if len(userdata.people_detections) == 0:
                 rospy.logerr("Couldn't find anyone!")
+                userdata.people = []
                 return "failed"
             elif len(userdata.people_detections) == 1:
                 rospy.logdebug("There is one person.")
