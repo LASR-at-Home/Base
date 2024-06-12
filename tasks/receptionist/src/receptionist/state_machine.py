@@ -435,8 +435,6 @@ class Receptionist(smach.StateMachine):
                 },
             )
 
-
-
             smach.StateMachine.add(
                 "GET_GUEST_ATTRIBUTES_GUEST_2",
                 GetGuestAttributes("guest2"),
