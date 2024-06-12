@@ -20,6 +20,7 @@ class DetectGesture(smach.State):
         self,
         gesture_to_detect: Optional[str] = None,
         buffer_width: int = 50,
+        debug_publisher: str = "/skills/gesture_detection/debug",
     ):
         """Optionally stores the gesture to detect. If None, it will infer the gesture from the keypoints."""
         smach.State.__init__(
@@ -28,12 +29,9 @@ class DetectGesture(smach.State):
             input_keys=["img_msg"],
             output_keys=["gesture_detected"],
         )
-        self.debug = debug
         self.gesture_to_detect = gesture_to_detect
         self.body_pix_client = rospy.ServiceProxy("/bodypix/detect", BodyPixDetection)
-        self.debug_publisher = rospy.Publisher(
-            "/gesture_detection/debug", Image, queue_size=1
-        )
+        self.debug_publisher = rospy.Publisher(debug_publisher, Image, queue_size=1)
         self.buffer_width = buffer_width
 
     def execute(self, userdata):
