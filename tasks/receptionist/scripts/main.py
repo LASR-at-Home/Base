@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import rospy
 from receptionist.state_machine import Receptionist
-import smach 
+import smach
 import smach_ros
 
 from geometry_msgs.msg import Pose, Point, Quaternion
@@ -9,7 +9,7 @@ from shapely.geometry import Polygon
 
 if __name__ == "__main__":
     rospy.init_node("receptionist_robocup")
-   # wait_pose_param = rospy.get_param("/receptionist/wait_pose")
+    # wait_pose_param = rospy.get_param("/receptionist/wait_pose")
     wait_pose_param = rospy.get_param("/wait_pose/")
 
     wait_pose = Pose(
@@ -40,7 +40,7 @@ if __name__ == "__main__":
         },
     )
 
-    sis = smach_ros.IntrospectionServer('smach_server',receptionist,'/SM_ROOT')
+    sis = smach_ros.IntrospectionServer("smach_server", receptionist, "/SM_ROOT")
     sis.start()
     outcome = receptionist.execute()
 

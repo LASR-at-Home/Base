@@ -8,17 +8,22 @@
     <node pkg="lasr_speech_recognition_whisper" type="transcribe_microphone_server" name="transcribe_speech" output="screen" args="--mic_device $(arg whisper_device_param)"/>
 
     <!--     STATIC POINTS     -->
-    <!--<rosparam command="load" file="$(find receptionist)/config/$(arg config).yaml" />-->
-    <rosparam command="load" file="$(find receptionist)/config/lab.yaml"/>
+    <rosparam command="load" file="$(find receptionist)/config/$(arg config).yaml" ns="receptionist" />
+    <!-- <rosparam command="load" file="$(find receptionist)/config/lab.yaml"/> -->
 
     <!--     MOTIONS     -->
     <rosparam command="load" file="$(find lasr_skills)/config/motions.yaml"/>
     <rosparam command="load" file="$(find receptionist)/config/motions.yaml"/>
 
     <!--      PERCEPTION     -->
-    <include file="$(find lasr_vision_yolov8)/launch/service.launch" />
+    <include file="$(find lasr_vision_yolov8)/launch/service.launch">
+        <param name="debug" value="true" />
+    </include>
+    
     <node pkg="lasr_vision_feature_extraction" type="service" name="torch_service" output="screen"/>
     <arg name="debug" default="true" />
     <node pkg="lasr_vision_bodypix" type="service" name="bodypix_service" output="screen" args="--debug $(arg debug)"/>
+
+    <node pkg="lasr_vision_deepface" type="service" name="deepface_service" output="screen"/>
 
 </launch>

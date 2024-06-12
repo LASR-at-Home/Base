@@ -1,5 +1,9 @@
 import smach
 from smach import UserData
+<<<<<<< HEAD
+=======
+
+>>>>>>> 16ff9e135b15e7fb0aeeeb5fe82ec14f7e0b2d2f
 from lasr_skills import DescribePeople
 import json
 
