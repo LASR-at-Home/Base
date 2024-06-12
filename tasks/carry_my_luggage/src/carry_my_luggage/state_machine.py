@@ -1,26 +1,17 @@
 import smach
-import smach_ros
 
-from lasr_skills import WaitForPerson, Say, DetectGesture, ReceiveObject, HandoverObject
-
-import rospy
+from lasr_skills import (
+    WaitForPerson,
+    Say,
+    DetectGesture,
+    ReceiveObject,
+    HandoverObject,
+    GetImage,
+)
 from lasr_person_following.msg import FollowAction
-from sensor_msgs.msg import Image
 
 
 class CarryMyLuggage(smach.StateMachine):
-
-    class GetImage(smach.State):
-        def __init__(self):
-            smach.State.__init__(
-                self,
-                outcomes=["succeeded", "failed"],
-                output_keys=["img_msg"],
-            )
-
-        def execute(self, userdata):
-            userdata.img_msg = rospy.wait_for_message("/xtion/rgb/image_raw", Image)
-            return "succeeded"
 
     class ProcessPointingDirection(smach.State):
         def __init__(self):
@@ -65,7 +56,7 @@ class CarryMyLuggage(smach.StateMachine):
 
             smach.StateMachine.add(
                 "GET_IMAGE",
-                CarryMyLuggage.GetImage(),
+                GetImage(),
                 transitions={
                     "succeeded": "DETECT_POINTING_DIRECTION",
                     "failed": "failed",
