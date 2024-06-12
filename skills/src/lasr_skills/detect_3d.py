@@ -1,11 +1,13 @@
+#!/usr/bin/env python3
 import rospy
 import smach
+import numpy as np
 
 from sensor_msgs.msg import PointCloud2
 from visualization_msgs.msg import Marker
 from geometry_msgs.msg import PointStamped, Point
 from lasr_vision_msgs.srv import YoloDetection3D
-from common.helpers.markers import create_and_publish_marker
+from markers import create_and_publish_marker
 
 from typing import List, Union
 
@@ -46,12 +48,29 @@ class Detect3D(smach.State):
 
             for det in result.detected_objects:
                 point_stamped = PointStamped()
-                point_stamped.header = pcl_msg.header
-                point_stamped.point = Point(det.x, det.y, det.z)
-                marker_msg = create_and_publish_marker(point_stamped, det.name)
-                self.debug_pub.publish(marker_msg)
+                point_stamped.header.frame_id = "map"
+                point_stamped.point = det.point
+                rospy.loginfo(f"Detected point: {point_stamped}")
+                if np.isnan(det.point.x).any():
+                    rospy.loginfo(f"No depth detected, object likely too far away")
+                    continue
+                create_and_publish_marker(self.debug_pub, point_stamped, name=det.name)
 
             return "succeeded"
         except rospy.ServiceException as e:
             rospy.logwarn(f"Unable to perform inference. ({str(e)})")
             return "failed"
+
+
+if __name__ == "__main__":
+    rospy.init_node("detect")
+    while not rospy.is_shutdown():
+        detect = Detect3D()
+        sm = smach.StateMachine(outcomes=["succeeded", "failed"])
+        with sm:
+            smach.StateMachine.add(
+                "DETECT",
+                detect,
+                transitions={"succeeded": "succeeded", "failed": "failed"},
+            )
+        sm.execute()
