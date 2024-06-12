@@ -51,6 +51,8 @@ class ParseNameAndDrink(smach.State):
 
         transcription = userdata["guest_transcription"].lower()
 
+        print(transcription)
+
         for name in self._possible_names:
             if name in transcription:
                 userdata.guest_data[self._guest_id]["name"] = name

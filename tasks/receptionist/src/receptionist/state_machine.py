@@ -516,7 +516,7 @@ class Receptionist(smach.StateMachine):
                 "SAY_WAIT_GUEST_2",
                 Say(text="Please wait here on my left"),
                 transitions={
-                    "succeeded": "FIND_AND_LOOK_AT_HOST_2",
+                    "succeeded": "INTRODUCE_GUEST_2_TO_EVERYONE",
                     "preempted": "failed",
                     "aborted": "failed",
                 },
@@ -525,32 +525,32 @@ class Receptionist(smach.StateMachine):
             # INTRODUCE GUEST 2 TO HOST
 
 
-            smach.StateMachine.add(
-                "FIND_AND_LOOK_AT_HOST_2",
-                FindAndLookAt(
-                    self.userdata.guest_data["host"]["name"],
-                    [
-                        [0.0, 0.0],
-                        [-1.0, 0.0],
-                        [1.0, 0.0],
-                    ],
-                ),
-                transitions={
-                    "succeeded": "INTRODUCE_GUEST_2_TO_HOST",
-                    "failed": "SAY_NO_HOST_2",
-                },
-            )
+            # smach.StateMachine.add(
+            #     "FIND_AND_LOOK_AT_HOST_2",
+            #     FindAndLookAt(
+            #         self.userdata.guest_data["host"]["name"],
+            #         [
+            #             [0.0, 0.0],
+            #             [-1.0, 0.0],
+            #             [1.0, 0.0],
+            #         ],
+            #     ),
+            #     transitions={
+            #         "succeeded": "INTRODUCE_GUEST_2_TO_HOST",
+            #         "failed": "SAY_NO_HOST_2",
+            #     },
+            # )
 
 
-            smach.StateMachine.add(
-                "SAY_NO_HOST_2",
-                Say(text="Wow, I can't find the host, I'm sure they're here"),
-                transitions={
-                    "succeeded": "INTRODUCE_GUEST_2_TO_HOST",
-                    "preempted": "failed",
-                    "aborted": "failed",
-                },
-            )
+            # smach.StateMachine.add(
+            #     "SAY_NO_HOST_2",
+            #     Say(text="Wow, I can't find the host, I'm sure they're here"),
+            #     transitions={
+            #         "succeeded": "INTRODUCE_GUEST_2_TO_HOST",
+            #         "preempted": "failed",
+            #         "aborted": "failed",
+            #     },
+            # )
  
             # Look at guest 2
 

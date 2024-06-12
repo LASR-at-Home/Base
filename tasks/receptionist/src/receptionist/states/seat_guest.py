@@ -6,10 +6,7 @@ from shapely.geometry import Polygon
 
 import numpy as np
 
-<<<<<<< HEAD
-from lasr_skills import PlayMotion, Detect3DInArea, LookToPoint, Say
 from geometry_msgs.msg import Point, PointStamped
-=======
 from lasr_skills import PlayMotion, Detect3DInArea, LookToPoint, Say, WaitForPerson
 
 
@@ -27,7 +24,6 @@ class GuestSeatWait(smach.State):
         except:
             print("Waiting for the guest to sit down failed")
             return "failed"
->>>>>>> 16ff9e135b15e7fb0aeeeb5fe82ec14f7e0b2d2f
 
 
 class SeatGuest(smach.StateMachine):
@@ -141,7 +137,7 @@ class SeatGuest(smach.StateMachine):
                     "succeeded": "SAY_SIT",
                     "aborted": "failed",
                     "preempted": "failed",
-                    "timed_out": "SAY_SIT",
+                    # "timed_out": "SAY_SIT",
                 },
                 remapping={"pointstamped": "seat_position"},
             )
