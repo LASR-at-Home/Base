@@ -19,7 +19,11 @@ from .ask_and_listen import AskAndListen
 from .clip_vqa import QueryImage
 from .detect_faces import DetectFaces
 from .recognise import Recognise
+<<<<<<< HEAD
 #from .detect_pointing import DetectPointingDirection
+=======
+
+>>>>>>> haiwei_fork/test
 from .detect_gesture import DetectGesture
 from .learn_face import LearnFace
 from .look_at_person import LookAtPerson

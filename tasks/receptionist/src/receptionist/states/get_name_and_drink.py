@@ -23,7 +23,7 @@ class ParseNameAndDrink(smach.State):
         """
         smach.State.__init__(
             self,
-            outcomes=["succeeded", "failed"],
+            outcomes=["succeeded", "failed", "failed_name", "failed_drink"],
             input_keys=["guest_transcription", "guest_data"],
             output_keys=["guest data", "guest_transcription"],
         )
@@ -44,12 +44,9 @@ class ParseNameAndDrink(smach.State):
             str: state outcome. Updates the userdata with the parsed name and drink, under
             the parameter "guest data".
         """
-
         outcome = "succeeded"
         name_found = False
         drink_found = False
-        print(userdata)
-        print(type(userdata.guest_transcription))
         transcription = userdata.guest_transcription.lower()
 
         transcription = userdata["guest_transcription"].lower()
@@ -62,8 +59,6 @@ class ParseNameAndDrink(smach.State):
                 break
 
         for drink in self._possible_drinks:
-            print(self._possible_drinks)
-            print(transcription)
             if drink in transcription:
                 userdata.guest_data[self._guest_id]["drink"] = drink
                 rospy.loginfo(f"Guest Drink identified as: {drink}")
@@ -79,4 +74,23 @@ class ParseNameAndDrink(smach.State):
             userdata.guest_data[self._guest_id]["drink"] = "unknown"
             outcome = "failed"
 
+        if outcome == "failed":
+            if not self._recovery_name_and_drink_required(userdata):
+                if userdata.guest_data[self._guest_id]["name"] == "unknown":
+                    outcome = "failed_name"
+                else:
+                    outcome = "failed_drink"
+
         return outcome
+
+    def _recovery_name_and_drink_required(self, userdata: UserData) -> bool:
+        """Determine whether both the name and drink requires recovery.
+
+        Returns:
+            bool: True if both attributes require recovery.
+        """
+        if userdata.guest_data[self._guest_id]["name"] == "unknown":
+            if userdata.guest_data[self._guest_id]["drink"] == "unknown":
+                return True
+        else:
+            return False

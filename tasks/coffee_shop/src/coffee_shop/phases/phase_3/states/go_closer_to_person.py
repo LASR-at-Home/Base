@@ -1,7 +1,7 @@
-#!/usr/bin/env python3
 import smach
 from geometry_msgs.msg import Pose, Point, Quaternion
 import rospy
+from move_base_msgs.msg import MoveBaseGoal
 
 
 class GoCloserToPerson(smach.State):
@@ -15,7 +15,10 @@ class GoCloserToPerson(smach.State):
         )
         location = rospy.get_param("/wait/approach1")
         position, orientation = location["position"], location["orientation"]
-        self.context.base_controller.sync_to_pose(
-            Pose(position=Point(**position), orientation=Quaternion(**orientation))
+        move_base_goal = MoveBaseGoal()
+        move_base_goal.target_pose.header.frame_id = "map"
+        move_base_goal.target_pose.pose = Pose(
+            position=Point(**position), orientation=Quaternion(**orientation)
         )
+        self.context.move_base_client.send_goal_and_wait(move_base_goal)
         return "done"
