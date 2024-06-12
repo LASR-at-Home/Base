@@ -25,8 +25,6 @@ nlu:
     - [Axel](name)
     - [Charlie](name)
     - [Jane](name)
-    - [Jayne](name)
-    - [Jay](name)
     - [Jules](name)
     - [Morgan](name)
     - [Paris](name)
@@ -36,3 +34,8 @@ nlu:
     - It's [Jane](name)
     - I am [Paris](name)
     - I'm [Robin](name)
+
+    # Misheard names for Jane
+    
+    - [Jayne](name)
+    - [Jay](name)

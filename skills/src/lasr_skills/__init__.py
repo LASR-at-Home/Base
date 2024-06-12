@@ -20,6 +20,5 @@ from .clip_vqa import QueryImage
 from .detect_faces import DetectFaces
 from .recognise import Recognise
 
-# from .detect_pointing import DetectPointingDirection
 from .detect_gesture import DetectGesture
 from .find_gesture_person import FindGesturePerson

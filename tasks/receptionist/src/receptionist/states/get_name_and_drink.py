@@ -47,8 +47,6 @@ class ParseNameAndDrink(smach.State):
         outcome = "succeeded"
         name_found = False
         drink_found = False
-        print(userdata)
-        print(type(userdata.guest_transcription))
         transcription = userdata.guest_transcription.lower()
 
         transcription = userdata["guest_transcription"].lower()
@@ -61,8 +59,6 @@ class ParseNameAndDrink(smach.State):
                 break
 
         for drink in self._possible_drinks:
-            print(self._possible_drinks)
-            print(transcription)
             if drink in transcription:
                 userdata.guest_data[self._guest_id]["drink"] = drink
                 rospy.loginfo(f"Guest Drink identified as: {drink}")
@@ -88,7 +84,7 @@ class ParseNameAndDrink(smach.State):
         return outcome
 
     def _recovery_name_and_drink_required(self, userdata: UserData) -> bool:
-        """Determine whetehr both the name and drink requires recovery.
+        """Determine whether both the name and drink requires recovery.
 
         Returns:
             bool: True if both attributes require recovery.

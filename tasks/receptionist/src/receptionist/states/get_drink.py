@@ -15,7 +15,7 @@ class ParseDrink(smach.State):
         guest_id: str,
         param_key: str = "/priors",
     ):
-        """Parses the transcription of the guests' name and favourite drink.
+        """Parses the transcription of the guests' favourite drink.
 
         Args:
             param_key (str, optional): Name of the parameter that contains the list of
@@ -29,7 +29,6 @@ class ParseDrink(smach.State):
         )
         self._guest_id = guest_id
         prior_data: Dict[str, List[str]] = rospy.get_param(param_key)
-        self._possible_names = [name.lower() for name in prior_data["names"]]
         self._possible_drinks = [drink.lower() for drink in prior_data["drinks"]]
 
     def execute(self, userdata: UserData) -> str:
@@ -41,13 +40,11 @@ class ParseDrink(smach.State):
             favourite drink.
 
         Returns:
-            str: state outcome. Updates the userdata with the parsed name and drink, under
+            str: state outcome. Updates the userdata with the parsed drink, under
             the parameter "guest data".
         """
         outcome = "succeeded"
         drink_found = False
-        print(userdata)
-        print(type(userdata.guest_transcription))
         transcription = userdata.guest_transcription.lower()
 
         transcription = userdata["guest_transcription"].lower()

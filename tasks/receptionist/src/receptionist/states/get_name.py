@@ -15,7 +15,7 @@ class ParseName(smach.State):
         guest_id: str,
         param_key: str = "/priors",
     ):
-        """Parses the transcription of the guests' name and favourite drink.
+        """Parses the transcription of the guests' name.
 
         Args:
             param_key (str, optional): Name of the parameter that contains the list of
@@ -30,24 +30,20 @@ class ParseName(smach.State):
         self._guest_id = guest_id
         prior_data: Dict[str, List[str]] = rospy.get_param(param_key)
         self._possible_names = [name.lower() for name in prior_data["names"]]
-        self._possible_drinks = [drink.lower() for drink in prior_data["drinks"]]
 
     def execute(self, userdata: UserData) -> str:
         """Handle the recovery behaviour and parse in the guest name again.
 
         Args:
             userdata (UserData): State machine userdata assumed to contain a key
-            called "guest transcription" with the transcription of the guest's name and
-            favourite drink.
+            called "guest transcription" with the transcription of the guest's name.
 
         Returns:
-            str: state outcome. Updates the userdata with the parsed name and drink, under
+            str: state outcome. Updates the userdata with the parsed name, under
             the parameter "guest data".
         """
         outcome = "succeeded"
         name_found = False
-        print(userdata)
-        print(type(userdata.guest_transcription))
         transcription = userdata.guest_transcription.lower()
 
         transcription = userdata["guest_transcription"].lower()

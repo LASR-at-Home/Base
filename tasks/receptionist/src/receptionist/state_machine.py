@@ -39,6 +39,10 @@ class Receptionist(smach.StateMachine):
                 },
             )
 
+            """
+            First guest
+            """
+
             smach.StateMachine.add(
                 "GO_TO_WAIT_LOCATION_GUEST_1",
                 GoToLocation(wait_pose),
@@ -67,7 +71,9 @@ class Receptionist(smach.StateMachine):
                 },
             )
 
-            ######## Asking first Guest for Drink and Name ######
+            """ 
+            Asking first Guest for Drink and Name
+            """
 
             smach.StateMachine.add(
                 "GET_NAME_AND_DRINK_GUEST_1",
@@ -113,7 +119,9 @@ class Receptionist(smach.StateMachine):
                 remapping={"guest_transcription": "transcribed_speech"},
             )
 
-            # Recovery for only name not recognised
+            """
+            Recovery for only name not recognised
+            """
 
             smach.StateMachine.add(
                 "REPEAT_GET_NAME_GUEST_1",
@@ -134,7 +142,9 @@ class Receptionist(smach.StateMachine):
                 remapping={"guest_transcription": "transcribed_speech"},
             )
 
-            # Recovery for only drink not recognised
+            """
+            Recovery for only drink not recognised
+            """
 
             smach.StateMachine.add(
                 "REPEAT_GET_DRINK_GUEST_1",
@@ -157,6 +167,9 @@ class Receptionist(smach.StateMachine):
                 remapping={"guest_transcription": "transcribed_speech"},
             )
 
+            """
+            Recovery if nothing was recognised (twice)
+            """
             smach.StateMachine.add(
                 "SAY_CONTINUE",
                 Say(text="Sorry, I didn't get that. I will carry on."),
@@ -167,7 +180,9 @@ class Receptionist(smach.StateMachine):
                 },
             )
 
-            ####### GET GUEST ATTRIBUTES ######
+            """ 
+            GET GUEST ATTRIBUTES
+            """
 
             smach.StateMachine.add(
                 "GET_GUEST_ATTRIBUTES_GUEST_1",
@@ -314,7 +329,9 @@ class Receptionist(smach.StateMachine):
                 },
             )
 
-            ####### Asking second guest for drink and name #######
+            """
+            Asking second guest for drink and name
+            """
 
             smach.StateMachine.add(
                 "GET_NAME_AND_DRINK_GUEST_2",
@@ -360,7 +377,9 @@ class Receptionist(smach.StateMachine):
                 remapping={"guest_transcription": "transcribed_speech"},
             )
 
-            # Recovery for only name not recognised
+            """
+            Recovery for only name not recognised
+            """
 
             smach.StateMachine.add(
                 "REPEAT_GET_NAME_GUEST_2",
@@ -381,7 +400,9 @@ class Receptionist(smach.StateMachine):
                 remapping={"guest_transcription": "transcribed_speech"},
             )
 
-            # Recovery for only drink not recognised
+            """
+            Recovery for only drink not recognised
+            """
 
             smach.StateMachine.add(
                 "REPEAT_GET_DRINK_GUEST_2",
@@ -413,6 +434,8 @@ class Receptionist(smach.StateMachine):
                     "preempted": "GET_GUEST_ATTRIBUTES_GUEST_2",
                 },
             )
+
+
 
             smach.StateMachine.add(
                 "GET_GUEST_ATTRIBUTES_GUEST_2",
