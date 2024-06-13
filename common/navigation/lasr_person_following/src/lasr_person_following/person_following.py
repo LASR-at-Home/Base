@@ -28,9 +28,17 @@ from math import atan2
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 
+import actionlib
+from pal_interaction_msgs.msg import TtsGoal, TtsAction
+from lasr_speech_recognition_msgs.msg import (
+    TranscribeSpeechAction,
+    TranscribeSpeechGoal,
+)
+
 
 class PersonFollower:
 
+    _latest_tracks: Union[None, PersonArray]
     _track_id: Union[None, int]
     _start_following_radius: float
     _min_distance_between_tracks: float
@@ -59,6 +67,7 @@ class PersonFollower:
         self._min_time_between_goals = min_time_between_goals
         self._stopping_distance = stopping_distance
 
+        self._latest_tracks = None
         self._track_id = None
 
         self._move_base_client = actionlib.SimpleActionClient(
@@ -72,8 +81,22 @@ class PersonFollower:
             "/follow_poses", PoseArray, queue_size=1000000, latch=True
         )
 
+        self._track_sub = rospy.Subscriber(
+            "/people_tracked", PersonArray, self._track_callback
+        )
+
         rospy.wait_for_service("/move_base/make_plan")
         self._make_plan = rospy.ServiceProxy("/move_base/make_plan", GetPlan)
+
+        self._tts_client = actionlib.SimpleActionClient("/tts", TtsAction)
+        self._tts_client.wait_for_server()
+        self._transcribe_speech_client = actionlib.SimpleActionClient(
+            "transcribe_speech", TranscribeSpeechAction
+        )
+        self._transcribe_speech_client.wait_for_server()
+
+    def _track_callback(self, msg: PersonArray) -> None:
+        self._latest_tracks = msg
 
     def _tf_pose(self, pose: PoseStamped, target_frame: str):
         trans = self._buffer.lookup_transform(
@@ -95,21 +118,33 @@ class PersonFollower:
         """
         Chooses the closest person as the target
         """
-        people: PersonArray = rospy.wait_for_message("/people_tracked", PersonArray)
+        while self._latest_tracks is None and not rospy.is_shutdown():
+            rospy.loginfo("Waiting for people to be tracked")
+            rospy.sleep(1)
+
+        if self._latest_tracks is None:
+            rospy.loginfo("No people to track")
+            return False
+
+        people: PersonArray = self._latest_tracks
 
         if len(people.people) == 0:
             return False
 
-        min_dist = np.inf
-        closest_person = None
-        robot_pose = self._robot_pose_in_odom()
+        min_dist: float = np.inf
+        closest_person: Union[None, Person] = None
+        robot_pose: PoseStamped = self._robot_pose_in_odom()
         for person in people.people:
-            dist = self._euclidian_distance(person.pose, robot_pose.pose)
+            dist: float = self._euclidian_distance(person.pose, robot_pose.pose)
 
-            face_quat = self._compute_face_quat(robot_pose.pose, person.pose)
-            robot_dir = self._quat_to_dir(robot_pose.pose.orientation)
-            person_dir = self._quat_to_dir(face_quat)
-            angle = np.degrees(self._angle_between_vectors(robot_dir, person_dir))
+            face_quat: Quaternion = self._compute_face_quat(
+                robot_pose.pose, person.pose
+            )
+            robot_dir: np.ndarray = self._quat_to_dir(robot_pose.pose.orientation)
+            person_dir: np.ndarray = self._quat_to_dir(face_quat)
+            angle: float = np.degrees(
+                self._angle_between_vectors(robot_dir, person_dir)
+            )
             rospy.loginfo(f"Person {person.id} is at {dist}m and {angle} degrees")
             if (
                 dist < self._start_following_radius
@@ -122,12 +157,50 @@ class PersonFollower:
         if not closest_person:
             return False
 
+        # Face the person
+        pose: PoseStamped = PoseStamped(header=people.header)
+        pose.pose = robot_pose.pose
+        pose.pose.orientation = self._compute_face_quat(
+            robot_pose.pose, closest_person.pose
+        )
+        goal: MoveBaseGoal = MoveBaseGoal()
+        goal.target_pose = self._tf_pose(pose, "map")
+        goal.target_pose.header.stamp = rospy.Time.now()
+        self._move_base_client.send_goal(goal)
+
+        # Ask if we should follow
+        tts_goal: TtsGoal = TtsGoal()
+        tts_goal.rawtext.text = "Should I follow you? Please answer yes or no"
+        tts_goal.rawtext.lang_id = "en_GB"
+        self._tts_client.send_goal_and_wait(tts_goal)
+
+        # listen
+        self._transcribe_speech_client.send_goal_and_wait(TranscribeSpeechGoal())
+        transcription = self._transcribe_speech_client.get_result().sequence
+
+        if "yes" not in transcription.lower():
+            return False
+
+        tts_goal: TtsGoal = TtsGoal()
+        tts_goal.rawtext.text = "Okay, I'll begin following you. Please walk slowly."
+        tts_goal.rawtext.lang_id = "en_GB"
+        self._tts_client.send_goal_and_wait(tts_goal)
+
         self._track_id = closest_person.id
 
         rospy.loginfo(f"Tracking person with ID {self._track_id}")
         return True
 
     def _recover_track(self) -> bool:
+        tts_goal: TtsGoal = TtsGoal()
+        tts_goal.rawtext.text = "I've lost you, please come back"
+        tts_goal.rawtext.lang_id = "en_GB"
+        self._tts_client.send_goal_and_wait(tts_goal)
+
+        while not self.begin_tracking() and not rospy.is_shutdown():
+            rospy.loginfo("Recovering track...")
+            rospy.sleep(1)
+
         return True
 
     def _euclidian_distance(self, p1: Pose, p2: Pose) -> float:
@@ -185,8 +258,8 @@ class PersonFollower:
             )
             if current_track is None:
                 rospy.loginfo(f"Lost track of person with ID {self._track_id}")
-                # TODO: recovery behaviour, maybe begin_tracking with a reduced radius?
-                break
+                self._recover_track()
+                continue
 
             robot_pose = self._robot_pose_in_odom()
 
