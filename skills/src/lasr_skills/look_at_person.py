@@ -130,6 +130,9 @@ class LookAtPerson(smach.StateMachine):
                     f"LOOKING AT POINT {look_at.point.x}, {look_at.point.y}, {look_at.point.z}"
                 )
                 self.look_at_pub.send_goal(goal)
+                
+                print(self.look_at_pub.get_state())
+
 
                 return "succeeded"
 
@@ -285,25 +288,25 @@ class LookAtPerson(smach.StateMachine):
                 ),
                 transitions={
                     "succeeded": "CHECK_EYES",
-                    "finish": "ENABLE_HEAD_MANAGER",
+                    "finish": "succeeded",
                 },
             )
-            if not IS_SIMULATION:
-                if PUBLIC_CONTAINER:
-                    rospy.logwarn(
-                        "You are using a public container. The head manager will not be start following navigation."
-                    )
-                else:
-                    smach.StateMachine.add(
-                        "ENABLE_HEAD_MANAGER",
-                        smach_ros.ServiceState(
-                            "/pal_startup_control/start",
-                            StartupStart,
-                            request=StartupStartRequest("head_manager", ""),
-                        ),
-                        transitions={
-                            "succeeded": "succeeded",
-                            "preempted": "failed",
-                            "aborted": "failed",
-                        },
-                    )
+            # if not IS_SIMULATION:
+            #     if PUBLIC_CONTAINER:
+            #         rospy.logwarn(
+            #             "You are using a public container. The head manager will not be start following navigation."
+            #         )
+            #     else:
+            #         smach.StateMachine.add(
+            #             "ENABLE_HEAD_MANAGER",
+            #             smach_ros.ServiceState(
+            #                 "/pal_startup_control/start",
+            #                 StartupStart,
+            #                 request=StartupStartRequest("head_manager", ""),
+            #             ),
+            #             transitions={
+            #                 "succeeded": "succeeded",
+            #                 "preempted": "failed",
+            #                 "aborted": "failed",
+            #             },
+            #         )

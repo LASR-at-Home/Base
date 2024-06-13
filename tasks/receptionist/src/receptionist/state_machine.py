@@ -194,7 +194,7 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "SAY_GET_GUEST_ATTRIBUTE_1",
-                Say(text="Please look into my eyes, I am about to detect the guests' attributes."),
+                Say(text="Please look into my eyes, I am about to detect your attributes."),
                 transitions={
                     "succeeded": "GET_GUEST_ATTRIBUTES_GUEST_1",
                     "aborted": "GET_GUEST_ATTRIBUTES_GUEST_1",

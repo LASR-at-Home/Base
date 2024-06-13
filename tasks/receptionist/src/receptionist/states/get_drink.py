@@ -50,8 +50,6 @@ class ParseDrink(smach.State):
 
         transcription = userdata["guest_transcription"].lower()
 
-        print(transcription)
-
         for drink in self._possible_drinks:
             print(self._possible_drinks)
             print(transcription)
