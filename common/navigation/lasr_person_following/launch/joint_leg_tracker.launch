@@ -1,12 +1,15 @@
 <launch>
 
   <!-- params -->
-  <param name="forest_file" value="$(find leg_tracker)/config/trained_leg_detector_res=0.33.yaml" />
-  <param name="scan_topic" value="/scan" />
-  <param name="fixed_frame" value="odom"/>
-  <param name="scan_frequency" value="15"/>  
-  <param name="max_detect_distance" value="7.5"/>
-  
+    <param name="forest_file" value="$(find leg_tracker)/config/trained_leg_detector_res=0.33.yaml" />
+    <param name="scan_topic" value="/scan" />
+    <param name="fixed_frame" value="odom"/>
+    <param name="scan_frequency" value="10"/>
+    <param name="max_detect_distance" value="5.0"/>
+    <param name="dist_travelled_together_to_initiate_leg_pair" value="1.0"/>
+    <param name="display_detected_people" value="true"/>
+    <param name="max_leg_pairing_dist" value="0.5"/>
+    <param name="max_std" value="0.9"/>
   <!-- run detect_leg_clusters -->  
   <node pkg="leg_tracker" type="detect_leg_clusters" name="detect_leg_clusters" output="screen"/>
 
