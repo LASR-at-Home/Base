@@ -239,7 +239,17 @@ class PersonFollower:
             self._move_base_client.cancel_goal()
 
     def _check_finished(self) -> bool:
-        # TODO: ask the person if they are finished via speech.
+        tts_goal: TtsGoal = TtsGoal()
+        tts_goal.rawtext.text = "Should I stop following now? Please answer yes or no"
+        tts_goal.rawtext.lang_id = "en_GB"
+        self._tts_client.send_goal_and_wait(tts_goal)
+
+        self._transcribe_speech_client.send_goal_and_wait(TranscribeSpeechGoal())
+        transcription = self._transcribe_speech_client.get_result().sequence
+
+        if "yes" in transcription.lower():
+            return True
+
         return False
 
     def follow(self) -> None:
