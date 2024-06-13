@@ -194,7 +194,7 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "SAY_GET_GUEST_ATTRIBUTE_1",
-                Say(text="I am about to detect the guests' attributes."),
+                Say(text="Please look into my eyes, I am about to detect the guests' attributes."),
                 transitions={
                     "succeeded": "GET_GUEST_ATTRIBUTES_GUEST_1",
                     "aborted": "GET_GUEST_ATTRIBUTES_GUEST_1",
@@ -213,7 +213,7 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "SAY_LEARN_FACES",
-                Say(text="Please look into my eyes, I'm about to learn your face"),
+                Say(text="Continue to look into my eyes, I'm about to learn your face"),
                 transitions={
                     "succeeded": "LEARN_FACES",
                     "preempted": "LEARN_FACES",

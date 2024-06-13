@@ -13,7 +13,8 @@ class ParseDrink(smach.State):
     def __init__(
         self,
         guest_id: str,
-        param_key: str = "/priors",
+        # param_key: str = "/priors",
+        param_key: str = "/receptionist/priors",
     ):
         """Parses the transcription of the guests' favourite drink.
 
@@ -48,6 +49,9 @@ class ParseDrink(smach.State):
         transcription = userdata.guest_transcription.lower()
 
         transcription = userdata["guest_transcription"].lower()
+
+        print(transcription)
+
         for drink in self._possible_drinks:
             print(self._possible_drinks)
             print(transcription)

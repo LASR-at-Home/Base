@@ -13,7 +13,8 @@ class ParseName(smach.State):
     def __init__(
         self,
         guest_id: str,
-        param_key: str = "/priors",
+        # param_key: str = "/priors",
+        param_key: str = "/receptionist/priors",
     ):
         """Parses the transcription of the guests' name.
 
