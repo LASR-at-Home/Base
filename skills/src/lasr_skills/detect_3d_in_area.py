@@ -5,14 +5,14 @@ from typing import List, Union
 
 from geometry_msgs.msg import Polygon, Point, Point32
 from shapely.geometry import Point
-from shapely.geometry.polygon import Polygon
+from shapely.geometry.polygon import Polygon as ShapelyPolygon
 
 
 class Detect3DInArea(smach.StateMachine):
     class FilterDetections(smach.State):
         def __init__(
             self,
-            area_polygon: Polygon,
+            area_polygon: ShapelyPolygon,
             debug_publisher: str = "/skills/detect3d_in_area/debug",
         ):
             smach.State.__init__(
@@ -29,12 +29,12 @@ class Detect3DInArea(smach.StateMachine):
         def execute(self, userdata):
             detected_objects = userdata["detections_3d"].detected_objects
             # publish polygon for debugging
-            polygon_msg = Polygon()
-            polygon_msg.points = [
-                Point32(x=point.x, y=point.y, z=point.z)
-                for point in self.area_polygon.exterior.coords
-            ]
-            self.debug_publisher.publish(polygon_msg)
+            # polygon_msg = Polygon()
+            # polygon_msg.points = [
+            #     Point32(x=point.x, y=point.y, z=point.z)
+            #     for point in self.area_polygon.exterior.coords
+            # ]
+            # self.debug_publisher.publish(polygon_msg)
             satisfied_points = [
                 self.area_polygon.contains(Point(object.point.x, object.point.y))
                 for object in detected_objects
@@ -50,7 +50,7 @@ class Detect3DInArea(smach.StateMachine):
 
     def __init__(
         self,
-        area_polygon: Polygon,
+        area_polygon: ShapelyPolygon,
         depth_topic: str = "/xtion/depth_registered/points",
         model: str = "yolov8x-seg.pt",
         filter: Union[List[str], None] = None,

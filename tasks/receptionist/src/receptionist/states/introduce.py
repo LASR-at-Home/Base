@@ -43,13 +43,6 @@ def stringify_guest_data(guest_data: Dict[str, Any], guest_id: str) -> str:
 
     guest_str += f"{relevant_guest_data['name']}, their favourite drink is {relevant_guest_data['drink']}. "
 
-    ### TESTING - REMOVE
-    # if relevant_guest_data['name'] != "zoe":
-    #     relevant_guest_data["attributes"] = {
-    #         "hair_shape": "straight", "hair_colour": "black", "facial_hair": "yes",
-    #         "earrings": "yes", "necklace": "yes", "necktie": "unknown",
-    #         "height": "unknown", "glasses": True, "hat": False
-    #     }
 
     known_attributes = {}
 
@@ -68,7 +61,17 @@ def stringify_guest_data(guest_data: Dict[str, Any], guest_id: str) -> str:
 
             break
 
+    ignored_attributes = [
+        'top', 'down', 'outwear', 'dress',
+        'short sleeve top', 'long sleeve top', 'short sleeve outwear',
+        'long sleeve outwear', 'vest', 'sling', 'shorts',
+        'trousers', 'skirt', 'short sleeve dress',
+        'long sleeve dress', 'vest dress', 'sling dress'
+    ]
+
     for attribute, value in known_attributes.items():
+        if attribute in ignored_attributes:
+            detection = True
         if attribute == "male" or attribute == "has_hair":
             detection = True
         if has_hair:

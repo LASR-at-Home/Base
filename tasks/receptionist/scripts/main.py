@@ -39,7 +39,7 @@ if __name__ == "__main__":
         seat_pose,
         seat_area,
         {
-            "name": "zoe",
+            "name": "charlie",
             "drink": "wine",
         },
     )
