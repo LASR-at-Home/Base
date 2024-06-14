@@ -138,3 +138,6 @@ legacy/choosing_wait_position/src/choosing_wait_position/final_lift_key_point/mo
 # Python extension setup files
 .pylintrc
 mypy.ini
+
+# Pycharm extension setup files
+.idea/*
