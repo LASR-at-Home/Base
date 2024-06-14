@@ -5,6 +5,7 @@ string name
 float32 confidence
 
 # Bounding box mask defined in pixel-space
+# X and Y are the midpoints of the bounding box.
 int32[] xywh
 
 # Segmentation mask defined in pixel-space
