@@ -169,15 +169,15 @@ class FindAndLookAt(smach.StateMachine):
                         transitions={"succeeded": "GET_IMAGE", "failed": "failed"},
                         remapping={"pointstamped": "pointstamped"},
                     )
-                    # smach.StateMachine.add(
-                    #     "LOOK_TO_POINT",
-                    #     LookToPoint(),
-                    #     transitions={
-                    #         "succeeded": "GET_IMAGE",
-                    #         "aborted": "failed",
-                    #         "preempted": "failed",
-                    #     },
-                    # )
+                    smach.StateMachine.add(
+                        "LOOK_TO_POINT",
+                        LookToPoint(),
+                        transitions={
+                            "succeeded": "GET_IMAGE",
+                            "aborted": "failed",
+                            "preempted": "failed",
+                        },
+                    )
                     smach.StateMachine.add(
                         "GET_IMAGE",
                         GetPointCloud("/xtion/depth_registered/points"),
