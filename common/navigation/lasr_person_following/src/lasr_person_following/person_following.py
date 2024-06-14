@@ -275,8 +275,25 @@ class PersonFollower:
             self._move_base_client.cancel_goal()
 
     def _check_finished(self) -> bool:
-        # TODO: ask the person if they are finished via speech.
-        return False
+        if self._tts_client_available:
+            tts_goal: TtsGoal = TtsGoal()
+            tts_goal.rawtext.text = (
+                "Should I stop following you? Please answer yes or no"
+            )
+            tts_goal.rawtext.lang_id = "en_GB"
+            self._tts_client.send_goal_and_wait(tts_goal)
+
+            if self._transcribe_speech_client_available:
+                self._transcribe_speech_client.send_goal_and_wait(
+                    TranscribeSpeechGoal()
+                )
+                transcription = self._transcribe_speech_client.get_result().sequence
+
+                if "yes" in transcription.lower():
+                    return True
+
+            return False
+        return True
 
     def _get_pose_on_path(
         self, start_pose: PoseStamped, goal_pose: PoseStamped, dist_to_goal: float
@@ -315,6 +332,7 @@ class PersonFollower:
         """
 
         prev_track: Union[None, Person] = None
+        last_track_time: Union[None, rospy.Time] = None
         prev_goal: Union[None, MoveBaseActionGoal] = None
 
         while not rospy.is_shutdown():
@@ -341,20 +359,33 @@ class PersonFollower:
             # Get the robot's pose in the odom frame
             robot_pose = self._robot_pose_in_odom()
 
-            # Check if the person is too close to the previous pose
+            # Distance to the previous pose
             dist_to_prev = (
                 self._euclidian_distance(track.pose, prev_track.pose)
                 if prev_track is not None
                 else np.inf
             )
 
+            # Distance to the goal
+            dist_to_goal = self._euclidian_distance(robot_pose.pose, track.pose)
+
+            # Check if the person is too close to the previous pose
             if dist_to_prev < self._min_distance_between_tracks:
                 rospy.loginfo("Person too close to previous, skipping")
                 # prev_track = track
+                if last_track_time is not None:
+                    if (
+                        rospy.Time.now().secs - last_track_time.secs
+                        > self._n_secs_static
+                    ):
+                        if self._check_finished():
+                            break
+                        else:
+                            last_track_time = None
+                            continue
                 continue
 
             # Check if the person is too close to the robot
-            dist_to_goal = self._euclidian_distance(robot_pose.pose, track.pose)
 
             if dist_to_goal < self._stopping_distance:
                 rospy.loginfo("Person too close to robot, facing them and skipping")
@@ -391,6 +422,7 @@ class PersonFollower:
             ):
                 rospy.loginfo("Currently executing a goal, skipping")
                 prev_track = track
+                last_track_time = rospy.Time.now()
                 continue
 
             goal: MoveBaseGoal = MoveBaseGoal()
@@ -410,3 +442,4 @@ class PersonFollower:
             rospy.loginfo(f"Sent goal to {goal.target_pose.pose.position}")
             prev_goal = goal
             prev_track = track
+            last_track_time = rospy.Time.now()
