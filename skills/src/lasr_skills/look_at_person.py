@@ -130,9 +130,8 @@ class LookAtPerson(smach.StateMachine):
                     f"LOOKING AT POINT {look_at.point.x}, {look_at.point.y}, {look_at.point.z}"
                 )
                 self.look_at_pub.send_goal(goal)
-                
-                print(self.look_at_pub.get_state())
 
+                print(self.look_at_pub.get_state())
 
                 return "succeeded"
 

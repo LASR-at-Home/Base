@@ -30,7 +30,7 @@ if __name__ == "__main__":
 
     # seat_area_param = rospy.get_param("/seat_area")
     seat_area_param = rospy.get_param("/receptionist/seat_area")
-    
+
     seat_area = Polygon(seat_area_param)
 
     receptionist = Receptionist(

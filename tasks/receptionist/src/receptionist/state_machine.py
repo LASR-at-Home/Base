@@ -12,7 +12,7 @@ from receptionist.states import (
     SeatGuest,
     FindAndLookAt,
     LearnFaces,
-    )
+)
 
 
 class Receptionist(smach.StateMachine):
@@ -187,14 +187,15 @@ class Receptionist(smach.StateMachine):
                 },
             )
 
-
             """ 
             GET GUEST ATTRIBUTES
             """
 
             smach.StateMachine.add(
                 "SAY_GET_GUEST_ATTRIBUTE_1",
-                Say(text="Please look into my eyes, I am about to detect your attributes."),
+                Say(
+                    text="Please look into my eyes, I am about to detect your attributes."
+                ),
                 transitions={
                     "succeeded": "GET_GUEST_ATTRIBUTES_GUEST_1",
                     "aborted": "GET_GUEST_ATTRIBUTES_GUEST_1",
@@ -230,7 +231,6 @@ class Receptionist(smach.StateMachine):
                 },
             )
 
-
             smach.StateMachine.add(
                 "SAY_FOLLOW_GUEST_1",
                 Say(text="Please follow me, I will guide you to the other guests"),
@@ -250,7 +250,6 @@ class Receptionist(smach.StateMachine):
                 },
             )
 
-
             smach.StateMachine.add(
                 "SAY_WAIT_GUEST_1",
                 Say(text="Please wait here on my left"),
@@ -260,7 +259,6 @@ class Receptionist(smach.StateMachine):
                     "aborted": "failed",
                 },
             )
-
 
             smach.StateMachine.add(
                 "FIND_AND_LOOK_AT",
@@ -278,7 +276,6 @@ class Receptionist(smach.StateMachine):
                 },
             )
 
-
             smach.StateMachine.add(
                 "SAY_NO_HOST_1",
                 Say(text="Wow, I can't find the host, I'm sure they're here"),
@@ -288,7 +285,6 @@ class Receptionist(smach.StateMachine):
                     "aborted": "failed",
                 },
             )
-
 
             smach.StateMachine.add(
                 "INTRODUCE_GUEST_1_TO_HOST",
@@ -524,7 +520,6 @@ class Receptionist(smach.StateMachine):
 
             # INTRODUCE GUEST 2 TO HOST
 
-
             # smach.StateMachine.add(
             #     "FIND_AND_LOOK_AT_HOST_2",
             #     FindAndLookAt(
@@ -541,7 +536,6 @@ class Receptionist(smach.StateMachine):
             #     },
             # )
 
-
             # smach.StateMachine.add(
             #     "SAY_NO_HOST_2",
             #     Say(text="Wow, I can't find the host, I'm sure they're here"),
@@ -551,7 +545,7 @@ class Receptionist(smach.StateMachine):
             #         "aborted": "failed",
             #     },
             # )
- 
+
             # Look at guest 2
 
             # smach.StateMachine.add(
@@ -598,8 +592,6 @@ class Receptionist(smach.StateMachine):
                     "failed": "failed",
                 },
             )
-
-
 
             smach.StateMachine.add(
                 "FIND_AND_LOOK_AT_GUEST_1",
