@@ -8,7 +8,6 @@ project(aruco_service)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-  aruco_msgs
   geometry_msgs
   roscpp
   rospy
@@ -74,7 +73,8 @@ add_service_files(
 ## Generate added messages and services with any dependencies listed here
 generate_messages(
    DEPENDENCIES
-   aruco_msgs   geometry_msgs   std_msgs
+   geometry_msgs
+   std_msgs
 )
 
 ################################################

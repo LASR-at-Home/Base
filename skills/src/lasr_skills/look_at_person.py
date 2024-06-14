@@ -2,6 +2,7 @@ import smach_ros
 from geometry_msgs.msg import PointStamped
 import smach
 from .vision import GetPointCloud
+from vision import GetPointCloud
 from lasr_vision_msgs.srv import BodyPixDetection, BodyPixDetectionRequest
 from lasr_vision_msgs.msg import BodyPixMaskRequest
 from lasr_skills import LookToPoint, DetectFaces
@@ -15,6 +16,7 @@ from cv2_pcl import pcl_to_img_msg
 import ros_numpy as rnp
 import rosservice
 from smach import CBState
+from std_msgs.msg import String
 import actionlib
 from control_msgs.msg import PointHeadAction, PointHeadGoal
 from geometry_msgs.msg import Point
@@ -63,8 +65,6 @@ class LookAtPerson(smach.StateMachine):
                 len(userdata.bbox_eyes) < 1 and len(userdata.detections.detections) < 1
             ):
                 return "no_detection"
-            print("THE DEEPFACE")
-            print(userdata.deepface_detection)
 
             if self._filter:
                 if userdata.deepface_detection:

@@ -2,7 +2,7 @@
 import rospy
 import smach
 from typing import Dict, List
-from lasr_skills import GoToLocation, FindNamedPerson  # type: ignore
+from lasr_skills import GoToLocation, FindNamedPerson, FindGesturePerson  # type: ignore
 from gpsr.states import Talk
 
 
@@ -43,11 +43,25 @@ class GPSRStateMachineFactory:
 
     def _handle_talk_command(self, command_param: Dict):
         if "gesture" in command_param:
-            raise NotImplementedError("Talk command with gesture not implemented")
-        elif "text" in command_param:
+            if not "location" in command_param:
+                raise ValueError(
+                    "Talk command with gesture but no room in command parameters"
+                )
+            location_param_room = f"/gpsr/arena/rooms/{command_param['location']}"
             self.sm.add(
                 f"STATE_{self._increment_state_count()}",
-                Talk(text=command_param["text"]),
+                FindGesturePerson(
+                    location_param=location_param_room, gesture=command_param["gesture"]
+                ),
+                transitions={
+                    "succeeded": f"STATE_{self.state_count + 1}",
+                    "failed": "failed",
+                },
+            )
+        if "talk" in command_param:
+            self.sm.add(
+                f"STATE_{self._increment_state_count()}",
+                Talk(talk_phrase=command_param["talk"]),
                 transitions={
                     "succeeded": f"STATE_{self.state_count + 1}",
                     "failed": "failed",
@@ -143,8 +157,8 @@ class GPSRStateMachineFactory:
                     raise ValueError(f"Invalid command verb: {command_verb}")
 
             self.sm.add(
-                f"STATE_{self.state_count}",
-                Talk(text="I have completed the task."),
+                f"STATE_{self.state_count+1}",
+                Talk(talk_phrase="I have completed the task."),
                 transitions={"succeeded": "succeeded", "failed": "failed"},
             )
 

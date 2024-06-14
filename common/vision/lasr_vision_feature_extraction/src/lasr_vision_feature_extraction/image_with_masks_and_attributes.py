@@ -195,7 +195,7 @@ class ImageOfPerson(ImageWithMasksAndAttributes):
                 "hair_colour": hair_colour_str,
                 "hair_shape": hair_shape_str,
                 "male": male[0],
-                "facial_hair": facial_hair[0],
+                "facial_hair": facial_hair[0] != "No_Beard",
                 "hat": hat[0],
                 "glasses": glasses[0],
                 "earrings": earrings[0],

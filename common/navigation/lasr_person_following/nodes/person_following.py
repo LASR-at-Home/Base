@@ -1,0 +1,53 @@
+#!/usr/bin/env/python3
+import rospy
+import actionlib
+
+from lasr_person_following.msg import (
+    FollowAction,
+    FollowGoal,
+    FollowResult,
+    FollowFeedback,
+)
+
+from lasr_person_following import PersonFollower
+
+import warnings
+
+
+class PersonFollowingServer:
+
+    _server: actionlib.SimpleActionServer
+    _follower: PersonFollower
+
+    def __init__(self) -> None:
+
+        self._server = actionlib.SimpleActionServer(
+            "follow_person", FollowAction, execute_cb=self._execute_cb, auto_start=False
+        )
+        self._server.register_preempt_callback(self._preempt_cb)
+
+        self._follower = PersonFollower()
+
+        self._server.start()
+
+    def _execute_cb(self, _: FollowGoal) -> None:
+        while not self._follower.begin_tracking():
+            rospy.logwarn("No people found, retrying...")
+            rospy.sleep(rospy.Duration(1.0))
+        warnings.warn(
+            "PersonFollowingServer does not handle preempting or cancelling yet, so the execution will continue until the person is lost."
+        )
+        warnings.warn("PersonFollowingServer does not provide feedback yet.")
+        self._follower.follow()
+
+        self._server.set_succeeded(FollowResult())
+
+    def _preempt_cb(self) -> None:
+        raise NotImplementedError("Preempt not implemented yet")
+
+
+if __name__ == "__main__":
+    rospy.init_node("person_following_server")
+    rospy.loginfo("Person following server started")
+    server = PersonFollowingServer()
+    rospy.spin()

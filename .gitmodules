@@ -1,0 +1,3 @@
+[submodule "common/third_party/leg_tracker"]
+	path = common/third_party/leg_tracker
+	url = git@github.com:angusleigh/leg_tracker.git
