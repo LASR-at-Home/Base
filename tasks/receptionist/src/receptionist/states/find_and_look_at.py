@@ -87,7 +87,10 @@ class FindAndLookAt(smach.StateMachine):
         if len(ud.deepface_detection) == 0:
             return "no_detection"
         for detection in ud.deepface_detection:
-            if detection.name == ud.guest_data[self.guest_name_in]['name'] and detection.confidence > ud.confidence:
+            if (
+                detection.name == ud.guest_data[self.guest_name_in]["name"]
+                and detection.confidence > ud.confidence
+            ):
                 return "succeeded"
         return "failed"
 
@@ -96,7 +99,7 @@ class FindAndLookAt(smach.StateMachine):
         guest_name_in: str,
         look_positions: Union[List[List[float]], None] = None,
     ):
-        
+
         self.guest_name_in = guest_name_in
 
         smach.StateMachine.__init__(
@@ -129,7 +132,7 @@ class FindAndLookAt(smach.StateMachine):
                 outcomes=["succeeded", "failed"],
                 it=lambda: range(len(all_look_positions)),
                 it_label="point_index",
-                input_keys=["look_positions", "dataset", "confidence","guest_data"],
+                input_keys=["look_positions", "dataset", "confidence", "guest_data"],
                 output_keys=[],
                 exhausted_outcome="failed",
             )
@@ -141,7 +144,7 @@ class FindAndLookAt(smach.StateMachine):
                         "look_positions",
                         "dataset",
                         "confidence",
-                        "guest_data"
+                        "guest_data",
                     ],
                     output_keys=[],
                 )
@@ -221,7 +224,7 @@ class FindAndLookAt(smach.StateMachine):
                             input_keys=[
                                 "deepface_detection",
                                 "confidence",
-                                "guest_data"
+                                "guest_data",
                             ],
                         ),
                         transitions={

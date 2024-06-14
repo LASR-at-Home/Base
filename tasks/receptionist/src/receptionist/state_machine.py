@@ -35,7 +35,7 @@ class Receptionist(smach.StateMachine):
             self.userdata.guest_name = "zoe"
             self.userdata.dataset = "receptionist"
             self.userdata.confidence = 0.2
-            
+
             smach.StateMachine.add(
                 "SAY_START",
                 Say(text="Start of receptionist task. Going to waiting area."),
@@ -461,7 +461,6 @@ class Receptionist(smach.StateMachine):
                 },
             )
 
-
             smach.StateMachine.add(
                 "SAY_GET_GUEST_ATTRIBUTE_2",
                 Say(
@@ -520,8 +519,7 @@ class Receptionist(smach.StateMachine):
                     "failed": "SAY_WAIT_GUEST_2",
                 },
             )
-            
-            
+
             smach.StateMachine.add(
                 "SAY_WAIT_GUEST_2",
                 Say(text="Please wait here on my left"),
@@ -605,7 +603,7 @@ class Receptionist(smach.StateMachine):
                     "failed": "SEAT_GUEST_2",
                 },
             )
-            
+
             smach.StateMachine.add(
                 "SEAT_GUEST_2",
                 SeatGuest(seat_area),

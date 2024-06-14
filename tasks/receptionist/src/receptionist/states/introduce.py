@@ -43,7 +43,6 @@ def stringify_guest_data(guest_data: Dict[str, Any], guest_id: str) -> str:
 
     guest_str += f"{relevant_guest_data['name']}, their favourite drink is {relevant_guest_data['drink']}. "
 
-
     known_attributes = {}
 
     for attribute, value in relevant_guest_data["attributes"].items():
@@ -62,11 +61,23 @@ def stringify_guest_data(guest_data: Dict[str, Any], guest_id: str) -> str:
             break
 
     ignored_attributes = [
-        'top', 'down', 'outwear', 'dress',
-        'short sleeve top', 'long sleeve top', 'short sleeve outwear',
-        'long sleeve outwear', 'vest', 'sling', 'shorts',
-        'trousers', 'skirt', 'short sleeve dress',
-        'long sleeve dress', 'vest dress', 'sling dress'
+        "top",
+        "down",
+        "outwear",
+        "dress",
+        "short sleeve top",
+        "long sleeve top",
+        "short sleeve outwear",
+        "long sleeve outwear",
+        "vest",
+        "sling",
+        "shorts",
+        "trousers",
+        "skirt",
+        "short sleeve dress",
+        "long sleeve dress",
+        "vest dress",
+        "sling dress",
     ]
 
     for attribute, value in known_attributes.items():

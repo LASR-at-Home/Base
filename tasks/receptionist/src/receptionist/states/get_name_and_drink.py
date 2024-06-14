@@ -75,11 +75,9 @@ class ParseNameAndDrink(smach.State):
             userdata.guest_data[self._guest_id]["drink"] = "unknown"
             outcome = "failed"
 
-                            
-                            
         {
-        "name": name,
-        "drink": drink,
+            "name": name,
+            "drink": drink,
         },
 
         if outcome == "failed":
