@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 from typing import Optional, List
 import numpy as np
-import cv2
 import rospy
 import smach
-from sensor_msgs.msg import Image
-from lasr_vision_msgs.msg import Detection
+from sensor_msgs.msg import Image, PointCloud2
+from geometry_msgs.msg import Point, PoseWithCovarianceStamped
+from lasr_vision_msgs.msg import Detection, Detection3D
 from lasr_vision_msgs.srv import YoloDetection, YoloDetection3D
-from cv2_img import cv2_img_to_msg, msg_to_cv2_img
+from cv2_img import cv2_img_to_msg, msg_to_cv2_img, pcl_to_cv2
 
 
 class GetCroppedImage(smach.State):
@@ -36,6 +36,7 @@ class GetCroppedImage(smach.State):
         self._object_name = object_name
         self._yolo_2d = rospy.ServiceProxy("/yolov8/detect", YoloDetection)
         self._yolo_3d = rospy.ServiceProxy("/yolov8/detect3d", YoloDetection3D)
+        self._robot_pose_topic = "/amcl_pose"
 
         self._valid_2d_methods = [
             "centered",
@@ -44,7 +45,7 @@ class GetCroppedImage(smach.State):
             "top-most",
             "bottom-most",
         ]
-        self._valid_3d_methods = ["closest", "furthest", "polygon"]
+        self._valid_3d_methods = ["closest", "furthest"]
 
         if crop_method in self._valid_2d_methods:
             self._yolo_2d.wait_for_service()
@@ -107,20 +108,88 @@ class GetCroppedImage(smach.State):
         )
         return image[y - h // 2 : y + h // 2, x - w // 2 : x + w // 2]
 
+    def _3d_crop(
+        self, pointcloud: np.ndarray, robot_loc: Point, detections: List[Detection3D]
+    ) -> np.ndarray:
+        """Crops the image to the desired object that is closest to the
+        centroid of the image.
+
+        Args:
+            pointcloud (np.ndarray): pointcloud from depth camera; RGB will be extracted
+            from this.
+            robot_loc (Point): Current location of the robot, used to calculate
+            3D-distance.
+            detections (YoloDetection): Yolo Detections of the desired object
+            in the image.
+        Returns:
+            np.ndarray: Cropped image
+        """
+        min_dist = float("inf")
+        max_dist = 0
+
+        for det in detections:
+            dist = np.sqrt(
+                (robot_loc.x - det.point.x) ** 2
+                + (robot_loc.y - det.point.y) ** 2
+                + (robot_loc.z - det.point.z) ** 2
+            )
+            if dist < min_dist:
+                min_dist = dist
+                closest_detection = det
+            if dist > max_dist:
+                max_dist = dist
+                furthest_detection = det
+
+        if self._crop_method == "closest":
+            detection = closest_detection
+        elif self._crop_method == "furthest":
+            detection = furthest_detection
+        else:
+            raise ValueError(f"Invalid 3D crop_method: {self._crop_method}")
+
+        rgb_image = pcl_to_cv2(pointcloud)
+        x, y, w, h = (
+            detection.xywh[0],
+            detection.xywh[1],
+            detection.xywh[2],
+            detection.xywh[3],
+        )
+
+        return rgb_image[y - h // 2 : y + h // 2, x - w // 2 : x + w // 2]
+
     def execute(self, userdata):
-        if self._crop_method in self._valid_2d_methods:
-            img_msg = rospy.wait_for_message(self._rgb_topic, Image)
-            detections = self._yolo_2d(img_msg, "yolov8x.pt", 0.5, 0.3).detected_objects
-            detections = [det for det in detections if det.name == self._object_name]
-            img_cv2 = msg_to_cv2_img(img_msg)
-            cropped_image = self._2d_crop(img_cv2, detections)
+        try:
+            if self._crop_method in self._valid_2d_methods:
+                img_msg = rospy.wait_for_message(self._rgb_topic, Image)
+                detections = self._yolo_2d(
+                    img_msg, "yolov8x.pt", 0.5, 0.3
+                ).detected_objects
+                detections = [
+                    det for det in detections if det.name == self._object_name
+                ]
+                img_cv2 = msg_to_cv2_img(img_msg)
+                cropped_image = self._2d_crop(img_cv2, detections)
+            elif self._crop_method in self._valid_3d_methods:
+                pointcloud_msg = rospy.wait_for_message(self._depth_topic, PointCloud2)
+                robot_loc = rospy.wait_for_message(
+                    self._robot_pose_topic, PoseWithCovarianceStamped
+                ).pose.pose.position
+                detections = self._yolo_3d(
+                    pointcloud_msg, "yolov8x-seg.pt", 0.5, 0.3
+                ).detected_objects
+                detections = [
+                    det for det in detections if det.name == self._object_name
+                ]
+                cropped_image = self._3d_crop(pointcloud_msg, robot_loc, detections)
+            else:
+                raise ValueError(f"Invalid crop_method: {self._crop_method}")
             cropped_msg = cv2_img_to_msg(cropped_image)
             self._debug_pub.publish(cropped_msg)
             userdata.cropped_image = cropped_msg
             return "succeeded"
-        elif self._crop_method in self._valid_3d_methods:
-            pass
-        return "failed"
+        except Exception as e:
+            rospy.logerr(e)
+            return "failed"
 
 
 if __name__ == "__main__":
