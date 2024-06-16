@@ -103,8 +103,6 @@ class GetCroppedImage(smach.State):
 
         for det in detections:
             det_center_x, det_center_y = det.xywh[0], det.xywh[1]
-            det_center_x = x
-            det_center_y = y
             det_dist = np.sqrt(
                 (x_to_compare - det_center_x) ** 2 + (y_to_compare - det_center_y) ** 2
             )
