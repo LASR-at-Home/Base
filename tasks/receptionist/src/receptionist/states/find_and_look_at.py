@@ -160,7 +160,6 @@ class FindAndLookAt(smach.StateMachine):
                     ],
                     output_keys=[],
                 )
-
                 with container_sm:
                     if not IS_SIMULATION:
                         if PUBLIC_CONTAINER:
