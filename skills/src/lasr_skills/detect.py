@@ -12,7 +12,6 @@ from typing import List, Union
 class Detect(smach.State):
     def __init__(
         self,
-        image_topic: str = "/xtion/rgb/image_raw",
         model: str = "yolov8x.pt",
         filter: Union[List[str], None] = None,
         confidence: float = 0.5,
@@ -22,9 +21,9 @@ class Detect(smach.State):
         smach.State.__init__(
             self,
             outcomes=["succeeded", "failed"],
+            input_keys=["img_msg"],
             output_keys=["detections"],
         )
-        self.image_topic = image_topic
         self.model = model
         self.filter = filter if filter is not None else []
         self.confidence = confidence
@@ -34,7 +33,7 @@ class Detect(smach.State):
         self.debug_pub = rospy.Publisher(debug_publisher, Image, queue_size=1)
 
     def execute(self, userdata):
-        img_msg = rospy.wait_for_message(self.image_topic, Image)
+        img_msg = userdata.img_msg
         img_cv2 = cv2_img.msg_to_cv2_img(img_msg)
         try:
             result = self.yolo(img_msg, self.model, self.confidence, self.nms)
@@ -70,19 +69,3 @@ class Detect(smach.State):
         except rospy.ServiceException as e:
             rospy.logwarn(f"Unable to perform inference. ({str(e)})")
             return "failed"
-
-
-if __name__ == "__main__":
-    rospy.init_node("detect")
-    while not rospy.is_shutdown():
-        detect = Detect(
-            image_topic="/usb_cam/image_raw",
-        )
-        sm = smach.StateMachine(outcomes=["succeeded", "failed"])
-        with sm:
-            smach.StateMachine.add(
-                "DETECT",
-                detect,
-                transitions={"succeeded": "succeeded", "failed": "failed"},
-            )
-        sm.execute()
