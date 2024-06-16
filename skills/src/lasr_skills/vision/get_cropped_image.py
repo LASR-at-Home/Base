@@ -20,16 +20,31 @@ class GetCroppedImage(smach.State):
         rgb_topic: Optional[str] = "/xtion/rgb/image_raw",
         depth_topic: Optional[str] = "/xtion/depth_registered/points",
     ):
+        """This skill gets a semantically cropped image of a given object, allowing
+        you to specify whether you want the nearest object, the furthest object,
+        the most centered object, etc.
+
+        Args:
+            object_name (str): YOLO class name of object to detect.
+
+            crop_method (str, optional): Which semantic crop method to use. See the valid method
+            variables for the list of options. Defaults to "centered".
+
+            debug_publisher (str, optional): Name of the topic to publish the cropped images to.
+            Defaults to "/skills/get_cropped_image/debug".
+
+            rgb_topic (Optional[str], optional): Name of the topic to get RGB images from.
+            Defaults to "/xtion/rgb/image_raw".
+
+            depth_topic (Optional[str], optional): Name of the topic to get RGBD images from.
+            Defaults to "/xtion/depth_registered/points".
+        """
         smach.State.__init__(
             self,
             outcomes=["succeeded", "failed"],
             output_keys=["cropped_image"],
         )
-        """_summary_
 
-        Args:
-            crop_method (str, optional): _description_. Defaults to "centered".
-        """
         self._crop_method = crop_method
         self._debug_pub = rospy.Publisher(debug_publisher, Image, queue_size=1)
         self._rgb_topic = rgb_topic
@@ -209,5 +224,4 @@ if __name__ == "__main__":
                 transitions={"succeeded": "succeeded", "failed": "failed"},
             )
         sm.execute()
-        # wait for user to press enter
         input("Press Enter to continue...")
