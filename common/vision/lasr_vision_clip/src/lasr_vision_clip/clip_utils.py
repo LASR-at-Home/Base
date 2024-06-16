@@ -10,7 +10,7 @@ from sentence_transformers import SentenceTransformer, util
 from sensor_msgs.msg import Image
 
 
-def load_model(device: str = "cpu"):
+def load_model(device: str = "cuda"):
     """Load the CLIP model.
 
     Args:

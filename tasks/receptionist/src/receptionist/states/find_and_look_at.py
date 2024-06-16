@@ -55,6 +55,22 @@ class FindAndLookAt(smach.StateMachine):
             userdata.look_positions = self.look_positions
             return "succeeded"
 
+    class GetGuestName(smach.State):
+        def __init__(self, guest_name_in: str):
+            super().__init__(
+                outcomes=["succeeded"],
+                input_keys=["guest_data"],
+                output_keys=["guest_name"],
+            )
+            self._guest_name_in = guest_name_in
+
+        def execute(self, userdata) -> str:
+            # print("Guest data", self.userdata.guest_data)
+            # self.userdata.guest_name = self.userdata.guest_data[guest_name_in]["name"]
+            guest_name = userdata.guest_data[self._guest_name_in]["name"]
+            userdata.guest_name = guest_name
+            return "succeeded"
+
     class GetPoint(smach.State):
         def __init__(self):
             smach.State.__init__(
@@ -98,7 +114,11 @@ class FindAndLookAt(smach.StateMachine):
         smach.StateMachine.__init__(
             self,
             outcomes=["succeeded", "failed"],
-            input_keys=["dataset", "confidence"],
+            input_keys=[
+                "dataset",
+                "confidence",
+                "guest_data",
+            ],
             output_keys=[],
         )
 
@@ -116,7 +136,6 @@ class FindAndLookAt(smach.StateMachine):
         )
 
         with self:
-            self.userdata.guest_name = guest_name_in
             smach.StateMachine.add(
                 "GET_LOOK_POINT",
                 self.GetLookPoint(all_look_positions),
@@ -126,7 +145,7 @@ class FindAndLookAt(smach.StateMachine):
                 outcomes=["succeeded", "failed"],
                 it=lambda: range(len(all_look_positions)),
                 it_label="point_index",
-                input_keys=["look_positions", "dataset", "confidence", "guest_name"],
+                input_keys=["look_positions", "dataset", "confidence", "guest_data"],
                 output_keys=[],
                 exhausted_outcome="failed",
             )
@@ -138,7 +157,7 @@ class FindAndLookAt(smach.StateMachine):
                         "look_positions",
                         "dataset",
                         "confidence",
-                        "guest_name",
+                        "guest_data",
                     ],
                     output_keys=[],
                 )
@@ -158,11 +177,16 @@ class FindAndLookAt(smach.StateMachine):
                                     request=StartupStopRequest("head_manager"),
                                 ),
                                 transitions={
-                                    "succeeded": "GET_POINT",
+                                    "succeeded": "GET_GUEST_NAME",
                                     "aborted": "failed",
                                     "preempted": "failed",
                                 },
                             )
+                    smach.StateMachine.add(
+                        "GET_GUEST_NAME",
+                        self.GetGuestName(guest_name_in=guest_name_in),
+                        transitions={"succeeded": "GET_POINT"},
+                    )
                     smach.StateMachine.add(
                         "GET_POINT",
                         self.GetPoint(),

@@ -2,7 +2,6 @@ import smach_ros
 from geometry_msgs.msg import PointStamped
 import smach
 from .vision import GetPointCloud
-from vision import GetPointCloud
 from lasr_vision_msgs.srv import BodyPixDetection, BodyPixDetectionRequest
 from lasr_vision_msgs.msg import BodyPixMaskRequest
 from lasr_skills import LookToPoint, DetectFaces

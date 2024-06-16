@@ -7,7 +7,7 @@ from sensor_msgs.msg import Image
 
 
 class VqaService:
-    def __init__(self, model_device: str = "cpu") -> None:
+    def __init__(self, model_device: str = "cuda") -> None:
         """Caches the clip model.
 
         Args:

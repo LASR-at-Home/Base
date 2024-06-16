@@ -80,14 +80,14 @@ class Receptionist(smach.StateMachine):
                 remapping={"guest_transcription": "transcribed_speech"},
             )
 
-            # smach.StateMachine.add(
-            #     "GET_GUEST_ATTRIBUTES_GUEST_1",
-            #     GetGuestAttributes("guest1"),
-            #     transitions={
-            #         "succeeded": "SAY_FOLLOW_GUEST_1",
-            #         "failed": "failed",
-            #     },
-            # )
+            smach.StateMachine.add(
+                "GET_GUEST_ATTRIBUTES_GUEST_1",
+                GetGuestAttributes("guest1"),
+                transitions={
+                    "succeeded": "SAY_FOLLOW_GUEST_1",
+                    "failed": "failed",
+                },
+            )
 
             smach.StateMachine.add(
                 "SAY_FOLLOW_GUEST_1",
@@ -120,7 +120,7 @@ class Receptionist(smach.StateMachine):
             smach.StateMachine.add(
                 "FIND_AND_LOOK_AT",
                 FindAndLookAt(
-                    self.userdata.guest_data["host"]["name"],
+                    "host",
                     [
                         [0.0, 0.0],
                         [-1.0, 0.0],
@@ -211,14 +211,14 @@ class Receptionist(smach.StateMachine):
                 remapping={"guest_transcription": "transcribed_speech"},
             )
 
-            # smach.StateMachine.add(
-            #     "GET_GUEST_ATTRIBUTES_GUEST_2",
-            #     GetGuestAttributes("guest2"),
-            #     transitions={
-            #         "succeeded": "SAY_FOLLOW_GUEST_2",
-            #         "failed": "failed",
-            #     },
-            # )
+            smach.StateMachine.add(
+                "GET_GUEST_ATTRIBUTES_GUEST_2",
+                GetGuestAttributes("guest2"),
+                transitions={
+                    "succeeded": "SAY_FOLLOW_GUEST_2",
+                    "failed": "failed",
+                },
+            )
 
             smach.StateMachine.add(
                 "SAY_FOLLOW_GUEST_2",
@@ -260,7 +260,7 @@ class Receptionist(smach.StateMachine):
             smach.StateMachine.add(
                 "FIND_AND_LOOK_AT_2",
                 FindAndLookAt(
-                    self.userdata.guest_data["host"]["name"],
+                    "host",
                     [
                         [0.0, 0.0],
                         [-1.0, 0.0],
@@ -284,7 +284,7 @@ class Receptionist(smach.StateMachine):
             smach.StateMachine.add(
                 "FIND_AND_LOOK_AT_3",
                 FindAndLookAt(
-                    self.userdata.guest_data["guest1"]["name"],
+                    "guest1",
                     [
                         [0.0, 0.0],
                         [-1.0, 0.0],

@@ -35,7 +35,7 @@ class speech_model_params:
     """
 
     model_name: str = "medium.en"
-    device: str = "cpu" #  if torch.cuda.is_available() else "cpu"
+    device: str = "cuda" #  if torch.cuda.is_available() else "cpu"
     start_timeout: float = 5.0
     end_timeout: Optional[float] = None
     sample_rate: int = 16000
@@ -223,7 +223,7 @@ def parse_args() -> dict:
     parser.add_argument(
         "--device",
         type=str,
-        default="cpu"  ,# if torch.cuda.is_available() else "cpu",
+        default="cpu" if torch.cuda.is_available() else "cpu",
         help="Device to run the model on.",
     )
     parser.add_argument(
