@@ -19,6 +19,12 @@ class GetCroppedImage(smach.State):
         debug_publisher: str = "/skills/get_cropped_image/debug",
         rgb_topic: Optional[str] = "/xtion/rgb/image_raw",
         depth_topic: Optional[str] = "/xtion/depth_registered/points",
+        model_2d: str = "yolov8x.pt",
+        model_3d: str = "yolov8x-seg.pt",
+        confidence_2d: float = 0.5,
+        confidence_3d: float = 0.5,
+        nmsthresh_2d: float = 0.3,
+        nmsthresh_3d: float = 0.3,
     ):
         """This skill gets a semantically cropped image of a given object, allowing
         you to specify whether you want the nearest object, the furthest object,
@@ -38,6 +44,18 @@ class GetCroppedImage(smach.State):
 
             depth_topic (Optional[str], optional): Name of the topic to get RGBD images from.
             Defaults to "/xtion/depth_registered/points".
+
+            model_2d (str, optional): Name of the YOLO model to use for 2D detection.
+
+            model_3d (str, optional): Name of the YOLO model to use for 3D detection.
+
+            confidence_2d (float, optional): Confidence threshold for 2D detection.
+
+            confidence_3d (float, optional): Confidence threshold for 3D detection.
+
+            nmsthresh_2d (float, optional): Non-maximum suppression threshold for 2D detection.
+
+            nmsthresh_3d (float, optional): Non-maximum suppression threshold for 3D detection.
         """
         smach.State.__init__(
             self,
@@ -50,6 +68,12 @@ class GetCroppedImage(smach.State):
         self._rgb_topic = rgb_topic
         self._depth_topic = depth_topic
         self._object_name = object_name
+        self._model_2d = model_2d
+        self._model_3d = model_3d
+        self._confidence_2d = confidence_2d
+        self._confidence_3d = confidence_3d
+        self._nmsthresh_2d = nmsthresh_2d
+        self._nmsthresh_3d = nmsthresh_3d
         self._yolo_2d = rospy.ServiceProxy("/yolov8/detect", YoloDetection)
         self._yolo_3d = rospy.ServiceProxy("/yolov8/detect3d", YoloDetection3D)
         self._robot_pose_topic = "/amcl_pose"
@@ -98,20 +122,15 @@ class GetCroppedImage(smach.State):
         else:
             raise ValueError(f"Invalid 2D crop_method: {self._crop_method}")
 
-        detection = None
-        dist = float("inf")
-
-        for det in detections:
-            det_center_x, det_center_y = det.xywh[0], det.xywh[1]
-            det_dist = np.sqrt(
-                (x_to_compare - det_center_x) ** 2 + (y_to_compare - det_center_y) ** 2
-            )
-            if det_dist < dist:
-                dist = det_dist
-                detection = det
-
-        if detection is None:
+        if len(detections) == 0:
             raise ValueError("No detections found")
+
+        detection = min(
+            detections,
+            key=lambda det: np.sqrt(
+                (x_to_compare - det.xywh[0]) ** 2 + (y_to_compare - det.xywh[1]) ** 2
+            ),
+        )
 
         x, y, w, h = (
             detection.xywh[0],
@@ -137,16 +156,22 @@ class GetCroppedImage(smach.State):
         Returns:
             np.ndarray: Cropped image
         """
-        closest_detection = min(detections, key = lambda det : np.sqrt(
-              (robot_loc.x - det.point.x) ** 2
-              + (robot_loc.y - det.point.y) ** 2
-              + (robot_loc.z - det.point.z) ** 2
-          ))
-          furthest_detection = max(detections, key = lambda det : np.sqrt(
-              (robot_loc.x - det.point.x) ** 2
-              + (robot_loc.y - det.point.y) ** 2
-              + (robot_loc.z - det.point.z) ** 2
-          ))
+        closest_detection = min(
+            detections,
+            key=lambda det: np.sqrt(
+                (robot_loc.x - det.point.x) ** 2
+                + (robot_loc.y - det.point.y) ** 2
+                + (robot_loc.z - det.point.z) ** 2
+            ),
+        )
+        furthest_detection = max(
+            detections,
+            key=lambda det: np.sqrt(
+                (robot_loc.x - det.point.x) ** 2
+                + (robot_loc.y - det.point.y) ** 2
+                + (robot_loc.z - det.point.z) ** 2
+            ),
+        )
 
         if self._crop_method == "closest":
             detection = closest_detection
@@ -173,7 +198,7 @@ class GetCroppedImage(smach.State):
             if self._crop_method in self._valid_2d_methods:
                 img_msg = rospy.wait_for_message(self._rgb_topic, Image)
                 detections = self._yolo_2d(
-                    img_msg, "yolov8x.pt", 0.5, 0.3
+                    img_msg, self._model_2d, self._confidence_2d, self._nmsthresh_2d
                 ).detected_objects
                 detections = [
                     det for det in detections if det.name == self._object_name
@@ -186,7 +211,10 @@ class GetCroppedImage(smach.State):
                     self._robot_pose_topic, PoseWithCovarianceStamped
                 ).pose.pose.position
                 detections = self._yolo_3d(
-                    pointcloud_msg, "yolov8x-seg.pt", 0.5, 0.3
+                    pointcloud_msg,
+                    self._model_3d,
+                    self._confidence_3d,
+                    self._nmsthresh_3d,
                 ).detected_objects
                 detections = [
                     det for det in detections if det.name == self._object_name
