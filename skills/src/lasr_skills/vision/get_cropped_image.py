@@ -137,22 +137,16 @@ class GetCroppedImage(smach.State):
         Returns:
             np.ndarray: Cropped image
         """
-        min_dist = float("inf")
-        max_dist = 0
-        closest_detection = None
-        furthest_detection = None
-        for det in detections:
-            dist = np.sqrt(
-                (robot_loc.x - det.point.x) ** 2
-                + (robot_loc.y - det.point.y) ** 2
-                + (robot_loc.z - det.point.z) ** 2
-            )
-            if dist < min_dist:
-                min_dist = dist
-                closest_detection = det
-            if dist > max_dist:
-                max_dist = dist
-                furthest_detection = det
+        closest_detection = min(detections, key = lambda det : np.sqrt(
+              (robot_loc.x - det.point.x) ** 2
+              + (robot_loc.y - det.point.y) ** 2
+              + (robot_loc.z - det.point.z) ** 2
+          ))
+          furthest_detection = max(detections, key = lambda det : np.sqrt(
+              (robot_loc.x - det.point.x) ** 2
+              + (robot_loc.y - det.point.y) ** 2
+              + (robot_loc.z - det.point.z) ** 2
+          ))
 
         if self._crop_method == "closest":
             detection = closest_detection
