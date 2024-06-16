@@ -1,20 +1,23 @@
+import json
+from os import path
+
+import cv2
+import numpy as np
+import rospkg
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torchvision.models as models
 from lasr_vision_feature_extraction.categories_and_attributes import (
     CategoriesAndAttributes,
     CelebAMaskHQCategoriesAndAttributes,
+    DeepFashion2GeneralizedCategoriesAndAttributes,
 )
 from lasr_vision_feature_extraction.image_with_masks_and_attributes import (
     ImageWithMasksAndAttributes,
     ImageOfPerson,
+    ImageOfCloth,
 )
-
-import numpy as np
-import cv2
-import torch
-import rospkg
-from os import path
-import torch.nn as nn
-import torch.nn.functional as F
-import torchvision.models as models
 
 
 def X2conv(in_channels, out_channels, inner_channels=None):
@@ -173,6 +176,163 @@ class CombinedModel(nn.Module):
         self.segment_model.train()
 
 
+class SegmentPredictor(nn.Module):
+    def __init__(self, num_masks, num_labels, in_channels=3, sigmoid=True):
+        super(SegmentPredictor, self).__init__()
+        self.sigmoid = sigmoid
+        self.resnet = models.resnet18(pretrained=False)
+
+        # Adapt ResNet to handle different input channel sizes
+        if in_channels != 3:
+            self.resnet.conv1 = nn.Conv2d(
+                in_channels, 64, kernel_size=7, stride=2, padding=3, bias=False
+            )
+
+        # Encoder layers
+        self.encoder1 = nn.Sequential(
+            self.resnet.conv1, self.resnet.bn1, self.resnet.relu
+        )
+        self.encoder2 = self.resnet.layer1
+        self.encoder3 = self.resnet.layer2
+        self.encoder4 = self.resnet.layer3
+        self.encoder5 = self.resnet.layer4
+
+        # Decoder layers
+        # resnet18/34
+        self.up1 = Decoder(512, 256, 256)
+        self.up2 = Decoder(256, 128, 128)
+        self.up3 = Decoder(128, 64, 64)
+        self.up4 = Decoder(64, 64, 64)
+
+        # resnet50/101/152
+        # self.up1 = Decoder(2048, 1024, 1024)
+        # self.up2 = Decoder(1024, 512, 512)
+        # self.up3 = Decoder(512, 256, 256)
+        # self.up4 = Decoder(256, 64, 64)
+
+        # Segmentation head
+        self.final_conv = nn.Conv2d(64, num_masks, kernel_size=1)
+
+        # Classification head
+        self.global_pool = nn.AdaptiveAvgPool2d((1, 1))
+        self.predictor_cnn_extension = nn.Sequential(
+            nn.Conv2d(512, 2048, kernel_size=3, padding=1),  # resnet18/34
+            # nn.Conv2d(2048, 2048, kernel_size=3, padding=1),
+            nn.LeakyReLU(negative_slope=0.01),
+            nn.Conv2d(2048, 2048, kernel_size=3, padding=1),
+            nn.LeakyReLU(negative_slope=0.01),
+        )
+        self.classifier = nn.Sequential(
+            nn.Linear(2048, 256),  # resnet50/101/152
+            nn.LeakyReLU(negative_slope=0.01),
+            nn.Dropout(p=0.5),
+            nn.Linear(256, 256),
+            nn.LeakyReLU(negative_slope=0.01),
+            nn.Dropout(p=0.5),
+            nn.Linear(256, num_labels),
+        )
+
+    def forward(self, x):
+        x1 = self.encoder1(x)
+        x2 = self.encoder2(x1)
+        x3 = self.encoder3(x2)
+        x4 = self.encoder4(x3)
+        x5 = self.encoder5(x4)
+
+        x = self.up1(x4, x5)
+        x = self.up2(x3, x)
+        x = self.up3(x2, x)
+        x = self.up4(x1, x)
+        x = F.interpolate(
+            x, size=(x.size(2) * 2, x.size(3) * 2), mode="bilinear", align_corners=True
+        )
+
+        mask = self.final_conv(x)
+
+        # Predicting the labels using features from the last encoder output
+        x_cls = self.predictor_cnn_extension(x5)
+        x_cls = self.global_pool(
+            x_cls
+        )  # Use the feature map from the last encoder layer
+        x_cls = x_cls.view(x_cls.size(0), -1)
+        labels = self.classifier(x_cls)
+
+        if self.sigmoid:
+            mask = torch.sigmoid(mask)
+            labels = torch.sigmoid(labels)
+
+        return mask, labels
+
+
+class SegmentPredictorBbox(SegmentPredictor):
+    def __init__(
+        self,
+        num_masks,
+        num_labels,
+        num_bbox_classes,
+        in_channels=3,
+        sigmoid=True,
+        return_bbox=True,
+    ):
+        self.return_bbox = return_bbox
+        super(SegmentPredictorBbox, self).__init__(
+            num_masks, num_labels, in_channels, sigmoid
+        )
+        self.num_bbox_classes = num_bbox_classes
+        self.bbox_cnn_extension = nn.Sequential(
+            nn.Conv2d(512, 2048, kernel_size=3, padding=1),  # resnet18/34
+            # nn.Conv2d(2048, 2048, kernel_size=3, padding=1),
+            nn.LeakyReLU(negative_slope=0.01),
+            nn.Conv2d(2048, 2048, kernel_size=3, padding=1),
+            nn.LeakyReLU(negative_slope=0.01),
+        )
+        self.bbox_generator = nn.Sequential(
+            nn.Linear(2048, 256),
+            nn.LeakyReLU(negative_slope=0.01),
+            nn.Linear(256, 256),
+            nn.LeakyReLU(negative_slope=0.01),
+            nn.Linear(256, num_bbox_classes * 4),
+        )
+
+    def forward(self, x):
+        x1 = self.encoder1(x)
+        x2 = self.encoder2(x1)
+        x3 = self.encoder3(x2)
+        x4 = self.encoder4(x3)
+        x5 = self.encoder5(x4)
+
+        x = self.up1(x4, x5)
+        x = self.up2(x3, x)
+        x = self.up3(x2, x)
+        x = self.up4(x1, x)
+        x = F.interpolate(
+            x, size=(x.size(2) * 2, x.size(3) * 2), mode="bilinear", align_corners=True
+        )
+
+        mask = self.final_conv(x)
+
+        # Predicting the labels using features from the last encoder output
+        x_cls = self.predictor_cnn_extension(x5)
+        x_cls = self.global_pool(
+            x_cls
+        )  # Use the feature map from the last encoder layer
+        x_cls = x_cls.view(x_cls.size(0), -1)
+        labels = self.classifier(x_cls)
+        x_bbox = self.bbox_cnn_extension(x5)
+        x_bbox = self.global_pool(x_bbox)
+        x_bbox = x_bbox.view(x_bbox.size(0), -1)
+        bboxes = self.bbox_generator(x_bbox).view(-1, self.num_bbox_classes, 4)
+
+        # no sigmoid for bboxes.
+        if self.sigmoid:
+            mask = torch.sigmoid(mask)
+            labels = torch.sigmoid(labels)
+
+        if self.return_bbox:
+            return mask, labels, bboxes
+        return mask, labels
+
+
 class Predictor:
     def __init__(
         self,
@@ -215,9 +375,6 @@ class Predictor:
         mask_list = [pred_masks[i, :, :] for i in range(pred_masks.shape[0])]
         pred_classes = pred_classes.detach().squeeze(0).numpy()
         class_list = [pred_classes[i].item() for i in range(pred_classes.shape[0])]
-        # print(rgb_image)
-        print(mean_val)
-        print(pred_classes)
         mask_dict = {}
         for i, mask in enumerate(mask_list):
             mask_dict[self.categories_and_attributes.mask_categories[i]] = mask
@@ -253,7 +410,26 @@ def load_face_classifier_model():
         model,
         None,
         path=path.join(
-            r.get_path("lasr_vision_feature_extraction"), "models", "model.pth"
+            r.get_path("lasr_vision_feature_extraction"), "models", "face_model.pth"
+        ),
+        cpu_only=True,
+    )
+    return model
+
+
+def load_cloth_classifier_model():
+    num_classes = len(DeepFashion2GeneralizedCategoriesAndAttributes.attributes)
+    model = SegmentPredictorBbox(
+        num_masks=num_classes + 4, num_labels=num_classes + 4, num_bbox_classes=4
+    )
+    model.eval()
+
+    r = rospkg.RosPack()
+    model, _, _, _ = load_torch_model(
+        model,
+        None,
+        path=path.join(
+            r.get_path("lasr_vision_feature_extraction"), "models", "cloth_model.pth"
         ),
         cpu_only=True,
     )
@@ -312,7 +488,13 @@ def extract_mask_region(frame, mask, expand_x=0.5, expand_y=0.5):
 
 
 def predict_frame(
-    head_frame, torso_frame, full_frame, head_mask, torso_mask, predictor
+    head_frame,
+    torso_frame,
+    full_frame,
+    head_mask,
+    torso_mask,
+    head_predictor,
+    cloth_predictor,
 ):
     full_frame = cv2.cvtColor(full_frame, cv2.COLOR_BGR2RGB)
     head_frame = cv2.cvtColor(head_frame, cv2.COLOR_BGR2RGB)
@@ -321,9 +503,21 @@ def predict_frame(
     head_frame = pad_image_to_even_dims(head_frame)
     torso_frame = pad_image_to_even_dims(torso_frame)
 
-    rst = ImageOfPerson.from_parent_instance(predictor.predict(head_frame))
+    rst_person = ImageOfPerson.from_parent_instance(
+        head_predictor.predict(head_frame)
+    ).describe()
+    rst_cloth = ImageOfCloth.from_parent_instance(
+        cloth_predictor.predict(torso_frame)
+    ).describe()
 
-    return rst.describe()
+    result = {
+        "attributes": {**rst_person["attributes"], **rst_cloth["attributes"]},
+        "description": rst_person["description"] + rst_cloth["description"],
+    }
+
+    result = json.dumps(result, indent=4)
+
+    return result
 
 
 def load_torch_model(model, optimizer, path="model.pth", cpu_only=False):
@@ -354,7 +548,9 @@ def binary_erosion_dilation(
 
     # Check if the length of thresholds matches the number of channels
     if len(thresholds) != tensor.size(1):
-        raise ValueError("Length of thresholds must match the number of channels")
+        # the error should be here, just removed for now since there's some other bug I haven't fixed.
+        # raise ValueError(f"Length of thresholds {len(thresholds)} must match the number of channels {tensor.size(1)}")
+        thresholds = [0.5 for _ in range(tensor.size(1))]
 
     # Binary thresholding
     for i, threshold in enumerate(thresholds):

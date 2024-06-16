@@ -116,12 +116,6 @@ class DescribePeople(smach.StateMachine):
                 masks = [torso, head]
                 result = self.bodypix(userdata.img_msg, "resnet50", 0.7, masks)
                 userdata.bodypix_masks = result.masks
-                rospy.logdebug("Found poses: %s" % str(len(result.poses)))
-                neck_coord = (
-                    int(result.poses[0].coord[0]),
-                    int(result.poses[0].coord[1]),
-                )
-                rospy.logdebug("Coordinate of the neck is: %s" % str(neck_coord))
                 return "succeeded"
             except rospy.ServiceException as e:
                 rospy.logerr(f"Unable to perform inference. ({str(e)})")
@@ -141,13 +135,14 @@ class DescribePeople(smach.StateMachine):
                 input_keys=["img", "people_detections", "bodypix_masks"],
                 output_keys=["people"],
             )
-            self.torch_face_features = rospy.ServiceProxy(
+            self.face_features = rospy.ServiceProxy(
                 "/torch/detect/face_features", TorchFaceFeatureDetectionDescription
             )
 
         def execute(self, userdata):
             if len(userdata.people_detections) == 0:
                 rospy.logerr("Couldn't find anyone!")
+                userdata.people = []
                 return "failed"
             elif len(userdata.people_detections) == 1:
                 rospy.logdebug("There is one person.")
@@ -204,7 +199,7 @@ class DescribePeople(smach.StateMachine):
 
                 full_frame = cv2_img.cv2_img_to_msg(img)
 
-                rst = self.torch_face_features(
+                rst = self.face_features(
                     full_frame,
                     head_mask_data,
                     head_mask_shape,
@@ -222,5 +217,5 @@ class DescribePeople(smach.StateMachine):
             #     - parts
             #       - - part
             #         - mask
-            userdata["people"] = people
+            userdata.people = people
             return "succeeded"
