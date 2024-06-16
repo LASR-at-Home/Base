@@ -75,7 +75,7 @@ class GetCroppedImage(smach.State):
 
         Args:
             image (np.ndarray): Image to crop
-            detections (YoloDetection): Yolo Detections of the desired object
+            detections (YoloDetection): YOLO Detections of the desired object
             in the image.
         Returns:
             np.ndarray: Cropped image
