@@ -71,8 +71,7 @@ class GetCroppedImage(smach.State):
             raise ValueError(f"Invalid crop_method: {crop_method}")
 
     def _2d_crop(self, image: np.ndarray, detections: List[Detection]) -> np.ndarray:
-        """Crops the image to the desired object that is closest to the
-        centroid of the image.
+        """Crops the image to the according to the desired crop_method.
 
         Args:
             image (np.ndarray): Image to crop
