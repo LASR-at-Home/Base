@@ -42,7 +42,7 @@ class GetCroppedImage(smach.State):
         smach.State.__init__(
             self,
             outcomes=["succeeded", "failed"],
-            output_keys=["cropped_image"],
+            output_keys=["img_msg"],
         )
 
         self._crop_method = crop_method
@@ -205,7 +205,7 @@ class GetCroppedImage(smach.State):
                 raise ValueError(f"Invalid crop_method: {self._crop_method}")
             cropped_msg = cv2_img_to_msg(cropped_image)
             self._debug_pub.publish(cropped_msg)
-            userdata.cropped_image = cropped_msg
+            userdata.img_msg = cropped_msg
             return "succeeded"
         except Exception as e:
             rospy.logerr(e)
