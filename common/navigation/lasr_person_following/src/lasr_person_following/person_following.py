@@ -192,10 +192,9 @@ class PersonFollower:
         pose.pose.orientation = self._compute_face_quat(
             robot_pose.pose, closest_person.pose
         )
-        goal: MoveBaseGoal = MoveBaseGoal()
-        goal.target_pose = self._tf_pose(pose, "map")
-        goal.target_pose.header.stamp = rospy.Time.now()
-        self._move_base_client.send_goal(goal)
+        pose.header.stamp = rospy.Time.now()
+        pose = self._tf_pose(pose, "map")
+        self._move_base(pose)
 
         if self._tts_client_available:
             # Ask if we should follow
@@ -318,6 +317,23 @@ class PersonFollower:
 
         return chosen_pose
 
+    def _move_base(self, pose: PoseStamped) -> MoveBaseGoal:
+        goal: MoveBaseGoal = MoveBaseGoal()
+        goal.target_pose = pose
+        goal.target_pose.header.stamp = rospy.Time.now()
+
+        if self._move_base_client.get_state() in [
+            GoalStatus.PENDING,
+            GoalStatus.ACTIVE,
+        ]:
+            # hack for janked move_base
+            self._move_base_client.send_goal(goal)
+            self._move_base_client.send_goal(goal)
+        else:
+            self._move_base_client.send_goal(goal)
+
+        return goal
+
     def follow(self) -> None:
         """
         The general loop should be:
@@ -351,8 +367,8 @@ class PersonFollower:
 
             # If we have lost track of the person, finish executing the curret goal and recover the track
             if track is None:
-                self._move_base_client.wait_for_result()
                 rospy.loginfo("Lost track of person, recovering...")
+                self._move_base_client.wait_for_result()
                 self._recover_track()
                 continue
 
@@ -394,10 +410,9 @@ class PersonFollower:
                 pose.pose.orientation = self._compute_face_quat(
                     robot_pose.pose, track.pose
                 )
-                goal = MoveBaseGoal()
-                goal.target_pose = self._tf_pose(pose, "map")
-                goal.target_pose.header.stamp = rospy.Time.now()
-                self._move_base_client.send_goal(goal)
+                pose.header.stamp = rospy.Time.now()
+                pose = self._tf_pose(pose, "map")
+                prev_goal = self._move_base(pose)
                 # prev_track = track
                 continue
 
@@ -412,7 +427,7 @@ class PersonFollower:
                 rospy.loginfo("Person has moved significantly, cancelling goal")
                 self._cancel_goal()
             # Check if we are currently executing a goal, it is too soon to send a new one, and the person has not moved significantly
-            elif (
+            if (
                 self._move_base_client.get_state()
                 in [
                     GoalStatus.PENDING,
@@ -425,8 +440,9 @@ class PersonFollower:
                 last_track_time = rospy.Time.now()
                 continue
 
-            goal: MoveBaseGoal = MoveBaseGoal()
-            goal.target_pose = self._get_pose_on_path(
+            goal_pose: PoseStamped = PoseStamped(header=self._latest_tracks.header)
+            goal_pose.header.stamp = rospy.Time.now()
+            goal_pose.pose = self._get_pose_on_path(
                 self._tf_pose(robot_pose, "map"),
                 self._tf_pose(
                     PoseStamped(pose=track.pose, header=self._latest_tracks.header),
@@ -434,12 +450,9 @@ class PersonFollower:
                 ),
                 self._stopping_distance,
             )
-            if goal.target_pose is None:
+            if goal_pose is None:
                 rospy.loginfo("Failed to find a plan, skipping")
                 continue
-            goal.target_pose.header.stamp = rospy.Time.now()
-            self._move_base_client.send_goal(goal)
-            rospy.loginfo(f"Sent goal to {goal.target_pose.pose.position}")
-            prev_goal = goal
+            prev_goal = self._move_base(goal_pose)
             prev_track = track
             last_track_time = rospy.Time.now()
