@@ -7,7 +7,8 @@ from sensor_msgs.msg import Image, PointCloud2
 from geometry_msgs.msg import Point, PoseWithCovarianceStamped
 from lasr_vision_msgs.msg import Detection, Detection3D
 from lasr_vision_msgs.srv import YoloDetection, YoloDetection3D
-from cv2_img import cv2_img_to_msg, msg_to_cv2_img, pcl_to_cv2
+from cv2_img import cv2_img_to_msg, msg_to_cv2_img
+from cv2_pcl import pcl_to_cv2
 
 
 class GetCroppedImage(smach.State):
@@ -126,7 +127,8 @@ class GetCroppedImage(smach.State):
         """
         min_dist = float("inf")
         max_dist = 0
-
+        closest_detection = None
+        furthest_detection = None
         for det in detections:
             dist = np.sqrt(
                 (robot_loc.x - det.point.x) ** 2
@@ -146,6 +148,9 @@ class GetCroppedImage(smach.State):
             detection = furthest_detection
         else:
             raise ValueError(f"Invalid 3D crop_method: {self._crop_method}")
+
+        if detection is None:
+            raise ValueError(f"No detection found")
 
         rgb_image = pcl_to_cv2(pointcloud)
         x, y, w, h = (
@@ -195,9 +200,7 @@ class GetCroppedImage(smach.State):
 if __name__ == "__main__":
     rospy.init_node("get_cropped_image")
     while not rospy.is_shutdown():
-        get_cropped_image = GetCroppedImage(
-            "bottle", crop_method="top-most", rgb_topic="/usb_cam/image_raw"
-        )
+        get_cropped_image = GetCroppedImage("chair", crop_method="furthest")
         sm = smach.StateMachine(outcomes=["succeeded", "failed"])
         with sm:
             smach.StateMachine.add(
