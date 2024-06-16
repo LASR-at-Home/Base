@@ -18,7 +18,6 @@ from smach import CBState
 import rosservice
 
 PUBLIC_CONTAINER = False
-
 try:
     from pal_startup_msgs.srv import (
         StartupStart,
