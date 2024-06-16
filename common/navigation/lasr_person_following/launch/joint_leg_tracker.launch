@@ -6,7 +6,7 @@
     <param name="fixed_frame" value="odom"/>
     <param name="scan_frequency" value="10"/>
     <param name="max_detect_distance" value="5.0"/>
-    <param name="dist_travelled_together_to_initiate_leg_pair" value="1.0"/>
+    <param name="dist_travelled_together_to_initiate_leg_pair" value="0.5"/>
     <param name="display_detected_people" value="true"/>
     <param name="max_leg_pairing_dist" value="0.5"/>
     <param name="max_std" value="0.9"/>
