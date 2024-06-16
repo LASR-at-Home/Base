@@ -1,5 +1,4 @@
 import os
-
 import whisper  # type: ignore
 import rospkg  # type: ignore
 import rospy

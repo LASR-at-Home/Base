@@ -19,7 +19,7 @@ class ParseNameAndDrink(smach.State):
 
         Args:
             param_key (str, optional): Name of the parameter that contains the list of
-            possible . Defaults to "/priors".
+            possible . Defaults to "/receptionist/priors".
         """
         smach.State.__init__(
             self,
