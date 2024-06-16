@@ -5,14 +5,14 @@ from typing import List, Union
 
 from geometry_msgs.msg import Polygon, Point, Point32
 from shapely.geometry import Point
-from shapely.geometry.polygon import Polygon
+from shapely.geometry.polygon import Polygon as ShapelyPolygon
 
 
 class Detect3DInArea(smach.StateMachine):
     class FilterDetections(smach.State):
         def __init__(
             self,
-            area_polygon: Polygon,
+            area_polygon: ShapelyPolygon,
             debug_publisher: str = "/skills/detect3d_in_area/debug",
         ):
             smach.State.__init__(
@@ -31,7 +31,7 @@ class Detect3DInArea(smach.StateMachine):
             # publish polygon for debugging
             polygon_msg = Polygon()
             polygon_msg.points = [
-                Point32(x=point.x, y=point.y, z=point.z)
+                Point32(x=point[0], y=point[1], z=0.0)
                 for point in self.area_polygon.exterior.coords
             ]
             self.debug_publisher.publish(polygon_msg)

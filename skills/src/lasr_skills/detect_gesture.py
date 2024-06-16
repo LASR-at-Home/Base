@@ -4,7 +4,7 @@ import smach
 import rospy
 import cv2
 import cv2_img
-from lasr_skills.vision import GetImage
+from lasr_skills.vision import GetCroppedImage
 from lasr_skills import PlayMotion
 from lasr_vision_msgs.srv import BodyPixDetection, BodyPixDetectionRequest
 from lasr_vision_msgs.msg import BodyPixMaskRequest
@@ -132,7 +132,7 @@ class GestureDetectionSM(smach.StateMachine):
         with self:
             smach.StateMachine.add(
                 "GET_IMAGE",
-                GetImage(),
+                GetCroppedImage("person", "nearest"),
                 transitions={"succeeded": "BODY_PIX_DETECTION", "failed": "failed"},
             )
 
