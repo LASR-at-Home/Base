@@ -1,6 +1,7 @@
 """
 State machine for the nicole task. It finds a person by given name and then looks at them.
 """
+
 import rospy
 import smach_ros
 import smach
