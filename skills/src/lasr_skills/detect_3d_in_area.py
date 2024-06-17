@@ -29,12 +29,13 @@ class Detect3DInArea(smach.StateMachine):
         def execute(self, userdata):
             detected_objects = userdata["detections_3d"].detected_objects
             # publish polygon for debugging
-            # polygon_msg = Polygon()
-            # polygon_msg.points = [
-            #     Point32(x=point.x, y=point.y, z=point.z)
-            #     for point in self.area_polygon.exterior.coords
-            # ]
-            # self.debug_publisher.publish(polygon_msg)
+
+            polygon_msg = Polygon()
+            polygon_msg.points = [
+                Point32(x=point[0], y=point[1], z=0.0)
+                for point in self.area_polygon.exterior.coords
+            ]
+            self.debug_publisher.publish(polygon_msg)
             satisfied_points = [
                 self.area_polygon.contains(Point(object.point.x, object.point.y))
                 for object in detected_objects

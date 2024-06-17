@@ -12,7 +12,7 @@ from lasr_vision_msgs.srv import (
     TorchFaceFeatureDetectionDescription,
 )
 from numpy2message import numpy2message
-from .vision import GetImage, ImageMsgToCv2
+from .vision import GetCroppedImage, ImageMsgToCv2
 import numpy as np
 
 
@@ -27,7 +27,9 @@ class DescribePeople(smach.StateMachine):
 
         with self:
             smach.StateMachine.add(
-                "GET_IMAGE", GetImage(), transitions={"succeeded": "CONVERT_IMAGE"}
+                "GET_IMAGE",
+                GetCroppedImage(object_name="person", crop_method="closest"),
+                transitions={"succeeded": "CONVERT_IMAGE"},
             )
             smach.StateMachine.add(
                 "CONVERT_IMAGE", ImageMsgToCv2(), transitions={"succeeded": "SEGMENT"}

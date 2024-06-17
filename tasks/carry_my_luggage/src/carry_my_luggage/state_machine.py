@@ -1,13 +1,13 @@
 import smach
-
+import smach_ros
 from lasr_skills import (
     WaitForPerson,
     Say,
     DetectGesture,
     ReceiveObject,
     HandoverObject,
-    GetImage,
 )
+from lasr_skills.vision import GetCroppedImage
 from lasr_person_following.msg import FollowAction
 
 
@@ -56,7 +56,7 @@ class CarryMyLuggage(smach.StateMachine):
 
             smach.StateMachine.add(
                 "GET_IMAGE",
-                GetImage(),
+                GetCroppedImage(object_name="person", crop_method="closest"),
                 transitions={
                     "succeeded": "DETECT_POINTING_DIRECTION",
                     "failed": "failed",
