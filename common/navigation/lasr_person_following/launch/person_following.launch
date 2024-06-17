@@ -1,14 +1,6 @@
 <launch>
 
  <include file="$(find lasr_person_following)/launch/joint_leg_tracker.launch">
-    <param name="forest_file" value="$(find leg_tracker)/config/trained_leg_detector_res=0.33.yaml" />
-    <param name="scan_topic" value="/scan" />
-    <param name="fixed_frame" value="odom"/>
-    <param name="scan_frequency" value="10"/>
-    <param name="max_detect_distance" value="5.0"/>
-    <param name="dist_travelled_together_to_initiate_leg_pair" value="1.0"/>
-    <param name="display_detected_people" value="true"/>
-    <param name="max_leg_pairing_dist" value="0.5"/>
  </include> 
 
  <node pkg="lasr_person_following" type="person_following.py" name="person_following" output="screen" />

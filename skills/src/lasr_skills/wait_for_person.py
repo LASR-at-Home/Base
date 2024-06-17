@@ -42,5 +42,5 @@ class WaitForPerson(smach.StateMachine):
             smach.StateMachine.add(
                 "CHECK_FOR_PERSON",
                 self.CheckForPerson(),
-                transitions={"done": "succeeded", "not_done": "DETECT_PEOPLE"},
+                transitions={"done": "succeeded", "not_done": "GET_IMAGE"},
             )
