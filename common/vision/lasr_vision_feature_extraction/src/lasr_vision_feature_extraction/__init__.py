@@ -600,7 +600,9 @@ def binary_erosion_dilation(
 
     # Check if the length of thresholds matches the number of channels
     if len(thresholds) != tensor.size(1):
-        raise ValueError(f"Length of thresholds {len(thresholds)} must match the number of channels {tensor.size(1)}")
+        raise ValueError(
+            f"Length of thresholds {len(thresholds)} must match the number of channels {tensor.size(1)}"
+        )
 
     # Binary thresholding
     for i, threshold in enumerate(thresholds):
