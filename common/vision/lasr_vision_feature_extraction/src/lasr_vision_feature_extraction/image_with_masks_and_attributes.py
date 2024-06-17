@@ -257,8 +257,6 @@ class ImageOfCloth(ImageWithMasksAndAttributes):
             "description": "this descrcription will be completed if we find out it is better to do it here.",
         }
 
-        print(self.attributes)
-
         for attribute in [
             "short sleeve top",
             "long sleeve top",
