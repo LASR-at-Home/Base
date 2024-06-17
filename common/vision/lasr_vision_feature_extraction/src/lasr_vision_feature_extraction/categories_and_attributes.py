@@ -172,18 +172,49 @@ class CelebAMaskHQCategoriesAndAttributes(CategoriesAndAttributes):
 
 class DeepFashion2GeneralizedCategoriesAndAttributes(CategoriesAndAttributes):
     mask_categories = [
-        'short sleeve top', 'long sleeve top', 'short sleeve outwear',
-        'long sleeve outwear', 'vest', 'sling', 'shorts',
-        'trousers', 'skirt', 'short sleeve dress',
-        'long sleeve dress', 'vest dress', 'sling dress'
+        "short sleeve top",
+        "long sleeve top",
+        "short sleeve outwear",
+        "long sleeve outwear",
+        "vest",
+        "sling",
+        "shorts",
+        "trousers",
+        "skirt",
+        "short sleeve dress",
+        "long sleeve dress",
+        "vest dress",
+        "sling dress",
     ]
     merged_categories = {
-        'top': ['short sleeve top', 'long sleeve top', 'vest', 'sling', ],
-        'down': ['shorts', 'trousers', 'skirt', ],
-        'outwear': ['short sleeve outwear', 'long sleeve outwear', ],
-        'dress': ['short sleeve dress', 'long sleeve dress', 'vest dress', 'sling dress', ],
+        "top": [
+            "short sleeve top",
+            "long sleeve top",
+            "vest",
+            "sling",
+        ],
+        "down": [
+            "shorts",
+            "trousers",
+            "skirt",
+        ],
+        "outwear": [
+            "short sleeve outwear",
+            "long sleeve outwear",
+        ],
+        "dress": [
+            "short sleeve dress",
+            "long sleeve dress",
+            "vest dress",
+            "sling dress",
+        ],
     }
-    mask_labels = ['top', 'down', 'outwear', 'dress', ]
+    mask_labels = [
+        "top",
+        "down",
+        "outwear",
+        "dress",
+    ]
     _categories_to_merge = []
     for key in sorted(list(merged_categories.keys())):
         for cat in merged_categories[key]:
@@ -195,10 +226,19 @@ class DeepFashion2GeneralizedCategoriesAndAttributes(CategoriesAndAttributes):
     plane_attributes = []
     avoided_attributes = []
     attributes = [
-        'short sleeve top', 'long sleeve top', 'short sleeve outwear',
-        'long sleeve outwear', 'vest', 'sling', 'shorts',
-        'trousers', 'skirt', 'short sleeve dress',
-        'long sleeve dress', 'vest dress', 'sling dress'
+        "short sleeve top",
+        "long sleeve top",
+        "short sleeve outwear",
+        "long sleeve outwear",
+        "vest",
+        "sling",
+        "shorts",
+        "trousers",
+        "skirt",
+        "short sleeve dress",
+        "long sleeve dress",
+        "vest dress",
+        "sling dress",
     ]
 
     thresholds_mask: dict[str, float] = {}

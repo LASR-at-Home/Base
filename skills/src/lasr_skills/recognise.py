@@ -6,7 +6,6 @@ from sensor_msgs.msg import Image
 
 
 class Recognise(smach.State):
-
     def __init__(
         self,
         dataset: str,

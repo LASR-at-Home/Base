@@ -30,7 +30,6 @@ from scipy.spatial.transform import Rotation as R
 
 
 class PersonFollower:
-
     _track_id: Union[None, int]
     _start_following_radius: float
     _min_distance_between_tracks: float
@@ -170,7 +169,6 @@ class PersonFollower:
         return False
 
     def follow(self) -> None:
-
         prev_track: Union[None, Person] = None
         prev_goal: Union[None, MoveBaseActionGoal] = None
         poses = []

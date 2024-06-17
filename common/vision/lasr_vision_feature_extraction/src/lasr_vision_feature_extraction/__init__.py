@@ -346,15 +346,11 @@ class Predictor:
 
         self._thresholds_mask: list[float] = []
         self._thresholds_pred: list[float] = []
-        for key in sorted(
-            list(self.categories_and_attributes.thresholds_mask.keys())
-        ):
+        for key in sorted(list(self.categories_and_attributes.thresholds_mask.keys())):
             self._thresholds_mask.append(
                 self.categories_and_attributes.thresholds_mask[key]
             )
-        for key in sorted(
-            list(self.categories_and_attributes.thresholds_pred.keys())
-        ):
+        for key in sorted(list(self.categories_and_attributes.thresholds_pred.keys())):
             self._thresholds_pred.append(
                 self.categories_and_attributes.thresholds_pred[key]
             )
@@ -393,13 +389,30 @@ class Predictor:
 
 class ClothPredictor(Predictor):
     def predict(self, rgb_image: np.ndarray) -> ImageWithMasksAndAttributes:
-        general_categories = ['top', 'down', 'outwear', 'dress', ]
+        general_categories = [
+            "top",
+            "down",
+            "outwear",
+            "dress",
+        ]
         categories = [
-            'top', 'down', 'outwear', 'dress',
-            'short sleeve top', 'long sleeve top', 'short sleeve outwear',
-            'long sleeve outwear', 'vest', 'sling', 'shorts',
-            'trousers', 'skirt', 'short sleeve dress',
-            'long sleeve dress', 'vest dress', 'sling dress'
+            "top",
+            "down",
+            "outwear",
+            "dress",
+            "short sleeve top",
+            "long sleeve top",
+            "short sleeve outwear",
+            "long sleeve outwear",
+            "vest",
+            "sling",
+            "shorts",
+            "trousers",
+            "skirt",
+            "short sleeve dress",
+            "long sleeve dress",
+            "vest dress",
+            "sling dress",
         ]
         image_tensor = (
             torch.from_numpy(rgb_image).permute(2, 0, 1).unsqueeze(0).float() / 255.0

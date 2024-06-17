@@ -15,12 +15,10 @@ import warnings
 
 
 class PersonFollowingServer:
-
     _server: actionlib.SimpleActionServer
     _follower: PersonFollower
 
     def __init__(self) -> None:
-
         self._server = actionlib.SimpleActionServer(
             "follow_person", FollowAction, execute_cb=self._execute_cb, auto_start=False
         )

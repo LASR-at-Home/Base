@@ -15,7 +15,6 @@ from typing import Union
 
 class HandoverObject(smach.StateMachine):
     def __init__(self, object_name: Union[str, None] = None, vertical: bool = True):
-
         if object_name is not None:
             super(HandoverObject, self).__init__(outcomes=["succeeded", "failed"])
         else:

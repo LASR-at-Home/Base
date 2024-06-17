@@ -234,10 +234,22 @@ class ImageOfCloth(ImageWithMasksAndAttributes):
         )
 
     def describe(self) -> dict:
-        top = self.attributes["top"] > self.categories_and_attributes.thresholds_pred["top"]
-        down = self.attributes["down"] > self.categories_and_attributes.thresholds_pred["down"]
-        dress = self.attributes["dress"] > self.categories_and_attributes.thresholds_pred["dress"]
-        outwear = self.attributes["outwear"] > self.categories_and_attributes.thresholds_pred["outwear"]
+        top = (
+            self.attributes["top"]
+            > self.categories_and_attributes.thresholds_pred["top"]
+        )
+        down = (
+            self.attributes["down"]
+            > self.categories_and_attributes.thresholds_pred["down"]
+        )
+        dress = (
+            self.attributes["dress"]
+            > self.categories_and_attributes.thresholds_pred["dress"]
+        )
+        outwear = (
+            self.attributes["outwear"]
+            > self.categories_and_attributes.thresholds_pred["outwear"]
+        )
 
         result = {
             # not in a loop for now, likely to add more logic combined with a classifier of more specific cloth classes.
@@ -247,13 +259,20 @@ class ImageOfCloth(ImageWithMasksAndAttributes):
 
         print(self.attributes)
 
-        for attribute in ['short sleeve top', 'long sleeve top', 'short sleeve outwear',
-            'long sleeve outwear',
-                          # 'shorts',
-                          # 'trousers',
-                          # 'skirt',
-                          'short sleeve dress',
-            'long sleeve dress', 'vest dress', 'sling dress', 'sleeveless top']:
+        for attribute in [
+            "short sleeve top",
+            "long sleeve top",
+            "short sleeve outwear",
+            "long sleeve outwear",
+            # 'shorts',
+            # 'trousers',
+            # 'skirt',
+            "short sleeve dress",
+            "long sleeve dress",
+            "vest dress",
+            "sling dress",
+            "sleeveless top",
+        ]:
             result["attributes"][attribute] = False
 
         if top:
@@ -281,7 +300,10 @@ class ImageOfCloth(ImageWithMasksAndAttributes):
         if outwear:
             max_prob = 0.0
             max_attribute = "short sleeve outwear"
-            for attribute in ['short sleeve outwear', 'long sleeve outwear', ]:
+            for attribute in [
+                "short sleeve outwear",
+                "long sleeve outwear",
+            ]:
                 if self.attributes[attribute] > max_prob:
                     max_prob = self.attributes[attribute]
                     max_attribute = attribute
@@ -290,7 +312,12 @@ class ImageOfCloth(ImageWithMasksAndAttributes):
         if dress:
             max_prob = 0.0
             max_attribute = "short sleeve dress"
-            for attribute in ['short sleeve dress', 'long sleeve dress', 'vest dress', 'sling dress', ]:
+            for attribute in [
+                "short sleeve dress",
+                "long sleeve dress",
+                "vest dress",
+                "sling dress",
+            ]:
                 if self.attributes[attribute] > max_prob:
                     max_prob = self.attributes[attribute]
                     max_attribute = attribute

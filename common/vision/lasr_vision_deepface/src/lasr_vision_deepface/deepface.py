@@ -197,7 +197,6 @@ def detect_faces(
     request: DetectFacesRequest,
     debug_publisher: Union[rospy.Publisher, None],
 ) -> DetectFacesResponse:
-
     cv_im = cv2_img.msg_to_cv2_img(request.image_raw)
 
     response = DetectFacesResponse()
