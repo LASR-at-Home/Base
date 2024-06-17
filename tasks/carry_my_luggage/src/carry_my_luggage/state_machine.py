@@ -6,8 +6,8 @@ from lasr_skills import (
     DetectGesture,
     ReceiveObject,
     HandoverObject,
-    GetCroppedImage,
 )
+from lasr_skills.vision import GetCroppedImage
 from lasr_person_following.msg import FollowAction
 
 
