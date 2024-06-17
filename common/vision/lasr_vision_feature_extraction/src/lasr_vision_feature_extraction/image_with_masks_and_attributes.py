@@ -248,8 +248,11 @@ class ImageOfCloth(ImageWithMasksAndAttributes):
         print(self.attributes)
 
         for attribute in ['short sleeve top', 'long sleeve top', 'short sleeve outwear',
-            'long sleeve outwear', 'shorts',
-            'trousers', 'skirt', 'short sleeve dress',
+            'long sleeve outwear',
+                          # 'shorts',
+                          # 'trousers',
+                          # 'skirt',
+                          'short sleeve dress',
             'long sleeve dress', 'vest dress', 'sling dress', 'sleeveless top']:
             result["attributes"][attribute] = False
 
