@@ -1,3 +1,4 @@
+"""This is no longer used"""
 import sys
 import smach
 import rospy
