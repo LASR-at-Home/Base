@@ -321,16 +321,7 @@ class PersonFollower:
         goal: MoveBaseGoal = MoveBaseGoal()
         goal.target_pose = pose
         goal.target_pose.header.stamp = rospy.Time.now()
-
-        if self._move_base_client.get_state() in [
-            GoalStatus.PENDING,
-            GoalStatus.ACTIVE,
-        ]:
-            # hack for janked move_base
-            self._move_base_client.send_goal(goal)
-            self._move_base_client.send_goal(goal)
-        else:
-            self._move_base_client.send_goal(goal)
+        self._move_base_client.send_goal(goal)
 
         return goal
 
