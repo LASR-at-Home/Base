@@ -33,7 +33,6 @@ def run_clip(
         model (Any): clip model loaded into memory
         labels (List[str]): list of string labels to query image similarity to.
         img (np.ndarray): the image to query
-        ensure that it runs on cpu for now
 
     Returns:
         List[float]: the cosine similarity scores between the image and label embeddings.

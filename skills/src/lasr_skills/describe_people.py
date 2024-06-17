@@ -5,6 +5,7 @@ import rospy
 import smach
 import cv2_img
 import numpy as np
+from lasr_skills import Say
 from lasr_vision_msgs.msg import BodyPixMaskRequest
 from lasr_vision_msgs.srv import (
     YoloDetection,
@@ -29,8 +30,35 @@ class DescribePeople(smach.StateMachine):
             smach.StateMachine.add(
                 "GET_IMAGE",
                 GetCroppedImage(object_name="person", crop_method="closest"),
-                transitions={"succeeded": "CONVERT_IMAGE"},
+                transitions={"succeeded": "CONVERT_IMAGE",
+                             "failed": "SAY_GET_IMAGE_AGAIN"},
             )
+            smach.StateMachine.add(
+                "SAY_GET_IMAGE_AGAIN",
+                Say(text="Make sure you're looking into my eyes, I can't seem to be able to see you."),
+                transitions={
+                    "succeeded": "GET_IMAGE_AGAIN",
+                    "preempted": "GET_IMAGE_AGAIN",
+                    "aborted": "GET_IMAGE_AGAIN",
+                },
+            )
+            smach.StateMachine.add(
+                "GET_IMAGE_AGAIN",
+                GetCroppedImage(object_name="person", crop_method="closest"),
+                transitions={"succeeded": "CONVERT_IMAGE",
+                             "failed": "SAY_CONTINUE"},
+            )
+
+            smach.StateMachine.add(
+                "SAY_CONTINUE",
+                Say(text="I can't see anyone, I will continue"),
+                transitions={
+                    "succeeded": "failed",
+                    "preempted": "failed",
+                    "aborted": "failed",
+                },
+            )
+
             smach.StateMachine.add(
                 "CONVERT_IMAGE", ImageMsgToCv2(), transitions={"succeeded": "SEGMENT"}
             )
