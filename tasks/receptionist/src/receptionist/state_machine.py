@@ -372,7 +372,7 @@ class Receptionist(smach.StateMachine):
                 "PARSE_NAME_AND_DRINK_GUEST_2",
                 ParseNameAndDrink("guest2"),
                 transitions={
-                    "succeeded": "GET_GUEST_ATTRIBUTES_GUEST_2",
+                    "succeeded": "SAY_GET_GUEST_ATTRIBUTE_2",
                     "failed": "REPEAT_GET_NAME_AND_DRINK_GUEST_2",
                     "failed_name": "REPEAT_GET_NAME_GUEST_2",
                     "failed_drink": "REPEAT_GET_DRINK_GUEST_2",
@@ -395,7 +395,7 @@ class Receptionist(smach.StateMachine):
                 "REPEAT_PARSE_NAME_AND_DRINK_GUEST_2",
                 ParseNameAndDrink("guest2"),
                 transitions={
-                    "succeeded": "GET_GUEST_ATTRIBUTES_GUEST_2",
+                    "succeeded": "SAY_GET_GUEST_ATTRIBUTE_2",
                     "failed": "SAY_CONTINUE_GUEST_2",
                     "failed_name": "SAY_CONTINUE_GUEST_2",
                     "failed_drink": "SAY_CONTINUE_GUEST_2",
