@@ -440,9 +440,7 @@ class PersonFollower:
                 last_track_time = rospy.Time.now()
                 continue
 
-            goal_pose: PoseStamped = PoseStamped(header=self._latest_tracks.header)
-            goal_pose.header.stamp = rospy.Time.now()
-            goal_pose.pose = self._get_pose_on_path(
+            goal_pose: PoseStamped = self._get_pose_on_path(
                 self._tf_pose(robot_pose, "map"),
                 self._tf_pose(
                     PoseStamped(pose=track.pose, header=self._latest_tracks.header),
