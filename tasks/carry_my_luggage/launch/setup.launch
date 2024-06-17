@@ -15,6 +15,5 @@
 
     <!--      PERCEPTION     -->
     <include file="$(find lasr_vision_yolov8)/launch/service.launch" />
-    <node pkg="lasr_vision_pointing" type="detect_pointing.py" name="pointing_service" output="screen"/>
-
+    <include file="$(find lasr_vision_bodypix)/launch/service.launch" />
 </launch>
