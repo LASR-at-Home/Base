@@ -76,9 +76,9 @@ def filter_laser_scan(laser_scan):
         len(laser_scan.ranges) // 3 : 2 * len(laser_scan.ranges) // 3
     ]
     filtered_ranges = [np.nan] * len(laser_scan.ranges)
-    filtered_ranges[
-        len(laser_scan.ranges) // 3 : 2 * len(laser_scan.ranges) // 3
-    ] = middle_part
+    filtered_ranges[len(laser_scan.ranges) // 3 : 2 * len(laser_scan.ranges) // 3] = (
+        middle_part
+    )
     mean_distance = np.nanmean(filtered_ranges)
 
     return mean_distance, filtered_ranges
