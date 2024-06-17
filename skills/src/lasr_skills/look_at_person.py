@@ -273,7 +273,7 @@ class LookAtPerson(smach.StateMachine):
                 transitions={
                     "succeeded": "LOOP",
                     "aborted": "failed",
-                    "preempted": "failed",
+                    "timed_out": "LOOP",
                 },
                 remapping={"pointstamped": "pointstamped"},
             )

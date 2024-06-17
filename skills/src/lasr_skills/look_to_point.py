@@ -12,7 +12,7 @@ class LookToPoint(smach.State):
     def __init__(self):
         smach.State.__init__(
             self,
-            outcomes=["succeeded", "preempted", "aborted"],
+            outcomes=["succeeded", "aborted", "timed_out"],
             input_keys=["pointstamped"],
         )
         self.client = actionlib.SimpleActionClient(
@@ -46,5 +46,4 @@ class LookToPoint(smach.State):
                 return "aborted"
         else:
             self.client.cancel_goal()
-            return "succeeded"
-            # return "timed_out"
+            return "timed_out"
