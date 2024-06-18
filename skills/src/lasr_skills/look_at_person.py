@@ -96,7 +96,9 @@ class LookAtPerson(smach.StateMachine):
                 try:
                     eye_point_pcl = pcl_xyz[int(eye_point[1]), int(eye_point[0])]
                 except IndexError:
-                    eye_point_pcl = pcl_xyz[int(eye_point[1])-1, int(eye_point[0])-1]
+                    eye_point_pcl = pcl_xyz[
+                        int(eye_point[1]) - 1, int(eye_point[0]) - 1
+                    ]
                 except Exception as e:
                     rospy.logerr(f"Unexpected Exception: {e}")
                     return "failed"

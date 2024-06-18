@@ -18,8 +18,8 @@ class LookToGivenPoint(smach.State):
             outcomes=["succeeded", "aborted", "timed_out"],
         )
         self.goal_pointstamped = PointStamped(
-                point=Point(x=look_position[0], y=look_position[1], z=1.0)
-            )
+            point=Point(x=look_position[0], y=look_position[1], z=1.0)
+        )
         self.client = actionlib.SimpleActionClient(
             "/head_controller/point_head_action", PointHeadAction
         )

@@ -2,7 +2,13 @@ import smach
 
 from geometry_msgs.msg import Pose
 from shapely.geometry import Polygon
-from lasr_skills import GoToLocation, WaitForPersonInArea, Say, AskAndListen, LookToGivenPoint
+from lasr_skills import (
+    GoToLocation,
+    WaitForPersonInArea,
+    Say,
+    AskAndListen,
+    LookToGivenPoint,
+)
 from receptionist.states import (
     ParseNameAndDrink,
     ParseName,
@@ -294,7 +300,7 @@ class Receptionist(smach.StateMachine):
                 transitions={
                     "succeeded": "INTRODUCE_GUEST_1_TO_HOST",
                     "timed_out": "INTRODUCE_GUEST_1_TO_HOST",
-                    "aborted": "failed"
+                    "aborted": "failed",
                 },
             )
 
@@ -315,7 +321,7 @@ class Receptionist(smach.StateMachine):
                 transitions={
                     "succeeded": "INTRODUCE_HOST_TO_GUEST_1",
                     "timed_out": "INTRODUCE_HOST_TO_GUEST_1",
-                    "aborted": "failed"
+                    "aborted": "failed",
                 },
             )
 
@@ -580,7 +586,7 @@ class Receptionist(smach.StateMachine):
                 transitions={
                     "succeeded": "INTRODUCE_GUEST_2_TO_HOST",
                     "timed_out": "INTRODUCE_GUEST_2_TO_HOST",
-                    "aborted": "failed"
+                    "aborted": "failed",
                 },
             )
 
@@ -604,7 +610,7 @@ class Receptionist(smach.StateMachine):
                 transitions={
                     "succeeded": "INTRODUCE_HOST_TO_GUEST_2",
                     "timed_out": "INTRODUCE_HOST_TO_GUEST_2",
-                    "aborted": "failed"
+                    "aborted": "failed",
                 },
             )
 
@@ -641,7 +647,7 @@ class Receptionist(smach.StateMachine):
                 transitions={
                     "succeeded": "INTRODUCE_GUEST_2_TO_GUEST_1",
                     "timed_out": "INTRODUCE_GUEST_2_TO_GUEST_1",
-                    "aborted": "failed"
+                    "aborted": "failed",
                 },
             )
 
@@ -662,7 +668,7 @@ class Receptionist(smach.StateMachine):
                 transitions={
                     "succeeded": "INTRODUCE_GUEST_1_TO_GUEST_2",
                     "timed_out": "INTRODUCE_GUEST_1_TO_GUEST_2",
-                    "aborted": "failed"
+                    "aborted": "failed",
                 },
             )
 

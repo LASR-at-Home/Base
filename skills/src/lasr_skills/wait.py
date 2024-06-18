@@ -1,6 +1,7 @@
 import smach
 import rospy
 
+
 class Wait(smach.State):
     def __init__(self, wait_time: int):
         smach.State.__init__(self, outcomes=["succeeded", "failed"])

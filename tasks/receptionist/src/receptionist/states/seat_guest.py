@@ -7,8 +7,14 @@ from shapely.geometry import Polygon
 import numpy as np
 
 from geometry_msgs.msg import Point, PointStamped
-from lasr_skills import PlayMotion, Detect3DInArea, LookToPoint, Say, WaitForPerson, Wait
-
+from lasr_skills import (
+    PlayMotion,
+    Detect3DInArea,
+    LookToPoint,
+    Say,
+    WaitForPerson,
+    Wait,
+)
 
 
 class SeatGuest(smach.StateMachine):
