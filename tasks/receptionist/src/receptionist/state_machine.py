@@ -272,8 +272,8 @@ class Receptionist(smach.StateMachine):
                     "host",
                     [
                         [0.0, 0.0],
-                        [-1.0, 0.0],
-                        [1.0, 0.0],
+                        [-0.8, 0.0],
+                        [0.8, 0.0],
                     ],
                 ),
                 transitions={
@@ -568,8 +568,8 @@ class Receptionist(smach.StateMachine):
                     "host",
                     [
                         [0.0, 0.0],
-                        [-1.0, 0.0],
-                        [1.0, 0.0],
+                        [-0.8, 0.0],
+                        [0.8, 0.0],
                     ],
                 ),
                 transitions={
@@ -629,8 +629,8 @@ class Receptionist(smach.StateMachine):
                     "guest1",
                     [
                         [0.0, 0.0],
-                        [-1.0, 0.0],
-                        [1.0, 0.0],
+                        [-0.8, 0.0],
+                        [0.8, 0.0],
                     ],
                 ),
                 transitions={
@@ -685,14 +685,24 @@ class Receptionist(smach.StateMachine):
                 "SEAT_GUEST_2",
                 SeatGuest(seat_area),
                 transitions={
-                    "succeeded": "GO_TO_FINISH_LOCATION",
-                    "failed": "GO_TO_FINISH_LOCATION",
+                    "succeeded": "SAY_GOODBYE",
+                    "failed": "SAY_GOODBYE",
                 },
             )
 
             """
             Finish
             """
+            smach.StateMachine.add(
+                "SAY_GOODBYE",
+                Say(text="Goodbye fellow humans, I shall be going back where I came from"),
+                transitions={
+                    "succeeded": "GO_TO_FINISH_LOCATION",
+                    "aborted": "failed",
+                    "preempted": "GO_TO_FINISH_LOCATION",
+                },
+            )
+
             smach.StateMachine.add(
                 "GO_TO_FINISH_LOCATION",
                 GoToLocation(wait_pose),
