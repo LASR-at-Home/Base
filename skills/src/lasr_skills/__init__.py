@@ -23,3 +23,4 @@ from .detect_gesture import DetectGesture
 from .learn_face import LearnFace
 from .look_at_person import LookAtPerson
 from .wait import Wait
+from .look_to_given_point import LookToGivenPoint

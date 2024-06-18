@@ -93,7 +93,13 @@ class LookAtPerson(smach.StateMachine):
                 pcl_xyz = rnp.point_cloud2.pointcloud2_to_xyz_array(
                     userdata.pcl_msg, remove_nans=False
                 )
-                eye_point_pcl = pcl_xyz[int(eye_point[1]), int(eye_point[0])]
+                try:
+                    eye_point_pcl = pcl_xyz[int(eye_point[1]), int(eye_point[0])]
+                except IndexError:
+                    eye_point_pcl = pcl_xyz[int(eye_point[1])-1, int(eye_point[0])-1]
+                except Exception as e:
+                    rospy.logerr(f"Unexpected Exception: {e}")
+                    return "failed"
                 if any([True for i in eye_point_pcl if i != i]):
                     eye_point_pcl = pcl_xyz[int(right_eye[1]), int(right_eye[0])]
 

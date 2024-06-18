@@ -2,7 +2,7 @@ import smach
 
 from geometry_msgs.msg import Pose
 from shapely.geometry import Polygon
-from lasr_skills import GoToLocation, WaitForPersonInArea, Say, AskAndListen
+from lasr_skills import GoToLocation, WaitForPersonInArea, Say, AskAndListen, LookToGivenPoint
 from receptionist.states import (
     ParseNameAndDrink,
     ParseName,
@@ -280,9 +280,21 @@ class Receptionist(smach.StateMachine):
                 "SAY_NO_HOST_1",
                 Say(text="Wow, I can't find the host, I'm sure they're here"),
                 transitions={
-                    "succeeded": "INTRODUCE_GUEST_1_TO_HOST",
+                    "succeeded": "LOOK_AT_WAITING_GUEST_1_1",
                     "preempted": "failed",
                     "aborted": "failed",
+                },
+            )
+
+            smach.StateMachine.add(
+                "LOOK_AT_WAITING_GUEST_1_1",
+                LookToGivenPoint(
+                    [-1.5, 0.0],
+                ),
+                transitions={
+                    "succeeded": "INTRODUCE_GUEST_1_TO_HOST",
+                    "timed_out": "INTRODUCE_GUEST_1_TO_HOST",
+                    "aborted": "failed"
                 },
             )
 
@@ -290,8 +302,20 @@ class Receptionist(smach.StateMachine):
                 "INTRODUCE_GUEST_1_TO_HOST",
                 Introduce(guest_to_introduce="guest1", guest_to_introduce_to="host"),
                 transitions={
+                    "succeeded": "LOOK_AT_WAITING_GUEST_1_2",
+                    "failed": "LOOK_AT_WAITING_GUEST_1_2",
+                },
+            )
+
+            smach.StateMachine.add(
+                "LOOK_AT_WAITING_GUEST_1_2",
+                LookToGivenPoint(
+                    [-1.5, 0.0],
+                ),
+                transitions={
                     "succeeded": "INTRODUCE_HOST_TO_GUEST_1",
-                    "failed": "INTRODUCE_HOST_TO_GUEST_1",
+                    "timed_out": "INTRODUCE_HOST_TO_GUEST_1",
+                    "aborted": "failed"
                 },
             )
 
@@ -544,7 +568,19 @@ class Receptionist(smach.StateMachine):
                 ),
                 transitions={
                     "succeeded": "INTRODUCE_GUEST_2_TO_HOST",
-                    "failed": "INTRODUCE_GUEST_2_TO_HOST",
+                    "failed": "LOOK_AT_WAITING_GUEST_2_1",
+                },
+            )
+
+            smach.StateMachine.add(
+                "LOOK_AT_WAITING_GUEST_2_1",
+                LookToGivenPoint(
+                    [-1.5, 0.0],
+                ),
+                transitions={
+                    "succeeded": "INTRODUCE_GUEST_2_TO_HOST",
+                    "timed_out": "INTRODUCE_GUEST_2_TO_HOST",
+                    "aborted": "failed"
                 },
             )
 
@@ -555,8 +591,20 @@ class Receptionist(smach.StateMachine):
                 "INTRODUCE_GUEST_2_TO_HOST",
                 Introduce(guest_to_introduce="guest2", guest_to_introduce_to="host"),
                 transitions={
-                    "succeeded": "INTRODUCE_HOST_TO_GUEST_2",
+                    "succeeded": "LOOK_AT_WAITING_GUEST_2_2",
                     "failed": "failed",
+                },
+            )
+
+            smach.StateMachine.add(
+                "LOOK_AT_WAITING_GUEST_2_2",
+                LookToGivenPoint(
+                    [-1.5, 0.0],
+                ),
+                transitions={
+                    "succeeded": "INTRODUCE_HOST_TO_GUEST_2",
+                    "timed_out": "INTRODUCE_HOST_TO_GUEST_2",
+                    "aborted": "failed"
                 },
             )
 
@@ -581,7 +629,19 @@ class Receptionist(smach.StateMachine):
                 ),
                 transitions={
                     "succeeded": "INTRODUCE_GUEST_2_TO_GUEST_1",
-                    "failed": "INTRODUCE_GUEST_2_TO_GUEST_1",
+                    "failed": "LOOK_AT_WAITING_GUEST_2_3",
+                },
+            )
+
+            smach.StateMachine.add(
+                "LOOK_AT_WAITING_GUEST_2_3",
+                LookToGivenPoint(
+                    [-1.5, 0.0],
+                ),
+                transitions={
+                    "succeeded": "INTRODUCE_GUEST_2_TO_GUEST_1",
+                    "timed_out": "INTRODUCE_GUEST_2_TO_GUEST_1",
+                    "aborted": "failed"
                 },
             )
 
@@ -589,12 +649,23 @@ class Receptionist(smach.StateMachine):
                 "INTRODUCE_GUEST_2_TO_GUEST_1",
                 Introduce(guest_to_introduce="guest2", guest_to_introduce_to="guest1"),
                 transitions={
-                    "succeeded": "INTRODUCE_GUEST_1_TO_GUEST_2",
-                    "failed": "INTRODUCE_GUEST_1_TO_GUEST_2",
+                    "succeeded": "LOOK_AT_WAITING_GUEST_2_4",
+                    "failed": "LOOK_AT_WAITING_GUEST_2_4",
                 },
             )
 
-            # Look at guest 1
+            smach.StateMachine.add(
+                "LOOK_AT_WAITING_GUEST_2_4",
+                LookToGivenPoint(
+                    [-1.5, 0.0],
+                ),
+                transitions={
+                    "succeeded": "INTRODUCE_GUEST_1_TO_GUEST_2",
+                    "timed_out": "INTRODUCE_GUEST_1_TO_GUEST_2",
+                    "aborted": "failed"
+                },
+            )
+
             smach.StateMachine.add(
                 "INTRODUCE_GUEST_1_TO_GUEST_2",
                 Introduce(guest_to_introduce="guest1", guest_to_introduce_to="guest2"),

@@ -35,7 +35,7 @@ class DescribePeople(smach.StateMachine):
             )
             smach.StateMachine.add(
                 "SAY_GET_IMAGE_AGAIN",
-                Say(text="Make sure you're looking into my eyes, I can't seem to be able to see you."),
+                Say(text="Make sure you're looking into my eyes, I can't seem to see you."),
                 transitions={
                     "succeeded": "GET_IMAGE_AGAIN",
                     "preempted": "GET_IMAGE_AGAIN",
