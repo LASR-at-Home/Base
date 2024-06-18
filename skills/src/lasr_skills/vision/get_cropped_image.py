@@ -146,6 +146,7 @@ class GetCroppedImage(smach.State):
         """Crops the image to the desired object that is closest to the
         centroid of the image.
 
+
         Args:
             pointcloud (np.ndarray): pointcloud from depth camera; RGB will be extracted
             from this.
