@@ -15,6 +15,7 @@ from typing import Union
 
 class ReceiveObject(smach.StateMachine):
     def __init__(self, object_name: Union[str, None] = None, vertical: bool = True):
+
         if object_name is not None:
             super(ReceiveObject, self).__init__(outcomes=["succeeded", "failed"])
         else:

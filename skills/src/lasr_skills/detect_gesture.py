@@ -35,6 +35,7 @@ class DetectGesture(smach.State):
         self.buffer_width = buffer_width
 
     def execute(self, userdata):
+
         body_pix_masks = BodyPixMaskRequest()
         body_pix_masks.parts = [
             "left_shoulder",

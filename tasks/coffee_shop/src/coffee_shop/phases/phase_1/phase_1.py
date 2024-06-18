@@ -8,8 +8,11 @@ from geometry_msgs.msg import Pose, Point, Quaternion
 
 
 class Phase1(smach.StateMachine):
+
     class GoIdle(smach.StateMachine):
+
         def __init__(self):
+
             smach.StateMachine.__init__(self, outcomes=["done"])
 
             idle_location = rospy.get_param("wait/location")
@@ -26,6 +29,7 @@ class Phase1(smach.StateMachine):
             idle_goal.target_pose.pose = idle_pose
 
             with self:
+
                 smach.StateMachine.add(
                     "GO_TO_IDLE",
                     smach_ros.SimpleActionState(

@@ -12,6 +12,7 @@ from lasr_person_following.msg import FollowAction
 
 
 class CarryMyLuggage(smach.StateMachine):
+
     class ProcessPointingDirection(smach.State):
         def __init__(self):
             smach.State.__init__(
