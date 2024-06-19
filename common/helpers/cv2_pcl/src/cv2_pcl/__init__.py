@@ -19,16 +19,6 @@ def pcl_to_img_msg(pcl: PointCloud2) -> Mat:
     return cv2_img_to_msg(cv2, pcl.header.stamp)
 
 
-def pcl_to_img_msg(pcl: PointCloud2) -> Mat:
-    """
-    Convert a given PointCloud2 message to img_msg
-    """
-    # keep the same timestamp
-    cv2 = pcl_to_cv2(pcl)
-
-    return cv2_img_to_msg(cv2, pcl.header.stamp)
-
-
 def pcl_to_cv2(
     pcl: PointCloud2, height: Union[int, None] = None, width: Union[int, None] = None
 ) -> Mat:

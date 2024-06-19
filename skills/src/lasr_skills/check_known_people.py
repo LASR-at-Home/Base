@@ -30,5 +30,6 @@ class CheckKnownPeople(smach.State):
             userdata.known_people = known_people_names
             return "succeeded"
         except Exception as e:
+            print(f"Face detection using dataset {dataset_path}")
             rospy.logerr(f"Failed to get known people: {str(e)}")
             return "failed"
