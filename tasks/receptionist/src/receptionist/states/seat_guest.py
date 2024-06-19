@@ -6,6 +6,7 @@ from shapely.geometry import Polygon
 import numpy as np
 
 from lasr_skills import PlayMotion, Detect3DInArea, LookToPoint, Say
+from geometry_msgs.msg import Point, PointStamped
 
 
 class SeatGuest(smach.StateMachine):
@@ -49,7 +50,7 @@ class SeatGuest(smach.StateMachine):
                         break
 
                 if seat_is_empty:
-                    userdata.seat_position = seat.point
+                    userdata.seat_position = PointStamped(point=seat.point)
                     print(seat.point)
                     return "succeeded"
 
@@ -120,7 +121,7 @@ class SeatGuest(smach.StateMachine):
                     "aborted": "failed",
                     "preempted": "failed",
                 },
-                remapping={"point": "seat_position"},
+                remapping={"pointstamped": "seat_position"},
             )
             smach.StateMachine.add(
                 "SAY_SIT",

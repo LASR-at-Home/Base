@@ -1,0 +1,12 @@
+#!/usr/bin/env python3
+
+import rospy
+from lasr_vision_msgs.srv import CheckKnownPeopleRequest, CheckKnownPeopleResponse, CheckKnownPeople
+
+if __name__ == "__main__":
+
+    # get the known people from the service
+    rospy.wait_for_service("/check_known_people")
+    check_known_people = rospy.ServiceProxy("/check_known_people", CheckKnownPeople)
+    response = check_known_people("receptionist")
+    print(response.known_people)
