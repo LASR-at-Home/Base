@@ -35,7 +35,7 @@ except ModuleNotFoundError:
 
 class LookAtPerson(smach.StateMachine):
     class CheckEyes(smach.State):
-        def __init__(self, debug=True, _filter=False):
+        def __init__(self, debug=True, filter=False):
             smach.State.__init__(
                 self,
                 outcomes=["succeeded", "failed", "no_detection"],
@@ -54,7 +54,7 @@ class LookAtPerson(smach.StateMachine):
             self.look_at_pub = actionlib.SimpleActionClient(
                 "/head_controller/point_head_action", PointHeadAction
             )
-            self._filter = _filter
+            self._filter = filter
 
         def execute(self, userdata):
             rospy.sleep(1)
@@ -250,7 +250,7 @@ class LookAtPerson(smach.StateMachine):
             )
             smach.StateMachine.add(
                 "CHECK_EYES",
-                self.CheckEyes(self.DEBUG, _filter=filter),
+                self.CheckEyes(self.DEBUG, filter=filter),
                 transitions={
                     "succeeded": "LOOP",
                     "failed": "failed",

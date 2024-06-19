@@ -65,6 +65,7 @@ add_service_files(
   PointingDirection.srv
   TorchFaceFeatureDetectionDescription.srv
   DetectFaces.srv
+  CheckKnownPeople.srv
 )
 
 # Generate actions in the 'action' folder
