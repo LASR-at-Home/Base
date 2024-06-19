@@ -52,8 +52,8 @@ def stringify_guest_data(guest_data: Dict[str, Any], guest_id: str) -> str:
     print(known_attributes)
 
     has_hair = False
-    detection = False   # Whenever the an attribute is detected in the for loop, the detection flag is set to true
-                        # so that multiple attributes are not checked at the same time
+    detection = False  # Whenever the an attribute is detected in the for loop, the detection flag is set to true
+    # so that multiple attributes are not checked at the same time
 
     for attribute, value in known_attributes.items():
         if attribute == "has_hair":
@@ -121,12 +121,12 @@ def stringify_guest_data(guest_data: Dict[str, Any], guest_id: str) -> str:
 
 def isSingular(attribute: str):
     """Checks is a word is singular or plural by checking the last letter
-    
+
     Args:
         attribute (str): The attribute to check for plurality
 
     Returns:
-        (bool): Boolean identifying whether the word is plural 
+        (bool): Boolean identifying whether the word is plural
     """
     if attribute[len(attribute) - 1] == "s":
         return False

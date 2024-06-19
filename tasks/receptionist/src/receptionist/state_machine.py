@@ -16,7 +16,7 @@ from receptionist.states import (
     SeatGuest,
     FindAndLookAt,
     ReceptionistLearnFaces,
-    ParseTranscribedInfo
+    ParseTranscribedInfo,
 )
 
 
@@ -694,7 +694,9 @@ class Receptionist(smach.StateMachine):
             """
             smach.StateMachine.add(
                 "SAY_GOODBYE",
-                Say(text="Goodbye fellow humans, I shall be going back where I came from"),
+                Say(
+                    text="Goodbye fellow humans, I shall be going back where I came from"
+                ),
                 transitions={
                     "succeeded": "GO_TO_FINISH_LOCATION",
                     "aborted": "failed",

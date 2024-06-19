@@ -21,7 +21,7 @@ class ParseTranscribedInfo(smach.State):
 
         Args:
             guest_id (str): ID of the guest (identifying the guest)
-            info_type (str): The type of information to try and extract useful information 
+            info_type (str): The type of information to try and extract useful information
             (drink or name)
             param_key (str, optional): Name of the parameter that contains the list of
             possible . Defaults to "receptionist/priors".
@@ -37,7 +37,9 @@ class ParseTranscribedInfo(smach.State):
         prior_data: Dict[str, List[str]] = rospy.get_param(param_key)
         possible_drinks = [drink.lower() for drink in prior_data["drinks"]]
         possible_names = [name.lower() for name in prior_data["names"]]
-        self._possible_information = {"drink": possible_drinks, "name": possible_names}[self._type]
+        self._possible_information = {"drink": possible_drinks, "name": possible_names}[
+            self._type
+        ]
 
     def execute(self, userdata: UserData) -> str:
         """Parse the guest's information.
