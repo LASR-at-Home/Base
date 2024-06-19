@@ -131,7 +131,6 @@ def recognise(
 
     # Run inference
     rospy.loginfo("Running inference")
-    import smach
 
     try:
         result = DeepFace.find(
