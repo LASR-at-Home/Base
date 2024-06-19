@@ -1,3 +1,5 @@
+"""The receptionist version of learn faces uses userdata for the name of the guest instead"""
+
 import smach
 import rospy
 import sys
@@ -10,7 +12,7 @@ from lasr_vision_msgs.srv import (
 )
 
 
-class LearnFaces(smach.State):
+class ReceptionistLearnFaces(smach.State):
     def __init__(self, guest_id: str):
         smach.State.__init__(
             self, outcomes=["succeeded", "failed"], input_keys=["guest_data"]

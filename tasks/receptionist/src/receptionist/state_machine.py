@@ -11,13 +11,12 @@ from lasr_skills import (
 )
 from receptionist.states import (
     ParseNameAndDrink,
-    ParseName,
-    ParseDrink,
     GetGuestAttributes,
     Introduce,
     SeatGuest,
     FindAndLookAt,
-    LearnFaces,
+    ReceptionistLearnFaces,
+    ParseTranscribedInfo
 )
 
 
@@ -147,7 +146,7 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "REPEAT_PARSE_NAME_GUEST_1",
-                ParseName("guest1"),
+                ParseTranscribedInfo("guest1", "name"),
                 transitions={
                     "succeeded": "SAY_GET_GUEST_ATTRIBUTE_1",
                     "failed": "SAY_CONTINUE",
@@ -172,7 +171,7 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "REPEAT_PARSE_DRINK_GUEST_1",
-                ParseDrink("guest1"),
+                ParseTranscribedInfo("guest1", "drink"),
                 transitions={
                     "succeeded": "SAY_GET_GUEST_ATTRIBUTE_1",
                     "failed": "SAY_CONTINUE",
@@ -230,7 +229,7 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "LEARN_FACES",
-                LearnFaces("guest1"),
+                ReceptionistLearnFaces("guest1"),
                 transitions={
                     "succeeded": "SAY_FOLLOW_GUEST_1",
                     "failed": "SAY_FOLLOW_GUEST_1",
@@ -448,7 +447,7 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "REPEAT_PARSE_NAME_GUEST_2",
-                ParseName("guest2"),
+                ParseTranscribedInfo("guest2", "name"),
                 transitions={
                     "succeeded": "SAY_GET_GUEST_ATTRIBUTE_2",
                     "failed": "SAY_CONTINUE_GUEST_2",
@@ -473,7 +472,7 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "REPEAT_PARSE_DRINK_GUEST_2",
-                ParseDrink("guest2"),
+                ParseTranscribedInfo("guest2", "drink"),
                 transitions={
                     "succeeded": "SAY_GET_GUEST_ATTRIBUTE_2",
                     "failed": "SAY_CONTINUE_GUEST_2",
@@ -524,7 +523,7 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "LEARN_FACES_GUEST_2",
-                LearnFaces("guest2"),
+                ReceptionistLearnFaces("guest2"),
                 transitions={
                     "succeeded": "SAY_FOLLOW_GUEST_2",
                     "failed": "SAY_FOLLOW_GUEST_2",
