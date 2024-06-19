@@ -31,8 +31,10 @@ if __name__ == "__main__":
         seat_pose,
         seat_area,
         {
-            "name": "John",
+            "name": "nicole",
             "drink": "beer",
+            "dataset": "receptionist",
+            "confidence": 0.5,
         },
     )
     outcome = receptionist.execute()

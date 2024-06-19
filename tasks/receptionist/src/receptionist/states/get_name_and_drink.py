@@ -13,13 +13,13 @@ class ParseNameAndDrink(smach.State):
     def __init__(
         self,
         guest_id: str,
-        param_key: str = "receptionist/priors",
+        param_key: str = "/receptionist/priors",
     ):
         """Parses the transcription of the guests' name and favourite drink.
 
         Args:
             param_key (str, optional): Name of the parameter that contains the list of
-            possible . Defaults to "receptionist/priors".
+            possible . Defaults to "/receptionist/priors".
         """
         smach.State.__init__(
             self,
@@ -48,8 +48,6 @@ class ParseNameAndDrink(smach.State):
         outcome = "succeeded"
         name_found = False
         drink_found = False
-        print(userdata)
-        print(type(userdata.guest_transcription))
         transcription = userdata.guest_transcription.lower()
 
         transcription = userdata["guest_transcription"].lower()

@@ -16,7 +16,6 @@ from lasr_vision_msgs.srv import (
     DetectFacesResponse,
 )
 
-
 rospy.init_node("recognise_service")
 
 # Determine variables

@@ -1,7 +1,7 @@
 import smach_ros
 from geometry_msgs.msg import PointStamped
 import smach
-from vision import GetPointCloud
+from .vision import GetPointCloud
 from lasr_vision_msgs.srv import BodyPixDetection, BodyPixDetectionRequest
 from lasr_vision_msgs.msg import BodyPixMaskRequest
 from lasr_skills import LookToPoint, DetectFaces
@@ -35,11 +35,17 @@ except ModuleNotFoundError:
 
 class LookAtPerson(smach.StateMachine):
     class CheckEyes(smach.State):
-        def __init__(self, debug=True):
+        def __init__(self, debug=True, filter=False):
             smach.State.__init__(
                 self,
                 outcomes=["succeeded", "failed", "no_detection"],
-                input_keys=["bbox_eyes", "pcl_msg", "masks", "detections"],
+                input_keys=[
+                    "bbox_eyes",
+                    "pcl_msg",
+                    "masks",
+                    "detections",
+                    "deepface_detection",
+                ],
                 output_keys=["pointstamped"],
             )
             self.DEBUG = debug
@@ -48,6 +54,7 @@ class LookAtPerson(smach.StateMachine):
             self.look_at_pub = actionlib.SimpleActionClient(
                 "/head_controller/point_head_action", PointHeadAction
             )
+            self._filter = filter
 
         def execute(self, userdata):
             rospy.sleep(1)
@@ -57,6 +64,16 @@ class LookAtPerson(smach.StateMachine):
                 len(userdata.bbox_eyes) < 1 and len(userdata.detections.detections) < 1
             ):
                 return "no_detection"
+
+            if self._filter:
+                if userdata.deepface_detection:
+                    deepface = userdata.deepface_detection[0]
+                    for bbox in userdata.bbox_eyes:
+                        if bbox["bbox"] == deepface:
+                            userdata.bbox_eyes = [bbox]
+                            break
+                else:
+                    return "failed"
 
             for det in userdata.bbox_eyes:
                 left_eye = det["left_eye"]
@@ -92,11 +109,25 @@ class LookAtPerson(smach.StateMachine):
                 userdata.pointstamped = look_at
 
                 self.look_at_pub.wait_for_server()
+                if any(
+                    [
+                        True
+                        for i in [look_at.point.x, look_at.point.y, look_at.point.z]
+                        if i != i
+                    ]
+                ):
+                    look_at.point.x = 0.0
+                    look_at.point.y = 0.0
+                    look_at.point.z = 0.0
+
                 goal = PointHeadGoal()
                 goal.pointing_frame = "head_2_link"
                 goal.pointing_axis = Point(1.0, 0.0, 0.0)
                 goal.max_velocity = 1.0
                 goal.target = look_at
+                rospy.loginfo(
+                    f"LOOKING AT POINT {look_at.point.x}, {look_at.point.y}, {look_at.point.z}"
+                )
                 self.look_at_pub.send_goal(goal)
 
                 return "succeeded"
@@ -140,12 +171,14 @@ class LookAtPerson(smach.StateMachine):
 
         return "succeeded"
 
-    def __init__(self):
-        super(LookAtPerson, self).__init__(
-            outcomes=["succeeded", "failed"],
-            input_keys=[],
-            output_keys=["masks", "poses", "pointstamped"],
+    def __init__(self, filter=False):
+        smach.StateMachine.__init__(
+            self,
+            outcomes=["succeeded", "failed", "no_detection"],
+            input_keys=["pcl_msg", "deepface_detection"],
+            output_keys=[],
         )
+
         self.DEBUG = rospy.get_param("/debug", True)
         IS_SIMULATION = (
             "/pal_startup_control/start" not in rosservice.get_service_list()
@@ -166,19 +199,11 @@ class LookAtPerson(smach.StateMachine):
                             request=StartupStopRequest("head_manager"),
                         ),
                         transitions={
-                            "succeeded": "GET_IMAGE",
+                            "succeeded": "SEGMENT_PERSON",
                             "aborted": "failed",
                             "preempted": "failed",
                         },
                     )
-            smach.StateMachine.add(
-                "GET_IMAGE",
-                GetPointCloud("/xtion/depth_registered/points"),
-                transitions={
-                    "succeeded": "SEGMENT_PERSON",
-                },
-                remapping={"pcl_msg": "pcl_msg"},
-            )
 
             eyes = BodyPixMaskRequest()
             eyes.parts = ["left_eye", "right_eye"]
@@ -225,16 +250,17 @@ class LookAtPerson(smach.StateMachine):
             )
             smach.StateMachine.add(
                 "CHECK_EYES",
-                self.CheckEyes(self.DEBUG),
+                self.CheckEyes(self.DEBUG, filter=filter),
                 transitions={
-                    "succeeded": "LOOK_TO_POINT",
+                    "succeeded": "LOOP",
                     "failed": "failed",
-                    "no_detection": "succeeded",
+                    "no_detection": "no_detection",
                 },
                 remapping={
                     "pcl_msg": "pcl_msg",
                     "bbox_eyes": "bbox_eyes",
                     "pointstamped": "pointstamped",
+                    "deepface_detection": "deepface_detection",
                 },
             )
 
@@ -258,25 +284,6 @@ class LookAtPerson(smach.StateMachine):
                 ),
                 transitions={
                     "succeeded": "CHECK_EYES",
-                    "finish": "ENABLE_HEAD_MANAGER",
+                    "finish": "succeeded",
                 },
             )
-            if not IS_SIMULATION:
-                if PUBLIC_CONTAINER:
-                    rospy.logwarn(
-                        "You are using a public container. The head manager will not be start following navigation."
-                    )
-                else:
-                    smach.StateMachine.add(
-                        "ENABLE_HEAD_MANAGER",
-                        smach_ros.ServiceState(
-                            "/pal_startup_control/start",
-                            StartupStart,
-                            request=StartupStartRequest("head_manager", ""),
-                        ),
-                        transitions={
-                            "succeeded": "succeeded",
-                            "preempted": "failed",
-                            "aborted": "failed",
-                        },
-                    )

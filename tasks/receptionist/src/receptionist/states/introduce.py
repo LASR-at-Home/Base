@@ -24,7 +24,6 @@ def stringify_guest_data(guest_data: Dict[str, Any], guest_id: str) -> str:
     """
 
     relevant_guest_data = guest_data[guest_id]
-
     guest_str = ""
 
     if "attributes" in relevant_guest_data.keys():
