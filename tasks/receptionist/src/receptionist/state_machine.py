@@ -29,9 +29,6 @@ class Receptionist(smach.StateMachine):
                 "guest1": {"name": ""},
                 "guest2": {"name": ""},
             }
-            self.userdata.guest_name = "nicole"
-            self.userdata.dataset = "receptionist"
-            self.userdata.confidence = 0.2
 
             smach.StateMachine.add(
                 "GO_TO_WAIT_LOCATION_GUEST_1",
@@ -74,7 +71,7 @@ class Receptionist(smach.StateMachine):
                 "PARSE_NAME_AND_DRINK_GUEST_1",
                 ParseNameAndDrink("guest1"),
                 transitions={
-                    "succeeded": "SAY_FOLLOW_GUEST_1",
+                    "succeeded": "GET_GUEST_ATTRIBUTES_GUEST_1",
                     "failed": "failed",
                 },
                 remapping={"guest_transcription": "transcribed_speech"},
@@ -205,7 +202,7 @@ class Receptionist(smach.StateMachine):
                 "PARSE_NAME_AND_DRINK_GUEST_2",
                 ParseNameAndDrink("guest2"),
                 transitions={
-                    "succeeded": "SAY_FOLLOW_GUEST_2",
+                    "succeeded": "GET_GUEST_ATTRIBUTES_GUEST_2",
                     "failed": "failed",
                 },
                 remapping={"guest_transcription": "transcribed_speech"},
