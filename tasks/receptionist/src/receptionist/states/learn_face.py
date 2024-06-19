@@ -1,7 +1,6 @@
 import smach
 import rospy
 import sys
-from lasr_voice import Voice
 
 
 from lasr_vision_msgs.srv import (
@@ -19,11 +18,7 @@ class LearnFaces(smach.State):
         self._guest_id = guest_id
 
     def execute(self, userdata):
-        guestcount = rospy.get_param("guestcount/count", 0)
-
         print("here we will learn faces")
-
-        # Here we will learn faces
         try:
             learn_service = rospy.ServiceProxy("/learn_face", LearnFace)
             guest_name = userdata.guest_data[self._guest_id]["name"]

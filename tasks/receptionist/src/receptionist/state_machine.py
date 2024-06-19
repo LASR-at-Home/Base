@@ -300,7 +300,7 @@ class Receptionist(smach.StateMachine):
                 transitions={
                     "succeeded": "INTRODUCE_GUEST_1_TO_HOST",
                     "timed_out": "INTRODUCE_GUEST_1_TO_HOST",
-                    "aborted": "failed",
+                    "aborted": "INTRODUCE_GUEST_1_TO_HOST",
                 },
             )
 
@@ -321,7 +321,7 @@ class Receptionist(smach.StateMachine):
                 transitions={
                     "succeeded": "INTRODUCE_HOST_TO_GUEST_1",
                     "timed_out": "INTRODUCE_HOST_TO_GUEST_1",
-                    "aborted": "failed",
+                    "aborted": "INTRODUCE_HOST_TO_GUEST_1",
                 },
             )
 
@@ -586,7 +586,7 @@ class Receptionist(smach.StateMachine):
                 transitions={
                     "succeeded": "INTRODUCE_GUEST_2_TO_HOST",
                     "timed_out": "INTRODUCE_GUEST_2_TO_HOST",
-                    "aborted": "failed",
+                    "aborted": "INTRODUCE_GUEST_2_TO_HOST",
                 },
             )
 
@@ -598,7 +598,7 @@ class Receptionist(smach.StateMachine):
                 Introduce(guest_to_introduce="guest2", guest_to_introduce_to="host"),
                 transitions={
                     "succeeded": "LOOK_AT_WAITING_GUEST_2_2",
-                    "failed": "failed",
+                    "failed": "LOOK_AT_WAITING_GUEST_2_2",
                 },
             )
 
@@ -610,7 +610,7 @@ class Receptionist(smach.StateMachine):
                 transitions={
                     "succeeded": "INTRODUCE_HOST_TO_GUEST_2",
                     "timed_out": "INTRODUCE_HOST_TO_GUEST_2",
-                    "aborted": "failed",
+                    "aborted": "INTRODUCE_HOST_TO_GUEST_2",
                 },
             )
 
@@ -619,7 +619,7 @@ class Receptionist(smach.StateMachine):
                 Introduce(guest_to_introduce="host", guest_to_introduce_to="guest2"),
                 transitions={
                     "succeeded": "FIND_AND_LOOK_AT_GUEST_1",
-                    "failed": "failed",
+                    "failed": "FIND_AND_LOOK_AT_GUEST_1",
                 },
             )
 
@@ -647,7 +647,7 @@ class Receptionist(smach.StateMachine):
                 transitions={
                     "succeeded": "INTRODUCE_GUEST_2_TO_GUEST_1",
                     "timed_out": "INTRODUCE_GUEST_2_TO_GUEST_1",
-                    "aborted": "failed",
+                    "aborted": "INTRODUCE_GUEST_2_TO_GUEST_1",
                 },
             )
 
@@ -668,7 +668,7 @@ class Receptionist(smach.StateMachine):
                 transitions={
                     "succeeded": "INTRODUCE_GUEST_1_TO_GUEST_2",
                     "timed_out": "INTRODUCE_GUEST_1_TO_GUEST_2",
-                    "aborted": "failed",
+                    "aborted": "INTRODUCE_GUEST_1_TO_GUEST_2",
                 },
             )
 
