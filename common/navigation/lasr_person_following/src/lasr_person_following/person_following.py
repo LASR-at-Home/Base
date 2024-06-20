@@ -143,7 +143,7 @@ class PersonFollower:
 
         return self._tf_pose(current_pose_stamped, "odom")
 
-    def begin_tracking(self) -> bool:
+    def begin_tracking(self, ask: bool = False) -> bool:
         """
         Chooses the closest person as the target
         """
@@ -196,29 +196,30 @@ class PersonFollower:
         pose = self._tf_pose(pose, "map")
         self._move_base(pose)
 
-        if self._tts_client_available:
-            # Ask if we should follow
-            tts_goal: TtsGoal = TtsGoal()
-            tts_goal.rawtext.text = "Should I follow you? Please answer yes or no"
-            tts_goal.rawtext.lang_id = "en_GB"
-            self._tts_client.send_goal_and_wait(tts_goal)
+        if ask:
+            if self._tts_client_available:
+                # Ask if we should follow
+                tts_goal: TtsGoal = TtsGoal()
+                tts_goal.rawtext.text = "Should I follow you? Please answer yes or no"
+                tts_goal.rawtext.lang_id = "en_GB"
+                self._tts_client.send_goal_and_wait(tts_goal)
 
-            if self._transcribe_speech_client_available:
-                # listen
-                self._transcribe_speech_client.send_goal_and_wait(
-                    TranscribeSpeechGoal()
+                if self._transcribe_speech_client_available:
+                    # listen
+                    self._transcribe_speech_client.send_goal_and_wait(
+                        TranscribeSpeechGoal()
+                    )
+                    transcription = self._transcribe_speech_client.get_result().sequence
+
+                    if "yes" not in transcription.lower():
+                        return False
+
+                tts_goal: TtsGoal = TtsGoal()
+                tts_goal.rawtext.text = (
+                    "Okay, I'll begin following you. Please walk slowly."
                 )
-                transcription = self._transcribe_speech_client.get_result().sequence
-
-                if "yes" not in transcription.lower():
-                    return False
-
-            tts_goal: TtsGoal = TtsGoal()
-            tts_goal.rawtext.text = (
-                "Okay, I'll begin following you. Please walk slowly."
-            )
-            tts_goal.rawtext.lang_id = "en_GB"
-            self._tts_client.send_goal_and_wait(tts_goal)
+                tts_goal.rawtext.lang_id = "en_GB"
+                self._tts_client.send_goal_and_wait(tts_goal)
 
         self._track_id = closest_person.id
 
@@ -232,7 +233,7 @@ class PersonFollower:
             tts_goal.rawtext.lang_id = "en_GB"
             self._tts_client.send_goal_and_wait(tts_goal)
 
-        while not self.begin_tracking() and not rospy.is_shutdown():
+        while not self.begin_tracking(ask=True) and not rospy.is_shutdown():
             rospy.loginfo("Recovering track...")
             rospy.sleep(1)
 
