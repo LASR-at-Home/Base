@@ -25,7 +25,7 @@ class DetectGesture(smach.State):
         """Optionally stores the gesture to detect. If None, it will infer the gesture from the keypoints."""
         smach.State.__init__(
             self,
-            outcomes=["succeeded", "failed"],
+            outcomes=["succeeded", "missing_keypoints", "failed"],
             input_keys=["img_msg"],
             output_keys=["gesture_detected"],
         )
@@ -66,6 +66,16 @@ class DetectGesture(smach.State):
                     "y": keypoint.xy[1],
                     "score": keypoint.score,
                 }
+
+        # Validate that the keypoints are present
+        non_present_parts = [
+            part for part in body_pix_masks.parts if part not in part_info
+        ]
+
+        if len(non_present_parts) > 0:
+            rospy.logerr(f"Parts not detected: {non_present_parts}")
+            return "missing_keypoints"
+
         if (
             self.gesture_to_detect == "raising_left_arm"
             or self.gesture_to_detect is None
