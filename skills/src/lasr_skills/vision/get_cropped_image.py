@@ -274,7 +274,43 @@ class GetCroppedImage(smach.State):
         Returns:
             np.ndarray: Cropped image
         """
-        raise NotImplementedError("Mask cropping not implemented yet")
+        closest_detection_index = min(
+            range(len(detections)),
+            key=lambda i: np.sqrt(
+                (robot_loc.x - detections[i].point.x) ** 2
+                + (robot_loc.y - detections[i].point.y) ** 2
+                + (robot_loc.z - detections[i].point.z) ** 2
+            ),
+        )
+        furthest_detection_index = max(
+            range(len(detections)),
+            key=lambda i: np.sqrt(
+                (robot_loc.x - detections[i].point.x) ** 2
+                + (robot_loc.y - detections[i].point.y) ** 2
+                + (robot_loc.z - detections[i].point.z) ** 2
+            ),
+        )
+
+        if self._crop_method == "closest":
+            detection_index = closest_detection_index
+        elif self._crop_method == "furthest":
+            detection_index = furthest_detection_index
+        else:
+            raise ValueError(f"Invalid 3D crop_method: {self._crop_method}")
+
+        rgb_image = pcl_to_cv2(pointcloud)
+
+        # x,y coords of the detection
+        # Taken from https://stackoverflow.com/questions/37912928/fill-the-outside-of-contours-opencv
+        mask = np.array(detections[detection_index].xyseg).reshape(-1, 2)
+        stencil = np.zeros(rgb_image.shape).astype(rgb_image.dtype)
+        colour = (255, 255, 255)
+        cv2.fillPoly(stencil, [mask], colour)
+        # Bitwise AND with 0s is 0s, hence we get the image only where the mask is
+        # with black elsewhere.
+        result = cv2.bitwise_and(rgb_image, stencil)
+
+        return result
 
     def execute(self, userdata):
         try:
