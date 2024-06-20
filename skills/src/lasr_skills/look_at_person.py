@@ -308,4 +308,3 @@ class LookAtPerson(smach.StateMachine):
                     "finish": "succeeded",
                 },
             )
-
