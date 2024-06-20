@@ -3,6 +3,7 @@ from typing import Optional, List
 import numpy as np
 import rospy
 import smach
+import cv2
 from sensor_msgs.msg import Image, PointCloud2
 from geometry_msgs.msg import Point, PoseWithCovarianceStamped
 from lasr_vision_msgs.msg import Detection, Detection3D
@@ -19,8 +20,9 @@ class GetCroppedImage(smach.State):
         debug_publisher: str = "/skills/get_cropped_image/debug",
         rgb_topic: Optional[str] = "/xtion/rgb/image_raw",
         depth_topic: Optional[str] = "/xtion/depth_registered/points",
-        model_2d: str = "yolov8x.pt",
+        model_2d: str = "yolov8x-seg.pt",
         model_3d: str = "yolov8x-seg.pt",
+        use_mask: bool = True,
         confidence_2d: float = 0.5,
         confidence_3d: float = 0.5,
         nmsthresh_2d: float = 0.3,
@@ -49,6 +51,8 @@ class GetCroppedImage(smach.State):
 
             model_3d (str, optional): Name of the YOLO model to use for 3D detection.
 
+            use_mask (bool, optional): Whether to use the mask to crop the image. Defaults to True.
+
             confidence_2d (float, optional): Confidence threshold for 2D detection.
 
             confidence_3d (float, optional): Confidence threshold for 3D detection.
@@ -70,6 +74,7 @@ class GetCroppedImage(smach.State):
         self._object_name = object_name
         self._model_2d = model_2d
         self._model_3d = model_3d
+        self._use_mask = use_mask
         self._confidence_2d = confidence_2d
         self._confidence_3d = confidence_3d
         self._nmsthresh_2d = nmsthresh_2d
@@ -94,7 +99,9 @@ class GetCroppedImage(smach.State):
         else:
             raise ValueError(f"Invalid crop_method: {crop_method}")
 
-    def _2d_crop(self, image: np.ndarray, detections: List[Detection]) -> np.ndarray:
+    def _2d_bbox_crop(
+        self, image: np.ndarray, detections: List[Detection]
+    ) -> np.ndarray:
         """Crops the image to the according to the desired crop_method.
 
         Args:
@@ -140,7 +147,68 @@ class GetCroppedImage(smach.State):
         )
         return image[y - h // 2 : y + h // 2, x - w // 2 : x + w // 2]
 
-    def _3d_crop(
+    def _2d_mask_crop(
+        self, image: np.ndarray, detections: List[Detection]
+    ) -> np.ndarray:
+        """Crops the image to the according to the desired crop_method using a mask.
+
+        Args:
+            image (np.ndarray): Image to crop
+            detections (YoloDetection): YOLO Detections of the desired object
+            in the image.
+        Returns:
+            np.ndarray: Cropped image
+        """
+
+        # Keeping this in a separate function as might want to make function
+        # more complex, i.e., add noise to other detections rather than filling
+        # in the whole image, etc.
+
+        if self._crop_method == "centered":
+            y_to_compare = image.shape[0] // 2
+            x_to_compare = image.shape[1] // 2
+        elif self._crop_method == "right-most":
+            x_to_compare = 0
+            y_to_compare = image.shape[0] // 2
+        elif self._crop_method == "left-most":
+            x_to_compare = image.shape[1]
+            y_to_compare = image.shape[0] // 2
+        elif self._crop_method == "top-most":
+            x_to_compare = image.shape[1] // 2
+            y_to_compare = 0
+        elif self._crop_method == "bottom-most":
+            x_to_compare = image.shape[1] // 2
+            y_to_compare = image.shape[0]
+        else:
+            raise ValueError(f"Invalid 2D crop_method: {self._crop_method}")
+
+        if len(detections) == 0:
+            raise ValueError("No detections found")
+
+        if len(detections[0].xyseg) == 0:
+            raise ValueError("No segmentation found")
+
+        detection_index = min(
+            range(len(detections)),
+            key=lambda i: np.sqrt(
+                (x_to_compare - detections[i].xywh[0]) ** 2
+                + (y_to_compare - detections[i].xywh[1]) ** 2
+            ),
+        )
+
+        # x,y coords of the detection
+        # Taken from https://stackoverflow.com/questions/37912928/fill-the-outside-of-contours-opencv
+        mask = np.array(detections[detection_index].xyseg).reshape(-1, 2)
+        stencil = np.zeros(image.shape).astype(image.dtype)
+        colour = (255, 255, 255)
+        cv2.fillPoly(stencil, [mask], colour)
+        # Bitwise AND with 0s is 0s, hence we get the image only where the mask is
+        # with black elsewhere.
+        result = cv2.bitwise_and(image, stencil)
+
+        return result
+
+    def _3d_bbox_crop(
         self, pointcloud: np.ndarray, robot_loc: Point, detections: List[Detection3D]
     ) -> np.ndarray:
         """Crops the image to the desired object that is closest to the
@@ -194,6 +262,20 @@ class GetCroppedImage(smach.State):
 
         return rgb_image[y - h // 2 : y + h // 2, x - w // 2 : x + w // 2]
 
+    def _3d_mask_crop(
+        self, pointcloud: np.ndarray, robot_loc: Point, detections: List[Detection3D]
+    ) -> np.ndarray:
+        """Crops the image to the according to the desired crop_method using a mask.
+
+        Args:
+            pointcloud (np.ndarray): Image to crop
+            detections (YoloDetection): YOLO Detections of the desired object
+            in the image.
+        Returns:
+            np.ndarray: Cropped image
+        """
+        raise NotImplementedError("Mask cropping not implemented yet")
+
     def execute(self, userdata):
         try:
             if self._crop_method in self._valid_2d_methods:
@@ -205,7 +287,11 @@ class GetCroppedImage(smach.State):
                     det for det in detections if det.name == self._object_name
                 ]
                 img_cv2 = msg_to_cv2_img(img_msg)
-                cropped_image = self._2d_crop(img_cv2, detections)
+                cropped_image = (
+                    self._2d_mask_crop(img_cv2, detections)
+                    if self._use_mask
+                    else self._2d_bbox_crop(img_cv2, detections)
+                )
             elif self._crop_method in self._valid_3d_methods:
                 pointcloud_msg = rospy.wait_for_message(self._depth_topic, PointCloud2)
                 robot_loc = rospy.wait_for_message(
@@ -220,7 +306,11 @@ class GetCroppedImage(smach.State):
                 detections = [
                     det for det in detections if det.name == self._object_name
                 ]
-                cropped_image = self._3d_crop(pointcloud_msg, robot_loc, detections)
+                cropped_image = (
+                    self._3d_mask_crop(pointcloud_msg, robot_loc, detections)
+                    if self._use_mask
+                    else self._3d_bbox_crop(pointcloud_msg, robot_loc, detections)
+                )
             else:
                 raise ValueError(f"Invalid crop_method: {self._crop_method}")
             cropped_msg = cv2_img_to_msg(cropped_image)
@@ -235,7 +325,12 @@ class GetCroppedImage(smach.State):
 if __name__ == "__main__":
     rospy.init_node("get_cropped_image")
     while not rospy.is_shutdown():
-        get_cropped_image = GetCroppedImage("chair", crop_method="furthest")
+        get_cropped_image = GetCroppedImage(
+            "bottle",
+            crop_method="centered",
+            use_mask=True,
+            rgb_topic="usb_cam/image_raw",
+        )
         sm = smach.StateMachine(outcomes=["succeeded", "failed"])
         with sm:
             smach.StateMachine.add(
