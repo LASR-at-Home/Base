@@ -1,4 +1,6 @@
-"""Similar to look_to_point but the input key is replaced with a passed argument for the point to look at"""
+"""Look to a specific point passed in as a parameter
+Similar to look_to_point but the input key is replaced with a passed argument for the point to look at
+"""
 
 import smach_ros
 import smach
@@ -13,6 +15,10 @@ from typing import List
 
 class LookToGivenPoint(smach.State):
     def __init__(self, look_position: List[float]):
+        """
+        Args:
+            look_position (List[float]): Position to look to
+        """
         smach.State.__init__(
             self,
             outcomes=["succeeded", "aborted", "timed_out"],
@@ -26,7 +32,6 @@ class LookToGivenPoint(smach.State):
         self.client.wait_for_server()
 
     def execute(self, userdata):
-        # Define the goal
         goal = PointHeadGoal(
             pointing_frame="head_2_link",
             pointing_axis=Point(1.0, 0.0, 0.0),
@@ -36,8 +41,6 @@ class LookToGivenPoint(smach.State):
                 point=self.goal_pointstamped.point,
             ),
         )
-
-        # Send the goal
         self.client.send_goal(goal)
 
         # Wait for the result with a timeout of 7 seconds

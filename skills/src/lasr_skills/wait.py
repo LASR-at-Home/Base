@@ -1,9 +1,14 @@
+"""Generic wait state for waiting a desired number of seconds"""
 import smach
 import rospy
 
 
 class Wait(smach.State):
     def __init__(self, wait_time: int):
+        """
+        Args:
+            wait_time (int): Number of seconds to wait for and remain idle
+        """
         smach.State.__init__(self, outcomes=["succeeded", "failed"])
         self._wait_time = wait_time
 
