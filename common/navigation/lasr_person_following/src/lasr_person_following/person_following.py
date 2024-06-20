@@ -138,10 +138,14 @@ class PersonFollower:
         )
         return do_transform_pose(pose, trans)
 
-    def _robot_pose_in_odom(self) -> PoseStamped:
-        current_pose: PoseWithCovarianceStamped = rospy.wait_for_message(
-            "/amcl_pose", PoseWithCovarianceStamped
-        )
+    def _robot_pose_in_odom(self) -> Union[PoseStamped, None]:
+        try:
+            current_pose: PoseWithCovarianceStamped = rospy.wait_for_message(
+                "/amcl_pose", PoseWithCovarianceStamped
+            )
+        except AttributeError:
+            return None
+
         current_pose_stamped = PoseStamped(
             pose=current_pose.pose.pose, header=current_pose.header
         )
@@ -168,6 +172,10 @@ class PersonFollower:
         min_dist: float = np.inf
         closest_person: Union[None, Person] = None
         robot_pose: PoseStamped = self._robot_pose_in_odom()
+
+        if robot_pose is None:
+            return False
+
         for person in people.people:
             dist: float = self._euclidian_distance(person.pose, robot_pose.pose)
 
@@ -371,6 +379,10 @@ class PersonFollower:
             # Get the robot's pose in the odom frame
             robot_pose = self._robot_pose_in_odom()
 
+            if robot_pose is None:
+                rospy.logwarn("Failed to get robot pose, skipping")
+                continue
+
             # Distance to the previous pose
             dist_to_prev = (
                 self._euclidian_distance(track.pose, prev_track.pose)
@@ -415,6 +427,7 @@ class PersonFollower:
                             continue
                         else:
                             prev_goal: MoveBaseGoal = self._move_base(goal_pose)
+                            prev_track = track
                             person_trajectory.poses.append(track.pose)
                             going_to_static_pose = True
                 continue
@@ -434,6 +447,7 @@ class PersonFollower:
                 pose = self._tf_pose(pose, "map")
                 self._move_base(pose)
                 person_trajectory.poses.append(track.pose)
+                prev_track = track
                 continue
 
             # Check if the person has moved significantly
