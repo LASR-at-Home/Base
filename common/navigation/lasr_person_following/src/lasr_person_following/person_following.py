@@ -45,6 +45,7 @@ class PersonFollower:
     _n_secs_static: float
     _new_goal_threshold: float
     _stopping_distance: float
+    _plan_behind_person: bool
 
     # State
     _latest_tracks: Union[None, PersonArray]
@@ -78,6 +79,7 @@ class PersonFollower:
         n_secs_static: float = 10.0,
         new_goal_threshold: float = 1.0,
         stopping_distance: float = 1.0,
+        plan_behind_person: bool = False,
     ):
         self._start_following_radius = start_following_radius
         self._start_following_angle = start_following_angle
@@ -85,6 +87,7 @@ class PersonFollower:
         self._n_secs_static = n_secs_static
         self._new_goal_threshold = new_goal_threshold
         self._stopping_distance = stopping_distance
+        self._plan_behind_person = plan_behind_person
 
         self._latest_tracks = None
         self._track_id = None
@@ -304,6 +307,7 @@ class PersonFollower:
     def _get_pose_on_path(
         self, start_pose: PoseStamped, goal_pose: PoseStamped, dist_to_goal: float
     ) -> Union[None, PoseStamped]:
+        start: rospy.Time = rospy.Time.now()
         assert (
             start_pose.header.frame_id == goal_pose.header.frame_id
         ), "Start and goal poses must be in the same frame"
@@ -321,6 +325,9 @@ class PersonFollower:
             if self._euclidian_distance(pose.pose, goal_pose.pose) >= dist_to_goal:
                 chosen_pose = pose
                 break
+        end: rospy.Time = rospy.Time.now()
+
+        rospy.logwarn(f"Time taken to find a plan: {end.secs - start.secs} seconds")
 
         return chosen_pose
 
@@ -357,6 +364,7 @@ class PersonFollower:
             if track is None:
                 rospy.loginfo("Lost track of person, recovering...")
                 self._move_base_client.wait_for_result()
+                person_trajectory = PoseArray()
                 self._recover_track()
                 continue
 
@@ -386,6 +394,17 @@ class PersonFollower:
                         else:
                             last_track_time = None
                             continue
+                    # elif (
+                    #     prev_goal
+                    #     and self._move_base_client.get_state()
+                    #     in [
+                    #         GoalStatus.PENDING,
+                    #         GoalStatus.ACTIVE,
+                    #     ]
+                    #     and rospy.Time.now().secs - last_track_time.secs > 1
+                    # ):
+                    #     rospy.loginfo("Person static with an active goal, preempting")
+
                 continue
 
             # Check if the person is too close to the robot
@@ -410,18 +429,27 @@ class PersonFollower:
             else:
                 continue
 
-            goal_pose: PoseStamped = self._get_pose_on_path(
-                self._tf_pose(robot_pose, "map"),
-                self._tf_pose(
+            if self._plan_behind_person:
+                goal_pose: PoseStamped = self._get_pose_on_path(
+                    self._tf_pose(robot_pose, "map"),
+                    self._tf_pose(
+                        PoseStamped(pose=track.pose, header=self._latest_tracks.header),
+                        "map",
+                    ),
+                    self._stopping_distance,
+                )
+                if goal_pose is None:
+                    rospy.loginfo("Failed to find a plan, skipping")
+                    continue
+            else:
+                goal_pose = PoseStamped(
+                    pose=track.pose, header=self._latest_tracks.header
+                )
+                goal_pose = self._tf_pose(
                     PoseStamped(pose=track.pose, header=self._latest_tracks.header),
                     "map",
-                ),
-                self._stopping_distance,
-            )
-            if goal_pose is None:
-                rospy.loginfo("Failed to find a plan, skipping")
-                continue
-            self._move_base(goal_pose)
+                )
+            prev_goal: MoveBaseGoal = self._move_base(goal_pose)
             prev_track = track
             last_track_time = rospy.Time.now()
             person_trajectory.poses.append(track.pose)
