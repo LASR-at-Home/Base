@@ -76,7 +76,7 @@ class PersonFollower:
         start_following_angle: float = 45.0,
         min_distance_between_tracks: float = 0.25,
         n_secs_static: float = 10.0,
-        new_goal_threshold: float = 0.5,
+        new_goal_threshold: float = 1.0,
         stopping_distance: float = 1.0,
     ):
         self._start_following_radius = start_following_radius
@@ -92,8 +92,10 @@ class PersonFollower:
         self._move_base_client = actionlib.SimpleActionClient(
             "move_base", MoveBaseAction
         )
+        if not self._move_base_client.wait_for_server(rospy.Duration.from_sec(10.0)):
+            rospy.logwarn("Move base client not available")
 
-        self._buffer = tf.Buffer(cache_time=rospy.Duration(10.0))
+        self._buffer = tf.Buffer(cache_time=rospy.Duration.from_sec(10.0))
         self._listener = tf.TransformListener(self._buffer)
 
         self._goal_pose_pub = rospy.Publisher(
@@ -104,22 +106,27 @@ class PersonFollower:
             "/people_tracked", PersonArray, self._track_callback
         )
 
-        """
-        Apparently, /move_base/NavfnROS/make_plan can be called while move_base is active https://github.com/ros-planning/navigation/issues/12
-        """
-        rospy.wait_for_service("/move_base/make_plan")
+        rospy.wait_for_service(
+            "/move_base/make_plan", timeout=rospy.Duration.from_sec(10.0)
+        )
         self._make_plan = rospy.ServiceProxy("/move_base/make_plan", GetPlan)
 
-        self._tts_client = actionlib.SimpleActionClient("/tts", TtsAction)
+        self._tts_client = actionlib.SimpleActionClient("tts", TtsAction)
         self._tts_client_available = self._tts_client.wait_for_server(
-            rospy.Duration(10.0)
+            rospy.Duration.from_sec(10.0)
         )
+        if not self._tts_client_available:
+            rospy.logwarn("TTS client not available")
         self._transcribe_speech_client = actionlib.SimpleActionClient(
             "transcribe_speech", TranscribeSpeechAction
         )
         self._transcribe_speech_client_available = (
-            self._transcribe_speech_client.wait_for_server(rospy.Duration(10.0))
+            self._transcribe_speech_client.wait_for_server(
+                rospy.Duration.from_sec(10.0)
+            )
         )
+        if not self._transcribe_speech_client_available:
+            rospy.logwarn("Transcribe speech client not available")
 
     def _track_callback(self, msg: PersonArray) -> None:
         self._latest_tracks = msg
@@ -194,29 +201,31 @@ class PersonFollower:
         self._move_base(pose)
 
         if ask:
-            if self._tts_client_available:
+            if self._tts_client_available and self._transcribe_speech_client_available:
                 # Ask if we should follow
                 tts_goal: TtsGoal = TtsGoal()
                 tts_goal.rawtext.text = "Should I follow you? Please answer yes or no"
                 tts_goal.rawtext.lang_id = "en_GB"
                 self._tts_client.send_goal_and_wait(tts_goal)
 
-                if self._transcribe_speech_client_available:
-                    # listen
-                    self._transcribe_speech_client.send_goal_and_wait(
-                        TranscribeSpeechGoal()
-                    )
-                    transcription = self._transcribe_speech_client.get_result().sequence
+                # listen
+                self._transcribe_speech_client.send_goal_and_wait(
+                    TranscribeSpeechGoal()
+                )
+                transcription = self._transcribe_speech_client.get_result().sequence
 
-                    if "yes" not in transcription.lower():
-                        return False
+                if "yes" not in transcription.lower():
+                    return False
 
                 tts_goal: TtsGoal = TtsGoal()
-                tts_goal.rawtext.text = (
-                    "Okay, I'll begin following you. Please walk slowly."
-                )
+                tts_goal.rawtext.text = "I'll begin following you. Please walk slowly."
                 tts_goal.rawtext.lang_id = "en_GB"
-                self._tts_client.send_goal_and_wait(tts_goal)
+                self._tts_client.send_goal(tts_goal)
+            elif self._tts_client_available:
+                tts_goal: TtsGoal = TtsGoal()
+                tts_goal.rawtext.text = "I'll begin following you. Please walk slowly."
+                tts_goal.rawtext.lang_id = "en_GB"
+                self._tts_client.send_goal(tts_goal)
 
         self._track_id = closest_person.id
 
