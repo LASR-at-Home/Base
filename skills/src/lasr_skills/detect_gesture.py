@@ -19,6 +19,8 @@ class DetectGesture(smach.State):
     def __init__(
         self,
         gesture_to_detect: Optional[str] = None,
+        bodypix_model: str = "resnet50",
+        bodypix_confidence: float = 0.7,
         buffer_width: int = 50,
         debug_publisher: str = "/skills/gesture_detection/debug",
     ):
@@ -30,7 +32,9 @@ class DetectGesture(smach.State):
             output_keys=["gesture_detected"],
         )
         self.gesture_to_detect = gesture_to_detect
-        self.body_pix_client = rospy.ServiceProxy("/bodypix/detect", BodyPixDetection)
+        self.bodypix_client = rospy.ServiceProxy("/bodypix/detect", BodyPixDetection)
+        self.bodypix_model = bodypix_model
+        self.bodypix_confidence = bodypix_confidence
         self.debug_publisher = rospy.Publisher(debug_publisher, Image, queue_size=1)
         self.buffer_width = buffer_width
 
@@ -48,11 +52,11 @@ class DetectGesture(smach.State):
         req = BodyPixDetectionRequest()
         req.image_raw = userdata.img_msg
         req.masks = masks
-        req.dataset = "resnet50"
-        req.confidence = 0.7
+        req.dataset = self.bodypix_model
+        req.confidence = self.bodypix_confidence
 
         try:
-            res = self.body_pix_client(req)
+            res = self.bodypix_client(req)
         except Exception as e:
             print(e)
             return "failed"
@@ -66,15 +70,6 @@ class DetectGesture(smach.State):
                     "y": keypoint.xy[1],
                     "score": keypoint.score,
                 }
-
-        # Validate that the keypoints are present
-        non_present_parts = [
-            part for part in body_pix_masks.parts if part not in part_info
-        ]
-
-        if len(non_present_parts) > 0:
-            rospy.logerr(f"Parts not detected: {non_present_parts}")
-            return "missing_keypoints"
 
         if (
             self.gesture_to_detect == "raising_left_arm"
