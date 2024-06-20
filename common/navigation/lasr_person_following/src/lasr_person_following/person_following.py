@@ -382,7 +382,6 @@ class PersonFollower:
                 continue
 
             # # Get the robot's pose in the odom frame
-            # robot_pose = self._robot_pose_in_odom()
 
             # if robot_pose is None:
             #     rospy.logwarn("Failed to get robot pose, skipping")
@@ -412,38 +411,40 @@ class PersonFollower:
                         else:
                             last_track_time = None
                             continue
-                    # elif (
-                    #     rospy.Time.now().secs - last_track_time.secs > 2.0
-                    #     and not going_to_static_pose
-                    # ):
-                    #     rospy.loginfo(
-                    #         "Person has been static for a while, going to static pose"
-                    #     )
-                    #     self._cancel_goal()
-                    #     goal_pose: PoseStamped = self._get_pose_on_path(
-                    #         self._tf_pose(robot_pose, "map"),
-                    #         self._tf_pose(
-                    #             PoseStamped(
-                    #                 pose=track.pose, header=self._latest_tracks.header
-                    #             ),
-                    #             "map",
-                    #         ),
-                    #         self._stopping_distance,
-                    #     )
-                    #     if goal_pose is None:
-                    #         rospy.loginfo("Failed to find a plan, skipping")
-                    #         continue
-                    #     else:
-                    #         prev_goal: MoveBaseGoal = self._move_base(goal_pose)
-                    #         prev_track = track
-                    #         last_track_time = rospy.Time.now()
-                    #         person_trajectory.poses.append(track.pose)
-                    #         going_to_static_pose = True
+                    elif (
+                        rospy.Time.now().secs - last_track_time.secs > 1.0
+                        and not going_to_static_pose
+                    ):
+                        rospy.loginfo(
+                            "Person has been static for a while, going to static pose"
+                        )
+                        self._cancel_goal()
+
+                        robot_pose = self._robot_pose_in_odom()
+                        goal_pose: PoseStamped = self._get_pose_on_path(
+                            self._tf_pose(robot_pose, "map"),
+                            self._tf_pose(
+                                PoseStamped(
+                                    pose=track.pose, header=self._latest_tracks.header
+                                ),
+                                "map",
+                            ),
+                            self._stopping_distance,
+                        )
+                        if goal_pose is None:
+                            rospy.loginfo("Failed to find a plan, skipping")
+                            continue
+                        else:
+                            prev_goal: MoveBaseGoal = self._move_base(goal_pose)
+
+                            prev_track = track
+                            last_track_time = rospy.Time.now()
+                            person_trajectory.poses.append(track.pose)
+                            going_to_static_pose = True
                 continue
 
             # Check if the person is too close to the robot
 
-            going_to_static_pose = False
 
             # if dist_to_goal < self._stopping_distance:
             #     # rospy.loginfo("Person too close to robot, facing them and skipping")
@@ -476,3 +477,4 @@ class PersonFollower:
             person_trajectory.poses.append(track.pose)
             person_trajectory.header.stamp = rospy.Time.now()
             self._person_trajectory_pub.publish(person_trajectory)
+            going_to_static_pose = False
