@@ -41,6 +41,8 @@ if __name__ == "__main__":
         {
             "name": "charlie",
             "drink": "wine",
+            "dataset": "receptionist",
+            "confidence": 0.5,
         },
     )
 

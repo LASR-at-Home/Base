@@ -290,6 +290,21 @@ class Receptionist(smach.StateMachine):
                     "aborted": "failed",
                 },
             )
+            smach.StateMachine.add(
+                "FIND_AND_LOOK_AT",
+                FindAndLookAt(
+                    "host",
+                    [
+                        [0.0, 0.0],
+                        [-1.0, 0.0],
+                        [1.0, 0.0],
+                    ],
+                ),
+                transitions={
+                    "succeeded": "INTRODUCE_GUEST_1_TO_HOST",
+                    "failed": "failed",
+                },
+            )
 
             smach.StateMachine.add(
                 "LOOK_AT_WAITING_GUEST_1_1",
@@ -605,6 +620,21 @@ class Receptionist(smach.StateMachine):
                 "LOOK_AT_WAITING_GUEST_2_2",
                 LookToGivenPoint(
                     [-1.5, 0.0],
+                ),
+                transitions={
+                    "succeeded": "FIND_AND_LOOK_AT_2",
+                    "failed": "failed",
+                },
+            )
+            smach.StateMachine.add(
+                "FIND_AND_LOOK_AT_2",
+                FindAndLookAt(
+                    "host",
+                    [
+                        [0.0, 0.0],
+                        [-1.0, 0.0],
+                        [1.0, 0.0],
+                    ],
                 ),
                 transitions={
                     "succeeded": "INTRODUCE_HOST_TO_GUEST_2",

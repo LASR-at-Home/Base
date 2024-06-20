@@ -34,7 +34,7 @@ except ModuleNotFoundError:
 
 class LookAtPerson(smach.StateMachine):
     class CheckEyes(smach.State):
-        def __init__(self, debug=True, _filter=False):
+        def __init__(self, debug=True, filter=False):
             smach.State.__init__(
                 self,
                 outcomes=["succeeded", "failed", "no_detection"],
@@ -53,7 +53,7 @@ class LookAtPerson(smach.StateMachine):
             self.look_at_pub = actionlib.SimpleActionClient(
                 "/head_controller/point_head_action", PointHeadAction
             )
-            self._filter = _filter
+            self._filter = filter
 
         def execute(self, userdata):
             rospy.sleep(1)
@@ -65,6 +65,16 @@ class LookAtPerson(smach.StateMachine):
                 return "no_detection"
             print("THE DEEPFACE")
             print(userdata.deepface_detection)
+
+            if self._filter:
+                if userdata.deepface_detection:
+                    deepface = userdata.deepface_detection[0]
+                    for bbox in userdata.bbox_eyes:
+                        if bbox["bbox"] == deepface:
+                            userdata.bbox_eyes = [bbox]
+                            break
+                else:
+                    return "failed"
 
             if self._filter:
                 if userdata.deepface_detection:
@@ -261,7 +271,7 @@ class LookAtPerson(smach.StateMachine):
             )
             smach.StateMachine.add(
                 "CHECK_EYES",
-                self.CheckEyes(self.DEBUG, _filter=filter),
+                self.CheckEyes(self.DEBUG, filter=filter),
                 transitions={
                     "succeeded": "LOOP",
                     "failed": "failed",
@@ -298,22 +308,4 @@ class LookAtPerson(smach.StateMachine):
                     "finish": "succeeded",
                 },
             )
-            # if not IS_SIMULATION:
-            #     if PUBLIC_CONTAINER:
-            #         rospy.logwarn(
-            #             "You are using a public container. The head manager will not be start following navigation."
-            #         )
-            #     else:
-            #         smach.StateMachine.add(
-            #             "ENABLE_HEAD_MANAGER",
-            #             smach_ros.ServiceState(
-            #                 "/pal_startup_control/start",
-            #                 StartupStart,
-            #                 request=StartupStartRequest("head_manager", ""),
-            #             ),
-            #             transitions={
-            #                 "succeeded": "succeeded",
-            #                 "preempted": "failed",
-            #                 "aborted": "failed",
-            #             },
-            #         )
+

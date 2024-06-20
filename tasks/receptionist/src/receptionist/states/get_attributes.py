@@ -5,7 +5,6 @@ import json
 
 
 class GetGuestAttributes(smach.StateMachine):
-
     class HandleGuestAttributes(smach.State):
         def __init__(self, guest_id: str):
             smach.State.__init__(

@@ -1,5 +1,5 @@
 """
-State machine for the nicole task. It finds a person by given name and then looks at them.
+State machine for the receptionist task. It finds a person by given name and then looks at them.
 """
 
 import rospy
@@ -19,7 +19,6 @@ from smach import CBState
 import rosservice
 
 PUBLIC_CONTAINER = False
-
 try:
     from pal_startup_msgs.srv import (
         StartupStart,
@@ -148,7 +147,6 @@ class FindAndLookAt(smach.StateMachine):
                     ],
                     output_keys=[],
                 )
-
                 with container_sm:
                     if not IS_SIMULATION:
                         if PUBLIC_CONTAINER:
