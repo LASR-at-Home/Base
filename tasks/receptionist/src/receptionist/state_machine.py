@@ -290,21 +290,6 @@ class Receptionist(smach.StateMachine):
                     "aborted": "failed",
                 },
             )
-            smach.StateMachine.add(
-                "FIND_AND_LOOK_AT",
-                FindAndLookAt(
-                    "host",
-                    [
-                        [0.0, 0.0],
-                        [-1.0, 0.0],
-                        [1.0, 0.0],
-                    ],
-                ),
-                transitions={
-                    "succeeded": "INTRODUCE_GUEST_1_TO_HOST",
-                    "failed": "failed",
-                },
-            )
 
             smach.StateMachine.add(
                 "LOOK_AT_WAITING_GUEST_1_1",
