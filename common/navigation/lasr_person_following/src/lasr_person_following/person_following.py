@@ -43,7 +43,6 @@ class PersonFollower:
     _start_following_angle: float
     _min_distance_between_tracks: float
     _n_secs_static: float
-    _min_time_between_goals: float
     _new_goal_threshold: float
     _stopping_distance: float
 
@@ -75,9 +74,8 @@ class PersonFollower:
         self,
         start_following_radius: float = 2.0,
         start_following_angle: float = 45.0,
-        min_distance_between_tracks: float = 0.5,
-        n_secs_static: float = 15.0,
-        min_time_between_goals: float = 1.0,
+        min_distance_between_tracks: float = 0.25,
+        n_secs_static: float = 10.0,
         new_goal_threshold: float = 0.5,
         stopping_distance: float = 1.0,
     ):
@@ -85,7 +83,6 @@ class PersonFollower:
         self._start_following_angle = start_following_angle
         self._min_distance_between_tracks = min_distance_between_tracks
         self._n_secs_static = n_secs_static
-        self._min_time_between_goals = min_time_between_goals
         self._new_goal_threshold = new_goal_threshold
         self._stopping_distance = stopping_distance
 
@@ -334,7 +331,6 @@ class PersonFollower:
                 - If person moves significantly, cancel goal and go to new pose
             - If person's pose is too close to the previous pose, skip
             - If person is too close to the robot, face them and skip
-            - If we are currently executing a goal, it is too soon to send a new one, and the person has not moved significantly, skip
             - If the person has been static for n_secs_static seconds, check if they are finished
 
         """
@@ -404,32 +400,15 @@ class PersonFollower:
                 )
                 pose.header.stamp = rospy.Time.now()
                 pose = self._tf_pose(pose, "map")
-                prev_goal = self._move_base(pose)
+                self._move_base(pose)
                 # prev_track = track
                 continue
-
-            time_since_last_goal: float = (
-                rospy.Time.now().secs - prev_goal.target_pose.header.stamp.secs
-                if prev_goal is not None
-                else np.inf
-            )
 
             # Check if the person has moved significantly
             if dist_to_prev > self._new_goal_threshold:
                 rospy.loginfo("Person has moved significantly, cancelling goal")
                 self._cancel_goal()
-            # Check if we are currently executing a goal, it is too soon to send a new one, and the person has not moved significantly
-            if (
-                self._move_base_client.get_state()
-                in [
-                    GoalStatus.PENDING,
-                    GoalStatus.ACTIVE,
-                ]
-                and time_since_last_goal < self._min_time_between_goals
-            ):
-                rospy.loginfo("Currently executing a goal, skipping")
-                prev_track = track
-                last_track_time = rospy.Time.now()
+            else:
                 continue
 
             goal_pose: PoseStamped = self._get_pose_on_path(
@@ -443,6 +422,6 @@ class PersonFollower:
             if goal_pose is None:
                 rospy.loginfo("Failed to find a plan, skipping")
                 continue
-            prev_goal = self._move_base(goal_pose)
+            self._move_base(goal_pose)
             prev_track = track
             last_track_time = rospy.Time.now()
