@@ -1,4 +1,5 @@
 """Generic wait state for waiting a desired number of seconds"""
+
 import smach
 import rospy
 
