@@ -68,7 +68,7 @@ class PersonFollower:
     _track_sub: rospy.Subscriber
 
     # Publishers
-    _goal_pose_pub: rospy.Publisher
+    _person_trajectory_pub: rospy.Publisher
 
     def __init__(
         self,
@@ -98,8 +98,8 @@ class PersonFollower:
         self._buffer = tf.Buffer(cache_time=rospy.Duration.from_sec(10.0))
         self._listener = tf.TransformListener(self._buffer)
 
-        self._goal_pose_pub = rospy.Publisher(
-            "/follow_poses", PoseArray, queue_size=1000000, latch=True
+        self._person_trajectory_pub = rospy.Publisher(
+            "/person_trajectory", PoseArray, queue_size=1, latch=True
         )
 
         self._track_sub = rospy.Subscriber(
@@ -333,20 +333,11 @@ class PersonFollower:
         return goal
 
     def follow(self) -> None:
-        """
-        The general loop should be:
-            - Get persons pose
-            - Go to pose - stopping_distance
-                - If person moves significantly, cancel goal and go to new pose
-            - If person's pose is too close to the previous pose, skip
-            - If person is too close to the robot, face them and skip
-            - If the person has been static for n_secs_static seconds, check if they are finished
 
-        """
-
+        person_trajectory: PoseArray = PoseArray()
+        person_trajectory.header.frame_id = "odom"
         prev_track: Union[None, Person] = None
         last_track_time: Union[None, rospy.Time] = None
-        prev_goal: Union[None, MoveBaseActionGoal] = None
 
         while not rospy.is_shutdown():
 
@@ -385,7 +376,6 @@ class PersonFollower:
             # Check if the person is too close to the previous pose
             if dist_to_prev < self._min_distance_between_tracks:
                 rospy.loginfo("Person too close to previous, skipping")
-                # prev_track = track
                 if last_track_time is not None:
                     if (
                         rospy.Time.now().secs - last_track_time.secs
@@ -410,7 +400,7 @@ class PersonFollower:
                 pose.header.stamp = rospy.Time.now()
                 pose = self._tf_pose(pose, "map")
                 self._move_base(pose)
-                # prev_track = track
+                person_trajectory.poses.append(track.pose)
                 continue
 
             # Check if the person has moved significantly
@@ -434,3 +424,6 @@ class PersonFollower:
             self._move_base(goal_pose)
             prev_track = track
             last_track_time = rospy.Time.now()
+            person_trajectory.poses.append(track.pose)
+            person_trajectory.header.stamp = rospy.Time.now()
+            self._person_trajectory_pub.publish(person_trajectory)
