@@ -346,20 +346,16 @@ class Predictor:
 
         self._thresholds_mask: list[float] = []
         self._thresholds_pred: list[float] = []
-        for key in sorted(
-            list(self.categories_and_attributes.merged_categories.keys())
-        ):
+        for key in sorted(list(self.categories_and_attributes.thresholds_mask.keys())):
             self._thresholds_mask.append(
                 self.categories_and_attributes.thresholds_mask[key]
             )
-        for attribute in self.categories_and_attributes.attributes:
-            if attribute not in self.categories_and_attributes.avoided_attributes:
-                self._thresholds_pred.append(
-                    self.categories_and_attributes.thresholds_pred[attribute]
-                )
+        for key in sorted(list(self.categories_and_attributes.thresholds_pred.keys())):
+            self._thresholds_pred.append(
+                self.categories_and_attributes.thresholds_pred[key]
+            )
 
     def predict(self, rgb_image: np.ndarray) -> ImageWithMasksAndAttributes:
-        mean_val = np.mean(rgb_image)
         image_tensor = (
             torch.from_numpy(rgb_image).permute(2, 0, 1).unsqueeze(0).float() / 255.0
         )
@@ -386,6 +382,62 @@ class Predictor:
         for attribute in self.categories_and_attributes.mask_labels:
             attribute_dict[attribute] = class_list_iter.__next__()
         image_obj = ImageWithMasksAndAttributes(
+            rgb_image, mask_dict, attribute_dict, self.categories_and_attributes
+        )
+        return image_obj
+
+
+class ClothPredictor(Predictor):
+    def predict(self, rgb_image: np.ndarray) -> ImageWithMasksAndAttributes:
+        general_categories = [
+            "top",
+            "down",
+            "outwear",
+            "dress",
+        ]
+        categories = [
+            "top",
+            "down",
+            "outwear",
+            "dress",
+            "short sleeve top",
+            "long sleeve top",
+            "short sleeve outwear",
+            "long sleeve outwear",
+            "vest",
+            "sling",
+            "shorts",
+            "trousers",
+            "skirt",
+            "short sleeve dress",
+            "long sleeve dress",
+            "vest dress",
+            "sling dress",
+        ]
+        image_tensor = (
+            torch.from_numpy(rgb_image).permute(2, 0, 1).unsqueeze(0).float() / 255.0
+        )
+        pred_masks, pred_classes, pred_bboxes = self.model(image_tensor)
+        # Apply binary erosion and dilation to the masks
+        pred_masks = binary_erosion_dilation(
+            pred_masks,
+            thresholds=self._thresholds_pred,
+            erosion_iterations=1,
+            dilation_iterations=1,
+        )
+        pred_masks = pred_masks.detach().squeeze(0).numpy().astype(np.uint8)
+        mask_list = [pred_masks[i, :, :] for i in range(pred_masks.shape[0])]
+        pred_classes = pred_classes.detach().squeeze(0).numpy()
+        class_list = [pred_classes[i].item() for i in range(pred_classes.shape[0])]
+        mask_dict = {}
+        for i, mask in enumerate(mask_list):
+            mask_dict[categories[i]] = mask
+        attribute_dict = {}
+        class_list_iter = class_list.__iter__()
+        for attribute in categories:
+            # if attribute not in self.categories_and_attributes.avoided_attributes:
+            attribute_dict[attribute] = class_list_iter.__next__()
+        image_obj = ImageOfCloth(
             rgb_image, mask_dict, attribute_dict, self.categories_and_attributes
         )
         return image_obj
@@ -548,9 +600,9 @@ def binary_erosion_dilation(
 
     # Check if the length of thresholds matches the number of channels
     if len(thresholds) != tensor.size(1):
-        # the error should be here, just removed for now since there's some other bug I haven't fixed.
-        # raise ValueError(f"Length of thresholds {len(thresholds)} must match the number of channels {tensor.size(1)}")
-        thresholds = [0.5 for _ in range(tensor.size(1))]
+        raise ValueError(
+            f"Length of thresholds {len(thresholds)} must match the number of channels {tensor.size(1)}"
+        )
 
     # Binary thresholding
     for i, threshold in enumerate(thresholds):

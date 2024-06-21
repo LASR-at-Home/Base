@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-
+import os
 import cv2
 import rospy
 import smach
@@ -27,6 +27,15 @@ class DescribePeople(smach.StateMachine):
         )
 
         with self:
+            # conditional topic and crop method for flexibility
+            rgb_topic = (
+                "/xtion/rgb/image_raw"
+                if "tiago" in os.environ["ROS_MASTER_URI"]
+                else "/camera/image_raw"
+            )
+            crop_method = (
+                "closest" if "tiago" in os.environ["ROS_MASTER_URI"] else "centered"
+            )
             smach.StateMachine.add(
                 "GET_IMAGE",
                 GetCroppedImage(object_name="person", crop_method="closest"),
