@@ -193,8 +193,6 @@ class ImageOfPerson(ImageWithMasksAndAttributes):
                 "has_hair": has_hair[0],
                 "hair_colour": hair_colour_str,
                 "hair_shape": hair_shape_str,
-                # stop returning "male" label for now, might remove from neural network when training next time.
-                # "male": male[0],
                 "facial_hair": facial_hair[0] != "No_Beard",
                 "hat": hat[0],
                 "glasses": glasses[0],
@@ -262,9 +260,6 @@ class ImageOfCloth(ImageWithMasksAndAttributes):
             "long sleeve top",
             "short sleeve outwear",
             "long sleeve outwear",
-            # 'shorts',
-            # 'trousers',
-            # 'skirt',
             "short sleeve dress",
             "long sleeve dress",
             "vest dress",
@@ -284,16 +279,6 @@ class ImageOfCloth(ImageWithMasksAndAttributes):
                 max_attribute = "sleeveless top"
             result["attributes"][max_attribute] = True
 
-        # "down" is not included for now since it might not be necessary to mention
-        # keep the comments here for showing all the cases.
-        # if down:
-        #     max_prob = 0.0
-        #     max_attribute = "shorts"
-        #     for attribute in ['shorts', 'trousers', 'skirt', ]:
-        #         if self.attributes[attribute] > max_prob:
-        #             max_prob = self.attributes[attribute]
-        #             max_attribute = attribute
-        #     result["attributes"][max_attribute] = True
 
         if outwear:
             max_prob = 0.0
