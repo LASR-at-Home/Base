@@ -334,12 +334,6 @@ class PersonFollower:
 
             tracks: PersonArray = rospy.wait_for_message("/people_tracked", PersonArray)
 
-            # No tracks, so skip
-            failed: bool = False
-
-            if len(tracks.people) == 0:
-                rospy.loginfo("No tracks")
-                failed = True
             # Get the most recent track of the person we are following
             track = next(
                 filter(lambda track: track.id == self._track_id, tracks.people),
@@ -348,10 +342,6 @@ class PersonFollower:
 
             if track is None:
                 rospy.loginfo("No track of person")
-                failed = True
-
-            # If we have lost track of the person, finish executing the curret goal and recover the track
-            if failed:
                 rospy.loginfo("Lost track of person, recovering...")
                 self._cancel_goal()
                 person_trajectory = PoseArray()
