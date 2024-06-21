@@ -15,6 +15,7 @@ from lasr_vision_msgs.srv import (
 from numpy2message import numpy2message
 from .vision import GetCroppedImage, ImageMsgToCv2
 import numpy as np
+from validate_keypoints import ValidateKeypoints
 
 
 class DescribePeople(smach.StateMachine):
@@ -38,7 +39,7 @@ class DescribePeople(smach.StateMachine):
             )
             smach.StateMachine.add(
                 "GET_IMAGE",
-                GetCroppedImage(object_name="person", crop_method="closest"),
+                GetCroppedImage(object_name="person", crop_method=crop_method, rgb_topic=rgb_topic),
                 transitions={
                     "succeeded": "CONVERT_IMAGE",
                     "failed": "SAY_GET_IMAGE_AGAIN",
@@ -57,7 +58,7 @@ class DescribePeople(smach.StateMachine):
             )
             smach.StateMachine.add(
                 "GET_IMAGE_AGAIN",
-                GetCroppedImage(object_name="person", crop_method="closest"),
+                GetCroppedImage(object_name="person", crop_method=crop_method, rgb_topic=rgb_topic),
                 transitions={"succeeded": "CONVERT_IMAGE", "failed": "SAY_CONTINUE"},
             )
 
