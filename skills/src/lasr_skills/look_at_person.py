@@ -86,16 +86,6 @@ class LookAtPerson(smach.StateMachine):
                 else:
                     return "failed"
 
-            if self._filter:
-                if userdata.deepface_detection:
-                    deepface = userdata.deepface_detection[0]
-                    for bbox in userdata.bbox_eyes:
-                        if bbox["bbox"] == deepface:
-                            userdata.bbox_eyes = [bbox]
-                            break
-                else:
-                    return "failed"
-
             for det in userdata.bbox_eyes:
                 left_eye = det["left_eye"]
                 right_eye = det["right_eye"]
