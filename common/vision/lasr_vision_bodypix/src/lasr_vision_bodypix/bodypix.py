@@ -48,7 +48,10 @@ def load_model_cached(dataset: str):
             name = download_model(BodyPixModelPaths.RESNET50_FLOAT_STRIDE_16)
             model = load_model(name)
         elif dataset == "mobilenet50":
-            name = download_model(BodyPixModelPaths.MOBILENET_FLOAT_50_STRIDE_16)
+            name = download_model(BodyPixModelPaths.MOBILENET_FLOAT_50_STRIDE_8)
+            model = load_model(name)
+        elif dataset == "mobilenet100":
+            name = download_model(BodyPixModelPaths.MOBILENET_FLOAT_100_STRIDE_8)
             model = load_model(name)
         else:
             model = load_model(dataset)
