@@ -362,10 +362,9 @@ if __name__ == "__main__":
     rospy.init_node("get_cropped_image")
     while not rospy.is_shutdown():
         get_cropped_image = GetCroppedImage(
-            "bottle",
-            crop_method="centered",
+            "person",
+            crop_method="closest",
             use_mask=True,
-            rgb_topic="usb_cam/image_raw",
         )
         sm = smach.StateMachine(outcomes=["succeeded", "failed"])
         with sm:
