@@ -194,11 +194,9 @@ class PersonFollower:
 
         if ask:
             if self._tts_client_available and self._transcribe_speech_client_available:
+
                 # Ask if we should follow
-                tts_goal: TtsGoal = TtsGoal()
-                tts_goal.rawtext.text = "Should I follow you? Please answer yes or no"
-                tts_goal.rawtext.lang_id = "en_GB"
-                self._tts_client.send_goal_and_wait(tts_goal)
+                self._tts("Should I follow you? Please answer yes or no", wait=True)
 
                 # listen
                 self._transcribe_speech_client.send_goal_and_wait(
@@ -209,15 +207,7 @@ class PersonFollower:
                 if "yes" not in transcription.lower():
                     return False
 
-                tts_goal: TtsGoal = TtsGoal()
-                tts_goal.rawtext.text = "I'll begin following you. Please walk slowly."
-                tts_goal.rawtext.lang_id = "en_GB"
-                self._tts_client.send_goal(tts_goal)
-            elif self._tts_client_available:
-                tts_goal: TtsGoal = TtsGoal()
-                tts_goal.rawtext.text = "I'll begin following you. Please walk slowly."
-                tts_goal.rawtext.lang_id = "en_GB"
-                self._tts_client.send_goal(tts_goal)
+                self._tts("I will follow you", wait=False)
 
         self._track_id = closest_person.id
 
@@ -226,10 +216,7 @@ class PersonFollower:
 
     def _recover_track(self) -> bool:
         if self._tts_client_available:
-            tts_goal: TtsGoal = TtsGoal()
-            tts_goal.rawtext.text = "I've lost you, please come back"
-            tts_goal.rawtext.lang_id = "en_GB"
-            self._tts_client.send_goal_and_wait(tts_goal)
+            self._tts("I lost track of you, please come back", wait=True)
 
         while not self.begin_tracking(ask=True) and not rospy.is_shutdown():
             rospy.loginfo("Recovering track...")
@@ -275,12 +262,7 @@ class PersonFollower:
 
     def _check_finished(self) -> bool:
         if self._tts_client_available:
-            tts_goal: TtsGoal = TtsGoal()
-            tts_goal.rawtext.text = (
-                "Should I stop following you? Please answer yes or no"
-            )
-            tts_goal.rawtext.lang_id = "en_GB"
-            self._tts_client.send_goal_and_wait(tts_goal)
+            self._tts("Have we arrived?", wait=True)
 
             if self._transcribe_speech_client_available:
                 self._transcribe_speech_client.send_goal_and_wait(
@@ -330,6 +312,16 @@ class PersonFollower:
 
         return goal
 
+    def _tts(self, text: str, wait: bool) -> None:
+        if self._tts_client_available:
+            tts_goal: TtsGoal = TtsGoal()
+            tts_goal.rawtext.text = text
+            tts_goal.rawtext.lang_id = "en_GB"
+            if wait:
+                self._tts_client.send_goal_and_wait(tts_goal)
+            else:
+                self._tts_client.send_goal(tts_goal)
+
     def follow(self) -> None:
 
         person_trajectory: PoseArray = PoseArray()
@@ -343,19 +335,25 @@ class PersonFollower:
             tracks: PersonArray = rospy.wait_for_message("/people_tracked", PersonArray)
 
             # No tracks, so skip
+            failed: bool = False
+
             if len(tracks.people) == 0:
-                rospy.loginfo("No tracks, skipping")
-                continue
+                rospy.loginfo("No tracks")
+                failed = True
             # Get the most recent track of the person we are following
             track = next(
                 filter(lambda track: track.id == self._track_id, tracks.people),
                 None,
             )
 
-            # If we have lost track of the person, finish executing the curret goal and recover the track
             if track is None:
+                rospy.loginfo("No track of person")
+                failed = True
+
+            # If we have lost track of the person, finish executing the curret goal and recover the track
+            if failed:
                 rospy.loginfo("Lost track of person, recovering...")
-                self._move_base_client.wait_for_result()
+                self._cancel_goal()
                 person_trajectory = PoseArray()
                 self._recover_track()
                 prev_goal = None
@@ -399,7 +397,7 @@ class PersonFollower:
                         and not going_to_static_pose
                     ):
                         rospy.loginfo(
-                            "Person has been static for a while, going to static pose"
+                            "Person has been static for a while, going to them"
                         )
                         self._cancel_goal()
 
@@ -417,9 +415,10 @@ class PersonFollower:
                             continue
                         else:
                             prev_goal: MoveBaseGoal = self._move_base(goal_pose)
+                            self._tts("I am coming to you", wait=False)
 
-                            prev_track = track
-                            last_track_time = rospy.Time.now()
+                            # prev_track = track
+                            # last_track_time = rospy.Time.now()
                             person_trajectory.poses.append(track.pose)
                             going_to_static_pose = True
                 continue
@@ -446,6 +445,8 @@ class PersonFollower:
                 #     rospy.loginfo("Person has moved significantly, cancelling goal")
                 #     self._cancel_goal()
                 continue
+
+            going_to_static_pose = False
 
             goal_pose = self._tf_pose(
                 PoseStamped(pose=track.pose, header=tracks.header),
