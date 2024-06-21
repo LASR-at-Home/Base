@@ -414,9 +414,7 @@ class PersonFollower:
                         goal_pose: PoseStamped = self._get_pose_on_path(
                             self._tf_pose(robot_pose, "map"),
                             self._tf_pose(
-                                PoseStamped(
-                                    pose=track.pose, header=self._latest_tracks.header
-                                ),
+                                PoseStamped(pose=track.pose, header=tracks.header),
                                 "map",
                             ),
                             self._stopping_distance,
@@ -457,7 +455,7 @@ class PersonFollower:
                 continue
 
             goal_pose = self._tf_pose(
-                PoseStamped(pose=track.pose, header=self._latest_tracks.header),
+                PoseStamped(pose=track.pose, header=tracks.header),
                 "map",
             )
             prev_goal: MoveBaseGoal = self._move_base(goal_pose)
