@@ -279,7 +279,6 @@ class ImageOfCloth(ImageWithMasksAndAttributes):
                 max_attribute = "sleeveless top"
             result["attributes"][max_attribute] = True
 
-
         if outwear:
             max_prob = 0.0
             max_attribute = "short sleeve outwear"
