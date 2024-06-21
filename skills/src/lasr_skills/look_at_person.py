@@ -15,7 +15,6 @@ from cv2_pcl import pcl_to_img_msg
 import ros_numpy as rnp
 import rosservice
 from smach import CBState
-from std_msgs.msg import String
 import actionlib
 from control_msgs.msg import PointHeadAction, PointHeadGoal
 from geometry_msgs.msg import Point
@@ -64,6 +63,18 @@ class LookAtPerson(smach.StateMachine):
                 len(userdata.bbox_eyes) < 1 and len(userdata.detections.detections) < 1
             ):
                 return "no_detection"
+            print("THE DEEPFACE")
+            print(userdata.deepface_detection)
+
+            if self._filter:
+                if userdata.deepface_detection:
+                    deepface = userdata.deepface_detection[0]
+                    for bbox in userdata.bbox_eyes:
+                        if bbox["bbox"] == deepface:
+                            userdata.bbox_eyes = [bbox]
+                            break
+                else:
+                    return "failed"
 
             if self._filter:
                 if userdata.deepface_detection:
@@ -92,7 +103,15 @@ class LookAtPerson(smach.StateMachine):
                 pcl_xyz = rnp.point_cloud2.pointcloud2_to_xyz_array(
                     userdata.pcl_msg, remove_nans=False
                 )
-                eye_point_pcl = pcl_xyz[int(eye_point[1]), int(eye_point[0])]
+                try:
+                    eye_point_pcl = pcl_xyz[int(eye_point[1]), int(eye_point[0])]
+                except IndexError:
+                    eye_point_pcl = pcl_xyz[
+                        int(eye_point[1]) - 1, int(eye_point[0]) - 1
+                    ]
+                except Exception as e:
+                    rospy.logerr(f"Unexpected Exception: {e}")
+                    return "failed"
                 if any([True for i in eye_point_pcl if i != i]):
                     eye_point_pcl = pcl_xyz[int(right_eye[1]), int(right_eye[0])]
 
@@ -129,6 +148,8 @@ class LookAtPerson(smach.StateMachine):
                     f"LOOKING AT POINT {look_at.point.x}, {look_at.point.y}, {look_at.point.z}"
                 )
                 self.look_at_pub.send_goal(goal)
+
+                print(self.look_at_pub.get_state())
 
                 return "succeeded"
 
@@ -270,7 +291,7 @@ class LookAtPerson(smach.StateMachine):
                 transitions={
                     "succeeded": "LOOP",
                     "aborted": "failed",
-                    "preempted": "failed",
+                    "timed_out": "LOOP",
                 },
                 remapping={"pointstamped": "pointstamped"},
             )

@@ -41,6 +41,7 @@ def run_clip(
     txt = model.encode(labels)
     img = model.encode(img)
     with torch.no_grad():
+        torch
         cos_scores = util.cos_sim(img, txt)
     return cos_scores
 

@@ -1,12 +1,20 @@
 import smach
+import rospy
 
 from typing import List
 from shapely.geometry import Polygon
 
 import numpy as np
 
-from lasr_skills import PlayMotion, Detect3DInArea, LookToPoint, Say
 from geometry_msgs.msg import Point, PointStamped
+from lasr_skills import (
+    PlayMotion,
+    Detect3DInArea,
+    LookToPoint,
+    Say,
+    WaitForPerson,
+    Wait,
+)
 
 
 class SeatGuest(smach.StateMachine):
@@ -119,7 +127,7 @@ class SeatGuest(smach.StateMachine):
                 transitions={
                     "succeeded": "SAY_SIT",
                     "aborted": "failed",
-                    "preempted": "failed",
+                    "timed_out": "SAY_SIT",
                 },
                 remapping={"pointstamped": "seat_position"},
             )
@@ -127,11 +135,21 @@ class SeatGuest(smach.StateMachine):
                 "SAY_SIT",
                 Say("Please sit in the seat that I am looking at."),
                 transitions={
-                    "succeeded": "RESET_HEAD",
+                    "succeeded": "WAIT_FOR_GUEST_SEAT",
                     "aborted": "failed",
                     "preempted": "failed",
                 },
-            )  # TODO: sleep after this.
+            )
+
+            smach.StateMachine.add(
+                "WAIT_FOR_GUEST_SEAT",
+                # Number of seconds to wait for passed in as argument
+                Wait(5),
+                transitions={
+                    "succeeded": "RESET_HEAD",
+                    "failed": "RESET_HEAD",
+                },
+            )
 
             smach.StateMachine.add(
                 "RESET_HEAD",
