@@ -6,7 +6,7 @@
     <arg name="debug" default="false" doc="Whether to publish plotted images to /bodypix/debug/model_name" />
     <arg name="preload" default="[]" doc="Array of models to preload when starting the service" />
 
-    <node name="bodypix_service" pkg="lasr_vision_bodypix" type="service" output="screen">
+    <node name="bodypix_mask_service" pkg="lasr_vision_bodypix" type="mask_service.py" output="screen">
         <param name="debug" type="bool" value="$(arg debug)" />
         <param name="preload" type="yaml" value="$(arg preload)" />
     </node>
