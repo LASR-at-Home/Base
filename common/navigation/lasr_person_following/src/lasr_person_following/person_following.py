@@ -65,9 +65,6 @@ class PersonFollower:
     _buffer: tf.Buffer
     _listener: tf.TransformListener
 
-    # Subscribers
-    _track_sub: rospy.Subscriber
-
     # Publishers
     _person_trajectory_pub: rospy.Publisher
 
@@ -108,10 +105,6 @@ class PersonFollower:
             "/person_trajectory", PoseArray, queue_size=1, latch=True
         )
 
-        self._track_sub = rospy.Subscriber(
-            "/people_tracked", PersonArray, self._track_callback
-        )
-
         self._tts_client = actionlib.SimpleActionClient("tts", TtsAction)
         self._tts_client_available = self._tts_client.wait_for_server(
             rospy.Duration.from_sec(10.0)
@@ -128,9 +121,6 @@ class PersonFollower:
         )
         if not self._transcribe_speech_client_available:
             rospy.logwarn("Transcribe speech client not available")
-
-    def _track_callback(self, msg: PersonArray) -> None:
-        self._latest_tracks = msg
 
     def _tf_pose(self, pose: PoseStamped, target_frame: str):
         trans = self._buffer.lookup_transform(
@@ -357,15 +347,15 @@ class PersonFollower:
 
         while not rospy.is_shutdown():
 
+            tracks: PersonArray = rospy.wait_for_message("/people_tracked", PersonArray)
+
             # No tracks, so skip
-            if self._latest_tracks is None:
+            if len(tracks.people) == 0:
                 rospy.loginfo("No tracks, skipping")
                 continue
             # Get the most recent track of the person we are following
             track = next(
-                filter(
-                    lambda track: track.id == self._track_id, self._latest_tracks.people
-                ),
+                filter(lambda track: track.id == self._track_id, tracks.people),
                 None,
             )
 
@@ -444,7 +434,6 @@ class PersonFollower:
                 continue
 
             # Check if the person is too close to the robot
-
 
             # if dist_to_goal < self._stopping_distance:
             #     # rospy.loginfo("Person too close to robot, facing them and skipping")
