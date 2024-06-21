@@ -31,7 +31,7 @@ class GetGuestAttributes(smach.StateMachine):
         smach.StateMachine.__init__(
             self,
             outcomes=["succeeded", "failed"],
-            input_keys=["guest_id", "guest_data"],
+            input_keys=["guest_data"],
             output_keys=["guest_data"],
         )
         self._guest_id: str = guest_id

@@ -55,22 +55,6 @@ class FindAndLookAt(smach.StateMachine):
             userdata.look_positions = self.look_positions
             return "succeeded"
 
-    class GetGuestName(smach.State):
-        def __init__(self, guest_name_in: str):
-            super().__init__(
-                outcomes=["succeeded"],
-                input_keys=["guest_data"],
-                output_keys=["guest_name"],
-            )
-            self._guest_name_in = guest_name_in
-
-        def execute(self, userdata) -> str:
-            # print("Guest data", self.userdata.guest_data)
-            # self.userdata.guest_name = self.userdata.guest_data[guest_name_in]["name"]
-            guest_name = userdata.guest_data[self._guest_name_in]["name"]
-            userdata.guest_name = guest_name
-            return "succeeded"
-
     class GetPoint(smach.State):
         def __init__(self):
             smach.State.__init__(
@@ -97,12 +81,15 @@ class FindAndLookAt(smach.StateMachine):
 
     def check_name(self, ud):
         rospy.logwarn(
-            f"Checking name {ud.guest_name} in detections {ud.deepface_detection}"
+            f"Checking name {ud.guest_data[self.guest_name_in]['name']} in detections {ud.deepface_detection}"
         )
         if len(ud.deepface_detection) == 0:
             return "no_detection"
         for detection in ud.deepface_detection:
-            if detection.name == ud.guest_name and detection.confidence > ud.confidence:
+            if (
+                detection.name == ud.guest_data[self.guest_name_in]["name"]
+                and detection.confidence > ud.confidence
+            ):
                 return "succeeded"
         return "failed"
 
@@ -111,14 +98,13 @@ class FindAndLookAt(smach.StateMachine):
         guest_name_in: str,
         look_positions: Union[List[List[float]], None] = None,
     ):
+
+        self.guest_name_in = guest_name_in
+
         smach.StateMachine.__init__(
             self,
             outcomes=["succeeded", "failed"],
-            input_keys=[
-                "dataset",
-                "confidence",
-                "guest_data",
-            ],
+            input_keys=["dataset", "confidence", "guest_data"],
             output_keys=[],
         )
 
@@ -176,31 +162,26 @@ class FindAndLookAt(smach.StateMachine):
                                     request=StartupStopRequest("head_manager"),
                                 ),
                                 transitions={
-                                    "succeeded": "GET_GUEST_NAME",
+                                    "succeeded": "GET_POINT",
                                     "aborted": "failed",
                                     "preempted": "failed",
                                 },
                             )
-                    smach.StateMachine.add(
-                        "GET_GUEST_NAME",
-                        self.GetGuestName(guest_name_in=guest_name_in),
-                        transitions={"succeeded": "GET_POINT"},
-                    )
                     smach.StateMachine.add(
                         "GET_POINT",
                         self.GetPoint(),
                         transitions={"succeeded": "GET_IMAGE", "failed": "failed"},
                         remapping={"pointstamped": "pointstamped"},
                     )
-                    smach.StateMachine.add(
-                        "LOOK_TO_POINT",
-                        LookToPoint(),
-                        transitions={
-                            "succeeded": "GET_IMAGE",
-                            "aborted": "failed",
-                            "preempted": "failed",
-                        },
-                    )
+                    # smach.StateMachine.add(
+                    #     "LOOK_TO_POINT",
+                    #     LookToPoint(),
+                    #     transitions={
+                    #         "succeeded": "GET_IMAGE",
+                    #         "aborted": "failed",
+                    #         "preempted": "failed",
+                    #     },
+                    # )
                     smach.StateMachine.add(
                         "GET_IMAGE",
                         GetPointCloud("/xtion/depth_registered/points"),
@@ -240,13 +221,13 @@ class FindAndLookAt(smach.StateMachine):
                             outcomes=["succeeded", "failed", "no_detection"],
                             input_keys=[
                                 "deepface_detection",
-                                "guest_name",
                                 "confidence",
+                                "guest_data",
                             ],
                         ),
                         transitions={
                             "succeeded": "LOOK_AT_PERSON",
-                            "failed": "GET_IMAGE",
+                            "failed": "continue",
                             "no_detection": "continue",
                         },
                     )

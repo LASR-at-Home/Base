@@ -29,6 +29,7 @@ class Detect3DInArea(smach.StateMachine):
         def execute(self, userdata):
             detected_objects = userdata["detections_3d"].detected_objects
             # publish polygon for debugging
+
             polygon_msg = Polygon()
             polygon_msg.points = [
                 Point32(x=point[0], y=point[1], z=0.0)
@@ -50,7 +51,7 @@ class Detect3DInArea(smach.StateMachine):
 
     def __init__(
         self,
-        area_polygon: Polygon,
+        area_polygon: ShapelyPolygon,
         depth_topic: str = "/xtion/depth_registered/points",
         model: str = "yolov8x-seg.pt",
         filter: Union[List[str], None] = None,
