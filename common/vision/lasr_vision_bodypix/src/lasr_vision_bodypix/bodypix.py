@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import List
 import rospy
+import cv2
 import cv2_img
 import numpy as np
 from PIL import Image
@@ -170,6 +171,18 @@ def detect_keypoints(
             skeleton_color=(100, 100, 255),
         )
 
+        # Add text of keypoints to image
+        for keypoint in detected_keypoints:
+            cv2.putText(
+                coloured_mask,
+                f"{keypoint.keypoint_name}",
+                (keypoint.x, keypoint.y),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.5,
+                (255, 255, 255),
+                2,
+                cv2.LINE_AA,
+            )
         debug_publisher.publish(cv2_img.cv2_img_to_msg(coloured_mask))
 
     return BodyPixKeypointDetectionResponse(keypoints=detected_keypoints)
