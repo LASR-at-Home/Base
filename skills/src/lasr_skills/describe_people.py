@@ -42,7 +42,7 @@ class DescribePeople(smach.StateMachine):
             )
             smach.StateMachine.add(
                 "GET_IMAGE",
-                GetCroppedImage(object_name="person", crop_method=crop_method, rgb_topic=rgb_topic),
+                GetCroppedImage(object_name="person", crop_method=crop_method, rgb_topic=rgb_topic, use_mask=True),
                 transitions={
                     "succeeded": "CONVERT_IMAGE",
                     "failed": "SAY_GET_IMAGE_AGAIN",
@@ -61,7 +61,7 @@ class DescribePeople(smach.StateMachine):
             )
             smach.StateMachine.add(
                 "GET_IMAGE_AGAIN",
-                GetCroppedImage(object_name="person", crop_method=crop_method, rgb_topic=rgb_topic),
+                GetCroppedImage(object_name="person", crop_method=crop_method, rgb_topic=rgb_topic, use_mask=True),
                 transitions={"succeeded": "CONVERT_IMAGE", "failed": "SAY_CONTINUE"},
             )
 
