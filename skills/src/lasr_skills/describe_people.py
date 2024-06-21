@@ -5,7 +5,10 @@ import rospy
 import smach
 import cv2_img
 import numpy as np
-from lasr_skills import Say
+if "tiago" in os.environ["ROS_MASTER_URI"]:
+    from lasr_skills import Say 
+else: 
+    from lasr_skills import PrintSay as Say 
 from lasr_vision_msgs.srv import (
     YoloDetection,
     BodyPixMaskDetection,

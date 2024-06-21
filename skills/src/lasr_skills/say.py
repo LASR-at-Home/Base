@@ -1,4 +1,5 @@
 import smach_ros
+import rospy
 
 from pal_interaction_msgs.msg import TtsGoal, TtsAction, TtsText
 
@@ -43,3 +44,11 @@ class Say(smach_ros.SimpleActionState):
                 ),
                 input_keys=["text"],
             )
+
+
+class PrintSay(object):
+    def __init__(
+        self, text: Union[str, None] = None, format_str: Union[str, None] = None
+    ):
+        if text is not None:
+            rospy.loginfo(text)
