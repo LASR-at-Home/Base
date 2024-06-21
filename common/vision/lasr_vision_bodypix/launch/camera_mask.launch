@@ -7,7 +7,7 @@
     <arg name="model" default="resnet50" doc="Model to use for the demo" />
 
     <!-- BodyPix service -->
-    <include file="$(find lasr_vision_bodypix)/launch/service.launch">
+    <include file="$(find lasr_vision_bodypix)/launch/mask_service.launch">
         <arg name="debug" value="true" />
         <arg name="preload" value="['$(arg model)']" />
     </include>
@@ -16,7 +16,7 @@
     <node name="image_view" pkg="rqt_image_view" type="rqt_image_view" respawn="false" output="screen" args="/bodypix/debug/$(arg model)" />
 
     <!-- start relay service -->
-    <node name="relay" pkg="lasr_vision_bodypix" type="relay" respawn="false" output="screen" args="/camera/image_raw $(arg model)" />
+    <node name="mask_relay" pkg="lasr_vision_bodypix" type="mask_relay.py" respawn="false" output="screen" args="/camera/image_raw $(arg model)" />
 
     <!-- launch video stream -->
    <include file="$(find video_stream_opencv)/launch/camera.launch">

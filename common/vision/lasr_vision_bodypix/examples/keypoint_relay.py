@@ -5,11 +5,15 @@ import rospy
 import threading
 
 from sensor_msgs.msg import Image
-from lasr_vision_msgs.msg import BodyPixMaskRequest
-from lasr_vision_msgs.srv import BodyPixDetection, BodyPixDetectionRequest
+from lasr_vision_msgs.srv import (
+    BodyPixKeypointDetection,
+    BodyPixKeypointDetectionRequest,
+)
 
 if len(sys.argv) < 2:
-    print('Usage: rosrun lasr_vision_bodypix relay <source_topic> [resnet50|mobilenet50|...]')
+    print(
+        "Usage: rosrun lasr_vision_bodypix keypoint_relay.py <source_topic> [resnet50|mobilenet50|...]"
+    )
     exit()
 
 # figure out what we are listening to
@@ -23,33 +27,28 @@ else:
 
 processing = False
 
+
 def detect(image):
     global processing
     processing = True
     rospy.loginfo("Received image message")
 
     try:
-        detect_service = rospy.ServiceProxy('/bodypix/detect', BodyPixDetection)
-        req = BodyPixDetectionRequest()
+        detect_service = rospy.ServiceProxy(
+            "/bodypix/keypoint_detection", BodyPixKeypointDetection
+        )
+        req = BodyPixKeypointDetectionRequest()
         req.image_raw = image
         req.dataset = model
         req.confidence = 0.7
 
-        mask = BodyPixMaskRequest()
-        mask.parts = ['left_face', 'right_face']
-        req.masks = [mask]
-
         resp = detect_service(req)
-
-        # don't print the whole mask
-        for mask in resp.masks:
-            mask.mask = [True, False, True, False]
-            
         print(resp)
     except rospy.ServiceException as e:
         rospy.logerr("Service call failed: %s" % e)
     finally:
         processing = False
+
 
 def image_callback(image):
     global processing
@@ -59,11 +58,13 @@ def image_callback(image):
     t = threading.Thread(target=detect, args=(image,))
     t.start()
 
+
 def listener():
-    rospy.init_node('image_listener', anonymous=True)
-    rospy.wait_for_service('/bodypix/detect')
+    rospy.init_node("image_listener", anonymous=True)
+    rospy.wait_for_service("/bodypix/keypoint_detection")
     rospy.Subscriber(listen_topic, Image, image_callback)
     rospy.spin()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     listener()

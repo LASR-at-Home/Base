@@ -6,10 +6,10 @@ import smach
 import cv2_img
 import numpy as np
 from lasr_skills import Say
-from lasr_vision_msgs.msg import BodyPixMaskRequest
 from lasr_vision_msgs.srv import (
     YoloDetection,
-    BodyPixDetection,
+    BodyPixMaskDetection,
+    BodyPixMaskDetectionRequest,
     TorchFaceFeatureDetectionDescription,
 )
 from numpy2message import numpy2message
@@ -147,16 +147,18 @@ class DescribePeople(smach.StateMachine):
                 ],
                 output_keys=["bodypix_masks"],
             )
-            self.bodypix = rospy.ServiceProxy("/bodypix/detect", BodyPixDetection)
+            self.bodypix = rospy.ServiceProxy(
+                "/bodypix/mask_detection", BodyPixMaskDetection
+            )
 
         def execute(self, userdata):
             try:
-                torso = BodyPixMaskRequest()
-                torso.parts = ["torso_front", "torso_back"]
-                head = BodyPixMaskRequest()
-                head.parts = ["left_face", "right_face"]
-                masks = [torso, head]
-                result = self.bodypix(userdata.img_msg, "resnet50", 0.7, masks)
+                request = BodyPixMaskDetectionRequest()
+                request.image_raw = userdata.img_msg
+                request.dataset = "resnet50"
+                request.confidence = 0.2
+                request.parts = ["torso_front", "torso_back", "left_face", "right_face"]
+                result = self.bodypix(request)
                 userdata.bodypix_masks = result.masks
                 return "succeeded"
             except rospy.ServiceException as e:
@@ -204,21 +206,20 @@ class DescribePeople(smach.StateMachine):
                 cv2.fillPoly(
                     mask_image, pts=np.int32([contours]), color=(255, 255, 255)
                 )
-                mask_bin = mask_image > 128
-
+                mask_bin = mask_image > 0
+                torso_mask = np.zeros((height, width), np.uint8)
+                head_mask = np.zeros((height, width), np.uint8)
                 # process part masks
-                for bodypix_mask, part in zip(
-                    userdata.bodypix_masks, ["torso", "head"]
-                ):
-                    part_mask = np.array(bodypix_mask.mask).reshape(
-                        bodypix_mask.shape[0], bodypix_mask.shape[1]
+                for part in userdata.bodypix_masks:
+                    part_mask = np.array(part.mask).reshape(
+                        part.shape[0], part.shape[1]
                     )
 
                     # filter out part for current person segmentation
                     try:
                         part_mask[mask_bin == 0] = 0
                     except Exception:
-                        rospy.logdebug("|> Failed to check {part} is visible")
+                        rospy.logdebug(f"|> Failed to check {part} is visible")
                         continue
 
                     if part_mask.any():
@@ -227,10 +228,10 @@ class DescribePeople(smach.StateMachine):
                         rospy.logdebug(f"|> Person does not have {part} visible")
                         continue
 
-                    if part == "torso":
-                        torso_mask = part_mask
-                    elif part == "head":
-                        head_mask = part_mask
+                    if part.name == "torso_front" or part.name == "torso_back":
+                        torso_mask = np.logical_or(torso_mask, part_mask)
+                    elif part.name == "left_face" or part.name == "right_face":
+                        head_mask = np.logical_or(head_mask, part_mask)
 
                 torso_mask_data, torso_mask_shape, torso_mask_dtype = numpy2message(
                     torso_mask
