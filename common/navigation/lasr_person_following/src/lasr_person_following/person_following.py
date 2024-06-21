@@ -84,7 +84,6 @@ class PersonFollower:
         self._new_goal_threshold = new_goal_threshold
         self._stopping_distance = stopping_distance
 
-        self._latest_tracks = None
         self._track_id = None
 
         self._move_base_client = actionlib.SimpleActionClient(
@@ -146,17 +145,11 @@ class PersonFollower:
         """
         Chooses the closest person as the target
         """
-        while self._latest_tracks is None and not rospy.is_shutdown():
-            rospy.loginfo("Waiting for people to be tracked")
-            rospy.sleep(1)
 
-        if self._latest_tracks is None:
-            rospy.loginfo("No people to track")
-            return False
+        tracks: PersonArray = rospy.wait_for_message("/people_tracked", PersonArray)
+        people: List[Person] = tracks.people
 
-        people: PersonArray = self._latest_tracks
-
-        if len(people.people) == 0:
+        if len(people) == 0:
             return False
 
         min_dist: float = np.inf
@@ -166,7 +159,7 @@ class PersonFollower:
         if robot_pose is None:
             return False
 
-        for person in people.people:
+        for person in people:
             dist: float = self._euclidian_distance(person.pose, robot_pose.pose)
 
             face_quat: Quaternion = self._compute_face_quat(
