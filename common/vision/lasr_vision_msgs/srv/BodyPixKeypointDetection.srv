@@ -1,0 +1,12 @@
+# Image to run inference on
+sensor_msgs/Image image_raw
+
+# BodyPix model to use
+string dataset
+
+# How certain the detection should be to include
+float32 confidence
+
+---
+# keypoints
+lasr_vision_msgs/BodyPixKeypoint[] keypoints
