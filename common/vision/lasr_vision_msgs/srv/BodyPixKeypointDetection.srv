@@ -8,5 +8,5 @@ string dataset
 float32 confidence
 
 ---
-# 
+# keypoints
 lasr_vision_msgs/BodyPixKeypoint[] keypoints
