@@ -1,0 +1,9 @@
+<launch>
+    <include file="$(find lasr_vision_yolov8)/launch/service.launch">
+        <arg name="debug" value="true" />
+        <arg name="preload" value="['yolov8n-seg.pt']" />
+    </include>
+    <include file="$(find video_stream_opencv)/launch/camera.launch">
+        <arg name="visualize" value="true" />
+   </include>
+</launch>

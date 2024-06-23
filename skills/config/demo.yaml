@@ -1,0 +1,5 @@
+living_room:
+  table:
+    location:
+      position: {x: 1.526343, y: 0.523707, z: 0.0024719}
+      orientation: { x: 0.0, y: 0.0, z: 0.746444684543, w: 0.665447468188 }
