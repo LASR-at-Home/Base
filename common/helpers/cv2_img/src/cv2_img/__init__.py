@@ -20,7 +20,7 @@ def cv2_img_to_msg(img, stamp=None):
     msg.header.stamp = rospy.Time.now() if stamp is None else stamp
     msg.width = width
     msg.height = height
-    msg.encoding = 'bgr8'
+    msg.encoding = "bgr8"
     msg.is_bigendian = 1
     msg.step = 3 * width
     msg.data = img.tobytes()
@@ -37,13 +37,13 @@ def msg_to_pillow_img(msg: SensorImage):
     """
 
     size = (msg.width, msg.height)
-    if msg.encoding in ['bgr8', '8UC3']:
-        img = Image.frombytes('RGB', size, msg.data, 'raw')
+    if msg.encoding in ["bgr8", "8UC3"]:
+        img = Image.frombytes("RGB", size, msg.data, "raw")
 
         # BGR => RGB
         img = Image.fromarray(np.array(img)[:, :, ::-1])
-    elif msg.encoding == 'rgb8':
-        img = Image.frombytes('RGB', size, msg.data, 'raw')
+    elif msg.encoding == "rgb8":
+        img = Image.frombytes("RGB", size, msg.data, "raw")
     else:
         raise Exception("Unsupported format.")
 
@@ -80,8 +80,7 @@ def extract_mask_region(frame, mask, expand_x=0.5, expand_y=0.5):
     # only requiring cv2 if we need it
     import cv2
 
-    contours, _ = cv2.findContours(
-        mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    contours, _ = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
     if contours:
         largest_contour = max(contours, key=cv2.contourArea)
@@ -99,6 +98,6 @@ def extract_mask_region(frame, mask, expand_x=0.5, expand_y=0.5):
         new_w = min(frame.shape[1] - x, new_w)
         new_h = min(frame.shape[0] - y, new_h)
 
-        face_region = frame[y:y+int(new_h), x:x+int(new_w)]
+        face_region = frame[y : y + int(new_h), x : x + int(new_w)]
         return face_region
     return None

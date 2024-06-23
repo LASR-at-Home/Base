@@ -7,13 +7,17 @@ from trajectory_msgs.msg import JointTrajectoryPoint
 from tiago_controllers.helpers import get_joint_values, is_running, cancel_goal
 from pal_common_msgs.msg import DisableActionGoal, DisableAction
 
+
 class HeadController:
     def __init__(self):
-        self._client = actionlib.SimpleActionClient("/head_controller/follow_joint_trajectory",
-                                                    FollowJointTrajectoryAction)
+        self._client = actionlib.SimpleActionClient(
+            "/head_controller/follow_joint_trajectory", FollowJointTrajectoryAction
+        )
         self._client.wait_for_server()
-        if rospy.get_published_topics(namespace='/pal_head_manager'):
-            self._client_disable_head = actionlib.SimpleActionClient('/pal_head_manager/disable', DisableAction)
+        if rospy.get_published_topics(namespace="/pal_head_manager"):
+            self._client_disable_head = actionlib.SimpleActionClient(
+                "/pal_head_manager/disable", DisableAction
+            )
 
     def get_client(self):
         return self._client
@@ -22,7 +26,9 @@ class HeadController:
         return is_running(self._client)
 
     def cancel_goal(self):
-        return cancel_goal(self, '/head_controller/follow_joint_trajectory/cancel', self._client)
+        return cancel_goal(
+            self, "/head_controller/follow_joint_trajectory/cancel", self._client
+        )
 
     def __go_to_position(self, joint1, joint2, time_from_start=1, velocities=None):
         """
@@ -42,11 +48,13 @@ class HeadController:
         goal.trajectory.points.append(point)
 
         self._client.send_goal(goal)
-    
+
     def async_reach_to(self, joint1, joint2, time_from_start=1, velocities=None):
         self.__go_to_position(joint1, joint2, time_from_start, velocities)
 
-    def sync_reach_to(self, joint1, joint2, time_from_start=1, wait=10, velocities=None):
+    def sync_reach_to(
+        self, joint1, joint2, time_from_start=1, wait=10, velocities=None
+    ):
         self.__go_to_position(joint1, joint2, time_from_start, velocities)
         done = self._client.wait_for_result(rospy.Duration(wait))
         state = self._client.get_state()
@@ -54,13 +62,13 @@ class HeadController:
 
     def nod_head(self):
         current_pos = self.current_joint_values()
-        self.sync_reach_to(0.5,0)
+        self.sync_reach_to(0.5, 0)
         self.sync_reach_to(current_pos[0], current_pos[1])
 
     @staticmethod
     def get_joint_values():
         return get_joint_values("/head_controller/query_state")
-    
+
     def activate_head(self):
         self._client_disable_head.wait_for_server()
         self._client_disable_head.cancel_goal()
@@ -77,12 +85,13 @@ class HeadController:
         self.sync_reach_to(0.0, -1.0)
 
     def look_right(self):
-        self.sync_reach_to(-1,0.0)
+        self.sync_reach_to(-1, 0.0)
 
     def look_left(self):
         self.sync_reach_to(1, 0.0)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     rospy.init_node("head_test", anonymous=True)
     _head = HeadController()
     _head.sync_reach_to(0, 0)

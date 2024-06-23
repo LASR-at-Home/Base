@@ -1,2 +1,0 @@
-numpy==1.25.2             # via shapely
-shapely==2.0.1            # via -r requirements.in

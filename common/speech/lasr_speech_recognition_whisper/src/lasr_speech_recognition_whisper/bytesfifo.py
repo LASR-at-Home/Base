@@ -1,14 +1,15 @@
 import io
 
+
 class BytesFIFO(object):
     """
     A FIFO that can store a fixed number of bytes.
     https://github.com/hbock/byte-fifo/blob/master/fifo.py
     """
-    
+
     def __init__(self, init_size):
-        """ Create a FIFO of ``init_size`` bytes. """
-        self._buffer = io.BytesIO(b"\x00"*init_size)
+        """Create a FIFO of ``init_size`` bytes."""
+        self._buffer = io.BytesIO(b"\x00" * init_size)
         self._size = init_size
         self._filled = 0
         self._read_ptr = 0
@@ -17,13 +18,13 @@ class BytesFIFO(object):
     def read(self, size=-1):
         """
         Read at most ``size`` bytes from the FIFO.
-        
+
         If less than ``size`` bytes are available, or ``size`` is negative,
         return all remaining bytes.
         """
         if size < 0:
             size = self._filled
-        
+
         # Go to read pointer
         self._buffer.seek(self._read_ptr)
 
@@ -32,7 +33,7 @@ class BytesFIFO(object):
         contig = self._size - self._read_ptr
         contig_read = min(contig, size)
 
-        ret =  self._buffer.read(contig_read)
+        ret = self._buffer.read(contig_read)
         self._read_ptr += contig_read
         if contig_read < size:
             leftover_size = size - contig_read
@@ -41,13 +42,13 @@ class BytesFIFO(object):
             self._read_ptr = leftover_size
 
         self._filled -= size
-        
+
         return ret
 
     def write(self, data):
         """
         Write as many bytes of ``data`` as are free in the FIFO.
-        
+
         If less than ``len(data)`` bytes are free, write as many as can be written.
         Returns the number of bytes written.
         """
@@ -67,7 +68,7 @@ class BytesFIFO(object):
             if contig < write_size:
                 self._buffer.seek(0)
                 self._buffer.write(data[contig_write:write_size])
-                #self._buffer.write(buffer(data, contig_write, write_size - contig_write))
+                # self._buffer.write(buffer(data, contig_write, write_size - contig_write))
                 self._write_ptr = write_size - contig_write
 
         self._filled += write_size
@@ -75,33 +76,33 @@ class BytesFIFO(object):
         return write_size
 
     def flush(self):
-        """ Flush all data from the FIFO. """
+        """Flush all data from the FIFO."""
         self._filled = 0
         self._read_ptr = 0
         self._write_ptr = 0
-        
+
     def empty(self):
-        """ Return ```True``` if FIFO is empty. """
+        """Return ```True``` if FIFO is empty."""
         return self._filled == 0
 
     def full(self):
-        """ Return ``True`` if FIFO is full. """
+        """Return ``True`` if FIFO is full."""
         return self._filled == self._size
 
     def free(self):
-        """ Return the number of bytes that can be written to the FIFO. """
+        """Return the number of bytes that can be written to the FIFO."""
         return self._size - self._filled
 
     def capacity(self):
-        """ Return the total space allocated for this FIFO. """
+        """Return the total space allocated for this FIFO."""
         return self._size
 
     def __len__(self):
-        """ Return the amount of data filled in FIFO """
+        """Return the amount of data filled in FIFO"""
         return self._filled
 
     def __nonzero__(self):
-        """ Return ```True``` if the FIFO is not empty. """
+        """Return ```True``` if the FIFO is not empty."""
         return self._filled > 0
 
     def resize(self, new_size):
@@ -117,8 +118,10 @@ class BytesFIFO(object):
             raise ValueError("Cannot resize to zero or less bytes.")
 
         if new_size < self._filled:
-            raise ValueError("Cannot contract FIFO to less than {} bytes, "
-                             "or data will be lost.".format(self._filled))
+            raise ValueError(
+                "Cannot contract FIFO to less than {} bytes, "
+                "or data will be lost.".format(self._filled)
+            )
 
         # original data is non-contiguous. we need to copy old data,
         # re-write to the beginning of the buffer, and re-sync
@@ -130,5 +133,5 @@ class BytesFIFO(object):
             self._filled = len(old_data)
             self._read_ptr = 0
             self._write_ptr = self._filled
-        
+
         self._size = new_size

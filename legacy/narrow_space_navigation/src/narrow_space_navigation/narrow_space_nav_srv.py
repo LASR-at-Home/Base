@@ -31,7 +31,7 @@ class NarrowSpaceNavSrv:
             return height
 
     def distance_to_nearest_obstacle(self, x, y, occupancy_array):
-        min_distance = float('inf')
+        min_distance = float("inf")
         for i in range(occupancy_array.shape[0]):
             for j in range(occupancy_array.shape[1]):
                 if occupancy_array[i][j] == 100:
@@ -67,13 +67,13 @@ class NarrowSpaceNavSrv:
                     IMPACT_WALLS = 4
                     SPREAD_WALLS = 6
                     height_contribution = (
-                                                  1 / (IMPACT_WALLS * math.sqrt(2 * math.pi))
-                                          ) * (
-                                                  math.pow(x, 2) / (2 * math.pow(SPREAD_WALLS, 2))
-                                                  + math.pow(y, 2) / (2 * math.pow(SPREAD_WALLS, 2))
-                                                  + math.pow(SIZE_X - x, 2) / (2 * math.pow(SPREAD_WALLS, 2))
-                                                  + math.pow(SIZE_Y - y, 2) / (2 * math.pow(SPREAD_WALLS, 2))
-                                          )
+                        1 / (IMPACT_WALLS * math.sqrt(2 * math.pi))
+                    ) * (
+                        math.pow(x, 2) / (2 * math.pow(SPREAD_WALLS, 2))
+                        + math.pow(y, 2) / (2 * math.pow(SPREAD_WALLS, 2))
+                        + math.pow(SIZE_X - x, 2) / (2 * math.pow(SPREAD_WALLS, 2))
+                        + math.pow(SIZE_Y - y, 2) / (2 * math.pow(SPREAD_WALLS, 2))
+                    )
                     heights[y][x] += height_contribution
 
         return heights
@@ -94,15 +94,16 @@ class NarrowSpaceNavSrv:
     def plot_height(self, heights):
         rospy.loginfo("Plotting height map")
         fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d')
+        ax = fig.add_subplot(111, projection="3d")
         x, y = np.meshgrid(np.arange(heights.shape[1]), np.arange(heights.shape[0]))
-        ax.plot_surface(x, y, heights, cmap='viridis')
-        ax.set_xlabel('X')
-        ax.set_ylabel('Y')
-        ax.set_zlabel('Height')
-        plt.title('3D Height Map')
+        ax.plot_surface(x, y, heights, cmap="viridis")
+        ax.set_xlabel("X")
+        ax.set_ylabel("Y")
+        ax.set_zlabel("Height")
+        plt.title("3D Height Map")
 
         from lift.defaults import PLOT_SAVE, PLOT_SHOW, TEST, DEBUG_PATH
+
         if PLOT_SHOW:
             plt.show()
         if PLOT_SAVE:
@@ -112,6 +113,8 @@ class NarrowSpaceNavSrv:
 if __name__ == "__main__":
     rospy.init_node("narrow_space_nav_srv", anonymous=True)
     server = NarrowSpaceNavSrv()
-    srv = rospy.Service('/narrow_space_nav_srv', HeightMap, server.process_occupancy_grid)
+    srv = rospy.Service(
+        "/narrow_space_nav_srv", HeightMap, server.process_occupancy_grid
+    )
     rospy.loginfo("String to location server initialised")
     rospy.spin()
