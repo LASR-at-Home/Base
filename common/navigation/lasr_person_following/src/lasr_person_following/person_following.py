@@ -265,8 +265,10 @@ class PersonFollower:
 
                 if "yes" in transcription.lower():
                     return True
+                else:
+                    return False
 
-            return False
+            return True
         return True
 
     def _get_pose_on_path(
