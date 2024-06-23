@@ -42,14 +42,12 @@ class PersonFollower:
     # Parameters
     _start_following_radius: float
     _start_following_angle: float
-    _min_distance_between_tracks: float
     _n_secs_static_finished: float
     _n_secs_static_plan_close: float
     _new_goal_threshold: float
     _stopping_distance: float
 
     # State
-    _latest_tracks: Union[None, PersonArray]
     _track_id: Union[None, int]
 
     # Action clients
@@ -73,7 +71,6 @@ class PersonFollower:
         self,
         start_following_radius: float = 2.0,
         start_following_angle: float = 45.0,
-        min_distance_between_tracks: float = 0.5,
         n_secs_static_finished: float = 10.0,
         n_secs_static_plan_close: float = 5.0,
         new_goal_threshold: float = 0.5,
@@ -81,7 +78,6 @@ class PersonFollower:
     ):
         self._start_following_radius = start_following_radius
         self._start_following_angle = start_following_angle
-        self._min_distance_between_tracks = min_distance_between_tracks
         self._n_secs_static_finished = n_secs_static_finished
         self._n_secs_static_plan_close = n_secs_static_plan_close
         self._new_goal_threshold = new_goal_threshold
