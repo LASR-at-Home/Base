@@ -15,5 +15,5 @@
 
     <!--      PERCEPTION     -->
     <include file="$(find lasr_vision_yolov8)/launch/service.launch" />
-    <include file="$(find lasr_vision_bodypix)/launch/service.launch" />
+    <include file="$(find lasr_vision_bodypix)/launch/mask_service.launch" />
 </launch>
