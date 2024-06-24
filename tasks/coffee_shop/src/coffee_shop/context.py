@@ -1,31 +1,30 @@
 import rospy
 import rosparam
-from tiago_controllers import BaseController, HeadController
 from lasr_voice import Voice
 from play_motion_msgs.msg import PlayMotionAction
 from control_msgs.msg import PointHeadAction
 from lasr_vision_msgs.srv import YoloDetection
-from coffee_shop.srv import TfTransform, LatestTransform, ApplyTransform
-from lasr_shapely import LasrShapely
-from lasr_speech.srv import Speech
-from cv_bridge3 import CvBridge
 import actionlib
+from move_base_msgs.msg import MoveBaseAction
 import yaml
 from visualization_msgs.msg import Marker
 import rosservice
 import time
 import random
-from std_msgs.msg import Empty, Int16
+import tf2_ros as tf2
+import tf2_geometry_msgs  # noqa
+from tf2_geometry_msgs.tf2_geometry_msgs import do_transform_pose, do_transform_point
 
 
 class Context:
     def __init__(self, config_path=None, tablet=False):
         self.tablet = tablet
 
-        self.base_controller = BaseController()
-        rospy.loginfo("Got base controller")
-        self.head_controller = HeadController()
-        rospy.loginfo("Got head controller")
+        self.move_base_client = actionlib.SimpleActionClient(
+            "/move_base", MoveBaseAction
+        )
+        self.move_base_client.wait_for_server()
+        rospy.loginfo("Got MoveBase")
         self.voice_controller = Voice()
         rospy.loginfo("Got voice controller")
         self.play_motion_client = actionlib.SimpleActionClient(
@@ -41,31 +40,9 @@ class Context:
         rospy.wait_for_service("/yolov8/detect")
         self.yolo = rospy.ServiceProxy("/yolov8/detect", YoloDetection)
         rospy.loginfo("Got YOLO")
-        rospy.wait_for_service("/tf_transform")
-        rospy.wait_for_service("/get_latest_transform")
-        rospy.wait_for_service("/apply_transform")
-        self.tf = rospy.ServiceProxy("/tf_transform", TfTransform)
-        self.tf_latest = rospy.ServiceProxy("/get_latest_transform", LatestTransform)
-        self.tf_apply = rospy.ServiceProxy("/apply_transform", ApplyTransform)
+        self.tf_buffer = tf2.Buffer()
+        self.tf_listener = tf2.TransformListener(self.tf_buffer)
         rospy.loginfo("Got TF")
-        self.shapely = LasrShapely()
-        rospy.loginfo("Got shapely")
-        self.bridge = CvBridge()
-        rospy.loginfo("CV Bridge")
-
-        self.datahub_ping = rospy.Publisher("/datahub/ping", Empty, queue_size=10)
-        self.datahub_start_episode = rospy.Publisher(
-            "/datahub/start_episode", Empty, queue_size=10
-        )
-        self.datahub_stop_epsiode = rospy.Publisher(
-            "/datahub/stop_episode", Empty, queue_size=10
-        )
-        self.datahub_start_phase = rospy.Publisher(
-            "/datahub/start_phase", Int16, queue_size=10
-        )
-        self.datahub_stop_phase = rospy.Publisher(
-            "/datahub/stop_phase", Int16, queue_size=10
-        )
 
         if not tablet:
             rospy.wait_for_service("/lasr_speech/transcribe_and_parse")
@@ -214,3 +191,16 @@ class Context:
         # Seed the random number generator with the current time
         random.seed(time.time())
         return random.choice(self.tables[self.current_table]["people"])
+
+    def tf_point(self, point_stamped, target_frame):
+        trans = self.tf_buffer.lookup_transform(
+            target_frame, point_stamped.header.frame_id, rospy.Time(0)
+        )
+        return do_transform_point(point_stamped, trans)
+
+    def tf_point_list(self, points, source_frame, target_frame):
+        trans = self.tf_buffer.lookup_transform(
+            target_frame, source_frame, rospy.Time(0)
+        )
+
+        return [do_transform_point(point, trans) for point in points]

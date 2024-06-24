@@ -1,38 +1,44 @@
-#!/usr/bin/env python3
 import smach
 import rospy
 
-from std_msgs.msg import String
 from play_motion_msgs.msg import PlayMotionGoal
 from sensor_msgs.msg import PointCloud2
 from geometry_msgs.msg import PointStamped, Point
-from common_math import pcl_msg_to_cv2, seg_to_centroid
-from coffee_shop.srv import TfTransform, TfTransformRequest
+import cv2_pcl
+import cv2_img
 import numpy as np
+
+from shapely.geometry import Point as ShapelyPoint
+from shapely.geometry.polygon import Polygon
 
 
 class CheckTable(smach.State):
     def __init__(self, context):
-        smach.State.__init__(self, outcomes=["not_finished", "finished"])
+        smach.State.__init__(
+            self,
+            outcomes=[
+                "not_finished",
+                "has_free_tables",
+                "has_needs_serving_tables",
+                "idle",
+            ],
+        )
         self.context = context
         self.detections_objects = []
         self.detections_people = []
         self.biscuits = False
 
     def estimate_pose(self, pcl_msg, detection):
-        centroid_xyz = seg_to_centroid(pcl_msg, np.array(detection.xyseg))
+        centroid_xyz = cv2_pcl.seg_to_centroid(pcl_msg, np.array(detection.xyseg))
         centroid = PointStamped()
         centroid.point = Point(*centroid_xyz)
         centroid.header = pcl_msg.header
-        tf_req = TfTransformRequest()
-        tf_req.target_frame = String("map")
-        tf_req.point = centroid
-        response = self.context.tf(tf_req)
+        centroid = self.context.tf_point(centroid, "map")
         return np.array(
             [
-                response.target_point.point.x,
-                response.target_point.point.y,
-                response.target_point.point.z,
+                centroid.point.x,
+                centroid.point.y,
+                centroid.point.z,
             ]
         )
 
@@ -57,9 +63,9 @@ class CheckTable(smach.State):
         return filtered
 
     def perform_detection(self, pcl_msg, polygon, filter, model):
-        cv_im = pcl_msg_to_cv2(pcl_msg)
-        img_msg = self.context.bridge.cv2_to_imgmsg(cv_im)
-        detections = self.context.yolo(img_msg, model, 0.6, 0.3)
+        cv_im = cv2_pcl.pcl_to_cv2(pcl_msg)
+        img_msg = cv2_img.cv2_img_to_msg(cv_im)
+        detections = self.context.yolo(img_msg, model, 0.3, 0.3)
         detections = [
             (det, self.estimate_pose(pcl_msg, det))
             for det in detections.detected_objects
@@ -67,11 +73,11 @@ class CheckTable(smach.State):
         ]
         rospy.loginfo(f"All: {[(det.name, pose) for det, pose in detections]}")
         rospy.loginfo(f"Boundary: {polygon}")
-        # satisfied_points = self.context.shapely.are_points_in_polygon_2d(self.arena_polygon, [[pose[0], pose[1]] for (_, pose) in detections]).inside
-        # detections = [detections[i] for i in range(0, len(detections)) if satisfied_points[i]]
-        satisfied_points = self.context.shapely.are_points_in_polygon_2d(
-            polygon, [[pose[0], pose[1]] for (_, pose) in detections]
-        ).inside
+        shapely_polygon = Polygon(polygon)
+        satisfied_points = [
+            shapely_polygon.contains(ShapelyPoint(pose[0], pose[1]))
+            for _, pose in detections
+        ]
         detections = [
             detections[i] for i in range(0, len(detections)) if satisfied_points[i]
         ]
@@ -114,7 +120,6 @@ class CheckTable(smach.State):
         self.person_polygon = rospy.get_param(
             f"/tables/{self.context.current_table}/persons_cuboid"
         )
-        # self.arena_polygon = rospy.get_param(f"/arena/cuboid")
         self.detections_objects = []
         self.detections_people = []
 
@@ -126,46 +131,14 @@ class CheckTable(smach.State):
             "look_right",
             "back_to_default",
         ]
-        # self.detection_sub = rospy.Subscriber("/xtion/depth_registered/points", PointCloud2, self.check)
 
-        if self.context.current_table == "table2":
-            pm_goal = PlayMotionGoal(motion_name="back_to_default", skip_planning=True)
-            self.context.play_motion_client.send_goal_and_wait(pm_goal)
-
-            pm_goal = PlayMotionGoal(
-                motion_name="check_annoying_table_low", skip_planning=True
-            )
+        for motion in motions:
+            pm_goal = PlayMotionGoal(motion_name=motion, skip_planning=True)
             self.context.play_motion_client.send_goal_and_wait(pm_goal)
             pcl_msg = rospy.wait_for_message(
                 "/xtion/depth_registered/points", PointCloud2
             )
-            self.check_table(pcl_msg)
-
-            pm_goal = PlayMotionGoal(motion_name="look_left", skip_planning=True)
-            self.context.play_motion_client.send_goal_and_wait(pm_goal)
-            pcl_msg = rospy.wait_for_message(
-                "/xtion/depth_registered/points", PointCloud2
-            )
-            self.check_people(pcl_msg)
-
-            pm_goal = PlayMotionGoal(motion_name="look_right", skip_planning=True)
-            self.context.play_motion_client.send_goal_and_wait(pm_goal)
-            pcl_msg = rospy.wait_for_message(
-                "/xtion/depth_registered/points", PointCloud2
-            )
-            self.check_people(pcl_msg)
-
-            pm_goal = PlayMotionGoal(motion_name="back_to_default", skip_planning=True)
-            self.context.play_motion_client.send_goal_and_wait(pm_goal)
-
-        else:
-            for motion in motions:
-                pm_goal = PlayMotionGoal(motion_name=motion, skip_planning=True)
-                self.context.play_motion_client.send_goal_and_wait(pm_goal)
-                pcl_msg = rospy.wait_for_message(
-                    "/xtion/depth_registered/points", PointCloud2
-                )
-                self.check(pcl_msg)
+            self.check(pcl_msg)
 
         status = "unknown"
         if len(self.detections_objects) > 0 and len(self.detections_people) == 0:
@@ -177,9 +150,6 @@ class CheckTable(smach.State):
         elif len(self.detections_objects) == 0 and len(self.detections_people) == 0:
             status = "ready"
 
-        # self.detection_sub.unregister()
-
-        # self.detections_objects = self.filter_detections_by_pose(self.detections_objects, threshold=0.1)
         self.detections_people = self.filter_detections_by_pose(
             self.detections_people, threshold=0.6
         )
@@ -199,14 +169,28 @@ class CheckTable(smach.State):
         self.context.voice_controller.sync_tts(f"{status_text} {count_text}")
 
         self.context.start_head_manager("head_manager", "")
-        return (
-            "not_finished"
-            if len(
-                [
-                    (label, table)
-                    for label, table in self.context.tables.items()
-                    if table["status"] == "unvisited"
-                ]
-            )
-            else "finished"
-        )
+
+        unvisited_tables = [
+            (label, table)
+            for label, table in self.context.tables.items()
+            if table["status"] == "unvisited"
+        ]
+        free_tables = [
+            (label, table)
+            for label, table in self.context.tables.items()
+            if table["status"] == "ready"
+        ]
+        needs_serving_tables = [
+            (label, table)
+            for label, table in self.context.tables.items()
+            if table["status"] == "needs serving"
+        ]
+
+        if len(unvisited_tables) > 0:
+            return "not_finished"
+        elif len(needs_serving_tables) > 0:
+            return "has_needs_serving_tables"
+        elif len(free_tables) > 0:
+            return "has_free_tables"
+        else:
+            return "idle"

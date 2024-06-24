@@ -1,14 +1,14 @@
 import smach
-
+import smach_ros
 from lasr_skills import (
     WaitForPerson,
-    DetectPointingDirection,
     Say,
     DetectGesture,
     ReceiveObject,
+    HandoverObject,
 )
-
-import rospy
+from lasr_skills.vision import GetCroppedImage
+from lasr_person_following.msg import FollowAction
 
 
 class CarryMyLuggage(smach.StateMachine):
@@ -39,6 +39,27 @@ class CarryMyLuggage(smach.StateMachine):
                 "WAIT_FOR_PERSON",
                 WaitForPerson(),
                 transitions={
+                    "succeeded": "SAY_POINT_TO_BAG",
+                    "failed": "failed",
+                },
+            )
+
+            smach.StateMachine.add(
+                "SAY_POINT_TO_BAG",
+                Say(text="Please point to the bag that you wish me to carry."),
+                transitions={
+                    "succeeded": "GET_IMAGE",
+                    "aborted": "failed",
+                    "preempted": "failed",
+                },
+            )
+
+            smach.StateMachine.add(
+                "GET_IMAGE",
+                GetCroppedImage(
+                    object_name="person", crop_method="closest", use_mask=True
+                ),
+                transitions={
                     "succeeded": "DETECT_POINTING_DIRECTION",
                     "failed": "failed",
                 },
@@ -68,7 +89,7 @@ class CarryMyLuggage(smach.StateMachine):
                     text="I could not detect the direction that you are pointing. I'll try again."
                 ),
                 transitions={
-                    "succeeded": "DETECT_POINTING_DIRECTION",
+                    "succeeded": "GET_IMAGE",
                     "aborted": "failed",
                     "preempted": "failed",
                 },
@@ -87,7 +108,49 @@ class CarryMyLuggage(smach.StateMachine):
 
             smach.StateMachine.add(
                 "RECEIVE_BAG",
-                ReceiveObject(object_name="bag", vertical=False),
+                ReceiveObject(object_name="bag", vertical=True),
+                transitions={
+                    "succeeded": "SAY_FOLLOW",
+                    "failed": "failed",
+                },
+            )
+
+            smach.StateMachine.add(
+                "SAY_FOLLOW",
+                Say(text="I will follow you now."),
+                transitions={
+                    "succeeded": "FOLLOW",
+                    "aborted": "failed",
+                    "preempted": "failed",
+                },
+            )
+
+            smach.StateMachine.add(
+                "FOLLOW",
+                smach_ros.SimpleActionState(
+                    "follow_person",
+                    FollowAction,
+                ),
+                transitions={
+                    "succeeded": "SAY_HANDOVER",
+                    "aborted": "failed",
+                    "preempted": "failed",
+                },
+            )
+
+            smach.StateMachine.add(
+                "SAY_HANDOVER",
+                Say(text="I will hand over the bag to you now."),
+                transitions={
+                    "succeeded": "HANDOVER",
+                    "aborted": "failed",
+                    "preempted": "failed",
+                },
+            )
+
+            smach.StateMachine.add(
+                "HANDOVER",
+                HandoverObject(object_name="bag", vertical=True),
                 transitions={
                     "succeeded": "succeeded",
                     "failed": "failed",

@@ -2,7 +2,6 @@ import numpy as np
 from lasr_vision_feature_extraction.categories_and_attributes import (
     CategoriesAndAttributes,
 )
-import json
 
 
 def _softmax(x: list[float]) -> list[float]:
@@ -91,7 +90,7 @@ class ImageOfPerson(ImageWithMasksAndAttributes):
             categories_and_attributes=parent_instance.categories_and_attributes,
         )
 
-    def describe(self) -> str:
+    def describe(self) -> dict:
         male = (
             self.attributes["Male"]
             > self.categories_and_attributes.thresholds_pred["Male"],
@@ -194,8 +193,7 @@ class ImageOfPerson(ImageWithMasksAndAttributes):
                 "has_hair": has_hair[0],
                 "hair_colour": hair_colour_str,
                 "hair_shape": hair_shape_str,
-                "male": male[0],
-                "facial_hair": facial_hair[0],
+                "facial_hair": facial_hair[0] != "No_Beard",
                 "hat": hat[0],
                 "glasses": glasses[0],
                 "earrings": earrings[0],
@@ -205,6 +203,106 @@ class ImageOfPerson(ImageWithMasksAndAttributes):
             "description": description,
         }
 
-        result = json.dumps(result, indent=4)
+        return result
+
+
+class ImageOfCloth(ImageWithMasksAndAttributes):
+    def __init__(
+        self,
+        image: np.ndarray,
+        masks: dict[str, np.ndarray],
+        attributes: dict[str, float],
+        categories_and_attributes: CategoriesAndAttributes,
+    ):
+        super().__init__(image, masks, attributes, categories_and_attributes)
+
+    @classmethod
+    def from_parent_instance(
+        cls, parent_instance: ImageWithMasksAndAttributes
+    ) -> "ImageOfCloth":
+        """
+        Creates an instance of ImageOfCloth using the properties of an
+        instance of ImageWithMasksAndAttributes.
+        """
+        return cls(
+            image=parent_instance.image,
+            masks=parent_instance.masks,
+            attributes=parent_instance.attributes,
+            categories_and_attributes=parent_instance.categories_and_attributes,
+        )
+
+    def describe(self) -> dict:
+        top = (
+            self.attributes["top"]
+            > self.categories_and_attributes.thresholds_pred["top"]
+        )
+        down = (
+            self.attributes["down"]
+            > self.categories_and_attributes.thresholds_pred["down"]
+        )
+        dress = (
+            self.attributes["dress"]
+            > self.categories_and_attributes.thresholds_pred["dress"]
+        )
+        outwear = (
+            self.attributes["outwear"]
+            > self.categories_and_attributes.thresholds_pred["outwear"]
+        )
+
+        result = {
+            # not in a loop for now, likely to add more logic combined with a classifier of more specific cloth classes.
+            "attributes": {},
+            "description": "this descrcription will be completed if we find out it is better to do it here.",
+        }
+
+        for attribute in [
+            "short sleeve top",
+            "long sleeve top",
+            "short sleeve outwear",
+            "long sleeve outwear",
+            "short sleeve dress",
+            "long sleeve dress",
+            "vest dress",
+            "sling dress",
+            "sleeveless top",
+        ]:
+            result["attributes"][attribute] = False
+
+        if top:
+            max_prob = 0.0
+            max_attribute = "short sleeve top"
+            for attribute in ["short sleeve top", "long sleeve top", "vest", "sling"]:
+                if self.attributes[attribute] > max_prob:
+                    max_prob = self.attributes[attribute]
+                    max_attribute = attribute
+            if max_attribute in ["vest", "sling"]:
+                max_attribute = "sleeveless top"
+            result["attributes"][max_attribute] = True
+
+        if outwear:
+            max_prob = 0.0
+            max_attribute = "short sleeve outwear"
+            for attribute in [
+                "short sleeve outwear",
+                "long sleeve outwear",
+            ]:
+                if self.attributes[attribute] > max_prob:
+                    max_prob = self.attributes[attribute]
+                    max_attribute = attribute
+            result["attributes"][max_attribute] = True
+
+        if dress:
+            max_prob = 0.0
+            max_attribute = "short sleeve dress"
+            for attribute in [
+                "short sleeve dress",
+                "long sleeve dress",
+                "vest dress",
+                "sling dress",
+            ]:
+                if self.attributes[attribute] > max_prob:
+                    max_prob = self.attributes[attribute]
+                    max_attribute = attribute
+            result["attributes"][max_attribute] = True
 
         return result

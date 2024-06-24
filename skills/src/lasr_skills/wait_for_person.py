@@ -1,6 +1,7 @@
 import smach
 
 from lasr_skills import Detect
+from lasr_skills.vision import GetImage
 
 
 class WaitForPerson(smach.StateMachine):
@@ -28,12 +29,18 @@ class WaitForPerson(smach.StateMachine):
 
         with self:
             smach.StateMachine.add(
+                "GET_IMAGE",
+                GetImage(topic=image_topic),
+                transitions={"succeeded": "DETECT_PEOPLE", "failed": "failed"},
+            )
+
+            smach.StateMachine.add(
                 "DETECT_PEOPLE",
-                Detect(image_topic=image_topic, filter=["person"]),
+                Detect(filter=["person"]),
                 transitions={"succeeded": "CHECK_FOR_PERSON", "failed": "failed"},
             )
             smach.StateMachine.add(
                 "CHECK_FOR_PERSON",
                 self.CheckForPerson(),
-                transitions={"done": "succeeded", "not_done": "DETECT_PEOPLE"},
+                transitions={"done": "succeeded", "not_done": "GET_IMAGE"},
             )

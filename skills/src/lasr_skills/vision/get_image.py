@@ -1,6 +1,7 @@
 import os
 import smach
 import rospy
+from typing import Optional
 from sensor_msgs.msg import Image, PointCloud2
 
 
@@ -9,7 +10,7 @@ class GetImage(smach.State):
     State for reading an sensor_msgs Image message
     """
 
-    def __init__(self, topic: str = None):
+    def __init__(self, topic: Optional[str] = None):
         smach.State.__init__(
             self, outcomes=["succeeded", "failed"], output_keys=["img_msg"]
         )
@@ -18,7 +19,7 @@ class GetImage(smach.State):
             self.topic = (
                 "/xtion/rgb/image_raw"
                 if "tiago" in os.environ["ROS_MASTER_URI"]
-                else "/usb_cam/image_raw"
+                else "/camera/image_raw"
             )
         else:
             self.topic = topic
@@ -38,7 +39,7 @@ class GetPointCloud(smach.State):
     State for acquiring a PointCloud2 message.
     """
 
-    def __init__(self, topic: str = None):
+    def __init__(self, topic: Optional[str] = None):
         smach.State.__init__(
             self, outcomes=["succeeded", "failed"], output_keys=["pcl_msg"]
         )
@@ -63,7 +64,7 @@ class GetImageAndPointCloud(smach.State):
     State for acquiring Image and PointCloud2 messages simultaneously.
     """
 
-    def __init__(self, topic: str = None):
+    def __init__(self):
         smach.State.__init__(
             self, outcomes=["succeeded", "failed"], output_keys=["img_msg", "pcl_msg"]
         )

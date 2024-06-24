@@ -7,29 +7,20 @@ import { SetStateAction, useState } from "react";
 type State = "edit" | "confirm";
 
 type Item =
-  | "coffee"
-  | "biscuits"
-  | "sandwich"
-  | "orange_juice"
-  | "smoothie"
-  | "granola";
+  | "cup"
+  // | "banana"
+  | "bottle";
 
 const items: Item[] = [
-  "coffee",
-  "biscuits",
-  "sandwich",
-  "orange_juice",
-  "smoothie",
-  "granola",
+  "cup",
+  // "banana",
+  "bottle",
 ];
 
 const NAMES: { [key in Item]: string } = {
-  coffee: 'Coffee',
-  biscuits: 'Biscuits',
-  sandwich: 'Sandwich',
-  orange_juice: 'Juice',
-  smoothie: 'Smoothie',
-  granola: 'Granola'
+  cup: 'Coffee',
+  // banana: 'Banana',
+  bottle: 'Coca Cola'
 }
 
 export function CreateOrder({ finish }: { finish: (order: Item[]) => void }) {
@@ -118,14 +109,9 @@ function EditMode({
   return (
     <>
       <div className="flex flex-row gap-4 flex-[2] min-h-0">
-        <Card item="coffee" order={order} setOrder={setOrder} />
-        <Card item="sandwich" order={order} setOrder={setOrder} />
-        <Card item="smoothie" order={order} setOrder={setOrder} />
-      </div>
-      <div className="flex flex-row gap-4 flex-[2] min-h-0">
-        <Card item="orange_juice" order={order} setOrder={setOrder} />
-        <Card item="granola" order={order} setOrder={setOrder} />
-        <Card item="biscuits" order={order} setOrder={setOrder} />
+        <Card item="cup" order={order} setOrder={setOrder} />
+        {/* <Card item="banana" order={order} setOrder={setOrder} /> */}
+        <Card item="bottle" order={order} setOrder={setOrder} />
       </div>
       <div className="flex flex-row gap-4 flex-1">
         <div

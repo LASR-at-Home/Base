@@ -6,7 +6,19 @@ from shapely.geometry import Polygon
 
 import numpy as np
 
+<<<<<<< HEAD
 from lasr_skills import PlayMotion, Detect3DInArea, LookToPoint, Say, WaitForPerson
+=======
+from geometry_msgs.msg import Point, PointStamped
+from lasr_skills import (
+    PlayMotion,
+    Detect3DInArea,
+    LookToPoint,
+    Say,
+    WaitForPerson,
+    Wait,
+)
+>>>>>>> 5026ebfb0cc02564e84da9d05b79c6aa6d85b8f3
 
 
 class GuestSeatWait(smach.State):
@@ -66,7 +78,7 @@ class SeatGuest(smach.StateMachine):
                         break
 
                 if seat_is_empty:
-                    userdata.seat_position = seat.point
+                    userdata.seat_position = PointStamped(point=seat.point)
                     print(seat.point)
                     return "succeeded"
 
@@ -135,10 +147,14 @@ class SeatGuest(smach.StateMachine):
                 transitions={
                     "succeeded": "SAY_SIT",
                     "aborted": "failed",
+<<<<<<< HEAD
                     "preempted": "failed",
                     "timed_out": "SAY_SIT"
+=======
+                    "timed_out": "SAY_SIT",
+>>>>>>> 5026ebfb0cc02564e84da9d05b79c6aa6d85b8f3
                 },
-                remapping={"point": "seat_position"},
+                remapping={"pointstamped": "seat_position"},
             )
             smach.StateMachine.add(
                 "SAY_SIT",
@@ -148,11 +164,20 @@ class SeatGuest(smach.StateMachine):
                     "aborted": "failed",
                     "preempted": "failed",
                 },
+<<<<<<< HEAD
             )  
 
             smach.StateMachine.add(
                 "WAIT_FOR_GUEST_SEAT",
                 GuestSeatWait(),
+=======
+            )
+
+            smach.StateMachine.add(
+                "WAIT_FOR_GUEST_SEAT",
+                # Number of seconds to wait for passed in as argument
+                Wait(5),
+>>>>>>> 5026ebfb0cc02564e84da9d05b79c6aa6d85b8f3
                 transitions={
                     "succeeded": "RESET_HEAD",
                     "failed": "RESET_HEAD",

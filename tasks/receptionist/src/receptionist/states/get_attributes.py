@@ -1,37 +1,47 @@
-"""
-State for calling the service to get a set of guest attributes.
-Currently incomplete.
-"""
-
-import rospy
 import smach
 from smach import UserData
+<<<<<<< HEAD
 from typing import List, Any, Dict, Union
 from lasr_vision_msgs.srv import VqaRequest, VqaResponse, Vqa
 
+=======
+from lasr_skills import DescribePeople
+import json
 
-class GetGuestAttributes(smach.State):
+
+class GetGuestAttributes(smach.StateMachine):
+    class HandleGuestAttributes(smach.State):
+        def __init__(self, guest_id: str):
+            smach.State.__init__(
+                self,
+                outcomes=["succeeded", "failed"],
+                input_keys=["people", "guest_data"],
+                output_keys=["guest_data"],
+            )
+
+            self._guest_id: str = guest_id
+
+        def execute(self, userdata: UserData) -> str:
+            if len(userdata.people) == 0:
+                return "failed"
+            userdata.guest_data[self._guest_id]["attributes"] = json.loads(
+                userdata.people[0]["features"]
+            )["attributes"]
+            return "succeeded"
+>>>>>>> 5026ebfb0cc02564e84da9d05b79c6aa6d85b8f3
+
     def __init__(
         self,
         guest_id: str,
-        attribute_service: Union[str, None] = None,
-        outcomes: List[str] = ["succeeded", "failed"],
-        input_keys: List[str] = ["guest_id", "guest_data"],
-        output_keys: List[str] = ["guest_data"],
     ):
-        """Calls and parses the service that gets a set of guest attributes.
-
-        Args:
-            attribute_service (str): Name of the service to call that returns the guest's attributes.
-        """
-
-        super().__init__(
-            outcomes=outcomes,
-            input_keys=input_keys,
-            output_keys=output_keys,
+        smach.StateMachine.__init__(
+            self,
+            outcomes=["succeeded", "failed"],
+            input_keys=["guest_data"],
+            output_keys=["guest_data"],
         )
-        self._service_proxy = rospy.ServiceProxy("/clip_vqa/query_service", Vqa)
         self._guest_id: str = guest_id
+<<<<<<< HEAD
         self._attribute_service: Union[str, None] = attribute_service
 
     def _call_attribute_service(self):
@@ -118,5 +128,23 @@ class GetGuestAttributes(smach.State):
 
 
 
+=======
+>>>>>>> 5026ebfb0cc02564e84da9d05b79c6aa6d85b8f3
 
-        return "succeeded"
+        with self:
+            smach.StateMachine.add(
+                "GET_GUEST_ATTRIBUTES",
+                DescribePeople(),
+                transitions={
+                    "succeeded": "HANDLE_GUEST_ATTRIBUTES",
+                    "failed": "failed",
+                },
+            )
+            smach.StateMachine.add(
+                "HANDLE_GUEST_ATTRIBUTES",
+                self.HandleGuestAttributes(self._guest_id),
+                transitions={
+                    "succeeded": "succeeded",
+                    "failed": "failed",
+                },
+            )
