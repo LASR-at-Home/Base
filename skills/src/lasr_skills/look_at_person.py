@@ -2,8 +2,10 @@ import smach_ros
 from geometry_msgs.msg import PointStamped
 import smach
 from .vision import GetPointCloud
-from lasr_vision_msgs.srv import BodyPixDetection, BodyPixDetectionRequest
-from lasr_vision_msgs.msg import BodyPixMaskRequest
+from lasr_vision_msgs.srv import (
+    BodyPixKeypointDetection,
+    BodyPixKeypointDetectionRequest,
+)
 from lasr_skills import LookToPoint, DetectFaces
 import cv2
 import rospy
@@ -155,38 +157,39 @@ class LookAtPerson(smach.StateMachine):
 
             return "failed"
 
-    @smach.cb_interface(input_keys=["poses", "detections"], output_keys=["bbox_eyes"])
+    @smach.cb_interface(
+        input_keys=["keypoints", "detections"], output_keys=["bbox_eyes"]
+    )
     def match_poses_and_detections(ud):
         bbox_eyes = []
-        for pose in ud.poses:
+        for keypoint in ud.keypoints:
             for detection in ud.detections.detections:
                 temp = {
                     "bbox": detection.xywh,
                 }
-                for keypoint in pose.keypoints:
-                    if (
-                        keypoint.part == "leftEye"
-                        and detection.xywh[0]
-                        < keypoint.xy[0]
-                        < detection.xywh[0] + detection.xywh[2]
-                        and detection.xywh[1]
-                        < keypoint.xy[1]
-                        < detection.xywh[1] + detection.xywh[3]
-                    ):
-                        temp["left_eye"] = keypoint.xy
-                    if (
-                        keypoint.part == "rightEye"
-                        and detection.xywh[0]
-                        < keypoint.xy[0]
-                        < detection.xywh[0] + detection.xywh[2]
-                        and detection.xywh[1]
-                        < keypoint.xy[1]
-                        < detection.xywh[1] + detection.xywh[3]
-                    ):
-                        temp["right_eye"] = keypoint.xy
+                if (
+                    keypoint.keypoint_name == "leftEye"
+                    and detection.xywh[0]
+                    < keypoint.x
+                    < detection.xywh[0] + detection.xywh[2]
+                    and detection.xywh[1]
+                    < keypoint.y
+                    < detection.xywh[1] + detection.xywh[3]
+                ):
+                    temp["left_eye"] = keypoint.x, keypoint.y
+                if (
+                    keypoint.keypoint_name == "rightEye"
+                    and detection.xywh[0]
+                    < keypoint.x
+                    < detection.xywh[0] + detection.xywh[2]
+                    and detection.xywh[1]
+                    < keypoint.y
+                    < detection.xywh[1] + detection.xywh[3]
+                ):
+                    temp["right_eye"] = keypoint.x, keypoint.y
 
-                    if "left_eye" in temp and "right_eye" in temp:
-                        bbox_eyes.append(temp)
+                if "left_eye" in temp and "right_eye" in temp:
+                    bbox_eyes.append(temp)
 
         ud.bbox_eyes = bbox_eyes
 
@@ -226,21 +229,17 @@ class LookAtPerson(smach.StateMachine):
                         },
                     )
 
-            eyes = BodyPixMaskRequest()
-            eyes.parts = ["left_eye", "right_eye"]
-            masks = [eyes]
-
             smach.StateMachine.add(
                 "SEGMENT_PERSON",
                 smach_ros.ServiceState(
-                    "/bodypix/detect",
-                    BodyPixDetection,
-                    request_cb=lambda ud, _: BodyPixDetectionRequest(
-                        pcl_to_img_msg(ud.pcl_msg), "resnet50", 0.7, masks
+                    "/bodypix/keypoint_detection",
+                    BodyPixKeypointDetection,
+                    request_cb=lambda ud, _: BodyPixKeypointDetectionRequest(
+                        pcl_to_img_msg(ud.pcl_msg), "resnet50", 0.2
                     ),
-                    response_slots=["masks", "poses"],
+                    response_slots=["keypoints"],
                     input_keys=["pcl_msg"],
-                    output_keys=["masks", "poses"],
+                    output_keys=["keypoints"],
                 ),
                 transitions={
                     "succeeded": "DETECT_FACES",
@@ -262,8 +261,8 @@ class LookAtPerson(smach.StateMachine):
                 "MATCH_POSES_AND_DETECTIONS",
                 CBState(
                     self.match_poses_and_detections,
-                    input_keys=["poses", "detections"],
-                    output_keys=["poses"],
+                    input_keys=["keypoints", "detections"],
+                    output_keys=["keypoints"],
                     outcomes=["succeeded", "failed"],
                 ),
                 transitions={"succeeded": "CHECK_EYES", "failed": "failed"},
