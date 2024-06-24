@@ -83,14 +83,9 @@ class Receptionist(smach.StateMachine):
                 },
             )
 
-<<<<<<< HEAD
-
-            ######## Asking first Guest for Drink and Name ######
-=======
             """ 
             Asking first Guest for Drink and Name
             """
->>>>>>> 5026ebfb0cc02564e84da9d05b79c6aa6d85b8f3
 
             smach.StateMachine.add(
                 "GET_NAME_AND_DRINK_GUEST_1",
@@ -105,61 +100,15 @@ class Receptionist(smach.StateMachine):
                 "PARSE_NAME_AND_DRINK_GUEST_1",
                 ParseNameAndDrink("guest1"),
                 transitions={
-<<<<<<< HEAD
-                    "succeeded": "GET_GUEST_ATTRIBUTES_GUEST_1",
-                    "failed": "REPEAT_GET_NAME_AND_DRINK_GUEST_1",
-                },
-                remapping={"guest_transcription": "transcribed_speech"},
-            )
-
-
-            smach.StateMachine.add(
-                "REPEAT_GET_NAME_AND_DRINK_GUEST_1",
-                AskAndListen("Sorry, I didn't get that. What is your name and favourite drink?"),
-                transitions={
-                    "succeeded": "REPEAT_PARSE_NAME_AND_DRINK_GUEST_1",
-                    "failed": "SAY_CONTINUE",
-                },
-            )
-
-
-            smach.StateMachine.add(
-                "REPEAT_PARSE_NAME_AND_DRINK_GUEST_1",
-                ParseNameAndDrink("guest1"),
-                transitions={
-                    "succeeded": "GET_GUEST_ATTRIBUTES_GUEST_1",
-                    "failed": "SAY_CONTINUE",
-=======
                     "succeeded": "SAY_GET_GUEST_ATTRIBUTE_1",
                     "failed": "REPEAT_GET_NAME_AND_DRINK_GUEST_1",
                     "failed_name": "REPEAT_GET_NAME_GUEST_1",
                     "failed_drink": "REPEAT_GET_DRINK_GUEST_1",
->>>>>>> 5026ebfb0cc02564e84da9d05b79c6aa6d85b8f3
                 },
                 remapping={"guest_transcription": "transcribed_speech"},
             )
 
             smach.StateMachine.add(
-<<<<<<< HEAD
-                "SAY_CONTINUE",
-                Say(text="Sorry, I didn't get that. I will carry on."),
-                transitions={
-                    "succeeded": "GET_GUEST_ATTRIBUTES_GUEST_1",
-                    "aborted": "GET_GUEST_ATTRIBUTES_GUEST_1",
-                    "preempted": "GET_GUEST_ATTRIBUTES_GUEST_1",
-                },
-            )
-
-
-          
-
-
-
-
-
-
-            ####### GET GUEST ATTRIBUTES ######
-=======
                 "REPEAT_GET_NAME_AND_DRINK_GUEST_1",
                 AskAndListen(
                     "Sorry, I didn't get that. What is your name and favourite drink?"
@@ -258,7 +207,6 @@ class Receptionist(smach.StateMachine):
                     "preempted": "GET_GUEST_ATTRIBUTES_GUEST_1",
                 },
             )
->>>>>>> 5026ebfb0cc02564e84da9d05b79c6aa6d85b8f3
 
             smach.StateMachine.add(
                 "GET_GUEST_ATTRIBUTES_GUEST_1",
@@ -371,12 +319,8 @@ class Receptionist(smach.StateMachine):
                 ),
                 transitions={
                     "succeeded": "INTRODUCE_HOST_TO_GUEST_1",
-<<<<<<< HEAD
-                    "failed": "INTRODUCE_HOST_TO_GUEST_1",
-=======
                     "timed_out": "INTRODUCE_HOST_TO_GUEST_1",
                     "aborted": "INTRODUCE_HOST_TO_GUEST_1",
->>>>>>> 5026ebfb0cc02564e84da9d05b79c6aa6d85b8f3
                 },
             )
 
@@ -393,13 +337,8 @@ class Receptionist(smach.StateMachine):
                 "SEAT_GUEST_1",
                 SeatGuest(seat_area),
                 transitions={
-<<<<<<< HEAD
-                    "succeeded": "GO_TO_WAIT_LOCATION_GUEST_2",
-                    "failed": "GO_TO_WAIT_LOCATION_GUEST_2",
-=======
                     "succeeded": "SAY_RETURN_WAITING_AREA",
                     "failed": "SAY_RETURN_WAITING_AREA",
->>>>>>> 5026ebfb0cc02564e84da9d05b79c6aa6d85b8f3
                 },
             )
 
@@ -445,14 +384,9 @@ class Receptionist(smach.StateMachine):
                 },
             )
 
-<<<<<<< HEAD
-
-            ####### Asking second guest for drink and name #######
-=======
             """
             Asking second guest for drink and name
             """
->>>>>>> 5026ebfb0cc02564e84da9d05b79c6aa6d85b8f3
 
             smach.StateMachine.add(
                 "GET_NAME_AND_DRINK_GUEST_2",
@@ -467,29 +401,14 @@ class Receptionist(smach.StateMachine):
                 "PARSE_NAME_AND_DRINK_GUEST_2",
                 ParseNameAndDrink("guest2"),
                 transitions={
-<<<<<<< HEAD
-                    "succeeded": "GET_GUEST_ATTRIBUTES_GUEST_2",
-                    "failed": "REPEAT_GET_NAME_AND_DRINK_GUEST_2",
-=======
                     "succeeded": "SAY_GET_GUEST_ATTRIBUTE_2",
                     "failed": "REPEAT_GET_NAME_AND_DRINK_GUEST_2",
                     "failed_name": "REPEAT_GET_NAME_GUEST_2",
                     "failed_drink": "REPEAT_GET_DRINK_GUEST_2",
->>>>>>> 5026ebfb0cc02564e84da9d05b79c6aa6d85b8f3
                 },
                 remapping={"guest_transcription": "transcribed_speech"},
             )
 
-<<<<<<< HEAD
-
-
-            smach.StateMachine.add(
-                "REPEAT_GET_NAME_AND_DRINK_GUEST_2",
-                AskAndListen("Sorry, I didn't get that. What is your name and favourite drink?"),
-                transitions={
-                    "succeeded": "REPEAT_PARSE_NAME_AND_DRINK_GUEST_2",
-                    "failed": "SAY_CONTINUE_2",
-=======
             smach.StateMachine.add(
                 "REPEAT_GET_NAME_AND_DRINK_GUEST_2",
                 AskAndListen(
@@ -498,18 +417,11 @@ class Receptionist(smach.StateMachine):
                 transitions={
                     "succeeded": "REPEAT_PARSE_NAME_AND_DRINK_GUEST_2",
                     "failed": "SAY_CONTINUE_GUEST_2",
->>>>>>> 5026ebfb0cc02564e84da9d05b79c6aa6d85b8f3
                 },
             )
 
             smach.StateMachine.add(
                 "REPEAT_PARSE_NAME_AND_DRINK_GUEST_2",
-<<<<<<< HEAD
-                ParseNameAndDrink("guest1"),
-                transitions={
-                    "succeeded": "GET_GUEST_ATTRIBUTES_GUEST_2",
-                    "failed": "SAY_CONTINUE_2",
-=======
                 ParseNameAndDrink("guest2"),
                 transitions={
                     "succeeded": "SAY_GET_GUEST_ATTRIBUTE_2",
@@ -539,18 +451,10 @@ class Receptionist(smach.StateMachine):
                 transitions={
                     "succeeded": "SAY_GET_GUEST_ATTRIBUTE_2",
                     "failed": "SAY_CONTINUE_GUEST_2",
->>>>>>> 5026ebfb0cc02564e84da9d05b79c6aa6d85b8f3
                 },
                 remapping={"guest_transcription": "transcribed_speech"},
             )
 
-<<<<<<< HEAD
-
-            smach.StateMachine.add(
-                "SAY_CONTINUE_2",
-                Say(text="Sorry, I didn't get that. I will carry on."),
-                transitions={
-=======
             """
             Recovery for only drink not recognised
             """
@@ -592,7 +496,6 @@ class Receptionist(smach.StateMachine):
                     text="Please look into my eyes, I am about to detect your attributes."
                 ),
                 transitions={
->>>>>>> 5026ebfb0cc02564e84da9d05b79c6aa6d85b8f3
                     "succeeded": "GET_GUEST_ATTRIBUTES_GUEST_2",
                     "aborted": "GET_GUEST_ATTRIBUTES_GUEST_2",
                     "preempted": "GET_GUEST_ATTRIBUTES_GUEST_2",
@@ -656,9 +559,6 @@ class Receptionist(smach.StateMachine):
                 },
             )
 
-<<<<<<< HEAD
-            # Look at guest 2 
-=======
             # INTRODUCE GUEST 2 TO HOST
 
             smach.StateMachine.add(
@@ -712,7 +612,6 @@ class Receptionist(smach.StateMachine):
                     "aborted": "FIND_AND_LOOK_AT_GUEST_1",
                 },
             )
->>>>>>> 5026ebfb0cc02564e84da9d05b79c6aa6d85b8f3
 
             smach.StateMachine.add(
                 "FIND_AND_LOOK_AT_GUEST_1",
@@ -725,13 +624,8 @@ class Receptionist(smach.StateMachine):
                     ],
                 ),
                 transitions={
-<<<<<<< HEAD
-                    "succeeded": "INTRODUCE_HOST_TO_GUEST_2",
-                    "failed": "INTRODUCE_HOST_TO_GUEST_2",
-=======
                     "succeeded": "INTRODUCE_GUEST_2_TO_GUEST_1",
                     "failed": "LOOK_AT_WAITING_GUEST_2_3",
->>>>>>> 5026ebfb0cc02564e84da9d05b79c6aa6d85b8f3
                 },
             )
 
@@ -767,12 +661,8 @@ class Receptionist(smach.StateMachine):
                 ),
                 transitions={
                     "succeeded": "INTRODUCE_GUEST_1_TO_GUEST_2",
-<<<<<<< HEAD
-                    "failed": "INTRODUCE_GUEST_1_TO_GUEST_2",
-=======
                     "timed_out": "INTRODUCE_GUEST_1_TO_GUEST_2",
                     "aborted": "INTRODUCE_GUEST_1_TO_GUEST_2",
->>>>>>> 5026ebfb0cc02564e84da9d05b79c6aa6d85b8f3
                 },
             )
 
@@ -790,14 +680,10 @@ class Receptionist(smach.StateMachine):
             smach.StateMachine.add(
                 "SEAT_GUEST_2",
                 SeatGuest(seat_area),
-<<<<<<< HEAD
-                transitions={"succeeded": "GO_TO_FINISH_LOCATION", "failed": "GO_TO_FINISH_LOCATION"},
-=======
                 transitions={
                     "succeeded": "SAY_GOODBYE",
                     "failed": "SAY_GOODBYE",
                 },
->>>>>>> 5026ebfb0cc02564e84da9d05b79c6aa6d85b8f3
             )
 
             """

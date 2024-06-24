@@ -13,11 +13,7 @@ class ParseNameAndDrink(smach.State):
     def __init__(
         self,
         guest_id: str,
-<<<<<<< HEAD
-        param_key: str = "/priors",
-=======
         param_key: str = "/receptionist/priors",
->>>>>>> 5026ebfb0cc02564e84da9d05b79c6aa6d85b8f3
     ):
         """Parses the transcription of the guests' name and favourite drink.
 

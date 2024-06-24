@@ -147,12 +147,7 @@ class SeatGuest(smach.StateMachine):
                 transitions={
                     "succeeded": "SAY_SIT",
                     "aborted": "failed",
-<<<<<<< HEAD
-                    "preempted": "failed",
-                    "timed_out": "SAY_SIT"
-=======
                     "timed_out": "SAY_SIT",
->>>>>>> 5026ebfb0cc02564e84da9d05b79c6aa6d85b8f3
                 },
                 remapping={"pointstamped": "seat_position"},
             )
@@ -164,20 +159,12 @@ class SeatGuest(smach.StateMachine):
                     "aborted": "failed",
                     "preempted": "failed",
                 },
-<<<<<<< HEAD
-            )  
-
-            smach.StateMachine.add(
-                "WAIT_FOR_GUEST_SEAT",
-                GuestSeatWait(),
-=======
             )
 
             smach.StateMachine.add(
                 "WAIT_FOR_GUEST_SEAT",
                 # Number of seconds to wait for passed in as argument
                 Wait(5),
->>>>>>> 5026ebfb0cc02564e84da9d05b79c6aa6d85b8f3
                 transitions={
                     "succeeded": "RESET_HEAD",
                     "failed": "RESET_HEAD",
