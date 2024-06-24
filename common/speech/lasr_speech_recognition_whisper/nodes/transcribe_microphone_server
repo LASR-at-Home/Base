@@ -44,7 +44,7 @@ class speech_model_params:
     timer_duration: Optional[int] = 20
     warmup: bool = True
     energy_threshold: Optional[int] = 600
-    phrase_duration: Optional[float] = 0.8
+    pause_threshold: Optional[float] = 2.0
 
 
 class TranscribeSpeechAction(object):
