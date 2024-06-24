@@ -26,23 +26,25 @@ class speech_model_params:
         Must be a valid Whisper model name.
         device (str, optional): Device to run the model on. Defaults to "cuda" if available, otherwise "cpu".
         start_timeout (float): Max number of seconds of silence when starting listening before stopping. Defaults to 5.0.
-        end_timeout (Optional[float]): Max number of seconds of silence after starting listening before stopping. Defaults to None.
+        phrase_duration (Optional[float]): Max number of seconds of the phrase. Defaults to 10 seconds.
         sample_rate (int): Sample rate of the microphone. Defaults to 16000Hz.
         mic_device (Optional[str]): Microphone device index or name. Defaults to None.
         timer_duration (Optional[int]): Duration of the timer for adjusting the microphone for ambient noise. Defaults to 20 seconds.
         warmup (bool): Whether to warmup the model by running inference on a test file. Defaults to True.
         energy_threshold (Optional[int]): Energy threshold for silence detection. Using this disables automatic adjustment. Defaults to None.
+        pause_threshold (Optional[float]): Seconds of non-speaking audio before a phrase is considered complete. Defaults to 0.8 seconds.
     """
 
     model_name: str = "medium.en"
     device: str = "cuda" if torch.cuda.is_available() else "cpu"
     start_timeout: float = 5.0
-    end_timeout: Optional[float] = 10
+    phrase_duration: Optional[float] = 10
     sample_rate: int = 16000
     mic_device: Optional[str] = None
     timer_duration: Optional[int] = 20
     warmup: bool = True
     energy_threshold: Optional[int] = 600
+    phrase_duration: Optional[float] = 0.8
 
 
 class TranscribeSpeechAction(object):
@@ -122,6 +124,9 @@ class TranscribeSpeechAction(object):
         self._listening = True
         recogniser = sr.Recognizer()
 
+        if self._model_params.pause_threshold:
+            recogniser.pause_threshold = self._model_params.pause_threshold
+
         if self._model_params.energy_threshold:
             recogniser.dynamic_energy_threshold = False
             recogniser.energy_threshold = self._model_params.energy_threshold
@@ -160,7 +165,7 @@ class TranscribeSpeechAction(object):
             wav_data = self.recogniser.listen(
                 src,
                 timeout=self._model_params.start_timeout,
-                phrase_time_limit=self._model_params.end_timeout,
+                phrase_time_limit=self._model_params.phrase_duration,
             ).get_wav_data()
         # Magic number 32768.0 is the maximum value of a 16-bit signed integer
         float_data = (
@@ -233,7 +238,7 @@ def parse_args() -> dict:
         help="Timeout for listening for the start of a phrase.",
     )
     parser.add_argument(
-        "--end_timeout",
+        "--phrase_duration",
         type=float,
         default=10,
         help="Maximum phrase duration after starting listening in seconds.",
@@ -263,6 +268,13 @@ def parse_args() -> dict:
         help="Energy threshold for silence detection. Using this disables automatic adjustment",
     )
 
+    parser.add_argument(
+        "--pause_threshold",
+        type=float,
+        default=2.0,
+        help="Seconds of non-speaking audio before a phrase is considered complete.",
+    )
+
     args, unknown = parser.parse_known_args()
     return vars(args)
 
@@ -284,8 +296,8 @@ def configure_model_params(config: dict) -> speech_model_params:
         model_params.device = config["device"]
     if config["start_timeout"]:
         model_params.start_timeout = config["start_timeout"]
-    if config["end_timeout"]:
-        model_params.end_timeout = config["end_timeout"]
+    if config["phrase_duration"]:
+        model_params.phrase_duration = config["phrase_duration"]
     if config["sample_rate"]:
         model_params.sample_rate = config["sample_rate"]
     if config["mic_device"]:
@@ -294,6 +306,8 @@ def configure_model_params(config: dict) -> speech_model_params:
         model_params.warmup = False
     if config["energy_threshold"]:
         model_params.energy_threshold = config["energy_threshold"]
+    if config["pause_threshold"]:
+        model_params.pause_threshold = config["pause_threshold"]
 
     return model_params
 
