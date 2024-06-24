@@ -90,7 +90,10 @@ class FindAndLookAt(smach.StateMachine):
                 detection.name == ud.guest_data[self.guest_name_in]["name"]
                 and detection.confidence > ud.confidence
             ):
+                rospy.loginfo(f"Detection {detection.name} has confidence {detection.confidence} > {ud.confidence}")
                 return "succeeded"
+            else:
+                rospy.loginfo(f"Detection {detection.name} has confidence {detection.confidence} <= {ud.confidence}")
         return "failed"
 
     def __init__(

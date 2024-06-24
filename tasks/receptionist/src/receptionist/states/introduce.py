@@ -27,6 +27,7 @@ def stringify_guest_data(guest_data: Dict[str, Any], guest_id: str) -> str:
     relevant_guest_data.setdefault(
         "attributes",
         {
+            "has_hair": True,
             "hair_shape": "unknown",
             "hair_colour": "unknown",
             "facial_hair": "No_Beard",
@@ -47,19 +48,20 @@ def stringify_guest_data(guest_data: Dict[str, Any], guest_id: str) -> str:
     print(relevant_guest_data["attributes"].items())
 
     for attribute, value in relevant_guest_data["attributes"].items():
-        if value != "unknown" and value != False:
+        if value != "unknown" and value != False and value != "No_Beard":
             known_attributes[attribute] = value
     print("These are the known attributes")
     print(known_attributes)
 
     has_hair = False
-    detection = False  # Whenever the an attribute is detected in the for loop, the detection flag is set to true
-    # so that multiple attributes are not checked at the same time
 
     for attribute, value in known_attributes.items():
         if attribute == "has_hair":
             has_hair = True
             break
+    if has_hair == False:
+        guest_str += "They are bald."
+
 
     ignored_attributes = [
         "top",
@@ -85,6 +87,8 @@ def stringify_guest_data(guest_data: Dict[str, Any], guest_id: str) -> str:
     ignored_attributes.append("has_hair")
 
     for attribute, value in known_attributes.items():
+        detection = False  # Whenever the an attribute is detected in the for loop, the detection flag is set to true
+        # so that multiple attributes are not checked at the same time
         if attribute in ignored_attributes:
             detection = True
         if has_hair:
@@ -97,6 +101,9 @@ def stringify_guest_data(guest_data: Dict[str, Any], guest_id: str) -> str:
                 guest_str += (
                     f"They have {relevant_guest_data['attributes'][attribute]} hair."
                 )
+                detection = True
+        else:
+            if attribute == "hair_shape" or attribute == "hair_colour":
                 detection = True
         if attribute == "facial_hair":
             guest_str += f"They have facial hair."
