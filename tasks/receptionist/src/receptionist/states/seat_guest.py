@@ -17,22 +17,6 @@ from lasr_skills import (
 )
 
 
-class GuestSeatWait(smach.State):
-    def __init__(self):
-        smach.State.__init__(self, outcomes=["succeeded", "failed"])
-
-    def execute(self, userdata) -> str:
-        # Wait 5 seconds for user to sit down
-        try:
-            wait_time = 5
-            print(f"Waiting for {wait_time} seconds for the user to sit down.")
-            Say("Waiting for the guest to sit down.")
-            rospy.sleep(wait_time)
-            return "succeeded"
-        except:
-            print("Waiting for the guest to sit down failed")
-            return "failed"
-
 class SeatGuest(smach.StateMachine):
     _motions: List[str] = ["look_down_left", "look_down_right", "look_down_centre"]
 

@@ -59,8 +59,6 @@ class ParseNameAndDrink(smach.State):
                 break
 
         for drink in self._possible_drinks:
-            print(self._possible_drinks)
-            print(transcription)
             if drink in transcription:
                 userdata.guest_data[self._guest_id]["drink"] = drink
                 rospy.loginfo(f"Guest Drink identified as: {drink}")
