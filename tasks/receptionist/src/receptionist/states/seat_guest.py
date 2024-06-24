@@ -6,9 +6,6 @@ from shapely.geometry import Polygon
 
 import numpy as np
 
-<<<<<<< HEAD
-from lasr_skills import PlayMotion, Detect3DInArea, LookToPoint, Say, WaitForPerson
-=======
 from geometry_msgs.msg import Point, PointStamped
 from lasr_skills import (
     PlayMotion,
@@ -18,7 +15,6 @@ from lasr_skills import (
     WaitForPerson,
     Wait,
 )
->>>>>>> 5026ebfb0cc02564e84da9d05b79c6aa6d85b8f3
 
 
 class GuestSeatWait(smach.State):
