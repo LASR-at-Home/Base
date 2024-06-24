@@ -46,7 +46,7 @@ def stringify_guest_data(guest_data: Dict[str, Any], guest_id: str) -> str:
     known_attributes = {}
 
     for attribute, value in relevant_guest_data["attributes"].items():
-        if value != "unknown" and value != False and value != "No_Beard":
+        if value != "unknown":
             known_attributes[attribute] = value
     print("These are the known attributes")
     print(known_attributes)
@@ -98,11 +98,26 @@ def stringify_guest_data(guest_data: Dict[str, Any], guest_id: str) -> str:
                 )
                 detection = True
         if attribute == "facial_hair":
-            guest_str += f"They have facial hair."
             detection = True
+            if relevant_guest_data["attributes"][attribute] != "No_Beard":
+                guest_str += f"They have facial hair."
+            else:
+                guest_str += f"They do not have facial hair."
+        if attribute == "glasses":
+            detection = True
+            if relevant_guest_data["attributes"][attribute]:
+                guest_str += f"They are wearing glasses."
+            else:
+                guest_str += f"They are not wearing glasses."
+        if attribute == "hat":
+            detection = True
+            if relevant_guest_data["attributes"][attribute]:
+                guest_str += f"They are wearing a hat."
+            else:
+                guest_str += f"They are not wearing a hat."
         if not detection:
             if isSingular(attribute):
-                guest_str += f"They are a wearing {attribute}."
+                guest_str += f"They are wearing a {attribute}."
             else:
                 guest_str += f"They are wearing {attribute}."
 

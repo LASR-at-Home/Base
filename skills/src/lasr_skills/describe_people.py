@@ -40,7 +40,12 @@ class DescribePeople(smach.StateMachine):
             )
             smach.StateMachine.add(
                 "GET_IMAGE",
-                GetCroppedImage(object_name="person", crop_method=crop_method, rgb_topic=rgb_topic, use_mask=True),
+                GetCroppedImage(
+                    object_name="person",
+                    crop_method=crop_method,
+                    rgb_topic=rgb_topic,
+                    use_mask=True,
+                ),
                 transitions={
                     "succeeded": "CONVERT_IMAGE",
                     "failed": "SAY_GET_IMAGE_AGAIN",
@@ -234,9 +239,14 @@ class DescribePeople(smach.StateMachine):
                         rospy.logdebug(f"|> Person does not have {part} visible")
                         continue
 
-                    if part.name == "torso_front" or part.name == "torso_back":
+                    if (
+                        part.part_name == "torso_front"
+                        or part.part_name == "torso_back"
+                    ):
                         torso_mask = np.logical_or(torso_mask, part_mask)
-                    elif part.name == "left_face" or part.name == "right_face":
+                    elif (
+                        part.part_name == "left_face" or part.part_name == "right_face"
+                    ):
                         head_mask = np.logical_or(head_mask, part_mask)
 
                 torso_mask_data, torso_mask_shape, torso_mask_dtype = numpy2message(
