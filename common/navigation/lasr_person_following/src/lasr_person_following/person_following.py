@@ -259,10 +259,7 @@ class PersonFollower:
                 )
                 transcription = self._transcribe_speech_client.get_result().sequence
 
-                if "yes" in transcription.lower():
-                    return True
-                else:
-                    return False
+                return "yes" in transcription.lower()
 
             return True
         return True
