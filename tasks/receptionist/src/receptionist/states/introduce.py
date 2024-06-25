@@ -8,7 +8,26 @@ import rospy
 import smach
 from smach import UserData
 from lasr_skills import Say
-from typing import Dict, Any, Optional
+from typing import Dict, List, Any, Optional
+
+
+def find_most_confident_clothes(relevant_guest_data: Dict[str, Any], clothes: List[List[Any]]):
+    max_clothes_type = ""
+    max_confidence = -1
+    for i in range(len(clothes)):
+        if clothes[i][1] > max_confidence:
+            max_confidence = clothes[i][1]
+            max_clothes_type = clothes[i][0]
+
+    if max_clothes_type == "dress":
+        max_clothes = relevant_guest_data["attributes"]["max_dress"]
+    elif max_clothes_type == "top":
+        max_clothes = relevant_guest_data["attributes"]["max_top"]
+    else:
+        max_clothes = relevant_guest_data["attributes"]["max_outwear"]
+
+    return [max_confidence, max_clothes]
+
 
 
 def stringify_guest_data(guest_data: Dict[str, Any], guest_id: str) -> str:
@@ -27,16 +46,22 @@ def stringify_guest_data(guest_data: Dict[str, Any], guest_id: str) -> str:
     relevant_guest_data.setdefault(
         "attributes",
         {
-            "has_hair": True,
+            "has_hair": 0,
             "hair_shape": "unknown",
             "hair_colour": "unknown",
-            "facial_hair": "No_Beard",
-            "earrings": "unknown",
-            "necklace": "unknown",
-            "necktie": "unknown",
-            "height": "unknown",
-            "glasses": False,
-            "hat": False,
+            "facial_hair": 0,
+            "earrings": 0,
+            "necklace": 0,
+            "necktie": 0,
+            # "height": "unknown",
+            "glasses": 0,
+            "hat": 0,
+            "dress": 0,
+            "top": 0,
+            "outwear": 0,
+            "max_dress": "unknown",
+            "max_top": "unknown",
+            "max_outwear": "unknown",
         },
     )
 
@@ -44,91 +69,152 @@ def stringify_guest_data(guest_data: Dict[str, Any], guest_id: str) -> str:
 
     guest_str += f"{relevant_guest_data['name']}, their favourite drink is {relevant_guest_data['drink']}. "
 
-    known_attributes = {}
+
     print(relevant_guest_data["attributes"].items())
 
+    clothes = ["dress", "top", "outwear"]
+
+    filtered_attributes = {}
+
+   
+    filtered_attributes["hair"] =  {"confidence": relevant_guest_data["attributes"]["has_hair"],
+                                  "hair_shape": relevant_guest_data["attributes"]["hair_shape"],
+                                  "hair_colour": relevant_guest_data["attributes"]["hair_colour"]
+                                }
+                                
+    
+    most_confident_clothes = find_most_confident_clothes(relevant_guest_data, clothes=[["dress",relevant_guest_data["attributes"]["dress"]],["top", relevant_guest_data["attributes"]["top"]], ["outwear", relevant_guest_data["attributes"]["outwear"]]])
+    filtered_attributes["clothes"] = {"confidence": most_confident_clothes[0],
+                                 "attribute": most_confident_clothes[1],
+                                    }
+
+
+    considered_attributes = ["dress", "top", "outwear", "max_dress", "max_top", "max_outwear", "has_hair", "hair_shape", "hair_colour"]
     for attribute, value in relevant_guest_data["attributes"].items():
-        if value != "unknown" and value != False and value != "No_Beard":
-            known_attributes[attribute] = value
-    print("These are the known attributes")
-    print(known_attributes)
+        if attribute not in considered_attributes:
+            filtered_attributes[attribute] =  {"confidence": relevant_guest_data["attributes"][attribute],
+                                         "attribute": attribute
+                                        }
 
-    has_hair = False
+    sorted_attributes = sorted(filtered_attributes.keys(), key=lambda k: abs(filtered_attributes[k]["confidence"]), reverse=True)
 
-    for attribute, value in known_attributes.items():
-        if attribute == "has_hair":
-            has_hair = True
-            break
-    if has_hair == False:
-        guest_str += "They are bald."
+    top_4_attributes = sorted_attributes[:4]
 
+    top_4_attributes = [attr for attr in top_4_attributes if not (attr == 'hair' and filtered_attributes[attr]['confidence'] < 0)]
+    if len(top_4_attributes) < 4:
+        top_4_attributes.append(sorted_attributes[4])
 
-    ignored_attributes = [
-        "top",
-        "down",
-        "outwear",
-        "dress",
-        # "short sleeve top",
-        # "long sleeve top",
-        # "short sleeve outwear",
-        # "long sleeve outwear",
-        # "vest",
-        # "sling",
-        "shorts",
-        "trousers",
-        "skirt",
-        # "short sleeve dress",
-        # "long sleeve dress",
-        # "vest dress",
-        # "sling dress",
-    ]
+    for i in range (len(top_4_attributes)):
+        attribute_name = top_4_attributes[i]
+        attribute_value = filtered_attributes[top_4_attributes[i]]
+        confidence = attribute_value["confidence"]
 
-    ignored_attributes.append("male")
-    ignored_attributes.append("has_hair")
-
-    for attribute, value in known_attributes.items():
-        detection = False  # Whenever the an attribute is detected in the for loop, the detection flag is set to true
-        # so that multiple attributes are not checked at the same time
-        if attribute in ignored_attributes:
-            detection = True
-        if has_hair:
-            if attribute == "hair_shape":
-                guest_str += (
-                    f"Their hair is {relevant_guest_data['attributes'][attribute]}."
-                )
-                detection = True
-            elif attribute == "hair_colour":
-                guest_str += (
-                    f"They have {relevant_guest_data['attributes'][attribute]} hair."
-                )
-                detection = True
-        else:
-            if attribute == "hair_shape" or attribute == "hair_colour":
-                detection = True
-        if attribute == "facial_hair":
-            guest_str += f"They have facial hair."
-            detection = True
-            # if relevant_guest_data["attributes"][attribute] != "No_Beard":
-            #     guest_str += f"They have facial hair."
-            # else:
-            #     guest_str += f"They do not have facial hair."
-        # if attribute == "glasses":
-        #     detection = True
-        #     if relevant_guest_data["attributes"][attribute]:
-        #         guest_str += f"They are wearing glasses."
-        #     else:
-        #         guest_str += f"They are not wearing glasses."
-        # if attribute == "hat":
-        #     detection = True
-        #     if relevant_guest_data["attributes"][attribute]:
-        #         guest_str += f"They are wearing a hat."
-        #     else:
-        #         guest_str += f"They are not wearing a hat."
-        if not detection:
-            if isSingular(attribute):
-                guest_str += f"They are wearing a {attribute}."
+        if attribute_name == "hair":
+            hair_shape = attribute_value["hair_shape"]
+            hair_colour = attribute_value["hair_colour"]
+            guest_str += f"They have {hair_shape} and {hair_colour} . "
+        elif attribute_name == "facial_hair":
+            if confidence < 0:
+                guest_str += "They don't have facial hair. "
             else:
-                guest_str += f"They are wearing {attribute}."
+                guest_str += "They have facial hair. "
+        else:
+            if confidence < 0:
+                guest_str += f"They are not wearing {attribute_value['attribute']}. "
+            else:
+                guest_str += f"They are wearing {attribute_value['attribute']}. "
+
+
+            
+
+
+
+
+    # known_attributes = {}
+    # 
+
+    # for attribute, value in relevant_guest_data["attributes"].items():
+    #     if value != "unknown" and value != False and value != "No_Beard":
+    #         known_attributes[attribute] = value
+    # print("These are the known attributes")
+    # print(known_attributes)
+
+    # has_hair = False
+
+    # for attribute, value in known_attributes.items():
+    #     if attribute == "has_hair":
+    #         has_hair = True
+    #         break
+    # if has_hair == False:
+    #     guest_str += "They are bald."
+
+
+    # ignored_attributes = [
+    #     "top",
+    #     "down",
+    #     "outwear",
+    #     "dress",
+    #     # "short sleeve top",
+    #     # "long sleeve top",
+    #     # "short sleeve outwear",
+    #     # "long sleeve outwear",
+    #     # "vest",
+    #     # "sling",
+    #     "shorts",
+    #     "trousers",
+    #     "skirt",
+    #     # "short sleeve dress",
+    #     # "long sleeve dress",
+    #     # "vest dress",
+    #     # "sling dress",
+    # ]
+
+    # ignored_attributes.append("male")
+    # ignored_attributes.append("has_hair")
+
+    # for attribute, value in known_attributes.items():
+    #     detection = False  # Whenever the an attribute is detected in the for loop, the detection flag is set to true
+    #     # so that multiple attributes are not checked at the same time
+    #     if attribute in ignored_attributes:
+    #         detection = True
+    #     if has_hair:
+    #         if attribute == "hair_shape":
+    #             guest_str += (
+    #                 f"Their hair is {relevant_guest_data['attributes'][attribute]}."
+    #             )
+    #             detection = True
+    #         elif attribute == "hair_colour":
+    #             guest_str += (
+    #                 f"They have {relevant_guest_data['attributes'][attribute]} hair."
+    #             )
+    #             detection = True
+    #     else:
+    #         if attribute == "hair_shape" or attribute == "hair_colour":
+    #             detection = True
+    #     if attribute == "facial_hair":
+    #         guest_str += f"They have facial hair."
+    #         detection = True
+    #         # if relevant_guest_data["attributes"][attribute] != "No_Beard":
+    #         #     guest_str += f"They have facial hair."
+    #         # else:
+    #         #     guest_str += f"They do not have facial hair."
+    #     # if attribute == "glasses":
+    #     #     detection = True
+    #     #     if relevant_guest_data["attributes"][attribute]:
+    #     #         guest_str += f"They are wearing glasses."
+    #     #     else:
+    #     #         guest_str += f"They are not wearing glasses."
+    #     # if attribute == "hat":
+    #     #     detection = True
+    #     #     if relevant_guest_data["attributes"][attribute]:
+    #     #         guest_str += f"They are wearing a hat."
+    #     #     else:
+    #     #         guest_str += f"They are not wearing a hat."
+    #     if not detection:
+    #         if isSingular(attribute):
+    #             guest_str += f"They are wearing a {attribute}."
+    #         else:
+    #             guest_str += f"They are wearing {attribute}."
 
     # if "attributes" in relevant_guest_data.keys():
 

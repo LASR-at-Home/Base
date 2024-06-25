@@ -21,7 +21,7 @@ class GetGuestAttributes(smach.StateMachine):
                 return "failed"
             userdata.guest_data[self._guest_id]["attributes"] = json.loads(
                 userdata.people[0]["features"]
-            )["attributes"]
+            )
             return "succeeded"
 
     def __init__(

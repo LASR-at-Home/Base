@@ -39,7 +39,7 @@ class Receptionist(smach.StateMachine):
             }
             self.userdata.guest_name = "zoe"
             self.userdata.dataset = "receptionist"
-            self.userdata.confidence = 0.2
+            self.userdata.confidence = 0.15
 
             smach.StateMachine.add(
                 "SAY_START",
@@ -718,3 +718,5 @@ class Receptionist(smach.StateMachine):
                     "preempted": "succeeded",
                 },
             )
+detection = False  # Whenever the an attribute is detected in the for loop, the detection flag is set to true
+    # so that multiple attributes are not checked at the same time
