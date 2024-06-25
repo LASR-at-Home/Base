@@ -144,19 +144,6 @@ class ImageOfCloth(ImageWithMasksAndAttributes):
             "dress": self.attributes["dress"] / 2,
         }
 
-        for attribute in [
-            "short sleeve top",
-            "long sleeve top",
-            "short sleeve outwear",
-            "long sleeve outwear",
-            "short sleeve dress",
-            "long sleeve dress",
-            "vest dress",
-            "sling dress",
-            "sleeveless top",
-        ]:
-            result[attribute] = False
-
         max_prob = 0.0
         max_attribute = "short sleeve top"
         for attribute in ["short sleeve top", "long sleeve top", "vest", "sling"]:
@@ -165,7 +152,7 @@ class ImageOfCloth(ImageWithMasksAndAttributes):
                 max_attribute = attribute
         if max_attribute in ["vest", "sling"]:
             max_attribute = "sleeveless top"
-        result[max_attribute] = True
+        result['max_top'] = max_attribute
 
         max_prob = 0.0
         max_attribute = "short sleeve outwear"
@@ -176,7 +163,7 @@ class ImageOfCloth(ImageWithMasksAndAttributes):
             if self.attributes[attribute] > max_prob:
                 max_prob = self.attributes[attribute]
                 max_attribute = attribute
-        result[max_attribute] = True
+        result['max_outwear'] = max_attribute
 
         max_prob = 0.0
         max_attribute = "short sleeve dress"
@@ -191,6 +178,6 @@ class ImageOfCloth(ImageWithMasksAndAttributes):
                 max_attribute = attribute
         if max_attribute in ["vest dress", "sling dress"]:
             max_attribute = "sleeveless dress"
-        result[max_attribute] = True
+        result['max_dress'] = max_attribute
 
         return result
