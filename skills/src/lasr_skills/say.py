@@ -1,4 +1,5 @@
 import smach_ros
+import rospy
 
 from pal_interaction_msgs.msg import TtsGoal, TtsAction, TtsText
 

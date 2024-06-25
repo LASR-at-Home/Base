@@ -5,7 +5,9 @@ import rospy
 import smach
 import cv2_img
 import numpy as np
-from lasr_skills import Say
+
+if "tiago" in os.environ["ROS_MASTER_URI"]:
+    from lasr_skills import Say
 from lasr_vision_msgs.srv import (
     YoloDetection,
     BodyPixMaskDetection,
@@ -15,6 +17,7 @@ from lasr_vision_msgs.srv import (
 from numpy2message import numpy2message
 from .vision import GetCroppedImage, ImageMsgToCv2
 import numpy as np
+from lasr_skills.validate_keypoints import ValidateKeypoints
 
 
 class DescribePeople(smach.StateMachine):
@@ -42,41 +45,48 @@ class DescribePeople(smach.StateMachine):
                     object_name="person",
                     crop_method=crop_method,
                     rgb_topic=rgb_topic,
-                    use_mask=True,
+                    use_mask=False,
                 ),
                 transitions={
                     "succeeded": "CONVERT_IMAGE",
                     "failed": "SAY_GET_IMAGE_AGAIN",
                 },
             )
-            smach.StateMachine.add(
-                "SAY_GET_IMAGE_AGAIN",
-                Say(
-                    text="Make sure you're looking into my eyes, I can't seem to see you."
-                ),
-                transitions={
-                    "succeeded": "GET_IMAGE_AGAIN",
-                    "preempted": "GET_IMAGE_AGAIN",
-                    "aborted": "GET_IMAGE_AGAIN",
-                },
-            )
+
+            if "tiago" in os.environ["ROS_MASTER_URI"]:
+                smach.StateMachine.add(
+                    "SAY_GET_IMAGE_AGAIN",
+                    Say(
+                        text="Make sure you're looking into my eyes, I can't seem to see you."
+                    ),
+                    transitions={
+                        "succeeded": "GET_IMAGE_AGAIN",
+                        "preempted": "GET_IMAGE_AGAIN",
+                        "aborted": "GET_IMAGE_AGAIN",
+                    },
+                )
+
             smach.StateMachine.add(
                 "GET_IMAGE_AGAIN",
                 GetCroppedImage(
-                    object_name="person", crop_method="closest", use_mask=True
+                    object_name="person",
+                    crop_method=crop_method,
+                    rgb_topic=rgb_topic,
+                    use_mask=False,
                 ),
                 transitions={"succeeded": "CONVERT_IMAGE", "failed": "SAY_CONTINUE"},
             )
 
-            smach.StateMachine.add(
-                "SAY_CONTINUE",
-                Say(text="I can't see anyone, I will continue"),
-                transitions={
-                    "succeeded": "failed",
-                    "preempted": "failed",
-                    "aborted": "failed",
-                },
-            )
+            if "tiago" in os.environ["ROS_MASTER_URI"]:
+                smach.StateMachine.add(
+                    "SAY_CONTINUE",
+                    Say(text="I can't see anyone, I will continue"),
+                    transitions={
+                        "succeeded": "failed",
+                        "preempted": "failed",
+                        "aborted": "failed",
+                    },
+                )
 
             smach.StateMachine.add(
                 "CONVERT_IMAGE", ImageMsgToCv2(), transitions={"succeeded": "SEGMENT"}
