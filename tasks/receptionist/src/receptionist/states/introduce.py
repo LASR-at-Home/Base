@@ -14,8 +14,8 @@ from typing import Dict, List, Any, Optional
 def find_most_confident_clothes(
     relevant_guest_data: Dict[str, Any], clothes: List[List[Any]]
 ) -> List[Any]:
-    """Converts the guest data for a specified guest into a string that can be used
-    for the robot to introduce the guest to the other guests/host.
+    """Find the clothes it's most confident of, after determining the clothes type 
+    through confidence values.
 
     Args:
         relevant_guest_data (Dict[str, Any]): guest data dictionary.
