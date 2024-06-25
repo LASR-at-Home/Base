@@ -563,8 +563,8 @@ def predict_frame(
     ).describe()
 
     result = {
-        "attributes": {**rst_person["attributes"], **rst_cloth["attributes"]},
-        "description": rst_person["description"] + rst_cloth["description"],
+        **rst_person, 
+        **rst_cloth,
     }
 
     result = json.dumps(result, indent=4)
