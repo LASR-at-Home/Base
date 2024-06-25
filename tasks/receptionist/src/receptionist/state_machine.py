@@ -629,9 +629,8 @@ class Receptionist(smach.StateMachine):
                 },
             )
 
-
-            # Check if host is sat where they are sat 
-            # Look at the host 
+            # Check if host is sat where they are sat
+            # Look at the host
 
             smach.StateMachine.add(
                 "LOOK_AT_WAITING_GUEST_2_3",
@@ -666,8 +665,7 @@ class Receptionist(smach.StateMachine):
                 },
             )
 
-
-            # Look at guest 1 
+            # Look at guest 1
             smach.StateMachine.add(
                 "INTRODUCE_GUEST_1_TO_GUEST_2",
                 Introduce(guest_to_introduce="guest1", guest_to_introduce_to="guest2"),
@@ -718,5 +716,7 @@ class Receptionist(smach.StateMachine):
                     "preempted": "succeeded",
                 },
             )
+
+
 detection = False  # Whenever the an attribute is detected in the for loop, the detection flag is set to true
-    # so that multiple attributes are not checked at the same time
+# so that multiple attributes are not checked at the same time

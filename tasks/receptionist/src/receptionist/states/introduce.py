@@ -11,7 +11,9 @@ from lasr_skills import Say
 from typing import Dict, List, Any, Optional
 
 
-def find_most_confident_clothes(relevant_guest_data: Dict[str, Any], clothes: List[List[Any]]):
+def find_most_confident_clothes(
+    relevant_guest_data: Dict[str, Any], clothes: List[List[Any]]
+):
     max_clothes_type = ""
     max_confidence = -1
     for i in range(len(clothes)):
@@ -27,7 +29,6 @@ def find_most_confident_clothes(relevant_guest_data: Dict[str, Any], clothes: Li
         max_clothes = relevant_guest_data["attributes"]["max_outwear"]
 
     return [max_confidence, max_clothes]
-
 
 
 def stringify_guest_data(guest_data: Dict[str, Any], guest_id: str) -> str:
@@ -69,42 +70,66 @@ def stringify_guest_data(guest_data: Dict[str, Any], guest_id: str) -> str:
 
     guest_str += f"{relevant_guest_data['name']}, their favourite drink is {relevant_guest_data['drink']}. "
 
-
     print(relevant_guest_data["attributes"].items())
 
     clothes = ["dress", "top", "outwear"]
 
     filtered_attributes = {}
 
-   
-    filtered_attributes["hair"] =  {"confidence": relevant_guest_data["attributes"]["has_hair"],
-                                  "hair_shape": relevant_guest_data["attributes"]["hair_shape"],
-                                  "hair_colour": relevant_guest_data["attributes"]["hair_colour"]
-                                }
-                                
-    
-    most_confident_clothes = find_most_confident_clothes(relevant_guest_data, clothes=[["dress",relevant_guest_data["attributes"]["dress"]],["top", relevant_guest_data["attributes"]["top"]], ["outwear", relevant_guest_data["attributes"]["outwear"]]])
-    filtered_attributes["clothes"] = {"confidence": most_confident_clothes[0],
-                                 "attribute": most_confident_clothes[1],
-                                    }
+    filtered_attributes["hair"] = {
+        "confidence": relevant_guest_data["attributes"]["has_hair"],
+        "hair_shape": relevant_guest_data["attributes"]["hair_shape"],
+        "hair_colour": relevant_guest_data["attributes"]["hair_colour"],
+    }
 
+    most_confident_clothes = find_most_confident_clothes(
+        relevant_guest_data,
+        clothes=[
+            ["dress", relevant_guest_data["attributes"]["dress"]],
+            ["top", relevant_guest_data["attributes"]["top"]],
+            ["outwear", relevant_guest_data["attributes"]["outwear"]],
+        ],
+    )
+    filtered_attributes["clothes"] = {
+        "confidence": most_confident_clothes[0],
+        "attribute": most_confident_clothes[1],
+    }
 
-    considered_attributes = ["dress", "top", "outwear", "max_dress", "max_top", "max_outwear", "has_hair", "hair_shape", "hair_colour"]
+    considered_attributes = [
+        "dress",
+        "top",
+        "outwear",
+        "max_dress",
+        "max_top",
+        "max_outwear",
+        "has_hair",
+        "hair_shape",
+        "hair_colour",
+    ]
     for attribute, value in relevant_guest_data["attributes"].items():
         if attribute not in considered_attributes:
-            filtered_attributes[attribute] =  {"confidence": relevant_guest_data["attributes"][attribute],
-                                         "attribute": attribute
-                                        }
+            filtered_attributes[attribute] = {
+                "confidence": relevant_guest_data["attributes"][attribute],
+                "attribute": attribute,
+            }
 
-    sorted_attributes = sorted(filtered_attributes.keys(), key=lambda k: abs(filtered_attributes[k]["confidence"]), reverse=True)
+    sorted_attributes = sorted(
+        filtered_attributes.keys(),
+        key=lambda k: abs(filtered_attributes[k]["confidence"]),
+        reverse=True,
+    )
 
     top_4_attributes = sorted_attributes[:4]
 
-    top_4_attributes = [attr for attr in top_4_attributes if not (attr == 'hair' and filtered_attributes[attr]['confidence'] < 0)]
+    top_4_attributes = [
+        attr
+        for attr in top_4_attributes
+        if not (attr == "hair" and filtered_attributes[attr]["confidence"] < 0)
+    ]
     if len(top_4_attributes) < 4:
         top_4_attributes.append(sorted_attributes[4])
 
-    for i in range (len(top_4_attributes)):
+    for i in range(len(top_4_attributes)):
         attribute_name = top_4_attributes[i]
         attribute_value = filtered_attributes[top_4_attributes[i]]
         confidence = attribute_value["confidence"]
@@ -124,14 +149,8 @@ def stringify_guest_data(guest_data: Dict[str, Any], guest_id: str) -> str:
             else:
                 guest_str += f"They are wearing {attribute_value['attribute']}. "
 
-
-            
-
-
-
-
     # known_attributes = {}
-    # 
+    #
 
     # for attribute, value in relevant_guest_data["attributes"].items():
     #     if value != "unknown" and value != False and value != "No_Beard":
@@ -147,7 +166,6 @@ def stringify_guest_data(guest_data: Dict[str, Any], guest_id: str) -> str:
     #         break
     # if has_hair == False:
     #     guest_str += "They are bald."
-
 
     # ignored_attributes = [
     #     "top",
