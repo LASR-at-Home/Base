@@ -5,6 +5,7 @@ import rospy
 import smach
 import cv2_img
 import numpy as np
+
 if "tiago" in os.environ["ROS_MASTER_URI"]:
     from lasr_skills import Say
 from lasr_vision_msgs.srv import (
@@ -67,7 +68,12 @@ class DescribePeople(smach.StateMachine):
 
             smach.StateMachine.add(
                 "GET_IMAGE_AGAIN",
-                GetCroppedImage(object_name="person", crop_method=crop_method, rgb_topic=rgb_topic, use_mask=True),
+                GetCroppedImage(
+                    object_name="person",
+                    crop_method=crop_method,
+                    rgb_topic=rgb_topic,
+                    use_mask=True,
+                ),
                 transitions={"succeeded": "CONVERT_IMAGE", "failed": "SAY_CONTINUE"},
             )
 
@@ -81,7 +87,7 @@ class DescribePeople(smach.StateMachine):
                         "aborted": "failed",
                     },
                 )
-                
+
             smach.StateMachine.add(
                 "CONVERT_IMAGE", ImageMsgToCv2(), transitions={"succeeded": "SEGMENT"}
             )

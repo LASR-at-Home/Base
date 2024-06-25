@@ -91,20 +91,22 @@ class ImageOfPerson(ImageWithMasksAndAttributes):
         )
 
     def describe(self) -> dict:
-        has_hair = self.attributes['hair'] - 0.5
-        hair_colour = _max_value_tuple(self.selective_attribute_dict['hair_colour']) - 0.5
-        hair_shape = _max_value_tuple(self.selective_attribute_dict['hair_shape']) - 0.5
-        facial_hair = 1 - self.attributes['No_Beard'] - 0.5
-        glasses = self.attributes['Eyeglasses'] - 0.5
-        hat = self.attributes['Wearing_Hat'] - 0.5
+        has_hair = self.attributes["hair"] - 0.5
+        hair_colour = (
+            _max_value_tuple(self.selective_attribute_dict["hair_colour"]) - 0.5
+        )
+        hair_shape = _max_value_tuple(self.selective_attribute_dict["hair_shape"]) - 0.5
+        facial_hair = 1 - self.attributes["No_Beard"] - 0.5
+        glasses = self.attributes["Eyeglasses"] - 0.5
+        hat = self.attributes["Wearing_Hat"] - 0.5
 
         result = {
-            'has_hair': has_hair,
-            'hair_colour': hair_colour,
-            'hair_shape': hair_shape,
-            'facial_hair': facial_hair,
-            'glasses': glasses,
-            'hat': hat,
+            "has_hair": has_hair,
+            "hair_colour": hair_colour,
+            "hair_shape": hair_shape,
+            "facial_hair": facial_hair,
+            "glasses": glasses,
+            "hat": hat,
         }
 
         return result
@@ -137,9 +139,9 @@ class ImageOfCloth(ImageWithMasksAndAttributes):
 
     def describe(self) -> dict:
         result = {
-            'top': self.attributes['top'] / 2,
-            'outwear': self.attributes['outwear'] / 2,
-            'dress': self.attributes['dress'] / 2,
+            "top": self.attributes["top"] / 2,
+            "outwear": self.attributes["outwear"] / 2,
+            "dress": self.attributes["dress"] / 2,
         }
 
         for attribute in [

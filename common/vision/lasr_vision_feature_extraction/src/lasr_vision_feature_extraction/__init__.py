@@ -563,7 +563,7 @@ def predict_frame(
     ).describe()
 
     result = {
-        **rst_person, 
+        **rst_person,
         **rst_cloth,
     }
 
