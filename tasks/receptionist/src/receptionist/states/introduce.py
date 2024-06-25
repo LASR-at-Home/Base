@@ -13,7 +13,17 @@ from typing import Dict, List, Any, Optional
 
 def find_most_confident_clothes(
     relevant_guest_data: Dict[str, Any], clothes: List[List[Any]]
-):
+) -> List[Any]:
+    """Converts the guest data for a specified guest into a string that can be used
+    for the robot to introduce the guest to the other guests/host.
+
+    Args:
+        relevant_guest_data (Dict[str, Any]): guest data dictionary.
+        clothes List[List[Any]]: List of the clothes type and their confidence
+
+    Returns:
+        List: Maximum confidence and the relevant clothes
+    """
     max_clothes_type = ""
     max_confidence = -1
     for i in range(len(clothes)):
@@ -145,9 +155,17 @@ def stringify_guest_data(guest_data: Dict[str, Any], guest_id: str) -> str:
                 guest_str += "They have facial hair. "
         else:
             if confidence < 0:
-                guest_str += f"They are not wearing {attribute_value['attribute']}. "
+                if isSingular(attribute_value["attribute"]):
+                    guest_str += (
+                        f"They are not wearing a {attribute_value['attribute']}."
+                    )
+                else:
+                    guest_str += f"They are not wearing {attribute_value['attribute']}."
             else:
-                guest_str += f"They are wearing {attribute_value['attribute']}. "
+                if isSingular(attribute_value["attribute"]):
+                    guest_str += f"They are wearing a {attribute_value['attribute']}."
+                else:
+                    guest_str += f"They are wearing {attribute_value['attribute']}."
 
     return guest_str
 
