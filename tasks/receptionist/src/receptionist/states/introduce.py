@@ -14,7 +14,7 @@ from typing import Dict, List, Any, Optional
 def find_most_confident_clothes(
     relevant_guest_data: Dict[str, Any], clothes: List[List[Any]]
 ) -> List[Any]:
-    """Find the clothes it's most confident of, after determining the clothes type 
+    """Find the clothes it's most confident of, after determining the clothes type
     through confidence values.
 
     Args:
