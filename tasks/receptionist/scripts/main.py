@@ -39,6 +39,7 @@ if __name__ == "__main__":
             "drink": "wine",
             "dataset": "receptionist",
             "confidence": 0.5,
+            "detection" : True,
             "attributes": {
                 "has_hair": 0.5,
                 "hair_shape": "straight hair",
@@ -56,8 +57,6 @@ if __name__ == "__main__":
                 "max_dress": "unknown",
                 "max_top": "short sleeved top",
                 "max_outwear": "unknown",
-
-                "detection" : True,
             },
         },
     )

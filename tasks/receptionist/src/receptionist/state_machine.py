@@ -679,9 +679,18 @@ class Receptionist(smach.StateMachine):
                     [-1.5, 0.0],
                 ),
                 transitions={
+                    "succeeded": "INTRODUCE_GUEST_HOST_TO_GUEST_2",
+                    "timed_out": "INTRODUCE_GUEST_HOST_TO_GUEST_2",
+                    "aborted": "INTRODUCE_GUEST_HOST_TO_GUEST_2",
+                },
+            )
+
+            smach.StateMachine.add(
+                "INTRODUCE_GUEST_HOST_TO_GUEST_2",
+                Introduce(guest_to_introduce="host", guest_to_introduce_to="guest2"),
+                transitions={
                     "succeeded": "FIND_AND_LOOK_AT_GUEST_1",
-                    "timed_out": "FIND_AND_LOOK_AT_GUEST_1",
-                    "aborted": "FIND_AND_LOOK_AT_GUEST_1",
+                    "failed": "FIND_AND_LOOK_AT_GUEST_1",
                 },
             )
 

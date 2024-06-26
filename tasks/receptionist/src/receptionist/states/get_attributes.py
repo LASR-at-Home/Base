@@ -18,7 +18,7 @@ class GetGuestAttributes(smach.StateMachine):
 
         def execute(self, userdata: UserData) -> str:
             try:
-                userdata.guest_data[self._guest_id]["attributes"]["detection"] = False
+                userdata.guest_data[self._guest_id]["detection"] = False
                 return "succeeded"
             except Exception as e:
                 print(e)
@@ -41,7 +41,7 @@ class GetGuestAttributes(smach.StateMachine):
             userdata.guest_data[self._guest_id]["attributes"] = json.loads(
                 userdata.people[0]["features"]
             )
-            userdata.guest_data[self._guest_id]["attributes"]["detection"] = True
+            userdata.guest_data[self._guest_id]["detection"] = True
             return "succeeded"
 
     def __init__(
@@ -59,7 +59,7 @@ class GetGuestAttributes(smach.StateMachine):
         with self:
             smach.StateMachine.add(
                 "INITIALISE_DETECTION_FLAG",
-                self.HandleGuestAttributes(self._guest_id),
+                self.InitialiseDetectionFlag(self._guest_id),
                 transitions={
                     "succeeded": "GET_GUEST_ATTRIBUTES",
                     "failed": "GET_GUEST_ATTRIBUTES",

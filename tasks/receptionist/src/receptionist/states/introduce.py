@@ -42,8 +42,6 @@ def stringify_guest_data(guest_data: Dict[str, Any], guest_id: str) -> str:
             "max_dress": "unknown",
             "max_top": "unknown",
             "max_outwear": "unknown",
-
-            "detection" : False
         },
     )
 
@@ -51,7 +49,7 @@ def stringify_guest_data(guest_data: Dict[str, Any], guest_id: str) -> str:
 
     guest_str += f"{relevant_guest_data['name']}, their favourite drink is {relevant_guest_data['drink']}. "
 
-    if relevant_guest_data["attributes"]["detection"] == False:
+    if relevant_guest_data["detection"] == False:
         guest_str += "No attributes were detected for them."
         return guest_str
 
