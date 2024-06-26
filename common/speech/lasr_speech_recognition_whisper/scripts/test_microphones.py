@@ -34,10 +34,9 @@ def main(args: dict) -> None:
     output_dir = args["output_dir"]
 
     r = sr.Recognizer()
-    with sr.Microphone(device_index=13, sample_rate=16000) as source:
+    with sr.Microphone(device_index=mic_index) as source:
         print("Say something!")
-        audio = r.listen(source, timeout=5, phrase_time_limit=5)
-        print("Finished listening")
+        audio = r.listen(source)
 
     with open(os.path.join(output_dir, "microphone.raw"), "wb") as f:
         f.write(audio.get_raw_data())

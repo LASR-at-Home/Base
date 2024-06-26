@@ -24,12 +24,7 @@ def find_most_confident_clothes(
     Returns:
         List: Maximum confidence and the relevant clothes
     """
-    max_clothes_type = ""
-    max_confidence = -1
-    for i in range(len(clothes)):
-        if clothes[i][1] > max_confidence:
-            max_confidence = clothes[i][1]
-            max_clothes_type = clothes[i][0]
+    max_clothes_type, max_confidence = max(clothes, key = lambda c : c[1])
 
     if max_clothes_type == "dress":
         max_clothes = relevant_guest_data["attributes"]["max_dress"]
@@ -80,7 +75,6 @@ def stringify_guest_data(guest_data: Dict[str, Any], guest_id: str) -> str:
 
     guest_str += f"{relevant_guest_data['name']}, their favourite drink is {relevant_guest_data['drink']}. "
 
-    print(relevant_guest_data["attributes"].items())
 
     clothes = ["dress", "top", "outwear"]
 
