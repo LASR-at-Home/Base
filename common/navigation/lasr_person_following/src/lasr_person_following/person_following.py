@@ -78,7 +78,7 @@ class PersonFollower:
         start_following_angle: float = 45.0,
         n_secs_static_finished: float = 10.0,
         n_secs_static_plan_close: float = 5.0,
-        new_goal_threshold: float = 0.5,
+        new_goal_threshold: float = 1.0,
         stopping_distance: float = 1.0,
         tracks_frame="odom",
     ):
@@ -149,7 +149,7 @@ class PersonFollower:
             return None
 
         if frame == amcl_pose.header.frame_id:
-            return amcl_pose.pose.pose
+            return PoseStamped(pose=amcl_pose.pose.pose, header=amcl_pose.header)
 
         return self._tf_pose(
             PoseStamped(pose=amcl_pose.pose.pose, header=amcl_pose.header), frame
@@ -445,6 +445,13 @@ class PersonFollower:
                         self._move_base(self._goal_pose)
                         going_to_person = True
                     else:
+                        pose: PoseStamped = PoseStamped(
+                            pose=self._get_pose_distance_ahead(track.pose, -1.0),
+                            header=tracks.header,
+                        )
+                        self._goal_pose = self._tf_pose(pose, "map")
+                        self._move_base(self._goal_pose)
+                        going_to_person = True
                         rospy.logwarn("Could not find a path to the person")
                 elif delta_t >= self._n_secs_static_finished:
                     rospy.loginfo(
@@ -463,7 +470,6 @@ class PersonFollower:
                         )
                         self._goal_pose = self._tf_pose(pose, "map")
                         self._move_base(self._goal_pose)
-                    self._move_base(pose)
 
                     if self._check_finished():
                         rospy.loginfo("Finished following person")
