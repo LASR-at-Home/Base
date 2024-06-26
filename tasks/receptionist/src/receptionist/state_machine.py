@@ -39,7 +39,7 @@ class Receptionist(smach.StateMachine):
             }
             self.userdata.guest_name = "zoe"
             self.userdata.dataset = "receptionist"
-            self.userdata.confidence = 0.2
+            self.userdata.confidence = 0.15
 
             smach.StateMachine.add(
                 "SAY_START",

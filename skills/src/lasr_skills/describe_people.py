@@ -5,6 +5,7 @@ import rospy
 import smach
 import cv2_img
 import numpy as np
+
 from lasr_skills import Say
 from lasr_vision_msgs.srv import (
     YoloDetection,
@@ -15,6 +16,7 @@ from lasr_vision_msgs.srv import (
 from numpy2message import numpy2message
 from .vision import GetCroppedImage, ImageMsgToCv2
 import numpy as np
+from lasr_skills.validate_keypoints import ValidateKeypoints
 
 
 class DescribePeople(smach.StateMachine):
@@ -42,13 +44,14 @@ class DescribePeople(smach.StateMachine):
                     object_name="person",
                     crop_method=crop_method,
                     rgb_topic=rgb_topic,
-                    use_mask=True,
+                    use_mask=False,
                 ),
                 transitions={
                     "succeeded": "CONVERT_IMAGE",
                     "failed": "SAY_GET_IMAGE_AGAIN",
                 },
             )
+
             smach.StateMachine.add(
                 "SAY_GET_IMAGE_AGAIN",
                 Say(
@@ -60,10 +63,14 @@ class DescribePeople(smach.StateMachine):
                     "aborted": "GET_IMAGE_AGAIN",
                 },
             )
+
             smach.StateMachine.add(
                 "GET_IMAGE_AGAIN",
                 GetCroppedImage(
-                    object_name="person", crop_method="closest", use_mask=True
+                    object_name="person",
+                    crop_method=crop_method,
+                    rgb_topic=rgb_topic,
+                    use_mask=False,
                 ),
                 transitions={"succeeded": "CONVERT_IMAGE", "failed": "SAY_CONTINUE"},
             )
