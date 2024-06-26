@@ -25,7 +25,7 @@ from nav_msgs.srv import GetPlan
 from nav_msgs.msg import Path
 
 
-from math import atan2
+import math
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 
@@ -245,7 +245,7 @@ class PersonFollower:
     def _compute_face_quat(self, p1: Pose, p2: Pose) -> Quaternion:
         dx: float = p2.position.x - p1.position.x
         dy: float = p2.position.y - p1.position.y
-        theta_deg = np.degrees(atan2(dy, dx))
+        theta_deg = np.degrees(math.atan2(dy, dx))
         x, y, z, w = R.from_euler("z", theta_deg, degrees=True).as_quat()
         return Quaternion(x, y, z, w)
 
@@ -271,6 +271,38 @@ class PersonFollower:
 
             return True
         return True
+
+    def _get_pose_distance_ahead(self, pose: Pose, distance: float):
+        new_pose = Pose()
+
+        # Extract position and orientation from the current pose
+        current_position = pose.position
+        current_orientation = pose.orientation
+
+        # Calculate the yaw angle from the quaternion (assuming 2D motion)
+        yaw = math.atan2(
+            2.0
+            * (
+                current_orientation.w * current_orientation.z
+                + current_orientation.x * current_orientation.y
+            ),
+            1.0
+            - 2.0
+            * (
+                current_orientation.y * current_orientation.y
+                + current_orientation.z * current_orientation.z
+            ),
+        )
+
+        # Calculate new position
+        new_pose.position.x = current_position.x + distance * math.cos(yaw)
+        new_pose.position.y = current_position.y + distance * math.sin(yaw)
+        new_pose.position.z = current_position.z  # Assuming no change in the z-axis
+
+        # The orientation remains the same
+        new_pose.orientation = pose.orientation
+
+        return new_pose
 
     def _get_pose_on_path(
         self, start_pose: PoseStamped, goal_pose: PoseStamped, dist_to_goal: float
@@ -318,14 +350,15 @@ class PersonFollower:
                 self._tts_client.send_goal(tts_goal)
 
     def _move_base_status_cb(self, status: GoalStatusArray) -> None:
-        if status.status_list[-1] == GoalStatus.ABORTED and self._goal_pose is not None:
-            rospy.logwarn("Move base goal aborted, replanning...")
-            self._goal_pose = self._get_pose_on_path(
-                self._tf_pose(self._robot_pose_in_odom(), "map"),
-                self._goal_pose,
-                self._stopping_distance,
-            )
-            self._move_base(self._goal_pose)
+        pass
+        # if status.status_list[-1] == GoalStatus.ABORTED and self._goal_pose is not None:
+        #     rospy.logwarn("Move base goal aborted, replanning...")
+        #     self._goal_pose = self._get_pose_on_path(
+        #         self._tf_pose(self._robot_pose_in_odom(), "map"),
+        #         self._goal_pose,
+        #         self._stopping_distance,
+        #     )
+        #     self._move_base(self._goal_pose)
 
     def follow(self) -> None:
 
@@ -345,6 +378,7 @@ class PersonFollower:
                 None,
             )
 
+            # TODO: consider multiple scans. we may have just lost them for a single scan.
             if track is None:
                 rospy.loginfo("Lost track of person, recovering...")
                 self._cancel_goal()
@@ -364,7 +398,10 @@ class PersonFollower:
             if dist_to_prev >= self._new_goal_threshold:
 
                 self._goal_pose = self._tf_pose(
-                    PoseStamped(pose=track.pose, header=tracks.header),
+                    PoseStamped(
+                        pose=self._get_pose_distance_ahead(track.pose, -1.0),
+                        header=tracks.header,
+                    ),
                     "map",
                 )
                 self._move_base(self._goal_pose)
@@ -383,14 +420,21 @@ class PersonFollower:
                     < self._n_secs_static_finished
                 ) and not going_to_person:
                     self._cancel_goal()
-                    self._goal_pose = self._get_pose_on_path(
-                        self._tf_pose(self._robot_pose_in_odom(), "map"),
-                        self._tf_pose(
-                            PoseStamped(pose=track.pose, header=tracks.header),
-                            "map",
+                    self._goal_pose = self._tf_pose(
+                        PoseStamped(
+                            pose=self._get_pose_distance_ahead(track.pose, -1.0),
+                            header=tracks.header,
                         ),
-                        self._stopping_distance,
+                        "map",
                     )
+                    # self._goal_pose = self._get_pose_on_path(
+                    #     self._tf_pose(self._robot_pose_in_odom(), "map"),
+                    #     self._tf_pose(
+                    #         PoseStamped(pose=track.pose, header=tracks.header),
+                    #         "map",
+                    #     ),
+                    #     self._stopping_distance,
+                    # )
                     if self._goal_pose is not None:
                         self._move_base(self._goal_pose)
                         going_to_person = True
