@@ -629,7 +629,6 @@ class Receptionist(smach.StateMachine):
                 },
             )
 
-
             smach.StateMachine.add(
                 "LOOK_AT_WAITING_GUEST_2_3",
                 LookToGivenPoint(
