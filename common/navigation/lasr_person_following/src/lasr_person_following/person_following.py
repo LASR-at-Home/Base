@@ -350,15 +350,24 @@ class PersonFollower:
                 self._tts_client.send_goal(tts_goal)
 
     def _move_base_status_cb(self, status: GoalStatusArray) -> None:
-        pass
-        # if status.status_list[-1] == GoalStatus.ABORTED and self._goal_pose is not None:
-        #     rospy.logwarn("Move base goal aborted, replanning...")
-        #     self._goal_pose = self._get_pose_on_path(
-        #         self._tf_pose(self._robot_pose_in_odom(), "map"),
-        #         self._goal_pose,
-        #         self._stopping_distance,
-        #     )
-        #     self._move_base(self._goal_pose)
+
+        if len(status.status_list) > 0:
+
+            if (
+                status.status_list[-1] == GoalStatus.ABORTED
+                and self._goal_pose is not None
+            ):
+                rospy.logwarn("Move base goal aborted, replanning...")
+                # self._goal_pose = self._get_pose_distance_ahead(
+                #     self._goal_pose.pose, -1.0
+                # )
+                # self._move_base(self._goal_pose)
+                self._goal_pose = self._get_pose_on_path(
+                    self._tf_pose(self._robot_pose_in_odom(), "map"),
+                    self._goal_pose,
+                    self._stopping_distance,
+                )
+                self._move_base(self._goal_pose)
 
     def follow(self) -> None:
 
@@ -420,21 +429,21 @@ class PersonFollower:
                     < self._n_secs_static_finished
                 ) and not going_to_person:
                     self._cancel_goal()
-                    self._goal_pose = self._tf_pose(
-                        PoseStamped(
-                            pose=self._get_pose_distance_ahead(track.pose, -1.0),
-                            header=tracks.header,
-                        ),
-                        "map",
-                    )
-                    # self._goal_pose = self._get_pose_on_path(
-                    #     self._tf_pose(self._robot_pose_in_odom(), "map"),
-                    #     self._tf_pose(
-                    #         PoseStamped(pose=track.pose, header=tracks.header),
-                    #         "map",
+                    # self._goal_pose = self._tf_pose(
+                    #     PoseStamped(
+                    #         pose=self._get_pose_distance_ahead(track.pose, -1.0),
+                    #         header=tracks.header,
                     #     ),
-                    #     self._stopping_distance,
+                    #     "map",
                     # )
+                    self._goal_pose = self._get_pose_on_path(
+                        self._tf_pose(self._robot_pose_in_odom(), "map"),
+                        self._tf_pose(
+                            PoseStamped(pose=track.pose, header=tracks.header),
+                            "map",
+                        ),
+                        self._stopping_distance,
+                    )
                     if self._goal_pose is not None:
                         self._move_base(self._goal_pose)
                         going_to_person = True
@@ -445,6 +454,17 @@ class PersonFollower:
                         "Person has been static for too long, checking if we are finished"
                     )
                     self._move_base_client.wait_for_result()
+
+                    robot_pose: Union[None, PoseStamped] = self._robot_pose_in_odom()
+                    if robot_pose is not None:
+                        pose: PoseStamped = PoseStamped(header=tracks.header)
+                        pose.pose = robot_pose.pose
+                        pose.pose.orientation = self._compute_face_quat(
+                            robot_pose.pose, track.pose
+                        )
+                        self._goal_pose = self._tf_pose(pose, "map")
+                        self._move_base(self._goal_pose)
+
                     if self._check_finished():
                         rospy.loginfo("Finished following person")
                         break
