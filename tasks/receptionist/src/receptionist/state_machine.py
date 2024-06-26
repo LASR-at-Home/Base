@@ -39,7 +39,7 @@ class Receptionist(smach.StateMachine):
             }
             self.userdata.guest_name = "zoe"
             self.userdata.dataset = "receptionist"
-            self.userdata.confidence = 0.2
+            self.userdata.confidence = 0.15
 
             smach.StateMachine.add(
                 "SAY_START",
@@ -210,6 +210,27 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "GET_GUEST_ATTRIBUTES_GUEST_1",
+                GetGuestAttributes("guest1"),
+                transitions={
+                    "succeeded": "SAY_LEARN_FACES",
+                    "failed": "SAY_GET_GUEST_ATTRIBUTE_1_FAILED",
+                },
+            )
+
+            smach.StateMachine.add(
+                "SAY_GET_GUEST_ATTRIBUTE_1_FAILED",
+                Say(
+                    text="Make sure you're looking into my eyes and facing me, I can't see you."
+                ),
+                transitions={
+                    "succeeded": "GET_GUEST_ATTRIBUTES_GUEST_1_AGAIN",
+                    "aborted": "GET_GUEST_ATTRIBUTES_GUEST_1_AGAIN",
+                    "preempted": "GET_GUEST_ATTRIBUTES_GUEST_1_AGAIN",
+                },
+            )
+
+            smach.StateMachine.add(
+                "GET_GUEST_ATTRIBUTES_GUEST_1_AGAIN",
                 GetGuestAttributes("guest1"),
                 transitions={
                     "succeeded": "SAY_LEARN_FACES",
@@ -505,6 +526,27 @@ class Receptionist(smach.StateMachine):
             smach.StateMachine.add(
                 "GET_GUEST_ATTRIBUTES_GUEST_2",
                 GetGuestAttributes("guest2"),
+                transitions={
+                    "succeeded": "SAY_LEARN_FACES_GUEST_2",
+                    "failed": "SAY_GET_GUEST_ATTRIBUTE_2_FAILED",
+                },
+            )
+
+            smach.StateMachine.add(
+                "SAY_GET_GUEST_ATTRIBUTE_2_FAILED",
+                Say(
+                    text="Make sure you're looking into my eyes and facing me, I can't see you."
+                ),
+                transitions={
+                    "succeeded": "GET_GUEST_ATTRIBUTES_GUEST_2_AGAIN",
+                    "aborted": "GET_GUEST_ATTRIBUTES_GUEST_2_AGAIN",
+                    "preempted": "GET_GUEST_ATTRIBUTES_GUEST_2_AGAIN",
+                },
+            )
+
+            smach.StateMachine.add(
+                "GET_GUEST_ATTRIBUTES_GUEST_2_AGAIN",
+                GetGuestAttributes("guest1"),
                 transitions={
                     "succeeded": "SAY_LEARN_FACES_GUEST_2",
                     "failed": "SAY_LEARN_FACES_GUEST_2",
