@@ -42,6 +42,8 @@ def stringify_guest_data(guest_data: Dict[str, Any], guest_id: str) -> str:
             "max_dress": "unknown",
             "max_top": "unknown",
             "max_outwear": "unknown",
+
+            "detection" : False
         },
     )
 

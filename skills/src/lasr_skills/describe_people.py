@@ -72,17 +72,7 @@ class DescribePeople(smach.StateMachine):
                     rgb_topic=rgb_topic,
                     use_mask=False,
                 ),
-                transitions={"succeeded": "CONVERT_IMAGE", "failed": "SAY_CONTINUE"},
-            )
-
-            smach.StateMachine.add(
-                "SAY_CONTINUE",
-                Say(text="I can't see anyone, I will continue"),
-                transitions={
-                    "succeeded": "failed",
-                    "preempted": "failed",
-                    "aborted": "failed",
-                },
+                transitions={"succeeded": "CONVERT_IMAGE", "failed": "failed"},
             )
 
             smach.StateMachine.add(

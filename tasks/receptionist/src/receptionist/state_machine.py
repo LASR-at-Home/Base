@@ -234,7 +234,17 @@ class Receptionist(smach.StateMachine):
                 GetGuestAttributes("guest1"),
                 transitions={
                     "succeeded": "SAY_LEARN_FACES",
-                    "failed": "SAY_LEARN_FACES",
+                    "failed": "SAY_CONTINUE_GET_GUEST_ATTRIBUTES_GUEST_1",
+                },
+            )
+
+            smach.StateMachine.add(
+                "SAY_CONTINUE_GET_GUEST_ATTRIBUTES_GUEST_1",
+                Say(text="I can't see anyone, I will continue"),
+                transitions={
+                    "succeeded": "SAY_LEARN_FACES",
+                    "preempted": "SAY_LEARN_FACES",
+                    "aborted": "SAY_LEARN_FACES",
                 },
             )
 
@@ -359,7 +369,17 @@ class Receptionist(smach.StateMachine):
                 SeatGuest(seat_area),
                 transitions={
                     "succeeded": "SAY_RETURN_WAITING_AREA",
-                    "failed": "SAY_RETURN_WAITING_AREA",
+                    "failed": "SAY_SEAT_GUEST_1_FAILED",
+                },
+            )
+
+            smach.StateMachine.add(
+                "SAY_SEAT_GUEST_1_FAILED",
+                Say(text="I can't see a free seat, please sit down somewhere."),
+                transitions={
+                    "succeeded": "SAY_RETURN_WAITING_AREA",
+                    "aborted": "SAY_RETURN_WAITING_AREA",
+                    "preempted": "SAY_RETURN_WAITING_AREA",
                 },
             )
 
@@ -549,7 +569,17 @@ class Receptionist(smach.StateMachine):
                 GetGuestAttributes("guest1"),
                 transitions={
                     "succeeded": "SAY_FOLLOW_GUEST_2",
-                    "failed": "SAY_FOLLOW_GUEST_2",
+                    "failed": "SAY_CONTINUE_GET_GUEST_ATTRIBUTES_GUEST_2",
+                },
+            )
+
+            smach.StateMachine.add(
+                "SAY_CONTINUE_GET_GUEST_ATTRIBUTES_GUEST_2",
+                Say(text="I can't see anyone, I will continue"),
+                transitions={
+                    "succeeded": "SAY_FOLLOW_GUEST_2",
+                    "preempted": "SAY_FOLLOW_GUEST_2",
+                    "aborted": "SAY_FOLLOW_GUEST_2",
                 },
             )
 
@@ -724,7 +754,19 @@ class Receptionist(smach.StateMachine):
                 SeatGuest(seat_area),
                 transitions={
                     "succeeded": "SAY_GOODBYE",
-                    "failed": "SAY_GOODBYE",
+                    "failed": "SAY_SEAT_GUEST_2_FAILED",
+                },
+            )
+
+            smach.StateMachine.add(
+                "SAY_SEAT_GUEST_2_FAILED",
+                Say(
+                    text="I can't see a free seat, please sit down somewhere."
+                ),
+                transitions={
+                    "succeeded": "SAY_GOODBYE",
+                    "aborted": "SAY_GOODBYE",
+                    "preempted": "SAY_GOODBYE",
                 },
             )
 
