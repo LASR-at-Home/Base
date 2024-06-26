@@ -46,6 +46,7 @@ class PersonFollower:
     _n_secs_static_plan_close: float
     _new_goal_threshold: float
     _stopping_distance: float
+    _tracks_frame: str
 
     # State
     _track_id: Union[None, int]
@@ -79,6 +80,7 @@ class PersonFollower:
         n_secs_static_plan_close: float = 5.0,
         new_goal_threshold: float = 0.5,
         stopping_distance: float = 1.0,
+        tracks_frame="odom",
     ):
         self._start_following_radius = start_following_radius
         self._start_following_angle = start_following_angle
@@ -86,6 +88,7 @@ class PersonFollower:
         self._n_secs_static_plan_close = n_secs_static_plan_close
         self._new_goal_threshold = new_goal_threshold
         self._stopping_distance = stopping_distance
+        self._tracks_frame = tracks_frame
 
         self._track_id = None
 
@@ -129,24 +132,28 @@ class PersonFollower:
             rospy.logwarn("Transcribe speech client not available")
 
     def _tf_pose(self, pose: PoseStamped, target_frame: str):
+        if target_frame == pose.header.frame_id:
+            return pose
+
         trans = self._buffer.lookup_transform(
             target_frame, pose.header.frame_id, rospy.Time(0), rospy.Duration(1.0)
         )
         return do_transform_pose(pose, trans)
 
-    def _robot_pose_in_odom(self) -> Union[PoseStamped, None]:
+    def _robot_pose_in_frame(self, frame: str) -> Union[PoseStamped, None]:
         try:
-            current_pose: PoseWithCovarianceStamped = rospy.wait_for_message(
+            amcl_pose: Pose = rospy.wait_for_message(
                 "/amcl_pose", PoseWithCovarianceStamped
             )
         except AttributeError:
             return None
 
-        current_pose_stamped = PoseStamped(
-            pose=current_pose.pose.pose, header=current_pose.header
-        )
+        if frame == amcl_pose.header.frame_id:
+            return amcl_pose.pose.pose
 
-        return self._tf_pose(current_pose_stamped, "odom")
+        return self._tf_pose(
+            PoseStamped(pose=amcl_pose.pose.pose, header=amcl_pose.header), frame
+        )
 
     def begin_tracking(self, ask: bool = False) -> bool:
         """
@@ -154,6 +161,11 @@ class PersonFollower:
         """
 
         tracks: PersonArray = rospy.wait_for_message("/people_tracked", PersonArray)
+
+        assert (
+            tracks.header.frame_id == self._tracks_frame
+        ), f"_tracks_frame should be set to frame of incoming tracks. _tracks_frame is {self._tracks_frame}, but received track in {tracks.header.frame_id} frame..."
+
         people: List[Person] = tracks.people
 
         if len(people) == 0:
@@ -161,7 +173,7 @@ class PersonFollower:
 
         min_dist: float = np.inf
         closest_person: Union[None, Person] = None
-        robot_pose: PoseStamped = self._robot_pose_in_odom()
+        robot_pose: PoseStamped = self._robot_pose_in_frame(self._tracks_frame)
 
         if robot_pose is None:
             return False
@@ -275,11 +287,9 @@ class PersonFollower:
     def _get_pose_distance_ahead(self, pose: Pose, distance: float):
         new_pose = Pose()
 
-        # Extract position and orientation from the current pose
         current_position = pose.position
         current_orientation = pose.orientation
 
-        # Calculate the yaw angle from the quaternion (assuming 2D motion)
         yaw = math.atan2(
             2.0
             * (
@@ -294,12 +304,10 @@ class PersonFollower:
             ),
         )
 
-        # Calculate new position
         new_pose.position.x = current_position.x + distance * math.cos(yaw)
         new_pose.position.y = current_position.y + distance * math.sin(yaw)
-        new_pose.position.z = current_position.z  # Assuming no change in the z-axis
+        new_pose.position.z = current_position.z
 
-        # The orientation remains the same
         new_pose.orientation = pose.orientation
 
         return new_pose
@@ -358,12 +366,8 @@ class PersonFollower:
                 and self._goal_pose is not None
             ):
                 rospy.logwarn("Move base goal aborted, replanning...")
-                # self._goal_pose = self._get_pose_distance_ahead(
-                #     self._goal_pose.pose, -1.0
-                # )
-                # self._move_base(self._goal_pose)
                 self._goal_pose = self._get_pose_on_path(
-                    self._tf_pose(self._robot_pose_in_odom(), "map"),
+                    self._robot_pose_in_frame("map"),
                     self._goal_pose,
                     self._stopping_distance,
                 )
@@ -429,15 +433,8 @@ class PersonFollower:
                     < self._n_secs_static_finished
                 ) and not going_to_person:
                     self._cancel_goal()
-                    # self._goal_pose = self._tf_pose(
-                    #     PoseStamped(
-                    #         pose=self._get_pose_distance_ahead(track.pose, -1.0),
-                    #         header=tracks.header,
-                    #     ),
-                    #     "map",
-                    # )
                     self._goal_pose = self._get_pose_on_path(
-                        self._tf_pose(self._robot_pose_in_odom(), "map"),
+                        self._robot_pose_in_frame("map"),
                         self._tf_pose(
                             PoseStamped(pose=track.pose, header=tracks.header),
                             "map",
@@ -455,7 +452,9 @@ class PersonFollower:
                     )
                     self._move_base_client.wait_for_result()
 
-                    robot_pose: Union[None, PoseStamped] = self._robot_pose_in_odom()
+                    robot_pose: Union[None, PoseStamped] = self._robot_pose_in_frame(
+                        self._tracks_frame
+                    )
                     if robot_pose is not None:
                         pose: PoseStamped = PoseStamped(header=tracks.header)
                         pose.pose = robot_pose.pose
@@ -464,6 +463,7 @@ class PersonFollower:
                         )
                         self._goal_pose = self._tf_pose(pose, "map")
                         self._move_base(self._goal_pose)
+                    self._move_base(pose)
 
                     if self._check_finished():
                         rospy.loginfo("Finished following person")
