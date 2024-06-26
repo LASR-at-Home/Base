@@ -15,7 +15,7 @@ from typing import Union, List
 
 import actionlib
 from move_base_msgs.msg import MoveBaseAction, MoveBaseActionGoal, MoveBaseGoal
-from actionlib_msgs.msg import GoalStatus
+from actionlib_msgs.msg import GoalStatus, GoalStatusArray
 
 import rosservice
 import tf2_ros as tf
@@ -49,6 +49,7 @@ class PersonFollower:
 
     # State
     _track_id: Union[None, int]
+    _goal_pose: Union[None, PoseStamped]
 
     # Action clients
     _move_base_client: actionlib.SimpleActionClient
@@ -66,6 +67,9 @@ class PersonFollower:
 
     # Publishers
     _person_trajectory_pub: rospy.Publisher
+
+    # Subscribers
+    _move_base_status_sub: rospy.Subscriber
 
     def __init__(
         self,
@@ -98,6 +102,10 @@ class PersonFollower:
             "/move_base/make_plan", timeout=rospy.Duration.from_sec(10.0)
         )
         self._make_plan = rospy.ServiceProxy("/move_base/make_plan", GetPlan)
+
+        self._move_base_status_sub = rospy.Subscriber(
+            "/move_base/status", GoalStatusArray, self._move_base_status_cb
+        )
 
         self._person_trajectory_pub = rospy.Publisher(
             "/person_trajectory", PoseArray, queue_size=1, latch=True
@@ -309,6 +317,16 @@ class PersonFollower:
             else:
                 self._tts_client.send_goal(tts_goal)
 
+    def _move_base_status_cb(self, status: GoalStatusArray) -> None:
+        if status.status_list[-1] == GoalStatus.ABORTED and self._goal_pose is not None:
+            rospy.logwarn("Move base goal aborted, replanning...")
+            self._goal_pose = self._get_pose_on_path(
+                self._tf_pose(self._robot_pose_in_odom(), "map"),
+                self._goal_pose,
+                self._stopping_distance,
+            )
+            self._move_base(self._goal_pose)
+
     def follow(self) -> None:
 
         person_trajectory: PoseArray = PoseArray()
@@ -345,11 +363,12 @@ class PersonFollower:
             # Check if the person has moved significantly
             if dist_to_prev >= self._new_goal_threshold:
 
-                goal_pose = self._tf_pose(
+                self._goal_pose = self._tf_pose(
                     PoseStamped(pose=track.pose, header=tracks.header),
                     "map",
                 )
-                self._move_base(goal_pose)
+                self._move_base(self._goal_pose)
+
                 prev_track = track
                 last_goal_time = rospy.Time.now()
                 person_trajectory.poses.append(track.pose)
@@ -364,7 +383,7 @@ class PersonFollower:
                     < self._n_secs_static_finished
                 ) and not going_to_person:
                     self._cancel_goal()
-                    goal_pose = self._get_pose_on_path(
+                    self._goal_pose = self._get_pose_on_path(
                         self._tf_pose(self._robot_pose_in_odom(), "map"),
                         self._tf_pose(
                             PoseStamped(pose=track.pose, header=tracks.header),
@@ -372,8 +391,8 @@ class PersonFollower:
                         ),
                         self._stopping_distance,
                     )
-                    if goal_pose is not None:
-                        self._move_base(goal_pose)
+                    if self._goal_pose is not None:
+                        self._move_base(self._goal_pose)
                         going_to_person = True
                     else:
                         rospy.logwarn("Could not find a path to the person")
