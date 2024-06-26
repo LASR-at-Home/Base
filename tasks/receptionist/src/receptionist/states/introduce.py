@@ -51,10 +51,12 @@ def stringify_guest_data(guest_data: Dict[str, Any], guest_id: str) -> str:
 
     guest_str += f"{relevant_guest_data['name']}, their favourite drink is {relevant_guest_data['drink']}. "
 
-    clothes = ["dress", "top", "outwear"]
+    if relevant_guest_data["attributes"]["detection"] == False:
+        guest_str += "No attributes were detected for them."
+        return guest_str
+
 
     filtered_attributes = {}
-
     filtered_attributes["hair"] = {
         "confidence": relevant_guest_data["attributes"]["has_hair"],
         "hair_shape": relevant_guest_data["attributes"]["hair_shape"],
