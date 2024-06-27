@@ -391,6 +391,7 @@ class PersonFollower:
         person_trajectory: PoseArray = PoseArray()
         person_trajectory.header.frame_id = self._tracks_frame
         prev_track: Union[None, Person] = None
+        last_track_time: Union[None, rospy.Time] = None
         last_goal_time: Union[None, rospy.Time] = None
         going_to_person: bool = False
 
@@ -404,19 +405,20 @@ class PersonFollower:
                 None,
             )
 
-            # TODO: consider multiple scans. we may have just lost them for a single scan.
             if track is None:
                 recover: bool = False
-                if prev_track is None:
+                if last_track_time is None:
                     recover = True
-                else:
-                    if (
-                        rospy.Time.now() - prev_track.header.stamp
-                        > rospy.Duration.from_sec(2.0)
-                    ):
-                        recover = True
-                    continue
+                elif (rospy.Time.now() - last_track_time).to_sec() > 5.0:
+                    recover = True
                 if recover:
+                    # TODO
+                    """
+                    sometimes, we lose track of the person, but they are in the frame of the camera.
+                    We should incorporate vision, combined with the last known position of the person, and the leg tracker, to recover the track.
+                    or, even assume that the "legs" closest to the last track are the person we are following.
+                    or, project using the velocity?
+                    """
                     rospy.loginfo("Lost track of person, recovering...")
                     self._cancel_goal()
                     self._recover_track()
@@ -427,6 +429,7 @@ class PersonFollower:
                     continue
 
             assert track is not None, "Track should not be None"
+            last_track_time = rospy.Time.now()
 
             if prev_track is None:
                 robot_pose: PoseStamped = self._robot_pose_in_frame("map")
