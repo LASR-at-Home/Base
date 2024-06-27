@@ -374,7 +374,7 @@ class PersonFollower:
                 self._move_base(self._goal_pose)
 
     def follow(self) -> None:
-
+        # TODO: handle initial person's vecocity
         person_trajectory: PoseArray = PoseArray()
         person_trajectory.header.frame_id = "odom"
         prev_track: Union[None, Person] = None
