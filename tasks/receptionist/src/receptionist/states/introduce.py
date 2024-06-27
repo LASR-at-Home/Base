@@ -10,6 +10,7 @@ from smach import UserData
 from lasr_skills import Say
 from typing import Dict, List, Any, Optional
 
+
 def stringify_guest_data(guest_data: Dict[str, Any], guest_id: str) -> str:
     """Converts the guest data for a specified guest into a string that can be used
     for the robot to introduce the guest to the other guests/host.
@@ -52,7 +53,6 @@ def stringify_guest_data(guest_data: Dict[str, Any], guest_id: str) -> str:
     if relevant_guest_data["detection"] == False:
         guest_str += "No attributes were detected for them."
         return guest_str
-
 
     filtered_attributes = {}
     filtered_attributes["hair"] = {
@@ -138,6 +138,7 @@ def stringify_guest_data(guest_data: Dict[str, Any], guest_id: str) -> str:
 
     return guest_str
 
+
 def find_most_confident_clothes(
     relevant_guest_data: Dict[str, Any], clothes: List[List[Any]]
 ) -> List[Any]:
@@ -161,6 +162,7 @@ def find_most_confident_clothes(
         max_clothes = relevant_guest_data["attributes"]["max_outwear"]
 
     return [max_confidence, max_clothes]
+
 
 def isSingular(attribute: str):
     """Checks if a word is singular or plural by checking the last letter

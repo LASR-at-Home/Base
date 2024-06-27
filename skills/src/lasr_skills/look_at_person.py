@@ -21,6 +21,7 @@ import actionlib
 from control_msgs.msg import PointHeadAction, PointHeadGoal
 from geometry_msgs.msg import Point
 from copy import copy
+
 PUBLIC_CONTAINER = False
 
 try:

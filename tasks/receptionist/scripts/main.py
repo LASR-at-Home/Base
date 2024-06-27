@@ -39,7 +39,7 @@ if __name__ == "__main__":
             "drink": "wine",
             "dataset": "receptionist",
             "confidence": 0.5,
-            "detection" : True,
+            "detection": True,
             "attributes": {
                 "has_hair": 0.5,
                 "hair_shape": "straight hair",

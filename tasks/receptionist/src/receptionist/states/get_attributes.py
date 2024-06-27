@@ -23,7 +23,7 @@ class GetGuestAttributes(smach.StateMachine):
             except Exception as e:
                 print(e)
                 return "failed"
-        
+
     class HandleGuestAttributes(smach.State):
         def __init__(self, guest_id: str):
             smach.State.__init__(

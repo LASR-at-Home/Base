@@ -137,7 +137,9 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "REPEAT_GET_NAME_GUEST_1",
-                AskAndListen("Sorry, I didn't get your name. What is your name? Feel free to repeat your name several times."),
+                AskAndListen(
+                    "Sorry, I didn't get your name. What is your name? Feel free to repeat your name several times."
+                ),
                 transitions={
                     "succeeded": "REPEAT_PARSE_NAME_GUEST_1",
                     "failed": "SAY_CONTINUE",
@@ -288,7 +290,9 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "SAY_WAIT_GUEST_1",
-                Say(text="Please wait here on my left. Can the seated host look into my eyes please."),
+                Say(
+                    text="Please wait here on my left. Can the seated host look into my eyes please."
+                ),
                 transitions={
                     "succeeded": "FIND_AND_LOOK_AT",
                     "preempted": "failed",
@@ -479,7 +483,9 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "REPEAT_GET_NAME_GUEST_2",
-                AskAndListen("Sorry, I didn't get your name. What is your name? Feel free to repeat your name several times."),
+                AskAndListen(
+                    "Sorry, I didn't get your name. What is your name? Feel free to repeat your name several times."
+                ),
                 transitions={
                     "succeeded": "REPEAT_PARSE_NAME_GUEST_2",
                     "failed": "SAY_CONTINUE_GUEST_2",
@@ -623,7 +629,9 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "SAY_WAIT_GUEST_2",
-                Say(text="Please wait here on my left. Can the seated host look into my eyes please."),
+                Say(
+                    text="Please wait here on my left. Can the seated host look into my eyes please."
+                ),
                 transitions={
                     "succeeded": "FIND_AND_LOOK_AT_HOST_2",
                     "preempted": "failed",
@@ -720,9 +728,8 @@ class Receptionist(smach.StateMachine):
                 },
             )
 
-
-            # Check if host is sat where they are sat 
-            # Look at the host 
+            # Check if host is sat where they are sat
+            # Look at the host
 
             smach.StateMachine.add(
                 "LOOK_AT_WAITING_GUEST_2_3",
@@ -757,8 +764,7 @@ class Receptionist(smach.StateMachine):
                 },
             )
 
-
-            # Look at guest 1 
+            # Look at guest 1
             smach.StateMachine.add(
                 "INTRODUCE_GUEST_1_TO_GUEST_2",
                 Introduce(guest_to_introduce="guest1", guest_to_introduce_to="guest2"),
@@ -779,9 +785,7 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "SAY_SEAT_GUEST_2_FAILED",
-                Say(
-                    text="I can't see a free seat, please sit down somewhere."
-                ),
+                Say(text="I can't see a free seat, please sit down somewhere."),
                 transitions={
                     "succeeded": "SAY_GOODBYE",
                     "aborted": "SAY_GOODBYE",
