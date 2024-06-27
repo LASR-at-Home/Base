@@ -406,14 +406,27 @@ class PersonFollower:
 
             # TODO: consider multiple scans. we may have just lost them for a single scan.
             if track is None:
-                rospy.loginfo("Lost track of person, recovering...")
-                self._cancel_goal()
-                self._recover_track()
-                person_trajectory = PoseArray()
-                prev_track = None
-                self._goal_pose = None
-                last_goal_time = None
-                continue
+                recover: bool = False
+                if prev_track is None:
+                    recover = True
+                else:
+                    if (
+                        rospy.Time.now() - prev_track.header.stamp
+                        > rospy.Duration.from_sec(2.0)
+                    ):
+                        recover = True
+                    continue
+                if recover:
+                    rospy.loginfo("Lost track of person, recovering...")
+                    self._cancel_goal()
+                    self._recover_track()
+                    person_trajectory = PoseArray()
+                    prev_track = None
+                    self._goal_pose = None
+                    last_goal_time = None
+                    continue
+
+            assert track is not None, "Track should not be None"
 
             if prev_track is None:
                 robot_pose: PoseStamped = self._robot_pose_in_frame("map")
