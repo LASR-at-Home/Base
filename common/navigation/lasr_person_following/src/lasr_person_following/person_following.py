@@ -510,6 +510,7 @@ class PersonFollower:
                         "Person has been static for too long, checking if we are finished"
                     )
                     self._move_base_client.wait_for_result()
+                    # if the person moves at this point, we lose them.
 
                     robot_pose: Union[None, PoseStamped] = self._robot_pose_in_frame(
                         self._tracks_frame
