@@ -92,8 +92,8 @@ class ImageOfPerson(ImageWithMasksAndAttributes):
 
     def describe(self) -> dict:
         has_hair = self.attributes["hair"] - 0.5
-        hair_colour = _max_value_tuple(self.selective_attribute_dict["hair_colour"])
-        hair_shape = _max_value_tuple(self.selective_attribute_dict["hair_shape"])
+        hair_colour = _max_value_tuple(self.selective_attribute_dict["hair_colour"])[0]
+        hair_shape = _max_value_tuple(self.selective_attribute_dict["hair_shape"])[0]
         facial_hair = 1 - self.attributes["No_Beard"] - 0.5
         glasses = self.attributes["Eyeglasses"] - 0.5
         hat = self.attributes["Wearing_Hat"] - 0.5
@@ -150,7 +150,7 @@ class ImageOfCloth(ImageWithMasksAndAttributes):
                 max_attribute = attribute
         if max_attribute in ["vest", "sling"]:
             max_attribute = "sleeveless top"
-        result['max_top'] = max_attribute
+        result["max_top"] = max_attribute
 
         max_prob = 0.0
         max_attribute = "short sleeve outwear"
@@ -161,7 +161,7 @@ class ImageOfCloth(ImageWithMasksAndAttributes):
             if self.attributes[attribute] > max_prob:
                 max_prob = self.attributes[attribute]
                 max_attribute = attribute
-        result['max_outwear'] = max_attribute
+        result["max_outwear"] = max_attribute
 
         max_prob = 0.0
         max_attribute = "short sleeve dress"
@@ -176,6 +176,6 @@ class ImageOfCloth(ImageWithMasksAndAttributes):
                 max_attribute = attribute
         if max_attribute in ["vest dress", "sling dress"]:
             max_attribute = "sleeveless dress"
-        result['max_dress'] = max_attribute
+        result["max_dress"] = max_attribute
 
         return result

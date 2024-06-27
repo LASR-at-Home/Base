@@ -16,8 +16,6 @@
 
     <node pkg="lasr_vision_feature_extraction" type="service" name="torch_service" output="screen"/>
     
-    <!-- <node name="image_view_yolo" pkg="rqt_image_view" type="rqt_image_view" respawn="false" output="screen" args="/yolov8/debug/yolov8nsegpt" />
-    <node name="image_view_bodypix" pkg="rqt_image_view" type="rqt_image_view" respawn="false" output="screen" args="/bodypix/debug/resnet50" />-->
 
    <include file="$(find video_stream_opencv)/launch/camera.launch">
         <arg name="visualize" value="true" />

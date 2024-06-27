@@ -18,6 +18,7 @@ from numpy2message import numpy2message
 from .vision import GetCroppedImage, ImageMsgToCv2
 import numpy as np
 from lasr_skills.validate_keypoints import ValidateKeypoints
+from lasr_skills.validate_keypoints import ValidateKeypoints
 
 
 class DescribePeople(smach.StateMachine):
@@ -45,6 +46,7 @@ class DescribePeople(smach.StateMachine):
                     object_name="person",
                     crop_method=crop_method,
                     rgb_topic=rgb_topic,
+                    use_mask=False,
                     use_mask=False,
                 ),
                 transitions={
