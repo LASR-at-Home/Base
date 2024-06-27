@@ -39,7 +39,7 @@ class Receptionist(smach.StateMachine):
             }
             self.userdata.guest_name = "zoe"
             self.userdata.dataset = "receptionist"
-            self.userdata.confidence = 0.15
+            self.userdata.confidence = 0.2
 
             smach.StateMachine.add(
                 "SAY_START",
@@ -66,7 +66,7 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "SAY_WAITING_GUEST_1",
-                Say(text="I am waiting for a guest."),
+                Say(text="I am waiting for a guest. Please open the door."),
                 transitions={
                     "succeeded": "WAIT_FOR_PERSON_GUEST_1",
                     "aborted": "WAIT_FOR_PERSON_GUEST_1",
@@ -111,7 +111,7 @@ class Receptionist(smach.StateMachine):
             smach.StateMachine.add(
                 "REPEAT_GET_NAME_AND_DRINK_GUEST_1",
                 AskAndListen(
-                    "Sorry, I didn't get that. What is your name and favourite drink?"
+                    "Sorry, I didn't get that, consider raising your voice. What is your name and favourite drink?"
                 ),
                 transitions={
                     "succeeded": "REPEAT_PARSE_NAME_AND_DRINK_GUEST_1",
@@ -137,7 +137,7 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "REPEAT_GET_NAME_GUEST_1",
-                AskAndListen("Sorry, I didn't get your name. What is your name?"),
+                AskAndListen("Sorry, I didn't get your name. What is your name? Feel free to repeat your name several times."),
                 transitions={
                     "succeeded": "REPEAT_PARSE_NAME_GUEST_1",
                     "failed": "SAY_CONTINUE",
@@ -161,7 +161,7 @@ class Receptionist(smach.StateMachine):
             smach.StateMachine.add(
                 "REPEAT_GET_DRINK_GUEST_1",
                 AskAndListen(
-                    "Sorry, I didn't get your favourite drink. What is your favourite drink?"
+                    "Sorry, I didn't get your favourite drink. What is your favourite drink? Feel free to repeat your favourite drink several times."
                 ),
                 transitions={
                     "succeeded": "REPEAT_PARSE_DRINK_GUEST_1",
@@ -288,7 +288,7 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "SAY_WAIT_GUEST_1",
-                Say(text="Please wait here on my left"),
+                Say(text="Please wait here on my left. Can the seated host look into my eyes please."),
                 transitions={
                     "succeeded": "FIND_AND_LOOK_AT",
                     "preempted": "failed",
@@ -408,7 +408,7 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "SAY_WAITING_GUEST_2",
-                Say(text="I am waiting for a guest."),
+                Say(text="I am waiting for a guest. Please open the door."),
                 transitions={
                     "succeeded": "WAIT_FOR_PERSON_GUEST_2",
                     "aborted": "WAIT_FOR_PERSON_GUEST_2",
@@ -453,7 +453,7 @@ class Receptionist(smach.StateMachine):
             smach.StateMachine.add(
                 "REPEAT_GET_NAME_AND_DRINK_GUEST_2",
                 AskAndListen(
-                    "Sorry, I didn't get that. What is your name and favourite drink?"
+                    "Sorry, I didn't get that, consider raising your voice. What is your name and favourite drink?"
                 ),
                 transitions={
                     "succeeded": "REPEAT_PARSE_NAME_AND_DRINK_GUEST_2",
@@ -479,7 +479,7 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "REPEAT_GET_NAME_GUEST_2",
-                AskAndListen("Sorry, I didn't get your name. What is your name?"),
+                AskAndListen("Sorry, I didn't get your name. What is your name? Feel free to repeat your name several times."),
                 transitions={
                     "succeeded": "REPEAT_PARSE_NAME_GUEST_2",
                     "failed": "SAY_CONTINUE_GUEST_2",
@@ -503,7 +503,7 @@ class Receptionist(smach.StateMachine):
             smach.StateMachine.add(
                 "REPEAT_GET_DRINK_GUEST_2",
                 AskAndListen(
-                    "Sorry, I didn't get your favourite drink. What is your favourite drink?"
+                    "Sorry, I didn't get your favourite drink. What is your favourite drink? Feel free to repeat your favourite drink several times."
                 ),
                 transitions={
                     "succeeded": "REPEAT_PARSE_DRINK_GUEST_2",
@@ -623,7 +623,7 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "SAY_WAIT_GUEST_2",
-                Say(text="Please wait here on my left"),
+                Say(text="Please wait here on my left. Can the seated host look into my eyes please."),
                 transitions={
                     "succeeded": "FIND_AND_LOOK_AT_HOST_2",
                     "preempted": "failed",
@@ -689,8 +689,18 @@ class Receptionist(smach.StateMachine):
                 "INTRODUCE_GUEST_HOST_TO_GUEST_2",
                 Introduce(guest_to_introduce="host", guest_to_introduce_to="guest2"),
                 transitions={
+                    "succeeded": "SAY_WAIT_GUEST_2_SEATED_GUEST_1",
+                    "failed": "SAY_WAIT_GUEST_2_SEATED_GUEST_1",
+                },
+            )
+
+            smach.StateMachine.add(
+                "SAY_WAIT_GUEST_2_SEATED_GUEST_1",
+                Say(text="Can the seated guest look into my eyes please."),
+                transitions={
                     "succeeded": "FIND_AND_LOOK_AT_GUEST_1",
-                    "failed": "FIND_AND_LOOK_AT_GUEST_1",
+                    "preempted": "FIND_AND_LOOK_AT_GUEST_1",
+                    "aborted": "FIND_AND_LOOK_AT_GUEST_1",
                 },
             )
 
