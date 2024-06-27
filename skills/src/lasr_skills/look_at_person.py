@@ -59,8 +59,9 @@ class LookAtPerson(smach.StateMachine):
 
         def execute(self, userdata):
             rospy.sleep(0.1)
+            ######### BUG HERE REQUIRES RESOLVING ###############
             if len(userdata.bbox_eyes) == 0 and len(userdata.detections.detections) > 0:
-                userdata.pointstamped = PointStamped()
+                # userdata.pointstamped = PointStamped()
                 return "succeeded"
             elif (
                 len(userdata.bbox_eyes) < 1 and len(userdata.detections.detections) < 1
@@ -144,15 +145,15 @@ class LookAtPerson(smach.StateMachine):
                     look_at.point.y = 0.0
                     look_at.point.z = 0.0
 
-                # goal = PointHeadGoal()
-                # goal.pointing_frame = "head_2_link"
-                # goal.pointing_axis = Point(1.0, 0.0, 0.0)
-                # goal.max_velocity = 1.0
-                # goal.target = look_at
-                # rospy.loginfo(
-                #     f"LOOKING AT POINT {look_at.point.x}, {look_at.point.y}, {look_at.point.z}"
-                # )
-                # self.look_at_pub.send_goal(goal)
+                goal = PointHeadGoal()
+                goal.pointing_frame = "head_2_link"
+                goal.pointing_axis = Point(1.0, 0.0, 0.0)
+                goal.max_velocity = 1.0
+                goal.target = look_at
+                rospy.loginfo(
+                    f"LOOKING AT POINT {look_at.point.x}, {look_at.point.y}, {look_at.point.z}"
+                )
+                self.look_at_pub.send_goal(goal)
 
                 print(self.look_at_pub.get_state())
 
@@ -271,11 +272,26 @@ class LookAtPerson(smach.StateMachine):
                 transitions={"succeeded": "CHECK_EYES", "failed": "failed"},
                 remapping={"bbox_eyes": "bbox_eyes"},
             )
+            # smach.StateMachine.add(
+            #     "CHECK_EYES",
+            #     self.CheckEyes(self.DEBUG, filter=filter),
+            #     transitions={
+            #         "succeeded": "LOOK_TO_POINT",
+            #         "failed": "failed",
+            #         "no_detection": "no_detection",
+            #     },
+            #     remapping={
+            #         "pcl_msg": "pcl_msg",
+            #         "bbox_eyes": "bbox_eyes",
+            #         "pointstamped": "pointstamped",
+            #         "deepface_detection": "deepface_detection",
+            #     },
+            # )
             smach.StateMachine.add(
                 "CHECK_EYES",
                 self.CheckEyes(self.DEBUG, filter=filter),
                 transitions={
-                    "succeeded": "LOOK_TO_POINT",
+                    "succeeded": "LOOP",
                     "failed": "failed",
                     "no_detection": "no_detection",
                 },

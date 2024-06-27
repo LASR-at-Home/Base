@@ -60,7 +60,7 @@ class Receptionist(smach.StateMachine):
                 GoToLocation(wait_pose),
                 transitions={
                     "succeeded": "SAY_WAITING_GUEST_1",
-                    "failed": "SAY_WAITING_GUEST_1",
+                    "failed": "GO_TO_WAIT_LOCATION_GUEST_1",
                 },
             )
 
@@ -282,7 +282,7 @@ class Receptionist(smach.StateMachine):
                 GoToLocation(seat_pose),
                 transitions={
                     "succeeded": "SAY_WAIT_GUEST_1",
-                    "failed": "SAY_WAIT_GUEST_1",
+                    "failed": "GO_TO_SEAT_LOCATION_GUEST_1",
                 },
             )
 
@@ -402,7 +402,7 @@ class Receptionist(smach.StateMachine):
                 GoToLocation(wait_pose),
                 transitions={
                     "succeeded": "SAY_WAITING_GUEST_2",
-                    "failed": "SAY_WAITING_GUEST_2",
+                    "failed": "GO_TO_WAIT_LOCATION_GUEST_2",
                 },
             )
 
@@ -617,7 +617,7 @@ class Receptionist(smach.StateMachine):
                 GoToLocation(seat_pose),
                 transitions={
                     "succeeded": "SAY_WAIT_GUEST_2",
-                    "failed": "SAY_WAIT_GUEST_2",
+                    "failed": "GO_TO_SEAT_LOCATION_GUEST_2",
                 },
             )
 
@@ -809,7 +809,7 @@ class Receptionist(smach.StateMachine):
                 GoToLocation(wait_pose),
                 transitions={
                     "succeeded": "SAY_FINISHED",
-                    "failed": "SAY_FINISHED",
+                    "failed": "GO_TO_FINISH_LOCATION",
                 },
             )
             smach.StateMachine.add(
