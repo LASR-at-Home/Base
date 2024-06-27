@@ -314,6 +314,7 @@ class PersonFollower:
         person_trajectory: PoseArray = PoseArray()
         person_trajectory.header.frame_id = "odom"
         prev_track: Union[None, Person] = None
+        prev_goal: Union[None, PoseStamped] = None
         last_goal_time: Union[None, rospy.Time] = None
         going_to_person: bool = False
 
@@ -350,12 +351,15 @@ class PersonFollower:
                     "map",
                 )
                 self._move_base(goal_pose)
+                prev_goal = goal_pose
                 prev_track = track
                 last_goal_time = rospy.Time.now()
-                person_trajectory.poses.append(track.pose)
-                person_trajectory.header.stamp = rospy.Time.now()
-                self._person_trajectory_pub.publish(person_trajectory)
-                going_to_person = False
+            elif (
+                self._move_base_client.get_state() in [GoalStatus.ABORTED]
+                and prev_goal is not None
+            ):
+                rospy.logwarn("Goal was aborted, retrying")
+                self._move_base(prev_goal)
             elif last_goal_time is not None:
                 delta_t: float = (rospy.Time.now() - last_goal_time).to_sec()
                 if (
