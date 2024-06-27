@@ -390,7 +390,7 @@ class PersonFollower:
     def follow(self) -> None:
         # TODO: handle initial person's vecocity
         person_trajectory: PoseArray = PoseArray()
-        person_trajectory.header.frame_id = "odom"
+        person_trajectory.header.frame_id = self._tracks_frame
         prev_track: Union[None, Person] = None
         last_goal_time: Union[None, rospy.Time] = None
         going_to_person: bool = False
