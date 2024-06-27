@@ -271,7 +271,9 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "SAY_LEARN_FACES_FAILED",
-                Say(text="Make sure you're looking into my eyes and staying still, I'll try and learn your face again"),
+                Say(
+                    text="Make sure you're looking into my eyes and staying still, I'll try and learn your face again"
+                ),
                 transitions={
                     "succeeded": "LEARN_FACES_RECOVERY",
                     "preempted": "LEARN_FACES_RECOVERY",
