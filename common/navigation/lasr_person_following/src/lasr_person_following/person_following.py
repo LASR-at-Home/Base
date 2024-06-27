@@ -388,7 +388,6 @@ class PersonFollower:
                 self._move_base(self._goal_pose)
 
     def follow(self) -> None:
-        # TODO: handle initial person's vecocity
         person_trajectory: PoseArray = PoseArray()
         person_trajectory.header.frame_id = self._tracks_frame
         prev_track: Union[None, Person] = None
@@ -428,7 +427,7 @@ class PersonFollower:
                 self._goal_pose = self._get_pose_on_path(
                     robot_pose,
                     track_pose_map,
-                    self._stopping_distance,
+                    self._stopping_distance / 2.0,
                 )
                 if self._goal_pose is not None:
                     self._move_base(self._goal_pose)
