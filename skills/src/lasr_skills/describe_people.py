@@ -18,7 +18,6 @@ from numpy2message import numpy2message
 from .vision import GetCroppedImage, ImageMsgToCv2
 import numpy as np
 from lasr_skills.validate_keypoints import ValidateKeypoints
-from lasr_skills.validate_keypoints import ValidateKeypoints
 
 
 class DescribePeople(smach.StateMachine):
@@ -40,6 +39,16 @@ class DescribePeople(smach.StateMachine):
             crop_method = (
                 "closest" if "tiago" in os.environ["ROS_MASTER_URI"] else "centered"
             )
+            if "tiago" in os.environ["ROS_MASTER_URI"]:
+                transitions = {
+                    "succeeded": "CONVERT_IMAGE",
+                    "failed": "SAY_GET_IMAGE_AGAIN",
+                }
+            else:
+                transitions={
+                    "succeeded": "CONVERT_IMAGE",
+                    "failed": "CONVERT_IMAGE",
+                }
             smach.StateMachine.add(
                 "GET_IMAGE",
                 GetCroppedImage(
@@ -47,12 +56,8 @@ class DescribePeople(smach.StateMachine):
                     crop_method=crop_method,
                     rgb_topic=rgb_topic,
                     use_mask=False,
-                    use_mask=False,
                 ),
-                transitions={
-                    "succeeded": "CONVERT_IMAGE",
-                    "failed": "SAY_GET_IMAGE_AGAIN",
-                },
+                transitions=transitions,
             )
 
             if "tiago" in os.environ["ROS_MASTER_URI"]:
@@ -68,6 +73,16 @@ class DescribePeople(smach.StateMachine):
                     },
                 )
 
+            if "tiago" in os.environ["ROS_MASTER_URI"]:
+                transitions = {
+                    "succeeded": "CONVERT_IMAGE",
+                    "failed": "SAY_CONTINUE",
+                }
+            else:
+                transitions={
+                    "succeeded": "CONVERT_IMAGE",
+                    "failed": "CONVERT_IMAGE",
+                }
             smach.StateMachine.add(
                 "GET_IMAGE_AGAIN",
                 GetCroppedImage(
@@ -76,7 +91,7 @@ class DescribePeople(smach.StateMachine):
                     rgb_topic=rgb_topic,
                     use_mask=False,
                 ),
-                transitions={"succeeded": "CONVERT_IMAGE", "failed": "SAY_CONTINUE"},
+                transitions=transitions,
             )
 
             if "tiago" in os.environ["ROS_MASTER_URI"]:
