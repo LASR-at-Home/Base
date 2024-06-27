@@ -241,12 +241,21 @@ class PersonFollower:
 
     def _quat_to_dir(self, q: Quaternion):
         x, y, z, w = q.x, q.y, q.z, q.w
+        """
+        Compute forward vector from quaternion
+        f_x = 1 - 2 * (y^2 + z^2)
+        f_y = 2 * (x * y - z * w)
+        f_z = 2 * (x * z + y * w)
+        """
         forward = np.array(
             [1 - 2 * (y**2 + z**2), 2 * (x * y - z * w), 2 * (x * z + y * w)]
         )
         return forward
 
     def _angle_between_vectors(self, v1, v2):
+        """
+        angle = arccos(dot(v1, v2) / (norm(v1) * norm(v2)))
+        """
         dot_product = np.dot(v1, v2)
         norms_product = np.linalg.norm(v1) * np.linalg.norm(v2)
         cos_theta = dot_product / norms_product
@@ -290,6 +299,10 @@ class PersonFollower:
         current_position = pose.position
         current_orientation = pose.orientation
 
+        """
+        Convert quaternion to yaw
+        yaw = atan2(2.0 * (w * z + x * y), 1.0 - 2.0 * (y * y + z * z))
+        """
         yaw = math.atan2(
             2.0
             * (
@@ -304,6 +317,7 @@ class PersonFollower:
             ),
         )
 
+        # project the point distance ahead
         new_pose.position.x = current_position.x + distance * math.cos(yaw)
         new_pose.position.y = current_position.y + distance * math.sin(yaw)
         new_pose.position.z = current_position.z
