@@ -416,6 +416,27 @@ class PersonFollower:
                 last_goal_time = None
                 continue
 
+            if prev_track is None:
+                robot_pose: PoseStamped = self._robot_pose_in_frame("map")
+                track_pose_map: PoseStamped = self._tf_pose(
+                    PoseStamped(pose=track.pose, header=tracks.header), "map"
+                )
+                track_pose_map.pose.orientation = self._compute_face_quat(
+                    robot_pose.pose, track_pose_map.pose
+                )
+
+                self._goal_pose = self._get_pose_on_path(
+                    robot_pose,
+                    track_pose_map,
+                    self._stopping_distance,
+                )
+                if self._goal_pose is not None:
+                    self._move_base(self._goal_pose)
+                    prev_track = track
+                    last_goal_time = rospy.Time.now()
+
+                continue
+
             # Distance to the previous pose
             dist_to_prev = (
                 self._euclidian_distance(track.pose, prev_track.pose)
