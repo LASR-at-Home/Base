@@ -72,16 +72,16 @@ class DescribePeople(smach.StateMachine):
                         'rightEar',
                         'leftShoulder',
                         'rightShoulder',
-                        'leftElbow',
-                        'rightElbow',
+                        # 'leftElbow',
+                        # 'rightElbow',
                         'leftWrist',
                         'rightWrist',
                         'leftHip',
                         'rightHip',
-                        'leftKnee',
-                        'rightKnee',
-                        'leftAnkle',
-                        'rightAnkle'
+                        # 'leftKnee',
+                        # 'rightKnee',
+                        # 'leftAnkle',
+                        # 'rightAnkle'
                     ],
                 ),
                 transitions={
