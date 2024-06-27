@@ -409,9 +409,11 @@ class PersonFollower:
             if track is None:
                 rospy.loginfo("Lost track of person, recovering...")
                 self._cancel_goal()
-                person_trajectory = PoseArray()
                 self._recover_track()
+                person_trajectory = PoseArray()
                 prev_track = None
+                self._goal_pose = None
+                last_goal_time = None
                 continue
 
             # Distance to the previous pose
