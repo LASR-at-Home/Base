@@ -92,10 +92,8 @@ class ImageOfPerson(ImageWithMasksAndAttributes):
 
     def describe(self) -> dict:
         has_hair = self.attributes["hair"] - 0.5
-        hair_colour = (
-            _max_value_tuple(self.selective_attribute_dict["hair_colour"]) - 0.5
-        )
-        hair_shape = _max_value_tuple(self.selective_attribute_dict["hair_shape"]) - 0.5
+        hair_colour = _max_value_tuple(self.selective_attribute_dict["hair_colour"])
+        hair_shape = _max_value_tuple(self.selective_attribute_dict["hair_shape"])
         facial_hair = 1 - self.attributes["No_Beard"] - 0.5
         glasses = self.attributes["Eyeglasses"] - 0.5
         hat = self.attributes["Wearing_Hat"] - 0.5
