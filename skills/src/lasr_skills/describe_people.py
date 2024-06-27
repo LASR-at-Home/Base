@@ -18,6 +18,7 @@ from numpy2message import numpy2message
 from .vision import GetCroppedImage, ImageMsgToCv2
 import numpy as np
 from lasr_skills.validate_keypoints import ValidateKeypoints
+from lasr_skills.adjust_camera import AdjustCamera
 
 
 class DescribePeople(smach.StateMachine):
@@ -41,13 +42,13 @@ class DescribePeople(smach.StateMachine):
             )
             if "tiago" in os.environ["ROS_MASTER_URI"]:
                 transitions = {
-                    "succeeded": "CONVERT_IMAGE",
+                    "succeeded": "CHECK_KEYPOINTS",
                     "failed": "SAY_GET_IMAGE_AGAIN",
                 }
             else:
                 transitions={
-                    "succeeded": "CONVERT_IMAGE",
-                    "failed": "CONVERT_IMAGE",
+                    "succeeded": "CHECK_KEYPOINTS",
+                    "failed": "GET_IMAGE_AGAIN",
                 }
             smach.StateMachine.add(
                 "GET_IMAGE",
@@ -57,6 +58,49 @@ class DescribePeople(smach.StateMachine):
                     rgb_topic=rgb_topic,
                     use_mask=False,
                 ),
+                transitions=transitions,
+            )
+
+            smach.StateMachine.add(
+                "CHECK_KEYPOINTS",
+                ValidateKeypoints(
+                    keypoints_to_detect=[
+                        'nose',
+                        'leftEye',
+                        'rightEye',
+                        'leftEar',
+                        'rightEar',
+                        'leftShoulder',
+                        'rightShoulder',
+                        'leftElbow',
+                        'rightElbow',
+                        'leftWrist',
+                        'rightWrist',
+                        'leftHip',
+                        'rightHip',
+                        'leftKnee',
+                        'rightKnee',
+                        'leftAnkle',
+                        'rightAnkle'
+                    ],
+                ),
+                transitions={
+                    "succeeded": "CONVERT_IMAGE",
+                    "failed": "ADJUST_CAMERA",
+                },
+            )
+
+            if "tiago" in os.environ["ROS_MASTER_URI"]:
+                transitions = {
+                    "finished": "SAY_GET_IMAGE_AGAIN",
+                }
+            else:
+                transitions={
+                    "finished": "GET_IMAGE_AGAIN",
+                }
+            smach.StateMachine.add(
+                "ADJUST_CAMERA",
+                AdjustCamera(),
                 transitions=transitions,
             )
 
@@ -73,16 +117,6 @@ class DescribePeople(smach.StateMachine):
                     },
                 )
 
-            if "tiago" in os.environ["ROS_MASTER_URI"]:
-                transitions = {
-                    "succeeded": "CONVERT_IMAGE",
-                    "failed": "SAY_CONTINUE",
-                }
-            else:
-                transitions={
-                    "succeeded": "CONVERT_IMAGE",
-                    "failed": "CONVERT_IMAGE",
-                }
             smach.StateMachine.add(
                 "GET_IMAGE_AGAIN",
                 GetCroppedImage(
@@ -91,7 +125,7 @@ class DescribePeople(smach.StateMachine):
                     rgb_topic=rgb_topic,
                     use_mask=False,
                 ),
-                transitions=transitions,
+                transitions={"succeeded": "CONVERT_IMAGE", "failed": "failed"},
             )
 
             if "tiago" in os.environ["ROS_MASTER_URI"]:

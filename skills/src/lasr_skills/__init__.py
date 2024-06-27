@@ -25,3 +25,4 @@ from .look_at_person import LookAtPerson
 from .wait import Wait
 from .look_to_given_point import LookToGivenPoint
 from .find_gesture_person import FindGesturePerson
+from .adjust_camera import AdjustCamera
