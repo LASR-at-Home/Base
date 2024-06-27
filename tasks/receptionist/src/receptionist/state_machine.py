@@ -265,6 +265,25 @@ class Receptionist(smach.StateMachine):
                 ReceptionistLearnFaces("guest1"),
                 transitions={
                     "succeeded": "SAY_FOLLOW_GUEST_1",
+                    "failed": "SAY_LEARN_FACES_FAILED",
+                },
+            )
+
+            smach.StateMachine.add(
+                "SAY_LEARN_FACES_FAILED",
+                Say(text="Make sure you're looking into my eyes and staying still, I'll try and learn your face again"),
+                transitions={
+                    "succeeded": "LEARN_FACES_RECOVERY",
+                    "preempted": "LEARN_FACES_RECOVERY",
+                    "aborted": "LEARN_FACES_RECOVERY",
+                },
+            )
+
+            smach.StateMachine.add(
+                "LEARN_FACES_RECOVERY",
+                ReceptionistLearnFaces("guest1"),
+                transitions={
+                    "succeeded": "SAY_FOLLOW_GUEST_1",
                     "failed": "SAY_FOLLOW_GUEST_1",
                 },
             )
