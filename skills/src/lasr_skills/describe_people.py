@@ -56,7 +56,7 @@ class DescribePeople(smach.StateMachine):
                     object_name="person",
                     crop_method=crop_method,
                     rgb_topic=rgb_topic,
-                    use_mask=False,
+                    use_mask=True,
                 ),
                 transitions=transitions,
             )
@@ -85,8 +85,8 @@ class DescribePeople(smach.StateMachine):
                     ],
                 ),
                 transitions={
-                    "succeeded": "CONVERT_IMAGE",
-                    "failed": "ADJUST_CAMERA",
+                    "succeeded": "GET_IMAGE",
+                    "failed": "GET_IMAGE",
                 },
             )
 

@@ -150,7 +150,11 @@ def detect_keypoints(
             x = int(keypoint.position.x)
             y = int(keypoint.position.y)
             try:
-                if mask[y, x] == 0:
+                # if mask[y, x] == 0:
+                #     continue
+                if x < 0.0 or y < 0.0:
+                    continue
+                if x >= mask.shape[1] or y >= mask.shape[0]:
                     continue
             # Throws an error if the keypoint is out of bounds
             # but not clear what type (some TF stuff)
