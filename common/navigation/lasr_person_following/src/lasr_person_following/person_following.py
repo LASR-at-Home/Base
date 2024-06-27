@@ -427,6 +427,8 @@ class PersonFollower:
                     self._goal_pose = None
                     last_goal_time = None
                     continue
+                rospy.logwarn("Lost the person, but will continue attempting to track")
+                continue
 
             assert track is not None, "Track should not be None"
             last_track_time = rospy.Time.now()
@@ -531,3 +533,23 @@ class PersonFollower:
                         rospy.loginfo("Person is not finished, continuing")
                         last_goal_time = None
                         continue
+            elif self._move_base_client.get_state() not in [
+                GoalStatus.PENDING,
+                GoalStatus.ACTIVE,
+            ]:
+
+                self._goal_pose = self._tf_pose(
+                    PoseStamped(
+                        pose=self._get_pose_distance_ahead(track.pose, -1.0),
+                        header=tracks.header,
+                    ),
+                    "map",
+                )
+                self._move_base(self._goal_pose)
+
+                prev_track = track
+                last_goal_time = rospy.Time.now()
+                person_trajectory.poses.append(track.pose)
+                person_trajectory.header.stamp = rospy.Time.now()
+                self._person_trajectory_pub.publish(person_trajectory)
+                going_to_person = False
