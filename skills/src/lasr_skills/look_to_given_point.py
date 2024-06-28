@@ -49,7 +49,7 @@ class LookToGivenPoint(smach.State):
         if finished_within_time:
             state = self.client.get_state()
             if state == GoalStatus.SUCCEEDED:
-                rospy.sleep(1)
+                rospy.sleep(0.1)
                 return "succeeded"
             else:
                 return "aborted"

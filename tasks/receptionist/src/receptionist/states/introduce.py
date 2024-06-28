@@ -11,31 +11,6 @@ from lasr_skills import Say
 from typing import Dict, List, Any, Optional
 
 
-def find_most_confident_clothes(
-    relevant_guest_data: Dict[str, Any], clothes: List[List[Any]]
-) -> List[Any]:
-    """Find the clothes it's most confident of, after determining the clothes type
-    through confidence values.
-
-    Args:
-        relevant_guest_data (Dict[str, Any]): guest data dictionary.
-        clothes List[List[Any]]: List of the clothes type and their confidence
-
-    Returns:
-        List: Maximum confidence and the relevant clothes
-    """
-    max_clothes_type, max_confidence = max(clothes, key=lambda c: c[1])
-
-    if max_clothes_type == "dress":
-        max_clothes = relevant_guest_data["attributes"]["max_dress"]
-    elif max_clothes_type == "top":
-        max_clothes = relevant_guest_data["attributes"]["max_top"]
-    else:
-        max_clothes = relevant_guest_data["attributes"]["max_outwear"]
-
-    return [max_confidence, max_clothes]
-
-
 def stringify_guest_data(guest_data: Dict[str, Any], guest_id: str) -> str:
     """Converts the guest data for a specified guest into a string that can be used
     for the robot to introduce the guest to the other guests/host.
@@ -75,10 +50,11 @@ def stringify_guest_data(guest_data: Dict[str, Any], guest_id: str) -> str:
 
     guest_str += f"{relevant_guest_data['name']}, their favourite drink is {relevant_guest_data['drink']}. "
 
-    clothes = ["dress", "top", "outwear"]
+    if relevant_guest_data["detection"] == False:
+        guest_str += "No attributes were detected for them."
+        return guest_str
 
     filtered_attributes = {}
-
     filtered_attributes["hair"] = {
         "confidence": relevant_guest_data["attributes"]["has_hair"],
         "hair_shape": relevant_guest_data["attributes"]["hair_shape"],
@@ -163,8 +139,33 @@ def stringify_guest_data(guest_data: Dict[str, Any], guest_id: str) -> str:
     return guest_str
 
 
+def find_most_confident_clothes(
+    relevant_guest_data: Dict[str, Any], clothes: List[List[Any]]
+) -> List[Any]:
+    """Find the clothes it's most confident of, after determining the clothes type
+    through confidence values.
+
+    Args:
+        relevant_guest_data (Dict[str, Any]): guest data dictionary.
+        clothes List[List[Any]]: List of the clothes type and their confidence
+
+    Returns:
+        List: Maximum confidence and the relevant clothes
+    """
+    max_clothes_type, max_confidence = max(clothes, key=lambda c: c[1])
+
+    if max_clothes_type == "dress":
+        max_clothes = relevant_guest_data["attributes"]["max_dress"]
+    elif max_clothes_type == "top":
+        max_clothes = relevant_guest_data["attributes"]["max_top"]
+    else:
+        max_clothes = relevant_guest_data["attributes"]["max_outwear"]
+
+    return [max_confidence, max_clothes]
+
+
 def isSingular(attribute: str):
-    """Checks is a word is singular or plural by checking the last letter
+    """Checks if a word is singular or plural by checking the last letter
 
     Args:
         attribute (str): The attribute to check for plurality
