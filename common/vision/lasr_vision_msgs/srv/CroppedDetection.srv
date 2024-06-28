@@ -32,3 +32,6 @@ lasr_vision_msgs/Detection[] detections_2d
 
 # A list of 3D detections, sorted to match the cropped_imgs
 lasr_vision_msgs/Detection3D[] detections_3d
+
+# Euclidian distance of given crop metric
+float32[] distances

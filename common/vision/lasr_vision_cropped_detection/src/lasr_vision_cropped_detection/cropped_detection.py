@@ -22,7 +22,7 @@ def _2d_bbox_crop(
     image: np.ndarray,
     crop_method: str,
     detections: List[Detection],
-) -> Tuple[List[np.ndarray], List[Detection]]:
+) -> Tuple[List[np.ndarray], List[Detection], List[float]]:
     """_summary_
 
     Args:
@@ -55,11 +55,13 @@ def _2d_bbox_crop(
     if len(detections) == 0:
         raise ValueError("No detections found")
 
-    detections.sort(
-        key=lambda det: np.sqrt(
-            (x_to_compare - det.xywh[0]) ** 2 + (y_to_compare - det.xywh[1]) ** 2
-        )
-    )
+    distances = [
+        np.sqrt((x_to_compare - det.xywh[0]) ** 2 + (y_to_compare - det.xywh[1]) ** 2)
+        for det in detections
+    ]
+
+    detections = [det for _, det in sorted(zip(distances, detections))]
+    distances.sort()
 
     cropped_images = []
     for detection in detections:
@@ -71,14 +73,14 @@ def _2d_bbox_crop(
         )
         cropped_images.append(image[y - h // 2 : y + h // 2, x - w // 2 : x + w // 2])
 
-    return cropped_images, detections
+    return cropped_images, detections, distances
 
 
 def _2d_mask_crop(
     image: np.ndarray,
     crop_method: str,
     detections: List[Detection],
-) -> Tuple[List[np.ndarray], np.ndarray, List[Detection]]:
+) -> Tuple[List[np.ndarray], np.ndarray, List[Detection], List[float]]:
     """_summary_
 
     Args:
@@ -118,11 +120,13 @@ def _2d_mask_crop(
     if len(detections[0].xyseg) == 0:
         raise ValueError("No segmentation found")
 
-    detections.sort(
-        key=lambda det: np.sqrt(
-            (x_to_compare - det.xywh[0]) ** 2 + (y_to_compare - det.xywh[1]) ** 2
-        )
-    )
+    distances = [
+        np.sqrt((x_to_compare - det.xywh[0]) ** 2 + (y_to_compare - det.xywh[1]) ** 2)
+        for det in detections
+    ]
+
+    detections = [det for _, det in sorted(zip(distances, detections))]
+    distances.sort()
 
     masked_images = []
     unified_mask = np.zeros(image.shape).astype(image.dtype)
@@ -138,7 +142,8 @@ def _2d_mask_crop(
         masked_image = cv2.bitwise_and(image, stencil)
         unified_mask = cv2.bitwise_or(unified_mask, masked_image)
         masked_images.append(masked_image)
-    return masked_images, unified_mask, detections
+
+    return masked_images, unified_mask, detections, distances
 
 
 def _3d_bbox_crop(
@@ -146,7 +151,7 @@ def _3d_bbox_crop(
     crop_method: str,
     robot_location: Point,
     detections: List[Detection3D],
-) -> Tuple[List[np.ndarray], List[Detection3D]]:
+) -> Tuple[List[np.ndarray], List[Detection3D], List[float]]:
     """_summary_
 
     Args:
@@ -162,23 +167,23 @@ def _3d_bbox_crop(
     if len(detections) == 0:
         raise ValueError("No detections found")
 
+    distances = [
+        np.sqrt(
+            (robot_location.x - det.point.x) ** 2
+            + (robot_location.y - det.point.y) ** 2
+            + (robot_location.z - det.point.z) ** 2
+        )
+        for det in detections
+    ]
     if crop_method == "closest":
-        detections.sort(
-            key=lambda det: np.sqrt(
-                (robot_location.x - det.point.x) ** 2
-                + (robot_location.y - det.point.y) ** 2
-                + (robot_location.z - det.point.z) ** 2
-            )
-        )
+        detections = [det for _, det in sorted(zip(distances, detections))]
+        distances.sort()
+
     elif crop_method == "furthest":
-        detections.sort(
-            key=lambda det: np.sqrt(
-                (robot_location.x - det.point.x) ** 2
-                + (robot_location.y - det.point.y) ** 2
-                + (robot_location.z - det.point.z) ** 2
-            ),
-            reverse=True,
-        )
+        detections = [
+            det for _, det in sorted(zip(distances, detections), reverse=True)
+        ]
+        distances.sort(reverse=True)
     else:
         raise ValueError(f"Invalid 3D crop_method: {crop_method}")
 
@@ -194,7 +199,7 @@ def _3d_bbox_crop(
             rgb_image[y - h // 2 : y + h // 2, x - w // 2 : x + w // 2]
         )
 
-    return cropped_images, detections
+    return cropped_images, detections, distances
 
 
 def _3d_mask_crop(
@@ -202,7 +207,7 @@ def _3d_mask_crop(
     crop_method: str,
     robot_location: Point,
     detections: List[Detection3D],
-) -> Tuple[List[np.ndarray], np.ndarray, List[Detection3D]]:
+) -> Tuple[List[np.ndarray], np.ndarray, List[Detection3D], List[float]]:
     """_summary_
 
     Args:
@@ -217,24 +222,23 @@ def _3d_mask_crop(
 
     if len(detections) == 0:
         raise ValueError("No detections found")
+    distances = [
+        np.sqrt(
+            (robot_location.x - det.point.x) ** 2
+            + (robot_location.y - det.point.y) ** 2
+            + (robot_location.z - det.point.z) ** 2
+        )
+        for det in detections
+    ]
 
     if crop_method == "closest":
-        detections.sort(
-            key=lambda det: np.sqrt(
-                (robot_location.x - det.point.x) ** 2
-                + (robot_location.y - det.point.y) ** 2
-                + (robot_location.z - det.point.z) ** 2
-            )
-        )
+        detections = [det for _, det in sorted(zip(distances, detections))]
+        distances.sort()
     elif crop_method == "furthest":
-        detections.sort(
-            key=lambda det: np.sqrt(
-                (robot_location.x - det.point.x) ** 2
-                + (robot_location.y - det.point.y) ** 2
-                + (robot_location.z - det.point.z) ** 2
-            ),
-            reverse=True,
-        )
+        detections = [
+            det for _, det in sorted(zip(distances, detections), reverse=True)
+        ]
+        distances.sort(reverse=True)
     else:
         raise ValueError(f"Invalid 3D crop_method: {crop_method}")
 
@@ -254,7 +258,7 @@ def _3d_mask_crop(
         unified_mask = cv2.bitwise_or(unified_mask, masked_image)
         masked_images.append(masked_image)
 
-    return masked_images, unified_mask, detections
+    return masked_images, unified_mask, detections, distances
 
 
 def process_detection_request(
@@ -289,11 +293,11 @@ def process_detection_request(
         ).detected_objects
         detections = [det for det in detections if det.name in request.object_names]
         if request.use_mask:
-            cropped_images, combined_mask, detections = _2d_mask_crop(
+            cropped_images, combined_mask, detections, distances = _2d_mask_crop(
                 rgb_cv2, request.method, detections
             )
         else:
-            cropped_images, detections = _2d_bbox_crop(
+            cropped_images, detections, distances = _2d_bbox_crop(
                 rgb_cv2, request.method, detections
             )
         response.detections_2d = detections
@@ -312,14 +316,14 @@ def process_detection_request(
         ).detected_objects
         detections = [det for det in detections if det.name in request.object_names]
         if request.use_mask:
-            cropped_images, combined_mask, detections = _3d_mask_crop(
+            cropped_images, combined_mask, detections, distances = _3d_mask_crop(
                 pointcloud_rgb,
                 request.method,
                 robot_location,
                 detections,
             )
         else:
-            cropped_images, detections = _3d_bbox_crop(
+            cropped_images, detections, distances = _3d_bbox_crop(
                 pointcloud_rgb,
                 request.method,
                 request.robot_location,
@@ -341,12 +345,37 @@ def process_detection_request(
 
     # Tile the images for debugging purposes
     if combined_mask is not None:
+        # Add distances to the image
+        for i, (dist, detect) in enumerate(zip(distances, detections)):
+            cv2.putText(
+                combined_mask,
+                f"Dist: {round(dist, 2)}",
+                (detect.xywh[0], detect.xywh[1]),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                1,
+                (0, 255, 0),
+                2,
+                cv2.LINE_AA,
+            )
         combined_mask_debug_publisher.publish(cv2_img_to_msg(combined_mask))
+        response.masked_img = cv2_img_to_msg(combined_mask)
+
+    response.distances = distances
 
     debug_image = np.hstack(cropped_images)
-    debug_publisher.publish(cv2_img_to_msg(debug_image))
+    # Add distances to the image
+    for i, dist in enumerate(distances):
+        cv2.putText(
+            debug_image,
+            f"Dist: {round(dist, 2)}",
+            (i * cropped_images[0].shape[0] + 150, 50),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            1,
+            (0, 255, 0),
+            2,
+            cv2.LINE_AA,
+        )
 
-    if combined_mask is not None:
-        response.masked_img = cv2_img_to_msg(combined_mask)
+    debug_publisher.publish(cv2_img_to_msg(debug_image))
 
     return response
