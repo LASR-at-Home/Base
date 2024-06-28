@@ -73,7 +73,7 @@ class PersonFollower:
         start_following_angle: float = 45.0,
         n_secs_static_finished: float = 10.0,
         n_secs_static_plan_close: float = 5.0,
-        new_goal_threshold: float = 1.5,
+        new_goal_threshold: float = 1.0,
         stopping_distance: float = 1.0,
     ):
         self._start_following_radius = start_following_radius
@@ -129,7 +129,7 @@ class PersonFollower:
     def _robot_pose_in_odom(self) -> Union[PoseStamped, None]:
         try:
             current_pose: PoseWithCovarianceStamped = rospy.wait_for_message(
-                "/amcl_pose", PoseWithCovarianceStamped
+                "/robot_pose", PoseWithCovarianceStamped
             )
         except AttributeError:
             return None
@@ -138,7 +138,7 @@ class PersonFollower:
             pose=current_pose.pose.pose, header=current_pose.header
         )
 
-        return self._tf_pose(current_pose_stamped, "odom")
+        return self._tf_pose(current_pose_stamped, "map")
 
     def begin_tracking(self, ask: bool = False) -> bool:
         """
