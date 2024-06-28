@@ -38,8 +38,8 @@ class Receptionist(smach.StateMachine):
                 "guest1": {"name": ""},
                 "guest2": {"name": ""},
             }
-            self.userdata.dataset = 'receptionist'
             self.userdata.confidence = face_detection_confidence
+            self.userdata.dataset = "receptionist"
 
             smach.StateMachine.add(
                 "SAY_START",
