@@ -73,7 +73,7 @@ class PersonFollower:
         start_following_angle: float = 45.0,
         n_secs_static_finished: float = 10.0,
         n_secs_static_plan_close: float = 5.0,
-        new_goal_threshold: float = 0.5,
+        new_goal_threshold: float = 1.5,
         stopping_distance: float = 1.0,
     ):
         self._start_following_radius = start_following_radius
@@ -360,36 +360,36 @@ class PersonFollower:
             ):
                 rospy.logwarn("Goal was aborted, retrying")
                 self._move_base(prev_goal)
-            elif last_goal_time is not None:
-                delta_t: float = (rospy.Time.now() - last_goal_time).to_sec()
-                if (
-                    self._n_secs_static_plan_close
-                    <= delta_t
-                    < self._n_secs_static_finished
-                ) and not going_to_person:
-                    self._cancel_goal()
-                    goal_pose = self._get_pose_on_path(
-                        self._tf_pose(self._robot_pose_in_odom(), "map"),
-                        self._tf_pose(
-                            PoseStamped(pose=track.pose, header=tracks.header),
-                            "map",
-                        ),
-                        self._stopping_distance,
-                    )
-                    if goal_pose is not None:
-                        self._move_base(goal_pose)
-                        going_to_person = True
-                    else:
-                        rospy.logwarn("Could not find a path to the person")
-                elif delta_t >= self._n_secs_static_finished:
-                    rospy.loginfo(
-                        "Person has been static for too long, checking if we are finished"
-                    )
-                    self._move_base_client.wait_for_result()
-                    if self._check_finished():
-                        rospy.loginfo("Finished following person")
-                        break
-                    else:
-                        rospy.loginfo("Person is not finished, continuing")
-                        last_goal_time = None
-                        continue
+            # elif last_goal_time is not None:
+            #     delta_t: float = (rospy.Time.now() - last_goal_time).to_sec()
+            #     if (
+            #         self._n_secs_static_plan_close
+            #         <= delta_t
+            #         < self._n_secs_static_finished
+            #     ) and not going_to_person:
+            #         self._cancel_goal()
+            #         goal_pose = self._get_pose_on_path(
+            #             self._tf_pose(self._robot_pose_in_odom(), "map"),
+            #             self._tf_pose(
+            #                 PoseStamped(pose=track.pose, header=tracks.header),
+            #                 "map",
+            #             ),
+            #             self._stopping_distance,
+            #         )
+            #         if goal_pose is not None:
+            #             self._move_base(goal_pose)
+            #             going_to_person = True
+            #         else:
+            #             rospy.logwarn("Could not find a path to the person")
+            #     elif delta_t >= self._n_secs_static_finished:
+            #         rospy.loginfo(
+            #             "Person has been static for too long, checking if we are finished"
+            #         )
+            #         self._move_base_client.wait_for_result()
+            #         if self._check_finished():
+            #             rospy.loginfo("Finished following person")
+            #             break
+            #         else:
+            #             rospy.loginfo("Person is not finished, continuing")
+            #             last_goal_time = None
+            #             continue
