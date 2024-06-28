@@ -28,6 +28,7 @@ class Receptionist(smach.StateMachine):
         seat_pose: Pose,
         seat_area: Polygon,
         host_data: dict,
+        face_detection_confidence: float = 0.2,
     ):
         smach.StateMachine.__init__(self, outcomes=["succeeded", "failed"])
 
@@ -37,9 +38,7 @@ class Receptionist(smach.StateMachine):
                 "guest1": {"name": ""},
                 "guest2": {"name": ""},
             }
-            self.userdata.guest_name = "zoe"
-            self.userdata.dataset = "receptionist"
-            self.userdata.confidence = 0.2
+            self.userdata.confidence = face_detection_confidence
 
             smach.StateMachine.add(
                 "SAY_START",

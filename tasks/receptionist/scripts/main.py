@@ -38,7 +38,6 @@ if __name__ == "__main__":
             "name": "charlie",
             "drink": "wine",
             "dataset": "receptionist",
-            "confidence": 0.5,
             "detection": True,
             "attributes": {
                 "has_hair": 0.5,
@@ -61,10 +60,7 @@ if __name__ == "__main__":
         },
     )
 
-    # sis = smach_ros.IntrospectionServer("smach_server", receptionist, "/SM_ROOT")
-    # sis.start()
     outcome = receptionist.execute()
 
-    # sis.stop()
     rospy.loginfo(f"Receptionist finished with outcome: {outcome}")
     rospy.spin()
