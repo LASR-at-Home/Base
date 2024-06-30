@@ -6,9 +6,7 @@
     <arg name="dataset" default="lab" doc="Dataset to use for the demo" />
 
     <!-- yolo service -->
-    <include file="$(find lasr_vision_deepface)/launch/service.launch">
-        <arg name="debug" value="true" />
-    </include>
+    <include file="$(find lasr_vision_deepface)/launch/service.launch"/>
     
     <!-- show debug topic -->
     <node name="image_view" pkg="rqt_image_view" type="rqt_image_view" respawn="false" output="screen" args="/recognise/debug" />
