@@ -62,12 +62,12 @@ class DescribePeople(smach.StateMachine):
             )
             if "tiago" in os.environ["ROS_MASTER_URI"]:
                 transitions = {
-                    "succeeded": "CHECK_KEYPOINTS",
+                    "succeeded": "ADJUST_CAMERA",
                     "failed": "GET_IMAGE",
                 }
             else:
                 transitions={
-                    "succeeded": "CHECK_KEYPOINTS",
+                    "succeeded": "ADJUST_CAMERA",
                     "failed": "GET_IMAGE_AGAIN",
                 }
             smach.StateMachine.add(
@@ -76,41 +76,41 @@ class DescribePeople(smach.StateMachine):
                     object_name="person",
                     crop_method=crop_method,
                     rgb_topic=rgb_topic,
-                    use_mask=False,
+                    use_mask=True,
                 ),
                 transitions=transitions,
             )
 
-            smach.StateMachine.add(
-                "CHECK_KEYPOINTS",
-                ValidateKeypoints(
-                    keypoints_to_detect=[
-                        'nose',
-                        'leftEye',
-                        'rightEye',
-                        'leftEar',
-                        'rightEar',
-                        'leftShoulder',
-                        'rightShoulder',
-                        # 'leftElbow',
-                        # 'rightElbow',
-                        'leftWrist',
-                        'rightWrist',
-                        'leftHip',
-                        'rightHip',
-                        # 'leftKnee',
-                        # 'rightKnee',
-                        # 'leftAnkle',
-                        # 'rightAnkle'
-                    ],
-                ),
-                transitions={
-                    "succeeded": "GET_IMAGE",
-                    "failed": "ADJUST_CAMERA",
-                },
-            )
+            # smach.StateMachine.add(
+            #     "CHECK_KEYPOINTS",
+            #     ValidateKeypoints(
+            #         keypoints_to_detect=[
+            #             'nose',
+            #             'leftEye',
+            #             'rightEye',
+            #             'leftEar',
+            #             'rightEar',
+            #             'leftShoulder',
+            #             'rightShoulder',
+            #             # 'leftElbow',
+            #             # 'rightElbow',
+            #             'leftWrist',
+            #             'rightWrist',
+            #             'leftHip',
+            #             'rightHip',
+            #             # 'leftKnee',
+            #             # 'rightKnee',
+            #             # 'leftAnkle',
+            #             # 'rightAnkle'
+            #         ],
+            #     ),
+            #     transitions={
+            #         "succeeded": "GET_IMAGE",
+            #         "failed": "ADJUST_CAMERA",
+            #     },
+            # )
 
-            positions = ['u2l', 'u2m', 'u2r', 'u1l', 'u1m', 'u1r', 'ml', 'mm', 'mr',]
+            positions = ['u3l', 'u3m', 'u3r', 'u2l', 'u2m', 'u2r', 'u1l', 'u1m', 'u1r', 'ml', 'mm', 'mr',]
 
             for motion in positions:
                 smach.StateMachine.add(

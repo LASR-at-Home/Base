@@ -12,7 +12,7 @@ from tf_bodypix.api import download_model, load_model, BodyPixModelPaths
 
 from sensor_msgs.msg import Image as SensorImage
 
-from lasr_vision_msgs.msg import BodyPixMask, BodyPixKeypoint
+from lasr_vision_msgs.msg import BodyPixMask, BodyPixKeypoint, BodyPixKeypointNormalized
 from lasr_vision_msgs.srv import (
     BodyPixMaskDetectionRequest,
     BodyPixMaskDetectionResponse,
@@ -143,6 +143,7 @@ def detect_keypoints(
     poses = result.get_poses()
 
     detected_keypoints: List[BodyPixKeypoint] = []
+    detected_keypoints_normalized: List[BodyPixKeypointNormalized] = []
 
     for pose in poses:
         for keypoint in pose.keypoints.values():
@@ -152,10 +153,11 @@ def detect_keypoints(
             try:
                 # if mask[y, x] == 0:
                 #     continue
-                if x < 0.0 or y < 0.0:
-                    continue
-                if x >= mask.shape[1] or y >= mask.shape[0]:
-                    continue
+                if not request.keep_out_of_bounds:
+                    if x < 0.0 or y < 0.0:
+                        continue
+                    if x >= mask.shape[1] or y >= mask.shape[0]:
+                        continue
             # Throws an error if the keypoint is out of bounds
             # but not clear what type (some TF stuff)
             except:
@@ -163,6 +165,9 @@ def detect_keypoints(
             rospy.loginfo(f"Keypoint {keypoint.part} at {x}, {y} is in mask")
             detected_keypoints.append(
                 BodyPixKeypoint(keypoint_name=keypoint.part, x=x, y=y)
+            )
+            detected_keypoints_normalized.append(
+                BodyPixKeypointNormalized(keypoint_name=keypoint.part, x=float(x)/mask.shape[1], y=float(y)/mask.shape[0])
             )
 
     # publish to debug topic
@@ -183,7 +188,7 @@ def detect_keypoints(
             cv2.putText(
                 coloured_mask,
                 f"{keypoint.keypoint_name}",
-                (keypoint.x, keypoint.y),
+                (int(keypoint.x), int(keypoint.y)),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 0.5,
                 (255, 255, 255),
@@ -192,4 +197,4 @@ def detect_keypoints(
             )
         debug_publisher.publish(cv2_img.cv2_img_to_msg(coloured_mask))
 
-    return BodyPixKeypointDetectionResponse(keypoints=detected_keypoints)
+    return BodyPixKeypointDetectionResponse(keypoints=detected_keypoints, normalized_keypoints=detected_keypoints_normalized)
