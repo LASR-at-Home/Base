@@ -5,9 +5,12 @@ import rospy
 import smach
 import cv2_img
 import numpy as np
+import rospkg
+import rosparam
 
 if "tiago" in os.environ["ROS_MASTER_URI"]:
     from lasr_skills import Say
+from lasr_skills.play_motion import PlayMotion
 from lasr_vision_msgs.srv import (
     YoloDetection,
     BodyPixMaskDetection,
@@ -30,7 +33,24 @@ class DescribePeople(smach.StateMachine):
             output_keys=["people"],
         )
 
+        r = rospkg.RosPack()
+        els = rosparam.load_file(
+            os.path.join(r.get_path("lasr_skills"), "config", "motions.yaml")
+        )
+        for param, ns in els:
+            rosparam.upload_params(ns, param)
+
         with self:
+            smach.StateMachine.add(
+                'init_u2m',
+                PlayMotion(motion_name='u2m'),
+                transitions={
+                    "succeeded": "GET_IMAGE",
+                    "aborted": "GET_IMAGE",
+                    "preempted": "GET_IMAGE",
+                },
+            )
+        
             # conditional topic and crop method for flexibility
             rgb_topic = (
                 "/xtion/rgb/image_raw"
@@ -43,7 +63,7 @@ class DescribePeople(smach.StateMachine):
             if "tiago" in os.environ["ROS_MASTER_URI"]:
                 transitions = {
                     "succeeded": "CHECK_KEYPOINTS",
-                    "failed": "SAY_GET_IMAGE_AGAIN",
+                    "failed": "GET_IMAGE",
                 }
             else:
                 transitions={
@@ -85,15 +105,31 @@ class DescribePeople(smach.StateMachine):
                     ],
                 ),
                 transitions={
-                    "succeeded": "CONVERT_IMAGE",
+                    "succeeded": "GET_IMAGE",
                     "failed": "ADJUST_CAMERA",
                 },
             )
 
+            positions = ['u2l', 'u2m', 'u2r', 'u1l', 'u1m', 'u1r', 'ml', 'mm', 'mr',]
+
+            for motion in positions:
+                smach.StateMachine.add(
+                    motion,
+                    PlayMotion(motion_name=motion),
+                    transitions={
+                        "succeeded": "GET_IMAGE",
+                        "aborted": "GET_IMAGE",
+                        "preempted": "GET_IMAGE",
+                    },
+                )
+
             if "tiago" in os.environ["ROS_MASTER_URI"]:
                 transitions = {
-                    "finished": "SAY_GET_IMAGE_AGAIN",
+                    "finished": "GET_IMAGE",
+                    "failed": "GET_IMAGE",
                 }
+                for position in positions:
+                    transitions[position] = position
             else:
                 transitions={
                     "finished": "GET_IMAGE",
