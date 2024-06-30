@@ -5,7 +5,8 @@ import cv2
 import rospy
 
 from sensor_msgs.msg import Image, PointCloud2
-from geometry_msgs.msg import Point, PoseWithCovarianceStamped
+from geometry_msgs.msg import Point, PoseWithCovarianceStamped, Polygon
+from shapely.geometry.polygon import Polygon as ShapelyPolygon
 
 from lasr_vision_msgs.msg import Detection, Detection3D
 from lasr_vision_msgs.srv import (
@@ -23,15 +24,15 @@ def _2d_bbox_crop(
     crop_method: str,
     detections: List[Detection],
 ) -> Tuple[List[np.ndarray], List[Detection], List[float]]:
-    """_summary_
+    """Crop 2D detections by the YOLO detection bounding box.
 
     Args:
-        image (np.ndarray): _description_
-        crop_method (str): _description_
-        detections (List[Detection]): _description_
+        image (np.ndarray): RGB image to crop.
+        crop_method (str): Method to crop by. Can be "centered", "right-most", "left-most", "top-most", or "bottom-most".
+        detections (List[Detection]): List of 2D detections to crop.
 
     Returns:
-        List[np.ndarray]: _description_
+        List[np.ndarray]: List of cropped images.
     """
 
     if crop_method == "centered":
@@ -81,15 +82,15 @@ def _2d_mask_crop(
     crop_method: str,
     detections: List[Detection],
 ) -> Tuple[List[np.ndarray], np.ndarray, List[Detection], List[float]]:
-    """_summary_
+    """Crop 2D detections by the YOLO detection mask.
 
     Args:
-        image (np.ndarray): _description_
-        crop_method (str): _description_
-        detections (List[Detection]): _description_
+        image (np.ndarray): RGB image to crop.
+        crop_method (str): Method to crop by. Can be "centered", "right-most", "left-most", "top-most", or "bottom-most".
+        detections (List[Detection]): List of 2D detections to crop.
 
     Returns:
-        List[np.ndarray]: _description_
+        List[np.ndarray]: List of cropped images.
     """
 
     # Keeping this in a separate function as might want to make function
@@ -152,16 +153,17 @@ def _3d_bbox_crop(
     robot_location: Point,
     detections: List[Detection3D],
 ) -> Tuple[List[np.ndarray], List[Detection3D], List[float]]:
-    """_summary_
+    """Function to crop 3D detections by the YOLO detection bounding box.
 
     Args:
-        point_cloud (np.ndarray): _description_
-        crop_method (str): _description_
-        robot_location (Point): _description_
-        detections (List[Detection3D]): _description_
+        point_cloud (np.ndarray): RGBD pointcloud to crop.
+        crop_method (str): Method to crop by. Can be "closest" or "furthest".
+        robot_location (Point): The robot's current location, used for determining
+        the closest/furthest detection.
+        detections (List[Detection3D]): List of 3D detections to crop.
 
     Returns:
-        List[np.ndarray]: _description_
+        List[np.ndarray]: List of cropped images.
     """
 
     if len(detections) == 0:
@@ -208,16 +210,17 @@ def _3d_mask_crop(
     robot_location: Point,
     detections: List[Detection3D],
 ) -> Tuple[List[np.ndarray], np.ndarray, List[Detection3D], List[float]]:
-    """_summary_
+    """Function to crop 3D detections by the YOLO detection mask.
 
     Args:
-        point_cloud (np.ndarray): _description_
-        crop_method (str): _description_
-        robot_location (Point): _description_
-        detections (List[Detection3D]): _description_
+        point_cloud (np.ndarray): RGBD pointcloud to crop.
+        crop_method (str): Method to crop by. Can be "closest" or "furthest".
+        robot_location (Point): The robot's current location, used for determining
+        which detection is closest/furthest.
+        detections (List[Detection3D]): List of 3D detections to crop.
 
     Returns:
-        Tuple[List[np.ndarray], np.ndarray, List[Detection3D]]: _description_
+        Tuple[List[np.ndarray], np.ndarray, List[Detection3D]]: Tuple of cropped images, the combined mask, and the detections.
     """
 
     if len(detections) == 0:
@@ -261,15 +264,57 @@ def _3d_mask_crop(
     return masked_images, unified_mask, detections, distances
 
 
+def filter_detections_by_polygon(
+    detections: List[Detection3D], polygons: List[Polygon]
+) -> Tuple[List[Detection3D], List[int]]:
+    """Filters detections by whether their centroid is within a polygon.
+    If a detection is within multiple polygons, it will be included multiple times.
+
+    Args:
+        detections (List[Detection3D]): List of 3D detections to filter.
+        polygons (List[Polygon]): List of geometry_msgs/Polygons to filter by.
+
+    Returns:
+        Tuple[List[Detection3D], List[int]]: Tuple of filtered detections and the polygon indices they are within.
+        Remember, if a detection is within multiple polygons, it will be included multiple times.
+    """
+
+    detection_polygon_ids: List[int] = []
+    filtered_detections: List[Detection3D] = []
+    for index, polygon in enumerate(polygons):
+        area_polygon = ShapelyPolygon([(point.x, point.y) for point in polygon.points])
+        for detection in detections:
+            if area_polygon.contains(Point(detection.point.x, detection.point.y)):
+                detection_polygon_ids.append(index)
+                filtered_detections.append(detection)
+
+    return filtered_detections, detection_polygon_ids
+
+
 def process_detection_request(
     request: CroppedDetectionRequest,
     rgb_image_topic: str = "/xtion/rgb/image_raw",
-    depth_image_topic: str = "/xtion/depth/image_raw",
+    depth_image_topic: str = "/xtion/depth_registered/points",
     yolo_2d_service_name: str = "/yolov8/detect",
     yolo_3d_service_name: str = "/yolov8/detect3d",
     robot_pose_topic: str = "/amcl_pose",
     debug_topic: str = "/lasr_vision/cropped_detection/debug",
 ) -> CroppedDetectionResponse:
+    """Dispatches a detection request to the appropriate bounding box/mask 2D or 3D cropped
+    detection function.
+
+    Args:
+        request (CroppedDetectionRequest): The request to process.
+        rgb_image_topic (str, optional): The topic to get an RGB image from. Defaults to "/xtion/rgb/image_raw".
+        depth_image_topic (str, optional): The topic to getn an RGBD image from. Defaults to "/xtion/depth_registered/points".
+        yolo_2d_service_name (str, optional): Name of the 2D Yolo detection service. Defaults to "/yolov8/detect".
+        yolo_3d_service_name (str, optional): Name of the 3D Yolo detection service. Defaults to "/yolov8/detect3d".
+        robot_pose_topic (str, optional): Service to get the robot's current pose. Defaults to "/amcl_pose".
+        debug_topic (str, optional): Topic to publish results to for debugging. Defaults to "/lasr_vision/cropped_detection/debug".
+
+    Returns:
+        CroppedDetectionResponse: The response to the request.
+    """
     valid_2d_crop_methods = [
         "centered",
         "left-most",
@@ -315,6 +360,11 @@ def process_detection_request(
             request.yolo_nms_threshold,
         ).detected_objects
         detections = [det for det in detections if det.name in request.object_names]
+        if request.polygons:
+            detections, polygon_ids = filter_detections_by_polygon(
+                detections, request.polygons
+            )
+            response.polygon_ids = polygon_ids
         if request.use_mask:
             cropped_images, combined_mask, detections, distances = _3d_mask_crop(
                 pointcloud_rgb,

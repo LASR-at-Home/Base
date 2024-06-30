@@ -8,10 +8,10 @@ if __name__ == "__main__":
     service.wait_for_service()
     while not rospy.is_shutdown():
         request = CroppedDetectionRequest()
-        request.method = "centered"
+        request.method = "closest"
         request.use_mask = True
         request.yolo_model = "yolov8x-seg.pt"
         request.yolo_model_confidence = 0.5
         request.yolo_nms_threshold = 0.3
-        request.object_names = ["person", "bottle"]
+        request.object_names = ["person", "bottle", "chair"]
         response = service(request)
