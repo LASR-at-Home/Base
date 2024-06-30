@@ -7,7 +7,7 @@ from lasr_skills import (
     WaitForPersonInArea,
     Say,
     AskAndListen,
-    LookToGivenPoint,
+    PlayMotion,
 )
 from receptionist.states import (
     ParseNameAndDrink,
@@ -187,13 +187,11 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "LOOK_AT_WAITING_GUEST_1_1",
-                LookToGivenPoint(
-                    [-1.5, 0.0],
-                ),
+                PlayMotion(motion_name="look_left"),
                 transitions={
                     "succeeded": "INTRODUCE_GUEST_1_TO_HOST",
-                    "timed_out": "INTRODUCE_GUEST_1_TO_HOST",
                     "aborted": "INTRODUCE_GUEST_1_TO_HOST",
+                    "preempted": "INTRODUCE_GUEST_1_TO_HOST",
                 },
             )
 
@@ -208,13 +206,11 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "LOOK_AT_WAITING_GUEST_1_2",
-                LookToGivenPoint(
-                    [-1.5, 0.0],
-                ),
+                PlayMotion(motion_name="look_left"),
                 transitions={
                     "succeeded": "INTRODUCE_HOST_TO_GUEST_1",
-                    "timed_out": "INTRODUCE_HOST_TO_GUEST_1",
                     "aborted": "INTRODUCE_HOST_TO_GUEST_1",
+                    "preempted": "INTRODUCE_HOST_TO_GUEST_1",
                 },
             )
 
@@ -284,13 +280,11 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "LOOK_AT_WAITING_GUEST_2_1",
-                LookToGivenPoint(
-                    [-1.5, 0.0],
-                ),
+                PlayMotion(motion_name="look_left"),
                 transitions={
                     "succeeded": "INTRODUCE_GUEST_2_TO_HOST",
-                    "timed_out": "INTRODUCE_GUEST_2_TO_HOST",
                     "aborted": "INTRODUCE_GUEST_2_TO_HOST",
+                    "preempted": "INTRODUCE_GUEST_2_TO_HOST",
                 },
             )
 
@@ -308,13 +302,11 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "LOOK_AT_WAITING_GUEST_2_2",
-                LookToGivenPoint(
-                    [-1.5, 0.0],
-                ),
+                PlayMotion(motion_name="look_left"),
                 transitions={
                     "succeeded": "INTRODUCE_GUEST_HOST_TO_GUEST_2",
-                    "timed_out": "INTRODUCE_GUEST_HOST_TO_GUEST_2",
                     "aborted": "INTRODUCE_GUEST_HOST_TO_GUEST_2",
+                    "preempted": "INTRODUCE_GUEST_HOST_TO_GUEST_2",
                 },
             )
 
@@ -358,13 +350,11 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "LOOK_AT_WAITING_GUEST_2_3",
-                LookToGivenPoint(
-                    [-1.5, 0.0],
-                ),
+                PlayMotion(motion_name="look_left"),
                 transitions={
                     "succeeded": "INTRODUCE_GUEST_2_TO_GUEST_1",
-                    "timed_out": "INTRODUCE_GUEST_2_TO_GUEST_1",
                     "aborted": "INTRODUCE_GUEST_2_TO_GUEST_1",
+                    "preempted": "INTRODUCE_GUEST_2_TO_GUEST_1",
                 },
             )
 
@@ -378,14 +368,11 @@ class Receptionist(smach.StateMachine):
             )
 
             smach.StateMachine.add(
-                "LOOK_AT_WAITING_GUEST_2_4",
-                LookToGivenPoint(
-                    [-1.5, 0.0],
-                ),
+                PlayMotion(motion_name="look_left"),
                 transitions={
                     "succeeded": "INTRODUCE_GUEST_1_TO_GUEST_2",
-                    "timed_out": "INTRODUCE_GUEST_1_TO_GUEST_2",
                     "aborted": "INTRODUCE_GUEST_1_TO_GUEST_2",
+                    "preempted": "INTRODUCE_GUEST_1_TO_GUEST_2",
                 },
             )
 
