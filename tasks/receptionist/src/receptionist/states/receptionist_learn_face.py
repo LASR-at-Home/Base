@@ -8,33 +8,68 @@ import sys
 from lasr_vision_msgs.srv import (
     LearnFace,
     LearnFaceRequest,
-    LearnFaceResponse,
+    CroppedDetection,
+    CroppedDetectionRequest,
+    CroppedDetectionResponse,
 )
+
+from sensor_msgs.msg import Image
+
+from typing import List
 
 
 class ReceptionistLearnFaces(smach.State):
-    def __init__(self, guest_id: str):
+
+    _guest_id: str
+    _dataset_size: int
+    _learn_face: rospy.ServiceProxy
+
+    def __init__(self, guest_id: str, dataset_size: int = 10):
         smach.State.__init__(
             self, outcomes=["succeeded", "failed"], input_keys=["guest_data"]
         )
         self._guest_id = guest_id
+        self._dataset_size = dataset_size
 
-    def execute(self, userdata):
-        print("here we will learn faces")
-        try:
-            learn_service = rospy.ServiceProxy("/learn_face", LearnFace)
-            guest_name = userdata.guest_data[self._guest_id]["name"]
-            print(guest_name)
-            req = LearnFaceRequest()
-            req.name = guest_name
-            req.dataset = "receptionist"
-            req.n_images = 10
-            resp = learn_service(req)
-        except ValueError as e:
-            print("No face detected. Error:" + str(e))
-            return "failed"
-        except rospy.ServiceException as e:
-            rospy.logerr("Service call failed: %s" % e)
-            return "failed"
+        rospy.wait_for_service("/learn_face")
+        self._learn_face = rospy.ServiceProxy("/learn_face", LearnFace)
+
+        rospy.wait_for_service("/vision/cropped_detection")
+        self._cropped_detection = rospy.ServiceProxy(
+            "/vision/cropped_detection", CroppedDetection
+        )
+
+    def execute(self, userdata) -> str:
+
+        guest_name: str = userdata.guest_data[self._guest_id]["name"]
+
+        cropped_detection_req: CroppedDetectionRequest = CroppedDetectionRequest(
+            method="closest",
+            use_mask=True,
+            yolo_model="yolov8x-seg.pt",
+            yolo_model_confidence=0.5,
+            yolo_model_nms_threshold=0.3,
+            object_names=["person"],
+        )
+
+        images: List[Image]
+
+        for i in range(self._dataset_size):
+            cropped_detection_resp: CroppedDetectionResponse = self._cropped_detection(
+                cropped_detection_req
+            )
+
+            if len(cropped_detection_resp.cropped_images) == 0:
+                continue
+
+            images.append(cropped_detection_resp.cropped_images[0])
+
+        learn_face_req: LearnFaceRequest = LearnFaceRequest(
+            name=guest_name,
+            dataset="receptionist",
+            images=images,
+        )
+
+        self._learn_face(learn_face_req)
 
         return "succeeded"
