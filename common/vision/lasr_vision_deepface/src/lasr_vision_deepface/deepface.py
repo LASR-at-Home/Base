@@ -62,7 +62,7 @@ def _extract_face(cv_im: Mat) -> Union[Mat, None]:
     try:
         faces = DeepFace.extract_faces(
             cv_im,
-            detector_backend="mtcnn",
+            detector_backend="opencv",
             enforce_detection=True,
         )
     except ValueError:
@@ -96,10 +96,8 @@ def create_dataset(
         face_cropped_cv_im = _extract_face(cv_im)
         if face_cropped_cv_im is None:
             continue
-        cv2.imwrite(
-            os.path.join(dataset_path, f"{name}_{i + 1}.png"), face_cropped_cv_im
-        )
-        debug_publisher.publish(cv2_img.cv2_img_to_msg(create_image_collage(cv_images)))
+        cv2.imwrite(os.path.join(dataset_path, f"{name}_{i + 1}.png"), cv_im)
+    debug_publisher.publish(cv2_img.cv2_img_to_msg(create_image_collage(cv_images)))
 
     # Force retraining
     DeepFace.find(
@@ -107,7 +105,7 @@ def create_dataset(
         os.path.join(DATASET_ROOT, dataset),
         enforce_detection=False,
         silent=True,
-        detector_backend="mtcnn",
+        detector_backend="opencv",
     )
 
 
@@ -132,7 +130,7 @@ def recognise(
             os.path.join(DATASET_ROOT, request.dataset),
             enforce_detection=True,
             silent=True,
-            detector_backend="mtcnn",
+            detector_backend="opencv",
         )
     except ValueError:
         return response
@@ -194,7 +192,7 @@ def detect_faces(
 
     try:
         faces = DeepFace.extract_faces(
-            cv_im, detector_backend="mtcnn", enforce_detection=True
+            cv_im, detector_backend="opencv", enforce_detection=True
         )
     except ValueError:
         return response
