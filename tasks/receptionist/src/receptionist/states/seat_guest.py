@@ -20,6 +20,22 @@ from lasr_skills import (
 class SeatGuest(smach.StateMachine):
     _motions: List[str] = ["look_down_left", "look_down_right", "look_down_centre"]
 
+    class ProcessDetectionsSofa(smach.State):
+        def __init__(self, max_people_on_sofa: int):
+            smach.State.__init__(
+                self,
+                outcomes=["has_free_space", "full_sofa"],
+                input_keys=["detections_3d"],
+                output_keys=["has_free_space"],
+            )
+            self.max_people_on_sofa = max_people_on_sofa
+
+        def execute(self, userdata) -> str:
+            if len(userdata.detections_3d) < self.max_people_on_sofa:
+                print(userdata.detections_3d)
+                return "has_free_space"
+            return "full_sofa"
+
     class ProcessDetections(smach.State):
         def __init__(self):
             smach.State.__init__(
@@ -67,12 +83,35 @@ class SeatGuest(smach.StateMachine):
     def __init__(
         self,
         seat_area: Polygon,
+        sofa_area: Polygon,
+        max_people_on_sofa: int,
     ):
         smach.StateMachine.__init__(self, outcomes=["succeeded", "failed"])
         with self:
             # TODO: stop doing this
             self.userdata.people_detections = []
             self.userdata.seat_detections = []
+
+            smach.StateMachine.add(
+                "DETECT_SOFA",
+                Detect3DInArea(sofa_area, filter=["person"]),
+                transitions={"succeeded": "CHECK_SOFA", "failed": "failed"},
+            )
+            smach.StateMachine.add(
+                "CHECK_SOFA",
+                self.ProcessDetectionsSofa(max_people_on_sofa),
+                transitions={"full_sofa": "MOTION_ITERATOR", "has_free_space": "SAY_SIT_ON_SOFA"},
+            )
+            smach.StateMachine.add(
+                "SAY_SIT_ON_SOFA",
+                Say("Please sit on the sofa."),
+                transitions={
+                    "succeeded": "WAIT_FOR_GUEST_SEAT",
+                    "aborted": "failed",
+                    "preempted": "failed",
+                },
+            )
+
 
             motion_iterator = smach.Iterator(
                 outcomes=["succeeded", "failed"],
