@@ -50,8 +50,7 @@ def stringify_guest_data(guest_data: Dict[str, Any], guest_id: str) -> str:
 
     guest_str += f"{relevant_guest_data['name']}, their favourite drink is {relevant_guest_data['drink']}. "
 
-    if relevant_guest_data["detection"] == False:
-        guest_str += "No attributes were detected for them."
+    if not relevant_guest_data["detection"]:
         return guest_str
 
     filtered_attributes = {}
