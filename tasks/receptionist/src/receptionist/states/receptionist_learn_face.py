@@ -5,6 +5,7 @@ import rospy
 import sys
 
 
+from lasr_vision_msgs.msg import CDRequest, CDResponse
 from lasr_vision_msgs.srv import (
     LearnFace,
     LearnFaceRequest,
@@ -42,20 +43,24 @@ class ReceptionistLearnFaces(smach.State):
     def execute(self, userdata) -> str:
 
         cropped_detection_req: CroppedDetectionRequest = CroppedDetectionRequest(
-            method="closest",
-            use_mask=True,
-            yolo_model="yolov8x-seg.pt",
-            yolo_model_confidence=0.5,
-            yolo_nms_threshold=0.3,
-            object_names=["person"],
+            [
+                CDRequest(
+                    method="closest",
+                    use_mask=True,
+                    yolo_model="yolov8x-seg.pt",
+                    yolo_model_confidence=0.5,
+                    yolo_nms_threshold=0.3,
+                    object_names=["person"],
+                )
+            ]
         )
 
         images: List[Image] = []
 
         for _ in range(self._dataset_size):
-            cropped_detection_resp: CroppedDetectionResponse = self._cropped_detection(
+            cropped_detection_resp: CDResponse = self._cropped_detection(
                 cropped_detection_req
-            )
+            )[0]
 
             if len(cropped_detection_resp.cropped_imgs) == 0:
                 continue
