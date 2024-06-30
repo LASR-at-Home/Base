@@ -49,6 +49,8 @@ add_message_files(
   Detection3D.msg
   BodyPixKeypoint.msg
   BodyPixMask.msg
+  CDRequest.msg
+  CDResponse.msg
 )
 
 ## Generate services in the 'srv' folder
