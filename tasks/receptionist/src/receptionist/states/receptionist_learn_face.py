@@ -41,31 +41,29 @@ class ReceptionistLearnFaces(smach.State):
 
     def execute(self, userdata) -> str:
 
-        guest_name: str = userdata.guest_data[self._guest_id]["name"]
-
         cropped_detection_req: CroppedDetectionRequest = CroppedDetectionRequest(
             method="closest",
             use_mask=True,
             yolo_model="yolov8x-seg.pt",
             yolo_model_confidence=0.5,
-            yolo_model_nms_threshold=0.3,
+            yolo_nms_threshold=0.3,
             object_names=["person"],
         )
 
-        images: List[Image]
+        images: List[Image] = []
 
         for _ in range(self._dataset_size):
             cropped_detection_resp: CroppedDetectionResponse = self._cropped_detection(
                 cropped_detection_req
             )
 
-            if len(cropped_detection_resp.cropped_images) == 0:
+            if len(cropped_detection_resp.cropped_imgs) == 0:
                 continue
 
-            images.append(cropped_detection_resp.cropped_images[0])
+            images.append(cropped_detection_resp.cropped_imgs[0])
 
         learn_face_req: LearnFaceRequest = LearnFaceRequest(
-            name=guest_name,
+            name=self._guest_id,
             dataset="receptionist",
             images=images,
         )
