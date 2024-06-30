@@ -625,3 +625,15 @@ class Receptionist(smach.StateMachine):
                 "aborted": "failed",
             },
         )
+
+    @smach.cb_interface(input_keys=["person_detection"], output_keys=["pointstamped"])
+    def _compute_person_point(self, userdata):
+        """Computes the point to look at for the person.
+
+        Args:
+            userdata (dict): Userdata containing the guest data.
+
+        Returns:
+            PointStamped: The point to look at.
+        """
+        pass
