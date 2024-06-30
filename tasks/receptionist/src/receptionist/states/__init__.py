@@ -6,3 +6,4 @@ from .find_and_look_at import FindAndLookAt
 from .receptionist_learn_face import ReceptionistLearnFaces
 from .detect_faces import DetectFaces
 from .get_name_or_drink import ParseTranscribedInfo
+from .handle_guest import HandleGuest
