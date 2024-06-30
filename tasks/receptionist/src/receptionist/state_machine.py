@@ -31,7 +31,10 @@ class Receptionist(smach.StateMachine):
         face_detection_confidence: float = 0.2,
     ):
         smach.StateMachine.__init__(self, outcomes=["succeeded", "failed"])
-
+        self.wait_pose = wait_pose
+        self.wait_area = wait_area
+        self.seat_pose = seat_pose
+        self.seat_area = seat_area
         with self:
             self.userdata.guest_data = {
                 "host": host_data,
@@ -55,34 +58,7 @@ class Receptionist(smach.StateMachine):
             First guest
             """
 
-            smach.StateMachine.add(
-                "GO_TO_WAIT_LOCATION_GUEST_1",
-                GoToLocation(wait_pose),
-                transitions={
-                    "succeeded": "SAY_WAITING_GUEST_1",
-                    "failed": "GO_TO_WAIT_LOCATION_GUEST_1",
-                },
-            )
-
-            smach.StateMachine.add(
-                "SAY_WAITING_GUEST_1",
-                Say(text="I am waiting for a guest. Please open the door."),
-                transitions={
-                    "succeeded": "WAIT_FOR_PERSON_GUEST_1",
-                    "aborted": "WAIT_FOR_PERSON_GUEST_1",
-                    "preempted": "WAIT_FOR_PERSON_GUEST_1",
-                },
-            )
-
-            smach.StateMachine.add(
-                "WAIT_FOR_PERSON_GUEST_1",
-                WaitForPersonInArea(wait_area),
-                transitions={
-                    "succeeded": "GET_NAME_AND_DRINK_GUEST_1",
-                    "failed": "GET_NAME_AND_DRINK_GUEST_1",
-                },
-            )
-
+            self._goto_waiting_area(1)
             self._ask_for_name_and_drink(1)
 
             """ 
@@ -313,33 +289,7 @@ class Receptionist(smach.StateMachine):
                 },
             )
 
-            smach.StateMachine.add(
-                "GO_TO_WAIT_LOCATION_GUEST_2",
-                GoToLocation(wait_pose),
-                transitions={
-                    "succeeded": "SAY_WAITING_GUEST_2",
-                    "failed": "GO_TO_WAIT_LOCATION_GUEST_2",
-                },
-            )
-
-            smach.StateMachine.add(
-                "SAY_WAITING_GUEST_2",
-                Say(text="I am waiting for a guest. Please open the door."),
-                transitions={
-                    "succeeded": "WAIT_FOR_PERSON_GUEST_2",
-                    "aborted": "WAIT_FOR_PERSON_GUEST_2",
-                    "preempted": "WAIT_FOR_PERSON_GUEST_2",
-                },
-            )
-
-            smach.StateMachine.add(
-                "WAIT_FOR_PERSON_GUEST_2",
-                WaitForPersonInArea(wait_area),
-                transitions={
-                    "succeeded": "GET_NAME_AND_DRINK_GUEST_2",
-                    "failed": "GET_NAME_AND_DRINK_GUEST_2",
-                },
-            )
+            self._goto_waiting_area(2)
 
             """
             Asking second guest for drink and name
@@ -676,5 +626,40 @@ class Receptionist(smach.StateMachine):
                 "succeeded": f"SAY_GET_GUEST_ATTRIBUTE_{guest_id}",
                 "aborted": f"SAY_GET_GUEST_ATTRIBUTE_{guest_id}",
                 "preempted": f"SAY_GET_GUEST_ATTRIBUTE_{guest_id}",
+            },
+        )
+
+    def _goto_waiting_area(self, guest_id: int) -> None:
+        """Adds the states to go to the waiting area.
+
+        Args:
+            guest_id (int): Identifier for the guest.
+        """
+
+        smach.StateMachine.add(
+            f"GO_TO_WAIT_LOCATION_GUEST_{guest_id}",
+            GoToLocation(self.wait_pose),
+            transitions={
+                "succeeded": f"SAY_WAITING_GUEST_{guest_id}",
+                "failed": f"GO_TO_WAIT_LOCATION_GUEST_{guest_id}",
+            },
+        )
+
+        smach.StateMachine.add(
+            f"SAY_WAITING_GUEST_{guest_id}",
+            Say(text="I am waiting for a guest. Please open the door."),
+            transitions={
+                "succeeded": f"WAIT_FOR_PERSON_GUEST_{guest_id}",
+                "aborted": f"WAIT_FOR_PERSON_GUEST_{guest_id}",
+                "preempted": f"WAIT_FOR_PERSON_GUEST_{guest_id}",
+            },
+        )
+
+        smach.StateMachine.add(
+            f"WAIT_FOR_PERSON_GUEST_{guest_id}",
+            WaitForPersonInArea(self.wait_area),
+            transitions={
+                "succeeded": f"GET_NAME_AND_DRINK_GUEST_{guest_id}",
+                "failed": f"GET_NAME_AND_DRINK_GUEST_{guest_id}",
             },
         )
