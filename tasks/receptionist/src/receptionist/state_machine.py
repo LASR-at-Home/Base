@@ -157,36 +157,7 @@ class Receptionist(smach.StateMachine):
                 },
             )
 
-            smach.StateMachine.add(
-                "SAY_FOLLOW_GUEST_1",
-                Say(text="Please follow me, I will guide you to the other guests"),
-                transitions={
-                    "succeeded": "GO_TO_SEAT_LOCATION_GUEST_1",
-                    "preempted": "failed",
-                    "aborted": "failed",
-                },
-            )
-
-            smach.StateMachine.add(
-                "GO_TO_SEAT_LOCATION_GUEST_1",
-                GoToLocation(seat_pose),
-                transitions={
-                    "succeeded": "SAY_WAIT_GUEST_1",
-                    "failed": "GO_TO_SEAT_LOCATION_GUEST_1",
-                },
-            )
-
-            smach.StateMachine.add(
-                "SAY_WAIT_GUEST_1",
-                Say(
-                    text="Please wait here on my left. Can the seated host look into my eyes please."
-                ),
-                transitions={
-                    "succeeded": "FIND_AND_LOOK_AT",
-                    "preempted": "failed",
-                    "aborted": "failed",
-                },
-            )
+            self._guide_guest(1)
 
             smach.StateMachine.add(
                 "FIND_AND_LOOK_AT",
@@ -290,43 +261,8 @@ class Receptionist(smach.StateMachine):
             )
 
             self._goto_waiting_area(2)
-
-            """
-            Asking second guest for drink and name
-            """
-
             self._ask_for_name_and_drink(2)
-
-            smach.StateMachine.add(
-                "SAY_FOLLOW_GUEST_2",
-                Say(text="Please follow me, I will guide you to the other guests"),
-                transitions={
-                    "succeeded": "GO_TO_SEAT_LOCATION_GUEST_2",
-                    "preempted": "failed",
-                    "aborted": "failed",
-                },
-            )
-
-            smach.StateMachine.add(
-                "GO_TO_SEAT_LOCATION_GUEST_2",
-                GoToLocation(seat_pose),
-                transitions={
-                    "succeeded": "SAY_WAIT_GUEST_2",
-                    "failed": "GO_TO_SEAT_LOCATION_GUEST_2",
-                },
-            )
-
-            smach.StateMachine.add(
-                "SAY_WAIT_GUEST_2",
-                Say(
-                    text="Please wait here on my left. Can the seated host look into my eyes please."
-                ),
-                transitions={
-                    "succeeded": "FIND_AND_LOOK_AT_HOST_2",
-                    "preempted": "failed",
-                    "aborted": "failed",
-                },
-            )
+            self._guide_guest(2)
 
             # INTRODUCE GUEST 2 TO HOST
 
@@ -661,5 +597,44 @@ class Receptionist(smach.StateMachine):
             transitions={
                 "succeeded": f"GET_NAME_AND_DRINK_GUEST_{guest_id}",
                 "failed": f"GET_NAME_AND_DRINK_GUEST_{guest_id}",
+            },
+        )
+
+    def _guide_guest(self, guest_id: int) -> None:
+        """Adds the states to guide a guest to the
+        seating area.
+
+        Args:
+            guest_id (int): Identifier for the guest.
+        """
+
+        smach.StateMachine.add(
+            f"SAY_FOLLOW_GUEST_{guest_id}",
+            Say(text="Please follow me, I will guide you to the other guests"),
+            transitions={
+                "succeeded": f"GO_TO_SEAT_LOCATION_GUEST_{guest_id}",
+                "preempted": "failed",
+                "aborted": "failed",
+            },
+        )
+
+        smach.StateMachine.add(
+            f"GO_TO_SEAT_LOCATION_GUEST_{guest_id}",
+            GoToLocation(self.seat_pose),
+            transitions={
+                "succeeded": f"SAY_WAIT_GUEST_{guest_id}",
+                "failed": f"GO_TO_SEAT_LOCATION_GUEST_{guest_id}",
+            },
+        )
+
+        smach.StateMachine.add(
+            f"SAY_WAIT_GUEST_{guest_id}",
+            Say(
+                text="Please wait here on my left. Can the seated host look into my eyes please."
+            ),
+            transitions={
+                "succeeded": f"FIND_AND_LOOK_AT_HOST_{guest_id}",
+                "preempted": "failed",
+                "aborted": "failed",
             },
         )
