@@ -67,10 +67,9 @@ def learn_face(request: LearnFaceRequest) -> LearnFaceResponse:
             f"/learn_face/debug/{topic_name}", Image, queue_size=1
         )
     face_recognition.create_dataset(
-        "/xtion/rgb/image_raw",
         request.dataset,
         request.name,
-        request.n_images,
+        request.images,
         debug_publisher,
     )
     return LearnFaceResponse()
