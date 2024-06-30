@@ -81,7 +81,7 @@ class GetCroppedImage(smach.State):
         self._nmsthresh_3d = nmsthresh_3d
         self._yolo_2d = rospy.ServiceProxy("/yolov8/detect", YoloDetection)
         self._yolo_3d = rospy.ServiceProxy("/yolov8/detect3d", YoloDetection3D)
-        self._robot_pose_topic = "/amcl_pose"
+        self._robot_pose_topic = "/robot_pose"
 
         self._valid_2d_methods = [
             "centered",
