@@ -14,7 +14,7 @@ class LookToPoint(smach.State):
 
     def __init__(
         self,
-        pointstamped: Union[None, PointStamped],
+        pointstamped: Union[None, PointStamped] = None,
     ):
         smach.State.__init__(
             self,
