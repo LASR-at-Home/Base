@@ -8,7 +8,12 @@ from sensor_msgs.msg import Image, PointCloud2
 from geometry_msgs.msg import Point, PoseWithCovarianceStamped, Polygon
 from shapely.geometry.polygon import Polygon as ShapelyPolygon
 
-from lasr_vision_msgs.msg import Detection, Detection3D
+from lasr_vision_msgs.msg import (
+    Detection,
+    Detection3D,
+    CDRequest,
+    CDResponse,
+)
 from lasr_vision_msgs.srv import (
     YoloDetection,
     YoloDetection3D,
@@ -291,20 +296,20 @@ def filter_detections_by_polygon(
     return filtered_detections, detection_polygon_ids
 
 
-def process_detection_request(
-    request: CroppedDetectionRequest,
+def process_single_detection_request(
+    request: CDRequest,
     rgb_image_topic: str = "/xtion/rgb/image_raw",
     depth_image_topic: str = "/xtion/depth_registered/points",
     yolo_2d_service_name: str = "/yolov8/detect",
     yolo_3d_service_name: str = "/yolov8/detect3d",
     robot_pose_topic: str = "/amcl_pose",
     debug_topic: str = "/lasr_vision/cropped_detection/debug",
-) -> CroppedDetectionResponse:
+) -> CDResponse:
     """Dispatches a detection request to the appropriate bounding box/mask 2D or 3D cropped
     detection function.
 
     Args:
-        request (CroppedDetectionRequest): The request to process.
+        request (CDRequest): The request to process.
         rgb_image_topic (str, optional): The topic to get an RGB image from. Defaults to "/xtion/rgb/image_raw".
         depth_image_topic (str, optional): The topic to getn an RGBD image from. Defaults to "/xtion/depth_registered/points".
         yolo_2d_service_name (str, optional): Name of the 2D Yolo detection service. Defaults to "/yolov8/detect".
@@ -313,7 +318,7 @@ def process_detection_request(
         debug_topic (str, optional): Topic to publish results to for debugging. Defaults to "/lasr_vision/cropped_detection/debug".
 
     Returns:
-        CroppedDetectionResponse: The response to the request.
+        CDResponse: The response to the request.
     """
     valid_2d_crop_methods = [
         "centered",
@@ -323,12 +328,16 @@ def process_detection_request(
         "bottom-most",
     ]
     valid_3d_crop_methods = ["closest", "furthest"]
-    response = CroppedDetectionResponse()
+    response = CDResponse()
     combined_mask = None
     if request.method in valid_2d_crop_methods:
         yolo_2d_service = rospy.ServiceProxy(yolo_2d_service_name, YoloDetection)
         yolo_2d_service.wait_for_service()
-        rgb_image = rospy.wait_for_message(rgb_image_topic, Image)
+        rgb_image = (
+            request.rgb_image
+            if request.rgb_image.data
+            else rospy.wait_for_message(rgb_image_topic, Image)
+        )
         rgb_cv2 = msg_to_cv2_img(rgb_image)
         detections = yolo_2d_service(
             rgb_image,
@@ -346,12 +355,18 @@ def process_detection_request(
                 rgb_cv2, request.method, detections
             )
         response.detections_2d = detections
+        if request.return_sensor_reading:
+            response.rgb_image = rgb_image
     elif request.method in valid_3d_crop_methods:
         yolo_3d_service = rospy.ServiceProxy(yolo_3d_service_name, YoloDetection3D)
         yolo_3d_service.wait_for_service()
         robot_pose = rospy.wait_for_message(robot_pose_topic, PoseWithCovarianceStamped)
         robot_location = robot_pose.pose.pose.position
-        pointcloud_msg = rospy.wait_for_message(depth_image_topic, PointCloud2)
+        pointcloud_msg = (
+            request.pointcloud
+            if request.pointcloud.data
+            else rospy.wait_for_message(depth_image_topic, PointCloud2)
+        )
         pointcloud_rgb = pcl_to_cv2(pointcloud_msg)
         detections = yolo_3d_service(
             pointcloud_msg,
@@ -380,6 +395,8 @@ def process_detection_request(
                 detections,
             )
         response.detections_3d = detections
+        if request.return_sensor_reading:
+            response.pointcloud = pointcloud_msg
     else:
         rospy.logerr(f"Invalid crop method: {request.method}")
         return response
@@ -427,5 +444,45 @@ def process_detection_request(
         )
 
     debug_publisher.publish(cv2_img_to_msg(debug_image))
+
+    return response
+
+
+def process_detection_requests(
+    request: CroppedDetectionRequest,
+    rgb_image_topic: str = "/xtion/rgb/image_raw",
+    depth_image_topic: str = "/xtion/depth_registered/points",
+    yolo_2d_service_name: str = "/yolov8/detect",
+    yolo_3d_service_name: str = "/yolov8/detect3d",
+    robot_pose_topic: str = "/amcl_pose",
+    debug_topic: str = "/lasr_vision/cropped_detection/debug",
+) -> CroppedDetectionResponse:
+    """Processes a list of detection requests.
+
+    Args:
+        request (CroppedDetectionRequestSrv): The request to process.
+        rgb_image_topic (str, optional): The topic to get an RGB image from. Defaults to "/xtion/rgb/image_raw".
+        depth_image_topic (str, optional): The topic to getn an RGBD image from. Defaults to "/xtion/depth_registered/points".
+        yolo_2d_service_name (str, optional): Name of the 2D Yolo detection service. Defaults to "/yolov8/detect".
+        yolo_3d_service_name (str, optional): Name of the 3D Yolo detection service. Defaults to "/yolov8/detect3d".
+        robot_pose_topic (str, optional): Service to get the robot's current pose. Defaults to "/amcl_pose".
+        debug_topic (str, optional): Topic to publish results to for debugging. Defaults to "/lasr_vision/cropped_detection/debug".
+
+    Returns:
+        CroppedDetectionResponseSrv: The response to the request.
+    """
+    response = CroppedDetectionResponse()
+    for req in request.requests:
+        response.responses.append(
+            process_single_detection_request(
+                req,
+                rgb_image_topic,
+                depth_image_topic,
+                yolo_2d_service_name,
+                yolo_3d_service_name,
+                robot_pose_topic,
+                debug_topic,
+            )
+        )
 
     return response
