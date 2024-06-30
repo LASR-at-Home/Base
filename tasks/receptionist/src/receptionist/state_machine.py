@@ -27,7 +27,9 @@ class Receptionist(smach.StateMachine):
         wait_area: Polygon,
         seat_pose: Pose,
         seat_area: Polygon,
+        sofa_area: Polygon,
         host_data: dict,
+        max_people_on_sofa: int = 3,
         face_detection_confidence: float = 0.2,
     ):
         smach.StateMachine.__init__(self, outcomes=["succeeded", "failed"])
@@ -391,7 +393,7 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "SEAT_GUEST_1",
-                SeatGuest(seat_area),
+                SeatGuest(seat_area, sofa_area, max_people_on_sofa),
                 transitions={
                     "succeeded": "SAY_RETURN_WAITING_AREA",
                     "failed": "SAY_SEAT_GUEST_1_FAILED",
