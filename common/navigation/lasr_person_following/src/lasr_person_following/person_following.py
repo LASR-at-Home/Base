@@ -15,7 +15,7 @@ from typing import Union, List
 
 import actionlib
 from move_base_msgs.msg import MoveBaseAction, MoveBaseActionGoal, MoveBaseGoal
-from actionlib_msgs.msg import GoalStatus
+from actionlib_msgs.msg import GoalStatus, GoalStatusArray
 
 import rosservice
 import tf2_ros as tf
@@ -25,7 +25,7 @@ from nav_msgs.srv import GetPlan
 from nav_msgs.msg import Path
 
 
-from math import atan2
+import math
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 
@@ -46,9 +46,11 @@ class PersonFollower:
     _n_secs_static_plan_close: float
     _new_goal_threshold: float
     _stopping_distance: float
+    _tracks_frame: str
 
     # State
     _track_id: Union[None, int]
+    _goal_pose: Union[None, PoseStamped]
 
     # Action clients
     _move_base_client: actionlib.SimpleActionClient
@@ -67,14 +69,18 @@ class PersonFollower:
     # Publishers
     _person_trajectory_pub: rospy.Publisher
 
+    # Subscribers
+    _move_base_status_sub: rospy.Subscriber
+
     def __init__(
         self,
         start_following_radius: float = 2.0,
         start_following_angle: float = 45.0,
         n_secs_static_finished: float = 10.0,
         n_secs_static_plan_close: float = 5.0,
-        new_goal_threshold: float = 0.5,
+        new_goal_threshold: float = 1.0,
         stopping_distance: float = 1.0,
+        tracks_frame="odom",
     ):
         self._start_following_radius = start_following_radius
         self._start_following_angle = start_following_angle
@@ -82,6 +88,7 @@ class PersonFollower:
         self._n_secs_static_plan_close = n_secs_static_plan_close
         self._new_goal_threshold = new_goal_threshold
         self._stopping_distance = stopping_distance
+        self._tracks_frame = tracks_frame
 
         self._track_id = None
 
@@ -98,6 +105,10 @@ class PersonFollower:
             "/move_base/make_plan", timeout=rospy.Duration.from_sec(10.0)
         )
         self._make_plan = rospy.ServiceProxy("/move_base/make_plan", GetPlan)
+
+        self._move_base_status_sub = rospy.Subscriber(
+            "/move_base/status", GoalStatusArray, self._move_base_status_cb
+        )
 
         self._person_trajectory_pub = rospy.Publisher(
             "/person_trajectory", PoseArray, queue_size=1, latch=True
@@ -121,24 +132,28 @@ class PersonFollower:
             rospy.logwarn("Transcribe speech client not available")
 
     def _tf_pose(self, pose: PoseStamped, target_frame: str):
+        if target_frame == pose.header.frame_id:
+            return pose
+
         trans = self._buffer.lookup_transform(
             target_frame, pose.header.frame_id, rospy.Time(0), rospy.Duration(1.0)
         )
         return do_transform_pose(pose, trans)
 
-    def _robot_pose_in_odom(self) -> Union[PoseStamped, None]:
+    def _robot_pose_in_frame(self, frame: str) -> Union[PoseStamped, None]:
         try:
-            current_pose: PoseWithCovarianceStamped = rospy.wait_for_message(
+            amcl_pose: Pose = rospy.wait_for_message(
                 "/amcl_pose", PoseWithCovarianceStamped
             )
         except AttributeError:
             return None
 
-        current_pose_stamped = PoseStamped(
-            pose=current_pose.pose.pose, header=current_pose.header
-        )
+        if frame == amcl_pose.header.frame_id:
+            return PoseStamped(pose=amcl_pose.pose.pose, header=amcl_pose.header)
 
-        return self._tf_pose(current_pose_stamped, "odom")
+        return self._tf_pose(
+            PoseStamped(pose=amcl_pose.pose.pose, header=amcl_pose.header), frame
+        )
 
     def begin_tracking(self, ask: bool = False) -> bool:
         """
@@ -146,6 +161,11 @@ class PersonFollower:
         """
 
         tracks: PersonArray = rospy.wait_for_message("/people_tracked", PersonArray)
+
+        assert (
+            tracks.header.frame_id == self._tracks_frame
+        ), f"_tracks_frame should be set to frame of incoming tracks. _tracks_frame is {self._tracks_frame}, but received track in {tracks.header.frame_id} frame..."
+
         people: List[Person] = tracks.people
 
         if len(people) == 0:
@@ -153,7 +173,7 @@ class PersonFollower:
 
         min_dist: float = np.inf
         closest_person: Union[None, Person] = None
-        robot_pose: PoseStamped = self._robot_pose_in_odom()
+        robot_pose: PoseStamped = self._robot_pose_in_frame(self._tracks_frame)
 
         if robot_pose is None:
             return False
@@ -221,12 +241,21 @@ class PersonFollower:
 
     def _quat_to_dir(self, q: Quaternion):
         x, y, z, w = q.x, q.y, q.z, q.w
+        """
+        Compute forward vector from quaternion
+        f_x = 1 - 2 * (y^2 + z^2)
+        f_y = 2 * (x * y - z * w)
+        f_z = 2 * (x * z + y * w)
+        """
         forward = np.array(
             [1 - 2 * (y**2 + z**2), 2 * (x * y - z * w), 2 * (x * z + y * w)]
         )
         return forward
 
     def _angle_between_vectors(self, v1, v2):
+        """
+        angle = arccos(dot(v1, v2) / (norm(v1) * norm(v2)))
+        """
         dot_product = np.dot(v1, v2)
         norms_product = np.linalg.norm(v1) * np.linalg.norm(v2)
         cos_theta = dot_product / norms_product
@@ -237,7 +266,7 @@ class PersonFollower:
     def _compute_face_quat(self, p1: Pose, p2: Pose) -> Quaternion:
         dx: float = p2.position.x - p1.position.x
         dy: float = p2.position.y - p1.position.y
-        theta_deg = np.degrees(atan2(dy, dx))
+        theta_deg = np.degrees(math.atan2(dy, dx))
         x, y, z, w = R.from_euler("z", theta_deg, degrees=True).as_quat()
         return Quaternion(x, y, z, w)
 
@@ -263,6 +292,39 @@ class PersonFollower:
 
             return True
         return True
+
+    def _get_pose_distance_ahead(self, pose: Pose, distance: float):
+        new_pose = Pose()
+
+        current_position = pose.position
+        current_orientation = pose.orientation
+
+        """
+        Convert quaternion to yaw
+        yaw = atan2(2.0 * (w * z + x * y), 1.0 - 2.0 * (y * y + z * z))
+        """
+        yaw = math.atan2(
+            2.0
+            * (
+                current_orientation.w * current_orientation.z
+                + current_orientation.x * current_orientation.y
+            ),
+            1.0
+            - 2.0
+            * (
+                current_orientation.y * current_orientation.y
+                + current_orientation.z * current_orientation.z
+            ),
+        )
+
+        # project the point distance ahead
+        new_pose.position.x = current_position.x + distance * math.cos(yaw)
+        new_pose.position.y = current_position.y + distance * math.sin(yaw)
+        new_pose.position.z = current_position.z
+
+        new_pose.orientation = pose.orientation
+
+        return new_pose
 
     def _get_pose_on_path(
         self, start_pose: PoseStamped, goal_pose: PoseStamped, dist_to_goal: float
@@ -309,11 +371,27 @@ class PersonFollower:
             else:
                 self._tts_client.send_goal(tts_goal)
 
-    def follow(self) -> None:
+    def _move_base_status_cb(self, status: GoalStatusArray) -> None:
 
+        if len(status.status_list) > 0:
+
+            if (
+                status.status_list[-1] == GoalStatus.ABORTED
+                and self._goal_pose is not None
+            ):
+                rospy.logwarn("Move base goal aborted, replanning...")
+                self._goal_pose = self._get_pose_on_path(
+                    self._robot_pose_in_frame("map"),
+                    self._goal_pose,
+                    self._stopping_distance,
+                )
+                self._move_base(self._goal_pose)
+
+    def follow(self) -> None:
         person_trajectory: PoseArray = PoseArray()
-        person_trajectory.header.frame_id = "odom"
+        person_trajectory.header.frame_id = self._tracks_frame
         prev_track: Union[None, Person] = None
+        last_track_time: Union[None, rospy.Time] = None
         last_goal_time: Union[None, rospy.Time] = None
         going_to_person: bool = False
 
@@ -328,11 +406,52 @@ class PersonFollower:
             )
 
             if track is None:
-                rospy.loginfo("Lost track of person, recovering...")
-                self._cancel_goal()
-                person_trajectory = PoseArray()
-                self._recover_track()
-                prev_track = None
+                recover: bool = False
+                if last_track_time is None:
+                    recover = True
+                elif (rospy.Time.now() - last_track_time).to_sec() > 5.0:
+                    recover = True
+                if recover:
+                    # TODO
+                    """
+                    sometimes, we lose track of the person, but they are in the frame of the camera.
+                    We should incorporate vision, combined with the last known position of the person, and the leg tracker, to recover the track.
+                    or, even assume that the "legs" closest to the last track are the person we are following.
+                    or, project using the velocity?
+                    """
+                    rospy.loginfo("Lost track of person, recovering...")
+                    self._cancel_goal()
+                    self._recover_track()
+                    person_trajectory = PoseArray()
+                    prev_track = None
+                    self._goal_pose = None
+                    last_goal_time = None
+                    continue
+                rospy.logwarn("Lost the person, but will continue attempting to track")
+                continue
+
+            assert track is not None, "Track should not be None"
+            last_track_time = rospy.Time.now()
+
+            if prev_track is None:
+                robot_pose: PoseStamped = self._robot_pose_in_frame("map")
+                track_pose_map: PoseStamped = self._tf_pose(
+                    PoseStamped(pose=track.pose, header=tracks.header), "map"
+                )
+                track_pose_map.pose.orientation = self._compute_face_quat(
+                    robot_pose.pose, track_pose_map.pose
+                )
+
+                self._goal_pose = self._get_pose_on_path(
+                    robot_pose,
+                    track_pose_map,
+                    self._stopping_distance / 2.0,
+                )
+                if self._goal_pose is not None:
+                    self._move_base(self._goal_pose)
+                    prev_track = track
+                    last_goal_time = rospy.Time.now()
+
                 continue
 
             # Distance to the previous pose
@@ -345,11 +464,15 @@ class PersonFollower:
             # Check if the person has moved significantly
             if dist_to_prev >= self._new_goal_threshold:
 
-                goal_pose = self._tf_pose(
-                    PoseStamped(pose=track.pose, header=tracks.header),
+                self._goal_pose = self._tf_pose(
+                    PoseStamped(
+                        pose=self._get_pose_distance_ahead(track.pose, -1.0),
+                        header=tracks.header,
+                    ),
                     "map",
                 )
-                self._move_base(goal_pose)
+                self._move_base(self._goal_pose)
+
                 prev_track = track
                 last_goal_time = rospy.Time.now()
                 person_trajectory.poses.append(track.pose)
@@ -364,24 +487,45 @@ class PersonFollower:
                     < self._n_secs_static_finished
                 ) and not going_to_person:
                     self._cancel_goal()
-                    goal_pose = self._get_pose_on_path(
-                        self._tf_pose(self._robot_pose_in_odom(), "map"),
+                    self._goal_pose = self._get_pose_on_path(
+                        self._robot_pose_in_frame("map"),
                         self._tf_pose(
                             PoseStamped(pose=track.pose, header=tracks.header),
                             "map",
                         ),
                         self._stopping_distance,
                     )
-                    if goal_pose is not None:
-                        self._move_base(goal_pose)
+                    if self._goal_pose is not None:
+                        self._move_base(self._goal_pose)
                         going_to_person = True
                     else:
+                        pose: PoseStamped = PoseStamped(
+                            pose=self._get_pose_distance_ahead(track.pose, -1.0),
+                            header=tracks.header,
+                        )
+                        self._goal_pose = self._tf_pose(pose, "map")
+                        self._move_base(self._goal_pose)
+                        going_to_person = True
                         rospy.logwarn("Could not find a path to the person")
                 elif delta_t >= self._n_secs_static_finished:
                     rospy.loginfo(
                         "Person has been static for too long, checking if we are finished"
                     )
                     self._move_base_client.wait_for_result()
+                    # if the person moves at this point, we lose them.
+
+                    robot_pose: Union[None, PoseStamped] = self._robot_pose_in_frame(
+                        self._tracks_frame
+                    )
+                    if robot_pose is not None:
+                        pose: PoseStamped = PoseStamped(header=tracks.header)
+                        pose.pose = robot_pose.pose
+                        pose.pose.orientation = self._compute_face_quat(
+                            robot_pose.pose, track.pose
+                        )
+                        self._goal_pose = self._tf_pose(pose, "map")
+                        self._move_base(self._goal_pose)
+
                     if self._check_finished():
                         rospy.loginfo("Finished following person")
                         break
@@ -389,3 +533,23 @@ class PersonFollower:
                         rospy.loginfo("Person is not finished, continuing")
                         last_goal_time = None
                         continue
+            elif self._move_base_client.get_state() not in [
+                GoalStatus.PENDING,
+                GoalStatus.ACTIVE,
+            ]:
+
+                self._goal_pose = self._tf_pose(
+                    PoseStamped(
+                        pose=self._get_pose_distance_ahead(track.pose, -1.0),
+                        header=tracks.header,
+                    ),
+                    "map",
+                )
+                self._move_base(self._goal_pose)
+
+                prev_track = track
+                last_goal_time = rospy.Time.now()
+                person_trajectory.poses.append(track.pose)
+                person_trajectory.header.stamp = rospy.Time.now()
+                self._person_trajectory_pub.publish(person_trajectory)
+                going_to_person = False

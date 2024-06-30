@@ -26,7 +26,7 @@ class PersonFollowingServer:
         )
         self._server.register_preempt_callback(self._preempt_cb)
 
-        self._follower = PersonFollower()
+        self._follower = PersonFollower(tracks_frame="map")
 
         self._server.start()
 
