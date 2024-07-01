@@ -16,11 +16,13 @@ if __name__ == "__main__":
 
     max_people_on_sofa = rospy.get_param("/max_people_on_sofa")
 
-    # rospy.sleep(5)
+    rospy.sleep(5)
 
     sofa_area = Polygon(sofa_area_param)
 
     seat_area = Polygon(seat_area_param)
+
+    seat_area = seat_area.difference(sofa_area)
 
     sm = smach.StateMachine(outcomes=["succeeded", "failed"])
     with sm:
