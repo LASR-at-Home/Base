@@ -16,6 +16,8 @@ from lasr_skills import (
     Wait,
 )
 
+from std_msgs.msg import Header
+
 
 class SeatGuest(smach.StateMachine):
     _motions: List[str] = ["look_down_left", "look_down_right", "look_down_centre"]
@@ -32,7 +34,7 @@ class SeatGuest(smach.StateMachine):
 
         def execute(self, userdata) -> str:
             if len(userdata.detections_3d) < self.max_people_on_sofa:
-                print(userdata.detections_3d)
+                print(f" the detections are {len(userdata.detections_3d)}")
                 return "has_free_space"
             return "full_sofa"
 
@@ -48,6 +50,7 @@ class SeatGuest(smach.StateMachine):
             )
 
         def execute(self, userdata) -> str:
+
             seat_detections = [
                 det for det in userdata.detections_3d if det.name == "chair"
             ]
@@ -68,13 +71,23 @@ class SeatGuest(smach.StateMachine):
                 seat_polygon: Polygon = Polygon(np.array(seat.xyseg).reshape(-1, 2))
                 seat_is_empty: bool = True
                 for person_polygon in person_polygons:
-                    if person_polygon.intersects(seat_polygon):
+                    print("Person polygon")
+                    print()
+                    print(person_polygon.intersection(seat_polygon).area)
+                    print(person_polygon.area)
+                    print(person_polygon.intersection(seat_polygon).area / person_polygon.area)
+                    print(person_polygon.intersects(seat_polygon))
+
+                    # get the percentage of the person that is on the seat
+                    if person_polygon.intersection(seat_polygon).area / person_polygon.area > 0.2:
                         seat_is_empty = False
-                        print(person_polygon.intersection(seat_polygon))
+                        print("Person is on the seat/n")
+                        print(person_polygon.intersection(seat_polygon).area)
+                        print(person_polygon.area)
                         break
 
                 if seat_is_empty:
-                    userdata.seat_position = PointStamped(point=seat.point)
+                    userdata.seat_position = PointStamped(point=seat.point, header=Header(frame_id="map"))
                     print(seat.point)
                     return "succeeded"
 
@@ -91,6 +104,7 @@ class SeatGuest(smach.StateMachine):
             # TODO: stop doing this
             self.userdata.people_detections = []
             self.userdata.seat_detections = []
+            self.userdata.seat_position = PointStamped()
 
             smach.StateMachine.add(
                 "DETECT_SOFA",
