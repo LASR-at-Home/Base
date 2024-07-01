@@ -73,5 +73,5 @@ seat_pose:
 seat_area: [[6.04, 21.42], [6.82, 19.38], [8.78, 19.89], [8.19, 22.32]]
 # test in the kitchen --end
 
-max_people_on_sofa: 2
+max_people_on_sofa: 1
 sofa_area: [[7.07, 20.38], [8.44, 20.64], [9.07, 20.18], [7.04, 19.81]]
