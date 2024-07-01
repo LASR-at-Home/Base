@@ -243,7 +243,7 @@ class AdjustCamera(smach.State):
             rospy.logwarn(f"very middle {very_middle}")
             # if y at upper 1/3 for eyes: do nothing,
             # otherwise move up 1 step
-            if eyes_middle[1] >= 4/5:
+            if eyes_middle[1] <= 1/3:
                 position[0] += 1
                 print('if y at upper 1/3 for eyes: do nothing, otherwise move up 1 step')
                 # if x at left 1/3, move left 1 step
