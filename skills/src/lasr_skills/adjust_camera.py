@@ -206,34 +206,34 @@ class AdjustCamera(smach.State):
             # in this case try to make eyes into the upper 1/3 of the frame,
             eyes_middle = ((keypoint_info["leftEye"][0] + keypoint_info["rightEye"][0]) / 2, (keypoint_info["leftEye"][1] + keypoint_info["rightEye"][1]) / 2)
             # if y at down 1/3: down move 2 steps
-            if eyes_middle[0] >= 2/3:
+            if eyes_middle[1] >= 2/3:
                 position[0] -= 2
             # if y at middle 1/3: down move 1 step
-            elif eyes_middle[0] >= 1/3:
+            elif eyes_middle[1] >= 1/3:
                 position[0] -= 1
             # if y at upper 1/3: wonder why no shoulders but never mind in this case
             else:
                 pass
             # if x at left 1/3 or left shoulder dissappear, move left 1 step
-            if eyes_middle[1] <= 1/3:
+            if eyes_middle[0] <= 1/3:
                 position[1] -= 1
             # if x at right 1/3 or right shoulder dissappear, move right 1 step
-            elif eyes_middle[1] >= 2/3:
+            elif eyes_middle[0] >= 2/3:
                 position[1] += 1
             pass
         elif not has_both_eyes and has_both_shoulders:
             shoulders_middle = ((keypoint_info["leftShoulder"][0] + keypoint_info["rightShoulder"][0]) / 2, (keypoint_info["leftEye"][1] + keypoint_info["rightEye"][1]) / 2)
             # if y at down 1/3: down move 1 step
-            if shoulders_middle[0] >= 2/3:
+            if shoulders_middle[1] >= 2/3:
                 position[0] -= 1
             # if y at upper 1/3: up move 1 step
-            elif shoulders_middle[0] <= 1/3:
+            elif shoulders_middle[1] <= 1/3:
                 position[0] += 1
             # if x at left 1/3, move left 1 step
-            if shoulders_middle[1] <= 1/3:
+            if shoulders_middle[0] <= 1/3:
                 position[1] -= 1
             # if x at right 1/3, move right 1 step
-            elif shoulders_middle[1] >= 2/3:
+            elif shoulders_middle[0] >= 2/3:
                 position[1] += 1
             pass
         elif has_both_eyes and has_both_shoulders:
@@ -243,36 +243,36 @@ class AdjustCamera(smach.State):
             rospy.logwarn(f"very middle {very_middle}")
             # if y at upper 1/3 for eyes: do nothing,
             # otherwise move up 1 step
-            if eyes_middle[0] >= 4/5:
+            if eyes_middle[1] >= 4/5:
                 position[0] += 1
                 print('if y at upper 1/3 for eyes: do nothing, otherwise move up 1 step')
                 # if x at left 1/3, move left 1 step
-                if very_middle[1] <= 1/3:
+                if very_middle[0] <= 1/3:
                     position[1] -= 1
                     print('if x at left 1/3, move left 1 step.')
                 # if x at right 1/3, move right 1 step
-                elif very_middle[1] >= 2/3:
+                elif very_middle[0] >= 2/3:
                     position[1] += 1
                     print('if x at right 1/3, move right 1 step.')
                 pass
             else:
-                if 1/3 <= very_middle[0] <= 2/3 and 1/3 <= very_middle[1] <= 2/3:
+                if 1/3 <= very_middle[1] <= 2/3 and 1/3 <= very_middle[0] <= 2/3:
                     print('finished.')
                     return "finished"
                 # if y at down 1/3: down move 1 step
-                if very_middle[0] >= 2/3:
+                if very_middle[1] >= 4/5:
                     position[0] -= 1
                     print('if y at down 1/3: down move 1 step.')
                 # if y at upper 1/3: up move 1 step
-                elif very_middle[0] <= 1/3:
+                elif very_middle[1] <= 1/3:
                     position[0] += 1
                     print('if y at upper 1/3: up move 1 step.')
                 # if x at left 1/3, move left 1 step
-                if very_middle[1] <= 1/3:
+                if very_middle[0] <= 1/3:
                     position[1] -= 1
                     print('if x at left 1/3, move left 1 step.')
                 # if x at right 1/3, move right 1 step
-                elif very_middle[1] >= 2/3:
+                elif very_middle[0] >= 2/3:
                     position[1] += 1
                     print('if x at right 1/3, move right 1 step.')
                 pass
@@ -280,10 +280,10 @@ class AdjustCamera(smach.State):
             shoulders_middle = ((keypoint_info["leftShoulder"][0] + keypoint_info["rightShoulder"][0]) / 2, (keypoint_info["leftEye"][1] + keypoint_info["rightEye"][1]) / 2)
             # move one step opposite left or right
             # if x at left 1/3, move left 1 step
-            if shoulders_middle[1] <= 1/3:
+            if shoulders_middle[0] <= 1/3:
                 position[1] -= 1
             # if x at right 1/3, move right 1 step
-            elif shoulders_middle[1] >= 2/3:
+            elif shoulders_middle[0] >= 2/3:
                 position[1] += 1
             pass
             if not has_more_than_one_one_eye:
@@ -294,10 +294,10 @@ class AdjustCamera(smach.State):
             eyes_middle = ((keypoint_info["leftEye"][0] + keypoint_info["rightEye"][0]) / 2, (keypoint_info["leftEye"][1] + keypoint_info["rightEye"][1]) / 2)
             # move one step opposite,
             # if x at left 1/3, move left 1 step
-            if eyes_middle[1] <= 1/3:
+            if eyes_middle[0] <= 1/3:
                 position[1] += 1
             # if x at right 1/3, move right 1 step
-            elif eyes_middle[1] >= 2/3:
+            elif eyes_middle[0] >= 2/3:
                 position[1] -= 1
             # probably move down
             position[0] -= 1
