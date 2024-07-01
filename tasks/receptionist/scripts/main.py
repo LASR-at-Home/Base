@@ -35,6 +35,9 @@ if __name__ == "__main__":
 
     sofa_area = Polygon(sofa_area_param)
 
+    # exclude the sofa area from the seat area
+    # seat_area = seat_area.difference(sofa_area)
+
     receptionist = Receptionist(
         wait_pose,
         wait_area,
