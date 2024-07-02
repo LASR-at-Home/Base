@@ -287,7 +287,7 @@ class HandleGuest(smach.StateMachine):
             smach.StateMachine.add(
                 "SAY_ATTRIBUTES_FAILED",
                 Say(
-                    text="I'm sorry, I couldn't get your attributes. I will try again."
+                    text="I'm sorry, I couldn't get your attributes. Make sure you're looking into my eyes."
                 ),
                 transitions={
                     "succeeded": "GET_ATTRIBUTES",
@@ -307,7 +307,7 @@ class HandleGuest(smach.StateMachine):
 
             smach.StateMachine.add(
                 "SAY_LEARN_FACE_FAILED",
-                Say(text="I'm sorry, I couldn't learn your face. I will try again."),
+                Say(text="I'm sorry, I couldn't learn your face. Make sure you're looking into my eyes."),
                 transitions={
                     "succeeded": "LEARN_FACE",
                     "aborted": "LEARN_FACE",

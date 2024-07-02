@@ -72,7 +72,7 @@ class ReceptionistLearnFaces(smach.State):
         ]
 
         learn_face_req: LearnFaceRequest = LearnFaceRequest(
-            name=userdata.guest_data[self._guest_id]["name"],
+            name=self._guest_id,
             dataset="receptionist",
             images=images,
         )

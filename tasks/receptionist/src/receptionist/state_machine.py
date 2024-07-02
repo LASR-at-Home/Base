@@ -115,7 +115,7 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "LOOK_AT_WAITING_GUEST_1_1",
-                PlayMotion(motion_name="look_left"),
+                PlayMotion(motion_name="look_very_left"),
                 transitions={
                     "succeeded": "INTRODUCE_GUEST_1_TO_HOST",
                     "aborted": "INTRODUCE_GUEST_1_TO_HOST",
@@ -134,7 +134,7 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "LOOK_AT_WAITING_GUEST_1_2",
-                PlayMotion(motion_name="look_left"),
+                PlayMotion(motion_name="look_very_left"),
                 transitions={
                     "succeeded": "INTRODUCE_HOST_TO_GUEST_1",
                     "aborted": "INTRODUCE_HOST_TO_GUEST_1",
@@ -229,7 +229,7 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "LOOK_AT_WAITING_GUEST_2_1",
-                PlayMotion(motion_name="look_left"),
+                PlayMotion(motion_name="look_very_left"),
                 transitions={
                     "succeeded": "INTRODUCE_GUEST_2_TO_HOST",
                     "aborted": "INTRODUCE_GUEST_2_TO_HOST",
@@ -251,7 +251,7 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "LOOK_AT_WAITING_GUEST_2_2",
-                PlayMotion(motion_name="look_left"),
+                PlayMotion(motion_name="look_very_left"),
                 transitions={
                     "succeeded": "INTRODUCE_GUEST_HOST_TO_GUEST_2",
                     "aborted": "INTRODUCE_GUEST_HOST_TO_GUEST_2",
@@ -299,7 +299,7 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "LOOK_AT_WAITING_GUEST_2_3",
-                PlayMotion(motion_name="look_left"),
+                PlayMotion(motion_name="look_very_left"),
                 transitions={
                     "succeeded": "INTRODUCE_GUEST_2_TO_GUEST_1",
                     "aborted": "INTRODUCE_GUEST_2_TO_GUEST_1",
@@ -318,7 +318,7 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "LOOK_AT_WAITING_GUEST_2_4",
-                PlayMotion(motion_name="look_left"),
+                PlayMotion(motion_name="look_very_left"),
                 transitions={
                     "succeeded": "INTRODUCE_GUEST_1_TO_GUEST_2",
                     "aborted": "INTRODUCE_GUEST_1_TO_GUEST_2",
