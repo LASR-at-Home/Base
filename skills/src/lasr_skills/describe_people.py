@@ -139,29 +139,28 @@ class DescribePeople(smach.StateMachine):
                 transitions=transitions,
             )
 
-            if "tiago" in os.environ["ROS_MASTER_URI"]:
-                smach.StateMachine.add(
-                    "SAY_GET_IMAGE_AGAIN",
-                    Say(
-                        text="Make sure you're looking into my eyes, I can't seem to see you."
-                    ),
-                    transitions={
-                        "succeeded": "GET_IMAGE_AGAIN",
-                        "preempted": "GET_IMAGE_AGAIN",
-                        "aborted": "GET_IMAGE_AGAIN",
-                    },
-                )
+            # if "tiago" in os.environ["ROS_MASTER_URI"]:
+            #     smach.StateMachine.add(
+            #         "SAY_GET_IMAGE_AGAIN",
+            #         Say(
+            #             text="Make sure you're looking into my eyes, I can't seem to see you."
+            #         ),
+            #         transitions={
+            #             "succeeded": "GET_IMAGE_AGAIN",
+            #             "preempted": "GET_IMAGE_AGAIN",
+            #             "aborted": "GET_IMAGE_AGAIN",
+            #         },
+            #     )
 
-            smach.StateMachine.add(
-                "GET_IMAGE_AGAIN",
-                GetCroppedImage(
-                    object_name="person",
-                    crop_method=crop_method,
-                    rgb_topic=rgb_topic,
-                    use_mask=False,
-                ),
-                transitions={"succeeded": "CONVERT_IMAGE", "failed": "failed"},
-            )
+            # smach.StateMachine.add(
+            #     "GET_IMAGE_AGAIN",
+            #     GetCroppedImage(
+            #         object_name="person",
+            #         method=crop_method,
+            #         use_mask=True,
+            #     ),
+            #     transitions=transitions,
+            # )
 
             if "tiago" in os.environ["ROS_MASTER_URI"]:
                 smach.StateMachine.add(

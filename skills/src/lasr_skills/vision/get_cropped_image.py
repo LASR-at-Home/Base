@@ -58,9 +58,9 @@ class GetCroppedImage(smach.State):
                 cropped_detection_req
             )
             cropped_image = cropped_detection_resp.responses[0].cropped_imgs[0]
-            cropped_msg = cv2_img_to_msg(cropped_image)
-            self._debug_pub.publish(cropped_msg)
-            userdata.img_msg = cropped_msg
+            # cropped_msg = cv2_img_to_msg(cropped_image)
+            # self._debug_pub.publish(cropped_msg)
+            userdata.img_msg = cropped_image
             return "succeeded"
         except rospy.ServiceException as e:
             rospy.logerr(f"Service call failed: {e}")
