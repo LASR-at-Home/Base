@@ -351,15 +351,19 @@ class DescribePeople(smach.StateMachine):
 
                 full_frame = cv2_img.cv2_img_to_msg(img)
 
-                rst = self.face_features(
-                    full_frame,
-                    head_mask_data,
-                    head_mask_shape,
-                    head_mask_dtype,
-                    torso_mask_data,
-                    torso_mask_shape,
-                    torso_mask_dtype,
-                ).description
+                try:
+                    rst = self.face_features(
+                        full_frame,
+                        head_mask_data,
+                        head_mask_shape,
+                        head_mask_dtype,
+                        torso_mask_data,
+                        torso_mask_shape,
+                        torso_mask_dtype,
+                    ).description
+                except rospy.ServiceException as e:
+                    rospy.logerr(f"Service call failed: {e}")
+                    return "failed"
 
                 people.append({"detection": person, "features": rst})
 

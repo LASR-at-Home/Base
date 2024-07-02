@@ -21,6 +21,7 @@ import actionlib
 from control_msgs.msg import PointHeadAction, PointHeadGoal
 from geometry_msgs.msg import Point
 from copy import copy
+
 PUBLIC_CONTAINER = False
 
 try:
@@ -59,8 +60,9 @@ class LookAtPerson(smach.StateMachine):
 
         def execute(self, userdata):
             rospy.sleep(0.1)
+            ######### BUG HERE REQUIRES RESOLVING ###############
             if len(userdata.bbox_eyes) == 0 and len(userdata.detections.detections) > 0:
-                userdata.pointstamped = PointStamped()
+                # userdata.pointstamped = PointStamped()
                 return "succeeded"
             elif (
                 len(userdata.bbox_eyes) < 1 and len(userdata.detections.detections) < 1
@@ -271,6 +273,21 @@ class LookAtPerson(smach.StateMachine):
                 transitions={"succeeded": "CHECK_EYES", "failed": "failed"},
                 remapping={"bbox_eyes": "bbox_eyes"},
             )
+            # smach.StateMachine.add(
+            #     "CHECK_EYES",
+            #     self.CheckEyes(self.DEBUG, filter=filter),
+            #     transitions={
+            #         "succeeded": "LOOK_TO_POINT",
+            #         "failed": "failed",
+            #         "no_detection": "no_detection",
+            #     },
+            #     remapping={
+            #         "pcl_msg": "pcl_msg",
+            #         "bbox_eyes": "bbox_eyes",
+            #         "pointstamped": "pointstamped",
+            #         "deepface_detection": "deepface_detection",
+            #     },
+            # )
             smach.StateMachine.add(
                 "CHECK_EYES",
                 self.CheckEyes(self.DEBUG, filter=filter),

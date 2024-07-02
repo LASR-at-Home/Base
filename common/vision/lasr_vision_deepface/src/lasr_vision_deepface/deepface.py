@@ -18,7 +18,7 @@ from lasr_vision_msgs.srv import (
 
 from sensor_msgs.msg import Image
 
-from typing import Union
+from typing import Union, List
 
 DATASET_ROOT = os.path.join(
     rospkg.RosPack().get_path("lasr_vision_deepface"), "datasets"
@@ -62,7 +62,7 @@ def _extract_face(cv_im: Mat) -> Union[Mat, None]:
     try:
         faces = DeepFace.extract_faces(
             cv_im,
-            detector_backend="mtcnn",
+            detector_backend="opencv",
             enforce_detection=True,
         )
     except ValueError:
@@ -80,31 +80,24 @@ def _extract_face(cv_im: Mat) -> Union[Mat, None]:
 
 
 def create_dataset(
-    topic: str,
     dataset: str,
     name: str,
-    size: int,
-    debug_publisher: Union[rospy.Publisher, None],
+    images: List[Image],
+    debug_publisher: rospy.Publisher,
 ) -> None:
     dataset_path = os.path.join(DATASET_ROOT, dataset, name)
     if not os.path.exists(dataset_path):
         os.makedirs(dataset_path)
-    rospy.loginfo(f"Taking {size} pictures of {name} and saving to {dataset_path}")
-
-    images = []
-    for i in range(size):
-        img_msg = rospy.wait_for_message(topic, Image)
-        cv_im = cv2_img.msg_to_cv2_img(img_msg)
+    rospy.loginfo(
+        f"Received {len(images)} pictures of {name} and saving to {dataset_path}"
+    )
+    cv_images: List[Mat] = [cv2_img.msg_to_cv2_img(img) for img in images]
+    for i, cv_im in enumerate(cv_images):
         face_cropped_cv_im = _extract_face(cv_im)
         if face_cropped_cv_im is None:
             continue
-        cv2.imwrite(os.path.join(dataset_path, f"{name}_{i + 1}.png"), face_cropped_cv_im)  # type: ignore
-        rospy.loginfo(f"Took picture {i + 1}")
-        images.append(face_cropped_cv_im)
-        if debug_publisher is not None:
-            debug_publisher.publish(
-                cv2_img.cv2_img_to_msg(create_image_collage(images))
-            )
+        cv2.imwrite(os.path.join(dataset_path, f"{name}_{i + 1}.png"), cv_im)
+    debug_publisher.publish(cv2_img.cv2_img_to_msg(create_image_collage(cv_images)))
 
     # Force retraining
     DeepFace.find(
@@ -112,15 +105,15 @@ def create_dataset(
         os.path.join(DATASET_ROOT, dataset),
         enforce_detection=False,
         silent=True,
-        detector_backend="mtcnn",
+        detector_backend="opencv",
     )
 
 
 def recognise(
     request: RecogniseRequest,
-    debug_publisher: Union[rospy.Publisher, None],
-    debug_inference_pub: Union[rospy.Publisher, None],
-    cropped_detect_pub: Union[rospy.Publisher, None],
+    debug_publisher: rospy.Publisher,
+    debug_inference_pub: rospy.Publisher,
+    cropped_detect_pub: rospy.Publisher,
 ) -> RecogniseResponse:
     # Decode the image
     rospy.loginfo("Decoding")
@@ -137,7 +130,7 @@ def recognise(
             os.path.join(DATASET_ROOT, request.dataset),
             enforce_detection=True,
             silent=True,
-            detector_backend="mtcnn",
+            detector_backend="opencv",
         )
     except ValueError:
         return response
@@ -159,8 +152,7 @@ def recognise(
 
         cropped_image = cv_im[:][y : y + h, x : x + w]
 
-        if cropped_detect_pub is not None:
-            cropped_detect_pub.publish(cv2_img.cv2_img_to_msg(cropped_image))
+        cropped_detect_pub.publish(cv2_img.cv2_img_to_msg(cropped_image))
 
         # Draw bounding boxes and labels for debugging
         cv2.rectangle(cv_im, (x, y), (x + w, y + h), (0, 0, 255), 2)
@@ -175,26 +167,24 @@ def recognise(
         )
 
     # publish to debug topic
-    if debug_publisher is not None:
-        debug_publisher.publish(cv2_img.cv2_img_to_msg(cv_im))
-    if debug_inference_pub is not None:
-        result = pd.concat(result)
-        # check for empty result
-        if not result.empty:
-            result_paths = list(result["identity"])
-            if len(result_paths) > 5:
-                result_paths = result_paths[:5]
-            result_images = [cv2.imread(path) for path in result_paths]
-            debug_inference_pub.publish(
-                cv2_img.cv2_img_to_msg(create_image_collage(result_images))
-            )
+    debug_publisher.publish(cv2_img.cv2_img_to_msg(cv_im))
+    result = pd.concat(result)
+    # check for empty result
+    if not result.empty:
+        result_paths = list(result["identity"])
+        if len(result_paths) > 5:
+            result_paths = result_paths[:5]
+        result_images = [cv2.imread(path) for path in result_paths]
+        debug_inference_pub.publish(
+            cv2_img.cv2_img_to_msg(create_image_collage(result_images))
+        )
 
     return response
 
 
 def detect_faces(
     request: DetectFacesRequest,
-    debug_publisher: Union[rospy.Publisher, None],
+    debug_publisher: rospy.Publisher,
 ) -> DetectFacesResponse:
     cv_im = cv2_img.msg_to_cv2_img(request.image_raw)
 
@@ -202,7 +192,7 @@ def detect_faces(
 
     try:
         faces = DeepFace.extract_faces(
-            cv_im, detector_backend="mtcnn", enforce_detection=True
+            cv_im, detector_backend="opencv", enforce_detection=True
         )
     except ValueError:
         return response
@@ -233,7 +223,6 @@ def detect_faces(
         )
 
     # publish to debug topic
-    if debug_publisher is not None:
-        debug_publisher.publish(cv2_img.cv2_img_to_msg(cv_im))
+    debug_publisher.publish(cv2_img.cv2_img_to_msg(cv_im))
 
     return response

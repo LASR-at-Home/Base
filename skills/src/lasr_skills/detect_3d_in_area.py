@@ -3,10 +3,10 @@ import rospy
 from lasr_skills import Detect3D
 from typing import List, Union
 
-from geometry_msgs.msg import Polygon, Point, Point32
+from geometry_msgs.msg import Polygon, Point, Point32, PolygonStamped
 from shapely.geometry import Point
 from shapely.geometry.polygon import Polygon as ShapelyPolygon
-
+from std_msgs.msg import Header
 
 class Detect3DInArea(smach.StateMachine):
     class FilterDetections(smach.State):
@@ -23,7 +23,7 @@ class Detect3DInArea(smach.StateMachine):
             )
             self.area_polygon = area_polygon
             self.debug_publisher = rospy.Publisher(
-                debug_publisher, Polygon, queue_size=1
+                debug_publisher, PolygonStamped, queue_size=1
             )
 
         def execute(self, userdata):
@@ -35,7 +35,7 @@ class Detect3DInArea(smach.StateMachine):
                 Point32(x=point[0], y=point[1], z=0.0)
                 for point in self.area_polygon.exterior.coords
             ]
-            self.debug_publisher.publish(polygon_msg)
+            self.debug_publisher.publish(PolygonStamped(polygon=polygon_msg, header=Header(frame_id="map")))
             satisfied_points = [
                 self.area_polygon.contains(Point(object.point.x, object.point.y))
                 for object in detected_objects

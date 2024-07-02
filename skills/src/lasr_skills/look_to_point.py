@@ -1,20 +1,29 @@
-import smach_ros
 import smach
 import actionlib
 import rospy
 from control_msgs.msg import PointHeadGoal, PointHeadAction
 from geometry_msgs.msg import Point, PointStamped
-from std_msgs.msg import Header
 from actionlib_msgs.msg import GoalStatus
+
+from typing import Union
 
 
 class LookToPoint(smach.State):
-    def __init__(self):
+
+    _pointstamped: Union[None, PointStamped]
+
+    def __init__(
+        self,
+        pointstamped: Union[None, PointStamped] = None,
+    ):
         smach.State.__init__(
             self,
             outcomes=["succeeded", "aborted", "timed_out"],
-            input_keys=["pointstamped"],
+            input_keys=["pointstamped"] if pointstamped is None else [],
         )
+
+        self._pointstamped = pointstamped
+
         self.client = actionlib.SimpleActionClient(
             "/head_controller/point_head_action", PointHeadAction
         )
@@ -26,9 +35,10 @@ class LookToPoint(smach.State):
             pointing_frame="head_2_link",
             pointing_axis=Point(1.0, 0.0, 0.0),
             max_velocity=1.0,
-            target=PointStamped(
-                header=Header(frame_id="map"),
-                point=userdata.pointstamped.point,
+            target=(
+                self._pointstamped
+                if self._pointstamped is not None
+                else userdata.pointstamped
             ),
         )
 

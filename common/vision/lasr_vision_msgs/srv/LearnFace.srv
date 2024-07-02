@@ -4,7 +4,7 @@ string dataset
 # Name to associate
 string name
 
-# Number of images to take
-int32 n_images
+# Images
+sensor_msgs/Image[] images
 
 ---
