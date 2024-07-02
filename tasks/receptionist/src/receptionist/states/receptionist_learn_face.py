@@ -65,7 +65,11 @@ class ReceptionistLearnFaces(smach.State):
             rospy.logerr(f"Service call failed: {e}")
             return "failed"
 
-        images: List[Image] = cropped_detection_resp.cropped_imgs
+        images: List[Image] = [
+            resp.cropped_imgs[0]
+            for resp in cropped_detection_resp.responses
+            if resp.cropped_imgs
+        ]
 
         learn_face_req: LearnFaceRequest = LearnFaceRequest(
             name=self._guest_id,
