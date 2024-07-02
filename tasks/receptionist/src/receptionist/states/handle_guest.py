@@ -139,9 +139,6 @@ class HandleGuest(smach.StateMachine):
                 input_keys=["guest_data"],
             )
 
-            print("=======================")
-            print(learn_face)
-
             with self:
 
                 sm_con = smach.Concurrence(
