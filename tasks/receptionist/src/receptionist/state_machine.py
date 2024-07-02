@@ -62,6 +62,18 @@ class Receptionist(smach.StateMachine):
             First guest
             """
 
+            smach.StateMachine.add(
+                "INTRODUCE_ROBOT",
+                Say(
+                    text="Hello my name is Tiago, nice to meet you, I shall be your receptionist for today. I will try and be polite by looking at you when I speak, so I hope you will do the same by looking into my eyes whenever possible. First let me get to know you a little bit better."
+                ),
+                transitions={
+                    "succeeded": f"HANDLE_GUEST_1",
+                    "aborted": f"HANDLE_GUEST_1",
+                    "preempted": f"HANDLE_GUEST_1",
+                },
+            )
+
             self._goto_waiting_area(guest_id=1)
             """ 
             GET GUEST ATTRIBUTES
@@ -106,7 +118,7 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "LOOK_AT_WAITING_GUEST_1_1",
-                PlayMotion(motion_name="look_left"),
+                PlayMotion(motion_name="look_very_left"),
                 transitions={
                     "succeeded": "INTRODUCE_GUEST_1_TO_HOST",
                     "aborted": "INTRODUCE_GUEST_1_TO_HOST",
@@ -125,7 +137,7 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "LOOK_AT_WAITING_GUEST_1_2",
-                PlayMotion(motion_name="look_left"),
+                PlayMotion(motion_name="look_very_left"),
                 transitions={
                     "succeeded": "INTRODUCE_HOST_TO_GUEST_1",
                     "aborted": "INTRODUCE_HOST_TO_GUEST_1",
@@ -181,8 +193,8 @@ class Receptionist(smach.StateMachine):
                 "HANDLE_GUEST_2",
                 HandleGuest("guest2"),
                 transitions={
-                    "succeeded": "SAY_WAIT_GUEST_2",
-                    "failed": "SAY_WAIT_GUEST_2",
+                    "succeeded": "SAY_FOLLOW_GUEST_2",
+                    "failed": "SAY_FOLLOW_GUEST_2",
                 },
             )
 
@@ -220,7 +232,7 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "LOOK_AT_WAITING_GUEST_2_1",
-                PlayMotion(motion_name="look_left"),
+                PlayMotion(motion_name="look_very_left"),
                 transitions={
                     "succeeded": "INTRODUCE_GUEST_2_TO_HOST",
                     "aborted": "INTRODUCE_GUEST_2_TO_HOST",
@@ -242,7 +254,7 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "LOOK_AT_WAITING_GUEST_2_2",
-                PlayMotion(motion_name="look_left"),
+                PlayMotion(motion_name="look_very_left"),
                 transitions={
                     "succeeded": "INTRODUCE_GUEST_HOST_TO_GUEST_2",
                     "aborted": "INTRODUCE_GUEST_HOST_TO_GUEST_2",
@@ -290,7 +302,7 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "LOOK_AT_WAITING_GUEST_2_3",
-                PlayMotion(motion_name="look_left"),
+                PlayMotion(motion_name="look_very_left"),
                 transitions={
                     "succeeded": "INTRODUCE_GUEST_2_TO_GUEST_1",
                     "aborted": "INTRODUCE_GUEST_2_TO_GUEST_1",
@@ -309,7 +321,7 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "LOOK_AT_WAITING_GUEST_2_4",
-                PlayMotion(motion_name="look_left"),
+                PlayMotion(motion_name="look_very_left"),
                 transitions={
                     "succeeded": "INTRODUCE_GUEST_1_TO_GUEST_2",
                     "aborted": "INTRODUCE_GUEST_1_TO_GUEST_2",
@@ -409,9 +421,21 @@ class Receptionist(smach.StateMachine):
             f"WAIT_FOR_PERSON_GUEST_{guest_id}",
             WaitForPersonInArea(self.wait_area),
             transitions={
-                "succeeded": f"HANDLE_GUEST_{guest_id}",
-                "failed": f"HANDLE_GUEST_{guest_id}",
+                "succeeded": f"CHECK_GUEST_ID_GUEST_{guest_id}",
+                "failed": f"CHECK_GUEST_ID_GUEST_{guest_id}",
             },
+        )
+
+        def check_guest_id(ud):
+            if guest_id == 2:
+                return "guest_2"
+            else:
+                return "guest_1"
+
+        smach.StateMachine.add(
+            f"CHECK_GUEST_ID_GUEST_{guest_id}",
+            smach.CBState(check_guest_id, outcomes=["guest_1", "guest_2"]),
+            transitions={"guest_2": "HANDLE_GUEST_2", "guest_1": "INTRODUCE_ROBOT"},
         )
 
     def _guide_guest(self, guest_id: int) -> None:

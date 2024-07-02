@@ -81,13 +81,13 @@ class FindAndLookAt(smach.StateMachine):
 
     def check_name(self, ud):
         rospy.logwarn(
-            f"Checking name {ud.guest_data[self.guest_name_in]['name']} in detections {ud.deepface_detection}"
+            f"Checking name {self.guest_name_in} in detections {ud.deepface_detection}"
         )
         if len(ud.deepface_detection) == 0:
             return "no_detection"
         for detection in ud.deepface_detection:
             if (
-                detection.name == ud.guest_data[self.guest_name_in]["name"]
+                detection.name == self.guest_name_in
                 and detection.confidence > ud.confidence
             ):
                 rospy.loginfo(
