@@ -78,7 +78,7 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "HANDLE_GUEST_1",
-                HandleGuest("guest1"),
+                HandleGuest("guest1", True),
                 transitions={
                     "succeeded": "SAY_FOLLOW_GUEST_1",
                     "failed": "SAY_FOLLOW_GUEST_1",
@@ -188,7 +188,7 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "HANDLE_GUEST_2",
-                HandleGuest("guest2"),
+                HandleGuest("guest2", False),
                 transitions={
                     "succeeded": "SAY_FOLLOW_GUEST_2",
                     "failed": "SAY_FOLLOW_GUEST_2",
