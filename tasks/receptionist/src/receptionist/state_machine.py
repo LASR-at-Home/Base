@@ -31,8 +31,8 @@ class Receptionist(smach.StateMachine):
         seat_pose: Pose,
         seat_area: Polygon,
         sofa_area: Polygon,
-        sweep_points: List[Tuple[float, float, float]],
         host_data: dict,
+        # sweep_points: List[Tuple[float, float, float]],
         max_people_on_sofa: int = 3,
         face_detection_confidence: float = 0.2,
     ):
@@ -41,7 +41,7 @@ class Receptionist(smach.StateMachine):
         self.wait_area = wait_area
         self.seat_pose = seat_pose
         self.seat_area = seat_area
-        self.sweep_points = sweep_points
+        # self.sweep_points = sweep_points
         with self:
             self.userdata.guest_data = {
                 "host": host_data,
@@ -84,7 +84,7 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "HANDLE_GUEST_1",
-                HandleGuest("guest1"),
+                HandleGuest("guest1", True),
                 transitions={
                     "succeeded": "SAY_FOLLOW_GUEST_1",
                     "failed": "SAY_FOLLOW_GUEST_1",
@@ -194,7 +194,7 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "HANDLE_GUEST_2",
-                HandleGuest("guest2"),
+                HandleGuest("guest2", False),
                 transitions={
                     "succeeded": "SAY_FOLLOW_GUEST_2",
                     "failed": "SAY_FOLLOW_GUEST_2",
