@@ -56,11 +56,20 @@ class ReceptionistLearnFaces(smach.State):
             * self._dataset_size
         )
 
-        cropped_detection_resp: CroppedDetectionResponse = self._cropped_detection(
-            cropped_detection_req
-        )
+        try:
 
-        images: List[Image] = cropped_detection_resp.cropped_imgs
+            cropped_detection_resp: CroppedDetectionResponse = self._cropped_detection(
+                cropped_detection_req
+            )
+        except rospy.ServiceException as e:
+            rospy.logerr(f"Service call failed: {e}")
+            return "failed"
+
+        images: List[Image] = [
+            resp.cropped_imgs[0]
+            for resp in cropped_detection_resp.responses
+            if resp.cropped_imgs
+        ]
 
         learn_face_req: LearnFaceRequest = LearnFaceRequest(
             name=self._guest_id,
@@ -68,6 +77,10 @@ class ReceptionistLearnFaces(smach.State):
             images=images,
         )
 
-        self._learn_face(learn_face_req)
+        try:
+            self._learn_face(learn_face_req)
+        except rospy.ServiceException as e:
+            rospy.logerr(f"Service call failed: {e}")
+            return "failed"
 
         return "succeeded"
