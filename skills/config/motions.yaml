@@ -84,61 +84,61 @@ play_motion:
     u3l:
       joints: [torso_lift_joint, head_1_joint, head_2_joint]
       points:
-      - positions: [0.45, 0.35, 0.15]
+      - positions: [0.4, 0.35, 0.15]
         time_from_start: 0.0
     u3m:
       joints: [torso_lift_joint, head_1_joint, head_2_joint]
       points:
-      - positions: [0.45, 0.0, 0.15]
+      - positions: [0.4, 0.0, 0.15]
         time_from_start: 0.0
     u3r:
       joints: [torso_lift_joint, head_1_joint, head_2_joint]
       points:
-      - positions: [0.45, -0.35, 0.15]
+      - positions: [0.4, -0.35, 0.15]
         time_from_start: 0.0
 
     u2l:
       joints: [torso_lift_joint, head_1_joint, head_2_joint]
       points:
-      - positions: [0.45, 0.35, 0.05]
+      - positions: [0.4, 0.35, 0.05]
         time_from_start: 0.0
     u2m:
       joints: [torso_lift_joint, head_1_joint, head_2_joint]
       points:
-      - positions: [0.45, 0.0, 0.05]
+      - positions: [0.4, 0.0, 0.05]
         time_from_start: 0.0
     u2r:
       joints: [torso_lift_joint, head_1_joint, head_2_joint]
       points:
-      - positions: [0.45, -0.35, 0.05]
+      - positions: [0.4, -0.35, 0.05]
         time_from_start: 0.0
     u1l:
       joints: [torso_lift_joint, head_1_joint, head_2_joint]
       points:
-      - positions: [0.25, 0.35, 0.05]
+      - positions: [0.3, 0.35, 0.05]
         time_from_start: 0.0
     u1m:
       joints: [torso_lift_joint, head_1_joint, head_2_joint]
       points:
-      - positions: [0.25, 0.0, 0.05]
+      - positions: [0.3, 0.0, 0.05]
         time_from_start: 0.0
     u1r:
       joints: [torso_lift_joint, head_1_joint, head_2_joint]
       points:
-      - positions: [0.25, -0.35, 0.05]
+      - positions: [0.3, -0.35, 0.05]
         time_from_start: 0.0
     ml:
       joints: [torso_lift_joint, head_1_joint, head_2_joint]
       points:
-      - positions: [0.15, 0.35, 0.0]
+      - positions: [0.2, 0.35, 0.0]
         time_from_start: 0.0
     mm:
       joints: [torso_lift_joint, head_1_joint, head_2_joint]
       points:
-      - positions: [0.15, 0.0, 0.0]
+      - positions: [0.2, 0.0, 0.0]
         time_from_start: 0.0
     mr:
       joints: [torso_lift_joint, head_1_joint, head_2_joint]
       points:
-      - positions: [0.15, -0.35, 0.0]
+      - positions: [0.2, -0.35, 0.0]
         time_from_start: 0.0
