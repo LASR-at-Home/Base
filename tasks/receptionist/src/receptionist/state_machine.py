@@ -189,6 +189,18 @@ class Receptionist(smach.StateMachine):
 
             # INTRODUCE GUEST 2 TO HOST
 
+            """
+            Logic should be as follows:
+            
+            1. 3D cropped detection of seating area
+            2. Pass RGB image to face recognition
+            3. Extract named point(s) of face detections.
+            4. Repeat until correct number of detections are made, or timeout.
+            5. If host is found, look at host and introduce.
+            
+            
+            """
+
             smach.StateMachine.add(
                 "FIND_AND_LOOK_AT_HOST_2",
                 FindAndLookAt(
