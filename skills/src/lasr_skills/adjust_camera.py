@@ -101,6 +101,9 @@ class AdjustCamera(smach.State):
         self._bodypix_client = rospy.ServiceProxy(
             "/bodypix/keypoint_detection", BodyPixKeypointDetection
         )
+
+        self.position = (2, 0)
+        self.counter = 0
         
     def execute(self, userdata):
         req = BodyPixKeypointDetectionRequest()
@@ -191,25 +194,14 @@ class AdjustCamera(smach.State):
                 userdata.position = (position[0] - 1 if position[0] > 0 else position[0], position[1])
                 return position_dict[userdata.position]
             return "finished"
-        #
-        #
-        #
-        #
-        #
-        #    probably x and y need to be inverted!!!!!
-        #
-        #
-        #
-        #
-        #
         elif has_both_eyes and not has_both_shoulders:
             # in this case try to make eyes into the upper 1/3 of the frame,
             eyes_middle = ((keypoint_info["leftEye"][0] + keypoint_info["rightEye"][0]) / 2, (keypoint_info["leftEye"][1] + keypoint_info["rightEye"][1]) / 2)
-            # if y at down 1/3: down move 2 steps
-            if eyes_middle[1] >= 2/3:
+            # if y at down 1/5: down move 2 steps
+            if eyes_middle[1] >= 4/5:
                 position[0] -= 2
-            # if y at middle 1/3: down move 1 step
-            elif eyes_middle[1] >= 1/3:
+            # if y at down 1/2: down move 1 step
+            elif eyes_middle[1] >= 1/2:
                 position[0] -= 1
             # if y at upper 1/3: wonder why no shoulders but never mind in this case
             else:
@@ -223,11 +215,11 @@ class AdjustCamera(smach.State):
             pass
         elif not has_both_eyes and has_both_shoulders:
             shoulders_middle = ((keypoint_info["leftShoulder"][0] + keypoint_info["rightShoulder"][0]) / 2, (keypoint_info["leftEye"][1] + keypoint_info["rightEye"][1]) / 2)
-            # if y at down 1/3: down move 1 step
-            if shoulders_middle[1] >= 2/3:
+            # if y at down 1/5: down move 1 step
+            if shoulders_middle[1] >= 4/5:
                 position[0] -= 1
-            # if y at upper 1/3: up move 1 step
-            elif shoulders_middle[1] <= 1/3:
+            # if y at upper 1/4: up move 1 step
+            elif shoulders_middle[1] <= 1/4:
                 position[0] += 1
             # if x at left 1/3, move left 1 step
             if shoulders_middle[0] <= 1/3:
@@ -241,66 +233,58 @@ class AdjustCamera(smach.State):
             shoulders_middle = ((keypoint_info["leftShoulder"][0] + keypoint_info["rightShoulder"][0]) / 2, (keypoint_info["leftEye"][1] + keypoint_info["rightEye"][1]) / 2)
             very_middle = ((eyes_middle[0] + shoulders_middle[0]) / 2, (eyes_middle[1] + shoulders_middle[1]) / 2)
             rospy.logwarn(f"very middle {very_middle}")
-            # if y at upper 1/3 for eyes: do nothing,
-            # otherwise move up 1 step
-            if eyes_middle[1] <= 1/3:
+            # if y at upper 1/5 for eyes: move up 1 step
+            if eyes_middle[1] <= 1/5:
                 position[0] += 1
-                print('if y at upper 1/3 for eyes: do nothing, otherwise move up 1 step')
-                # if x at left 1/3, move left 1 step
-                if very_middle[0] <= 1/3:
-                    position[1] -= 1
-                    print('if x at left 1/3, move left 1 step.')
-                # if x at right 1/3, move right 1 step
-                elif very_middle[0] >= 2/3:
-                    position[1] += 1
-                    print('if x at right 1/3, move right 1 step.')
-                pass
+                print('if y at upper 1/5 for eyes: move up 1 step')
             else:
-                if 1/3 <= very_middle[1] <= 2/3 and 1/3 <= very_middle[0] <= 2/3:
+                if 1/4 <= very_middle[1] <= 2/3 and 1/3 <= very_middle[0] <= 2/3:
                     print('finished.')
                     return "finished"
                 # if y at down 1/3: down move 1 step
-                if very_middle[1] >= 4/5:
+                if very_middle[1] >= 2/3:
                     position[0] -= 1
                     print('if y at down 1/3: down move 1 step.')
-                # if y at upper 1/3: up move 1 step
-                elif very_middle[1] <= 1/3:
+                # if y at upper 1/4: up move 1 step
+                elif very_middle[1] <= 1/4:
                     position[0] += 1
                     print('if y at upper 1/3: up move 1 step.')
-                # if x at left 1/3, move left 1 step
-                if very_middle[0] <= 1/3:
-                    position[1] -= 1
-                    print('if x at left 1/3, move left 1 step.')
-                # if x at right 1/3, move right 1 step
-                elif very_middle[0] >= 2/3:
-                    position[1] += 1
-                    print('if x at right 1/3, move right 1 step.')
-                pass
-        elif has_more_than_one_shoulder:  # but not both
-            shoulders_middle = ((keypoint_info["leftShoulder"][0] + keypoint_info["rightShoulder"][0]) / 2, (keypoint_info["leftEye"][1] + keypoint_info["rightEye"][1]) / 2)
-            # move one step opposite left or right
             # if x at left 1/3, move left 1 step
-            if shoulders_middle[0] <= 1/3:
+            if very_middle[0] <= 1/3:
                 position[1] -= 1
+                print('if x at left 1/3, move left 1 step.')
             # if x at right 1/3, move right 1 step
-            elif shoulders_middle[0] >= 2/3:
+            elif very_middle[0] >= 2/3:
                 position[1] += 1
+                print('if x at right 1/3, move right 1 step.')
             pass
-            if not has_more_than_one_one_eye:
-                # move up!
-                position[0] += 1
-                pass
+        elif has_more_than_one_shoulder:  # but not both
+            # shoulders_middle = ((keypoint_info["leftShoulder"][0] + keypoint_info["rightShoulder"][0]) / 2, (keypoint_info["leftEye"][1] + keypoint_info["rightEye"][1]) / 2)
+            # # move one step opposite left or right
+            # # if x at left 1/3, move left 1 step
+            # if shoulders_middle[0] <= 1/3:
+            #     position[1] -= 1
+            # # if x at right 1/3, move right 1 step
+            # elif shoulders_middle[0] >= 2/3:
+            #     position[1] += 1
+            # pass
+            # if not has_more_than_one_one_eye:
+            #     # move up!
+            #     position[0] += 1
+            #     pass
+            pass
         else:  # has_more_than_one_one_eye:
-            eyes_middle = ((keypoint_info["leftEye"][0] + keypoint_info["rightEye"][0]) / 2, (keypoint_info["leftEye"][1] + keypoint_info["rightEye"][1]) / 2)
-            # move one step opposite,
-            # if x at left 1/3, move left 1 step
-            if eyes_middle[0] <= 1/3:
-                position[1] += 1
-            # if x at right 1/3, move right 1 step
-            elif eyes_middle[0] >= 2/3:
-                position[1] -= 1
-            # probably move down
-            position[0] -= 1
+            # eyes_middle = ((keypoint_info["leftEye"][0] + keypoint_info["rightEye"][0]) / 2, (keypoint_info["leftEye"][1] + keypoint_info["rightEye"][1]) / 2)
+            # # move one step opposite,
+            # # if x at left 1/3, move left 1 step
+            # if eyes_middle[0] <= 1/3:
+            #     position[1] += 1
+            # # if x at right 1/3, move right 1 step
+            # elif eyes_middle[0] >= 2/3:
+            #     position[1] -= 1
+            # # probably move down
+            # position[0] -= 1
+            # pass
             pass
 
         if position[0] < 0:
