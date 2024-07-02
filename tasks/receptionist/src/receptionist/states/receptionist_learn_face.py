@@ -53,19 +53,14 @@ class ReceptionistLearnFaces(smach.State):
                     object_names=["person"],
                 )
             ]
+            * self._dataset_size
         )
 
-        images: List[Image] = []
+        cropped_detection_resp: CroppedDetectionResponse = self._cropped_detection(
+            cropped_detection_req
+        )
 
-        for _ in range(self._dataset_size):
-            cropped_detection_resp: CDResponse = self._cropped_detection(
-                cropped_detection_req
-            )[0]
-
-            if len(cropped_detection_resp.cropped_imgs) == 0:
-                continue
-
-            images.append(cropped_detection_resp.cropped_imgs[0])
+        images: List[Image] = cropped_detection_resp.cropped_imgs
 
         learn_face_req: LearnFaceRequest = LearnFaceRequest(
             name=self._guest_id,
