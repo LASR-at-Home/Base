@@ -22,9 +22,15 @@ class PersonFollowingServer:
     _follower: PersonFollower
 
     def __init__(self) -> None:
-        self._dynamic_costmap = rospy.ServiceProxy("/move_base/local_costmap/set_parameters", Reconfigure)
-        self._dynamic_velocity = rospy.ServiceProxy("/move_base/PalLocalPlanner/set_parameters", Reconfigure)
-        self._dynamic_recovery = rospy.ServiceProxy("/move_base/set_parameters", Reconfigure)
+        self._dynamic_costmap = rospy.ServiceProxy(
+            "/move_base/local_costmap/set_parameters", Reconfigure
+        )
+        self._dynamic_velocity = rospy.ServiceProxy(
+            "/move_base/PalLocalPlanner/set_parameters", Reconfigure
+        )
+        self._dynamic_recovery = rospy.ServiceProxy(
+            "/move_base/set_parameters", Reconfigure
+        )
 
         self._update_params()
         rospy.sleep(1)
@@ -57,8 +63,8 @@ class PersonFollowingServer:
 
     def _update_params(self):
         config = Config()
-        config.ints.append(IntParameter(name="width", value=8))
-        config.ints.append(IntParameter(name="height", value=8))
+        config.ints.append(IntParameter(name="width", value=4))
+        config.ints.append(IntParameter(name="height", value=4))
         self._dynamic_costmap(config)
 
         config = Config()
