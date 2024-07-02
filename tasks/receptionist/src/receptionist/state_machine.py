@@ -1,4 +1,6 @@
+from typing import List, Tuple
 import smach
+import smach_ros
 
 from geometry_msgs.msg import Pose
 from shapely.geometry import Polygon
@@ -10,14 +12,11 @@ from lasr_skills import (
     PlayMotion,
 )
 from receptionist.states import (
-    ParseNameAndDrink,
-    GetGuestAttributes,
     Introduce,
     SeatGuest,
     FindAndLookAt,
-    ReceptionistLearnFaces,
-    ParseTranscribedInfo,
     HandleGuest,
+    PointCloudSweep,
 )
 
 
@@ -29,6 +28,7 @@ class Receptionist(smach.StateMachine):
         seat_pose: Pose,
         seat_area: Polygon,
         sofa_area: Polygon,
+        sweep_points: List[Tuple[float, float, float]],
         host_data: dict,
         max_people_on_sofa: int = 3,
         face_detection_confidence: float = 0.2,
@@ -38,6 +38,7 @@ class Receptionist(smach.StateMachine):
         self.wait_area = wait_area
         self.seat_pose = seat_pose
         self.seat_area = seat_area
+        self.sweep_points = sweep_points
         with self:
             self.userdata.guest_data = {
                 "host": host_data,
@@ -63,7 +64,9 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "INTRODUCE_ROBOT",
-                Say(text="Hello my name is Tiago, nice to meet you, I shall be your receptionist for today. I will try and be polite by looking at you when I speak, so I hope you will do the same by looking into my eyes whenever possible. First let me get to know you a little bit better."),
+                Say(
+                    text="Hello my name is Tiago, nice to meet you, I shall be your receptionist for today. I will try and be polite by looking at you when I speak, so I hope you will do the same by looking into my eyes whenever possible. First let me get to know you a little bit better."
+                ),
                 transitions={
                     "succeeded": f"HANDLE_GUEST_1",
                     "aborted": f"HANDLE_GUEST_1",
@@ -71,7 +74,7 @@ class Receptionist(smach.StateMachine):
                 },
             )
 
-            self._goto_waiting_area(1)
+            self._goto_waiting_area(guest_id=1)
             """ 
             GET GUEST ATTRIBUTES
             """
@@ -85,7 +88,7 @@ class Receptionist(smach.StateMachine):
                 },
             )
 
-            self._guide_guest(1)
+            self._guide_guest(guest_id=1)
 
             smach.StateMachine.add(
                 "FIND_AND_LOOK_AT_HOST_1",
@@ -195,7 +198,7 @@ class Receptionist(smach.StateMachine):
                 },
             )
 
-            self._guide_guest(2)
+            self._guide_guest(guest_id=2)
 
             # INTRODUCE GUEST 2 TO HOST
 
@@ -425,12 +428,15 @@ class Receptionist(smach.StateMachine):
 
         def check_guest_id(ud):
             if guest_id == 2:
-                return 'guest_2'
+                return "guest_2"
             else:
-                return 'guest_1'
+                return "guest_1"
 
-        smach.StateMachine.add(f"CHECK_GUEST_ID_GUEST_{guest_id}", smach.CBState(check_guest_id, outcomes=['guest_1', 'guest_2']),
-                               transitions={"guest_2": "HANDLE_GUEST_2", "guest_1": 'INTRODUCE_ROBOT'})
+        smach.StateMachine.add(
+            f"CHECK_GUEST_ID_GUEST_{guest_id}",
+            smach.CBState(check_guest_id, outcomes=["guest_1", "guest_2"]),
+            transitions={"guest_2": "HANDLE_GUEST_2", "guest_1": "INTRODUCE_ROBOT"},
+        )
 
     def _guide_guest(self, guest_id: int) -> None:
         """Adds the states to guide a guest to the
@@ -482,3 +488,17 @@ class Receptionist(smach.StateMachine):
             PointStamped: The point to look at.
         """
         pass
+
+    def _detect_and_sweep(
+        self,
+        expected_seated_guests: int,
+    ):
+
+        smach.StateMachine.add(
+            f"DETECT_AND_SWEEP_{expected_seated_guests}",
+            PointCloudSweep(self.sweep_points),
+            transitions={
+                "succeeded": f"RUN_AND_PROCESS_DETECTIONS_{expected_seated_guests}",
+                "failed": "failed",
+            },
+        )
