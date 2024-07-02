@@ -127,20 +127,47 @@ class HandleGuest(smach.StateMachine):
 
     def __init__(self, guest_id: str):
         super().__init__(
-            outcomes=["succeeded", "failed"],
+            outcomes=[
+                "succeeded",
+                "failed",
+                "vision_failed",
+                "get_attributes_failed",
+                "learn_face_failed",
+            ],
             input_keys=["guest_data"],
         )
 
         with self:
             sm_con = smach.Concurrence(
-                outcomes=["succeeded", "failed"],
+                outcomes=[
+                    "succeeded",
+                    "failed",
+                    "vision_failed",
+                    "get_attributes_failed",
+                    "learn_face_failed",
+                ],
                 default_outcome="failed",
                 outcome_map={
                     "succeeded": {
                         "GET_NAME_AND_DRINK": "succeeded",
                         "GET_ATTRIBUTES": "succeeded",
                         "LEARN_FACE": "succeeded",
-                    }
+                    },
+                    "vision_failed": {
+                        "GET_NAME_AND_DRINK": "succeeded",
+                        "GET_ATTRIBUTES": "failed",
+                        "LEARN_FACE": "failed",
+                    },
+                    "get_attributes_failed": {
+                        "GET_NAME_AND_DRINK": "succeeded",
+                        "GET_ATTRIBUTES": "failed",
+                        "LEARN_FACE": "succeeded",
+                    },
+                    "learn_face_failed": {
+                        "GET_NAME_AND_DRINK": "succeeded",
+                        "GET_ATTRIBUTES": "succeeded",
+                        "LEARN_FACE": "failed",
+                    },
                 },
                 input_keys=["guest_data"],
                 output_keys=["guest_data"],
@@ -163,5 +190,13 @@ class HandleGuest(smach.StateMachine):
                 )
 
             smach.StateMachine.add(
-                "HANDLE_GUEST", sm_con, transitions={"succeeded": "succeeded"}
+                "HANDLE_GUEST",
+                sm_con,
+                transitions={
+                    "succeeded": "succeeded",
+                    "failed": "failed",
+                    "vision_failed": "vision_failed",
+                    "get_attributes_failed": "get_attributes_failed",
+                    "learn_face_failed": "learn_face_failed",
+                },
             )

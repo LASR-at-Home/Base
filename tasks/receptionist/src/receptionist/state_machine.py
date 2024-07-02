@@ -72,6 +72,9 @@ class Receptionist(smach.StateMachine):
                 transitions={
                     "succeeded": "SAY_FOLLOW_GUEST_1",
                     "failed": "SAY_FOLLOW_GUEST_1",
+                    "vision_failed": "SAY_FOLLOW_GUEST_1",
+                    "get_attributes_failed": "SAY_FOLLOW_GUEST_1",
+                    "learn_face_failed": "SAY_FOLLOW_GUEST_1",
                 },
             )
 
@@ -182,6 +185,9 @@ class Receptionist(smach.StateMachine):
                 transitions={
                     "succeeded": "SAY_WAIT_GUEST_2",
                     "failed": "SAY_WAIT_GUEST_2",
+                    "vision_failed": "SAY_WAIT_GUEST_2",
+                    "get_attributes_failed": "SAY_WAIT_GUEST_2",
+                    "learn_face_failed": "SAY_WAIT_GUEST_2",
                 },
             )
 
