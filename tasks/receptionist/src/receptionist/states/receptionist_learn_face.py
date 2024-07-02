@@ -58,7 +58,7 @@ class ReceptionistLearnFaces(smach.State):
         images: List[Image] = []
 
         for _ in range(self._dataset_size):
-            cropped_detection_resp: CDResponse = self._cropped_detection(
+            cropped_detection_resp: CroppedDetectionResponse = self._cropped_detection(
                 cropped_detection_req
             )[0]
 
