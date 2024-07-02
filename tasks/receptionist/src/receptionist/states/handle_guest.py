@@ -70,9 +70,7 @@ class HandleGuest(smach.StateMachine):
 
                 smach.StateMachine.add(
                     f"REPEAT_GET_NAME_GUEST_{guest_id}",
-                    AskAndListen(
-                        "Sorry, I didn't get your name. What is your name? Feel free to repeat your name several times."
-                    ),
+                    AskAndListen("Sorry, I didn't get your name. What is your name?"),
                     transitions={
                         "succeeded": f"REPEAT_PARSE_NAME_GUEST_{guest_id}",
                         "failed": "SAY_CONTINUE",
@@ -96,7 +94,7 @@ class HandleGuest(smach.StateMachine):
                 smach.StateMachine.add(
                     f"REPEAT_GET_DRINK_GUEST_{guest_id}",
                     AskAndListen(
-                        "Sorry, I didn't get your favourite drink. What is your favourite drink? Feel free to repeat your favourite drink several times."
+                        "Sorry, I didn't get your favourite drink. What is your favourite drink?"
                     ),
                     transitions={
                         "succeeded": f"REPEAT_PARSE_DRINK_GUEST_{guest_id}",
@@ -127,22 +125,114 @@ class HandleGuest(smach.StateMachine):
                     },
                 )
 
+    class GetAttributesAndLearnFace(smach.StateMachine):
+
+        def __init__(self, guest_id: str):
+
+            super().__init__(
+                outcomes=[
+                    "succeeded",
+                    "failed",
+                    "get_attributes_failed",
+                    "learn_face_failed",
+                ],
+                input_keys=["guest_data"],
+            )
+
+            with self:
+
+                sm_con = smach.Concurrence(
+                    outcomes=[
+                        "succeeded",
+                        "failed",
+                        "get_attributes_failed",
+                        "learn_face_failed",
+                    ],
+                    default_outcome="failed",
+                    outcome_map={
+                        "succeeded": {
+                            "GET_ATTRIBUTES": "succeeded",
+                            "LEARN_FACE": "succeeded",
+                        },
+                        "failed": {
+                            "GET_ATTRIBUTES": "failed",
+                            "LEARN_FACE": "failed",
+                        },
+                        "get_attributes_failed": {
+                            "GET_ATTRIBUTES": "failed",
+                            "LEARN_FACE": "succeeded",
+                        },
+                        "learn_face_failed": {
+                            "GET_ATTRIBUTES": "succeeded",
+                            "LEARN_FACE": "failed",
+                        },
+                    },
+                    input_keys=["guest_data"],
+                    output_keys=["guest_data"],
+                )
+
+                with sm_con:
+                    smach.Concurrence.add(
+                        "GET_ATTRIBUTES",
+                        GetGuestAttributes(guest_id),
+                    )
+
+                    smach.Concurrence.add(
+                        "LEARN_FACE",
+                        ReceptionistLearnFaces(guest_id),
+                    )
+
+                smach.StateMachine.add(
+                    "GET_ATTRIBUTES_AND_LEARN_FACE",
+                    sm_con,
+                    transitions={
+                        "succeeded": "succeeded",
+                        "failed": "failed",
+                        "get_attributes_failed": "get_attributes_failed",
+                        "learn_face_failed": "learn_face_failed",
+                    },
+                )
+
     def __init__(self, guest_id: str):
         super().__init__(
-            outcomes=["succeeded", "failed"],
+            outcomes=[
+                "succeeded",
+                "failed",
+            ],
             input_keys=["guest_data"],
         )
 
         with self:
             sm_con = smach.Concurrence(
-                outcomes=["succeeded", "failed"],
+                outcomes=[
+                    "succeeded",
+                    "failed",
+                    "vision_failed",
+                    "get_attributes_failed",
+                    "learn_face_failed",
+                ],
                 default_outcome="failed",
                 outcome_map={
                     "succeeded": {
                         "GET_NAME_AND_DRINK": "succeeded",
-                        "GET_ATTRIBUTES": "succeeded",
-                        "LEARN_FACE": "succeeded",
-                    }
+                        "GET_ATTRIBUTES_AND_LEARN_FACE": "succeeded",
+                    },
+                    "failed": {
+                        "GET_NAME_AND_DRINK": "failed",
+                        "GET_ATTRIBUTES_AND_LEARN_FACE": "failed",
+                    },
+                    "vision_failed": {
+                        "GET_NAME_AND_DRINK": "succeeded",
+                        "GET_ATTRIBUTES_AND_LEARN_FACE": "failed",
+                    },
+                    "get_attributes_failed": {
+                        "GET_NAME_AND_DRINK": "succeeded",
+                        "GET_ATTRIBUTES_AND_LEARN_FACE": "get_attributes_failed",
+                    },
+                    "learn_face_failed": {
+                        "GET_NAME_AND_DRINK": "succeeded",
+                        "GET_ATTRIBUTES_AND_LEARN_FACE": "learn_face_failed",
+                    },
                 },
                 input_keys=["guest_data"],
                 output_keys=["guest_data"],
@@ -155,15 +245,113 @@ class HandleGuest(smach.StateMachine):
                 )
 
                 smach.Concurrence.add(
-                    "LEARN_FACE",
-                    ReceptionistLearnFaces(guest_id),
-                )
-
-                smach.Concurrence.add(
-                    "GET_ATTRIBUTES",
-                    GetGuestAttributes(guest_id),
+                    "GET_ATTRIBUTES_AND_LEARN_FACE",
+                    self.GetAttributesAndLearnFace(guest_id),
                 )
 
             smach.StateMachine.add(
-                "HANDLE_GUEST", sm_con, transitions={"succeeded": "succeeded"}
+                "HANDLE_GUEST",
+                sm_con,
+                transitions={
+                    "succeeded": "succeeded",
+                    "failed": "failed",
+                    "vision_failed": "SAY_VISION_FAILED",
+                    "get_attributes_failed": "SAY_ATTRIBUTES_FAILED",
+                    "learn_face_failed": "SAY_LEARN_FACE_FAILED",
+                },
+            )
+
+            smach.StateMachine.add(
+                "SAY_VISION_FAILED",
+                Say(
+                    text="I'm sorry, I get your attributes or learn your face. I will try again."
+                ),
+                transitions={
+                    "succeeded": "GET_ATTRIBUTES_AND_LEARN_FACE",
+                    "aborted": "GET_ATTRIBUTES_AND_LEARN_FACE",
+                    "preempted": "GET_ATTRIBUTES_AND_LEARN_FACE",
+                },
+            )
+
+            smach.StateMachine.add(
+                "GET_ATTRIBUTES_AND_LEARN_FACE",
+                self.GetAttributesAndLearnFace(guest_id),
+                transitions={
+                    "succeeded": "succeeded",
+                    "failed": "SAY_VISION_STILL_FAILED",
+                    "get_attributes_failed": "SAY_GET_ATTRIBUTES_STILL_FAILED",
+                    "learn_face_failed": "SAY_LEARN_FACE_STILL_FAILED",
+                },
+            )
+
+            smach.StateMachine.add(
+                "SAY_ATTRIBUTES_FAILED",
+                Say(
+                    text="I'm sorry, I couldn't get your attributes. I will try again."
+                ),
+                transitions={
+                    "succeeded": "GET_ATTRIBUTES",
+                    "aborted": "GET_ATTRIBUTES",
+                    "preempted": "GET_ATTRIBUTES",
+                },
+            )
+
+            smach.StateMachine.add(
+                "GET_ATTRIBUTES",
+                GetGuestAttributes(guest_id),
+                transitions={
+                    "succeeded": "succeeded",
+                    "failed": "SAY_GET_ATTRIBUTES_STILL_FAILED",
+                },
+            )
+
+            smach.StateMachine.add(
+                "SAY_LEARN_FACE_FAILED",
+                Say(text="I'm sorry, I couldn't learn your face. I will try again."),
+                transitions={
+                    "succeeded": "LEARN_FACE",
+                    "aborted": "LEARN_FACE",
+                    "preempted": "LEARN_FACE",
+                },
+            )
+
+            smach.StateMachine.add(
+                "LEARN_FACE",
+                ReceptionistLearnFaces(guest_id),
+                transitions={
+                    "succeeded": "succeeded",
+                    "failed": "SAY_LEARN_FACE_STILL_FAILED",
+                },
+            )
+
+            smach.StateMachine.add(
+                "SAY_VISION_STILL_FAILED",
+                Say(
+                    text="I'm sorry, I still couldn't get your attributes or learn your face."
+                ),
+                transitions={
+                    "succeeded": "failed",
+                    "aborted": "failed",
+                    "preempted": "failed",
+                },
+            )
+
+            smach.StateMachine.add(
+                "SAY_GET_ATTRIBUTES_STILL_FAILED",
+                Say(text="I'm sorry, I still couldn't get your attributes."),
+                transitions={
+                    "succeeded": "failed",
+                    "aborted": "failed",
+                    "preempted": "failed",
+                },
+            )
+
+            smach.StateMachine.add(
+                "SAY_LEARN_FACE_STILL_FAILED",
+                Say(text="I'm sorry, I still couldn't learn your face."),
+                transitions={
+                    "succeeded": "failed",
+                    "aborted": "failed",
+                    "preempted": "failed",
+                },
             )

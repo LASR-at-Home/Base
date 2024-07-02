@@ -107,6 +107,15 @@ class SeatGuest(smach.StateMachine):
             self.userdata.seat_position = PointStamped()
 
             smach.StateMachine.add(
+                "LOOK_CENTRE",
+                PlayMotion(motion_name="look_centre"),
+                transitions={
+                    "succeeded": "DETECT_SOFA",
+                    "aborted": "DETECT_SOFA",
+                    "preempted": "DETECT_SOFA",
+                },
+            )
+            smach.StateMachine.add(
                 "DETECT_SOFA",
                 Detect3DInArea(sofa_area, filter=["person"]),
                 transitions={"succeeded": "CHECK_SOFA", "failed": "failed"},
