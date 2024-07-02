@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 import smach
 import rospy
 import tf2_ros as tf
 
+from tf_pcl import pcl_transform
 from std_msgs.msg import Header
 from geometry_msgs.msg import PointStamped, Point
 from sensor_msgs.msg import PointCloud2
-from tf2_sensor_msgs.tf2_sensor_msgs import do_transform_cloud
 
 from lasr_skills import LookToPoint
 
@@ -48,7 +48,7 @@ class PointCloudSweep(smach.StateMachine):
                     transitions={
                         "succeeded": f"GetTransformedPointcloud_{index}",
                         "aborted": "failed",
-                        "timed_out": "failed",
+                        "timed_out": f"GetTransformedPointcloud_{index}",
                     },
                     remapping={
                         "pointstamped": f"pointstamped_{index}",
@@ -93,7 +93,7 @@ class PointCloudSweep(smach.StateMachine):
                     rospy.Time(0),
                     rospy.Duration(1.0),
                 )
-                pcl_map = do_transform_cloud(pcl, trans)
+                pcl_map = pcl_transform(pcl, trans)
                 userdata.transformed_pointclouds.append(pcl_map)
             except Exception as e:
                 rospy.logerr(f"Failed to get and transform pointcloud: {str(e)}")
@@ -101,19 +101,23 @@ class PointCloudSweep(smach.StateMachine):
             return "succeeded"
 
     class GetPointStamped(smach.State):
-        def __init__(self, point: Tuple[float, float, float]):
+        def __init__(self, point: Optional[Tuple[float, float, float]]):
             smach.State.__init__(
                 self,
                 outcomes=["succeeded", "failed"],
-                input_keys=["point"],
+                input_keys=["point"] if point is None else [],
                 output_keys=["pointstamped"],
             )
             self.point = point
 
         def execute(self, userdata):
             try:
+                if self.point is None:
+                    point = userdata.point
+                else:
+                    point = self.point
                 pointstamped = PointStamped(
-                    point=Point(self.point[0], self.point[1], self.point[2]),
+                    point=Point(point[0], point[1], point[2]),
                     header=Header(frame_id="map"),
                 )
                 userdata.pointstamped = pointstamped

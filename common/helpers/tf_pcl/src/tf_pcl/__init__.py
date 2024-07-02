@@ -51,5 +51,7 @@ def pcl_transform(pcl: PointCloud2, transform: TransformStamped) -> PointCloud2:
     pcl_arr["y"] = transformed_pcl[1]
     pcl_arr["z"] = transformed_pcl[2]
 
-    transformed_pcl = rnp.point_cloud2.array_to_pointcloud2(pcl_arr)
+    transformed_pcl = rnp.point_cloud2.array_to_pointcloud2(
+        pcl_arr, stamp=pcl.header.stamp, frame_id=transform.child_frame_id
+    )
     return transformed_pcl

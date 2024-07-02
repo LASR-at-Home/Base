@@ -8,3 +8,5 @@ from .detect_faces import DetectFaces
 from .get_name_or_drink import ParseTranscribedInfo
 from .handle_guest import HandleGuest
 from .pointcloud_sweep import PointCloudSweep
+from .run_and_process_detections import RunAndProcessDetections
+from .recognise_people import RecognisePeople
