@@ -72,8 +72,8 @@ class PersonFollower:
         start_following_radius: float = 2.0,
         start_following_angle: float = 45.0,
         n_secs_static_finished: float = 15.0,
-        n_secs_static_plan_close: float = 10.0,
-        new_goal_threshold: float = 1.0,
+        n_secs_static_plan_close: float = 5.0,
+        new_goal_threshold: float = 1.5,
         stopping_distance: float = 1.0,
     ):
         self._start_following_radius = start_following_radius
