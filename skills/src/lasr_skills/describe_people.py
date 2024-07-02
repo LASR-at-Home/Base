@@ -74,8 +74,7 @@ class DescribePeople(smach.StateMachine):
                 "GET_IMAGE",
                 GetCroppedImage(
                     object_name="person",
-                    crop_method=crop_method,
-                    rgb_topic=rgb_topic,
+                    method=crop_method,
                     use_mask=True,
                 ),
                 transitions=transitions,
