@@ -1,4 +1,6 @@
+from typing import List, Tuple
 import smach
+import smach_ros
 
 from geometry_msgs.msg import Pose
 from shapely.geometry import Polygon
@@ -10,14 +12,11 @@ from lasr_skills import (
     PlayMotion,
 )
 from receptionist.states import (
-    ParseNameAndDrink,
-    GetGuestAttributes,
     Introduce,
     SeatGuest,
     FindAndLookAt,
-    ReceptionistLearnFaces,
-    ParseTranscribedInfo,
     HandleGuest,
+    PointCloudSweep,
 )
 
 
@@ -29,6 +28,7 @@ class Receptionist(smach.StateMachine):
         seat_pose: Pose,
         seat_area: Polygon,
         sofa_area: Polygon,
+        sweep_points: List[Tuple[float, float, float]],
         host_data: dict,
         max_people_on_sofa: int = 3,
         face_detection_confidence: float = 0.2,
@@ -38,6 +38,7 @@ class Receptionist(smach.StateMachine):
         self.wait_area = wait_area
         self.seat_pose = seat_pose
         self.seat_area = seat_area
+        self.sweep_points = sweep_points
         with self:
             self.userdata.guest_data = {
                 "host": host_data,
@@ -61,7 +62,7 @@ class Receptionist(smach.StateMachine):
             First guest
             """
 
-            self._goto_waiting_area(1)
+            self._goto_waiting_area(guest_id=1)
             """ 
             GET GUEST ATTRIBUTES
             """
@@ -75,7 +76,7 @@ class Receptionist(smach.StateMachine):
                 },
             )
 
-            self._guide_guest(1)
+            self._guide_guest(guest_id=1)
 
             smach.StateMachine.add(
                 "FIND_AND_LOOK_AT_HOST_1",
@@ -185,7 +186,7 @@ class Receptionist(smach.StateMachine):
                 },
             )
 
-            self._guide_guest(2)
+            self._guide_guest(guest_id=2)
 
             # INTRODUCE GUEST 2 TO HOST
 
@@ -463,3 +464,17 @@ class Receptionist(smach.StateMachine):
             PointStamped: The point to look at.
         """
         pass
+
+    def _detect_and_sweep(
+        self,
+        expected_seated_guests: int,
+    ):
+
+        smach.StateMachine.add(
+            f"DETECT_AND_SWEEP_{expected_seated_guests}",
+            PointCloudSweep(self.sweep_points),
+            transitions={
+                "succeeded": f"RUN_AND_PROCESS_DETECTIONS_{expected_seated_guests}",
+                "failed": "failed",
+            },
+        )
