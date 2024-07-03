@@ -110,12 +110,10 @@ def detect_3d(
     img = cv2_pcl.pcl_to_cv2(request.pcl)
 
     # transform pcl to map frame
-    # trans = tf_buffer.lookup_transform(
-    #     "map", request.pcl.header.frame_id, rospy.Time(0), rospy.Duration(1.0)
-    # )
-    # pcl_map = do_transform_cloud(request.pcl, trans)
-    print(request.pcl.header.frame_id)
-    pcl_map = request.pcl
+    trans = tf_buffer.lookup_transform(
+        "map", request.pcl.header.frame_id, rospy.Time(0), rospy.Duration(1.0)
+    )
+    pcl_map = do_transform_cloud(request.pcl, trans)
 
     # load model
     rospy.loginfo("Loading model")
