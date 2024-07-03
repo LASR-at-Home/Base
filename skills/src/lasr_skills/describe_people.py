@@ -5,12 +5,7 @@ import rospy
 import smach
 import cv2_img
 import numpy as np
-import rospkg
-import rosparam
 
-if "tiago" in os.environ["ROS_MASTER_URI"]:
-    from lasr_skills import Say
-from lasr_skills.play_motion import PlayMotion
 from lasr_vision_msgs.srv import (
     YoloDetection,
     BodyPixMaskDetection,
@@ -21,7 +16,6 @@ from numpy2message import numpy2message
 from .vision import GetCroppedImage, ImageMsgToCv2
 import numpy as np
 from lasr_skills.validate_keypoints import ValidateKeypoints
-from lasr_skills.adjust_camera import AdjustCamera
 
 
 class DescribePeople(smach.StateMachine):
@@ -33,145 +27,20 @@ class DescribePeople(smach.StateMachine):
             output_keys=["people"],
         )
 
-        r = rospkg.RosPack()
-        els = rosparam.load_file(
-            os.path.join(r.get_path("lasr_skills"), "config", "motions.yaml")
-        )
-        for param, ns in els:
-            rosparam.upload_params(ns, param)
-
         with self:
-            smach.StateMachine.add(
-                'init_u2m',
-                PlayMotion(motion_name='u2m'),
-                transitions={
-                    "succeeded": "GET_IMAGE",
-                    "aborted": "GET_IMAGE",
-                    "preempted": "GET_IMAGE",
-                },
-            )
-        
-            # conditional topic and crop method for flexibility
-            rgb_topic = (
-                "/xtion/rgb/image_raw"
-                if "tiago" in os.environ["ROS_MASTER_URI"]
-                else "/camera/image_raw"
-            )
-            crop_method = (
-                "closest" if "tiago" in os.environ["ROS_MASTER_URI"] else "centered"
-            )
-            if "tiago" in os.environ["ROS_MASTER_URI"]:
-                transitions = {
-                    "succeeded": "ADJUST_CAMERA",
-                    "failed": "GET_IMAGE",
-                }
-            else:
-                transitions={
-                    "succeeded": "ADJUST_CAMERA",
-                    "failed": "GET_IMAGE_AGAIN",
-                }
             smach.StateMachine.add(
                 "GET_IMAGE",
                 GetCroppedImage(
                     object_name="person",
-                    method=crop_method,
-                    use_mask=True,
+                    crop_method="closest",
+                    rgb_topic="/xtion/rgb/image_raw",
+                    use_mask=False,
                 ),
-                transitions=transitions,
-            )
-
-            # smach.StateMachine.add(
-            #     "CHECK_KEYPOINTS",
-            #     ValidateKeypoints(
-            #         keypoints_to_detect=[
-            #             'nose',
-            #             'leftEye',
-            #             'rightEye',
-            #             'leftEar',
-            #             'rightEar',
-            #             'leftShoulder',
-            #             'rightShoulder',
-            #             # 'leftElbow',
-            #             # 'rightElbow',
-            #             'leftWrist',
-            #             'rightWrist',
-            #             'leftHip',
-            #             'rightHip',
-            #             # 'leftKnee',
-            #             # 'rightKnee',
-            #             # 'leftAnkle',
-            #             # 'rightAnkle'
-            #         ],
-            #     ),
-            #     transitions={
-            #         "succeeded": "GET_IMAGE",
-            #         "failed": "ADJUST_CAMERA",
-            #     },
-            # )
-
-            positions = ['u3l', 'u3m', 'u3r', 'u2l', 'u2m', 'u2r', 'u1l', 'u1m', 'u1r', 'ml', 'mm', 'mr',]
-
-            for motion in positions:
-                smach.StateMachine.add(
-                    motion,
-                    PlayMotion(motion_name=motion),
-                    transitions={
-                        "succeeded": "GET_IMAGE",
-                        "aborted": "GET_IMAGE",
-                        "preempted": "GET_IMAGE",
-                    },
-                )
-
-            if "tiago" in os.environ["ROS_MASTER_URI"]:
-                transitions = {
-                    "finished": "GET_IMAGE",
-                    "failed": "GET_IMAGE",
-                }
-                for position in positions:
-                    transitions[position] = position
-            else:
                 transitions={
-                    "finished": "GET_IMAGE",
-                }
-            smach.StateMachine.add(
-                "ADJUST_CAMERA",
-                AdjustCamera(),
-                transitions=transitions,
+                    "succeeded": "CONVERT_IMAGE",
+                    "failed": "failed",
+                },
             )
-
-            # if "tiago" in os.environ["ROS_MASTER_URI"]:
-            #     smach.StateMachine.add(
-            #         "SAY_GET_IMAGE_AGAIN",
-            #         Say(
-            #             text="Make sure you're looking into my eyes, I can't seem to see you."
-            #         ),
-            #         transitions={
-            #             "succeeded": "GET_IMAGE_AGAIN",
-            #             "preempted": "GET_IMAGE_AGAIN",
-            #             "aborted": "GET_IMAGE_AGAIN",
-            #         },
-            #     )
-
-            # smach.StateMachine.add(
-            #     "GET_IMAGE_AGAIN",
-            #     GetCroppedImage(
-            #         object_name="person",
-            #         method=crop_method,
-            #         use_mask=True,
-            #     ),
-            #     transitions=transitions,
-            # )
-
-            if "tiago" in os.environ["ROS_MASTER_URI"]:
-                smach.StateMachine.add(
-                    "SAY_CONTINUE",
-                    Say(text="I can't see anyone, I will continue"),
-                    transitions={
-                        "succeeded": "failed",
-                        "preempted": "failed",
-                        "aborted": "failed",
-                    },
-                )
 
             smach.StateMachine.add(
                 "CONVERT_IMAGE", ImageMsgToCv2(), transitions={"succeeded": "SEGMENT"}
@@ -373,3 +242,4 @@ class DescribePeople(smach.StateMachine):
             #         - mask
             userdata.people = people
             return "succeeded"
+        

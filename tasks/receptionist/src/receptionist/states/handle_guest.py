@@ -1,6 +1,6 @@
 import smach
 
-from lasr_skills import AskAndListen, Say
+from lasr_skills import AskAndListen, Say, AdjustCamera
 from receptionist.states import (
     ParseNameAndDrink,
     ParseTranscribedInfo,
@@ -209,6 +209,19 @@ class HandleGuest(smach.StateMachine):
         )
 
         with self:
+            smach.StateMachine.add(
+                "AdjustCamera",
+                AdjustCamera(
+                    max_attempts=3,
+                    debug=False,
+                ),
+                transitions={
+                    "finished": "HANDLE_GUEST", 
+                    "failed": "HANDLE_GUEST", 
+                    "truncated": "HANDLE_GUEST"
+                },
+            )
+
             sm_con = smach.Concurrence(
                 outcomes=[
                     "succeeded",
