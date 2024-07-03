@@ -71,7 +71,7 @@ class PersonFollower:
         self,
         start_following_radius: float = 2.0,
         start_following_angle: float = 45.0,
-        n_secs_static_finished: float = 15.0,
+        n_secs_static_finished: float = 8.0,
         n_secs_static_plan_close: float = 10.0,
         new_goal_threshold: float = 2.0,
         stopping_distance: float = 1.0,
@@ -316,7 +316,9 @@ class PersonFollower:
         prev_track: Union[None, Person] = None
         prev_goal: Union[None, PoseStamped] = None
         last_goal_time: Union[None, rospy.Time] = None
+        last_goal_time_aborted: Union[None, rospy.Time] = None
         going_to_person: bool = False
+        is_prev_goal_aborted: bool = False
 
         while not rospy.is_shutdown():
 
@@ -333,6 +335,7 @@ class PersonFollower:
                 person_trajectory = PoseArray()
                 self._recover_track()
                 prev_track = None
+                is_prev_goal_aborted = False
                 continue
 
             if prev_track is None:
@@ -371,10 +374,55 @@ class PersonFollower:
                 prev_goal = goal_pose
                 prev_track = track
                 last_goal_time = rospy.Time.now()
+                is_prev_goal_aborted = False
             elif (
                 self._move_base_client.get_state() in [GoalStatus.ABORTED]
                 and prev_goal is not None
             ):
                 rospy.logwarn("Goal was aborted, retrying")
+                rospy.logwarn((rospy.Time.now() - last_goal_time).to_sec())
+                rospy.logwarn(track.pose == prev_track.pose)
+                rospy.logwarn("")
                 self._move_base(prev_goal)
-                last_goal_time = rospy.Time.now()
+                last_goal_time_aborted = rospy.Time.now()
+                is_prev_goal_aborted = True
+            # check if the person has been static for too long and the prev goal was aborted, if yes go to prev track
+            # elif (
+            #     last_goal_time is not None
+            #     and is_prev_goal_abortedprev_goal
+            #     and (rospy.Time.now() - last_goal_time).to_sec() >= self._n_secs_static_finished
+            # ):
+            #     rospy.logwarn("Person has been static for too long, going to previous track")
+            #     self._cancel_goal()
+            #     goal_pose = self._tf_pose(
+            #         PoseStamped(pose=prev_track.pose, header=tracks.header),
+            #         "map",
+            #     )
+            #     self._move_base(goal_pose)
+            #     if self._check_finished():
+            #         rospy.loginfo("Finished following person")
+            #         break
+
+            # stop sending goals when we are too close
+            # if we are too close for too long - ask
+            # else keep following
+            elif (
+                # self._euclidian_distance(track.pose, prev_track.pose)
+                # < self._stopping_distance
+                # track.pose == prev_track.pose
+                (rospy.Time.now() - last_goal_time).to_sec() >= self._n_secs_static_finished
+                # and (rospy.Time.now() - last_goal_time).to_sec()
+                # >= self._n_secs_static_finished
+            ):
+                rospy.logwarn("Person has been static for too long, stopping")
+                self._cancel_goal()
+                if self._check_finished():
+                    rospy.loginfo("Finished following person")
+                    break
+
+            # last goal is aborted and 8 seconds have passed
+
+
+            rospy.loginfo("")
+            rospy.logwarn((rospy.Time.now() - last_goal_time).to_sec())
+            rospy.loginfo("")
