@@ -24,12 +24,13 @@ class PointCloudSweep(smach.StateMachine):
         smach.StateMachine.__init__(
             self,
             outcomes=["succeeded", "failed"],
-            input_keys=["transformed_pointclouds"],
             output_keys=["transformed_pointclouds"],
         )
         self.sweep_points = sweep_points
+
         start_tf_buffer()
         with self:
+            self.userdata.transformed_pointclouds = []
             for index, point in enumerate(sweep_points):
                 smach.StateMachine.add(
                     f"GetPointStamped_{index}",

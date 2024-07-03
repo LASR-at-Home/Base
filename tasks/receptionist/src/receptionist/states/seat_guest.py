@@ -16,8 +16,7 @@ from lasr_skills import (
     Wait,
 )
 
-from .pointcloud_sweep import PointCloudSweep
-from .run_and_process_detections import RunAndProcessDetections
+from receptionist.states import PointCloudSweep, RunAndProcessDetections
 
 from std_msgs.msg import Header
 
@@ -135,12 +134,13 @@ class SeatGuest(smach.StateMachine):
             )
             smach.StateMachine.add(
                 "CHECK_SOFA",
-                self.ProcessDetectionsSofa(max_people_on_sofa),
+                self.ProcessDetectionsSofa(0),
                 transitions={
-                    "full_sofa": "MOTION_ITERATOR",
+                    "full_sofa": "SWEEP",
                     "has_free_space": "SAY_SIT_ON_SOFA",
                 },
             )
+
             smach.StateMachine.add(
                 "SAY_SIT_ON_SOFA",
                 Say("Please sit on the sofa."),
@@ -166,7 +166,7 @@ class SeatGuest(smach.StateMachine):
                 "RUN_AND_PROCESS_DETECTIONS",
                 RunAndProcessDetections(seat_area),
                 transitions={"succeeded": "LOOK_TO_POINT", "failed": "failed"},
-                remapping={"empty_seat_point": "pointstamped"},
+                remapping={"empty_seat_point": "seat_position"},
             )
 
             smach.StateMachine.add(

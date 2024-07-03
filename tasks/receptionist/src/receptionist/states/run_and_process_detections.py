@@ -5,7 +5,8 @@ import smach
 import numpy as np
 from receptionist.states import PointCloudSweep
 from shapely.geometry import Polygon as ShapelyPolygon
-from geometry_msgs.msg import Polygon, Point
+from geometry_msgs.msg import Polygon, Point, PointStamped
+from std_msgs.msg import Header
 from lasr_vision_msgs.srv import (
     CroppedDetectionRequest,
     CroppedDetectionResponse,
@@ -17,7 +18,7 @@ from lasr_vision_msgs.msg import CDRequest, CDResponse
 class RunAndProcessDetections(smach.StateMachine):
     def __init__(
         self,
-        seating_area: Polygon,
+        seating_area: ShapelyPolygon,
         detection_service: str = "/vision/cropped_detection",
     ):
         smach.StateMachine.__init__(
@@ -71,7 +72,7 @@ class RunAndProcessDetections(smach.StateMachine):
         def __init__(
             self,
             detection_client: rospy.ServiceProxy,
-            seating_area: Polygon,
+            seating_area: ShapelyPolygon,
             method: str = "closest",
             use_mask: bool = True,
             yolo_model: str = "yolov8x-seg.pt",
@@ -112,12 +113,22 @@ class RunAndProcessDetections(smach.StateMachine):
                             yolo_model_confidence=self.yolo_model_confidence,
                             yolo_nms_threshold=self.yolo_nms_threshold,
                             return_sensor_reading=self.return_sensor_reading,
-                            polygons=[self.seating_area],
+                            polygons=[
+                                Polygon(
+                                    points=[
+                                        Point(
+                                            x=point[0],
+                                            y=point[1],
+                                            z=0.0,
+                                        )
+                                        for point in self.seating_area.exterior.coords
+                                    ]
+                                )
+                            ],
                             pointcloud=pointcloud,
                             object_names=self.object_names,
                         )
                     )
-
                 result: CroppedDetectionResponse = self.detector(request)
                 userdata.detections = result.responses
             except Exception as e:
@@ -224,13 +235,12 @@ class RunAndProcessDetections(smach.StateMachine):
                     f"Found {len(filtered_seats)} empty seats and {len(people_detections)} people."
                 )
 
-                userdata.empty_seat_point = (
-                    filtered_seats[0][0].point.x,
-                    filtered_seats[0][0].point.y,
-                    filtered_seats[0][0].point.z,
-                )
-
-                rospy.loginfo(f"Empty Seat point: {userdata.empty_seat_point}")
+                if len(filtered_seats) > 0:
+                    userdata.empty_seat_point = PointStamped(
+                        point=filtered_seats[0][0].point, header=Header(frame_id="map")
+                    )
+                else:
+                    return "failed"
 
             except Exception as e:
                 rospy.logerr(f"Failed to process detections: {str(e)}")
