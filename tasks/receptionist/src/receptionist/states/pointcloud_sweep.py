@@ -20,7 +20,7 @@ def start_tf_buffer() -> None:
 
 
 class PointCloudSweep(smach.StateMachine):
-    def __init__(self, sweep_points: List[Tuple[float, float, float]]):
+    def __init__(self, sweep_points: List[Point]):
         smach.StateMachine.__init__(
             self,
             outcomes=["succeeded", "failed"],
@@ -101,7 +101,7 @@ class PointCloudSweep(smach.StateMachine):
             return "succeeded"
 
     class GetPointStamped(smach.State):
-        def __init__(self, point: Optional[Tuple[float, float, float]]):
+        def __init__(self, point: Optional[Point]):
             smach.State.__init__(
                 self,
                 outcomes=["succeeded", "failed"],
@@ -117,7 +117,7 @@ class PointCloudSweep(smach.StateMachine):
                 else:
                     point = self.point
                 pointstamped = PointStamped(
-                    point=Point(point[0], point[1], point[2]),
+                    point=point,
                     header=Header(frame_id="map"),
                 )
                 userdata.pointstamped = pointstamped

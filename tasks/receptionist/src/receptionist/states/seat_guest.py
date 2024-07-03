@@ -16,11 +16,13 @@ from lasr_skills import (
     Wait,
 )
 
+from .pointcloud_sweep import PointCloudSweep
+from .run_and_process_detections import RunAndProcessDetections
+
 from std_msgs.msg import Header
 
 
 class SeatGuest(smach.StateMachine):
-    _motions: List[str] = ["look_down_left", "look_down_right", "look_down_centre"]
 
     class ProcessDetectionsSofa(smach.State):
         def __init__(self, max_people_on_sofa: int):
@@ -75,11 +77,18 @@ class SeatGuest(smach.StateMachine):
                     print()
                     print(person_polygon.intersection(seat_polygon).area)
                     print(person_polygon.area)
-                    print(person_polygon.intersection(seat_polygon).area / person_polygon.area)
+                    print(
+                        person_polygon.intersection(seat_polygon).area
+                        / person_polygon.area
+                    )
                     print(person_polygon.intersects(seat_polygon))
 
                     # get the percentage of the person that is on the seat
-                    if person_polygon.intersection(seat_polygon).area / person_polygon.area > 0.2:
+                    if (
+                        person_polygon.intersection(seat_polygon).area
+                        / person_polygon.area
+                        > 0.2
+                    ):
                         seat_is_empty = False
                         print("Person is on the seat/n")
                         print(person_polygon.intersection(seat_polygon).area)
@@ -87,7 +96,9 @@ class SeatGuest(smach.StateMachine):
                         break
 
                 if seat_is_empty:
-                    userdata.seat_position = PointStamped(point=seat.point, header=Header(frame_id="map"))
+                    userdata.seat_position = PointStamped(
+                        point=seat.point, header=Header(frame_id="map")
+                    )
                     print(seat.point)
                     return "succeeded"
 
@@ -97,6 +108,7 @@ class SeatGuest(smach.StateMachine):
         self,
         seat_area: Polygon,
         sofa_area: Polygon,
+        sweep_points: List[Point],
         max_people_on_sofa: int,
     ):
         smach.StateMachine.__init__(self, outcomes=["succeeded", "failed"])
@@ -115,6 +127,7 @@ class SeatGuest(smach.StateMachine):
                     "preempted": "DETECT_SOFA",
                 },
             )
+
             smach.StateMachine.add(
                 "DETECT_SOFA",
                 Detect3DInArea(sofa_area, filter=["person"]),
@@ -123,7 +136,10 @@ class SeatGuest(smach.StateMachine):
             smach.StateMachine.add(
                 "CHECK_SOFA",
                 self.ProcessDetectionsSofa(max_people_on_sofa),
-                transitions={"full_sofa": "MOTION_ITERATOR", "has_free_space": "SAY_SIT_ON_SOFA"},
+                transitions={
+                    "full_sofa": "MOTION_ITERATOR",
+                    "has_free_space": "SAY_SIT_ON_SOFA",
+                },
             )
             smach.StateMachine.add(
                 "SAY_SIT_ON_SOFA",
@@ -135,54 +151,24 @@ class SeatGuest(smach.StateMachine):
                 },
             )
 
-
-            motion_iterator = smach.Iterator(
-                outcomes=["succeeded", "failed"],
-                it=self._motions,
-                it_label="motion",
-                input_keys=["people_detections", "seat_detections"],
-                output_keys=["seat_position"],
-                exhausted_outcome="failed",
+            smach.StateMachine.add(
+                "SWEEP",
+                PointCloudSweep(
+                    sweep_points=sweep_points,
+                ),
+                transitions={
+                    "succeeded": "RUN_AND_PROCESS_DETECTIONS",
+                    "failed": "failed",
+                },
             )
-
-            with motion_iterator:
-                container_sm = smach.StateMachine(
-                    outcomes=["succeeded", "failed", "continue"],
-                    input_keys=["motion", "people_detections", "seat_detections"],
-                    output_keys=["seat_position"],
-                )
-
-                with container_sm:
-                    smach.StateMachine.add(
-                        "LOOK",
-                        PlayMotion(),
-                        transitions={
-                            "succeeded": "DETECT",
-                            "aborted": "failed",
-                            "preempted": "failed",
-                        },
-                        remapping={"motion_name": "motion"},
-                    )
-                    smach.StateMachine.add(
-                        "DETECT",
-                        Detect3DInArea(seat_area, filter=["chair", "person"]),
-                        transitions={"succeeded": "CHECK", "failed": "failed"},
-                    )
-                    smach.StateMachine.add(
-                        "CHECK",
-                        self.ProcessDetections(),
-                        transitions={"succeeded": "succeeded", "failed": "continue"},
-                    )
-
-                smach.Iterator.set_contained_state(
-                    "CONTAINER_SM", container_sm, loop_outcomes=["continue"]
-                )
 
             smach.StateMachine.add(
-                "MOTION_ITERATOR",
-                motion_iterator,
+                "RUN_AND_PROCESS_DETECTIONS",
+                RunAndProcessDetections(seat_area),
                 transitions={"succeeded": "LOOK_TO_POINT", "failed": "failed"},
+                remapping={"empty_seat_point": "pointstamped"},
             )
+
             smach.StateMachine.add(
                 "LOOK_TO_POINT",
                 LookToPoint(),
@@ -205,7 +191,6 @@ class SeatGuest(smach.StateMachine):
 
             smach.StateMachine.add(
                 "WAIT_FOR_GUEST_SEAT",
-                # Number of seconds to wait for passed in as argument
                 Wait(5),
                 transitions={
                     "succeeded": "RESET_HEAD",

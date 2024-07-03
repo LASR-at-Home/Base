@@ -3,7 +3,7 @@ import smach
 import smach_ros
 
 from lasr_vision_msgs.srv import Recognise
-from geometry_msgs.msg import Pose
+from geometry_msgs.msg import Pose, Point
 from shapely.geometry import Polygon
 from lasr_skills import (
     GoToLocation,
@@ -29,6 +29,7 @@ class Receptionist(smach.StateMachine):
         wait_pose: Pose,
         wait_area: Polygon,
         seat_pose: Pose,
+        sweep_points: List[Point],
         seat_area: Polygon,
         sofa_area: Polygon,
         host_data: dict,
@@ -159,7 +160,7 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "SEAT_GUEST_1",
-                SeatGuest(seat_area, sofa_area, max_people_on_sofa),
+                SeatGuest(seat_area, sofa_area, sweep_points, max_people_on_sofa),
                 transitions={
                     "succeeded": "SAY_RETURN_WAITING_AREA",
                     "failed": "SAY_SEAT_GUEST_1_FAILED",
@@ -344,7 +345,7 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "SEAT_GUEST_2",
-                SeatGuest(seat_area, sofa_area, max_people_on_sofa),
+                SeatGuest(seat_area, sofa_area, sweep_points, max_people_on_sofa),
                 transitions={
                     "succeeded": "SAY_GOODBYE",
                     "failed": "SAY_SEAT_GUEST_2_FAILED",
