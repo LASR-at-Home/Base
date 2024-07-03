@@ -23,7 +23,11 @@ from lasr_vision_msgs.srv import (
 import rospkg
 
 # model cache
-loaded_models = {}
+# preload resnet 50 model so that it won't waste the time 
+# doing that in the middle of the task.
+loaded_models = {
+    "resnet50": load_model(BodyPixModelPaths.RESNET50_FLOAT_STRIDE_16)
+}
 r = rospkg.RosPack()
 
 
