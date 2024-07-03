@@ -44,8 +44,8 @@ class FindAndLookAt(smach.StateMachine):
                         self._set_userdata_look_position(userdata, detection)
                         return "succeeded"
             else:
-                named_guest = self._check_named_host(userdata)
-                if named_guest:
+                named_host = self._check_named_host(userdata)
+                if named_host:
                     return "succeeded"
                 elif self.mask is not None:
                     for detection in userdata.matched_face_detections:
@@ -55,7 +55,7 @@ class FindAndLookAt(smach.StateMachine):
                 else:
                     if len(userdata.matched_face_detections) > 0:
                         self._set_userdata_look_position(userdata, userdata.matched_face_detections[0])
-                    return "succeeded"
+                        return "succeeded"
             userdata.look_position = PointStamped()
             return "failed"
         
