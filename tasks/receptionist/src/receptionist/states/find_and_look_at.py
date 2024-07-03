@@ -62,7 +62,6 @@ class FindAndLookAt(smach.StateMachine):
         def _check_named_host(self, userdata):
             for detection in userdata.matched_face_detections:
                 if detection.name == "host":
-                    print("YESSSSSSSSSSSSSSSSSSSSSSSSSSS")
                     self._set_userdata_look_position(userdata, detection)
                     return True
             return False
