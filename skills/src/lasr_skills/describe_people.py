@@ -32,8 +32,7 @@ class DescribePeople(smach.StateMachine):
                 "GET_IMAGE",
                 GetCroppedImage(
                     object_name="person",
-                    crop_method="closest",
-                    rgb_topic="/xtion/rgb/image_raw",
+                    method="closest",
                     use_mask=False,
                 ),
                 transitions={
