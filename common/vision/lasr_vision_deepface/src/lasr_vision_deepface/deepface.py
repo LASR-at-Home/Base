@@ -192,9 +192,11 @@ def detect_faces(
 
     try:
         faces = DeepFace.extract_faces(
-            cv_im, detector_backend="opencv", enforce_detection=True
+            cv_im, detector_backend="mtcnn", enforce_detection=True
         )
-    except ValueError:
+    except ValueError as e:
+        rospy.loginfo(f"Error: {e}")
+        debug_publisher.publish(cv2_img.cv2_img_to_msg(cv_im))
         return response
 
     for i, face in enumerate(faces):

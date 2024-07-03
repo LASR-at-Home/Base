@@ -13,6 +13,12 @@ from lasr_vision_msgs.srv import (
     CroppedDetection,
 )
 from lasr_vision_msgs.msg import CDRequest, CDResponse
+from lasr_vision_msgs.srv import (
+    Recognise,
+    RecogniseRequest,
+    DetectFaces,
+    DetectFacesRequest,
+)
 
 
 class RunAndProcessDetections(smach.StateMachine):
@@ -28,7 +34,7 @@ class RunAndProcessDetections(smach.StateMachine):
             output_keys=[
                 "empty_seat_detections",
                 "people_detections",
-                "empty_seat_point",
+                "matched_face_detections",
             ],
         )
         self._detection_service = detection_service
@@ -39,7 +45,7 @@ class RunAndProcessDetections(smach.StateMachine):
 
         with self:
             smach.StateMachine.add(
-                "RunDetections",
+                "RUN_DETECTIONS",
                 self.RunDetections(
                     detection_client=self._detection_client,
                     seating_area=self.seating_area,
@@ -51,21 +57,26 @@ class RunAndProcessDetections(smach.StateMachine):
                     return_sensor_reading=False,
                     object_names=["person", "chair"],
                 ),
-                transitions={"succeeded": "ProcessDetections", "failed": "failed"},
+                transitions={"succeeded": "PROCESS_DETECTIONS", "failed": "failed"},
                 remapping={
                     "transformed_pointclouds": "transformed_pointclouds",
                     "detections": "detections",
                 },
             )
             smach.StateMachine.add(
-                "ProcessDetections",
+                "PROCESS_DETECTIONS",
                 self.ProcessDetections(closesness_distance=0.5, overlap_threshold=0.8),
-                transitions={"succeeded": "succeeded", "failed": "failed"},
+                transitions={"succeeded": "RUN_FACE_DETECTIONS", "failed": "failed"},
                 remapping={
                     "detections": "detections",
                     "empty_seat_detections": "empty_seat_detections",
                     "people_detections": "people_detections",
                 },
+            )
+            smach.StateMachine.add(
+                "RUN_FACE_DETECTIONS",
+                self.RunFaceDetections(),
+                transitions={"succeeded": "succeeded", "failed": "failed"},
             )
 
     class RunDetections(smach.State):
@@ -136,6 +147,56 @@ class RunAndProcessDetections(smach.StateMachine):
                 return "failed"
             return "succeeded"
 
+    class RunFaceDetections(smach.State):
+        def __init__(self):
+            smach.State.__init__(
+                self,
+                outcomes=["succeeded", "failed"],
+                input_keys=["transformed_pointclouds", "people_detections"],
+                output_keys=["matched_face_detections"],
+            )
+
+            self._dataset = "receptionist"
+            self._recognise = rospy.ServiceProxy("/recognise", Recognise)
+            self._recognise.wait_for_service()
+
+            self._detect_faces = rospy.ServiceProxy("/detect_faces", DetectFaces)
+            self._detect_faces.wait_for_service()
+
+        def execute(self, userdata):
+            try:
+                face_detections = []
+                for person_detection in userdata.people_detections:
+                    rospy.loginfo(
+                        f"Running face detection on {person_detection[0].name}"
+                    )
+                    img_msg = person_detection[1]
+                    face_detection_result = self._detect_faces(img_msg)
+                    if len(face_detection_result.detections) > 0:
+
+                        recognise_result = self._recognise(img_msg, self._dataset, 0.2)
+                        if len(recognise_result.detections) > 0:
+
+                            face_detection = person_detection
+                            face_detection[0].name = recognise_result.detections[0].name
+                            face_detections.append(face_detection[0])
+                            rospy.loginfo(
+                                f"Recognised face as {recognise_result.detections[0].name}"
+                            )
+                        else:
+                            face_detection = person_detection
+                            face_detection[0].name = "unknown"
+                            face_detections.append(face_detection[0])
+                            rospy.loginfo("Detected face but could not recognise it.")
+                    else:
+                        rospy.loginfo("No face detected.")
+
+                userdata.matched_face_detections = face_detections
+            except rospy.ServiceException as e:
+                rospy.logwarn(f"Unable to perform face detection. ({str(e)})")
+                return "failed"
+            return "succeeded"
+
     class ProcessDetections(smach.State):
         def __init__(
             self, closesness_distance: float = 0.15, overlap_threshold: float = 0.8
@@ -147,7 +208,6 @@ class RunAndProcessDetections(smach.StateMachine):
                 output_keys=[
                     "empty_seat_detections",
                     "people_detections",
-                    "empty_seat_point",
                 ],
             )
             self.closesness_distance = closesness_distance
@@ -190,15 +250,15 @@ class RunAndProcessDetections(smach.StateMachine):
                                 )
                                 rospy.loginfo(f"Found chair at: {detection.point}")
                         elif detection.name == "person":
-                            for added_person in people_detections:
-                                if (
-                                    self._euclidian_distance(
-                                        added_person[0].point,
-                                        detection.point,
-                                    )
-                                    < self.closesness_distance
-                                ):
-                                    add_person = False
+                            # for added_person in people_detections:
+                            # if (
+                            #     self._euclidian_distance(
+                            #         added_person[0].point,
+                            #         detection.point,
+                            #     )
+                            #     < self.closesness_distance
+                            # ):
+                            #     add_person = False
                             if add_person:
                                 people_detections.append(
                                     (detection, detection_set.cropped_imgs[index])
@@ -234,13 +294,6 @@ class RunAndProcessDetections(smach.StateMachine):
                 rospy.loginfo(
                     f"Found {len(filtered_seats)} empty seats and {len(people_detections)} people."
                 )
-
-                if len(filtered_seats) > 0:
-                    userdata.empty_seat_point = PointStamped(
-                        point=filtered_seats[0][0].point, header=Header(frame_id="map")
-                    )
-                else:
-                    return "failed"
 
             except Exception as e:
                 rospy.logerr(f"Failed to process detections: {str(e)}")
