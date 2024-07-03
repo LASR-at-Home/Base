@@ -386,7 +386,7 @@ def process_single_detection_request(
             cropped_images, detections, distances = _3d_bbox_crop(
                 pointcloud_rgb,
                 request.method,
-                request.robot_location,
+                robot_location,
                 detections,
             )
         response.detections_3d = detections
