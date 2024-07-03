@@ -103,6 +103,27 @@ class SeatGuest(smach.StateMachine):
 
             return "failed"
 
+    class SelectSeat(smach.State):
+
+        def __init__(self):
+
+            smach.State.__init__(
+                self,
+                outcomes=["succeeded", "failed"],
+                input_keys=["empty_seat_detections"],
+                output_keys=["seat_position"],
+            )
+
+        def execute(self, userdata) -> str:
+            if len(userdata.empty_seat_detections) == 0:
+                return "failed"
+
+            seat = userdata.empty_seat_detections[0][0]
+            userdata.seat_position = PointStamped(
+                point=seat.point, header=Header(frame_id="map")
+            )
+            return "succeeded"
+
     def __init__(
         self,
         seat_area: Polygon,
@@ -110,65 +131,75 @@ class SeatGuest(smach.StateMachine):
         sweep_points: List[Point],
         max_people_on_sofa: int,
     ):
-        smach.StateMachine.__init__(self, outcomes=["succeeded", "failed"])
+        smach.StateMachine.__init__(
+            self, outcomes=["succeeded", "failed"], input_keys=["empty_seat_detections"]
+        )
         with self:
             # TODO: stop doing this
             self.userdata.people_detections = []
             self.userdata.seat_detections = []
-            self.userdata.seat_position = PointStamped()
+            # self.userdata.seat_position = PointStamped()
+
+            # smach.StateMachine.add(
+            #     "LOOK_CENTRE",
+            #     PlayMotion(motion_name="look_centre"),
+            #     transitions={
+            #         "succeeded": "DETECT_SOFA",
+            #         "aborted": "DETECT_SOFA",
+            #         "preempted": "DETECT_SOFA",
+            #     },
+            # )
+
+            # smach.StateMachine.add(
+            #     "DETECT_SOFA",
+            #     Detect3DInArea(sofa_area, filter=["person"]),
+            #     transitions={"succeeded": "CHECK_SOFA", "failed": "failed"},
+            # )
+            # smach.StateMachine.add(
+            #     "CHECK_SOFA",
+            #     self.ProcessDetectionsSofa(max_people_on_sofa),
+            #     transitions={
+            #         "full_sofa": "SWEEP",
+            #         "has_free_space": "SAY_SIT_ON_SOFA",
+            #     },
+            # )
+
+            # smach.StateMachine.add(
+            #     "SAY_SIT_ON_SOFA",
+            #     Say("Please sit on the sofa."),
+            #     transitions={
+            #         "succeeded": "WAIT_FOR_GUEST_SEAT",
+            #         "aborted": "failed",
+            #         "preempted": "failed",
+            #     },
+            # )
+
+            # smach.StateMachine.add(
+            #     "SWEEP",
+            #     PointCloudSweep(
+            #         sweep_points=sweep_points,
+            #     ),
+            #     transitions={
+            #         "succeeded": "RUN_AND_PROCESS_DETECTIONS",
+            #         "failed": "failed",
+            #     },
+            # )
+
+            # smach.StateMachine.add(
+            #     "RUN_AND_PROCESS_DETECTIONS",
+            #     RunAndProcessDetections(seat_area),
+            #     transitions={"succeeded": "LOOK_TO_POINT", "failed": "failed"},
+            #     remapping={"empty_seat_point": "seat_position"},
+            # )
 
             smach.StateMachine.add(
-                "LOOK_CENTRE",
-                PlayMotion(motion_name="look_centre"),
+                "SELECT_SEAT",
+                self.SelectSeat(),
                 transitions={
-                    "succeeded": "DETECT_SOFA",
-                    "aborted": "DETECT_SOFA",
-                    "preempted": "DETECT_SOFA",
-                },
-            )
-
-            smach.StateMachine.add(
-                "DETECT_SOFA",
-                Detect3DInArea(sofa_area, filter=["person"]),
-                transitions={"succeeded": "CHECK_SOFA", "failed": "failed"},
-            )
-            smach.StateMachine.add(
-                "CHECK_SOFA",
-                self.ProcessDetectionsSofa(0),
-                transitions={
-                    "full_sofa": "SWEEP",
-                    "has_free_space": "SAY_SIT_ON_SOFA",
-                },
-            )
-
-            smach.StateMachine.add(
-                "SAY_SIT_ON_SOFA",
-                Say("Please sit on the sofa."),
-                transitions={
-                    "succeeded": "WAIT_FOR_GUEST_SEAT",
-                    "aborted": "failed",
-                    "preempted": "failed",
-                },
-            )
-
-            smach.StateMachine.add(
-                "SWEEP",
-                PointCloudSweep(
-                    sweep_points=sweep_points,
-                ),
-                transitions={
-                    "succeeded": "RUN_AND_PROCESS_DETECTIONS",
+                    "succeeded": "LOOK_TO_POINT",
                     "failed": "failed",
                 },
             )
-
-            smach.StateMachine.add(
-                "RUN_AND_PROCESS_DETECTIONS",
-                RunAndProcessDetections(seat_area),
-                transitions={"succeeded": "LOOK_TO_POINT", "failed": "failed"},
-                remapping={"empty_seat_point": "seat_position"},
-            )
-
             smach.StateMachine.add(
                 "LOOK_TO_POINT",
                 LookToPoint(),

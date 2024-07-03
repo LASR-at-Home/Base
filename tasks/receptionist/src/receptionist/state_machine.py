@@ -3,7 +3,7 @@ import smach
 import smach_ros
 
 from lasr_vision_msgs.srv import Recognise
-from geometry_msgs.msg import Pose, Point
+from geometry_msgs.msg import Pose, Point, PointStamped
 from shapely.geometry import Polygon
 from lasr_skills import (
     GoToLocation,
@@ -33,9 +33,9 @@ class Receptionist(smach.StateMachine):
         seat_area: Polygon,
         sofa_area: Polygon,
         host_data: dict,
-        # sweep_points: List[Tuple[float, float, float]],
         max_people_on_sofa: int = 3,
         face_detection_confidence: float = 0.2,
+        known_host: bool = False,
     ):
         smach.StateMachine.__init__(self, outcomes=["succeeded", "failed"])
         self.wait_pose = wait_pose
@@ -46,11 +46,12 @@ class Receptionist(smach.StateMachine):
         with self:
             self.userdata.guest_data = {
                 "host": host_data,
-                "guest1": {"name": ""},
-                "guest2": {"name": ""},
+                "guest1": {"name": "jared", "drink": "water", "detection": False},
+                "guest2": {"name": "nicole", "drink": "tea", "detection": False},
             }
             self.userdata.confidence = face_detection_confidence
             self.userdata.dataset = "receptionist"
+            self.userdata.seat_position = PointStamped()
 
             smach.StateMachine.add(
                 "SAY_START",
@@ -66,6 +67,8 @@ class Receptionist(smach.StateMachine):
             First guest
             """
 
+            self._goto_waiting_area(guest_id=1)
+
             smach.StateMachine.add(
                 "INTRODUCE_ROBOT",
                 Say(
@@ -78,14 +81,13 @@ class Receptionist(smach.StateMachine):
                 },
             )
 
-            self._goto_waiting_area(guest_id=1)
-            """ 
-            GET GUEST ATTRIBUTES
-            """
+            # """
+            # GET GUEST ATTRIBUTES
+            # """
 
             smach.StateMachine.add(
                 "HANDLE_GUEST_1",
-                HandleGuest("guest1", True),
+                HandleGuest("guest1", not known_host),
                 transitions={
                     "succeeded": "SAY_FOLLOW_GUEST_1",
                     "failed": "SAY_FOLLOW_GUEST_1",
@@ -95,38 +97,33 @@ class Receptionist(smach.StateMachine):
             self._guide_guest(guest_id=1)
 
             smach.StateMachine.add(
-                "FIND_AND_LOOK_AT_HOST_1",
-                FindAndLookAt(
-                    "host",
-                    [
-                        [0.0, 0.0],
-                        [-0.8, 0.0],
-                        [0.8, 0.0],
-                    ],
+                "SWEEP_GUEST_1",
+                PointCloudSweep(
+                    sweep_points=sweep_points,
                 ),
                 transitions={
-                    "succeeded": "INTRODUCE_GUEST_1_TO_HOST",
-                    "failed": "SAY_NO_HOST_1",
+                    "succeeded": "RUN_AND_PROCESS_DETECTIONS_GUEST_1",
+                    "failed": "failed",
                 },
             )
 
             smach.StateMachine.add(
-                "SAY_NO_HOST_1",
-                Say(text="Wow, I can't find the host, I'm sure they're here"),
+                "RUN_AND_PROCESS_DETECTIONS_GUEST_1",
+                RunAndProcessDetections(seat_area),
                 transitions={
-                    "succeeded": "LOOK_AT_WAITING_GUEST_1_1",
-                    "preempted": "failed",
-                    "aborted": "failed",
+                    "succeeded": "FIND_AND_LOOK_AT_HOST_1",
+                    "failed": "FIND_AND_LOOK_AT_HOST_1",
                 },
+                remapping={"empty_seat_point": "seat_position"},
             )
 
+            # Look at host
             smach.StateMachine.add(
-                "LOOK_AT_WAITING_GUEST_1_1",
-                PlayMotion(motion_name="look_very_left"),
+                "FIND_AND_LOOK_AT_HOST_1",
+                FindAndLookAt(guest_id=None),  # assume host is the only person there?
                 transitions={
                     "succeeded": "INTRODUCE_GUEST_1_TO_HOST",
-                    "aborted": "INTRODUCE_GUEST_1_TO_HOST",
-                    "preempted": "INTRODUCE_GUEST_1_TO_HOST",
+                    "failed": "INTRODUCE_GUEST_1_TO_HOST",
                 },
             )
 
@@ -134,13 +131,13 @@ class Receptionist(smach.StateMachine):
                 "INTRODUCE_GUEST_1_TO_HOST",
                 Introduce(guest_to_introduce="guest1", guest_to_introduce_to="host"),
                 transitions={
-                    "succeeded": "LOOK_AT_WAITING_GUEST_1_2",
-                    "failed": "LOOK_AT_WAITING_GUEST_1_2",
+                    "succeeded": "LOOK_AT_WAITING_GUEST_1_1",
+                    "failed": "LOOK_AT_WAITING_GUEST_1_1",
                 },
             )
 
             smach.StateMachine.add(
-                "LOOK_AT_WAITING_GUEST_1_2",
+                "LOOK_AT_WAITING_GUEST_1_1",
                 PlayMotion(motion_name="look_very_left"),
                 transitions={
                     "succeeded": "INTRODUCE_HOST_TO_GUEST_1",
@@ -177,9 +174,9 @@ class Receptionist(smach.StateMachine):
                 },
             )
 
-            """
-            Guest 2
-            """
+            # """
+            # Guest 2
+            # """
 
             smach.StateMachine.add(
                 "SAY_RETURN_WAITING_AREA",
@@ -204,32 +201,44 @@ class Receptionist(smach.StateMachine):
 
             self._guide_guest(guest_id=2)
 
-            # INTRODUCE GUEST 2 TO HOST
+            smach.StateMachine.add(
+                "SWEEP_GUEST_2",
+                PointCloudSweep(
+                    sweep_points=sweep_points,
+                ),
+                transitions={
+                    "succeeded": "RUN_AND_PROCESS_DETECTIONS_GUEST_2",
+                    "failed": "failed",
+                },
+            )
 
-            """
-            Logic should be as follows:
-            
-            1. 3D cropped detection of seating area
-            2. Pass RGB image to face recognition
-            3. Extract named point(s) of face detections.
-            4. Repeat until correct number of detections are made, or timeout.
-            5. If host is found, look at host and introduce.
-            
-            
-            """
+            smach.StateMachine.add(
+                "RUN_AND_PROCESS_DETECTIONS_GUEST_2",
+                RunAndProcessDetections(seat_area),
+                transitions={
+                    "succeeded": "FIND_AND_LOOK_AT_HOST_2",
+                    "failed": "FIND_AND_LOOK_AT_HOST_2",
+                },
+                remapping={"empty_seat_point": "seat_position"},
+            )
 
             smach.StateMachine.add(
                 "FIND_AND_LOOK_AT_HOST_2",
                 FindAndLookAt(
-                    "host",
-                    [
-                        [0.0, 0.0],
-                        [-0.8, 0.0],
-                        [0.8, 0.0],
-                    ],
+                    guest_id="host" if known_host else None,
+                    mask=["guest1"] if not known_host else None,
                 ),
                 transitions={
                     "succeeded": "INTRODUCE_GUEST_2_TO_HOST",
+                    "failed": "INTRODUCE_GUEST_2_TO_HOST",
+                },
+            )
+
+            smach.StateMachine.add(
+                "INTRODUCE_GUEST_2_TO_HOST",
+                Introduce(guest_to_introduce="guest2", guest_to_introduce_to="host"),
+                transitions={
+                    "succeeded": "LOOK_AT_WAITING_GUEST_2_1",
                     "failed": "LOOK_AT_WAITING_GUEST_2_1",
                 },
             )
@@ -238,18 +247,36 @@ class Receptionist(smach.StateMachine):
                 "LOOK_AT_WAITING_GUEST_2_1",
                 PlayMotion(motion_name="look_very_left"),
                 transitions={
-                    "succeeded": "INTRODUCE_GUEST_2_TO_HOST",
-                    "aborted": "INTRODUCE_GUEST_2_TO_HOST",
-                    "preempted": "INTRODUCE_GUEST_2_TO_HOST",
+                    "succeeded": "INTRODUCE_HOST_TO_GUEST_2",
+                    "aborted": "INTRODUCE_HOST_TO_GUEST_2",
+                    "preempted": "INTRODUCE_HOST_TO_GUEST_2",
                 },
             )
 
-            # Check if host is sat where they are sat
-            # Look at the host
+            smach.StateMachine.add(
+                "INTRODUCE_HOST_TO_GUEST_2",
+                Introduce(guest_to_introduce="host", guest_to_introduce_to="guest2"),
+                transitions={
+                    "succeeded": "FIND_AND_LOOK_AT_GUEST_1",
+                    "failed": "FIND_AND_LOOK_AT_GUEST_1",
+                },
+            )
 
             smach.StateMachine.add(
-                "INTRODUCE_GUEST_2_TO_HOST",
-                Introduce(guest_to_introduce="guest2", guest_to_introduce_to="host"),
+                "FIND_AND_LOOK_AT_GUEST_1",
+                FindAndLookAt(
+                    guest_id="guest1" if not known_host else None,
+                    mask=["host"] if known_host else None,
+                ),
+                transitions={
+                    "succeeded": "INTRODUCE_GUEST_2_TO_GUEST_1",
+                    "failed": "INTRODUCE_GUEST_2_TO_GUEST_1",
+                },
+            )
+
+            smach.StateMachine.add(
+                "INTRODUCE_GUEST_2_TO_GUEST_1",
+                Introduce(guest_to_introduce="guest2", guest_to_introduce_to="guest1"),
                 transitions={
                     "succeeded": "LOOK_AT_WAITING_GUEST_2_2",
                     "failed": "LOOK_AT_WAITING_GUEST_2_2",
@@ -260,80 +287,12 @@ class Receptionist(smach.StateMachine):
                 "LOOK_AT_WAITING_GUEST_2_2",
                 PlayMotion(motion_name="look_very_left"),
                 transitions={
-                    "succeeded": "INTRODUCE_GUEST_HOST_TO_GUEST_2",
-                    "aborted": "INTRODUCE_GUEST_HOST_TO_GUEST_2",
-                    "preempted": "INTRODUCE_GUEST_HOST_TO_GUEST_2",
-                },
-            )
-
-            smach.StateMachine.add(
-                "INTRODUCE_GUEST_HOST_TO_GUEST_2",
-                Introduce(guest_to_introduce="host", guest_to_introduce_to="guest2"),
-                transitions={
-                    "succeeded": "SAY_WAIT_GUEST_2_SEATED_GUEST_1",
-                    "failed": "SAY_WAIT_GUEST_2_SEATED_GUEST_1",
-                },
-            )
-
-            smach.StateMachine.add(
-                "SAY_WAIT_GUEST_2_SEATED_GUEST_1",
-                Say(text="Can the seated guest look into my eyes please."),
-                transitions={
-                    "succeeded": "FIND_AND_LOOK_AT_GUEST_1",
-                    "preempted": "FIND_AND_LOOK_AT_GUEST_1",
-                    "aborted": "FIND_AND_LOOK_AT_GUEST_1",
-                },
-            )
-
-            smach.StateMachine.add(
-                "FIND_AND_LOOK_AT_GUEST_1",
-                FindAndLookAt(
-                    "guest1",
-                    [
-                        [0.0, 0.0],
-                        [-0.8, 0.0],
-                        [0.8, 0.0],
-                    ],
-                ),
-                transitions={
-                    "succeeded": "INTRODUCE_GUEST_2_TO_GUEST_1",
-                    "failed": "LOOK_AT_WAITING_GUEST_2_3",
-                },
-            )
-
-            # Check if host is sat where they are sat
-            # Look at the host
-
-            smach.StateMachine.add(
-                "LOOK_AT_WAITING_GUEST_2_3",
-                PlayMotion(motion_name="look_very_left"),
-                transitions={
-                    "succeeded": "INTRODUCE_GUEST_2_TO_GUEST_1",
-                    "aborted": "INTRODUCE_GUEST_2_TO_GUEST_1",
-                    "preempted": "INTRODUCE_GUEST_2_TO_GUEST_1",
-                },
-            )
-
-            smach.StateMachine.add(
-                "INTRODUCE_GUEST_2_TO_GUEST_1",
-                Introduce(guest_to_introduce="guest2", guest_to_introduce_to="guest1"),
-                transitions={
-                    "succeeded": "LOOK_AT_WAITING_GUEST_2_4",
-                    "failed": "LOOK_AT_WAITING_GUEST_2_4",
-                },
-            )
-
-            smach.StateMachine.add(
-                "LOOK_AT_WAITING_GUEST_2_4",
-                PlayMotion(motion_name="look_very_left"),
-                transitions={
                     "succeeded": "INTRODUCE_GUEST_1_TO_GUEST_2",
                     "aborted": "INTRODUCE_GUEST_1_TO_GUEST_2",
                     "preempted": "INTRODUCE_GUEST_1_TO_GUEST_2",
                 },
             )
 
-            # Look at guest 1
             smach.StateMachine.add(
                 "INTRODUCE_GUEST_1_TO_GUEST_2",
                 Introduce(guest_to_introduce="guest1", guest_to_introduce_to="guest2"),
@@ -471,84 +430,10 @@ class Receptionist(smach.StateMachine):
 
         smach.StateMachine.add(
             f"SAY_WAIT_GUEST_{guest_id}",
-            Say(
-                text="Please wait here on my left. Can the seated host look into my eyes please."
-            ),
+            Say(text="Please wait here on my left."),
             transitions={
-                "succeeded": f"FIND_AND_LOOK_AT_HOST_{guest_id}",
+                "succeeded": f"SWEEP_GUEST_{guest_id}",
                 "preempted": "failed",
                 "aborted": "failed",
             },
         )
-
-    @smach.cb_interface(input_keys=["person_detection"], output_keys=["pointstamped"])
-    def _compute_person_point(self, userdata):
-        """Computes the point to look at for the person.
-
-        Args:
-            userdata (dict): Userdata containing the guest data.
-
-        Returns:
-            PointStamped: The point to look at.
-        """
-        pass
-
-    def _detect_sweep_recognise_seat(
-        self,
-        expected_seated_guests: int,
-    ):
-
-        # Looks to a list of given points in the seating area and obtains the transformed
-        # pointclouds
-        smach.StateMachine.add(
-            f"SWEEP_{expected_seated_guests}",
-            PointCloudSweep(self.sweep_points),
-            transitions={
-                "succeeded": f"RUN_AND_PROCESS_DETECTIONS_{expected_seated_guests}",
-                "failed": "failed",
-            },
-        )
-
-        # For each pointcloud, runs the 3D masked cropped detection service, looking for chairs
-        # and people, and removes any duplicate detections, and return empty chairs by removing
-        # any chair detections that are over people.
-        smach.StateMachine.add(
-            f"RUN_AND_PROCESS_DETECTIONS_{expected_seated_guests}",
-            RunAndProcessDetections(seating_area=self.seat_area),
-            transitions={
-                "succeeded": f"RECOGNISE_{expected_seated_guests}",
-                "failed": "failed",
-            },
-        )
-
-        smach.StateMachine.add(
-            f"RECOGNISE_{expected_seated_guests}",
-            RecognisePeople(self.userdata.dataset),
-            transitions={
-                "succeeded": f"LOOK_AT_SEAT_{expected_seated_guests}",
-                "failed": "failed",
-            },
-        )
-
-        # Look at guest or host
-        smach.StateMachine.add(
-            f"GET_POINTSTAMPED_{expected_seated_guests}",
-            PointCloudSweep.GetPointStamped(),
-            transitions={
-                "succeeded": f"LOOK_AT_SEAT_{expected_seated_guests}",
-                "failed": "failed",
-            },
-        )
-
-        smach.StateMachine.add(
-            f"LOOK_AT_SEAT_{expected_seated_guests}",
-            LookToPoint(pointstamped=None),
-            transitions={
-                "succeeded": f"GET_POINTSTAMPED_{expected_seated_guests}",
-                "failed": "failed",
-            },
-        )
-
-        # Handle sofas.
-
-        # Seat guest.
