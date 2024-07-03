@@ -37,6 +37,18 @@ class FindAndLookAt(smach.StateMachine):
             self.guest_id = guest_id
             self.mask = mask
 
+        def _check_named_host(self, userdata):
+            for detection in userdata.matched_face_detections:
+                if detection.name == "host":
+                    print("YESSSSSSSSSSSSSSSSSSSSSSSSSSS")
+                    look_position = detection.point
+                    look_position.z = 1.25
+                    userdata.look_position = PointStamped(
+                        point=look_position, header=Header(frame_id="map")
+                    )
+                    return True
+            return False
+
         def execute(self, userdata):
             if self.guest_id is not None:
                 for detection in userdata.matched_face_detections:
@@ -47,23 +59,27 @@ class FindAndLookAt(smach.StateMachine):
                             point=look_position, header=Header(frame_id="map")
                         )
                         return "succeeded"
-            elif self.mask is not None:
-                for detection in userdata.matched_face_detections:
-                    if detection.name not in self.mask:
-                        look_position = detection.point
+            else:
+                named_guest = self._check_named_host(userdata)
+                if named_guest:
+                    return "succeeded"
+                elif self.mask is not None:
+                    for detection in userdata.matched_face_detections:
+                        if detection.name not in self.mask:
+                            look_position = detection.point
+                            look_position.z = 1.25
+                            userdata.look_position = PointStamped(
+                                point=look_position, header=Header(frame_id="map")
+                            )
+                            return "succeeded"
+                else:
+                    if len(userdata.matched_face_detections) > 0:
+                        look_position = userdata.matched_face_detections[0].point
                         look_position.z = 1.25
                         userdata.look_position = PointStamped(
-                            point=look_position, header=Header(frame_id="map")
+                            point=look_position,
+                            header=Header(frame_id="map"),
                         )
-                        return "succeeded"
-            else:
-                if len(userdata.matched_face_detections) > 0:
-                    look_position = userdata.matched_face_detections[0].point
-                    look_position.z = 1.25
-                    userdata.look_position = PointStamped(
-                        point=look_position,
-                        header=Header(frame_id="map"),
-                    )
                     return "succeeded"
             userdata.look_position = PointStamped()
             return "failed"
