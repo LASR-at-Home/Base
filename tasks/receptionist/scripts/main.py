@@ -25,6 +25,9 @@ if __name__ == "__main__":
         orientation=Quaternion(**seat_pose_param["orientation"]),
     )
 
+    sweep_points_param = rospy.get_param("/receptionist/sweep_points")
+    sweep_points = [Point(**point) for point in sweep_points_param]
+
     seat_area_param = rospy.get_param("/receptionist/seat_area")
 
     sofa_area_param = rospy.get_param("/receptionist/sofa_area")
@@ -42,31 +45,14 @@ if __name__ == "__main__":
         wait_pose,
         wait_area,
         seat_pose,
+        sweep_points,
         seat_area,
         sofa_area,
         {
             "name": "charlie",
             "drink": "wine",
             "dataset": "receptionist",
-            "detection": True,
-            "attributes": {
-                "has_hair": 0.5,
-                "hair_shape": "straight hair",
-                "hair_colour": "black hair",
-                "facial_hair": 0,
-                "earrings": 0,
-                "necklace": 0,
-                "necktie": 0,
-                # "height": "unknown",
-                "glasses": -0.5,
-                "hat": -0.5,
-                "dress": 0,
-                "top": 0.5,
-                "outwear": 0,
-                "max_dress": "unknown",
-                "max_top": "short sleeved top",
-                "max_outwear": "unknown",
-            },
+            "detection": False,
         },
         max_people_on_sofa=max_people_on_sofa,
     )

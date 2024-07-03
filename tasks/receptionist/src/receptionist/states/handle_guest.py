@@ -127,7 +127,7 @@ class HandleGuest(smach.StateMachine):
 
     class GetAttributesAndLearnFace(smach.StateMachine):
 
-        def __init__(self, guest_id: str):
+        def __init__(self, guest_id: str, learn_face: bool):
 
             super().__init__(
                 outcomes=[
@@ -177,10 +177,16 @@ class HandleGuest(smach.StateMachine):
                         GetGuestAttributes(guest_id),
                     )
 
-                    smach.Concurrence.add(
-                        "LEARN_FACE",
-                        ReceptionistLearnFaces(guest_id),
-                    )
+                    if learn_face:
+                        smach.Concurrence.add(
+                            "LEARN_FACE",
+                            ReceptionistLearnFaces(guest_id),
+                        )
+                    else:
+                        smach.Concurrence.add(
+                            "LEARN_FACE",
+                            smach.CBState(lambda ud: 'succeeded', outcomes=['succeeded', 'failed']),
+                        )
 
                 smach.StateMachine.add(
                     "GET_ATTRIBUTES_AND_LEARN_FACE",
@@ -193,7 +199,7 @@ class HandleGuest(smach.StateMachine):
                     },
                 )
 
-    def __init__(self, guest_id: str):
+    def __init__(self, guest_id: str, learn_face: bool):
         super().__init__(
             outcomes=[
                 "succeeded",
@@ -246,7 +252,7 @@ class HandleGuest(smach.StateMachine):
 
                 smach.Concurrence.add(
                     "GET_ATTRIBUTES_AND_LEARN_FACE",
-                    self.GetAttributesAndLearnFace(guest_id),
+                    self.GetAttributesAndLearnFace(guest_id, learn_face),
                 )
 
             smach.StateMachine.add(
@@ -264,7 +270,7 @@ class HandleGuest(smach.StateMachine):
             smach.StateMachine.add(
                 "SAY_VISION_FAILED",
                 Say(
-                    text="I'm sorry, I get your attributes or learn your face. I will try again."
+                    text="I'm sorry, I can't get your attributes or learn your face. Look into my eyes please."
                 ),
                 transitions={
                     "succeeded": "GET_ATTRIBUTES_AND_LEARN_FACE",
@@ -275,7 +281,7 @@ class HandleGuest(smach.StateMachine):
 
             smach.StateMachine.add(
                 "GET_ATTRIBUTES_AND_LEARN_FACE",
-                self.GetAttributesAndLearnFace(guest_id),
+                self.GetAttributesAndLearnFace(guest_id, learn_face),
                 transitions={
                     "succeeded": "succeeded",
                     "failed": "SAY_VISION_STILL_FAILED",
@@ -314,7 +320,7 @@ class HandleGuest(smach.StateMachine):
                     "preempted": "LEARN_FACE",
                 },
             )
-
+            
             smach.StateMachine.add(
                 "LEARN_FACE",
                 ReceptionistLearnFaces(guest_id),

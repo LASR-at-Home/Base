@@ -2,7 +2,8 @@ from typing import List, Tuple
 import smach
 import smach_ros
 
-from geometry_msgs.msg import Pose
+from lasr_vision_msgs.srv import Recognise
+from geometry_msgs.msg import Pose, Point
 from shapely.geometry import Polygon
 from lasr_skills import (
     GoToLocation,
@@ -17,6 +18,8 @@ from receptionist.states import (
     FindAndLookAt,
     HandleGuest,
     PointCloudSweep,
+    RunAndProcessDetections,
+    RecognisePeople,
 )
 
 
@@ -26,10 +29,11 @@ class Receptionist(smach.StateMachine):
         wait_pose: Pose,
         wait_area: Polygon,
         seat_pose: Pose,
+        sweep_points: List[Point],
         seat_area: Polygon,
         sofa_area: Polygon,
-        sweep_points: List[Tuple[float, float, float]],
         host_data: dict,
+        # sweep_points: List[Tuple[float, float, float]],
         max_people_on_sofa: int = 3,
         face_detection_confidence: float = 0.2,
     ):
@@ -38,7 +42,7 @@ class Receptionist(smach.StateMachine):
         self.wait_area = wait_area
         self.seat_pose = seat_pose
         self.seat_area = seat_area
-        self.sweep_points = sweep_points
+        # self.sweep_points = sweep_points
         with self:
             self.userdata.guest_data = {
                 "host": host_data,
@@ -81,7 +85,7 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "HANDLE_GUEST_1",
-                HandleGuest("guest1"),
+                HandleGuest("guest1", True),
                 transitions={
                     "succeeded": "SAY_FOLLOW_GUEST_1",
                     "failed": "SAY_FOLLOW_GUEST_1",
@@ -156,7 +160,7 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "SEAT_GUEST_1",
-                SeatGuest(seat_area, sofa_area, max_people_on_sofa),
+                SeatGuest(seat_area, sofa_area, sweep_points, max_people_on_sofa),
                 transitions={
                     "succeeded": "SAY_RETURN_WAITING_AREA",
                     "failed": "SAY_SEAT_GUEST_1_FAILED",
@@ -191,7 +195,7 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "HANDLE_GUEST_2",
-                HandleGuest("guest2"),
+                HandleGuest("guest2", False),
                 transitions={
                     "succeeded": "SAY_FOLLOW_GUEST_2",
                     "failed": "SAY_FOLLOW_GUEST_2",
@@ -341,7 +345,7 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "SEAT_GUEST_2",
-                SeatGuest(seat_area, sofa_area, max_people_on_sofa),
+                SeatGuest(seat_area, sofa_area, sweep_points, max_people_on_sofa),
                 transitions={
                     "succeeded": "SAY_GOODBYE",
                     "failed": "SAY_SEAT_GUEST_2_FAILED",
@@ -489,16 +493,62 @@ class Receptionist(smach.StateMachine):
         """
         pass
 
-    def _detect_and_sweep(
+    def _detect_sweep_recognise_seat(
         self,
         expected_seated_guests: int,
     ):
 
+        # Looks to a list of given points in the seating area and obtains the transformed
+        # pointclouds
         smach.StateMachine.add(
-            f"DETECT_AND_SWEEP_{expected_seated_guests}",
+            f"SWEEP_{expected_seated_guests}",
             PointCloudSweep(self.sweep_points),
             transitions={
                 "succeeded": f"RUN_AND_PROCESS_DETECTIONS_{expected_seated_guests}",
                 "failed": "failed",
             },
         )
+
+        # For each pointcloud, runs the 3D masked cropped detection service, looking for chairs
+        # and people, and removes any duplicate detections, and return empty chairs by removing
+        # any chair detections that are over people.
+        smach.StateMachine.add(
+            f"RUN_AND_PROCESS_DETECTIONS_{expected_seated_guests}",
+            RunAndProcessDetections(seating_area=self.seat_area),
+            transitions={
+                "succeeded": f"RECOGNISE_{expected_seated_guests}",
+                "failed": "failed",
+            },
+        )
+
+        smach.StateMachine.add(
+            f"RECOGNISE_{expected_seated_guests}",
+            RecognisePeople(self.userdata.dataset),
+            transitions={
+                "succeeded": f"LOOK_AT_SEAT_{expected_seated_guests}",
+                "failed": "failed",
+            },
+        )
+
+        # Look at guest or host
+        smach.StateMachine.add(
+            f"GET_POINTSTAMPED_{expected_seated_guests}",
+            PointCloudSweep.GetPointStamped(),
+            transitions={
+                "succeeded": f"LOOK_AT_SEAT_{expected_seated_guests}",
+                "failed": "failed",
+            },
+        )
+
+        smach.StateMachine.add(
+            f"LOOK_AT_SEAT_{expected_seated_guests}",
+            LookToPoint(pointstamped=None),
+            transitions={
+                "succeeded": f"GET_POINTSTAMPED_{expected_seated_guests}",
+                "failed": "failed",
+            },
+        )
+
+        # Handle sofas.
+
+        # Seat guest.
