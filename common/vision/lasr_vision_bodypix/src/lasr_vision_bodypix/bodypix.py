@@ -26,7 +26,7 @@ import rospkg
 # preload resnet 50 model so that it won't waste the time 
 # doing that in the middle of the task.
 loaded_models = {
-    "resnet50": load_model(BodyPixModelPaths.RESNET50_FLOAT_STRIDE_16)
+    "resnet50": load_model(download_model(BodyPixModelPaths.RESNET50_FLOAT_STRIDE_16))
 }
 r = rospkg.RosPack()
 
