@@ -44,18 +44,15 @@ class GetCroppedImage(smach.State):
         )
 
     def execute(self, userdata) -> str:
-        cropped_detection_req: CroppedDetectionRequest = CroppedDetectionRequest(
-            [
-                CDRequest(
-                    method=self.method,
-                    use_mask=self.use_mask,
-                    yolo_model=self.yolo_model,
-                    yolo_model_confidence=self.yolo_model_confidence,
-                    yolo_nms_threshold=self.yolo_nms_threshold,
-                    object_names=[self.object_name],
-                )
-            ]
-        )
+        req = CDRequest()
+        req.method=self.method
+        req.use_mask=self.use_mask
+        req.yolo_model=self.yolo_model
+        req.yolo_model_confidence=self.yolo_model_confidence
+        req.yolo_nms_threshold=self.yolo_nms_threshold
+        req.object_names=[self.object_name]
+        cropped_detection_req: CroppedDetectionRequest = CroppedDetectionRequest()
+        cropped_detection_req.requests = [req]
 
         try:
             cropped_detection_resp: CroppedDetectionResponse = self._cropped_detection(
