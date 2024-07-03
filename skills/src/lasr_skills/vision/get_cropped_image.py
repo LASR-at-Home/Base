@@ -12,6 +12,10 @@ from lasr_vision_msgs.srv import (
 
 
 class GetCroppedImage(smach.State):
+    """
+    This state calls CroppedDetection service instead of running on its own.
+    THis is a much faster version than the older one.
+    """
     def __init__(
         self,
         object_name: str,
