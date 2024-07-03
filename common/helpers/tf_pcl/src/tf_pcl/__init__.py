@@ -9,7 +9,9 @@ from sensor_msgs.msg import PointCloud2
 from geometry_msgs.msg import TransformStamped
 
 
-def pcl_transform(pcl: PointCloud2, transform: TransformStamped) -> PointCloud2:
+def pcl_transform(
+    pcl: PointCloud2, transform: TransformStamped, target_frame: str = "map"
+) -> PointCloud2:
     """Transforms a pointclound using a given transform message.
     Needed as the tf2 transform function returns an un-orderded pcl.
     Whilst we want an ordered pcl.
@@ -52,6 +54,6 @@ def pcl_transform(pcl: PointCloud2, transform: TransformStamped) -> PointCloud2:
     pcl_arr["z"] = transformed_pcl[2]
 
     transformed_pcl = rnp.point_cloud2.array_to_pointcloud2(
-        pcl_arr, stamp=pcl.header.stamp, frame_id=transform.child_frame_id
+        pcl_arr, stamp=pcl.header.stamp, frame_id=target_frame
     )
     return transformed_pcl
