@@ -66,7 +66,10 @@ class GetCroppedImage(smach.State):
             # self._debug_pub.publish(cropped_msg)
             userdata.img_msg = cropped_image
             return "succeeded"
-        except rospy.ServiceException as e:
+        # except rospy.ServiceException as e:
+        #     rospy.logerr(f"Service call failed: {e}")
+        #     return "failed"
+        except Exception as e:  # Got some errors that is not rospy.
             rospy.logerr(f"Service call failed: {e}")
             return "failed"
         

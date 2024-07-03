@@ -111,7 +111,7 @@ class AdjustCamera(smach.StateMachine):
                 "GET_IMAGE",
                 GetCroppedImage(
                     object_name="person",
-                    method="centered",
+                    method="closest",
                     use_mask=True,
                 ),
                 transitions={
