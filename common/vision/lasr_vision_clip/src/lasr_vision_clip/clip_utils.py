@@ -6,7 +6,6 @@ import cv2_img
 import numpy as np
 from copy import deepcopy
 from sentence_transformers import SentenceTransformer, util
-
 from sensor_msgs.msg import Image
 
 
@@ -41,12 +40,29 @@ def run_clip(
     txt = model.encode(labels)
     img = model.encode(img)
     with torch.no_grad():
-        torch
         cos_scores = util.cos_sim(img, txt)
     return cos_scores
 
 
-def encode_img(model: SentenceTransformer, img_msg: Image) -> np.ndarray:
+def load_face_model():
+    from transformers import AutoImageProcessor, AutoModel
+
+    processor = AutoImageProcessor.from_pretrained("google/vit-base-patch16-224")
+    model = AutoModel.from_pretrained("google/vit-base-patch16-224").to("cuda")
+
+    return processor, model
+
+
+def infer(image, processor, model):
+    image = cv2_img.msg_to_cv2_img(image)
+    inputs = processor(image, return_tensors="pt").to("cuda")
+    outputs = model(**inputs)
+    # squeeze and flatten
+    outputs.pooler_output = outputs.pooler_output.squeeze(0).flatten()
+    return outputs.pooler_output.detach().cpu().numpy()
+
+
+def encode_img(model, img_msg: Image) -> np.ndarray:
     """Run the CLIP model.
 
     Args:
@@ -56,8 +72,8 @@ def encode_img(model: SentenceTransformer, img_msg: Image) -> np.ndarray:
     Returns:
         np.ndarray: the image embedding
     """
-
-    return model.encode(cv2_img.msg_to_pillow_img(img_msg))
+    img = cv2_img.msg_to_cv2_img(img_msg)
+    return model(img.unsqueeze(0)).detach().numpy()
 
 
 def query_image_stream(

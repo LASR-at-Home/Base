@@ -158,6 +158,7 @@ include_directories(
 catkin_install_python(PROGRAMS
   nodes/vqa
   nodes/img_encoder.py
+  nodes/learn_face.py
   examples/encode_image_example.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
