@@ -70,7 +70,7 @@ class AdjustCamera(smach.StateMachine):
         self, 
         bodypix_model: str = "resnet50",
         bodypix_confidence: float = 0.7,
-        max_attempts=1000,
+        max_attempts=3,
         debug=False,
     ):
         smach.StateMachine.__init__(
