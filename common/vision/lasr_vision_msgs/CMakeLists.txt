@@ -48,6 +48,7 @@ add_message_files(
   Detection.msg
   Detection3D.msg
   BodyPixKeypoint.msg
+  BodyPixKeypointNormalized.msg
   BodyPixMask.msg
   CDRequest.msg
   CDResponse.msg

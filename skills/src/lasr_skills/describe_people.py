@@ -28,22 +28,12 @@ class DescribePeople(smach.StateMachine):
         )
 
         with self:
-            # conditional topic and crop method for flexibility
-            rgb_topic = (
-                "/xtion/rgb/image_raw"
-                if "tiago" in os.environ["ROS_MASTER_URI"]
-                else "/camera/image_raw"
-            )
-            crop_method = (
-                "closest" if "tiago" in os.environ["ROS_MASTER_URI"] else "centered"
-            )
             smach.StateMachine.add(
                 "GET_IMAGE",
                 GetCroppedImage(
                     object_name="person",
-                    crop_method=crop_method,
-                    rgb_topic=rgb_topic,
-                    use_mask=False,
+                    method="closest",
+                    use_mask=False,  # If true prediction can be very wrong!!!
                 ),
                 transitions={
                     "succeeded": "CONVERT_IMAGE",
@@ -251,3 +241,4 @@ class DescribePeople(smach.StateMachine):
             #         - mask
             userdata.people = people
             return "succeeded"
+        
