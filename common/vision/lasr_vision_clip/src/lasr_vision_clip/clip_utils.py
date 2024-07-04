@@ -46,6 +46,20 @@ def run_clip(
     return cos_scores
 
 
+def encode_img(model: SentenceTransformer, img_msg: Image) -> np.ndarray:
+    """Run the CLIP model.
+
+    Args:
+        model (Any): clip model loaded into memory
+        img (np.ndarray): the image to query
+
+    Returns:
+        np.ndarray: the image embedding
+    """
+
+    return model.encode(cv2_img.msg_to_pillow_img(img_msg))
+
+
 def query_image_stream(
     model: SentenceTransformer,
     answers: list[str],

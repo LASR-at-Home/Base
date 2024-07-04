@@ -68,6 +68,7 @@ add_service_files(
   DetectFaces.srv
   CheckKnownPeople.srv
   CroppedDetection.srv
+  ClipImageEncoder.srv
 )
 
 # Generate actions in the 'action' folder
