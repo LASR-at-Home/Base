@@ -66,10 +66,10 @@ class CheckSofa(smach.StateMachine):
             )
 
     def detections_cb(self, userdata, response):
-        if len(response.detections) == 0:
+        if len(response.responses[0].detections) == 0:
             return "aborted"
 
-        if len(response.detections) >= self.max_people_on_sofa:
+        if len(response.responses[0].detections) >= self.max_people_on_sofa:
             return "aborted"
 
         return "succeeded"

@@ -31,6 +31,7 @@ class RunAndProcessDetections(smach.StateMachine):
     def __init__(
         self,
         seating_area: ShapelyPolygon,
+        sofa_area: ShapelyPolygon,
         detection_service: str = "/vision/cropped_detection",
     ):
         smach.StateMachine.__init__(
@@ -48,6 +49,7 @@ class RunAndProcessDetections(smach.StateMachine):
             self._detection_service, CroppedDetection
         )
         self.seating_area = seating_area
+        self.sofa_area = sofa_area
 
         with self:
             smach.StateMachine.add(
@@ -55,6 +57,7 @@ class RunAndProcessDetections(smach.StateMachine):
                 self.RunDetections(
                     detection_client=self._detection_client,
                     seating_area=self.seating_area,
+                    sofa_area=self.sofa_area,
                     method="closest",
                     use_mask=True,
                     yolo_model="yolov8x-seg.pt",
@@ -90,6 +93,7 @@ class RunAndProcessDetections(smach.StateMachine):
             self,
             detection_client: rospy.ServiceProxy,
             seating_area: ShapelyPolygon,
+            sofa_area: ShapelyPolygon,
             method: str = "closest",
             use_mask: bool = True,
             yolo_model: str = "yolov8x-seg.pt",
@@ -107,6 +111,7 @@ class RunAndProcessDetections(smach.StateMachine):
 
             self.detector = detection_client
             self.seating_area = seating_area
+            self.sofa_area = sofa_area
             self.method = method
             self.use_mask = use_mask
             self.yolo_model = yolo_model
@@ -140,7 +145,17 @@ class RunAndProcessDetections(smach.StateMachine):
                                         )
                                         for point in self.seating_area.exterior.coords
                                     ]
-                                )
+                                ),
+                                Polygon(
+                                    points=[
+                                        Point(
+                                            x=point[0],
+                                            y=point[1],
+                                            z=0.0,
+                                        )
+                                        for point in self.sofa_area.exterior.coords
+                                    ]
+                                ),
                             ],
                             pointcloud=pointcloud,
                             object_names=self.object_names,
@@ -166,9 +181,9 @@ class RunAndProcessDetections(smach.StateMachine):
 
             self._dataset = "receptionist"
             self._recognise = rospy.ServiceProxy("/recognise", Recognise)
-            self._recognise.wait_for_service()
 
         def execute(self, userdata):
+            self._recognise.wait_for_service()
             try:
                 face_detections = []
                 for person_detection in userdata.people_detections:
@@ -225,7 +240,10 @@ class RunAndProcessDetections(smach.StateMachine):
                         rospy.loginfo(f"Processing detection: {detection.name}")
                         add_person = True
                         add_chair = True
-                        if detection.name == "chair":
+                        if (
+                            detection.name == "chair"
+                            and detection_set.polygon_ids[index] == 0
+                        ):
                             for added_chair in seat_detections:
                                 if (
                                     _euclidian_distance(
@@ -241,15 +259,15 @@ class RunAndProcessDetections(smach.StateMachine):
                                 )
                                 rospy.loginfo(f"Found chair at: {detection.point}")
                         elif detection.name == "person":
-                            # for added_person in people_detections:
-                            # if (
-                            #     _euclidian_distance(
-                            #         added_person[0].point,
-                            #         detection.point,
-                            #     )
-                            #     < self.closesness_distance
-                            # ):
-                            #     add_person = False
+                            for added_person in people_detections:
+                                if (
+                                    _euclidian_distance(
+                                        added_person[0].point,
+                                        detection.point,
+                                    )
+                                    < self.closesness_distance
+                                ):
+                                    add_person = False
                             if add_person:
                                 people_detections.append(
                                     (detection, detection_set.cropped_imgs[index])

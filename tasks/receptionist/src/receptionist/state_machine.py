@@ -117,7 +117,7 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "RUN_AND_PROCESS_DETECTIONS_GUEST_1",
-                RunAndProcessDetections(seat_area),
+                RunAndProcessDetections(seat_area, sofa_area),
                 transitions={
                     "succeeded": "FIND_AND_LOOK_AT_HOST_1",
                     "failed": "FIND_AND_LOOK_AT_HOST_1",
@@ -255,7 +255,7 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "RUN_AND_PROCESS_DETECTIONS_GUEST_2",
-                RunAndProcessDetections(seat_area),
+                RunAndProcessDetections(seat_area, sofa_area),
                 transitions={
                     "succeeded": "FIND_AND_LOOK_AT_HOST_2",
                     "failed": "FIND_AND_LOOK_AT_HOST_2",

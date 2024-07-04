@@ -37,8 +37,10 @@ if __name__ == "__main__":
     max_people_on_sofa = rospy.get_param("/receptionist/max_people_on_sofa")
 
     seat_area = Polygon(seat_area_param)
+    assert seat_area.is_valid
 
     sofa_area = Polygon(sofa_area_param)
+    assert sofa_area.is_valid
 
     sofa_point = Point(**sofa_point_param)
 
