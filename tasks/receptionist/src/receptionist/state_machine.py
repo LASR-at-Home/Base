@@ -39,9 +39,13 @@ class Receptionist(smach.StateMachine):
         host_data: dict,
         max_people_on_sofa: int = 3,
         face_detection_confidence: float = 0.2,
-        known_host: bool = False,
+        known_host: bool = True,
+        learn_guest_1: bool = True,
     ):
         smach.StateMachine.__init__(self, outcomes=["succeeded", "failed"])
+
+        assert known_host or learn_guest_1, "Must learn at least one guest"
+
         self.wait_pose = wait_pose
         self.wait_area = wait_area
         self.seat_pose = seat_pose
@@ -91,7 +95,7 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "HANDLE_GUEST_1",
-                HandleGuest("guest1", not known_host),
+                HandleGuest("guest1", learn_guest_1),
                 transitions={
                     "succeeded": "SAY_FOLLOW_GUEST_1",
                     "failed": "SAY_FOLLOW_GUEST_1",
@@ -302,8 +306,8 @@ class Receptionist(smach.StateMachine):
             smach.StateMachine.add(
                 "FIND_AND_LOOK_AT_GUEST_1",
                 FindAndLookAt(
-                    guest_id="guest1" if not known_host else None,
-                    mask=["host"] if known_host else None,
+                    guest_id="guest1" if learn_guest_1 else None,
+                    mask=["host"] if not learn_guest_1 else None,
                 ),
                 transitions={
                     "succeeded": "INTRODUCE_GUEST_2_TO_GUEST_1",

@@ -86,6 +86,7 @@ class PointCloudSweep(smach.StateMachine):
 
         def execute(self, userdata):
             try:
+                rospy.sleep(1.0)
                 pcl = rospy.wait_for_message(self.depth_topic, PointCloud2)
                 # transform pcl to map frame
                 trans = tf_buffer.lookup_transform(

@@ -21,6 +21,12 @@ from lasr_vision_msgs.srv import (
 )
 
 
+def _euclidian_distance(point1: Point, point2: Point):
+    return ((point1.x - point2.x) ** 2 + (point1.y - point2.y) ** 2) + (
+        (point1.z - point2.z) ** 2
+    ) ** 0.5
+
+
 class RunAndProcessDetections(smach.StateMachine):
     def __init__(
         self,
@@ -148,7 +154,9 @@ class RunAndProcessDetections(smach.StateMachine):
             return "succeeded"
 
     class RunFaceDetections(smach.State):
-        def __init__(self):
+        def __init__(
+            self,
+        ):
             smach.State.__init__(
                 self,
                 outcomes=["succeeded", "failed"],
@@ -160,9 +168,6 @@ class RunAndProcessDetections(smach.StateMachine):
             self._recognise = rospy.ServiceProxy("/recognise", Recognise)
             self._recognise.wait_for_service()
 
-            self._detect_faces = rospy.ServiceProxy("/detect_faces", DetectFaces)
-            self._detect_faces.wait_for_service()
-
         def execute(self, userdata):
             try:
                 face_detections = []
@@ -171,25 +176,16 @@ class RunAndProcessDetections(smach.StateMachine):
                         f"Running face detection on {person_detection[0].name}"
                     )
                     img_msg = person_detection[1]
-                    face_detection_result = self._detect_faces(img_msg)
-                    if len(face_detection_result.detections) > 0:
+                    recognise_result = self._recognise(img_msg, self._dataset, 0.2)
+                    if len(recognise_result.detections) > 0:
 
-                        recognise_result = self._recognise(img_msg, self._dataset, 0.2)
-                        if len(recognise_result.detections) > 0:
+                        face_detection = person_detection
+                        face_detection[0].name = recognise_result.detections[0].name
 
-                            face_detection = person_detection
-                            face_detection[0].name = recognise_result.detections[0].name
-                            face_detections.append(face_detection[0])
-                            rospy.loginfo(
-                                f"Recognised face as {recognise_result.detections[0].name}"
-                            )
-                        else:
-                            face_detection = person_detection
-                            face_detection[0].name = "unknown"
-                            face_detections.append(face_detection[0])
-                            rospy.loginfo("Detected face but could not recognise it.")
-                    else:
-                        rospy.loginfo("No face detected.")
+                        rospy.loginfo(
+                            f"Recognised face as {recognise_result.detections[0].name}"
+                        )
+                        face_detections.append(face_detection[0])
 
                 userdata.matched_face_detections = face_detections
             except rospy.ServiceException as e:
@@ -213,11 +209,6 @@ class RunAndProcessDetections(smach.StateMachine):
             self.closesness_distance = closesness_distance
             self.overlap_threshold = overlap_threshold
 
-        def _euclidian_distance(self, point1: Point, point2: Point):
-            return ((point1.x - point2.x) ** 2 + (point1.y - point2.y) ** 2) + (
-                (point1.z - point2.z) ** 2
-            ) ** 0.5
-
         def execute(self, userdata):
             try:
                 seat_detections = []
@@ -237,7 +228,7 @@ class RunAndProcessDetections(smach.StateMachine):
                         if detection.name == "chair":
                             for added_chair in seat_detections:
                                 if (
-                                    self._euclidian_distance(
+                                    _euclidian_distance(
                                         added_chair[0].point,
                                         detection.point,
                                     )
@@ -252,7 +243,7 @@ class RunAndProcessDetections(smach.StateMachine):
                         elif detection.name == "person":
                             # for added_person in people_detections:
                             # if (
-                            #     self._euclidian_distance(
+                            #     _euclidian_distance(
                             #         added_person[0].point,
                             #         detection.point,
                             #     )

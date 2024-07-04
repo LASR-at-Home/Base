@@ -32,14 +32,18 @@ if __name__ == "__main__":
 
     sofa_area_param = rospy.get_param("/receptionist/sofa_area")
 
+    sofa_point_param = rospy.get_param("/receptionist/sofa_point")
+
     max_people_on_sofa = rospy.get_param("/receptionist/max_people_on_sofa")
 
     seat_area = Polygon(seat_area_param)
 
     sofa_area = Polygon(sofa_area_param)
 
+    sofa_point = Point(**sofa_point_param)
+
     # exclude the sofa area from the seat area
-    seat_area = seat_area.difference(sofa_area)
+    # seat_area = seat_area.difference(sofa_area)
 
     receptionist = Receptionist(
         wait_pose,
@@ -48,6 +52,7 @@ if __name__ == "__main__":
         sweep_points,
         seat_area,
         sofa_area,
+        sofa_point,
         {
             "name": "charlie",
             "drink": "wine",
