@@ -25,7 +25,7 @@ class ReceptionistLearnFaces(smach.State):
     _dataset_size: int
     _learn_face: rospy.ServiceProxy
 
-    def __init__(self, guest_id: str, dataset_size: int = 10):
+    def __init__(self, guest_id: str, dataset_size: int = 20):
         smach.State.__init__(
             self, outcomes=["succeeded", "failed"], input_keys=["guest_data"]
         )
