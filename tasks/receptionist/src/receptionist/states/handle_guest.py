@@ -201,8 +201,9 @@ class HandleGuest(smach.StateMachine):
             smach.StateMachine.add(
                 "AdjustCamera",
                 AdjustCamera(
-                    max_attempts=3,
+                    max_attempts=5,
                     debug=False,
+                    init_state="u1m",
                 ),
                 transitions={
                     "finished": "HANDLE_GUEST",
