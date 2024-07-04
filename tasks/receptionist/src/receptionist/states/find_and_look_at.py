@@ -41,32 +41,38 @@ class FindAndLookAt(smach.StateMachine):
             if self.guest_id is not None:
                 for detection in userdata.matched_face_detections:
                     if detection.name == self.guest_id:
-                        look_position = detection.point
-                        look_position.z = 1.25
-                        userdata.look_position = PointStamped(
-                            point=look_position, header=Header(frame_id="map")
-                        )
-                        return "succeeded"
-            elif self.mask is not None:
-                for detection in userdata.matched_face_detections:
-                    if detection.name not in self.mask:
-                        look_position = detection.point
-                        look_position.z = 1.25
-                        userdata.look_position = PointStamped(
-                            point=look_position, header=Header(frame_id="map")
-                        )
+                        self._set_userdata_look_position(userdata, detection)
                         return "succeeded"
             else:
-                if len(userdata.matched_face_detections) > 0:
-                    look_position = userdata.matched_face_detections[0].point
-                    look_position.z = 1.25
-                    userdata.look_position = PointStamped(
-                        point=look_position,
-                        header=Header(frame_id="map"),
-                    )
+                named_host = self._check_named_host(userdata)
+                if named_host:
                     return "succeeded"
+                elif self.mask is not None:
+                    for detection in userdata.matched_face_detections:
+                        if detection.name not in self.mask:
+                            self._set_userdata_look_position(userdata, detection)
+                            return "succeeded"
+                else:
+                    if len(userdata.matched_face_detections) > 0:
+                        self._set_userdata_look_position(userdata, userdata.matched_face_detections[0])
+                        return "succeeded"
             userdata.look_position = PointStamped()
             return "failed"
+        
+        def _check_named_host(self, userdata):
+            for detection in userdata.matched_face_detections:
+                if detection.name == "host":
+                    self._set_userdata_look_position(userdata, detection)
+                    return True
+            return False
+
+        def _set_userdata_look_position(self, userdata, detection):
+            look_position = detection.point
+            look_position.z = 1.25
+            userdata.look_position = PointStamped(
+                point=look_position, header=Header(frame_id="map")
+            )
+
 
     def __init__(
         self, guest_id: Union[None, str] = None, mask: Union[None, List[str]] = None

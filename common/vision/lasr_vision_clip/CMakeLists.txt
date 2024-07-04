@@ -19,7 +19,7 @@ find_package(catkin REQUIRED catkin_virtualenv)
 catkin_python_setup()
 catkin_generate_virtualenv(
   INPUT_REQUIREMENTS requirements.in
-  PYTHON_INTERPRETER python3.10
+  PYTHON_INTERPRETER python3.9
 )
 ################################################
 ## Declare ROS messages, services and actions ##
@@ -157,6 +157,8 @@ include_directories(
 ## in contrast to setup.py, you can choose the destination
 catkin_install_python(PROGRAMS
   nodes/vqa
+  nodes/img_encoder.py
+  examples/encode_image_example.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

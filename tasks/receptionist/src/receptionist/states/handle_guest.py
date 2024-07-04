@@ -44,11 +44,11 @@ class HandleGuest(smach.StateMachine):
                 smach.StateMachine.add(
                     f"REPEAT_GET_NAME_AND_DRINK_GUEST_{guest_id}",
                     AskAndListen(
-                        "Sorry, I didn't get that, consider raising your voice. What is your name and favourite drink?"
+                        "Sorry, I didn't get that, please raise your voice. What is your name and favourite drink?"
                     ),
                     transitions={
                         "succeeded": f"REPEAT_PARSE_NAME_AND_DRINK_GUEST_{guest_id}",
-                        "failed": "SAY_CONTINUE",
+                        "failed": "succeeded",
                     },
                 )
 
@@ -57,9 +57,9 @@ class HandleGuest(smach.StateMachine):
                     ParseNameAndDrink(guest_id),
                     transitions={
                         "succeeded": "succeeded",
-                        "failed": "SAY_CONTINUE",
-                        "failed_name": "SAY_CONTINUE",
-                        "failed_drink": "SAY_CONTINUE",
+                        "failed": "succeeded",
+                        "failed_name": "succeeded",
+                        "failed_drink": "succeeded",
                     },
                     remapping={"guest_transcription": "transcribed_speech"},
                 )
@@ -73,7 +73,7 @@ class HandleGuest(smach.StateMachine):
                     AskAndListen("Sorry, I didn't get your name. What is your name?"),
                     transitions={
                         "succeeded": f"REPEAT_PARSE_NAME_GUEST_{guest_id}",
-                        "failed": "SAY_CONTINUE",
+                        "failed": "succeeded",
                     },
                 )
 
@@ -82,7 +82,7 @@ class HandleGuest(smach.StateMachine):
                     ParseTranscribedInfo(guest_id, "name"),
                     transitions={
                         "succeeded": "succeeded",
-                        "failed": "SAY_CONTINUE",
+                        "failed": "succeeded",
                     },
                     remapping={"guest_transcription": "transcribed_speech"},
                 )
@@ -98,7 +98,7 @@ class HandleGuest(smach.StateMachine):
                     ),
                     transitions={
                         "succeeded": f"REPEAT_PARSE_DRINK_GUEST_{guest_id}",
-                        "failed": "SAY_CONTINUE",
+                        "failed": "succeeded",
                     },
                 )
 
@@ -107,22 +107,9 @@ class HandleGuest(smach.StateMachine):
                     ParseTranscribedInfo(guest_id, "drink"),
                     transitions={
                         "succeeded": "succeeded",
-                        "failed": "SAY_CONTINUE",
+                        "failed": "succeeded",
                     },
                     remapping={"guest_transcription": "transcribed_speech"},
-                )
-
-                """
-                Recovery if nothing was recognised (twice)
-                """
-                smach.StateMachine.add(
-                    "SAY_CONTINUE",
-                    Say(text="Sorry, I didn't get that. I will carry on."),
-                    transitions={
-                        "succeeded": "succeeded",
-                        "aborted": "succeeded",
-                        "preempted": "succeeded",
-                    },
                 )
 
     class GetAttributesAndLearnFace(smach.StateMachine):
@@ -185,7 +172,9 @@ class HandleGuest(smach.StateMachine):
                     else:
                         smach.Concurrence.add(
                             "LEARN_FACE",
-                            smach.CBState(lambda ud: 'succeeded', outcomes=['succeeded', 'failed']),
+                            smach.CBState(
+                                lambda ud: "succeeded", outcomes=["succeeded", "failed"]
+                            ),
                         )
 
                 smach.StateMachine.add(
@@ -216,9 +205,9 @@ class HandleGuest(smach.StateMachine):
                     debug=False,
                 ),
                 transitions={
-                    "finished": "HANDLE_GUEST", 
-                    "failed": "HANDLE_GUEST", 
-                    "truncated": "HANDLE_GUEST"
+                    "finished": "HANDLE_GUEST",
+                    "failed": "HANDLE_GUEST",
+                    "truncated": "HANDLE_GUEST",
                 },
             )
 
@@ -326,14 +315,16 @@ class HandleGuest(smach.StateMachine):
 
             smach.StateMachine.add(
                 "SAY_LEARN_FACE_FAILED",
-                Say(text="I'm sorry, I couldn't learn your face. Make sure you're looking into my eyes."),
+                Say(
+                    text="I'm sorry, I couldn't learn your face. Make sure you're looking into my eyes."
+                ),
                 transitions={
                     "succeeded": "LEARN_FACE",
                     "aborted": "LEARN_FACE",
                     "preempted": "LEARN_FACE",
                 },
             )
-            
+
             smach.StateMachine.add(
                 "LEARN_FACE",
                 ReceptionistLearnFaces(guest_id),
