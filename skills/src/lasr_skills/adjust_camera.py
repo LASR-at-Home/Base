@@ -182,7 +182,6 @@ class AdjustCamera(smach.StateMachine):
             self.counter = 0
             
         def execute(self, userdata):
-            
             req = BodyPixKeypointDetectionRequest()
             req.image_raw = userdata.img_msg
             req.dataset = self._bodypix_model
@@ -259,11 +258,11 @@ class AdjustCamera(smach.StateMachine):
                 # if y at upper 1/3: wonder why no shoulders but never mind in this case
                 else:
                     pass
-                # if x at left 1/3 or left shoulder dissappear, move left 1 step
-                if eyes_middle[0] <= 1/3:
+                # if x at left 2/7 or left shoulder dissappear, move left 1 step
+                if eyes_middle[0] <= 2/7:
                     self.position[1] -= 1
-                # if x at right 1/3 or right shoulder dissappear, move right 1 step
-                elif eyes_middle[0] >= 2/3:
+                # if x at right 2/7 or right shoulder dissappear, move right 1 step
+                elif eyes_middle[0] >= 5/7:
                     self.position[1] += 1
                 pass
 
@@ -275,11 +274,11 @@ class AdjustCamera(smach.StateMachine):
                 # if y at upper 1/4: up move 1 step
                 elif shoulders_middle[1] <= 1/4:
                     self.position[0] += 1
-                # if x at left 1/3, move left 1 step
-                if shoulders_middle[0] <= 1/3:
+                # if x at left 2/7, move left 1 step
+                if shoulders_middle[0] <= 2/7:
                     self.position[1] -= 1
-                # if x at right 1/3, move right 1 step
-                elif shoulders_middle[0] >= 2/3:
+                # if x at right 2/7, move right 1 step
+                elif shoulders_middle[0] >= 5/7:
                     self.position[1] += 1
                 pass
 
@@ -304,14 +303,14 @@ class AdjustCamera(smach.StateMachine):
                     elif very_middle[1] <= 1/4:
                         self.position[0] += 1
                         print('if y at upper 1/3: up move 1 step.')
-                # if x at left 1/3, move left 1 step
-                if very_middle[0] <= 1/3:
+                # if x at left 2/7, move left 1 step
+                if very_middle[0] <= 2/7:
                     self.position[1] -= 1
-                    print('if x at left 1/3, move left 1 step.')
-                # if x at right 1/3, move right 1 step
-                elif very_middle[0] >= 2/3:
+                    print('if x at left 2/7, move left 1 step.')
+                # if x at right 2/7, move right 1 step
+                elif very_middle[0] >= 5/7:
                     self.position[1] += 1
-                    print('if x at right 1/3, move right 1 step.')
+                    print('if x at right 2/7, move right 1 step.')
                 pass
 
             # keep the position in the range.
