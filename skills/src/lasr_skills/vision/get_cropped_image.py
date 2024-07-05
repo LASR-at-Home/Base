@@ -16,6 +16,7 @@ class GetCroppedImage(smach.State):
     This state calls CroppedDetection service instead of running on its own.
     THis is a much faster version than the older one.
     """
+
     def __init__(
         self,
         object_name: str,
@@ -45,12 +46,12 @@ class GetCroppedImage(smach.State):
 
     def execute(self, userdata) -> str:
         req = CDRequest()
-        req.method=self.method
-        req.use_mask=self.use_mask
-        req.yolo_model=self.yolo_model
-        req.yolo_model_confidence=self.yolo_model_confidence
-        req.yolo_nms_threshold=self.yolo_nms_threshold
-        req.object_names=[self.object_name]
+        req.method = self.method
+        req.use_mask = self.use_mask
+        req.yolo_model = self.yolo_model
+        req.yolo_model_confidence = self.yolo_model_confidence
+        req.yolo_nms_threshold = self.yolo_nms_threshold
+        req.object_names = [self.object_name]
         cropped_detection_req: CroppedDetectionRequest = CroppedDetectionRequest()
         cropped_detection_req.requests = [req]
 
@@ -69,7 +70,7 @@ class GetCroppedImage(smach.State):
         except Exception as e:  # Got some errors that is not rospy.
             rospy.logerr(f"Service call failed: {e}")
             return "failed"
-        
+
 
 if __name__ == "__main__":
     rospy.init_node("get_cropped_image")

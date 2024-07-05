@@ -241,4 +241,3 @@ class DescribePeople(smach.StateMachine):
             #         - mask
             userdata.people = people
             return "succeeded"
-        
