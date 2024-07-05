@@ -3,10 +3,11 @@ from typing import List, Tuple
 import numpy as np
 import cv2
 import rospy
-
+from shapely.validation import explain_validity
 from sensor_msgs.msg import Image, PointCloud2
 from geometry_msgs.msg import Point, PoseWithCovarianceStamped, Polygon
 from shapely.geometry.polygon import Polygon as ShapelyPolygon
+from shapely.geometry.point import Point as ShapelyPoint
 
 from lasr_vision_msgs.msg import (
     Detection,
@@ -57,9 +58,6 @@ def _2d_bbox_crop(
         y_to_compare = image.shape[0]
     else:
         raise ValueError(f"Invalid 2D crop_method: {crop_method}")
-
-    if len(detections) == 0:
-        raise ValueError("No detections found")
 
     distances = [
         np.sqrt((x_to_compare - det.xywh[0]) ** 2 + (y_to_compare - det.xywh[1]) ** 2)
@@ -120,12 +118,6 @@ def _2d_mask_crop(
     else:
         raise ValueError(f"Invalid 2D crop_method: {crop_method}")
 
-    if len(detections) == 0:
-        raise ValueError("No detections found")
-
-    if len(detections[0].xyseg) == 0:
-        raise ValueError("No segmentation found")
-
     distances = [
         np.sqrt((x_to_compare - det.xywh[0]) ** 2 + (y_to_compare - det.xywh[1]) ** 2)
         for det in detections
@@ -170,9 +162,6 @@ def _3d_bbox_crop(
     Returns:
         List[np.ndarray]: List of cropped images.
     """
-
-    if len(detections) == 0:
-        raise ValueError("No detections found")
 
     distances = [
         np.sqrt(
@@ -228,8 +217,6 @@ def _3d_mask_crop(
         Tuple[List[np.ndarray], np.ndarray, List[Detection3D]]: Tuple of cropped images, the combined mask, and the detections.
     """
 
-    if len(detections) == 0:
-        raise ValueError("No detections found")
     distances = [
         np.sqrt(
             (robot_location.x - det.point.x) ** 2
@@ -288,10 +275,20 @@ def filter_detections_by_polygon(
     filtered_detections: List[Detection3D] = []
     for index, polygon in enumerate(polygons):
         area_polygon = ShapelyPolygon([(point.x, point.y) for point in polygon.points])
+        print(f"Area polygon: {area_polygon}")
+        print(f"Polygon Area: {area_polygon.area}")
+        print(f"Polygon is valid: {area_polygon.is_valid}")
+        print(explain_validity(area_polygon))
         for detection in detections:
-            if area_polygon.contains(Point(detection.point.x, detection.point.y)):
+            print(f"Point: {detection.point}")
+            if area_polygon.contains(
+                ShapelyPoint(detection.point.x, detection.point.y)
+            ):
+                print(f"Detection {detection} is within polygon {index}")
                 detection_polygon_ids.append(index)
                 filtered_detections.append(detection)
+            else:
+                print(f"Detection {detection} is not within polygon {index}")
 
     return filtered_detections, detection_polygon_ids
 
@@ -391,7 +388,7 @@ def process_single_detection_request(
             cropped_images, detections, distances = _3d_bbox_crop(
                 pointcloud_rgb,
                 request.method,
-                request.robot_location,
+                robot_location,
                 detections,
             )
         response.detections_3d = detections
@@ -406,6 +403,7 @@ def process_single_detection_request(
     ]
 
     debug_publisher = rospy.Publisher(debug_topic, Image, queue_size=10)
+    closest_pub = rospy.Publisher(debug_topic + "_closest", Image, queue_size=10)
     combined_mask_debug_publisher = rospy.Publisher(
         debug_topic + "_mask", Image, queue_size=10
     )
@@ -414,36 +412,44 @@ def process_single_detection_request(
     if combined_mask is not None:
         # Add distances to the image
         for i, (dist, detect) in enumerate(zip(distances, detections)):
-            cv2.putText(
-                combined_mask,
-                f"Dist: {round(dist, 2)}",
-                (detect.xywh[0], detect.xywh[1]),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                1,
-                (0, 255, 0),
-                2,
-                cv2.LINE_AA,
-            )
+            continue
+            # cv2.putText(
+            #     combined_mask,
+            #     f"Dist: {round(dist, 2)}",
+            #     (detect.xywh[0], detect.xywh[1]),
+            #     cv2.FONT_HERSHEY_SIMPLEX,
+            #     1,
+            #     (0, 255, 0),
+            #     2,
+            #     cv2.LINE_AA,
+            # )
         combined_mask_debug_publisher.publish(cv2_img_to_msg(combined_mask))
         response.masked_img = cv2_img_to_msg(combined_mask)
 
+    try:
+        closest_pub.publish(cv2_img_to_msg(cropped_images[0]))
+    except IndexError:
+        rospy.logwarn("No detections found")
     response.distances = distances
+    try:
+        print("...")
+        # debug_image = np.hstack(cropped_images)
+        # # Add distances to the image
+        # for i, dist in enumerate(distances):
+        #     cv2.putText(
+        #         debug_image,
+        #         f"Dist: {round(dist, 2)}",
+        #         (i * cropped_images[0].shape[0] + 150, 50),
+        #         cv2.FONT_HERSHEY_SIMPLEX,
+        #         1,
+        #         (0, 255, 0),
+        #         2,
+        #         cv2.LINE_AA,
+        #     )
 
-    debug_image = np.hstack(cropped_images)
-    # Add distances to the image
-    for i, dist in enumerate(distances):
-        cv2.putText(
-            debug_image,
-            f"Dist: {round(dist, 2)}",
-            (i * cropped_images[0].shape[0] + 150, 50),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            1,
-            (0, 255, 0),
-            2,
-            cv2.LINE_AA,
-        )
-
-    debug_publisher.publish(cv2_img_to_msg(debug_image))
+        # debug_publisher.publish(cv2_img_to_msg(debug_image))
+    except ValueError:
+        rospy.logwarn("No detections found")
 
     return response
 

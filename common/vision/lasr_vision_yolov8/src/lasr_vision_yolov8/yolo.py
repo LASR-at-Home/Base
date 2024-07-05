@@ -146,6 +146,9 @@ def detect_3d(
                 width=request.pcl.width,
             )
             detection.point = Point(*centroid)
+            rospy.loginfo(
+                f"Detected point: {detection.point} of object {detection.name}"
+            )
 
         if debug_point_publisher is not None:
             markers.create_and_publish_marker(

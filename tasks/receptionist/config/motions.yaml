@@ -5,6 +5,11 @@ play_motion:
       points:
       - positions: [0.5, 0.0]
         time_from_start: 0.0
+    look_very_left:
+      joints: [head_1_joint, head_2_joint]
+      points:
+      - positions: [1.5, 0.0]
+        time_from_start: 0.0
     look_centre:
       joints: [head_1_joint, head_2_joint]
       points:
@@ -14,6 +19,11 @@ play_motion:
       joints: [head_1_joint, head_2_joint]
       points:
       - positions: [-0.5, 0.0]
+        time_from_start: 0.0
+    look_very_right:
+      joints: [head_1_joint, head_2_joint]
+      points:
+      - positions: [-1.5, 0.0]
         time_from_start: 0.0
     look_down_left:
       joints: [head_1_joint, head_2_joint]
