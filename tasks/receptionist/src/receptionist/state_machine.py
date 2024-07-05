@@ -15,14 +15,7 @@ from lasr_skills import (
 )
 from std_msgs.msg import Header
 from receptionist.states import (
-    Introduce,
-    SeatGuest,
-    FindAndLookAt,
     HandleGuest,
-    PointCloudSweep,
-    RunAndProcessDetections,
-    RecognisePeople,
-    CheckSofa,
     IntroduceAndSeatGuest,
 )
 
@@ -33,7 +26,7 @@ class Receptionist(smach.StateMachine):
         wait_pose: Pose,
         wait_area: Polygon,
         seat_pose: Pose,
-        sweep_points: List[Point],
+        search_motions: List[str],
         seat_area: Polygon,
         sofa_area: Polygon,
         sofa_point: Point,
@@ -51,6 +44,7 @@ class Receptionist(smach.StateMachine):
         self.wait_area = wait_area
         self.seat_pose = seat_pose
         self.seat_area = seat_area
+
         # self.sweep_points = sweep_points
         with self:
             self.userdata.guest_data = {
@@ -114,6 +108,7 @@ class Receptionist(smach.StateMachine):
                     sofa_area,
                     sofa_point,
                     max_people_on_sofa,
+                    search_motions,
                 ),
                 transitions={
                     "succeeded": "SAY_RETURN_WAITING_AREA",
