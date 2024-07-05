@@ -4,12 +4,22 @@ from receptionist.state_machine import Receptionist
 import smach
 import smach_ros
 
-from geometry_msgs.msg import Pose, Point, Quaternion
-from shapely.geometry import Polygon
+from geometry_msgs.msg import Pose, Point, Quaternion, Polygon, PolygonStamped
+from shapely.geometry import Polygon as ShapelyPolygon
+
+from std_msgs.msg import Header
 
 if __name__ == "__main__":
     rospy.init_node("receptionist_robocup")
     wait_pose_param = rospy.get_param("/receptionist/wait_pose")
+
+    seat_area_publisher = rospy.Publisher(
+        "/receptionist/seat_area", PolygonStamped, queue_size=1, latch=True
+    )
+
+    sofa_area_publisher = rospy.Publisher(
+        "/receptionist/sofa_area", PolygonStamped, queue_size=1, latch=True
+    )
 
     wait_pose = Pose(
         position=Point(**wait_pose_param["position"]),
@@ -17,7 +27,7 @@ if __name__ == "__main__":
     )
 
     wait_area_param = rospy.get_param("/receptionist/wait_area")
-    wait_area = Polygon(wait_area_param)
+    wait_area = ShapelyPolygon(wait_area_param)
 
     seat_pose_param = rospy.get_param("/receptionist/seat_pose")
     seat_pose = Pose(
@@ -32,14 +42,39 @@ if __name__ == "__main__":
 
     sofa_area_param = rospy.get_param("/receptionist/sofa_area")
 
+    sofa_point_param = rospy.get_param("/receptionist/sofa_point")
+
     max_people_on_sofa = rospy.get_param("/receptionist/max_people_on_sofa")
 
-    seat_area = Polygon(seat_area_param)
+    seat_area = ShapelyPolygon(seat_area_param)
+    assert seat_area.is_valid
 
-    sofa_area = Polygon(sofa_area_param)
+    sofa_area = ShapelyPolygon(sofa_area_param)
+    assert sofa_area.is_valid
+
+    sofa_point = Point(**sofa_point_param)
 
     # exclude the sofa area from the seat area
     seat_area = seat_area.difference(sofa_area)
+
+    seat_area_publisher.publish(
+        PolygonStamped(
+            polygon=Polygon(
+                points=[Point(x=x, y=y, z=0.0) for (x, y) in seat_area.exterior.coords]
+            ),
+            header=Header(frame_id="map"),
+        )
+    )
+    sofa_area_publisher.publish(
+        PolygonStamped(
+            polygon=Polygon(
+                points=[Point(x=x, y=y, z=0.0) for (x, y) in sofa_area.exterior.coords]
+            ),
+            header=Header(frame_id="map"),
+        )
+    )
+
+    assert seat_area.is_valid
 
     receptionist = Receptionist(
         wait_pose,
@@ -48,6 +83,7 @@ if __name__ == "__main__":
         sweep_points,
         seat_area,
         sofa_area,
+        sofa_point,
         {
             "name": "charlie",
             "drink": "wine",

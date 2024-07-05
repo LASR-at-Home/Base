@@ -287,6 +287,8 @@ def filter_detections_by_polygon(
                 print(f"Detection {detection} is within polygon {index}")
                 detection_polygon_ids.append(index)
                 filtered_detections.append(detection)
+            else:
+                print(f"Detection {detection} is not within polygon {index}")
 
     return filtered_detections, detection_polygon_ids
 
@@ -410,16 +412,17 @@ def process_single_detection_request(
     if combined_mask is not None:
         # Add distances to the image
         for i, (dist, detect) in enumerate(zip(distances, detections)):
-            cv2.putText(
-                combined_mask,
-                f"Dist: {round(dist, 2)}",
-                (detect.xywh[0], detect.xywh[1]),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                1,
-                (0, 255, 0),
-                2,
-                cv2.LINE_AA,
-            )
+            continue
+            # cv2.putText(
+            #     combined_mask,
+            #     f"Dist: {round(dist, 2)}",
+            #     (detect.xywh[0], detect.xywh[1]),
+            #     cv2.FONT_HERSHEY_SIMPLEX,
+            #     1,
+            #     (0, 255, 0),
+            #     2,
+            #     cv2.LINE_AA,
+            # )
         combined_mask_debug_publisher.publish(cv2_img_to_msg(combined_mask))
         response.masked_img = cv2_img_to_msg(combined_mask)
 
@@ -429,21 +432,22 @@ def process_single_detection_request(
         rospy.logwarn("No detections found")
     response.distances = distances
     try:
-        debug_image = np.hstack(cropped_images)
-        # Add distances to the image
-        for i, dist in enumerate(distances):
-            cv2.putText(
-                debug_image,
-                f"Dist: {round(dist, 2)}",
-                (i * cropped_images[0].shape[0] + 150, 50),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                1,
-                (0, 255, 0),
-                2,
-                cv2.LINE_AA,
-            )
+        print("...")
+        # debug_image = np.hstack(cropped_images)
+        # # Add distances to the image
+        # for i, dist in enumerate(distances):
+        #     cv2.putText(
+        #         debug_image,
+        #         f"Dist: {round(dist, 2)}",
+        #         (i * cropped_images[0].shape[0] + 150, 50),
+        #         cv2.FONT_HERSHEY_SIMPLEX,
+        #         1,
+        #         (0, 255, 0),
+        #         2,
+        #         cv2.LINE_AA,
+        #     )
 
-        debug_publisher.publish(cv2_img_to_msg(debug_image))
+        # debug_publisher.publish(cv2_img_to_msg(debug_image))
     except ValueError:
         rospy.logwarn("No detections found")
 

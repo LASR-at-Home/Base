@@ -1,2 +1,4 @@
+facenet-pytorch
 sentence-transformers
 opencv-python
+opencv-contrib-python

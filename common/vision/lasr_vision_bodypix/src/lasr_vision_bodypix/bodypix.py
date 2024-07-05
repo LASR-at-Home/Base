@@ -23,7 +23,7 @@ from lasr_vision_msgs.srv import (
 import rospkg
 
 # model cache
-# preload resnet 50 model so that it won't waste the time 
+# preload resnet 50 model so that it won't waste the time
 # doing that in the middle of the task.
 loaded_models = {
     "resnet50": load_model(download_model(BodyPixModelPaths.RESNET50_FLOAT_STRIDE_16))
@@ -171,7 +171,11 @@ def detect_keypoints(
                 BodyPixKeypoint(keypoint_name=keypoint.part, x=x, y=y)
             )
             detected_keypoints_normalized.append(
-                BodyPixKeypointNormalized(keypoint_name=keypoint.part, x=float(x)/mask.shape[1], y=float(y)/mask.shape[0])
+                BodyPixKeypointNormalized(
+                    keypoint_name=keypoint.part,
+                    x=float(x) / mask.shape[1],
+                    y=float(y) / mask.shape[0],
+                )
             )
 
     # publish to debug topic
@@ -201,4 +205,6 @@ def detect_keypoints(
             )
         debug_publisher.publish(cv2_img.cv2_img_to_msg(coloured_mask))
 
-    return BodyPixKeypointDetectionResponse(keypoints=detected_keypoints, normalized_keypoints=detected_keypoints_normalized)
+    return BodyPixKeypointDetectionResponse(
+        keypoints=detected_keypoints, normalized_keypoints=detected_keypoints_normalized
+    )

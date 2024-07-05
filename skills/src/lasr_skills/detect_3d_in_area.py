@@ -8,6 +8,7 @@ from shapely.geometry import Point
 from shapely.geometry.polygon import Polygon as ShapelyPolygon
 from std_msgs.msg import Header
 
+
 class Detect3DInArea(smach.StateMachine):
     class FilterDetections(smach.State):
         def __init__(
@@ -35,7 +36,9 @@ class Detect3DInArea(smach.StateMachine):
                 Point32(x=point[0], y=point[1], z=0.0)
                 for point in self.area_polygon.exterior.coords
             ]
-            self.debug_publisher.publish(PolygonStamped(polygon=polygon_msg, header=Header(frame_id="map")))
+            self.debug_publisher.publish(
+                PolygonStamped(polygon=polygon_msg, header=Header(frame_id="map"))
+            )
             satisfied_points = [
                 self.area_polygon.contains(Point(object.point.x, object.point.y))
                 for object in detected_objects
