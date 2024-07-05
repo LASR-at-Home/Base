@@ -7,6 +7,9 @@ import rospy
 import smach
 from smach import UserData
 from typing import List, Dict, Any
+from receptionist.states import (
+    SpeechRecovery
+)
 
 class GetNameAndDrink(smach.StateMachine):
     class ParseNameAndDrink(smach.State):
@@ -119,11 +122,13 @@ class GetNameAndDrink(smach.StateMachine):
     def __init__(
             self,
             guest_id: str,
+            last_resort: bool,
             param_key: str = "/receptionist/priors",
         ):
 
         self._guest_id = guest_id
         self._param_key = param_key
+        self._last_resort = last_resort
 
         smach.StateMachine.__init__(
             self,
@@ -137,6 +142,11 @@ class GetNameAndDrink(smach.StateMachine):
             smach.StateMachine.add(
                 "PARSE_NAME_AND_DRINK",
                 self.ParseNameAndDrink(guest_id=self._guest_id, param_key=self._param_key),
+                transitions={"succeeded": "succeeded", "failed": "SPEECH_RECOVERY"},
+            )
+            smach.StateMachine.add(
+                "SPEECH_RECOVERY",
+                SpeechRecovery(self._guest_id, self._last_resort),
                 transitions={"succeeded": "succeeded", "failed": "POST_RECOVERY_DECISION"},
             )
             smach.StateMachine.add(

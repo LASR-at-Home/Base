@@ -31,7 +31,7 @@ class HandleGuest(smach.StateMachine):
 
                 smach.StateMachine.add(
                     f"PARSE_NAME_AND_DRINK_GUEST_{guest_id}",
-                    GetNameAndDrink(guest_id),
+                    GetNameAndDrink(guest_id, False),
                     transitions={
                         "succeeded": "succeeded",
                         "failed": f"REPEAT_GET_NAME_AND_DRINK_GUEST_{guest_id}",
@@ -54,7 +54,7 @@ class HandleGuest(smach.StateMachine):
 
                 smach.StateMachine.add(
                     f"REPEAT_PARSE_NAME_AND_DRINK_GUEST_{guest_id}",
-                    GetNameAndDrink(guest_id),
+                    GetNameAndDrink(guest_id, True),
                     transitions={
                         "succeeded": "succeeded",
                         "failed": "succeeded",
@@ -79,7 +79,7 @@ class HandleGuest(smach.StateMachine):
 
                 smach.StateMachine.add(
                     f"REPEAT_PARSE_NAME_GUEST_{guest_id}",
-                    GetNameOrDrink(guest_id, "name"),
+                    GetNameOrDrink(guest_id, True, "name"),
                     transitions={
                         "succeeded": "succeeded",
                         "failed": "succeeded",
@@ -104,7 +104,7 @@ class HandleGuest(smach.StateMachine):
 
                 smach.StateMachine.add(
                     f"REPEAT_PARSE_DRINK_GUEST_{guest_id}",
-                    GetNameOrDrink(guest_id, "drink"),
+                    GetNameOrDrink(guest_id, True, "drink"),
                     transitions={
                         "succeeded": "succeeded",
                         "failed": "succeeded",

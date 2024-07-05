@@ -12,3 +12,4 @@ from .recognise_people import RecognisePeople
 from .seat_guest import SeatGuest
 from .check_sofa import CheckSofa
 from .introduce_and_seat_guest import IntroduceAndSeatGuest
+from .speech_recovery import SpeechRecovery
