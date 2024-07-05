@@ -43,6 +43,7 @@ class SpeechRecovery(smach.State):
             final_name = self._handle_name(sentence_list, self._last_resort)
             if final_name != "unknown":
                 userdata.guest_data[self._guest_id]["name"] = final_name
+                print(f"Recovered name: {final_name} ")
                 return "succeeded"
             else:
                 return "failed"
@@ -50,6 +51,7 @@ class SpeechRecovery(smach.State):
             final_drink = self._handle_drink(sentence_list, self._last_resort)
             if final_drink != "unknown":
                 userdata.guest_data[self._guest_id]["drink"] = final_drink
+                print(f"Recovered drink: {final_drink} ")
                 return "succeeded"
             else:
                 return "failed"
@@ -57,9 +59,11 @@ class SpeechRecovery(smach.State):
             if userdata.guest_data[self._guest_id]["name"] == "unknown":
                 final_name = self._handle_name(sentence_list, self._last_resort)
                 userdata.guest_data[self._guest_id]["name"] = final_name
+                print(f"Recovered name: {final_name} ")
             if userdata.guest_data[self._guest_id]["drink"] == "unknown":  
                 final_drink = self._handle_drink(sentence_list, self._last_resort)
                 userdata.guest_data[self._guest_id]["drink"] = final_drink
+                print(f"Recovered drink: {final_drink} ")
             if final_name == "unknown" or final_drink == "unknown":
                 return "failed"
             else:
