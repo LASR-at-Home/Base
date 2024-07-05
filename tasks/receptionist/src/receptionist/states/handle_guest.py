@@ -2,8 +2,8 @@ import smach
 
 from lasr_skills import AskAndListen, Say, AdjustCamera
 from receptionist.states import (
-    ParseNameAndDrink,
-    ParseTranscribedInfo,
+    GetNameAndDrink,
+    GetNameOrDrink,
     ReceptionistLearnFaces,
     GetGuestAttributes,
 )
@@ -11,7 +11,7 @@ from receptionist.states import (
 
 class HandleGuest(smach.StateMachine):
 
-    class GetNameAndDrink(smach.StateMachine):
+    class HandleNameAndDrink(smach.StateMachine):
         def __init__(self, guest_id: str):
             super().__init__(
                 outcomes=["succeeded", "failed"],
@@ -31,7 +31,7 @@ class HandleGuest(smach.StateMachine):
 
                 smach.StateMachine.add(
                     f"PARSE_NAME_AND_DRINK_GUEST_{guest_id}",
-                    ParseNameAndDrink(guest_id),
+                    GetNameAndDrink(guest_id),
                     transitions={
                         "succeeded": "succeeded",
                         "failed": f"REPEAT_GET_NAME_AND_DRINK_GUEST_{guest_id}",
@@ -54,7 +54,7 @@ class HandleGuest(smach.StateMachine):
 
                 smach.StateMachine.add(
                     f"REPEAT_PARSE_NAME_AND_DRINK_GUEST_{guest_id}",
-                    ParseNameAndDrink(guest_id),
+                    GetNameAndDrink(guest_id),
                     transitions={
                         "succeeded": "succeeded",
                         "failed": "succeeded",
@@ -79,7 +79,7 @@ class HandleGuest(smach.StateMachine):
 
                 smach.StateMachine.add(
                     f"REPEAT_PARSE_NAME_GUEST_{guest_id}",
-                    ParseTranscribedInfo(guest_id, "name"),
+                    GetNameOrDrink(guest_id, "name"),
                     transitions={
                         "succeeded": "succeeded",
                         "failed": "succeeded",
@@ -104,7 +104,7 @@ class HandleGuest(smach.StateMachine):
 
                 smach.StateMachine.add(
                     f"REPEAT_PARSE_DRINK_GUEST_{guest_id}",
-                    ParseTranscribedInfo(guest_id, "drink"),
+                    GetNameOrDrink(guest_id, "drink"),
                     transitions={
                         "succeeded": "succeeded",
                         "failed": "succeeded",
@@ -249,7 +249,7 @@ class HandleGuest(smach.StateMachine):
             with sm_con:
                 smach.Concurrence.add(
                     "GET_NAME_AND_DRINK",
-                    self.GetNameAndDrink(guest_id),
+                    self.HandleNameAndDrink(guest_id),
                 )
 
                 smach.Concurrence.add(
