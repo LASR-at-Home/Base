@@ -18,15 +18,15 @@ class AskAndListen(smach.StateMachine):
                 output_keys=["transcribed_speech"],
             )
             with self:
-                # smach.StateMachine.add(
-                #     "SAY",
-                #     Say(text=tts_phrase),
-                #     transitions={
-                #         "succeeded": "LISTEN",
-                #         "aborted": "failed",
-                #         "preempted": "failed",
-                #     },
-                # )
+                smach.StateMachine.add(
+                    "SAY",
+                    Say(text=tts_phrase),
+                    transitions={
+                        "succeeded": "LISTEN",
+                        "aborted": "failed",
+                        "preempted": "failed",
+                    },
+                )
                 smach.StateMachine.add(
                     "LISTEN",
                     Listen(),
