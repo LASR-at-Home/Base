@@ -130,7 +130,7 @@ class IntroduceAndSeatGuest(smach.StateMachine):
 
     class HandleResponses(smach.State):
 
-        def __init__(self):
+        def __init__(self, expected_detections: List[str]):
 
             smach.State.__init__(
                 self,
@@ -140,6 +140,7 @@ class IntroduceAndSeatGuest(smach.StateMachine):
             )
             self.closesness_distance = 0.5
             self.overlap_threshold = 0.8
+            self._expected_detections = expected_detections
             self._recognise = rospy.ServiceProxy("/recognise", Recognise)
             self._recognise.wait_for_service()
 
@@ -212,6 +213,54 @@ class IntroduceAndSeatGuest(smach.StateMachine):
                                 other_detection.name = detection.name
                                 other_detection.point = detection.point
                     filtered_face_detections.append(detection)
+
+                # If we have all the expected guests, remove the unknowns
+                if set(
+                    [detection.name for detection in filtered_face_detections]
+                ) == set(self._expected_detections):
+                    filtered_face_detections = [
+                        detection
+                        for detection in filtered_face_detections
+                        if detection.name != "unknown"
+                    ]
+
+                # There will never be more than 2 people on the sofa
+
+                if len(self._expected_detections) == 1:
+                    if self._expected_detections[0] not in [
+                        detection.name for detection in filtered_face_detections
+                    ]:
+                        if len(filtered_face_detections) > 0:
+                            filtered_face_detections[0].name = (
+                                self._expected_detections[0]
+                            )
+                        else:
+                            return "failed"
+                elif len(self._expected_detections) == 2:
+                    # If we have two people, we need to make sure that we have at least one of them
+                    # the missing one should be assigned to one of the unknowns
+                    if self._expected_detections[0] not in [
+                        detection.name for detection in filtered_face_detections
+                    ]:
+                        if len(filtered_face_detections) > 0:
+                            for detection in filtered_face_detections:
+                                if detection.name == "unknown":
+                                    detection.name = self._expected_detections[0]
+                                    break
+                        else:
+                            return "failed"
+                    elif self._expected_detections[1] not in [
+                        detection.name for detection in filtered_face_detections
+                    ]:
+                        if len(filtered_face_detections) > 0:
+                            for detection in filtered_face_detections:
+                                if detection.name == "unknown":
+                                    detection.name = self._expected_detections[1]
+                                    break
+                        else:
+                            return "failed"
+                    else:
+                        return "failed"
 
                 """
                 Extract all seats that are not occupied by people
