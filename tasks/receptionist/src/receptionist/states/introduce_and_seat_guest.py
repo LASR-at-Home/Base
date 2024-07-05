@@ -8,7 +8,7 @@ from geometry_msgs.msg import Point, Polygon, PointStamped
 from std_msgs.msg import Header
 
 
-from lasr_skills import LookToPoint, Say, PlayMotion
+from lasr_skills import LookToPoint, Say, PlayMotion, Wait
 
 from lasr_vision_msgs.msg import CDRequest, CDResponse
 
@@ -23,12 +23,11 @@ import rospy
 from receptionist.states import Introduce
 
 import numpy as np
+from copy import deepcopy
 
 
 def _euclidian_distance(point1: Point, point2: Point):
-    return ((point1.x - point2.x) ** 2 + (point1.y - point2.y) ** 2) + (
-        (point1.z - point2.z) ** 2
-    ) ** 0.5
+    return ((point1.x - point2.x) ** 2 + (point1.y - point2.y) ** 2) ** 0.5
 
 
 class IntroduceAndSeatGuest(smach.StateMachine):
@@ -47,8 +46,13 @@ class IntroduceAndSeatGuest(smach.StateMachine):
 
             def execute(self, userdata):
 
-                for detection in userdata.motion_detections[0].detections_3d:
-                    userdata.detections.append(detection)
+                for index, detection in enumerate(
+                    userdata.motion_detections[0].detections_3d
+                ):
+                    userdata.detections.append(
+                        (detection, userdata.motion_detections[0].cropped_imgs[index])
+                    )
+                return "succeeded"
 
         def _cropped_detection_request(self):
             return CroppedDetectionRequest(
@@ -91,10 +95,18 @@ class IntroduceAndSeatGuest(smach.StateMachine):
                         f"PLAY_MOTION_{motion}",
                         PlayMotion(motion_name=motion),
                         transitions={
+                            "succeeded": f"SLEEP_1_{motion}",
+                            "aborted": f"SLEEP_1_{motion}",
+                            "preempted": f"SLEEP_1_{motion}",
+                        },
+                    )
+
+                    smach.StateMachine.add(
+                        f"SLEEP_1_{motion}",
+                        Wait(1),
+                        transitions={
                             "succeeded": f"DETECT_PEOPLE_AND_SEATS_{motion}",
-                            "aborted": f"DETECT_PEOPLE_AND_SEATS_{motion}",
-                            "preempted": f"DETECT_PEOPLE_AND_SEATS_{motion}",
-                            "preeempted": f"DETECT_PEOPLE_AND_SEATS_{motion}",
+                            "failed": f"DETECT_PEOPLE_AND_SEATS_{motion}",
                         },
                     )
 
@@ -136,183 +148,309 @@ class IntroduceAndSeatGuest(smach.StateMachine):
                 self,
                 outcomes=["succeeded", "failed"],
                 input_keys=["sofa_detections", "detections"],
-                output_keys=["empty_seat_detections", "matched_face_detections"],
+                output_keys=[
+                    "empty_seat_detections",
+                    "matched_face_detections",
+                    "num_people_on_sofa",
+                ],
             )
-            self.closesness_distance = 0.5
+            self.closesness_distance = 0.8
             self.overlap_threshold = 0.8
             self._expected_detections = expected_detections
             self._recognise = rospy.ServiceProxy("/recognise", Recognise)
             self._recognise.wait_for_service()
 
         def execute(self, userdata):
-            try:
-                seat_detections = []
-                matched_face_detections = []
+            seat_detections = []
+            matched_face_detections = []
 
-                def identify(img_msg):
-                    recognise_result = self._recognise(img_msg, "receptionist", 0.2)
-                    if len(recognise_result.detections) > 0:
-                        rospy.loginfo(
-                            f"Recognised face as {recognise_result.detections[0].name}"
-                        )
-                        return recognise_result.detections[0].name
-                    rospy.loginfo("No face recognised")
-                    return "unknown"
+            def identify(img_msg):
+                recognise_result = self._recognise(img_msg, "receptionist", 0.2)
+                if len(recognise_result.detections) > 0:
+                    rospy.loginfo(
+                        f"Recognised face as {recognise_result.detections[0].name}"
+                    )
+                    return recognise_result.detections[0].name
+                rospy.loginfo("No face recognised")
+                return "unknown"
 
-                """
-                Identify all people in the detections
-                """
-
-                for index, detection in enumerate(
-                    userdata.sofa_detections[0].detections_3d
+            """
+            Identify all people in the detections
+            """
+            rospy.logwarn(
+                f"Sofa detections: {[(d.name, d.point) for d in userdata.sofa_detections[0].detections_3d]}"
+            )
+            for index, detection in enumerate(
+                userdata.sofa_detections[0].detections_3d
+            ):
+                if (
+                    np.isnan(detection.point.x)
+                    or np.isnan(detection.point.y)
+                    or np.isnan(detection.point.z)
                 ):
+                    continue
+                rospy.loginfo(f"Processing detection: {detection.name}")
+
+                if detection.name == "person":
+                    img_msg = userdata.sofa_detections[0].cropped_imgs[index]
+                    detection.name = identify(img_msg)
+                    matched_face_detections.append(detection)
+                    rospy.loginfo(f"Identified person as: {detection.name}")
+
+            rospy.logwarn(
+                f"Seating area detections: {[(d.name, d.point) for d, _ in userdata.detections]}"
+            )
+            for index, (detection, img_msg) in enumerate(userdata.detections):
+                if (
+                    np.isnan(detection.point.x)
+                    or np.isnan(detection.point.y)
+                    or np.isnan(detection.point.z)
+                ):
+                    continue
+                rospy.loginfo(f"Processing detection: {detection.name}")
+
+                if detection.name == "person":
+                    detection.name = identify(img_msg)
+                    matched_face_detections.append(detection)
+                    rospy.loginfo(f"Identified person as: {detection.name}")
+
+            print("*" * 50)
+            print(([(d.name, d.point) for d in matched_face_detections]))
+            print("*" * 50)
+
+            # """
+            # Filter out people that are too close to each other
+            # """
+
+            knowns = [
+                detection
+                for detection in matched_face_detections
+                if detection.name != "unknown"
+            ]
+
+            knowns = {
+                "host": [detection for detection in knowns if detection.name == "host"],
+                "guest1": [
+                    detection for detection in knowns if detection.name == "guest1"
+                ],
+            }
+
+            unknowns = [
+                detection
+                for detection in matched_face_detections
+                if detection.name == "unknown"
+            ]
+
+            filtered_face_detections = []
+            if knowns["host"]:
+                filtered_face_detections.append(
+                    max(knowns["host"], key=lambda x: x.confidence)
+                )
+            if knowns["guest1"]:
+                filtered_face_detections.append(
+                    max(knowns["guest1"], key=lambda x: x.confidence)
+                )
+
+            for unknown in unknowns:
+                add = True
+                for detection in filtered_face_detections:
                     if (
-                        np.isnan(detection.point.x)
-                        or np.isnan(detection.point.y)
-                        or np.isnan(detection.point.z)
+                        _euclidian_distance(unknown.point, detection.point)
+                        < self.closesness_distance
                     ):
-                        continue
-                    rospy.loginfo(f"Processing detection: {detection.name}")
+                        add = False
+                        break
+                if add:
+                    filtered_face_detections.append(unknown)
 
-                    if detection.name == "person":
-                        img_msg = userdata.sofa_detections[0].cropped_imgs[index]
-                        detection.name = identify(img_msg)
-                        matched_face_detections.append(detection)
+            # # ignore_indices = []
+            # for i, detection in enumerate(matched_face_detections):
+            #     if detection in filtered_face_detections:
+            #         continue
+            #     for j, other_detection in enumerate(matched_face_detections):
 
-                for index, detection in enumerate(userdata.detections[0].detections_3d):
-                    if (
-                        np.isnan(detection.point.x)
-                        or np.isnan(detection.point.y)
-                        or np.isnan(detection.point.z)
-                    ):
-                        continue
-                    rospy.loginfo(f"Processing detection: {detection.name}")
+            #         if i == j:
+            #             continue
 
-                    if detection.name == "person":
-                        img_msg = userdata.detections[0].cropped_imgs[index]
-                        detection.name = identify(img_msg)
-                        matched_face_detections.append(detection)
+            #         if (
+            #             _euclidian_distance(detection.point, other_detection.point)
+            #             < self.closesness_distance
+            #         ):
+            #             if detection.name == other_detection.name:
+            #                 # remove the one with the lower confidence
+            #                 if detection.confidence > other_detection.confidence:
+            #                     filtered_face_detections.append(detection)
+            #                 else:
+            #                     filtered_face_detections.append(other_detection)
+            #             elif (
+            #                 detection.name != "unknown"
+            #                 and other_detection.name == "unknown"
+            #             ):
+            #                 filtered_face_detections.append(detection)
+            #             elif (
+            #                 detection.name == "unknown"
+            #                 and other_detection.name != "unknown"
+            #             ):
+            #                 filtered_face_detections.append(other_detection)
 
-                """
-                Filter out people that are too close to each other
-                """
+            # # if all expected detections are present, remove unknowns
+            # if all(
+            #     [
+            #         detection.name in self._expected_detections
+            #         for detection in filtered_face_detections
+            #     ]
+            # ):
+            #     filtered_face_detections = [
+            #         detection
+            #         for detection in filtered_face_detections
+            #         if detection.name != "unknown"
+            #     ]
 
-                filtered_face_detections = []
-                for i, detection in enumerate(matched_face_detections):
-                    for j, other_detection in enumerate(matched_face_detections):
-                        if i == j:
-                            continue
-                        if (
-                            _euclidian_distance(detection.point, other_detection.point)
-                            < self.closesness_distance
-                        ):
-                            if (
-                                detection.name == other_detection.name
-                                or other_detection.name == "unknown"
-                            ):
-                                other_detection.name = detection.name
-                                other_detection.point = detection.point
-                    filtered_face_detections.append(detection)
-
-                # If we have all the expected guests, remove the unknowns
-                if set(
-                    [detection.name for detection in filtered_face_detections]
-                ) == set(self._expected_detections):
-                    filtered_face_detections = [
-                        detection
-                        for detection in filtered_face_detections
-                        if detection.name != "unknown"
-                    ]
-
-                # There will never be more than 2 people on the sofa
-
-                if len(self._expected_detections) == 1:
-                    if self._expected_detections[0] not in [
-                        detection.name for detection in filtered_face_detections
-                    ]:
-                        if len(filtered_face_detections) > 0:
-                            filtered_face_detections[0].name = (
-                                self._expected_detections[0]
-                            )
-                        else:
-                            return "failed"
-                elif len(self._expected_detections) == 2:
-                    # If we have two people, we need to make sure that we have at least one of them
-                    # the missing one should be assigned to one of the unknowns
-                    if self._expected_detections[0] not in [
-                        detection.name for detection in filtered_face_detections
-                    ]:
-                        if len(filtered_face_detections) > 0:
-                            for detection in filtered_face_detections:
-                                if detection.name == "unknown":
-                                    detection.name = self._expected_detections[0]
-                                    break
-                        else:
-                            return "failed"
-                    elif self._expected_detections[1] not in [
-                        detection.name for detection in filtered_face_detections
-                    ]:
-                        if len(filtered_face_detections) > 0:
-                            for detection in filtered_face_detections:
-                                if detection.name == "unknown":
-                                    detection.name = self._expected_detections[1]
-                                    break
-                        else:
-                            return "failed"
+            # if we have only one expected detection, and it is not present, assign it to the first unknown
+            if len(self._expected_detections) == 1:
+                if self._expected_detections[0] not in [
+                    detection.name for detection in filtered_face_detections
+                ]:
+                    rospy.logwarn(f"Expected guest not found..")
+                    rospy.logwarn(f"Expected: {self._expected_detections[0]}")
+                    rospy.logwarn(
+                        [detection.name for detection in filtered_face_detections]
+                    )
+                    if len(filtered_face_detections) > 0:
+                        filtered_face_detections[0].name = self._expected_detections[0]
                     else:
+                        rospy.logwarn("Failed to find expected guest")
                         return "failed"
 
-                """
-                Extract all seats that are not occupied by people
-                """
+            print("+" * 50)
+            print(([(d.name, d.point) for d in filtered_face_detections]))
+            print("+" * 50)
 
-                for index, detection in enumerate(userdata.detections[0].detections_3d):
-                    if (
-                        np.isnan(detection.point.x)
-                        or np.isnan(detection.point.y)
-                        or np.isnan(detection.point.z)
-                    ):
-                        continue
-                    rospy.loginfo(f"Processing detection: {detection.name}")
-
-                    if detection.name == "chair":
-                        seat_detections.append(
-                            (
-                                detection,
-                                userdata.detections[0].cropped_imgs[index],
-                                userdata.detections[0].polygon_ids[index],
-                            )
+            # if we have two expected detections, and one is missing, assign it to the first unknown
+            if len(self._expected_detections) == 2:
+                if self._expected_detections[0] not in [
+                    detection.name for detection in filtered_face_detections
+                ] and self._expected_detections[1] in [
+                    detection.name for detection in filtered_face_detections
+                ]:
+                    if len(filtered_face_detections) > 0:
+                        other = next(
+                            detection
+                            for detection in filtered_face_detections
+                            if detection.name == self._expected_detections[1]
                         )
-                        rospy.loginfo(f"Found chair at: {detection.point}")
 
-                filtered_seats = []
-                for seat_det in seat_detections:
-                    seat = seat_det[0]
-                    seat_removed = False
-                    seat_seg = np.array([seat.xyseg]).reshape(-1, 2)
-                    seat_polygon = ShapelyPolygon(seat_seg)
-                    for person in filtered_face_detections:
-                        person_seg = np.array([person.xyseg]).reshape(-1, 2)
-                        person_polygon = ShapelyPolygon(person_seg)
-                        if (
-                            person_polygon.intersection(seat_polygon).area
-                            / person_polygon.area
-                            >= self.overlap_threshold
-                        ):
-                            rospy.loginfo(
-                                f"Person detected on seat. Removing seat: {seat.point}"
-                            )
-                            seat_removed = True
-                            break
-                    if not seat_removed:
-                        filtered_seats.append(seat_det)
+                        furthest_unknown = max(
+                            [
+                                detection
+                                for detection in filtered_face_detections
+                                if detection.name == "unknown"
+                            ],
+                            key=lambda x: _euclidian_distance(x.point, other.point),
+                        )
+                        furthest_unknown.name = self._expected_detections[0]
+                    else:
+                        rospy.logwarn("Failed to find expected guest")
+                        return "failed"
+                elif self._expected_detections[1] not in [
+                    detection.name for detection in filtered_face_detections
+                ] and self._expected_detections[0] in [
+                    detection.name for detection in filtered_face_detections
+                ]:
+                    if len(filtered_face_detections) > 0:
+                        other = next(
+                            detection
+                            for detection in filtered_face_detections
+                            if detection.name == self._expected_detections[0]
+                        )
 
-                userdata.empty_seat_detections = filtered_seats
-                userdata.matched_face_detections = filtered_face_detections
+                        furthest_unknown = max(
+                            [
+                                detection
+                                for detection in filtered_face_detections
+                                if detection.name == "unknown"
+                            ],
+                            key=lambda x: _euclidian_distance(x.point, other.point),
+                        )
+                        furthest_unknown.name = self._expected_detections[1]
+                    else:
+                        rospy.logwarn("Failed to find expected guest")
+                        return "failed"
+                else:
+                    rospy.logwarn("Failed to find expected guest")
+                    return "failed"
 
-            except Exception as e:
-                rospy.logerr(f"Failed to process detections: {str(e)}")
-                return "failed"
+            print("-" * 50)
+            print(([(d.name, d.point) for d in filtered_face_detections]))
+            print("-" * 50)
+
+            # remove duplicates
+            # filtered_face_detections_no_duplicates = filter(
+            #     lambda detection: detection.name
+            #     not in [d.name for d in filtered_face_detections if detection != d],
+            #     filtered_face_detections,
+            # )
+            # filtered_face_detections = list(filtered_face_detections_no_duplicates)
+
+            # remove unknowns
+            # filtered_face_detections = [
+            #     detection
+            #     for detection in filtered_face_detections
+            #     if detection.name != "unknown"
+            # ]
+
+            """
+            Extract all seats that are not occupied by people
+            """
+
+            for index, (detection, img_msg) in enumerate(userdata.detections):
+                if (
+                    np.isnan(detection.point.x)
+                    or np.isnan(detection.point.y)
+                    or np.isnan(detection.point.z)
+                ):
+                    continue
+                rospy.loginfo(f"Processing detection: {detection.name}")
+
+                if detection.name == "chair":
+                    seat_detections.append(detection)
+                    rospy.loginfo(f"Found chair at: {detection.point}")
+
+            filtered_seats = []
+            for seat in seat_detections:
+                seat_removed = False
+                seat_seg = np.array([seat.xyseg]).reshape(-1, 2)
+                seat_polygon = ShapelyPolygon(seat_seg)
+                for person in filtered_face_detections:
+                    person_seg = np.array([person.xyseg]).reshape(-1, 2)
+                    person_polygon = ShapelyPolygon(person_seg)
+                    if (
+                        person_polygon.intersection(seat_polygon).area
+                        / person_polygon.area
+                        >= self.overlap_threshold
+                    ):
+                        rospy.loginfo(
+                            f"Person detected on seat. Removing seat: {seat.point}"
+                        )
+                        seat_removed = True
+                        break
+                if not seat_removed:
+                    filtered_seats.append(seat)
+
+            # rospy.loginfo(f"Filtered seats: {[seat.point for seat in filtered_seats]}")
+            rospy.loginfo(
+                f"Filtered face detections: {[detection.name for detection in filtered_face_detections]}"
+            )
+
+            userdata.empty_seat_detections = filtered_seats
+            userdata.matched_face_detections = filtered_face_detections
+            userdata.num_people_on_sofa = len(userdata.sofa_detections[0].detections_3d)
+            rospy.loginfo(
+                f"{[(detection.name, detection.point) for detection in filtered_face_detections]}"
+            )
+            # except Exception as e:
+            #     rospy.logerr(f"Failed to process detections: {str(e)}")
+            #     return "failed"
             return "succeeded"
 
     class GetLookPoint(smach.State):
@@ -329,6 +467,7 @@ class IntroduceAndSeatGuest(smach.StateMachine):
         def execute(self, userdata):
             if len(userdata.matched_face_detections) == 0:
                 userdata.look_point = PointStamped()
+                rospy.logwarn(f"Failed to find guest: {self._guest_id}")
                 return "succeeded"
 
             for detection in userdata.matched_face_detections:
@@ -338,6 +477,8 @@ class IntroduceAndSeatGuest(smach.StateMachine):
                     )
                     userdata.look_point = look_point
                     return "succeeded"
+
+            rospy.logwarn(f"Failed to find guest: {self._guest_id}")
             userdata.look_point = PointStamped()
             return "succeeded"
 
@@ -348,7 +489,7 @@ class IntroduceAndSeatGuest(smach.StateMachine):
                 self,
                 outcomes=["succeeded_sofa", "succeeded_chair", "failed"],
                 input_keys=[
-                    "sofa_detections",
+                    "num_people_on_sofa",
                     "empty_seat_detections",
                 ],
                 output_keys=["seat_position"],
@@ -358,9 +499,8 @@ class IntroduceAndSeatGuest(smach.StateMachine):
 
         def execute(self, userdata):
 
-            num_people_on_sofa = len(userdata.sofa_detections[0].detections_3d)
-
-            if num_people_on_sofa < self._max_people_on_sofa:
+            rospy.loginfo(f"Num people on sofa: {userdata.num_people_on_sofa}")
+            if userdata.num_people_on_sofa < self._max_people_on_sofa:
 
                 userdata.seat_position = PointStamped(
                     point=self._sofa_position, header=Header(frame_id="map")
@@ -369,7 +509,7 @@ class IntroduceAndSeatGuest(smach.StateMachine):
 
             if len(userdata.empty_seat_detections) > 0:
                 userdata.seat_position = PointStamped(
-                    point=userdata.empty_seat_detections[0][0].point,
+                    point=userdata.empty_seat_detections[0].point,
                     header=Header(frame_id="map"),
                 )
                 return "succeeded_chair"
@@ -407,9 +547,18 @@ class IntroduceAndSeatGuest(smach.StateMachine):
                     )
                 ),
                 transitions={
+                    "succeeded": "SLEEP_1",
+                    "aborted": "SLEEP_1",
+                    "timed_out": "SLEEP_1",
+                },
+            )
+
+            smach.StateMachine.add(
+                "SLEEP_1",
+                Wait(1),
+                transitions={
                     "succeeded": "DETECT_PEOPLE_ON_SOFA",
-                    "aborted": "DETECT_PEOPLE_ON_SOFA",
-                    "timed_out": "DETECT_PEOPLE_ON_SOFA",
+                    "failed": "DETECT_PEOPLE_ON_SOFA",
                 },
             )
 
@@ -465,7 +614,7 @@ class IntroduceAndSeatGuest(smach.StateMachine):
             # Handle the responses from the detections
             smach.StateMachine.add(
                 "HANDLE_RESPONSES",
-                self.HandleResponses(),
+                self.HandleResponses(guests_to_introduce_to),
                 transitions={
                     "succeeded": (
                         f"GET_LOOK_POINT_{guests_to_introduce_to[0]}"

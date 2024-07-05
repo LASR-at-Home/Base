@@ -77,7 +77,7 @@ if __name__ == "__main__":
     while not rospy.is_shutdown():
         get_cropped_image = GetCroppedImage(
             "person",
-            crop_method="closest",
+            method="closest",
             use_mask=True,
         )
         sm = smach.StateMachine(outcomes=["succeeded", "failed"])
