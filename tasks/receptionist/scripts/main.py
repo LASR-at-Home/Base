@@ -35,6 +35,9 @@ if __name__ == "__main__":
         orientation=Quaternion(**seat_pose_param["orientation"]),
     )
 
+    sweep_points_param = rospy.get_param("/receptionist/sweep_points")
+    sweep_points = [Point(**point) for point in sweep_points_param]
+
     seat_area_param = rospy.get_param("/receptionist/seat_area")
 
     sofa_area_param = rospy.get_param("/receptionist/sofa_area")

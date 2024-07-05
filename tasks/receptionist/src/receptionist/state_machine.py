@@ -44,7 +44,6 @@ class Receptionist(smach.StateMachine):
         self.wait_area = wait_area
         self.seat_pose = seat_pose
         self.seat_area = seat_area
-
         # self.sweep_points = sweep_points
         with self:
             self.userdata.guest_data = {
