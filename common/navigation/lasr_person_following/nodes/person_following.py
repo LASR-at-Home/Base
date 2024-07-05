@@ -31,7 +31,7 @@ class PersonFollowingServer:
         self._server.start()
 
     def _execute_cb(self, _: FollowGoal) -> None:
-        while not self._follower.begin_tracking():
+        while not self._follower.begin_tracking(ask=False):
             rospy.logwarn("No people found, retrying...")
             rospy.sleep(rospy.Duration(1.0))
         warnings.warn(
@@ -48,6 +48,6 @@ class PersonFollowingServer:
 
 if __name__ == "__main__":
     rospy.init_node("person_following_server")
-    rospy.loginfo("Person following server started")
     server = PersonFollowingServer()
+    rospy.loginfo("Person following server started")
     rospy.spin()
