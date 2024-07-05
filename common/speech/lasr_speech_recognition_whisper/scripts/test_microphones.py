@@ -34,7 +34,7 @@ def main(args: dict) -> None:
     output_dir = args["output_dir"]
 
     r = sr.Recognizer()
-    with sr.Microphone(device_index=13,sample_rate=16000) as source:
+    with sr.Microphone(device_index=13, sample_rate=16000) as source:
         print("Say something!")
         audio = r.listen(source, timeout=5, phrase_time_limit=5)
         print("Finished listening")

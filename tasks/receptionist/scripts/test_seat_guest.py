@@ -13,7 +13,6 @@ if __name__ == "__main__":
 
     seat_area_param = rospy.get_param("/seat_area")
 
-
     max_people_on_sofa = rospy.get_param("/max_people_on_sofa")
 
     rospy.sleep(5)
@@ -35,4 +34,3 @@ if __name__ == "__main__":
     outcome = sm.execute()
     rospy.loginfo("Outcome: %s", outcome)
     rospy.signal_shutdown("Test completed.")
-
