@@ -10,6 +10,7 @@ from tiago_controllers.helpers.nav_map_helpers import counter
 from narrow_space_navigation.waypoints import *
 from read_pcl_info.pcl_helpers import limit_laser_scan
 import rospy
+
 # from tf_module.tf_transforms import tranform_pose
 
 door_open = False
@@ -56,10 +57,9 @@ from std_msgs.msg import Bool
 class CheckOpenDoor(smach.State):
     def __init__(self, default):
         # smach.State.__init__(self, outcomes=['success'])
-        smach.State.__init__(self, outcomes=['success', 'failed'])
+        smach.State.__init__(self, outcomes=["success", "failed"])
 
         self.default = default
-
 
     def get_joke(self):
         if not used_jokes:
@@ -76,17 +76,25 @@ class CheckOpenDoor(smach.State):
 
         # rotate to face the door
         self.default.voice.speak("Rotating to face the door")
-        self.default.controllers.base_controller.rotate_to_face_object(object_name='/door/pose')
+        self.default.controllers.base_controller.rotate_to_face_object(
+            object_name="/door/pose"
+        )
 
         topic = "/counter_lift/counter" if in_lift else "/counter_door/counter"
-        message = "I am in the lift. Waiting for the doors to open" if in_lift else "I arrived at the door. Waiting for the doors to open"
+        message = (
+            "I am in the lift. Waiting for the doors to open"
+            if in_lift
+            else "I arrived at the door. Waiting for the doors to open"
+        )
         res = counter(topic=topic)
         self.default.voice.speak(message)
 
         if res == "counter":
-            return 'success'
+            return "success"
 
-        self.default.controllers.base_controller.rotate_to_face_object(object_name='/door/pose')
+        self.default.controllers.base_controller.rotate_to_face_object(
+            object_name="/door/pose"
+        )
 
         # tell a joke
         self.default.voice.speak("I will tell you a joke in the meantime.")
@@ -102,21 +110,21 @@ class CheckOpenDoor(smach.State):
             if not door_detected:
                 message = "The door is open." if in_lift else "The door is open."
                 self.default.voice.speak(message)
-                return 'success'
+                return "success"
 
             # ensure you get out of the loop and go to the next state
-            counter_door_open = counter(topic="/counter_door_open/counter", count_default=10)
+            counter_door_open = counter(
+                topic="/counter_door_open/counter", count_default=10
+            )
             if counter_door_open == "counter":
                 # TODO: maybe change to success :)
-                return 'failed'
+                return "failed"
 
             if not door_detected:
                 self.default.voice.speak("Great stuff! The door is open.")
-                return 'success'
+                return "success"
 
             self.default.voice.speak("I am still waiting for the door to open")
             rospy.sleep(1)
 
-        return 'success'
-
-
+        return "success"

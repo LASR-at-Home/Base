@@ -5,13 +5,16 @@ from unsafe_traversal.srv import LaserDist, LaserDistResponse
 from sensor_msgs.msg import LaserScan
 import math
 
+
 class LaserDistCheckerService:
     """A ROS service that returns the mean distance of a laser scan within a specific field of view and with outliers removed."""
 
     def __init__(self):
         """Initialize the service."""
         self.laser_topic = "/scan"
-        self.laser_dist_srv = rospy.Service("/unsafe_traversal/laser_dist_checker", LaserDist, self.laser_dist)
+        self.laser_dist_srv = rospy.Service(
+            "/unsafe_traversal/laser_dist_checker", LaserDist, self.laser_dist
+        )
 
     def remove_outliers(self, data, threshold=1.5):
         """
@@ -56,7 +59,7 @@ class LaserDistCheckerService:
             LaserScan: The filtered laser scan message.
         """
         filtered_scan = LaserScan()
-        
+
         filtered_scan.header = scan.header
         filtered_scan.angle_min = scan.angle_min
         filtered_scan.angle_max = scan.angle_max
@@ -70,7 +73,9 @@ class LaserDistCheckerService:
         fov_end = center_idx + fov_half
 
         filtered_scan.ranges = [np.nan] * len(scan.ranges)
-        filtered_scan.ranges[fov_start:fov_end+1] = scan.ranges[fov_start:fov_end+1]
+        filtered_scan.ranges[fov_start : fov_end + 1] = scan.ranges[
+            fov_start : fov_end + 1
+        ]
 
         return filtered_scan
 

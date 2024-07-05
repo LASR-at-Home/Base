@@ -37,9 +37,11 @@ def run_clip(
     Returns:
         List[float]: the cosine similarity scores between the image and label embeddings.
     """
+
     txt = model.encode(labels)
     img = model.encode(img)
     with torch.no_grad():
+        torch
         cos_scores = util.cos_sim(img, txt)
     return cos_scores
 
@@ -97,4 +99,4 @@ def query_image_stream(
         )
 
     img = cv2_img.cv2_img_to_msg(cv2_im)
-    return answers[max_score], cos_scores, img
+    return answers[max_score], cos_scores[0, max_score], img

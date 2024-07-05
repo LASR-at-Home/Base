@@ -1,6 +1,7 @@
 import torch
-from base.src.Base.common.navigation.choosing_wait_position.src.choosing_wait_position.final_lift_key_point.pytorch_utils import \
-    transforms as T
+from base.src.Base.common.navigation.choosing_wait_position.src.choosing_wait_position.final_lift_key_point.pytorch_utils import (
+    transforms as T,
+)
 
 
 class DetectionPresetTrain:

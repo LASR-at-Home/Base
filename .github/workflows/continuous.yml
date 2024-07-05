@@ -1,0 +1,25 @@
+name: Continuous
+
+on:
+  push:
+    branches:
+    - 'main'
+jobs:
+  QC:
+    runs-on: ubuntu-20.04
+    steps:
+    - name: Checkout Repository and Submodules
+      uses: actions/checkout@v4
+    - name: Quality Control
+      uses: "./.github/workflows/qc"
+  Documentation:
+    runs-on: ubuntu-20.04
+    env:
+      DOCS_DEPLOY_KEY: ${{ secrets.DOCS_DEPLOY_KEY }}
+    steps:
+    - name: Checkout Repository and Submodules
+      uses: actions/checkout@v4
+      with:
+        path: "src/lasr-base"
+    - name: Build & Deploy Documentation
+      uses: "./src/lasr-base/.github/workflows/docs"
