@@ -1,8 +1,5 @@
 import jellyfish as jf
 
-from itertools import groupby
-import pandas as pd
-import numpy as np
 
 
 available_names  = ["adel", "angel", "axel", "charlie", "jane", "jules", "morgan", "paris", "robin", "simone"]
