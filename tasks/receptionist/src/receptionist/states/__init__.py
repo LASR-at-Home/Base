@@ -1,3 +1,4 @@
+from .speech_recovery import SpeechRecovery
 from .get_name_and_drink import GetNameAndDrink
 from .get_attributes import GetGuestAttributes
 from .introduce import Introduce
@@ -12,4 +13,3 @@ from .recognise_people import RecognisePeople
 from .seat_guest import SeatGuest
 from .check_sofa import CheckSofa
 from .introduce_and_seat_guest import IntroduceAndSeatGuest
-from .speech_recovery import SpeechRecovery

@@ -62,10 +62,9 @@ class GetNameOrDrink(smach.StateMachine):
             transcription = userdata["guest_transcription"].lower()
 
             for key_phrase in self._possible_information:
-                print(self._possible_information)
                 if key_phrase in transcription:
                     userdata.guest_data[self._guest_id][self._type] = key_phrase
-                    rospy.loginfo(f"Guest {self._type} identified as: {key_phrase}")
+                    rospy.loginfo(f"Guest/Drink {self._type} identified as: {key_phrase}")
                     information_found = True
                     break
             if not information_found:

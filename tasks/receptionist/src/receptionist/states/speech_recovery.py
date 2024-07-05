@@ -1,5 +1,6 @@
 import rospy
 import smach
+import string
 import jellyfish as jf
 from smach import UserData
 from typing import List, Dict, Any
@@ -37,7 +38,11 @@ class SpeechRecovery(smach.State):
         self._excluded_words = ["my", "name", "is", "and", "favourite","drink", "you", "can", "call", "me"]
 
     def execute(self, userdata: UserData) -> str:
-        sentence_split = userdata.guest_transcription.lower()
+        filtered_sentence = userdata.guest_transcription.lower().translate(str.maketrans('', '', string.punctuation))
+        sentence_split = filtered_sentence.split()
+        if sentence_split is None:
+            return "failed"
+        print(sentence_split)
         sentence_list = list(set(sentence_split) - set(self._excluded_words))
         if self._input_type == "name":
             final_name = self._handle_name(sentence_list, self._last_resort)
@@ -64,7 +69,7 @@ class SpeechRecovery(smach.State):
                 final_drink = self._handle_drink(sentence_list, self._last_resort)
                 userdata.guest_data[self._guest_id]["drink"] = final_drink
                 print(f"Recovered drink: {final_drink} ")
-            if final_name == "unknown" or final_drink == "unknown":
+            if userdata.guest_data[self._guest_id]["name"] == "unknown" or userdata.guest_data[self._guest_id]["drink"] == "unknown":
                 return "failed"
             else:
                 return "succeeded"
