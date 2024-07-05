@@ -287,6 +287,8 @@ def filter_detections_by_polygon(
                 print(f"Detection {detection} is within polygon {index}")
                 detection_polygon_ids.append(index)
                 filtered_detections.append(detection)
+            else:
+                print(f"Detection {detection} is not within polygon {index}")
 
     return filtered_detections, detection_polygon_ids
 

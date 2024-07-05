@@ -7,7 +7,7 @@ seating area.
 import rospy
 import smach
 from smach import UserData
-from lasr_skills import Say
+from lasr_skills import Say, LookToPoint
 from typing import Dict, List, Any, Optional
 
 
