@@ -154,7 +154,7 @@ class IntroduceAndSeatGuest(smach.StateMachine):
                     "num_people_on_sofa",
                 ],
             )
-            self.closesness_distance = 0.8
+            self.closesness_distance = 0.5
             self.overlap_threshold = 0.8
             self._expected_detections = expected_detections
             self._recognise = rospy.ServiceProxy("/recognise", Recognise)
@@ -339,13 +339,16 @@ class IntroduceAndSeatGuest(smach.StateMachine):
                             for detection in filtered_face_detections
                             if detection.name == self._expected_detections[1]
                         )
-
+                        # TODO: handle this being empty
+                        other_detections = [
+                            detection
+                            for detection in filtered_face_detections
+                            if detection.name == "unknown"
+                        ]
+                        if not other_detections:
+                            return "failed"
                         furthest_unknown = max(
-                            [
-                                detection
-                                for detection in filtered_face_detections
-                                if detection.name == "unknown"
-                            ],
+                            other_detections,
                             key=lambda x: _euclidian_distance(x.point, other.point),
                         )
                         furthest_unknown.name = self._expected_detections[0]
@@ -376,9 +379,6 @@ class IntroduceAndSeatGuest(smach.StateMachine):
                     else:
                         rospy.logwarn("Failed to find expected guest")
                         return "failed"
-                else:
-                    rospy.logwarn("Failed to find expected guest")
-                    return "failed"
 
             print("-" * 50)
             print(([(d.name, d.point) for d in filtered_face_detections]))
@@ -621,7 +621,11 @@ class IntroduceAndSeatGuest(smach.StateMachine):
                         if len(guests_to_introduce_to) > 0
                         else "succeeded"
                     ),
-                    "failed": "failed",
+                    "failed": (
+                        f"GET_LOOK_POINT_{guests_to_introduce_to[0]}"
+                        if len(guests_to_introduce_to) > 0
+                        else "succeeded"
+                    ),
                 },
             )
 
