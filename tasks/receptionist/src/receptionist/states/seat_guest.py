@@ -1,19 +1,26 @@
 import smach
+import rospy
 
 from typing import List
 from shapely.geometry import Polygon
 
 import numpy as np
 
-from lasr_skills import PlayMotion, Detect3DInArea, LookToPoint, Say
+from geometry_msgs.msg import Point, PointStamped
+from lasr_skills import (
+    PlayMotion,
+    Detect3DInArea,
+    LookToPoint,
+    Say,
+    WaitForPerson,
+    Wait,
+)
 
 
 class SeatGuest(smach.StateMachine):
-
     _motions: List[str] = ["look_down_left", "look_down_right", "look_down_centre"]
 
     class ProcessDetections(smach.State):
-
         def __init__(self):
             smach.State.__init__(
                 self,
@@ -42,7 +49,6 @@ class SeatGuest(smach.StateMachine):
             )
 
             for seat in seat_detections:
-
                 seat_polygon: Polygon = Polygon(np.array(seat.xyseg).reshape(-1, 2))
                 seat_is_empty: bool = True
                 for person_polygon in person_polygons:
@@ -52,7 +58,7 @@ class SeatGuest(smach.StateMachine):
                         break
 
                 if seat_is_empty:
-                    userdata.seat_position = seat.point
+                    userdata.seat_position = PointStamped(point=seat.point)
                     print(seat.point)
                     return "succeeded"
 
@@ -64,7 +70,6 @@ class SeatGuest(smach.StateMachine):
     ):
         smach.StateMachine.__init__(self, outcomes=["succeeded", "failed"])
         with self:
-
             # TODO: stop doing this
             self.userdata.people_detections = []
             self.userdata.seat_detections = []
@@ -79,7 +84,6 @@ class SeatGuest(smach.StateMachine):
             )
 
             with motion_iterator:
-
                 container_sm = smach.StateMachine(
                     outcomes=["succeeded", "failed", "continue"],
                     input_keys=["motion", "people_detections", "seat_detections"],
@@ -123,19 +127,29 @@ class SeatGuest(smach.StateMachine):
                 transitions={
                     "succeeded": "SAY_SIT",
                     "aborted": "failed",
-                    "preempted": "failed",
+                    "timed_out": "SAY_SIT",
                 },
-                remapping={"point": "seat_position"},
+                remapping={"pointstamped": "seat_position"},
             )
             smach.StateMachine.add(
                 "SAY_SIT",
                 Say("Please sit in the seat that I am looking at."),
                 transitions={
-                    "succeeded": "RESET_HEAD",
+                    "succeeded": "WAIT_FOR_GUEST_SEAT",
                     "aborted": "failed",
                     "preempted": "failed",
                 },
-            )  # TODO: sleep after this.
+            )
+
+            smach.StateMachine.add(
+                "WAIT_FOR_GUEST_SEAT",
+                # Number of seconds to wait for passed in as argument
+                Wait(5),
+                transitions={
+                    "succeeded": "RESET_HEAD",
+                    "failed": "RESET_HEAD",
+                },
+            )
 
             smach.StateMachine.add(
                 "RESET_HEAD",

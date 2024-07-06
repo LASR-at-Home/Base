@@ -13,17 +13,17 @@ class ParseNameAndDrink(smach.State):
     def __init__(
         self,
         guest_id: str,
-        param_key: str = "receptionist/priors",
+        param_key: str = "/receptionist/priors",
     ):
         """Parses the transcription of the guests' name and favourite drink.
 
         Args:
             param_key (str, optional): Name of the parameter that contains the list of
-            possible . Defaults to "receptionist/priors".
+            possible . Defaults to "/receptionist/priors".
         """
         smach.State.__init__(
             self,
-            outcomes=["succeeded", "failed"],
+            outcomes=["succeeded", "failed", "failed_name", "failed_drink"],
             input_keys=["guest_transcription", "guest_data"],
             output_keys=["guest data", "guest_transcription"],
         )
@@ -44,12 +44,9 @@ class ParseNameAndDrink(smach.State):
             str: state outcome. Updates the userdata with the parsed name and drink, under
             the parameter "guest data".
         """
-
         outcome = "succeeded"
         name_found = False
         drink_found = False
-        print(userdata)
-        print(type(userdata.guest_transcription))
         transcription = userdata.guest_transcription.lower()
 
         transcription = userdata["guest_transcription"].lower()
@@ -70,9 +67,35 @@ class ParseNameAndDrink(smach.State):
 
         if not name_found:
             rospy.loginfo("Name not found in transcription")
+            userdata.guest_data[self._guest_id]["name"] = "unknown"
             outcome = "failed"
         if not drink_found:
             rospy.loginfo("Drink not found in transcription")
+            userdata.guest_data[self._guest_id]["drink"] = "unknown"
             outcome = "failed"
 
+        {
+            "name": name,
+            "drink": drink,
+        },
+
+        if outcome == "failed":
+            if not self._recovery_name_and_drink_required(userdata):
+                if userdata.guest_data[self._guest_id]["name"] == "unknown":
+                    outcome = "failed_name"
+                else:
+                    outcome = "failed_drink"
+
         return outcome
+
+    def _recovery_name_and_drink_required(self, userdata: UserData) -> bool:
+        """Determine whether both the name and drink requires recovery.
+
+        Returns:
+            bool: True if both attributes require recovery.
+        """
+        if userdata.guest_data[self._guest_id]["name"] == "unknown":
+            if userdata.guest_data[self._guest_id]["drink"] == "unknown":
+                return True
+        else:
+            return False

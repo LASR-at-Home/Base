@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import rospy
 from receptionist.state_machine import Receptionist
+import smach
+import smach_ros
 
 from geometry_msgs.msg import Pose, Point, Quaternion
 from shapely.geometry import Polygon
@@ -8,6 +10,7 @@ from shapely.geometry import Polygon
 if __name__ == "__main__":
     rospy.init_node("receptionist_robocup")
     wait_pose_param = rospy.get_param("/receptionist/wait_pose")
+
     wait_pose = Pose(
         position=Point(**wait_pose_param["position"]),
         orientation=Quaternion(**wait_pose_param["orientation"]),
@@ -23,6 +26,7 @@ if __name__ == "__main__":
     )
 
     seat_area_param = rospy.get_param("/receptionist/seat_area")
+
     seat_area = Polygon(seat_area_param)
 
     receptionist = Receptionist(
@@ -31,16 +35,32 @@ if __name__ == "__main__":
         seat_pose,
         seat_area,
         {
-            "name": "John",
-            "drink": "beer",
+            "name": "charlie",
+            "drink": "wine",
+            "dataset": "receptionist",
+            "detection": True,
             "attributes": {
-                "hair_colour": "strawberry blonde",
-                "glasses": False,
-                "hat": True,
-                "height": "tall",
+                "has_hair": 0.5,
+                "hair_shape": "straight hair",
+                "hair_colour": "black hair",
+                "facial_hair": 0,
+                "earrings": 0,
+                "necklace": 0,
+                "necktie": 0,
+                # "height": "unknown",
+                "glasses": -0.5,
+                "hat": -0.5,
+                "dress": 0,
+                "top": 0.5,
+                "outwear": 0,
+                "max_dress": "unknown",
+                "max_top": "short sleeved top",
+                "max_outwear": "unknown",
             },
         },
     )
+
     outcome = receptionist.execute()
+
     rospy.loginfo(f"Receptionist finished with outcome: {outcome}")
     rospy.spin()

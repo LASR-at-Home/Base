@@ -8,6 +8,7 @@ from visualization_msgs.msg import Marker
 from markers.markers_helpers import create_point_marker
 from common_math.math_ import euclidian_distance
 
+
 def get_dist_to_door(is_robot, x=None, y=None):
     if is_robot:
         robot_pose = rospy.wait_for_message("/robot_pose", PoseWithCovarianceStamped)
@@ -23,22 +24,25 @@ def get_dist_to_door(is_robot, x=None, y=None):
     dist = euclidian_distance(r, d)
     print(f"distance to door: {dist}")
     return dist
+
+
 def clear_costmap():
     """
-        Clears costmap using clear_octomap server
+    Clears costmap using clear_octomap server
     """
 
-    rospy.loginfo('waiting for clear_costmap')
-    rospy.wait_for_service('/move_base/clear_costmaps', timeout=10)
+    rospy.loginfo("waiting for clear_costmap")
+    rospy.wait_for_service("/move_base/clear_costmaps", timeout=10)
     try:
-        _clear_costmap = rospy.ServiceProxy('/move_base/clear_costmaps', Empty)
+        _clear_costmap = rospy.ServiceProxy("/move_base/clear_costmaps", Empty)
         response = _clear_costmap()
-        rospy.loginfo('clearing costmap done!')
+        rospy.loginfo("clearing costmap done!")
         return response
     except rospy.ServiceException as e:
         print("Service call failed: %s" % e)
 
-def how_close_to_object(object_name='/door/pose'):
+
+def how_close_to_object(object_name="/door/pose"):
     """
     Checks how close the robot is to the object stored in param
     Parameters
@@ -56,7 +60,9 @@ def how_close_to_object(object_name='/door/pose'):
     d = (door_position.position.x, door_position.position.y)
     dist = euclidian_distance(r, d)
     return dist
-def is_close_to_object(object_name='/door/pose', min_dist=0.5):
+
+
+def is_close_to_object(object_name="/door/pose", min_dist=0.5):
     """
     Checks if the robot is close to the object stored in param compared to the min_dist
     Parameters
@@ -70,16 +76,23 @@ def is_close_to_object(object_name='/door/pose', min_dist=0.5):
     """
     dist = how_close_to_object(object_name)
     return dist < min_dist
+
+
 def get_current_robot_pose():
-        robot_pose = rospy.wait_for_message("/robot_pose", PoseWithCovarianceStamped)
-        return robot_pose.pose.pose
+    robot_pose = rospy.wait_for_message("/robot_pose", PoseWithCovarianceStamped)
+    return robot_pose.pose.pose
+
+
 def get_random_rgb():
     import random
+
     r = random.randint(0, 255)
     g = random.randint(0, 255)
     b = random.randint(0, 255)
     print(f"Random RGB: ({r}, {g}, {b})")
     return (r, g, b), "This is {}, {}, {}".format(r, g, b)
+
+
 def rank(points_name="lift/centers"):
     centers = rospy.get_param(points_name)
     print("centers")
@@ -113,6 +126,8 @@ def rank(points_name="lift/centers"):
         return True
     else:
         return False
+
+
 def counter(topic="/counter_lift/counter", count_default=3):
     count = rospy.get_param(topic)
     rospy.loginfo("count: " + str(topic) + "---> " + str(count))
@@ -124,13 +139,14 @@ def counter(topic="/counter_lift/counter", count_default=3):
     count += 1
     rospy.set_param(topic, count)
 
-def play_motion_goal(client, motion_name='home'):
-        client.wait_for_server()
-        rospy.sleep(0.5)
-        goal = PlayMotionGoal()
 
-        goal.motion_name = motion_name
-        client.send_goal(goal)
-        result = client.wait_for_result()
-        state = client.get_state()
-        return result, state
+def play_motion_goal(client, motion_name="home"):
+    client.wait_for_server()
+    rospy.sleep(0.5)
+    goal = PlayMotionGoal()
+
+    goal.motion_name = motion_name
+    client.send_goal(goal)
+    result = client.wait_for_result()
+    state = client.get_state()
+    return result, state

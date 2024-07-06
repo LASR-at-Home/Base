@@ -3,7 +3,7 @@ import smach
 import rospy
 import rosservice
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
-from geometry_msgs.msg import Pose, PoseStamped
+from geometry_msgs.msg import Pose, PoseStamped, Point, Quaternion
 from std_msgs.msg import Header
 
 from typing import Union
@@ -24,10 +24,12 @@ except ModuleNotFoundError:
 
 
 class GoToLocation(smach.StateMachine):
-
-    def __init__(self, location: Union[Pose, None] = None):
-
-        if location is not None:
+    def __init__(
+        self,
+        location: Union[Pose, None] = None,
+        location_param: Union[str, None] = None,
+    ):
+        if location is not None or location_param is not None:
             super(GoToLocation, self).__init__(outcomes=["succeeded", "failed"])
         else:
             super(GoToLocation, self).__init__(
@@ -52,7 +54,6 @@ class GoToLocation(smach.StateMachine):
             )
 
             if not IS_SIMULATION:
-
                 if PUBLIC_CONTAINER:
                     rospy.logwarn(
                         "You are using a public container. The head manager will not be stopped during navigation."
@@ -94,6 +95,38 @@ class GoToLocation(smach.StateMachine):
                         "preempted": "failed",
                     },
                 )
+            elif location_param is not None:
+                smach.StateMachine.add(
+                    "GO_TO_LOCATION",
+                    smach_ros.SimpleActionState(
+                        "move_base",
+                        MoveBaseAction,
+                        goal=MoveBaseGoal(
+                            target_pose=PoseStamped(
+                                pose=Pose(
+                                    position=Point(
+                                        **rospy.get_param(f"{location_param}/position")
+                                    ),
+                                    orientation=Quaternion(
+                                        **rospy.get_param(
+                                            f"{location_param}/orientation"
+                                        )
+                                    ),
+                                ),
+                                header=Header(frame_id="map"),
+                            )
+                        ),
+                    ),
+                    transitions={
+                        "succeeded": (
+                            "DISABLE_HEAD_MANAGER"
+                            if not IS_SIMULATION
+                            else "RAISE_BASE"
+                        ),
+                        "aborted": "failed",
+                        "preempted": "failed",
+                    },
+                )
             else:
                 smach.StateMachine.add(
                     "GO_TO_LOCATION",
@@ -119,7 +152,6 @@ class GoToLocation(smach.StateMachine):
                 )
 
             if not IS_SIMULATION:
-
                 if PUBLIC_CONTAINER:
                     rospy.logwarn(
                         "You are using a public container. The head manager will not be start following navigation."

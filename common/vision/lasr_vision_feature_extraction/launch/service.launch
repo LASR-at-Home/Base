@@ -1,0 +1,6 @@
+<launch>
+    <description>Start the torch service</description>
+    <usage doc="Torch service"></usage>
+
+    <node name="torch_service" pkg="lasr_vision_feature_extraction" type="service" output="screen" />
+</launch>

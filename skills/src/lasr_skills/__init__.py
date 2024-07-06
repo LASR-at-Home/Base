@@ -13,8 +13,15 @@ from .listen_for import ListenFor
 from .ask_and_listen import AskAndListen
 from .find_person import FindPerson
 from .find_named_person import FindNamedPerson
-from .go_to_semantic_location import GoToSemanticLocation
 from .receive_object import ReceiveObject
 from .handover_object import HandoverObject
 from .ask_and_listen import AskAndListen
 from .clip_vqa import QueryImage
+from .detect_faces import DetectFaces
+from .recognise import Recognise
+from .detect_gesture import DetectGesture
+from .learn_face import LearnFace
+from .look_at_person import LookAtPerson
+from .wait import Wait
+from .look_to_given_point import LookToGivenPoint
+from .find_gesture_person import FindGesturePerson

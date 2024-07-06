@@ -4,15 +4,18 @@
         <arg name="preload" value="['yolov8n-seg.pt']" />
     </include>
 
-    <include file="$(find lasr_vision_bodypix)/launch/service.launch">
-        <arg name="debug" value="true" />
-        <arg name="preload" value="['resnet50']" />
-    </include>
+    <node name="bodypix_keypoint_service" pkg="lasr_vision_bodypix" type="keypoint_service.py" output="screen">
+        <param name="debug" type="bool" value="true" />
+        <param name="preload" type="yaml" value='resnet50' />
+    </node>
 
-    <include file="$(find lasr_vision_torch)/launch/service.launch" />
+    <node name="bodypix_mask_service" pkg="lasr_vision_bodypix" type="mask_service.py" output="screen">
+        <param name="debug" type="bool" value="true" />
+        <param name="preload" type="yaml" value='resnet50' />
+    </node>
+
+    <node pkg="lasr_vision_feature_extraction" type="service" name="torch_service" output="screen"/>
     
-    <node name="image_view_yolo" pkg="rqt_image_view" type="rqt_image_view" respawn="false" output="screen" args="/yolov8/debug/yolov8nsegpt" />
-    <node name="image_view_bodypix" pkg="rqt_image_view" type="rqt_image_view" respawn="false" output="screen" args="/bodypix/debug/resnet50" />
 
    <include file="$(find video_stream_opencv)/launch/camera.launch">
         <arg name="visualize" value="true" />

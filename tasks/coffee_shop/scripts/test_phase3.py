@@ -7,11 +7,11 @@ import sys
 
 if __name__ == "__main__":
     rospy.init_node("test_wait_for_person")
-    sm = smach.StateMachine(outcomes=['end'])
-    context = Context(sys.argv[1],True)
+    sm = smach.StateMachine(outcomes=["end"])
+    context = Context(sys.argv[1], True)
     context.current_table = "table0"
     context.tables[context.current_table]["status"] = "ready"
 
     with sm:
-        sm.add('PHASE_3', Phase3(context), transitions={'done' : 'end'})
+        sm.add("PHASE_3", Phase3(context), transitions={"done": "end"})
     sm.execute()
