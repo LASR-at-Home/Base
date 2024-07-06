@@ -2,7 +2,7 @@
 import os
 import rospy
 
-from lasr_vision_cropped_detection.cropped_detection import process_detection_request
+from lasr_vision_cropped_detection.cropped_detection import process_detection_requests
 from lasr_vision_msgs.srv import (
     CroppedDetection,
     CroppedDetectionRequest,
@@ -17,7 +17,7 @@ def cropped_detection(req: CroppedDetectionRequest) -> CroppedDetectionResponse:
         if "tiago" in os.environ["ROS_MASTER_URI"]
         else "/usb_cam/image_raw"
     )
-    response: CroppedDetectionResponse = process_detection_request(
+    response: CroppedDetectionResponse = process_detection_requests(
         req, rgb_image_topic=rgb_topic
     )
     rospy.loginfo("Cropped detection request processed")

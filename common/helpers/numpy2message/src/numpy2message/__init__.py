@@ -1,7 +1,8 @@
+from typing import Tuple
 import numpy as np
 
 
-def numpy2message(np_array: np.ndarray) -> list:
+def numpy2message(np_array: np.ndarray) -> Tuple:
     data = np_array.tobytes()
     shape = list(np_array.shape)
     dtype = str(np_array.dtype)

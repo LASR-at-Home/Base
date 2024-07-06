@@ -14,7 +14,6 @@ class ParseTranscribedInfo(smach.State):
         self,
         guest_id: str,
         info_type: str,
-        # param_key: str = "/priors",
         param_key: str = "/receptionist/priors",
     ):
         """Parses the transcription of the guests' information.

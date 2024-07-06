@@ -6,7 +6,6 @@ import smach
 import cv2_img
 import numpy as np
 
-from lasr_skills import Say
 from lasr_vision_msgs.srv import (
     YoloDetection,
     BodyPixMaskDetection,
@@ -29,50 +28,17 @@ class DescribePeople(smach.StateMachine):
         )
 
         with self:
-            # conditional topic and crop method for flexibility
-            rgb_topic = (
-                "/xtion/rgb/image_raw"
-                if "tiago" in os.environ["ROS_MASTER_URI"]
-                else "/camera/image_raw"
-            )
-            crop_method = (
-                "closest" if "tiago" in os.environ["ROS_MASTER_URI"] else "centered"
-            )
             smach.StateMachine.add(
                 "GET_IMAGE",
                 GetCroppedImage(
                     object_name="person",
-                    crop_method=crop_method,
-                    rgb_topic=rgb_topic,
-                    use_mask=False,
+                    method="closest",
+                    use_mask=False,  # If true prediction can be very wrong!!!
                 ),
                 transitions={
                     "succeeded": "CONVERT_IMAGE",
-                    "failed": "SAY_GET_IMAGE_AGAIN",
+                    "failed": "failed",
                 },
-            )
-
-            smach.StateMachine.add(
-                "SAY_GET_IMAGE_AGAIN",
-                Say(
-                    text="Make sure you're looking into my eyes, I can't seem to see you."
-                ),
-                transitions={
-                    "succeeded": "GET_IMAGE_AGAIN",
-                    "preempted": "GET_IMAGE_AGAIN",
-                    "aborted": "GET_IMAGE_AGAIN",
-                },
-            )
-
-            smach.StateMachine.add(
-                "GET_IMAGE_AGAIN",
-                GetCroppedImage(
-                    object_name="person",
-                    crop_method=crop_method,
-                    rgb_topic=rgb_topic,
-                    use_mask=False,
-                ),
-                transitions={"succeeded": "CONVERT_IMAGE", "failed": "failed"},
             )
 
             smach.StateMachine.add(
@@ -251,15 +217,19 @@ class DescribePeople(smach.StateMachine):
 
                 full_frame = cv2_img.cv2_img_to_msg(img)
 
-                rst = self.face_features(
-                    full_frame,
-                    head_mask_data,
-                    head_mask_shape,
-                    head_mask_dtype,
-                    torso_mask_data,
-                    torso_mask_shape,
-                    torso_mask_dtype,
-                ).description
+                try:
+                    rst = self.face_features(
+                        full_frame,
+                        head_mask_data,
+                        head_mask_shape,
+                        head_mask_dtype,
+                        torso_mask_data,
+                        torso_mask_shape,
+                        torso_mask_dtype,
+                    ).description
+                except rospy.ServiceException as e:
+                    rospy.logerr(f"Service call failed: {e}")
+                    return "failed"
 
                 people.append({"detection": person, "features": rst})
 

@@ -1,44 +1,6 @@
-# 2D methods are "centered", "left-most" "right-most" "top-most" "bottom-most"
-# 3D methods are "closest" "furthest"
-string method
-
-# Whether to turn all pixels other than the YOLo mask to black
-# If false, uses bounding-box cropping.
-bool use_mask
-
-# Name of the objects to get
-string[] object_names
-
-# Name of the yolo model to use for detections. If using mask is True,
-# this must be a valid segementation model.
-string yolo_model
-
-# Confidence for YOLO model detections.
-float32 yolo_model_confidence
-
-# NMS threshold for YOLO model detections
-float32 yolo_nms_threshold
-
-# List of polygons to be used for 3D detections only
-geometry_msgs/Polygon[] polygons
+# List of detection requests
+lasr_vision_msgs/CDRequest[] requests
 
 ---
-# The combined masked image, if use_mask is True, else empty.
-sensor_msgs/Image masked_img
-
-# A list of all the cropped images of detections sorted according to the
-# given method.
-sensor_msgs/Image[] cropped_imgs
-
-# A list of 2D detections, sorted to match the cropped_imgs
-lasr_vision_msgs/Detection[] detections_2d
-
-# A list of 3D detections, sorted to match the cropped_imgs
-lasr_vision_msgs/Detection3D[] detections_3d
-
-# Euclidian distance of given crop metric
-float32[] distances
-
-# IDs corresponding to which polygon(s) the detection centroid is contained in.
-# An ID of 0 corresponds to the first polygon in the request, etc.
-uint8[] polygon_ids
+# List of detection responses
+lasr_vision_msgs/CDResponse[] responses

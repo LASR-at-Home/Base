@@ -48,7 +48,10 @@ add_message_files(
   Detection.msg
   Detection3D.msg
   BodyPixKeypoint.msg
+  BodyPixKeypointNormalized.msg
   BodyPixMask.msg
+  CDRequest.msg
+  CDResponse.msg
 )
 
 ## Generate services in the 'srv' folder
@@ -66,6 +69,9 @@ add_service_files(
   DetectFaces.srv
   CheckKnownPeople.srv
   CroppedDetection.srv
+  ClipImageEncoder.srv
+  ClipLearnFace.srv
+  ClipRecogniseFace.srv
 )
 
 # Generate actions in the 'action' folder
