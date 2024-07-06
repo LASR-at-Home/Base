@@ -91,7 +91,7 @@ if __name__ == "__main__":
             "dataset": "receptionist",
             "detection": False,
         },
-        sweep=sweep
+        sweep=sweep,
         max_people_on_sofa=max_people_on_sofa,
     )
 
