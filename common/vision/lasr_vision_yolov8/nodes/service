@@ -29,7 +29,7 @@ os.chdir(os.path.abspath(os.path.join(package_path, "models")))
 rospy.init_node("yolov8_service")
 
 # Determine variables
-DEBUG = True
+DEBUG = rospy.get_param("~debug", False)
 PRELOAD = rospy.get_param("~preload", [])
 
 for model in PRELOAD:

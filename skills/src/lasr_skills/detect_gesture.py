@@ -146,7 +146,9 @@ class GestureDetectionSM(smach.StateMachine):
         with self:
             smach.StateMachine.add(
                 "GET_IMAGE",
-                GetCroppedImage("person", "closest", use_mask=True),
+                GetCroppedImage(
+                    "person", "centered", use_mask=True, rgb_topic="/usb_cam/image_raw"
+                ),
                 transitions={"succeeded": "BODY_PIX_DETECTION", "failed": "failed"},
             )
 

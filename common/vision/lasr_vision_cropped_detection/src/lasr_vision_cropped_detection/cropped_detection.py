@@ -64,8 +64,8 @@ def _2d_bbox_crop(
         for det in detections
     ]
 
-    # detections = [det for _, det in sorted(zip(distances, detections))]
-    # distances.sort()
+    detections = [det for _, det in sorted(zip(distances, detections))]
+    distances.sort()
 
     cropped_images = []
     for detection in detections:
@@ -123,8 +123,8 @@ def _2d_mask_crop(
         for det in detections
     ]
 
-    # detections = [det for _, det in sorted(zip(distances, detections))]
-    # distances.sort()
+    detections = [det for _, det in sorted(zip(distances, detections))]
+    distances.sort()
 
     masked_images = []
     unified_mask = np.zeros(image.shape).astype(image.dtype)
@@ -163,18 +163,25 @@ def _3d_bbox_crop(
         List[np.ndarray]: List of cropped images.
     """
 
-    distances = [0.0] * len(detections)
-    # if crop_method == "closest":
-    #     detections = [det for _, det in sorted(zip(distances, detections))]
-    #     distances.sort()
+    distances = [
+        np.sqrt(
+            (robot_location.x - det.point.x) ** 2
+            + (robot_location.y - det.point.y) ** 2
+            + (robot_location.z - det.point.z) ** 2
+        )
+        for det in detections
+    ]
+    if crop_method == "closest":
+        detections = [det for _, det in sorted(zip(distances, detections))]
+        distances.sort()
 
-    # elif crop_method == "furthest":
-    #     detections = [
-    #         det for _, det in sorted(zip(distances, detections), reverse=True)
-    #     ]
-    #     distances.sort(reverse=True)
-    # else:
-    #     raise ValueError(f"Invalid 3D crop_method: {crop_method}")
+    elif crop_method == "furthest":
+        detections = [
+            det for _, det in sorted(zip(distances, detections), reverse=True)
+        ]
+        distances.sort(reverse=True)
+    else:
+        raise ValueError(f"Invalid 3D crop_method: {crop_method}")
 
     cropped_images = []
     for detection in detections:
@@ -210,24 +217,25 @@ def _3d_mask_crop(
         Tuple[List[np.ndarray], np.ndarray, List[Detection3D]]: Tuple of cropped images, the combined mask, and the detections.
     """
 
-    distances = [0.0] * len(detections)
-    # np.sqrt(
-    #     (robot_location.x - det.point.x) ** 2
-    #     + (robot_location.y - det.point.y) ** 2
-    #     + (robot_location.z - det.point.z) ** 2
-    # )
-    # for det in detections
+    distances = [
+        np.sqrt(
+            (robot_location.x - det.point.x) ** 2
+            + (robot_location.y - det.point.y) ** 2
+            + (robot_location.z - det.point.z) ** 2
+        )
+        for det in detections
+    ]
 
-    # if crop_method == "closest":
-    #     detections = [det for _, det in sorted(zip(distances, detections))]
-    #     distances.sort()
-    # elif crop_method == "furthest":
-    #     detections = [
-    #         det for _, det in sorted(zip(distances, detections), reverse=True)
-    #     ]
-    #     distances.sort(reverse=True)
-    # else:
-    #     raise ValueError(f"Invalid 3D crop_method: {crop_method}")
+    if crop_method == "closest":
+        detections = [det for _, det in sorted(zip(distances, detections))]
+        distances.sort()
+    elif crop_method == "furthest":
+        detections = [
+            det for _, det in sorted(zip(distances, detections), reverse=True)
+        ]
+        distances.sort(reverse=True)
+    else:
+        raise ValueError(f"Invalid 3D crop_method: {crop_method}")
 
     masked_images = []
     unified_mask = np.zeros(rgb_image.shape).astype(rgb_image.dtype)
@@ -289,8 +297,8 @@ def process_single_detection_request(
     request: CDRequest,
     rgb_image_topic: str = "/xtion/rgb/image_raw",
     depth_image_topic: str = "/xtion/depth_registered/points",
-    yolo_2d_service=None,
-    yolo_3d_service=None,
+    yolo_2d_service_name: str = "/yolov8/detect",
+    yolo_3d_service_name: str = "/yolov8/detect3d",
     robot_pose_topic: str = "/amcl_pose",
     debug_topic: str = "/lasr_vision/cropped_detection/debug",
 ) -> CDResponse:
@@ -320,6 +328,8 @@ def process_single_detection_request(
     response = CDResponse()
     combined_mask = None
     if request.method in valid_2d_crop_methods:
+        yolo_2d_service = rospy.ServiceProxy(yolo_2d_service_name, YoloDetection)
+        yolo_2d_service.wait_for_service()
         rgb_image = (
             request.rgb_image
             if request.rgb_image.data
@@ -345,7 +355,10 @@ def process_single_detection_request(
         if request.return_sensor_reading:
             response.rgb_image = rgb_image
     elif request.method in valid_3d_crop_methods:
-        robot_location = None
+        yolo_3d_service = rospy.ServiceProxy(yolo_3d_service_name, YoloDetection3D)
+        yolo_3d_service.wait_for_service()
+        robot_pose = rospy.wait_for_message(robot_pose_topic, PoseWithCovarianceStamped)
+        robot_location = robot_pose.pose.pose.position
         pointcloud_msg = (
             request.pointcloud
             if request.pointcloud.data
@@ -396,22 +409,22 @@ def process_single_detection_request(
     )
 
     # Tile the images for debugging purposes
-    # if combined_mask is not None:
-    # Add distances to the image
-    # for i, (dist, detect) in enumerate(zip(distances, detections)):
-    #     continue
-    #     # cv2.putText(
-    #     #     combined_mask,
-    #     #     f"Dist: {round(dist, 2)}",
-    #     #     (detect.xywh[0], detect.xywh[1]),
-    #     #     cv2.FONT_HERSHEY_SIMPLEX,
-    #     #     1,
-    #     #     (0, 255, 0),
-    #     #     2,
-    #     #     cv2.LINE_AA,
-    #     # )
-    # combined_mask_debug_publisher.publish(cv2_img_to_msg(combined_mask))
-    # response.masked_img = cv2_img_to_msg(combined_mask)
+    if combined_mask is not None:
+        # Add distances to the image
+        for i, (dist, detect) in enumerate(zip(distances, detections)):
+            continue
+            # cv2.putText(
+            #     combined_mask,
+            #     f"Dist: {round(dist, 2)}",
+            #     (detect.xywh[0], detect.xywh[1]),
+            #     cv2.FONT_HERSHEY_SIMPLEX,
+            #     1,
+            #     (0, 255, 0),
+            #     2,
+            #     cv2.LINE_AA,
+            # )
+        combined_mask_debug_publisher.publish(cv2_img_to_msg(combined_mask))
+        response.masked_img = cv2_img_to_msg(combined_mask)
 
     try:
         closest_pub.publish(cv2_img_to_msg(cropped_images[0]))
@@ -445,8 +458,8 @@ def process_detection_requests(
     request: CroppedDetectionRequest,
     rgb_image_topic: str = "/xtion/rgb/image_raw",
     depth_image_topic: str = "/xtion/depth_registered/points",
-    yolo2d_service=None,
-    yolo3d_service=None,
+    yolo_2d_service_name: str = "/yolov8/detect",
+    yolo_3d_service_name: str = "/yolov8/detect3d",
     robot_pose_topic: str = "/amcl_pose",
     debug_topic: str = "/lasr_vision/cropped_detection/debug",
 ) -> CroppedDetectionResponse:
@@ -471,8 +484,8 @@ def process_detection_requests(
                 req,
                 rgb_image_topic,
                 depth_image_topic,
-                yolo2d_service,
-                yolo3d_service,
+                yolo_2d_service_name,
+                yolo_3d_service_name,
                 robot_pose_topic,
                 debug_topic,
             )
