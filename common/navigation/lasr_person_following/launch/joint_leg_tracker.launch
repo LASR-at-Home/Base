@@ -10,7 +10,7 @@
     <param name="display_detected_people" value="true"/>
     <param name="max_leg_pairing_dist" value="0.5"/>
     <param name="max_std" value="0.9"/>
-    
+    <param name="min_points_per_cluster" value="5"/>
   <!-- run detect_leg_clusters -->  
   <node pkg="leg_tracker" type="detect_leg_clusters" name="detect_leg_clusters" output="screen"/>
 
