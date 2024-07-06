@@ -7,9 +7,8 @@ import rospy
 import smach
 from smach import UserData
 from typing import List, Dict, Any
-from receptionist.states import (
-    SpeechRecovery
-)
+from receptionist.states import SpeechRecovery
+
 
 class GetNameOrDrink(smach.StateMachine):
     class ParseTranscribedInfo(smach.State):
@@ -39,9 +38,10 @@ class GetNameOrDrink(smach.StateMachine):
             prior_data: Dict[str, List[str]] = rospy.get_param(param_key)
             possible_drinks = [drink.lower() for drink in prior_data["drinks"]]
             possible_names = [name.lower() for name in prior_data["names"]]
-            self._possible_information = {"drink": possible_drinks, "name": possible_names}[
-                self._type
-            ]
+            self._possible_information = {
+                "drink": possible_drinks,
+                "name": possible_names,
+            }[self._type]
 
         def execute(self, userdata: UserData) -> str:
             """Parse the guest's information.
@@ -64,7 +64,9 @@ class GetNameOrDrink(smach.StateMachine):
             for key_phrase in self._possible_information:
                 if key_phrase in transcription:
                     userdata.guest_data[self._guest_id][self._type] = key_phrase
-                    rospy.loginfo(f"Guest/Drink {self._type} identified as: {key_phrase}")
+                    rospy.loginfo(
+                        f"Guest/Drink {self._type} identified as: {key_phrase}"
+                    )
                     information_found = True
                     break
             if not information_found:
@@ -73,14 +75,14 @@ class GetNameOrDrink(smach.StateMachine):
                 outcome = "failed"
 
             return outcome
-        
+
     def __init__(
-            self,
-            guest_id: str,
-            last_resort: bool,
-            info_type: str,
-            param_key: str = "/receptionist/priors",
-        ):
+        self,
+        guest_id: str,
+        last_resort: bool,
+        info_type: str,
+        param_key: str = "/receptionist/priors",
+    ):
 
         self._last_resort = last_resort
         self._guest_id = guest_id
@@ -92,13 +94,16 @@ class GetNameOrDrink(smach.StateMachine):
             outcomes=["succeeded", "failed"],
             input_keys=["guest_transcription", "guest_data"],
             output_keys=["guest_data", "guest_transcription"],
-
         )
         with self:
 
             smach.StateMachine.add(
                 "PARSE_NAME_OR_DRINK",
-                self.ParseTranscribedInfo(guest_id=self._guest_id, info_type=self._info_type, param_key=self._param_key),
+                self.ParseTranscribedInfo(
+                    guest_id=self._guest_id,
+                    info_type=self._info_type,
+                    param_key=self._param_key,
+                ),
                 transitions={"succeeded": "succeeded", "failed": "SPEECH_RECOVERY"},
             )
             smach.StateMachine.add(
