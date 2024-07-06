@@ -216,6 +216,9 @@ class PersonFollower:
         return True
 
     def _recover_track(self, say) -> bool:
+        if not say:
+            self._tts("I SAW A person waving", wait=True)
+
         if self._tts_client_available and say:
             self._tts("I lost track of you, please come back", wait=True)
 
@@ -226,14 +229,18 @@ class PersonFollower:
         return True
 
     # recover with vision, look up and check if person is waving
-    def _recover_vision(self) -> bool:
+    def _recover_vision(self, prev_pose: PoseStamped) -> bool:
         # look up with playmotion and detect wave service
         # if detected, begin tracking
 
         # use play motion to look up
+        self._cancel_goal()
+
         goal = PlayMotionGoal()
         goal.motion_name = "look_centre"
         self._play_motion.send_goal_and_wait(goal)
+
+        self._tts("Can you wave at me so that i can try to find you easily", wait=True)
 
         # detect wave
         try:
@@ -245,7 +252,22 @@ class PersonFollower:
             response = self._detect_wave(req)
             if response.wave_detected:
                 rospy.loginfo("Wave detected, beginning tracking")
-                self._move_base(response.wave_pose)
+                if np.isnan(response.wave_position.point.x) or np.isnan(response.wave_position.point.y):
+                    return False
+                goal_pose = self._tf_pose(PoseStamped(
+                    pose=Pose(
+                        position=Point(
+                            x=response.wave_position.point.x,
+                            y=response.wave_position.point.y,
+                            z=response.wave_position.point.z
+                        ),
+                        orientation=Quaternion(0, 0, 0, 1)
+                    ),
+                    header=pcl.header
+                ), "map")
+                rospy.loginfo(goal_pose.pose.position)
+                goal_pose.pose.orientation = self._compute_face_quat(prev_pose.pose, goal_pose.pose)
+                self._move_base(goal_pose)
                 return True
         except rospy.ServiceException as e:
             rospy.loginfo(f"Error detecting wave: {e}")
@@ -375,7 +397,7 @@ class PersonFollower:
             if track is None:
                 rospy.loginfo("Lost track of person, recovering...")
                 person_trajectory = PoseArray()
-                recovery = self._recover_vision()
+                recovery = self._recover_vision(prev_goal)
                 self._recover_track(say=not recovery)
                 prev_track = None
                 continue
