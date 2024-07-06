@@ -116,8 +116,16 @@ class TranscribeSpeechAction(object):
                 f"Could not find microphone with name: {self._model_params.mic_device}"
             )
 
-    def _configure_recogniser(self) -> sr.Recognizer:
+    def _configure_recogniser(
+        self,
+        energy_threshold: Optional[float] = None,
+        pause_threshold: Optional[float] = None,
+    ) -> sr.Recognizer:
         """Configures the speech recogniser object.
+
+        Args:
+            energy_threshold (float): Energy threshold for silence detection. Using this disables automatic adjustment.
+            pause_threshold (float): Seconds of non-speaking audio before a phrase is considered complete.
 
         Returns:
             sr.Recognizer: speech recogniser object.
@@ -125,8 +133,16 @@ class TranscribeSpeechAction(object):
         self._listening = True
         recogniser = sr.Recognizer()
 
-        if self._model_params.pause_threshold:
+        if pause_threshold:
+            recogniser.pause_threshold = pause_threshold
+
+        elif self._model_params.pause_threshold:
             recogniser.pause_threshold = self._model_params.pause_threshold
+
+        if energy_threshold:
+            recogniser.dynamic_energy_threshold = False
+            recogniser.energy_threshold = energy_threshold
+            return recogniser
 
         if self._model_params.energy_threshold:
             recogniser.dynamic_energy_threshold = False
@@ -161,6 +177,18 @@ class TranscribeSpeechAction(object):
         rospy.loginfo("Request Received")
         if self._action_server.is_preempt_requested():
             return
+
+        if goal.energy_threshold > 0.0 and goal.max_phrase_limit > 0.0:
+            self.recogniser = self._configure_recogniser(
+                goal.energy_threshold, goal.max_phrase_limit
+            )
+        elif goal.energy_threshold > 0.0:
+            self.recogniser = self._configure_recogniser(goal.energy_threshold)
+        elif goal.max_phrase_limit > 0.0:
+            self.recogniser = self._configure_recogniser(
+                pause_threshold=goal.max_phrase_limit
+            )
+
         with self._configure_microphone() as src:
             self._listening = True
             wav_data = self.recogniser.listen(
