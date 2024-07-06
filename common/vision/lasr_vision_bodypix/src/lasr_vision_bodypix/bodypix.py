@@ -3,14 +3,15 @@ from __future__ import annotations
 from typing import List
 import rospy
 import cv2
-import cv2_img
 import numpy as np
-from PIL import Image
+
 import re
 import tensorflow as tf
-from tf_bodypix.api import download_model, load_model, BodyPixModelPaths
+
+import cv2_img
 
 from sensor_msgs.msg import Image as SensorImage
+from tf_bodypix.api import download_model, load_model, BodyPixModelPaths
 
 from lasr_vision_msgs.msg import BodyPixMask, BodyPixKeypoint, BodyPixKeypointNormalized
 from lasr_vision_msgs.srv import (
@@ -64,7 +65,7 @@ def load_model_cached(dataset: str):
     return model
 
 
-def run_inference(dataset: str, confidence: float, img: Image):
+def run_inference(dataset: str, confidence: float, img: SensorImage):
     # decode the image
     rospy.loginfo("Decoding")
     img = cv2_img.msg_to_cv2_img(img)
