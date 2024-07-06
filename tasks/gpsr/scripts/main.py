@@ -4,7 +4,7 @@ import rospy
 import sys
 from typing import Dict
 from gpsr.load_known_data import GPSRDataLoader
-from gpsr.state_machine_factory import GPSRStateMachineFactory
+from gpsr.state_machine_factory import build_state_machine
 from gpsr.regex_command_parser import Configuration
 from gpsr.states import CommandParserStateMachine
 
@@ -34,7 +34,7 @@ def main():
     command_parser_sm.execute()
     parsed_command: Dict = command_parser_sm.userdata.parsed_command
     rospy.loginfo(f"Parsed command: {parsed_command}")
-    sm = GPSRStateMachineFactory(parsed_command).build_state_machine()
+    sm = build_state_machine(parsed_command)
     sm.execute()
 
 
