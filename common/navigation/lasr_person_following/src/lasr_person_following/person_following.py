@@ -13,17 +13,20 @@ from geometry_msgs.msg import (
 
 from typing import Union, List
 
-import actionlib
 from move_base_msgs.msg import MoveBaseAction, MoveBaseActionGoal, MoveBaseGoal
 from actionlib_msgs.msg import GoalStatus
+from sensor_msgs.msg import PointCloud2
 
 import rosservice
 import tf2_ros as tf
 import tf2_geometry_msgs  # type: ignore
 from tf2_geometry_msgs.tf2_geometry_msgs import do_transform_pose
 from nav_msgs.srv import GetPlan
-from nav_msgs.msg import Path
+from lasr_vision_msgs.srv import DetectWave
+from play_motion_msgs.msg import PlayMotionAction
+from play_motion_msgs.msg import PlayMotionGoal
 
+from lasr_vision_msgs.srv import DetectWaveRequest
 
 from math import atan2
 import numpy as np
@@ -38,7 +41,6 @@ from lasr_speech_recognition_msgs.msg import (
 
 
 class PersonFollower:
-
     # Parameters
     _start_following_radius: float
     _start_following_angle: float
@@ -71,10 +73,11 @@ class PersonFollower:
         self,
         start_following_radius: float = 2.0,
         start_following_angle: float = 45.0,
-        n_secs_static_finished: float = 10.0,
-        n_secs_static_plan_close: float = 5.0,
-        new_goal_threshold: float = 0.5,
+        n_secs_static_finished: float = 8.0,
+        n_secs_static_plan_close: float = 10.0,
+        new_goal_threshold: float = 2.0,
         stopping_distance: float = 1.0,
+        static_speed: float = 0.0015,
     ):
         self._start_following_radius = start_following_radius
         self._start_following_angle = start_following_angle
@@ -82,6 +85,7 @@ class PersonFollower:
         self._n_secs_static_plan_close = n_secs_static_plan_close
         self._new_goal_threshold = new_goal_threshold
         self._stopping_distance = stopping_distance
+        self._static_speed = static_speed
 
         self._track_id = None
 
@@ -120,6 +124,16 @@ class PersonFollower:
         if not self._transcribe_speech_client_available:
             rospy.logwarn("Transcribe speech client not available")
 
+        self._detect_wave = rospy.ServiceProxy("/detect_wave", DetectWave)
+        if not self._detect_wave.wait_for_service(rospy.Duration.from_sec(10.0)):
+            rospy.logwarn("Detect wave service not available")
+
+        self._play_motion = actionlib.SimpleActionClient(
+            "play_motion", PlayMotionAction
+        )
+        if not self._play_motion.wait_for_server(rospy.Duration.from_sec(10.0)):
+            rospy.logwarn("Play motion client not available")
+
     def _tf_pose(self, pose: PoseStamped, target_frame: str):
         trans = self._buffer.lookup_transform(
             target_frame, pose.header.frame_id, rospy.Time(0), rospy.Duration(1.0)
@@ -129,7 +143,7 @@ class PersonFollower:
     def _robot_pose_in_odom(self) -> Union[PoseStamped, None]:
         try:
             current_pose: PoseWithCovarianceStamped = rospy.wait_for_message(
-                "/amcl_pose", PoseWithCovarianceStamped
+                "/robot_pose", PoseWithCovarianceStamped
             )
         except AttributeError:
             return None
@@ -203,8 +217,11 @@ class PersonFollower:
         rospy.loginfo(f"Tracking person with ID {self._track_id}")
         return True
 
-    def _recover_track(self) -> bool:
-        if self._tts_client_available:
+    def _recover_track(self, say) -> bool:
+        if not say:
+            self._tts("I SAW A person waving", wait=True)
+
+        if self._tts_client_available and say:
             self._tts("I lost track of you, please come back", wait=True)
 
         while not self.begin_tracking(ask=True) and not rospy.is_shutdown():
@@ -212,6 +229,58 @@ class PersonFollower:
             rospy.sleep(1)
 
         return True
+
+    # recover with vision, look up and check if person is waving
+    def _recover_vision(self, prev_pose: PoseStamped) -> bool:
+        # look up with playmotion and detect wave service
+        # if detected, begin tracking
+
+        # use play motion to look up
+        self._cancel_goal()
+
+        goal = PlayMotionGoal()
+        goal.motion_name = "look_centre"
+        self._play_motion.send_goal_and_wait(goal)
+
+        self._tts("Can you wave at me so that i can try to find you easily", wait=True)
+
+        # detect wave
+        try:
+            pcl = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
+            req = DetectWaveRequest()
+            req.pcl_msg = pcl
+            req.dataset = "resnet50"
+            req.confidence = 0.1
+            response = self._detect_wave(req)
+            if response.wave_detected:
+                rospy.loginfo("Wave detected, beginning tracking")
+                if np.isnan(response.wave_position.point.x) or np.isnan(
+                    response.wave_position.point.y
+                ):
+                    return False
+                goal_pose = self._tf_pose(
+                    PoseStamped(
+                        pose=Pose(
+                            position=Point(
+                                x=response.wave_position.point.x,
+                                y=response.wave_position.point.y,
+                                z=response.wave_position.point.z,
+                            ),
+                            orientation=Quaternion(0, 0, 0, 1),
+                        ),
+                        header=pcl.header,
+                    ),
+                    "map",
+                )
+                rospy.loginfo(goal_pose.pose.position)
+                goal_pose.pose.orientation = self._compute_face_quat(
+                    prev_pose.pose, goal_pose.pose
+                )
+                self._move_base(goal_pose)
+                return True
+        except rospy.ServiceException as e:
+            rospy.loginfo(f"Error detecting wave: {e}")
+            return False
 
     def _euclidian_distance(self, p1: Pose, p2: Pose) -> float:
         return np.linalg.norm(
@@ -314,8 +383,10 @@ class PersonFollower:
         person_trajectory: PoseArray = PoseArray()
         person_trajectory.header.frame_id = "odom"
         prev_track: Union[None, Person] = None
+        prev_goal: Union[None, PoseStamped] = None
         last_goal_time: Union[None, rospy.Time] = None
         going_to_person: bool = False
+        track_vels: [float] = []
 
         while not rospy.is_shutdown():
 
@@ -326,14 +397,37 @@ class PersonFollower:
                 filter(lambda track: track.id == self._track_id, tracks.people),
                 None,
             )
+            # keep a sliding window of the tracks velocity
+            if track is not None:
+                track_vels.append((track.vel_x, track.vel_y))
+                if len(track_vels) > 10:
+                    track_vels.pop(0)
 
             if track is None:
                 rospy.loginfo("Lost track of person, recovering...")
-                self._cancel_goal()
                 person_trajectory = PoseArray()
-                self._recover_track()
+                recovery = self._recover_vision(prev_goal)
+                self._recover_track(say=not recovery)
                 prev_track = None
                 continue
+
+            if prev_track is None:
+                robot_pose: PoseStamped = self._robot_pose_in_odom()
+
+                goal_pose = self._tf_pose(
+                    PoseStamped(
+                        pose=Pose(
+                            position=track.pose.position,
+                            orientation=robot_pose.pose.orientation,
+                        ),
+                        header=tracks.header,
+                    ),
+                    "map",
+                )
+                self._move_base(goal_pose)
+                prev_goal = goal_pose
+                last_goal_time = rospy.Time.now()
+                prev_track = track
 
             # Distance to the previous pose
             dist_to_prev = (
@@ -350,42 +444,28 @@ class PersonFollower:
                     "map",
                 )
                 self._move_base(goal_pose)
+                prev_goal = goal_pose
                 prev_track = track
                 last_goal_time = rospy.Time.now()
-                person_trajectory.poses.append(track.pose)
-                person_trajectory.header.stamp = rospy.Time.now()
-                self._person_trajectory_pub.publish(person_trajectory)
-                going_to_person = False
-            elif last_goal_time is not None:
-                delta_t: float = (rospy.Time.now() - last_goal_time).to_sec()
-                if (
-                    self._n_secs_static_plan_close
-                    <= delta_t
-                    < self._n_secs_static_finished
-                ) and not going_to_person:
-                    self._cancel_goal()
-                    goal_pose = self._get_pose_on_path(
-                        self._tf_pose(self._robot_pose_in_odom(), "map"),
-                        self._tf_pose(
-                            PoseStamped(pose=track.pose, header=tracks.header),
-                            "map",
-                        ),
-                        self._stopping_distance,
-                    )
-                    if goal_pose is not None:
-                        self._move_base(goal_pose)
-                        going_to_person = True
-                    else:
-                        rospy.logwarn("Could not find a path to the person")
-                elif delta_t >= self._n_secs_static_finished:
-                    rospy.loginfo(
-                        "Person has been static for too long, checking if we are finished"
-                    )
-                    self._move_base_client.wait_for_result()
-                    if self._check_finished():
-                        rospy.loginfo("Finished following person")
-                        break
-                    else:
-                        rospy.loginfo("Person is not finished, continuing")
-                        last_goal_time = None
-                        continue
+            elif (
+                self._move_base_client.get_state() in [GoalStatus.ABORTED]
+                and prev_goal is not None
+            ):
+                rospy.logwarn("Goal was aborted, retrying")
+                rospy.logwarn((rospy.Time.now() - last_goal_time).to_sec())
+                rospy.logwarn(track.pose == prev_track.pose)
+                rospy.logwarn("")
+                self._move_base(prev_goal)
+            elif (
+                np.mean([np.linalg.norm(vel) for vel in track_vels])
+                < self._static_speed
+            ):
+
+                rospy.logwarn("Person has been static for too long, stopping")
+                self._cancel_goal()
+                if self._check_finished():
+                    rospy.loginfo("Finished following person")
+                    break
+            rospy.loginfo("")
+            rospy.loginfo(np.mean([np.linalg.norm(vel) for vel in track_vels]))
+            rospy.loginfo("")
