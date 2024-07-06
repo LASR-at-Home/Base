@@ -164,6 +164,7 @@ include_directories(
 catkin_install_python(PROGRAMS
   scripts/main.py
   scripts/test_find_and_look_at.py
+  scripts/create_name_and_drink_vector_db.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
