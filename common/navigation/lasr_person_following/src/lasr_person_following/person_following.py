@@ -70,14 +70,14 @@ class PersonFollower:
     _person_trajectory_pub: rospy.Publisher
 
     def __init__(
-            self,
-            start_following_radius: float = 2.0,
-            start_following_angle: float = 45.0,
-            n_secs_static_finished: float = 8.0,
-            n_secs_static_plan_close: float = 10.0,
-            new_goal_threshold: float = 2.0,
-            stopping_distance: float = 1.0,
-            static_speed: float = 0.0015,
+        self,
+        start_following_radius: float = 2.0,
+        start_following_angle: float = 45.0,
+        n_secs_static_finished: float = 8.0,
+        n_secs_static_plan_close: float = 10.0,
+        new_goal_threshold: float = 2.0,
+        stopping_distance: float = 1.0,
+        static_speed: float = 0.0015,
     ):
         self._start_following_radius = start_following_radius
         self._start_following_angle = start_following_angle
@@ -128,7 +128,9 @@ class PersonFollower:
         if not self._detect_wave.wait_for_service(rospy.Duration.from_sec(10.0)):
             rospy.logwarn("Detect wave service not available")
 
-        self._play_motion = actionlib.SimpleActionClient("play_motion", PlayMotionAction)
+        self._play_motion = actionlib.SimpleActionClient(
+            "play_motion", PlayMotionAction
+        )
         if not self._play_motion.wait_for_server(rospy.Duration.from_sec(10.0)):
             rospy.logwarn("Play motion client not available")
 
@@ -183,8 +185,8 @@ class PersonFollower:
             )
             rospy.loginfo(f"Person {person.id} is at {dist}m and {angle} degrees")
             if (
-                    dist < self._start_following_radius
-                    and abs(angle) < self._start_following_angle
+                dist < self._start_following_radius
+                and abs(angle) < self._start_following_angle
             ):
                 if dist < min_dist:
                     min_dist = dist
@@ -252,21 +254,28 @@ class PersonFollower:
             response = self._detect_wave(req)
             if response.wave_detected:
                 rospy.loginfo("Wave detected, beginning tracking")
-                if np.isnan(response.wave_position.point.x) or np.isnan(response.wave_position.point.y):
+                if np.isnan(response.wave_position.point.x) or np.isnan(
+                    response.wave_position.point.y
+                ):
                     return False
-                goal_pose = self._tf_pose(PoseStamped(
-                    pose=Pose(
-                        position=Point(
-                            x=response.wave_position.point.x,
-                            y=response.wave_position.point.y,
-                            z=response.wave_position.point.z
+                goal_pose = self._tf_pose(
+                    PoseStamped(
+                        pose=Pose(
+                            position=Point(
+                                x=response.wave_position.point.x,
+                                y=response.wave_position.point.y,
+                                z=response.wave_position.point.z,
+                            ),
+                            orientation=Quaternion(0, 0, 0, 1),
                         ),
-                        orientation=Quaternion(0, 0, 0, 1)
+                        header=pcl.header,
                     ),
-                    header=pcl.header
-                ), "map")
+                    "map",
+                )
                 rospy.loginfo(goal_pose.pose.position)
-                goal_pose.pose.orientation = self._compute_face_quat(prev_pose.pose, goal_pose.pose)
+                goal_pose.pose.orientation = self._compute_face_quat(
+                    prev_pose.pose, goal_pose.pose
+                )
                 self._move_base(goal_pose)
                 return True
         except rospy.ServiceException as e:
@@ -282,7 +291,7 @@ class PersonFollower:
     def _quat_to_dir(self, q: Quaternion):
         x, y, z, w = q.x, q.y, q.z, q.w
         forward = np.array(
-            [1 - 2 * (y ** 2 + z ** 2), 2 * (x * y - z * w), 2 * (x * z + y * w)]
+            [1 - 2 * (y**2 + z**2), 2 * (x * y - z * w), 2 * (x * z + y * w)]
         )
         return forward
 
@@ -325,11 +334,11 @@ class PersonFollower:
         return True
 
     def _get_pose_on_path(
-            self, start_pose: PoseStamped, goal_pose: PoseStamped, dist_to_goal: float
+        self, start_pose: PoseStamped, goal_pose: PoseStamped, dist_to_goal: float
     ) -> Union[None, PoseStamped]:
         start: rospy.Time = rospy.Time.now()
         assert (
-                start_pose.header.frame_id == goal_pose.header.frame_id
+            start_pose.header.frame_id == goal_pose.header.frame_id
         ), "Start and goal poses must be in the same frame"
 
         chosen_pose: Union[None, PoseStamped] = None
@@ -439,8 +448,8 @@ class PersonFollower:
                 prev_track = track
                 last_goal_time = rospy.Time.now()
             elif (
-                    self._move_base_client.get_state() in [GoalStatus.ABORTED]
-                    and prev_goal is not None
+                self._move_base_client.get_state() in [GoalStatus.ABORTED]
+                and prev_goal is not None
             ):
                 rospy.logwarn("Goal was aborted, retrying")
                 rospy.logwarn((rospy.Time.now() - last_goal_time).to_sec())
@@ -448,8 +457,8 @@ class PersonFollower:
                 rospy.logwarn("")
                 self._move_base(prev_goal)
             elif (
-                    np.mean([np.linalg.norm(vel) for vel in track_vels])
-                    < self._static_speed
+                np.mean([np.linalg.norm(vel) for vel in track_vels])
+                < self._static_speed
             ):
 
                 rospy.logwarn("Person has been static for too long, stopping")

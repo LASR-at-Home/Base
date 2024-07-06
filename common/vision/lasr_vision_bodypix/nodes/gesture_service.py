@@ -24,7 +24,6 @@ from lasr_vision_msgs.srv import (
 from std_msgs.msg import Header
 import numpy as np
 
-
 rospy.init_node("detect_wave_service")
 
 DEBUG = rospy.get_param("~debug", True)
@@ -32,9 +31,10 @@ marker_pub = rospy.Publisher("waving_person", Marker, queue_size=1)
 
 
 def detect_wave(
-        request: DetectWaveRequest,
-        debug_publisher: Union[rospy.Publisher, None] = rospy.Publisher(
-            "debug_waving", Image, queue_size=1)
+    request: DetectWaveRequest,
+    debug_publisher: Union[rospy.Publisher, None] = rospy.Publisher(
+        "debug_waving", Image, queue_size=1
+    ),
 ) -> DetectWaveResponse:
     """
     Detects a waving gesture by checking if the wrist is above the shoulder
@@ -60,37 +60,41 @@ def detect_wave(
         if keypoint_info["leftWrist"]["y"] < keypoint_info["leftShoulder"]["y"]:
             gesture_to_detect = "raising_left_arm"
 
-    if (
-            "rightShoulder" in keypoint_info
-            and "rightWrist" in keypoint_info
-    ):
-        if (
-                keypoint_info["rightWrist"]["y"]
-                < keypoint_info["rightShoulder"]["y"]
-        ):
+    if "rightShoulder" in keypoint_info and "rightWrist" in keypoint_info:
+        if keypoint_info["rightWrist"]["y"] < keypoint_info["rightShoulder"]["y"]:
             gesture_to_detect = "raising_right_arm"
 
     if gesture_to_detect is not None:
         rospy.loginfo(f"Detected gesture: {gesture_to_detect}")
 
-    wave_point = keypoint_info.get("leftShoulder" if gesture_to_detect == "raising_left_arm" else "rightShoulder")
+    wave_point = keypoint_info.get(
+        "leftShoulder" if gesture_to_detect == "raising_left_arm" else "rightShoulder"
+    )
     # get the pcl instead and transform it to img msg in the beginnign
     pcl_xyz = rnp.point_cloud2.pointcloud2_to_xyz_array(
-        request.pcl_msg,
-        remove_nans=False
+        request.pcl_msg, remove_nans=False
     )
     try:
         wave_position = np.zeros(3)
         # take the average of the points around the detected keypoint
         for i in range(-5, 5):
             for j in range(-5, 5):
-                if np.any(np.isnan(pcl_xyz[int(wave_point["y"]) + i][int(wave_point["x"]) + j])):
+                if np.any(
+                    np.isnan(
+                        pcl_xyz[int(wave_point["y"]) + i][int(wave_point["x"]) + j]
+                    )
+                ):
                     rospy.logwarn("Nan point in pcl")
                     continue
-                wave_position += pcl_xyz[int(wave_point["y"]) + i][int(wave_point["x"]) + j]
+                wave_position += pcl_xyz[int(wave_point["y"]) + i][
+                    int(wave_point["x"]) + j
+                ]
         wave_position /= 100
 
-        wave_position = PointStamped(point=Point(*wave_position), header=Header(frame_id=request.pcl_msg.header.frame_id))
+        wave_position = PointStamped(
+            point=Point(*wave_position),
+            header=Header(frame_id=request.pcl_msg.header.frame_id),
+        )
         rospy.loginfo(f"Wave point: {wave_position}")
     except Exception as e:
         rospy.logerr(f"Error getting wave point: {e}")
@@ -115,7 +119,11 @@ def detect_wave(
 
     is_waving = False if gesture_to_detect is None else True
 
-    return DetectWaveResponse(keypoints=detected_keypoints, wave_detected=is_waving, wave_position=wave_position)
+    return DetectWaveResponse(
+        keypoints=detected_keypoints,
+        wave_detected=is_waving,
+        wave_position=wave_position,
+    )
 
 
 # rospy.Service("/detect_wave", DetectWave, lambda req: detect_wave(req, rospy.Publisher("debug_waving", Image, queue_size=1)))
