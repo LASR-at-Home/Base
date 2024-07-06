@@ -1,0 +1,43 @@
+<launch>    
+
+    <!-- Config -->
+    <arg name="config" default="lab"/>
+
+    <!-- Motions -->
+    <rosparam 
+        command="load" 
+        file="$(find lasr_skills)/config/motions.yaml"
+    />
+
+        <!--     STATIC POINTS     -->
+    <rosparam 
+        command="load" 
+        file="$(find gpsr)/config/$(arg config).yaml" 
+        ns="gpsr" 
+    />
+
+    <!-- Speech Recognition -->
+    <arg name="whisper_device_param" default="9" />
+    <node
+        pkg="lasr_speech_recognition_whisper"
+        type="transcribe_microphone_server"
+        name="transcribe_speech"
+        output="screen"
+        args="--mic_device $(arg whisper_device_param)"
+    />
+
+
+        <!--      PERCEPTION     -->
+    <include file="$(find lasr_vision_yolov8)/launch/service.launch">
+        <param name="debug" value="true" />
+    </include>
+
+    <!-- To find the most similar commands -->
+    <node 
+        pkg="lasr_vector_databases_faiss" 
+        type="txt_query_service" 
+        name="txt_query" 
+        output="screen"
+    />
+
+</launch>
