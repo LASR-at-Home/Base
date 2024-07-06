@@ -20,6 +20,7 @@ from smach import CBState
 import actionlib
 from control_msgs.msg import PointHeadAction, PointHeadGoal
 from geometry_msgs.msg import Point
+from copy import copy
 
 PUBLIC_CONTAINER = False
 
@@ -47,7 +48,7 @@ class LookAtPerson(smach.StateMachine):
                     "detections",
                     "deepface_detection",
                 ],
-                output_keys=["pointstamped"],
+                output_keys=["pointstamped", "bbox_eyes"],
             )
             self.DEBUG = debug
             self.img_pub = rospy.Publisher("/debug/image", Image, queue_size=1)
@@ -58,8 +59,10 @@ class LookAtPerson(smach.StateMachine):
             self._filter = filter
 
         def execute(self, userdata):
-            rospy.sleep(1)
-            if len(userdata.bbox_eyes) < 1 and len(userdata.detections.detections) > 0:
+            rospy.sleep(0.1)
+            ######### BUG HERE REQUIRES RESOLVING ###############
+            if len(userdata.bbox_eyes) == 0 and len(userdata.detections.detections) > 0:
+                # userdata.pointstamped = PointStamped()
                 return "succeeded"
             elif (
                 len(userdata.bbox_eyes) < 1 and len(userdata.detections.detections) < 1
@@ -88,7 +91,9 @@ class LookAtPerson(smach.StateMachine):
                 else:
                     return "failed"
 
-            for det in userdata.bbox_eyes:
+            bbox_eyes = copy(userdata.bbox_eyes)
+
+            for det in bbox_eyes:
                 left_eye = det["left_eye"]
                 right_eye = det["right_eye"]
                 eye_point = (left_eye[0] + right_eye[0]) / 2, (
@@ -141,15 +146,15 @@ class LookAtPerson(smach.StateMachine):
                     look_at.point.y = 0.0
                     look_at.point.z = 0.0
 
-                goal = PointHeadGoal()
-                goal.pointing_frame = "head_2_link"
-                goal.pointing_axis = Point(1.0, 0.0, 0.0)
-                goal.max_velocity = 1.0
-                goal.target = look_at
-                rospy.loginfo(
-                    f"LOOKING AT POINT {look_at.point.x}, {look_at.point.y}, {look_at.point.z}"
-                )
-                self.look_at_pub.send_goal(goal)
+                # goal = PointHeadGoal()
+                # goal.pointing_frame = "head_2_link"
+                # goal.pointing_axis = Point(1.0, 0.0, 0.0)
+                # goal.max_velocity = 1.0
+                # goal.target = look_at
+                # rospy.loginfo(
+                #     f"LOOKING AT POINT {look_at.point.x}, {look_at.point.y}, {look_at.point.z}"
+                # )
+                # self.look_at_pub.send_goal(goal)
 
                 print(self.look_at_pub.get_state())
 
@@ -268,11 +273,26 @@ class LookAtPerson(smach.StateMachine):
                 transitions={"succeeded": "CHECK_EYES", "failed": "failed"},
                 remapping={"bbox_eyes": "bbox_eyes"},
             )
+            # smach.StateMachine.add(
+            #     "CHECK_EYES",
+            #     self.CheckEyes(self.DEBUG, filter=filter),
+            #     transitions={
+            #         "succeeded": "LOOK_TO_POINT",
+            #         "failed": "failed",
+            #         "no_detection": "no_detection",
+            #     },
+            #     remapping={
+            #         "pcl_msg": "pcl_msg",
+            #         "bbox_eyes": "bbox_eyes",
+            #         "pointstamped": "pointstamped",
+            #         "deepface_detection": "deepface_detection",
+            #     },
+            # )
             smach.StateMachine.add(
                 "CHECK_EYES",
                 self.CheckEyes(self.DEBUG, filter=filter),
                 transitions={
-                    "succeeded": "LOOP",
+                    "succeeded": "LOOK_TO_POINT",
                     "failed": "failed",
                     "no_detection": "no_detection",
                 },

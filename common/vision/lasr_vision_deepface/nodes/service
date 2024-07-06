@@ -18,71 +18,58 @@ from lasr_vision_msgs.srv import (
 
 rospy.init_node("recognise_service")
 
-# Determine variables
-DEBUG = rospy.get_param("~debug", False)
-
 recognise_debug_publishers = {}
 learn_face_debug_publishers = {}
 detect_faces_debug_publisher = None
 
-if DEBUG:
-    recognise_debug_publisher = rospy.Publisher("/recognise/debug", Image, queue_size=1)
-    learn_face_debug_publisher = rospy.Publisher(
-        "/learn_face/debug", Image, queue_size=1
-    )
-    cropped_face_publisher = rospy.Publisher(
-        "/learn_face/debug/cropped_query_face", Image, queue_size=1
-    )
-    detect_faces_debug_publisher = rospy.Publisher(
-        "/detect_faces/debug", Image, queue_size=1
-    )
+recognise_debug_publisher = rospy.Publisher("/recognise/debug", Image, queue_size=1)
+learn_face_debug_publisher = rospy.Publisher("/learn_face/debug", Image, queue_size=1)
+cropped_face_publisher = rospy.Publisher(
+    "/learn_face/debug/cropped_query_face", Image, queue_size=1
+)
+detect_faces_debug_publisher = rospy.Publisher(
+    "/detect_faces/debug", Image, queue_size=1
+)
 
 
 def recognise(request: RecogniseRequest) -> RecogniseResponse:
-    debug_publisher = None
-    similar_face_debug_publisher = None
-    cropped_face_publisher = None
-    if DEBUG:
-        if request.dataset in recognise_debug_publishers:
-            debug_publisher, similar_face_debug_publisher, cropped_face_publisher = (
-                recognise_debug_publishers[request.dataset]
-            )
-        else:
-            topic_name = re.sub(r"[\W_]+", "", request.dataset)
-            debug_publisher = rospy.Publisher(
-                f"/recognise/debug/{topic_name}", Image, queue_size=1
-            )
-            similar_face_debug_publisher = rospy.Publisher(
-                f"/recognise/debug/{topic_name}/similar_face", Image, queue_size=1
-            )
-            cropped_face_publisher = rospy.Publisher(
-                "/recognise/debug/cropped_query_face", Image, queue_size=1
-            )
-            recognise_debug_publishers[request.dataset] = (
-                debug_publisher,
-                similar_face_debug_publisher,
-                cropped_face_publisher,
-            )
+    if request.dataset in recognise_debug_publishers:
+        debug_publisher, similar_face_debug_publisher, cropped_face_publisher = (
+            recognise_debug_publishers[request.dataset]
+        )
+    else:
+        topic_name = re.sub(r"[\W_]+", "", request.dataset)
+        debug_publisher = rospy.Publisher(
+            f"/recognise/debug/{topic_name}", Image, queue_size=1
+        )
+        similar_face_debug_publisher = rospy.Publisher(
+            f"/recognise/debug/{topic_name}/similar_face", Image, queue_size=1
+        )
+        cropped_face_publisher = rospy.Publisher(
+            "/recognise/debug/cropped_query_face", Image, queue_size=1
+        )
+        recognise_debug_publishers[request.dataset] = (
+            debug_publisher,
+            similar_face_debug_publisher,
+            cropped_face_publisher,
+        )
     return face_recognition.recognise(
         request, debug_publisher, similar_face_debug_publisher, cropped_face_publisher
     )
 
 
 def learn_face(request: LearnFaceRequest) -> LearnFaceResponse:
-    debug_publisher = None
-    if DEBUG:
-        if request.dataset in learn_face_debug_publishers:
-            debug_publisher = learn_face_debug_publishers[request.dataset]
-        else:
-            topic_name = re.sub(r"[\W_]+", "", request.dataset)
-            debug_publisher = rospy.Publisher(
-                f"/learn_face/debug/{topic_name}", Image, queue_size=1
-            )
+    if request.dataset in learn_face_debug_publishers:
+        debug_publisher = learn_face_debug_publishers[request.dataset]
+    else:
+        topic_name = re.sub(r"[\W_]+", "", request.dataset)
+        debug_publisher = rospy.Publisher(
+            f"/learn_face/debug/{topic_name}", Image, queue_size=1
+        )
     face_recognition.create_dataset(
-        "/xtion/rgb/image_raw",
         request.dataset,
         request.name,
-        request.n_images,
+        request.images,
         debug_publisher,
     )
     return LearnFaceResponse()
