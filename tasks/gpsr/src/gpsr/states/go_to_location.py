@@ -8,7 +8,7 @@ from typing import Union
 
 
 class GoToLocation(smach_ros.SimpleActionState):
-      def __init__(self, location: Union[Pose, None] = None):
+    def __init__(self, location: Union[Pose, None] = None):
         if location is not None:
             super(GoToLocation, self).__init__(
                 "move_base",

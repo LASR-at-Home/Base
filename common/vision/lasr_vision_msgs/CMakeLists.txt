@@ -59,12 +59,6 @@ add_service_files(
   FILES
   YoloDetection.srv
   YoloDetection3D.srv
-<<<<<<< HEAD
-  BodyPixDetection.srv
-  Recognise.srv
-  LearnFace.srv
-  Vqa.srv
-=======
   BodyPixMaskDetection.srv
   BodyPixKeypointDetection.srv
   Recognise.srv
