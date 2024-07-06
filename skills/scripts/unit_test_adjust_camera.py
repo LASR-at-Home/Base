@@ -11,11 +11,7 @@ if __name__ == "__main__":
     with sm:
         sm.add(
             "AdjustCamera",
-            AdjustCamera(
-                max_attempts=1000,
-                debug=True,
-                init_state="u1m",
-            ),
+            AdjustCamera(debug=True),
             transitions={"finished": "end", "failed": "end", "truncated": "end"},
         )
     sm.execute()

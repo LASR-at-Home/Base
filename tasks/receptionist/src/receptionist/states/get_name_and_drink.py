@@ -7,8 +7,9 @@ import rospy
 import smach
 from smach import UserData
 from typing import List, Dict, Any
-from receptionist.states import SpeechRecovery
-
+from receptionist.states import (
+    SpeechRecovery
+)
 
 class GetNameAndDrink(smach.StateMachine):
     class ParseNameAndDrink(smach.State):
@@ -77,25 +78,25 @@ class GetNameAndDrink(smach.StateMachine):
                 outcome = "failed"
 
             return outcome
-
+    
     class PostRecoveryDecision(smach.State):
         def __init__(
             self,
             guest_id: str,
             param_key: str = "/receptionist/priors",
         ):
-
+            
             smach.State.__init__(
                 self,
                 outcomes=["succeeded", "failed", "failed_name", "failed_drink"],
                 input_keys=["guest_transcription", "guest_data"],
                 output_keys=["guest_data", "guest_transcription"],
-            )
+            )       
             self._guest_id = guest_id
             prior_data: Dict[str, List[str]] = rospy.get_param(param_key)
             self._possible_names = [name.lower() for name in prior_data["names"]]
             self._possible_drinks = [drink.lower() for drink in prior_data["drinks"]]
-
+        
         def execute(self, userdata: UserData) -> str:
             if not self._recovery_name_and_drink_required(userdata):
                 if userdata.guest_data[self._guest_id]["name"] == "unknown":
@@ -105,7 +106,7 @@ class GetNameAndDrink(smach.StateMachine):
             else:
                 outcome = "failed"
             return outcome
-
+        
         def _recovery_name_and_drink_required(self, userdata: UserData) -> bool:
             """Determine whether both the name and drink requires recovery.
 
@@ -119,11 +120,11 @@ class GetNameAndDrink(smach.StateMachine):
                 return False
 
     def __init__(
-        self,
-        guest_id: str,
-        last_resort: bool,
-        param_key: str = "/receptionist/priors",
-    ):
+            self,
+            guest_id: str,
+            last_resort: bool,
+            param_key: str = "/receptionist/priors",
+        ):
 
         self._guest_id = guest_id
         self._param_key = param_key
@@ -134,29 +135,23 @@ class GetNameAndDrink(smach.StateMachine):
             outcomes=["succeeded", "failed", "failed_name", "failed_drink"],
             input_keys=["guest_transcription", "guest_data"],
             output_keys=["guest_data", "guest_transcription"],
+
         )
         with self:
 
             smach.StateMachine.add(
                 "PARSE_NAME_AND_DRINK",
-                self.ParseNameAndDrink(
-                    guest_id=self._guest_id, param_key=self._param_key
-                ),
+                self.ParseNameAndDrink(guest_id=self._guest_id, param_key=self._param_key),
                 transitions={"succeeded": "succeeded", "failed": "SPEECH_RECOVERY"},
             )
             smach.StateMachine.add(
                 "SPEECH_RECOVERY",
                 SpeechRecovery(self._guest_id, self._last_resort),
-                transitions={
-                    "succeeded": "succeeded",
-                    "failed": "POST_RECOVERY_DECISION",
-                },
+                transitions={"succeeded": "succeeded", "failed": "POST_RECOVERY_DECISION"},
             )
             smach.StateMachine.add(
                 "POST_RECOVERY_DECISION",
-                self.PostRecoveryDecision(
-                    guest_id=self._guest_id, param_key=self._param_key
-                ),
+                self.PostRecoveryDecision(guest_id=self._guest_id, param_key=self._param_key),
                 transitions={
                     "failed": "failed",
                     "failed_name": "failed_name",

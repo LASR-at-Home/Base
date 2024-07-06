@@ -84,33 +84,33 @@ play_motion:
     u3l:
       joints: [torso_lift_joint, head_1_joint, head_2_joint]
       points:
-      - positions: [0.4, 0.35, 0.05]
+      - positions: [0.4, 0.35, 0.15]
         time_from_start: 0.0
     u3m:
       joints: [torso_lift_joint, head_1_joint, head_2_joint]
       points:
-      - positions: [0.4, 0.0, 0.05]
+      - positions: [0.4, 0.0, 0.15]
         time_from_start: 0.0
     u3r:
       joints: [torso_lift_joint, head_1_joint, head_2_joint]
       points:
-      - positions: [0.4, -0.35, 0.05]
+      - positions: [0.4, -0.35, 0.15]
         time_from_start: 0.0
 
     u2l:
       joints: [torso_lift_joint, head_1_joint, head_2_joint]
       points:
-      - positions: [0.35, 0.35, 0.05]
+      - positions: [0.4, 0.35, 0.05]
         time_from_start: 0.0
     u2m:
       joints: [torso_lift_joint, head_1_joint, head_2_joint]
       points:
-      - positions: [0.35, 0.0, 0.05]
+      - positions: [0.4, 0.0, 0.05]
         time_from_start: 0.0
     u2r:
       joints: [torso_lift_joint, head_1_joint, head_2_joint]
       points:
-      - positions: [0.35, -0.35, 0.05]
+      - positions: [0.4, -0.35, 0.05]
         time_from_start: 0.0
     u1l:
       joints: [torso_lift_joint, head_1_joint, head_2_joint]
