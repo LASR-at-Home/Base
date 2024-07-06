@@ -463,6 +463,7 @@ class IntroduceAndSeatGuest(smach.StateMachine):
         sofa_position: Point,
         max_people_on_sofa: int,
         motions: List[str],
+        sweep: bool = True,
     ):
 
         smach.StateMachine.__init__(
@@ -475,188 +476,193 @@ class IntroduceAndSeatGuest(smach.StateMachine):
         3. Seat the guest
         
         """
+
         with self:
 
-            smach.StateMachine.add(
-                "LOOK_AT_SOFA",
-                LookToPoint(
-                    pointstamped=PointStamped(
-                        point=sofa_position, header=Header(frame_id="map")
-                    )
-                ),
-                transitions={
-                    "succeeded": "SLEEP_1",
-                    "aborted": "SLEEP_1",
-                    "timed_out": "SLEEP_1",
-                },
-            )
+            if sweep:
 
-            smach.StateMachine.add(
-                "SLEEP_1",
-                Wait(1),
-                transitions={
-                    "succeeded": "DETECT_PEOPLE_ON_SOFA",
-                    "failed": "DETECT_PEOPLE_ON_SOFA",
-                },
-            )
-
-            # Detect people on the sofa
-            smach.StateMachine.add(
-                "DETECT_PEOPLE_ON_SOFA",
-                smach_ros.ServiceState(
-                    "/vision/cropped_detection",
-                    CroppedDetection,
-                    request=CroppedDetectionRequest(
-                        requests=[
-                            CDRequest(
-                                method="closest",
-                                use_mask=True,
-                                yolo_model="yolov8x-seg.pt",
-                                yolo_model_confidence=0.5,
-                                yolo_nms_threshold=0.3,
-                                return_sensor_reading=False,
-                                object_names=["person"],
-                                polygons=[
-                                    Polygon(
-                                        points=[
-                                            Point(
-                                                x=point[0],
-                                                y=point[1],
-                                                z=0.0,
-                                            )
-                                            for point in sofa_area.exterior.coords
-                                        ]
-                                    ),
-                                ],
-                            )
-                        ]
-                    ),
-                    output_keys=["responses"],
-                    response_slots=["responses"],
-                ),
-                transitions={
-                    "succeeded": "DETECT_PEOPLE_AND_SEATS",
-                    "aborted": "failed",
-                    "preempted": "failed",
-                },
-                remapping={"responses": "sofa_detections"},
-            )
-
-            # Detect people and seats in the seating area
-            smach.StateMachine.add(
-                "DETECT_PEOPLE_AND_SEATS",
-                self.DetectPeopleAndSeats(seating_area, motions),
-                transitions={"succeeded": "HANDLE_RESPONSES", "failed": "failed"},
-            )
-
-            # Handle the responses from the detections
-            smach.StateMachine.add(
-                "HANDLE_RESPONSES",
-                self.HandleResponses(guests_to_introduce_to),
-                transitions={
-                    "succeeded": (
-                        f"GET_LOOK_POINT_{guests_to_introduce_to[0]}"
-                        if len(guests_to_introduce_to) > 0
-                        else "succeeded"
-                    ),
-                    "failed": (
-                        f"GET_LOOK_POINT_{guests_to_introduce_to[0]}"
-                        if len(guests_to_introduce_to) > 0
-                        else "succeeded"
-                    ),
-                },
-            )
-
-            # Introduce the guest to the other guests
-            for i, guest_to_introduce_to in enumerate(guests_to_introduce_to):
-
-                # Get the look point for the guest to introduce to
                 smach.StateMachine.add(
-                    f"GET_LOOK_POINT_{guest_to_introduce_to}",
-                    self.GetLookPoint(guest_to_introduce_to),
-                    transitions={"succeeded": f"LOOK_AT_{guest_to_introduce_to}"},
-                )
-
-                # Look at the guest to introduce to
-                smach.StateMachine.add(
-                    f"LOOK_AT_{guest_to_introduce_to}",
-                    LookToPoint(),
+                    "LOOK_AT_SOFA",
+                    LookToPoint(
+                        pointstamped=PointStamped(
+                            point=sofa_position, header=Header(frame_id="map")
+                        )
+                    ),
                     transitions={
-                        "succeeded": f"INTRODUCE_{guest_id}_TO_{guest_to_introduce_to}",
-                        "aborted": f"INTRODUCE_{guest_id}_TO_{guest_to_introduce_to}",
-                        "timed_out": f"INTRODUCE_{guest_id}_TO_{guest_to_introduce_to}",
+                        "succeeded": "SLEEP_1",
+                        "aborted": "SLEEP_1",
+                        "timed_out": "SLEEP_1",
                     },
-                    remapping={"pointstamped": "look_point"},
                 )
 
-                # Introduce the guest to the other guest
                 smach.StateMachine.add(
-                    f"INTRODUCE_{guest_id}_TO_{guest_to_introduce_to}",
-                    Introduce(
-                        guest_to_introduce=guest_id,
-                        guest_to_introduce_to=guest_to_introduce_to,
+                    "SLEEP_1",
+                    Wait(1),
+                    transitions={
+                        "succeeded": "DETECT_PEOPLE_ON_SOFA",
+                        "failed": "DETECT_PEOPLE_ON_SOFA",
+                    },
+                )
+
+                # Detect people on the sofa
+                smach.StateMachine.add(
+                    "DETECT_PEOPLE_ON_SOFA",
+                    smach_ros.ServiceState(
+                        "/vision/cropped_detection",
+                        CroppedDetection,
+                        request=CroppedDetectionRequest(
+                            requests=[
+                                CDRequest(
+                                    method="closest",
+                                    use_mask=True,
+                                    yolo_model="yolov8x-seg.pt",
+                                    yolo_model_confidence=0.5,
+                                    yolo_nms_threshold=0.3,
+                                    return_sensor_reading=False,
+                                    object_names=["person"],
+                                    polygons=[
+                                        Polygon(
+                                            points=[
+                                                Point(
+                                                    x=point[0],
+                                                    y=point[1],
+                                                    z=0.0,
+                                                )
+                                                for point in sofa_area.exterior.coords
+                                            ]
+                                        ),
+                                    ],
+                                )
+                            ]
+                        ),
+                        output_keys=["responses"],
+                        response_slots=["responses"],
                     ),
+                    transitions={
+                        "succeeded": "DETECT_PEOPLE_AND_SEATS",
+                        "aborted": "failed",
+                        "preempted": "failed",
+                    },
+                    remapping={"responses": "sofa_detections"},
+                )
+
+                # Detect people and seats in the seating area
+                smach.StateMachine.add(
+                    "DETECT_PEOPLE_AND_SEATS",
+                    self.DetectPeopleAndSeats(seating_area, motions),
+                    transitions={"succeeded": "HANDLE_RESPONSES", "failed": "failed"},
+                )
+
+                # Handle the responses from the detections
+                smach.StateMachine.add(
+                    "HANDLE_RESPONSES",
+                    self.HandleResponses(guests_to_introduce_to),
                     transitions={
                         "succeeded": (
-                            "SELECT_SEAT"
-                            if i == len(guests_to_introduce_to) - 1
-                            else f"GET_LOOK_POINT_{guests_to_introduce_to[i+1]}"
-                        )
+                            f"GET_LOOK_POINT_{guests_to_introduce_to[0]}"
+                            if len(guests_to_introduce_to) > 0
+                            else "succeeded"
+                        ),
+                        "failed": (
+                            f"GET_LOOK_POINT_{guests_to_introduce_to[0]}"
+                            if len(guests_to_introduce_to) > 0
+                            else "succeeded"
+                        ),
                     },
                 )
 
-            # Select a seat for the guest
-            smach.StateMachine.add(
-                "SELECT_SEAT",
-                self.SelectSeat(sofa_position, max_people_on_sofa),
-                transitions={
-                    "succeeded_sofa": "SAY_SOFA",
-                    "succeeded_chair": "SAY_CHAIR",
-                    "failed": "SAY_ANY",
-                },
-            )
+                # Introduce the guest to the other guests
+                for i, guest_to_introduce_to in enumerate(guests_to_introduce_to):
 
-            # Say to sit on the sofa
-            smach.StateMachine.add(
-                "SAY_SOFA",
-                Say(text="Please sit on the sofa"),
-                transitions={
-                    "succeeded": "LOOK_AT_SEAT",
-                    "preempted": "LOOK_AT_SEAT",
-                    "aborted": "LOOK_AT_SEAT",
-                },
-            )
+                    # Get the look point for the guest to introduce to
+                    smach.StateMachine.add(
+                        f"GET_LOOK_POINT_{guest_to_introduce_to}",
+                        self.GetLookPoint(guest_to_introduce_to),
+                        transitions={"succeeded": f"LOOK_AT_{guest_to_introduce_to}"},
+                    )
 
-            # Say to sit on the chair
-            smach.StateMachine.add(
-                "SAY_CHAIR",
-                Say(text="Please sit on the chair that I am looking at"),
-                transitions={
-                    "succeeded": "LOOK_AT_SEAT",
-                    "preempted": "LOOK_AT_SEAT",
-                    "aborted": "LOOK_AT_SEAT",
-                },
-            )
+                    # Look at the guest to introduce to
+                    smach.StateMachine.add(
+                        f"LOOK_AT_{guest_to_introduce_to}",
+                        LookToPoint(),
+                        transitions={
+                            "succeeded": f"INTRODUCE_{guest_id}_TO_{guest_to_introduce_to}",
+                            "aborted": f"INTRODUCE_{guest_id}_TO_{guest_to_introduce_to}",
+                            "timed_out": f"INTRODUCE_{guest_id}_TO_{guest_to_introduce_to}",
+                        },
+                        remapping={"pointstamped": "look_point"},
+                    )
 
-            # Say to sit on any empty seat
-            smach.StateMachine.add(
-                "SAY_ANY",
-                Say(text="Please sit on any empty seat"),
-                transitions={
-                    "succeeded": "succeeded",
-                    "preempted": "succeeded",
-                    "aborted": "succeeded",
-                },
-            )
+                    # Introduce the guest to the other guest
+                    smach.StateMachine.add(
+                        f"INTRODUCE_{guest_id}_TO_{guest_to_introduce_to}",
+                        Introduce(
+                            guest_to_introduce=guest_id,
+                            guest_to_introduce_to=guest_to_introduce_to,
+                        ),
+                        transitions={
+                            "succeeded": (
+                                "SELECT_SEAT"
+                                if i == len(guests_to_introduce_to) - 1
+                                else f"GET_LOOK_POINT_{guests_to_introduce_to[i+1]}"
+                            )
+                        },
+                    )
 
-            # Look at the seat
-            smach.StateMachine.add(
-                "LOOK_AT_SEAT",
-                LookToPoint(),
-                transitions={
-                    "succeeded": "succeeded",
-                    "aborted": "succeeded",
-                    "timed_out": "succeeded",
-                },
-                remapping={"pointstamped": "seat_position"},
-            )
+                # Select a seat for the guest
+                smach.StateMachine.add(
+                    "SELECT_SEAT",
+                    self.SelectSeat(sofa_position, max_people_on_sofa),
+                    transitions={
+                        "succeeded_sofa": "SAY_SOFA",
+                        "succeeded_chair": "SAY_CHAIR",
+                        "failed": "SAY_ANY",
+                    },
+                )
+
+                # Say to sit on the sofa
+                smach.StateMachine.add(
+                    "SAY_SOFA",
+                    Say(text="Please sit on the sofa"),
+                    transitions={
+                        "succeeded": "LOOK_AT_SEAT",
+                        "preempted": "LOOK_AT_SEAT",
+                        "aborted": "LOOK_AT_SEAT",
+                    },
+                )
+
+                # Say to sit on the chair
+                smach.StateMachine.add(
+                    "SAY_CHAIR",
+                    Say(text="Please sit on the chair that I am looking at"),
+                    transitions={
+                        "succeeded": "LOOK_AT_SEAT",
+                        "preempted": "LOOK_AT_SEAT",
+                        "aborted": "LOOK_AT_SEAT",
+                    },
+                )
+
+                # Say to sit on any empty seat
+                smach.StateMachine.add(
+                    "SAY_ANY",
+                    Say(text="Please sit on any empty seat"),
+                    transitions={
+                        "succeeded": "succeeded",
+                        "preempted": "succeeded",
+                        "aborted": "succeeded",
+                    },
+                )
+
+                # Look at the seat
+                smach.StateMachine.add(
+                    "LOOK_AT_SEAT",
+                    LookToPoint(),
+                    transitions={
+                        "succeeded": "succeeded",
+                        "aborted": "succeeded",
+                        "timed_out": "succeeded",
+                    },
+                    remapping={"pointstamped": "seat_position"},
+                )
+            else:
+                pass

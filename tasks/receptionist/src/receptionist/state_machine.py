@@ -35,6 +35,7 @@ class Receptionist(smach.StateMachine):
         face_detection_confidence: float = 0.2,
         known_host: bool = True,
         learn_guest_1: bool = True,
+        sweep: bool = True,
     ):
         smach.StateMachine.__init__(self, outcomes=["succeeded", "failed"])
 
@@ -108,6 +109,7 @@ class Receptionist(smach.StateMachine):
                     sofa_point,
                     max_people_on_sofa,
                     search_motions,
+                    sweep=sweep,
                 ),
                 transitions={
                     "succeeded": "SAY_RETURN_WAITING_AREA",
@@ -152,6 +154,7 @@ class Receptionist(smach.StateMachine):
                     sofa_point,
                     max_people_on_sofa,
                     search_motions,
+                    sweep=sweep,
                 ),
                 transitions={
                     "succeeded": "SAY_GOODBYE",

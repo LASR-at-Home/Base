@@ -56,6 +56,8 @@ if __name__ == "__main__":
 
     search_motions = rospy.get_param("/receptionist/search_motions")
 
+    sweep = rospy.get_param("/receptionist/sweep")
+
     seat_area_publisher.publish(
         PolygonStamped(
             polygon=Polygon(
@@ -89,6 +91,7 @@ if __name__ == "__main__":
             "dataset": "receptionist",
             "detection": False,
         },
+        sweep=sweep
         max_people_on_sofa=max_people_on_sofa,
     )
 
