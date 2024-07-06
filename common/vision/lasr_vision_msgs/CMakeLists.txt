@@ -65,6 +65,7 @@ add_service_files(
   TorchFaceFeatureDetectionDescription.srv
   DetectFaces.srv
   CheckKnownPeople.srv
+  DetectWave.srv
 )
 
 # Generate actions in the 'action' folder
