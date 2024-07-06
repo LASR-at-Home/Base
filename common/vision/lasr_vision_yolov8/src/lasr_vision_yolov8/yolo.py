@@ -111,7 +111,10 @@ def detect_3d(
 
     # transform pcl to map frame
     trans = tf_buffer.lookup_transform(
-        "map", request.pcl.header.frame_id, rospy.Time(0), rospy.Duration(1.0)
+        "map",
+        request.pcl.header.frame_id,
+        rospy.Time(0),
+        rospy.Duration(1.0),
     )
     pcl_map = do_transform_cloud(request.pcl, trans)
 
