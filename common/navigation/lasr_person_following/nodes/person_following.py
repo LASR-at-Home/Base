@@ -68,12 +68,12 @@ class PersonFollowingServer:
         self._dynamic_costmap(config)
 
         config = Config()
-        config.doubles.append(DoubleParameter(name="max_vel_x", value=0.7))
+        config.doubles.append(DoubleParameter(name="max_vel_x", value=0.6))
 
         self._dynamic_velocity(config)
 
         config = Config()
-        config.bools.append(BoolParameter(name="recovery_behavior_enabled", value=0))
+        config.bools.append(BoolParameter(name="recovery_behavior_enabled", value=1))
         config.bools.append(BoolParameter(name="clearing_rotation_allowed", value=0))
 
         self._dynamic_recovery(config)
