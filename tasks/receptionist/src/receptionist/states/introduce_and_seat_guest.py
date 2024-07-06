@@ -263,49 +263,6 @@ class IntroduceAndSeatGuest(smach.StateMachine):
                 if add:
                     filtered_face_detections.append(unknown)
 
-            # # ignore_indices = []
-            # for i, detection in enumerate(matched_face_detections):
-            #     if detection in filtered_face_detections:
-            #         continue
-            #     for j, other_detection in enumerate(matched_face_detections):
-
-            #         if i == j:
-            #             continue
-
-            #         if (
-            #             _euclidian_distance(detection.point, other_detection.point)
-            #             < self.closesness_distance
-            #         ):
-            #             if detection.name == other_detection.name:
-            #                 # remove the one with the lower confidence
-            #                 if detection.confidence > other_detection.confidence:
-            #                     filtered_face_detections.append(detection)
-            #                 else:
-            #                     filtered_face_detections.append(other_detection)
-            #             elif (
-            #                 detection.name != "unknown"
-            #                 and other_detection.name == "unknown"
-            #             ):
-            #                 filtered_face_detections.append(detection)
-            #             elif (
-            #                 detection.name == "unknown"
-            #                 and other_detection.name != "unknown"
-            #             ):
-            #                 filtered_face_detections.append(other_detection)
-
-            # # if all expected detections are present, remove unknowns
-            # if all(
-            #     [
-            #         detection.name in self._expected_detections
-            #         for detection in filtered_face_detections
-            #     ]
-            # ):
-            #     filtered_face_detections = [
-            #         detection
-            #         for detection in filtered_face_detections
-            #         if detection.name != "unknown"
-            #     ]
-
             # if we have only one expected detection, and it is not present, assign it to the first unknown
             if len(self._expected_detections) == 1:
                 if self._expected_detections[0] not in [
@@ -384,21 +341,6 @@ class IntroduceAndSeatGuest(smach.StateMachine):
             print(([(d.name, d.point) for d in filtered_face_detections]))
             print("-" * 50)
 
-            # remove duplicates
-            # filtered_face_detections_no_duplicates = filter(
-            #     lambda detection: detection.name
-            #     not in [d.name for d in filtered_face_detections if detection != d],
-            #     filtered_face_detections,
-            # )
-            # filtered_face_detections = list(filtered_face_detections_no_duplicates)
-
-            # remove unknowns
-            # filtered_face_detections = [
-            #     detection
-            #     for detection in filtered_face_detections
-            #     if detection.name != "unknown"
-            # ]
-
             """
             Extract all seats that are not occupied by people
             """
@@ -437,7 +379,6 @@ class IntroduceAndSeatGuest(smach.StateMachine):
                 if not seat_removed:
                     filtered_seats.append(seat)
 
-            # rospy.loginfo(f"Filtered seats: {[seat.point for seat in filtered_seats]}")
             rospy.loginfo(
                 f"Filtered face detections: {[detection.name for detection in filtered_face_detections]}"
             )
@@ -448,9 +389,6 @@ class IntroduceAndSeatGuest(smach.StateMachine):
             rospy.loginfo(
                 f"{[(detection.name, detection.point) for detection in filtered_face_detections]}"
             )
-            # except Exception as e:
-            #     rospy.logerr(f"Failed to process detections: {str(e)}")
-            #     return "failed"
             return "succeeded"
 
     class GetLookPoint(smach.State):
