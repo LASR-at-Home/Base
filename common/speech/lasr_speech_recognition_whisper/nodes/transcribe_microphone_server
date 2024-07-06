@@ -87,6 +87,7 @@ class TranscribeSpeechAction(object):
         self._listening = False
 
         self._action_server.start()
+        rospy.loginfo(f"Speech Action server {self._action_name} started")
 
     def _configure_microphone(self) -> sr.Microphone:
         """Configures the microphone for listening to speech based on the

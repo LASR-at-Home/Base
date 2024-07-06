@@ -98,7 +98,7 @@ class FindNamedPerson(smach.StateMachine):
 
         if waypoints is None:
             waypoints_to_iterate: List[Pose] = []
-
+            rospy.loginfo(f"Getting waypoints from location param: {location_param}")
             room = rospy.get_param(location_param)
             beacons = room["beacons"]
             for beacon in beacons:
@@ -111,6 +111,8 @@ class FindNamedPerson(smach.StateMachine):
                 waypoints_to_iterate.append(waypoint)
         else:
             waypoints_to_iterate: List[Pose] = waypoints
+
+        rospy.loginfo(f"Waypoints to iterate: {waypoints_to_iterate}")
 
         with self:
             smach.StateMachine.add(
