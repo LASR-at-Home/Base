@@ -25,7 +25,7 @@ from cv2_pcl import pcl_to_img_msg
 rospy.init_node("bodypix_mask_service")
 
 # Determine variables
-PRELOAD = ["resnet50"]  # resnet50 or mobilenet50
+PRELOAD = rospy.get_param("~preload", [])  # List of models to preload
 
 for model in PRELOAD:
     bodypix.load_model_cached(model)
