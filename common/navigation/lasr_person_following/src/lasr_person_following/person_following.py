@@ -154,7 +154,7 @@ class PersonFollower:
 
         return self._tf_pose(current_pose_stamped, "odom")
 
-    def begin_tracking(self, ask: bool = False) -> bool:
+    def begin_tracking(self) -> bool:
         """
         Chooses the closest person as the target
         """
@@ -195,23 +195,6 @@ class PersonFollower:
         if not closest_person:
             return False
 
-        if ask:
-            if self._tts_client_available and self._transcribe_speech_client_available:
-
-                # Ask if we should follow
-                self._tts("Should I follow you? Please answer yes or no", wait=True)
-
-                # listen
-                self._transcribe_speech_client.send_goal_and_wait(
-                    TranscribeSpeechGoal()
-                )
-                transcription = self._transcribe_speech_client.get_result().sequence
-
-                if "yes" not in transcription.lower():
-                    return False
-
-                self._tts("I will follow you", wait=False)
-
         self._track_id = closest_person.id
 
         rospy.loginfo(f"Tracking person with ID {self._track_id}")
@@ -224,7 +207,7 @@ class PersonFollower:
         if self._tts_client_available and say:
             self._tts("I lost track of you, please come back", wait=True)
 
-        while not self.begin_tracking(ask=True) and not rospy.is_shutdown():
+        while not self.begin_tracking() and not rospy.is_shutdown():
             rospy.loginfo("Recovering track...")
             rospy.sleep(1)
 
@@ -329,8 +312,6 @@ class PersonFollower:
                 transcription = self._transcribe_speech_client.get_result().sequence
 
                 return "yes" in transcription.lower()
-
-            return True
         return True
 
     def _get_pose_on_path(
@@ -459,7 +440,7 @@ class PersonFollower:
             elif (
                 np.mean([np.linalg.norm(vel) for vel in track_vels])
                 < self._static_speed
-            ):
+            ) and len(track_vels) == 10:
 
                 rospy.logwarn("Person has been static for too long, stopping")
                 self._cancel_goal()
