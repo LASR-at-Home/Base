@@ -449,9 +449,42 @@ class PersonFollower:
                 np.mean([np.linalg.norm(vel) for vel in track_vels])
                 < self._static_speed
             ) and len(track_vels) == 10:
-
-                rospy.logwarn("Person has been static for too long, stopping")
+                rospy.logwarn(
+                    "Person has been static for too long, going to them and stopping"
+                )
                 self._cancel_goal()
+
+                robot_pose: PoseStamped = self._robot_pose_in_odom()
+                dist: float = self._euclidian_distance(track.pose, robot_pose.pose)
+                rospy.loginfo(f"Distance to person: {dist}")
+
+                # If the person is too far away, go to them
+                if dist > self._stopping_distance:
+                    goal_pose = self._get_pose_on_path(
+                        self._tf_pose(robot_pose, "map"),
+                        self._tf_pose(track.pose, "map"),
+                        self._stopping_distance,
+                    )
+                    # If we can't find a path, face them
+                    if goal_pose is None:
+                        rospy.logwarn("Could not find a path to the person")
+                        goal_pose = robot_pose
+                        goal_pose.orientation = self._compute_face_quat(
+                            robot_pose.pose, track.pose
+                        )
+                        goal_pose = self._tf_pose(goal_pose, "map")
+                # Otherwise, face them
+                else:
+                    goal_pose = robot_pose
+                    goal_pose.orientation = self._compute_face_quat(
+                        robot_pose.pose, track.pose
+                    )
+                    goal_pose = self._tf_pose(goal_pose, "map")
+                
+                self._move_base(goal_pose)
+
+                    
+
                 if self._check_finished():
                     rospy.loginfo("Finished following person")
                     break
