@@ -227,13 +227,13 @@ def _3d_mask_crop(
     ]
 
     if crop_method == "closest":
-        detections = [det for _, det in sorted(zip(distances, detections))]
-        distances.sort()
+        detections = [det for _, det in sorted(zip(distances, detections), reverse=True)]
+        distances.sort(reverse=True)
     elif crop_method == "furthest":
         detections = [
-            det for _, det in sorted(zip(distances, detections), reverse=True)
+            det for _, det in sorted(zip(distances, detections))  # , reverse=True)
         ]
-        distances.sort(reverse=True)
+        distances.sort()  # reverse=True)
     else:
         raise ValueError(f"Invalid 3D crop_method: {crop_method}")
 

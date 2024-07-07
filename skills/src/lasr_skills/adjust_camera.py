@@ -372,35 +372,54 @@ class AdjustCamera(smach.StateMachine):
                 )
                 rospy.logwarn(f"very middle {very_middle}")
                 eyes_to_shoulders_distance = math.sqrt((eyes_middle[0] - shoulders_middle[0]) ** 2 + (eyes_middle[1] - shoulders_middle[1]))
-                if eyes_to_shoulders_distance > 1/3:
+                rospy.logwarn(f"eyes to shoulder distance {eyes_to_shoulders_distance}")
+                if eyes_to_shoulders_distance > 0.14:
                     # person is kind of close to the camera,
-                    # if y at upper 1/5 for eyes: move up 1 step
-                    if eyes_middle[1] <= 1 / 5:
-                        self.position[0] += 1
-                        print("if y at upper 1/5 for eyes: move up 1 step")
-                    else:
-                        if (
-                            1 / 4 <= very_middle[1] <= 2 / 3
-                            and 1 / 3 <= very_middle[0] <= 2 / 3
-                        ):
-                            print("finished.")
-                            return "finished"
-                        # if y at down 1/3: down move 1 step
-                        if very_middle[1] >= 2 / 3:
-                            self.position[0] -= 1
-                            print("if y at down 1/3: down move 1 step.")
-                        # if y at upper 1/4: up move 1 step
-                        elif very_middle[1] <= 1 / 4:
+                    if eyes_to_shoulders_distance >= 0.24:
+                        # person if very close to the camera.
+                        # ACTUALLY, maybe should just tell person to stand back?
+                        # if y at upper 1/5 for eyes: move up 1 step
+                        if eyes_middle[1] <= 1 / 5:
                             self.position[0] += 1
-                            print("if y at upper 1/3: up move 1 step.")
+                            print("if y at upper 1/4 for eyes: move up 1 step")
+                        else:
+                            # if y at down 1/5: down move 1 step
+                            if very_middle[1] >= 4 / 5:
+                                self.position[0] -= 1
+                                print("if y at down 1/5: down move 1 step.")
+                    else:
+                        # if y at upper 1/7 for eyes: move up 1 step
+                        if eyes_middle[1] <= 1 / 7:
+                            self.position[0] += 1
+                            print("if y at upper 1/7 for eyes: move up 1 step")
+                        elif eyes_middle[1] >= 2 / 9:
+                            self.position[0] -= 1
+                            print("if y lower than upper 2/9 for eyes: move down 1 step")
+                        else:
+                            if (
+                                1 / 4 <= very_middle[1] <= 1 / 2
+                                and 2 / 7 <= very_middle[0] <= 5 / 7
+                            ):
+                                print("finished.")
+                                return "finished"
+                            # if y at down 3/7: down move 1 step
+                            if very_middle[1] >= 4 / 7:
+                                self.position[0] -= 1
+                                print("if y at down 3/7: down move 1 step.")
+                            # if y at upper 1/4: up move 1 step
+                            elif very_middle[1] <= 1 / 4:
+                                self.position[0] += 1
+                                print("if y at upper 1/4: up move 1 step.")
                 else:
                     # person is kind of far from the camera.
                     # in this case simply try to the middle-point of the shoulder to the centre up
                     if shoulders_middle[1] >= 1 / 2:
                         self.position[0] -= 1
-                    elif shoulders_middle[1] <= 1 / 2 - 1 / 5:
+                    elif shoulders_middle[1] <= 1 / 2 - 2 / 7:
                         self.position[0] += 1
-                    pass
+                    elif 2 / 7 <= very_middle[0] <= 5 / 7:
+                        print("finished.")
+                        return "finished"
                 # if x at left 2/7, move left 1 step
                 if very_middle[0] <= 2 / 7:
                     self.position[1] -= 1
