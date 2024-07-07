@@ -26,7 +26,7 @@ from lasr_vision_msgs.srv import DetectWave
 from play_motion_msgs.msg import PlayMotionAction
 from play_motion_msgs.msg import PlayMotionGoal
 
-from lasr_vision_msgs.srv import DetectWaveRequest
+from lasr_vision_msgs.srv import DetectWaveRequest, DetectWaveResponse
 
 from math import atan2
 import numpy as np
@@ -48,6 +48,8 @@ class PersonFollower:
     _n_secs_static_plan_close: float
     _new_goal_threshold: float
     _stopping_distance: float
+    _vision_recovery_motions: List[str] = ["look_centre", "look_left", "look_right"]
+    _vision_recovery_attempts: int = 3
 
     # State
     _track_id: Union[None, int]
@@ -213,21 +215,7 @@ class PersonFollower:
 
         return True
 
-    # recover with vision, look up and check if person is waving
-    def _recover_vision(self, prev_pose: PoseStamped) -> bool:
-        # look up with playmotion and detect wave service
-        # if detected, begin tracking
-
-        # use play motion to look up
-        self._cancel_goal()
-
-        goal = PlayMotionGoal()
-        goal.motion_name = "look_centre"
-        self._play_motion.send_goal_and_wait(goal)
-
-        self._tts("Can you wave at me so that i can try to find you easily", wait=True)
-
-        # detect wave
+    def _detect_waving_person(self) -> DetectWaveResponse:
         try:
             pcl = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
             req = DetectWaveRequest()
@@ -235,35 +223,55 @@ class PersonFollower:
             req.dataset = "resnet50"
             req.confidence = 0.1
             response = self._detect_wave(req)
-            if response.wave_detected:
-                rospy.loginfo("Wave detected, beginning tracking")
-                if np.isnan(response.wave_position.point.x) or np.isnan(
-                    response.wave_position.point.y
-                ):
-                    return False
-                goal_pose = self._tf_pose(
-                    PoseStamped(
-                        pose=Pose(
-                            position=Point(
-                                x=response.wave_position.point.x,
-                                y=response.wave_position.point.y,
-                                z=response.wave_position.point.z,
-                            ),
-                            orientation=Quaternion(0, 0, 0, 1),
-                        ),
-                        header=pcl.header,
-                    ),
-                    "map",
-                )
-                rospy.loginfo(goal_pose.pose.position)
-                goal_pose.pose.orientation = self._compute_face_quat(
-                    prev_pose.pose, goal_pose.pose
-                )
-                self._move_base(goal_pose)
-                return True
+            return response
         except rospy.ServiceException as e:
             rospy.loginfo(f"Error detecting wave: {e}")
-            return False
+            return DetectWaveResponse()
+
+    # recover with vision, look around and check if person is waving
+    def _recover_vision(self, prev_pose: PoseStamped) -> bool:
+
+        # cancel current goal
+        self._cancel_goal()
+
+        self._tts("Can you wave at me so that i can try to find you easily", wait=True)
+
+        for motion in self._vision_recovery_motions:
+            rospy.loginfo(f"Performing motion: {motion}")
+            goal = PlayMotionGoal()
+            goal.motion_name = motion
+            self._play_motion.send_goal_and_wait(goal)
+            for _ in range(self._vision_recovery_attempts):
+                response = self._detect_waving_person()
+                if response.wave_detected:
+                    if np.isnan(response.wave_position.point.x) or np.isnan(
+                        response.wave_position.point.y
+                    ):
+                        continue
+                    else:
+                        goal_pose = self._tf_pose(
+                            PoseStamped(
+                                pose=Pose(
+                                    position=Point(
+                                        x=response.wave_position.point.x,
+                                        y=response.wave_position.point.y,
+                                        z=response.wave_position.point.z,
+                                    ),
+                                    orientation=Quaternion(0, 0, 0, 1),
+                                ),
+                                header=prev_pose.header,
+                            ),
+                            "map",
+                        )
+                        goal_pose.pose.orientation = self._compute_face_quat(
+                            prev_pose.pose, goal_pose.pose
+                        )
+                        rospy.loginfo(goal_pose.pose.position)
+                        self._move_base(goal_pose)
+                        return True
+                rospy.sleep(rospy.Duration.from_sec(1.0))
+
+        return False
 
     def _euclidian_distance(self, p1: Pose, p2: Pose) -> float:
         return np.linalg.norm(
