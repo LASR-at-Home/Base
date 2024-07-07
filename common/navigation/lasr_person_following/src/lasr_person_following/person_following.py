@@ -481,7 +481,11 @@ class PersonFollower:
                 rospy.logwarn(
                     "Person has been static for too long, going to them and stopping"
                 )
+                # cancel current goal
                 self._cancel_goal()
+
+                # clear velocity buffer
+                track_vels = []
 
                 robot_pose: PoseStamped = self._robot_pose_in_odom()
                 dist: float = self._euclidian_distance(track.pose, robot_pose.pose)
