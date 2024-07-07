@@ -8,10 +8,17 @@ from lasr_skills import (
     ReceiveObject,
     HandoverObject,
 )
-from lasr_skills.vision import GetCroppedImage
+from lasr_skills.vision import GetCroppedImage, PlayMotion
 from lasr_person_following.msg import FollowAction
 
 from std_msgs.msg import Empty
+
+from pal_startup_msgs.srv import (
+    StartupStart,
+    StartupStop,
+    StartupStartRequest,
+    StartupStopRequest,
+)
 
 
 class CarryMyLuggage(smach.StateMachine):
@@ -51,8 +58,32 @@ class CarryMyLuggage(smach.StateMachine):
                 ),
                 transitions={
                     "valid": "WAIT_START",
-                    "invalid": "WAIT_FOR_PERSON",
+                    "invalid": "STOP_HEAD_MANAGER",
                     "preempted": "WAIT_START",
+                },
+            )
+
+            smach.StateMachine.add(
+                "STOP_HEAD_MANAGER",
+                smach_ros.ServiceState(
+                    "/pal_startup_control/stop",
+                    StartupStop,
+                    request=StartupStopRequest("head_manager"),
+                ),
+                transitions={
+                    "succeeded": "LOOK_CENTRE",
+                    "aborted": "LOOK_CENTRE",
+                    "preempted": "LOOK_CENTRE",
+                },
+            )
+
+            smach.StateMachine.add(
+                "LOOK_CENTRE",
+                PlayMotion(motion_name="look_centre"),
+                transitions={
+                    "succeeded": "WAIT_FOR_PERSON",
+                    "aborted": "WAIT_FOR_PERSON",
+                    "preempted": "WAIT_FOR_PERSON",
                 },
             )
 
@@ -107,11 +138,25 @@ class CarryMyLuggage(smach.StateMachine):
                 "SAY_BAG",
                 Say(format_str="I need you to give me the bag on your {}."),
                 transitions={
-                    "succeeded": "RECEIVE_BAG",
+                    "succeeded": "START_HEAD_MANAGER",
                     "aborted": "failed",
                     "preempted": "failed",
                 },
                 remapping={"placeholders": "pointing_direction"},
+            )
+
+            smach.StateMachine.add(
+                "START_HEAD_MANAGER",
+                smach_ros.ServiceState(
+                    "/pal_startup_control/start",
+                    StartupStart,
+                    request=StartupStartRequest("head_manager", ""),
+                ),
+                transitions={
+                    "succeeded": "RECEIVE_BAG",
+                    "aborted": "RECEIVE_BAG",
+                    "preempted": "RECEIVE_BAG",
+                },
             )
 
             smach.StateMachine.add(
