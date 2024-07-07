@@ -98,6 +98,11 @@ class ImageOfPerson(ImageWithMasksAndAttributes):
         glasses = self.attributes["Eyeglasses"] - 0.5
         hat = self.attributes["Wearing_Hat"] - 0.5
 
+        if hat >= 0.25:  # probably wearing hat
+            has_hair *= (
+                0.5 - hat
+            ) * has_hair  # give a penalty to the hair confidence (hope this helps!)
+
         result = {
             "has_hair": has_hair,
             "hair_colour": hair_colour,
@@ -136,6 +141,8 @@ class ImageOfCloth(ImageWithMasksAndAttributes):
         )
 
     def describe(self) -> dict:
+        # Maybe not keep ‘sleeveless’ anymore but might do this in the actual environment.
+
         result = {
             "top": self.attributes["top"] / 2,
             "outwear": self.attributes["outwear"] / 2,
@@ -177,5 +184,8 @@ class ImageOfCloth(ImageWithMasksAndAttributes):
         if max_attribute in ["vest dress", "sling dress"]:
             max_attribute = "sleeveless dress"
         result["max_dress"] = max_attribute
+
+        # QUICK FIX that won't break the code
+        result["max_dress"] = 0.0
 
         return result
