@@ -1,6 +1,5 @@
 <launch>
     <include file="$(find lasr_vision_yolov8)/launch/service.launch">
-        <arg name="debug" value="true" />
         <arg name="preload" value="['yolov8n-seg.pt']" />
     </include>
 
