@@ -7,8 +7,7 @@
     <arg name="model" default="resnet50" doc="Model to use for the demo" />
 
     <!-- BodyPix service -->
-    <include file="$(find lasr_vision_bodypix)/launch/keypoint_service.launch">
-        <arg name="debug" value="true" />
+    <include file="$(find lasr_vision_bodypix)/launch/bodypix.launch">
         <arg name="preload" value="['$(arg model)']" />
     </include>
     

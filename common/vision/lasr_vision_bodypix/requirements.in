@@ -1,8 +1,7 @@
 tf-bodypix==0.4.2
-tensorflow==2.14.0
 opencv-python==4.8.1.78
 Pillow==10.1.0
 matplotlib==3.8.1
 
 # The following was manually added and freezed into requirements.txt:
-# tfjs-graph-converter==1.6.3
+tfjs-graph-converter==1.6.3
