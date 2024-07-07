@@ -82,12 +82,14 @@ class PersonFollower:
         new_goal_threshold: float = 2.0,
         stopping_distance: float = 1.0,
         static_speed: float = 0.0015,
+        max_speed: float = 0.5,
     ):
         self._start_following_radius = start_following_radius
         self._start_following_angle = start_following_angle
         self._new_goal_threshold = new_goal_threshold
         self._stopping_distance = stopping_distance
         self._static_speed = static_speed
+        self._max_speed = max_speed
 
         self._track_id = None
 
@@ -145,8 +147,12 @@ class PersonFollower:
     def _robot_pose_in_odom(self) -> Union[PoseStamped, None]:
         try:
             current_pose: PoseWithCovarianceStamped = rospy.wait_for_message(
-                "/robot_pose", PoseWithCovarianceStamped
+                "/robot_pose",
+                PoseWithCovarianceStamped,
+                timeout=rospy.Duration.from_sec(2.0),
             )
+        except rospy.ROSException:
+            return None
         except AttributeError:
             return None
 
@@ -413,7 +419,7 @@ class PersonFollower:
                     ask_back = True
 
                 if not ask_back:
-                    self._recover_track(say=self._recover_vision(prev_goal))
+                    self._recover_track(say=not self._recover_vision(prev_goal))
                 else:
                     self._recover_track(say=True)
 
@@ -437,6 +443,9 @@ class PersonFollower:
                 prev_goal = goal_pose
                 last_goal_time = rospy.Time.now()
                 prev_track = track
+
+            if np.mean([np.linalg.norm(vel) for vel in track_vels]) > self._max_speed:
+                self._tts("Please walk slower, I am struggling to keep up", wait=False)
 
             # Distance to the previous pose
             dist_to_prev = (
