@@ -9,6 +9,7 @@ from lasr_skills.play_motion import PlayMotion
 import rospkg
 import rosparam
 import os
+import math
 
 
 LEFT = {
@@ -307,7 +308,7 @@ class AdjustCamera(smach.StateMachine):
                         )
 
             elif has_both_eyes and not has_both_shoulders:
-                # in this case try to make eyes into the upper 1/3 of the frame,
+                # in this case try to make eyes into the upper 1/5 of the frame,
                 eyes_middle = (
                     (keypoint_info["leftEye"][0] + keypoint_info["rightEye"][0]) / 2,
                     (keypoint_info["leftEye"][1] + keypoint_info["rightEye"][1]) / 2,
@@ -370,25 +371,36 @@ class AdjustCamera(smach.StateMachine):
                     (eyes_middle[1] + shoulders_middle[1]) / 2,
                 )
                 rospy.logwarn(f"very middle {very_middle}")
-                # if y at upper 1/5 for eyes: move up 1 step
-                if eyes_middle[1] <= 1 / 5:
-                    self.position[0] += 1
-                    print("if y at upper 1/5 for eyes: move up 1 step")
-                else:
-                    if (
-                        1 / 4 <= very_middle[1] <= 2 / 3
-                        and 1 / 3 <= very_middle[0] <= 2 / 3
-                    ):
-                        print("finished.")
-                        return "finished"
-                    # if y at down 1/3: down move 1 step
-                    if very_middle[1] >= 2 / 3:
-                        self.position[0] -= 1
-                        print("if y at down 1/3: down move 1 step.")
-                    # if y at upper 1/4: up move 1 step
-                    elif very_middle[1] <= 1 / 4:
+                eyes_to_shoulders_distance = math.sqrt((eyes_middle[0] - shoulders_middle[0]) ** 2 + (eyes_middle[1] - shoulders_middle[1]))
+                if eyes_to_shoulders_distance > 1/3:
+                    # person is kind of close to the camera,
+                    # if y at upper 1/5 for eyes: move up 1 step
+                    if eyes_middle[1] <= 1 / 5:
                         self.position[0] += 1
-                        print("if y at upper 1/3: up move 1 step.")
+                        print("if y at upper 1/5 for eyes: move up 1 step")
+                    else:
+                        if (
+                            1 / 4 <= very_middle[1] <= 2 / 3
+                            and 1 / 3 <= very_middle[0] <= 2 / 3
+                        ):
+                            print("finished.")
+                            return "finished"
+                        # if y at down 1/3: down move 1 step
+                        if very_middle[1] >= 2 / 3:
+                            self.position[0] -= 1
+                            print("if y at down 1/3: down move 1 step.")
+                        # if y at upper 1/4: up move 1 step
+                        elif very_middle[1] <= 1 / 4:
+                            self.position[0] += 1
+                            print("if y at upper 1/3: up move 1 step.")
+                else:
+                    # person is kind of far from the camera.
+                    # in this case simply try to the middle-point of the shoulder to the centre up
+                    if shoulders_middle[1] >= 1 / 2:
+                        self.position[0] -= 1
+                    elif shoulders_middle[1] <= 1 / 2 - 1 / 5:
+                        self.position[0] += 1
+                    pass
                 # if x at left 2/7, move left 1 step
                 if very_middle[0] <= 2 / 7:
                     self.position[1] -= 1
