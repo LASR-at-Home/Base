@@ -24,11 +24,7 @@ from lasr_vision_msgs.srv import (
 import rospkg
 
 # model cache
-# preload resnet 50 model so that it won't waste the time
-# doing that in the middle of the task.
-loaded_models = {
-    "resnet50": load_model(download_model(BodyPixModelPaths.RESNET50_FLOAT_STRIDE_16))
-}
+loaded_models = {}
 r = rospkg.RosPack()
 
 
@@ -47,20 +43,27 @@ def load_model_cached(dataset: str):
     """
     model = None
     if dataset in loaded_models:
+        rospy.loginfo(f"Using cached {dataset} model")
         model = loaded_models[dataset]
     else:
         if dataset == "resnet50":
+            rospy.loginfo("Downloading resnet50 model")
             name = download_model(BodyPixModelPaths.RESNET50_FLOAT_STRIDE_16)
+            rospy.loginfo("Loading resnet50 model")
             model = load_model(name)
         elif dataset == "mobilenet50":
+            rospy.loginfo("Downloading mobilenet50 model")
             name = download_model(BodyPixModelPaths.MOBILENET_FLOAT_50_STRIDE_8)
+            rospy.loginfo("Loading mobilenet50 model")
             model = load_model(name)
         elif dataset == "mobilenet100":
+            rospy.loginfo("Downloading mobilenet100 model")
             name = download_model(BodyPixModelPaths.MOBILENET_FLOAT_100_STRIDE_8)
+            rospy.loginfo("Loading mobilenet100 model")
             model = load_model(name)
         else:
             model = load_model(dataset)
-        rospy.loginfo(f"Loaded {dataset} model")
+        rospy.loginfo(f"Loaded {dataset} model into cache")
         loaded_models[dataset] = model
     return model
 

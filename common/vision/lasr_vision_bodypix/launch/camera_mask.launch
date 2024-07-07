@@ -7,11 +7,10 @@
     <arg name="model" default="resnet50" doc="Model to use for the demo" />
 
     <!-- BodyPix service -->
-    <include file="$(find lasr_vision_bodypix)/launch/mask_service.launch">
-        <arg name="debug" value="true" />
+    <include file="$(find lasr_vision_bodypix)/launch/bodypix.launch">
         <arg name="preload" value="['$(arg model)']" />
     </include>
-    
+
     <!-- show debug topic -->
     <node name="image_view" pkg="rqt_image_view" type="rqt_image_view" respawn="false" output="screen" args="/bodypix/debug/$(arg model)" />
 
@@ -22,4 +21,5 @@
    <include file="$(find video_stream_opencv)/launch/camera.launch">
         <arg name="visualize" value="true" />
    </include>
+
 </launch>

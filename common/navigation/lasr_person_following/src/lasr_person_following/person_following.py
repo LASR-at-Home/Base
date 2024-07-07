@@ -124,7 +124,7 @@ class PersonFollower:
         if not self._transcribe_speech_client_available:
             rospy.logwarn("Transcribe speech client not available")
 
-        self._detect_wave = rospy.ServiceProxy("/detect_wave", DetectWave)
+        self._detect_wave = rospy.ServiceProxy("/bodypix/detect_wave", DetectWave)
         if not self._detect_wave.wait_for_service(rospy.Duration.from_sec(10.0)):
             rospy.logwarn("Detect wave service not available")
 

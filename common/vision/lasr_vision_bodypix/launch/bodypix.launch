@@ -1,0 +1,13 @@
+<launch>
+    <description>Start BodyPix services</description>
+    <usage doc="BodyPix service"></usage>
+    <usage doc="Preload models and enable debug topic">debug:=true preload:=['resnet50', 'mobilenet50']</usage>
+
+    <arg name="preload" default="['resnet50']" doc="Array of models to preload when starting the service" />
+
+
+    <node name="bodypix_services" pkg="lasr_vision_bodypix" type="bodypix_services.py" output="screen">
+        <param name="preload" type="yaml" value="$(arg preload)" />
+    </node>
+    
+</launch>
