@@ -223,11 +223,13 @@ class PersonFollower:
             self._tts("I SAW A person waving", wait=True)
 
         if self._tts_client_available and say:
-            self._tts("I lost track of you, please come back", wait=True)
+            self._tts("Please could you come back...", wait=True)
 
         while not self.begin_tracking() and not rospy.is_shutdown():
             rospy.loginfo("Recovering track...")
             rospy.sleep(1)
+
+        self._tts("I see you again", wait=False)
 
         return True
 
@@ -257,7 +259,7 @@ class PersonFollower:
         self._cancel_goal()
 
         # stop head manager
-        self._stop_head_manager()
+        # self._stop_head_manager()
 
         self._tts("Can you wave at me so that i can try to find you easily", wait=True)
 
@@ -295,8 +297,8 @@ class PersonFollower:
                         self._start_head_manager()
                         self._move_base(goal_pose)
                         return True
-                rospy.sleep(rospy.Duration.from_sec(1.0))
-        self._start_head_manager()
+                # rospy.sleep(rospy.Duration.from_sec(1.0))
+        # self._start_head_manager()
         return False
 
     def _euclidian_distance(self, p1: Pose, p2: Pose) -> float:
