@@ -41,6 +41,9 @@ from lasr_speech_recognition_msgs.msg import (
 from pal_interaction_msgs.msg import TtsGoal, TtsAction
 
 
+MAX_VISION_DIST: float = 5.0
+
+
 class PersonFollower:
     # Parameters
     _start_following_radius: float
@@ -201,7 +204,7 @@ class PersonFollower:
 
     def _recover_track(self, say) -> bool:
         if not say:
-            self._tts("I SAW A person waving", wait=True)
+            self._tts("I see you are waving", wait=True)
 
         if self._tts_client_available and say:
             self._tts("Please could you come back...", wait=True)
@@ -393,9 +396,27 @@ class PersonFollower:
             if track is None:
                 rospy.loginfo("Lost track of person, recovering...")
                 person_trajectory = PoseArray()
-                # TODO: if person was >5m away, we can't use vision
-                recovery = self._recover_vision(prev_goal)
-                self._recover_track(say=not recovery)
+                ask_back: bool = False
+
+                if prev_track is not None:
+                    robot_pose: PoseStamped = self._robot_pose_in_odom()
+                    if robot_pose:
+                        dist: float = self._euclidian_distance(
+                            robot_pose.pose, prev_track.pose
+                        )
+                        rospy.loginfo(f"Distance to last known position: {dist}")
+                        if dist >= MAX_VISION_DIST:
+                            ask_back = True
+                    else:
+                        ask_back = True
+                else:
+                    ask_back = True
+
+                if not ask_back:
+                    self._recover_track(say=self._recover_vision(prev_goal))
+                else:
+                    self._recover_track(say=True)
+
                 prev_track = None
                 continue
 
