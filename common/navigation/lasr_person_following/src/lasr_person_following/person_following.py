@@ -41,14 +41,6 @@ from lasr_speech_recognition_msgs.msg import (
 from pal_interaction_msgs.msg import TtsGoal, TtsAction
 
 
-from pal_startup_msgs.srv import (
-    StartupStart,
-    StartupStop,
-    StartupStartRequest,
-    StartupStopRequest,
-)
-
-
 class PersonFollower:
     # Parameters
     _start_following_radius: float
@@ -84,16 +76,12 @@ class PersonFollower:
         self,
         start_following_radius: float = 2.0,
         start_following_angle: float = 45.0,
-        n_secs_static_finished: float = 8.0,
-        n_secs_static_plan_close: float = 10.0,
         new_goal_threshold: float = 2.0,
         stopping_distance: float = 1.0,
         static_speed: float = 0.0015,
     ):
         self._start_following_radius = start_following_radius
         self._start_following_angle = start_following_angle
-        self._n_secs_static_finished = n_secs_static_finished
-        self._n_secs_static_plan_close = n_secs_static_plan_close
         self._new_goal_threshold = new_goal_threshold
         self._stopping_distance = stopping_distance
         self._static_speed = static_speed
@@ -144,13 +132,6 @@ class PersonFollower:
         )
         if not self._play_motion.wait_for_server(rospy.Duration.from_sec(10.0)):
             rospy.logwarn("Play motion client not available")
-
-        self._pal_startup_control_start = rospy.ServiceProxy(
-            "/pal_startup_control/start", StartupStart
-        )
-        self._pal_startup_control_stop = rospy.ServiceProxy(
-            "/pal_startup_control/stop", StartupStop
-        )
 
     def _tf_pose(self, pose: PoseStamped, target_frame: str):
         trans = self._buffer.lookup_transform(
@@ -246,20 +227,11 @@ class PersonFollower:
             rospy.loginfo(f"Error detecting wave: {e}")
             return DetectWaveResponse()
 
-    def _start_head_manager(self) -> None:
-        self._pal_startup_control_start(StartupStartRequest("head_manager", ""))
-
-    def _stop_head_manager(self) -> None:
-        self._pal_startup_control_stop(StartupStopRequest("head_manager"))
-
     # recover with vision, look around and check if person is waving
     def _recover_vision(self, prev_pose: PoseStamped) -> bool:
 
         # cancel current goal
         self._cancel_goal()
-
-        # stop head manager
-        # self._stop_head_manager()
 
         self._tts("Can you wave at me so that i can try to find you easily", wait=True)
 
@@ -294,11 +266,9 @@ class PersonFollower:
                             prev_pose.pose, goal_pose.pose
                         )
                         rospy.loginfo(goal_pose.pose.position)
-                        self._start_head_manager()
                         self._move_base(goal_pose)
                         return True
-                # rospy.sleep(rospy.Duration.from_sec(1.0))
-        # self._start_head_manager()
+
         return False
 
     def _euclidian_distance(self, p1: Pose, p2: Pose) -> float:
@@ -423,6 +393,7 @@ class PersonFollower:
             if track is None:
                 rospy.loginfo("Lost track of person, recovering...")
                 person_trajectory = PoseArray()
+                # TODO: if person was >5m away, we can't use vision
                 recovery = self._recover_vision(prev_goal)
                 self._recover_track(say=not recovery)
                 prev_track = None
