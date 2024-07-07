@@ -329,7 +329,9 @@ class IntroduceAndSeatGuest(smach.StateMachine):
                                         self._expected_detections[0]
                                     )
                                 else:
-                                    rospy.logwarn(f"Failed to find expected guest {self._expected_detections[0]}")
+                                    rospy.logwarn(
+                                        f"Failed to find expected guest {self._expected_detections[0]}"
+                                    )
 
                         print("+" * 50)
                         print(([(d.name, d.point) for d in filtered_face_detections]))
@@ -362,9 +364,13 @@ class IntroduceAndSeatGuest(smach.StateMachine):
                                                 x.point, other.point
                                             ),
                                         )
-                                        furthest_unknown.name = self._expected_detections[0]
+                                        furthest_unknown.name = (
+                                            self._expected_detections[0]
+                                        )
                                 else:
-                                    rospy.logwarn(f"Failed to find expected guest {self._expected_detections[1]}")
+                                    rospy.logwarn(
+                                        f"Failed to find expected guest {self._expected_detections[1]}"
+                                    )
                             elif self._expected_detections[1] not in [
                                 detection.name for detection in filtered_face_detections
                             ] and self._expected_detections[0] in [
@@ -389,9 +395,13 @@ class IntroduceAndSeatGuest(smach.StateMachine):
                                                 x.point, other.point
                                             ),
                                         )
-                                        furthest_unknown.name = self._expected_detections[1]
+                                        furthest_unknown.name = (
+                                            self._expected_detections[1]
+                                        )
                                 else:
-                                    rospy.logwarn(f"Failed to find expected guest {self._expected_detections[0]}")
+                                    rospy.logwarn(
+                                        f"Failed to find expected guest {self._expected_detections[0]}"
+                                    )
 
                         print("-" * 50)
                         print(([(d.name, d.point) for d in filtered_face_detections]))
@@ -943,11 +953,21 @@ class IntroduceAndSeatGuest(smach.StateMachine):
                         response_slots=["responses"],
                     ),
                     transitions={
-                        "succeeded": "HANDLE_RESPONSE",
+                        "succeeded": "LOOK_CENTRE",
                         "aborted": "failed",
                         "preempted": "failed",
                     },
                     remapping={"response": "detections"},
+                )
+
+                smach.StateMachine.add(
+                    "LOOK_CENTRE",
+                    PlayMotion(motion_name="look_centre"),
+                    transitions={
+                        "succeeded": "HANDLE_RESPONSE",
+                        "aborted": "HANDLE_RESPONSE",
+                        "preempted": "HANDLE_RESPONSE",
+                    },
                 )
 
                 smach.StateMachine.add(
