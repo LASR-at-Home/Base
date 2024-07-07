@@ -488,21 +488,27 @@ class PersonFollower:
                 if dist > self._stopping_distance:
                     goal_pose = self._get_pose_on_path(
                         self._tf_pose(robot_pose, "map"),
-                        self._tf_pose(track.pose, "map"),
+                        self._tf_pose(
+                            PoseStamped(
+                                pose=track.pose,
+                                header=tracks.header,
+                            ),
+                            "map",
+                        ),
                         self._stopping_distance,
                     )
                     # If we can't find a path, face them
                     if goal_pose is None:
                         rospy.logwarn("Could not find a path to the person")
                         goal_pose = robot_pose
-                        goal_pose.orientation = self._compute_face_quat(
+                        goal_pose.pose.orientation = self._compute_face_quat(
                             robot_pose.pose, track.pose
                         )
                         goal_pose = self._tf_pose(goal_pose, "map")
                 # Otherwise, face them
                 else:
                     goal_pose = robot_pose
-                    goal_pose.orientation = self._compute_face_quat(
+                    goal_pose.pose.orientation = self._compute_face_quat(
                         robot_pose.pose, track.pose
                     )
                     goal_pose = self._tf_pose(goal_pose, "map")
