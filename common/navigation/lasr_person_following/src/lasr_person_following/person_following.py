@@ -382,7 +382,7 @@ class PersonFollower:
         prev_goal: Union[None, PoseStamped] = None
         last_goal_time: Union[None, rospy.Time] = None
         going_to_person: bool = False
-        track_vels: [float] = []
+        track_vels: List[float] = []
 
         while not rospy.is_shutdown():
 
