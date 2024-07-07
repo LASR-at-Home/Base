@@ -8,10 +8,12 @@ from lasr_skills import (
     ReceiveObject,
     HandoverObject,
 )
-from lasr_skills.vision import GetCroppedImage, PlayMotion
+from lasr_skills.vision import GetCroppedImage
+from lasr_skills import PlayMotion
 from lasr_person_following.msg import FollowAction
 
 from std_msgs.msg import Empty
+from std_srvs.srv import Empty as EmptySrv
 
 from pal_startup_msgs.srv import (
     StartupStart,
@@ -163,8 +165,21 @@ class CarryMyLuggage(smach.StateMachine):
                 "RECEIVE_BAG",
                 ReceiveObject(object_name="bag", vertical=True),
                 transitions={
-                    "succeeded": "SAY_FOLLOW",
+                    "succeeded": "CLEAR_COSTMAPS",
                     "failed": "failed",
+                },
+            )
+
+            smach.StateMachine.add(
+                "CLEAR_COSTMAPS",
+                smach_ros.ServiceState(
+                    "/move_base/clear_costmaps",
+                    EmptySrv,
+                ),
+                transitions={
+                    "succeeded": "SAY_FOLLOW",
+                    "aborted": "SAY_FOLLOW",
+                    "preempted": "SAY_FOLLOW",
                 },
             )
 
