@@ -1,18 +1,10 @@
-#!/usr/bin/env python3.9
-
+#!/usr/bin/env python3
 import rospy
-from typing import List, Union
-from sensor_msgs.msg import Image
 import lasr_vision_bodypix as bodypix
-import cv2
-import cv2_img
-import ros_numpy as rnp
-from geometry_msgs.msg import PointStamped, Point
-from visualization_msgs.msg import Marker
-from markers import create_and_publish_marker
-from cv2_pcl import pcl_to_img_msg
-
 from lasr_vision_msgs.srv import (
+    BodyPixMaskDetection,
+    BodyPixMaskDetectionRequest,
+    BodyPixMaskDetectionResponse,
     BodyPixKeypointDetection,
     BodyPixKeypointDetectionRequest,
     BodyPixKeypointDetectionResponse,
@@ -21,13 +13,38 @@ from lasr_vision_msgs.srv import (
     DetectWaveResponse,
 )
 
+from typing import Union
+from sensor_msgs.msg import Image
+import ros_numpy as rnp
+from geometry_msgs.msg import PointStamped, Point
 from std_msgs.msg import Header
 import numpy as np
+from cv2_pcl import pcl_to_img_msg
 
-rospy.init_node("detect_wave_service")
+# Initialise rospy
+rospy.init_node("bodypix_mask_service")
 
-DEBUG = rospy.get_param("~debug", True)
-marker_pub = rospy.Publisher("waving_person", Marker, queue_size=1)
+# Determine variables
+PRELOAD = ["resnet50"]  # resnet50 or mobilenet50
+
+for model in PRELOAD:
+    bodypix.load_model_cached(model)
+
+
+def detect_masks(request: BodyPixMaskDetectionRequest) -> BodyPixMaskDetectionResponse:
+    """
+    Hand off detection request to bodypix library
+    """
+    return bodypix.detect_masks(request)
+
+
+def detect_keypoints(
+    request: BodyPixKeypointDetectionRequest,
+) -> BodyPixKeypointDetectionResponse:
+    """
+    Hand off detection request to bodypix library
+    """
+    return bodypix.detect_keypoints(request)
 
 
 def detect_wave(
@@ -126,7 +143,8 @@ def detect_wave(
     )
 
 
-# rospy.Service("/detect_wave", DetectWave, lambda req: detect_wave(req, rospy.Publisher("debug_waving", Image, queue_size=1)))
-rospy.Service("/detect_wave", DetectWave, detect_wave)
-rospy.loginfo("Detect wave service started")
+rospy.Service("/bodypix/mask_detection", BodyPixMaskDetection, detect_masks)
+rospy.Service("/bodypix/keypoint_detection", BodyPixKeypointDetection, detect_keypoints)
+rospy.Service("/bodypix/detect_wave", DetectWave, detect_wave)
+rospy.loginfo("BodyPix service started")
 rospy.spin()
