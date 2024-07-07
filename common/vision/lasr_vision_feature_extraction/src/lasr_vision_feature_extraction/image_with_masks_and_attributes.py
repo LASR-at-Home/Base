@@ -100,8 +100,8 @@ class ImageOfPerson(ImageWithMasksAndAttributes):
 
         if hat >= 0.25:  # probably wearing hat
             has_hair *= (
-                0.5 - hat
-            ) * has_hair  # give a penalty to the hair confidence (hope this helps!)
+                (0.5 - hat) / 0.5 * has_hair
+            )  # give a penalty to the hair confidence (hope this helps!)
 
         result = {
             "has_hair": has_hair,
