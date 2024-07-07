@@ -595,7 +595,17 @@ class IntroduceAndSeatGuest(smach.StateMachine):
                 smach.StateMachine.add(
                     "DETECT_PEOPLE_AND_SEATS",
                     DetectPeopleAndSeats(seating_area, motions),
-                    transitions={"succeeded": "HANDLE_RESPONSES", "failed": "failed"},
+                    transitions={"succeeded": "LOOK_CENTRE", "failed": "failed"},
+                )
+
+                smach.StateMachine.add(
+                    "LOOK_CENTRE",
+                    PlayMotion(motion_name="look_centre"),
+                    transitions={
+                        "succeeded": "HANDLE_RESPONSES",
+                        "aborted": "HANDLE_RESPONSES",
+                        "preempted": "HANDLE_RESPONSES",
+                    },
                 )
 
                 # Handle the responses from the detections
@@ -953,21 +963,11 @@ class IntroduceAndSeatGuest(smach.StateMachine):
                         response_slots=["responses"],
                     ),
                     transitions={
-                        "succeeded": "LOOK_CENTRE",
+                        "succeeded": "HANDLE_RESPONSE",
                         "aborted": "failed",
                         "preempted": "failed",
                     },
                     remapping={"response": "detections"},
-                )
-
-                smach.StateMachine.add(
-                    "LOOK_CENTRE",
-                    PlayMotion(motion_name="look_centre"),
-                    transitions={
-                        "succeeded": "HANDLE_RESPONSE",
-                        "aborted": "HANDLE_RESPONSE",
-                        "preempted": "HANDLE_RESPONSE",
-                    },
                 )
 
                 smach.StateMachine.add(
