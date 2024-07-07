@@ -56,9 +56,7 @@ class CarryMyLuggage(smach.StateMachine):
 
             smach.StateMachine.add(
                 "GET_IMAGE",
-                GetCroppedImage(
-                    object_name="person", crop_method="closest", use_mask=True
-                ),
+                GetCroppedImage(object_name="person", method="closest", use_mask=True),
                 transitions={
                     "succeeded": "DETECT_POINTING_DIRECTION",
                     "failed": "failed",
@@ -71,6 +69,7 @@ class CarryMyLuggage(smach.StateMachine):
                 transitions={
                     "succeeded": "PROCESS_POINTING_DIRECTION",
                     "failed": "SAY_FAILED_POINTING",
+                    "missing_keypoints": "SAY_FAILED_POINTING",
                 },
             )
 
