@@ -1,3 +1,4 @@
+import rospy
 import smach
 import smach_ros
 from lasr_skills import (
@@ -9,6 +10,8 @@ from lasr_skills import (
 )
 from lasr_skills.vision import GetCroppedImage
 from lasr_person_following.msg import FollowAction
+
+from std_msgs.msg import Empty
 
 
 class CarryMyLuggage(smach.StateMachine):
@@ -33,8 +36,26 @@ class CarryMyLuggage(smach.StateMachine):
 
     def __init__(self):
         smach.StateMachine.__init__(self, outcomes=["succeeded", "failed"])
-
         with self:
+
+            def wait_cb(ud, msg):
+                rospy.loginfo("Received start signal")
+                return False
+
+            smach.StateMachine.add(
+                "WAIT_START",
+                smach_ros.MonitorState(
+                    "/carry_my_luggage/start",
+                    Empty,
+                    wait_cb,
+                ),
+                transitions={
+                    "valid": "WAIT_START",
+                    "invalid": "WAIT_FOR_PERSON",
+                    "preempted": "WAIT_START",
+                },
+            )
+
             smach.StateMachine.add(
                 "WAIT_FOR_PERSON",
                 WaitForPerson(),
@@ -68,8 +89,8 @@ class CarryMyLuggage(smach.StateMachine):
                 DetectGesture(),
                 transitions={
                     "succeeded": "PROCESS_POINTING_DIRECTION",
-                    "failed": "SAY_FAILED_POINTING",
-                    "missing_keypoints": "SAY_FAILED_POINTING",
+                    "failed": "GET_IMAGE",
+                    "missing_keypoints": "GET_IMAGE",
                 },
             )
 
@@ -78,19 +99,7 @@ class CarryMyLuggage(smach.StateMachine):
                 CarryMyLuggage.ProcessPointingDirection(),
                 transitions={
                     "succeeded": "SAY_BAG",
-                    "failed": "SAY_FAILED_POINTING",
-                },
-            )
-
-            smach.StateMachine.add(
-                "SAY_FAILED_POINTING",
-                Say(
-                    text="I could not detect the direction that you are pointing. I'll try again."
-                ),
-                transitions={
-                    "succeeded": "GET_IMAGE",
-                    "aborted": "failed",
-                    "preempted": "failed",
+                    "failed": "GET_IMAGE",
                 },
             )
 
