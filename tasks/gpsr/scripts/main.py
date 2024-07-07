@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
+import os
 import smach
 import rospy
+import rospkg
 import sys
 from typing import Dict
 from gpsr.load_known_data import GPSRDataLoader
@@ -10,7 +12,7 @@ from gpsr.states import CommandParserStateMachine
 
 
 def load_gpsr_configuration() -> Configuration:
-    gpsr_data_dir = sys.argv[1]
+    gpsr_data_dir = os.path.join(rospkg.RosPack().get_path("gpsr"), "data", "mock_data")
     """Loads the configuration for the GPSR command parser"""
     data_loader = GPSRDataLoader(data_dir=gpsr_data_dir)
     gpsr_known_data: Dict = data_loader.load_data()

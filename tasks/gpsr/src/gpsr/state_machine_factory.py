@@ -52,6 +52,7 @@ def build_state_machine(parsed_command: Dict) -> smach.StateMachine:
                         },
                     )
                 elif "clothes" in command_param:
+                    # TODO:
                     pass
                 else:
                     raise ValueError(
@@ -59,6 +60,7 @@ def build_state_machine(parsed_command: Dict) -> smach.StateMachine:
                     )
             elif command_verb == "talk":
                 if "gesture" in command_param:
+                    # TODO:
                     pass
                 elif "talk" in command_param:
                     sm.add(
