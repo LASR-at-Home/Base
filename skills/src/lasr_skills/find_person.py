@@ -224,7 +224,7 @@ class FindPerson(smach.StateMachine):
                         "GO_TO_LOCATION",
                         GoToLocation(),
                         transitions={
-                            "succeeded": "DETECT3D",
+                            "succeeded": "DETECT",
                             "failed": "failed",
                         },
                     )
