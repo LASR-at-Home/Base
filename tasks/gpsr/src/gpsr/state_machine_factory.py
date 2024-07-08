@@ -3,7 +3,7 @@ import rospy
 import smach
 from typing import Dict, List
 from lasr_skills import GoToLocation, FindNamedPerson, FindGesturePerson  # type: ignore
-from gpsr.states import Talk
+from gpsr.states import Talk, GoFindTheObject
 
 
 class GPSRStateMachineFactory:
@@ -36,9 +36,27 @@ class GPSRStateMachineFactory:
         raise NotImplementedError("Bring command not implemented")
 
     def _handle_go_command(self, command_param: Dict):
+
         raise NotImplementedError("Go command not implemented")
 
     def _handle_find_command(self, command_param: Dict):
+        # find a object in the given room
+        if "object_category" in command_param:
+            if not "location" in command_param:
+                raise ValueError(
+                    "find command with object but no room in command parameters"
+                )
+            location_param_room = f"/gpsr/arena/rooms/{command_param['location']}"
+            self.sm.add(
+                f"STATE_{self._increment_state_count()}",
+                GoFindTheObject(
+                    location_param=location_param_room, object=command_param["object_category"]
+                ),
+                transitions={
+                    "succeeded": f"STATE_{self.state_count + 1}",
+                    "failed": "failed",
+                },
+            )
         raise NotImplementedError("Find command not implemented")
 
     def _handle_talk_command(self, command_param: Dict):
@@ -112,13 +130,70 @@ class GPSRStateMachineFactory:
             )
 
     def _handle_count_command(self, command_params: Dict):
+        # Count the number of a category of objects at a given placement location 
+        # Count the number of people in a given gesture in a given room 
+        # Count the number of people in a given pose in a given room 
+        # Count the number of people wearing a certain item of clothing in a given room
+
+
         raise NotImplementedError("Count command not implemented")
 
     def _handle_follow_command(self, command_params: Dict):
         raise NotImplementedError("Follow command not implemented")
 
-    def _handle_guide_command(self, command_params: Dict):
-        raise NotImplementedError("Guide command not implemented")
+    def _handle_guide_command(self, command_param: Dict):
+        if "name" in command_param:
+            location_param_room = f"/gpsr/arena/rooms/{command_param['location']}"
+            location_param_pose = f"{location_param_room}/pose"
+            self.sm.add(
+                f"STATE_{self._increment_state_count()}",
+                GoToLocation(location_param=location_param_pose),
+                transitions={
+                    "succeeded": f"STATE_{self.state_count + 1}",
+                    "failed": "failed",
+                },
+            )
+            self.sm.add(
+                f"STATE_{self._increment_state_count()}",
+                FindNamedPerson(
+                    name=command_param["name"],
+                    location_param=location_param_room,
+                ),
+                transitions={
+                    "succeeded": f"STATE_{self.state_count + 1}",
+                    "failed": "failed",
+                },
+            )
+
+        elif "gesture" in command_param:
+            location_param_room = f"/gpsr/arena/rooms/{command_param['location']}"
+            self.sm.add(
+                f"STATE_{self._increment_state_count()}",
+                FindGesturePerson(
+                    location_param=location_param_room, gesture=command_param["gesture"]
+                ),
+                transitions={
+                    "succeeded": f"STATE_{self.state_count + 1}",
+                    "failed": "failed",
+                },
+            )
+            self.sm.add(
+                f"STATE_{self._increment_state_count()}",
+                GoToLocation(location_param=location_param_pose),
+                transitions={
+                    "succeeded": f"STATE_{self.state_count + 1}",
+                    "failed": "failed",
+                },
+            )
+
+        elif "pose" in command_param:
+            raise NotImplementedError("Guide command with pose not implemented")
+        elif "cloth" in command_param:
+            raise NotImplementedError("Guide command with clothes not implemented")
+        else:
+            raise ValueError(
+                "Guide command received with no name or gesture or pose or cloth in command parameters"
+            )
 
     def build_state_machine(self) -> smach.StateMachine:
         with self.sm:

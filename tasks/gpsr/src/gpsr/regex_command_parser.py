@@ -514,12 +514,14 @@ if __name__ == "__main__":
         matches = regex.match(input).groupdict()
         return parse_result_dict(gpsr_parse(matches), object_categories)
 
-    print(
-        execute(
-            "go to the kitchen then meet guest1 and tell the time",
-            object_categories,
-        )
-    )
+    # print(
+    #     execute(
+    #         "Take the person wearing a red shirt from the pantry to the bed",
+    #         object_categories,
+    #     )
+    # )
+
+
 
     # print(
     #     execute(
@@ -534,16 +536,16 @@ if __name__ == "__main__":
     #         object_categories,
     #     )
     # )
-    # print(
-    #     execute(
-    #         "navigate to the kitchen table then find a stick and fetch it and deliver it to guest1 in the living room",
-    #         object_categories,
-    #     )
-    # )
+    print(
+        execute(
+            "navigate to the kitchen table then find a stick and fetch it and deliver it to guest1 in the living room",
+            object_categories,
+        )
+    )
 
     # print(
     #     execute(
-    #         "lead the person wearing a red shirt from the sofa to the living room",
+    #         "navigate to the kitchen table then find a stick.",
     #         object_categories,
     #     )
     # )
