@@ -75,6 +75,30 @@ def get_room_polygon(room: str) -> Polygon:
     )
 
 
+def get_person_detection_polygon(location: str) -> Polygon:
+    location_room = get_location_room(location)
+    return Polygon(
+        [
+            Point(**p)
+            for p in rospy.get_param(
+                f"/gpsr/arena/rooms/{location_room}/beacons/{location}/person_detection_polygon"
+            )
+        ]
+    )
+
+
+def get_object_detection_polygon(location: str) -> Polygon:
+    location_room = get_location_room(location)
+    return Polygon(
+        [
+            Point(**p)
+            for p in rospy.get_param(
+                f"/gpsr/arena/rooms/{location_room}/beacons/{location}/object_detection_polygon"
+            )
+        ]
+    )
+
+
 def greet(command_param: Dict, sm: smach.StateMachine) -> None:
     target_pose = get_room_pose(command_param["room"])
     sm.add(
