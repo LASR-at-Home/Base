@@ -378,6 +378,52 @@ def meet(command_param: Dict, sm: smach.StateMachine) -> None:
 
 
 def tell(command_param: Dict, sm: smach.StateMachine) -> None:
+    """
+    Tell me the biggest/largest/smallest/heaviest/lightest/thinnest object at a given placement location
+    """
+    if "object_category" in command_param:
+        if not "location" in command_param:
+            raise ValueError(
+                "Tell command with object but no room in command parameters"
+            )
+        location_param_room = f"/gpsr/arena/rooms/{command_param['location']}"
+        sm.add(
+        f"STATE_{increment_state_count()}",
+        GoToLocation(location_param=f"{location_param_room}/pose"),
+        transitions={
+            "succeeded": f"STATE_{STATE_COUNT + 1}",
+            "failed": "failed",
+        },
+    )
+        # TODO: combine the weight list within
+        # TODO: add speak out the result
+        weight_list = rospy.get_param("/Object_list/Object")
+        sm.add(
+            f"STATE_{increment_state_count()}",
+            ObjectComparison(
+                filter=command_param["object_category"],
+                operation_label = "weight",
+                weight = weight_list
+            ),
+            transitions={
+                "succeeded": f"STATE_{STATE_COUNT + 1}",
+                "failed": "failed",
+            },
+        )
+
+        sm.add(
+            f"STATE_{increment_state_count()}",
+            ObjectComparison(
+                filter=command_param["object_category"],
+                operation_label = "size",
+                weight = weight_list
+            ),
+            transitions={
+                "succeeded": f"STATE_{STATE_COUNT + 1}",
+                "failed": "failed",
+            },
+        )
+
     pass
 
 
