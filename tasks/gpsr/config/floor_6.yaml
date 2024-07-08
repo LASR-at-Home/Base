@@ -1,0 +1,429 @@
+arena:
+  polygon: []
+  rooms:
+    - bedroom:
+        pose:
+          orientation: {w: 1.0, x: 0.0, y: 0.0, z: 0.0}
+          position: {x: 0.0, y: 0.0, z: 0.0}
+        people_search_poses:
+          - orientation: {w: 1.0, x: 0.0, y: 0.0, z: 0.0}
+            position: {x: 0.0, y: 0.0, z: 0.0}
+        polygon: []
+        beacons:
+          - bed:
+              placeable: true
+              object_category: all
+              object_detection_pose:
+                orientation: {w: 1.0, x: 0.0, y: 0.0, z: 0.0}
+                position: {x: 0.0, y: 0.0, z: 0.0}
+              object_detection_point:
+                x: 0.0
+                y: 0.0
+                z: 0.0
+              object_detection_polygon: []
+              person_detection_pose:
+                orientation: {w: 1.0, x: 0.0, y: 0.0, z: 0.0}
+                position: {x: 0.0, y: 0.0, z: 0.0}
+              person_detection_polygon: []
+          - bedside_table:
+              placeable: true
+              object_category: all
+              object_detection_pose:
+                orientation: {w: 1.0, x: 0.0, y: 0.0, z: 0.0}
+                position: {x: 0.0, y: 0.0, z: 0.0}
+              object_detection_point:
+                x: 0.0
+                y: 0.0
+                z: 0.0
+              object_detection_polygon: []
+              person_detection_pose:
+                orientation: {w: 1.0, x: 0.0, y: 0.0, z: 0.0}
+                position: {x: 0.0, y: 0.0, z: 0.0}
+              person_detection_polygon: []
+          - shelf:
+              placeable: true
+              object_category: cleaning_supplies
+              object_detection_pose:
+                orientation: {w: 1.0, x: 0.0, y: 0.0, z: 0.0}
+                position: {x: 0.0, y: 0.0, z: 0.0}
+              object_detection_point:
+                x: 0.0
+                y: 0.0
+                z: 0.0
+              object_detection_polygon: []
+              person_detection_pose:
+                orientation: {w: 1.0, x: 0.0, y: 0.0, z: 0.0}
+                position: {x: 0.0, y: 0.0, z: 0.0}
+              person_detection_polygon: []
+    - kitchen:
+        pose:
+          orientation: {w: 1.0, x: 0.0, y: 0.0, z: 0.0}
+          position: {x: 0.0, y: 0.0, z: 0.0}
+        people_search_poses:
+          - orientation: {w: 1.0, x: 0.0, y: 0.0, z: 0.0}
+            position: {x: 0.0, y: 0.0, z: 0.0}
+        polygon: []
+        beacons:
+          - trashbin:
+              placeable: false
+              object_category: null
+              object_detection_pose:
+                orientation: {w: 1.0, x: 0.0, y: 0.0, z: 0.0}
+                position: {x: 0.0, y: 0.0, z: 0.0}
+              object_detection_point:
+                x: 0.0
+                y: 0.0
+                z: 0.0
+              object_detection_polygon: []
+              person_detection_pose:
+                orientation: {w: 1.0, x: 0.0, y: 0.0, z: 0.0}
+                position: {x: 0.0, y: 0.0, z: 0.0}
+              person_detection_polygon: []
+          - dishwasher:
+              placeable: true
+              object_category: any
+              object_detection_pose:
+                orientation: {w: 1.0, x: 0.0, y: 0.0, z: 0.0}
+                position: {x: 0.0, y: 0.0, z: 0.0}
+              object_detection_point:
+                x: 0.0
+                y: 0.0
+                z: 0.0
+              object_detection_polygon: []
+              person_detection_pose:
+                orientation: {w: 1.0, x: 0.0, y: 0.0, z: 0.0}
+                position: {x: 0.0, y: 0.0, z: 0.0}
+              person_detection_polygon: []
+          - potted_plant:
+              placeable: false
+              object_category: null
+              object_detection_pose:
+                orientation: {w: 1.0, x: 0.0, y: 0.0, z: 0.0}
+                position: {x: 0.0, y: 0.0, z: 0.0}
+              object_detection_point:
+                x: 0.0
+                y: 0.0
+                z: 0.0
+              object_detection_polygon: []
+              person_detection_pose:
+                orientation: {w: 1.0, x: 0.0, y: 0.0, z: 0.0}
+                position: {x: 0.0, y: 0.0, z: 0.0}
+              person_detection_polygon: []
+          - kitchen_table:
+              placeable: true
+              object_category: dishes
+              object_detection_pose:
+                orientation: {w: 1.0, x: 0.0, y: 0.0, z: 0.0}
+                position: {x: 0.0, y: 0.0, z: 0.0}
+              object_detection_point:
+                x: 0.0
+                y: 0.0
+                z: 0.0
+              object_detection_polygon: []
+              person_detection_pose:
+                orientation: {w: 1.0, x: 0.0, y: 0.0, z: 0.0}
+                position: {x: 0.0, y: 0.0, z: 0.0}
+              person_detection_polygon: []
+          - chairs:
+              placeable: false
+              object_category: null
+              object_detection_pose:
+                orientation: {w: 1.0, x: 0.0, y: 0.0, z: 0.0}
+                position: {x: 0.0, y: 0.0, z: 0.0}
+              object_detection_point:
+                x: 0.0
+                y: 0.0
+                z: 0.0
+              object_detection_polygon: []
+              person_detection_pose:
+                orientation: {w: 1.0, x: 0.0, y: 0.0, z: 0.0}
+                position: {x: 0.0, y: 0.0, z: 0.0}
+              person_detection_polygon: []
+          - pantry:
+              placeable: true
+              object_category: food
+              object_detection_pose:
+                orientation: {w: 1.0, x: 0.0, y: 0.0, z: 0.0}
+                position: {x: 0.0, y: 0.0, z: 0.0}
+              object_detection_point:
+                x: 0.0
+                y: 0.0
+                z: 0.0
+              object_detection_polygon: []
+              person_detection_pose:
+                orientation: {w: 1.0, x: 0.0, y: 0.0, z: 0.0}
+                position: {x: 0.0, y: 0.0, z: 0.0}
+              person_detection_polygon: []
+          - refrigerator:
+              placeable: true
+              object_category: any
+              object_detection_pose:
+                orientation: {w: 1.0, x: 0.0, y: 0.0, z: 0.0}
+                position: {x: 0.0, y: 0.0, z: 0.0}
+              object_detection_point:
+                x: 0.0
+                y: 0.0
+                z: 0.0
+              object_detection_polygon: []
+              person_detection_pose:
+                orientation: {w: 1.0, x: 0.0, y: 0.0, z: 0.0}
+                position: {x: 0.0, y: 0.0, z: 0.0}
+              person_detection_polygon: []
+          - sink:
+              placeable: true
+              object_category: any
+              object_detection_pose:
+                orientation: {w: 1.0, x: 0.0, y: 0.0, z: 0.0}
+                position: {x: 0.0, y: 0.0, z: 0.0}
+              object_detection_point:
+                x: 0.0
+                y: 0.0
+                z: 0.0
+              object_detection_polygon: []
+              person_detection_pose:
+                orientation: {w: 1.0, x: 0.0, y: 0.0, z: 0.0}
+                position: {x: 0.0, y: 0.0, z: 0.0}
+              person_detection_polygon: []
+    - study:
+        pose:
+          orientation: {w: 1.0, x: 0.0, y: 0.0, z: 0.0}
+          position: {x: 0.0, y: 0.0, z: 0.0}
+        people_search_poses:
+          - orientation: {w: 1.0, x: 0.0, y: 0.0, z: 0.0}
+            position: {x: 0.0, y: 0.0, z: 0.0}
+        polygon: []
+        beacons:
+          - cabinet:
+              placeable: true
+              object_category: drinks
+              object_detection_pose:
+                orientation: {w: 1.0, x: 0.0, y: 0.0, z: 0.0}
+                position: {x: 0.0, y: 0.0, z: 0.0}
+              object_detection_point:
+                x: 0.0
+                y: 0.0
+                z: 0.0
+              object_detection_polygon: []
+              person_detection_pose:
+                orientation: {w: 1.0, x: 0.0, y: 0.0, z: 0.0}
+                position: {x: 0.0, y: 0.0, z: 0.0}
+              person_detection_polygon: []
+          - coatrack:
+              placeable: false
+              object_category: null
+              object_detection_pose:
+                orientation: {w: 1.0, x: 0.0, y: 0.0, z: 0.0}
+                position: {x: 0.0, y: 0.0, z: 0.0}
+              object_detection_point:
+                x: 0.0
+                y: 0.0
+                z: 0.0
+              object_detection_polygon: []
+              person_detection_pose:
+                orientation: {w: 1.0, x: 0.0, y: 0.0, z: 0.0}
+                position: {x: 0.0, y: 0.0, z: 0.0}
+              person_detection_polygon: []
+          - desk:
+              placeable: true
+              object_category: fruits
+              object_detection_pose:
+                orientation: {w: 1.0, x: 0.0, y: 0.0, z: 0.0}
+                position: {x: 0.0, y: 0.0, z: 0.0}
+              object_detection_point:
+                x: 0.0
+                y: 0.0
+                z: 0.0
+              object_detection_polygon: []
+              person_detection_pose:
+                orientation: {w: 1.0, x: 0.0, y: 0.0, z: 0.0}
+                position: {x: 0.0, y: 0.0, z: 0.0}
+              person_detection_polygon: []
+          - armchair:
+              placeable: false
+              object_category: null 
+              object_detection_pose:
+                orientation: {w: 1.0, x: 0.0, y: 0.0, z: 0.0}
+                position: {x: 0.0, y: 0.0, z: 0.0}
+              object_detection_point:
+                x: 0.0
+                y: 0.0
+                z: 0.0
+              object_detection_polygon: []
+              person_detection_pose:
+                orientation: {w: 1.0, x: 0.0, y: 0.0, z: 0.0}
+                position: {x: 0.0, y: 0.0, z: 0.0}
+              person_detection_polygon: []
+          - desk_lamp:
+              placeable: false
+              object_category: null 
+              object_detection_pose:
+                orientation: {w: 1.0, x: 0.0, y: 0.0, z: 0.0}
+                position: {x: 0.0, y: 0.0, z: 0.0}
+              object_detection_point:
+                x: 0.0
+                y: 0.0
+                z: 0.0
+              object_detection_polygon: []
+              person_detection_pose:
+                orientation: {w: 1.0, x: 0.0, y: 0.0, z: 0.0}
+                position: {x: 0.0, y: 0.0, z: 0.0}
+              person_detection_polygon: []
+          - waste_basket:
+              placeable: false
+              object_category: null 
+              object_detection_pose:
+                orientation: {w: 1.0, x: 0.0, y: 0.0, z: 0.0}
+                position: {x: 0.0, y: 0.0, z: 0.0}
+              object_detection_point:
+                x: 0.0
+                y: 0.0
+                z: 0.0
+              object_detection_polygon: []
+              person_detection_pose:
+                orientation: {w: 1.0, x: 0.0, y: 0.0, z: 0.0}
+                position: {x: 0.0, y: 0.0, z: 0.0}
+              person_detection_polygon: []
+          - exit:
+              placeable: false
+              object_category: null
+              object_detection_pose:
+                orientation: {w: 1.0, x: 0.0, y: 0.0, z: 0.0}
+                position: {x: 0.0, y: 0.0, z: 0.0}
+              object_detection_point:
+                x: 0.0
+                y: 0.0
+                z: 0.0
+              object_detection_polygon: []
+              person_detection_pose:
+                orientation: {w: 1.0, x: 0.0, y: 0.0, z: 0.0}
+                position: {x: 0.0, y: 0.0, z: 0.0}
+              person_detection_polygon: []
+    - living_room:
+        pose:
+          orientation: {w: 1.0, x: 0.0, y: 0.0, z: 0.0}
+          position: {x: 0.0, y: 0.0, z: 0.0}
+        people_search_poses:
+          - orientation: {w: 1.0, x: 0.0, y: 0.0, z: 0.0}
+            position: {x: 0.0, y: 0.0, z: 0.0}
+        polygon: []
+        beacons:
+          - tv_stand:
+              placeable: true
+              object_category: null
+              object_detection_pose:
+                orientation: {w: 1.0, x: 0.0, y: 0.0, z: 0.0}
+                position: {x: 0.0, y: 0.0, z: 0.0}
+              object_detection_point:
+                x: 0.0
+                y: 0.0
+                z: 0.0
+              object_detection_polygon: []
+              person_detection_pose:
+                orientation: {w: 1.0, x: 0.0, y: 0.0, z: 0.0}
+                position: {x: 0.0, y: 0.0, z: 0.0}
+              person_detection_polygon: []
+          - storage_rack:
+              placeable: true
+              object_category: null
+              object_detection_pose:
+                orientation: {w: 1.0, x: 0.0, y: 0.0, z: 0.0}
+                position: {x: 0.0, y: 0.0, z: 0.0}
+              object_detection_point:
+                x: 0.0
+                y: 0.0
+                z: 0.0
+              object_detection_polygon: []
+              person_detection_pose:
+                orientation: {w: 1.0, x: 0.0, y: 0.0, z: 0.0}
+                position: {x: 0.0, y: 0.0, z: 0.0}
+              person_detection_polygon: []
+          - lamp:
+              placeable: false
+              object_category: null
+              object_detection_pose:
+                orientation: {w: 1.0, x: 0.0, y: 0.0, z: 0.0}
+                position: {x: 0.0, y: 0.0, z: 0.0}
+              object_detection_point:
+                x: 0.0
+                y: 0.0
+                z: 0.0
+              object_detection_polygon: []
+              person_detection_pose:
+                orientation: {w: 1.0, x: 0.0, y: 0.0, z: 0.0}
+                position: {x: 0.0, y: 0.0, z: 0.0}
+              person_detection_polygon: []
+          - side_tables:
+              placeable: true
+              object_category: snacks
+              object_detection_pose:
+                orientation: {w: 1.0, x: 0.0, y: 0.0, z: 0.0}
+                position: {x: 0.0, y: 0.0, z: 0.0}
+              object_detection_point:
+                x: 0.0
+                y: 0.0
+                z: 0.0
+              object_detection_polygon: []
+              person_detection_pose:
+                orientation: {w: 1.0, x: 0.0, y: 0.0, z: 0.0}
+                position: {x: 0.0, y: 0.0, z: 0.0}
+              person_detection_polygon: []
+          - sofa:
+              placeable: true
+              object_category: null
+              object_detection_pose:
+                orientation: {w: 1.0, x: 0.0, y: 0.0, z: 0.0}
+                position: {x: 0.0, y: 0.0, z: 0.0}
+              object_detection_point:
+                x: 0.0
+                y: 0.0
+                z: 0.0
+              object_detection_polygon: []
+              person_detection_pose:
+                orientation: {w: 1.0, x: 0.0, y: 0.0, z: 0.0}
+                position: {x: 0.0, y: 0.0, z: 0.0}
+              person_detection_polygon: []
+          - bookshelf:
+              placeable: true
+              object_category: toys
+              object_detection_pose:
+                orientation: {w: 1.0, x: 0.0, y: 0.0, z: 0.0}
+                position: {x: 0.0, y: 0.0, z: 0.0}
+              object_detection_point:
+                x: 0.0
+                y: 0.0
+                z: 0.0
+              object_detection_polygon: []
+              person_detection_pose:
+                orientation: {w: 1.0, x: 0.0, y: 0.0, z: 0.0}
+                position: {x: 0.0, y: 0.0, z: 0.0}
+              person_detection_polygon: []
+          - entrance:
+              placeable: false
+              object_category: null
+              object_detection_pose:
+                orientation: {w: 1.0, x: 0.0, y: 0.0, z: 0.0}
+                position: {x: 0.0, y: 0.0, z: 0.0}
+              object_detection_point:
+                x: 0.0
+                y: 0.0
+                z: 0.0
+              object_detection_polygon: []
+              person_detection_pose:
+                orientation: {w: 1.0, x: 0.0, y: 0.0, z: 0.0}
+                position: {x: 0.0, y: 0.0, z: 0.0}
+              person_detection_polygon: []
+          - exit:
+              placeable: false
+              object_category: null
+              object_detection_pose:
+                orientation: {w: 1.0, x: 0.0, y: 0.0, z: 0.0}
+                position: {x: 0.0, y: 0.0, z: 0.0}
+              object_detection_point:
+                x: 0.0
+                y: 0.0
+                z: 0.0
+              object_detection_polygon: []
+              person_detection_pose:
+                orientation: {w: 1.0, x: 0.0, y: 0.0, z: 0.0}
+                position: {x: 0.0, y: 0.0, z: 0.0}
+              person_detection_polygon: []
