@@ -16,7 +16,7 @@ from gpsr.states import Talk, QuestionAnswer, GoFindTheObject, ObjectComparison
 from geometry_msgs.msg import Pose, Point, Quaternion, Polygon
 
 STATE_COUNT = 0
-from lasr_skills import GoToLocation, FindNamedPerson, FindGesturePerson  # type: ignore
+from lasr_skills import GoToLocation
 
 
 def increment_state_count() -> int:
