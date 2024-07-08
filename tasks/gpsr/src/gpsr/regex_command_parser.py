@@ -401,6 +401,7 @@ def gpsr_parse(matches: Dict[str, str]) -> Dict[str, Any]:
         if key_to_check == "verb":
             result["commands"].append(reverse_translate_verb_dict(value))
             result["command_params"].append({})
+
         elif key_to_check in [
             "object",
             "location",
@@ -410,6 +411,7 @@ def gpsr_parse(matches: Dict[str, str]) -> Dict[str, Any]:
             "start",
             "end",
             "objectcomp",
+            "personinfo",
             "clothes",
             "talk",
             "pose",
@@ -537,22 +539,22 @@ if __name__ == "__main__":
         )
     )
 
-    # print(
-    #     execute(
-    #         "navigate to the kitchen then find a cup and get it and bring it to the person pointing to the right in the kitchen",
-    #         object_categories,
-    #     )
-    # )
-
-    # print(
-    #     execute(
-    #         "navigate to the kitchen then find a cup and get it and bring it to me",
-    #         object_categories,
-    #     )
-    # )
     print(
         execute(
-            "navigate to the kitchen table then find a stick and fetch it and deliver it to guest1 in the living room",
+            "navigate to the kitchen then find a cup and get it and bring it to the person pointing to the right in the kitchen",
+            object_categories,
+        )
+    )
+
+    print(
+        execute(
+            "navigate to the kitchen then find a cup and get it and bring it to me",
+            object_categories,
+        )
+    )
+    print(
+        execute(
+            "tell me the pose of the person at the sofa",
             object_categories,
         )
     )

@@ -453,13 +453,13 @@ def tell(command_param: Dict, sm: smach.StateMachine) -> None:
             )
         location_param_room = f"/gpsr/arena/rooms/{command_param['location']}"
         sm.add(
-        f"STATE_{increment_state_count()}",
-        GoToLocation(location_param=f"{location_param_room}/pose"),
-        transitions={
-            "succeeded": f"STATE_{STATE_COUNT + 1}",
-            "failed": "failed",
-        },
-    )
+            f"STATE_{increment_state_count()}",
+            GoToLocation(location_param=f"{location_param_room}/pose"),
+            transitions={
+                "succeeded": f"STATE_{STATE_COUNT + 1}",
+                "failed": "failed",
+            },
+        )
         # TODO: combine the weight list within
         # TODO: add speak out the result
         weight_list = rospy.get_param("/Object_list/Object")
@@ -467,8 +467,8 @@ def tell(command_param: Dict, sm: smach.StateMachine) -> None:
             f"STATE_{increment_state_count()}",
             ObjectComparison(
                 filter=command_param["object_category"],
-                operation_label = "weight",
-                weight = weight_list
+                operation_label="weight",
+                weight=weight_list,
             ),
             transitions={
                 "succeeded": f"STATE_{STATE_COUNT + 1}",
@@ -480,8 +480,8 @@ def tell(command_param: Dict, sm: smach.StateMachine) -> None:
             f"STATE_{increment_state_count()}",
             ObjectComparison(
                 filter=command_param["object_category"],
-                operation_label = "size",
-                weight = weight_list
+                operation_label="size",
+                weight=weight_list,
             ),
             transitions={
                 "succeeded": f"STATE_{STATE_COUNT + 1}",
@@ -504,13 +504,13 @@ def count(command_param: Dict, sm: smach.StateMachine) -> None:
             )
         location_param_room = f"/gpsr/arena/rooms/{command_param['location']}"
         sm.add(
-        f"STATE_{increment_state_count()}",
-        GoToLocation(location_param=f"{location_param_room}/pose"),
-        transitions={
-            "succeeded": f"STATE_{STATE_COUNT + 1}",
-            "failed": "failed",
-        },
-    )
+            f"STATE_{increment_state_count()}",
+            GoToLocation(location_param=f"{location_param_room}/pose"),
+            transitions={
+                "succeeded": f"STATE_{STATE_COUNT + 1}",
+                "failed": "failed",
+            },
+        )
         # TODO: combine the weight list within
         # TODO: add speak out the result
         weight_list = rospy.get_param("/Object_list/Object")
@@ -518,15 +518,14 @@ def count(command_param: Dict, sm: smach.StateMachine) -> None:
             f"STATE_{increment_state_count()}",
             ObjectComparison(
                 filter=command_param["object_category"],
-                operation_label = "count",
-                weight = weight_list
+                operation_label="count",
+                weight=weight_list,
             ),
             transitions={
                 "succeeded": f"STATE_{STATE_COUNT + 1}",
                 "failed": "failed",
             },
         )
-
 
     raise NotImplementedError("Count command not implemented")
 
