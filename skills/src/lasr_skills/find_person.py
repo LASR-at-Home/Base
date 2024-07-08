@@ -6,7 +6,14 @@ import rospy
 from lasr_skills import GoToLocation, AskAndListen, DetectGesture
 import navigation_helpers
 
-from geometry_msgs.msg import Pose, PoseWithCovarianceStamped, Polygon
+from geometry_msgs.msg import (
+    Pose,
+    PoseWithCovarianceStamped,
+    Polygon,
+    PoseStamped,
+    Point,
+    Quaternion,
+)
 from lasr_vision_msgs.msg import CDRequest, CDResponse
 from lasr_vision_msgs.srv import (
     CroppedDetectionRequest,
@@ -14,6 +21,8 @@ from lasr_vision_msgs.srv import (
     CroppedDetection,
     Recognise,
 )
+
+
 from typing import List, Literal
 
 
@@ -71,9 +80,83 @@ class FindPerson(smach.StateMachine):
                 if len(userdata.responses[0].detections_3d) == 0:
                     rospy.logwarn("No response available, returning failed.")
                     return "failed"
-                userdata.response = userdata.responses[0].detections_3d.pop(0)
+                response = userdata.responses[0].detections_3d.pop(0)
+                userdata.response = response
                 userdata.cropped_image = userdata.responses[0].cropped_imgs.pop(0)
+                userdata.person_point = response.point
                 return "succeeded"
+
+        class ApproachPerson(smach.StateMachine):
+
+            class ComputeApproachPose(smach.State):
+
+                def __init__(self):
+                    smach.State.__init__(
+                        self,
+                        outcomes=["succeeded", "failed"],
+                        input_keys=["person_point"],
+                        output_keys=["approach_pose"],
+                    )
+
+                def execute(self, userdata):
+                    robot_pose_with_covariance = rospy.wait_for_message(
+                        "/robot_pose", PoseWithCovarianceStamped
+                    )
+                    robot_pose = PoseStamped(
+                        pose=robot_pose_with_covariance.pose.pose,
+                        header=robot_pose_with_covariance.header,
+                    )
+
+                    person_pose = PoseStamped(
+                        pose=Pose(
+                            position=userdata.person_point,
+                            orientation=robot_pose.pose.orientation,
+                        ),
+                        header=robot_pose.header,
+                    )
+                    approach_pose = navigation_helpers.get_pose_on_path(
+                        robot_pose,
+                        person_pose,
+                    )
+                    rospy.loginfo(approach_pose)
+
+                    if approach_pose is None:
+                        return "failed"
+
+                    approach_pose.pose.orientation = (
+                        navigation_helpers.compute_face_quat(
+                            approach_pose.pose,
+                            person_pose.pose,
+                        )
+                    )
+                    userdata.approach_pose = approach_pose.pose
+
+                    return "succeeded"
+
+            def __init__(self):
+                smach.StateMachine.__init__(
+                    self,
+                    outcomes=["succeeded", "failed"],
+                    input_keys=["person_point"],
+                )
+
+                with self:
+
+                    smach.StateMachine.add(
+                        "COMPUTE_APPROACH_POSE",
+                        self.ComputeApproachPose(),
+                        transitions={"succeeded": "GO_TO_PERSON", "failed": "failed"},
+                    )
+
+                    smach.StateMachine.add(
+                        "GO_TO_PERSON",
+                        GoToLocation(),
+                        transitions={
+                            "succeeded": "succeeded",
+                            "failed": "failed",
+                        },
+                        remapping={"location": "approach_pose"},
+                    )
 
         def __init__(
             self,
@@ -110,16 +193,17 @@ class FindPerson(smach.StateMachine):
                         "GET_RESPONSE",
                         self.GetResponse(),
                         transitions={"succeeded": "GO_TO_PERSON", "failed": "failed"},
+                        remapping={"img_msg": "cropped_image"},
                     )
 
                     smach.StateMachine.add(
-                        "GO_TO_PERSON",
-                        GoToLocation(),
+                        "APPROACH_PERSON",
+                        self.ApproachPerson(),
                         transitions={
                             "succeeded": "ASK_NAME",
                             "failed": "failed",
                         },
-                        remapping={"location": "person_point"},
+                        remapping={"location": "approach_pose"},
                     )
                     smach.StateMachine.add(
                         "CHECK_NAME",
@@ -152,10 +236,21 @@ class FindPerson(smach.StateMachine):
                         "DETECT_GESTURE",
                         DetectGesture(criteria_value),
                         transitions={
-                            "succeeded": "succeeded",
+                            "succeeded": "GO_TO_PERSON",
                             "missing_keypoints": "GET_RESPONSE",
                             "failed": "GET_RESPONSE",
                         },
+                        remapping={"img_msg": "cropped_image"},
+                    )
+
+                    smach.StateMachine.add(
+                        "GO_TO_PERSON",
+                        self.ApproachPerson(),
+                        transitions={
+                            "succeeded": "succeeded",
+                            "failed": "GET_RESPONSE",
+                        },
+                        remapping={"location": "approach_pose"},
                     )
 
                 elif criteria == "pose":
@@ -312,3 +407,4 @@ if __name__ == "__main__":
         criteria="gesture",
         criteria_value="raising_left_arm",
     )
+    print(find_person.execute())
