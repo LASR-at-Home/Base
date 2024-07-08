@@ -3,7 +3,14 @@ import rospy
 import smach
 from smach_ros import ServiceState
 from typing import Dict, List
-from lasr_skills import GoToLocation, FindPerson, Guide, HandoverObject, Say
+from lasr_skills import (
+    GoToLocation,
+    FindPerson,
+    Guide,
+    HandoverObject,
+    Say,
+    ReceiveObject,
+)
 from gpsr.states import Talk
 
 from geometry_msgs.msg import Pose, Point, Quaternion, Polygon
@@ -212,6 +219,37 @@ def build_state_machine(parsed_command: Dict) -> smach.StateMachine:
                         "succeeded": f"STATE_{STATE_COUNT + 1}",
                         "aborted": "failed",
                         "preempted": "failed",
+                    },
+                )
+            elif command_verb == "take":
+                location_param = f"/gpsr/arena/rooms/{command_param['location']}"
+                sm.add(
+                    f"STATE_{increment_state_count()}",
+                    GoToLocation(location_param=f"{location_param}/pose"),
+                    transitions={
+                        "succeeded": f"STATE_{STATE_COUNT + 1}",
+                        "failed": "failed",
+                    },
+                )
+
+                sm.add(
+                    f"STATE_{increment_state_count()}",
+                    Say(
+                        text=f"Please pick up the {command_param['object_category']} on the {command_param['location']} for me."
+                    ),
+                    transitions={
+                        "succeeded": f"STATE_{STATE_COUNT + 1}",
+                        "aborted": "failed",
+                        "preempted": "failed",
+                    },
+                )
+
+                sm.add(
+                    f"STATE_{increment_state_count()}",
+                    ReceiveObject(object_name=command_param["object_category"]),
+                    transitions={
+                        "succeeded": f"STATE_{STATE_COUNT + 1}",
+                        "failed": "failed",
                     },
                 )
 
