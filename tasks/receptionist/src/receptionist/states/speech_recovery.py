@@ -132,7 +132,7 @@ class SpeechRecovery(smach.State):
             return self._handle_closest_spelt(sentence_list, self._available_names)
 
     def _handle_drink(self, sentence_list, last_resort):
-        result = self._infer_second_drink(sentence_list)
+        result = self._infer_second_drink(sentence_list, last_resort)
         if result != "unknown":
             return result
         result = self._handle_similar_spelt(sentence_list, self._available_drinks, 1)
@@ -150,7 +150,7 @@ class SpeechRecovery(smach.State):
                 return result
             else:
                 sentence_list.append(result)
-                return self._infer_second_drink(sentence_list)
+                return self._infer_second_drink(sentence_list, last_resort)
         else:
             if not last_resort:
                 return "unknown"
@@ -164,7 +164,7 @@ class SpeechRecovery(smach.State):
                     return closest_spelt
                 else:
                     sentence_list.append(closest_spelt)
-                    return self._infer_second_drink(closest_spelt)
+                    return self._infer_second_drink(closest_spelt, last_resort)
 
     def _handle_similar_spelt(self, sentence_list, available_words, distance_threshold):
         for input_word in sentence_list:
@@ -187,17 +187,20 @@ class SpeechRecovery(smach.State):
                     return available_word
         return "unknown"
 
-    def _infer_second_drink(self, sentence_list):
+    def _infer_second_drink(self, sentence_list, recover_juice=False):
         for input_word in sentence_list:
             if input_word == "juice":
-                choices = ["pack", "orange", "tropical"]
-                closest_word = self._handle_closest_spelt(sentence_list, choices)
-                if closest_word == "pack":
-                    return "juice pack"
-                elif closest_word == "orange":
-                    return "orange juice"
+                if recover_juice:
+                    choices = ["pack", "orange", "tropical"]
+                    closest_word = self._handle_closest_spelt(sentence_list, choices)
+                    if closest_word == "pack":
+                        return "juice pack"
+                    elif closest_word == "orange":
+                        return "orange juice"
+                    else:
+                        return "tropical juice"
                 else:
-                    return "tropical juice"
+                    return "unknown"
             for available_word in self._available_double_drinks:
                 if input_word == available_word:
                     return self._double_drinks_dict[input_word]
