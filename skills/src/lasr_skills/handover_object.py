@@ -150,7 +150,7 @@ class HandoverObject(smach.StateMachine):
                         format_str="Please place the {} in my end-effector. I will wait for a few seconds.",
                     ),
                     transitions={
-                        "succeeded": "WAIT_5",
+                        "succeeded": "OPEN_GRIPPER",
                         "aborted": "failed",
                         "preempted": "failed",
                     },
@@ -158,20 +158,21 @@ class HandoverObject(smach.StateMachine):
                 )
 
             smach.StateMachine.add(
+                "OPEN_GRIPPER",
+                PlayMotion(motion_name="open_gripper"),
+                transitions={
+                    "succeeded": "WAIT_5",
+                    "aborted": "failed",
+                    "preempted": "failed",
+                },
+            )
+
+            smach.StateMachine.add(
                 "WAIT_5",
                 Wait(5),
                 transitions={"succeeded": "OPEN_GRIPPER", "failed": "OPEN_GRIPPER"},
             )
 
-            smach.StateMachine.add(
-                "OPEN_GRIPPER",
-                PlayMotion(motion_name="open_gripper"),
-                transitions={
-                    "succeeded": "FOLD_ARM",
-                    "aborted": "failed",
-                    "preempted": "failed",
-                },
-            )
             smach.StateMachine.add(
                 "FOLD_ARM",
                 PlayMotion(motion_name="home"),
