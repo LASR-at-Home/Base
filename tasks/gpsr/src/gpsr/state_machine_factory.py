@@ -11,7 +11,7 @@ from lasr_skills import (
     Say,
     ReceiveObject,
 )
-from gpsr.states import Talk
+from gpsr.states import Talk, QuestionAnswer
 
 from geometry_msgs.msg import Pose, Point, Quaternion, Polygon
 
@@ -249,6 +249,21 @@ def build_state_machine(parsed_command: Dict) -> smach.StateMachine:
                 sm.add(
                     f"STATE_{increment_state_count()}",
                     ReceiveObject(object_name=command_param["object_category"]),
+                    transitions={
+                        "succeeded": f"STATE_{STATE_COUNT + 1}",
+                        "failed": "failed",
+                    },
+                )
+            elif command_verb == "answer":
+                sm.add(
+                    f"STATE_{increment_state_count()}",
+                    # TODO: pass index_path, txt_path, xml_path
+                    QuestionAnswer(
+                        index_path="index.txt",
+                        txt_path="txt",
+                        xml_path="xml",
+                        k=1,
+                    ),
                     transitions={
                         "succeeded": f"STATE_{STATE_COUNT + 1}",
                         "failed": "failed",
