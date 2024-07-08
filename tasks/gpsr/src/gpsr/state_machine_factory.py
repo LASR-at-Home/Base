@@ -16,7 +16,7 @@ from gpsr.states import Talk, QuestionAnswer, GoFindTheObject, ObjectComparison
 from geometry_msgs.msg import Pose, Point, Quaternion, Polygon
 
 STATE_COUNT = 0
-from lasr_skills import GoToLocation, FindNamedPerson, FindGesturePerson  # type: ignore
+from lasr_skills import GoToLocation
 
 
 def increment_state_count() -> int:
@@ -147,9 +147,8 @@ def greet(command_param: Dict, sm: smach.StateMachine) -> None:
 
 def talk(command_param: Dict, sm: smach.StateMachine) -> None:
     if "gesture" in command_param:
-        # TODO:
-        pass
-    elif "talk" in command_param:
+        find(command_param, sm)
+    if "talk" in command_param:
         sm.add(
             f"STATE_{increment_state_count()}",
             Talk(command_param["talk"]),
