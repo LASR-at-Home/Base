@@ -28,9 +28,9 @@
 
 
         <!--      PERCEPTION     -->
-    <include file="$(find lasr_vision_yolov8)/launch/service.launch">
-        <param name="debug" value="true" />
-    </include>
+    <include 
+        file="$(find lasr_vision_cropped_detection)/launch/cropped_detection.launch"
+    />
 
     <!-- To find the most similar commands -->
     <node 

@@ -111,6 +111,7 @@ def build_state_machine(parsed_command: Dict) -> smach.StateMachine:
                         "Talk command received with no gesture or talk in command parameters"
                     )
             elif command_verb == "guide":
+                # TODO: need to handle rooms or location
                 location_param = f"/gpsr/arena/rooms/{command_param['location']}"
                 location_name = command_param["location"]
                 location_pose = Pose(
@@ -166,7 +167,7 @@ def build_state_machine(parsed_command: Dict) -> smach.StateMachine:
                     criteria_value = command_param["pose"]
                 else:
                     raise ValueError(
-                        "Greet command received with no name, clothes, gesture, or pose in command parameters"
+                        "Deliver command received with no name, clothes, gesture, or pose in command parameters"
                     )
 
                 sm.add(
@@ -222,6 +223,7 @@ def build_state_machine(parsed_command: Dict) -> smach.StateMachine:
                     },
                 )
             elif command_verb == "take":
+                # TODO: need to redo this to handle placement locations
                 location_param = f"/gpsr/arena/rooms/{command_param['location']}"
                 sm.add(
                     f"STATE_{increment_state_count()}",
@@ -252,6 +254,14 @@ def build_state_machine(parsed_command: Dict) -> smach.StateMachine:
                         "failed": "failed",
                     },
                 )
+
+            elif command_verb == "go":
+                location_param = f"/gpsr/arena/rooms/{command_param['location']}"
+
+                sm.add()
+
+            else:
+                raise ValueError(f"Unrecognised command verb: {command_verb}")
 
     rospy.loginfo(f"State machine: {sm}")
     return sm
