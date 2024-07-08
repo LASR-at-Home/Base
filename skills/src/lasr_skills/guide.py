@@ -1,4 +1,4 @@
-import smach.StateMachine
+import smach
 
 from geometry_msgs.msg import Pose
 
