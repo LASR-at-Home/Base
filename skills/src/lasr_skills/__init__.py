@@ -22,4 +22,6 @@ from .look_at_person import LookAtPerson
 from .wait import Wait
 from .adjust_camera import AdjustCamera
 from .guide import Guide
+from .detect_clothing import DetectClothing
+from .detect_pose import DetectPose
 from .find_person import FindPerson

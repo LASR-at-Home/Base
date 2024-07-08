@@ -3,7 +3,13 @@ import smach
 import smach_ros
 import rospy
 
-from lasr_skills import GoToLocation, AskAndListen, DetectGesture
+from lasr_skills import (
+    GoToLocation,
+    AskAndListen,
+    DetectGesture,
+    DetectClothing,
+    DetectPose,
+)
 import navigation_helpers
 
 from geometry_msgs.msg import (
@@ -24,6 +30,7 @@ from lasr_vision_msgs.srv import (
 
 
 from typing import List, Literal
+import itertools
 
 
 class FindPerson(smach.StateMachine):
@@ -258,9 +265,66 @@ class FindPerson(smach.StateMachine):
                     )
 
                 elif criteria == "pose":
-                    raise NotImplementedError("Pose criteria not implemented")
+
+                    smach.StateMachine.add(
+                        "GET_RESPONSE",
+                        self.GetResponse(),
+                        transitions={
+                            "succeeded": "DETECT_POSE",
+                            "failed": "failed",
+                        },
+                    )
+
+                    smach.StateMachine.add(
+                        "DETECT_POSE",
+                        DetectPose(criteria_value),
+                        transitions={
+                            "succeeded": "GO_TO_PERSON",
+                            "failed": "GET_RESPONSE",
+                        },
+                        remapping={"img_msg": "cropped_image"},
+                    )
+
+                    smach.StateMachine.add(
+                        "GO_TO_PERSON",
+                        self.ApproachPerson(),
+                        transitions={
+                            "succeeded": "succeeded",
+                            "failed": "GET_RESPONSE",
+                        },
+                        remapping={"location": "approach_pose"},
+                    )
+
                 elif criteria == "clothes":
-                    raise NotImplementedError("Clothes criteria not implemented")
+
+                    smach.StateMachine.add(
+                        "GET_RESPONSE",
+                        self.GetResponse(),
+                        transitions={
+                            "succeeded": "DETECT_CLOTHING",
+                            "failed": "failed",
+                        },
+                    )
+
+                    smach.StateMachine.add(
+                        "DETECT_CLOTHING",
+                        DetectClothing(criteria_value),
+                        transitions={
+                            "succeeded": "GO_TO_PERSON",
+                            "failed": "GET_RESPONSE",
+                        },
+                        remapping={"img_msg": "cropped_image"},
+                    )
+
+                    smach.StateMachine.add(
+                        "GO_TO_PERSON",
+                        self.ApproachPerson(),
+                        transitions={
+                            "succeeded": "succeeded",
+                            "failed": "GET_RESPONSE",
+                        },
+                        remapping={"location": "approach_pose"},
+                    )
 
     def __init__(
         self,
@@ -285,6 +349,26 @@ class FindPerson(smach.StateMachine):
                 "standing",
                 "lying_down",
             ], "Invalid pose"
+        elif criteria == "clothes":
+            color_list = ["blue", "yellow", "black", "white", "red", "orange", "gray"]
+            clothe_list = ["t shirt", "shirt", "blouse", "sweater", "coat", "jacket"]
+            clothes_list = [
+                "t shirts",
+                "shirts",
+                "blouses",
+                "sweaters",
+                "coats",
+                "jackets",
+            ]
+            color_clothe_list: List[str] = []
+            for a, b in list(itertools.product(color_list, clothe_list)):
+                color_clothe_list = color_clothe_list + [a + " " + b]
+            color_clothes_list: List[str] = []
+            for a, b in list(itertools.product(color_list, clothes_list)):
+                color_clothes_list = color_clothes_list + [a + " " + b]
+            assert (
+                criteria_value in color_clothe_list + color_clothes_list
+            ), "Invalid clothing"
 
         smach.StateMachine.__init__(self, outcomes=["succeeded", "failed"])
 
