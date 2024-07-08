@@ -146,6 +146,36 @@ def greet(command_param: Dict, sm: smach.StateMachine) -> None:
 
 
 def talk(command_param: Dict, sm: smach.StateMachine) -> None:
+    """
+    This combines talk and tell as they use the same verb.
+
+    Talk:
+        - Say a given response
+        - Say a given response to a person in a given gesture at a given location.
+
+    Tell:
+        People
+        - Tell me the name of the person at a given room or location.
+        - Tell me the pose of the person at a given room or location.
+        - Tell me the gesture of the person at a given room or location.
+
+        Objects
+        - Tell me what is the biggest object at a given placement location
+        - Tell me what is the largest object at a given placement location
+        - Tell me what is the smallest object at a given placement location
+        - Tell me what is the heaviest object at a given placement location
+        - Tell me what is the lightest object at a given placement location
+        - Tell me what is the thinnest object at a given placement location
+
+        - Tell me what is the biggest object in a given category at a given placement location
+        - Tell me what is the largest object in a given category at a given placement location
+        - Tell me what is the smallest object in a given category at a given placement location
+        - Tell me what is the heaviest object in a given category at a given placement location
+        - Tell me what is the lightest object in a given category at a given placement location
+        - Tell me what is the thinnest object at in a given category a given placement location
+
+
+    """
     if "gesture" in command_param:
         find(command_param, sm)
     if "talk" in command_param:
@@ -154,10 +184,52 @@ def talk(command_param: Dict, sm: smach.StateMachine) -> None:
             Talk(command_param["talk"]),
             transitions={"succeeded": "succeeded", "failed": "failed"},
         )
-    else:
-        raise ValueError(
-            "Talk command received with no gesture or talk in command parameters"
+    elif "object_category" in command_param:
+        if not "location" in command_param:
+            raise ValueError(
+                "Tell command with object but no room in command parameters"
+            )
+        location_param_room = f"/gpsr/arena/rooms/{command_param['location']}"
+        sm.add(
+            f"STATE_{increment_state_count()}",
+            GoToLocation(location_param=f"{location_param_room}/pose"),
+            transitions={
+                "succeeded": f"STATE_{STATE_COUNT + 1}",
+                "failed": "failed",
+            },
         )
+        # TODO: combine the weight list within
+        # TODO: add speak out the result
+        weight_list = rospy.get_param("/Object_list/Object")
+        sm.add(
+            f"STATE_{increment_state_count()}",
+            ObjectComparison(
+                filter=command_param["object_category"],
+                operation_label="weight",
+                weight=weight_list,
+            ),
+            transitions={
+                "succeeded": f"STATE_{STATE_COUNT + 1}",
+                "failed": "failed",
+            },
+        )
+
+        sm.add(
+            f"STATE_{increment_state_count()}",
+            ObjectComparison(
+                filter=command_param["object_category"],
+                operation_label="size",
+                weight=weight_list,
+            ),
+            transitions={
+                "succeeded": f"STATE_{STATE_COUNT + 1}",
+                "failed": "failed",
+            },
+        )
+
+    elif "personinfo" in command_param:
+        # personinfo: pose, gesture, name
+        pass
 
 
 def guide(command_param: Dict, sm: smach.StateMachine) -> None:
