@@ -88,8 +88,7 @@ def detect(
         detected_objects.append(detection)
 
     # publish to debug topic
-    if debug_publisher is not None:
-        debug_publisher.publish(cv2_img.cv2_img_to_msg(result.plot()))
+    debug_publisher.publish(cv2_img.cv2_img_to_msg(result.plot()))
 
     response = YoloDetectionResponse()
     response.detected_objects = detected_objects
@@ -111,7 +110,10 @@ def detect_3d(
 
     # transform pcl to map frame
     trans = tf_buffer.lookup_transform(
-        "map", request.pcl.header.frame_id, rospy.Time(0), rospy.Duration(1.0)
+        "map",
+        request.pcl.header.frame_id,
+        rospy.Time(0),
+        rospy.Duration(1.0),
     )
     pcl_map = do_transform_cloud(request.pcl, trans)
 
@@ -146,18 +148,19 @@ def detect_3d(
                 width=request.pcl.width,
             )
             detection.point = Point(*centroid)
-
-        if debug_point_publisher is not None:
-            markers.create_and_publish_marker(
-                debug_point_publisher,
-                PointStamped(point=detection.point, header=pcl_map.header),
+            rospy.loginfo(
+                f"Detected point: {detection.point} of object {detection.name}"
             )
+
+        markers.create_and_publish_marker(
+            debug_point_publisher,
+            PointStamped(point=detection.point, header=pcl_map.header),
+        )
 
         detected_objects.append(detection)
 
     # publish to debug topic
-    if debug_inference_publisher is not None:
-        debug_inference_publisher.publish(cv2_img.cv2_img_to_msg(result.plot()))
+    debug_inference_publisher.publish(cv2_img.cv2_img_to_msg(result.plot()))
 
     response = YoloDetection3DResponse()
     response.detected_objects = detected_objects

@@ -15,14 +15,13 @@
     <rosparam command="load" file="$(find receptionist)/config/motions.yaml"/>
 
     <!--      PERCEPTION     -->
-    <include file="$(find lasr_vision_yolov8)/launch/service.launch">
-        <param name="debug" value="true" />
-    </include>
-    
+    <include file="$(find lasr_vision_yolov8)/launch/service.launch"/>
+    <include file="$(find lasr_vision_cropped_detection)/launch/cropped_detection.launch"/>
     <node pkg="lasr_vision_feature_extraction" type="service" name="torch_service" output="screen"/>
-    <arg name="debug" default="true" />
-    <node pkg="lasr_vision_bodypix" type="mask_service.py" name="bodypix_service" output="screen" args="--debug $(arg debug)"/>
-    <node pkg="lasr_vision_bodypix" type="keypoint_service.py" name="bodypix__keypoint_service" output="screen" args="--debug $(arg debug)"/>
+    <include file="$(find lasr_vision_bodypix)/launch/bodypix_services.launch">
+        <param name="preload" type="yaml" value='resnet50' />
+    </include>
+
     <node pkg="lasr_vision_deepface" type="service" name="deepface_service" output="screen"/>
 
 </launch>

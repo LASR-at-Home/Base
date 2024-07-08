@@ -53,6 +53,7 @@ class DetectGesture(smach.State):
         req.image_raw = userdata.img_msg
         req.dataset = self.bodypix_model
         req.confidence = self.bodypix_confidence
+        req.keep_out_of_bounds = False
 
         try:
             res = self.bodypix_client(req)

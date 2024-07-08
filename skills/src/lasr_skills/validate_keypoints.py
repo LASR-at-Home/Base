@@ -28,7 +28,6 @@ class ValidateKeypoints(smach.State):
 
             bodypix_confidence (float, optional): The confidence threshold for bodypix. Defaults to 0.7.
 
-
         """
         smach.State.__init__(
             self,

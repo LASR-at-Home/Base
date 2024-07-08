@@ -146,15 +146,15 @@ class LookAtPerson(smach.StateMachine):
                     look_at.point.y = 0.0
                     look_at.point.z = 0.0
 
-                goal = PointHeadGoal()
-                goal.pointing_frame = "head_2_link"
-                goal.pointing_axis = Point(1.0, 0.0, 0.0)
-                goal.max_velocity = 1.0
-                goal.target = look_at
-                rospy.loginfo(
-                    f"LOOKING AT POINT {look_at.point.x}, {look_at.point.y}, {look_at.point.z}"
-                )
-                self.look_at_pub.send_goal(goal)
+                # goal = PointHeadGoal()
+                # goal.pointing_frame = "head_2_link"
+                # goal.pointing_axis = Point(1.0, 0.0, 0.0)
+                # goal.max_velocity = 1.0
+                # goal.target = look_at
+                # rospy.loginfo(
+                #     f"LOOKING AT POINT {look_at.point.x}, {look_at.point.y}, {look_at.point.z}"
+                # )
+                # self.look_at_pub.send_goal(goal)
 
                 print(self.look_at_pub.get_state())
 
@@ -292,7 +292,7 @@ class LookAtPerson(smach.StateMachine):
                 "CHECK_EYES",
                 self.CheckEyes(self.DEBUG, filter=filter),
                 transitions={
-                    "succeeded": "LOOP",
+                    "succeeded": "LOOK_TO_POINT",
                     "failed": "failed",
                     "no_detection": "no_detection",
                 },

@@ -48,7 +48,10 @@ add_message_files(
   Detection.msg
   Detection3D.msg
   BodyPixKeypoint.msg
+  BodyPixKeypointNormalized.msg
   BodyPixMask.msg
+  CDRequest.msg
+  CDResponse.msg
 )
 
 ## Generate services in the 'srv' folder
@@ -65,6 +68,11 @@ add_service_files(
   TorchFaceFeatureDetectionDescription.srv
   DetectFaces.srv
   CheckKnownPeople.srv
+  DetectWave.srv
+  CroppedDetection.srv
+  ClipImageEncoder.srv
+  ClipLearnFace.srv
+  ClipRecogniseFace.srv
 )
 
 # Generate actions in the 'action' folder
