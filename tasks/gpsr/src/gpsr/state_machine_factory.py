@@ -148,13 +148,54 @@ def guide(command_param: Dict, sm: smach.StateMachine) -> None:
 
     """
 
-    # TODO: need to handle rooms or location
-    location_param = f"/gpsr/arena/rooms/{command_param['location']}"
-    location_name = command_param["location"]
-    location_pose = Pose(
-        position=Point(**rospy.get_param(f"{location_param}/pose/position")),
-        orientation=Quaternion(**rospy.get_param(f"{location_param}/pose/orientation")),
-    )
+    find_person = False
+
+    if "name" in command_param:
+        criteria = "name"
+        criteria_value = command_param["name"]
+        find_person = True
+    elif "clothes" in command_param:
+        criteria = "clothes"
+        criteria_value = command_param["clothes"]
+        find_person = True
+    elif "gesture" in command_param:
+        criteria = "gesture"
+        criteria_value = command_param["gesture"]
+        find_person = True
+    elif "pose" in command_param:
+        criteria = "pose"
+        criteria_value = command_param["pose"]
+        find_person = True
+    else:
+        location_pose = get_room_pose(command_param["room"])
+        location_name = command_param["room"]
+
+    if find_person:
+        start_loc = command_param["start"]
+        start_pose = get_location_pose(start_loc, person=True)
+        room = get_location_room(start_loc)
+        polygon: Polygon = get_room_polygon(room)
+
+        sm.add(
+            f"STATE_{increment_state_count()}",
+            FindPerson(
+                waypoints=[start_pose],
+                polygon=polygon,
+                criteria=criteria,
+                criteria_value=criteria_value,
+            ),
+            transitions={
+                "succeeded": f"STATE_{STATE_COUNT + 1}",
+                "failed": "failed",
+            },
+        )
+
+        try:
+            location_pose = get_location_pose(command_param["end"], person=True)
+            location_name = command_param["end"]
+        except KeyError:
+            location_pose = get_room_pose(command_param["end"])
+            location_name = command_param["end"]
 
     sm.add(
         f"STATE_{increment_state_count()}",
