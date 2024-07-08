@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import smach
 import smach_ros
 import rospy
@@ -17,6 +18,19 @@ from typing import List, Literal
 
 
 class FindPerson(smach.StateMachine):
+
+    class GetLocation(smach.State):
+        def __init__(self):
+            smach.State.__init__(
+                self,
+                outcomes=["succeeded", "failed"],
+                input_keys=["location_index", "waypoints"],
+                output_keys=["location"],
+            )
+
+        def execute(self, userdata) -> str:
+            userdata.location = userdata.waypoints[userdata.location_index]
+            return "succeeded"
 
     class ComputePath(smach.State):
         def __init__(self, waypoints: List[Pose]):
@@ -252,3 +266,49 @@ class FindPerson(smach.StateMachine):
                             "failed": "continue",
                         },
                     )
+                waypoint_iterator.set_contained_state(
+                    "CONTAINER_STATE", container_sm, loop_outcomes=["continue"]
+                )
+            smach.StateMachine.add(
+                "WAYPOINT_ITERATOR",
+                waypoint_iterator,
+                {"succeeded": "succeeded", "failed": "failed"},
+            )
+
+
+if __name__ == "__main__":
+    import rospy
+    from geometry_msgs.msg import Point, Quaternion, Pose
+
+    rospy.init_node("find_person")
+
+    waypoints = [
+        Pose(
+            position=Point(x=2.46, y=-2.15, z=0),
+            orientation=Quaternion(x=0, y=0, z=-0.993, w=0.116),
+        ),
+        Pose(
+            position=Point(x=0.88, y=1.04, z=0),
+            orientation=Quaternion(x=0, y=0, z=0.125, w=0.992),
+        ),
+        Pose(
+            position=Point(x=4.05, y=-2.16, z=0),
+            orientation=Quaternion(x=0, y=0, z=-0.995, w=0.090),
+        ),
+    ]
+
+    polygon = Polygon(
+        [
+            Point(x=-0.4806538224220276, y=-5.140193462371826, z=0.002532958984375),
+            Point(x=6.777748107910156, y=-5.0068678855896, z=0.002532958984375),
+            Point(x=7.11236047744751, y=2.4408864974975586, z=-0.001434326171875),
+            Point(x=-4.766469955444336, y=2.666473627090454, z=-0.005340576171875),
+        ]
+    )
+
+    find_person = FindPerson(
+        waypoints=waypoints,
+        polygon=polygon,
+        criteria="gesture",
+        criteria_value="raising_left_arm",
+    )
