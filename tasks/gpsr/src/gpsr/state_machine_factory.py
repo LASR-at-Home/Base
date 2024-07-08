@@ -3,7 +3,7 @@ import rospy
 import smach
 from smach_ros import ServiceState
 from typing import Dict, List
-from lasr_skills import GoToLocation, FindPerson, Guide
+from lasr_skills import GoToLocation, FindPerson, Guide, HandoverObject
 from gpsr.states import Talk
 
 from geometry_msgs.msg import Pose, Point, Quaternion, Polygon
@@ -118,6 +118,70 @@ def build_state_machine(parsed_command: Dict) -> smach.StateMachine:
                     f"STATE_{increment_state_count()}",
                     Guide(location_name=location_name, location_pose=location_pose),
                     transitions={"succeeded": "succeeded", "failed": "failed"},
+                )
+            elif command_verb == "deliver":
+                location_param = f"/gpsr/arena/rooms/{command_param['location']}"
+                sm.add(
+                    f"STATE_{increment_state_count()}",
+                    GoToLocation(location_param=f"{location_param}/pose"),
+                    transitions={
+                        "succeeded": f"STATE_{STATE_COUNT + 1}",
+                        "failed": "failed",
+                    },
+                )
+
+                waypoints: List[Pose] = [
+                    Pose(
+                        position=Point(**wp["position"]),
+                        orientation=Quaternion(**wp["orientation"]),
+                    )
+                    for wp in rospy.get_param(location_param)["waypoints"]
+                ]
+
+                polygon = Polygon(
+                    [
+                        Point(**p)
+                        for p in rospy.get_param(location_param)["polygon"]["points"]
+                    ]
+                )
+
+                if "name" in command_param:
+                    criteria = "name"
+                    criteria_value = command_param["name"]
+                elif "clothes" in command_param:
+                    criteria = "clothes"
+                    criteria_value = command_param["clothes"]
+                elif "gesture" in command_param:
+                    criteria = "gesture"
+                    criteria_value = command_param["gesture"]
+                elif "pose" in command_param:
+                    criteria = "pose"
+                    criteria_value = command_param["pose"]
+                else:
+                    raise ValueError(
+                        "Greet command received with no name, clothes, gesture, or pose in command parameters"
+                    )
+
+                sm.add(
+                    f"STATE_{increment_state_count()}",
+                    FindPerson(
+                        waypoints=waypoints,
+                        polygon=polygon,
+                        criteria=criteria,
+                        criteria_value=criteria_value,
+                    ),
+                    transitions={
+                        "succeeded": f"STATE_{STATE_COUNT + 1}",
+                        "failed": "failed",
+                    },
+                )
+                sm.add(
+                    f"STATE_{increment_state_count()}",
+                    HandoverObject(object_name="object"),  # TODO: pass object name
+                    transitions={
+                        "succeeded": f"STATE_{STATE_COUNT + 1}",
+                        "failed": "failed",
+                    },
                 )
 
     rospy.loginfo(f"State machine: {sm}")
