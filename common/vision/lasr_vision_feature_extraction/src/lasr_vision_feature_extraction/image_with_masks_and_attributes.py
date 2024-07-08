@@ -186,6 +186,6 @@ class ImageOfCloth(ImageWithMasksAndAttributes):
         result["max_dress"] = max_attribute
 
         # QUICK FIX that won't break the code
-        result["max_dress"] = 0.0
+        result["dress"] = 0.0
 
         return result
