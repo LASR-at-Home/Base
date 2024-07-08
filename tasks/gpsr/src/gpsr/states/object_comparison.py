@@ -18,34 +18,21 @@ class ObjectComparison(smach.StateMachine):
             )
 
         def count_types(self, detections):
-            """
-            Count the number of different object types in detections.
-
-            :param detections: List of detection tuples (object_type, position)
-            :return: Dictionary with object types as keys and counts as values
-            """
             object_counts = {}
             for detection in detections:
                 object_type = detection.name
-
-                if len(object_counts.keys()) == 0:
-                    object_counts[object_type] = 1
+                if object_type in object_counts:
+                    object_counts[object_type] += 1
                 else:
-                    if object_type in object_counts.keys():
-                        object_counts[object_type] += 1
-                    else:
-                        object_counts[object_type] = 1
+                    object_counts[object_type] = 1
             return object_counts
 
         def execute(self, userdata):
-            print(userdata.detections_3d)
             filtered_detections = userdata.detections_3d
             rospy.loginfo(filtered_detections)
-            rospy.loginfo(type(filtered_detections.detected_objects[0]))
             object_counts = self.count_types(filtered_detections.detected_objects)
-            print(object_counts)
             userdata.object_dict = object_counts
-            userdata.detections_types = object_counts.keys()
+            userdata.detections_types = list(object_counts.keys())
             return "succeeded"
 
     class CountCategory(smach.State):
@@ -69,13 +56,9 @@ class ObjectComparison(smach.StateMachine):
         def execute(self, userdata):
             detected_objects = userdata.object_dict
             counts = self.count_category(self.object_weight, detected_objects)
-            category_counts = {
-                key: value for key, value in counts.items() if value != 0
-            }
-            print("finished counting")
-            print(category_counts)
+            category_counts = {key: value for key, value in counts.items() if value != 0}
             userdata.category_dict = category_counts
-            userdata.detections_categories = category_counts.keys()
+            userdata.detections_categories = list(category_counts.keys())
             return "succeeded"
 
     class ObjectWeight(smach.State):
@@ -89,19 +72,12 @@ class ObjectComparison(smach.StateMachine):
             self.object_weight = object_weight
 
         def get_weight(self, detections, average_weights):
-            """
-            rank the weight of a list of objects.
-
-            :param detections: List of detection tuples (object_type, position)
-            :return: a list of the weight rank of object in a category(max->min)
-            """
             weight_dict = {}
             for category, items in average_weights.items():
                 for i in detections:
                     if i in items:
                         weight = items[i]
                         weight_dict[i] = weight
-
             return weight_dict
 
         def execute(self, userdata):
@@ -112,7 +88,6 @@ class ObjectComparison(smach.StateMachine):
                 weights_dict.items(), key=lambda item: item[1], reverse=True
             )
             userdata.sorted_weights = sorted_weights
-            print(sorted_weights)
             return "succeeded"
 
     class ObjectSize(smach.State):
@@ -125,12 +100,6 @@ class ObjectComparison(smach.StateMachine):
             )
 
         def property_size_calculation(self, detections, result):
-            """
-            calculate the size of a list of objects using bounding box.
-            :param detections: List of detection tuples (object_type, position)
-            :return: a list of the size of each object in a category
-            """
-
             area = dict()
             for i in detections:
                 for object in result.detected_objects:
@@ -139,7 +108,7 @@ class ObjectComparison(smach.StateMachine):
             return area
 
         def execute(self, userdata):
-            detections_types = userdata.object_dict.keys()
+            detections_types = list(userdata.object_dict.keys())
             area_dict = self.property_size_calculation(
                 detections_types, userdata.detections_3d
             )
@@ -147,24 +116,45 @@ class ObjectComparison(smach.StateMachine):
                 area_dict.items(), key=lambda item: item[1], reverse=True
             )
             userdata.sorted_size = sorted_size
-            print(sorted_size)
             return "succeeded"
+
+    class DecideOperation(smach.State):
+        def __init__(self):
+            smach.State.__init__(
+                self,
+                outcomes=["do_count", "do_weight", "do_size", "failed"],
+                input_keys=["operation_label"],
+            )
+
+        def execute(self, userdata):
+            if userdata.operation_label == "count":
+                return "do_count"
+            elif userdata.operation_label == "weight":
+                return "do_weight"
+            elif userdata.operation_label == "size":
+                return "do_size"
+            else:
+                return "failed"
 
     def __init__(
         self,
         area_polygon: Polygon,
+        operation_label: str,
         depth_topic: str = "/xtion/depth_registered/points",
         model: str = "yolov8n-seg.pt",
         filter: Union[List[str], None] = None,
         confidence: float = 0.5,
         nms: float = 0.3,
-        object: Union[List[dict], None] = None,
+        object_weight: Union[List[dict], None] = None,
     ):
         smach.StateMachine.__init__(
             self,
             outcomes=["succeeded", "failed"],
             output_keys=["detections_3d", "object_dict"],
         )
+
+        # Set the operation label in the userdata
+        self.userdata.operation_label = operation_label
 
         with self:
             smach.StateMachine.add(
@@ -176,7 +166,18 @@ class ObjectComparison(smach.StateMachine):
                     confidence=confidence,
                     nms=nms,
                 ),
-                transitions={"succeeded": "COUNTOBJECTS", "failed": "failed"},
+                transitions={"succeeded": "DECIDE_OPERATION", "failed": "failed"},
+            )
+
+            smach.StateMachine.add(
+                "DECIDE_OPERATION",
+                self.DecideOperation(),
+                transitions={
+                    "do_count": "COUNTOBJECTS",
+                    "do_weight": "GETWEIGHT",
+                    "do_size": "GETSIZE",
+                    "failed": "failed",
+                },
             )
 
             smach.StateMachine.add(
@@ -186,13 +187,13 @@ class ObjectComparison(smach.StateMachine):
             )
             smach.StateMachine.add(
                 "COUNTCATEGORY",
-                self.CountCategory(object_weight=object),
-                transitions={"succeeded": "GETWEIGHT", "failed": "failed"},
+                self.CountCategory(object_weight=object_weight),
+                transitions={"succeeded": "succeeded", "failed": "failed"},
             )
             smach.StateMachine.add(
                 "GETWEIGHT",
-                self.ObjectWeight(object_weight=object),
-                transitions={"succeeded": "GETSIZE", "failed": "failed"},
+                self.ObjectWeight(object_weight=object_weight),
+                transitions={"succeeded": "succeeded", "failed": "failed"},
             )
             smach.StateMachine.add(
                 "GETSIZE",
@@ -201,16 +202,16 @@ class ObjectComparison(smach.StateMachine):
             )
 
 
-if __name__ == "__main__":
-    import rospy
-    from sensor_msgs.msg import PointCloud2
+# if __name__ == "__main__":
+#     import rospy
+#     from sensor_msgs.msg import PointCloud2
 
-    rospy.init_node("test_object_comparison")
-    weight = rospy.get_param("/Object_list/Object")
+#     rospy.init_node("test_object_comparison")
+#     weight = rospy.get_param("/Object_list/Object")
 
-    polygon = Polygon([[-1, 0], [1, 0], [0, 1], [1, 1]])
-    sm = ObjectComparison(Polygon(), filter=["bottle", "cup", "cola"], object=weight)
-    sm.userdata.pcl_msg = rospy.wait_for_message(
-        "/xtion/depth_registered/points", PointCloud2
-    )
-    sm.execute()
+#     polygon = Polygon([[-1, 0], [1, 0], [0, 1], [1, 1]])
+#     sm = ObjectComparison(Polygon(), filter=["bottle", "cup", "cola"], object=weight)
+#     sm.userdata.pcl_msg = rospy.wait_for_message(
+#         "/xtion/depth_registered/points", PointCloud2
+#     )
+#     sm.execute()

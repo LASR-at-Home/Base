@@ -342,7 +342,10 @@ def bring(command_param: Dict, sm: smach.StateMachine) -> None:
 
 
 def find(command_param: Dict, sm: smach.StateMachine) -> None:
-    # find a object in the given room
+    """
+    find a object in the given room
+    """
+
     if "object_category" in command_param:
         if not "location" in command_param:
             raise ValueError(
@@ -353,7 +356,7 @@ def find(command_param: Dict, sm: smach.StateMachine) -> None:
             f"STATE_{increment_state_count()}",
             GoFindTheObject(
                 location_param=location_param_room,
-                object=command_param["object_category"],
+                filter=command_param["object_category"],
             ),
             transitions={
                 "succeeded": f"STATE_{STATE_COUNT + 1}",
@@ -379,7 +382,10 @@ def tell(command_param: Dict, sm: smach.StateMachine) -> None:
 
 
 def count(command_param: Dict, sm: smach.StateMachine) -> None:
-    # Count the number of a category of objects at a given placement location
+    """
+    count the number of a category of objects at a given placement location
+    """
+
     if "object_category" in command_param:
         if not "location" in command_param:
             raise ValueError(
@@ -387,9 +393,22 @@ def count(command_param: Dict, sm: smach.StateMachine) -> None:
             )
         location_param_room = f"/gpsr/arena/rooms/{command_param['location']}"
         sm.add(
+        f"STATE_{increment_state_count()}",
+        GoToLocation(location_param=f"{location_param_room}/pose"),
+        transitions={
+            "succeeded": f"STATE_{STATE_COUNT + 1}",
+            "failed": "failed",
+        },
+    )
+        # TODO: combine the weight list within
+        # TODO: add speak out the result
+        weight_list = rospy.get_param("/Object_list/Object")
+        sm.add(
             f"STATE_{increment_state_count()}",
-            GoFindTheObject(
-                location_param=location_param_room, object=command_param["object_category"]
+            ObjectComparison(
+                filter=command_param["object_category"],
+                operation_label = "count",
+                weight = weight_list
             ),
             transitions={
                 "succeeded": f"STATE_{STATE_COUNT + 1}",
