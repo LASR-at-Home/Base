@@ -88,8 +88,7 @@ def detect(
         detected_objects.append(detection)
 
     # publish to debug topic
-    if debug_publisher is not None:
-        debug_publisher.publish(cv2_img.cv2_img_to_msg(result.plot()))
+    debug_publisher.publish(cv2_img.cv2_img_to_msg(result.plot()))
 
     response = YoloDetectionResponse()
     response.detected_objects = detected_objects
@@ -153,17 +152,15 @@ def detect_3d(
                 f"Detected point: {detection.point} of object {detection.name}"
             )
 
-        if debug_point_publisher is not None:
-            markers.create_and_publish_marker(
-                debug_point_publisher,
-                PointStamped(point=detection.point, header=pcl_map.header),
-            )
+        markers.create_and_publish_marker(
+            debug_point_publisher,
+            PointStamped(point=detection.point, header=pcl_map.header),
+        )
 
         detected_objects.append(detection)
 
     # publish to debug topic
-    if debug_inference_publisher is not None:
-        debug_inference_publisher.publish(cv2_img.cv2_img_to_msg(result.plot()))
+    debug_inference_publisher.publish(cv2_img.cv2_img_to_msg(result.plot()))
 
     response = YoloDetection3DResponse()
     response.detected_objects = detected_objects
