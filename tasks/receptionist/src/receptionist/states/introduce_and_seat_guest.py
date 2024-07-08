@@ -329,8 +329,9 @@ class IntroduceAndSeatGuest(smach.StateMachine):
                                         self._expected_detections[0]
                                     )
                                 else:
-                                    rospy.logwarn("Failed to find expected guest")
-                                    return "failed"
+                                    rospy.logwarn(
+                                        f"Failed to find expected guest {self._expected_detections[0]}"
+                                    )
 
                         print("+" * 50)
                         print(([(d.name, d.point) for d in filtered_face_detections]))
@@ -350,24 +351,26 @@ class IntroduceAndSeatGuest(smach.StateMachine):
                                         if detection.name
                                         == self._expected_detections[1]
                                     )
-                                    # TODO: handle this being empty
+
                                     other_detections = [
                                         detection
                                         for detection in filtered_face_detections
                                         if detection.name == "unknown"
                                     ]
-                                    if not other_detections:
-                                        return "failed"
-                                    furthest_unknown = max(
-                                        other_detections,
-                                        key=lambda x: _euclidian_distance(
-                                            x.point, other.point
-                                        ),
-                                    )
-                                    furthest_unknown.name = self._expected_detections[0]
+                                    if other_detections:
+                                        furthest_unknown = max(
+                                            other_detections,
+                                            key=lambda x: _euclidian_distance(
+                                                x.point, other.point
+                                            ),
+                                        )
+                                        furthest_unknown.name = (
+                                            self._expected_detections[0]
+                                        )
                                 else:
-                                    rospy.logwarn("Failed to find expected guest")
-                                    return "failed"
+                                    rospy.logwarn(
+                                        f"Failed to find expected guest {self._expected_detections[1]}"
+                                    )
                             elif self._expected_detections[1] not in [
                                 detection.name for detection in filtered_face_detections
                             ] and self._expected_detections[0] in [
@@ -380,21 +383,25 @@ class IntroduceAndSeatGuest(smach.StateMachine):
                                         if detection.name
                                         == self._expected_detections[0]
                                     )
-
-                                    furthest_unknown = max(
-                                        [
-                                            detection
-                                            for detection in filtered_face_detections
-                                            if detection.name == "unknown"
-                                        ],
-                                        key=lambda x: _euclidian_distance(
-                                            x.point, other.point
-                                        ),
-                                    )
-                                    furthest_unknown.name = self._expected_detections[1]
+                                    other_detections = [
+                                        detection
+                                        for detection in filtered_face_detections
+                                        if detection.name == "unknown"
+                                    ]
+                                    if other_detections:
+                                        furthest_unknown = max(
+                                            other_detections,
+                                            key=lambda x: _euclidian_distance(
+                                                x.point, other.point
+                                            ),
+                                        )
+                                        furthest_unknown.name = (
+                                            self._expected_detections[1]
+                                        )
                                 else:
-                                    rospy.logwarn("Failed to find expected guest")
-                                    return "failed"
+                                    rospy.logwarn(
+                                        f"Failed to find expected guest {self._expected_detections[0]}"
+                                    )
 
                         print("-" * 50)
                         print(([(d.name, d.point) for d in filtered_face_detections]))
@@ -588,7 +595,17 @@ class IntroduceAndSeatGuest(smach.StateMachine):
                 smach.StateMachine.add(
                     "DETECT_PEOPLE_AND_SEATS",
                     DetectPeopleAndSeats(seating_area, motions),
-                    transitions={"succeeded": "HANDLE_RESPONSES", "failed": "failed"},
+                    transitions={"succeeded": "LOOK_CENTRE", "failed": "failed"},
+                )
+
+                smach.StateMachine.add(
+                    "LOOK_CENTRE",
+                    PlayMotion(motion_name="look_centre"),
+                    transitions={
+                        "succeeded": "HANDLE_RESPONSES",
+                        "aborted": "HANDLE_RESPONSES",
+                        "preempted": "HANDLE_RESPONSES",
+                    },
                 )
 
                 # Handle the responses from the detections
