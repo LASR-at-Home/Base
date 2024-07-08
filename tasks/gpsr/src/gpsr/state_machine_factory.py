@@ -11,11 +11,12 @@ from lasr_skills import (
     Say,
     ReceiveObject,
 )
-from gpsr.states import Talk, QuestionAnswer
+from gpsr.states import Talk, QuestionAnswer, GoFindTheObject
 
 from geometry_msgs.msg import Pose, Point, Quaternion, Polygon
 
 STATE_COUNT = 0
+from lasr_skills import GoToLocation, FindNamedPerson, FindGesturePerson  # type: ignore
 
 
 def increment_state_count() -> int:
@@ -341,7 +342,24 @@ def bring(command_param: Dict, sm: smach.StateMachine) -> None:
 
 
 def find(command_param: Dict, sm: smach.StateMachine) -> None:
-    pass
+    # find a object in the given room
+    if "object_category" in command_param:
+        if not "location" in command_param:
+            raise ValueError(
+                "find command with object but no room in command parameters"
+            )
+        location_param_room = f"/gpsr/arena/rooms/{command_param['location']}"
+        sm.add(
+            f"STATE_{increment_state_count()}",
+            GoFindTheObject(
+                location_param=location_param_room, object=command_param["object_category"]
+            ),
+            transitions={
+                "succeeded": f"STATE_{STATE_COUNT + 1}",
+                "failed": "failed",
+            },
+        )
+    raise NotImplementedError("Find command not implemented")
 
 
 def meet(command_param: Dict, sm: smach.StateMachine) -> None:
