@@ -187,7 +187,7 @@ class SpeechRecovery(smach.State):
                     return available_word
         return "unknown"
 
-    def _infer_second_drink(self, sentence_list, recover_juice = False):
+    def _infer_second_drink(self, sentence_list, recover_juice=False):
         for input_word in sentence_list:
             if input_word == "juice":
                 if recover_juice:
