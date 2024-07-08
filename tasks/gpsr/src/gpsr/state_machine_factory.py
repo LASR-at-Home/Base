@@ -3,7 +3,7 @@ import rospy
 import smach
 from smach_ros import ServiceState
 from typing import Dict, List
-from lasr_skills import GoToLocation, FindPerson, Guide, HandoverObject
+from lasr_skills import GoToLocation, FindPerson, Guide, HandoverObject, Say
 from gpsr.states import Talk
 
 from geometry_msgs.msg import Pose, Point, Quaternion, Polygon
@@ -181,6 +181,37 @@ def build_state_machine(parsed_command: Dict) -> smach.StateMachine:
                     transitions={
                         "succeeded": f"STATE_{STATE_COUNT + 1}",
                         "failed": "failed",
+                    },
+                )
+            elif command_verb == "place":
+                location_param = f"/gpsr/arena/rooms/{command_param['location']}"
+                sm.add(
+                    f"STATE_{increment_state_count()}",
+                    GoToLocation(location_param=f"{location_param}/pose"),
+                    transitions={
+                        "succeeded": f"STATE_{STATE_COUNT + 1}",
+                        "failed": "failed",
+                    },
+                )
+
+                sm.add(
+                    f"STATE_{increment_state_count()}",
+                    HandoverObject(object_name="object"),  # TODO: pass object name
+                    transitions={
+                        "succeeded": f"STATE_{STATE_COUNT + 1}",
+                        "failed": "failed",
+                    },
+                )
+
+                sm.add(
+                    f"STATE_{increment_state_count()}",
+                    Say(
+                        text=f"Please place the object on the {command_param['location']}"
+                    ),
+                    transitions={
+                        "succeeded": f"STATE_{STATE_COUNT + 1}",
+                        "aborted": "failed",
+                        "preempted": "failed",
                     },
                 )
 
