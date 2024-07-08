@@ -192,19 +192,23 @@ class FindPerson(smach.StateMachine):
                     smach.StateMachine.add(
                         "GET_RESPONSE",
                         self.GetResponse(),
-                        transitions={"succeeded": "GO_TO_PERSON", "failed": "failed"},
+                        transitions={
+                            "succeeded": "GO_TO_PERSON",
+                            "failed": "failed",
+                        },
                         remapping={"img_msg": "cropped_image"},
                     )
 
                     smach.StateMachine.add(
-                        "APPROACH_PERSON",
+                        "GO_TO_PERSON",
                         self.ApproachPerson(),
                         transitions={
-                            "succeeded": "ASK_NAME",
-                            "failed": "failed",
+                            "succeeded": "CHECK_NAME",
+                            "failed": "GET_RESPONSE",
                         },
                         remapping={"location": "approach_pose"},
                     )
+
                     smach.StateMachine.add(
                         "CHECK_NAME",
                         AskAndListen(
@@ -404,7 +408,7 @@ if __name__ == "__main__":
     find_person = FindPerson(
         waypoints=waypoints,
         polygon=polygon,
-        criteria="gesture",
-        criteria_value="raising_left_arm",
+        criteria="name",
+        criteria_value="jared",
     )
     print(find_person.execute())
