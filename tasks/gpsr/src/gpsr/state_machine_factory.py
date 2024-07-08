@@ -3,7 +3,7 @@ import rospy
 import smach
 from smach_ros import ServiceState
 from typing import Dict, List
-from lasr_skills import GoToLocation, FindPerson
+from lasr_skills import GoToLocation, FindPerson, Guide
 from gpsr.states import Talk
 
 from geometry_msgs.msg import Pose, Point, Quaternion, Polygon
@@ -103,6 +103,22 @@ def build_state_machine(parsed_command: Dict) -> smach.StateMachine:
                     raise ValueError(
                         "Talk command received with no gesture or talk in command parameters"
                     )
+            elif command_verb == "guide":
+                location_param = f"/gpsr/arena/rooms/{command_param['location']}"
+                location_name = command_param["location"]
+                location_pose = Pose(
+                    position=Point(
+                        **rospy.get_param(f"{location_param}/pose/position")
+                    ),
+                    orientation=Quaternion(
+                        **rospy.get_param(f"{location_param}/pose/orientation")
+                    ),
+                )
+                sm.add(
+                    f"STATE_{increment_state_count()}",
+                    Guide(location_name=location_name, location_pose=location_pose),
+                    transitions={"succeeded": "succeeded", "failed": "failed"},
+                )
 
     rospy.loginfo(f"State machine: {sm}")
     return sm
