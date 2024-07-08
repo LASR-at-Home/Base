@@ -39,7 +39,7 @@ def min_hamiltonian_path(start: Pose, poses: List[Pose]) -> Union[None, List[Pos
 
 
 def get_pose_on_path(
-    p1: PoseStamped, p2: PoseStamped, dist_to_goal: float = 1.0
+    p1: PoseStamped, p2: PoseStamped, dist_to_goal: float = 1.0, tolerance: float = 0.5
 ) -> Union[None, PoseStamped]:
     make_plan: rospy.ServiceProxy = rospy.ServiceProxy("/move_base/make_plan", GetPlan)
 
@@ -60,7 +60,7 @@ def get_pose_on_path(
         return chosen_pose
 
     try:
-        plan: Path = make_plan(p1, p2, dist_to_goal).plan
+        plan: Path = make_plan(p1, p2, tolerance).plan
     except rospy.ServiceException as e:
         rospy.loginfo(e)
         return chosen_pose
