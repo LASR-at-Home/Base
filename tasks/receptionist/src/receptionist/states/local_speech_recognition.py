@@ -60,7 +60,6 @@ def speech_recovery(sentence):
     print(f"final name: {handle_name(sentence_list, True)}")
     print(f"final drink: {handle_drink(sentence_list, True)}")
 
-
 def handle_name(sentence_list, last_resort):
     result = handle_similar_spelt(sentence_list, available_names, 1)
     if result != "unknown":
@@ -75,7 +74,6 @@ def handle_name(sentence_list, last_resort):
         print("Last resort name")
         return handle_closest_spelt(sentence_list, available_names)
 
-
 def handle_drink(sentence_list, last_resort):
     result = infer_second_drink(sentence_list)
     if result != "unknown":
@@ -86,7 +84,6 @@ def handle_drink(sentence_list, last_resort):
     else:
         result = handle_similar_sound(sentence_list, available_drinks, 0)
         print(f"drink (sound): {result}")
-
     if result != "unknown":
         if result in available_single_drinks:
             print(f"final attempt drink: {result}")
@@ -159,12 +156,10 @@ def handle_closest_spelt(sentence_list, choices):
 def get_damerau_levenshtein_distance(word_1, word_2):
     return jf.damerau_levenshtein_distance(word_1, word_2)
 
-
 def get_levenshtein_soundex_distance(word_1, word_2):
     soundex_word_1 = jf.soundex(word_1)
     soundex_word_2 = jf.soundex(word_2)
     return jf.levenshtein_distance(soundex_word_1, soundex_word_2)
-
 
 # print(get_damerau_levenshtein_distance("juice", "shoes"))
 # print(get_levenshtein_soundex_distance("juice", "shoes"))

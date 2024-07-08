@@ -11,11 +11,12 @@ from lasr_skills import (
     Say,
     ReceiveObject,
 )
-from gpsr.states import Talk, QuestionAnswer
+from gpsr.states import Talk, QuestionAnswer, GoFindTheObject, ObjectComparison
 
 from geometry_msgs.msg import Pose, Point, Quaternion, Polygon
 
 STATE_COUNT = 0
+from lasr_skills import GoToLocation, FindNamedPerson, FindGesturePerson  # type: ignore
 
 
 def increment_state_count() -> int:
@@ -71,6 +72,30 @@ def get_person_detection_poses(room: str) -> List[Pose]:
 def get_room_polygon(room: str) -> Polygon:
     return Polygon(
         [Point(**p) for p in rospy.get_param(f"/gpsr/arena/rooms/{room}/room_polygon")]
+    )
+
+
+def get_person_detection_polygon(location: str) -> Polygon:
+    location_room = get_location_room(location)
+    return Polygon(
+        [
+            Point(**p)
+            for p in rospy.get_param(
+                f"/gpsr/arena/rooms/{location_room}/beacons/{location}/person_detection_polygon"
+            )
+        ]
+    )
+
+
+def get_object_detection_polygon(location: str) -> Polygon:
+    location_room = get_location_room(location)
+    return Polygon(
+        [
+            Point(**p)
+            for p in rospy.get_param(
+                f"/gpsr/arena/rooms/{location_room}/beacons/{location}/object_detection_polygon"
+            )
+        ]
     )
 
 
@@ -382,18 +407,129 @@ def bring(command_param: Dict, sm: smach.StateMachine) -> None:
 
 
 def find(command_param: Dict, sm: smach.StateMachine) -> None:
-    pass
+    """
+    find a object in the given room
+    """
+
+    if "object_category" in command_param:
+        if not "location" in command_param:
+            raise ValueError(
+                "find command with object but no room in command parameters"
+            )
+        location_param_room = f"/gpsr/arena/rooms/{command_param['location']}"
+        sm.add(
+            f"STATE_{increment_state_count()}",
+            GoFindTheObject(
+                location_param=location_param_room,
+                filter=command_param["object_category"],
+            ),
+            transitions={
+                "succeeded": f"STATE_{STATE_COUNT + 1}",
+                "failed": "failed",
+            },
+        )
+    raise NotImplementedError("Find command not implemented")
 
 
 def meet(command_param: Dict, sm: smach.StateMachine) -> None:
-    pass
+    """
+    Meet commands can be of the following form:
+
+    - Meet a person at a location and execute another command.
+    - Meet a person in a room and execute another command.
+    - Meet a person in a rooom then find them in another room.
+    """
+    greet(command_param, sm)
 
 
 def tell(command_param: Dict, sm: smach.StateMachine) -> None:
+    """
+    Tell me the biggest/largest/smallest/heaviest/lightest/thinnest object at a given placement location
+    """
+    if "object_category" in command_param:
+        if not "location" in command_param:
+            raise ValueError(
+                "Tell command with object but no room in command parameters"
+            )
+        location_param_room = f"/gpsr/arena/rooms/{command_param['location']}"
+        sm.add(
+        f"STATE_{increment_state_count()}",
+        GoToLocation(location_param=f"{location_param_room}/pose"),
+        transitions={
+            "succeeded": f"STATE_{STATE_COUNT + 1}",
+            "failed": "failed",
+        },
+    )
+        # TODO: combine the weight list within
+        # TODO: add speak out the result
+        weight_list = rospy.get_param("/Object_list/Object")
+        sm.add(
+            f"STATE_{increment_state_count()}",
+            ObjectComparison(
+                filter=command_param["object_category"],
+                operation_label = "weight",
+                weight = weight_list
+            ),
+            transitions={
+                "succeeded": f"STATE_{STATE_COUNT + 1}",
+                "failed": "failed",
+            },
+        )
+
+        sm.add(
+            f"STATE_{increment_state_count()}",
+            ObjectComparison(
+                filter=command_param["object_category"],
+                operation_label = "size",
+                weight = weight_list
+            ),
+            transitions={
+                "succeeded": f"STATE_{STATE_COUNT + 1}",
+                "failed": "failed",
+            },
+        )
+
     pass
 
 
 def count(command_param: Dict, sm: smach.StateMachine) -> None:
+    """
+    count the number of a category of objects at a given placement location
+    """
+
+    if "object_category" in command_param:
+        if not "location" in command_param:
+            raise ValueError(
+                "Count command with object but no room in command parameters"
+            )
+        location_param_room = f"/gpsr/arena/rooms/{command_param['location']}"
+        sm.add(
+        f"STATE_{increment_state_count()}",
+        GoToLocation(location_param=f"{location_param_room}/pose"),
+        transitions={
+            "succeeded": f"STATE_{STATE_COUNT + 1}",
+            "failed": "failed",
+        },
+    )
+        # TODO: combine the weight list within
+        # TODO: add speak out the result
+        weight_list = rospy.get_param("/Object_list/Object")
+        sm.add(
+            f"STATE_{increment_state_count()}",
+            ObjectComparison(
+                filter=command_param["object_category"],
+                operation_label = "count",
+                weight = weight_list
+            ),
+            transitions={
+                "succeeded": f"STATE_{STATE_COUNT + 1}",
+                "failed": "failed",
+            },
+        )
+
+
+    raise NotImplementedError("Count command not implemented")
+
     pass
 
 

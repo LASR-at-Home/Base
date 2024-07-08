@@ -6,6 +6,7 @@ from shapely.geometry.polygon import Polygon
 from typing import List, Union
 from geometry_msgs.msg import Pose, Point, Quaternion
 from lasr_skills import Say, PlayMotion
+import rospy
 
 """
 location = rospy.get_param("/start") -> python dict
@@ -14,7 +15,20 @@ pose = Pose(position=Point(**location['pose']['position'], orientation=Quaternio
 """
 
 
-class Go_find_the_object(smach.StateMachine):
+class GoFindTheObject(smach.StateMachine):
+    class GetLocation(smach.State):
+        def __init__(self):
+            smach.State.__init__(
+                self,
+                outcomes=["succeeded", "failed"],
+                input_keys=["location_index", "waypoints"],
+                output_keys=["location"],
+            )
+
+        def execute(self, userdata):
+            userdata.location = userdata.waypoints[userdata.location_index]
+            return "succeeded"
+
     class check_objects(smach.State):
         def __init__(self):
             smach.State.__init__(
@@ -86,146 +100,195 @@ class Go_find_the_object(smach.StateMachine):
 
     def __init__(
         self,
-        area_polygon: Polygon,
         depth_topic: str = "/xtion/depth_registered/points",
         model: str = "yolov8n-seg.pt",
         filter: Union[List[str], None] = None,
-        locations: Union[List[dict], None] = None,
+        waypoints: Union[List[Pose], None] = None,
+        locations: Union[str, None] = None,
         confidence: float = 0.5,
         nms: float = 0.3,
         motions: Union[List[str], None] = None,
     ):
         smach.StateMachine.__init__(self, outcomes=["succeeded", "failed"])
 
+        if waypoints is None and locations is None:
+            raise ValueError("Either waypoints or location_param must be provided")
+
+        if waypoints is None:
+            waypoints_to_iterate: List[Pose] = []
+            room = rospy.get_param(locations)
+            beacons = room["beacons"]
+            for beacon in beacons:
+                waypoint = Pose(
+                    position=Point(**beacons[beacon]["near_pose"]["position"]),
+                    orientation=Quaternion(**beacons[beacon]["near_pose"]["orientation"])
+                )
+                waypoints_to_iterate.append(waypoint)
+        else:
+            waypoints_to_iterate: List[Pose] = waypoints
+
+        if motions is None:
+            motions = ["look_down", "look_down_left", "look_down_right"]
+
         say_object_found = Say("I found the object here!")
-        say_object_not_found = Say("the object is not here")
+        say_object_not_found = Say("The object is not here")
 
         with self:
-            state = 0
+            waypoint_iterator = smach.Iterator(
+                outcomes=["succeeded", "failed"],
+                it=lambda: range(len(waypoints_to_iterate)),
+                it_label="location_index",
+                input_keys=["waypoints"],
+                output_keys=["cumulated_result"],
+                exhausted_outcome="failed",
+            )
 
-            # Outer loop iterates over locations
-            for i, location in enumerate(locations):
-                pose = Pose(
-                    position=Point(**location["pose"]["position"]),
-                    orientation=Quaternion(**location["pose"]["orientation"]),
+            with waypoint_iterator:
+                container_sm = smach.StateMachine(
+                    outcomes=["succeeded", "failed", "continue"],
+                    input_keys=["location_index", "waypoints"],
+                    output_keys=["cumulated_result"],
                 )
 
-                # Add the initial state for going to this location
-                smach.StateMachine.add(
-                    f"LOCATION_{i}",
-                    GoToLocation(pose),
-                    transitions={
-                        "succeeded": f"LOOK_AROUND_{state}",
-                        "aborted": "failed",
-                        "preempted": "failed",
-                    },
-                )
-
-                # Inner loop iterates over motions
-                for index, direction in enumerate(motions):
-                    print(direction)
-                    # Add a state to perform the current motion
+                with container_sm:
                     smach.StateMachine.add(
-                        f"LOOK_AROUND_{state}",
-                        PlayMotion(motion_name=direction),
+                        "GET_LOCATION",
+                        self.GetLocation(),
+                        transitions={"succeeded": "GO_TO_LOCATION", "failed": "failed"},
+                    )
+
+                    smach.StateMachine.add(
+                        "GO_TO_LOCATION",
+                        GoToLocation(),
                         transitions={
-                            "succeeded": f"DETECT_OBJECTS_3D_{state}",
-                            "aborted": f"DETECT_OBJECTS_3D_{state}",
+                            "succeeded": "INNER_ITERATOR",
+                            "failed": "failed",
+                        },
+                    )
+
+                    inner_iterator = smach.Iterator(
+                        outcomes=["succeeded", "failed", "continue"],
+                        it=lambda: range(len(motions)),
+                        it_label="motion_index",
+                        input_keys=["waypoints", "location_index"],
+                        output_keys=["cumulated_result"],
+                        exhausted_outcome="succeeded",
+                    )
+
+                    with inner_iterator:
+                        inner_container_sm = smach.StateMachine(
+                            outcomes=["succeeded", "failed", "continue"],
+                            input_keys=["motion_index", "location_index", "waypoints"],
+                            output_keys=["cumulated_result"],
+                        )
+
+                        with inner_container_sm:
+                            smach.StateMachine.add(
+                                "LOOK_AROUND",
+                                PlayMotion(),
+                                transitions={
+                                    "succeeded": "DETECT_OBJECTS_3D",
+                                    "aborted": "DETECT_OBJECTS_3D",
+                                    "preempted": "failed",
+                                },
+                            )
+
+                            smach.StateMachine.add(
+                                "DETECT_OBJECTS_3D",
+                                Detect3D(
+                                    depth_topic=depth_topic,
+                                    model=model,
+                                    filter=filter,
+                                    confidence=confidence,
+                                    nms=nms,
+                                ),
+                                transitions={
+                                    "succeeded": "RESULT",
+                                    "failed": "failed",
+                                },
+                            )
+
+                            smach.StateMachine.add(
+                                "RESULT",
+                                self.check_objects(),
+                                transitions={
+                                    "succeeded": "SAVE_RESULT",
+                                    "failed": "failed",
+                                },
+                            )
+
+                            smach.StateMachine.add(
+                                "SAVE_RESULT",
+                                self.cumulate_result(),
+                                transitions={
+                                    "succeeded": "continue",
+                                    "failed": "failed",
+                                },
+                            )
+
+                        inner_iterator.set_contained_state(
+                            "INNER_CONTAINER_STATE", inner_container_sm, loop_outcomes=["continue"]
+                        )
+
+                    smach.StateMachine.add(
+                        "INNER_ITERATOR",
+                        inner_iterator,
+                        {"succeeded": "CHECK_RESULT", "failed": "failed"},
+                    )
+
+                    smach.StateMachine.add(
+                        "CHECK_RESULT",
+                        self.detection_result(),
+                        transitions={
+                            "object_found": "SAY_OBJECT_FOUND",
+                            "object_not_found": "SAY_OBJECT_NOT_FOUND",
+                            "failed": "failed",
+                        },
+                    )
+
+                    smach.StateMachine.add(
+                        "SAY_OBJECT_FOUND",
+                        say_object_found,
+                        transitions={
+                            "succeeded": "succeeded",
+                            "aborted": "failed",
                             "preempted": "failed",
                         },
                     )
 
-                    # Add a state to detect 3D objects after performing the motion
                     smach.StateMachine.add(
-                        f"DETECT_OBJECTS_3D_{state}",
-                        Detect3D(
-                            depth_topic=depth_topic,
-                            model=model,
-                            filter=filter,
-                            confidence=confidence,
-                            nms=nms,
-                        ),
+                        "SAY_OBJECT_NOT_FOUND",
+                        say_object_not_found,
                         transitions={
-                            "succeeded": f"RESULT_{state}",
-                            "failed": "failed",
+                            "succeeded": "continue",
+                            "aborted": "failed",
+                            "preempted": "failed",
                         },
                     )
 
-                    # Add a state to check objects
-                    smach.StateMachine.add(
-                        f"RESULT_{state}",
-                        self.check_objects(),
-                        transitions={
-                            "succeeded": f"SAVE_RESULT_{state}",
-                            "failed": "failed",
-                        },
-                    )
-                    smach.StateMachine.add(
-                        f"SAVE_RESULT_{state}",
-                        self.cumulate_result(),
-                        transitions={
-                            "succeeded": (
-                                f"LOOK_AROUND_{state+1}"
-                                if index != (len(motions) - 1)
-                                else f"CHECK_RESULT_{i}"
-                            ),
-                            "failed": "failed",
-                        },
-                    )
-                    state += 1
-
-                smach.StateMachine.add(
-                    f"CHECK_RESULT_{i}",
-                    self.detection_result(),
-                    transitions={
-                        "object_found": f"SAY_OBJECT_FOUND_{i}",
-                        "object_not_found": f"SAY_OBJECT_NOT_FOUND_{i}",
-                        "failed": "failed",
-                    },
-                )
-                # Add states to handle object found or not found results
-                smach.StateMachine.add(
-                    f"SAY_OBJECT_FOUND_{i}",
-                    say_object_found,
-                    transitions={
-                        "succeeded": (
-                            f"LOCATION_{i+1}"
-                            if i != len(locations) - 1
-                            else "succeeded"
-                        ),
-                        "aborted": "failed",
-                        "preempted": "failed",
-                    },
-                )
-                smach.StateMachine.add(
-                    f"SAY_OBJECT_NOT_FOUND_{i}",
-                    say_object_not_found,
-                    transitions={
-                        "succeeded": (
-                            f"LOCATION_{i+1}"
-                            if i != len(locations) - 1
-                            else "succeeded"
-                        ),
-                        "aborted": "failed",
-                        "preempted": "failed",
-                    },
+                waypoint_iterator.set_contained_state(
+                    "CONTAINER_STATE", container_sm, loop_outcomes=["continue"]
                 )
 
+            smach.StateMachine.add(
+                "WAYPOINT_ITERATOR",
+                waypoint_iterator,
+                {"succeeded": "succeeded", "failed": "failed"},
+            )
 
-if __name__ == "__main__":
-    import rospy
-    from sensor_msgs.msg import PointCloud2
+# if __name__ == "__main__":
+#     import rospy
+#     from sensor_msgs.msg import PointCloud2
 
-    location_list = list()
-    for i in range(3):
-        location = rospy.get_param(f"/LOCATION_{i}")
-        location_list.append(location)
-    motion = ["look_down", "look_down_left", "look_down_right"]
-    rospy.init_node("test_find_object")
-    sm = Go_find_the_object(
-        Polygon(), filter=["cup"], locations=location_list, motions=motion
-    )
-    sm.userdata.pcl_msg = rospy.wait_for_message(
-        "/xtion/depth_registered/points", PointCloud2
-    )
-    sm.execute()
+#     location_list = list()
+#     for i in range(3):
+#         location = rospy.get_param(f"/LOCATION_{i}")
+#         location_list.append(location)
+#     rospy.init_node("test_find_object")
+#     sm = GoFindTheObject(
+#         Polygon(), filter=["cup"], locations=location_list, motions=motion
+#     )
+#     sm.userdata.pcl_msg = rospy.wait_for_message(
+#         "/xtion/depth_registered/points", PointCloud2
+#     )
+#     sm.execute()

@@ -412,6 +412,7 @@ def gpsr_parse(matches: Dict[str, str]) -> Dict[str, Any]:
             "objectcomp",
             "clothes",
             "talk",
+            "pose",
         ]:
             value_to_add = value
             try:
@@ -549,16 +550,16 @@ if __name__ == "__main__":
     #         object_categories,
     #     )
     # )
-    # print(
-    #     execute(
-    #         "navigate to the kitchen table then find a stick and fetch it and deliver it to guest1 in the living room",
-    #         object_categories,
-    #     )
-    # )
+    print(
+        execute(
+            "navigate to the kitchen table then find a stick and fetch it and deliver it to guest1 in the living room",
+            object_categories,
+        )
+    )
 
     # print(
     #     execute(
-    #         "lead the person wearing a red shirt from the sofa to the living room",
+    #         "navigate to the kitchen table then find a stick.",
     #         object_categories,
     #     )
     # )
