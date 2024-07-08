@@ -139,7 +139,7 @@ class GoFindTheObject(smach.StateMachine):
                 it=lambda: range(len(waypoints_to_iterate)),
                 it_label="location_index",
                 input_keys=["waypoints"],
-                output_keys=["person_point"],
+                output_keys=["cumulated_result"],
                 exhausted_outcome="failed",
             )
 
@@ -147,7 +147,7 @@ class GoFindTheObject(smach.StateMachine):
                 container_sm = smach.StateMachine(
                     outcomes=["succeeded", "failed", "continue"],
                     input_keys=["location_index", "waypoints"],
-                    output_keys=["person_point"],
+                    output_keys=["cumulated_result"],
                 )
 
                 with container_sm:
@@ -171,7 +171,7 @@ class GoFindTheObject(smach.StateMachine):
                         it=lambda: range(len(motions)),
                         it_label="motion_index",
                         input_keys=["waypoints", "location_index"],
-                        output_keys=["person_point"],
+                        output_keys=["cumulated_result"],
                         exhausted_outcome="succeeded",
                     )
 
@@ -179,7 +179,7 @@ class GoFindTheObject(smach.StateMachine):
                         inner_container_sm = smach.StateMachine(
                             outcomes=["succeeded", "failed", "continue"],
                             input_keys=["motion_index", "location_index", "waypoints"],
-                            output_keys=["person_point"],
+                            output_keys=["cumulated_result"],
                         )
 
                         with inner_container_sm:

@@ -11,7 +11,7 @@ from lasr_skills import (
     Say,
     ReceiveObject,
 )
-from gpsr.states import Talk, QuestionAnswer, GoFindTheObject
+from gpsr.states import Talk, QuestionAnswer, GoFindTheObject, ObjectComparison
 
 from geometry_msgs.msg import Pose, Point, Quaternion, Polygon
 
@@ -371,6 +371,27 @@ def tell(command_param: Dict, sm: smach.StateMachine) -> None:
 
 
 def count(command_param: Dict, sm: smach.StateMachine) -> None:
+    # Count the number of a category of objects at a given placement location
+    if "object_category" in command_param:
+        if not "location" in command_param:
+            raise ValueError(
+                "Count command with object but no room in command parameters"
+            )
+        location_param_room = f"/gpsr/arena/rooms/{command_param['location']}"
+        sm.add(
+            f"STATE_{increment_state_count()}",
+            GoFindTheObject(
+                location_param=location_param_room, object=command_param["object_category"]
+            ),
+            transitions={
+                "succeeded": f"STATE_{STATE_COUNT + 1}",
+                "failed": "failed",
+            },
+        )
+
+
+    raise NotImplementedError("Count command not implemented")
+
     pass
 
 
