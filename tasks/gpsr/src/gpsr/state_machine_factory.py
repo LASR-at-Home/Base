@@ -352,7 +352,8 @@ def find(command_param: Dict, sm: smach.StateMachine) -> None:
         sm.add(
             f"STATE_{increment_state_count()}",
             GoFindTheObject(
-                location_param=location_param_room, object=command_param["object_category"]
+                location_param=location_param_room,
+                object=command_param["object_category"],
             ),
             transitions={
                 "succeeded": f"STATE_{STATE_COUNT + 1}",
@@ -363,7 +364,14 @@ def find(command_param: Dict, sm: smach.StateMachine) -> None:
 
 
 def meet(command_param: Dict, sm: smach.StateMachine) -> None:
-    pass
+    """
+    Meet commands can be of the following form:
+
+    - Meet a person at a location and execute another command.
+    - Meet a person in a room and execute another command.
+    - Meet a person in a rooom then find them in another room.
+    """
+    greet(command_param, sm)
 
 
 def tell(command_param: Dict, sm: smach.StateMachine) -> None:
