@@ -43,7 +43,7 @@ class speech_model_params:
     mic_device: Optional[str] = None
     timer_duration: Optional[int] = 20
     warmup: bool = True
-    energy_threshold: Optional[int] = 600
+    energy_threshold: Optional[int] = None
     pause_threshold: Optional[float] = 2.0
 
 
@@ -290,12 +290,12 @@ def parse_args() -> dict:
         help="Disable warming up the model by running inference on a test file.",
     )
 
-    parser.add_argument(
-        "--energy_threshold",
-        type=int,
-        default=600,
-        help="Energy threshold for silence detection. Using this disables automatic adjustment",
-    )
+    # parser.add_argument(
+    #     "--energy_threshold",
+    #     type=int,
+    #     default=600,
+    #     help="Energy threshold for silence detection. Using this disables automatic adjustment",
+    # )
 
     parser.add_argument(
         "--pause_threshold",
@@ -333,8 +333,8 @@ def configure_model_params(config: dict) -> speech_model_params:
         model_params.mic_device = config["mic_device"]
     if config["no_warmup"]:
         model_params.warmup = False
-    if config["energy_threshold"]:
-        model_params.energy_threshold = config["energy_threshold"]
+    # if config["energy_threshold"]:
+    #     model_params.energy_threshold = config["energy_threshold"]
     if config["pause_threshold"]:
         model_params.pause_threshold = config["pause_threshold"]
 

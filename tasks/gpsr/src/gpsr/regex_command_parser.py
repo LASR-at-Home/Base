@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import itertools
 import re
 
@@ -436,10 +437,14 @@ def gpsr_compile_and_parse(config: Configuration, input: str) -> Dict:
     object_categories = (
         config["object_categories_singular"] + config["object_categories_plural"]
     )
-    return parse_result_dict(gpsr_parse(matches), object_categories)
+    return parse_result_dict(
+        gpsr_parse(matches), object_categories, config["room_names"]
+    )
 
 
-def parse_result_dict(result: Dict, object_categories: List[str]) -> Dict:
+def parse_result_dict(
+    result: Dict, object_categories: List[str], rooms: List[str]
+) -> Dict:
     """Parses the result dictionary output by the gpsr parse to
     handle missing parameters.
 
@@ -458,6 +463,15 @@ def parse_result_dict(result: Dict, object_categories: List[str]) -> Dict:
                     "command_params"
                 ][i]["object"]
                 del result["command_params"][i]["object"]
+
+        # Rename location to room if it is a room
+        if "location" in result["command_params"][i]:
+            if result["command_params"][i]["location"] in rooms:
+                result["command_params"][i]["room"] = result["command_params"][i][
+                    "location"
+                ]
+                del result["command_params"][i]["location"]
+
         # Update command params based on the previous commands params
         if i > 0:
             if "location" not in result["command_params"][i]:
@@ -470,7 +484,6 @@ def parse_result_dict(result: Dict, object_categories: List[str]) -> Dict:
                     result["command_params"][i - 1]["room"] = result["command_params"][
                         i - 1
                     ]["room"]
-                    del result["command_params"][i]["room"]
             if "name" not in result["command_params"][i]:
                 if "name" in result["command_params"][i - 1]:
                     result["command_params"][i]["name"] = result["command_params"][
@@ -512,11 +525,13 @@ if __name__ == "__main__":
 
     def execute(input: str, object_categories: List[str]):
         matches = regex.match(input).groupdict()
-        return parse_result_dict(gpsr_parse(matches), object_categories)
+        return parse_result_dict(
+            gpsr_parse(matches), object_categories, config["room_names"]
+        )
 
     print(
         execute(
-            "go to the kitchen then meet guest1 and tell the time",
+            "   
             object_categories,
         )
     )
