@@ -534,7 +534,7 @@ if __name__ == "__main__":
 
     print(
         execute(
-            "meet guest1 in the living room and guide them to the kitchen",
+            "go to the sofa then find the waving person and guide them to the kitchen",
             object_categories,
         )
     )

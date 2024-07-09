@@ -76,8 +76,9 @@ def encode_img(model, img_msg: Image) -> np.ndarray:
     return model(img.unsqueeze(0)).detach().numpy()
 
 
-def query_image_stream(
+def query_image(
     model: SentenceTransformer,
+    img_msg: Image,
     answers: list[str],
     annotate: bool = False,
 ) -> tuple[str, torch.Tensor, Image]:
@@ -92,7 +93,6 @@ def query_image_stream(
     returns:
         tuple(str, torch.Tensor, Image): the most likely answer, the scores, and the annotated image msg
     """
-    img_msg = rospy.wait_for_message("/xtion/rgb/image_raw", Image)
     img_pil = cv2_img.msg_to_pillow_img(img_msg)
 
     cos_scores = run_clip(model, answers, img_pil)
