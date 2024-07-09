@@ -239,7 +239,7 @@ def talk(command_param: Dict, sm: smach.StateMachine) -> None:
             f"STATE_{increment_state_count()}",
             ObjectComparison(
                 filter=command_param["object_category"],
-                operation_label="size",
+                operation_label="size", # need the relation between command and operation
                 weight=weight_list,
             ),
             transitions={
@@ -562,6 +562,7 @@ def find(command_param: Dict, sm: smach.StateMachine) -> None:
                 "failed": "failed",
             },
         )
+
     elif "gesture" in command_param:
         greet(command_param, sm)
 
@@ -600,7 +601,6 @@ def count(command_param: Dict, sm: smach.StateMachine) -> None:
             },
         )
         # TODO: combine the weight list within
-        # TODO: add speak out the result
         weight_list = rospy.get_param("/Object_list/Object")
         sm.add(
             f"STATE_{increment_state_count()}",
