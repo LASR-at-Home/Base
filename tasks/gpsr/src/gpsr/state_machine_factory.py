@@ -137,7 +137,7 @@ def greet(command_param: Dict, sm: smach.StateMachine) -> None:
     elif "gesture" in command_param:
         criteria = "gesture"
         criteria_value = command_param["gesture"]
-    elif "pose" in command_param:  # TODO
+    elif "pose" in command_param:
         criteria = "pose"
         criteria_value = command_param["pose"]
     else:
