@@ -741,14 +741,10 @@ class IntroduceAndSeatGuest(smach.StateMachine):
                     remapping={"pointstamped": "seat_position"},
                 )
 
-
                 smach.StateMachine.add(
                     "WAIT_SEAT",
                     Wait(3),
-                    transitions={
-                        "succeeded":"succeeded",
-                        "failed":"failed"
-                    }
+                    transitions={"succeeded": "succeeded", "failed": "failed"},
                 )
 
             else:
