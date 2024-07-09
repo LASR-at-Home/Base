@@ -109,6 +109,9 @@ def stringify_guest_data(
     if len(top_4_attributes) < 4:
         top_4_attributes.append(sorted_attributes[4])
 
+    wearing_items = []
+    not_wearing_items = []
+
     for i in range(len(top_4_attributes)):
         attribute_name = top_4_attributes[i]
         attribute_value = filtered_attributes[top_4_attributes[i]]
@@ -117,25 +120,43 @@ def stringify_guest_data(
         if attribute_name == "hair":
             hair_shape = attribute_value["hair_shape"]
             hair_colour = attribute_value["hair_colour"]
-            guest_str += f"They have {hair_shape} and {hair_colour} . "
+            guest_str += f"They have {hair_shape} and {hair_colour}. "
         elif attribute_name == "facial_hair":
             if confidence < 0:
                 guest_str += "They don't have facial hair. "
             else:
                 guest_str += "They have facial hair. "
         else:
+            attribute = attribute_value["attribute"]
             if confidence < 0:
-                if isSingular(attribute_value["attribute"]):
-                    guest_str += (
-                        f"They are not wearing a {attribute_value['attribute']}."
-                    )
+                if isSingular(attribute):
+                    not_wearing_items.append(f"a {attribute}")
                 else:
-                    guest_str += f"They are not wearing {attribute_value['attribute']}."
+                    not_wearing_items.append(attribute)
             else:
-                if isSingular(attribute_value["attribute"]):
-                    guest_str += f"They are wearing a {attribute_value['attribute']}."
+                if isSingular(attribute):
+                    wearing_items.append(f"a {attribute}")
                 else:
-                    guest_str += f"They are wearing {attribute_value['attribute']}."
+                    wearing_items.append(attribute)
+
+    def grammatical_concat(items):
+        if len(items) > 1:
+            return ", ".join(items[:-1]) + " and " + items[-1]
+        elif items:
+            return items[0]
+        else:
+            return ""
+
+    # Combine wearing and not wearing items into guest_str
+    if wearing_items:
+        guest_str += "They are wearing " + grammatical_concat(wearing_items)
+    if not_wearing_items:
+        if wearing_items:
+            guest_str += "They are also not wearing " + grammatical_concat(
+                not_wearing_items
+            )
+        else:
+            guest_str += "They are not wearing " + grammatical_concat(not_wearing_items)
 
     return guest_str
 
