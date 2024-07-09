@@ -1,0 +1,73 @@
+priors:
+  names:
+    - Adel
+    - Angel
+    - Axel
+    - Charlie
+    - Jane
+    - Jules
+    - Morgan
+    - Paris
+    - Robin
+    - Simone
+  drinks:
+    - cola
+    - iced tea
+    - juice pack
+    - milk
+    - orange juice
+    - red wine
+    - tropical juice
+  
+
+#WAIT POSE LAB:
+wait_pose: 
+  position: 
+    x: -15.027493553116143
+    y: 8.731164058220495
+    z: 0.0
+  orientation: 
+    x: 0.0
+    y: 0.0
+    z: -0.7865759968179794
+    w: 0.6174934827427752
+
+
+
+#556918144226074
+
+
+#0.478893309417269
+#0.8778731105321406
+
+
+#WAIT AREA LAB:
+# From robot POV: [top left, top right,bottom right, bottom left ] 
+wait_area: [[-15.9, 8.19], [-17.2, 8.11], [-16.2, 11.2], [-14.9, 10.0]]
+
+#Where to position self for seating guests
+seat_pose:
+  position: 
+    x: -13.659998294234812
+    y: 6.421172168922483
+    z: 0.0
+  orientation: 
+    x: 0.0
+    y: 0.0
+    z: -0.6021594916272762
+    w: 0.7983758179223494
+
+
+
+search_motions: ["look_left", "look_right"]
+sofa_point: 
+  x: -15.0
+  y: 4.21
+  z: 0.5
+
+seat_area: [[-12.2, 2.63], [-18.2, 4.61], [-17.4, 7.31], [-11.7, 5.06]]
+max_people_on_sofa: 2
+
+sofa_area: [[-13.8, 4.61], [-14.4, 3.54], [-15.85, 4.16], [-15.4, 5.33]]
+
+sweep: true
