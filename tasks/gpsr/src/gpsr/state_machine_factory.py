@@ -12,6 +12,8 @@ from lasr_skills import (
     ReceiveObject,
 )
 from gpsr.states import Talk, QuestionAnswer, GoFindTheObject, ObjectComparison
+import os
+import rospkg
 
 from geometry_msgs.msg import (
     Pose,
@@ -126,13 +128,13 @@ def greet(command_param: Dict, sm: smach.StateMachine) -> None:
     if "name" in command_param:
         criteria = "name"
         criteria_value = command_param["name"]
-    elif "clothes" in command_param:
+    elif "clothes" in command_param:  # TODO
         criteria = "clothes"
         criteria_value = command_param["clothes"]
     elif "gesture" in command_param:
         criteria = "gesture"
         criteria_value = command_param["gesture"]
-    elif "pose" in command_param:
+    elif "pose" in command_param:  # TODO
         criteria = "pose"
         criteria_value = command_param["pose"]
     else:
@@ -165,11 +167,17 @@ def talk(command_param: Dict, sm: smach.StateMachine) -> None:
 
     Tell:
         People
+
+        Need additional find person skill, then handle the following commands here
+
         - Tell me the name of the person at a given room or location.
         - Tell me the pose of the person at a given room or location.
         - Tell me the gesture of the person at a given room or location.
 
         Objects
+
+        This can all be a single skill that takes img_msg, runs inference, outputs object name
+
         - Tell me what is the biggest object at a given placement location
         - Tell me what is the largest object at a given placement location
         - Tell me what is the smallest object at a given placement location
@@ -333,6 +341,8 @@ def deliver(command_param: Dict, sm: smach.StateMachine) -> None:
 
     """
 
+    # TODO
+
     if "room" in command_param:
         room_pose = get_room_pose(command_param["room"])
 
@@ -450,13 +460,13 @@ def take(command_param: Dict, sm: smach.StateMachine) -> None:
 
 
 def answer(command_param: Dict, sm: smach.StateMachine) -> None:
+    data_root = os.path.join(rospkg.RosPack().get_path("gpsr"), "data")
     sm.add(
         f"STATE_{increment_state_count()}",
-        # TODO: pass index_path, txt_path, xml_path
         QuestionAnswer(
-            index_path="index.txt",
-            txt_path="txt",
-            xml_path="xml",
+            index_path=os.path.join(data_root, "questions.index"),
+            txt_path=os.path.join(data_root, "questions.txt"),
+            xml_path=os.path.join(data_root, "questions.xml"),
             k=1,
         ),
         transitions={
@@ -536,60 +546,12 @@ def meet(command_param: Dict, sm: smach.StateMachine) -> None:
     greet(command_param, sm)
 
 
-def tell(command_param: Dict, sm: smach.StateMachine) -> None:
-    """
-    Tell me the biggest/largest/smallest/heaviest/lightest/thinnest object at a given placement location
-    """
-    if "object_category" in command_param:
-        if not "location" in command_param:
-            raise ValueError(
-                "Tell command with object but no room in command parameters"
-            )
-        location_param_room = f"/gpsr/arena/rooms/{command_param['location']}"
-        sm.add(
-            f"STATE_{increment_state_count()}",
-            GoToLocation(location_param=f"{location_param_room}/pose"),
-            transitions={
-                "succeeded": f"STATE_{STATE_COUNT + 1}",
-                "failed": "failed",
-            },
-        )
-        # TODO: combine the weight list within
-        # TODO: add speak out the result
-        weight_list = rospy.get_param("/Object_list/Object")
-        sm.add(
-            f"STATE_{increment_state_count()}",
-            ObjectComparison(
-                filter=command_param["object_category"],
-                operation_label="weight",
-                weight=weight_list,
-            ),
-            transitions={
-                "succeeded": f"STATE_{STATE_COUNT + 1}",
-                "failed": "failed",
-            },
-        )
-
-        sm.add(
-            f"STATE_{increment_state_count()}",
-            ObjectComparison(
-                filter=command_param["object_category"],
-                operation_label="size",
-                weight=weight_list,
-            ),
-            transitions={
-                "succeeded": f"STATE_{STATE_COUNT + 1}",
-                "failed": "failed",
-            },
-        )
-
-    pass
-
-
 def count(command_param: Dict, sm: smach.StateMachine) -> None:
     """
     count the number of a category of objects at a given placement location
     """
+
+    # TODO
 
     if "object_category" in command_param:
         if not "location" in command_param:
@@ -675,8 +637,6 @@ def build_state_machine(parsed_command: Dict) -> smach.StateMachine:
                 find(command_param, sm)
             elif command_verb == "meet":
                 meet(command_param, sm)
-            elif command_verb == "tell":
-                tell(command_param, sm)
             elif command_verb == "count":
                 count(command_param, sm)
             elif command_verb == "follow":
