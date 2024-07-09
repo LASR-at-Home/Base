@@ -497,7 +497,11 @@ def parse_result_dict(
                     result["command_params"][i]["object"] = result["command_params"][
                         i - 1
                     ]["object"]
-
+            if "object_category" not in result["command_params"][i]:
+                if "object_category" in result["command_params"][i - 1]:
+                    result["command_params"][i]["object_category"] = result[
+                        "command_params"
+                    ][i - 1]["object_category"]
     return result
 
 
@@ -534,7 +538,7 @@ if __name__ == "__main__":
 
     print(
         execute(
-            "go to the bed then find the waving person and guide them to the sofa",
+            "go to the sofa then find a cup and take it and bring it to me",
             object_categories,
         )
     )
