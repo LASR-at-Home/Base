@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import rospy
 import smach
-from smach_ros import ServiceState
+import smach_ros
 from typing import Dict, List
 from lasr_skills import (
     GoToLocation,
@@ -11,6 +11,9 @@ from lasr_skills import (
     Say,
     ReceiveObject,
 )
+
+from lasr_person_following.msg import FollowAction, FollowGoal
+
 from gpsr.states import Talk, QuestionAnswer, GoFindTheObject, ObjectComparison
 import os
 import rospkg
@@ -589,7 +592,19 @@ def count(command_param: Dict, sm: smach.StateMachine) -> None:
 
 
 def follow(command_param: Dict, sm: smach.StateMachine) -> None:
-    pass
+    sm.add(
+        f"STATE_{increment_state_count()}",
+        smach_ros.SimpleActionState(
+            "/follow_person",
+            FollowAction,
+            goal=FollowGoal(),
+        ),
+        transitions={
+            "succeeded": f"STATE_{STATE_COUNT + 1}",
+            "aborted": "failed",
+            "preempted": "failed",
+        },
+    )
 
 
 def build_state_machine(parsed_command: Dict) -> smach.StateMachine:
