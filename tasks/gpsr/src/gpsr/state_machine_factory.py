@@ -26,8 +26,9 @@ def increment_state_count() -> int:
 
 
 def get_location_room(location: str) -> str:
-    for room in rospy.get_param("/gpsr/arena/rooms"):
-        if location in room["beacons"]:
+    rooms = rospy.get_param("/gpsr/arena/rooms")
+    for room in rooms:
+        if location in rooms[room]["beacons"]:
             return room
     raise ValueError(f"Location {location} not found in the arena")
 
@@ -245,8 +246,9 @@ def guide(command_param: Dict, sm: smach.StateMachine) -> None:
     """
 
     find_person = False
-
-    if "name" in command_param:
+    if "start" not in command_param:
+        pass
+    elif "name" in command_param:
         criteria = "name"
         criteria_value = command_param["name"]
         find_person = True
@@ -292,6 +294,9 @@ def guide(command_param: Dict, sm: smach.StateMachine) -> None:
         except KeyError:
             location_pose = get_room_pose(command_param["end"])
             location_name = command_param["end"]
+    else:
+        location_pose = get_room_pose(command_param["room"])
+        location_name = command_param["room"]
 
     sm.add(
         f"STATE_{increment_state_count()}",
