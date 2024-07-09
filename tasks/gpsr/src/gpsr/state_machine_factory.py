@@ -508,7 +508,7 @@ def go(command_param: Dict, sm: smach.StateMachine, person: bool) -> None:
 
 
 def bring(command_param: Dict, sm: smach.StateMachine) -> None:
-    pass
+    raise NotImplementedError("Bring command not implemented")
 
 
 def find(command_param: Dict, sm: smach.StateMachine) -> None:
@@ -555,6 +555,7 @@ def count(command_param: Dict, sm: smach.StateMachine) -> None:
     """
 
     # TODO
+    raise NotImplementedError("Count command not implemented")
 
     if "object_category" in command_param:
         if not "location" in command_param:
@@ -585,10 +586,6 @@ def count(command_param: Dict, sm: smach.StateMachine) -> None:
                 "failed": "failed",
             },
         )
-
-    raise NotImplementedError("Count command not implemented")
-
-    pass
 
 
 def follow(command_param: Dict, sm: smach.StateMachine) -> None:
