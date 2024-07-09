@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
-from go_to_location import GoToLocation
 import smach
-from lasr_skills import Detect3D
+from lasr_skills import Detect3D, GoToLocation
 from shapely.geometry.polygon import Polygon
 from typing import List, Union
 from geometry_msgs.msg import Pose, Point, Quaternion
@@ -121,7 +120,9 @@ class GoFindTheObject(smach.StateMachine):
             for beacon in beacons:
                 waypoint = Pose(
                     position=Point(**beacons[beacon]["near_pose"]["position"]),
-                    orientation=Quaternion(**beacons[beacon]["near_pose"]["orientation"])
+                    orientation=Quaternion(
+                        **beacons[beacon]["near_pose"]["orientation"]
+                    ),
                 )
                 waypoints_to_iterate.append(waypoint)
         else:
@@ -227,7 +228,9 @@ class GoFindTheObject(smach.StateMachine):
                             )
 
                         inner_iterator.set_contained_state(
-                            "INNER_CONTAINER_STATE", inner_container_sm, loop_outcomes=["continue"]
+                            "INNER_CONTAINER_STATE",
+                            inner_container_sm,
+                            loop_outcomes=["continue"],
                         )
 
                     smach.StateMachine.add(
@@ -275,6 +278,7 @@ class GoFindTheObject(smach.StateMachine):
                 waypoint_iterator,
                 {"succeeded": "succeeded", "failed": "failed"},
             )
+
 
 # if __name__ == "__main__":
 #     import rospy
