@@ -699,7 +699,7 @@ class IntroduceAndSeatGuest(smach.StateMachine):
                 # Say to sit on the sofa
                 smach.StateMachine.add(
                     "SAY_SOFA",
-                    Say(text="Please sit on the sofa"),
+                    Say(text="Please sit on the sofa that I am looking at"),
                     transitions={
                         "succeeded": "LOOK_AT_SEAT",
                         "preempted": "LOOK_AT_SEAT",
@@ -723,9 +723,9 @@ class IntroduceAndSeatGuest(smach.StateMachine):
                     "SAY_ANY",
                     Say(text="Please sit on any empty seat"),
                     transitions={
-                        "succeeded": "succeeded",
-                        "preempted": "succeeded",
-                        "aborted": "succeeded",
+                        "succeeded": "WAIT_SEAT",
+                        "preempted": "WAIT_SEAT",
+                        "aborted": "WAIT_SEAT",
                     },
                 )
 
@@ -734,12 +734,23 @@ class IntroduceAndSeatGuest(smach.StateMachine):
                     "LOOK_AT_SEAT",
                     LookToPoint(),
                     transitions={
-                        "succeeded": "succeeded",
-                        "aborted": "succeeded",
-                        "timed_out": "succeeded",
+                        "succeeded": "WAIT_SEAT",
+                        "aborted": "WAIT_SEAT",
+                        "timed_out": "WAIT_SEAT",
                     },
                     remapping={"pointstamped": "seat_position"},
                 )
+
+
+                smach.StateMachine.add(
+                    "WAIT_SEAT",
+                    Wait(3),
+                    transitions={
+                        "succeeded":"succeeded",
+                        "failed":"failed"
+                    }
+                )
+
             else:
 
                 class RecognisePeople(smach.State):

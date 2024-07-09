@@ -1,0 +1,57 @@
+priors:
+  names:
+    - Adel
+    - Angel
+    - Axel
+    - Charlie
+    - Jane
+    - Jules
+    - Morgan
+    - Paris
+    - Robin
+    - Simone
+  drinks:
+    - cola
+    - iced tea
+    - juice pack
+    - milk
+    - orange juice
+    - red wine
+    - tropical juice
+  
+# WAIT POSE KITCHEN:
+wait_pose: 
+  position: 
+    x: 8.245934441303595
+    y: 24.285935396834816
+    z: 0.0
+  orientation: 
+    x: 0.0
+    y: 0.0
+    z: 0.08719394681831685
+    w: 0.9961913549304895
+
+# WAIT AREA KITCHEN:
+wait_area: [[9.16, 25.3], [10.6, 25.7], [11, 24.1], [9.4, 23.7]]
+
+seat_pose:
+  position: 
+    x: 7.439730848846352
+    y: 22.667057212175145
+    z: 0.0
+  orientation: 
+    x: 0.0
+    y: 0.0
+    z: -0.6336387580418182
+    w: 0.7736290611832146
+
+search_motions: ["look_left", "look_right"]
+sofa_point:
+  x: 7.78
+  y: 20.1
+  z: 0.5
+seat_area: [[10.8, 20.2], [5.2, 18.9], [4.41, 21.6], [10.1, 23.1]]
+max_people_on_sofa: 2
+sofa_area: [[8.52, 20.1], [7.1, 19.8], [6.71, 21.1], [8.06, 21.5]]
+
+sweep: true
