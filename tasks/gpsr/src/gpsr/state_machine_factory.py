@@ -344,22 +344,9 @@ def deliver(command_param: Dict, sm: smach.StateMachine) -> None:
 
     """
 
-    # TODO
-
     if "room" in command_param:
-        room_pose = get_room_pose(command_param["room"])
-
-        waypoints: List[Pose] = [
-            Pose(
-                position=Point(**wp["position"]),
-                orientation=Quaternion(**wp["orientation"]),
-            )
-            for wp in rospy.get_param(location_param)["waypoints"]
-        ]
-
-        polygon = Polygon(
-            [Point(**p) for p in rospy.get_param(location_param)["polygon"]["points"]]
-        )
+        waypoints: List[Pose] = get_person_detection_poses(command_param["room"])
+        polygon: Polygon = get_room_polygon(command_param["room"])
 
     if "name" in command_param:
         criteria = "name"
@@ -387,9 +374,19 @@ def deliver(command_param: Dict, sm: smach.StateMachine) -> None:
             "failed": "failed",
         },
     )
+
+    if "object" in command_param:
+        object_name = command_param["object"]
+    elif "object_category" in command_param:
+        object_name = command_param["object_category"]
+    else:
+        raise ValueError(
+            "Deliver command received with no object or object category in command parameters"
+        )
+
     sm.add(
         f"STATE_{increment_state_count()}",
-        HandoverObject(object_name="object"),  # TODO: pass object name
+        HandoverObject(object_name=object_name),
         transitions={
             "succeeded": f"STATE_{STATE_COUNT + 1}",
             "failed": "failed",
