@@ -207,6 +207,7 @@ class AdjustCamera(smach.StateMachine):
             self.counter = 0
 
         def execute(self, userdata):
+            rospy.logwarn(f"Start attempt number {self.counter}.")
             req = BodyPixKeypointDetectionRequest()
             req.image_raw = userdata.img_msg
             req.dataset = self._bodypix_model
