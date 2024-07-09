@@ -8,6 +8,8 @@ from lasr_vision_msgs.srv import (
 )
 from sensor_msgs.msg import Image
 
+from typing import Union
+
 
 class DetectGesture(smach.State):
     """
@@ -16,7 +18,7 @@ class DetectGesture(smach.State):
 
     def __init__(
         self,
-        gesture_to_detect: str,
+        gesture_to_detect: Union[str, None] = None,
         bodypix_model: str = "resnet50",
         bodypix_confidence: float = 0.1,
         buffer_width: int = 50,
@@ -26,6 +28,7 @@ class DetectGesture(smach.State):
             self,
             outcomes=["succeeded", "failed"],
             input_keys=["img_msg"],
+            output_keys=["detected_gesture"],
         )
         self.gesture_to_detect = gesture_to_detect
         self.bodypix_client = rospy.ServiceProxy(
@@ -93,6 +96,7 @@ class DetectGesture(smach.State):
                 detected_gesture = "waving"
 
         rospy.loginfo(f"Detected gesture: {detected_gesture}")
+        userdata.detected_gesture = detected_gesture
 
         cv2_gesture_img = cv2_img.msg_to_cv2_img(userdata.img_msg)
         # Add text to the image
@@ -109,4 +113,9 @@ class DetectGesture(smach.State):
         # Publish the image
         self.debug_publisher.publish(cv2_img.cv2_img_to_msg(cv2_gesture_img))
 
-        return "succeeded" if detected_gesture == self.gesture_to_detect else "failed"
+        if self.gesture_to_detect is not None:
+            return (
+                "succeeded" if detected_gesture == self.gesture_to_detect else "failed"
+            )
+        else:
+            return "succeeded"
