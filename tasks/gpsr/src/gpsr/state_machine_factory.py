@@ -13,7 +13,13 @@ from lasr_skills import (
 )
 from gpsr.states import Talk, QuestionAnswer, GoFindTheObject, ObjectComparison
 
-from geometry_msgs.msg import Pose, Point, Quaternion, Polygon
+from geometry_msgs.msg import (
+    Pose,
+    Point,
+    Quaternion,
+    Polygon,
+    PoseWithCovarianceStamped,
+)
 
 STATE_COUNT = 0
 from lasr_skills import GoToLocation
@@ -30,6 +36,11 @@ def get_location_room(location: str) -> str:
         if location in room["beacons"]:
             return room
     raise ValueError(f"Location {location} not found in the arena")
+
+
+def get_current_pose() -> Pose:
+    pose = rospy.wait_for_message("/amcl_pose", PoseWithCovarianceStamped)
+    return pose.pose.pose
 
 
 def get_location_pose(location: str, person: bool) -> Pose:
@@ -301,34 +312,34 @@ def guide(command_param: Dict, sm: smach.StateMachine) -> None:
 
 
 def deliver(command_param: Dict, sm: smach.StateMachine) -> None:
-    location_param = f"/gpsr/arena/rooms/{command_param['location']}"
-    sm.add(
-        f"STATE_{increment_state_count()}",
-        GoToLocation(location_param=f"{location_param}/pose"),
-        transitions={
-            "succeeded": f"STATE_{STATE_COUNT + 1}",
-            "failed": "failed",
-        },
-    )
+    """
+    The possible deliver commands are:
+        - deliver an object the robot aleady has to me
+        - deliver an object the robot already has to a person in a given gesture in a given room.
+        - deliver an object the robot already has to a person in a given pose in a given room.
+        - deliver an object the robot already has to a person with a given name in a given room.
 
-    waypoints: List[Pose] = [
-        Pose(
-            position=Point(**wp["position"]),
-            orientation=Quaternion(**wp["orientation"]),
+
+    """
+
+    if "room" in command_param:
+        room_pose = get_room_pose(command_param["room"])
+
+        waypoints: List[Pose] = [
+            Pose(
+                position=Point(**wp["position"]),
+                orientation=Quaternion(**wp["orientation"]),
+            )
+            for wp in rospy.get_param(location_param)["waypoints"]
+        ]
+
+        polygon = Polygon(
+            [Point(**p) for p in rospy.get_param(location_param)["polygon"]["points"]]
         )
-        for wp in rospy.get_param(location_param)["waypoints"]
-    ]
-
-    polygon = Polygon(
-        [Point(**p) for p in rospy.get_param(location_param)["polygon"]["points"]]
-    )
 
     if "name" in command_param:
         criteria = "name"
         criteria_value = command_param["name"]
-    elif "clothes" in command_param:
-        criteria = "clothes"
-        criteria_value = command_param["clothes"]
     elif "gesture" in command_param:
         criteria = "gesture"
         criteria_value = command_param["gesture"]
@@ -336,9 +347,8 @@ def deliver(command_param: Dict, sm: smach.StateMachine) -> None:
         criteria = "pose"
         criteria_value = command_param["pose"]
     else:
-        raise ValueError(
-            "Deliver command received with no name, clothes, gesture, or pose in command parameters"
-        )
+        criteria = None
+        waypoints = [get_current_pose()]
 
     sm.add(
         f"STATE_{increment_state_count()}",
