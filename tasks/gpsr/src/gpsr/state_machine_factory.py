@@ -395,19 +395,35 @@ def deliver(command_param: Dict, sm: smach.StateMachine) -> None:
 
 
 def place(command_param: Dict, sm: smach.StateMachine) -> None:
-    location_param = f"/gpsr/arena/rooms/{command_param['location']}"
+
+    if "location" in command_param:
+        location_pose = get_location_pose(command_param["location"], False)
+    else:
+        raise ValueError(
+            "Place command received with no location in command parameters"
+        )
+
     sm.add(
         f"STATE_{increment_state_count()}",
-        GoToLocation(location_param=f"{location_param}/pose"),
+        GoToLocation(location=location_pose),
         transitions={
             "succeeded": f"STATE_{STATE_COUNT + 1}",
             "failed": "failed",
         },
     )
 
+    if "object" in command_param:
+        object_name = command_param["object"]
+    elif "object_category" in command_param:
+        object_name = command_param["object_category"]
+    else:
+        raise ValueError(
+            "Place command received with no object or object category in command parameters"
+        )
+
     sm.add(
         f"STATE_{increment_state_count()}",
-        HandoverObject(object_name="object"),  # TODO: pass object name
+        HandoverObject(object_name=object_name),
         transitions={
             "succeeded": f"STATE_{STATE_COUNT + 1}",
             "failed": "failed",
@@ -426,11 +442,26 @@ def place(command_param: Dict, sm: smach.StateMachine) -> None:
 
 
 def take(command_param: Dict, sm: smach.StateMachine) -> None:
-    # TODO: need to redo this to handle placement locations
-    location_param = f"/gpsr/arena/rooms/{command_param['location']}"
+
+    if "object" in command_param:
+        criteria = "object"
+        criteria_value = command_param["object"]
+    elif "object_category" in command_param:
+        criteria = "object_category"
+        criteria_value = command_param["object_category"]
+    else:
+        raise ValueError(
+            "Take command received with no object or object category in command parameters"
+        )
+    if "location" in command_param:
+        location_pose = get_location_pose(command_param["location"], False)
+    else:
+        raise ValueError("Take command received with no location in command parameters")
+
+    # TODO: this should use find, to find the object at the location
     sm.add(
         f"STATE_{increment_state_count()}",
-        GoToLocation(location_param=f"{location_param}/pose"),
+        GoToLocation(location=location_pose),
         transitions={
             "succeeded": f"STATE_{STATE_COUNT + 1}",
             "failed": "failed",
@@ -440,7 +471,7 @@ def take(command_param: Dict, sm: smach.StateMachine) -> None:
     sm.add(
         f"STATE_{increment_state_count()}",
         Say(
-            text=f"Please pick up the {command_param['object_category']} on the {command_param['location']} for me."
+            text=f"Please pick up the {criteria_value} on the {command_param['location']} for me."
         ),
         transitions={
             "succeeded": f"STATE_{STATE_COUNT + 1}",
@@ -451,7 +482,7 @@ def take(command_param: Dict, sm: smach.StateMachine) -> None:
 
     sm.add(
         f"STATE_{increment_state_count()}",
-        ReceiveObject(object_name=command_param["object_category"]),
+        ReceiveObject(object_name=criteria_value),
         transitions={
             "succeeded": f"STATE_{STATE_COUNT + 1}",
             "failed": "failed",
