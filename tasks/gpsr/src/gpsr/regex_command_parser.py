@@ -263,7 +263,7 @@ def gpsr_regex(configuration: Configuration):
                 f"{verb('follow')} them {prep('toLocPrep')} the {Configuration.pick(configuration, 'location', ['room'])}"
             )
             sub_commands.append(
-                f"{verb('guide')} them {prep('toLocPrep')} the {Configuration.pick(configuration, 'location', ['room'])}"
+                f"{verb('guide')} them {prep('toLocPrep')} the {Configuration.pick(configuration, 'location', ['room', 'loc'])}"
             )
         elif type == "foundObj":
             sub_commands.append(
@@ -514,9 +514,9 @@ if __name__ == "__main__":
     object_categories = object_categories_singular + object_categories_plural
     config: Configuration = {
         "person_names": ["guest1", "guest2"],
-        "location_names": ["sofa", "piano", "kitchen table"],
+        "location_names": ["sofa", "piano", "kitchen table", "bed"],
         "placement_location_names": ["kitchen table"],
-        "room_names": ["living room", "kitchen"],
+        "room_names": ["living room", "kitchen", "bedroom"],
         "object_names": ["cup", "television"],
         "object_categories_plural": ["sticks"],
         "object_categories_singular": ["stick"],
@@ -534,7 +534,7 @@ if __name__ == "__main__":
 
     print(
         execute(
-            "meet guest1 in the living room and guide them to the kitchen",
+            "go to the bed then find the waving person and guide them to the sofa",
             object_categories,
         )
     )
