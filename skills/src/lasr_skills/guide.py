@@ -37,6 +37,7 @@ class Guide(smach.StateMachine):
                 Say(text=f"We have arrived at the {location_name}."),
                 transitions={
                     "succeeded": "succeeded",
-                    "failed": "failed",
+                    "aborted": "failed",
+                    "preempted": "failed",
                 },
             )
