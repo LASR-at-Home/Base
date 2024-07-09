@@ -3,7 +3,7 @@
         <arg name="preload" value="['yolov8n-seg.pt']" />
     </include>
 
-    <include file="$(find lasr_vision_bodypix)/launch/bodypix_services.launch">
+    <include file="$(find lasr_vision_bodypix)/launch/bodypix.launch">
         <param name="preload" type="yaml" value='resnet50' />
     </include>
 
