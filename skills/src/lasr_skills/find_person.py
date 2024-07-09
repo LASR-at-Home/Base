@@ -342,6 +342,7 @@ class FindPerson(smach.StateMachine):
                 "raising_right_arm",
                 "pointing_to_the_right",
                 "pointing_to_the_left",
+                "waving",
             ], "Invalid gesture"
         elif criteria == "pose":
             assert criteria_value in [
