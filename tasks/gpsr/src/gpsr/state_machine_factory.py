@@ -30,6 +30,11 @@ STATE_COUNT = 0
 from lasr_skills import GoToLocation
 
 
+"""
+Helpers
+"""
+
+
 def increment_state_count() -> int:
     global STATE_COUNT
     STATE_COUNT += 1
@@ -114,6 +119,11 @@ def get_object_detection_polygon(location: str) -> Polygon:
             )
         ]
     )
+
+
+"""
+Verbs
+"""
 
 
 def greet(command_param: Dict, sm: smach.StateMachine) -> None:
@@ -630,6 +640,11 @@ def follow(command_param: Dict, sm: smach.StateMachine) -> None:
             "preempted": "failed",
         },
     )
+
+
+"""
+Build
+"""
 
 
 def build_state_machine(parsed_command: Dict) -> smach.StateMachine:
