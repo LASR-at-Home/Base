@@ -164,7 +164,7 @@ class SpeechRecovery(smach.State):
                     return closest_spelt
                 else:
                     sentence_list.append(closest_spelt)
-                    return self._infer_second_drink(closest_spelt, last_resort)
+                    return self._infer_second_drink(sentence_list, last_resort)
 
     def _handle_similar_spelt(self, sentence_list, available_words, distance_threshold):
         for input_word in sentence_list:
