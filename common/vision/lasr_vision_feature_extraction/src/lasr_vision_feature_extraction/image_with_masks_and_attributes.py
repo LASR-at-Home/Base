@@ -1,4 +1,5 @@
 import numpy as np
+from lasr_vision_feature_extraction import split_and_sample_colours, colour_group_map, estimate_colour, possible_colours
 from lasr_vision_feature_extraction.categories_and_attributes import (
     CategoriesAndAttributes,
 )
@@ -187,5 +188,34 @@ class ImageOfCloth(ImageWithMasksAndAttributes):
 
         # QUICK FIX that won't break the code
         result["dress"] = 0.0
+
+        # ========= colour estimation below: =========
+        # blurred_image = gaussian_blur(self.image, kernel_size=13, rep=3)
+        blurred_image = self.image
+        for cloth in ["top", "down", "outwear", "dress"]:
+            mask = self.masks[cloth]
+            # plt.imshow(mask)
+            # plt.show()
+            squares_colours, valid_squares = split_and_sample_colours(blurred_image, mask, 20)
+            # visualize_grids(blurred_image, squares_colours, square_size=20)
+            _squares_colours = {}
+            for k in squares_colours.keys():
+                if k in valid_squares:
+                    _squares_colours[k] = squares_colours[k]
+            squares_colours = {k: colour_group_map[colour] for k, colour in _squares_colours.items()}
+            squares_colours_count = {}
+            for k, colour in squares_colours.items():
+                if colour not in squares_colours_count.keys():
+                    squares_colours_count[colour] = 1
+                else:
+                    squares_colours_count[colour] += 1
+            print(squares_colours_count)
+            tag = cloth + "_colour"
+            result[tag] = {}
+            for k in possible_colours:
+                if k in squares_colours_count.keys():
+                    result[tag][k] = squares_colours_count[k] / len(squares_colours)
+                else:
+                    result[tag][k] = 0.0
 
         return result
