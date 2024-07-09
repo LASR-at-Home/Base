@@ -95,12 +95,21 @@ class HandoverObject(smach.StateMachine):
                 "LOOK_CENTRE",
                 PlayMotion(motion_name="look_centre"),
                 transitions={
-                    "succeeded": "REACH_ARM",
+                    "succeeded": "SAY_REACH_ARM",
                     "aborted": "failed",
                     "preempted": "failed",
                 },
             )
 
+            smach.StateMachine.add(
+                "SAY_REACH_ARM",
+                Say(text="Please step back, I am going to reach my arm out."),
+                transitions={
+                    "succeeded": "REACH_ARM",
+                    "aborted": "REACH_ARM",
+                    "preempted": "REACH_ARM",
+                },
+            )
             if vertical:
                 smach.StateMachine.add(
                     "REACH_ARM",
