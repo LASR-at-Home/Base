@@ -656,11 +656,32 @@ class IntroduceAndSeatGuest(smach.StateMachine):
                             guest_to_introduce_to=guest_to_introduce_to,
                         ),
                         transitions={
+                            "succeeded": f"LOOK_AT_WAITING_GUEST_{guest_id}_{guest_to_introduce_to}",
+                        },
+                    )
+
+                    smach.StateMachine.add(
+                        f"LOOK_AT_WAITING_GUEST_{guest_id}_{guest_to_introduce_to}",
+                        PlayMotion(motion_name="look_very_left"),
+                        transitions={
+                            "succeeded": f"INTRODUCE_{guest_to_introduce_to}_TO_{guest_id}",
+                            "aborted": f"INTRODUCE_{guest_to_introduce_to}_TO_{guest_id}",
+                            "preempted": f"INTRODUCE_{guest_to_introduce_to}_TO_{guest_id}",
+                        },
+                    )
+
+                    smach.StateMachine.add(
+                        f"INTRODUCE_{guest_to_introduce_to}_TO_{guest_id}",
+                        Introduce(
+                            guest_to_introduce=guest_to_introduce_to,
+                            guest_to_introduce_to=guest_id,
+                        ),
+                        transitions={
                             "succeeded": (
                                 "SELECT_SEAT"
                                 if i == len(guests_to_introduce_to) - 1
                                 else f"GET_LOOK_POINT_{guests_to_introduce_to[i+1]}"
-                            )
+                            ),
                         },
                     )
 
