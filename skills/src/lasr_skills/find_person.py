@@ -23,9 +23,7 @@ from geometry_msgs.msg import (
 from lasr_vision_msgs.msg import CDRequest, CDResponse
 from lasr_vision_msgs.srv import (
     CroppedDetectionRequest,
-    CroppedDetectionResponse,
     CroppedDetection,
-    Recognise,
 )
 
 
