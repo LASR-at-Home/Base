@@ -11,7 +11,9 @@ from lasr_skills import Say, LookToPoint
 from typing import Dict, List, Any, Optional
 
 
-def stringify_guest_data(guest_data: Dict[str, Any], guest_id: str) -> str:
+def stringify_guest_data(
+    guest_data: Dict[str, Any], guest_id: str, describe_features: bool
+) -> str:
     """Converts the guest data for a specified guest into a string that can be used
     for the robot to introduce the guest to the other guests/host.
 
@@ -50,7 +52,7 @@ def stringify_guest_data(guest_data: Dict[str, Any], guest_id: str) -> str:
 
     guest_str += f"{relevant_guest_data['name']}, their favourite drink is {relevant_guest_data['drink']}. "
 
-    if not relevant_guest_data["detection"]:
+    if not relevant_guest_data["detection"] or not describe_features:
         return guest_str
 
     filtered_attributes = {}
@@ -179,16 +181,19 @@ def isSingular(attribute: str):
 
 
 class GetStrGuestData(smach.State):
-    def __init__(self, guest_id: str):
+    def __init__(self, guest_id: str, describe_features: bool = False):
         super().__init__(
             outcomes=["succeeded"],
             input_keys=["guest_data"],
             output_keys=["guest_str"],
         )
         self._guest_id = guest_id
+        self._describe_features = describe_features
 
     def execute(self, userdata: UserData) -> str:
-        guest_str = stringify_guest_data(userdata.guest_data, self._guest_id)
+        guest_str = stringify_guest_data(
+            userdata.guest_data, self._guest_id, self._describe_features
+        )
         userdata.guest_str = guest_str
         return "succeeded"
 
@@ -229,6 +234,7 @@ class Introduce(smach.StateMachine):
         self,
         guest_to_introduce: str,
         guest_to_introduce_to: Optional[str] = None,
+        describe_features: Optional[bool] = False,
         everyone: Optional[bool] = False,
     ):
         super().__init__(
@@ -241,7 +247,9 @@ class Introduce(smach.StateMachine):
             if everyone:
                 smach.StateMachine.add(
                     "GetStrGuestData",
-                    GetStrGuestData(guest_id=guest_to_introduce),
+                    GetStrGuestData(
+                        guest_id=guest_to_introduce, describe_features=describe_features
+                    ),
                     transitions={"succeeded": "SayIntroduce"},
                 )
                 smach.StateMachine.add(
@@ -260,7 +268,9 @@ class Introduce(smach.StateMachine):
             else:
                 smach.StateMachine.add(
                     "GetStrGuestData",
-                    GetStrGuestData(guest_id=guest_to_introduce),
+                    GetStrGuestData(
+                        guest_id=guest_to_introduce, describe_features=describe_features
+                    ),
                     transitions={"succeeded": "GetGuestName"},
                 )
 

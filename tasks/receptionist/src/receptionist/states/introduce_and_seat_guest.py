@@ -1041,6 +1041,7 @@ class IntroduceAndSeatGuest(smach.StateMachine):
                         Introduce(
                             guest_to_introduce=guest_id,
                             guest_to_introduce_to=guest_to_introduce_to,
+                            describe_features=guest_to_introduce_to != "host",
                         ),
                         transitions={
                             "succeeded": (
