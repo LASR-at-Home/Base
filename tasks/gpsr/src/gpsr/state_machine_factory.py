@@ -112,18 +112,16 @@ def get_object_detection_polygon(location: str) -> Polygon:
 
 
 def greet(command_param: Dict, sm: smach.StateMachine) -> None:
-    target_pose = get_room_pose(command_param["room"])
-    sm.add(
-        f"STATE_{increment_state_count()}",
-        GoToLocation(location=target_pose),
-        transitions={
-            "succeeded": f"STATE_{STATE_COUNT + 1}",
-            "failed": "failed",
-        },
-    )
-
-    waypoints: List[Pose] = get_person_detection_poses(command_param["room"])
-    polygon: Polygon = get_room_polygon(command_param["room"])
+    if "room" in command_param:
+        waypoints: List[Pose] = get_person_detection_poses(command_param["room"])
+        polygon: Polygon = get_room_polygon(command_param["room"])
+    elif "location" in command_param:
+        waypoints: List[Pose] = [get_location_pose(command_param["location"], True)]
+        polygon: Polygon = get_person_detection_polygon(command_param["location"])
+    else:
+        raise ValueError(
+            "Greet command received with no room or location in command parameters"
+        )
 
     if "name" in command_param:
         criteria = "name"
@@ -306,8 +304,16 @@ def guide(command_param: Dict, sm: smach.StateMachine) -> None:
             location_pose = get_room_pose(command_param["end"])
             location_name = command_param["end"]
     else:
-        location_pose = get_room_pose(command_param["room"])
-        location_name = command_param["room"]
+        if "room" in command_param:
+            location_pose = get_room_pose(command_param["room"])
+            location_name = command_param["room"]
+        elif "location" in command_param:
+            location_pose = get_location_pose(command_param["location"], True)
+            location_name = command_param["location"]
+        else:
+            raise ValueError(
+                "Guide command received with no room or location in command parameters"
+            )
 
     sm.add(
         f"STATE_{increment_state_count()}",
@@ -482,7 +488,7 @@ def go(command_param: Dict, sm: smach.StateMachine, person: bool) -> None:
         f"STATE_{increment_state_count()}",
         GoToLocation(location=target_pose),
         transitions={
-            "succeeded": "succeeded",
+            "succeeded": f"STATE_{STATE_COUNT + 1}",
             "failed": "failed",
         },
     )
@@ -498,6 +504,7 @@ def find(command_param: Dict, sm: smach.StateMachine) -> None:
     """
 
     if "object_category" in command_param:
+        raise NotImplementedError("Find command not implemented")
         if not "location" in command_param:
             raise ValueError(
                 "find command with object but no room in command parameters"
@@ -514,7 +521,8 @@ def find(command_param: Dict, sm: smach.StateMachine) -> None:
                 "failed": "failed",
             },
         )
-    raise NotImplementedError("Find command not implemented")
+    elif "gesture" in command_param:
+        greet(command_param, sm)
 
 
 def meet(command_param: Dict, sm: smach.StateMachine) -> None:
