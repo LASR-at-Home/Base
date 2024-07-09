@@ -1,5 +1,10 @@
 import numpy as np
-from lasr_vision_feature_extraction import split_and_sample_colours, colour_group_map, estimate_colour, possible_colours
+from lasr_vision_feature_extraction import (
+    split_and_sample_colours,
+    colour_group_map,
+    estimate_colour,
+    possible_colours,
+)
 from lasr_vision_feature_extraction.categories_and_attributes import (
     CategoriesAndAttributes,
 )
@@ -196,13 +201,17 @@ class ImageOfCloth(ImageWithMasksAndAttributes):
             mask = self.masks[cloth]
             # plt.imshow(mask)
             # plt.show()
-            squares_colours, valid_squares = split_and_sample_colours(blurred_image, mask, 20)
+            squares_colours, valid_squares = split_and_sample_colours(
+                blurred_image, mask, 20
+            )
             # visualize_grids(blurred_image, squares_colours, square_size=20)
             _squares_colours = {}
             for k in squares_colours.keys():
                 if k in valid_squares:
                     _squares_colours[k] = squares_colours[k]
-            squares_colours = {k: colour_group_map[colour] for k, colour in _squares_colours.items()}
+            squares_colours = {
+                k: colour_group_map[colour] for k, colour in _squares_colours.items()
+            }
             squares_colours_count = {}
             for k, colour in squares_colours.items():
                 if colour not in squares_colours_count.keys():

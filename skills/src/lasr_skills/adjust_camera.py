@@ -371,7 +371,10 @@ class AdjustCamera(smach.StateMachine):
                     (eyes_middle[1] + shoulders_middle[1]) / 2,
                 )
                 rospy.logwarn(f"very middle {very_middle}")
-                eyes_to_shoulders_distance = math.sqrt((eyes_middle[0] - shoulders_middle[0]) ** 2 + (eyes_middle[1] - shoulders_middle[1]))
+                eyes_to_shoulders_distance = math.sqrt(
+                    (eyes_middle[0] - shoulders_middle[0]) ** 2
+                    + (eyes_middle[1] - shoulders_middle[1])
+                )
                 rospy.logwarn(f"eyes to shoulder distance {eyes_to_shoulders_distance}")
                 if eyes_to_shoulders_distance > 0.14:
                     # person is kind of close to the camera,
@@ -394,7 +397,9 @@ class AdjustCamera(smach.StateMachine):
                             print("if y at upper 1/7 for eyes: move up 1 step")
                         elif eyes_middle[1] >= 2 / 9:
                             self.position[0] -= 1
-                            print("if y lower than upper 2/9 for eyes: move down 1 step")
+                            print(
+                                "if y lower than upper 2/9 for eyes: move down 1 step"
+                            )
                         else:
                             if (
                                 1 / 4 <= very_middle[1] <= 1 / 2

@@ -237,7 +237,6 @@ def _3d_mask_crop(
     else:
         raise ValueError(f"Invalid 3D crop_method: {crop_method}")
 
-
     masked_images = []
     unified_mask = np.zeros(rgb_image.shape).astype(rgb_image.dtype)
 
