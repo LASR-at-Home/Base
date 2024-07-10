@@ -141,7 +141,7 @@ def greet(command_param: Dict, sm: smach.StateMachine) -> None:
     if "name" in command_param:
         criteria = "name"
         criteria_value = command_param["name"]
-    elif "clothes" in command_param:  # TODO
+    elif "clothes" in command_param:
         criteria = "clothes"
         criteria_value = command_param["clothes"]
     elif "gesture" in command_param:
@@ -207,8 +207,11 @@ def talk(command_param: Dict, sm: smach.StateMachine) -> None:
 
 
     """
-    if "gesture" in command_param:
+    if "gesture" in command_param or "pose" in command_param or "name" in command_param:
         find(command_param, sm)
+
+        # go back to the start, and report
+
     if "talk" in command_param:
         sm.add(
             f"STATE_{increment_state_count()}",
@@ -249,7 +252,7 @@ def talk(command_param: Dict, sm: smach.StateMachine) -> None:
             f"STATE_{increment_state_count()}",
             ObjectComparison(
                 filter=command_param["object_category"],
-                operation_label="size", # need the relation between command and operation
+                operation_label="size",  # need the relation between command and operation
                 weight=weight_list,
             ),
             transitions={

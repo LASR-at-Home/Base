@@ -23,22 +23,31 @@ class DetectPose(smach.StateMachine):
     class HandleResponse(smach.State):
 
         _pose_dict: Dict[str, str]
-        _pose_to_detect: str
+        _pose_to_detect: Optional[str]
 
-        def __init__(self, pose_dict: Dict[str, str], pose_to_detect: str):
+        def __init__(
+            self, pose_dict: Dict[str, str], pose_to_detect: Optional[str] = None
+        ):
             smach.State.__init__(
-                self, outcomes=["succeeded", "failed"], input_keys=["answer"]
+                self,
+                outcomes=["succeeded", "failed"],
+                input_keys=["answer"],
+                output_keys=[] if pose_to_detect is None else ["detected_pose"],
             )
 
             self._pose_dict = pose_dict
             self._pose_to_detect = pose_to_detect
 
         def execute(self, userdata):
-            if self._pose_dict[userdata.answer] == self._pose_to_detect:
+            if self._pose_to_detect is None:
+                userdata.detected_pose = self._pose_dict[userdata.answer]
                 return "succeeded"
-            return "failed"
+            else:
+                if self._pose_dict[userdata.answer] == self._pose_to_detect:
+                    return "succeeded"
+                return "failed"
 
-    def __init__(self, pose_to_detect: str):
+    def __init__(self, pose_to_detect: Optional[str] = None):
         smach.StateMachine.__init__(
             self, outcomes=["succeeded", "failed"], input_keys=["img_msg"]
         )
