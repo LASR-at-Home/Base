@@ -48,9 +48,7 @@ def stringify_guest_data(
         },
     )
 
-    guest_str = ""
-
-    guest_str += f"{relevant_guest_data['name']}, their favourite drink is {relevant_guest_data['drink']}. "
+    guest_str = f"{relevant_guest_data['name']}, their favourite drink is {relevant_guest_data['drink']}. "
 
     if not relevant_guest_data["detection"] or not describe_features:
         return guest_str
@@ -149,14 +147,18 @@ def stringify_guest_data(
 
     # Combine wearing and not wearing items into guest_str
     if wearing_items:
-        guest_str += "They are wearing " + grammatical_concat(wearing_items)
+        guest_str += "They are wearing " + grammatical_concat(wearing_items) + ". "
     if not_wearing_items:
         if wearing_items:
-            guest_str += "They are also not wearing " + grammatical_concat(
-                not_wearing_items
+            guest_str += (
+                "They are also not wearing "
+                + grammatical_concat(not_wearing_items)
+                + "."
             )
         else:
-            guest_str += "They are not wearing " + grammatical_concat(not_wearing_items)
+            guest_str += (
+                "They are not wearing " + grammatical_concat(not_wearing_items) + "."
+            )
 
     return guest_str
 
@@ -255,7 +257,7 @@ class Introduce(smach.StateMachine):
         self,
         guest_to_introduce: str,
         guest_to_introduce_to: Optional[str] = None,
-        describe_features: Optional[bool] = False,
+        describe_features: bool = False,
         everyone: Optional[bool] = False,
     ):
         super().__init__(
