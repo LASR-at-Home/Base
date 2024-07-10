@@ -47,7 +47,7 @@ class PersonFollowingServer:
 
     def _execute_cb(self, _: FollowGoal) -> None:
         print("Executing follow_person action")
-        while not self._follower.begin_tracking():
+        while not self._follower.begin_tracking(ask=False):
             rospy.logwarn("No people found, retrying...")
             rospy.sleep(rospy.Duration(1.0))
         warnings.warn(

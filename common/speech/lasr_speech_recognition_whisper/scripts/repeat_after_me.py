@@ -18,6 +18,7 @@ voice = Voice()
 
 if USE_ACTIONLIB:
     client = actionlib.SimpleActionClient("transcribe_speech", TranscribeSpeechAction)
+    rospy.loginfo("Waiting for server...")
     client.wait_for_server()
     repeating = False
     rospy.loginfo("Done waiting")
