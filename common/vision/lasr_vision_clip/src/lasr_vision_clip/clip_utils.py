@@ -6,7 +6,6 @@ import cv2_img
 import numpy as np
 from copy import deepcopy
 from sentence_transformers import SentenceTransformer, util
-
 from sensor_msgs.msg import Image
 
 
@@ -37,6 +36,7 @@ def run_clip(
     Returns:
         List[float]: the cosine similarity scores between the image and label embeddings.
     """
+
     txt = model.encode(labels)
     img = model.encode(img)
     with torch.no_grad():
@@ -44,15 +44,48 @@ def run_clip(
     return cos_scores
 
 
-def query_image_stream(
+def load_face_model():
+    from transformers import AutoImageProcessor, AutoModel
+
+    processor = AutoImageProcessor.from_pretrained("google/vit-base-patch16-224")
+    model = AutoModel.from_pretrained("google/vit-base-patch16-224").to("cuda")
+
+    return processor, model
+
+
+def infer(image, processor, model):
+    image = cv2_img.msg_to_cv2_img(image)
+    inputs = processor(image, return_tensors="pt").to("cuda")
+    outputs = model(**inputs)
+    # squeeze and flatten
+    outputs.pooler_output = outputs.pooler_output.squeeze(0).flatten()
+    return outputs.pooler_output.detach().cpu().numpy()
+
+
+def encode_img(model, img_msg: Image) -> np.ndarray:
+    """Run the CLIP model.
+
+    Args:
+        model (Any): clip model loaded into memory
+        img (np.ndarray): the image to query
+
+    Returns:
+        np.ndarray: the image embedding
+    """
+    img = cv2_img.msg_to_cv2_img(img_msg)
+    return model(img.unsqueeze(0)).detach().numpy()
+
+
+def query_image(
+    img_msg: Image,
     model: SentenceTransformer,
     answers: list[str],
     annotate: bool = False,
 ) -> tuple[str, torch.Tensor, Image]:
-    """Queries the CLIP model with the latest image from the robot's camera
-    and a set of possible image captions and returns the most likely caption.
+    """Queries the CLIP model with an image and a set of possible image captions and returns the most likely caption.
 
     Args:
+        img_msg (Image): the image to query
         model (SentenceTransformer): clip model to run inference on, loaded into memory
         answers(list[str]): list of possible answers
         annotate(bool, optional): whether to annotate the image with the most likely, and
@@ -60,7 +93,6 @@ def query_image_stream(
     returns:
         tuple(str, torch.Tensor, Image): the most likely answer, the scores, and the annotated image msg
     """
-    img_msg = rospy.wait_for_message("/xtion/rgb/image_raw", Image)
     img_pil = cv2_img.msg_to_pillow_img(img_msg)
 
     cos_scores = run_clip(model, answers, img_pil)

@@ -1,0 +1,8 @@
+# Image to encode
+sensor_msgs/Image image_raw 
+
+---
+
+# Encoded image vector
+float32[] encoded_vector
+

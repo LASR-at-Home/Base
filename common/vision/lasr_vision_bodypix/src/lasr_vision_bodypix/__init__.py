@@ -1,1 +1,1 @@
-from .bodypix import detect, load_model
+from .bodypix import detect_masks, detect_keypoints, load_model_cached

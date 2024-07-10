@@ -1,10 +1,10 @@
-# Name to associate
-string name
-
 # Dataset to add face to
 string dataset
 
-# Number of images to take
-int32 n_images
+# Name to associate
+string name
+
+# Images
+sensor_msgs/Image[] images
 
 ---

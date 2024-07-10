@@ -1,0 +1,25 @@
+<launch>
+    <description>Run a BodyPix model using the camera</description>
+    <usage doc="Run the demo"></usage>
+    <usage doc="Run the demo with a different model">model:=mobilenet50</usage>
+
+    <!-- arguments -->
+    <arg name="model" default="resnet50" doc="Model to use for the demo" />
+
+    <!-- BodyPix service -->
+    <include file="$(find lasr_vision_bodypix)/launch/bodypix.launch">
+        <arg name="preload" value="['$(arg model)']" />
+    </include>
+
+    <!-- show debug topic -->
+    <node name="image_view" pkg="rqt_image_view" type="rqt_image_view" respawn="false" output="screen" args="/bodypix/debug/$(arg model)" />
+
+    <!-- start relay service -->
+    <node name="mask_relay" pkg="lasr_vision_bodypix" type="mask_relay.py" respawn="false" output="screen" args="/camera/image_raw $(arg model)" />
+
+    <!-- launch video stream -->
+   <include file="$(find video_stream_opencv)/launch/camera.launch">
+        <arg name="visualize" value="true" />
+   </include>
+
+</launch>

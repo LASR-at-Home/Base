@@ -48,7 +48,7 @@ class CommandParserStateMachine(smach.StateMachine):
         Args:
             data_config (Configuration): Configuration object containing the regex patterns
             n_vecs_per_txt_file (int, optional): number of vectors in each gpsr txt
-            file. Defaults to 100.
+            file. Defaults to 1177943.
             total_txt_files (int, optional): total number of gpsr txt files. Defaults to 10.
         """
         smach.StateMachine.__init__(self, outcomes=["succeeded", "failed"])

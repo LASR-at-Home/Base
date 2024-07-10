@@ -1,0 +1,6 @@
+# List of detection requests
+lasr_vision_msgs/CDRequest[] requests
+
+---
+# List of detection responses
+lasr_vision_msgs/CDResponse[] responses

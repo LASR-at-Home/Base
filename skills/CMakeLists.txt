@@ -161,6 +161,7 @@ include_directories(
 ## in contrast to setup.py, you can choose the destination
 catkin_install_python(PROGRAMS
   scripts/unit_test_describe_people.py
+  scripts/unit_test_adjust_camera.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

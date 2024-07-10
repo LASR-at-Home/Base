@@ -12,7 +12,9 @@ if len(sys.argv) < 1:
 
 rospy.init_node("coffee_shop_prep")
 
-save_navigation_point = rospy.ServiceProxy("/save_navigation_points", SaveNavigationPoint)
+save_navigation_point = rospy.ServiceProxy(
+    "/save_navigation_points", SaveNavigationPoint
+)
 save_table_cuboid = rospy.ServiceProxy("/generate_table_cuboid", GenerateTableCuboid)
 
 
@@ -29,20 +31,22 @@ n_tables = int(input("Enter the number of tables: "))
 rospy.loginfo(f"There are {n_tables} tables.")
 
 for i in range(n_tables):
-
     while True:
         long_side_length = short_side_length = radius = 0.0
-        input(f"Place an Aruco marker in the corner of table {i}, adjust me so that I can see it, then press Enter.")
+        input(
+            f"Place an Aruco marker in the corner of table {i}, adjust me so that I can see it, then press Enter."
+        )
         is_rect = bool(int(input("Is rect (0/1): ")))
         if is_rect:
-
             long_side_length = float(input(f"Long side length: "))
             short_side_length = float(input(f"Short side length: "))
         else:
             radius = float(input("Radius: "))
         padding_sz = float((input("Padding: ")))
         try:
-            save_table_cuboid(i, long_side_length, short_side_length, padding_sz, is_rect, radius)
+            save_table_cuboid(
+                i, long_side_length, short_side_length, padding_sz, is_rect, radius
+            )
             break
         except rospy.service.ServiceException:
             rospy.logwarn("Something went wrong - is the Aruco marker in view?")
@@ -52,7 +56,9 @@ for i in range(n_tables):
 
 while True:
     padding_sz = 0.0
-    input(f"Place an Aruco marker in the corner of counter, adjust me so that I can see it, then press Enter.")
+    input(
+        f"Place an Aruco marker in the corner of counter, adjust me so that I can see it, then press Enter."
+    )
     is_rect = bool(int(input("Is rect (0/1): ")))
     if is_rect:
         long_side_length = float(input(f"Long side length: "))
@@ -60,7 +66,9 @@ while True:
     else:
         radius = float(input("Radius: "))
     try:
-        save_table_cuboid(-1, long_side_length, short_side_length, padding_sz, is_rect, radius)
+        save_table_cuboid(
+            -1, long_side_length, short_side_length, padding_sz, is_rect, radius
+        )
         break
     except rospy.service.ServiceException:
         rospy.logwarn("Something went wrong - is the Aruco marker in view?")
@@ -69,11 +77,13 @@ input("Take me to the search position for the counter, then press Enter.")
 save_navigation_point(-1)
 
 while True:
-    input(f"Place an Aruco marker to indicate the waiting area, adjust me so that I can see it, then press Enter.")
+    input(
+        f"Place an Aruco marker to indicate the waiting area, adjust me so that I can see it, then press Enter."
+    )
     try:
         long_side_length = float(input(f"Long side length: "))
         short_side_length = float(input(f"Short side length: "))
-        save_table_cuboid(-2, long_side_length, short_side_length, 0.0  , 1, 0.0)
+        save_table_cuboid(-2, long_side_length, short_side_length, 0.0, 1, 0.0)
         break
     except rospy.service.ServiceException:
         rospy.logwarn("Something went wrong - is the Aruco marker in view?")

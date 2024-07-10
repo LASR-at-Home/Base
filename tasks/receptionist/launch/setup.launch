@@ -4,17 +4,26 @@
     <arg name="config" default="lab"/>
 
     <!--     INTERACTION     -->
-    <arg name="whisper_device_param" default="10" />
+    <arg name="whisper_device_param" default="9" />
     <node pkg="lasr_speech_recognition_whisper" type="transcribe_microphone_server" name="transcribe_speech" output="screen" args="--mic_device $(arg whisper_device_param)"/>
 
     <!--     STATIC POINTS     -->
-    <rosparam command="load" file="$(find receptionist)/config/$(arg config).yaml" />
+    <rosparam command="load" file="$(find receptionist)/config/$(arg config).yaml" ns="receptionist" />
 
     <!--     MOTIONS     -->
     <rosparam command="load" file="$(find lasr_skills)/config/motions.yaml"/>
     <rosparam command="load" file="$(find receptionist)/config/motions.yaml"/>
 
     <!--      PERCEPTION     -->
-    <include file="$(find lasr_vision_yolov8)/launch/service.launch" />
+    <include file="$(find lasr_vision_yolov8)/launch/service.launch">
+        <param name="debug" value="true" />
+    </include>
+    <include file="$(find lasr_vision_cropped_detection)/launch/cropped_detection.launch"/>
+    <node pkg="lasr_vision_feature_extraction" type="service" name="torch_service" output="screen"/>
+    <include file="$(find lasr_vision_bodypix)/launch/bodypix_services.launch">
+        <param name="preload" type="yaml" value='resnet50' />
+    </include>
+
+    <node pkg="lasr_vision_deepface" type="service" name="deepface_service" output="screen"/>
 
 </launch>

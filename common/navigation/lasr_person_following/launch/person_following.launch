@@ -1,0 +1,10 @@
+<launch>
+
+ <include file="$(find lasr_person_following)/launch/joint_leg_tracker.launch">
+ </include> 
+
+ <node pkg="lasr_person_following" type="person_following.py" name="person_following" output="screen" />
+
+ <node pkg="tiago_2dnav" type="navigation_camera_mgr.py" name="navigation_camera_mgr" output="screen"/>
+</launch>
+

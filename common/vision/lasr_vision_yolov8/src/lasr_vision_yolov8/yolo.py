@@ -111,7 +111,10 @@ def detect_3d(
 
     # transform pcl to map frame
     trans = tf_buffer.lookup_transform(
-        "map", request.pcl.header.frame_id, rospy.Time(0), rospy.Duration(1.0)
+        "map",
+        request.pcl.header.frame_id,
+        rospy.Time(0),
+        rospy.Duration(1.0),
     )
     pcl_map = do_transform_cloud(request.pcl, trans)
 
@@ -146,6 +149,9 @@ def detect_3d(
                 width=request.pcl.width,
             )
             detection.point = Point(*centroid)
+            rospy.loginfo(
+                f"Detected point: {detection.point} of object {detection.name}"
+            )
 
         if debug_point_publisher is not None:
             markers.create_and_publish_marker(

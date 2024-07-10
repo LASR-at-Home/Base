@@ -29,9 +29,8 @@ class VqaService:
         Returns:
             VqaResult
         """
-        possible_answers = request.possible_answers
         answer, cos_score, annotated_img = query_image_stream(
-            self._model, possible_answers, annotate=True
+            request.image, self._model, request.possible_answers, annotate=True
         )
 
         self._debug_pub.publish(annotated_img)
