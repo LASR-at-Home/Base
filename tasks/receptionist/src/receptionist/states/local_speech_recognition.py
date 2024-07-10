@@ -60,6 +60,7 @@ def speech_recovery(sentence):
     print(f"final name: {handle_name(sentence_list, True)}")
     print(f"final drink: {handle_drink(sentence_list, True)}")
 
+
 def handle_name(sentence_list, last_resort):
     result = handle_similar_spelt(sentence_list, available_names, 1)
     if result != "unknown":
@@ -73,6 +74,7 @@ def handle_name(sentence_list, last_resort):
     else:
         print("Last resort name")
         return handle_closest_spelt(sentence_list, available_names)
+
 
 def handle_drink(sentence_list, last_resort):
     result = infer_second_drink(sentence_list)

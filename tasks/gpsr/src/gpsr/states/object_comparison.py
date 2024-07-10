@@ -57,7 +57,9 @@ class ObjectComparison(smach.StateMachine):
         def execute(self, userdata):
             detected_objects = userdata.object_dict
             counts = self.count_category(self.object_weight, detected_objects)
-            category_counts = {key: value for key, value in counts.items() if value != 0}
+            category_counts = {
+                key: value for key, value in counts.items() if value != 0
+            }
             userdata.category_dict = category_counts
             userdata.detections_categories = list(category_counts.keys())
             return "succeeded"
@@ -149,7 +151,7 @@ class ObjectComparison(smach.StateMachine):
                     "sorted_size",
                     "sorted_weights",
                 ],
-                output_keys=["say_text"]
+                output_keys=["say_text"],
             )
 
         def execute(self, userdata):
@@ -250,6 +252,8 @@ class ObjectComparison(smach.StateMachine):
                 transitions={"succeeded": "succeeded", "failed": "failed"},
                 remapping={"text": "say_text"},
             )
+
+
 # if __name__ == "__main__":
 #     import rospy
 #     from sensor_msgs.msg import PointCloud2
