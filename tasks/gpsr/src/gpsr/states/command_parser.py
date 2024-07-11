@@ -51,6 +51,9 @@ class CommandParserStateMachine(smach.StateMachine):
             file. Defaults to 1177943.
             total_txt_files (int, optional): total number of gpsr txt files. Defaults to 10.
         """
+        self._parse_command_counter = 0
+        self._parse_command_counter_threshold = 3
+
         smach.StateMachine.__init__(self, outcomes=["succeeded", "failed"])
 
         with self:
@@ -66,9 +69,18 @@ class CommandParserStateMachine(smach.StateMachine):
                 ParseCommand(data_config),
                 transitions={
                     "succeeded": "succeeded",
-                    "failed": "COMMAND_SIMILARITY_MATCHER",
+                    "failed": "CHECK_PARSE_COMMAND_COUNTER",
                 },
                 remapping={"parsed_command": "parsed_command"},
+            )
+
+            smach.StateMachine.add(
+                "CHECK_PARSE_COMMAND_COUNTER",
+                smach.CBState(self._increment_counter, outcomes=["continue", "exceeded"]),
+                transitions={
+                    "continue": "COMMAND_SIMILARITY_MATCHER",
+                    "exceeded": "ASK_FOR_COMMAND"
+                }
             )
 
             smach.StateMachine.add(
@@ -80,3 +92,13 @@ class CommandParserStateMachine(smach.StateMachine):
                     "matched_command": "raw_command",
                 },
             )
+
+    def _increment_counter(self, userdata):
+        """Increment counter and determine whether command has been parsed over the number of times 
+        set by the threshold.
+        """
+        self._parse_command_counter += 1
+        if self._parse_command_counter >= self._parse_command_counter_threshold:
+            self._parse_command_counter = 0
+            return "exceeded"
+        return "continue"

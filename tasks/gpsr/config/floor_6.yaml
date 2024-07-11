@@ -222,7 +222,7 @@ arena:
             - x: 2.8841753005981445
               y: -1.464163780212402
               z: 0.5
-    living_room:
+    living room:
       pose:
         position: 
           x: 1.5507337906536043
