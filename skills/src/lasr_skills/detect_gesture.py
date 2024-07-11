@@ -135,12 +135,13 @@ class DetectGesture(smach.State):
                 pose=Pose(position=userdata.detection.point, orientation=Quaternion(0, 0, 0, 1))
             )
             trans = _buffer.lookup_transform(
-                "base_laser_link", person_pose.header.frame_id, rospy.Time(0), rospy.Duration(1.0)
+                "odom", person_pose.header.frame_id, rospy.Time(0), rospy.Duration(1.0)
             )
             pose = do_transform_pose(person_pose, trans)
-            userdata.person_point = pose.pose.position
+            # userdata.person_point = pose.pose.position
             create_and_publish_marker(self.person_point_pub, PointStamped(header=pose.header, point=pose.pose.position),
-                                      name="person_point_base_link", r=0.0, g=0.0, b=1.0)
+                                      name="person_point_odom", r=0.0, g=0.0, b=1.0)
+            userdata.person_point = pose.pose.position
 
         cv2_gesture_img = cv2_img.msg_to_cv2_img(userdata.img_msg)
         # Add text to the image
