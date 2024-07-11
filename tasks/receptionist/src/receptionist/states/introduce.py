@@ -11,7 +11,9 @@ from lasr_skills import Say, LookToPoint
 from typing import Dict, List, Any, Optional
 
 
-def stringify_guest_data(guest_data: Dict[str, Any], guest_id: str) -> str:
+def stringify_guest_data(
+    guest_data: Dict[str, Any], guest_id: str, describe_features: bool
+) -> str:
     """Converts the guest data for a specified guest into a string that can be used
     for the robot to introduce the guest to the other guests/host.
 
@@ -46,11 +48,9 @@ def stringify_guest_data(guest_data: Dict[str, Any], guest_id: str) -> str:
         },
     )
 
-    guest_str = ""
+    guest_str = f"{relevant_guest_data['name']}, their favourite drink is {relevant_guest_data['drink']}. "
 
-    guest_str += f"{relevant_guest_data['name']}, their favourite drink is {relevant_guest_data['drink']}. "
-
-    if not relevant_guest_data["detection"]:
+    if not relevant_guest_data["detection"] or not describe_features:
         return guest_str
 
     filtered_attributes = {}
@@ -107,6 +107,9 @@ def stringify_guest_data(guest_data: Dict[str, Any], guest_id: str) -> str:
     if len(top_4_attributes) < 4:
         top_4_attributes.append(sorted_attributes[4])
 
+    wearing_items = []
+    not_wearing_items = []
+
     for i in range(len(top_4_attributes)):
         attribute_name = top_4_attributes[i]
         attribute_value = filtered_attributes[top_4_attributes[i]]
@@ -115,25 +118,47 @@ def stringify_guest_data(guest_data: Dict[str, Any], guest_id: str) -> str:
         if attribute_name == "hair":
             hair_shape = attribute_value["hair_shape"]
             hair_colour = attribute_value["hair_colour"]
-            guest_str += f"They have {hair_shape} and {hair_colour} . "
+            guest_str += f"They have {hair_shape} and {hair_colour}. "
         elif attribute_name == "facial_hair":
             if confidence < 0:
                 guest_str += "They don't have facial hair. "
             else:
                 guest_str += "They have facial hair. "
         else:
+            attribute = attribute_value["attribute"]
             if confidence < 0:
-                if isSingular(attribute_value["attribute"]):
-                    guest_str += (
-                        f"They are not wearing a {attribute_value['attribute']}."
-                    )
+                if isSingular(attribute):
+                    not_wearing_items.append(f"a {attribute}")
                 else:
-                    guest_str += f"They are not wearing {attribute_value['attribute']}."
+                    not_wearing_items.append(attribute)
             else:
-                if isSingular(attribute_value["attribute"]):
-                    guest_str += f"They are wearing a {attribute_value['attribute']}."
+                if isSingular(attribute):
+                    wearing_items.append(f"a {attribute}")
                 else:
-                    guest_str += f"They are wearing {attribute_value['attribute']}."
+                    wearing_items.append(attribute)
+
+    def grammatical_concat(items):
+        if len(items) > 1:
+            return ", ".join(items[:-1]) + " and " + items[-1]
+        elif items:
+            return items[0]
+        else:
+            return ""
+
+    # Combine wearing and not wearing items into guest_str
+    if wearing_items:
+        guest_str += "They are wearing " + grammatical_concat(wearing_items) + ". "
+    if not_wearing_items:
+        if wearing_items:
+            guest_str += (
+                "They are also not wearing "
+                + grammatical_concat(not_wearing_items)
+                + "."
+            )
+        else:
+            guest_str += (
+                "They are not wearing " + grammatical_concat(not_wearing_items) + "."
+            )
 
     return guest_str
 
@@ -179,16 +204,19 @@ def isSingular(attribute: str):
 
 
 class GetStrGuestData(smach.State):
-    def __init__(self, guest_id: str):
+    def __init__(self, guest_id: str, describe_features: bool = False):
         super().__init__(
             outcomes=["succeeded"],
             input_keys=["guest_data"],
             output_keys=["guest_str"],
         )
         self._guest_id = guest_id
+        self._describe_features = describe_features
 
     def execute(self, userdata: UserData) -> str:
-        guest_str = stringify_guest_data(userdata.guest_data, self._guest_id)
+        guest_str = stringify_guest_data(
+            userdata.guest_data, self._guest_id, self._describe_features
+        )
         userdata.guest_str = guest_str
         return "succeeded"
 
@@ -229,6 +257,7 @@ class Introduce(smach.StateMachine):
         self,
         guest_to_introduce: str,
         guest_to_introduce_to: Optional[str] = None,
+        describe_features: bool = False,
         everyone: Optional[bool] = False,
     ):
         super().__init__(
@@ -241,7 +270,9 @@ class Introduce(smach.StateMachine):
             if everyone:
                 smach.StateMachine.add(
                     "GetStrGuestData",
-                    GetStrGuestData(guest_id=guest_to_introduce),
+                    GetStrGuestData(
+                        guest_id=guest_to_introduce, describe_features=describe_features
+                    ),
                     transitions={"succeeded": "SayIntroduce"},
                 )
                 smach.StateMachine.add(
@@ -260,7 +291,9 @@ class Introduce(smach.StateMachine):
             else:
                 smach.StateMachine.add(
                     "GetStrGuestData",
-                    GetStrGuestData(guest_id=guest_to_introduce),
+                    GetStrGuestData(
+                        guest_id=guest_to_introduce, describe_features=describe_features
+                    ),
                     transitions={"succeeded": "GetGuestName"},
                 )
 
