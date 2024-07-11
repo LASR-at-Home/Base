@@ -122,26 +122,8 @@ class DetectGesture(smach.State):
 
         rospy.loginfo(f"Detected gesture: {detected_gesture}")
         userdata.gesture_detected = detected_gesture
-        # take any valid point which is not none from the detected keypoints
-        person_point = None
-        for keypoint in keypoint_info:
-            if keypoint_info[keypoint]["x"] is not None:
-                # Point
-                person_point = Point(
-                    x=keypoint_info[keypoint]["x"], y=keypoint_info[keypoint]["y"], z=0
-                )
-                break
 
-        # get the xywh of the detected person and take the center point
-        det_point = Point(
-            x=(res.person_detection.x + res.person_detection.width / 2),
-            y=(res.person_detection.y + res.person_detection.height / 2),
-            z=0,
-        )
-        # transform the point to the map frame
-
-
-        if not person_point:
+        if not userdata.detection.point:
             # take it a meter away from the robot position if no keypoints are detected
             robot_pose = rospy.wait_for_message("/robot_pose", Pose)
             userdata.person_point = Point(x=robot_pose.position.x + 1, y=robot_pose.position.y)
@@ -149,32 +131,16 @@ class DetectGesture(smach.State):
             _buffer = tf.Buffer(cache_time=rospy.Duration.from_sec(10.0))
             _listener = tf.TransformListener(_buffer)
             person_pose = PoseStamped(
-                header=Header(frame_id="xtion_rgb_optical_frame"),
-                pose=Pose(position=person_point, orientation=Quaternion(0, 0, 0, 1))
+                header=Header(frame_id="map"),
+                pose=Pose(position=userdata.detection.point, orientation=Quaternion(0, 0, 0, 1))
             )
-            rospy.loginfo(f" The detected detection are {userdata.detection}")
-            rospy.loginfo(f" The initial points are {person_point}")
-            rospy.loginfo(f" the person pose is {person_pose}")
             trans = _buffer.lookup_transform(
                 "base_laser_link", person_pose.header.frame_id, rospy.Time(0), rospy.Duration(1.0)
             )
             pose = do_transform_pose(person_pose, trans)
             userdata.person_point = pose.pose.position
-
-            create_and_publish_marker(self.person_point_pub, PointStamped(header=pose.header, point=pose.pose.position), name="person_point")
-            rospy.loginfo(f"Person point: {pose}")
-
-            # do it for map frame
-            trans_map = _buffer.lookup_transform(
-                "map", person_pose.header.frame_id, rospy.Time(0), rospy.Duration(1.0)
-            )
-            pose_map = do_transform_pose(person_pose, trans_map)
-
-            create_and_publish_marker(self.person_point_pub, PointStamped(header=pose_map.header, point=pose_map.pose.position), name="person_point_map")
-            rospy.loginfo(f"Person point in map frame: {pose_map}")
-
-
-
+            create_and_publish_marker(self.person_point_pub, PointStamped(header=pose.header, point=pose.pose.position),
+                                      name="person_point_base_link", r=0.0, g=0.0, b=1.0)
 
         cv2_gesture_img = cv2_img.msg_to_cv2_img(userdata.img_msg)
         # Add text to the image
