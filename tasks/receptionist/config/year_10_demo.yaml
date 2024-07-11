@@ -18,30 +18,22 @@ priors:
     - orange juice
     - red wine
     - tropical juice
-  
 
-#WAIT POSE LAB:
+# WAIT POSE YEAR 10 DEMO:
 wait_pose: 
   position: 
-    x: 2.4307581363168773
-    y: -1.661594410669659
+    x: 2.675762687658822
+    y: 2.3335752842925213
     z: 0.0
   orientation: 
     x: 0.0
     y: 0.0
-    z: 0.012769969339563213
-    w: 0.9999184606171978
+    z: 0.77370619167885
+    w: 0.6335445753518931
 
-#556918144226074
-
-
-#0.478893309417269
-#0.8778731105321406
-
-
-#WAIT AREA LAB:
+# WAIT AREA YEAR 10 DEMO:
 # From robot POV: [top left, top right,bottom right, bottom left ] 
-wait_area: [[2.65, -0.61], [4.21, -0.33], [4.58, -2.27], [2.67, -2.66]]
+wait_area: [[1.26,4.6],[2.80,4.82],[3.03,3.63],[1.53,3.4]]
 
 #Where to position self for seating guests
 seat_pose:
@@ -61,9 +53,9 @@ sofa_point:
   x: 0.4604474902153015
   y: 1.877323865890503
   z: 0.002471923828125
-
 seat_area: [[-0.39, 0.87], [-0.74, 2.18], [1.26, 2.64], [1.54, 1.26]]
 max_people_on_sofa: 0
-sofa_area: [[-0.39, 0.87], [-0.74, 2.18], [1.26, 2.64], [1.54, 1.26]]
+#sofa_area: [[-0.39, 0.87], [-0.74, 2.18], [1.26, 2.64], [1.54, 1.26]]
+sofa_area: [[0.83, 2.40], [1.16, 2.51], [1.23, 2.27], [0.91, 2.17]]
 
 sweep: true

@@ -77,6 +77,7 @@ class GetNameAndDrink(smach.StateMachine):
                 outcome = "failed"
 
             return outcome
+
     class PostRecoveryDecision(smach.State):
         def __init__(
             self,
@@ -93,6 +94,7 @@ class GetNameAndDrink(smach.StateMachine):
             prior_data: Dict[str, List[str]] = rospy.get_param(param_key)
             self._possible_names = [name.lower() for name in prior_data["names"]]
             self._possible_drinks = [drink.lower() for drink in prior_data["drinks"]]
+
         def execute(self, userdata: UserData) -> str:
             if not self._recovery_name_and_drink_required(userdata):
                 if userdata.guest_data[self._guest_id]["name"] == "unknown":

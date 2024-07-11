@@ -22,7 +22,9 @@ class HandleGuest(smach.StateMachine):
             with self:
                 smach.StateMachine.add(
                     f"GET_NAME_AND_DRINK_GUEST_{guest_id}",
-                    AskAndListen("What is your name and favourite drink?"),
+                    AskAndListen(
+                        "Please say 'Hi Tiago' when talking to me. What is your name and favourite drink?"
+                    ),
                     transitions={
                         "succeeded": f"PARSE_NAME_AND_DRINK_GUEST_{guest_id}",
                         "failed": f"PARSE_NAME_AND_DRINK_GUEST_{guest_id}",
@@ -44,7 +46,7 @@ class HandleGuest(smach.StateMachine):
                 smach.StateMachine.add(
                     f"REPEAT_GET_NAME_AND_DRINK_GUEST_{guest_id}",
                     AskAndListen(
-                        "Sorry, I didn't get that, please raise your voice. What is your name and favourite drink?"
+                        "Sorry, I didn't get that, please raise your voice. What is your name and favourite drink? Please remember to say 'hi tiago'"
                     ),
                     transitions={
                         "succeeded": f"REPEAT_PARSE_NAME_AND_DRINK_GUEST_{guest_id}",
