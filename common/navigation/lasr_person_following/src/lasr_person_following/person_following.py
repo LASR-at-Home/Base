@@ -75,13 +75,14 @@ class PersonFollower:
     _person_trajectory_pub: rospy.Publisher
 
     def __init__(
-        self,
-        start_following_radius: float = 2.0,
-        start_following_angle: float = 45.0,
-        new_goal_threshold: float = 2.0,
-        stopping_distance: float = 1.0,
-        static_speed: float = 0.0015,
-        max_speed: float = 0.55,
+            self,
+            start_following_radius: float = 2.0,
+            start_following_angle: float = 45.0,
+            new_goal_threshold: float = 2.0,
+            stopping_distance: float = 1.0,
+            static_speed: float = 0.0015,
+            max_speed: float = 0.55,
+            asking_time_limit: float = 15.0,
     ):
         self._start_following_radius = start_following_radius
         self._start_following_angle = start_following_angle
@@ -89,6 +90,7 @@ class PersonFollower:
         self._stopping_distance = stopping_distance
         self._static_speed = static_speed
         self._max_speed = max_speed
+        self._asking_time_limit = asking_time_limit
 
         self._track_id = None
 
@@ -192,8 +194,8 @@ class PersonFollower:
             )
             rospy.loginfo(f"Person {person.id} is at {dist}m and {angle} degrees")
             if (
-                dist < self._start_following_radius
-                and abs(angle) < self._start_following_angle
+                    dist < self._start_following_radius
+                    and abs(angle) < self._start_following_angle
             ):
                 if dist < min_dist:
                     min_dist = dist
@@ -241,7 +243,7 @@ class PersonFollower:
         # cancel current goal
         self._cancel_goal()
 
-        self._tts("Can you wave at me so that i can try to find you easily", wait=True)
+        self._tts("Please come into my view and wave so that I can find you", wait=True)
 
         for motion in self._vision_recovery_motions:
             rospy.loginfo(f"Performing motion: {motion}")
@@ -252,7 +254,7 @@ class PersonFollower:
                 response = self._detect_waving_person()
                 if response.wave_detected:
                     if np.isnan(response.wave_position.point.x) or np.isnan(
-                        response.wave_position.point.y
+                            response.wave_position.point.y
                     ):
                         continue
                     else:
@@ -291,7 +293,7 @@ class PersonFollower:
     def _quat_to_dir(self, q: Quaternion):
         x, y, z, w = q.x, q.y, q.z, q.w
         forward = np.array(
-            [1 - 2 * (y**2 + z**2), 2 * (x * y - z * w), 2 * (x * z + y * w)]
+            [1 - 2 * (y ** 2 + z ** 2), 2 * (x * y - z * w), 2 * (x * z + y * w)]
         )
         return forward
 
@@ -332,11 +334,11 @@ class PersonFollower:
         return True
 
     def _get_pose_on_path(
-        self, start_pose: PoseStamped, goal_pose: PoseStamped, dist_to_goal: float
+            self, start_pose: PoseStamped, goal_pose: PoseStamped, dist_to_goal: float
     ) -> Union[None, PoseStamped]:
         start: rospy.Time = rospy.Time.now()
         assert (
-            start_pose.header.frame_id == goal_pose.header.frame_id
+                start_pose.header.frame_id == goal_pose.header.frame_id
         ), "Start and goal poses must be in the same frame"
 
         chosen_pose: Union[None, PoseStamped] = None
@@ -385,6 +387,7 @@ class PersonFollower:
         last_goal_time: Union[None, rospy.Time] = None
         going_to_person: bool = False
         track_vels: List[float] = []
+        asking_time: rospy.Time = rospy.Time.now()
 
         while not rospy.is_shutdown():
 
@@ -448,8 +451,14 @@ class PersonFollower:
                 last_goal_time = rospy.Time.now()
                 prev_track = track
 
-            if np.mean([np.linalg.norm(vel) for vel in track_vels]) > self._max_speed:
+            # Check if the person is walking too fast and ask them to slow down only
+            # if you haven't asked them in the last 15 seconds
+            if np.mean([np.linalg.norm(vel) for vel in track_vels]) > self._max_speed and \
+                    (
+                            rospy.Time.now() - asking_time
+                    ).to_sec() > self._asking_time_limit:
                 self._tts("Please walk slower, I am struggling to keep up", wait=False)
+                asking_time = rospy.Time.now()
 
             # Distance to the previous pose
             dist_to_prev = (
@@ -469,22 +478,21 @@ class PersonFollower:
                 prev_goal = goal_pose
                 prev_track = track
                 last_goal_time = rospy.Time.now()
+            # retry goal if it was aborted
             elif (
-                self._move_base_client.get_state() in [GoalStatus.ABORTED]
-                and prev_goal is not None
+                    self._move_base_client.get_state() in [GoalStatus.ABORTED]
+                    and prev_goal is not None
             ):
                 rospy.logwarn("Goal was aborted, retrying")
-                rospy.logwarn((rospy.Time.now() - last_goal_time).to_sec())
-                rospy.logwarn(track.pose == prev_track.pose)
-                rospy.logwarn("")
                 self._move_base(prev_goal)
+            # check if the person has been static for too long
             elif (
-                (
-                    np.mean([np.linalg.norm(vel) for vel in track_vels])
-                    < self._static_speed
-                )
-                and len(track_vels) == 10
-                and prev_track is not None
+                    (
+                            np.mean([np.linalg.norm(vel) for vel in track_vels])
+                            < self._static_speed
+                    )
+                    and len(track_vels) == 10
+                    and prev_track is not None
             ):
                 rospy.logwarn(
                     "Person has been static for too long, going to them and stopping"
@@ -494,41 +502,6 @@ class PersonFollower:
 
                 # clear velocity buffer
                 track_vels = []
-
-                robot_pose: PoseStamped = self._robot_pose_in_odom()
-                dist: float = self._euclidian_distance(track.pose, robot_pose.pose)
-                rospy.loginfo(f"Distance to person: {dist}")
-
-                # If the person is too far away, go to them
-                if dist > self._stopping_distance:
-                    goal_pose = self._get_pose_on_path(
-                        self._tf_pose(robot_pose, "map"),
-                        self._tf_pose(
-                            PoseStamped(
-                                pose=track.pose,
-                                header=tracks.header,
-                            ),
-                            "map",
-                        ),
-                        self._stopping_distance,
-                    )
-                    # If we can't find a path, face them
-                    if goal_pose is None:
-                        rospy.logwarn("Could not find a path to the person")
-                        goal_pose = robot_pose
-                        goal_pose.pose.orientation = self._compute_face_quat(
-                            robot_pose.pose, track.pose
-                        )
-                        goal_pose = self._tf_pose(goal_pose, "map")
-                # Otherwise, face them
-                else:
-                    goal_pose = robot_pose
-                    goal_pose.pose.orientation = self._compute_face_quat(
-                        robot_pose.pose, track.pose
-                    )
-                    goal_pose = self._tf_pose(goal_pose, "map")
-
-                self._move_base(goal_pose)
 
                 if self._check_finished():
                     rospy.loginfo("Finished following person")

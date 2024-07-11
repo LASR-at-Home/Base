@@ -10,6 +10,12 @@ from lasr_vision_msgs.srv import (
     BodyPixKeypointDetectionRequest,
 )
 from sensor_msgs.msg import Image
+from geometry_msgs.msg import Point, Pose, PoseStamped, Quaternion, PointStamped
+from std_msgs.msg import Header
+from tf2_geometry_msgs.tf2_geometry_msgs import do_transform_pose
+import tf2_ros as tf
+from visualization_msgs.msg import Marker
+from markers import create_and_publish_marker
 
 
 class DetectGesture(smach.State):
@@ -18,19 +24,19 @@ class DetectGesture(smach.State):
     """
 
     def __init__(
-        self,
-        gesture_to_detect: Optional[str] = None,
-        bodypix_model: str = "resnet50",
-        bodypix_confidence: float = 0.1,
-        buffer_width: int = 50,
-        debug_publisher: str = "/skills/gesture_detection/debug",
+            self,
+            gesture_to_detect: Optional[str] = None,
+            bodypix_model: str = "resnet50",
+            bodypix_confidence: float = 0.1,
+            buffer_width: int = 50,
+            debug_publisher: str = "/skills/gesture_detection/debug",
     ):
         """Optionally stores the gesture to detect. If None, it will infer the gesture from the keypoints."""
         smach.State.__init__(
             self,
             outcomes=["succeeded", "missing_keypoints", "failed"],
-            input_keys=["img_msg"],
-            output_keys=["gesture_detected"],
+            input_keys=["img_msg", "detection"],
+            output_keys=["gesture_detected", "person_point"],
         )
         self.gesture_to_detect = gesture_to_detect
         self.bodypix_client = rospy.ServiceProxy(
@@ -46,6 +52,8 @@ class DetectGesture(smach.State):
             "rightWrist",
             "rightShoulder",
         ]
+        # publish a marker
+        self.person_point_pub = rospy.Publisher("/person_point", Marker, queue_size=1)
 
     def execute(self, userdata):
 
@@ -68,59 +76,111 @@ class DetectGesture(smach.State):
             for keypoint in detected_keypoints
         }
 
+        detected_gesture = "none"
+
         if "leftShoulder" in keypoint_info and "leftWrist" in keypoint_info:
             if (
-                self.gesture_to_detect == "raising_left_arm"
-                or self.gesture_to_detect is None
+                    self.gesture_to_detect == "raising_left_arm"
+                    or self.gesture_to_detect is None
             ):
                 if keypoint_info["leftWrist"]["y"] < keypoint_info["leftShoulder"]["y"]:
-                    self.gesture_to_detect = "raising_left_arm"
+                    detected_gesture = "raising_left_arm"
             if (
-                self.gesture_to_detect == "pointing_to_the_left"
-                or self.gesture_to_detect is None
+                    self.gesture_to_detect == "pointing_to_the_left"
+                    or self.gesture_to_detect is None
             ):
                 if (
-                    keypoint_info["leftWrist"]["x"] - self.buffer_width
-                    > keypoint_info["leftShoulder"]["x"]
+                        keypoint_info["leftWrist"]["x"] - self.buffer_width
+                        > keypoint_info["leftShoulder"]["x"]
                 ):
-                    self.gesture_to_detect = "pointing_to_the_left"
+                    detected_gesture = "pointing_to_the_left"
 
         if (
-            "rightShoulder" in keypoint_info
-            and "rightWrist" in keypoint_info
-            and self.gesture_to_detect is None
+                "rightShoulder" in keypoint_info
+                and "rightWrist" in keypoint_info
+                and self.gesture_to_detect is None
         ):
             print(keypoint_info["rightShoulder"]["x"], keypoint_info["rightWrist"]["x"])
             if (
-                self.gesture_to_detect == "raising_right_arm"
-                or self.gesture_to_detect is None
+                    self.gesture_to_detect == "raising_right_arm"
+                    or self.gesture_to_detect is None
             ):
                 if (
-                    keypoint_info["rightWrist"]["y"]
-                    < keypoint_info["rightShoulder"]["y"]
+                        keypoint_info["rightWrist"]["y"]
+                        < keypoint_info["rightShoulder"]["y"]
                 ):
-                    self.gesture_to_detect = "raising_right_arm"
+                    detected_gesture = "raising_right_arm"
             if (
-                self.gesture_to_detect == "pointing_to_the_right"
-                or self.gesture_to_detect is None
+                    self.gesture_to_detect == "pointing_to_the_right"
+                    or self.gesture_to_detect is None
             ):
                 if (
-                    keypoint_info["rightShoulder"]["x"] - self.buffer_width
-                    > keypoint_info["rightWrist"]["x"]
+                        keypoint_info["rightShoulder"]["x"] - self.buffer_width
+                        > keypoint_info["rightWrist"]["x"]
                 ):
-                    self.gesture_to_detect = "pointing_to_the_right"
+                    detected_gesture = "pointing_to_the_right"
 
-        if self.gesture_to_detect is None:
-            self.gesture_to_detect = "none"
+        rospy.loginfo(f"Detected gesture: {detected_gesture}")
+        userdata.gesture_detected = detected_gesture
+        # take any valid point which is not none from the detected keypoints
+        person_point = None
+        for keypoint in keypoint_info:
+            if keypoint_info[keypoint]["x"] is not None:
+                # Point
+                person_point = Point(
+                    x=keypoint_info[keypoint]["x"], y=keypoint_info[keypoint]["y"], z=0
+                )
+                break
 
-        rospy.loginfo(f"Detected gesture: {self.gesture_to_detect}")
-        userdata.gesture_detected = self.gesture_to_detect
+        # get the xywh of the detected person and take the center point
+        det_point = Point(
+            x=(res.person_detection.x + res.person_detection.width / 2),
+            y=(res.person_detection.y + res.person_detection.height / 2),
+            z=0,
+        )
+        # transform the point to the map frame
+
+
+        if not person_point:
+            # take it a meter away from the robot position if no keypoints are detected
+            robot_pose = rospy.wait_for_message("/robot_pose", Pose)
+            userdata.person_point = Point(x=robot_pose.position.x + 1, y=robot_pose.position.y)
+        else:
+            _buffer = tf.Buffer(cache_time=rospy.Duration.from_sec(10.0))
+            _listener = tf.TransformListener(_buffer)
+            person_pose = PoseStamped(
+                header=Header(frame_id="xtion_rgb_optical_frame"),
+                pose=Pose(position=person_point, orientation=Quaternion(0, 0, 0, 1))
+            )
+            rospy.loginfo(f" The detected detection are {userdata.detection}")
+            rospy.loginfo(f" The initial points are {person_point}")
+            rospy.loginfo(f" the person pose is {person_pose}")
+            trans = _buffer.lookup_transform(
+                "base_laser_link", person_pose.header.frame_id, rospy.Time(0), rospy.Duration(1.0)
+            )
+            pose = do_transform_pose(person_pose, trans)
+            userdata.person_point = pose.pose.position
+
+            create_and_publish_marker(self.person_point_pub, PointStamped(header=pose.header, point=pose.pose.position), name="person_point")
+            rospy.loginfo(f"Person point: {pose}")
+
+            # do it for map frame
+            trans_map = _buffer.lookup_transform(
+                "map", person_pose.header.frame_id, rospy.Time(0), rospy.Duration(1.0)
+            )
+            pose_map = do_transform_pose(person_pose, trans_map)
+
+            create_and_publish_marker(self.person_point_pub, PointStamped(header=pose_map.header, point=pose_map.pose.position), name="person_point_map")
+            rospy.loginfo(f"Person point in map frame: {pose_map}")
+
+
+
 
         cv2_gesture_img = cv2_img.msg_to_cv2_img(userdata.img_msg)
         # Add text to the image
         cv2.putText(
             cv2_gesture_img,
-            self.gesture_to_detect,
+            detected_gesture,
             (10, 30),
             cv2.FONT_HERSHEY_SIMPLEX,
             1,

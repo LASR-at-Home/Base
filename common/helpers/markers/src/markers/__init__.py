@@ -63,3 +63,4 @@ def create_and_publish_marker(
         publisher_counts[publisher] += 1
         marker_name_msg = create_marker(point_stamped, idx, r, g, b, name)
         publisher.publish(marker_name_msg)
+    rospy.loginfo(f"Published marker {point_stamped.header.frame_id} at {point_stamped.point}")

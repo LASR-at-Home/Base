@@ -11,6 +11,7 @@ from lasr_skills import (
 from lasr_skills.vision import GetCroppedImage
 from lasr_skills import PlayMotion
 from lasr_person_following.msg import FollowAction
+from leg_tracker.srv import InitialisePersonWithVision, InitialisePersonWithVisionRequest
 
 from std_msgs.msg import Empty
 from std_srvs.srv import Empty as EmptySrv
@@ -140,7 +141,8 @@ class CarryMyLuggage(smach.StateMachine):
                 "SAY_BAG",
                 Say(format_str="I need you to give me the bag on your {}."),
                 transitions={
-                    "succeeded": "START_HEAD_MANAGER",
+                    "succeeded": "CLEAR_COSTMAPS",
+                    # "succeeded": "START_HEAD_MANAGER",
                     "aborted": "failed",
                     "preempted": "failed",
                 },
@@ -187,9 +189,25 @@ class CarryMyLuggage(smach.StateMachine):
                 "SAY_FOLLOW",
                 Say(text="I will follow you now."),
                 transitions={
-                    "succeeded": "FOLLOW",
+                    "succeeded": "INITIALISE_PERSON_TRACK",
                     "aborted": "failed",
                     "preempted": "failed",
+                },
+            )
+            smach.StateMachine.add(
+                "INITIALISE_PERSON_TRACK",
+                smach_ros.ServiceState(
+                    "/cml/initialise_person_with_vision",
+                    InitialisePersonWithVision,
+                    request_cb=lambda ud, req: InitialisePersonWithVisionRequest(
+                        point=ud.person_point,
+                    ),
+                    input_keys=["person_point"],
+                ),
+                transitions={
+                    "succeeded": "FOLLOW",
+                    "aborted": "FOLLOW",
+                    "preempted": "FOLLOW",
                 },
             )
 
@@ -200,7 +218,8 @@ class CarryMyLuggage(smach.StateMachine):
                     FollowAction,
                 ),
                 transitions={
-                    "succeeded": "SAY_HANDOVER",
+                    "succeeded": "succeeded",
+                    # "succeeded": "SAY_HANDOVER",
                     "aborted": "failed",
                     "preempted": "failed",
                 },
