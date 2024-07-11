@@ -28,7 +28,7 @@ class Guide(smach.StateMachine):
                 GoToLocation(location_pose),
                 transitions={
                     "succeeded": "SAY_DONE",
-                    "failed": "failed",
+                    "failed": "GO_TO_LOCATION",
                 },
             )
 

@@ -407,7 +407,7 @@ class FindPerson(smach.StateMachine):
                         GoToLocation(),
                         transitions={
                             "succeeded": "DETECT",
-                            "failed": "failed",
+                            "failed": "GO_TO_LOCATION",
                         },
                     )
 
