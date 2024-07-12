@@ -141,8 +141,8 @@ class CarryMyLuggage(smach.StateMachine):
                 "SAY_BAG",
                 Say(format_str="I need you to give me the bag on your {}."),
                 transitions={
-                    "succeeded": "CLEAR_COSTMAPS",
-                    # "succeeded": "START_HEAD_MANAGER",
+                    # "succeeded": "CLEAR_COSTMAPS",
+                    "succeeded": "START_HEAD_MANAGER",
                     "aborted": "failed",
                     "preempted": "failed",
                 },
@@ -189,27 +189,37 @@ class CarryMyLuggage(smach.StateMachine):
                 "SAY_FOLLOW",
                 Say(text="I will follow you now."),
                 transitions={
-                    "succeeded": "INITIALISE_PERSON_TRACK",
+                    "succeeded": "SAY_STEP",
+                    # "succeeded": "INITIALISE_PERSON_TRACK",
                     "aborted": "failed",
                     "preempted": "failed",
                 },
             )
             smach.StateMachine.add(
-                "INITIALISE_PERSON_TRACK",
-                smach_ros.ServiceState(
-                    "/cml/initialise_person_with_vision",
-                    InitialisePersonWithVision,
-                    request_cb=lambda ud, req: InitialisePersonWithVisionRequest(
-                        point=ud.person_point,
-                    ),
-                    input_keys=["person_point"],
-                ),
+                "SAY_STEP",
+                Say(text="First walk slowly towards me and then I will follow you."),
                 transitions={
                     "succeeded": "FOLLOW",
-                    "aborted": "FOLLOW",
-                    "preempted": "FOLLOW",
+                    "aborted": "failed",
+                    "preempted": "failed",
                 },
             )
+            # smach.StateMachine.add(
+            #     "INITIALISE_PERSON_TRACK",
+            #     smach_ros.ServiceState(
+            #         "/cml/initialise_person_with_vision",
+            #         InitialisePersonWithVision,
+            #         request_cb=lambda ud, req: InitialisePersonWithVisionRequest(
+            #             point=ud.person_point,
+            #         ),
+            #         input_keys=["person_point"],
+            #     ),
+            #     transitions={
+            #         "succeeded": "FOLLOW",
+            #         "aborted": "FOLLOW",
+            #         "preempted": "FOLLOW",
+            #     },
+            # )
 
             smach.StateMachine.add(
                 "FOLLOW",
@@ -218,8 +228,8 @@ class CarryMyLuggage(smach.StateMachine):
                     FollowAction,
                 ),
                 transitions={
-                    "succeeded": "succeeded",
-                    # "succeeded": "SAY_HANDOVER",
+                    # "succeeded": "succeeded",
+                    "succeeded": "SAY_HANDOVER",
                     "aborted": "failed",
                     "preempted": "failed",
                 },
