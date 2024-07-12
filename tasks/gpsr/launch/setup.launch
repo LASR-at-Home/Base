@@ -31,7 +31,7 @@
     <include 
         file="$(find lasr_vision_cropped_detection)/launch/cropped_detection.launch"
     />
-    <include file="$(find lasr_vision_bodypix)/launch/bodypix.launch">
+    <include file="$(find lasr_vision_bodypix)/launch/bodypix.launch"/>
 
     <!-- To find the most similar commands -->
     <node 

@@ -152,10 +152,10 @@ def detect_3d(
                 f"Detected point: {detection.point} of object {detection.name}"
             )
 
-        markers.create_and_publish_marker(
-            debug_point_publisher,
-            PointStamped(point=detection.point, header=pcl_map.header),
-        )
+        # markers.create_and_publish_marker(
+        #     debug_point_publisher,
+        #     PointStamped(point=detection.point, header=pcl_map.header),
+        # )
 
         detected_objects.append(detection)
 
