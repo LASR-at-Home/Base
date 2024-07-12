@@ -216,7 +216,7 @@ def talk(command_param: Dict, sm: smach.StateMachine) -> None:
         sm.add(
             f"STATE_{increment_state_count()}",
             Talk(command_param["talk"]),
-            transitions={"succeeded": "succeeded", "failed": "failed"},
+            transitions={"succeeded": f"STATE_{STATE_COUNT + 1}", "failed": "failed"},
         )
     elif "object_category" in command_param:
         if not "location" in command_param:
@@ -342,7 +342,7 @@ def guide(command_param: Dict, sm: smach.StateMachine) -> None:
     sm.add(
         f"STATE_{increment_state_count()}",
         Guide(location_name=location_name, location_pose=location_pose),
-        transitions={"succeeded": "succeeded", "failed": "failed"},
+        transitions={"succeeded": f"STATE_{STATE_COUNT + 1}", "failed": "failed"},
     )
 
 
