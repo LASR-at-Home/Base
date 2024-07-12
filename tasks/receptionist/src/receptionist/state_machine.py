@@ -47,7 +47,7 @@ class Receptionist(smach.StateMachine):
         self.wait_area = wait_area
         self.seat_pose = seat_pose
         self.seat_area = seat_area
-        # self.sweep_points = sweep_points
+
         with self:
             self.userdata.guest_data = {
                 "host": host_data,
@@ -280,6 +280,16 @@ class Receptionist(smach.StateMachine):
         smach.StateMachine.add(
             f"SAY_WAIT_GUEST_{guest_id}",
             Say(text="Please wait here on my left."),
+            transitions={
+                "succeeded": f"LOOK_EYES_{guest_id}",
+                "preempted": "failed",
+                "aborted": "failed",
+            },
+        )
+
+        smach.StateMachine.add(
+            f"LOOK_EYES_{guest_id}",
+            PlayMotion(motion_name="look_very_left"),
             transitions={
                 "succeeded": f"INTRODUCE_AND_SEAT_GUEST_{guest_id}",
                 "preempted": "failed",

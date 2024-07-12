@@ -28,10 +28,9 @@ from lasr_vision_msgs.srv import (
 
 
 from typing import List, Literal
-import itertools
 
 
-class FindPerson(smach.StateMachine):
+class FindPersonAndTell(smach.StateMachine):
 
     class GetLocation(smach.State):
         def __init__(self):
@@ -165,34 +164,18 @@ class FindPerson(smach.StateMachine):
 
         def __init__(
             self,
-            criteria: Literal["name", "pose", "gesture", "clothes"],
-            criteria_value: str,
+            query: Literal["name", "pose", "gesture", "clothes"],
         ):
             smach.StateMachine.__init__(
                 self,
                 outcomes=["succeeded", "failed"],
                 input_keys=["responses"],
-                output_keys=["responses", "person_point"],
+                output_keys=["responses", "query_result"],
             )
 
             with self:
 
-                if criteria == "name":
-
-                    class HandleSpeechResponse(smach.State):
-
-                        def __init__(self):
-                            smach.State.__init__(
-                                self,
-                                outcomes=["succeeded", "failed"],
-                                input_keys=["transcribed_speech"],
-                            )
-
-                        def execute(self, userdata):
-                            # TODO: make this smarter,e.g. levenshtein distance
-                            if "yes" in userdata.transcribed_speech.lower():
-                                return "succeeded"
-                            return "failed"
+                if query == "name":
 
                     smach.StateMachine.add(
                         "GET_RESPONSE",
@@ -208,32 +191,25 @@ class FindPerson(smach.StateMachine):
                         "GO_TO_PERSON",
                         self.ApproachPerson(),
                         transitions={
-                            "succeeded": "CHECK_NAME",
+                            "succeeded": "ASK_NAME",
                             "failed": "GET_RESPONSE",
                         },
                         remapping={"location": "approach_pose"},
                     )
 
                     smach.StateMachine.add(
-                        "CHECK_NAME",
+                        "ASK_NAME",
                         AskAndListen(
-                            f"I'm looking for {criteria_value}. Are you {criteria_value}?"
+                            "What is your name?",
                         ),
                         transitions={
-                            "succeeded": "HANDLE_SPEECH_RESPONSE",
+                            "succeeded": "succeeded",
                             "failed": "failed",
                         },
-                    )
-                    smach.StateMachine.add(
-                        "HANDLE_SPEECH_RESPONSE",
-                        HandleSpeechResponse(),
-                        transitions={
-                            "succeeded": "succeeded",
-                            "failed": "GET_RESPONSE",
-                        },
+                        remapping={"transcribed_speceh": "query_result"},
                     )
 
-                elif criteria == "gesture":
+                elif query == "gesture":
 
                     smach.StateMachine.add(
                         "GET_RESPONSE",
@@ -243,26 +219,18 @@ class FindPerson(smach.StateMachine):
 
                     smach.StateMachine.add(
                         "DETECT_GESTURE",
-                        DetectGesture(criteria_value),
-                        transitions={
-                            "succeeded": "GO_TO_PERSON",
-                            "missing_keypoints": "GET_RESPONSE",
-                            "failed": "GET_RESPONSE",
-                        },
-                        remapping={"img_msg": "cropped_image"},
-                    )
-
-                    smach.StateMachine.add(
-                        "GO_TO_PERSON",
-                        self.ApproachPerson(),
+                        DetectGesture(),
                         transitions={
                             "succeeded": "succeeded",
                             "failed": "GET_RESPONSE",
                         },
-                        remapping={"location": "approach_pose"},
+                        remapping={
+                            "img_msg": "cropped_image",
+                            "detected_gesture": "query_result",
+                        },
                     )
 
-                elif criteria == "pose":
+                elif query == "pose":
 
                     smach.StateMachine.add(
                         "GET_RESPONSE",
@@ -275,101 +243,29 @@ class FindPerson(smach.StateMachine):
 
                     smach.StateMachine.add(
                         "DETECT_POSE",
-                        DetectPose(criteria_value),
+                        DetectPose(),
                         transitions={
                             "succeeded": "GO_TO_PERSON",
                             "failed": "GET_RESPONSE",
                         },
-                        remapping={"img_msg": "cropped_image"},
-                    )
-
-                    smach.StateMachine.add(
-                        "GO_TO_PERSON",
-                        self.ApproachPerson(),
-                        transitions={
-                            "succeeded": "succeeded",
-                            "failed": "GET_RESPONSE",
+                        remapping={
+                            "img_msg": "cropped_image",
+                            "detected_pose": "query_result",
                         },
-                        remapping={"location": "approach_pose"},
-                    )
-
-                elif criteria == "clothes":
-
-                    smach.StateMachine.add(
-                        "GET_RESPONSE",
-                        self.GetResponse(),
-                        transitions={
-                            "succeeded": "DETECT_CLOTHING",
-                            "failed": "failed",
-                        },
-                    )
-
-                    smach.StateMachine.add(
-                        "DETECT_CLOTHING",
-                        DetectClothing(criteria_value),
-                        transitions={
-                            "succeeded": "GO_TO_PERSON",
-                            "failed": "GET_RESPONSE",
-                        },
-                        remapping={"img_msg": "cropped_image"},
-                    )
-
-                    smach.StateMachine.add(
-                        "GO_TO_PERSON",
-                        self.ApproachPerson(),
-                        transitions={
-                            "succeeded": "succeeded",
-                            "failed": "GET_RESPONSE",
-                        },
-                        remapping={"location": "approach_pose"},
                     )
 
     def __init__(
         self,
         waypoints: List[Pose],
         polygon: Polygon,
-        criteria: Literal["name", "pose", "gesture", "clothes"],
-        criteria_value: str,
+        query: Literal["name", "pose", "gesture"],
     ):
 
-        assert criteria in ["name", "pose", "gesture", "clothes"], "Invalid criteria"
+        assert query in ["name", "pose", "gesture"], "Invalid query"
 
-        if criteria == "gesture":
-            assert criteria_value in [
-                "raising_left_arm",
-                "raising_right_arm",
-                "pointing_to_the_right",
-                "pointing_to_the_left",
-                "waving",
-            ], "Invalid gesture"
-        elif criteria == "pose":
-            assert criteria_value in [
-                "sitting",
-                "standing",
-                "lying_down",
-            ], "Invalid pose"
-        elif criteria == "clothes":
-            color_list = ["blue", "yellow", "black", "white", "red", "orange", "gray"]
-            clothe_list = ["t shirt", "shirt", "blouse", "sweater", "coat", "jacket"]
-            clothes_list = [
-                "t shirts",
-                "shirts",
-                "blouses",
-                "sweaters",
-                "coats",
-                "jackets",
-            ]
-            color_clothe_list: List[str] = []
-            for a, b in list(itertools.product(color_list, clothe_list)):
-                color_clothe_list = color_clothe_list + [a + " " + b]
-            color_clothes_list: List[str] = []
-            for a, b in list(itertools.product(color_list, clothes_list)):
-                color_clothes_list = color_clothes_list + [a + " " + b]
-            assert (
-                criteria_value in color_clothe_list + color_clothes_list
-            ), "Invalid clothing"
-
-        smach.StateMachine.__init__(self, outcomes=["succeeded", "failed"])
+        smach.StateMachine.__init__(
+            self, outcomes=["succeeded", "failed"], output_keys=["query_result"]
+        )
 
         with self:
 
@@ -442,7 +338,7 @@ class FindPerson(smach.StateMachine):
 
                     smach.StateMachine.add(
                         "HANDLE_DETECTIONS",
-                        self.HandleDetections(criteria, criteria_value),
+                        self.HandleDetections(query),
                         transitions={
                             "succeeded": "succeeded",
                             "failed": "continue",
@@ -456,42 +352,3 @@ class FindPerson(smach.StateMachine):
                 waypoint_iterator,
                 {"succeeded": "succeeded", "failed": "failed"},
             )
-
-
-if __name__ == "__main__":
-    import rospy
-    from geometry_msgs.msg import Point, Quaternion, Pose
-
-    rospy.init_node("find_person")
-
-    waypoints = [
-        Pose(
-            position=Point(x=2.46, y=-2.15, z=0),
-            orientation=Quaternion(x=0, y=0, z=-0.993, w=0.116),
-        ),
-        Pose(
-            position=Point(x=0.88, y=1.04, z=0),
-            orientation=Quaternion(x=0, y=0, z=0.125, w=0.992),
-        ),
-        Pose(
-            position=Point(x=4.05, y=-2.16, z=0),
-            orientation=Quaternion(x=0, y=0, z=-0.995, w=0.090),
-        ),
-    ]
-
-    polygon = Polygon(
-        [
-            Point(x=-0.4806538224220276, y=-5.140193462371826, z=0.002532958984375),
-            Point(x=6.777748107910156, y=-5.0068678855896, z=0.002532958984375),
-            Point(x=7.11236047744751, y=2.4408864974975586, z=-0.001434326171875),
-            Point(x=-4.766469955444336, y=2.666473627090454, z=-0.005340576171875),
-        ]
-    )
-
-    find_person = FindPerson(
-        waypoints=waypoints,
-        polygon=polygon,
-        criteria="name",
-        criteria_value="jared",
-    )
-    print(find_person.execute())

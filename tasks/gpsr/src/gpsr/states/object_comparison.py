@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 import smach
-from lasr_skills import Detect3DInArea
+from lasr_skills import Detect3DInArea, Say
 from lasr_skills import Detect3D
 from lasr_skills import Detect
 from shapely.geometry.polygon import Polygon
 from typing import List, Union, Dict
+import rospy
 
 
 class ObjectComparison(smach.StateMachine):
@@ -136,6 +137,39 @@ class ObjectComparison(smach.StateMachine):
             else:
                 return "failed"
 
+    class SayResult(smach.State):
+        def __init__(self):
+            smach.State.__init__(
+                self,
+                outcomes=["succeeded", "failed"],
+                input_keys=[
+                    "operation_label",
+                    "detections_types",
+                    "detections_categories",
+                    "sorted_size",
+                    "sorted_weights",
+                ],
+                output_keys=["say_text"]
+            )
+
+        def execute(self, userdata):
+            try:
+                if userdata.operation_label == "count":
+                    object_count = len(userdata.detections_categories)
+                    userdata.say_text = f"There are {object_count} objects"
+                elif userdata.operation_label == "weight":
+                    heaviest_object = userdata.sorted_weights[0][0]
+                    userdata.say_text = f"The heaviest object is {heaviest_object}"
+                elif userdata.operation_label == "size":
+                    biggest_object = userdata.sorted_size[0][0]
+                    userdata.say_text = f"The biggest object is {biggest_object}"
+                else:
+                    return "failed"
+                return "succeeded"
+            except Exception as e:
+                rospy.logerr(str(e))
+                return "failed"
+
     def __init__(
         self,
         area_polygon: Polygon,
@@ -150,7 +184,7 @@ class ObjectComparison(smach.StateMachine):
         smach.StateMachine.__init__(
             self,
             outcomes=["succeeded", "failed"],
-            output_keys=["detections_3d", "object_dict"],
+            output_keys=["detections_3d", "object_dict", "say_text"],
         )
 
         # Set the operation label in the userdata
@@ -185,23 +219,37 @@ class ObjectComparison(smach.StateMachine):
                 self.CountObjectTypes(area_polygon),
                 transitions={"succeeded": "COUNTCATEGORY", "failed": "failed"},
             )
+
             smach.StateMachine.add(
                 "COUNTCATEGORY",
                 self.CountCategory(object_weight=object_weight),
-                transitions={"succeeded": "succeeded", "failed": "failed"},
+                transitions={"succeeded": "SAY_RESULT", "failed": "failed"},
             )
+
             smach.StateMachine.add(
                 "GETWEIGHT",
                 self.ObjectWeight(object_weight=object_weight),
-                transitions={"succeeded": "succeeded", "failed": "failed"},
+                transitions={"succeeded": "SAY_RESULT", "failed": "failed"},
             )
+
             smach.StateMachine.add(
                 "GETSIZE",
                 self.ObjectSize(),
-                transitions={"succeeded": "succeeded", "failed": "failed"},
+                transitions={"succeeded": "SAY_RESULT", "failed": "failed"},
             )
 
+            smach.StateMachine.add(
+                "SAY_RESULT",
+                self.SayResult(),
+                transitions={"succeeded": "SAY", "failed": "failed"},
+            )
 
+            smach.StateMachine.add(
+                "SAY",
+                Say(),
+                transitions={"succeeded": "succeeded", "failed": "failed"},
+                remapping={"text": "say_text"},
+            )
 # if __name__ == "__main__":
 #     import rospy
 #     from sensor_msgs.msg import PointCloud2

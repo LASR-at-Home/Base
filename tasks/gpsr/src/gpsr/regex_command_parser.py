@@ -263,7 +263,7 @@ def gpsr_regex(configuration: Configuration):
                 f"{verb('follow')} them {prep('toLocPrep')} the {Configuration.pick(configuration, 'location', ['room'])}"
             )
             sub_commands.append(
-                f"{verb('guide')} them {prep('toLocPrep')} the {Configuration.pick(configuration, 'location', ['room'])}"
+                f"{verb('guide')} them {prep('toLocPrep')} the {Configuration.pick(configuration, 'location', ['room', 'loc'])}"
             )
         elif type == "foundObj":
             sub_commands.append(
@@ -497,7 +497,11 @@ def parse_result_dict(
                     result["command_params"][i]["object"] = result["command_params"][
                         i - 1
                     ]["object"]
-
+            if "object_category" not in result["command_params"][i]:
+                if "object_category" in result["command_params"][i - 1]:
+                    result["command_params"][i]["object_category"] = result[
+                        "command_params"
+                    ][i - 1]["object_category"]
     return result
 
 
@@ -514,9 +518,9 @@ if __name__ == "__main__":
     object_categories = object_categories_singular + object_categories_plural
     config: Configuration = {
         "person_names": ["guest1", "guest2"],
-        "location_names": ["sofa", "piano", "kitchen table"],
+        "location_names": ["sofa", "piano", "kitchen table", "bed"],
         "placement_location_names": ["kitchen table"],
-        "room_names": ["living room", "kitchen"],
+        "room_names": ["living room", "kitchen", "bedroom"],
         "object_names": ["cup", "television"],
         "object_categories_plural": ["sticks"],
         "object_categories_singular": ["stick"],
@@ -534,7 +538,11 @@ if __name__ == "__main__":
 
     print(
         execute(
+<<<<<<< HEAD
             "go to the sofa then find the waving person and guide them to the kitchen",
+=======
+            "go to the sofa then find a cup and take it and bring it to me",
+>>>>>>> 53286bda68794b7b6e18dde5149dda24bcc473ae
             object_categories,
         )
     )

@@ -11,7 +11,10 @@ from std_msgs.msg import Header
 
 if __name__ == "__main__":
     rospy.init_node("receptionist_robocup")
-    wait_pose_param = rospy.get_param("/receptionist/wait_pose")
+
+    wait_area_publisher = rospy.Publisher(
+        "/receptionist/wait_area", PolygonStamped, queue_size=1, latch=True
+    )
 
     seat_area_publisher = rospy.Publisher(
         "/receptionist/seat_area", PolygonStamped, queue_size=1, latch=True
@@ -20,6 +23,8 @@ if __name__ == "__main__":
     sofa_area_publisher = rospy.Publisher(
         "/receptionist/sofa_area", PolygonStamped, queue_size=1, latch=True
     )
+
+    wait_pose_param = rospy.get_param("/receptionist/wait_pose")
 
     wait_pose = Pose(
         position=Point(**wait_pose_param["position"]),
@@ -44,10 +49,10 @@ if __name__ == "__main__":
     max_people_on_sofa = rospy.get_param("/receptionist/max_people_on_sofa")
 
     seat_area = ShapelyPolygon(seat_area_param)
-    assert seat_area.is_valid
+    assert seat_area.is_valid, "Seat area is not valid"
 
     sofa_area = ShapelyPolygon(sofa_area_param)
-    assert sofa_area.is_valid
+    assert sofa_area.is_valid, "Sofa area is not valid"
 
     sofa_point = Point(**sofa_point_param)
 
@@ -57,6 +62,15 @@ if __name__ == "__main__":
     search_motions = rospy.get_param("/receptionist/search_motions")
 
     sweep = rospy.get_param("/receptionist/sweep")
+
+    wait_area_publisher.publish(
+        PolygonStamped(
+            polygon=Polygon(
+                points=[Point(x=x, y=y, z=0.0) for (x, y) in wait_area.exterior.coords]
+            ),
+            header=Header(frame_id="map"),
+        )
+    )
 
     seat_area_publisher.publish(
         PolygonStamped(
