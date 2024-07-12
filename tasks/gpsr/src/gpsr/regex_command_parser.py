@@ -538,11 +538,7 @@ if __name__ == "__main__":
 
     print(
         execute(
-<<<<<<< HEAD
-            "go to the sofa then find the waving person and guide them to the kitchen",
-=======
             "go to the sofa then find a cup and take it and bring it to me",
->>>>>>> 53286bda68794b7b6e18dde5149dda24bcc473ae
             object_categories,
         )
     )
@@ -556,7 +552,7 @@ if __name__ == "__main__":
 
     print(
         execute(
-            "navigate to the kitchen then find a cup and get it and bring it to me",
+            "tell the time to the person raising their right arm in the kitchen",
             object_categories,
         )
     )
