@@ -57,9 +57,7 @@ class ObjectComparison(smach.StateMachine):
         def execute(self, userdata):
             detected_objects = userdata.object_dict
             counts = self.count_category(self.object_weight, detected_objects)
-            category_counts = {
-                key: value for key, value in counts.items() if value != 0
-            }
+            category_counts = {key: value for key, value in counts.items() if value != 0}
             userdata.category_dict = category_counts
             userdata.detections_categories = list(category_counts.keys())
             return "succeeded"
@@ -125,13 +123,15 @@ class ObjectComparison(smach.StateMachine):
         def __init__(self):
             smach.State.__init__(
                 self,
-                outcomes=["do_count", "do_weight", "do_size", "failed"],
+                outcomes=["do_object_count","do_category_count" "do_weight", "do_size", "failed"],
                 input_keys=["operation_label"],
             )
 
         def execute(self, userdata):
-            if userdata.operation_label == "count":
-                return "do_count"
+            if userdata.operation_label == "object":
+                return "do_object_count"
+            elif userdata.operation_label == "categoty":
+                return "do_category_count"          
             elif userdata.operation_label == "weight":
                 return "do_weight"
             elif userdata.operation_label == "size":
@@ -151,14 +151,17 @@ class ObjectComparison(smach.StateMachine):
                     "sorted_size",
                     "sorted_weights",
                 ],
-                output_keys=["say_text"],
+                output_keys=["say_text"]
             )
 
         def execute(self, userdata):
             try:
                 if userdata.operation_label == "count":
-                    object_count = len(userdata.detections_categories)
+                    object_count = len(userdata.detections_types)
                     userdata.say_text = f"There are {object_count} objects"
+                elif userdata.operation_label == "category":
+                    category_count = len(userdata.detections_categories)
+                    userdata.say_text = f"There are {category_count} objects"
                 elif userdata.operation_label == "weight":
                     heaviest_object = userdata.sorted_weights[0][0]
                     userdata.say_text = f"The heaviest object is {heaviest_object}"
@@ -189,7 +192,7 @@ class ObjectComparison(smach.StateMachine):
             output_keys=["detections_3d", "object_dict", "say_text"],
         )
 
-        # Set the operation label in the userdata
+        # Set the operation label in the userdata to decide which task to perform
         self.userdata.operation_label = operation_label
 
         with self:
@@ -202,6 +205,13 @@ class ObjectComparison(smach.StateMachine):
                     confidence=confidence,
                     nms=nms,
                 ),
+                transitions={"succeeded": "COUNTOBJECTS", "failed": "failed"},
+            )
+
+
+            smach.StateMachine.add(
+                "COUNTOBJECTS",
+                self.CountObjectTypes(area_polygon),
                 transitions={"succeeded": "DECIDE_OPERATION", "failed": "failed"},
             )
 
@@ -209,17 +219,12 @@ class ObjectComparison(smach.StateMachine):
                 "DECIDE_OPERATION",
                 self.DecideOperation(),
                 transitions={
-                    "do_count": "COUNTOBJECTS",
+                    "do_object_count": "SAY_RESULT",
+                    "do_category_count": "COUNTCATEGORY",
                     "do_weight": "GETWEIGHT",
                     "do_size": "GETSIZE",
                     "failed": "failed",
                 },
-            )
-
-            smach.StateMachine.add(
-                "COUNTOBJECTS",
-                self.CountObjectTypes(area_polygon),
-                transitions={"succeeded": "COUNTCATEGORY", "failed": "failed"},
             )
 
             smach.StateMachine.add(
@@ -252,8 +257,6 @@ class ObjectComparison(smach.StateMachine):
                 transitions={"succeeded": "succeeded", "failed": "failed"},
                 remapping={"text": "say_text"},
             )
-
-
 # if __name__ == "__main__":
 #     import rospy
 #     from sensor_msgs.msg import PointCloud2
