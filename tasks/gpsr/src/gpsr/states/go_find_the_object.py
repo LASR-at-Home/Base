@@ -163,7 +163,7 @@ class GoFindTheObject(smach.StateMachine):
                         GoToLocation(),
                         transitions={
                             "succeeded": "INNER_ITERATOR",
-                            "failed": "failed",
+                            "failed": "GO_TO_LOCATION",
                         },
                     )
 

@@ -484,7 +484,7 @@ def parse_result_dict(
                     ]["location"]
             if "room" not in result["command_params"][i]:
                 if "room" in result["command_params"][i - 1]:
-                    result["command_params"][i - 1]["room"] = result["command_params"][
+                    result["command_params"][i]["room"] = result["command_params"][
                         i - 1
                     ]["room"]
             if "name" not in result["command_params"][i]:
@@ -538,11 +538,7 @@ if __name__ == "__main__":
 
     print(
         execute(
-<<<<<<< HEAD
-            "go to the sofa then find the waving person and guide them to the kitchen",
-=======
-            "go to the sofa then find a cup and take it and bring it to me",
->>>>>>> 53286bda68794b7b6e18dde5149dda24bcc473ae
+            "go to the bedroom then find the person pointing to the left and say something about yourself",
             object_categories,
         )
     )
@@ -556,7 +552,7 @@ if __name__ == "__main__":
 
     print(
         execute(
-            "navigate to the kitchen then find a cup and get it and bring it to me",
+            "tell the time to the person raising their right arm in the kitchen",
             object_categories,
         )
     )

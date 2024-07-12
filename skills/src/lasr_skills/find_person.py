@@ -246,7 +246,7 @@ class FindPerson(smach.StateMachine):
                         DetectGesture(criteria_value),
                         transitions={
                             "succeeded": "GO_TO_PERSON",
-                            "missing_keypoints": "GET_RESPONSE",
+                            # "missing_keypoints": "GET_RESPONSE",
                             "failed": "GET_RESPONSE",
                         },
                         remapping={"img_msg": "cropped_image"},
@@ -407,7 +407,7 @@ class FindPerson(smach.StateMachine):
                         GoToLocation(),
                         transitions={
                             "succeeded": "DETECT",
-                            "failed": "failed",
+                            "failed": "GO_TO_LOCATION",
                         },
                     )
 
