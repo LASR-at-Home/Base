@@ -1,7 +1,7 @@
 <launch>
 
     <!--     PARAMS     -->
-    <arg name="config" default="lab"/>
+    <arg name="config" default="arcade"/>
 
     <!--     INTERACTION     -->
     <arg name="whisper_device_param" default="9" />
@@ -15,10 +15,9 @@
     <rosparam command="load" file="$(find receptionist)/config/motions.yaml"/>
 
     <!--      PERCEPTION     -->
-    <include file="$(find lasr_vision_yolov8)/launch/service.launch"/>
     <include file="$(find lasr_vision_cropped_detection)/launch/cropped_detection.launch"/>
     <node pkg="lasr_vision_feature_extraction" type="service" name="torch_service" output="screen"/>
-    <include file="$(find lasr_vision_bodypix)/launch/bodypix_services.launch">
+    <include file="$(find lasr_vision_bodypix)/launch/bodypix.launch">
         <param name="preload" type="yaml" value='resnet50' />
     </include>
 
