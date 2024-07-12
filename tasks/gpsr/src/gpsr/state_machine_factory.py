@@ -11,6 +11,7 @@ from lasr_skills import (
     Say,
     ReceiveObject,
     FindPersonAndTell,
+    CountPeople,
 )
 
 from lasr_person_following.msg import FollowAction, FollowGoal
@@ -660,40 +661,116 @@ def meet(command_param: Dict, sm: smach.StateMachine) -> None:
 
 def count(command_param: Dict, sm: smach.StateMachine) -> None:
     """
-    count the number of a category of objects at a given placement location
+    Count commands can be of the following form:
+
+    - Tell me how many objects there are of a given category at a placement location
+    - Tell me how many people there are in a given gesture in a given room
+    - Tell me how many people there are in a given pose in a given room
+    - Tell me how many people there are wearing given clothes in a given room
     """
 
-    # TODO
-    raise NotImplementedError("Count command not implemented")
+    people: bool = False
 
-    if "object_category" in command_param:
-        if not "location" in command_param:
-            raise ValueError(
-                "Count command with object but no room in command parameters"
-            )
-        location_param_room = f"/gpsr/arena/rooms/{command_param['location']}"
-        sm.add(
-            f"STATE_{increment_state_count()}",
-            GoToLocation(location_param=f"{location_param_room}/pose"),
-            transitions={
-                "succeeded": f"STATE_{STATE_COUNT + 1}",
-                "failed": "failed",
-            },
+    if "pose" in command_param:
+        criteria = "pose"
+        criteria_value = command_param["pose"]
+        people = True
+    elif "gesture" in command_param:
+        criteria = "gesture"
+        criteria_value = command_param["gesture"]
+        people = True
+    elif "clothes" in command_param:
+        criteria = "clothes"
+        criteria_value = command_param["clothes"]
+        people = True
+    elif "object_category" in command_param:
+        criteria = "object_category"
+        criteria_value = command_param["object_category"]
+    else:
+        raise ValueError(
+            "Count command received with no pose, gesture, clothes, or object category in command parameters"
         )
-        # TODO: combine the weight list within
-        weight_list = rospy.get_param("/Object_list/Object")
+
+    if people:
+        if "room" in command_param:
+            waypoints: List[Pose] = get_person_detection_poses(command_param["room"])
+            polygon: Polygon = get_room_polygon(command_param["room"])
+        else:
+            raise ValueError(
+                "Count command received pose, gesture, clothes, or object category but no room in command parameters"
+            )
+
         sm.add(
             f"STATE_{increment_state_count()}",
-            ObjectComparison(
-                filter=command_param["object_category"],
-                operation_label="count",
-                weight=weight_list,
+            CountPeople(
+                waypoints=waypoints,
+                polygon=polygon,
+                criteria=criteria,
+                criteria_value=criteria_value,
             ),
             transitions={
                 "succeeded": f"STATE_{STATE_COUNT + 1}",
                 "failed": "failed",
             },
         )
+
+        sm.add(
+            f"STATE_{increment_state_count()}",
+            GoToLocation(location=get_current_pose()),
+            transitions={
+                "succeeded": f"STATE_{STATE_COUNT + 1}",
+                "failed": "failed",
+            },
+        )
+
+        sm.add(
+            f"STATE_{increment_state_count()}",
+            Say(
+                text="There are {}"
+                + criteria
+                + " people in the "
+                + command_param["room"]
+            ),
+            transitions={
+                "succeeded": f"STATE_{STATE_COUNT + 1}",
+                "failed": "failed",
+            },
+            remapping={"placeholders": "people_count"},
+        )
+
+    else:
+        raise NotImplementedError("Count command not implemented for objects")
+
+    # if "object_category" in command_param:
+    #     if not "location" in command_param:
+    #         raise ValueError(
+    #             "Count command with object but no room in command parameters"
+    #         )
+    #     location_param_room = f"/gpsr/arena/rooms/{command_param['location']}"
+    #     sm.add(
+    #         f"STATE_{increment_state_count()}",
+    #         GoToLocation(location_param=f"{location_param_room}/pose"),
+    #         transitions={
+    #             "succeeded": f"STATE_{STATE_COUNT + 1}",
+    #             "failed": "failed",
+    #         },
+    #     )
+    #     # TODO: combine the weight list within
+    #     weight_list = rospy.get_param("/Object_list/Object")
+    #     sm.add(
+    #         f"STATE_{increment_state_count()}",
+    #         ObjectComparison(
+    #             filter=command_param["object_category"],
+    #             operation_label="count",
+    #             weight=weight_list,
+    #         ),
+    #         transitions={
+    #             "succeeded": f"STATE_{STATE_COUNT + 1}",
+    #             "failed": "failed",
+    #         },
+
+
+# )
 
 
 def follow(command_param: Dict, sm: smach.StateMachine) -> None:
