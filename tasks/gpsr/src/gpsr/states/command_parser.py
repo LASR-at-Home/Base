@@ -4,7 +4,8 @@ import rospy
 
 from gpsr.regex_command_parser import Configuration, gpsr_compile_and_parse
 from gpsr.states import CommandSimilarityMatcher
-from lasr_skills import AskAndListen
+from lasr_skills import AskAndListen, GoToLocation
+from geometry_msgs.msg import Pose, Point, Quaternion
 
 
 class ParseCommand(smach.State):
@@ -57,6 +58,23 @@ class CommandParserStateMachine(smach.StateMachine):
         smach.StateMachine.__init__(self, outcomes=["succeeded", "failed"])
 
         with self:
+
+            start_pose_param = rospy.get_param("/gpsr/arena/start_pose")
+
+            smach.StateMachine.add(
+                "GO_TO_START",
+                GoToLocation(
+                    location=Pose(
+                        position=Point(**start_pose_param["position"]),
+                        orientation=Quaternion(**start_pose_param["orientation"]),
+                    )
+                ),
+                transitions={
+                    "succeeded": "ASK_FOR_COMMAND",
+                    "failed": "ASK_FOR_COMMAND",
+                },
+            )
+
             smach.StateMachine.add(
                 "ASK_FOR_COMMAND",
                 AskAndListen(tts_phrase="Hello, please tell me your command."),
@@ -76,11 +94,13 @@ class CommandParserStateMachine(smach.StateMachine):
 
             smach.StateMachine.add(
                 "CHECK_PARSE_COMMAND_COUNTER",
-                smach.CBState(self._increment_counter, outcomes=["continue", "exceeded"]),
+                smach.CBState(
+                    self._increment_counter, outcomes=["continue", "exceeded"]
+                ),
                 transitions={
                     "continue": "COMMAND_SIMILARITY_MATCHER",
-                    "exceeded": "ASK_FOR_COMMAND"
-                }
+                    "exceeded": "ASK_FOR_COMMAND",
+                },
             )
 
             smach.StateMachine.add(
@@ -94,7 +114,7 @@ class CommandParserStateMachine(smach.StateMachine):
             )
 
     def _increment_counter(self, userdata):
-        """Increment counter and determine whether command has been parsed over the number of times 
+        """Increment counter and determine whether command has been parsed over the number of times
         set by the threshold.
         """
         self._parse_command_counter += 1

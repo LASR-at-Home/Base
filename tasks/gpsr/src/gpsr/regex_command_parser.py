@@ -552,7 +552,7 @@ if __name__ == "__main__":
 
     print(
         execute(
-            "navigate to the kitchen then find a cup and get it and bring it to me",
+            "tell the time to the person raising their right arm in the kitchen",
             object_categories,
         )
     )

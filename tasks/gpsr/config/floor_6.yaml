@@ -13,6 +13,17 @@ arena:
     - x: 5.1799726486206055
       y: -0.0733039379119873
       z: 0.0
+  start:
+    # random start position
+    position: 
+      x: 1.5507337906536043
+      y: 1.1521238898558481
+      z: 0.0
+    orientation: 
+      x: 0.0
+      y: 0.0
+      z: -0.6061077408064555
+      w: 0.7953825535768902
   rooms:
     bedroom:
       pose:
