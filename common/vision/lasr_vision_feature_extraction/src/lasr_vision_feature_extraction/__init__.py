@@ -427,6 +427,12 @@ def predict_frame(
     ).describe()
 
     result = {
+        "has_hair": 0.0,
+        "hair_colour": "Not used.",
+        "hair_shape": "Not used.",
+        "facial_hair": 0.0,
+        "glasses": 0.0,
+        "hat": 0.0,
         **rst_cloth,
     }
 
