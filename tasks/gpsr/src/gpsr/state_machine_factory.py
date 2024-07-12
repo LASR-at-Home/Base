@@ -817,8 +817,10 @@ def build_state_machine(parsed_command: Dict) -> smach.StateMachine:
                 talk(command_param, sm)
             elif command_verb == "guide":
                 guide(command_param, sm)
-            elif command_verb == "deliver":
+            elif command_verb == "deliver" and len(command_params) > 1:
                 deliver(command_param, sm)
+            elif command_verb == "deliver" and len(command_params) == 1:
+                bring(command_param, sm)
             elif command_verb == "place":
                 place(command_param, sm)
             elif command_verb == "take":
@@ -833,8 +835,6 @@ def build_state_machine(parsed_command: Dict) -> smach.StateMachine:
                     ]
                 )
                 go(command_param, sm, person)
-            elif command_verb == "bring":
-                bring(command_param, sm)
             elif command_verb == "find":
                 find(command_param, sm)
             elif command_verb == "meet":
