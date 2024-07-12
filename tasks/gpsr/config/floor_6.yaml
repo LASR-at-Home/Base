@@ -13,7 +13,7 @@ arena:
     - x: 5.1799726486206055
       y: -0.0733039379119873
       z: 0.0
-  start:
+  start_pose:
     # random start position
     position: 
       x: 1.5507337906536043
