@@ -702,5 +702,15 @@ def build_state_machine(parsed_command: Dict) -> smach.StateMachine:
             else:
                 raise ValueError(f"Unrecognised command verb: {command_verb}")
 
+        @smach.cb_interface(outcomes=["succeeded"])
+        def terminal_cb(_):
+            return "succeeded"
+
+        sm.add(
+            f"STATE_{increment_state_count()}",
+            smach.CBState(terminal_cb),
+            transitions={"succeeded": "succeeded"},
+        )
+
     rospy.loginfo(f"State machine: {sm}")
     return sm
