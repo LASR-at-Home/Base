@@ -148,6 +148,20 @@ def greet(command_param: Dict, sm: smach.StateMachine) -> None:
     elif "gesture" in command_param:
         criteria = "gesture"
         criteria_value = command_param["gesture"]
+        if "pointing" in criteria_value:
+            if "left" in criteria_value:
+                criteria_value = "pointing_to_the_left"
+            elif "right" in criteria_value:
+                criteria_value = "pointing_to_the_right"
+        elif "raising" in criteria_value:
+            if "left" in criteria_value:
+                criteria_value = "raising_left_arm"
+            elif "right" in criteria_value:
+                criteria_value = "raising_right_arm"
+        elif "waving" in criteria_value:
+            criteria_value = "waving"
+        rospy.loginfo(f"CRITERIA VALUE: {criteria_value}")
+
     elif "pose" in command_param:
         criteria = "pose"
         criteria_value = command_param["pose"]
