@@ -10,6 +10,7 @@ from lasr_skills import (
     HandoverObject,
     Say,
     ReceiveObject,
+    FindPersonAndTell,
 )
 
 from lasr_person_following.msg import FollowAction, FollowGoal
@@ -207,17 +208,83 @@ def talk(command_param: Dict, sm: smach.StateMachine) -> None:
 
 
     """
-    if "gesture" in command_param or "pose" in command_param or "name" in command_param:
-        find(command_param, sm)
-
-        # go back to the start, and report
-
     if "talk" in command_param:
+        if "gesture" in command_param:
+            if not "room" in command_param:
+                raise ValueError(
+                    "Talk command with gesture but no room in command parameters"
+                )
+            waypoints: List[Pose] = get_person_detection_poses(command_param["room"])
+            polygon: Polygon = get_room_polygon(command_param["room"])
+            sm.add(
+                f"STATE_{increment_state_count()}",
+                FindPersonAndTell(
+                    waypoints=waypoints,
+                    polygon=polygon,
+                    criteria="gesture",
+                    criteria_value=command_param["gesture"],
+                ),
+                transitions={
+                    "succeeded": f"STATE_{STATE_COUNT + 1}",
+                    "failed": "failed",
+                },
+            )
+
         sm.add(
             f"STATE_{increment_state_count()}",
             Talk(command_param["talk"]),
             transitions={"succeeded": f"STATE_{STATE_COUNT + 1}", "failed": "failed"},
         )
+    elif "personinfo" in command_param:
+        query: str = command_param["personinfo"]
+        if query not in ["name", "pose", "gesture"]:
+            raise ValueError(
+                f"Person info query {query} not recognised. Must be 'name', 'pose', or 'gesture'"
+            )
+
+        if "room" in command_param:
+            waypoints: List[Pose] = get_person_detection_poses(command_param["room"])
+            polygon: Polygon = get_room_polygon(command_param["room"])
+        elif "location" in command_param:
+            waypoints: List[Pose] = [get_location_pose(command_param["location"], True)]
+            polygon: Polygon = get_person_detection_polygon(command_param["location"])
+        else:
+            raise ValueError(
+                "Tell command received with personinfo, but no room or location in command parameters"
+            )
+
+        sm.add(
+            f"STATE_{increment_state_count()}",
+            FindPersonAndTell(
+                waypoints=waypoints,
+                polygon=polygon,
+                criteria="name",
+            ),
+            transitions={
+                "succeeded": f"STATE_{STATE_COUNT + 1}",
+                "failed": "failed",
+            },
+        )
+
+        sm.add(
+            f"STATE_{increment_state_count()}",
+            GoToLocation(location=get_current_pose()),
+            transitions={
+                "succeeded": f"STATE_{STATE_COUNT + 1}",
+                "failed": "failed",
+            },
+        )
+
+        sm.add(
+            f"STATE_{increment_state_count()}",
+            Say(text="The " + query + " of the person is {}"),
+            transitions={
+                "succeeded": f"STATE_{STATE_COUNT + 1}",
+                "failed": "failed",
+            },
+            remapping={"placeholders": "query_result"},
+        )
+
     elif "object_category" in command_param:
         if not "location" in command_param:
             raise ValueError(
