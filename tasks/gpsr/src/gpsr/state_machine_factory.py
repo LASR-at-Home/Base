@@ -12,11 +12,18 @@ from lasr_skills import (
     ReceiveObject,
     FindPersonAndTell,
     CountPeople,
+    LookToPoint,
 )
 
 from lasr_person_following.msg import FollowAction, FollowGoal
 
-from gpsr.states import Talk, QuestionAnswer, GoFindTheObject, ObjectComparison
+from gpsr.states import (
+    Talk,
+    QuestionAnswer,
+    GoFindTheObject,
+    ObjectComparison,
+    CountObject,
+)
 import os
 import rospkg
 
@@ -26,7 +33,9 @@ from geometry_msgs.msg import (
     Quaternion,
     Polygon,
     PoseWithCovarianceStamped,
+    PointStamped,
 )
+from std_msgs.msg import Header
 
 STATE_COUNT = 0
 from lasr_skills import GoToLocation
@@ -121,6 +130,21 @@ def get_object_detection_polygon(location: str) -> Polygon:
             )
         ]
     )
+
+
+def get_look_point(location: str) -> PointStamped:
+    location_room = get_location_room(location)
+    look_point = rospy.get_param(
+        f"/gpsr/arena/rooms/{location_room}/beacons/{location}/object_detection_point"
+    )
+    return PointStamped(
+        header=Header(frame_id="map"),
+        point=Point(**look_point),
+    )
+
+
+def get_objects_from_category(category: str) -> List[str]:
+    return rospy.get_param(f"/gpsr/objects/{category}")
 
 
 """
@@ -292,7 +316,7 @@ def talk(command_param: Dict, sm: smach.StateMachine) -> None:
 
         sm.add(
             f"STATE_{increment_state_count()}",
-            Say(text="The " + query + " of the person is {}"),
+            Say(format_str="The " + query + " of the person is {}"),
             transitions={
                 "succeeded": f"STATE_{STATE_COUNT + 1}",
                 "failed": "failed",
@@ -740,8 +764,8 @@ def count(command_param: Dict, sm: smach.StateMachine) -> None:
         sm.add(
             f"STATE_{increment_state_count()}",
             Say(
-                text="There are {}"
-                + criteria
+                format_str="There are {}"
+                + criteria_value
                 + " people in the "
                 + command_param["room"]
             ),
@@ -753,35 +777,64 @@ def count(command_param: Dict, sm: smach.StateMachine) -> None:
         )
 
     else:
-        raise NotImplementedError("Count command not implemented for objects")
+        if not "location" in command_param:
+            raise ValueError(
+                "Count command with object but no room in command parameters"
+            )
+        location_pose = get_location_pose(command_param["location"], False)
+        location_polygon = get_object_detection_polygon(command_param["location"])
 
-    # if "object_category" in command_param:
-    #     if not "location" in command_param:
-    #         raise ValueError(
-    #             "Count command with object but no room in command parameters"
-    #         )
-    #     location_param_room = f"/gpsr/arena/rooms/{command_param['location']}"
-    #     sm.add(
-    #         f"STATE_{increment_state_count()}",
-    #         GoToLocation(location_param=f"{location_param_room}/pose"),
-    #         transitions={
-    #             "succeeded": f"STATE_{STATE_COUNT + 1}",
-    #             "failed": "failed",
-    #         },
-    #     )
-    #     # TODO: combine the weight list within
-    #     weight_list = rospy.get_param("/Object_list/Object")
-    #     sm.add(
-    #         f"STATE_{increment_state_count()}",
-    #         ObjectComparison(
-    #             filter=command_param["object_category"],
-    #             operation_label="count",
-    #             weight=weight_list,
-    #         ),
-    #         transitions={
-    #             "succeeded": f"STATE_{STATE_COUNT + 1}",
-    #             "failed": "failed",
-    #         },
+        sm.add(
+            f"STATE_{increment_state_count()}",
+            GoToLocation(location=location_pose),
+            transitions={
+                "succeeded": f"STATE_{STATE_COUNT + 1}",
+                "failed": "failed",
+            },
+        )
+
+        sm.add(
+            f"STATE_{increment_state_count()}",
+            LookToPoint(pointstamped=get_look_point(command_param["location"])),
+            transitions={
+                "succeeded": f"STATE_{STATE_COUNT + 1}",
+                "aborted": "failed",
+                "timed_out": f"STATE_{STATE_COUNT + 1}",
+            },
+        )
+
+        sm.add(
+            f"STATE_{increment_state_count()}",
+            CountObject(
+                location_polygon,
+                objects=get_objects_from_category(command_param["object_category"]),
+            ),
+            transitions={"succeeded": f"STATE_{STATE_COUNT + 1}", "failed": "failed"},
+        )
+
+        sm.add(
+            f"STATE_{increment_state_count()}",
+            GoToLocation(location=get_current_pose()),
+            transitions={
+                "succeeded": f"STATE_{STATE_COUNT + 1}",
+                "failed": "failed",
+            },
+        )
+
+        sm.add(
+            f"STATE_{increment_state_count()}",
+            Say(
+                format_str="There are {} "
+                + criteria_value
+                + " on the "
+                + command_param["location"]
+            ),
+            transitions={
+                "succeeded": f"STATE_{STATE_COUNT + 1}",
+                "failed": "failed",
+            },
+            remapping={"placeholders": "object_count"},
+        )
 
 
 # )
