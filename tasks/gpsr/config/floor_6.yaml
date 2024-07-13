@@ -82,6 +82,16 @@ arena:
               y: 0.0
               z: -0.6357181444855956
               w: 0.771921265914984
+          dem_manipulation_pose: # dummy pose
+            position: 
+              x: 2.562624240536362
+              y: -3.1575592820569067
+              z: 0.0
+            orientation: 
+              x: 0.0
+              y: 0.0
+              z: -0.6357181444855956
+              w: 0.771921265914984
           object_detection_point:
             x: 2.8841753005981445
             y: -4.464163780212402
@@ -127,6 +137,16 @@ arena:
           placeable: true
           object_category: all
           object_detection_pose:
+            position: 
+              x: 0.46844828109331477
+              y: -2.7787364857911587
+              z: 0.0
+            orientation: 
+              x: 0.0
+              y: 0.0
+              z: -0.5940872852706002
+              w: 0.8044005827197097
+          dem_manipulation_pose: # dummy pose
             position: 
               x: 0.46844828109331477
               y: -2.7787364857911587
@@ -182,6 +202,16 @@ arena:
           placeable: true
           object_category: cleaning_supplies
           object_detection_pose:
+            position: 
+              x: 1.1910431437118454
+              y: -1.4156583938830964
+              z: 0.0
+            orientation: 
+              x: 0.0
+              y: 0.0
+              z: -0.9895964310973278
+              w: 0.14387113525454617
+          dem_manipulation_pose: # dummy pose
             position: 
               x: 1.1910431437118454
               y: -1.4156583938830964
@@ -290,6 +320,16 @@ arena:
               y: 0.0
               z: 0.7888655924246054
               w: 0.6145657630299431
+          dem_manipulation_pose: # dummy pose
+            position: 
+              x: 1.1086318163079976
+              y: 1.375791007054298
+              z: 0.0
+            orientation: 
+              x: 0.0
+              y: 0.0
+              z: 0.7888655924246054
+              w: 0.6145657630299431
           object_detection_point:
             x: 0.7934732437133789
             y: 2.2658238410949707
@@ -335,6 +375,16 @@ arena:
           placeable: true
           object_category: toys
           object_detection_pose:
+            position: 
+              x: 3.1121494229032702
+              y: 2.1099085797580597
+              z: 0.0
+            orientation: 
+              x: 0.0
+              y: 0.0
+              z: 0.43746361630651703
+              w: 0.8992361116014105
+          dem_manipulation_pose: # dummy pose
             position: 
               x: 3.1121494229032702
               y: 2.1099085797580597
