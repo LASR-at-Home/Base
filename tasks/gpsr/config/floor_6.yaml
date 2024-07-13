@@ -386,3 +386,11 @@ arena:
             - x: 2.8841753005981445
               y: -1.464163780212402
               z: 0.5
+objects:
+  - drinks: ["orange juice", "red wine", "milk", "iced tea", "cola", "tropical juice", "juice pack"]
+  - fruits: ["apple", "pear", "lemon", "peach", "banana", "strawberry", "orange", "plum"]
+  - snacks: ["cheezit", "cornflakes", "pringles"]
+  - foods: ["tuna", "sugar", "strawberry jello", "tomato soup", "mustard", "chocolate jello", "spam", "coffee grounds"]
+  - dishes: ["plate", "fork", "spoon", "cup", "knife", "bowl"]
+  - toys: ["rubiks cube", "soccer ball", "dice", "tennis ball", "baseball"]
+  - cleaning_supplies: ["cleanser", "sponge"]
