@@ -314,7 +314,7 @@ class CountPeople(smach.StateMachine):
                         GoToLocation(),
                         transitions={
                             "succeeded": "DETECT",
-                            "failed": "GO_TO_LOCATION",
+                            "failed": "failed",
                         },
                     )
 
