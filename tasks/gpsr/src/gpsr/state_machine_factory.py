@@ -628,8 +628,12 @@ def take(command_param: Dict, sm: smach.StateMachine) -> None:
     )
 
 
-def answer(command_param: Dict, sm: smach.StateMachine) -> None:
+def answer(command_param: Dict, sm: smach.StateMachine, greet_person: bool) -> None:
     data_root = os.path.join(rospkg.RosPack().get_path("gpsr"), "data")
+
+    if greet_person:
+        greet(command_param, sm)
+
     sm.add(
         f"STATE_{increment_state_count()}",
         QuestionAnswer(
@@ -913,7 +917,7 @@ def build_state_machine(parsed_command: Dict) -> smach.StateMachine:
             elif command_verb == "take":
                 take(command_param, sm)
             elif command_verb == "answer":
-                answer(command_param, sm)
+                answer(command_param, sm, greet_person=len(command_verbs) == 1)
             elif command_verb == "go":
                 person = not any(
                     [
