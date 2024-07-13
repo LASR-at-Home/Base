@@ -856,10 +856,11 @@ def count(command_param: Dict, sm: smach.StateMachine) -> None:
         )
 
 
-# )
+def follow(command_param: Dict, sm: smach.StateMachine, greet_person: bool) -> None:
 
+    if greet_person:
+        greet(command_param, sm)
 
-def follow(command_param: Dict, sm: smach.StateMachine) -> None:
     sm.add(
         f"STATE_{increment_state_count()}",
         smach_ros.SimpleActionState(
@@ -928,7 +929,7 @@ def build_state_machine(parsed_command: Dict) -> smach.StateMachine:
             elif command_verb == "count":
                 count(command_param, sm)
             elif command_verb == "follow":
-                follow(command_param, sm)
+                follow(command_param, sm, greet_person=len(command_verbs) == 1)
             else:
                 raise ValueError(f"Unrecognised command verb: {command_verb}")
 
