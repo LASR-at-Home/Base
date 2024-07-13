@@ -4,8 +4,11 @@ import rospy
 
 from gpsr.regex_command_parser import Configuration, gpsr_compile_and_parse
 from gpsr.states import CommandSimilarityMatcher
-from lasr_skills import AskAndListen, GoToLocation
+from lasr_skills import AskAndListen, GoToLocation, GetImage
 from geometry_msgs.msg import Pose, Point, Quaternion
+
+import cv2_img
+import cv2
 
 
 class ParseCommand(smach.State):
@@ -51,6 +54,49 @@ class CommandParserStateMachine(smach.StateMachine):
             if "yes" in userdata.transcribed_speech.lower():  # TODO: make this smarter
                 return "correct"
             return "incorrect"
+
+    class QRCodeToCommand(smach.StateMachine):
+
+        class DetectQRCode(smach.State):
+
+            _qr_code_detector: cv2.QRCodeDetector
+
+            def __init__(self):
+                smach.State.__init__(
+                    self,
+                    outcomes=["succeeded", "failed"],
+                    input_keys=["img_msg"],
+                    output_keys=["qr_code_text"],
+                )
+
+                self._qr_code_detector = cv2.QRCodeDetector()
+
+            def execute(self, userdata):
+                cv_im = cv2_img.msg_to_cv2_img(userdata)
+                text, _, _ = self._qr_code_detector.detectAndDecode(cv_im)
+                if text:
+                    userdata.qr_code_text = text
+                    return "succeeded"
+                return "failed"
+
+        def __init__(self):
+            smach.StateMachine.__init__(
+                self, outcomes=["succeeded", "failed"], output_keys=["qr_code_text"]
+            )
+
+            with self:
+
+                smach.StateMachine.add(
+                    "GET_IMAGE",
+                    GetImage(),
+                    transitions={"succeeded": "DETECT_QR_CODE", "failed": "failed"},
+                )
+
+                smach.StateMachine.add(
+                    "DETECT_QR_CODE",
+                    self.DetectQRCode(),
+                    transitions={"succeeded": "succeeded", "failed": "GET_IMAGE"},
+                )
 
     def __init__(
         self,
@@ -110,20 +156,10 @@ class CommandParserStateMachine(smach.StateMachine):
                     tts_phrase_format_str="You said {}, is that correct? Please respond 'tiago, yes that's correct' or 'tiago, no that's incorrect'."
                 ),
                 transitions={
-                    "correct": "PARSE_COMMAND",
-                    "incorrect": "CHECK_COMMAND_COUNTER",
+                    "correct": "COMMAND_SIMILARITY_MATCHER",
+                    "incorrect": "ASK_FOR_COMMAND_AGAIN",
                 },
                 remapping={"placeholders": "raw_command"},
-            )
-
-            smach.StateMachine.add(
-                "PARSE_COMMAND",
-                ParseCommand(data_config),
-                transitions={
-                    "succeeded": "succeeded",
-                    "failed": "failed",
-                },
-                remapping={"parsed_command": "parsed_command"},
             )
 
             smach.StateMachine.add(
@@ -133,8 +169,15 @@ class CommandParserStateMachine(smach.StateMachine):
                 ),
                 transitions={
                     "continue": "ASK_FOR_COMMAND_AGAIN",
-                    "exceeded": "failed",  # TODO: use QR code here
+                    "exceeded": "QR_CODE_TO_COMMAND",
                 },
+            )
+
+            smach.StateMachine.add(
+                "QR_CODE_TO_COMMAND",
+                self.QRCodeToCommand(),
+                transitions={"succeeded": "PARSE_COMMAND", "failed": "failed"},
+                remapping={"matched_command": "qr_code_text"},
             )
 
             smach.StateMachine.add(
@@ -145,6 +188,16 @@ class CommandParserStateMachine(smach.StateMachine):
                     "command": "raw_command",
                     "matched_command": "raw_command",
                 },
+            )
+
+            smach.StateMachine.add(
+                "PARSE_COMMAND",
+                ParseCommand(data_config),
+                transitions={
+                    "succeeded": "succeeded",
+                    "failed": "failed",
+                },
+                remapping={"parsed_command": "parsed_command"},
             )
 
     def _increment_counter(self, userdata):
