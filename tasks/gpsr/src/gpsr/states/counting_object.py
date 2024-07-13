@@ -1,9 +1,11 @@
-#!/usr/bin/env python3
 import smach
-from lasr_skills import Detect3DInArea
+import smach_ros
 from shapely.geometry.polygon import Polygon
 from typing import List, Union
 import rospy
+
+from lasr_vision_msgs.srv import CroppedDetection, CroppedDetectionRequest
+from lasr_vision_msgs.msg import CDRequest
 
 
 class CountObject(smach.State):
@@ -21,18 +23,17 @@ class CountObject(smach.State):
             return object_counts
 
         def execute(self, userdata):
-            filtered_detections = userdata.detections_3d
+            filtered_detections = userdata.detections_3d[0]
             rospy.loginfo(filtered_detections)
-            object_counts = self.count_types(filtered_detections.detected_objects)
-            userdata.object_count = object_counts # output key
+            object_counts = self.count_types(filtered_detections.detections_3d)
+            userdata.object_count = object_counts  # output key
             return "succeeded"
 
     def __init__(
         self,
-        area_polygon: Polygon, # input key
-        depth_topic: str = "/xtion/depth_registered/points",
-        model: str = "yolov8n-seg.pt",
-        Object: Union[List[str], None] = None, # input key
+        area_polygon: Polygon,  # input key
+        model: str = "yolov8x-seg.pt",
+        objects: Union[List[str], None] = None,  # input key
         confidence: float = 0.5,
         nms: float = 0.3,
     ):
@@ -45,20 +46,36 @@ class CountObject(smach.State):
         with self:
             smach.StateMachine.add(
                 "DETECT_OBJECTS_3D",
-                Detect3DInArea(
-                    depth_topic=depth_topic,
-                    model=model,
-                    filter=Object,
-                    confidence=confidence,
-                    nms=nms,
-                    Polygon = area_polygon,
+                smach_ros.ServiceState(
+                    "/vision/cropped_detection",
+                    CroppedDetection,
+                    request=CroppedDetectionRequest(
+                        requests=[
+                            CDRequest(
+                                method="closest",
+                                use_mask=True,
+                                yolo_model=model,
+                                yolo_model_confidence=confidence,
+                                yolo_nms_threshold=nms,
+                                return_sensor_reading=False,
+                                object_names=objects,
+                                polygons=[area_polygon],
+                            )
+                        ]
+                    ),
+                    output_keys=["responses"],
+                    response_slots=["responses"],
                 ),
-                transitions={"succeeded": "COUNTOBJECTS", "failed": "failed"},
+                transitions={
+                    "succeeded": "COUNTOBJECTS",
+                    "aborted": "failed",
+                    "preempted": "failed",
+                },
             )
 
             smach.StateMachine.add(
                 "COUNTOBJECTS",
                 self.CountItems(),
                 transitions={"succeeded": "succeeded", "failed": "failed"},
+                remapping={"detections_3d": "responses"},
             )
-
