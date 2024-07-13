@@ -214,7 +214,7 @@ def greet(command_param: Dict, sm: smach.StateMachine) -> None:
     )
 
 
-def talk(command_param: Dict, sm: smach.StateMachine) -> None:
+def talk(command_param: Dict, sm: smach.StateMachine, greet_person: bool) -> None:
     """
     This combines talk and tell as they use the same verb.
 
@@ -251,28 +251,10 @@ def talk(command_param: Dict, sm: smach.StateMachine) -> None:
 
 
     """
-    if "talk" in command_param:
-        if "gesture" in command_param:
-            if not "room" in command_param:
-                raise ValueError(
-                    "Talk command with gesture but no room in command parameters"
-                )
-            waypoints: List[Pose] = get_person_detection_poses(command_param["room"])
-            polygon: Polygon = get_room_polygon(command_param["room"])
-            sm.add(
-                f"STATE_{increment_state_count()}",
-                FindPersonAndTell(
-                    waypoints=waypoints,
-                    polygon=polygon,
-                    criteria="gesture",
-                    criteria_value=command_param["gesture"],
-                ),
-                transitions={
-                    "succeeded": f"STATE_{STATE_COUNT + 1}",
-                    "failed": "failed",
-                },
-            )
 
+    if "talk" in command_param:
+        if greet_person:
+            greet(command_param, sm)
         sm.add(
             f"STATE_{increment_state_count()}",
             Talk(command_param["talk"]),
@@ -284,7 +266,6 @@ def talk(command_param: Dict, sm: smach.StateMachine) -> None:
             raise ValueError(
                 f"Person info query {query} not recognised. Must be 'name', 'pose', or 'gesture'"
             )
-
         if "room" in command_param:
             waypoints: List[Pose] = get_person_detection_poses(command_param["room"])
             polygon: Polygon = get_room_polygon(command_param["room"])
@@ -301,7 +282,7 @@ def talk(command_param: Dict, sm: smach.StateMachine) -> None:
             FindPersonAndTell(
                 waypoints=waypoints,
                 polygon=polygon,
-                criteria="name",
+                criteria=query,
             ),
             transitions={
                 "succeeded": f"STATE_{STATE_COUNT + 1}",
@@ -328,30 +309,21 @@ def talk(command_param: Dict, sm: smach.StateMachine) -> None:
             remapping={"placeholders": "query_result"},
         )
 
-    elif "object_category" in command_param:
-        if not "location" in command_param:
+    elif "objectcomp" in command_param:
+
+        query = command_param["objectcomp"]
+
+        if "location" in command_param:
+            location_pose = get_location_pose(command_param["location"], False)
+            look_point = get_look_point(command_param["location"])
+        else:
             raise ValueError(
                 "Tell command with object but no room in command parameters"
             )
-        location_param_room = f"/gpsr/arena/rooms/{command_param['location']}"
+
         sm.add(
             f"STATE_{increment_state_count()}",
-            GoToLocation(location_param=f"{location_param_room}/pose"),
-            transitions={
-                "succeeded": f"STATE_{STATE_COUNT + 1}",
-                "failed": "failed",
-            },
-        )
-        # TODO: combine the weight list within
-        # TODO: add speak out the result
-        weight_list = rospy.get_param("/Object_list/Object")
-        sm.add(
-            f"STATE_{increment_state_count()}",
-            ObjectComparison(
-                filter=command_param["object_category"],
-                operation_label="weight",
-                weight=weight_list,
-            ),
+            GoToLocation(location=location_pose),
             transitions={
                 "succeeded": f"STATE_{STATE_COUNT + 1}",
                 "failed": "failed",
@@ -360,20 +332,43 @@ def talk(command_param: Dict, sm: smach.StateMachine) -> None:
 
         sm.add(
             f"STATE_{increment_state_count()}",
-            ObjectComparison(
-                filter=command_param["object_category"],
-                operation_label="size",  # need the relation between command and operation
-                weight=weight_list,
-            ),
+            LookToPoint(pointstamped=look_point),
+            transitions={
+                "succeeded": f"STATE_{STATE_COUNT + 1}",
+                "aborted": "failed",
+                "timed_out": f"STATE_{STATE_COUNT + 1}",
+            },
+        )
+
+        # TODO: call ObjectComparison with the query
+        # query should include a comparison type, and a dictionary of object properties (possibly filtered to a given category)
+        # should write query result to query_result in userdata
+
+        sm.add(
+            f"STATE_{increment_state_count()}",
+            GoToLocation(location=get_current_pose()),
             transitions={
                 "succeeded": f"STATE_{STATE_COUNT + 1}",
                 "failed": "failed",
             },
         )
 
-    elif "personinfo" in command_param:
-        # personinfo: pose, gesture, name
-        pass
+        sm.add(
+            f"STATE_{increment_state_count()}",
+            Say(format_str="The " + query + " is {}"),
+            transitions={
+                "succeeded": f"STATE_{STATE_COUNT + 1}",
+                "failed": "failed",
+            },
+            remapping={"placeholders": "query_result"},
+        )
+
+        raise NotImplementedError("Tell command not implemented for objects")
+
+    else:
+        raise ValueError(
+            "Tell command received with no talk, personinfo or objectcomp in command parameters"
+        )
 
 
 def guide(command_param: Dict, sm: smach.StateMachine) -> None:
@@ -905,7 +900,7 @@ def build_state_machine(parsed_command: Dict) -> smach.StateMachine:
             if command_verb == "greet":
                 greet(command_param, sm)
             elif command_verb == "talk":
-                talk(command_param, sm)
+                talk(command_param, sm, greet_person=len(command_verbs) == 1)
             elif command_verb == "guide":
                 guide(command_param, sm)
             elif command_verb == "deliver" and len(command_params) > 1:
