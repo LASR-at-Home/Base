@@ -4,7 +4,8 @@ import rospy
 
 from gpsr.regex_command_parser import Configuration, gpsr_compile_and_parse
 from gpsr.states import CommandSimilarityMatcher
-from lasr_skills import AskAndListen, GoToLocation, GetImage, Say
+from lasr_skills import AskAndListen, GoToLocation, Say
+from lasr_skills.vision import GetImage
 from geometry_msgs.msg import Pose, Point, Quaternion
 
 import cv2_img
@@ -72,7 +73,7 @@ class CommandParserStateMachine(smach.StateMachine):
                 self._qr_code_detector = cv2.QRCodeDetector()
 
             def execute(self, userdata):
-                cv_im = cv2_img.msg_to_cv2_img(userdata)
+                cv_im = cv2_img.msg_to_cv2_img(userdata.img_msg)
                 text, _, _ = self._qr_code_detector.detectAndDecode(cv_im)
                 if text:
                     userdata.qr_code_text = text
@@ -156,10 +157,19 @@ class CommandParserStateMachine(smach.StateMachine):
                     tts_phrase_format_str="You said {}, is that correct? Please respond 'tiago, yes that's correct' or 'tiago, no that's incorrect'."
                 ),
                 transitions={
-                    "correct": "COMMAND_SIMILARITY_MATCHER",
-                    "incorrect": "ASK_FOR_COMMAND_AGAIN",
+                    "succeeded": "CHECK_RESPONSE",
+                    "failed": "ASK_FOR_COMMAND_AGAIN",
                 },
-                remapping={"placeholders": "raw_command"},
+                remapping={"tts_phrase_placeholders": "raw_command"},
+            )
+
+            smach.StateMachine.add(
+                "CHECK_RESPONSE",
+                self.CheckResponse(),
+                transitions={
+                    "correct": "PARSE_COMMAND",
+                    "incorrect": "CHECK_COMMAND_COUNTER",
+                },
             )
 
             smach.StateMachine.add(
@@ -175,15 +185,19 @@ class CommandParserStateMachine(smach.StateMachine):
 
             smach.StateMachine.add(
                 "SAY_QR_CODE",
-                Say(tts_phrase="Please show me a QR code with the command."),
-                transitions={"succeeded": "QR_CODE_TO_COMMAND", "failed": "failed"},
+                Say(text="Please show me a QR code with the command."),
+                transitions={
+                    "succeeded": "QR_CODE_TO_COMMAND",
+                    "aborted": "failed",
+                    "preempted": "failed",
+                },
             )
 
             smach.StateMachine.add(
                 "QR_CODE_TO_COMMAND",
                 self.QRCodeToCommand(),
                 transitions={"succeeded": "PARSE_COMMAND", "failed": "failed"},
-                remapping={"matched_command": "qr_code_text"},
+                remapping={"qr_code_text": "raw_command"},
             )
 
             smach.StateMachine.add(
