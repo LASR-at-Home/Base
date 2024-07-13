@@ -37,6 +37,21 @@ class ParseCommand(smach.State):
 
 
 class CommandParserStateMachine(smach.StateMachine):
+
+    class CheckResponse(smach.State):
+
+        def __init__(self):
+            smach.State.__init__(
+                self,
+                outcomes=["correct", "incorrect"],
+                input_keys=["transcribed_speech"],
+            )
+
+        def execute(self, userdata):
+            if "yes" in userdata.transcribed_speech.lower():  # TODO: make this smarter
+                return "correct"
+            return "incorrect"
+
     def __init__(
         self,
         data_config: Configuration,
@@ -52,8 +67,8 @@ class CommandParserStateMachine(smach.StateMachine):
             file. Defaults to 1177943.
             total_txt_files (int, optional): total number of gpsr txt files. Defaults to 10.
         """
-        self._parse_command_counter = 0
-        self._parse_command_counter_threshold = 3
+        self._command_counter = 0
+        self._command_counter_threshold = 3
 
         smach.StateMachine.__init__(self, outcomes=["succeeded", "failed"])
 
@@ -78,8 +93,27 @@ class CommandParserStateMachine(smach.StateMachine):
             smach.StateMachine.add(
                 "ASK_FOR_COMMAND",
                 AskAndListen(tts_phrase="Hello, please tell me your command."),
-                transitions={"succeeded": "PARSE_COMMAND", "failed": "failed"},
+                transitions={"succeeded": "SAY_CHECK_COMMAND", "failed": "failed"},
                 remapping={"transcribed_speech": "raw_command"},
+            )
+
+            smach.StateMachine.add(
+                "ASK_FOR_COMMAND_AGAIN",
+                AskAndListen(tts_phrase="Okay, please could you repeat your command?"),
+                transitions={"succeeded": "SAY_CHECK_COMMAND", "failed": "failed"},
+                remapping={"transcribed_speech": "raw_command"},
+            )
+
+            smach.StateMachine.add(
+                "SAY_CHECK_COMMAND",
+                AskAndListen(
+                    tts_phrase_format_str="You said {}, is that correct? Please respond 'tiago, yes that's correct' or 'tiago, no that's incorrect'."
+                ),
+                transitions={
+                    "correct": "PARSE_COMMAND",
+                    "incorrect": "CHECK_COMMAND_COUNTER",
+                },
+                remapping={"placeholders": "raw_command"},
             )
 
             smach.StateMachine.add(
@@ -87,19 +121,19 @@ class CommandParserStateMachine(smach.StateMachine):
                 ParseCommand(data_config),
                 transitions={
                     "succeeded": "succeeded",
-                    "failed": "CHECK_PARSE_COMMAND_COUNTER",
+                    "failed": "failed",
                 },
                 remapping={"parsed_command": "parsed_command"},
             )
 
             smach.StateMachine.add(
-                "CHECK_PARSE_COMMAND_COUNTER",
+                "CHECK_COMMAND_COUNTER",
                 smach.CBState(
                     self._increment_counter, outcomes=["continue", "exceeded"]
                 ),
                 transitions={
-                    "continue": "COMMAND_SIMILARITY_MATCHER",
-                    "exceeded": "ASK_FOR_COMMAND",
+                    "continue": "ASK_FOR_COMMAND_AGAIN",
+                    "exceeded": "failed",  # TODO: use QR code here
                 },
             )
 
@@ -117,8 +151,8 @@ class CommandParserStateMachine(smach.StateMachine):
         """Increment counter and determine whether command has been parsed over the number of times
         set by the threshold.
         """
-        self._parse_command_counter += 1
-        if self._parse_command_counter >= self._parse_command_counter_threshold:
-            self._parse_command_counter = 0
+        self._command_counter += 1
+        if self._command_counter >= self._command_counter_threshold:
+            self._command_counter = 0
             return "exceeded"
         return "continue"
