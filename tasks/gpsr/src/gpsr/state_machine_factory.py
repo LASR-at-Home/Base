@@ -160,6 +160,9 @@ def greet(command_param: Dict, sm: smach.StateMachine) -> None:
     if "room" in command_param:
         waypoints: List[Pose] = get_person_detection_poses(command_param["room"])
         polygon: Polygon = get_room_polygon(command_param["room"])
+    elif "destination" in command_param:
+        waypoints: List[Pose] = get_person_detection_poses(command_param["destination"])
+        polygon: Polygon =get_room_polygon(command_param["destination"])
     elif "location" in command_param:
         waypoints: List[Pose] = [get_location_pose(command_param["location"], True)]
         polygon: Polygon = get_person_detection_polygon(command_param["location"])
@@ -707,6 +710,8 @@ def find(command_param: Dict, sm: smach.StateMachine) -> None:
         )
 
     elif "gesture" in command_param:
+        greet(command_param, sm)
+    elif "name" in command_param:
         greet(command_param, sm)
 
 
