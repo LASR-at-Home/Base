@@ -150,7 +150,6 @@ def get_look_point(location: str) -> PointStamped:
 def get_objects_from_category(category: str) -> List[str]:
     return rospy.get_param(f"/gpsr/objects/{category}")
 
-
 """
 Verbs
 """
@@ -349,9 +348,17 @@ def talk(command_param: Dict, sm: smach.StateMachine, greet_person: bool) -> Non
             },
         )
 
-        # TODO: call ObjectComparison with the query
-        # query should include a comparison type, and a dictionary of object properties (possibly filtered to a given category)
-        # should write query result to query_result in userdata
+        if "object_category" in command_param:
+            objects = get_objects_from_category(command_param["object_category"])
+        else:
+            objects = None
+
+        sm.add(
+            f"STATE_{increment_state_count()}",
+            ObjectComparison(query=query, objects=objects),
+            transitions={"succeeded": f"STATE_{STATE_COUNT + 1}", "failed": "failed"},
+
+        )
 
         sm.add(
             f"STATE_{increment_state_count()}",
@@ -371,8 +378,6 @@ def talk(command_param: Dict, sm: smach.StateMachine, greet_person: bool) -> Non
             },
             remapping={"placeholders": "query_result"},
         )
-
-        raise NotImplementedError("Tell command not implemented for objects")
 
     else:
         raise ValueError(
