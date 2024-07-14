@@ -324,6 +324,7 @@ def talk(command_param: Dict, sm: smach.StateMachine, greet_person: bool) -> Non
         if "location" in command_param:
             location_pose = get_location_pose(command_param["location"], False)
             look_point = get_look_point(command_param["location"])
+            area_polygon = get_object_detection_polygon(command_param["location"])
         else:
             raise ValueError(
                 "Tell command with object but no room in command parameters"
@@ -355,7 +356,7 @@ def talk(command_param: Dict, sm: smach.StateMachine, greet_person: bool) -> Non
 
         sm.add(
             f"STATE_{increment_state_count()}",
-            ObjectComparison(query=query, objects=objects),
+            ObjectComparison(query=query, area_polygon=area_polygon, objects=objects),
             transitions={"succeeded": f"STATE_{STATE_COUNT + 1}", "failed": "failed"},
 
         )
