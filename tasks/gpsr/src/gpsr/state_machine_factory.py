@@ -290,9 +290,15 @@ def talk(command_param: Dict, sm: smach.StateMachine, greet_person: bool) -> Non
             },
         )
 
+        if "destination" in command_param:
+            location_pose = get_location_pose(command_param["destination"], True)
+        else
+            location_pose = get_current_pose()
+
+        # maybe: find person?
         sm.add(
             f"STATE_{increment_state_count()}",
-            GoToLocation(location=get_current_pose()),
+            GoToLocation(location=location_pose),
             transitions={
                 "succeeded": f"STATE_{STATE_COUNT + 1}",
                 "failed": "failed",
