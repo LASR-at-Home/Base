@@ -150,6 +150,7 @@ def get_look_point(location: str) -> PointStamped:
 def get_objects_from_category(category: str) -> List[str]:
     return rospy.get_param(f"/gpsr/objects/{category}")
 
+
 """
 Verbs
 """
@@ -161,7 +162,7 @@ def greet(command_param: Dict, sm: smach.StateMachine) -> None:
         polygon: Polygon = get_room_polygon(command_param["room"])
     elif "destination" in command_param:
         waypoints: List[Pose] = get_person_detection_poses(command_param["destination"])
-        polygon: Polygon =get_room_polygon(command_param["destination"])
+        polygon: Polygon = get_room_polygon(command_param["destination"])
     elif "location" in command_param:
         waypoints: List[Pose] = [get_location_pose(command_param["location"], True)]
         polygon: Polygon = get_person_detection_polygon(command_param["location"])
@@ -294,7 +295,7 @@ def talk(command_param: Dict, sm: smach.StateMachine, greet_person: bool) -> Non
 
         if "destination" in command_param:
             location_pose = get_location_pose(command_param["destination"], True)
-        else
+        else:
             location_pose = get_current_pose()
 
         # maybe: find person?
@@ -358,7 +359,6 @@ def talk(command_param: Dict, sm: smach.StateMachine, greet_person: bool) -> Non
             f"STATE_{increment_state_count()}",
             ObjectComparison(query=query, area_polygon=area_polygon, objects=objects),
             transitions={"succeeded": f"STATE_{STATE_COUNT + 1}", "failed": "failed"},
-
         )
 
         sm.add(
