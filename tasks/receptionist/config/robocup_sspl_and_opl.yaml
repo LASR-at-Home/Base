@@ -1,0 +1,33 @@
+priors:
+  names:
+    - Sophie
+    - Julia
+    - Emma
+    - Sara
+    - Laura
+    - Hayley
+    - Susan
+    - Fleur
+    - Gabriëlle
+    - Gabrielle
+    - Robin
+    - John
+    - Liam
+    - Lucas
+    - William
+    - Kevin
+    - Jesse
+    - Noah
+    - Harrie
+    - Peter
+
+  drinks:
+    - cola
+    - ice tea
+    - milk
+    - water
+    - big coke
+    - fanta
+    - dubbelfris
+
+    
