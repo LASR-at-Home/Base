@@ -75,14 +75,14 @@ class PersonFollower:
     _person_trajectory_pub: rospy.Publisher
 
     def __init__(
-            self,
-            start_following_radius: float = 2.0,
-            start_following_angle: float = 45.0,
-            new_goal_threshold: float = 2.0,
-            stopping_distance: float = 1.0,
-            static_speed: float = 0.0015,
-            max_speed: float = 0.55,
-            asking_time_limit: float = 15.0,
+        self,
+        start_following_radius: float = 2.0,
+        start_following_angle: float = 45.0,
+        new_goal_threshold: float = 2.0,
+        stopping_distance: float = 1.0,
+        static_speed: float = 0.0015,
+        max_speed: float = 0.55,
+        asking_time_limit: float = 15.0,
     ):
         self._start_following_radius = start_following_radius
         self._start_following_angle = start_following_angle
@@ -194,8 +194,8 @@ class PersonFollower:
             )
             rospy.loginfo(f"Person {person.id} is at {dist}m and {angle} degrees")
             if (
-                    dist < self._start_following_radius
-                    and abs(angle) < self._start_following_angle
+                dist < self._start_following_radius
+                and abs(angle) < self._start_following_angle
             ):
                 if dist < min_dist:
                     min_dist = dist
@@ -254,7 +254,7 @@ class PersonFollower:
                 response = self._detect_waving_person()
                 if response.wave_detected:
                     if np.isnan(response.wave_position.point.x) or np.isnan(
-                            response.wave_position.point.y
+                        response.wave_position.point.y
                     ):
                         continue
                     else:
@@ -293,7 +293,7 @@ class PersonFollower:
     def _quat_to_dir(self, q: Quaternion):
         x, y, z, w = q.x, q.y, q.z, q.w
         forward = np.array(
-            [1 - 2 * (y ** 2 + z ** 2), 2 * (x * y - z * w), 2 * (x * z + y * w)]
+            [1 - 2 * (y**2 + z**2), 2 * (x * y - z * w), 2 * (x * z + y * w)]
         )
         return forward
 
@@ -334,11 +334,11 @@ class PersonFollower:
         return True
 
     def _get_pose_on_path(
-            self, start_pose: PoseStamped, goal_pose: PoseStamped, dist_to_goal: float
+        self, start_pose: PoseStamped, goal_pose: PoseStamped, dist_to_goal: float
     ) -> Union[None, PoseStamped]:
         start: rospy.Time = rospy.Time.now()
         assert (
-                start_pose.header.frame_id == goal_pose.header.frame_id
+            start_pose.header.frame_id == goal_pose.header.frame_id
         ), "Start and goal poses must be in the same frame"
 
         chosen_pose: Union[None, PoseStamped] = None
@@ -453,10 +453,10 @@ class PersonFollower:
 
             # Check if the person is walking too fast and ask them to slow down only
             # if you haven't asked them in the last 15 seconds
-            if np.mean([np.linalg.norm(vel) for vel in track_vels]) > self._max_speed and \
-                    (
-                            rospy.Time.now() - asking_time
-                    ).to_sec() > self._asking_time_limit:
+            if (
+                np.mean([np.linalg.norm(vel) for vel in track_vels]) > self._max_speed
+                and (rospy.Time.now() - asking_time).to_sec() > self._asking_time_limit
+            ):
                 self._tts("Please walk slower, I am struggling to keep up", wait=False)
                 asking_time = rospy.Time.now()
 
@@ -480,19 +480,19 @@ class PersonFollower:
                 last_goal_time = rospy.Time.now()
             # retry goal if it was aborted
             elif (
-                    self._move_base_client.get_state() in [GoalStatus.ABORTED]
-                    and prev_goal is not None
+                self._move_base_client.get_state() in [GoalStatus.ABORTED]
+                and prev_goal is not None
             ):
                 rospy.logwarn("Goal was aborted, retrying")
                 self._move_base(prev_goal)
             # check if the person has been static for too long
             elif (
-                    (
-                            np.mean([np.linalg.norm(vel) for vel in track_vels])
-                            < self._static_speed
-                    )
-                    and len(track_vels) == 10
-                    and prev_track is not None
+                (
+                    np.mean([np.linalg.norm(vel) for vel in track_vels])
+                    < self._static_speed
+                )
+                and len(track_vels) == 10
+                and prev_track is not None
             ):
                 rospy.logwarn(
                     "Person has been static for too long, going to them and stopping"

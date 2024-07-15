@@ -11,7 +11,10 @@ from lasr_skills import (
 from lasr_skills.vision import GetCroppedImage
 from lasr_skills import PlayMotion
 from lasr_person_following.msg import FollowAction
-from leg_tracker.srv import InitialisePersonWithVision, InitialisePersonWithVisionRequest
+from leg_tracker.srv import (
+    InitialisePersonWithVision,
+    InitialisePersonWithVisionRequest,
+)
 
 from std_msgs.msg import Empty
 from std_srvs.srv import Empty as EmptySrv
@@ -46,6 +49,7 @@ class CarryMyLuggage(smach.StateMachine):
     def __init__(self):
         smach.StateMachine.__init__(self, outcomes=["succeeded", "failed"])
         with self:
+
             def wait_cb(ud, msg):
                 rospy.loginfo("Received start signal")
                 return False

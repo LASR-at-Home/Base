@@ -65,7 +65,7 @@ class LookAtPerson(smach.StateMachine):
                 # userdata.pointstamped = PointStamped()
                 return "succeeded"
             elif (
-                    len(userdata.bbox_eyes) < 1 and len(userdata.detections.detections) < 1
+                len(userdata.bbox_eyes) < 1 and len(userdata.detections.detections) < 1
             ):
                 return "no_detection"
             print("THE DEEPFACE")
@@ -97,7 +97,7 @@ class LookAtPerson(smach.StateMachine):
                 left_eye = det["left_eye"]
                 right_eye = det["right_eye"]
                 eye_point = (left_eye[0] + right_eye[0]) / 2, (
-                        left_eye[1] + right_eye[1]
+                    left_eye[1] + right_eye[1]
                 ) / 2
 
                 if self.DEBUG:
@@ -136,11 +136,11 @@ class LookAtPerson(smach.StateMachine):
 
                 self.look_at_pub.wait_for_server()
                 if any(
-                        [
-                            True
-                            for i in [look_at.point.x, look_at.point.y, look_at.point.z]
-                            if i != i
-                        ]
+                    [
+                        True
+                        for i in [look_at.point.x, look_at.point.y, look_at.point.z]
+                        if i != i
+                    ]
                 ):
                     look_at.point.x = 0.0
                     look_at.point.y = 0.0
@@ -173,23 +173,23 @@ class LookAtPerson(smach.StateMachine):
                     "bbox": detection.xywh,
                 }
                 if (
-                        keypoint.keypoint_name == "leftEye"
-                        and detection.xywh[0]
-                        < keypoint.x
-                        < detection.xywh[0] + detection.xywh[2]
-                        and detection.xywh[1]
-                        < keypoint.y
-                        < detection.xywh[1] + detection.xywh[3]
+                    keypoint.keypoint_name == "leftEye"
+                    and detection.xywh[0]
+                    < keypoint.x
+                    < detection.xywh[0] + detection.xywh[2]
+                    and detection.xywh[1]
+                    < keypoint.y
+                    < detection.xywh[1] + detection.xywh[3]
                 ):
                     temp["left_eye"] = keypoint.x, keypoint.y
                 if (
-                        keypoint.keypoint_name == "rightEye"
-                        and detection.xywh[0]
-                        < keypoint.x
-                        < detection.xywh[0] + detection.xywh[2]
-                        and detection.xywh[1]
-                        < keypoint.y
-                        < detection.xywh[1] + detection.xywh[3]
+                    keypoint.keypoint_name == "rightEye"
+                    and detection.xywh[0]
+                    < keypoint.x
+                    < detection.xywh[0] + detection.xywh[2]
+                    and detection.xywh[1]
+                    < keypoint.y
+                    < detection.xywh[1] + detection.xywh[3]
                 ):
                     temp["right_eye"] = keypoint.x, keypoint.y
 
@@ -210,7 +210,7 @@ class LookAtPerson(smach.StateMachine):
 
         self.DEBUG = rospy.get_param("/debug", True)
         IS_SIMULATION = (
-                "/pal_startup_control/start" not in rosservice.get_service_list()
+            "/pal_startup_control/start" not in rosservice.get_service_list()
         )
 
         with self:

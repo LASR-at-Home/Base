@@ -24,12 +24,12 @@ class DetectGesture(smach.State):
     """
 
     def __init__(
-            self,
-            gesture_to_detect: Optional[str] = None,
-            bodypix_model: str = "resnet50",
-            bodypix_confidence: float = 0.1,
-            buffer_width: int = 50,
-            debug_publisher: str = "/skills/gesture_detection/debug",
+        self,
+        gesture_to_detect: Optional[str] = None,
+        bodypix_model: str = "resnet50",
+        bodypix_confidence: float = 0.1,
+        buffer_width: int = 50,
+        debug_publisher: str = "/skills/gesture_detection/debug",
     ):
         """Optionally stores the gesture to detect. If None, it will infer the gesture from the keypoints."""
         smach.State.__init__(
@@ -80,43 +80,43 @@ class DetectGesture(smach.State):
 
         if "leftShoulder" in keypoint_info and "leftWrist" in keypoint_info:
             if (
-                    self.gesture_to_detect == "raising_left_arm"
-                    or self.gesture_to_detect is None
+                self.gesture_to_detect == "raising_left_arm"
+                or self.gesture_to_detect is None
             ):
                 if keypoint_info["leftWrist"]["y"] < keypoint_info["leftShoulder"]["y"]:
                     detected_gesture = "raising_left_arm"
             if (
-                    self.gesture_to_detect == "pointing_to_the_left"
-                    or self.gesture_to_detect is None
+                self.gesture_to_detect == "pointing_to_the_left"
+                or self.gesture_to_detect is None
             ):
                 if (
-                        keypoint_info["leftWrist"]["x"] - self.buffer_width
-                        > keypoint_info["leftShoulder"]["x"]
+                    keypoint_info["leftWrist"]["x"] - self.buffer_width
+                    > keypoint_info["leftShoulder"]["x"]
                 ):
                     detected_gesture = "pointing_to_the_left"
 
         if (
-                "rightShoulder" in keypoint_info
-                and "rightWrist" in keypoint_info
-                and self.gesture_to_detect is None
+            "rightShoulder" in keypoint_info
+            and "rightWrist" in keypoint_info
+            and self.gesture_to_detect is None
         ):
             print(keypoint_info["rightShoulder"]["x"], keypoint_info["rightWrist"]["x"])
             if (
-                    self.gesture_to_detect == "raising_right_arm"
-                    or self.gesture_to_detect is None
+                self.gesture_to_detect == "raising_right_arm"
+                or self.gesture_to_detect is None
             ):
                 if (
-                        keypoint_info["rightWrist"]["y"]
-                        < keypoint_info["rightShoulder"]["y"]
+                    keypoint_info["rightWrist"]["y"]
+                    < keypoint_info["rightShoulder"]["y"]
                 ):
                     detected_gesture = "raising_right_arm"
             if (
-                    self.gesture_to_detect == "pointing_to_the_right"
-                    or self.gesture_to_detect is None
+                self.gesture_to_detect == "pointing_to_the_right"
+                or self.gesture_to_detect is None
             ):
                 if (
-                        keypoint_info["rightShoulder"]["x"] - self.buffer_width
-                        > keypoint_info["rightWrist"]["x"]
+                    keypoint_info["rightShoulder"]["x"] - self.buffer_width
+                    > keypoint_info["rightWrist"]["x"]
                 ):
                     detected_gesture = "pointing_to_the_right"
 
@@ -126,21 +126,32 @@ class DetectGesture(smach.State):
         if not userdata.detection.point:
             # take it a meter away from the robot position if no keypoints are detected
             robot_pose = rospy.wait_for_message("/robot_pose", Pose)
-            userdata.person_point = Point(x=robot_pose.position.x + 1, y=robot_pose.position.y)
+            userdata.person_point = Point(
+                x=robot_pose.position.x + 1, y=robot_pose.position.y
+            )
         else:
             _buffer = tf.Buffer(cache_time=rospy.Duration.from_sec(10.0))
             _listener = tf.TransformListener(_buffer)
             person_pose = PoseStamped(
                 header=Header(frame_id="map"),
-                pose=Pose(position=userdata.detection.point, orientation=Quaternion(0, 0, 0, 1))
+                pose=Pose(
+                    position=userdata.detection.point,
+                    orientation=Quaternion(0, 0, 0, 1),
+                ),
             )
             trans = _buffer.lookup_transform(
                 "odom", person_pose.header.frame_id, rospy.Time(0), rospy.Duration(1.0)
             )
             pose = do_transform_pose(person_pose, trans)
             # userdata.person_point = pose.pose.position
-            create_and_publish_marker(self.person_point_pub, PointStamped(header=pose.header, point=pose.pose.position),
-                                      name="person_point_odom", r=0.0, g=0.0, b=1.0)
+            create_and_publish_marker(
+                self.person_point_pub,
+                PointStamped(header=pose.header, point=pose.pose.position),
+                name="person_point_odom",
+                r=0.0,
+                g=0.0,
+                b=1.0,
+            )
             userdata.person_point = pose.pose.position
 
         cv2_gesture_img = cv2_img.msg_to_cv2_img(userdata.img_msg)
