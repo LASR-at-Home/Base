@@ -11,6 +11,8 @@ from lasr_vision_msgs.srv import (
     BodyPixMaskDetection,
     BodyPixMaskDetectionRequest,
     TorchFaceFeatureDetectionDescription,
+    Vqa,
+    VqaRequest,
 )
 from numpy2message import numpy2message
 from .vision import GetCroppedImage, ImageMsgToCv2
@@ -36,9 +38,14 @@ class DescribePeople(smach.StateMachine):
                     use_mask=False,  # If true prediction can be very wrong!!!
                 ),
                 transitions={
-                    "succeeded": "CONVERT_IMAGE",
+                    "succeeded": "CLIP ATTRIBUTES",
                     "failed": "failed",
                 },
+            )
+
+            smach.StateMachine.add(
+                self.GetClipAttributes(),
+                transitions={"succeeded": "CONVERT_IMAGE", "failed": "failed"},
             )
 
             smach.StateMachine.add(
@@ -74,6 +81,58 @@ class DescribePeople(smach.StateMachine):
                 transitions={"succeeded": "succeeded"},
             )
 
+    class GetClipAttributes(smach.State):
+        def __init__(self):
+            smach.State.__init__(
+                self,
+                outcomes=["succeeded", "failed"],
+                input_keys=["image_raw"],
+                output_keys=["clip_detection_dict"],
+            )
+            self.clip_service = rospy.ServiceProxy("/clip_vqa/query_service", Vqa)
+            self.glasses_questions = [
+                "a person wearing glasses",
+                "a person not wearing glasses",
+            ]
+            self.hat_questions = [
+                "a person wearing a hat",
+                "a person not wearing a hat",
+            ]
+            self.hair_questions = [
+                "a person with long hair",
+                "a person with short hair",
+            ]
+
+        def execute(self, userdata):
+            try:
+                glasses_request = VqaRequest(
+                    possible_answers=self.glasses_questions,
+                    image_raw=userdata.image_raw,
+                )
+                glasses_response = self.clip_service(glasses_request)
+                hat_request = VqaRequest(
+                    possible_answers=self.hat_questions, image_raw=userdata.image_raw
+                )
+                hat_response = self.clip_service(hat_request)
+                hair_request = VqaRequest(
+                    possible_answers=self.hair_questions, image_raw=userdata.image_raw
+                )
+                hair_response = self.clip_service(hair_request)
+
+                glasses_bool = glasses_response.answer == "a person wearing glasses"
+                hat_bool = hat_response.answer == "a person wearing a hat"
+                hair_bool = hair_response.answer == "a person with long hair"
+
+                userdata.clip_detection_dict = {
+                    "glasses": glasses_bool,
+                    "hat": hat_bool,
+                    "long_hair": hair_bool,
+                }
+            except Exception as e:
+                rospy.logerr(f"Failed to get clip attributes: {e}")
+                return "failed"
+            return "succeeded"
+
     class SegmentYolo(smach.State):
         """
         Segment using YOLO
@@ -92,7 +151,7 @@ class DescribePeople(smach.StateMachine):
 
         def execute(self, userdata):
             try:
-                result = self.yolo(userdata.img_msg, "yolov8n-seg.pt", 0.5, 0.3)
+                result = self.yolo(userdata.img_msg, "yolov8x-seg.pt", 0.5, 0.3)
                 userdata.people_detections = [
                     det for det in result.detected_objects if det.name == "person"
                 ]
