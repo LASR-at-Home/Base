@@ -566,11 +566,7 @@ def predict_frame(
     ).describe()
 
     # 0.5 for True, -0.5 for False
-    rst_person = {
-        "glasses": -0.5,
-        "hat": -0.5,
-        "hair_shape": "short hair"
-    }
+    rst_person = {"glasses": -0.5, "hat": -0.5, "hair_shape": "short hair"}
 
     glasses_query = VqaRequest(
         possible_answers=["A person wearing glasses", "A person not wearing glasses"],
