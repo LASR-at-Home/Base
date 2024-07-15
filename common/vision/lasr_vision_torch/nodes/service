@@ -1,0 +1,130 @@
+from lasr_vision_msgs.srv import TorchFaceFeatureDetection, TorchFaceFeatureDetectionRequest, TorchFaceFeatureDetectionResponse
+from lasr_vision_msgs.msg import FeatureWithColour, ColourPrediction
+from colour_estimation import closest_colours, RGB_COLOURS, RGB_HAIR_COLOURS
+from cv2_img import msg_to_cv2_img
+from torch_module.helpers import binary_erosion_dilation, median_color_float
+from numpy2message import message2numpy
+
+import numpy as np
+import torch
+import rospy
+import lasr_vision_torch
+
+
+model = lasr_vision_torch.load_face_classifier_model()
+
+
+def detect(request: TorchFaceFeatureDetectionRequest) -> TorchFaceFeatureDetectionResponse:
+    # decode the image
+    rospy.loginfo('Decoding')
+    frame = msg_to_cv2_img(request.image_raw)
+    torso_mask_data, torso_mask_shape, torso_mask_dtype = request.torso_mask_data, request.torso_mask_shape, request.torso_mask_dtype
+    head_mask_data, head_mask_shape, head_mask_dtype = request.head_mask_data, request.head_mask_shape, request.head_mask_dtype 
+    torsal_mask = message2numpy(torso_mask_data, torso_mask_shape, torso_mask_dtype)
+    head_mask = message2numpy(head_mask_data, head_mask_shape, head_mask_dtype)
+    print(torso_mask_shape)
+    print(head_mask_shape)
+
+    # 'hair', 'hat', 'glasses', 'face'
+    input_image = torch.from_numpy(frame).permute(2, 0, 1).unsqueeze(0).float()
+    input_image /= 255.0
+    masks_batch_pred, pred_classes = model(input_image)
+
+    thresholds_mask = [
+        0.5, 0.75, 0.25, 0.5,  # 0.5, 0.5, 0.5, 0.5,
+    ]
+    thresholds_pred = [
+        0.6, 0.8, 0.1, 0.5,
+    ]
+    erosion_iterations = 1
+    dilation_iterations = 1
+    categories = ['hair', 'hat', 'glasses', 'face',]
+
+    masks_batch_pred = binary_erosion_dilation(
+        masks_batch_pred, thresholds=thresholds_mask,
+        erosion_iterations=erosion_iterations, dilation_iterations=dilation_iterations
+    )
+
+    median_colours = (median_color_float(
+        input_image, masks_batch_pred).detach().squeeze(0)*255).numpy().astype(np.uint8)
+
+    # discarded: masks = masks_batch_pred.detach().squeeze(0).numpy().astype(np.uint8)
+    # discarded: mask_list = [masks[i,:,:] for i in range(masks.shape[0])]
+
+    pred_classes = pred_classes.detach().squeeze(0).numpy()
+    # discarded: class_list = [categories[i] for i in range(
+    #     pred_classes.shape[0]) if pred_classes[i].item() > thresholds_pred[i]]
+    colour_list = [median_colours[i, :]
+                   for i in range(median_colours.shape[0])]
+
+    response = TorchFaceFeatureDetectionResponse()
+    response.detected_features = [
+        FeatureWithColour(categories[i], [
+            ColourPrediction(colour, distance)
+            for colour, distance
+            in closest_colours(colour_list[i], RGB_HAIR_COLOURS if categories[i] == 'hair' else RGB_COLOURS)
+        ])
+        for i
+        in range(pred_classes.shape[0])
+        if pred_classes[i].item() > thresholds_pred[i]
+    ]
+
+    return response
+
+
+# def detect(request: TorchFaceFeatureDetectionRequest) -> TorchFaceFeatureDetectionResponse:
+#     # decode the image
+#     rospy.loginfo('Decoding')
+#     frame = msg_to_cv2_img(request.image_raw)
+
+#     # 'hair', 'hat', 'glasses', 'face'
+#     input_image = torch.from_numpy(frame).permute(2, 0, 1).unsqueeze(0).float()
+#     input_image /= 255.0
+#     masks_batch_pred, pred_classes = model(input_image)
+
+#     thresholds_mask = [
+#         0.5, 0.75, 0.25, 0.5,  # 0.5, 0.5, 0.5, 0.5,
+#     ]
+#     thresholds_pred = [
+#         0.6, 0.8, 0.1, 0.5,
+#     ]
+#     erosion_iterations = 1
+#     dilation_iterations = 1
+#     categories = ['hair', 'hat', 'glasses', 'face',]
+
+#     masks_batch_pred = binary_erosion_dilation(
+#         masks_batch_pred, thresholds=thresholds_mask,
+#         erosion_iterations=erosion_iterations, dilation_iterations=dilation_iterations
+#     )
+
+#     median_colours = (median_color_float(
+#         input_image, masks_batch_pred).detach().squeeze(0)*255).numpy().astype(np.uint8)
+
+#     # discarded: masks = masks_batch_pred.detach().squeeze(0).numpy().astype(np.uint8)
+#     # discarded: mask_list = [masks[i,:,:] for i in range(masks.shape[0])]
+
+#     pred_classes = pred_classes.detach().squeeze(0).numpy()
+#     # discarded: class_list = [categories[i] for i in range(
+#     #     pred_classes.shape[0]) if pred_classes[i].item() > thresholds_pred[i]]
+#     colour_list = [median_colours[i, :]
+#                    for i in range(median_colours.shape[0])]
+
+#     response = TorchFaceFeatureDetectionResponse()
+#     response.detected_features = [
+#         FeatureWithColour(categories[i], [
+#             ColourPrediction(colour, distance)
+#             for colour, distance
+#             in closest_colours(colour_list[i], RGB_HAIR_COLOURS if categories[i] == 'hair' else RGB_COLOURS)
+#         ])
+#         for i
+#         in range(pred_classes.shape[0])
+#         if pred_classes[i].item() > thresholds_pred[i]
+#     ]
+
+#     return response
+# test test
+
+rospy.init_node('torch_service')
+rospy.Service('/torch/detect/face_features', TorchFaceFeatureDetection, detect)
+rospy.loginfo('Torch service started')
+rospy.spin()

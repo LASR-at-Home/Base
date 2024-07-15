@@ -78,6 +78,7 @@ class GetNameAndDrink(smach.StateMachine):
 
             return outcome
 
+
     class PostRecoveryDecision(smach.State):
         def __init__(
             self,
@@ -95,6 +96,7 @@ class GetNameAndDrink(smach.StateMachine):
             self._possible_names = [name.lower() for name in prior_data["names"]]
             self._possible_drinks = [drink.lower() for drink in prior_data["drinks"]]
 
+
         def execute(self, userdata: UserData) -> str:
             if not self._recovery_name_and_drink_required(userdata):
                 if userdata.guest_data[self._guest_id]["name"] == "unknown":
@@ -104,6 +106,7 @@ class GetNameAndDrink(smach.StateMachine):
             else:
                 outcome = "failed"
             return outcome
+
 
         def _recovery_name_and_drink_required(self, userdata: UserData) -> bool:
             """Determine whether both the name and drink requires recovery.
@@ -118,6 +121,11 @@ class GetNameAndDrink(smach.StateMachine):
                 return False
 
     def __init__(
+        self,
+        guest_id: str,
+        last_resort: bool,
+        param_key: str = "/receptionist/priors",
+    ):
         self,
         guest_id: str,
         last_resort: bool,

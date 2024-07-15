@@ -171,10 +171,10 @@ def _3d_bbox_crop(
         )
         for det in detections
     ]
+
     if crop_method == "closest":
         detections = [det for _, det in sorted(zip(distances, detections))]
         distances.sort()
-
     elif crop_method == "furthest":
         detections = [
             det for _, det in sorted(zip(distances, detections), reverse=True)
