@@ -25,7 +25,6 @@ from pal_startup_msgs.srv import (
 
 
 class CarryMyLuggage(smach.StateMachine):
-
     class ProcessPointingDirection(smach.State):
         def __init__(self):
             smach.State.__init__(
@@ -47,7 +46,6 @@ class CarryMyLuggage(smach.StateMachine):
     def __init__(self):
         smach.StateMachine.__init__(self, outcomes=["succeeded", "failed"])
         with self:
-
             def wait_cb(ud, msg):
                 rospy.loginfo("Received start signal")
                 return False
