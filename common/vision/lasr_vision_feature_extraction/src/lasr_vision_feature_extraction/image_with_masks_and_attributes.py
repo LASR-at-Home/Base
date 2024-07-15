@@ -325,7 +325,7 @@ class ImageOfCloth(ImageWithMasksAndAttributes):
                 else:
                     squares_colours_count[colour] += 1
             print(squares_colours_count)
-            tag = cloth + "_colour"
+            tag = cloth + " colour"
             result[tag] = {}
             for k in possible_colours:
                 if k in squares_colours_count.keys():
