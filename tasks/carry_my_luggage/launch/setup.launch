@@ -3,17 +3,20 @@
     <!--     PARAMS     -->
     <arg name="config" default="lab"/>
 
-    <!--     INTERACTION     -->
-    <arg name="whisper_device_param" default="10" />
-    <node pkg="lasr_speech_recognition_whisper" type="transcribe_microphone_server" name="transcribe_speech" output="screen" args="--mic_device $(arg whisper_device_param)"/>
-
     <!--     STATIC POINTS     -->
     <rosparam command="load" file="$(find carry_my_luggage)/config/$(arg config).yaml" />
+
+     <!--     INTERACTION     -->
+    <arg name="whisper_device_param" default="23" />
+    <node pkg="lasr_speech_recognition_whisper" type="transcribe_microphone_server" name="transcribe_speech" output="screen" args="--mic_device $(arg whisper_device_param)"/>
 
     <!--     MOTIONS     -->
     <rosparam command="load" file="$(find lasr_skills)/config/motions.yaml"/>
 
     <!--      PERCEPTION     -->
     <include file="$(find lasr_vision_yolov8)/launch/service.launch" />
-    <include file="$(find lasr_vision_bodypix)/launch/mask_service.launch" />
+    <include file="$(find lasr_vision_cropped_detection)/launch/cropped_detection.launch"/>
+    <include file="$(find lasr_vision_bodypix)/launch/bodypix.launch">
+        <param name="preload" type="yaml" value='resnet50' />
+    </include>
 </launch>

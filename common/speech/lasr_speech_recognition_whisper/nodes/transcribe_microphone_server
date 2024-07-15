@@ -43,7 +43,7 @@ class speech_model_params:
     mic_device: Optional[str] = None
     timer_duration: Optional[int] = 20
     warmup: bool = True
-    energy_threshold: Optional[int] = 600
+    energy_threshold: Optional[int] = None
     pause_threshold: Optional[float] = 2.0
 
 
@@ -53,9 +53,9 @@ class TranscribeSpeechAction(object):
     _result = lasr_speech_recognition_msgs.msg.TranscribeSpeechResult()
 
     def __init__(
-        self,
-        action_name: str,
-        model_params: speech_model_params,
+            self,
+            action_name: str,
+            model_params: speech_model_params,
     ) -> None:
         """Starts an action server for transcribing speech.
 
@@ -116,9 +116,9 @@ class TranscribeSpeechAction(object):
             )
 
     def _configure_recogniser(
-        self,
-        energy_threshold: Optional[float] = None,
-        pause_threshold: Optional[float] = None,
+            self,
+            energy_threshold: Optional[float] = None,
+            pause_threshold: Optional[float] = None,
     ) -> sr.Recognizer:
         """Configures the speech recogniser object.
 
@@ -197,8 +197,8 @@ class TranscribeSpeechAction(object):
             ).get_wav_data()
         # Magic number 32768.0 is the maximum value of a 16-bit signed integer
         float_data = (
-            np.frombuffer(wav_data, dtype=np.int16).astype(np.float32, order="C")
-            / 32768.0
+                np.frombuffer(wav_data, dtype=np.int16).astype(np.float32, order="C")
+                / 32768.0
         )
 
         if self._action_server.is_preempt_requested():
@@ -291,8 +291,8 @@ def parse_args() -> dict:
 
     parser.add_argument(
         "--energy_threshold",
-        type=int,
-        default=600,
+        type=Optional[int],
+        default=None,
         help="Energy threshold for silence detection. Using this disables automatic adjustment",
     )
 

@@ -4,7 +4,7 @@ import smach_ros
 
 from std_srvs.srv import Empty
 
-from lasr_skills import Say, ListenFor, PlayMotion
+from lasr_skills import Say, PlayMotion, Wait
 
 import rospkg
 import rosparam
@@ -31,6 +31,7 @@ class ReceiveObject(smach.StateMachine):
             rosparam.upload_params(ns, param)
 
         with self:
+
             smach.StateMachine.add(
                 "CLEAR_OCTOMAP",
                 smach_ros.ServiceState("clear_octomap", Empty),
@@ -95,9 +96,19 @@ class ReceiveObject(smach.StateMachine):
                 "LOOK_CENTRE",
                 PlayMotion(motion_name="look_centre"),
                 transitions={
-                    "succeeded": "REACH_ARM",
+                    "succeeded": "SAY_REACH_ARM",
                     "aborted": "failed",
                     "preempted": "failed",
+                },
+            )
+
+            smach.StateMachine.add(
+                "SAY_REACH_ARM",
+                Say(text="Please step back, I am going to reach my arm out."),
+                transitions={
+                    "succeeded": "REACH_ARM",
+                    "aborted": "REACH_ARM",
+                    "preempted": "REACH_ARM",
                 },
             )
 
@@ -136,10 +147,10 @@ class ReceiveObject(smach.StateMachine):
                 smach.StateMachine.add(
                     "SAY_PLACE",
                     Say(
-                        text=f"Please place the {object_name} in my end-effector, and say `I am done`.",
+                        text=f"Please place the {object_name} in my end-effector. I will wait for a few seconds.",
                     ),
                     transitions={
-                        "succeeded": "LISTEN_DONE",
+                        "succeeded": "WAIT_5",
                         "aborted": "failed",
                         "preempted": "failed",
                     },
@@ -148,25 +159,25 @@ class ReceiveObject(smach.StateMachine):
                 smach.StateMachine.add(
                     "SAY_PLACE",
                     Say(
-                        format_str="Please place the {} in my end-effector, and say `I am done`.",
+                        format_str="Please place the {} in my end-effector. I will wait for a few seconds.",
                     ),
                     transitions={
-                        "succeeded": "LISTEN_DONE",
+                        "succeeded": "WAIT_5",
                         "aborted": "failed",
                         "preempted": "failed",
                     },
                     remapping={"placeholders": "object_name"},
                 )
+
             smach.StateMachine.add(
-                "LISTEN_DONE",
-                ListenFor("done"),
+                "WAIT_5",
+                Wait(5),
                 transitions={
                     "succeeded": "CLOSE_GRIPPER",
-                    "not_done": "LISTEN_DONE",
-                    "aborted": "failed",
-                    "preempted": "failed",
+                    "failed": "CLOSE_GRIPPER",
                 },
             )
+
             smach.StateMachine.add(
                 "CLOSE_GRIPPER",
                 smach_ros.ServiceState("parallel_gripper_controller/grasp", Empty),
