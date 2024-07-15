@@ -35,8 +35,8 @@ class speech_model_params:
         pause_threshold (Optional[float]): Seconds of non-speaking audio before a phrase is considered complete. Defaults to 0.8 seconds.
     """
 
-    model_name: str = "small.en"
-    device: str = "cpu",  # if torch.cuda.is_available() else "cpu"
+    model_name: str = "medium.en"
+    device: str = "cuda" if torch.cuda.is_available() else "cpu"
     start_timeout: float = 5.0
     phrase_duration: Optional[float] = 10
     sample_rate: int = 16000
@@ -210,7 +210,7 @@ class TranscribeSpeechAction(object):
         # Cast to fp16 if using GPU
         phrase = self._model.transcribe(
             float_data,
-            fp16=self._model_params.device == "cpu",
+            fp16=self._model_params.device == "cuda",
         )["text"]
         transcription_end_time = timer()
         rospy.loginfo(f"Transcription finished!")
@@ -256,7 +256,7 @@ def parse_args() -> dict:
     parser.add_argument(
         "--device",
         type=str,
-        default="cpu",  # if torch.cuda.is_available() else "cpu",
+        default="cuda" if torch.cuda.is_available() else "cpu",
         help="Device to run the model on.",
     )
     parser.add_argument(
