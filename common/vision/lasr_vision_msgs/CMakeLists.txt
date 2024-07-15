@@ -68,10 +68,12 @@ add_service_files(
   TorchFaceFeatureDetectionDescription.srv
   DetectFaces.srv
   CheckKnownPeople.srv
+  DetectWave.srv
   CroppedDetection.srv
   ClipImageEncoder.srv
   ClipLearnFace.srv
   ClipRecogniseFace.srv
+  GroundedSam.srv
 )
 
 # Generate actions in the 'action' folder

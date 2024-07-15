@@ -10,6 +10,11 @@ from typing import Union
 
 from lasr_skills import PlayMotion
 
+import rospkg
+import rosparam
+
+import os
+
 PUBLIC_CONTAINER = False
 
 try:
@@ -35,6 +40,13 @@ class GoToLocation(smach.StateMachine):
             super(GoToLocation, self).__init__(
                 outcomes=["succeeded", "failed"], input_keys=["location"]
             )
+
+        r = rospkg.RosPack()
+        els = rosparam.load_file(
+            os.path.join(r.get_path("lasr_skills"), "config", "motions.yaml")
+        )
+        for param, ns in els:
+            rosparam.upload_params(ns, param)
 
         IS_SIMULATION = (
             "/pal_startup_control/start" not in rosservice.get_service_list()

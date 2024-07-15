@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import itertools
 import re
 
@@ -262,7 +263,7 @@ def gpsr_regex(configuration: Configuration):
                 f"{verb('follow')} them {prep('toLocPrep')} the {Configuration.pick(configuration, 'location', ['room'])}"
             )
             sub_commands.append(
-                f"{verb('guide')} them {prep('toLocPrep')} the {Configuration.pick(configuration, 'location', ['room'])}"
+                f"{verb('guide')} them {prep('toLocPrep')} the {Configuration.pick(configuration, 'location', ['room', 'loc'])}"
             )
         elif type == "foundObj":
             sub_commands.append(
@@ -400,6 +401,7 @@ def gpsr_parse(matches: Dict[str, str]) -> Dict[str, Any]:
         if key_to_check == "verb":
             result["commands"].append(reverse_translate_verb_dict(value))
             result["command_params"].append({})
+
         elif key_to_check in [
             "object",
             "location",
@@ -409,8 +411,11 @@ def gpsr_parse(matches: Dict[str, str]) -> Dict[str, Any]:
             "start",
             "end",
             "objectcomp",
+            "personinfo",
             "clothes",
             "talk",
+            "pose",
+            "destination",
         ]:
             value_to_add = value
             try:
@@ -436,10 +441,14 @@ def gpsr_compile_and_parse(config: Configuration, input: str) -> Dict:
     object_categories = (
         config["object_categories_singular"] + config["object_categories_plural"]
     )
-    return parse_result_dict(gpsr_parse(matches), object_categories)
+    return parse_result_dict(
+        gpsr_parse(matches), object_categories, config["room_names"]
+    )
 
 
-def parse_result_dict(result: Dict, object_categories: List[str]) -> Dict:
+def parse_result_dict(
+    result: Dict, object_categories: List[str], rooms: List[str]
+) -> Dict:
     """Parses the result dictionary output by the gpsr parse to
     handle missing parameters.
 
@@ -458,6 +467,15 @@ def parse_result_dict(result: Dict, object_categories: List[str]) -> Dict:
                     "command_params"
                 ][i]["object"]
                 del result["command_params"][i]["object"]
+
+        # Rename location to room if it is a room
+        if "location" in result["command_params"][i]:
+            if result["command_params"][i]["location"] in rooms:
+                result["command_params"][i]["room"] = result["command_params"][i][
+                    "location"
+                ]
+                del result["command_params"][i]["location"]
+
         # Update command params based on the previous commands params
         if i > 0:
             if "location" not in result["command_params"][i]:
@@ -467,10 +485,9 @@ def parse_result_dict(result: Dict, object_categories: List[str]) -> Dict:
                     ]["location"]
             if "room" not in result["command_params"][i]:
                 if "room" in result["command_params"][i - 1]:
-                    result["command_params"][i - 1]["room"] = result["command_params"][
+                    result["command_params"][i]["room"] = result["command_params"][
                         i - 1
                     ]["room"]
-                    del result["command_params"][i]["room"]
             if "name" not in result["command_params"][i]:
                 if "name" in result["command_params"][i - 1]:
                     result["command_params"][i]["name"] = result["command_params"][
@@ -481,7 +498,11 @@ def parse_result_dict(result: Dict, object_categories: List[str]) -> Dict:
                     result["command_params"][i]["object"] = result["command_params"][
                         i - 1
                     ]["object"]
-
+            if "object_category" not in result["command_params"][i]:
+                if "object_category" in result["command_params"][i - 1]:
+                    result["command_params"][i]["object_category"] = result[
+                        "command_params"
+                    ][i - 1]["object_category"]
     return result
 
 
@@ -498,9 +519,9 @@ if __name__ == "__main__":
     object_categories = object_categories_singular + object_categories_plural
     config: Configuration = {
         "person_names": ["guest1", "guest2"],
-        "location_names": ["sofa", "piano", "kitchen table"],
+        "location_names": ["sofa", "piano", "kitchen table", "bed"],
         "placement_location_names": ["kitchen table"],
-        "room_names": ["living room", "kitchen"],
+        "room_names": ["living room", "kitchen", "bedroom"],
         "object_names": ["cup", "television"],
         "object_categories_plural": ["sticks"],
         "object_categories_singular": ["stick"],
@@ -512,11 +533,13 @@ if __name__ == "__main__":
 
     def execute(input: str, object_categories: List[str]):
         matches = regex.match(input).groupdict()
-        return parse_result_dict(gpsr_parse(matches), object_categories)
+        return parse_result_dict(
+            gpsr_parse(matches), object_categories, config["room_names"]
+        )
 
     print(
         execute(
-            "go to the kitchen then meet guest1 and tell the time",
+            "tell the pose of the person at the kitchen to the person at the living room",
             object_categories,
         )
     )
@@ -530,20 +553,20 @@ if __name__ == "__main__":
 
     # print(
     #     execute(
-    #         "navigate to the kitchen then find a cup and get it and bring it to me",
+    #         "tell the time to the person raising their right arm in the kitchen",
     #         object_categories,
     #     )
     # )
     # print(
     #     execute(
-    #         "navigate to the kitchen table then find a stick and fetch it and deliver it to guest1 in the living room",
+    #         "tell me the pose of the person at the sofa",
     #         object_categories,
     #     )
     # )
 
     # print(
     #     execute(
-    #         "lead the person wearing a red shirt from the sofa to the living room",
+    #         "navigate to the kitchen table then find a stick.",
     #         object_categories,
     #     )
     # )

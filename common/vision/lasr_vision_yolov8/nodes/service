@@ -5,6 +5,8 @@ import rospy
 import rospkg
 import lasr_vision_yolov8 as yolo
 
+from typing import Dict
+
 from sensor_msgs.msg import Image
 from visualization_msgs.msg import Marker
 
@@ -29,31 +31,27 @@ os.chdir(os.path.abspath(os.path.join(package_path, "models")))
 rospy.init_node("yolov8_service")
 
 # Determine variables
-DEBUG = rospy.get_param("~debug", False)
 PRELOAD = rospy.get_param("~preload", [])
 
 for model in PRELOAD:
     yolo.load_model(model)
 
 # Prepare publisher
-debug_publishers = {}
-if DEBUG:
-    debug_publisher = rospy.Publisher("/yolov8/debug", Image, queue_size=1)
+debug_publishers: Dict[str, rospy.Publisher] = {}
+debug_publisher = rospy.Publisher("/yolov8/debug", Image, queue_size=1)
 
 
 def detect(request: YoloDetectionRequest) -> YoloDetectionResponse:
     """
     Hand off detection request to yolo library
     """
-    debug_publisher = None
-    if DEBUG:
-        if request.dataset in debug_publishers:
-            debug_publisher = debug_publishers[request.dataset]
-        else:
-            topic_name = re.sub(r"[\W_]+", "", request.dataset)
-            debug_publisher = rospy.Publisher(
-                f"/yolov8/debug/{topic_name}", Image, queue_size=1
-            )
+    if request.dataset in debug_publishers:
+        debug_publisher = debug_publishers[request.dataset]
+    else:
+        topic_name = re.sub(r"[\W_]+", "", request.dataset)
+        debug_publisher = rospy.Publisher(
+            f"/yolov8/debug/{topic_name}", Image, queue_size=1
+        )
     return yolo.detect(request, debug_publisher)
 
 
@@ -61,20 +59,18 @@ def detect_3d(request: YoloDetection3DRequest) -> YoloDetection3DResponse:
     """
     Hand off detection request to yolo library
     """
-    debug_inference_publisher, debug_point_publisher = None, None
-    if DEBUG:
-        if request.dataset in debug_publishers:
-            debug_inference_publisher, debug_point_publisher = debug_publishers[
-                request.dataset
-            ]
-        else:
-            topic_name = re.sub(r"[\W_]+", "", request.dataset)
-            debug_inference_publisher = rospy.Publisher(
-                f"/yolov8/debug/{topic_name}", Image, queue_size=1
-            )
-            debug_point_publisher = rospy.Publisher(
-                f"/yolov8/debug/points", Marker, queue_size=10
-            )
+    if request.dataset in debug_publishers:
+        debug_inference_publisher, debug_point_publisher = debug_publishers[
+            request.dataset
+        ]
+    else:
+        topic_name = re.sub(r"[\W_]+", "", request.dataset)
+        debug_inference_publisher = rospy.Publisher(
+            f"/yolov8/debug/{topic_name}", Image, queue_size=1
+        )
+        debug_point_publisher = rospy.Publisher(
+            f"/yolov8/debug/points", Marker, queue_size=100
+        )
 
     return yolo.detect_3d(request, debug_inference_publisher, debug_point_publisher)
 

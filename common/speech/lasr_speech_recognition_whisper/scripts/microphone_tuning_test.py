@@ -28,6 +28,7 @@ def main():
     args = parse_args()
 
     recognizer = sr.Recognizer()
+    recognizer.pause_threshold = 2
     microphone = sr.Microphone(device_index=args["device_index"], sample_rate=16000)
     threshold = 100
     recognizer.dynamic_energy_threshold = False
@@ -39,7 +40,9 @@ def main():
     while transcription_result != "":
         print(f"Listening...")
         with microphone as source:
-            wav_data = recognizer.listen(source).get_wav_data()
+            wav_data = recognizer.listen(
+                source, phrase_time_limit=10, timeout=5
+            ).get_wav_data()
         print(f"Processing...")
         # Magic number 32768.0 is the maximum value of a 16-bit signed integer
         float_data = (

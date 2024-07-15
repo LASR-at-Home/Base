@@ -13,18 +13,13 @@ from lasr_skills import (
     PlayMotion,
     LookToPoint,
 )
-from std_msgs.msg import Header
+from std_msgs.msg import Header, Empty
 from receptionist.states import (
-    Introduce,
-    SeatGuest,
-    FindAndLookAt,
     HandleGuest,
-    PointCloudSweep,
-    RunAndProcessDetections,
-    RecognisePeople,
-    CheckSofa,
     IntroduceAndSeatGuest,
 )
+
+import rospy
 
 
 class Receptionist(smach.StateMachine):
@@ -33,7 +28,7 @@ class Receptionist(smach.StateMachine):
         wait_pose: Pose,
         wait_area: Polygon,
         seat_pose: Pose,
-        sweep_points: List[Point],
+        search_motions: List[str],
         seat_area: Polygon,
         sofa_area: Polygon,
         sofa_point: Point,
@@ -42,6 +37,7 @@ class Receptionist(smach.StateMachine):
         face_detection_confidence: float = 0.2,
         known_host: bool = True,
         learn_guest_1: bool = True,
+        sweep: bool = True,
     ):
         smach.StateMachine.__init__(self, outcomes=["succeeded", "failed"])
 
@@ -51,7 +47,7 @@ class Receptionist(smach.StateMachine):
         self.wait_area = wait_area
         self.seat_pose = seat_pose
         self.seat_area = seat_area
-        # self.sweep_points = sweep_points
+
         with self:
             self.userdata.guest_data = {
                 "host": host_data,
@@ -61,6 +57,24 @@ class Receptionist(smach.StateMachine):
             self.userdata.confidence = face_detection_confidence
             self.userdata.dataset = "receptionist"
             self.userdata.seat_position = PointStamped()
+
+            def wait_cb(ud, msg):
+                rospy.loginfo("Received start signal")
+                return False
+
+            smach.StateMachine.add(
+                "WAIT_START",
+                smach_ros.MonitorState(
+                    "/receptionist/start",
+                    Empty,
+                    wait_cb,
+                ),
+                transitions={
+                    "valid": "WAIT_START",
+                    "invalid": "SAY_START",
+                    "preempted": "WAIT_START",
+                },
+            )
 
             smach.StateMachine.add(
                 "SAY_START",
@@ -77,18 +91,6 @@ class Receptionist(smach.StateMachine):
             """
 
             self._goto_waiting_area(guest_id=1)
-
-            smach.StateMachine.add(
-                "INTRODUCE_ROBOT",
-                Say(
-                    text="Hello my name is Tiago, nice to meet you, I shall be your receptionist for today. I will try and be polite by looking at you when I speak, so I hope you will do the same by looking into my eyes whenever possible. First let me get to know you a little bit better."
-                ),
-                transitions={
-                    "succeeded": f"HANDLE_GUEST_1",
-                    "aborted": f"HANDLE_GUEST_1",
-                    "preempted": f"HANDLE_GUEST_1",
-                },
-            )
 
             # """
             # GET GUEST ATTRIBUTES
@@ -114,6 +116,8 @@ class Receptionist(smach.StateMachine):
                     sofa_area,
                     sofa_point,
                     max_people_on_sofa,
+                    search_motions,
+                    sweep=sweep,
                 ),
                 transitions={
                     "succeeded": "SAY_RETURN_WAITING_AREA",
@@ -157,6 +161,8 @@ class Receptionist(smach.StateMachine):
                     sofa_area,
                     sofa_point,
                     max_people_on_sofa,
+                    search_motions,
+                    sweep=sweep,
                 ),
                 transitions={
                     "succeeded": "SAY_GOODBYE",
@@ -241,7 +247,7 @@ class Receptionist(smach.StateMachine):
         smach.StateMachine.add(
             f"CHECK_GUEST_ID_GUEST_{guest_id}",
             smach.CBState(check_guest_id, outcomes=["guest_1", "guest_2"]),
-            transitions={"guest_2": "HANDLE_GUEST_2", "guest_1": "INTRODUCE_ROBOT"},
+            transitions={"guest_2": "HANDLE_GUEST_2", "guest_1": "HANDLE_GUEST_1"},
         )
 
     def _guide_guest(self, guest_id: int) -> None:
@@ -274,6 +280,16 @@ class Receptionist(smach.StateMachine):
         smach.StateMachine.add(
             f"SAY_WAIT_GUEST_{guest_id}",
             Say(text="Please wait here on my left."),
+            transitions={
+                "succeeded": f"LOOK_EYES_{guest_id}",
+                "preempted": "failed",
+                "aborted": "failed",
+            },
+        )
+
+        smach.StateMachine.add(
+            f"LOOK_EYES_{guest_id}",
+            PlayMotion(motion_name="look_very_left"),
             transitions={
                 "succeeded": f"INTRODUCE_AND_SEAT_GUEST_{guest_id}",
                 "preempted": "failed",

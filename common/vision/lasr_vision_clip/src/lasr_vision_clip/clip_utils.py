@@ -76,15 +76,17 @@ def encode_img(model, img_msg: Image) -> np.ndarray:
     return model(img.unsqueeze(0)).detach().numpy()
 
 
-def query_image_stream(
+def query_image(
+    img_msg: Image,
     model: SentenceTransformer,
+    img_msg: Image,
     answers: list[str],
     annotate: bool = False,
 ) -> tuple[str, torch.Tensor, Image]:
-    """Queries the CLIP model with the latest image from the robot's camera
-    and a set of possible image captions and returns the most likely caption.
+    """Queries the CLIP model with an image and a set of possible image captions and returns the most likely caption.
 
     Args:
+        img_msg (Image): the image to query
         model (SentenceTransformer): clip model to run inference on, loaded into memory
         answers(list[str]): list of possible answers
         annotate(bool, optional): whether to annotate the image with the most likely, and
@@ -92,7 +94,6 @@ def query_image_stream(
     returns:
         tuple(str, torch.Tensor, Image): the most likely answer, the scores, and the annotated image msg
     """
-    img_msg = rospy.wait_for_message("/xtion/rgb/image_raw", Image)
     img_pil = cv2_img.msg_to_pillow_img(img_msg)
 
     cos_scores = run_clip(model, answers, img_pil)

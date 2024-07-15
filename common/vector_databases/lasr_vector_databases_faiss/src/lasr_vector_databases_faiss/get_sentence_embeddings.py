@@ -13,6 +13,7 @@ def load_model(model_name: str = "all-MiniLM-L6-v2") -> SentenceTransformer:
     Returns:
         sentence_transformers.SentenceTransformer: the loaded model
     """
+    print(f"Loading model...")
     return SentenceTransformer(model_name, device=DEVICE)
 
 

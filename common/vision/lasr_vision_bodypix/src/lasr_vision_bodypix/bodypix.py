@@ -3,14 +3,15 @@ from __future__ import annotations
 from typing import List
 import rospy
 import cv2
-import cv2_img
 import numpy as np
-from PIL import Image
+
 import re
 import tensorflow as tf
-from tf_bodypix.api import download_model, load_model, BodyPixModelPaths
+
+import cv2_img
 
 from sensor_msgs.msg import Image as SensorImage
+from tf_bodypix.api import download_model, load_model, BodyPixModelPaths
 
 from lasr_vision_msgs.msg import BodyPixMask, BodyPixKeypoint, BodyPixKeypointNormalized
 from lasr_vision_msgs.srv import (
@@ -23,11 +24,7 @@ from lasr_vision_msgs.srv import (
 import rospkg
 
 # model cache
-# preload resnet 50 model so that it won't waste the time
-# doing that in the middle of the task.
-loaded_models = {
-    "resnet50": load_model(download_model(BodyPixModelPaths.RESNET50_FLOAT_STRIDE_16))
-}
+loaded_models = {}
 r = rospkg.RosPack()
 
 
@@ -46,25 +43,32 @@ def load_model_cached(dataset: str):
     """
     model = None
     if dataset in loaded_models:
+        rospy.loginfo(f"Using cached {dataset} model")
         model = loaded_models[dataset]
     else:
         if dataset == "resnet50":
+            rospy.loginfo("Downloading resnet50 model")
             name = download_model(BodyPixModelPaths.RESNET50_FLOAT_STRIDE_16)
+            rospy.loginfo("Loading resnet50 model")
             model = load_model(name)
         elif dataset == "mobilenet50":
+            rospy.loginfo("Downloading mobilenet50 model")
             name = download_model(BodyPixModelPaths.MOBILENET_FLOAT_50_STRIDE_8)
+            rospy.loginfo("Loading mobilenet50 model")
             model = load_model(name)
         elif dataset == "mobilenet100":
+            rospy.loginfo("Downloading mobilenet100 model")
             name = download_model(BodyPixModelPaths.MOBILENET_FLOAT_100_STRIDE_8)
+            rospy.loginfo("Loading mobilenet100 model")
             model = load_model(name)
         else:
             model = load_model(dataset)
-        rospy.loginfo(f"Loaded {dataset} model")
+        rospy.loginfo(f"Loaded {dataset} model into cache")
         loaded_models[dataset] = model
     return model
 
 
-def run_inference(dataset: str, confidence: float, img: Image):
+def run_inference(dataset: str, confidence: float, img: SensorImage):
     # decode the image
     rospy.loginfo("Decoding")
     img = cv2_img.msg_to_cv2_img(img)

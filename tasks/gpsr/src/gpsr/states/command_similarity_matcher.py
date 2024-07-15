@@ -52,12 +52,12 @@ if __name__ == "__main__":
     sm = smach.StateMachine(outcomes=["succeeded", "failed"])
     with sm:
         sm.userdata.tts_phrase = "Please tell me your command."
-        # smach.StateMachine.add(
-        #     "ASK_FOR_COMMAND",
-        #     AskAndListen(),
-        #     transitions={"succeeded": "COMMAND_SIMILARITY_MATCHER", "failed": "failed"},
-        #     remapping={"transcribed_speech": "command"},
-        # )
+        smach.StateMachine.add(
+            "ASK_FOR_COMMAND",
+            AskAndListen(),
+            transitions={"succeeded": "COMMAND_SIMILARITY_MATCHER", "failed": "failed"},
+            remapping={"transcribed_speech": "command"},
+        )
         sm.add(
             "LISTEN",
             Listen(),
@@ -71,18 +71,18 @@ if __name__ == "__main__":
         sm.add(
             "COMMAND_SIMILARITY_MATCHER",
             CommandSimilarityMatcher([1177943] * 10),
-            transitions={"succeeded": "LISTEN"},
+            transitions={"succeeded": "SAY_MATCHED_COMMAND", "failed": "failed"},
         )
-        # smach.StateMachine.add(
-        #     "SAY_MATCHED_COMMAND",
-        #     Say(),
-        #     transitions={
-        #         "succeeded": "ASK_FOR_COMMAND",
-        #         "aborted": "failed",
-        #         "preempted": "failed",
-        #     },
-        #     remapping={"text": "matched_command"},
-        # )
+        sm.add(
+            "SAY_MATCHED_COMMAND",
+            Say(),
+            transitions={
+                "succeeded": "ASK_FOR_COMMAND",
+                "aborted": "failed",
+                "preempted": "failed",
+            },
+            remapping={"text": "matched_command"},
+        )
 
     sm.execute()
     rospy.spin()
