@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 import smach
 import smach_ros
-from lasr_skills import Detect3D, GoToLocation, LookToPoint
+from lasr_skills import GoToLocation, LookToPoint, Say
 from shapely.geometry.polygon import Polygon
 from typing import List, Union
 from geometry_msgs.msg import Pose, Point, Quaternion, CDRequest
-from lasr_skills import Say, LookToPoint
 from lasr_vision_msgs.srv import CroppedDetection, CroppedDetectionRequest
 import rospy
 
@@ -193,7 +192,7 @@ class GoFindTheObject(smach.StateMachine):
                         "aborted": "failed",
                         "preempted": "failed",
                     },
-                    remapping={"polygon": "polygon"}
+                        remapping={"polygon": "polygon"}
                     )
 
                     smach.StateMachine.add(
