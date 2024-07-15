@@ -545,8 +545,6 @@ def predict_frame(
     head_frame,
     torso_frame,
     full_frame,
-    head_mask,
-    torso_mask,
     cloth_predictor,
     image_raw,
     clip_service: rospy.ServiceProxy = rospy.ServiceProxy(
@@ -568,10 +566,7 @@ def predict_frame(
     ).describe()
 
     # 0.5 for True, -0.5 for False
-    rst_person = {
-        "glasses": -0.5,
-        "hat": -0.5,
-    }
+    rst_person = {"glasses": -0.5, "hat": -0.5, "hair_shape": "short hair"}
 
     glasses_query = VqaRequest(
         possible_answers=["A person wearing glasses", "A person not wearing glasses"],
@@ -583,13 +578,23 @@ def predict_frame(
         image_raw=image_raw,
     )
 
+    hair_query = VqaRequest(
+        possible_answers=["A person with short hair", "A person with long hair"],
+        image_raw=image_raw,
+    )
+
     glasses_response = clip_service(glasses_query)
-    hat_response = clip_service(hat_query)
 
     if glasses_response.answer == "A person wearing glasses":
         rst_person["glasses"] = 0.5
+    hat_response = clip_service(hat_query)
     if hat_response.answer == "A person wearing a hat":
         rst_person["hat"] = 0.5
+
+    hair_response = clip_service(hair_query)
+
+    if hair_response.answer == "A person with long hair":
+        rst_person["hair_shape"] = "long hair"
 
     result = {
         **rst_person,

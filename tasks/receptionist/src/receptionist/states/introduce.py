@@ -48,17 +48,19 @@ def stringify_guest_data(
         },
     )
 
+    relevant_guest_data["attributes"]["has_hair"] = 0.5
+
     guest_str = f"{relevant_guest_data['name']}, their favourite drink is {relevant_guest_data['drink']}. "
 
     if not relevant_guest_data["detection"] or not describe_features:
         return guest_str
 
     filtered_attributes = {}
-    # filtered_attributes["hair"] = {
-    #     "confidence": relevant_guest_data["attributes"]["has_hair"],
-    #     "hair_shape": relevant_guest_data["attributes"]["hair_shape"],
-    #     "hair_colour": relevant_guest_data["attributes"]["hair_colour"],
-    # }
+    filtered_attributes["hair"] = {
+        "confidence": relevant_guest_data["attributes"]["has_hair"],
+        "hair_shape": relevant_guest_data["attributes"]["hair_shape"],
+        # "hair_colour": relevant_guest_data["attributes"]["hair_colour"],
+    }
 
     most_confident_clothes = find_most_confident_clothes(
         relevant_guest_data,
@@ -117,8 +119,8 @@ def stringify_guest_data(
 
         if attribute_name == "hair":
             hair_shape = attribute_value["hair_shape"]
-            hair_colour = attribute_value["hair_colour"]
-            guest_str += f"They have {hair_shape} and {hair_colour}. "
+            # hair_colour = attribute_value["hair_colour"]
+            guest_str += f"They have {hair_shape}. "
         elif attribute_name == "facial_hair":
             if confidence < 0:
                 guest_str += "They don't have facial hair. "
