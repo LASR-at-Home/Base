@@ -415,6 +415,7 @@ def gpsr_parse(matches: Dict[str, str]) -> Dict[str, Any]:
             "clothes",
             "talk",
             "pose",
+            "destination",
         ]:
             value_to_add = value
             try:
@@ -484,7 +485,7 @@ def parse_result_dict(
                     ]["location"]
             if "room" not in result["command_params"][i]:
                 if "room" in result["command_params"][i - 1]:
-                    result["command_params"][i - 1]["room"] = result["command_params"][
+                    result["command_params"][i]["room"] = result["command_params"][
                         i - 1
                     ]["room"]
             if "name" not in result["command_params"][i]:
@@ -538,30 +539,30 @@ if __name__ == "__main__":
 
     print(
         execute(
-            "go to the sofa then find a cup and take it and bring it to me",
+            "tell the pose of the person at the kitchen to the person at the living room",
             object_categories,
         )
     )
 
-    print(
-        execute(
-            "navigate to the kitchen then find a cup and get it and bring it to the person pointing to the right in the kitchen",
-            object_categories,
-        )
-    )
+    # print(
+    #     execute(
+    #         "navigate to the kitchen then find a cup and get it and bring it to the person pointing to the right in the kitchen",
+    #         object_categories,
+    #     )
+    # )
 
-    print(
-        execute(
-            "navigate to the kitchen then find a cup and get it and bring it to me",
-            object_categories,
-        )
-    )
-    print(
-        execute(
-            "tell me the pose of the person at the sofa",
-            object_categories,
-        )
-    )
+    # print(
+    #     execute(
+    #         "tell the time to the person raising their right arm in the kitchen",
+    #         object_categories,
+    #     )
+    # )
+    # print(
+    #     execute(
+    #         "tell me the pose of the person at the sofa",
+    #         object_categories,
+    #     )
+    # )
 
     # print(
     #     execute(

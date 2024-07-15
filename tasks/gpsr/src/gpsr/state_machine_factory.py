@@ -10,11 +10,20 @@ from lasr_skills import (
     HandoverObject,
     Say,
     ReceiveObject,
+    FindPersonAndTell,
+    CountPeople,
+    LookToPoint,
 )
 
 from lasr_person_following.msg import FollowAction, FollowGoal
 
-from gpsr.states import Talk, QuestionAnswer, GoFindTheObject, ObjectComparison
+from gpsr.states import (
+    Talk,
+    QuestionAnswer,
+    GoFindTheObject,
+    ObjectComparison,
+    CountObject,
+)
 import os
 import rospkg
 
@@ -24,7 +33,9 @@ from geometry_msgs.msg import (
     Quaternion,
     Polygon,
     PoseWithCovarianceStamped,
+    PointStamped,
 )
+from std_msgs.msg import Header
 
 STATE_COUNT = 0
 from lasr_skills import GoToLocation
@@ -54,15 +65,19 @@ def get_current_pose() -> Pose:
     return pose.pose.pose
 
 
-def get_location_pose(location: str, person: bool) -> Pose:
+def get_location_pose(location: str, person: bool, dem_manipulation=False) -> Pose:
     location_room = get_location_room(location)
     if person:
         location_pose: Dict = rospy.get_param(
             f"/gpsr/arena/rooms/{location_room}/beacons/{location}/person_detection_pose"
         )
-    else:
+    elif not dem_manipulation:
         location_pose: Dict = rospy.get_param(
             f"/gpsr/arena/rooms/{location_room}/beacons/{location}/object_detection_pose"
+        )
+    else:
+        location_pose: Dict = rospy.get_param(
+            f"/gpsr/arena/roomss/{location_room}/beacons/{location}/dem_manipulation_pose"
         )
 
     return Pose(
@@ -121,6 +136,21 @@ def get_object_detection_polygon(location: str) -> Polygon:
     )
 
 
+def get_look_point(location: str) -> PointStamped:
+    location_room = get_location_room(location)
+    look_point = rospy.get_param(
+        f"/gpsr/arena/rooms/{location_room}/beacons/{location}/object_detection_point"
+    )
+    return PointStamped(
+        header=Header(frame_id="map"),
+        point=Point(**look_point),
+    )
+
+
+def get_objects_from_category(category: str) -> List[str]:
+    return rospy.get_param(f"/gpsr/objects/{category}")
+
+
 """
 Verbs
 """
@@ -130,6 +160,9 @@ def greet(command_param: Dict, sm: smach.StateMachine) -> None:
     if "room" in command_param:
         waypoints: List[Pose] = get_person_detection_poses(command_param["room"])
         polygon: Polygon = get_room_polygon(command_param["room"])
+    elif "destination" in command_param:
+        waypoints: List[Pose] = get_person_detection_poses(command_param["destination"])
+        polygon: Polygon = get_room_polygon(command_param["destination"])
     elif "location" in command_param:
         waypoints: List[Pose] = [get_location_pose(command_param["location"], True)]
         polygon: Polygon = get_person_detection_polygon(command_param["location"])
@@ -147,6 +180,20 @@ def greet(command_param: Dict, sm: smach.StateMachine) -> None:
     elif "gesture" in command_param:
         criteria = "gesture"
         criteria_value = command_param["gesture"]
+        if "pointing" in criteria_value:
+            if "left" in criteria_value:
+                criteria_value = "pointing_to_the_left"
+            elif "right" in criteria_value:
+                criteria_value = "pointing_to_the_right"
+        elif "raising" in criteria_value:
+            if "left" in criteria_value:
+                criteria_value = "raising_left_arm"
+            elif "right" in criteria_value:
+                criteria_value = "raising_right_arm"
+        elif "waving" in criteria_value:
+            criteria_value = "waving"
+        rospy.loginfo(f"CRITERIA VALUE: {criteria_value}")
+
     elif "pose" in command_param:
         criteria = "pose"
         criteria_value = command_param["pose"]
@@ -170,7 +217,7 @@ def greet(command_param: Dict, sm: smach.StateMachine) -> None:
     )
 
 
-def talk(command_param: Dict, sm: smach.StateMachine) -> None:
+def talk(command_param: Dict, sm: smach.StateMachine, greet_person: bool) -> None:
     """
     This combines talk and tell as they use the same verb.
 
@@ -207,41 +254,86 @@ def talk(command_param: Dict, sm: smach.StateMachine) -> None:
 
 
     """
-    if "gesture" in command_param or "pose" in command_param or "name" in command_param:
-        find(command_param, sm)
-
-        # go back to the start, and report
 
     if "talk" in command_param:
+        if greet_person:
+            greet(command_param, sm)
         sm.add(
             f"STATE_{increment_state_count()}",
             Talk(command_param["talk"]),
-            transitions={"succeeded": "succeeded", "failed": "failed"},
+            transitions={"succeeded": f"STATE_{STATE_COUNT + 1}", "failed": "failed"},
         )
-    elif "object_category" in command_param:
-        if not "location" in command_param:
+    elif "personinfo" in command_param:
+        query: str = command_param["personinfo"]
+        if query not in ["name", "pose", "gesture"]:
+            raise ValueError(
+                f"Person info query {query} not recognised. Must be 'name', 'pose', or 'gesture'"
+            )
+        if "room" in command_param:
+            waypoints: List[Pose] = get_person_detection_poses(command_param["room"])
+            polygon: Polygon = get_room_polygon(command_param["room"])
+        elif "location" in command_param:
+            waypoints: List[Pose] = [get_location_pose(command_param["location"], True)]
+            polygon: Polygon = get_person_detection_polygon(command_param["location"])
+        else:
+            raise ValueError(
+                "Tell command received with personinfo, but no room or location in command parameters"
+            )
+
+        sm.add(
+            f"STATE_{increment_state_count()}",
+            FindPersonAndTell(
+                waypoints=waypoints,
+                polygon=polygon,
+                criteria=query,
+            ),
+            transitions={
+                "succeeded": f"STATE_{STATE_COUNT + 1}",
+                "failed": "failed",
+            },
+        )
+
+        if "destination" in command_param:
+            location_pose = get_location_pose(command_param["destination"], True)
+        else:
+            location_pose = get_current_pose()
+
+        # maybe: find person?
+        sm.add(
+            f"STATE_{increment_state_count()}",
+            GoToLocation(location=location_pose),
+            transitions={
+                "succeeded": f"STATE_{STATE_COUNT + 1}",
+                "failed": "failed",
+            },
+        )
+
+        sm.add(
+            f"STATE_{increment_state_count()}",
+            Say(format_str="The " + query + " of the person is {}"),
+            transitions={
+                "succeeded": f"STATE_{STATE_COUNT + 1}",
+                "failed": "failed",
+            },
+            remapping={"placeholders": "query_result"},
+        )
+
+    elif "objectcomp" in command_param:
+
+        query = command_param["objectcomp"]
+
+        if "location" in command_param:
+            location_pose = get_location_pose(command_param["location"], False)
+            look_point = get_look_point(command_param["location"])
+            area_polygon = get_object_detection_polygon(command_param["location"])
+        else:
             raise ValueError(
                 "Tell command with object but no room in command parameters"
             )
-        location_param_room = f"/gpsr/arena/rooms/{command_param['location']}"
+
         sm.add(
             f"STATE_{increment_state_count()}",
-            GoToLocation(location_param=f"{location_param_room}/pose"),
-            transitions={
-                "succeeded": f"STATE_{STATE_COUNT + 1}",
-                "failed": "failed",
-            },
-        )
-        # TODO: combine the weight list within
-        # TODO: add speak out the result
-        weight_list = rospy.get_param("/Object_list/Object")
-        sm.add(
-            f"STATE_{increment_state_count()}",
-            ObjectComparison(
-                filter=command_param["object_category"],
-                operation_label="weight",
-                weight=weight_list,
-            ),
+            GoToLocation(location=location_pose),
             transitions={
                 "succeeded": f"STATE_{STATE_COUNT + 1}",
                 "failed": "failed",
@@ -250,20 +342,48 @@ def talk(command_param: Dict, sm: smach.StateMachine) -> None:
 
         sm.add(
             f"STATE_{increment_state_count()}",
-            ObjectComparison(
-                filter=command_param["object_category"],
-                operation_label="size",  # need the relation between command and operation
-                weight=weight_list,
-            ),
+            LookToPoint(pointstamped=look_point),
+            transitions={
+                "succeeded": f"STATE_{STATE_COUNT + 1}",
+                "aborted": "failed",
+                "timed_out": f"STATE_{STATE_COUNT + 1}",
+            },
+        )
+
+        if "object_category" in command_param:
+            objects = get_objects_from_category(command_param["object_category"])
+        else:
+            objects = None
+
+        sm.add(
+            f"STATE_{increment_state_count()}",
+            ObjectComparison(query=query, area_polygon=area_polygon, objects=objects),
+            transitions={"succeeded": f"STATE_{STATE_COUNT + 1}", "failed": "failed"},
+        )
+
+        sm.add(
+            f"STATE_{increment_state_count()}",
+            GoToLocation(location=get_current_pose()),
             transitions={
                 "succeeded": f"STATE_{STATE_COUNT + 1}",
                 "failed": "failed",
             },
         )
 
-    elif "personinfo" in command_param:
-        # personinfo: pose, gesture, name
-        pass
+        sm.add(
+            f"STATE_{increment_state_count()}",
+            Say(format_str="The " + query + " is {}"),
+            transitions={
+                "succeeded": f"STATE_{STATE_COUNT + 1}",
+                "failed": "failed",
+            },
+            remapping={"placeholders": "query_result"},
+        )
+
+    else:
+        raise ValueError(
+            "Tell command received with no talk, personinfo or objectcomp in command parameters"
+        )
 
 
 def guide(command_param: Dict, sm: smach.StateMachine) -> None:
@@ -342,7 +462,7 @@ def guide(command_param: Dict, sm: smach.StateMachine) -> None:
     sm.add(
         f"STATE_{increment_state_count()}",
         Guide(location_name=location_name, location_pose=location_pose),
-        transitions={"succeeded": "succeeded", "failed": "failed"},
+        transitions={"succeeded": f"STATE_{STATE_COUNT + 1}", "failed": "failed"},
     )
 
 
@@ -410,7 +530,9 @@ def deliver(command_param: Dict, sm: smach.StateMachine) -> None:
 def place(command_param: Dict, sm: smach.StateMachine) -> None:
 
     if "location" in command_param:
-        location_pose = get_location_pose(command_param["location"], False)
+        location_pose = get_location_pose(
+            command_param["location"], False, dem_manipulation=True
+        )
     else:
         raise ValueError(
             "Place command received with no location in command parameters"
@@ -495,6 +617,19 @@ def take(command_param: Dict, sm: smach.StateMachine) -> None:
 
     sm.add(
         f"STATE_{increment_state_count()}",
+        GoToLocation(
+            location=get_location_pose(
+                command_param["location"], False, dem_manipulation=True
+            ),
+        ),
+        transitions={
+            "succeeded": f"STATE_{STATE_COUNT + 1}",
+            "failed": "failed",
+        },
+    )
+
+    sm.add(
+        f"STATE_{increment_state_count()}",
         ReceiveObject(object_name=criteria_value),
         transitions={
             "succeeded": f"STATE_{STATE_COUNT + 1}",
@@ -503,8 +638,12 @@ def take(command_param: Dict, sm: smach.StateMachine) -> None:
     )
 
 
-def answer(command_param: Dict, sm: smach.StateMachine) -> None:
+def answer(command_param: Dict, sm: smach.StateMachine, greet_person: bool) -> None:
     data_root = os.path.join(rospkg.RosPack().get_path("gpsr"), "data")
+
+    if greet_person:
+        greet(command_param, sm)
+
     sm.add(
         f"STATE_{increment_state_count()}",
         QuestionAnswer(
@@ -578,6 +717,8 @@ def find(command_param: Dict, sm: smach.StateMachine) -> None:
 
     elif "gesture" in command_param:
         greet(command_param, sm)
+    elif "name" in command_param:
+        greet(command_param, sm)
 
 
 def meet(command_param: Dict, sm: smach.StateMachine) -> None:
@@ -593,34 +734,52 @@ def meet(command_param: Dict, sm: smach.StateMachine) -> None:
 
 def count(command_param: Dict, sm: smach.StateMachine) -> None:
     """
-    count the number of a category of objects at a given placement location
+    Count commands can be of the following form:
+
+    - Tell me how many objects there are of a given category at a placement location
+    - Tell me how many people there are in a given gesture in a given room
+    - Tell me how many people there are in a given pose in a given room
+    - Tell me how many people there are wearing given clothes in a given room
     """
 
-    # TODO
-    raise NotImplementedError("Count command not implemented")
+    people: bool = False
 
-    if "object_category" in command_param:
-        if not "location" in command_param:
-            raise ValueError(
-                "Count command with object but no room in command parameters"
-            )
-        location_param_room = f"/gpsr/arena/rooms/{command_param['location']}"
-        sm.add(
-            f"STATE_{increment_state_count()}",
-            GoToLocation(location_param=f"{location_param_room}/pose"),
-            transitions={
-                "succeeded": f"STATE_{STATE_COUNT + 1}",
-                "failed": "failed",
-            },
+    if "pose" in command_param:
+        criteria = "pose"
+        criteria_value = command_param["pose"]
+        people = True
+    elif "gesture" in command_param:
+        criteria = "gesture"
+        criteria_value = command_param["gesture"]
+        people = True
+    elif "clothes" in command_param:
+        criteria = "clothes"
+        criteria_value = command_param["clothes"]
+        people = True
+    elif "object_category" in command_param:
+        criteria = "object_category"
+        criteria_value = command_param["object_category"]
+    else:
+        raise ValueError(
+            "Count command received with no pose, gesture, clothes, or object category in command parameters"
         )
-        # TODO: combine the weight list within
-        weight_list = rospy.get_param("/Object_list/Object")
+
+    if people:
+        if "room" in command_param:
+            waypoints: List[Pose] = get_person_detection_poses(command_param["room"])
+            polygon: Polygon = get_room_polygon(command_param["room"])
+        else:
+            raise ValueError(
+                "Count command received pose, gesture, clothes, or object category but no room in command parameters"
+            )
+
         sm.add(
             f"STATE_{increment_state_count()}",
-            ObjectComparison(
-                filter=command_param["object_category"],
-                operation_label="count",
-                weight=weight_list,
+            CountPeople(
+                waypoints=waypoints,
+                polygon=polygon,
+                criteria=criteria,
+                criteria_value=criteria_value,
             ),
             transitions={
                 "succeeded": f"STATE_{STATE_COUNT + 1}",
@@ -628,8 +787,96 @@ def count(command_param: Dict, sm: smach.StateMachine) -> None:
             },
         )
 
+        sm.add(
+            f"STATE_{increment_state_count()}",
+            GoToLocation(location=get_current_pose()),
+            transitions={
+                "succeeded": f"STATE_{STATE_COUNT + 1}",
+                "failed": "failed",
+            },
+        )
 
-def follow(command_param: Dict, sm: smach.StateMachine) -> None:
+        sm.add(
+            f"STATE_{increment_state_count()}",
+            Say(
+                format_str="There are {}"
+                + criteria_value
+                + " people in the "
+                + command_param["room"]
+            ),
+            transitions={
+                "succeeded": f"STATE_{STATE_COUNT + 1}",
+                "failed": "failed",
+            },
+            remapping={"placeholders": "people_count"},
+        )
+
+    else:
+        if not "location" in command_param:
+            raise ValueError(
+                "Count command with object but no room in command parameters"
+            )
+        location_pose = get_location_pose(command_param["location"], False)
+        location_polygon = get_object_detection_polygon(command_param["location"])
+
+        sm.add(
+            f"STATE_{increment_state_count()}",
+            GoToLocation(location=location_pose),
+            transitions={
+                "succeeded": f"STATE_{STATE_COUNT + 1}",
+                "failed": "failed",
+            },
+        )
+
+        sm.add(
+            f"STATE_{increment_state_count()}",
+            LookToPoint(pointstamped=get_look_point(command_param["location"])),
+            transitions={
+                "succeeded": f"STATE_{STATE_COUNT + 1}",
+                "aborted": "failed",
+                "timed_out": f"STATE_{STATE_COUNT + 1}",
+            },
+        )
+
+        sm.add(
+            f"STATE_{increment_state_count()}",
+            CountObject(
+                location_polygon,
+                objects=get_objects_from_category(command_param["object_category"]),
+            ),
+            transitions={"succeeded": f"STATE_{STATE_COUNT + 1}", "failed": "failed"},
+        )
+
+        sm.add(
+            f"STATE_{increment_state_count()}",
+            GoToLocation(location=get_current_pose()),
+            transitions={
+                "succeeded": f"STATE_{STATE_COUNT + 1}",
+                "failed": "failed",
+            },
+        )
+
+        sm.add(
+            f"STATE_{increment_state_count()}",
+            Say(
+                format_str="There are {} "
+                + criteria_value
+                + " on the "
+                + command_param["location"]
+            ),
+            transitions={
+                "succeeded": f"STATE_{STATE_COUNT + 1}",
+                "failed": "failed",
+            },
+            remapping={"placeholders": "object_count"},
+        )
+
+
+def follow(command_param: Dict, sm: smach.StateMachine, greet_person: bool) -> None:
+
+    if greet_person:
+        greet(command_param, sm)
+
     sm.add(
         f"STATE_{increment_state_count()}",
         smach_ros.SimpleActionState(
@@ -670,17 +917,19 @@ def build_state_machine(parsed_command: Dict) -> smach.StateMachine:
             if command_verb == "greet":
                 greet(command_param, sm)
             elif command_verb == "talk":
-                talk(command_param, sm)
+                talk(command_param, sm, greet_person=len(command_verbs) == 1)
             elif command_verb == "guide":
                 guide(command_param, sm)
-            elif command_verb == "deliver":
+            elif command_verb == "deliver" and len(command_params) > 1:
                 deliver(command_param, sm)
+            elif command_verb == "deliver" and len(command_params) == 1:
+                bring(command_param, sm)
             elif command_verb == "place":
                 place(command_param, sm)
             elif command_verb == "take":
                 take(command_param, sm)
             elif command_verb == "answer":
-                answer(command_param, sm)
+                answer(command_param, sm, greet_person=len(command_verbs) == 1)
             elif command_verb == "go":
                 person = not any(
                     [
@@ -689,8 +938,6 @@ def build_state_machine(parsed_command: Dict) -> smach.StateMachine:
                     ]
                 )
                 go(command_param, sm, person)
-            elif command_verb == "bring":
-                bring(command_param, sm)
             elif command_verb == "find":
                 find(command_param, sm)
             elif command_verb == "meet":
@@ -698,9 +945,19 @@ def build_state_machine(parsed_command: Dict) -> smach.StateMachine:
             elif command_verb == "count":
                 count(command_param, sm)
             elif command_verb == "follow":
-                follow(command_param, sm)
+                follow(command_param, sm, greet_person=len(command_verbs) == 1)
             else:
                 raise ValueError(f"Unrecognised command verb: {command_verb}")
+
+        @smach.cb_interface(outcomes=["succeeded"])
+        def terminal_cb(_):
+            return "succeeded"
+
+        sm.add(
+            f"STATE_{increment_state_count()}",
+            smach.CBState(terminal_cb),
+            transitions={"succeeded": "succeeded"},
+        )
 
     rospy.loginfo(f"State machine: {sm}")
     return sm

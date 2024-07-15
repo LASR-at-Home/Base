@@ -79,6 +79,7 @@ def encode_img(model, img_msg: Image) -> np.ndarray:
 def query_image(
     img_msg: Image,
     model: SentenceTransformer,
+    img_msg: Image,
     answers: list[str],
     annotate: bool = False,
 ) -> tuple[str, torch.Tensor, Image]:

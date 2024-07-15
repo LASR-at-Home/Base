@@ -31,13 +31,16 @@ def load_gpsr_configuration() -> Configuration:
 
 
 def main():
+    N_COMMANDS: int = 3
     config = load_gpsr_configuration()
-    command_parser_sm = CommandParserStateMachine(data_config=config)
-    command_parser_sm.execute()
-    parsed_command: Dict = command_parser_sm.userdata.parsed_command
-    rospy.loginfo(f"Parsed command: {parsed_command}")
-    sm = build_state_machine(parsed_command)
-    sm.execute()
+    for i in range(N_COMMANDS):
+        rospy.loginfo(f"Command {i + 1}")
+        command_parser_sm = CommandParserStateMachine(data_config=config)
+        command_parser_sm.execute()
+        parsed_command: Dict = command_parser_sm.userdata.parsed_command
+        rospy.loginfo(f"Parsed command: {parsed_command}")
+        sm = build_state_machine(parsed_command)
+        sm.execute()
 
 
 if __name__ == "__main__":
