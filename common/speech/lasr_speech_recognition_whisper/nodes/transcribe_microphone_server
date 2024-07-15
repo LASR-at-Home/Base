@@ -290,12 +290,12 @@ def parse_args() -> dict:
         help="Disable warming up the model by running inference on a test file.",
     )
 
-    # parser.add_argument(
-    #     "--energy_threshold",
-    #     type=int,
-    #     default=600,
-    #     help="Energy threshold for silence detection. Using this disables automatic adjustment",
-    # )
+    parser.add_argument(
+        "--energy_threshold",
+        type=Optional[int],
+        default=None,
+        help="Energy threshold for silence detection. Using this disables automatic adjustment",
+    )
 
     parser.add_argument(
         "--pause_threshold",
