@@ -48,9 +48,7 @@ def detect(
         head_frame,
         torso_frame,
         full_frame,
-        head_mask,
-        torso_mask,
-        request.image_raw,
+        image_raw=request.image_raw,
         cloth_predictor=cloth_predictor,
     )
     response = TorchFaceFeatureDetectionDescriptionResponse()
