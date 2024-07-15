@@ -1,4 +1,3 @@
-sensor_msgs/Image image
 string[] possible_answers
 
 sensor_msgs/Image image_raw

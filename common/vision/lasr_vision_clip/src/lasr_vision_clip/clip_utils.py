@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import torch
-import rospy
 import cv2
 import cv2_img
 import numpy as np
@@ -79,7 +78,6 @@ def encode_img(model, img_msg: Image) -> np.ndarray:
 def query_image(
     img_msg: Image,
     model: SentenceTransformer,
-    img_msg: Image,
     answers: list[str],
     annotate: bool = False,
 ) -> tuple[str, torch.Tensor, Image]:
