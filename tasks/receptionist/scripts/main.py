@@ -52,7 +52,18 @@ if __name__ == "__main__":
     assert seat_area.is_valid, "Seat area is not valid"
 
     sofa_area = ShapelyPolygon(sofa_area_param)
-    assert sofa_area.is_valid, "Sofa area is not valid"
+    rospy.loginfo(sofa_area.area)
+    rospy.loginfo(list(sofa_area.exterior.coords))
+    sofa_area_publisher.publish(
+    PolygonStamped(
+        polygon=Polygon(
+            points=[Point(x=x, y=y, z=0.0) for (x, y) in sofa_area.exterior.coords]
+        ),
+        header=Header(frame_id="map"),
+    )
+    )
+    #rospy.spin()
+    # assert sofa_area.is_valid, "Sofa area is not valid"
 
     sofa_point = Point(**sofa_point_param)
 

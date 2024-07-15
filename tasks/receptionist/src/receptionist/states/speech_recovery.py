@@ -24,38 +24,38 @@ class SpeechRecovery(smach.State):
         self._last_resort = last_resort
         self._input_type = input_type
         self._available_names = [
-            "sophie"
-            "julia"
-            "emma"
-            "sara"
-            "laura"
-            "hayley"
-            "susan"
-            "fleur"
-            "gabrielle"
-            "robin"
-            "john"
-            "liam"
-            "lucas"
-            "william"
-            "kevin"
-            "jesse"
-            "noah"
-            "harrie"
-            "peter"
+            "sophie",
+            "julia",
+            "emma",
+            "sara",
+            "laura",
+            "hayley",
+            "susan",
+            "fleur",
+            "gabrielle",
+            "robin",
+            "john",
+            "liam",
+            "lucas",
+            "william",
+            "kevin",
+            "jesse",
+            "noah",
+            "harrie",
+            "peter",
         ]
         self._available_single_drinks = [
             "cola",
-            "water"
+            "water",
             "milk",
-            "fanta"
-            "dubbelfris"
+            "fanta",
+            "dubbelfris",
         ]
         self._available_double_drinks = [
             "ice",
             "tea",
-            "big"
-            "coke"
+            "big",
+            "coke",
         ]
         self._double_drinks_dict = {
             "ice": "ice tea",
