@@ -466,7 +466,7 @@ class IntroduceAndSeatGuest(smach.StateMachine):
                     def __init__(self, guest_id: str):
                         smach.State.__init__(
                             self,
-                            outcomes=["succeeded"],
+                            outcomes=["succeeded", "failed"],
                             input_keys=["matched_face_detections"],
                             output_keys=["look_point"],
                         )
@@ -476,13 +476,14 @@ class IntroduceAndSeatGuest(smach.StateMachine):
                         if len(userdata.matched_face_detections) == 0:
                             userdata.look_point = PointStamped()
                             rospy.logwarn(f"Failed to find guest: {self._guest_id}")
-                            return "succeeded"
+                            return "failed"
 
                         for detection in userdata.matched_face_detections:
                             if detection.name == self._guest_id:
                                 look_point = PointStamped(
                                     point=detection.point, header=Header(frame_id="map")
                                 )
+                                look_point.point.z = 0.75  # fixed height
                                 userdata.look_point = look_point
                                 return "succeeded"
 
@@ -518,10 +519,13 @@ class IntroduceAndSeatGuest(smach.StateMachine):
                             return "succeeded_sofa"
 
                         if len(userdata.empty_seat_detections) > 0:
-                            userdata.seat_position = PointStamped(
+                            seat_position = PointStamped(
                                 point=userdata.empty_seat_detections[0].point,
                                 header=Header(frame_id="map"),
                             )
+                            seat_position.point.z = 0.5  # fixed height
+                            userdata.seat_position = seat_position
+
                             return "succeeded_chair"
 
                         return "failed"
@@ -633,7 +637,20 @@ class IntroduceAndSeatGuest(smach.StateMachine):
                     smach.StateMachine.add(
                         f"GET_LOOK_POINT_{guest_to_introduce_to}",
                         GetLookPoint(guest_to_introduce_to),
-                        transitions={"succeeded": f"LOOK_AT_{guest_to_introduce_to}"},
+                        transitions={
+                            "succeeded": f"LOOK_AT_{guest_to_introduce_to}",
+                            "failed": f"LOOK_CENTRE_BACKUP_{guest_to_introduce_to}",
+                        },
+                    )
+
+                    smach.StateMachine.add(
+                        f"LOOK_CENTRE_BACKUP_{guest_to_introduce_to}",
+                        PlayMotion(motion_name="look_centre"),
+                        transitions={
+                            "succeeded": f"INTRODUCE_{guest_id}_TO_{guest_to_introduce_to}",
+                            "aborted": f"INTRODUCE_{guest_id}_TO_{guest_to_introduce_to}",
+                            "preempted": f"INTRODUCE_{guest_id}_TO_{guest_to_introduce_to}",
+                        },
                     )
 
                     # Look at the guest to introduce to
@@ -654,6 +671,7 @@ class IntroduceAndSeatGuest(smach.StateMachine):
                         Introduce(
                             guest_to_introduce=guest_id,
                             guest_to_introduce_to=guest_to_introduce_to,
+                            describe_features=guest_to_introduce_to != "host",
                         ),
                         transitions={
                             "succeeded": f"LOOK_AT_WAITING_GUEST_{guest_id}_{guest_to_introduce_to}",
@@ -675,6 +693,7 @@ class IntroduceAndSeatGuest(smach.StateMachine):
                         Introduce(
                             guest_to_introduce=guest_to_introduce_to,
                             guest_to_introduce_to=guest_id,
+                            describe_features=guest_to_introduce_to != "host",
                         ),
                         transitions={
                             "succeeded": (
@@ -692,7 +711,17 @@ class IntroduceAndSeatGuest(smach.StateMachine):
                     transitions={
                         "succeeded_sofa": "SAY_SOFA",
                         "succeeded_chair": "SAY_CHAIR",
-                        "failed": "SAY_ANY",
+                        "failed": "LOOK_CENTRE_SEAT",
+                    },
+                )
+
+                smach.StateMachine.add(
+                    "LOOK_CENTRE_SEAT",
+                    PlayMotion(motion_name="look_centre"),
+                    transitions={
+                        "succeeded": "SAY_ANY",
+                        "aborted": "SAY_ANY",
+                        "preempted": "SAY_ANY",
                     },
                 )
 
@@ -897,7 +926,7 @@ class IntroduceAndSeatGuest(smach.StateMachine):
                     def execute(self, userdata):
                         if len(userdata.matched_face_detections) == 0:
                             userdata.look_point = PointStamped()
-                            return "succeeded"
+                            return "failed"
 
                         for detection in userdata.matched_face_detections:
                             if detection.name == self._guest_id:
@@ -938,10 +967,12 @@ class IntroduceAndSeatGuest(smach.StateMachine):
                             return "succeeded_sofa"
 
                         if len(userdata.empty_seat_detections) > 0:
-                            userdata.seat_position = PointStamped(
+                            seat_position = PointStamped(
                                 point=userdata.empty_seat_detections[0][0].point,
                                 header=Header(frame_id="map"),
                             )
+                            seat_position.point.z = 0.5
+                            userdata.seat_position = seat_position
                             return "succeeded_chair"
 
                         return "failed"
@@ -1022,7 +1053,20 @@ class IntroduceAndSeatGuest(smach.StateMachine):
                     smach.StateMachine.add(
                         f"GET_LOOK_POINT_{guest_to_introduce_to}",
                         GetLookPoint(guest_to_introduce_to),
-                        transitions={"succeeded": f"LOOK_AT_{guest_to_introduce_to}"},
+                        transitions={
+                            "succeeded": f"LOOK_AT_{guest_to_introduce_to}",
+                            "failed": "LOOK_CENTRE",
+                        },
+                    )
+
+                    smach.StateMachine.add(
+                        "LOOK_CENTRE",
+                        PlayMotion(motion_name="look_centre"),
+                        transitions={
+                            "succeeded": f"INTRODUCE_{guest_id}_TO_{guest_to_introduce_to}",
+                            "aborted": f"INTRODUCE_{guest_id}_TO_{guest_to_introduce_to}",
+                            "preempted": f"INTRODUCE_{guest_id}_TO_{guest_to_introduce_to}",
+                        },
                     )
 
                     smach.StateMachine.add(
@@ -1041,6 +1085,7 @@ class IntroduceAndSeatGuest(smach.StateMachine):
                         Introduce(
                             guest_to_introduce=guest_id,
                             guest_to_introduce_to=guest_to_introduce_to,
+                            describe_features=guest_to_introduce_to != "host",
                         ),
                         transitions={
                             "succeeded": (
