@@ -29,7 +29,7 @@ class GetCroppedImage(smach.State):
         smach.State.__init__(
             self,
             outcomes=["succeeded", "failed"],
-            output_keys=["img_msg"],
+            output_keys=["img_msg", "detection"],
         )
 
         self.object_name = object_name
@@ -63,6 +63,7 @@ class GetCroppedImage(smach.State):
             # cropped_msg = cv2_img_to_msg(cropped_image)
             # self._debug_pub.publish(cropped_msg)
             userdata.img_msg = cropped_image
+            userdata.detection = cropped_detection_resp.responses[0].detections_3d[0]
             return "succeeded"
         # except rospy.ServiceException as e:
         #     rospy.logerr(f"Service call failed: {e}")
