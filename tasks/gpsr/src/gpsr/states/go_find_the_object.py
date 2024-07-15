@@ -84,12 +84,16 @@ class GoFindTheObject(smach.StateMachine):
         self,
         model: str = "yolov8x-seg.pt",
         filter: Union[List[str], None] = None,  # <- input
-        waypoints: Union[List[Pose], None] = None,   # <- input
+        waypoints: Union[List[Pose], None] = None,  # <- input
         locations: Union[str, None] = None,
         confidence: float = 0.5,
         nms: float = 0.3,
-        poly_points: List[Polygon] = None, # polygen list of polygen for every location   <- input
-        look_points: List[Point] = None # point to look at for each location      <- input
+        poly_points: List[
+            Polygon
+        ] = None,  # polygen list of polygen for every location   <- input
+        look_points: List[
+            Point
+        ] = None,  # point to look at for each location      <- input
     ):
         smach.StateMachine.__init__(self, outcomes=["succeeded", "failed"])
 
@@ -100,7 +104,6 @@ class GoFindTheObject(smach.StateMachine):
 
         if look_points is None or len(look_points) != len(waypoints_to_iterate):
             raise ValueError("Look points must be provided for each waypoint")
-
 
         if waypoints is None:
             waypoints_to_iterate: List[Pose] = []
@@ -167,33 +170,33 @@ class GoFindTheObject(smach.StateMachine):
                     )
 
                     smach.StateMachine.add(
-                    "DETECT_OBJECTS_3D",
-                    smach_ros.ServiceState(
-                        "/vision/cropped_detection",
-                        CroppedDetection,
-                        request=CroppedDetectionRequest(
-                            requests=[
-                                CDRequest(
-                                    method="closest",
-                                    use_mask=True,
-                                    yolo_model=model,
-                                    yolo_model_confidence=confidence,
-                                    yolo_nms_threshold=nms,
-                                    return_sensor_reading=False,
-                                    object_names= filter,
-                                    polygons= [],
-                                )
-                            ]
+                        "DETECT_OBJECTS_3D",
+                        smach_ros.ServiceState(
+                            "/vision/cropped_detection",
+                            CroppedDetection,
+                            request=CroppedDetectionRequest(
+                                requests=[
+                                    CDRequest(
+                                        method="closest",
+                                        use_mask=True,
+                                        yolo_model=model,
+                                        yolo_model_confidence=confidence,
+                                        yolo_nms_threshold=nms,
+                                        return_sensor_reading=False,
+                                        object_names=filter,
+                                        polygons=[],
+                                    )
+                                ]
+                            ),
+                            output_keys=["responses"],
+                            response_slots=["responses"],
                         ),
-                        output_keys=["responses"],
-                        response_slots=["responses"],
-                    ),
-                    transitions={
-                        "succeeded": "RESULT",
-                        "aborted": "failed",
-                        "preempted": "failed",
-                    },
-                    remapping={"polygon": "polygon"}
+                        transitions={
+                            "succeeded": "RESULT",
+                            "aborted": "failed",
+                            "preempted": "failed",
+                        },
+                        remapping={"polygon": "polygon"},
                     )
 
                     smach.StateMachine.add(

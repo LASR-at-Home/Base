@@ -23,7 +23,7 @@ cloth_type_rough_map = {
     "long sleeve top": "top",
     "long sleeve outwear": "outwear",
 }
-            
+
 
 class DetectClothing(smach.StateMachine):
 
@@ -32,7 +32,9 @@ class DetectClothing(smach.StateMachine):
         clothing_to_detect: "blue shirt"
         """
         smach.State.__init__(
-            self, outcomes=["succeeded", "failed"], input_keys=["img_msg"],
+            self,
+            outcomes=["succeeded", "failed"],
+            input_keys=["img_msg"],
         )
 
         # self._clothing_to_detect = clothing_to_detect
@@ -49,7 +51,7 @@ class DetectClothing(smach.StateMachine):
                     "failed": "failed",
                 },
             )
-            
+
             smach.StateMachine.add(
                 "DECIDE",
                 self.Descriminator(
@@ -61,12 +63,12 @@ class DetectClothing(smach.StateMachine):
                     "failed": "failed",
                 },
             )
-    
+
     class Descriminator(smach.State):
         def __init__(
-                self,
-                colour: str,
-                cloth: str,
+            self,
+            colour: str,
+            cloth: str,
         ):
             smach.State.__init__(
                 self,
@@ -74,10 +76,10 @@ class DetectClothing(smach.StateMachine):
                     "succeeded",
                     "fail",
                 ],
-                input_keys = [
+                input_keys=[
                     "img_msg",
                 ],
-                output_keys = [],
+                output_keys=[],
             )
             self.colour = colour
             self.cloth = cloth
@@ -91,29 +93,28 @@ class DetectClothing(smach.StateMachine):
                     return "failed"
                 if len(userdata.people) == 0:
                     return "failed"
-                
+
                 feature_dict = userdata.people[0]["features"]
-                
+
                 inquired_cloth_type = cloth_type_map[self.cloth]
 
                 inquired_rough_cloth_type = cloth_type_rough_map[inquired_cloth_type]
 
                 confidence = feature_dict[inquired_rough_cloth_type]
-                
+
                 if confidence < 0.25:
                     return "failed"
-                
+
                 cloth_type = cloth_type_rough_map["max_" + inquired_rough_cloth_type]
-                
+
                 if inquired_cloth_type != cloth_type:
                     return "failed"
-                
+
                 colour_percentage = feature_dict[inquired_cloth_type + " colour"]
 
                 largest_colour = max(colour_percentage, key=colour_percentage.get)
 
                 if inquired_cloth_type == largest_colour:
                     return "succeeded"
-                
+
                 return "failed"
-                
