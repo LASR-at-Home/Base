@@ -160,6 +160,11 @@ class SpeechRecovery(smach.State):
                 return "unknown"
             else:
                 print("Last resort drink")
+                for word in sentence_list:
+                    print(word)
+                    print(self._get_levenshtein_soundex_distance("dubbelfris", word))
+                    if self._get_levenshtein_soundex_distance("dubbelfris", word) < 3:
+                        return "dubbelfris"
                 closest_spelt = self._handle_closest_spelt(
                     sentence_list, self._available_drinks
                 )
