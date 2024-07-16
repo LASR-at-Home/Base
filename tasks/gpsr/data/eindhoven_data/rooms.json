@@ -1,0 +1,8 @@
+{
+    "rooms": [
+        "hallway",
+        "office",
+        "kitchen",
+        "living room"
+    ]
+}
