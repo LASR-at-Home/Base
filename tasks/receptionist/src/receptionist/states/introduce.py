@@ -25,18 +25,15 @@ def stringify_guest_data(
         str: string representation of the guest data.
     """
 
-    relevant_guest_data = guest_data[guest_id]
+    relevant_guest_data = guest_data[guest_id]["attributes"]
+
     relevant_guest_data.setdefault(
         "attributes",
         {
-            "glasses": 0,
-            "hat": 0,
-            "dress": 0,
-            "top": 0,
-            "outwear": 0,
-            "max_dress": "unknown",
-            "max_top": "unknown",
-            "max_outwear": "unknown",
+            "glasses": False,
+            "hat": False,
+            "long_hair": False,
+            "short_sleeve_t_shirt": False,
         },
     )
 
@@ -45,120 +42,26 @@ def stringify_guest_data(
     if not relevant_guest_data["detection"] or not describe_features:
         return guest_str
 
-    filtered_attributes = {}
+    if relevant_guest_data["attributes"]["long_hair"]:
+        guest_str += "They have long hair. "
+    else:
+        guest_str += "They have short hair. "
 
-    most_confident_clothes = find_most_confident_clothes(
-        relevant_guest_data,
-        clothes=[
-            ["dress", relevant_guest_data["attributes"]["dress"]],
-            ["top", relevant_guest_data["attributes"]["top"]],
-            ["outwear", relevant_guest_data["attributes"]["outwear"]],
-        ],
-    )
-    filtered_attributes["clothes"] = {
-        "confidence": most_confident_clothes[0],
-        "attribute": most_confident_clothes[1],
-    }
-
-    considered_attributes = [
-        "dress",
-        "top",
-        "outwear",
-        "max_dress",
-        "max_top",
-        "max_outwear",
-    ]
-    for attribute, value in relevant_guest_data["attributes"].items():
-        if attribute not in considered_attributes:
-            filtered_attributes[attribute] = {
-                "confidence": relevant_guest_data["attributes"][attribute],
-                "attribute": attribute,
-            }
-
-    cloth_attributes = sorted(
-        filtered_attributes.keys(),
-        key=lambda k: abs(filtered_attributes[k]["confidence"]),
-        reverse=True,
+    t_shirt = (
+        "short sleeve"
+        if relevant_guest_data["attributes"]["short_sleeve_t_shirt"]
+        else "long sleeve"
     )
 
-    wearing_items = []
-    not_wearing_items = []
-
-    for i in range(len(cloth_attributes)):
-        attribute_value = filtered_attributes[cloth_attributes[i]]
-        confidence = attribute_value["confidence"]
-        attribute = attribute_value["attribute"]
-        if isSingular(attribute):
-            wearing_items.append(f"a {attribute}")
-        else:
-            wearing_items.append(attribute)
-
-    def grammatical_concat(items):
-        if len(items) > 1:
-            return ", ".join(items[:-1]) + " and " + items[-1]
-        elif items:
-            return items[0]
-        else:
-            return ""
-
-    # Combine wearing and not wearing items into guest_str
-    if wearing_items:
-        guest_str += "They are wearing " + grammatical_concat(wearing_items) + ". "
-    if not_wearing_items:
-        if wearing_items:
-            guest_str += (
-                "They are also not wearing "
-                + grammatical_concat(not_wearing_items)
-                + "."
-            )
-        else:
-            guest_str += (
-                "They are not wearing " + grammatical_concat(not_wearing_items) + "."
-            )
-    
-    if user
-
+    if relevant_guest_data["glasses"] and relevant_guest_data["hat"]:
+        guest_str += f"They are wearing a {t_shirt} t shirt, glasses and a hat. "
+    elif relevant_guest_data["glasses"] and not relevant_guest_data["hat"]:
+        guest_str += f"They are wearing a {t_shirt} t shirt and glasses and they are not wearing a hat. "
+    elif not relevant_guest_data["glasses"] and relevant_guest_data["hat"]:
+        guest_str += f"They wearing a {t_shirt} t shirt and hat and they are not wearing glasses. "
+    elif not relevant_guest_data["glasses"] and not relevant_guest_data["hat"]:
+        guest_str += f"They wearing a {t_shirt} t shirt and they are not wearing glasses or a hat. "
     return guest_str
-
-
-def find_most_confident_clothes(
-    relevant_guest_data: Dict[str, Any], clothes: List[List[Any]]
-) -> List[Any]:
-    """Find the clothes it's most confident of, after determining the clothes type
-    through confidence values.
-
-    Args:
-        relevant_guest_data (Dict[str, Any]): guest data dictionary.
-        clothes List[List[Any]]: List of the clothes type and their confidence
-
-    Returns:
-        List: Maximum confidence and the relevant clothes
-    """
-    max_clothes_type, max_confidence = max(clothes, key=lambda c: c[1])
-
-    if max_clothes_type == "dress":
-        max_clothes = relevant_guest_data["attributes"]["max_dress"]
-    elif max_clothes_type == "top":
-        max_clothes = relevant_guest_data["attributes"]["max_top"]
-    else:
-        max_clothes = relevant_guest_data["attributes"]["max_outwear"]
-
-    return [max_confidence, max_clothes]
-
-
-def isSingular(attribute: str):
-    """Checks if a word is singular or plural by checking the last letter
-
-    Args:
-        attribute (str): The attribute to check for plurality
-
-    Returns:
-        (bool): Boolean identifying whether the word is plural
-    """
-    if attribute[len(attribute) - 1] == "s":
-        return False
-    else:
-        return True
 
 
 class GetStrGuestData(smach.State):

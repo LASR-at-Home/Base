@@ -38,9 +38,9 @@ class GetGuestAttributes(smach.StateMachine):
         def execute(self, userdata: UserData) -> str:
             if len(userdata.people) == 0:
                 return "failed"
-            userdata.guest_data[self._guest_id]["attributes"] = json.loads(
-                userdata.people[0]["features"]
-            )
+            userdata.guest_data[self._guest_id][
+                "attributes"
+            ] = userdata.clip_detection_dict
             userdata.guest_data[self._guest_id]["detection"] = True
             return "succeeded"
 

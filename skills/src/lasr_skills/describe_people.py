@@ -26,7 +26,7 @@ class DescribePeople(smach.StateMachine):
             self,
             outcomes=["succeeded", "failed"],
             input_keys=[],
-            output_keys=["people", "clip_detection_dict"],
+            output_keys=["clip_detection_dict"],
         )
 
         with self:
@@ -45,41 +45,41 @@ class DescribePeople(smach.StateMachine):
 
             smach.StateMachine.add(
                 self.GetClipAttributes(),
-                transitions={"succeeded": "CONVERT_IMAGE", "failed": "failed"},
+                transitions={"succeeded": "succeeded", "failed": "failed"},
             )
 
-            smach.StateMachine.add(
-                "CONVERT_IMAGE", ImageMsgToCv2(), transitions={"succeeded": "SEGMENT"}
-            )
+            # smach.StateMachine.add(
+            #     "CONVERT_IMAGE", ImageMsgToCv2(), transitions={"succeeded": "SEGMENT"}
+            # )
 
-            sm_con = smach.Concurrence(
-                outcomes=["succeeded", "failed"],
-                default_outcome="failed",
-                outcome_map={
-                    "succeeded": {
-                        "SEGMENT_YOLO": "succeeded",
-                        "SEGMENT_BODYPIX": "succeeded",
-                    }
-                },
-                input_keys=[
-                    "img",
-                    "img_msg",
-                ],
-                output_keys=["people_detections", "bodypix_masks"],
-            )
+            # sm_con = smach.Concurrence(
+            #     outcomes=["succeeded", "failed"],
+            #     default_outcome="failed",
+            #     outcome_map={
+            #         "succeeded": {
+            #             "SEGMENT_YOLO": "succeeded",
+            #             "SEGMENT_BODYPIX": "succeeded",
+            #         }
+            #     },
+            #     input_keys=[
+            #         "img",
+            #         "img_msg",
+            #     ],
+            #     output_keys=["people_detections", "bodypix_masks"],
+            # )
 
-            with sm_con:
-                smach.Concurrence.add("SEGMENT_YOLO", self.SegmentYolo())
-                smach.Concurrence.add("SEGMENT_BODYPIX", self.SegmentBodypix())
+            # with sm_con:
+            #     smach.Concurrence.add("SEGMENT_YOLO", self.SegmentYolo())
+            #     smach.Concurrence.add("SEGMENT_BODYPIX", self.SegmentBodypix())
 
-            smach.StateMachine.add(
-                "SEGMENT", sm_con, transitions={"succeeded": "FEATURE_EXTRACTION"}
-            )
-            smach.StateMachine.add(
-                "FEATURE_EXTRACTION",
-                self.FeatureExtraction(),
-                transitions={"succeeded": "succeeded"},
-            )
+            # smach.StateMachine.add(
+            #     "SEGMENT", sm_con, transitions={"succeeded": "FEATURE_EXTRACTION"}
+            # )
+            # smach.StateMachine.add(
+            #     "FEATURE_EXTRACTION",
+            #     self.FeatureExtraction(),
+            #     transitions={"succeeded": "succeeded"},
+            # )
 
     class GetClipAttributes(smach.State):
         def __init__(self):
@@ -102,6 +102,10 @@ class DescribePeople(smach.StateMachine):
                 "a person with long hair",
                 "a person with short hair",
             ]
+            self.t_shirt_questions = [
+                "a person wearing a short-sleeve t-shirt",
+                "a person wearing a long-sleeve t-shirt",
+            ]
 
         def execute(self, userdata):
             try:
@@ -118,15 +122,24 @@ class DescribePeople(smach.StateMachine):
                     possible_answers=self.hair_questions, image_raw=userdata.image_raw
                 )
                 hair_response = self.clip_service(hair_request)
+                t_shirt_request = VqaRequest(
+                    possible_answers=self.t_shirt_questions,
+                    image_raw=userdata.image_raw,
+                )
+                t_shirt_response = self.clip_service(t_shirt_request)
 
                 glasses_bool = glasses_response.answer == "a person wearing glasses"
                 hat_bool = hat_response.answer == "a person wearing a hat"
                 hair_bool = hair_response.answer == "a person with long hair"
+                t_shirt_bool = (
+                    t_shirt_response == "a person wearing a short-sleeve t-shirt"
+                )
 
                 userdata.clip_detection_dict = {
                     "glasses": glasses_bool,
                     "hat": hat_bool,
                     "long_hair": hair_bool,
+                    "short_sleeve_t_shirt": t_shirt_bool,
                 }
             except Exception as e:
                 rospy.logerr(f"Failed to get clip attributes: {e}")
