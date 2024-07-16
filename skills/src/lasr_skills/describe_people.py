@@ -38,12 +38,13 @@ class DescribePeople(smach.StateMachine):
                     use_mask=False,  # If true prediction can be very wrong!!!
                 ),
                 transitions={
-                    "succeeded": "CLIP ATTRIBUTES",
+                    "succeeded": "GET_CLIP_ATTRIBUTES",
                     "failed": "failed",
                 },
             )
 
             smach.StateMachine.add(
+                "GET_CLIP_ATTRIBUTES",
                 self.GetClipAttributes(),
                 transitions={"succeeded": "succeeded", "failed": "failed"},
             )
@@ -53,7 +54,7 @@ class DescribePeople(smach.StateMachine):
             smach.State.__init__(
                 self,
                 outcomes=["succeeded", "failed"],
-                input_keys=["image_raw"],
+                input_keys=["img_msg"],
                 output_keys=["clip_detection_dict"],
             )
             self.clip_service = rospy.ServiceProxy("/clip_vqa/query_service", Vqa)
@@ -78,20 +79,20 @@ class DescribePeople(smach.StateMachine):
             try:
                 glasses_request = VqaRequest(
                     possible_answers=self.glasses_questions,
-                    image_raw=userdata.image_raw,
+                    image_raw=userdata.img_msg,
                 )
                 glasses_response = self.clip_service(glasses_request)
                 hat_request = VqaRequest(
-                    possible_answers=self.hat_questions, image_raw=userdata.image_raw
+                    possible_answers=self.hat_questions, image_raw=userdata.img_msg
                 )
                 hat_response = self.clip_service(hat_request)
                 hair_request = VqaRequest(
-                    possible_answers=self.hair_questions, image_raw=userdata.image_raw
+                    possible_answers=self.hair_questions, image_raw=userdata.img_msg
                 )
                 hair_response = self.clip_service(hair_request)
                 t_shirt_request = VqaRequest(
                     possible_answers=self.t_shirt_questions,
-                    image_raw=userdata.image_raw,
+                    image_raw=userdata.img_msg,
                 )
                 t_shirt_response = self.clip_service(t_shirt_request)
 
@@ -102,12 +103,15 @@ class DescribePeople(smach.StateMachine):
                     t_shirt_response == "a person wearing a short-sleeve t-shirt"
                 )
 
-                userdata.clip_detection_dict = {
+                clip_detection_dict = {
                     "glasses": glasses_bool,
                     "hat": hat_bool,
                     "long_hair": hair_bool,
                     "short_sleeve_t_shirt": t_shirt_bool,
                 }
+
+                rospy.loginfo(clip_detection_dict)
+                userdata.clip_detection_dict = clip_detection_dict
             except Exception as e:
                 rospy.logerr(f"Failed to get clip attributes: {e}")
                 return "failed"

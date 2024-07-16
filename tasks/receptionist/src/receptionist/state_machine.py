@@ -77,15 +77,15 @@ class Receptionist(smach.StateMachine):
                 },
             )
 
-            # smach.StateMachine.add(
-            #     "SAY_START",
-            #     Say(text="Start of receptionist task. Going to waiting area."),
-            #     transitions={
-            #         "succeeded": "GO_TO_WAIT_LOCATION_GUEST_1",
-            #         "aborted": "GO_TO_WAIT_LOCATION_GUEST_1",
-            #         "preempted": "GO_TO_WAIT_LOCATION_GUEST_1",
-            #     },
-            # )
+            smach.StateMachine.add(
+                "SAY_START",
+                Say(text="Start of receptionist task."),
+                transitions={
+                    "succeeded": "GO_TO_WAIT_LOCATION_GUEST_1",
+                    "aborted": "GO_TO_WAIT_LOCATION_GUEST_1",
+                    "preempted": "GO_TO_WAIT_LOCATION_GUEST_1",
+                },
+            )
 
             """
             First guest
