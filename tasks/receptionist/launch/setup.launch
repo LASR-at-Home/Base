@@ -16,6 +16,7 @@
 
     <!--      PERCEPTION     -->
     <include file="$(find lasr_vision_cropped_detection)/launch/cropped_detection.launch"/>
+    <node pkg="lasr_vision_clip" name="clip_service" type="vqa" output="screen"/>
     <node pkg="lasr_vision_bodypix" type="bodypix_services.py" name="bodypix_service" output="screen"/>
     <node pkg="lasr_vision_deepface" type="service" name="deepface_service" output="screen"/>
 
