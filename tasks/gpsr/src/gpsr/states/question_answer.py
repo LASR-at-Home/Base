@@ -1,11 +1,11 @@
 import smach
 
-from lasr_skills import AskAndListen, XmlQuestionAnswer, Say
+from lasr_skills import AskAndListen, JsonQuestionAnswer, Say
 
 
 class QuestionAnswer(smach.StateMachine):
 
-    def __init__(self, index_path: str, txt_path: str, xml_path: str, k: int = 1):
+    def __init__(self, index_path: str, txt_path: str, json_path: str, k: int = 1):
         smach.StateMachine.__init__(
             self,
             outcomes=["succeeded", "failed"],
@@ -28,7 +28,7 @@ class QuestionAnswer(smach.StateMachine):
 
             smach.StateMachine.add(
                 "XML_QUESTION_ANSWER",
-                XmlQuestionAnswer(index_path, txt_path, xml_path, k),
+                JsonQuestionAnswer(index_path, txt_path, json_path, k),
                 transitions={
                     "succeeded": "SAY_ANSWER",
                     "failed": "failed",

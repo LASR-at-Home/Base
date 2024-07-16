@@ -1,7 +1,7 @@
 <launch>    
 
     <!-- Config -->
-    <arg name="config" default="lab"/>
+    <arg name="config" default="robocup_opl_arena"/>
 
     <!-- Motions -->
     <rosparam 
