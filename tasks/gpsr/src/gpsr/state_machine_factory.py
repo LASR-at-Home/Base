@@ -848,22 +848,26 @@ def count(command_param: Dict, sm: smach.StateMachine) -> None:
     """
 
     people: bool = False
-
+    output_string = "I will count the "
     if "pose" in command_param:
         criteria = "pose"
         criteria_value = command_param["pose"]
         people = True
+        output_string += f"{criteria_value} in the "
     elif "gesture" in command_param:
         criteria = "gesture"
         criteria_value = command_param["gesture"]
         people = True
+        output_string += f"{criteria_value} in the "
     elif "clothes" in command_param:
         criteria = "clothes"
         criteria_value = command_param["clothes"]
         people = True
+        output_string += f"people wearing {criteria_value} in the "
     elif "object_category" in command_param:
         criteria = "object_category"
         criteria_value = command_param["object_category"]
+        output_string += f"number of {criteria_value} on the "
     else:
         raise ValueError(
             "Count command received with no pose, gesture, clothes, or object category in command parameters"
@@ -873,11 +877,20 @@ def count(command_param: Dict, sm: smach.StateMachine) -> None:
         if "room" in command_param:
             waypoints: List[Pose] = get_person_detection_poses(command_param["room"])
             polygon: Polygon = get_room_polygon(command_param["room"])
+            output_string += command_param["room"]
         else:
             raise ValueError(
                 "Count command received pose, gesture, clothes, or object category but no room in command parameters"
             )
-
+        sm.add(
+            f"STATE_{increment_state_count()}",
+            Say(text=output_string),
+            transitions={
+                "succeeded": f"STATE_{STATE_COUNT + 1}",
+                "preempted": "failed",
+                "aborted": "failed",
+            },
+        )
         sm.add(
             f"STATE_{increment_state_count()}",
             CountPeople(
@@ -923,7 +936,16 @@ def count(command_param: Dict, sm: smach.StateMachine) -> None:
             )
         location_pose = get_location_pose(command_param["location"], False)
         location_polygon = get_object_detection_polygon(command_param["location"])
-
+        output_string += command_param["location"]
+        sm.add(
+            f"STATE_{increment_state_count()}",
+            Say(text=output_string),
+            transitions={
+                "succeeded": f"STATE_{STATE_COUNT + 1}",
+                "preempted": "failed",
+                "aborted": "failed",
+            },
+        )
         sm.add(
             f"STATE_{increment_state_count()}",
             GoToLocation(location=location_pose),
