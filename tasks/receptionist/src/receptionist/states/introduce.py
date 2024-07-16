@@ -25,52 +25,46 @@ def stringify_guest_data(
         str: string representation of the guest data.
     """
 
-    relevant_guest_data = guest_data[guest_id]["attributes"]
-
-    relevant_guest_data.setdefault(
-        "clip_attributes",
-        {
-            "glasses": False,
-            "hat": False,
-            "long_hair": False,
-            "short_sleeve_t_shirt": False,
-        },
-    )
+    relevant_guest_data = guest_data[guest_id]
 
     guest_str = f"{relevant_guest_data['name']}, their favourite drink is {relevant_guest_data['drink']}. "
 
-    if not relevant_guest_data["detection"] or not describe_features:
+    if (
+        not relevant_guest_data["detection"]
+        or not describe_features
+        or "attributes" not in relevant_guest_data
+    ):
         return guest_str
 
-    if relevant_guest_data["clip_attributes"]["long_hair"]:
+    if relevant_guest_data["attributes"]["long_hair"]:
         guest_str += "They have long hair. "
     else:
         guest_str += "They have short hair. "
 
     t_shirt = (
         "short sleeve"
-        if relevant_guest_data["clip_attributes"]["short_sleeve_t_shirt"]
+        if relevant_guest_data["attributes"]["short_sleeve_t_shirt"]
         else "long sleeve"
     )
 
     if (
-        relevant_guest_data["clip_attributes"]["glasses"]
-        and relevant_guest_data["clip_attributes"]["hat"]
+        relevant_guest_data["attributes"]["glasses"]
+        and relevant_guest_data["attributes"]["hat"]
     ):
-        guest_str += f"They are wearing a {t_shirt} t shirt, glasses and a hat. "
+        guest_str += f"They are wearing a {t_shirt} top, glasses and a hat. "
     elif (
-        relevant_guest_data["clip_attributes"]["glasses"]
-        and not relevant_guest_data["clip_attributes"]["hat"]
+        relevant_guest_data["attributes"]["glasses"]
+        and not relevant_guest_data["attributes"]["hat"]
     ):
         guest_str += f"They are wearing a {t_shirt} t shirt and glasses and they are not wearing a hat. "
     elif (
-        not relevant_guest_data["clip_attributes"]["glasses"]
-        and relevant_guest_data["clip_attributes"]["hat"]
+        not relevant_guest_data["attributes"]["glasses"]
+        and relevant_guest_data["attributes"]["hat"]
     ):
         guest_str += f"They wearing a {t_shirt} t shirt and hat and they are not wearing glasses. "
     elif (
-        not relevant_guest_data["clip_attributes"]["glasses"]
-        and not relevant_guest_data["clip_attributes"]["hat"]
+        not relevant_guest_data["attributes"]["glasses"]
+        and not relevant_guest_data["attributes"]["hat"]
     ):
         guest_str += f"They wearing a {t_shirt} t shirt and they are not wearing glasses or a hat. "
     return guest_str
@@ -135,7 +129,7 @@ class Introduce(smach.StateMachine):
     ):
         super().__init__(
             outcomes=["succeeded", "failed"],
-            input_keys=["guest_data", ""],
+            input_keys=["guest_data"],
         )
         assert not (guest_to_introduce_to is None and not everyone)
 

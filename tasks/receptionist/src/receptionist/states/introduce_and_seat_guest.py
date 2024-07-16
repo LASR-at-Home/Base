@@ -93,7 +93,7 @@ class IntroduceAndSeatGuest(smach.StateMachine):
                                     method="closest",
                                     use_mask=True,
                                     yolo_model="yolov8x-seg.pt",
-                                    yolo_model_confidence=0.5,
+                                    yolo_model_confidence=0.7,
                                     yolo_nms_threshold=0.3,
                                     return_sensor_reading=False,
                                     object_names=["person", "chair"],

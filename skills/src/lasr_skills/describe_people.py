@@ -35,7 +35,7 @@ class DescribePeople(smach.StateMachine):
                 GetCroppedImage(
                     object_name="person",
                     method="closest",
-                    use_mask=False,  # If true prediction can be very wrong!!!
+                    use_mask=True,  # If true prediction can be very wrong!!!
                 ),
                 transitions={
                     "succeeded": "GET_CLIP_ATTRIBUTES",
