@@ -4,8 +4,9 @@ import smach_ros
 from lasr_skills import GoToLocation, LookToPoint, Say
 from shapely.geometry.polygon import Polygon
 from typing import List, Union
-from geometry_msgs.msg import Pose, Point, Quaternion, CDRequest
+from geometry_msgs.msg import Pose, Point, Quaternion
 from lasr_vision_msgs.srv import CroppedDetection, CroppedDetectionRequest
+from lasr_vision_msgs.msg import CDRequest
 import rospy
 
 """
