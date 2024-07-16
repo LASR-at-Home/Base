@@ -16,10 +16,7 @@
 
     <!--      PERCEPTION     -->
     <include file="$(find lasr_vision_cropped_detection)/launch/cropped_detection.launch"/>
-    <include file="$(find lasr_vision_bodypix)/launch/bodypix.launch">
-        <param name="preload" type="yaml" value='resnet50' />
-    </include>
-
+    <node pkg="lasr_vision_bodypix" type="bodypix_services.py" name="bodypix_service" output="screen"/>
     <node pkg="lasr_vision_deepface" type="service" name="deepface_service" output="screen"/>
 
 </launch>
