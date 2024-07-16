@@ -589,15 +589,6 @@ def place(command_param: Dict, sm: smach.StateMachine) -> None:
             "Place command received with no location in command parameters"
         )
 
-    sm.add(
-        f"STATE_{increment_state_count()}",
-        GoToLocation(location=location_pose),
-        transitions={
-            "succeeded": f"STATE_{STATE_COUNT + 1}",
-            "failed": "failed",
-        },
-    )
-
     if "object" in command_param:
         object_name = command_param["object"]
     elif "object_category" in command_param:
@@ -607,6 +598,25 @@ def place(command_param: Dict, sm: smach.StateMachine) -> None:
             "Place command received with no object or object category in command parameters"
         )
 
+    sm.add(
+        f"STATE_{increment_state_count()}",
+        Say(
+            text=f"I am going to place the {object_name} at the {command_param['location']}"
+        ),
+        transitions={
+            "succeeded": f"STATE_{STATE_COUNT + 1}",
+            "aborted": "failed",
+            "preempted": "failed",
+        },
+    )
+    sm.add(
+        f"STATE_{increment_state_count()}",
+        GoToLocation(location=location_pose),
+        transitions={
+            "succeeded": f"STATE_{STATE_COUNT + 1}",
+            "failed": "failed",
+        },
+    )
     sm.add(
         f"STATE_{increment_state_count()}",
         HandoverObject(object_name=object_name),
