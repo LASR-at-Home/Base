@@ -157,29 +157,36 @@ Verbs
 
 
 def greet(command_param: Dict, sm: smach.StateMachine) -> None:
+    location_string = ""
     if "room" in command_param:
         waypoints: List[Pose] = get_person_detection_poses(command_param["room"])
         polygon: Polygon = get_room_polygon(command_param["room"])
+        location_string = command_param["room"]
     elif "destination" in command_param:
         waypoints: List[Pose] = get_person_detection_poses(command_param["destination"])
         polygon: Polygon = get_room_polygon(command_param["destination"])
+        location_string = command_param["destination"]
     elif "location" in command_param:
         waypoints: List[Pose] = [get_location_pose(command_param["location"], True)]
         polygon: Polygon = get_person_detection_polygon(command_param["location"])
+        location_string = command_param["location"]
     else:
         raise ValueError(
             "Greet command received with no room or location in command parameters"
         )
-
+    output_string = "I will greet "
     if "name" in command_param:
         criteria = "name"
         criteria_value = command_param["name"]
+        output_string += f"{criteria_value} "
     elif "clothes" in command_param:
         criteria = "clothes"
         criteria_value = command_param["clothes"]
+        output_string += f"the person wearing a {criteria_value} "
     elif "gesture" in command_param:
         criteria = "gesture"
         criteria_value = command_param["gesture"]
+        output_string += f"the {criteria_value} "
         if "pointing" in criteria_value:
             if "left" in criteria_value:
                 criteria_value = "pointing_to_the_left"
@@ -193,15 +200,21 @@ def greet(command_param: Dict, sm: smach.StateMachine) -> None:
         elif "waving" in criteria_value:
             criteria_value = "waving"
         rospy.loginfo(f"CRITERIA VALUE: {criteria_value}")
-
     elif "pose" in command_param:
         criteria = "pose"
         criteria_value = command_param["pose"]
+        output_string += f"the {criteria_value} "
     else:
         raise ValueError(
             "Greet command received with no name, clothes, gesture, or pose in command parameters"
         )
 
+    output_string += f"at the {location_string}"
+    sm.add(
+        f"STATE_{increment_state_count()}",
+        Say(text=output_string),
+        transitions={"succeeded": f"STATE_{STATE_COUNT + 1}", "failed": "failed"},
+    )
     sm.add(
         f"STATE_{increment_state_count()}",
         FindPerson(
