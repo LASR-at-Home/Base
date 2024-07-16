@@ -212,7 +212,7 @@ class SpeechRecovery(smach.State):
                     closest_distance = distance
                     closest_word = available_word
         return closest_word
-    
+
     def _recover_dubbelfris(self, sentence_list):
         for word in sentence_list:
             if self._get_levenshtein_soundex_distance("dubbelfris", word) < 3:
