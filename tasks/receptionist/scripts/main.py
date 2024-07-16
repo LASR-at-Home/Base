@@ -100,8 +100,8 @@ if __name__ == "__main__":
         sofa_area,
         sofa_point,
         {
-            "name": "charlie",
-            "drink": "wine",
+            "name": "john",
+            "drink": "milk",
             "dataset": "receptionist",
             "detection": False,
         },
