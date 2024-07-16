@@ -28,7 +28,7 @@ def stringify_guest_data(
     relevant_guest_data = guest_data[guest_id]["attributes"]
 
     relevant_guest_data.setdefault(
-        "attributes",
+        "clip_attributes",
         {
             "glasses": False,
             "hat": False,
@@ -42,24 +42,36 @@ def stringify_guest_data(
     if not relevant_guest_data["detection"] or not describe_features:
         return guest_str
 
-    if relevant_guest_data["attributes"]["long_hair"]:
+    if relevant_guest_data["clip_attributes"]["long_hair"]:
         guest_str += "They have long hair. "
     else:
         guest_str += "They have short hair. "
 
     t_shirt = (
         "short sleeve"
-        if relevant_guest_data["attributes"]["short_sleeve_t_shirt"]
+        if relevant_guest_data["clip_attributes"]["short_sleeve_t_shirt"]
         else "long sleeve"
     )
 
-    if relevant_guest_data["glasses"] and relevant_guest_data["hat"]:
+    if (
+        relevant_guest_data["clip_attributes"]["glasses"]
+        and relevant_guest_data["clip_attributes"]["hat"]
+    ):
         guest_str += f"They are wearing a {t_shirt} t shirt, glasses and a hat. "
-    elif relevant_guest_data["glasses"] and not relevant_guest_data["hat"]:
+    elif (
+        relevant_guest_data["clip_attributes"]["glasses"]
+        and not relevant_guest_data["clip_attributes"]["hat"]
+    ):
         guest_str += f"They are wearing a {t_shirt} t shirt and glasses and they are not wearing a hat. "
-    elif not relevant_guest_data["glasses"] and relevant_guest_data["hat"]:
+    elif (
+        not relevant_guest_data["clip_attributes"]["glasses"]
+        and relevant_guest_data["clip_attributes"]["hat"]
+    ):
         guest_str += f"They wearing a {t_shirt} t shirt and hat and they are not wearing glasses. "
-    elif not relevant_guest_data["glasses"] and not relevant_guest_data["hat"]:
+    elif (
+        not relevant_guest_data["clip_attributes"]["glasses"]
+        and not relevant_guest_data["clip_attributes"]["hat"]
+    ):
         guest_str += f"They wearing a {t_shirt} t shirt and they are not wearing glasses or a hat. "
     return guest_str
 
