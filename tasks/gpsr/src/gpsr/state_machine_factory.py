@@ -639,7 +639,7 @@ def take(command_param: Dict, sm: smach.StateMachine) -> None:
 
 
 def answer(command_param: Dict, sm: smach.StateMachine, greet_person: bool) -> None:
-    data_root = os.path.join(rospkg.RosPack().get_path("gpsr"), "data")
+    data_root = os.path.join(rospkg.RosPack().get_path("gpsr"), "data", "qa_data")
 
     if greet_person:
         greet(command_param, sm)
@@ -649,7 +649,7 @@ def answer(command_param: Dict, sm: smach.StateMachine, greet_person: bool) -> N
         QuestionAnswer(
             index_path=os.path.join(data_root, "questions.index"),
             txt_path=os.path.join(data_root, "questions.txt"),
-            xml_path=os.path.join(data_root, "questions.xml"),
+            json_path=os.path.join(data_root, "qa_mapping.json"),
             k=1,
         ),
         transitions={
