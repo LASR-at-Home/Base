@@ -428,34 +428,45 @@ def guide(command_param: Dict, sm: smach.StateMachine) -> None:
     """
 
     find_person = False
+    output_string = "I will find "
     if "start" not in command_param:
         pass
     elif "name" in command_param:
         criteria = "name"
         criteria_value = command_param["name"]
+        output_string += f"{criteria_value} "
         find_person = True
     elif "clothes" in command_param:
         criteria = "clothes"
         criteria_value = command_param["clothes"]
         find_person = True
+        output_string += f"the person wearing a {criteria_value} "
     elif "gesture" in command_param:
         criteria = "gesture"
         criteria_value = command_param["gesture"]
         find_person = True
+        output_string += f"the {criteria_value} "
     elif "pose" in command_param:
         criteria = "pose"
         criteria_value = command_param["pose"]
         find_person = True
+        output_string += f"the {criteria_value} "
     else:
         location_pose = get_room_pose(command_param["room"])
         location_name = command_param["room"]
 
     if find_person:
         start_loc = command_param["start"]
+        output_string += f"at the {start_loc}"
         start_pose = get_location_pose(start_loc, person=True)
         room = get_location_room(start_loc)
         polygon: Polygon = get_room_polygon(room)
 
+        sm.add(
+            f"STATE_{increment_state_count()}",
+            Say(text=output_string),
+            transitions={"succeeded": f"STATE_{STATE_COUNT + 1}", "failed": "failed"},
+        )
         sm.add(
             f"STATE_{increment_state_count()}",
             FindPerson(
@@ -509,20 +520,41 @@ def deliver(command_param: Dict, sm: smach.StateMachine) -> None:
     if "room" in command_param:
         waypoints: List[Pose] = get_person_detection_poses(command_param["room"])
         polygon: Polygon = get_room_polygon(command_param["room"])
+    else:
+        raise ValueError("Deliver command received with no room in command parameters")
 
     if "name" in command_param:
         criteria = "name"
         criteria_value = command_param["name"]
+        output_string = f"I will deliver the object to {criteria_value}"
     elif "gesture" in command_param:
         criteria = "gesture"
         criteria_value = command_param["gesture"]
+        output_string = f"I will deliver the object to the {criteria_value}"
     elif "pose" in command_param:
         criteria = "pose"
         criteria_value = command_param["pose"]
+        output_string = f"I will deliver the object to the {criteria_value}"
     else:
         criteria = None
         waypoints = [get_current_pose()]
+    output_string += f" in the {command_param['room']}"
 
+    if "object" in command_param:
+        object_name = command_param["object"]
+    elif "object_category" in command_param:
+        object_name = command_param["object_category"]
+    else:
+        raise ValueError(
+            "Deliver command received with no object or object category in command parameters"
+        )
+    output_string.replace("object", object_name)
+
+    sm.add(
+        f"STATE_{increment_state_count()}",
+        Say(text=output_string),
+        transitions={"succeeded": f"STATE_{STATE_COUNT + 1}", "failed": "failed"},
+    )
     sm.add(
         f"STATE_{increment_state_count()}",
         FindPerson(
@@ -536,16 +568,6 @@ def deliver(command_param: Dict, sm: smach.StateMachine) -> None:
             "failed": "failed",
         },
     )
-
-    if "object" in command_param:
-        object_name = command_param["object"]
-    elif "object_category" in command_param:
-        object_name = command_param["object_category"]
-    else:
-        raise ValueError(
-            "Deliver command received with no object or object category in command parameters"
-        )
-
     sm.add(
         f"STATE_{increment_state_count()}",
         HandoverObject(object_name=object_name),
