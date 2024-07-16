@@ -26,7 +26,7 @@ class DescribePeople(smach.StateMachine):
             self,
             outcomes=["succeeded", "failed"],
             input_keys=[],
-            output_keys=["people"],
+            output_keys=["people", "clip_detection_dict"],
         )
 
         with self:

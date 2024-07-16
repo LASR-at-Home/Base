@@ -29,14 +29,6 @@ def stringify_guest_data(
     relevant_guest_data.setdefault(
         "attributes",
         {
-            "has_hair": 0,
-            "hair_shape": "unknown",
-            "hair_colour": "unknown",
-            "facial_hair": 0,
-            "earrings": 0,
-            "necklace": 0,
-            "necktie": 0,
-            # "height": "unknown",
             "glasses": 0,
             "hat": 0,
             "dress": 0,
@@ -54,11 +46,6 @@ def stringify_guest_data(
         return guest_str
 
     filtered_attributes = {}
-    filtered_attributes["hair"] = {
-        "confidence": relevant_guest_data["attributes"]["has_hair"],
-        "hair_shape": relevant_guest_data["attributes"]["hair_shape"],
-        "hair_colour": relevant_guest_data["attributes"]["hair_colour"],
-    }
 
     most_confident_clothes = find_most_confident_clothes(
         relevant_guest_data,
@@ -80,9 +67,6 @@ def stringify_guest_data(
         "max_dress",
         "max_top",
         "max_outwear",
-        "has_hair",
-        "hair_shape",
-        "hair_colour",
     ]
     for attribute, value in relevant_guest_data["attributes"].items():
         if attribute not in considered_attributes:
@@ -91,51 +75,23 @@ def stringify_guest_data(
                 "attribute": attribute,
             }
 
-    sorted_attributes = sorted(
+    cloth_attributes = sorted(
         filtered_attributes.keys(),
         key=lambda k: abs(filtered_attributes[k]["confidence"]),
         reverse=True,
     )
 
-    top_4_attributes = sorted_attributes[:4]
-
-    top_4_attributes = [
-        attr
-        for attr in top_4_attributes
-        if not (attr == "hair" and filtered_attributes[attr]["confidence"] < 0)
-    ]
-    if len(top_4_attributes) < 4:
-        top_4_attributes.append(sorted_attributes[4])
-
     wearing_items = []
     not_wearing_items = []
 
-    for i in range(len(top_4_attributes)):
-        attribute_name = top_4_attributes[i]
-        attribute_value = filtered_attributes[top_4_attributes[i]]
+    for i in range(len(cloth_attributes)):
+        attribute_value = filtered_attributes[cloth_attributes[i]]
         confidence = attribute_value["confidence"]
-
-        if attribute_name == "hair":
-            hair_shape = attribute_value["hair_shape"]
-            hair_colour = attribute_value["hair_colour"]
-            guest_str += f"They have {hair_shape} and {hair_colour}. "
-        elif attribute_name == "facial_hair":
-            if confidence < 0:
-                guest_str += "They don't have facial hair. "
-            else:
-                guest_str += "They have facial hair. "
+        attribute = attribute_value["attribute"]
+        if isSingular(attribute):
+            wearing_items.append(f"a {attribute}")
         else:
-            attribute = attribute_value["attribute"]
-            if confidence < 0:
-                if isSingular(attribute):
-                    not_wearing_items.append(f"a {attribute}")
-                else:
-                    not_wearing_items.append(attribute)
-            else:
-                if isSingular(attribute):
-                    wearing_items.append(f"a {attribute}")
-                else:
-                    wearing_items.append(attribute)
+            wearing_items.append(attribute)
 
     def grammatical_concat(items):
         if len(items) > 1:
@@ -159,6 +115,8 @@ def stringify_guest_data(
             guest_str += (
                 "They are not wearing " + grammatical_concat(not_wearing_items) + "."
             )
+    
+    if user
 
     return guest_str
 
@@ -262,7 +220,7 @@ class Introduce(smach.StateMachine):
     ):
         super().__init__(
             outcomes=["succeeded", "failed"],
-            input_keys=["guest_data"],
+            input_keys=["guest_data", ""],
         )
         assert not (guest_to_introduce_to is None and not everyone)
 

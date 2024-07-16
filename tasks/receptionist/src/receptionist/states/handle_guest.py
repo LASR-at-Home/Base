@@ -16,7 +16,7 @@ class HandleGuest(smach.StateMachine):
             super().__init__(
                 outcomes=["succeeded", "failed"],
                 input_keys=["guest_data"],
-                output_keys=["guest_data"],
+                output_keys=["guest_data", ""],
             )
 
             with self:
