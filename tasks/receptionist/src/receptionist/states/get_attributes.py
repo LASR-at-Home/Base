@@ -10,7 +10,7 @@ class GetGuestAttributes(smach.StateMachine):
             smach.State.__init__(
                 self,
                 outcomes=["succeeded", "failed"],
-                input_keys=["guest_data"],
+                input_keys=["guest_data", "clip_detection_dict"],
                 output_keys=["guest_data"],
             )
 
