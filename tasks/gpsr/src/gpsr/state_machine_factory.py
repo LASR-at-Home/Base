@@ -282,17 +282,27 @@ def talk(command_param: Dict, sm: smach.StateMachine, greet_person: bool) -> Non
             raise ValueError(
                 f"Person info query {query} not recognised. Must be 'name', 'pose', or 'gesture'"
             )
+
+        output_str = "I will determine the " + query + " of the person"
+
         if "room" in command_param:
             waypoints: List[Pose] = get_person_detection_poses(command_param["room"])
             polygon: Polygon = get_room_polygon(command_param["room"])
+            location_str = command_param["room"]
         elif "location" in command_param:
             waypoints: List[Pose] = [get_location_pose(command_param["location"], True)]
             polygon: Polygon = get_person_detection_polygon(command_param["location"])
+            location_str = command_param["location"]
         else:
             raise ValueError(
                 "Tell command received with personinfo, but no room or location in command parameters"
             )
-
+        output_str += f" at the {location_str}"
+        sm.add(
+            f"STATE_{increment_state_count()}",
+            Say(text=output_str),
+            transitions={"succeeded": f"STATE_{STATE_COUNT + 1}", "failed": "failed"},
+        )
         sm.add(
             f"STATE_{increment_state_count()}",
             FindPersonAndTell(
@@ -334,7 +344,7 @@ def talk(command_param: Dict, sm: smach.StateMachine, greet_person: bool) -> Non
     elif "objectcomp" in command_param:
 
         query = command_param["objectcomp"]
-
+        output_str = f"I will determine the {query} of the specified object"
         if "location" in command_param:
             location_pose = get_location_pose(command_param["location"], False)
             look_point = get_look_point(command_param["location"])
@@ -344,6 +354,12 @@ def talk(command_param: Dict, sm: smach.StateMachine, greet_person: bool) -> Non
                 "Tell command with object but no room in command parameters"
             )
 
+        output_str += f" in the {command_param['location']}"
+        sm.add(
+            f"STATE_{increment_state_count()}",
+            Say(text=output_str),
+            transitions={"succeeded": f"STATE_{STATE_COUNT + 1}", "failed": "failed"},
+        )
         sm.add(
             f"STATE_{increment_state_count()}",
             GoToLocation(location=location_pose),
