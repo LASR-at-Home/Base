@@ -68,7 +68,7 @@ class PersonFollowingServer:
         self._dynamic_costmap(config)
 
         config = Config()
-        config.doubles.append(DoubleParameter(name="max_vel_x", value=0.4))
+        config.doubles.append(DoubleParameter(name="max_vel_x", value=0.6))
 
         self._dynamic_velocity(config)
 
