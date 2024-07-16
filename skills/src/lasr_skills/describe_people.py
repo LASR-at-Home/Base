@@ -95,13 +95,24 @@ class DescribePeople(smach.StateMachine):
                     image_raw=userdata.img_msg,
                 )
                 t_shirt_response = self.clip_service(t_shirt_request)
+                rospy.loginfo("RESPONSES")
+                rospy.loginfo(f"Glasses: {glasses_response}")
+                rospy.loginfo(f"Hat: {hat_response}")
+                rospy.loginfo(f"Hair: {hair_response}")
+                rospy.loginfo(f"T-shirt: {t_shirt_response}")
 
                 glasses_bool = glasses_response.answer == "a person wearing glasses"
                 hat_bool = hat_response.answer == "a person wearing a hat"
                 hair_bool = hair_response.answer == "a person with long hair"
                 t_shirt_bool = (
-                    t_shirt_response == "a person wearing a short-sleeve t-shirt"
+                    t_shirt_response.answer == "a person wearing a short-sleeve t-shirt"
                 )
+
+                rospy.loginfo("DETECTED ATTRIBUTES")
+                rospy.loginfo(f"Glasses: {glasses_bool}")
+                rospy.loginfo(f"Hat: {hat_bool}")
+                rospy.loginfo(f"Hair: {hair_bool}")
+                rospy.loginfo(f"Short Sleeve T-shirt: {t_shirt_bool}")
 
                 clip_detection_dict = {
                     "glasses": glasses_bool,
