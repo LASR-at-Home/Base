@@ -102,7 +102,7 @@ class CommandParserStateMachine(smach.StateMachine):
     def __init__(
         self,
         data_config: Configuration,
-        n_vecs_per_txt_file: int = 1177943,
+        n_vecs_per_txt_file: int = 8403420,
         total_txt_files: int = 10,
     ):
         """State machine that takes in a command, matches it to a known command, and

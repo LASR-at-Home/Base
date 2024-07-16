@@ -70,7 +70,7 @@ if __name__ == "__main__":
         )
         sm.add(
             "COMMAND_SIMILARITY_MATCHER",
-            CommandSimilarityMatcher([1177943] * 10),
+            CommandSimilarityMatcher([840342] * 10),
             transitions={"succeeded": "SAY_MATCHED_COMMAND", "failed": "failed"},
         )
         sm.add(
