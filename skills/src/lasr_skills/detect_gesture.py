@@ -13,6 +13,7 @@ from tf2_geometry_msgs.tf2_geometry_msgs import do_transform_pose
 import tf2_ros as tf
 from visualization_msgs.msg import Marker
 from markers import create_and_publish_marker
+from typing import Tuple, Union
 
 
 class DetectGesture(smach.State):

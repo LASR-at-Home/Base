@@ -4,8 +4,8 @@ from lasr_vision_msgs.srv import (
     TorchFaceFeatureDetectionDescriptionResponse,
 )
 from lasr_vision_feature_extraction.categories_and_attributes import (
-    CategoriesAndAttributes,
-    CelebAMaskHQCategoriesAndAttributes,
+    # CategoriesAndAttributes,
+    # CelebAMaskHQCategoriesAndAttributes,
     DeepFashion2GeneralizedCategoriesAndAttributes,
 )
 
