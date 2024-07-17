@@ -467,8 +467,6 @@ class PersonFollower:
                     "map",
                 )
                 self._move_base(goal_pose)
-                if self._move_base_client.get_state() in [GoalStatus.ABORTED]:
-                    self._move_base(goal_pose)
 
                 self._waypoints.append(goal_pose)
                 prev_goal = goal_pose
@@ -481,9 +479,15 @@ class PersonFollower:
             ):
                 rospy.logwarn("Goal was aborted, retrying")
                 self._move_base(prev_goal)
-                # result.waypoints.append(prev_goal)
-                # self._waypoints.append(prev_goal)
             # check if the person has been static for too long
+            elif self._move_base_client.get_state() in [GoalStatus.SUCCEEDED]:
+                goal_pose = self._tf_pose(
+                    PoseStamped(pose=track.pose, header=tracks.header),
+                    "map",
+                )
+                self._move_base(goal_pose)
+                prev_goal = goal_pose
+                prev_track = track
             elif (
                 (
                     np.mean([np.linalg.norm(vel) for vel in track_vels])
