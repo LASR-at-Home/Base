@@ -15,7 +15,7 @@ from lasr_vision_msgs.srv import (
     VqaRequest,
 )
 from numpy2message import numpy2message
-from .vision import GetCroppedImage, ImageMsgToCv2
+from .vision import GetCroppedImage, ImageMsgToCv2, GetImage
 import numpy as np
 from lasr_skills.validate_keypoints import ValidateKeypoints
 
@@ -30,17 +30,21 @@ class DescribePeople(smach.StateMachine):
         )
 
         with self:
+            # smach.StateMachine.add(
+            #     "GET_IMAGE",
+            #     GetCroppedImage(
+            #         object_name="person",
+            #         method="closest",
+            #         use_mask=True,  # If true prediction can be very wrong!!!
+            #     ),
             smach.StateMachine.add(
                 "GET_IMAGE",
-                GetCroppedImage(
-                    object_name="person",
-                    method="closest",
-                    use_mask=True,  # If true prediction can be very wrong!!!
-                ),
+                GetImage(),
                 transitions={
                     "succeeded": "GET_CLIP_ATTRIBUTES",
                     "failed": "failed",
                 },
+                remapping={"img_msg": "img_raw"},
             )
 
             smach.StateMachine.add(
@@ -79,20 +83,20 @@ class DescribePeople(smach.StateMachine):
             try:
                 glasses_request = VqaRequest(
                     possible_answers=self.glasses_questions,
-                    image_raw=userdata.img_msg,
+                    image_raw=userdata.img_raw,
                 )
                 glasses_response = self.clip_service(glasses_request)
                 hat_request = VqaRequest(
-                    possible_answers=self.hat_questions, image_raw=userdata.img_msg
+                    possible_answers=self.hat_questions, image_raw=userdata.img_raw
                 )
                 hat_response = self.clip_service(hat_request)
                 hair_request = VqaRequest(
-                    possible_answers=self.hair_questions, image_raw=userdata.img_msg
+                    possible_answers=self.hair_questions, image_raw=userdata.img_raw
                 )
                 hair_response = self.clip_service(hair_request)
                 t_shirt_request = VqaRequest(
                     possible_answers=self.t_shirt_questions,
-                    image_raw=userdata.img_msg,
+                    image_raw=userdata.img_raw,
                 )
                 t_shirt_response = self.clip_service(t_shirt_request)
                 rospy.loginfo("RESPONSES")
