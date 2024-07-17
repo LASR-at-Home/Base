@@ -58,7 +58,7 @@ class DescribePeople(smach.StateMachine):
             smach.State.__init__(
                 self,
                 outcomes=["succeeded", "failed"],
-                input_keys=["img_msg"],
+                input_keys=["img_raw"],
                 output_keys=["clip_detection_dict"],
             )
             self.clip_service = rospy.ServiceProxy("/clip_vqa/query_service", Vqa)
