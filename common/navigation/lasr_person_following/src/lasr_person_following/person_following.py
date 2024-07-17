@@ -263,9 +263,7 @@ class PersonFollower:
                     ):
                         continue
                     else:
-                        goal_pose = self._get_pose_on_path(
-                            self._tf_pose(robot_pose, "map"),
-                            self._tf_pose(
+                        goal_pose = self._tf_pose(
                                 PoseStamped(
                                     pose=Pose(
                                         position=Point(
@@ -276,10 +274,7 @@ class PersonFollower:
                                         orientation=Quaternion(0, 0, 0, 1),
                                     ),
                                     header=prev_pose.header,
-                                ),
-                                "map",
-                            ),
-                            self._stopping_distance,
+                                ), "map"
                         )
                         if goal_pose is None:
                             rospy.logwarn("Could not find a path to the person")
@@ -366,10 +361,13 @@ class PersonFollower:
 
         return chosen_pose
 
-    def _move_base(self, pose: PoseStamped) -> MoveBaseGoal:
+    def _move_base(self, pose: PoseStamped, wait=False) -> MoveBaseGoal:
         goal: MoveBaseGoal = MoveBaseGoal()
         goal.target_pose = pose
         self._move_base_client.send_goal(goal)
+
+        if wait:
+            self._move_base_client.wait_for_result()
 
         return goal
 
@@ -517,8 +515,8 @@ class PersonFollower:
                     rospy.loginfo("Finished following person")
 
                     # navigate back to the original position from waypoints
-                    for waypoint in self._waypoints[::-1]:
-                        self._move_base(waypoint)
+                    # for waypoint in self._waypoints[::-1]:
+                    #     self._move_base(waypoint, wait=True)
 
                     break
             rospy.loginfo("")
