@@ -7,7 +7,6 @@ from lasr_skills import (
     DetectGesture,
     ReceiveObject,
     HandoverObject,
-)
 from lasr_skills.vision import GetCroppedImage
 from lasr_skills import PlayMotion
 from lasr_person_following.msg import FollowAction
@@ -17,6 +16,7 @@ from leg_tracker.srv import (
 )
 
 from std_msgs.msg import Empty
+from pal_navigation_msgs.srv import Acknowledgment, AcknowledgmentRequest
 from std_srvs.srv import Empty as EmptySrv
 
 from pal_startup_msgs.srv import (
@@ -49,7 +49,6 @@ class CarryMyLuggage(smach.StateMachine):
     def __init__(self):
         smach.StateMachine.__init__(self, outcomes=["succeeded", "failed"])
         with self:
-
             def wait_cb(ud, msg):
                 rospy.loginfo("Received start signal")
                 return False
@@ -178,6 +177,20 @@ class CarryMyLuggage(smach.StateMachine):
                 smach_ros.ServiceState(
                     "/move_base/clear_costmaps",
                     EmptySrv,
+                ),
+                transitions={
+                    "succeeded": "START_MAPPING",
+                    "aborted": "START_MAPPING",
+                    "preempted": "START_MAPPING",
+                },
+            )
+
+            smach.StateMachine.add(
+                "START_MAPPING",
+                smach_ros.ServiceState(
+                    "/pal_navigation_sm",
+                    Acknowledgment,
+                    request=AcknowledgmentRequest("MAP"),
                 ),
                 transitions={
                     "succeeded": "SAY_FOLLOW",
