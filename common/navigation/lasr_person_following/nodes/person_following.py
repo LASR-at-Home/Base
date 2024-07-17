@@ -85,8 +85,8 @@ class PersonFollowingServer:
         self._dynamic_recovery(config)
 
         config = Config()
-        config.bools.append(BoolParameter(name="enabled"), value=1)
-        config.doubles.append(DoubleParameter(name="inflation_radius"), value=0.2)
+        config.bools.append(BoolParameter(name="enabled", value=1))
+        config.doubles.append(DoubleParameter(name="inflation_radius", value=0.2))
 
         self._dynamic_local_costmap(config)
 

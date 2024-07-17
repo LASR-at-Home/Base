@@ -177,6 +177,7 @@ class CarryMyLuggage(smach.StateMachine):
                 },
             )
 
+            # TODO: ensure it doesnt get stuck here, maybe concurrenr
             smach.StateMachine.add(
                 "CLEAR_COSTMAPS",
                 smach_ros.ServiceState(
@@ -184,59 +185,45 @@ class CarryMyLuggage(smach.StateMachine):
                     EmptySrv,
                 ),
                 transitions={
-                    "succeeded": "START_MAPPING",
-                    "aborted": "START_MAPPING",
-                    "preempted": "START_MAPPING",
+                    "succeeded": "GET_START_POSE",
+                    "aborted": "GET_START_POSE",
+                    "preempted": "GET_START_POSE",
                 },
             )
 
+            def start_pose_cb(ud):
+                try:
+                    ud.start_pose = rospy.wait_for_message("/robot_pose", PoseWithCovarianceStamped, timeout=rospy.Duration(5.0)).pose.pose
+                except rospy.ROSException:
+                    rospy.logerr("Failed to get robot pose")
+                    ud.start_pose = Pose(position=Point(0., 0., 0.0), orientation=Quaternion(0., 0., 0., 1.))
+                return "succeeded"
             smach.StateMachine.add(
-                "START_MAPPING",
-                smach_ros.ServiceState(
-                    "/pal_navigation_sm",
-                    Acknowledgment,
-                    request=AcknowledgmentRequest("MAP"),
+                "GET_START_LOCATION",
+                smach.CBState(
+                    start_pose_cb,
+                    outcomes=["succeeded"],
+                    output_keys=["start_pose"],
                 ),
-                transitions={
-                    "succeeded": "SAY_FOLLOW",
-                    "aborted": "SAY_FOLLOW",
-                    "preempted": "SAY_FOLLOW",
-                },
+                transitions={"succeeded": "SAY_STEP"}
             )
 
-            smach.StateMachine.add(
-                "SAY_FOLLOW",
-                Say(text="I will follow you now."),
-                transitions={
-                    "succeeded": "SAY_STEP",
-                    # "succeeded": "INITIALISE_PERSON_TRACK",
-                    "aborted": "failed",
-                    "preempted": "failed",
-                },
-            )
             smach.StateMachine.add(
                 "SAY_STEP",
                 Say(text="First walk slowly towards me and then I will follow you."),
                 transitions={
-                    "succeeded": "FOLLOW",
+                    "succeeded": "SAY_FOLLOW",
                     "aborted": "failed",
                     "preempted": "failed",
                 },
             )
             smach.StateMachine.add(
-                "INITIALISE_PERSON_TRACK",
-                smach_ros.ServiceState(
-                    "/cml/initialise_person_with_vision",
-                    InitialisePersonWithVision,
-                    request_cb=lambda ud, req: InitialisePersonWithVisionRequest(
-                        point=ud.person_point,
-                    ),
-                    input_keys=["person_point"],
-                ),
+                "SAY_FOLLOW",
+                Say(text="I will follow you now."),
                 transitions={
                     "succeeded": "FOLLOW",
-                    "aborted": "FOLLOW",
-                    "preempted": "FOLLOW",
+                    "aborted": "failed",
+                    "preempted": "failed",
                 },
             )
 
@@ -283,12 +270,8 @@ class CarryMyLuggage(smach.StateMachine):
             )
 
             smach.StateMachine.add(
-                "GO_TO_START",
-                GoToLocation(
-                    location=Pose(
-                        position=Point(0.0, 0.0, 0.0),
-                        orientation=Quaternion(0.0, 0.0, 0.0, 1.0),
-                    )
-                ),
+                "GO_TO_START", # todo: instead, get the start position within the state machine, and return to it at the end
+                GoToLocation(),
+                remapping={"location" : "start_pose"},
                 transitions={"succeeded": "succeeded", "failed": "succeeded"},
             )

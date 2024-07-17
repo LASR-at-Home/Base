@@ -342,7 +342,7 @@ class PersonFollower:
 
     def _check_finished(self) -> bool:
         if self._tts_client_available:
-            self._tts("Have we arrived?", wait=True)
+            self._tts("Have we arrived? Please say Yes We Have Arrived", wait=True)
 
             if self._transcribe_speech_client_available:
                 self._transcribe_speech_client.send_goal_and_wait(
@@ -350,7 +350,7 @@ class PersonFollower:
                 )
                 transcription = self._transcribe_speech_client.get_result().sequence
 
-                return "yes" in transcription.lower()
+                return "yes" in transcription.lower() or "arrived" in transcription.lower() or "arrive" in transcription.lower()
         return True
 
     def _get_pose_on_path(
@@ -415,11 +415,6 @@ class PersonFollower:
         asking_time: rospy.Time = rospy.Time.now()
 
         while not rospy.is_shutdown():
-
-            if self._should_stop:
-                rospy.loginfo("Received stop signal")
-                self._tts("I am stopping now", wait=True)
-                break
 
             tracks: PersonArray = rospy.wait_for_message("/people_tracked", PersonArray)
 
