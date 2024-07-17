@@ -793,7 +793,88 @@ def go(command_param: Dict, sm: smach.StateMachine, person: bool) -> None:
 
 
 def bring(command_param: Dict, sm: smach.StateMachine) -> None:
-    raise NotImplementedError("Bring command not implemented")
+    # Bring me a <object> from the <placement location>
+
+    if "location" not in command_param:
+        raise ValueError("Bring command received with no location in command paramas")
+    if "object" not in command_param:
+        raise ValueError("Bring command received with no object in command params")
+
+    location_pose = get_location_pose(command_param["location"], False)
+    dest_pose = get_current_pose()
+
+    sm.add(
+        f"STATE_{increment_state_count()}",
+        Say(
+            text=f"I will bring you a {command_param['object']} from the {command_param['location']}"
+        ),
+        transitions={
+            "succeded": f"STATE_{STATE_COUNT+1}",
+            "aborted": "failed",
+            "preempted": "failed",
+        },
+    )
+
+    sm.add(
+        f"STATE_{increment_state_count()}",
+        GoToLocation(location=location_pose),
+        transitions={
+            "succeeded": f"STATE_{STATE_COUNT + 1}",
+            "failed": "failed",
+        },
+    )
+
+    sm.add(
+        f"STATE_{increment_state_count()}",
+        Say(
+            text=f"Please pick up the {command_param['object']} on the {command_param['location']} for me."
+        ),
+        transitions={
+            "succeeded": f"STATE_{STATE_COUNT + 1}",
+            "aborted": "failed",
+            "preempted": "failed",
+        },
+    )
+
+    sm.add(
+        f"STATE_{increment_state_count()}",
+        GoToLocation(
+            location=get_location_pose(
+                command_param["location"], False, dem_manipulation=True
+            ),
+        ),
+        transitions={
+            "succeeded": f"STATE_{STATE_COUNT + 1}",
+            "failed": "failed",
+        },
+    )
+
+    sm.add(
+        f"STATE_{increment_state_count()}",
+        ReceiveObject(object_name=command_param["object"]),
+        transitions={
+            "succeeded": f"STATE_{STATE_COUNT + 1}",
+            "failed": "failed",
+        },
+    )
+
+    sm.add(
+        f"STATE_{increment_state_count()}",
+        GoToLocation(dest_pose),
+        transitions={
+            "succeeded": f"STATE_{STATE_COUNT + 1}",
+            "failed": "failed",
+        },
+    )
+
+    sm.add(
+        f"STATE_{increment_state_count()}",
+        HandoverObject(object_name=command_param["object"]),
+        transitions={
+            "succeeded": f"STATE_{STATE_COUNT + 1}",
+            "failed": "failed",
+        },
+    )
 
 
 def find(command_param: Dict, sm: smach.StateMachine) -> None:
