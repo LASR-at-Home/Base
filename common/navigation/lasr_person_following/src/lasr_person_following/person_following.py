@@ -480,14 +480,6 @@ class PersonFollower:
                 rospy.logwarn("Goal was aborted, retrying")
                 self._move_base(prev_goal)
             # check if the person has been static for too long
-            elif self._move_base_client.get_state() in [GoalStatus.SUCCEEDED]:
-                goal_pose = self._tf_pose(
-                    PoseStamped(pose=track.pose, header=tracks.header),
-                    "map",
-                )
-                self._move_base(goal_pose)
-                prev_goal = goal_pose
-                prev_track = track
             elif (
                 (
                     np.mean([np.linalg.norm(vel) for vel in track_vels])
@@ -510,12 +502,15 @@ class PersonFollower:
 
                 if self._check_finished():
                     rospy.loginfo("Finished following person")
-
-                    # navigate back to the original position from waypoints
-                    for waypoint in self._waypoints[::-1]:
-                        self._move_base(waypoint, wait=True)
-
                     break
+            elif self._move_base_client.get_state() in [GoalStatus.SUCCEEDED]:
+                goal_pose = self._tf_pose(
+                    PoseStamped(pose=track.pose, header=tracks.header),
+                    "map",
+                )
+                self._move_base(goal_pose)
+                prev_goal = goal_pose
+                prev_track = track
             rospy.loginfo("")
             rospy.loginfo(np.mean([np.linalg.norm(vel) for vel in track_vels]))
             rospy.loginfo("")
