@@ -11,7 +11,7 @@ from geometry_msgs.msg import (
     Point,
 )
 
-from typing import Union, List
+from typing import Union, List, Tuple
 
 from move_base_msgs.msg import MoveBaseAction, MoveBaseActionGoal, MoveBaseGoal
 from actionlib_msgs.msg import GoalStatus
@@ -73,6 +73,9 @@ class PersonFollower:
 
     # Publishers
     _person_trajectory_pub: rospy.Publisher
+
+    # Waypoints
+    _waypoints: List[PoseStamped]
 
     def __init__(
         self,
@@ -138,6 +141,8 @@ class PersonFollower:
         )
         if not self._play_motion.wait_for_server(rospy.Duration.from_sec(10.0)):
             rospy.logwarn("Play motion client not available")
+
+        self._waypoints = []
 
     def _tf_pose(self, pose: PoseStamped, target_frame: str):
         trans = self._buffer.lookup_transform(
@@ -386,7 +391,7 @@ class PersonFollower:
         prev_goal: Union[None, PoseStamped] = None
         last_goal_time: Union[None, rospy.Time] = None
         going_to_person: bool = False
-        track_vels: List[float] = []
+        track_vels: List[Tuple[float, float]] = []
         asking_time: rospy.Time = rospy.Time.now()
 
         while not rospy.is_shutdown():
@@ -475,6 +480,7 @@ class PersonFollower:
                     "map",
                 )
                 self._move_base(goal_pose)
+                self._waypoints.append(goal_pose)
                 prev_goal = goal_pose
                 prev_track = track
                 last_goal_time = rospy.Time.now()
@@ -485,6 +491,7 @@ class PersonFollower:
             ):
                 rospy.logwarn("Goal was aborted, retrying")
                 self._move_base(prev_goal)
+                self._waypoints.append(prev_goal)
             # check if the person has been static for too long
             elif (
                 (
@@ -502,6 +509,9 @@ class PersonFollower:
 
                 # clear velocity buffer
                 track_vels = []
+
+                # clear waypoints
+                self._waypoints = []
 
                 if self._check_finished():
                     rospy.loginfo("Finished following person")
