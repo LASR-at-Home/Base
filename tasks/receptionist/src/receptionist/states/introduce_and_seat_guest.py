@@ -500,6 +500,7 @@ class IntroduceAndSeatGuest(smach.StateMachine):
                             input_keys=[
                                 "num_people_on_sofa",
                                 "empty_seat_detections",
+                                "sofa_detections",
                             ],
                             output_keys=["seat_position"],
                         )
@@ -512,11 +513,42 @@ class IntroduceAndSeatGuest(smach.StateMachine):
                             f"Num people on sofa: {userdata.num_people_on_sofa}"
                         )
                         if userdata.num_people_on_sofa < self._max_people_on_sofa:
-
                             userdata.seat_position = PointStamped(
                                 point=self._sofa_position, header=Header(frame_id="map")
                             )
-                            return "succeeded_sofa"
+                            if userdata.num_people_on_sofa == 0:
+                                return "succeeded_sofa_left"
+                            else:
+                                sat_person_centroid = (
+                                    userdata.sofa_detections[0].detections_3d[0].point
+                                )
+                                sofa_points = rospy.get_param("/receptionist/sofa_area")
+                                bottom_left = sofa_points[0]
+                                top_left = sofa_points[1]
+                                top_right = sofa_points[2]
+                                bottom_right = sofa_points[3]
+                                bottom_mid_point = Point(
+                                    x=(bottom_left[0] + bottom_right[0]) / 2,
+                                    y=(bottom_left[1] + bottom_right[1]) / 2,
+                                )
+                                top_mid_point = Point(
+                                    x=(top_left[0] + top_right[0]) / 2,
+                                    y=(top_left[1] + top_right[1]) / 2,
+                                )
+
+                                left_rectangle = ShapelyPolygon(
+                                    [
+                                        bottom_left,
+                                        bottom_mid_point,
+                                        top_mid_point,
+                                        top_left,
+                                    ]
+                                )
+
+                                if left_rectangle.contains(sat_person_centroid):
+                                    return "succeeded_sofa_right"
+                                else:
+                                    return "succeeded_sofa_left"
 
                         if len(userdata.empty_seat_detections) > 0:
                             seat_position = PointStamped(
@@ -693,7 +725,7 @@ class IntroduceAndSeatGuest(smach.StateMachine):
                         Introduce(
                             guest_to_introduce=guest_to_introduce_to,
                             guest_to_introduce_to=guest_id,
-                            describe_features=guest_to_introduce_to != "host",
+                            describe_features=guest_to_introduce_to == "host",
                         ),
                         transitions={
                             "succeeded": (
@@ -709,7 +741,8 @@ class IntroduceAndSeatGuest(smach.StateMachine):
                     "SELECT_SEAT",
                     SelectSeat(sofa_position, max_people_on_sofa),
                     transitions={
-                        "succeeded_sofa": "SAY_SOFA",
+                        "succeeded_sofa_left": "SAY_SOFA_LEFT",
+                        "succeeded_sofa_right": "SAY_SOFA_RIGHT",
                         "succeeded_chair": "SAY_CHAIR",
                         "failed": "LOOK_CENTRE_SEAT",
                     },
@@ -727,8 +760,22 @@ class IntroduceAndSeatGuest(smach.StateMachine):
 
                 # Say to sit on the sofa
                 smach.StateMachine.add(
-                    "SAY_SOFA",
-                    Say(text="Please sit on the sofa that I am looking at"),
+                    "SAY_SOFA_LEFT",
+                    Say(
+                        text="Please sit on left side of the sofa that I am looking at"
+                    ),
+                    transitions={
+                        "succeeded": "LOOK_AT_SEAT",
+                        "preempted": "LOOK_AT_SEAT",
+                        "aborted": "LOOK_AT_SEAT",
+                    },
+                )
+                # Say to sit on the sofa
+                smach.StateMachine.add(
+                    "SAY_SOFA_RIGHT",
+                    Say(
+                        text="Please sit on the right side of the sofa that I am looking at"
+                    ),
                     transitions={
                         "succeeded": "LOOK_AT_SEAT",
                         "preempted": "LOOK_AT_SEAT",
