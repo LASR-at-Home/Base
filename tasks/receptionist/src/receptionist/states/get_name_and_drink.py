@@ -55,6 +55,7 @@ class GetNameAndDrink(smach.StateMachine):
 
             for name in self._possible_names:
                 if name in transcription:
+                    print(name)
                     userdata.guest_data[self._guest_id]["name"] = name
                     rospy.loginfo(f"Guest Name identified as: {name}")
                     name_found = True
