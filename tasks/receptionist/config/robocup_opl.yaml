@@ -32,29 +32,33 @@ priors:
 
 # WAIT POSE KITCHEN:
 wait_pose:
-  position:
-    x: 1.9867316187022508
-    y: 0.7879099771350105
+  position: 
+    x: 1.8632217222187388
+    y: 0.439813444255738
     z: 0.0
-  orientation:
+  orientation: 
     x: 0.0
     y: 0.0
-    z: -0.8156974576748943
-    w: 0.5784787442445175
+    z: -0.7479260859393064
+    w: 0.6637820199218334
+
+
+
 
 # WAIT AREA KITCHEN:
 wait_area: [[2.67, 0.0], [2.5, -1.86], [0.79, -1.60], [1.0, -0.0]]
 
 seat_pose:
-  position:
-    x: 2.2513155977453994
-    y: 4.607534990369736
+  position: 
+    x: 3.0207276536854186
+    y: 4.842124838244151
     z: 0.0
-  orientation:
+  orientation: 
     x: 0.0
     y: 0.0
-    z: 0.463219811993643
-    w: 0.8862434235448938
+    z: 0.5695976288326214
+    w: 0.8219236833357798
+
 
 search_motions: ["look_left", "look_right"]
 sofa_point:
