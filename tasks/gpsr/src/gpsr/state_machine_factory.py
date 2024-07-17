@@ -37,8 +37,69 @@ from geometry_msgs.msg import (
 )
 from std_msgs.msg import Header
 
-STATE_COUNT = 0
 from lasr_skills import GoToLocation
+
+STATE_COUNT = 0
+
+OBJECT_CATEGORIES = {
+    "cleaning_supplies": ["soap", "dishwasher tab", "washcloth", "sponges"],
+    "cleaning_supply": ["soap", "dishwasher tab", "washcloth", "sponges"],
+    "drinks": ["cola", "ice_tea", "water", "milk", "big_coke", "fanta", "dubbelfris"],
+    "drink": ["cola", "ice_tea", "water", "milk", "big_coke", "fanta", "dubbelfris"],
+    "food": [
+        "cornflakes",
+        "pea_soup",
+        "curry",
+        "pancake_mix",
+        "hagelslag",
+        "sausages",
+        "mayonaise",
+    ],
+    "decorations": ["candle"],
+    "decoration": ["candle"],
+    "fruits": [
+        "pear",
+        "plum",
+        "peach",
+        "lemon",
+        "orange",
+        "strawberry",
+        "banana",
+        "apple",
+    ],
+    "fruit": [
+        "pear",
+        "plum",
+        "peach",
+        "lemon",
+        "orange",
+        "strawberry",
+        "banana",
+        "apple",
+    ],
+    "snacks": ["stroopwafel", "candy", "liquorice", "crisps", "pringles", "tictac"],
+    "snack": ["stroopwafel", "candy", "liquorice", "crisps", "pringles", "tictac"],
+    "dishes": ["spoon", "plate", "cup", "fork", "bowl", "knife"],
+    "dish": ["spoon", "plate", "cup", "fork", "bowl", "knife"],
+}
+
+
+OBJECT_CATEGORY_LOCATIONS = {
+    "decorations": "desk",
+    "decoration": "desk",
+    "cleaning_supplies": "shelf",
+    "cleaning_supply": "shelf",
+    "toys": "tv_table",
+    "toy": "tv_table",
+    "fruits": "coffee_table",
+    "fruit": "coffee_table",
+    "drinks": "kitchen_cabinet",
+    "drink": "kitchen_cabinet",
+    "snacks": "dinner_table",
+    "snack": "dinner_table",
+    "dishes": "dishwasher",
+    "dish": "dishwasher",
+}
 
 
 """
@@ -882,17 +943,32 @@ def find(command_param: Dict, sm: smach.StateMachine) -> None:
     find a object in the given room
     """
 
-    if "object_category" in command_param:
-        raise NotImplementedError("Find command not implemented")
-        if not "location" in command_param:
+    if "object_category" in command_param or "object" in command_param:
+        location_str = ""
+        if "location" in command_param:
+            target_pose = get_location_pose(command_param["location"], person=False)
+            location_str = command_param["location"]
+        elif "room" in command_param:
+            target_pose = get_room_pose(command_param["room"])
+            location_str = command_param["room"]
+        else:
             raise ValueError(
-                "find command with object but no room in command parameters"
+                "Find command with no location or room provided in command parameters"
             )
-        location_param_room = f"/gpsr/arena/rooms/{command_param['location']}"
+
+        if "object_category" in command_param:
+            object_str = command_param["object_category"]
+        elif "object" in command_param:
+            object_str = command_param["object"]
+
+        sm.add(
+            f"STATE_{increment_state_count()}",
+            Say(text=f"I will go to the {location_str} and find a {object_str}"),
+        )
         sm.add(
             f"STATE_{increment_state_count()}",
             GoFindTheObject(
-                location_param=location_param_room,
+                location_param=target_pose,
                 filter=command_param["object_category"],
             ),
             transitions={
