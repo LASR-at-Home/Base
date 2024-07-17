@@ -271,17 +271,18 @@ class PersonFollower:
                         continue
                     else:
                         goal_pose = self._tf_pose(
-                                PoseStamped(
-                                    pose=Pose(
-                                        position=Point(
-                                            x=response.wave_position.point.x,
-                                            y=response.wave_position.point.y,
-                                            z=response.wave_position.point.z,
-                                        ),
-                                        orientation=Quaternion(0, 0, 0, 1),
+                            PoseStamped(
+                                pose=Pose(
+                                    position=Point(
+                                        x=response.wave_position.point.x,
+                                        y=response.wave_position.point.y,
+                                        z=response.wave_position.point.z,
                                     ),
-                                    header=prev_pose.header,
-                                ), "map"
+                                    orientation=Quaternion(0, 0, 0, 1),
+                                ),
+                                header=prev_pose.header,
+                            ),
+                            "map",
                         )
                         if goal_pose is None:
                             rospy.logwarn("Could not find a path to the person")
@@ -466,6 +467,9 @@ class PersonFollower:
                     "map",
                 )
                 self._move_base(goal_pose)
+                if self._move_base_client.get_state() in [GoalStatus.ABORTED]:
+                    self._move_base(goal_pose)
+
                 self._waypoints.append(goal_pose)
                 prev_goal = goal_pose
                 prev_track = track
@@ -477,7 +481,7 @@ class PersonFollower:
             ):
                 rospy.logwarn("Goal was aborted, retrying")
                 self._move_base(prev_goal)
-                #result.waypoints.append(prev_goal)
+                # result.waypoints.append(prev_goal)
                 # self._waypoints.append(prev_goal)
             # check if the person has been static for too long
             elif (
@@ -504,8 +508,8 @@ class PersonFollower:
                     rospy.loginfo("Finished following person")
 
                     # navigate back to the original position from waypoints
-                    # for waypoint in self._waypoints[::-1]:
-                    #     self._move_base(waypoint, wait=True)
+                    for waypoint in self._waypoints[::-1]:
+                        self._move_base(waypoint, wait=True)
 
                     break
             rospy.loginfo("")
