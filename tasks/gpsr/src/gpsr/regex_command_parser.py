@@ -458,6 +458,9 @@ def parse_result_dict(
     Returns:
         dict: _description_
     """
+    for i, command in enumerate(result["commands"]):
+        for key, value in result["command_params"][i].items():
+            result["command_params"][i][key] = value.replace(" ", "_")
 
     for i, command in enumerate(result["commands"]):
         if "object" in result["command_params"][i]:
@@ -475,6 +478,12 @@ def parse_result_dict(
                     "location"
                 ]
                 del result["command_params"][i]["location"]
+
+        # if "destination" in result["command_params"][i]:
+        #     result["command_params"][i]["destination"] = result["command_params"][i][
+        #             "destination"
+        #         ].replace(" ", "_")
+        #     print(result["command_params"][i]["destination"])
 
         # Update command params based on the previous commands params
         if i > 0:
@@ -503,6 +512,7 @@ def parse_result_dict(
                     result["command_params"][i]["object_category"] = result[
                         "command_params"
                     ][i - 1]["object_category"]
+
     return result
 
 
@@ -670,7 +680,7 @@ if __name__ == "__main__":
     #         object_categories,
     #     )
     # )
-
+    #
     # print(
     #     execute(
     #         "tell the time to the person raising their right arm in the kitchen",
@@ -683,14 +693,14 @@ if __name__ == "__main__":
     #         object_categories,
     #     )
     # )
-
+    #
     # print(
     #     execute(
     #         "navigate to the kitchen table then find a stick.",
     #         object_categories,
     #     )
     # )
-
+    #
     # print(
     #     execute(
     #         "tell me what is the biggest stick on the kitchen table",
