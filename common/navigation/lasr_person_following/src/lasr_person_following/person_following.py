@@ -515,6 +515,11 @@ class PersonFollower:
 
                 if self._check_finished():
                     rospy.loginfo("Finished following person")
+
+                    # navigate back to the original position from waypoints
+                    for waypoint in self._waypoints[::-1]:
+                        self._move_base(waypoint)
+
                     break
             rospy.loginfo("")
             rospy.loginfo(np.mean([np.linalg.norm(vel) for vel in track_vels]))
