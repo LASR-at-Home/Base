@@ -189,7 +189,7 @@ class ReceiveObject(smach.StateMachine):
             )
             smach.StateMachine.add(
                 "FOLD_ARM",
-                PlayMotion(motion_name="home"),
+                PlayMotion(motion_name="cml_arm_away"),
                 transitions={
                     "succeeded": "succeeded",
                     "aborted": "failed",
