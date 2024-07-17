@@ -271,17 +271,18 @@ class PersonFollower:
                         continue
                     else:
                         goal_pose = self._tf_pose(
-                                PoseStamped(
-                                    pose=Pose(
-                                        position=Point(
-                                            x=response.wave_position.point.x,
-                                            y=response.wave_position.point.y,
-                                            z=response.wave_position.point.z,
-                                        ),
-                                        orientation=Quaternion(0, 0, 0, 1),
+                            PoseStamped(
+                                pose=Pose(
+                                    position=Point(
+                                        x=response.wave_position.point.x,
+                                        y=response.wave_position.point.y,
+                                        z=response.wave_position.point.z,
                                     ),
-                                    header=prev_pose.header,
-                                ), "map"
+                                    orientation=Quaternion(0, 0, 0, 1),
+                                ),
+                                header=prev_pose.header,
+                            ),
+                            "map",
                         )
                         if goal_pose is None:
                             rospy.logwarn("Could not find a path to the person")
@@ -388,148 +389,43 @@ class PersonFollower:
             else:
                 self._tts_client.send_goal(tts_goal)
 
-    def follow(self) -> FollowResult:
+    def follow(self) -> None:
 
-        result = FollowResult()
-
-        person_trajectory: PoseArray = PoseArray()
-        person_trajectory.header.frame_id = "odom"
         prev_track: Union[None, Person] = None
-        prev_goal: Union[None, PoseStamped] = None
-        last_goal_time: Union[None, rospy.Time] = None
-        going_to_person: bool = False
-        track_vels: List[Tuple[float, float]] = []
-        asking_time: rospy.Time = rospy.Time.now()
+        prev_goal: Union[None, MoveBaseActionGoal] = None
+        poses = []
 
+        """
+        Constantly sends goals on the person, never returns unless the person is lost
+        No recovery behaviour or stopping conditions
+        """
         while not rospy.is_shutdown():
-
-            tracks: PersonArray = rospy.wait_for_message("/people_tracked", PersonArray)
-
-            # Get the most recent track of the person we are following
-            track = next(
-                filter(lambda track: track.id == self._track_id, tracks.people),
-                None,
+            tracks = rospy.wait_for_message("/people_tracked", PersonArray)
+            current_track = next(
+                filter(lambda track: track.id == self._track_id, tracks.people), None
             )
-            # keep a sliding window of the tracks velocity
-            if track is not None:
-                track_vels.append((track.vel_x, track.vel_y))
-                if len(track_vels) > 10:
-                    track_vels.pop(0)
+            if current_track is None:
+                rospy.loginfo(f"Lost track of person with ID {self._track_id}")
+                break
 
-            if track is None:
-                rospy.loginfo("Lost track of person, recovering...")
-                person_trajectory = PoseArray()
-                ask_back: bool = False
+            if prev_track is not None:
+                # If the poses are significantly different, update the most recent pose
+                if self._euclidian_distance(prev_track.pose, current_track.pose) < 0.0:
+                    rospy.loginfo("Person too close to previous one, skipping")
+                    continue
 
-                if prev_track is not None:
-                    robot_pose: PoseStamped = self._robot_pose_in_odom()
-                    if robot_pose:
-                        dist: float = self._euclidian_distance(
-                            robot_pose.pose, prev_track.pose
-                        )
-                        rospy.loginfo(f"Distance to last known position: {dist}")
-                        if dist >= MAX_VISION_DIST:
-                            ask_back = True
-                    else:
-                        ask_back = True
-                else:
-                    ask_back = True
+            robot_pose = self._robot_pose_in_odom()
 
-                if not ask_back:
-                    self._recover_track(
-                        say=not self._recover_vision(robot_pose, prev_goal)
-                    )
-                else:
-                    self._recover_track(say=True)
-
-                prev_track = None
+            if robot_pose is None:
                 continue
 
-            if prev_track is None:
-                robot_pose: PoseStamped = self._robot_pose_in_odom()
+            if self._euclidian_distance(robot_pose.pose, current_track.pose) < 1.0:
+                rospy.loginfo("Person too close to robot, skipping")
+                continue
 
-                goal_pose = self._tf_pose(
-                    PoseStamped(
-                        pose=Pose(
-                            position=track.pose.position,
-                            orientation=robot_pose.pose.orientation,
-                        ),
-                        header=tracks.header,
-                    ),
-                    "map",
-                )
-                self._move_base(goal_pose)
-                prev_goal = goal_pose
-                last_goal_time = rospy.Time.now()
-                prev_track = track
+            goal_pose = PoseStamped(pose=current_track.pose, header=tracks.header)
+            goal = MoveBaseGoal()
+            goal.target_pose = self._tf_pose(goal_pose, "map")
+            goal.target_pose.header.stamp = rospy.Time.now()
 
-            # Check if the person is walking too fast and ask them to slow down only
-            # if you haven't asked them in the last 15 seconds
-            if (
-                np.mean([np.linalg.norm(vel) for vel in track_vels]) > self._max_speed
-                and (rospy.Time.now() - asking_time).to_sec() > self._asking_time_limit
-            ):
-                self._tts("Please walk slower, I am struggling to keep up", wait=False)
-                asking_time = rospy.Time.now()
-
-            # Distance to the previous pose
-            dist_to_prev = (
-                self._euclidian_distance(track.pose, prev_track.pose)
-                if prev_track is not None
-                else np.inf
-            )
-
-            # Check if the person has moved significantly
-            if dist_to_prev >= self._new_goal_threshold:
-
-                goal_pose = self._tf_pose(
-                    PoseStamped(pose=track.pose, header=tracks.header),
-                    "map",
-                )
-                self._move_base(goal_pose)
-                self._waypoints.append(goal_pose)
-                prev_goal = goal_pose
-                prev_track = track
-                last_goal_time = rospy.Time.now()
-            # retry goal if it was aborted
-            elif (
-                self._move_base_client.get_state() in [GoalStatus.ABORTED]
-                and prev_goal is not None
-            ):
-                rospy.logwarn("Goal was aborted, retrying")
-                self._move_base(prev_goal)
-                result.waypoints.append(prev_goal)
-                # self._waypoints.append(prev_goal)
-            # check if the person has been static for too long
-            elif (
-                (
-                    np.mean([np.linalg.norm(vel) for vel in track_vels])
-                    < self._static_speed
-                )
-                and len(track_vels) == 10
-                and prev_track is not None
-            ):
-                rospy.logwarn(
-                    "Person has been static for too long, going to them and stopping"
-                )
-                # cancel current goal
-                self._cancel_goal()
-
-                # clear velocity buffer
-                track_vels = []
-
-                # clear waypoints
-                self._waypoints = []
-
-                if self._check_finished():
-                    rospy.loginfo("Finished following person")
-
-                    # navigate back to the original position from waypoints
-                    # for waypoint in self._waypoints[::-1]:
-                    #     self._move_base(waypoint, wait=True)
-
-                    break
-            rospy.loginfo("")
-            rospy.loginfo(np.mean([np.linalg.norm(vel) for vel in track_vels]))
-            rospy.loginfo("")
-        return result
+            prev_track = current_track
