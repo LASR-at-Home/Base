@@ -420,27 +420,27 @@ class PersonFollower:
                 rospy.loginfo("Lost track of person, recovering...")
                 person_trajectory = PoseArray()
                 ask_back: bool = False
+                self._recover_track(say=True)
+                # if prev_track is not None:
+                #     robot_pose: PoseStamped = self._robot_pose_in_odom()
+                #     if robot_pose:
+                #         dist: float = self._euclidian_distance(
+                #             robot_pose.pose, prev_track.pose
+                #         )
+                #         rospy.loginfo(f"Distance to last known position: {dist}")
+                #         if dist >= MAX_VISION_DIST:
+                #             ask_back = True
+                #     else:
+                #         ask_back = True
+                # else:
+                #     ask_back = True
 
-                if prev_track is not None:
-                    robot_pose: PoseStamped = self._robot_pose_in_odom()
-                    if robot_pose:
-                        dist: float = self._euclidian_distance(
-                            robot_pose.pose, prev_track.pose
-                        )
-                        rospy.loginfo(f"Distance to last known position: {dist}")
-                        if dist >= MAX_VISION_DIST:
-                            ask_back = True
-                    else:
-                        ask_back = True
-                else:
-                    ask_back = True
-
-                if not ask_back:
-                    self._recover_track(
-                        say=not self._recover_vision(robot_pose, prev_goal)
-                    )
-                else:
-                    self._recover_track(say=True)
+                # if not ask_back:
+                #     self._recover_track(
+                #         say=not self._recover_vision(robot_pose, prev_goal)
+                #     )
+                # else:
+                #     self._recover_track(say=True)
 
                 prev_track = None
                 continue
@@ -498,7 +498,7 @@ class PersonFollower:
             ):
                 rospy.logwarn("Goal was aborted, retrying")
                 self._move_base(prev_goal)
-                result.waypoints.append(prev_goal)
+                #result.waypoints.append(prev_goal)
                 # self._waypoints.append(prev_goal)
             # check if the person has been static for too long
             elif (
