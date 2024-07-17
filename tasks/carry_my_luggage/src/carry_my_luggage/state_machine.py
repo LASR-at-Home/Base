@@ -7,6 +7,8 @@ from lasr_skills import (
     DetectGesture,
     ReceiveObject,
     HandoverObject,
+    GoToLocation,
+)
 from lasr_skills.vision import GetCroppedImage
 from lasr_skills import PlayMotion
 from lasr_person_following.msg import FollowAction
@@ -18,6 +20,8 @@ from leg_tracker.srv import (
 from std_msgs.msg import Empty
 from pal_navigation_msgs.srv import Acknowledgment, AcknowledgmentRequest
 from std_srvs.srv import Empty as EmptySrv
+
+from geometry_msgs.msg import Pose, Point, Quaternion
 
 from pal_startup_msgs.srv import (
     StartupStart,
@@ -49,6 +53,7 @@ class CarryMyLuggage(smach.StateMachine):
     def __init__(self):
         smach.StateMachine.__init__(self, outcomes=["succeeded", "failed"])
         with self:
+
             def wait_cb(ud, msg):
                 rospy.loginfo("Received start signal")
                 return False
@@ -265,4 +270,25 @@ class CarryMyLuggage(smach.StateMachine):
                     "succeeded": "succeeded",
                     "failed": "failed",
                 },
+            )
+
+            smach.StateMachine.add(
+                "SAY_GOING_BACK",
+                Say(text="I am going back to the start position."),
+                transitions={
+                    "succeeded": "GO_TO_START",
+                    "preempted": "GO_TO_START",
+                    "aborted": "GO_TO_START",
+                },
+            )
+
+            smach.StateMachine.add(
+                "GO_TO_START",
+                GoToLocation(
+                    location=Pose(
+                        position=Point(0.0, 0.0, 0.0),
+                        orientation=Quaternion(0.0, 0.0, 0.0, 1.0),
+                    )
+                ),
+                transitions={"succeeded": "succeeded", "failed": "succeeded"},
             )
