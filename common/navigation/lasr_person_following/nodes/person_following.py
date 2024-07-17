@@ -32,6 +32,10 @@ class PersonFollowingServer:
             "/move_base/set_parameters", Reconfigure
         )
 
+        self._dynamic_local_costmap = rospy.ServiceProxy(
+            "/move_base/local_costmap/inflation_layer/set_parameters", Reconfigure
+        )
+
         self._update_params()
         rospy.sleep(1)
         print("Updated params")
@@ -77,6 +81,12 @@ class PersonFollowingServer:
         config.bools.append(BoolParameter(name="clearing_rotation_allowed", value=0))
 
         self._dynamic_recovery(config)
+
+        config = Config()
+        config.bools.append(BoolParameter(name="enabled"), value=1)
+        config.doubles.append(DoubleParameter(name="inflation_radius"), value=0.2)
+
+        self._dynamic_local_costmap(config)
 
 
 if __name__ == "__main__":
