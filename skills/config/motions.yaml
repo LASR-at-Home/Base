@@ -10,6 +10,11 @@ play_motion:
       points:
       - positions: [1.61, -0.93, -3.14, 1.83, -1.58, -0.53, 0.00]
         time_from_start: 0.0
+    cml_arm_away:
+      joints: [ arm_1_joint, arm_2_joint, arm_3_joint, arm_4_joint, arm_5_joint, arm_6_joint, arm_7_joint ]
+      points:
+        - positions: [ 2.65, -1.36, -1.23, 1.86, -1.36, 1.39, -0.01 ]
+          time_from_start: 0.0
     open_gripper:
       joints: [gripper_left_finger_joint, gripper_right_finger_joint]
       points:
