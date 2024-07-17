@@ -40,6 +40,13 @@ from lasr_speech_recognition_msgs.msg import (
 
 from pal_interaction_msgs.msg import TtsGoal, TtsAction
 
+from lasr_person_following.msg import (
+    FollowAction,
+    FollowGoal,
+    FollowResult,
+    FollowFeedback,
+)
+
 MAX_VISION_DIST: float = 5.0
 
 
@@ -381,7 +388,9 @@ class PersonFollower:
             else:
                 self._tts_client.send_goal(tts_goal)
 
-    def follow(self) -> None:
+    def follow(self) -> FollowResult:
+
+        result = FollowResult()
 
         person_trajectory: PoseArray = PoseArray()
         person_trajectory.header.frame_id = "odom"
@@ -489,7 +498,8 @@ class PersonFollower:
             ):
                 rospy.logwarn("Goal was aborted, retrying")
                 self._move_base(prev_goal)
-                self._waypoints.append(prev_goal)
+                result.waypoints.append(prev_goal)
+                # self._waypoints.append(prev_goal)
             # check if the person has been static for too long
             elif (
                 (
@@ -522,3 +532,4 @@ class PersonFollower:
             rospy.loginfo("")
             rospy.loginfo(np.mean([np.linalg.norm(vel) for vel in track_vels]))
             rospy.loginfo("")
+        return result

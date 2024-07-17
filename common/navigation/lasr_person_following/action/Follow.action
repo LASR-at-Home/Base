@@ -1,4 +1,5 @@
 ---
 #result definition
+geometry_msgs/Pose[] waypoints
 ---
 #feedback
