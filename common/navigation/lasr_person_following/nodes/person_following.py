@@ -16,6 +16,8 @@ from lasr_person_following import PersonFollower
 
 import warnings
 
+from std_msgs.msg import Empty
+
 
 class PersonFollowingServer:
     _server: actionlib.SimpleActionServer

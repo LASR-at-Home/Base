@@ -47,6 +47,8 @@ from lasr_person_following.msg import (
     FollowFeedback,
 )
 
+from std_msgs.msg import Empty
+
 MAX_VISION_DIST: float = 5.0
 
 
@@ -70,6 +72,7 @@ class PersonFollower:
     _tts_client_available: bool
     _transcribe_speech_client: actionlib.SimpleActionClient
     _transcribe_speech_client_available: bool
+    _stop_listener_sub: rospy.Subscriber
 
     # Services
     _make_plan: rospy.ServiceProxy
@@ -149,7 +152,16 @@ class PersonFollower:
         if not self._play_motion.wait_for_server(rospy.Duration.from_sec(10.0)):
             rospy.logwarn("Play motion client not available")
 
+        self._stop_listener_sub = rospy.Subscriber(
+            "/stop_listener/finished", Empty, self._stop_listener_cb
+        )
+
+        self._should_stop = False
+
         self._waypoints = []
+
+    def _stop_listener_cb(self, msg: Empty) -> None:
+        self._should_stop = True
 
     def _tf_pose(self, pose: PoseStamped, target_frame: str):
         trans = self._buffer.lookup_transform(
@@ -404,6 +416,11 @@ class PersonFollower:
 
         while not rospy.is_shutdown():
 
+            if self._should_stop:
+                rospy.loginfo("Received stop signal")
+                self._tts("I am stopping now", wait=True)
+                break
+
             tracks: PersonArray = rospy.wait_for_message("/people_tracked", PersonArray)
 
             # Get the most recent track of the person we are following
@@ -499,29 +516,29 @@ class PersonFollower:
                 rospy.logwarn("Goal was aborted, retrying")
                 self._move_base(prev_goal)
             # check if the person has been static for too long
-            elif (
-                (
-                    np.mean([np.linalg.norm(vel) for vel in track_vels])
-                    < self._static_speed
-                )
-                and len(track_vels) == 10
-                and prev_track is not None
-            ):
-                rospy.logwarn(
-                    "Person has been static for too long, going to them and stopping"
-                )
-                # cancel current goal
-                self._cancel_goal()
+            # elif (
+            #     (
+            #         np.mean([np.linalg.norm(vel) for vel in track_vels])
+            #         < self._static_speed
+            #     )
+            #     and len(track_vels) == 10
+            #     and prev_track is not None
+            # ):
+            #     rospy.logwarn(
+            #         "Person has been static for too long, going to them and stopping"
+            #     )
+            #     # cancel current goal
+            #     self._cancel_goal()
 
-                # clear velocity buffer
-                track_vels = []
+            #     # clear velocity buffer
+            #     track_vels = []
 
-                # clear waypoints
-                self._waypoints = []
+            #     # clear waypoints
+            #     self._waypoints = []
 
-                if self._check_finished():
-                    rospy.loginfo("Finished following person")
-                    break
+            #     if self._check_finished():
+            #         rospy.loginfo("Finished following person")
+            #         break
             elif self._move_base_client.get_state() in [GoalStatus.SUCCEEDED]:
                 goal_pose = self._tf_pose(
                     PoseStamped(pose=track.pose, header=tracks.header),
