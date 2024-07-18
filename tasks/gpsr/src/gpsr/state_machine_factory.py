@@ -173,30 +173,6 @@ def get_room_polygon(room: str) -> Polygon:
     )
 
 
-def get_person_detection_polygon(location: str) -> Polygon:
-    location_room = get_location_room(location)
-    return Polygon(
-        [
-            Point(**p)
-            for p in rospy.get_param(
-                f"/gpsr/arena/rooms/{location_room}/beacons/{location}/person_detection_polygon"
-            )
-        ]
-    )
-
-
-def get_object_detection_polygon(location: str) -> Polygon:
-    location_room = get_location_room(location)
-    return Polygon(
-        [
-            Point(**p)
-            for p in rospy.get_param(
-                f"/gpsr/arena/rooms/{location_room}/beacons/{location}/object_detection_polygon"
-            )
-        ]
-    )
-
-
 def get_look_point(location: str) -> PointStamped:
     location_room = get_location_room(location)
     look_point = rospy.get_param(
@@ -229,7 +205,9 @@ def greet(command_param: Dict, sm: smach.StateMachine) -> None:
         location_string = command_param["destination"]
     elif "location" in command_param:
         waypoints: List[Pose] = [get_location_pose(command_param["location"], True)]
-        polygon: Polygon = get_person_detection_polygon(command_param["location"])
+        polygon: Polygon = get_room_polygon(
+            get_location_room(command_param["location"])
+        )
         location_string = command_param["location"]
     else:
         raise ValueError(
@@ -356,7 +334,9 @@ def talk(command_param: Dict, sm: smach.StateMachine, greet_person: bool) -> Non
             location_str = command_param["room"]
         elif "location" in command_param:
             waypoints: List[Pose] = [get_location_pose(command_param["location"], True)]
-            polygon: Polygon = get_person_detection_polygon(command_param["location"])
+            polygon: Polygon = get_room_polygon(
+                get_location_room((command_param["location"]))
+            )
             location_str = command_param["location"]
         else:
             raise ValueError(
@@ -418,7 +398,9 @@ def talk(command_param: Dict, sm: smach.StateMachine, greet_person: bool) -> Non
         if "location" in command_param:
             location_pose = get_location_pose(command_param["location"], False)
             look_point = get_look_point(command_param["location"])
-            area_polygon = get_object_detection_polygon(command_param["location"])
+            area_polygon = get_room_polygon(
+                get_location_room((command_param["location"]))
+            )
         else:
             raise ValueError(
                 "Tell command with object but no room in command parameters"
@@ -944,6 +926,7 @@ def find(command_param: Dict, sm: smach.StateMachine) -> None:
     """
 
     if "object_category" in command_param or "object" in command_param:
+        raise NotImplementedError("Find not implemented")
         location_str = ""
         if "location" in command_param:
             target_pose = get_location_pose(command_param["location"], person=False)
@@ -1092,7 +1075,9 @@ def count(command_param: Dict, sm: smach.StateMachine) -> None:
                 "Count command with object but no room in command parameters"
             )
         location_pose = get_location_pose(command_param["location"], False)
-        location_polygon = get_object_detection_polygon(command_param["location"])
+        location_polygon = get_room_polygon(
+            get_location_room((command_param["location"]))
+        )
         output_string += command_param["location"]
         sm.add(
             f"STATE_{increment_state_count()}",

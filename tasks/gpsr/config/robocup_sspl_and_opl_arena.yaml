@@ -336,7 +336,16 @@ arena:
               z: 0.6980324092187533
               w: 0.7160661671104583
     hallway: 
-      pose: # TODO: take from receptionist
+      pose:
+        position: 
+          x: 6.406923818929698
+          y: -0.41544372565988424
+          z: 0.0
+        orientation: 
+          x: 0.0
+          y: 0.0
+          z: -0.5195673509149114
+          w: 0.8544294984744273
       room_polygon: [[5.75, -1.88], [5.04, 1.40], [8.88, 2.21], [9.59, -1.05]]
       people_search_poses: # list of poses for people search
         - position:
