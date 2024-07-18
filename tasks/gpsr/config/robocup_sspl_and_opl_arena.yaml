@@ -1,5 +1,5 @@
 arena:
-  polygon:
+  polygon: [[0.94, -2.89], [-0.67, 5.39], [1.60, 5.77], [1.49, 6.38], [7.61, 7.62], [9.61, -1.06]]
   rooms:
     living_room:
       pose:
@@ -12,7 +12,7 @@ arena:
           y: 0.0
           z: 0.6976626012448783
           w: 0.7164264755187583
-      room_polygon: # of the room
+      room_polygon: [[5.04, 1.46], [3.79, 6.86], [7.65, 7.64], [8.87, 2.26]]
       people_search_poses:
         position:
           x: 5.629079430861646
@@ -51,7 +51,6 @@ arena:
             x: 7.336175918579102
             y: 2.161613941192627
             z: 0.8558647632598877
-          object_detection_polygon: # polygon of the beacon to search for objects
           person_detection_pose:
             position:
               x: 7.178624964267576
@@ -62,7 +61,6 @@ arena:
               y: 0.0
               z: -0.8293872296702443
               w: 0.5586741655562011
-          person_detection_polygon: # polygon of the beacon to search for people
         lounge_chair:
           placeable: false
           person_detection_pose:
@@ -75,7 +73,6 @@ arena:
               y: 0.0
               z: 0.67393157419759
               w: 0.7387937691261062
-          person_detection_polygon: # polygon of the beacon to search for people
         lamp:
           placeable: false
           person_detection_pose:
@@ -88,7 +85,6 @@ arena:
               y: 0.0
               z: 0.67393157419759
               w: 0.7387937691261062
-          person_detection_polygon: # polygon of the beacon to search for people
         couch:
           placeable: false
           person_detection_pose:
@@ -101,7 +97,6 @@ arena:
               y: 0.0
               z: 0.8950260507658574
               w: 0.446013865760329
-          person_detection_polygon: # polygon of the beacon to search for people
         coffee_table:
           placeable: true
           object_category: "fruits"
@@ -129,7 +124,6 @@ arena:
             x: 6.047140598297119
             y: 5.356678009033203
             z: 0.6894049644470215
-          object_detection_polygon:
           person_detection_pose: # pose for person detection
             position:
               x: 6.072641821149185
@@ -140,7 +134,6 @@ arena:
               y: 0.0
               z: 0.6755591389777796
               w: 0.7373058047673307
-          person_detection_polygon: # polygon of the beacon to search for people
     kitchen:
       pose:
         position:
@@ -152,7 +145,7 @@ arena:
           y: 0.0
           z: 0.9126515293224691
           w: 0.40873853014532197
-      room_polygon: # of the room
+      room_polygon: [[0.27, 0.49], [-0.65, 5.36], [1.58, 5.80], [1.49, 6.32], [3.89, 6.82], [4.96, 1.44]]
       people_search_poses:
         - position:
             x: 3.9433358501268594
@@ -194,7 +187,6 @@ arena:
               y: 0.0
               z: -0.3121720915187429
               w: 0.9500255708541816
-          person_detection_polygon: # polygon of the beacon to search for people
         kitchen_cabinet:
           placeable: true
           object_category: "drinks"
@@ -222,7 +214,6 @@ arena:
             x: 0.8811559081077576
             y: 0.5808010101318359
             z: 0.9112319946289062
-          object_detection_polygon: # polygon of the beacon to search for objects
           person_detection_pose:
             position:
               x: 0.41346658822354454
@@ -233,7 +224,6 @@ arena:
               y: 0.0
               z: -0.3155156152787112
               w: 0.9489203847084835
-          person_detection_polygon:
         dinner_table:
           placeable: true
           object_category: "snacks"
@@ -261,7 +251,6 @@ arena:
             x: 1.4012675285339355
             y: 3.3633391857147217
             z: 0.8118224143981934
-          object_detection_polygon: # polygon of the beacon to search for objects
           person_detection_pose:
             position:
               x: 1.9960502931903918
@@ -272,7 +261,6 @@ arena:
               y: 0.0
               z: 0.7983903222483791
               w: 0.6021402605208602
-          person_detection_polygon: # polygon of the beacon to search for people
         dishwasher:
           placeable: true
           object_category: "dishes"
@@ -300,7 +288,6 @@ arena:
             x: 1.3605456352233887
             y: 5.999742031097412
             z: 0.8568863868713379
-          object_detection_polygon:  # polygon of
           person_detection_pose:
             position:
               x: 2.65489823025352
@@ -311,7 +298,6 @@ arena:
               y: 0.0
               z: 0.9999952361044794
               w: 0.0030867083352073693
-          person_detection_polygon: # polygon of the beacon to search for people
         kitchen_counter:
           placeable: true
           object_category: "food"
@@ -339,7 +325,6 @@ arena:
             x: 0.500577449798584
             y: 5.770392417907715
             z: 0.9268898963928223
-          object_detection_polygon: # polygon of the beacon to search for objects
           person_detection_pose:
             position:
               x: 0.14874480525409264
@@ -350,10 +335,9 @@ arena:
               y: 0.0
               z: 0.6980324092187533
               w: 0.7160661671104583
-          person_detection_polygon: # polygon of the beacon to search for people
-    hallway:
+    hallway: 
       pose: # TODO: take from receptionist
-      room_polygon: # polygon of the room
+      room_polygon: [[5.75, -1.88], [5.04, 1.40], [8.88, 2.21], [9.59, -1.05]]
       people_search_poses: # list of poses for people search
         - position:
             x: 8.531460776002305
@@ -400,7 +384,6 @@ arena:
             x: 8.50695514678955
             y: -1.2844955921173096
             z: 0.8518805503845215
-          object_detection_polygon: [ [ 0.0, 2.0 ], [ 1.0, 2.0 ], [ 1.0, 3.0 ], [ 0.0, 3.0 ] ] # not sure if thats correct
           person_detection_pose:
             position:
               x: 8.154730778074187
@@ -411,13 +394,9 @@ arena:
               y: 0.0
               z: -0.616600806524571
               w: 0.7872759652074033
-          person_detection_polygon: [ [ 0.0, 2.0 ], [ 1.0, 2.0 ], [ 1.0, 3.0 ], [ 0.0, 3.0 ] ]# not sure if thats correct
         entrance:
           placeable: false
           person_detection_pose: # pose for person detection
-          # TODO: receptionist
-          person_detection_polygon: [ [ 0.0, 2.0 ], [ 1.0, 2.0 ], [ 1.0, 3.0 ], [ 0.0, 3.0 ] ]# not sure if thats correct
-          # TODO: receptionist
       office:
         pose:
           position:
@@ -429,7 +408,7 @@ arena:
             y: 0.0
             z: -0.9715699244383985
             w: 0.23675278652375886
-        room_polygon: # of the room
+        room_polygon: [[0.97, -2.88], [0.25, 0.51], [5.04, 1.40], [5.70, -1.87]]
         people_search_poses: # list of poses for people search
           - position:
               x: 1.1897928222331966
@@ -477,7 +456,6 @@ arena:
               x: 5.166173458099365
               y: -1.2579708099365234
               z: 0.8283624649047852
-            object_detection_polygon: # fill in the polygon
             person_detection_pose:
               position:
                 x: 3.15544081281043
@@ -488,7 +466,6 @@ arena:
                 y: 0.0
                 z: 0.0750698144804968
                 w: 0.9971782804262554
-            person_detection_polygon: # polygon of the beacon to search for people
           shelf:
             placeable: true
             object_category: "cleaning_supplies"
@@ -516,7 +493,6 @@ arena:
               x: 2.308501720428467
               y: -2.374452590942383
               z: 1.0352556705474854
-            object_detection_polygon: # polygon of the beacon to search for objects
             person_detection_pose:
               position:
                 x: 2.0525058695053557
@@ -527,7 +503,6 @@ arena:
                 y: 0.0
                 z: -0.8421138710595055
                 w: 0.5392997572493191
-            person_detection_polygon: # polygon of the beacon to search for people
           coathanger:
             placeable: false
             person_detection_pose:
@@ -540,7 +515,6 @@ arena:
                 y: 0.0
                 z: -0.919280962536277
                 w: 0.3936019714360892
-            person_detection_polygon: # polygon of the beacon to search for people
           exit:
             placeable: false
             person_detection_pose:
@@ -553,7 +527,6 @@ arena:
                 y: 0.0
                 z: 0.9999125666331964
                 w: 0.013223429548099866
-            person_detection_polygon: # polygon of the beacon to search for people
 objects:
   - cleaning_supplies: [ "dishwasher_tab", "soap", "sponges", "washcloth" ]
   - decorations: [ "candle" ]
