@@ -1,0 +1,60 @@
+arena:
+  polygon: [[-1.14, -3.01], [-0.918, 3.14], [11.6, -3.28], [11.6, 2.89]]
+  start_pose:
+    position:
+      x: 0.0
+      y: 0.0
+      z: 0.0
+    orientation:
+      x: 0.0
+      y: 0.0
+      z: 0.0
+      w: 1.0
+  rooms:
+    living_room:
+      pose: # pose in the room
+      room_polygon:
+        [[-1.14, -3.01], [5.16, -3.18], [5.22, 2.96], [-0.918, 3.14]]
+      people_search_poses: # list of poses for people search
+      beacons:
+        coffee_table:
+          placeable: true
+          object_category: "fruits"
+          object_detection_pose: # pose for object detection
+          dem_manipulation_pose: # pose for manipulation
+          object_detection_point: # point to look at
+          object_detection_polygon: # polygon of the beacon to search for objects
+          person_detection_pose: # pose for person detection
+          person_detection_polygon: # polygon of the beacon to search for people
+    kitchen:
+      pose: # pose in the room
+      room_polygon: [[5.16, -3.18], [11.6, -3.28], [11.6, 2.89], [5.22, 2.96]]
+      people_search_poses: # list of poses for people search
+      beacons:
+        kitchen_cabinet:
+          placeable: true
+          object_category: "drinks"
+          object_detection_pose: # pose for object detection
+          dem_manipulation_pose: # pose for manipulation
+          object_detection_point: # point to look at
+          object_detection_polygon: # polygon of the beacon to search for objects
+          person_detection_pose: # pose for person detection
+          person_detection_polygon: # polygon of the beacon to search for people
+objects:
+  - cleaning_supplies: ["dishwasher_tab", "soap", "sponges", "washcloth"]
+  - decorations: ["candle"]
+  - dishes: ["bowl", "cup", "fork", "knife", "plate", "spoon"]
+  - drinks:
+      ["big_coke", "cola", "dubbelfris", "fanta", "ice_tea", "milk", "water"]
+  - food:
+      [
+        "cornflakes",
+        "curry",
+        "hagelslag",
+        "mayonaise",
+        "pancake_mix",
+        "pea_soup",
+        "sausage",
+      ]
+  - fruits:
+      ["apple", "banana", "lemon", "orange", "peach", "plum", "strawberry"]
