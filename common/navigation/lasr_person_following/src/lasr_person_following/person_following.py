@@ -414,6 +414,8 @@ class PersonFollower:
         track_vels: List[Tuple[float, float]] = []
         asking_time: rospy.Time = rospy.Time.now()
 
+        self._tts("I will follow you now. Please walk slowly!", wait=False)
+
         while not rospy.is_shutdown():
 
             tracks: PersonArray = rospy.wait_for_message("/people_tracked", PersonArray)
