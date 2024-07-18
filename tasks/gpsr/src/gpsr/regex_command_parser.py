@@ -588,7 +588,7 @@ if __name__ == "__main__":
             "hallway cabinet",
             "desk",
             "shelf",
-            "TV table",
+            "tv table",
             "coffee table",
             "kitchen cabinet",
             "dinner table",
@@ -669,7 +669,7 @@ if __name__ == "__main__":
 
     print(
         execute(
-            "tell the pose of the person at the kitchen to the person at the living room",
+            "navigate to the desk then find an apple and grasp it and place it on the tv table",
             object_categories,
         )
     )
