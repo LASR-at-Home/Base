@@ -4,9 +4,8 @@ import rospy
 
 from gpsr.regex_command_parser import Configuration, gpsr_compile_and_parse
 from gpsr.states import CommandSimilarityMatcher
-from lasr_skills import AskAndListen, GoToLocation, Say
+from lasr_skills import AskAndListen, Say
 from lasr_skills.vision import GetImage
-from geometry_msgs.msg import Pose, Point, Quaternion
 
 import cv2_img
 import cv2
@@ -121,22 +120,6 @@ class CommandParserStateMachine(smach.StateMachine):
 
         with self:
 
-            start_pose_param = rospy.get_param("/gpsr/arena/start_pose")
-
-            smach.StateMachine.add(
-                "GO_TO_START",
-                GoToLocation(
-                    location=Pose(
-                        position=Point(**start_pose_param["position"]),
-                        orientation=Quaternion(**start_pose_param["orientation"]),
-                    )
-                ),
-                transitions={
-                    "succeeded": "ASK_FOR_COMMAND",
-                    "failed": "ASK_FOR_COMMAND",
-                },
-            )
-
             smach.StateMachine.add(
                 "ASK_FOR_COMMAND",
                 AskAndListen(tts_phrase="Hello, please tell me your command."),
@@ -185,7 +168,9 @@ class CommandParserStateMachine(smach.StateMachine):
 
             smach.StateMachine.add(
                 "SAY_QR_CODE",
-                Say(text="Please show me a QR code with the command."),
+                Say(
+                    text="Please show me a QR code with the command. Make sure it close to my camera, so that I can see it."
+                ),
                 transitions={
                     "succeeded": "QR_CODE_TO_COMMAND",
                     "aborted": "failed",
