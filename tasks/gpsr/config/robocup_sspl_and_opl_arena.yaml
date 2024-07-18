@@ -2,41 +2,149 @@ arena:
   polygon:
 
   rooms:
-#     living_room:
-#       pose: # pose in the room
-#       room_polygon: # of the room
-#       people_search_poses: # list of poses for people search
-#       beacons:
-#         tv_table:
-#           placeable: true
-#           object_category: "toys"
-#           object_detection_pose: # pose for object detection
-#           dem_manipulation_pose: # pose for manipulation
-#           object_detection_point: # point to look at
-#           object_detection_polygon: # polygon of the beacon to search for objects
-#           person_detection_pose: # pose for person detection
-#           person_detection_polygon: # polygon of the beacon to search for people
-#         lounge_chair:
-#           placeable: false
-#           person_detection_pose: # pose for person detection
-#           person_detection_polygon: # polygon of the beacon to search for people
-#         lamp:
-#           placeable: false
-#           person_detection_pose: # pose for person detection
-#           person_detection_polygon: # polygon of the beacon to search for people
-#         couch:
-#           placeable: false
-#           person_detection_pose: # pose for person detection
-#           person_detection_polygon: # polygon of the beacon to search for people
-#         coffee_table:
-#           placeable: true
-#           object_category: "fruits"
-#           object_detection_pose: # pose for object detection
-#           dem_manipulation_pose: # pose for manipulation
-#           object_detection_point: # point to look at
-#           object_detection_polygon: # polygon of the beacon to search for objects
-#           person_detection_pose: # pose for person detection
-#           person_detection_polygon: # polygon of the beacon to search for people
+     living_room:
+       pose:
+         position:
+           x: 6.120715369195898
+           y: 3.700837077669375
+           z: 0.0
+         orientation:
+           x: 0.0
+           y: 0.0
+           z: 0.6976626012448783
+           w: 0.7164264755187583
+
+       room_polygon: # of the room
+       people_search_poses:
+         position:
+           x: 5.629079430861646
+           y: 2.143383048889825
+           z: 0.0
+         orientation:
+           x: 0.0
+           y: 0.0
+           z: 0.5030997040264118
+           w: 0.8642283771136752
+       beacons:
+         tv_table:
+           placeable: true
+           object_category: "toys"
+           object_detection_pose:
+             position:
+               x: 7.273992107547448
+               y: 2.948434139879407
+               z: 0.0
+             orientation:
+               x: 0.0
+               y: 0.0
+               z: -0.5894704889887196
+               w: 0.8077899124224069
+           dem_manipulation_pose:
+             position:
+               x: 7.354864460241598
+               y: 2.8805250297298883
+               z: 0.0
+             orientation:
+               x: 0.0
+               y: 0.0
+               z: 0.9340189701920224
+               w: 0.3572234081375883
+
+           object_detection_point:
+             x: 7.336175918579102
+             y: 2.161613941192627
+             z: 0.8558647632598877
+           object_detection_polygon: # polygon of the beacon to search for objects
+           person_detection_pose:
+             position:
+               x: 7.178624964267576
+               y: 3.6922693385518555
+               z: 0.0
+             orientation:
+               x: 0.0
+               y: 0.0
+               z: -0.8293872296702443
+               w: 0.5586741655562011
+           person_detection_polygon: # polygon of the beacon to search for people
+         lounge_chair:
+           placeable: false
+           person_detection_pose:
+             position:
+               x: 7.06269559885777
+               y: 4.046433502834197
+               z: 0.0
+             orientation:
+               x: 0.0
+               y: 0.0
+               z: 0.67393157419759
+               w: 0.7387937691261062
+           person_detection_polygon: # polygon of the beacon to search for people
+         lamp:
+           placeable: false
+           person_detection_pose:
+             position:
+               x: 7.06269559885777
+               y: 4.046433502834197
+               z: 0.0
+             orientation:
+               x: 0.0
+               y: 0.0
+               z: 0.67393157419759
+               w: 0.7387937691261062
+           person_detection_polygon: # polygon of the beacon to search for people
+         couch:
+           placeable: false
+           person_detection_pose:
+             position:
+               x: 6.1008258301000735
+               y: 4.286478092897883
+               z: 0.0
+             orientation:
+               x: 0.0
+               y: 0.0
+               z: 0.8950260507658574
+               w: 0.446013865760329
+           person_detection_polygon: # polygon of the beacon to search for people
+         coffee_table:
+           placeable: true
+           object_category: "fruits"
+           object_detection_pose:
+             position:
+               x: 6.1008258301000735
+               y: 4.286478092897883
+               z: 0.0
+             orientation:
+               x: 0.0
+               y: 0.0
+               z: 0.8950260507658574
+               w: 0.446013865760329
+           dem_manipulation_pose:
+             position:
+               x: 6.0536832836653796
+               y: 4.292645186729313
+               z: 0.0
+             orientation:
+               x: 0.0
+               y: 0.0
+               z: -0.867303194550545
+               w: 0.4977802413941511
+           object_detection_point:
+             x: 6.047140598297119
+             y: 5.356678009033203
+             z: 0.6894049644470215
+           object_detection_polygon:
+           person_detection_pose: # pose for person detection
+           position:
+             x: 6.072641821149185
+             y: 4.060858541961114
+             z: 0.0
+           orientation:
+             x: 0.0
+             y: 0.0
+             z: 0.6755591389777796
+             w: 0.7373058047673307
+
+           person_detection_polygon: # polygon of the beacon to search for people
      kitchen:
        pose:
          position:
@@ -262,117 +370,230 @@ arena:
                z: 0.6980324092187533
                w: 0.7160661671104583
            person_detection_polygon: # polygon of the beacon to search for people
-#    hallway:
-#      pose:
-#
-#      room_polygon:
-#      people_search_poses: # list of poses for people search
-#
-#      beacons:
-#        hallway_cabinet:
-#          placeable: true
-#          object_category: "any"
-#          object_detection_pose: # pose for object detection
-#            # dummy pose
-#            position:
-#              x: 0.0
-#              y: 0.0
-#              z: 0.0
-#            orientation:
-#              x: 0.0
-#              y: 0.0
-#              z: 0.0
-#              w: 1.0
-#          dem_manipulation_pose: # pose for manipulation
-#            # dummy pose
-#            position:
-#              x: 0.0
-#              y: 0.0
-#              z: 0.0
-#            orientation:
-#              x: 0.0
-#              y: 0.0
-#              z: 0.0
-#              w: 1.0
-#          object_detection_point: # point to look at
-#            # dummy point
-#            x: 0.0
-#            y: 0.0
-#            z: 0.0
-#          object_detection_polygon: [[0.0, 2.0], [1.0, 2.0], [1.0, 3.0], [0.0, 3.0]]
-#          person_detection_pose: # pose for person detection#
-#            # dummy pose
-#            position:
-#              x: 0.0
-#              y: 0.0
-#              z: 0.0
-#            orientation:
-#              x: 0.0
-#              y: 0.0
-#              z: 0.0
-#              w: 1.0
-#          person_detection_polygon: [[0.0, 2.0], [1.0, 2.0], [1.0, 3.0], [0.0, 3.0]]
-#        entrance:
-#          placeable: false
-#          person_detection_pose: # pose for person detection
-#            # dummy pose
-#            position:
-#              x: 0.0
-#              y: 0.0
-#              z: 0.0
-#            orientation:
-#              x: 0.0
-#              y: 0.0
-#              z: 0.0
-#              w: 1.0
-#          person_detection_polygon: [[0.0, 2.0], [1.0, 2.0], [1.0, 3.0], [0.0, 3.0]]
-    
-#     office:
-#       pose: # pose in the room
-#
-#       room_polygon: # of the room
-#       people_search_poses: # list of poses for people search
-#
-#
-#       beacons:
-#         desk:
-#           placeable: true
-#           object_category: "decorations"
-#           object_detection_pose:
-#
-#
-#           dem_manipulation_pose:
-#
-#
-#           object_detection_point:
-#
-#           object_detection_polygon:
-#           person_detection_pose:
-#
-#
-#           person_detection_polygon: # polygon of the beacon to search for people
-#         shelf:
-#           placeable: true
-#           object_category: "cleaning_supplies"
-#           object_detection_pose:
-#
-#
-#           dem_manipulation_pose: # pose for manipulation
-#           object_detection_point:
-#
-#           object_detection_polygon: # polygon of the beacon to search for objects
-#           person_detection_pose:
-#
-#
-#           person_detection_polygon: # polygon of the beacon to search for people
-#         coathanger:
-#           placeable: false
-#           person_detection_pose: # pose for person detection
-#           person_detection_polygon: # polygon of the beacon to search for people
-#         exit:
-#           placeable: false
-#           person_detection_pose: # pose for person detection
-#           person_detection_polygon: # polygon of the beacon to search for people
+    hallway:
+      pose:
+
+      room_polygon:
+      people_search_poses: # list of poses for people search
+        - position:
+            x: 8.531460776002305
+            y: 1.555449127362031
+            z: 0.0
+          orientation:
+            x: 0.0
+            y: 0.0
+            z: -0.750724815283217
+            w: 0.6606150556246654
+          - position:
+              x: 8.816889192351006
+              y: -0.28486093508806826
+              z: 0.0
+          orientation:
+            x: 0.0
+            y: 0.0
+            z: 0.9976569977780967
+
+
+      beacons:
+        hallway_cabinet:
+          placeable: true
+          object_category: "any"
+          object_detection_pose:
+            position:
+              x: 8.293975528035883
+              y: -0.3616191863693362
+              z: 0.0
+            orientation:
+              x: 0.0
+              y: 0.0
+              z: -0.6646370439111504
+              w: 0.7471663803069886
+
+          dem_manipulation_pose: # pose for manipulation
+          position:
+            x: 8.28576371574446
+            y: -0.36721763331931334
+            z: 0.0
+          orientation:
+            x: 0.0
+            y: 0.0
+            z: 0.9029129168766404
+            w: 0.42982352720310346
+
+
+          object_detection_point: # point to look at
+            x: 8.50695514678955
+            y: -1.2844955921173096
+            z: 0.8518805503845215
+          object_detection_polygon: [[0.0, 2.0], [1.0, 2.0], [1.0, 3.0], [0.0, 3.0]]
+          person_detection_pose: # pose for person detection#
+            position:
+              x: 8.154730778074187
+              y: 0.2045271600062283
+              z: 0.0
+            orientation:
+              x: 0.0
+              y: 0.0
+              z: -0.616600806524571
+              w: 0.7872759652074033
+
+
+          person_detection_polygon: [[0.0, 2.0], [1.0, 2.0], [1.0, 3.0], [0.0, 3.0]]
+        entrance:
+          placeable: false
+          person_detection_pose: # pose for person detection
+          # TODO: receptionist
+          person_detection_polygon: [[0.0, 2.0], [1.0, 2.0], [1.0, 3.0], [0.0, 3.0]]
+          # TODO: receptionist
+
+     office:
+       pose: # pose in the room
+       position:
+         x: 2.961776524002213
+         y: -0.3265839146877172
+         z: 0.0
+       orientation:
+         x: 0.0
+         y: 0.0
+         z: -0.9715699244383985
+         w: 0.23675278652375886
+
+
+       room_polygon: # of the room
+       people_search_poses: # list of poses for people search
+         - position:
+             x: 1.1897928222331966
+             y: -2.4248999657840415
+             z: 0.0
+           orientation:
+             x: 0.0
+             y: 0.0
+             z: 0.38947822627340883
+             w: 0.921035673173911
+
+          - position:
+              x: 4.6296750957052035
+              y: 0.5693606743249666
+              z: 0.0
+            orientation:
+              x: 0.0
+              y: 0.0
+              z: -0.7152771861774136
+              w: 0.6988408595196203
+
+
+
+
+       beacons:
+         desk:
+           placeable: true
+           object_category: "decorations"
+           object_detection_pose:
+             position:
+               x: 4.13641344180174
+               y: -1.1219134907122885
+               z: 0.0
+             orientation:
+               x: 0.0
+               y: 0.0
+               z: -0.2168473262966226
+               w: 0.9762055301410693
+           dem_manipulation_pose:
+             position:
+               x: 4.117926944746048
+               y: -1.1650206648628683
+               z: 0.0
+             orientation:
+               x: 0.0
+               y: 0.0
+               z: 0.9991173043946355
+               w: 0.04200728578707645
+           object_detection_point:
+             x: 5.166173458099365
+             y: -1.2579708099365234
+             z: 0.8283624649047852
+           object_detection_polygon:
+           person_detection_pose:
+             position:
+               x: 3.15544081281043
+               y: -1.2741549162520411
+               z: 0.0
+             orientation:
+               x: 0.0
+               y: 0.0
+               z: 0.0750698144804968
+               w: 0.9971782804262554
+           person_detection_polygon: # polygon of the beacon to search for people
+         shelf:
+           placeable: true
+           object_category: "cleaning_supplies"
+           object_detection_pose:
+             position:
+               x: 2.104748073089378
+               y: -1.3468360989597448
+               z: 0.0
+             orientation:
+               x: 0.0
+               y: 0.0
+               z: -0.5473950131215115
+               w: 0.8368743630974127
+           dem_manipulation_pose: # pose for manipulation
+           position:
+             x: 2.111821807632297
+             y: -1.2878679731048162
+             z: 0.0
+           orientation:
+             x: 0.0
+             y: 0.0
+             z: 0.7589510178190422
+             w: 0.6511477194549943
+
+
+           object_detection_point:
+             x: 2.308501720428467
+             y: -2.374452590942383
+             z: 1.0352556705474854
+
+           object_detection_polygon: # polygon of the beacon to search for objects
+           person_detection_pose:
+             position:
+               x: 2.0525058695053557
+               y: -0.3978282496045481
+               z: 0.0
+             orientation:
+               x: 0.0
+               y: 0.0
+               z: -0.8421138710595055
+               w: 0.5392997572493191
+
+           person_detection_polygon: # polygon of the beacon to search for people
+         coathanger:
+           placeable: false
+           person_detection_pose: # pose for person detection
+            position:
+              x: 6.8857825177057
+              y: 0.3320540650469538
+              z: 0.0
+            orientation:
+              x: 0.0
+              y: 0.0
+              z: -0.919280962536277
+              w: 0.3936019714360892
+
+           person_detection_polygon: # polygon of the beacon to search for people
+         exit:
+           placeable: false
+           person_detection_pose: # pose for person detection
+           position:
+             x: 2.3359576942170737
+             y: -0.16493364361628138
+             z: 0.0
+           orientation:
+             x: 0.0
+             y: 0.0
+             z: 0.9999125666331964
+             w: 0.013223429548099866
+           person_detection_polygon: # polygon of the beacon to search for people
 objects:
   - cleaning_supplies: ["dishwasher_tab", "soap", "sponges", "washcloth"]
   - decorations: ["candle"]
