@@ -958,8 +958,10 @@ def find(command_param: Dict, sm: smach.StateMachine) -> None:
 
         if "object_category" in command_param:
             object_str = command_param["object_category"]
+            object_filter = OBJECT_CATEGORY_LOCATIONS[command_param["object_category"]]
         elif "object" in command_param:
             object_str = command_param["object"]
+            object_filter = [command_param["object"]]
 
         sm.add(
             f"STATE_{increment_state_count()}",
@@ -968,8 +970,9 @@ def find(command_param: Dict, sm: smach.StateMachine) -> None:
         sm.add(
             f"STATE_{increment_state_count()}",
             GoFindTheObject(
+                model="gpsr-fine-tuned.pt",
                 location_param=target_pose,
-                filter=command_param["object_category"],
+                filter=object_filter,
             ),
             transitions={
                 "succeeded": f"STATE_{STATE_COUNT + 1}",

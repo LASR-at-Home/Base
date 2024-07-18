@@ -195,8 +195,9 @@ class GoFindTheObject(smach.StateMachine):
                             "succeeded": "RESULT",
                             "aborted": "failed",
                             "preempted": "failed",
-                        }, remapping={"polygon": "polygon"}
-                            )
+                        },
+                        remapping={"polygon": "polygon"},
+                    )
 
                     smach.StateMachine.add(
                         "RESULT",
