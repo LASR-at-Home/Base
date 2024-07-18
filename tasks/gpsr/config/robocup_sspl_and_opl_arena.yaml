@@ -380,15 +380,15 @@ arena:
               z: -0.6646370439111504
               w: 0.7471663803069886
           dem_manipulation_pose:
-          position:
-            x: 8.28576371574446
-            y: -0.36721763331931334
-            z: 0.0
-          orientation:
-            x: 0.0
-            y: 0.0
-            z: 0.9029129168766404
-            w: 0.42982352720310346
+            position:
+              x: 8.28576371574446
+              y: -0.36721763331931334
+              z: 0.0
+            orientation:
+              x: 0.0
+              y: 0.0
+              z: 0.9029129168766404
+              w: 0.42982352720310346
           object_detection_point:
             x: 8.50695514678955
             y: -1.2844955921173096
@@ -405,7 +405,16 @@ arena:
               w: 0.7872759652074033
         entrance:
           placeable: false
-          person_detection_pose: # pose for person detection
+          person_detection_pose:
+            position: 
+              x: 6.406923818929698
+              y: -0.41544372565988424
+              z: 0.0
+            orientation: 
+              x: 0.0
+              y: 0.0
+              z: -0.5195673509149114
+              w: 0.8544294984744273
       office:
         pose:
           position:
