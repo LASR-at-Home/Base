@@ -185,9 +185,9 @@ class CarryMyLuggage(smach.StateMachine):
                     EmptySrv,
                 ),
                 transitions={
-                    "succeeded": "GET_START_POSE",
-                    "aborted": "GET_START_POSE",
-                    "preempted": "GET_START_POSE",
+                    "succeeded": "GET_START_LOCATION",
+                    "aborted": "GET_START_LOCATION",
+                    "preempted": "GET_START_LOCATION",
                 },
             )
 
@@ -212,18 +212,9 @@ class CarryMyLuggage(smach.StateMachine):
                 "SAY_STEP",
                 Say(text="First walk slowly towards me and then I will follow you."),
                 transitions={
-                    "succeeded": "SAY_FOLLOW",
-                    "aborted": "failed",
-                    "preempted": "failed",
-                },
-            )
-            smach.StateMachine.add(
-                "SAY_FOLLOW",
-                Say(text="I will follow you now."),
-                transitions={
                     "succeeded": "FOLLOW",
-                    "aborted": "failed",
-                    "preempted": "failed",
+                    "aborted": "FOLLOW",
+                    "preempted": "FOLLOW",
                 },
             )
 
