@@ -23,15 +23,18 @@ class ParseCommand(smach.State):
             self,
             outcomes=["succeeded", "failed"],
             input_keys=["matched_command"],
+            input_keys=["matched_command"],
             output_keys=["parsed_command"],
         )
         self.data_config = data_config
 
     def execute(self, userdata):
         rospy.loginfo(f"Received command : {userdata.matched_command.lower()}")
+        rospy.loginfo(f"Received command : {userdata.matched_command.lower()}")
         try:
             print(userdata.matched_command.lower())
             userdata.parsed_command = gpsr_compile_and_parse(
+                self.data_config, userdata.matched_command.lower()
                 self.data_config, userdata.matched_command.lower()
             )
         except Exception as e:
@@ -124,75 +127,24 @@ class CommandParserStateMachine(smach.StateMachine):
             smach.StateMachine.add(
                 "ASK_FOR_COMMAND",
                 AskAndListen(tts_phrase="Hello, please tell me your command."),
-                transitions={"succeeded": "SAY_CHECK_COMMAND", "failed": "failed"},
+                transitions={"succeeded": "COMMAND_SIMILARITY_MATCHER", "ASK_FOR_COMMAND": "ASK_FOR_COMMAND"},
                 remapping={"transcribed_speech": "raw_command"},
-            )
-
-            smach.StateMachine.add(
-                "ASK_FOR_COMMAND_AGAIN",
-                AskAndListen(tts_phrase="Okay, please could you repeat your command?"),
-                transitions={"succeeded": "SAY_CHECK_COMMAND", "failed": "failed"},
-                remapping={"transcribed_speech": "raw_command"},
-            )
-
-            smach.StateMachine.add(
-                "SAY_CHECK_COMMAND",
-                AskAndListen(
-                    tts_phrase_format_str="You said {}, is that correct? Please respond 'tiago, yes that's correct' or 'tiago, no that's incorrect'."
-                ),
-                transitions={
-                    "succeeded": "CHECK_RESPONSE",
-                    "failed": "ASK_FOR_COMMAND_AGAIN",
-                },
-                remapping={"tts_phrase_placeholders": "raw_command"},
-            )
-
-            smach.StateMachine.add(
-                "CHECK_RESPONSE",
-                self.CheckResponse(),
-                transitions={
-                    "correct": "COMMAND_SIMILARITY_MATCHER",
-                    "incorrect": "CHECK_COMMAND_COUNTER",
-                },
-            )
-
-            smach.StateMachine.add(
-                "CHECK_COMMAND_COUNTER",
-                smach.CBState(
-                    self._increment_counter, outcomes=["continue", "exceeded"]
-                ),
-                transitions={
-                    "continue": "ASK_FOR_COMMAND_AGAIN",
-                    "exceeded": "SAY_QR_CODE",
-                },
-            )
-
-            smach.StateMachine.add(
-                "SAY_QR_CODE",
-                Say(
-                    text="Please show me a QR code with the command. Make sure it close to my camera, so that I can see it."
-                ),
-                transitions={
-                    "succeeded": "QR_CODE_TO_COMMAND",
-                    "aborted": "failed",
-                    "preempted": "failed",
-                },
-            )
-
-            smach.StateMachine.add(
-                "QR_CODE_TO_COMMAND",
-                self.QRCodeToCommand(),
-                transitions={"succeeded": "PARSE_COMMAND", "failed": "failed"},
-                remapping={"qr_code_text": "raw_command"},
             )
 
             smach.StateMachine.add(
                 "COMMAND_SIMILARITY_MATCHER",
                 CommandSimilarityMatcher([n_vecs_per_txt_file] * total_txt_files),
-                transitions={"succeeded": "PARSE_COMMAND", "failed": "failed"},
+                transitions={"succeeded": "SAY_COMMAND", "failed": "failed"},
                 remapping={
                     "command": "raw_command",
                 },
+            )
+
+            smach.StateMachine.add(
+                "SAY_COMMAND",
+                Say(format_str="I received command: {}"),
+                transitions={"succeeded": "PARSE_COMMAND", "preempted": "PARSE_COMMAND", "aborted": "PARSE_COMMAND"},
+                remapping={"tts_phrase_placeholders": "matched_command"},
             )
 
             smach.StateMachine.add(

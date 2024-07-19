@@ -17,17 +17,18 @@ class ObjectComparison(smach.StateMachine):
         "thinnest",
     ]
 
-    _biggest_list: List[str] = []
+    # TODO: fill this in
 
-    _largest_list: List[str] = []
+    _smallest_list: List[str] = ["dishwasher_tab", "candle", "strawberry", "tictac", "plum", "lemon", "pear", "peach", "orange", "apple", "sponges", "fork", "knife", "spoon", "banana", "dubbelfris", "cola", "ice_tea", "fanta", "milk", "pea_soup", "sausages", "cup", "stroopwafel", "soap", "curry", "water", "crisps", "liquorice", "candy", "hagelslag", "pancake_mix", "mayonaise", "bowl", "plate", "washcloth", "pringles", "big_coke" ]
+    _biggest_list: List[str] = reversed(_smallest_list)
 
-    _smallest_list: List[str] = []
+    _largest_list: List[str] = _biggest_list
 
-    _heaviest_list: List[str] = []
+    _heaviest_list: List[str] = ["big_coke", "pea_soup", "milk", "mayonaise", "cola", "ice_tea", "fanta", "dubbelfris", "water", "pancake_mix", "curry", "soap", "sausages", "apple", "orange", "peach", "pear", "lemon", "plum", "banana", "stroopwafel", "cup", "bowl", "plate", "washcloth", "sponges", "pringles", "crisps", "hagelslag", "liquorice", "candy", "knife", "fork", "spoon", "candle", "strawberry", "tictac", "dishwasher_tab"]
 
-    _lightest_list: List[str] = []
+    _lightest_list: List[str] = reversed(_heaviest_list)
 
-    _thinnest_list: List[str] = []
+    _thinnest_list: List[str] = ["knife", "fork", "spoon", "candle", "strawberry", "tictac", "dishwasher_tab", "liquorice", "candy", "crisps", "stroopwafel", "soap", "sponges", "washcloth", "plate", "bowl", "cup", "pancake_mix", "hagelslag", "curry", "mayonaise", "pea_soup", "sausages", "milk", "water", "dubbelfris", "cola", "ice_tea", "fanta", "big_coke", "apple", "orange", "peach", "pear", "lemon", "plum", "banana", "pringles"]
 
     _query: Literal[
         "biggest", "largest", "smallest", "heaviest", "lightest", "thinnest"
@@ -92,7 +93,7 @@ class ObjectComparison(smach.StateMachine):
             "biggest", "largest", "smallest", "heaviest", "lightest", "thinnest"
         ],
         area_polygon: Polygon,  # input key
-        model: str = "yolov8x-seg.pt",
+        model: str = "best.pt",
         objects: Optional[List[str]] = None,
         confidence: float = 0.5,
         nms: float = 0.3,

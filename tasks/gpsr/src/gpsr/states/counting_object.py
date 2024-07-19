@@ -32,7 +32,7 @@ class CountObject(smach.State):
     def __init__(
         self,
         area_polygon: Polygon,  # input key
-        model: str = "yolov8x-seg.pt",
+        model: str = "best.pt",
         objects: Union[List[str], None] = None,  # input key
         confidence: float = 0.5,
         nms: float = 0.3,

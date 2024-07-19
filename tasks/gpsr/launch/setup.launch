@@ -41,4 +41,6 @@
         output="screen"
     />
 
+    <include file="$(find lasr_person_following)/launch/person_following.launch"/>
+
 </launch>
