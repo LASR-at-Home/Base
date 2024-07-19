@@ -4,7 +4,8 @@ import smach_ros
 from lasr_skills import GoToLocation, LookToPoint, Say
 from shapely.geometry.polygon import Polygon
 from typing import List, Union
-from geometry_msgs.msg import Pose, Point, Quaternion
+from std_msgs.msg import Header
+from geometry_msgs.msg import Pose, Point, Quaternion, PointStamped
 from lasr_vision_msgs.srv import CroppedDetection, CroppedDetectionRequest
 from lasr_vision_msgs.msg import CDRequest
 import rospy
@@ -18,18 +19,29 @@ pose = Pose(position=Point(**location['pose']['position'], orientation=Quaternio
 
 class GoFindTheObject(smach.StateMachine):
     class GetLocation(smach.State):
-        def __init__(self):
+        def __init__(
+            self,
+            waypoints: List[Pose],
+            polygons: List[Polygon],
+            look_points: List[Point],
+        ):
             smach.State.__init__(
                 self,
                 outcomes=["succeeded", "failed"],
                 input_keys=["location_index", "waypoints"],
-                output_keys=["location"],
+                output_keys=["location", "polygon", "pointstamped"],
             )
+            self.waypoints = waypoints
+            self.polygons = polygons
+            self.look_points = look_points
 
         def execute(self, userdata):
-            userdata.location = userdata.waypoints[userdata.location_index]
-            userdata.polygon = userdata.polygons[userdata.location_index]
-            userdata.look_point = userdata.look_points[userdata.location_index]
+            userdata.location = self.waypoints[userdata.location_index]
+            userdata.polygon = self.polygons[userdata.location_index]
+            userdata.pointstamped = PointStamped(
+                point=self.look_points[userdata.location_index],
+                header=Header(frame_id="map"),
+            )
             return "succeeded"
 
     class check_objects(smach.State):

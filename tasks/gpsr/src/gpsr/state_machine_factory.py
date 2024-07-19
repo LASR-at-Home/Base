@@ -155,6 +155,33 @@ def get_room_pose(room: str) -> Pose:
     )
 
 
+def get_object_detection_poses(room: str) -> List[Pose]:
+    poses = []
+
+    for beacon in rospy.get_param(f"/gpsr/arena/rooms/{room}/beacons"):
+        if "object_detection_pose" in beacon:
+            poses.append(
+                Pose(
+                    position=Point(**beacon["object_detection_pose"]["position"]),
+                    orientation=Quaternion(
+                        **beacon["object_detection_pose"]["orientation"]
+                    ),
+                )
+            )
+    return poses
+
+
+def get_look_detection_poses(room: str) -> List[Point]:
+    poses = []
+
+    for beacon in rospy.get_param(f"/gpsr/arena/rooms/{room}/beacons"):
+        if "object_detection_point" in beacon:
+            poses.append(
+                Point(**beacon["object_detection_point"]),
+            )
+    return poses
+
+
 def get_person_detection_poses(room: str) -> List[Pose]:
     poses = []
     for pose in rospy.get_param(f"/gpsr/arena/rooms/{room}/people_search_poses"):
@@ -938,14 +965,16 @@ def find(command_param: Dict, sm: smach.StateMachine) -> None:
     """
 
     if "object_category" in command_param or "object" in command_param:
-        raise NotImplementedError("Find not implemented")
         location_str = ""
         if "location" in command_param:
-            target_pose = get_location_pose(command_param["location"], person=False)
+            waypoints = [get_location_pose(command_param["location"], person=False)]
             location_str = command_param["location"]
+            look_points = [get_look_point(command_param["location"])]
         elif "room" in command_param:
-            target_pose = get_room_pose(command_param["room"])
+            waypoints = get_object_detection_poses(command_param["room"])
             location_str = command_param["room"]
+            look_points = get_look_detection_poses(command_param["room"])
+
         else:
             raise ValueError(
                 "Find command with no location or room provided in command parameters"
@@ -962,12 +991,16 @@ def find(command_param: Dict, sm: smach.StateMachine) -> None:
             f"STATE_{increment_state_count()}",
             Say(text=f"I will go to the {location_str} and find a {object_str}"),
         )
+        arena_polygon = rospy.get_param("/gpsr/arena/polygon")
+        arena_polygon = Polygon([Point(p[0], p[1], 0.0) for p in arena_polygon])
         sm.add(
             f"STATE_{increment_state_count()}",
             GoFindTheObject(
                 model="best.pt",
-                location_param=target_pose,
+                waypoints=waypoints,
                 filter=object_filter,
+                look_points=look_points,
+                poly_points=[arena_polygon] * len(waypoints),
             ),
             transitions={
                 "succeeded": f"STATE_{STATE_COUNT + 1}",
@@ -1224,7 +1257,10 @@ def build_state_machine(parsed_command: Dict) -> smach.StateMachine:
             elif command_verb == "place":
                 place(command_param, sm)
             elif command_verb == "take":
-                take(command_param, sm)
+                if "object" in command_param or "object_category" in command_param:
+                    take(command_param, sm)
+                else:
+                    guide(command_param, sm)
             elif command_verb == "answer":
                 answer(command_param, sm, greet_person=len(command_verbs) == 1)
             elif command_verb == "go":
