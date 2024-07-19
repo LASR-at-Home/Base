@@ -953,7 +953,7 @@ def find(command_param: Dict, sm: smach.StateMachine) -> None:
         sm.add(
             f"STATE_{increment_state_count()}",
             GoFindTheObject(
-                model="gpsr-fine-tuned.pt",
+                model="best.pt",
                 location_param=target_pose,
                 filter=object_filter,
             ),
@@ -1115,6 +1115,7 @@ def count(command_param: Dict, sm: smach.StateMachine) -> None:
             CountObject(
                 location_polygon,
                 objects=get_objects_from_category(command_param["object_category"]),
+                model="best.pt",
             ),
             transitions={"succeeded": f"STATE_{STATE_COUNT + 1}", "failed": "failed"},
         )
