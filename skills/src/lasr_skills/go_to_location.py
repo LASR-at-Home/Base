@@ -158,7 +158,7 @@ class GoToLocation(smach.StateMachine):
                             if not IS_SIMULATION
                             else "RAISE_BASE"
                         ),
-                        "aborted": "failed",
+                        "aborted": "succeeded",
                         "preempted": "failed",
                     },
                 )

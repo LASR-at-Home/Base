@@ -17,7 +17,9 @@ from pal_interaction_msgs.msg import TtsGoal, TtsAction
 
 
 def load_gpsr_configuration() -> Configuration:
-    gpsr_data_dir = os.path.join(rospkg.RosPack().get_path("gpsr"), "data", "mock_data")
+    gpsr_data_dir = os.path.join(
+        rospkg.RosPack().get_path("gpsr"), "data", "eindhoven_data"
+    )
     """Loads the configuration for the GPSR command parser"""
     data_loader = GPSRDataLoader(data_dir=gpsr_data_dir)
     gpsr_known_data: Dict = data_loader.load_data()

@@ -169,7 +169,10 @@ def get_person_detection_poses(room: str) -> List[Pose]:
 
 def get_room_polygon(room: str) -> Polygon:
     return Polygon(
-        [Point(**p) for p in rospy.get_param(f"/gpsr/arena/rooms/{room}/room_polygon")]
+        [
+            Point(p[0], p[1], 0.0)
+            for p in rospy.get_param(f"/gpsr/arena/rooms/{room}/room_polygon")
+        ]
     )
 
 

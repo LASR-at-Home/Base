@@ -669,7 +669,7 @@ if __name__ == "__main__":
 
     print(
         execute(
-            "navigate to the desk then find an apple and grasp it and place it on the tv table",
+            "salute emma in the kitchen and tell the time",
             object_categories,
         )
     )

@@ -22,16 +22,17 @@ class ParseCommand(smach.State):
         smach.State.__init__(
             self,
             outcomes=["succeeded", "failed"],
-            input_keys=["raw_command"],
+            input_keys=["matched_command"],
             output_keys=["parsed_command"],
         )
         self.data_config = data_config
 
     def execute(self, userdata):
-        rospy.loginfo(f"Received command : {userdata.raw_command.lower()}")
+        rospy.loginfo(f"Received command : {userdata.matched_command.lower()}")
         try:
+            print(userdata.matched_command.lower())
             userdata.parsed_command = gpsr_compile_and_parse(
-                self.data_config, userdata.raw_command.lower()
+                self.data_config, userdata.matched_command.lower()
             )
         except Exception as e:
             rospy.logerr(e)
@@ -101,7 +102,7 @@ class CommandParserStateMachine(smach.StateMachine):
     def __init__(
         self,
         data_config: Configuration,
-        n_vecs_per_txt_file: int = 8403420,
+        n_vecs_per_txt_file: int = 840342,
         total_txt_files: int = 10,
     ):
         """State machine that takes in a command, matches it to a known command, and
@@ -150,7 +151,7 @@ class CommandParserStateMachine(smach.StateMachine):
                 "CHECK_RESPONSE",
                 self.CheckResponse(),
                 transitions={
-                    "correct": "PARSE_COMMAND",
+                    "correct": "COMMAND_SIMILARITY_MATCHER",
                     "incorrect": "CHECK_COMMAND_COUNTER",
                 },
             )
@@ -191,7 +192,6 @@ class CommandParserStateMachine(smach.StateMachine):
                 transitions={"succeeded": "PARSE_COMMAND", "failed": "failed"},
                 remapping={
                     "command": "raw_command",
-                    "matched_command": "raw_command",
                 },
             )
 
