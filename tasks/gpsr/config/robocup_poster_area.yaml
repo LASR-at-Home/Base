@@ -1,69 +1,142 @@
 arena:
   polygon: [[-1.14, -3.01], [-0.918, 3.14], [11.6, -3.28], [11.6, 2.89]]
   start_pose:
-    position: 
-      x: -0.00981206097740912
-      y: 0.002635313393437912
+    position:
+      x: 4.5028412524443056
+      y: -0.35303314668493496
       z: 0.0
-    orientation: 
+    orientation:
       x: 0.0
       y: 0.0
-      z: 0.008101548886304339
-      w: 0.999967181914308
+      z: 0.9503202090510965
+      w: 0.3112739954912395
+
   rooms:
     living_room:
       pose:
         position:
-          x: -0.6005736126500462
-          y: -0.47796751931466963
+          x: 1.151744097292771
+          y: -0.25829574881178413
           z: 0.0
         orientation:
           x: 0.0
           y: 0.0
-          z: -0.7617209417864367
-          w: 0.6479052452666084
+          z: 0.9999991456585311
+          w: 0.001307165715523452
       room_polygon:
         [[-1.14, -3.01], [5.16, -3.18], [5.22, 2.96], [-0.918, 3.14]]
       people_search_poses:
         - position:
-            x: -0.6473889259914133
-            y: -2.072993308444593
+            x: 1.151744097292771
+            y: -0.25829574881178413
             z: 0.0
           orientation:
             x: 0.0
             y: 0.0
-            z: 0.7654854277101042
-            w: 0.6434532305952616
-        - position:
-          x: -0.11683864821276106
-          y: 1.9218449824932589
-          z: 0.0
-          orientation:
-          x: 0.0
-          y: 0.0
-        z: -0.406810036950025
-        w: 0.9135127770517056
-
+            z: 0.9999991456585311
+            w: 0.001307165715523452
       beacons:
         coffee_table:
           placeable: true
           object_category: "snacks`"
-          object_detection_pose: # pose for object detection
-          dem_manipulation_pose: # pose for manipulation
-          object_detection_point: # point to look at
-          person_detection_pose: # pose for person detection
+          object_detection_pose:
+            position:
+              x: -2.501736551664237
+              y: 0.7019945343701729
+              z: 0.0
+            orientation:
+              x: 0.0
+              y: 0.0
+              z: 0.774754445248335
+              w: 0.6322622474637756
+          dem_manipulation_pose:
+            position:
+              x: -2.495971729492923
+              y: 0.6877483024843442
+              z: 0.0
+            orientation:
+              x: 0.0
+              y: 0.0
+              z: 0.413619275553823
+              w: 0.9104499409030299
+
+          object_detection_point:
+            x: -2.5
+            y: 2.07
+            z: 1.1
+          person_detection_pose:
+            position:
+              x: -2.502017785540046
+              y: 0.09892229313341899
+              z: 0.0
+            orientation:
+              x: 0.0
+              y: 0.0
+              z: 0.7177150969705061
+              w: 0.6963368721966524
     kitchen:
-      pose: # pose in the room
+      pose:
+        position:
+          x: 4.66866234307036
+          y: -0.32825536801659283
+          z: 0.0
+        orientation:
+          x: 0.0
+          y: 0.0
+          z: -0.04610110880564237
+          w: 0.9989367786636402
       room_polygon: [[5.16, -3.18], [11.6, -3.28], [11.6, 2.89], [5.22, 2.96]]
-      people_search_poses: # list of poses for people search
+      people_search_poses:
+        - position:
+            x: 4.66866234307036
+            y: -0.32825536801659283
+            z: 0.0
+          orientation:
+            x: 0.0
+            y: 0.0
+            z: -0.04610110880564237
+            w: 0.9989367786636402
       beacons:
         kitchen_cabinet:
           placeable: true
           object_category: "drinks"
-          object_detection_pose: # pose for object detection
-          dem_manipulation_pose: # pose for manipulation
-          object_detection_point: # point to look at
+          object_detection_pose:
+            position:
+              x: 6.845114312850698
+              y: -1.0865087985765394
+              z: 0.0
+            orientation:
+              x: 0.0
+              y: 0.0
+              z: -0.697241068240881
+              w: 0.7168367267086105
+
+          dem_manipulation_pose:
+            position:
+              x: 6.845114312850698
+              y: -1.0865087985765394
+              z: 0.0
+            orientation:
+              x: 0.0
+              y: 0.0
+              z: -0.697241068240881
+              w: 0.7168367267086105
+
+          object_detection_point:
+            x: 7.72
+            y: -3.32
+            z: 0.0
           person_detection_pose: # pose for person detection
+            position:
+              x: 6.845114312850698
+              y: -1.0865087985765394
+              z: 0.0
+            orientation:
+              x: 0.0
+              y: 0.0
+              z: -0.697241068240881
+              w: 0.7168367267086105
+
 objects:
   - cleaning_supplies: ["dishwasher_tab", "soap", "sponges", "washcloth"]
   - decorations: ["candle"]

@@ -23,7 +23,6 @@ class ParseCommand(smach.State):
             self,
             outcomes=["succeeded", "failed"],
             input_keys=["matched_command"],
-            input_keys=["matched_command"],
             output_keys=["parsed_command"],
         )
         self.data_config = data_config
@@ -34,7 +33,6 @@ class ParseCommand(smach.State):
         try:
             print(userdata.matched_command.lower())
             userdata.parsed_command = gpsr_compile_and_parse(
-                self.data_config, userdata.matched_command.lower()
                 self.data_config, userdata.matched_command.lower()
             )
         except Exception as e:
@@ -127,7 +125,10 @@ class CommandParserStateMachine(smach.StateMachine):
             smach.StateMachine.add(
                 "ASK_FOR_COMMAND",
                 AskAndListen(tts_phrase="Hello, please tell me your command."),
-                transitions={"succeeded": "COMMAND_SIMILARITY_MATCHER", "ASK_FOR_COMMAND": "ASK_FOR_COMMAND"},
+                transitions={
+                    "succeeded": "COMMAND_SIMILARITY_MATCHER",
+                    "failed": "ASK_FOR_COMMAND",
+                },
                 remapping={"transcribed_speech": "raw_command"},
             )
 
@@ -143,8 +144,12 @@ class CommandParserStateMachine(smach.StateMachine):
             smach.StateMachine.add(
                 "SAY_COMMAND",
                 Say(format_str="I received command: {}"),
-                transitions={"succeeded": "PARSE_COMMAND", "preempted": "PARSE_COMMAND", "aborted": "PARSE_COMMAND"},
-                remapping={"tts_phrase_placeholders": "matched_command"},
+                transitions={
+                    "succeeded": "PARSE_COMMAND",
+                    "preempted": "PARSE_COMMAND",
+                    "aborted": "PARSE_COMMAND",
+                },
+                remapping={"placeholders": "matched_command"},
             )
 
             smach.StateMachine.add(

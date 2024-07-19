@@ -3,6 +3,7 @@
         "hallway",
         "office",
         "kitchen",
-        "living room"
+        "living room",
+        "living_room"
     ]
 }

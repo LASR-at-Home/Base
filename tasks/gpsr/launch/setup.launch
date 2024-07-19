@@ -1,7 +1,7 @@
 <launch>    
 
     <!-- Config -->
-    <arg name="config" default="robocup_opl_arena"/>
+    <arg name="config" default="robocup_poster_area"/>
 
     <!-- Motions -->
     <rosparam 

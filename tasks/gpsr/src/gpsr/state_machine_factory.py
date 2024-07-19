@@ -138,7 +138,7 @@ def get_location_pose(location: str, person: bool, dem_manipulation=False) -> Po
         )
     else:
         location_pose: Dict = rospy.get_param(
-            f"/gpsr/arena/roomss/{location_room}/beacons/{location}/dem_manipulation_pose"
+            f"/gpsr/arena/rooms/{location_room}/beacons/{location}/dem_manipulation_pose"
         )
 
     return Pose(
@@ -257,8 +257,8 @@ def greet(command_param: Dict, sm: smach.StateMachine) -> None:
         Say(text=output_string),
         transitions={
             "succeeded": f"STATE_{STATE_COUNT + 1}",
-            "preempted": "failed",
-            "aborted": "failed",
+            "preempted": f"STATE_{STATE_COUNT + 1}",
+            "aborted": f"STATE_{STATE_COUNT + 1}",
         },
     )
     sm.add(
@@ -271,7 +271,7 @@ def greet(command_param: Dict, sm: smach.StateMachine) -> None:
         ),
         transitions={
             "succeeded": f"STATE_{STATE_COUNT + 1}",
-            "failed": "failed",
+            "failed": f"STATE_{STATE_COUNT + 1}",
         },
     )
 
@@ -320,7 +320,10 @@ def talk(command_param: Dict, sm: smach.StateMachine, greet_person: bool) -> Non
         sm.add(
             f"STATE_{increment_state_count()}",
             Talk(command_param["talk"]),
-            transitions={"succeeded": f"STATE_{STATE_COUNT + 1}", "failed": "failed"},
+            transitions={
+                "succeeded": f"STATE_{STATE_COUNT + 1}",
+                "failed": f"STATE_{STATE_COUNT + 1}",
+            },
         )
     elif "personinfo" in command_param:
         query: str = command_param["personinfo"]
@@ -351,8 +354,8 @@ def talk(command_param: Dict, sm: smach.StateMachine, greet_person: bool) -> Non
             Say(text=output_str),
             transitions={
                 "succeeded": f"STATE_{STATE_COUNT + 1}",
-                "preempted": "failed",
-                "aborted": "failed",
+                "preempted": f"STATE_{STATE_COUNT + 1}",
+                "aborted": f"STATE_{STATE_COUNT + 1}",
             },
         )
         sm.add(
@@ -364,7 +367,7 @@ def talk(command_param: Dict, sm: smach.StateMachine, greet_person: bool) -> Non
             ),
             transitions={
                 "succeeded": f"STATE_{STATE_COUNT + 1}",
-                "failed": "failed",
+                "failed": f"STATE_{STATE_COUNT + 1}",
             },
         )
 
@@ -379,7 +382,7 @@ def talk(command_param: Dict, sm: smach.StateMachine, greet_person: bool) -> Non
             GoToLocation(location=location_pose),
             transitions={
                 "succeeded": f"STATE_{STATE_COUNT + 1}",
-                "failed": "failed",
+                "failed": f"STATE_{STATE_COUNT + 1}",
             },
         )
 
@@ -388,8 +391,8 @@ def talk(command_param: Dict, sm: smach.StateMachine, greet_person: bool) -> Non
             Say(format_str="The " + query + " of the person is {}"),
             transitions={
                 "succeeded": f"STATE_{STATE_COUNT + 1}",
-                "preempted": "failed",
-                "aborted": "failed",
+                "preempted": f"STATE_{STATE_COUNT + 1}",
+                "aborted": f"STATE_{STATE_COUNT + 1}",
             },
             remapping={"placeholders": "query_result"},
         )
@@ -415,8 +418,8 @@ def talk(command_param: Dict, sm: smach.StateMachine, greet_person: bool) -> Non
             Say(text=output_str),
             transitions={
                 "succeeded": f"STATE_{STATE_COUNT + 1}",
-                "preempted": "failed",
-                "aborted": "failed",
+                "preempted": f"STATE_{STATE_COUNT + 1}",
+                "aborted": f"STATE_{STATE_COUNT + 1}",
             },
         )
         sm.add(
@@ -424,7 +427,7 @@ def talk(command_param: Dict, sm: smach.StateMachine, greet_person: bool) -> Non
             GoToLocation(location=location_pose),
             transitions={
                 "succeeded": f"STATE_{STATE_COUNT + 1}",
-                "failed": "failed",
+                "failed": f"STATE_{STATE_COUNT + 1}",
             },
         )
 
@@ -433,7 +436,7 @@ def talk(command_param: Dict, sm: smach.StateMachine, greet_person: bool) -> Non
             LookToPoint(pointstamped=look_point),
             transitions={
                 "succeeded": f"STATE_{STATE_COUNT + 1}",
-                "aborted": "failed",
+                "aborted": f"STATE_{STATE_COUNT + 1}",
                 "timed_out": f"STATE_{STATE_COUNT + 1}",
             },
         )
@@ -446,7 +449,10 @@ def talk(command_param: Dict, sm: smach.StateMachine, greet_person: bool) -> Non
         sm.add(
             f"STATE_{increment_state_count()}",
             ObjectComparison(query=query, area_polygon=area_polygon, objects=objects),
-            transitions={"succeeded": f"STATE_{STATE_COUNT + 1}", "failed": "failed"},
+            transitions={
+                "succeeded": f"STATE_{STATE_COUNT + 1}",
+                "failed": f"STATE_{STATE_COUNT + 1}",
+            },
         )
 
         sm.add(
@@ -454,7 +460,7 @@ def talk(command_param: Dict, sm: smach.StateMachine, greet_person: bool) -> Non
             GoToLocation(location=get_current_pose()),
             transitions={
                 "succeeded": f"STATE_{STATE_COUNT + 1}",
-                "failed": "failed",
+                "failed": f"STATE_{STATE_COUNT + 1}",
             },
         )
 
@@ -463,8 +469,8 @@ def talk(command_param: Dict, sm: smach.StateMachine, greet_person: bool) -> Non
             Say(format_str="The " + query + " is {}"),
             transitions={
                 "succeeded": f"STATE_{STATE_COUNT + 1}",
-                "preempted": "failed",
-                "aborted": "failed",
+                "preempted": f"STATE_{STATE_COUNT + 1}",
+                "aborted": f"STATE_{STATE_COUNT + 1}",
             },
             remapping={"placeholders": "query_result"},
         )
@@ -527,8 +533,8 @@ def guide(command_param: Dict, sm: smach.StateMachine) -> None:
             Say(text=output_string),
             transitions={
                 "succeeded": f"STATE_{STATE_COUNT + 1}",
-                "preempted": "failed",
-                "aborted": "failed",
+                "preempted": f"STATE_{STATE_COUNT + 1}",
+                "aborted": f"STATE_{STATE_COUNT + 1}",
             },
         )
         sm.add(
@@ -541,7 +547,7 @@ def guide(command_param: Dict, sm: smach.StateMachine) -> None:
             ),
             transitions={
                 "succeeded": f"STATE_{STATE_COUNT + 1}",
-                "failed": "failed",
+                "failed": f"STATE_{STATE_COUNT + 1}",
             },
         )
 
@@ -566,7 +572,10 @@ def guide(command_param: Dict, sm: smach.StateMachine) -> None:
     sm.add(
         f"STATE_{increment_state_count()}",
         Guide(location_name=location_name, location_pose=location_pose),
-        transitions={"succeeded": f"STATE_{STATE_COUNT + 1}", "failed": "failed"},
+        transitions={
+            "succeeded": f"STATE_{STATE_COUNT + 1}",
+            "failed": f"STATE_{STATE_COUNT + 1}",
+        },
     )
 
 
@@ -619,8 +628,8 @@ def deliver(command_param: Dict, sm: smach.StateMachine) -> None:
         Say(text=output_string),
         transitions={
             "succeeded": f"STATE_{STATE_COUNT + 1}",
-            "preempted": "failed",
-            "aborted": "failed",
+            "preempted": f"STATE_{STATE_COUNT + 1}",
+            "aborted": f"STATE_{STATE_COUNT + 1}",
         },
     )
     sm.add(
@@ -633,7 +642,7 @@ def deliver(command_param: Dict, sm: smach.StateMachine) -> None:
         ),
         transitions={
             "succeeded": f"STATE_{STATE_COUNT + 1}",
-            "failed": "failed",
+            "failed": f"STATE_{STATE_COUNT + 1}",
         },
     )
     sm.add(
@@ -641,7 +650,7 @@ def deliver(command_param: Dict, sm: smach.StateMachine) -> None:
         HandoverObject(object_name=object_name),
         transitions={
             "succeeded": f"STATE_{STATE_COUNT + 1}",
-            "failed": "failed",
+            "failed": f"STATE_{STATE_COUNT + 1}",
         },
     )
 
@@ -673,8 +682,8 @@ def place(command_param: Dict, sm: smach.StateMachine) -> None:
         ),
         transitions={
             "succeeded": f"STATE_{STATE_COUNT + 1}",
-            "aborted": "failed",
-            "preempted": "failed",
+            "aborted": f"STATE_{STATE_COUNT + 1}",
+            "preempted": f"STATE_{STATE_COUNT + 1}",
         },
     )
     sm.add(
@@ -682,7 +691,7 @@ def place(command_param: Dict, sm: smach.StateMachine) -> None:
         GoToLocation(location=location_pose),
         transitions={
             "succeeded": f"STATE_{STATE_COUNT + 1}",
-            "failed": "failed",
+            "failed": f"STATE_{STATE_COUNT + 1}",
         },
     )
     sm.add(
@@ -690,7 +699,7 @@ def place(command_param: Dict, sm: smach.StateMachine) -> None:
         HandoverObject(object_name=object_name),
         transitions={
             "succeeded": f"STATE_{STATE_COUNT + 1}",
-            "failed": "failed",
+            "failed": f"STATE_{STATE_COUNT + 1}",
         },
     )
 
@@ -699,8 +708,8 @@ def place(command_param: Dict, sm: smach.StateMachine) -> None:
         Say(text=f"Please place the object on the {command_param['location']}"),
         transitions={
             "succeeded": f"STATE_{STATE_COUNT + 1}",
-            "aborted": "failed",
-            "preempted": "failed",
+            "aborted": f"STATE_{STATE_COUNT + 1}",
+            "preempted": f"STATE_{STATE_COUNT + 1}",
         },
     )
 
@@ -730,8 +739,8 @@ def take(command_param: Dict, sm: smach.StateMachine) -> None:
         ),
         transitions={
             "succeeded": f"STATE_{STATE_COUNT + 1}",
-            "aborted": "failed",
-            "preempted": "failed",
+            "aborted": f"STATE_{STATE_COUNT + 1}",
+            "preempted": f"STATE_{STATE_COUNT + 1}",
         },
     )
     sm.add(
@@ -739,7 +748,7 @@ def take(command_param: Dict, sm: smach.StateMachine) -> None:
         GoToLocation(location=location_pose),
         transitions={
             "succeeded": f"STATE_{STATE_COUNT + 1}",
-            "failed": "failed",
+            "failed": f"STATE_{STATE_COUNT + 1}",
         },
     )
 
@@ -750,8 +759,8 @@ def take(command_param: Dict, sm: smach.StateMachine) -> None:
         ),
         transitions={
             "succeeded": f"STATE_{STATE_COUNT + 1}",
-            "aborted": "failed",
-            "preempted": "failed",
+            "aborted": f"STATE_{STATE_COUNT + 1}",
+            "preempted": f"STATE_{STATE_COUNT + 1}",
         },
     )
 
@@ -764,7 +773,7 @@ def take(command_param: Dict, sm: smach.StateMachine) -> None:
         ),
         transitions={
             "succeeded": f"STATE_{STATE_COUNT + 1}",
-            "failed": "failed",
+            "failed": f"STATE_{STATE_COUNT + 1}",
         },
     )
 
@@ -773,7 +782,7 @@ def take(command_param: Dict, sm: smach.StateMachine) -> None:
         ReceiveObject(object_name=criteria_value),
         transitions={
             "succeeded": f"STATE_{STATE_COUNT + 1}",
-            "failed": "failed",
+            "failed": f"STATE_{STATE_COUNT + 1}",
         },
     )
 
@@ -794,7 +803,7 @@ def answer(command_param: Dict, sm: smach.StateMachine, greet_person: bool) -> N
         ),
         transitions={
             "succeeded": f"STATE_{STATE_COUNT + 1}",
-            "failed": "failed",
+            "failed": f"STATE_{STATE_COUNT + 1}",
         },
     )
 
@@ -824,8 +833,8 @@ def go(command_param: Dict, sm: smach.StateMachine, person: bool) -> None:
         Say(text=f"I am going to the {location_str}"),
         transitions={
             "succeeded": f"STATE_{STATE_COUNT + 1}",
-            "aborted": "failed",
-            "preempted": "failed",
+            "aborted": f"STATE_{STATE_COUNT + 1}",
+            "preempted": f"STATE_{STATE_COUNT + 1}",
         },
     )
     sm.add(
@@ -833,7 +842,7 @@ def go(command_param: Dict, sm: smach.StateMachine, person: bool) -> None:
         GoToLocation(location=target_pose),
         transitions={
             "succeeded": f"STATE_{STATE_COUNT + 1}",
-            "failed": "failed",
+            "failed": f"STATE_{STATE_COUNT + 1}",
         },
     )
 
@@ -855,9 +864,9 @@ def bring(command_param: Dict, sm: smach.StateMachine) -> None:
             text=f"I will bring you a {command_param['object']} from the {command_param['location']}"
         ),
         transitions={
-            "succeded": f"STATE_{STATE_COUNT+1}",
-            "aborted": "failed",
-            "preempted": "failed",
+            "succeeded": f"STATE_{STATE_COUNT+1}",
+            "aborted": f"STATE_{STATE_COUNT + 1}",
+            "preempted": f"STATE_{STATE_COUNT + 1}",
         },
     )
 
@@ -866,7 +875,7 @@ def bring(command_param: Dict, sm: smach.StateMachine) -> None:
         GoToLocation(location=location_pose),
         transitions={
             "succeeded": f"STATE_{STATE_COUNT + 1}",
-            "failed": "failed",
+            "failed": f"STATE_{STATE_COUNT + 1}",
         },
     )
 
@@ -877,8 +886,8 @@ def bring(command_param: Dict, sm: smach.StateMachine) -> None:
         ),
         transitions={
             "succeeded": f"STATE_{STATE_COUNT + 1}",
-            "aborted": "failed",
-            "preempted": "failed",
+            "aborted": f"STATE_{STATE_COUNT + 1}",
+            "preempted": f"STATE_{STATE_COUNT + 1}",
         },
     )
 
@@ -891,7 +900,7 @@ def bring(command_param: Dict, sm: smach.StateMachine) -> None:
         ),
         transitions={
             "succeeded": f"STATE_{STATE_COUNT + 1}",
-            "failed": "failed",
+            "failed": f"STATE_{STATE_COUNT + 1}",
         },
     )
 
@@ -900,7 +909,7 @@ def bring(command_param: Dict, sm: smach.StateMachine) -> None:
         ReceiveObject(object_name=command_param["object"]),
         transitions={
             "succeeded": f"STATE_{STATE_COUNT + 1}",
-            "failed": "failed",
+            "failed": f"STATE_{STATE_COUNT + 1}",
         },
     )
 
@@ -909,7 +918,7 @@ def bring(command_param: Dict, sm: smach.StateMachine) -> None:
         GoToLocation(dest_pose),
         transitions={
             "succeeded": f"STATE_{STATE_COUNT + 1}",
-            "failed": "failed",
+            "failed": f"STATE_{STATE_COUNT + 1}",
         },
     )
 
@@ -918,7 +927,7 @@ def bring(command_param: Dict, sm: smach.StateMachine) -> None:
         HandoverObject(object_name=command_param["object"]),
         transitions={
             "succeeded": f"STATE_{STATE_COUNT + 1}",
-            "failed": "failed",
+            "failed": f"STATE_{STATE_COUNT + 1}",
         },
     )
 
@@ -962,7 +971,7 @@ def find(command_param: Dict, sm: smach.StateMachine) -> None:
             ),
             transitions={
                 "succeeded": f"STATE_{STATE_COUNT + 1}",
-                "failed": "failed",
+                "failed": f"STATE_{STATE_COUNT + 1}",
             },
         )
 
@@ -1033,8 +1042,8 @@ def count(command_param: Dict, sm: smach.StateMachine) -> None:
             Say(text=output_string),
             transitions={
                 "succeeded": f"STATE_{STATE_COUNT + 1}",
-                "preempted": "failed",
-                "aborted": "failed",
+                "preempted": f"STATE_{STATE_COUNT + 1}",
+                "aborted": f"STATE_{STATE_COUNT + 1}",
             },
         )
         sm.add(
@@ -1047,7 +1056,7 @@ def count(command_param: Dict, sm: smach.StateMachine) -> None:
             ),
             transitions={
                 "succeeded": f"STATE_{STATE_COUNT + 1}",
-                "failed": "failed",
+                "failed": f"STATE_{STATE_COUNT + 1}",
             },
         )
 
@@ -1056,7 +1065,7 @@ def count(command_param: Dict, sm: smach.StateMachine) -> None:
             GoToLocation(location=get_current_pose()),
             transitions={
                 "succeeded": f"STATE_{STATE_COUNT + 1}",
-                "failed": "failed",
+                "failed": f"STATE_{STATE_COUNT + 1}",
             },
         )
 
@@ -1070,7 +1079,7 @@ def count(command_param: Dict, sm: smach.StateMachine) -> None:
             ),
             transitions={
                 "succeeded": f"STATE_{STATE_COUNT + 1}",
-                "failed": "failed",
+                "failed": f"STATE_{STATE_COUNT + 1}",
             },
             remapping={"placeholders": "people_count"},
         )
@@ -1090,8 +1099,8 @@ def count(command_param: Dict, sm: smach.StateMachine) -> None:
             Say(text=output_string),
             transitions={
                 "succeeded": f"STATE_{STATE_COUNT + 1}",
-                "preempted": "failed",
-                "aborted": "failed",
+                "preempted": f"STATE_{STATE_COUNT + 1}",
+                "aborted": f"STATE_{STATE_COUNT + 1}",
             },
         )
         sm.add(
@@ -1099,7 +1108,7 @@ def count(command_param: Dict, sm: smach.StateMachine) -> None:
             GoToLocation(location=location_pose),
             transitions={
                 "succeeded": f"STATE_{STATE_COUNT + 1}",
-                "failed": "failed",
+                "failed": f"STATE_{STATE_COUNT + 1}",
             },
         )
 
@@ -1108,7 +1117,7 @@ def count(command_param: Dict, sm: smach.StateMachine) -> None:
             LookToPoint(pointstamped=get_look_point(command_param["location"])),
             transitions={
                 "succeeded": f"STATE_{STATE_COUNT + 1}",
-                "aborted": "failed",
+                "aborted": f"STATE_{STATE_COUNT + 1}",
                 "timed_out": f"STATE_{STATE_COUNT + 1}",
             },
         )
@@ -1120,7 +1129,10 @@ def count(command_param: Dict, sm: smach.StateMachine) -> None:
                 objects=get_objects_from_category(command_param["object_category"]),
                 model="best.pt",
             ),
-            transitions={"succeeded": f"STATE_{STATE_COUNT + 1}", "failed": "failed"},
+            transitions={
+                "succeeded": f"STATE_{STATE_COUNT + 1}",
+                "failed": f"STATE_{STATE_COUNT + 1}",
+            },
         )
 
         sm.add(
@@ -1128,7 +1140,7 @@ def count(command_param: Dict, sm: smach.StateMachine) -> None:
             GoToLocation(location=get_current_pose()),
             transitions={
                 "succeeded": f"STATE_{STATE_COUNT + 1}",
-                "failed": "failed",
+                "failed": f"STATE_{STATE_COUNT + 1}",
             },
         )
 
@@ -1142,7 +1154,7 @@ def count(command_param: Dict, sm: smach.StateMachine) -> None:
             ),
             transitions={
                 "succeeded": f"STATE_{STATE_COUNT + 1}",
-                "failed": "failed",
+                "failed": f"STATE_{STATE_COUNT + 1}",
             },
             remapping={"placeholders": "object_count"},
         )
@@ -1158,8 +1170,8 @@ def follow(command_param: Dict, sm: smach.StateMachine, greet_person: bool) -> N
         Say(text="I will follow you"),
         transitions={
             "succeeded": f"STATE_{STATE_COUNT + 1}",
-            "aborted": "failed",
-            "preempted": "failed",
+            "aborted": f"STATE_{STATE_COUNT + 1}",
+            "preempted": f"STATE_{STATE_COUNT + 1}",
         },
     )
     sm.add(
@@ -1171,8 +1183,8 @@ def follow(command_param: Dict, sm: smach.StateMachine, greet_person: bool) -> N
         ),
         transitions={
             "succeeded": f"STATE_{STATE_COUNT + 1}",
-            "aborted": "failed",
-            "preempted": "failed",
+            "aborted": f"STATE_{STATE_COUNT + 1}",
+            "preempted": f"STATE_{STATE_COUNT + 1}",
         },
     )
 

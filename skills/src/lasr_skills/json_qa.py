@@ -24,10 +24,7 @@ class JsonQuestionAnswer(smach.State):
         q_a_dict = json.load(open(self.json_path, "r"))
         try:
             request = TxtQueryRequest(
-                self.txt_path,
-                self.index_path,
-                userdata.query_sentence,
-                self.k,
+                [self.txt_path], [self.index_path], userdata.query_sentence, self.k, [9]
             )
             result = self.txt_query(request)
             answers = [q_a_dict[question] for question in result.closest_sentences]

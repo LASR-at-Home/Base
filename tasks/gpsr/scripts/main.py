@@ -41,6 +41,7 @@ def _move_base(client: actionlib.SimpleActionClient, pose: PoseStamped) -> MoveB
     goal: MoveBaseGoal = MoveBaseGoal()
     goal.target_pose = pose
     client.send_goal(goal)
+    client.wait_for_result()
 
     return goal
 
@@ -50,6 +51,7 @@ def _tts(client: actionlib.SimpleActionClient, text: str) -> None:
     tts_goal.rawtext.text = text
     tts_goal.rawtext.lang_id = "en_GB"
     client.send_goal(tts_goal)
+    client.wait_for_result()
 
 
 def main() -> None:
@@ -60,6 +62,7 @@ def main() -> None:
             orientation=Quaternion(**instruction_pose_param["orientation"]),
         )
     )
+    instruction_pose.header.frame_id = "map"
     N_COMMANDS: int = 3
     config = load_gpsr_configuration()
     move_base_client = actionlib.SimpleActionClient("move_base", MoveBaseAction)
@@ -70,12 +73,21 @@ def main() -> None:
         rospy.loginfo(f"Command {i + 1}")
         _tts(tts_client, "I am going to the instruction point to receive a command")
         _move_base(move_base_client, instruction_pose)
-        command_parser_sm = CommandParserStateMachine(data_config=config)
-        command_parser_sm.execute()
-        parsed_command: Dict = command_parser_sm.userdata.parsed_command
-        rospy.loginfo(f"Parsed command: {parsed_command}")
-        sm = build_state_machine(parsed_command)
-        sm.execute()
+        if i > 0:
+            _tts(
+                tts_client,
+                "I will wait 10 seconds, then I will be ready for the next command",
+            )
+            rospy.sleep(rospy.Duration(10.0))
+        try:
+            command_parser_sm = CommandParserStateMachine(data_config=config)
+            command_parser_sm.execute()
+            parsed_command: Dict = command_parser_sm.userdata.parsed_command
+            rospy.loginfo(f"Parsed command: {parsed_command}")
+            sm = build_state_machine(parsed_command)
+            sm.execute()
+        except:
+            _tts(tts_client, "Something went wrong, I couldn't execute the command")
     _tts(tts_client, "I am done")
 
 
