@@ -69,6 +69,8 @@ def main() -> None:
     move_base_client.wait_for_server()
     tts_client = actionlib.SimpleActionClient("tts", TtsAction)
     tts_client.wait_for_server()
+    _tts(tts_client, "Please open the door")
+    rospy.sleep(3)
     for i in range(N_COMMANDS):
         rospy.loginfo(f"Command {i + 1}")
         _tts(tts_client, "I am going to the instruction point to receive a command")
@@ -76,9 +78,9 @@ def main() -> None:
         if i > 0:
             _tts(
                 tts_client,
-                "I will wait 10 seconds, then I will be ready for the next command",
+                "I will wait 20 seconds to allow you to reset the arena, then I will be ready for the next command",
             )
-            rospy.sleep(rospy.Duration(10.0))
+            rospy.sleep(rospy.Duration(20.0))
         try:
             command_parser_sm = CommandParserStateMachine(data_config=config)
             command_parser_sm.execute()
