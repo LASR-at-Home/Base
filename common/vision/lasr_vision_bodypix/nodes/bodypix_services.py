@@ -117,23 +117,6 @@ def detect_wave(
         rospy.logerr(f"Error getting wave point: {e}")
         wave_position = PointStamped()
 
-    # if debug_publisher is not None:
-    #     cv2_gesture_img = cv2_img.msg_to_cv2_img(request.pcl_msg)
-    #     # Add text to the image
-    #     cv2.putText(
-    #         cv2_gesture_img,
-    #         gesture_to_detect,
-    #         (10, 30),
-    #         cv2.FONT_HERSHEY_SIMPLEX,
-    #         1,
-    #         (0, 255, 0),
-    #         2,
-    #         cv2.LINE_AA,
-    #     )
-    #     # Publish the image
-    #     debug_publisher.publish(cv2_img.cv2_img_to_msg(cv2_gesture_img))
-    #     create_and_publish_marker(marker_pub, wave_position, r=0, g=1, b=0)
-
     is_waving = False if gesture_to_detect is None else True
 
     return DetectWaveResponse(

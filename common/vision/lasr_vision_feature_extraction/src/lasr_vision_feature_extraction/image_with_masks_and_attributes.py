@@ -179,56 +179,6 @@ def _max_value_tuple(some_dict: dict[str, float]) -> tuple[str, float]:
     return max_key, some_dict[max_key]
 
 
-class ImageOfPerson(ImageWithMasksAndAttributes):
-    def __init__(
-        self,
-        image: np.ndarray,
-        masks: dict[str, np.ndarray],
-        attributes: dict[str, float],
-        categories_and_attributes: CategoriesAndAttributes,
-    ):
-        super().__init__(image, masks, attributes, categories_and_attributes)
-
-    @classmethod
-    def from_parent_instance(
-        cls, parent_instance: ImageWithMasksAndAttributes
-    ) -> "ImageOfPerson":
-        """
-        Creates an instance of ImageOfPerson using the properties of an
-        instance of ImageWithMasksAndAttributes.
-        """
-        return cls(
-            image=parent_instance.image,
-            masks=parent_instance.masks,
-            attributes=parent_instance.attributes,
-            categories_and_attributes=parent_instance.categories_and_attributes,
-        )
-
-    def describe(self) -> dict:
-        has_hair = self.attributes["hair"] - 0.5
-        hair_colour = _max_value_tuple(self.selective_attribute_dict["hair_colour"])[0]
-        hair_shape = _max_value_tuple(self.selective_attribute_dict["hair_shape"])[0]
-        facial_hair = 1 - self.attributes["No_Beard"] - 0.5
-        glasses = self.attributes["Eyeglasses"] - 0.5
-        hat = self.attributes["Wearing_Hat"] - 0.5
-
-        if hat >= 0.25:  # probably wearing hat
-            has_hair *= (
-                (0.5 - hat) / 0.5 * has_hair
-            )  # give a penalty to the hair confidence (hope this helps!)
-
-        result = {
-            "has_hair": has_hair,
-            "hair_colour": hair_colour,
-            "hair_shape": hair_shape,
-            "facial_hair": facial_hair,
-            "glasses": glasses,
-            "hat": hat,
-        }
-
-        return result
-
-
 class ImageOfCloth(ImageWithMasksAndAttributes):
     def __init__(
         self,

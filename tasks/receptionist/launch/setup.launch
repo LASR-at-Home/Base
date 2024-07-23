@@ -1,7 +1,7 @@
 <launch>
 
     <!--     PARAMS     -->
-    <arg name="config" default="arcade"/>
+    <arg name="config" default="robocup_sspl_and_opl"/>
 
     <!--     INTERACTION     -->
     <arg name="whisper_device_param" default="9" />
@@ -16,11 +16,8 @@
 
     <!--      PERCEPTION     -->
     <include file="$(find lasr_vision_cropped_detection)/launch/cropped_detection.launch"/>
-    <node pkg="lasr_vision_feature_extraction" type="service" name="torch_service" output="screen"/>
-    <include file="$(find lasr_vision_bodypix)/launch/bodypix.launch">
-        <param name="preload" type="yaml" value='resnet50' />
-    </include>
-
+    <node pkg="lasr_vision_clip" name="clip_service" type="vqa" output="screen"/>
+    <node pkg="lasr_vision_bodypix" type="bodypix_services.py" name="bodypix_service" output="screen"/>
     <node pkg="lasr_vision_deepface" type="service" name="deepface_service" output="screen"/>
 
 </launch>

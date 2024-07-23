@@ -6,17 +6,17 @@ import rospkg
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import rospy
 import torchvision.models as models
 from lasr_vision_feature_extraction.categories_and_attributes import (
     CategoriesAndAttributes,
-    CelebAMaskHQCategoriesAndAttributes,
     DeepFashion2GeneralizedCategoriesAndAttributes,
 )
 from lasr_vision_feature_extraction.image_with_masks_and_attributes import (
     ImageWithMasksAndAttributes,
-    ImageOfPerson,
     ImageOfCloth,
 )
+from lasr_vision_msgs.srv import Vqa, VqaRequest
 
 
 def gaussian_blur(image, kernel_size, rep=3):
@@ -461,32 +461,6 @@ class ClothPredictor(Predictor):
         return image_obj
 
 
-def load_face_classifier_model():
-    cat_layers = CelebAMaskHQCategoriesAndAttributes.merged_categories.keys().__len__()
-    segment_model = UNetWithResnetEncoder(num_classes=cat_layers)
-    predictions = (
-        len(CelebAMaskHQCategoriesAndAttributes.attributes)
-        - len(CelebAMaskHQCategoriesAndAttributes.avoided_attributes)
-        + len(CelebAMaskHQCategoriesAndAttributes.mask_labels)
-    )
-    predict_model = MultiLabelResNet(
-        num_labels=predictions, input_channels=cat_layers + 3
-    )
-    model = CombinedModel(segment_model, predict_model, cat_layers=cat_layers)
-    model.eval()
-
-    r = rospkg.RosPack()
-    model, _, _, _ = load_torch_model(
-        model,
-        None,
-        path=path.join(
-            r.get_path("lasr_vision_feature_extraction"), "models", "face_model.pth"
-        ),
-        cpu_only=True,
-    )
-    return model
-
-
 def load_cloth_classifier_model():
     num_classes = len(DeepFashion2GeneralizedCategoriesAndAttributes.attributes)
     model = SegmentPredictorBbox(
@@ -561,10 +535,11 @@ def predict_frame(
     head_frame,
     torso_frame,
     full_frame,
-    head_mask,
-    torso_mask,
-    head_predictor,
     cloth_predictor,
+    image_raw,
+    clip_service: rospy.ServiceProxy = rospy.ServiceProxy(
+        "/clip_vqa/query_service", Vqa
+    ),
 ):
     full_frame = cv2.cvtColor(full_frame, cv2.COLOR_BGR2RGB)
     head_frame = cv2.cvtColor(head_frame, cv2.COLOR_BGR2RGB)
@@ -573,15 +548,42 @@ def predict_frame(
     head_frame = pad_image_to_even_dims(head_frame)
     torso_frame = pad_image_to_even_dims(torso_frame)
 
-    rst_person = ImageOfPerson.from_parent_instance(
-        head_predictor.predict(head_frame)
-    ).describe()
     rst_cloth = ImageOfCloth.from_parent_instance(
         cloth_predictor.predict(torso_frame)
     ).describe()
 
+    # 0.5 for True, -0.5 for False
+    rst_person = {"glasses": -0.5, "hat": -0.5, "hair_shape": "short hair"}
+
+    glasses_query = VqaRequest(
+        possible_answers=["A person wearing glasses", "A person not wearing glasses"],
+        image_raw=image_raw,
+    )
+
+    hat_query = VqaRequest(
+        possible_answers=["A person wearing a hat", "A person not wearing a hat"],
+        image_raw=image_raw,
+    )
+
+    hair_query = VqaRequest(
+        possible_answers=["A person with short hair", "A person with long hair"],
+        image_raw=image_raw,
+    )
+
+    glasses_response = clip_service(glasses_query)
+
+    if glasses_response.answer == "A person wearing glasses":
+        rst_person["glasses"] = 0.5
+    hat_response = clip_service(hat_query)
+    if hat_response.answer == "A person wearing a hat":
+        rst_person["hat"] = 0.5
+
+    hair_response = clip_service(hair_query)
+
+    if hair_response.answer == "A person with long hair":
+        rst_person["hair_shape"] = "long hair"
+
     result = {
-        **rst_person,
         **rst_cloth,
     }
 

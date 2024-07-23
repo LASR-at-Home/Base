@@ -52,6 +52,14 @@ if __name__ == "__main__":
     assert seat_area.is_valid, "Seat area is not valid"
 
     sofa_area = ShapelyPolygon(sofa_area_param)
+    sofa_area_publisher.publish(
+        PolygonStamped(
+            polygon=Polygon(
+                points=[Point(x=x, y=y, z=0.0) for (x, y) in sofa_area.exterior.coords]
+            ),
+            header=Header(frame_id="map"),
+        )
+    )
     assert sofa_area.is_valid, "Sofa area is not valid"
 
     sofa_point = Point(**sofa_point_param)
@@ -100,8 +108,8 @@ if __name__ == "__main__":
         sofa_area,
         sofa_point,
         {
-            "name": "charlie",
-            "drink": "wine",
+            "name": "john",
+            "drink": "milk",
             "dataset": "receptionist",
             "detection": False,
         },

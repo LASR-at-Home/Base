@@ -7,6 +7,12 @@ from lasr_vision_msgs.srv import (
     BodyPixKeypointDetectionRequest,
 )
 from sensor_msgs.msg import Image
+from geometry_msgs.msg import Point, Pose, PoseStamped, Quaternion, PointStamped
+from std_msgs.msg import Header
+from tf2_geometry_msgs.tf2_geometry_msgs import do_transform_pose
+import tf2_ros as tf
+from visualization_msgs.msg import Marker
+from markers import create_and_publish_marker
 
 from typing import Union
 
@@ -44,6 +50,8 @@ class DetectGesture(smach.State):
             "rightWrist",
             "rightShoulder",
         ]
+        # publish a marker
+        self.person_point_pub = rospy.Publisher("/person_point", Marker, queue_size=1)
 
     def execute(self, userdata):
 
@@ -102,7 +110,7 @@ class DetectGesture(smach.State):
         # Add text to the image
         cv2.putText(
             cv2_gesture_img,
-            self.gesture_to_detect,
+            detected_gesture,
             (10, 30),
             cv2.FONT_HERSHEY_SIMPLEX,
             1,
