@@ -5,9 +5,12 @@ from collections import Counter
 import difflib
 from play_motion_msgs.msg import PlayMotionGoal
 from control_msgs.msg import PointHeadGoal
-from geometry_msgs.msg import Point
+from geometry_msgs.msg import Point, Pose, Quaternion, PoseWithCovarianceStamped
 from coffee_shop_ui.msg import Order
 from std_msgs.msg import String
+from move_base_msgs.msg import MoveBaseGoal
+import numpy as np
+from scipy.spatial.transform import Rotation as R
 
 
 class TakeOrder(smach.State):
@@ -90,8 +93,35 @@ class TakeOrder(smach.State):
             self.context.voice_controller.sync_tts(
                 "Please use the tablet to make your order."
             )
-            pm_goal = PlayMotionGoal(motion_name="tablet", skip_planning=True)
-            self.context.play_motion_client.send_goal_and_wait(pm_goal)
+            if self.context.tablet_on_head:
+                pm_goal = PlayMotionGoal(motion_name="tablet", skip_planning=True)
+                self.context.play_motion_client.send_goal_and_wait(pm_goal)
+                rospy.loginfo("Tablet is on the head")
+            else:
+                rospy.loginfo("Tablet is not on the head")
+                robot_pose = rospy.wait_for_message(
+                    "/amcl_pose", PoseWithCovarianceStamped
+                ).pose.pose
+                target_orientation = R.from_quat(
+                    [
+                        robot_pose.orientation.x,
+                        robot_pose.orientation.y,
+                        robot_pose.orientation.z,
+                        robot_pose.orientation.w,
+                    ]
+                ) * R.from_euler("z", 180.0, degrees=True)
+                move_base_goal = MoveBaseGoal()
+                move_base_goal.target_pose.header.frame_id = "map"
+                move_base_goal.target_pose.pose = Pose(
+                    position=robot_pose.position,
+                    orientation=Quaternion(*target_orientation.as_quat()),
+                )
+                self.context.move_base_client.send_goal_and_wait(move_base_goal)
+                pm_goal = PlayMotionGoal(
+                    motion_name="tablet_no_head", skip_planning=True
+                )
+                self.context.play_motion_client.send_goal_and_wait(pm_goal)
+
             self.tablet_pub.publish(String("order"))
             order = rospy.wait_for_message("/tablet/order", Order).products
         else:

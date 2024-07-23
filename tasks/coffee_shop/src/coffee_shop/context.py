@@ -19,7 +19,8 @@ from tf2_geometry_msgs.tf2_geometry_msgs import do_transform_pose, do_transform_
 class Context:
     def __init__(self, config_path=None, tablet=False):
         self.tablet = tablet
-
+        self.tablet_on_head = False
+        rospy.loginfo(f"Tablet: {self.tablet}, Tablet on head: {self.tablet_on_head}")
         self.move_base_client = actionlib.SimpleActionClient(
             "/move_base", MoveBaseAction
         )

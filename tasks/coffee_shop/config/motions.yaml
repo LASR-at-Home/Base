@@ -60,3 +60,8 @@ play_motion:
       points:
       - positions: [0.05, 0.0, -0.5]
         time_from_start: 0.0
+    tablet_no_head:
+      joints: [torso_lift_joint]
+      points:
+      - positions: [0.35]
+        time_from_start: 0.0
