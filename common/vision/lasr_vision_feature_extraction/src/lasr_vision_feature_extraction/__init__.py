@@ -11,12 +11,10 @@ import rospy
 import torchvision.models as models
 from lasr_vision_feature_extraction.categories_and_attributes import (
     CategoriesAndAttributes,
-    CelebAMaskHQCategoriesAndAttributes,
     DeepFashion2GeneralizedCategoriesAndAttributes,
 )
 from lasr_vision_feature_extraction.image_with_masks_and_attributes import (
     ImageWithMasksAndAttributes,
-    ImageOfPerson,
     ImageOfCloth,
 )
 from lasr_vision_msgs.srv import Vqa, VqaRequest
@@ -445,32 +443,6 @@ class ClothPredictor(Predictor):
         return image_obj
 
 
-def load_face_classifier_model():
-    cat_layers = CelebAMaskHQCategoriesAndAttributes.merged_categories.keys().__len__()
-    segment_model = UNetWithResnetEncoder(num_classes=cat_layers)
-    predictions = (
-        len(CelebAMaskHQCategoriesAndAttributes.attributes)
-        - len(CelebAMaskHQCategoriesAndAttributes.avoided_attributes)
-        + len(CelebAMaskHQCategoriesAndAttributes.mask_labels)
-    )
-    predict_model = MultiLabelResNet(
-        num_labels=predictions, input_channels=cat_layers + 3
-    )
-    model = CombinedModel(segment_model, predict_model, cat_layers=cat_layers)
-    model.eval()
-
-    r = rospkg.RosPack()
-    model, _, _, _ = load_torch_model(
-        model,
-        None,
-        path=path.join(
-            r.get_path("lasr_vision_feature_extraction"), "models", "face_model.pth"
-        ),
-        cpu_only=True,
-    )
-    return model
-
-
 def load_cloth_classifier_model():
     num_classes = len(DeepFashion2GeneralizedCategoriesAndAttributes.attributes)
     model = SegmentPredictorBbox(
@@ -558,9 +530,6 @@ def predict_frame(
     head_frame = pad_image_to_even_dims(head_frame)
     torso_frame = pad_image_to_even_dims(torso_frame)
 
-    # rst_person = ImageOfPerson.from_parent_instance(
-    #     head_predictor.predict(head_frame)
-    # ).describe()
     rst_cloth = ImageOfCloth.from_parent_instance(
         cloth_predictor.predict(torso_frame)
     ).describe()
@@ -597,7 +566,6 @@ def predict_frame(
         rst_person["hair_shape"] = "long hair"
 
     result = {
-        **rst_person,
         **rst_cloth,
     }
 

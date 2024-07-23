@@ -55,7 +55,6 @@ def create_and_publish_marker(
         publisher_counts[publisher] += 1
     marker_msg = create_marker(point_stamped, idx, r, g, b)
     publisher.publish(marker_msg)
-    rospy.sleep(2)  # Needed to prevent markers from being overwritten
     if name is not None:
         name_location = point_stamped.point
         name_location.z += 0.1

@@ -12,6 +12,7 @@ from lasr_skills import (
     AskAndListen,
     PlayMotion,
     LookToPoint,
+    Wait,
 )
 from std_msgs.msg import Header, Empty
 from receptionist.states import (
@@ -78,7 +79,7 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "SAY_START",
-                Say(text="Start of receptionist task. Going to waiting area."),
+                Say(text="Start of receptionist task."),
                 transitions={
                     "succeeded": "GO_TO_WAIT_LOCATION_GUEST_1",
                     "aborted": "GO_TO_WAIT_LOCATION_GUEST_1",
@@ -175,9 +176,7 @@ class Receptionist(smach.StateMachine):
             """
             smach.StateMachine.add(
                 "SAY_GOODBYE",
-                Say(
-                    text="Goodbye fellow humans, I shall be going back where I came from"
-                ),
+                Say(text="Enjoy the party!"),
                 transitions={
                     "succeeded": "GO_TO_FINISH_LOCATION",
                     "aborted": "failed",
@@ -291,8 +290,17 @@ class Receptionist(smach.StateMachine):
             f"LOOK_EYES_{guest_id}",
             PlayMotion(motion_name="look_very_left"),
             transitions={
-                "succeeded": f"INTRODUCE_AND_SEAT_GUEST_{guest_id}",
+                "succeeded": f"WAIT_{guest_id}_2",
                 "preempted": "failed",
                 "aborted": "failed",
+            },
+        )
+
+        smach.StateMachine.add(
+            f"WAIT_{guest_id}_2",
+            Wait(1),
+            transitions={
+                "succeeded": f"INTRODUCE_AND_SEAT_GUEST_{guest_id}",
+                "failed": f"INTRODUCE_AND_SEAT_GUEST_{guest_id}",
             },
         )

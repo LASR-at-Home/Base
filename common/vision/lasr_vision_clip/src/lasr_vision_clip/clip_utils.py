@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import torch
-import rospy
 import cv2
 import cv2_img
 import numpy as np

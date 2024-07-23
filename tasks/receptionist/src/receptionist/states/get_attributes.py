@@ -10,7 +10,7 @@ class GetGuestAttributes(smach.StateMachine):
             smach.State.__init__(
                 self,
                 outcomes=["succeeded", "failed"],
-                input_keys=["guest_data"],
+                input_keys=["guest_data", "clip_detection_dict"],
                 output_keys=["guest_data"],
             )
 
@@ -29,18 +29,16 @@ class GetGuestAttributes(smach.StateMachine):
             smach.State.__init__(
                 self,
                 outcomes=["succeeded", "failed"],
-                input_keys=["people", "guest_data"],
+                input_keys=["guest_data", "clip_detection_dict"],
                 output_keys=["guest_data"],
             )
 
             self._guest_id: str = guest_id
 
         def execute(self, userdata: UserData) -> str:
-            if len(userdata.people) == 0:
-                return "failed"
-            userdata.guest_data[self._guest_id]["attributes"] = json.loads(
-                userdata.people[0]["features"]
-            )
+            userdata.guest_data[self._guest_id][
+                "attributes"
+            ] = userdata.clip_detection_dict
             userdata.guest_data[self._guest_id]["detection"] = True
             return "succeeded"
 
