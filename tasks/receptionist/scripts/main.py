@@ -60,7 +60,6 @@ if __name__ == "__main__":
             header=Header(frame_id="map"),
         )
     )
-
     assert sofa_area.is_valid, "Sofa area is not valid"
 
     sofa_point = Point(**sofa_point_param)

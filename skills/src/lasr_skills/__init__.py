@@ -1,3 +1,4 @@
+from .wait import Wait
 from .detect import Detect
 from .detect_3d import Detect3D
 from .detect_3d_in_area import Detect3DInArea
@@ -21,6 +22,5 @@ from .detect_faces import DetectFaces
 from .recognise import Recognise
 from .detect_gesture import DetectGesture
 from .look_at_person import LookAtPerson
-from .wait import Wait
 from .find_gesture_person import FindGesturePerson
 from .adjust_camera import AdjustCamera

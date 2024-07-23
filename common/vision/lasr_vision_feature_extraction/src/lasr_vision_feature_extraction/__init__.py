@@ -7,6 +7,7 @@ import rospkg
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import rospy
 import torchvision.models as models
 from lasr_vision_feature_extraction.categories_and_attributes import (
     CategoriesAndAttributes,
@@ -16,6 +17,7 @@ from lasr_vision_feature_extraction.image_with_masks_and_attributes import (
     ImageWithMasksAndAttributes,
     ImageOfCloth,
 )
+from lasr_vision_msgs.srv import Vqa, VqaRequest
 
 
 def X2conv(in_channels, out_channels, inner_channels=None):
@@ -515,10 +517,11 @@ def predict_frame(
     head_frame,
     torso_frame,
     full_frame,
-    head_mask,
-    torso_mask,
-    head_predictor,
     cloth_predictor,
+    image_raw,
+    clip_service: rospy.ServiceProxy = rospy.ServiceProxy(
+        "/clip_vqa/query_service", Vqa
+    ),
 ):
     full_frame = cv2.cvtColor(full_frame, cv2.COLOR_BGR2RGB)
     head_frame = cv2.cvtColor(head_frame, cv2.COLOR_BGR2RGB)
@@ -530,6 +533,37 @@ def predict_frame(
     rst_cloth = ImageOfCloth.from_parent_instance(
         cloth_predictor.predict(torso_frame)
     ).describe()
+
+    # 0.5 for True, -0.5 for False
+    rst_person = {"glasses": -0.5, "hat": -0.5, "hair_shape": "short hair"}
+
+    glasses_query = VqaRequest(
+        possible_answers=["A person wearing glasses", "A person not wearing glasses"],
+        image_raw=image_raw,
+    )
+
+    hat_query = VqaRequest(
+        possible_answers=["A person wearing a hat", "A person not wearing a hat"],
+        image_raw=image_raw,
+    )
+
+    hair_query = VqaRequest(
+        possible_answers=["A person with short hair", "A person with long hair"],
+        image_raw=image_raw,
+    )
+
+    glasses_response = clip_service(glasses_query)
+
+    if glasses_response.answer == "A person wearing glasses":
+        rst_person["glasses"] = 0.5
+    hat_response = clip_service(hat_query)
+    if hat_response.answer == "A person wearing a hat":
+        rst_person["hat"] = 0.5
+
+    hair_response = clip_service(hair_query)
+
+    if hair_response.answer == "A person with long hair":
+        rst_person["hair_shape"] = "long hair"
 
     result = {
         **rst_cloth,

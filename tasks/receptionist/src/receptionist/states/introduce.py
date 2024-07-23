@@ -27,6 +27,8 @@ def stringify_guest_data(
 
     relevant_guest_data = guest_data[guest_id]
 
+    relevant_guest_data["attributes"]["has_hair"] = 0.5
+
     guest_str = f"{relevant_guest_data['name']}, their favourite drink is {relevant_guest_data['drink']}. "
 
     if (

@@ -4,7 +4,7 @@ import smach_ros
 
 from std_srvs.srv import Empty
 
-from lasr_skills import Say, ListenFor, PlayMotion
+from lasr_skills import Say, PlayMotion, Wait
 
 import rospkg
 import rosparam
@@ -135,10 +135,10 @@ class HandoverObject(smach.StateMachine):
                 smach.StateMachine.add(
                     "SAY_TAKE",
                     Say(
-                        text=f"Please grab the {object_name} in my end-effector, and say `I am done`.",
+                        text=f"Please grab the {object_name} in my hand. I will wait for a few seconds.",
                     ),
                     transitions={
-                        "succeeded": "LISTEN_DONE",
+                        "succeeded": "OPEN_GRIPPER",
                         "aborted": "failed",
                         "preempted": "failed",
                     },
@@ -147,10 +147,10 @@ class HandoverObject(smach.StateMachine):
                 smach.StateMachine.add(
                     "SAY_TAKE",
                     Say(
-                        format_str="Please place the {} in my end-effector, and say `I am done`.",
+                        format_str="Please place the {} in my hand. I will wait for a few seconds.",
                     ),
                     transitions={
-                        "succeeded": "LISTEN_DONE",
+                        "succeeded": "OPEN_GRIPPER",
                         "aborted": "failed",
                         "preempted": "failed",
                     },
@@ -158,24 +158,21 @@ class HandoverObject(smach.StateMachine):
                 )
 
             smach.StateMachine.add(
-                "LISTEN_DONE",
-                ListenFor("done"),
-                transitions={
-                    "succeeded": "OPEN_GRIPPER",
-                    "not_done": "LISTEN_DONE",
-                    "aborted": "failed",
-                    "preempted": "failed",
-                },
+                "WAIT_5",
+                Wait(5),
+                transitions={"succeeded": "FOLD_ARM", "failed": "OPEN_GRIPPER"},
             )
+
             smach.StateMachine.add(
                 "OPEN_GRIPPER",
                 PlayMotion(motion_name="open_gripper"),
                 transitions={
-                    "succeeded": "FOLD_ARM",
+                    "succeeded": "WAIT_5",
                     "aborted": "failed",
                     "preempted": "failed",
                 },
             )
+
             smach.StateMachine.add(
                 "FOLD_ARM",
                 PlayMotion(motion_name="home"),
