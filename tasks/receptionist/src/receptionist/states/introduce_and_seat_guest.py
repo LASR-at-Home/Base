@@ -496,7 +496,12 @@ class IntroduceAndSeatGuest(smach.StateMachine):
                     def __init__(self, sofa_position: Point, max_people_on_sofa: int):
                         smach.State.__init__(
                             self,
-                            outcomes=["succeeded_sofa", "succeeded_chair", "failed"],
+                            outcomes=[
+                                "succeeded_sofa_left",
+                                "succeeded_sofa_right",
+                                "succeeded_chair",
+                                "failed",
+                            ],
                             input_keys=[
                                 "num_people_on_sofa",
                                 "empty_seat_detections",
@@ -513,42 +518,50 @@ class IntroduceAndSeatGuest(smach.StateMachine):
                             f"Num people on sofa: {userdata.num_people_on_sofa}"
                         )
                         if userdata.num_people_on_sofa < self._max_people_on_sofa:
-                            userdata.seat_position = PointStamped(
-                                point=self._sofa_position, header=Header(frame_id="map")
-                            )
-                            if userdata.num_people_on_sofa == 0:
-                                return "succeeded_sofa_left"
-                            else:
-                                sat_person_centroid = (
-                                    userdata.sofa_detections[0].detections_3d[0].point
+                            try:
+                                userdata.seat_position = PointStamped(
+                                    point=self._sofa_position,
+                                    header=Header(frame_id="map"),
                                 )
-                                sofa_points = rospy.get_param("/receptionist/sofa_area")
-                                bottom_left = sofa_points[0]
-                                top_left = sofa_points[1]
-                                top_right = sofa_points[2]
-                                bottom_right = sofa_points[3]
-                                bottom_mid_point = Point(
-                                    x=(bottom_left[0] + bottom_right[0]) / 2,
-                                    y=(bottom_left[1] + bottom_right[1]) / 2,
-                                )
-                                top_mid_point = Point(
-                                    x=(top_left[0] + top_right[0]) / 2,
-                                    y=(top_left[1] + top_right[1]) / 2,
-                                )
-
-                                left_rectangle = ShapelyPolygon(
-                                    [
-                                        bottom_left,
-                                        bottom_mid_point,
-                                        top_mid_point,
-                                        top_left,
-                                    ]
-                                )
-
-                                if left_rectangle.contains(sat_person_centroid):
-                                    return "succeeded_sofa_right"
-                                else:
+                                if userdata.num_people_on_sofa == 0:
                                     return "succeeded_sofa_left"
+                                else:
+                                    sat_person_centroid = (
+                                        userdata.sofa_detections[0]
+                                        .detections_3d[0]
+                                        .point
+                                    )
+                                    sofa_points = rospy.get_param(
+                                        "/receptionist/sofa_area"
+                                    )
+                                    bottom_left = sofa_points[0]
+                                    top_left = sofa_points[1]
+                                    top_right = sofa_points[2]
+                                    bottom_right = sofa_points[3]
+                                    bottom_mid_point = Point(
+                                        x=(bottom_left.x + bottom_right.x) / 2,
+                                        y=(bottom_left.y + bottom_right.y) / 2,
+                                    )
+                                    top_mid_point = Point(
+                                        x=(top_left.x + top_right.x) / 2,
+                                        y=(top_left.y + top_right.y) / 2,
+                                    )
+
+                                    left_rectangle = ShapelyPolygon(
+                                        [
+                                            bottom_left,
+                                            bottom_mid_point,
+                                            top_mid_point,
+                                            top_left,
+                                        ]
+                                    )
+
+                                    if left_rectangle.contains(sat_person_centroid):
+                                        return "succeeded_sofa_right"
+                                    else:
+                                        return "succeeded_sofa_left"
+                            except:
+                                return "succeeded_sofa_left"
 
                         if len(userdata.empty_seat_detections) > 0:
                             seat_position = PointStamped(
@@ -1147,7 +1160,8 @@ class IntroduceAndSeatGuest(smach.StateMachine):
                     "SELECT_SEAT",
                     SelectSeat(sofa_position, max_people_on_sofa),
                     transitions={
-                        "succeeded_sofa": "SAY_SOFA",
+                        "succeeded_sofa_left": "SAY_SOFA",
+                        "succeeded_sofa_right": "SAY_SOFA",
                         "succeeded_chair": "SAY_CHAIR",
                         "failed": "SAY_ANY",
                     },
