@@ -1,0 +1,628 @@
+arena:
+  start_pose:
+    position:
+      x: 5.584087276351337
+      y: 2.4879090828874073
+      z: 0.0
+    orientation:
+      x: 0.0
+      y: 0.0
+      z: 0.134068061223
+      w: 0.998972
+  polygon:
+    [
+      [0.94, -2.89],
+      [-0.67, 5.39],
+      [1.60, 5.77],
+      [1.49, 6.38],
+      [7.61, 7.62],
+      [9.61, -1.06],
+    ]
+  rooms:
+    living_room:
+      pose:
+        position:
+          x: 6.120715369195898
+          y: 3.700837077669375
+          z: 0.0
+        orientation:
+          x: 0.0
+          y: 0.0
+          z: 0.6976626012448783
+          w: 0.7164264755187583
+      room_polygon: [[5.04, 1.46], [3.79, 6.86], [7.65, 7.64], [8.87, 2.26]]
+      people_search_poses:
+        - position:
+            x: 5.512430979846947
+            y: 2.2112105127589268
+            z: 0.0
+          orientation:
+            x: 0.0
+            y: 0.0
+            z: 0.6718972330096871
+            w: 0.740644387188566
+        - position:
+            x: 7.1901546702468755
+            y: 3.4281468515799753
+            z: 0.0
+          orientation:
+            x: 0.0
+            y: 0.0
+            z: 0.6300077340673419
+            w: 0.7765888584156571
+        - position:
+            x: 4.256927303750438
+            y: 6.225962608439394
+            z: 0.0
+          orientation:
+            x: 0.0
+            y: 0.0
+            z: 0.02020204788855622
+            w: 0.9997959178057833
+      beacons:
+        tv_table:
+          placeable: true
+          object_category: "toys"
+          object_detection_pose:
+            position:
+              x: 7.273992107547448
+              y: 2.948434139879407
+              z: 0.0
+            orientation:
+              x: 0.0
+              y: 0.0
+              z: -0.5894704889887196
+              w: 0.8077899124224069
+          dem_manipulation_pose:
+            position:
+              x: 7.354864460241598
+              y: 2.8805250297298883
+              z: 0.0
+            orientation:
+              x: 0.0
+              y: 0.0
+              z: 0.9340189701920224
+              w: 0.3572234081375883
+          object_detection_point:
+            x: 7.336175918579102
+            y: 2.161613941192627
+            z: 0.8558647632598877
+          person_detection_pose:
+            position:
+              x: 7.178624964267576
+              y: 3.6922693385518555
+              z: 0.0
+            orientation:
+              x: 0.0
+              y: 0.0
+              z: -0.8293872296702443
+              w: 0.5586741655562011
+        lounge_chair:
+          placeable: false
+          person_detection_pose:
+            position:
+              x: 7.06269559885777
+              y: 4.046433502834197
+              z: 0.0
+            orientation:
+              x: 0.0
+              y: 0.0
+              z: 0.67393157419759
+              w: 0.7387937691261062
+        lamp:
+          placeable: false
+          person_detection_pose:
+            position:
+              x: 7.06269559885777
+              y: 4.046433502834197
+              z: 0.0
+            orientation:
+              x: 0.0
+              y: 0.0
+              z: 0.67393157419759
+              w: 0.7387937691261062
+        couch:
+          placeable: false
+          person_detection_pose:
+            position:
+              x: 6.1008258301000735
+              y: 4.286478092897883
+              z: 0.0
+            orientation:
+              x: 0.0
+              y: 0.0
+              z: 0.8950260507658574
+              w: 0.446013865760329
+        coffee_table:
+          placeable: true
+          object_category: "fruits"
+          object_detection_pose:
+            position:
+              x: 6.1008258301000735
+              y: 4.286478092897883
+              z: 0.0
+            orientation:
+              x: 0.0
+              y: 0.0
+              z: 0.8950260507658574
+              w: 0.446013865760329
+          dem_manipulation_pose:
+            position:
+              x: 6.0536832836653796
+              y: 4.292645186729313
+              z: 0.0
+            orientation:
+              x: 0.0
+              y: 0.0
+              z: -0.867303194550545
+              w: 0.4977802413941511
+          object_detection_point:
+            x: 6.047140598297119
+            y: 5.356678009033203
+            z: 0.6894049644470215
+          person_detection_pose: # pose for person detection
+            position:
+              x: 6.072641821149185
+              y: 4.060858541961114
+              z: 0.0
+            orientation:
+              x: 0.0
+              y: 0.0
+              z: 0.6755591389777796
+              w: 0.7373058047673307
+    kitchen:
+      pose:
+        position:
+          x: 3.6582946339155127
+          y: 2.3279302321170223
+          z: 0.0
+        orientation:
+          x: 0.0
+          y: 0.0
+          z: 0.9126515293224691
+          w: 0.40873853014532197
+      room_polygon:
+        [
+          [0.27, 0.49],
+          [-0.65, 5.36],
+          [1.58, 5.80],
+          [1.49, 6.32],
+          [3.89, 6.82],
+          [4.96, 1.44],
+        ]
+      people_search_poses:
+        - position:
+            x: 3.3127991092604003
+            y: 6.271491804060524
+            z: 0.0
+          orientation:
+            x: 0.0
+            y: 0.0
+            z: -0.9822437070808837
+            w: 0.18760943446427
+        - position:
+            x: 0.49674944951582156
+            y: 1.5076444576771209
+            z: 0.0
+          orientation:
+            x: 0.0
+            y: 0.0
+            z: 0.661145746627997
+            w: 0.7502574902763107
+        - position:
+            x: 2.909013563446123
+            y: 6.010437841115851
+            z: 0.0
+          orientation:
+            x: 0.0
+            y: 0.0
+            z: -0.8370818019305263
+            w: 0.5470777429915635
+      beacons:
+        trashcan:
+          placeable: false
+          person_detection_pose:
+            position:
+              x: 3.5332087903150957
+              y: 2.5125015244492226
+              z: 0.0
+            orientation:
+              x: 0.0
+              y: 0.0
+              z: -0.3121720915187429
+              w: 0.9500255708541816
+        kitchen_cabinet:
+          placeable: true
+          object_category: "drinks"
+          object_detection_pose:
+            position:
+              x: 0.7129784522316165
+              y: 2.088477120979522
+              z: 0.0
+            orientation:
+              x: 0.0
+              y: 0.0
+              z: -0.6278812361347521
+              w: 0.7783091630643286
+          dem_manipulation_pose:
+            position:
+              x: 0.6875555703291897
+              y: 2.0882110649638723
+              z: 0.0
+            orientation:
+              x: 0.0
+              y: 0.0
+              z: -0.2530214877322829
+              w: 0.9674606590170693
+          object_detection_point:
+            x: 0.8811559081077576
+            y: 0.5808010101318359
+            z: 0.9112319946289062
+          person_detection_pose:
+            position:
+              x: 0.41346658822354454
+              y: 2.467466868570338
+              z: 0.0
+            orientation:
+              x: 0.0
+              y: 0.0
+              z: -0.3155156152787112
+              w: 0.9489203847084835
+        dinner_table:
+          placeable: true
+          object_category: "snacks"
+          object_detection_pose:
+            position:
+              x: 1.8356811058837614
+              y: 2.2207238657079955
+              z: 0.0
+            orientation:
+              x: 0.0
+              y: 0.0
+              z: 0.7228114738827914
+              w: 0.6910452758129432
+          dem_manipulation_pose:
+            position:
+              x: 1.83228766192722
+              y: 2.235019297806372
+              z: 0.0
+            orientation:
+              x: 0.0
+              y: 0.0
+              z: 0.37985665084757875
+              w: 0.9250453636481082
+          object_detection_point:
+            x: 1.4012675285339355
+            y: 3.3633391857147217
+            z: 0.8118224143981934
+          person_detection_pose:
+            position:
+              x: 1.9960502931903918
+              y: 1.6978352608104392
+              z: 0.0
+            orientation:
+              x: 0.0
+              y: 0.0
+              z: 0.7983903222483791
+              w: 0.6021402605208602
+        dishwasher:
+          placeable: true
+          object_category: "dishes"
+          object_detection_pose:
+            position:
+              x: 1.4215204357846618
+              y: 5.207411621433423
+              z: 0.0
+            orientation:
+              x: 0.0
+              y: 0.0
+              z: 0.8257806156186729
+              w: 0.5639914670174058
+          dem_manipulation_pose:
+            position:
+              x: 1.419445500037952
+              y: 5.224601271679582
+              z: 0.0
+            orientation:
+              x: 0.0
+              y: 0.0
+              z: 0.11012898249701325
+              w: 0.9939173040118441
+          object_detection_point:
+            x: 1.3605456352233887
+            y: 5.999742031097412
+            z: 0.8568863868713379
+          person_detection_pose:
+            position:
+              x: 2.65489823025352
+              y: 5.50331155327315
+              z: 0.0
+            orientation:
+              x: 0.0
+              y: 0.0
+              z: 0.9999952361044794
+              w: 0.0030867083352073693
+        kitchen_counter:
+          placeable: true
+          object_category: "food"
+          object_detection_pose:
+            position:
+              x: 0.6451470698409517
+              y: 4.8843714860815215
+              z: 0.0
+            orientation:
+              x: 0.0
+              y: 0.0
+              z: 0.8224023271521479
+              w: 0.5689063299830048
+          dem_manipulation_pose:
+            position:
+              x: 0.6441025943277391
+              y: 4.902964957072345
+              z: 0.0
+            orientation:
+              x: 0.0
+              y: 0.0
+              z: 0.10316049107191201
+              w: 0.9946647239556664
+          object_detection_point:
+            x: 0.500577449798584
+            y: 5.770392417907715
+            z: 0.9268898963928223
+          person_detection_pose:
+            position:
+              x: 0.14874480525409264
+              y: 4.093747938657101
+              z: 0.0
+            orientation:
+              x: 0.0
+              y: 0.0
+              z: 0.6980324092187533
+              w: 0.7160661671104583
+    hallway:
+      pose:
+        position:
+          x: 6.406923818929698
+          y: -0.41544372565988424
+          z: 0.0
+        orientation:
+          x: 0.0
+          y: 0.0
+          z: -0.5195673509149114
+          w: 0.8544294984744273
+      room_polygon: [[5.75, -1.88], [5.04, 1.40], [8.88, 2.21], [9.59, -1.05]]
+      people_search_poses: # list of poses for people search
+        - position:
+            x: 4.297003233693579
+            y: -3.4487786564582015
+            z: 0.0
+          orientation:
+            x: 0.0
+            y: 0.0
+            z: -0.994091155709743
+            w: 0.10854848750520432
+        - position:
+            x: 5.516548337062351
+            y: 1.016193465880367
+            z: 0.0
+          orientation:
+            x: 0.0
+            y: 0.0
+            z: -0.30852562323823274
+            w: 0.951216032142783
+        - position:
+            x: 7.790182988733782
+            y: 1.4220243015027143
+            z: 0.0
+          orientation:
+            x: 0.0
+            y: 0.0
+            z: -0.9162657718587097
+            w: 0.40057088676058683
+      beacons:
+        hallway_cabinet:
+          placeable: true
+          object_category: "any"
+          object_detection_pose:
+            position:
+              x: 8.293975528035883
+              y: -0.3616191863693362
+              z: 0.0
+            orientation:
+              x: 0.0
+              y: 0.0
+              z: -0.6646370439111504
+              w: 0.7471663803069886
+          dem_manipulation_pose:
+            position:
+              x: 8.28576371574446
+              y: -0.36721763331931334
+              z: 0.0
+            orientation:
+              x: 0.0
+              y: 0.0
+              z: 0.9029129168766404
+              w: 0.42982352720310346
+          object_detection_point:
+            x: 8.50695514678955
+            y: -1.2844955921173096
+            z: 0.8518805503845215
+          person_detection_pose:
+            position:
+              x: 8.154730778074187
+              y: 0.2045271600062283
+              z: 0.0
+            orientation:
+              x: 0.0
+              y: 0.0
+              z: -0.616600806524571
+              w: 0.7872759652074033
+        entrance:
+          placeable: false
+          person_detection_pose:
+            position:
+              x: 6.406923818929698
+              y: -0.41544372565988424
+              z: 0.0
+            orientation:
+              x: 0.0
+              y: 0.0
+              z: -0.5195673509149114
+              w: 0.8544294984744273
+      office:
+        pose:
+          position:
+            x: 2.961776524002213
+            y: -0.3265839146877172
+            z: 0.0
+          orientation:
+            x: 0.0
+            y: 0.0
+            z: -0.9715699244383985
+            w: 0.23675278652375886
+        room_polygon: [[0.97, -2.88], [0.25, 0.51], [5.04, 1.40], [5.70, -1.87]]
+        people_search_poses: # list of poses for people search
+          - position:
+              x: 1.3694407527845058
+              y: -2.217844077102087
+              z: 0.0
+            orientation:
+              x: 0.0
+              y: 0.0
+              z: 0.09719778532801243
+              w: 0.9952650855562701
+          - position:
+              x: 4.585249379998879
+              y: 0.6290073287595137
+              z: 0.0
+            orientation:
+              x: 0.0
+              y: 0.0
+              z: -0.953186049011395
+              w: 0.30238445060890023
+          - position:
+              x: 4.098423167827246
+              y: -1.774077666080138
+              z: 0.0
+            orientation:
+              x: 0.0
+              y: 0.0
+              z: 0.9949277049270365
+              w: 0.10059255424045896
+        beacons:
+          desk:
+            placeable: true
+            object_category: "decorations"
+            object_detection_pose:
+              position:
+                x: 4.13641344180174
+                y: -1.1219134907122885
+                z: 0.0
+              orientation:
+                x: 0.0
+                y: 0.0
+                z: -0.2168473262966226
+                w: 0.9762055301410693
+            dem_manipulation_pose:
+              position:
+                x: 4.117926944746048
+                y: -1.1650206648628683
+                z: 0.0
+              orientation:
+                x: 0.0
+                y: 0.0
+                z: 0.9991173043946355
+                w: 0.04200728578707645
+            object_detection_point:
+              x: 5.166173458099365
+              y: -1.2579708099365234
+              z: 0.8283624649047852
+            person_detection_pose:
+              position:
+                x: 3.15544081281043
+                y: -1.2741549162520411
+                z: 0.0
+              orientation:
+                x: 0.0
+                y: 0.0
+                z: 0.0750698144804968
+                w: 0.9971782804262554
+          shelf:
+            placeable: true
+            object_category: "cleaning_supplies"
+            object_detection_pose:
+              position:
+                x: 2.104748073089378
+                y: -1.3468360989597448
+                z: 0.0
+              orientation:
+                x: 0.0
+                y: 0.0
+                z: -0.5473950131215115
+                w: 0.8368743630974127
+            dem_manipulation_pose:
+              position:
+                x: 2.111821807632297
+                y: -1.2878679731048162
+                z: 0.0
+              orientation:
+                x: 0.0
+                y: 0.0
+                z: 0.7589510178190422
+                w: 0.6511477194549943
+            object_detection_point:
+              x: 2.308501720428467
+              y: -2.374452590942383
+              z: 1.0352556705474854
+            person_detection_pose:
+              position:
+                x: 2.0525058695053557
+                y: -0.3978282496045481
+                z: 0.0
+              orientation:
+                x: 0.0
+                y: 0.0
+                z: -0.8421138710595055
+                w: 0.5392997572493191
+          coathanger:
+            placeable: false
+            person_detection_pose:
+              position:
+                x: 6.8857825177057
+                y: 0.3320540650469538
+                z: 0.0
+              orientation:
+                x: 0.0
+                y: 0.0
+                z: -0.919280962536277
+                w: 0.3936019714360892
+          exit:
+            placeable: false
+            person_detection_pose:
+              position:
+                x: 2.3359576942170737
+                y: -0.16493364361628138
+                z: 0.0
+              orientation:
+                x: 0.0
+                y: 0.0
+                z: 0.9999125666331964
+                w: 0.013223429548099866
+objects:
+  - cleaning_supplies: ["dishwasher_tab", "soap", "sponges", "washcloth"]
+  - decorations: ["candle"]
+  - dishes: ["bowl", "cup", "fork", "knife", "plate", "spoon"]
+  - drinks:
+      ["big_coke", "cola", "dubbelfris", "fanta", "ice_tea", "milk", "water"]
+  - food:
+      [
+        "cornflakes",
+        "curry",
+        "hagelslag",
+        "mayonaise",
+        "pancake_mix",
+        "pea_soup",
+        "sausage",
+      ]
+  - fruits:
+      ["apple", "banana", "lemon", "orange", "peach", "plum", "strawberry"]

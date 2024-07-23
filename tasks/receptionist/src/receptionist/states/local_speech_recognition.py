@@ -86,7 +86,6 @@ def handle_drink(sentence_list, last_resort):
     else:
         result = handle_similar_sound(sentence_list, available_drinks, 0)
         print(f"drink (sound): {result}")
-
     if result != "unknown":
         if result in available_single_drinks:
             print(f"final attempt drink: {result}")

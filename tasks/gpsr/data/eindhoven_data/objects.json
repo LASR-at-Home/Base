@@ -1,0 +1,76 @@
+{
+    "cleaning supplies": {
+        "items": [
+            "soap",
+            "dishwasher tab",
+            "washcloth",
+            "sponges"
+        ],
+        "singular": "cleaning supply"
+    },
+    "drinks": {
+        "items": [
+            "cola",
+            "ice tea",
+            "water",
+            "milk",
+            "big coke",
+            "fanta",
+            "dubbelfris"
+        ],
+        "singular": "drink"
+    },
+    "food": {
+        "items": [
+            "cornflakes",
+            "pea soup",
+            "curry",
+            "pancake mix",
+            "hagelslag",
+            "sausages",
+            "mayonaise"
+        ],
+        "singular": "food"
+    },
+    "decorations": {
+        "items": [
+            "candle"
+        ],
+        "singular": "decoration"
+    },
+    "fruits": {
+        "items": [
+            "pear",
+            "plum",
+            "peach",
+            "lemon",
+            "orange",
+            "strawberry",
+            "banana",
+            "apple"
+        ],
+        "singular": "fruit"
+    },
+    "snacks": {
+        "items": [
+            "stroopwafel",
+            "candy",
+            "liquorice",
+            "crisps",
+            "pringles",
+            "tictac"
+        ],
+        "singular": "snack"
+    },
+    "dishes": {
+        "items": [
+            "spoon",
+            "plate",
+            "cup",
+            "fork",
+            "bowl",
+            "knife"
+        ],
+        "singular": "dish"
+    }
+}

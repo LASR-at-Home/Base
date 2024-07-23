@@ -73,6 +73,7 @@ add_service_files(
   ClipImageEncoder.srv
   ClipLearnFace.srv
   ClipRecogniseFace.srv
+  GroundedSam.srv
 )
 
 # Generate actions in the 'action' folder

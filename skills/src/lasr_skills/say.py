@@ -26,7 +26,20 @@ if PUBLIC_CONTAINER or SIMULATION:
             self, text: Union[str, None] = None, format_str: Union[str, None] = None
         ):
 
-            super(Say, self).__init__(outcomes=["succeeded", "aborted", "preempted"])
+            if text is not None:
+                super(Say, self).__init__(
+                    outcomes=["succeeded", "aborted", "preempted"]
+                )
+            elif format_str is not None:
+                super(Say, self).__init__(
+                    outcomes=["succeeded", "aborted", "preempted"],
+                    input_keys=["placeholders"],
+                )
+            else:
+                super(Say, self).__init__(
+                    outcomes=["succeeded", "aborted", "preempted"],
+                    input_keys=["text"],
+                )
 
             self.text = text
             self.format_str = format_str
@@ -43,7 +56,7 @@ if PUBLIC_CONTAINER or SIMULATION:
             if self.text is not None:
                 rospy.loginfo(self.text)
             elif self.format_str is not None:
-                rospy.loginfo(self.format_str.format(*userdata.placeholders))
+                rospy.loginfo(self.format_str.format(userdata.placeholders))
             else:
                 rospy.loginfo(userdata.text)
             return "succeeded"

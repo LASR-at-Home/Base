@@ -20,7 +20,7 @@ class GetCroppedImage(smach.State):
     def __init__(
         self,
         object_name: str,
-        method: str = "centered",
+        method: str = "closest",
         use_mask: bool = True,
         yolo_model: str = "yolov8x-seg.pt",
         yolo_model_confidence: float = 0.5,

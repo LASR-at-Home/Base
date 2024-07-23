@@ -9,6 +9,7 @@ from lasr_skills.play_motion import PlayMotion
 import rospkg
 import rosparam
 import os
+import math
 
 
 LEFT = {
@@ -77,14 +78,17 @@ position_dict = {
     (0, 1): "mr",
 }
 
+inverse_position_dict = {value: key for key, value in position_dict.items()}
+
 
 class AdjustCamera(smach.StateMachine):
     def __init__(
         self,
         bodypix_model: str = "resnet50",
         bodypix_confidence: float = 0.7,
-        max_attempts=1000,
+        max_attempts=5,
         debug=False,
+        init_state="u1m",
     ):
         smach.StateMachine.__init__(
             self,
@@ -105,8 +109,8 @@ class AdjustCamera(smach.StateMachine):
 
         with self:
             smach.StateMachine.add(
-                "init_u2m",
-                PlayMotion(motion_name="u2m"),
+                "init",
+                PlayMotion(motion_name=init_state),
                 transitions={
                     "succeeded": "GET_IMAGE",
                     "aborted": "GET_IMAGE",
@@ -122,7 +126,7 @@ class AdjustCamera(smach.StateMachine):
             else:
                 _transitions = {
                     "succeeded": "DECIDE_ADJUST_CAMERA",
-                    "failed": "failed",
+                    "failed": "GET_IMAGE",
                 }
             smach.StateMachine.add(
                 "GET_IMAGE",
@@ -131,10 +135,7 @@ class AdjustCamera(smach.StateMachine):
                     method="closest",
                     use_mask=True,
                 ),
-                transitions={
-                    "succeeded": "DECIDE_ADJUST_CAMERA",
-                    "failed": "failed",
-                },
+                transitions=_transitions,
             )
 
             if debug:
@@ -158,6 +159,7 @@ class AdjustCamera(smach.StateMachine):
                     bodypix_model=bodypix_model,
                     bodypix_confidence=bodypix_confidence,
                     max_attempts=max_attempts,
+                    init_state=init_state,
                 ),
                 transitions=_transitions,
             )
@@ -176,10 +178,10 @@ class AdjustCamera(smach.StateMachine):
     class DecideAdjustCamera(smach.State):
         def __init__(
             self,
-            # keypoints_to_detect: List[str] = ALL_KEYS,
             bodypix_model: str = "resnet50",
             bodypix_confidence: float = 0.7,
-            max_attempts=1000,
+            max_attempts=5,
+            init_state="u1m",
         ):
             smach.State.__init__(
                 self,
@@ -195,18 +197,17 @@ class AdjustCamera(smach.StateMachine):
                 output_keys=[],
             )
             self.max_attempts = max_attempts
-            # self._keypoints_to_detect = keypoints_to_detect
             self._bodypix_model = bodypix_model
             self._bodypix_confidence = bodypix_confidence
             self._bodypix_client = rospy.ServiceProxy(
                 "/bodypix/keypoint_detection", BodyPixKeypointDetection
             )
 
-            self.position = [2, 0]
+            self.position = [i for i in inverse_position_dict[init_state]]
             self.counter = 0
 
         def execute(self, userdata):
-
+            rospy.logwarn(f"Start attempt number {self.counter}.")
             req = BodyPixKeypointDetectionRequest()
             req.image_raw = userdata.img_msg
             req.dataset = self._bodypix_model
@@ -243,10 +244,15 @@ class AdjustCamera(smach.StateMachine):
             rospy.logwarn(
                 f"missing shoulders: {missing_keypoints.intersection(MIDDLE)}, missing eyes: {missing_keypoints.intersection(HEAD)}"
             )
-            # has_torso = len(missing_keypoints.intersection(TORSO)) <= 1
 
             if not has_more_than_one_shoulder and not has_more_than_one_one_eye:
-                # 'Try recovery behaviour or give up, need a bit polish
+                # This is the case that not any centre points can be used,
+                # In this case most likely it is the guest standing either too close or not in the camera at all.
+                # However we may still try to get this person back into the frame if some part of them are detected.
+                # Otherwise we say something like "Please stand in front of me but keep a bit distance.".
+                rospy.logwarn(
+                    "The person might not actually be in the frame, trying to recover."
+                )
                 miss_head = len(missing_keypoints.intersection(HEAD)) >= 2
                 miss_middle = len(missing_keypoints.intersection(MIDDLE)) >= 2
                 miss_torso = len(missing_keypoints.intersection(TORSO)) >= 4
@@ -263,14 +269,7 @@ class AdjustCamera(smach.StateMachine):
                     f"Needs to move up: {needs_to_move_up}, down: {needs_to_move_down}, left: {needs_to_move_left}, right: {needs_to_move_right}."
                 )
 
-                # if counter > maxmum, check if head is in, if not, move up to get head, otherwise return finished.
-                if self.counter > self.max_attempts:
-                    if not miss_head or self.counter > self.max_attempts + 2:
-                        return "truncated"
-
-                # self.counter += 1
                 if not (needs_to_move_left and needs_to_move_right):
-                    # return "failed"
                     if needs_to_move_left:
                         self.position = (
                             self.position[0],
@@ -280,8 +279,7 @@ class AdjustCamera(smach.StateMachine):
                                 else self.position[1]
                             ),
                         )
-                        return position_dict[self.position]
-                    if needs_to_move_right:
+                    elif needs_to_move_right:
                         self.position = (
                             self.position[0],
                             (
@@ -290,32 +288,28 @@ class AdjustCamera(smach.StateMachine):
                                 else self.position[1]
                             ),
                         )
-                        return position_dict[self.position]
-                if needs_to_move_up and needs_to_move_down:
-                    return "failed"
-                if needs_to_move_up:
-                    self.position = (
-                        (
-                            self.position[0] + 1
-                            if self.position[0] < 3
-                            else self.position[0]
-                        ),
-                        self.position[1],
-                    )
-                    return position_dict[userdata.position]
-                if needs_to_move_down:
-                    self.position = (
-                        (
-                            self.position[0] - 1
-                            if self.position[0] > 0
-                            else self.position[0]
-                        ),
-                        self.position[1],
-                    )
-                    return position_dict[userdata.position]
-                return "finished"
+                if not needs_to_move_up and needs_to_move_down:
+                    if needs_to_move_up:
+                        self.position = (
+                            (
+                                self.position[0] + 1
+                                if self.position[0] < 3
+                                else self.position[0]
+                            ),
+                            self.position[1],
+                        )
+                    elif needs_to_move_down:
+                        self.position = (
+                            (
+                                self.position[0] - 1
+                                if self.position[0] > 0
+                                else self.position[0]
+                            ),
+                            self.position[1],
+                        )
+
             elif has_both_eyes and not has_both_shoulders:
-                # in this case try to make eyes into the upper 1/3 of the frame,
+                # in this case try to make eyes into the upper 1/5 of the frame,
                 eyes_middle = (
                     (keypoint_info["leftEye"][0] + keypoint_info["rightEye"][0]) / 2,
                     (keypoint_info["leftEye"][1] + keypoint_info["rightEye"][1]) / 2,
@@ -329,13 +323,14 @@ class AdjustCamera(smach.StateMachine):
                 # if y at upper 1/3: wonder why no shoulders but never mind in this case
                 else:
                     pass
-                # if x at left 1/3 or left shoulder dissappear, move left 1 step
-                if eyes_middle[0] <= 1 / 3:
+                # if x at left 2/7 or left shoulder dissappear, move left 1 step
+                if eyes_middle[0] <= 2 / 7:
                     self.position[1] -= 1
-                # if x at right 1/3 or right shoulder dissappear, move right 1 step
-                elif eyes_middle[0] >= 2 / 3:
+                # if x at right 2/7 or right shoulder dissappear, move right 1 step
+                elif eyes_middle[0] >= 5 / 7:
                     self.position[1] += 1
                 pass
+
             elif not has_both_eyes and has_both_shoulders:
                 shoulders_middle = (
                     (
@@ -351,13 +346,14 @@ class AdjustCamera(smach.StateMachine):
                 # if y at upper 1/4: up move 1 step
                 elif shoulders_middle[1] <= 1 / 4:
                     self.position[0] += 1
-                # if x at left 1/3, move left 1 step
-                if shoulders_middle[0] <= 1 / 3:
+                # if x at left 2/7, move left 1 step
+                if shoulders_middle[0] <= 2 / 7:
                     self.position[1] -= 1
-                # if x at right 1/3, move right 1 step
-                elif shoulders_middle[0] >= 2 / 3:
+                # if x at right 2/7, move right 1 step
+                elif shoulders_middle[0] >= 5 / 7:
                     self.position[1] += 1
                 pass
+
             elif has_both_eyes and has_both_shoulders:
                 eyes_middle = (
                     (keypoint_info["leftEye"][0] + keypoint_info["rightEye"][0]) / 2,
@@ -376,63 +372,71 @@ class AdjustCamera(smach.StateMachine):
                     (eyes_middle[1] + shoulders_middle[1]) / 2,
                 )
                 rospy.logwarn(f"very middle {very_middle}")
-                # if y at upper 1/5 for eyes: move up 1 step
-                if eyes_middle[1] <= 1 / 5:
-                    self.position[0] += 1
-                    print("if y at upper 1/5 for eyes: move up 1 step")
+                eyes_to_shoulders_distance = math.sqrt(
+                    (eyes_middle[0] - shoulders_middle[0]) ** 2
+                    + (eyes_middle[1] - shoulders_middle[1])
+                )
+                rospy.logwarn(f"eyes to shoulder distance {eyes_to_shoulders_distance}")
+                if eyes_to_shoulders_distance > 0.14:
+                    # person is kind of close to the camera,
+                    if eyes_to_shoulders_distance >= 0.24:
+                        # person if very close to the camera.
+                        # ACTUALLY, maybe should just tell person to stand back?
+                        # if y at upper 1/5 for eyes: move up 1 step
+                        if eyes_middle[1] <= 1 / 5:
+                            self.position[0] += 1
+                            print("if y at upper 1/4 for eyes: move up 1 step")
+                        else:
+                            # if y at down 1/5: down move 1 step
+                            if very_middle[1] >= 4 / 5:
+                                self.position[0] -= 1
+                                print("if y at down 1/5: down move 1 step.")
+                    else:
+                        # if y at upper 1/7 for eyes: move up 1 step
+                        if eyes_middle[1] <= 1 / 7:
+                            self.position[0] += 1
+                            print("if y at upper 1/7 for eyes: move up 1 step")
+                        elif eyes_middle[1] >= 2 / 9:
+                            self.position[0] -= 1
+                            print(
+                                "if y lower than upper 2/9 for eyes: move down 1 step"
+                            )
+                        else:
+                            if (
+                                1 / 4 <= very_middle[1] <= 1 / 2
+                                and 2 / 7 <= very_middle[0] <= 5 / 7
+                            ):
+                                print("finished.")
+                                return "finished"
+                            # if y at down 3/7: down move 1 step
+                            if very_middle[1] >= 4 / 7:
+                                self.position[0] -= 1
+                                print("if y at down 3/7: down move 1 step.")
+                            # if y at upper 1/4: up move 1 step
+                            elif very_middle[1] <= 1 / 4:
+                                self.position[0] += 1
+                                print("if y at upper 1/4: up move 1 step.")
                 else:
-                    if (
-                        1 / 4 <= very_middle[1] <= 2 / 3
-                        and 1 / 3 <= very_middle[0] <= 2 / 3
-                    ):
+                    # person is kind of far from the camera.
+                    # in this case simply try to the middle-point of the shoulder to the centre up
+                    if shoulders_middle[1] >= 1 / 2:
+                        self.position[0] -= 1
+                    elif shoulders_middle[1] <= 1 / 2 - 2 / 7:
+                        self.position[0] += 1
+                    elif 2 / 7 <= very_middle[0] <= 5 / 7:
                         print("finished.")
                         return "finished"
-                    # if y at down 1/3: down move 1 step
-                    if very_middle[1] >= 2 / 3:
-                        self.position[0] -= 1
-                        print("if y at down 1/3: down move 1 step.")
-                    # if y at upper 1/4: up move 1 step
-                    elif very_middle[1] <= 1 / 4:
-                        self.position[0] += 1
-                        print("if y at upper 1/3: up move 1 step.")
-                # if x at left 1/3, move left 1 step
-                if very_middle[0] <= 1 / 3:
+                # if x at left 2/7, move left 1 step
+                if very_middle[0] <= 2 / 7:
                     self.position[1] -= 1
-                    print("if x at left 1/3, move left 1 step.")
-                # if x at right 1/3, move right 1 step
-                elif very_middle[0] >= 2 / 3:
+                    print("if x at left 2/7, move left 1 step.")
+                # if x at right 2/7, move right 1 step
+                elif very_middle[0] >= 5 / 7:
                     self.position[1] += 1
-                    print("if x at right 1/3, move right 1 step.")
-                pass
-            elif has_more_than_one_shoulder:  # but not both
-                # shoulders_middle = ((keypoint_info["leftShoulder"][0] + keypoint_info["rightShoulder"][0]) / 2, (keypoint_info["leftEye"][1] + keypoint_info["rightEye"][1]) / 2)
-                # # move one step opposite left or right
-                # # if x at left 1/3, move left 1 step
-                # if shoulders_middle[0] <= 1/3:
-                #     position[1] -= 1
-                # # if x at right 1/3, move right 1 step
-                # elif shoulders_middle[0] >= 2/3:
-                #     position[1] += 1
-                # pass
-                # if not has_more_than_one_one_eye:
-                #     # move up!
-                #     position[0] += 1
-                #     pass
-                pass
-            else:  # has_more_than_one_one_eye:
-                # eyes_middle = ((keypoint_info["leftEye"][0] + keypoint_info["rightEye"][0]) / 2, (keypoint_info["leftEye"][1] + keypoint_info["rightEye"][1]) / 2)
-                # # move one step opposite,
-                # # if x at left 1/3, move left 1 step
-                # if eyes_middle[0] <= 1/3:
-                #     position[1] += 1
-                # # if x at right 1/3, move right 1 step
-                # elif eyes_middle[0] >= 2/3:
-                #     position[1] -= 1
-                # # probably move down
-                # position[0] -= 1
-                # pass
+                    print("if x at right 2/7, move right 1 step.")
                 pass
 
+            # keep the position in the range.
             if self.position[0] < 0:
                 self.position[0] = 0
             elif self.position[0] > 3:
@@ -441,5 +445,10 @@ class AdjustCamera(smach.StateMachine):
                 self.position[1] = -1
             elif self.position[1] > 1:
                 self.position[1] = 1
+
+            # if counter > maxmum.
+            if self.counter > self.max_attempts:
+                return "truncated"
+            self.counter += 1
 
             return position_dict[(self.position[0], self.position[1])]

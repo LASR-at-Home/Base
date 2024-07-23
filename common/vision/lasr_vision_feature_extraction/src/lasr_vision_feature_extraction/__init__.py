@@ -1,6 +1,5 @@
 import json
 from os import path
-
 import cv2
 import numpy as np
 import rospkg
@@ -18,6 +17,25 @@ from lasr_vision_feature_extraction.image_with_masks_and_attributes import (
     ImageOfCloth,
 )
 from lasr_vision_msgs.srv import Vqa, VqaRequest
+
+
+def gaussian_blur(image, kernel_size, rep=3):
+    """
+    Apply Gaussian blur to an RGB image.
+
+    Parameters:
+    image (numpy.ndarray): The input RGB image.
+    kernel_size (int): The size of the Gaussian kernel. If an even number is provided, it will be incremented to the next odd number.
+
+    Returns:
+    numpy.ndarray: The blurred RGB image.
+    """
+    if kernel_size % 2 == 0:
+        kernel_size += 1  # Increment kernel size to make it odd if it's even
+
+    for _ in range(rep):
+        image = cv2.GaussianBlur(image, (kernel_size, kernel_size), 0)
+    return image
 
 
 def X2conv(in_channels, out_channels, inner_channels=None):
