@@ -299,7 +299,7 @@ def process_single_detection_request(
     depth_image_topic: str = "/xtion/depth_registered/points",
     yolo_2d_service_name: str = "/yolov8/detect",
     yolo_3d_service_name: str = "/yolov8/detect3d",
-    robot_pose_topic: str = "/amcl_pose",
+    robot_pose_topic: str = "/robot_pose",
     debug_topic: str = "/lasr_vision/cropped_detection/debug",
 ) -> CDResponse:
     """Dispatches a detection request to the appropriate bounding box/mask 2D or 3D cropped
@@ -311,7 +311,7 @@ def process_single_detection_request(
         depth_image_topic (str, optional): The topic to getn an RGBD image from. Defaults to "/xtion/depth_registered/points".
         yolo_2d_service_name (str, optional): Name of the 2D Yolo detection service. Defaults to "/yolov8/detect".
         yolo_3d_service_name (str, optional): Name of the 3D Yolo detection service. Defaults to "/yolov8/detect3d".
-        robot_pose_topic (str, optional): Service to get the robot's current pose. Defaults to "/amcl_pose".
+        robot_pose_topic (str, optional): Service to get the robot's current pose. Defaults to "/robot_pose".
         debug_topic (str, optional): Topic to publish results to for debugging. Defaults to "/lasr_vision/cropped_detection/debug".
 
     Returns:

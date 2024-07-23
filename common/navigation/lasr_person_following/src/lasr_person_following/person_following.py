@@ -11,7 +11,7 @@ from geometry_msgs.msg import (
     Point,
 )
 
-from typing import Union, List
+from typing import Union, List, Tuple
 
 from move_base_msgs.msg import MoveBaseAction, MoveBaseActionGoal, MoveBaseGoal
 from actionlib_msgs.msg import GoalStatus
@@ -40,6 +40,15 @@ from lasr_speech_recognition_msgs.msg import (
 
 from pal_interaction_msgs.msg import TtsGoal, TtsAction
 
+from lasr_person_following.msg import (
+    FollowAction,
+    FollowGoal,
+    FollowResult,
+    FollowFeedback,
+)
+
+from std_msgs.msg import Empty
+
 MAX_VISION_DIST: float = 5.0
 
 
@@ -63,6 +72,7 @@ class PersonFollower:
     _tts_client_available: bool
     _transcribe_speech_client: actionlib.SimpleActionClient
     _transcribe_speech_client_available: bool
+    _stop_listener_sub: rospy.Subscriber
 
     # Services
     _make_plan: rospy.ServiceProxy
@@ -73,6 +83,9 @@ class PersonFollower:
 
     # Publishers
     _person_trajectory_pub: rospy.Publisher
+
+    # Waypoints
+    _waypoints: List[PoseStamped]
 
     def __init__(
         self,
@@ -138,6 +151,17 @@ class PersonFollower:
         )
         if not self._play_motion.wait_for_server(rospy.Duration.from_sec(10.0)):
             rospy.logwarn("Play motion client not available")
+
+        self._stop_listener_sub = rospy.Subscriber(
+            "/stop_listener/finished", Empty, self._stop_listener_cb
+        )
+
+        self._should_stop = False
+
+        self._waypoints = []
+
+    def _stop_listener_cb(self, msg: Empty) -> None:
+        self._should_stop = True
 
     def _tf_pose(self, pose: PoseStamped, target_frame: str):
         trans = self._buffer.lookup_transform(
@@ -258,23 +282,19 @@ class PersonFollower:
                     ):
                         continue
                     else:
-                        goal_pose = self._get_pose_on_path(
-                            self._tf_pose(robot_pose, "map"),
-                            self._tf_pose(
-                                PoseStamped(
-                                    pose=Pose(
-                                        position=Point(
-                                            x=response.wave_position.point.x,
-                                            y=response.wave_position.point.y,
-                                            z=response.wave_position.point.z,
-                                        ),
-                                        orientation=Quaternion(0, 0, 0, 1),
+                        goal_pose = self._tf_pose(
+                            PoseStamped(
+                                pose=Pose(
+                                    position=Point(
+                                        x=response.wave_position.point.x,
+                                        y=response.wave_position.point.y,
+                                        z=response.wave_position.point.z,
                                     ),
-                                    header=prev_pose.header,
+                                    orientation=Quaternion(0, 0, 0, 1),
                                 ),
-                                "map",
+                                header=prev_pose.header,
                             ),
-                            self._stopping_distance,
+                            "map",
                         )
                         if goal_pose is None:
                             rospy.logwarn("Could not find a path to the person")
@@ -322,7 +342,7 @@ class PersonFollower:
 
     def _check_finished(self) -> bool:
         if self._tts_client_available:
-            self._tts("Have we arrived?", wait=True)
+            self._tts("Have we arrived? Please say Yes We Have Arrived", wait=True)
 
             if self._transcribe_speech_client_available:
                 self._transcribe_speech_client.send_goal_and_wait(
@@ -330,7 +350,7 @@ class PersonFollower:
                 )
                 transcription = self._transcribe_speech_client.get_result().sequence
 
-                return "yes" in transcription.lower()
+                return "yes" in transcription.lower() or "arrived" in transcription.lower() or "arrive" in transcription.lower()
         return True
 
     def _get_pose_on_path(
@@ -361,10 +381,13 @@ class PersonFollower:
 
         return chosen_pose
 
-    def _move_base(self, pose: PoseStamped) -> MoveBaseGoal:
+    def _move_base(self, pose: PoseStamped, wait=False) -> MoveBaseGoal:
         goal: MoveBaseGoal = MoveBaseGoal()
         goal.target_pose = pose
         self._move_base_client.send_goal(goal)
+
+        if wait:
+            self._move_base_client.wait_for_result()
 
         return goal
 
@@ -378,7 +401,9 @@ class PersonFollower:
             else:
                 self._tts_client.send_goal(tts_goal)
 
-    def follow(self) -> None:
+    def follow(self) -> FollowResult:
+
+        result = FollowResult()
 
         person_trajectory: PoseArray = PoseArray()
         person_trajectory.header.frame_id = "odom"
@@ -386,8 +411,10 @@ class PersonFollower:
         prev_goal: Union[None, PoseStamped] = None
         last_goal_time: Union[None, rospy.Time] = None
         going_to_person: bool = False
-        track_vels: List[float] = []
+        track_vels: List[Tuple[float, float]] = []
         asking_time: rospy.Time = rospy.Time.now()
+
+        self._tts("I will follow you now. Please walk slowly!", wait=False)
 
         while not rospy.is_shutdown():
 
@@ -408,28 +435,7 @@ class PersonFollower:
                 rospy.loginfo("Lost track of person, recovering...")
                 person_trajectory = PoseArray()
                 ask_back: bool = False
-
-                if prev_track is not None:
-                    robot_pose: PoseStamped = self._robot_pose_in_odom()
-                    if robot_pose:
-                        dist: float = self._euclidian_distance(
-                            robot_pose.pose, prev_track.pose
-                        )
-                        rospy.loginfo(f"Distance to last known position: {dist}")
-                        if dist >= MAX_VISION_DIST:
-                            ask_back = True
-                    else:
-                        ask_back = True
-                else:
-                    ask_back = True
-
-                if not ask_back:
-                    self._recover_track(
-                        say=not self._recover_vision(robot_pose, prev_goal)
-                    )
-                else:
-                    self._recover_track(say=True)
-
+                self._recover_track(say=True)
                 prev_track = None
                 continue
 
@@ -475,6 +481,8 @@ class PersonFollower:
                     "map",
                 )
                 self._move_base(goal_pose)
+
+                self._waypoints.append(goal_pose)
                 prev_goal = goal_pose
                 prev_track = track
                 last_goal_time = rospy.Time.now()
@@ -503,9 +511,21 @@ class PersonFollower:
                 # clear velocity buffer
                 track_vels = []
 
+                # clear waypoints
+                self._waypoints = []
+
                 if self._check_finished():
                     rospy.loginfo("Finished following person")
                     break
+            elif self._move_base_client.get_state() in [GoalStatus.SUCCEEDED]:
+                goal_pose = self._tf_pose(
+                    PoseStamped(pose=track.pose, header=tracks.header),
+                    "map",
+                )
+                self._move_base(goal_pose)
+                prev_goal = goal_pose
+                prev_track = track
             rospy.loginfo("")
             rospy.loginfo(np.mean([np.linalg.norm(vel) for vel in track_vels]))
             rospy.loginfo("")
+        return result

@@ -147,7 +147,7 @@ class ReceiveObject(smach.StateMachine):
                 smach.StateMachine.add(
                     "SAY_PLACE",
                     Say(
-                        text=f"Please place the {object_name} in my end-effector. I will wait for a few seconds.",
+                        text=f"Please place the {object_name} in my hand. I will wait for a few seconds.",
                     ),
                     transitions={
                         "succeeded": "WAIT_5",
@@ -159,7 +159,7 @@ class ReceiveObject(smach.StateMachine):
                 smach.StateMachine.add(
                     "SAY_PLACE",
                     Say(
-                        format_str="Please place the {} in my end-effector. I will wait for a few seconds.",
+                        format_str="Please place the {} in my hand. I will wait for a few seconds.",
                     ),
                     transitions={
                         "succeeded": "WAIT_5",
@@ -189,7 +189,7 @@ class ReceiveObject(smach.StateMachine):
             )
             smach.StateMachine.add(
                 "FOLD_ARM",
-                PlayMotion(motion_name="home"),
+                PlayMotion(motion_name="cml_arm_away"),
                 transitions={
                     "succeeded": "succeeded",
                     "aborted": "failed",
