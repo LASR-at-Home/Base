@@ -298,7 +298,7 @@ class SpeechRecovery(smach.State):
 
         Args:
             sentence_list (List[str]): Transcription split up as a list of strings.
-            choice (List[str]): List of choices to compare to (drinks or names)
+            choices (List[str]): List of choices to compare to (drinks or names)
 
         Returns:
             str: Recovered closest spelt word.
