@@ -126,11 +126,6 @@ class GetNameAndDrink(smach.StateMachine):
         last_resort: bool,
         param_key: str = "/receptionist/priors",
     ):
-        self,
-        guest_id: str,
-        last_resort: bool,
-        param_key: str = "/receptionist/priors",
-    ):
 
         self._guest_id = guest_id
         self._param_key = param_key
