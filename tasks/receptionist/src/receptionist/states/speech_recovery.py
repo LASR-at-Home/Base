@@ -161,7 +161,7 @@ class SpeechRecovery(smach.State):
             else:
                 return "succeeded"
 
-    def _handle_name(self, sentence_list, last_resort):
+    def _handle_name(self, sentence_list: List[str], last_resort: bool) -> str:
         """Attempt to recover the name in the transcription. First recover via spelling, then pronounciation.
         Enter last resort if necessary and recover the closest spelt name.
 
@@ -185,7 +185,7 @@ class SpeechRecovery(smach.State):
             print("Last resort name")
             return self._handle_closest_spelt(sentence_list, self._available_names)
 
-    def _handle_drink(self, sentence_list, last_resort):
+    def _handle_drink(self, sentence_list: List[str], last_resort: bool) -> str:
         """Attempt to recover the drink in the transcription. For phrases containing two words, try to infer the 
         second word in the phrase. If this fails, attempt to recover the drink via spelling, then pronounciation. 
         Enter last resort if necessary and recover the closest spelt drink.
@@ -233,7 +233,7 @@ class SpeechRecovery(smach.State):
                     sentence_list.append(closest_spelt)
                     return self._infer_second_drink(sentence_list)
 
-    def _handle_similar_spelt(self, sentence_list, available_words, distance_threshold):
+    def _handle_similar_spelt(self, sentence_list: List[str], available_words: List[str], distance_threshold: int) -> str:
         """Recover any word by spelling that has a similarity lower than the specified threshold 
         when comparing each word in the sentence list to the list of available words. 
 
@@ -254,7 +254,7 @@ class SpeechRecovery(smach.State):
                     return available_word
         return "unknown"
 
-    def _handle_similar_sound(self, sentence_list, available_words, distance_threshold):
+    def _handle_similar_sound(self, sentence_list: List[str], available_words: List[str], distance_threshold: int) -> str:
         """Recover any word by pronounciation that has a similarity lower than the specified threshold 
         when comparing each word in the sentence list to the list of available words. 
 
@@ -276,7 +276,7 @@ class SpeechRecovery(smach.State):
                     return available_word
         return "unknown"
 
-    def _infer_second_drink(self, sentence_list):
+    def _infer_second_drink(self, sentence_list: List[str]) -> str:
         """Infer the second word of a two-worded drink phrase and hence the entire phrase, if
         a word contained in any of the two-worded drink phrases is detected.
 
@@ -292,7 +292,7 @@ class SpeechRecovery(smach.State):
                     return self._double_drinks_dict[input_word]
         return "unknown"
 
-    def _handle_closest_spelt(self, sentence_list, choices):
+    def _handle_closest_spelt(self, sentence_list: List[str], choices: List[str]) -> str:
         """Get the closest spelt word from the list of choices (drinks or names) 
         in the sentence list (transcription).
 
@@ -315,7 +315,7 @@ class SpeechRecovery(smach.State):
                     closest_word = available_word
         return closest_word
 
-    def _recover_dubbelfris(self, sentence_list):
+    def _recover_dubbelfris(self, sentence_list: List[str]) -> bool:
         """Recover the drink dubbelfris if any of the words in the sentence list (transcription) is
         similar enough (lower than the threshold) in terms of pronounciation to the word.
 
@@ -332,7 +332,7 @@ class SpeechRecovery(smach.State):
                 return True
         return False
 
-    def _get_damerau_levenshtein_distance(self, word_1, word_2):
+    def _get_damerau_levenshtein_distance(self, word_1: str, word_2: str) -> int:
         """Get the damerau-levenshtein distance between two words for the similarity in spelling.
 
         Args:
@@ -344,7 +344,7 @@ class SpeechRecovery(smach.State):
         """
         return jf.damerau_levenshtein_distance(word_1, word_2)
 
-    def _get_levenshtein_soundex_distance(self, word_1, word_2):
+    def _get_levenshtein_soundex_distance(self, word_1: str, word_2: str) -> int:
         """Get the levenshtein distance between the soundex encoding of two words for the similarity
         in pronounciation.
 
