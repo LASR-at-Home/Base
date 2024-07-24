@@ -1,3 +1,8 @@
+"""
+State for recovering the speech transcribed via whisper (name and drink) by using 
+the spelling and pronounciation of a word.
+"""
+
 import rospy
 import smach
 import string
@@ -13,6 +18,15 @@ class SpeechRecovery(smach.State):
         last_resort: bool,
         input_type: str = "",
     ):
+        """Recover the correct name and / or drink by parsing the transcription. 
+
+        Args:
+            guest_id (str): ID of the guest (identifying the guest)
+            last_resort (bool): Whether the program must recover a name or drink
+            input_type (str, optional): The type of information to try and extract useful information
+            (drink or name)
+        """
+        
         smach.State.__init__(
             self,
             outcomes=["succeeded", "failed"],
@@ -95,6 +109,17 @@ class SpeechRecovery(smach.State):
         ]
 
     def execute(self, userdata: UserData) -> str:
+        """Optimise the transcription, then attempt to recover the drink or / and name.
+
+        Args:
+            userdata (UserData): State machine userdata assumed to contain a key
+            called "guest transcription" with the transcription of the guest's name or
+            favourite drink or both.
+
+        Returns:
+            str: state outcome. Updates the userdata with the parsed information (drink or name), under
+            the parameter "guest data".
+        """
         filtered_sentence = userdata.guest_transcription.lower().translate(
             str.maketrans("", "", string.punctuation)
         )
@@ -137,6 +162,16 @@ class SpeechRecovery(smach.State):
                 return "succeeded"
 
     def _handle_name(self, sentence_list, last_resort):
+        """Attempt to recover the name in the transcription. First recover via spelling, then pronounciation.
+        Enter last resort if necessary and recover the closest spelt name.
+
+        Args:
+            sentence_list (List[str]): Transcription split up as a list of strings.
+            last_resort (bool): Whether the program must recover a name
+
+        Returns:
+            str: Recovered name. 'unknown' is returned if no name is recovered.
+        """
         result = self._handle_similar_spelt(sentence_list, self._available_names, 1)
         if result != "unknown":
             print(f"name (spelt): {result}")
@@ -151,6 +186,17 @@ class SpeechRecovery(smach.State):
             return self._handle_closest_spelt(sentence_list, self._available_names)
 
     def _handle_drink(self, sentence_list, last_resort):
+        """Attempt to recover the drink in the transcription. For phrases containing two words, try to infer the 
+        second word in the phrase. If this fails, attempt to recover the drink via spelling, then pronounciation. 
+        Enter last resort if necessary and recover the closest spelt drink.
+
+        Args:
+            sentence_list (List[str]): Transcription split up as a list of strings.
+            last_resort (bool): Whether the program must recover a drink
+
+        Returns:
+            str: Recovered drink. 'unknown' is returned if no drink is recovered.
+        """
         result = self._infer_second_drink(sentence_list)
         if result != "unknown":
             return result
@@ -188,6 +234,17 @@ class SpeechRecovery(smach.State):
                     return self._infer_second_drink(sentence_list)
 
     def _handle_similar_spelt(self, sentence_list, available_words, distance_threshold):
+        """Recover any word by spelling that has a similarity lower than the specified threshold 
+        when comparing each word in the sentence list to the list of available words. 
+
+        Args:
+            sentence_list (List[str]): Transcription split up as a list of strings.
+            available_words (List[str]): List of available words to compare to (drinks or names)
+            distance_threshold (int): Similarity in terms of spelling distance required for a word to be recovered
+
+        Returns:
+            str: Recovered word. 'unknown' is returned if no word is recovered.
+        """
         for input_word in sentence_list:
             for available_word in available_words:
                 distance = self._get_damerau_levenshtein_distance(
@@ -198,6 +255,17 @@ class SpeechRecovery(smach.State):
         return "unknown"
 
     def _handle_similar_sound(self, sentence_list, available_words, distance_threshold):
+        """Recover any word by pronounciation that has a similarity lower than the specified threshold 
+        when comparing each word in the sentence list to the list of available words. 
+
+        Args:
+            sentence_list (List[str]): Transcription split up as a list of strings.
+            available_words (List[str]): List of available words to compare to (drinks or names)
+            distance_threshold (int): Similarity in terms of pronounciation distance required for a word to be recovered
+
+        Returns:
+            str: Recovered word or phrase. 'unknown' is returned if no word is recovered.
+        """
         for input_word in sentence_list:
             for available_word in available_words:
                 distance = self._get_levenshtein_soundex_distance(
@@ -209,6 +277,15 @@ class SpeechRecovery(smach.State):
         return "unknown"
 
     def _infer_second_drink(self, sentence_list):
+        """Infer the second word of a two-worded drink phrase and hence the entire phrase, if
+        a word contained in any of the two-worded drink phrases is detected.
+
+        Args:
+            sentence_list (List[str]): Transcription split up as a list of strings.
+
+        Returns:
+            str: Recovered drink phrase. 'unknown' is returned if no drink phrase is recovered.
+        """
         for input_word in sentence_list:
             for available_word in self._available_double_drinks:
                 if input_word == available_word:
@@ -216,6 +293,16 @@ class SpeechRecovery(smach.State):
         return "unknown"
 
     def _handle_closest_spelt(self, sentence_list, choices):
+        """Get the closest spelt word from the list of choices (drinks or names) 
+        in the sentence list (transcription).
+
+        Args:
+            sentence_list (List[str]): Transcription split up as a list of strings.
+            choice (List[str]): List of choices to compare to (drinks or names)
+
+        Returns:
+            str: Recovered closest spelt word.
+        """
         closest_distance = float("inf")
         closest_word = None
         for input_word in sentence_list:
@@ -229,6 +316,15 @@ class SpeechRecovery(smach.State):
         return closest_word
 
     def _recover_dubbelfris(self, sentence_list):
+        """Recover the drink dubbelfris if any of the words in the sentence list (transcription) is
+        similar enough (lower than the threshold) in terms of pronounciation to the word.
+
+        Args:
+            sentence_list (List[str]): Transcription split up as a list of strings.
+
+        Returns:
+            bool: Whether dubbelfris has been recovered
+        """
         for word in sentence_list:
             if self._get_levenshtein_soundex_distance("dubbelfris", word) < 3:
                 print(word)
@@ -237,9 +333,28 @@ class SpeechRecovery(smach.State):
         return False
 
     def _get_damerau_levenshtein_distance(self, word_1, word_2):
+        """Get the damerau-levenshtein distance between two words for the similarity in spelling.
+
+        Args:
+            word_1 (str): First word
+            word_2 (str): Second word
+
+        Returns:
+            int: Damerau-levenshtein distance between the two words.
+        """
         return jf.damerau_levenshtein_distance(word_1, word_2)
 
     def _get_levenshtein_soundex_distance(self, word_1, word_2):
+        """Get the levenshtein distance between the soundex encoding of two words for the similarity
+        in pronounciation.
+
+        Args:
+            word_1 (str): First word
+            word_2 (str): Second word
+
+        Returns:
+            int: Levenshtein distance between the soundex encoding of the two words.
+        """
         soundex_word_1 = jf.soundex(word_1)
         soundex_word_2 = jf.soundex(word_2)
         return jf.levenshtein_distance(soundex_word_1, soundex_word_2)
