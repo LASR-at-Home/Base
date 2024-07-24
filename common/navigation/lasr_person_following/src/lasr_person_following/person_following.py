@@ -350,7 +350,11 @@ class PersonFollower:
                 )
                 transcription = self._transcribe_speech_client.get_result().sequence
 
-                return "yes" in transcription.lower() or "arrived" in transcription.lower() or "arrive" in transcription.lower()
+                return (
+                    "yes" in transcription.lower()
+                    or "arrived" in transcription.lower()
+                    or "arrive" in transcription.lower()
+                )
         return True
 
     def _get_pose_on_path(

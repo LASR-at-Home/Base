@@ -18,7 +18,7 @@ class SpeechRecovery(smach.State):
         last_resort: bool,
         input_type: str = "",
     ):
-        """Recover the correct name and / or drink by parsing the transcription. 
+        """Recover the correct name and / or drink by parsing the transcription.
 
         Args:
             guest_id (str): ID of the guest (identifying the guest)
@@ -26,7 +26,7 @@ class SpeechRecovery(smach.State):
             input_type (str, optional): The type of information to try and extract useful information
             (drink or name)
         """
-        
+
         smach.State.__init__(
             self,
             outcomes=["succeeded", "failed"],
@@ -186,8 +186,8 @@ class SpeechRecovery(smach.State):
             return self._handle_closest_spelt(sentence_list, self._available_names)
 
     def _handle_drink(self, sentence_list: List[str], last_resort: bool) -> str:
-        """Attempt to recover the drink in the transcription. For phrases containing two words, try to infer the 
-        second word in the phrase. If this fails, attempt to recover the drink via spelling, then pronounciation. 
+        """Attempt to recover the drink in the transcription. For phrases containing two words, try to infer the
+        second word in the phrase. If this fails, attempt to recover the drink via spelling, then pronounciation.
         Enter last resort if necessary and recover the closest spelt drink.
 
         Args:
@@ -233,9 +233,14 @@ class SpeechRecovery(smach.State):
                     sentence_list.append(closest_spelt)
                     return self._infer_second_drink(sentence_list)
 
-    def _handle_similar_spelt(self, sentence_list: List[str], available_words: List[str], distance_threshold: int) -> str:
-        """Recover any word by spelling that has a similarity lower than the specified threshold 
-        when comparing each word in the sentence list to the list of available words. 
+    def _handle_similar_spelt(
+        self,
+        sentence_list: List[str],
+        available_words: List[str],
+        distance_threshold: int,
+    ) -> str:
+        """Recover any word by spelling that has a similarity lower than the specified threshold
+        when comparing each word in the sentence list to the list of available words.
 
         Args:
             sentence_list (List[str]): Transcription split up as a list of strings.
@@ -254,9 +259,14 @@ class SpeechRecovery(smach.State):
                     return available_word
         return "unknown"
 
-    def _handle_similar_sound(self, sentence_list: List[str], available_words: List[str], distance_threshold: int) -> str:
-        """Recover any word by pronounciation that has a similarity lower than the specified threshold 
-        when comparing each word in the sentence list to the list of available words. 
+    def _handle_similar_sound(
+        self,
+        sentence_list: List[str],
+        available_words: List[str],
+        distance_threshold: int,
+    ) -> str:
+        """Recover any word by pronounciation that has a similarity lower than the specified threshold
+        when comparing each word in the sentence list to the list of available words.
 
         Args:
             sentence_list (List[str]): Transcription split up as a list of strings.
@@ -292,8 +302,10 @@ class SpeechRecovery(smach.State):
                     return self._double_drinks_dict[input_word]
         return "unknown"
 
-    def _handle_closest_spelt(self, sentence_list: List[str], choices: List[str]) -> str:
-        """Get the closest spelt word from the list of choices (drinks or names) 
+    def _handle_closest_spelt(
+        self, sentence_list: List[str], choices: List[str]
+    ) -> str:
+        """Get the closest spelt word from the list of choices (drinks or names)
         in the sentence list (transcription).
 
         Args:
