@@ -118,7 +118,7 @@ class SpeechRecovery(smach.State):
 
         Returns:
             str: state outcome. Updates the userdata with the parsed information (drink or name), under
-            the parameter "guest data".
+            the parameter "guest_data".
         """
         filtered_sentence = userdata.guest_transcription.lower().translate(
             str.maketrans("", "", string.punctuation)
