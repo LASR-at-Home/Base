@@ -19,7 +19,7 @@ if __name__ == "__main__":
     seat_area_publisher = rospy.Publisher(
         "/receptionist/seat_area", PolygonStamped, queue_size=1, latch=True
     )
-    # Test
+
     sofa_area_publisher = rospy.Publisher(
         "/receptionist/sofa_area", PolygonStamped, queue_size=1, latch=True
     )
