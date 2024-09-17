@@ -40,12 +40,7 @@ from lasr_speech_recognition_msgs.msg import (
 
 from pal_interaction_msgs.msg import TtsGoal, TtsAction
 
-from lasr_person_following.msg import (
-    FollowAction,
-    FollowGoal,
-    FollowResult,
-    FollowFeedback,
-)
+from lasr_person_following.action import Follow
 
 from std_msgs.msg import Empty
 
@@ -350,7 +345,11 @@ class PersonFollower:
                 )
                 transcription = self._transcribe_speech_client.get_result().sequence
 
-                return "yes" in transcription.lower() or "arrived" in transcription.lower() or "arrive" in transcription.lower()
+                return (
+                    "yes" in transcription.lower()
+                    or "arrived" in transcription.lower()
+                    or "arrive" in transcription.lower()
+                )
         return True
 
     def _get_pose_on_path(
