@@ -193,11 +193,19 @@ class CarryMyLuggage(smach.StateMachine):
 
             def start_pose_cb(ud):
                 try:
-                    ud.start_pose = rospy.wait_for_message("/robot_pose", PoseWithCovarianceStamped, timeout=rospy.Duration(5.0)).pose.pose
+                    ud.start_pose = rospy.wait_for_message(
+                        "/robot_pose",
+                        PoseWithCovarianceStamped,
+                        timeout=rospy.Duration(5.0),
+                    ).pose.pose
                 except rospy.ROSException:
                     rospy.logerr("Failed to get robot pose")
-                    ud.start_pose = Pose(position=Point(0., 0., 0.0), orientation=Quaternion(0., 0., 0., 1.))
+                    ud.start_pose = Pose(
+                        position=Point(0.0, 0.0, 0.0),
+                        orientation=Quaternion(0.0, 0.0, 0.0, 1.0),
+                    )
                 return "succeeded"
+
             smach.StateMachine.add(
                 "GET_START_LOCATION",
                 smach.CBState(
@@ -205,7 +213,7 @@ class CarryMyLuggage(smach.StateMachine):
                     outcomes=["succeeded"],
                     output_keys=["start_pose"],
                 ),
-                transitions={"succeeded": "SAY_STEP"}
+                transitions={"succeeded": "SAY_STEP"},
             )
 
             smach.StateMachine.add(
@@ -261,8 +269,8 @@ class CarryMyLuggage(smach.StateMachine):
             )
 
             smach.StateMachine.add(
-                "GO_TO_START", # todo: instead, get the start position within the state machine, and return to it at the end
+                "GO_TO_START",  # todo: instead, get the start position within the state machine, and return to it at the end
                 GoToLocation(),
-                remapping={"location" : "start_pose"},
+                remapping={"location": "start_pose"},
                 transitions={"succeeded": "succeeded", "failed": "succeeded"},
             )
