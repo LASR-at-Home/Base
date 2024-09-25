@@ -1,2 +1,0 @@
-# confirmation
-bool value

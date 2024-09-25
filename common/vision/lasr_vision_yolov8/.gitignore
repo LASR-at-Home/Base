@@ -1,3 +1,0 @@
-# keep models folder
-models/**
-!models/.gitkeep

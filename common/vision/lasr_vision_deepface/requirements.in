@@ -1,3 +1,0 @@
-deepface==0.0.91
-tensorflow==2.9.0
-numpy>=1.2.1

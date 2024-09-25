@@ -1,3 +1,0 @@
-sensor_msgs/PointCloud2 points
----
-geometry_msgs/PointStamped centroid

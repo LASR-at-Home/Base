@@ -1,3 +1,0 @@
-# keep datasets folder
-datasets/**
-!datasets/.gitkeep
