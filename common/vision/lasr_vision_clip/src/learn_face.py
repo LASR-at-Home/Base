@@ -21,7 +21,7 @@ from lasr_vision_clip import load_face_model, encode_img, infer
 
 class FaceService(Node):
     def __init__(self, similarity_threshold: float = 6.0) -> None:
-        super().__init__('face_service_node')
+        super().__init__("face_service_node")
 
         self._face_classifier = cv2.CascadeClassifier(
             os.path.join(
@@ -38,7 +38,9 @@ class FaceService(Node):
 
         self.bridge = CvBridge()
 
-        self.create_service(ClipRecogniseFace, "/vision/face_detection", self.face_detection)
+        self.create_service(
+            ClipRecogniseFace, "/vision/face_detection", self.face_detection
+        )
         self.create_service(ClipLearnFace, "/vision/learn_face", self.learn_face)
 
         self.get_logger().info("Face detector service started")
@@ -68,7 +70,11 @@ class FaceService(Node):
                 # cv2_face = cv2.cvtColor(cv2_face, cv2.COLOR_GRAY2BGR)
                 face_msg = self.bridge.cv2_to_imgmsg(cv2_face, "bgr8")
                 self._face_pub.publish(face_msg)
-                encoded_face = infer(self.bridge.cv2_to_imgmsg(cv2_img, "bgr8"), self.processor, self.model)
+                encoded_face = infer(
+                    self.bridge.cv2_to_imgmsg(cv2_img, "bgr8"),
+                    self.processor,
+                    self.model,
+                )
                 encoded_face = encoded_face.flatten()
                 for name, face in self.learned_faces.items():
                     distance = np.linalg.norm(encoded_face - face)
@@ -102,7 +108,11 @@ class FaceService(Node):
                 # cv2_face = cv2.cvtColor(cv2_face, cv2.COLOR_GRAY2BGR)
                 face_msg = self.bridge.cv2_to_imgmsg(cv2_face, "bgr8")
                 self._face_pub.publish(face_msg)
-                encoded_face = infer(self.bridge.cv2_to_imgmsg(cv2_img, "bgr8"), self.processor, self.model)
+                encoded_face = infer(
+                    self.bridge.cv2_to_imgmsg(cv2_img, "bgr8"),
+                    self.processor,
+                    self.model,
+                )
                 encoded_face = encoded_face.flatten()
                 embedding_vectors.append(encoded_face)
 
@@ -112,5 +122,3 @@ class FaceService(Node):
         self.get_logger().info(f"Learned {request.name}")
 
         return ClipLearnFaceResponse()
-    
-    
