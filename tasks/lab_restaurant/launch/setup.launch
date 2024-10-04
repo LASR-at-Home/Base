@@ -1,0 +1,22 @@
+<launch>
+
+    <!--     PARAMS     -->
+    <arg name="config" default="robocup_sspl_and_opl"/>
+
+    <!--     INTERACTION     -->
+    <arg name="whisper_device_param" default="9" />
+    <node pkg="lasr_speech_recognition_whisper" type="transcribe_microphone_server" name="transcribe_speech" output="screen" args="--mic_device $(arg whisper_device_param)"/>
+
+    <!--     STATIC POINTS     -->
+    <rosparam command="load" file="$(find receptionist)/config/$(arg config).yaml" ns="receptionist" />
+
+    <!--     MOTIONS     -->
+    <rosparam command="load" file="$(find lasr_skills)/config/motions.yaml"/>
+    <rosparam command="load" file="$(find receptionist)/config/motions.yaml"/>
+
+    <!--      PERCEPTION     -->
+    <include file="$(find lasr_vision_cropped_detection)/launch/cropped_detection.launch"/>
+    <node pkg="lasr_vision_clip" name="clip_service" type="vqa" output="screen"/>
+    <node pkg="lasr_vision_bodypix" type="bodypix_services.py" name="bodypix_service" output="screen"/>
+
+</launch>
