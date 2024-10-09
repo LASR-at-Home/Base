@@ -6,13 +6,13 @@ from rclpy.node import Node
 from typing import Dict
 import numpy as np
 from ament_index_python.packages import get_package_share_directory
-from lasr_vision_msgs.srv import (
-    ClipRecogniseFaceRequest,
-    ClipRecogniseFaceResponse,
+from lasr_vision_interfaces.srv import (
+    # ClipRecogniseFaceRequest,
+    # ClipRecogniseFaceResponse,
     ClipLearnFace,
-    ClipRecogniseFace,
-    ClipLearnFaceRequest,
-    ClipLearnFaceResponse,
+    # ClipRecogniseFace,
+    # ClipLearnFaceRequest,
+    # ClipLearnFaceResponse,
 )
 from sensor_msgs.msg import Image
 from cv2_img import msg_to_cv2_img, cv2_img_to_msg
