@@ -1,4 +1,4 @@
-#!/usr/bin python3
+#!/usr/bin/env python3
 import torch
 import cv2
 import cv2_img
