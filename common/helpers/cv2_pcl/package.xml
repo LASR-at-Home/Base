@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>cv2_pcl</name>
+  <version>0.0.0</version>
+  <description>The cv2_pcl package</description>
+
+  <!-- One maintainer tag required, multiple allowed, one person per tag -->
+  <maintainer email="jared.swift@kcl.ac.uk">Jared Swift</maintainer>
+
+  <!-- One license tag required, multiple allowed, one license per tag -->
+  <license>MIT</license>
+
+  <!-- Dependency for build tool in ROS2 -->
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <!-- ROS2 package dependencies -->
+  <depend>rclpy</depend>
+  <depend>sensor_msgs</depend>
+  <depend>cv_bridge</depend>  <!-- if using OpenCV -->
+  <depend>cv2_img</depend>
+
+  <!-- The export tag contains other, unspecified, tags -->
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
+s
