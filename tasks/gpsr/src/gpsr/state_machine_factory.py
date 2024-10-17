@@ -9,7 +9,6 @@ from lasr_skills import (
     Guide,
     HandoverObject,
     Say,
-    ReceiveObject,
     FindPersonAndTell,
     CountPeople,
     LookToPoint,
@@ -36,7 +35,7 @@ from geometry_msgs.msg import (
     PointStamped,
 )
 from std_msgs.msg import Header
-
+from std_srvs.srv import Trigger
 from lasr_skills import GoToLocation
 
 STATE_COUNT = 0
@@ -781,35 +780,9 @@ def take(command_param: Dict, sm: smach.StateMachine) -> None:
 
     sm.add(
         f"STATE_{increment_state_count()}",
-        Say(
-            text=f"Please pick up the {criteria_value} on the {command_param['location']} for me."
-        ),
+        smach_ros.ServiceState("tiago_kcl_moveit_grasp/grasp_object", Trigger),
         transitions={
             "succeeded": f"STATE_{STATE_COUNT + 1}",
-            "aborted": f"STATE_{STATE_COUNT + 1}",
-            "preempted": f"STATE_{STATE_COUNT + 1}",
-        },
-    )
-
-    sm.add(
-        f"STATE_{increment_state_count()}",
-        GoToLocation(
-            location=get_location_pose(
-                command_param["location"], False, dem_manipulation=True
-            ),
-        ),
-        transitions={
-            "succeeded": f"STATE_{STATE_COUNT + 1}",
-            "failed": f"STATE_{STATE_COUNT + 1}",
-        },
-    )
-
-    sm.add(
-        f"STATE_{increment_state_count()}",
-        ReceiveObject(object_name=criteria_value),
-        transitions={
-            "succeeded": f"STATE_{STATE_COUNT + 1}",
-            "failed": f"STATE_{STATE_COUNT + 1}",
         },
     )
 
@@ -908,35 +881,9 @@ def bring(command_param: Dict, sm: smach.StateMachine) -> None:
 
     sm.add(
         f"STATE_{increment_state_count()}",
-        Say(
-            text=f"Please pick up the {command_param['object']} on the {command_param['location']} for me."
-        ),
+        smach_ros.ServiceState("tiago_kcl_moveit_grasp/grasp_object", Trigger),
         transitions={
             "succeeded": f"STATE_{STATE_COUNT + 1}",
-            "aborted": f"STATE_{STATE_COUNT + 1}",
-            "preempted": f"STATE_{STATE_COUNT + 1}",
-        },
-    )
-
-    sm.add(
-        f"STATE_{increment_state_count()}",
-        GoToLocation(
-            location=get_location_pose(
-                command_param["location"], False, dem_manipulation=True
-            ),
-        ),
-        transitions={
-            "succeeded": f"STATE_{STATE_COUNT + 1}",
-            "failed": f"STATE_{STATE_COUNT + 1}",
-        },
-    )
-
-    sm.add(
-        f"STATE_{increment_state_count()}",
-        ReceiveObject(object_name=command_param["object"]),
-        transitions={
-            "succeeded": f"STATE_{STATE_COUNT + 1}",
-            "failed": f"STATE_{STATE_COUNT + 1}",
         },
     )
 
