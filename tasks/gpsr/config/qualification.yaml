@@ -1,0 +1,36 @@
+
+arena:
+  polygon: []
+  start_pose:
+    position: 
+      x: -0.0933573390787798
+      y: 0.5861360829622231
+      z: 0.0
+    orientation: 
+      x: 0.0
+      y: 0.0
+      z: 0.08775558408769461
+      w: 0.9961420367906514
+
+  rooms:
+    kitchen:
+      pose: null
+      room_polygon: []
+      people_search_poses: []
+      beacons:
+        kitchen_counter:
+          placeable: true
+          object_category: "drinks"
+          object_detection_pose:
+            position: 
+              x: 3.160620048254749
+              y: 1.0166561962919571
+              z: 0.0
+            orientation: 
+              x: 0.0
+              y: 0.0
+              z: 0.09876241454837013
+              w: 0.9951110417800497
+objects:
+  - drinks:
+      ["cola"]
