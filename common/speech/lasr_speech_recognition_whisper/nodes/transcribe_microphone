@@ -1,7 +1,7 @@
 #!/usr/bin python3
 import os
 import torch
-import rospkg
+from ament_index_python import packages
 from pathlib import Path
 
 WHISPER_CACHE = os.path.join(str(Path.home()), '.cache', 'whisper')
@@ -39,9 +39,11 @@ else:
         print('Invalid matcher')
         exit(1)
 
-import rospy
+import rclpy
 from std_srvs.srv import Empty, EmptyResponse
-rospy.init_node('transcribe_mic', anonymous=True)
+
+with rclpy.init(args=None):
+    node = rclpy.create_node('transcribe_mic')  # was anonymous in ROS1
 
 from lasr_speech_recognition_whisper import SpeechRecognitionToTopic, MicrophonePhraseCollector, load_model
 
@@ -53,10 +55,9 @@ collector.adjust_for_noise()
 model = load_model("medium.en")
 
 # try to run inference on the example file
-r = rospkg.RosPack()
-EXAMPLE_FILE = r.get_path('lasr_speech_recognition_whisper') + "/test.m4a"
-rospy.loginfo("Running transcription on example file to ensure model is loaded...")
-rospy.loginfo(model.transcribe(EXAMPLE_FILE, fp16=torch.cuda.is_available()))
+EXAMPLE_FILE = packages.get_package_share_path('lasr_speech_recognition_whisper') + "/test.m4a"
+node.get_logger().info("Running transcription on example file to ensure model is loaded...")
+node.get_logger().info(model.transcribe(EXAMPLE_FILE, fp16=torch.cuda.is_available()))
 
 worker = SpeechRecognitionToTopic(collector, model, "transcription", infer_partial = False)
 
@@ -72,9 +73,9 @@ def stop_listening(_):
     worker.stop()
     return EmptyResponse()
 
-rospy.Service('/whisper/adjust_for_noise', Empty, adjust_for_noise)
-rospy.Service('/whisper/start_listening', Empty, start_listening)
-rospy.Service('/whisper/stop_listening', Empty, stop_listening)
+node.create_service(Empty, '/whisper/adjust_for_noise', adjust_for_noise)
+node.create_service(Empty, '/whisper/start_listening', start_listening)
+node.create_service(Empty, '/whisper/stop_listening', stop_listening)
 
-rospy.loginfo("Starting the Whisper worker!")
-rospy.spin()
+node.get_logger().info("Starting the Whisper worker!")
+rclpy.spin(node)

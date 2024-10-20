@@ -9,6 +9,7 @@ from lasr_speech_recognition_whisper import load_model  # type: ignore
 import sounddevice  # needed to remove ALSA error messages
 from typing import Dict
 
+# TODO argparse -> ROS params
 
 def parse_args() -> Dict:
     parser = argparse.ArgumentParser()

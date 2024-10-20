@@ -1,5 +1,5 @@
 import torch
-import rospy
+import rclpy
 import whisper
 import speech_recognition as sr
 
@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 
 from .collector import AbstractPhraseCollector
 
-from lasr_speech_recognition_msgs.msg import Transcription
+from lasr_speech_recognition_interfaces.msg import Transcription
 
 
 class SpeechRecognitionWorker(ABC):
@@ -36,6 +36,8 @@ class SpeechRecognitionWorker(ABC):
         maximum_phrase_length=timedelta(seconds=3),
         infer_partial=True,
     ) -> None:
+        with rclpy.init(args=None):
+            self.node = rclpy.create_node('worker')
         self._collector = collector
         self._tmp_file = NamedTemporaryFile().name
         self._model = model
@@ -68,7 +70,7 @@ class SpeechRecognitionWorker(ABC):
         Run inference on the current sample
         """
 
-        rospy.loginfo("Processing sample")
+        self.node.get_logger().info("Processing sample")
         audio_data = sr.AudioData(
             self._current_sample,
             self._collector.sample_rate(),
@@ -79,7 +81,7 @@ class SpeechRecognitionWorker(ABC):
         with open(self._tmp_file, "w+b") as f:
             f.write(wav_data.read())
 
-        rospy.loginfo("Running inference")
+        self.node.get_logger().info("Running inference")
         try:
             result = self._model.transcribe(
                 self._tmp_file, fp16=torch.cuda.is_available()
@@ -92,7 +94,7 @@ class SpeechRecognitionWorker(ABC):
         if len(text) == 0 or text.lower() in [".", "you", "thanks for watching!"]:
             self._phrase_start = None
             self._current_sample = bytes()
-            rospy.loginfo("Skipping garbage...")
+            self.node.get_logger().info("Skipping garbage...")
             return None
 
         return text
@@ -102,7 +104,7 @@ class SpeechRecognitionWorker(ABC):
         Indefinitely perform inference on the given data
         """
 
-        rospy.loginfo("Started inference worker")
+        self.node.get_logger().info("Started inference worker")
 
         while not self._stopped:
             try:
@@ -112,7 +114,7 @@ class SpeechRecognitionWorker(ABC):
                     self._phrase_start
                     and now - self._phrase_start > self._maximum_phrase_length
                 ):
-                    rospy.loginfo("Reached timeout for phrase, ending now.")
+                    self.node.get_logger().info("Reached timeout for phrase, ending now.")
                     self._finish_phrase()
 
                 # Start / continue phrase if data is coming in
@@ -123,7 +125,7 @@ class SpeechRecognitionWorker(ABC):
                     while not self._collector.data.empty():
                         self._current_sample += self._collector.data.get()
 
-                    rospy.loginfo(
+                    self.node.get_logger().info(
                         "Received and added more data to current audio sample."
                     )
 
@@ -139,7 +141,7 @@ class SpeechRecognitionWorker(ABC):
             except KeyboardInterrupt:
                 self._stopped = True
 
-        rospy.loginfo("Worker finished")
+        self.node.get_logger().info("Worker finished")
 
     def start(self):
         """
@@ -173,7 +175,7 @@ class SpeechRecognitionToStdout(SpeechRecognitionWorker):
     """
 
     def on_phrase(self, phrase: str, finished: bool) -> None:
-        rospy.loginfo("[" + ("x" if finished else " ") + "] " + phrase)
+        self.node.get_logger().info("[" + ("x" if finished else " ") + "] " + phrase)
 
 
 class SpeechRecognitionToTopic(SpeechRecognitionToStdout):
@@ -181,7 +183,7 @@ class SpeechRecognitionToTopic(SpeechRecognitionToStdout):
     Recognise speech and publish it to a topic
     """
 
-    _pub: rospy.Publisher
+    # _pub: node.create_publisher() TODO add type if possible
 
     def __init__(
         self,
@@ -192,8 +194,8 @@ class SpeechRecognitionToTopic(SpeechRecognitionToStdout):
         infer_partial=True,
     ) -> None:
         super().__init__(collector, model, maximum_phrase_length, infer_partial)
-        rospy.loginfo(f"Will be publishing transcription to {topic}")
-        self._pub = rospy.Publisher(topic, Transcription, queue_size=5)
+        self.node.get_logger().info(f"Will be publishing transcription to {topic}")
+        self._pub = self.node.create_publisher(Transcription, topic, 5)
 
     def on_phrase(self, phrase: str, finished: bool) -> None:
         super().on_phrase(phrase, finished)

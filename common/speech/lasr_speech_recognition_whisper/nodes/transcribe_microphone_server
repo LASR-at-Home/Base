@@ -12,14 +12,18 @@ import torch
 
 import rclpy
 from rclpy.node import Node
-from rclpy.action import ActionServer
+from rclpy.action.server import ActionServer, CancelResponse
 
 import speech_recognition as sr  # type: ignore
-import lasr_speech_recognition_msgs.msg  # type: ignore
+import lasr_speech_recognition_interfaces.msg  # type: ignore
+from rclpy.executors import ExternalShutdownException
 from std_msgs.msg import String  # type: ignore
-from lasr_speech_recognition_whisper import load_model  # type: ignore
+from lasr_speech_recognition_whisper import ModelCache # type: ignore
 
-# TODO: argpars -> ROS2 params, behaviour of preemption, behaviour of rclpy.spin(node)  
+# from common.speech.lasr_speech_recognition_whisper.scripts.repeat_after_me import result
+
+
+# TODO: argpars -> ROS2 params, test behaviour of preemption
 
 @dataclass
 class speech_model_params:
@@ -51,10 +55,10 @@ class speech_model_params:
     pause_threshold: Optional[float] = 2.0
 
 
-class TranscribeSpeechAction(object):
+class TranscribeSpeechAction(object, Node):
     # create messages that are used to publish feedback/result
-    _feedback = lasr_speech_recognition_msgs.msg.TranscribeSpeechFeedback()
-    _result = lasr_speech_recognition_msgs.msg.TranscribeSpeechResult()
+    _feedback = lasr_speech_recognition_interfaces.msg.TranscribeSpeechFeedback()
+    _result = lasr_speech_recognition_interfaces.msg.TranscribeSpeechResult()
 
     def __init__(
             self,
@@ -66,33 +70,35 @@ class TranscribeSpeechAction(object):
         Args:
             action_name (str): Name of the action server.
         """
-
+        Node.__init__(self, "transcribe_speech_action")
         self._action_name = action_name
         self._model_params = model_params
-        self._transcription_server = node.create_publisher(
+        self._transcription_server = self.create_publisher(
             String, "/live_speech_transcription", 10
         )
 
-        self._model = load_model(
+        self._model = ModelCache.load_model(
             self._model_params.model_name,
             self._model_params.device,
             self._model_params.warmup,
         )
         # Configure the speech recogniser object and adjust for ambient noise
         self.recogniser = self._configure_recogniser()
-        # Setup the action server and register execution callback
-        # TODO check behaviour of ActionServer
+
+        # Set up the action server and register execution callback
         self._action_server = ActionServer(
+            self,
+            lasr_speech_recognition_interfaces.action.TranscribeSpeechAction,
             self._action_name,
-            lasr_speech_recognition_msgs.msg.TranscribeSpeechAction,
-            execute_cb=self.execute_cb,
-            auto_start=False,
+            execute_callback=self.execute_cb,
+            cancel_callback=self.cancel_cb,
+            # auto_start=False,  # not required in ROS2 ?? (cb is async)
         )
-        self._action_server.register_preempt_callback(self.prempt_cb)
+        self._action_server.register_cancel_callback(self.cancel_cb)
         self._listening = False
 
-        self._action_server.start()
-        rclpy.get_logger().info(f"Speech Action server {self._action_name} started")
+        # self._action_server.start()  # not required in ROS2
+        self.get_logger().info(f"Speech Action server {self._action_name} started")
 
     def _configure_microphone(self) -> sr.Microphone:
         """Configures the microphone for listening to speech based on the
@@ -159,28 +165,33 @@ class TranscribeSpeechAction(object):
         self._listening = False
         return recogniser
 
-    def prempt_cb(self) -> None:
-        """Callback for preempting the action server.
-
-        Sets server to preempted state.
+    def cancel_cb(self, goal_handle) -> CancelResponse:
+        """Callback for cancelling the action server.
+        Sets server to 'canceled' state.
         """
-        preempted_str = f"{self._action_name} has been preempted"
-        rclpy.get_logger().info(preempted_str)
-        self._result.sequence = preempted_str
-        self._action_server.set_preempted(result=self._result, text=preempted_str)
+        cancel_str = f"{self._action_name} has been cancelled"
+        self.get_logger().info(cancel_str)
+        self._result.sequence = cancel_str
 
-    def execute_cb(self, goal) -> None:
+        # self._action_server.set_preempted(result=self._result, text=cancel_str)
+        goal_handle.canceled()
+
+        return CancelResponse.ACCEPT  # TODO decide if always accept cancellation
+
+    async def execute_cb(self, goal_handle) -> None:
         """Callback for executing the action server.
 
-        Checks for preemption before listening and before and after transcribing, returning
-        if preemption is requested.
+        Checks for cancellation before listening and before and after transcribing, returning
+        if cancellation is requested.
 
         Args:
-            goal: UNUSED - actionlib requires a goal argument in the execute callback, but
-            this action server does not use a goal.
+            :param goal_handle: handles the goal request, and provides access to the goal parameters
         """
-        rclpy.get_logger().info("Request Received")
-        if self._action_server.is_preempt_requested():
+
+        goal = goal_handle.request
+
+        self.get_logger().info("Request Received")
+        if goal_handle.is_cancel_requested():
             return
 
         if goal.energy_threshold > 0.0 and goal.max_phrase_limit > 0.0:
@@ -207,11 +218,13 @@ class TranscribeSpeechAction(object):
                 / 32768.0
         )
 
-        if self._action_server.is_preempt_requested():
+        if goal_handle.is_cancel_requested():
             self._listening = False
-            return
+            self.get_logger().info("Goal was cancelled during execution.")
+            goal_handle.canceled()
+            return self._result
 
-        rclpy.get_logger().info(f"Transcribing phrase with Whisper...")
+        self.get_logger().info(f"Transcribing phrase with Whisper...")
         transcription_start_time = timer()
         # Cast to fp16 if using GPU
         phrase = self._model.transcribe(
@@ -219,22 +232,25 @@ class TranscribeSpeechAction(object):
             fp16=self._model_params.device == "cuda",
         )["text"]
         transcription_end_time = timer()
-        rclpy.get_logger().info(f"Transcription finished!")
-        rclpy.get_logger().info(
+        self.get_logger().info(f"Transcription finished!")
+        self.get_logger().info(
             f"Time taken: {transcription_end_time - transcription_start_time:.2f}s"
         )
         self._transcription_server.publish(phrase)
-        if self._action_server.is_preempt_requested():
+        if goal_handle.is_cancel_requested():
             self._listening = False
             return
 
         self._result.sequence = phrase
-        rclpy.get_logger().info(f"Transcribed phrase: {phrase}")
-        rclpy.get_logger().info(f"{self._action_name} has succeeded")
-        self._action_server.set_succeeded(self._result)
+        self.get_logger().info(f"Transcribed phrase: {phrase}")
+        self.get_logger().info(f"{self._action_name} has succeeded")
+
+        goal_handle.succeed()
 
         # Have this at the very end to not disrupt the action server
         self._listening = False
+
+        return self._result
 
 
 def parse_args() -> dict:
@@ -355,20 +371,21 @@ def configure_whisper_cache() -> None:
     """Configures the whisper cache directory."""
     whisper_cache = os.path.join(str(Path.home()), ".cache", "whisper")
     os.makedirs(whisper_cache, exist_ok=True)
-    # Environemntal variable required to run whisper locally
+    # Environmental variable required to run whisper locally
     os.environ["TIKTOKEN_CACHE_DIR"] = whisper_cache
 
 def main(args=None):
+    rclpy.init(args=args)
+
     configure_whisper_cache()
     config = parse_args()
-    try:
-        rclpy.init(args=args)
-        whisper_node = rclpy.create_node("transcribe_speech_server")
 
-        server = TranscribeSpeechAction("transcribe_speech", configure_model_params(config))
-        rclpy.spin(whisper_node)  # TODO check behaviour (was rospy.spin())
+    server = TranscribeSpeechAction("transcribe_speech", configure_model_params(config))
+
+    try:
+        rclpy.spin(server)
     except (KeyboardInterrupt, ExternalShutdownException):
         pass
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()

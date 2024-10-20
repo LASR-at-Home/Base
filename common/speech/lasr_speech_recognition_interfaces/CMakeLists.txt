@@ -7,6 +7,9 @@ endif()
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
+find_package(rclpy REQUIRED)
+find_package(action_msgs REQUIRED)
+
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
@@ -20,6 +23,8 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/TranscribeAudio.srv"
   DEPENDENCIES builtin_interfaces # Add packages that above messages depend on
 )
+
+ament_export_dependencies(rosidl_default_runtime)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)

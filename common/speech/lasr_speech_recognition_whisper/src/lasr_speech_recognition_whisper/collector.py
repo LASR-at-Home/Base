@@ -1,4 +1,4 @@
-import rospy
+import rclpy
 
 import speech_recognition as sr
 
@@ -65,6 +65,9 @@ class RecognizerPhraseCollector(AbstractPhraseCollector):
         self, energy_threshold: int = 500, phrase_time_limit: float = 2
     ) -> None:
         super().__init__()
+        with rclpy.init(args=None):
+            self.node = rclpy.create_node('source')
+
         self._recorder = sr.Recognizer()
         self._recorder.dynamic_energy_threshold = False
         self._recorder.energy_threshold = energy_threshold
@@ -72,13 +75,13 @@ class RecognizerPhraseCollector(AbstractPhraseCollector):
 
     @abstractmethod
     def adjust_for_noise(self, source: sr.AudioSource):
-        rospy.loginfo("Adjusting for background noise...")
+        self.node.get_logger().info("Adjusting for background noise...")
         with source:
             self._recorder.adjust_for_ambient_noise(source)
 
     @abstractmethod
     def start(self, source: sr.AudioSource):
-        rospy.loginfo("Started source listen thread")
+        self.node.get_logger().info("Started source listen thread")
         self._stopper = self._recorder.listen_in_background(
             source, self._record_callback, phrase_time_limit=self._phrase_time_limit
         )

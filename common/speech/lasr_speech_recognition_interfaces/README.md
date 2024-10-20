@@ -1,4 +1,4 @@
-# lasr_speech_recognition_msgs
+# lasr_speech_recognition_interfaces
 
 Common messages used for speech recognition
 

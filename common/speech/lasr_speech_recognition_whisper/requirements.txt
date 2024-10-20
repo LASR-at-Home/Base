@@ -1,9 +1,6 @@
-catkin-pkg==1.0.0         # via rospkg
 certifi==2024.2.2         # via requests
 cffi==1.16.0              # via sounddevice
 charset-normalizer==3.3.2  # via requests
-distro==1.9.0             # via rospkg
-docutils==0.21.2          # via catkin-pkg
 filelock==3.14.0          # via torch, triton
 fsspec==2024.3.1          # via torch
 idna==3.7                 # via requests
@@ -28,14 +25,11 @@ nvidia-nccl-cu12==2.20.5  # via torch
 nvidia-nvjitlink-cu12==12.4.127  # via nvidia-cusolver-cu12, nvidia-cusparse-cu12
 nvidia-nvtx-cu12==12.1.105  # via torch
 openai-whisper==20231117  # via -r requirements.in
-pyaudio==0.2.13           # via -r requirements.in
+# pyaudio==0.2.13           # via -r requirements.in
 pycparser==2.22           # via cffi
-pyparsing==3.1.2          # via catkin-pkg
-python-dateutil==2.9.0.post0  # via catkin-pkg
-pyyaml==6.0.1             # via -r requirements.in, rospkg
+pyyaml==6.0.1             # via -r requirements.in
 regex==2024.4.28          # via tiktoken
 requests==2.31.0          # via speechrecognition, tiktoken
-rospkg==1.5.0             # via -r requirements.in
 six==1.16.0               # via python-dateutil
 sounddevice==0.4.6        # via -r requirements.in
 speechrecognition==3.10.0  # via -r requirements.in

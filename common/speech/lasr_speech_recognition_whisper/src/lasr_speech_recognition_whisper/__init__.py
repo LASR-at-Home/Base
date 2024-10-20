@@ -9,4 +9,4 @@ from .worker import (
     SpeechRecognitionToStdout,
     SpeechRecognitionToTopic,
 )
-from .cache import load_model
+from .cache import ModelCache

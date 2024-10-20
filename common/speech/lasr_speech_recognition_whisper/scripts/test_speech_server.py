@@ -1,17 +1,22 @@
 #!/usr/bin python3
+from argparse import Action
+
 import rclpy
-import actionlib  # TODO change to reg actions
-from lasr_speech_recognition_msgs.srv import TranscribeAudio, TranscribeAudioResponse  # type: ignore
-from lasr_speech_recognition_msgs.msg import (  # type: ignore
+from rclpy.action import ActionClient
+from lasr_speech_recognition_interfaces.srv import TranscribeAudio, TranscribeAudioResponse  # type: ignore
+from lasr_speech_recognition_interfaces.msg import (  # type: ignore
     TranscribeSpeechAction,
     TranscribeSpeechGoal,
 )
 
+# TODO port file: action client, is_shutdown
 
-rospy.init_node("test_speech_server")
-client = actionlib.SimpleActionClient("transcribe_speech", TranscribeSpeechAction)
+with rclpy.init(args=None):
+    node = rclpy.create_node("test_speech_server")
+
+client = ActionClient("transcribe_speech", TranscribeSpeechAction)
 client.wait_for_server()
-rospy.loginfo("Done waiting")
+node.get_logger().info("Done waiting")
 while not rospy.is_shutdown():
     goal = TranscribeSpeechGoal()
     client.send_goal(goal)

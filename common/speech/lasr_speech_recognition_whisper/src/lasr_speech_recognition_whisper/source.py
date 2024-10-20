@@ -1,4 +1,4 @@
-import rospy
+import rclpy
 import pyaudio
 import speech_recognition as sr
 
@@ -6,6 +6,7 @@ from audio_common_msgs.msg import AudioInfo, AudioData
 
 from .bytesfifo import BytesFIFO
 
+# TODO rospy.wait_for_message()
 
 class AudioTopic(sr.AudioSource):
     """
@@ -13,15 +14,18 @@ class AudioTopic(sr.AudioSource):
     """
 
     _topic: str
-    _sub: rospy.Subscriber
+    # _sub: node.create_subscription TODO add type if possible
 
     def __init__(self, topic: str, chunk_size=1024) -> None:
+        with rclpy.init(args=None):
+            self.node = rclpy.create_node('source')
+
         self._topic = topic
 
         config: AudioInfo = rospy.wait_for_message(f"{topic}/audio_info", AudioInfo)
         assert config.coding_format == "wave", "Expected Wave audio format"
         assert config.sample_format == "S16LE", "Expected sample format S16LE"
-        rospy.loginfo(config)
+        self.node.get_logger().info(config)
 
         self.SAMPLE_WIDTH = pyaudio.get_sample_size(pyaudio.paInt16)
         self.SAMPLE_RATE = config.sample_rate
@@ -38,7 +42,7 @@ class AudioTopic(sr.AudioSource):
             self.stream is None
         ), "This audio source is already inside a context manager"
         self.stream = BytesFIFO(1024 * 10)  # 10 kB buffer
-        self._sub = rospy.Subscriber(f"{self._topic}/audio", AudioData, self._read)
+        self._sub = self.node.create_subscription(AudioData, f"{self._topic}/audio",  self._read)
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
@@ -47,7 +51,7 @@ class AudioTopic(sr.AudioSource):
         """
 
         self.stream = None
-        self._sub.unregister()
+        self.node.destroy_subscription(self._sub)  # TODO behaviour, was self._sub.unregister()
 
     def _read(self, msg: AudioData) -> None:
         """
