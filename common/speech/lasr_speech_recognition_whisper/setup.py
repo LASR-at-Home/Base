@@ -6,6 +6,13 @@ setup(
     name=package_name,
     version='0.0.0',
     packages=find_packages(exclude=['test']),
+    # packages=[package_name, f"{package_name}.lasr_speech_recognition_whisper", f"{package_name}.src"],
+    # package_dir={
+    #     '': '.',
+    #     package_name: os.path.join(package_name),
+    #     f"{package_name}.whisper": os.path.join(package_name, 'whisper'),
+    #     f"{package_name}.src": os.path.join(package_name, 'src'),
+    # },
     data_files=[
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),

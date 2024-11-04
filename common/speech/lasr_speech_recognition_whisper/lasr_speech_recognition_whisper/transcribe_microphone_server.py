@@ -18,9 +18,7 @@ import speech_recognition as sr  # type: ignore
 from lasr_speech_recognition_interfaces.action import TranscribeSpeech  # type: ignore
 from rclpy.executors import ExternalShutdownException
 from std_msgs.msg import String  # type: ignore
-from lasr_speech_recognition_whisper import ModelCache # type: ignore
-
-
+from src import ModelCache # type: ignore
 
 # TODO: argpars -> ROS2 params, test behaviour of preemption
 

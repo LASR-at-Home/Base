@@ -34,7 +34,7 @@ class ModelCache(Node):
             MODEL_CACHE[name] = whisper.load_model(name, device=device)
             self.get_logger().info(f"Sucessfully loaded model {name} on {device}")
             if load_test_file:
-                package_root = packages.get_package_share_path("lasr_speech_recognition_whisper")
+                package_root = packages.get_package_prefix("lasr_speech_recognition_whisper")
                 example_fp = os.path.join(package_root, "test.m4a")
                 self.get_logger().info(
                     "Running transcription on example file to ensure model is loaded..."

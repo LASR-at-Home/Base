@@ -1,12 +1,12 @@
 # from .collector import AbstractPhraseCollector, AudioTopicPhraseCollector, MicrophonePhraseCollector, RecognizerPhraseCollector
-from .collector import (
+from .lasr_speech_recognition_whisper.collector import (
     AbstractPhraseCollector,
     MicrophonePhraseCollector,
     RecognizerPhraseCollector,
 )
-from .worker import (
+from .lasr_speech_recognition_whisper.worker import (
     SpeechRecognitionWorker,
     SpeechRecognitionToStdout,
     SpeechRecognitionToTopic,
 )
-from .cache import ModelCache
+from .lasr_speech_recognition_whisper.cache import ModelCache
