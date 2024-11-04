@@ -1,6 +1,6 @@
 #!/usr/bin python3
 import os
-import sounddevice  # needed to remove ALSA error messages
+# import sounddevice  # needed to remove ALSA error messages
 import argparse
 from typing import Optional
 from dataclasses import dataclass
@@ -15,12 +15,11 @@ from rclpy.node import Node
 from rclpy.action.server import ActionServer, CancelResponse
 
 import speech_recognition as sr  # type: ignore
-import lasr_speech_recognition_interfaces.msg  # type: ignore
+from lasr_speech_recognition_interfaces.action import TranscribeSpeech  # type: ignore
 from rclpy.executors import ExternalShutdownException
 from std_msgs.msg import String  # type: ignore
 from lasr_speech_recognition_whisper import ModelCache # type: ignore
 
-# from common.speech.lasr_speech_recognition_whisper.scripts.repeat_after_me import result
 
 
 # TODO: argpars -> ROS2 params, test behaviour of preemption
@@ -55,10 +54,10 @@ class speech_model_params:
     pause_threshold: Optional[float] = 2.0
 
 
-class TranscribeSpeechAction(object, Node):
+class TranscribeSpeechAction(Node):
     # create messages that are used to publish feedback/result
-    _feedback = lasr_speech_recognition_interfaces.msg.TranscribeSpeechFeedback()
-    _result = lasr_speech_recognition_interfaces.msg.TranscribeSpeechResult()
+    _feedback = TranscribeSpeech.Feedback()
+    _result = TranscribeSpeech.Result()
 
     def __init__(
             self,
@@ -77,7 +76,8 @@ class TranscribeSpeechAction(object, Node):
             String, "/live_speech_transcription", 10
         )
 
-        self._model = ModelCache.load_model(
+        model_cache = ModelCache()
+        self._model = model_cache.load_model(
             self._model_params.model_name,
             self._model_params.device,
             self._model_params.warmup,
@@ -386,6 +386,3 @@ def main(args=None):
         rclpy.spin(server)
     except (KeyboardInterrupt, ExternalShutdownException):
         pass
-
-# if __name__ == "__main__":
-#     main()

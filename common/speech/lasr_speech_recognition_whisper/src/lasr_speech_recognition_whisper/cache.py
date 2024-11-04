@@ -2,6 +2,7 @@ import os
 import whisper  # type: ignore
 from ament_index_python import packages
 from rclpy.node import Node
+
 # Keep all loaded models in memory
 MODEL_CACHE = {}
 
