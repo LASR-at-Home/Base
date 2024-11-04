@@ -1,6 +1,6 @@
 #!/usr/bin python3
 import os
-# import sounddevice  # needed to remove ALSA error messages
+import sounddevice  # needed to remove ALSA error messages
 import argparse
 from typing import Optional
 from dataclasses import dataclass
@@ -86,7 +86,7 @@ class TranscribeSpeechAction(Node):
         # Set up the action server and register execution callback
         self._action_server = ActionServer(
             self,
-            lasr_speech_recognition_interfaces.action.TranscribeSpeechAction,
+            TranscribeSpeech,
             self._action_name,
             execute_callback=self.execute_cb,
             cancel_callback=self.cancel_cb,

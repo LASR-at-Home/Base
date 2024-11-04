@@ -25,7 +25,7 @@ nvidia-nccl-cu12==2.20.5  # via torch
 nvidia-nvjitlink-cu12==12.4.127  # via nvidia-cusolver-cu12, nvidia-cusparse-cu12
 nvidia-nvtx-cu12==12.1.105  # via torch
 openai-whisper==20231117  # via -r requirements.in
-# pyaudio==0.2.13           # via -r requirements.in
+pyaudio==0.2.13           # via -r requirements.in
 pycparser==2.22           # via cffi
 pyyaml==6.0.1             # via -r requirements.in
 regex==2024.4.28          # via tiktoken
