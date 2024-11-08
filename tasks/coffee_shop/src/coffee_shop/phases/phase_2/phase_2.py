@@ -1,13 +1,14 @@
 import smach
+
 from .states import (
-    TakeOrder,
-    MakeOrder,
     CheckOrder,
-    GoToTable,
     DeliverOrder,
     GoToCounter,
-    Start,
+    GoToTable,
     LoadOrder,
+    MakeOrder,
+    Start,
+    TakeOrder,
     WaitForOrder,
 )
 
@@ -34,17 +35,7 @@ class Phase2(smach.StateMachine):
                 transitions={"done": "MAKE_ORDER"},
             )
             smach.StateMachine.add(
-                "MAKE_ORDER", MakeOrder(context), transitions={"done": "WAIT_FOR_ORDER"}
-            )
-            smach.StateMachine.add(
-                "WAIT_FOR_ORDER",
-                WaitForOrder(context),
-                transitions={"done": "CHECK_ORDER"},
-            )
-            smach.StateMachine.add(
-                "CHECK_ORDER",
-                CheckOrder(context),
-                transitions={"correct": "LOAD_ORDER", "incorrect": "WAIT_FOR_ORDER"},
+                "MAKE_ORDER", MakeOrder(context), transitions={"done": "LOAD_ORDER"}
             )
             smach.StateMachine.add(
                 "LOAD_ORDER", LoadOrder(context), transitions={"done": "DELIVER_ORDER"}

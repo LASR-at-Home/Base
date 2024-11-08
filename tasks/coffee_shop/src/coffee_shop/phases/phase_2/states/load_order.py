@@ -1,9 +1,9 @@
-import smach
 import numpy as np
-from play_motion_msgs.msg import PlayMotionGoal
-from geometry_msgs.msg import PoseWithCovarianceStamped, Pose, Point, Quaternion
-from move_base_msgs.msg import MoveBaseGoal
 import rospy
+import smach
+from geometry_msgs.msg import Point, Pose, PoseWithCovarianceStamped, Quaternion
+from move_base_msgs.msg import MoveBaseGoal
+from play_motion_msgs.msg import PlayMotionGoal
 from scipy.spatial.transform import Rotation as R
 
 
@@ -14,7 +14,7 @@ class LoadOrder(smach.State):
 
     def execute(self, userdata):
         self.context.voice_controller.sync_tts(
-            "That's the right order, I'll turn around so that you can load it"
+            "I'll turn around so you can load the order."
         )
         robot_pose = rospy.wait_for_message(
             "/amcl_pose", PoseWithCovarianceStamped
