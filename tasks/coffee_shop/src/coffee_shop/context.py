@@ -1,19 +1,20 @@
-import rospy
+import random
+import time
+
+import actionlib
 import rosparam
-from lasr_voice import Voice
-from play_motion_msgs.msg import PlayMotionAction
+import rospy
+import rosservice
+import tf2_geometry_msgs  # noqa
+import tf2_ros as tf2
+import yaml
 from control_msgs.msg import PointHeadAction
 from lasr_vision_msgs.srv import YoloDetection
-import actionlib
+from lasr_voice import Voice
 from move_base_msgs.msg import MoveBaseAction
-import yaml
+from play_motion_msgs.msg import PlayMotionAction
+from tf2_geometry_msgs.tf2_geometry_msgs import do_transform_point, do_transform_pose
 from visualization_msgs.msg import Marker
-import rosservice
-import time
-import random
-import tf2_ros as tf2
-import tf2_geometry_msgs  # noqa
-from tf2_geometry_msgs.tf2_geometry_msgs import do_transform_pose, do_transform_point
 
 
 class Context:
@@ -38,12 +39,6 @@ class Context:
         )
         self.point_head_client.wait_for_server()
         rospy.loginfo("Got PH")
-        rospy.wait_for_service("/yolov8/detect")
-        self.yolo = rospy.ServiceProxy("/yolov8/detect", YoloDetection)
-        rospy.loginfo("Got YOLO")
-        self.tf_buffer = tf2.Buffer()
-        self.tf_listener = tf2.TransformListener(self.tf_buffer)
-        rospy.loginfo("Got TF")
 
         if not tablet:
             rospy.wait_for_service("/lasr_speech/transcribe_and_parse")
@@ -85,10 +80,6 @@ class Context:
             }
 
             self.target_object_remappings = data.get("objects", dict())
-
-            self.YOLO_person_model = data.get("yolo_person_model", "yolov8n-seg.pt")
-            self.YOLO_objects_model = data.get("yolo_objects_model", "yolov8n-seg.pt")
-            self.YOLO_counter_model = data.get("yolo_counter_model", "MK_COUNTER.pt")
 
             if rosparam.list_params("/mmap"):
                 rosparam.delete_param("mmap")
