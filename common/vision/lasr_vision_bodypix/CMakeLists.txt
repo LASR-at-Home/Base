@@ -23,6 +23,11 @@ install(PROGRAMS
   DESTINATION lib/${PROJECT_NAME}
 )
 
+install(PROGRAMS
+  examples/keypoint_relay.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
 
 # Install launch files
 install(DIRECTORY launch

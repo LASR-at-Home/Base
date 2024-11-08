@@ -12,12 +12,14 @@ from tf_bodypix.api import download_model, load_model, BodyPixModelPaths
 from lasr_vision_msgs.msg import BodyPixMask, BodyPixKeypoint, BodyPixKeypointNormalized
 from lasr_vision_msgs.srv import (
     BodyPixMaskDetection,
-    BodyPixMaskDetection_Request,
-    BodyPixMaskDetection_Response,
     BodyPixKeypointDetection,
-    BodyPixKeypointDetection_Request,
-    BodyPixKeypointDetection_Response,
+
 )
+
+BodyPixKeypointDetection_Request = BodyPixKeypointDetection.Request()
+BodyPixKeypointDetection_Response = BodyPixKeypointDetection.Response()
+BodyPixMaskDetection_Request = BodyPixMaskDetection.Request()
+BodyPixMaskDetection_Response = BodyPixMaskDetection.Response()
 
 
 # model cache
@@ -187,4 +189,8 @@ def main(args=None):
     rclpy.spin(node)
     node.destroy_node()
     rclpy.shutdown()
+
+
+if __name__ == "__main__":
+    main()
 

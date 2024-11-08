@@ -2,7 +2,7 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
 from launch_ros.actions import Node
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration
+from launch.substitutions import LaunchConfiguration, TextSubstitution
 import os
 from ament_index_python.packages import get_package_share_directory
 
@@ -14,12 +14,16 @@ def generate_launch_description():
 
     # Path to the BodyPix launch file
     bodypix_launch_file = os.path.join(
-        get_package_share_directory('lasr_vision_bodypix'), 'launch', 'bodypix.launch.py'
+        get_package_share_directory('lasr_vision_bodypix'), 'launch', 'bodypix_launch.py'
     )
 
-    # Path to the video stream launch file
-    video_stream_launch_file = os.path.join(
-        get_package_share_directory('video_stream_opencv'), 'launch', 'camera.launch.py'
+    # # Path to the v4l2_camera launch file (replacement for video_stream_opencv)
+    # v4l2_camera_launch_file = os.path.join(
+    #     get_package_share_directory('v4l2_camera'), 'launch', 'v4l2_camera_node.launch.py'
+    # )
+
+    v4l2_camera_launch_file = os.path.join(
+        get_package_share_directory('lasr_vision_bodypix'), 'launch', 'v4l2_camera_launch.py'
     )
 
     return LaunchDescription([
@@ -29,7 +33,9 @@ def generate_launch_description():
         # Include BodyPix launch file
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(bodypix_launch_file),
-            launch_arguments={'preload': LaunchConfiguration('model')}.items(),  # Corrected argument
+            launch_arguments={
+                'preload': LaunchConfiguration('model')
+            }.items(),
         ),
 
         # Show debug topic using rqt_image_view
@@ -38,21 +44,26 @@ def generate_launch_description():
             executable='rqt_image_view',
             name='image_view',
             output='screen',
-            arguments=[LaunchConfiguration('model')],  # Corrected arguments
+            arguments=[
+                TextSubstitution(text='/bodypix/debug/'), 
+                LaunchConfiguration('model')
+            ],  # Constructs the topic path dynamically
         ),
 
-        # Start the keypoint relay service (assuming the executable is installed without .py)
+        # Start the keypoint relay service
         Node(
             package='lasr_vision_bodypix',
-            executable='keypoint_relay',  # Remove the .py extension
+            executable='keypoint_relay.py',  # Specifying the subdirectory
             name='keypoint_relay',
             output='screen',
-            arguments=[LaunchConfiguration('model')],  # Corrected arguments
+            arguments=[LaunchConfiguration('model')],
         ),
 
-        # Include the video stream launch file
+
+
+        # Include the v4l2_camera launch file
         IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(video_stream_launch_file),
-            launch_arguments={'visualize': 'true'}.items(),
+            PythonLaunchDescriptionSource(v4l2_camera_launch_file),
+            launch_arguments={'image_size': '640x480'}.items(),
         ),
     ])
