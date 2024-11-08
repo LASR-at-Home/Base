@@ -1,0 +1,27 @@
+counter:
+  location:
+    orientation:
+      x:
+      y:
+      z:
+      w:
+    position:
+      x:
+      y:
+      z:
+tables:
+  table0:
+    location:
+      orientation:
+        x:
+        y:
+        z:
+        w:
+      position:
+        x:
+        y:
+        z:
+    num_persons: 0
+    order: []
+    status: unvisited
+objects: {"coffee": "coffee"}
