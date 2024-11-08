@@ -19,13 +19,13 @@ class Phase2(smach.StateMachine):
 
         with self:
             smach.StateMachine.add(
-                "START_PHASE_2", Start(context), transitions={"done": "GO_TO_TABLE"}
+                "START_PHASE_2", Start(context), transitions={"done": "TAKE_ORDER"}
             )
-            smach.StateMachine.add(
-                "GO_TO_TABLE",
-                GoToTable(context),
-                transitions={"done": "TAKE_ORDER", "skip": "done"},
-            )
+            # smach.StateMachine.add(
+            #     "GO_TO_TABLE",
+            #     GoToTable(context),
+            #     transitions={"done": "TAKE_ORDER", "skip": "done"},
+            # )
             smach.StateMachine.add(
                 "TAKE_ORDER", TakeOrder(context), transitions={"done": "GO_TO_COUNTER"}
             )

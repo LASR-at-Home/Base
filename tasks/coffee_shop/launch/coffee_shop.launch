@@ -1,5 +1,5 @@
 <launch>
-    <arg name="config" default="full"/>
+    <arg name="config" default="girls_robotics"/>
     <arg name="tablet" default="true"/>
     <rosparam command="load" file="$(find coffee_shop)/config/$(arg config).yaml" />
     <node pkg="coffee_shop" type="main.py" name="main" output="screen" args="$(find coffee_shop)/config/$(arg config).yaml $(arg tablet)"/>

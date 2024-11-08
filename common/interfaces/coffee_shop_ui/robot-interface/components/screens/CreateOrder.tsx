@@ -7,17 +7,17 @@ import { SetStateAction, useState } from "react";
 type State = "edit" | "confirm";
 
 type Item =
-  | "cup"
-  | "banana";
+  | "pizza"
+  | "fruit";
 
 const items: Item[] = [
-  "cup",
-  "banana"
+  "pizza",
+  "fruit"
 ];
 
 const NAMES: { [key in Item]: string } = {
-  cup: 'Coffee',
-  banana: 'Banana'
+  pizza: 'Pizza',
+  fruit: 'Fruit'
 }
 
 export function CreateOrder({ finish }: { finish: (order: Item[]) => void }) {
@@ -106,8 +106,8 @@ function EditMode({
   return (
     <>
       <div className="flex flex-row gap-4 flex-[2] min-h-0">
-        <Card item="cup" order={order} setOrder={setOrder} />
-        <Card item="banana" order={order} setOrder={setOrder} />
+        <Card item="pizza" order={order} setOrder={setOrder} />
+        <Card item="fruit" order={order} setOrder={setOrder} />
       </div>
       <div className="flex flex-row gap-4 flex-1">
         <div

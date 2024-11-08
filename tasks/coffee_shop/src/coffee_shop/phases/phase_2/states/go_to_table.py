@@ -20,8 +20,8 @@ class GoToTable(smach.State):
             for label, table in self.context.tables.items()
             if table["status"] == "needs serving"
         ]
-        if not tables_need_serving:
-            return "skip"
+        # if not tables_need_serving:
+        #     return "skip"
         closest_table = min(
             tables_need_serving,
             key=lambda table: np.linalg.norm(

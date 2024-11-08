@@ -20,7 +20,7 @@ from visualization_msgs.msg import Marker
 class Context:
     def __init__(self, config_path=None, tablet=False):
         self.tablet = tablet
-        self.tablet_on_head = False
+        self.tablet_on_head = True
         rospy.loginfo(f"Tablet: {self.tablet}, Tablet on head: {self.tablet_on_head}")
         self.move_base_client = actionlib.SimpleActionClient(
             "/move_base", MoveBaseAction
@@ -40,13 +40,13 @@ class Context:
         self.point_head_client.wait_for_server()
         rospy.loginfo("Got PH")
 
-        if not tablet:
-            rospy.wait_for_service("/lasr_speech/transcribe_and_parse")
-            self.speech = rospy.ServiceProxy(
-                "/lasr_speech/transcribe_and_parse", Speech
-            )
-        else:
-            self.speech = None
+        # if not tablet:
+        #     rospy.wait_for_service("/lasr_speech/transcribe_and_parse")
+        #     self.speech = rospy.ServiceProxy(
+        #         "/lasr_speech/transcribe_and_parse", Speech
+        #     )
+        # else:
+        #     self.speech = None
         rospy.loginfo("Speech")
 
         if "/pal_startup_control/start" in rosservice.get_service_list():
@@ -84,26 +84,26 @@ class Context:
             if rosparam.list_params("/mmap"):
                 rosparam.delete_param("mmap")
 
-            mmap_dict = {"vo": {"submap_0": dict()}, "numberOfSubMaps": 1}
-            rospy.loginfo(
-                f"There are {len(data['tables'].keys())}, should be {len(data['tables'].keys()) + 1} VOs"
-            )
-            count = 0
-            for i, table in enumerate(data["tables"].keys()):
-                for j, corner in enumerate(data["tables"][table]["objects_cuboid"]):
-                    vo = f"vo_00{count}"
-                    mmap_dict["vo"]["submap_0"][vo] = [
-                        "submap_0",
-                        f"table{i}",
-                        *corner,
-                        0.0,
-                    ]
-                    count += 1
-            for j, corner in enumerate(data["counter"]["cuboid"]):
-                vo = f"vo_00{count}"
-                mmap_dict["vo"]["submap_0"][vo] = ["submap_0", f"counter", *corner, 0.0]
-                count += 1
-            rosparam.upload_params("mmap", mmap_dict)
+            # mmap_dict = {"vo": {"submap_0": dict()}, "numberOfSubMaps": 1}
+            # rospy.loginfo(
+            #     f"There are {len(data['tables'].keys())}, should be {len(data['tables'].keys()) + 1} VOs"
+            # )
+            # count = 0
+            # for i, table in enumerate(data["tables"].keys()):
+            #     for j, corner in enumerate(data["tables"][table]["objects_cuboid"]):
+            #         vo = f"vo_00{count}"
+            #         mmap_dict["vo"]["submap_0"][vo] = [
+            #             "submap_0",
+            #             f"table{i}",
+            #             *corner,
+            #             0.0,
+            #         ]
+            #         count += 1
+            # for j, corner in enumerate(data["counter"]["cuboid"]):
+            #     vo = f"vo_00{count}"
+            #     mmap_dict["vo"]["submap_0"][vo] = ["submap_0", f"counter", *corner, 0.0]
+            #     count += 1
+            # rosparam.upload_params("mmap", mmap_dict)
 
         else:
             rospy.logerr("No config_path was given.")

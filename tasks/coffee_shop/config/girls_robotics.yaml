@@ -1,27 +1,29 @@
 counter:
   location:
-    orientation:
-      x:
-      y:
-      z:
-      w:
-    position:
-      x:
-      y:
-      z:
+    position: 
+      x: 2.508862083576647
+      y: -3.528995445269088
+      z: 0.0
+    orientation: 
+      x: 0.0
+      y: 0.0
+      z: -0.5804298507729834
+      w: 0.8143102531171104
+
 tables:
   table0:
     location:
-      orientation:
-        x:
-        y:
-        z:
-        w:
-      position:
-        x:
-        y:
-        z:
+      position: 
+        x: 0.9444032954447322
+        y: -1.117842930960006
+        z: 0.0
+      orientation: 
+        x: 0.0
+        y: 0.0
+        z: -0.995427717760212
+        w: 0.09551784500655273
+
     num_persons: 0
     order: []
     status: unvisited
-objects: {"coffee": "coffee"}
+objects: {"pizza": "pizza", "fruit": "fruit"}
