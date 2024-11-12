@@ -4,11 +4,12 @@ seating area.
 
 """
 
+from typing import Any, Dict, List, Optional
+
 import rospy
 import smach
+from lasr_skills import LookToPoint, Say
 from smach import UserData
-from lasr_skills import Say, LookToPoint
-from typing import Dict, List, Any, Optional
 
 
 def stringify_guest_data(
@@ -27,8 +28,6 @@ def stringify_guest_data(
 
     relevant_guest_data = guest_data[guest_id]
 
-    relevant_guest_data["attributes"]["has_hair"] = 0.5
-
     guest_str = f"{relevant_guest_data['name']}, their favourite drink is {relevant_guest_data['drink']}. "
 
     if (
@@ -37,6 +36,8 @@ def stringify_guest_data(
         or "attributes" not in relevant_guest_data
     ):
         return guest_str
+
+    relevant_guest_data["attributes"]["has_hair"] = 0.5
 
     if relevant_guest_data["attributes"]["long_hair"]:
         guest_str += "They have long hair. "
