@@ -1,26 +1,22 @@
 from typing import List, Tuple
-import smach
-import smach_ros
-
-from lasr_vision_msgs.srv import Recognise
-from geometry_msgs.msg import Pose, Point, PointStamped
-from shapely.geometry import Polygon
-from lasr_skills import (
-    GoToLocation,
-    WaitForPersonInArea,
-    Say,
-    AskAndListen,
-    PlayMotion,
-    LookToPoint,
-    Wait,
-)
-from std_msgs.msg import Header, Empty
-from receptionist.states import (
-    HandleGuest,
-    IntroduceAndSeatGuest,
-)
 
 import rospy
+import smach
+import smach_ros
+from geometry_msgs.msg import Point, PointStamped, Pose
+from lasr_skills import (
+    AskAndListen,
+    GoToLocation,
+    LookToPoint,
+    PlayMotion,
+    Say,
+    Wait,
+    WaitForPersonInArea,
+)
+from lasr_vision_msgs.srv import Recognise
+from receptionist.states import HandleGuest, IntroduceAndSeatGuest
+from shapely.geometry import Polygon
+from std_msgs.msg import Empty, Header
 
 
 class Receptionist(smach.StateMachine):

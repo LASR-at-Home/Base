@@ -21,7 +21,6 @@ from .recognise import Recognise
 from .detect_gesture import DetectGesture
 from .look_at_person import LookAtPerson
 from .wait import Wait
-from .find_gesture_person import FindGesturePerson
 from .adjust_camera import AdjustCamera
 from .guide import Guide
 from .detect_clothing import DetectClothing
