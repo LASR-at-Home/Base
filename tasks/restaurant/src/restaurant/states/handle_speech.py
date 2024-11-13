@@ -1,16 +1,13 @@
 import string
 
 excluded_words = [
-    "my",
-    "name",
-    "is",
+    "i",
+    "would",
+    "like",
     "and",
-    "favourite",
-    "drink",
-    "you",
-    "can",
-    "call",
-    "me",
+    "please",
+    "uh",
+    "um"
 ]
 
 
@@ -81,10 +78,11 @@ def main(guest_transcription):
                 break 
 
     num_items = list(zip(number_items, matched_items))
-    print(num_items)
+    return (num_items)
 
 
 
 if __name__ == "__main__":
     guest_transcription = "Hello, are you okay. I would like a curry, three bottles of big coke and one packet of stroopwafel please"
-    main(guest_transcription)
+    num_items = main(guest_transcription)
+    print(num_items)
