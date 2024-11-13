@@ -6,8 +6,12 @@ excluded_words = [
     "like",
     "and",
     "please",
-    "uh",
     "um"
+    "can",
+    "have"
+    "may",
+    "could",
+    "get"
 ]
 
 
