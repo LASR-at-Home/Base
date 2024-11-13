@@ -1,0 +1,22 @@
+// generated from rosidl_adapter/resource/srv.idl.em
+// with input from lasr_vision_interfaces/srv/ClipLearnFace.srv
+// generated code does not contain a copyright notice
+
+#include "sensor_msgs/msg/Image.idl"
+
+module lasr_vision_interfaces {
+  module srv {
+    @verbatim (language="comment", text=
+      "Images to use to learn face")
+    struct ClipLearnFace_Request {
+      sequence<sensor_msgs::msg::Image> raw_imgs;
+
+      @verbatim (language="comment", text=
+        "Name of person to be learned")
+      string name;
+    };
+    struct ClipLearnFace_Response {
+      uint8 structure_needs_at_least_one_member;
+    };
+  };
+};

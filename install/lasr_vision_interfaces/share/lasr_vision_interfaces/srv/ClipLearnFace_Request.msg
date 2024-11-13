@@ -1,0 +1,6 @@
+# Images to use to learn face
+sensor_msgs/Image[] raw_imgs
+
+# Name of person to be learned
+string name
+

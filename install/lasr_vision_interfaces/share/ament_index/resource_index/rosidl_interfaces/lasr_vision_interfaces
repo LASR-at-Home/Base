@@ -1,0 +1,4 @@
+srv/ClipLearnFace.idl
+srv/ClipLearnFace.srv
+srv/ClipLearnFace_Request.msg
+srv/ClipLearnFace_Response.msg

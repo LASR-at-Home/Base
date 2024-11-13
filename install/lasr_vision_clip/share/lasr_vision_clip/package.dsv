@@ -1,0 +1,8 @@
+source;share/lasr_vision_clip/hook/cmake_prefix_path.ps1
+source;share/lasr_vision_clip/hook/cmake_prefix_path.dsv
+source;share/lasr_vision_clip/hook/cmake_prefix_path.sh
+source;share/lasr_vision_clip/local_setup.bash
+source;share/lasr_vision_clip/local_setup.dsv
+source;share/lasr_vision_clip/local_setup.ps1
+source;share/lasr_vision_clip/local_setup.sh
+source;share/lasr_vision_clip/local_setup.zsh

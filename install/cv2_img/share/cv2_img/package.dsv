@@ -1,0 +1,8 @@
+source;share/cv2_img/hook/cmake_prefix_path.ps1
+source;share/cv2_img/hook/cmake_prefix_path.dsv
+source;share/cv2_img/hook/cmake_prefix_path.sh
+source;share/cv2_img/local_setup.bash
+source;share/cv2_img/local_setup.dsv
+source;share/cv2_img/local_setup.ps1
+source;share/cv2_img/local_setup.sh
+source;share/cv2_img/local_setup.zsh
