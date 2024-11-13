@@ -72,8 +72,6 @@ def main(guest_transcription):
         if sentence_list[i] in numbers_list:
             number_items.append(sentence_list[i])
 
-    print(number_items)
-
     matched_items = []
     for i in range(len(sentence_list)):
         for item in items_list:
@@ -81,11 +79,12 @@ def main(guest_transcription):
             if sentence_list[i:i + len(item_words)] == item_words:
                 matched_items.append(item)
                 break 
-    
-    print(matched_items)
+
+    num_items = list(zip(number_items, matched_items))
+    print(num_items)
 
 
 
 if __name__ == "__main__":
-    guest_transcription = "Hello, are you okay. I would like a curry, three big coke and one stroopwafel"
+    guest_transcription = "Hello, are you okay. I would like a curry, three bottles of big coke and one packet of stroopwafel please"
     main(guest_transcription)
