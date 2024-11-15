@@ -57,7 +57,10 @@ snacks_list = [
 items_list = drinks_list + food_list + fruits_list + snacks_list
 
 numbers_list = ["a", "one", "two", "three", "four", "five"]
-numbers_map = {word: i for i, word in enumerate(numbers_list, start=1)}
+numbers_map = {word: 
+    (1 if word in ["a", "one"] 
+    else i) 
+    for i, word in enumerate(numbers_list, start=0)}
 
 def main(guest_transcription):
 
