@@ -57,6 +57,7 @@ snacks_list = [
 items_list = drinks_list + food_list + fruits_list + snacks_list
 
 numbers_list = ["a", "one", "two", "three", "four", "five"]
+numbers_map = {word: i for i, word in enumerate(numbers_list, start=1)}
 
 def main(guest_transcription):
 
@@ -69,9 +70,11 @@ def main(guest_transcription):
 
 
     number_items = []
+    int_number_items = []
     for i in range(len(sentence_list)):
         if sentence_list[i] in numbers_list:
             number_items.append(sentence_list[i])
+            int_number_items.append(numbers_map[sentence_list[i]])
 
     matched_items = []
     for i in range(len(sentence_list)):
@@ -81,7 +84,7 @@ def main(guest_transcription):
                 matched_items.append(item)
                 break 
 
-    num_items = list(zip(number_items, matched_items))
+    num_items = list(zip(int_number_items, matched_items))
     return (num_items)
 
 
