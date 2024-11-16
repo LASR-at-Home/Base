@@ -150,9 +150,12 @@ def main(guest_transcription, last_resort):
         recovered_num_and_items = get_num_and_items(recovered_sentence_list)
         print(f"Recovered: {recovered_num_and_items}")
         if recovered_num_and_items[0][0] == -1:
-            return "unknown"
-        else:
-            return recovered_num_and_items
+            recovered_sentence_list = recover_sentence(sentence_list, num_and_items[0][1], True)
+            recovered_num_and_items = get_num_and_items(recovered_sentence_list)
+            print(f"Recovered: {recovered_num_and_items}")
+            if recovered_num_and_items[0][0] == -1:
+                return "unknown"    
+        return recovered_num_and_items
     else:
         return num_and_items
 
@@ -403,6 +406,13 @@ if __name__ == "__main__":
     print("====================================================================")
     guest_transcription = "Hello, are you okay. I would like for curry, two ice and one pancake please"
     print(main(guest_transcription, True))
+    print("====================================================================")
+    guest_transcription = "Hello, are you okay. I would like for curry, too ice and on pancake please"
+    print(main(guest_transcription, False))
+    print("====================================================================")
+    guest_transcription = "Hello, are you okay. I would like for curry, two ice and one pancake please"
+    print(main(guest_transcription, False))
+
 
 
 
