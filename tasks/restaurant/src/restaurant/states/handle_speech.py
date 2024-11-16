@@ -158,6 +158,13 @@ def main(guest_transcription, last_resort):
 
 
 def get_split_sentence_list(guest_transcription):
+    """Split sentence into a list of strings.
+
+    Args:
+        guest_transcription (str): Transcription as a pure string.
+    Returns:
+        List[str]: Transcription split up as a list of strings.
+    """
     filtered_sentence = guest_transcription.lower().translate(
         str.maketrans("", "", string.punctuation)
     )
@@ -166,6 +173,15 @@ def get_split_sentence_list(guest_transcription):
 
 
 def get_num_and_items(sentence_list):
+    """Extract the ordered items and their corresponding number required.
+
+    Args:
+        sentence_list (List[str]): Transcription split up as a list of strings.
+
+    Returns:
+        List[int][str]: List identifying the pairing of the number words and item words. 
+        Error message may be contained.
+    """
     number_items = []
     int_number_items = []
     for i in range(len(sentence_list)):
@@ -193,6 +209,18 @@ def get_num_and_items(sentence_list):
 
 
 def recover_sentence(sentence_list, error_message, last_resort):
+    """Recover words and phrases in the sentence. If there's a mismatch between the number of number words and item
+    words, recover until they are of the same number. If last resort mode is True, then disregard the mismatch in 
+    numbers and perform all recovery behaviours.
+
+    Args:
+        sentence_list (List[str]): Transcription split up as a list of strings.
+        error_message (str): Identifies whether more number or item words were identified.
+        last_resort (bool): Whether all recovery behaviour needs to be performed.
+
+    Returns:
+        List[str]: Recovered sentence list.
+    """
     # Recover items
     if not last_resort and error_message == "more number":
         recovered_sentence = handle_similar_spelt(sentence_list, items_split_list, SPELLING_THRESHOLD)
@@ -235,11 +263,11 @@ def handle_similar_spelt(
 
     Args:
         sentence_list (List[str]): Transcription split up as a list of strings.
-        available_words (List[str]): List of available words to compare to (numbers or items)
-        distance_threshold (int): Similarity in terms of spelling distance required for a word to be recovered
+        available_words (List[str]): List of available words to compare to (numbers or items).
+        distance_threshold (int): Similarity in terms of spelling distance required for a word to be recovered.
 
     Returns:
-        sentence_list (List[str]): Recovered sentence in terms of spelling
+        List[str]: Recovered sentence in terms of spelling.
     """
     input_word_index = 0
 
@@ -266,11 +294,11 @@ def handle_similar_sound(
 
     Args:
         sentence_list (List[str]): Transcription split up as a list of strings.
-        available_words (List[str]): List of available words to compare to (numbers or items)
-        distance_threshold (int): Similarity in terms of pronounciation distance required for a word to be recovered
+        available_words (List[str]): List of available words to compare to (numbers or items).
+        distance_threshold (int): Similarity in terms of pronounciation distance required for a word to be recovered.
 
     Returns:
-        sentence_list (List[str]): Recovered sentence in terms of pronounciation
+        List[str]: Recovered sentence in terms of pronounciation.
     """
     input_word_index = 0
 
@@ -296,7 +324,7 @@ def infer_second_item(sentence_list: List[str]) -> str:
         sentence_list (List[str]): Transcription split up as a list of strings.
 
     Returns:
-        str: sentence_list (List[str]): Recovered sentence with the second item inferred
+        List[str]: Recovered sentence with the second item inferred.
     """
     allowed_recovery_phrases = list(double_word_items_full_list)
     input_word_index = 0
@@ -360,8 +388,6 @@ def get_levenshtein_soundex_distance(word_1: str, word_2: str) -> int:
 # (investigate whether there's more one kind of keyword than the other)
 
 if __name__ == "__main__":
-    print(get_levenshtein_soundex_distance("for","four"))
-
     # my_list = ["one", "two", "three"]
     # rand_ele = ["love", "hate"]
     # my_list[1:2] = rand_ele
