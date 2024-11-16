@@ -388,11 +388,6 @@ def get_levenshtein_soundex_distance(word_1: str, word_2: str) -> int:
 # (investigate whether there's more one kind of keyword than the other)
 
 if __name__ == "__main__":
-    # my_list = ["one", "two", "three"]
-    # rand_ele = ["love", "hate"]
-    # my_list[1:2] = rand_ele
-    # print(my_list)
-
     # guest_transcription = "Hello, are you okay. I would like a curry, three bottles of big coke and one packet of stroopwafel please"
     guest_transcription = "Hello, are you okay. I would like a curry, too bottles of big coke and one packet of stroopwafel please"
     print(main(guest_transcription, False))
