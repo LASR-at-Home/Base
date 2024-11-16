@@ -139,14 +139,14 @@ numbers_map = {word:
 everything_split_list = items_split_list + numbers_list
 
 
-def main(guest_transcription):
+def main(guest_transcription, last_resort):
     sentence_list = get_split_sentence_list(guest_transcription)
     print(sentence_list)
     num_and_items = get_num_and_items(sentence_list)
     print(num_and_items)
 
     if num_and_items[0][0] == -1:
-        recovered_sentence_list = recover_sentence(sentence_list, num_and_items[0][1])
+        recovered_sentence_list = recover_sentence(sentence_list, num_and_items[0][1], last_resort)
         recovered_num_and_items = get_num_and_items(recovered_sentence_list)
         print(f"Recovered: {recovered_num_and_items}")
         if recovered_num_and_items[0][0] == -1:
@@ -192,9 +192,9 @@ def get_num_and_items(sentence_list):
         return (num_and_items)
 
 
-def recover_sentence(sentence_list, error_message):
+def recover_sentence(sentence_list, error_message, last_resort):
     # Recover items
-    if error_message == "more number":
+    if not last_resort and error_message == "more number":
         recovered_sentence = handle_similar_spelt(sentence_list, items_split_list, SPELLING_THRESHOLD)
         # print(f"Recovered items (spelt): {recovered_sentence}")
         recovered_sentence = handle_similar_sound(recovered_sentence, items_split_list, PRONOUNCIATION_THRESHOLD)
@@ -203,7 +203,7 @@ def recover_sentence(sentence_list, error_message):
         # print(f"Recovered items (inferred second word): {recovered_sentence}")
         return recovered_sentence
     # Recover numbers
-    elif error_message == "more items":
+    elif not last_resort and error_message == "more items":
         recovered_sentence = handle_similar_spelt(sentence_list, numbers_list, SPELLING_THRESHOLD)
         # print(f"Recovered number (spelt): {recovered_sentence}")
         recovered_sentence = handle_similar_sound(recovered_sentence, numbers_list, PRONOUNCIATION_THRESHOLD)
@@ -241,7 +241,9 @@ def handle_similar_spelt(
     Returns:
         sentence_list (List[str]): Recovered sentence in terms of spelling
     """
-    for input_word_index in range(len(sentence_list)):
+    input_word_index = 0
+
+    for input_word in sentence_list:
         input_word = sentence_list[input_word_index]
         for available_word in available_words:
             distance = get_damerau_levenshtein_distance(
@@ -251,6 +253,7 @@ def handle_similar_spelt(
                 if distance <= distance_threshold:
                     print(f"Spelling recovery: {input_word} -> {available_word}")
                     sentence_list[input_word_index] = available_word
+        input_word_index = input_word_index + 1
     return sentence_list
 
 def handle_similar_sound(
@@ -269,7 +272,9 @@ def handle_similar_sound(
     Returns:
         sentence_list (List[str]): Recovered sentence in terms of pronounciation
     """
-    for input_word_index in range(len(sentence_list)):
+    input_word_index = 0
+
+    for input_word in sentence_list:
         input_word = sentence_list[input_word_index]
         for available_word in available_words:
             distance = get_levenshtein_soundex_distance(
@@ -279,6 +284,7 @@ def handle_similar_sound(
                 if distance <= distance_threshold:
                     print(f"Sound recovery: {input_word} -> {available_word}")
                     sentence_list[input_word_index] = available_word
+        input_word_index = input_word_index + 1
     return sentence_list
 
 def infer_second_item(sentence_list: List[str]) -> str:
@@ -293,9 +299,9 @@ def infer_second_item(sentence_list: List[str]) -> str:
         str: sentence_list (List[str]): Recovered sentence with the second item inferred
     """
     allowed_recovery_phrases = list(double_word_items_full_list)
+    input_word_index = 0
 
-    for input_word_index in range (len(sentence_list)):
-        input_word = sentence_list[input_word_index]
+    for input_word in sentence_list:
         for available_word in double_word_items_split_list:
             if input_word == available_word and double_word_items_full_dict[input_word] in allowed_recovery_phrases:
                 recovered_phrase = double_word_items_full_dict[input_word]
@@ -314,6 +320,7 @@ def infer_second_item(sentence_list: List[str]) -> str:
                     allowed_recovery_phrases.remove(recovered_phrase)
                     recovered_phrase_list = get_split_sentence_list(recovered_phrase)
                     sentence_list[input_word_index:input_word_index + 1] = recovered_phrase_list
+        input_word_index = input_word_index + 1
     return sentence_list
 
 
@@ -347,10 +354,14 @@ def get_levenshtein_soundex_distance(word_1: str, word_2: str) -> int:
 
 
 # Recover only:
-# - User said it's the wrong order (this handles when the number of numbers and items happen to be the same even though something hasn't been picked up)
-# - Mismatch between the number of number keywords and the number of item keywords (investigate whether there's more one kind of keyword than the other)
+# - User said it's the wrong order (this handles when the number of numbers and 
+# items happen to be the same even though something hasn't been picked up) - enters last resort
+# - Mismatch between the number of number keywords and the number of item keywords 
+# (investigate whether there's more one kind of keyword than the other)
 
 if __name__ == "__main__":
+    print(get_levenshtein_soundex_distance("for","four"))
+
     # my_list = ["one", "two", "three"]
     # rand_ele = ["love", "hate"]
     # my_list[1:2] = rand_ele
@@ -358,13 +369,19 @@ if __name__ == "__main__":
 
     # guest_transcription = "Hello, are you okay. I would like a curry, three bottles of big coke and one packet of stroopwafel please"
     guest_transcription = "Hello, are you okay. I would like a curry, too bottles of big coke and one packet of stroopwafel please"
-    print(main(guest_transcription))
+    print(main(guest_transcription, False))
     print("====================================================================")
     guest_transcription = "Hello, are you okay. I would like a curry, two bottles of big and one packet of stroopwafel please"
-    print(main(guest_transcription))
+    print(main(guest_transcription, False))
     print("====================================================================")
     guest_transcription = "I would like a curry, two bottles of big uh uh coke and one packet of stroopwafel please"
-    print(main(guest_transcription))
+    print(main(guest_transcription, False))
+    print("====================================================================")
+    guest_transcription = "I would like a curry, two bottles of big uh uh coke and one packet of stroop waffle please"
+    print(main(guest_transcription, False))
+    print("====================================================================")
+    guest_transcription = "Hello, are you okay. I would like for curry, two ice and one pancake please"
+    print(main(guest_transcription, True))
 
 
 
