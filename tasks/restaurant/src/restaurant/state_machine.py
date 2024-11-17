@@ -1,7 +1,7 @@
 import smach
 import smach_ros
 from geometry_msgs.msg import Pose
-from lasr_skills import AskAndListen, GoToLocation, Rotate, Say
+from lasr_skills import AskAndListen, GoToLocation, Rotate, Say, Wait
 from restaurant.states import Survey
 from std_msgs.msg import Empty
 
@@ -94,6 +94,12 @@ class Restaurant(smach.StateMachine):
             smach.StateMachine.add(
                 "ROTATE_LOAD",
                 Rotate(angle=180.0),
+                transitions={"succeeded": "WAIT_LOAD", "failed": "failed"},
+            )
+
+            smach.StateMachine.add(
+                "WAIT_LOAD",
+                Wait(5),
                 transitions={"succeeded": "RETURN_TO_CUSTOMER", "failed": "failed"},
             )
 
@@ -119,6 +125,12 @@ class Restaurant(smach.StateMachine):
             smach.StateMachine.add(
                 "ROTATE_UNLOAD",
                 Rotate(angle=180.0),
+                transitions={"succeeded": "GO_TO_SURVEY", "failed": "failed"},
+            )
+
+            smach.StateMachine.add(
+                "WAIT_UNLOAD",
+                Wait(5),
                 transitions={"succeeded": "GO_TO_SURVEY", "failed": "failed"},
             )
 
