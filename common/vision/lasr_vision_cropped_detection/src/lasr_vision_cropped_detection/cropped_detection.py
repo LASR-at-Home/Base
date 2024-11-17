@@ -1,28 +1,23 @@
 #!/usr/bin/env python3
 from typing import List, Tuple
-import numpy as np
-import cv2
-import rospy
-from shapely.validation import explain_validity
-from sensor_msgs.msg import Image, PointCloud2
-from geometry_msgs.msg import Point, PoseWithCovarianceStamped, Polygon
-from shapely.geometry.polygon import Polygon as ShapelyPolygon
-from shapely.geometry.point import Point as ShapelyPoint
 
-from lasr_vision_msgs.msg import (
-    Detection,
-    Detection3D,
-    CDRequest,
-    CDResponse,
-)
-from lasr_vision_msgs.srv import (
-    YoloDetection,
-    YoloDetection3D,
-    CroppedDetectionRequest,
-    CroppedDetectionResponse,
-)
+import cv2
+import numpy as np
+import rospy
 from cv2_img import cv2_img_to_msg, msg_to_cv2_img
 from cv2_pcl import pcl_to_cv2
+from geometry_msgs.msg import Point, Polygon, PoseWithCovarianceStamped
+from lasr_vision_msgs.msg import CDRequest, CDResponse, Detection, Detection3D
+from lasr_vision_msgs.srv import (
+    CroppedDetectionRequest,
+    CroppedDetectionResponse,
+    YoloDetection,
+    YoloDetection3D,
+)
+from sensor_msgs.msg import Image, PointCloud2
+from shapely.geometry.point import Point as ShapelyPoint
+from shapely.geometry.polygon import Polygon as ShapelyPolygon
+from shapely.validation import explain_validity
 
 
 def _2d_bbox_crop(
@@ -460,7 +455,7 @@ def process_detection_requests(
     depth_image_topic: str = "/xtion/depth_registered/points",
     yolo_2d_service_name: str = "/yolov8/detect",
     yolo_3d_service_name: str = "/yolov8/detect3d",
-    robot_pose_topic: str = "/amcl_pose",
+    robot_pose_topic: str = "/robot_pose",
     debug_topic: str = "/lasr_vision/cropped_detection/debug",
 ) -> CroppedDetectionResponse:
     """Processes a list of detection requests.
