@@ -17,6 +17,7 @@ class Rotate(smach.StateMachine):
                 input_keys=["angle"] if angle is None else [],
                 output_keys=["target_pose"],
             )
+            self.angle = angle
 
         def execute(self, userdata):
             robot_pose_with_covariance = rospy.wait_for_message(
@@ -37,7 +38,7 @@ class Rotate(smach.StateMachine):
 
             rot_matrix = R.from_quat(current_orientation)
             new_rot_matrix = rot_matrix * R.from_euler(
-                "z", userdata.angle, degrees=True
+                "z", userdata.angle if self.angle is None else self.angle, degrees=True
             )
             new_pose = Pose(
                 position=robot_pose.pose.position,
