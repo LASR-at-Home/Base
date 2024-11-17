@@ -1,0 +1,8 @@
+survey_motions:
+ - look_centre
+ - look_left
+ - look_right
+survey_angle_increments:
+  - -45
+  - -45
+  - -45

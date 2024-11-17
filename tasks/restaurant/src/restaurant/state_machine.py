@@ -41,7 +41,7 @@ class Restaurant(smach.StateMachine):
                 Survey(),
                 transitions={
                     "customer_found": "GO_TO_CUSTOMER",
-                    "customer_not_found": "failed",
+                    "customer_not_found": "SURVEY",
                 },
             )
 
@@ -65,7 +65,11 @@ class Restaurant(smach.StateMachine):
                 "SAY_ORDER",
                 Say(format_str="Your order is: {}. I will deliver it shortly."),
                 remapping={"placeholders": "order_str"},
-                transitions={"succeeded": "GO_TO_BAR", "failed": "failed"},
+                transitions={
+                    "succeeded": "GO_TO_BAR",
+                    "preempted": "failed",
+                    "aborted": "failed",
+                },
             )
 
             smach.StateMachine.add(
@@ -79,7 +83,7 @@ class Restaurant(smach.StateMachine):
                 Say(format_str="Please get me {}"),
                 remapping={"placeholders": "order_str"},
                 transitions={
-                    "suceeded": "succeeded",
+                    "succeeded": "RETURN_TO_CUSTOMER",
                     "aborted": "failed",
                     "preempted": "failed",
                 },

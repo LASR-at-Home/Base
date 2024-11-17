@@ -1,8 +1,8 @@
 <launch>
 
     <!--     PARAMS     -->
-    <!-- <arg name="config" default=""/> -->
-    <!-- <rosparam command="load" file="$(find restaurant)/config/$(arg config).yaml" ns="restaurant" /> -->
+    <arg name="config" default=""/>
+    <rosparam command="load" file="$(find restaurant)/config/$(arg config).yaml" ns="restaurant" />
     
     <!--     MOTIONS     -->
     <!-- <rosparam command="load" file="$(find lasr_skills)/config/motions.yaml"/> -->
