@@ -30,4 +30,4 @@ from .xml_question_answer import XmlQuestionAnswer
 from .find_person_and_tell import FindPersonAndTell
 from .count_people import CountPeople
 from .json_qa import JsonQuestionAnswer
-
+from .rotate import Rotate
