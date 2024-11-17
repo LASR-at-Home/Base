@@ -1,7 +1,7 @@
 import smach
 import smach_ros
 from geometry_msgs.msg import Pose
-from lasr_skills import AskAndListen, GoToLocation, Say
+from lasr_skills import AskAndListen, GoToLocation, Rotate, Say
 from restaurant.states import Survey
 from std_msgs.msg import Empty
 
@@ -80,13 +80,21 @@ class Restaurant(smach.StateMachine):
 
             smach.StateMachine.add(
                 "REQUEST_ITEMS",
-                Say(format_str="Please get me {}"),
+                Say(
+                    format_str="Please get me {}, I will turn around for you to load the order."
+                ),
                 remapping={"placeholders": "order_str"},
                 transitions={
-                    "succeeded": "RETURN_TO_CUSTOMER",
+                    "succeeded": "ROTATE_LOAD",
                     "aborted": "failed",
                     "preempted": "failed",
                 },
+            )
+
+            smach.StateMachine.add(
+                "ROTATE_LOAD",
+                Rotate(angle=180.0),
+                transitions={"succeeded": "RETURN_TO_CUSTOMER", "failed": "failed"},
             )
 
             smach.StateMachine.add(
@@ -98,12 +106,20 @@ class Restaurant(smach.StateMachine):
 
             smach.StateMachine.add(
                 "SAY_TAKE_ORDER",
-                Say(text="Here is your order"),
+                Say(
+                    text="Here is your order, I will turn around for you to unload it."
+                ),
                 transitions={
                     "succeeded": "GO_TO_SURVEY",
                     "aborted": "failed",
                     "preempted": "failed",
                 },
+            )
+
+            smach.StateMachine.add(
+                "ROTATE_UNLOAD",
+                Rotate(angle=180.0),
+                transitions={"succeeded": "GO_TO_SURVEY", "failed": "failed"},
             )
 
             smach.StateMachine.add(
