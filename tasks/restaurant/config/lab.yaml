@@ -3,6 +3,6 @@ survey_motions:
  - look_left
  - look_right
 survey_angle_increments:
-  - -45
-  - -45
-  - -45
+  - -90
+  - -90
+  - -90
