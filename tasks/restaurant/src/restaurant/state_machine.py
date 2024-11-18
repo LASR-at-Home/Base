@@ -73,8 +73,9 @@ class Restaurant(smach.StateMachine):
                 outcomes=["succeeded", "failed"],
             )
             def speech_postprocess_cb(ud):
-                parsed_order = handle_speech(ud.order_str, False)
-                print(parsed_order)
+                parsed_order, success = handle_speech(ud.order_str, False)
+                if not success:
+                    return "failed"
                 order_string = ", ".join(
                     [
                         f"{count} {item if count == 1 or item.endswith('s') else item+'s'}"
@@ -82,13 +83,21 @@ class Restaurant(smach.StateMachine):
                     ]
                 )
                 ud.order_str = order_string
-                print(order_string)
                 return "succeeded"
 
             smach.StateMachine.add(
                 "PROCESS_ORDER",
                 smach.CBState(speech_postprocess_cb),
-                transitions={"succeeded": "SAY_ORDER", "failed": "failed"},
+                transitions={"succeeded": "SAY_ORDER", "failed": "TAKE_ORDER_AGAIN"},
+            )
+
+            smach.StateMachine.add(
+                "TAKE_ORDER_AGAIN",
+                AskAndListen(
+                    tts_phrase="Sorry, I didn't understand that. Can you state your order again?"
+                ),
+                remapping={"transcribed_speech": "order_str"},
+                transitions={"succeeded": "PROCESS_ORDER", "failed": "failed"},
             )
 
             smach.StateMachine.add(

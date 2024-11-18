@@ -399,7 +399,7 @@ def handle_speech(guest_transcription, last_resort):
             recovered_num_and_items = get_num_and_items(recovered_sentence_list)
             print(f"Recovered: {recovered_num_and_items}")
             if recovered_num_and_items[0][0] == -1:
-                return "unknown"
-        return recovered_num_and_items
+                return [], False
+        return recovered_num_and_items, True
     else:
-        return num_and_items
+        return num_and_items, True
