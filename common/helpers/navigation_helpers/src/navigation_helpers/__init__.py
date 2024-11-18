@@ -1,21 +1,13 @@
-import rospy
-
-
-from geometry_msgs.msg import (
-    Point,
-    Pose,
-    PoseStamped,
-    Quaternion,
-)
-from nav_msgs.srv import GetPlan
-from nav_msgs.msg import Path
+import math
+from itertools import permutations
+from typing import List, Union
 
 import numpy as np
-import math
+import rospy
+from geometry_msgs.msg import Point, Pose, PoseStamped, Quaternion
+from nav_msgs.msg import Path
+from nav_msgs.srv import GetPlan
 from scipy.spatial.transform import Rotation as R
-from itertools import permutations
-
-from typing import Union, List
 
 
 def euclidian_distance(p1: Point, p2: Point) -> float:
@@ -74,6 +66,53 @@ def get_pose_on_path(
                 break
 
     return chosen_pose
+
+
+def get_approach_pose_on_radius(
+    origin: PoseStamped,
+    target: PoseStamped,
+    radius: float,
+    tolerance: float = 0.5,
+    num_candidates: int = 36,
+) -> Union[None, PoseStamped]:
+
+    make_plan: rospy.ServiceProxy = rospy.ServiceProxy("/move_base/make_plan", GetPlan)
+    try:
+        make_plan.wait_for_service(timeout=rospy.Duration.from_sec(10.0))
+    except rospy.ROSException:
+        rospy.loginfo("Service /move_base/make_plan not available.")
+        return None
+
+    best_pose = None
+    min_distance = float("inf")
+
+    for i in range(num_candidates):
+        angle = 2 * math.pi * i / num_candidates
+        x = target.pose.position.x + radius * math.cos(angle)
+        y = target.pose.position.y + radius * math.sin(angle)
+
+        candidate_pose = PoseStamped()
+        candidate_pose.header.frame_id = target.header.frame_id
+        candidate_pose.pose.position.x = x
+        candidate_pose.pose.position.y = y
+
+        plan = make_plan(origin, candidate_pose, tolerance)
+        if plan.plan.poses:
+            distance_from_origin = math.hypot(
+                x - origin.pose.position.x, y - origin.pose.position.y
+            )
+            distance_from_goal = math.hypot(
+                x - target.pose.position.x, y - target.pose.position.y
+            )
+
+            if (
+                distance_from_origin < min_distance
+                and abs(distance_from_goal - radius) <= tolerance
+            ):
+                min_distance = distance_from_origin
+                best_pose = candidate_pose
+
+    return best_pose
 
 
 def compute_face_quat(p1: Pose, p2: Pose) -> Quaternion:
