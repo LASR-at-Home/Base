@@ -5,7 +5,7 @@ from typing import List, Union
 import numpy as np
 import rospy
 from geometry_msgs.msg import Point, Pose, PoseStamped, Quaternion
-from nav_msgs.msg import Path
+from nav_msgs.msg import OccupancyGrid, Path
 from nav_msgs.srv import GetPlan
 from scipy.spatial.transform import Rotation as R
 from visualization_msgs.msg import Marker, MarkerArray
@@ -69,6 +69,28 @@ def get_pose_on_path(
     return chosen_pose
 
 
+def is_point_free(occupancy_grid: OccupancyGrid, x: float, y: float) -> bool:
+    if np.isnan(x) or np.isnan(y):
+        return False
+    col = int(
+        (x - occupancy_grid.info.origin.position.x) / occupancy_grid.info.resolution
+    )
+    row = int(
+        (y - occupancy_grid.info.origin.position.y) / occupancy_grid.info.resolution
+    )
+
+    if (
+        col > 0
+        or col >= occupancy_grid.info.width
+        or row < 0
+        or row >= occupancy_grid.info.height
+    ):
+        return False
+
+    idx = row * occupancy_grid.info.width + col
+    return occupancy_grid.data[idx] == 0
+
+
 def get_approach_pose_on_radius(
     origin: PoseStamped,
     target: PoseStamped,
@@ -89,6 +111,8 @@ def get_approach_pose_on_radius(
         rospy.loginfo("Service /move_base/make_plan not available.")
         return None
 
+    costmap = rospy.wait_for_message("/move_base/global_costmap/costmap", OccupancyGrid)
+
     best_pose = None
     min_distance = float("inf")
     marker_array = MarkerArray()
@@ -97,6 +121,9 @@ def get_approach_pose_on_radius(
         angle = 2 * math.pi * i / num_candidates
         x = target.pose.position.x + radius * math.cos(angle)
         y = target.pose.position.y + radius * math.sin(angle)
+
+        if not is_point_free(costmap, x, y):
+            continue
 
         candidate_pose = PoseStamped()
         candidate_pose.header.frame_id = target.header.frame_id
