@@ -18,7 +18,7 @@ play_motion:
     open_gripper:
       joints: [gripper_left_finger_joint, gripper_right_finger_joint]
       points:
-      - positions: [0.04, 0.04]
+      - positions: [0.05, 0.05]
         time_from_start: 0.0
     pre_navigation:
       joints: [torso_lift_joint]
