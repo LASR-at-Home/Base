@@ -36,55 +36,11 @@ class Survey(smach.StateMachine):
                 userdata.person_point = response.point
                 return "succeeded"
 
-        class ComputeApproachPose(smach.State):
-
-            def __init__(self):
-
-                super().__init__(
-                    outcomes=["succeeded", "failed"],
-                    input_keys=["person_point"],
-                    output_keys=["customer_approach_pose"],
-                )
-
-            def execute(self, userdata):
-                robot_pose_with_covariance = rospy.wait_for_message(
-                    "/robot_pose", PoseWithCovarianceStamped
-                )
-                robot_pose = PoseStamped(
-                    pose=robot_pose_with_covariance.pose.pose,
-                    header=robot_pose_with_covariance.header,
-                )
-
-                person_pose = PoseStamped(
-                    pose=Pose(
-                        position=userdata.person_point,
-                        orientation=robot_pose.pose.orientation,
-                    ),
-                    header=robot_pose.header,
-                )
-                approach_pose = navigation_helpers.get_pose_on_path(
-                    robot_pose,
-                    person_pose,
-                    1.0,
-                )
-                rospy.loginfo(approach_pose)
-
-                if approach_pose is None:
-                    return "failed"
-
-                approach_pose.pose.orientation = navigation_helpers.compute_face_quat(
-                    approach_pose.pose,
-                    person_pose.pose,
-                )
-                userdata.customer_approach_pose = approach_pose.pose
-
-                return "succeeded"
-
         def __init__(self):
             super().__init__(
                 outcomes=["succeeded", "failed"],
                 input_keys=["responses"],
-                output_keys=["responses", "customer_approach_pose"],
+                output_keys=["responses", "person_point"],
             )
 
             with self:
@@ -99,22 +55,22 @@ class Survey(smach.StateMachine):
                     "DETECT_GESTURE",
                     DetectGesture("waving"),
                     transitions={
-                        "succeeded": "COMPUTE_APPROACH_POSE",
+                        "succeeded": "succeeded",
                         "failed": "GET_RESPONSE",
                     },
                     remapping={"img_msg": "cropped_image"},
                 )
 
-                smach.StateMachine.add(
-                    "COMPUTE_APPROACH_POSE",
-                    self.ComputeApproachPose(),
-                    transitions={"succeeded": "succeeded", "failed": "GET_RESPONSE"},
-                )
+                # smach.StateMachine.add(
+                #     "COMPUTE_APPROACH_POSE",
+                #     self.ComputeApproachPose(),
+                #     transitions={"succeeded": "succeeded", "failed": "GET_RESPONSE"},
+                # )
 
     def __init__(self) -> None:
         super().__init__(
             outcomes=["customer_found", "customer_not_found"],
-            output_keys=["customer_approach_pose"],
+            output_keys=["person_point"],
         )
 
         with self:
@@ -124,7 +80,7 @@ class Survey(smach.StateMachine):
                 it=rospy.get_param("/restaurant/survey_angle_increments"),
                 it_label="angle_increment",
                 input_keys=[],
-                output_keys=["customer_approach_pose"],
+                output_keys=["person_point"],
                 exhausted_outcome="failed",
             )
 
@@ -135,7 +91,7 @@ class Survey(smach.StateMachine):
                     it=rospy.get_param("/restaurant/survey_motions"),
                     it_label="motion_name",
                     input_keys=[],
-                    output_keys=["customer_approach_pose"],
+                    output_keys=["person_point"],
                     exhausted_outcome="failed",
                 )
 
@@ -144,7 +100,7 @@ class Survey(smach.StateMachine):
                     container_sm = smach.StateMachine(
                         outcomes=["succeeded", "failed", "continue"],
                         input_keys=["motion_name"],
-                        output_keys=["customer_approach_pose"],
+                        output_keys=["person_point"],
                     )
 
                     with container_sm:
@@ -203,7 +159,7 @@ class Survey(smach.StateMachine):
                 angle_container_sm = smach.StateMachine(
                     outcomes=["succeeded", "failed", "continue"],
                     input_keys=["angle_increment"],
-                    output_keys=["customer_approach_pose"],
+                    output_keys=["person_point"],
                 )
                 with angle_container_sm:
 

@@ -16,6 +16,6 @@ if __name__ == "__main__":
     restaurant = Restaurant(
         bar_pose_map.pose.pose,
         unmapped,
-        "/tiago_kcl_moveit_grasp/grasp" not in rosservice.get_service_list(),
+        False,
     )
     restaurant.execute()
