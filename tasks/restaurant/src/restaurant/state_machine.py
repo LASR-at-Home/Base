@@ -9,7 +9,7 @@ from std_msgs.msg import Empty
 
 class Restaurant(smach.StateMachine):
 
-    def __init__(self, bar_pose_map: Pose) -> None:
+    def __init__(self, bar_pose_map: Pose, unmapped: bool = False) -> None:
         super().__init__(outcomes=["succeeded", "failed"])
 
         with self:
@@ -31,11 +31,16 @@ class Restaurant(smach.StateMachine):
                 "SAY_START",
                 Say(text="Start of Restaurant task."),
                 transitions={
-                    "succeeded": "SURVEY",
+                    "succeeded": "SURVEY" if not unmapped else "ROTATE_360",
                     "aborted": "failed",
                     "preempted": "failed",
                 },
             )
+
+            if unmapped:
+                smach.StateMachine.add(
+                    "ROTATE_360", Rotate(angle=360), transitions={"succeeded": "SURVEY"}
+                )
 
             smach.StateMachine.add(
                 "SURVEY",
@@ -119,7 +124,7 @@ class Restaurant(smach.StateMachine):
             smach.StateMachine.add(
                 "ROTATE_LOAD",
                 Rotate(angle=180.0),
-                transitions={"succeeded": "WAIT_LOAD", "failed": "failed"},
+                transitions={"succeeded": "WAIT_LOAD"},
             )
 
             smach.StateMachine.add(
@@ -150,7 +155,7 @@ class Restaurant(smach.StateMachine):
             smach.StateMachine.add(
                 "ROTATE_UNLOAD",
                 Rotate(angle=180.0),
-                transitions={"succeeded": "WAIT_UNLOAD", "failed": "failed"},
+                transitions={"succeeded": "WAIT_UNLOAD"},
             )
 
             smach.StateMachine.add(
