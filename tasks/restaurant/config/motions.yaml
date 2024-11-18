@@ -1,0 +1,7 @@
+play_motion:
+  motions:
+    place_order:
+      joints: [arm_1_joint, arm_2_joint, arm_3_joint, arm_4_joint, arm_5_joint, arm_6_joint, arm_7_joint, torso_lift_joint]
+      points:
+      - positions: [0.1, 0.05, -1.62, 1.46, 0.03, 0.08, 0.01, 0.14]
+        time_from_start: 0.0

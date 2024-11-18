@@ -1,15 +1,19 @@
 import smach
 import smach_ros
 from geometry_msgs.msg import Pose
-from lasr_skills import AskAndListen, GoToLocation, Rotate, Say, Wait
+from lasr_skills import AskAndListen, GoToLocation, PlayMotion, Rotate, Say, Wait
 from restaurant.speech.speech_handlers import handle_speech
 from restaurant.states import Survey
 from std_msgs.msg import Empty
+from std_srvs.srv import Empty as EmptySrv
+from std_srvs.srv import Trigger
 
 
 class Restaurant(smach.StateMachine):
 
-    def __init__(self, bar_pose_map: Pose, unmapped: bool = False) -> None:
+    def __init__(
+        self, bar_pose_map: Pose, unmapped: bool = False, dem_manipulation: bool = True
+    ) -> None:
         super().__init__(outcomes=["succeeded", "failed"])
 
         with self:
@@ -64,7 +68,10 @@ class Restaurant(smach.StateMachine):
                     tts_phrase="Hello, I'm TIAGo. What can I get for you today?"
                 ),
                 remapping={"transcribed_speech": "order_str"},
-                transitions={"succeeded": "PROCESS_ORDER", "failed": "failed"},
+                transitions={
+                    "succeeded": "PROCESS_ORDER",
+                    "failed": "TAKE_ORDER_AGAIN",
+                },
             )
 
             @smach.cb_interface(
@@ -119,59 +126,205 @@ class Restaurant(smach.StateMachine):
 
             smach.StateMachine.add(
                 "REQUEST_ITEMS",
-                Say(
-                    format_str="Please get me {}, I will turn around for you to load the order."
-                ),
+                Say(format_str="Please get me {}"),
                 remapping={"placeholders": "order_str"},
                 transitions={
-                    "succeeded": "ROTATE_LOAD",
+                    "succeeded": "SAY_TURN" if dem_manipulation else "SAY_WAIT",
                     "aborted": "failed",
                     "preempted": "failed",
                 },
             )
 
-            smach.StateMachine.add(
-                "ROTATE_LOAD",
-                Rotate(angle=180.0),
-                transitions={"succeeded": "WAIT_LOAD"},
-            )
-
-            smach.StateMachine.add(
-                "WAIT_LOAD",
-                Wait(5),
-                transitions={"succeeded": "RETURN_TO_CUSTOMER", "failed": "failed"},
-            )
+            if dem_manipulation:
+                smach.StateMachine.add(
+                    "SAY_TURN",
+                    Say(text="I will turn around for you to load the order."),
+                    transitions={
+                        "succeeded": "ROTATE_LOAD",
+                        "aborted": "failed",
+                        "preempted": "failed",
+                    },
+                )
+                smach.StateMachine.add(
+                    "ROTATE_LOAD",
+                    Rotate(angle=180.0),
+                    transitions={"succeeded": "WAIT_LOAD"},
+                )
+                smach.StateMachine.add(
+                    "WAIT_LOAD",
+                    Wait(5),
+                    transitions={"succeeded": "RETURN_TO_CUSTOMER", "failed": "failed"},
+                )
+            else:
+                smach.StateMachine.add(
+                    "SAY_WAIT",
+                    Say(text="I will give you some time to prepare the order."),
+                    transitions={
+                        "succeeded": "WAIT_PREPARE",
+                        "aborted": "failed",
+                        "preempted": "failed",
+                    },
+                )
+                smach.StateMachine.add(
+                    smach_ros.ServiceState(
+                        "tiago_kcl_moveit_grasp/grasp_object", Trigger
+                    ),
+                    transitions={
+                        "succeeded": "RETURN_TO_CUSTOMER",
+                        "aborted": "failed",
+                        "preempted": "failed",
+                    },
+                )
 
             smach.StateMachine.add(
                 "RETURN_TO_CUSTOMER",
                 GoToLocation(),
                 remapping={"location": "customer_approach_pose"},
-                transitions={"succeeded": "SAY_TAKE_ORDER", "failed": "failed"},
-            )
-
-            smach.StateMachine.add(
-                "SAY_TAKE_ORDER",
-                Say(
-                    text="Here is your order, I will turn around for you to unload it."
-                ),
                 transitions={
-                    "succeeded": "ROTATE_UNLOAD",
-                    "aborted": "failed",
-                    "preempted": "failed",
+                    "succeeded": (
+                        "SAY_TAKE_ORDER" if dem_manipulation else "SAY_DELIVER_ORDER"
+                    ),
+                    "failed": "failed",
                 },
             )
 
-            smach.StateMachine.add(
-                "ROTATE_UNLOAD",
-                Rotate(angle=180.0),
-                transitions={"succeeded": "WAIT_UNLOAD"},
-            )
+            if dem_manipulation:
 
-            smach.StateMachine.add(
-                "WAIT_UNLOAD",
-                Wait(5),
-                transitions={"succeeded": "GO_TO_SURVEY", "failed": "failed"},
-            )
+                smach.StateMachine.add(
+                    "SAY_TAKE_ORDER",
+                    Say(
+                        text="Here is your order, I will turn around for you to unload it."
+                    ),
+                    transitions={
+                        "succeeded": "ROTATE_UNLOAD",
+                        "aborted": "failed",
+                        "preempted": "failed",
+                    },
+                )
+
+                smach.StateMachine.add(
+                    "ROTATE_UNLOAD",
+                    Rotate(angle=180.0),
+                    transitions={"succeeded": "WAIT_UNLOAD"},
+                )
+
+                smach.StateMachine.add(
+                    "WAIT_UNLOAD",
+                    Wait(5),
+                    transitions={"succeeded": "GO_TO_SURVEY", "failed": "failed"},
+                )
+
+            else:
+
+                smach.StateMachine.add(
+                    "SAY_DELIVER_ORDER",
+                    Say(text="Here is your order."),
+                    transitions={
+                        "succeeded": "CLEAR_OCTOMAP",
+                        "aborted": "failed",
+                        "preempted": "failed",
+                    },
+                )
+
+                smach.StateMachine.add(
+                    "CLEAR_OCTOMAP",
+                    smach_ros.ServiceState("clear_octomap", EmptySrv),
+                    transitions={
+                        "succeeded": "LOOK_LEFT",
+                        "aborted": "failed",
+                        "preempted": "failed",
+                    },
+                )
+
+                smach.StateMachine.add(
+                    "LOOK_LEFT",
+                    PlayMotion(motion_name="look_left"),
+                    transitions={
+                        "succeeded": "LOOK_DOWN_LEFT",
+                        "aborted": "failed",
+                        "preempted": "failed",
+                    },
+                )
+
+                smach.StateMachine.add(
+                    "LOOK_DOWN_LEFT",
+                    PlayMotion(motion_name="look_down_left"),
+                    transitions={
+                        "succeeded": "LOOK_RIGHT",
+                        "aborted": "failed",
+                        "preempted": "failed",
+                    },
+                )
+
+                smach.StateMachine.add(
+                    "LOOK_RIGHT",
+                    PlayMotion(motion_name="look_right"),
+                    transitions={
+                        "succeeded": "LOOK_DOWN_RIGHT",
+                        "aborted": "failed",
+                        "preempted": "failed",
+                    },
+                )
+
+                smach.StateMachine.add(
+                    "LOOK_DOWN_RIGHT",
+                    PlayMotion(motion_name="look_down_right"),
+                    transitions={
+                        "succeeded": "LOOK_DOWN_CENTRE",
+                        "aborted": "failed",
+                        "preempted": "failed",
+                    },
+                )
+
+                smach.StateMachine.add(
+                    "LOOK_DOWN_CENTRE",
+                    PlayMotion(motion_name="look_centre"),
+                    transitions={
+                        "succeeded": "LOOK_CENTRE",
+                        "aborted": "failed",
+                        "preempted": "failed",
+                    },
+                )
+
+                smach.StateMachine.add(
+                    "LOOK_CENTRE",
+                    PlayMotion(motion_name="look_centre"),
+                    transitions={
+                        "succeeded": "PLACE_ORDER",
+                        "aborted": "failed",
+                        "preempted": "failed",
+                    },
+                )
+
+                smach.StateMachine.add(
+                    "PLACE_ORDER",
+                    PlayMotion(motion_name="place_order"),
+                    transitions={
+                        "succeeded": "RELEASE",
+                        "aborted": "failed",
+                        "preempted": "failed",
+                    },
+                )
+
+                smach.StateMachine.add(
+                    "RELEASE",
+                    PlayMotion(motion_name="open_gripper"),
+                    transitions={
+                        "succeeded": "HOME",
+                        "aborted": "failed",
+                        "preempted": "failed",
+                    },
+                )
+
+                smach.StateMachine.add(
+                    "HOME",
+                    PlayMotion(motion_name="home"),
+                    transitions={
+                        "succeeded": "GO_TO_SURVEY",
+                        "aborted": "failed",
+                        "preempted": "failed",
+                    },
+                )
 
             smach.StateMachine.add(
                 "GO_TO_SURVEY",

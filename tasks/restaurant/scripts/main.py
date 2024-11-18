@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import rospy
+import rosservice
 from geometry_msgs.msg import PoseWithCovarianceStamped
 from pal_navigation_msgs.msg import NavigationStatus
 from restaurant.state_machine import Restaurant
@@ -12,5 +13,9 @@ if __name__ == "__main__":
         rospy.wait_for_message("/pal_navigation_sm/state", NavigationStatus).status.data
         != "LOC"
     )
-    restaurant = Restaurant(bar_pose_map.pose.pose, unmapped)
+    restaurant = Restaurant(
+        bar_pose_map.pose.pose,
+        unmapped,
+        "/tiago_kcl_moveit_grasp/grasp" not in rosservice.get_service_list(),
+    )
     restaurant.execute()
