@@ -1,20 +1,20 @@
-import smach
-import rospy
+from typing import Union
+
 import cv2
 import cv2_img
+import rospy
+import smach
+import tf2_ros as tf
+from geometry_msgs.msg import Point, PointStamped, Pose, PoseStamped, Quaternion
 from lasr_vision_msgs.srv import (
     BodyPixKeypointDetection,
     BodyPixKeypointDetectionRequest,
 )
+from markers import create_and_publish_marker
 from sensor_msgs.msg import Image
-from geometry_msgs.msg import Point, Pose, PoseStamped, Quaternion, PointStamped
 from std_msgs.msg import Header
 from tf2_geometry_msgs.tf2_geometry_msgs import do_transform_pose
-import tf2_ros as tf
 from visualization_msgs.msg import Marker
-from markers import create_and_publish_marker
-
-from typing import Union
 
 
 class DetectGesture(smach.State):
@@ -34,7 +34,7 @@ class DetectGesture(smach.State):
             self,
             outcomes=["succeeded", "failed"],
             input_keys=["img_msg"],
-            output_keys=["detected_gesture"],
+            output_keys=["detected_gestures"],
         )
         self.gesture_to_detect = gesture_to_detect
         self.bodypix_client = rospy.ServiceProxy(
@@ -69,48 +69,51 @@ class DetectGesture(smach.State):
 
         detected_keypoints = res.keypoints
 
-        detected_gesture = "none"
-
         keypoint_info = {
             keypoint.keypoint_name: {"x": keypoint.x, "y": keypoint.y}
             for keypoint in detected_keypoints
         }
 
+        detected_gestures = []
+
         # raising left arm
         if "leftShoulder" in keypoint_info and "leftWrist" in keypoint_info:
             if keypoint_info["leftWrist"]["y"] < keypoint_info["leftShoulder"]["y"]:
-                detected_gesture = "raising_left_arm"
+                detected_gestures.append("raising_left_arm")
         # pointing to the left
         if "leftShoulder" in keypoint_info and "leftWrist" in keypoint_info:
             if (
                 keypoint_info["leftWrist"]["x"] - self.buffer_width
                 > keypoint_info["leftShoulder"]["x"]
             ):
-                detected_gesture = "pointing_to_the_left"
+                detected_gestures.append("pointing_to_the_left")
         # raising right arm
         if "rightShoulder" in keypoint_info and "rightWrist" in keypoint_info:
             if keypoint_info["rightWrist"]["y"] < keypoint_info["rightShoulder"]["y"]:
-                detected_gesture = "raising_right_arm"
+                detected_gestures.append("raising_right_arm")
         # pointing to the right
         if "rightShoulder" in keypoint_info and "rightWrist" in keypoint_info:
             if (
                 keypoint_info["rightShoulder"]["x"] - self.buffer_width
                 > keypoint_info["rightWrist"]["x"]
             ):
-                detected_gesture = "pointing_to_the_right"
+                detected_gestures.append("pointing_to_the_right")
 
         if self.gesture_to_detect == "waving":
-            if detected_gesture in ["raising_left_arm", "raising_right_arm"]:
-                detected_gesture = "waving"
+            if (
+                "raising_left_arm" in detected_gestures
+                or "raising_right_arm" in detected_gestures
+            ):
+                detected_gestures.append("waving")
 
-        rospy.loginfo(f"Detected gesture: {detected_gesture}")
-        userdata.detected_gesture = detected_gesture
+        rospy.loginfo(f"Detected gestures: {detected_gestures}")
+        userdata.detected_gestures = detected_gestures
 
         cv2_gesture_img = cv2_img.msg_to_cv2_img(userdata.img_msg)
         # Add text to the image
         cv2.putText(
             cv2_gesture_img,
-            detected_gesture,
+            ",".join(detected_gestures),
             (10, 30),
             cv2.FONT_HERSHEY_SIMPLEX,
             1,
@@ -123,7 +126,7 @@ class DetectGesture(smach.State):
 
         if self.gesture_to_detect is not None:
             return (
-                "succeeded" if detected_gesture == self.gesture_to_detect else "failed"
+                "succeeded" if self.gesture_to_detect in detected_gestures else "failed"
             )
         else:
             return "succeeded"
