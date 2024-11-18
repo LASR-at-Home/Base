@@ -1,16 +1,13 @@
 #!/usr/bin/env python3
+import os
+from typing import Union
+
+import rosparam
+import rospkg
 import smach
 import smach_ros
-
+from lasr_skills import PlayMotion, Say, Wait
 from std_srvs.srv import Empty
-
-from lasr_skills import Say, PlayMotion, Wait
-
-import rospkg
-import rosparam
-import os
-
-from typing import Union
 
 
 class HandoverObject(smach.StateMachine):
@@ -135,7 +132,7 @@ class HandoverObject(smach.StateMachine):
                 smach.StateMachine.add(
                     "SAY_TAKE",
                     Say(
-                        text=f"Please grab the {object_name} in my hand. I will wait for a few seconds.",
+                        text=f"Here is your order",
                     ),
                     transitions={
                         "succeeded": "OPEN_GRIPPER",
