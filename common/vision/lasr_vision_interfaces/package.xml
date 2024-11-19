@@ -1,4 +1,5 @@
 <?xml version="1.0"?>
+
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>lasr_vision_interfaces</name>
@@ -7,9 +8,20 @@
   <maintainer email="jared.swift@kcl.ac.uk">Jared Swift</maintainer>
   <license>GPL-3.0-only</license>
 
+    <!-- Build tool dependencies -->
   <buildtool_depend>ament_cmake</buildtool_depend>
-  <buildtool_depend>rosidl_default_generators</buildtool_depend>
+
+  <!-- Dependencies for message and service generation -->
+  <build_depend>rosidl_default_generators</build_depend>
   <exec_depend>rosidl_default_runtime</exec_depend>
+
+   <!-- Dependencies for sensor messages and built-in interfaces -->
+  <build_depend>sensor_msgs</build_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <build_depend>builtin_interfaces</build_depend>
+  <exec_depend>builtin_interfaces</exec_depend>
+
+  <!-- ROS2 specific group for interface packages -->
   <member_of_group>rosidl_interface_packages</member_of_group>
 
   <test_depend>ament_lint_auto</test_depend>

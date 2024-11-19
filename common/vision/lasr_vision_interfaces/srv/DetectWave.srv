@@ -1,0 +1,18 @@
+# Image to run inference on
+sensor_msgs/PointCloud2 pcl_msg
+
+# BodyPix model to use
+string dataset
+
+# How certain the detection should be to include
+float32 confidence
+
+---
+# keypoints
+lasr_vision_interfaces/BodyPixKeypoint[] keypoints
+
+# waving
+bool wave_detected
+
+# waving position
+geometry_msgs/PointStamped wave_position
