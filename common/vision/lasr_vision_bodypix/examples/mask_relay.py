@@ -10,24 +10,25 @@ from lasr_vision_msgs.srv import BodyPixMaskDetection
 
 class ImageListener(Node):
     def __init__(self, listen_topic, model):
-        super().__init__('image_listener')
+        super().__init__("image_listener")
         self.listen_topic = listen_topic
         self.model = model
         self.processing = False
 
         # Set up the service client
-        self.detect_service_client = self.create_client(BodyPixMaskDetection, '/bodypix/mask_detection')
+        self.detect_service_client = self.create_client(
+            BodyPixMaskDetection, "/bodypix/mask_detection"
+        )
         while not self.detect_service_client.wait_for_service(timeout_sec=1.0):
-            self.get_logger().info('Service not available, waiting...')
+            self.get_logger().info("Service not available, waiting...")
 
         # Set up the subscriber
         self.subscription = self.create_subscription(
-            Image,
-            self.listen_topic,
-            self.image_callback,
-            10  # QoS profile
+            Image, self.listen_topic, self.image_callback, 10  # QoS profile
         )
-        self.get_logger().info(f'Started listening on topic: {self.listen_topic} with model: {self.model}')
+        self.get_logger().info(
+            f"Started listening on topic: {self.listen_topic} with model: {self.model}"
+        )
 
     def detect(self, image):
         self.processing = True
@@ -70,14 +71,16 @@ def main(args=None):
     print("Starting mask_relay node")
     # Check if command-line arguments are sufficient
     if len(sys.argv) < 2:
-        print("Usage: ros2 run lasr_vision_bodypix mask_relay.py <source_topic> [resnet50|mobilenet50|...]")
+        print(
+            "Usage: ros2 run lasr_vision_bodypix mask_relay.py <source_topic> [resnet50|mobilenet50|...]"
+        )
         sys.exit(1)
 
     # Parse the command-line arguments
-    listen_topic = '/image_raw'
+    listen_topic = "/image_raw"
     if isinstance(sys.argv[1], list):
         listen_topic = sys.argv[1][0]
-        
+
     model = sys.argv[2] if len(sys.argv) >= 3 else "resnet50"
 
     rclpy.init(args=args)

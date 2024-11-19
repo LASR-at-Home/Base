@@ -11,6 +11,7 @@ from rclpy.node import Node
 
 Mat = np.ndarray
 
+
 def pointcloud2_to_xyz_array(pointcloud: PointCloud2, remove_nans=True):
     """
     Convert a sensor_msgs/PointCloud2 message to an Nx3 NumPy array.
@@ -24,8 +25,12 @@ def pointcloud2_to_xyz_array(pointcloud: PointCloud2, remove_nans=True):
     points = []
 
     for i in range(height * width):
-        point_data = pointcloud.data[i * pointcloud.point_step:(i + 1) * pointcloud.point_step]
-        point = unpacker.unpack(point_data[:12])  # Assuming XYZ are first 12 bytes (3 floats)
+        point_data = pointcloud.data[
+            i * pointcloud.point_step : (i + 1) * pointcloud.point_step
+        ]
+        point = unpacker.unpack(
+            point_data[:12]
+        )  # Assuming XYZ are first 12 bytes (3 floats)
         points.append(point)
 
     # Convert to a NumPy array
@@ -33,8 +38,9 @@ def pointcloud2_to_xyz_array(pointcloud: PointCloud2, remove_nans=True):
 
     if remove_nans:
         points = points[~np.isnan(points).any(axis=1)]
-    
+
     return points
+
 
 def _get_struct_fmt(cloud_msg: PointCloud2):
     """
@@ -43,8 +49,9 @@ def _get_struct_fmt(cloud_msg: PointCloud2):
     :return: Struct format string for unpacking the data.
     """
     # Define the data structure format string (assuming XYZ are all float32)
-    fmt = 'fff'  # XYZ are three 32-bit floats (4 bytes each)
+    fmt = "fff"  # XYZ are three 32-bit floats (4 bytes each)
     return fmt
+
 
 def pcl_to_img_msg(pcl: PointCloud2) -> Mat:
     """
@@ -54,6 +61,7 @@ def pcl_to_img_msg(pcl: PointCloud2) -> Mat:
     cv2_img = pcl_to_cv2(pcl)
 
     return cv2_img_to_msg(cv2_img, pcl.header.stamp)
+
 
 def pcl_to_cv2(
     pcl: PointCloud2, height: Union[int, None] = None, width: Union[int, None] = None
@@ -69,13 +77,16 @@ def pcl_to_cv2(
 
     # Placeholder for converting XYZ to RGB or any other visualization.
     # For example, scale and shift XYZ to [0, 255] for visualization as an image.
-    frame = (xyz_array[:, :3] - np.min(xyz_array[:, :3])) / (np.max(xyz_array[:, :3]) - np.min(xyz_array[:, :3]))
+    frame = (xyz_array[:, :3] - np.min(xyz_array[:, :3])) / (
+        np.max(xyz_array[:, :3]) - np.min(xyz_array[:, :3])
+    )
     frame = (frame * 255).astype(np.uint8)
 
     # Reshape into a height x width x 3 image.
     frame = frame.reshape((height, width, 3))
 
     return frame
+
 
 def seg_to_centroid(
     pcl: PointCloud2,
@@ -111,6 +122,7 @@ def seg_to_centroid(
 
     # Compute the centroid of the points
     return np.nanmean(xyz_points, axis=0)
+
 
 def bb_to_centroid(
     pcl: PointCloud2,

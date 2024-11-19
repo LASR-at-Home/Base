@@ -33,6 +33,7 @@ def cv2_img_to_msg(img, stamp=None):
 
     return msg
 
+
 def msg_to_pillow_img(msg: SensorImage):
     """
     Convert a given sensor image to a pillow image
@@ -53,6 +54,7 @@ def msg_to_pillow_img(msg: SensorImage):
 
     return img
 
+
 def msg_to_cv2_img(msg: SensorImage):
     """
     Convert a given sensor image to a cv2 image
@@ -67,6 +69,7 @@ def msg_to_cv2_img(msg: SensorImage):
     img = img[:, :, ::-1].copy()
 
     return img
+
 
 def extract_mask_region(frame, mask, expand_x=0.5, expand_y=0.5):
     """

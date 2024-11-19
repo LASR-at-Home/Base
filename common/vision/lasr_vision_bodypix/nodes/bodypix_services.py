@@ -17,15 +17,21 @@ from cv2_pcl import pcl_to_img_msg
 from typing import Union
 from rcl_interfaces.msg import ParameterDescriptor, ParameterType
 
+
 class BodyPixServiceNode(Node):
     def __init__(self):
         super().__init__("bodypix_service_node")
 
         # Declare and load parameters
         # self.declare_parameter('preload', [])
-        self.declare_parameter('preload', [''], ParameterDescriptor(type=ParameterType.PARAMETER_STRING_ARRAY))
-        preload_models = self.get_parameter('preload').get_parameter_value().string_array_value
-
+        self.declare_parameter(
+            "preload",
+            [""],
+            ParameterDescriptor(type=ParameterType.PARAMETER_STRING_ARRAY),
+        )
+        preload_models = (
+            self.get_parameter("preload").get_parameter_value().string_array_value
+        )
 
         # Preload models
         for model in preload_models:
@@ -33,14 +39,16 @@ class BodyPixServiceNode(Node):
 
         # Create service servers
         self.mask_service = self.create_service(
-            BodyPixMaskDetection, '/bodypix/mask_detection', self.detect_masks
+            BodyPixMaskDetection, "/bodypix/mask_detection", self.detect_masks
         )
         self.keypoint_service = self.create_service(
-            BodyPixKeypointDetection, '/bodypix/keypoint_detection', self.detect_keypoints
+            BodyPixKeypointDetection,
+            "/bodypix/keypoint_detection",
+            self.detect_keypoints,
         )
         self.get_logger().info("Keypoint detection service registered.")
         self.detect_wave_service = self.create_service(
-            DetectWave, '/bodypix/detect_wave', self.detect_wave
+            DetectWave, "/bodypix/detect_wave", self.detect_wave
         )
 
         # Debug publisher for detect_wave
@@ -90,7 +98,9 @@ class BodyPixServiceNode(Node):
 
         # Process wave point in point cloud
         wave_point = keypoint_info.get(
-            "leftShoulder" if gesture_to_detect == "raising_left_arm" else "rightShoulder"
+            "leftShoulder"
+            if gesture_to_detect == "raising_left_arm"
+            else "rightShoulder"
         )
         pcl_xyz = rnp.point_cloud2.pointcloud2_to_xyz_array(
             request.pcl_msg, remove_nans=False
@@ -100,10 +110,16 @@ class BodyPixServiceNode(Node):
             wave_position = np.zeros(3)
             for i in range(-5, 5):
                 for j in range(-5, 5):
-                    if np.any(np.isnan(pcl_xyz[int(wave_point["y"]) + i][int(wave_point["x"]) + j])):
+                    if np.any(
+                        np.isnan(
+                            pcl_xyz[int(wave_point["y"]) + i][int(wave_point["x"]) + j]
+                        )
+                    ):
                         self.get_logger().warn("NaN point in PCL")
                         continue
-                    wave_position += pcl_xyz[int(wave_point["y"]) + i][int(wave_point["x"]) + j]
+                    wave_position += pcl_xyz[int(wave_point["y"]) + i][
+                        int(wave_point["x"]) + j
+                    ]
             wave_position /= 100
             wave_position_msg = PointStamped(
                 point=Point(*wave_position),
@@ -122,12 +138,14 @@ class BodyPixServiceNode(Node):
         response.wave_position = wave_position_msg
         return response
 
+
 def main(args=None):
     rclpy.init(args=args)
     node = BodyPixServiceNode()
     rclpy.spin(node)
     node.destroy_node()
     rclpy.shutdown()
+
 
 if __name__ == "__main__":
     main()

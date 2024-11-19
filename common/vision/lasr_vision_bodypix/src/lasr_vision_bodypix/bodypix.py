@@ -13,7 +13,6 @@ from lasr_vision_msgs.msg import BodyPixMask, BodyPixKeypoint, BodyPixKeypointNo
 from lasr_vision_msgs.srv import (
     BodyPixMaskDetection,
     BodyPixKeypointDetection,
-
 )
 
 BodyPixKeypointDetection_Request = BodyPixKeypointDetection.Request()
@@ -84,16 +83,22 @@ def run_inference(dataset: str, confidence: float, img: SensorImage, logger=None
     return result, mask
 
 
-def detect_masks(request: BodyPixMaskDetection_Request, debug_publisher=None, logger=None):
+def detect_masks(
+    request: BodyPixMaskDetection_Request, debug_publisher=None, logger=None
+):
     """
     Run BodyPix inference for mask detection.
     """
-    result, mask = run_inference(request.dataset, request.confidence, request.image_raw, logger)
+    result, mask = run_inference(
+        request.dataset, request.confidence, request.image_raw, logger
+    )
 
     masks = []
 
     for part_name in request.parts:
-        part_mask = result.get_part_mask(mask=tf.identity(mask), part_names=[part_name]).squeeze()
+        part_mask = result.get_part_mask(
+            mask=tf.identity(mask), part_names=[part_name]
+        ).squeeze()
 
         if np.max(part_mask) == 0:
             if logger:
@@ -125,11 +130,15 @@ def detect_masks(request: BodyPixMaskDetection_Request, debug_publisher=None, lo
     return response
 
 
-def detect_keypoints(request: BodyPixKeypointDetection_Request, debug_publisher=None, logger=None):
+def detect_keypoints(
+    request: BodyPixKeypointDetection_Request, debug_publisher=None, logger=None
+):
     """
     Run BodyPix inference for keypoint detection.
     """
-    result, mask = run_inference(request.dataset, request.confidence, request.image_raw, logger)
+    result, mask = run_inference(
+        request.dataset, request.confidence, request.image_raw, logger
+    )
 
     poses = result.get_poses()
     detected_keypoints: List[BodyPixKeypoint] = []

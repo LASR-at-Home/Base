@@ -7,26 +7,28 @@ import threading
 from sensor_msgs.msg import Image
 from lasr_vision_msgs.srv import BodyPixKeypointDetection
 
+
 class KeypointRelay(Node):
     def __init__(self, listen_topic, model):
-        super().__init__('keypoint_relay')
+        super().__init__("keypoint_relay")
         self.listen_topic = listen_topic
         self.model = model
         self.processing = False
 
         # Set up the service client
-        self.detect_service_client = self.create_client(BodyPixKeypointDetection, '/bodypix/keypoint_detection')
+        self.detect_service_client = self.create_client(
+            BodyPixKeypointDetection, "/bodypix/keypoint_detection"
+        )
         while not self.detect_service_client.wait_for_service(timeout_sec=1.0):
-            self.get_logger().info('Service not available, waiting...')
+            self.get_logger().info("Service not available, waiting...")
 
         # Set up the subscriber
         self.subscription = self.create_subscription(
-            Image,
-            self.listen_topic,
-            self.image_callback,
-            10  # QoS profile
+            Image, self.listen_topic, self.image_callback, 10  # QoS profile
         )
-        self.get_logger().info(f'Started listening on topic: {self.listen_topic} with model: {self.model}')
+        self.get_logger().info(
+            f"Started listening on topic: {self.listen_topic} with model: {self.model}"
+        )
 
     def detect(self, image):
         self.processing = True
@@ -62,12 +64,14 @@ def main(args=None):
     print("start keypoint_relay")
     # Check if command-line arguments are sufficient
     if len(sys.argv) < 2:
-        print("Usage: ros2 run lasr_vision_bodypix keypoint_relay.py <source_topic> [resnet50|mobilenet50|...]")
+        print(
+            "Usage: ros2 run lasr_vision_bodypix keypoint_relay.py <source_topic> [resnet50|mobilenet50|...]"
+        )
         sys.exit(1)
 
     # Parse the command-line arguments
 
-    listen_topic = '/image_raw'
+    listen_topic = "/image_raw"
     if isinstance(sys.argv[1], list):
         listen_topic = sys.argv[1][0]
 
