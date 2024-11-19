@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(lasr_vision_msgs)
+project(lasr_vision_interfaces)
 
 # Find dependencies
 find_package(ament_cmake REQUIRED)

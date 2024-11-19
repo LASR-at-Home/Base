@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="3">
-  <name>lasr_vision_msgs</name>
+  <name>lasr_vision_interfaces</name>
   <version>0.0.0</version>
   <description>Messages and services for vision processing</description>
   <maintainer email="me@insrt.uk">Paul Makles</maintainer>
