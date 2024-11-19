@@ -1,25 +1,28 @@
 from __future__ import annotations
-from typing import List
-import rclpy
-from rclpy.node import Node
-import cv2
-import numpy as np
+
 import re
-import tensorflow as tf
+from typing import List
+
+import cv2
 import cv2_img
-from sensor_msgs.msg import Image as SensorImage
-from tf_bodypix.api import download_model, load_model, BodyPixModelPaths
-from lasr_vision_interfaces.msg import BodyPixMask, BodyPixKeypoint, BodyPixKeypointNormalized
+import numpy as np
+import tensorflow as tf
+from lasr_vision_interfaces.msg import (
+    BodyPixMask,
+    BodyPixKeypoint,
+    BodyPixKeypointNormalized,
+)
 from lasr_vision_interfaces.srv import (
     BodyPixMaskDetection,
     BodyPixKeypointDetection,
 )
+from sensor_msgs.msg import Image as SensorImage
+from tf_bodypix.api import download_model, load_model, BodyPixModelPaths
 
 BodyPixKeypointDetection_Request = BodyPixKeypointDetection.Request()
 BodyPixKeypointDetection_Response = BodyPixKeypointDetection.Response()
 BodyPixMaskDetection_Request = BodyPixMaskDetection.Request()
 BodyPixMaskDetection_Response = BodyPixMaskDetection.Response()
-
 
 # model cache
 loaded_models = {}
