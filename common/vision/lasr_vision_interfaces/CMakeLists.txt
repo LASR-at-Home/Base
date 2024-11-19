@@ -10,8 +10,6 @@ find_package(ament_cmake REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(builtin_interfaces REQUIRED)  # Needed for built-in ROS types like Time
-rosidl_generate_interfaces(${PROJECT_NAME})
-ament_export_dependencies(rosidl_default_runtime)
 
 ################################################
 ## Declare ROS messages, services, and actions #

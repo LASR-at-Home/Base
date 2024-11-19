@@ -5,7 +5,7 @@ import threading
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
-from lasr_vision_msgs.srv import BodyPixMaskDetection
+from lasr_vision_interfaces.srv import BodyPixMaskDetection
 
 
 class ImageListener(Node):

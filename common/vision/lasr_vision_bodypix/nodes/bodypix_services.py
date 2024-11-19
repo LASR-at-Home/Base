@@ -3,7 +3,7 @@
 import rclpy
 from rclpy.node import Node
 import lasr_vision_bodypix as bodypix
-from lasr_vision_msgs.srv import (
+from lasr_vision_interfaces.srv import (
     BodyPixMaskDetection,
     BodyPixKeypointDetection,
     DetectWave,

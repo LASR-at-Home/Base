@@ -13,7 +13,7 @@ bool keep_out_of_bounds
 ---
 # Response
 # keypoints
-lasr_vision_msgs/BodyPixKeypoint[] keypoints
+lasr_vision_interfaces/BodyPixKeypoint[] keypoints
 
 # keypoints
-lasr_vision_msgs/BodyPixKeypointNormalized[] normalized_keypoints
+lasr_vision_interfaces/BodyPixKeypointNormalized[] normalized_keypoints

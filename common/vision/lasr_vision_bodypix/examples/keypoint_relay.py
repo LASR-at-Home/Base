@@ -5,7 +5,7 @@ from rclpy.node import Node
 import threading
 
 from sensor_msgs.msg import Image
-from lasr_vision_msgs.srv import BodyPixKeypointDetection
+from lasr_vision_interfaces.srv import BodyPixKeypointDetection
 
 
 class KeypointRelay(Node):

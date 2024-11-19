@@ -9,7 +9,7 @@ float32 confidence
 
 ---
 # keypoints
-lasr_vision_msgs/BodyPixKeypoint[] keypoints
+lasr_vision_interfaces/BodyPixKeypoint[] keypoints
 
 # waving
 bool wave_detected

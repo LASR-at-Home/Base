@@ -7,7 +7,7 @@ find_package(ament_cmake_python REQUIRED)
 find_package(rclpy REQUIRED)  # If you are using rclpy in your Python scripts
 find_package(sensor_msgs REQUIRED)  # Example ROS2 package dependency
 find_package(std_msgs REQUIRED)
-find_package(lasr_vision_msgs REQUIRED)
+find_package(lasr_vision_interfaces REQUIRED)
 
 # Install Python modules
 ament_python_install_package(${PROJECT_NAME} PACKAGE_DIR src/${PROJECT_NAME})

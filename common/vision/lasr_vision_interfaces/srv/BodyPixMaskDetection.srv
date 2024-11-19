@@ -13,4 +13,4 @@ float32 confidence
 string[] parts
 ---
 # Generated masks
-lasr_vision_msgs/BodyPixMask[] masks
+lasr_vision_interfaces/BodyPixMask[] masks

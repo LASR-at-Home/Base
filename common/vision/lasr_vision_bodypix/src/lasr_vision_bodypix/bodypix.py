@@ -9,8 +9,8 @@ import tensorflow as tf
 import cv2_img
 from sensor_msgs.msg import Image as SensorImage
 from tf_bodypix.api import download_model, load_model, BodyPixModelPaths
-from lasr_vision_msgs.msg import BodyPixMask, BodyPixKeypoint, BodyPixKeypointNormalized
-from lasr_vision_msgs.srv import (
+from lasr_vision_interfaces.msg import BodyPixMask, BodyPixKeypoint, BodyPixKeypointNormalized
+from lasr_vision_interfaces.srv import (
     BodyPixMaskDetection,
     BodyPixKeypointDetection,
 )
