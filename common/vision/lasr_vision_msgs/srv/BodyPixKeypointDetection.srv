@@ -1,3 +1,4 @@
+# Request
 # Image to run inference on
 sensor_msgs/Image image_raw
 
@@ -10,6 +11,7 @@ float32 confidence
 # Whether to return keypoints that are out of bound
 bool keep_out_of_bounds
 ---
+# Response
 # keypoints
 lasr_vision_msgs/BodyPixKeypoint[] keypoints
 

@@ -2,15 +2,23 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
 from launch_ros.actions import Node
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration, TextSubstitution
+from launch.substitutions import LaunchConfiguration, TextSubstitution, PythonExpression
+
 import os
 from ament_index_python.packages import get_package_share_directory
 
 def generate_launch_description():
     # Declare launch arguments
     model_arg = DeclareLaunchArgument(
-        'model', default_value='resnet50', description='Model to use for the demo'
+        'model', default_value="['resnet50']", description='Model to use for the demo'
     )
+
+    image_topic_arg = DeclareLaunchArgument(
+        'image_topic',
+        default_value='/image_raw',  # Default input image topic
+        description='Input image topic for keypoint relay'
+    )
+
 
     # Path to the BodyPix launch file
     bodypix_launch_file = os.path.join(
@@ -45,8 +53,15 @@ def generate_launch_description():
             name='image_view',
             output='screen',
             arguments=[
-                TextSubstitution(text='/bodypix/debug/'), 
-                LaunchConfiguration('model')
+
+                # [TextSubstitution(text='/bodypix/debug/'), LaunchConfiguration('model')]# Topic to visualize
+                PythonExpression([
+                    "'/bodypix/debug/' + ",  # Static string
+                    "''.join(",              # Convert list to string
+                    LaunchConfiguration('model'),
+                    ")"
+                ])
+                # '/bodypix/debug/{}'.format(LaunchConfiguration('resnet50'))
             ],  # Constructs the topic path dynamically
         ),
 
@@ -56,7 +71,17 @@ def generate_launch_description():
             executable='keypoint_relay.py',  # Specifying the subdirectory
             name='keypoint_relay',
             output='screen',
-            arguments=[LaunchConfiguration('model')],
+            arguments=[
+                # TextSubstitution(text='/bodypix/debug/'), 
+                # LaunchConfiguration('model')
+                # '/camera/image_raw /{}'.format(LaunchConfiguration('model'))
+                '/image_raw ',
+                PythonExpression([
+                    "''.join(",  # Convert model list to a single string
+                    LaunchConfiguration('model'),
+                    ")"
+                ])
+            ],  # Constructs the topic path dynamically],
         ),
 
 

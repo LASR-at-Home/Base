@@ -9,11 +9,11 @@ def generate_launch_description():
             name='v4l2_camera_node',
             output='screen',
             parameters=[{
-                'video_device': '/dev/video0',    # 摄像头设备路径
-                'image_width': 640,              # 图像宽度
-                'image_height': 480,             # 图像高度
-                'pixel_format': 'YUYV',          # 像素格式
-                'frame_rate': 30,                # 帧率
+                'video_device': '/dev/video0',    # the video device to open
+                'image_width': 640,              
+                'image_height': 480,            
+                'pixel_format': 'YUYV',          # the pixel format of the image
+                'frame_rate': 30,                
             }],
         ),
     ])

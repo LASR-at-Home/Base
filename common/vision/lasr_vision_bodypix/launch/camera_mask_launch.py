@@ -2,14 +2,20 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
 from launch_ros.actions import Node
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration, TextSubstitution
+from launch.substitutions import LaunchConfiguration, TextSubstitution, PythonExpression
 import os
 from ament_index_python.packages import get_package_share_directory
 
 def generate_launch_description():
     # Declare launch arguments
     model_arg = DeclareLaunchArgument(
-        'model', default_value='resnet50', description='Model to use for the demo'
+        'model', default_value="['resnet50']", description='Model to use for the demo'
+    )
+
+    image_topic_arg = DeclareLaunchArgument(
+        'image_topic',
+        default_value='/image_raw',  # Default input image topic
+        description='Input image topic for keypoint relay'
     )
 
     # Path to the BodyPix launch file
@@ -19,7 +25,7 @@ def generate_launch_description():
 
     # Path to the v4l2_camera launch file (replacement for video_stream_opencv)
     v4l2_camera_launch_file = os.path.join(
-        get_package_share_directory('v4l2_camera'), 'launch', 'v4l2_camera_node.launch.py'
+        get_package_share_directory('lasr_vision_bodypix'), 'launch', 'v4l2_camera_launch.py'
     )
 
     return LaunchDescription([
@@ -41,18 +47,31 @@ def generate_launch_description():
             name='image_view',
             output='screen',
             arguments=[
-                TextSubstitution(text='/bodypix/debug/'), 
-                LaunchConfiguration('model')
+                # [TextSubstitution(text='/bodypix/debug/'), LaunchConfiguration('model')]# Topic to visualize
+                PythonExpression([
+                    "'/bodypix/debug/' + ",  # Static string
+                    "''.join(",              # Convert list to string
+                    LaunchConfiguration('model'),
+                    ")"
+                ])
+                # '/bodypix/debug/{}'.format(LaunchConfiguration('resnet50'))
             ],  # Constructs the topic path dynamically
         ),
 
         # Start the keypoint relay service
         Node(
             package='lasr_vision_bodypix',
-            executable='keypoint_relay.py',  # Removed .py extension, assuming installed without it
-            name='keypoint_relay',
+            executable='mask_relay.py',  # Removed .py extension, assuming installed without it
+            name='mask_relay',
             output='screen',
-            arguments=[LaunchConfiguration('model')],
+            arguments=[                
+                '/image_raw ',
+                PythonExpression([
+                    "''.join(",  # Convert model list to a single string
+                    LaunchConfiguration('model'),
+                    ")"
+                ])
+            ],  # Constructs the topic path dynamically],],
         ),
 
         # Include the v4l2_camera launch file

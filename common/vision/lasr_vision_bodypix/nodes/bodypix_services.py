@@ -15,14 +15,17 @@ from std_msgs.msg import Header
 import numpy as np
 from cv2_pcl import pcl_to_img_msg
 from typing import Union
+from rcl_interfaces.msg import ParameterDescriptor, ParameterType
 
 class BodyPixServiceNode(Node):
     def __init__(self):
         super().__init__("bodypix_service_node")
 
         # Declare and load parameters
-        self.declare_parameter('preload', [])
+        # self.declare_parameter('preload', [])
+        self.declare_parameter('preload', [''], ParameterDescriptor(type=ParameterType.PARAMETER_STRING_ARRAY))
         preload_models = self.get_parameter('preload').get_parameter_value().string_array_value
+
 
         # Preload models
         for model in preload_models:
@@ -35,6 +38,7 @@ class BodyPixServiceNode(Node):
         self.keypoint_service = self.create_service(
             BodyPixKeypointDetection, '/bodypix/keypoint_detection', self.detect_keypoints
         )
+        self.get_logger().info("Keypoint detection service registered.")
         self.detect_wave_service = self.create_service(
             DetectWave, '/bodypix/detect_wave', self.detect_wave
         )
