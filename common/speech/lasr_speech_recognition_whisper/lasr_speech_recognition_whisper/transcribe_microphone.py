@@ -1,84 +1,95 @@
 #!/usr/bin python3
 import os
+import sys
 import torch
-from ament_index_python import packages
 from pathlib import Path
+
+import rclpy
+from rclpy.node import Node
+from ament_index_python import packages
+from std_srvs.srv import Empty
+from src import SpeechRecognitionToTopic, MicrophonePhraseCollector, ModelCache
 
 WHISPER_CACHE = os.path.join(str(Path.home()), '.cache', 'whisper')
 os.makedirs(WHISPER_CACHE, exist_ok=True)
 os.environ["TIKTOKEN_CACHE_DIR"] = WHISPER_CACHE
 
-import sys
+class TranscribeMicrophone(Node):
+    def __init__(self):
+        Node.__init__(self, 'transcribe_microphone')
+        self.worker = None
+        self.collector = None
 
-# TODO port node
+        self.create_service(Empty, '/whisper/adjust_for_noise', self.adjust_for_noise)
+        self.create_service(Empty, '/whisper/start_listening', self.start_listening)
+        self.create_service(Empty, '/whisper/stop_listening', self.stop_listening)
 
-if len(sys.argv) < 3:
-    print('Usage:')
-    print('rosrun lasr_speech_recognition transcribe_microphone by-index <device_index>')
-    print('rosrun lasr_speech_recognition transcribe_microphone by-name <substring>')
-    exit(1)
-else:
-    matcher = sys.argv[1]
-    device_index = None
-    if matcher == 'by-index':
-        device_index = int(sys.argv[2])
-    elif matcher == 'by-name':
-        import speech_recognition as sr
-        microphones = enumerate(sr.Microphone.list_microphone_names())
+        self.get_logger().info("Starting the Whisper worker!")
+        self.run_transcription()
 
-        target_name = sys.argv[2]
-        for index, name in microphones:
-            if target_name in name:
-                device_index = index
-                break
-        
-        if device_index is None:
-            print('Could not find device!')
+    def run_transcription(self):
+        if len(sys.argv) < 3:
+            print('Usage:')
+            print('rosrun lasr_speech_recognition transcribe_microphone by-index <device_index>')
+            print('rosrun lasr_speech_recognition transcribe_microphone by-name <substring>')
             exit(1)
-    else:
-        print('Invalid matcher')
-        exit(1)
+        else:
+            matcher = sys.argv[1]
+            device_index = None
+            if matcher == 'by-index':
+                device_index = int(sys.argv[2])
+            elif matcher == 'by-name':
+                import speech_recognition as sr
+                microphones = enumerate(sr.Microphone.list_microphone_names())
 
-import rclpy
-from std_srvs.srv import Empty, EmptyResponse
+                target_name = sys.argv[2]
+                for index, name in microphones:
+                    if target_name in name:
+                        device_index = index
+                        break
 
-with rclpy.init(args=None):
-    node = rclpy.create_node('transcribe_mic')  # was anonymous in ROS1
+                if device_index is None:
+                    print('Could not find device!')
+                    exit(1)
+            else:
+                print('Invalid matcher')
+                exit(1)
 
-from lasr_speech_recognition_whisper import SpeechRecognitionToTopic, MicrophonePhraseCollector, load_model
 
-collector = MicrophonePhraseCollector(device_index=device_index)
-collector.adjust_for_noise()
+        self.collector = MicrophonePhraseCollector(device_index=device_index)
+        self.collector.adjust_for_noise()
 
-#model = load_model("base.en")
+        model_cache = ModelCache()
+        model = model_cache.load_model("medium.en")
 
-model = load_model("medium.en")
+        # try to run inference on the example file
+        package_install = packages.get_package_prefix("lasr_speech_recognition_whisper")
+        package_root = os.path.abspath(os.path.join(package_install, os.pardir, os.pardir, "lasr_speech_recognition_whisper"))
+        example_fp = os.path.join(package_root, "test.m4a")
 
-# try to run inference on the example file
-package_install = packages.get_package_prefix("lasr_speech_recognition_whisper")
-package_root = os.path.abspath(os.path.join(package_install, os.pardir, os.pardir, "lasr_speech_recognition_whisper"))
-example_fp = os.path.join(package_root, "test.m4a")
+        self.get_logger().info("Running transcription on example file to ensure model is loaded...")
+        model_transcription = model.transcribe(example_fp, fp16=torch.cuda.is_available())
+        self.get_logger().info(str(model_transcription))
 
-node.get_logger().info("Running transcription on example file to ensure model is loaded...")
-node.get_logger().info(model.transcribe(example_fp, fp16=torch.cuda.is_available()))
+        self.worker = SpeechRecognitionToTopic(self.collector, model, "transcription", infer_partial = False)
 
-worker = SpeechRecognitionToTopic(collector, model, "transcription", infer_partial = False)
+    def adjust_for_noise(self, request, response):
+        self.collector.adjust_for_noise()
+        return response
 
-def adjust_for_noise(_):
-    collector.adjust_for_noise()
-    return EmptyResponse()
+    def start_listening(self, request, response):
+        self.worker.start()
+        return response
 
-def start_listening(_):
-    worker.start()
-    return EmptyResponse()
+    def stop_listening(self, request, response):
+        self.worker.stop()
+        return response
 
-def stop_listening(_):
-    worker.stop()
-    return EmptyResponse()
+def main(args=None):
+    rclpy.init(args=args)
+    transcribe_microphone = TranscribeMicrophone()
+    rclpy.spin(transcribe_microphone)
 
-node.create_service(Empty, '/whisper/adjust_for_noise', adjust_for_noise)
-node.create_service(Empty, '/whisper/start_listening', start_listening)
-node.create_service(Empty, '/whisper/stop_listening', stop_listening)
 
-node.get_logger().info("Starting the Whisper worker!")
-rclpy.spin(node)
+if __name__ == '__main__':
+    main()

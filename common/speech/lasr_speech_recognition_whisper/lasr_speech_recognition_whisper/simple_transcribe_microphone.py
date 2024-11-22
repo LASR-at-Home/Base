@@ -9,8 +9,9 @@ from pathlib import Path
 import speech_recognition as sr
 import numpy as np
 
-from lasr_speech_recognition_interfaces.srv import TranscribeAudio, TranscribeAudioResponse
-from lasr_speech_recognition_whisper import load_model
+import sounddevice  # needed to remove ALSA error messages
+from lasr_speech_recognition_interfaces.srv import TranscribeAudio
+from src import ModelCache # type: ignore
 
 MODEL = "medium.en" # Whisper model
 TIMEOUT = 5.0 # Timeout for listening for the start of a phrase
@@ -48,17 +49,19 @@ else:
         exit(1)
 
 rclpy.init(args=sys.argv)
-node = rclpy.create_node('transcribe_mic', anonymous=True)
+node = rclpy.create_node('transcribe_mic')
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
-model = load_model("medium.en", device=device)
+model_cache = ModelCache()
+model = model_cache.load_model("medium.en", device=device)
 
 # try to run inference on the example file
 package_install = packages.get_package_prefix("lasr_speech_recognition_whisper")
 package_root = os.path.abspath(os.path.join(package_install, os.pardir, os.pardir, "lasr_speech_recognition_whisper"))
 example_fp = os.path.join(package_root, "test.m4a")
 node.get_logger().info("Running transcription on example file to ensure model is loaded...")
-node.get_logger().info(model.transcribe(example_fp, fp16=torch.cuda.is_available()))
+transcription = model.transcribe(example_fp, fp16=torch.cuda.is_available())
+node.get_logger().info(str(transcription))
 
 microphone = sr.Microphone(device_index=device_index, sample_rate=16000)
 r = sr.Recognizer()
@@ -72,7 +75,7 @@ def handle_transcribe_audio(_):
         float_data = np.frombuffer(wav_data, dtype=np.int16).astype(np.float32, order='C') / 32768.0
 
         phrase = model.transcribe(float_data, fp16=device == "cuda")["text"]
-        return TranscribeAudioResponse(phrase=phrase)
+        return TranscribeAudio.Response(phrase=phrase)
 
 node.create_service(TranscribeAudio, '/whisper/transcribe_audio', handle_transcribe_audio)
 

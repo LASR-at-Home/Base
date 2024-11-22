@@ -5,10 +5,6 @@ import speech_recognition as sr
 from queue import Queue
 from abc import ABC, abstractmethod
 
-# from .source import AudioTopic
-
-# TODO test
-
 class AbstractPhraseCollector(ABC):
     """
     Supertype holding a queue of audio data representing a phrase
@@ -65,8 +61,8 @@ class RecognizerPhraseCollector(AbstractPhraseCollector, Node):
     def __init__(
         self, energy_threshold: int = 500, phrase_time_limit: float = 2
     ) -> None:
-        super().__init__()
-        Node.__init__(self, "collector")
+        super().__init__("collector")
+        # Node.__init__(self, "collector")
 
         self._recorder = sr.Recognizer()
         self._recorder.dynamic_energy_threshold = False
