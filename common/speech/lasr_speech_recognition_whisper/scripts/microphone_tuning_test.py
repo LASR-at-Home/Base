@@ -14,7 +14,7 @@ import rclpy
 
 def parse_args() -> Dict:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--device_index", type=int, default=None)
+    parser.add_argument("--device_index", help="Microphone index", type=int, default=None)
     return vars(parser.parse_args())
 
 

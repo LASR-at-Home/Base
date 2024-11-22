@@ -1,9 +1,8 @@
 #!/usr/bin python3
 from argparse import Action
-
 import rclpy
 from rclpy.action import ActionClient
-from lasr_speech_recognition_interfaces.srv import TranscribeAudio, TranscribeAudioResponse  # type: ignore
+from lasr_speech_recognition_interfaces.srv import TranscribeAudio  # type: ignore
 from lasr_speech_recognition_interfaces.action import TranscribeSpeech
 
 # TODO port file: action client
@@ -24,15 +23,20 @@ class TestSpeechServerClient:
 
 # client.wait_for_server()
 # node.get_logger().info("Done waiting")
-while rclpy.ok():
-    rclpy.init()
-    # goal = TranscribeSpeech.Goal()
-    # client.send_goal(goal)
-    client = TestSpeechServerClient()
-    client.send_goal(10)
-    rclpy.spin(client.node)
-    # client.wait_for_result()
-    # result = client.get_result()
-    # text = result.sequence
-    text = ""
-    print(f"Transcribed Speech: {text}")
+
+def main():
+    while rclpy.ok():
+        rclpy.init()
+        # goal = TranscribeSpeech.Goal()
+        # client.send_goal(goal)
+        client = TestSpeechServerClient()
+        client.send_goal(10)
+        rclpy.spin(client.node)
+        # client.wait_for_result()
+        # result = client.get_result()
+        # text = result.sequence
+        text = ""
+        print(f"Transcribed Speech: {text}")
+
+if __name__ == '__main__':
+    main()

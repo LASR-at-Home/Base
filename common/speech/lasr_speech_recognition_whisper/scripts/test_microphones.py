@@ -4,6 +4,7 @@ import os
 import argparse
 import speech_recognition as sr
 import rclpy
+import sounddevice  # needed to remove ALSA error messages
 
 # TODO argparse -> ROS params
 
@@ -15,7 +16,7 @@ def parse_args() -> dict:
     """
 
     parser = argparse.ArgumentParser(description="Test microphones")
-    parser.add_argument("-m", "--microphone", type=int, help="Microphone index")
+    parser.add_argument("-m", "--microphone", type=int, help="Microphone index", default=None)
     parser.add_argument(
         "-o", "--output_dir", type=str, help="Directory to save audio files"
     )
@@ -43,7 +44,8 @@ def main(args: dict = None) -> None:
 
     r = sr.Recognizer()
     r.pause_threshold = 2
-    with sr.Microphone(device_index=9, sample_rate=16000) as source:
+    microphone = sr.Microphone(device_index=mic_index, sample_rate=16000)
+    with microphone as source:
         print("Say something!")
         audio = r.listen(source, timeout=5, phrase_time_limit=10)
         print("Finished listening")
