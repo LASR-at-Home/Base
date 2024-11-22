@@ -5,9 +5,10 @@ import torch
 import numpy as np
 from pathlib import Path
 import speech_recognition as sr
-from lasr_speech_recognition_whisper import load_model  # type: ignore
+from src import ModelCache # type: ignore
 import sounddevice  # needed to remove ALSA error messages
 from typing import Dict
+import rclpy
 
 # TODO argparse -> ROS params
 
@@ -21,11 +22,14 @@ def configure_whisper_cache() -> None:
     """Configures the whisper cache directory."""
     whisper_cache = os.path.join(str(Path.home()), ".cache", "whisper")
     os.makedirs(whisper_cache, exist_ok=True)
-    # Environemntal variable required to run whisper locally
+    # Environmental variable required to run whisper locally
     os.environ["TIKTOKEN_CACHE_DIR"] = whisper_cache
 
 
-def main():
+def main(args=None):
+    rclpy.init(args=args)  # Have to initialise rclpy for the ModelCache
+
+    configure_whisper_cache()
     args = parse_args()
 
     recognizer = sr.Recognizer()
@@ -34,7 +38,8 @@ def main():
     threshold = 100
     recognizer.dynamic_energy_threshold = False
     recognizer.energy_threshold = threshold
-    transcription_model = load_model(
+    model_cache = ModelCache()
+    transcription_model = model_cache.load_model(
         "medium.en", "cuda" if torch.cuda.is_available() else "cpu", True
     )
     transcription_result = "The quick brown fox jumps over the lazy dog."
@@ -62,7 +67,6 @@ def main():
         threshold += 100
         recognizer.energy_threshold = threshold
 
-
 if __name__ == "__main__":
-    configure_whisper_cache()
+
     main()

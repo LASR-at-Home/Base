@@ -1,5 +1,8 @@
 import torch
-import rclpy
+
+from rclpy.node import Node
+from rclpy.publisher import Publisher
+
 import whisper
 import speech_recognition as sr
 
@@ -15,7 +18,7 @@ from .collector import AbstractPhraseCollector
 from lasr_speech_recognition_interfaces.msg import Transcription
 
 
-class SpeechRecognitionWorker(ABC):
+class SpeechRecognitionWorker(ABC, Node):
     """
     Collect and run inference on phrases to produce a transcription
     """
@@ -36,8 +39,7 @@ class SpeechRecognitionWorker(ABC):
         maximum_phrase_length=timedelta(seconds=3),
         infer_partial=True,
     ) -> None:
-        with rclpy.init(args=None):
-            self.node = rclpy.create_node('worker')
+        Node.__init__(self, 'worker')
         self._collector = collector
         self._tmp_file = NamedTemporaryFile().name
         self._model = model
@@ -70,7 +72,7 @@ class SpeechRecognitionWorker(ABC):
         Run inference on the current sample
         """
 
-        self.node.get_logger().info("Processing sample")
+        self.get_logger().info("Processing sample")
         audio_data = sr.AudioData(
             self._current_sample,
             self._collector.sample_rate(),
@@ -81,7 +83,7 @@ class SpeechRecognitionWorker(ABC):
         with open(self._tmp_file, "w+b") as f:
             f.write(wav_data.read())
 
-        self.node.get_logger().info("Running inference")
+        self.get_logger().info("Running inference")
         try:
             result = self._model.transcribe(
                 self._tmp_file, fp16=torch.cuda.is_available()
@@ -94,7 +96,7 @@ class SpeechRecognitionWorker(ABC):
         if len(text) == 0 or text.lower() in [".", "you", "thanks for watching!"]:
             self._phrase_start = None
             self._current_sample = bytes()
-            self.node.get_logger().info("Skipping garbage...")
+            self.get_logger().info("Skipping garbage...")
             return None
 
         return text
@@ -104,7 +106,7 @@ class SpeechRecognitionWorker(ABC):
         Indefinitely perform inference on the given data
         """
 
-        self.node.get_logger().info("Started inference worker")
+        self.get_logger().info("Started inference worker")
 
         while not self._stopped:
             try:
@@ -114,7 +116,7 @@ class SpeechRecognitionWorker(ABC):
                     self._phrase_start
                     and now - self._phrase_start > self._maximum_phrase_length
                 ):
-                    self.node.get_logger().info("Reached timeout for phrase, ending now.")
+                    self.get_logger().info("Reached timeout for phrase, ending now.")
                     self._finish_phrase()
 
                 # Start / continue phrase if data is coming in
@@ -125,7 +127,7 @@ class SpeechRecognitionWorker(ABC):
                     while not self._collector.data.empty():
                         self._current_sample += self._collector.data.get()
 
-                    self.node.get_logger().info(
+                    self.get_logger().info(
                         "Received and added more data to current audio sample."
                     )
 
@@ -141,7 +143,7 @@ class SpeechRecognitionWorker(ABC):
             except KeyboardInterrupt:
                 self._stopped = True
 
-        self.node.get_logger().info("Worker finished")
+        self.get_logger().info("Worker finished")
 
     def start(self):
         """
@@ -175,7 +177,7 @@ class SpeechRecognitionToStdout(SpeechRecognitionWorker):
     """
 
     def on_phrase(self, phrase: str, finished: bool) -> None:
-        self.node.get_logger().info("[" + ("x" if finished else " ") + "] " + phrase)
+        self.get_logger().info("[" + ("x" if finished else " ") + "] " + phrase)
 
 
 class SpeechRecognitionToTopic(SpeechRecognitionToStdout):
@@ -183,7 +185,7 @@ class SpeechRecognitionToTopic(SpeechRecognitionToStdout):
     Recognise speech and publish it to a topic
     """
 
-    # _pub: node.create_publisher() TODO add type if possible
+    _pub: Publisher
 
     def __init__(
         self,
@@ -194,8 +196,8 @@ class SpeechRecognitionToTopic(SpeechRecognitionToStdout):
         infer_partial=True,
     ) -> None:
         super().__init__(collector, model, maximum_phrase_length, infer_partial)
-        self.node.get_logger().info(f"Will be publishing transcription to {topic}")
-        self._pub = self.node.create_publisher(Transcription, topic, 5)
+        self.get_logger().info(f"Will be publishing transcription to {topic}")
+        self._pub = self.create_publisher(Transcription, topic, 5)
 
     def on_phrase(self, phrase: str, finished: bool) -> None:
         super().on_phrase(phrase, finished)

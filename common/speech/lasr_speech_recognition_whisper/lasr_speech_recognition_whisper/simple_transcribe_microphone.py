@@ -12,8 +12,6 @@ import numpy as np
 from lasr_speech_recognition_interfaces.srv import TranscribeAudio, TranscribeAudioResponse
 from lasr_speech_recognition_whisper import load_model
 
-# TODO rospkg
-
 MODEL = "medium.en" # Whisper model
 TIMEOUT = 5.0 # Timeout for listening for the start of a phrase
 PHRASE_TIME_LIMIT = None # Timeout for listening for the end of a phrase
@@ -56,10 +54,11 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 model = load_model("medium.en", device=device)
 
 # try to run inference on the example file
-r = rospkg.RosPack()
-EXAMPLE_FILE = r.get_path('lasr_speech_recognition_whisper') + "/test.m4a"
+package_install = packages.get_package_prefix("lasr_speech_recognition_whisper")
+package_root = os.path.abspath(os.path.join(package_install, os.pardir, os.pardir, "lasr_speech_recognition_whisper"))
+example_fp = os.path.join(package_root, "test.m4a")
 node.get_logger().info("Running transcription on example file to ensure model is loaded...")
-node.get_logger().info(model.transcribe(EXAMPLE_FILE, fp16=torch.cuda.is_available()))
+node.get_logger().info(model.transcribe(example_fp, fp16=torch.cuda.is_available()))
 
 microphone = sr.Microphone(device_index=device_index, sample_rate=16000)
 r = sr.Recognizer()

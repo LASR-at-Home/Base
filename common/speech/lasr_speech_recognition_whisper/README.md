@@ -43,7 +43,7 @@ ros2 run lasr_speech_recognition_whisper transcribe_microphone by-name <substrin
 Then start listening to people:
 
 ```bash
-rosservice call /whisper/start_listening "{}"
+ros2 service call /whisper/start_listening "{}"
 ```
 
 You can now listen on `/transcription` for a live transcription.
@@ -51,7 +51,7 @@ You can now listen on `/transcription` for a live transcription.
 Stop listening whenever:
 
 ```bash
-rosservice call /whisper/stop_listening "{}"
+ros2 service call /whisper/stop_listening "{}"
 ```
 
 ## Example

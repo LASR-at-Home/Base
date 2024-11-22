@@ -55,9 +55,12 @@ collector.adjust_for_noise()
 model = load_model("medium.en")
 
 # try to run inference on the example file
-EXAMPLE_FILE = packages.get_package_share_path('lasr_speech_recognition_whisper') + "/test.m4a"
+package_install = packages.get_package_prefix("lasr_speech_recognition_whisper")
+package_root = os.path.abspath(os.path.join(package_install, os.pardir, os.pardir, "lasr_speech_recognition_whisper"))
+example_fp = os.path.join(package_root, "test.m4a")
+
 node.get_logger().info("Running transcription on example file to ensure model is loaded...")
-node.get_logger().info(model.transcribe(EXAMPLE_FILE, fp16=torch.cuda.is_available()))
+node.get_logger().info(model.transcribe(example_fp, fp16=torch.cuda.is_available()))
 
 worker = SpeechRecognitionToTopic(collector, model, "transcription", infer_partial = False)
 

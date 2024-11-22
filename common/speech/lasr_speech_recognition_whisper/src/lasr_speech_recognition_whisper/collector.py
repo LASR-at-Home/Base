@@ -1,5 +1,5 @@
 import rclpy
-
+from rclpy.node import Node
 import speech_recognition as sr
 
 from queue import Queue
@@ -7,6 +7,7 @@ from abc import ABC, abstractmethod
 
 # from .source import AudioTopic
 
+# TODO test
 
 class AbstractPhraseCollector(ABC):
     """
@@ -44,7 +45,7 @@ class AbstractPhraseCollector(ABC):
         pass
 
 
-class RecognizerPhraseCollector(AbstractPhraseCollector):
+class RecognizerPhraseCollector(AbstractPhraseCollector, Node):
     """
     Collect phrases using a SoundRecognition Recognizer
 
@@ -65,8 +66,7 @@ class RecognizerPhraseCollector(AbstractPhraseCollector):
         self, energy_threshold: int = 500, phrase_time_limit: float = 2
     ) -> None:
         super().__init__()
-        with rclpy.init(args=None):
-            self.node = rclpy.create_node('source')
+        Node.__init__(self, "collector")
 
         self._recorder = sr.Recognizer()
         self._recorder.dynamic_energy_threshold = False
@@ -75,13 +75,13 @@ class RecognizerPhraseCollector(AbstractPhraseCollector):
 
     @abstractmethod
     def adjust_for_noise(self, source: sr.AudioSource):
-        self.node.get_logger().info("Adjusting for background noise...")
+        self.get_logger().info("Adjusting for background noise...")
         with source:
             self._recorder.adjust_for_ambient_noise(source)
 
     @abstractmethod
     def start(self, source: sr.AudioSource):
-        self.node.get_logger().info("Started source listen thread")
+        self.get_logger().info("Started source listen thread")
         self._stopper = self._recorder.listen_in_background(
             source, self._record_callback, phrase_time_limit=self._phrase_time_limit
         )

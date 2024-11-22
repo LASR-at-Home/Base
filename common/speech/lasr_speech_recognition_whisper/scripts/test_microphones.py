@@ -3,7 +3,9 @@
 import os
 import argparse
 import speech_recognition as sr
+import rclpy
 
+# TODO argparse -> ROS params
 
 def parse_args() -> dict:
     """Parse command line arguments into a dictionary.
@@ -18,10 +20,12 @@ def parse_args() -> dict:
         "-o", "--output_dir", type=str, help="Directory to save audio files"
     )
 
-    return vars(parser.parse_args())
+    # return vars(parser.parse_args())
+    args, _ = parser.parse_known_args()
+    return vars(args)
 
 
-def main(args: dict) -> None:
+def main(args: dict = None) -> None:
     """Generate audio files from microphone input.
 
     Args:
@@ -30,8 +34,12 @@ def main(args: dict) -> None:
 
     # Adapted from https://github.com/Uberi/speech_recognition/blob/master/examples/write_audio.py
 
-    mic_index = args["microphone"]
-    output_dir = args["output_dir"]
+    rclpy.init(args=args)
+
+    parser_args = parse_args()
+
+    mic_index = parser_args["microphone"]
+    output_dir = parser_args["output_dir"]
 
     r = sr.Recognizer()
     r.pause_threshold = 2
@@ -52,6 +60,7 @@ def main(args: dict) -> None:
     with open(os.path.join(output_dir, "microphone.aiff"), "wb") as f:
         f.write(audio.get_aiff_data())
 
+    rclpy.shutdown()
 
 if __name__ == "__main__":
-    main(parse_args())
+    main()
