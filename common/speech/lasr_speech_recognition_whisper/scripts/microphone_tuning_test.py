@@ -5,16 +5,19 @@ import torch
 import numpy as np
 from pathlib import Path
 import speech_recognition as sr
-from src import ModelCache # type: ignore
+from src import ModelCache  # type: ignore
 import sounddevice  # needed to remove ALSA error messages
 from typing import Dict
 import rclpy
 
 # TODO argparse -> ROS params
 
+
 def parse_args() -> Dict:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--device_index", help="Microphone index", type=int, default=None)
+    parser.add_argument(
+        "--device_index", help="Microphone index", type=int, default=None
+    )
     return vars(parser.parse_args())
 
 
@@ -66,6 +69,7 @@ def main(args=None):
         )
         threshold += 100
         recognizer.energy_threshold = threshold
+
 
 if __name__ == "__main__":
 

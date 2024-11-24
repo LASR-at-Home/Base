@@ -9,6 +9,7 @@ from .bytesfifo import BytesFIFO
 
 # TODO rospy.wait_for_message()
 
+
 class AudioTopic(sr.AudioSource, Node):
     """
     Use a ROS topic as an AudioSource
@@ -21,7 +22,9 @@ class AudioTopic(sr.AudioSource, Node):
         Node.__init__(self, "source")
 
         self._topic = topic
-        self.subscription = self.create_subscription(AudioInfo, f"{topic}/audio_info", self.callback, 10)
+        self.subscription = self.create_subscription(
+            AudioInfo, f"{topic}/audio_info", self.callback, 10
+        )
         # config: AudioInfo = rospy.wait_for_message(f"{topic}/audio_info", AudioInfo)
         self.config = None  # TODO test that this works
         if self.config is not None:
@@ -48,7 +51,9 @@ class AudioTopic(sr.AudioSource, Node):
             self.stream is None
         ), "This audio source is already inside a context manager"
         self.stream = BytesFIFO(1024 * 10)  # 10 kB buffer
-        self._sub = self.node.create_subscription(AudioData, f"{self._topic}/audio",  self._read)
+        self._sub = self.node.create_subscription(
+            AudioData, f"{self._topic}/audio", self._read
+        )
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
@@ -57,7 +62,9 @@ class AudioTopic(sr.AudioSource, Node):
         """
 
         self.stream = None
-        self.destroy_subscription(self._sub)  # TODO behaviour, was self._sub.unregister()
+        self.destroy_subscription(
+            self._sub
+        )  # TODO behaviour, was self._sub.unregister()
 
     def _read(self, msg: AudioData) -> None:
         """

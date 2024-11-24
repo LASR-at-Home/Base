@@ -14,5 +14,6 @@ def main():
     # print("Available microphone devices (sounddevice):")
     # print(sounddevice.query_devices())
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

@@ -5,6 +5,7 @@ import speech_recognition as sr
 from queue import Queue
 from abc import ABC, abstractmethod
 
+
 class AbstractPhraseCollector(ABC):
     """
     Supertype holding a queue of audio data representing a phrase

@@ -1,30 +1,30 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>lasr_speech_recognition_whisper</name>
-  <version>0.0.0</version>
-  <description>Speech recognition implemented using OpenAI Whisper</description>
-  <maintainer email="maayan.armony@gmail.com">maayan</maintainer>
-  <license>MIT</license>
+    <name>lasr_speech_recognition_whisper</name>
+    <version>0.0.0</version>
+    <description>Speech recognition implemented using OpenAI Whisper</description>
+    <maintainer email="maayan.armony@gmail.com">maayan</maintainer>
+    <license>MIT</license>
 
-  <test_depend>ament_copyright</test_depend>
-  <test_depend>ament_flake8</test_depend>
-  <test_depend>ament_pep257</test_depend>
-  <test_depend>python3-pytest</test_depend>
+    <test_depend>ament_copyright</test_depend>
+    <test_depend>ament_flake8</test_depend>
+    <test_depend>ament_pep257</test_depend>
+    <test_depend>python3-pytest</test_depend>
 
-  <!-- From ROS1 porting -->
-   <!--
-   <build_depend>catkin_virtualenv</build_depend>  
-   TODO fix virtualenv build
-   -->
-  <depend>lasr_speech_recognition_interfaces</depend>
-  <build_depend>actionlib</build_depend>
-  <build_depend>actionlib_msgs</build_depend>
-  <exec_depend>actionlib</exec_depend>
-  <exec_depend>actionlib_msgs</exec_depend>
+    <!-- From ROS1 porting -->
+    <!--
+    <build_depend>catkin_virtualenv</build_depend>
+    TODO fix virtualenv build
+    -->
+    <depend>lasr_speech_recognition_interfaces</depend>
+    <build_depend>actionlib</build_depend>
+    <build_depend>actionlib_msgs</build_depend>
+    <exec_depend>actionlib</exec_depend>
+    <exec_depend>actionlib_msgs</exec_depend>
 
-  <export>
-    <build_type>ament_python</build_type>
-    <pip_requirements>requirements.txt</pip_requirements>
-  </export>
+    <export>
+        <build_type>ament_python</build_type>
+        <pip_requirements>requirements.txt</pip_requirements>
+    </export>
 </package>

@@ -6,13 +6,13 @@ from rclpy.node import Node
 # Keep all loaded models in memory
 MODEL_CACHE = {}
 
+
 class ModelCache(Node):
     def __init__(self):
-        super().__init__('lasr_speech_recognition_whisper_cache')
+        super().__init__("lasr_speech_recognition_whisper_cache")
 
     def load_model(
-            self,
-            name: str, device: str = "cpu", load_test_file: bool = False
+        self, name: str, device: str = "cpu", load_test_file: bool = False
     ) -> whisper.Whisper:
         """Loads a whisper model from disk, or from cache if it has already been loaded.
 
@@ -34,8 +34,17 @@ class ModelCache(Node):
             MODEL_CACHE[name] = whisper.load_model(name, device=device)
             self.get_logger().info(f"Sucessfully loaded model {name} on {device}")
             if load_test_file:
-                package_install = packages.get_package_prefix("lasr_speech_recognition_whisper")
-                package_root = os.path.abspath(os.path.join(package_install, os.pardir, os.pardir, "lasr_speech_recognition_whisper"))
+                package_install = packages.get_package_prefix(
+                    "lasr_speech_recognition_whisper"
+                )
+                package_root = os.path.abspath(
+                    os.path.join(
+                        package_install,
+                        os.pardir,
+                        os.pardir,
+                        "lasr_speech_recognition_whisper",
+                    )
+                )
                 example_fp = os.path.join(package_root, "test.m4a")
                 self.get_logger().info(
                     "Running transcription on example file to ensure model is loaded..."

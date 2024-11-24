@@ -18,9 +18,10 @@ import speech_recognition as sr  # type: ignore
 from lasr_speech_recognition_interfaces.action import TranscribeSpeech  # type: ignore
 from rclpy.executors import ExternalShutdownException
 from std_msgs.msg import String  # type: ignore
-from src import ModelCache # type: ignore
+from src import ModelCache  # type: ignore
 
 # TODO: argpars -> ROS2 params, test behaviour of preemption
+
 
 @dataclass
 class speech_model_params:
@@ -58,9 +59,9 @@ class TranscribeSpeechAction(Node):
     _result = TranscribeSpeech.Result()
 
     def __init__(
-            self,
-            action_name: str,
-            model_params: speech_model_params,
+        self,
+        action_name: str,
+        model_params: speech_model_params,
     ) -> None:
         """Starts an action server for transcribing speech.
 
@@ -126,9 +127,9 @@ class TranscribeSpeechAction(Node):
             )
 
     def _configure_recogniser(
-            self,
-            energy_threshold: Optional[float] = None,
-            pause_threshold: Optional[float] = None,
+        self,
+        energy_threshold: Optional[float] = None,
+        pause_threshold: Optional[float] = None,
     ) -> sr.Recognizer:
         """Configures the speech recogniser object.
 
@@ -212,8 +213,8 @@ class TranscribeSpeechAction(Node):
             ).get_wav_data()
         # Magic number 32768.0 is the maximum value of a 16-bit signed integer
         float_data = (
-                np.frombuffer(wav_data, dtype=np.int16).astype(np.float32, order="C")
-                / 32768.0
+            np.frombuffer(wav_data, dtype=np.int16).astype(np.float32, order="C")
+            / 32768.0
         )
 
         if goal_handle.is_cancel_requested():
@@ -264,7 +265,6 @@ def parse_args() -> dict:
     # TODO change to ROS2 rosparams:
     # port = node.declare_parameter('port', '/dev/ttyUSB0').value
     # assert isinstance(port, str), 'port parameter must be a str'
-
 
     parser.add_argument(
         "--action_name",
@@ -371,6 +371,7 @@ def configure_whisper_cache() -> None:
     os.makedirs(whisper_cache, exist_ok=True)
     # Environmental variable required to run whisper locally
     os.environ["TIKTOKEN_CACHE_DIR"] = whisper_cache
+
 
 def main(args=None):
     rclpy.init(args=args)

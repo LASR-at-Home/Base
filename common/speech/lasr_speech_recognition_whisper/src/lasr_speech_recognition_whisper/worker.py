@@ -39,7 +39,7 @@ class SpeechRecognitionWorker(ABC, Node):
         maximum_phrase_length=timedelta(seconds=3),
         infer_partial=True,
     ) -> None:
-        Node.__init__(self, 'worker')
+        Node.__init__(self, "worker")
         self._collector = collector
         self._tmp_file = NamedTemporaryFile().name
         self._model = model

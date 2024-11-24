@@ -8,6 +8,7 @@ import sounddevice  # needed to remove ALSA error messages
 
 # TODO argparse -> ROS params
 
+
 def parse_args() -> dict:
     """Parse command line arguments into a dictionary.
 
@@ -16,7 +17,9 @@ def parse_args() -> dict:
     """
 
     parser = argparse.ArgumentParser(description="Test microphones")
-    parser.add_argument("-m", "--microphone", type=int, help="Microphone index", default=None)
+    parser.add_argument(
+        "-m", "--microphone", type=int, help="Microphone index", default=None
+    )
     parser.add_argument(
         "-o", "--output_dir", type=str, help="Directory to save audio files"
     )
@@ -63,6 +66,7 @@ def main(args: dict = None) -> None:
         f.write(audio.get_aiff_data())
 
     rclpy.shutdown()
+
 
 if __name__ == "__main__":
     main()

@@ -3,16 +3,17 @@
 Common messages used for speech recognition
 
 This package is maintained by:
+
 - [Maayan Armony](mailto:maayan.armony@gmail.com)
 - [Paul Makles](mailto:me@insrt.uk) (ROS1)
 
 ## Prerequisites
 
 This package depends on the following ROS packages:
+
 - colcon (buildtool)
 - message_generation (build)
 - message_runtime (exec)
-
 
 ## Usage
 
@@ -36,11 +37,10 @@ This package has no launch files.
 
 #### `Transcription`
 
-| Field | Type | Description |
-|:-:|:-:|---|
-| phrase | string |  |
-| finished | bool |  |
-
+|  Field   |  Type  | Description |
+|:--------:|:------:|-------------|
+|  phrase  | string |             |
+| finished |  bool  |             |
 
 ### Services
 

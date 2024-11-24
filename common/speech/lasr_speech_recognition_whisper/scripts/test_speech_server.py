@@ -7,6 +7,7 @@ from lasr_speech_recognition_interfaces.action import TranscribeSpeech
 
 # https://docs.ros2.org/latest/api/rclpy/api/actions.html
 
+
 class TestSpeechServerClient(Node):
     def __init__(self):
         Node.__init__(self, "listen_action_client")
@@ -20,8 +21,12 @@ class TestSpeechServerClient(Node):
         self.client.wait_for_server()
         self.get_logger().info("Server activated, sending goal...")
 
-        self.goal_future = self.client.send_goal_async(goal, feedback_callback=self.feedback_cb)  # Returns a Future instance when the goal request has been accepted or rejected.
-        self.goal_future.add_done_callback(self.response_cb) # When received get response
+        self.goal_future = self.client.send_goal_async(
+            goal, feedback_callback=self.feedback_cb
+        )  # Returns a Future instance when the goal request has been accepted or rejected.
+        self.goal_future.add_done_callback(
+            self.response_cb
+        )  # When received get response
 
     def feedback_cb(self, msg):
         self.get_logger().info(f"Received feedback: {msg.feedback}")
@@ -33,12 +38,15 @@ class TestSpeechServerClient(Node):
             return
 
         self.get_logger().info("Goal was accepted")
-        self.result_future = handle.get_result_async()  # Not using get_result() in cb, as can cause deadlock according to docs
+        self.result_future = (
+            handle.get_result_async()
+        )  # Not using get_result() in cb, as can cause deadlock according to docs
         self.result_future.add_done_callback(self.result_cb)
 
     def result_cb(self, future):
         result = future.result().result
         self.get_logger().info(f"Transcribed Speech: {result.sequence}")
+
 
 def main(args=None):
     rclpy.init(args=args)
@@ -53,6 +61,7 @@ def main(args=None):
         finally:
             client.destroy_node()
             rclpy.shutdown()
+
 
 if __name__ == "__main__":
     main()
