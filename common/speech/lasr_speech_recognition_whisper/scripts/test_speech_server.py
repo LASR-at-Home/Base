@@ -1,42 +1,58 @@
 #!/usr/bin python3
-from argparse import Action
 import rclpy
+from rclpy.node import Node
 from rclpy.action import ActionClient
 from lasr_speech_recognition_interfaces.srv import TranscribeAudio  # type: ignore
 from lasr_speech_recognition_interfaces.action import TranscribeSpeech
 
-# TODO port file: action client
+# https://docs.ros2.org/latest/api/rclpy/api/actions.html
 
-class TestSpeechServerClient:
+class TestSpeechServerClient(Node):
     def __init__(self):
-        self.node = rclpy.create_node("test_speech_server")
-        self.client = ActionClient(self.node, TranscribeSpeech, "transcribe_speech")
+        Node.__init__(self, "listen_action_client")
 
-    def send_goal(self, msg):
-        goal = TranscribeSpeech.Goal()
-        goal.msg = msg
+        self.client = ActionClient(self, TranscribeSpeech, "transcribe_speech")
+        self.goal_future = None
+        self.result_future = None
 
+    def send_goal(self, goal):
+        self.get_logger().info("Waiting for Whisper server...")
         self.client.wait_for_server()
-        self.client.send_goal(goal)  # should be future and async?
+        self.get_logger().info("Server activated, sending goal...")
 
-    # TODO add callback with future and handle result
+        self.goal_future = self.client.send_goal_async(goal, feedback_callback=self.feedback_cb)  # Returns a Future instance when the goal request has been accepted or rejected.
+        self.goal_future.add_done_callback(self.response_cb) # When received get response
 
-# client.wait_for_server()
-# node.get_logger().info("Done waiting")
+    def feedback_cb(self, msg):
+        self.get_logger().info(f"Received feedback: {msg.feedback}")
 
-def main():
+    def response_cb(self, future):
+        handle = future.result()
+        if not handle.accepted:
+            self.get_logger().info("Goal was rejected")
+            return
+
+        self.get_logger().info("Goal was accepted")
+        self.result_future = handle.get_result_async()  # Not using get_result() in cb, as can cause deadlock according to docs
+        self.result_future.add_done_callback(self.result_cb)
+
+    def result_cb(self, future):
+        result = future.result().result
+        self.get_logger().info(f"Transcribed Speech: {result.sequence}")
+
+def main(args=None):
+    rclpy.init(args=args)
     while rclpy.ok():
-        rclpy.init()
-        # goal = TranscribeSpeech.Goal()
-        # client.send_goal(goal)
+        goal = TranscribeSpeech.Goal()
         client = TestSpeechServerClient()
-        client.send_goal(10)
-        rclpy.spin(client.node)
-        # client.wait_for_result()
-        # result = client.get_result()
-        # text = result.sequence
-        text = ""
-        print(f"Transcribed Speech: {text}")
+        try:
+            client.send_goal(goal)
+            rclpy.spin(client)
+        except KeyboardInterrupt:
+            client.get_logger().info("Shutting down...")
+        finally:
+            client.destroy_node()
+            rclpy.shutdown()
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

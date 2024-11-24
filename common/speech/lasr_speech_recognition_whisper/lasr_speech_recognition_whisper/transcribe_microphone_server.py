@@ -189,7 +189,7 @@ class TranscribeSpeechAction(Node):
         goal = goal_handle.request
 
         self.get_logger().info("Request Received")
-        if goal_handle.is_cancel_requested():
+        if goal_handle.is_cancel_requested:
             return
 
         if goal.energy_threshold > 0.0 and goal.max_phrase_limit > 0.0:
