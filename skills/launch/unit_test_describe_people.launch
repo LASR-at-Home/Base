@@ -1,0 +1,25 @@
+<launch>
+    <include file="$(find lasr_vision_yolov8)/launch/service.launch">
+        <arg name="preload" value="['yolov8n-seg.pt']" />
+    </include>
+
+    <include file="$(find lasr_vision_bodypix)/launch/bodypix.launch">
+        <param name="preload" type="yaml" value='resnet50' />
+    </include>
+    </include>
+
+    <node pkg="lasr_vision_feature_extraction" type="service" name="torch_service" output="screen"/>
+    
+    <node name="yolo" pkg="lasr_vision_yolov8" type="service" output="screen"/>
+    <node name="cropped_detection" pkg="lasr_vision_cropped_detection" type="service.py" output="screen"/>
+
+   <!--<include file="$(find video_stream_opencv)/launch/camera.launch">
+        <arg name="visualize" value="true" />
+   </include>-->
+    <!-- <arg name="file" doc="Video file to run inference on" />
+   <include file="$(find video_stream_opencv)/launch/camera.launch">
+        <arg name="video_stream_provider" value="$(arg file)" />
+        <arg name="loop_videofile" value="true" />
+        <arg name="visualize" value="true" />
+   </include> -->
+</launch>
