@@ -5,7 +5,6 @@ Speech recognition implemented using OpenAI Whisper
 This package is maintained by:
 
 - [Maayan Armony](mailto:maayan.armony@gmail.com)
-- [Paul Makles](mailto:me@insrt.uk) (ROS1)
 
 ## Prerequisites
 
