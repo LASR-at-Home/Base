@@ -262,9 +262,6 @@ def parse_args() -> dict:
         description="Starts an action server for transcribing speech."
     )
 
-    # TODO change to ROS2 rosparams:
-    # port = node.declare_parameter('port', '/dev/ttyUSB0').value
-    # assert isinstance(port, str), 'port parameter must be a str'
 
     parser.add_argument(
         "--action_name",
