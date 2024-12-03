@@ -262,7 +262,6 @@ def parse_args() -> dict:
         description="Starts an action server for transcribing speech."
     )
 
-
     parser.add_argument(
         "--action_name",
         type=str,
