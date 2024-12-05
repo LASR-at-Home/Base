@@ -4,24 +4,15 @@
   <name>lasr_vision_clip</name>
   <version>0.0.0</version>
   <description>TODO: Package description</description>
-  <maintainer email="haiwei8809@gmail.com">haiwei</maintainer>
-  <license>GPL-3.0-only</license>
+  <maintainer email="maayan.armony@gmail.com">maayan</maintainer>
+  <license>Apache-2.0</license>
 
-  <buildtool_depend>ament_cmake</buildtool_depend>
-
-  <depend>rclpy</depend>
-  <build_depend>message_generation</build_depend>
-  <exec_depend>message_runtime</exec_depend>
-  <build_depend>sensor_msgs</build_depend>
-  <exec_depend>sensor_msgs</exec_depend>
-  <build_depend>cv2_img</build_depend>
-  <exec_depend>cv2_img</exec_depend>
-  <depend>lasr_vision_interfaces</depend>
-
-  <test_depend>ament_lint_auto</test_depend>
-  <test_depend>ament_lint_common</test_depend>
+  <test_depend>ament_copyright</test_depend>
+  <test_depend>ament_flake8</test_depend>
+  <test_depend>ament_pep257</test_depend>
+  <test_depend>python3-pytest</test_depend>
 
   <export>
-    <build_type>ament_cmake</build_type>
+    <build_type>ament_python</build_type>
   </export>
 </package>
