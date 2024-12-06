@@ -1,0 +1,11 @@
+# Energy threshold
+float32 energy_threshold
+
+# Max phrase duration
+float32 max_phrase_limit
+---
+#result definition
+string sequence
+---
+#feedback
+string sequence
