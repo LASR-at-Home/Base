@@ -8,22 +8,23 @@ package_name = 'skills'
 setup(
     name=package_name,
     version='0.0.0',
-    # packages=find_packages(exclude=['test']),
-    packages=["lasr_skills"],
+    packages=find_packages(exclude=['test']),
+    # packages=["lasr_skills"],
     data_files=[
         ('share/ament_index/resource_index/packages',
-            ['resource/' + package_name]),
+         ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
-    maintainer='maayan',
+    maintainer='Maayan Armony',
     maintainer_email='maayan.armony@gmail.com',
-    description='TODO: Package description',
+    description='The skills package',
     license='MIT',
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
+            # "look_to_point = src.lasr_skills.look_to_point:main",
         ],
     },
 )
