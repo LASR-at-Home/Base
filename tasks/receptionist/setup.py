@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-package_name = 'tasks'
+package_name = 'receptionist'
 
 setup(
     name=package_name,
@@ -15,7 +15,7 @@ setup(
     zip_safe=True,
     maintainer='maayan',
     maintainer_email='maayan.armony@gmail.com',
-    description='TODO: Package description',
+    description='REceptionist task',
     license='MIT',
     tests_require=['pytest'],
     entry_points={

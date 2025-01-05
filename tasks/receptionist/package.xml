@@ -3,7 +3,7 @@
 <package format="3">
     <name>tasks</name>
     <version>0.0.0</version>
-    <description>TODO: Package description</description>
+    <description>Receptionist task</description>
     <maintainer email="maayan.armony@gmail.com">maayan</maintainer>
     <license>MIT</license>
 

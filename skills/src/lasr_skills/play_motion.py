@@ -6,11 +6,11 @@ from play_motion2_msgs.action import PlayMotion2
 from typing import Union, List
 
 
-# TODO: test initialisation of states
+# TODO: test initialisation of states; check that PlayMotion2 is found
 
 class PlayMotion(smach_ros.SimpleActionState, Node):
     def _needs_planning(self, motion_name: str) -> bool:
-        joints_param = self.node.get_parameter(
+        joints_param = self.get_parameter(
             f"/play_motion2/motions/{motion_name}/joints"
         )
         joints: List[str] = joints_param.value
@@ -25,6 +25,7 @@ class PlayMotion(smach_ros.SimpleActionState, Node):
     def __init__(self, motion_name: Union[str, None] = None):
         Node.__init__(self, "play_motion")
         # TODO: the play motion action server is always returning 'aborted', figure out what's going on
+        #  This is an issue from ROS1, check if it's been resolved in ROS2
         if motion_name is not None:
             smach_ros.SimpleActionState(self, "play_motion", PlayMotion2).__init__(
                 PlayMotion,
