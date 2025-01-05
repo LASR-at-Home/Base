@@ -11,5 +11,5 @@ from .pointcloud_sweep import PointCloudSweep
 # from .run_and_process_detections import RunAndProcessDetections
 # from .recognise_people import RecognisePeople
 # from .seat_guest import SeatGuest
-# from .check_sofa import CheckSofa
+from .check_sofa import CheckSofa
 # from .introduce_and_seat_guest import IntroduceAndSeatGuest

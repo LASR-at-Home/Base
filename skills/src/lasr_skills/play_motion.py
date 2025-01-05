@@ -13,7 +13,7 @@ class PlayMotion(smach_ros.SimpleActionState, Node):
         joints_param = self.get_parameter(
             f"/play_motion2/motions/{motion_name}/joints"
         )
-        joints: List[str] = joints_param.value
+        joints: List[str] = joints_param.get_parameter_value().string_array_value
         needs_planning: bool = any(
             "arm" in joint or "gripper" in joint for joint in joints
         )

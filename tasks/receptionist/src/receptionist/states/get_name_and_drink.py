@@ -93,7 +93,7 @@ class GetNameAndDrink(smach.StateMachine):
                 output_keys=["guest_data", "guest_transcription"],
             )
             self._guest_id = guest_id
-            prior_data: Dict[str, List[str]] = self.get_parameter(param_key).value
+            prior_data: Dict[str, List[str]] = self.get_parameter(param_key).get_parameter_value()  # TODO: check this
             self._possible_names = [name.lower() for name in prior_data["names"]]
             self._possible_drinks = [drink.lower() for drink in prior_data["drinks"]]
 
