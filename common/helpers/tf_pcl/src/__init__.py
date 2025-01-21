@@ -11,14 +11,14 @@ from scipy.spatial.transform import Rotation as R
 
 class PointCloudTransformer(Node):
     def __init__(self):
-        super().__init__('pointcloud_transformer')
+        super().__init__("pointcloud_transformer")
         self.subscription = self.create_subscription(
             PointCloud2,
-            'input_pointcloud',
+            "input_pointcloud",
             self.pcl_callback,
             10,
         )
-        self.publisher = self.create_publisher(PointCloud2, 'output_pointcloud', 10)
+        self.publisher = self.create_publisher(PointCloud2, "output_pointcloud", 10)
 
     def pcl_callback(self, pcl: PointCloud2):
         # Example transform (identity transform for demonstration purposes)
@@ -35,14 +35,20 @@ class PointCloudTransformer(Node):
         self.publisher.publish(transformed_pcl)
 
 
-def pcl_transform(pcl: PointCloud2, transform: TransformStamped, target_frame: str = "map") -> PointCloud2:
+def pcl_transform(
+    pcl: PointCloud2, transform: TransformStamped, target_frame: str = "map"
+) -> PointCloud2:
     """Transforms a point cloud using a given transform message."""
-    pcl_arr = deepcopy(list(point_cloud2.read_points(pcl, field_names=("x", "y", "z"), skip_nans=True)))
+    pcl_arr = deepcopy(
+        list(point_cloud2.read_points(pcl, field_names=("x", "y", "z"), skip_nans=True))
+    )
 
     translation = transform.transform.translation
     rotation_q = transform.transform.rotation
 
-    rotation_matrix = R.from_quat([rotation_q.x, rotation_q.y, rotation_q.z, rotation_q.w])
+    rotation_matrix = R.from_quat(
+        [rotation_q.x, rotation_q.y, rotation_q.z, rotation_q.w]
+    )
 
     pcl_x_y_z_arr = np.array(pcl_arr)
 
@@ -66,5 +72,5 @@ def main(args=None):
     rclpy.shutdown()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
