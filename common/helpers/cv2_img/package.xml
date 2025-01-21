@@ -3,14 +3,16 @@
 <package format="3">
   <name>cv2_img</name>
   <version>0.0.0</version>
-  <description>TODO: Package description</description>
-  <maintainer email="haiwei8809@gmail.com">haiwei</maintainer>
-  <license>GPL-3.0-only</license>
+  <description>Various Python utilities for working with OpenCV and ROS2.</description>
+  <maintainer email="me@insrt.uk">Paul Makles</maintainer>
+  <license>MIT</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
   <depend>rclpy</depend>
   <depend>sensor_msgs</depend>
+  <depend>cv_bridge</depend> <!-- If using OpenCV and ROS image conversions -->
+  <depend>python3-numpy</depend> <!-- Include system dependencies like numpy -->
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
