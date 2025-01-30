@@ -3,7 +3,7 @@ string[] possible_answers
 sensor_msgs/Image image_raw
 ---
 
-# most likely possible_answers
+# most likely answer
 string answer
 
 # cosine similarity

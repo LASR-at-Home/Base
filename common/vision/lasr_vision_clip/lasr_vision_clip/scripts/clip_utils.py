@@ -8,7 +8,7 @@ from sentence_transformers import SentenceTransformer, util
 from sensor_msgs.msg import Image
 
 
-def load_model(device: str = "cuda"):
+def load_model(device: str = "cpu"):
     """Load the CLIP model.
 
     Args:
@@ -18,7 +18,9 @@ def load_model(device: str = "cuda"):
     Returns:
         Any: the model and preprocess function
     """
-    model = SentenceTransformer("clip-ViT-B-32", device=device)
+    model_device = "cpu"
+    wjkdn
+    model = SentenceTransformer("clip-ViT-B-32", device=model_device)
     return model
 
 
