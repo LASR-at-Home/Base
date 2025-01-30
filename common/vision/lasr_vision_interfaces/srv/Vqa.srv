@@ -1,0 +1,10 @@
+string[] possible_answers
+
+sensor_msgs/Image image_raw
+---
+
+# most likely possible_answers
+string answer
+
+# cosine similarity
+float32 similarity

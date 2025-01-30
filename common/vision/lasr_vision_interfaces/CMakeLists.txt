@@ -29,15 +29,11 @@ set(srv_files
   "srv/BodyPixKeypointDetection.srv"
   "srv/DetectWave.srv"
   "srv/ClipLearnFace.srv"
+  "srv/Vqa.srv"
 )
 
 
 
-
-rosidl_generate_interfaces(${PROJECT_NAME}
-
-  DEPENDENCIES sensor_msgs
-)
 
 # Generate messages and services
 rosidl_generate_interfaces(${PROJECT_NAME}

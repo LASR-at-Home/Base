@@ -19,8 +19,8 @@ setup(
     tests_require=["pytest"],
     entry_points={
         "console_scripts": [
-            "clip_utils = scripts.clip_utils:main",
-            "learn_face = scripts.learn_face:main",
+            "clip_utils = clip_utils:main",
+            "learn_face = learn_face:main",
             "vqa = lasr_vision_clip.nodes.vqa:main",
         ],
     },
