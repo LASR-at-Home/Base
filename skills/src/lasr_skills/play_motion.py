@@ -1,6 +1,7 @@
 import smach_ros
 from rclpy.node import Node
 from play_motion2_msgs.action import PlayMotion2
+
 # https://github.com/pal-robotics/play_motion2
 
 from typing import Union, List
@@ -8,11 +9,10 @@ from typing import Union, List
 
 # TODO: test initialisation of states; check that PlayMotion2 is found
 
+
 class PlayMotion(smach_ros.SimpleActionState, Node):
     def _needs_planning(self, motion_name: str) -> bool:
-        joints_param = self.get_parameter(
-            f"/play_motion2/motions/{motion_name}/joints"
-        )
+        joints_param = self.get_parameter(f"/play_motion2/motions/{motion_name}/joints")
         joints: List[str] = joints_param.get_parameter_value().string_array_value
         needs_planning: bool = any(
             "arm" in joint or "gripper" in joint for joint in joints

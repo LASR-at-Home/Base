@@ -1,35 +1,35 @@
 <?xml version="1.0"?>
 <package format="3">
-  <name>cv2_img</name>
-  <version>0.0.0</version>
-  <description>Various Python utilities for working with OpenCV and ROS2.</description>
+    <name>cv2_img</name>
+    <version>0.0.0</version>
+    <description>Various Python utilities for working with OpenCV and ROS2.</description>
 
-  <!-- Maintainer information -->
-  <maintainer email="me@insrt.uk">Paul Makles</maintainer>
+    <!-- Maintainer information -->
+    <maintainer email="me@insrt.uk">Paul Makles</maintainer>
 
-  <!-- License -->
-  <license>MIT</license>
+    <!-- License -->
+    <license>MIT</license>
 
-  <!-- Optional URL tags (uncomment and modify if needed) -->
-  <!-- <url type="website">http://wiki.ros.org/cv2_img</url> -->
+    <!-- Optional URL tags (uncomment and modify if needed) -->
+    <!-- <url type="website">http://wiki.ros.org/cv2_img</url> -->
 
-  <!-- Author information (optional) -->
-  <!-- <author email="jane.doe@example.com">Jane Doe</author> -->
+    <!-- Author information (optional) -->
+    <!-- <author email="jane.doe@example.com">Jane Doe</author> -->
 
-  <!-- Build tool dependency: ament is used for ROS2 -->
-  <buildtool_depend>ament_cmake</buildtool_depend>
+    <!-- Build tool dependency: ament is used for ROS2 -->
+    <buildtool_depend>ament_cmake</buildtool_depend>
 
-  <!-- Runtime and build dependencies -->
-  <depend>rclpy</depend>
-  <depend>sensor_msgs</depend>
-  <depend>cv_bridge</depend> <!-- If using OpenCV and ROS image conversions -->
-  <depend>python3-numpy</depend> <!-- Include system dependencies like numpy -->
+    <!-- Runtime and build dependencies -->
+    <depend>rclpy</depend>
+    <depend>sensor_msgs</depend>
+    <depend>cv_bridge</depend> <!-- If using OpenCV and ROS image conversions -->
+    <depend>python3-numpy</depend> <!-- Include system dependencies like numpy -->
 
-  <!-- Testing dependencies (optional) -->
-  <!-- <test_depend>ament_cmake_pytest</test_depend> -->
+    <!-- Testing dependencies (optional) -->
+    <!-- <test_depend>ament_cmake_pytest</test_depend> -->
 
-  <!-- Export section for additional tools -->
-  <export>
-    <!-- No specific exports needed, but ROS2 tools may require some information here -->
-  </export>
+    <!-- Export section for additional tools -->
+    <export>
+        <!-- No specific exports needed, but ROS2 tools may require some information here -->
+    </export>
 </package>

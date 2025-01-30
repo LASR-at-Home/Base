@@ -9,6 +9,7 @@ from lasr_vision_interfaces.msg import CDRequest
 
 # TODO: test this SM; check services are called correctly
 
+
 class CheckSofa(smach.StateMachine):
     def __init__(self, sofa_area: ShapelyPolygon, max_people_on_sofa: int):
 

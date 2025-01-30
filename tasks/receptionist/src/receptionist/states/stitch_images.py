@@ -12,6 +12,7 @@ from cv2_img import cv2_img_to_msg
 
 # TODO test main function and SM
 
+
 class StitchImage(smach.State, Node):
     def __init__(self):
         Node.__init__(self, "stitch_image")
@@ -22,7 +23,9 @@ class StitchImage(smach.State, Node):
             output_keys=["stitched_image"],
         )
         self.stitcher = Stitcher()
-        self.stitcher_pub = self.create_publisher(Image, "/vision/sitched_img", qos_profile=1)
+        self.stitcher_pub = self.create_publisher(
+            Image, "/vision/sitched_img", qos_profile=1
+        )
 
     def execute(self, userdata):
         transformed_pointclouds = userdata.transformed_pointclouds
@@ -35,6 +38,7 @@ class StitchImage(smach.State, Node):
         self.stitcher_pub.publish(cv2_img_to_msg(stitched_image))
         userdata.stitched_image = stitched_image
         return "succeeded"
+
 
 def main(args=None):
     rclpy.init(args=args)
@@ -82,6 +86,7 @@ def main(args=None):
         finally:
             node.destroy_node()
             rclpy.shutdown()
+
 
 if __name__ == "__main__":
     main()

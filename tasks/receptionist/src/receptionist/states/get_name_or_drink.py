@@ -11,6 +11,7 @@ from receptionist.states import SpeechRecovery
 
 # TODO test this state
 
+
 class GetNameOrDrink(smach.StateMachine):
     class ParseTranscribedInfo(smach.State, Node):
         def __init__(

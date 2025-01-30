@@ -1,33 +1,33 @@
 <?xml version="1.0"?>
 <package format="3">
-  <name>lasr_vision_bodypix</name>
-  <version>0.0.0</version>
-  <description>BodyPix 2.0 vision service</description>
-  <maintainer email="me@insrt.uk">Paul Makles</maintainer>
-  <!-- License -->
-  <license>MIT</license>
+    <name>lasr_vision_bodypix</name>
+    <version>0.0.0</version>
+    <description>BodyPix 2.0 vision service</description>
+    <maintainer email="me@insrt.uk">Paul Makles</maintainer>
+    <!-- License -->
+    <license>MIT</license>
 
-  <!-- Build tool dependencies (ROS2 uses ament_cmake instead of catkin) -->
-  <buildtool_depend>ament_cmake</buildtool_depend>
-  <buildtool_depend>ament_cmake_python</buildtool_depend>
-  <exec_depend>rclpy</exec_depend>
+    <!-- Build tool dependencies (ROS2 uses ament_cmake instead of catkin) -->
+    <buildtool_depend>ament_cmake</buildtool_depend>
+    <buildtool_depend>ament_cmake_python</buildtool_depend>
+    <exec_depend>rclpy</exec_depend>
 
-  <!-- Runtime and build dependencies -->
-  <exec_depend>rosidl_default_generators</exec_depend>
-  <build_depend>rosidl_default_generators</build_depend>
-  <exec_depend>rosidl_default_runtime</exec_depend>
+    <!-- Runtime and build dependencies -->
+    <exec_depend>rosidl_default_generators</exec_depend>
+    <build_depend>rosidl_default_generators</build_depend>
+    <exec_depend>rosidl_default_runtime</exec_depend>
 
-  <build_depend>ament_python</build_depend>
-  <exec_depend>ament_python</exec_depend>
+    <build_depend>ament_python</build_depend>
+    <exec_depend>ament_python</exec_depend>
 
-  <depend>lasr_vision_interfaces</depend>
-  <exec_depend>cv2_img</exec_depend>
+    <depend>lasr_vision_interfaces</depend>
+    <exec_depend>cv2_img</exec_depend>
 
-  <!-- Export Python package requirements -->
-  <export>
-    <pip_requirements>requirements.txt</pip_requirements> 
-    <build_type>ament_cmake</build_type>
+    <!-- Export Python package requirements -->
+    <export>
+        <pip_requirements>requirements.txt</pip_requirements>
+        <build_type>ament_cmake</build_type>
 
-  </export>
+    </export>
 </package>
 

@@ -13,10 +13,10 @@ class LookToPoint(smach.State, Node):
     _pointstamped: Union[None, PointStamped]
 
     def __init__(
-            self,
-            pointstamped: Union[None, PointStamped] = None,
+        self,
+        pointstamped: Union[None, PointStamped] = None,
     ):
-        Node.__init__(self, 'look_to_point')
+        Node.__init__(self, "look_to_point")
         smach.State.__init__(
             self,
             outcomes=["succeeded", "aborted", "timed_out"],
@@ -25,7 +25,9 @@ class LookToPoint(smach.State, Node):
 
         self._pointstamped = pointstamped
 
-        self.client = ActionClient(self, PointHead, "/head_controller/point_head_action")
+        self.client = ActionClient(
+            self, PointHead, "/head_controller/point_head_action"
+        )
         self.goal_future = None
         self.result_future = None
         self.get_logger().info("Created State")
@@ -47,7 +49,9 @@ class LookToPoint(smach.State, Node):
 
         # Send the goal
         self.get_logger().info("Sending goal")
-        future = self.client.send_goal_async(goal)  # can't call send_goal in cb because of deadlock
+        future = self.client.send_goal_async(
+            goal
+        )  # can't call send_goal in cb because of deadlock
         rclpy.spin_until_future_complete(self, future)
 
         # Wait for the result with a timeout of 2 seconds

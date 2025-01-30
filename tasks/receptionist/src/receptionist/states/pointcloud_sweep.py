@@ -19,6 +19,7 @@ from lasr_skills import LookToPoint
 # global tf buffer
 tf_buffer = tf.Buffer(cache_time=Duration(seconds=10))
 
+
 def start_tf_buffer() -> None:
     tf.TransformListener(tf_buffer)
 
@@ -79,7 +80,9 @@ class PointCloudSweep(smach.StateMachine):
                 )
 
     class GetTransformedPointcloud(smach.State):
-        def __init__(self, depth_topic: str = "/xtion/depth_registered/points", node: Node = None):
+        def __init__(
+            self, depth_topic: str = "/xtion/depth_registered/points", node: Node = None
+        ):
             smach.State.__init__(
                 self,
                 outcomes=["succeeded", "failed"],
@@ -91,7 +94,9 @@ class PointCloudSweep(smach.StateMachine):
 
         def execute(self, userdata):
             try:
-                pcl = rclpy.wait_for_message(self.depth_topic, PointCloud2)   # TODO fix this
+                pcl = rclpy.wait_for_message(
+                    self.depth_topic, PointCloud2
+                )  # TODO fix this
                 # transform pcl to map frame
                 trans = tf_buffer.lookup_transform(
                     "map",
@@ -102,7 +107,9 @@ class PointCloudSweep(smach.StateMachine):
                 pcl_map = pcl_transform(pcl, trans)
                 userdata.transformed_pointclouds.append(pcl_map)
             except Exception as e:
-                node.get_logger().error(f"Failed to get and transform pointcloud: {str(e)}")
+                node.get_logger().error(
+                    f"Failed to get and transform pointcloud: {str(e)}"
+                )
                 return "failed"
             return "succeeded"
 
@@ -132,11 +139,12 @@ class PointCloudSweep(smach.StateMachine):
                 return "failed"
             return "succeeded"
 
+
 def main(args=None):
     global node
 
     rclpy.init(args=args)
-    node = rclpy.create_node('pointcloud_sweep')
+    node = rclpy.create_node("pointcloud_sweep")
 
     sweep_points = [
         (5.78, 3.06, 0.8),
@@ -158,6 +166,7 @@ def main(args=None):
     finally:
         rclpy.shutdown()
         node.destroy_node()
+
 
 if __name__ == "__main__":
     main()

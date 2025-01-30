@@ -8,7 +8,9 @@ import smach
 from smach import UserData
 from typing import List, Dict, Any
 from receptionist.states import SpeechRecovery
+
 # from tasks.receptionist.src.receptionist.states import SpeechRecovery
+
 
 class GetNameAndDrink(smach.StateMachine):
     class ParseNameAndDrink(smach.State, Node):
@@ -93,7 +95,9 @@ class GetNameAndDrink(smach.StateMachine):
                 output_keys=["guest_data", "guest_transcription"],
             )
             self._guest_id = guest_id
-            prior_data: Dict[str, List[str]] = self.get_parameter(param_key).get_parameter_value()  # TODO: check this
+            prior_data: Dict[str, List[str]] = self.get_parameter(
+                param_key
+            ).get_parameter_value()  # TODO: check this
             self._possible_names = [name.lower() for name in prior_data["names"]]
             self._possible_drinks = [drink.lower() for drink in prior_data["drinks"]]
 
