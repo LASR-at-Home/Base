@@ -18,9 +18,7 @@ def load_model(device: str = "cpu"):
     Returns:
         Any: the model and preprocess function
     """
-    model_device = "cpu"
-    wjkdn
-    model = SentenceTransformer("clip-ViT-B-32", device=model_device)
+    model = SentenceTransformer("clip-ViT-B-32", device=device)
     return model
 
 
