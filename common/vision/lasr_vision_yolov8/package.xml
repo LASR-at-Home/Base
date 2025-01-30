@@ -8,9 +8,10 @@
   <license>MIT</license>
 
   <depend>lasr_vision_interfaces</depend>
-  <exec_depend>markers</exec_depend>
+  <exec_depend>ros2launch</exec_depend>
   <exec_depend>cv2_img</exec_depend>
   <exec_depend>cv2_pcl</exec_depend>
+  <!--  <exec_depend>markers</exec_depend> uncomment for 3D detection -->
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>
