@@ -1,0 +1,6 @@
+# List of detection requests
+lasr_vision_interfaces/CDRequest[] requests
+
+---
+# List of detection responses
+lasr_vision_interfaces/CDResponse[] responses
