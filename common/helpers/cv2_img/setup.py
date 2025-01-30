@@ -1,4 +1,9 @@
+#!/usr/bin/env python3
 from setuptools import setup
+
+# TODO was imported in clip ranch, double check that it's not needed
+# from distutils.core import setup
+# from catkin_pkg.python_setup import generate_distutils_setup
 
 package_name = "cv2_img"
 

@@ -6,9 +6,10 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 
 # Find dependencies
-find_package(ament_cmake REQUIRED)
+find_package(ament_cmake REQUIRED message_generation message_runtime sensor_msgs)
 find_package(rosidl_default_generators REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(rclpy REQUIRED)
 find_package(builtin_interfaces REQUIRED)  # Needed for built-in ROS types like Time
 
 ################################################
@@ -27,8 +28,16 @@ set(srv_files
   "srv/BodyPixMaskDetection.srv"
   "srv/BodyPixKeypointDetection.srv"
   "srv/DetectWave.srv"
+  "srv/ClipLearnFace.srv"
 )
 
+
+
+
+rosidl_generate_interfaces(${PROJECT_NAME}
+
+  DEPENDENCIES sensor_msgs
+)
 
 # Generate messages and services
 rosidl_generate_interfaces(${PROJECT_NAME}
@@ -45,5 +54,4 @@ rosidl_generate_interfaces(${PROJECT_NAME}
 ament_export_dependencies(rosidl_default_runtime)
 
 # This must be called after all targets and before any installation commands
-
 ament_package()
