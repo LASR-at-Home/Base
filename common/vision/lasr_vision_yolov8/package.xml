@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>lasr_vision_yolov8</name>
+  <version>0.0.0</version>
+  <description>YOLOv8 object detection service</description>
+  <maintainer email="maayan.armony@gmail.com">maayan</maintainer>
+  <license>MIT</license>
+
+  <depend>lasr_vision_interfaces</depend>
+  <exec_depend>markers</exec_depend>
+  <exec_depend>cv2_img</exec_depend>
+  <exec_depend>cv2_pcl</exec_depend>
+
+  <test_depend>ament_copyright</test_depend>
+  <test_depend>ament_flake8</test_depend>
+  <test_depend>ament_pep257</test_depend>
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>
