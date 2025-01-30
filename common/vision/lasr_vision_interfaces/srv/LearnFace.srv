@@ -1,0 +1,10 @@
+# Dataset to add face to
+string dataset
+
+# Name to associate
+string name
+
+# Images
+sensor_msgs/Image[] images
+
+---

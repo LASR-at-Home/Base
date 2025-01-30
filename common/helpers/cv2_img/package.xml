@@ -14,8 +14,10 @@
     <depend>cv_bridge</depend> <!-- If using OpenCV and ROS image conversions -->
     <depend>python3-numpy</depend> <!-- Include system dependencies like numpy -->
 
-    <test_depend>ament_lint_auto</test_depend>
-    <test_depend>ament_lint_common</test_depend>
+    <!-- Testing dependencies (optional) -->
+    <!-- <test_depend>ament_cmake_pytest</test_depend> -->
+    <!-- <test_depend>ament_lint_auto</test_depend> -->
+    <!-- <test_depend>ament_lint_common</test_depend> -->
 
     <export>
         <build_type>ament_cmake</build_type>
