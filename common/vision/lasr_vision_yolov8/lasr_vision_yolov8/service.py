@@ -6,7 +6,7 @@ import re
 from typing import Dict
 
 import rclpy
-from rclpy import Node
+from rclpy.node import Node
 from ament_index_python import packages
 
 import lasr_vision_yolov8 as yolo
@@ -55,7 +55,7 @@ def main(args=None):
 
     # Put ourselves in the model folder
     package_install = packages.get_package_prefix("lasr_vision_yolov8")
-    package_path = os.path.abspath(os.path.join(package_install, os.pardir, os.pardir, "PACKAGE_NAME", ))
+    package_path = os.path.abspath(os.path.join(package_install, os.pardir, os.pardir, "lasr_vision_yolov8", ))
     os.chdir(os.path.abspath(os.path.join(package_path, "models")))
 
     node = YoloServiceNode()

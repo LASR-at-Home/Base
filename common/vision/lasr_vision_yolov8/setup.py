@@ -23,7 +23,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            "yolo_service_node = lasr_vision_yolov8.lasr_vision_yolov8.services:main",
+            "yolo_service_node = lasr_vision_yolov8.service:main",
         ],
     },
 )
