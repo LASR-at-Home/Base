@@ -1,4 +1,5 @@
 import rclpy
+from rclpy.node import Node
 import cv2_img
 from ultralytics import YOLO
 
@@ -9,17 +10,15 @@ from lasr_vision_interfaces.srv import (
 )
 
 import tf2_ros as tf
-import tf2_sensor_msgs  # noqa
+# import tf2_sensor_msgs  # noqa
 
 # TODO address 3D Detection later on (check ROS1 implementation)
-while rclpy.ok():
-    node = rclpy.create_node("YOLO")
 
 # global tf buffer
 tf_buffer = tf.Buffer() # cache_time=rospy.Duration(10) needed for 3D
 
 def start_tf_buffer() -> None:
-    tf.TransformListener(tf_buffer)
+    tf.TransformListener(tf_buffer, AccessNode.get_node())
 
 # model cache
 loaded_models = {}
@@ -28,7 +27,7 @@ def load_model(dataset: str) -> None:
     """
     Load a model into cache
     """
-
+    node = AccessNode.get_node()
     model = None
     if dataset in loaded_models:
         model = loaded_models[dataset]
@@ -47,6 +46,7 @@ def detect(
     """
     Run YOLO inference on given detection request
     """
+    node = AccessNode.get_node()
 
     # decode the image
     node.get_logger().info("Decoding")
@@ -84,3 +84,26 @@ def detect(
     response = YoloDetection.Response()
     response.detected_objects = detected_objects
     return response
+
+
+class AccessNode(Node):
+    """
+    Class to  create and access the node to avoid duplications
+    """
+    _node = None  # Static variable to hold the node instance
+
+    @staticmethod
+    def get_node():
+        """Returns the singleton ROS 2 node instance, creating it if necessary."""
+        if AccessNode._node is None:
+            # rclpy.init()
+            AccessNode._node = Node('yolo_access_node')
+        return AccessNode._node
+
+    @staticmethod
+    def shutdown():
+        """Shuts down the singleton node properly."""
+        if AccessNode._node is not None:
+            AccessNode._node.destroy_node()
+            AccessNode._node = None
+            AccessNode.shutdown()

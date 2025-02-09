@@ -24,6 +24,7 @@ setup(
     entry_points={
         'console_scripts': [
             "yolo_service_node = lasr_vision_yolov8.service:main",
+            # "yolo_node = src.yolo:main",
         ],
     },
 )
