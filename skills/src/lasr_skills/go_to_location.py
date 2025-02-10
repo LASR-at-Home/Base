@@ -31,9 +31,9 @@ class GoToLocation(smach.State):
             goal_pose = userdata.location
         else:
             return "failed"
-        
+
         goal_stamped = PoseStamped(pose=goal_pose, header=Header(frame_id="map"))
-        
+
         self.navigator.goToPose(goal_stamped)
 
         while not self.navigator.isTaskComplete():
