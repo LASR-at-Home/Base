@@ -4,7 +4,6 @@ import smach
 from geometry_msgs.msg import Pose, PoseStamped
 from nav2_simple_commander.robot_navigator import BasicNavigator
 from std_msgs.msg import Header
-from rclpy.time import Time
 
 
 class GoToLocation(smach.State):
@@ -37,7 +36,6 @@ class GoToLocation(smach.State):
         
         self.navigator.goToPose(goal_stamped)
 
-        # todo: not sure if needed to loop to wait.
         while not self.navigator.isTaskComplete():
             rclpy.spin_once(self.navigator)
 
