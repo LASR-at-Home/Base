@@ -84,10 +84,10 @@ class GetPointCloud(smach.State):
 
     def __init__(self, topic: Optional[str] = None):
         smach.State.__init__(
-            self, outcomes=["succeeded", "failed"], output_keys=["pcl_msg"]
+            self, outcomes=["succeeded", "failed"], output_keys=["pcl_msg"], input_keys=["pcl_msg"]
         )
         
-        self.topic = topic or "/xtion/depth_registered/points"
+        self.topic = topic or "/xtion/depth_registered/pints"
 
     def execute(self, userdata):
         if not rclpy.ok():
@@ -97,6 +97,7 @@ class GetPointCloud(smach.State):
 
         try:
             node = ROS2HelperNode()
+            userdata.pcl_msg = None
             userdata.pcl_msg = node.wait_for_message(self.topic, PointCloud2)
             if userdata.pcl_msg is None:
                 return "failed"
@@ -112,7 +113,7 @@ class GetPointCloud(smach.State):
 class GetImageAndPointCloud(smach.State):
     def __init__(self):
         smach.State.__init__(
-            self, outcomes=["succeeded", "failed"], output_keys=["img_msg", "pcl_msg"]
+            self, outcomes=["succeeded", "failed"], output_keys=["img_msg", "pcl_msg"], input_keys=["img_msg", "pcl_msg"]
         )
 
         self.topic1 = "/xtion/rgb/image_raw"
@@ -144,19 +145,25 @@ class GetImageAndPointCloud(smach.State):
 
         return "succeeded"
 
-def main(args=None):
-    rclpy.init(args=args)
+# def main(args=None):
+#     rclpy.init(args=args)
 
-    # rclpy.init('smach_example_state_machine')
+#     # rclpy.init('smach_example_state_machine')
 
-    sm = smach.StateMachine(outcomes=['failed','succeeded'])
-    with sm:
-        smach.StateMachine.add('GetImage', GetImage(),
-            transitions={'failed': 'failed', 'succeeded':'succeeded'},
-            )
+#     sm = smach.StateMachine(outcomes=['failed','succeeded'])
+#     with sm:
+#         # smach.StateMachine.add('GetImage', GetImage(),
+#         #     transitions={'failed': 'failed', 'succeeded':'succeeded'},
+#         # )
+#         # smach.StateMachine.add('GetPointCloud', GetPointCloud(),
+#         #     transitions={'failed': 'failed', 'succeeded': 'succeeded'},
+#         # )
+#         smach.StateMachine.add('GetImageAndPointCloud', GetImageAndPointCloud(),
+#             transitions={'failed': 'failed', 'succeeded': 'succeeded'},
+#         )
     
-    outcome = sm.execute()
+#     outcome = sm.execute()
 
 
-if __name__ == '__main__':
-    main()
+# if __name__ == '__main__':
+#     main()
