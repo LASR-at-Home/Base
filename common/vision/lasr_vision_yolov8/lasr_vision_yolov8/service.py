@@ -8,10 +8,8 @@ from typing import Dict
 import rclpy
 from ament_index_python import packages
 
-# import lasr_vision_yolov8 as yolo
 from src import lasr_vision_yolov8 as yolo
 from src import AccessNode
-# from lasr_vision_yolov8.yolo import AccessNode
 
 from sensor_msgs.msg import Image
 from lasr_vision_interfaces.srv import (

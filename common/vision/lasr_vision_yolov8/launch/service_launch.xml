@@ -1,0 +1,7 @@
+<launch>
+    <arg name="preload" default="[]" />
+
+    <node name="yolo_service" exec="yolo_service_node" pkg="lasr_vision_yolov8" output="screen">
+        <param name="preload" type="yaml" value="$(var preload)" />
+    </node>
+</launch>

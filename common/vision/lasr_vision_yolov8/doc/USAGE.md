@@ -10,6 +10,7 @@ This package is maintained by:
 This package depends on the following ROS packages:
 - colcon (buildtool)
 - lasr_vision_interfaces
+- cv2_img
 
 This packages requires Python 3.10 to be present.
 

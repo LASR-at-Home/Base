@@ -9,6 +9,7 @@ apt update
 export DEBIAN_FRONTEND=noninteractive
 apt upgrade -y
 apt install ros-$ROS_DISTRO-xacro -y # missing dependency
+sudo apt install ros-$ROS_DISTRO-rqt* -y # missing dependency
 apt install terminator wget git inetutils-ping -y
 apt install python3-pip -y
 
