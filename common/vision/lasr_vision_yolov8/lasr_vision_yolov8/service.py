@@ -10,18 +10,15 @@ from ament_index_python import packages
 
 from src import lasr_vision_yolov8 as yolo
 from src import AccessNode
-
 from sensor_msgs.msg import Image
 from lasr_vision_interfaces.srv import (
     YoloDetection,
 )
 
-
 # TODO handle 3D detection service later on
 
 class YoloServiceNode():
     def __init__(self):
-        # Node.__init__(self, "yolo_service_node")
         self.node = AccessNode.get_node()
         # Determine variables
         self.node.declare_parameter("~preload", ["yolov8n.pt"])  # to have a default value.. maybe there is a cleaner way to do this
@@ -47,9 +44,11 @@ class YoloServiceNode():
             debug_publisher = self.debug_publishers[request.dataset]
         else:
             topic_name = re.sub(r"[\W_]+", "", request.dataset)
-            debug_publisher = self.node.create_publisher(
-                Image, f"/yolov8/debug/{topic_name}", 1
-            )
+            if topic_name == "":
+                topic_name = "/yolov8/debug"
+            else:
+                topic_name = f"/yolov8/debug/{topic_name}"
+            debug_publisher = self.node.create_publisher(Image, topic_name, 1)
         response = yolo.detect(request, debug_publisher)
         return response
 
@@ -58,7 +57,7 @@ def main(args=None):
 
     # Put ourselves in the model folder
     package_install = packages.get_package_prefix("lasr_vision_yolov8")
-    package_path = os.path.abspath(os.path.join(package_install, os.pardir, os.pardir, "vision/lasr_vision_yolov8", ))
+    package_path = os.path.abspath(os.path.join(package_install, os.pardir, os.pardir, "common/vision/lasr_vision_yolov8", ))
     os.chdir(os.path.abspath(os.path.join(package_path, "models")))
 
     node = AccessNode.get_node()

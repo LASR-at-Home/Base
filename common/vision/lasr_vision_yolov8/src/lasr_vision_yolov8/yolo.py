@@ -96,7 +96,6 @@ class AccessNode(Node):
     def get_node():
         """Returns the singleton ROS 2 node instance, creating it if necessary."""
         if AccessNode._node is None:
-            # rclpy.init()
             AccessNode._node = Node('yolo_access_node')
         return AccessNode._node
 
