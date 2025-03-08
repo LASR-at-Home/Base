@@ -21,7 +21,9 @@ setup(
     entry_points={
         'console_scripts': [
             "deepface_service_node = lasr_vision_deepface.nodes.deepface_services:main",
-            "deepface_node = lasr_vision_bodypix.deepface:main",
+            "deepface_node = lasr_vision_deepface.deepface:main",
+            "recognise_face = lasr_vision_deepface.examples.recogniseFace:main",
+        
         ],
     },
 )
