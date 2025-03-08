@@ -34,10 +34,10 @@ set(srv_files
 
 
 
-rosidl_generate_interfaces(${PROJECT_NAME}
+# rosidl_generate_interfaces(${PROJECT_NAME}
 
-  DEPENDENCIES sensor_msgs
-)
+#   DEPENDENCIES sensor_msgs
+# )
 
 # Generate messages and services
 rosidl_generate_interfaces(${PROJECT_NAME}
