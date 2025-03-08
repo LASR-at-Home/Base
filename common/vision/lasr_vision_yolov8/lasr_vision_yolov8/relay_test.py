@@ -8,20 +8,23 @@ import threading
 from sensor_msgs.msg import Image
 from lasr_vision_interfaces.srv import YoloDetection
 
+
 class ImageListener(Node):
     def __init__(self, listen_topic, model):
-        super().__init__('image_listener')
+        super().__init__("image_listener")
 
         self.listen_topic = listen_topic
         self.model = model
         self.processing = False
 
-        self.detect_client = self.create_client(YoloDetection, '/yolov8/detect')
+        self.detect_client = self.create_client(YoloDetection, "/yolov8/detect")
 
         while not self.detect_client.wait_for_service(timeout_sec=5.0):
             self.get_logger().warn("Waiting for /yolov8/detect service")
 
-        self.subscription = self.create_subscription(Image, self.listen_topic, self.image_callback,10)
+        self.subscription = self.create_subscription(
+            Image, self.listen_topic, self.image_callback, 10
+        )
 
         self.get_logger().info(f"Listening on topic: {self.listen_topic}")
 
@@ -60,7 +63,9 @@ def main(args=None):
     rclpy.init(args=args)
 
     if len(sys.argv) < 2:
-        print('Usage: ros2 run lasr_objcet_detection_yolov8 relay <source_topic> [model.pt]')
+        print(
+            "Usage: ros2 run lasr_objcet_detection_yolov8 relay <source_topic> [model.pt]"
+        )
         return
 
     listen_topic = sys.argv[1]
@@ -77,5 +82,5 @@ def main(args=None):
         rclpy.shutdown()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

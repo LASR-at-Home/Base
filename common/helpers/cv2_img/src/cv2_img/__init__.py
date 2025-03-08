@@ -42,7 +42,9 @@ def msg_to_pillow_img(msg: SensorImage):
     """
     size = (msg.width, msg.height)
     if msg.encoding in ["yuv422_yuy2"]:
-        yuy2_data = np.frombuffer(msg.data, dtype=np.uint8).reshape((msg.height, msg.width, 2))
+        yuy2_data = np.frombuffer(msg.data, dtype=np.uint8).reshape(
+            (msg.height, msg.width, 2)
+        )
         bgr_img = cv2.cvtColor(yuy2_data, cv2.COLOR_YUV2BGR_YUY2)
         img = Image.fromarray(cv2.cvtColor(bgr_img, cv2.COLOR_BGR2RGB))
     elif msg.encoding in ["bgr8", "8UC3"]:

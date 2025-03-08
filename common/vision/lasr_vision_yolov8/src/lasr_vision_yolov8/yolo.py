@@ -10,18 +10,22 @@ from lasr_vision_interfaces.srv import (
 )
 
 import tf2_ros as tf
+
 # import tf2_sensor_msgs  # noqa
 
 # TODO address 3D Detection later on (check ROS1 implementation)
 
 # global tf buffer
-tf_buffer = tf.Buffer() # cache_time=rospy.Duration(10) needed for 3D
+tf_buffer = tf.Buffer()  # cache_time=rospy.Duration(10) needed for 3D
+
 
 def start_tf_buffer() -> None:
     tf.TransformListener(tf_buffer, AccessNode.get_node())
 
+
 # model cache
 loaded_models = {}
+
 
 def load_model(dataset: str) -> None:
     """
@@ -90,13 +94,14 @@ class AccessNode(Node):
     """
     Class to  create and access the node to avoid duplications
     """
+
     _node = None  # Static variable to hold the node instance
 
     @staticmethod
     def get_node():
         """Returns the singleton ROS 2 node instance, creating it if necessary."""
         if AccessNode._node is None:
-            AccessNode._node = Node('yolo_access_node')
+            AccessNode._node = Node("yolo_access_node")
         return AccessNode._node
 
     @staticmethod

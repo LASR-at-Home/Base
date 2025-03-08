@@ -3,11 +3,13 @@
 YOLOv8 object detection service
 
 This package is maintained by:
+
 - [Ma'ayan Armony](mailto:maayan.armony@gmail.com)
 
 ## Prerequisites
 
 This package depends on the following ROS packages:
+
 - colcon (buildtool)
 - lasr_vision_interfaces
 - cv2_img
@@ -15,14 +17,15 @@ This package depends on the following ROS packages:
 This packages requires Python 3.10 to be present.
 
 This package has 52 Python dependencies:
+
 - [ultralytics](https://pypi.org/project/ultralytics)==8.0.168
 - [dill](https://pypi.org/project/dill)==0.3.7
 - .. and 50 sub dependencies
 
-
 ## Usage
 
-This package provides the `/yolov8/detect` service which uses the `YoloDetection` service definition from `lasr_vision_interfaces`.
+This package provides the `/yolov8/detect` service which uses the `YoloDetection` service definition from
+`lasr_vision_interfaces`.
 
 ```python
 from lasr_vision_interfaces.srv import YoloDetection, YoloDetectionRequest
@@ -59,7 +62,8 @@ ros2 launch lasr_vision_yolov8 service.launch debug:=true preload:=["yolov8n-seg
 
 1. Find a video to test on, or otherwise acquire an image topic.
 
-   My test video is `https://www.youtube.com/watch?v=ng8Wivt52K0`, [download it using Cobalt](https://co.wukko.me/) then place it in a directory such as `~/v.mp4`.
+   My test video is `https://www.youtube.com/watch?v=ng8Wivt52K0`, [download it using Cobalt](https://co.wukko.me/) then
+   place it in a directory such as `~/v.mp4`.
 
 2. Then launch the demo:
 
@@ -77,7 +81,8 @@ There are currently two components to this package:
 - The YOLO "server" which runs inference and uses IPC (Python `multiprocessing`) to communicate with a rospy node.
 - The actual service node which uses IPC to communicate with the "server".
 
-This is a temporary solution to workaround the minimum Python requirements for the `ultralytics` Python package which wraps around YOLOv8 and provides an interface for running interface and collecting results.
+This is a temporary solution to workaround the minimum Python requirements for the `ultralytics` Python package which
+wraps around YOLOv8 and provides an interface for running interface and collecting results.
 
 The actual YOLO detection routine works as follows:
 
@@ -87,19 +92,21 @@ The actual YOLO detection routine works as follows:
 
   The following encodings are currently supported:
 
-  - bgr8
-  - 8UC3
-  - rgb8
+    - bgr8
+    - 8UC3
+    - rgb8
 
   > [!NOTE]  
   > This could be turned into a utility library.
 
 - Load the appropriate YOLO model
 
-  Models are loaded from the `models` folder. Standard v8 models are loaded on-demand and saved to the directory as well.
+  Models are loaded from the `models` folder. Standard v8 models are loaded on-demand and saved to the directory as
+  well.
 
   > [!IMPORTANT]  
-  > If you would like to train your own model, [a full guide is available here](https://github.com/insertish/yolov8_training_workspace).
+  > If you would like to train your own
+  model, [a full guide is available here](https://github.com/insertish/yolov8_training_workspace).
 
   One or more models may be loaded at the same time, they are stored in an in-memory cache.
 
@@ -133,11 +140,10 @@ ros2 launch lasr_vision_yolov8 service.launch
 ros2 launch lasr_vision_yolov8 service.launch debug:=true preload:=['yolov8n.pt','yolov8n-seg.pt']
 ```
 
-| Argument | Default | Description |
-|:-:|:-:|---|
-| debug | false | Whether to publish plotted images to /yolov8/debug |
-| preload | [] | Array of models to preload when starting the service |
-
+| Argument | Default | Description                                          |
+|:--------:|:-------:|------------------------------------------------------|
+|  debug   |  false  | Whether to publish plotted images to /yolov8/debug   |
+| preload  |   []    | Array of models to preload when starting the service |
 
 #### `camera`
 
@@ -151,10 +157,9 @@ ros2 launch lasr_vision_yolov8 camera.launch
 ros2 launch lasr_vision_yolov8 camera.launch model:=yolov8n.pt
 ```
 
-| Argument | Default | Description |
-|:-:|:-:|---|
-| model | yolov8n-seg.pt | Model to use for the demo |
-
+| Argument |    Default     | Description               |
+|:--------:|:--------------:|---------------------------|
+|  model   | yolov8n-seg.pt | Model to use for the demo |
 
 #### `demo`
 
@@ -168,7 +173,7 @@ ros2 launch lasr_vision_yolov8 demo.launch file:=$HOME/video.mp4
 ros2 launch lasr_vision_yolov8 demo.launch model:=yolov8n.pt file:=$HOME/video.mp4
 ```
 
-| Argument | Default | Description |
-|:-:|:-:|---|
-| model | yolov8n-seg.pt | Model to use for the demo |
-| file |  | Video file to run inference on |
+| Argument |    Default     | Description                    |
+|:--------:|:--------------:|--------------------------------|
+|  model   | yolov8n-seg.pt | Model to use for the demo      |
+|   file   |                | Video file to run inference on |

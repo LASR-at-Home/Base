@@ -1,20 +1,22 @@
 <launch>
     <!-- arguments -->
-    <arg name="model" default="yolov8n-seg.pt" />
+    <arg name="model" default="yolov8n-seg.pt"/>
 
     <!-- yolo service -->
     <include file="$(find-pkg-share lasr_vision_yolov8)/launch/service_launch.xml">
-        <arg name="preload" value="['$(var model)']" />
+        <arg name="preload" value="['$(var model)']"/>
     </include>
 
     <!-- show debug topic -->
-    <node name="image_view" pkg="rqt_image_view" exec="rqt_image_view" respawn="false" output="screen" args="/yolov8/debug" />
+    <node name="image_view" pkg="rqt_image_view" exec="rqt_image_view" respawn="false" output="screen"
+          args="/yolov8/debug"/>
 
     <!-- start relay service (TODO should be relay?) -->
-    <node name="service" pkg="lasr_vision_yolov8" exec="yolo_service_node" respawn="false" output="screen" args="/xtion/rgb/image_raw $(var model)" />
+    <node name="service" pkg="lasr_vision_yolov8" exec="yolo_service_node" respawn="false" output="screen"
+          args="/xtion/rgb/image_raw $(var model)"/>
 
     <!-- launch video stream -->
-   <!-- <include file="$(find video_stream_opencv)/launch/camera.launch">
-        <arg name="visualize" value="true" />
-   </include> -->
+    <!-- <include file="$(find video_stream_opencv)/launch/camera.launch">
+         <arg name="visualize" value="true" />
+    </include> -->
 </launch>

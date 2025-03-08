@@ -1,30 +1,32 @@
 <launch>
-<!--    <description>Run a YOLOv8 model on a video file</description>-->
-<!--    <usage doc="Run the demo">file:=$HOME/video.mp4</usage>-->
-<!--    <usage doc="Run the demo with a different model">model:=yolov8n.pt file:=$HOME/video.mp4</usage>-->
+    <!--    <description>Run a YOLOv8 model on a video file</description>-->
+    <!--    <usage doc="Run the demo">file:=$HOME/video.mp4</usage>-->
+    <!--    <usage doc="Run the demo with a different model">model:=yolov8n.pt file:=$HOME/video.mp4</usage>-->
 
     <!-- arguments -->
-    <arg name="model" default="yolov8n.pt" />
-<!--    <arg name="file" default="" /> doc="Video file to run inference on" -->
+    <arg name="model" default="yolov8n.pt"/>
+    <!--    <arg name="file" default="" /> doc="Video file to run inference on" -->
 
     <!-- yolo service -->
     <include file="$(find-pkg-share lasr_vision_yolov8)/launch/service_launch.xml">
-        <arg name="preload" value="['$(var model)']" />
+        <arg name="preload" value="['$(var model)']"/>
     </include>
 
     <!-- show debug topic -->
-    <node name="image_view" pkg="rqt_image_view" exec="rqt_image_view" respawn="false" output="screen" args="/yolov8/debug" />
+    <node name="image_view" pkg="rqt_image_view" exec="rqt_image_view" respawn="false" output="screen"
+          args="/yolov8/debug"/>
 
     <!-- start relay service -->
-    <node name="relay" pkg="lasr_vision_yolov8" exec="relay" respawn="false" output="screen" args="/image_raw $(var model)" />
+    <node name="relay" pkg="lasr_vision_yolov8" exec="relay" respawn="false" output="screen"
+          args="/image_raw $(var model)"/>
 
     <!-- start yolo service -->
-    <arg name="preload" default="[]" />
+    <arg name="preload" default="[]"/>
 
     <!-- launch video stream -->
-<!--   <include file="$(find-pkg-share video_stream_opencv)/launch/camera.launch">-->
-<!--        <arg name="video_stream_provider" value="$(var file)" />-->
-<!--        <arg name="loop_videofile" value="true" />-->
-<!--        <arg name="visualize" value="true" />-->
-<!--   </include>-->
+    <!--   <include file="$(find-pkg-share video_stream_opencv)/launch/camera.launch">-->
+    <!--        <arg name="video_stream_provider" value="$(var file)" />-->
+    <!--        <arg name="loop_videofile" value="true" />-->
+    <!--        <arg name="visualize" value="true" />-->
+    <!--   </include>-->
 </launch>
