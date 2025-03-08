@@ -4,6 +4,7 @@ import smach
 from geometry_msgs.msg import Pose, PoseStamped
 from nav2_simple_commander.robot_navigator import BasicNavigator
 from std_msgs.msg import Header
+from lasr_skills import AccessNode
 
 
 class GoToLocation(smach.State):
@@ -21,6 +22,7 @@ class GoToLocation(smach.State):
                 input_keys=["location"],
             )
 
+        self.node = AccessNode.get_node()
         self.navigator = BasicNavigator()
         self.location = location
 
