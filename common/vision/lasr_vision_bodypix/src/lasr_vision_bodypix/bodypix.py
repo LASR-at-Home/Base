@@ -17,7 +17,8 @@ from lasr_vision_interfaces.srv import (
     BodyPixKeypointDetection,
 )
 from sensor_msgs.msg import Image as SensorImage
-from tf_bodypix.api import download_model, load_model, BodyPixModelPaths
+from tf_bodypix.api import download_model, BodyPixModelPaths
+from tf_bodypix.api import load_model as bp_load_model
 
 BodyPixKeypointDetection_Request = BodyPixKeypointDetection.Request()
 BodyPixKeypointDetection_Response = BodyPixKeypointDetection.Response()
@@ -65,7 +66,7 @@ def load_model():
     Load resnet 50 model.
     """
     name = download_model(BodyPixModelPaths.RESNET50_FLOAT_STRIDE_16)
-    model = load_model(name)
+    model = bp_load_model(name)
     return model
 
 

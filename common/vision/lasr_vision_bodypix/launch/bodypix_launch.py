@@ -19,7 +19,7 @@ def generate_launch_description():
         executable="bodypix_services.py",
         name="bodypix_services",
         output="screen",
-        parameters=[{"preload": LaunchConfiguration("preload")}],
+        # parameters=[{"preload": LaunchConfiguration("preload")}],
     )
 
     # Return the launch description
