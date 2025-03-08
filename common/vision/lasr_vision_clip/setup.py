@@ -20,6 +20,7 @@ setup(
     entry_points={
         "console_scripts": [
             "test_clip_utils = lasr_vision_clip.test_clip_utils:main",
+            "test_2_clip_utils = lasr_vision_clip.test_2_clip_utils:main",
             "clip_utils = clip_utils:main",
             "learn_face = learn_face:main",
             "vqa = lasr_vision_clip.nodes.vqa:main",

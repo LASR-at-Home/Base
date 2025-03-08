@@ -67,7 +67,7 @@ class VqaClient(Node):
 
 def main(args=None):
     # Enter the directory and name of the test file - should be in the same directory as the workspace
-    image_path = "test_image.jpg"
+    image_path = "glasses2.jpeg"
     choices = ["Wearing glasses", "Not wearing glasses"] 
 
     
