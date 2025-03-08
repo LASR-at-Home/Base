@@ -100,7 +100,7 @@ Apptainer/Singularity image for simulating TIAGo in ROS2 Humble.
 
 Usage:
   apptainer run --nv --nvccli <terminator>
-  
+
   Suffixing with "terminator" launches terminator inside the container.
 
 Useful built-in commands:
