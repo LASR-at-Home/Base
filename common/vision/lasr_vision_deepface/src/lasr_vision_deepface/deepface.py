@@ -7,8 +7,8 @@ import os
 import numpy as np
 import pandas as pd
 
-from lasr_vision_msgs.msg import Detection
-from lasr_vision_msgs.srv import (
+from lasr_vision_interfaces.msg import Detection
+from lasr_vision_interfaces.srv import (
     Recognise,
     DetectFaces,
 )
