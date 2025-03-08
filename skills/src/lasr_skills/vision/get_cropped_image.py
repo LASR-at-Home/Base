@@ -4,11 +4,7 @@ from lasr_skills import AccessNode
 
 
 from lasr_vision_interfaces.msg import CDRequest
-from lasr_vision_interfaces.srv import (
-    CroppedDetection,
-    CroppedDetectionRequest,
-    CroppedDetectionResponse,
-)
+from lasr_vision_interfaces.srv import CroppedDetection
 
 
 class GetCroppedImage(smach.State):
@@ -53,7 +49,7 @@ class GetCroppedImage(smach.State):
         req.yolo_nms_threshold = self.yolo_nms_threshold
         req.object_names = [self.object_name]
 
-        cropped_detection_req = CroppedDetectionRequest()
+        cropped_detection_req = CroppedDetection.Request()
         cropped_detection_req.requests = [req]
 
         try:

@@ -1,4 +1,3 @@
-import os
 import smach
 import rclpy
 from typing import Optional

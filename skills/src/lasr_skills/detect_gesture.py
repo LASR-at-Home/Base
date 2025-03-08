@@ -3,17 +3,10 @@ import rclpy
 from lasr_skills import AccessNode
 import cv2
 import cv2_img
-from lasr_vision_interfaces.srv import (
-    BodyPixKeypointDetection,
-    BodyPixKeypointDetectionRequest,
-)
+from lasr_vision_interfaces.srv import BodyPixKeypointDetection
 from sensor_msgs.msg import Image
-from geometry_msgs.msg import Point, Pose, PoseStamped, Quaternion, PointStamped
-from std_msgs.msg import Header
-from tf2_geometry_msgs.tf2_geometry_msgs import do_transform_pose
 import tf2_ros as tf
 from visualization_msgs.msg import Marker
-from markers import create_and_publish_marker
 
 from typing import Union
 
@@ -39,7 +32,7 @@ class DetectGesture(smach.State):
         )
         self.node = AccessNode.get_node()
         self.gesture_to_detect = gesture_to_detect
-        self.bodypix_client = node.create_client(
+        self.bodypix_client = self.node.create_client(
             BodyPixKeypointDetection, "/bodypix/keypoint_detection"
         )
         self.bodypix_client.wait_for_service()
@@ -62,7 +55,7 @@ class DetectGesture(smach.State):
 
     def execute(self, userdata):
 
-        req = BodyPixKeypointDetectionRequest()
+        req = BodyPixKeypointDetection.Request()
         req.image_raw = userdata.img_msg
         req.dataset = self.bodypix_model
         req.confidence = self.bodypix_confidence
