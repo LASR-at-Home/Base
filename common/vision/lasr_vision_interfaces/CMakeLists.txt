@@ -36,7 +36,9 @@ set(srv_files
   "srv/CroppedDetection.srv"
   "srv/LearnFace.srv"
   "srv/YoloDetection.srv"
+  "srv/Vqa.srv"
 )
+
 
 # Generate messages and services
 rosidl_generate_interfaces(${PROJECT_NAME}
