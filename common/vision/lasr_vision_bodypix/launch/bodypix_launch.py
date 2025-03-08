@@ -8,7 +8,7 @@ def generate_launch_description():
     # Declare preload argument with default value as a YAML list
     preload_arg = DeclareLaunchArgument(
         "preload",
-        default_value=["resnet50"],
+        default_value="['resnet50']",
         # default_value="['resnet50', 'mobilenet50']",
         description="Array of models to preload when starting the service",
     )
