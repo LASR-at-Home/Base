@@ -23,26 +23,26 @@ class VqaService(Node):
         print("intialising")
 
     def query_clip(self, request: Vqa.Request, response: Vqa.Response) -> Vqa.Response:
-            """Queries CLIP from the robot's image stream and returns
-            the most likely answer and cosine similarity score.
+        """Queries CLIP from the robot's image stream and returns
+        the most likely answer and cosine similarity score.
 
-            Args:
-                possible_answers (List[str]): set of possible answers.
+        Args:
+            possible_answers (List[str]): set of possible answers.
 
-            Returns:
-                VqaResult
-            """
-            possible_answers = request.possible_answers
-            answer, cos_score, annotated_img = query_image(
-                request.image_raw, self._model, possible_answers, annotate=True
-            )
+        Returns:
+            VqaResult
+        """
+        possible_answers = request.possible_answers
+        answer, cos_score, annotated_img = query_image(
+            request.image_raw, self._model, possible_answers, annotate=True
+        )
 
-            self._debug_pub.publish(annotated_img)
+        self._debug_pub.publish(annotated_img)
 
-            response.answer = answer
-            self.get_logger().info(f"Answer: {answer}")
-            response.similarity = float(cos_score)
-            return response
+        response.answer = answer
+        self.get_logger().info(f"Answer: {answer}")
+        response.similarity = float(cos_score)
+        return response
 
 
 def main(args=None):
