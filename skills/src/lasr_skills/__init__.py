@@ -48,7 +48,7 @@ class WaitForMessageNode(Node):
     def wait_for_message(self, topic, msg_type, timeout=5.0):
         """
         ROS2 does not provide wait_for_message
-        Waits for a message with a Future object (More efficient). 
+        Waits for a message with a Future object (More efficient).
         """
         future = Future()
         qos_profile = QoSProfile(depth=10, reliability=QoSReliabilityPolicy.RELIABLE)
@@ -57,7 +57,9 @@ class WaitForMessageNode(Node):
             if not future.done():
                 future.set_result(msg)
 
-        self.subscriber = self.create_subscription(msg_type, topic, callback, qos_profile)
+        self.subscriber = self.create_subscription(
+            msg_type, topic, callback, qos_profile
+        )
 
         start_time = self.get_clock().now().nanoseconds / 1e9
 
@@ -114,4 +116,3 @@ class AccessNode(Node):
 #             AccessNode._node.destroy_node()
 #             AccessNode._node = None
 #             AccessNode.shutdown()
-

@@ -4,6 +4,7 @@ import cv2_img
 import cv2_pcl
 import rclpy
 from lasr_skills import AccessNode
+
 # from .get_image import GetImage, ROS2HelperNode, GetPointCloud
 # from .image_cv2_to_msg import ImageCv2ToMsg
 
@@ -16,7 +17,10 @@ class ImageMsgToCv2(smach.State):
     def __init__(self):
         smach.State.__init__(
             # self, outcomes=["succeeded", "failed"], input_keys=["img_msg", "img"], output_keys=["img"]
-            self, outcomes=["succeeded", "failed"], input_keys=["img_msg"], output_keys=["img"]
+            self,
+            outcomes=["succeeded", "failed"],
+            input_keys=["img_msg"],
+            output_keys=["img"],
         )
         self.node = AccessNode.get_node()
 
@@ -24,7 +28,7 @@ class ImageMsgToCv2(smach.State):
         userdata.img = cv2_img.msg_to_cv2_img(userdata.img_msg)
         # print(userdata.img)
         return "succeeded"
-    
+
 
 class PclMsgToCv2(smach.State):
     """
@@ -44,7 +48,7 @@ class PclMsgToCv2(smach.State):
         userdata.img = cv2_pcl.pcl_to_cv2(userdata.img_msg_3d)
         userdata.xyz = cv2_pcl.pointcloud2_to_xyz_array(userdata.img_msg_3d)
         return "succeeded"
-    
+
 
 # def main(args=None):
 #     rclpy.init(args=args)
@@ -69,7 +73,7 @@ class PclMsgToCv2(smach.State):
 #         # smach.StateMachine.add('ImageCv2ToMsg', ImageCv2ToMsg(),
 #         #     transitions={'succeeded': 'succeeded', 'failed': 'failed'},
 #         # )
-        
+
 #     outcome = sm.execute()
 
 

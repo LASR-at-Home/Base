@@ -106,7 +106,9 @@ def detect_masks(
     """
     result, mask = run_inference(
         # request.dataset, request.confidence, request.image_raw, logger
-        request.confidence, request.image_raw, logger
+        request.confidence,
+        request.image_raw,
+        logger,
     )
 
     masks = []
@@ -154,7 +156,9 @@ def detect_keypoints(
     """
     result, mask = run_inference(
         # request.dataset, request.confidence, request.image_raw, logger
-        request.confidence, request.image_raw, logger
+        request.confidence,
+        request.image_raw,
+        logger,
     )
 
     poses = result.get_poses()

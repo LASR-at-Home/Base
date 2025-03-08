@@ -25,8 +25,7 @@ setup(
         "console_scripts": [
             # "look_to_point = src.lasr_skills.look_to_point:main",
             "get_image = src.lasr_skills.vision.get_image:main",
-            'wait_state = src.lasr_skills.wait:main'
-
+            "wait_state = src.lasr_skills.wait:main",
         ],
     },
 )

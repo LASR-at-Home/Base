@@ -13,14 +13,17 @@ class GetImage(smach.State):
 
     def __init__(self, topic: Optional[str] = None):
         smach.State.__init__(
-            self, outcomes=["succeeded", "failed"], output_keys=["img_msg"], input_keys=["img_msg"] 
+            self,
+            outcomes=["succeeded", "failed"],
+            output_keys=["img_msg"],
+            input_keys=["img_msg"],
         )
         self.node = AccessNode.get_node()
 
         self.topic = topic or "/xtion/rgb/image_raw"
         # self.topic = topic or "/image_raw"
         # TODO check if tiago is in environment
-        #else "/usb_cam/image_raw", self.topic = topic
+        # else "/usb_cam/image_raw", self.topic = topic
 
     def execute(self, userdata):
         if not rclpy.ok():
@@ -34,7 +37,7 @@ class GetImage(smach.State):
                 userdata.img_msg = None
             if userdata.img_msg is None:
                 return "failed"
-            
+
         except Exception as e:
             self.node.get_logger().error(str(e))
             return "failed"
@@ -52,7 +55,10 @@ class GetPointCloud(smach.State):
 
     def __init__(self, topic: Optional[str] = None):
         smach.State.__init__(
-            self, outcomes=["succeeded", "failed"], output_keys=["pcl_msg"], input_keys=["pcl_msg"]
+            self,
+            outcomes=["succeeded", "failed"],
+            output_keys=["pcl_msg"],
+            input_keys=["pcl_msg"],
         )
         self.node = AccessNode.get_node()
 
@@ -79,7 +85,10 @@ class GetPointCloud(smach.State):
 class GetImageAndPointCloud(smach.State):
     def __init__(self):
         smach.State.__init__(
-            self, outcomes=["succeeded", "failed"], output_keys=["img_msg", "pcl_msg"], input_keys=["img_msg", "pcl_msg"]
+            self,
+            outcomes=["succeeded", "failed"],
+            output_keys=["img_msg", "pcl_msg"],
+            input_keys=["img_msg", "pcl_msg"],
         )
         self.node = AccessNode.get_node()
 
@@ -106,7 +115,7 @@ class GetImageAndPointCloud(smach.State):
                 self.node.destroy_node()
 
         return "succeeded"
-    
+
 
 # class ROS2HelperNode(Node):
 #     def __init__(self, name="ros2_helper_node"):
@@ -115,7 +124,7 @@ class GetImageAndPointCloud(smach.State):
 #     def wait_for_message(self, topic, msg_type, timeout=5.0):
 #         """
 #         ROS2 does not provide wait_for_message
-#         Waits for a message with a Future object (More efficient). 
+#         Waits for a message with a Future object (More efficient).
 #         """
 #         future = Future()
 #         qos_profile = QoSProfile(depth=10, reliability=QoSReliabilityPolicy.RELIABLE)
@@ -145,7 +154,7 @@ class GetImageAndPointCloud(smach.State):
 
 #     def __init__(self, topic: Optional[str] = None):
 #         smach.State.__init__(
-#             self, outcomes=["succeeded", "failed"], output_keys=["img_msg"], input_keys=["img_msg"] 
+#             self, outcomes=["succeeded", "failed"], output_keys=["img_msg"], input_keys=["img_msg"]
 #         )
 
 #         self.topic = topic or "/xtion/rgb/image_raw"
@@ -168,7 +177,7 @@ class GetImageAndPointCloud(smach.State):
 #                 userdata.img_msg = None
 #             if userdata.img_msg is None:
 #                 return "failed"
-            
+
 #         except Exception as e:
 #             node.get_logger().error(str(e))
 #             return "failed"
@@ -187,7 +196,7 @@ class GetImageAndPointCloud(smach.State):
 #         smach.State.__init__(
 #             self, outcomes=["succeeded", "failed"], output_keys=["pcl_msg"], input_keys=["pcl_msg"]
 #         )
-        
+
 #         self.topic = topic or "/xtion/depth_registered/pints"
 
 #     def execute(self, userdata):
@@ -228,7 +237,7 @@ class GetImageAndPointCloud(smach.State):
 #             rclpy.init()
 
 #         node = None
-        
+
 #         try:
 #             node = ROS2HelperNode()
 
@@ -262,7 +271,7 @@ class GetImageAndPointCloud(smach.State):
 #         smach.StateMachine.add('GetImageAndPointCloud', GetImageAndPointCloud(),
 #             transitions={'failed': 'failed', 'succeeded': 'succeeded'},
 #         )
-    
+
 #     outcome = sm.execute()
 
 

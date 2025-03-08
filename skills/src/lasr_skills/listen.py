@@ -5,7 +5,9 @@ from lasr_skills import AccessNode
 
 
 class Listen(smach_ros.SimpleActionState):
-    def __init__(self,):
+    def __init__(
+        self,
+    ):
         smach_ros.SimpleActionState.__init__(
             self,
             "transcribe_speech",

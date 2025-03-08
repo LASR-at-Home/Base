@@ -3,6 +3,7 @@ import smach
 import cv2_img
 import rclpy
 from lasr_skills import AccessNode
+
 # from .get_image import GetImage, ROS2HelperNode
 
 
@@ -14,7 +15,10 @@ class ImageCv2ToMsg(smach.State):
     def __init__(self):
         smach.State.__init__(
             # self, outcomes=["succeeded", "failed"], input_keys=["img", "img_msg"], output_keys=["img_msg"]
-            self, outcomes=["succeeded", "failed"], input_keys=["img"], output_keys=["img_msg"]
+            self,
+            outcomes=["succeeded", "failed"],
+            input_keys=["img"],
+            output_keys=["img_msg"],
         )
         self.node = AccessNode.get_node()
 

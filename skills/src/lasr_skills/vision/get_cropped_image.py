@@ -10,6 +10,7 @@ from lasr_vision_interfaces.srv import (
     CroppedDetectionResponse,
 )
 
+
 class GetCroppedImage(smach.State):
     """
     This state calls CroppedDetection service instead of running on its own.
@@ -17,13 +18,13 @@ class GetCroppedImage(smach.State):
     """
 
     def __init__(
-            self,
-            object_name: str,
-            method: str = "closest",
-            use_mask: bool = True,
-            yolo_model: str = "yolov8x-seg.pt",
-            yolo_model_confidence: float = 0.5,
-            yolo_nms_threshold: float = 0.3,
+        self,
+        object_name: str,
+        method: str = "closest",
+        use_mask: bool = True,
+        yolo_model: str = "yolov8x-seg.pt",
+        yolo_model_confidence: float = 0.5,
+        yolo_nms_threshold: float = 0.3,
     ):
         smach.State.__init__(
             self,
@@ -37,8 +38,10 @@ class GetCroppedImage(smach.State):
         self.yolo_model = yolo_model
         self.yolo_model_confidence = yolo_model_confidence
         self.yolo_nms_threshold = yolo_nms_threshold
-        
-        self._cropped_detection = self.create_client(CroppedDetection, "/vision/cropped_detection")
+
+        self._cropped_detection = self.create_client(
+            CroppedDetection, "/vision/cropped_detection"
+        )
         self._cropped_detection.wait_for_service()
 
     def execute(self, userdata) -> str:
@@ -49,7 +52,7 @@ class GetCroppedImage(smach.State):
         req.yolo_model_confidence = self.yolo_model_confidence
         req.yolo_nms_threshold = self.yolo_nms_threshold
         req.object_names = [self.object_name]
-        
+
         cropped_detection_req = CroppedDetectionRequest()
         cropped_detection_req.requests = [req]
 
@@ -70,6 +73,7 @@ class GetCroppedImage(smach.State):
         except Exception as e:  # Got some errors that is not rospy.
             self.node.get_logger().error(f"Service call failed: {e}")
             return "failed"
+
 
 if __name__ == "__main__":
     rclpy.init()

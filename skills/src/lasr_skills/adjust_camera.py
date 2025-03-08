@@ -13,17 +13,33 @@ TORSO = {"leftWrist", "rightWrist", "leftHip", "rightHip"}
 ALL_KEYS = LEFT.union(RIGHT).union(HEAD).union(MIDDLE).union(TORSO)
 
 positions = [
-    "u3l", "u3m", "u3r",
-    "u2l", "u2m", "u2r",
-    "u1l", "u1m", "u1r",
-    "ml", "mm", "mr",
+    "u3l",
+    "u3m",
+    "u3r",
+    "u2l",
+    "u2m",
+    "u2r",
+    "u1l",
+    "u1m",
+    "u1r",
+    "ml",
+    "mm",
+    "mr",
 ]
 
 position_dict = {
-    (3, -1): "u3l", (3, 0): "u3m", (3, 1): "u3r",
-    (2, -1): "u2l", (2, 0): "u2m", (2, 1): "u2r",
-    (1, -1): "u1l", (1, 0): "u1m", (1, 1): "u1r",
-    (0, -1): "ml", (0, 0): "mm", (0, 1): "mr",
+    (3, -1): "u3l",
+    (3, 0): "u3m",
+    (3, 1): "u3r",
+    (2, -1): "u2l",
+    (2, 0): "u2m",
+    (2, 1): "u2r",
+    (1, -1): "u1l",
+    (1, 0): "u1m",
+    (1, 1): "u1r",
+    (0, -1): "ml",
+    (0, 0): "mm",
+    (0, 1): "mr",
 }
 
 inverse_position_dict = {value: key for key, value in position_dict.items()}
@@ -34,11 +50,16 @@ class AdjustCamera(smach.StateMachine):
         self, bodypix_confidence=0.7, max_attempts=5, debug=False, init_state="u1m"
     ):
         smach.StateMachine.__init__(
-            self, outcomes=["finished", "failed", "truncated"], input_keys=[], output_keys=[]
+            self,
+            outcomes=["finished", "failed", "truncated"],
+            input_keys=[],
+            output_keys=[],
         )
         self.node = AccessNode.get_node()
 
-        self.bodypix_client = self.create_client(BodyPixKeypointDetection, "/bodypix/keypoint_detection")
+        self.bodypix_client = self.create_client(
+            BodyPixKeypointDetection, "/bodypix/keypoint_detection"
+        )
         while not self.bodypix_client.wait_for_service(timeout_sec=1.0):
             self.get_logger().info("Waiting for BodyPixKeypointDetection service...")
 
@@ -49,32 +70,51 @@ class AdjustCamera(smach.StateMachine):
 
         with self:
             smach.StateMachine.add(
-                "INIT", PlayMotion(motion_name=init_state),
-                transitions={"succeeded": "GET_IMAGE", "aborted": "GET_IMAGE", "preempted": "GET_IMAGE"},
+                "INIT",
+                PlayMotion(motion_name=init_state),
+                transitions={
+                    "succeeded": "GET_IMAGE",
+                    "aborted": "GET_IMAGE",
+                    "preempted": "GET_IMAGE",
+                },
             )
 
             smach.StateMachine.add(
                 "GET_IMAGE",
                 GetCroppedImage(object_name="person", method="closest", use_mask=True),
-                transitions={"succeeded": "DECIDE_ADJUST_CAMERA", "failed": "GET_IMAGE"},
+                transitions={
+                    "succeeded": "DECIDE_ADJUST_CAMERA",
+                    "failed": "GET_IMAGE",
+                },
             )
 
             smach.StateMachine.add(
                 "DECIDE_ADJUST_CAMERA",
                 self.DecideAdjustCamera(self),
                 transitions={pos: pos for pos in positions}.update(
-                    {"finished": "finished", "failed": "failed", "truncated": "truncated"}
+                    {
+                        "finished": "finished",
+                        "failed": "failed",
+                        "truncated": "truncated",
+                    }
                 ),
             )
 
             for motion in positions:
                 smach.StateMachine.add(
-                    motion, PlayMotion(motion_name=motion),
-                    transitions={"succeeded": "GET_IMAGE", "aborted": "GET_IMAGE", "preempted": "GET_IMAGE"},
+                    motion,
+                    PlayMotion(motion_name=motion),
+                    transitions={
+                        "succeeded": "GET_IMAGE",
+                        "aborted": "GET_IMAGE",
+                        "preempted": "GET_IMAGE",
+                    },
                 )
 
     class DecideAdjustCamera(smach.State):
-        def __init__(self,):
+        def __init__(
+            self,
+        ):
             smach.State.__init__(
                 self,
                 outcomes=["finished", "failed", "truncated"] + positions,
@@ -111,7 +151,9 @@ class AdjustCamera(smach.StateMachine):
             has_both_eyes = len(missing_keypoints.intersection(HEAD)) == 0
 
             if not has_both_shoulders and not has_both_eyes:
-                self.node.get_logger().warn("Person might not be in frame, trying to recover.")
+                self.node.get_logger().warn(
+                    "Person might not be in frame, trying to recover."
+                )
 
             if self.counter > self.node.max_attempts:
                 return "truncated"

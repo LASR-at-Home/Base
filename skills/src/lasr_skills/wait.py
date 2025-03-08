@@ -31,6 +31,7 @@ class Wait(smach.State):
             self._logger.error("Waiting failed")
             return "failed"
 
+
 # class WaitStateNode(Node):
 #     def __init__(self):
 #         super().__init__("wait_state_node")
@@ -51,5 +52,3 @@ class Wait(smach.State):
 
 # if __name__ == "__main__":
 #     main()
-
-

@@ -17,6 +17,7 @@ from markers import create_and_publish_marker
 
 from typing import Union
 
+
 class DetectGesture(smach.State):
     """
     State for detecting gestures.
@@ -38,11 +39,15 @@ class DetectGesture(smach.State):
         )
         self.node = AccessNode.get_node()
         self.gesture_to_detect = gesture_to_detect
-        self.bodypix_client = node.create_client(BodyPixKeypointDetection, "/bodypix/keypoint_detection")
+        self.bodypix_client = node.create_client(
+            BodyPixKeypointDetection, "/bodypix/keypoint_detection"
+        )
         self.bodypix_client.wait_for_service()
         self.bodypix_model = bodypix_model
         self.bodypix_confidence = bodypix_confidence
-        self.debug_publisher = self.node.create_publisher(Image, debug_publisher, queue_size=1)
+        self.debug_publisher = self.node.create_publisher(
+            Image, debug_publisher, queue_size=1
+        )
         self.buffer_width = buffer_width
         self.required_keypoints = [
             "leftWrist",
@@ -51,7 +56,9 @@ class DetectGesture(smach.State):
             "rightShoulder",
         ]
         # publish a marker
-        self.person_point_pub = self.node.create_publisher(Marker, "/person_point", queue_size=1)
+        self.person_point_pub = self.node.create_publisher(
+            Marker, "/person_point", queue_size=1
+        )
 
     def execute(self, userdata):
 
@@ -69,7 +76,7 @@ class DetectGesture(smach.State):
         except Exception as e:
             self.node.get_logger().error(f"{e}")
             return "failed"
-        
+
         detected_keypoints = res.keypoints
 
         detected_gesture = "none"
@@ -130,18 +137,21 @@ class DetectGesture(smach.State):
             )
         else:
             return "succeeded"
-        
+
+
 def main(args=None):
     rclpy.init(args=args)
 
-    sm = smach.StateMachine(outcomes=['succeeded', 'failed'])
+    sm = smach.StateMachine(outcomes=["succeeded", "failed"])
     with sm:
-        smach.StateMachine.add('DetectGesture', DetectGesture(),
-            transitions={'succeeded': 'succeeded', 'failed':'failed'},
+        smach.StateMachine.add(
+            "DetectGesture",
+            DetectGesture(),
+            transitions={"succeeded": "succeeded", "failed": "failed"},
         )
-        
+
     outcome = sm.execute()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

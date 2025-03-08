@@ -8,6 +8,7 @@ from lasr_skills import AccessNode
 
 from typing import List, Union
 
+
 class Detect(smach.State):
     def __init__(
         self,
@@ -30,7 +31,9 @@ class Detect(smach.State):
         self.nms = nms
         self.yolo = self.node.create_client(YoloDetection, "/vision/cropped_detection")
         self.yolo.wait_for_service()
-        self.debug_pub = self.node.create_publisher(Image, debug_publisher, queue_size=1)
+        self.debug_pub = self.node.create_publisher(
+            Image, debug_publisher, queue_size=1
+        )
 
     def execute(self, userdata):
         img_msg = userdata.img_msg
@@ -70,11 +73,11 @@ class Detect(smach.State):
                     (0, 255, 0),
                     2,
                 )
-            
+
             self.debug_pub.publish(cv2_img.cv2_img_to_msg(img_cv2))
 
             return "succeeded"
-        
+
         except Exception as e:
             self.node.get_logger().error(f"Service call failed: {e}")
             return "failed"
