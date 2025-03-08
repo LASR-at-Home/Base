@@ -84,7 +84,7 @@ class AdjustCamera(smach.StateMachine):
             self.node = AccessNode.get_node()
             self.counter = 0
 
-        async def execute(self, userdata):
+        def execute(self, userdata):
             self.node.get_logger().warn(f"Start attempt number {self.counter}.")
 
             req = BodyPixKeypointDetection.Request()
