@@ -30,7 +30,9 @@ class DescribePeople(smach.StateMachine):
             )
 
     class GetClipAttributes(smach.State):
-        def __init__(self,):
+        def __init__(
+            self,
+        ):
             smach.State.__init__(
                 self,
                 outcomes=["succeeded", "failed"],
@@ -43,10 +45,22 @@ class DescribePeople(smach.StateMachine):
             while not self.clip_client.wait_for_service(timeout_sec=1.0):
                 self.node.get_logger().info("Waiting for /clip_vqa/query_service...")
 
-            self.glasses_questions = ["a person wearing glasses", "a person not wearing glasses"]
-            self.hat_questions = ["a person wearing a hat", "a person not wearing a hat"]
-            self.hair_questions = ["a person with long hair", "a person with short hair"]
-            self.t_shirt_questions = ["a person wearing a short-sleeve t-shirt", "a person wearing a long-sleeve t-shirt"]
+            self.glasses_questions = [
+                "a person wearing glasses",
+                "a person not wearing glasses",
+            ]
+            self.hat_questions = [
+                "a person wearing a hat",
+                "a person not wearing a hat",
+            ]
+            self.hair_questions = [
+                "a person with long hair",
+                "a person with short hair",
+            ]
+            self.t_shirt_questions = [
+                "a person wearing a short-sleeve t-shirt",
+                "a person wearing a long-sleeve t-shirt",
+            ]
 
         def execute(self, userdata):
             try:
@@ -90,7 +104,9 @@ class DescribePeople(smach.StateMachine):
                 glasses_bool = glasses_response.answer == "a person wearing glasses"
                 hat_bool = hat_response.answer == "a person wearing a hat"
                 hair_bool = hair_response.answer == "a person with long hair"
-                t_shirt_bool = t_shirt_response.answer == "a person wearing a short-sleeve t-shirt"
+                t_shirt_bool = (
+                    t_shirt_response.answer == "a person wearing a short-sleeve t-shirt"
+                )
 
                 clip_detection_dict = {
                     "glasses": glasses_bool,
@@ -99,7 +115,9 @@ class DescribePeople(smach.StateMachine):
                     "short_sleeve_t_shirt": t_shirt_bool,
                 }
 
-                self.node.get_logger().info(f"DETECTED ATTRIBUTES: {clip_detection_dict}")
+                self.node.get_logger().info(
+                    f"DETECTED ATTRIBUTES: {clip_detection_dict}"
+                )
                 userdata.clip_detection_dict = clip_detection_dict
             except Exception as e:
                 self.node.get_logger().error(f"Failed to get clip attributes: {e}")
