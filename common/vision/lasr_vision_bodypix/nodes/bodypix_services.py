@@ -29,13 +29,14 @@ class BodyPixServiceNode(Node):
             [""],
             ParameterDescriptor(type=ParameterType.PARAMETER_STRING_ARRAY),
         )
-        preload_models = (
-            self.get_parameter("preload").get_parameter_value().string_array_value
-        )
+        # preload_models = (
+        #     self.get_parameter("preload").get_parameter_value().string_array_value
+        # )
 
         # Preload models
-        for model in preload_models:
-            bodypix.load_model_cached(model)
+        # for model in preload_models:
+        #     bodypix.load_model_cached(model)
+        bodypix.load_model()  # by calling this the model will be loaded and cached
 
         # Create service servers
         self.mask_service = self.create_service(
