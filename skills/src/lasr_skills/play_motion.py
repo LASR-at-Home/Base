@@ -1,16 +1,15 @@
 import smach_ros
-from rclpy.node import Node
 from play_motion2_msgs.action import PlayMotion2
 
 # https://github.com/pal-robotics/play_motion2
 
 from typing import Union, List
-
+from lasr_skills import AccessNode
 
 # TODO: test initialisation of states; check that PlayMotion2 is found
 
 
-class PlayMotion(smach_ros.SimpleActionState, Node):
+class PlayMotion(smach_ros.SimpleActionState):
     def _needs_planning(self, motion_name: str) -> bool:
         joints_param = self.get_parameter(f"/play_motion2/motions/{motion_name}/joints")
         joints: List[str] = joints_param.get_parameter_value().string_array_value
@@ -23,7 +22,7 @@ class PlayMotion(smach_ros.SimpleActionState, Node):
         return needs_planning
 
     def __init__(self, motion_name: Union[str, None] = None):
-        Node.__init__(self, "play_motion")
+        self.node = AccessNode.get_node()
         # TODO: the play motion action server is always returning 'aborted', figure out what's going on
         #  This is an issue from ROS1, check if it's been resolved in ROS2
         if motion_name is not None:

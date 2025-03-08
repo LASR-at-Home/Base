@@ -2,6 +2,7 @@ import smach_ros
 import smach
 import rclpy
 import os
+from lasr_skills import AccessNode
 
 PUBLIC_CONTAINER: bool = False
 
@@ -24,6 +25,7 @@ if PUBLIC_CONTAINER or SIMULATION:
         def __init__(
                 self, text: Union[str, None] = "None", format_str: Union[str, None] = None
         ):
+            self.node = AccessNode.get_node()
             if text is not None:
                 super(Say, self).__init__(
                     outcomes=["succeeded", "aborted", "preempted"]
@@ -63,6 +65,7 @@ else:
         def __init__(
             self, text: Union[str, None] = None, format_str: Union[str, None] = None
         ):
+            self.node = AccessNode.get_node()
             if text is not None:
                 super(Say, self).__init__(
                     "tts",

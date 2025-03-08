@@ -1,5 +1,6 @@
 import smach
 import rclpy
+from lasr_skills import AccessNode
 import cv2
 import cv2_img
 from lasr_vision_interfaces.srv import (
@@ -23,7 +24,6 @@ class DetectGesture(smach.State):
 
     def __init__(
         self,
-        node,
         gesture_to_detect: Union[str, None] = None,
         bodypix_model: str = "resnet50",
         bodypix_confidence: float = 0.1,
@@ -32,12 +32,11 @@ class DetectGesture(smach.State):
     ):
         smach.State.__init__(
             self,
-            node,
             outcomes=["succeeded", "failed"],
             input_keys=["img_msg"],
             output_keys=["detected_gesture"],
         )
-        self.node = node
+        self.node = AccessNode.get_node()
         self.gesture_to_detect = gesture_to_detect
         self.bodypix_client = node.create_client(BodyPixKeypointDetection, "/bodypix/keypoint_detection")
         self.bodypix_client.wait_for_service()
