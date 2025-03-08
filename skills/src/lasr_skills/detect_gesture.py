@@ -4,7 +4,6 @@ import cv2
 import cv2_img
 from lasr_vision_interfaces.srv import (
     BodyPixKeypointDetection,
-    BodyPixKeypointDetectionRequest,
 )
 from sensor_msgs.msg import Image
 from geometry_msgs.msg import Point, Pose, PoseStamped, Quaternion, PointStamped
@@ -12,7 +11,10 @@ from std_msgs.msg import Header
 from tf2_geometry_msgs.tf2_geometry_msgs import do_transform_pose
 import tf2_ros as tf
 from visualization_msgs.msg import Marker
-from markers import create_and_publish_marker
+from .vision.get_image import GetImage, ROS2HelperNode
+
+
+# from markers import create_and_publish_marker
 
 from typing import Union
 
@@ -25,14 +27,12 @@ class DetectGesture(smach.State):
         self,
         node,
         gesture_to_detect: Union[str, None] = None,
-        bodypix_model: str = "resnet50",
         bodypix_confidence: float = 0.1,
         buffer_width: int = 50,
         debug_publisher: str = "/skills/gesture_detection/debug",
     ):
         smach.State.__init__(
             self,
-            node,
             outcomes=["succeeded", "failed"],
             input_keys=["img_msg"],
             output_keys=["detected_gesture"],
@@ -40,31 +40,38 @@ class DetectGesture(smach.State):
         self.node = node
         self.gesture_to_detect = gesture_to_detect
         self.bodypix_client = node.create_client(BodyPixKeypointDetection, "/bodypix/keypoint_detection")
+        self.node.get_logger().info(f"service start")
         self.bodypix_client.wait_for_service()
-        self.bodypix_model = bodypix_model
+        self.node.get_logger().info(f"service end")
+        self.req = BodyPixKeypointDetection.Request()
         self.bodypix_confidence = bodypix_confidence
-        self.debug_publisher = self.node.create_publisher(Image, debug_publisher, queue_size=1)
+        self.debug_publisher = self.node.create_publisher(Image, debug_publisher, 1)
         self.buffer_width = buffer_width
         self.required_keypoints = [
             "leftWrist",
             "leftShoulder",
             "rightWrist",
             "rightShoulder",
-        ]
+        ] 
         # publish a marker
-        self.person_point_pub = self.node.create_publisher(Marker, "/person_point", queue_size=1)
+        self.person_point_pub = self.node.create_publisher(Marker, "/person_point",1)
 
     def execute(self, userdata):
+        if not rclpy.ok():
+            rclpy.init()
 
-        req = BodyPixKeypointDetectionRequest()
+        req = self.req
         req.image_raw = userdata.img_msg
-        req.dataset = self.bodypix_model
         req.confidence = self.bodypix_confidence
+        req.dataset = "resnet50"
         req.keep_out_of_bounds = False
+        self.node.get_logger().info(f"before")
 
         try:
-            future = self.bodypix_client(req)
+            future = self.bodypix_client.call_async(req)
+            self.node.get_logger().info(f"start")
             rclpy.spin_until_future_complete(self.node, future)
+            self.node.get_logger().info(f"end")
             res = future.result()
 
         except Exception as e:
@@ -135,13 +142,21 @@ class DetectGesture(smach.State):
 def main(args=None):
     rclpy.init(args=args)
 
+    node = rclpy.create_node('detect_gestrue_node')
+
     sm = smach.StateMachine(outcomes=['succeeded', 'failed'])
     with sm:
-        smach.StateMachine.add('DetectGesture', DetectGesture(),
+        smach.StateMachine.add('GetImage', GetImage(),
+            transitions={'succeeded': 'DetectGesture', 'failed':'failed'},
+        )
+        smach.StateMachine.add('DetectGesture', DetectGesture(node),
             transitions={'succeeded': 'succeeded', 'failed':'failed'},
         )
         
     outcome = sm.execute()
+
+    node.destroy_node()
+    rclpy.shutdown()
 
 
 if __name__ == '__main__':
