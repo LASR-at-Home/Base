@@ -9,11 +9,14 @@ apt update
 export DEBIAN_FRONTEND=noninteractive
 apt upgrade -y
 apt install ros-$ROS_DISTRO-xacro -y # missing dependency
+apt install ros-$ROS_DISTRO-rqt* -y # missing dependency
+apt install ros-$ROS_DISTRO-usb-cam -y # to test camera
 apt install terminator wget git inetutils-ping -y
 apt install python3-pip -y
 
 # Dependencies for tf_pcl
-sudo apt-get install ros-$ROS_DISTRO-sensor-msgs-py
+apt install ros-$ROS_DISTRO-sensor-msgs-py -y
+
 # Dependencies for Whisper
 apt install ffmpeg portaudio19-dev alsa-utils -y
 pip install -r $PWD/common/speech/lasr_speech_recognition_whisper/requirements.txt

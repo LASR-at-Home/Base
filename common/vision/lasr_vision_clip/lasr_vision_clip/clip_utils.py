@@ -129,8 +129,3 @@ def query_image(
 
     img = cv2_img.cv2_img_to_msg(cv2_im)
     return answers[max_score], cos_scores[0, max_score], img
-
-
-
-
-    

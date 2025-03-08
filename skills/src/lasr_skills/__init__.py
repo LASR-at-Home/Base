@@ -9,7 +9,7 @@
 from .look_to_point import LookToPoint
 
 # from .play_motion import PlayMotion
-# from .go_to_location import GoToLocation
+from .go_to_location import GoToLocation
 from .listen import Listen
 
 # from .listen_for import ListenFor
