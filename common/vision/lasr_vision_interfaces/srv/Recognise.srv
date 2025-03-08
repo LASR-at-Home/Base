@@ -1,0 +1,13 @@
+# Image to run inference on
+sensor_msgs/Image image_raw
+
+# Dataset to use
+string dataset
+
+# Confidence threshold for filtering detections
+float32 confidence
+
+---
+
+# Detections
+lasr_vision_msgs/Detection[] detections
