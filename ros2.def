@@ -13,7 +13,12 @@ apt install ros-$ROS_DISTRO-rqt* -y # missing dependency
 apt install ros-$ROS_DISTRO-usb-cam -y # to test camera
 apt install terminator wget git inetutils-ping -y
 apt install python3-pip -y
+
 apt install unzip
+apt install -y ros-humble-image-pipeline 
+apt install -y ros-humble-rqt-image-view
+apt install -y ros-humble-v4l2-camera
+apt install -y libcanberra-gtk3-module 
 
 # Dependencies for tf_pcl
 apt install ros-$ROS_DISTRO-sensor-msgs-py -y
