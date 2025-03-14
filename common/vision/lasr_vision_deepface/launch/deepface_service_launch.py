@@ -13,7 +13,7 @@ def generate_launch_description():
         # Start the face recognition service node
         launch_ros.actions.Node(
             package="lasr_vision_deepface",
-            executable="service",  # The actual executable file
+            executable="deepface_service_node",  # The actual executable file
             name="face_recognition_service",
             output="screen",
             parameters=[{"debug": launch.substitutions.LaunchConfiguration("debug")}]

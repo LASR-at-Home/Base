@@ -28,7 +28,7 @@ def generate_launch_description():
         # Include the service launch file
         launch.actions.IncludeLaunchDescription(
             launch.launch_description_sources.PythonLaunchDescriptionSource(
-                [FindPackageShare("lasr_vision_deepface"), "/launch/face_recognition_launch.py"]
+                [FindPackageShare("lasr_vision_deepface"), "/launch/deepface_service_launch.py"]
             ),
             launch_arguments={"debug": LaunchConfiguration("debug")}.items(),
         ),

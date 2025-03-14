@@ -17,7 +17,7 @@ def generate_launch_description():
         # Include the face recognition service
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource([
-                FindPackageShare("lasr_vision_deepface"), "/launch/greet_launch.py"
+                FindPackageShare("lasr_vision_deepface"), "/launch/deepface_service_launch.py"
             ])
         ),
 
