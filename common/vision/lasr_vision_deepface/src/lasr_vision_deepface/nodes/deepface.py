@@ -2,7 +2,7 @@ from deepface import DeepFace
 
 import cv2
 import cv2_img
-import rospkg
+from ament_index_python.packages import get_package_share_directory
 import os
 import numpy as np
 import pandas as pd
@@ -17,13 +17,14 @@ from sensor_msgs.msg import Image
 
 from typing import Union, List
 
-Recognise_Request = Recognise.Request()
-Recognise_Response = Recognise.Response()
-DetectFaces_Request = DetectFaces.Request()
-DetectFaces_Response = DetectFaces.Response()
+Recognise_Request = Recognise.Request
+Recognise_Response = Recognise.Response
+DetectFaces_Request = DetectFaces.Request
+DetectFaces_Response = DetectFaces.Response
+
 
 DATASET_ROOT = os.path.join(
-    rospkg.RosPack().get_path("lasr_vision_deepface"), "datasets"
+    get_package_share_directory("lasr_vision_deepface"), "datasets"
 )
 
 Mat = np.ndarray
@@ -86,11 +87,13 @@ def create_dataset(
     name: str,
     images: List[Image],
     debug_publisher=None,
+    logger=None,
 ) -> None:
     dataset_path = os.path.join(DATASET_ROOT, dataset, name)
     if not os.path.exists(dataset_path):
         os.makedirs(dataset_path)
-    self.get_logger().info(f"Received {len(images)} pictures of {name} and saving to {dataset_path}")
+    if logger:
+        logger.info(f"Received {len(images)} pictures of {name} and saving to {dataset_path}")
     cv_images: List[Mat] = [cv2_img.msg_to_cv2_img(img) for img in images]
     for i, cv_im in enumerate(cv_images):
         face_cropped_cv_im = _extract_face(cv_im)
@@ -111,16 +114,17 @@ def create_dataset(
     )
 
 def recognise(
-    request: Recognise_Request, debug_publisher=None, logger=None
-):
+    request: Recognise_Request, debug_publisher=None, logger=None, cropped_detect_pub=None):
+
   
  
     cv_im = cv2_img.msg_to_cv2_img(request.image_raw)
 
-    response = Recognise_Response
+    response = Recognise_Response()
 
     # Run inference
-    self.get_logger().info("Running inference")
+    if logger:
+        logger.info("Running inference")
 
     try:
         result = DeepFace.find(
@@ -187,14 +191,15 @@ def detect_faces(
 
     cv_im = cv2_img.msg_to_cv2_img(request.image_raw)
 
-    response = DetectFaces_Response
+    response = DetectFaces_Response()
 
     try:
         faces = DeepFace.extract_faces(
             cv_im, detector_backend="mtcnn", enforce_detection=True
         )
     except ValueError as e:
-        self.get_logger().Error("Error: {e}")
+        if logger:
+            logger.error(f"Error: {e}") 
         debug_publisher.publish(cv2_img.cv2_img_to_msg(cv_im))
         return response
 

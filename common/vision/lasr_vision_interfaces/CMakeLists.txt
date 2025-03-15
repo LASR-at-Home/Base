@@ -6,7 +6,7 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 
 # Find dependencies
-find_package(ament_cmake REQUIRED message_generation message_runtime sensor_msgs)
+find_package(ament_cmake REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(rclpy REQUIRED)
@@ -36,6 +36,8 @@ set(srv_files
   "srv/CroppedDetection.srv"
   "srv/LearnFace.srv"
   "srv/YoloDetection.srv"
+  "srv/Recognise.srv"
+  "srv/DetectFaces.srv"
 )
 
 # Generate messages and services
@@ -52,5 +54,5 @@ rosidl_generate_interfaces(${PROJECT_NAME}
 # Export dependencies
 ament_export_dependencies(rosidl_default_runtime)
 
-# This must be called after all targets and before any installation commands
+# Ensure correct build order
 ament_package()

@@ -21,23 +21,8 @@ def generate_launch_description():
             ])
         ),
 
-        # Launch rqt_image_view to display the debug topic
-        launch_ros.actions.Node(
-            package="rqt_image_view",
-            executable="rqt_image_view",
-            name="image_view",
-            output="screen",
-            arguments=["/recognise/debug"],
-        ),
-
-        # Launch relay service
-        launch_ros.actions.Node(
-            package="lasr_vision_deepface",
-            executable="relay",
-            name="relay",
-            output="screen",
-            arguments=["/camera/image_raw", LaunchConfiguration("dataset")],
-        ),
+         
+         
 
         # Launch V4L2 Camera Node (instead of video_stream_opencv)
         launch_ros.actions.Node(

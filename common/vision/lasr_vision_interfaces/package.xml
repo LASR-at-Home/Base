@@ -14,9 +14,7 @@
     <!-- Dependencies for message and service generation -->
     <build_depend>rosidl_default_generators</build_depend>
     <exec_depend>rosidl_default_runtime</exec_depend>
-    <!-- TODO check that this is an actual dependency and not left from ROS1 -->
-    <build_depend>message_generation</build_depend>
-    <exec_depend>message_runtime</exec_depend>
+    
     <!-- Dependencies for sensor messages and built-in interfaces -->
     <build_depend>sensor_msgs</build_depend>
     <exec_depend>sensor_msgs</exec_depend>

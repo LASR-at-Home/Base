@@ -10,4 +10,4 @@ float32 confidence
 ---
 
 # Detections
-lasr_vision_msgs/Detection[] detections
+lasr_vision_interfaces/Detection[] detections

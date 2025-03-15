@@ -2,7 +2,7 @@
 import rclpy
 from rclpy.node import Node
 from lasr_vision_clip.scripts.clip_utils import load_model, query_image
-from lasr_vision_msgs.srv import VqaRequest, VqaResponse, Vqa
+from lasr_vision_interfaces.srv import VqaRequest, VqaResponse, Vqa
 from sensor_msgs.msg import Image
 
 
