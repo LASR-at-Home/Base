@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 import rclpy
 from rclpy.node import Node
-from lasr_vision_clip.scripts.clip_utils import load_model, query_image
-from lasr_vision_msgs.srv import VqaRequest, VqaResponse, Vqa
+from lasr_vision_clip.clip_utils import load_model, query_image
+from lasr_vision_interfaces.srv import Vqa
 from sensor_msgs.msg import Image
 
 
@@ -22,7 +22,7 @@ class VqaService(Node):
         self._srv = self.create_service(Vqa, "/clip_vqa/query_service", self.query_clip)
         print("intialising")
 
-    def query_clip(self, request: VqaRequest, response: VqaResponse) -> VqaResponse:
+    def query_clip(self, request: Vqa.Request, response: Vqa.Response) -> Vqa.Response:
         """Queries CLIP from the robot's image stream and returns
         the most likely answer and cosine similarity score.
 

@@ -21,6 +21,10 @@ set(msg_files
   "msg/BodyPixKeypoint.msg"
   "msg/BodyPixKeypointNormalized.msg"
   "msg/BodyPixMask.msg"
+  "msg/CDRequest.msg"
+  "msg/CDResponse.msg"
+  "msg/Detection.msg"
+  "msg/Detection3D.msg"
 )
 
 # Specify service files
@@ -29,6 +33,10 @@ set(srv_files
   "srv/BodyPixKeypointDetection.srv"
   "srv/DetectWave.srv"
   "srv/ClipLearnFace.srv"
+  "srv/CroppedDetection.srv"
+  "srv/LearnFace.srv"
+  "srv/YoloDetection.srv"
+  "srv/Vqa.srv"
 )
 
 
