@@ -3,6 +3,7 @@ import smach
 from lasr_skills import Detect
 from lasr_skills.vision import GetImage
 
+
 class WaitForPerson(smach.StateMachine):
     class CheckForPerson(smach.State):
         def __init__(self):
@@ -15,10 +16,10 @@ class WaitForPerson(smach.StateMachine):
                 return "done"
             else:
                 return "not_done"
-            
+
         def __init__(
-                self,
-                image_topic: str = "/xtion/rgb/image_raw",
+            self,
+            image_topic: str = "/xtion/rgb/image_raw",
         ):
             smach.StateMachine.__init__(
                 self,

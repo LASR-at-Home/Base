@@ -7,6 +7,7 @@ from rclpy.qos import QoSProfile, QoSReliabilityPolicy
 from sensor_msgs.msg import Image, PointCloud2
 from rclpy.task import Future
 
+
 class ROS2HelperNode(Node):
     def __init__(self, name="ros2_helper_node"):
         super().__init__(name)
@@ -14,7 +15,7 @@ class ROS2HelperNode(Node):
     def wait_for_message(self, topic, msg_type, timeout=5.0):
         """
         ROS2 does not provide wait_for_message
-        Waits for a message with a Future object (More efficient). 
+        Waits for a message with a Future object (More efficient).
         """
         future = Future()
         qos_profile = QoSProfile(depth=10, reliability=QoSReliabilityPolicy.RELIABLE)
@@ -23,9 +24,10 @@ class ROS2HelperNode(Node):
             if not future.done():
                 future.set_result(msg)
 
-        self.subscriber = self.create_subscription(msg_type, topic, callback, qos_profile)
+        self.subscriber = self.create_subscription(
+            msg_type, topic, callback, qos_profile
+        )
         # self.subscriber.append(sub)
-
 
         start_time = self.get_clock().now().nanoseconds / 1e9
 
@@ -37,6 +39,7 @@ class ROS2HelperNode(Node):
 
         return future.result()
 
+
 class GetImage(smach.State):
     """
     State for reading an sensor_msgs Image message
@@ -44,13 +47,16 @@ class GetImage(smach.State):
 
     def __init__(self, topic: Optional[str] = None):
         smach.State.__init__(
-            self, outcomes=["succeeded", "failed"], output_keys=["img_msg"], input_keys=["img_msg"] 
+            self,
+            outcomes=["succeeded", "failed"],
+            output_keys=["img_msg"],
+            input_keys=["img_msg"],
         )
 
         self.topic = topic or "/xtion/rgb/image_raw"
         # self.topic = topic or "/image_raw"
         # TODO check if tiago is in environment
-        #else "/usb_cam/image_raw", self.topic = topic
+        # else "/usb_cam/image_raw", self.topic = topic
 
     def execute(self, userdata):
         if not rclpy.ok():
@@ -67,7 +73,7 @@ class GetImage(smach.State):
                 userdata.img_msg = None
             if userdata.img_msg is None:
                 return "failed"
-            
+
         except Exception as e:
             node.get_logger().error(str(e))
             return "failed"
@@ -77,6 +83,7 @@ class GetImage(smach.State):
         print(userdata.img_msg)
         return "succeeded"
 
+
 class GetPointCloud(smach.State):
     """
     State for acquiring a PointCloud2 message.
@@ -84,9 +91,12 @@ class GetPointCloud(smach.State):
 
     def __init__(self, topic: Optional[str] = None):
         smach.State.__init__(
-            self, outcomes=["succeeded", "failed"], output_keys=["pcl_msg"], input_keys=["pcl_msg"]
+            self,
+            outcomes=["succeeded", "failed"],
+            output_keys=["pcl_msg"],
+            input_keys=["pcl_msg"],
         )
-        
+
         self.topic = topic or "/xtion/depth_registered/pints"
 
     def execute(self, userdata):
@@ -110,10 +120,14 @@ class GetPointCloud(smach.State):
 
         return "succeeded"
 
+
 class GetImageAndPointCloud(smach.State):
     def __init__(self):
         smach.State.__init__(
-            self, outcomes=["succeeded", "failed"], output_keys=["img_msg", "pcl_msg"], input_keys=["img_msg", "pcl_msg"]
+            self,
+            outcomes=["succeeded", "failed"],
+            output_keys=["img_msg", "pcl_msg"],
+            input_keys=["img_msg", "pcl_msg"],
         )
 
         self.topic1 = "/xtion/rgb/image_raw"
@@ -127,7 +141,7 @@ class GetImageAndPointCloud(smach.State):
             rclpy.init()
 
         node = None
-        
+
         try:
             node = ROS2HelperNode()
 
@@ -145,6 +159,7 @@ class GetImageAndPointCloud(smach.State):
 
         return "succeeded"
 
+
 # def main(args=None):
 #     rclpy.init(args=args)
 
@@ -161,7 +176,7 @@ class GetImageAndPointCloud(smach.State):
 #         smach.StateMachine.add('GetImageAndPointCloud', GetImageAndPointCloud(),
 #             transitions={'failed': 'failed', 'succeeded': 'succeeded'},
 #         )
-    
+
 #     outcome = sm.execute()
 
 

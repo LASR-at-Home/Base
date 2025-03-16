@@ -18,6 +18,7 @@ from .vision.get_image import GetImage, ROS2HelperNode
 
 from typing import Union
 
+
 class DetectGesture(smach.State):
     """
     State for detecting gestures.
@@ -39,7 +40,9 @@ class DetectGesture(smach.State):
         )
         self.node = node
         self.gesture_to_detect = gesture_to_detect
-        self.bodypix_client = node.create_client(BodyPixKeypointDetection, "/bodypix/keypoint_detection")
+        self.bodypix_client = node.create_client(
+            BodyPixKeypointDetection, "/bodypix/keypoint_detection"
+        )
         self.node.get_logger().info(f"service start")
         self.bodypix_client.wait_for_service()
         self.node.get_logger().info(f"service end")
@@ -52,9 +55,9 @@ class DetectGesture(smach.State):
             "leftShoulder",
             "rightWrist",
             "rightShoulder",
-        ] 
+        ]
         # publish a marker
-        self.person_point_pub = self.node.create_publisher(Marker, "/person_point",1)
+        self.person_point_pub = self.node.create_publisher(Marker, "/person_point", 1)
 
     def execute(self, userdata):
         if not rclpy.ok():
@@ -77,7 +80,7 @@ class DetectGesture(smach.State):
         except Exception as e:
             self.node.get_logger().error(f"{e}")
             return "failed"
-        
+
         detected_keypoints = res.keypoints
 
         detected_gesture = "none"
@@ -138,26 +141,31 @@ class DetectGesture(smach.State):
             )
         else:
             return "succeeded"
-        
+
+
 def main(args=None):
     rclpy.init(args=args)
 
-    node = rclpy.create_node('detect_gestrue_node')
+    node = rclpy.create_node("detect_gestrue_node")
 
-    sm = smach.StateMachine(outcomes=['succeeded', 'failed'])
+    sm = smach.StateMachine(outcomes=["succeeded", "failed"])
     with sm:
-        smach.StateMachine.add('GetImage', GetImage(),
-            transitions={'succeeded': 'DetectGesture', 'failed':'failed'},
+        smach.StateMachine.add(
+            "GetImage",
+            GetImage(),
+            transitions={"succeeded": "DetectGesture", "failed": "failed"},
         )
-        smach.StateMachine.add('DetectGesture', DetectGesture(node),
-            transitions={'succeeded': 'succeeded', 'failed':'failed'},
+        smach.StateMachine.add(
+            "DetectGesture",
+            DetectGesture(node),
+            transitions={"succeeded": "succeeded", "failed": "failed"},
         )
-        
+
     outcome = sm.execute()
 
     node.destroy_node()
     rclpy.shutdown()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
