@@ -1,9 +1,9 @@
 """Generic wait state for waiting a desired number of seconds"""
 
 import rclpy
-from rclpy.node import Node
 import smach
 from time import sleep
+from lasr_skills import AccessNode
 
 
 class Wait(smach.State):
@@ -13,6 +13,8 @@ class Wait(smach.State):
             wait_time (int): Number of seconds to wait for and remain idle
         """
         smach.State.__init__(self, outcomes=["succeeded", "failed"])
+
+        self.node = AccessNode.get_node()
 
         if not rclpy.ok():
             rclpy.init()
