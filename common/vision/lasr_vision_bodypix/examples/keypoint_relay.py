@@ -9,7 +9,10 @@ from lasr_vision_interfaces.srv import BodyPixKeypointDetection
 
 
 class KeypointRelay(Node):
-    def __init__(self, listen_topic,):
+    def __init__(
+        self,
+        listen_topic,
+    ):
         super().__init__("keypoint_relay")
         self.listen_topic = listen_topic
         self.processing = False
@@ -25,9 +28,7 @@ class KeypointRelay(Node):
         self.subscription = self.create_subscription(
             Image, self.listen_topic, self.image_callback, 10  # QoS profile
         )
-        self.get_logger().info(
-            f"Started listening on topic: {self.listen_topic}"
-        )
+        self.get_logger().info(f"Started listening on topic: {self.listen_topic}")
 
     def detect(self, image):
         self.processing = True
@@ -75,7 +76,9 @@ def main(args=None):
         listen_topic = sys.argv[1][0]
 
     rclpy.init(args=args)
-    keypoint_relay_node = KeypointRelay(listen_topic,)
+    keypoint_relay_node = KeypointRelay(
+        listen_topic,
+    )
     keypoint_relay_node.get_logger().info("Keypoint relay node started")
 
     try:
