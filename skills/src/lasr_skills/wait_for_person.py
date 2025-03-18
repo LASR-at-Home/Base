@@ -38,7 +38,6 @@ class WaitForPerson(smach.StateMachine):
                 GetImage(topic=image_topic),
                 transitions={"succeeded": "DETECT_PEOPLE", "failed": "failed"},
             )
-
             smach.StateMachine.add(
                 "DETECT_PEOPLE",
                 Detect(filter=["person"]),
@@ -46,6 +45,6 @@ class WaitForPerson(smach.StateMachine):
             )
             smach.StateMachine.add(
                 "CHECK_FOR_PERSON",
-                self.CheckForPerson(node=self.node),
+                self.CheckForPerson(),
                 transitions={"done": "succeeded", "not_done": "GET_IMAGE"},
             )
