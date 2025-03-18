@@ -9,10 +9,9 @@ from lasr_vision_interfaces.srv import BodyPixKeypointDetection
 
 
 class KeypointRelay(Node):
-    def __init__(self, listen_topic, model):
+    def __init__(self, listen_topic,):
         super().__init__("keypoint_relay")
         self.listen_topic = listen_topic
-        self.model = model
         self.processing = False
 
         # Set up the service client
@@ -27,7 +26,7 @@ class KeypointRelay(Node):
             Image, self.listen_topic, self.image_callback, 10  # QoS profile
         )
         self.get_logger().info(
-            f"Started listening on topic: {self.listen_topic} with model: {self.model}"
+            f"Started listening on topic: {self.listen_topic}"
         )
 
     def detect(self, image):
@@ -36,7 +35,7 @@ class KeypointRelay(Node):
         # Create a request for the service
         req = BodyPixKeypointDetection.Request()
         req.image_raw = image
-        req.dataset = self.model
+        # req.dataset = self.model
         req.confidence = 0.7
 
         # Call the service asynchronously
@@ -75,10 +74,8 @@ def main(args=None):
     if isinstance(sys.argv[1], list):
         listen_topic = sys.argv[1][0]
 
-    model = sys.argv[2] if len(sys.argv) >= 3 else "resnet50"
-
     rclpy.init(args=args)
-    keypoint_relay_node = KeypointRelay(listen_topic, model)
+    keypoint_relay_node = KeypointRelay(listen_topic,)
     keypoint_relay_node.get_logger().info("Keypoint relay node started")
 
     try:

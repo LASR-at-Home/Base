@@ -27,6 +27,9 @@ apt install ros-$ROS_DISTRO-sensor-msgs-py -y
 apt install ffmpeg portaudio19-dev alsa-utils -y
 # pip install -r $PWD/common/speech/lasr_speech_recognition_whisper/requirements.txt
 
+# dependency of web camera (for laptops)
+sudo apt install ros-humble-v4l2-camera
+
 # Dependencies for BodyPixKeypoint
 # pip install -r $PWD/common/vision/lasr_vision_bodypix/requirements.txt
 
