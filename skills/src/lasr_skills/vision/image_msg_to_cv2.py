@@ -3,6 +3,7 @@ import smach
 import cv2_img
 import cv2_pcl
 import rclpy
+from lasr_skills import AccessNode
 
 # from .get_image import GetImage, ROS2HelperNode, GetPointCloud
 # from .image_cv2_to_msg import ImageCv2ToMsg
@@ -21,6 +22,7 @@ class ImageMsgToCv2(smach.State):
             input_keys=["img_msg"],
             output_keys=["img"],
         )
+        self.node = AccessNode.get_node()
 
     def execute(self, userdata):
         userdata.img = cv2_img.msg_to_cv2_img(userdata.img_msg)
@@ -40,6 +42,7 @@ class PclMsgToCv2(smach.State):
             input_keys=["img_msg_3d"],
             output_keys=["img", "xyz"],
         )
+        self.node = AccessNode.get_node()
 
     def execute(self, userdata):
         userdata.img = cv2_pcl.pcl_to_cv2(userdata.img_msg_3d)

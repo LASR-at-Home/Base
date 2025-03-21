@@ -1,15 +1,10 @@
 import rclpy
 import smach
-from rclpy.node import Node
-from cv2_img import cv2_img_to_msg
+from lasr_skills import AccessNode
 
 
 from lasr_vision_interfaces.msg import CDRequest
-from lasr_vision_interfaces.srv import (
-    CroppedDetection,
-    CroppedDetectionRequest,
-    CroppedDetectionResponse,
-)
+from lasr_vision_interfaces.srv import CroppedDetection
 
 
 class GetCroppedImage(smach.State):
@@ -20,7 +15,6 @@ class GetCroppedImage(smach.State):
 
     def __init__(
         self,
-        node,
         object_name: str,
         method: str = "closest",
         use_mask: bool = True,
@@ -33,8 +27,7 @@ class GetCroppedImage(smach.State):
             outcomes=["succeeded", "failed"],
             output_keys=["img_msg", "detection"],
         )
-
-        self.node = node
+        self.node = AccessNode.get_node()
         self.object_name = object_name
         self.method = method
         self.use_mask = use_mask
@@ -56,7 +49,7 @@ class GetCroppedImage(smach.State):
         req.yolo_nms_threshold = self.yolo_nms_threshold
         req.object_names = [self.object_name]
 
-        cropped_detection_req = CroppedDetectionRequest()
+        cropped_detection_req = CroppedDetection.Request()
         cropped_detection_req.requests = [req]
 
         try:

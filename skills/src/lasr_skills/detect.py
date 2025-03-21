@@ -4,6 +4,7 @@ import rclpy
 import smach
 from sensor_msgs.msg import Image
 from lasr_vision_msgs.srv import YoloDetection
+from lasr_skills import AccessNode
 
 from typing import List, Union
 
@@ -11,7 +12,6 @@ from typing import List, Union
 class Detect(smach.State):
     def __init__(
         self,
-        node,
         model: str = "yolov8x.pt",
         filter: Union[List[str], None] = None,
         confidence: float = 0.5,
@@ -24,12 +24,12 @@ class Detect(smach.State):
             input_keys=["img_msg"],
             output_keys=["detections"],
         )
-        self.node = node
+        self.node = AccessNode.get_node()
         self.model = model
         self.filter = filter if filter is not None else []
         self.confidence = confidence
         self.nms = nms
-        self.yolo = node.create_client(YoloDetection, "/vision/cropped_detection")
+        self.yolo = self.node.create_client(YoloDetection, "/vision/cropped_detection")
         self.yolo.wait_for_service()
         self.debug_pub = self.node.create_publisher(
             Image, debug_publisher, queue_size=1
