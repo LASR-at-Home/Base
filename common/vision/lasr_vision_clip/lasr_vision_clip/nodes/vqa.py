@@ -22,7 +22,7 @@ class VqaService(Node):
         self._srv = self.create_service(Vqa, "/clip_vqa/query_service", self.query_clip)
         print("intialising")
 
-    def query_clip(self, request: VqaRequest, response: VqaResponse) -> VqaResponse:
+    def query_clip(self, request: Vqa.Request, response: Vqa.Response) -> Vqa.Response:
         """Queries CLIP from the robot's image stream and returns
         the most likely answer and cosine similarity score.
 

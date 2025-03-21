@@ -1,24 +1,27 @@
 import smach
 import rclpy
-from rclpy.node import Node
 from rclpy.action import ActionClient
 
 from control_msgs.action import PointHead
 from geometry_msgs.msg import Point, PointStamped
 
 from typing import Union
+from lasr_skills import AccessNode
 
 
-class LookToPoint(smach.State, Node):
+class LookToPoint(smach.State):
     _pointstamped: Union[None, PointStamped]
 
-    def __init__(self, pointstamped: Union[None, PointStamped] = None):
-        Node.__init__(self, "look_to_point")
+    def __init__(
+        self,
+        pointstamped: Union[None, PointStamped] = None,
+    ):
         smach.State.__init__(
             self,
             outcomes=["succeeded", "aborted", "timed_out"],
             input_keys=["pointstamped"] if pointstamped is None else [],
         )
+        self.node = AccessNode.get_node()
 
         self._pointstamped = pointstamped
 
