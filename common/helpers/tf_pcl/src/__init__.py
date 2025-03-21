@@ -13,10 +13,7 @@ class PointCloudTransformer(Node):
     def __init__(self):
         super().__init__("pointcloud_transformer")
         self.subscription = self.create_subscription(
-            PointCloud2,
-            "input_pointcloud",
-            self.pcl_callback,
-            10,
+            PointCloud2, "input_pointcloud", self.pcl_callback, 10
         )
         self.publisher = self.create_publisher(PointCloud2, "output_pointcloud", 10)
 

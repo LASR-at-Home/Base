@@ -14,11 +14,7 @@ from receptionist.states import SpeechRecovery
 
 class GetNameAndDrink(smach.StateMachine):
     class ParseNameAndDrink(smach.State, Node):
-        def __init__(
-            self,
-            guest_id: str,
-            param_key: str = "/receptionist/priors",
-        ):
+        def __init__(self, guest_id: str, param_key: str = "/receptionist/priors"):
             """Parses the transcription of the guests' name and favourite drink.
 
             Args:
@@ -82,11 +78,7 @@ class GetNameAndDrink(smach.StateMachine):
             return outcome
 
     class PostRecoveryDecision(smach.State, Node):
-        def __init__(
-            self,
-            guest_id: str,
-            param_key: str = "/receptionist/priors",
-        ):
+        def __init__(self, guest_id: str, param_key: str = "/receptionist/priors"):
             Node.__init__(self, "post_recovery_decision")
             smach.State.__init__(
                 self,
@@ -124,10 +116,7 @@ class GetNameAndDrink(smach.StateMachine):
                 return False
 
     def __init__(
-        self,
-        guest_id: str,
-        last_resort: bool,
-        param_key: str = "/receptionist/priors",
+        self, guest_id: str, last_resort: bool, param_key: str = "/receptionist/priors"
     ):
 
         self._guest_id = guest_id

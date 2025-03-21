@@ -8,19 +8,11 @@ from lasr_skills import AccessNode
 
 
 class GoToLocation(smach.State):
-    def __init__(
-        self,
-        location: Union[Pose, None] = None,
-    ):
+    def __init__(self, location: Union[Pose, None] = None):
         if location is not None is not None:
-            super().__init__(
-                outcomes=["succeeded", "failed"],
-            )
+            super().__init__(outcomes=["succeeded", "failed"])
         else:
-            super().__init__(
-                outcomes=["succeeded", "failed"],
-                input_keys=["location"],
-            )
+            super().__init__(outcomes=["succeeded", "failed"], input_keys=["location"])
 
         self.node = AccessNode.get_node()
         self.navigator = BasicNavigator()

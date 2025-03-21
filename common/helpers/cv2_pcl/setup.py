@@ -18,6 +18,6 @@ setup(
         "console_scripts": [
             # Add any scripts you want to expose as command-line executables here
             # For example: 'pcl_processor = cv2_pcl.pcl_processor:main'
-        ],
+        ]
     },
 )

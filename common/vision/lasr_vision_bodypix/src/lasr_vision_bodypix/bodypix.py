@@ -12,10 +12,7 @@ from lasr_vision_interfaces.msg import (
     BodyPixKeypoint,
     BodyPixKeypointNormalized,
 )
-from lasr_vision_interfaces.srv import (
-    BodyPixMaskDetection,
-    BodyPixKeypointDetection,
-)
+from lasr_vision_interfaces.srv import BodyPixMaskDetection, BodyPixKeypointDetection
 from sensor_msgs.msg import Image as SensorImage
 from tf_bodypix.api import download_model, BodyPixModelPaths
 from tf_bodypix.api import load_model as bp_load_model

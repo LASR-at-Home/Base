@@ -19,9 +19,5 @@ setup(
     description="A ROS 2 package for point cloud transformations",
     license="Apache License 2.0",  # Update license as per your project
     tests_require=["pytest"],  # Add any test dependencies here
-    entry_points={
-        "console_scripts": [
-            "pointcloud_transformer = tf_pcl.__init__:main",
-        ],
-    },
+    entry_points={"console_scripts": ["pointcloud_transformer = tf_pcl.__init__:main"]},
 )
