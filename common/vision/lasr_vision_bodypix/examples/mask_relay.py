@@ -9,10 +9,9 @@ from lasr_vision_interfaces.srv import BodyPixMaskDetection
 
 
 class ImageListener(Node):
-    def __init__(self, listen_topic, model):
+    def __init__(self, listen_topic):
         super().__init__("image_listener")
         self.listen_topic = listen_topic
-        self.model = model
         self.processing = False
 
         # Set up the service client
@@ -26,9 +25,7 @@ class ImageListener(Node):
         self.subscription = self.create_subscription(
             Image, self.listen_topic, self.image_callback, 10  # QoS profile
         )
-        self.get_logger().info(
-            f"Started listening on topic: {self.listen_topic} with model: {self.model}"
-        )
+        self.get_logger().info(f"Started listening on topic: {self.listen_topic}")
 
     def detect(self, image):
         self.processing = True
@@ -36,7 +33,7 @@ class ImageListener(Node):
         # Create a request for the service
         req = BodyPixMaskDetection.Request()
         req.image_raw = image
-        req.dataset = self.model
+        # req.dataset = self.model
         req.confidence = 0.7
         req.parts = ["left_face", "right_face"]
 
@@ -81,10 +78,8 @@ def main(args=None):
     if isinstance(sys.argv[1], list):
         listen_topic = sys.argv[1][0]
 
-    model = sys.argv[2] if len(sys.argv) >= 3 else "resnet50"
-
     rclpy.init(args=args)
-    mask_relay_node = ImageListener(listen_topic, model)
+    mask_relay_node = ImageListener(listen_topic)
     mask_relay_node.get_logger().info("Mask relay node started")
 
     try:

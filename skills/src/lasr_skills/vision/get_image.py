@@ -40,9 +40,10 @@ class GetImage(smach.State):
         except Exception as e:
             self.node.get_logger().error(str(e))
             return "failed"
-        finally:
-            if self.node is not None:
-                self.node.destroy_node()
+        # I wonder if we should destroy the node if we only have one node now?
+        # finally:
+        #     if self.node is not None:
+        #         self.node.destroy_node()
         print(userdata.img_msg)
         return "succeeded"
 
@@ -74,9 +75,9 @@ class GetPointCloud(smach.State):
         except Exception as e:
             self.node.get_logger().error(str(e))
             return "failed"
-        finally:
-            if self.node is not None:
-                self.node.destroy_node()
+        # finally:
+        #     if self.node is not None:
+        #         self.node.destroy_node()
 
         return "succeeded"
 
@@ -109,9 +110,9 @@ class GetImageAndPointCloud(smach.State):
         except Exception as e:
             self.node.get_logger().error(str(e))
             return "failed"
-        finally:
-            if self.node is not None:
-                self.node.destroy_node()
+        # finally:
+        #     if self.node is not None:
+        #         self.node.destroy_node()
 
         return "succeeded"
 

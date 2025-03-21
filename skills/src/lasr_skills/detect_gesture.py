@@ -7,7 +7,7 @@ from lasr_vision_interfaces.srv import BodyPixKeypointDetection
 from sensor_msgs.msg import Image
 import tf2_ros as tf
 from visualization_msgs.msg import Marker
-
+from .vision.get_image import GetImage
 from typing import Union
 
 
@@ -19,7 +19,6 @@ class DetectGesture(smach.State):
     def __init__(
         self,
         gesture_to_detect: Union[str, None] = None,
-        bodypix_model: str = "resnet50",
         bodypix_confidence: float = 0.1,
         buffer_width: int = 50,
         debug_publisher: str = "/skills/gesture_detection/debug",
@@ -36,7 +35,6 @@ class DetectGesture(smach.State):
             BodyPixKeypointDetection, "/bodypix/keypoint_detection"
         )
         self.bodypix_client.wait_for_service()
-        self.bodypix_model = bodypix_model
         self.bodypix_confidence = bodypix_confidence
         self.debug_publisher = self.node.create_publisher(
             Image, debug_publisher, queue_size=1
@@ -57,13 +55,15 @@ class DetectGesture(smach.State):
 
         req = BodyPixKeypointDetection.Request()
         req.image_raw = userdata.img_msg
-        req.dataset = self.bodypix_model
         req.confidence = self.bodypix_confidence
         req.keep_out_of_bounds = False
+        # self.node.get_logger().info(f"before")
 
         try:
             future = self.bodypix_client(req)
+            # self.node.get_logger().info(f"start")
             rclpy.spin_until_future_complete(self.node, future)
+            # self.node.get_logger().info(f"end")
             res = future.result()
 
         except Exception as e:
@@ -138,12 +138,18 @@ def main(args=None):
     sm = smach.StateMachine(outcomes=["succeeded", "failed"])
     with sm:
         smach.StateMachine.add(
+            "GetImage",
+            GetImage(),
+            transitions={"succeeded": "DetectGesture", "failed": "failed"},
+        )
+        smach.StateMachine.add(
             "DetectGesture",
             DetectGesture(),
             transitions={"succeeded": "succeeded", "failed": "failed"},
         )
 
     outcome = sm.execute()
+    rclpy.shutdown()
 
 
 if __name__ == "__main__":

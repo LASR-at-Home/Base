@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-package_name = "receptionist"
+package_name = "carry_my_luggage"
 
 setup(
     name=package_name,
@@ -12,10 +12,10 @@ setup(
     ],
     install_requires=["setuptools"],
     zip_safe=True,
-    maintainer="maayan",
-    maintainer_email="maayan.armony@gmail.com",
-    description="REceptionist task",
-    license="MIT",
+    maintainer="eunice",
+    maintainer_email="hayeong.lee@kcl.ac.uk",
+    description="TODO: Package description",
+    license="TODO: License declaration",
     tests_require=["pytest"],
     entry_points={
         "console_scripts": [],
