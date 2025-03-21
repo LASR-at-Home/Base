@@ -108,7 +108,7 @@ def create_dataset(
 
 
 def recognise(cv_im: Mat, debug_publisher=None, logger=None, cropped_detect_pub=None):
-    """ Recognises a face from an image (allows direct image input). """
+    """Recognises a face from an image (allows direct image input)."""
 
     response = Recognise_Response()
 

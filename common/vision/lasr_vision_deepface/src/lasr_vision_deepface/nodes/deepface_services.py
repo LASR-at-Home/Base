@@ -77,7 +77,7 @@ class DeepFaceServiceNode(Node):
             self.get_logger().error(f"Failed to process camera image: {e}")
 
     def recognise(self, request: Recognise.Request, response: Recognise.Response):
-        """ Handles face recognition requests """
+        """Handles face recognition requests"""
         if not request.image_raw.data:
             self.get_logger().error("Received empty image! Dropping request.")
             return response
@@ -97,7 +97,7 @@ class DeepFaceServiceNode(Node):
         )
 
     def learn_face(self, request: LearnFace.Request, response: LearnFace.Response):
-        """ Handles learning new faces """
+        """Handles learning new faces"""
         if request.dataset in self.learn_face_debug_publishers:
             debug_publisher = self.learn_face_debug_publishers[request.dataset]
         else:
@@ -115,7 +115,7 @@ class DeepFaceServiceNode(Node):
     def detect_faces(
         self, request: DetectFaces.Request, response: DetectFaces.Response
     ):
-        """ Handles face detection requests """
+        """Handles face detection requests"""
         return face_recognition.detect_faces(
             request, self.debug_publisher, self.get_logger()
         )
