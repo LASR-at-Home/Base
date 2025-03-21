@@ -22,6 +22,6 @@ setup(
             "clip_utils = scripts.clip_utils:main",
             "learn_face = scripts.learn_face:main",
             "vqa = lasr_vision_clip.nodes.vqa:main",
-        ],
+        ]
     },
 )

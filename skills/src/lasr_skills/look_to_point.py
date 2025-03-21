@@ -12,10 +12,7 @@ from typing import Union
 class LookToPoint(smach.State, Node):
     _pointstamped: Union[None, PointStamped]
 
-    def __init__(
-        self,
-        pointstamped: Union[None, PointStamped] = None,
-    ):
+    def __init__(self, pointstamped: Union[None, PointStamped] = None):
         Node.__init__(self, "look_to_point")
         smach.State.__init__(
             self,

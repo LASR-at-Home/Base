@@ -6,15 +6,16 @@ from rclpy.node import Node
 from sensor_msgs.msg import Image
 from lasr_vision_interfaces.srv import Recognise
 
+
 class FaceRecognitionClient(Node):
     def __init__(self, listen_topic, dataset):
-        super().__init__('face_recognition_client')
+        super().__init__("face_recognition_client")
 
         # ROS2 Subscription
         self.subscription = self.create_subscription(
             Image, listen_topic, self.detect, 10
         )
-        self.client = self.create_client(Recognise, '/recognise')
+        self.client = self.create_client(Recognise, "/recognise")
 
         # Store dataset name
         self.dataset = dataset
@@ -47,24 +48,31 @@ class FaceRecognitionClient(Node):
         # Remove old detections
         self.detect(image)
         for person in list(self.people_in_frame.keys()):
-            if self.get_clock().now() - self.people_in_frame[person] > rclpy.duration.Duration(seconds=10):
+            if self.get_clock().now() - self.people_in_frame[
+                person
+            ] > rclpy.duration.Duration(seconds=10):
                 del self.people_in_frame[person]
 
         # Trigger greet() if people in frame change
-        if (list(self.people_in_frame.keys()) != prev_people_in_frame and len(self.people_in_frame) > 0) or \
-           (len(prev_people_in_frame) == 0 and len(self.people_in_frame) > 0):
+        if (
+            list(self.people_in_frame.keys()) != prev_people_in_frame
+            and len(self.people_in_frame) > 0
+        ) or (len(prev_people_in_frame) == 0 and len(self.people_in_frame) > 0):
             self.greet()
 
     def greet(self):
         """Example function that triggers when a new person is detected."""
         self.get_logger().info("Greeting a detected person!")
 
+
 def main(args=None):
     """Main function to start the ROS2 node."""
     rclpy.init(args=args)
 
     if len(sys.argv) < 3:
-        print("Usage: ros2 run lasr_vision_deepface recognise_face <source_topic> <dataset>")
+        print(
+            "Usage: ros2 run lasr_vision_deepface recognise_face <source_topic> <dataset>"
+        )
         sys.exit(1)
 
     listen_topic = sys.argv[1]
@@ -75,6 +83,7 @@ def main(args=None):
 
     node.destroy_node()
     rclpy.shutdown()
+
 
 if __name__ == "__main__":
     main()

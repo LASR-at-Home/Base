@@ -8,10 +8,7 @@ import numpy as np
 import pandas as pd
 
 from lasr_vision_interfaces.msg import Detection
-from lasr_vision_interfaces.srv import (
-    Recognise,
-    DetectFaces,
-)
+from lasr_vision_interfaces.srv import Recognise, DetectFaces
 
 from sensor_msgs.msg import Image
 
@@ -64,9 +61,7 @@ def create_image_collage(images, output_size=(640, 480)):
 def _extract_face(cv_im: Mat) -> Union[Mat, None]:
     try:
         faces = DeepFace.extract_faces(
-            cv_im,
-            detector_backend="mtcnn",
-            enforce_detection=True,
+            cv_im, detector_backend="mtcnn", enforce_detection=True
         )
     except ValueError:
         return None
@@ -83,17 +78,15 @@ def _extract_face(cv_im: Mat) -> Union[Mat, None]:
 
 
 def create_dataset(
-    dataset: str,
-    name: str,
-    images: List[Image],
-    debug_publisher=None,
-    logger=None,
+    dataset: str, name: str, images: List[Image], debug_publisher=None, logger=None
 ) -> None:
     dataset_path = os.path.join(DATASET_ROOT, dataset, name)
     if not os.path.exists(dataset_path):
         os.makedirs(dataset_path)
     if logger:
-        logger.info(f"Received {len(images)} pictures of {name} and saving to {dataset_path}")
+        logger.info(
+            f"Received {len(images)} pictures of {name} and saving to {dataset_path}"
+        )
     cv_images: List[Mat] = [cv2_img.msg_to_cv2_img(img) for img in images]
     for i, cv_im in enumerate(cv_images):
         face_cropped_cv_im = _extract_face(cv_im)
@@ -113,23 +106,20 @@ def create_dataset(
         detector_backend="mtcnn",
     )
 
-def recognise(
-    request: Recognise_Request, debug_publisher=None, logger=None, cropped_detect_pub=None):
 
-  
- 
-    cv_im = cv2_img.msg_to_cv2_img(request.image_raw)
+def recognise(cv_im: Mat, debug_publisher=None, logger=None, cropped_detect_pub=None):
+    """ Recognises a face from an image (allows direct image input). """
 
     response = Recognise_Response()
 
     # Run inference
     if logger:
-        logger.info("Running inference")
+        logger.info("Running DeepFace recognition...")
 
     try:
         result = DeepFace.find(
             cv_im,
-            os.path.join(DATASET_ROOT, request.dataset),
+            os.path.join(DATASET_ROOT, "your_dataset"),  # Make sure this path exists
             enforce_detection=True,
             silent=True,
             detector_backend="mtcnn",
@@ -152,15 +142,14 @@ def recognise(
         detection.confidence = row["distance"][0]
         response.detections.append(detection)
 
-        cropped_image = cv_im[:][y : y + h, x : x + w]
-
+        cropped_image = cv_im[y : y + h, x : x + w]
         cropped_detect_pub.publish(cv2_img.cv2_img_to_msg(cropped_image))
 
-        # Draw bounding boxes and labels for debugging
+        # Draw bounding boxes
         cv2.rectangle(cv_im, (x, y), (x + w, y + h), (0, 0, 255), 2)
         cv2.putText(
             cv_im,
-            f"{detection.name} Distance: ({detection.confidence:.2f})",
+            f"{detection.name} ({detection.confidence:.2f})",
             (x, y - 5),
             cv2.FONT_HERSHEY_SIMPLEX,
             0.5,
@@ -168,28 +157,26 @@ def recognise(
             2,
         )
 
-    # publish to debug topic
     debug_publisher.publish(cv2_img.cv2_img_to_msg(cv_im))
-    result = pd.concat(result)
-    # check for empty result
-    if not result.empty:
-        result_paths = list(result["identity"])
-        if len(result_paths) > 5:
-            result_paths = result_paths[:5]
-        result_images = [cv2.imread(path) for path in result_paths]
-        debug_inference_pub.publish(
-            cv2_img.cv2_img_to_msg(create_image_collage(result_images))
-        )
-
     return response
 
 
-def detect_faces(
-    request: DetectFaces_Request, debug_publisher=None, logger=None
-):
-  
+def detect_faces(request: DetectFaces_Request, debug_publisher=None, logger=None):
+    if logger:
+        logger.info("detect_faces service called.")
+
+    if not request.image_raw.encoding:
+        request.image_raw.encoding = "bgr8"  # Use "rgb8" if needed
 
     cv_im = cv2_img.msg_to_cv2_img(request.image_raw)
+
+    if cv_im is None or cv_im.size == 0:
+        if logger:
+            logger.error("Received an empty or invalid image in detect_faces!")
+        return DetectFaces_Response()
+
+    if logger:
+        logger.info(f"Processing image: shape={cv_im.shape}")
 
     response = DetectFaces_Response()
 
@@ -197,10 +184,11 @@ def detect_faces(
         faces = DeepFace.extract_faces(
             cv_im, detector_backend="mtcnn", enforce_detection=True
         )
+        if logger:
+            logger.info(f"DeepFace detected {len(faces)} faces.")
     except ValueError as e:
         if logger:
-            logger.error(f"Error: {e}") 
-        debug_publisher.publish(cv2_img.cv2_img_to_msg(cv_im))
+            logger.error(f"DeepFace error: {e}")
         return response
 
     for i, face in enumerate(faces):
@@ -216,7 +204,6 @@ def detect_faces(
         detection.confidence = 1.0
         response.detections.append(detection)
 
-        # Draw bounding boxes and labels for debugging
         cv2.rectangle(cv_im, (x, y), (x + w, y + h), (0, 0, 255), 2)
         cv2.putText(
             cv_im,
@@ -228,7 +215,9 @@ def detect_faces(
             2,
         )
 
-    # publish to debug topic
-    debug_publisher.publish(cv2_img.cv2_img_to_msg(cv_im))
+    if debug_publisher:
+        debug_publisher.publish(cv2_img.cv2_img_to_msg(cv_im))
+        if logger:
+            logger.info("Published debug image.")
 
     return response

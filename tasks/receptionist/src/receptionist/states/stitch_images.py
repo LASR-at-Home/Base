@@ -59,13 +59,8 @@ def main(args=None):
             sm.userdata.transformed_pointclouds = []
             smach.StateMachine.add(
                 "Sweep",
-                PointCloudSweep(
-                    sweep_points=sweep_points,
-                ),
-                transitions={
-                    "succeeded": "StitchImages",
-                    "failed": "failed",
-                },
+                PointCloudSweep(sweep_points=sweep_points),
+                transitions={"succeeded": "StitchImages", "failed": "failed"},
             )
 
             smach.StateMachine.add(

@@ -24,6 +24,6 @@ setup(
     entry_points={
         "console_scripts": [
             # "look_to_point = src.lasr_skills.look_to_point:main",
-        ],
+        ]
     },
 )
