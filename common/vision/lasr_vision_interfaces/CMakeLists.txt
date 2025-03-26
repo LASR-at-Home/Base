@@ -33,9 +33,7 @@ set(srv_files
   "srv/BodyPixKeypointDetection.srv"
   "srv/BodyPixWaveDetection.srv"
   "srv/ClipLearnFace.srv"
-  "srv/CroppedDetection.srv"n/depth_registered/points",
-  PythonExpression(
-      [
+  "srv/CroppedDetection.srv"
   "srv/LearnFace.srv"
   "srv/YoloDetection.srv"
   "srv/Recognise.srv"
