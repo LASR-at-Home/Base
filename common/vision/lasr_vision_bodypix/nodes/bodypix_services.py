@@ -37,19 +37,19 @@ class BodyPixServiceNode(Node):
         )
 
         # Debug publisher for detect_wave
-        self.debug_publisher = self.create_publisher(Image, "debog_bodypix", 1)
+        self.debug_publisher = self.create_publisher(Image, "debug_bodypix", 1)
         
         self.get_logger().info("BodyPix service node started")
 
     def detect_masks(self, request, response):
         """Handles mask detection request."""
-        response = bodypix.detect_masks(request, debug_publisher=self.debug_publisher)
+        response = bodypix.detect_masks(request, debug_publisher=self.debug_publisher, logger=self.get_logger())
         return response
     
 
     def detect_keypoints(self, request, response):
         """Handles keypoint detection request."""
-        response = bodypix.detect_keypoints(request, debug_publisher=self.debug_publisher)
+        response = bodypix.detect_keypoints(request, debug_publisher=self.debug_publisher, logger=self.get_logger())
         return response
 
     def detect_wave(self, request, response):
@@ -62,7 +62,7 @@ class BodyPixServiceNode(Node):
             bp_req.confidence = request.confidence
 
             # Call BodyPix keypoint detection
-            detected_keypoints = bodypix.detect_keypoints(bp_req).keypoints
+            detected_keypoints = bodypix.detect_keypoints(bp_req,  debug_publisher=self.debug_publisher, logger=self.get_logger()).keypoints
         except Exception as e:
             self.get_logger().error(f"Error detecting keypoints: {e}")
             return BodyPixWaveDetection.Response()

@@ -139,6 +139,8 @@ def detect_masks(
             skeleton_color=(100, 100, 255),
         )
         debug_publisher.publish(cv2_img.cv2_img_to_msg(coloured_mask))
+        if logger:
+            logger.info("I'm publishing the image!")
 
     response = BodyPixMaskDetection_Response
     response.masks = masks
@@ -214,6 +216,8 @@ def detect_keypoints(
             )
             
         debug_publisher.publish(cv2_img.cv2_img_to_msg(coloured_mask))
+        if logger:
+            logger.info("I'm publishing the image!")
 
     response = BodyPixKeypointDetection_Response
     response.keypoints = detected_keypoints
