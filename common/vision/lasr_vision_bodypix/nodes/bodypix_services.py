@@ -56,12 +56,13 @@ class BodyPixServiceNode(Node):
 
     def detect_masks(self, request, response):
         """Handles mask detection request."""
-        response = bodypix.detect_masks(request)
+        response = bodypix.detect_masks(request, debug_publisher=self.debug_publisher)
         return response
+    
 
     def detect_keypoints(self, request, response):
         """Handles keypoint detection request."""
-        response = bodypix.detect_keypoints(request)
+        response = bodypix.detect_keypoints(request, debug_publisher=self.debug_publisher)
         return response
 
     def detect_wave(self, request, response):

@@ -212,6 +212,7 @@ def detect_keypoints(
                 2,
                 cv2.LINE_AA,
             )
+            
         debug_publisher.publish(cv2_img.cv2_img_to_msg(coloured_mask))
 
     response = BodyPixKeypointDetection_Response
