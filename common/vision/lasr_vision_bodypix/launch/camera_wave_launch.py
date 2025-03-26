@@ -19,6 +19,12 @@ def generate_launch_description():
         description="Input image topic for mask relay",
     )
 
+    pcl_topic_arg = DeclareLaunchArgument(
+        "pcl_topic",
+        default_value="/xtion/depth_registered/points",  # Default input image topic
+        description="Input pcl topic for mask relay",
+    )
+
     # Path to the BodyPix launch file
     bodypix_launch_file = os.path.join(
         get_package_share_directory("lasr_vision_bodypix"),
@@ -64,11 +70,14 @@ def generate_launch_description():
             # Start the keypoint relay service
             Node(
                 package="lasr_vision_bodypix",
-                executable="mask_relay.py",  # Removed .py extension, assuming installed without it
-                name="mask_relay",
+                executable="wave_relay.py",  # Removed .py extension, assuming installed without it
+                name="wave_relay",
                 output="screen",
                 arguments=[
-                    "/image_raw ",
+                    "/image_raw",n/depth_registered/points",
+                    PythonExpression(
+                        [
+                    "/xtion/depth_registered/points",  # not sure about this
                     PythonExpression(
                         [
                             "''.join(",  # Convert model list to a single string

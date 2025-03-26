@@ -4,40 +4,43 @@ import sys
 import threading
 import rclpy
 from rclpy.node import Node
-from sensor_msgs.msg import Image
-from lasr_vision_interfaces.srv import BodyPixMaskDetection
+from sensor_msgs.msg import Image, PointCloud2
+from lasr_vision_interfaces.srv import BodyPixWaveDetection
 
 
-class MaskRelay(Node):
-    def __init__(self, listen_topic):
+class WaveRelay(Node):
+    def __init__(self, listen_image_topic, listen_pcl_topic):
         super().__init__("image_listener")
-        self.listen_topic = listen_topic
+        self.listen_image_topic = listen_image_topic
+        self.listen_pcl_topic = listen_pcl_topic
         self.processing = False
 
         # Set up the service client
         self.detect_service_client = self.create_client(
-            BodyPixMaskDetection, "/bodypix/mask_detection"
+            BodyPixWaveDetection, "/bodypix/detect_wave"
         )
         while not self.detect_service_client.wait_for_service(timeout_sec=1.0):
             self.get_logger().info("Service not available, waiting...")
 
         # Set up the subscriber
-        self.subscription = self.create_subscription(
-            Image, self.listen_topic, self.image_callback, 10  # QoS profile
+        self.image_subscription = self.create_subscription(
+            Image, self.listen_image_topic, self.image_callback, 10  # QoS profile
+        )
+        self.pcl_subscription = self.create_subscription(
+            PointCloud2, self.listen_pcl_topic, self.pcl_callback, 10  # QoS profile
         )
         self.get_logger().info(
-            f"Started listening on topic: {self.listen_topic}"
+            f"Started listening on topic: {self.listen_image_topic}, {self.listen_pcl_topic}"
         )
 
     def detect(self, image):
         self.processing = True
         self.get_logger().info("Received image message")
         # Create a request for the service
-        req = BodyPixMaskDetection.Request()
+        req = BodyPixWaveDetection.Request()
         req.image_raw = image
         # req.dataset = self.model
         req.confidence = 0.7
-        req.parts = ["left_face", "right_face"]
 
         # Call the service asynchronously
         future = self.detect_service_client.call_async(req)
@@ -48,9 +51,8 @@ class MaskRelay(Node):
             response = future.result()
             if response is not None:
                 # Modify masks for demonstration purposes
-                for mask in response.masks:
-                    mask.mask = [True, False, True, False]
-                self.get_logger().info(f"Detection response received: {response}")
+                is_waving = response.wave_detected
+                self.get_logger().info(f"Waving detection: {is_waving}")
             else:
                 self.get_logger().error("Service call returned no response")
         except Exception as e:
@@ -65,9 +67,16 @@ class MaskRelay(Node):
         # Start a new thread for detection to avoid blocking
         threading.Thread(target=self.detect, args=(image,)).start()
 
+    def pcl_callback(self, pcl):
+        if self.processing:
+            return
+
+        # Start a new thread for detection to avoid blocking
+        threading.Thread(target=self.detect, args=(pcl,)).start()
+
 
 def main(args=None):
-    print("Starting mask_relay node")
+    print("Starting wave_relay node")
     # Check if command-line arguments are sufficient
     if len(sys.argv) < 2:
         print(
@@ -76,20 +85,23 @@ def main(args=None):
         sys.exit(1)
 
     # Parse the command-line arguments
-    listen_topic = "/image_raw"
+    listen_image_topic = "/image_raw"
+    listen_pcl_topic = "/xtion/depth_registered/points"  # not sure if this is the thing in ros2
     if isinstance(sys.argv[1], list):
-        listen_topic = sys.argv[1][0]
+        listen_image_topic = sys.argv[1][0]
+        listen_pcl_topic = sys.argv[1][1]
+
 
     rclpy.init(args=args)
-    mask_relay_node = MaskRelay(listen_topic)
-    mask_relay_node.get_logger().info("Mask relay node started")
+    wave_relay_node = WaveRelay(listen_image_topic, listen_pcl_topic)
+    wave_relay_node.get_logger().info("Mask relay node started")
 
     try:
-        rclpy.spin(mask_relay_node)
+        rclpy.spin(wave_relay_node)
     except KeyboardInterrupt:
         pass
     finally:
-        mask_relay_node.destroy_node()
+        wave_relay_node.destroy_node()
         rclpy.shutdown()
 
 

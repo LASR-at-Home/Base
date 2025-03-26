@@ -6,7 +6,7 @@ import lasr_vision_bodypix as bodypix
 from lasr_vision_interfaces.srv import (
     BodyPixMaskDetection,
     BodyPixKeypointDetection,
-    DetectWave,
+    BodyPixWaveDetection,
 )
 from sensor_msgs.msg import Image
 import ros2_numpy as rnp
@@ -20,20 +20,6 @@ class BodyPixServiceNode(Node):
     def __init__(self):
         super().__init__("bodypix_service_node")
 
-        # Declare and load parameters
-        # self.declare_parameter('preload', [])
-        # self.declare_parameter(
-        #     "preload",
-        #     [""],
-        #     ParameterDescriptor(type=ParameterType.PARAMETER_STRING_ARRAY),
-        # )
-        # preload_models = (
-        #     self.get_parameter("preload").get_parameter_value().string_array_value
-        # )
-
-        # Preload models
-        # for model in preload_models:
-        #     bodypix.load_model_cached(model)
         bodypix.load_model()  # by calling this the model will be loaded and cached
 
         # Create service servers
@@ -47,11 +33,12 @@ class BodyPixServiceNode(Node):
         )
         self.get_logger().info("Keypoint detection service registered.")
         self.detect_wave_service = self.create_service(
-            DetectWave, "/bodypix/detect_wave", self.detect_wave
+            BodyPixWaveDetection, "/bodypix/detect_wave", self.detect_wave
         )
 
         # Debug publisher for detect_wave
         self.debug_publisher = self.create_publisher(Image, "debug_waving", 1)
+        
         self.get_logger().info("BodyPix service node started")
 
     def detect_masks(self, request, response):
@@ -70,14 +57,14 @@ class BodyPixServiceNode(Node):
             # Prepare request for keypoint detection
             bp_req = BodyPixKeypointDetection.Request()
             bp_req.image_raw = pcl_to_img_msg(request.pcl_msg)
-            bp_req.dataset = request.dataset
+            # bp_req.image_raw = request.image_raw
             bp_req.confidence = request.confidence
 
             # Call BodyPix keypoint detection
             detected_keypoints = bodypix.detect_keypoints(bp_req).keypoints
         except Exception as e:
             self.get_logger().error(f"Error detecting keypoints: {e}")
-            return DetectWave.Response()
+            return BodyPixWaveDetection.Response()
 
         gesture_to_detect = None
         keypoint_info = {
