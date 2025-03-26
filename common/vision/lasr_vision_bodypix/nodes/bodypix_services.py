@@ -37,7 +37,7 @@ class BodyPixServiceNode(Node):
         )
 
         # Debug publisher for detect_wave
-        self.debug_publisher = self.create_publisher(Image, "debug_waving", 1)
+        self.debug_publisher = self.create_publisher(Image, "debog_bodypix", 1)
         
         self.get_logger().info("BodyPix service node started")
 
