@@ -2,7 +2,7 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
 from launch_ros.actions import Node
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration, TextSubstitution,
+from launch.substitutions import LaunchConfiguration, TextSubstitution, PythonExpression
 
 import os
 from ament_index_python.packages import get_package_share_directory
@@ -11,8 +11,8 @@ from ament_index_python.packages import get_package_share_directory
 def generate_launch_description():
     image_topic_arg = DeclareLaunchArgument(
         "image_topic",
-        default_value=TextSubstitution(text="/image_raw"),
-        description="Input image topic for mask relay",
+        default_value=TextSubstitution(text="/head_front_camera/rgb/image_raw"),
+        description="Input image topic for keypoint relay",
     )
 
     # Path to the BodyPix launch file
@@ -20,12 +20,6 @@ def generate_launch_description():
         get_package_share_directory("lasr_vision_bodypix"),
         "launch",
         "bodypix_launch.py",
-    )
-
-    v4l2_camera_launch_file = os.path.join(
-        get_package_share_directory("lasr_vision_bodypix"),
-        "launch",
-        "v4l2_camera_launch.py",
     )
 
     return LaunchDescription(
@@ -45,23 +39,17 @@ def generate_launch_description():
                 output="screen",
             ),
 
-            # Start the mask relay service
+            # Start the keypoint relay service
             Node(
                 package="lasr_vision_bodypix",
-                executable="mask_relay.py",  # Specifying the subdirectory
-                name="mask_relay",
+                executable="keypoint_relay.py",  # Specifying the subdirectory
+                name="keypoint_relay",
                 output="screen",
                 parameters=[
                     {
                         "image_topic": LaunchConfiguration("image_topic"),
                     }
                 ]
-            ),
-
-            # Include the v4l2_camera launch file
-            IncludeLaunchDescription(
-                PythonLaunchDescriptionSource(v4l2_camera_launch_file),
-                launch_arguments={"image_size": "640x480"}.items(),
             ),
         ]
     )

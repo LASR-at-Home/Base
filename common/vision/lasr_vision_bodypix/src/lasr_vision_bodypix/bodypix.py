@@ -23,7 +23,7 @@ BodyPixMaskDetection_Request = BodyPixMaskDetection.Request()
 BodyPixMaskDetection_Response = BodyPixMaskDetection.Response()
 
 # model cache
-loaded_models = {}
+model_cache = dict()
 
 
 def snake_to_camel(snake_str):
@@ -35,35 +35,13 @@ def camel_to_snake(name):
     return re.sub(r"(?<!^)(?=[A-Z])", "_", name).lower()
 
 
-def load_model_cached(dataset: str):
-    """
-    Load a model into cache
-    """
-    model = None
-    if dataset in loaded_models:
-        model = loaded_models[dataset]
-    else:
-        if dataset == "resnet50":
-            name = download_model(BodyPixModelPaths.RESNET50_FLOAT_STRIDE_16)
-            model = load_model(name)
-        elif dataset == "mobilenet50":
-            name = download_model(BodyPixModelPaths.MOBILENET_FLOAT_50_STRIDE_8)
-            model = load_model(name)
-        elif dataset == "mobilenet100":
-            name = download_model(BodyPixModelPaths.MOBILENET_FLOAT_100_STRIDE_8)
-            model = load_model(name)
-        else:
-            model = load_model(dataset)
-        loaded_models[dataset] = model
-    return model
-
-
-def load_model(_):
+def load_model():
     """
     Load resnet 50 model.
     """
     name = download_model(BodyPixModelPaths.RESNET50_FLOAT_STRIDE_16)
     model = bp_load_model(name)
+    model_cache[name] = model
     return model
 
 
@@ -80,8 +58,7 @@ def run_inference(confidence: float, img: SensorImage, logger=None):
     # Load model
     if logger:
         logger.info("Loading model")
-    model = load_model_cached("resnet50")
-    # model = load_model()
+    model = load_model()
 
     # Run inference
     if logger:

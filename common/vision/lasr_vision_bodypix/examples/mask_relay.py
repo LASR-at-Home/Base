@@ -9,9 +9,10 @@ from lasr_vision_interfaces.srv import BodyPixMaskDetection
 
 
 class MaskRelay(Node):
-    def __init__(self, listen_topic):
+    def __init__(self):
         super().__init__("image_listener")
-        self.listen_topic = listen_topic
+        self.declare_parameter("image_topic", "/head_front_camera/rgb/image_raw")
+        self.listen_topic = self.get_parameter("image_topic").get_parameter_value().string_value
         self.processing = False
 
         # Set up the service client
@@ -20,6 +21,7 @@ class MaskRelay(Node):
         )
         while not self.detect_service_client.wait_for_service(timeout_sec=1.0):
             self.get_logger().info("Service not available, waiting...")
+        
         # Set up the subscriber
         self.subscription = self.create_subscription(
             Image, self.listen_topic, self.image_callback, 10  # QoS profile
@@ -65,21 +67,9 @@ class MaskRelay(Node):
 
 def main(args=None):
     print("Starting mask_relay node")
-    # Check if command-line arguments are sufficient
-    if len(sys.argv) < 2:
-        print(
-            "Usage: ros2 run lasr_vision_bodypix mask_relay.py <source_topic> [resnet50|mobilenet50|...]"
-        )
-        sys.exit(1)
-
-    # Parse the command-line arguments
-    listen_topic = "/head_front_camera/rgb/image_raw"
-    # print(sys.argv, len(sys.argv))
-    # if isinstance(sys.argv[1], list):
-    #     listen_topic = sys.argv[1][0]
 
     rclpy.init(args=args)
-    mask_relay_node = MaskRelay(listen_topic)
+    mask_relay_node = MaskRelay()
     mask_relay_node.get_logger().info("Mask relay node started")
 
     try:

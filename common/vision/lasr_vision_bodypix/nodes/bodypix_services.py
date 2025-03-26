@@ -6,15 +6,15 @@ import lasr_vision_bodypix as bodypix
 from lasr_vision_interfaces.srv import (
     BodyPixMaskDetection,
     BodyPixKeypointDetection,
-    BodyPixWaveDetection,
+    # BodyPixWaveDetection,
 )
 from sensor_msgs.msg import Image
 
 # import ros2_numpy as rnp
-from geometry_msgs.msg import PointStamped, Point
-from std_msgs.msg import Header
+# from geometry_msgs.msg import PointStamped, Point
+# from std_msgs.msg import Header
 import numpy as np
-from cv2_pcl import pcl_to_img_msg
+# from cv2_pcl import pcl_to_img_msg
 
 
 class BodyPixServiceNode(Node):
@@ -58,6 +58,7 @@ class BodyPixServiceNode(Node):
         )
         return response
 
+    # ToDo: make a skill
     # def detect_wave(self, request, response):
     #     """Detects a waving gesture."""
     #     try:
