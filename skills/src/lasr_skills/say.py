@@ -1,21 +1,22 @@
+#!/usr/bin/env python3
 import smach_ros
 import smach
 import rclpy
 import os
 from lasr_skills import AccessNode
 
-PUBLIC_CONTAINER: bool = False
+HAS_TTS_MSGS: bool = False
+
 
 try:
-    from pal_interaction_msgs.msg import TtsGoal, TtsAction, TtsText
+    from tts_msgs.msg import TtsGoal, TtsAction, TtsText
 except ImportError:
-    PUBLIC_CONTAINER = True
+    HAS_TTS_MSGS = True
 
-SIMULATION: bool = "tiago"
 
 from typing import Union
 
-if PUBLIC_CONTAINER or SIMULATION:
+if not HAS_TTS_MSGS:
 
     class Say(smach.State):
 
@@ -43,25 +44,19 @@ if PUBLIC_CONTAINER or SIMULATION:
 
             self.text = text
             self.format_str = format_str
-            if PUBLIC_CONTAINER:
-                rclpy.logging.get_logger("Say").warning(
-                    "You are using the public container, the Say skill will not work"
-                )
-
-            elif SIMULATION:
-                rclpy.logging.get_logger("Say").warning(
-                    "You are using the simulation, the Say skill will not work"
-                )
+            self.node.get_logger().info(
+                "tts_msgs not available, the Say skill will not work."
+            )
 
         def execute(self, userdata):
             if self.text is not None:
-                rclpy.logging.get_logger("Say").info(self.text)
+                self.node.get_logger().info(self.text)
             elif self.format_str is not None:
-                rclpy.logging.get_logger("Say").info(
+                self.node.get_logger().info(
                     self.format_str.format(userdata.placeholders)
                 )
             else:
-                rclpy.logging.get_logger("Say").info(userdata.text)
+                self.node.get_logger().info(userdata.text)
             return "succeeded"
 
 else:
