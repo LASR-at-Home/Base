@@ -14,9 +14,7 @@ from lasr_vision_yolov8.yolo import AccessNode
 # from src import lasr_vision_yolov8 as yolo
 # from src import AccessNode
 from sensor_msgs.msg import Image
-from lasr_vision_interfaces.srv import (
-    YoloDetection,
-)
+from lasr_vision_interfaces.srv import YoloDetection
 
 # TODO handle 3D detection service later on
 
@@ -68,10 +66,7 @@ def main(args=None):
     package_install = packages.get_package_prefix("lasr_vision_yolov8")
     package_path = os.path.abspath(
         os.path.join(
-            package_install,
-            os.pardir,
-            os.pardir,
-            "common/vision/lasr_vision_yolov8",
+            package_install, os.pardir, os.pardir, "common/vision/lasr_vision_yolov8"
         )
     )
     os.chdir(os.path.abspath(os.path.join(package_path, "models")))

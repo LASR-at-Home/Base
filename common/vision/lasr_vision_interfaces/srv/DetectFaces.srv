@@ -1,0 +1,3 @@
+sensor_msgs/Image image_raw
+---
+lasr_vision_interfaces/Detection[] detections

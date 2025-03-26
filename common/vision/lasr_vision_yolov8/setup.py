@@ -28,6 +28,6 @@ setup(
             "yolo_service_node = lasr_vision_yolov8.service:main",
             "yolo_node = src.lasr_vision_yolov8.yolo:main",
             "relay = lasr_vision_yolov8.relay_test:main",
-        ],
+        ]
     },
 )

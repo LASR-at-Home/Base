@@ -38,6 +38,8 @@ set(srv_files
       [
   "srv/LearnFace.srv"
   "srv/YoloDetection.srv"
+  "srv/Recognise.srv"
+  "srv/DetectFaces.srv"
   "srv/Vqa.srv"
 )
 
@@ -63,5 +65,5 @@ rosidl_generate_interfaces(${PROJECT_NAME}
 # Export dependencies
 ament_export_dependencies(rosidl_default_runtime)
 
-# This must be called after all targets and before any installation commands
+# Ensure correct build order
 ament_package()

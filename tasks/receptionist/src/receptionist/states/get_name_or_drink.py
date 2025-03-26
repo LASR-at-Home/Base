@@ -15,10 +15,7 @@ from receptionist.states import SpeechRecovery
 class GetNameOrDrink(smach.StateMachine):
     class ParseTranscribedInfo(smach.State, Node):
         def __init__(
-            self,
-            guest_id: str,
-            info_type: str,
-            param_key: str = "/receptionist/priors",
+            self, guest_id: str, info_type: str, param_key: str = "/receptionist/priors"
         ):
             """Parses the transcription of the guests' information.
 

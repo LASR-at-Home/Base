@@ -9,7 +9,10 @@ from lasr_vision_interfaces.srv import BodyPixKeypointDetection
 
 
 class KeypointRelay(Node):
-    def __init__(self, listen_topic,):
+    def __init__(
+        self,
+        listen_topic,
+    ):
         super().__init__("keypoint_relay")
         self.listen_topic = listen_topic
         self.processing = False
