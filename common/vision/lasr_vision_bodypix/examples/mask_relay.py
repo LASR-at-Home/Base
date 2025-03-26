@@ -25,9 +25,7 @@ class MaskRelay(Node):
         self.subscription = self.create_subscription(
             Image, self.listen_topic, self.image_callback, 10  # QoS profile
         )
-        self.get_logger().info(
-            f"Started listening on topic: {self.listen_topic}"
-        )
+        self.get_logger().info(f"Started listening on topic: {self.listen_topic}")
 
     def detect(self, image):
         self.processing = True

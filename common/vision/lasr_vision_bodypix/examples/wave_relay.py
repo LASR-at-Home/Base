@@ -86,11 +86,12 @@ def main(args=None):
 
     # Parse the command-line arguments
     listen_image_topic = "/image_raw"
-    listen_pcl_topic = "/xtion/depth_registered/points"  # not sure if this is the thing in ros2
+    listen_pcl_topic = (
+        "/xtion/depth_registered/points"  # not sure if this is the thing in ros2
+    )
     if isinstance(sys.argv[1], list):
         listen_image_topic = sys.argv[1][0]
         listen_pcl_topic = sys.argv[1][1]
-
 
     rclpy.init(args=args)
     wave_relay_node = WaveRelay(listen_image_topic, listen_pcl_topic)
