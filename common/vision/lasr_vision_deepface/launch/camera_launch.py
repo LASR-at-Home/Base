@@ -23,24 +23,24 @@ def generate_launch_description():
                 )
             ),
             # # Launch V4L2 Camera Node
-            # launch_ros.actions.Node(
-            #     package="v4l2_camera",
-            #     executable="v4l2_camera_node",
-            #     name="v4l2_camera_node",
-            #     output="screen",
-            #     parameters=[
-            #         {
-            #             "video_device": "/dev/video0",
-            #             "image_width": 640,
-            #             "image_height": 480,
-            #             "pixel_format": "YUYV",
-            #             "frame_rate": 30,
-            #         }
-            #     ],
-            #     remappings=[
-            #         ("/image_raw", "/camera/image_raw")  # Ensure correct topic name
-            #     ],
-            # ),
+            launch_ros.actions.Node(
+                package="v4l2_camera",
+                executable="v4l2_camera_node",
+                name="v4l2_camera_node",
+                output="screen",
+                parameters=[
+                    {
+                        "video_device": "/dev/video0",
+                        "image_width": 640,
+                        "image_height": 480,
+                        "pixel_format": "YUYV",
+                        "frame_rate": 30,
+                    }
+                ],
+                remappings=[
+                    ("/image_raw", "/camera/image_raw")  
+                ],
+            ),
             # Launch rqt_image_view to display the camera feed
             launch_ros.actions.Node(
                 package="rqt_image_view",

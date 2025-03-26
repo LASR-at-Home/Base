@@ -109,25 +109,33 @@ def create_dataset(
     )
 
 
-def recognise(cv_im: Mat, debug_publisher=None, logger=None, cropped_detect_pub=None):
-    """Recognises a face from an image (allows direct image input)."""
-
+def recognise(request: Recognise_Request, debug_publisher=None, logger=None, cropped_detect_pub=None):
     response = Recognise_Response()
 
-    # Run inference
+    if not request.image_raw.encoding:
+        request.image_raw.encoding = "bgr8"
+
+    cv_im = cv2_img.msg_to_cv2_img(request.image_raw)
+
+    if cv_im is None or cv_im.size == 0:
+        if logger:
+            logger.error("Received an empty or invalid image in recognise!")
+        return response
+
     if logger:
         logger.info("Running DeepFace recognition...")
 
     try:
         result = DeepFace.find(
             cv_im,
-            os.path.join(DATASET_ROOT, "receptionist"),  # Make sure this path exists
+            os.path.join(DATASET_ROOT, "receptionist"),   
             enforce_detection=True,
             silent=True,
             detector_backend="mtcnn",
         )
     except ValueError as e:
-        print(e)
+        if logger:
+            logger.error(f"DeepFace error: {e}")
         return response
 
     for row in result:
@@ -146,9 +154,10 @@ def recognise(cv_im: Mat, debug_publisher=None, logger=None, cropped_detect_pub=
         response.detections.append(detection)
 
         cropped_image = cv_im[y : y + h, x : x + w]
-        cropped_detect_pub.publish(cv2_img.cv2_img_to_msg(cropped_image))
+        if cropped_detect_pub:
+            cropped_detect_pub.publish(cv2_img.cv2_img_to_msg(cropped_image))
 
-        # Draw bounding boxes
+        # Draw bounding boxes on original image
         cv2.rectangle(cv_im, (x, y), (x + w, y + h), (0, 0, 255), 2)
         cv2.putText(
             cv_im,
@@ -160,7 +169,11 @@ def recognise(cv_im: Mat, debug_publisher=None, logger=None, cropped_detect_pub=
             2,
         )
 
-    debug_publisher.publish(cv2_img.cv2_img_to_msg(cv_im))
+    if debug_publisher:
+        debug_publisher.publish(cv2_img.cv2_img_to_msg(cv_im))
+        if logger:
+            logger.info("Published debug image.")
+
     return response
 
 

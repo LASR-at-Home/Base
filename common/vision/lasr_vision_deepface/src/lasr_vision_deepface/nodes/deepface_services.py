@@ -5,7 +5,6 @@ from lasr_vision_deepface.nodes import deepface as face_recognition
 from sensor_msgs.msg import Image
 from lasr_vision_interfaces.srv import Recognise, LearnFace, DetectFaces
 from cv_bridge import CvBridge
-import cv2
 
 
 class DeepFaceServiceNode(Node):
@@ -24,11 +23,6 @@ class DeepFaceServiceNode(Node):
             LearnFace, "/deepface/learn_face", self.learn_face
         )
 
-        # Subscribe to live camera feed
-        self.subscription = self.create_subscription(
-            Image, "/head_front_camera/rgb/image_raw", self.image_callback, 10
-        )
-
         # Publishers for debugging
         self.debug_publisher = self.create_publisher(Image, "debug_image", 1)
         self.cropped_detect_pub = self.create_publisher(
@@ -36,50 +30,9 @@ class DeepFaceServiceNode(Node):
         )
         self.debug_inference_pub = self.create_publisher(Image, "debug_inference", 1)
 
-        self.recognise_debug_publishers = {}
         self.learn_face_debug_publishers = {}
 
-        self.get_logger().info(
-            "DeepFace service node started, listening to /camera/image_raw"
-        )
-
-    def image_callback(self, msg):
-        """Processes live images from the camera feed."""
-        # try:
-        cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
-        if cv_image is None or cv_image.size == 0:
-            self.get_logger().error(
-                "Received an empty or corrupted image from the camera."
-            )
-            return
-
-        self.get_logger().info(f"Processing image from camera: shape={cv_image.shape}")
-
-        # Convert Image message to a DetectFaces_Request
-        detect_faces_request = DetectFaces.Request()
-        detect_faces_request.image_raw = msg  # Assign the ROS2 Image message
-
-        # Call detect_faces with the correct request format
-        response = face_recognition.detect_faces(
-            detect_faces_request, self.debug_publisher, self.get_logger()
-        )
-        response = face_recognition.recognise(
-            cv_image,
-            self.debug_inference_pub,
-            self.get_logger(),
-            self.cropped_detect_pub,
-        )
-        print(response)
-
-        if response.detections:
-            self.get_logger().info(
-                f"Detected {len(response.detections)} faces in live camera feed."
-            )
-        else:
-            self.get_logger().info("No faces detected in the live feed.")
-
-        # except Exception as e:
-        #     self.get_logger().error(f"Failed to process camera image: {e}")
+        self.get_logger().info("DeepFace service node started.")
 
     def recognise(self, request: Recognise.Request, response: Recognise.Response):
         """Handles face recognition requests"""
@@ -98,18 +51,19 @@ class DeepFaceServiceNode(Node):
         self.get_logger().info("Running DeepFace recognition...")
 
         return face_recognition.recognise(
-            cv_image, self.debug_publisher, self.get_logger(), self.cropped_detect_pub
+            request, self.debug_inference_pub, self.get_logger(), self.cropped_detect_pub
         )
 
     def learn_face(self, request: LearnFace.Request, response: LearnFace.Response):
         """Handles learning new faces"""
-        if request.dataset in self.learn_face_debug_publishers:
-            debug_publisher = self.learn_face_debug_publishers[request.dataset]
-        else:
-            topic_name = re.sub(r"[\W_]+", "", request.dataset)
-            debug_publisher = self.create_publisher(
-                Image, f"/learn_face/debug/{topic_name}", 1
+        dataset_topic = re.sub(r"[\W_]+", "", request.dataset)
+
+        if dataset_topic not in self.learn_face_debug_publishers:
+            self.learn_face_debug_publishers[dataset_topic] = self.create_publisher(
+                Image, f"/learn_face/debug/{dataset_topic}", 1
             )
+
+        debug_publisher = self.learn_face_debug_publishers[dataset_topic]
 
         face_recognition.create_dataset(
             request.dataset, request.name, request.images, debug_publisher
