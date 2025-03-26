@@ -1,4 +1,5 @@
 <?xml version="1.0"?>
+<<<<<<< HEAD
 <package format="3">
   <name>cv2_img</name>
   <version>0.0.0</version>
@@ -32,4 +33,31 @@
   <export>
     <!-- No specific exports needed, but ROS2 tools may require some information here -->
   </export>
+=======
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+    <name>cv2_img</name>
+    <version>0.0.0</version>
+    <description>Various Python utilities for working with OpenCV and ROS2.</description>
+    <maintainer email="me@insrt.uk">Paul Makles</maintainer>
+    <license>MIT</license>
+
+    <buildtool_depend>ament_cmake</buildtool_depend>
+
+    <depend>rclpy</depend>
+    <depend>sensor_msgs</depend>
+    <depend>cv_bridge</depend> <!-- If using OpenCV and ROS image conversions -->
+    <depend>python3-numpy</depend> <!-- Include system dependencies like numpy -->
+
+    <test_depend>ament_lint_auto</test_depend>
+    <test_depend>ament_lint_common</test_depend>
+    <!-- Testing dependencies (optional) -->
+    <!-- <test_depend>ament_cmake_pytest</test_depend> -->
+    <!-- <test_depend>ament_lint_auto</test_depend> -->
+    <!-- <test_depend>ament_lint_common</test_depend> -->
+
+    <export>
+        <build_type>ament_cmake</build_type>
+    </export>
+>>>>>>> origin/ros2
 </package>

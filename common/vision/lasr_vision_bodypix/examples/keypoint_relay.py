@@ -9,10 +9,19 @@ from lasr_vision_interfaces.srv import BodyPixKeypointDetection
 
 
 class KeypointRelay(Node):
+<<<<<<< HEAD
     def __init__(self, listen_topic, model):
         super().__init__("keypoint_relay")
         self.listen_topic = listen_topic
         self.model = model
+=======
+    def __init__(
+        self,
+        listen_topic,
+    ):
+        super().__init__("keypoint_relay")
+        self.listen_topic = listen_topic
+>>>>>>> origin/ros2
         self.processing = False
 
         # Set up the service client
@@ -26,9 +35,13 @@ class KeypointRelay(Node):
         self.subscription = self.create_subscription(
             Image, self.listen_topic, self.image_callback, 10  # QoS profile
         )
+<<<<<<< HEAD
         self.get_logger().info(
             f"Started listening on topic: {self.listen_topic} with model: {self.model}"
         )
+=======
+        self.get_logger().info(f"Started listening on topic: {self.listen_topic}")
+>>>>>>> origin/ros2
 
     def detect(self, image):
         self.processing = True
@@ -36,7 +49,11 @@ class KeypointRelay(Node):
         # Create a request for the service
         req = BodyPixKeypointDetection.Request()
         req.image_raw = image
+<<<<<<< HEAD
         req.dataset = self.model
+=======
+        # req.dataset = self.model
+>>>>>>> origin/ros2
         req.confidence = 0.7
 
         # Call the service asynchronously
