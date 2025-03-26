@@ -20,11 +20,13 @@ DetectFaces_Request = DetectFaces.Request
 DetectFaces_Response = DetectFaces.Response
 
 
-DATASET_ROOT = os.path.join(
-    "/home/jared/robocup/Base/common/vision/lasr_vision_deepface",
-    "datasets",
-    # get_package_share_directory("lasr_vision_deepface"), "datasets"
-)
+# DATASET_ROOT = os.path.join(
+#     # "/home/jared/robocup/Base/common/vision/lasr_vision_deepface",
+#     # "datasets",
+#      get_package_share_directory("lasr_vision_deepface"), "datasets"
+# )
+PACKAGE_ROOT = os.path.dirname(os.path.abspath(__file__))
+DATASET_ROOT = os.path.join(PACKAGE_ROOT, "datasets")
 
 Mat = np.ndarray
 
