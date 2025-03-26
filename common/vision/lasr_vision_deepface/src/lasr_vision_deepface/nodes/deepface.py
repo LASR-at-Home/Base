@@ -21,7 +21,9 @@ DetectFaces_Response = DetectFaces.Response
 
 
 DATASET_ROOT = os.path.join(
-    get_package_share_directory("lasr_vision_deepface"), "datasets"
+    "/home/jared/robocup/Base/common/vision/lasr_vision_deepface",
+    "datasets",
+    # get_package_share_directory("lasr_vision_deepface"), "datasets"
 )
 
 Mat = np.ndarray
@@ -119,12 +121,13 @@ def recognise(cv_im: Mat, debug_publisher=None, logger=None, cropped_detect_pub=
     try:
         result = DeepFace.find(
             cv_im,
-            os.path.join(DATASET_ROOT, "your_dataset"),  # Make sure this path exists
+            os.path.join(DATASET_ROOT, "receptionist"),  # Make sure this path exists
             enforce_detection=True,
             silent=True,
             detector_backend="mtcnn",
         )
-    except ValueError:
+    except ValueError as e:
+        print(e)
         return response
 
     for row in result:
@@ -133,10 +136,10 @@ def recognise(cv_im: Mat, debug_publisher=None, logger=None, cropped_detect_pub=
         detection = Detection()
         detection.name = row["identity"][0].split("/")[-1].split("_")[0]
         x, y, w, h = (
-            row["source_x"][0],
-            row["source_y"][0],
-            row["source_w"][0],
-            row["source_h"][0],
+            int(row["source_x"][0]),
+            int(row["source_y"][0]),
+            int(row["source_w"][0]),
+            int(row["source_h"][0]),
         )
         detection.xywh = [x, y, w, h]
         detection.confidence = row["distance"][0]

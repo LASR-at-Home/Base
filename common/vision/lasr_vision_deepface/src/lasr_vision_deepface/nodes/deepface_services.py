@@ -26,7 +26,7 @@ class DeepFaceServiceNode(Node):
 
         # Subscribe to live camera feed
         self.subscription = self.create_subscription(
-            Image, "/camera/image_raw", self.image_callback, 10
+            Image, "/head_front_camera/rgb/image_raw", self.image_callback, 10
         )
 
         # Publishers for debugging
@@ -45,36 +45,41 @@ class DeepFaceServiceNode(Node):
 
     def image_callback(self, msg):
         """Processes live images from the camera feed."""
-        try:
-            cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
-            if cv_image is None or cv_image.size == 0:
-                self.get_logger().error(
-                    "Received an empty or corrupted image from the camera."
-                )
-                return
+        # try:
+        cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
+        if cv_image is None or cv_image.size == 0:
+            self.get_logger().error(
+                "Received an empty or corrupted image from the camera."
+            )
+            return
 
+        self.get_logger().info(f"Processing image from camera: shape={cv_image.shape}")
+
+        # Convert Image message to a DetectFaces_Request
+        detect_faces_request = DetectFaces.Request()
+        detect_faces_request.image_raw = msg  # Assign the ROS2 Image message
+
+        # Call detect_faces with the correct request format
+        response = face_recognition.detect_faces(
+            detect_faces_request, self.debug_publisher, self.get_logger()
+        )
+        response = face_recognition.recognise(
+            cv_image,
+            self.debug_inference_pub,
+            self.get_logger(),
+            self.cropped_detect_pub,
+        )
+        print(response)
+
+        if response.detections:
             self.get_logger().info(
-                f"Processing image from camera: shape={cv_image.shape}"
+                f"Detected {len(response.detections)} faces in live camera feed."
             )
+        else:
+            self.get_logger().info("No faces detected in the live feed.")
 
-            # Convert Image message to a DetectFaces_Request
-            detect_faces_request = DetectFaces.Request()
-            detect_faces_request.image_raw = msg  # Assign the ROS2 Image message
-
-            # Call detect_faces with the correct request format
-            response = face_recognition.detect_faces(
-                detect_faces_request, self.debug_publisher, self.get_logger()
-            )
-
-            if response.detections:
-                self.get_logger().info(
-                    f"Detected {len(response.detections)} faces in live camera feed."
-                )
-            else:
-                self.get_logger().info("No faces detected in the live feed.")
-
-        except Exception as e:
-            self.get_logger().error(f"Failed to process camera image: {e}")
+        # except Exception as e:
+        #     self.get_logger().error(f"Failed to process camera image: {e}")
 
     def recognise(self, request: Recognise.Request, response: Recognise.Response):
         """Handles face recognition requests"""

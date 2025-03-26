@@ -10,7 +10,7 @@ def generate_launch_description():
             # Declare launch arguments
             DeclareLaunchArgument(
                 "dataset",
-                default_value="lab",
+                default_value="receptionist",
                 description="Dataset to use for the demo",
             ),
             # Include the face recognition service
@@ -22,25 +22,25 @@ def generate_launch_description():
                     ]
                 )
             ),
-            # Launch V4L2 Camera Node
-            launch_ros.actions.Node(
-                package="v4l2_camera",
-                executable="v4l2_camera_node",
-                name="v4l2_camera_node",
-                output="screen",
-                parameters=[
-                    {
-                        "video_device": "/dev/video0",
-                        "image_width": 640,
-                        "image_height": 480,
-                        "pixel_format": "YUYV",
-                        "frame_rate": 30,
-                    }
-                ],
-                remappings=[
-                    ("/image_raw", "/camera/image_raw")  # Ensure correct topic name
-                ],
-            ),
+            # # Launch V4L2 Camera Node
+            # launch_ros.actions.Node(
+            #     package="v4l2_camera",
+            #     executable="v4l2_camera_node",
+            #     name="v4l2_camera_node",
+            #     output="screen",
+            #     parameters=[
+            #         {
+            #             "video_device": "/dev/video0",
+            #             "image_width": 640,
+            #             "image_height": 480,
+            #             "pixel_format": "YUYV",
+            #             "frame_rate": 30,
+            #         }
+            #     ],
+            #     remappings=[
+            #         ("/image_raw", "/camera/image_raw")  # Ensure correct topic name
+            #     ],
+            # ),
             # Launch rqt_image_view to display the camera feed
             launch_ros.actions.Node(
                 package="rqt_image_view",

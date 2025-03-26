@@ -52,7 +52,12 @@ def msg_to_pillow_img(msg: SensorImage):
         # BGR => RGB
         img = Image.fromarray(np.array(img)[:, :, ::-1])
     elif msg.encoding == "rgb8":
-        img = Image.frombytes("RGB", size, msg.data, "raw")
+        print(f"type: {type(msg.data)}")
+        data = np.frombuffer(msg.data, dtype=np.uint8).reshape(
+            (msg.height, msg.width, 3)
+        )
+        img = Image.fromarray(data)
+        # img = Image.frombytes("RGB", size, msg.data, "raw")
     else:
         raise Exception(f"Unsupported format {msg.encoding}.")
     return img
