@@ -71,9 +71,9 @@ def main(args=None):
 
     # Parse the command-line arguments
 
-    listen_topic = "/image_raw"
-    if isinstance(sys.argv[1], list):
-        listen_topic = sys.argv[1][0]
+    listen_topic = "/head_front_camera/rgb/image_raw"
+    # if isinstance(sys.argv[1], list):
+    #     listen_topic = sys.argv[1][0]
 
     rclpy.init(args=args)
     keypoint_relay_node = KeypointRelay(

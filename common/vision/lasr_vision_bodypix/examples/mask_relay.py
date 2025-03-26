@@ -20,7 +20,6 @@ class MaskRelay(Node):
         )
         while not self.detect_service_client.wait_for_service(timeout_sec=1.0):
             self.get_logger().info("Service not available, waiting...")
-
         # Set up the subscriber
         self.subscription = self.create_subscription(
             Image, self.listen_topic, self.image_callback, 10  # QoS profile
@@ -74,9 +73,10 @@ def main(args=None):
         sys.exit(1)
 
     # Parse the command-line arguments
-    listen_topic = "/image_raw"
-    if isinstance(sys.argv[1], list):
-        listen_topic = sys.argv[1][0]
+    listen_topic = "/head_front_camera/rgb/image_raw"
+    # print(sys.argv, len(sys.argv))
+    # if isinstance(sys.argv[1], list):
+    #     listen_topic = sys.argv[1][0]
 
     rclpy.init(args=args)
     mask_relay_node = MaskRelay(listen_topic)

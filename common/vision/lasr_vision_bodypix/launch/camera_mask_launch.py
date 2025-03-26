@@ -68,7 +68,7 @@ def generate_launch_description():
                 name="mask_relay",
                 output="screen",
                 arguments=[
-                    "/image_raw ",
+                    "/head_front_camera/rgb/image_raw",
                     PythonExpression(
                         [
                             "''.join(",  # Convert model list to a single string
@@ -79,9 +79,9 @@ def generate_launch_description():
                 ],  # Constructs the topic path dynamically],],
             ),
             # Include the v4l2_camera launch file
-            IncludeLaunchDescription(
-                PythonLaunchDescriptionSource(v4l2_camera_launch_file),
-                launch_arguments={"image_size": "640x480"}.items(),
-            ),
+            # IncludeLaunchDescription(
+            #     PythonLaunchDescriptionSource(v4l2_camera_launch_file),
+            #     launch_arguments={"image_size": "640x480"}.items(),
+            # ),
         ]
     )
