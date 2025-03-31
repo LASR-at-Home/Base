@@ -13,13 +13,6 @@ import sys
 def get_pose_from_param(param_name,node):
     #param_name should be a string - top of the dictionary 
 
-    # node.get_parameter(param_name+'.position.x')
-    # node.get_parameter(param_name+'.position.y')
-    # node.get_parameter(param_name+'.position.z')
-    # node.get_parameter(param_name+'.orientation.x')
-    # node.get_parameter(param_name+'.orientation.y')
-    # node.get_parameter(param_name+'.orientation.z')
-    # node.get_parameter(param_name+'.orientation.w')
 
 
 
