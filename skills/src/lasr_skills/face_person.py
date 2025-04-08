@@ -45,7 +45,7 @@ position_dict = {
 inverse_position_dict = {value: key for key, value in position_dict.items()}
 
 
-class AdjustCamera(smach.StateMachine):
+class FacePerson(smach.StateMachine):
     def __init__(
         self, bodypix_confidence=0.7, max_attempts=5, debug=False, init_state="u1m"
     ):
@@ -90,7 +90,7 @@ class AdjustCamera(smach.StateMachine):
 
             smach.StateMachine.add(
                 "DECIDE_ADJUST_CAMERA",
-                self.DecideAdjustCamera(self),
+                self.DecideFacePerson(self),
                 transitions={pos: pos for pos in positions}.update(
                     {
                         "finished": "finished",
@@ -111,7 +111,7 @@ class AdjustCamera(smach.StateMachine):
                     },
                 )
 
-    class DecideAdjustCamera(smach.State):
+    class DecideFacePerson(smach.State):
         def __init__(
             self,
         ):

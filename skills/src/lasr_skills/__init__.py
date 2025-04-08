@@ -19,7 +19,7 @@ from .look_to_point import LookToPoint
 from .play_motion import PlayMotion
 from .go_to_location import GoToLocation
 from .listen import Listen
-from adjust_camera import AdjustCamera
+from .face_person import FacePerson
 from listen import Listen
 
 # from .listen_for import ListenFor
@@ -34,7 +34,6 @@ from .detect_gesture import DetectGesture
 
 # from .look_at_person import LookAtPerson
 # from .wait import Wait
-# from .adjust_camera import AdjustCamera
 # from .guide import Guide
 # from .detect_clothing import DetectClothing
 # from .detect_pose import DetectPose
