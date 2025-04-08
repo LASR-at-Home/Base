@@ -34,3 +34,10 @@ setup(
         ],
     },
 )
+
+
+#     entry_points={
+    #     'console_scripts': [
+    #         "what_we_rosrun = path.executable_file:definition_name"
+    #     ],
+    # },
