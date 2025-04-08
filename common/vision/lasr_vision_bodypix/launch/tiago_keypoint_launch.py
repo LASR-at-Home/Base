@@ -25,12 +25,10 @@ def generate_launch_description():
     return LaunchDescription(
         [
             image_topic_arg,
-
             # Include BodyPix launch file
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(bodypix_launch_file),
             ),
-
             # Show debug topic using rqt_image_view
             Node(
                 package="rqt_image_view",
@@ -38,7 +36,6 @@ def generate_launch_description():
                 name="image_view",
                 output="screen",
             ),
-
             # Start the keypoint relay service
             Node(
                 package="lasr_vision_bodypix",
@@ -49,7 +46,7 @@ def generate_launch_description():
                     {
                         "image_topic": LaunchConfiguration("image_topic"),
                     }
-                ]
+                ],
             ),
         ]
     )

@@ -12,7 +12,9 @@ class KeypointRelay(Node):
     def __init__(self):
         super().__init__("keypoint_relay")
         self.declare_parameter("image_topic", "/head_front_camera/rgb/image_raw")
-        self.listen_topic = self.get_parameter("image_topic").get_parameter_value().string_value
+        self.listen_topic = (
+            self.get_parameter("image_topic").get_parameter_value().string_value
+        )
         self.processing = False
 
         # Set up the service client

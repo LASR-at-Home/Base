@@ -12,7 +12,9 @@ class MaskRelay(Node):
     def __init__(self):
         super().__init__("image_listener")
         self.declare_parameter("image_topic", "/head_front_camera/rgb/image_raw")
-        self.listen_topic = self.get_parameter("image_topic").get_parameter_value().string_value
+        self.listen_topic = (
+            self.get_parameter("image_topic").get_parameter_value().string_value
+        )
         self.processing = False
 
         # Set up the service client
@@ -21,7 +23,7 @@ class MaskRelay(Node):
         )
         while not self.detect_service_client.wait_for_service(timeout_sec=1.0):
             self.get_logger().info("Service not available, waiting...")
-        
+
         # Set up the subscriber
         self.subscription = self.create_subscription(
             Image, self.listen_topic, self.image_callback, 10  # QoS profile
