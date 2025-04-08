@@ -63,7 +63,8 @@ def main(args=None):
     rclpy.init(args=args)
 
     # listen_topic = "/xtion/rgb/image_raw"
-    listen_topic = "/image_raw"
+    # listen_topic = "/image_raw"
+    listen_topic = "/head_front_camera/rgb/image_raw"
     possible_answers = ["Wearing glasses", "Not wearing glasses"]
 
     node = ClipCameraTester(listen_topic, possible_answers)
