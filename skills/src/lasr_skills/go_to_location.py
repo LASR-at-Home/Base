@@ -2,7 +2,7 @@ from typing import Union
 import rclpy
 import smach
 from geometry_msgs.msg import Pose, PoseStamped
-from nav2_simple_commander.robot_navigator import BasicNavigator
+from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
 from std_msgs.msg import Header
 from lasr_skills import AccessNode
 
@@ -33,4 +33,8 @@ class GoToLocation(smach.State):
         while not self.navigator.isTaskComplete():
             rclpy.spin_once(self.navigator)
 
-        return "succeeded" if self.navigator.getResult() == 2 else "failed"
+        return (
+            "succeeded"
+            if self.navigator.getResult() == TaskResult.SUCCEEDED
+            else "failed"
+        )

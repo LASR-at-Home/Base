@@ -31,7 +31,7 @@ set(msg_files
 set(srv_files
   "srv/BodyPixMaskDetection.srv"
   "srv/BodyPixKeypointDetection.srv"
-  "srv/DetectWave.srv"
+  "srv/BodyPixWaveDetection.srv"
   "srv/ClipLearnFace.srv"
   "srv/CroppedDetection.srv"
   "srv/LearnFace.srv"
