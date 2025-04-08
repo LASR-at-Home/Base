@@ -2,7 +2,7 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
 from launch_ros.actions import Node
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration, TextSubstitution,
+from launch.substitutions import LaunchConfiguration, TextSubstitution
 
 import os
 from ament_index_python.packages import get_package_share_directory
@@ -31,12 +31,10 @@ def generate_launch_description():
     return LaunchDescription(
         [
             image_topic_arg,
-
             # Include BodyPix launch file
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(bodypix_launch_file),
             ),
-
             # Show debug topic using rqt_image_view
             Node(
                 package="rqt_image_view",
@@ -44,7 +42,6 @@ def generate_launch_description():
                 name="image_view",
                 output="screen",
             ),
-
             # Start the mask relay service
             Node(
                 package="lasr_vision_bodypix",
@@ -55,9 +52,8 @@ def generate_launch_description():
                     {
                         "image_topic": LaunchConfiguration("image_topic"),
                     }
-                ]
+                ],
             ),
-
             # Include the v4l2_camera launch file
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(v4l2_camera_launch_file),
