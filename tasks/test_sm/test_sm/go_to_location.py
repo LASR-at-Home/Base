@@ -40,10 +40,9 @@ class GoToLocation(smach.State):
         while not self.navigator.isTaskComplete():
             rclpy.spin_once(self.navigator)
 
-        
-
         print("navigator result: ", type(self.navigator.getResult()))
-        return "succeeded" if self.navigator.getResult() == TaskResult.SUCCEEDED else "failed"
-    
-
-
+        return (
+            "succeeded"
+            if self.navigator.getResult() == TaskResult.SUCCEEDED
+            else "failed"
+        )
