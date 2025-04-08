@@ -112,7 +112,7 @@ class DetectWave(RosState):
 
             userdata.wave_detected = is_waving
             userdata.wave_position = wave_position_msg
-        
+
         except Exception as e:
             self.node.get_logger().error(f"Error detecting keypoints: {e}")
             userdata.wave_detected = False
