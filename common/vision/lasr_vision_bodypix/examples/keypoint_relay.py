@@ -9,12 +9,12 @@ from lasr_vision_interfaces.srv import BodyPixKeypointDetection
 
 
 class KeypointRelay(Node):
-    def __init__(
-        self,
-        listen_topic,
-    ):
+    def __init__(self):
         super().__init__("keypoint_relay")
-        self.listen_topic = listen_topic
+        self.declare_parameter("image_topic", "/head_front_camera/rgb/image_raw")
+        self.listen_topic = (
+            self.get_parameter("image_topic").get_parameter_value().string_value
+        )
         self.processing = False
 
         # Set up the service client
@@ -62,23 +62,9 @@ class KeypointRelay(Node):
 
 def main(args=None):
     print("start keypoint_relay")
-    # Check if command-line arguments are sufficient
-    if len(sys.argv) < 2:
-        print(
-            "Usage: ros2 run lasr_vision_bodypix keypoint_relay.py <source_topic> [resnet50|mobilenet50|...]"
-        )
-        sys.exit(1)
-
-    # Parse the command-line arguments
-
-    listen_topic = "/image_raw"
-    if isinstance(sys.argv[1], list):
-        listen_topic = sys.argv[1][0]
 
     rclpy.init(args=args)
-    keypoint_relay_node = KeypointRelay(
-        listen_topic,
-    )
+    keypoint_relay_node = KeypointRelay()
     keypoint_relay_node.get_logger().info("Keypoint relay node started")
 
     try:
