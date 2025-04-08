@@ -35,14 +35,15 @@ def camel_to_snake(name):
     return re.sub(r"(?<!^)(?=[A-Z])", "_", name).lower()
 
 
-def load_model():
+def load_model_cached():
     """
     Load resnet 50 model.
     """
     name = download_model(BodyPixModelPaths.RESNET50_FLOAT_STRIDE_16)
-    model = bp_load_model(name)
-    model_cache[name] = model
-    return model
+    if not name in model_cache.keys():
+        model = bp_load_model(name)
+        model_cache[name] = model
+    return model_cache[name]
 
 
 # def run_inference(dataset: str, confidence: float, img: SensorImage, logger=None):
@@ -58,7 +59,7 @@ def run_inference(confidence: float, img: SensorImage, logger=None):
     # Load model
     if logger:
         logger.info("Loading model")
-    model = load_model()
+    model = load_model_cached()
 
     # Run inference
     if logger:

@@ -21,9 +21,7 @@ class BodyPixServiceNode(Node):
     def __init__(self):
         super().__init__("bodypix_service_node")
 
-        bodypix.load_model_cached(
-            "resnet50"
-        )  # by calling this the model will be loaded and cached
+        bodypix.load_model_cached()  # by calling this the model will be loaded and cached
 
         # Create service servers
         self.mask_service = self.create_service(
