@@ -4,7 +4,6 @@ import rclpy
 from ros_state import RosState
 from sensor_msgs.msg import Image
 from lasr_vision_msgs.srv import YoloDetection
-from lasr_skills import AccessNode
 
 from typing import List, Union
 
@@ -26,7 +25,6 @@ class Detect(RosState):
             input_keys=["img_msg"],
             output_keys=["detections"],
         )
-        self.node = AccessNode.get_node()
         self.model = model
         self.filter = filter if filter is not None else []
         self.confidence = confidence
