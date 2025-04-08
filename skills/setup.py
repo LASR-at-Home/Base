@@ -27,6 +27,7 @@ setup(
             # "look_to_point = src.lasr_skills.look_to_point:main",
             "get_image = lasr_skills.vision.get_image:main",
             "wait_state = lasr_skills.wait:main",
+            "say = lasr_skills.say:main",
         ],
     },
 )
