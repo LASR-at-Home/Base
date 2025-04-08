@@ -3,7 +3,8 @@ from rclpy.node import Node
 from rclpy.task import Future
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy
 
-
+# please place the AccessNode on top to avoide circular error
+from .access_node import AccessNode
 from .wait import Wait
 from .detect import Detect
 
@@ -44,27 +45,3 @@ from .detect_gesture import DetectGesture
 # from .count_people import CountPeople
 # from .json_qa import JsonQuestionAnswer
 # from .rotate import Rotate
-
-
-
-# class AccessNode(Node):
-#     """
-#     Class to  create and access the node to avoid duplications
-#     """
-
-#     _node = None  # Static variable to hold the node instance
-
-#     @staticmethod
-#     def get_node():
-#         """Returns the singleton ROS 2 node instance, creating it if necessary."""
-#         if AccessNode._node is None:
-#             AccessNode._node = Node("skills_access_node")
-#         return AccessNode._node
-
-#     @staticmethod
-#     def shutdown():
-#         """Shuts down the singleton node properly."""
-#         if AccessNode._node is not None:
-#             AccessNode._node.destroy_node()
-#             AccessNode._node = None
-#             AccessNode.shutdown()
