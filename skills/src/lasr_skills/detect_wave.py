@@ -1,6 +1,6 @@
 from typing import Union
 import rclpy
-import smach
+from ros_state import RosState
 from geometry_msgs.msg import Pose, PoseStamped
 from std_msgs.msg import Header
 from lasr_skills import AccessNode
@@ -15,8 +15,8 @@ class DetectWave(smach.State):
     def __init__(self, confidence: float):
         super().__init__(
             outcomes=["succeeded", "failed"],
-            input_keys = ["pcl_msg"],
-            output_keys = ["wave_detected", "wave_position"],
+            input_keys=["pcl_msg"],
+            output_keys=["wave_detected", "wave_position"],
         )
         self.node = AccessNode.get_node()
         self.confidence = confidence
@@ -25,6 +25,7 @@ class DetectWave(smach.State):
         if not "pcl_msg" in userdata:
             self.node.get_logger().error(f"PCL message doesn't exist!")
         pcl_msg = userdata.pcl_msg
+
         try:
             # Prepare request for keypoint detection
             bp_req = BodyPixKeypointDetection.Request()
@@ -34,7 +35,9 @@ class DetectWave(smach.State):
 
             # Call BodyPix keypoint detection
             detected_keypoints = bodypix.detect_keypoints(
-                bp_req, debug_publisher=self.debug_publisher, logger=self.node.get_logger()
+                bp_req,
+                debug_publisher=self.debug_publisher,
+                logger=self.node.get_logger(),
             ).keypoints
 
             gesture_to_detect = None
@@ -47,7 +50,10 @@ class DetectWave(smach.State):
                 if keypoint_info["leftWrist"]["y"] < keypoint_info["leftShoulder"]["y"]:
                     gesture_to_detect = "raising_left_arm"
             if "rightShoulder" in keypoint_info and "rightWrist" in keypoint_info:
-                if keypoint_info["rightWrist"]["y"] < keypoint_info["rightShoulder"]["y"]:
+                if (
+                    keypoint_info["rightWrist"]["y"]
+                    < keypoint_info["rightShoulder"]["y"]
+                ):
                     gesture_to_detect = "raising_right_arm"
 
             if gesture_to_detect is not None:
@@ -62,6 +68,28 @@ class DetectWave(smach.State):
             pcl_xyz = rnp.point_cloud2.pointcloud2_to_xyz_array(
                 request.pcl_msg, remove_nans=False
             )
+
+            wave_position = np.zeros(3)
+            for i in range(-5, 5):
+                for j in range(-5, 5):
+                    if np.any(
+                        np.isnan(
+                            pcl_xyz[int(wave_point["y"]) + i][int(wave_point["x"]) + j]
+                        )
+                    ):
+                        self.get_logger().warn("NaN point in PCL")
+                        continue
+                    wave_position += pcl_xyz[int(wave_point["y"]) + i][
+                        int(wave_point["x"]) + j
+                    ]
+            wave_position /= 100
+            wave_position_msg = PointStamped(
+                point=Point(*wave_position),
+                header=Header(frame_id=request.pcl_msg.header.frame_id),
+            )
+            self.get_logger().info(f"Wave point: {wave_position_msg}")
+
+            is_waving = gesture_to_detect is not None
         except Exception as e:
             self.node.get_logger().error(f"Error detecting keypoints: {e}")
             return BodyPixWaveDetection.Response()
