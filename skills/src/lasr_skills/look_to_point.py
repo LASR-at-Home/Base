@@ -30,7 +30,7 @@ class LookToPoint(smach.State):
         )
         self.goal_future = None
         self.result_future = None
-        self.get_logger().info("Created State")
+        self.node.get_logger().info("Created State")
 
         self.client.wait_for_server()
 
@@ -48,7 +48,7 @@ class LookToPoint(smach.State):
         )
 
         # Send the goal
-        self.get_logger().info("Sending goal")
+        self.node.get_logger().info("Sending goal")
         future = self.client.send_goal_async(
             goal
         )  # can't call send_goal in cb because of deadlock

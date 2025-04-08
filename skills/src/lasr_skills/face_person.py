@@ -61,7 +61,7 @@ class FacePerson(smach.StateMachine):
             BodyPixKeypointDetection, "/bodypix/keypoint_detection"
         )
         while not self.bodypix_client.wait_for_service(timeout_sec=1.0):
-            self.get_logger().info("Waiting for BodyPixKeypointDetection service...")
+            self.node.get_logger().info("Waiting for BodyPixKeypointDetection service...")
 
         self.position = [i for i in inverse_position_dict[init_state]]
         self.max_attempts = max_attempts
