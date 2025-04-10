@@ -4,7 +4,6 @@ import cv2
 import cv2_img
 from lasr_vision_interfaces.srv import BodyPixKeypointDetection
 from sensor_msgs.msg import Image
-import tf2_ros as tf
 from visualization_msgs.msg import Marker
 from .vision.get_image import GetImage
 from typing import Union
@@ -128,6 +127,26 @@ class DetectGesture(RosState):
                 "succeeded" if detected_gesture == self.gesture_to_detect else "failed"
             )
         else:
+            return "succeeded"
+
+
+class ProcessPointingDirection(RosState):
+        def __init__(self, node):
+            super().__init__(
+                self,
+                node,
+                outcomes=["succeeded", "failed"],
+                input_keys=["gesture_detected"],
+                output_keys=["pointing_direction"],
+            )
+
+        def execute(self, userdata):
+            if userdata.gesture_detected == "pointing_to_the_left":
+                userdata.pointing_direction = "left"
+            elif userdata.gesture_detected == "pointing_to_the_right":
+                userdata.pointing_direction = "right"
+            else:
+                return "failed"
             return "succeeded"
 
 

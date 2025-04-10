@@ -1,5 +1,3 @@
-from typing import Union
-import rclpy
 from ros_state import RosState
 from std_msgs.msg import Header
 from cv2_pcl import pcl_to_img_msg
