@@ -1,5 +1,6 @@
 from ros_state import RosState
 import rclpy
+from rclpy.wait_for_message import wait_for_message
 from typing import Optional
 from sensor_msgs.msg import Image, PointCloud2
 
@@ -30,7 +31,7 @@ class GetImage(RosState):
             rclpy.init()
 
         try:
-            msg = self.node.wait_for_message(self.topic, Image)
+            msg = wait_for_message(Image, self.node, self.topic)
             if msg is not None:
                 userdata.img_msg = msg
             else:
@@ -71,7 +72,7 @@ class GetPointCloud(RosState):
             rclpy.init()
         try:
             userdata.pcl_msg = None
-            userdata.pcl_msg = self.node.wait_for_message(self.topic, PointCloud2)
+            userdata.pcl_msg = wait_for_message(PointCloud2, self.node, self.topic)
             if userdata.pcl_msg is None:
                 return "failed"
         except Exception as e:
@@ -100,8 +101,8 @@ class GetImageAndPointCloud(RosState):
         if not rclpy.ok():
             rclpy.init()
         try:
-            userdata.img_msg = self.node.wait_for_message(self.topic1, Image)
-            userdata.pcl_msg = self.node.wait_for_message(self.topic2, PointCloud2)
+            userdata.img_msg = wait_for_message(Image, self.node, self.topic1)
+            userdata.pcl_msg = wait_for_message(PointCloud2, self.node, self.topic2)
 
             if userdata.img_msg is None or userdata.pcl_msg is None:
                 return "failed"
