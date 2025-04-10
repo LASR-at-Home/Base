@@ -1,28 +1,25 @@
-import os
-import smach
+from ros_state import RosState
 import cv2_img
 import cv2_pcl
-import rclpy
-from lasr_skills import AccessNode
 
 # from .get_image import GetImage, ROS2HelperNode, GetPointCloud
 # from .image_cv2_to_msg import ImageCv2ToMsg
 
 
-class ImageMsgToCv2(smach.State):
+class ImageMsgToCv2(RosState):
     """
     State for converting a sensor Image message to cv2 format
     """
 
-    def __init__(self):
-        smach.State.__init__(
+    def __init__(self, node):
+        super().__init__(
             # self, outcomes=["succeeded", "failed"], input_keys=["img_msg", "img"], output_keys=["img"]
             self,
+            node,
             outcomes=["succeeded", "failed"],
             input_keys=["img_msg"],
             output_keys=["img"],
         )
-        self.node = AccessNode.get_node()
 
     def execute(self, userdata):
         userdata.img = cv2_img.msg_to_cv2_img(userdata.img_msg)
@@ -30,19 +27,19 @@ class ImageMsgToCv2(smach.State):
         return "succeeded"
 
 
-class PclMsgToCv2(smach.State):
+class PclMsgToCv2(RosState):
     """
     State for converting a sensor Image message to cv2 format
     """
 
-    def __init__(self):
-        smach.State.__init__(
+    def __init__(self, node):
+        super().__init__(
             self,
+            node,
             outcomes=["succeeded", "failed"],
             input_keys=["img_msg_3d"],
             output_keys=["img", "xyz"],
         )
-        self.node = AccessNode.get_node()
 
     def execute(self, userdata):
         userdata.img = cv2_pcl.pcl_to_cv2(userdata.img_msg_3d)

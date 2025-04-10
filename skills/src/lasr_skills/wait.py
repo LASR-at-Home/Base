@@ -1,20 +1,17 @@
 """Generic wait state for waiting a desired number of seconds"""
 
 import rclpy
-import smach
+from ros_state import RosState
 from time import sleep
-from lasr_skills import AccessNode
 
 
-class Wait(smach.State):
-    def __init__(self, wait_time: int):
+class Wait(RosState):
+    def __init__(self, node, wait_time: int):
         """
         Args:
             wait_time (int): Number of seconds to wait for and remain idle
         """
-        smach.State.__init__(self, outcomes=["succeeded", "failed"])
-
-        self.node = AccessNode.get_node()
+        super().__init__(self, node, outcomes=["succeeded", "failed"])
 
         if not rclpy.ok():
             rclpy.init()
@@ -30,25 +27,3 @@ class Wait(smach.State):
         except:
             self._logger.error("Waiting failed")
             return "failed"
-
-
-# class WaitStateNode(Node):
-#     def __init__(self):
-#         super().__init__("wait_state_node")
-
-#         sm = smach.StateMachine(outcomes=["succeeded", "failed"])
-
-#         with sm:
-#             smach.StateMachine.add("WAIT", Wait(wait_time=5), transitions={"succeeded": "succeeded", "failed": "failed"})
-
-#         outcome = sm.execute()
-
-# def main():
-#     rclpy.init()
-#     node = WaitStateNode()
-#     rclpy.spin(node)
-#     node.destroy_node()
-#     rclpy.shutdown()
-
-# if __name__ == "__main__":
-#     main()

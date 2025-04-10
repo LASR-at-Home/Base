@@ -1,35 +1,37 @@
-import smach
+from ros_state import RosState
 import rclpy
+from rclpy.wait_for_message import wait_for_message
 from typing import Optional
 from sensor_msgs.msg import Image, PointCloud2
-from lasr_skills import AccessNode
 
 
-class GetImage(smach.State):
+class GetImage(RosState):
     """
     State for reading an sensor_msgs Image message
     """
 
-    def __init__(self, topic: Optional[str] = None):
-        smach.State.__init__(
+    def __init__(self, node, topic: Optional[str] = None):
+        super().__init__(
             self,
+            node,
             outcomes=["succeeded", "failed"],
             output_keys=["img_msg"],
             input_keys=["img_msg"],
         )
-        self.node = AccessNode.get_node()
 
-        self.topic = topic or "/xtion/rgb/image_raw"
-        # self.topic = topic or "/image_raw"
-        # TODO check if tiago is in environment
-        # else "/usb_cam/image_raw", self.topic = topic
+        self.node.declare_parameter("image_topic", "/head_front_camera/rgb/image_raw")
+        self.topic = (
+            topic
+            if topic
+            else self.get_parameter("image_topic").get_parameter_value().string_value
+        )
 
     def execute(self, userdata):
         if not rclpy.ok():
             rclpy.init()
 
         try:
-            msg = self.node.wait_for_message(self.topic, Image)
+            msg = wait_for_message(Image, self.node, self.topic)
             if msg is not None:
                 userdata.img_msg = msg
             else:
@@ -40,57 +42,54 @@ class GetImage(smach.State):
         except Exception as e:
             self.node.get_logger().error(str(e))
             return "failed"
-        # I wonder if we should destroy the node if we only have one node now?
-        # finally:
-        #     if self.node is not None:
-        #         self.node.destroy_node()
         print(userdata.img_msg)
         return "succeeded"
 
 
-class GetPointCloud(smach.State):
+class GetPointCloud(RosState):
     """
     State for acquiring a PointCloud2 message.
     """
 
-    def __init__(self, topic: Optional[str] = None):
-        smach.State.__init__(
+    def __init__(self, node, topic: Optional[str] = None):
+        super().__init__(
             self,
+            node,
             outcomes=["succeeded", "failed"],
             output_keys=["pcl_msg"],
             input_keys=["pcl_msg"],
         )
-        self.node = AccessNode.get_node()
 
-        self.topic = topic or "/xtion/depth_registered/pints"
+        self.node.declare_parameter("image_topic", "/head_front_camera/rgb/image_raw")
+        self.topic = (
+            topic
+            if topic
+            else self.get_parameter("image_topic").get_parameter_value().string_value
+        )
 
     def execute(self, userdata):
         if not rclpy.ok():
             rclpy.init()
         try:
             userdata.pcl_msg = None
-            userdata.pcl_msg = self.node.wait_for_message(self.topic, PointCloud2)
+            userdata.pcl_msg = wait_for_message(PointCloud2, self.node, self.topic)
             if userdata.pcl_msg is None:
                 return "failed"
         except Exception as e:
             self.node.get_logger().error(str(e))
             return "failed"
-        # finally:
-        #     if self.node is not None:
-        #         self.node.destroy_node()
-
         return "succeeded"
 
 
-class GetImageAndPointCloud(smach.State):
-    def __init__(self):
-        smach.State.__init__(
+class GetImageAndPointCloud(RosState):
+    def __init__(self, node):
+        super().__init__(
             self,
+            node,
             outcomes=["succeeded", "failed"],
             output_keys=["img_msg", "pcl_msg"],
             input_keys=["img_msg", "pcl_msg"],
         )
-        self.node = AccessNode.get_node()
 
         self.topic1 = "/xtion/rgb/image_raw"
         self.topic2 = "/xtion/depth_registered/points"
@@ -102,17 +101,14 @@ class GetImageAndPointCloud(smach.State):
         if not rclpy.ok():
             rclpy.init()
         try:
-            userdata.img_msg = self.node.wait_for_message(self.topic1, Image)
-            userdata.pcl_msg = self.node.wait_for_message(self.topic2, PointCloud2)
+            userdata.img_msg = wait_for_message(Image, self.node, self.topic1)
+            userdata.pcl_msg = wait_for_message(PointCloud2, self.node, self.topic2)
 
             if userdata.img_msg is None or userdata.pcl_msg is None:
                 return "failed"
         except Exception as e:
             self.node.get_logger().error(str(e))
             return "failed"
-        # finally:
-        #     if self.node is not None:
-        #         self.node.destroy_node()
 
         return "succeeded"
 
