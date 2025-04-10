@@ -47,7 +47,7 @@ class ReceiveObject(smach.StateMachine):
 
             smach.StateMachine.add(
                 "LOOK_LEFT",
-                PlayMotion(motion_name="look_left"),
+                PlayMotion(node=Node, motion_name="look_left"),
                 transitions={
                     "succeeded": "LOOK_DOWN_LEFT",
                     "aborted": "failed",
@@ -57,7 +57,7 @@ class ReceiveObject(smach.StateMachine):
 
             smach.StateMachine.add(
                 "LOOK_DOWN_LEFT",
-                PlayMotion(motion_name="look_down_left"),
+                PlayMotion(node=Node, motion_name="look_down_left"),
                 transitions={
                     "succeeded": "LOOK_RIGHT",
                     "aborted": "failed",
@@ -77,17 +77,17 @@ class ReceiveObject(smach.StateMachine):
 
             smach.StateMachine.add(
                 "LOOK_DOWN_RIGHT",
-                PlayMotion(motion_name="look_down_right"),
+                PlayMotion(node=Node, motion_name="look_down_right"),
                 transitions={
                     "succeeded": "LOOK_DOWN_CENTRE",
                     "aborted": "failed",
                     "preempted": "failed",
                 },
             )
-
+            # TODO: check whether the motion name for state LOOK_DOWN_CENTRE in ROS1 was look_centre is not look_down_centre on purpose and not just a mistake 
             smach.StateMachine.add(
                 "LOOK_DOWN_CENTRE",
-                PlayMotion(motion_name="look_centre"),
+                PlayMotion(node=Node, motion_name="look_centre"),
                 transitions={
                     "succeeded": "LOOK_CENTRE",
                     "aborted": "failed",
@@ -97,7 +97,7 @@ class ReceiveObject(smach.StateMachine):
 
             smach.StateMachine.add(
                 "LOOK_CENTRE",
-                PlayMotion(motion_name="look_centre"),
+                PlayMotion(node=Node, motion_name="look_centre"),
                 transitions={
                     "succeeded": "SAY_REACH_ARM",
                     "aborted": "failed",
@@ -107,7 +107,7 @@ class ReceiveObject(smach.StateMachine):
 
             smach.StateMachine.add(
                 "SAY_REACH_ARM",
-                Say(text="Please step back, I am going to reach my arm out."),
+                Say(node=Node, text="Please step back, I am going to reach my arm out."),
                 transitions={
                     "succeeded": "REACH_ARM",
                     "aborted": "REACH_ARM",
@@ -118,7 +118,7 @@ class ReceiveObject(smach.StateMachine):
             if vertical:
                 smach.StateMachine.add(
                     "REACH_ARM",
-                    PlayMotion(motion_name="reach_arm_vertical_gripper"),
+                    PlayMotion(node=Node, motion_name="reach_arm_vertical_gripper"),
                     transitions={
                         "succeeded": "OPEN_GRIPPER",
                         "aborted": "failed",
@@ -128,7 +128,7 @@ class ReceiveObject(smach.StateMachine):
             else:
                 smach.StateMachine.add(
                     "REACH_ARM",
-                    PlayMotion(motion_name="reach_arm_horizontal_gripper"),
+                    PlayMotion(node=Node, motion_name="reach_arm_horizontal_gripper"),
                     transitions={
                         "succeeded": "OPEN_GRIPPER",
                         "aborted": "failed",
@@ -138,7 +138,7 @@ class ReceiveObject(smach.StateMachine):
 
             smach.StateMachine.add(
                 "OPEN_GRIPPER",
-                PlayMotion(motion_name="open_gripper"),
+                PlayMotion(node=Node, motion_name="open_gripper"),
                 transitions={
                     "succeeded": "SAY_PLACE",
                     "aborted": "failed",
@@ -150,6 +150,7 @@ class ReceiveObject(smach.StateMachine):
                 smach.StateMachine.add(
                     "SAY_PLACE",
                     Say(
+                        node=Node,
                         text=f"Please place the {object_name} in my hand. I will wait for a few seconds.",
                     ),
                     transitions={
@@ -162,6 +163,7 @@ class ReceiveObject(smach.StateMachine):
                 smach.StateMachine.add(
                     "SAY_PLACE",
                     Say(
+                        node=Node,
                         format_str="Please place the {} in my hand. I will wait for a few seconds.",
                     ),
                     transitions={
@@ -192,7 +194,7 @@ class ReceiveObject(smach.StateMachine):
             )
             smach.StateMachine.add(
                 "FOLD_ARM",
-                PlayMotion(motion_name="cml_arm_away"),
+                PlayMotion(node=Node, motion_name="cml_arm_away"),
                 transitions={
                     "succeeded": "succeeded",
                     "aborted": "failed",
