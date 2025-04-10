@@ -293,15 +293,15 @@ def filter_detections_by_polygon(
 
 
 def process_single_detection_request(
-        node,
-        request: CDRequest,
-        rgb_image_topic: str = "/xtion/rgb/image_raw",
-        depth_image_topic: str = "/xtion/depth_registered/points",
-        yolo_2d_service_name: str = "/yolov8/detect",
-        yolo_3d_service_name: str = "/yolov8/detect3d",
-        robot_pose_topic: str = "/robot_pose",
-        debug_topic: str = "/lasr_vision/cropped_detection/debug",
-    ) -> CDResponse:
+    node,
+    request: CDRequest,
+    rgb_image_topic: str = "/xtion/rgb/image_raw",
+    depth_image_topic: str = "/xtion/depth_registered/points",
+    yolo_2d_service_name: str = "/yolov8/detect",
+    yolo_3d_service_name: str = "/yolov8/detect3d",
+    robot_pose_topic: str = "/robot_pose",
+    debug_topic: str = "/lasr_vision/cropped_detection/debug",
+) -> CDResponse:
     """Dispatches a detection request to the appropriate bounding box/mask 2D or 3D cropped
     detection function.
 
@@ -330,9 +330,13 @@ def process_single_detection_request(
     if request.method in valid_2d_crop_methods:
         key = "2d"
         if key not in yolo_client_cache:
-            yolo_client_cache[key] = node.create_client(YoloDetection, yolo_2d_service_name)
+            yolo_client_cache[key] = node.create_client(
+                YoloDetection, yolo_2d_service_name
+            )
             while not yolo_client_cache[key].wait_for_service(timeout_sec=1.0):
-                node.get_logger().info(f"Service [{yolo_2d_service_name}] not available, waiting...")
+                node.get_logger().info(
+                    f"Service [{yolo_2d_service_name}] not available, waiting..."
+                )
 
         yolo_2d_client = yolo_client_cache[key]
 
@@ -341,7 +345,9 @@ def process_single_detection_request(
         else:
             success, rgb_image = wait_for_message(Image, node, rgb_image_topic)
             if not success:
-                node.get_logger().error(f"Failed to receive rgb image from {rgb_image_topic}")
+                node.get_logger().error(
+                    f"Failed to receive rgb image from {rgb_image_topic}"
+                )
                 return response
 
         rgb_cv2 = msg_to_cv2_img(rgb_image)
@@ -353,12 +359,18 @@ def process_single_detection_request(
         req.yolo_nms_threshold = request.yolo_nms_threshold
 
         res = yolo_2d_client.call(req)
-        detections = [det for det in res.detected_objects if det.name in request.object_names]
+        detections = [
+            det for det in res.detected_objects if det.name in request.object_names
+        ]
 
         if request.use_mask:
-            cropped_images, combined_mask, detections, distances = _2d_mask_crop(rgb_cv2, request.method, detections)
+            cropped_images, combined_mask, detections, distances = _2d_mask_crop(
+                rgb_cv2, request.method, detections
+            )
         else:
-            cropped_images, detections, distances = _2d_bbox_crop(rgb_cv2, request.method, detections)
+            cropped_images, detections, distances = _2d_bbox_crop(
+                rgb_cv2, request.method, detections
+            )
 
         response.detections_2d = detections
         if request.return_sensor_reading:
@@ -367,24 +379,36 @@ def process_single_detection_request(
     elif request.method in valid_3d_crop_methods:
         key = "3d"
         if key not in yolo_client_cache:
-            yolo_client_cache[key] = node.create_client(YoloDetection3D, yolo_3d_service_name)
+            yolo_client_cache[key] = node.create_client(
+                YoloDetection3D, yolo_3d_service_name
+            )
             while not yolo_client_cache[key].wait_for_service(timeout_sec=1.0):
-                node.get_logger().info(f"Service [{yolo_3d_service_name}] not available, waiting...")
+                node.get_logger().info(
+                    f"Service [{yolo_3d_service_name}] not available, waiting..."
+                )
 
         yolo_3d_client = yolo_client_cache[key]
 
-        success, robot_pose = wait_for_message(PoseWithCovarianceStamped, node, robot_pose_topic)
+        success, robot_pose = wait_for_message(
+            PoseWithCovarianceStamped, node, robot_pose_topic
+        )
         if not success:
-            node.get_logger().error(f"Failed to receive robot pose from {robot_pose_topic}")
+            node.get_logger().error(
+                f"Failed to receive robot pose from {robot_pose_topic}"
+            )
             return response
         robot_location = robot_pose.pose.pose.position
 
         if request.pointcloud.data:
             pointcloud_msg = request.pointcloud
         else:
-            success, pointcloud_msg = wait_for_message(PointCloud2, node, depth_image_topic)
+            success, pointcloud_msg = wait_for_message(
+                PointCloud2, node, depth_image_topic
+            )
             if not success:
-                node.get_logger().error(f"Failed to receive pointcloud from {depth_image_topic}")
+                node.get_logger().error(
+                    f"Failed to receive pointcloud from {depth_image_topic}"
+                )
                 return response
 
         pointcloud_rgb = pcl_to_cv2(pointcloud_msg)
@@ -396,18 +420,24 @@ def process_single_detection_request(
         req.yolo_nms_threshold = request.yolo_nms_threshold
 
         res = yolo_3d_client.call(req)
-        detections = [det for det in res.detected_objects if det.name in request.object_names]
+        detections = [
+            det for det in res.detected_objects if det.name in request.object_names
+        ]
 
         if request.polygons:
-            detections, polygon_ids = filter_detections_by_polygon(detections, request.polygons)
+            detections, polygon_ids = filter_detections_by_polygon(
+                detections, request.polygons
+            )
             response.polygon_ids = polygon_ids
 
         if request.use_mask:
             cropped_images, combined_mask, detections, distances = _3d_mask_crop(
-                pointcloud_rgb, request.method, robot_location, detections)
+                pointcloud_rgb, request.method, robot_location, detections
+            )
         else:
             cropped_images, detections, distances = _3d_bbox_crop(
-                pointcloud_rgb, request.method, robot_location, detections)
+                pointcloud_rgb, request.method, robot_location, detections
+            )
 
         response.detections_3d = detections
         if request.return_sensor_reading:
@@ -423,7 +453,9 @@ def process_single_detection_request(
 
     debug_publisher = node.create_publisher(Image, debug_topic, 10)
     closest_pub = node.create_publisher(Image, debug_topic + "_closest", 10)
-    combined_mask_debug_publisher = node.create_publisher(Image, debug_topic + "_mask", 10)
+    combined_mask_debug_publisher = node.create_publisher(
+        Image, debug_topic + "_mask", 10
+    )
 
     # Tile the images for debugging purposes
     if combined_mask is not None:
@@ -474,15 +506,15 @@ def process_single_detection_request(
 
 
 def process_detection_requests(
-        node,
-        request: CroppedDetection_Request,
-        rgb_image_topic: str = "/xtion/rgb/image_raw",
-        depth_image_topic: str = "/xtion/depth_registered/points",
-        yolo_2d_service_name: str = "/yolov8/detect",
-        yolo_3d_service_name: str = "/yolov8/detect3d",
-        robot_pose_topic: str = "/robot_pose",
-        debug_topic: str = "/lasr_vision/cropped_detection/debug",
-    ) -> CroppedDetection_Response:
+    node,
+    request: CroppedDetection_Request,
+    rgb_image_topic: str = "/xtion/rgb/image_raw",
+    depth_image_topic: str = "/xtion/depth_registered/points",
+    yolo_2d_service_name: str = "/yolov8/detect",
+    yolo_3d_service_name: str = "/yolov8/detect3d",
+    robot_pose_topic: str = "/robot_pose",
+    debug_topic: str = "/lasr_vision/cropped_detection/debug",
+) -> CroppedDetection_Response:
     """Processes a list of detection requests.
 
     Args:

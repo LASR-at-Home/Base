@@ -131,23 +131,23 @@ class DetectGesture(RosState):
 
 
 class ProcessPointingDirection(RosState):
-        def __init__(self, node):
-            super().__init__(
-                self,
-                node,
-                outcomes=["succeeded", "failed"],
-                input_keys=["gesture_detected"],
-                output_keys=["pointing_direction"],
-            )
+    def __init__(self, node):
+        super().__init__(
+            self,
+            node,
+            outcomes=["succeeded", "failed"],
+            input_keys=["gesture_detected"],
+            output_keys=["pointing_direction"],
+        )
 
-        def execute(self, userdata):
-            if userdata.gesture_detected == "pointing_to_the_left":
-                userdata.pointing_direction = "left"
-            elif userdata.gesture_detected == "pointing_to_the_right":
-                userdata.pointing_direction = "right"
-            else:
-                return "failed"
-            return "succeeded"
+    def execute(self, userdata):
+        if userdata.gesture_detected == "pointing_to_the_left":
+            userdata.pointing_direction = "left"
+        elif userdata.gesture_detected == "pointing_to_the_right":
+            userdata.pointing_direction = "right"
+        else:
+            return "failed"
+        return "succeeded"
 
 
 def main(args=None):

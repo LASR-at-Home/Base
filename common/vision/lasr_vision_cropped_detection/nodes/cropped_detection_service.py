@@ -20,13 +20,19 @@ class CroppedDetectionService(Node):
             self.get_parameter("image_topic").get_parameter_value().string_value
         )
 
-        self.create_service(CroppedDetection, "/vision/cropped_detection", self.cropped_detection_callback)
+        self.create_service(
+            CroppedDetection,
+            "/vision/cropped_detection",
+            self.cropped_detection_callback,
+        )
         self.get_logger().info("Cropped Detection service started")
 
     def cropped_detection_callback(self, request, response):
         self.get_logger().info("Received cropped detection request, dispatching...")
 
-        response = process_detection_requests(self, request, rgb_image_topic=self.listen_topic)
+        response = process_detection_requests(
+            self, request, rgb_image_topic=self.listen_topic
+        )
 
         self.get_logger().info("Cropped detection request processed")
         return response
