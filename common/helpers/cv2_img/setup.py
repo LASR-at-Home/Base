@@ -23,6 +23,6 @@ setup(
         "console_scripts": [
             # Add any scripts you want to be able to run from the command line
             # Example: 'script_name = cv2_img.script_module:main'
-        ],
+        ]
     },
 )

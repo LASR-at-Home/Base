@@ -12,12 +12,10 @@ from lasr_vision_interfaces.msg import (
     BodyPixKeypoint,
     BodyPixKeypointNormalized,
 )
-from lasr_vision_interfaces.srv import (
-    BodyPixMaskDetection,
-    BodyPixKeypointDetection,
-)
+from lasr_vision_interfaces.srv import BodyPixMaskDetection, BodyPixKeypointDetection
 from sensor_msgs.msg import Image as SensorImage
-from tf_bodypix.api import download_model, load_model, BodyPixModelPaths
+from tf_bodypix.api import download_model, BodyPixModelPaths
+from tf_bodypix.api import load_model as bp_load_model
 
 BodyPixKeypointDetection_Request = BodyPixKeypointDetection.Request()
 BodyPixKeypointDetection_Response = BodyPixKeypointDetection.Response()
@@ -25,7 +23,7 @@ BodyPixMaskDetection_Request = BodyPixMaskDetection.Request()
 BodyPixMaskDetection_Response = BodyPixMaskDetection.Response()
 
 # model cache
-loaded_models = {}
+model_cache = dict()
 
 
 def snake_to_camel(snake_str):
@@ -37,30 +35,19 @@ def camel_to_snake(name):
     return re.sub(r"(?<!^)(?=[A-Z])", "_", name).lower()
 
 
-def load_model_cached(dataset: str):
+def load_model_cached():
     """
-    Load a model into cache
+    Load resnet 50 model.
     """
-    model = None
-    if dataset in loaded_models:
-        model = loaded_models[dataset]
-    else:
-        if dataset == "resnet50":
-            name = download_model(BodyPixModelPaths.RESNET50_FLOAT_STRIDE_16)
-            model = load_model(name)
-        elif dataset == "mobilenet50":
-            name = download_model(BodyPixModelPaths.MOBILENET_FLOAT_50_STRIDE_8)
-            model = load_model(name)
-        elif dataset == "mobilenet100":
-            name = download_model(BodyPixModelPaths.MOBILENET_FLOAT_100_STRIDE_8)
-            model = load_model(name)
-        else:
-            model = load_model(dataset)
-        loaded_models[dataset] = model
-    return model
+    name = download_model(BodyPixModelPaths.RESNET50_FLOAT_STRIDE_16)
+    if not name in model_cache.keys():
+        model = bp_load_model(name)
+        model_cache[name] = model
+    return model_cache[name]
 
 
-def run_inference(dataset: str, confidence: float, img: SensorImage, logger=None):
+# def run_inference(dataset: str, confidence: float, img: SensorImage, logger=None):
+def run_inference(confidence: float, img: SensorImage, logger=None):
     """
     Run inference on an image.
     """
@@ -72,7 +59,7 @@ def run_inference(dataset: str, confidence: float, img: SensorImage, logger=None
     # Load model
     if logger:
         logger.info("Loading model")
-    model = load_model_cached(dataset)
+    model = load_model_cached()
 
     # Run inference
     if logger:
@@ -93,7 +80,10 @@ def detect_masks(
     Run BodyPix inference for mask detection.
     """
     result, mask = run_inference(
-        request.dataset, request.confidence, request.image_raw, logger
+        # request.dataset, request.confidence, request.image_raw, logger
+        request.confidence,
+        request.image_raw,
+        logger,
     )
 
     masks = []
@@ -127,6 +117,8 @@ def detect_masks(
             skeleton_color=(100, 100, 255),
         )
         debug_publisher.publish(cv2_img.cv2_img_to_msg(coloured_mask))
+        if logger:
+            logger.info("I'm publishing the image!")
 
     response = BodyPixMaskDetection_Response
     response.masks = masks
@@ -140,7 +132,10 @@ def detect_keypoints(
     Run BodyPix inference for keypoint detection.
     """
     result, mask = run_inference(
-        request.dataset, request.confidence, request.image_raw, logger
+        # request.dataset, request.confidence, request.image_raw, logger
+        request.confidence,
+        request.image_raw,
+        logger,
     )
 
     poses = result.get_poses()
@@ -197,7 +192,10 @@ def detect_keypoints(
                 2,
                 cv2.LINE_AA,
             )
+
         debug_publisher.publish(cv2_img.cv2_img_to_msg(coloured_mask))
+        if logger:
+            logger.info("I'm publishing the image!")
 
     response = BodyPixKeypointDetection_Response
     response.keypoints = detected_keypoints

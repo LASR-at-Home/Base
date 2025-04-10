@@ -8,11 +8,13 @@ from sensor_msgs.msg import Image
 from lasr_vision_interfaces.srv import BodyPixMaskDetection
 
 
-class ImageListener(Node):
-    def __init__(self, listen_topic, model):
+class MaskRelay(Node):
+    def __init__(self):
         super().__init__("image_listener")
-        self.listen_topic = listen_topic
-        self.model = model
+        self.declare_parameter("image_topic", "/head_front_camera/rgb/image_raw")
+        self.listen_topic = (
+            self.get_parameter("image_topic").get_parameter_value().string_value
+        )
         self.processing = False
 
         # Set up the service client
@@ -26,9 +28,7 @@ class ImageListener(Node):
         self.subscription = self.create_subscription(
             Image, self.listen_topic, self.image_callback, 10  # QoS profile
         )
-        self.get_logger().info(
-            f"Started listening on topic: {self.listen_topic} with model: {self.model}"
-        )
+        self.get_logger().info(f"Started listening on topic: {self.listen_topic}")
 
     def detect(self, image):
         self.processing = True
@@ -36,7 +36,7 @@ class ImageListener(Node):
         # Create a request for the service
         req = BodyPixMaskDetection.Request()
         req.image_raw = image
-        req.dataset = self.model
+        # req.dataset = self.model
         req.confidence = 0.7
         req.parts = ["left_face", "right_face"]
 
@@ -69,22 +69,9 @@ class ImageListener(Node):
 
 def main(args=None):
     print("Starting mask_relay node")
-    # Check if command-line arguments are sufficient
-    if len(sys.argv) < 2:
-        print(
-            "Usage: ros2 run lasr_vision_bodypix mask_relay.py <source_topic> [resnet50|mobilenet50|...]"
-        )
-        sys.exit(1)
-
-    # Parse the command-line arguments
-    listen_topic = "/image_raw"
-    if isinstance(sys.argv[1], list):
-        listen_topic = sys.argv[1][0]
-
-    model = sys.argv[2] if len(sys.argv) >= 3 else "resnet50"
 
     rclpy.init(args=args)
-    mask_relay_node = ImageListener(listen_topic, model)
+    mask_relay_node = MaskRelay()
     mask_relay_node.get_logger().info("Mask relay node started")
 
     try:

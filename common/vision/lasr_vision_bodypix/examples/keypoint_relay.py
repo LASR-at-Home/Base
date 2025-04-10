@@ -9,10 +9,12 @@ from lasr_vision_interfaces.srv import BodyPixKeypointDetection
 
 
 class KeypointRelay(Node):
-    def __init__(self, listen_topic, model):
+    def __init__(self):
         super().__init__("keypoint_relay")
-        self.listen_topic = listen_topic
-        self.model = model
+        self.declare_parameter("image_topic", "/head_front_camera/rgb/image_raw")
+        self.listen_topic = (
+            self.get_parameter("image_topic").get_parameter_value().string_value
+        )
         self.processing = False
 
         # Set up the service client
@@ -26,9 +28,7 @@ class KeypointRelay(Node):
         self.subscription = self.create_subscription(
             Image, self.listen_topic, self.image_callback, 10  # QoS profile
         )
-        self.get_logger().info(
-            f"Started listening on topic: {self.listen_topic} with model: {self.model}"
-        )
+        self.get_logger().info(f"Started listening on topic: {self.listen_topic}")
 
     def detect(self, image):
         self.processing = True
@@ -36,7 +36,7 @@ class KeypointRelay(Node):
         # Create a request for the service
         req = BodyPixKeypointDetection.Request()
         req.image_raw = image
-        req.dataset = self.model
+        # req.dataset = self.model
         req.confidence = 0.7
 
         # Call the service asynchronously
@@ -62,23 +62,9 @@ class KeypointRelay(Node):
 
 def main(args=None):
     print("start keypoint_relay")
-    # Check if command-line arguments are sufficient
-    if len(sys.argv) < 2:
-        print(
-            "Usage: ros2 run lasr_vision_bodypix keypoint_relay.py <source_topic> [resnet50|mobilenet50|...]"
-        )
-        sys.exit(1)
-
-    # Parse the command-line arguments
-
-    listen_topic = "/image_raw"
-    if isinstance(sys.argv[1], list):
-        listen_topic = sys.argv[1][0]
-
-    model = sys.argv[2] if len(sys.argv) >= 3 else "resnet50"
 
     rclpy.init(args=args)
-    keypoint_relay_node = KeypointRelay(listen_topic, model)
+    keypoint_relay_node = KeypointRelay()
     keypoint_relay_node.get_logger().info("Keypoint relay node started")
 
     try:

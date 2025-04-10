@@ -11,25 +11,25 @@
     <!-- Build tool dependencies -->
     <buildtool_depend>ament_cmake</buildtool_depend>
 
-  <!-- Dependencies for message and service generation -->
-  <build_depend>rosidl_default_generators</build_depend>
-  <exec_depend>rosidl_default_runtime</exec_depend>
-  <!-- TODO check that this is an actual dependency and not left from ROS1 -->
-  <build_depend>message_generation</build_depend>
-  <exec_depend>message_runtime</exec_depend>
-   <!-- Dependencies for sensor messages and built-in interfaces -->
-  <build_depend>sensor_msgs</build_depend>
-  <exec_depend>sensor_msgs</exec_depend>
-  <build_depend>builtin_interfaces</build_depend>
-  <exec_depend>builtin_interfaces</exec_depend>
+    <!-- Dependencies for message and service generation -->
+    <build_depend>rosidl_default_generators</build_depend>
+    <exec_depend>rosidl_default_runtime</exec_depend>
+    <!-- TODO check that this is an actual dependency and not left from ROS1 -->
+    <!-- <build_depend>message_generation</build_depend>
+    <exec_depend>message_runtime</exec_depend> -->
+    <!-- Dependencies for sensor messages and built-in interfaces -->
+    <build_depend>sensor_msgs</build_depend>
+    <exec_depend>sensor_msgs</exec_depend>
+    <build_depend>builtin_interfaces</build_depend>
+    <exec_depend>builtin_interfaces</exec_depend>
 
-  <!-- ROS2 specific group for interface packages -->
-  <member_of_group>rosidl_interface_packages</member_of_group>
+    <!-- ROS2 specific group for interface packages -->
+    <member_of_group>rosidl_interface_packages</member_of_group>
 
-  <test_depend>ament_lint_auto</test_depend>
-  <test_depend>ament_lint_common</test_depend>
+    <test_depend>ament_lint_auto</test_depend>
+    <test_depend>ament_lint_common</test_depend>
 
-  <export>
-    <build_type>ament_cmake</build_type>
-  </export>
+    <export>
+        <build_type>ament_cmake</build_type>
+    </export>
 </package>

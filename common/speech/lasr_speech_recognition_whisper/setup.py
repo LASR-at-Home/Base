@@ -26,6 +26,6 @@ setup(
             "microphone_tuning_test = scripts.microphone_tuning_test:main",
             "test_microphones = scripts.test_microphones:main",
             "test_speech_server = scripts.test_speech_server:main",
-        ],
+        ]
     },
 )

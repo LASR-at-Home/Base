@@ -3,7 +3,7 @@
 sensor_msgs/Image image_raw
 
 # BodyPix model to use
-string dataset
+# string dataset
 
 # How certain the detection should be to include
 float32 confidence

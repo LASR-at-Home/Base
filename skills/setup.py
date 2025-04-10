@@ -8,8 +8,14 @@ package_name = "skills"
 setup(
     name=package_name,
     version="0.0.0",
+<<<<<<< HEAD
     packages=find_packages(exclude=["test"]),
     # packages=["lasr_skills"],
+=======
+    packages=find_packages(where="src", exclude=["test"]),
+    # packages=["lasr_skills"],
+    package_dir={"": "src"},
+>>>>>>> 06f880e74fae35a16f2eafb5b509bc976c47d0e8
     data_files=[
         ("share/ament_index/resource_index/packages", ["resource/" + package_name]),
         ("share/" + package_name, ["package.xml"]),
@@ -24,6 +30,11 @@ setup(
     entry_points={
         "console_scripts": [
             # "look_to_point = src.lasr_skills.look_to_point:main",
+<<<<<<< HEAD
+=======
+            "get_image = lasr_skills.vision.get_image:main",
+            "wait_state = lasr_skills.wait:main",
+>>>>>>> 06f880e74fae35a16f2eafb5b509bc976c47d0e8
         ],
     },
 )

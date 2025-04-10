@@ -21,23 +21,33 @@ set(msg_files
   "msg/BodyPixKeypoint.msg"
   "msg/BodyPixKeypointNormalized.msg"
   "msg/BodyPixMask.msg"
+  "msg/CDRequest.msg"
+  "msg/CDResponse.msg"
+  "msg/Detection.msg"
+  "msg/Detection3D.msg"
 )
 
 # Specify service files
 set(srv_files
   "srv/BodyPixMaskDetection.srv"
   "srv/BodyPixKeypointDetection.srv"
-  "srv/DetectWave.srv"
+  "srv/BodyPixWaveDetection.srv"
   "srv/ClipLearnFace.srv"
+  "srv/CroppedDetection.srv"
+  "srv/LearnFace.srv"
+  "srv/YoloDetection.srv"
+  "srv/Recognise.srv"
+  "srv/DetectFaces.srv"
+  "srv/Vqa.srv"
 )
 
 
 
 
-rosidl_generate_interfaces(${PROJECT_NAME}
+# rosidl_generate_interfaces(${PROJECT_NAME}
 
-  DEPENDENCIES sensor_msgs
-)
+#   DEPENDENCIES sensor_msgs
+# )
 
 # Generate messages and services
 rosidl_generate_interfaces(${PROJECT_NAME}
@@ -53,5 +63,5 @@ rosidl_generate_interfaces(${PROJECT_NAME}
 # Export dependencies
 ament_export_dependencies(rosidl_default_runtime)
 
-# This must be called after all targets and before any installation commands
+# Ensure correct build order
 ament_package()
