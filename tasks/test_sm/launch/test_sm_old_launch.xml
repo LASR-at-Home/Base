@@ -1,0 +1,19 @@
+<launch>
+
+    <!--     PARAMS     -->
+    <arg name="config" default="sim"/>
+
+    <!--     INTERACTION     -->
+
+    <!--     STATIC POINTS     -->
+    <node
+        name="main"
+        pkg="test_sm"
+        exec="main"
+        output="screen">
+        
+        <param from="/home/zoe/ros2/robocup_ws/src/Base/tasks/test_sm/launch/test_sm_launch.xml" />
+    </node>
+    <!--      PERCEPTION     -->
+    
+</launch>
