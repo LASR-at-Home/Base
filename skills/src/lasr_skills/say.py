@@ -9,7 +9,7 @@ HAS_TTS_MSGS: bool = True
 
 
 try:
-    from tts_msgs.msg import TTS
+    from tts_msgs.action import TTS
 except ImportError:
     HAS_TTS_MSGS = False
     print("doesn't have tts msgs")
@@ -74,11 +74,13 @@ else:
             format_str: Union[str, None] = None,
         ):
             if text is not None:
-                super(Say, self).__init__(node, "tts", TTS, goal=TTS.Goal(input=text))
+                super(Say, self).__init__(
+                    node, "/tts_engine/tts", TTS, goal=TTS.Goal(input=text)
+                )
             elif format_str is not None:
                 super(Say, self).__init__(
                     node,
-                    "tts",
+                    "/tts_engine/tts",
                     TTS,
                     goal_cb=lambda ud, _: (
                         TTS.Goal(
@@ -92,7 +94,7 @@ else:
             else:
                 super(Say, self).__init__(
                     node,
-                    "tts",
+                    "/tts_engine/tts",
                     TTS,
                     goal_cb=lambda ud, _: TTS.Goal(input=ud.text),
                     input_keys=["text"],
