@@ -3,6 +3,7 @@ from rclpy.node import Node
 from rclpy.task import Future
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy
 
+
 class WaitForMessageNode(Node):
     def __init__(self, name="skills_access_node"):
         super().__init__(name)
