@@ -1,6 +1,6 @@
 import rclpy
 from rclpy.node import Node
-from rclpy.wait_for_message import wait_for_message 
+from rclpy.wait_for_message import wait_for_message
 import smach
 
 from lasr_vision_interfaces.srv import DetectFaces as DetectFacesSrv
@@ -30,7 +30,9 @@ class DetectFaces(smach.State):
     def execute(self, userdata):
         img_msg = pcl_to_img_msg(userdata.pcl_msg)
         if img_msg is None:
-            self.node.get_logger().info(f"No image from point cloud, waiting on topic: {self._image_topic}")
+            self.node.get_logger().info(
+                f"No image from point cloud, waiting on topic: {self._image_topic}"
+            )
             try:
                 img_msg = wait_for_message(
                     node=self.node,
@@ -38,11 +40,12 @@ class DetectFaces(smach.State):
                     msg_type=Image,
                     timeout_sec=5.0,
                 )
-                
-            except Exception as e:
-                self.node.get_logger().error(f"Failed to get image from topic: {str(e)}")
-                return "failed"
 
+            except Exception as e:
+                self.node.get_logger().error(
+                    f"Failed to get image from topic: {str(e)}"
+                )
+                return "failed"
 
         request = DetectFacesSrv.Request()
         request.image_raw = img_msg
@@ -56,5 +59,3 @@ class DetectFaces(smach.State):
         else:
             self.node.get_logger().error("Detect faces service call failed.")
             return "failed"
-
-     

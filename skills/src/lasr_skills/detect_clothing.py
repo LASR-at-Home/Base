@@ -25,7 +25,7 @@ cloth_type_rough_map = {
 
 class DetectClothing(smach.StateMachine):
 
-    def __init__(self,node:Node, clothing_to_detect: Optional[str] = None):
+    def __init__(self, node: Node, clothing_to_detect: Optional[str] = None):
         """
         clothing_to_detect: "blue shirt"
         """
@@ -44,7 +44,9 @@ class DetectClothing(smach.StateMachine):
         with self:
             smach.StateMachine.add(
                 "GET_ATTRIBUTES",
-                DescribePeople(),
+                DescribePeople(
+                    self.node,
+                ),
                 transitions={
                     "succeeded": "DECIDE",
                     "failed": "failed",
@@ -87,20 +89,20 @@ class DetectClothing(smach.StateMachine):
             self.cloth = cloth
 
             self.face_features = node.create_client(
-                TorchFaceFeatureDetectionDescription,
-                "/torch/detect/face_features"
+                TorchFaceFeatureDetectionDescription, "/torch/detect/face_features"
             )
 
             while not self.face_features.wait_for_service(timeout_sec=1.0):
-                self.node.get_logger().info("Waiting for /torch/detect/face_features...")
-
+                self.node.get_logger().info(
+                    "Waiting for /torch/detect/face_features..."
+                )
 
         def execute(self, userdata):
             if self.colour not in colour_list or self.cloth not in cloth_list:
                 return "failed"
 
             request = TorchFaceFeatureDetectionDescription.Request()
-             
+
             request.image_raw = userdata.img_msg
             request.head_mask_data = []
             request.head_mask_shape = []
@@ -125,8 +127,8 @@ class DetectClothing(smach.StateMachine):
                 return "failed"
 
             # I removed the following part because we don't have numeric confidence scores and detailed feature breakdowns
-            # I will remove it after testing 
-            '''
+            # I will remove it after testing
+            """
             if len(result.people) == 0:
                 return "failed"
 
@@ -155,4 +157,4 @@ class DetectClothing(smach.StateMachine):
                 return "succeeded"
 
             return "failed"
-            '''
+            """

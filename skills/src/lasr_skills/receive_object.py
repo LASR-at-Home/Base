@@ -15,7 +15,9 @@ from typing import Union
 
 
 class ReceiveObject(smach.StateMachine):
-    def __init__(self,node:Node, object_name: Union[str, None] = None, vertical: bool = True):
+    def __init__(
+        self, node: Node, object_name: Union[str, None] = None, vertical: bool = True
+    ):
 
         if object_name is not None:
             super(ReceiveObject, self).__init__(outcomes=["succeeded", "failed"])
@@ -25,14 +27,14 @@ class ReceiveObject(smach.StateMachine):
             )
         self.node = node
         self.load_motion_params()
-        '''
+        """
         r = rospkg.RosPack()
         els = rosparam.load_file(
             os.path.join(r.get_path("lasr_skills"), "config", "motions.yaml")
         )
         for param, ns in els:
             rosparam.upload_params(ns, param)
-        '''
+        """
         with self:
 
             smach.StateMachine.add(
@@ -84,7 +86,7 @@ class ReceiveObject(smach.StateMachine):
                     "preempted": "failed",
                 },
             )
-            # TODO: check whether the motion name for state LOOK_DOWN_CENTRE in ROS1 was look_centre is not look_down_centre on purpose and not just a mistake 
+            # TODO: check whether the motion name for state LOOK_DOWN_CENTRE in ROS1 was look_centre is not look_down_centre on purpose and not just a mistake
             smach.StateMachine.add(
                 "LOOK_DOWN_CENTRE",
                 PlayMotion(node=Node, motion_name="look_centre"),
@@ -107,7 +109,9 @@ class ReceiveObject(smach.StateMachine):
 
             smach.StateMachine.add(
                 "SAY_REACH_ARM",
-                Say(node=Node, text="Please step back, I am going to reach my arm out."),
+                Say(
+                    node=Node, text="Please step back, I am going to reach my arm out."
+                ),
                 transitions={
                     "succeeded": "REACH_ARM",
                     "aborted": "REACH_ARM",
@@ -201,15 +205,15 @@ class ReceiveObject(smach.StateMachine):
                     "preempted": "failed",
                 },
             )
+
     def load_motion_params(self):
         package_path = get_package_share_directory("lasr_skills")
-        config_path = os.path.join(package_path, "config","motion.yaml")
+        config_path = os.path.join(package_path, "config", "motion.yaml")
         if os.path.exists(config_path):
-            with open(config_path,"r") as f:
+            with open(config_path, "r") as f:
                 params = yaml.safe_load(f)
                 for key, value in params.items():
                     self.node.declare_parameters(key, value)
-
 
 
 if __name__ == "__main__":
