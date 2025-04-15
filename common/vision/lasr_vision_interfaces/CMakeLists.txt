@@ -11,6 +11,7 @@ find_package(rosidl_default_generators REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(rclpy REQUIRED)
 find_package(builtin_interfaces REQUIRED)  # Needed for built-in ROS types like Time
+find_package(geometry_msgs REQUIRED)
 
 ################################################
 ## Declare ROS messages, services, and actions #
@@ -43,8 +44,6 @@ set(srv_files
 )
 
 
-
-
 # rosidl_generate_interfaces(${PROJECT_NAME}
 
 #   DEPENDENCIES sensor_msgs
@@ -54,7 +53,7 @@ set(srv_files
 rosidl_generate_interfaces(${PROJECT_NAME}
   ${msg_files}
   ${srv_files}
-  DEPENDENCIES sensor_msgs builtin_interfaces  # List all dependencies here
+  DEPENDENCIES sensor_msgs builtin_interfaces geometry_msgs  # List all dependencies here
 )
 
 ###################################

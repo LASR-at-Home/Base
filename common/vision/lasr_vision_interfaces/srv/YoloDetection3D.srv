@@ -13,4 +13,4 @@ float32 confidence
 float32 nms
 ---
 # Detection result
-lasr_vision_msgs/Detection3D[] detected_objects
+lasr_vision_interfaces/Detection3D[] detected_objects
