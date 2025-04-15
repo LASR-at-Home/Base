@@ -3,8 +3,6 @@ from rclpy.node import Node
 from rclpy.task import Future
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy
 
-# please place the AccessNode on top to avoide circular error
-from .access_node import AccessNode
 from .wait import Wait
 
 # from .detect import Detect

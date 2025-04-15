@@ -2,7 +2,6 @@ from ros_state import RosState
 import smach
 from lasr_skills import Detect
 from lasr_skills.vision import GetImage
-from lasr_skills import AccessNode
 
 
 class WaitForPerson(smach.StateMachine):

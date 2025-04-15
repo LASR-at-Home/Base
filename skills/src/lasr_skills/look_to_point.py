@@ -6,7 +6,6 @@ from control_msgs.action import PointHead
 from geometry_msgs.msg import Point, PointStamped
 
 from typing import Union
-from lasr_skills import AccessNode
 
 
 class LookToPoint(RosState):
@@ -23,7 +22,6 @@ class LookToPoint(RosState):
             outcomes=["succeeded", "aborted", "timed_out"],
             input_keys=["pointstamped"] if pointstamped is None else [],
         )
-        self.node = AccessNode.get_node()
 
         self._pointstamped = pointstamped
 
