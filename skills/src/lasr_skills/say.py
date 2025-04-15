@@ -3,7 +3,6 @@ import smach_ros
 import smach
 import rclpy
 import os
-from lasr_skills import AccessNode
 
 HAS_TTS_MSGS: bool = True
 

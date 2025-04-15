@@ -1,6 +1,5 @@
 import rclpy
 from ros_state import RosState
-from lasr_skills import AccessNode
 from lasr_vision_interfaces.msg import CDRequest
 from lasr_vision_interfaces.srv import CroppedDetection
 
