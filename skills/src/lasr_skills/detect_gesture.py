@@ -1,35 +1,34 @@
-import smach
+from ros_state import RosState
 import rclpy
-from lasr_skills import AccessNode
 import cv2
 import cv2_img
 from lasr_vision_interfaces.srv import BodyPixKeypointDetection
 from sensor_msgs.msg import Image
-import tf2_ros as tf
 from visualization_msgs.msg import Marker
 from .vision.get_image import GetImage
 from typing import Union
 
 
-class DetectGesture(smach.State):
+class DetectGesture(RosState):
     """
     State for detecting gestures.
     """
 
     def __init__(
         self,
+        node,
         gesture_to_detect: Union[str, None] = None,
         bodypix_confidence: float = 0.1,
         buffer_width: int = 50,
         debug_publisher: str = "/skills/gesture_detection/debug",
     ):
-        smach.State.__init__(
+        super().__init__(
             self,
+            node,
             outcomes=["succeeded", "failed"],
             input_keys=["img_msg"],
             output_keys=["detected_gesture"],
         )
-        self.node = AccessNode.get_node()
         self.gesture_to_detect = gesture_to_detect
         self.bodypix_client = self.node.create_client(
             BodyPixKeypointDetection, "/bodypix/keypoint_detection"
@@ -52,7 +51,6 @@ class DetectGesture(smach.State):
         )
 
     def execute(self, userdata):
-
         req = BodyPixKeypointDetection.Request()
         req.image_raw = userdata.img_msg
         req.confidence = self.bodypix_confidence
@@ -132,19 +130,40 @@ class DetectGesture(smach.State):
             return "succeeded"
 
 
+class ProcessPointingDirection(RosState):
+    def __init__(self, node):
+        super().__init__(
+            self,
+            node,
+            outcomes=["succeeded", "failed"],
+            input_keys=["gesture_detected"],
+            output_keys=["pointing_direction"],
+        )
+
+    def execute(self, userdata):
+        if userdata.gesture_detected == "pointing_to_the_left":
+            userdata.pointing_direction = "left"
+        elif userdata.gesture_detected == "pointing_to_the_right":
+            userdata.pointing_direction = "right"
+        else:
+            return "failed"
+        return "succeeded"
+
+
 def main(args=None):
     rclpy.init(args=args)
+    node = rclpy.create_node("detect_gesture")
 
     sm = smach.StateMachine(outcomes=["succeeded", "failed"])
     with sm:
         smach.StateMachine.add(
             "GetImage",
-            GetImage(),
+            GetImage(node),
             transitions={"succeeded": "DetectGesture", "failed": "failed"},
         )
         smach.StateMachine.add(
             "DetectGesture",
-            DetectGesture(),
+            DetectGesture(node),
             transitions={"succeeded": "succeeded", "failed": "failed"},
         )
 
@@ -153,4 +172,6 @@ def main(args=None):
 
 
 if __name__ == "__main__":
+    import smach
+
     main()

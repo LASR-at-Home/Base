@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(lasr_vision_bodypix)
+project(lasr_vision_cropped_detection)
 
 # Find ament packages and libraries for building
 find_package(ament_cmake REQUIRED)
@@ -14,29 +14,19 @@ ament_python_install_package(${PROJECT_NAME} PACKAGE_DIR src/${PROJECT_NAME})
 
 # Install Python scripts (these are the executables)
 install(PROGRAMS
-  nodes/bodypix_services.py
+  nodes/cropped_detection_service.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
 install(PROGRAMS
-  src/lasr_vision_bodypix/bodypix.py
+  src/lasr_vision_cropped_detection/cropped_detection.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
 install(PROGRAMS
-  examples/keypoint_relay.py
+  examples/request.py
   DESTINATION lib/${PROJECT_NAME}
 )
-
-install(PROGRAMS
-  examples/mask_relay.py
-  DESTINATION lib/${PROJECT_NAME}
-)
-
-# install(PROGRAMS
-#   examples/wave_relay.py
-#   DESTINATION lib/${PROJECT_NAME}
-# )
 
 # Install launch files
 install(DIRECTORY launch

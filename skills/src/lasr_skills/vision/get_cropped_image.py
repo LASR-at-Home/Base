@@ -1,13 +1,11 @@
 import rclpy
-import smach
+from ros_state import RosState
 from lasr_skills import AccessNode
-
-
 from lasr_vision_interfaces.msg import CDRequest
 from lasr_vision_interfaces.srv import CroppedDetection
 
 
-class GetCroppedImage(smach.State):
+class GetCroppedImage(RosState):
     """
     This state calls CroppedDetection service instead of running on its own.
     THis is a much faster version than the older one.
@@ -15,6 +13,7 @@ class GetCroppedImage(smach.State):
 
     def __init__(
         self,
+        node,
         object_name: str,
         method: str = "closest",
         use_mask: bool = True,
@@ -22,12 +21,12 @@ class GetCroppedImage(smach.State):
         yolo_model_confidence: float = 0.5,
         yolo_nms_threshold: float = 0.3,
     ):
-        smach.State.__init__(
+        super().__init__(
             self,
+            node,
             outcomes=["succeeded", "failed"],
             output_keys=["img_msg", "detection"],
         )
-        self.node = AccessNode.get_node()
         self.object_name = object_name
         self.method = method
         self.use_mask = use_mask
@@ -63,15 +62,14 @@ class GetCroppedImage(smach.State):
             userdata.img_msg = cropped_image
             userdata.detection = cropped_detection_resp.responses[0].detections_3d[0]
             return "succeeded"
-        # except rospy.ServiceException as e:
-        #     rospy.logerr(f"Service call failed: {e}")
-        #     return "failed"
         except Exception as e:  # Got some errors that is not rospy.
             self.node.get_logger().error(f"Service call failed: {e}")
             return "failed"
 
 
 if __name__ == "__main__":
+    import smach
+
     rclpy.init()
     node = rclpy.create_node("get_cropped_image")
 

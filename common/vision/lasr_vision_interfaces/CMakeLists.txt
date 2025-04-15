@@ -36,6 +36,7 @@ set(srv_files
   "srv/CroppedDetection.srv"
   "srv/LearnFace.srv"
   "srv/YoloDetection.srv"
+  "srv/YoloDetection3D.srv"
   "srv/Recognise.srv"
   "srv/DetectFaces.srv"
   "srv/Vqa.srv"

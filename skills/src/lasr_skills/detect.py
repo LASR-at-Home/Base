@@ -1,30 +1,30 @@
 import cv2
 import cv2_img
 import rclpy
-import smach
+from ros_state import RosState
 from sensor_msgs.msg import Image
 from lasr_vision_msgs.srv import YoloDetection
-from lasr_skills import AccessNode
 
 from typing import List, Union
 
 
-class Detect(smach.State):
+class Detect(RosState):
     def __init__(
         self,
+        node,
         model: str = "yolov8x.pt",
         filter: Union[List[str], None] = None,
         confidence: float = 0.5,
         nms: float = 0.3,
         debug_publisher: str = "/skills/detect/debug",
     ):
-        smach.State.__init__(
+        super().__init__(
             self,
+            node,
             outcomes=["succeeded", "failed"],
             input_keys=["img_msg"],
             output_keys=["detections"],
         )
-        self.node = AccessNode.get_node()
         self.model = model
         self.filter = filter if filter is not None else []
         self.confidence = confidence
