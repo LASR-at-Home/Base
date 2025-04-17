@@ -18,6 +18,8 @@ priors:
     - orange juice
     - red wine
     - tropical juice
+  interests: 
+    - robot
   
 
 #WAIT POSE LAB:
