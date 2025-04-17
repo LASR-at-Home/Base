@@ -24,6 +24,8 @@ class Receptionist(smach.StateMachine):
         self,
         wait_pose: Pose,
         wait_area: Polygon,
+        table_pose: Pose,
+        table_area: Polygon,
         seat_pose: Pose,
         search_motions: List[str],
         seat_area: Polygon,
@@ -42,18 +44,22 @@ class Receptionist(smach.StateMachine):
 
         self.wait_pose = wait_pose
         self.wait_area = wait_area
+        self.table_pose = table_pose
+        self.table_area = table_area
         self.seat_pose = seat_pose
         self.seat_area = seat_area
 
         with self:
             self.userdata.guest_data = {
                 "host": host_data,
-                "guest1": {"name": "", "drink": "", "detection": False},
-                "guest2": {"name": "", "drink": "", "detection": False},
+                "guest1": {"name": "", "drink": "", "interest": "", "detection": False},
+                "guest2": {"name": "", "drink": "", "interest": "", "detection": False},
             }
             self.userdata.confidence = face_detection_confidence
             self.userdata.dataset = "receptionist"
             self.userdata.seat_position = PointStamped()
+            self.userdata.drink_position = PointStamped()       
+         
 
             def wait_cb(ud, msg):
                 rospy.loginfo("Received start signal")
@@ -99,6 +105,24 @@ class Receptionist(smach.StateMachine):
                 transitions={
                     "succeeded": "SAY_FOLLOW_GUEST_1",
                     "failed": "SAY_FOLLOW_GUEST_1",
+                },
+            )
+
+            smach.StateMachine.add(
+                "INTRODUCE_AND_SEAT_GUEST_1",
+                IntroduceAndSeatGuest(
+                    "guest1",
+                    ["host"],
+                    seat_area,
+                    sofa_area,
+                    sofa_point,
+                    max_people_on_sofa,
+                    search_motions,
+                    sweep=sweep,
+                ),
+                transitions={
+                    "succeeded": "SAY_RETURN_WAITING_AREA",
+                    "failed": "SAY_RETURN_WAITING_AREA",
                 },
             )
 
@@ -243,6 +267,62 @@ class Receptionist(smach.StateMachine):
             f"CHECK_GUEST_ID_GUEST_{guest_id}",
             smach.CBState(check_guest_id, outcomes=["guest_1", "guest_2"]),
             transitions={"guest_2": "HANDLE_GUEST_2", "guest_1": "HANDLE_GUEST_1"},
+        )
+
+    def _guide_guest_to_table(self, guest_id: int) -> None:
+        """Adds the states to guide a guest to the
+        seating area.
+
+        Args:
+            guest_id (int): Identifier for the guest.
+        """
+
+        smach.StateMachine.add(
+            f"SAY_FOLLOW_GUEST_{guest_id}",
+            Say(text="Please follow me, I will guide you to the other guests"),
+            transitions={
+                "succeeded": f"GO_TO_SEAT_LOCATION_GUEST_{guest_id}",
+                "preempted": "failed",
+                "aborted": "failed",
+            },
+        )
+
+        smach.StateMachine.add(
+            f"GO_TO_SEAT_LOCATION_GUEST_{guest_id}",
+            GoToLocation(self.seat_pose),
+            transitions={
+                "succeeded": f"SAY_WAIT_GUEST_{guest_id}",
+                "failed": f"GO_TO_SEAT_LOCATION_GUEST_{guest_id}",
+            },
+        )
+
+        smach.StateMachine.add(
+            f"SAY_WAIT_GUEST_{guest_id}",
+            Say(text="Please wait here on my left."),
+            transitions={
+                "succeeded": f"LOOK_EYES_{guest_id}",
+                "preempted": "failed",
+                "aborted": "failed",
+            },
+        )
+
+        smach.StateMachine.add(
+            f"LOOK_EYES_{guest_id}",
+            PlayMotion(motion_name="look_very_left"),
+            transitions={
+                "succeeded": f"WAIT_{guest_id}_2",
+                "preempted": "failed",
+                "aborted": "failed",
+            },
+        )
+
+        smach.StateMachine.add(
+            f"WAIT_{guest_id}_2",
+            Wait(1),
+            transitions={
+                "succeeded": f"INTRODUCE_AND_SEAT_GUEST_{guest_id}",
+                "failed": f"INTRODUCE_AND_SEAT_GUEST_{guest_id}",
+            },
         )
 
     def _guide_guest(self, guest_id: int) -> None:
