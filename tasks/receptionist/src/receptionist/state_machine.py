@@ -14,7 +14,7 @@ from lasr_skills import (
     WaitForPersonInArea,
 )
 from lasr_vision_msgs.srv import Recognise
-from receptionist.states import HandleGuest, IntroduceAndSeatGuest
+from receptionist.states import HandleGuest, HandleFavouriteDrink, IntroduceTableGuest, IntroduceAndSeatGuest
 from shapely.geometry import Polygon
 from std_msgs.msg import Empty, Header
 
@@ -103,26 +103,34 @@ class Receptionist(smach.StateMachine):
                 "HANDLE_GUEST_1",
                 HandleGuest("guest1", learn_guest_1),
                 transitions={
-                    "succeeded": "SAY_FOLLOW_GUEST_1",
-                    "failed": "SAY_FOLLOW_GUEST_1",
+                    "succeeded": "SAY_FOLLOW_GUEST_TO_TABLE_1",
+                    "failed": "SAY_FOLLOW_GUEST_TO_TABLE_1",
+                },
+            )
+
+            self._guide_guest_to_table(guest_id=1)
+
+            smach.StateMachine.add(
+                "HANDLE_FAVOURITE_DRINK_GUEST_1",
+                HandleFavouriteDrink("guest1", learn_guest_1),
+                transitions={
+                    "succeeded": "INTRODUCE_TABLE_GUEST_1",
+                    "failed": "INTRODUCE_TABLE_GUEST_1", #if this failes can not introduce table to guest so continue with SAY_FOLLOW_GUEST_1?
                 },
             )
 
             smach.StateMachine.add(
-                "INTRODUCE_AND_SEAT_GUEST_1",
-                IntroduceAndSeatGuest(
+                "INTRODUCE_TABLE_GUEST_1",
+                IntroduceTableGuest(
                     "guest1",
                     ["host"],
-                    seat_area,
-                    sofa_area,
-                    sofa_point,
-                    max_people_on_sofa,
+                    table_area,
                     search_motions,
                     sweep=sweep,
                 ),
                 transitions={
-                    "succeeded": "SAY_RETURN_WAITING_AREA",
-                    "failed": "SAY_RETURN_WAITING_AREA",
+                    "succeeded": "SAY_FOLLOW_GUEST_1",
+                    "failed": "SAY_FOLLOW_GUEST_1",
                 },
             )
 
@@ -278,31 +286,21 @@ class Receptionist(smach.StateMachine):
         """
 
         smach.StateMachine.add(
-            f"SAY_FOLLOW_GUEST_{guest_id}",
-            Say(text="Please follow me, I will guide you to the other guests"),
+            f"SAY_FOLLOW_GUEST_TO_TABLE_{guest_id}",
+            Say(text="Please follow me, I will guide you to the beverage area"),
             transitions={
-                "succeeded": f"GO_TO_SEAT_LOCATION_GUEST_{guest_id}",
+                "succeeded": f"GO_TO_TABLE_LOCATION_GUEST_{guest_id}",
                 "preempted": "failed",
                 "aborted": "failed",
             },
         )
 
         smach.StateMachine.add(
-            f"GO_TO_SEAT_LOCATION_GUEST_{guest_id}",
-            GoToLocation(self.seat_pose),
-            transitions={
-                "succeeded": f"SAY_WAIT_GUEST_{guest_id}",
-                "failed": f"GO_TO_SEAT_LOCATION_GUEST_{guest_id}",
-            },
-        )
-
-        smach.StateMachine.add(
-            f"SAY_WAIT_GUEST_{guest_id}",
-            Say(text="Please wait here on my left."),
+            f"GO_TO_TABLE_LOCATION_GUEST_{guest_id}",
+            GoToLocation(self.table_pose),
             transitions={
                 "succeeded": f"LOOK_EYES_{guest_id}",
-                "preempted": "failed",
-                "aborted": "failed",
+                "failed": f"GO_TO_TABLE_LOCATION_GUEST_{guest_id}",
             },
         )
 
@@ -310,20 +308,32 @@ class Receptionist(smach.StateMachine):
             f"LOOK_EYES_{guest_id}",
             PlayMotion(motion_name="look_very_left"),
             transitions={
-                "succeeded": f"WAIT_{guest_id}_2",
+                "succeeded": f"SAY_ARRIVE_GUEST_{guest_id}",
                 "preempted": "failed",
                 "aborted": "failed",
             },
         )
 
         smach.StateMachine.add(
-            f"WAIT_{guest_id}_2",
-            Wait(1),
+            f"SAY_ARRIVE_GUEST_{guest_id}",
+            Say(text="This is the beverage area."),
             transitions={
-                "succeeded": f"INTRODUCE_AND_SEAT_GUEST_{guest_id}",
-                "failed": f"INTRODUCE_AND_SEAT_GUEST_{guest_id}",
+                "succeeded": "HANDLE_FAVOURITE_DRINK_GUEST_1",
+                "preempted": "failed",
+                "aborted": "failed",
             },
         )
+
+        
+
+        # smach.StateMachine.add(
+        #     f"WAIT_{guest_id}_2",
+        #     Wait(1),
+        #     transitions={
+        #         "succeeded": f"HANDLE_FAVOURITE_DRINK_GUEST_{guest_id}",
+        #         "failed": f"HANDLE_FAVOURITE_DRINK_GUEST_{guest_id}",
+        #     },
+        # )
 
     def _guide_guest(self, guest_id: int) -> None:
         """Adds the states to guide a guest to the
