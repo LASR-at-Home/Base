@@ -5,7 +5,7 @@ the spelling and pronounciation of a word.
 
 import smach
 import string
-import jellyfish as jf
+# import jellyfish as jf
 from smach import UserData
 from typing import List, Dict, Any
 
@@ -345,29 +345,30 @@ class SpeechRecovery(smach.State):
                 return True
         return False
 
-    def _get_damerau_levenshtein_distance(self, word_1: str, word_2: str) -> int:
-        """Get the damerau-levenshtein distance between two words for the similarity in spelling.
+#     def _get_damerau_levenshtein_distance(self, word_1: str, word_2: str) -> int:
+#         """Get the damerau-levenshtein distance between two words for the similarity in spelling.
 
-        Args:
-            word_1 (str): First word
-            word_2 (str): Second word
+#         Args:
+#             word_1 (str): First word
+#             word_2 (str): Second word
 
-        Returns:
-            int: Damerau-levenshtein distance between the two words.
-        """
-        return jf.damerau_levenshtein_distance(word_1, word_2)
+#         Returns:
+#             int: Damerau-levenshtein distance between the two words.
+#         """
+#         return jf.damerau_levenshtein_distance(word_1, word_2)
 
-    def _get_levenshtein_soundex_distance(self, word_1: str, word_2: str) -> int:
-        """Get the levenshtein distance between the soundex encoding of two words for the similarity
-        in pronounciation.
+#     def _get_levenshtein_soundex_distance(self, word_1: str, word_2: str) -> int:
+#         """Get the levenshtein distance between the soundex encoding of two words for the similarity
+#         in pronounciation.
 
-        Args:
-            word_1 (str): First word
-            word_2 (str): Second word
+#         Args:
+#             word_1 (str): First word
+#             word_2 (str): Second word
 
-        Returns:
-            int: Levenshtein distance between the soundex encoding of the two words.
-        """
-        soundex_word_1 = jf.soundex(word_1)
-        soundex_word_2 = jf.soundex(word_2)
-        return jf.levenshtein_distance(soundex_word_1, soundex_word_2)
+#         Returns:
+#             int: Levenshtein distance between the soundex encoding of the two words.
+#         """
+#         soundex_word_1 = jf.soundex(word_1)
+#         soundex_word_2 = jf.soundex(word_2)
+#         return jf.levenshtein_distance(soundex_word_1, soundex_word_2)
+# # 

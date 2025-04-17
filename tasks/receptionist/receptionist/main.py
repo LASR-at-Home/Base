@@ -6,6 +6,14 @@ from nav2_simple_commander.robot_navigator import BasicNavigator
 from std_msgs.msg import Header
 from receptionist.state_machine import Receptionist
 import sys
+# from shapely.geometry import Polygon
+
+
+
+def get_polygon_from_param(param_name,node):
+    param_array = node.get_parameter(param_name).get_parameter_value()._array_value
+
+    return Polygon(param_array)
 
 
 def get_pose_from_param(param_name, node):
@@ -54,14 +62,29 @@ def main():
     node.get_logger().info("Created node")
 
     wait_pose = get_pose_from_param("wait_pose", node)
+    # wait_area = get_polygon_from_param("wait_area",node)
     seat_pose = get_pose_from_param("seat_pose", node)
+    # seat_area = get_polygon_from_param("seat_area",node)
+    # sofa_area = get_polygon_from_param("sofa_area",node)
+    
+
 
     node.get_logger().info(f"Start Pose: {wait_pose}")
     node.get_logger().info(f"End pose: {seat_pose}")
 
+
+
     receptionist = Receptionist(
         wait_pose,
+        # wait_area,
         seat_pose,
+        # seat_area,
+        {
+            "name": "john",
+            "drink": "milk",
+            "dataset": "receptionist",
+            "detection": False,
+        },
     )
 
     outcome = receptionist.execute()
