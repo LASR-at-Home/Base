@@ -15,14 +15,16 @@ class SpeechRecovery(smach.State):
     def __init__(
         self,
         guest_id: int,
-        last_resort: bool,
+        last_resort: int, 
         input_type: str = "",
     ):
-        """Recover the correct name and / or drink by parsing the transcription.
+        """Recover the correct name and / or interest or drink by parsing the transcription.
 
         Args:
             guest_id (str): ID of the guest (identifying the guest)
-            last_resort (bool): Whether the program must recover a name or drink
+            last_resort (int): Whether the program must recover a name or interest or drink
+                               1: name&interest, 2: name, 3: interest, 4: drink
+                               failed
             input_type (str, optional): The type of information to try and extract useful information
             (drink or name)
         """
@@ -58,6 +60,9 @@ class SpeechRecovery(smach.State):
             "harrie",
             "peter",
         ]
+        self._available_interest = [
+            "robotics",
+        ]
         self._available_single_drinks = [
             "cola",
             "water",
@@ -87,21 +92,7 @@ class SpeechRecovery(smach.State):
             "and",
             "favourite",
             "drink",
-            "you",
-            "can",
-            "call",
-            "me",
-        ]
-        self._available_drinks = list(
-            set(self._available_single_drinks).union(set(self._available_double_drinks))
-        )
-        self._excluded_words = [
-            "my",
-            "name",
-            "is",
-            "and",
-            "favourite",
-            "drink",
+            "Interest",
             "you",
             "can",
             "call",
