@@ -1,3 +1,6 @@
 [submodule "common/third_party/leg_tracker"]
 	path = common/third_party/leg_tracker
 	url = https://github.com/LASR-at-Home/leg_tracker
+[submodule "common/third_party/gpd_ros"]
+	path = common/third_party/gpd_ros
+	url = git@github.com:LASR-at-Home/gpd_ros.git
