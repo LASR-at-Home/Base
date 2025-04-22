@@ -9,6 +9,7 @@ from smach import UserData
 from typing import List, Dict, Any
 from receptionist.states import SpeechRecovery
 
+
 class GetDrink(smach.StateMachine):
     class ParseDrink(smach.State):
         def __init__(
@@ -24,7 +25,7 @@ class GetDrink(smach.StateMachine):
             """
             smach.State.__init__(
                 self,
-                outcomes=["succeeded", "failed", "failed_drink"],
+                outcomes=["succeeded", "failed"],
                 input_keys=["guest_transcription", "guest_data"],
                 output_keys=["guest_data", "guest_transcription"],
             )
@@ -33,12 +34,11 @@ class GetDrink(smach.StateMachine):
             self._possible_drinks = [drink.lower() for drink in prior_data["drinks"]]
 
         def execute(self, userdata: UserData) -> str:
-            """Parses the transcription of the guests' favourite drink.
+            """Parses the transcription of the favourite drink.
 
             Args:
                 userdata (UserData): State machine userdata assumed to contain a key
-                called "guest transcription" with the transcription of the guest's
-                favourite drink.
+                called "guest transcription" with the transcription of the guest's favourite drink.
 
             Returns:
                 str: state outcome. Updates the userdata with the parsed drink, under
@@ -56,6 +56,7 @@ class GetDrink(smach.StateMachine):
                     rospy.loginfo(f"Guest Drink identified as: {drink}")
                     drink_found = True
                     break
+
             if not drink_found:
                 rospy.loginfo("Drink not found in transcription")
                 userdata.guest_data[self._guest_id]["drink"] = "unknown"
@@ -71,7 +72,7 @@ class GetDrink(smach.StateMachine):
         ):
             smach.State.__init__(
                 self,
-                outcomes=["succeeded", "failed", "failed_drink"],
+                outcomes=["succeeded", "failed"],
                 input_keys=["guest_transcription", "guest_data"],
                 output_keys=["guest_data", "guest_transcription"],
             )
@@ -80,37 +81,26 @@ class GetDrink(smach.StateMachine):
             self._possible_drinks = [drink.lower() for drink in prior_data["drinks"]]
 
         def execute(self, userdata: UserData) -> str:
-            if not self._recovery_drink_required(userdata):
-                if userdata.guest_data[self._guest_id]["drink"] == "unknown":
-                    outcome = "failed_drink"
-            else:
-                outcome = "failed"
-            return outcome
-
-
-        def _recovery_drink_required(self, userdata: UserData) -> bool:
-            """Determine whether drink requires recovery.
-
-            Returns:
-                bool: True if attributes require recovery.
-            """
             if userdata.guest_data[self._guest_id]["drink"] == "unknown":
-                return False
+                outcome = "failed"
+            else:
+                outcome = "succeeded"
+            return outcome
 
     def __init__(
         self,
         guest_id: str,
-        last_resort: int,
+        last_resort: bool,
         param_key: str = "/receptionist/priors",
     ):
 
         self._guest_id = guest_id
         self._param_key = param_key
-        self._last_resort = 3
+        self._last_resort = last_resort
 
         smach.StateMachine.__init__(
             self,
-            outcomes=["succeeded", "failed", "failed_drink"],
+            outcomes=["succeeded", "failed"],
             input_keys=["guest_transcription", "guest_data"],
             output_keys=["guest_data", "guest_transcription"],
         )
@@ -125,7 +115,7 @@ class GetDrink(smach.StateMachine):
             )
             smach.StateMachine.add(
                 "SPEECH_RECOVERY",
-                SpeechRecovery(self._guest_id, self._last_resort),
+                SpeechRecovery(self._guest_id, self._last_resort, input_type="drink"),
                 transitions={
                     "succeeded": "succeeded",
                     "failed": "POST_RECOVERY_DECISION",
@@ -138,5 +128,6 @@ class GetDrink(smach.StateMachine):
                 ),
                 transitions={
                     "failed": "failed",
+                    "succeeded": "succeeded",
                 },
             )
