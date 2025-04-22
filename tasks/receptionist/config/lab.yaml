@@ -19,7 +19,7 @@ priors:
     - red wine
     - tropical juice
   interests: 
-    - robot
+    - robotics
   
 
 #WAIT POSE LAB:
@@ -35,7 +35,16 @@ wait_pose:
     w: 0.9999184606171978
 
 #556918144226074
-
+table_pose: 
+  position: 
+    x: 2.4307581363168773
+    y: -1.661594410669659
+    z: 0.0
+  orientation: 
+    x: 0.0
+    y: 0.0
+    z: 0.012769969339563213
+    w: 0.9999184606171978
 
 #0.478893309417269
 #0.8778731105321406
@@ -44,6 +53,7 @@ wait_pose:
 #WAIT AREA LAB:
 # From robot POV: [top left, top right,bottom right, bottom left ] 
 wait_area: [[2.65, -0.61], [4.21, -0.33], [4.58, -2.27], [2.67, -2.66]]
+table_area: [[2.65, -0.61], [4.21, -0.33], [4.58, -2.27], [2.67, -2.66]]
 
 #Where to position self for seating guests
 seat_pose:

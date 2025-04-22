@@ -34,6 +34,13 @@ if __name__ == "__main__":
     wait_area_param = rospy.get_param("/receptionist/wait_area")
     wait_area = ShapelyPolygon(wait_area_param)
 
+    table_pose_param = rospy.get_param("/receptionist/table_pose")
+    table_pose = Pose(
+        position=Point(**table_pose_param["position"]),
+        orientation=Quaternion(**table_pose_param["orientation"]),
+    )
+
+
     seat_pose_param = rospy.get_param("/receptionist/seat_pose")
     seat_pose = Pose(
         position=Point(**seat_pose_param["position"]),
@@ -48,9 +55,11 @@ if __name__ == "__main__":
 
     max_people_on_sofa = rospy.get_param("/receptionist/max_people_on_sofa")
 
+    table_area_param = rospy.get_param("/receptionist/table_area")
+
     seat_area = ShapelyPolygon(seat_area_param)
     assert seat_area.is_valid, "Seat area is not valid"
-
+    
     sofa_area = ShapelyPolygon(sofa_area_param)
     sofa_area_publisher.publish(
         PolygonStamped(
@@ -63,7 +72,7 @@ if __name__ == "__main__":
     assert sofa_area.is_valid, "Sofa area is not valid"
 
     sofa_point = Point(**sofa_point_param)
-
+    table_area = ShapelyPolygon(table_area_param)
     # exclude the sofa area from the seat area
     seat_area = seat_area.difference(sofa_area)
 
@@ -102,6 +111,8 @@ if __name__ == "__main__":
     receptionist = Receptionist(
         wait_pose,
         wait_area,
+        table_pose,
+        table_area,
         seat_pose,
         search_motions,
         seat_area,
@@ -110,6 +121,7 @@ if __name__ == "__main__":
         {
             "name": "john",
             "drink": "milk",
+            "interest":"robots",
             "dataset": "receptionist",
             "detection": False,
         },
