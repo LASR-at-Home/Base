@@ -1,5 +1,5 @@
 """
-State for parsing the transcription of the guests' name and favourite drink, and adding this
+State for parsing the transcription of the guests' name and adding this
 to the guest data userdata
 """
 
