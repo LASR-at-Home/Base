@@ -7,8 +7,8 @@ from .receptionist_learn_face import ReceptionistLearnFaces
 from .detect_faces import DetectFaces
 from .get_name_or_drink import GetNameOrDrink
 from .handle_guest import HandleGuest
-from .pointcloud_sweep import PointCloudSweep
-from .run_and_process_detections import RunAndProcessDetections
+# from .pointcloud_sweep import PointCloudSweep
+# from .run_and_process_detections import RunAndProcessDetections
 from .recognise_people import RecognisePeople
 from .seat_guest import SeatGuest
 from .check_sofa import CheckSofa
