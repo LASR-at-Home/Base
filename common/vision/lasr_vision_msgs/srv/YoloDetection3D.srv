@@ -4,16 +4,16 @@ sensor_msgs/Image image_raw
 # Depth image
 sensor_msgs/Image depth_image
 
+# Camera info for depth camera
+# we may want to keep this hardcoded in future
+# it shouldn't change, unless we recalibrate the depth camera
+sensor_msgs/CameraInfo depth_camera_info
+
 # YOLO model to use
 string model
 
-# How certain the detection should be to include
+# Confidence threshold
 float32 confidence
-
-# Non-maximum Supression
-#
-# Guiding value to remove overlapping bounding boxes
-float32 nms
 ---
 # Detection result
 lasr_vision_msgs/Detection3D[] detected_objects

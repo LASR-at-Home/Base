@@ -30,22 +30,35 @@ def cv2_img_to_msg(img, stamp=None):
 
 def msg_to_pillow_img(msg: SensorImage):
     """
-    Convert a given sensor image to a pillow image
+    Convert a given sensor image to a Pillow image
 
     :param msg: Sensor Image
     :return: Pillow Image
     """
 
     size = (msg.width, msg.height)
+    print(msg.encoding)
     if msg.encoding in ["bgr8", "8UC3"]:
-        img = Image.frombytes("RGB", size, msg.data, "raw")
-
-        # BGR => RGB
-        img = Image.fromarray(np.array(img)[:, :, ::-1])
+        img = Image.frombytes("RGB", size, msg.data, "raw")  # BGR
     elif msg.encoding == "rgb8":
-        img = Image.frombytes("RGB", size, msg.data, "raw")
+        img = Image.frombytes("RGB", size, msg.data, "raw")  # RGB
+        img = Image.fromarray(np.array(img)[:, :, ::-1])  # BGR
+    elif msg.encoding == "32FC1":
+        # Convert byte data to float32 array
+        img_array = np.frombuffer(msg.data, dtype=np.float32).reshape(
+            (msg.height, msg.width)
+        )
+
+        # Normalize to 0-255 for display
+        img_normalized = (
+            255 * (img_array - np.min(img_array)) / (np.ptp(img_array) + 1e-8)
+        )
+        img_uint8 = img_normalized.astype(np.uint8)
+
+        # Convert to grayscale image
+        img = Image.fromarray(img_uint8, mode="L")
     else:
-        raise Exception("Unsupported format.")
+        raise Exception(f"Unsupported format {msg.encoding}")
 
     return img
 
