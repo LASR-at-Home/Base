@@ -1,5 +1,8 @@
-# PointCloud2 to run inference on
-sensor_msgs/PointCloud2 pcl
+# Image to run inference on
+sensor_msgs/Image image_raw
+
+# Depth image
+sensor_msgs/Image depth_image
 
 # YOLO model to use
 string dataset
