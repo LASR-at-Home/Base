@@ -26,7 +26,7 @@ To start the service:
 
 ```python
 # use the launch file:
-roslaunch lasr_vision_yolov8 service.launch
+roslaunch lasr_vision_yolo service.launch
 # .. optionally configure debug / preload:
-roslaunch lasr_vision_yolov8 service.launch debug:=true preload:=["yolov8n-seg.pt"]
+roslaunch lasr_vision_yolo service.launch debug:=true preload:=["yolov8n-seg.pt"]
 ```

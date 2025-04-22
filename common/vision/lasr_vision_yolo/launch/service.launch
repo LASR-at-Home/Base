@@ -5,7 +5,7 @@
 
     <arg name="preload" default="[]" doc="Array of models to preload when starting the service" />
 
-    <node name="yolo_service" pkg="lasr_vision_yolov8" type="service" output="screen">
+    <node name="yolo_service" pkg="lasr_vision_yolo" type="service" output="screen">
         <param name="preload" type="yaml" value="$(arg preload)" />
     </node>
 </launch>

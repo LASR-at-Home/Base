@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>lasr_vision_yolov8</name>
+  <name>lasr_vision_yolo</name>
   <version>0.0.0</version>
   <description>YOLOv8 object detection service</description>
 
@@ -19,7 +19,7 @@
   <!-- Url tags are optional, but multiple are allowed, one per tag -->
   <!-- Optional attribute type can be: website, bugtracker, or repository -->
   <!-- Example: -->
-  <!-- <url type="website">http://wiki.ros.org/lasr_vision_yolov8</url> -->
+  <!-- <url type="website">http://wiki.ros.org/lasr_vision_yolo</url> -->
 
 
   <!-- Author tags are optional, multiple are allowed, one per tag -->

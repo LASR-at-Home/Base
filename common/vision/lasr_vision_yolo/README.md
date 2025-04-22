@@ -1,4 +1,4 @@
-# lasr_vision_yolov8
+# lasr_vision_yolo
 
 YOLOv8 object detection service
 
@@ -51,9 +51,9 @@ To start the service:
 
 ```python
 # use the launch file:
-roslaunch lasr_vision_yolov8 service.launch
+roslaunch lasr_vision_yolo service.launch
 # .. optionally configure debug / preload:
-roslaunch lasr_vision_yolov8 service.launch debug:=true preload:=["yolov8n-seg.pt"]
+roslaunch lasr_vision_yolo service.launch debug:=true preload:=["yolov8n-seg.pt"]
 ```
 
 ## Example
@@ -65,10 +65,10 @@ roslaunch lasr_vision_yolov8 service.launch debug:=true preload:=["yolov8n-seg.p
 2. Then launch the demo:
 
    ```bash
-   roslaunch lasr_vision_yolov8 demo.launch file:=$HOME/v.mp4
+   roslaunch lasr_vision_yolo demo.launch file:=$HOME/v.mp4
 
    # .. you can also try other models:
-   roslaunch lasr_vision_yolov8 demo.launch model:=yolov8n.pt file:=$HOME/v.mp4
+   roslaunch lasr_vision_yolo demo.launch model:=yolov8n.pt file:=$HOME/v.mp4
    ```
 
 ## Technical Overview
@@ -128,10 +128,10 @@ Start the YOLOv8 service
 
 ```bash
 # YOLOv8 service
-roslaunch lasr_vision_yolov8 service.launch 
+roslaunch lasr_vision_yolo service.launch 
 
 # Preload models and enable debug topic
-roslaunch lasr_vision_yolov8 service.launch debug:=true preload:=['yolov8n.pt','yolov8n-seg.pt']
+roslaunch lasr_vision_yolo service.launch debug:=true preload:=['yolov8n.pt','yolov8n-seg.pt']
 ```
 
 | Argument | Default | Description |
@@ -146,10 +146,10 @@ Run a YOLOv8 model using the camera
 
 ```bash
 # Run the demo
-roslaunch lasr_vision_yolov8 camera.launch 
+roslaunch lasr_vision_yolo camera.launch 
 
 # Run the demo with a different model
-roslaunch lasr_vision_yolov8 camera.launch model:=yolov8n.pt
+roslaunch lasr_vision_yolo camera.launch model:=yolov8n.pt
 ```
 
 | Argument | Default | Description |
@@ -163,10 +163,10 @@ Run a YOLOv8 model on a video file
 
 ```bash
 # Run the demo
-roslaunch lasr_vision_yolov8 demo.launch file:=$HOME/video.mp4
+roslaunch lasr_vision_yolo demo.launch file:=$HOME/video.mp4
 
 # Run the demo with a different model
-roslaunch lasr_vision_yolov8 demo.launch model:=yolov8n.pt file:=$HOME/video.mp4
+roslaunch lasr_vision_yolo demo.launch model:=yolov8n.pt file:=$HOME/video.mp4
 ```
 
 | Argument | Default | Description |

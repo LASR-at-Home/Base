@@ -1,5 +1,5 @@
 <launch>
-    <include file="$(find lasr_vision_yolov8)/launch/service.launch">
+    <include file="$(find lasr_vision_yolo)/launch/service.launch">
         <arg name="preload" value="['yolov8n-seg.pt']" />
     </include>
 
@@ -10,7 +10,7 @@
 
     <node pkg="lasr_vision_feature_extraction" type="service" name="torch_service" output="screen"/>
     
-    <node name="yolo" pkg="lasr_vision_yolov8" type="service" output="screen"/>
+    <node name="yolo" pkg="lasr_vision_yolo" type="service" output="screen"/>
     <node name="cropped_detection" pkg="lasr_vision_cropped_detection" type="service.py" output="screen"/>
 
    <!--<include file="$(find video_stream_opencv)/launch/camera.launch">

@@ -5,8 +5,8 @@
 2. Then launch the demo:
 
    ```bash
-   roslaunch lasr_vision_yolov8 demo.launch file:=$HOME/v.mp4
+   roslaunch lasr_vision_yolo demo.launch file:=$HOME/v.mp4
 
    # .. you can also try other models:
-   roslaunch lasr_vision_yolov8 demo.launch model:=yolov8n.pt file:=$HOME/v.mp4
+   roslaunch lasr_vision_yolo demo.launch model:=yolov8n.pt file:=$HOME/v.mp4
    ```
