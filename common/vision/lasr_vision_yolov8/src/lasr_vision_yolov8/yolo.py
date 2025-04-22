@@ -13,20 +13,7 @@ from lasr_vision_msgs.srv import (
     YoloDetection3DResponse,
 )
 
-import markers
-
-from geometry_msgs.msg import Point, PointStamped
-
-import tf2_ros as tf
-import tf2_sensor_msgs  # noqa
-from tf2_sensor_msgs.tf2_sensor_msgs import do_transform_cloud
-
-# global tf buffer
-tf_buffer = tf.Buffer(cache_time=rospy.Duration(10))
-
-
-def start_tf_buffer() -> None:
-    tf.TransformListener(tf_buffer)
+from geometry_msgs.msg import Point
 
 
 # model cache
