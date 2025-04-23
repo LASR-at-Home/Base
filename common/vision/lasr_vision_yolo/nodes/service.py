@@ -38,6 +38,10 @@ class YOLOService:
         self._device = rospy.get_param(
             "~device", "cuda:0" if torch.cuda.is_available() else "cpu"
         )
+
+        for model in rospy.get_param("~preload", []):
+            self._maybe_load_model(model)
+
         self._image_publishers = {}
         self._marker_publishers = {}
         self._bridge = CvBridge()

@@ -161,9 +161,7 @@ include_directories(
 ## in contrast to setup.py, you can choose the destination
 catkin_install_python(PROGRAMS
   nodes/service.py
-  examples/relay
-  examples/relay_3d
-  examples/construct_mask
+  examples/relay.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
