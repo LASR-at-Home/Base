@@ -61,6 +61,7 @@ class Detect3DInArea(smach.StateMachine):
         model: str = "yolo11n-seg.pt",
         filter: Union[List[str], None] = None,
         confidence: float = 0.5,
+        target_frame: str = "map",
     ):
         smach.StateMachine.__init__(
             self,
@@ -78,6 +79,7 @@ class Detect3DInArea(smach.StateMachine):
                     model=model,
                     filter=filter,
                     confidence=confidence,
+                    target_frame=target_frame,
                 ),
                 transitions={"succeeded": "FILTER_DETECTIONS", "failed": "failed"},
             )

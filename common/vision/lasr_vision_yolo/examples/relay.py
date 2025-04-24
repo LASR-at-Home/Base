@@ -2,8 +2,9 @@
 
 import rospy
 import rosgraph
-from sensor_msgs.msg import Image, CameraInfo
 import message_filters
+
+from sensor_msgs.msg import Image, CameraInfo
 
 from lasr_vision_msgs.srv import (
     YoloDetection,
@@ -54,6 +55,7 @@ def relay_3d(
             depth_camera_info=depth_camera_info,
             model=model_name,
             confidence=0.5,
+            target_frame="map",
         )
         response = yolo(req)
         rospy.loginfo(response)

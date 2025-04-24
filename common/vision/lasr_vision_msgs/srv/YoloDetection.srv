@@ -8,7 +8,7 @@ string model
 float32 confidence
 
 # Classes to filter, i.e. only detect these classes
-std_msgs/String[] filter
+string[] filter
 
 ---
 # Detection result

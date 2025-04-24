@@ -21,7 +21,7 @@ class Detect(smach.State):
             output_keys=["detections"],
         )
         self.model = model
-        self.filter = [String(cls) for cls in filter] if filter is not None else []
+        self.filter = filter or []
         self.confidence = confidence
         self.yolo = rospy.ServiceProxy("/yolo/detect", YoloDetection)
         self.yolo.wait_for_service()

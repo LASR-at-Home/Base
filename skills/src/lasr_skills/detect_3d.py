@@ -19,6 +19,7 @@ class Detect3D(smach.State):
         model: str = "yolo11n-seg.pt",
         filter: Union[List[str], None] = None,
         confidence: float = 0.5,
+        target_frame: str = "map",
     ):
         smach.State.__init__(
             self,
@@ -29,8 +30,9 @@ class Detect3D(smach.State):
         self.depth_image_topic = depth_image_topic
         self.depth_camera_info_topic = depth_camera_info_topic
         self.model = model
-        self.filter = [String(cls) for cls in filter] if filter is not None else []
+        self.filter = filter or []
         self.confidence = confidence
+        self.target_frame = target_frame
 
         image_sub = message_filters.Subscriber(self.image_topic, Image)
         depth_sub = message_filters.Subscriber(self.depth_image_topic, Image)
@@ -67,6 +69,7 @@ class Detect3D(smach.State):
                 model=self.model,
                 confidence=self.confidence,
                 filter=self.filter,
+                target_frame=self.target_frame,
             )
             userdata.detections_3d = resp.detected_objects
             return "succeeded"

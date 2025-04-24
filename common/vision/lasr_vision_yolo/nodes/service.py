@@ -35,9 +35,11 @@ from lasr_vision_msgs.msg import (
 from cv_bridge import CvBridge
 
 from sensor_msgs.msg import Image
-from geometry_msgs.msg import Point
+from geometry_msgs.msg import Point, PointStamped
 from visualization_msgs.msg import Marker, MarkerArray
 
+import tf2_ros as tf
+from tf2_geometry_msgs.tf2_geometry_msgs import do_transform_point
 
 KEYPOINT_MAPPING: Dict[int, str] = {
     0: "nose",
@@ -102,6 +104,9 @@ class YOLOService:
         self._marker_publishers = {}
         self._bridge = CvBridge()
 
+        self._tf_buffer = tf.Buffer(cache_time=rospy.Duration(10))
+        self._tf_listener = tf.TransformListener(self._tf_buffer)
+
         rospy.Service("/yolo/detect", YoloDetection, self._detect)
         rospy.Service("/yolo/detect3d", YoloDetection3D, self._detect3d)
         rospy.Service("/yolo/detect_pose", YoloPoseDetection, self._detect_keypoints)
@@ -114,7 +119,7 @@ class YOLOService:
 
         cv_im = self._bridge.imgmsg_to_cv2(req.image_raw, desired_encoding="bgr8")
         results = self._yolo(
-            cv_im, req.model, req.confidence, [cls.data for cls in req.filter]
+            cv_im, req.model, req.confidence, [cls for cls in req.filter]
         )
 
         has_masks = results.masks is not None
@@ -144,7 +149,7 @@ class YOLOService:
 
         cv_im = self._bridge.imgmsg_to_cv2(req.image_raw, desired_encoding="bgr8")
         results = self._yolo(
-            cv_im, req.model, req.confidence, [cls.data for cls in req.filter]
+            cv_im, req.model, req.confidence, [cls for cls in req.filter]
         )
         depth_im = self._bridge.imgmsg_to_cv2(
             req.depth_image, desired_encoding="passthrough"
@@ -152,6 +157,23 @@ class YOLOService:
         K = req.depth_camera_info.K
         fx, fy = K[0], K[4]
         cx, cy = K[2], K[5]
+
+        target_frame = req.target_frame or req.depth_image.header.frame_id
+
+        if results:
+            try:
+                transform = self._tf_buffer.lookup_transform(
+                    target_frame,
+                    req.depth_image.header.frame_id,
+                    req.depth_image.header.stamp,
+                    rospy.Duration(1.0),
+                )
+            except (
+                tf.LookupException,
+                tf.ConnectivityException,
+                tf.ExtrapolationException,
+            ) as e:
+                raise rospy.ServiceException(str(e))
 
         for result in results:
             detection = Detection3D()
@@ -181,9 +203,14 @@ class YOLOService:
                 y = z * (v - cy) / fy
                 points = np.stack((x, y, z), axis=1)
                 x, y, z = np.median(points, axis=0)
-                detection.point.x = x
-                detection.point.y = y
-                detection.point.z = z
+
+                point = Point(x, y, z)
+                point_stamped = PointStamped()
+                point_stamped.header = req.depth_image.header
+                point_stamped.point = point
+                point_stamped_transformed = do_transform_point(point_stamped, transform)
+                detection.point = point_stamped_transformed.point
+
             else:
                 rospy.logwarn(
                     "3D Estimation is not implemented when masks aren't available."
@@ -223,7 +250,7 @@ class YOLOService:
         response = YoloPoseDetection3DResponse()
 
         cv_im = self._bridge.imgmsg_to_cv2(req.image_raw, desired_encoding="bgr8")
-        results = self._yolo(cv_im, req.model, req.confidence)
+        results = self._yolo(cv_im, req.model, req.confidence, [])
         depth_im = self._bridge.imgmsg_to_cv2(
             req.depth_image, desired_encoding="passthrough"
         )
@@ -231,7 +258,22 @@ class YOLOService:
         fx, fy = K[0], K[4]
         cx, cy = K[2], K[5]
 
-        results = self._yolo(cv_im, req.model, req.confidence, [])
+        target_frame = req.target_frame or req.depth_image.header.frame_id
+
+        if results:
+            try:
+                transform = self._tf_buffer.lookup_transform(
+                    target_frame,
+                    req.depth_image.header.frame_id,
+                    req.depth_image.header.stamp,
+                    rospy.Duration(1.0),
+                )
+            except (
+                tf.LookupException,
+                tf.ConnectivityException,
+                tf.ExtrapolationException,
+            ) as e:
+                raise rospy.ServiceException(str(e))
 
         for result in results:
             keypoints = Keypoint3DList()
@@ -248,7 +290,17 @@ class YOLOService:
                     y = z * (v - cy) / fy
                     if np.isnan(x) or np.isnan(y) or np.isnan(z):
                         continue
-                    keypoints.keypoints.append(Keypoint3D(name, Point(x, y, z)))
+
+                    point = Point(x, y, z)
+                    point_stamped = PointStamped()
+                    point_stamped.header = req.depth_image.header
+                    point_stamped.point = point
+                    point_stamped_transformed = do_transform_point(
+                        point_stamped, transform
+                    )
+                    point = point_stamped_transformed.point
+
+                    keypoints.keypoints.append(Keypoint3D(name, point))
             response.detections.append(keypoints)
 
         self._publish_results(req, results, response)
@@ -298,7 +350,9 @@ class YOLOService:
             for i, detection in enumerate(response.detected_objects):
 
                 marker = Marker()
-                marker.header.frame_id = req.depth_image.header.frame_id
+                marker.header.frame_id = (
+                    req.target_frame or req.depth_image.header.frame_id
+                )
                 marker.header.stamp = rospy.Time.now()
                 marker.id = i
                 marker.type = Marker.SPHERE
@@ -336,7 +390,9 @@ class YOLOService:
                 # Add spheres for each keypoint
                 for i, pt in enumerate(points):
                     marker = Marker()
-                    marker.header.frame_id = req.depth_image.header.frame_id
+                    marker.header.frame_id = (
+                        req.target_frame or req.depth_image.header.frame_id
+                    )
                     marker.header.stamp = rospy.Time.now()
                     marker.id = marker_id
                     marker.ns = f"person_{detection_idx}"
@@ -357,7 +413,9 @@ class YOLOService:
                 for a, b in SKELETON_CONNECTIONS:
                     if a < len(points) and b < len(points):
                         line_marker = Marker()
-                        line_marker.header.frame_id = req.depth_image.header.frame_id
+                        line_marker.header.frame_id = (
+                            req.target_frame or req.depth_image.header.frame_id
+                        )
                         line_marker.header.stamp = rospy.Time.now()
                         line_marker.id = marker_id
                         line_marker.ns = f"person_{detection_idx}_lines"

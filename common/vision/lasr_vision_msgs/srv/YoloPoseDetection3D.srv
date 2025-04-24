@@ -14,6 +14,9 @@ string model
 
 # Confidence threshold
 float32 confidence
+
+# target frame for 3D estimate
+string target_frame
 ---
 # Detection result
 lasr_vision_msgs/Keypoint3DList[] detections
