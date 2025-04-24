@@ -89,6 +89,8 @@ class YOLOService:
     _image_publishers: Dict[str, rospy.Publisher]
     _marker_publishers: Dict[str, rospy.Publisher]
     _bridge: CvBridge
+    _tf_buffer: tf.Buffer
+    _tf_listener: tf.TransformListener
 
     def __init__(self):
 
