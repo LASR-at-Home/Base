@@ -1,0 +1,19 @@
+# Image to run inference on
+sensor_msgs/Image image_raw
+
+# Depth image
+sensor_msgs/Image depth_image
+
+# Camera info for depth camera
+# we may want to keep this hardcoded in future
+# it shouldn't change, unless we recalibrate the depth camera
+sensor_msgs/CameraInfo depth_camera_info
+
+# YOLO model to use
+string model
+
+# Confidence threshold
+float32 confidence
+---
+# Detection result
+lasr_vision_msgs/Keypoint3DList[] detections
