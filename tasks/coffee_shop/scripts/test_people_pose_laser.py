@@ -114,7 +114,7 @@ if __name__ == "__main__":
         lsr_scan = rospy.wait_for_message("/scan", LaserScan)
         points, pixels = get_points_and_pixels_from_laser(lsr_scan)
         img_msg = rospy.wait_for_message("/xtion/rgb/image_raw", Image)
-        detections = yolo(img_msg, "yolov8n-seg.pt", 0.3, 0.3)
+        detections = yolo(img_msg, "yolo11n-seg.pt", 0.3, 0.3)
         i = 0
         for detection in detections.detected_objects:
             if detection.name == "person":

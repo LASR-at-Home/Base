@@ -86,8 +86,8 @@ class Context:
 
             self.target_object_remappings = data.get("objects", dict())
 
-            self.YOLO_person_model = data.get("yolo_person_model", "yolov8n-seg.pt")
-            self.YOLO_objects_model = data.get("yolo_objects_model", "yolov8n-seg.pt")
+            self.YOLO_person_model = data.get("yolo_person_model", "yolo11n-seg.pt")
+            self.YOLO_objects_model = data.get("yolo_objects_model", "yolo11n-seg.pt")
             self.YOLO_counter_model = data.get("yolo_counter_model", "MK_COUNTER.pt")
 
             if rosparam.list_params("/mmap"):

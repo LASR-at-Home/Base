@@ -115,7 +115,7 @@ wait:
 
 objects: {"coffee" : "coffee", "biscuits": "biscuits", "sandwich": "sandwich", "orange_juice" : "juice", "smoothie" : "smoothie", "granola" : "granola"}
 
-yolo_person_model: "yolov8n-seg.pt"
+yolo_person_model: "yolo11n-seg.pt"
 yolo_objects_model: "final-mk-model-fine-tuned-with-val.pt"
 yolo_counter_model: "MK_COUNTER.pt"
 
