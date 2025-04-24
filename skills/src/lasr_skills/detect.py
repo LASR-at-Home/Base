@@ -4,6 +4,7 @@ from typing import List, Union
 import rospy
 import smach
 from lasr_vision_msgs.srv import YoloDetection
+from std_msgs.msg import String
 
 
 class Detect(smach.State):
@@ -20,7 +21,7 @@ class Detect(smach.State):
             output_keys=["detections"],
         )
         self.model = model
-        self.filter = filter if filter is not None else []
+        self.filter = [String(cls) for cls in filter] if filter is not None else []
         self.confidence = confidence
         self.yolo = rospy.ServiceProxy("/yolo/detect", YoloDetection)
         self.yolo.wait_for_service()
@@ -28,12 +29,9 @@ class Detect(smach.State):
     def execute(self, userdata):
         img_msg = userdata.img_msg
         try:
-            result = self.yolo(img_msg, self.model, self.confidence, self.nms)
-            if len(self.filter) > 0:
-                result.detected_objects = [
-                    det for det in result.detected_objects if det.name in self.filter
-                ]
-            userdata.detections = result
+            userdata.detections = self.yolo(
+                img_msg, self.model, self.confidence, self.filter
+            )
 
             return "succeeded"
         except rospy.ServiceException as e:

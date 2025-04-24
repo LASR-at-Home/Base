@@ -6,6 +6,10 @@ string model
 
 # Confidence threshold
 float32 confidence
+
+# Classes to filter, i.e. only detect these classes
+std_msgs/String[] filter
+
 ---
 # Detection result
 lasr_vision_msgs/Detection[] detected_objects

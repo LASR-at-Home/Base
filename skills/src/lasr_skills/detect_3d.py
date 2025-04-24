@@ -7,6 +7,7 @@ import message_filters
 
 from sensor_msgs.msg import Image, CameraInfo
 from lasr_vision_msgs.srv import YoloDetection3D
+from std_msgs.msg import String
 
 
 class Detect3D(smach.State):
@@ -28,7 +29,7 @@ class Detect3D(smach.State):
         self.depth_image_topic = depth_image_topic
         self.depth_camera_info_topic = depth_camera_info_topic
         self.model = model
-        self.filter = filter if filter is not None else []
+        self.filter = [String(cls) for cls in filter] if filter is not None else []
         self.confidence = confidence
 
         image_sub = message_filters.Subscriber(self.image_topic, Image)
@@ -65,6 +66,7 @@ class Detect3D(smach.State):
                 depth_camera_info=cam_info_msg,
                 model=self.model,
                 confidence=self.confidence,
+                filter=self.filter,
             )
             userdata.detections_3d = resp.detected_objects
             return "succeeded"

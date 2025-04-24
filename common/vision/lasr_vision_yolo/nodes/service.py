@@ -113,7 +113,9 @@ class YOLOService:
         response = YoloDetectionResponse()
 
         cv_im = self._bridge.imgmsg_to_cv2(req.image_raw, desired_encoding="bgr8")
-        results = self._yolo(cv_im, req.model, req.confidence)
+        results = self._yolo(
+            cv_im, req.model, req.confidence, [cls.data for cls in req.filter]
+        )
 
         has_masks = results.masks is not None
 
@@ -141,15 +143,15 @@ class YOLOService:
         response = YoloDetection3DResponse()
 
         cv_im = self._bridge.imgmsg_to_cv2(req.image_raw, desired_encoding="bgr8")
-        results = self._yolo(cv_im, req.model, req.confidence)
+        results = self._yolo(
+            cv_im, req.model, req.confidence, [cls.data for cls in req.filter]
+        )
         depth_im = self._bridge.imgmsg_to_cv2(
             req.depth_image, desired_encoding="passthrough"
         )
         K = req.depth_camera_info.K
         fx, fy = K[0], K[4]
         cx, cy = K[2], K[5]
-
-        results = self._yolo(cv_im, req.model, req.confidence)
 
         for result in results:
             detection = Detection3D()
@@ -199,7 +201,7 @@ class YOLOService:
         response = YoloPoseDetectionResponse()
 
         cv_im = self._bridge.imgmsg_to_cv2(req.image_raw, desired_encoding="bgr8")
-        results = self._yolo(cv_im, req.model, req.confidence)
+        results = self._yolo(cv_im, req.model, req.confidence, [])
 
         for result in results:
             keypoints = KeypointList()
@@ -229,7 +231,7 @@ class YOLOService:
         fx, fy = K[0], K[4]
         cx, cy = K[2], K[5]
 
-        results = self._yolo(cv_im, req.model, req.confidence)
+        results = self._yolo(cv_im, req.model, req.confidence, [])
 
         for result in results:
             keypoints = Keypoint3DList()
@@ -373,9 +375,16 @@ class YOLOService:
 
             marker_publisher.publish(marker_array)
 
-    def _yolo(self, img, model: str, conf: float) -> ultralytics.engine.results.Results:
+    def _yolo(
+        self, img, model: str, conf: float, filter: List[str]
+    ) -> ultralytics.engine.results.Results:
         yolo = self._maybe_load_model(model)
-        results = yolo(img, conf=conf)[0]
+        filter_idx = (
+            [{v: k for k, v in yolo.names.items()}[cls] for cls in filter]
+            if filter
+            else None
+        )
+        results = yolo(img, conf=conf, classes=filter_idx)[0]
         return results
 
 
