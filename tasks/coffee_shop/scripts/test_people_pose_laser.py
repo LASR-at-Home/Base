@@ -96,8 +96,8 @@ if __name__ == "__main__":
 
     people_pose_pub = rospy.Publisher("/people_poses_laser", Marker, queue_size=100)
 
-    rospy.wait_for_service("/yolov8/detect", rospy.Duration(15.0))
-    yolo = rospy.ServiceProxy("/yolov8/detect", YoloDetection)
+    rospy.wait_for_service("/yolo/detect", rospy.Duration(15.0))
+    yolo = rospy.ServiceProxy("/yolo/detect", YoloDetection)
     shapely = rospy.ServiceProxy(
         "/lasr_shapely/points_in_polygon_2d", PointsInPolygon2D
     )

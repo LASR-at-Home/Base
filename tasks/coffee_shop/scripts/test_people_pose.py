@@ -37,8 +37,8 @@ rospy.init_node("test_people_pose")
 
 people_pose_pub = rospy.Publisher("/people_poses", Marker, queue_size=100)
 
-rospy.wait_for_service("/yolov8/detect", rospy.Duration(15.0))
-yolo = rospy.ServiceProxy("/yolov8/detect", YoloDetection)
+rospy.wait_for_service("/yolo/detect", rospy.Duration(15.0))
+yolo = rospy.ServiceProxy("/yolo/detect", YoloDetection)
 tf = rospy.ServiceProxy("/tf_transform", TfTransform)
 bridge = CvBridge()
 
