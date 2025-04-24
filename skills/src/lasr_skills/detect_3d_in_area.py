@@ -55,11 +55,12 @@ class Detect3DInArea(smach.StateMachine):
     def __init__(
         self,
         area_polygon: ShapelyPolygon,
-        depth_topic: str = "/xtion/depth_registered/points",
-        model: str = "yolov8x-seg.pt",
+        image_topic: str = "/xtion/rgb/image_raw",
+        depth_image_topic: str = "/xtion/depth_registered/image_raw",
+        depth_camera_info_topic: str = "/xtion/depth_registered/camera_info",
+        model: str = "yolo11n-seg.pt",
         filter: Union[List[str], None] = None,
         confidence: float = 0.5,
-        nms: float = 0.3,
     ):
         smach.StateMachine.__init__(
             self,
@@ -71,11 +72,12 @@ class Detect3DInArea(smach.StateMachine):
             smach.StateMachine.add(
                 "DETECT_OBJECTS_3D",
                 Detect3D(
-                    depth_topic=depth_topic,
+                    image_topic=image_topic,
+                    depth_image_topic=depth_image_topic,
+                    depth_camera_info_topic=depth_camera_info_topic,
                     model=model,
                     filter=filter,
                     confidence=confidence,
-                    nms=nms,
                 ),
                 transitions={"succeeded": "FILTER_DETECTIONS", "failed": "failed"},
             )
