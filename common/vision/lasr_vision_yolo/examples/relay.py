@@ -65,8 +65,8 @@ def relay_3d(
     depth_camera_info_sub = message_filters.Subscriber(
         depth_camera_info_topic, CameraInfo
     )
-    ts = message_filters.TimeSynchronizer(
-        [image_sub, depth_sub, depth_camera_info_sub], 10
+    ts = message_filters.ApproximateTimeSynchronizer(
+        [image_sub, depth_sub, depth_camera_info_sub], 10, 0.1
     )
     ts.registerCallback(detect_cb)
 
@@ -110,8 +110,8 @@ def relay_keypoints_3d(
     depth_camera_info_sub = message_filters.Subscriber(
         depth_camera_info_topic, CameraInfo
     )
-    ts = message_filters.TimeSynchronizer(
-        [image_sub, depth_sub, depth_camera_info_sub], 10
+    ts = message_filters.ApproximateTimeSynchronizer(
+        [image_sub, depth_sub, depth_camera_info_sub], 10, 0.1
     )
     ts.registerCallback(detect_cb)
 
