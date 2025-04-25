@@ -7,9 +7,9 @@ string model
 # Confidence threshold
 float32 confidence
 
-# Classes to filter, i.e. only detect these classes
-string[] filter
+# target frame for 3D estimate
+string target_frame
 
 ---
 # Detection result
-lasr_vision_msgs/Detection[] detected_objects
+lasr_vision_msgs/KeypointList[] detections

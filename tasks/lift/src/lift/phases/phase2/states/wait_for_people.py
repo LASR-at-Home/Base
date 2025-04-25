@@ -58,7 +58,7 @@ class WaitForPeople(smach.State):
         polygon = rospy.get_param("test_lift_points")
         pcl_msg = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
         detections, im = perform_detection(
-            self.default, pcl_msg, None, ["person"], "yolov8n-seg.pt"
+            self.default, pcl_msg, None, ["person"], "yolo11n-seg.pt"
         )
         print("len detections")
         print(len(detections))

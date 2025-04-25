@@ -96,8 +96,8 @@ if __name__ == "__main__":
 
     people_pose_pub = rospy.Publisher("/people_poses_laser", Marker, queue_size=100)
 
-    rospy.wait_for_service("/yolov8/detect", rospy.Duration(15.0))
-    yolo = rospy.ServiceProxy("/yolov8/detect", YoloDetection)
+    rospy.wait_for_service("/yolo/detect", rospy.Duration(15.0))
+    yolo = rospy.ServiceProxy("/yolo/detect", YoloDetection)
     shapely = rospy.ServiceProxy(
         "/lasr_shapely/points_in_polygon_2d", PointsInPolygon2D
     )
@@ -114,7 +114,7 @@ if __name__ == "__main__":
         lsr_scan = rospy.wait_for_message("/scan", LaserScan)
         points, pixels = get_points_and_pixels_from_laser(lsr_scan)
         img_msg = rospy.wait_for_message("/xtion/rgb/image_raw", Image)
-        detections = yolo(img_msg, "yolov8n-seg.pt", 0.3, 0.3)
+        detections = yolo(img_msg, "yolo11n-seg.pt", 0.3, 0.3)
         i = 0
         for detection in detections.detected_objects:
             if detection.name == "person":
