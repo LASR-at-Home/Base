@@ -41,9 +41,7 @@ class Detect3D(smach.State):
         )
 
         self.ts = message_filters.ApproximateTimeSynchronizer(
-            [image_sub, depth_sub, cam_info_sub],
-            queue_size=10,
-            slop=0.1
+            [image_sub, depth_sub, cam_info_sub], queue_size=10, slop=0.1
         )
         self.data = None
 
