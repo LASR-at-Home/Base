@@ -7,7 +7,13 @@ project(lasr_vision_msgs)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED COMPONENTS message_generation message_runtime sensor_msgs)
+find_package(catkin REQUIRED COMPONENTS 
+  rospy
+  message_runtime 
+  sensor_msgs
+  geometry_msgs
+  message_generation 
+)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -52,6 +58,11 @@ add_message_files(
   BodyPixMask.msg
   CDRequest.msg
   CDResponse.msg
+  DetectionArray.msg
+  Detection3DArray.msg
+  Sam2BboxWithFlag.msg
+  Sam2PointsWithLabelsAndFlag.msg
+  Sam2PromptArrays.msg
 )
 
 ## Generate services in the 'srv' folder
