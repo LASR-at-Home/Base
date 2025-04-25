@@ -55,7 +55,7 @@
 
 
     <!--      PERCEPTION     -->
-    <node pkg="lasr_vision_yolov8" type="service" name="service" output="screen"/>
+    <node pkg="lasr_vision_yolo" type="service" name="service" output="screen"/>
 
 
     <!--      Phase 3     -->

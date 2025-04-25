@@ -63,6 +63,10 @@ add_message_files(
   Sam2BboxWithFlag.msg
   Sam2PointsWithLabelsAndFlag.msg
   Sam2PromptArrays.msg
+  Keypoint.msg
+  Keypoint3D.msg
+  KeypointList.msg
+  Keypoint3DList.msg
 )
 
 ## Generate services in the 'srv' folder
@@ -70,6 +74,8 @@ add_service_files(
   FILES
   YoloDetection.srv
   YoloDetection3D.srv
+  YoloPoseDetection.srv
+  YoloPoseDetection3D.srv
   BodyPixMaskDetection.srv
   BodyPixKeypointDetection.srv
   Recognise.srv
@@ -93,6 +99,7 @@ add_service_files(
 generate_messages(
   DEPENDENCIES
   sensor_msgs
+  geometry_msgs
 )
 
 ################################################

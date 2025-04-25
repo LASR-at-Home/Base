@@ -11,7 +11,7 @@ This package is maintained by:
 
 This package depends on the following ROS packages:
 - catkin (buildtool)
-- lasr_vision_yolov8
+- lasr_vision_yolo
 - cv_bridge3
 
 Ask the package maintainer to write or create a blank `doc/PREREQUISITES.md` for their package!
