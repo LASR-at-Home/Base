@@ -14,7 +14,7 @@ from lasr_skills import (
     WaitForPersonInArea,
 )
 from lasr_vision_msgs.srv import Recognise
-from receptionist.states import HandleName, HandleDrink, HandleInterest, IntroduceTableGuest, IntroduceAndSeatGuest
+from receptionist.states import HandleName, HandleDrink, HandleInterest, IntroduceAndSeatGuest
 from shapely.geometry import Polygon
 from std_msgs.msg import Empty, Header
 
@@ -110,7 +110,7 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "HANDLE_INTEREST_1",
-                HandleName("guest1", learn_guest_1),
+                HandleInterest("guest1"),
                 transitions={
                     "succeeded": "COMPARE_INTEREST_1",
                     "failed": "COMPARE_INTEREST_1",
@@ -122,7 +122,9 @@ class Receptionist(smach.StateMachine):
                 Say(text="Comparing interests is ongoing."),
                 transitions={
                     "succeeded": "SAY_FOLLOW_GUEST_TO_TABLE_1",
-                    "failed": "SAY_FOLLOW_GUEST_TO_TABLE_1",
+                    "aborted": "SAY_FOLLOW_GUEST_TO_TABLE_1",
+                    "preempted": "SAY_FOLLOW_GUEST_TO_TABLE_1",
+
                 },
             )
 
@@ -130,7 +132,7 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "HANDLE_FAVOURITE_DRINK_GUEST_1",
-                HandleDrink("guest1", learn_guest_1),
+                HandleDrink("guest1"),
                 transitions={
                     "succeeded": "INTRODUCE_TABLE_GUEST_1",
                     "failed": "INTRODUCE_TABLE_GUEST_1", #if this failes can not introduce table to guest so continue with SAY_FOLLOW_GUEST_1?
@@ -142,7 +144,8 @@ class Receptionist(smach.StateMachine):
                 Say(text="Finding your favourite drink on the table is ongoing."),
                 transitions={
                     "succeeded": "SAY_FOLLOW_GUEST_1",
-                    "failed": "SAY_FOLLOW_GUEST_1",
+                    "aborted": "SAY_FOLLOW_GUEST_1",
+                    "preempted":"SAY_FOLLOW_GUEST_1",
                 },
             )
 
@@ -208,7 +211,7 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "HANDLE_INTEREST_2",
-                HandleName("guest2", False),
+                HandleInterest("guest2"),
                 transitions={
                     "succeeded": "COMPARE_INTEREST_2",
                     "failed": "COMPARE_INTEREST_2",
@@ -220,7 +223,8 @@ class Receptionist(smach.StateMachine):
                 Say(text="Comparing interests is ongoing."),
                 transitions={
                     "succeeded": "SAY_FOLLOW_GUEST_TO_TABLE_2",
-                    "failed": "SAY_FOLLOW_GUEST_TO_TABLE_2",
+                    "aborted": "SAY_FOLLOW_GUEST_TO_TABLE_2",
+                    "preempted":"SAY_FOLLOW_GUEST_TO_TABLE_2",
                 },
             )
 
@@ -228,7 +232,7 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "HANDLE_FAVOURITE_DRINK_GUEST_2",
-                HandleDrink("guest1", False),
+                HandleDrink("guest2"),
                 transitions={
                     "succeeded": "INTRODUCE_TABLE_GUEST_2",
                     "failed": "INTRODUCE_TABLE_GUEST_2", #if this failes can not introduce table to guest so continue with SAY_FOLLOW_GUEST_1?
@@ -240,7 +244,8 @@ class Receptionist(smach.StateMachine):
                 Say(text="Finding your favourite drink on the table is ongoing."),
                 transitions={
                     "succeeded": "SAY_FOLLOW_GUEST_2",
-                    "failed": "SAY_FOLLOW_GUEST_2",
+                    "aborted": "SAY_FOLLOW_GUEST_2",
+                    "preempted":"SAY_FOLLOW_GUEST_2"
                 },
             )
             self._guide_guest(guest_id=2)
@@ -338,7 +343,7 @@ class Receptionist(smach.StateMachine):
         smach.StateMachine.add(
             f"CHECK_GUEST_ID_GUEST_{guest_id}",
             smach.CBState(check_guest_id, outcomes=["guest_1", "guest_2"]),
-            transitions={"guest_2": "HANDLE_GUEST_2", "guest_1": "HANDLE_GUEST_1"},
+            transitions={"guest_2": "HANDLE_NAME_2", "guest_1": "HANDLE_NAME_1"},
         )
 
     def _guide_guest_to_table(self, guest_id: int) -> None:
@@ -363,13 +368,13 @@ class Receptionist(smach.StateMachine):
             f"GO_TO_TABLE_LOCATION_GUEST_{guest_id}",
             GoToLocation(self.table_pose),
             transitions={
-                "succeeded": f"LOOK_EYES_{guest_id}",
+                "succeeded": f"LOOK_EYES_TABLE_{guest_id}",
                 "failed": f"GO_TO_TABLE_LOCATION_GUEST_{guest_id}",
             },
         )
 
         smach.StateMachine.add(
-            f"LOOK_EYES_{guest_id}",
+            f"LOOK_EYES_TABLE_{guest_id}",
             PlayMotion(motion_name="look_very_left"),
             transitions={
                 "succeeded": f"SAY_ARRIVE_GUEST_{guest_id}",
