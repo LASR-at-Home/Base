@@ -1,3 +1,4 @@
+-e file:///home/jared/robocup/Base/common/manipulation/ros_contact_graspnet/contact_graspnet_pytorch  # via -r requirements.in
 absl-py==1.4.0            # via -r requirements.in
 addict==2.4.0             # via -r requirements.in, open3d
 anyio==3.5.0              # via -r requirements.in, jupyter-server
