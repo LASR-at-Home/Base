@@ -20,8 +20,32 @@ priors:
     - red wine
     - tropical juice
   interests: 
+    - football
     - robotics
-  
+    - basketball
+    - table tennis
+    - badminton
+    - running
+    - swimming
+    - chess
+    - cooking
+    - painting
+    - reading
+    - yoga
+    - robotics
+    - programming
+    - electronics
+    - travel
+    - hiking
+    - camping
+    - dancing
+    - singing
+    - playing guitar
+    - photography
+    - gardening
+    - video games
+    - board games
+
 
 #WAIT POSE LAB:
 wait_pose: 
