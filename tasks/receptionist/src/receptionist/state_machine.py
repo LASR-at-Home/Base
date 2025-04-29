@@ -14,7 +14,7 @@ from lasr_skills import (
     WaitForPersonInArea,
 )
 from lasr_vision_msgs.srv import Recognise
-from receptionist.states import HandleName, HandleDrink, HandleInterest, IntroduceAndSeatGuest
+from receptionist.states import HandleName, HandleDrink, CompareInterest, HandleInterest, IntroduceAndSeatGuest
 from shapely.geometry import Polygon
 from std_msgs.msg import Empty, Header
 
@@ -110,7 +110,7 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "HANDLE_INTEREST_1",
-                HandleInterest("guest1"),
+                HandleInterest("1"),
                 transitions={
                     "succeeded": "COMPARE_INTEREST_1",
                     "failed": "COMPARE_INTEREST_1",
@@ -119,7 +119,7 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "COMPARE_INTEREST_1",
-                Say(text="Comparing interests is ongoing."),
+                CompareInterest(guest_id=1),
                 transitions={
                     "succeeded": "SAY_FOLLOW_GUEST_TO_TABLE_1",
                     "aborted": "SAY_FOLLOW_GUEST_TO_TABLE_1",
@@ -220,7 +220,7 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "COMPARE_INTEREST_2",
-                Say(text="Comparing interests is ongoing."),
+                CompareInterest(guest_id=2),
                 transitions={
                     "succeeded": "SAY_FOLLOW_GUEST_TO_TABLE_2",
                     "aborted": "SAY_FOLLOW_GUEST_TO_TABLE_2",
