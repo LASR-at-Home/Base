@@ -1,6 +1,5 @@
 import rospy
-
-from leg_tracker.msg import PersonArray, Person
+import math
 
 from geometry_msgs.msg import (
     PoseWithCovarianceStamped,
@@ -16,6 +15,7 @@ from typing import Union, List, Tuple
 from move_base_msgs.msg import MoveBaseAction, MoveBaseActionGoal, MoveBaseGoal
 from actionlib_msgs.msg import GoalStatus
 from sensor_msgs.msg import PointCloud2
+import message_filters
 
 import rosservice
 import tf2_ros as tf
@@ -24,6 +24,11 @@ from tf2_geometry_msgs.tf2_geometry_msgs import do_transform_pose
 from nav_msgs.srv import GetPlan
 from play_motion_msgs.msg import PlayMotionAction
 from play_motion_msgs.msg import PlayMotionGoal
+from geometry_msgs.msg import Point, PointStamped
+from sensor_msgs.msg import Image, CameraInfo
+from std_msgs.msg import Bool
+from visualization_msgs.msg import Marker
+from lasr_vision_msgs.msg import Sam2PromptArrays as PromptArrays, Sam2BboxWithFlag as BboxWithFlag, Detection3DArray, YoloDetection3D, Detection3D
 
 from math import atan2
 import numpy as np
@@ -49,9 +54,6 @@ class PersonFollower:
     _stopping_distance: float
     _vision_recovery_motions: List[str] = ["look_centre", "look_left", "look_right"]
     _vision_recovery_attempts: int = 3
-
-    # State
-    _track_id: Union[None, int]
 
     # Action clients
     _move_base_client: actionlib.SimpleActionClient
@@ -85,6 +87,7 @@ class PersonFollower:
         self._static_speed = static_speed
         self._max_speed = max_speed
 
+        self._track_bbox = None
         self._track_id = None
 
         rospy.init_node("person_following_sam2")
@@ -92,10 +95,11 @@ class PersonFollower:
         self.camera = rospy.get_param("~camera", "xtion")
         self.model_name = rospy.get_param("~model", "yolo11n-seg.pt")
 
-        self.image_topic = f"/{camera}/rgb/image_raw"
-        self.depth_topic = f"/{camera}/depth_registered/image_raw"
-        self.depth_camera_info_topic = f"/{camera}/depth_registered/camera_info"
+        self.image_topic = f"/{self.camera}/rgb/image_raw"
+        self.depth_topic = f"/{self.camera}/depth_registered/image_raw"
+        self.depth_camera_info_topic = f"/{self.camera}/depth_registered/camera_info"
 
+        self.image, self.depth_image, self.depth_camera_info = None, None, None
         image_sub = message_filters.Subscriber(self.image_topic, Image)
         depth_sub = message_filters.Subscriber(self.depth_topic, Image)
         depth_camera_info_sub = message_filters.Subscriber(
@@ -140,8 +144,11 @@ class PersonFollower:
         self._should_stop = False
 
         self._waypoints = []
+        self._last_detection_time = rospy.Time.now()
+        self.newest_detection = None
 
-    def image_callback(self,)
+    def image_callback(self, image: Image, depth_image: Image, depth_camera_info: CameraInfo):
+        self.image, self.depth_image, self.depth_camera_info = image, depth_image, depth_camera_info
 
     def _tf_pose(self, pose: PoseStamped, target_frame: str):
         trans = self._buffer.lookup_transform(
@@ -172,55 +179,87 @@ class PersonFollower:
         Chooses the closest person as the target
         """
 
+        while True:
+            if self.image and self.depth_image and self.depth_camera_info:
+                break
         req = YoloDetection3DRequest(
-            image_raw=image,
-            depth_image=depth_image,
-            depth_camera_info=depth_camera_info,
-            model=model_name,
+            image_raw=self.image,
+            depth_image=self.depth_image,
+            depth_camera_info=self.depth_camera_info,
+            model="yolo11n-seg.pt",  # not using poses for now
             confidence=0.5,
             target_frame="map",
         )
-        detections: Detection3D = self.yolo()
+        detections: Detection3D = self.yolo(req)
 
-        tracks: PersonArray = rospy.wait_for_message("/people_tracked", PersonArray)
-        people: List[Person] = tracks.people
+        detected_people = {
+            "xywh": [],
+            "point": [],
+        }
+        for detection in detections:
+            detected_people["point"].append(detection.point)
+            detected_people["xywh"].append(detection.xywh)
 
-        if len(people) == 0:
-            return False
+        # find the nearest person:
+        robot_frame = "base_link"
+        map_frame = "map"
 
-        min_dist: float = np.inf
-        closest_person: Union[None, Person] = None
-        robot_pose: PoseStamped = self._robot_pose_in_odom()
-
-        if robot_pose is None:
-            return False
-
-        for person in people:
-            dist: float = self._euclidian_distance(person.pose, robot_pose.pose)
-
-            face_quat: Quaternion = self._compute_face_quat(
-                robot_pose.pose, person.pose
+        # find robot's position in map
+        try:
+            transform = self._tf_buffer.lookup_transform(
+                map_frame,
+                robot_frame,
+                rospy.Time(0),
+                rospy.Duration(1.0)
             )
-            robot_dir: np.ndarray = self._quat_to_dir(robot_pose.pose.orientation)
-            person_dir: np.ndarray = self._quat_to_dir(face_quat)
-            angle: float = np.degrees(
-                self._angle_between_vectors(robot_dir, person_dir)
-            )
-            rospy.loginfo(f"Person {person.id} is at {dist}m and {angle} degrees")
-            if (
-                dist < self._start_following_radius
-                and abs(angle) < self._start_following_angle
-            ):
-                if dist < min_dist:
-                    min_dist = dist
-                    closest_person = person
+            robot_x = transform.transform.translation.x
+            robot_y = transform.transform.translation.y
+        except tf.LookupException as e:
+            rospy.logerr("TF lookup failed: %s", str(e))
+            return
 
-        if not closest_person:
+        min_dist = float("inf")
+        nearest_index = -1
+
+        for i, point in enumerate(detected_people["point"]):
+            dx = point.x - robot_x
+            dy = point.y - robot_y
+            dist = math.hypot(dx, dy)
+
+            if dist < min_dist:
+                min_dist = dist
+                nearest_index = i
+
+        if nearest_index != -1:
+            nearest_person_point = detected_people["point"][nearest_index]
+            nearest_person_bbox = detected_people["xywh"][nearest_index]
+            rospy.loginfo(f"Nearest person at distance {min_dist:.2f}m")
+        else:
             return False
 
-        self._track_id = closest_person.id
+        self._track_bbox = nearest_person_bbox
+        self._track_id = nearest_index
 
-        rospy.loginfo(f"Tracking person with ID {self._track_id}")
+        # restart sam2 and prompt it
+        bbox_list = []
+        for i, bbox in enumerate(detected_people["xywh"]):
+            bbox_msg = BboxWithFlag()
+            bbox_msg.obj_id = i
+            bbox_msg.reset = False  # not to reset here, will reset together
+            bbox_msg.clear_old_points = True
+            bbox_msg.xywh = bbox
+            bbox_list.append(bbox_msg)
+            rospy.loginfo(f"Prepared BBox for ID {i}")
+
+        prompt_msg = PromptArrays()
+        prompt_msg.bbox_array = bbox_list
+        prompt_msg.point_array = []
+        prompt_msg.reset = True  # full reset
+        self.prompt_pub.publish(prompt_msg)
+        rospy.loginfo(f"Published PromptArrays with {len(bbox_list)} BBoxes.")
+        rospy.sleep(1.0)
+
+        rospy.loginfo(f"Tracking person discovered with id {self._track_id}")
         return True
 
     def _euclidian_distance(self, p1: Pose, p2: Pose) -> float:
@@ -302,112 +341,152 @@ class PersonFollower:
             rospy.loginfo("Recovering track...")
             rospy.sleep(1)
         return True
+    
+    def detection3d_callback(self, msg: Detection3DArray):
+        for detection in msg.detections:
+            if int(detection.name) == self._track_id:
+                self.newest_detection = detection
+                self._last_detection_time = rospy.Time.now()
+                break
 
     def follow(self) -> FollowResult:
-
         result = FollowResult()
-
         person_trajectory: PoseArray = PoseArray()
         person_trajectory.header.frame_id = "odom"
-        prev_track: Union[None, Person] = None
-        prev_goal: Union[None, PoseStamped] = None
+        prev_goal = None
+        prev_pose = None
         track_vels: List[Tuple[float, float]] = []
 
+        # Variables for velocity estimation
+        self._prev_detection_pos = None  # (x, y)
+        self._prev_detection_time = None  # rospy.Time
+
+        rate = rospy.Rate(10)
+        timeout_duration = rospy.Duration(5.0)
+
         while not rospy.is_shutdown():
-
-            tracks: PersonArray = rospy.wait_for_message("/people_tracked", PersonArray)
-
-            # Get the most recent track of the person we are following
-            track = next(
-                filter(lambda track: track.id == self._track_id, tracks.people),
-                None,
-            )
-            # keep a sliding window of the tracks velocity
-            if track is not None:
-                track_vels.append((track.vel_x, track.vel_y))
-                if len(track_vels) > 10:
-                    track_vels.pop(0)
-
-            if track is None:
+            # 1. Timeout check: no detection for 5 seconds
+            if (
+                not hasattr(self, "_last_detection_time")
+                or rospy.Time.now() - self._last_detection_time > timeout_duration
+            ):
                 rospy.loginfo("Lost track of person, recovering...")
                 person_trajectory = PoseArray()
                 self._recover_track()
-                prev_track = None
+                prev_pose = None
+                self._prev_detection_pos = None
+                self._prev_detection_time = None
+                track_vels.clear()
+                rate.sleep()
                 continue
 
-            if prev_track is None:
-                robot_pose: PoseStamped = self._robot_pose_in_odom()
+            # 2. Get newest_detection
+            detection = getattr(self, "newest_detection", None)
+            if detection is None:
+                rospy.logwarn("No detection yet")
+                rate.sleep()
+                continue
 
+            # 3. Create PoseStamped in "map"
+            map_pose = PoseStamped()
+            map_pose.header.frame_id = "map"
+            map_pose.header.stamp = rospy.Time.now()  # Conservative estimate
+            map_pose.pose.position = detection.point
+            map_pose.pose.orientation.w = 1.0  # Identity orientation
+
+            # 4. Transform to "odom"
+            try:
+                odom_pose = self._tf_buffer.transform(
+                    map_pose, "odom", rospy.Duration(0.5)
+                )
+            except (tf.LookupException, tf.ExtrapolationException) as e:
+                rospy.logwarn(f"TF transform failed: {e}")
+                rate.sleep()
+                continue
+
+            # 5. Add position to trajectory
+            person_trajectory.poses.append(odom_pose.pose)
+
+            # 6. Estimate velocity (x, y in odom)
+            now = rospy.Time.now()
+            curr_x = odom_pose.pose.position.x
+            curr_y = odom_pose.pose.position.y
+            vel_x, vel_y = 0.0, 0.0
+
+            if self._prev_detection_pos is not None and self._prev_detection_time is not None:
+                dt = (now - self._prev_detection_time).to_sec()
+                if dt > 0:
+                    dx = curr_x - self._prev_detection_pos[0]
+                    dy = curr_y - self._prev_detection_pos[1]
+                    vel_x = dx / dt
+                    vel_y = dy / dt
+
+            self._prev_detection_pos = (curr_x, curr_y)
+            self._prev_detection_time = now
+
+            # 7. Velocity tracking buffer
+            track_vels.append((vel_x, vel_y))
+            if len(track_vels) > 10:
+                track_vels.pop(0)
+
+            # 8. Goal logic
+            if prev_pose is None:
+                robot_pose = self._robot_pose_in_odom()
                 goal_pose = self._tf_pose(
                     PoseStamped(
                         pose=Pose(
-                            position=track.pose.position,
+                            position=odom_pose.pose.position,
                             orientation=robot_pose.pose.orientation,
                         ),
-                        header=tracks.header,
+                        header=odom_pose.header,
                     ),
                     "map",
                 )
                 self._move_base(goal_pose)
                 prev_goal = goal_pose
-                prev_track = track
+                prev_pose = odom_pose
 
-            # Distance to the previous pose
-            dist_to_prev = (
-                self._euclidian_distance(track.pose, prev_track.pose)
-                if prev_track is not None
-                else np.inf
-            )
+            else:
+                dist_to_prev = self._euclidian_distance(odom_pose, prev_pose)
 
-            # Check if the person has moved significantly
-            if dist_to_prev >= self._new_goal_threshold:
+                if dist_to_prev >= self._new_goal_threshold:
+                    goal_pose = self._tf_pose(
+                        PoseStamped(pose=odom_pose.pose, header=odom_pose.header),
+                        "map",
+                    )
+                    self._move_base(goal_pose)
+                    self._waypoints.append(goal_pose)
+                    prev_goal = goal_pose
+                    prev_pose = odom_pose
 
-                goal_pose = self._tf_pose(
-                    PoseStamped(pose=track.pose, header=tracks.header),
-                    "map",
-                )
-                self._move_base(goal_pose)
+                elif (
+                    self._move_base_client.get_state() in [GoalStatus.ABORTED]
+                    and prev_goal is not None
+                ):
+                    rospy.logwarn("Goal was aborted, retrying")
+                    self._move_base(prev_goal)
 
-                self._waypoints.append(goal_pose)
-                prev_goal = goal_pose
-                prev_track = track
-            # retry goal if it was aborted
-            elif (
-                self._move_base_client.get_state() in [GoalStatus.ABORTED]
-                and prev_goal is not None
-            ):
-                rospy.logwarn("Goal was aborted, retrying")
-                self._move_base(prev_goal)
-            # check if the person has been static for too long
-            elif (
-                (
-                    np.mean([np.linalg.norm(vel) for vel in track_vels])
-                    < self._static_speed
-                )
-                and len(track_vels) == 10
-                and prev_track is not None
-            ):
-                rospy.logwarn(
-                    "Person has been static for too long, going to them and stopping"
-                )
-                # cancel current goal
-                self._cancel_goal()
+                elif (
+                    (
+                        np.mean([np.linalg.norm(vel) for vel in track_vels])
+                        < self._static_speed
+                    )
+                    and len(track_vels) == 10
+                ):
+                    rospy.logwarn("Person has been static too long, stopping")
+                    self._cancel_goal()
+                    track_vels = []
+                    self._waypoints = []
 
-                # clear velocity buffer
-                track_vels = []
+                elif self._move_base_client.get_state() in [GoalStatus.SUCCEEDED]:
+                    goal_pose = self._tf_pose(
+                        PoseStamped(pose=odom_pose.pose, header=odom_pose.header),
+                        "map",
+                    )
+                    self._move_base(goal_pose)
+                    prev_goal = goal_pose
+                    prev_pose = odom_pose
 
-                # clear waypoints
-                self._waypoints = []
+            rate.sleep()
 
-            elif self._move_base_client.get_state() in [GoalStatus.SUCCEEDED]:
-                goal_pose = self._tf_pose(
-                    PoseStamped(pose=track.pose, header=tracks.header),
-                    "map",
-                )
-                self._move_base(goal_pose)
-                prev_goal = goal_pose
-                prev_track = track
-            rospy.loginfo("")
-            rospy.loginfo(np.mean([np.linalg.norm(vel) for vel in track_vels]))
-            rospy.loginfo("")
         return result

@@ -1,1 +1,1 @@
-from .person_following import PersonFollower
+from .person_following_sam2 import PersonFollower
