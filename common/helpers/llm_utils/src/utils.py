@@ -11,7 +11,7 @@ def parse_llm_output_to_dict(output: str, fields: list[str] = None) -> dict:
     """
     field_dict = {field: None for field in fields}
     for field in fields:
-        pattern = re.compile(rf"{field}:\s*(.*?)(?:\n|$)") # field: value
+        pattern = re.compile(rf"{field}:\s*(.*?)(?:\n|$)")  # field: value
         match = pattern.search(output)
         if match:
             field_dict[field] = match.group(1).strip()
@@ -24,7 +24,7 @@ def truncate_llm_output(output: str) -> str:
     :param output: the output from the LLM
     :return: the parsed output
     """
-    sentences = re.split(r'(?<=[.!?]) +', output)
+    sentences = re.split(r"(?<=[.!?]) +", output)
     if len(sentences) > 1:
         return sentences[0]
     else:
@@ -48,6 +48,8 @@ def create_query(text: str, task: str, fields: list[str] = None):
         query = f"Extract the commonality (if it exists) of the following interests:\n\nSentences: {text}."
         # query = f"Extract the commonality (if it exists) of the following interests:\n\nInterests: {text}.\nFormat it as a sentence: 'you both have interests which are...'"
     else:
-        raise ValueError(f"Unknown task: {task}. Supported tasks are 'extract_fields' and 'interest_commonality'.")
+        raise ValueError(
+            f"Unknown task: {task}. Supported tasks are 'extract_fields' and 'interest_commonality'."
+        )
 
     return query

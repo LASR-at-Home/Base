@@ -5,15 +5,25 @@ from typing import Optional, List
 import re
 
 import numpy as np
-from transformers import pipeline, AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, \
-    AutoModelForTokenClassification, AutoModelForQuestionAnswering
+from transformers import (
+    pipeline,
+    AutoModelForCausalLM,
+    AutoTokenizer,
+    BitsAndBytesConfig,
+    AutoModelForTokenClassification,
+    AutoModelForQuestionAnswering,
+)
 import torch
 
 import os
 import json
 from datetime import datetime
 
-from common.helpers.llm_utils.src.utils import create_query, truncate_llm_output, parse_llm_output_to_dict
+from common.helpers.llm_utils.src.utils import (
+    create_query,
+    truncate_llm_output,
+    parse_llm_output_to_dict,
+)
 
 
 @dataclass
@@ -21,19 +31,24 @@ class ModelConfig:
     """
     Configuration class for the LLM or pipeline models.
     """
+
     model_name: str
-    model_type: str = "pipeline"  # 'pipeline' (NER, QA, classification) or 'llm' (chat/instruction)
+    model_type: str = (
+        "pipeline"  # 'pipeline' (NER, QA, classification) or 'llm' (chat/instruction)
+    )
     task: Optional[str] = None  # For pipeline models
     quantize: bool = True
 
+
 models = {
-    "BERT-ner": "dslim/bert-base-NER", # NER so mainly names
+    "BERT-ner": "dslim/bert-base-NER",  # NER so mainly names
     "Qwen": "Qwen/Qwen2.5-1.5B",  # perfect
     "QCode": "Qwen/Qwen2.5-Coder-1.5B",  # perfect
-    "Mistral": "mistralai/Mistral-7B-v0.1", # empty output
-    "Gemma": "google/gemma-2b", # nope
-    "DeepSeekQwen": "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B", # terrible lol
+    "Mistral": "mistralai/Mistral-7B-v0.1",  # empty output
+    "Gemma": "google/gemma-2b",  # nope
+    "DeepSeekQwen": "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B",  # terrible lol
 }
+
 
 class LLMInference:
     def __init__(self, model_config: ModelConfig, query):
@@ -58,12 +73,16 @@ class LLMInference:
             else:
                 self.infer_task()
             self.model = self.load_pipeline_model()
-            self.pipe = pipeline(task=self.task, model=self.model, tokenizer=self.tokenizer) # , device=self.device)
+            self.pipe = pipeline(
+                task=self.task, model=self.model, tokenizer=self.tokenizer
+            )  # , device=self.device)
 
         elif self.config.model_type == "llm":
             self.model = self.load_llm_model()
         else:
-            raise ValueError(f"Model type {self.config.model_type} is unknown or not supported.")
+            raise ValueError(
+                f"Model type {self.config.model_type} is unknown or not supported."
+            )
 
     def process_query(self, query):
         """
@@ -79,7 +98,9 @@ class LLMInference:
         elif isinstance(query, list):
             return query
         else:
-            raise ValueError("Unsupported query type. Use 'string', 'list' or provide a file to a path containing text.")
+            raise ValueError(
+                "Unsupported query type. Use 'string', 'list' or provide a file to a path containing text."
+            )
 
     def infer_task(self) -> str:
         name = self.model_name.lower()
@@ -88,7 +109,9 @@ class LLMInference:
         elif "qa" in name or "question" in name:
             return "question-answering"
         else:
-            raise ValueError(f"Cannot infer task from model name: {self.model_name}. Please specify manually in model config.")
+            raise ValueError(
+                f"Cannot infer task from model name: {self.model_name}. Please specify manually in model config."
+            )
 
     def load_pipeline_model(self):
         # device_map = "auto" if self.device != "cpu" else "cpu"
@@ -134,7 +157,7 @@ class LLMInference:
                 input_ids = self.tokenizer(q, return_tensors="pt").to(self.model.device)
                 output_ids = self.model.generate(**input_ids, max_new_tokens=128)
                 result = self.tokenizer.decode(output_ids[0], skip_special_tokens=True)
-            generated_text = re.sub(re.escape(q), '', result).strip()
+            generated_text = re.sub(re.escape(q), "", result).strip()
             outputs.append(generated_text)
         return outputs
 
@@ -181,17 +204,14 @@ class LLMInference:
         with open(log_filename, "w+") as file:
             json.dump(logs, file, indent=4)
 
+
 def interest_commonality_llm(interests: list[str]) -> str:
     """
     Find common interests between a list of interests.
     :param interests: a list of interests
     :return: a sentence describing the commonalities
     """
-    config = ModelConfig(
-        model_name=models["Qwen"],
-        model_type="llm",
-        quantize=True
-    )
+    config = ModelConfig(model_name=models["Qwen"], model_type="llm", quantize=True)
     sentence = ", ".join(interests)
     query = create_query(sentence, "interest_commonality")
     inference = LLMInference(config, query)
@@ -207,11 +227,7 @@ def extract_fields_llm(text: str, fields: list[str] = None):
     :param text: The input sentence to process.
     :param fields: A list of fields to return.
     """
-    config = ModelConfig(
-        model_name=models["Qwen"],
-        model_type="llm",
-        quantize=True
-    )
+    config = ModelConfig(model_name=models["Qwen"], model_type="llm", quantize=True)
     if fields is None:
         fields = ["Name", "Favourite drink", "Interests"]  # all for receptionist
 
@@ -222,13 +238,10 @@ def extract_fields_llm(text: str, fields: list[str] = None):
     parsed_response = parse_llm_output_to_dict(response[0], fields)
     return parsed_response
 
+
 def main():
     # Examples for testing
-    config = ModelConfig(
-        model_name=models["Qwen"],
-        model_type="llm",
-        quantize=True
-    )
+    config = ModelConfig(model_name=models["Qwen"], model_type="llm", quantize=True)
 
     # sentence = "My name is John, my favourite drink is green tea, and my interests are robotics."
     # sentence = "I am John, I usually drink green tea, and I really like robotics. I also like to play chess and watch movies."
@@ -240,6 +253,7 @@ def main():
     response = inference.run_inference()
     print(response)
     inference.log_output(response)
+
 
 if __name__ == "__main__":
     # main()
