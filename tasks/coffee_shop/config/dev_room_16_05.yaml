@@ -148,6 +148,6 @@ wait:
       z: 0.0
 objects: {"cup" : "coffee", "banana": "banana", "bottle": "cocacola"}
 
-yolo_person_model: "yolov8n-seg.pt"
-yolo_objects_model: "yolov8n-seg.pt"
-yolo_counter_model: "yolov8n-seg.pt"
+yolo_person_model: "yolo11n-seg.pt"
+yolo_objects_model: "yolo11n-seg.pt"
+yolo_counter_model: "yolo11n-seg.pt"

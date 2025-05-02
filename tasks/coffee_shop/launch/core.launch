@@ -12,8 +12,8 @@
         </include>        
     </group>
 
-    <include file="$(find lasr_vision_yolov8)/launch/service.launch">
-        <arg name="preload" value="['yolov8n-seg.pt']" />
+    <include file="$(find lasr_vision_yolo)/launch/service.launch">
+        <arg name="preload" value="['yolo11n-seg.pt']" />
     </include>
 
     <rosparam command="load" file="$(find coffee_shop)/config/motions.yaml" />
