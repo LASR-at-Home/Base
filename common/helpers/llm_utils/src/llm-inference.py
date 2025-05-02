@@ -178,14 +178,56 @@ class LLMInference:
         with open(log_filename, "w+") as file:
             json.dump(logs, file, indent=4)
 
-if __name__ == "__main__":
-    # config = ModelConfig(
-    #     model_name="dslim/bert-base-NER",
-    #     model_type="pipeline",
-    #     task="token-classification",
-    #     quantize=True
-    # )
+def create_query(text: str, fields: list[str] = None):
+    """
+    Create a query for the LLM to extract specific fields from the input text.
+    :param text: The input sentence to process.
+    :param fields: A list of fields to extract.
+    """
+    field_str = "\n".join([f"- {field}" for field in fields])
+    query = f"Extract the following fields from the sentence:\n{field_str}\n\nSentence: {text}."
+    return query
 
+def parse_llm_output(output: str, fields: list[str] = None) -> dict:
+    """
+    Parse the llm response to get the requested fields into a dict where the keys are the field names,
+    and the values are the result from the response.
+    :param output: llm response
+    :param fields: the fields requested to extract
+    :return: dictionary of field names and their values
+    """
+    field_dict = {field: None for field in fields}
+    for field in fields:
+        pattern = re.compile(rf"{field}:\s*(.*?)(?:\n|$)") # field: value
+        match = pattern.search(output)
+        if match:
+            field_dict[field] = match.group(1).strip()
+    return field_dict
+
+def receptionist_llm_inference(text: str, fields: list[str] = None):
+    """
+    A simple receptionist LLM inference function.
+    :param text: The input sentence to process.
+    :param fields: A list of fields to return.
+    """
+    config = ModelConfig(
+        model_name=models["Qwen"],
+        model_type="llm",
+        quantize=True
+    )
+    if fields is None:
+        fields = ["Name", "Favourite drink", "Interests"]  # all for receptionist
+
+    sentence = text
+    query = create_query(sentence, fields)
+    inference = LLMInference(config, query)
+    response = inference.run_inference()
+    print(response)
+    parsed_response = parse_llm_output(response[0], fields)
+    print(f"parsed_respones: {parsed_response}")
+    return parsed_response
+
+if __name__ == "__main__":
     config = ModelConfig(
         model_name=models["Qwen"],
         model_type="llm",
@@ -194,10 +236,13 @@ if __name__ == "__main__":
 
     # sentence = "My name is John, my favourite drink is green tea, and my interests are robotics."
     # sentence = "I am John, I usually drink green tea, and I really like robotics. I also like to play chess and watch movies."
-    sentence = "Oh hi yeah, I'm John erm I drink tea usually green, and I am a robotics enthusiast. I also like to play chess and watch movies when I can."
-    query = f"Extract the following fields from the sentence:\n- Name\n- Favorite drink\n- Interests\n\nSentence: {sentence}"
-    # query = "My name is John, my favourite drink is green tea, and my interests are robotics."
+    # sentence = "Oh hi yeah, I'm John erm I drink tea usually green, and I am a robotics enthusiast. I also like to play chess and watch movies when I can."
+    sentence = "I would like a vegan hamburger, no cheese please, and a large fries. I also want a large coke and a small salad."
+    # query = f"Extract the following fields from the sentence:\n- Name\n- Favorite drink\n- Interests\n\nSentence: {sentence}"
+    query = f"Extract the following fields from the sentence:\n -Food\n -Requests\n -Drink\n\nSentence: {sentence}."
     inference = LLMInference(config, query)
     response = inference.run_inference()
     print(response)
     inference.log_output(response)
+
+    # receptionist_llm_inference("Oh hi yeah, I'm John erm I drink tea usually green, and I am a robotics enthusiast. I also like to play chess and watch movies when I can.")
