@@ -5,13 +5,16 @@ from typing import Optional, List
 import re
 
 import numpy as np
-from transformers import pipeline, AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, set_seed, \
+from transformers import pipeline, AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, \
     AutoModelForTokenClassification, AutoModelForQuestionAnswering
 import torch
 
 import os
 import json
 from datetime import datetime
+
+from common.helpers.llm_utils.src.utils import create_query, truncate_llm_output, parse_llm_output_to_dict
+
 
 @dataclass
 class ModelConfig:
@@ -178,33 +181,27 @@ class LLMInference:
         with open(log_filename, "w+") as file:
             json.dump(logs, file, indent=4)
 
-def create_query(text: str, fields: list[str] = None):
+def interest_commonality_llm(interests: list[str]) -> str:
     """
-    Create a query for the LLM to extract specific fields from the input text.
-    :param text: The input sentence to process.
-    :param fields: A list of fields to extract.
+    Find common interests between a list of interests.
+    :param interests: a list of interests
+    :return: a sentence describing the commonalities
     """
-    field_str = "\n".join([f"- {field}" for field in fields])
-    query = f"Extract the following fields from the sentence:\n{field_str}\n\nSentence: {text}."
-    return query
+    config = ModelConfig(
+        model_name=models["Qwen"],
+        model_type="llm",
+        quantize=True
+    )
+    sentence = ", ".join(interests)
+    query = create_query(sentence, "interest_commonality")
+    inference = LLMInference(config, query)
+    response = inference.run_inference()
+    # print(response)
+    parsed_response = truncate_llm_output(response[0])
+    return parsed_response
 
-def parse_llm_output(output: str, fields: list[str] = None) -> dict:
-    """
-    Parse the llm response to get the requested fields into a dict where the keys are the field names,
-    and the values are the result from the response.
-    :param output: llm response
-    :param fields: the fields requested to extract
-    :return: dictionary of field names and their values
-    """
-    field_dict = {field: None for field in fields}
-    for field in fields:
-        pattern = re.compile(rf"{field}:\s*(.*?)(?:\n|$)") # field: value
-        match = pattern.search(output)
-        if match:
-            field_dict[field] = match.group(1).strip()
-    return field_dict
 
-def receptionist_llm_inference(text: str, fields: list[str] = None):
+def extract_fields_llm(text: str, fields: list[str] = None):
     """
     A simple receptionist LLM inference function.
     :param text: The input sentence to process.
@@ -219,15 +216,14 @@ def receptionist_llm_inference(text: str, fields: list[str] = None):
         fields = ["Name", "Favourite drink", "Interests"]  # all for receptionist
 
     sentence = text
-    query = create_query(sentence, fields)
+    query = create_query(sentence, "extract_fields", fields)
     inference = LLMInference(config, query)
     response = inference.run_inference()
-    print(response)
-    parsed_response = parse_llm_output(response[0], fields)
-    print(f"parsed_respones: {parsed_response}")
+    parsed_response = parse_llm_output_to_dict(response[0], fields)
     return parsed_response
 
-if __name__ == "__main__":
+def main():
+    # Examples for testing
     config = ModelConfig(
         model_name=models["Qwen"],
         model_type="llm",
@@ -245,4 +241,8 @@ if __name__ == "__main__":
     print(response)
     inference.log_output(response)
 
-    # receptionist_llm_inference("Oh hi yeah, I'm John erm I drink tea usually green, and I am a robotics enthusiast. I also like to play chess and watch movies when I can.")
+if __name__ == "__main__":
+    # main()
+    # extract_fields_llm("Oh hi yeah, I'm John erm I drink tea usually green, and I am a robotics enthusiast. I also like to play chess and watch movies when I can.")
+    # interest_commonality_llm(["robotics", "chess", "movies"])
+    interest_commonality_llm(["tennis", "football", "basketball"])
