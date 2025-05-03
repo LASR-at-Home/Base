@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import rospy
 import math
 
@@ -28,7 +29,8 @@ from geometry_msgs.msg import Point, PointStamped
 from sensor_msgs.msg import Image, CameraInfo
 from std_msgs.msg import Bool
 from visualization_msgs.msg import Marker
-from lasr_vision_msgs.msg import Sam2PromptArrays as PromptArrays, Sam2BboxWithFlag as BboxWithFlag, Detection3DArray, YoloDetection3D, Detection3D
+from lasr_vision_msgs.msg import Sam2PromptArrays as PromptArrays, Sam2BboxWithFlag as BboxWithFlag, Detection3DArray, Detection3D
+from lasr_vision_msgs.srv import YoloDetection3D, YoloDetection3DRequest
 
 from math import atan2
 import numpy as np
@@ -186,11 +188,13 @@ class PersonFollower:
             image_raw=self.image,
             depth_image=self.depth_image,
             depth_camera_info=self.depth_camera_info,
-            model="yolo11n-seg.pt",  # not using poses for now
+            model="yolo11n-pose.pt",  # not using poses for now
             confidence=0.5,
             target_frame="map",
         )
-        detections: Detection3D = self.yolo(req)
+        response = self.yolo(req)
+        print(response)
+        detections: Detection3D = response.detected_objects
 
         detected_people = {
             "xywh": [],
@@ -206,7 +210,7 @@ class PersonFollower:
 
         # find robot's position in map
         try:
-            transform = self._tf_buffer.lookup_transform(
+            transform = self._buffer.lookup_transform(
                 map_frame,
                 robot_frame,
                 rospy.Time(0),
@@ -257,7 +261,15 @@ class PersonFollower:
         prompt_msg.reset = True  # full reset
         self.prompt_pub.publish(prompt_msg)
         rospy.loginfo(f"Published PromptArrays with {len(bbox_list)} BBoxes.")
-        rospy.sleep(1.0)
+        rospy.sleep(0.5)
+        self.track_flag_pub.publish(Bool(data=True))
+        rospy.sleep(0.1)
+        self.track_flag_pub.publish(Bool(data=True))
+        rospy.sleep(0.1)
+        self.track_flag_pub.publish(Bool(data=True))
+        rospy.sleep(0.1)
+        rospy.loginfo(f"Published SAM2 traking commmand.")
+        rospy.sleep(0.5)
 
         rospy.loginfo(f"Tracking person discovered with id {self._track_id}")
         return True
@@ -396,7 +408,7 @@ class PersonFollower:
 
             # 4. Transform to "odom"
             try:
-                odom_pose = self._tf_buffer.transform(
+                odom_pose = self._buffer.transform(
                     map_pose, "odom", rospy.Duration(0.5)
                 )
             except (tf.LookupException, tf.ExtrapolationException) as e:
@@ -432,11 +444,12 @@ class PersonFollower:
             # 8. Goal logic
             if prev_pose is None:
                 robot_pose = self._robot_pose_in_odom()
+                goal_orientation = self._compute_face_quat(robot_pose.pose, odom_pose.pose)
                 goal_pose = self._tf_pose(
                     PoseStamped(
                         pose=Pose(
                             position=odom_pose.pose.position,
-                            orientation=robot_pose.pose.orientation,
+                            orientation=goal_orientation,
                         ),
                         header=odom_pose.header,
                     ),
@@ -447,11 +460,16 @@ class PersonFollower:
                 prev_pose = odom_pose
 
             else:
-                dist_to_prev = self._euclidian_distance(odom_pose, prev_pose)
+                dist_to_prev = self._euclidian_distance(odom_pose.pose, prev_pose.pose)
 
                 if dist_to_prev >= self._new_goal_threshold:
+                    goal_orientation = self._compute_face_quat(robot_pose.pose, odom_pose.pose)
+                    pose_with_orientation = Pose(
+                        position=odom_pose.pose.position,
+                        orientation=goal_orientation,
+                    )
                     goal_pose = self._tf_pose(
-                        PoseStamped(pose=odom_pose.pose, header=odom_pose.header),
+                        PoseStamped(pose=pose_with_orientation, header=odom_pose.header),
                         "map",
                     )
                     self._move_base(goal_pose)
@@ -459,28 +477,33 @@ class PersonFollower:
                     prev_goal = goal_pose
                     prev_pose = odom_pose
 
-                elif (
-                    self._move_base_client.get_state() in [GoalStatus.ABORTED]
-                    and prev_goal is not None
-                ):
-                    rospy.logwarn("Goal was aborted, retrying")
-                    self._move_base(prev_goal)
+                # elif (
+                #     self._move_base_client.get_state() in [GoalStatus.ABORTED]
+                #     and prev_goal is not None
+                # ):
+                #     rospy.logwarn("Goal was aborted, retrying")
+                #     self._move_base(prev_goal)
 
-                elif (
-                    (
-                        np.mean([np.linalg.norm(vel) for vel in track_vels])
-                        < self._static_speed
-                    )
-                    and len(track_vels) == 10
-                ):
-                    rospy.logwarn("Person has been static too long, stopping")
-                    self._cancel_goal()
-                    track_vels = []
-                    self._waypoints = []
+                # elif (
+                #     (
+                #         np.mean([np.linalg.norm(vel) for vel in track_vels])
+                #         < self._static_speed
+                #     )
+                #     and len(track_vels) == 10
+                # ):
+                #     rospy.logwarn("Person has been static too long, stopping")
+                #     self._cancel_goal()
+                #     track_vels = []
+                #     self._waypoints = []
 
                 elif self._move_base_client.get_state() in [GoalStatus.SUCCEEDED]:
+                    goal_orientation = self._compute_face_quat(robot_pose.pose, odom_pose.pose)
+                    pose_with_orientation = Pose(
+                        position=odom_pose.pose.position,
+                        orientation=goal_orientation,
+                    )
                     goal_pose = self._tf_pose(
-                        PoseStamped(pose=odom_pose.pose, header=odom_pose.header),
+                        PoseStamped(pose=pose_with_orientation, header=odom_pose.header),
                         "map",
                     )
                     self._move_base(goal_pose)
@@ -490,3 +513,9 @@ class PersonFollower:
             rate.sleep()
 
         return result
+    
+
+if __name__ == "__main__":
+    follower = PersonFollower()
+    follower.follow()
+    rospy.spin()
