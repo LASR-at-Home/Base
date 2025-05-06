@@ -28,7 +28,7 @@ from play_motion_msgs.msg import PlayMotionGoal
 from geometry_msgs.msg import Point, PointStamped
 from sensor_msgs.msg import Image, CameraInfo
 from std_msgs.msg import Bool
-from visualization_msgs.msg import Marker
+from visualization_msgs.msg import Marker, MarkerArray
 from lasr_vision_msgs.msg import Sam2PromptArrays as PromptArrays, Sam2BboxWithFlag as BboxWithFlag, Detection3DArray, Detection3D
 from lasr_vision_msgs.srv import YoloDetection3D, YoloDetection3DRequest
 
@@ -117,6 +117,9 @@ class PersonFollower:
         self.detection3d_sub = rospy.Subscriber(
                 "/sam2/detections_3d", Detection3DArray, self.detection3d_callback, queue_size=1
             )
+        self.trajectory_marker_pub = rospy.Publisher(
+            "/person_trajectory_markers", MarkerArray, queue_size=1
+        )
         self.yolo = rospy.ServiceProxy("/yolo/detect3d", YoloDetection3D)
         self.yolo.wait_for_service()
 
@@ -140,7 +143,7 @@ class PersonFollower:
         self._play_motion = actionlib.SimpleActionClient(
             "play_motion", PlayMotionAction
         )
-        if not self._play_motion.wait_for_server(rospy.Duration.from_sec(10.0)):
+        if not self._play_motion.wait_for_server(rospy.Duration.from_sec(1.0)):
             rospy.logwarn("Play motion client not available")
 
         self._should_stop = False
@@ -148,6 +151,12 @@ class PersonFollower:
         self._waypoints = []
         self._last_detection_time = rospy.Time.now()
         self.newest_detection = None
+
+        self._last_head_motion = "look_centre"
+        self._head_motion_interval = rospy.Duration(2.0)
+        self._last_head_motion_time = rospy.Time.now()
+        self._send_head_motion("look_centre")
+        self._look_centre_count = 0
 
     def image_callback(self, image: Image, depth_image: Image, depth_camera_info: CameraInfo):
         self.image, self.depth_image, self.depth_camera_info = image, depth_image, depth_camera_info
@@ -361,6 +370,17 @@ class PersonFollower:
                 self._last_detection_time = rospy.Time.now()
                 break
 
+    def _send_head_motion(self, motion_name: str):
+        """Send a named head motion to the play_motion client."""
+        if self._play_motion.wait_for_server(rospy.Duration(1.0)):
+            goal = PlayMotionGoal()
+            goal.motion_name = motion_name
+            goal.skip_planning = True
+            goal.priority = 0
+            self._play_motion.send_goal(goal)
+        else:
+            rospy.logwarn("play_motion server unavailable")
+
     def follow(self) -> FollowResult:
         result = FollowResult()
         person_trajectory: PoseArray = PoseArray()
@@ -419,6 +439,44 @@ class PersonFollower:
             # 5. Add position to trajectory
             person_trajectory.poses.append(odom_pose.pose)
 
+            # Publish as MarkerArray
+            marker_array = MarkerArray()
+
+            for idx, pose in enumerate(person_trajectory.poses):
+                marker = Marker()
+                marker.header.frame_id = "odom"
+                marker.header.stamp = rospy.Time.now()
+                marker.ns = "person_trajectory"
+                marker.id = idx
+                marker.type = Marker.SPHERE
+                marker.action = Marker.ADD
+                marker.pose = pose
+                marker.scale.x = 0.1
+                marker.scale.y = 0.1
+                marker.scale.z = 0.1
+                marker.color.a = 1.0
+                marker.color.r = 1.0
+                marker.color.g = 0.5
+                marker.color.b = 0.0
+                marker_array.markers.append(marker)
+
+            line_marker = Marker()
+            line_marker.header.frame_id = "odom"
+            line_marker.header.stamp = rospy.Time.now()
+            line_marker.ns = "person_trajectory"
+            line_marker.id = 9999
+            line_marker.type = Marker.LINE_STRIP
+            line_marker.action = Marker.ADD
+            line_marker.scale.x = 0.05
+            line_marker.color.a = 1.0
+            line_marker.color.r = 0.0
+            line_marker.color.g = 1.0
+            line_marker.color.b = 0.0
+            line_marker.points = [pose.position for pose in person_trajectory.poses]
+            marker_array.markers.append(line_marker)
+
+            self.trajectory_marker_pub.publish(marker_array)
+
             # 6. Estimate velocity (x, y in odom)
             now = rospy.Time.now()
             curr_x = odom_pose.pose.position.x
@@ -440,6 +498,28 @@ class PersonFollower:
             track_vels.append((vel_x, vel_y))
             if len(track_vels) > 10:
                 track_vels.pop(0)
+
+            # --- Head motion control based on velocity ---
+            avg_speed = np.mean([np.linalg.norm(vel) for vel in track_vels]) if track_vels else 0.0
+            now_time = rospy.Time.now()
+
+            if avg_speed < self._static_speed:
+                if self._last_head_motion != "look_centre":
+                    self._send_head_motion("look_centre")
+                    self._last_head_motion = "look_centre"
+                    self._last_head_motion_time = now_time
+                    self._look_centre_count = 0  # reset
+            else:
+                if now_time - self._last_head_motion_time > self._head_motion_interval:
+                    if self._look_centre_count < 2:
+                        self._send_head_motion("look_centre")
+                        self._last_head_motion = "look_centre"
+                        self._look_centre_count += 1
+                    else:
+                        self._send_head_motion("look_down_centre")
+                        self._last_head_motion = "look_down_centre"
+                        self._look_centre_count = 0
+                    self._last_head_motion_time = now_time
 
             # 8. Goal logic
             if prev_pose is None:

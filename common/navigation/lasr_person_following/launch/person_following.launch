@@ -1,7 +1,8 @@
 <launch>
 
  <!-- <include file="$(find lasr_person_following)/launch/joint_leg_tracker.launch"/> -->
- 
+    <arg name="config" default="motions"/>
+    <rosparam command="load" file="$(find lasr_skills)/config/$(arg config).yaml" />
     <include file="$(find lasr_vision_sam2)/launch/sam2.launch"/>
     <include file="$(find lasr_vision_yolo)/launch/service.launch"/>
     <node pkg="tiago_2dnav" type="navigation_camera_mgr.py" name="navigation_camera_mgr" output="screen"/>
