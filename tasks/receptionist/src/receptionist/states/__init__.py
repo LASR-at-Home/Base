@@ -16,8 +16,12 @@ from .introduce_and_seat_guest import IntroduceAndSeatGuest
 from .get_name import GetName 
 from .get_drink import GetDrink 
 from .get_interest import GetInterest
+from .determine_drink_position import DetermineDrinkPosition
+from .recognise_drink import RecogniseDrink
 from .handle_name import HandleName
 from .handle_drink import HandleDrink
 from .handle_interest import HandleInterest
+from .handle_favourite_drink import HandleFavouriteDrink
+
 # from .introduce_table_guest import IntroduceTableGuest
 # from .get_name_and_interest import GetNameAndInterest

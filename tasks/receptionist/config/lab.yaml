@@ -79,7 +79,7 @@ table_pose:
 #WAIT AREA LAB:
 # From robot POV: [top left, top right,bottom right, bottom left ] 
 wait_area: [[2.65, -0.61], [4.21, -0.33], [4.58, -2.27], [2.67, -2.66]]
-table_area: [[2.65, -0.61], [4.21, -0.33], [4.58, -2.27], [2.67, -2.66]]
+table_area: [[0.63, -0.42], [0.00, -0.51], [0.27, -1.71], [0.87, -1.55]]
 
 #Where to position self for seating guests
 seat_pose:
