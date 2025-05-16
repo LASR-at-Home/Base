@@ -135,8 +135,6 @@ widgetsnbextension==4.0.14  # via ipywidgets
 y-py==0.6.2               # via jupyter-ydoc, ypy-websocket
 ypy-websocket==0.8.4      # via jupyter-server-ydoc
 zipp==3.20.2              # via importlib-metadata, importlib-resources
-# -e /home/siyao/project/RoboCup/robocup_svea/src/Base/common/manipulation/lasr_manipulation_3d_completion/KNN_CUDA/
-# -e /home/siyao/project/RoboCup/robocup_svea/src/Base/common/manipulation/lasr_manipulation_3d_completion/Pointnet2_PyTorch/pointnet2_ops_lib
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools
