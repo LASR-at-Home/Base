@@ -13,19 +13,37 @@ from shape_msgs.msg import SolidPrimitive
 from moveit_msgs.msg import CollisionObject
 from moveit_commander import PlanningSceneInterface
 from ros_contact_graspnet.srv import DetectGrasps
-
+from moveit_msgs.srv import GetPlanningScene, ApplyPlanningSceneRequest
+from moveit_msgs.msg import PlanningScene, AllowedCollisionEntry
 import tf2_ros as tf
 from tf2_geometry_msgs.tf2_geometry_msgs import do_transform_pose
+from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
+import actionlib
+from play_motion_msgs.msg import PlayMotionGoal, PlayMotionAction
 
 import cv2_pcl
 import cv2
 import ultralytics
 import numpy as np
-
+from moveit.core.collision_detection import AllowedCollisionMatrix
 
 sam = ultralytics.FastSAM("FastSAM-s.pt").to("cpu")
 
 rospy.init_node("test_contact_graspnet_grasps")
+planning_scene = PlanningSceneInterface()
+planning_scene.clear()
+
+
+play_motion = actionlib.SimpleActionClient("play_motion", PlayMotionAction)
+play_motion.wait_for_server()
+play_goal = PlayMotionGoal()
+play_goal.motion_name = "pregrasp"
+play_goal.skip_planning = False
+play_motion.send_goal_and_wait(play_goal)
+play_goal = PlayMotionGoal()
+play_goal.motion_name = "open_gripper"
+play_goal.skip_planning = False
+play_motion.send_goal_and_wait(play_goal)
 clear_octomap = rospy.ServiceProxy("/clear_octomap", Empty)
 tf_buffer = tf.Buffer(cache_time=rospy.Duration(10))
 tf_listener = tf.TransformListener(tf_buffer)
@@ -122,12 +140,12 @@ def create_collision_object_from_pcl(
     points = np.array(points)
 
     # Optional: remove outliers based on percentiles (e.g., filtering out the extreme points)
-    # lower = np.percentile(points, 1, axis=0)
-    # upper = np.percentile(points, 99, axis=0)
+    lower = np.percentile(points, 1, axis=0)
+    upper = np.percentile(points, 99, axis=0)
 
     # Filter points based on the percentile ranges
-    # mask = np.all((points >= lower) & (points <= upper), axis=1)
-    # points = points[mask]
+    mask = np.all((points >= lower) & (points <= upper), axis=1)
+    points = points[mask]
 
     # Find the min and max of the points
     min_pt = points.min(axis=0)
@@ -191,18 +209,15 @@ rospy.loginfo("Setting up MoveIt!")
 arm_torso_group = moveit_commander.MoveGroupCommander("arm_torso")
 arm_torso_group.set_planner_id("RRTConnectkConfigDefault")
 arm_torso_group.allow_replanning(True)
-arm_torso_group.allow_replanning(True)
 arm_torso_group.allow_looking(True)
-arm_torso_group.set_planning_time(15)
-arm_torso_group.set_num_planning_attempts(10)
-arm_torso_group.set_pose_reference_frame("base_footprint")
-planning_scene = PlanningSceneInterface()
-planning_scene.clear()
+arm_torso_group.set_planning_time(30)
+arm_torso_group.set_num_planning_attempts(30)
 print(arm_torso_group.get_planning_frame())
 print(arm_torso_group.get_end_effector_link())
 rospy.loginfo("MoveIt! ready")
 pcl_pub = rospy.Publisher("/segmented_cloud", PointCloud2)
 pcl = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
+arm_torso_group.set_pose_reference_frame(pcl.header.frame_id)
 
 rospy.loginfo("Got PCL")
 im = cv2_pcl.pcl_to_cv2(pcl)
@@ -266,15 +281,71 @@ rospy.loginfo("Got segmentations")
 create_collision_object_from_pcl(
     masked_cloud, planning_scene, masked_cloud.header.frame_id
 )
-# arm_torso_group.attach_object(
-#     "obj",
-#     touch_links=[
-#         "gripper_left_finger_link",
-#         "gripper_right_finger_link",
-#         "gripper_link",
-#     ],
-# )
-rospy.loginfo("Created colission object")
+rospy.loginfo("Created collision object")
+
+
+def allow_collisions_with_object(obj_name, scene):
+    """Updates the MoveIt PlanningScene using the AllowedCollisionMatrix to ignore collisions for an object"""
+    # Set up service to get the current planning scene
+    service_timeout = 5.0
+    _get_planning_scene = rospy.ServiceProxy("get_planning_scene", GetPlanningScene)
+    _get_planning_scene.wait_for_service(service_timeout)
+
+    request = GetPlanningScene()
+    request.components = 0  # Get just the Allowed Collision Matrix
+    planning_scene = _get_planning_scene.call(request)
+    print(
+        f"\n\n\n--- allowed_collision_matrix before update:{planning_scene.scene.allowed_collision_matrix} ---\n\n\n"
+    )
+
+    # Set this object to ignore collisions with all objects. The entry values are not updated
+    planning_scene.scene.allowed_collision_matrix.entry_names.append(obj_name)
+    for entry in planning_scene.scene.allowed_collision_matrix.entry_values:
+        entry.enabled.append(True)
+    enabled = [
+        True
+        for i in range(len(planning_scene.scene.allowed_collision_matrix.entry_names))
+        # if planning_scene.scene.allowed_collision_matrix.entry_names[i] in [
+        #     "gripper_left_finger_link",
+        #     "gripper_right_finger_link",
+        #     "gripper_link",
+        # ],
+    ]
+    entry = AllowedCollisionEntry(enabled=enabled)  # Test kwarg in constructor
+    planning_scene.scene.allowed_collision_matrix.entry_values.append(entry)
+
+    # Set the default entries. They are also not updated
+    planning_scene.scene.allowed_collision_matrix.default_entry_names = [obj_name]
+    planning_scene.scene.allowed_collision_matrix.default_entry_values = [False]
+    planning_scene.scene.is_diff = True  # Mark this as a diff message to force an update of the allowed collision matrix
+    planning_scene.scene.robot_state.is_diff = True
+
+    planning_scene_diff_req = ApplyPlanningSceneRequest()
+    planning_scene_diff_req.scene = planning_scene.scene
+
+    # Updating the Allowed Collision Matrix through the apply_planning_scene service shows no effect.
+    # However, adding objects to the planning scene works fine.
+    # scene._apply_planning_scene_diff.call(planning_scene_diff_req)
+    scene.apply_planning_scene(planning_scene.scene)
+
+    # Attempting to use the planning_scene topic for asynchronous updates also does not work
+    # planning_scene_pub = rospy.Publisher("planning_scene", PlanningScene, queue_size=5)
+    # planning_scene_pub.publish(planning_scene.scene)
+
+    print(f"\n--- Sent message:{planning_scene.scene.allowed_collision_matrix} ---\n")
+
+    # The planning scene retrieved after the update should have taken place shows the Allowed Collision Matrix is the same as before
+    request = GetPlanningScene()
+    request.components = 0  # Get just the Allowed Collision Matrix
+    planning_scene = _get_planning_scene.call(request)
+    print(
+        f"\n--- allowed_collision_matrix after update:{planning_scene.scene.allowed_collision_matrix} ---\n"
+    )
+
+
+allow_collisions_with_object("obj", planning_scene)
+
+
 # Invert the mask: object == 0, background == 255
 # inv_mask = cv2.bitwise_not(mask)
 
@@ -299,15 +370,144 @@ rospy.loginfo("Created colission object")
 
 
 rospy.loginfo("Got PCL, calling graspnet")
-grasps = detect_grasps(pcl, masked_cloud).grasps
-grasps = sorted(grasps, key=lambda g: g.score, reverse=True)
+grasp_response = detect_grasps(pcl, masked_cloud)
+header = grasp_response.grasps.header
+grasps_scores = sorted(
+    zip(grasp_response.grasps.poses, grasp_response.scores),
+    key=lambda x: x[1],
+    reverse=True,
+)
+grasps, scores = zip(*grasps_scores)
+grasps = list(grasps)
+scores = list(scores)
+# grasps = sorted(grasps, key=lambda g: g.score, reverse=True)
 # for i, grasp in enumerate(gras)
 arm_torso_group.set_pose_targets(
-    [tf_pose(pcl.header.frame_id, "base_footprint", g.pose).pose for g in grasps],
+    grasps,
+    # [tf_pose(header.frame_id, "base_footprint", g).pose for g in grasps][:10],
     end_effector_link="gripper_grasping_frame",
 )
 res = arm_torso_group.go(wait=True)
+arm_torso_group.clear_pose_targets()
+arm_torso_group.stop()
 print(res)
+rospy.sleep(1.0)
+if res:
+    # arm_torso_group.set_pose_reference_frame("gripper_grasping_frame")
+    # offset_pose = Pose()
+    # offset_pose.position.z = -0.080
+    # offset_pose.orientation.w = 1
+    # arm_torso_group.set_pose_target(
+    #     offset_pose, end_effector_link="gripper_grasping_frame"
+    # )
+    # res = arm_torso_group.go(wait=True)
+    # arm_torso_group.clear_pose_target()
+    # arm_torso_group.stop()
+
+    import geometry_msgs.msg
+    import tf.transformations as tf
+
+    def move_end_effector_offset(move_group, offset_x, offset_y, offset_z):
+        """
+        Move the end effector by a given offset (in its local frame).
+
+        Args:
+            move_group: MoveGroupCommander instance.
+            offset_x: Desired x offset (meters) in local frame.
+            offset_y: Desired y offset (meters) in local frame.
+            offset_z: Desired z offset (meters) in local frame.
+        """
+        # Get the current pose
+        current_pose = move_group.get_current_pose().pose
+
+        # Get current orientation as quaternion
+        q = [
+            current_pose.orientation.x,
+            current_pose.orientation.y,
+            current_pose.orientation.z,
+            current_pose.orientation.w,
+        ]
+
+        # Convert quaternion to rotation matrix
+        rotation_matrix = tf.quaternion_matrix(q)  # 4x4 homogeneous matrix
+
+        # Offset vector in local end-effector frame (homogeneous coordinates)
+        local_offset = [offset_x, offset_y, offset_z, 0]
+
+        # Transform the local offset into world frame
+        world_offset = rotation_matrix.dot(local_offset)
+
+        # Create target pose
+        target_pose = geometry_msgs.msg.Pose()
+        target_pose.position.x = current_pose.position.x + world_offset[0]
+        target_pose.position.y = current_pose.position.y + world_offset[1]
+        target_pose.position.z = current_pose.position.z + world_offset[2]
+        target_pose.orientation = current_pose.orientation  # Keep the same orientation
+
+        # Plan and execute
+        move_group.set_pose_target(target_pose)
+        success = move_group.go(wait=True)
+
+        move_group.stop()
+        move_group.clear_pose_targets()
+
+        return success
+
+    def sync_shift_ee(move_group, x, y, z):
+        from tf.transformations import euler_from_quaternion, euler_matrix
+
+        curr_pose = move_group.get_current_pose()
+        pose = curr_pose.pose
+        # print('x: {}, y: {}, z: {}'.format(pose.position.x, pose.position.y, pose.position.z))
+
+        quat = [
+            pose.orientation.x,
+            pose.orientation.y,
+            pose.orientation.z,
+            pose.orientation.w,
+        ]
+        euler = euler_from_quaternion(quat)
+        euler_m = euler_matrix(*euler)
+
+        # calculate offset to add to the current pose
+        delta = np.dot(euler_m[:3, :3], np.array([x, y, z]).T)
+        pose.position.x += delta[0]
+        pose.position.y += delta[1]
+        pose.position.z += delta[2]
+
+        move_group.set_pose_target(curr_pose)
+        # publish pose for debugging purposes
+        # print('Publishing debug_plan_pose')
+
+        move_group.set_start_state_to_current_state()
+        result = move_group.go(wait=True)
+        return result
+
+    clear_octomap()
+    sync_shift_ee(arm_torso_group, 0.06, 0.0, 0.0)
+    # arm_torso_group.set_start_state_to_current_state()
+    # res = move_end_effector_offset(arm_torso_group, 0.05, 0.0, 0.0)
+    #
+    if res:
+        arm_torso_group.attach_object(
+            "obj",
+            touch_links=[
+                "gripper_left_finger_link",
+                "gripper_right_finger_link",
+                "gripper_link",
+            ],
+        )
+        close_gripper = rospy.ServiceProxy("/parallel_gripper_controller/grasp", Empty)
+        close_gripper()
+        sync_shift_ee(arm_torso_group, -0.06, 0.0, 0.0)
+        play_goal = PlayMotionGoal()
+        play_goal.motion_name = "post_grasp_pose"
+        play_goal.skip_planning = False
+        play_motion.send_goal_and_wait(play_goal)
+        play_goal = PlayMotionGoal()
+        play_goal.motion_name = "grasp_to_home"
+        play_goal.skip_planning = False
+        play_motion.send_goal_and_wait(play_goal)
 # print(arm_torso_group.go(wait=True))
 # rospy.spin()
 # /throttle_filtering_points/filtered_points
@@ -324,3 +524,4 @@ print(res)
 #     # y = input("Continue?")
 #     # if y[0] != "y":
 #     #     break
+moveit_commander.roscpp_shutdown()
