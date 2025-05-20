@@ -37,6 +37,7 @@ import numpy as np
 from scipy.spatial.transform import Rotation as R
 
 import actionlib
+from control_msgs.msg import PointHeadAction, PointHeadGoal
 
 from lasr_person_following.msg import (
     FollowAction,
@@ -140,11 +141,6 @@ class PersonFollower:
         self._person_trajectory_pub = rospy.Publisher(
             "/person_trajectory", PoseArray, queue_size=1, latch=True
         )
-        self._play_motion = actionlib.SimpleActionClient(
-            "play_motion", PlayMotionAction
-        )
-        if not self._play_motion.wait_for_server(rospy.Duration.from_sec(1.0)):
-            rospy.logwarn("Play motion client not available")
 
         self._should_stop = False
 
@@ -152,11 +148,43 @@ class PersonFollower:
         self._last_detection_time = rospy.Time.now()
         self.newest_detection = None
 
+        self._point_head_client = actionlib.SimpleActionClient(
+            "/head_controller/point_head_action", PointHeadAction
+        )
+        if not self._point_head_client.wait_for_server(rospy.Duration(5.0)):
+            rospy.logwarn("Head pointing action server not available.")
+
         self._last_head_motion = "look_centre"
         self._head_motion_interval = rospy.Duration(2.0)
         self._last_head_motion_time = rospy.Time.now()
-        self._send_head_motion("look_centre")
         self._look_centre_count = 0
+        self._look_centre_point()
+
+    def _look_at_point(self, target_point: Point, target_frame: str = "map"):
+        goal = PointHeadGoal()
+        goal.target.header.stamp = rospy.Time.now()
+        goal.target.header.frame_id = target_frame
+        goal.target.point = target_point
+
+        goal.pointing_frame = "xtion_rgb_optical_frame"
+        goal.pointing_axis.x = 0.0
+        goal.pointing_axis.y = 0.0
+        goal.pointing_axis.z = 1.0
+
+        goal.min_duration = rospy.Duration(0.3)
+        goal.max_velocity = 1.0
+
+        self._point_head_client.send_goal(goal)
+
+    def _enqueue_head_motion_sequence(self):
+        now = rospy.Time.now()
+        self._head_motion_sequence = [
+            ("look_down_centre", now),
+            ("look_centre", now + rospy.Duration(2.0)),
+            ("look_target", now + rospy.Duration(2.0)),
+            ("look_down_centre", now + rospy.Duration(2.0)),  # after 1s holding target
+        ]
+        self._head_motion_active = True
 
     def image_callback(self, image: Image, depth_image: Image, depth_camera_info: CameraInfo):
         self.image, self.depth_image, self.depth_camera_info = image, depth_image, depth_camera_info
@@ -370,16 +398,14 @@ class PersonFollower:
                 self._last_detection_time = rospy.Time.now()
                 break
 
-    def _send_head_motion(self, motion_name: str):
-        """Send a named head motion to the play_motion client."""
-        if self._play_motion.wait_for_server(rospy.Duration(1.0)):
-            goal = PlayMotionGoal()
-            goal.motion_name = motion_name
-            goal.skip_planning = True
-            goal.priority = 0
-            self._play_motion.send_goal(goal)
-        else:
-            rospy.logwarn("play_motion server unavailable")
+    def _look_centre_point(self):
+        point = Point(x=3.0, y=0.0, z=1.3)
+        self._look_at_point(point, target_frame="base_link")
+
+    def _look_down_centre_point(self):
+        point = Point(x=3.0, y=0.0, z=0.0)
+        self._look_at_point(point, target_frame="base_link")
+
 
     def follow(self) -> FollowResult:
         result = FollowResult()
@@ -503,20 +529,37 @@ class PersonFollower:
             avg_speed = np.mean([np.linalg.norm(vel) for vel in track_vels]) if track_vels else 0.0
             now_time = rospy.Time.now()
 
+            def try_look_at_target():
+                try:
+                    if self.newest_detection is None:
+                        return False
+                    point = self.newest_detection.point
+                    target_frame = "xtion_rgb_optical_frame"
+                    self._buffer.lookup_transform(
+                        target_frame,
+                        "map",  # newest_detection.point
+                        rospy.Time(0),
+                        rospy.Duration(0.5)
+                    )
+                    self._look_at_point(point, target_frame="map")
+                    return True
+                except (tf.LookupException, tf.ExtrapolationException, tf.ConnectivityException):
+                    return False
+
             if avg_speed < self._static_speed:
-                if self._last_head_motion != "look_centre":
-                    self._send_head_motion("look_centre")
+                if now_time - self._last_head_motion_time > self._head_motion_interval:
+                    self._look_centre_point()
                     self._last_head_motion = "look_centre"
                     self._last_head_motion_time = now_time
-                    self._look_centre_count = 0  # reset
+                    self._look_centre_count = 0
             else:
                 if now_time - self._last_head_motion_time > self._head_motion_interval:
                     if self._look_centre_count < 2:
-                        self._send_head_motion("look_centre")
+                        self._look_centre_point()
                         self._last_head_motion = "look_centre"
                         self._look_centre_count += 1
                     else:
-                        self._send_head_motion("look_down_centre")
+                        self._look_down_centre_point()
                         self._last_head_motion = "look_down_centre"
                         self._look_centre_count = 0
                     self._last_head_motion_time = now_time
