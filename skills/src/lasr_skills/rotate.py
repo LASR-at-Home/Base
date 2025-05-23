@@ -1,69 +1,68 @@
-from typing import Optional
+from typing import Literal, Optional
 
-import numpy as np
 import rospy
 import smach
-from geometry_msgs.msg import Pose, PoseStamped, PoseWithCovarianceStamped, Quaternion
-from lasr_skills import GoToLocation
+from geometry_msgs.msg import PoseWithCovarianceStamped, Twist
 from scipy.spatial.transform import Rotation as R
 
 
-class Rotate(smach.StateMachine):
+class Rotate(smach.State):
 
-    class GetRotatedPose(smach.State):
-        def __init__(self, angle: Optional[float] = None):
-            super().__init__(
-                outcomes=["succeeded"],
-                input_keys=["angle"] if angle is None else [],
-                output_keys=["target_pose"],
-            )
-            self.angle = angle
-
-        def execute(self, userdata):
-            robot_pose_with_covariance = rospy.wait_for_message(
-                "/robot_pose", PoseWithCovarianceStamped
-            )
-            robot_pose = PoseStamped(
-                pose=robot_pose_with_covariance.pose.pose,
-                header=robot_pose_with_covariance.header,
-            )
-            current_orientation = np.array(
-                [
-                    robot_pose.pose.orientation.x,
-                    robot_pose.pose.orientation.y,
-                    robot_pose.pose.orientation.z,
-                    robot_pose.pose.orientation.w,
-                ]
-            )
-
-            rot_matrix = R.from_quat(current_orientation)
-            new_rot_matrix = rot_matrix * R.from_euler(
-                "z", userdata.angle if self.angle is None else self.angle, degrees=True
-            )
-            new_pose = Pose(
-                position=robot_pose.pose.position,
-                orientation=Quaternion(*new_rot_matrix.as_quat()),
-            )
-
-            userdata.target_pose = new_pose
-
-            return "succeeded"
+    _angular_vel: float = 0.5
+    _tol: float = 1.0
+    angle: Optional[float]
 
     def __init__(self, angle: Optional[float] = None):
         super().__init__(
-            outcomes=["succeeded", "failed"],
-            input_keys=["angle"] if angle is None else [],
+            outcomes=["succeeded"], input_keys=["angle"] if angle is None else []
+        )
+        self.angle = angle
+        self._cmd_vel_pub = rospy.Publisher(
+            "/mobile_base_controller/cmd_vel", Twist, queue_size=10, latch=True
         )
 
-        with self:
-            smach.StateMachine.add(
-                "GET_ROTATED_POSE",
-                self.GetRotatedPose(angle),
-                transitions={"succeeded": "ROTATE"},
+    def execute(self, userdata) -> Literal["succeeded"]:
+        initial_pose = rospy.wait_for_message("/robot_pose", PoseWithCovarianceStamped)
+        initial_orientation = [
+            initial_pose.pose.pose.orientation.x,
+            initial_pose.pose.pose.orientation.y,
+            initial_pose.pose.pose.orientation.z,
+            initial_pose.pose.pose.orientation.w,
+        ]
+        initial_rotation = R.from_quat(initial_orientation)
+
+        accumulated_rotation = 0.0
+
+        twist = Twist()
+        angle = self.angle or userdata.angle
+        twist.angular.z = self._angular_vel if angle > 0 else -self._angular_vel
+
+        rate = rospy.Rate(10)
+
+        while not rospy.is_shutdown():
+            current_pose = rospy.wait_for_message(
+                "/robot_pose", PoseWithCovarianceStamped
             )
-            smach.StateMachine.add(
-                "ROTATE",
-                GoToLocation(safe_navigation=False),
-                transitions={"succeeded": "succeeded", "failed": "failed"},
-                remapping={"location": "target_pose"},
-            )
+            current_orientation = [
+                current_pose.pose.pose.orientation.x,
+                current_pose.pose.pose.orientation.y,
+                current_pose.pose.pose.orientation.z,
+                current_pose.pose.pose.orientation.w,
+            ]
+            current_rotation = R.from_quat(current_orientation)
+
+            delta_rotation = initial_rotation.inv() * current_rotation
+            delta_angle = delta_rotation.as_euler("xyz", degrees=True)[2]
+            accumulated_rotation += delta_angle
+
+            initial_rotation = current_rotation
+
+            if abs(accumulated_rotation) >= abs(angle) - self._tol:
+                break
+            self._cmd_vel_pub.publish(twist)
+            rate.sleep()
+
+        twist.angular.z = 0
+        self._cmd_vel_pub.publish(twist)
+
+        return "succeeded"
