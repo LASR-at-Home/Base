@@ -5,8 +5,7 @@
     <rosparam command="load" file="$(find restaurant)/config/$(arg config).yaml" />
     
     <!--     MOTIONS     -->
-    <!-- <rosparam command="load" file="$(find lasr_skills)/config/motions.yaml"/> -->
-    <!-- <rosparam command="load" file="$(find restaurant)/config/motions.yaml"/> -->
+    <rosparam command="load" file="$(find lasr_skills)/config/motions.yaml"/>
 
 
     <!--     SPEECH     -->
@@ -17,5 +16,9 @@
     <include file="$(find lasr_vision_cropped_detection)/launch/cropped_detection.launch"/>
     <node pkg="lasr_vision_bodypix" type="bodypix_services.py" name="bodypix_service" output="screen"/>
 
+    <!--      MANIPULATION     -->
+    <group if="$(arg manipulation)">
+        <include file="$(find tiago_kcl_moveit_grasp)/launch/nodes.launch"/>
+    </group>
 
 </launch>

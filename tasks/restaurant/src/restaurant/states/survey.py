@@ -62,7 +62,7 @@ class Survey(smach.StateMachine):
                     ),
                     header=robot_pose.header,
                 )
-                approach_pose = navigation_helpers.get_approach_pose_on_radius(
+                approach_pose = navigation_helpers.get_pose_on_path(
                     robot_pose,
                     person_pose,
                     1.0,

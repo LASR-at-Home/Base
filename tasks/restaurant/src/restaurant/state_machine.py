@@ -109,7 +109,10 @@ class Restaurant(smach.StateMachine):
                     tts_phrase="Hello, I'm TIAGo. What can I get for you today?"
                 ),
                 remapping={"transcribed_speech": "order_str"},
-                transitions={"succeeded": "PROCESS_ORDER", "failed": "failed"},
+                transitions={
+                    "succeeded": "PROCESS_ORDER",
+                    "failed": "TAKE_ORDER_AGAIN",
+                },
             )
 
             @smach.cb_interface(
