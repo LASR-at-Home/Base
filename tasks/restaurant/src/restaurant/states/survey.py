@@ -62,9 +62,10 @@ class Survey(smach.StateMachine):
                     ),
                     header=robot_pose.header,
                 )
-                approach_pose = navigation_helpers.get_pose_on_path(
+                approach_pose = navigation_helpers.get_approach_pose_on_radius(
                     robot_pose,
                     person_pose,
+                    1.0,
                 )
                 rospy.loginfo(approach_pose)
 
