@@ -5,27 +5,39 @@ play_motion:
       points:
       - positions: [0.0, 0.0]
         time_from_start: 0.0
+    look_left:
+      joints: [head_1_joint, head_2_joint]
+      points:
+      - positions: [0.5, -0.25]
+        time_from_start: 0.0 
+    look_right:
+      joints: [head_1_joint, head_2_joint]
+      points:
+      - positions: [-0.5, 0.0]
+        time_from_start: 0.0
 restaurant:
   survey_motions:
   - look_centre
+  - look_left
+  - look_right
   bar_pose:
     position: 
-      x: 2.4670109660016966
-      y: -2.8809724545472255
+      x: 6.153476530458299
+      y: 21.0844252499161
       z: 0.0
     orientation: 
       x: 0.0
       y: 0.0
-      z: -0.9997314190844669
-      w: 0.023175195691899027
+      z: -0.6241237720877172
+      w: 0.7813254873066661
   table_pose:
     position: 
-      x: 2.4670109660016966
-      y: -2.8809724545472255
+      x: -0.01205474682914201
+      y: 14.274533414260663
       z: 0.0
     orientation: 
       x: 0.0
       y: 0.0
-      z: -0.9997314190844669
-      w: 0.023175195691899027
+      z: -0.41549681775802816
+      w: 0.9095946319283947
   menu: ['black tea']

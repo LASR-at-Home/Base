@@ -72,7 +72,7 @@ class Survey(smach.StateMachine):
                 if approach_pose is None:
 
                     approach_pose = navigation_helpers.get_pose_on_path(
-                        robot_pose, target_pose, 1.5
+                        robot_pose, target_pose, 1.0
                     )
 
                 if approach_pose is None:

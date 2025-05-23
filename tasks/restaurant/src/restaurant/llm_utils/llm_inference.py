@@ -19,7 +19,7 @@ import os
 import json
 from datetime import datetime
 
-from utils import (
+from .utils import (
     create_query,
     truncate_llm_output,
     parse_llm_output_to_dict,

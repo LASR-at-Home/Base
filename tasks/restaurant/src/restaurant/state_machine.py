@@ -63,13 +63,13 @@ class Restaurant(smach.StateMachine):
                 smach.StateMachine.add(
                     "ROTATE_360",
                     Rotate(angle=360.0),
-                    transitions={"succeeded": "ROTATE_SURVEY", "failed": "failed"},
+                    transitions={"succeeded": "ROTATE_SURVEY"},
                 )
 
             smach.StateMachine.add(
                 "ROTATE_SURVEY",
                 Rotate(angle=180.0),
-                transitions={"succeeded": "SAY_WAVE", "failed": "failed"},
+                transitions={"succeeded": "SAY_WAVE"},
             )
 
             smach.StateMachine.add(
@@ -129,7 +129,7 @@ class Restaurant(smach.StateMachine):
                         print(order_dict)
 
                         for items_str in order_dict.values():
-                            if items_str is None:
+                            if items_str == "None":
                                 continue
                             items = [
                                 item.strip()
@@ -147,7 +147,7 @@ class Restaurant(smach.StateMachine):
                                 parts.append(formatted_items)
 
                         if not parts:
-                            return "Please get me nothing."
+                            return ""
                         elif len(parts) == 1:
                             return f"Please get me {parts[0]}."
                         else:
@@ -167,11 +167,11 @@ class Restaurant(smach.StateMachine):
             smach.StateMachine.add(
                 "PROCESS_ORDER",
                 smach.CBState(speech_postprocess_cb),
-                transitions={"succeeded": "SAY_ORDER", "failed": "REPEAT_TAKE_ORDER"},
+                transitions={"succeeded": "SAY_ORDER", "failed": "TAKE_ORDER_AGAIN"},
             )
 
             smach.StateMachine.add(
-                "REPEAT_TAKE_ORDER",
+                "TAKE_ORDER_AGAIN",
                 AskAndListen(
                     tts_phrase="Sorry, I didn't understand you. What would you like to order?",
                 ),
@@ -210,7 +210,7 @@ class Restaurant(smach.StateMachine):
                 smach.StateMachine.add(
                     "ROTATE_LOAD",
                     Rotate(angle=180.0),
-                    transitions={"succeeded": "WAIT_LOAD", "failed": "failed"},
+                    transitions={"succeeded": "WAIT_LOAD"},
                 )
 
                 smach.StateMachine.add(
@@ -270,7 +270,7 @@ class Restaurant(smach.StateMachine):
                 smach.StateMachine.add(
                     "ROTATE_UNLOAD",
                     Rotate(angle=180.0),
-                    transitions={"succeeded": "WAIT_UNLOAD", "failed": "failed"},
+                    transitions={"succeeded": "WAIT_UNLOAD"},
                 )
 
                 smach.StateMachine.add(
@@ -289,5 +289,5 @@ class Restaurant(smach.StateMachine):
             smach.StateMachine.add(
                 "GO_TO_SURVEY",
                 GoToLocation(location=bar_pose_map),
-                transitions={"succeeded": "SURVEY", "failed": "failed"},
+                transitions={"succeeded": "ROTATE_SURVEY", "failed": "failed"},
             )

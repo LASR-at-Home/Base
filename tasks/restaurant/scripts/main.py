@@ -26,6 +26,6 @@ if __name__ == "__main__":
         else None
     )
     restaurant = Restaurant(
-        bar_pose_map, menu_items, MANIPULATION, HARDCODED_TABLE_POSE
+        menu_items, bar_pose_map, UNMAPPED, MANIPULATION, table_pose
     )
     restaurant.execute()
