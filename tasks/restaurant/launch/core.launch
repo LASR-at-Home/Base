@@ -17,8 +17,6 @@
     <node pkg="lasr_vision_bodypix" type="bodypix_services.py" name="bodypix_service" output="screen"/>
 
     <!--      MANIPULATION     -->
-    <group if="$(arg manipulation)">
-        <include file="$(find tiago_kcl_moveit_grasp)/launch/nodes.launch"/>
-    </group>
+    <include file="$(find tiago_kcl_moveit_grasp)/launch/nodes.launch"/>
 
 </launch>
