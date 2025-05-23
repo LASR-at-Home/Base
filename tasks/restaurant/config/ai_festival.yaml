@@ -1,0 +1,22 @@
+survey_motions:
+ - look_centre
+bar_pose:
+  position: 
+    x: 0.0
+    y: 0.0
+    z: 0.0
+  orientation: 
+    x: 0.0
+    y: 0.0
+    z: 0.0
+    w: 0.0
+survey_pose:
+  position: 
+    x: 0.0
+    y: 0.0
+    z: 0.0
+  orientation: 
+    x: 0.0
+    y: 0.0
+    z: 0.08719394681831685
+    w: 0.9961913549304895

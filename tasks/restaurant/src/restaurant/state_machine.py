@@ -1,3 +1,5 @@
+from typing import List
+
 import smach
 import smach_ros
 from geometry_msgs.msg import Pose
@@ -5,11 +7,12 @@ from lasr_skills import AskAndListen, GoToLocation, Rotate, Say, Wait
 from restaurant.speech.speech_handlers import handle_speech
 from restaurant.states import Survey
 from std_msgs.msg import Empty
+from llm_utils import llm_inference
 
 
 class Restaurant(smach.StateMachine):
 
-    def __init__(self, bar_pose_map: Pose) -> None:
+    def __init__(self, bar_pose_map: Pose, menu: List[str]) -> None:
         super().__init__(outcomes=["succeeded", "failed"])
 
         with self:
@@ -29,7 +32,23 @@ class Restaurant(smach.StateMachine):
 
             smach.StateMachine.add(
                 "SAY_START",
-                Say(text="Start of Restaurant task."),
+                Say(text="Start of Restaurant task. I am going to the Bar."),
+                transitions={
+                    "succeeded": "GO_TO_BAR_1",
+                    "aborted": "failed",
+                    "preempted": "failed",
+                },
+            )
+
+            smach.StateMachine.add(
+                "GO_TO_BAR_1",
+                GoToLocation(location=bar_pose_map),
+                transitions={"succeeded": "SURVEY", "failed": "failed"},
+            )
+
+            smach.StateMachine.add(
+                "SAY_WAVE",
+                Say(text="Please wave to get my attention."),
                 transitions={
                     "succeeded": "SURVEY",
                     "aborted": "failed",
@@ -68,16 +87,26 @@ class Restaurant(smach.StateMachine):
                 outcomes=["succeeded", "failed"],
             )
             def speech_postprocess_cb(ud):
-                parsed_order = handle_speech(ud.order_str, False)
-                print(parsed_order)
-                order_string = ", ".join(
-                    [
-                        f"{count} {item if count == 1 or item.endswith('s') else item+'s'}"
-                        for count, item in parsed_order
-                    ]
-                )
-                ud.order_str = order_string
-                print(order_string)
+                response = llm_inference.restaurant_llm(ud.order_str, menu)
+
+                def menu_to_string(order_dict):
+                    parts = []
+                    for item, quantity in order_dict.items():
+                        if quantity == 1:
+                            parts.append(f"a {item}")
+                        else:
+                            parts.append(f"{quantity} {item}")
+
+                    if not parts:
+                        return "Please get me nothing."
+                    elif len(parts) == 1:
+                        return f"Please get me {parts[0]}."
+                    else:
+                        return (
+                            f"Please get me {', '.join(parts[:-1])}, and {parts[-1]}."
+                        )
+
+                ud.order_str = menu_to_string(response)
                 return "succeeded"
 
             smach.StateMachine.add(
@@ -88,8 +117,7 @@ class Restaurant(smach.StateMachine):
 
             smach.StateMachine.add(
                 "SAY_ORDER",
-                Say(format_str="Your order is: {}. I will deliver it shortly."),
-                remapping={"placeholders": "order_str"},
+                Say(format_str="Coming right up!"),
                 transitions={
                     "succeeded": "GO_TO_BAR",
                     "preempted": "failed",
@@ -105,9 +133,7 @@ class Restaurant(smach.StateMachine):
 
             smach.StateMachine.add(
                 "REQUEST_ITEMS",
-                Say(
-                    format_str="Please get me {}, I will turn around for you to load the order."
-                ),
+                Say(format_str="{} I will turn around for you to load the order."),
                 remapping={"placeholders": "order_str"},
                 transitions={
                     "succeeded": "ROTATE_LOAD",

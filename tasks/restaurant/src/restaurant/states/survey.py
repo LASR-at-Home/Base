@@ -1,13 +1,11 @@
 import navigation_helpers
-import numpy as np
 import rospy
 import smach
 import smach_ros
-from geometry_msgs.msg import Pose, PoseStamped, PoseWithCovarianceStamped, Quaternion
-from lasr_skills import DetectGesture, GoToLocation, PlayMotion, Rotate
-from lasr_vision_msgs.msg import CDRequest, CDResponse
+from geometry_msgs.msg import Pose, PoseStamped, PoseWithCovarianceStamped
+from lasr_skills import DetectGesture, PlayMotion, Say
+from lasr_vision_msgs.msg import CDRequest
 from lasr_vision_msgs.srv import CroppedDetection, CroppedDetectionRequest
-from scipy.spatial.transform import Rotation as R
 
 
 class Survey(smach.StateMachine):
@@ -118,116 +116,79 @@ class Survey(smach.StateMachine):
 
         with self:
 
-            angle_iterator = smach.Iterator(
+            motion_iterator = smach.Iterator(
                 outcomes=["succeeded", "failed"],
-                it=rospy.get_param("/restaurant/survey_angle_increments"),
-                it_label="angle_increment",
+                it=rospy.get_param("/restaurant/survey_motions"),
+                it_label="motion_name",
                 input_keys=[],
                 output_keys=["customer_approach_pose"],
                 exhausted_outcome="failed",
             )
 
-            with angle_iterator:
+            with motion_iterator:
 
-                motion_iterator = smach.Iterator(
-                    outcomes=["succeeded", "failed"],
-                    it=rospy.get_param("/restaurant/survey_motions"),
-                    it_label="motion_name",
-                    input_keys=[],
-                    output_keys=["customer_approach_pose"],
-                    exhausted_outcome="failed",
-                )
-
-                with motion_iterator:
-
-                    container_sm = smach.StateMachine(
-                        outcomes=["succeeded", "failed", "continue"],
-                        input_keys=["motion_name"],
-                        output_keys=["customer_approach_pose"],
-                    )
-
-                    with container_sm:
-                        smach.StateMachine.add(
-                            "SURVEY_MOTION",
-                            PlayMotion(),
-                            transitions={
-                                "succeeded": "DETECT",
-                                "aborted": "failed",
-                                "preempted": "failed",
-                            },
-                        )
-
-                        smach.StateMachine.add(
-                            "DETECT",
-                            smach_ros.ServiceState(
-                                "/vision/cropped_detection",
-                                CroppedDetection,
-                                request=CroppedDetectionRequest(
-                                    requests=[
-                                        CDRequest(
-                                            method="closest",
-                                            use_mask=True,
-                                            yolo_model="yolov8x-seg.pt",
-                                            yolo_model_confidence=0.5,
-                                            yolo_nms_threshold=0.3,
-                                            return_sensor_reading=False,
-                                            object_names=["person"],
-                                            polygons=[],
-                                        )
-                                    ]
-                                ),
-                                output_keys=["responses"],
-                                response_slots=["responses"],
-                            ),
-                            transitions={
-                                "succeeded": "HANDLE_DETECTIONS",
-                                "aborted": "failed",
-                                "preempted": "failed",
-                            },
-                        )
-
-                        smach.StateMachine.add(
-                            "HANDLE_DETECTIONS",
-                            self.HandleDetections(),
-                            transitions={
-                                "succeeded": "succeeded",
-                                "failed": "continue",
-                            },
-                        )
-
-                    motion_iterator.set_contained_state(
-                        "CONTAINER_STATE", container_sm, loop_outcomes=["continue"]
-                    )
-
-                angle_container_sm = smach.StateMachine(
+                container_sm = smach.StateMachine(
                     outcomes=["succeeded", "failed", "continue"],
-                    input_keys=["angle_increment"],
+                    input_keys=["motion_name"],
                     output_keys=["customer_approach_pose"],
                 )
-                with angle_container_sm:
 
+                with container_sm:
                     smach.StateMachine.add(
-                        "ROTATE",
-                        Rotate(),
-                        transitions={"succeeded": "MOTION_ITERATOR"},
-                        remapping={"angle": "angle_increment"},
-                    )
-
-                    smach.StateMachine.add(
-                        "MOTION_ITERATOR",
-                        motion_iterator,
+                        "SURVEY_MOTION",
+                        PlayMotion(),
                         transitions={
-                            "succeeded": "succeeded",
-                            "failed": "failed",
+                            "succeeded": "DETECT",
+                            "aborted": "failed",
+                            "preempted": "failed",
                         },
                     )
-                angle_iterator.set_contained_state(
-                    "CONTAINER_STATE", angle_container_sm, loop_outcomes=["continue"]
+
+                    smach.StateMachine.add(
+                        "DETECT",
+                        smach_ros.ServiceState(
+                            "/vision/cropped_detection",
+                            CroppedDetection,
+                            request=CroppedDetectionRequest(
+                                requests=[
+                                    CDRequest(
+                                        method="closest",
+                                        use_mask=True,
+                                        yolo_model="yolov8x-seg.pt",
+                                        yolo_model_confidence=0.5,
+                                        yolo_nms_threshold=0.3,
+                                        return_sensor_reading=False,
+                                        object_names=["person"],
+                                        polygons=[],
+                                    )
+                                ]
+                            ),
+                            output_keys=["responses"],
+                            response_slots=["responses"],
+                        ),
+                        transitions={
+                            "succeeded": "HANDLE_DETECTIONS",
+                            "aborted": "failed",
+                            "preempted": "failed",
+                        },
+                    )
+
+                    smach.StateMachine.add(
+                        "HANDLE_DETECTIONS",
+                        self.HandleDetections(),
+                        transitions={
+                            "succeeded": "succeeded",
+                            "failed": "continue",
+                        },
+                    )
+
+                motion_iterator.set_contained_state(
+                    "CONTAINER_STATE", container_sm, loop_outcomes=["continue"]
                 )
 
             smach.StateMachine.add(
-                "ANGLE_ITERATOR",
-                angle_iterator,
+                "MOTION_ITERATOR",
+                motion_iterator,
                 transitions={
                     "succeeded": "customer_found",
                     "failed": "customer_not_found",

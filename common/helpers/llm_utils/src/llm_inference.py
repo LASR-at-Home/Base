@@ -19,7 +19,7 @@ import os
 import json
 from datetime import datetime
 
-from common.helpers.llm_utils.src.utils import (
+from utils import (
     create_query,
     truncate_llm_output,
     parse_llm_output_to_dict,
@@ -205,7 +205,7 @@ class LLMInference:
             json.dump(logs, file, indent=4)
 
 
-def interest_commonality_llm(interests: list[str]) -> str:
+def interest_commonality_llm(interests: List[str]) -> str:
     """
     Find common interests between a list of interests.
     :param interests: a list of interests
@@ -221,7 +221,16 @@ def interest_commonality_llm(interests: list[str]) -> str:
     return parsed_response
 
 
-def extract_fields_llm(text: str, fields: list[str] = None):
+def restaurant_llm(text: str, items: List[str]):
+    config = ModelConfig(model_name=models["Qwen"], model_type="llm", quantize=True)
+    bar_query = f"You are a robot taking an order in a restaurant. The menu consists of the following items: {','.join(items)}. The customer says: {text}. Output a JSON dict mapping items to quantities."
+    bar_inference = LLMInference(config, bar_query)
+    bar_response = bar_inference.run_inference()[0]
+    bar_json = json.loads(bar_response)
+    return bar_json
+
+
+def extract_fields_llm(text: str, fields: List[str] = None):
     """
     A simple receptionist LLM inference function.
     :param text: The input sentence to process.
@@ -259,4 +268,8 @@ if __name__ == "__main__":
     # main()
     # extract_fields_llm("Oh hi yeah, I'm John erm I drink tea usually green, and I am a robotics enthusiast. I also like to play chess and watch movies when I can.")
     # interest_commonality_llm(["robotics", "chess", "movies"])
-    interest_commonality_llm(["tennis", "football", "basketball"])
+    # interest_commonality_llm(["tennis", "football", "basketball"])
+    restaurant_llm(
+        "Get me a black tea please, and an apple and some iced tea and another apple",
+        ["black tea", "iced tea", "apple"],
+    )

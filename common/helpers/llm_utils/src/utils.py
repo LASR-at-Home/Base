@@ -1,7 +1,9 @@
+from typing import List
+
 import re
 
 
-def parse_llm_output_to_dict(output: str, fields: list[str] = None) -> dict:
+def parse_llm_output_to_dict(output: str, fields: List[str] = None) -> dict:
     """
     Parse the llm response to get the requested fields into a dict where the keys are the field names,
     and the values are the result from the response.
@@ -31,7 +33,7 @@ def truncate_llm_output(output: str) -> str:
         return output
 
 
-def create_query(text: str, task: str, fields: list[str] = None):
+def create_query(text: str, task: str, fields: List[str] = None):
     """
     Create a query for the LLM to extract specific fields from the input text.
     :param text: The input sentence to process.
