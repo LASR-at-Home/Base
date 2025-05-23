@@ -1,22 +1,31 @@
-survey_motions:
- - look_centre
-bar_pose:
-  position: 
-    x: 0.0
-    y: 0.0
-    z: 0.0
-  orientation: 
-    x: 0.0
-    y: 0.0
-    z: 0.0
-    w: 0.0
-survey_pose:
-  position: 
-    x: 0.0
-    y: 0.0
-    z: 0.0
-  orientation: 
-    x: 0.0
-    y: 0.0
-    z: 0.08719394681831685
-    w: 0.9961913549304895
+play_motion:
+  motions:
+    look_centre:
+      joints: [head_1_joint, head_2_joint]
+      points:
+      - positions: [0.0, 0.0]
+        time_from_start: 0.0
+restaurant:
+  survey_motions:
+  - look_centre
+  bar_pose:
+    position: 
+      x: 2.4670109660016966
+      y: -2.8809724545472255
+      z: 0.0
+    orientation: 
+      x: 0.0
+      y: 0.0
+      z: -0.9997314190844669
+      w: 0.023175195691899027
+  table_pose:
+    position: 
+      x: 2.4670109660016966
+      y: -2.8809724545472255
+      z: 0.0
+    orientation: 
+      x: 0.0
+      y: 0.0
+      z: -0.9997314190844669
+      w: 0.023175195691899027
+  menu: ['black tea']

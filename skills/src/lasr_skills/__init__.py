@@ -5,7 +5,8 @@ from .detect_3d_in_area import Detect3DInArea
 from .wait_for_person import WaitForPerson
 from .say import Say
 from .wait_for_person_in_area import WaitForPersonInArea
-from .describe_people import DescribePeople
+
+# from .describe_people import DescribePeople
 from .look_to_point import LookToPoint
 from .play_motion import PlayMotion
 from .go_to_location import GoToLocation
@@ -23,11 +24,15 @@ from .look_at_person import LookAtPerson
 from .wait import Wait
 from .adjust_camera import AdjustCamera
 from .guide import Guide
-from .detect_clothing import DetectClothing
+
+# from .detect_clothing import DetectClothing
 from .detect_pose import DetectPose
-from .find_person import FindPerson
-from .xml_question_answer import XmlQuestionAnswer
-from .find_person_and_tell import FindPersonAndTell
-from .count_people import CountPeople
+
+# from .find_person import FindPerson
+# from .xml_question_answer import XmlQuestionAnswer
+
+# from .find_person_and_tell import FindPersonAndTell
+
+# from .count_people import CountPeople
 from .json_qa import JsonQuestionAnswer
 from .rotate import Rotate

@@ -60,7 +60,7 @@ class LLMInference:
                 bnb_4bit_quant_type="nf4",
                 bnb_4bit_compute_dtype=torch.bfloat16,
             )
-        self.device = torch.device("cpu")
+        self.device = "cpu"
 
         self.model_name = self.config.model_name
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
@@ -74,9 +74,11 @@ class LLMInference:
                 self.infer_task()
             self.model = self.load_pipeline_model()
             self.pipe = pipeline(
-                task=self.task, model=self.model, tokenizer=self.tokenizer
-            )  # , device=self.device)
-
+                task=self.task,
+                model=self.model,
+                tokenizer=self.tokenizer,
+                device=self.device,
+            )
         elif self.config.model_type == "llm":
             self.model = self.load_llm_model()
         else:
@@ -222,12 +224,13 @@ def interest_commonality_llm(interests: List[str]) -> str:
 
 
 def restaurant_llm(text: str, items: List[str]):
-    config = ModelConfig(model_name=models["Qwen"], model_type="llm", quantize=True)
-    bar_query = f"You are a robot taking an order in a restaurant. The menu consists of the following items: {','.join(items)}. The customer says: {text}. Output a JSON dict mapping items to quantities."
+    config = ModelConfig(model_name=models["Qwen"], model_type="llm", quantize=False)
+    # bar_query = f"You are a robot taking an order in a restaurant. The menu consists of the following items: {','.join(items)}. The customer says: {text}. Output a JSON dict mapping items to quantities."
+    bar_query = f"Extract the following fields from the sentence:\n -Food\n \nDrinks \nSentence: {text}."
     bar_inference = LLMInference(config, bar_query)
-    bar_response = bar_inference.run_inference()[0]
-    bar_json = json.loads(bar_response)
-    return bar_json
+    bar_response = bar_inference.run_inference()
+    parsed_response = parse_llm_output_to_dict(bar_response[0], ["Food", "Drinks"])
+    return parsed_response
 
 
 def extract_fields_llm(text: str, fields: List[str] = None):
@@ -250,7 +253,7 @@ def extract_fields_llm(text: str, fields: List[str] = None):
 
 def main():
     # Examples for testing
-    config = ModelConfig(model_name=models["Qwen"], model_type="llm", quantize=True)
+    config = ModelConfig(model_name=models["Qwen"], model_type="llm", quantize=False)
 
     # sentence = "My name is John, my favourite drink is green tea, and my interests are robotics."
     # sentence = "I am John, I usually drink green tea, and I really like robotics. I also like to play chess and watch movies."
@@ -269,9 +272,7 @@ if __name__ == "__main__":
     # extract_fields_llm("Oh hi yeah, I'm John erm I drink tea usually green, and I am a robotics enthusiast. I also like to play chess and watch movies when I can.")
     # interest_commonality_llm(["robotics", "chess", "movies"])
     # interest_commonality_llm(["tennis", "football", "basketball"])
-    print(
-        restaurant_llm(
-            "Get me a black tea please, and an apple and some iced tea and another apple",
-            ["black tea", "iced tea", "apple"],
-        )
+    restaurant_llm(
+        "Get me a black tea please, and an apple and some iced tea and another apple",
+        ["black tea", "iced tea", "apple"],
     )

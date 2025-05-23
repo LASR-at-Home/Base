@@ -2,14 +2,15 @@
 sensor_msgs/Image image_raw
 
 # YOLO model to use
-string model
+string dataset
 
-# Confidence threshold
+# How certain the detection should be to include
 float32 confidence
 
-# Classes to filter, i.e. only detect these classes
-string[] filter
-
+# Non-maximum Supression
+#
+# Guiding value to remove overlapping bounding boxes
+float32 nms
 ---
 # Detection result
 lasr_vision_msgs/Detection[] detected_objects

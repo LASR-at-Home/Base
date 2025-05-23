@@ -1,25 +1,16 @@
-# Image to run inference on
-sensor_msgs/Image image_raw
-
-# Depth image
-sensor_msgs/Image depth_image
-
-# Camera info for depth camera
-# we may want to keep this hardcoded in future
-# it shouldn't change, unless we recalibrate the depth camera
-sensor_msgs/CameraInfo depth_camera_info
+# PointCloud2 to run inference on
+sensor_msgs/PointCloud2 pcl
 
 # YOLO model to use
-string model
+string dataset
 
-# Confidence threshold
+# How certain the detection should be to include
 float32 confidence
 
-# Classes to filter, i.e. only detect these classes
-string[] filter
-
-# target frame for 3D estimate
-string target_frame
+# Non-maximum Supression
+#
+# Guiding value to remove overlapping bounding boxes
+float32 nms
 ---
 # Detection result
 lasr_vision_msgs/Detection3D[] detected_objects

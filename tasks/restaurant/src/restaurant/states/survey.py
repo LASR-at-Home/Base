@@ -1,3 +1,5 @@
+from typing import Optional
+
 import navigation_helpers
 import rospy
 import smach
@@ -77,7 +79,7 @@ class Survey(smach.StateMachine):
 
                 return "succeeded"
 
-        def __init__(self):
+        def __init__(self, table_pose: Optional[Pose] = None):
             super().__init__(
                 outcomes=["succeeded", "failed"],
                 input_keys=["responses"],
@@ -96,19 +98,38 @@ class Survey(smach.StateMachine):
                     "DETECT_GESTURE",
                     DetectGesture("waving"),
                     transitions={
-                        "succeeded": "COMPUTE_APPROACH_POSE",
+                        "succeeded": (
+                            "COMPUTE_APPROACH_POSE" if not table_pose else "SET_POSE"
+                        ),
                         "failed": "GET_RESPONSE",
                     },
                     remapping={"img_msg": "cropped_image"},
                 )
 
-                smach.StateMachine.add(
-                    "COMPUTE_APPROACH_POSE",
-                    self.ComputeApproachPose(),
-                    transitions={"succeeded": "succeeded", "failed": "GET_RESPONSE"},
+                @smach.cb_interface(
+                    output_keys=["customer_approach_pose"], outcomes=["succeeded"]
                 )
+                def set_approach_pose(ud):
+                    ud.customer_approach_pose = table_pose
+                    return "succeeded"
 
-    def __init__(self) -> None:
+                if table_pose is not None:
+                    smach.StateMachine.add(
+                        "SET_POSE",
+                        smach.CBState(set_approach_pose),
+                        transitions={"succeeded": "succeeded"},
+                    )
+                else:
+                    smach.StateMachine.add(
+                        "COMPUTE_APPROACH_POSE",
+                        self.ComputeApproachPose(),
+                        transitions={
+                            "succeeded": "succeeded",
+                            "failed": "GET_RESPONSE",
+                        },
+                    )
+
+    def __init__(self, table_pose: Optional[Pose] = None) -> None:
         super().__init__(
             outcomes=["customer_found", "customer_not_found"],
             output_keys=["customer_approach_pose"],
@@ -175,7 +196,7 @@ class Survey(smach.StateMachine):
 
                     smach.StateMachine.add(
                         "HANDLE_DETECTIONS",
-                        self.HandleDetections(),
+                        self.HandleDetections(table_pose),
                         transitions={
                             "succeeded": "succeeded",
                             "failed": "continue",
