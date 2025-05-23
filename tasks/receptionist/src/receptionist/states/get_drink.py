@@ -52,10 +52,10 @@ class GetDrink(smach.StateMachine):
 
             extract_fields = llm_utils.extract_fields_llm(transcription, ["Favourite drink"])
 
-            if len(extract_fields) == 1:
-                userdata.guest_data[self._guest_id]["drink"] = extract_fields[0]
+            if extract_fields["drink"] != "Unknown":
+                userdata.guest_data[self._guest_id]["drink"] = extract_fields["drink"]
             else:
-                userdata.guest_data[self._guest_id]["drink"] = "unknown"
+                userdata.guest_data[self._guest_id]["interest"] = extract_fields["interest"]
                 outcome = "failed"
 
             return outcome

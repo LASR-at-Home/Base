@@ -51,16 +51,18 @@ class GetNameAndInterest(smach.StateMachine):
             transcription = userdata.guest_transcription.lower()
             transcription = userdata["guest_transcription"].lower()
 
-            #Need to make a safe guard in case sentence has no name or interest.
-            
             extract_fields = llm_utils.extract_fields_llm(transcription, ["Name", "Interests"])
 
-            if len(extract_fields) == 2:
-                userdata.guest_data[self._guest_id]["name"] = extract_fields[0]
-                userdata.guest_data[self._guest_id]["interest"] = extract_fields[1]
+            if extract_fields["name"] != "Unknown":
+                userdata.guest_data[self._guest_id]["name"] = extract_fields["name"]
             else:
-                userdata.guest_data[self._guest_id]["name"] = "unknown"
-                userdata.guest_data[self._guest_id]["interest"] = "unknown"
+                userdata.guest_data[self._guest_id]["interest"] = extract_fields["interest"]
+                outcome = "failed"
+
+            if extract_fields["interest"] != "Unknown":
+                userdata.guest_data[self._guest_id]["interest"] = extract_fields["interest"]
+            else:
+                userdata.guest_data[self._guest_id]["interest"] = extract_fields["interest"]
                 outcome = "failed"
 
             return outcome
