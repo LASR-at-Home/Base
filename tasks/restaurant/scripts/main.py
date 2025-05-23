@@ -6,6 +6,7 @@ from restaurant.state_machine import Restaurant
 
 MANIPULATION: bool = False
 HARDCODED_TABLE_POSE: bool = False
+UNMAPPED: bool = False
 
 if __name__ == "__main__":
     rospy.init_node("restaurant")

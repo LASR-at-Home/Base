@@ -76,11 +76,16 @@ class Restaurant(smach.StateMachine):
                 "SAY_WAVE",
                 Say(text="Please wave to get my attention."),
                 transitions={
-                    "succeeded": "SURVEY",
+                    "succeeded": "SURVEY" if not unmapped else "ROTATE_360",
                     "aborted": "failed",
                     "preempted": "failed",
                 },
             )
+
+            if unmapped:
+                smach.StateMachine.add(
+                    "ROTATE_360", Rotate(angle=360), transitions={"succeeded": "SURVEY"}
+                )
 
             smach.StateMachine.add(
                 "SURVEY",

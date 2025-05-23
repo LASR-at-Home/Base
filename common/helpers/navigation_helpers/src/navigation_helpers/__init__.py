@@ -8,6 +8,7 @@ from geometry_msgs.msg import Point, Pose, PoseStamped, Quaternion
 from nav_msgs.msg import Path
 from nav_msgs.srv import GetPlan
 from scipy.spatial.transform import Rotation as R
+from visualization_msgs.msg import Marker, MarkerArray
 
 
 def euclidian_distance(p1: Point, p2: Point) -> float:
@@ -75,6 +76,11 @@ def get_approach_pose_on_radius(
     tolerance: float = 0.5,
     num_candidates: int = 36,
 ) -> Union[None, PoseStamped]:
+    marker_pub = rospy.Publisher(
+        "/approach_pose_candidates", MarkerArray, queue_size=10
+    )
+    target_pub = rospy.Publisher("/approach_pose_target", Marker, queue_size=10)
+    chosen_marker_pub = rospy.Publisher("/approach_pose_chosen", Marker, queue_size=10)
 
     make_plan: rospy.ServiceProxy = rospy.ServiceProxy("/move_base/make_plan", GetPlan)
     try:
@@ -85,6 +91,7 @@ def get_approach_pose_on_radius(
 
     best_pose = None
     min_distance = float("inf")
+    marker_array = MarkerArray()
 
     for i in range(num_candidates):
         angle = 2 * math.pi * i / num_candidates
@@ -95,6 +102,25 @@ def get_approach_pose_on_radius(
         candidate_pose.header.frame_id = target.header.frame_id
         candidate_pose.pose.position.x = x
         candidate_pose.pose.position.y = y
+
+        # Create candidate marker
+        candidate_marker = Marker()
+        candidate_marker.header.frame_id = target.header.frame_id
+        candidate_marker.type = Marker.SPHERE
+        candidate_marker.action = Marker.ADD
+        candidate_marker.scale.x = 0.1  # Set size
+        candidate_marker.scale.y = 0.1
+        candidate_marker.scale.z = 0.1
+        candidate_marker.color.r = 0.0  # Candidate color (e.g., blue)
+        candidate_marker.color.g = 0.0
+        candidate_marker.color.b = 1.0
+        candidate_marker.color.a = 1.0
+        candidate_marker.pose.position.x = x
+        candidate_marker.pose.position.y = y
+        candidate_marker.pose.position.z = target.pose.position.z
+        candidate_marker.id = i  # Unique ID for each marker
+
+        marker_array.markers.append(candidate_marker)
 
         plan = make_plan(origin, candidate_pose, tolerance)
         if plan.plan.poses:
@@ -111,6 +137,37 @@ def get_approach_pose_on_radius(
             ):
                 min_distance = distance_from_origin
                 best_pose = candidate_pose
+    marker_pub.publish(marker_array)
+    if best_pose:
+        chosen_marker = Marker()
+        chosen_marker.header.frame_id = best_pose.header.frame_id
+        chosen_marker.type = Marker.SPHERE
+        chosen_marker.action = Marker.ADD
+        chosen_marker.scale.x = 0.15  # Set larger size for the chosen pose
+        chosen_marker.scale.y = 0.15
+        chosen_marker.scale.z = 0.15
+        chosen_marker.color.r = 1.0  # Chosen color (e.g., red)
+        chosen_marker.color.g = 0.0
+        chosen_marker.color.b = 0.0
+        chosen_marker.color.a = 1.0
+        chosen_marker.pose = best_pose.pose
+        chosen_marker.id = 999  # Unique ID for chosen marker
+        chosen_marker_pub.publish(chosen_marker)
+
+    target_marker = Marker()
+    target_marker.header.frame_id = target.header.frame_id
+    target_marker.type = Marker.SPHERE
+    target_marker.action = Marker.ADD
+    target_marker.scale.x = 0.15  # Set larger size for the chosen pose
+    target_marker.scale.y = 0.15
+    target_marker.scale.z = 0.15
+    target_marker.color.r = 1.0  # Chosen color (e.g., red)
+    target_marker.color.g = 0.0
+    target_marker.color.b = 0.0
+    target_marker.color.a = 1.0
+    target_marker.pose = target.pose
+    target_marker.id = 999  # Unique ID for chosen marker
+    target_pub.publish(target_marker)
 
     return best_pose
 
