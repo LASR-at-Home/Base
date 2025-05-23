@@ -14,7 +14,7 @@ from lasr_skills import (
     WaitForPersonInArea,
 )
 from lasr_vision_msgs.srv import Recognise
-from receptionist.states import HandleName, HandleDrink, CompareInterest, HandleInterest, IntroduceAndSeatGuest
+from receptionist.states import HandleNameInterest, HandleDrink, CompareInterest, IntroduceAndSeatGuest
 from shapely.geometry import Polygon
 from std_msgs.msg import Empty, Header
 
@@ -100,33 +100,33 @@ class Receptionist(smach.StateMachine):
             # """
 
             smach.StateMachine.add(
-                "HANDLE_NAME_1",
-                HandleName("guest1", learn_guest_1),
-                transitions={
-                    "succeeded": "HANDLE_INTEREST_1",
-                    "failed": "HANDLE_INTEREST_1",
-                },
-            )
-
-            smach.StateMachine.add(
-                "HANDLE_INTEREST_1",
-                HandleInterest("1"),
-                transitions={
-                    "succeeded": "COMPARE_INTEREST_1",
-                    "failed": "COMPARE_INTEREST_1",
-                },
-            )
-
-            smach.StateMachine.add(
-                "COMPARE_INTEREST_1",
-                CompareInterest(guest_id=1),
+                "HANDLE_NAME_INTEREST_1",
+                HandleNameInterest("guest1", learn_guest_1),
                 transitions={
                     "succeeded": "SAY_FOLLOW_GUEST_TO_TABLE_1",
-                    "aborted": "SAY_FOLLOW_GUEST_TO_TABLE_1",
-                    "preempted": "SAY_FOLLOW_GUEST_TO_TABLE_1",
-
+                    "failed": "SAY_FOLLOW_GUEST_TO_TABLE_1",
                 },
             )
+
+            # smach.StateMachine.add(
+            #     "HANDLE_INTEREST_1",
+            #     HandleInterest("1"),
+            #     transitions={
+            #         "succeeded": "COMPARE_INTEREST_1",
+            #         "failed": "COMPARE_INTEREST_1",
+            #     },
+            # )
+
+            # smach.StateMachine.add(
+            #     "COMPARE_INTEREST_1",
+            #     CompareInterest(guest_id=1),
+            #     transitions={
+            #         "succeeded": "SAY_FOLLOW_GUEST_TO_TABLE_1",
+            #         "aborted": "SAY_FOLLOW_GUEST_TO_TABLE_1",
+            #         "preempted": "SAY_FOLLOW_GUEST_TO_TABLE_1",
+
+            #     },
+            # )
 
             self._guide_guest_to_table(guest_id=1)
 
@@ -199,34 +199,43 @@ class Receptionist(smach.StateMachine):
             # """
 
             self._goto_waiting_area(2)
-            
-            smach.StateMachine.add(
-                "HANDLE_NAME_2",
-                HandleName("guest2", False),
-                transitions={
-                    "succeeded": "HANDLE_INTEREST_2",
-                    "failed": "HANDLE_INTEREST_2",
-                },
-            )
 
             smach.StateMachine.add(
-                "HANDLE_INTEREST_2",
-                HandleInterest("guest2"),
-                transitions={
-                    "succeeded": "COMPARE_INTEREST_2",
-                    "failed": "COMPARE_INTEREST_2",
-                },
-            )
-
-            smach.StateMachine.add(
-                "COMPARE_INTEREST_2",
-                CompareInterest(guest_id=2),
+                "HANDLE_NAME_INTEREST_2",
+                HandleNameInterest("guest2", False),
                 transitions={
                     "succeeded": "SAY_FOLLOW_GUEST_TO_TABLE_2",
-                    "aborted": "SAY_FOLLOW_GUEST_TO_TABLE_2",
-                    "preempted":"SAY_FOLLOW_GUEST_TO_TABLE_2",
+                    "failed": "SAY_FOLLOW_GUEST_TO_TABLE_2",
                 },
             )
+            
+            # smach.StateMachine.add(
+            #     "HANDLE_NAME_2",
+            #     HandleName("guest2", False),
+            #     transitions={
+            #         "succeeded": "HANDLE_INTEREST_2",
+            #         "failed": "HANDLE_INTEREST_2",
+            #     },
+            # )
+
+            # smach.StateMachine.add(
+            #     "HANDLE_INTEREST_2",
+            #     HandleInterest("guest2"),
+            #     transitions={
+            #         "succeeded": "COMPARE_INTEREST_2",
+            #         "failed": "COMPARE_INTEREST_2",
+            #     },
+            # )
+
+            # smach.StateMachine.add(
+            #     "COMPARE_INTEREST_2",
+            #     CompareInterest(guest_id=2),
+            #     transitions={
+            #         "succeeded": "SAY_FOLLOW_GUEST_TO_TABLE_2",
+            #         "aborted": "SAY_FOLLOW_GUEST_TO_TABLE_2",
+            #         "preempted":"SAY_FOLLOW_GUEST_TO_TABLE_2",
+            #     },
+            # )
 
             self._guide_guest_to_table(guest_id=2)
 
@@ -248,6 +257,7 @@ class Receptionist(smach.StateMachine):
                     "preempted":"SAY_FOLLOW_GUEST_2"
                 },
             )
+            
             self._guide_guest(guest_id=2)
 
             smach.StateMachine.add(

@@ -8,6 +8,7 @@ import smach
 from smach import UserData
 from typing import List, Dict, Any
 from receptionist.states import SpeechRecovery
+import llm_utils
 
 
 class GetNameAndInterest(smach.StateMachine):
@@ -30,9 +31,9 @@ class GetNameAndInterest(smach.StateMachine):
                 output_keys=["guest_data", "guest_transcription"],
             )
             self._guest_id = guest_id
-            prior_data: Dict[str, List[str]] = rospy.get_param(param_key)
-            self._possible_names = [name.lower() for name in prior_data["names"]]
-            self._possible_interests = [interest.lower() for interest in prior_data["interest"]]
+            # prior_data: Dict[str, List[str]] = rospy.get_param(param_key)
+            # self._possible_names = [name.lower() for name in prior_data["names"]]
+            # self._possible_interests = [interest.lower() for interest in prior_data["interest"]]
 
         def execute(self, userdata: UserData) -> str:
             """Parses the transcription of the guests' name and interest.
@@ -47,32 +48,18 @@ class GetNameAndInterest(smach.StateMachine):
                 the parameter "guest_data".
             """
             outcome = "succeeded"
-            name_found = False
-            interest_found = False
             transcription = userdata.guest_transcription.lower()
-
             transcription = userdata["guest_transcription"].lower()
 
-            for name in self._possible_names:
-                if name in transcription:
-                    userdata.guest_data[self._guest_id]["name"] = name
-                    rospy.loginfo(f"Guest Name identified as: {name}")
-                    name_found = True
-                    break
+            #Need to make a safe guard in case sentence has no name or interest.
+            
+            extract_fields = llm_utils.extract_fields_llm(transcription, ["Name", "Interests"])
 
-            for interest in self._possible_interests:
-                if interest in transcription:
-                    userdata.guest_data[self._guest_id]["interest"] = interest
-                    rospy.loginfo(f"Guest Interest identified as: {interest}")
-                    interest_found = True
-                    break
-
-            if not name_found:
-                rospy.loginfo("Name not found in transcription")
+            if len(extract_fields) == 2:
+                userdata.guest_data[self._guest_id]["name"] = extract_fields[0]
+                userdata.guest_data[self._guest_id]["interest"] = extract_fields[1]
+            else:
                 userdata.guest_data[self._guest_id]["name"] = "unknown"
-                outcome = "failed"
-            if not interest_found:
-                rospy.loginfo("Interest not found in transcription")
                 userdata.guest_data[self._guest_id]["interest"] = "unknown"
                 outcome = "failed"
 
@@ -141,24 +128,25 @@ class GetNameAndInterest(smach.StateMachine):
                 self.ParseNameAndInterest(
                     guest_id=self._guest_id, param_key=self._param_key
                 ),
-                transitions={"succeeded": "succeeded", "failed": "SPEECH_RECOVERY"},
+                transitions={"succeeded": "succeeded", "failed": "failed"},
             )
-            smach.StateMachine.add(
-                "SPEECH_RECOVERY",
-                SpeechRecovery(self._guest_id, self._last_resort),
-                transitions={
-                    "succeeded": "succeeded",
-                    "failed": "POST_RECOVERY_DECISION",
-                },
-            )
-            smach.StateMachine.add(
-                "POST_RECOVERY_DECISION",
-                self.PostRecoveryDecision(
-                    guest_id=self._guest_id, param_key=self._param_key
-                ),
-                transitions={
-                    "failed": "failed",
-                    "failed_name": "failed_name",
-                    "failed_interest": "failed_interest",
-                },
-            )
+            # smach.StateMachine.add(
+            #     "SPEECH_RECOVERY",
+            #     SpeechRecovery(self._guest_id, self._last_resort),
+            #     transitions={
+            #         "succeeded": "succeeded",
+            #         "failed": "POST_RECOVERY_DECISION",
+            #     },
+            # )
+            # smach.StateMachine.add(
+            #     "POST_RECOVERY_DECISION",
+            #     self.PostRecoveryDecision(
+            #         guest_id=self._guest_id, param_key=self._param_key
+            #     ),
+            #     transitions={
+            #         "failed": "failed",
+            #         "failed_name": "failed_name",
+            #         "failed_interest": "failed_interest",
+            #     },
+            # )
+        
