@@ -47,35 +47,43 @@ class Survey(smach.StateMachine):
                 )
 
             def execute(self, userdata):
+
                 robot_pose_with_covariance = rospy.wait_for_message(
                     "/robot_pose", PoseWithCovarianceStamped
                 )
+
                 robot_pose = PoseStamped(
                     pose=robot_pose_with_covariance.pose.pose,
                     header=robot_pose_with_covariance.header,
                 )
 
-                person_pose = PoseStamped(
+                target_pose = PoseStamped(
                     pose=Pose(
                         position=userdata.person_point,
                         orientation=robot_pose.pose.orientation,
                     ),
                     header=robot_pose.header,
                 )
-                approach_pose = navigation_helpers.get_pose_on_path(
-                    robot_pose,
-                    person_pose,
-                    1.0,
+
+                approach_pose = navigation_helpers.get_approach_pose_on_radius(
+                    robot_pose, target_pose, 1.0
                 )
-                rospy.loginfo(approach_pose)
 
                 if approach_pose is None:
+
+                    approach_pose = navigation_helpers.get_pose_on_path(
+                        robot_pose, target_pose, 1.5
+                    )
+
+                if approach_pose is None:
+
                     return "failed"
 
                 approach_pose.pose.orientation = navigation_helpers.compute_face_quat(
                     approach_pose.pose,
-                    person_pose.pose,
+                    target_pose.pose,
                 )
+
                 userdata.customer_approach_pose = approach_pose.pose
 
                 return "succeeded"
