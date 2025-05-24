@@ -42,7 +42,7 @@ class Restaurant(smach.StateMachine):
 
             smach.StateMachine.add(
                 "SAY_START",
-                Say(text="Start of Restaurant task. I am going to the Bar."),
+                Say(text="I am going to the Bar."),
                 transitions={
                     "succeeded": "GO_TO_BAR_1" if not unmapped else "ROTATE_360",
                     "aborted": "failed",

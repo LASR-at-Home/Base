@@ -5,7 +5,7 @@ from geometry_msgs.msg import Pose, Quaternion, Point
 from restaurant.state_machine import Restaurant
 
 MANIPULATION: bool = False
-HARDCODED_TABLE_POSE: bool = False
+HARDCODED_TABLE_POSE: bool = True
 UNMAPPED: bool = False
 
 if __name__ == "__main__":
