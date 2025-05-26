@@ -18,6 +18,10 @@ from actionlib_msgs.msg import GoalStatus
 from sensor_msgs.msg import PointCloud2
 import message_filters
 
+from dynamic_reconfigure.srv import Reconfigure
+from dynamic_reconfigure.msg import Config, IntParameter, DoubleParameter, BoolParameter
+from std_srvs.srv import Empty
+
 import rosservice
 import tf2_ros as tf
 import tf2_geometry_msgs  # type: ignore
@@ -163,6 +167,57 @@ class PersonFollower:
 
         self._scan_interval   = rospy.Duration(3.0)
         self._last_scan_time  = rospy.Time.now()
+
+        # Create service proxies for dynamic_reconfigure
+        self._dynamic_costmap = rospy.ServiceProxy(
+            "/move_base/local_costmap/set_parameters", Reconfigure
+        )
+        self._dynamic_velocity = rospy.ServiceProxy(
+            "/move_base/PalLocalPlanner/set_parameters", Reconfigure
+        )
+        self._dynamic_recovery = rospy.ServiceProxy(
+            "/move_base/set_parameters", Reconfigure
+        )
+        self._dynamic_local_costmap = rospy.ServiceProxy(
+            "/move_base/local_costmap/inflation_layer/set_parameters", Reconfigure
+        )
+
+        # Wait for necessary services
+        rospy.wait_for_service("/move_base/set_parameters")
+        rospy.wait_for_service("/move_base/local_costmap/set_parameters")
+        rospy.wait_for_service("/move_base/PalLocalPlanner/set_parameters")
+        rospy.wait_for_service("/move_base/local_costmap/inflation_layer/set_parameters")
+        rospy.wait_for_service("/move_base/clear_costmaps")
+
+        # --- Direct parameter configuration ---
+        # 1. Costmap size
+        config = Config()
+        config.ints.append(IntParameter(name="width", value=4))
+        config.ints.append(IntParameter(name="height", value=4))
+        self._dynamic_costmap(config)
+
+        # 2. Max velocity
+        config = Config()
+        config.doubles.append(DoubleParameter(name="max_vel_x", value=0.3))
+        self._dynamic_velocity(config)
+
+        # 3. Disable rotate recovery & clearing_rotation_allowed
+        config = Config()
+        config.bools.append(BoolParameter(name="recovery_behavior_enabled", value=0))  # Disable recovery
+        config.bools.append(BoolParameter(name="clearing_rotation_allowed", value=0))  # Also disable planner rotations
+        self._dynamic_recovery(config)
+
+        # 4. Local inflation radius
+        config = Config()
+        config.bools.append(BoolParameter(name="enabled", value=1))
+        config.doubles.append(DoubleParameter(name="inflation_radius", value=0.2))
+        self._dynamic_local_costmap(config)
+
+        # 5. Clear costmaps
+        rospy.ServiceProxy("/move_base/clear_costmaps", Empty)()
+
+        rospy.sleep(1)
+        rospy.loginfo("Dynamic parameters updated.")
 
     def _look_at_point(self, target_point: Point, target_frame: str = "map"):
         goal = PointHeadGoal()
@@ -430,12 +485,12 @@ class PersonFollower:
                 not hasattr(self, "_last_detection_time")
                 or rospy.Time.now() - self._last_detection_time > timeout_duration
             ):
-                if self._condition_flag_state:
-                    self.condition_frame_flag_pub.publish(Bool(data=False))
-                    self._condition_flag_state = False
+                # if self._condition_flag_state:
+                #     self.condition_frame_flag_pub.publish(Bool(data=False))
+                #     self._condition_flag_state = False
                 rospy.loginfo("Lost track of person, recovering...")
                 person_trajectory = PoseArray()
-                self._recover_track()
+                self.begin_tracking()
                 prev_pose = None
                 self._prev_detection_pos = None
                 self._prev_detection_time = None
