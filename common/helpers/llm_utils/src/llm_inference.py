@@ -213,31 +213,67 @@ def interest_commonality_llm(interests: list[str]) -> str:
     """
     config = ModelConfig(model_name=models["Qwen"], model_type="llm", quantize=True)
     sentence = ", ".join(interests)
-    query = create_query(sentence, "interest_commonality")
+    query = create_query(sentence, "Create a sentence that introduces a person named Eunice, mentioning her interest in green tea and swimming.")
     inference = LLMInference(config, query)
     response = inference.run_inference()
     # print(response)
     parsed_response = truncate_llm_output(response[0])
     return parsed_response
 
-
-def extract_fields_llm(text: str, fields: list[str] = None):
+def introduce_llm(name: str, drink: str, interests: str) -> str:
     """
-    A simple receptionist LLM inference function.
-    :param text: The input sentence to process.
-    :param fields: A list of fields to return.
+    Create a sentence introducing a person using the given name, drink, and interests.
     """
     config = ModelConfig(model_name=models["Qwen"], model_type="llm", quantize=True)
-    if fields is None:
-        fields = ["Name", "Favourite drink", "Interests"]  # all for receptionist
+    input_summary = f"Name: {name}, Favorite drink: {drink}, Interests: {interests}"
+    prompt = f"Create a sentence that introduces a person named {name}, mentioning their favorite drink ({drink}) and their interest in {interests}."
 
-    sentence = text
-    query = create_query(sentence, "extract_fields", fields)
+    query = create_query(input_summary, prompt)
     inference = LLMInference(config, query)
     response = inference.run_inference()
-    parsed_response = parse_llm_output_to_dict(response[0], fields)
+    parsed_response = truncate_llm_output(response[0])
+
     return parsed_response
 
+# def extract_fields_llm(text: str, fields: list[str] = None):
+#     """
+#     A simple receptionist LLM inference function.
+#     :param text: The input sentence to process.
+#     :param fields: A list of fields to return.
+#     """
+#     config = ModelConfig(model_name=models["Qwen"], model_type="llm", quantize=True)
+#     if fields is None:
+#         fields = ["Name", "Favourite drink", "Interests"]  # all for receptionist
+
+#     sentence = text
+#     query = create_query(sentence, "extract_fields", fields)
+#     inference = LLMInference(config, query)
+#     response = inference.run_inference()
+#     parsed_response = parse_llm_output_to_dict(response[0], fields)
+#     return parsed_response
+
+
+def extract_fields_llm(text: str, fields: list[str] = None) -> dict:
+    """
+    Extracts structured information from a sentence using an LLM.
+    Returns a dictionary with all fields — missing ones are filled with 'Unknown'.
+    """
+    config = ModelConfig(model_name=models["Qwen"], model_type="llm", quantize=True)
+
+    if fields is None:
+        fields = ["Name", "Favourite drink", "Interests"]
+
+    query = create_query(text, "extract_fields", fields)
+    inference = LLMInference(config, query)
+    response = inference.run_inference()
+
+    # Parse the model response
+    parsed = parse_llm_output_to_dict(response[0], fields)
+
+    # Fill missing or empty fields with "Unknown"
+    result = {field: parsed.get(field, "Unknown") or "Unknown" for field in fields}
+
+    return result
 
 def main():
     # Examples for testing

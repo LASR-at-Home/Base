@@ -3,15 +3,13 @@ import smach
 from lasr_skills import AskAndListen, Say, AdjustCamera
 from receptionist.states import (
     GetNameAndInterest,
-    GetNameOrInterest,
     ReceptionistLearnFaces,
     GetGuestAttributes,
 )
 
 
-class HandleGuest(smach.StateMachine):
-
-    class HandleNameAndInterest(smach.StateMachine):
+class HandleNameInterest(smach.StateMachine):
+    class NameInterestFlow(smach.StateMachine):
         def __init__(self, guest_id: str):
             super().__init__(
                 outcomes=["succeeded", "failed"],
@@ -21,197 +19,46 @@ class HandleGuest(smach.StateMachine):
 
             with self:
                 smach.StateMachine.add(
-                    f"GET_NAME_AND_INTEREST_GUEST_{guest_id}",
+                    f"GET_NAME_INTEREST_{guest_id}",
                     AskAndListen(
                         "Please say 'Hi Tiago' for me to begin listening. What is your name and interest?"
                     ),
                     transitions={
-                        "succeeded": f"PARSE_NAME_AND_INTEREST_GUEST_{guest_id}",
-                        "failed": f"PARSE_NAME_AND_INTEREST_GUEST_{guest_id}",
+                        "succeeded": f"PARSE_NAME_INTEREST_{guest_id}",
+                        "failed": f"PARSE_NAME_INTEREST_{guest_id}",
                     },
                 )
 
                 smach.StateMachine.add(
-                    f"PARSE_NAME_AND_INTEREST_GUEST_{guest_id}",
+                    f"PARSE_NAME_INTEREST_{guest_id}",
                     GetNameAndInterest(guest_id, False),
                     transitions={
                         "succeeded": "succeeded",
-                        "failed": f"REPEAT_GET_NAME_AND_INTEREST_GUEST_{guest_id}",
-                        "failed_name": f"REPEAT_GET_NAME_GUEST_{guest_id}",
-                        "failed_interest": f"REPEAT_GET_INTEREST_GUEST_{guest_id}",
+                        "failed": f"REPEAT_GET_NAME_INTEREST_{guest_id}",
                     },
                     remapping={"guest_transcription": "transcribed_speech"},
                 )
 
                 smach.StateMachine.add(
-                    f"REPEAT_GET_NAME_AND_INTEREST_GUEST_{guest_id}",
+                    f"REPEAT_GET_NAME_INTEREST_{guest_id}",
                     AskAndListen(
                         "Please speak louder. What is your name and interest?",
                     ),
                     transitions={
-                        "succeeded": f"REPEAT_PARSE_NAME_AND_INTEREST_GUEST_{guest_id}",
+                        "succeeded": f"REPEAT_PARSE_NAME_INTEREST_{guest_id}",
                         "failed": "succeeded",
                     },
                 )
 
                 smach.StateMachine.add(
-                    f"REPEAT_PARSE_NAME_AND_INTEREST_GUEST_{guest_id}",
+                    f"REPEAT_PARSE_NAME_INTEREST_{guest_id}",
                     GetNameAndInterest(guest_id, True),
                     transitions={
                         "succeeded": "succeeded",
                         "failed": "succeeded",
-                        "failed_name": "succeeded",
-                        "failed_interest": "succeeded",
                     },
                     remapping={"guest_transcription": "transcribed_speech"},
                 )
-
-                """
-                Recovery for only name not recognised
-                """
-
-                smach.StateMachine.add(
-                    f"REPEAT_GET_NAME_GUEST_{guest_id}",
-                    AskAndListen("Plase speak louader. What is your name?"),
-                    transitions={
-                        "succeeded": f"REPEAT_PARSE_NAME_GUEST_{guest_id}",
-                        "failed": "succeeded",
-                    },
-                )
-
-                smach.StateMachine.add(
-                    f"REPEAT_PARSE_NAME_GUEST_{guest_id}",
-                    GetNameOrInterest(guest_id, True, "name"),
-                    transitions={
-                        "succeeded": "succeeded",
-                        "failed": "succeeded",
-                    },
-                    remapping={"guest_transcription": "transcribed_speech"},
-                )
-
-                """
-                Recovery for only interest not recognised
-                """
-
-                smach.StateMachine.add(
-                    f"REPEAT_GET_INTEREST_GUEST_{guest_id}",
-                    AskAndListen("Please speak louder. What is your interest?"),
-                    transitions={
-                        "succeeded": f"REPEAT_PARSE_INTEREST_GUEST_{guest_id}",
-                        "failed": "succeeded",
-                    },
-                )
-
-                smach.StateMachine.add(
-                    f"REPEAT_PARSE_INTEREST_GUEST_{guest_id}",
-                    GetNameOrInterest(guest_id, True, "interest"),
-                    transitions={
-                        "succeeded": "succeeded",
-                        "failed": "succeeded",
-                    },
-                    remapping={"guest_transcription": "transcribed_speech"},
-                )
-
-    # class HandleNameAndDrink(smach.StateMachine):
-    #     def __init__(self, guest_id: str):
-    #         super().__init__(
-    #             outcomes=["succeeded", "failed"],
-    #             input_keys=["guest_data"],
-    #             output_keys=["guest_data"],
-    #         )
-
-    #         with self:
-    #             smach.StateMachine.add(
-    #                 f"GET_NAME_AND_DRINK_GUEST_{guest_id}",
-    #                 AskAndListen(
-    #                     "Please say 'Hi Tiago' for me to begin listening. What is your name and favourite drink?"
-    #                 ),
-    #                 transitions={
-    #                     "succeeded": f"PARSE_NAME_AND_DRINK_GUEST_{guest_id}",
-    #                     "failed": f"PARSE_NAME_AND_DRINK_GUEST_{guest_id}",
-    #                 },
-    #             )
-
-    #             smach.StateMachine.add(
-    #                 f"PARSE_NAME_AND_DRINK_GUEST_{guest_id}",
-    #                 GetNameAndDrink(guest_id, False),
-    #                 transitions={
-    #                     "succeeded": "succeeded",
-    #                     "failed": f"REPEAT_GET_NAME_AND_DRINK_GUEST_{guest_id}",
-    #                     "failed_name": f"REPEAT_GET_NAME_GUEST_{guest_id}",
-    #                     "failed_drink": f"REPEAT_GET_DRINK_GUEST_{guest_id}",
-    #                 },
-    #                 remapping={"guest_transcription": "transcribed_speech"},
-    #             )
-
-    #             smach.StateMachine.add(
-    #                 f"REPEAT_GET_NAME_AND_DRINK_GUEST_{guest_id}",
-    #                 AskAndListen(
-    #                     "Please speak louder. What is your name and favourite drink?",
-    #                 ),
-    #                 transitions={
-    #                     "succeeded": f"REPEAT_PARSE_NAME_AND_DRINK_GUEST_{guest_id}",
-    #                     "failed": "succeeded",
-    #                 },
-    #             )
-
-    #             smach.StateMachine.add(
-    #                 f"REPEAT_PARSE_NAME_AND_DRINK_GUEST_{guest_id}",
-    #                 GetNameAndDrink(guest_id, True),
-    #                 transitions={
-    #                     "succeeded": "succeeded",
-    #                     "failed": "succeeded",
-    #                     "failed_name": "succeeded",
-    #                     "failed_drink": "succeeded",
-    #                 },
-    #                 remapping={"guest_transcription": "transcribed_speech"},
-    #             )
-
-    #             """
-    #             Recovery for only name not recognised
-    #             """
-
-    #             smach.StateMachine.add(
-    #                 f"REPEAT_GET_NAME_GUEST_{guest_id}",
-    #                 AskAndListen("Plase speak louader. What is your name?"),
-    #                 transitions={
-    #                     "succeeded": f"REPEAT_PARSE_NAME_GUEST_{guest_id}",
-    #                     "failed": "succeeded",
-    #                 },
-    #             )
-
-    #             smach.StateMachine.add(
-    #                 f"REPEAT_PARSE_NAME_GUEST_{guest_id}",
-    #                 GetNameOrDrink(guest_id, True, "name"),
-    #                 transitions={
-    #                     "succeeded": "succeeded",
-    #                     "failed": "succeeded",
-    #                 },
-    #                 remapping={"guest_transcription": "transcribed_speech"},
-    #             )
-
-    #             """
-    #             Recovery for only drink not recognised
-    #             """
-
-    #             smach.StateMachine.add(
-    #                 f"REPEAT_GET_DRINK_GUEST_{guest_id}",
-    #                 AskAndListen("Please speak louder. What is your favourite drink?"),
-    #                 transitions={
-    #                     "succeeded": f"REPEAT_PARSE_DRINK_GUEST_{guest_id}",
-    #                     "failed": "succeeded",
-    #                 },
-    #             )
-
-    #             smach.StateMachine.add(
-    #                 f"REPEAT_PARSE_DRINK_GUEST_{guest_id}",
-    #                 GetNameOrDrink(guest_id, True, "drink"),
-    #                 transitions={
-    #                     "succeeded": "succeeded",
-    #                     "failed": "succeeded",
-    #                 },
-    #                 remapping={"guest_transcription": "transcribed_speech"},
-    #             )
 
     class GetAttributesAndLearnFace(smach.StateMachine):
 
@@ -307,9 +154,9 @@ class HandleGuest(smach.StateMachine):
                     init_state="u1m",
                 ),
                 transitions={
-                    "finished": "HANDLE_GUEST",
-                    "failed": "HANDLE_GUEST",
-                    "truncated": "HANDLE_GUEST",
+                    "finished": "HANDLE_NAME_INTEREST",
+                    "failed": "HANDLE_NAME_INTEREST",
+                    "truncated": "HANDLE_NAME_INTEREST",
                 },
             )
 
@@ -324,23 +171,23 @@ class HandleGuest(smach.StateMachine):
                 default_outcome="failed",
                 outcome_map={
                     "succeeded": {
-                        "GET_NAME_AND_INTEREST": "succeeded",
+                        "GET_NAME_INTEREST": "succeeded",
                         "GET_ATTRIBUTES_AND_LEARN_FACE": "succeeded",
                     },
                     "failed": {
-                        "GET_NAME_AND_INTEREST": "failed",
+                        "GET_NAME_INTEREST": "failed",
                         "GET_ATTRIBUTES_AND_LEARN_FACE": "failed",
                     },
                     "vision_failed": {
-                        "GET_NAME_AND_INTEREST": "succeeded",
+                        "GET_NAME_INTEREST": "succeeded",
                         "GET_ATTRIBUTES_AND_LEARN_FACE": "failed",
                     },
                     "get_attributes_failed": {
-                        "GET_NAME_AND_INTEREST": "succeeded",
+                        "GET_NAME_INTEREST": "succeeded",
                         "GET_ATTRIBUTES_AND_LEARN_FACE": "get_attributes_failed",
                     },
                     "learn_face_failed": {
-                        "GET_NAME_AND_INTEREST": "succeeded",
+                        "GET_NAME_INTEREST": "succeeded",
                         "GET_ATTRIBUTES_AND_LEARN_FACE": "learn_face_failed",
                     },
                 },
@@ -350,8 +197,8 @@ class HandleGuest(smach.StateMachine):
 
             with sm_con:
                 smach.Concurrence.add(
-                    "GET_NAME_AND_INTEREST",
-                    self.HandleNameAndInterest(guest_id),
+                    "GET_NAME_INTEREST",
+                    self.NameInterestFlow(guest_id),
                 )
 
                 smach.Concurrence.add(
@@ -360,7 +207,7 @@ class HandleGuest(smach.StateMachine):
                 )
 
             smach.StateMachine.add(
-                "HANDLE_GUEST",
+                "HANDLE_NAME_INTEREST",
                 sm_con,
                 transitions={
                     "succeeded": "succeeded",
@@ -373,7 +220,7 @@ class HandleGuest(smach.StateMachine):
 
             smach.StateMachine.add(
                 "SAY_VISION_FAILED",
-                Say(text="Plase look into my eyes."),
+                Say(text="Please look into my eyes."),
                 transitions={
                     "succeeded": "GET_ATTRIBUTES_AND_LEARN_FACE",
                     "aborted": "GET_ATTRIBUTES_AND_LEARN_FACE",

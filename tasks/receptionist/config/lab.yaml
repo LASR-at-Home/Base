@@ -12,58 +12,116 @@ priors:
     - Simone
   drinks:
     - cola
+    - coffee
     - iced tea
     - juice pack
     - milk
     - orange juice
     - red wine
     - tropical juice
-  
+  interests:
+    - football
+    - robotics
+    - basketball
+    - table tennis
+    - badminton
+    - running
+    - swimming
+    - chess
+    - cooking
+    - painting
+    - reading
+    - yoga
+    - robotics
+    - programming
+    - electronics
+    - travel
+    - hiking
+    - camping
+    - dancing
+    - singing
+    - playing guitar
+    - photography
+    - gardening
+    - video games
+    - board games
 
 #WAIT POSE LAB:
-wait_pose: 
-  position: 
-    x: 2.4307581363168773
-    y: -1.661594410669659
+wait_pose:
+  position:
+    x: -6.493023559930487
+    y: -3.1779610117357797
     z: 0.0
-  orientation: 
+  orientation:
     x: 0.0
     y: 0.0
-    z: 0.012769969339563213
-    w: 0.9999184606171978
+    z: -0.7354773038945536
+    w: 0.6775493601620465
 
 #556918144226074
-
+table_pose:
+  position:
+    x: -2.031032890078074
+    y: 0.25234341862913057
+    z: 0.0
+  orientation:
+    x: 0.0
+    y: 0.0
+    z: -0.7394836459477764
+    w: 0.6731745222271738
 
 #0.478893309417269
 #0.8778731105321406
 
-
 #WAIT AREA LAB:
-# From robot POV: [top left, top right,bottom right, bottom left ] 
-wait_area: [[2.65, -0.61], [4.21, -0.33], [4.58, -2.27], [2.67, -2.66]]
+# From robot POV: [top left, top right,bottom right, bottom left ]
+wait_area:
+  [
+    [-6.455103397369385, -4.68436861038208],
+    [-7.531763076782227, -4.589631080627441],
+    [-7.227839946746826, -3.7023062705993652],
+    [-6.342676639556885, -3.693847179412842],
+  ]
+table_area:
+  [
+    [-1.5900062322616577, -0.7710987329483032],
+    [-2.5319550037384033, -0.70818030834198],
+    [-2.5240018367767334, -0.2656506299972534],
+    [-1.5835102796554565, -0.2970758080482483],
+  ]
 
 #Where to position self for seating guests
 seat_pose:
-  position: 
-    x: 1.10349540659
-    y: 0.17802904565
+  position:
+    x: -2.040802484872392
+    y: 3.0259398197520078
     z: 0.0
-  orientation: 
+  orientation:
     x: 0.0
     y: 0.0
-    z: 0.816644293927375
-    w: 0.577141314753899
-
+    z: 0.6797044893236551
+    w: 0.7334860647573812
 
 search_motions: ["look_left", "look_right"]
-sofa_point: 
-  x: 0.4604474902153015
-  y: 1.877323865890503
-  z: 0.002471923828125
+sofa_point:
+  x: -2.2819204330444336
+  y: 4.928988456726074
+  z: 0.006378173828125
 
-seat_area: [[-0.39, 0.87], [-0.74, 2.18], [1.26, 2.64], [1.54, 1.26]]
-max_people_on_sofa: 0
-sofa_area: [[-0.39, 0.87], [-0.74, 2.18], [1.26, 2.64], [1.54, 1.26]]
+seat_area:
+  [
+    [-3.1454052925109863, 5.3363494873046875],
+    [-0.6444593667984009, 5.272571086883545],
+    [-1.0963619947433472, 4.154860496520996],
+    [-2.9432268142700195, 4.397289752960205],
+  ]
+max_people_on_sofa: 2
+sofa_area:
+  [
+    [-3.0886566638946533, 5.4537177085876465],
+    [-1.5161420106887817, 5.381309509277344],
+    [-1.6571526527404785, 4.413987636566162],
+    [-2.9432268142700195, 4.397289752960205],
+  ]
 
 sweep: true

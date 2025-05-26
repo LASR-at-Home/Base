@@ -14,7 +14,7 @@ from lasr_vision_msgs.srv import (
     Vqa,
     VqaRequest,
 )
-from numpy2message import numpy2message
+# from numpy2message import numpy2message
 from .vision import GetCroppedImage, ImageMsgToCv2, GetImage
 import numpy as np
 from lasr_skills.validate_keypoints import ValidateKeypoints

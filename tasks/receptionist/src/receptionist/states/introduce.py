@@ -1,5 +1,5 @@
 """
-State machine that introduces the greeted guest to all other guests/host present in the 
+State machine that introduces the greeted guest to all other guests/host present in the
 seating area.
 
 """
@@ -10,6 +10,8 @@ import rospy
 import smach
 from lasr_skills import LookToPoint, Say
 from smach import UserData
+
+# import llm_utils
 
 
 def stringify_guest_data(
@@ -28,7 +30,7 @@ def stringify_guest_data(
 
     relevant_guest_data = guest_data[guest_id]
 
-    guest_str = f"{relevant_guest_data['name']}, their favourite drink is {relevant_guest_data['drink']}. "
+    guest_str = f"{relevant_guest_data['name']}, their favourite drink is {relevant_guest_data['drink']} and interest is {relevant_guest_data['interest']}. "
 
     if (
         not relevant_guest_data["detection"]

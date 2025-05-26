@@ -2,16 +2,15 @@ import smach
 
 from lasr_skills import AskAndListen, Say, AdjustCamera
 from receptionist.states import (
-    GetNameAndInterest,
-    GetNameOrInterest,
+    GetDrink,
     ReceptionistLearnFaces,
     GetGuestAttributes,
 )
 
 
-class HandleGuest(smach.StateMachine):
+class HandleFavouriteDrink(smach.StateMachine):
 
-    class HandleNameAndInterest(smach.StateMachine):
+    class HandleDrink(smach.StateMachine):
         def __init__(self, guest_id: str):
             super().__init__(
                 outcomes=["succeeded", "failed"],
@@ -21,19 +20,19 @@ class HandleGuest(smach.StateMachine):
 
             with self:
                 smach.StateMachine.add(
-                    f"GET_NAME_AND_INTEREST_GUEST_{guest_id}",
+                    f"GET_DRINK_GUEST_{guest_id}",
                     AskAndListen(
-                        "Please say 'Hi Tiago' for me to begin listening. What is your name and interest?"
+                        "Please say 'Hi Tiago' for me to begin listening. What is your favourite drink?"
                     ),
                     transitions={
-                        "succeeded": f"PARSE_NAME_AND_INTEREST_GUEST_{guest_id}",
-                        "failed": f"PARSE_NAME_AND_INTEREST_GUEST_{guest_id}",
+                        "succeeded": f"PARSE_DRINK_GUEST_{guest_id}",
+                        "failed": f"PARSE_DRINK_GUEST_{guest_id}",
                     },
                 )
 
                 smach.StateMachine.add(
-                    f"PARSE_NAME_AND_INTEREST_GUEST_{guest_id}",
-                    GetNameAndInterest(guest_id, False),
+                    f"PARSE_DRINK_GUEST_{guest_id}",
+                    GetDrink(guest_id, False),
                     transitions={
                         "succeeded": "succeeded",
                         "failed": f"REPEAT_GET_NAME_AND_INTEREST_GUEST_{guest_id}",
