@@ -70,7 +70,7 @@ class Detect3D(smach.State):
                 filter=self.filter,
                 target_frame=self.target_frame,
             )
-            userdata.detections_3d = resp.detected_objects
+            userdata.detections_3d = resp
             return "succeeded"
         except rospy.ServiceException as e:
             rospy.logerr(f"Service call failed: {e}")

@@ -2,10 +2,11 @@ import smach
 
 from lasr_skills import AskAndListen, Say, AdjustCamera
 from receptionist.states import (
-    GetNameInterest,
+    GetNameAndInterest,
     ReceptionistLearnFaces,
     GetGuestAttributes,
 )
+
 
 class HandleNameInterest(smach.StateMachine):
     class NameInterestFlow(smach.StateMachine):
@@ -30,7 +31,7 @@ class HandleNameInterest(smach.StateMachine):
 
                 smach.StateMachine.add(
                     f"PARSE_NAME_INTEREST_{guest_id}",
-                    GetNameInterest(guest_id, False),
+                    GetNameAndInterest(guest_id, False),
                     transitions={
                         "succeeded": "succeeded",
                         "failed": f"REPEAT_GET_NAME_INTEREST_{guest_id}",
@@ -51,7 +52,7 @@ class HandleNameInterest(smach.StateMachine):
 
                 smach.StateMachine.add(
                     f"REPEAT_PARSE_NAME_INTEREST_{guest_id}",
-                    GetNameInterest(guest_id, True),
+                    GetNameAndInterest(guest_id, True),
                     transitions={
                         "succeeded": "succeeded",
                         "failed": "succeeded",
@@ -153,9 +154,9 @@ class HandleNameInterest(smach.StateMachine):
                     init_state="u1m",
                 ),
                 transitions={
-                    "finished": "HANDLE_NAME",
-                    "failed": "HANDLE_NAME",
-                    "truncated": "HANDLE_NAME",
+                    "finished": "HANDLE_NAME_INTEREST",
+                    "failed": "HANDLE_NAME_INTEREST",
+                    "truncated": "HANDLE_NAME_INTEREST",
                 },
             )
 

@@ -47,7 +47,7 @@ class ReceptionistLearnFaces(smach.State):
                 CDRequest(
                     method="closest",
                     use_mask=True,
-                    yolo_model="yolov8x-seg.pt",
+                    yolo_model="yolo11n-seg.pt",
                     yolo_model_confidence=0.5,
                     yolo_nms_threshold=0.3,
                     object_names=["person"],
