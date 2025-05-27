@@ -711,17 +711,17 @@ class IntroduceAndSeatGuest(smach.StateMachine):
                     )
 
                     # Introduce the guest to the other guest
-                    smach.StateMachine.add(
-                        f"INTRODUCE_{guest_id}_TO_{guest_to_introduce_to}",
-                        Introduce(
-                            guest_to_introduce=guest_id,
-                            guest_to_introduce_to=guest_to_introduce_to,
-                            describe_features=guest_to_introduce_to != "host",
-                        ),
-                        transitions={
-                            "succeeded": f"LOOK_AT_WAITING_GUEST_{guest_id}_{guest_to_introduce_to}",
-                        },
-                    )
+                    # smach.StateMachine.add(
+                    #     f"INTRODUCE_{guest_id}_TO_{guest_to_introduce_to}",
+                    #     Introduce(
+                    #         guest_to_introduce=guest_id,
+                    #         guest_to_introduce_to=guest_to_introduce_to,
+                    #         compare_interests=False,
+                    #     ),
+                    #     transitions={
+                    #         "succeeded": f"LOOK_AT_WAITING_GUEST_{guest_id}_{guest_to_introduce_to}",
+                    #     },
+                    # )
 
                     smach.StateMachine.add(
                         f"LOOK_AT_WAITING_GUEST_{guest_id}_{guest_to_introduce_to}",
@@ -733,21 +733,22 @@ class IntroduceAndSeatGuest(smach.StateMachine):
                         },
                     )
 
-                    smach.StateMachine.add(
-                        f"INTRODUCE_{guest_to_introduce_to}_TO_{guest_id}",
-                        Introduce(
-                            guest_to_introduce=guest_to_introduce_to,
-                            guest_to_introduce_to=guest_id,
-                            describe_features=guest_to_introduce_to == "host",
-                        ),
-                        transitions={
-                            "succeeded": (
-                                "SELECT_SEAT"
-                                if i == len(guests_to_introduce_to) - 1
-                                else f"GET_LOOK_POINT_{guests_to_introduce_to[i+1]}"
-                            ),
-                        },
-                    )
+                    # smach.StateMachine.add(
+                    #     f"INTRODUCE_{guest_to_introduce_to}_TO_{guest_id}",
+                    #     Introduce(
+                    #         guest_to_introduce=guest_to_introduce_to,
+                    #         guest_to_introduce_to=guest_id,
+                    #         # describe_features=guest_to_introduce_to == "host",
+                    #         compare_interests=True,
+                    #     ),
+                    #     transitions={
+                    #         "succeeded": (
+                    #             "SELECT_SEAT"
+                    #             if i == len(guests_to_introduce_to) - 1
+                    #             else f"GET_LOOK_POINT_{guests_to_introduce_to[i+1]}"
+                    #         ),
+                    #     },
+                    # )
 
                 # Select a seat for the guest
                 smach.StateMachine.add(
@@ -1140,21 +1141,21 @@ class IntroduceAndSeatGuest(smach.StateMachine):
                         remapping={"pointstamped": "look_point"},
                     )
 
-                    smach.StateMachine.add(
-                        f"INTRODUCE_{guest_id}_TO_{guest_to_introduce_to}",
-                        Introduce(
-                            guest_to_introduce=guest_id,
-                            guest_to_introduce_to=guest_to_introduce_to,
-                            describe_features=guest_to_introduce_to != "host",
-                        ),
-                        transitions={
-                            "succeeded": (
-                                "SELECT_SEAT"
-                                if i == len(guests_to_introduce_to) - 1
-                                else f"GET_LOOK_POINT_{guests_to_introduce_to[i+1]}"
-                            )
-                        },
-                    )
+                    # smach.StateMachine.add(
+                    #     f"INTRODUCE_{guest_id}_TO_{guest_to_introduce_to}",
+                    #     Introduce(
+                    #         guest_to_introduce=guest_id,
+                    #         guest_to_introduce_to=guest_to_introduce_to,
+                    #         # describe_features=guest_to_introduce_to != "host",
+                    #     ),
+                    #     transitions={
+                    #         "succeeded": (
+                    #             "SELECT_SEAT"
+                    #             if i == len(guests_to_introduce_to) - 1
+                    #             else f"GET_LOOK_POINT_{guests_to_introduce_to[i+1]}"
+                    #         )
+                    #     },
+                    # )
 
                 smach.StateMachine.add(
                     "SELECT_SEAT",

@@ -14,7 +14,7 @@ from lasr_skills import (
     WaitForPersonInArea,
 )
 from lasr_vision_msgs.srv import Recognise
-from receptionist.states import HandleNameInterest, HandleDrink, CompareInterest, IntroduceAndSeatGuest
+from receptionist.states import HandleNameInterest, HandleDrink, IntroduceFeature, IntroduceAndSeatGuest
 from shapely.geometry import Polygon
 from std_msgs.msg import Empty, Header
 
@@ -149,6 +149,7 @@ class Receptionist(smach.StateMachine):
                 },
             )
 
+
             # smach.StateMachine.add(
             #     "INTRODUCE_TABLE_GUEST_1",
             #     IntroduceTableGuest(
@@ -252,9 +253,19 @@ class Receptionist(smach.StateMachine):
                 "INTRODUCE_TABLE_GUEST_2",
                 Say(text="Finding your favourite drink on the table is ongoing."),
                 transitions={
+                    "succeeded": "INTRODUCE_FEATURE_1",
+                    "aborted": "INTRODUCE_FEATURE_1",
+                    "preempted":"INTRODUCE_FEATURE_1"
+                },
+            )
+
+            smach.StateMachine.add(
+                "INTRODUCE_FEATURE_1",
+                IntroduceFeature("1"),
+                transitions={
                     "succeeded": "SAY_FOLLOW_GUEST_2",
-                    "aborted": "SAY_FOLLOW_GUEST_2",
-                    "preempted":"SAY_FOLLOW_GUEST_2"
+                    "failed": "SAY_FOLLOW_GUEST_2"
+                    
                 },
             )
             
