@@ -148,10 +148,9 @@ class GetIntroductionString(smach.State):
         introducer_interest = introducer.get("interest", "Unknown")
 
         # Case: Introduce to everyone (broadcast)
-        if self.guest_to_introduce_to is None:
+        if self.guest_to_introduce == "guest2":
             llm_intro = llm_utils.introduce_llm(introducer_name, introducer_drink, introducer_interest)
             intro = f"Hello everyone, {llm_intro}"
-
         else:
             target = self._get_profile(self.guest_to_introduce_to, userdata.guest_data, userdata.host_data)
             target_name = target.get("name", "Unknown")

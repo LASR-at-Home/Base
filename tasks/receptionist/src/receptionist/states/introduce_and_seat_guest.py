@@ -716,7 +716,6 @@ class IntroduceAndSeatGuest(smach.StateMachine):
                         Introduce(
                             guest_to_introduce=guest_id,
                             guest_to_introduce_to=guest_to_introduce_to,
-                            compare_interests=False,
                         ),
                         transitions={
                             "succeeded": f"LOOK_AT_WAITING_GUEST_{guest_id}_{guest_to_introduce_to}",
@@ -739,7 +738,6 @@ class IntroduceAndSeatGuest(smach.StateMachine):
                             guest_to_introduce=guest_to_introduce_to,
                             guest_to_introduce_to=guest_id,
                             # describe_features=guest_to_introduce_to == "host",
-                            compare_interests=True,
                         ),
                         transitions={
                             "succeeded": (
@@ -1146,7 +1144,6 @@ class IntroduceAndSeatGuest(smach.StateMachine):
                         Introduce(
                             guest_to_introduce=guest_id,
                             guest_to_introduce_to=guest_to_introduce_to,
-                            # describe_features=guest_to_introduce_to != "host",
                         ),
                         transitions={
                             "succeeded": (

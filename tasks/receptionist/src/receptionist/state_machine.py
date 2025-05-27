@@ -260,7 +260,7 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "INTRODUCE_FEATURE_1",
-                IntroduceFeature("1"),
+                IntroduceFeature("guest1"),
                 transitions={
                     "succeeded": "SAY_FOLLOW_GUEST_2",
                     "failed": "SAY_FOLLOW_GUEST_2"

@@ -6,10 +6,11 @@ to the guest data userdata
 import rospy
 import smach
 
-# import llm_utils
+import llm_utils
 from smach import UserData
 from typing import List, Dict, Any
 from receptionist.states import SpeechRecovery
+
 
 
 class GetDrink(smach.StateMachine):
