@@ -56,16 +56,16 @@ class GetNameAndInterest(smach.StateMachine):
                 transcription, ["Name", "Interests"]
             )
 
-            if extract_fields["name"] != "Unknown":
-                userdata.guest_data[self._guest_id]["name"] = extract_fields["name"]
+            if extract_fields["Name"] != "Unknown":
+                userdata.guest_data[self._guest_id]["name"] = extract_fields["Name"]
             else:
-                userdata.guest_data[self._guest_id]["name"] = extract_fields["name"]
+                userdata.guest_data[self._guest_id]["name"] = extract_fields["Name"]
                 outcome = "failed"
 
-            if extract_fields["interest"] != "Unknown":
-                userdata.guest_data[self._guest_id]["interest"] = extract_fields["interest"]
+            if extract_fields["Interest"] != "Unknown":
+                userdata.guest_data[self._guest_id]["interest"] = extract_fields["Interest"]
             else:
-                userdata.guest_data[self._guest_id]["interest"] = extract_fields["interest"]
+                userdata.guest_data[self._guest_id]["interest"] = extract_fields["Interest"]
                 outcome = "failed"
 
             return outcome
