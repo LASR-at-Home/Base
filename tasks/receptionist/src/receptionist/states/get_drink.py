@@ -5,7 +5,8 @@ to the guest data userdata
 
 import rospy
 import smach
-import llm_utils
+
+# import llm_utils
 from smach import UserData
 from typing import List, Dict, Any
 from receptionist.states import SpeechRecovery
@@ -50,28 +51,32 @@ class GetDrink(smach.StateMachine):
             transcription = userdata.guest_transcription.lower()
             transcription = userdata["guest_transcription"].lower()
 
-            extract_fields = llm_utils.extract_fields_llm(transcription, ["Favourite drink"])
+            # extract_fields = llm_utils.extract_fields_llm(
+            #     transcription, ["Favourite drink"]
+            # )
 
-            if extract_fields["drink"] != "Unknown":
-                userdata.guest_data[self._guest_id]["drink"] = extract_fields["drink"]
-            else:
-                userdata.guest_data[self._guest_id]["interest"] = extract_fields["interest"]
-                outcome = "failed"
-
-            return outcome
-            # for drink in self._possible_drinks:
-            #     if drink in transcription:
-            #         userdata.guest_data[self._guest_id]["drink"] = drink
-            #         rospy.loginfo(f"Guest Drink identified as: {drink}")
-            #         drink_found = True
-            #         break
-
-            # if not drink_found:
-            #     rospy.loginfo("Drink not found in transcription")
-            #     userdata.guest_data[self._guest_id]["drink"] = "unknown"
+            # if extract_fields["drink"] != "Unknown":
+            #     userdata.guest_data[self._guest_id]["drink"] = extract_fields["drink"]
+            # else:
+            #     userdata.guest_data[self._guest_id]["interest"] = extract_fields[
+            #         "interest"
+            #     ]
             #     outcome = "failed"
 
             # return outcome
+            for drink in self._possible_drinks:
+                if drink in transcription:
+                    userdata.guest_data[self._guest_id]["drink"] = drink
+                    rospy.loginfo(f"Guest Drink identified as: {drink}")
+                    drink_found = True
+                    break
+
+            if not drink_found:
+                rospy.loginfo("Drink not found in transcription")
+                userdata.guest_data[self._guest_id]["drink"] = "unknown"
+                outcome = "failed"
+
+            return outcome
 
     class PostRecoveryDecision(smach.State):
         def __init__(
@@ -117,9 +122,7 @@ class GetDrink(smach.StateMachine):
 
             smach.StateMachine.add(
                 "PARSE_DRINK",
-                self.ParseDrink(
-                    guest_id=self._guest_id, param_key=self._param_key
-                ),
+                self.ParseDrink(guest_id=self._guest_id, param_key=self._param_key),
                 transitions={"succeeded": "succeeded", "failed": "failed"},
             )
             # smach.StateMachine.add(

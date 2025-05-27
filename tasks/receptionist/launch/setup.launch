@@ -1,7 +1,7 @@
 <launch>
 
     <!--     PARAMS     -->
-    <arg name="config" default="robocup_sspl_and_opl"/>
+    <arg name="config" default="lab"/>
 
     <!--     INTERACTION     -->
     <arg name="whisper_device_param" default="9" />

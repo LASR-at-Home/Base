@@ -58,8 +58,7 @@ class Receptionist(smach.StateMachine):
             self.userdata.confidence = face_detection_confidence
             self.userdata.dataset = "receptionist"
             self.userdata.seat_position = PointStamped()
-            self.userdata.drink_position = PointStamped()       
-         
+            self.userdata.drink_position = PointStamped()
 
             def wait_cb(ud, msg):
                 rospy.loginfo("Received start signal")
@@ -135,7 +134,7 @@ class Receptionist(smach.StateMachine):
                 HandleDrink("guest1"),
                 transitions={
                     "succeeded": "INTRODUCE_TABLE_GUEST_1",
-                    "failed": "INTRODUCE_TABLE_GUEST_1", #if this failes can not introduce table to guest so continue with SAY_FOLLOW_GUEST_1?
+                    "failed": "INTRODUCE_TABLE_GUEST_1",  # if this failes can not introduce table to guest so continue with SAY_FOLLOW_GUEST_1?
                 },
             )
 
@@ -145,7 +144,7 @@ class Receptionist(smach.StateMachine):
                 transitions={
                     "succeeded": "SAY_FOLLOW_GUEST_1",
                     "aborted": "SAY_FOLLOW_GUEST_1",
-                    "preempted":"SAY_FOLLOW_GUEST_1",
+                    "preempted": "SAY_FOLLOW_GUEST_1",
                 },
             )
 
@@ -209,7 +208,7 @@ class Receptionist(smach.StateMachine):
                     "failed": "SAY_FOLLOW_GUEST_TO_TABLE_2",
                 },
             )
-            
+
             # smach.StateMachine.add(
             #     "HANDLE_NAME_2",
             #     HandleName("guest2", False),
@@ -245,7 +244,7 @@ class Receptionist(smach.StateMachine):
                 HandleDrink("guest2"),
                 transitions={
                     "succeeded": "INTRODUCE_TABLE_GUEST_2",
-                    "failed": "INTRODUCE_TABLE_GUEST_2", #if this failes can not introduce table to guest so continue with SAY_FOLLOW_GUEST_1?
+                    "failed": "INTRODUCE_TABLE_GUEST_2",  # if this failes can not introduce table to guest so continue with SAY_FOLLOW_GUEST_1?
                 },
             )
 
@@ -268,7 +267,7 @@ class Receptionist(smach.StateMachine):
                     
                 },
             )
-            
+
             self._guide_guest(guest_id=2)
 
             smach.StateMachine.add(
@@ -364,7 +363,10 @@ class Receptionist(smach.StateMachine):
         smach.StateMachine.add(
             f"CHECK_GUEST_ID_GUEST_{guest_id}",
             smach.CBState(check_guest_id, outcomes=["guest_1", "guest_2"]),
-            transitions={"guest_2": "HANDLE_NAME_2", "guest_1": "HANDLE_NAME_1"},
+            transitions={
+                "guest_2": "HANDLE_NAME_INTEREST_2",
+                "guest_1": "HANDLE_NAME_INTEREST_1",
+            },
         )
 
     def _guide_guest_to_table(self, guest_id: int) -> None:

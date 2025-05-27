@@ -22,7 +22,7 @@ class GetCroppedImage(smach.State):
         object_name: str,
         method: str = "closest",
         use_mask: bool = True,
-        yolo_model: str = "yolov8x-seg.pt",
+        yolo_model: str = "yolo11n-seg.pt",
         yolo_model_confidence: float = 0.5,
         yolo_nms_threshold: float = 0.3,
     ):

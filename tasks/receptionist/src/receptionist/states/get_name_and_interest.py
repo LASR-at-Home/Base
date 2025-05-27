@@ -8,7 +8,8 @@ import smach
 from smach import UserData
 from typing import List, Dict, Any
 from receptionist.states import SpeechRecovery
-import llm_utils
+
+# import llm_utils
 
 
 class GetNameAndInterest(smach.StateMachine):
@@ -26,7 +27,7 @@ class GetNameAndInterest(smach.StateMachine):
             """
             smach.State.__init__(
                 self,
-                outcomes=["succeeded", "failed", "failed_name", "failed_interest"],
+                outcomes=["succeeded", "failed"],
                 input_keys=["guest_transcription", "guest_data"],
                 output_keys=["guest_data", "guest_transcription"],
             )
@@ -51,18 +52,27 @@ class GetNameAndInterest(smach.StateMachine):
             transcription = userdata.guest_transcription.lower()
             transcription = userdata["guest_transcription"].lower()
 
-            extract_fields = llm_utils.extract_fields_llm(transcription, ["Name", "Interests"])
+            # extract_fields = llm_utils.extract_fields_llm(
+            #     transcription, ["Name", "Interests"]
+            # )
+            extract_fields = {"name": "Charlie", "interest": "sports"}
 
             if extract_fields["name"] != "Unknown":
                 userdata.guest_data[self._guest_id]["name"] = extract_fields["name"]
             else:
-                userdata.guest_data[self._guest_id]["interest"] = extract_fields["interest"]
+                userdata.guest_data[self._guest_id]["interest"] = extract_fields[
+                    "interest"
+                ]
                 outcome = "failed"
 
             if extract_fields["interest"] != "Unknown":
-                userdata.guest_data[self._guest_id]["interest"] = extract_fields["interest"]
+                userdata.guest_data[self._guest_id]["interest"] = extract_fields[
+                    "interest"
+                ]
             else:
-                userdata.guest_data[self._guest_id]["interest"] = extract_fields["interest"]
+                userdata.guest_data[self._guest_id]["interest"] = extract_fields[
+                    "interest"
+                ]
                 outcome = "failed"
 
             return outcome
@@ -75,14 +85,16 @@ class GetNameAndInterest(smach.StateMachine):
         ):
             smach.State.__init__(
                 self,
-                outcomes=["succeeded", "failed", "failed_name", "failed_interest"],
+                outcomes=["succeeded", "failed"],
                 input_keys=["guest_transcription", "guest_data"],
                 output_keys=["guest_data", "guest_transcription"],
             )
             self._guest_id = guest_id
             prior_data: Dict[str, List[str]] = rospy.get_param(param_key)
             self._possible_names = [name.lower() for name in prior_data["names"]]
-            self._possible_interests = [interest.lower() for interest in prior_data["interests"]]
+            self._possible_interests = [
+                interest.lower() for interest in prior_data["interests"]
+            ]
 
         def execute(self, userdata: UserData) -> str:
             if not self._recovery_name_and_interest_required(userdata):
@@ -119,7 +131,7 @@ class GetNameAndInterest(smach.StateMachine):
 
         smach.StateMachine.__init__(
             self,
-            outcomes=["succeeded", "failed", "failed_name", "failed_interest"],
+            outcomes=["succeeded", "failed"],
             input_keys=["guest_transcription", "guest_data"],
             output_keys=["guest_data", "guest_transcription"],
         )
@@ -151,4 +163,3 @@ class GetNameAndInterest(smach.StateMachine):
             #         "failed_interest": "failed_interest",
             #     },
             # )
-        

@@ -6,6 +6,7 @@ import smach_ros
 
 from geometry_msgs.msg import Pose, Point, Quaternion, Polygon, PolygonStamped
 from shapely.geometry import Polygon as ShapelyPolygon
+from shapely.validation import explain_validity
 
 from std_msgs.msg import Header
 
@@ -40,7 +41,6 @@ if __name__ == "__main__":
         orientation=Quaternion(**table_pose_param["orientation"]),
     )
 
-
     seat_pose_param = rospy.get_param("/receptionist/seat_pose")
     seat_pose = Pose(
         position=Point(**seat_pose_param["position"]),
@@ -59,7 +59,7 @@ if __name__ == "__main__":
 
     seat_area = ShapelyPolygon(seat_area_param)
     assert seat_area.is_valid, "Seat area is not valid"
-    
+
     sofa_area = ShapelyPolygon(sofa_area_param)
     sofa_area_publisher.publish(
         PolygonStamped(
@@ -69,12 +69,12 @@ if __name__ == "__main__":
             header=Header(frame_id="map"),
         )
     )
-    assert sofa_area.is_valid, "Sofa area is not valid"
+    assert sofa_area.is_valid, f"Sofa area is not valid: {explain_validity(sofa_area)}"
 
     sofa_point = Point(**sofa_point_param)
     table_area = ShapelyPolygon(table_area_param)
     # exclude the sofa area from the seat area
-    seat_area = seat_area.difference(sofa_area)
+    # seat_area = seat_area.difference(sofa_area)
 
     search_motions = rospy.get_param("/receptionist/search_motions")
 
@@ -121,7 +121,7 @@ if __name__ == "__main__":
         {
             "name": "john",
             "drink": "milk",
-            "interest":"robots",
+            "interest": "robots",
             "dataset": "receptionist",
             "detection": False,
         },
