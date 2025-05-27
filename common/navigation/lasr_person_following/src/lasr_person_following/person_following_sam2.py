@@ -231,7 +231,7 @@ class PersonFollower:
         goal.pointing_axis.z = 1.0
 
         goal.min_duration = rospy.Duration(0.3)
-        goal.max_velocity = 1.0
+        goal.max_velocity = 0.5
 
         self._point_head_client.send_goal(goal)
 
@@ -460,7 +460,7 @@ class PersonFollower:
         self._look_at_point(point, target_frame="base_link")
 
     def _look_down_centre_point(self):
-        point = Point(x=3.0, y=0.0, z=0.0)
+        point = Point(x=3.0, y=0.0, z=0.5)
         self._look_at_point(point, target_frame="base_link")
 
 
@@ -595,11 +595,13 @@ class PersonFollower:
 
             if now_time - self._last_scan_time >= self._scan_interval:
                 self._look_down_centre_point()
-                rospy.sleep(2.0) 
-                try:
-                    self._look_at_point(self.newest_detection.point, target_frame="map")
-                except Exception as e:
-                    rospy.logwarn(f"Return‑look failed: {e}")
+                rospy.sleep(0.75) 
+                for _ in range(3):
+                    try:
+                        self._look_at_point(self.newest_detection.point, target_frame="map")
+                        rospy.sleep(0.1) 
+                    except Exception as e:
+                        rospy.logwarn(f"Return‑look failed: {e}")
                 self._last_scan_time = now_time
             # -------------------------------------
 
