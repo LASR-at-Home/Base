@@ -32,8 +32,8 @@ class GetDrink(smach.StateMachine):
                 output_keys=["guest_data", "guest_transcription"],
             )
             self._guest_id = guest_id
-            # prior_data: Dict[str, List[str]] = rospy.get_param(param_key)
-            # self._possible_drinks = [drink.lower() for drink in prior_data["drinks"]]
+            prior_data: Dict[str, List[str]] = rospy.get_param(param_key)
+            self._possible_drinks = [drink.lower() for drink in prior_data["drinks"]]
 
         def execute(self, userdata: UserData) -> str:
             """Parses the transcription of the favourite drink.

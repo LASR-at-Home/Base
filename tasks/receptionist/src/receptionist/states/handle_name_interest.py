@@ -146,19 +146,19 @@ class HandleNameInterest(smach.StateMachine):
         )
 
         with self:
-            smach.StateMachine.add(
-                "AdjustCamera",
-                AdjustCamera(
-                    max_attempts=5,
-                    debug=False,
-                    init_state="u1m",
-                ),
-                transitions={
-                    "finished": "HANDLE_NAME_INTEREST",
-                    "failed": "HANDLE_NAME_INTEREST",
-                    "truncated": "HANDLE_NAME_INTEREST",
-                },
-            )
+            # smach.StateMachine.add(
+            #     "AdjustCamera",
+            #     AdjustCamera(
+            #         max_attempts=5,
+            #         debug=False,
+            #         init_state="u1m",
+            #     ),
+            #     transitions={
+            #         "finished": "HANDLE_NAME_INTEREST",
+            #         "failed": "HANDLE_NAME_INTEREST",
+            #         "truncated": "HANDLE_NAME_INTEREST",
+            #     },
+            # )
 
             sm_con = smach.Concurrence(
                 outcomes=[

@@ -54,7 +54,7 @@ class CropImage3D(smach.State):
         self.filters = filters or []
         self.crop_logic = crop_logic
         self.crop_type = crop_type
-        self.bridge = CvBridge()
+        self._bridge = CvBridge()
 
         self.debug_publisher = rospy.Publisher(
             "/skills/crop_image_3d/debug", Image, queue_size=1
@@ -70,7 +70,7 @@ class CropImage3D(smach.State):
             )
 
     def execute(self, userdata):
-        detections = userdata["detections_3d"]
+        detections = userdata["detections_3d"].detected_objects
         if not detections:
             rospy.logwarn("No 3D detections found.")
             return "failed"
@@ -89,7 +89,7 @@ class CropImage3D(smach.State):
         )
 
         if self.filters:
-            detections = [det for det in detections if det.label in self.filters]
+            detections = [det for det in detections if det.name in self.filters]
             if not detections:
                 rospy.logwarn("No detections match the specified filters.")
                 return "failed"
@@ -106,7 +106,7 @@ class CropImage3D(smach.State):
         cropped_images = {k: None for k in self.filters}
         for det in detections:
             # Already have the closest/farthest detection for this class
-            if cropped_images[det.label] is not None:
+            if cropped_images[det.name] is not None:
                 continue
 
             if self.crop_type == "masked":
@@ -131,12 +131,12 @@ class CropImage3D(smach.State):
                     y - h // 2 : y + h // 2, x - w // 2 : x + w // 2
                 ]
 
-            cropped_images[det.label] = masked_image
+            cropped_images[det.name] = masked_image
 
         # Convert image to ROS Image message for debugging
         if cropped_images:
             debug_image = next(iter(cropped_images.values()))
-            debug_image_msg = self.bridge.cv2_to_imgmsg(debug_image, encoding="rgb8")
+            debug_image_msg = self._bridge.cv2_to_imgmsg(debug_image, encoding="rgb8")
             self.debug_publisher.publish(debug_image_msg)
 
         userdata["cropped_images"] = cropped_images

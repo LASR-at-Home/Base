@@ -7,7 +7,6 @@ from lasr_vision_msgs.srv import (
     BodyPixKeypointDetection,
     BodyPixKeypointDetectionRequest,
 )
-from lasr_skills.vision import GetCroppedImage
 
 
 class ValidateKeypoints(smach.State):
