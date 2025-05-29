@@ -1,0 +1,72 @@
+priors:
+  names:
+    - Sophie
+    - Julia
+    - Emma
+    - Sara
+    - Laura
+    - Hayley
+    - Susan
+    - Fleur
+    - Gabriëlle
+    - Gabrielle
+    - Robin
+    - John
+    - William
+    - Liam
+    - Lucas
+    - Kevin
+    - Jesse
+    - Noah
+    - Harrie
+    - Peter
+
+  drinks:
+    - cola
+    - ice tea
+    - milk
+    - water
+    - big coke
+    - fanta
+    - dubbelfris
+
+# WAIT POSE KITCHEN:
+wait_pose:
+  position: 
+    x: 1.8632217222187388
+    y: 0.439813444255738
+    z: 0.0
+  orientation: 
+    x: 0.0
+    y: 0.0
+    z: -0.7479260859393064
+    w: 0.6637820199218334
+
+
+
+
+# WAIT AREA KITCHEN:
+wait_area: [[2.67, 0.0], [2.5, -1.86], [0.79, -1.60], [1.0, -0.0]]
+
+seat_pose:
+  position: 
+    x: 3.0207276536854186
+    y: 4.842124838244151
+    z: 0.0
+  orientation: 
+    x: 0.0
+    y: 0.0
+    z: 0.5695976288326214
+    w: 0.8219236833357798
+
+
+search_motions: ["look_left", "look_right"]
+sofa_point:
+  x: 3.6489758491516113
+  y: 7.049365997314453
+  z: 0.5
+seat_area: [[1.57, 6.1], [1.73, 7.9], [5.58, 7.49], [5.16, 4.79]]
+sofa_area: [[2.65, 6.87], [2.79, 7.79], [4.61, 7.58], [4.50, 6.69]]
+max_people_on_sofa: 2
+
+sweep: true

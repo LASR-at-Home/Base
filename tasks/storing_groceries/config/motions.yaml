@@ -1,0 +1,57 @@
+play_motion:
+  motions:
+    look_left:
+      joints: [head_1_joint, head_2_joint]
+      points:
+      - positions: [0.5, 0.0]
+        time_from_start: 0.0
+    look_very_left:
+      joints: [head_1_joint, head_2_joint]
+      points:
+      - positions: [1.5, 0.0]
+        time_from_start: 0.0
+    look_centre:
+      joints: [head_1_joint, head_2_joint]
+      points:
+      - positions: [0.0, 0.0]
+        time_from_start: 0.0
+    look_right:
+      joints: [head_1_joint, head_2_joint]
+      points:
+      - positions: [-0.5, 0.0]
+        time_from_start: 0.0
+    look_very_right:
+      joints: [head_1_joint, head_2_joint]
+      points:
+      - positions: [-1.5, 0.0]
+        time_from_start: 0.0
+    look_down_left:
+      joints: [head_1_joint, head_2_joint]
+      points:
+      - positions: [0.5, -0.25]
+        time_from_start: 0.0
+    look_down_centre:
+      joints: [head_1_joint, head_2_joint]
+      points:
+      - positions: [0.0, -0.25]
+        time_from_start: 0.0
+    look_down_right:
+      joints: [head_1_joint, head_2_joint]
+      points:
+      - positions: [-0.5, -0.25]
+        time_from_start: 0.0
+    raise_torso:
+      joints: [torso_lift_joint]
+      points:
+      - positions: [0.30]
+        time_from_start: 0.0
+    point:
+      joints: [arm_1_joint, arm_2_joint, arm_3_joint, arm_4_joint, arm_5_joint, arm_6_joint, arm_7_joint]
+      points:
+      - positions: [1.46, -1.47, -3.01, 1.73, -1.62, -0.12, -0.03]
+        time_from_start: 0.0
+    back_to_default_head:
+      joints: [head_1_joint, head_2_joint]
+      points:
+      - positions: [0.0, 0.0]
+        time_from_start: 0.0
