@@ -1,4 +1,4 @@
-w"""
+"""
 State for parsing the transcription of the guests' name and favourite interest, and adding this
 to the guest data userdata
 """
@@ -32,11 +32,9 @@ class GetNameAndInterest(smach.StateMachine):
                 output_keys=["guest_data", "guest_transcription"],
             )
             self._guest_id = guest_id
-            prior_data: Dict[str, List[str]] = rospy.get_param(param_key)
-            self._possible_names = [name.lower() for name in prior_data["names"]]
-            self._possible_interests = [
-                interest.lower() for interest in prior_data["interests"]
-            ]
+            # prior_data: Dict[str, List[str]] = rospy.get_param(param_key)
+            # self._possible_names = [name.lower() for name in prior_data["names"]]
+            # self._possible_interests = [interest.lower() for interest in prior_data["interest"]]
 
         def execute(self, userdata: UserData) -> str:
             """Parses the transcription of the guests' name and interest.
