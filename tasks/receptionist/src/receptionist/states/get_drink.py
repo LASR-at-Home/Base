@@ -6,11 +6,10 @@ to the guest data userdata
 import rospy
 import smach
 
-import llm_utils
+# import llm_utils
 from smach import UserData
 from typing import List, Dict, Any
 from receptionist.states import SpeechRecovery
-
 
 
 class GetDrink(smach.StateMachine):
@@ -33,8 +32,8 @@ class GetDrink(smach.StateMachine):
                 output_keys=["guest_data", "guest_transcription"],
             )
             self._guest_id = guest_id
-            # prior_data: Dict[str, List[str]] = rospy.get_param(param_key)
-            # self._possible_drinks = [drink.lower() for drink in prior_data["drinks"]]
+            prior_data: Dict[str, List[str]] = rospy.get_param(param_key)
+            self._possible_drinks = [drink.lower() for drink in prior_data["drinks"]]
 
         def execute(self, userdata: UserData) -> str:
             """Parses the transcription of the favourite drink.
@@ -52,54 +51,55 @@ class GetDrink(smach.StateMachine):
             transcription = userdata.guest_transcription.lower()
             transcription = userdata["guest_transcription"].lower()
 
-            extract_fields = llm_utils.extract_fields_llm(
-                transcription, ["Drink"]
-            )
+            # extract_fields = llm_utils.extract_fields_llm(
+            #     transcription, ["Favourite drink"]
+            # )
 
-            if extract_fields["Drink"] != "Unknown":
-                userdata.guest_data[self._guest_id]["drink"] = extract_fields["Drink"]
-            else:
-                userdata.guest_data[self._guest_id]["drink"] = extract_fields["Drink"]
+            # if extract_fields["drink"] != "Unknown":
+            #     userdata.guest_data[self._guest_id]["drink"] = extract_fields["drink"]
+            # else:
+            #     userdata.guest_data[self._guest_id]["interest"] = extract_fields[
+            #         "interest"
+            #     ]
+            #     outcome = "failed"
+
+            # return outcome
+            for drink in self._possible_drinks:
+                if drink in transcription:
+                    userdata.guest_data[self._guest_id]["drink"] = drink
+                    rospy.loginfo(f"Guest Drink identified as: {drink}")
+                    drink_found = True
+                    break
+
+            if not drink_found:
+                rospy.loginfo("Drink not found in transcription")
+                userdata.guest_data[self._guest_id]["drink"] = "unknown"
                 outcome = "failed"
 
             return outcome
 
-            # for drink in self._possible_drinks:
-            #     if drink in transcription:
-            #         userdata.guest_data[self._guest_id]["drink"] = drink
-            #         rospy.loginfo(f"Guest Drink identified as: {drink}")
-            #         drink_found = True
-            #         break
+    class PostRecoveryDecision(smach.State):
+        def __init__(
+            self,
+            guest_id: str,
+            param_key: str = "/receptionist/priors",
+        ):
+            smach.State.__init__(
+                self,
+                outcomes=["succeeded", "failed"],
+                input_keys=["guest_transcription", "guest_data"],
+                output_keys=["guest_data", "guest_transcription"],
+            )
+            self._guest_id = guest_id
+            prior_data: Dict[str, List[str]] = rospy.get_param(param_key)
+            self._possible_drinks = [drink.lower() for drink in prior_data["drinks"]]
 
-            # if not drink_found:
-            #     rospy.loginfo("Drink not found in transcription")
-            #     userdata.guest_data[self._guest_id]["drink"] = "unknown"
-            #     outcome = "failed"
-
-            # return outcome
-
-    # class PostRecoveryDecision(smach.State):
-    #     def __init__(
-    #         self,
-    #         guest_id: str,
-    #         param_key: str = "/receptionist/priors",
-    #     ):
-    #         smach.State.__init__(
-    #             self,
-    #             outcomes=["succeeded", "failed"],
-    #             input_keys=["guest_transcription", "guest_data"],
-    #             output_keys=["guest_data", "guest_transcription"],
-    #         )
-    #         self._guest_id = guest_id
-    #         prior_data: Dict[str, List[str]] = rospy.get_param(param_key)
-    #         self._possible_drinks = [drink.lower() for drink in prior_data["drinks"]]
-
-    #     def execute(self, userdata: UserData) -> str:
-    #         if userdata.guest_data[self._guest_id]["drink"] == "unknown":
-    #             outcome = "failed"
-    #         else:
-    #             outcome = "succeeded"
-    #         return outcome
+        def execute(self, userdata: UserData) -> str:
+            if userdata.guest_data[self._guest_id]["drink"] == "unknown":
+                outcome = "failed"
+            else:
+                outcome = "succeeded"
+            return outcome
 
     def __init__(
         self,

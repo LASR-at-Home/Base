@@ -66,7 +66,7 @@ class Detect3DInArea(smach.StateMachine):
         smach.StateMachine.__init__(
             self,
             outcomes=["succeeded", "failed"],
-            output_keys=["detections_3d"],
+            output_keys=["detections_3d", "image_raw"],
         )
 
         with self:

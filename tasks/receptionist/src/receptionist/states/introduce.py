@@ -13,6 +13,8 @@ from smach import UserData
 
 # import llm_utils
 
+# import llm_utils
+
 
 # def stringify_guest_data(
 #     guest_data: Dict[str, Any], guest_id: str, describe_features: bool
@@ -30,7 +32,7 @@ from smach import UserData
 
 #     relevant_guest_data = guest_data[guest_id]
 
-#     guest_str = f"{relevant_guest_data['name']}, their favourite drink is {relevant_guest_data['drink']} and interest is {relevant_guest_data['interest']}. "
+    guest_str = f"{relevant_guest_data['name']}, their favourite drink is {relevant_guest_data['drink']}. "
 
 #     if (
 #         not relevant_guest_data["detection"]

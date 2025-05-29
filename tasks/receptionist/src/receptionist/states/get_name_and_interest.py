@@ -1,4 +1,4 @@
-"""
+w"""
 State for parsing the transcription of the guests' name and favourite interest, and adding this
 to the guest data userdata
 """
@@ -9,7 +9,7 @@ from smach import UserData
 from typing import List, Dict, Any
 from receptionist.states import SpeechRecovery
 
-import llm_utils
+# import llm_utils
 
 
 class GetNameAndInterest(smach.StateMachine):
@@ -32,9 +32,11 @@ class GetNameAndInterest(smach.StateMachine):
                 output_keys=["guest_data", "guest_transcription"],
             )
             self._guest_id = guest_id
-            # prior_data: Dict[str, List[str]] = rospy.get_param(param_key)
-            # self._possible_names = [name.lower() for name in prior_data["names"]]
-            # self._possible_interests = [interest.lower() for interest in prior_data["interest"]]
+            prior_data: Dict[str, List[str]] = rospy.get_param(param_key)
+            self._possible_names = [name.lower() for name in prior_data["names"]]
+            self._possible_interests = [
+                interest.lower() for interest in prior_data["interests"]
+            ]
 
         def execute(self, userdata: UserData) -> str:
             """Parses the transcription of the guests' name and interest.
@@ -52,64 +54,71 @@ class GetNameAndInterest(smach.StateMachine):
             transcription = userdata.guest_transcription.lower()
             transcription = userdata["guest_transcription"].lower()
 
-            extract_fields = llm_utils.extract_fields_llm(
-                transcription, ["Name", "Interests"]
-            )
+            # extract_fields = llm_utils.extract_fields_llm(
+            #     transcription, ["Name", "Interests"]
+            # )
+            extract_fields = {"name": "Charlie", "interest": "sports"}
 
-            if extract_fields["Name"] != "Unknown":
-                userdata.guest_data[self._guest_id]["name"] = extract_fields["Name"]
+            if extract_fields["name"] != "Unknown":
+                userdata.guest_data[self._guest_id]["name"] = extract_fields["name"]
             else:
-                userdata.guest_data[self._guest_id]["name"] = extract_fields["Name"]
+                userdata.guest_data[self._guest_id]["interest"] = extract_fields[
+                    "interest"
+                ]
                 outcome = "failed"
 
-            if extract_fields["Interest"] != "Unknown":
-                userdata.guest_data[self._guest_id]["interest"] = extract_fields["Interest"]
+            if extract_fields["interest"] != "Unknown":
+                userdata.guest_data[self._guest_id]["interest"] = extract_fields[
+                    "interest"
+                ]
             else:
-                userdata.guest_data[self._guest_id]["interest"] = extract_fields["Interest"]
+                userdata.guest_data[self._guest_id]["interest"] = extract_fields[
+                    "interest"
+                ]
                 outcome = "failed"
 
             return outcome
 
-    # class PostRecoveryDecision(smach.State):
-    #     def __init__(
-    #         self,
-    #         guest_id: str,
-    #         param_key: str = "/receptionist/priors",
-    #     ):
-    #         smach.State.__init__(
-    #             self,
-    #             outcomes=["succeeded", "failed"],
-    #             input_keys=["guest_transcription", "guest_data"],
-    #             output_keys=["guest_data", "guest_transcription"],
-    #         )
-    #         self._guest_id = guest_id
-    #         prior_data: Dict[str, List[str]] = rospy.get_param(param_key)
-    #         self._possible_names = [name.lower() for name in prior_data["names"]]
-    #         self._possible_interests = [
-    #             interest.lower() for interest in prior_data["interests"]
-    #         ]
+    class PostRecoveryDecision(smach.State):
+        def __init__(
+            self,
+            guest_id: str,
+            param_key: str = "/receptionist/priors",
+        ):
+            smach.State.__init__(
+                self,
+                outcomes=["succeeded", "failed"],
+                input_keys=["guest_transcription", "guest_data"],
+                output_keys=["guest_data", "guest_transcription"],
+            )
+            self._guest_id = guest_id
+            prior_data: Dict[str, List[str]] = rospy.get_param(param_key)
+            self._possible_names = [name.lower() for name in prior_data["names"]]
+            self._possible_interests = [
+                interest.lower() for interest in prior_data["interests"]
+            ]
 
-    #     def execute(self, userdata: UserData) -> str:
-    #         if not self._recovery_name_and_interest_required(userdata):
-    #             if userdata.guest_data[self._guest_id]["name"] == "unknown":
-    #                 outcome = "failed_name"
-    #             else:
-    #                 outcome = "failed_interest"
-    #         else:
-    #             outcome = "failed"
-    #         return outcome
+        def execute(self, userdata: UserData) -> str:
+            if not self._recovery_name_and_interest_required(userdata):
+                if userdata.guest_data[self._guest_id]["name"] == "unknown":
+                    outcome = "failed_name"
+                else:
+                    outcome = "failed_interest"
+            else:
+                outcome = "failed"
+            return outcome
 
-    #     def _recovery_name_and_interest_required(self, userdata: UserData) -> bool:
-    #         """Determine whether both the name and interest requires recovery.
+        def _recovery_name_and_interest_required(self, userdata: UserData) -> bool:
+            """Determine whether both the name and interest requires recovery.
 
-    #         Returns:
-    #             bool: True if both attributes require recovery.
-    #         """
-    #         if userdata.guest_data[self._guest_id]["name"] == "unknown":
-    #             if userdata.guest_data[self._guest_id]["interest"] == "unknown":
-    #                 return True
-    #         else:
-    #             return False
+            Returns:
+                bool: True if both attributes require recovery.
+            """
+            if userdata.guest_data[self._guest_id]["name"] == "unknown":
+                if userdata.guest_data[self._guest_id]["interest"] == "unknown":
+                    return True
+            else:
+                return False
 
     def __init__(
         self,
