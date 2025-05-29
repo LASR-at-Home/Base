@@ -231,7 +231,7 @@ class PersonFollower:
         goal.pointing_axis.z = 1.0
 
         goal.min_duration = rospy.Duration(0.3)
-        goal.max_velocity = 0.5
+        goal.max_velocity = 0.25
 
         self._point_head_client.send_goal(goal)
 
@@ -447,12 +447,89 @@ class PersonFollower:
             rospy.loginfo("Recovering track...")
             rospy.sleep(1)
         return True
-    
+
     def detection3d_callback(self, msg: Detection3DArray):
         for detection in msg.detections:
             if int(detection.name) == self._track_id:
-                self.newest_detection = detection
-                self._last_detection_time = rospy.Time.now()
+                # Get the bounding box dimensions from xywh
+                # xywh format: [x_min, y_min, width, height]
+                if hasattr(detection, 'xywh') and len(detection.xywh) == 4:
+                    xywh = detection.xywh
+
+                    # Calculate bounding box properties
+                    box_width = xywh[2]
+                    box_height = xywh[3]
+                    box_area = box_width * box_height
+
+                    # Get image dimensions (assuming standard camera resolution if not available)
+                    image_width = 640  # Default width if not available
+                    image_height = 480  # Default height if not available
+                    if hasattr(self, 'depth_camera_info') and self.depth_camera_info is not None:
+                        image_width = self.depth_camera_info.width
+                        image_height = self.depth_camera_info.height
+
+                    # Calculate center position of the box
+                    center_x = xywh[0] + box_width / 2
+                    center_y = xywh[1] + box_height / 2
+
+                    # Calculate normalized distance from center of image
+                    image_center_x = image_width / 2
+                    image_center_y = image_height / 2
+                    normalized_distance = math.sqrt(
+                        ((center_x - image_center_x) / image_width) ** 2 +
+                        ((center_y - image_center_y) / image_height) ** 2
+                    )
+
+                    # Calculate normalized area
+                    normalized_area = box_area / (image_width * image_height)
+
+                    # Define thresholds for quality check
+                    # Too far from center or too small detection is considered poor quality
+                    max_distance_threshold = 0.65  # Maximum allowed normalized distance from center (reduced from 1.0)
+                    min_area_threshold = 0.01  # Minimum normalized area required
+
+                    # Calculate additional quality metrics (optional)
+                    aspect_ratio = box_width / max(box_height, 1)  # Avoid division by zero
+                    is_reasonable_aspect = 0.2 < aspect_ratio < 5.0  # Person should have reasonable aspect ratio
+
+                    # Check quality criteria
+                    is_good_quality = (normalized_distance < max_distance_threshold and
+                                       normalized_area > min_area_threshold and
+                                       is_reasonable_aspect and detection.confidence > 0.5)
+
+                    # Set conditional frame flag based on quality
+                    if is_good_quality:
+                        # Good quality detection - allow conditional frames
+                        # if not self._condition_flag_state:
+                        self.condition_frame_flag_pub.publish(Bool(data=True))
+                        self._condition_flag_state = True
+                        rospy.loginfo("Detection quality good - enabling conditional frames")
+
+                        # Update detection information for good quality detections
+                        self.newest_detection = detection
+                        self._last_detection_time = rospy.Time.now()
+
+                        # Log quality metrics at debug level
+                        rospy.logdebug(f"Good detection - Distance: {normalized_distance:.3f}, "
+                                       f"Area: {normalized_area:.5f}, Aspect: {aspect_ratio:.2f}")
+                    else:
+                        # Poor quality detection - disable conditional frames
+                        # if self._condition_flag_state:
+                        self.condition_frame_flag_pub.publish(Bool(data=False))
+                        self._condition_flag_state = False
+                        rospy.loginfo(f"Detection quality poor - disabling conditional frames")
+
+                        # Log the specific reason for poor quality
+                        quality_issues = []
+                        if normalized_distance >= max_distance_threshold:
+                            quality_issues.append(f"off-center ({normalized_distance:.3f} >= {max_distance_threshold})")
+                        if normalized_area <= min_area_threshold:
+                            quality_issues.append(f"too small ({normalized_area:.5f} <= {min_area_threshold})")
+                        if not is_reasonable_aspect:
+                            quality_issues.append(f"odd shape (aspect ratio: {aspect_ratio:.2f})")
+
+                        if quality_issues:
+                            rospy.loginfo(f"Quality issues: {', '.join(quality_issues)}")
                 break
 
     def _look_centre_point(self):
@@ -463,6 +540,79 @@ class PersonFollower:
         point = Point(x=3.0, y=0.0, z=0.5)
         self._look_at_point(point, target_frame="base_link")
 
+    # def _calculate_person_angle(self, robot_pose: PoseStamped, person_point: Point) -> float:
+    #     """Calculate angle between robot's forward direction and person position (in degrees)"""
+    #     # Get robot's orientation (forward direction)
+    #     robot_orientation = robot_pose.pose.orientation
+    #     robot_dir = self._quat_to_dir(robot_orientation)
+    #     robot_forward = np.array([robot_dir[0], robot_dir[1]])
+    #
+    #     # Calculate vector from robot to person
+    #     dx = person_point.x - robot_pose.pose.position.x
+    #     dy = person_point.y - robot_pose.pose.position.y
+    #     person_dir = np.array([dx, dy])
+    #
+    #     # If person direction vector is too small, return 0
+    #     if np.linalg.norm(person_dir) < 0.1:
+    #         return 0.0
+    #
+    #     # Normalize vectors
+    #     robot_forward = robot_forward / np.linalg.norm(robot_forward)
+    #     person_dir = person_dir / np.linalg.norm(person_dir)
+    #
+    #     # Calculate angle (radians)
+    #     angle_rad = np.arccos(np.clip(np.dot(robot_forward, person_dir), -1.0, 1.0))
+    #
+    #     # Determine sign of angle (positive for left, negative for right)
+    #     cross_product = np.cross(np.append(robot_forward, 0), np.append(person_dir, 0))[2]
+    #     angle_rad = angle_rad if cross_product >= 0 else -angle_rad
+    #
+    #     # Convert to degrees
+    #     return np.degrees(angle_rad)
+    #
+    # def _rotate_to_face_person_simple(self, person_point: Point) -> bool:
+    #     """Simple rotation using move_base without complex configuration"""
+    #     # Get current robot pose
+    #     robot_pose = self._robot_pose_in_odom()
+    #     if robot_pose is None:
+    #         rospy.logwarn("Unable to get robot position, cannot rotate")
+    #         return False
+    #
+    #     # Cancel current goal
+    #     self._cancel_goal()
+    #
+    #     # Calculate orientation quaternion facing the person
+    #     person_pose = Pose(position=person_point, orientation=Quaternion(0, 0, 0, 1))
+    #     target_orientation = self._compute_face_quat(robot_pose.pose, person_pose)
+    #
+    #     # Create rotation goal (without complex configuration)
+    #     goal = MoveBaseGoal()
+    #     goal.target_pose.header.frame_id = "map"
+    #     goal.target_pose.header.stamp = rospy.Time.now()
+    #     goal.target_pose.pose.position = robot_pose.pose.position
+    #     goal.target_pose.pose.orientation = target_orientation
+    #
+    #     # Send goal directly without waiting
+    #     self._move_base_client.send_goal(goal)
+    #
+    #     # Wait for rotation to complete with timeout
+    #     rotation_timeout = rospy.Duration(5.0)  # Maximum 5 seconds wait
+    #     start_time = rospy.Time.now()
+    #     rate = rospy.Rate(10)
+    #
+    #     while (rospy.Time.now() - start_time) < rotation_timeout:
+    #         state = self._move_base_client.get_state()
+    #         if state == GoalStatus.SUCCEEDED:
+    #             rospy.loginfo("Rotation completed successfully")
+    #             return True
+    #         elif state in [GoalStatus.ABORTED, GoalStatus.REJECTED, GoalStatus.PREEMPTED]:
+    #             rospy.logwarn(f"Rotation aborted with state: {state}")
+    #             return False
+    #         rate.sleep()
+    #
+    #     rospy.logwarn("Rotation timed out")
+    #     self._move_base_client.cancel_goal()
+    #     return False
 
     def follow(self) -> FollowResult:
         result = FollowResult()
@@ -475,6 +625,11 @@ class PersonFollower:
         # Variables for velocity estimation
         self._prev_detection_pos = None  # (x, y)
         self._prev_detection_time = None  # rospy.Time
+
+        # # New: variables for angle detection
+        # max_angle_threshold = 45.0  # Angle threshold in degrees
+        # last_rotation_time = rospy.Time.now() - rospy.Duration(10.0)  # Initialize as 10 seconds ago
+        # rotation_cooldown = rospy.Duration(3.0)  # Cooldown period to avoid frequent rotations
 
         rate = rospy.Rate(10)
         timeout_duration = rospy.Duration(5.0)
@@ -596,14 +751,72 @@ class PersonFollower:
             if now_time - self._last_scan_time >= self._scan_interval:
                 self._look_down_centre_point()
                 rospy.sleep(0.75) 
-                for _ in range(3):
+                for _ in range(5):
                     try:
                         self._look_at_point(self.newest_detection.point, target_frame="map")
-                        rospy.sleep(0.1) 
+                        rospy.sleep(0.01)
                     except Exception as e:
                         rospy.logwarn(f"Return‑look failed: {e}")
                 self._last_scan_time = now_time
             # -------------------------------------
+
+            # robot_pose = self._robot_pose_in_odom()
+            # if robot_pose is not None:
+            #     # Calculate angle between robot and person
+            #     person_angle = self._calculate_person_angle(robot_pose, detection.point)
+            #
+            #     # Get current navigation state
+            #     nav_state = self._move_base_client.get_state()
+            #     is_navigating = nav_state in [GoalStatus.PENDING, GoalStatus.ACTIVE]
+            #
+            #     # Check if robot is static
+            #     is_static = nav_state == GoalStatus.SUCCEEDED
+            #     if not is_static and len(track_vels) > 5:
+            #         avg_vel = np.mean([np.linalg.norm([v[0], v[1]]) for v in track_vels[-5:]])
+            #         is_static = avg_vel < self._static_speed
+            #
+            #     # Check if rotation is needed: angle exceeds threshold and cooldown period passed
+            #     current_time = rospy.Time.now()
+            #     if (abs(person_angle) > max_angle_threshold and
+            #             (current_time - last_rotation_time) > rotation_cooldown):
+            #
+            #         rospy.loginfo(
+            #             f"Person off-center by {person_angle:.2f} degrees, exceeding threshold of {max_angle_threshold}")
+            #
+            #         # If robot is static or navigating, perform rotation
+            #         if is_static or is_navigating:
+            #             rospy.loginfo("Executing rotation")
+            #
+            #             # Save navigation state
+            #             was_navigating = is_navigating
+            #
+            #             # Execute rotation using simplified approach
+            #             rotation_success = self._rotate_to_face_person_simple(detection.point)
+            #             last_rotation_time = current_time
+            #
+            #             # After rotation, if previously navigating, set new navigation goal
+            #             if rotation_success and was_navigating:
+            #                 # Get updated robot pose after rotation
+            #                 robot_pose = self._robot_pose_in_odom()
+            #                 if robot_pose is not None:
+            #                     goal_pose = self._tf_pose(
+            #                         PoseStamped(
+            #                             pose=Pose(
+            #                                 position=detection.point,
+            #                                 orientation=self._compute_face_quat(
+            #                                     robot_pose.pose,
+            #                                     Pose(position=detection.point, orientation=Quaternion(0, 0, 0, 1))
+            #                                 )
+            #                             ),
+            #                             header=map_pose.header
+            #                         ),
+            #                         "map"
+            #                     )
+            #                     self._move_base(goal_pose)
+            #                     prev_goal = goal_pose
+            #                     prev_pose = odom_pose
+            #
+            #             rospy.loginfo("Rotation handling complete, continuing to follow")
 
             # 8. Goal logic
             if prev_pose is None:
