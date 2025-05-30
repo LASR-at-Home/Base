@@ -1,64 +1,79 @@
 #!/usr/bin/env python3
+from typing import List, Union
+
 import rospy
 import smach
-import numpy as np
+import message_filters
 
-from sensor_msgs.msg import PointCloud2
-from visualization_msgs.msg import Marker
-from geometry_msgs.msg import PointStamped, Point
+from sensor_msgs.msg import Image, CameraInfo
 from lasr_vision_msgs.srv import YoloDetection3D
-from markers import create_and_publish_marker
-
-from typing import List, Union
+from std_msgs.msg import String
 
 
 class Detect3D(smach.State):
     def __init__(
         self,
-        depth_topic: str = "/xtion/depth_registered/points",
-        model: str = "yolov8x-seg.pt",
+        image_topic: str = "/xtion/rgb/image_raw",
+        depth_image_topic: str = "/xtion/depth_registered/image_raw",
+        depth_camera_info_topic: str = "/xtion/depth_registered/camera_info",
+        model: str = "yolo11n-seg.pt",
         filter: Union[List[str], None] = None,
         confidence: float = 0.5,
-        nms: float = 0.3,
-        debug_publisher: str = "/skills/detect3d/debug",
+        target_frame: str = "map",
     ):
         smach.State.__init__(
             self,
             outcomes=["succeeded", "failed"],
             output_keys=["detections_3d"],
         )
-        self.depth_topic = depth_topic
+        self.image_topic = image_topic
+        self.depth_image_topic = depth_image_topic
+        self.depth_camera_info_topic = depth_camera_info_topic
         self.model = model
-        self.filter = filter if filter is not None else []
+        self.filter = filter or []
         self.confidence = confidence
-        self.nms = nms
-        self.yolo = rospy.ServiceProxy("/yolov8/detect3d", YoloDetection3D)
+        self.target_frame = target_frame
+
+        image_sub = message_filters.Subscriber(self.image_topic, Image)
+        depth_sub = message_filters.Subscriber(self.depth_image_topic, Image)
+        cam_info_sub = message_filters.Subscriber(
+            self.depth_camera_info_topic, CameraInfo
+        )
+
+        self.ts = message_filters.ApproximateTimeSynchronizer(
+            [image_sub, depth_sub, cam_info_sub], queue_size=10, slop=0.1
+        )
+        self.data = None
+
+        self.yolo = rospy.ServiceProxy("/yolo/detect3d", YoloDetection3D)
         self.yolo.wait_for_service()
-        self.debug_pub = rospy.Publisher(debug_publisher, Marker, queue_size=1)
 
     def execute(self, userdata):
-        pcl_msg = rospy.wait_for_message(self.depth_topic, PointCloud2)
+
+        def callback(image_msg, depth_msg, cam_info_msg):
+            self.data = (image_msg, depth_msg, cam_info_msg)
+
+        self.ts.registerCallback(callback)
+
+        while not self.data:
+            rospy.sleep(0.1)
+
+        image_msg, depth_msg, cam_info_msg = self.data
+
         try:
-            result = self.yolo(pcl_msg, self.model, self.confidence, self.nms)
-            if len(self.filter) > 0:
-                result.detected_objects = [
-                    det for det in result.detected_objects if det.name in self.filter
-                ]
-            userdata.detections_3d = result
-
-            for det in result.detected_objects:
-                point_stamped = PointStamped()
-                point_stamped.header.frame_id = "map"
-                point_stamped.point = det.point
-                rospy.loginfo(f"Detected point: {point_stamped}")
-                if np.isnan(det.point.x).any():
-                    rospy.loginfo(f"No depth detected, object likely too far away")
-                    continue
-                create_and_publish_marker(self.debug_pub, point_stamped, name=det.name)
-
+            resp = self.yolo(
+                image_raw=image_msg,
+                depth_image=depth_msg,
+                depth_camera_info=cam_info_msg,
+                model=self.model,
+                confidence=self.confidence,
+                filter=self.filter,
+                target_frame=self.target_frame,
+            )
+            userdata.detections_3d = resp
             return "succeeded"
         except rospy.ServiceException as e:
-            rospy.logwarn(f"Unable to perform inference. ({str(e)})")
+            rospy.logerr(f"Service call failed: {e}")
             return "failed"
 
 

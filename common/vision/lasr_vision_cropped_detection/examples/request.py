@@ -12,7 +12,7 @@ if __name__ == "__main__":
         request = CDRequest()
         request.method = "closest"
         request.use_mask = True
-        request.yolo_model = "yolov8x-seg.pt"
+        request.yolo_model = "yolo11n-seg.pt"
         request.yolo_model_confidence = 0.5
         request.yolo_nms_threshold = 0.3
         request.object_names = ["person"]

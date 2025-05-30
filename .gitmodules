@@ -7,3 +7,6 @@
 [submodule "common/manipulation/ros_contact_graspnet/contact_graspnet_pytorch"]
 	path = common/manipulation/ros_contact_graspnet/contact_graspnet_pytorch
 	url = git@github.com:elchun/contact_graspnet_pytorch.git
+[submodule "common/third_party/sam2-real-time-ros1"]
+	path = common/third_party/sam2-real-time-ros1
+	url = https://github.com/LASR-at-Home/sam2-real-time-ros1

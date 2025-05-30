@@ -37,8 +37,8 @@ rospy.init_node("test_people_pose")
 
 people_pose_pub = rospy.Publisher("/people_poses", Marker, queue_size=100)
 
-rospy.wait_for_service("/yolov8/detect", rospy.Duration(15.0))
-yolo = rospy.ServiceProxy("/yolov8/detect", YoloDetection)
+rospy.wait_for_service("/yolo/detect", rospy.Duration(15.0))
+yolo = rospy.ServiceProxy("/yolo/detect", YoloDetection)
 tf = rospy.ServiceProxy("/tf_transform", TfTransform)
 bridge = CvBridge()
 
@@ -48,7 +48,7 @@ while not rospy.is_shutdown():
     pcl_msg = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
     cv_im = cv2_pcl.pcl_to_cv2(pcl_msg)
     img_msg = cv2_img.cv2_img_to_msg(cv_im)
-    detections = yolo(img_msg, "yolov8n-seg.pt", 0.3, 0.3)
+    detections = yolo(img_msg, "yolo11n-seg.pt", 0.3, 0.3)
     for detection in detections.detected_objects:
         if detection.name == "person":
             centroid_xyz = cv2_pcl.seg_to_centroid(pcl_msg, np.array(detection.xyseg))
