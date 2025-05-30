@@ -1,0 +1,5 @@
+sensor_msgs/PointCloud2 cloud
+string object_id
+string frame_id
+---
+moveit_msgs/CollisionObject object
