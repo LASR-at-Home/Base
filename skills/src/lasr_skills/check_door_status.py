@@ -10,67 +10,88 @@ import numpy as np
 
 
 class CheckDoorStatus(smach.State):
-    def __init__(self, estimated_depth=1.2, threshold=0.7):
+    def __init__(self, expected_closed_depth=1.2, roi=None, change_thresh=0.5, open_thresh=0.6):
         smach.State.__init__(self, outcomes=["open", "closed", "error"])
+        self.expected_depth = expected_closed_depth
+        self.change_thresh = change_thresh
+        self.open_thresh = open_thresh
+
+        # ROI boundaries (X, Y, Z) in meters
+        self.roi = roi if roi else {
+            'x': (0.2, 0.7),
+            'y': (0.0, 0.6),
+            'z': (0.3, 4.0)
+        }
+
         self.lock = threading.Lock()
-        self.depth_data = None
+        self.latest_cloud = None
         self.ready = False
+
         self.sub = rospy.Subscriber("/xtion/depth_registered/points", PointCloud2, self.callback)
-        self.estimated_depth = estimated_depth
-        self.threshold = threshold
 
     def callback(self, msg):
         with self.lock:
-            try:
-                cloud = ros_numpy.point_cloud2.pointcloud2_to_xyz_array(msg, remove_nans=True)
-                rospy.loginfo("Received %d points", len(cloud))
-                rospy.loginfo("Sample points:\n%s", cloud[:5])
+            self.latest_cloud = msg
+            self.ready = True
 
-                # Widened ROI box
+    def get_avg_depth(self):
+        with self.lock:
+            if self.latest_cloud is None:
+                return None
+
+            try:
+                cloud = ros_numpy.point_cloud2.pointcloud2_to_xyz_array(self.latest_cloud, remove_nans=True)
                 mask = (
-                    (cloud[:, 0] > 0.2) & (cloud[:, 0] < 0.7) &  # left-right (X)
-                    (cloud[:, 1] > 0.0) & (cloud[:, 1] < 0.6) &  # up-down (Y)
-                    (cloud[:, 2] > 0.3) & (cloud[:, 2] < 4.0)    # depth (Z)
+                    (cloud[:, 0] > self.roi['x'][0]) & (cloud[:, 0] < self.roi['x'][1]) &
+                    (cloud[:, 1] > self.roi['y'][0]) & (cloud[:, 1] < self.roi['y'][1]) &
+                    (cloud[:, 2] > self.roi['z'][0]) & (cloud[:, 2] < self.roi['z'][1])
                 )
                 roi_points = cloud[mask]
-                rospy.loginfo("Filtered points in ROI: %d", roi_points.shape[0])
-
                 if roi_points.shape[0] < 50:
-                    rospy.logwarn("Too few points in ROI — assuming door is open.")
-                    self.depth_data = "open"
-                else:
-                    avg_depth = np.mean(roi_points[:, 2])  # Z-axis is depth
-                    rospy.loginfo("Avg object depth (Z): %.2f m", avg_depth)
+                    rospy.logwarn("Not enough points in ROI")
+                    return None
 
-                    if abs(avg_depth - self.estimated_depth) > self.threshold:
-                        self.depth_data = "open"
-                    else:
-                        self.depth_data = "closed"
-
-                self.ready = True
-                self.sub.unregister()
+                avg_depth = np.mean(roi_points[:, 2])
+                rospy.loginfo("Avg ROI depth: %.2f m", avg_depth)
+                return avg_depth
 
             except Exception as e:
-                rospy.logerr("Error processing point cloud: %s", e)
-                self.depth_data = "error"
-                self.ready = True
-                self.sub.unregister()
+                rospy.logerr("Point cloud processing error: %s", e)
+                return None
 
     def execute(self, userdata):
-        rospy.loginfo("Checking door status near estimated depth: %.2f m", self.estimated_depth)
+        rospy.loginfo("Waiting for initial depth reading...")
         self.ready = False
-        self.depth_data = None
+        self.latest_cloud = None
 
-        timeout = rospy.Time.now() + rospy.Duration(10)
+        timeout = rospy.Time.now() + rospy.Duration(5)
         rate = rospy.Rate(5)
         while not self.ready and rospy.Time.now() < timeout:
             rate.sleep()
 
-        if not self.ready:
-            rospy.logerr("Timed out waiting for depth data.")
+        initial_depth = self.get_avg_depth()
+        if initial_depth is None:
             return "error"
 
-        return self.depth_data
+        # Check if already open compared to expected closed depth
+        if abs(initial_depth - self.expected_depth) > self.open_thresh:
+            rospy.loginfo("Initial depth already differs from expected closed depth → door is open")
+            return "open"
+
+        rospy.loginfo("Waiting for second depth to check for changes...")
+        rospy.sleep(3.0)  # wait for user or environment to change door
+
+        second_depth = self.get_avg_depth()
+        if second_depth is None:
+            return "error"
+
+        # Check if depth has changed significantly
+        if abs(second_depth - initial_depth) > self.change_thresh:
+            rospy.loginfo("Depth changed → door is now open")
+            return "open"
+
+        rospy.loginfo("Depth stayed similar → door is closed")
+        return "closed"
 
 
 def main():
@@ -81,7 +102,11 @@ def main():
     with sm:
         smach.StateMachine.add(
             "CHECK_DOOR_STATUS",
-            CheckDoorStatus(estimated_depth=1.2, threshold=0.7),
+            CheckDoorStatus(
+                expected_closed_depth=1.2,  # adjust for cabinet (~0.5) or room door (~1.2)
+                change_thresh=0.4,
+                open_thresh=0.6
+            ),
             transitions={
                 "open": "DONE",
                 "closed": "DONE",
@@ -91,10 +116,8 @@ def main():
 
     smach_viewer = smach_ros.IntrospectionServer("viewer", sm, "/SM_ROOT")
     smach_viewer.start()
-
     outcome = sm.execute()
-    rospy.loginfo("State machine finished with outcome: %s", outcome)
-
+    rospy.loginfo("SM finished with outcome: %s", outcome)
     smach_viewer.stop()
 
 
