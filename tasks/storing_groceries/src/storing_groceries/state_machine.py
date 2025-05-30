@@ -5,21 +5,10 @@ import smach
 import smach_ros
 from geometry_msgs.msg import Point, PointStamped, Pose
 from lasr_skills import (
-    AskAndListen,
-    GoToLocation,
-    LookToPoint,
-    PlayMotion,
     Say,
-    Wait,
-    WaitForPersonInArea,
 )
 from lasr_vision_msgs.srv import Recognise
-from storing_groceries.states import (
-    HandleNameInterest,
-    HandleDrink,
-    CompareInterest,
-    IntroduceAndSeatGuest,
-)
+from storing_groceries.states import *
 from shapely.geometry import Polygon
 from std_msgs.msg import Empty, Header
 
@@ -76,7 +65,7 @@ class StoringGroceries(smach.StateMachine):
 
             smach.StateMachine.add(
                 "SAY_START",
-                Say(text="Waiting for door open."),
+                Say(text="Start of storing_groceries task."),
                 transitions={
                     "succeeded": "WAIT_DOOR_OPEN",
                     "aborted": "GO_TO_WAIT_LOCATION",
@@ -92,19 +81,9 @@ class StoringGroceries(smach.StateMachine):
                 "WAIT_DOOR_OPEN",
                 Say(text="wait door open is ongoing"),
                 transitions={
-                    "succeeded": "SAY_TASK_START",
-                    "aborted": "GO_TO_TABLE",
-                    "preempted": "GO_TO_TABLE",
-                },
-            )
-
-            smach.StateMachine.add(
-                "SAY_TASK_START",
-                Say(text="Start of storing_groceries task."),
-                transitions={
-                    "succeeded": "GO_TO_TABLE",
-                    "aborted": "GO_TO_WAIT_LOCATION",
-                    "preempted": "GO_TO_WAIT_LOCATION",
+                    "succeeded": "OBJECT_SORTING_LOOP",
+                    "aborted": "OBJECT_SORTING_LOOP",
+                    "preempted": "OBJECT_SORTING_LOOP",
                 },
             )
 
@@ -112,17 +91,19 @@ class StoringGroceries(smach.StateMachine):
             ObjectSortingLoop
             """
 
-            self.go_to_table()
-
             smach.StateMachine.add(
                 "OBJECT_SORTING_LOOP",
                 Say(text="object sorting loop is ongoing"),
                 transitions={
-                    "succeeded": "GO_TO_TABLE",
-                    "aborted": "GO_TO_WAIT_LOCATION",
-                    "preempted": "GO_TO_WAIT_LOCATION",
+                    "succeeded": "POUR_CEREAL",
+                    "aborted": "POUR_CEREAL",
+                    "preempted": "POUR_CEREAL",
                 },
             )
+
+            """
+            + ShoppingBagSortingLoop
+            """
 
             """
             PourCereal
@@ -138,6 +119,10 @@ class StoringGroceries(smach.StateMachine):
                 },
             )
 
+            """
+            Finish
+            """
+
             smach.StateMachine.add(
                 "SAY_FINISHED",
                 Say(text="I am done."),
@@ -148,59 +133,4 @@ class StoringGroceries(smach.StateMachine):
                 },
             )
 
-    def go_to_table(self, cereal=False) -> None:
-        """Adds the states to go to table area.
-        """
-        
-        smach.StateMachine.add(
-            f"GO_TO_TABLE",
-            GoToLocation(self.table_pose),
-            transitions={
-                "succeeded": f"SAY_ARRIVE_TABLE",
-                "failed": f"SAY_ARRIVE_TABLE",
-            },
-        )
-        
-        if(cereal):
-            smach.StateMachine.add(
-                f"SAY_ARRIVE_CEREAL",
-                Say(text="Arrive table"),
-                transitions={
-                    "succeeded": f"DETECT_CEREAL",
-                    "aborted": f"DETECT_CEREAL",
-                    "preempted": f"DETECT_CEREAL",
-                },
-            )    
-        else:   
-            smach.StateMachine.add(
-                f"SAY_ARRIVE_TABLE",
-                Say(text="Arrive table"),
-                transitions={
-                    "succeeded": f"OBJECT_SORTING_LOOP",
-                    "aborted": f"OBJECT_SORTING_LOOP",
-                    "preempted": f"OBJECT_SORTING_LOOP",
-                },
-            )
-
-    def go_to_cabinet(self) -> None:
-        """Adds the states to go to cabinet area.
-        """
-        
-        smach.StateMachine.add(
-            f"GO_TO_CABINET",
-            GoToLocation(self.table_pose),
-            transitions={
-                "succeeded": f"SAY_ARRIVE_CABINET",
-                "failed": f"SAY_ARRIVE_CABINET",
-            },
-        )
-
-        smach.StateMachine.add(
-            f"SAY_ARRIVE_CABINET",
-            Say(text="Arrive cabinet"),
-            transitions={
-                "succeeded": f"DETECT_CABINET",
-                "aborted": f"DETECT_CABINET",
-                "preempted": f"DETECT_CABINET",
-            },
-        )
+   

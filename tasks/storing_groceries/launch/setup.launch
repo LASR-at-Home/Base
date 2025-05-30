@@ -8,11 +8,11 @@
     <node pkg="lasr_speech_recognition_whisper" type="transcribe_microphone_server" name="transcribe_speech" output="screen" args="--mic_device $(arg whisper_device_param)"/>
 
     <!--     STATIC POINTS     -->
-    <rosparam command="load" file="$(find receptionist)/config/$(arg config).yaml" ns="receptionist" />
+    <rosparam command="load" file="$(find storing_groceries)/config/$(arg config).yaml" ns="storing_groceries" />
 
     <!--     MOTIONS     -->
     <rosparam command="load" file="$(find lasr_skills)/config/motions.yaml"/>
-    <rosparam command="load" file="$(find receptionist)/config/motions.yaml"/>
+    <rosparam command="load" file="$(find storing_groceries)/config/motions.yaml"/>
 
     <!--      PERCEPTION     -->
     <include file="$(find lasr_vision_cropped_detection)/launch/cropped_detection.launch"/>
