@@ -3,77 +3,89 @@
 import rospy
 import smach
 import smach_ros
+import threading
 from sensor_msgs.msg import PointCloud2
 import ros_numpy
 import numpy as np
 
 
 class CheckDoorStatus(smach.State):
-    def __init__(self):
+    def __init__(self, estimated_depth=1.2, threshold=0.7):
         smach.State.__init__(self, outcomes=["open", "closed", "error"])
+        self.lock = threading.Lock()
+        self.depth_data = None
+        self.ready = False
         self.sub = rospy.Subscriber("/xtion/depth_registered/points", PointCloud2, self.callback)
-        self.result_ready = False
-        self.result = None
+        self.estimated_depth = estimated_depth
+        self.threshold = threshold
 
     def callback(self, msg):
-        if self.result_ready:
-            return  # Already processed
+        with self.lock:
+            try:
+                cloud = ros_numpy.point_cloud2.pointcloud2_to_xyz_array(msg, remove_nans=True)
+                rospy.loginfo("Received %d points", len(cloud))
+                rospy.loginfo("Sample points:\n%s", cloud[:5])
 
-        try:
-            cloud_array = ros_numpy.point_cloud2.pointcloud2_to_xyz_array(msg)
+                # Widened ROI box
+                mask = (
+                    (cloud[:, 0] > 0.2) & (cloud[:, 0] < 0.7) &  # left-right (X)
+                    (cloud[:, 1] > 0.0) & (cloud[:, 1] < 0.6) &  # up-down (Y)
+                    (cloud[:, 2] > 0.3) & (cloud[:, 2] < 4.0)    # depth (Z)
+                )
+                roi_points = cloud[mask]
+                rospy.loginfo("Filtered points in ROI: %d", roi_points.shape[0])
 
-            # ROI in camera frame
-            mask = (
-                (cloud_array[:, 2] > 1.2) & (cloud_array[:, 2] < 1.6) &   # Z: depth
-                (cloud_array[:, 0] > 0.4) & (cloud_array[:, 0] < 0.6) &   # X: side
-                (cloud_array[:, 1] > 0.1) & (cloud_array[:, 1] < 0.3)     # Y: down
-            )
+                if roi_points.shape[0] < 50:
+                    rospy.logwarn("Too few points in ROI — assuming door is open.")
+                    self.depth_data = "open"
+                else:
+                    avg_depth = np.mean(roi_points[:, 2])  # Z-axis is depth
+                    rospy.loginfo("Avg object depth (Z): %.2f m", avg_depth)
 
-            roi_points = cloud_array[mask]
-            if roi_points.shape[0] < 100:
-                rospy.logwarn_throttle(5, "Not enough points in ROI")
-                self.result = "open"
-            else:
-                avg_depth = np.mean(roi_points[:, 2])
-                rospy.loginfo("Avg object depth (Z): %.2f m", avg_depth)
-                self.result = "closed" if avg_depth < 1.4 else "open"
+                    if abs(avg_depth - self.estimated_depth) > self.threshold:
+                        self.depth_data = "open"
+                    else:
+                        self.depth_data = "closed"
 
-            self.result_ready = True
-            self.sub.unregister()  # stop further callbacks
+                self.ready = True
+                self.sub.unregister()
 
-        except Exception as e:
-            rospy.logerr("Error in point cloud processing: %s", e)
-            self.result = "error"
-            self.result_ready = True
-            self.sub.unregister()
+            except Exception as e:
+                rospy.logerr("Error processing point cloud: %s", e)
+                self.depth_data = "error"
+                self.ready = True
+                self.sub.unregister()
 
     def execute(self, userdata):
-        rospy.loginfo("Waiting for depth data...")
-        timeout = rospy.Time.now() + rospy.Duration(5)
+        rospy.loginfo("Checking door status near estimated depth: %.2f m", self.estimated_depth)
+        self.ready = False
+        self.depth_data = None
 
-        while not self.result_ready and rospy.Time.now() < timeout:
-            rospy.sleep(0.1)
+        timeout = rospy.Time.now() + rospy.Duration(10)
+        rate = rospy.Rate(5)
+        while not self.ready and rospy.Time.now() < timeout:
+            rate.sleep()
 
-        if self.result_ready:
-            return self.result
-        else:
-            rospy.logerr("Timeout waiting for depth data")
+        if not self.ready:
+            rospy.logerr("Timed out waiting for depth data.")
             return "error"
+
+        return self.depth_data
 
 
 def main():
-    rospy.init_node("check_door_status_state_machine")
+    rospy.init_node("door_status_state_machine")
 
     sm = smach.StateMachine(outcomes=["DONE", "FAILED"])
 
     with sm:
         smach.StateMachine.add(
             "CHECK_DOOR_STATUS",
-            CheckDoorStatus(),
+            CheckDoorStatus(estimated_depth=1.2, threshold=0.7),
             transitions={
                 "open": "DONE",
                 "closed": "DONE",
-                "error": "FAILED"
+                "error": "FAILED",
             }
         )
 
@@ -81,7 +93,7 @@ def main():
     smach_viewer.start()
 
     outcome = sm.execute()
-    rospy.loginfo("Finished with outcome: %s", outcome)
+    rospy.loginfo("State machine finished with outcome: %s", outcome)
 
     smach_viewer.stop()
 
