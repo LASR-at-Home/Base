@@ -62,7 +62,8 @@ class PersonFollower:
             self,
             start_following_radius: float = 2.0,  # Distance threshold to start following (meters)
             start_following_angle: float = 45.0,  # Angle threshold to start following (degrees)
-            new_goal_threshold_min: float = 0.5,  # Minimum distance to trigger new navigation goal (meters)
+            target_boundary: float = 1.0,
+            new_goal_threshold_min: float = 0.45,  # Minimum distance to trigger new navigation goal (meters)
             new_goal_threshold_max: float = 2.5,  # Max distance to trigger new navigation goal (meters)
             stopping_distance: float = 0.75,  # Distance to maintain from person (meters)
             static_speed: float = 0.0015,  # Speed when person is stationary (m/s)
@@ -71,6 +72,7 @@ class PersonFollower:
         # Store configuration parameters
         self._start_following_radius = start_following_radius
         self._start_following_angle = start_following_angle
+        self._target_boundary = target_boundary
         self._new_goal_threshold_min = new_goal_threshold_min
         self._new_goal_threshold_max = new_goal_threshold_max
         self._stopping_distance = stopping_distance
@@ -134,13 +136,24 @@ class PersonFollower:
         self._buffer = tf.Buffer(cache_time=rospy.Duration.from_sec(10.0))
         self._listener = tf.TransformListener(self._buffer)
 
-        # Initialize target queue and the newest target
+        # Initialise target queue and the newest detection
         self.target_list: List[Tuple] = []
         self.person_trajectory = PoseArray()
         self.person_trajectory.header.frame_id = "odom"
+        self.newest_detection = None
+
+        # Initialise timers
+        self.good_detection_timeout_duration = rospy.Duration(5.0)
+        self.target_moving_timeout_duration = rospy.Duration(5.0)
         self.last_movement_time = rospy.Time.now()
         self.good_detection_time = rospy.Time.now()
         self.added_new_target_time = rospy.Time.now()
+        self.look_at_point_time = rospy.Time.now()
+        self.look_down_time = rospy.Time.now()
+
+        # Initialise flags
+        self.is_tracking = False
+        self.is_navigating = False
 
         # Setup head pointing client
         self._point_head_client = actionlib.SimpleActionClient(
@@ -148,9 +161,6 @@ class PersonFollower:
         )
         if not self._point_head_client.wait_for_server(rospy.Duration(5.0)):
             rospy.logwarn("Head pointing action server not available.")
-
-        # Initialize head position
-        self._look_centre_point()
 
         # Setup scanning parameters
         self._scan_interval = rospy.Duration(3.0)
@@ -241,6 +251,78 @@ class PersonFollower:
 
         self._point_head_client.send_goal(goal)
 
+    def _look_centre_point(self):
+        point = Point(x=3.0, y=0.0, z=1.3)
+        self._look_at_point(point, target_frame="base_link")
+
+    def _look_down_centre_point(self):
+        point = Point(x=3.0, y=0.0, z=0.5)
+        self._look_at_point(point, target_frame="base_link")
+
+    # def _look_down_point(self, target_point: Point = None, target_frame: str = "map"):
+    #     """
+    #     Look down towards the target direction or center if no target provided.
+    #
+    #     Args:
+    #         target_point: Target point to look towards (optional)
+    #         target_frame: Frame of the target point
+    #     """
+    #     if target_point is not None:
+    #         # Transform target point to base_link frame to get direction
+    #         try:
+    #             target_pose = PoseStamped()
+    #             target_pose.header.frame_id = target_frame
+    #             target_pose.header.stamp = rospy.Time.now()
+    #             target_pose.pose.position = target_point
+    #             target_pose.pose.orientation.w = 1.0
+    #
+    #             # Transform to base_link frame
+    #             target_in_base = self._tf_pose(target_pose, "base_link")
+    #
+    #             # Calculate direction towards target but look down
+    #             x_dir = target_in_base.pose.position.x
+    #             y_dir = target_in_base.pose.position.y
+    #
+    #             # Normalize the direction and set distance
+    #             distance = 3.0
+    #             if x_dir != 0 or y_dir != 0:
+    #                 norm = math.sqrt(x_dir ** 2 + y_dir ** 2)
+    #                 x_dir = (x_dir / norm) * distance
+    #                 y_dir = (y_dir / norm) * distance
+    #             else:
+    #                 # Default to forward if target is directly above/below
+    #                 x_dir = distance
+    #                 y_dir = 0.0
+    #
+    #             # Look down towards the target direction
+    #             point = Point(x=x_dir, y=y_dir, z=0.5)
+    #
+    #         except Exception as e:
+    #             rospy.logwarn(f"Failed to transform target point: {e}")
+    #             # Fall back to center point
+    #             point = Point(x=3.0, y=0.0, z=0.5)
+    #     else:
+    #         # Default center point when no target provided
+    #         point = Point(x=3.0, y=0.0, z=0.5)
+    #
+    #     self._look_at_point(point, target_frame="base_link")
+
+    def _move_head(self, target_point: Point, target_frame: str = "map"):
+        current_time = rospy.Time.now()
+
+        # if current_time - self.look_down_time >= rospy.Duration(3.1):
+        #     self._look_down_point(target_point, target_frame=target_frame)
+        #     self.look_down_time = current_time
+        #     return
+        #
+        # look_down_protection_time = rospy.Duration(1.5)
+        # if current_time - self.look_down_time < look_down_protection_time:
+        #     return
+
+        if current_time - self.look_at_point_time >= rospy.Duration(0.55):
+            self._look_at_point(target_point, target_frame=target_frame)
+            self.look_at_point_time = current_time
+
     def image_callback(self, image: Image, depth_image: Image, depth_camera_info: CameraInfo):
         self.image, self.depth_image, self.depth_camera_info = image, depth_image, depth_camera_info
 
@@ -250,28 +332,66 @@ class PersonFollower:
         )
         return do_transform_pose(pose, trans)
 
-    def _robot_pose_in_odom(self) -> Union[PoseStamped, None]:
+    def _robot_pose_in_odom(self) -> PoseStamped:
+        """
+        Get the current robot pose in the odom coordinate frame.
+
+        Returns:
+            PoseStamped: Current robot pose in odom frame
+
+        Raises:
+            tf.LookupException: If the transform cannot be found
+            tf.ExtrapolationException: If the transform is too old
+        """
         try:
-            current_pose: PoseWithCovarianceStamped = rospy.wait_for_message(
-                "/robot_pose",
-                PoseWithCovarianceStamped,
-                timeout=rospy.Duration.from_sec(2.0),
+            # Look up the transform from base_link to odom
+            transform = self._buffer.lookup_transform(
+                "odom",  # target frame
+                "base_link",  # source frame
+                rospy.Time(0),  # get latest available transform
+                rospy.Duration(1.0)  # timeout
             )
-        except rospy.ROSException:
-            return None
-        except AttributeError:
-            return None
 
-        current_pose_stamped = PoseStamped(
-            pose=current_pose.pose.pose, header=current_pose.header
-        )
+            # Create a PoseStamped message for the robot's current pose
+            robot_pose = PoseStamped()
+            robot_pose.header.frame_id = "odom"
+            robot_pose.header.stamp = rospy.Time.now()
 
-        return self._tf_pose(current_pose_stamped, "odom")
+            # Extract position from transform
+            robot_pose.pose.position.x = transform.transform.translation.x
+            robot_pose.pose.position.y = transform.transform.translation.y
+            robot_pose.pose.position.z = transform.transform.translation.z
 
-    def _euclidian_distance(self, p1: Pose, p2: Pose) -> float:
+            # Extract orientation from transform
+            robot_pose.pose.orientation.x = transform.transform.rotation.x
+            robot_pose.pose.orientation.y = transform.transform.rotation.y
+            robot_pose.pose.orientation.z = transform.transform.rotation.z
+            robot_pose.pose.orientation.w = transform.transform.rotation.w
+
+            return robot_pose
+
+        except (tf.LookupException, tf.ExtrapolationException, tf.ConnectivityException) as e:
+            rospy.logerr(f"Failed to get robot pose in odom frame: {e}")
+            raise
+
+    def _euclidian_distance(self, p1: Union[Pose, PoseStamped], p2: Union[Pose, PoseStamped]) -> float:
+        """
+        Calculate Euclidean distance between two poses.
+
+        Args:
+            p1: First pose (Pose or PoseStamped)
+            p2: Second pose (Pose or PoseStamped)
+
+        Returns:
+            float: Euclidean distance in meters
+        """
+        # Extract Pose from PoseStamped if necessary
+        pose1 = p1.pose if isinstance(p1, PoseStamped) else p1
+        pose2 = p2.pose if isinstance(p2, PoseStamped) else p2
+
         return np.linalg.norm(
-            np.array([p1.position.x, p1.position.y])
-            - np.array([p2.position.x, p2.position.y])
+            np.array([pose1.position.x, pose1.position.y])
+            - np.array([pose2.position.x, pose2.position.y])
         ).astype(float)
 
     def _compute_face_quat(self, p1: Pose, p2: Pose) -> Quaternion:
@@ -288,6 +408,9 @@ class PersonFollower:
         ]:
             self._move_base_client.cancel_goal()
             self._move_base_client.wait_for_result()
+            self.is_navigating = False
+            self.last_movement_time = rospy.Time.now()
+            rospy.loginfo("Goal cancelled.")
 
     def _move_base(self, pose: PoseStamped, wait=False) -> MoveBaseGoal:
         goal: MoveBaseGoal = MoveBaseGoal()
@@ -296,14 +419,6 @@ class PersonFollower:
         if wait:
             self._move_base_client.wait_for_result()
         return goal
-
-    def _look_centre_point(self):
-        point = Point(x=3.0, y=0.0, z=1.3)
-        self._look_at_point(point, target_frame="base_link")
-
-    def _look_down_centre_point(self):
-        point = Point(x=3.0, y=0.0, z=0.5)
-        self._look_at_point(point, target_frame="base_link")
 
     def detection3d_callback(self, msg: Detection3DArray):
         for detection in msg.detections:
@@ -371,9 +486,20 @@ class PersonFollower:
                         map_pose.header.stamp = rospy.Time.now()
                         map_pose.pose.position = detection.point
                         map_pose.pose.orientation.w = 1.0  # Identity orientation
-                        odom_pose = self._buffer.transform(
-                            map_pose, "odom", rospy.Duration(0.5)
-                        )
+
+                        if detection is not None:
+                            self.newest_detection = detection
+
+                        if self.newest_detection is not None:
+                            self._move_head(self.newest_detection.point, target_frame="map")
+
+                        try:
+                            odom_pose = self._buffer.transform(
+                                map_pose, "odom", rospy.Duration(0.1)
+                            )
+                        except (tf.LookupException, tf.ExtrapolationException) as e:
+                            rospy.logwarn(f"TF transform failed: {e}")
+                            return
 
                         # if target list is empty or the distance make sense
                         if len(self.target_list) == 0:
@@ -413,15 +539,19 @@ class PersonFollower:
         """
         Chooses the closest person as the target
         """
+        # Initialize head position
+        self._look_centre_point()
+        rospy.sleep(1.0)
 
         while True:
             if self.image and self.depth_image and self.depth_camera_info:
                 break
+
         req = YoloDetection3DRequest(
             image_raw=self.image,
             depth_image=self.depth_image,
             depth_camera_info=self.depth_camera_info,
-            model="yolo11n-pose.pt",  # not using poses for now
+            model="yolo11n-pose.pt",
             confidence=0.5,
             target_frame="map",
         )
@@ -488,6 +618,15 @@ class PersonFollower:
             bbox_list.append(bbox_msg)
             rospy.loginfo(f"Prepared BBox for ID {i}")
 
+        # Initialize target queue and the newest target
+        self.target_list: List[Tuple] = []
+        self.person_trajectory = PoseArray()
+        self.person_trajectory.header.frame_id = "odom"
+        self.last_movement_time = rospy.Time.now()
+        self.good_detection_time = rospy.Time.now()
+        self.added_new_target_time = rospy.Time.now()
+        self.newest_detection = None
+
         prompt_msg = PromptArrays()
         prompt_msg.bbox_array = bbox_list
         prompt_msg.point_array = []
@@ -500,250 +639,87 @@ class PersonFollower:
         rospy.sleep(0.1)
         rospy.loginfo(f"Tracking person discovered with id {self._track_id}")
         self.condition_frame_flag_pub.publish(Bool(data=True))
-        self.last_movement_time = rospy.Time.now()
-        self.good_detection_time = rospy.Time.now()
-
         return True
 
     def follow(self) -> FollowResult:
         result = FollowResult()
-        person_trajectory: PoseArray = PoseArray()
-        person_trajectory.header.frame_id = "odom"
-        prev_goal = None
-        prev_pose = None
-        track_vels: List[Tuple[float, float]] = []
-
-        # Variables for velocity estimation
-        self._prev_detection_pos = None  # (x, y)
-        self._prev_detection_time = None  # rospy.Time
-
-        # New parameter for trajectory timeout (5 seconds)
-        trajectory_timeout = rospy.Duration(5.0)
-        # Initialize as None - we'll only start the timer when robot reaches a goal
-        last_goal_reached_time = None
-        last_pose_added_time = rospy.Time.now()
-
         rate = rospy.Rate(10)
-        timeout_duration = rospy.Duration(5.0)
+        self.last_movement_time = rospy.Time.now()
+        self.good_detection_time = rospy.Time.now()
+        previous_target = None
+        just_started = True
 
         while not rospy.is_shutdown():
-            # 1. Timeout check: no detection for 5 seconds
-            if (
-                    not hasattr(self, "_last_detection_time")
-                    or rospy.Time.now() - self._last_detection_time > timeout_duration
-            ):
-                rospy.loginfo("Lost track of person, recovering...")
-                person_trajectory = PoseArray()
-                self.begin_tracking()
-                self._tts("I will start to follow you.", wait=True)
-                prev_pose = None
-                self._prev_detection_pos = None
-                self._prev_detection_time = None
-                track_vels.clear()
-                last_goal_reached_time = None  # Reset goal timer
+            # 0. check if continues bad detection or stop following
+            if not self.is_tracking and not just_started:
+                if self.good_detection_time + self.target_moving_timeout_duration < rospy.Time.now():
+                    rospy.loginfo("Tracking stopped for no good detection.")
+                    self._tts("I cannot find you anymore.", wait=True)
+                    self._tts("Recover behaviour not implemented, I will give up following now.", wait=True)
+                    break
+
+            if not self.is_navigating and not just_started:
+                self._tts("Might stopped.", wait=True)
+                if self.last_movement_time + self.target_moving_timeout_duration < rospy.Time.now():
+                    rospy.loginfo("Tracking stopped for no movement.")
+                    self._tts("Have we arrived? I will stop following.", wait=True)
+                    break
+
+            # Timeout check: no detection for 5 seconds
+            if not self.is_tracking:
+                self.is_tracking = self.begin_tracking()
+                if self.is_tracking:
+                    self._tts("I will start to follow you.", wait=True)
                 rate.sleep()
                 continue
 
             # Check navigation state - if we reached a goal, start the timer
-            nav_state = self._move_base_client.get_state()
-            if nav_state == GoalStatus.SUCCEEDED:
-                if last_goal_reached_time is None:
-                    last_goal_reached_time = rospy.Time.now()
-                    rospy.loginfo("Goal reached. Starting 10-second timeout timer.")
+            if self.is_navigating:
+                nav_state = self._move_base_client.get_state()
+                if nav_state not in [GoalStatus.PENDING, GoalStatus.ACTIVE]:
+                    self.is_navigating = False
+                    self.last_movement_time = rospy.Time.now()
+                    rospy.loginfo("Goal reached.")
 
-            # Only check timeout if we've reached a goal previously
-            if last_goal_reached_time is not None:
-                # Check if we've been at the goal for 10 seconds with no new trajectory points
-                if rospy.Time.now() - last_goal_reached_time > trajectory_timeout:
-                    # Check if we've received new poses since reaching the goal
-                    if rospy.Time.now() - last_pose_added_time > trajectory_timeout:
-                        rospy.loginfo("Robot at goal for 10 seconds with no new trajectory points. Ending tracking.")
-                        self._cancel_goal()
-                        # break
-                        if self._tts_client_available:
-                            self._tts("Have we arrived? I will stop following now.", wait=True)
-                        return result
-                    else:
-                        # New poses were added since reaching goal, reset the timer
-                        last_goal_reached_time = None
-                        rospy.loginfo("New trajectory points detected. Resetting timeout timer.")
-
-            # 2. Get newest_detection
-            detection = getattr(self, "newest_detection", None)
-            if detection is None:
-                rospy.logwarn("No detection yet")
+            # Navigate to the next target
+            if len(self.target_list) == 0:
+                rospy.logwarn("No target list available.")
                 rate.sleep()
                 continue
-
-            # 3. Create PoseStamped in "map"
-            map_pose = PoseStamped()
-            map_pose.header.frame_id = "map"
-            map_pose.header.stamp = rospy.Time.now()
-            map_pose.pose.position = detection.point
-            map_pose.pose.orientation.w = 1.0  # Identity orientation
-
-            # 4. Transform to "odom"
-            try:
-                odom_pose = self._buffer.transform(
-                    map_pose, "odom", rospy.Duration(0.5)
-                )
-            except (tf.LookupException, tf.ExtrapolationException) as e:
-                rospy.logwarn(f"TF transform failed: {e}")
-                rate.sleep()
-                continue
-
-            # 5. Check distance threshold before adding to trajectory
-            add_to_trajectory = True
-            if prev_pose is not None:
-                dist_to_prev = self._euclidian_distance(odom_pose.pose, prev_pose.pose)
-                # Only add if distance exceeds threshold
-                if dist_to_prev < self._new_goal_threshold_min:
-                    add_to_trajectory = False
-
-            if add_to_trajectory:
-                # Add position to trajectory
-                person_trajectory.poses.append(odom_pose.pose)
-                last_pose_added_time = rospy.Time.now()  # Update last pose time
-                prev_pose = odom_pose
-
-                # If we add a new pose, reset the goal reached timer
-                last_goal_reached_time = None
-
-                # Debug information
-                rospy.loginfo(f"Added new pose to trajectory, total poses: {len(person_trajectory.poses)}")
-
-            # Publish as MarkerArray
-            marker_array = MarkerArray()
-
-            for idx, pose in enumerate(person_trajectory.poses):
-                marker = Marker()
-                marker.header.frame_id = "odom"
-                marker.header.stamp = rospy.Time.now()
-                marker.ns = "person_trajectory"
-                marker.id = idx
-                marker.type = Marker.SPHERE
-                marker.action = Marker.ADD
-                marker.pose = pose
-                marker.scale.x = 0.1
-                marker.scale.y = 0.1
-                marker.scale.z = 0.1
-                marker.color.a = 1.0
-                marker.color.r = 1.0
-                marker.color.g = 0.5
-                marker.color.b = 0.0
-                marker_array.markers.append(marker)
-
-            line_marker = Marker()
-            line_marker.header.frame_id = "odom"
-            line_marker.header.stamp = rospy.Time.now()
-            line_marker.ns = "person_trajectory"
-            line_marker.id = 9999
-            line_marker.type = Marker.LINE_STRIP
-            line_marker.action = Marker.ADD
-            line_marker.scale.x = 0.05
-            line_marker.color.a = 1.0
-            line_marker.color.r = 0.0
-            line_marker.color.g = 1.0
-            line_marker.color.b = 0.0
-            line_marker.points = [pose.position for pose in person_trajectory.poses]
-            marker_array.markers.append(line_marker)
-
-            self.trajectory_marker_pub.publish(marker_array)
-
-            # 6. Estimate velocity (x, y in odom)
-            now = rospy.Time.now()
-            curr_x = odom_pose.pose.position.x
-            curr_y = odom_pose.pose.position.y
-            vel_x, vel_y = 0.0, 0.0
-
-            if self._prev_detection_pos is not None and self._prev_detection_time is not None:
-                dt = (now - self._prev_detection_time).to_sec()
-                if dt > 0:
-                    dx = curr_x - self._prev_detection_pos[0]
-                    dy = curr_y - self._prev_detection_pos[1]
-                    vel_x = dx / dt
-                    vel_y = dy / dt
-
-            self._prev_detection_pos = (curr_x, curr_y)
-            self._prev_detection_time = now
-
-            # 7. Velocity tracking buffer
-            track_vels.append((vel_x, vel_y))
-            if len(track_vels) > 10:
-                track_vels.pop(0)
-
-            # --- Head motion control based on velocity ---
-            now_time = rospy.Time.now()
-
-            try:
-                self._look_at_point(self.newest_detection.point, target_frame="map")
-            except Exception as e:
-                rospy.logwarn(f"Look‑at‑target failed: {e}")
-
-            if now_time - self._last_scan_time >= self._scan_interval:
-                self._look_down_centre_point()
-                rospy.sleep(0.75)
-                for _ in range(5):
-                    try:
-                        self._look_at_point(self.newest_detection.point, target_frame="map")
-                        rospy.sleep(0.2)
-                    except Exception as e:
-                        rospy.logwarn(f"Return‑look failed: {e}")
-                self._last_scan_time = now_time
-
-            # 8. Goal logic - only start navigation when we have at least 2 poses
-            if len(person_trajectory.poses) < 2:
-                rospy.loginfo("Waiting for more trajectory points before starting navigation")
-                rate.sleep()
-                continue
-
-            robot_pose = self._robot_pose_in_odom()
-            if robot_pose is None:
-                rospy.logwarn("Cannot get robot pose")
-                rate.sleep()
-                continue
-
-            # Get the final pose (latest detection position)
-            final_pose = person_trajectory.poses[-1]
-
-            # Find a suitable goal pose that is at least _stopping_distance away from the final pose
+            last_pose_in_list = self.target_list[-1]
             target_pose = None
-            for i in range(len(person_trajectory.poses) - 2, -1, -1):  # Iterate backwards, excluding the last pose
-                candidate_pose = person_trajectory.poses[i]
-                dist_to_final = self._euclidian_distance(candidate_pose, final_pose)
-                if dist_to_final >= self._stopping_distance:
-                    target_pose = candidate_pose
-                    rospy.logdebug(f"Selected pose {i} at distance {dist_to_final:.2f}m from final pose")
+            for i in reversed(range(len(self.target_list))):
+                if self._target_boundary <= self._euclidian_distance(self.target_list[i], last_pose_in_list):
+                    target_pose = self.target_list[i]
                     break
-
-            # If no suitable pose found (all are too close), use the earliest pose
-            if target_pose is None and len(person_trajectory.poses) > 1:
-                target_pose = person_trajectory.poses[0]
-                rospy.loginfo("All poses are within stopping distance, using earliest pose")
-            elif target_pose is None:
-                # Fallback to the only pose we have
-                target_pose = final_pose
-                rospy.loginfo("Only one pose available, using it despite distance constraint")
-
-            # If no current goal or previous goal was completed/aborted
-            if (nav_state not in [GoalStatus.PENDING, GoalStatus.ACTIVE] and
-                    last_goal_reached_time is None):
-                # Set orientation to face the final pose, not the target pose
-                goal_orientation = self._compute_face_quat(target_pose, final_pose)
+            if target_pose is None:
+                rospy.logwarn("No target pose available.")
+                rate.sleep()
+                continue
+            if previous_target and self._euclidian_distance(target_pose, previous_target) < self._new_goal_threshold_min:
+                rospy.logwarn("Target pose is the same as previous target pose.")
+                rate.sleep()
+                continue
+            # Set orientation to face the final pose, not the target pose
+            if not self.is_navigating:
+                goal_orientation = self._compute_face_quat(target_pose, last_pose_in_list)
                 pose_with_orientation = Pose(
                     position=target_pose.position,
                     orientation=goal_orientation,
                 )
-                goal_pose = self._tf_pose(
-                    PoseStamped(pose=pose_with_orientation, header=odom_pose.header),
-                    "map",
-                )
+
+                pose_stamped = PoseStamped()
+                pose_stamped.header.frame_id = "odom"
+                pose_stamped.header.stamp = rospy.Time.now()
+                pose_stamped.pose = pose_with_orientation
+
+                goal_pose = self._tf_pose(pose_stamped, "map")
                 rospy.loginfo(f"Setting navigation goal to intermediate point, facing final point")
                 self._move_base(goal_pose)
-                prev_goal = goal_pose
+                self.is_navigating = True  # This might still be wrong.
+                just_started = False
 
             rate.sleep()
-
         return result
 
 

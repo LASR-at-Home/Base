@@ -277,7 +277,6 @@ class PersonFollower:
         current_pose_stamped = PoseStamped(
             pose=current_pose.pose.pose, header=current_pose.header
         )
-
         return self._tf_pose(current_pose_stamped, "odom")
 
     def begin_tracking(self) -> bool:
