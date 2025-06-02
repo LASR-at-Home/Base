@@ -144,7 +144,7 @@ class PersonFollower:
 
         # Initialise timers
         self.good_detection_timeout_duration = rospy.Duration(5.0)
-        self.target_moving_timeout_duration = rospy.Duration(5.0)
+        self.target_moving_timeout_duration = rospy.Duration(10.0)
         self.last_movement_time = rospy.Time.now()
         self.good_detection_time = rospy.Time.now()
         self.added_new_target_time = rospy.Time.now()
@@ -237,7 +237,8 @@ class PersonFollower:
 
     def _look_at_point(self, target_point: Point, target_frame: str = "map"):
         goal = PointHeadGoal()
-        goal.target.header.stamp = rospy.Time.now()
+        # Use timestamp from TF for better synchronization
+        goal.target.header.stamp = rospy.Time(0)  # Use latest transform available
         goal.target.header.frame_id = target_frame
         goal.target.point = target_point
 
@@ -259,53 +260,53 @@ class PersonFollower:
         point = Point(x=3.0, y=0.0, z=0.5)
         self._look_at_point(point, target_frame="base_link")
 
-    # def _look_down_point(self, target_point: Point = None, target_frame: str = "map"):
-    #     """
-    #     Look down towards the target direction or center if no target provided.
-    #
-    #     Args:
-    #         target_point: Target point to look towards (optional)
-    #         target_frame: Frame of the target point
-    #     """
-    #     if target_point is not None:
-    #         # Transform target point to base_link frame to get direction
-    #         try:
-    #             target_pose = PoseStamped()
-    #             target_pose.header.frame_id = target_frame
-    #             target_pose.header.stamp = rospy.Time.now()
-    #             target_pose.pose.position = target_point
-    #             target_pose.pose.orientation.w = 1.0
-    #
-    #             # Transform to base_link frame
-    #             target_in_base = self._tf_pose(target_pose, "base_link")
-    #
-    #             # Calculate direction towards target but look down
-    #             x_dir = target_in_base.pose.position.x
-    #             y_dir = target_in_base.pose.position.y
-    #
-    #             # Normalize the direction and set distance
-    #             distance = 3.0
-    #             if x_dir != 0 or y_dir != 0:
-    #                 norm = math.sqrt(x_dir ** 2 + y_dir ** 2)
-    #                 x_dir = (x_dir / norm) * distance
-    #                 y_dir = (y_dir / norm) * distance
-    #             else:
-    #                 # Default to forward if target is directly above/below
-    #                 x_dir = distance
-    #                 y_dir = 0.0
-    #
-    #             # Look down towards the target direction
-    #             point = Point(x=x_dir, y=y_dir, z=0.5)
-    #
-    #         except Exception as e:
-    #             rospy.logwarn(f"Failed to transform target point: {e}")
-    #             # Fall back to center point
-    #             point = Point(x=3.0, y=0.0, z=0.5)
-    #     else:
-    #         # Default center point when no target provided
-    #         point = Point(x=3.0, y=0.0, z=0.5)
-    #
-    #     self._look_at_point(point, target_frame="base_link")
+    def _look_down_point(self, target_point: Point = None, target_frame: str = "map"):
+        """
+        Look down towards the target direction or center if no target provided.
+
+        Args:
+            target_point: Target point to look towards (optional)
+            target_frame: Frame of the target point
+        """
+        if target_point is not None:
+            # Transform target point to base_link frame to get direction
+            try:
+                target_pose = PoseStamped()
+                target_pose.header.frame_id = target_frame
+                target_pose.header.stamp = rospy.Time.now()
+                target_pose.pose.position = target_point
+                target_pose.pose.orientation.w = 1.0
+
+                # Transform to base_link frame
+                target_in_base = self._tf_pose(target_pose, "base_link")
+
+                # Calculate direction towards target but look down
+                x_dir = target_in_base.pose.position.x
+                y_dir = target_in_base.pose.position.y
+
+                # Normalize the direction and set distance
+                distance = 3.0
+                if x_dir != 0 or y_dir != 0:
+                    norm = math.sqrt(x_dir ** 2 + y_dir ** 2)
+                    x_dir = (x_dir / norm) * distance
+                    y_dir = (y_dir / norm) * distance
+                else:
+                    # Default to forward if target is directly above/below
+                    x_dir = distance
+                    y_dir = 0.0
+
+                # Look down towards the target direction
+                point = Point(x=x_dir, y=y_dir, z=0.5)
+
+            except Exception as e:
+                rospy.logwarn(f"Failed to transform target point: {e}")
+                # Fall back to center point
+                point = Point(x=3.0, y=0.0, z=0.5)
+        else:
+            # Default center point when no target provided
+            point = Point(x=3.0, y=0.0, z=0.5)
+
+        self._look_at_point(point, target_frame="base_link")
 
     def _move_head(self, target_point: Point, target_frame: str = "map"):
         current_time = rospy.Time.now()
@@ -457,7 +458,7 @@ class PersonFollower:
 
                     # Define thresholds for quality check
                     # Too far from center or too small detection is considered poor quality
-                    max_distance_threshold = 0.65  # Maximum allowed normalized distance from center (reduced from 1.0)
+                    max_distance_threshold = 0.9  # Maximum allowed normalized distance from center (reduced from 1.0)
                     min_area_threshold = 0.01  # Minimum normalized area required
 
                     # Calculate additional quality metrics (optional)
@@ -468,6 +469,12 @@ class PersonFollower:
                     is_good_quality = (normalized_distance < max_distance_threshold and
                                        normalized_area > min_area_threshold and
                                        is_reasonable_aspect and detection.confidence > 0.5)
+
+                    if detection is not None and is_reasonable_aspect and detection.confidence > 0.5:
+                        self.newest_detection = detection
+
+                    if self.newest_detection is not None:
+                        self._move_head(self.newest_detection.point, target_frame="map")
 
                     # Set conditional frame flag based on quality
                     if is_good_quality:
@@ -486,12 +493,6 @@ class PersonFollower:
                         map_pose.header.stamp = rospy.Time.now()
                         map_pose.pose.position = detection.point
                         map_pose.pose.orientation.w = 1.0  # Identity orientation
-
-                        if detection is not None:
-                            self.newest_detection = detection
-
-                        if self.newest_detection is not None:
-                            self._move_head(self.newest_detection.point, target_frame="map")
 
                         try:
                             odom_pose = self._buffer.transform(
@@ -650,16 +651,15 @@ class PersonFollower:
         just_started = True
 
         while not rospy.is_shutdown():
-            # 0. check if continues bad detection or stop following
-            if not self.is_tracking and not just_started:
-                if self.good_detection_time + self.target_moving_timeout_duration < rospy.Time.now():
-                    rospy.loginfo("Tracking stopped for no good detection.")
-                    self._tts("I cannot find you anymore.", wait=True)
-                    self._tts("Recover behaviour not implemented, I will give up following now.", wait=True)
-                    break
+            # Check if continues bad detection or stop following
+            if self.good_detection_time + self.target_moving_timeout_duration < rospy.Time.now():
+                rospy.loginfo("Tracking stopped for no good detection.")
+                self._tts("I cannot find you anymore.", wait=True)
+                # self._tts("Recover behaviour not implemented, I will give up following now.", wait=True)
+                # break
 
             if not self.is_navigating and not just_started:
-                self._tts("Might stopped.", wait=True)
+                # self._tts("Might stopped.", wait=True)
                 if self.last_movement_time + self.target_moving_timeout_duration < rospy.Time.now():
                     rospy.loginfo("Tracking stopped for no movement.")
                     self._tts("Have we arrived? I will stop following.", wait=True)
@@ -696,12 +696,30 @@ class PersonFollower:
                 rospy.logwarn("No target pose available.")
                 rate.sleep()
                 continue
-            if previous_target and self._euclidian_distance(target_pose, previous_target) < self._new_goal_threshold_min:
+            if previous_target and self._euclidian_distance(target_pose,
+                                                            previous_target) < self._new_goal_threshold_min:
                 rospy.logwarn("Target pose is the same as previous target pose.")
                 rate.sleep()
                 continue
-            # Set orientation to face the final pose, not the target pose
+
+            # Check if robot is already close enough to the target to avoid repeated navigation
             if not self.is_navigating:
+                try:
+                    robot_pose = self._robot_pose_in_odom()
+                    distance_to_target = self._euclidian_distance(robot_pose.pose, target_pose)
+
+                    # If robot is already close enough to target, don't navigate
+                    if distance_to_target < self._stopping_distance:
+                        rospy.logdebug(
+                            f"Robot already close to target ({distance_to_target:.2f}m < {self._stopping_distance}m), skipping navigation")
+                        rate.sleep()
+                        continue
+
+                except Exception as e:
+                    rospy.logwarn(f"Failed to get robot pose: {e}")
+                    # Continue with navigation if we can't get robot pose
+
+                # Set orientation to face the final pose, not the target pose
                 goal_orientation = self._compute_face_quat(target_pose, last_pose_in_list)
                 pose_with_orientation = Pose(
                     position=target_pose.position,
@@ -716,8 +734,9 @@ class PersonFollower:
                 goal_pose = self._tf_pose(pose_stamped, "map")
                 rospy.loginfo(f"Setting navigation goal to intermediate point, facing final point")
                 self._move_base(goal_pose)
-                self.is_navigating = True  # This might still be wrong.
+                self.is_navigating = True
                 just_started = False
+                previous_target = target_pose  # Update previous target after setting new goal
 
             rate.sleep()
         return result
