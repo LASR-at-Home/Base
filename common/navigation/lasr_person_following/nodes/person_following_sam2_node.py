@@ -63,11 +63,12 @@ class PersonFollower:
             start_following_radius: float = 2.0,  # Distance threshold to start following (meters)
             start_following_angle: float = 45.0,  # Angle threshold to start following (degrees)
             target_boundary: float = 1.0,
-            new_goal_threshold_min: float = 0.45,  # Minimum distance to trigger new navigation goal (meters)
+            new_goal_threshold_min: float = 0.25,  # Minimum distance to trigger new navigation goal (meters)
             new_goal_threshold_max: float = 2.5,  # Max distance to trigger new navigation goal (meters)
             stopping_distance: float = 0.75,  # Distance to maintain from person (meters)
             static_speed: float = 0.0015,  # Speed when person is stationary (m/s)
             max_speed: float = 0.55,  # Maximum robot velocity (m/s)
+            max_following_distance: float = 2.5,  # Maximum distance to follow before asking person to wait (meters)
     ):
         # Store configuration parameters
         self._start_following_radius = start_following_radius
@@ -78,6 +79,7 @@ class PersonFollower:
         self._stopping_distance = stopping_distance
         self._static_speed = static_speed
         self._max_speed = max_speed
+        self._max_following_distance = max_following_distance
 
         # Initialize tracking state
         self._track_bbox = None
@@ -194,9 +196,9 @@ class PersonFollower:
         config.ints.append(IntParameter(name="height", value=4))
         self._dynamic_costmap(config)
 
-        # Set maximum velocity to 0.3 m/s
+        # Set maximum velocity
         config = Config()
-        config.doubles.append(DoubleParameter(name="max_vel_x", value=0.3))
+        config.doubles.append(DoubleParameter(name="max_vel_x", value=self._max_speed))
         self._dynamic_velocity(config)
 
         # Disable recovery behaviors and rotation clearing
@@ -224,6 +226,10 @@ class PersonFollower:
         )
         if not self._tts_client_available:
             rospy.logwarn("TTS client not available")
+
+        # Add timer for distance warning
+        self.last_distance_warning_time = rospy.Time.now()
+        self.distance_warning_interval = rospy.Duration(5.0)  # Warn every 5 seconds if still too far
 
     def _tts(self, text: str, wait: bool) -> None:
         if self._tts_client_available:
@@ -320,7 +326,7 @@ class PersonFollower:
         # if current_time - self.look_down_time < look_down_protection_time:
         #     return
 
-        if current_time - self.look_at_point_time >= rospy.Duration(0.55):
+        if current_time - self.look_at_point_time >= rospy.Duration(0.35):
             self._look_at_point(target_point, target_frame=target_frame)
             self.look_at_point_time = current_time
 
@@ -707,6 +713,20 @@ class PersonFollower:
                 try:
                     robot_pose = self._robot_pose_in_odom()
                     distance_to_target = self._euclidian_distance(robot_pose.pose, target_pose)
+
+                    # Check if target is too far away - ask person to wait
+                    current_time = rospy.Time.now()
+                    if distance_to_target > self._max_following_distance:
+                        # Only send warning if enough time has passed since last warning
+                        if current_time - self.last_distance_warning_time > self.distance_warning_interval:
+                            rospy.loginfo(
+                                f"Target too far ({distance_to_target:.2f}m > {self._max_following_distance}m) - asking person to wait")
+                            self._tts("Please wait for me. You are too far away.", wait=False)
+                            self.last_distance_warning_time = current_time
+
+                        # Skip navigation if target is too far
+                        # rate.sleep()
+                        # continue
 
                     # If robot is already close enough to target, don't navigate
                     if distance_to_target < self._stopping_distance:
