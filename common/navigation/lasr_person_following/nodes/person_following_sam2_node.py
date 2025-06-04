@@ -67,7 +67,7 @@ class PersonFollower:
             new_goal_threshold_max: float = 2.5,  # Max distance to trigger new navigation goal (meters)
             stopping_distance: float = 0.75,  # Distance to maintain from person (meters)
             static_speed: float = 0.0015,  # Speed when person is stationary (m/s)
-            max_speed: float = 0.55,  # Maximum robot velocity (m/s)
+            max_speed: float = 0.4,  # Maximum robot velocity (m/s)
             max_following_distance: float = 2.5,  # Maximum distance to follow before asking person to wait (meters)
     ):
         # Store configuration parameters
@@ -227,9 +227,33 @@ class PersonFollower:
         if not self._tts_client_available:
             rospy.logwarn("TTS client not available")
 
-        # Add timer for distance warning
-        self.last_distance_warning_time = rospy.Time.now()
-        self.distance_warning_interval = rospy.Duration(5.0)  # Warn every 5 seconds if still too far
+        # Add recovery behavior variables
+        self.is_in_recovery_mode = False
+        self.recovery_scan_positions = []  # List of head positions for scanning
+        self.current_scan_index = 0
+        self.recovery_start_time = None
+        self.scan_position_duration = rospy.Duration(1.5)  # Time to hold each scan position
+        self.last_scan_position_time = rospy.Time.now()
+        self.recovery_timeout = rospy.Duration(30.0)  # Maximum time to spend in recovery mode
+
+        # Initialize recovery scan positions (60 degrees left to 60 degrees right)
+        self._initialize_recovery_positions()
+
+    def _initialize_recovery_positions(self):
+        """Initialize the head scan positions for recovery behavior"""
+        # Create scan positions from -60 to +60 degrees (left to right)
+        scan_angles = [-60, -30, 0, 30, 60, 30, 0, -30]  # Sweep pattern
+
+        self.recovery_scan_positions = []
+        for angle in scan_angles:
+            # Convert angle to point in base_link frame
+            angle_rad = math.radians(angle)
+            x = 3.0 * math.cos(angle_rad)  # 3 meters forward distance
+            y = 3.0 * math.sin(angle_rad)  # Left/right based on angle
+            z = 1.3  # Eye level height
+
+            point = Point(x=x, y=y, z=z)
+            self.recovery_scan_positions.append(point)
 
     def _tts(self, text: str, wait: bool) -> None:
         if self._tts_client_available:
@@ -502,7 +526,7 @@ class PersonFollower:
 
                         try:
                             odom_pose = self._buffer.transform(
-                                map_pose, "odom", rospy.Duration(0.25)
+                                map_pose, "odom", rospy.Duration(0.50)
                             )
                         except (tf.LookupException, tf.ExtrapolationException) as e:
                             rospy.logwarn(f"TF transform failed: {e}")
@@ -648,6 +672,78 @@ class PersonFollower:
         self.condition_frame_flag_pub.publish(Bool(data=True))
         return True
 
+    def _start_recovery_behavior(self):
+        """Start the recovery scanning behavior when target is lost"""
+        if not self.is_in_recovery_mode:
+            rospy.loginfo("Starting recovery behavior - scanning for lost target")
+            self._tts("Let me look for you.", wait=False)
+
+            self.is_in_recovery_mode = True
+            self.current_scan_index = 0
+            self.recovery_start_time = rospy.Time.now()
+            self.last_scan_position_time = rospy.Time.now()
+
+            # Start with first scan position
+            if self.recovery_scan_positions:
+                self._look_at_point(self.recovery_scan_positions[0], target_frame="base_link")
+
+    def _update_recovery_behavior(self):
+        """Update the recovery scanning behavior"""
+        if not self.is_in_recovery_mode:
+            return False
+
+        current_time = rospy.Time.now()
+
+        # Check if recovery has timed out
+        if current_time - self.recovery_start_time > self.recovery_timeout:
+            rospy.logwarn("Recovery behavior timed out")
+            self._stop_recovery_behavior()
+            return False
+
+        # Check if it's time to move to next scan position
+        if current_time - self.last_scan_position_time > self.scan_position_duration:
+            self.current_scan_index += 1
+
+            # If we've completed all scan positions, start over
+            if self.current_scan_index >= len(self.recovery_scan_positions):
+                self.current_scan_index = 0
+                rospy.loginfo("Completed one full scan cycle, starting over")
+
+            # Move to next scan position
+            scan_point = self.recovery_scan_positions[self.current_scan_index]
+            self._look_at_point(scan_point, target_frame="base_link")
+            self.last_scan_position_time = current_time
+
+            rospy.logdebug(
+                f"Scanning position {self.current_scan_index}: looking at angle {self.current_scan_index * 30 - 60} degrees")
+
+        return True
+
+    def _stop_recovery_behavior(self):
+        """Stop the recovery behavior and return to normal tracking"""
+        if self.is_in_recovery_mode:
+            rospy.loginfo("Stopping recovery behavior - target found or giving up")
+            self.is_in_recovery_mode = False
+            self.current_scan_index = 0
+            self.recovery_start_time = None
+
+            # Return head to center position
+            self._look_centre_point()
+
+    def _check_target_recovery(self):
+        """Check if target has been recovered during scanning"""
+        current_time = rospy.Time.now()
+
+        # If we have a recent good detection, target is recovered
+        if current_time - self.good_detection_time < rospy.Duration(2.0):
+            if self.is_in_recovery_mode:
+                rospy.loginfo("Target recovered during scanning!")
+                self._tts("Found you! Continuing to follow.", wait=False)
+                self._stop_recovery_behavior()
+                return True
+
+        return False
+
     def follow(self) -> FollowResult:
         result = FollowResult()
         rate = rospy.Rate(10)
@@ -657,14 +753,35 @@ class PersonFollower:
         just_started = True
 
         while not rospy.is_shutdown():
-            # Check if continues bad detection or stop following
+            # Check if target has been recovered during scanning
+            if self._check_target_recovery():
+                # Target was recovered, continue normal operation
+                pass
+
+            # Check if continues bad detection or start recovery behavior
             if self.good_detection_time + self.target_moving_timeout_duration < rospy.Time.now():
-                rospy.loginfo("Tracking stopped for no good detection.")
-                self._tts("I cannot find you anymore.", wait=True)
-                # self._tts("Recover behaviour not implemented, I will give up following now.", wait=True)
-                # break
+                if not self.is_in_recovery_mode:
+                    rospy.loginfo("Tracking stopped for no good detection.")
+                    self._tts("I cannot find you anymore.", wait=True)
+                    self._start_recovery_behavior()
+                else:
+                    # Continue recovery behavior
+                    if not self._update_recovery_behavior():
+                        # Recovery timed out or failed
+                        self._tts("I give up looking for you. Please come back.", wait=True)
+                        break
+            else:
+                # Good detection - stop recovery if active
+                if self.is_in_recovery_mode:
+                    self._stop_recovery_behavior()
+
+            # Skip normal navigation logic if in recovery mode
+            if self.is_in_recovery_mode:
+                rate.sleep()
+                continue
 
             if not self.is_navigating and not just_started:
+                # todo: need to consider recovery behavior
                 # self._tts("Might stopped.", wait=True)
                 if self.last_movement_time + self.target_moving_timeout_duration < rospy.Time.now():
                     rospy.loginfo("Tracking stopped for no movement.")
