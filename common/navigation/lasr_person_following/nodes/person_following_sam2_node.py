@@ -496,7 +496,7 @@ class PersonFollower:
 
                         try:
                             odom_pose = self._buffer.transform(
-                                map_pose, "odom", rospy.Duration(0.1)
+                                map_pose, "odom", rospy.Duration(0.25)
                             )
                         except (tf.LookupException, tf.ExtrapolationException) as e:
                             rospy.logwarn(f"TF transform failed: {e}")
