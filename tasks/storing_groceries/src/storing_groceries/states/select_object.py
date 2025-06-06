@@ -6,7 +6,7 @@ class SelectObject(smach.StateMachine):
     def __init__(self):
         super().__init__(
             outcomes=["succeeded", "failed"],
-            input_keys=["table objects"],
+            input_keys=[],
         )
 
         with self:
@@ -20,15 +20,15 @@ class SelectObject(smach.StateMachine):
                 },
             )
 
-            # smach.StateMachine.add(
-            #     "MEASURE_OBJECT",
-            #     Say(text="Measure object is ongoing"),
-            #     transitions={
-            #         "succeeded": "GRAB_OBJECT",
-            #         "aborted": "GRAB_OBJECT",
-            #         "preempted": "GRAB_OBJECT",
-            #     },
-            # )
+            smach.StateMachine.add(
+                "MEASURE_OBJECT",
+                Say(text="Measure object is ongoing"),
+                transitions={
+                    "succeeded": "GRAB_OBJECT",
+                    "aborted": "GRAB_OBJECT",
+                    "preempted": "GRAB_OBJECT",
+                },
+            )
 
             # smach.StateMachine.add(
             #     "SAY_MEASURE_OBJECT",
@@ -40,5 +40,4 @@ class SelectObject(smach.StateMachine):
             #     },
             # )
 
-            self.go_to_cabinet(self)
-        
+    

@@ -2,9 +2,7 @@ import smach
 
 from lasr_skills import Say, AdjustCamera, GoToLocation
 from storing_groceries.states import (
-    GetNameAndInterest,
-    ReceptionistLearnFaces,
-    GetGuestAttributes,
+    SelectObject
 )
 
 class ObjectSortingLoop(smach.StateMachine):
@@ -18,7 +16,7 @@ class ObjectSortingLoop(smach.StateMachine):
             self.go_to_table(self)
 
             smach.StateMachine.add(
-                "DETECT_TABLE", #Update userdata.objects
+                "DETECT_TABLE",
                 Say(text="Detect table is on going"),
                 transitions={
                     "succeeded": "SELECT_OBJECT",
@@ -29,7 +27,7 @@ class ObjectSortingLoop(smach.StateMachine):
 
             smach.StateMachine.add(
                 "SELECT_OBJECT",
-                Say(text="Select object is on going"),
+                SelectObject(),
                 transitions={
                     "succeeded": "CLASSIFY_CATEGORY_OBJECT",
                     "aborted": "CLASSIFY_CATEGORY_OBJECT",

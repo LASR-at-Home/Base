@@ -8,7 +8,7 @@ from lasr_skills import (
     Say,
 )
 from lasr_vision_msgs.srv import Recognise
-from storing_groceries.states import WaitDoorOpen
+from storing_groceries.states import WaitDoorOpen, ObjectSortingLoop
 from shapely.geometry import Polygon
 from std_msgs.msg import Empty, Header
 
@@ -34,11 +34,10 @@ class StoringGroceries(smach.StateMachine):
         self.table_area = table_area
         self.cabinet_pose = cabinet_pose
         self.cabinet_area = cabinet_area
-        self.shelf_point = shelf_point #is it given?
+        self.shelf_point = shelf_point
         self.shelf_area = shelf_area
 
         with self:
-            self.userdata.confidence = 0 #modify needed
             self.userdata.dataset = "storing_groceries"
             self.userdata.shelf_position = PointStamped()
             self.userdata.object_position = PointStamped()
@@ -65,7 +64,7 @@ class StoringGroceries(smach.StateMachine):
 
             smach.StateMachine.add(
                 "SAY_START",
-                Say(text="Start task storing groceries."),
+                Say(text="Ready to start"),
                 transitions={
                     "succeeded": "WAIT_DOOR_OPEN",
                     "failed":"GO_TO_WAIT_LOCATION",
@@ -92,7 +91,7 @@ class StoringGroceries(smach.StateMachine):
 
             smach.StateMachine.add(
                 "OBJECT_SORTING_LOOP",
-                Say(text="object sorting loop is ongoing"),
+                ObjectSortingLoop(),
                 transitions={
                     "succeeded": "POUR_CEREAL",
                     "aborted": "POUR_CEREAL",

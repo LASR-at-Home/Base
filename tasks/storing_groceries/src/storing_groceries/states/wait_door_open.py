@@ -3,12 +3,12 @@ import smach
 from lasr_skills import Say, CheckDoorStatus
 from storing_groceries.states import *
 
-# TODO: Add recovery states
+# TODO: Add recovery states and prevent infinit loop
 
 class WaitDoorOpen(smach.StateMachine):
     def __init__(self):
         super().__init__(
-            outcomes=["succeeded","failed",],
+            outcomes=["succeeded","aborted","preempted"],
             input_keys=[],
         )
 
@@ -31,7 +31,7 @@ class WaitDoorOpen(smach.StateMachine):
 
             smach.StateMachine.add(
                 "DOOR_OPEN",
-                Say(text="Door is open"),
+                Say(text="Door is open, Starting storing groceries"),
                 transitions={
                     "succeeded": "succeeded",
                     "aborted": "aborted",
