@@ -1,7 +1,9 @@
 import smach
 
-from lasr_skills import Say
+from lasr_skills import Say, CheckDoorStatus
 from storing_groceries.states import *
+
+# TODO: Add recovery states
 
 class WaitDoorOpen(smach.StateMachine):
     def __init__(self):
@@ -14,13 +16,17 @@ class WaitDoorOpen(smach.StateMachine):
             self.go_to_table(self)
 
             smach.StateMachine.add(
-                "DETECT_DOOR",
-                Say(text="Detect door is on going"),
+                "CHECK_DOOR_STATUS",
+                CheckDoorStatus(
+                    expected_closed_depth=1.2,  # adjust for cabinet (~0.5) or room door (~1.2)
+                    change_thresh=0.4,
+                    open_thresh=0.6
+                ),
                 transitions={
-                    "succeeded": "DOOR_OPEN",
-                    "aborted": "DOOR_OPEN",
-                    "preempted": "DOOR_OPEN",
-                },
+                    "open": "DOOR_OPEN",
+                    "closed": "CHECK_DOOR_STATUS",
+                    "error": "CHECK_DOOR_STATUS",
+                }
             )
 
             smach.StateMachine.add(
@@ -32,3 +38,4 @@ class WaitDoorOpen(smach.StateMachine):
                     "preempted": "preempted",
                 },            
             )
+

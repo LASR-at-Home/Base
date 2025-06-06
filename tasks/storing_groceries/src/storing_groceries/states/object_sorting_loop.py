@@ -11,14 +11,14 @@ class ObjectSortingLoop(smach.StateMachine):
     def __init__(self):
         super().__init__(
             outcomes=["succeeded","failed",],
-            input_keys=[],
+            input_keys=["table_pose", "cabinet_pose"],
         )
 
         with self:
             self.go_to_table(self)
 
             smach.StateMachine.add(
-                "DETECT_TABLE",
+                "DETECT_TABLE", #Update userdata.objects
                 Say(text="Detect table is on going"),
                 transitions={
                     "succeeded": "SELECT_OBJECT",
@@ -29,7 +29,7 @@ class ObjectSortingLoop(smach.StateMachine):
 
             smach.StateMachine.add(
                 "SELECT_OBJECT",
-                Say(text="Detect table is on going"),
+                Say(text="Select object is on going"),
                 transitions={
                     "succeeded": "CLASSIFY_CATEGORY_OBJECT",
                     "aborted": "CLASSIFY_CATEGORY_OBJECT",
@@ -39,7 +39,7 @@ class ObjectSortingLoop(smach.StateMachine):
 
             smach.StateMachine.add(
                 "CLASSIFY_CATEGORY_OBJECT",
-                Say(text="Detect table is on going"),
+                Say(text="CLASSIFY CATEGORY OBJECT table is on going"),
                 transitions={
                     "succeeded": "GRAB_OBJECT",
                     "aborted": "GRAB_OBJECT",
@@ -49,7 +49,7 @@ class ObjectSortingLoop(smach.StateMachine):
 
             smach.StateMachine.add(
                 "GRAB_OBJECT",
-                Say(text="Detect table is on going"),
+                Say(text="GRAB_OBJECT is on going"),
                 transitions={
                     "succeeded": "GO_TO_CABINET",
                     "aborted": "GO_TO_CABINET",
@@ -61,7 +61,7 @@ class ObjectSortingLoop(smach.StateMachine):
 
             smach.StateMachine.add(
                 "DETECT_CABINET",
-                Say(text="Detect table is on going"),
+                Say(text="DETECT_CABINET table is on going"),
                 transitions={
                     "succeeded": "CLASSIFY_CATEGORY_CABINET",
                     "aborted": "CLASSIFY_CATEGORY_CABINET",
@@ -71,7 +71,7 @@ class ObjectSortingLoop(smach.StateMachine):
 
             smach.StateMachine.add(
                 "CLASSIFY_CATEGORY_CABINET",
-                Say(text="Detect table is on going"),
+                Say(text="CLASSIFY_CATEGORY_CABINET is on going"),
                 transitions={
                     "succeeded": "PUT_OBJECT",
                     "aborted": "PUT_OBJECT",
@@ -81,7 +81,7 @@ class ObjectSortingLoop(smach.StateMachine):
 
             smach.StateMachine.add(
                 "PUT_OBJECT",
-                Say(text="Detect table is on going"),
+                Say(text="PUT_OBJECT is on going"),
                 transitions={
                     "succeeded": "GO_TO_TABLE",
                     "aborted": "GO_TO_TABLE",
@@ -89,9 +89,8 @@ class ObjectSortingLoop(smach.StateMachine):
                 },
             )
 
-
     
-    def go_to_table(self, userdata, cereal=False) -> None:
+    def go_to_table(self, userdata) -> None:
         """Adds the states to go to table area.
         """
         
@@ -103,27 +102,16 @@ class ObjectSortingLoop(smach.StateMachine):
                 "failed": f"SAY_ARRIVE_TABLE",
             },
         )
-        
-        if(cereal):
-            smach.StateMachine.add(
-                f"SAY_ARRIVE_CEREAL",
-                Say(text="Arrive table"),
-                transitions={
-                    "succeeded": f"DETECT_CEREAL",
-                    "aborted": f"DETECT_CEREAL",
-                    "preempted": f"DETECT_CEREAL",
-                },
-            )    
-        else:   
-            smach.StateMachine.add(
-                f"SAY_ARRIVE_TABLE",
-                Say(text="Arrive table"),
-                transitions={
-                    "succeeded": f"DETECT_TABLE",
-                    "aborted": f"DETECT_TABLE",
-                    "preempted": f"DETECT_TABLE",
-                },
-            )
+    
+        smach.StateMachine.add(
+            f"SAY_ARRIVE_TABLE",
+            Say(text="Arrive table"),
+            transitions={
+                "succeeded": f"DETECT_TABLE",
+                "aborted": f"DETECT_TABLE",
+                "preempted": f"DETECT_TABLE",
+            },
+        )
 
     def go_to_cabinet(self, userdata) -> None:
         """Adds the states to go to cabinet area.

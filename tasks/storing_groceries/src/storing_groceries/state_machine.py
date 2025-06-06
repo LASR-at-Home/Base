@@ -8,7 +8,7 @@ from lasr_skills import (
     Say,
 )
 from lasr_vision_msgs.srv import Recognise
-from storing_groceries.states import *
+from storing_groceries.states import WaitDoorOpen
 from shapely.geometry import Polygon
 from std_msgs.msg import Empty, Header
 
@@ -65,11 +65,10 @@ class StoringGroceries(smach.StateMachine):
 
             smach.StateMachine.add(
                 "SAY_START",
-                Say(text="Start of storing_groceries task."),
+                Say(text="Start task storing groceries."),
                 transitions={
                     "succeeded": "WAIT_DOOR_OPEN",
-                    "aborted": "GO_TO_WAIT_LOCATION",
-                    "preempted": "GO_TO_WAIT_LOCATION",
+                    "failed":"GO_TO_WAIT_LOCATION",
                 },
             )
 
@@ -79,7 +78,7 @@ class StoringGroceries(smach.StateMachine):
 
             smach.StateMachine.add(
                 "WAIT_DOOR_OPEN",
-                Say(text="wait door open is ongoing"),
+                WaitDoorOpen(),
                 transitions={
                     "succeeded": "OBJECT_SORTING_LOOP",
                     "aborted": "OBJECT_SORTING_LOOP",
