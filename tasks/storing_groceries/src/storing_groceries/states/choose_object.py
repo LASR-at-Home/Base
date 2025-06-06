@@ -9,7 +9,7 @@ class ChooseObject(smach.State):
         """
         super().__init__(
             outcomes=["succeeded", "failed", "empty"],
-            input_keys=["table_objects"],
+            input_keys=["table_objects", "not_graspable"],
             output_keys=["table_object"],
         )
         self.category_filter = category_filter
@@ -31,10 +31,20 @@ class ChooseObject(smach.State):
         best_conf = -1.0
 
         for obj in userdata.table_objects:
-            name = obj.get("name", "").strip()
-            conf = obj.get("confidence", 1.0)
+            name = obj.get("name", "")
+            conf = obj.get("confidence")
+            bbox = obj.get("bbox")
 
-            if name == "":
+            if name == "" or conf is None or bbox is None:
+                continue
+
+            skip = False
+
+            for ng in userdata.not_graspable:
+                if obj == ng:
+                    skip = True
+                    break
+            if skip:
                 continue
 
             # Category filtering logic
