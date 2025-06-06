@@ -1,0 +1,10 @@
+<launch>
+  <!-- Segment the object -->
+  <node pkg="lasr_grasping" type="segmentation_node.py" name="segmentation_node" output="screen" />
+
+  <!-- Shape completion service -->
+  <node pkg="lasr_manipulation_3d_completion" type="pointcloud_completion_service.py" name="completion_service" output="screen" />
+
+  <!-- Final grasping -->
+  <node pkg="lasr_grasping" type="grasp_contact_graspnet.py" name="grasp_executor" output="screen" />
+</launch>

@@ -1,4 +1,4 @@
--e file:///home/jared/robocup/Base/common/manipulation/ros_contact_graspnet/contact_graspnet_pytorch  # via -r requirements.in
+-e file:///home/siyao/project/RoboCup/robocup_svea/src/Base/common/third_party/contact_graspnet_pytorch  # via -r requirements.in
 absl-py==1.4.0            # via -r requirements.in
 addict==2.4.0             # via -r requirements.in, open3d
 anyio==3.5.0              # via -r requirements.in, jupyter-server
@@ -33,7 +33,7 @@ dash-table==5.0.0         # via -r requirements.in
 debugpy==1.5.1            # via -r requirements.in, ipykernel
 decorator==5.1.1          # via -r requirements.in, ipython
 defusedxml==0.7.1         # via -r requirements.in, nbconvert
-entrypoints==0.4          # via -r requirements.in, jupyter-client, nbconvert
+entrypoints==0.4          # via -r requirements.in, nbconvert
 executing==0.8.3          # via -r requirements.in, stack-data
 fastjsonschema==2.21.1    # via -r requirements.in, nbformat
 filelock==3.9.0           # via -r requirements.in, torch, triton
@@ -45,7 +45,7 @@ gmpy2==2.1.2              # via -r requirements.in
 h5py==3.7.0               # via -r requirements.in
 idna==3.4                 # via -r requirements.in, anyio, requests
 imageio==2.26.0           # via -r requirements.in, pyrender
-importlib-metadata==8.4.0  # via -r requirements.in, dash, flask
+importlib-metadata==8.4.0  # via -r requirements.in, dash, flask, jupyter-client
 importlib-resources==6.5.2  # via -r requirements.in, matplotlib
 ipykernel==6.19.2         # via -r requirements.in, nbclassic, notebook
 ipython==8.8.0            # via -r requirements.in, ipykernel, ipywidgets
@@ -56,16 +56,16 @@ jedi==0.18.1              # via -r requirements.in, ipython
 jinja2==3.1.2             # via -r requirements.in, flask, jupyter-server, nbclassic, nbconvert, notebook, torch
 joblib==1.4.2             # via -r requirements.in, scikit-learn
 jsonschema==4.16.0        # via -r requirements.in, nbformat
-jupyter-client==7.4.8     # via -r requirements.in, ipykernel, jupyter-server, nbclassic, nbclient, notebook
-jupyter-core==5.1.1       # via -r requirements.in, jupyter-client, jupyter-server, nbclassic, nbconvert, nbformat, notebook
-jupyter-server==1.23.4    # via -r requirements.in, nbclassic, notebook-shim
-jupyterlab-pygments==0.1.2  # via -r requirements.in, nbconvert
-jupyterlab-widgets==3.0.14  # via -r requirements.in, ipywidgets
+jupyter-client==8.6.3     # via ipykernel, jupyter-server, nbclassic, nbclient, notebook
+jupyter-core==5.8.1       # via jupyter-client, jupyter-server, nbclassic, nbconvert, nbformat, notebook
+jupyter-server==1.24.0    # via nbclassic, notebook-shim
+jupyterlab-pygments==0.3.0  # via nbconvert
+jupyterlab-widgets==3.0.15  # via ipywidgets
 kaleido==0.2.1            # via -r requirements.in
 kiwisolver==1.4.7         # via -r requirements.in, matplotlib
 lit==18.1.8               # via -r requirements.in, triton
 markupsafe==2.1.1         # via -r requirements.in, jinja2, werkzeug
-matplotlib==3.9.4         # via -r requirements.in, open3d
+matplotlib==3.9.4         # via -r requirements.in, open3d, ultralytics
 matplotlib-inline==0.1.6  # via -r requirements.in, ipykernel, ipython
 mistune==0.8.4            # via -r requirements.in, nbconvert
 mpmath==1.2.1             # via -r requirements.in, sympy
@@ -73,12 +73,12 @@ nbclassic==0.4.8          # via -r requirements.in, notebook
 nbclient==0.5.13          # via -r requirements.in, nbconvert
 nbconvert==6.4.4          # via -r requirements.in, jupyter-server, nbclassic, notebook
 nbformat==5.7.0           # via -r requirements.in, jupyter-server, nbclassic, nbclient, nbconvert, notebook, open3d
-nest-asyncio==1.5.6       # via -r requirements.in, dash, ipykernel, jupyter-client, nbclassic, nbclient, notebook
+nest-asyncio==1.5.6       # via -r requirements.in, dash, ipykernel, nbclassic, nbclient, notebook
 networkx==2.8.4           # via -r requirements.in, pyrender, torch
 notebook==6.5.2           # via -r requirements.in
 notebook-shim==0.2.2      # via -r requirements.in, nbclassic
 numexpr==2.8.4            # via -r requirements.in
-numpy==1.24.3             # via -r requirements.in, bottleneck, contourpy, h5py, imageio, matplotlib, numexpr, open3d, opencv-python, pandas, pyquaternion, pyrender, scikit-learn, scipy, torchvision, trimesh
+numpy==1.24.3             # via -r requirements.in, bottleneck, contourpy, h5py, imageio, matplotlib, numexpr, open3d, opencv-python, pandas, pyquaternion, pyrender, scikit-learn, scipy, torchvision, trimesh, ultralytics, ultralytics-thop
 nvidia-cublas-cu11==11.10.3.66  # via -r requirements.in, nvidia-cudnn-cu11, nvidia-cusolver-cu11, torch
 nvidia-cuda-cupti-cu11==11.7.101  # via -r requirements.in, torch
 nvidia-cuda-nvrtc-cu11==11.7.99  # via -r requirements.in, torch
@@ -91,25 +91,26 @@ nvidia-cusparse-cu11==11.7.4.91  # via -r requirements.in, torch
 nvidia-nccl-cu11==2.14.3  # via -r requirements.in, torch
 nvidia-nvtx-cu11==11.7.91  # via -r requirements.in, torch
 open3d==0.19.0            # via -r requirements.in
-opencv-python==4.11.0.86  # via -r requirements.in
+opencv-python==4.11.0.86  # via -r requirements.in, ultralytics
 packaging==23.0           # via -r requirements.in, bleach, ipykernel, jupyter-server, matplotlib, pooch
-pandas==1.5.2             # via -r requirements.in, open3d
+pandas==1.5.2             # via -r requirements.in, open3d, ultralytics
 pandocfilters==1.5.0      # via -r requirements.in, nbconvert
 parso==0.8.3              # via -r requirements.in, jedi
 pexpect==4.8.0            # via -r requirements.in, ipython
 pickleshare==0.7.5        # via -r requirements.in, ipython
-pillow==9.4.0             # via -r requirements.in, imageio, matplotlib, open3d, pyrender, torchvision
+pillow==9.4.0             # via -r requirements.in, imageio, matplotlib, open3d, pyrender, torchvision, ultralytics
 platformdirs==2.5.2       # via -r requirements.in, jupyter-core
 plotly==5.9.0             # via -r requirements.in, dash
 pooch==1.4.0              # via -r requirements.in
 prometheus-client==0.14.1  # via -r requirements.in, jupyter-server, nbclassic, notebook
 prompt-toolkit==3.0.36    # via -r requirements.in, ipython
-psutil==5.9.0             # via -r requirements.in, ipykernel
+psutil==5.9.0             # via -r requirements.in, ipykernel, ultralytics
 ptyprocess==0.7.0         # via -r requirements.in, pexpect, terminado
 pure-eval==0.2.2          # via -r requirements.in, stack-data
+py-cpuinfo==9.0.0         # via ultralytics
 pycparser==2.21           # via -r requirements.in, cffi
 pyglet==1.5.27            # via -r requirements.in, pyrender
-pygments==2.11.2          # via -r requirements.in, ipython, jupyterlab-pygments, nbconvert
+pygments==2.11.2          # via -r requirements.in, ipython, nbconvert
 pyopengl==3.1.0           # via -r requirements.in, pyrender
 pyopenssl==23.0.0         # via -r requirements.in
 pyparsing==3.2.3          # via -r requirements.in, matplotlib
@@ -119,12 +120,12 @@ pyrsistent==0.18.0        # via -r requirements.in, jsonschema
 pysocks==1.7.1            # via -r requirements.in
 python-dateutil==2.9.0.post0  # via -r requirements.in, jupyter-client, matplotlib, pandas
 pytz==2022.7              # via -r requirements.in, pandas
-pyyaml==6.0               # via -r requirements.in, open3d
+pyyaml==6.0               # via -r requirements.in, open3d, ultralytics
 pyzmq==23.2.0             # via -r requirements.in, ipykernel, jupyter-client, jupyter-server, nbclassic, notebook
-requests==2.29.0          # via -r requirements.in, dash, pooch, torchvision
+requests==2.29.0          # via -r requirements.in, dash, pooch, torchvision, ultralytics
 retrying==1.3.4           # via -r requirements.in, dash
 scikit-learn==1.6.1       # via -r requirements.in, open3d
-scipy==1.10.1             # via -r requirements.in, pyrender, scikit-learn
+scipy==1.10.1             # via -r requirements.in, pyrender, scikit-learn, ultralytics
 send2trash==1.8.0         # via -r requirements.in, jupyter-server, nbclassic, notebook
 six==1.16.0               # via -r requirements.in, argon2-cffi, bleach, configobj, pyrender, python-dateutil, retrying, websocket-client
 sniffio==1.2.0            # via -r requirements.in, anyio
@@ -135,15 +136,17 @@ tenacity==8.2.2           # via -r requirements.in, plotly
 terminado==0.17.1         # via -r requirements.in, jupyter-server, nbclassic, notebook
 testpath==0.6.0           # via -r requirements.in, nbconvert
 threadpoolctl==3.6.0      # via -r requirements.in, scikit-learn
-torch==2.0.1              # via -r requirements.in, torchaudio, torchvision, triton
+torch==2.0.1              # via -r requirements.in, torchaudio, torchvision, triton, ultralytics, ultralytics-thop
 torchaudio==2.0.2         # via -r requirements.in
-torchvision==0.15.2       # via -r requirements.in
+torchvision==0.15.2       # via -r requirements.in, ultralytics
 tornado==6.2              # via -r requirements.in, ipykernel, jupyter-client, jupyter-server, nbclassic, notebook, terminado
-tqdm==4.65.0              # via -r requirements.in, open3d
+tqdm==4.65.0              # via -r requirements.in, open3d, ultralytics
 traitlets==5.7.1          # via -r requirements.in, comm, ipykernel, ipython, ipywidgets, jupyter-client, jupyter-core, jupyter-server, matplotlib-inline, nbclassic, nbclient, nbconvert, nbformat, notebook
 trimesh==3.22.0           # via -r requirements.in, pyrender
 triton==2.0.0             # via -r requirements.in, torch
 typing-extensions==4.13.2  # via -r requirements.in, dash, torch
+ultralytics==8.3.146      # via -r requirements.in
+ultralytics-thop==2.0.14  # via ultralytics
 urllib3==1.26.16          # via -r requirements.in, requests
 wcwidth==0.2.5            # via -r requirements.in, prompt-toolkit
 webencodings==0.5.1       # via -r requirements.in, bleach

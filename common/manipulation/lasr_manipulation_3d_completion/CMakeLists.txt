@@ -16,6 +16,27 @@ find_package(catkin REQUIRED COMPONENTS
 )
 
 
+
+catkin_generate_virtualenv(
+  INPUT_REQUIREMENTS requirements.in
+  PYTHON_INTERPRETER python3.8
+)
+
+# catkin_python_setup()
+# set(VENV_PIP "${CATKIN_DEVEL_PREFIX}/.private/${PROJECT_NAME}/venv/bin/pip")
+# set(POINTNET2_PATH "${CMAKE_CURRENT_SOURCE_DIR}/Pointnet2_PyTorch/pointnet2_ops_lib")
+# set(KNN_CUDA_PATH "${CMAKE_CURRENT_SOURCE_DIR}/KNN_CUDA")
+
+# add_custom_target(
+#   third_party_python_modules ALL
+#   COMMAND "${VENV_PIP}" install -e "${POINTNET2_PATH}"
+#   COMMAND "${VENV_PIP}" install -e "${KNN_CUDA_PATH}"
+#   COMMENT "Installing third-party Python modules into venv"
+# )
+
+# add_dependencies(${PROJECT_NAME}_generate_messages third_party_python_modules)
+
+
 add_service_files(
   FILES
   CompleteShape.srv
@@ -27,10 +48,7 @@ generate_messages(
   sensor_msgs
 )
 
-catkin_generate_virtualenv(
-  INPUT_REQUIREMENTS requirements.in
-  PYTHON_INTERPRETER python3.8
-)
+
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
 
@@ -38,7 +56,7 @@ catkin_generate_virtualenv(
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
 ## See http://ros.org/doc/api/catkin/html/user_guide/setup_dot_py.html
-# catkin_python_setup()
+
 
 ################################################
 ## Declare ROS messages, services and actions ##
@@ -199,10 +217,10 @@ include_directories(
 catkin_install_python(PROGRAMS
   nodes/pointcloud_completion_service.py
   nodes/load_xyz_pub.py
-  nodes/pointcloud_completion.py
-  scripts/call_completion_client.py
+  nodes/call_completion_client.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
+
 
 install(DIRECTORY models/
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/models

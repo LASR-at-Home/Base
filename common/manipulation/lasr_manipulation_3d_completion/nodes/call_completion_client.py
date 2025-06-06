@@ -4,6 +4,9 @@ import rospy
 from sensor_msgs.msg import PointCloud2
 from lasr_manipulation_3d_completion.srv import CompleteShape, CompleteShapeRequest
 import sensor_msgs.point_cloud2 as pc2
+# import sys
+# rospy.init_node("test_3d_completion_client")
+# rospy.logwarn(sys.executable)
 
 def print_cloud_info(cloud_msg, name="PointCloud"):
     try:
@@ -17,8 +20,6 @@ if __name__ == "__main__":
 
     rospy.loginfo("Waiting for partial point cloud...")
     cloud_msg = rospy.wait_for_message("/partial_cloud_vis", PointCloud2)
-    print_cloud_info(cloud_msg, "Input cloud")
-
     rospy.wait_for_service("/shape_completion/complete")
     complete_srv = rospy.ServiceProxy("/shape_completion/complete", CompleteShape)
 

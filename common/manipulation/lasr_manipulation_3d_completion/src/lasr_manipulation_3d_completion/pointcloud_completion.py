@@ -1,9 +1,11 @@
+#!/usr/bin/env python3
+
 import torch
 import numpy as np
 import os
 import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-from models.sgrasp_model import SGrasp
+from lasr_manipulation_3d_completion.sgrasp_model import SGrasp
 from argparse import Namespace
 
 

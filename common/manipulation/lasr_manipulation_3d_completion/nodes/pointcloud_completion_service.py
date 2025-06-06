@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+
 import rospy
 from lasr_manipulation_3d_completion.srv import CompleteShape, CompleteShapeResponse
 from sensor_msgs.msg import PointCloud2
@@ -6,11 +7,10 @@ import sensor_msgs.point_cloud2 as pc2
 import numpy as np
 import rospkg
 import torch
-from pointcloud_completion import complete_pointcloud, build_and_load_model
+from lasr_manipulation_3d_completion import complete_pointcloud, build_and_load_model
 
 
 class CompletionService:
-
     def __init__(self):
         rospy.loginfo("Initializing shape completion service...")
 
@@ -30,18 +30,30 @@ class CompletionService:
         self.model.eval()
 
         rospy.Service('/shape_completion/complete', CompleteShape, self.handle_completion)
-        rospy.loginfo("Shape completion service ready.")
+
+        rospy.Subscriber("/segmented_cloud", PointCloud2, self.segmented_cloud_callback)
+
+        self.pcl_pub = rospy.Publisher("/completed_cloud_vis", PointCloud2, queue_size=1)
+
+        rospy.loginfo("Shape completion service & topic listener ready.")
 
     def handle_completion(self, req):
-        rospy.loginfo("Received a shape completion request.")
+        return self.process_pointcloud(req.input_cloud)
 
+    def segmented_cloud_callback(self, msg):
+        rospy.loginfo("Received /segmented_cloud message, running completion...")
+        response = self.process_pointcloud(msg)
+        self.pcl_pub.publish(response.completed_cloud)
+        rospy.loginfo("Published /completed_cloud_vis")
+
+    def process_pointcloud(self, pcl_msg):
         partial_np = np.array([
-            p[:3] for p in pc2.read_points(req.input_cloud, field_names=["x", "y", "z"], skip_nans=True)
+            p[:3] for p in pc2.read_points(pcl_msg, field_names=["x", "y", "z"], skip_nans=True)
         ])
 
         if partial_np.shape[0] == 0:
             rospy.logwarn("Received empty point cloud. Returning original.")
-            return CompleteShapeResponse(completed_cloud=req.input_cloud)
+            return CompleteShapeResponse(completed_cloud=pcl_msg, success=False)
 
         rospy.loginfo(f"Partial point cloud has {partial_np.shape[0]} points.")
 
@@ -50,10 +62,9 @@ class CompletionService:
         rospy.loginfo(f"Completed point cloud has {complete_np.shape[0]} points.")
 
         return CompleteShapeResponse(
-        completed_cloud=pc2.create_cloud_xyz32(req.input_cloud.header, complete_np),
-        success=True
-    )
-
+            completed_cloud=pc2.create_cloud_xyz32(pcl_msg.header, complete_np),
+            success=True
+        )
 
 
 if __name__ == "__main__":
