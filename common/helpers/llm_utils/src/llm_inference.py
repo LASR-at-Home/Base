@@ -235,6 +235,35 @@ def introduce_llm(name: str, drink: str, interests: str) -> str:
 
     return parsed_response
 
+def classify_category(objects: list(str)) -> str:
+    """
+    Classify category between a list of objects.
+    :param objects: a list of interests
+    :return: category
+    """
+    config = ModelConfig(model_name=models["Qwen"], model_type="llm", quantize=True)
+    sentence = ", ".join(objects)
+    query = create_query(sentence, "Detect which category these or a object belongs to.")
+    inference = LLMInference(config, query)
+    response = inference.run_inference()
+    # print(response)
+    parsed_response = truncate_llm_output(response[0])
+    return parsed_response
+
+def classify_category(object: str, category: list[str]) -> str:
+    """
+    Classify category between a list of objects.
+    :param objects: a list of interests
+    :return: category
+    """
+    config = ModelConfig(model_name=models["Qwen"], model_type="llm", quantize=True)
+    query = create_query(category, "Detect which category {object} belongs to the most. If not appropreate category to go return 'new'")
+    inference = LLMInference(config, query)
+    response = inference.run_inference()
+    # print(response)
+    parsed_response = truncate_llm_output(response[0])
+    return parsed_response
+
 # def extract_fields_llm(text: str, fields: list[str] = None):
 #     """
 #     A simple receptionist LLM inference function.
