@@ -1,0 +1,5 @@
+string llm_input
+
+string model
+---
+lasr_llm_msgs/ReceptionistResponse response
