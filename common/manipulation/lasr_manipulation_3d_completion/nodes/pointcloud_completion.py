@@ -2,21 +2,16 @@ import torch
 import numpy as np
 import os
 import sys
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
+sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from models.sgrasp_model import SGrasp
 from argparse import Namespace
 
 
 def build_and_load_model(
-    ckpt_path,
-    name,
-    num_pred,
-    num_query,
-    knn_layer,
-    trans_dim,
-    map_location='cpu'
+    ckpt_path, name, num_pred, num_query, knn_layer, trans_dim, map_location="cpu"
 ):
-    if name != 'SGrasp':
+    if name != "SGrasp":
         raise ValueError(f"Unsupported model type: {name}")
 
     config = Namespace(
@@ -34,10 +29,10 @@ def build_and_load_model(
 
     ckpt = torch.load(ckpt_path, map_location=map_location)
 
-    if 'model' in ckpt:
-        state_dict = ckpt['model']
-    elif 'base_model' in ckpt:
-        state_dict = ckpt['base_model']
+    if "model" in ckpt:
+        state_dict = ckpt["model"]
+    elif "base_model" in ckpt:
+        state_dict = ckpt["base_model"]
     else:
         raise RuntimeError("Checkpoint must contain 'model' or 'base_model'.")
 
@@ -80,7 +75,7 @@ def preprocess_pointcloud(points: np.ndarray, target_num: int = 2048):
     return farthest_point_sample(points, target_num)
 
 
-def complete_pointcloud(model, partial_np: np.ndarray, device='cuda') -> np.ndarray:
+def complete_pointcloud(model, partial_np: np.ndarray, device="cuda") -> np.ndarray:
     """
     Use pretrained model to complete the partial point cloud.
     """

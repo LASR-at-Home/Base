@@ -5,6 +5,7 @@ from sensor_msgs.msg import PointCloud2
 from std_msgs.msg import Header
 import sensor_msgs.point_cloud2 as pc2
 
+
 def load_xyz(path):
     try:
         return np.loadtxt(path, dtype=np.float32)
@@ -12,6 +13,7 @@ def load_xyz(path):
         rospy.logerr(f"Failed to load .xyz file: {e}")
         rospy.signal_shutdown("XYZ file loading failed.")
         return np.array([])
+
 
 def publish_xyz():
     rospy.init_node("xyz_publisher", anonymous=True)
@@ -37,6 +39,7 @@ def publish_xyz():
         msg = pc2.create_cloud_xyz32(header, pts)
         pub.publish(msg)
         rate.sleep()
+
 
 if __name__ == "__main__":
     publish_xyz()

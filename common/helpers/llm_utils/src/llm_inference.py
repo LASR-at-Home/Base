@@ -213,12 +213,16 @@ def interest_commonality_llm(interests: list[str]) -> str:
     """
     config = ModelConfig(model_name=models["Qwen"], model_type="llm", quantize=True)
     sentence = ", ".join(interests)
-    query = create_query(sentence, "Create a sentence that introduces a person named Eunice, mentioning her interest in green tea and swimming.")
+    query = create_query(
+        sentence,
+        "Create a sentence that introduces a person named Eunice, mentioning her interest in green tea and swimming.",
+    )
     inference = LLMInference(config, query)
     response = inference.run_inference()
     # print(response)
     parsed_response = truncate_llm_output(response[0])
     return parsed_response
+
 
 def introduce_llm(name: str, drink: str, interests: str) -> str:
     """
@@ -234,6 +238,7 @@ def introduce_llm(name: str, drink: str, interests: str) -> str:
     parsed_response = truncate_llm_output(response[0])
 
     return parsed_response
+
 
 # def extract_fields_llm(text: str, fields: list[str] = None):
 #     """
@@ -274,6 +279,7 @@ def extract_fields_llm(text: str, fields: list[str] = None) -> dict:
     result = {field: parsed.get(field, "Unknown") or "Unknown" for field in fields}
 
     return result
+
 
 def main():
     # Examples for testing
