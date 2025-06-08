@@ -39,7 +39,6 @@ class GetDrink(smach.StateMachine):
                 self.ParseDrink(guest_id=self._guest_id, param_key=self._param_key),
                 transitions={"succeeded": "succeeded", "failed": "failed"},
             )
-
     class ParseDrink(smach.State):
         def __init__(
             self,

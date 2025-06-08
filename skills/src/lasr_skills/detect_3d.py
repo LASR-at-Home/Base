@@ -73,7 +73,6 @@ class Detect3D(smach.State):
             )
             userdata.detections_3d = resp
             userdata.image_raw = image_msg
-
             return "succeeded"
         except rospy.ServiceException as e:
             rospy.logerr(f"Service call failed: {e}")

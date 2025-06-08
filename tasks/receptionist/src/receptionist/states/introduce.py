@@ -11,6 +11,8 @@ import smach
 from lasr_skills import LookToPoint, Say
 from smach import UserData
 
+# import llm_utils
+
 
 def stringify_guest_data(
     guest_data: Dict[str, Any], guest_id: str, describe_features: bool
@@ -30,7 +32,7 @@ def stringify_guest_data(
     print(f"Guest Data: {relevant_guest_data}")
     print(f"Guest ID: {guest_id}")
 
-    guest_str = f"{relevant_guest_data['name']}, their favourite drink is {relevant_guest_data['drink']}. "
+    guest_str = f"{relevant_guest_data['name']}, their favourite drink is {relevant_guest_data['drink']} and interest is {relevant_guest_data['interest']}. "
 
     if (
         not relevant_guest_data["detection"]

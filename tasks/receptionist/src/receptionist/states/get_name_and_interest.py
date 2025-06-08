@@ -115,7 +115,6 @@ class GetNameAndInterest(smach.StateMachine):
             userdata.guest_data[self._guest_id]["interest"] = (
                 interest if interest else "unknown"
             )
-
             return outcome
 
     class PostRecoveryDecision(smach.State):

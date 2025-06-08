@@ -14,7 +14,6 @@ from lasr_vision_msgs.srv import (
     Vqa,
     VqaRequest,
 )
-
 # from numpy2message import numpy2message
 from .vision import GetImage
 import numpy as np
