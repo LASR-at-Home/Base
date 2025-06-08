@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import rospy
-from receptionist.state_machine_fixed import Receptionist
+from receptionist.state_machine import Receptionist
 import smach
 import smach_ros
 

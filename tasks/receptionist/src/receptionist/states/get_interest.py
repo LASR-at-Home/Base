@@ -31,7 +31,9 @@ class GetInterest(smach.StateMachine):
             )
             self._guest_id = guest_id
             prior_data: Dict[str, List[str]] = rospy.get_param(param_key)
-            self._possible_interests = [interest.lower() for interest in prior_data["interests"]]
+            self._possible_interests = [
+                interest.lower() for interest in prior_data["interests"]
+            ]
 
         def execute(self, userdata: UserData) -> str:
             """Parses the transcription of the guests' interest.
@@ -77,7 +79,9 @@ class GetInterest(smach.StateMachine):
             )
             self._guest_id = guest_id
             prior_data: Dict[str, List[str]] = rospy.get_param(param_key)
-            self._possible_interests = [interest.lower() for interest in prior_data["interests"]]
+            self._possible_interests = [
+                interest.lower() for interest in prior_data["interests"]
+            ]
 
         def execute(self, userdata: UserData) -> str:
             if userdata.guest_data[self._guest_id]["interest"] == "unknown":
@@ -107,14 +111,14 @@ class GetInterest(smach.StateMachine):
 
             smach.StateMachine.add(
                 "PARSE_INTEREST",
-                self.ParseInterest(
-                    guest_id=self._guest_id, param_key=self._param_key
-                ),
+                self.ParseInterest(guest_id=self._guest_id, param_key=self._param_key),
                 transitions={"succeeded": "succeeded", "failed": "SPEECH_RECOVERY"},
             )
             smach.StateMachine.add(
                 "SPEECH_RECOVERY",
-                SpeechRecovery(self._guest_id, self._last_resort, input_type="interest"),
+                SpeechRecovery(
+                    self._guest_id, self._last_resort, input_type="interest"
+                ),
                 transitions={
                     "succeeded": "succeeded",
                     "failed": "POST_RECOVERY_DECISION",
