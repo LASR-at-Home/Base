@@ -6,18 +6,46 @@ to the guest data userdata
 import rospy
 import smach
 
-# import llm_utils
 from smach import UserData
 from typing import List, Dict, Any
 from receptionist.states import SpeechRecovery
+from lasr_llm_msgs.srv import (
+    ReceptionistQueryLlm,
+    ReceptionistQueryLlmRequest,
+    ReceptionistQueryLlmResponse,
+)
 
 
 class GetDrink(smach.StateMachine):
+    def __init__(
+        self,
+        guest_id: str,
+        last_resort: bool,
+        param_key: str = "/receptionist/priors",
+    ):
+        smach.StateMachine.__init__(
+            self,
+            outcomes=["succeeded", "failed"],
+            input_keys=["guest_transcription", "guest_data"],
+            output_keys=["guest_data", "guest_transcription"],
+        )
+
+        self._guest_id = guest_id
+        self._param_key = param_key
+        self._last_resort = last_resort
+        with self:
+            smach.StateMachine.add(
+                "PARSE_DRINK",
+                self.ParseDrink(guest_id=self._guest_id, param_key=self._param_key),
+                transitions={"succeeded": "succeeded", "failed": "failed"},
+            )
+
     class ParseDrink(smach.State):
         def __init__(
             self,
             guest_id: str,
             param_key: str = "/receptionist/priors",
+            llm_service: str = "/receptionist/query_llm",
         ):
             """Parses the transcription of the guests' favourite drink.
 
@@ -31,9 +59,11 @@ class GetDrink(smach.StateMachine):
                 input_keys=["guest_transcription", "guest_data"],
                 output_keys=["guest_data", "guest_transcription"],
             )
+            self._llm_client = rospy.ServiceProxy(llm_service, ReceptionistQueryLlm)
+            self._llm_client.wait_for_service()
             self._guest_id = guest_id
-            # prior_data: Dict[str, List[str]] = rospy.get_param(param_key)
-            # self._possible_drinks = [drink.lower() for drink in prior_data["drinks"]]
+            prior_data: Dict[str, List[str]] = rospy.get_param(param_key)
+            self._possible_drinks = [drink.lower() for drink in prior_data["drinks"]]
 
         def execute(self, userdata: UserData) -> str:
             """Parses the transcription of the favourite drink.
@@ -64,6 +94,7 @@ class GetDrink(smach.StateMachine):
             #     outcome = "failed"
 
             # return outcome
+            drink_found = False
             for drink in self._possible_drinks:
                 if drink in transcription:
                     userdata.guest_data[self._guest_id]["drink"] = drink
@@ -72,9 +103,22 @@ class GetDrink(smach.StateMachine):
                     break
 
             if not drink_found:
-                rospy.loginfo("Drink not found in transcription")
-                userdata.guest_data[self._guest_id]["drink"] = "unknown"
-                outcome = "failed"
+                request = ReceptionistQueryLlmRequest()
+                request.llm_input = transcription
+                request.task = "drink"
+                response: ReceptionistQueryLlmResponse = self._llm_client(
+                    request
+                ).response
+                drink = response.favourite_drink
+                if drink is not None and drink.lower() in self._possible_drinks:
+                    userdata.guest_data[self._guest_id]["drink"] = drink.lower()
+                    rospy.loginfo(f"Guest Drink identified as: {drink}")
+                else:
+                    userdata.guest_data[self._guest_id]["drink"] = "unknown"
+                    rospy.logwarn(
+                        f"Could not identify drink from transcription: {transcription}"
+                    )
+                    outcome = "failed"
 
             return outcome
 
@@ -100,46 +144,3 @@ class GetDrink(smach.StateMachine):
             else:
                 outcome = "succeeded"
             return outcome
-
-    def __init__(
-        self,
-        guest_id: str,
-        last_resort: bool,
-        param_key: str = "/receptionist/priors",
-    ):
-
-        self._guest_id = guest_id
-        self._param_key = param_key
-        self._last_resort = last_resort
-
-        smach.StateMachine.__init__(
-            self,
-            outcomes=["succeeded", "failed"],
-            input_keys=["guest_transcription", "guest_data"],
-            output_keys=["guest_data", "guest_transcription"],
-        )
-        with self:
-
-            smach.StateMachine.add(
-                "PARSE_DRINK",
-                self.ParseDrink(guest_id=self._guest_id, param_key=self._param_key),
-                transitions={"succeeded": "succeeded", "failed": "failed"},
-            )
-            # smach.StateMachine.add(
-            #     "SPEECH_RECOVERY",
-            #     SpeechRecovery(self._guest_id, self._last_resort, input_type="drink"),
-            #     transitions={
-            #         "succeeded": "succeeded",
-            #         "failed": "POST_RECOVERY_DECISION",
-            #     },
-            # )
-            # smach.StateMachine.add(
-            #     "POST_RECOVERY_DECISION",
-            #     self.PostRecoveryDecision(
-            #         guest_id=self._guest_id, param_key=self._param_key
-            #     ),
-            #     transitions={
-            #         "failed": "failed",
-            #         "succeeded": "succeeded",
-            #     },
-            # )

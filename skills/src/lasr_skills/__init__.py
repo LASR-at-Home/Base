@@ -26,6 +26,7 @@ from .guide import Guide
 from .detect_clothing import DetectClothing
 from .detect_pose import DetectPose
 from .find_person import FindPerson
+
 # from .xml_question_answer import XmlQuestionAnswer
 from .find_person_and_tell import FindPersonAndTell
 from .count_people import CountPeople

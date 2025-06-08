@@ -1,5 +1,5 @@
 """
-State for recovering the speech transcribed via whisper (name and drink and interest) by using 
+State for recovering the speech transcribed via whisper (name and drink and interest) by using
 the spelling and pronounciation of a word.
 """
 
@@ -15,7 +15,7 @@ class SpeechRecovery(smach.State):
     def __init__(
         self,
         guest_id: int,
-        last_resort: bool, 
+        last_resort: bool,
         input_type: str = "",
     ):
         """Recover the correct name or interest or drink by parsing the transcription.
@@ -140,7 +140,7 @@ class SpeechRecovery(smach.State):
         sentence_list = list(set(sentence_split) - set(self._excluded_words))
         if not sentence_list:
             return "failed"
-        print(sentence_split) # Do we need this?
+        print(sentence_split)  # Do we need this?
         if self._input_type == "name":
             final_name = self._handle_name(sentence_list, self._last_resort)
             if final_name != "unknown":
@@ -165,7 +165,7 @@ class SpeechRecovery(smach.State):
                 return "succeeded"
             else:
                 return "failed"
-        else: #Need for combination?
+        else:  # Need for combination?
             if userdata.guest_data[self._guest_id]["name"] == "unknown":
                 final_name = self._handle_name(sentence_list, self._last_resort)
                 userdata.guest_data[self._guest_id]["name"] = final_name
@@ -258,7 +258,7 @@ class SpeechRecovery(smach.State):
                 else:
                     sentence_list.append(closest_spelt)
                     return self._infer_second_drink(sentence_list)
-                
+
     def _handle_interest(self, sentence_list: List[str], last_resort: bool) -> str:
         """Attempt to recover the interest in the transcription. First recover via spelling, then pronounciation.
         Enter last resort if necessary and recover the closest spelt interest.
@@ -275,7 +275,9 @@ class SpeechRecovery(smach.State):
             print(f"interest (spelt): {result}")
             return result
         else:
-            result = self._handle_similar_sound(sentence_list, self._available_interests, 0)
+            result = self._handle_similar_sound(
+                sentence_list, self._available_interests, 0
+            )
             print(f"interest (sound): {result}")
         if not last_resort or result != "unknown":
             return result

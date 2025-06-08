@@ -24,6 +24,8 @@ from .handle_drink import HandleDrink
 from .handle_interest import HandleInterest
 from .handle_name_interest import HandleNameInterest
 from .compare_interest import CompareInterest
+from .welcome_guest import WelcomeGuest
+from .find_drink_on_table import FindDrinkOnTable
 
 # from .introduce_table_guest import IntroduceTableGuest
 # from .get_name_and_interest import GetNameAndInterest

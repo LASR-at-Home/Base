@@ -107,9 +107,7 @@ class GetName(smach.StateMachine):
 
             smach.StateMachine.add(
                 "PARSE_NAME",
-                self.ParseName(
-                    guest_id=self._guest_id, param_key=self._param_key
-                ),
+                self.ParseName(guest_id=self._guest_id, param_key=self._param_key),
                 transitions={"succeeded": "succeeded", "failed": "SPEECH_RECOVERY"},
             )
             smach.StateMachine.add(

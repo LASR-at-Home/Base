@@ -1,10 +1,14 @@
 # Script to perform LLM inference using a pre-trained model from HuggingFace
 
 from dataclasses import dataclass
-from typing import Optional, List
+from typing import Optional, List, Dict
 import re
+import rospy
 
 import numpy as np
+
+print(f"Numpy version: {np.__version__}")  # For debugging purposes
+
 from transformers import (
     pipeline,
     AutoModelForCausalLM,
@@ -19,7 +23,7 @@ import os
 import json
 from datetime import datetime
 
-from common.helpers.llm_utils.src.utils import (
+from .utils import (
     create_query,
     truncate_llm_output,
     parse_llm_output_to_dict,
@@ -51,7 +55,7 @@ models = {
 
 
 class LLMInference:
-    def __init__(self, model_config: ModelConfig, query):
+    def __init__(self, model_config: ModelConfig):
         self.config = model_config
         if self.config.quantize:
             # Quantize the model - for using 1/4 (or 1/8) of the GPU RAM. Full example in the models' HugginFace docs
@@ -64,8 +68,6 @@ class LLMInference:
 
         self.model_name = self.config.model_name
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
-        self.model = None
-        self.query_list = self.process_query(query)
 
         if self.config.model_type == "pipeline":
             if self.config.task:
@@ -140,26 +142,24 @@ class LLMInference:
 
         return AutoModelForCausalLM.from_pretrained(self.model_name, **kwargs)
 
-    def run_inference(self, context: Optional[str] = None) -> List:
-        queries = self.query_list
-        outputs = []
+    def run_inference(self, query: str, context: Optional[str] = None) -> str:
 
-        for q in queries:
-            result = None
-            if self.config.model_type == "pipeline":
-                if self.task == "question-answering":
-                    if not context:
-                        raise ValueError("Question Answering task requires context.")
-                    result = self.pipe(question=q, context=context)
-                else:
-                    result = self.pipe(q)
-            elif self.config.model_type == "llm":
-                input_ids = self.tokenizer(q, return_tensors="pt").to(self.model.device)
-                output_ids = self.model.generate(**input_ids, max_new_tokens=128)
-                result = self.tokenizer.decode(output_ids[0], skip_special_tokens=True)
-            generated_text = re.sub(re.escape(q), "", result).strip()
-            outputs.append(generated_text)
-        return outputs
+        result = None
+        if self.config.model_type == "pipeline":
+            if self.task == "question-answering":
+                if not context:
+                    raise ValueError("Question Answering task requires context.")
+                result = self.pipe(question=query, context=context)
+            else:
+                result = self.pipe(query)
+        elif self.config.model_type == "llm":
+            input_ids = self.tokenizer(query, return_tensors="pt").to(self.model.device)
+            output_ids = self.model.generate(**input_ids, max_new_tokens=128)
+            result = self.tokenizer.decode(output_ids[0], skip_special_tokens=True)
+            print(f"LLM output: {result}")
+        generated_text = re.sub(re.escape(query), "", result).strip()
+
+        return generated_text
 
     def serialise_output(self, output):
         """
@@ -240,25 +240,7 @@ def introduce_llm(name: str, drink: str, interests: str) -> str:
     return parsed_response
 
 
-# def extract_fields_llm(text: str, fields: list[str] = None):
-#     """
-#     A simple receptionist LLM inference function.
-#     :param text: The input sentence to process.
-#     :param fields: A list of fields to return.
-#     """
-#     config = ModelConfig(model_name=models["Qwen"], model_type="llm", quantize=True)
-#     if fields is None:
-#         fields = ["Name", "Favourite drink", "Interests"]  # all for receptionist
-
-#     sentence = text
-#     query = create_query(sentence, "extract_fields", fields)
-#     inference = LLMInference(config, query)
-#     response = inference.run_inference()
-#     parsed_response = parse_llm_output_to_dict(response[0], fields)
-#     return parsed_response
-
-
-def extract_fields_llm(text: str, fields: list[str] = None) -> dict:
+def extract_fields_llm(text: str, fields: List[str]) -> Dict:
     """
     Extracts structured information from a sentence using an LLM.
     Returns a dictionary with all fields — missing ones are filled with 'Unknown'.

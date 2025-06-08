@@ -36,7 +36,9 @@ class GetNameOrInterest(smach.StateMachine):
             self._guest_id = guest_id
             self._type = info_type
             prior_data: Dict[str, List[str]] = rospy.get_param(param_key)
-            possible_interests = [interest.lower() for interest in prior_data["interests"]]
+            possible_interests = [
+                interest.lower() for interest in prior_data["interests"]
+            ]
             possible_names = [name.lower() for name in prior_data["names"]]
             self._possible_information = {
                 "interest": possible_interests,

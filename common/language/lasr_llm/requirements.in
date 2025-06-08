@@ -1,0 +1,5 @@
+numpy
+transformers
+bitsandbytes
+torch
+accelerate
