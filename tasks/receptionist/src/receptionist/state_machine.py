@@ -112,7 +112,7 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "HANDLE_NAME_INTEREST_1",
-                HandleNameInterest("guest1", learn_guest_1),
+                HandleNameInterest("guest1"),
                 transitions={
                     "succeeded": "SAY_FOLLOW_GUEST_TO_TABLE_1",
                     "failed": "SAY_FOLLOW_GUEST_TO_TABLE_1",
@@ -154,7 +154,7 @@ class Receptionist(smach.StateMachine):
                 "INTRODUCE_TABLE_GUEST_1",
                 Say(text="Finding your favourite drink on the table is ongoing."),
                 "HANDLE_NAME_INTEREST_1",
-                HandleNameInterest("guest1", learn_guest_1),
+                HandleNameInterest("guest1"),
                 transitions={
                     "succeeded": "SAY_FOLLOW_GUEST_TO_TABLE_1",
                     "failed": "SAY_FOLLOW_GUEST_TO_TABLE_1",
@@ -255,7 +255,7 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "HANDLE_NAME_INTEREST_2",
-                HandleNameInterest("guest2", False),
+                HandleNameInterest("guest2"),
                 transitions={
                     "succeeded": "SAY_FOLLOW_GUEST_TO_TABLE_2",
                     "failed": "SAY_FOLLOW_GUEST_TO_TABLE_2",

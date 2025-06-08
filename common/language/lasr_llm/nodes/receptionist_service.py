@@ -76,7 +76,7 @@ class ReceptionistLlmService:
             response.response.interests = parsed_output.get("Interests", "")
         else:
             parsed_output = truncate_llm_output(llm_output)
-            response.response.commonality = parsed_output
+            response.response.interest_commonality = parsed_output
 
         rospy.loginfo(f"Returning response: {response.response}")
         return response

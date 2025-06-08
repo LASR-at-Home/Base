@@ -1,12 +1,27 @@
 import smach
 
-from lasr_skills import AskAndListen, Say
+from lasr_skills import AskAndListen
 from receptionist.states import (
     GetDrink,
 )
 
 
 class HandleDrink(smach.StateMachine):
+    def __init__(self, guest_id: str):
+        super().__init__(
+            outcomes=["succeeded", "failed"],
+            input_keys=["guest_data"],
+        )
+
+        with self:
+            smach.StateMachine.add(
+                "GET_DRINK",
+                self.DrinkFlow(guest_id),
+                transitions={
+                    "succeeded": "succeeded",
+                    "failed": "failed",
+                },
+            )
 
     class DrinkFlow(smach.StateMachine):
         def __init__(self, guest_id: str):
@@ -58,19 +73,3 @@ class HandleDrink(smach.StateMachine):
                     },
                     remapping={"guest_transcription": "transcribed_speech"},
                 )
-
-    def __init__(self, guest_id: str):
-        super().__init__(
-            outcomes=["succeeded", "failed"],
-            input_keys=["guest_data"],
-        )
-
-        with self:
-            smach.StateMachine.add(
-                "GET_DRINK",
-                self.DrinkFlow(guest_id),
-                transitions={
-                    "succeeded": "succeeded",
-                    "failed": "failed",
-                },
-            )

@@ -60,17 +60,17 @@ class IntroduceAndSeatGuest(smach.StateMachine):
                         outcomes=["succeeded", "failed"],
                         input_keys=[
                             "detections",
-                            "sofa_detections",
                             "image_raw",
                         ],
                         output_keys=["sofa_detections"],
                     )
 
                 def execute(self, userdata):
-
+                    sofa_detections = []
                     # List of Detect3D messages
-                    for index, detection in userdata.sofa_detections:
-                        userdata.sofa_detections.append((detection, userdata.image_raw))
+                    for detection in userdata.detections:
+                        sofa_detections.append((detection, userdata.image_raw))
+                    userdata.sofa_detections = sofa_detections
                     return "succeeded"
 
             class DetectPeopleAndSeats(smach.StateMachine):
@@ -92,7 +92,7 @@ class IntroduceAndSeatGuest(smach.StateMachine):
                     def execute(self, userdata):
 
                         # List of Detect3D messages
-                        for index, detection in userdata.motion_detections:
+                        for detection in userdata.motion_detections:
                             userdata.detections.append((detection, userdata.image_raw))
                         return "succeeded"
 
@@ -195,9 +195,7 @@ class IntroduceAndSeatGuest(smach.StateMachine):
                     """
                     Identify all people in the detections
                     """
-                    rospy.logwarn(
-                        f"Sofa detections: {[(d.name, d.point) for d in userdata.sofa_detections]}"
-                    )
+
                     for index, (detection, img_msg) in enumerate(
                         userdata.sofa_detections
                     ):
@@ -565,7 +563,7 @@ class IntroduceAndSeatGuest(smach.StateMachine):
                     "succeeded": "HANDLE_SOFA_DETECTIONS",
                     "failed": "failed",
                 },
-                remapping={"detections_3d": "sofa_detections"},
+                remapping={"detections_3d": "detections"},
             )
 
             smach.StateMachine.add(
