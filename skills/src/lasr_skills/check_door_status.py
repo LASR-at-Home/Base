@@ -7,12 +7,13 @@ import threading
 from sensor_msgs.msg import PointCloud2
 import ros_numpy
 import numpy as np
+from lasr_skills import Say
 from sklearn.cluster import KMeans
 
 
 class CheckDoorStatus(smach.State):
     def __init__(self, expected_closed_depth=None, roi=None, change_thresh=0.5, open_thresh=0.6, score_thresh=1.0):
-        smach.State.__init__(self, outcomes=["open", "closed", "no_object", "error"])
+        smach.State.__init__(self, outcomes=["open", "closed", "error"])
         self.expected_depth = expected_closed_depth  # trusted, map-based depth
         self.change_thresh = change_thresh  # how much observed baseline can differ from expected
         self.open_thresh = open_thresh  # how much deeper to consider door open
@@ -140,7 +141,7 @@ class CheckDoorStatus(smach.State):
         if status in ["no_data", "error"]:
             return "error"
         elif status == "empty":
-            return "no_object"
+            return "closed"
 
         result = self.analyze_depth(depth_data)
         if result is None:
@@ -177,11 +178,21 @@ def main():
             "CHECK_DOOR_STATUS",
             CheckDoorStatus(expected_closed_depth=2, change_thresh=0.4, open_thresh=0.6, score_thresh=1.0),
             transitions={
-                "open": "DONE",
+                "open": "SAY_DOOR_STATUS",
                 "closed": "DONE",
                 "no_object": "FAILED",
                 "error": "FAILED"
             }
+        )
+
+        smach.StateMachine.add(
+            "SAY_DOOR_STATUS",
+            Say(text = "Door is open"),
+            transitions={
+                "succeeded": f"DONE",
+                "aborted": f"DONE",
+                "preempted": f"DONE",
+            },
         )
 
     smach_viewer = smach_ros.IntrospectionServer("viewer", sm, "/SM_ROOT")

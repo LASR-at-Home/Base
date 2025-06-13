@@ -13,7 +13,6 @@ class WaitDoorOpen(smach.StateMachine):
         )
 
         with self:
-            self.go_to_table(self)
 
             smach.StateMachine.add(
                 "CHECK_DOOR_STATUS",

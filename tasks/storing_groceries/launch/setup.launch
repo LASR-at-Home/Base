@@ -3,21 +3,30 @@
     <!--     PARAMS     -->
     <arg name="config" default="lab"/>
 
-    <!--     INTERACTION     -->
-    <arg name="whisper_device_param" default="9" />
-    <node pkg="lasr_speech_recognition_whisper" type="transcribe_microphone_server" name="transcribe_speech" output="screen" args="--mic_device $(arg whisper_device_param)"/>
-
+   
     <!--     STATIC POINTS     -->
     <rosparam command="load" file="$(find storing_groceries)/config/$(arg config).yaml" ns="storing_groceries" />
 
+    <!-- LLM Service Node -->
+    <node pkg="lasr_llm" type="storing_groceries_service.py" name="storing_groceries_service" output="screen"/>
+
     <!--     MOTIONS     -->
-    <rosparam command="load" file="$(find lasr_skills)/config/motions.yaml"/>
-    <rosparam command="load" file="$(find storing_groceries)/config/motions.yaml"/>
+    <!-- <rosparam command="load" file="$(find lasr_skills)/config/motions.yaml"/> -->
+    <!-- <rosparam command="load" file="$(find storing_groceries)/config/motions.yaml"/> -->
 
     <!--      PERCEPTION     -->
-    <include file="$(find lasr_vision_cropped_detection)/launch/cropped_detection.launch"/>
-    <node pkg="lasr_vision_clip" name="clip_service" type="vqa" output="screen"/>
-    <node pkg="lasr_vision_bodypix" type="bodypix_services.py" name="bodypix_service" output="screen"/>
-    <node pkg="lasr_vision_deepface" type="service" name="deepface_service" output="screen"/>
+    <!-- <include file="$(find lasr_vision_cropped_detection)/launch/cropped_detection.launch"/> -->
+    <!-- <node pkg="lasr_vision_clip" name="clip_service" type="vqa" output="screen"/> -->
+
+    <!-- DEPTH IMAGE SPEED CONTROL  -->
+    <node pkg="nodelet" type="nodelet" name="depth_image_proc_nodelet_manager" args="manager" output="screen" />
+
+    <node pkg="nodelet" type="nodelet" name="depth_to_cloud" args="load depth_image_proc/point_cloud_xyz depth_image_proc_nodelet_manager" output="screen">
+        <remap from="image_rect" to="/xtion/depth_registered/image_raw"/>
+        <remap from="camera_info" to="/xtion/depth_registered/camera_info"/>
+        <remap from="points" to="/xtion/depth_pointsros"/> 
+
+    </node>
+
 
 </launch>

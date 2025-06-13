@@ -1,35 +1,33 @@
 import smach
 
 from lasr_skills import Say, AdjustCamera, GoToLocation
-from storing_groceries.states import (
-    GetNameAndInterest,
-    ReceptionistLearnFaces,
-    GetGuestAttributes,
-)
+from storing_groceries.states import *
 
 class PourCereal(smach.StateMachine):
-    def __init__(self):
+    def __init__(self, table_pose):
         super().__init__(
             outcomes=["succeeded","failed",],
             input_keys=[],
         )
 
+        self.table_pose = table_pose
+
         with self:
-            self.go_to_table(self)
+            self.go_to_table()
 
             smach.StateMachine.add(
-                "DETECT_CEAREAL",
-                Say(text="Detect table is on going"),
+                "DETECT_CEREAL",
+                Say(text="Detect cereal is on going"),
                 transitions={
-                    "succeeded": "SELECT_OBJECT",
-                    "aborted": "SELECT_OBJECT",
-                    "preempted": "SELECT_OBJECT",
+                    "succeeded": "DETECT_CONTAINER",
+                    "aborted": "DETECT_CONTAINER",
+                    "preempted": "DETECT_CONTAINER",
                 },
             )
 
             smach.StateMachine.add(
                 "DETECT_CONTAINER",
-                Say(text="Detect table is on going"),
+                Say(text="Detect container is on going"),
                 transitions={
                     "succeeded": "GRAB_OBJECT",
                     "aborted": "GRAB_OBJECT",
@@ -39,7 +37,7 @@ class PourCereal(smach.StateMachine):
 
             smach.StateMachine.add(
                 "GRAB_OBJECT",
-                Say(text="Detect table is on going"),
+                Say(text="Grab object is on going"),
                 transitions={
                     "succeeded": "POUR_OBJECT",
                     "aborted": "POUR_OBJECT",
@@ -49,24 +47,24 @@ class PourCereal(smach.StateMachine):
 
             smach.StateMachine.add(
                 "POUR_OBJECT",
-                Say(text="Detect table is on going"),
+                Say(text="pour object is on going"),
                 transitions={
-                    "succeeded": "SELECT_OBJECT",
-                    "aborted": "SELECT_OBJECT",
-                    "preempted": "SELECT_OBJECT",
+                    "succeeded": "succeeded",
+                    "aborted": "succeeded",
+                    "preempted": "succeeded",
                 },
             )
 
-    def go_to_table(self, userdata, cereal=False) -> None:
+    def go_to_table(self) -> None:
         """Adds the states to go to table area.
         """
         
         smach.StateMachine.add(
             f"GO_TO_CEREAL",
-            GoToLocation(userdata.table_pose),
+            GoToLocation(self.table_pose),
             transitions={
-                "succeeded": f"SAY_ARRIVE_TABLE",
-                "failed": f"SAY_ARRIVE_TABLE",
+                "succeeded": f"SAY_ARRIVE_CEREAL",
+                "failed": f"SAY_ARRIVE_CEREAL",
             },
         )
         
@@ -78,4 +76,4 @@ class PourCereal(smach.StateMachine):
                 "aborted": f"DETECT_CEREAL",
                 "preempted": f"DETECT_CEREAL",
             },
-        )    
+        )

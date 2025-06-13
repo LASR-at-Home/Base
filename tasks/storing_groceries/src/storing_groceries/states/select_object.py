@@ -1,12 +1,14 @@
 import smach
 
 from storing_groceries.states import ChooseObject
+from lasr_skills import Say
 
 class SelectObject(smach.StateMachine):
     def __init__(self):
         super().__init__(
-            outcomes=["succeeded", "failed"],
-            input_keys=[],
+            outcomes=["succeeded", "failed", "escape"],
+            input_keys=["table_objects", "not_graspable"],
+            output_keys=["table_object"]
         )
 
         with self:
@@ -14,30 +16,23 @@ class SelectObject(smach.StateMachine):
                 "CHOOSE_OBJECT",
                 ChooseObject(),
                 transitions={
-                    "succeeded": "CLASSIFY_CATEGORY_OBJECT",
-                    "aborted": "CLASSIFY_CATEGORY_OBJECT",
-                    "preempted": "CLASSIFY_CATEGORY_OBJECT",
+                    "succeeded": "MEASURE_OBJECT",
+                    "failed": "MEASURE_OBJECT",
+                    "empty": "escape", #should return escape in future 
                 },
+
             )
 
             smach.StateMachine.add(
                 "MEASURE_OBJECT",
                 Say(text="Measure object is ongoing"),
                 transitions={
-                    "succeeded": "GRAB_OBJECT",
-                    "aborted": "GRAB_OBJECT",
-                    "preempted": "GRAB_OBJECT",
+                    "succeeded": "succeeded",
+                    "aborted": "succeeded", #If fail then go to ChooseObject again
+                    "preempted": "succeeded",
                 },
             )
-
-            # smach.StateMachine.add(
-            #     "SAY_MEASURE_OBJECT",
-            #     Say(text="Measure object is ongoing"),
-            #     transitions={
-            #         "succeeded": "GO_TO_CABINET",
-            #         "aborted": "GO_TO_CABINET",
-            #         "preempted": "GO_TO_CABINET",
-            #     },
-            # )
+            
+            
 
     
