@@ -8,7 +8,6 @@ project(storing_groceries)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-  catkin_virtualenv
   geometry_msgs
   message_generation
   roscpp
@@ -24,10 +23,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## modules and global scripts declared therein get installed
 ## See http://ros.org/doc/api/catkin/html/user_guide/setup_dot_py.html
 catkin_python_setup()
-catkin_generate_virtualenv(
-  INPUT_REQUIREMENTS requirements.in
-  PYTHON_INTERPRETER python3.8
-)
+
 
 ################################################
 ## Declare ROS messages, services and actions ##
@@ -168,8 +164,6 @@ include_directories(
 ## in contrast to setup.py, you can choose the destination
 catkin_install_python(PROGRAMS
   scripts/main.py
-  scripts/test_find_and_look_at.py
-  scripts/create_name_and_drink_vector_db.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
