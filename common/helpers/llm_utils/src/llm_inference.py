@@ -229,7 +229,7 @@ def introduce_llm(name: str, drink: str, interests: str) -> str:
     prompt = f"Create a sentence that introduces a person named {name}, mentioning their favorite drink ({drink}) and their interest in {interests}."
 
     query = create_query(input_summary, prompt)
-    inference = LLMInference(config, query)
+    inference = LLMInfllerence(config, query)
     response = inference.run_inference()
     parsed_response = truncate_llm_output(response[0])
 
