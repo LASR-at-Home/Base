@@ -19,7 +19,7 @@ find_package(catkin REQUIRED catkin_virtualenv)
 catkin_python_setup()
 catkin_generate_virtualenv(
   INPUT_REQUIREMENTS requirements.in
-  PYTHON_INTERPRETER python3.9
+  PYTHON_INTERPRETER python3.8
 )
 ################################################
 ## Declare ROS messages, services and actions ##
