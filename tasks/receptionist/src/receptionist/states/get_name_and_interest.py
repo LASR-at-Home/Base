@@ -65,44 +65,46 @@ class GetNameAndInterest(smach.StateMachine):
             prior_data: Dict[str, List[str]] = rospy.get_param(param_key)
             self._possible_names = [name.lower() for name in prior_data["names"]]
 
-    def execute(self, userdata: UserData) -> str:
-        """Parses the transcription of the guest's name and interest.
+        def execute(self, userdata: UserData) -> str:
+            """Parses the transcription of the guest's name and interest.
 
-        Args:
-            userdata (UserData): Must contain key 'guest_transcription' with guest's transcription.
+            Args:
+                userdata (UserData): Must contain key 'guest_transcription' with guest's transcription.
 
-        Returns:
-            str: State outcome. Updates 'guest_data' in userdata with parsed name and interest.
-        """
-        transcription = userdata["guest_transcription"].lower()
+            Returns:
+                str: State outcome. Updates 'guest_data' in userdata with parsed name and interest.
+            """
+            transcription = userdata["guest_transcription"].lower()
 
-        request = LlmRequest()
-        request.system_prompt = (
-            "You are a robot acting as a party host. You are tasked with identifying the name "
-            f"and interest belonging to a guest. The possible names are {','.join(self._possible_names)}. "
-            "You will receive input such as 'my name is john and I like robotics'. Output only the name "
-            "and interest, e.g. 'john,robotics'. If you can't identify the name or interest, output 'unknown'."
-        )
-        request.prompt = transcription
+            request = LlmRequest()
+            request.system_prompt = (
+                "You are a robot acting as a party host. You are tasked with identifying the name "
+                f"and interest belonging to a guest. The possible names are {','.join(self._possible_names)}. "
+                "You will receive input such as 'my name is john and I like robotics'. Output only the name "
+                "and interest, e.g. 'john,robotics'. If you can't identify the name or interest, output 'unknown'."
+            )
+            request.prompt = transcription
 
-        response = self._llm(request).lower()
-        llm_name, interest = map(str.strip, response.split(","))
+            response = self._llm(request).lower()
+            llm_name, interest = map(str.strip, response.split(","))
 
-        # Try to match an exact name from transcription
-        name = next((n for n in self._possible_names if n in transcription), llm_name)
+            # Try to match an exact name from transcription
+            name = next(
+                (n for n in self._possible_names if n in transcription), llm_name
+            )
 
-        # Update guest data
-        guest = userdata.guest_data[self._guest_id]
-        guest["name"] = name
-        guest["interest"] = interest
+            # Update guest data
+            guest = userdata.guest_data[self._guest_id]
+            guest["name"] = name
+            guest["interest"] = interest
 
-        # Determine outcome
-        if name == "unknown" or interest == "unknown":
-            return "failed"
-        if name not in self._possible_names:
-            return "failed"
+            # Determine outcome
+            if name == "unknown" or interest == "unknown":
+                return "failed"
+            if name not in self._possible_names:
+                return "failed"
 
-        return "succeeded"
+            return "succeeded"
 
     class PostRecoveryDecision(smach.State):
         def __init__(
