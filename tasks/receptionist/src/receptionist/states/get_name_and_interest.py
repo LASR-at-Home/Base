@@ -81,12 +81,12 @@ class GetNameAndInterest(smach.StateMachine):
                 "You are a robot acting as a party host. You are tasked with identifying the name "
                 f"and interest belonging to a guest. The possible names are {','.join(self._possible_names)}. "
                 "You will receive input such as 'my name is john and I like robotics'. Output only the name "
-                "and interest, e.g. 'john,robotics'. If you can't identify the name or interest, output 'unknown'."
+                "and interest, e.g. 'john,robotics'. If you can't identify the name or interest, output 'unknown', e.g. 'john,unknown'."
             )
             request.prompt = transcription
 
-            response = self._llm(request).lower()
-            llm_name, interest = map(str.strip, response.split(","))
+            response = self._llm(request)
+            llm_name, interest = response.output.strip().split(",")
 
             # Try to match an exact name from transcription
             name = next(

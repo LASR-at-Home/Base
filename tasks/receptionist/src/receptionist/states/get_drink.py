@@ -86,7 +86,7 @@ class GetDrink(smach.StateMachine):
             request.system_prompt = f"You are a robot acting as a party host. You are tasked with identifying the favourite drink belonging to a guest. The possible drinks are {','.join(self._possible_drinks)}. You will receive input such as 'my favourite drink is cola'. Output only the drink. If you can't identify the drink, output 'None'."
             request.prompt = transcription
             response = self._llm(request)
-            drink = response.output
+            drink = response.output.strip()
 
             if drink.lower() in self._possible_drinks:
                 userdata.guest_data[self._guest_id]["drink"] = drink.lower()
