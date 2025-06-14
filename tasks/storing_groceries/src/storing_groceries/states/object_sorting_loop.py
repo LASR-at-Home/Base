@@ -1,19 +1,27 @@
 import smach
-
-from lasr_skills import Say, AdjustCamera, GoToLocation, CheckDoorStatus
+from smach import CBState
+from lasr_skills import Say, AdjustCamera, GoToLocation, CheckDoorStatus, DetectDict
 from storing_groceries.states import (
     SelectObject, ClassifyCategory, SayDynamic
 )
+def is_cabinet_checked_cb(userdata):
+    return "true" if userdata.all_cabinet_open else "false"
+
+def set_cabinet_checked_cb(userdata):
+    userdata.all_cabinet_open = True
+    return "done"
+
 
 class ObjectSortingLoop(smach.StateMachine):
     def __init__(self, table_pose, cabinet_pose):        
         super().__init__(
             outcomes=["succeeded","failed","escape"],
             input_keys=[],
+            output_keys=[],
         )
 
         self.table_pose = table_pose
-        self.cabinet_pose = cabinet_pose
+        self.cabinet_pose = [cabinet_pose]
 
         self.userdata.table_objects = [{"name": "apple", "confidence": 0.8, "bbox": [1.0, 0.5, 0.1]}, {"name": "orange", "confidence": 0.85, "bbox": [1.0, 0.5, 0.1]}, {"name": "hat", "confidence": 0.85, "bbox": [1.0, 0.5, 0.1]}]
         self.userdata.table_object = {"name": None, "confidence": None, "bbox": None}
@@ -26,20 +34,19 @@ class ObjectSortingLoop(smach.StateMachine):
                                         ]
         self.userdata.cabinet_categories = []
         self.userdata.cabinet_num = None
-        self.all_cabinet_open = False
-
+        self.userdata.all_cabinet_open = False
 
         with self:
-            self.go_to_table()
+            # self.go_to_table()
 
             smach.StateMachine.add(
                 "DETECT_TABLE",
-                Say(text="Detect table is on going. Will continue with fake data"),
+                DetectDict(),
                 transitions={
                     "succeeded": "SELECT_OBJECT",
-                    "aborted": "SELECT_OBJECT",
-                    "preempted": "SELECT_OBJECT",
+                    "failed": "SELECT_OBJECT",
                 },
+                remapping = {'detections': 'table_objects'}
             )
 
             smach.StateMachine.add(
@@ -86,35 +93,15 @@ class ObjectSortingLoop(smach.StateMachine):
                 "GRAB_OBJECT",
                 Say(text="GRAB_OBJECT is on going"),
                 transitions={
-                    "succeeded": "GO_TO_CABINET",
-                    "aborted": "GO_TO_CABINET",
-                    "preempted": "GO_TO_CABINET",
+                    "succeeded": "CHECK_IF_CABINET_ALREADY_OPEN",
+                    "aborted": "CHECK_IF_CABINET_ALREADY_OPEN",
+                    "preempted": "CHECK_IF_CABINET_ALREADY_OPEN",
                 },
             )
 
-            self.go_to_cabinet() 
+            # self.go_to_cabinet() 
 
-            self.check_cabinet_open() #try do once
-
-            smach.StateMachine.add(
-                "DETECT_CABINET",
-                Say(text="DETECT_CABINET is on going"),
-                transitions={
-                    "succeeded": "CLASSIFY_CATEGORY_CABINET",
-                    "aborted": "CLASSIFY_CATEGORY_CABINET",
-                    "preempted": "CLASSIFY_CATEGORY_CABINET",
-                },
-            )
-
-            smach.StateMachine.add(
-                "CLASSIFY_CATEGORY_CABINET", #try do once (for new collect at once and edit whenever storing new category to follow object category)
-                ClassifyCategory("cabinet"),
-                transitions={
-                    "succeeded": "SAY_CABINET_CATEGORY",
-                    "failed": "SAY_CABINET_CATEGORY",
-                    "empty": "SAY_CABINET_CATEGORY",
-                },
-            )
+            self.check_cabinet() #Do once, but consider the posibility that the door will be closed again.
 
             smach.StateMachine.add(
                 "SAY_CABINET_CATEGORY",
@@ -138,7 +125,7 @@ class ObjectSortingLoop(smach.StateMachine):
 
             smach.StateMachine.add(
                 "SAY_LINK_CATEGORY",
-                SayDynamic(text_fn=lambda ud: f"{ud.table_object['name']}'s belongs to {ud.cabinet_num}"),                
+                SayDynamic(text_fn=lambda ud: f"{ud.table_object['name']}'s belongs to {ud.cabinet_num + 1}"),                
                 transitions={
                     "succeeded": "PUT_OBJECT",
                     "aborted": "PUT_OBJECT",
@@ -150,9 +137,9 @@ class ObjectSortingLoop(smach.StateMachine):
                 "PUT_OBJECT",
                 Say(text="PUT_OBJECT is on going"),
                 transitions={
-                    "succeeded": "GO_TO_TABLE",
-                    "aborted": "GO_TO_TABLE",
-                    "preempted": "GO_TO_TABLE",
+                    "succeeded": "DETECT_TABLE",
+                    "aborted": "DETECT_TABLE",
+                    "preempted": "DETECT_TABLE",
                 },
             )
 
@@ -182,72 +169,162 @@ class ObjectSortingLoop(smach.StateMachine):
     def go_to_cabinet(self) -> None:
         """Adds the states to go to cabinet area.
         """
-        
         smach.StateMachine.add(
-            f"GO_TO_CABINET",
-            GoToLocation(self.cabinet_pose),
-            transitions={
-                "succeeded": f"SAY_ARRIVE_CABINET",
-                "failed": f"SAY_ARRIVE_CABINET",
-            },
-        )
+                f"GO_TO_CABINET",
+                GoToLocation(self.cabinet_pose),
+                transitions={
+                    "succeeded": f"SAY_ARRIVE_CABINET",
+                    "failed": f"SAY_ARRIVE_CABINET",
+                },
+            )
 
         smach.StateMachine.add(
             f"SAY_ARRIVE_CABINET",
             Say(text="Arrive cabinet"),
             transitions={
-                "succeeded": f"WAIT_CABINET_OPEN",
-                "aborted": f"WAIT_CABINET_OPEN",
-                "preempted": f"WAIT_CABINET_OPEN",
+                "succeeded": f"CHECK_IF_CABINET_ALREADY_OPEN",
+                "aborted": f"CHECK_IF_CABINET_ALREADY_OPEN",
+                "preempted": f"CHECK_IF_CABINET_ALREADY_OPEN",
             },
         )
 
-    def check_cabinet_open(self) -> None:
-        """Adds the states to open the cabinet.
-        """
-        #Todo: door opening manipulation. But also checking every shelf. points.
+    def check_cabinet(self) -> None:
+        """Adds the states to check and classify each cabinet pose once, using CBState for runtime branching."""
 
+        # Decide if cabinet has already been checked
         smach.StateMachine.add(
-            "WAIT_CABINET_OPEN",
-            CheckDoorStatus(
-                expected_closed_depth=1.2,  # adjust for cabinet (~0.5) or room door (~1.2)
-                change_thresh=0.4,
-                open_thresh=0.6),
+            "CHECK_IF_CABINET_ALREADY_OPEN",
+            CBState(is_cabinet_checked_cb, outcomes=["true", "false"], input_keys=["all_cabinet_open"]),
             transitions={
-                "open": "SAY_SHELF_OPEN", 
-                "closed": "SAY_SHELF_CLOSED",
-                "error": "SAY_SHELF_CLOSED",
+                "true": "SAY_CABINET_ALREADY_CHECKED",
+                "false": "CHECK_CABINET"
             }
         )
 
-        #check all shelf level ongoing
-        
+
+        # If already checked, skip to next
         smach.StateMachine.add(
-            f"SAY_SHELF_OPEN",
-            Say(text="Cabinet is open"),
+            "SAY_CABINET_ALREADY_CHECKED",
+            Say(text="Cabinet already checked"),
             transitions={
-                "succeeded": f"DETECT_CABINET",
-                "aborted": f"DETECT_CABINET",
-                "preempted": f"DETECT_CABINET",
+                "succeeded": "SAY_CABINET_CATEGORY",
+                "aborted": "SAY_CABINET_CATEGORY",
+                "preempted": "SAY_CABINET_CATEGORY"
             },
         )
 
+        # Sub-state machine to loop through each cabinet pose
+        check_cabinet_sm = smach.StateMachine(outcomes=["done"],
+                                            input_keys=["all_cabinet_open", "table_object", "cabinets_objects", "table_object_category", "cabinet_categories"],
+                                            output_keys=["table_object_category", "cabinet_categories", "cabinet_num", "all_cabinet_open"],
+
+        )
+
+        with check_cabinet_sm:
+            for i, pose in enumerate(self.cabinet_pose):
+                prefix = f"CABINET_{i}"
+
+                smach.StateMachine.add(
+                    f"{prefix}_SAY_CHECKING",
+                    Say(text=f"Checking cabinet {i+1}"),
+                    transitions={
+                        "succeeded": f"{prefix}_WAIT_OPEN",
+                        "aborted": f"{prefix}_WAIT_OPEN",
+                        "preempted": f"{prefix}_WAIT_OPEN"
+                    }
+                )
+
+                smach.StateMachine.add(
+                    f"{prefix}_WAIT_OPEN",
+                    CheckDoorStatus(expected_closed_depth=1.2, change_thresh=0.4, open_thresh=0.6),
+                    transitions={
+                        "open": f"{prefix}_SAY_OPEN",
+                        "closed": f"{prefix}_SAY_CLOSED",
+                        "error": f"{prefix}_SAY_CLOSED"
+                    }
+                )
+
+                smach.StateMachine.add(
+                    f"{prefix}_SAY_OPEN",
+                    Say(text="Cabinet is open"),
+                    transitions={
+                        "succeeded": f"{prefix}_DETECT",
+                        "aborted": f"{prefix}_DETECT",
+                        "preempted": f"{prefix}_DETECT"
+                    }
+                )
+
+                smach.StateMachine.add(
+                    f"{prefix}_SAY_CLOSED",
+                    Say(text="Cabinet is closed"),
+                    transitions={
+                        "succeeded": f"{prefix}_OPEN_DOOR",
+                        "aborted": f"{prefix}_OPEN_DOOR",
+                        "preempted": f"{prefix}_OPEN_DOOR"
+                    }
+                )
+
+                smach.StateMachine.add(
+                    f"{prefix}_OPEN_DOOR",
+                    Say(text="Opening the cabinet is ongoing."),
+                    transitions={
+                        "succeeded": f"{prefix}_DETECT",
+                        "aborted": f"{prefix}_DETECT",
+                        "preempted": f"{prefix}_DETECT"
+                    }
+                )
+
+                smach.StateMachine.add(
+                    f"{prefix}_DETECT",
+                    DetectDict(),
+                    transitions={
+                        "succeeded": f"{prefix}_CLASSIFY",
+                        "failed": f"{prefix}_CLASSIFY",
+                    },
+                    remapping = {'detections': 'cabinets_objects'}
+                )
+
+                smach.StateMachine.add(
+                    f"{prefix}_CLASSIFY",
+                    ClassifyCategory("cabinet"),
+                    transitions={
+                        "succeeded": f"{prefix}_NEXT",
+                        "failed": f"{prefix}_NEXT",
+                        "empty": f"{prefix}_NEXT"
+                    }
+                )
+
+                if i < len(self.cabinet_pose) - 1:
+                    smach.StateMachine.add(
+                        f"{prefix}_NEXT",
+                        CBState(lambda userdata: "continue", outcomes=["continue"], input_keys=["all_cabinet_open"]),
+                        transitions={"continue": f"CABINET_{i+1}_SAY_CHECKING"},
+                    )
+                else:
+                    smach.StateMachine.add(
+                        f"{prefix}_NEXT",
+                        CBState(lambda userdata: "done", outcomes=["done"], input_keys=["all_cabinet_open"]),
+                        transitions={"done": "done"}
+                    )
+
+
         smach.StateMachine.add(
-            f"SAY_SHELF_CLOSED",
-            Say(text="Cabinet is closed"),
-            transitions={
-                "succeeded": f"CABINET_DOOR_OPEN",
-                "aborted": f"CABINET_DOOR_OPEN", 
-                "preempted": f"CABINET_DOOR_OPEN",
-            },
+            "CHECK_CABINET",
+            check_cabinet_sm,
+            transitions={"done": "SET_CABINET_CHECKED_TRUE"},
+            remapping={
+                "table_object": "table_object",
+                "cabinets_objects": "cabinets_objects",
+                "table_object_category": "table_object_category",
+                "cabinet_categories": "cabinet_categories",
+                "cabinet_num": "cabinet_num",
+                "all_cabinet_open": "all_cabinet_open"
+            }
         )
 
         smach.StateMachine.add(
-            f"CABINET_DOOR_OPEN",
-            Say(text="Openning the cabinet is ongoing."),
-            transitions={
-                "succeeded": f"DETECT_CABINET",
-                "aborted": f"DETECT_CABINET", 
-                "preempted": f"DETECT_CABINET",
-            },
+            "SET_CABINET_CHECKED_TRUE",
+            CBState(set_cabinet_checked_cb, outcomes=["done"]),
+            transitions={"done": "SAY_CABINET_CATEGORY"},
+            remapping={"all_cabinet_open": "all_cabinet_open"} 
         )

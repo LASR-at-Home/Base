@@ -1,6 +1,7 @@
 #!/usr/bin/env python3.10
 import rospy
 import re
+import torch
 
 from lasr_llm_msgs.srv import (
     StoringGroceriesQueryLlm,
@@ -40,47 +41,50 @@ class StoringGroceriesQueryLlmService:
         task = request.task
         rospy.loginfo(f"Received query: {llm_input} (task: {task})")
 
+        # Construct the query
         if task == "ClassifyObject":
             query = f"What category does the object '{llm_input[0]}' belong to? Respond with only one word."
         elif task == "ClassifyCabinet":
             query = (
-                "Respond with only one word."
-                f"Classify the following objects as a group: {', '.join(llm_input)}.\n"
+                "Respond with only one word. "
+                f"Classify the following objects as a group: {', '.join(llm_input)}."
             )
         elif task == "LinkCategory":
             object_name = llm_input[0]
             categories = ', '.join(llm_input[1:])
             query = (
-                "Respond with only one word"
-                f"what '{object_name}' belong to the most or none: nothing, {categories}\n"
+                "Respond with only one word. "
+                f"What does '{object_name}' belong to the most or none: nothing, {categories}?"
             )
         else:
             rospy.logerr(f"Unsupported task: {task}")
             raise ValueError(f"Unsupported task: {task}")
 
         rospy.loginfo(f"[QUERY SENT TO LLM]\n{query}")
-        llm_output = self.llm_inference.run_inference(query)
+        try:
+            llm_output = self.llm_inference.run_inference(query)
+        except Exception as e:
+            rospy.logerr(f"LLM inference failed: {e}")
+            return StoringGroceriesQueryLlmResponse(category="error")
+
         rospy.loginfo(f"[RAW OUTPUT FROM LLM]\n{llm_output}")
 
-        # Clean and extract predicted category using smarter pattern
+        # Clean and extract category
         llm_output_clean = llm_output.strip().lower()
+        match = re.search(r"(?:category(?: is| of|:)?\s*)(\w+)", llm_output_clean)
+        if match:
+            predicted_category = match.group(1)
+        else:
+            predicted_category = llm_output_clean.split()[-1].strip(",.\"\':")
 
-        # Match e.g., "category of fruits", "category is fruit", "category: snacks"
-        # match = re.search(r"category(?: of| is|:)?\s*(\w+)", llm_output_clean)
-        # if match:
-            # predicted_category = match.group(1)
-        # else:
-            # fallback: last word
-            # predicted_category = llm_output_clean.split()[-1].strip(",.\"\':")
+        if task == "LinkCategory":
+            valid_categories = [cat.lower() for cat in llm_input[1:]]
+            if predicted_category not in valid_categories:
+                predicted_category = "new"
 
-        # For LinkCategory, check against allowed list
-        # if task == "LinkCategory":
-        #     valid_categories = [cat.lower() for cat in llm_input[1:]]
-        #     if predicted_category not in valid_categories:
-        #         predicted_category = "new"
-
+        # Build response
         response = StoringGroceriesQueryLlmResponse()
-        response.category = llm_output_clean
+        response.category = predicted_category
         rospy.loginfo(f"[RETURNING RESPONSE]: {response.category}")
         return response
 
@@ -88,4 +92,3 @@ class StoringGroceriesQueryLlmService:
 if __name__ == "__main__":
     storing_groceries_query_llm = StoringGroceriesQueryLlmService()
     rospy.spin()
-

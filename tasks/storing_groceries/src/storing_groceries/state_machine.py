@@ -72,13 +72,13 @@ class StoringGroceries(smach.StateMachine):
                 "SAY_START",
                 Say(text="Ready to start"),
                 transitions={
-                    "succeeded": "GO_TO_WAITING_AREA",
-                    "aborted": "GO_TO_WAITING_AREA",
-                    "preempted": "GO_TO_WAITING_AREA",
+                    "succeeded": "WAIT_DOOR_OPEN",
+                    "aborted": "WAIT_DOOR_OPEN",
+                    "preempted": "WAIT_DOOR_OPEN",
                 },
             )
 
-            self.go_to_waiting_area()
+            # self.go_to_waiting_area()
 
             """
             WaitDoorOpen

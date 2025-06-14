@@ -32,3 +32,4 @@ from .count_people import CountPeople
 from .json_qa import JsonQuestionAnswer
 from .rotate import Rotate
 from .check_door_status import CheckDoorStatus
+from .detect_dict import DetectDict
