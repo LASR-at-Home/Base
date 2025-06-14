@@ -1,11 +1,8 @@
-#!/usr/bin/env python3
-
 from typing import Dict, Any
 
 import rospy
 
 from llama_cpp import Llama
-
 
 from lasr_llm_msgs.srv import Llm, LlmRequest, LlmResponse
 
@@ -38,7 +35,7 @@ class LLMService:
             echo=False,
         )
         rospy.loginfo(f"LLM Output:\n {llm_output}")
-        response.output = llm_output["choices"][0]["text"])
+        response.output = llm_output["choices"][0]["text"]
 
         return response
 
