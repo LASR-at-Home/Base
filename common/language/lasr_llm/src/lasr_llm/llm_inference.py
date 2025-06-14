@@ -134,13 +134,35 @@ class LLMInference:
         return model_class.from_pretrained(self.model_name, **kwargs)
 
     def load_llm_model(self):
-        device_map = "auto" if self.device != "cpu" else "cpu"
-        torch_dtype = torch.bfloat16 if self.device != "cpu" else torch.float32
-        kwargs = {"device_map": device_map, "torch_dtype": torch_dtype}
-        if self.config.quantize:
-            kwargs["quantization_config"] = self.quantization_config
+        from transformers import BitsAndBytesConfig
 
-        return AutoModelForCausalLM.from_pretrained(self.model_name, **kwargs)
+        if self.device == torch.device("cpu"):
+            rospy.logwarn("[LLMInference] CPU detected — skipping quantization.")
+            return AutoModelForCausalLM.from_pretrained(self.model_name)
+
+        # Try quantized load if requested and CUDA is available
+        try:
+            if self.config.quantize:
+                quant_config = BitsAndBytesConfig(
+                    load_in_4bit=True,
+                    bnb_4bit_quant_type="nf4",
+                    bnb_4bit_compute_dtype=torch.bfloat16,
+                )
+                return AutoModelForCausalLM.from_pretrained(
+                    self.model_name,
+                    device_map="auto",
+                    quantization_config=quant_config
+                )
+            else:
+                return AutoModelForCausalLM.from_pretrained(
+                    self.model_name,
+                    device_map="auto",
+                    torch_dtype=torch.bfloat16
+                )
+        except Exception as e:
+            rospy.logerr(f"[LLMInference] Quantized model load failed: {e}")
+            rospy.logwarn("[LLMInference] Falling back to full-precision model.")
+            return AutoModelForCausalLM.from_pretrained(self.model_name)
 
     def run_inference(self, query: str, context: Optional[str] = None) -> str:
 
