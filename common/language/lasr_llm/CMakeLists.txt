@@ -15,7 +15,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_python_setup()
 catkin_generate_virtualenv(
   INPUT_REQUIREMENTS requirements.in
-  PYTHON_INTERPRETER python3.10
+  PYTHON_INTERPRETER python3.12
 )
 
 ## System dependencies are found with CMake's conventions
@@ -166,6 +166,7 @@ include_directories(
 ## in contrast to setup.py, you can choose the destination
 catkin_install_python(PROGRAMS
   nodes/receptionist_service.py
+  nodes/llm.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
