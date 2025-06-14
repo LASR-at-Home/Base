@@ -21,32 +21,6 @@ priors:
     - tropical juice
     - cup
     - bottle
-  interests:
-    - football
-    - robotics
-    - basketball
-    - table tennis
-    - badminton
-    - running
-    - swimming
-    - chess
-    - cooking
-    - painting
-    - reading
-    - yoga
-    - robotics
-    - programming
-    - electronics
-    - travel
-    - hiking
-    - camping
-    - dancing
-    - singing
-    - playing guitar
-    - photography
-    - gardening
-    - video games
-    - board games
 
 #WAIT POSE LAB:
 wait_pose:
@@ -90,6 +64,7 @@ wait_area:
     [-6.342676639556885, -3.693847179412842],
   ]
 table_area:
+  [
     [-1.6926265954971313, -0.8597434759140015],
     [-2.7264482975006104, -0.7741394639015198],
     [-2.6938109397888184, -0.2346661239862442],
