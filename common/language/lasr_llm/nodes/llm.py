@@ -1,15 +1,16 @@
+#!/usr/bin/env python3
+
 from typing import Dict, Any
 
 import rospy
 
-import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
 from transformers.pipelines.text_generation import TextGenerationPipeline
 
 from lasr_llm_msgs.srv import Llm, LlmRequest, LlmResponse
 
 
-class LLMNode:
+class LLMService:
 
     _generation_args: Dict[str, Any] = {
         "max_new_tokens": 500,
@@ -21,8 +22,6 @@ class LLMNode:
     _pipeline: TextGenerationPipeline
 
     def __init__(self):
-        rospy.init_node("lasr_llm")
-
         self._model = AutoModelForCausalLM.from_pretrained(
             "microsoft/Phi-3-mini-4k-instruct",
             device_map="cpu",
@@ -39,7 +38,7 @@ class LLMNode:
         )
 
         self._service = rospy.Service("/lasr_llm/llm", Llm, self._llm)
-        rospy.loginfo("/lsr_llm/llm service is ready!")
+        rospy.loginfo("/lasr_llm/llm service is ready!")
 
     def _llm(self, request: LlmRequest) -> LlmResponse:
         response = LlmResponse()
@@ -57,3 +56,9 @@ class LLMNode:
         response.output = llm_output[0]["generated_text"]
 
         return response
+
+
+if __name__ == "__main__":
+    rospy.init_node("lasr_llm")
+    llm_service = LLMService()
+    rospy.spin()
