@@ -10,12 +10,8 @@ from smach import UserData
 from typing import List, Dict, Any
 from receptionist.states import SpeechRecovery
 from lasr_llm_msgs.srv import (
-    ReceptionistQueryLlm,
-    ReceptionistQueryLlmRequest,
-    ReceptionistQueryLlmResponse,
     Llm,
     LlmRequest,
-    LlmResponse,
 )
 
 
