@@ -6,5 +6,11 @@
   <node pkg="lasr_manipulation_3d_completion" type="pointcloud_completion_service.py" name="completion_service" output="screen" />
 
   <!-- Final grasping -->
-  <node pkg="lasr_grasping" type="grasp_contact_graspnet.py" name="grasp_executor" output="screen" />
+  <node pkg="lasr_grasping" type="grasp_gpd.py" name="grasp_executor" output="screen" />
+
+
+  <!-- GPD -->
+  <include file="$(find gpd_ros)/launch/tiago.launch"/>
+	<node name="rviz" pkg="rviz" type="rviz" args="-d $(find tiago_kcl_moveit_grasp)/cfg/tiago_grasp.rviz"/>
+
 </launch>

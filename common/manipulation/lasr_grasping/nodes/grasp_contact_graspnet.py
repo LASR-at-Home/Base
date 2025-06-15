@@ -1,6 +1,7 @@
 #!/usr/bin/env /home/siyao/project/RoboCup/robocup_svea/devel/.private/lasr_grasping/share/lasr_grasping/venv/bin/python
 import sys
 import rospy
+
 # rospy.logwarn(sys.executable)
 print("Starting grasp_contact_graspnet node")
 rospy.init_node("test_contact_graspnet_grasps")
@@ -36,8 +37,6 @@ from geometry_msgs.msg import Point, Pose
 import os
 
 
-
-
 def tf_pose(source_frame: str, target_frame: str, pose: Pose) -> Pose:
     try:
         transform = tf_buffer.lookup_transform(
@@ -57,6 +56,7 @@ def tf_pose(source_frame: str, target_frame: str, pose: Pose) -> Pose:
     pose_stamped.header.frame_id = source_frame
     return do_transform_pose(pose_stamped, transform)
 
+
 def publish_marker(pose: Pose, frame_id: str, marker_id: int):
     marker = Marker()
     marker.header.frame_id = frame_id
@@ -75,6 +75,7 @@ def publish_marker(pose: Pose, frame_id: str, marker_id: int):
     marker.color.a = 1.0
     marker.lifetime = rospy.Duration(30)  # Stays visible for 30 seconds
     marker_pub.publish(marker)
+
 
 # def create_collision_object_from_pcl(
 #     pcl_msg, planning_scene_interface, frame_id="base_footprint"
@@ -145,16 +146,17 @@ def publish_marker(pose: Pose, frame_id: str, marker_id: int):
 
 
 def create_mesh_collision_object_from_pcl(
-    pcl_msg,
-    planning_scene_interface,
-    obj_id="obj",
-    frame_id="base_footprint"
+    pcl_msg, planning_scene_interface, obj_id="obj", frame_id="base_footprint"
 ):
     # 1) Turn the PointCloud2 into a NumPy array of shape (N,3)
-    points = np.array([
-        [p[0], p[1], p[2]]
-        for p in pc2.read_points(pcl_msg, field_names=("x", "y", "z"), skip_nans=True)
-    ])
+    points = np.array(
+        [
+            [p[0], p[1], p[2]]
+            for p in pc2.read_points(
+                pcl_msg, field_names=("x", "y", "z"), skip_nans=True
+            )
+        ]
+    )
     if points.shape[0] == 0:
         rospy.logwarn("No points in the PCL message!")
         return
@@ -189,12 +191,12 @@ def create_mesh_collision_object_from_pcl(
     pose.pose.orientation.w = 1.0
 
     # 6) Finally, give MoveIt the full path to that STL:
-    planning_scene_interface.add_mesh(
-        name=obj_id,
-        pose=pose,
-        filename=mesh_filename
+    planning_scene_interface.add_mesh(name=obj_id, pose=pose, filename=mesh_filename)
+    rospy.loginfo(
+        "Mesh CollisionObject '%s' added to the planning scene (file: %s)",
+        obj_id,
+        mesh_filename,
     )
-    rospy.loginfo("Mesh CollisionObject '%s' added to the planning scene (file: %s)", obj_id, mesh_filename)
 
 
 def allow_collisions_with_object(obj_name, scene):
@@ -282,7 +284,6 @@ def allow_collisions_with_object(obj_name, scene):
 # rospy.loginfo("Published background pointcloud without the segmented object")
 
 
-
 planning_scene = PlanningSceneInterface()
 planning_scene.clear()
 
@@ -311,14 +312,15 @@ masked_cloud = rospy.wait_for_message("/segmented_cloud", PointCloud2)
 print("Got PCL")
 # get the collision object from the topic
 
-create_mesh_collision_object_from_pcl(masked_cloud, planning_scene, obj_id="obj", frame_id=masked_cloud.header.frame_id)
+create_mesh_collision_object_from_pcl(
+    masked_cloud, planning_scene, obj_id="obj", frame_id=masked_cloud.header.frame_id
+)
 
 
 rospy.loginfo("Got PCL, calling graspnet")
 
 rospy.loginfo("Published mesh CollisionObject to MoveIt planning scene.")
 rospy.loginfo("Created collision object")
-
 
 
 rospy.loginfo("Setting up MoveIt!")
@@ -448,6 +450,7 @@ if res:
         move_group.set_start_state_to_current_state()
         result = move_group.go(wait=True)
         return result
+
     clear_octomap = rospy.ServiceProxy("/clear_octomap", Empty)
     clear_octomap()
     sync_shift_ee(arm_torso_group, 0.06, 0.0, 0.0)
