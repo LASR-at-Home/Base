@@ -730,6 +730,9 @@ class PersonFollower:
             # Return head to center position
             self._look_centre_point()
 
+            # reset the time of recovery to avoid stop detection
+            self.last_movement_time = rospy.Time.now()
+
     def _check_target_recovery(self):
         """Check if target has been recovered during scanning"""
         current_time = rospy.Time.now()

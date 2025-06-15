@@ -1,1 +1,0 @@
-from .person_following_sam2 import PersonFollower
