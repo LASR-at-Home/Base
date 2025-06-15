@@ -143,6 +143,103 @@ def publish_marker(pose: Pose, frame_id: str, marker_id: int):
 
 #     rospy.loginfo("Collision object added to the planning scene!")
 
+def create_pointcloud2(points, frame_id="map"):
+    """
+    points: (N, 3) numpy array
+    frame_id: TF frame
+    returns: sensor_msgs/PointCloud2
+    """
+    header = std_msgs.msg.Header()
+    header.stamp = rospy.Time.now()
+    header.frame_id = frame_id
+
+    fields = [
+        sensor_msgs.msg.PointField(
+            name="x", offset=0, datatype=sensor_msgs.msg.PointField.FLOAT32, count=1
+        ),
+        sensor_msgs.msg.PointField(
+            name="y", offset=4, datatype=sensor_msgs.msg.PointField.FLOAT32, count=1
+        ),
+        sensor_msgs.msg.PointField(
+            name="z", offset=8, datatype=sensor_msgs.msg.PointField.FLOAT32, count=1
+        ),
+    ]
+
+    # pack the points into a list of tuples
+    points_list = [tuple(p) for p in points]
+
+    pcl2_msg = pc2.create_cloud(header, fields, points_list)
+
+    return pcl2_msg
+
+
+def create_collision_object_from_pcl(
+    pcl_msg, planning_scene_interface, frame_id="base_footprint"
+):
+    # Convert PointCloud2 message to a list of (x, y, z)
+    points = []
+    for p in pc2.read_points(pcl_msg, field_names=("x", "y", "z"), skip_nans=True):
+        points.append([p[0], p[1], p[2]])
+
+    if not points:
+        rospy.logwarn("No points in the PCL message!")
+        return
+
+    points = np.array(points)
+
+    # Optional: remove outliers based on percentiles (e.g., filtering out the extreme points)
+    lower = np.percentile(points, 1, axis=0)
+    upper = np.percentile(points, 99, axis=0)
+
+    # Filter points based on the percentile ranges
+    mask = np.all((points >= lower) & (points <= upper), axis=1)
+    points = points[mask]
+
+    # Find the min and max of the points
+    min_pt = points.min(axis=0)
+    max_pt = points.max(axis=0)
+
+    # Calculate the center of the bounding box and its size
+    center = (min_pt + max_pt) / 2.0
+    size = max_pt - min_pt
+
+    p = PoseStamped()
+    p.header.frame_id = frame_id
+    # p.pose.position.x = obj.centroid.x
+    # p.pose.position.y = obj.centroid.y
+    # p.pose.position.z = obj.centroid.z
+    p.pose.position.x = center[0]
+    p.pose.position.y = center[1]
+    p.pose.position.z = center[2]
+    p.pose.orientation.w = 1
+    planning_scene_interface.add_box("obj", p, size=size)
+
+    # # Create the collision object (bounding box)
+    # collision_object = CollisionObject()
+    # collision_object.header.frame_id = frame_id
+    # collision_object.id = "object"
+
+    # # Define a SolidPrimitive (box)
+    # box = SolidPrimitive()
+    # box.type = SolidPrimitive.BOX
+    # box.dimensions = [size[0], size[1], size[2]]
+
+    # # Define the pose of the collision object
+    # pose = Pose()
+    # pose.position.x = center[0]
+    # pose.position.y = center[1]
+    # pose.position.z = center[2]
+    # pose.orientation.w = 1.0  # No rotation, just the position
+
+    # collision_object.primitives = [box]
+    # collision_object.primitive_poses = [pose]
+    # collision_object.operation = CollisionObject.ADD
+
+    # Add the collision object to the planning scene
+    # planning_scene_interface.apply_collision_object(collision_object)
+
+    rospy.loginfo("Collision object added to the planning scene!")
+
 
 def create_mesh_collision_object_from_pcl(
     pcl_msg,
@@ -164,29 +261,48 @@ def create_mesh_collision_object_from_pcl(
     pcd.points = o3d.utility.Vector3dVector(points)
     pcd.estimate_normals()
 
-    # 3) Run Poisson registration (or any reconstruction you like)
-    mesh_o3d, _ = o3d.geometry.TriangleMesh.create_from_point_cloud_poisson(
-        pcd, depth=8
+    tetra_mesh, pt_map = o3d.geometry.TetraMesh.create_from_point_cloud(pcd)
+
+
+    mesh_o3d = o3d.geometry.TriangleMesh.create_from_point_cloud_alpha_shape(
+        pcd, 0.05, tetra_mesh, pt_map
     )
+    mesh_o3d.compute_vertex_normals()
+    mesh_o3d = mesh_o3d.filter_smooth_taubin(number_of_iterations=10)
     mesh_o3d = mesh_o3d.simplify_quadric_decimation(10000)
+    o3d.visualization.draw_geometries([mesh_o3d])
 
     # 4) Decide where on disk to save this mesh. For example:
     #    - Put it in /tmp
     #    - Or under your ROS package’s “meshes” folder
     # Here, we’ll just save to /tmp/object.stl:
     mesh_filename = "/tmp/{}_mesh.ply".format(obj_id)
-    o3d.io.write_triangle_mesh(mesh_filename, mesh_o3d)
-    rospy.loginfo("Wrote mesh to %s", mesh_filename)
+    saved = o3d.io.write_triangle_mesh(mesh_filename, mesh_o3d)
+    if not saved:
+        rospy.logerr(f"Failed to save mesh to {mesh_filename}")
+    else:
+        rospy.loginfo(f"Mesh saved at {mesh_filename}")
 
     # 5) Compute the mesh’s centroid so we can tell MoveIt where to place it.
     vertices = np.asarray(mesh_o3d.vertices)
-    center = vertices.mean(axis=0)
+    center = mesh_o3d.get_center()
+
+    min_pt = vertices.min(axis=0)
+    max_pt = vertices.max(axis=0)
+
+    rospy.loginfo(f"Mesh bounding box min: {min_pt}")
+    rospy.loginfo(f"Mesh bounding box max: {max_pt}")
+    rospy.loginfo(f"Mesh centroid: {center}")
+
+
+
     pose = PoseStamped()
     pose.header.frame_id = frame_id
-    pose.pose.position.x = center[0]
-    pose.pose.position.y = center[1]
-    pose.pose.position.z = center[2]
+    pose.pose.position.x = 0.0
+    pose.pose.position.y = 0.0
+    pose.pose.position.z = 0.0
     pose.pose.orientation.w = 1.0
+
 
     # 6) Finally, give MoveIt the full path to that STL:
     planning_scene_interface.add_mesh(
@@ -194,6 +310,7 @@ def create_mesh_collision_object_from_pcl(
         pose=pose,
         filename=mesh_filename
     )
+    rospy.loginfo(f"frame_id: {frame_id}")
     rospy.loginfo("Mesh CollisionObject '%s' added to the planning scene (file: %s)", obj_id, mesh_filename)
 
 
@@ -282,7 +399,7 @@ def allow_collisions_with_object(obj_name, scene):
 # rospy.loginfo("Published background pointcloud without the segmented object")
 
 
-
+completion = True
 planning_scene = PlanningSceneInterface()
 planning_scene.clear()
 
@@ -305,14 +422,20 @@ detect_grasps = rospy.ServiceProxy("/contact_graspnet/detect_grasps", DetectGras
 
 # Publisher for markers
 marker_pub = rospy.Publisher("grasp_markers", Marker, queue_size=10)
+completion_pcl = rospy.wait_for_message("/completed_cloud_vis", PointCloud2)
 pcl = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
 masked_cloud = rospy.wait_for_message("/segmented_cloud", PointCloud2)
 
 print("Got PCL")
 # get the collision object from the topic
+if completion:
+    create_mesh_collision_object_from_pcl(completion_pcl, planning_scene, obj_id="obj", frame_id=pcl.header.frame_id)
+    rospy.loginfo("Published mesh marker for RViz visualization")
 
-create_mesh_collision_object_from_pcl(masked_cloud, planning_scene, obj_id="obj", frame_id=masked_cloud.header.frame_id)
-
+else:
+    create_collision_object_from_pcl(
+    masked_cloud, planning_scene, masked_cloud.header.frame_id
+)
 
 rospy.loginfo("Got PCL, calling graspnet")
 

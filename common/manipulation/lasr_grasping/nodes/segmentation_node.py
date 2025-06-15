@@ -84,39 +84,83 @@ pcl = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
 rospy.loginfo("Got PCL")
 im = cv2_pcl.pcl_to_cv2(pcl)
 
+USE_BBOX = True  # Set to False to use point, True for bounding box
 
 clicked_point = []
-
+bbox = []
+drawing = False
+start_point = None
 
 def mouse_callback(event, x, y, flags, param):
     if event == cv2.EVENT_LBUTTONDOWN:
         print(f"Clicked at: ({x}, {y})")
         clicked_point.append((x, y))  # Save the point
 
+def mouse_callback_bbox(event, x, y, flags, param):
+    global drawing, start_point, bbox, image_copy
+    if event == cv2.EVENT_LBUTTONDOWN:
+        drawing = True
+        start_point = (x, y)
+        bbox.clear()
+    elif event == cv2.EVENT_MOUSEMOVE and drawing:
+        image_copy = image.copy()
+        cv2.rectangle(image_copy, start_point, (x, y), (0, 255, 0), 2)
+    elif event == cv2.EVENT_LBUTTONUP:
+        drawing = False
+        end_point = (x, y)
+        bbox[:] = [start_point, end_point]
+        print(f"Selected box: {bbox}")
 
 # Load your image
 image = im
+if USE_BBOX:
+    image_copy = image.copy()
 
-# Display image
 cv2.namedWindow("Image")
-cv2.setMouseCallback("Image", mouse_callback)
+if USE_BBOX:
+    cv2.setMouseCallback("Image", mouse_callback_bbox)
+else:
+    cv2.setMouseCallback("Image", mouse_callback)
 
 while True:
-    cv2.imshow("Image", image)
+    if USE_BBOX:
+        cv2.imshow("Image", image_copy)
+    else:
+        cv2.imshow("Image", image)
     key = cv2.waitKey(1) & 0xFF
-    if key == 27:  # Press ESC to exit
+    if key == 27:  # ESC
         break
-    if clicked_point:
+    if USE_BBOX and bbox:
+        break
+    if not USE_BBOX and clicked_point:
         break
 
 cv2.destroyAllWindows()
 
-print(f"Selected point: {clicked_point[0]}")
+if USE_BBOX:
+    print(f"Selected bounding box: {bbox}")
+    x0, y0 = bbox[0]
+    x1, y1 = bbox[1]
+    box = [min(x0, x1), min(y0, y1), max(x0, x1), max(y0, y1)]
+    rospy.loginfo("Got 2D Image, calling SAM")
+    print(f"Selected box: {box}")
+    # result = sam(im, prompts={'bboxes': bbox})[0]
+    result = sam.predict(
+        im,
+        bboxes=[box],
+        retina_masks=True,   
+        iou=0.25,            
+        conf=0.5, 
+    )[0]
+else:
+    print(f"Selected point: {clicked_point[0]}")
+    rospy.loginfo("Got 2D Image, calling SAM")
+    result = sam(im, points=[list(clicked_point[0])], labels=[1])[0]
 
-
-rospy.loginfo("Got 2D Image, calling SAM")
-result = sam(im, points=[list(clicked_point[0])], labels=[1])[0]
 cv2.imshow("result", result.plot())
+cv2.waitKey(0)
+cv2.destroyAllWindows()
+
 result = min(result, key=lambda r: r.boxes.xywh[0, 2] * r.boxes.xywh[0, 3])
 cv2.waitKey(0)
 cv2.imshow("result", result.plot())
@@ -140,7 +184,8 @@ masked_points = masked_points[~np.all(masked_points == 0, axis=1)]
 masked_cloud = create_pointcloud2(masked_points, pcl.header.frame_id)
 pcl_pub = rospy.Publisher("/segmented_cloud", PointCloud2)
 rate = rospy.Rate(10) 
-while not rospy.is_shutdown():
+# while not rospy.is_shutdown():
+for _ in range(10):
     pcl_pub.publish(masked_cloud)
     rate.sleep()
 rospy.loginfo("Got segmentations")
