@@ -1,6 +1,6 @@
-#!/usr/bin/env /home/siyao/project/RoboCup/robocup_svea/devel/.private/lasr_grasping/share/lasr_grasping/venv/bin/python
 import sys
 import rospy
+
 rospy.logwarn(sys.executable)
 import ultralytics
 import moveit_commander
@@ -28,6 +28,10 @@ import cv2_pcl
 import cv2
 import numpy as np
 from moveit.core.collision_detection import AllowedCollisionMatrix
+import os
+import rospkg
+
+os.chdir(rospkg.RosPack().get_path("lasr_grasping"))
 
 sam = ultralytics.FastSAM("FastSAM-s.pt").to("cpu")
 
@@ -62,8 +66,6 @@ def create_pointcloud2(points, frame_id="map"):
     pcl2_msg = pc2.create_cloud(header, fields, points_list)
 
     return pcl2_msg
-
-
 
 
 # octomap_pub = rospy.Publisher("/throttle_filtering_points/filtered_points", PointCloud2)
@@ -139,7 +141,7 @@ masked_points = masked_points[~np.isnan(masked_points).any(axis=1)]
 masked_points = masked_points[~np.all(masked_points == 0, axis=1)]
 masked_cloud = create_pointcloud2(masked_points, pcl.header.frame_id)
 pcl_pub = rospy.Publisher("/segmented_cloud", PointCloud2)
-rate = rospy.Rate(10) 
+rate = rospy.Rate(10)
 while not rospy.is_shutdown():
     pcl_pub.publish(masked_cloud)
     rate.sleep()
