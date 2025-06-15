@@ -1,4 +1,4 @@
 <launch>
-    <node name="yolo" pkg="lasr_vision_yolo" type="service" output="screen"/>
+    <node name="yolo" pkg="lasr_vision_yolo" type="service.py" output="screen"/>
     <node name="cropped_detection" pkg="lasr_vision_cropped_detection" type="service.py" output="screen"/>
 </launch>

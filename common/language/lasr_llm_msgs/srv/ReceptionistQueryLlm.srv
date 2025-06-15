@@ -1,0 +1,6 @@
+string llm_input
+
+# Either name_and_interest, drink, or interest_commonality
+string task
+---
+lasr_llm_msgs/ReceptionistResponse response

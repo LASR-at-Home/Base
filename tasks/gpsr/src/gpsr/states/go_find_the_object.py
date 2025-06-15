@@ -94,7 +94,7 @@ class GoFindTheObject(smach.StateMachine):
 
     def __init__(
         self,
-        model: str = "yolov8x-seg.pt",
+        model: str = "yolo11n-seg.pt",
         filter: Union[List[str], None] = None,  # <- input
         waypoints: Union[List[Pose], None] = None,  # <- input
         locations: Union[str, None] = None,
