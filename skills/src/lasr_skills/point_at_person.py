@@ -15,7 +15,6 @@ from geometry_msgs.msg import (
 from tf.transformations import quaternion_from_matrix
 import numpy as np
 
-import sys
 import moveit_commander
 
 import tf2_geometry_msgs
@@ -54,7 +53,7 @@ class PointAt(smach.State):
                 robot_pose.position.z,
             ]
         )
-        print(robot_pose, target_point)
+        rospy.logdebug(f"Robot pose: {robot_pose}, Target point: {target_point}")
         target_pos = np.array(
             [
                 target_point.x,
@@ -66,6 +65,16 @@ class PointAt(smach.State):
         # Direction vector
         direction = target_pos - robot_pos
         distance = np.linalg.norm(direction)
+        if distance == 0:
+            rospy.logwarn("Target point coincides with robot position. Returning default pose.")
+            pose_stamped = PoseStamped()
+            pose_stamped.header.frame_id = "map"
+            pose_stamped.header.stamp = rospy.Time.now()
+            pose_stamped.pose = Pose(
+                position=Point(robot_pose.position.x, robot_pose.position.y, self._eef_height),
+                orientation=Quaternion(0, 0, 0, 1),
+            )
+            return pose_stamped
         direction /= distance
 
         position = robot_pos + direction * min(distance, self._max_dist)
