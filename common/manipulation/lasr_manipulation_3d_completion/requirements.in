@@ -4,13 +4,7 @@ open3d==0.13.0
 absl-py==1.1.0
 easydict==1.9
 timm==0.4.5
-torch==1.12.0
-torchaudio==0.12.0
-torchvision==0.13.0
 python-dateutil>=2.8.2
-# testresources
-# pointnet2-ops==3.0.0
 ninja==1.11.1.4
-# -e ./KNN_CUDA
-# -e ./Pointnet2_PyTorch/pointnet2_ops_lib
-
+git+https://github.com/fishbotics/pointnet2_ops.git
+https://github.com/unlimblue/KNN_CUDA/releases/download/0.2/KNN_CUDA-0.2-py3-none-any.whl
