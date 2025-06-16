@@ -15,7 +15,7 @@ from moveit_commander import PlanningSceneInterface, MoveGroupCommander
 from gpd_ros.srv import detect_grasps as DetectGrasps
 from gpd_ros.msg import CloudIndexed, CloudSources, GraspConfig, GraspConfigList
 
-from lasr_manipulation_3d_completion.srv import CompleteShape
+from lasr_manipulation_msgs.srv import CompleteShape
 
 from play_motion_msgs.msg import PlayMotionGoal, PlayMotionAction
 from sensor_msgs.msg import PointCloud2
@@ -31,6 +31,7 @@ class GraspGPD:
 
         rospy.loginfo("Starting GraspGPD...")
 
+        moveit_commander.roscpp_initialize(sys.argv)
         rospy.loginfo("Setting up PlanningSceneInterface...")
         self._planning_scene = PlanningSceneInterface()
         self._planning_scene.clear()
@@ -43,7 +44,6 @@ class GraspGPD:
         self._move_group.allow_looking(True)
         self._move_group.set_planning_time(30)
         self._move_group.set_num_planning_attempts(30)
-
         rospy.loginfo("Setup MoveGroupCommander!")
 
         rospy.loginfo("Setting up PlayMotion...")
@@ -56,18 +56,22 @@ class GraspGPD:
         rospy.loginfo("Setting up clear_octomap...")
         self._clear_octomap = rospy.ServiceProxy("/clear_octomap", Empty)
         self._clear_octomap.wait_for_service()
-        rospy.loginfo("Setup GPD!")
+        rospy.loginfo("Setup clear_octomap!")
 
         rospy.loginfo("Setting up 3D Completion...")
         self._3d_completion = rospy.ServiceProxy(
             "/shape_completion/complete", CompleteShape
         )
         self._3d_completion.wait_for_service()
+        rospy.loginfo("Setup 3D Completion...")
 
         rospy.loginfo("Setting up GPD...")
-        self._gpd = rospy.SerivceProxy("/detect_grasps/detect_grasps", DetectGrasps)
+        self._gpd = rospy.ServiceProxy(
+            "/detect_grasps_server/detect_grasps", DetectGrasps
+        )
         self._gpd.wait_for_service()
         rospy.loginfo("Setup GPD!")
+        rospy.loginfo("GraspGPD pipeline is ready!")
 
     def _play_motion(self, motion_name: str):
         goal = PlayMotionGoal()
@@ -75,7 +79,7 @@ class GraspGPD:
         goal.motion_name = motion_name
         self._play_motion_client.send_goal_and_wait(goal)
 
-    def _grasp_to_pose(grasp: GraspConfig) -> Pose:
+    def _grasp_to_pose(self, grasp: GraspConfig) -> Pose:
         # Extract orientation vectors
         x = [grasp.axis.x, grasp.axis.y, grasp.axis.z]
         y = [grasp.binormal.x, grasp.binormal.y, grasp.binormal.z]
@@ -169,7 +173,7 @@ class GraspGPD:
         self._move_group.set_pose_reference_frame(masked_pcl.header.frame_id)
         rospy.loginfo("Got segmented_cloud!")
         rospy.loginfo("Completing point cloud...")
-        completed_pcl = self._3d_completion(masked_pcl)
+        completed_pcl = self._3d_completion(masked_pcl).completed_cloud
         rospy.loginfo("Completed point cloud!")
         # Call GPD
         rospy.loginfo("Calling GPD...")
@@ -191,6 +195,6 @@ class GraspGPD:
 
 if __name__ == "__main__":
     rospy.init_node("grasp_gpd")
-    moveit_commander.roscpp_initialize(sys.argv)
     grasp_gpd = GraspGPD()
+    grasp_gpd.grasp_pipeline()
     rospy.spin()

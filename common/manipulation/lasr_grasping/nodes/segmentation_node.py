@@ -81,6 +81,7 @@ def create_pointcloud2(points, frame_id="map"):
 #     "/throttle_filtering_points/filtered_points", PointCloud2, update_octomap
 # )
 
+pcl_pub = rospy.Publisher("/segmented_cloud", PointCloud2, latch=True, queue_size=10)
 
 pcl = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
 rospy.loginfo("Got PCL")
@@ -140,9 +141,5 @@ masked_points = pcl_xyz[indices[:, 0], indices[:, 1]]
 masked_points = masked_points[~np.isnan(masked_points).any(axis=1)]
 masked_points = masked_points[~np.all(masked_points == 0, axis=1)]
 masked_cloud = create_pointcloud2(masked_points, pcl.header.frame_id)
-pcl_pub = rospy.Publisher("/segmented_cloud", PointCloud2)
-rate = rospy.Rate(10)
-while not rospy.is_shutdown():
-    pcl_pub.publish(masked_cloud)
-    rate.sleep()
+pcl_pub.publish(masked_cloud)
 rospy.loginfo("Got segmentations")

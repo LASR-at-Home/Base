@@ -13,4 +13,7 @@
   <include file="$(find gpd_ros)/launch/tiago.launch"/>
 	<node name="rviz" pkg="rviz" type="rviz" args="-d $(find tiago_kcl_moveit_grasp)/cfg/tiago_grasp.rviz"/>
 
+  <rosparam command="load" file="$(find lasr_grasping)/config/motions.yaml"/>
+
+
 </launch>
