@@ -34,8 +34,12 @@ from geometry_msgs.msg import Point, PointStamped
 from sensor_msgs.msg import Image, CameraInfo
 from std_msgs.msg import Bool
 from visualization_msgs.msg import Marker, MarkerArray
-from lasr_vision_msgs.msg import Sam2PromptArrays as PromptArrays, Sam2BboxWithFlag as BboxWithFlag, Detection3DArray, \
-    Detection3D
+from lasr_vision_msgs.msg import (
+    Sam2PromptArrays as PromptArrays,
+    Sam2BboxWithFlag as BboxWithFlag,
+    Detection3DArray,
+    Detection3D,
+)
 from lasr_vision_msgs.srv import YoloDetection3D, YoloDetection3DRequest
 
 from math import atan2
@@ -59,16 +63,16 @@ class PersonFollower:
     """ROS node for person following using SAM2 and YOLO detection."""
 
     def __init__(
-            self,
-            start_following_radius: float = 2.0,  # Distance threshold to start following (meters)
-            start_following_angle: float = 45.0,  # Angle threshold to start following (degrees)
-            target_boundary: float = 1.0,
-            new_goal_threshold_min: float = 0.25,  # Minimum distance to trigger new navigation goal (meters)
-            new_goal_threshold_max: float = 2.5,  # Max distance to trigger new navigation goal (meters)
-            stopping_distance: float = 0.75,  # Distance to maintain from person (meters)
-            static_speed: float = 0.0015,  # Speed when person is stationary (m/s)
-            max_speed: float = 0.4,  # Maximum robot velocity (m/s)
-            max_following_distance: float = 2.5,  # Maximum distance to follow before asking person to wait (meters)
+        self,
+        start_following_radius: float = 2.0,  # Distance threshold to start following (meters)
+        start_following_angle: float = 45.0,  # Angle threshold to start following (degrees)
+        target_boundary: float = 1.0,
+        new_goal_threshold_min: float = 0.25,  # Minimum distance to trigger new navigation goal (meters)
+        new_goal_threshold_max: float = 2.5,  # Max distance to trigger new navigation goal (meters)
+        stopping_distance: float = 0.75,  # Distance to maintain from person (meters)
+        static_speed: float = 0.0015,  # Speed when person is stationary (m/s)
+        max_speed: float = 0.4,  # Maximum robot velocity (m/s)
+        max_following_distance: float = 2.5,  # Maximum distance to follow before asking person to wait (meters)
     ):
         # Store configuration parameters
         self._start_following_radius = start_following_radius
@@ -111,14 +115,21 @@ class PersonFollower:
         ts.registerCallback(self.image_callback)
 
         # Setup SAM2 publishers and subscribers
-        self.prompt_pub = rospy.Publisher("/sam2/prompt_arrays", PromptArrays, queue_size=1)
+        self.prompt_pub = rospy.Publisher(
+            "/sam2/prompt_arrays", PromptArrays, queue_size=1
+        )
         self.track_flag_pub = rospy.Publisher("/sam2/track_flag", Bool, queue_size=1)
         self.detection3d_sub = rospy.Subscriber(
-            "/sam2/detections_3d", Detection3DArray, self.detection3d_callback, queue_size=1
+            "/sam2/detections_3d",
+            Detection3DArray,
+            self.detection3d_callback,
+            queue_size=1,
         )
 
         # Setup SAM2 conditioning frame control
-        self.condition_frame_flag_pub = rospy.Publisher("/sam2/add_conditioning_frame_flag", Bool, queue_size=1)
+        self.condition_frame_flag_pub = rospy.Publisher(
+            "/sam2/add_conditioning_frame_flag", Bool, queue_size=1
+        )
         self._condition_flag_state = True
         self._first_tracking_done = False
 
@@ -130,7 +141,9 @@ class PersonFollower:
         self.yolo.wait_for_service()
 
         # Setup navigation client
-        self._move_base_client = actionlib.SimpleActionClient("move_base", MoveBaseAction)
+        self._move_base_client = actionlib.SimpleActionClient(
+            "move_base", MoveBaseAction
+        )
         if not self._move_base_client.wait_for_server(rospy.Duration.from_sec(10.0)):
             rospy.logwarn("Move base client not available")
 
@@ -186,7 +199,9 @@ class PersonFollower:
         rospy.wait_for_service("/move_base/set_parameters")
         rospy.wait_for_service("/move_base/local_costmap/set_parameters")
         rospy.wait_for_service("/move_base/PalLocalPlanner/set_parameters")
-        rospy.wait_for_service("/move_base/local_costmap/inflation_layer/set_parameters")
+        rospy.wait_for_service(
+            "/move_base/local_costmap/inflation_layer/set_parameters"
+        )
         rospy.wait_for_service("/move_base/clear_costmaps")
 
         # Configure navigation parameters
@@ -232,9 +247,13 @@ class PersonFollower:
         self.recovery_scan_positions = []  # List of head positions for scanning
         self.current_scan_index = 0
         self.recovery_start_time = None
-        self.scan_position_duration = rospy.Duration(1.5)  # Time to hold each scan position
+        self.scan_position_duration = rospy.Duration(
+            1.5
+        )  # Time to hold each scan position
         self.last_scan_position_time = rospy.Time.now()
-        self.recovery_timeout = rospy.Duration(30.0)  # Maximum time to spend in recovery mode
+        self.recovery_timeout = rospy.Duration(
+            30.0
+        )  # Maximum time to spend in recovery mode
 
         # Initialize recovery scan positions (60 degrees left to 60 degrees right)
         self._initialize_recovery_positions()
@@ -317,7 +336,7 @@ class PersonFollower:
                 # Normalize the direction and set distance
                 distance = 3.0
                 if x_dir != 0 or y_dir != 0:
-                    norm = math.sqrt(x_dir ** 2 + y_dir ** 2)
+                    norm = math.sqrt(x_dir**2 + y_dir**2)
                     x_dir = (x_dir / norm) * distance
                     y_dir = (y_dir / norm) * distance
                 else:
@@ -354,8 +373,14 @@ class PersonFollower:
             self._look_at_point(target_point, target_frame=target_frame)
             self.look_at_point_time = current_time
 
-    def image_callback(self, image: Image, depth_image: Image, depth_camera_info: CameraInfo):
-        self.image, self.depth_image, self.depth_camera_info = image, depth_image, depth_camera_info
+    def image_callback(
+        self, image: Image, depth_image: Image, depth_camera_info: CameraInfo
+    ):
+        self.image, self.depth_image, self.depth_camera_info = (
+            image,
+            depth_image,
+            depth_camera_info,
+        )
 
     def _tf_pose(self, pose: PoseStamped, target_frame: str):
         trans = self._buffer.lookup_transform(
@@ -380,7 +405,7 @@ class PersonFollower:
                 "odom",  # target frame
                 "base_link",  # source frame
                 rospy.Time(0),  # get latest available transform
-                rospy.Duration(1.0)  # timeout
+                rospy.Duration(1.0),  # timeout
             )
 
             # Create a PoseStamped message for the robot's current pose
@@ -401,11 +426,17 @@ class PersonFollower:
 
             return robot_pose
 
-        except (tf.LookupException, tf.ExtrapolationException, tf.ConnectivityException) as e:
+        except (
+            tf.LookupException,
+            tf.ExtrapolationException,
+            tf.ConnectivityException,
+        ) as e:
             rospy.logerr(f"Failed to get robot pose in odom frame: {e}")
             raise
 
-    def _euclidian_distance(self, p1: Union[Pose, PoseStamped], p2: Union[Pose, PoseStamped]) -> float:
+    def _euclidian_distance(
+        self, p1: Union[Pose, PoseStamped], p2: Union[Pose, PoseStamped]
+    ) -> float:
         """
         Calculate Euclidean distance between two poses.
 
@@ -456,7 +487,7 @@ class PersonFollower:
             if int(detection.name) == self._track_id:
                 # Get the bounding box dimensions from xywh
                 # xywh format: [x_min, y_min, width, height]
-                if hasattr(detection, 'xywh') and len(detection.xywh) == 4:
+                if hasattr(detection, "xywh") and len(detection.xywh) == 4:
                     xywh = detection.xywh
 
                     # Calculate bounding box properties
@@ -467,7 +498,10 @@ class PersonFollower:
                     # Get image dimensions (assuming standard camera resolution if not available)
                     image_width = 640  # Default width if not available
                     image_height = 480  # Default height if not available
-                    if hasattr(self, 'depth_camera_info') and self.depth_camera_info is not None:
+                    if (
+                        hasattr(self, "depth_camera_info")
+                        and self.depth_camera_info is not None
+                    ):
                         image_width = self.depth_camera_info.width
                         image_height = self.depth_camera_info.height
 
@@ -479,8 +513,8 @@ class PersonFollower:
                     image_center_x = image_width / 2
                     image_center_y = image_height / 2
                     normalized_distance = math.sqrt(
-                        ((center_x - image_center_x) / image_width) ** 2 +
-                        ((center_y - image_center_y) / image_height) ** 2
+                        ((center_x - image_center_x) / image_width) ** 2
+                        + ((center_y - image_center_y) / image_height) ** 2
                     )
 
                     # Calculate normalized area
@@ -492,15 +526,24 @@ class PersonFollower:
                     min_area_threshold = 0.01  # Minimum normalized area required
 
                     # Calculate additional quality metrics (optional)
-                    aspect_ratio = box_width / max(box_height, 1)  # Avoid division by zero
+                    aspect_ratio = box_width / max(
+                        box_height, 1
+                    )  # Avoid division by zero
                     is_reasonable_aspect = True  # 0.2 < aspect_ratio < 5.0  # Person should have reasonable aspect ratio
 
                     # Check quality criteria
-                    is_good_quality = (normalized_distance < max_distance_threshold and
-                                       normalized_area > min_area_threshold and
-                                       is_reasonable_aspect and detection.confidence > 0.5)
+                    is_good_quality = (
+                        normalized_distance < max_distance_threshold
+                        and normalized_area > min_area_threshold
+                        and is_reasonable_aspect
+                        and detection.confidence > 0.5
+                    )
 
-                    if detection is not None and is_reasonable_aspect and detection.confidence > 0.5:
+                    if (
+                        detection is not None
+                        and is_reasonable_aspect
+                        and detection.confidence > 0.5
+                    ):
                         self.newest_detection = detection
 
                     if self.newest_detection is not None:
@@ -513,8 +556,10 @@ class PersonFollower:
                         self.condition_frame_flag_pub.publish(Bool(data=True))
                         self._condition_flag_state = True
                         # Log quality metrics at debug level
-                        rospy.logdebug(f"Good detection - Distance: {normalized_distance:.3f}, "
-                                       f"Area: {normalized_area:.5f}, Aspect: {aspect_ratio:.2f}")
+                        rospy.logdebug(
+                            f"Good detection - Distance: {normalized_distance:.3f}, "
+                            f"Area: {normalized_area:.5f}, Aspect: {aspect_ratio:.2f}"
+                        )
                         self.good_detection_time = rospy.Time.now()
 
                         # transpose into the map point
@@ -540,9 +585,15 @@ class PersonFollower:
                             self.added_new_target_time = rospy.Time.now()
                         else:
                             prev_pose = self.target_list[-1]
-                            dist_to_prev = self._euclidian_distance(prev_pose, odom_pose.pose)
+                            dist_to_prev = self._euclidian_distance(
+                                prev_pose, odom_pose.pose
+                            )
                             # Only add if distance exceeds threshold
-                            if self._new_goal_threshold_min < dist_to_prev < self._new_goal_threshold_max:
+                            if (
+                                self._new_goal_threshold_min
+                                < dist_to_prev
+                                < self._new_goal_threshold_max
+                            ):
                                 self.person_trajectory.poses.append(odom_pose.pose)
                                 self.target_list.append(odom_pose.pose)
                                 self.added_new_target_time = rospy.Time.now()
@@ -551,19 +602,29 @@ class PersonFollower:
                         # if self._condition_flag_state:
                         self.condition_frame_flag_pub.publish(Bool(data=False))
                         self._condition_flag_state = False
-                        rospy.loginfo(f"Detection quality poor - disabling conditional frames")
+                        rospy.loginfo(
+                            f"Detection quality poor - disabling conditional frames"
+                        )
 
                         # Log the specific reason for poor quality
                         quality_issues = []
                         if normalized_distance >= max_distance_threshold:
-                            quality_issues.append(f"off-center ({normalized_distance:.3f} >= {max_distance_threshold})")
+                            quality_issues.append(
+                                f"off-center ({normalized_distance:.3f} >= {max_distance_threshold})"
+                            )
                         if normalized_area <= min_area_threshold:
-                            quality_issues.append(f"too small ({normalized_area:.5f} <= {min_area_threshold})")
+                            quality_issues.append(
+                                f"too small ({normalized_area:.5f} <= {min_area_threshold})"
+                            )
                         if not is_reasonable_aspect:
-                            quality_issues.append(f"odd shape (aspect ratio: {aspect_ratio:.2f})")
+                            quality_issues.append(
+                                f"odd shape (aspect ratio: {aspect_ratio:.2f})"
+                            )
 
                         if quality_issues:
-                            rospy.loginfo(f"Quality issues: {', '.join(quality_issues)}")
+                            rospy.loginfo(
+                                f"Quality issues: {', '.join(quality_issues)}"
+                            )
                 break
 
     def begin_tracking(self) -> bool:
@@ -605,10 +666,7 @@ class PersonFollower:
         # find robot's position in map
         try:
             transform = self._buffer.lookup_transform(
-                map_frame,
-                robot_frame,
-                rospy.Time(0),
-                rospy.Duration(1.0)
+                map_frame, robot_frame, rospy.Time(0), rospy.Duration(1.0)
             )
             robot_x = transform.transform.translation.x
             robot_y = transform.transform.translation.y
@@ -685,7 +743,9 @@ class PersonFollower:
 
             # Start with first scan position
             if self.recovery_scan_positions:
-                self._look_at_point(self.recovery_scan_positions[0], target_frame="base_link")
+                self._look_at_point(
+                    self.recovery_scan_positions[0], target_frame="base_link"
+                )
 
     def _update_recovery_behavior(self):
         """Update the recovery scanning behavior"""
@@ -715,7 +775,8 @@ class PersonFollower:
             self.last_scan_position_time = current_time
 
             rospy.logdebug(
-                f"Scanning position {self.current_scan_index}: looking at angle {self.current_scan_index * 30 - 60} degrees")
+                f"Scanning position {self.current_scan_index}: looking at angle {self.current_scan_index * 30 - 60} degrees"
+            )
 
         return True
 
@@ -762,7 +823,10 @@ class PersonFollower:
                 pass
 
             # Check if continues bad detection or start recovery behavior
-            if self.good_detection_time + self.target_moving_timeout_duration < rospy.Time.now():
+            if (
+                self.good_detection_time + self.target_moving_timeout_duration
+                < rospy.Time.now()
+            ):
                 if not self.is_in_recovery_mode:
                     rospy.loginfo("Tracking stopped for no good detection.")
                     self._tts("I cannot find you anymore.", wait=True)
@@ -771,7 +835,9 @@ class PersonFollower:
                     # Continue recovery behavior
                     if not self._update_recovery_behavior():
                         # Recovery timed out or failed
-                        self._tts("I give up looking for you. Please come back.", wait=True)
+                        self._tts(
+                            "I give up looking for you. Please come back.", wait=True
+                        )
                         break
             else:
                 # Good detection - stop recovery if active
@@ -786,7 +852,10 @@ class PersonFollower:
             if not self.is_navigating and not just_started:
                 # todo: need to consider recovery behavior
                 # self._tts("Might stopped.", wait=True)
-                if self.last_movement_time + self.target_moving_timeout_duration < rospy.Time.now():
+                if (
+                    self.last_movement_time + self.target_moving_timeout_duration
+                    < rospy.Time.now()
+                ):
                     rospy.loginfo("Tracking stopped for no movement.")
                     self._tts("Have we arrived? I will stop following.", wait=True)
                     break
@@ -815,15 +884,20 @@ class PersonFollower:
             last_pose_in_list = self.target_list[-1]
             target_pose = None
             for i in reversed(range(len(self.target_list))):
-                if self._target_boundary <= self._euclidian_distance(self.target_list[i], last_pose_in_list):
+                if self._target_boundary <= self._euclidian_distance(
+                    self.target_list[i], last_pose_in_list
+                ):
                     target_pose = self.target_list[i]
                     break
             if target_pose is None:
                 rospy.logwarn("No target pose available.")
                 rate.sleep()
                 continue
-            if previous_target and self._euclidian_distance(target_pose,
-                                                            previous_target) < self._new_goal_threshold_min:
+            if (
+                previous_target
+                and self._euclidian_distance(target_pose, previous_target)
+                < self._new_goal_threshold_min
+            ):
                 rospy.logwarn("Target pose is the same as previous target pose.")
                 rate.sleep()
                 continue
@@ -832,16 +906,24 @@ class PersonFollower:
             if not self.is_navigating:
                 try:
                     robot_pose = self._robot_pose_in_odom()
-                    distance_to_target = self._euclidian_distance(robot_pose.pose, target_pose)
+                    distance_to_target = self._euclidian_distance(
+                        robot_pose.pose, target_pose
+                    )
 
                     # Check if target is too far away - ask person to wait
                     current_time = rospy.Time.now()
                     if distance_to_target > self._max_following_distance:
                         # Only send warning if enough time has passed since last warning
-                        if current_time - self.last_distance_warning_time > self.distance_warning_interval:
+                        if (
+                            current_time - self.last_distance_warning_time
+                            > self.distance_warning_interval
+                        ):
                             rospy.loginfo(
-                                f"Target too far ({distance_to_target:.2f}m > {self._max_following_distance}m) - asking person to wait")
-                            self._tts("Please wait for me. You are too far away.", wait=False)
+                                f"Target too far ({distance_to_target:.2f}m > {self._max_following_distance}m) - asking person to wait"
+                            )
+                            self._tts(
+                                "Please wait for me. You are too far away.", wait=False
+                            )
                             self.last_distance_warning_time = current_time
 
                         # Skip navigation if target is too far
@@ -851,7 +933,8 @@ class PersonFollower:
                     # If robot is already close enough to target, don't navigate
                     if distance_to_target < self._stopping_distance:
                         rospy.logdebug(
-                            f"Robot already close to target ({distance_to_target:.2f}m < {self._stopping_distance}m), skipping navigation")
+                            f"Robot already close to target ({distance_to_target:.2f}m < {self._stopping_distance}m), skipping navigation"
+                        )
                         rate.sleep()
                         continue
 
@@ -860,7 +943,9 @@ class PersonFollower:
                     # Continue with navigation if we can't get robot pose
 
                 # Set orientation to face the final pose, not the target pose
-                goal_orientation = self._compute_face_quat(target_pose, last_pose_in_list)
+                goal_orientation = self._compute_face_quat(
+                    target_pose, last_pose_in_list
+                )
                 pose_with_orientation = Pose(
                     position=target_pose.position,
                     orientation=goal_orientation,
@@ -872,11 +957,15 @@ class PersonFollower:
                 pose_stamped.pose = pose_with_orientation
 
                 goal_pose = self._tf_pose(pose_stamped, "map")
-                rospy.loginfo(f"Setting navigation goal to intermediate point, facing final point")
+                rospy.loginfo(
+                    f"Setting navigation goal to intermediate point, facing final point"
+                )
                 self._move_base(goal_pose)
                 self.is_navigating = True
                 just_started = False
-                previous_target = target_pose  # Update previous target after setting new goal
+                previous_target = (
+                    target_pose  # Update previous target after setting new goal
+                )
 
             rate.sleep()
         return result

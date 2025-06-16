@@ -1,0 +1,12 @@
+# Request - parameters for person following
+float32 max_following_distance    # Maximum distance to follow (meters)
+float32 max_speed                 # Maximum robot speed (m/s)
+float32 stopping_distance         # Distance to maintain from person (meters)
+bool    speak                     # Whether robot should speak during following
+float32 timeout                   # Maximum following time (seconds), 0 for no timeout
+---
+# Response - result of person following
+bool    success                   # Whether following completed successfully
+string  result_type               # Reason for finishing ("TIMEOUT", "LOST_PERSON", "ARRIVED", "CANCELLED")
+float32 distance_traveled         # Total distance traveled during following (meters)
+float32 following_duration        # Total time spent following (seconds)
