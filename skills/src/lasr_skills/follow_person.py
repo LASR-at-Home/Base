@@ -66,7 +66,7 @@ class FollowPersonState(smach.State):
         try:
             # Wait for the service to be available
             rospy.loginfo(f"Waiting for '{self._service_name}' service...")
-            rospy.wait_for_service(self._service_name, timeout=5.0)
+            rospy.wait_for_service(self._service_name,)
 
             # Create service proxy
             follow_person_srv = rospy.ServiceProxy(self._service_name, FollowPersonSrv)
@@ -147,8 +147,8 @@ class FollowPerson(smach.StateMachine):
                 ),
                 transitions={
                     "succeeded": "succeeded",
-                    "lost_person": "SAY_LOST",
-                    "timed_out": "SAY_TIMEOUT",
+                    "lost_person": "failed",
+                    "timed_out": "failed",
                     "failed": "failed",
                 },
             )
@@ -171,8 +171,6 @@ if __name__ == "__main__":
             FollowPerson(),
             transitions={
                 "succeeded": "succeeded",
-                "lost_person": "failed",
-                "timed_out": "failed",
                 "failed": "failed",
             },
         )
