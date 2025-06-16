@@ -2,11 +2,13 @@
 
 import rospy
 from sensor_msgs.msg import PointCloud2
-from lasr_manipulation_3d_completion.srv import CompleteShape, CompleteShapeRequest
+from lasr_manipulation_msgs.srv import CompleteShape, CompleteShapeRequest
 import sensor_msgs.point_cloud2 as pc2
+
 # import sys
 # rospy.init_node("test_3d_completion_client")
 # rospy.logwarn(sys.executable)
+
 
 def print_cloud_info(cloud_msg, name="PointCloud"):
     try:
@@ -14,6 +16,7 @@ def print_cloud_info(cloud_msg, name="PointCloud"):
         rospy.loginfo(f"{name} has {len(points)} points.")
     except Exception as e:
         rospy.logwarn(f"Could not read points from {name}: {e}")
+
 
 if __name__ == "__main__":
     rospy.init_node("shape_completion_client")

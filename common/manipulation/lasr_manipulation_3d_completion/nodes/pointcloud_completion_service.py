@@ -1,5 +1,5 @@
 import rospy
-from lasr_manipulation_3d_completion.srv import CompleteShape, CompleteShapeResponse
+from lasr_manipulation_msgs.srv import CompleteShape, CompleteShapeResponse
 from sensor_msgs.msg import PointCloud2
 import sensor_msgs.point_cloud2 as pc2
 import numpy as np
@@ -34,7 +34,7 @@ class CompletionService:
             "/shape_completion/complete", CompleteShape, self.handle_completion
         )
 
-        rospy.Subscriber("/segmented_cloud", PointCloud2, self.segmented_cloud_callback)
+        # rospy.Subscriber("/segmented_cloud", PointCloud2, self.segmented_cloud_callback)
 
         self.pcl_pub = rospy.Publisher(
             "/completed_cloud_vis", PointCloud2, queue_size=1
