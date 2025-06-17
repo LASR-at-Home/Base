@@ -66,12 +66,16 @@ class PointAt(smach.State):
         direction = target_pos - robot_pos
         distance = np.linalg.norm(direction)
         if distance == 0:
-            rospy.logwarn("Target point coincides with robot position. Returning default pose.")
+            rospy.logwarn(
+                "Target point coincides with robot position. Returning default pose."
+            )
             pose_stamped = PoseStamped()
             pose_stamped.header.frame_id = "map"
             pose_stamped.header.stamp = rospy.Time.now()
             pose_stamped.pose = Pose(
-                position=Point(robot_pose.position.x, robot_pose.position.y, self._eef_height),
+                position=Point(
+                    robot_pose.position.x, robot_pose.position.y, self._eef_height
+                ),
                 orientation=Quaternion(0, 0, 0, 1),
             )
             return pose_stamped
