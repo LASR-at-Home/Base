@@ -1,5 +1,6 @@
 #!/usr/bin/env python3.10
 
+import smach
 import rospy
 import numpy as np
 import cv2
@@ -15,10 +16,11 @@ from message_filters import Subscriber, ApproximateTimeSynchronizer
 
 from segment_anything import sam_model_registry, SamPredictor
 
-class SAMClickNavigateNode:
+class GoToBag(smach.State):
     def __init__(self):
-        rospy.init_node('sam_click_navigate')
-
+        smach.State.__init__(
+            self, outcomes=['finished', 'failed']
+        )
         # --- Model and CV ---
         self.bridge = CvBridge()
         self.latest_rgb = None
@@ -58,10 +60,6 @@ class SAMClickNavigateNode:
         sam.to(self.device)
         self.predictor = SamPredictor(sam)
 
-        rospy.loginfo("SAMClickNavigateNode ready.")
-        rospy.sleep(2)
-        self.loop()
-
     def amcl_pose_callback(self, msg):
         self.latest_amcl_pose = msg
 
@@ -78,7 +76,7 @@ class SAMClickNavigateNode:
         except Exception as e:
             rospy.logerr(f"CV bridge error: {e}")
 
-    def loop(self):
+    def execute(self, userdata):
         # Wait for all sensors to have valid data
         while not rospy.is_shutdown():
             if self.latest_rgb is not None and self.latest_depth is not None and self.depth_info is not None:
@@ -101,27 +99,39 @@ class SAMClickNavigateNode:
             mask = self.get_click_mask(self.latest_rgb, u, v)
             if np.sum(mask) == 0:
                 rospy.logwarn("SAM did not find a mask at click point.")
+                cv2.destroyWindow("Click to segment")
+                return 'failed'
+            mu, mv = self.get_mask_median(mask)
+            if mu is None or mv is None:
+                rospy.logwarn("No valid median pixel in mask.")
+                cv2.destroyWindow("Click to segment")
+                return 'failed'
+
+            overlay = self._make_overlay(self.latest_rgb, mask)
+            cv2.circle(overlay, (mu, mv), 8, (0, 255, 0), -1)
+            cv2.imshow("Click to segment", overlay)
+            cv2.waitKey(1)
+
+            p_cam = self.pixel_to_3d(mu, mv)
+            if p_cam is None:
+                rospy.logwarn("No valid depth at median pixel.")
+                cv2.destroyWindow("Click to segment")
+                return 'failed'
+
+            x_bag, y_bag = self.navigate_to_closest_feasible_point(p_cam)
+            if x_bag is not None and y_bag is not None:
+                rospy.loginfo("[SAM-CLICK] Navigation succeeded! Now adjusting orientation with AMCL pose.")
+                self.face_point_with_amcl(x_bag, y_bag)
+                cv2.destroyWindow("Click to segment")
+                return 'finished'
             else:
-                mu, mv = self.get_mask_median(mask)
-                if mu is None or mv is None:
-                    rospy.logwarn("No valid median pixel in mask.")
-                else:
-                    overlay = self._make_overlay(self.latest_rgb, mask)
-                    cv2.circle(overlay, (mu, mv), 8, (0, 255, 0), -1)
-                    cv2.imshow("Click to segment", overlay)
-                    cv2.waitKey(1)
+                cv2.destroyWindow("Click to segment")
+                return 'failed'
+        else:
+            cv2.destroyWindow("Click to segment")
+            return 'failed'
 
-                    p_cam = self.pixel_to_3d(mu, mv)
-                    if p_cam is not None:
-                        x_bag, y_bag = self.navigate_to_closest_feasible_point(p_cam)
-                        if x_bag is not None and y_bag is not None:
-                            rospy.loginfo("[SAM-CLICK] Navigation succeeded! Now adjusting orientation with AMCL pose.")
-                            self.face_point_with_amcl(x_bag, y_bag)
-
-        # Cleanup and exit
-        cv2.destroyWindow("Click to segment")
-
-
+    # --- all your existing helper methods (unchanged, just copy from your node) ---
     def get_click_mask(self, rgb_bgr, u, v):
         img_rgb = cv2.cvtColor(rgb_bgr, cv2.COLOR_BGR2RGB)
         self.predictor.set_image(img_rgb)
@@ -246,10 +256,6 @@ class SAMClickNavigateNode:
         return (None, None)
 
     def face_point_with_amcl(self, target_x, target_y):
-        """
-        Rotates the robot in place (using move_base) so it faces the (target_x, target_y) point in the 'map' frame,
-        using the latest AMCL pose.
-        """
         rospy.loginfo(f"[SAM-CLICK] Request to face ({target_x:.2f}, {target_y:.2f}) using AMCL pose.")
         for attempt in range(10):
             if self.latest_amcl_pose is None:
@@ -316,7 +322,12 @@ class SAMClickNavigateNode:
         return overlay
 
 if __name__ == '__main__':
-    try:
-        SAMClickNavigateNode()
-    except rospy.ROSInterruptException:
-        pass
+    import smach
+    rospy.init_node('go_to_bag_skill_runner')
+    sm = smach.StateMachine(outcomes=['finished', 'failed'])
+    with sm:
+        smach.StateMachine.add('GO_TO_BAG', GoToBag(),
+                               transitions={'finished': 'finished',
+                                            'failed': 'failed'})
+    outcome = sm.execute()
+    rospy.loginfo(f"Skill outcome: {outcome}")
