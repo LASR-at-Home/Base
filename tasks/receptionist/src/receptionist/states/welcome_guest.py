@@ -82,7 +82,7 @@ class WelcomeGuest(smach.StateMachine):
         def execute(self, userdata):
 
             request = LlmRequest()
-            request.system_prompt = f"You are a robot acting as a party host. You are tasked with reasoning about interests between two guests. You will receive input such as 'Person 1 interest: football. Person 2 interest: tennis'. You should reason about what these guests have in common, if anything, and outpu a single word. In the example, this might be 'sports' or 'exercise'. If you cannot find any commanality, output 'none'."
+            request.system_prompt = f"You are a robot acting as a party host. You are tasked with reasoning about interests between two guests. You will receive input such as 'Person 1 interest: football. Person 2 interest: tennis'. You should reason about what these guests have in common, if anything, and output a single word describing this commonality. In the example, this might be 'sports' or 'exercise'. If you cannot find any commanality, output 'none'."
             request.prompt = f"Person 1 interest: {userdata.guest_data['guest1']['interest']}. Person 2 interests: {userdata.guest_data['guest2']['interest']}."
             response = self._llm(request)
             commonality = response.output.lower()
