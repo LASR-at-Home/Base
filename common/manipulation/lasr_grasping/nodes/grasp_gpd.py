@@ -31,12 +31,18 @@ from lasr_manipulation_msgs.srv import CompleteShape
 from play_motion_msgs.msg import PlayMotionGoal, PlayMotionAction
 from sensor_msgs.msg import PointCloud2, PointField
 import sensor_msgs.point_cloud2 as pc2
-from geometry_msgs.msg import Point, Pose, PoseStamped, Quaternion
+from geometry_msgs.msg import Point, Pose, PoseStamped, Quaternion, Vector3Stamped
 from std_msgs.msg import Int64, Header
 from std_srvs.srv import Empty
 from visualization_msgs.msg import Marker, MarkerArray
 from moveit_msgs.srv import GetPlanningScene, ApplyPlanningSceneRequest
-from moveit_msgs.msg import PlanningScene, AllowedCollisionEntry
+from moveit_msgs.msg import (
+    PlanningScene,
+    AllowedCollisionEntry,
+    Grasp,
+    GripperTranslation,
+)
+from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 
 
 def allow_collisions_with_object(obj_name, scene):
@@ -400,15 +406,16 @@ class GraspGPD:
         # plane_pose.pose.position.z = 0.7
         # plane_pose.pose.orientation.w = 1.0
 
-        # p.pose.position.z = max_pt[2]
-        # plane_pose = self._tf_buffer.transform(p, "base_footprint", rospy.Duration(1.0))
-        # plane_pose.pose.orientation = Quaternion(0.0, 0.0, 0.0, 1.0)
-        # self._planning_scene.add_box(
-        #     "supporting_plane",
-        #     plane_pose,
-        #     size=(0.15, 0.15, 0.005),
-        # )  # 0.1 0.1 0.005
-        # self._move_group.set_support_surface_name("supporting_plane")
+        p.pose.position.z = max_pt[2]
+        plane_pose = self._tf_buffer.transform(p, "base_footprint", rospy.Duration(1.0))
+        plane_pose.pose.position.z -= 0.15
+        plane_pose.pose.orientation = Quaternion(0.0, 0.0, 0.0, 1.0)
+        self._planning_scene.add_box(
+            "supporting_plane",
+            plane_pose,
+            size=(0.15, 0.15, 0.005),
+        )  # 0.1 0.1 0.005
+        self._move_group.set_support_surface_name("supporting_plane")
 
     def _wait_for_scene_update(self, object_name: str, timeout: float = 5.0) -> bool:
         start_time = rospy.get_time()
@@ -509,9 +516,55 @@ class GraspGPD:
 
         return pose
 
+    def _make_moveit_grasps(
+        self, grasps_frame: str, grasps: GraspConfigList
+    ) -> List[Grasp]:
+        moveit_grasps = []
+
+        def __gripper_posture(pos):
+            t = JointTrajectory()
+            t.joint_names = ["gripper_left_finger_joint", "gripper_right_finger_joint"]
+            tp = JointTrajectoryPoint()
+            tp.positions = [pos] if type(pos) != list else pos
+            tp.time_from_start = rospy.Duration(2.0)
+            t.points.append(tp)
+            return t
+
+        for i, grasp in enumerate(grasps):
+            moveit_grasp = Grasp()
+            grasp_pose = self._grasp_to_pose(grasp)
+
+            moveit_grasp.id = str(i)
+            moveit_grasp.pre_grasp_posture = __gripper_posture(0.05)
+            moveit_grasp.grasp_posture = __gripper_posture(0.05)
+            moveit_grasp.grasp_pose.pose = grasp_pose
+            moveit_grasp.grasp_pose.header.frame_id = grasps_frame
+            moveit_grasp.grasp_pose.header.stamp = rospy.Time.now()
+            moveit_grasp.grasp_quality = float(grasp.score.data)
+            moveit_grasp.pre_grasp_approach.direction.header.frame_id = (
+                "gripper_grasping_frame"
+            )
+            moveit_grasp.pre_grasp_approach.direction.vector.x = 1.0
+            moveit_grasp.pre_grasp_approach.min_distance = 0.095
+            moveit_grasp.pre_grasp_approach.desired_distance = 0.115
+            moveit_grasp.post_grasp_retreat.direction.header.frame_id = (
+                "gripper_grasping_frame"
+            )
+            moveit_grasp.post_grasp_retreat.direction.vector.z = 1.0
+            moveit_grasp.post_grasp_retreat.min_distance = 0.1
+            moveit_grasp.post_grasp_retreat.desired_distance = 0.25
+
+            moveit_grasp.max_contact_force = 0.0
+            moveit_grasp.allowed_touch_objects = ["obj", "floor"]
+
+            moveit_grasps.append(moveit_grasp)
+            print(moveit_grasp)
+
+        return moveit_grasps
+
     def grasp_pipeline(self):
         rospy.loginfo("Sending pregrasp motion...")
-        self._play_motion("pregrasp")
+        # self._play_motion("pregrasp")
         rospy.loginfo("Pregrasp motion finished!")
         rospy.loginfo("Sending open_gripper motion...")
         self._play_motion("open_gripper")
@@ -525,16 +578,17 @@ class GraspGPD:
         rospy.loginfo("Got point cloud!")
         rospy.loginfo("Getting segmentation...")
         pcl_seg, _, seg_idx_flat, points = self._segment(pcl)
+        pcl_seg = self.filter_pcl(pcl_seg)
         self._pcl_seg_pub.publish(pcl_seg)
         rospy.loginfo("Got segmented_cloud!")
         # # masked_pcl = rospy.wait_for_message("/segmented_cloud", PointCloud2)
-        self._move_group.set_pose_reference_frame("gripper_grasping_frame")
+        self._move_group.set_pose_reference_frame(pcl.header.frame_id)
         # Collision object
         rospy.loginfo("Completing point cloud...")
-        completed_pcl = self._3d_completion(self.filter_pcl(pcl_seg)).completed_cloud
+        # completed_pcl = self._3d_completion(self.filter_pcl(pcl_seg)).completed_cloud
         rospy.loginfo("Completed point cloud!")
         rospy.loginfo("Adding collision object added to the planning scene...")
-        self._create_collision_object(self.filter_pcl(pcl_seg))
+        self._create_collision_object(pcl_seg)
         if not self._wait_for_scene_update("obj", timeout=30.0):
             rospy.logwarn("Collision object not yet in the planning scene!")
         else:
@@ -551,20 +605,22 @@ class GraspGPD:
         grasps = self._grasps.grasps
         rospy.loginfo("Got response from GPD!")
         rospy.loginfo("Converting grasps to poses...")
-        grasp_poses = [self._grasp_to_pose(grasp) for grasp in grasps]
-        grasp_poses = [
-            self._tf_pose(grasp, pcl.header.frame_id, "gripper_grasping_frame").pose
-            for grasp in grasp_poses
-        ]
+        moveit_grasps = self._make_moveit_grasps(pcl.header.frame_id, grasps)
+        self._move_group.pick("obj", moveit_grasps)
+        grasp_poses = [moveit_grasp.grasp_pose.pose for moveit_grasp in moveit_grasps]
+        self._publish_grasp_poses(grasp_poses, pcl.header.frame_id)
+        # grasp_poses = [
+        #     self._tf_pose(grasp, pcl.header.frame_id, "gripper_grasping_frame").pose
+        #     for grasp in grasp_poses
+        # ]
         # grasp_poses = [
         #     self._offset_pose(grasp, 0.12, 0.0, 0.0) for grasp in grasp_poses
         # ]
-        # self._publish_grasp_poses(grasp_poses, "gripper_grasping_frame")
-        rospy.loginfo("Grasps converted to poses!")
-        # Execute
-        rospy.loginfo("Executing...")
-        success = self._execute_grasps(grasp_poses)
-        rospy.loginfo(f"Executed, success: {success}!")
+        # rospy.loginfo("Grasps converted to poses!")
+        # # Execute
+        # rospy.loginfo("Executing...")
+        # success = self._execute_grasps(grasp_poses)
+        # rospy.loginfo(f"Executed, success: {success}!")
 
         # self._move_end_effector_offset(0.01, 0.0, 0.0)
 
