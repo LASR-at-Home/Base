@@ -32,32 +32,9 @@ from pal_startup_msgs.srv import (
 
 
 class CarryMyLuggage(smach.StateMachine):
-    class ProcessPointingDirection(smach.State):
-        def __init__(self):
-            smach.State.__init__(
-                self,
-                outcomes=["succeeded", "failed"],
-                input_keys=["gesture_detected"],
-                output_keys=["pointing_direction"],
-            )
-
-        def execute(self, userdata):
-            if userdata.gesture_detected == "pointing_to_the_left":
-                userdata.pointing_direction = "left"
-            elif userdata.gesture_detected == "pointing_to_the_right":
-                userdata.pointing_direction = "right"
-            else:
-                return "failed"
-            return "succeeded"
-
     def __init__(self):
         smach.StateMachine.__init__(self, outcomes=["succeeded", "failed"])
         with self:
-
-            def wait_cb(ud, msg):
-                rospy.loginfo("Received start signal")
-                return False
-
             smach.StateMachine.add(
                 "WAIT_START",
                 smach_ros.MonitorState(

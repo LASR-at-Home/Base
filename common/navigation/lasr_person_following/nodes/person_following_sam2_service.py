@@ -91,6 +91,8 @@ class PersonFollowerService:
         self.yolo = rospy.ServiceProxy("/yolo/detect3d", YoloDetection3D)
         self.yolo.wait_for_service()
 
+        self.follower = None
+
         # Setup navigation client
         self._move_base_client = actionlib.SimpleActionClient(
             "move_base", MoveBaseAction
@@ -145,7 +147,7 @@ class PersonFollowerService:
 
         try:
             # Create a PersonFollower instance with the request parameters
-            follower = PersonFollower(
+            self.follower = PersonFollower(
                 start_following_radius=2.0,
                 start_following_angle=45.0,
                 target_boundary=1.0,
@@ -158,9 +160,6 @@ class PersonFollowerService:
                 speak=req.speak,
                 timeout=req.timeout,
                 # Pass service components to the follower
-                image=self.image,
-                depth_image=self.depth_image,
-                depth_camera_info=self.depth_camera_info,
                 yolo=self.yolo,
                 prompt_pub=self.prompt_pub,
                 track_flag_pub=self.track_flag_pub,
@@ -178,10 +177,10 @@ class PersonFollowerService:
             )
 
             # Start following
-            result = follower.follow()
+            result = self.follower.follow()
 
             # Clean up follower resources
-            follower.cleanup()
+            self.follower.cleanup()
 
             # Create response based on FollowResult
             response = FollowPersonSrvResponse()
@@ -227,6 +226,10 @@ class PersonFollowerService:
             depth_image,
             depth_camera_info,
         )
+        if hasattr(self, 'follower') and self.follower is not None:
+            self.follower.image = image
+            self.follower.depth_image = depth_image
+            self.follower.depth_camera_info = depth_camera_info
 
 
 class PersonFollower:
@@ -246,9 +249,6 @@ class PersonFollower:
             speak: bool = True,
             timeout: float = 0.0,
             # Additional parameters passed from service
-            image=None,
-            depth_image=None,
-            depth_camera_info=None,
             yolo=None,
             prompt_pub=None,
             track_flag_pub=None,
@@ -282,9 +282,9 @@ class PersonFollower:
         self._track_id = None
 
         # Use shared resources from service if provided
-        self.image = image
-        self.depth_image = depth_image
-        self.depth_camera_info = depth_camera_info
+        self.image = None
+        self.depth_image = None
+        self.depth_camera_info = None
         self.yolo = yolo
         self.prompt_pub = prompt_pub
         self.track_flag_pub = track_flag_pub
@@ -438,10 +438,10 @@ class PersonFollower:
 
     def _move_head(self, target_point: Point, target_frame: str = "map"):
         """Move head with timing control"""
-        current_time = rospy.Time.now()
-        if current_time - self.look_at_point_time >= rospy.Duration(0.35):
+        # current_time = rospy.Time.now()
+        if rospy.Time.now() - self.look_at_point_time >= rospy.Duration(0.35):
             self._look_at_point(target_point, target_frame=target_frame)
-            self.look_at_point_time = current_time
+            self.look_at_point_time = rospy.Time.now()
 
     def _tf_pose(self, pose: PoseStamped, target_frame: str):
         """Transform pose to target frame"""
@@ -632,15 +632,9 @@ class PersonFollower:
         rospy.sleep(1.0)
 
         # Wait for image data
-        timeout = rospy.Time.now() + rospy.Duration(5.0)
-        while rospy.Time.now() < timeout:
+        while True:
             if self.image and self.depth_image and self.depth_camera_info:
                 break
-            rospy.sleep(0.1)
-
-        if not (self.image and self.depth_image and self.depth_camera_info):
-            rospy.logerr("Failed to get camera data for tracking initialization")
-            return False
 
         req = YoloDetection3DRequest(
             image_raw=self.image,
@@ -651,12 +645,8 @@ class PersonFollower:
             target_frame="map",
         )
 
-        try:
-            response = self.yolo(req)
-        except Exception as e:
-            rospy.logerr(f"YOLO service call failed: {e}")
-            return False
-
+        response = self.yolo(req)
+        print(response)
         detections: Detection3D = response.detected_objects
 
         detected_people = {
@@ -697,13 +687,12 @@ class PersonFollower:
                 min_dist = dist
                 nearest_index = i
 
-        if nearest_index == -1:
-            rospy.logwarn("No valid person found for tracking")
+        if nearest_index != -1:
+            nearest_person_point = detected_people["point"][nearest_index]
+            nearest_person_bbox = detected_people["xywh"][nearest_index]
+            rospy.loginfo(f"Nearest person at distance {min_dist:.2f}m")
+        else:
             return False
-
-        nearest_person_point = detected_people["point"][nearest_index]
-        nearest_person_bbox = detected_people["xywh"][nearest_index]
-        rospy.loginfo(f"Nearest person at distance {min_dist:.2f}m")
 
         self._track_bbox = nearest_person_bbox
         self._track_id = nearest_index
@@ -763,14 +752,14 @@ class PersonFollower:
         if not self.is_in_recovery_mode:
             return False
 
-        current_time = rospy.Time.now()
+        # current_time = rospy.Time.now()
 
-        if current_time - self.recovery_start_time > self.recovery_timeout:
+        if rospy.Time.now() - self.recovery_start_time > self.recovery_timeout:
             rospy.logwarn("Recovery behavior timed out")
             self._stop_recovery_behavior()
             return False
 
-        if current_time - self.last_scan_position_time > self.scan_position_duration:
+        if rospy.Time.now() - self.last_scan_position_time > self.scan_position_duration:
             self.current_scan_index += 1
 
             if self.current_scan_index >= len(self.recovery_scan_positions):
@@ -779,7 +768,7 @@ class PersonFollower:
 
             scan_point = self.recovery_scan_positions[self.current_scan_index]
             self._look_at_point(scan_point, target_frame="base_link")
-            self.last_scan_position_time = current_time
+            self.last_scan_position_time = rospy.Time.now()
 
         return True
 
@@ -792,12 +781,13 @@ class PersonFollower:
             self.recovery_start_time = None
             self._look_centre_point()
             self.last_movement_time = rospy.Time.now()
+            self.is_tracking = True
 
     def _check_target_recovery(self):
         """Check if target has been recovered during scanning"""
-        current_time = rospy.Time.now()
+        # current_time = rospy.Time.now()
 
-        if current_time - self.good_detection_time < rospy.Duration(2.0):
+        if rospy.Time.now() - self.good_detection_time < rospy.Duration(2.0):
             if self.is_in_recovery_mode:
                 rospy.loginfo("Target recovered during scanning!")
                 self._tts("Found you! Continuing to follow.", wait=False)
@@ -852,10 +842,10 @@ class PersonFollower:
             timeout_time = rospy.Time.now() + rospy.Duration(self._timeout)
 
         while not rospy.is_shutdown():
-            current_time = rospy.Time.now()
+            # current_time = rospy.Time.now()
 
             # Check timeout
-            if timeout_time and current_time > timeout_time:
+            if timeout_time and rospy.Time.now() > timeout_time:
                 rospy.loginfo("Person following timed out")
                 result.result_type = "TIMEOUT"
                 break
@@ -878,18 +868,21 @@ class PersonFollower:
 
             # Check for bad detection or start recovery behavior
             if (
+                    self.is_tracking and
                     self.good_detection_time + self.target_moving_timeout_duration
-                    < current_time
+                    < rospy.Time.now()
             ):
                 if not self.is_in_recovery_mode:
                     rospy.loginfo("Tracking stopped for no good detection.")
                     self._tts("I cannot find you anymore.", wait=True)
+                    self.is_tracking = False
                     self._start_recovery_behavior()
                 else:
                     if not self._update_recovery_behavior():
                         self._tts(
                             "I give up looking for you. Please come back.", wait=True
                         )
+                        self.is_tracking = False
                         result.result_type = "LOST_PERSON"
                         break
             else:
@@ -904,7 +897,7 @@ class PersonFollower:
             if not self.is_navigating and not just_started:
                 if (
                         self.last_movement_time + self.target_moving_timeout_duration
-                        < current_time
+                        < rospy.Time.now()
                 ):
                     rospy.loginfo("Tracking stopped for no movement.")
                     self._tts("Have we arrived? I will stop following.", wait=True)
@@ -924,7 +917,7 @@ class PersonFollower:
                 nav_state = self._move_base_client.get_state()
                 if nav_state not in [GoalStatus.PENDING, GoalStatus.ACTIVE]:
                     self.is_navigating = False
-                    self.last_movement_time = current_time
+                    self.last_movement_time = rospy.Time.now()
                     rospy.loginfo("Goal reached.")
 
             # Navigate to the next target
@@ -964,7 +957,7 @@ class PersonFollower:
                     # Check if target is too far away
                     if distance_to_target > self._max_following_distance:
                         if (
-                                current_time - self.last_distance_warning_time
+                                rospy.Time.now() - self.last_distance_warning_time
                                 > self.distance_warning_interval
                         ):
                             rospy.loginfo(
@@ -973,7 +966,7 @@ class PersonFollower:
                             self._tts(
                                 "Please wait for me. You are too far away.", wait=False
                             )
-                            self.last_distance_warning_time = current_time
+                            self.last_distance_warning_time = rospy.Time.now()
 
                     # If robot is already close enough to target, don't navigate
                     if distance_to_target < self._stopping_distance:
@@ -994,7 +987,7 @@ class PersonFollower:
 
                 pose_stamped = PoseStamped()
                 pose_stamped.header.frame_id = "odom"
-                pose_stamped.header.stamp = current_time
+                pose_stamped.header.stamp = rospy.Time.now()
                 pose_stamped.pose = pose_with_orientation
 
                 goal_pose = self._tf_pose(pose_stamped, "map")
