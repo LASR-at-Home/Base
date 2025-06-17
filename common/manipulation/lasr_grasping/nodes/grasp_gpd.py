@@ -6,7 +6,8 @@ import tf
 import tf2_geometry_msgs
 import tf2_ros
 import numpy as np
-
+import cv2
+import ultralytics
 import sys
 
 
@@ -14,8 +15,16 @@ import moveit_commander
 from moveit_commander import PlanningSceneInterface, MoveGroupCommander
 
 
+import cv2_pcl
+
 from gpd_ros.srv import detect_grasps as DetectGrasps
-from gpd_ros.msg import CloudIndexed, CloudSources, GraspConfig, GraspConfigList
+from gpd_ros.msg import (
+    CloudIndexed,
+    CloudSources,
+    GraspConfig,
+    GraspConfigList,
+    CloudSamples,
+)
 
 from lasr_manipulation_msgs.srv import CompleteShape
 
@@ -51,11 +60,12 @@ def allow_collisions_with_object(obj_name, scene):
     enabled = [
         True
         for i in range(len(planning_scene.scene.allowed_collision_matrix.entry_names))
-        # if planning_scene.scene.allowed_collision_matrix.entry_names[i] in [
-        #     "gripper_left_finger_link",
-        #     "gripper_right_finger_link",
-        #     "gripper_link",
-        # ],
+        if planning_scene.scene.allowed_collision_matrix.entry_names[i]
+        in [
+            "gripper_left_finger_link",
+            "gripper_right_finger_link",
+            "gripper_link",
+        ]
     ]
     entry = AllowedCollisionEntry(enabled=enabled)  # Test kwarg in constructor
     planning_scene.scene.allowed_collision_matrix.entry_values.append(entry)
@@ -153,12 +163,12 @@ class GraspGPD:
         self._3d_completion.wait_for_service()
         rospy.loginfo("Setup 3D Completion...")
 
-        rospy.loginfo("Setting up GPD...")
-        self._gpd = rospy.ServiceProxy(
-            "/detect_grasps_server/detect_grasps", DetectGrasps
-        )
-        self._gpd.wait_for_service()
-        rospy.loginfo("Setup GPD!")
+        # rospy.loginfo("Setting up GPD...")
+        # self._gpd = rospy.ServiceProxy(
+        #     "/detect_grasps_server/detect_grasps", DetectGrasps
+        # )
+        # self._gpd.wait_for_service()
+        # rospy.loginfo("Setup GPD!")
 
         rospy.loginfo("Setting up TF...")
         self._tf_buffer = tf2_ros.Buffer(cache_time=rospy.Duration(10.0))
@@ -167,6 +177,18 @@ class GraspGPD:
 
         self._grasp_markers_pub = rospy.Publisher(
             "/grasp_markers", MarkerArray, queue_size=10, latch=True
+        )
+        self._pcl_seg_pub = rospy.Publisher(
+            "/pcl_seg", PointCloud2, queue_size=10, latch=True
+        )
+        self._samples_pub = rospy.Publisher(
+            "/cloud_samples", CloudSamples, queue_size=10, latch=True
+        )
+        self._grasps = None
+        self._grasp_sub = rospy.Subscriber(
+            "/detect_grasps_server/clustered_grasps",
+            GraspConfigList,
+            self._update_grasps,
         )
 
         rospy.loginfo("GraspGPD pipeline is ready!")
@@ -177,17 +199,17 @@ class GraspGPD:
         goal.motion_name = motion_name
         self._play_motion_client.send_goal_and_wait(goal)
 
+    def _update_grasps(self, grasps: GraspConfigList):
+        self._grasps = grasps
+
     def _grasp_to_pose(self, grasp: GraspConfig) -> Pose:
-        # Extract orientation vectors
-        x = [grasp.axis.x, grasp.axis.y, grasp.axis.z]
-        y = [grasp.binormal.x, grasp.binormal.y, grasp.binormal.z]
-        z = [grasp.approach.x, grasp.approach.y, grasp.approach.z]
+        rot_matrix = [
+            [grasp.axis.x, grasp.binormal.x, grasp.approach.x],
+            [grasp.axis.y, grasp.binormal.y, grasp.approach.y],
+            [grasp.axis.z, grasp.binormal.z, grasp.approach.z],
+        ]
 
-        # Rotation matrix: columns are x, y, z
-        rot_matrix = [[x[0], y[0], z[0]], [x[1], y[1], z[1]], [x[2], y[2], z[2]]]
-
-        # Convert rotation matrix to quaternion
-        quat = tf.transformations.quaternion_from_matrix(
+        quaternion = tf.transformations.quaternion_from_matrix(
             [
                 [rot_matrix[0][0], rot_matrix[0][1], rot_matrix[0][2], 0],
                 [rot_matrix[1][0], rot_matrix[1][1], rot_matrix[1][2], 0],
@@ -198,10 +220,10 @@ class GraspGPD:
 
         pose = Pose()
         pose.position = grasp.position
-        pose.orientation.x = quat[0]
-        pose.orientation.y = quat[1]
-        pose.orientation.z = quat[2]
-        pose.orientation.w = quat[3]
+        pose.orientation.x = quaternion[0]
+        pose.orientation.y = quaternion[1]
+        pose.orientation.z = quaternion[2]
+        pose.orientation.w = quaternion[3]
 
         return pose
 
@@ -260,6 +282,86 @@ class GraspGPD:
 
         return create_pointcloud2(points, pcl.header.frame_id)
 
+    def _segment(self, pcl: PointCloud2):
+        im = cv2_pcl.pcl_to_cv2(pcl)
+        bbox = []
+        drawing = False
+        start_point = (0, 0)
+        image_copy = im.copy()
+        sam = ultralytics.FastSAM("FastSAM-s.pt").to("cpu")
+
+        def mouse_callback_bbox(event, x, y, flags, param):
+            nonlocal drawing, start_point, bbox, image_copy
+            if event == cv2.EVENT_LBUTTONDOWN:
+                drawing = True
+                start_point = (x, y)
+                bbox = []
+            elif event == cv2.EVENT_MOUSEMOVE and drawing:
+                image_copy = im.copy()
+                cv2.rectangle(image_copy, start_point, (x, y), (0, 255, 0), 2)
+            elif event == cv2.EVENT_LBUTTONUP:
+                drawing = False
+                end_point = (x, y)
+                bbox = [start_point, end_point]
+
+        while True:
+            bbox = []
+            cv2.namedWindow("Image")
+            cv2.setMouseCallback("Image", mouse_callback_bbox)
+            while True:
+                cv2.imshow("Image", image_copy)
+                key = cv2.waitKey(1) & 0xFF
+                if key == 27:
+                    break
+                if bbox:
+                    break
+            cv2.destroyAllWindows()
+
+            if not bbox:
+                continue
+
+            x0, y0 = bbox[0]
+            x1, y1 = bbox[1]
+            box = [min(x0, x1), min(y0, y1), max(x0, x1), max(y0, y1)]
+            result = sam.predict(
+                im,
+                bboxes=[box],
+                retina_masks=True,
+                iou=0.25,
+                conf=0.5,
+            )[0]
+
+            cv2.imshow("result", result.plot())
+            print("Press Y to proceed, or N to re-segment")
+            key = None
+            while key not in [ord("y"), ord("n")]:
+                key = cv2.waitKey(0) & 0xFF
+            cv2.destroyAllWindows()
+
+            proceed = key == ord("y")
+            if proceed:
+                break
+
+        xyseg = np.array(result.masks.xy).flatten().round().astype(int).reshape(-1, 2)
+        contours = xyseg.reshape(-1, 2)
+        mask = np.zeros(shape=im.shape[:2], dtype=np.uint8)
+        cv2.fillPoly(mask, pts=[contours], color=255)
+        indices = np.argwhere(mask)
+
+        pcl_xyz = np.array(
+            list(pc2.read_points(pcl, field_names=("x", "y", "z"), skip_nans=False)),
+            dtype=np.float32,
+        ).reshape(im.shape[0], im.shape[1], 3)
+
+        masked_points = pcl_xyz[indices[:, 0], indices[:, 1]]
+        masked_points = masked_points[~np.isnan(masked_points).any(axis=1)]
+        masked_points = masked_points[~np.all(masked_points == 0, axis=1)]
+        masked_cloud = create_pointcloud2(masked_points, pcl.header.frame_id)
+
+        flat_indices = indices[:, 0] * im.shape[1] + indices[:, 1]
+
+        return masked_cloud, indices, flat_indices, masked_points
+
     def _create_collision_object(self, pcl: PointCloud2):
         points = []
 
@@ -291,23 +393,22 @@ class GraspGPD:
         obj_pose.pose.orientation = Quaternion(0.0, 0.0, 0.0, 1.0)
 
         self._planning_scene.add_box("obj", obj_pose, size=size)
+        # plane_pose = PoseStamped()
+        # plane_pose.header.frame_id = "map"
+        # plane_pose.pose.position.x = 2.58
+        # plane_pose.pose.position.y = -0.46
+        # plane_pose.pose.position.z = 0.7
+        # plane_pose.pose.orientation.w = 1.0
 
-        plane_pose = PoseStamped()
-        plane_pose.header.frame_id = "map"
-        plane_pose.pose.position.x = 2.58
-        plane_pose.pose.position.y = -0.46
-        plane_pose.pose.position.z = 0.7
-        plane_pose.pose.orientation.w = 1.0
-
-        # p.pose.position.z = max_pt[2] + 0.1
+        # p.pose.position.z = max_pt[2]
         # plane_pose = self._tf_buffer.transform(p, "base_footprint", rospy.Duration(1.0))
         # plane_pose.pose.orientation = Quaternion(0.0, 0.0, 0.0, 1.0)
-        self._planning_scene.add_box(
-            "supporting_plane",
-            plane_pose,
-            size=(0.6, 0.4, 0.005),
-        )  # 0.1 0.1 0.005
-        self._move_group.set_support_surface_name("supporting_plane")
+        # self._planning_scene.add_box(
+        #     "supporting_plane",
+        #     plane_pose,
+        #     size=(0.15, 0.15, 0.005),
+        # )  # 0.1 0.1 0.005
+        # self._move_group.set_support_surface_name("supporting_plane")
 
     def _wait_for_scene_update(self, object_name: str, timeout: float = 5.0) -> bool:
         start_time = rospy.get_time()
@@ -320,6 +421,43 @@ class GraspGPD:
         rospy.logwarn(f"Timeout: Object '{object_name}' not found in planning scene.")
         return False
 
+    def _offset_grasp_local_axis(
+        self, grasp_pose: Pose, dx: float, dy: float, dz: float
+    ) -> Pose:
+        def pose_to_matrix(pose):
+            translation = [pose.position.x, pose.position.y, pose.position.z]
+            rotation = [
+                pose.orientation.x,
+                pose.orientation.y,
+                pose.orientation.z,
+                pose.orientation.w,
+            ]
+            return tf.transformations.concatenate_matrices(
+                tf.transformations.translation_matrix(translation),
+                tf.transformations.quaternion_matrix(rotation),
+            )
+
+        def matrix_to_pose(mat):
+            trans = tf.transformations.translation_from_matrix(mat)
+            rot = tf.transformations.quaternion_from_matrix(mat)
+            pose = Pose()
+            pose.position.x, pose.position.y, pose.position.z = trans
+            (
+                pose.orientation.x,
+                pose.orientation.y,
+                pose.orientation.z,
+                pose.orientation.w,
+            ) = rot
+            return pose
+
+        pose_mat = pose_to_matrix(grasp_pose)
+
+        offset_mat = tf.transformations.translation_matrix([dx, dy, dz])
+
+        new_pose_mat = np.dot(pose_mat, offset_mat)
+
+        return matrix_to_pose(new_pose_mat)
+
     def _execute_grasps(self, grasp_poses: List[Pose]) -> bool:
         self._move_group.set_pose_targets(
             grasp_poses, end_effector_link="gripper_grasping_frame"
@@ -328,45 +466,107 @@ class GraspGPD:
         self._move_group.stop()
         return success
 
+    def _tf_pose(self, pose: Pose, source_frame: str, target_frame: str):
+        pose_stamped = PoseStamped()
+        pose_stamped.pose = pose
+        pose_stamped.header.frame_id = source_frame
+        pose_stamped.header.stamp = rospy.Time.now()
+        return self._tf_buffer.transform(
+            pose_stamped, target_frame, rospy.Duration(1.0)
+        )
+
+    def _move_end_effector_offset(self, dx: float, dy: float, dz: float):
+        curr_pose = self._move_group.get_current_pose()
+        pose = curr_pose.pose
+
+        quat = [
+            pose.orientation.x,
+            pose.orientation.y,
+            pose.orientation.z,
+            pose.orientation.w,
+        ]
+        euler = tf.transformations.euler_from_quaternion(quat)
+        euler_m = tf.transformations.euler_matrix(*euler)
+
+        # calculate offset to add to the current pose
+        delta = np.dot(euler_m[:3, :3], np.array([dx, dy, dz]).T)
+        pose.position.x += delta[0]
+        pose.position.y += delta[1]
+        pose.position.z += delta[2]
+
+        self._move_group.set_pose_target(curr_pose)
+        # publish pose for debugging purposes
+        # print('Publishing debug_plan_pose')
+
+        self._move_group.set_start_state_to_current_state()
+        result = self._move_group.go(wait=True)
+        return result
+
+    def _offset_pose(self, pose: Pose, dx: float, dy: float, dz: float) -> Pose:
+        pose.position.x += dx
+        pose.position.y += dy
+        pose.position.z += dz
+
+        return pose
+
     def grasp_pipeline(self):
-        # rospy.loginfo("Sending pregrasp motion...")
-        # self._play_motion("pregrasp")
-        # rospy.loginfo("Pregrasp motion finished!")
-        # rospy.loginfo("Sending open_gripper motion...")
-        # self._play_motion("open_gripper")
-        # rospy.loginfo("Pregrasp open_gripper finished!")
+        rospy.loginfo("Sending pregrasp motion...")
+        self._play_motion("pregrasp")
+        rospy.loginfo("Pregrasp motion finished!")
+        rospy.loginfo("Sending open_gripper motion...")
+        self._play_motion("open_gripper")
+        rospy.loginfo("Pregrasp open_gripper finished!")
         rospy.loginfo("Calling clear_octomap...")
         self._clear_octomap()
         rospy.loginfo("Cleared octomap!")
-        # Get segmented PCL
-        rospy.loginfo("Waiting for segmented_cloud...")
-        masked_pcl = rospy.wait_for_message("/segmented_cloud", PointCloud2)
-        # full_pcl = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
-        self._move_group.set_pose_reference_frame(masked_pcl.header.frame_id)
+        # Get PCL
+        rospy.loginfo("Waiting for point cloud...")
+        pcl = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
+        rospy.loginfo("Got point cloud!")
+        rospy.loginfo("Getting segmentation...")
+        pcl_seg, _, seg_idx_flat, points = self._segment(pcl)
+        self._pcl_seg_pub.publish(pcl_seg)
         rospy.loginfo("Got segmented_cloud!")
-        rospy.loginfo("Completing point cloud...")
-        completed_pcl = self._3d_completion(self.filter_pcl(masked_pcl)).completed_cloud
-        rospy.loginfo("Completed point cloud!")
+        # # masked_pcl = rospy.wait_for_message("/segmented_cloud", PointCloud2)
+        self._move_group.set_pose_reference_frame("gripper_grasping_frame")
         # Collision object
+        rospy.loginfo("Completing point cloud...")
+        completed_pcl = self._3d_completion(self.filter_pcl(pcl_seg)).completed_cloud
+        rospy.loginfo("Completed point cloud!")
         rospy.loginfo("Adding collision object added to the planning scene...")
-        self._create_collision_object(completed_pcl)
-        if not self._wait_for_scene_update("obj", timeout=10.0):
+        self._create_collision_object(self.filter_pcl(pcl_seg))
+        if not self._wait_for_scene_update("obj", timeout=30.0):
             rospy.logwarn("Collision object not yet in the planning scene!")
         else:
             rospy.loginfo("Collision object added to the planning scene!")
         allow_collisions_with_object("obj", self._planning_scene)
         # Call GPD
-        rospy.loginfo("Calling GPD...")
-        grasps = self._detect_grasps(completed_pcl)
+        rospy.loginfo("Publishing for GPD...")
+        sources = CloudSources(pcl, [Int64(0)], [Point(0, 0, 0)])
+        samples = CloudSamples(sources, [Point(*p) for p in points])
+        self._samples_pub.publish(samples)
+        rospy.loginfo("Waiting for GPD response...")
+        while not self._grasps:
+            rospy.sleep(0.1)
+        grasps = self._grasps.grasps
         rospy.loginfo("Got response from GPD!")
         rospy.loginfo("Converting grasps to poses...")
         grasp_poses = [self._grasp_to_pose(grasp) for grasp in grasps]
+        grasp_poses = [
+            self._tf_pose(grasp, pcl.header.frame_id, "gripper_grasping_frame").pose
+            for grasp in grasp_poses
+        ]
+        # grasp_poses = [
+        #     self._offset_pose(grasp, 0.12, 0.0, 0.0) for grasp in grasp_poses
+        # ]
+        # self._publish_grasp_poses(grasp_poses, "gripper_grasping_frame")
         rospy.loginfo("Grasps converted to poses!")
-        self._publish_grasp_poses(grasp_poses, masked_pcl.header.frame_id)
         # Execute
         rospy.loginfo("Executing...")
         success = self._execute_grasps(grasp_poses)
         rospy.loginfo(f"Executed, success: {success}!")
+
+        # self._move_end_effector_offset(0.01, 0.0, 0.0)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch>
+
+  <arg name="public_sim" default="false"/>
+
+  <!-- Gazebo simulation -->
+  <include file="$(find tiago_gazebo)/launch/tiago_gazebo.launch">
+    <arg name="robot"      value="steel"/>
+    <arg name="public_sim" value="$(arg public_sim)"/>
+    <arg name="use_moveit_camera" value="true"/>
+  </include>
+  
+  <node name="spawn_urdf1" pkg="gazebo_ros" type="spawn_model" args="-file $(find pal_gazebo_worlds)/models/table_0m8/table.sdf -sdf -x 0.88 -y 0 -z 0 -model table1" />
+  <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" args="-file $(find pal_gazebo_worlds)/models/cocacola/cocacola.sdf -sdf -x 0.75 -y 0 -z 0.87 -model cocacola" />
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find lasr_grasping)/config/tiago_grasp.rviz"/>
+</launch>
+
