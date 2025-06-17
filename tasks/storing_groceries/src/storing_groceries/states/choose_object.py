@@ -17,6 +17,8 @@ class ChooseObject(smach.State):
         # Define known category sets
         self.category_map = {
             "cereal": {"cereal", "cereal_container"},
+            "cereal_only": {"cereal"},
+            "cereal_container_only": {"cereal_container"},
             # Add more categories if needed
         }
 
@@ -40,11 +42,7 @@ class ChooseObject(smach.State):
 
             skip = False
 
-            for ng in userdata.not_graspable:
-                if obj == ng:
-                    skip = True
-                    break
-            if skip:
+            if name in userdata.not_graspable:
                 continue
 
             # Category filtering logic
@@ -54,7 +52,6 @@ class ChooseObject(smach.State):
             else:
                 # Default mode: exclude cereal types
                 if name in self.category_map["cereal"]:
-                    
                     continue
 
             rospy.loginfo(f"Candidate: {name} (conf: {conf:.2f})")

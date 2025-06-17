@@ -16,20 +16,9 @@ class SelectObject(smach.StateMachine):
                 "CHOOSE_OBJECT",
                 ChooseObject(),
                 transitions={
-                    "succeeded": "MEASURE_OBJECT",
-                    "failed": "MEASURE_OBJECT",
-                    "empty": "escape", #should return escape in future 
-                },
-
-            )
-
-            smach.StateMachine.add(
-                "MEASURE_OBJECT",
-                Say(text="Measure object is ongoing"),
-                transitions={
                     "succeeded": "succeeded",
-                    "aborted": "succeeded", #If fail then go to ChooseObject again
-                    "preempted": "succeeded",
+                    "failed": "succeeded",
+                    "empty": "escape", #should return escape in future 
                 },
             )
             

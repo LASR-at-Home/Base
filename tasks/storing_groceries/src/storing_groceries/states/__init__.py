@@ -2,6 +2,7 @@ from .wait_door_open import WaitDoorOpen
 
 from .choose_object import ChooseObject
 
+from .append_detections import AppendDetections
 
 from .select_object import SelectObject
 

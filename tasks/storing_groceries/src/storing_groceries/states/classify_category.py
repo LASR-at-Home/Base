@@ -18,13 +18,36 @@ class ClassifyCategory(smach.State):
 
         # Define known category sets for safety
         self.category_map = {
-            "fruit": {"apple", "banana", "cherry", "dragon fruit", "strawberry", "mango", "orange"},
-            "beverage": {"cola", "water", "orange juice", "coffee", "cider", "milk", "juice", },
-            "new": {"empty"},
-            "clothing": {"hat", "pants", "socks", "t-shirt", "glasses", "trousers", "shoes"},
-
-
+            "fruit": {
+                "apple", "banana", "orange", "grape", "pineapple", "lemon", "lime", "peach",
+                "plum", "pear", "mango", "watermelon", "strawberry", "blueberry"
+            },
+            "vegetable": {
+                "carrot", "tomato", "cucumber", "lettuce", "onion", "broccoli", "cabbage",
+                "pepper", "zucchini", "radish", "corn", "potato", "garlic"
+            },
+            "beverage": {
+                "bottle", "can", "water bottle", "juice box", "milk carton", "soda can",
+                "coffee cup", "energy drink", "thermos"
+            },
+            "clothing": {
+                "t-shirt", "shirt", "pants", "socks", "jacket", "hat", "cap", "skirt",
+                "shorts", "glasses", "scarf", "sneakers", "shoes", "boots"
+            },
+            "snack": {
+                "chips", "crackers", "candy", "chocolate bar", "cookie", "snack bag",
+                "biscuit", "granola bar", "popcorn"
+            },
+            "cleaning": {
+                "soap", "sponge", "brush", "cleaner", "detergent", "tissue box", "toilet paper",
+                "broom", "mop", "spray bottle", "bucket"
+            },
+            "new": {
+                "unknown", "misc", "empty", "unrecognized", "?"
+            }
         }
+
+
 
         rospy.wait_for_service("/storing_groceries/query_llm")
         self.llm_service = rospy.ServiceProxy("/storing_groceries/query_llm", StoringGroceriesQueryLlm)

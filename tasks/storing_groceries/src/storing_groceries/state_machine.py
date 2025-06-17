@@ -50,9 +50,9 @@ class StoringGroceries(smach.StateMachine):
             # self.userdata.table_objects=[]
             # self.userdata.not_graspable=[]
 
-            def wait_cb(ud, msg):
-                rospy.loginfo("Received start signal")
-                return False
+            # def wait_cb(ud, msg):
+            #     rospy.loginfo("Received start signal")
+            #     return False
 
             # smach.StateMachine.add(
             #     "WAIT_START",
@@ -72,17 +72,27 @@ class StoringGroceries(smach.StateMachine):
                 "SAY_START",
                 Say(text="Ready to start"),
                 transitions={
+                    "succeeded": "GO_TO_WAITING_AREA",
+                    "aborted": "GO_TO_WAITING_AREA",
+                    "preempted": "GO_TO_WAITING_AREA",
+                },
+            )
+
+            self.go_to_waiting_area()
+
+            """
+            WaitDoorOpen
+            """
+
+            smach.StateMachine.add(
+                "SAY_WAIT",
+                Say(text="Waiting for door to open"),
+                transitions={
                     "succeeded": "WAIT_DOOR_OPEN",
                     "aborted": "WAIT_DOOR_OPEN",
                     "preempted": "WAIT_DOOR_OPEN",
                 },
             )
-
-            # self.go_to_waiting_area()
-
-            """
-            WaitDoorOpen
-            """
 
             smach.StateMachine.add(
                 "WAIT_DOOR_OPEN",
@@ -102,9 +112,19 @@ class StoringGroceries(smach.StateMachine):
                 "OBJECT_SORTING_LOOP",
                 ObjectSortingLoop(self.table_pose, self.cabinet_pose),
                 transitions={
+                    "succeeded": "SAY_DONE_OBJECT_SORTING_LOOP",
+                    "failed": "SAY_DONE_OBJECT_SORTING_LOOP",
+                    "escape": "SAY_DONE_OBJECT_SORTING_LOOP",
+                },
+            )
+
+            smach.StateMachine.add(
+                "SAY_DONE_OBJECT_SORTING_LOOP",
+                Say("No more object to put in cabinet"),                
+                transitions={
                     "succeeded": "POUR_CEREAL",
-                    "failed": "POUR_CEREAL",
-                    "escape": "POUR_CEREAL",
+                    "aborted": "POUR_CEREAL",
+                    "preempted": "POUR_CEREAL",
                 },
             )
 
@@ -154,11 +174,11 @@ class StoringGroceries(smach.StateMachine):
     
         smach.StateMachine.add(
             f"SAY_ARRIVE_WAITING_AREA",
-            Say(text="Arrive waiting area"),
+            Say(text="Arrived waiting area"),
             transitions={
-                "succeeded": f"WAIT_DOOR_OPEN",
-                "aborted": f"WAIT_DOOR_OPEN",
-                "preempted": f"WAIT_DOOR_OPEN",
+                "succeeded": f"SAY_WAIT",
+                "aborted": f"SAY_WAIT",
+                "preempted": f"SAY_WAIT",
             },
         )
 
