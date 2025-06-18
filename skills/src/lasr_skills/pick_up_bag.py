@@ -254,10 +254,13 @@ class BagPickAndPlaceSkill(smach.State):
             orth /= np.linalg.norm(orth)
             yaw  = math.atan2(orth[1], orth[0])
 
-            self.create_collision_object_from_pcl(pts)
+            closest_pose = self.find_closest_pose_footprint(pts)
+            centroid_pose = self.transform_centroid_pose_footprint(centroid, yaw)
+
+            # self.create_collision_object_from_pcl(pts)
             rospy.sleep(1.0)
             self.prepare_pick()
-            result = self.pick(centroid, yaw)
+            result = self.pick(centroid_pose, closest_pose)
             if not result:
                 self.ask_for_bag()
 
@@ -351,9 +354,54 @@ class BagPickAndPlaceSkill(smach.State):
         self.motion_client.send_goal(goal)
         self.motion_client.wait_for_result()
         self.adjust_torso(0.1)
+        rospy.sleep(0.2)
         rospy.loginfo("Reached prepare grasp pose.")
 
-    def pick(self, centroid_mm, yaw):
+    def find_closest_pose_footprint(self, pts):
+        # Transform all pts to base_footprint
+        listener = tf.TransformListener()
+        listener.waitForTransform(
+            'base_footprint',
+            'xtion_rgb_optical_frame',
+            rospy.Time(0),
+            rospy.Duration(1.0)
+        )
+        trans, rot = listener.lookupTransform(
+            'base_footprint',
+            'xtion_rgb_optical_frame',
+            rospy.Time(0)
+        )
+        T = tft.quaternion_matrix(rot)
+        T[0:3, 3] = trans
+
+        pts_m = pts / 1000.0  # if needed
+        pts_hom = np.hstack([pts_m, np.ones((pts_m.shape[0], 1))])
+        pts_base = (T @ pts_hom.T).T[:, :3]
+
+        dists = np.linalg.norm(pts_base, axis=1)
+        k = 10
+        closest_index = np.argmin(dists)
+        closest_pts = pts_base[closest_index]   # still in camera frame
+
+        pose = PoseStamped()
+        pose.header.frame_id = 'base_footprint'
+        pose.header.stamp = rospy.Time.now()
+        pose.pose.position.x = closest_pts[0]
+        pose.pose.position.y = closest_pts[1]
+        pose.pose.position.z = closest_pts[2] # Top point is twice the height of the centroid
+
+        pose.pose.orientation.x = 0.0010062689510449319
+        pose.pose.orientation.y = 0.70710678
+        pose.pose.orientation.z = 0.0004933099788376551
+        pose.pose.orientation.w = 0.70710678
+
+        if pose.pose.position.z < 0.6:
+            pose.pose.position.z = 0.6
+
+        rospy.loginfo(f"Closest pick pose in base_footprint: {pose}")
+        return pose
+
+    def transform_centroid_pose_footprint(self, centroid_mm, yaw):
         x_mm, y_mm, z_mm = centroid_mm
         x_cam, y_cam, z_cam = x_mm/1000.0, y_mm/1000.0, z_mm/1000.0
 
@@ -396,16 +444,32 @@ class BagPickAndPlaceSkill(smach.State):
         if pose.pose.position.z < 0.6:
             pose.pose.position.z = 0.6
 
-        rospy.loginfo(f"Final pick pose in base_footprint: {pose}")
+        rospy.loginfo(f"Centroid pick pose in base_footprint: {pose}")
+        return pose
 
-        self.arm.set_start_state_to_current_state()
-        pre_pose = copy.deepcopy(pose)
-        pre_pose.pose.position.z += 0.20
-        self.arm.set_pose_target(pre_pose)
-        self.arm.go(wait=True)
-        self.arm.clear_pose_targets()
-        self.arm.stop()
-        rospy.sleep(0.2)
+    def pick(self, centroid_pose, closest_pose):
+        closest_pose.pose.orientation = centroid_pose.pose.orientation
+
+        # self.arm.set_start_state_to_current_state()
+        # pre_pose = copy.deepcopy(centroid_pose)
+        # pre_pose.pose.position.z += 0.20
+        # self.arm.set_pose_target(pre_pose)
+        # result = self.arm.go(wait=True)
+        # self.arm.clear_pose_targets()
+        # rospy.sleep(0.2)
+
+        if True:
+            rospy.logwarn(f"Picking with closest pose")
+            self.arm.set_start_state_to_current_state()
+            pre_pose = copy.deepcopy(closest_pose)
+            pre_pose.pose.position.z += 0.20
+            self.arm.set_pose_target(pre_pose)
+            result = self.arm.go(wait=True)
+            self.arm.clear_pose_targets()
+            rospy.sleep(0.2)
+
+        if result == False:
+            return result
 
         result = self.sync_shift_ee(self.arm, 0.35, 0.0, 0.0)
         if result == False:
@@ -414,7 +478,7 @@ class BagPickAndPlaceSkill(smach.State):
         rospy.loginfo("Bag pick complete!")
         self.sync_shift_ee(self.arm, -0.35, 0.0, 0.0)
 
-        return self.is_picked_up(0.001, 0.25)
+        return self.is_picked_up(0.003, 0.20)
 
     
 
@@ -440,7 +504,7 @@ class BagPickAndPlaceSkill(smach.State):
         result = move_group.go(wait=True)
         return result
 
-    def is_picked_up(self, pos_thresh=0.001, effort_thresh=0.05):
+    def is_picked_up(self, pos_thresh=0.002, effort_thresh=0.05):
         rospy.sleep(0.1)
         js = rospy.wait_for_message('/joint_states', JointState, timeout=1.0)
         lidx = js.name.index('gripper_left_finger_joint')
@@ -449,7 +513,7 @@ class BagPickAndPlaceSkill(smach.State):
         eff_l, eff_r   = js.effort[lidx],   js.effort[ridx]
         avg_pos   = 0.5 * (pos_l + pos_r)
         avg_eff   = abs(0.5 * (eff_l + eff_r))
-        if avg_pos > pos_thresh and avg_eff > effort_thresh:
+        if avg_pos >= pos_thresh or avg_eff >= effort_thresh:
             rospy.loginfo(f"Grasp succeeded: pos={avg_pos:.3f} m, eff={avg_eff:.2f}")
             return True
         else:
