@@ -1,6 +1,6 @@
 import smach
 
-from lasr_skills import AskAndListen, Say, AdjustCamera
+from lasr_skills import AskAndListen, Say
 from receptionist.states import (
     GetNameAndInterest,
     ReceptionistLearnFaces,
