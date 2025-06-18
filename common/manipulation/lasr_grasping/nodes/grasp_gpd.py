@@ -5,10 +5,13 @@ import actionlib
 import tf
 import tf2_geometry_msgs
 import tf2_ros
+import tf2_sensor_msgs.tf2_sensor_msgs
 import numpy as np
 import cv2
 import ultralytics
 import sys
+import struct
+import ctypes
 
 
 import moveit_commander
@@ -31,6 +34,7 @@ from lasr_manipulation_msgs.srv import CompleteShape
 from play_motion_msgs.msg import PlayMotionGoal, PlayMotionAction
 from sensor_msgs.msg import PointCloud2, PointField
 import sensor_msgs.point_cloud2 as pc2
+import PyKDL
 from geometry_msgs.msg import Point, Pose, PoseStamped, Quaternion, Vector3Stamped
 from std_msgs.msg import Int64, Header
 from std_srvs.srv import Empty
@@ -142,12 +146,12 @@ class GraspGPD:
         rospy.loginfo("Setup PlanningSceneInterface!")
 
         rospy.loginfo("Setting up MoveGroupCommander...")
-        self._move_group = MoveGroupCommander("arm_torso")
-        self._move_group.set_planner_id("RRTConnectkConfigDefault")
-        self._move_group.allow_replanning(True)
-        self._move_group.allow_looking(True)
-        self._move_group.set_planning_time(30)
-        self._move_group.set_num_planning_attempts(30)
+        # self._move_group = MoveGroupCommander("arm_torso")
+        # self._move_group.set_planner_id("RRTConnectkConfigDefault")
+        # self._move_group.allow_replanning(True)
+        # self._move_group.allow_looking(True)
+        # self._move_group.set_planning_time(30)
+        # self._move_group.set_num_planning_attempts(30)
         rospy.loginfo("Setup MoveGroupCommander!")
 
         rospy.loginfo("Setting up PlayMotion...")
@@ -293,6 +297,7 @@ class GraspGPD:
         bbox = []
         drawing = False
         start_point = (0, 0)
+        assert im is not None
         image_copy = im.copy()
         sam = ultralytics.FastSAM("FastSAM-s.pt").to("cpu")
 
@@ -311,6 +316,7 @@ class GraspGPD:
                 bbox = [start_point, end_point]
 
         while True:
+            rospy.loginfo("really getting segmentation")
             bbox = []
             cv2.namedWindow("Image")
             cv2.setMouseCallback("Image", mouse_callback_bbox)
@@ -562,6 +568,56 @@ class GraspGPD:
 
         return moveit_grasps
 
+    def transform_to_kdl(self, t):
+        return PyKDL.Frame(
+            PyKDL.Rotation.Quaternion(
+                t.transform.rotation.x,
+                t.transform.rotation.y,
+                t.transform.rotation.z,
+                t.transform.rotation.w,
+            ),
+            PyKDL.Vector(
+                t.transform.translation.x,
+                t.transform.translation.y,
+                t.transform.translation.z,
+            ),
+        )
+
+    def do_transform_cloud(self, cloud, transform):
+        t_kdl = self.transform_to_kdl(transform)
+
+        # Convert the PointCloud2 data buffer to a numpy byte array
+        data = np.frombuffer(cloud.data, dtype=np.uint8).copy()
+
+        point_step = cloud.point_step
+        offset_x = next(f.offset for f in cloud.fields if f.name == "x")
+        offset_y = next(f.offset for f in cloud.fields if f.name == "y")
+        offset_z = next(f.offset for f in cloud.fields if f.name == "z")
+
+        for i in range(cloud.width * cloud.height):
+            base = i * point_step
+
+            # Extract x, y, z using struct (little-endian float32)
+            x = struct.unpack_from("<f", data, base + offset_x)[0]
+            y = struct.unpack_from("<f", data, base + offset_y)[0]
+            z = struct.unpack_from("<f", data, base + offset_z)[0]
+
+            # Transform point
+            p = PyKDL.Vector(x, y, z)
+            p_out = t_kdl * p
+
+            # Write back transformed x, y, z
+            struct.pack_into("<f", data, base + offset_x, p_out[0])
+            struct.pack_into("<f", data, base + offset_y, p_out[1])
+            struct.pack_into("<f", data, base + offset_z, p_out[2])
+
+        # Create new PointCloud2 preserving all metadata and raw structure
+        new_cloud = cloud
+        new_cloud.data = data.tobytes()
+        new_cloud.header = transform.header
+
+        return new_cloud
+
     def grasp_pipeline(self):
         rospy.loginfo("Sending pregrasp motion...")
         # self._play_motion("pregrasp")
@@ -575,6 +631,14 @@ class GraspGPD:
         # Get PCL
         rospy.loginfo("Waiting for point cloud...")
         pcl = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
+        transform = self._tf_buffer.lookup_transform(
+            "gripper_grasping_frame",
+            pcl.header.frame_id,  # Source frame
+            pcl.header.stamp,
+            rospy.Duration(1.0),
+        )
+        pcl = self.do_transform_cloud(pcl, transform)
+        # pcl = tf2_sensor_msgs.do_transform_cloud(pcl, transform)
         rospy.loginfo("Got point cloud!")
         rospy.loginfo("Getting segmentation...")
         pcl_seg, _, seg_idx_flat, points = self._segment(pcl)
@@ -582,6 +646,7 @@ class GraspGPD:
         self._pcl_seg_pub.publish(pcl_seg)
         rospy.loginfo("Got segmented_cloud!")
         # # masked_pcl = rospy.wait_for_message("/segmented_cloud", PointCloud2)
+        """
         self._move_group.set_pose_reference_frame(pcl.header.frame_id)
         # Collision object
         rospy.loginfo("Completing point cloud...")
@@ -594,6 +659,8 @@ class GraspGPD:
         else:
             rospy.loginfo("Collision object added to the planning scene!")
         allow_collisions_with_object("obj", self._planning_scene)
+        """
+        return
         # Call GPD
         rospy.loginfo("Publishing for GPD...")
         sources = CloudSources(pcl, [Int64(0)], [Point(0, 0, 0)])
@@ -608,7 +675,7 @@ class GraspGPD:
         moveit_grasps = self._make_moveit_grasps(pcl.header.frame_id, grasps)
         self._move_group.pick("obj", moveit_grasps)
         grasp_poses = [moveit_grasp.grasp_pose.pose for moveit_grasp in moveit_grasps]
-        self._publish_grasp_poses(grasp_poses, pcl.header.frame_id)
+        self._publish_grasp_poses(grasp_poses, "gripper_grasping_frame")
         # grasp_poses = [
         #     self._tf_pose(grasp, pcl.header.frame_id, "gripper_grasping_frame").pose
         #     for grasp in grasp_poses
