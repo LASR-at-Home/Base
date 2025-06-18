@@ -15,11 +15,13 @@ from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from message_filters import Subscriber, ApproximateTimeSynchronizer
 
 from segment_anything import sam_model_registry, SamPredictor
+from control_msgs.msg import PointHeadAction, PointHeadGoal
+from geometry_msgs.msg import PointStamped, Point
 
 class GoToBag(smach.State):
     def __init__(self):
         smach.State.__init__(
-            self, outcomes=['finished', 'failed']
+            self, outcomes=['succeeded', 'failed']
         )
         # --- Model and CV ---
         self.bridge = CvBridge()
@@ -59,6 +61,9 @@ class GoToBag(smach.State):
         sam  = sam_model_registry["vit_b"](checkpoint=ckpt)
         sam.to(self.device)
         self.predictor = SamPredictor(sam)
+
+        self.point_head_client = actionlib.SimpleActionClient('/head_controller/point_head_action', PointHeadAction)
+        self.point_head_client.wait_for_server()
 
     def amcl_pose_callback(self, msg):
         self.latest_amcl_pose = msg
@@ -118,12 +123,16 @@ class GoToBag(smach.State):
                 cv2.destroyWindow("Click to segment")
                 return 'failed'
 
+            head_point = self.transform_from_camera_to_map(p_cam)
+            print(head_point)
+
             x_bag, y_bag = self.navigate_to_closest_feasible_point(p_cam)
             if x_bag is not None and y_bag is not None:
                 rospy.loginfo("[SAM-CLICK] Navigation succeeded! Now adjusting orientation with AMCL pose.")
                 self.face_point_with_amcl(x_bag, y_bag)
+                self.look_at_point(head_point, 'map')
                 cv2.destroyWindow("Click to segment")
-                return 'finished'
+                return 'succeeded'
             else:
                 cv2.destroyWindow("Click to segment")
                 return 'failed'
@@ -178,6 +187,28 @@ class GoToBag(smach.State):
         y_cam = (v - cy) * z_cam / fy
         return np.array([x_cam, y_cam, z_cam])
 
+    def transform_from_camera_to_map(self, p_cam):
+        cam_frame = 'xtion_depth_optical_frame'
+
+        # Create the PointStamped in camera frame
+        target_pt = PointStamped()
+        target_pt.header.stamp = rospy.Time(0)  # Use latest available
+        target_pt.header.frame_id = cam_frame
+        target_pt.point.x = float(p_cam[0])
+        target_pt.point.y = float(p_cam[1])
+        target_pt.point.z = float(p_cam[2])
+
+        # Transform to map frame
+        map_frame = "map"
+        try:
+            self.tf_listener.waitForTransform(map_frame, cam_frame, rospy.Time(0), rospy.Duration(1.0))
+            target_in_head = self.tf_listener.transformPoint(map_frame, target_pt)
+            return [target_in_head.point.x, target_in_head.point.y, target_in_head.point.z]
+        except (tf.Exception, tf.LookupException, tf.ConnectivityException) as e:
+            rospy.logerr("TF transform for look_at_point failed: %s", e)
+            return
+
+
     def navigate_to_closest_feasible_point(self, p_cam):
         cam_frame = self.depth_info.header.frame_id  # e.g. "xtion_depth_optical_frame"
         try:
@@ -218,7 +249,7 @@ class GoToBag(smach.State):
         # Try moving to increasing distances back from the bag, up to 2m away
         approach_min = 0.2  # minimum approach distance (meters)
         approach_max = min(2.0, dist-0.05)  # max backoff, never behind robot
-        step = 0.1  # meters
+        step = 0.05  # meters
 
         for approach_dist in np.arange(approach_min, approach_max, step):
             goal_x = x_bag + approach_dist * ux
@@ -321,13 +352,49 @@ class GoToBag(smach.State):
         overlay = cv2.addWeighted(rgb_img, 1.0, red_mask, alpha, 0.0)
         return overlay
 
+
+    def look_at_point(self, target_point, target_frame):
+        if not self.point_head_client:
+            return
+
+        # If target_point is a numpy array or list, convert to geometry_msgs/Point
+        if isinstance(target_point, (list, tuple, np.ndarray)):
+            pt = Point()
+            pt.x = float(target_point[0])
+            pt.y = float(target_point[1])
+            pt.z = float(target_point[2])
+        else:
+            pt = target_point  # already geometry_msgs/Point
+
+        goal = PointHeadGoal()
+        goal.target.header.stamp = rospy.Time(0)
+        goal.target.header.frame_id = target_frame
+        goal.target.point = pt
+
+        goal.pointing_frame = "xtion_rgb_optical_frame"
+        goal.pointing_axis.x = 0.0
+        goal.pointing_axis.y = 0.0
+        goal.pointing_axis.z = 1.0
+
+        goal.min_duration = rospy.Duration(0.1)
+        goal.max_velocity = 1.0
+
+        self.point_head_client.send_goal(goal)
+        rospy.loginfo("Looked at point!")
+
+
+
+
+
+
+
 if __name__ == '__main__':
     import smach
     rospy.init_node('go_to_bag_skill_runner')
-    sm = smach.StateMachine(outcomes=['finished', 'failed'])
+    sm = smach.StateMachine(outcomes=['succeeded', 'failed'])
     with sm:
         smach.StateMachine.add('GO_TO_BAG', GoToBag(),
-                               transitions={'finished': 'finished',
+                               transitions={'succeeded': 'succeeded',
                                             'failed': 'failed'})
     outcome = sm.execute()
     rospy.loginfo(f"Skill outcome: {outcome}")

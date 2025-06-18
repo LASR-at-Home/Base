@@ -14,6 +14,8 @@ from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from message_filters import Subscriber, ApproximateTimeSynchronizer
 
 from segment_anything import sam_model_registry, SamPredictor
+from control_msgs.msg import PointHeadAction, PointHeadGoal
+from geometry_msgs.msg import PointStamped
 
 class SAMClickNavigateNode:
     def __init__(self):
@@ -57,6 +59,9 @@ class SAMClickNavigateNode:
         sam  = sam_model_registry["vit_b"](checkpoint=ckpt)
         sam.to(self.device)
         self.predictor = SamPredictor(sam)
+
+        self.point_head = actionlib.SimpleActionClient('/head_controller/point_head', PointHeadAction)
+        self.point_head.wait_for_server()
 
         rospy.loginfo("SAMClickNavigateNode ready.")
         rospy.sleep(2)
@@ -117,6 +122,8 @@ class SAMClickNavigateNode:
                         if x_bag is not None and y_bag is not None:
                             rospy.loginfo("[SAM-CLICK] Navigation succeeded! Now adjusting orientation with AMCL pose.")
                             self.face_point_with_amcl(x_bag, y_bag)
+                            self.look_at_point(p_cam)
+
 
         # Cleanup and exit
         cv2.destroyWindow("Click to segment")
@@ -314,6 +321,23 @@ class SAMClickNavigateNode:
         alpha = 0.4
         overlay = cv2.addWeighted(rgb_img, 1.0, red_mask, alpha, 0.0)
         return overlay
+
+    def look_at_point(self, point_3d):
+        cam_frame = self.depth_info.header.frame_id
+        goal = PointHeadGoal()
+        goal.target.header.stamp = rospy.Time.now()
+        goal.target.header.frame_id = cam_frame
+        goal.target.point.x = point_3d[0]
+        goal.target.point.y = point_3d[1]
+        goal.target.point.z = point_3d[2]
+        goal.pointing_frame = frame_id  # Or your camera frame
+        goal.pointing_axis.x = 1.0  # Usually (1, 0, 0)
+        goal.pointing_axis.y = 0.0
+        goal.pointing_axis.z = 0.0
+        goal.min_duration = rospy.Duration(0.5)
+        goal.max_velocity = 1.0
+        self.point_head.send_goal(goal)
+        self.point_head.wait_for_result()
 
 if __name__ == '__main__':
     try:

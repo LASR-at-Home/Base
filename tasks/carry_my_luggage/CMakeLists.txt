@@ -159,6 +159,7 @@ include_directories(
 ## in contrast to setup.py, you can choose the destination
 catkin_install_python(PROGRAMS
   scripts/main.py
+  src/carry_my_luggage/state_machine.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

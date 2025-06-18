@@ -19,7 +19,7 @@ from cv_bridge                  import CvBridge
 from geometry_msgs.msg          import PoseStamped
 from segment_anything           import sam_model_registry, SamPredictor
 from moveit_msgs import *
-from moveit_commander           import MoveGroupCommander, roscpp_initialize, roscpp_shutdown
+from moveit_commander           import MoveGroupCommander, roscpp_initialize, roscpp_shutdown, PlanningSceneInterface
 
 from message_filters            import Subscriber, ApproximateTimeSynchronizer
 from control_msgs.msg           import FollowJointTrajectoryAction, FollowJointTrajectoryGoal
@@ -27,13 +27,85 @@ from trajectory_msgs.msg        import JointTrajectory, JointTrajectoryPoint
 from pal_interaction_msgs.msg   import TtsAction, TtsGoal, TtsText
 from play_motion_msgs.msg       import PlayMotionAction, PlayMotionGoal
 from controller_manager_msgs.srv import SwitchController, SwitchControllerRequest
-import std_srvs.srv
+from play_motion_msgs.msg import PlayMotionGoal, PlayMotionAction
+from sensor_msgs.msg import PointCloud2, PointField
+import sensor_msgs.point_cloud2 as pc2
+from geometry_msgs.msg import Point, Pose, PoseStamped, Quaternion, Vector3Stamped
+from std_msgs.msg import Int64, Header
+from std_srvs.srv import Empty
+from visualization_msgs.msg import Marker, MarkerArray
+from moveit_msgs.srv import GetPlanningScene, ApplyPlanningSceneRequest
+from moveit_msgs.msg import (
+    PlanningScene,
+    AllowedCollisionEntry,
+    Grasp,
+    GripperTranslation,
+)
+from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 
+def allow_collisions_with_object(obj_name, scene):
+    """Updates the MoveIt PlanningScene using the AllowedCollisionMatrix to ignore collisions for an object"""
+    # Set up service to get the current planning scene
+    service_timeout = 5.0
+    _get_planning_scene = rospy.ServiceProxy("get_planning_scene", GetPlanningScene)
+    _get_planning_scene.wait_for_service(service_timeout)
+
+    request = GetPlanningScene()
+    request.components = 0  # Get just the Allowed Collision Matrix
+    planning_scene = _get_planning_scene.call(request)
+    print(
+        f"\n\n\n--- allowed_collision_matrix before update:{planning_scene.scene.allowed_collision_matrix} ---\n\n\n"
+    )
+
+    # Set this object to ignore collisions with all objects. The entry values are not updated
+    planning_scene.scene.allowed_collision_matrix.entry_names.append(obj_name)
+    for entry in planning_scene.scene.allowed_collision_matrix.entry_values:
+        entry.enabled.append(True)
+    enabled = [
+        True
+        for i in range(len(planning_scene.scene.allowed_collision_matrix.entry_names))
+        if planning_scene.scene.allowed_collision_matrix.entry_names[i]
+        in [
+            "gripper_left_finger_link",
+            "gripper_right_finger_link",
+            "gripper_link",
+        ]
+    ]
+    entry = AllowedCollisionEntry(enabled=enabled)  # Test kwarg in constructor
+    planning_scene.scene.allowed_collision_matrix.entry_values.append(entry)
+
+    # Set the default entries. They are also not updated
+    planning_scene.scene.allowed_collision_matrix.default_entry_names = [obj_name]
+    planning_scene.scene.allowed_collision_matrix.default_entry_values = [False]
+    planning_scene.scene.is_diff = True  # Mark this as a diff message to force an update of the allowed collision matrix
+    planning_scene.scene.robot_state.is_diff = True
+
+    planning_scene_diff_req = ApplyPlanningSceneRequest()
+    planning_scene_diff_req.scene = planning_scene.scene
+
+    # Updating the Allowed Collision Matrix through the apply_planning_scene service shows no effect.
+    # However, adding objects to the planning scene works fine.
+    # scene._apply_planning_scene_diff.call(planning_scene_diff_req)
+    scene.apply_planning_scene(planning_scene.scene)
+
+    # Attempting to use the planning_scene topic for asynchronous updates also does not work
+    # planning_scene_pub = rospy.Publisher("planning_scene", PlanningScene, queue_size=5)
+    # planning_scene_pub.publish(planning_scene.scene)
+
+    print(f"\n--- Sent message:{planning_scene.scene.allowed_collision_matrix} ---\n")
+
+    # The planning scene retrieved after the update should have taken place shows the Allowed Collision Matrix is the same as before
+    request = GetPlanningScene()
+    request.components = 0  # Get just the Allowed Collision Matrix
+    planning_scene = _get_planning_scene.call(request)
+    print(
+        f"\n--- allowed_collision_matrix after update:{planning_scene.scene.allowed_collision_matrix} ---\n"
+    )
 
 
 class BagPickAndPlaceSkill(smach.State):
     def __init__(self):
-        smach.State.__init__(self, outcomes=['finished', 'failed'])
+        smach.State.__init__(self, outcomes=['succeeded', 'failed'])
 
         # --- SAM2 setup ---
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -92,6 +164,8 @@ class BagPickAndPlaceSkill(smach.State):
         self.tts_client.wait_for_server()
         rospy.loginfo("TTS action server connected.")
 
+        self.planning_scene_interface = PlanningSceneInterface()
+        self.planning_scene_interface.clear()
     def on_mouse_click(self, event, x, y, flags, param):
         if event == cv2.EVENT_LBUTTONDOWN:
             self.click = (x, y)
@@ -180,6 +254,8 @@ class BagPickAndPlaceSkill(smach.State):
             orth /= np.linalg.norm(orth)
             yaw  = math.atan2(orth[1], orth[0])
 
+            self.create_collision_object_from_pcl(pts)
+            rospy.sleep(1.0)
             self.prepare_pick()
             result = self.pick(centroid, yaw)
             if not result:
@@ -187,7 +263,7 @@ class BagPickAndPlaceSkill(smach.State):
 
             self.stow_bag()
             cv2.destroyWindow("Live View")
-            return 'finished'
+            return 'succeeded'
         except Exception as e:
             rospy.logerr(f"Exception in skill: {e}")
             try:
@@ -195,6 +271,64 @@ class BagPickAndPlaceSkill(smach.State):
             except:
                 pass
             return 'failed'
+
+    def create_collision_object_from_pcl(self, points):
+        # Optional: remove outliers based on percentiles (e.g., filtering out the extreme points)
+        # lower = np.percentile(points, 1, axis=0)
+        # upper = np.percentile(points, 99, axis=0)
+
+        # Filter points based on the percentile ranges
+        # mask = np.all((points >= lower) & (points <= upper), axis=1)
+        # points = points[mask]
+
+        # Find the min and max of the points
+        min_pt = points.min(axis=0)
+        max_pt = points.max(axis=0)
+
+        # Calculate the center of the bounding box and its size
+        center = (min_pt + max_pt) / 2.0
+        size = (max_pt - min_pt) / 1000.0
+
+        p = PoseStamped()
+        frame_id = 'xtion_rgb_optical_frame'
+        p.header.frame_id = frame_id
+        p.header.stamp = rospy.Time.now()
+        # p.pose.position.x = obj.centroid.x
+        # p.pose.position.y = obj.centroid.y
+        # p.pose.position.z = obj.centroid.z
+        p.pose.position.x = center[0] / 1000.0
+        p.pose.position.y = center[1] / 1000.0
+        p.pose.position.z = center[2] / 1000.0
+
+        p.pose.orientation.w = 1
+        rospy.loginfo(p)
+        self.planning_scene_interface.add_box("obj", p, size=size)
+
+        # # Create the collision object (bounding box)
+        # collision_object = CollisionObject()
+        # collision_object.header.frame_id = frame_id
+        # collision_object.id = "object"
+
+        # # Define a SolidPrimitive (box)
+        # box = SolidPrimitive()
+        # box.type = SolidPrimitive.BOX
+        # box.dimensions = [size[0], size[1], size[2]]
+
+        # # Define the pose of the collision object
+        # pose = Pose()
+        # pose.position.x = center[0]
+        # pose.position.y = center[1]
+        # pose.position.z = center[2]
+        # pose.orientation.w = 1.0  # No rotation, just the position
+
+        # collision_object.primitives = [box]
+        # collision_object.primitive_poses = [pose]
+        # collision_object.operation = CollisionObject.ADD
+
+        # Add the collision object to the planning scene
+        # planning_scene_interface.apply_collision_object(collision_object)
+        allow_collisions_with_object("obj", self.planning_scene_interface)
+        rospy.loginfo("Collision object added to the planning scene!")
 
     def adjust_torso(self,target_height):
         rospy.loginfo("Adjusting torso")
@@ -270,9 +404,9 @@ class BagPickAndPlaceSkill(smach.State):
         self.arm.set_pose_target(pre_pose)
         self.arm.go(wait=True)
         self.arm.clear_pose_targets()
+        self.arm.stop()
         rospy.sleep(0.2)
 
-        self.run_clear_octomap()
         result = self.sync_shift_ee(self.arm, 0.35, 0.0, 0.0)
         if result == False:
             return result
@@ -305,14 +439,6 @@ class BagPickAndPlaceSkill(smach.State):
         move_group.set_start_state_to_current_state()
         result = move_group.go(wait=True)
         return result
-
-    def run_clear_octomap(self):
-        rospy.wait_for_service('/clear_octomap', timeout=2.0)
-        clear_octomap = rospy.ServiceProxy('/clear_octomap', std_srvs.srv.Empty)
-        clear_octomap()
-        rospy.sleep(0.1)
-        rospy.loginfo("Octomap cleared before executing move.")
-
 
     def is_picked_up(self, pos_thresh=0.001, effort_thresh=0.05):
         rospy.sleep(0.1)
@@ -386,10 +512,10 @@ class BagPickAndPlaceSkill(smach.State):
 if __name__ == '__main__':
     import smach
     rospy.init_node('bag_pick_and_place_skill_runner')
-    sm = smach.StateMachine(outcomes=['finished', 'failed'])
+    sm = smach.StateMachine(outcomes=['succeeded', 'failed'])
     with sm:
         smach.StateMachine.add('BAG_PICK_AND_PLACE', BagPickAndPlaceSkill(),
-                               transitions={'finished': 'finished',
+                               transitions={'succeeded': 'succeeded',
                                             'failed': 'failed'})
     outcome = sm.execute()
     rospy.loginfo(f"Skill outcome: {outcome}")
