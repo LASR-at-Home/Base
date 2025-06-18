@@ -1,0 +1,2 @@
+-r https://raw.githubusercontent.com/KaiyangZhou/deep-person-reid/refs/heads/master/requirements.txt
+git+https://github.com/KaiyangZhou/deep-person-reid.git
