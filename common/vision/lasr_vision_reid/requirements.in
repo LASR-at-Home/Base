@@ -1,0 +1,4 @@
+nvidia-cuda-cupti-cu12
+git+https://github.com/LASR-at-Home/deep-person-reid.git
+facenet-pytorch
+scikit-learn
