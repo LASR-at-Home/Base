@@ -1,0 +1,6 @@
+# Text prompt
+string prompt
+
+---
+# Segmentations and other info
+lasr_vision_msgs/LangSamDetection[] detections
