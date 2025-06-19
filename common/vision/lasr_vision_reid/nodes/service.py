@@ -40,7 +40,7 @@ class ReID:
     _db: Dict[str, torch.Tensor]
     _bridge: CvBridge
     _tf_buffer: tf.Buffer
-    _tf_listener: tf.Listener
+    _tf_listener: tf.TransformListener
     _image_publisher: rospy.Publisher
     _marker_publisher: rospy.Publisher
     _recognise_service: rospy.Service
@@ -79,7 +79,7 @@ class ReID:
             "/lasr_vision_reid/recognise/points", Marker, queue_size=10
         )
 
-        self._recognise_service = rospy.ServiceProxy(
+        self._recognise_service = rospy.Service(
             "/lasr_vision_reid/recognise", Recognise3D, self._recognise
         )
 
@@ -118,7 +118,8 @@ class ReID:
             with torch.no_grad():
                 features = self._model(batch).cpu()
 
-            self._db[label] = features
+            if features.size(0) > 0:
+                self._db[label] = features
 
         rospy.loginfo(f"Loaded {len(self._db)} identities.")
 
@@ -204,8 +205,12 @@ class ReID:
             face_crop = cv_im[y1:y2, x1:x2]
             if face_crop.size == 0:
                 continue
-            detection = Detection3D()
             label, score = self._perform_reid(face_crop)
+
+            if score < request.threshold:
+                continue
+
+            detection = Detection3D()
             detection.name = label
             detection.confidence = score
             detection.xywh = [x1, y1, x2 - x1, y2 - y1]

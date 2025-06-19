@@ -9,6 +9,8 @@ sensor_msgs/Image depth_image
 # it shouldn't change, unless we recalibrate the depth camera
 sensor_msgs/CameraInfo depth_camera_info
 
+float threshold
+
 # target frame for 3D estimate
 string target_frame
 ---
