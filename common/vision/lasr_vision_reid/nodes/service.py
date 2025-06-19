@@ -7,8 +7,6 @@ import torchreid
 import torch
 from torchvision import transforms
 from PIL import Image as PILImage
-import os
-import rospkg
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 import cv2
@@ -20,8 +18,12 @@ from lasr_vision_msgs.srv import (
     Recognise3D,
     Recognise3DRequest,
     Recognise3DResponse,
+    AddFace,
+    AddFaceRequest,
+    AddFaceResponse,
 )
 from lasr_vision_msgs.msg import Detection3D
+
 
 from geometry_msgs.msg import Point, PointStamped
 from sensor_msgs.msg import Image
@@ -33,8 +35,6 @@ Mat = np.ndarray
 
 class ReID:
 
-    _dataset: str
-    _dataset_root: str
     _model: torch.nn.Module
     _device: torch.device
     _transform: transforms.Compose
@@ -47,11 +47,7 @@ class ReID:
     _marker_publisher: rospy.Publisher
     _recognise_service: rospy.Service
 
-    def __init__(self, dataset: str):
-        self._dataset = dataset
-        self._dataset_root = os.path.join(
-            rospkg.RosPack().get_path("lasr_vision_reid"), "datasets", self._dataset
-        )
+    def __init__(self):
         self._model = torchreid.models.build_model(
             "osnet_x1_0", pretrained=True, num_classes=1000
         )
@@ -70,7 +66,6 @@ class ReID:
         self._face_detector = MTCNN(keep_all=True, device=self._device)
 
         self._db = {}
-        self._load_dataset()
 
         self._bridge = CvBridge()
         self._tf_buffer = tf.Buffer(cache_time=rospy.Duration(10))
@@ -86,46 +81,9 @@ class ReID:
         self._recognise_service = rospy.Service(
             "/lasr_vision_reid/recognise", Recognise3D, self._recognise
         )
-
-    def _load_dataset(self) -> None:
-        """
-        Load all labeled face images from the dataset directory and extract features in batches.
-        """
-        if not os.path.exists(self._dataset_root):
-            rospy.logerr(f"Dataset path not found: {self._dataset_root}")
-            return
-
-        rospy.loginfo(f"Loading dataset from: {self._dataset_root}")
-
-        for label in os.listdir(self._dataset_root):
-            label_path = os.path.join(self._dataset_root, label)
-            if not os.path.isdir(label_path):
-                continue
-
-            image_tensors = []
-            for fname in os.listdir(label_path):
-                if not fname.lower().endswith(".png"):
-                    continue
-
-                img_path = os.path.join(label_path, fname)
-                try:
-                    pil_im = PILImage.open(img_path).convert("RGB")
-                    x = self._transform(pil_im)
-                    image_tensors.append(x)
-                except Exception as e:
-                    rospy.logwarn(f"Failed to process {img_path}: {e}")
-
-            if not image_tensors:
-                continue
-
-            batch = torch.stack(image_tensors).to(self._device)
-            with torch.no_grad():
-                features = self._model(batch).cpu()
-
-            if features.size(0) > 0:
-                self._db[label] = features
-
-        rospy.loginfo(f"Loaded {len(self._db)} identities.")
+        self._add_face_service = rospy.Service(
+            "/lasr_vision_reid/add_face", AddFace, self._add_face
+        )
 
     def _forward_model(self, cv_im: Mat) -> torch.Tensor:
         """
@@ -142,7 +100,7 @@ class ReID:
         Perform person re-identification against the database.
         """
         if not self._db:
-            rospy.logwarn("Database is empty. Did you call _load_dataset()?")
+            rospy.logwarn("Database is empty.")
             return "unknown", 0.0
 
         pil_im = PILImage.fromarray(cv_im).convert("RGB")
@@ -257,6 +215,62 @@ class ReID:
 
         return response
 
+    def _add_face(self, request: AddFaceRequest) -> AddFaceResponse:
+        response = AddFaceResponse()
+        response.success = False  # default to False
+
+        try:
+            cv_im = self._bridge.imgmsg_to_cv2(
+                request.image_raw, desired_encoding="bgr8"
+            )
+        except Exception as e:
+            rospy.logerr(f"Failed to convert image: {e}")
+            return response
+
+        boxes, _ = self._face_detector.detect(cv_im)
+
+        if boxes is None or len(boxes) == 0:
+            rospy.loginfo("No faces detected in the input image.")
+            return response
+
+        if len(boxes) > 1:
+            rospy.logwarn(
+                f"Multiple faces detected ({len(boxes)}). Please provide a cropped face image."
+            )
+
+        # Take the first detected face
+        box = boxes[0]
+        x1, y1, x2, y2 = [int(v) for v in box]
+
+        h, w, _ = cv_im.shape
+        x1, y1, x2, y2 = max(0, x1), max(0, y1), min(w, x2), min(h, y2)
+
+        if x1 >= x2 or y1 >= y2:
+            rospy.logwarn("Invalid face bounding box, skipping.")
+            return response
+
+        face_crop = cv_im[y1:y2, x1:x2]
+        if face_crop.size == 0:
+            rospy.logwarn("Empty face crop, skipping.")
+            return response
+
+        try:
+            feature = self._forward_model(face_crop).squeeze(0)  # shape: [feat_dim]
+            label = request.name
+
+            if label in self._db:
+                self._db[label] = torch.vstack([self._db[label], feature])
+            else:
+                self._db[label] = feature.unsqueeze(0)
+
+            response.success = True
+            rospy.loginfo(f"Added face feature for label: {label}")
+
+        except Exception as e:
+            rospy.logwarn(f"Failed to extract feature: {e}")
+
+        return response
+
     def _publish_results(
         self, response: Recognise3DResponse, cv_im: Mat, frame_id: str
     ) -> None:
@@ -301,6 +315,5 @@ class ReID:
 
 if __name__ == "__main__":
     rospy.init_node("lasr_vision_reid")
-    dataset = rospy.get_param("lasr_vision_reid/dataset")
-    reid = ReID(dataset)
+    reid = ReID()
     rospy.spin()

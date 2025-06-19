@@ -162,6 +162,7 @@ include_directories(
 catkin_install_python(PROGRAMS
   nodes/service.py
   examples/relay_3d.py
+  examples/add_face.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
