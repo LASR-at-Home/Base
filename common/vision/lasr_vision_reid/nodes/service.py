@@ -31,11 +31,19 @@ Mat = np.ndarray
 
 class ReID:
 
-    dataset: str
+    _dataset: str
+    _dataset_root: str
     _model: torchreid.models.OSNet
     _device: torch.device
     _transform: transforms.Compose
+    _face_detector: MTCNN
     _db: Dict[str, torch.Tensor]
+    _bridge: CvBridge
+    _tf_buffer: tf.Buffer
+    _tf_listener: tf.Listener
+    _image_publisher: rospy.Publisher
+    _marker_publisher: rospy.Publisher
+    _recognise_service: rospy.Service
 
     def __init__(self, dataset: str):
         self._dataset = dataset
