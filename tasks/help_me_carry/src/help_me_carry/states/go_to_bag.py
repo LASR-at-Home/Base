@@ -21,9 +21,7 @@ from geometry_msgs.msg import PointStamped, Point
 
 class GoToBag(smach.State):
     def __init__(self):
-        smach.State.__init__(
-            self, outcomes=['succeeded', 'failed']
-        )
+        smach.State.__init__(self, outcomes=["succeeded", "failed"])
         # --- Model and CV ---
         self.bridge = CvBridge()
         self.latest_rgb = None
@@ -67,7 +65,9 @@ class GoToBag(smach.State):
         sam.to(self.device)
         self.predictor = SamPredictor(sam)
 
-        self.point_head_client = actionlib.SimpleActionClient('/head_controller/point_head_action', PointHeadAction)
+        self.point_head_client = actionlib.SimpleActionClient(
+            "/head_controller/point_head_action", PointHeadAction
+        )
         self.point_head_client.wait_for_server()
 
     def amcl_pose_callback(self, msg):
@@ -141,9 +141,9 @@ class GoToBag(smach.State):
                     "[SAM-CLICK] Navigation succeeded! Now adjusting orientation with AMCL pose."
                 )
                 self.face_point_with_amcl(x_bag, y_bag)
-                self.look_at_point(head_point, 'map')
+                self.look_at_point(head_point, "map")
                 cv2.destroyWindow("Click to segment")
-                return 'succeeded'
+                return "succeeded"
             else:
                 cv2.destroyWindow("Click to segment")
                 return "failed"
@@ -158,9 +158,7 @@ class GoToBag(smach.State):
         point_coords = np.array([[u, v]])
         point_labels = np.array([1])
         masks, _, _ = self.predictor.predict(
-            point_coords=point_coords,
-            point_labels=point_labels,
-            multimask_output=True,
+            point_coords=point_coords, point_labels=point_labels, multimask_output=True
         )
         H, W = rgb_bgr.shape[:2]
         combined = np.zeros((H, W), dtype=np.uint8)
@@ -201,7 +199,7 @@ class GoToBag(smach.State):
         return np.array([x_cam, y_cam, z_cam])
 
     def transform_from_camera_to_map(self, p_cam):
-        cam_frame = 'xtion_depth_optical_frame'
+        cam_frame = "xtion_depth_optical_frame"
 
         # Create the PointStamped in camera frame
         target_pt = PointStamped()
@@ -214,13 +212,18 @@ class GoToBag(smach.State):
         # Transform to map frame
         map_frame = "map"
         try:
-            self.tf_listener.waitForTransform(map_frame, cam_frame, rospy.Time(0), rospy.Duration(1.0))
+            self.tf_listener.waitForTransform(
+                map_frame, cam_frame, rospy.Time(0), rospy.Duration(1.0)
+            )
             target_in_head = self.tf_listener.transformPoint(map_frame, target_pt)
-            return [target_in_head.point.x, target_in_head.point.y, target_in_head.point.z]
+            return [
+                target_in_head.point.x,
+                target_in_head.point.y,
+                target_in_head.point.z,
+            ]
         except (tf.Exception, tf.LookupException, tf.ConnectivityException) as e:
             rospy.logerr("TF transform for look_at_point failed: %s", e)
             return
-
 
     def navigate_to_closest_feasible_point(self, p_cam):
         cam_frame = self.depth_info.header.frame_id  # e.g. "xtion_depth_optical_frame"
@@ -269,7 +272,7 @@ class GoToBag(smach.State):
 
         # Try moving to increasing distances back from the bag, up to 2m away
         approach_min = 0.2  # minimum approach distance (meters)
-        approach_max = min(2.0, dist-0.05)  # max backoff, never behind robot
+        approach_max = min(2.0, dist - 0.05)  # max backoff, never behind robot
         step = 0.05  # meters
 
         for approach_dist in np.arange(approach_min, approach_max, step):
@@ -386,7 +389,6 @@ class GoToBag(smach.State):
         overlay = cv2.addWeighted(rgb_img, 1.0, red_mask, alpha, 0.0)
         return overlay
 
-
     def look_at_point(self, target_point, target_frame):
         if not self.point_head_client:
             return
@@ -417,18 +419,16 @@ class GoToBag(smach.State):
         rospy.loginfo("Looked at point!")
 
 
-
-
-
-
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     import smach
-    rospy.init_node('go_to_bag_skill_runner')
-    sm = smach.StateMachine(outcomes=['succeeded', 'failed'])
+
+    rospy.init_node("go_to_bag_skill_runner")
+    sm = smach.StateMachine(outcomes=["succeeded", "failed"])
     with sm:
-        smach.StateMachine.add('GO_TO_BAG', GoToBag(),
-                               transitions={'succeeded': 'succeeded',
-                                            'failed': 'failed'})
+        smach.StateMachine.add(
+            "GO_TO_BAG",
+            GoToBag(),
+            transitions={"succeeded": "succeeded", "failed": "failed"},
+        )
     outcome = sm.execute()
     rospy.loginfo(f"Skill outcome: {outcome}")

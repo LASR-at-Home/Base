@@ -19,7 +19,12 @@ from cv_bridge import CvBridge
 from geometry_msgs.msg import PoseStamped
 from segment_anything import sam_model_registry, SamPredictor
 from moveit_msgs import *
-from moveit_commander           import MoveGroupCommander, roscpp_initialize, roscpp_shutdown, PlanningSceneInterface
+from moveit_commander import (
+    MoveGroupCommander,
+    roscpp_initialize,
+    roscpp_shutdown,
+    PlanningSceneInterface,
+)
 
 from message_filters import Subscriber, ApproximateTimeSynchronizer
 from control_msgs.msg import FollowJointTrajectoryAction, FollowJointTrajectoryGoal
@@ -43,6 +48,7 @@ from moveit_msgs.msg import (
 )
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 
+
 def allow_collisions_with_object(obj_name, scene):
     """Updates the MoveIt PlanningScene using the AllowedCollisionMatrix to ignore collisions for an object"""
     # Set up service to get the current planning scene
@@ -65,11 +71,7 @@ def allow_collisions_with_object(obj_name, scene):
         True
         for i in range(len(planning_scene.scene.allowed_collision_matrix.entry_names))
         if planning_scene.scene.allowed_collision_matrix.entry_names[i]
-        in [
-            "gripper_left_finger_link",
-            "gripper_right_finger_link",
-            "gripper_link",
-        ]
+        in ["gripper_left_finger_link", "gripper_right_finger_link", "gripper_link"]
     ]
     entry = AllowedCollisionEntry(enabled=enabled)  # Test kwarg in constructor
     planning_scene.scene.allowed_collision_matrix.entry_values.append(entry)
@@ -77,7 +79,9 @@ def allow_collisions_with_object(obj_name, scene):
     # Set the default entries. They are also not updated
     planning_scene.scene.allowed_collision_matrix.default_entry_names = [obj_name]
     planning_scene.scene.allowed_collision_matrix.default_entry_values = [False]
-    planning_scene.scene.is_diff = True  # Mark this as a diff message to force an update of the allowed collision matrix
+    planning_scene.scene.is_diff = (
+        True
+    )  # Mark this as a diff message to force an update of the allowed collision matrix
     planning_scene.scene.robot_state.is_diff = True
 
     planning_scene_diff_req = ApplyPlanningSceneRequest()
@@ -102,9 +106,10 @@ def allow_collisions_with_object(obj_name, scene):
         f"\n--- allowed_collision_matrix after update:{planning_scene.scene.allowed_collision_matrix} ---\n"
     )
 
+
 class BagPickAndPlace(smach.State):
     def __init__(self):
-        smach.State.__init__(self, outcomes=['succeeded', 'failed'])
+        smach.State.__init__(self, outcomes=["succeeded", "failed"])
 
         # --- SAM2 setup ---
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -165,6 +170,7 @@ class BagPickAndPlace(smach.State):
 
         self.planning_scene_interface = PlanningSceneInterface()
         self.planning_scene_interface.clear()
+
     def on_mouse_click(self, event, x, y, flags, param):
         if event == cv2.EVENT_LBUTTONDOWN:
             self.click = (x, y)
@@ -263,7 +269,7 @@ class BagPickAndPlace(smach.State):
 
             self.stow_bag()
             cv2.destroyWindow("Live View")
-            return 'succeeded'
+            return "succeeded"
         except Exception as e:
             rospy.logerr(f"Exception in skill: {e}")
             try:
@@ -290,7 +296,7 @@ class BagPickAndPlace(smach.State):
         size = (max_pt - min_pt) / 1000.0
 
         p = PoseStamped()
-        frame_id = 'xtion_rgb_optical_frame'
+        frame_id = "xtion_rgb_optical_frame"
         p.header.frame_id = frame_id
         p.header.stamp = rospy.Time.now()
         # p.pose.position.x = obj.centroid.x
@@ -330,7 +336,7 @@ class BagPickAndPlace(smach.State):
         allow_collisions_with_object("obj", self.planning_scene_interface)
         rospy.loginfo("Collision object added to the planning scene!")
 
-    def adjust_torso(self,target_height):
+    def adjust_torso(self, target_height):
         rospy.loginfo("Adjusting torso")
         goal = FollowJointTrajectoryGoal()
         goal.trajectory.joint_names = ["torso_lift_joint"]
@@ -358,15 +364,13 @@ class BagPickAndPlace(smach.State):
         # Transform all pts to base_footprint
         listener = tf.TransformListener()
         listener.waitForTransform(
-            'base_footprint',
-            'xtion_rgb_optical_frame',
+            "base_footprint",
+            "xtion_rgb_optical_frame",
             rospy.Time(0),
-            rospy.Duration(1.0)
+            rospy.Duration(1.0),
         )
         trans, rot = listener.lookupTransform(
-            'base_footprint',
-            'xtion_rgb_optical_frame',
-            rospy.Time(0)
+            "base_footprint", "xtion_rgb_optical_frame", rospy.Time(0)
         )
         T = tft.quaternion_matrix(rot)
         T[0:3, 3] = trans
@@ -378,14 +382,16 @@ class BagPickAndPlace(smach.State):
         dists = np.linalg.norm(pts_base, axis=1)
         k = 10
         closest_index = np.argmin(dists)
-        closest_pts = pts_base[closest_index]   # still in camera frame
+        closest_pts = pts_base[closest_index]  # still in camera frame
 
         pose = PoseStamped()
-        pose.header.frame_id = 'base_footprint'
+        pose.header.frame_id = "base_footprint"
         pose.header.stamp = rospy.Time.now()
         pose.pose.position.x = closest_pts[0]
         pose.pose.position.y = closest_pts[1]
-        pose.pose.position.z = closest_pts[2] # Top point is twice the height of the centroid
+        pose.pose.position.z = closest_pts[
+            2
+        ]  # Top point is twice the height of the centroid
 
         pose.pose.orientation.x = 0.0010062689510449319
         pose.pose.orientation.y = 0.70710678
@@ -499,13 +505,13 @@ class BagPickAndPlace(smach.State):
 
     def is_picked_up(self, pos_thresh=0.002, effort_thresh=0.05):
         rospy.sleep(0.1)
-        js = rospy.wait_for_message('/joint_states', JointState, timeout=1.0)
-        lidx = js.name.index('gripper_left_finger_joint')
-        ridx = js.name.index('gripper_right_finger_joint')
-        pos_l, pos_r   = js.position[lidx], js.position[ridx]
-        eff_l, eff_r   = js.effort[lidx],   js.effort[ridx]
-        avg_pos   = 0.5 * (pos_l + pos_r)
-        avg_eff   = abs(0.5 * (eff_l + eff_r))
+        js = rospy.wait_for_message("/joint_states", JointState, timeout=1.0)
+        lidx = js.name.index("gripper_left_finger_joint")
+        ridx = js.name.index("gripper_right_finger_joint")
+        pos_l, pos_r = js.position[lidx], js.position[ridx]
+        eff_l, eff_r = js.effort[lidx], js.effort[ridx]
+        avg_pos = 0.5 * (pos_l + pos_r)
+        avg_eff = abs(0.5 * (eff_l + eff_r))
         if avg_pos >= pos_thresh or avg_eff >= effort_thresh:
             rospy.loginfo(f"Grasp succeeded: pos={avg_pos:.3f} m, eff={avg_eff:.2f}")
             return True
@@ -571,12 +577,15 @@ class BagPickAndPlace(smach.State):
 
 if __name__ == "__main__":
     import smach
-    rospy.init_node('bag_pick_and_place_skill_runner')
-    sm = smach.StateMachine(outcomes=['succeeded', 'failed'])
+
+    rospy.init_node("bag_pick_and_place_skill_runner")
+    sm = smach.StateMachine(outcomes=["succeeded", "failed"])
     with sm:
-        smach.StateMachine.add('BAG_PICK_AND_PLACE', BagPickAndPlaceSkill(),
-                               transitions={'succeeded': 'succeeded',
-                                            'failed': 'failed'})
+        smach.StateMachine.add(
+            "BAG_PICK_AND_PLACE",
+            BagPickAndPlaceSkill(),
+            transitions={"succeeded": "succeeded", "failed": "failed"},
+        )
     outcome = sm.execute()
     rospy.loginfo(f"Skill outcome: {outcome}")
     roscpp_shutdown()
