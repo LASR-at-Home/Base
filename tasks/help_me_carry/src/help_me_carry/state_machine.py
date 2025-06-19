@@ -48,7 +48,7 @@ def main():
     sm = CarryMyLuggage()
 
     # Execute the state machine
-    rospy.loginfo("Starting CarryMyLuggage state machine...")
+    rospy.loginfo("Starting HelpMeCarry state machine...")
     outcome = sm.execute()
     rospy.loginfo(f"State machine finished with outcome: {outcome}")
 

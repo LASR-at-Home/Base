@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.10
+#!/usr/bin/env python3
 
 import rospy
 import cv2
@@ -30,10 +30,9 @@ from controller_manager_msgs.srv import SwitchController, SwitchControllerReques
 import std_srvs.srv
 
 
-
-class BagPickAndPlaceSkill(smach.State):
+class BagPickAndPlace(smach.State):
     def __init__(self):
-        smach.State.__init__(self, outcomes=['finished', 'failed'])
+        smach.State.__init__(self, outcomes=['succeeded', 'failed'])
 
         # --- SAM2 setup ---
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -187,7 +186,7 @@ class BagPickAndPlaceSkill(smach.State):
 
             self.stow_bag()
             cv2.destroyWindow("Live View")
-            return 'finished'
+            return 'succeeded'
         except Exception as e:
             rospy.logerr(f"Exception in skill: {e}")
             try:
@@ -282,8 +281,6 @@ class BagPickAndPlaceSkill(smach.State):
 
         return self.is_picked_up(0.001, 0.25)
 
-    
-
     def sync_shift_ee(self, move_group, x, y, z):
         from tf.transformations import euler_from_quaternion, euler_matrix
         
@@ -312,7 +309,6 @@ class BagPickAndPlaceSkill(smach.State):
         clear_octomap()
         rospy.sleep(0.1)
         rospy.loginfo("Octomap cleared before executing move.")
-
 
     def is_picked_up(self, pos_thresh=0.001, effort_thresh=0.05):
         rospy.sleep(0.1)
@@ -383,13 +379,14 @@ class BagPickAndPlaceSkill(smach.State):
         self.gripper_client.send_goal(goal)
         self.gripper_client.wait_for_result()
 
+
 if __name__ == '__main__':
     import smach
     rospy.init_node('bag_pick_and_place_skill_runner')
-    sm = smach.StateMachine(outcomes=['finished', 'failed'])
+    sm = smach.StateMachine(outcomes=['succeeded', 'failed'])
     with sm:
-        smach.StateMachine.add('BAG_PICK_AND_PLACE', BagPickAndPlaceSkill(),
-                               transitions={'finished': 'finished',
+        smach.StateMachine.add('BAG_PICK_AND_PLACE', BagPickAndPlace(),
+                               transitions={'succeeded': 'succeeded',
                                             'failed': 'failed'})
     outcome = sm.execute()
     rospy.loginfo(f"Skill outcome: {outcome}")

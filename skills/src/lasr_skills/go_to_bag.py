@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.10
+#!/usr/bin/env python3
 
 import smach
 import rospy
@@ -16,10 +16,11 @@ from message_filters import Subscriber, ApproximateTimeSynchronizer
 
 from segment_anything import sam_model_registry, SamPredictor
 
+
 class GoToBag(smach.State):
     def __init__(self):
         smach.State.__init__(
-            self, outcomes=['finished', 'failed']
+            self, outcomes=['succeeded', 'failed']
         )
         # --- Model and CV ---
         self.bridge = CvBridge()
@@ -123,7 +124,7 @@ class GoToBag(smach.State):
                 rospy.loginfo("[SAM-CLICK] Navigation succeeded! Now adjusting orientation with AMCL pose.")
                 self.face_point_with_amcl(x_bag, y_bag)
                 cv2.destroyWindow("Click to segment")
-                return 'finished'
+                return 'succeeded'
             else:
                 cv2.destroyWindow("Click to segment")
                 return 'failed'
@@ -321,13 +322,14 @@ class GoToBag(smach.State):
         overlay = cv2.addWeighted(rgb_img, 1.0, red_mask, alpha, 0.0)
         return overlay
 
+
 if __name__ == '__main__':
     import smach
     rospy.init_node('go_to_bag_skill_runner')
-    sm = smach.StateMachine(outcomes=['finished', 'failed'])
+    sm = smach.StateMachine(outcomes=['succeeded', 'failed'])
     with sm:
         smach.StateMachine.add('GO_TO_BAG', GoToBag(),
-                               transitions={'finished': 'finished',
+                               transitions={'succeeded': 'succeeded',
                                             'failed': 'failed'})
     outcome = sm.execute()
     rospy.loginfo(f"Skill outcome: {outcome}")

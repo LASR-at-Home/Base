@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(carry_my_luggage)
+project(help_me_carry)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
@@ -166,7 +166,7 @@ include_directories(
 ## in contrast to setup.py, you can choose the destination
 catkin_install_python(PROGRAMS
   scripts/main.py
-  src/carry_my_luggage/state_machine.py
+  src/help_me_carry/state_machine.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
