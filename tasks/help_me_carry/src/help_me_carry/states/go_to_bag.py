@@ -111,16 +111,13 @@ class GoToBag(smach.State):
             return "failed"
         mask = mask_flat.reshape((height, width))
 
+        self.visualize_segmentation(self.latest_rgb, mask)
+
         mu, mv = self.get_mask_median(mask)
         if mu is None or mv is None:
             rospy.logwarn("No valid median pixel in mask.")
             cv2.destroyAllWindows()
             return "failed"
-
-        # Optionally, publish a debug overlay as before
-        overlay = self._make_overlay(self.latest_rgb, mask)
-        cv2.imshow("Auto-segmented bag", overlay)
-        cv2.waitKey(1)
 
         # Use the rest of your pipeline as before
         p_cam = self.pixel_to_3d(mu, mv)
@@ -137,9 +134,11 @@ class GoToBag(smach.State):
             )
             self.face_point_with_amcl(x_bag, y_bag)
             self.look_at_point(head_point, "map")
+            rospy.sleep(0.2)
             cv2.destroyAllWindows()
             return "succeeded"
         else:
+            rospy.sleep(0.2)
             cv2.destroyAllWindows()
             return "failed"
 
@@ -232,14 +231,19 @@ class GoToBag(smach.State):
         dx = x_robot - x_bag
         dy = y_robot - y_bag
         dist = np.hypot(dx, dy)
+
+        if dist < 0.3:
+            rospy.loginfo(f"Already within {dist:.2f}m of bag. Skipping navigation.")
+            return (x_bag, y_bag)
+
         if dist < 1e-4:
             dx, dy = 1.0, 0.0
             dist = 1.0
         ux = dx / dist
         uy = dy / dist
 
-        # Try moving to increasing distances back from the bag, up to 2m away
-        approach_min = 0.2  # minimum approach distance (meters)
+        # Try moving to increasing distances back from the bag, up to 1m away
+        approach_min = 0.1  # minimum approach distance (meters)
         approach_max = min(2.0, dist - 0.05)  # max backoff, never behind robot
         step = 0.05  # meters
 
@@ -347,13 +351,15 @@ class GoToBag(smach.State):
         rospy.logerr("Failed to adjust orientation after multiple tries.")
         return False
 
-    def _make_overlay(self, rgb_img: np.ndarray, mask: np.ndarray) -> np.ndarray:
-        # Overlay mask in red, semi-transparent
-        red_mask = np.zeros_like(rgb_img, dtype=np.uint8)
-        red_mask[:, :, 2] = (mask * 255).astype(np.uint8)
+    def visualize_segmentation(self, rgb_img, mask):
+        overlay = rgb_img.copy()
+        color = np.array([0, 0, 255], dtype=np.uint8)
         alpha = 0.4
-        overlay = cv2.addWeighted(rgb_img, 1.0, red_mask, alpha, 0.0)
-        return overlay
+        overlay[mask > 0] = (alpha * color + (1 - alpha) * overlay[mask > 0]).astype(
+            np.uint8
+        )
+        cv2.imshow("LangSAM Segmentation", overlay)
+        cv2.waitKey(1)
 
     def look_at_point(self, target_point, target_frame):
         if not self.point_head_client:
@@ -386,9 +392,8 @@ class GoToBag(smach.State):
 
 
 if __name__ == "__main__":
-    import smach
 
-    rospy.init_node("go_to_bag_skill_runner")
+    rospy.init_node("go_to_bag")
     sm = smach.StateMachine(outcomes=["succeeded", "failed"])
     with sm:
         smach.StateMachine.add(
