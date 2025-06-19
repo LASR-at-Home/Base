@@ -134,9 +134,7 @@ common/Perception/lasr_object_detection_yolo/models
 .vscode/
 common/navigation/choosing_wait_position/src/choosing_wait_position/final_lift_key_point/models
 legacy/choosing_wait_position/src/choosing_wait_position/final_lift_key_point/models/keypointsrcnn_weights.pth
-tasks/pick_up_bag/models
-skills/src/models
-tasks/help_me_carry/src/models
+tasks/help_me_carry/src/help_me_carry/models
 
 # Python extension setup files
 .pylintrc

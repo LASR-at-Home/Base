@@ -1,6 +1,0 @@
-<launch>
-    <arg name="preload" default="['$(find lasr_vision_yolo)/models/best.pt']" doc="Array of models to preload when starting the service" />
-    <node name="yolo_service" pkg="lasr_vision_yolo" type="service.py" output="screen">
-        <param name="preload" type="yaml" value="$(arg preload)" />
-    </node>
-</launch>

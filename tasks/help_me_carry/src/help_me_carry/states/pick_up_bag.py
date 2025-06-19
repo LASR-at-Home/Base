@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.10
 
 import rospy
 import cv2
@@ -449,15 +449,15 @@ class BagPickAndPlace(smach.State):
     def pick(self, centroid_pose, closest_pose):
         closest_pose.pose.orientation = centroid_pose.pose.orientation
 
-        # self.arm.set_start_state_to_current_state()
-        # pre_pose = copy.deepcopy(centroid_pose)
-        # pre_pose.pose.position.z += 0.20
-        # self.arm.set_pose_target(pre_pose)
-        # result = self.arm.go(wait=True)
-        # self.arm.clear_pose_targets()
-        # rospy.sleep(0.2)
+        self.arm.set_start_state_to_current_state()
+        pre_pose = copy.deepcopy(centroid_pose)
+        pre_pose.pose.position.z += 0.20
+        self.arm.set_pose_target(pre_pose)
+        result = self.arm.go(wait=True)
+        self.arm.clear_pose_targets()
+        rospy.sleep(0.2)
 
-        if True:
+        if result == False:
             rospy.logwarn(f"Picking with closest pose")
             self.arm.set_start_state_to_current_state()
             pre_pose = copy.deepcopy(closest_pose)
@@ -581,7 +581,7 @@ if __name__ == "__main__":
     with sm:
         smach.StateMachine.add(
             "BAG_PICK_AND_PLACE",
-            BagPickAndPlaceSkill(),
+            BagPickAndPlace(),
             transitions={"succeeded": "succeeded", "failed": "failed"},
         )
     outcome = sm.execute()
