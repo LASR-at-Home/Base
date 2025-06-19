@@ -66,7 +66,9 @@ class FollowPersonState(smach.State):
         try:
             # Wait for the service to be available
             rospy.loginfo(f"Waiting for '{self._service_name}' service...")
-            rospy.wait_for_service(self._service_name,)
+            rospy.wait_for_service(
+                self._service_name,
+            )
 
             # Create service proxy
             follow_person_srv = rospy.ServiceProxy(self._service_name, FollowPersonSrv)

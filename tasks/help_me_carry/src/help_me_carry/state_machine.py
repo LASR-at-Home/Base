@@ -42,7 +42,7 @@ class CarryMyLuggage(smach.StateMachine):
 
 def main():
     # Initialize ROS node
-    rospy.init_node('carry_my_luggage_sm')
+    rospy.init_node("carry_my_luggage_sm")
 
     # Create the state machine
     sm = CarryMyLuggage()
@@ -53,7 +53,7 @@ def main():
     rospy.loginfo(f"State machine finished with outcome: {outcome}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     try:
         main()
     except rospy.ROSInterruptException:

@@ -187,8 +187,12 @@ class YOLOService:
             # detection.xywh = [x, y, w, h]
             bbox = result.boxes.xyxy[0].cpu().numpy()
             x1, y1, x2, y2 = bbox
-            detection.xywh = [int(round(x1)), int(round(y1)), int(round(x2 - x1)), int(round(y2 - y1))]
-
+            detection.xywh = [
+                int(round(x1)),
+                int(round(y1)),
+                int(round(x2 - x1)),
+                int(round(y2 - y1)),
+            ]
 
             has_mask = result.masks is not None
             if has_mask:

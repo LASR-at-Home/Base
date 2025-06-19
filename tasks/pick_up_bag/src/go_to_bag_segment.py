@@ -15,9 +15,10 @@ from message_filters import Subscriber, ApproximateTimeSynchronizer
 
 from segment_anything import sam_model_registry, SamPredictor
 
+
 class SAMClickNavigateNode:
     def __init__(self):
-        rospy.init_node('sam_click_navigate')
+        rospy.init_node("sam_click_navigate")
 
         # --- Model and CV ---
         self.bridge = CvBridge()
@@ -30,14 +31,16 @@ class SAMClickNavigateNode:
         cv2.setMouseCallback("Click to segment", self.on_mouse_click)
 
         # Subscribers
-        rgb_sub = Subscriber('/xtion/rgb/image_raw', Image)
-        depth_sub = Subscriber('/xtion/depth/image_raw', Image)
-        info_sub = Subscriber('/xtion/depth/camera_info', CameraInfo)
-        ats = ApproximateTimeSynchronizer([rgb_sub, depth_sub, info_sub], queue_size=5, slop=0.1)
+        rgb_sub = Subscriber("/xtion/rgb/image_raw", Image)
+        depth_sub = Subscriber("/xtion/depth/image_raw", Image)
+        info_sub = Subscriber("/xtion/depth/camera_info", CameraInfo)
+        ats = ApproximateTimeSynchronizer(
+            [rgb_sub, depth_sub, info_sub], queue_size=5, slop=0.1
+        )
         ats.registerCallback(self.synced_callback)
 
         # move_base client
-        self.move_base = actionlib.SimpleActionClient('move_base', MoveBaseAction)
+        self.move_base = actionlib.SimpleActionClient("move_base", MoveBaseAction)
         rospy.loginfo("Waiting for move_base…")
         self.move_base.wait_for_server()
         rospy.loginfo("Connected to move_base")
@@ -47,14 +50,16 @@ class SAMClickNavigateNode:
 
         # --- AMCL pose ---
         self.latest_amcl_pose = None
-        rospy.Subscriber('/amcl_pose', PoseWithCovarianceStamped, self.amcl_pose_callback)
+        rospy.Subscriber(
+            "/amcl_pose", PoseWithCovarianceStamped, self.amcl_pose_callback
+        )
 
         # Load SAM model
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         root = os.path.dirname(__file__)
-        pkg  = os.path.dirname(root)
+        pkg = os.path.dirname(root)
         ckpt = os.path.join(pkg, "models", "sam_vit_b_01ec64.pth")
-        sam  = sam_model_registry["vit_b"](checkpoint=ckpt)
+        sam = sam_model_registry["vit_b"](checkpoint=ckpt)
         sam.to(self.device)
         self.predictor = SamPredictor(sam)
 
@@ -72,8 +77,8 @@ class SAMClickNavigateNode:
 
     def synced_callback(self, rgb_msg, depth_msg, info_msg):
         try:
-            self.latest_rgb = self.bridge.imgmsg_to_cv2(rgb_msg, 'bgr8')
-            self.latest_depth = self.bridge.imgmsg_to_cv2(depth_msg, 'passthrough')
+            self.latest_rgb = self.bridge.imgmsg_to_cv2(rgb_msg, "bgr8")
+            self.latest_depth = self.bridge.imgmsg_to_cv2(depth_msg, "passthrough")
             self.depth_info = info_msg
         except Exception as e:
             rospy.logerr(f"CV bridge error: {e}")
@@ -81,7 +86,11 @@ class SAMClickNavigateNode:
     def loop(self):
         # Wait for all sensors to have valid data
         while not rospy.is_shutdown():
-            if self.latest_rgb is not None and self.latest_depth is not None and self.depth_info is not None:
+            if (
+                self.latest_rgb is not None
+                and self.latest_depth is not None
+                and self.depth_info is not None
+            ):
                 break
             rospy.sleep(0.1)
 
@@ -115,12 +124,13 @@ class SAMClickNavigateNode:
                     if p_cam is not None:
                         x_bag, y_bag = self.navigate_to_closest_feasible_point(p_cam)
                         if x_bag is not None and y_bag is not None:
-                            rospy.loginfo("[SAM-CLICK] Navigation succeeded! Now adjusting orientation with AMCL pose.")
+                            rospy.loginfo(
+                                "[SAM-CLICK] Navigation succeeded! Now adjusting orientation with AMCL pose."
+                            )
                             self.face_point_with_amcl(x_bag, y_bag)
 
         # Cleanup and exit
         cv2.destroyWindow("Click to segment")
-
 
     def get_click_mask(self, rgb_bgr, u, v):
         img_rgb = cv2.cvtColor(rgb_bgr, cv2.COLOR_BGR2RGB)
@@ -137,7 +147,9 @@ class SAMClickNavigateNode:
         for m in masks:
             combined = np.logical_or(combined, m).astype(np.uint8)
         # Largest connected component
-        num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(combined, connectivity=8)
+        num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(
+            combined, connectivity=8
+        )
         if num_labels <= 1:
             return np.zeros((H, W), dtype=np.uint8)
         areas = stats[1:, cv2.CC_STAT_AREA]
@@ -171,8 +183,12 @@ class SAMClickNavigateNode:
     def navigate_to_closest_feasible_point(self, p_cam):
         cam_frame = self.depth_info.header.frame_id  # e.g. "xtion_depth_optical_frame"
         try:
-            self.tf_listener.waitForTransform('map', cam_frame, rospy.Time(0), rospy.Duration(1.0))
-            (trans, rot) = self.tf_listener.lookupTransform('map', cam_frame, rospy.Time(0))
+            self.tf_listener.waitForTransform(
+                "map", cam_frame, rospy.Time(0), rospy.Duration(1.0)
+            )
+            (trans, rot) = self.tf_listener.lookupTransform(
+                "map", cam_frame, rospy.Time(0)
+            )
         except (tf.Exception, tf.LookupException, tf.ConnectivityException) as e:
             rospy.logerr(f"TF lookup failed: {e}")
             return (None, None)
@@ -190,8 +206,12 @@ class SAMClickNavigateNode:
 
         # Get robot's current position
         try:
-            self.tf_listener.waitForTransform('map', 'base_link', rospy.Time(0), rospy.Duration(1.0))
-            (robot_trans, _) = self.tf_listener.lookupTransform('map', 'base_link', rospy.Time(0))
+            self.tf_listener.waitForTransform(
+                "map", "base_link", rospy.Time(0), rospy.Duration(1.0)
+            )
+            (robot_trans, _) = self.tf_listener.lookupTransform(
+                "map", "base_link", rospy.Time(0)
+            )
             x_robot, y_robot = robot_trans[0], robot_trans[1]
         except (tf.Exception, tf.LookupException, tf.ConnectivityException):
             x_robot, y_robot = x_bag, y_bag  # fallback to bag position
@@ -207,7 +227,7 @@ class SAMClickNavigateNode:
 
         # Try moving to increasing distances back from the bag, up to 2m away
         approach_min = 0.2  # minimum approach distance (meters)
-        approach_max = min(2.0, dist-0.05)  # max backoff, never behind robot
+        approach_max = min(2.0, dist - 0.05)  # max backoff, never behind robot
         step = 0.1  # meters
 
         for approach_dist in np.arange(approach_min, approach_max, step):
@@ -221,7 +241,7 @@ class SAMClickNavigateNode:
             yaw = np.arctan2(vy, vx)
 
             goal = MoveBaseGoal()
-            goal.target_pose.header.frame_id = 'map'
+            goal.target_pose.header.frame_id = "map"
             goal.target_pose.header.stamp = rospy.Time.now()
             goal.target_pose.pose.position.x = goal_x
             goal.target_pose.pose.position.y = goal_y
@@ -233,14 +253,23 @@ class SAMClickNavigateNode:
             goal.target_pose.pose.orientation.z = quat[2]
             goal.target_pose.pose.orientation.w = quat[3]
 
-            rospy.loginfo(f"[SAM-CLICK] Trying to navigate to ({goal_x:.2f}, {goal_y:.2f}) dist {approach_dist:.2f} from bag")
+            rospy.loginfo(
+                f"[SAM-CLICK] Trying to navigate to ({goal_x:.2f}, {goal_y:.2f}) dist {approach_dist:.2f} from bag"
+            )
             self.move_base.send_goal(goal)
             ok = self.move_base.wait_for_result(rospy.Duration(12.0))
             if ok and self.move_base.get_state() == actionlib.GoalStatus.SUCCEEDED:
-                rospy.loginfo("[SAM-CLICK] Navigation succeeded at closest feasible point!")
-                return (x_bag, y_bag)  # return the true target for use in face_point_with_amcl
+                rospy.loginfo(
+                    "[SAM-CLICK] Navigation succeeded at closest feasible point!"
+                )
+                return (
+                    x_bag,
+                    y_bag,
+                )  # return the true target for use in face_point_with_amcl
             else:
-                rospy.logwarn("[SAM-CLICK] Navigation failed at this distance, trying further away...")
+                rospy.logwarn(
+                    "[SAM-CLICK] Navigation failed at this distance, trying further away..."
+                )
 
         rospy.logerr("[SAM-CLICK] Could not find any feasible approach point.")
         return (None, None)
@@ -250,7 +279,9 @@ class SAMClickNavigateNode:
         Rotates the robot in place (using move_base) so it faces the (target_x, target_y) point in the 'map' frame,
         using the latest AMCL pose.
         """
-        rospy.loginfo(f"[SAM-CLICK] Request to face ({target_x:.2f}, {target_y:.2f}) using AMCL pose.")
+        rospy.loginfo(
+            f"[SAM-CLICK] Request to face ({target_x:.2f}, {target_y:.2f}) using AMCL pose."
+        )
         for attempt in range(10):
             if self.latest_amcl_pose is None:
                 rospy.logwarn("No AMCL pose available yet, waiting...")
@@ -277,14 +308,16 @@ class SAMClickNavigateNode:
             _, _, current_yaw = tf.transformations.euler_from_quaternion(quat)
 
             # Check if already close enough
-            angle_error = np.abs(((desired_yaw - current_yaw + np.pi) % (2 * np.pi)) - np.pi)
+            angle_error = np.abs(
+                ((desired_yaw - current_yaw + np.pi) % (2 * np.pi)) - np.pi
+            )
             if angle_error < 0.05:  # radians (~3 degrees)
                 rospy.loginfo("[SAM-CLICK] Already facing target.")
                 return True
 
             # Build a move_base goal to rotate in place
             goal = MoveBaseGoal()
-            goal.target_pose.header.frame_id = 'map'
+            goal.target_pose.header.frame_id = "map"
             goal.target_pose.header.stamp = rospy.Time.now()
             goal.target_pose.pose.position.x = robot_x
             goal.target_pose.pose.position.y = robot_y
@@ -315,7 +348,8 @@ class SAMClickNavigateNode:
         overlay = cv2.addWeighted(rgb_img, 1.0, red_mask, alpha, 0.0)
         return overlay
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     try:
         SAMClickNavigateNode()
     except rospy.ROSInterruptException:

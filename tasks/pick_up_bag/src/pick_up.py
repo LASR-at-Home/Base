@@ -18,7 +18,7 @@ import os
 
 class PointAndNavigateNode:
     def __init__(self):
-        rospy.init_node('point_and_navigate_sam')
+        rospy.init_node("point_and_navigate_sam")
 
         # --- (A) CV Bridge + placeholders ---
         self.bridge = CvBridge()
@@ -30,22 +30,20 @@ class PointAndNavigateNode:
         cv2.namedWindow("SAM Segmentation", cv2.WINDOW_NORMAL)
 
         # --- (B) Subscribers: RGB, depth, camera_info ---
-        rgb_sub = Subscriber('/xtion/rgb/image_raw', Image)
-        depth_sub = Subscriber('/xtion/depth/image_raw', Image)
-        info_sub = Subscriber('/xtion/depth/camera_info', CameraInfo)
+        rgb_sub = Subscriber("/xtion/rgb/image_raw", Image)
+        depth_sub = Subscriber("/xtion/depth/image_raw", Image)
+        info_sub = Subscriber("/xtion/depth/camera_info", CameraInfo)
         ats = ApproximateTimeSynchronizer(
-            [rgb_sub, depth_sub, info_sub],
-            queue_size=5,
-            slop=0.1
+            [rgb_sub, depth_sub, info_sub], queue_size=5, slop=0.1
         )
         ats.registerCallback(self.synced_callback)
 
         # --- (C) YOLOPoseDetection3D client ---
-        rospy.wait_for_service('/yolo/detect3d_pose')
-        self.detect3d = rospy.ServiceProxy('/yolo/detect3d_pose', YoloPoseDetection3D)
+        rospy.wait_for_service("/yolo/detect3d_pose")
+        self.detect3d = rospy.ServiceProxy("/yolo/detect3d_pose", YoloPoseDetection3D)
 
         # --- (D) move_base client ---
-        self.move_base = actionlib.SimpleActionClient('move_base', MoveBaseAction)
+        self.move_base = actionlib.SimpleActionClient("move_base", MoveBaseAction)
         rospy.loginfo("Waiting for move_base…")
         self.move_base.wait_for_server()
         rospy.loginfo("Connected to move_base")
@@ -56,9 +54,9 @@ class PointAndNavigateNode:
         # --- (F) Load SAM model once ---
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         root = os.path.dirname(__file__)
-        pkg  = os.path.dirname(root)
+        pkg = os.path.dirname(root)
         ckpt = os.path.join(pkg, "models", "sam_vit_b_01ec64.pth")
-        sam  = sam_model_registry["vit_b"](checkpoint=ckpt)
+        sam = sam_model_registry["vit_b"](checkpoint=ckpt)
         sam.to(self.device)
         self.predictor = SamPredictor(sam)
 
@@ -69,17 +67,21 @@ class PointAndNavigateNode:
 
     def synced_callback(self, rgb_msg, depth_msg, info_msg):
         try:
-            self.latest_rgb = self.bridge.imgmsg_to_cv2(rgb_msg, 'bgr8')
+            self.latest_rgb = self.bridge.imgmsg_to_cv2(rgb_msg, "bgr8")
             # Read depth as raw uint16 (millimeters)
-            self.latest_depth = self.bridge.imgmsg_to_cv2(depth_msg, 'passthrough')
+            self.latest_depth = self.bridge.imgmsg_to_cv2(depth_msg, "passthrough")
             self.depth_info = info_msg
         except Exception as e:
             rospy.logerr(f"CV bridge error: {e}")
-    
+
     def loop(self):
         rate = rospy.Rate(10)
         while not rospy.is_shutdown():
-            if self.latest_rgb is None or self.depth_info is None or self.latest_depth is None:
+            if (
+                self.latest_rgb is None
+                or self.depth_info is None
+                or self.latest_depth is None
+            ):
                 rate.sleep()
                 continue
 
@@ -93,8 +95,8 @@ class PointAndNavigateNode:
                 continue
 
             # 2. Project 3D keypoints to 2D pixels
-            wrist_3d = kps_3d.get('right_wrist')
-            elbow_3d = kps_3d.get('right_elbow')
+            wrist_3d = kps_3d.get("right_wrist")
+            elbow_3d = kps_3d.get("right_elbow")
             if wrist_3d is None or elbow_3d is None:
                 rospy.logwarn("Wrist or elbow not detected in keypoints.")
                 rate.sleep()
@@ -108,7 +110,9 @@ class PointAndNavigateNode:
                 continue
 
             # 3. Probe along the ray, prompting SAM at each pixel
-            pointed_pixel = self.find_last_bag_pixel_along_ray(wrist_2d, elbow_2d, self.latest_rgb)
+            pointed_pixel = self.find_last_bag_pixel_along_ray(
+                wrist_2d, elbow_2d, self.latest_rgb
+            )
             if pointed_pixel is None:
                 rospy.logwarn("Could not find a bag pixel along the ray.")
                 rate.sleep()
@@ -151,8 +155,6 @@ class PointAndNavigateNode:
 
         cv2.destroyWindow("SAM Segmentation")
 
-
-    
     def find_last_bag_pixel_along_ray(self, wrist, elbow, rgb_img):
         """
         Walks along the wrist->elbow ray, prompts SAM at each step,
@@ -199,7 +201,6 @@ class PointAndNavigateNode:
             last_bag_pixel = (u, v)
 
         return last_bag_pixel
-
 
     def project_3d_to_pixel(self, point_3d):
         """
@@ -262,22 +263,24 @@ class PointAndNavigateNode:
         y_cam = (v - cy) * z_cam / fy
         return np.array([x_cam, y_cam, z_cam])
 
-
-
     def get_human_keypoints_3d(self):
-        if self.latest_rgb is None or self.latest_depth is None or self.depth_info is None:
+        if (
+            self.latest_rgb is None
+            or self.latest_depth is None
+            or self.depth_info is None
+        ):
             return None
 
         # Convert raw uint16 depth (mm) → float32 meters for the service
         depth_m = self.latest_depth.astype(np.float32) * 0.001
-        depth_msg_f32 = self.bridge.cv2_to_imgmsg(depth_m, '32FC1')
+        depth_msg_f32 = self.bridge.cv2_to_imgmsg(depth_m, "32FC1")
 
         req = YoloPoseDetection3DRequest(
-            image_raw         = self.bridge.cv2_to_imgmsg(self.latest_rgb, 'bgr8'),
-            depth_image       = depth_msg_f32,
-            depth_camera_info = self.depth_info,
-            model             = rospy.get_param('~model', 'yolo11n-pose.pt'),
-            confidence        = 0.5,
+            image_raw=self.bridge.cv2_to_imgmsg(self.latest_rgb, "bgr8"),
+            depth_image=depth_msg_f32,
+            depth_camera_info=self.depth_info,
+            model=rospy.get_param("~model", "yolo11n-pose.pt"),
+            confidence=0.5,
         )
 
         try:
@@ -291,11 +294,9 @@ class PointAndNavigateNode:
 
         kp_list = res.detections[0].keypoints
         return {
-            kp.keypoint_name: np.array([
-                kp.point.x / 1000.0,
-                kp.point.y / 1000.0,
-                kp.point.z / 1000.0
-            ])
+            kp.keypoint_name: np.array(
+                [kp.point.x / 1000.0, kp.point.y / 1000.0, kp.point.z / 1000.0]
+            )
             for kp in kp_list
         }
 
@@ -366,7 +367,9 @@ class PointAndNavigateNode:
             combined = np.logical_or(combined, m).astype(np.uint8)
 
         # Keep only the largest connected component:
-        num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(combined, connectivity=8)
+        num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(
+            combined, connectivity=8
+        )
         if num_labels <= 1:
             return np.zeros((H, W), dtype=np.uint8)
 
@@ -386,8 +389,12 @@ class PointAndNavigateNode:
         # Step 1: Transform from camera → map using TF
         cam_frame = self.depth_info.header.frame_id  # e.g. "xtion_depth_optical_frame"
         try:
-            self.tf_listener.waitForTransform('map', cam_frame, rospy.Time(0), rospy.Duration(1.0))
-            (trans, rot) = self.tf_listener.lookupTransform('map', cam_frame, rospy.Time(0))
+            self.tf_listener.waitForTransform(
+                "map", cam_frame, rospy.Time(0), rospy.Duration(1.0)
+            )
+            (trans, rot) = self.tf_listener.lookupTransform(
+                "map", cam_frame, rospy.Time(0)
+            )
         except (tf.Exception, tf.LookupException, tf.ConnectivityException) as e:
             rospy.logerr(f"[SAM] TF lookup failed: {e}")
             return False
@@ -397,7 +404,7 @@ class PointAndNavigateNode:
         T[0:3, 3] = trans
         p_cam_h = np.array([p_cam[0], p_cam[1], p_cam[2], 1.0])
         p_map_h = T.dot(p_cam_h)
-        p_map   = p_map_h[:3]  # [x_bag, y_bag, z_bag]
+        p_map = p_map_h[:3]  # [x_bag, y_bag, z_bag]
 
         # If the bag center is absurdly far, bail
         if np.linalg.norm(p_map[:2]) > 100.0:
@@ -410,10 +417,16 @@ class PointAndNavigateNode:
         # Step 2: Compute goal position 0.3 m behind the bag along camera→bag line
         # First find camera position in map:
         try:
-            self.tf_listener.waitForTransform('map', cam_frame, rospy.Time(0), rospy.Duration(1.0))
-            (cam_trans, _) = self.tf_listener.lookupTransform('map', cam_frame, rospy.Time(0))
+            self.tf_listener.waitForTransform(
+                "map", cam_frame, rospy.Time(0), rospy.Duration(1.0)
+            )
+            (cam_trans, _) = self.tf_listener.lookupTransform(
+                "map", cam_frame, rospy.Time(0)
+            )
         except (tf.Exception, tf.LookupException, tf.ConnectivityException):
-            rospy.logwarn("[SAM] Could not lookup camera position; defaulting goal to bag location.")
+            rospy.logwarn(
+                "[SAM] Could not lookup camera position; defaulting goal to bag location."
+            )
             cam_trans = [x_bag, y_bag, 0.0]
 
         x_cam_map = cam_trans[0]
@@ -446,7 +459,7 @@ class PointAndNavigateNode:
 
         # Step 4: Build and send MoveBaseGoal
         goal = MoveBaseGoal()
-        goal.target_pose.header.frame_id = 'map'
+        goal.target_pose.header.frame_id = "map"
         goal.target_pose.header.stamp = rospy.Time.now()
         goal.target_pose.pose.position.x = goal_x
         goal.target_pose.pose.position.y = goal_y
@@ -458,7 +471,9 @@ class PointAndNavigateNode:
         goal.target_pose.pose.orientation.z = quat[2]
         goal.target_pose.pose.orientation.w = quat[3]
 
-        rospy.loginfo(f"[SAM‐CENTROID] Navigating to ({goal_x:.2f}, {goal_y:.2f}) facing bag at ({x_bag:.2f}, {y_bag:.2f}) yaw {yaw:.2f}")
+        rospy.loginfo(
+            f"[SAM‐CENTROID] Navigating to ({goal_x:.2f}, {goal_y:.2f}) facing bag at ({x_bag:.2f}, {y_bag:.2f}) yaw {yaw:.2f}"
+        )
         self.move_base.send_goal(goal)
         ok = self.move_base.wait_for_result(rospy.Duration(30.0))
         if not ok or self.move_base.get_state() != actionlib.GoalStatus.SUCCEEDED:
@@ -466,7 +481,7 @@ class PointAndNavigateNode:
             return False
 
         return True
-    
+
     def _make_overlay(self, rgb_img: np.ndarray, mask: np.ndarray) -> np.ndarray:
         """
         Returns a BGR image where the mask is overlaid in semi‐transparent red.
@@ -482,8 +497,7 @@ class PointAndNavigateNode:
         return overlay
 
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     try:
         PointAndNavigateNode()
     except rospy.ROSInterruptException:
