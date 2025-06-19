@@ -162,6 +162,7 @@ include_directories(
 catkin_install_python(PROGRAMS
   scripts/unit_test_describe_people.py
   scripts/unit_test_adjust_camera.py
+  src/lasr_skills/follow_person.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

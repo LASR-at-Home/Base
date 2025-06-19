@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.10
+#!/usr/bin/env python3
 
 import rospy
 import cv2
@@ -14,18 +14,18 @@ import math
 
 import smach
 
-from sensor_msgs.msg            import Image, JointState
-from cv_bridge                  import CvBridge
-from geometry_msgs.msg          import PoseStamped
-from segment_anything           import sam_model_registry, SamPredictor
+from sensor_msgs.msg import Image, JointState
+from cv_bridge import CvBridge
+from geometry_msgs.msg import PoseStamped
+from segment_anything import sam_model_registry, SamPredictor
 from moveit_msgs import *
 from moveit_commander           import MoveGroupCommander, roscpp_initialize, roscpp_shutdown, PlanningSceneInterface
 
-from message_filters            import Subscriber, ApproximateTimeSynchronizer
-from control_msgs.msg           import FollowJointTrajectoryAction, FollowJointTrajectoryGoal
-from trajectory_msgs.msg        import JointTrajectory, JointTrajectoryPoint
-from pal_interaction_msgs.msg   import TtsAction, TtsGoal, TtsText
-from play_motion_msgs.msg       import PlayMotionAction, PlayMotionGoal
+from message_filters import Subscriber, ApproximateTimeSynchronizer
+from control_msgs.msg import FollowJointTrajectoryAction, FollowJointTrajectoryGoal
+from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
+from pal_interaction_msgs.msg import TtsAction, TtsGoal, TtsText
+from play_motion_msgs.msg import PlayMotionAction, PlayMotionGoal
 from controller_manager_msgs.srv import SwitchController, SwitchControllerRequest
 from play_motion_msgs.msg import PlayMotionGoal, PlayMotionAction
 from sensor_msgs.msg import PointCloud2, PointField
@@ -102,64 +102,63 @@ def allow_collisions_with_object(obj_name, scene):
         f"\n--- allowed_collision_matrix after update:{planning_scene.scene.allowed_collision_matrix} ---\n"
     )
 
-
-class BagPickAndPlaceSkill(smach.State):
+class BagPickAndPlace(smach.State):
     def __init__(self):
         smach.State.__init__(self, outcomes=['succeeded', 'failed'])
 
         # --- SAM2 setup ---
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         root = os.path.dirname(__file__)
-        pkg  = os.path.dirname(root)
+        pkg = os.path.dirname(root)
         ckpt = os.path.join(pkg, "models", "sam_vit_b_01ec64.pth")
-        sam  = sam_model_registry["vit_b"](checkpoint=ckpt)
+        sam = sam_model_registry["vit_b"](checkpoint=ckpt)
         sam.to(self.device)
         self.predictor = SamPredictor(sam)
         # -------------------
 
-        self.bridge       = CvBridge()
-        self.latest_rgb   = None
+        self.bridge = CvBridge()
+        self.latest_rgb = None
         self.latest_depth = None
-        self.click        = None
+        self.click = None
 
         # Display window for clicking
         cv2.namedWindow("Live View", cv2.WINDOW_NORMAL)
         cv2.setMouseCallback("Live View", self.on_mouse_click)
 
         # Sync RGB + depth
-        rgb_sub   = Subscriber('/xtion/rgb/image_raw', Image)
-        depth_sub = Subscriber('/xtion/depth/image_raw', Image)
-        ats = ApproximateTimeSynchronizer([rgb_sub, depth_sub],
-                                          queue_size=5, slop=0.1)
+        rgb_sub = Subscriber("/xtion/rgb/image_raw", Image)
+        depth_sub = Subscriber("/xtion/depth/image_raw", Image)
+        ats = ApproximateTimeSynchronizer([rgb_sub, depth_sub], queue_size=5, slop=0.1)
         ats.registerCallback(self.synced_callback)
 
         # --- MoveIt! arm setup ---
         roscpp_initialize([])
-        self.arm = MoveGroupCommander('arm_torso')
+        self.arm = MoveGroupCommander("arm_torso")
 
         # --- Gripper action client ---
         self.gripper_client = actionlib.SimpleActionClient(
-            '/parallel_gripper_controller/follow_joint_trajectory',
-            FollowJointTrajectoryAction
+            "/parallel_gripper_controller/follow_joint_trajectory",
+            FollowJointTrajectoryAction,
         )
         rospy.loginfo("Waiting for gripper action server…")
         self.gripper_client.wait_for_server()
         rospy.loginfo("Gripper action server ready.")
 
-        self.motion_client = actionlib.SimpleActionClient('/play_motion', PlayMotionAction)
+        self.motion_client = actionlib.SimpleActionClient(
+            "/play_motion", PlayMotionAction
+        )
         rospy.loginfo("Waiting for /play_motion action server...")
         self.motion_client.wait_for_server()
         rospy.loginfo("/play_motion action server connected")
 
         self.torso_client = actionlib.SimpleActionClient(
-            '/torso_controller/follow_joint_trajectory',
-            FollowJointTrajectoryAction
+            "/torso_controller/follow_joint_trajectory", FollowJointTrajectoryAction
         )
         rospy.loginfo("Waiting for torso action server…")
         self.torso_client.wait_for_server()
         rospy.loginfo("Torso action server ready.")
 
-        self.tts_client = actionlib.SimpleActionClient('tts', TtsAction)
+        self.tts_client = actionlib.SimpleActionClient("tts", TtsAction)
         rospy.loginfo("Waiting for TTS action server…")
         self.tts_client.wait_for_server()
         rospy.loginfo("TTS action server connected.")
@@ -173,8 +172,8 @@ class BagPickAndPlaceSkill(smach.State):
 
     def synced_callback(self, rgb_msg, depth_msg):
         try:
-            self.latest_rgb   = self.bridge.imgmsg_to_cv2(rgb_msg,   'bgr8')
-            self.latest_depth = self.bridge.imgmsg_to_cv2(depth_msg, 'passthrough')
+            self.latest_rgb = self.bridge.imgmsg_to_cv2(rgb_msg, "bgr8")
+            self.latest_depth = self.bridge.imgmsg_to_cv2(depth_msg, "passthrough")
         except Exception as e:
             rospy.logerr(f"cv_bridge error: {e}")
 
@@ -192,7 +191,7 @@ class BagPickAndPlaceSkill(smach.State):
                 if (rospy.Time.now() - start).to_sec() > 10:  # 10s timeout
                     rospy.logwarn("Timeout waiting for camera.")
                     cv2.destroyWindow("Live View")
-                    return 'failed'
+                    return "failed"
 
             frame = self.latest_rgb.copy()
             cv2.imshow("Live View", frame)
@@ -208,12 +207,12 @@ class BagPickAndPlaceSkill(smach.State):
                 if (rospy.Time.now() - click_start).to_sec() > 15:  # 15s timeout
                     rospy.logwarn("Timeout waiting for click.")
                     cv2.destroyWindow("Live View")
-                    return 'failed'
+                    return "failed"
 
             if not self.click:
                 rospy.logwarn("No click received.")
                 cv2.destroyWindow("Live View")
-                return 'failed'
+                return "failed"
 
             u, v = self.click
             self.click = None
@@ -221,17 +220,15 @@ class BagPickAndPlaceSkill(smach.State):
             # 1) segment with SAM
             self.predictor.set_image(frame)
             coords = np.array([[u, v]], dtype=float)
-            labs   = np.array([1], dtype=int)
+            labs = np.array([1], dtype=int)
             masks, _, _ = self.predictor.predict(
-                point_coords=coords,
-                point_labels=labs,
-                multimask_output=False
+                point_coords=coords, point_labels=labs, multimask_output=False
             )
             mask = masks[0].astype(bool)
 
             pts = []
             h, w = mask.shape
-            fx = fy = 579.653076171875   # verify with camera_info!
+            fx = fy = 579.653076171875  # verify with camera_info!
             cx, cy = 319.5, 239.5
             for yy, xx in zip(*np.where(mask)):
                 z = self.latest_depth[yy, xx]
@@ -242,7 +239,7 @@ class BagPickAndPlaceSkill(smach.State):
             if not pts:
                 rospy.logwarn("No valid 3D points—try clicking elsewhere.")
                 cv2.destroyWindow("Live View")
-                return 'failed'
+                return "failed"
             pts = np.array(pts)
             centroid = np.median(pts, axis=0)
             rospy.loginfo(f"Bag centroid (m): {centroid}")
@@ -252,7 +249,7 @@ class BagPickAndPlaceSkill(smach.State):
             long_axis = evecs[:, np.argmax(evals)]
             orth = np.array([-long_axis[1], long_axis[0]])
             orth /= np.linalg.norm(orth)
-            yaw  = math.atan2(orth[1], orth[0])
+            yaw = math.atan2(orth[1], orth[0])
 
             closest_pose = self.find_closest_pose_footprint(pts)
             centroid_pose = self.transform_centroid_pose_footprint(centroid, yaw)
@@ -273,7 +270,7 @@ class BagPickAndPlaceSkill(smach.State):
                 cv2.destroyWindow("Live View")
             except:
                 pass
-            return 'failed'
+            return "failed"
 
     def create_collision_object_from_pcl(self, points):
         # Optional: remove outliers based on percentiles (e.g., filtering out the extreme points)
@@ -343,13 +340,13 @@ class BagPickAndPlaceSkill(smach.State):
         point.time_from_start = rospy.Duration(2.0)
         goal.trajectory.points.append(point)
         self.torso_client.send_goal(goal)
-        self.torso_client.wait_for_result() 
+        self.torso_client.wait_for_result()
 
     def prepare_pick(self):
         rospy.loginfo("Preparing to pick up the bag…")
         self.open_gripper()
         goal = PlayMotionGoal()
-        goal.motion_name = 'prepare_grasp'
+        goal.motion_name = "prepare_grasp"
         goal.skip_planning = False
         self.motion_client.send_goal(goal)
         self.motion_client.wait_for_result()
@@ -403,38 +400,36 @@ class BagPickAndPlaceSkill(smach.State):
 
     def transform_centroid_pose_footprint(self, centroid_mm, yaw):
         x_mm, y_mm, z_mm = centroid_mm
-        x_cam, y_cam, z_cam = x_mm/1000.0, y_mm/1000.0, z_mm/1000.0
+        x_cam, y_cam, z_cam = x_mm / 1000.0, y_mm / 1000.0, z_mm / 1000.0
 
         listener = tf.TransformListener()
         listener.waitForTransform(
-            'base_footprint',
-            'xtion_rgb_optical_frame',
+            "base_footprint",
+            "xtion_rgb_optical_frame",
             rospy.Time(0),
-            rospy.Duration(1.0)
+            rospy.Duration(1.0),
         )
         trans, rot = listener.lookupTransform(
-            'base_footprint',
-            'xtion_rgb_optical_frame',
-            rospy.Time(0)
+            "base_footprint", "xtion_rgb_optical_frame", rospy.Time(0)
         )
         T = tft.quaternion_matrix(rot)
         T[0:3, 3] = trans
         x, y, z = T.dot([x_cam, y_cam, z_cam, 1.0])[:3]
 
-        close_cam = np.array([ math.cos(yaw), math.sin(yaw), 0.0 ])
+        close_cam = np.array([math.cos(yaw), math.sin(yaw), 0.0])
         R_cam2base = tft.quaternion_matrix(rot)[0:3, 0:3]
         close_base = R_cam2base.dot(close_cam)
         close_base[2] = 0.0
-        close_base   /= np.linalg.norm(close_base)
+        close_base /= np.linalg.norm(close_base)
         yaw_base = math.atan2(close_base[1], close_base[0])
-        q_final = tft.quaternion_from_euler(0,  math.pi/2, yaw_base)
+        q_final = tft.quaternion_from_euler(0, math.pi / 2, yaw_base)
 
         pose = PoseStamped()
-        pose.header.frame_id = 'base_footprint'
+        pose.header.frame_id = "base_footprint"
         pose.header.stamp = rospy.Time.now()
         pose.pose.position.x = x
         pose.pose.position.y = y
-        pose.pose.position.z = z*2 # Top point is twice the height of the centroid
+        pose.pose.position.z = z * 2  # Top point is twice the height of the centroid
 
         pose.pose.orientation.x = float(q_final[0])
         pose.pose.orientation.y = float(q_final[1])
@@ -480,11 +475,9 @@ class BagPickAndPlaceSkill(smach.State):
 
         return self.is_picked_up(0.003, 0.20)
 
-    
-
     def sync_shift_ee(self, move_group, x, y, z):
         from tf.transformations import euler_from_quaternion, euler_matrix
-        
+
         curr_pose = move_group.get_current_pose()
         pose = curr_pose.pose
         quat = [
@@ -523,17 +516,19 @@ class BagPickAndPlaceSkill(smach.State):
     def ask_for_bag(self):
         self.open_gripper()
         goal = PlayMotionGoal()
-        goal.motion_name = 'offer_gripper'
+        goal.motion_name = "offer_gripper"
         goal.skip_planning = False
         self.motion_client.send_goal(goal)
         self.motion_client.wait_for_result()
-        rospy.loginfo("Gripper offered.") 
-        self.say("I wasn't able to pickup the bag. Please put the bag into my gripper. I will give you 5 seconds.")
+        rospy.loginfo("Gripper offered.")
+        self.say(
+            "I wasn't able to pickup the bag. Please put the bag into my gripper. I will give you 5 seconds."
+        )
         rospy.sleep(5)
         self.close_gripper()
 
     def say(self, text: str):
-        if hasattr(self, 'tts_client'):
+        if hasattr(self, "tts_client"):
             goal = TtsGoal(rawtext=TtsText(text=text, lang_id="en_GB"))
             self.tts_client.send_goal(goal)
             self.tts_client.wait_for_result()
@@ -543,16 +538,16 @@ class BagPickAndPlaceSkill(smach.State):
     def stow_bag(self):
         self.adjust_torso(0.3)
         goal = PlayMotionGoal()
-        goal.motion_name = 'stow_bag'
+        goal.motion_name = "stow_bag"
         goal.skip_planning = False
         self.motion_client.send_goal(goal)
         self.motion_client.wait_for_result()
-        rospy.loginfo("Reached stow pose.") 
+        rospy.loginfo("Reached stow pose.")
 
     def close_gripper(self, width=0.00, duration=1.0):
         goal = FollowJointTrajectoryGoal()
         traj = JointTrajectory()
-        traj.joint_names = ['gripper_joint']
+        traj.joint_names = ["gripper_joint"]
         pt = JointTrajectoryPoint()
         pt.positions = [width]
         pt.time_from_start = rospy.Duration(duration)
@@ -564,7 +559,7 @@ class BagPickAndPlaceSkill(smach.State):
     def open_gripper(self, width=0.10, duration=1.0):
         goal = FollowJointTrajectoryGoal()
         traj = JointTrajectory()
-        traj.joint_names = ['gripper_joint']
+        traj.joint_names = ["gripper_joint"]
         pt = JointTrajectoryPoint()
         pt.positions = [width]
         pt.time_from_start = rospy.Duration(duration)
@@ -573,7 +568,8 @@ class BagPickAndPlaceSkill(smach.State):
         self.gripper_client.send_goal(goal)
         self.gripper_client.wait_for_result()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     import smach
     rospy.init_node('bag_pick_and_place_skill_runner')
     sm = smach.StateMachine(outcomes=['succeeded', 'failed'])

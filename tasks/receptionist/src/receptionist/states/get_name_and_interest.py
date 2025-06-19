@@ -8,11 +8,39 @@ import smach
 from smach import UserData
 from typing import List, Dict, Any
 from receptionist.states import SpeechRecovery
-
-# import llm_utils
+from lasr_llm_msgs.srv import (
+    Llm,
+    LlmRequest,
+)
 
 
 class GetNameAndInterest(smach.StateMachine):
+    def __init__(
+        self,
+        guest_id: str,
+        last_resort: bool,
+        param_key: str = "/receptionist/priors",
+    ):
+
+        self._guest_id = guest_id
+        self._param_key = param_key
+        self._last_resort = last_resort
+
+        smach.StateMachine.__init__(
+            self,
+            outcomes=["succeeded", "failed"],
+            input_keys=["guest_transcription", "guest_data"],
+            output_keys=["guest_data", "guest_transcription"],
+        )
+        with self:
+            smach.StateMachine.add(
+                "PARSE_NAME_AND_INTEREST",
+                self.ParseNameAndInterest(
+                    guest_id=self._guest_id, param_key=self._param_key
+                ),
+                transitions={"succeeded": "succeeded", "failed": "failed"},
+            )
+
     class ParseNameAndInterest(smach.State):
         def __init__(
             self,
@@ -23,7 +51,7 @@ class GetNameAndInterest(smach.StateMachine):
 
             Args:
                 param_key (str, optional): Name of the parameter that contains the list of
-                possible . Defaults to "/receptionist/priors".
+                prior knowledge . Defaults to "/receptionist/priors".
             """
             smach.State.__init__(
                 self,
@@ -31,51 +59,52 @@ class GetNameAndInterest(smach.StateMachine):
                 input_keys=["guest_transcription", "guest_data"],
                 output_keys=["guest_data", "guest_transcription"],
             )
+            self._llm = rospy.ServiceProxy("/lasr_llm/llm", Llm)
+            self._llm.wait_for_service()
             self._guest_id = guest_id
-            # prior_data: Dict[str, List[str]] = rospy.get_param(param_key)
-            # self._possible_names = [name.lower() for name in prior_data["names"]]
-            # self._possible_interests = [interest.lower() for interest in prior_data["interest"]]
+            prior_data: Dict[str, List[str]] = rospy.get_param(param_key)
+            self._possible_names = [name.lower() for name in prior_data["names"]]
 
         def execute(self, userdata: UserData) -> str:
-            """Parses the transcription of the guests' name and interest.
+            """Parses the transcription of the guest's name and interest.
 
             Args:
-                userdata (UserData): State machine userdata assumed to contain a key
-                called "guest transcription" with the transcription of the guest's name and
-                interest.
+                userdata (UserData): Must contain key 'guest_transcription' with guest's transcription.
 
             Returns:
-                str: state outcome. Updates the userdata with the parsed name and interest, under
-                the parameter "guest_data".
+                str: State outcome. Updates 'guest_data' in userdata with parsed name and interest.
             """
-            outcome = "succeeded"
-            transcription = userdata.guest_transcription.lower()
             transcription = userdata["guest_transcription"].lower()
 
-            # extract_fields = llm_utils.extract_fields_llm(
-            #     transcription, ["Name", "Interests"]
-            # )
-            extract_fields = {"name": "Charlie", "interest": "sports"}
+            request = LlmRequest()
+            request.system_prompt = (
+                "You are a robot acting as a party host. You are tasked with identifying the name "
+                f"and interest belonging to a guest. The possible names are {','.join(self._possible_names)}. "
+                "You will receive input such as 'my name is john and I like robotics'. Output only the name "
+                "and interest, e.g. 'john,robotics'. Make sure that the interest is only one word. If you can.'t identify the name or interest, output 'unknown', e.g. 'john,unknown'."
+            )
+            request.prompt = transcription
 
-            if extract_fields["name"] != "Unknown":
-                userdata.guest_data[self._guest_id]["name"] = extract_fields["name"]
-            else:
-                userdata.guest_data[self._guest_id]["interest"] = extract_fields[
-                    "interest"
-                ]
-                outcome = "failed"
+            response = self._llm(request)
+            llm_name, interest = response.output.strip().split(",")
 
-            if extract_fields["interest"] != "Unknown":
-                userdata.guest_data[self._guest_id]["interest"] = extract_fields[
-                    "interest"
-                ]
-            else:
-                userdata.guest_data[self._guest_id]["interest"] = extract_fields[
-                    "interest"
-                ]
-                outcome = "failed"
+            # Try to match an exact name from transcription
+            name = next(
+                (n for n in self._possible_names if n in transcription), llm_name
+            )
 
-            return outcome
+            # Update guest data
+            guest = userdata.guest_data[self._guest_id]
+            guest["name"] = name
+            guest["interest"] = interest
+
+            # Determine outcome
+            if name == "unknown" or interest == "unknown":
+                return "failed"
+            if name not in self._possible_names:
+                return "failed"
+
+            return "succeeded"
 
     class PostRecoveryDecision(smach.State):
         def __init__(
@@ -115,51 +144,4 @@ class GetNameAndInterest(smach.StateMachine):
             if userdata.guest_data[self._guest_id]["name"] == "unknown":
                 if userdata.guest_data[self._guest_id]["interest"] == "unknown":
                     return True
-            else:
-                return False
-
-    def __init__(
-        self,
-        guest_id: str,
-        last_resort: bool,
-        param_key: str = "/receptionist/priors",
-    ):
-
-        self._guest_id = guest_id
-        self._param_key = param_key
-        self._last_resort = last_resort
-
-        smach.StateMachine.__init__(
-            self,
-            outcomes=["succeeded", "failed"],
-            input_keys=["guest_transcription", "guest_data"],
-            output_keys=["guest_data", "guest_transcription"],
-        )
-        with self:
-
-            smach.StateMachine.add(
-                "PARSE_NAME_AND_INTEREST",
-                self.ParseNameAndInterest(
-                    guest_id=self._guest_id, param_key=self._param_key
-                ),
-                transitions={"succeeded": "succeeded", "failed": "failed"},
-            )
-            # smach.StateMachine.add(
-            #     "SPEECH_RECOVERY",
-            #     SpeechRecovery(self._guest_id, self._last_resort),
-            #     transitions={
-            #         "succeeded": "succeeded",
-            #         "failed": "POST_RECOVERY_DECISION",
-            #     },
-            # )
-            # smach.StateMachine.add(
-            #     "POST_RECOVERY_DECISION",
-            #     self.PostRecoveryDecision(
-            #         guest_id=self._guest_id, param_key=self._param_key
-            #     ),
-            #     transitions={
-            #         "failed": "failed",
-            #         "failed_name": "failed_name",
-            #         "failed_interest": "failed_interest",
-            #     },
-            # )
+            return False

@@ -20,11 +20,12 @@ class Detect3D(smach.State):
         filter: Union[List[str], None] = None,
         confidence: float = 0.5,
         target_frame: str = "map",
+        slop=0.1,
     ):
         smach.State.__init__(
             self,
             outcomes=["succeeded", "failed"],
-            output_keys=["detections_3d"],
+            output_keys=["detections_3d", "image_raw"],
         )
         self.image_topic = image_topic
         self.depth_image_topic = depth_image_topic
@@ -41,7 +42,7 @@ class Detect3D(smach.State):
         )
 
         self.ts = message_filters.ApproximateTimeSynchronizer(
-            [image_sub, depth_sub, cam_info_sub], queue_size=10, slop=0.1
+            [image_sub, depth_sub, cam_info_sub], queue_size=10, slop=slop
         )
         self.data = None
 
@@ -71,6 +72,7 @@ class Detect3D(smach.State):
                 target_frame=self.target_frame,
             )
             userdata.detections_3d = resp
+            userdata.image_raw = image_msg
             return "succeeded"
         except rospy.ServiceException as e:
             rospy.logerr(f"Service call failed: {e}")
@@ -80,7 +82,7 @@ class Detect3D(smach.State):
 if __name__ == "__main__":
     rospy.init_node("detect")
     while not rospy.is_shutdown():
-        detect = Detect3D()
+        detect = Detect3D(slop=10.0)
         sm = smach.StateMachine(outcomes=["succeeded", "failed"])
         with sm:
             smach.StateMachine.add(

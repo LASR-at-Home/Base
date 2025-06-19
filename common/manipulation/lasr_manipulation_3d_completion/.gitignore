@@ -1,0 +1,3 @@
+KNN_CUDA/
+Pointnet2_PyTorch/
+models/3dsgrasp_model.pth

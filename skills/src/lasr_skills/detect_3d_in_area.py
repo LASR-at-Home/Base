@@ -48,7 +48,7 @@ class Detect3DInArea(smach.StateMachine):
                 for i in range(0, len(detected_objects))
                 if satisfied_points[i]
             ]
-
+            # List of Detection3D msgs
             userdata["detections_3d"] = filtered_detections
             return "succeeded"
 
@@ -66,7 +66,7 @@ class Detect3DInArea(smach.StateMachine):
         smach.StateMachine.__init__(
             self,
             outcomes=["succeeded", "failed"],
-            output_keys=["detections_3d"],
+            output_keys=["detections_3d", "image_raw"],
         )
 
         with self:

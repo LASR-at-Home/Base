@@ -5,6 +5,7 @@ from cv_bridge import CvBridge
 from ultralytics import YOLO
 import os
 
+
 def image_callback(msg):
     # convert ROS Image to OpenCV BGR
     cv_img = bridge.imgmsg_to_cv2(msg, "bgr8")
@@ -17,11 +18,12 @@ def image_callback(msg):
     out_msg.header = msg.header
     pub_annotated.publish(out_msg)
 
+
 if __name__ == "__main__":
     rospy.init_node("yolov11_node")
     # load model
     root = os.path.dirname(__file__)
-    pkg  = os.path.dirname(root)
+    pkg = os.path.dirname(root)
     model_path = os.path.join(pkg, "models", "best.pt")
     rospy.loginfo(f"Loading model from {model_path}")
     model = YOLO(model_path)
@@ -32,6 +34,8 @@ if __name__ == "__main__":
     pub_annotated.publish()
 
     # subscribe to your camera topic (e.g. /camera/image_raw)
-    sub = rospy.Subscriber("xtion/rgb/image_raw", Image, image_callback, queue_size=1, buff_size=2**24)
+    sub = rospy.Subscriber(
+        "xtion/rgb/image_raw", Image, image_callback, queue_size=1, buff_size=2**24
+    )
 
     rospy.spin()

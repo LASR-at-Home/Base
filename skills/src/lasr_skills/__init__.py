@@ -26,8 +26,11 @@ from .guide import Guide
 from .detect_clothing import DetectClothing
 from .detect_pose import DetectPose
 from .find_person import FindPerson
+
 # from .xml_question_answer import XmlQuestionAnswer
 from .find_person_and_tell import FindPersonAndTell
 from .count_people import CountPeople
 from .json_qa import JsonQuestionAnswer
 from .rotate import Rotate
+from .point_at_person import PointAtPerson
+from .follow_person import FollowPerson
