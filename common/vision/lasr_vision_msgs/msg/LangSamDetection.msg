@@ -1,5 +1,5 @@
 # Bounding box mask defined in pixel-space
-int32[] bbox
+int32[] xywh
 
 # Segmentation mask defined in pixel-space
 int32[] seg_mask
