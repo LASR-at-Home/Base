@@ -5,25 +5,21 @@ import smach
 import smach_ros
 from geometry_msgs.msg import Point, PointStamped, Pose
 from lasr_skills import (
-    AskAndListen,
     GoToLocation,
-    LookToPoint,
     PlayMotion,
     Say,
     Wait,
     WaitForPersonInArea,
 )
-from lasr_vision_msgs.srv import Recognise
 from receptionist.states import (
     HandleNameInterest,
     HandleDrink,
-    CompareInterest,
     IntroduceAndSeatGuest,
     WelcomeGuest,
     FindDrinkOnTable,
 )
 from shapely.geometry import Polygon
-from std_msgs.msg import Empty, Header
+from std_msgs.msg import Empty
 
 
 class Receptionist(smach.StateMachine):

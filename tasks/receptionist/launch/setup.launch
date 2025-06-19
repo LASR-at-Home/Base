@@ -8,7 +8,7 @@
     <node pkg="lasr_speech_recognition_whisper" type="transcribe_microphone_server" name="transcribe_speech" output="screen" args="--mic_device $(arg whisper_device_param)"/>
 
     <!-- LLM -->
-    <node pkg="lasr_llm" type="receptionist_service.py" name="llm_server" output="screen"/>
+    <node pkg="lasr_llm" type="llm.py" name="llm_server" output="screen"/>
 
     <!--     STATIC POINTS     -->
     <rosparam command="load" file="$(find receptionist)/config/$(arg config).yaml" ns="receptionist" />
@@ -18,9 +18,7 @@
     <rosparam command="load" file="$(find receptionist)/config/motions.yaml"/>
 
     <!--      PERCEPTION     -->
-    <include file="$(find lasr_vision_cropped_detection)/launch/cropped_detection.launch"/>
     <node pkg="lasr_vision_clip" name="clip_service" type="vqa" output="screen"/>
-    <node pkg="lasr_vision_bodypix" type="bodypix_services.py" name="bodypix_service" output="screen"/>
     <node pkg="lasr_vision_deepface" type="service" name="deepface_service" output="screen"/>
 
 </launch>

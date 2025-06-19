@@ -32,4 +32,5 @@ from .find_person_and_tell import FindPersonAndTell
 from .count_people import CountPeople
 from .json_qa import JsonQuestionAnswer
 from .rotate import Rotate
+from .point_at_person import PointAtPerson
 from .follow_person import FollowPerson

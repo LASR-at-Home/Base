@@ -5,9 +5,8 @@ import rospy
 
 from lasr_skills import Say
 from lasr_llm_msgs.srv import (
-    ReceptionistQueryLlm,
-    ReceptionistQueryLlmRequest,
-    ReceptionistQueryLlmResponse,
+    Llm,
+    LlmRequest,
 )
 
 
@@ -15,7 +14,7 @@ class WelcomeGuest(smach.StateMachine):
     """Class to welcome guest 2 to the party at the door, where we
     tell guest 2 the interests they have in common with guest 1."""
 
-    def __init__(self, llm_service: str = "/receptionist/query_llm/"):
+    def __init__(self):
         super().__init__(
             outcomes=["succeeded", "failed"],
             input_keys=["guest_data"],
@@ -34,7 +33,7 @@ class WelcomeGuest(smach.StateMachine):
         with self:
             smach.StateMachine.add(
                 "GET_SIMILARITY",
-                self.GetSimilarity(llm_service=llm_service),
+                self.GetSimilarity(),
                 transitions={
                     "succeeded": "SAY_WELCOME",
                     "failed": "SAY_WELCOME",
@@ -71,29 +70,30 @@ class WelcomeGuest(smach.StateMachine):
     class GetSimilarity(smach.State):
         """State to get the similarity between two guests."""
 
-        def __init__(self, llm_service: str = "/receptionist/query_llm/"):
+        def __init__(self):
             super().__init__(
                 outcomes=["succeeded", "failed"],
                 input_keys=["guest_data"],
                 output_keys=["guest_data", "common_interest"],
             )
-            self._llm_client = rospy.ServiceProxy(llm_service, ReceptionistQueryLlm)
-            self._llm_client.wait_for_service()
+            self._llm = rospy.ServiceProxy("/lasr_llm/llm", Llm)
+            self._llm.wait_for_service()
 
         def execute(self, userdata):
 
-            request = ReceptionistQueryLlmRequest()
-            request.task = "interest_commonality"
-            request.llm_input = f"Person 1 interest: {userdata.guest_data['guest1']['interest']}. Person 2 interests: {userdata.guest_data['guest2']['interest']}."
+            request = LlmRequest()
+            request.system_prompt = f"You are a robot acting as a party host. You are tasked with reasoning about interests between two guests. You will receive input such as 'Person 1 interest: football. Person 2 interest: tennis'. You should reason about what these guests have in common, if anything, and output a single word describing this commonality. In the example, this might be 'sports' or 'exercise'. If you cannot find any commanality, output 'none'."
+            request.prompt = f"Person 1 interest: {userdata.guest_data['guest1']['interest']}. Person 2 interests: {userdata.guest_data['guest2']['interest']}."
+            response = self._llm(request)
+            commonality = response.output.lower()
 
-            response = self._llm_client(request)
-            if response.response:
-                userdata.common_interest = response.response.interest_commonality
-                return "succeeded"
-            else:
+            if commonality == "none":
                 rospy.logerr("Failed to get similarity from LLM.")
                 userdata.common_interest = "unknown"
                 return "failed"
+            else:
+                userdata.common_interest = commonality
+                return "succeeded"
 
     class GetWelcomeMessage(smach.State):
         """State to get the welcome message for the guest."""
