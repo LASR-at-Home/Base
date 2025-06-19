@@ -60,6 +60,8 @@ class GoToBag(smach.State):
         rospy.wait_for_service("/lasr_vision/lang_sam")
         self.langsam_srv = rospy.ServiceProxy("/lasr_vision/lang_sam", LangSam)
 
+        cv2.namedWindow("Auto-segmented bag", cv2.WINDOW_NORMAL)
+
     def amcl_pose_callback(self, msg):
         self.latest_amcl_pose = msg
 
@@ -113,18 +115,27 @@ class GoToBag(smach.State):
 
         self.visualize_segmentation(self.latest_rgb, mask)
 
-        mu, mv = self.get_mask_median(mask)
-        if mu is None or mv is None:
-            rospy.logwarn("No valid median pixel in mask.")
+        ys, xs = np.where(mask)
+        pts = []
+        for v, u in zip(ys, xs):
+            raw_depth_mm = float(self.latest_depth[v, u])
+            if np.isfinite(raw_depth_mm) and raw_depth_mm > 0.0:
+                z_cam = raw_depth_mm * 0.001
+                fx = self.depth_info.K[0]
+                fy = self.depth_info.K[4]
+                cx = self.depth_info.K[2]
+                cy = self.depth_info.K[5]
+                x_cam = (u - cx) * z_cam / fx
+                y_cam = (v - cy) * z_cam / fy
+                pts.append([x_cam, y_cam, z_cam])
+        if not pts:
+            rospy.logwarn("No valid depth points in mask.")
             cv2.destroyAllWindows()
             return "failed"
 
-        # Use the rest of your pipeline as before
-        p_cam = self.pixel_to_3d(mu, mv)
-        if p_cam is None:
-            rospy.logwarn("No valid depth at median pixel.")
-            cv2.destroyAllWindows()
-            return "failed"
+        pts = np.array(pts)
+        centroid = np.median(pts, axis=0)
+        p_cam = centroid
 
         head_point = self.transform_from_camera_to_map(p_cam)
         x_bag, y_bag = self.navigate_to_closest_feasible_point(p_cam)
@@ -232,10 +243,6 @@ class GoToBag(smach.State):
         dy = y_robot - y_bag
         dist = np.hypot(dx, dy)
 
-        if dist < 0.3:
-            rospy.loginfo(f"Already within {dist:.2f}m of bag. Skipping navigation.")
-            return (x_bag, y_bag)
-
         if dist < 1e-4:
             dx, dy = 1.0, 0.0
             dist = 1.0
@@ -274,7 +281,7 @@ class GoToBag(smach.State):
                 f"Trying to navigate to ({goal_x:.2f}, {goal_y:.2f}) dist {approach_dist:.2f} from bag"
             )
             self.move_base.send_goal(goal)
-            ok = self.move_base.wait_for_result(rospy.Duration(12.0))
+            ok = self.move_base.wait_for_result()
             if ok and self.move_base.get_state() == actionlib.GoalStatus.SUCCEEDED:
                 rospy.loginfo("Navigation succeeded at closest feasible point!")
                 return (
@@ -353,13 +360,11 @@ class GoToBag(smach.State):
 
     def visualize_segmentation(self, rgb_img, mask):
         overlay = rgb_img.copy()
-        color = np.array([0, 0, 255], dtype=np.uint8)
-        alpha = 0.4
-        overlay[mask > 0] = (alpha * color + (1 - alpha) * overlay[mask > 0]).astype(
-            np.uint8
-        )
-        cv2.imshow("LangSAM Segmentation", overlay)
-        cv2.waitKey(1)
+        overlay[mask > 0] = [0, 0, 255]
+        print("RGB min/max", overlay.min(), overlay.max())
+        print("Mask sum", mask.sum())
+        cv2.imshow("Auto-segmented bag", overlay)
+        cv2.waitKey(1000)
 
     def look_at_point(self, target_point, target_frame):
         if not self.point_head_client:
