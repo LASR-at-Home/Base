@@ -29,7 +29,7 @@ def relay_3d(image_topic: str, depth_topic: str, depth_camera_info_topic: str) -
         depth_camera_info_topic, CameraInfo
     )
     ts = message_filters.ApproximateTimeSynchronizer(
-        [image_sub, depth_sub, depth_camera_info_sub], 10, 0.1
+        [image_sub, depth_sub, depth_camera_info_sub], 10, 2.0
     )
     ts.registerCallback(detect_cb)
 

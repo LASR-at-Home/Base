@@ -73,6 +73,7 @@ add_message_files(
 ## Generate services in the 'srv' folder
 add_service_files(
   FILES
+  AddFace.srv
   YoloDetection.srv
   YoloDetection3D.srv
   YoloPoseDetection.srv
