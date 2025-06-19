@@ -46,7 +46,7 @@ def add_face(name: str, num_images: int, image_topic: str):
 if __name__ == "__main__":
     rospy.init_node("lasr_vision_reid_add_face")
     camera = rospy.get_param("~camera", "xtion")
-    name = rospy.get_param("~name", "siyao")
+    name = rospy.get_param("~name", "jared")
     num_images = rospy.get_param("~num_images", 10)
     image_topic = f"/{camera}/rgb/image_raw"
 
