@@ -1,2 +1,4 @@
--r https://raw.githubusercontent.com/KaiyangZhou/deep-person-reid/refs/heads/master/requirements.txt
-git+https://github.com/KaiyangZhou/deep-person-reid.git
+nvidia-cuda-cupti-cu12
+git+https://github.com/LASR-at-Home/deep-person-reid.git
+facenet-pytorch
+scikit-learn
