@@ -174,6 +174,7 @@ class ReID:
             rospy.logerr(f"Failed to convert image: {e}")
             return response
 
+        h, w, _ = cv_im.shape
         target_frame = request.target_frame or request.depth_image.header.frame_id
         K = request.depth_camera_info.K
         fx, fy = K[0], K[4]
@@ -202,9 +203,14 @@ class ReID:
         for box in boxes:
             x1, y1, x2, y2 = [int(v) for v in box]
 
+            x1, y1, x2, y2 = max(0, x1), max(0, y1), min(w, x2), min(h, y2)
+            if x1 >= x2 or y1 >= y2:
+                continue
+
             face_crop = cv_im[y1:y2, x1:x2]
             if face_crop.size == 0:
                 continue
+
             label, score = self._perform_reid(face_crop)
 
             if score < request.threshold:
@@ -253,15 +259,7 @@ class ReID:
 
         annotated = cv_im.copy()
         for detection in response.detections:
-            x, y, w, h = map(
-                int,
-                [
-                    detection.xywh.x,
-                    detection.xywh.y,
-                    detection.xywh.w,
-                    detection.xywh.h,
-                ],
-            )
+            x, y, w, h = detection.xywh
             cv2.rectangle(annotated, (x, y), (x + w, y + h), (0, 255, 0), 2)
             label = f"{detection.name} ({detection.confidence:.2f})"
             cv2.putText(
