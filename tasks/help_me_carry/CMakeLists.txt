@@ -8,7 +8,10 @@ project(carry_my_luggage)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
+  catkin_virtualenv
+  lasr_skills
   rospy
+  std_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -19,6 +22,10 @@ find_package(catkin REQUIRED COMPONENTS
 ## modules and global scripts declared therein get installed
 ## See http://ros.org/doc/api/catkin/html/user_guide/setup_dot_py.html
 catkin_python_setup()
+catkin_generate_virtualenv(
+ INPUT_REQUIREMENTS requirements.in
+ PYTHON_INTERPRETER python3.8
+)
 
 ################################################
 ## Declare ROS messages, services and actions ##
@@ -159,6 +166,7 @@ include_directories(
 ## in contrast to setup.py, you can choose the destination
 catkin_install_python(PROGRAMS
   scripts/main.py
+  src/carry_my_luggage/state_machine.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
