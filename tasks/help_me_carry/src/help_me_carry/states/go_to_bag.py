@@ -18,6 +18,9 @@ from segment_anything import sam_model_registry, SamPredictor
 from control_msgs.msg import PointHeadAction, PointHeadGoal
 from geometry_msgs.msg import PointStamped, Point
 
+from lasr_vision_msgs.srv import LangSamRequest
+from lasr_vision_msgs.srv import LangSam
+
 
 class GoToBag(smach.State):
     def __init__(self):
@@ -56,19 +59,13 @@ class GoToBag(smach.State):
             "/amcl_pose", PoseWithCovarianceStamped, self.amcl_pose_callback
         )
 
-        # Load SAM model
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        root = os.path.dirname(__file__)
-        pkg = os.path.dirname(root)
-        ckpt = os.path.join(pkg, "models", "sam_vit_b_01ec64.pth")
-        sam = sam_model_registry["vit_b"](checkpoint=ckpt)
-        sam.to(self.device)
-        self.predictor = SamPredictor(sam)
-
         self.point_head_client = actionlib.SimpleActionClient(
             "/head_controller/point_head_action", PointHeadAction
         )
         self.point_head_client.wait_for_server()
+
+        rospy.wait_for_service("/lasr_vision/lang_sam")
+        self.langsam_srv = rospy.ServiceProxy("/lasr_vision/lang_sam", LangSam)
 
     def amcl_pose_callback(self, msg):
         self.latest_amcl_pose = msg
@@ -87,7 +84,7 @@ class GoToBag(smach.State):
             rospy.logerr(f"CV bridge error: {e}")
 
     def execute(self, userdata):
-        # Wait for all sensors to have valid data
+        # Wait for image & depth as before
         while not rospy.is_shutdown():
             if (
                 self.latest_rgb is not None
@@ -97,58 +94,65 @@ class GoToBag(smach.State):
                 break
             rospy.sleep(0.1)
 
-        # Show frame and wait for user click
-        while not rospy.is_shutdown() and self.click_pixel is None:
-            frame = self.latest_rgb.copy()
-            cv2.imshow("Click to segment", frame)
-            cv2.waitKey(1)
-            rospy.sleep(0.05)
+        # Prepare the request (assuming self.latest_rgb is a cv2 image)
+        rgb_msg = self.bridge.cv2_to_imgmsg(self.latest_rgb, "bgr8")
+        langsam_req = LangSamRequest()
+        langsam_req.image_raw = rgb_msg
+        langsam_req.prompt = "bag"
 
-        # Once clicked, do everything once
-        if self.click_pixel:
-            u, v = self.click_pixel
-            self.click_pixel = None
+        try:
+            resp = self.langsam_srv(langsam_req)
+        except rospy.ServiceException as e:
+            rospy.logerr(f"LangSAM service call failed: {e}")
+            return "failed"
 
-            # Segment
-            mask = self.get_click_mask(self.latest_rgb, u, v)
-            if np.sum(mask) == 0:
-                rospy.logwarn("SAM did not find a mask at click point.")
-                cv2.destroyWindow("Click to segment")
-                return "failed"
-            mu, mv = self.get_mask_median(mask)
-            if mu is None or mv is None:
-                rospy.logwarn("No valid median pixel in mask.")
-                cv2.destroyWindow("Click to segment")
-                return "failed"
+        if not resp.detections:
+            rospy.logwarn("No bags detected.")
+            cv2.destroyAllWindows()
+            return "failed"
 
-            overlay = self._make_overlay(self.latest_rgb, mask)
-            cv2.circle(overlay, (mu, mv), 8, (0, 255, 0), -1)
-            cv2.imshow("Click to segment", overlay)
-            cv2.waitKey(1)
+        # Pick detection with highest detection_score
+        best_det = max(resp.detections, key=lambda det: det.detection_score)
+        mask_flat = np.array(best_det.seg_mask, dtype=np.uint8)
+        height, width = self.latest_rgb.shape[:2]
+        if mask_flat.size != height * width:
+            rospy.logerr(
+                f"Mask size {mask_flat.size} does not match image size {height}x{width}"
+            )
+            cv2.destroyAllWindows()
+            return "failed"
+        mask = mask_flat.reshape((height, width))
 
-            p_cam = self.pixel_to_3d(mu, mv)
-            if p_cam is None:
-                rospy.logwarn("No valid depth at median pixel.")
-                cv2.destroyWindow("Click to segment")
-                return "failed"
+        mu, mv = self.get_mask_median(mask)
+        if mu is None or mv is None:
+            rospy.logwarn("No valid median pixel in mask.")
+            cv2.destroyAllWindows()
+            return "failed"
 
-            head_point = self.transform_from_camera_to_map(p_cam)
-            print(head_point)
+        # Optionally, publish a debug overlay as before
+        overlay = self._make_overlay(self.latest_rgb, mask)
+        cv2.imshow("Auto-segmented bag", overlay)
+        cv2.waitKey(1)
 
-            x_bag, y_bag = self.navigate_to_closest_feasible_point(p_cam)
-            if x_bag is not None and y_bag is not None:
-                rospy.loginfo(
-                    "[SAM-CLICK] Navigation succeeded! Now adjusting orientation with AMCL pose."
-                )
-                self.face_point_with_amcl(x_bag, y_bag)
-                self.look_at_point(head_point, "map")
-                cv2.destroyWindow("Click to segment")
-                return "succeeded"
-            else:
-                cv2.destroyWindow("Click to segment")
-                return "failed"
+        # Use the rest of your pipeline as before
+        p_cam = self.pixel_to_3d(mu, mv)
+        if p_cam is None:
+            rospy.logwarn("No valid depth at median pixel.")
+            cv2.destroyAllWindows()
+            return "failed"
+
+        head_point = self.transform_from_camera_to_map(p_cam)
+        x_bag, y_bag = self.navigate_to_closest_feasible_point(p_cam)
+        if x_bag is not None and y_bag is not None:
+            rospy.loginfo(
+                "[LangSAM] Navigation succeeded! Adjusting orientation with AMCL pose."
+            )
+            self.face_point_with_amcl(x_bag, y_bag)
+            self.look_at_point(head_point, "map")
+            cv2.destroyAllWindows()
+            return "succeeded"
         else:
-            cv2.destroyWindow("Click to segment")
+            cv2.destroyAllWindows()
             return "failed"
 
     # --- all your existing helper methods (unchanged, just copy from your node) ---

@@ -1,28 +1,30 @@
 import rospy
 import smach
 import smach_ros
-from help_me_carry import follow_person, go_to_bag, pick_up_bag
+
+# from help_me_carry import follow_person, go_to_bag, pick_up_bag
+from help_me_carry import GoToBag, BagPickAndPlace
 
 
 class CarryMyLuggage(smach.StateMachine):
     def __init__(self):
         smach.StateMachine.__init__(self, outcomes=["succeeded", "failed"])
         with self:
-            smach.StateMachine.add(
-                "FOLLOW_PERSON",
-                follow_person.FollowPerson(),
-                transitions={"succeeded": "GO_TO_BAG", "failed": "GO_TO_BAG"},
-            )
+            # smach.StateMachine.add(
+            #     "FOLLOW_PERSON",
+            #     follow_person.FollowPerson(),
+            #     transitions={"succeeded": "GO_TO_BAG", "failed": "GO_TO_BAG"},
+            # )
 
             smach.StateMachine.add(
                 "GO_TO_BAG",
-                go_to_bag.GoToBag(),
+                GoToBag(),
                 transitions={"succeeded": "PICK_UP_BAG", "failed": "failed"},
             )
 
             smach.StateMachine.add(
                 "PICK_UP_BAG",
-                pick_up_bag.BagPickAndPlace(),
+                BagPickAndPlace(),
                 transitions={"succeeded": "succeeded", "failed": "failed"},
             )
 
