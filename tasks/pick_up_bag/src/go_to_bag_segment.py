@@ -355,7 +355,6 @@ class SAMClickNavigateNode:
         overlay = cv2.addWeighted(rgb_img, 1.0, red_mask, alpha, 0.0)
         return overlay
 
-<<<<<<< HEAD
     def look_at_point(self, point_3d):
         cam_frame = self.depth_info.header.frame_id
         goal = PointHeadGoal()
@@ -374,10 +373,6 @@ class SAMClickNavigateNode:
         self.point_head.wait_for_result()
 
 if __name__ == '__main__':
-=======
-
-if __name__ == "__main__":
->>>>>>> b7ad1e606a979dc7092b4a33bce48fb52edb965a
     try:
         SAMClickNavigateNode()
     except rospy.ROSInterruptException:

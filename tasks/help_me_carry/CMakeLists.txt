@@ -166,11 +166,7 @@ include_directories(
 ## in contrast to setup.py, you can choose the destination
 catkin_install_python(PROGRAMS
   scripts/main.py
-<<<<<<< HEAD:tasks/carry_my_luggage/CMakeLists.txt
-  src/carry_my_luggage/state_machine.py
-=======
   src/help_me_carry/state_machine.py
->>>>>>> b7ad1e606a979dc7092b4a33bce48fb52edb965a:tasks/help_me_carry/CMakeLists.txt
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
