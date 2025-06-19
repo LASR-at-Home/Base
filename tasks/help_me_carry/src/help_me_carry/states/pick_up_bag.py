@@ -79,9 +79,7 @@ def allow_collisions_with_object(obj_name, scene):
     # Set the default entries. They are also not updated
     planning_scene.scene.allowed_collision_matrix.default_entry_names = [obj_name]
     planning_scene.scene.allowed_collision_matrix.default_entry_values = [False]
-    planning_scene.scene.is_diff = (
-        True
-    )  # Mark this as a diff message to force an update of the allowed collision matrix
+    planning_scene.scene.is_diff = True  # Mark this as a diff message to force an update of the allowed collision matrix
     planning_scene.scene.robot_state.is_diff = True
 
     planning_scene_diff_req = ApplyPlanningSceneRequest()
