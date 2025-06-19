@@ -141,37 +141,13 @@ class Introduce(smach.StateMachine):
         assert not (guest_to_introduce_to is None and not everyone)
 
         with self:
-            smach.StateMachine.add(
-                "GetStrGuestData",
-                GetStrGuestData(
-                    guest_id=guest_to_introduce, describe_features=describe_features
-                ),
-                transitions={"succeeded": "GetGuestName"},
-            )
-
-            smach.StateMachine.add(
-                "GetGuestName",
-                GetGuestName(guest_id=guest_to_introduce_to),
-                transitions={"succeeded": "GetIntroductionString"},
-            )
-
-            smach.StateMachine.add(
-                "GetIntroductionString",
-                GetIntroductionString(),
-                transitions={"succeeded": "SayIntroduce"},
-                remapping={
-                    "guest_str": "guest_str",
-                    "requested_name": "requested_name",
-                },
-            )
 
             smach.StateMachine.add(
                 "SayIntroduce",
-                Say(),
+                Say("I can't introduce you yet"),
                 transitions={
                     "succeeded": "succeeded",
                     "preempted": "failed",
                     "aborted": "failed",
                 },
-                remapping={"text": "introduction_str"},
             )

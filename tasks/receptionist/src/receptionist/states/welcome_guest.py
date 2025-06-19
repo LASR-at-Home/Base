@@ -10,6 +10,32 @@ from lasr_llm_msgs.srv import (
 )
 
 
+def stringify_guest_data(guest_data: dict) -> str:
+    guest_str = ""
+    if guest_data["attributes"]["long_hair"]:
+        guest_str += "They have long hair. "
+    else:
+        guest_str += "They have short hair. "
+
+    t_shirt = (
+        "short sleeve"
+        if guest_data["attributes"]["short_sleeve_t_shirt"]
+        else "long sleeve"
+    )
+
+    if guest_data["attributes"]["glasses"] and guest_data["attributes"]["hat"]:
+        guest_str += f"They are wearing a {t_shirt} top, glasses and a hat. "
+    elif guest_data["attributes"]["glasses"] and not guest_data["attributes"]["hat"]:
+        guest_str += f"They are wearing a {t_shirt} t shirt and glasses and they are not wearing a hat. "
+    elif not guest_data["attributes"]["glasses"] and guest_data["attributes"]["hat"]:
+        guest_str += f"They wearing a {t_shirt} t shirt and hat and they are not wearing glasses. "
+    elif (
+        not guest_data["attributes"]["glasses"] and not guest_data["attributes"]["hat"]
+    ):
+        guest_str += f"They wearing a {t_shirt} t shirt and they are not wearing glasses or a hat. "
+    return guest_str
+
+
 class WelcomeGuest(smach.StateMachine):
     """Class to welcome guest 2 to the party at the door, where we
     tell guest 2 the interests they have in common with guest 1."""
@@ -112,6 +138,7 @@ class WelcomeGuest(smach.StateMachine):
 
             userdata.welcome_message = (
                 f"Hello {guest_2_name}, welcome to the party! "
-                f"You'll get on well with {guest_1_name} who is already here as they share a common interest in {common_interest}."
+                f"You'll get on well with {guest_1_name} who is already here as they share a common interest in {common_interest}. "
+                f"You'll recognise them as {stringify_guest_data(userdata.guest_data['guest1'])}."
             )
             return "succeeded"

@@ -37,20 +37,12 @@ class IntroduceAndSeatGuest(smach.StateMachine):
         sofa_position: Point,
         max_people_on_sofa: int,
         motions: List[str],
-        sweep: bool = True,
     ):
 
         smach.StateMachine.__init__(
             self, outcomes=["succeeded", "failed"], input_keys=["guest_data"]
         )
-
-        """
-        1. Detect all people and seats
-        2. Introduce the guest to the other guests
-        3. Seat the guest
         
-        """
-
         with self:
 
             class HandleSofaDetections(smach.State):
