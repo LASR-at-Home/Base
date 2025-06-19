@@ -1,5 +1,7 @@
 from typing import Dict, Tuple
 
+import torch
+
 import rospy
 import torchreid
 import torch
@@ -14,12 +16,12 @@ from cv_bridge import CvBridge
 import tf2_ros as tf
 from facenet_pytorch import MTCNN
 
-from lasr_vision_msgs import (
+from lasr_vision_msgs.srv import (
     Recognise3D,
     Recognise3DRequest,
     Recognise3DResponse,
-    Detection3D,
 )
+from lasr_vision_msgs.msg import Detection3D
 
 from geometry_msgs.msg import Point, PointStamped
 from sensor_msgs.msg import Image
@@ -33,7 +35,7 @@ class ReID:
 
     _dataset: str
     _dataset_root: str
-    _model: torchreid.models.OSNet
+    _model: torch.nn.Module
     _device: torch.device
     _transform: transforms.Compose
     _face_detector: MTCNN
@@ -50,7 +52,9 @@ class ReID:
         self._dataset_root = os.path.join(
             rospkg.RosPack().get_path("lasr_vision_reid"), "datasets", self._dataset
         )
-        self._model = torchreid.models.build_model("osnet_x1_0", pretrained=True)
+        self._model = torchreid.models.build_model(
+            "osnet_x1_0", pretrained=True, num_classes=1000
+        )
         self._device = (
             torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
         )
