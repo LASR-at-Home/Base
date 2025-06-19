@@ -79,6 +79,7 @@ add_service_files(
   BodyPixMaskDetection.srv
   BodyPixKeypointDetection.srv
   Recognise.srv
+  Recognise3D.srv
   LearnFace.srv
   Vqa.srv
   PointingDirection.srv
