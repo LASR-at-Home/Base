@@ -15,6 +15,16 @@ find_package(catkin REQUIRED COMPONENTS
   actionlib_msgs
   actionlib
   geometry_msgs
+  std_msgs
+  sensor_msgs
+  tf2_ros
+  tf2_geometry_msgs
+  dynamic_reconfigure
+  lasr_vision_msgs
+  visualization_msgs
+  pal_interaction_msgs
+  control_msgs
+  move_base_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -58,11 +68,10 @@ catkin_python_setup()
 # )
 
 ## Generate services in the 'srv' folder
-# add_service_files(
-#   FILES
-#   Service1.srv
-#   Service2.srv
-# )
+add_service_files(
+  FILES
+  FollowPersonSrv.srv
+)
 
 # Generate actions in the 'action' folder
 add_action_files(
@@ -75,6 +84,7 @@ generate_messages(
   DEPENDENCIES
   actionlib_msgs
   geometry_msgs
+  std_msgs
 )
 
 ################################################
@@ -164,8 +174,9 @@ include_directories(
 # Mark executable scripts (Python etc.) for installation
 # in contrast to setup.py, you can choose the destination
 catkin_install_python(PROGRAMS
-  nodes/person_following.py
-  nodes/stop_listener.py
+  nodes/person_following_sam2_node.py
+  nodes/person_following_sam2_service.py
+  # nodes/stop_listener.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

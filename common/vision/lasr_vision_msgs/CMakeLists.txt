@@ -67,6 +67,7 @@ add_message_files(
   Keypoint3D.msg
   KeypointList.msg
   Keypoint3DList.msg
+  LangSamDetection.msg
 )
 
 ## Generate services in the 'srv' folder
@@ -93,6 +94,7 @@ add_service_files(
   ClipLearnFace.srv
   ClipRecogniseFace.srv
   GroundedSam.srv
+  LangSam.srv
 )
 
 # Generate actions in the 'action' folder

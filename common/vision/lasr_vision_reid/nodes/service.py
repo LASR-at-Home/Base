@@ -7,6 +7,11 @@ import torchreid
 import torch
 from torchvision import transforms
 from PIL import Image as PILImage
+<<<<<<< HEAD
+=======
+import os
+import rospkg
+>>>>>>> main
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 import cv2

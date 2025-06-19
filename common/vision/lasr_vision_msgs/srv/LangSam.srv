@@ -1,0 +1,9 @@
+# Text prompt
+string prompt
+
+# Image to run inference on
+sensor_msgs/Image image_raw
+
+---
+# Segmentations and other info
+lasr_vision_msgs/LangSamDetection[] detections
