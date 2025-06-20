@@ -56,6 +56,10 @@ if __name__ == "__main__":
     max_people_on_sofa = rospy.get_param("/receptionist/max_people_on_sofa")
 
     table_area_param = rospy.get_param("/receptionist/table_area")
+    table_point_param = rospy.get_param("/receptionist/table_point")
+    left_table_area_param = rospy.get_param("/receptionist/left_table_area")
+    right_table_area_param = rospy.get_param("/receptionist/right_table_area")
+    centre_table_area_param = rospy.get_param("/receptionist/centre_table_area")
 
     seat_area = ShapelyPolygon(seat_area_param)
     assert seat_area.is_valid, "Seat area is not valid"
@@ -73,6 +77,10 @@ if __name__ == "__main__":
 
     sofa_point = Point(**sofa_point_param)
     table_area = ShapelyPolygon(table_area_param)
+    left_table_area = ShapelyPolygon(left_table_area_param)
+    right_table_area = ShapelyPolygon(right_table_area_param)
+    centre_table_area = ShapelyPolygon(centre_table_area_param)
+    table_point = Point(**table_point_param)
     # exclude the sofa area from the seat area
     # seat_area = seat_area.difference(sofa_area)
 
@@ -112,7 +120,11 @@ if __name__ == "__main__":
         wait_pose,
         wait_area,
         table_pose,
+        table_point,
         table_area,
+        left_table_area,
+        right_table_area,
+        centre_table_area,
         seat_pose,
         search_motions,
         seat_area,
@@ -125,7 +137,6 @@ if __name__ == "__main__":
             "dataset": "receptionist",
             "detection": False,
         },
-        sweep=sweep,
         max_people_on_sofa=max_people_on_sofa,
     )
 

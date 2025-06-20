@@ -7,4 +7,4 @@ string interests
 string interest_commonality
 
 # Full response by the LLM
-string llm_response
+string llm_response 

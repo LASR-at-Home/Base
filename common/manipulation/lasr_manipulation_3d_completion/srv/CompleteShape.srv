@@ -1,0 +1,4 @@
+sensor_msgs/PointCloud2 input_cloud
+---
+sensor_msgs/PointCloud2 completed_cloud
+bool success

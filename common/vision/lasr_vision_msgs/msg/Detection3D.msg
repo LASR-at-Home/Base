@@ -12,5 +12,5 @@ int32[] xywh
 # This will be empty if a segmentation model was not used
 int32[] xyseg
 
-# Point in camera frame
+# Point in target frame
 geometry_msgs/Point point

@@ -1,0 +1,4 @@
+string system_prompt
+string prompt
+---
+string output

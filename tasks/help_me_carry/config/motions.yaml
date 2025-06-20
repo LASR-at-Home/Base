@@ -1,0 +1,8 @@
+play_motion:
+  motions:
+    stow_bag:
+      joints: [arm_1_joint, arm_2_joint, arm_3_joint, arm_4_joint, arm_5_joint, arm_6_joint, arm_7_joint]
+      points:
+      - positions: [2.5, -1.20, -1.30, 2.26, 1.91, 1.39, -1.77]
+        time_from_start: 0.0
+      

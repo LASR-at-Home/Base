@@ -67,11 +67,13 @@ add_message_files(
   Keypoint3D.msg
   KeypointList.msg
   Keypoint3DList.msg
+  LangSamDetection.msg
 )
 
 ## Generate services in the 'srv' folder
 add_service_files(
   FILES
+  AddFace.srv
   YoloDetection.srv
   YoloDetection3D.srv
   YoloPoseDetection.srv
@@ -79,6 +81,7 @@ add_service_files(
   BodyPixMaskDetection.srv
   BodyPixKeypointDetection.srv
   Recognise.srv
+  Recognise3D.srv
   LearnFace.srv
   Vqa.srv
   PointingDirection.srv
@@ -91,6 +94,7 @@ add_service_files(
   ClipLearnFace.srv
   ClipRecogniseFace.srv
   GroundedSam.srv
+  LangSam.srv
 )
 
 # Generate actions in the 'action' folder

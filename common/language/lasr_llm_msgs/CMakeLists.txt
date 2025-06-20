@@ -57,6 +57,7 @@ add_service_files(
   FILES
   ReceptionistQueryLlm.srv
   StoringGroceriesQueryLlm.srv
+  Llm.srv
 )
 
 ## Generate actions in the 'action' folder

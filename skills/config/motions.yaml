@@ -147,3 +147,9 @@ play_motion:
       points:
       - positions: [0.2, -0.35, 0.0]
         time_from_start: 0.0
+
+    pre_point:
+      joints: [ arm_1_joint, arm_2_joint, arm_3_joint, arm_4_joint, arm_5_joint, arm_6_joint, arm_7_joint ]
+      points:
+      - positions: [1.49, -1.50, -3.16, 1.81, -1.58, 1.39, 0.0]
+        time_from_start: 0.0

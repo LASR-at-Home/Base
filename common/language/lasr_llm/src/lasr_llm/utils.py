@@ -18,7 +18,7 @@ def parse_llm_output_to_dict(output: str, fields: List[str]) -> Dict:
             field_dict[field] = match.group(1).strip()
     return field_dict
 
-    
+
 def truncate_llm_output(output: str) -> str:
     """
     If the output is too long, truncate it to a reasonable length, after the first sentence.
@@ -30,7 +30,7 @@ def truncate_llm_output(output: str) -> str:
         return sentences[0]
     else:
         return output
-    
+
 
 def create_query(text: str, task: str, fields: Optional[List[str]] = None):
     """
@@ -47,9 +47,9 @@ def create_query(text: str, task: str, fields: Optional[List[str]] = None):
             fields is not None
         ), "Fields must be provided for the 'extract_fields' task."
         field_str = "\n".join([f"- {field}" for field in fields])
-        query = f"Extract the following fields from the sentence:\n{field_str}\n\nSentence: {text}."
+        query = f"Extract the following fields from the sentence:\n{field_str}\n\n For example, the sentence ' my favourite drink is cocal cola' should have the field favourite_drink matched to 'coca cola' \n\n Sentence: {text}."
     elif task == "interest_commonality":
-        query = f"Extract the commonality (if it exists) of the following interests:\n\nSentences: {text}."
+        query = f"Extract the commonality (if it exists) of the following interests of two people:\n\nSentences: {text}. \n\n For example, the sentences 'I like football' and 'I like basketball' should have the commonality 'you both like sports'. If there is no common interest, say 'you have no common interests'\n\n"
         # query = f"Extract the commonality (if it exists) of the following interests:\n\nInterests: {text}.\nFormat it as a sentence: 'you both have interests which are...'"
     else:
         raise ValueError(

@@ -167,6 +167,7 @@ include_directories(
 catkin_install_python(PROGRAMS
   nodes/receptionist_service.py
   nodes/storing_groceries_service.py
+  nodes/llm.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
