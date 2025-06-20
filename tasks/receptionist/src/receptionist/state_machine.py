@@ -138,7 +138,7 @@ class Receptionist(smach.StateMachine):
                 },
             )
 
-            self._guide_guest(guest_id=1).
+            self._guide_guest(guest_id=1)
 
             smach.StateMachine.add(
                 "SEAT_GUEST_1",
@@ -151,7 +151,7 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "INTRODUCE_GUEST_1",
-                Introduce(),
+                Introduce(guest_to_introduce="guest1"),
                 transitions={
                     "succeeded": "SAY_RETURN_WAITING_AREA",
                     "failed": "SAY_RETURN_WAITING_AREA",
@@ -233,7 +233,7 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "INTRODUCE_GUEST_2",
-                Introduce(),
+                Introduce(guest_to_introduce="guest2"),
                 transitions={
                     "succeeded": "SAY_GOODBYE",
                     "failed": "SAY_GOODBYE",

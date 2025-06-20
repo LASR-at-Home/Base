@@ -138,8 +138,6 @@ class Introduce(smach.StateMachine):
             outcomes=["succeeded", "failed"],
             input_keys=["guest_data"],
         )
-        assert not (guest_to_introduce_to is None and not everyone)
-
         with self:
 
             smach.StateMachine.add(
