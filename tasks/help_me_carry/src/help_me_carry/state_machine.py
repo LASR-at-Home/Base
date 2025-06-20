@@ -4,29 +4,30 @@ import smach_ros
 
 # from help_me_carry import follow_person, go_to_bag, pick_up_bag
 from help_me_carry import GoToBag, BagPickAndPlace
+from lasr_skills import FollowPerson
 
 
 class CarryMyLuggage(smach.StateMachine):
     def __init__(self):
         smach.StateMachine.__init__(self, outcomes=["succeeded", "failed"])
         with self:
+            smach.StateMachine.add(
+                "FOLLOW_PERSON",
+                FollowPerson(),
+                transitions={"succeeded": "succeeded", "failed": "succeeded"},
+            )
+
             # smach.StateMachine.add(
-            #     "FOLLOW_PERSON",
-            #     follow_person.FollowPerson(),
-            #     transitions={"succeeded": "GO_TO_BAG", "failed": "GO_TO_BAG"},
+            #     "GO_TO_BAG",
+            #     GoToBag(),
+            #     transitions={"succeeded": "PICK_UP_BAG", "failed": "failed"},
             # )
 
-            smach.StateMachine.add(
-                "GO_TO_BAG",
-                GoToBag(),
-                transitions={"succeeded": "PICK_UP_BAG", "failed": "failed"},
-            )
-
-            smach.StateMachine.add(
-                "PICK_UP_BAG",
-                BagPickAndPlace(),
-                transitions={"succeeded": "succeeded", "failed": "failed"},
-            )
+            # smach.StateMachine.add(
+            #     "PICK_UP_BAG",
+            #     BagPickAndPlace(),
+            #     transitions={"succeeded": "succeeded", "failed": "failed"},
+            # )
 
 
 def main():

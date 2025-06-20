@@ -32,7 +32,7 @@ class FollowPersonState(smach.State):
         self,
         max_following_distance: float = 3.5,
         max_speed: float = 0.4,
-        stopping_distance: float = 1.5,
+        stopping_distance: float = 2.0,
         speak: bool = True,
         timeout: float = 0.0,
     ):
