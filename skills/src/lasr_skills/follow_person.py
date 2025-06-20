@@ -18,6 +18,7 @@ from actionlib_msgs.msg import GoalStatus
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from control_msgs.msg import PointHeadAction, PointHeadGoal
 from pal_interaction_msgs.msg import TtsAction, TtsGoal
+from nav_msgs.msg import Odometry
 from dynamic_reconfigure.srv import Reconfigure
 from dynamic_reconfigure.msg import Config, BoolParameter, DoubleParameter, IntParameter
 from std_srvs.srv import Empty
@@ -147,7 +148,7 @@ class PersonFollowingUserData(smach.UserData):
         self.recovery_timeout_duration = rospy.Duration(self.recovery_timeout)
 
     def update_parameters(self, **params):
-        """Update parameters after initialization"""
+        """Update parameters after initialisation"""
         for key, value in params.items():
             if hasattr(self, key):
                 setattr(self, key, value)
@@ -307,7 +308,7 @@ class PersonFollowingStateMachine(smach.StateMachine):
     """
 
     def __init__(self, camera_name="xtion", **config_params):
-        # Initialize as StateMachine with standard outcomes
+        # Initialise as StateMachine with standard outcomes
         smach.StateMachine.__init__(self, outcomes=['succeeded', 'failed', 'preempted'])
 
         # Store camera name
@@ -318,7 +319,7 @@ class PersonFollowingStateMachine(smach.StateMachine):
         self.depth_topic = f"/{self.camera}/depth_registered/image_raw"
         self.depth_camera_info_topic = f"/{self.camera}/depth_registered/camera_info"
 
-        # Initialize UserData with configuration parameters
+        # Initialise UserData with configuration parameters
         self.userdata = PersonFollowingUserData(**config_params)
 
         # Setup synchronized camera subscribers for continuous data update
@@ -377,7 +378,14 @@ class PersonFollowingStateMachine(smach.StateMachine):
         self.buffer = tf.Buffer(cache_time=rospy.Duration.from_sec(10.0))
         self.listener = tf.TransformListener(self.buffer)
 
-        # Initialize head scan positions for recovery behavior
+        self.odom_sub = rospy.Subscriber(
+            "/mobile_base_controller/odom",
+            Odometry,
+            self._robot_pose_callback,
+            queue_size=1
+        )
+
+        # Initialise head scan positions for recovery behavior
         self.userdata.recovery_scan_positions = []
         for angle in self.userdata.recovery_scan_angles:
             angle_rad = math.radians(angle)
@@ -432,20 +440,20 @@ class PersonFollowingStateMachine(smach.StateMachine):
         # Build the state machine structure
         self._build_state_machine()
 
-        rospy.loginfo("Person following state machine initialized")
+        rospy.loginfo("Person following state machine initialised")
 
     def _build_state_machine(self):
         """Build the complete state machine structure"""
         with self:
-            smach.StateMachine.add('INITIALIZING',
-                                   InitializingState(self),
-                                   transitions={'initialized': 'PERSON_DETECTION',
+            smach.StateMachine.add('Initialising',
+                                   InitialisingState(self),
+                                   transitions={'initialised': 'PERSON_DETECTION',
                                                 'failed': 'failed'})
 
             smach.StateMachine.add('PERSON_DETECTION',
                                    PersonDetectionState(self),
                                    transitions={'person_detected': 'TRACKING_ACTIVE',
-                                                'no_person_found': 'failed',
+                                                'no_person_found': 'PERSON_DETECTION',
                                                 'failed': 'failed'})
 
             smach.StateMachine.add('TRACKING_ACTIVE',
@@ -478,6 +486,10 @@ class PersonFollowingStateMachine(smach.StateMachine):
         Execute the state machine
         Can be called directly or as part of a larger state machine
         """
+        # Merge incoming userdata with state machine's userdata (state machine takes priority)
+        if userdata is not None:
+            self._merge_userdata(userdata)
+
         # Initialize trajectory and timing
         self.userdata.person_trajectory.header.frame_id = "odom"
         self.userdata.start_time = rospy.Time.now()
@@ -488,10 +500,43 @@ class PersonFollowingStateMachine(smach.StateMachine):
         # Calculate final metrics
         self.userdata.following_duration = (rospy.Time.now() - self.userdata.start_time).to_sec()
 
+        # Copy results back to incoming userdata if provided
+        if userdata is not None:
+            self._copy_results_to_userdata(userdata)
+
         # Cleanup resources
         self._cleanup()
 
         return outcome
+
+    def _merge_userdata(self, incoming_userdata):
+        """Merge incoming userdata with state machine userdata, keeping state machine values on conflict"""
+        for key in dir(incoming_userdata):
+            # Skip private attributes and methods
+            if key.startswith('_') or callable(getattr(incoming_userdata, key)):
+                continue
+
+            # Only copy if our userdata doesn't have this attribute
+            if not hasattr(self.userdata, key):
+                try:
+                    setattr(self.userdata, key, getattr(incoming_userdata, key))
+                    rospy.logdebug(f"Merged incoming userdata: {key}")
+                except:
+                    pass  # Skip if cannot set attribute
+
+    def _copy_results_to_userdata(self, target_userdata):
+        """Copy execution results back to target userdata"""
+        result_keys = [
+            'distance_traveled', 'following_duration', 'completion_reason',
+            'person_trajectory', 'target_list', 'is_person_detected'
+        ]
+
+        for key in result_keys:
+            if hasattr(self.userdata, key):
+                try:
+                    setattr(target_userdata, key, getattr(self.userdata, key))
+                except:
+                    pass  # Skip if cannot set attribute
 
     def _sensor_callback(self, image: Image, depth_image: Image, depth_camera_info: CameraInfo):
         """Continuous callback for synchronized camera data"""
@@ -499,22 +544,12 @@ class PersonFollowingStateMachine(smach.StateMachine):
         self.userdata.depth_image = depth_image
         self.userdata.camera_info = depth_camera_info
 
-        # Update robot pose if TF is available
-        if self.buffer:
-            try:
-                transform = self.buffer.lookup_transform(
-                    "odom", "base_link", rospy.Time(0), rospy.Duration(1.0)
-                )
-                robot_pose = PoseStamped()
-                robot_pose.header.frame_id = "odom"
-                robot_pose.header.stamp = rospy.Time.now()
-                robot_pose.pose.position.x = transform.transform.translation.x
-                robot_pose.pose.position.y = transform.transform.translation.y
-                robot_pose.pose.position.z = transform.transform.translation.z
-                robot_pose.pose.orientation = transform.transform.rotation
-                self.userdata.robot_pose = robot_pose
-            except:
-                pass  # Continue if TF lookup fails
+    def _robot_pose_callback(self, msg):
+        """Callback for robot odometry updates"""
+        robot_pose = PoseStamped()
+        robot_pose.header = msg.header
+        robot_pose.pose = msg.pose.pose
+        self.userdata.robot_pose = robot_pose
 
     def _detection3d_callback(self, msg: Detection3DArray):
         """Callback for SAM2 3D detections - updates userdata"""
@@ -661,17 +696,59 @@ class PersonFollowingStateMachine(smach.StateMachine):
         )
         self._look_at_point(point, target_frame="base_link")
 
+    def _look_down_point(self, target_point: Point = None, target_frame: str = "map"):
+        """ Look down towards the target direction or center if no target provided. """
+        if target_point is not None:
+            # Transform target point to base_link frame to get direction
+            try:
+                target_pose = PoseStamped()
+                target_pose.header.frame_id = target_frame
+                target_pose.header.stamp = rospy.Time.now()
+                target_pose.pose.position = target_point
+                target_pose.pose.orientation.w = 1.0
+
+                # Transform to base_link frame
+                target_in_base = self._tf_pose(target_pose, "base_link")
+
+                # Calculate direction towards target but look down
+                x_dir = target_in_base.pose.position.x
+                y_dir = target_in_base.pose.position.y
+
+                # Normalize the direction and set distance
+                distance = 3.0
+                if x_dir != 0 or y_dir != 0:
+                    norm = math.sqrt(x_dir**2 + y_dir**2)
+                    x_dir = (x_dir / norm) * distance
+                    y_dir = (y_dir / norm) * distance
+                else:
+                    # Default to forward if target is directly above/below
+                    x_dir = distance
+                    y_dir = 0.0
+
+                # Look down towards the target direction
+                point = Point(x=x_dir, y=y_dir, z=0.5)
+
+            except Exception as e:
+                rospy.logwarn(f"Failed to transform target point: {e}")
+                # Fall back to center point
+                point = Point(x=3.0, y=0.0, z=0.5)
+        else:
+            # Default center point when no target provided
+            point = Point(x=3.0, y=0.0, z=0.5)
+
+        self._look_at_point(point, target_frame="base_link")
+
 
 # State classes remain the same but without the IdleState
-class InitializingState(smach.State):
-    """Initialize tracking and setup systems"""
+class InitialisingState(smach.State):
+    """Initialise tracking and setup systems"""
 
     def __init__(self, sm_manager):
-        smach.State.__init__(self, outcomes=['initialized', 'failed'])
+        smach.State.__init__(self, outcomes=['initialised', 'failed'])
         self.sm_manager = sm_manager
 
     def execute(self, userdata):
-        rospy.loginfo("Initializing person following system")
+        rospy.loginfo("Initialising person following system")
 
         # Wait for sensor data to be available
         while not rospy.is_shutdown():
@@ -681,7 +758,7 @@ class InitializingState(smach.State):
                 break
             rospy.sleep(0.1)
 
-        # Initialize tracking data
+        # Initialise tracking data
         userdata.target_list = []
         userdata.person_trajectory = PoseArray()
         userdata.person_trajectory.header.frame_id = "odom"
@@ -692,8 +769,8 @@ class InitializingState(smach.State):
         if userdata.robot_pose:
             userdata.last_position = userdata.robot_pose
 
-        rospy.loginfo("Initialization complete")
-        return 'initialized'
+        rospy.loginfo("Initialisation complete")
+        return 'initialised'
 
 
 class PersonDetectionState(smach.State):
@@ -920,7 +997,7 @@ class NavigationState(smach.State):
 
         # Compute goal orientation to face the person
         last_pose = userdata.target_list[-1] if userdata.target_list else userdata.current_goal
-        goal_orientation = self.sm_manager._compute_face_quat(userdata.current_goal, last_pose)
+        goal_orientation = _compute_face_quat(userdata.current_goal, last_pose)
 
         pose_with_orientation = Pose(
             position=userdata.current_goal.position,
@@ -986,7 +1063,7 @@ class RecoveryScanningState(smach.State):
             self.sm_manager.move_base_client.cancel_all_goals()
         userdata.is_navigation_active = False
 
-        # Initialize recovery mode
+        # Initialise recovery mode
         userdata.recovery_mode_active = True
         userdata.current_scan_index = 0
         userdata.recovery_start_time = rospy.Time.now()
