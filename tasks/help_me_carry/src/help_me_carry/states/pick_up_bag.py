@@ -2,52 +2,32 @@
 
 import rospy
 import cv2
-import torch
 import numpy as np
-import os
+import math
+import copy
 import actionlib
 import tf
 import tf.transformations as tft
 
-import copy
-import math
-
-import smach
-
 from sensor_msgs.msg import Image, JointState
 from cv_bridge import CvBridge
 from geometry_msgs.msg import PoseStamped
-from segment_anything import sam_model_registry, SamPredictor
-from moveit_msgs import *
 from moveit_commander import (
     MoveGroupCommander,
     roscpp_initialize,
     roscpp_shutdown,
     PlanningSceneInterface,
 )
-
 from message_filters import Subscriber, ApproximateTimeSynchronizer
 from control_msgs.msg import FollowJointTrajectoryAction, FollowJointTrajectoryGoal
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 from pal_interaction_msgs.msg import TtsAction, TtsGoal, TtsText
 from play_motion_msgs.msg import PlayMotionAction, PlayMotionGoal
-from controller_manager_msgs.srv import SwitchController, SwitchControllerRequest
-from play_motion_msgs.msg import PlayMotionGoal, PlayMotionAction
-from sensor_msgs.msg import PointCloud2, PointField
-import sensor_msgs.point_cloud2 as pc2
-from geometry_msgs.msg import Point, Pose, PoseStamped, Quaternion, Vector3Stamped
-from std_msgs.msg import Int64, Header
-from std_srvs.srv import Empty
-from visualization_msgs.msg import Marker, MarkerArray
 from moveit_msgs.srv import GetPlanningScene, ApplyPlanningSceneRequest
-from moveit_msgs.msg import (
-    PlanningScene,
-    AllowedCollisionEntry,
-    Grasp,
-    GripperTranslation,
-)
-from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
+from moveit_msgs.msg import AllowedCollisionEntry
 from lasr_vision_msgs.srv import LangSam, LangSamRequest
+
+import smach
 
 
 def allow_collisions_with_object(obj_name, scene):
