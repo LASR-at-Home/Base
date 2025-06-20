@@ -164,122 +164,6 @@ class PersonFollowingUserData(smach.UserData):
         self.recovery_timeout_duration = rospy.Duration(self.recovery_timeout)
 
 
-class PersonFollowingUserData(smach.UserData):
-    """UserData structure for person following state machine"""
-
-    def __init__(self, **config_params):
-        super(PersonFollowingUserData, self).__init__()
-
-        # Sensor data - continuously updated
-        self.current_image = None
-        self.depth_image = None
-        self.camera_info = None
-        self.robot_pose = None
-
-        # Tracking data
-        self.track_id = None
-        self.track_bbox = None
-        self.target_list = []
-        self.person_trajectory = PoseArray()
-        self.newest_detection = None
-        self.detection_quality_metrics = {}
-
-        # Navigation data
-        self.current_goal = None
-        self.navigation_state = None
-        self.distance_to_target = float('inf')
-        self.path_history = []
-
-        # Timing data
-        self.last_good_detection_time = rospy.Time.now()
-        self.last_movement_time = rospy.Time.now()
-        self.recovery_start_time = None
-        self.added_new_target_time = rospy.Time.now()
-        self.look_at_point_time = rospy.Time.now()
-        self.last_distance_warning_time = rospy.Time.now()
-        self.last_scan_position_time = rospy.Time.now()
-
-        # Status flags
-        self.is_person_detected = False
-        self.is_tracking_stable = False
-        self.is_navigation_active = False
-        self.recovery_mode_active = False
-        self.condition_flag_state = True
-        self.first_tracking_done = False
-
-        # Recovery behavior data
-        self.recovery_scan_positions = []
-        self.current_scan_index = 0
-
-        # Result data
-        self.distance_traveled = 0.0
-        self.following_duration = 0.0
-        self.completion_reason = "UNKNOWN"
-        self.start_time = rospy.Time.now()
-        self.last_position = None
-
-        # Configuration parameters with defaults
-        self.target_boundary = 1.0
-        self.new_goal_threshold_min = 0.25
-        self.new_goal_threshold_max = 2.5
-        self.stopping_distance = 0.75
-        self.static_speed = 0.0015
-        self.max_speed = 0.4
-        self.max_following_distance = 2.5
-        self.speak = True
-        self.timeout = 0.0
-
-        # Timeout durations (in seconds)
-        self.good_detection_timeout = 5.0
-        self.target_moving_timeout = 10.0
-        self.distance_warning_interval = 5.0
-        self.scan_position_duration = 1.5
-        self.recovery_timeout = 30.0
-
-        # Detection quality parameters
-        self.max_distance_threshold = 0.9
-        self.min_area_threshold = 0.01
-        self.min_confidence_threshold = 0.5
-
-        # YOLO parameters
-        self.yolo_model = "yolo11n-pose.pt"
-        self.yolo_confidence = 0.5
-
-        # Head control parameters
-        self.head_movement_interval = 0.35
-        self.head_min_duration = 0.1
-        self.head_max_velocity = 0.33
-        self.head_pointing_frame = "xtion_rgb_optical_frame"
-
-        # Recovery scan parameters
-        self.recovery_scan_angles = [-60, -30, 0, 30, 60, 30, 0, -30]
-        self.recovery_scan_distance = 3.0
-        self.recovery_scan_height = 1.3
-
-        # Look center point parameters
-        self.center_look_point = [3.0, 0.0, 1.3]
-
-        # Navigation parameters
-        self.costmap_width = 4
-        self.costmap_height = 4
-        self.inflation_radius = 0.2
-
-        # Override with provided parameters
-        for key, value in config_params.items():
-            if hasattr(self, key):
-                setattr(self, key, value)
-                rospy.loginfo(f"Set parameter {key} = {value}")
-            else:
-                rospy.logwarn(f"Unknown parameter: {key}")
-
-        # Convert timeout parameters to Duration objects
-        self.good_detection_timeout_duration = rospy.Duration(self.good_detection_timeout)
-        self.target_moving_timeout_duration = rospy.Duration(self.target_moving_timeout)
-        self.distance_warning_interval_duration = rospy.Duration(self.distance_warning_interval)
-        self.scan_position_duration = rospy.Duration(self.scan_position_duration)
-        self.recovery_timeout_duration = rospy.Duration(self.recovery_timeout)
-
-
 def _euclidean_distance(p1: Union[Pose, PoseStamped], p2: Union[Pose, PoseStamped]) -> float:
     """Calculate Euclidean distance between two poses"""
     pose1 = p1.pose if isinstance(p1, PoseStamped) else p1
@@ -300,7 +184,15 @@ def _compute_face_quat(p1: Pose, p2: Pose) -> Quaternion:
     return Quaternion(x, y, z, w)
 
 
-class PersonFollowingStateMachine(smach.StateMachine):
+def _discover_userdata_keys(ud):
+    keys = set()
+    keys.update(ud.__dict__.keys())
+    if hasattr(ud, '_data') and isinstance(ud._data, dict):
+        keys.update(ud._data.keys())
+    return [k for k in keys if not k.startswith('_')]
+
+
+class FollowPerson(smach.StateMachine):
     """
     Complete person following state machine that can be used as:
     1. Standalone state machine - execute directly
@@ -308,8 +200,15 @@ class PersonFollowingStateMachine(smach.StateMachine):
     """
 
     def __init__(self, camera_name="xtion", **config_params):
-        # Initialise as StateMachine with standard outcomes
-        smach.StateMachine.__init__(self, outcomes=['succeeded', 'failed', 'preempted'])
+        # Get all attribute names from PersonFollowingUserData for dynamic key declaration
+        _temp_userdata = PersonFollowingUserData()
+        self._all_userdata_keys = _discover_userdata_keys(_temp_userdata)
+
+        # Initialise as StateMachine with dynamic input/output keys
+        smach.StateMachine.__init__(self,
+                                    outcomes=['succeeded', 'failed'],
+                                    input_keys=self._all_userdata_keys,
+                                    output_keys=self._all_userdata_keys)
 
         # Store camera name
         self.camera = camera_name
@@ -372,7 +271,11 @@ class PersonFollowingStateMachine(smach.StateMachine):
         self.point_head_client.wait_for_server()
 
         self.tts_client = actionlib.SimpleActionClient("tts", TtsAction)
-        self.tts_client.wait_for_server()
+        if not self.tts_client.wait_for_server(timeout=rospy.Duration(5.0)):
+            rospy.logwarn("TTS server not available after 5 seconds timeout")
+            self.tts_client = False
+        else:
+            rospy.loginfo("TTS server connected successfully")
 
         # Setup TF buffer and listener
         self.buffer = tf.Buffer(cache_time=rospy.Duration.from_sec(10.0))
@@ -481,62 +384,78 @@ class PersonFollowingStateMachine(smach.StateMachine):
                                    transitions={'warning_complete': 'TRACKING_ACTIVE',
                                                 'failed': 'failed'})
 
-    def execute(self, userdata=None):
+    def _sync_userdata_to_state_data(self, state_userdata):
+        """Sync StateMachine userdata to state execution userdata"""
+        for key in self._all_userdata_keys:
+            if hasattr(self.userdata, key):
+                try:
+                    setattr(state_userdata, key, getattr(self.userdata, key))
+                except:
+                    pass
+
+    def execute(self, external_userdata=None):
         """
         Execute the state machine
         Can be called directly or as part of a larger state machine
         """
-        # Merge incoming userdata with state machine's userdata (state machine takes priority)
-        if userdata is not None:
-            self._merge_userdata(userdata)
+        # Create execution userdata and populate with StateMachine data
+        execution_userdata = smach.UserData()
+        self._sync_userdata_to_state_data(execution_userdata)
 
-        # Initialize trajectory and timing
-        self.userdata.person_trajectory.header.frame_id = "odom"
-        self.userdata.start_time = rospy.Time.now()
+        # Merge external userdata if provided
+        if external_userdata is not None:
+            self._merge_userdata(execution_userdata, external_userdata)
 
-        # Execute the state machine
-        outcome = smach.StateMachine.execute(self, userdata)
+        # Initialize execution-specific data
+        execution_userdata.person_trajectory.header.frame_id = "odom"
+        execution_userdata.start_time = rospy.Time.now()
+
+        # Execute the state machine with populated userdata
+        outcome = smach.StateMachine.execute(self, execution_userdata)
 
         # Calculate final metrics
-        self.userdata.following_duration = (rospy.Time.now() - self.userdata.start_time).to_sec()
+        execution_userdata.following_duration = (rospy.Time.now() - execution_userdata.start_time).to_sec()
 
-        # Copy results back to incoming userdata if provided
-        if userdata is not None:
-            self._copy_results_to_userdata(userdata)
+        # Sync results back to StateMachine userdata
+        self._sync_userdata_to_state_data = lambda ud: None  # Temporarily disable to avoid recursion
+        for key in self._all_userdata_keys:
+            if hasattr(execution_userdata, key):
+                try:
+                    setattr(self.userdata, key, getattr(execution_userdata, key))
+                except:
+                    pass
+
+        # Copy results back to external userdata if provided
+        if external_userdata is not None:
+            self._copy_results_to_userdata(external_userdata, execution_userdata)
 
         # Cleanup resources
         self._cleanup()
 
         return outcome
 
-    def _merge_userdata(self, incoming_userdata):
-        """Merge incoming userdata with state machine userdata, keeping state machine values on conflict"""
-        for key in dir(incoming_userdata):
-            # Skip private attributes and methods
-            if key.startswith('_') or callable(getattr(incoming_userdata, key)):
-                continue
+    def _merge_userdata(self, target_userdata, source_userdata):
+        """Merge source userdata into target userdata"""
+        for key in dir(source_userdata):
+            if not key.startswith('_') and not callable(getattr(source_userdata, key)):
+                if not hasattr(target_userdata, key):
+                    try:
+                        setattr(target_userdata, key, getattr(source_userdata, key))
+                    except:
+                        pass
 
-            # Only copy if our userdata doesn't have this attribute
-            if not hasattr(self.userdata, key):
-                try:
-                    setattr(self.userdata, key, getattr(incoming_userdata, key))
-                    rospy.logdebug(f"Merged incoming userdata: {key}")
-                except:
-                    pass  # Skip if cannot set attribute
-
-    def _copy_results_to_userdata(self, target_userdata):
+    def _copy_results_to_userdata(self, target_userdata, source_userdata):
         """Copy execution results back to target userdata"""
         result_keys = [
             'distance_traveled', 'following_duration', 'completion_reason',
             'person_trajectory', 'target_list', 'is_person_detected'
         ]
-
         for key in result_keys:
-            if hasattr(self.userdata, key):
+            if hasattr(source_userdata, key):
                 try:
-                    setattr(target_userdata, key, getattr(self.userdata, key))
+                    setattr(target_userdata, key, getattr(source_userdata, key))
                 except:
-                    pass  # Skip if cannot set attribute
+                    pass
 
     def _sensor_callback(self, image: Image, depth_image: Image, depth_camera_info: CameraInfo):
         """Continuous callback for synchronized camera data"""
@@ -562,7 +481,16 @@ class PersonFollowingStateMachine(smach.StateMachine):
                     self.userdata.newest_detection = detection
 
                 if is_good_quality:
-                    self.condition_frame_flag_pub.publish(Bool(data=True))
+                    for _retry in range(5):
+                        try:
+                            self.condition_frame_flag_pub.publish(Bool(data=True))
+                            break  # success
+                        except Exception as err:
+                            rospy.logdebug(f"Publish good-quality flag failed (attempt {_retry + 1}/5): {err}")
+                            rospy.sleep(0.1)
+                    else:
+                        rospy.logwarn("Failed to publish good-quality flag after 5 attempts")
+
                     self.userdata.condition_flag_state = True
                     self.userdata.last_good_detection_time = rospy.Time.now()
 
@@ -571,7 +499,16 @@ class PersonFollowingStateMachine(smach.StateMachine):
                     if odom_pose:
                         self._update_target_list(odom_pose)
                 else:
-                    self.condition_frame_flag_pub.publish(Bool(data=False))
+                    for _retry in range(5):
+                        try:
+                            self.condition_frame_flag_pub.publish(Bool(data=False))
+                            break  # success
+                        except Exception as err:
+                            rospy.logdebug(f"Publish bad-quality flag failed (attempt {_retry + 1}/5): {err}")
+                            rospy.sleep(0.1)
+                    else:
+                        rospy.logwarn("Failed to publish bad-quality flag after 5 attempts")
+
                     self.userdata.condition_flag_state = False
                 break
 
@@ -659,6 +596,9 @@ class PersonFollowingStateMachine(smach.StateMachine):
 
     def _tts(self, text: str, wait: bool = False):
         """Text-to-speech with speaking flag check"""
+        if not self.tts_client:
+            rospy.logwarn(f"TTS client not initialised, you are saying '{text}'.")
+            return
         if self.userdata.speak:
             tts_goal = TtsGoal()
             tts_goal.rawtext.text = text
@@ -744,7 +684,15 @@ class InitialisingState(smach.State):
     """Initialise tracking and setup systems"""
 
     def __init__(self, sm_manager):
-        smach.State.__init__(self, outcomes=['initialised', 'failed'])
+        # Get all attribute names from PersonFollowingUserData for dynamic key declaration
+        _temp_userdata = PersonFollowingUserData()
+        _all_userdata_keys = _discover_userdata_keys(_temp_userdata)
+
+        smach.State.__init__(self,
+                             outcomes=['initialised', 'failed'],
+                             input_keys=_all_userdata_keys,
+                             output_keys=_all_userdata_keys)
+
         self.sm_manager = sm_manager
 
     def execute(self, userdata):
@@ -760,8 +708,9 @@ class InitialisingState(smach.State):
 
         # Initialise tracking data
         userdata.target_list = []
-        userdata.person_trajectory = PoseArray()
-        userdata.person_trajectory.header.frame_id = "odom"
+        person_trajectory = PoseArray()
+        person_trajectory.header.frame_id = "odom"
+        userdata.person_trajectory = person_trajectory
         userdata.last_movement_time = rospy.Time.now()
         userdata.last_good_detection_time = rospy.Time.now()
         userdata.is_tracking_stable = False
@@ -777,7 +726,14 @@ class PersonDetectionState(smach.State):
     """Detect and select person to follow"""
 
     def __init__(self, sm_manager):
-        smach.State.__init__(self, outcomes=['person_detected', 'no_person_found', 'failed'])
+        # Get all attribute names from PersonFollowingUserData for dynamic key declaration
+        _temp_userdata = PersonFollowingUserData()
+        _all_userdata_keys = _discover_userdata_keys(_temp_userdata)
+
+        smach.State.__init__(self,
+                             outcomes=['person_detected', 'no_person_found', 'failed'],
+                             input_keys=_all_userdata_keys,
+                             output_keys=_all_userdata_keys)
         self.sm_manager = sm_manager
 
     def execute(self, userdata):
@@ -862,7 +818,7 @@ class PersonDetectionState(smach.State):
         userdata.condition_flag_state = True
         userdata.is_person_detected = True
 
-        rospy.loginfo(f"Started tracking person with ID {userdata.track_id}")
+        rospy.loginfo(f"Started tracking person with ID {nearest_index}")
         return 'person_detected'
 
 
@@ -871,8 +827,15 @@ class TrackingActiveState(smach.State):
     """Active tracking state - monitors target and decides on actions"""
 
     def __init__(self, sm_manager):
-        smach.State.__init__(self, outcomes=['navigate_to_target', 'target_lost',
-                                             'following_complete', 'distance_warning', 'failed'])
+        # Get all attribute names from PersonFollowingUserData for dynamic key declaration
+        _temp_userdata = PersonFollowingUserData()
+        _all_userdata_keys = _discover_userdata_keys(_temp_userdata)
+
+        smach.State.__init__(self,
+                             outcomes=['navigate_to_target', 'target_lost', 'following_complete', 'distance_warning',
+                                       'failed'],
+                             input_keys=_all_userdata_keys,
+                             output_keys=_all_userdata_keys)
         self.sm_manager = sm_manager
         self.previous_target = None
         self.just_started = True
@@ -889,7 +852,7 @@ class TrackingActiveState(smach.State):
         while not rospy.is_shutdown():
             # Update distance traveled
             if userdata.last_position and userdata.robot_pose:
-                distance_increment = self.sm_manager._euclidean_distance(
+                distance_increment = _euclidean_distance(
                     userdata.last_position, userdata.robot_pose
                 )
                 userdata.distance_traveled += distance_increment
@@ -946,7 +909,7 @@ class TrackingActiveState(smach.State):
         # Find suitable target pose within boundary
         for i in reversed(range(len(userdata.target_list))):
             if (userdata.target_boundary <=
-                    self.sm_manager._euclidean_distance(userdata.target_list[i], last_pose_in_list)):
+                    _euclidean_distance(userdata.target_list[i], last_pose_in_list)):
                 target_pose = userdata.target_list[i]
                 break
 
@@ -955,12 +918,12 @@ class TrackingActiveState(smach.State):
 
         # Check if target is different enough from previous
         if (self.previous_target and
-                self.sm_manager._euclidean_distance(target_pose, self.previous_target) <
+                _euclidean_distance(target_pose, self.previous_target) <
                 userdata.new_goal_threshold_min):
             return None
 
         if userdata.robot_pose:
-            distance_to_target = self.sm_manager._euclidean_distance(
+            distance_to_target = _euclidean_distance(
                 userdata.robot_pose.pose, target_pose
             )
 
@@ -986,7 +949,14 @@ class NavigationState(smach.State):
     """Handle navigation to target position"""
 
     def __init__(self, sm_manager):
-        smach.State.__init__(self, outcomes=['navigation_complete', 'target_lost', 'failed'])
+        # Get all attribute names from PersonFollowingUserData for dynamic key declaration
+        _temp_userdata = PersonFollowingUserData()
+        _all_userdata_keys = _discover_userdata_keys(_temp_userdata)
+
+        smach.State.__init__(self,
+                             outcomes=['navigation_complete', 'target_lost', 'failed'],
+                             input_keys=_all_userdata_keys,
+                             output_keys=_all_userdata_keys)
         self.sm_manager = sm_manager
 
     def execute(self, userdata):
@@ -1052,7 +1022,14 @@ class RecoveryScanningState(smach.State):
     """Recovery behavior when target is lost"""
 
     def __init__(self, sm_manager):
-        smach.State.__init__(self, outcomes=['target_recovered', 'recovery_failed', 'failed'])
+        # Get all attribute names from PersonFollowingUserData for dynamic key declaration
+        _temp_userdata = PersonFollowingUserData()
+        _all_userdata_keys = _discover_userdata_keys(_temp_userdata)
+
+        smach.State.__init__(self,
+                             outcomes=['target_recovered', 'recovery_failed', 'failed'],
+                             input_keys=_all_userdata_keys,
+                             output_keys=_all_userdata_keys)
         self.sm_manager = sm_manager
 
     def execute(self, userdata):
@@ -1094,6 +1071,7 @@ class RecoveryScanningState(smach.State):
                 rospy.loginfo("Target recovered during scanning!")
                 self.sm_manager._tts("Found you! Continuing to follow.", wait=False)
                 userdata.recovery_mode_active = False
+                userdata.last_movement_time = rospy.Time.now()
                 return 'target_recovered'
 
             # Move to next scan position
@@ -1118,14 +1096,21 @@ class DistanceWarningState(smach.State):
     """Handle distance warning when target is too far"""
 
     def __init__(self, sm_manager):
-        smach.State.__init__(self, outcomes=['warning_complete', 'failed'])
+        # Get all attribute names from PersonFollowingUserData for dynamic key declaration
+        _temp_userdata = PersonFollowingUserData()
+        _all_userdata_keys = _discover_userdata_keys(_temp_userdata)
+
+        smach.State.__init__(self,
+                             outcomes=['warning_complete', 'failed'],
+                             input_keys=_all_userdata_keys,
+                             output_keys=_all_userdata_keys)
         self.sm_manager = sm_manager
 
     def execute(self, userdata):
         rospy.loginfo("Target too far - issuing distance warning")
 
         if userdata.robot_pose and len(userdata.target_list) > 0:
-            distance = self.sm_manager._euclidean_distance(
+            distance = _euclidean_distance(
                 userdata.robot_pose.pose, userdata.target_list[-1]
             )
             rospy.loginfo(f"Target distance: {distance:.2f}m > {userdata.max_following_distance}m")
@@ -1155,10 +1140,10 @@ def main():
 
     try:
         # Create the state machine with custom parameters
-        person_following_sm = PersonFollowingStateMachine(
+        person_following_sm = FollowPerson(
             camera_name="xtion",
             max_speed=0.5,
-            stopping_distance=0.8,
+            stopping_distance=2.0,
             speak=True,
             recovery_timeout=25.0,
             min_confidence_threshold=0.6
