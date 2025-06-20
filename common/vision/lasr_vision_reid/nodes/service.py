@@ -1,18 +1,12 @@
-from typing import Dict, Tuple
-
-import torch
+from typing import Dict, Tuple, Optional, List
 
 import rospy
-import torchreid
-import torch
-from torchvision import transforms
-from PIL import Image as PILImage
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 import cv2
 from cv_bridge import CvBridge
 import tf2_ros as tf
-from facenet_pytorch import MTCNN
+from deepface import DeepFace
 
 from lasr_vision_msgs.srv import (
     Recognise3D,
@@ -35,11 +29,7 @@ Mat = np.ndarray
 
 class ReID:
 
-    _model: torch.nn.Module
-    _device: torch.device
-    _transform: transforms.Compose
-    _face_detector: MTCNN
-    _db: Dict[str, torch.Tensor]
+    _db: Dict[str, List[np.ndarray]]
     _bridge: CvBridge
     _tf_buffer: tf.Buffer
     _tf_listener: tf.TransformListener
@@ -48,23 +38,6 @@ class ReID:
     _recognise_service: rospy.Service
 
     def __init__(self):
-        self._model = torchreid.models.build_model(
-            "osnet_x1_0", pretrained=True, num_classes=1000
-        )
-        self._device = (
-            torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-        )
-        self._model.to(self._device)
-        self._model.eval()
-        self._transform = transforms.Compose(
-            [
-                transforms.Resize((256, 128)),
-                transforms.ToTensor(),
-                transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
-            ]
-        )
-        self._face_detector = MTCNN(keep_all=True, device=self._device)
-
         self._db = {}
 
         self._bridge = CvBridge()
@@ -85,49 +58,22 @@ class ReID:
             "/lasr_vision_reid/add_face", AddFace, self._add_face
         )
 
-    def _forward_model(self, cv_im: Mat) -> torch.Tensor:
+    def _extract_embeddings(self, im: np.ndarray) -> List[np.ndarray]:
         """
-        Perform a forward pass of the model using the input image.
+        Use DeepFace to extract an embedding of a face.
         """
-        pil_im = PILImage.fromarray(cv_im)
-        x = self._transform(pil_im).unsqueeze(0).to(self._device)
-        with torch.no_grad():
-            feat = self._model(x).cpu()
-        return feat
-
-    def _perform_reid(self, cv_im: Mat) -> Tuple[str, float]:
-        """
-        Perform person re-identification against the database.
-        """
-        if not self._db:
-            rospy.logwarn("Database is empty.")
-            return "unknown", 0.0
-
-        pil_im = PILImage.fromarray(cv_im).convert("RGB")
-        x = self._transform(pil_im).unsqueeze(0).to(self._device)
-
-        with torch.no_grad():
-            query_feat = self._model(x).cpu().numpy()
-
-        best_match = "unknown"
-        best_score = -1.0
-
-        for label, gallery_feats in self._db.items():
-            gallery_np = gallery_feats.numpy()
-            sim = cosine_similarity(query_feat, gallery_np).mean()
-
-            if sim > best_score:
-                best_score = sim
-                best_match = label
-
-        return (best_match, float(best_score))
+        results = DeepFace.represent(
+            img_path=im, model_name="VGG-Face", enforce_detection=False
+        )
+        embeddings = [np.array(entry["embedding"]) for entry in results]
+        return embeddings
 
     def _recognise(self, request: Recognise3DRequest) -> Recognise3DResponse:
         response = Recognise3DResponse()
 
         try:
             cv_im = self._bridge.imgmsg_to_cv2(
-                request.image_raw, desired_encoding="bgr8"
+                request.image_raw, desired_encoding="rgb8"
             )
             depth_im = self._bridge.imgmsg_to_cv2(
                 request.depth_image, desired_encoding="passthrough"
@@ -156,31 +102,53 @@ class ReID:
         ) as e:
             raise rospy.ServiceException(str(e))
 
-        boxes, _ = self._face_detector.detect(cv_im)
+        try:
+            # Get face embeddings and bounding boxes from DeepFace (face detection + embedding)
+            results = DeepFace.represent(
+                img_path=cv_im,
+                model_name="VGG-Face",
+                enforce_detection=False,
+                detector_backend="retinaface",
+                align=True,
+                max_faces=None,
+            )
+        except Exception as e:
+            rospy.logwarn(f"DeepFace representation failed: {e}")
+            return response
 
-        if boxes is None:
+        if not results:
             rospy.loginfo("No faces detected.")
             return response
 
-        for box in boxes:
-            x1, y1, x2, y2 = [int(v) for v in box]
+        for face_data in results:
+            embedding = np.array(face_data["embedding"])
+            region = face_data["facial_area"]
+            x1, y1 = region["x"], region["y"]
+            x2, y2 = x1 + region["w"], y1 + region["h"]
 
-            x1, y1, x2, y2 = max(0, x1), max(0, y1), min(w, x2), min(h, y2)
-            if x1 >= x2 or y1 >= y2:
-                continue
+            # Clamp bounding box within image
+            x1, y1 = max(0, x1), max(0, y1)
+            x2, y2 = min(w, x2), min(h, y2)
 
-            face_crop = cv_im[y1:y2, x1:x2]
-            if face_crop.size == 0:
-                continue
+            # Compare embedding with database entries
+            best_label = "unknown"
+            best_score = -1.0
+            for label, embeddings in self._db.items():
+                sims = [
+                    cosine_similarity([embedding], [db_emb])[0][0]
+                    for db_emb in embeddings
+                ]
+                avg_sim = np.mean(sims)
+                if avg_sim > best_score:
+                    best_score = avg_sim
+                    best_label = label
 
-            label, score = self._perform_reid(face_crop)
-
-            if score < request.threshold:
+            if best_score < request.threshold:
                 continue
 
             detection = Detection3D()
-            detection.name = label
-            detection.confidence = score
+            detection.name = best_label
+            detection.confidence = best_score
             detection.xywh = [x1, y1, x2 - x1, y2 - y1]
 
             roi_depth = depth_im[y1:y2, x1:x2]
@@ -212,62 +180,55 @@ class ReID:
             response.detections.append(detection)
 
         self._publish_results(response, cv_im, target_frame)
-
         return response
 
     def _add_face(self, request: AddFaceRequest) -> AddFaceResponse:
         response = AddFaceResponse()
-        response.success = False  # default to False
+        response.success = False
 
         try:
+            # Convert ROS Image message to OpenCV image (BGR)
             cv_im = self._bridge.imgmsg_to_cv2(
-                request.image_raw, desired_encoding="bgr8"
+                request.image_raw, desired_encoding="rgb8"
             )
         except Exception as e:
             rospy.logerr(f"Failed to convert image: {e}")
             return response
 
-        boxes, _ = self._face_detector.detect(cv_im)
-
-        if boxes is None or len(boxes) == 0:
-            rospy.loginfo("No faces detected in the input image.")
-            return response
-
-        if len(boxes) > 1:
-            rospy.logwarn(
-                f"Multiple faces detected ({len(boxes)}). Please provide a cropped face image."
-            )
-
-        # Take the first detected face
-        box = boxes[0]
-        x1, y1, x2, y2 = [int(v) for v in box]
-
-        h, w, _ = cv_im.shape
-        x1, y1, x2, y2 = max(0, x1), max(0, y1), min(w, x2), min(h, y2)
-
-        if x1 >= x2 or y1 >= y2:
-            rospy.logwarn("Invalid face bounding box, skipping.")
-            return response
-
-        face_crop = cv_im[y1:y2, x1:x2]
-        if face_crop.size == 0:
-            rospy.logwarn("Empty face crop, skipping.")
-            return response
-
         try:
-            feature = self._forward_model(face_crop).squeeze(0)  # shape: [feat_dim]
-            label = request.name
-
-            if label in self._db:
-                self._db[label] = torch.vstack([self._db[label], feature])
-            else:
-                self._db[label] = feature.unsqueeze(0)
-
-            response.success = True
-            rospy.loginfo(f"Added face feature for label: {label}")
-
+            # Use DeepFace to get embeddings, assume single face
+            results = DeepFace.represent(
+                img_path=cv_im,
+                model_name="VGG-Face",
+                enforce_detection=True,  # ensure face detected
+                detector_backend="retinaface",
+                align=True,
+                max_faces=1,
+            )
         except Exception as e:
-            rospy.logwarn(f"Failed to extract feature: {e}")
+            rospy.logwarn(f"Failed to extract embedding: {e}")
+            return response
+
+        if not results:
+            rospy.logwarn("No face detected in the image.")
+            return response
+
+        embedding = np.array(results[0]["embedding"])
+        name = request.name.strip()
+
+        if not name:
+            rospy.logwarn("Empty name provided for face addition.")
+            return response
+
+        # Add embedding to database
+        if name not in self._db:
+            self._db[name] = []
+
+        self._db[name].append(embedding)
+        response.success = True
+        rospy.loginfo(
+            f"Added face embedding for {name}, total samples: {len(self._db[name])}"
+        )
 
         return response
 
@@ -291,7 +252,7 @@ class ReID:
             )
 
         self._image_publisher.publish(
-            self._bridge.cv2_to_imgmsg(annotated, encoding="bgr8")
+            self._bridge.cv2_to_imgmsg(annotated, encoding="rgb8")
         )
 
         for i, detection in enumerate(response.detections):

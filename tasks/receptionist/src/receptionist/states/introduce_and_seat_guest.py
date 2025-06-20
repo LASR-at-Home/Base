@@ -12,7 +12,7 @@ from lasr_skills import LookToPoint, Say, PlayMotion, Wait, Detect3DInArea
 
 
 from lasr_vision_msgs.srv import (
-    Recognise,
+    Recognise3D,
 )
 import rospy
 
@@ -175,7 +175,9 @@ class IntroduceAndSeatGuest(smach.StateMachine):
                     self.closesness_distance = 0.5
                     self.overlap_threshold = 0.8
                     self._expected_detections = expected_detections
-                    self._recognise = rospy.ServiceProxy("/recognise", Recognise)
+                    self._recognise = rospy.ServiceProxy(
+                        "/lasr_vision_reid/recognise", Recognise3D
+                    )
                     self._recognise.wait_for_service()
 
                 def execute(self, userdata):
@@ -183,14 +185,17 @@ class IntroduceAndSeatGuest(smach.StateMachine):
                     matched_face_detections = []
 
                     def identify(img_msg):
-                        recognise_result = self._recognise(img_msg, "receptionist", 0.2)
+                        recognise_result = self._recognise(img_msg, 0.7)
                         if len(recognise_result.detections) > 0:
                             rospy.loginfo(
                                 f"Recognised face as {recognise_result.detections[0].name}"
                             )
-                            return recognise_result.detections[0].name
+                            return (
+                                recognise_result.detections[0].name,
+                                recognise_result.detections[0].point,
+                            )
                         rospy.loginfo("No face recognised")
-                        return "unknown"
+                        return "unknown", None
 
                     """
                     Identify all people in the detections
@@ -208,7 +213,9 @@ class IntroduceAndSeatGuest(smach.StateMachine):
                         rospy.loginfo(f"Processing detection: {detection.name}")
 
                         if detection.name == "person":
-                            detection.name = identify(img_msg)
+                            detection.name, point = identify(
+                                img_msg
+                            )  # TODO: maybe want to use this point, rather than the one from YOLO.
                             matched_face_detections.append(detection)
                             rospy.loginfo(f"Identified person as: {detection.name}")
 
@@ -225,7 +232,9 @@ class IntroduceAndSeatGuest(smach.StateMachine):
                         rospy.loginfo(f"Processing detection: {detection.name}")
 
                         if detection.name == "person":
-                            detection.name = identify(img_msg)
+                            detection.name, point = identify(
+                                img_msg
+                            )  # TODO: maybe want to use this point, rather than the one from YOLO.
                             matched_face_detections.append(detection)
                             rospy.loginfo(f"Identified person as: {detection.name}")
 
