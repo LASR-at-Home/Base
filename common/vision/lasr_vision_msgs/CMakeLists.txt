@@ -73,6 +73,7 @@ add_message_files(
 ## Generate services in the 'srv' folder
 add_service_files(
   FILES
+  AddFace.srv
   YoloDetection.srv
   YoloDetection3D.srv
   YoloPoseDetection.srv
@@ -80,6 +81,7 @@ add_service_files(
   BodyPixMaskDetection.srv
   BodyPixKeypointDetection.srv
   Recognise.srv
+  Recognise3D.srv
   LearnFace.srv
   Vqa.srv
   PointingDirection.srv
