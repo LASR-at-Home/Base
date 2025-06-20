@@ -551,8 +551,6 @@ class BagPickAndPlace(smach.State):
 
 
 if __name__ == "__main__":
-    import smach
-
     rospy.init_node("bag_pick_and_place_skill_runner")
     sm = smach.StateMachine(outcomes=["succeeded", "failed"])
     with sm:
