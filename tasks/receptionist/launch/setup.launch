@@ -19,6 +19,6 @@
 
     <!--      PERCEPTION     -->
     <node pkg="lasr_vision_clip" name="clip_service" type="vqa" output="screen"/>
-    <node pkg="lasr_vision_deepface" type="service" name="deepface_service" output="screen"/>
+    <node pkg="lasr_vision_reid" type="service.py" name="reid_service" output="screen"/>
 
 </launch>
