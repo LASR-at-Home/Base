@@ -1,31 +1,8 @@
 <launch>
-
-    <!--     PARAMS     -->
-    <arg name="config" default="lab"/>
-
-    <!--     INTERACTION     -->
-    <arg name="whisper_device_param" default="9" />
-    <arg name="whisper_device_param" default="9" />
-    <node pkg="lasr_speech_recognition_whisper" type="transcribe_microphone_server" name="transcribe_speech" output="screen" args="--mic_device $(arg whisper_device_param)"/>
-
-    <!--     STATIC POINTS     -->
-    <rosparam command="load" file="$(find carry_my_luggage)/config/$(arg config).yaml" />
-
-     <!--     INTERACTION     -->
-    <arg name="whisper_device_param" default="23" />
-    <node pkg="lasr_speech_recognition_whisper" type="transcribe_microphone_server" name="transcribe_speech" output="screen" args="--mic_device $(arg whisper_device_param)"/>
-
-    <!--     MOTIONS     -->
-    <rosparam command="load" file="$(find lasr_skills)/config/motions.yaml"/>
-
-    <!--      PERCEPTION     -->
-<!--    <include file="$(find lasr_vision_yolo)/launch/service.launch" />-->
-    <include file="$(find lasr_vision_cropped_detection)/launch/cropped_detection.launch"/>
-    <include file="$(find lasr_vision_bodypix)/launch/bodypix.launch">
-        <param name="preload" type="yaml" value='resnet50' />
-    </include>
+    <rosparam command="load" file="$(find help_me_carry)/config/stow_motions.yaml" />
+    <!--     Add the lang_sam_service node    -->
+    <node pkg="lasr_vision_lang_sam" type="lang_sam_service.py" name="lang_sam_service" output="screen" />
 
     <!--     NAVIGATION     -->
-    <include file="$(find lasr_person_following)/launch/person_following.launch" />
-
+    <!-- <include file="$(find lasr_person_following)/launch/person_following.launch" /> -->
 </launch>
