@@ -70,7 +70,6 @@ class PersonFollowingUserData(smach.UserData):
 
         # Status flags
         self.is_person_detected = False
-        self.is_tracking_stable = False
         self.is_navigation_active = False
         self.recovery_mode_active = False
         self.condition_flag_state = True
@@ -88,8 +87,8 @@ class PersonFollowingUserData(smach.UserData):
         self.last_position = None
 
         # Configuration parameters with defaults
-        self.new_goal_threshold_min = 0.5
-        self.new_goal_threshold_max = 4.5
+        self.new_goal_threshold_min = 0.1
+        self.new_goal_threshold_max = 2.0
         self.stopping_distance = 2.0
         self.max_speed = 0.4
         self.max_following_distance = 4.0
@@ -168,6 +167,8 @@ def _euclidean_distance(p1: Union[Pose, PoseStamped], p2: Union[Pose, PoseStampe
     pose1 = p1.pose if isinstance(p1, PoseStamped) else p1
     pose2 = p2.pose if isinstance(p2, PoseStamped) else p2
 
+    # rospy.loginfo(f"{np.linalg.norm(np.array([pose1.position.x, pose1.position.y])- np.array([pose2.position.x, pose2.position.y])).astype(float)}")
+
     return np.linalg.norm(
         np.array([pose1.position.x, pose1.position.y])
         - np.array([pose2.position.x, pose2.position.y])
@@ -189,36 +190,6 @@ def _discover_userdata_keys(ud):
     if hasattr(ud, '_data') and isinstance(ud._data, dict):
         keys.update(ud._data.keys())
     return [k for k in keys if not k.startswith('_')]
-
-
-def _calculate_navigation_distance(start_pose, goal_pose):
-    """Calculate navigation distance between two poses using global planner"""
-    try:
-        # Convert poses to PoseStamped for planning
-        start_stamped = PoseStamped()
-        start_stamped.header.frame_id = 'map'
-        start_stamped.header.stamp = rospy.Time.now()
-        start_stamped.pose = start_pose
-
-        goal_stamped = PoseStamped()
-        goal_stamped.header.frame_id = 'map'
-        goal_stamped.header.stamp = rospy.Time.now()
-        goal_stamped.pose = goal_pose
-
-        resp = self._make_plan(start_stamped, goal_stamped, tolerance=0.0)
-        if resp.plan.poses:
-            # Calculate total path length
-            total_distance = 0.0
-            for i in range(1, len(resp.plan.poses)):
-                total_distance += _euclidean_distance(
-                    resp.plan.poses[i - 1].pose,
-                    resp.plan.poses[i].pose
-                )
-            return total_distance
-    except:
-        pass
-    # Fallback to euclidean distance if planning fails
-    return _euclidean_distance(start_pose, goal_pose)
 
 
 class FollowPerson(smach.StateMachine):
@@ -397,10 +368,9 @@ class FollowPerson(smach.StateMachine):
 
             smach.StateMachine.add('TRACKING_ACTIVE',
                                    TrackingActiveState(self),
-                                   transitions={'navigate_to_target': 'NAVIGATION',
+                                   transitions={'navigation_started': 'NAVIGATION',
                                                 'target_lost': 'RECOVERY_SCANNING',
                                                 'following_complete': 'succeeded',
-                                                'distance_warning': 'DISTANCE_WARNING',
                                                 'failed': 'failed'})
 
             smach.StateMachine.add('NAVIGATION',
@@ -413,11 +383,6 @@ class FollowPerson(smach.StateMachine):
                                    RecoveryScanningState(self),
                                    transitions={'target_recovered': 'TRACKING_ACTIVE',
                                                 'recovery_failed': 'failed',
-                                                'failed': 'failed'})
-
-            smach.StateMachine.add('DISTANCE_WARNING',
-                                   DistanceWarningState(self),
-                                   transitions={'warning_complete': 'TRACKING_ACTIVE',
                                                 'failed': 'failed'})
 
     def _sync_userdata_to_state_data(self, state_userdata):
@@ -443,7 +408,7 @@ class FollowPerson(smach.StateMachine):
             self._merge_userdata(execution_userdata, external_userdata)
 
         # Initialize execution-specific data
-        execution_userdata.person_trajectory.header.frame_id = "odom"
+        execution_userdata.person_trajectory.header.frame_id = "map"
         execution_userdata.start_time = rospy.Time.now()
 
         # Execute the state machine with populated userdata
@@ -500,13 +465,33 @@ class FollowPerson(smach.StateMachine):
         self.userdata.camera_info = depth_camera_info
 
     def _robot_pose_callback(self, msg):
-        """Callback for robot odometry updates"""
-        robot_pose = PoseStamped()
-        robot_pose.header = msg.header
-        robot_pose.pose = msg.pose.pose
-        if robot_pose.header.frame_id.startswith('/'):
-            robot_pose.header.frame_id = robot_pose.header.frame_id[1:]
-        self.userdata.robot_pose = robot_pose
+        """Callback for robot odometry updates - transforms pose to map frame"""
+        try:
+            # Create pose stamped from odometry message
+            odom_pose = PoseStamped()
+            odom_pose.header = msg.header
+            odom_pose.pose = msg.pose.pose
+
+            # Clean frame_id (remove leading slash if present)
+            if odom_pose.header.frame_id.startswith('/'):
+                odom_pose.header.frame_id = odom_pose.header.frame_id[1:]
+
+            # Transform pose to map frame
+            map_pose = self.tf_buffer.transform(odom_pose, "map", rospy.Duration(0.1))
+
+            # Store the transformed pose
+            self.userdata.robot_pose = map_pose
+
+        except (tf.LookupException, tf.ConnectivityException,
+                tf.ExtrapolationException) as e:
+            rospy.logwarn_throttle(1.0, f"Failed to transform robot pose to map frame: {e}")
+            # Fallback: still store the original pose if transform fails
+            robot_pose = PoseStamped()
+            robot_pose.header = msg.header
+            robot_pose.pose = msg.pose.pose
+            if robot_pose.header.frame_id.startswith('/'):
+                robot_pose.header.frame_id = robot_pose.header.frame_id[1:]
+            self.userdata.robot_pose = robot_pose
 
     def _detection3d_callback(self, msg: Detection3DArray):
         """Callback for SAM2 3D detections - updates userdata"""
@@ -532,58 +517,26 @@ class FollowPerson(smach.StateMachine):
                     self.userdata.condition_flag_state = True
                     self.userdata.last_good_detection_time = rospy.Time.now()
 
-                    # Transform to odom frame and add to target list
-                    odom_pose = self._transform_detection_to_odom(detection)
-                    if odom_pose:
-                        # Add the direct target pose
-                        new_pose = self._update_target_list(odom_pose)
-                        # if new_pose and not self.userdata.is_navigation_active:  # only when there is a new pose of the target accepted, we will try to add an extra approach.
-                        #     # Also add a reachable approach pose within stopping radius
-                        #     try:
-                        #         # Get current robot pose in odom frame
-                        #         robot_pose = self.userdata.robot_pose
-                        #         # Transform robot pose to odom frame if necessary
-                        #         if robot_pose.header.frame_id != odom_pose.header.frame_id:
-                        #             try:
-                        #                 # Transform robot pose to match odom_pose frame
-                        #                 # rospy.loginfo(f"Transforming robot pose with: {robot_pose.header.frame_id} to match odom frame: {odom_pose.header.frame_id}")
-                        #                 robot_pose_odom = self.tf_buffer.transform(
-                        #                     robot_pose,
-                        #                     odom_pose.header.frame_id,
-                        #                     timeout=rospy.Duration(1.0)  # 1 second timeout
-                        #                 )
-                        #                 robot_pose = robot_pose_odom
-                        #                 rospy.logdebug(
-                        #                     f"Transformed robot pose from {self.userdata.robot_pose.header.frame_id} to {odom_pose.header.frame_id}")
-                        #             except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException) as e:
-                        #                 rospy.logwarn(f"Failed to transform robot pose to odom frame: {e}")
-                        #         # Check if robot is already within stopping distance
-                        #         current_distance = _euclidean_distance(robot_pose.pose, odom_pose.pose)
-                        #         # rospy.loginfo(f"Robot pose distance: {current_distance}")
-                        #
-                        #         if current_distance > self.userdata.stopping_distance:
-                        #             # Only compute approach pose if robot is far enough from target
-                        #             approach_radius = self.userdata.stopping_distance + 0.1  # Add 10cm buffer
-                        #
-                        #             approach_pose = self.get_nearest_reachable_pose_within_radius(
-                        #                 start_pose=robot_pose,
-                        #                 goal_pose=odom_pose,
-                        #                 radius=approach_radius
-                        #             )
-                        #
-                        #             if approach_pose:
-                        #                 # Add the reachable approach pose to target list
-                        #                 self._update_target_list(approach_pose)
-                        #                 rospy.logdebug(
-                        #                     f"Added reachable approach pose at {approach_radius:.2f}m radius")
-                        #             else:
-                        #                 rospy.logdebug("No reachable approach pose found, using direct target only")
-                        #         else:
-                        #             rospy.logdebug(
-                        #                 f"Robot already within stopping distance ({current_distance:.2f}m <= {self.userdata.stopping_distance:.2f}m), skipping approach pose")
-                        #     except Exception as e:
-                        #         rospy.logwarn(f"Failed to compute reachable approach pose: {e}")
-                        #         # Continue with just the direct target pose
+                    # transpose into the map point
+                    map_pose = PoseStamped()
+                    map_pose.header.frame_id = "map"
+                    map_pose.header.stamp = rospy.Time.now()
+                    map_pose.pose.position = detection.point
+                    map_pose.pose.orientation.w = 1.0  # Identity orientation
+
+                    if len(self.userdata.target_list) == 0:
+                        reachable_pose = self.get_nearest_reachable_pose_within_radius(
+                            self.userdata.robot_pose, map_pose, self.userdata.stopping_distance * 0.66
+                        )
+                        if reachable_pose:
+                            self._update_target_list(reachable_pose)
+                        reachable_pose = self.get_nearest_reachable_pose_within_radius(
+                            self.userdata.robot_pose, map_pose, self.userdata.stopping_distance * 0.33)
+                        if reachable_pose:
+                            self._update_target_list(reachable_pose)
+
+                    # Add to target list
+                    self._update_target_list(map_pose)
                 else:
                     for _retry in range(5):
                         try:
@@ -632,89 +585,82 @@ class FollowPerson(smach.StateMachine):
                 and detection.confidence > self.userdata.min_confidence_threshold
         )
 
-    def _transform_detection_to_odom(self, detection):
-        """Transform detection point to odom frame"""
-        map_pose = PoseStamped()
-        map_pose.header.frame_id = "map"
-        map_pose.header.stamp = rospy.Time.now()
-        map_pose.pose.position = detection.point
-        map_pose.pose.orientation.w = 1.0
-
-        try:
-            odom_pose = self.tf_buffer.transform(map_pose, "odom", rospy.Duration(0.50))
-            return odom_pose
-        except:
-            return None
-
-    # def _update_target_list(self, odom_pose):
-    #     """Update target list with new pose using insertion sort by navigation distance"""
-    #
-    #     # Initialize navigation distance list if not exists
-    #     if not hasattr(self.userdata, 'target_nav_distances'):
-    #         self.userdata.target_nav_distances = []
-    #
-    #     if len(self.userdata.target_list) == 0:
-    #         # First target - calculate and store navigation distance
-    #         robot_pose = self.userdata.robot_pose.pose
-    #         nav_distance = _calculate_navigation_distance(robot_pose, odom_pose.pose)
-    #
-    #         self.userdata.person_trajectory.poses.append(odom_pose.pose)
-    #         self.userdata.target_list.append(odom_pose.pose)
-    #         self.userdata.target_nav_distances.append(nav_distance)
-    #         self.userdata.added_new_target_time = rospy.Time.now()
-    #         rospy.loginfo(f"Adding first target pose with nav distance: {nav_distance:.2f}m")
-    #         return True
-    #     else:
-    #         # Check distance threshold against last target
-    #         prev_pose = self.userdata.target_list[-1]
-    #         dist_to_prev = _euclidean_distance(prev_pose, odom_pose.pose)
-    #
-    #         if self.userdata.new_goal_threshold_min < dist_to_prev < self.userdata.new_goal_threshold_max:
-    #             # Calculate navigation distance for new target
-    #             robot_pose = self.userdata.robot_pose.pose
-    #             nav_distance = _calculate_navigation_distance(robot_pose, odom_pose.pose)
-    #
-    #             # Find insertion position using binary-like search for sorted order
-    #             insert_pos = 0
-    #             for i in range(len(self.userdata.target_nav_distances)):
-    #                 if nav_distance < self.userdata.target_nav_distances[i]:
-    #                     insert_pos = i
-    #                     break
-    #                 insert_pos = i + 1
-    #
-    #             # Insert at found position to maintain sorted order (closest first)
-    #             self.userdata.target_list.insert(insert_pos, odom_pose.pose)
-    #             self.userdata.target_nav_distances.insert(insert_pos, nav_distance)
-    #
-    #             self.userdata.person_trajectory.poses.append(odom_pose.pose)
-    #             self.userdata.added_new_target_time = rospy.Time.now()
-    #             rospy.loginfo(f"Inserted target pose with nav distance: {nav_distance:.2f}m at position {insert_pos}")
-    #             return True
-    #
-    #     return False
-
-    def _update_target_list(self, odom_pose):
+    def _update_target_list(self, pose_stamped):
         """Update target list with new pose"""
         if len(self.userdata.target_list) == 0:
-            self.userdata.person_trajectory.poses.append(odom_pose.pose)
-            self.userdata.target_list.append(odom_pose.pose)
+            self.userdata.person_trajectory.poses.append(pose_stamped.pose)
+            self.userdata.target_list.append(pose_stamped.pose)
             self.userdata.added_new_target_time = rospy.Time.now()
-            rospy.loginfo(f"Adding target pose: {odom_pose}")
+            rospy.loginfo(f"Adding target pose: {pose_stamped}")
             return True
         else:
             prev_pose = self.userdata.target_list[-1]
-            dist_to_prev = _euclidean_distance(prev_pose, odom_pose.pose)
+            dist_to_prev = _euclidean_distance(prev_pose, pose_stamped.pose)
             if (
                     self.userdata.new_goal_threshold_min
                     < dist_to_prev
                     < self.userdata.new_goal_threshold_max
             ):
-                self.userdata.person_trajectory.poses.append(odom_pose.pose)
-                self.userdata.target_list.append(odom_pose.pose)
+                self.userdata.person_trajectory.poses.append(pose_stamped.pose)
+                self.userdata.target_list.append(pose_stamped.pose)
                 self.userdata.added_new_target_time = rospy.Time.now()
-                rospy.loginfo(f"Adding target pose: {odom_pose}")
+                rospy.loginfo(f"Adding target pose: {pose_stamped}")
                 return True
         return False
+
+    def _make_plan(self, start_pose: PoseStamped, goal_pose: PoseStamped, tolerance: float = 0.0):
+        """Call move_base make_plan service"""
+        req = GetPlanRequest()
+        req.start = start_pose
+        req.goal = goal_pose
+        req.tolerance = tolerance
+
+        return self.make_plan_service(req)
+
+    # todo: this needs to be tested!!!!!
+    def get_nearest_reachable_pose_within_radius(
+            self,
+            start_pose: PoseStamped,
+            goal_pose: PoseStamped,
+            radius: float,
+    ) -> Optional[PoseStamped]:
+        """
+        Find the nearest reachable pose within a specified radius of the goal.
+
+        This function attempts to find a pose that is:
+        1. Within 'radius' meters of the goal_pose
+        2. Reachable from start_pose (validated by global planner)
+        3. As close as possible to the robot's current position
+        """
+        # Ensure both poses are in the same coordinate frame
+        assert start_pose.header.frame_id == goal_pose.header.frame_id, \
+            "Start and goal poses must be in the same coordinate frame"
+
+        # Step 1: Request global path planning from start to goal
+        try:
+            resp = self._make_plan(start_pose, goal_pose, tolerance=0.0)
+            plan = resp.plan
+        except rospy.ServiceException as e:
+            rospy.logerr(f"Global path planning failed: {e}")
+            return None
+
+        # Check if planner returned a valid path
+        if not plan.poses:
+            rospy.logwarn("Global planner returned empty path")
+            return None
+
+        # Step 2: Forward traverse the path to find the first pose within radius
+        for pose in plan.poses:
+            distance_to_goal = _euclidean_distance(pose.pose, goal_pose.pose)  # 使用现有的函数
+
+            if distance_to_goal <= radius:
+                rospy.loginfo(f"Found reachable pose at {distance_to_goal:.2f}m from goal")
+                return pose
+
+        # Step 3: No poses found within radius
+        rospy.logwarn(f"No path poses found within {radius}m radius of goal. "
+                      f"Consider increasing radius or checking goal accessibility.")
+        return None
 
     def _cleanup(self):
         """Clean up resources after execution"""
@@ -745,6 +691,7 @@ class FollowPerson(smach.StateMachine):
                 self.tts_client.send_goal_and_wait(tts_goal)
             else:
                 self.tts_client.send_goal(tts_goal)
+        rospy.loginfo(f"Saying '{text}'")
 
     def _look_at_point(self, target_point: Point, target_frame: str = "map"):
         current_time = rospy.Time.now()
@@ -864,11 +811,10 @@ class InitialisingState(SyncUserdataState):
         # Initialise tracking data
         userdata.target_list = []
         person_trajectory = PoseArray()
-        person_trajectory.header.frame_id = "odom"
+        person_trajectory.header.frame_id = "map"
         userdata.person_trajectory = person_trajectory
         userdata.last_movement_time = rospy.Time.now()
         userdata.last_good_detection_time = rospy.Time.now()
-        userdata.is_tracking_stable = False
 
         if userdata.robot_pose:
             userdata.last_position = userdata.robot_pose
@@ -980,9 +926,8 @@ class PersonDetectionState(SyncUserdataState):
         return 'person_detected'
 
 
-# Other state classes remain unchanged...
 class TrackingActiveState(SyncUserdataState):
-    """Active tracking state - monitors target and decides on actions"""
+    """Active tracking state - monitors target, sends navigation goals, and manages distance warnings"""
 
     def __init__(self, sm_manager):
         super().__init__(sm_manager)
@@ -991,8 +936,7 @@ class TrackingActiveState(SyncUserdataState):
         _all_userdata_keys = _discover_userdata_keys(_temp_userdata)
 
         smach.State.__init__(self,
-                             outcomes=['navigate_to_target', 'target_lost', 'following_complete', 'distance_warning',
-                                       'failed'],
+                             outcomes=['navigation_started', 'target_lost', 'following_complete', 'failed'],
                              input_keys=_all_userdata_keys,
                              output_keys=_all_userdata_keys)
         self.previous_target = None
@@ -1002,8 +946,7 @@ class TrackingActiveState(SyncUserdataState):
         self.sync_userdata_from_manager(userdata)
         rospy.loginfo("Active tracking mode")
 
-        if not userdata.is_tracking_stable:
-            userdata.is_tracking_stable = True
+        if len(userdata.target_list) > 0:
             self.sm_manager._tts("I will start to follow you.", wait=True)
 
         rate = rospy.Rate(10)
@@ -1029,24 +972,88 @@ class TrackingActiveState(SyncUserdataState):
                 rospy.loginfo("Target lost - no good detection")
                 return 'target_lost'
 
-            # Check navigation status
-            if userdata.is_navigation_active and self.sm_manager.move_base_client:
+            # Check if navigation is currently active
+            if self.sm_manager.move_base_client:
                 nav_state = self.sm_manager.move_base_client.get_state()
-                if nav_state not in [GoalStatus.PENDING, GoalStatus.ACTIVE]:
-                    userdata.is_navigation_active = False
-                    userdata.last_movement_time = rospy.Time.now()
-                    rospy.loginfo("Navigation goal reached")
+                nav_active = nav_state in [GoalStatus.PENDING, GoalStatus.ACTIVE]
 
-            # Decide if we should navigate to target
-            if len(userdata.target_list) > 0 and not userdata.is_navigation_active:
-                nav_decision = self._should_navigate_to_target(userdata)
-                if nav_decision == 'navigate':
-                    return 'navigate_to_target'
-                elif nav_decision == 'distance_warning':
-                    return 'distance_warning'
+                # If navigation is active, we should be in NAVIGATION state
+                if nav_active:
+                    rospy.loginfo(f"Navigation active (state: {nav_state}), transitioning to NAVIGATION state")
+                    return 'navigation_started'
+            else:
+                nav_active = False
+
+            # Handle distance warning and navigation decision
+            if len(userdata.target_list) > 0:
+                rospy.loginfo(f"Processing target list with {len(userdata.target_list)} poses")
+
+                # Find suitable target pose within boundary (used for both navigation decision and orientation)
+                target_pose = None
+                last_pose_in_list = userdata.target_list[-1]
+
+                for i in reversed(range(len(userdata.target_list))):
+                    distance_to_last = _euclidean_distance(userdata.target_list[i], last_pose_in_list)
+                    rospy.loginfo(f"Checking pose {i}: distance to latest pose = {distance_to_last:.2f}m "
+                                  f"(threshold: {userdata.stopping_distance:.2f}m)")
+
+                    if userdata.stopping_distance <= distance_to_last:
+                        target_pose = userdata.target_list[i]
+                        rospy.loginfo(f"Selected target pose at index {i} (distance threshold met)")
+                        break
+
+                if target_pose is None:
+                    rospy.loginfo("No suitable target pose found - all poses too close to latest position")
+                else:
+                    rospy.loginfo("Evaluating navigation decision criteria")
+
+                    # Check if target is different enough from previous
+                    if self.previous_target:
+                        distance_to_previous = _euclidean_distance(target_pose, self.previous_target)
+                        rospy.loginfo(f"Distance to previous target: {distance_to_previous:.2f}m "
+                                      f"(threshold: {userdata.new_goal_threshold_min:.2f}m)")
+
+                        if distance_to_previous < userdata.new_goal_threshold_min:
+                            rospy.loginfo("Target too similar to previous - skipping navigation")
+                            target_pose = None
+                    else:
+                        rospy.loginfo("No previous target - proceeding with navigation evaluation")
+
+                    # Check robot distance if we have a valid target
+                    if target_pose is not None and userdata.robot_pose:
+                        distance_to_target = _euclidean_distance(
+                            userdata.robot_pose.pose, target_pose
+                        )
+                        rospy.loginfo(f"Robot distance to target: {distance_to_target:.2f}m "
+                                      f"(stopping distance: {userdata.stopping_distance:.2f}m, "
+                                      f"max following distance: {userdata.max_following_distance:.2f}m)")
+
+                        # Only navigate if we're not already close enough
+                        if distance_to_target >= userdata.stopping_distance:
+                            rospy.loginfo("Distance check passed - sending navigation goal")
+                            # Send navigation goal directly here
+                            if self._send_navigation_goal(userdata, target_pose, last_pose_in_list):
+                                rospy.loginfo("Navigation goal sent successfully, transitioning to NAVIGATION state")
+                                return 'navigation_started'
+                            else:
+                                rospy.logwarn("Failed to send navigation goal")
+                        else:
+                            rospy.loginfo("Robot already close enough to target - no navigation needed")
+
+                        # Issue distance warning if target is too far
+                        if (distance_to_target > userdata.max_following_distance and
+                                (rospy.Time.now() - userdata.last_distance_warning_time >
+                                 userdata.distance_warning_interval_duration)):
+                            rospy.loginfo(f"Issuing distance warning - target too far: {distance_to_target:.2f}m")
+                            self.sm_manager._tts("Please wait for me. You are too far away.", wait=False)
+                            userdata.last_distance_warning_time = rospy.Time.now()
+                    elif target_pose is not None:
+                        rospy.loginfo("No robot pose available - cannot evaluate navigation distance")
+            else:
+                rospy.loginfo("Target list empty - no navigation decision possible")
 
             # Check if following is complete (no movement for a while)
-            if (not userdata.is_navigation_active and not self.just_started and
+            if (not nav_active and not self.just_started and
                     rospy.Time.now() - userdata.last_movement_time > userdata.target_moving_timeout_duration and
                     rospy.Time.now() - userdata.added_new_target_time > userdata.target_moving_timeout_duration
             ):
@@ -1060,55 +1067,45 @@ class TrackingActiveState(SyncUserdataState):
         self.sync_userdata_to_manager(userdata)
         return 'failed'
 
-    def _should_navigate_to_target(self, userdata):
-        """Determine if robot should navigate to target"""
-        if len(userdata.target_list) == 0:
-            return None
+    def _send_navigation_goal(self, userdata, target_pose, orientation_reference_pose):
+        """Send navigation goal to move_base and return success status"""
+        try:
+            # Compute goal orientation to face the person
+            goal_orientation = _compute_face_quat(target_pose, orientation_reference_pose)
 
-        last_pose_in_list = userdata.target_list[-1]
-        target_pose = None
-
-        # Find suitable target pose within boundary
-        for i in reversed(range(len(userdata.target_list))):
-            if (userdata.stopping_distance <=
-                    _euclidean_distance(userdata.target_list[i], last_pose_in_list)):
-                target_pose = userdata.target_list[i]
-                break
-
-        if target_pose is None:
-            return None
-
-        # Check if target is different enough from previous
-        if (self.previous_target and
-                _euclidean_distance(target_pose, self.previous_target) <
-                userdata.new_goal_threshold_min):
-            return None
-
-        if userdata.robot_pose:
-            distance_to_target = _euclidean_distance(
-                userdata.robot_pose.pose, target_pose
+            pose_with_orientation = Pose(
+                position=target_pose.position,
+                orientation=goal_orientation,
             )
 
-            # # Check if target is too far
-            # if distance_to_target > userdata.max_following_distance:
-            #     if (rospy.Time.now() - userdata.last_distance_warning_time >
-            #             userdata.distance_warning_interval_duration):
-            #         return 'distance_warning'  # todo: this shouldn't be a state.
+            pose_stamped = PoseStamped()
+            pose_stamped.header.frame_id = "map"
+            pose_stamped.header.stamp = rospy.Time.now()
+            pose_stamped.pose = pose_with_orientation
 
-            # Check if we're close enough already
-            if distance_to_target < userdata.stopping_distance:
-                return None
+            # Transform to map frame for navigation
+            goal_pose = self.sm_manager.tf_buffer.transform(pose_stamped, "map", rospy.Duration(1.0))
 
-        # Set current goal and proceed with navigation
-        userdata.current_goal = target_pose
-        self.previous_target = target_pose
-        self.just_started = False
+            # Send navigation goal
+            goal = MoveBaseGoal()
+            goal.target_pose = goal_pose
+            self.sm_manager.move_base_client.send_goal(goal)
 
-        return 'navigate'
+            # Update tracking state
+            userdata.current_goal = target_pose
+            self.previous_target = target_pose
+            self.just_started = False
+
+            rospy.loginfo("Navigation goal sent successfully")
+            return True
+
+        except Exception as e:
+            rospy.logerr(f"Failed to send navigation goal: {e}")
+            return False
 
 
 class NavigationState(SyncUserdataState):
-    """Handle navigation to target position"""
+    """Monitor navigation progress, handle head tracking, and detect completion/failure"""
 
     def __init__(self, sm_manager):
         super().__init__(sm_manager)
@@ -1120,78 +1117,59 @@ class NavigationState(SyncUserdataState):
                              outcomes=['navigation_complete', 'target_lost', 'failed'],
                              input_keys=_all_userdata_keys,
                              output_keys=_all_userdata_keys)
-        self.sm_manager = sm_manager
 
     def execute(self, userdata):
         self.sync_userdata_from_manager(userdata)
-        rospy.loginfo("Starting navigation to target")
+        rospy.loginfo("Monitoring navigation progress")
 
-        if not userdata.current_goal:
-            return 'failed'
-
-        target_pose = None
-        for i in reversed(range(len(userdata.target_list))):
-            if userdata.stopping_distance <= _euclidean_distance(
-                    userdata.target_list[i], userdata.target_list[-1]
-            ):
-                target_pose = userdata.target_list[i]
-                break
-
-        # Compute goal orientation to face the person
-        goal_orientation = _compute_face_quat(userdata.current_goal, target_pose)
-
-        pose_with_orientation = Pose(
-            position=userdata.current_goal.position,
-            orientation=goal_orientation,
-        )
-
-        pose_stamped = PoseStamped()
-        pose_stamped.header.frame_id = "odom"
-        pose_stamped.header.stamp = rospy.Time.now()
-        pose_stamped.pose = pose_with_orientation
-
-        # Transform to map frame for navigation
-        goal_pose = self.sm_manager.tf_buffer.transform(pose_stamped, "map", rospy.Duration(1.0))
-
-        # Send navigation goal
-        goal = MoveBaseGoal()
-        goal.target_pose = goal_pose
-        self.sm_manager.move_base_client.send_goal(goal)
-        userdata.is_navigation_active = True
-
-        rospy.loginfo("Navigation goal sent")
+        # Verify that navigation is indeed active
+        if not self._is_navigation_active():
+            rospy.logwarn("Entered NAVIGATION state but no active navigation found")
+            return 'navigation_complete'
 
         # Monitor navigation progress
         rate = rospy.Rate(10)
         while not rospy.is_shutdown():
-            userdata.last_movement_time = rospy.Time.now()
+            # Keep looking at detected person during navigation
             if userdata.newest_detection:
                 self.sm_manager._look_at_point(
                     userdata.newest_detection.point, target_frame="map"
                 )
+
             # # Check if target is lost during navigation
             # if (rospy.Time.now() - userdata.last_good_detection_time >
             #         userdata.target_moving_timeout_duration):
+            #     rospy.loginfo("Target lost during navigation")
             #     self.sm_manager.move_base_client.cancel_goal()
-            #     userdata.is_navigation_active = False
             #     return 'target_lost'
 
             # Check navigation status
             nav_state = self.sm_manager.move_base_client.get_state()
             if nav_state not in [GoalStatus.PENDING, GoalStatus.ACTIVE]:
-                userdata.is_navigation_active = False
-
+                # Navigation has completed (successfully or not)
                 if nav_state == GoalStatus.SUCCEEDED:
                     rospy.loginfo("Navigation completed successfully")
-                    return 'navigation_complete'
                 else:
-                    rospy.logwarn(f"Navigation failed with status: {nav_state}")
-                    return 'navigation_complete'  # Continue even if navigation failed
+                    rospy.logwarn(f"Navigation ended with status: {nav_state}")
+
+                # Update movement time continuously during navigation
+                userdata.last_movement_time = rospy.Time.now()
+                userdata.added_new_target_time = rospy.Time.now()
+
+                # Always return to tracking active, even if navigation failed
+                return 'navigation_complete'
 
             rate.sleep()
 
         self.sync_userdata_to_manager(userdata)
         return 'failed'
+
+    def _is_navigation_active(self):
+        """Check if navigation is currently active based on move_base client state"""
+        if not self.sm_manager.move_base_client:
+            return False
+        nav_state = self.sm_manager.move_base_client.get_state()
+        return nav_state in [GoalStatus.PENDING, GoalStatus.ACTIVE]
 
 
 class RecoveryScanningState(SyncUserdataState):
@@ -1250,6 +1228,7 @@ class RecoveryScanningState(SyncUserdataState):
                 self.sm_manager._tts("Found you! Continuing to follow.", wait=False)
                 userdata.recovery_mode_active = False
                 userdata.last_movement_time = rospy.Time.now()
+                userdata.added_new_target_time = rospy.Time.now()
                 # userdata.just_started = True  # not sure if this is really needed.
                 return 'target_recovered'
 
@@ -1270,38 +1249,6 @@ class RecoveryScanningState(SyncUserdataState):
 
         self.sync_userdata_to_manager(userdata)
         return 'failed'
-
-
-class DistanceWarningState(SyncUserdataState):
-    """Handle distance warning when target is too far"""
-
-    def __init__(self, sm_manager):
-        super().__init__(sm_manager)
-        # Get all attribute names from PersonFollowingUserData for dynamic key declaration
-        _temp_userdata = PersonFollowingUserData()
-        _all_userdata_keys = _discover_userdata_keys(_temp_userdata)
-
-        smach.State.__init__(self,
-                             outcomes=['warning_complete', 'failed'],
-                             input_keys=_all_userdata_keys,
-                             output_keys=_all_userdata_keys)
-        self.sm_manager = sm_manager
-
-    def execute(self, userdata):
-        self.sync_userdata_from_manager(userdata)
-        rospy.loginfo("Target too far - issuing distance warning")
-
-        if userdata.robot_pose and len(userdata.target_list) > 0:
-            distance = _euclidean_distance(
-                userdata.robot_pose.pose, userdata.target_list[-1]
-            )
-            rospy.loginfo(f"Target distance: {distance:.2f}m > {userdata.max_following_distance}m")
-
-        self.sm_manager._tts("Please wait for me. You are too far away.", wait=False)
-        userdata.last_distance_warning_time = rospy.Time.now()
-
-        self.sync_userdata_to_manager(userdata)
-        return 'warning_complete'
 
 
 def is_reasonable_detection(detection, min_confidence_threshold=0.5):
