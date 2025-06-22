@@ -40,3 +40,4 @@ if __name__ == "__main__":
             rospy.logerr("Shape completion failed (response.success is False).")
     except rospy.ServiceException as e:
         rospy.logerr(f"Service call failed: {e}")
+

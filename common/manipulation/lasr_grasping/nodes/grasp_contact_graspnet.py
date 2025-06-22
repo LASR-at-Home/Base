@@ -1,4 +1,5 @@
-#!/usr/bin/env /home/siyao/project/RoboCup/robocup_svea/devel/.private/lasr_grasping/share/lasr_grasping/venv/bin/python
+#!/home/siyao/project/RoboCup/robocup_svea/devel/.private/lasr_grasping/share/lasr_grasping/venv/bin/python
+
 import sys
 import rospy
 # rospy.logwarn(sys.executable)

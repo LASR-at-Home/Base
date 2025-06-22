@@ -80,3 +80,13 @@ play_motion:
         time_from_start: 10.0
       - positions: [0.34, 0.21, 0.35, -1.5, 1.15, -1.57, 0.2, 0.0]
         time_from_start: 13.0
+
+    deliver_preplace_pose:
+        joints: [arm_1_joint, arm_2_joint, arm_3_joint, arm_4_joint,
+                arm_5_joint, arm_6_joint, arm_7_joint,
+                gripper_left_finger_joint, gripper_right_finger_joint,
+                torso_lift_joint]
+        points:
+        - positions: [0.20, -1.34, -0.20, 1.94, -1.57, 1.37, 0.00,
+                      0.037, 0.037, 0.15]
+          time_from_start: 3.0

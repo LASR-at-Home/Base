@@ -182,7 +182,7 @@ masked_points = pcl_xyz[indices[:, 0], indices[:, 1]]
 masked_points = masked_points[~np.isnan(masked_points).any(axis=1)]
 masked_points = masked_points[~np.all(masked_points == 0, axis=1)]
 masked_cloud = create_pointcloud2(masked_points, pcl.header.frame_id)
-pcl_pub = rospy.Publisher("/segmented_cloud", PointCloud2)
+pcl_pub = rospy.Publisher("/segmented_cloud", PointCloud2,latch=True)
 rate = rospy.Rate(10) 
 # while not rospy.is_shutdown():
 for _ in range(10):

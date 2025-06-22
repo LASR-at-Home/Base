@@ -1,4 +1,4 @@
-certifi==2025.4.26        # via requests
+certifi==2025.6.15        # via requests
 charset-normalizer==3.4.2  # via requests
 contourpy==1.1.1          # via matplotlib
 cycler==0.12.1            # via matplotlib
@@ -24,7 +24,7 @@ nvidia-curand-cu12==10.3.2.106  # via torch
 nvidia-cusolver-cu12==11.4.5.107  # via torch
 nvidia-cusparse-cu12==12.1.0.106  # via nvidia-cusolver-cu12, torch
 nvidia-nccl-cu12==2.20.5  # via torch
-nvidia-nvjitlink-cu12==12.9.41  # via nvidia-cusolver-cu12, nvidia-cusparse-cu12
+nvidia-nvjitlink-cu12==12.9.86  # via nvidia-cusolver-cu12, nvidia-cusparse-cu12
 nvidia-nvtx-cu12==12.1.105  # via torch
 opencv-python==4.11.0.86  # via ultralytics
 packaging==25.0           # via matplotlib
@@ -36,7 +36,7 @@ pyparsing==3.1.4          # via matplotlib
 python-dateutil==2.9.0.post0  # via matplotlib, pandas
 pytz==2025.2              # via pandas
 pyyaml==6.0.2             # via ultralytics
-requests==2.32.3          # via ultralytics
+requests==2.32.4          # via ultralytics
 scipy==1.10.1             # via ultralytics
 six==1.17.0               # via python-dateutil
 sympy==1.13.3             # via torch
@@ -46,7 +46,7 @@ tqdm==4.67.1              # via ultralytics
 triton==3.0.0             # via torch
 typing-extensions==4.13.2  # via torch
 tzdata==2025.2            # via pandas
-ultralytics==8.3.146      # via -r requirements.in
+ultralytics==8.3.155      # via -r requirements.in
 ultralytics-thop==2.0.14  # via ultralytics
 urllib3==2.2.3            # via requests
 zipp==3.20.2              # via importlib-resources
