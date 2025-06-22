@@ -115,6 +115,7 @@ class YOLOService:
         rospy.Service(
             "/yolo/detect3d_pose", YoloPoseDetection3D, self._detect_keypoints3d
         )
+        rospy.loginfo("YOLO service is ready.")
 
     def _detect(self, req: YoloDetectionRequest) -> YoloDetectionResponse:
         response = YoloDetectionResponse()
