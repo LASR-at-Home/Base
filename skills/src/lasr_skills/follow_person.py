@@ -1,4 +1,5 @@
 # !/usr/bin/env python3
+import copy
 import rospy
 import smach
 import smach_ros
@@ -7,6 +8,7 @@ import math
 import numpy as np
 from typing import List, Tuple, Union
 from math import atan2
+from tf.transformations import quaternion_from_euler  # this is tf tool pack, not tf1
 import tf2_ros as tf
 from tf2_geometry_msgs import do_transform_pose
 from scipy.spatial.transform import Rotation as R
@@ -89,9 +91,10 @@ class PersonFollowingUserData(smach.UserData):
         # Configuration parameters with defaults
         self.new_goal_threshold_min = 0.1
         self.new_goal_threshold_max = 2.0
-        self.stopping_distance = 2.0
+        self.stopping_distance = 1.75
         self.max_speed = 0.4
         self.max_following_distance = 4.0
+        self.min_following_distance = 0.1
         self.speak = True
         self.timeout = 0.0
 
@@ -525,17 +528,14 @@ class FollowPerson(smach.StateMachine):
                     map_pose.pose.orientation.w = 1.0  # Identity orientation
 
                     if len(self.userdata.target_list) == 0:
-                        reachable_pose = self.get_nearest_reachable_pose_within_radius(
-                            self.userdata.robot_pose, map_pose, self.userdata.stopping_distance * 0.66
-                        )
-                        if reachable_pose:
-                            self._update_target_list(reachable_pose)
-                        reachable_pose = self.get_nearest_reachable_pose_within_radius(
-                            self.userdata.robot_pose, map_pose, self.userdata.stopping_distance * 0.33)
-                        if reachable_pose:
-                            self._update_target_list(reachable_pose)
-
-                    # Add to target list
+                        # sample <num_samples> way-points inside stopping_distance
+                        poses = self._plan_and_sample_targets(
+                            self.userdata.robot_pose,
+                            map_pose,
+                            radius=self.userdata.stopping_distance,
+                            num_samples=8)
+                        for p in poses:
+                            self._update_target_list(p)
                     self._update_target_list(map_pose)
                 else:
                     for _retry in range(5):
@@ -608,59 +608,73 @@ class FollowPerson(smach.StateMachine):
                 return True
         return False
 
-    def _make_plan(self, start_pose: PoseStamped, goal_pose: PoseStamped, tolerance: float = 0.0):
+    def _make_plan(self, start_pose: PoseStamped, goal_pose: PoseStamped, tolerance: float = 0.3):
         """Call move_base make_plan service"""
+        """Call /move_base/make_plan service (header.stamp set to 0)"""
         req = GetPlanRequest()
         req.start = start_pose
         req.goal = goal_pose
+        req.start.header.stamp = rospy.Time(0)
+        req.goal.header.stamp = rospy.Time(0)
         req.tolerance = tolerance
-
+        rospy.loginfo(
+            f"[make_plan] start({start_pose.pose.position.x:.2f},"
+            f"{start_pose.pose.position.y:.2f})  "
+            f"goal({goal_pose.pose.position.x:.2f},"
+            f"{goal_pose.pose.position.y:.2f})  tol={tolerance}"
+        )
         return self.make_plan_service(req)
 
-    # todo: this needs to be tested!!!!!
-    def get_nearest_reachable_pose_within_radius(
+    def _plan_and_sample_targets(
             self,
             start_pose: PoseStamped,
             goal_pose: PoseStamped,
             radius: float,
-    ) -> Optional[PoseStamped]:
+            num_samples: int = 3):
         """
-        Find the nearest reachable pose within a specified radius of the goal.
-
-        This function attempts to find a pose that is:
-        1. Within 'radius' meters of the goal_pose
-        2. Reachable from start_pose (validated by global planner)
-        3. As close as possible to the robot's current position
+        1. Compute a new goal located on the line (goal → robot) at exactly <radius>
+        2. Call /move_base/make_plan(start, new_goal)
+        3. Evenly take <num_samples> poses (near → far)
+        4. Rotate every pose to face the original goal
+        5. Return List[PoseStamped]
         """
-        # Ensure both poses are in the same coordinate frame
-        assert start_pose.header.frame_id == goal_pose.header.frame_id, \
-            "Start and goal poses must be in the same coordinate frame"
+        # ------------------------------------------------------------------
+        # Step-0: build a new goal on the desired circle
+        # ------------------------------------------------------------------
+        sx, sy = start_pose.pose.position.x, start_pose.pose.position.y
+        gx, gy = goal_pose.pose.position.x, goal_pose.pose.position.y
+        vec_x, vec_y = sx - gx, sy - gy  # goal → robot
+        dist = math.hypot(vec_x, vec_y)
+        if dist < 1e-3:  # almost same point
+            rospy.logwarn("Robot already at goal; no path needed")
+            return []
+        # shrink / expand to exactly <radius>
+        scale = radius / dist
+        target_x = gx + vec_x * scale
+        target_y = gy + vec_y * scale
 
-        # Step 1: Request global path planning from start to goal
-        try:
-            resp = self._make_plan(start_pose, goal_pose, tolerance=0.0)
-            plan = resp.plan
-        except rospy.ServiceException as e:
-            rospy.logerr(f"Global path planning failed: {e}")
-            return None
-
-        # Check if planner returned a valid path
-        if not plan.poses:
+        new_goal = PoseStamped()
+        new_goal.header = goal_pose.header  # keep same frame
+        new_goal.pose.position.x = target_x
+        new_goal.pose.position.y = target_y
+        new_goal.pose.position.z = goal_pose.pose.position.z
+        # orientation will be ignored by planner; keep as-is
+        new_goal.pose.orientation = goal_pose.pose.orientation
+        resp = self._make_plan(start_pose, new_goal, tolerance=0.5)
+        path = resp.plan.poses
+        if not path:
             rospy.logwarn("Global planner returned empty path")
-            return None
+            return []
+        idxs = np.linspace(0, len(path) - 1, num_samples, dtype=int)
+        sampled = [copy.deepcopy(path[i]) for i in idxs]
+        for p in sampled:
+            dx, dy = gx - p.pose.position.x, gy - p.pose.position.y
+            yaw = math.atan2(dy, dx)
+            qx, qy, qz, qw = quaternion_from_euler(0.0, 0.0, yaw)
+            p.pose.orientation.x, p.pose.orientation.y = qx, qy
+            p.pose.orientation.z, p.pose.orientation.w = qz, qw
 
-        # Step 2: Forward traverse the path to find the first pose within radius
-        for pose in plan.poses:
-            distance_to_goal = _euclidean_distance(pose.pose, goal_pose.pose)  # 使用现有的函数
-
-            if distance_to_goal <= radius:
-                rospy.loginfo(f"Found reachable pose at {distance_to_goal:.2f}m from goal")
-                return pose
-
-        # Step 3: No poses found within radius
-        rospy.logwarn(f"No path poses found within {radius}m radius of goal. "
-                      f"Consider increasing radius or checking goal accessibility.")
-        return None
+        return sampled
 
     def _cleanup(self):
         """Clean up resources after execution"""
@@ -1008,7 +1022,7 @@ class TrackingActiveState(SyncUserdataState):
                     rospy.loginfo("Evaluating navigation decision criteria")
 
                     # Check if target is different enough from previous
-                    if self.previous_target:
+                    if self.previous_target and self.previous_target != userdata.current_goal:
                         distance_to_previous = _euclidean_distance(target_pose, self.previous_target)
                         rospy.loginfo(f"Distance to previous target: {distance_to_previous:.2f}m "
                                       f"(threshold: {userdata.new_goal_threshold_min:.2f}m)")
@@ -1025,11 +1039,11 @@ class TrackingActiveState(SyncUserdataState):
                             userdata.robot_pose.pose, target_pose
                         )
                         rospy.loginfo(f"Robot distance to target: {distance_to_target:.2f}m "
-                                      f"(stopping distance: {userdata.stopping_distance:.2f}m, "
+                                      f"(min following distance: {userdata.min_following_distance:.2f}m, "
                                       f"max following distance: {userdata.max_following_distance:.2f}m)")
 
                         # Only navigate if we're not already close enough
-                        if distance_to_target >= userdata.stopping_distance:
+                        if distance_to_target >= userdata.min_following_distance:
                             rospy.loginfo("Distance check passed - sending navigation goal")
                             # Send navigation goal directly here
                             if self._send_navigation_goal(userdata, target_pose, last_pose_in_list):
@@ -1040,13 +1054,6 @@ class TrackingActiveState(SyncUserdataState):
                         else:
                             rospy.loginfo("Robot already close enough to target - no navigation needed")
 
-                        # Issue distance warning if target is too far
-                        if (distance_to_target > userdata.max_following_distance and
-                                (rospy.Time.now() - userdata.last_distance_warning_time >
-                                 userdata.distance_warning_interval_duration)):
-                            rospy.loginfo(f"Issuing distance warning - target too far: {distance_to_target:.2f}m")
-                            self.sm_manager._tts("Please wait for me. You are too far away.", wait=False)
-                            userdata.last_distance_warning_time = rospy.Time.now()
                     elif target_pose is not None:
                         rospy.loginfo("No robot pose available - cannot evaluate navigation distance")
             else:
@@ -1136,12 +1143,17 @@ class NavigationState(SyncUserdataState):
                     userdata.newest_detection.point, target_frame="map"
                 )
 
-            # # Check if target is lost during navigation
-            # if (rospy.Time.now() - userdata.last_good_detection_time >
-            #         userdata.target_moving_timeout_duration):
-            #     rospy.loginfo("Target lost during navigation")
-            #     self.sm_manager.move_base_client.cancel_goal()
-            #     return 'target_lost'
+            if len(userdata.target_list) > 0 and userdata.robot_pose:
+                distance_to_target = _euclidean_distance(
+                    userdata.robot_pose.pose, userdata.target_list[-1]
+                )
+                # Issue distance warning if target is too far
+                if (distance_to_target > userdata.max_following_distance and
+                        (rospy.Time.now() - userdata.last_distance_warning_time >
+                         userdata.distance_warning_interval_duration)):
+                    rospy.loginfo(f"Issuing distance warning - target too far: {distance_to_target:.2f}m")
+                    self.sm_manager._tts("Please wait for me. You are too far away.", wait=False)
+                    userdata.last_distance_warning_time = rospy.Time.now()
 
             # Check navigation status
             nav_state = self.sm_manager.move_base_client.get_state()
