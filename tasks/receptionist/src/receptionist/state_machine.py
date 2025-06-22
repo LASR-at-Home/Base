@@ -142,10 +142,15 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "SEAT_GUEST_1",
-                SeatGuest(),
+                SeatGuest(
+                    seating_area=self.seat_area,
+                    sofa_area=self.sofa_area,
+                    sofa_point=self.sofa_point,
+                    max_people_on_sofa=max_people_on_sofa,
+                ),
                 transitions={
                     "succeeded": "INTRODUCE_GUEST_1",
-                    "succeeded": "INTRODUCE_GUEST_1",
+                    "failed": "INTRODUCE_GUEST_1",
                 },
             )
 
@@ -224,10 +229,15 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "SEAT_GUEST_2",
-                SeatGuest(),
+                SeatGuest(
+                    seating_area=self.seat_area,
+                    sofa_area=self.sofa_area,
+                    sofa_point=self.sofa_point,
+                    max_people_on_sofa=max_people_on_sofa,
+                ),
                 transitions={
                     "succeeded": "INTRODUCE_GUEST_2",
-                    "succeeded": "INTRODUCE_GUEST_2",
+                    "failed": "INTRODUCE_GUEST_2",
                 },
             )
 
