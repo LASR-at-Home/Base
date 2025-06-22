@@ -152,6 +152,10 @@ class Receptionist(smach.StateMachine):
                     "succeeded": "INTRODUCE_GUEST_1",
                     "failed": "INTRODUCE_GUEST_1",
                 },
+                remapping={
+                    "guest_seat_point": "guest_seat_point",
+                    "seated_guest_locs": "seated_guest_locs",
+                },
             )
 
             smach.StateMachine.add(
@@ -238,6 +242,10 @@ class Receptionist(smach.StateMachine):
                 transitions={
                     "succeeded": "INTRODUCE_GUEST_2",
                     "failed": "INTRODUCE_GUEST_2",
+                },
+                remapping={
+                    "guest_seat_point": "guest_seat_point",
+                    "seated_guest_locs": "seated_guest_locs",
                 },
             )
 

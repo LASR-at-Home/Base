@@ -227,7 +227,9 @@ class SeatGuest(smach.StateMachine):
             )
             smach.StateMachine.add(
                 "SAY_SEAT_GUEST",
-                Say("Please sit on the seat that I am looking at."),
+                Say(
+                    "Please have sit on the seat that I am looking at, and then I will begin introductions."
+                ),
                 transitions={
                     "succeeded": "WAIT_FOR_GUEST_TO_SEAT",
                     "aborted": "failed",
