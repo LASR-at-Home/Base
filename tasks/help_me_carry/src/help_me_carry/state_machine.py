@@ -4,7 +4,7 @@ import smach_ros
 
 # from help_me_carry import follow_person, go_to_bag, pick_up_bag
 from help_me_carry import GoToBag, BagPickAndPlace
-from lasr_skills import FollowPerson
+from lasr_skills import FollowPerson, PlayMotion
 
 
 class CarryMyLuggage(smach.StateMachine):
@@ -12,9 +12,29 @@ class CarryMyLuggage(smach.StateMachine):
         smach.StateMachine.__init__(self, outcomes=["succeeded", "failed"])
         with self:
             smach.StateMachine.add(
+                f"PRE_FOLLOW",
+                PlayMotion(motion_name="pre_navigation"),
+                transitions={
+                    "succeeded": f"FOLLOW_PERSON",
+                    "preempted": "FOLLOW_PERSON",
+                    "aborted": "FOLLOW_PERSON",
+                },
+            )
+
+            smach.StateMachine.add(
                 "FOLLOW_PERSON",
                 FollowPerson(),
-                transitions={"succeeded": "succeeded", "failed": "succeeded"},
+                transitions={"succeeded": "POST_FOLLOW", "failed": "POST_FOLLOW"},
+            )
+
+            smach.StateMachine.add(
+                f"POST_FOLLOW",
+                PlayMotion(motion_name="following_post_navigation"),
+                transitions={
+                    "succeeded": f"succeeded",
+                    "preempted": "failed",
+                    "aborted": "failed",
+                },
             )
 
             # smach.StateMachine.add(

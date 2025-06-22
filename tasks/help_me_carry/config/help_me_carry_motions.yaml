@@ -5,4 +5,10 @@ play_motion:
       points:
       - positions: [2.5, -1.20, -1.30, 2.26, 1.91, 1.39, -1.77]
         time_from_start: 0.0
+
+    following_post_navigation:  # the torso will still stay low and look slightly down
+      joints: [torso_lift_joint, head_1_joint, head_2_joint]
+      points:
+        - positions: [0.15, 0.0, -0.2]
+          time_from_start: 0.0
       
