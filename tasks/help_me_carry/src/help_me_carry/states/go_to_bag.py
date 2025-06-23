@@ -57,7 +57,7 @@ class GoToBag(smach.State):
         )
         self.point_head_client.wait_for_server()
 
-        self.langsam_srv = rospy.ServiceProxy("/lasr_vision/lang_sam", LangSam)  
+        self.langsam_srv = rospy.ServiceProxy("/lasr_vision/lang_sam", LangSam)
         self.langsam_srv.wait_for_service()
 
         cv2.namedWindow("Auto-segmented bag", cv2.WINDOW_NORMAL)

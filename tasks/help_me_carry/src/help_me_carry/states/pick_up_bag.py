@@ -40,9 +40,6 @@ def allow_collisions_with_object(obj_name, scene):
     request = GetPlanningScene()
     request.components = 0  # Get just the Allowed Collision Matrix
     planning_scene = _get_planning_scene.call(request)
-    print(
-        f"\n\n\n--- allowed_collision_matrix before update:{planning_scene.scene.allowed_collision_matrix} ---\n\n\n"
-    )
 
     # Set this object to ignore collisions with all objects. The entry values are not updated
     planning_scene.scene.allowed_collision_matrix.entry_names.append(obj_name)
@@ -75,15 +72,12 @@ def allow_collisions_with_object(obj_name, scene):
     # planning_scene_pub = rospy.Publisher("planning_scene", PlanningScene, queue_size=5)
     # planning_scene_pub.publish(planning_scene.scene)
 
-    print(f"\n--- Sent message:{planning_scene.scene.allowed_collision_matrix} ---\n")
-
     # The planning scene retrieved after the update should have taken place shows the Allowed Collision Matrix is the same as before
     request = GetPlanningScene()
     request.components = 0  # Get just the Allowed Collision Matrix
     planning_scene = _get_planning_scene.call(request)
-    print(
-        f"\n--- allowed_collision_matrix after update:{planning_scene.scene.allowed_collision_matrix} ---\n"
-    )
+
+    rospy.loginfo("Collision object added to disregard to the planning scene!")
 
 
 class BagPickAndPlace(smach.State):
@@ -235,7 +229,7 @@ class BagPickAndPlace(smach.State):
             closest_pose = self.find_closest_pose_footprint(pts)
             centroid_pose = self.transform_centroid_pose_footprint(centroid, yaw)
 
-            # self.create_collision_object_from_pcl(pts)
+            self.create_collision_object_from_pcl(pts)
             rospy.sleep(1.0)
             self.prepare_pick()
             result = self.pick(centroid_pose, closest_pose)
@@ -243,6 +237,8 @@ class BagPickAndPlace(smach.State):
                 self.ask_for_bag()
 
             self.stow_bag()
+            self.hold_gripper_position()
+
             return "succeeded"
         except Exception as e:
             rospy.logerr(f"Exception in skill: {e}")
@@ -253,60 +249,45 @@ class BagPickAndPlace(smach.State):
             return "failed"
 
     def create_collision_object_from_pcl(self, points):
-        # Optional: remove outliers based on percentiles (e.g., filtering out the extreme points)
-        # lower = np.percentile(points, 1, axis=0)
-        # upper = np.percentile(points, 99, axis=0)
-
-        # Filter points based on the percentile ranges
-        # mask = np.all((points >= lower) & (points <= upper), axis=1)
-        # points = points[mask]
-
-        # Find the min and max of the points
         min_pt = points.min(axis=0)
         max_pt = points.max(axis=0)
 
-        # Calculate the center of the bounding box and its size
         center = (min_pt + max_pt) / 2.0
         size = (max_pt - min_pt) / 1000.0
+
+        # --- PCA on XY as you do elsewhere
+        xy = points[:, :2] - center[:2]
+        cov = np.cov(xy, rowvar=False)
+        evals, evecs = np.linalg.eigh(cov)
+        # The principal axis in the XY plane
+        long_axis = evecs[:, np.argmax(evals)]
+        orth = np.array([-long_axis[1], long_axis[0]])  # orthogonal
+
+        # Build rotation matrix
+        x_axis = np.array([long_axis[0], long_axis[1], 0])
+        y_axis = np.array([orth[0], orth[1], 0])
+        z_axis = np.array([0, 0, 1])
+        R = np.stack([x_axis, y_axis, z_axis], axis=1)  # shape (3,3)
+
+        quat = tft.quaternion_from_matrix(
+            np.vstack([np.hstack([R, np.zeros((3, 1))]), [0, 0, 0, 1]])  # shape (3,4)
+        )
 
         p = PoseStamped()
         frame_id = "xtion_rgb_optical_frame"
         p.header.frame_id = frame_id
         p.header.stamp = rospy.Time.now()
-        # p.pose.position.x = obj.centroid.x
-        # p.pose.position.y = obj.centroid.y
-        # p.pose.position.z = obj.centroid.z
         p.pose.position.x = center[0] / 1000.0
         p.pose.position.y = center[1] / 1000.0
         p.pose.position.z = center[2] / 1000.0
+        p.pose.orientation.x = quat[0]
+        p.pose.orientation.y = quat[1]
+        p.pose.orientation.z = quat[2]
+        p.pose.orientation.w = quat[3]
 
-        p.pose.orientation.w = 1
         rospy.loginfo(p)
         self.planning_scene_interface.add_box("obj", p, size=size)
 
-        # # Create the collision object (bounding box)
-        # collision_object = CollisionObject()
-        # collision_object.header.frame_id = frame_id
-        # collision_object.id = "object"
-
-        # # Define a SolidPrimitive (box)
-        # box = SolidPrimitive()
-        # box.type = SolidPrimitive.BOX
-        # box.dimensions = [size[0], size[1], size[2]]
-
-        # # Define the pose of the collision object
-        # pose = Pose()
-        # pose.position.x = center[0]
-        # pose.position.y = center[1]
-        # pose.position.z = center[2]
-        # pose.orientation.w = 1.0  # No rotation, just the position
-
-        # collision_object.primitives = [box]
-        # collision_object.primitive_poses = [pose]
-        # collision_object.operation = CollisionObject.ADD
-
-        # Add the collision object to the planning scene
-        # planning_scene_interface.apply_collision_object(collision_object)
         allow_collisions_with_object("obj", self.planning_scene_interface)
         rospy.loginfo("Collision object added to the planning scene!")
 
@@ -548,6 +529,25 @@ class BagPickAndPlace(smach.State):
         goal.trajectory = traj
         self.gripper_client.send_goal(goal)
         self.gripper_client.wait_for_result()
+
+    def hold_gripper_position(self, duration=1.0):
+        js = rospy.wait_for_message("/joint_states", JointState, timeout=1.0)
+
+        lidx = js.name.index("gripper_left_finger_joint")
+        ridx = js.name.index("gripper_right_finger_joint")
+        pos_l = js.position[lidx]
+        pos_r = js.position[ridx]
+
+        goal = FollowJointTrajectoryGoal()
+        traj = JointTrajectory()
+        traj.joint_names = ["gripper_left_finger_joint", "gripper_right_finger_joint"]
+        pt = JointTrajectoryPoint()
+        pt.positions = [pos_l, pos_r]
+        pt.time_from_start = rospy.Duration(duration)
+        traj.points = [pt]
+        goal.trajectory = traj
+
+        self.gripper_client.send_goal(goal)
 
 
 if __name__ == "__main__":

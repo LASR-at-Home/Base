@@ -1,8 +1,6 @@
 import rospy
 import smach
 import smach_ros
-
-# from help_me_carry import follow_person, go_to_bag, pick_up_bag
 from help_me_carry import GoToBag, BagPickAndPlace
 from lasr_skills import FollowPerson, PlayMotion
 
