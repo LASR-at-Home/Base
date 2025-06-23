@@ -54,7 +54,7 @@ class FindDrinkOnTable(smach.StateMachine):
                 ),
                 transitions={
                     "succeeded": "PROCESS_DETECTED_DRINKS",
-                    "failed": "POCESS_DETECTED_DRINKS",
+                    "failed": "PROCESS_DETECTED_DRINKS",
                 },
                 remapping={
                     "detected_objects": "detected_objects",
