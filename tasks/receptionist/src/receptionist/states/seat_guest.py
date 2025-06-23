@@ -1,7 +1,6 @@
 import smach
 import rospy
 
-from typing import List
 from shapely.geometry import Polygon as ShapelyPolygon
 
 import numpy as np
@@ -135,7 +134,6 @@ class SeatGuest(smach.StateMachine):
         smach.StateMachine.__init__(
             self,
             outcomes=["succeeded", "failed"],
-            input_keys=[""],
             output_keys=["guest_seat_point", "seated_guest_locs"],
         )
         seating_area_minus_sofa = seating_area.difference(sofa_area)
@@ -167,7 +165,7 @@ class SeatGuest(smach.StateMachine):
                     "failed": "failed",
                 },
                 remapping={
-                    "detected_objects": "sofa_detections",
+                    "detections_3d": "sofa_detections",
                 },
             )
             smach.StateMachine.add(
@@ -185,9 +183,9 @@ class SeatGuest(smach.StateMachine):
                 DetectAllInPolygon(
                     seating_area_minus_sofa,
                     object_filter=["person", "chair"],
-                    min_converage=1.0,
+                    min_coverage=1.0,
                     min_new_object_dist=0.50,
-                    min_confidence=0.7,
+                    min_confidence=0.5,
                 ),
                 transitions={
                     "succeeded": "PROCESS_DETECTIONS",
@@ -238,13 +236,10 @@ class SeatGuest(smach.StateMachine):
             )
             smach.StateMachine.add(
                 "WAIT_FOR_GUEST_TO_SEAT",
-                Wait(
-                    timeout=rospy.Duration(5.0),
-                ),
+                Wait(5.0),
                 transitions={
                     "succeeded": "RESET_HEAD_2",
-                    "aborted": "failed",
-                    "preempted": "failed",
+                    "failed": "failed",
                 },
             )
 

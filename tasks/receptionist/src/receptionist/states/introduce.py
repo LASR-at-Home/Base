@@ -4,7 +4,7 @@ seating area.
 
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Optional
 
 import rospy
 import message_filters
@@ -12,9 +12,10 @@ import smach
 
 from smach import UserData
 from sensor_msgs.msg import Image, CameraInfo
-from geometry_msgs.msg import Point, PointStamped
+from geometry_msgs.msg import PointStamped
 
 from lasr_skills import LookToPoint, Say, Wait
+from lasr_vision_msgs.msg import Detection3D
 from lasr_vision_msgs.srv import Recognise3D, Recognise3DRequest
 
 
@@ -62,8 +63,8 @@ class Recognise(smach.State):
                 self._depth_image = depth_image
                 self._depth_camera_info = depth_camera_info
 
-        image_sub = message_filters.Subscriber(self._image_topic, Image)
-        depth_sub = message_filters.Subscriber(self._depth_topic, Image)
+        image_sub = message_filters.Subscriber(self._rgb_image_topic, Image)
+        depth_sub = message_filters.Subscriber(self._depth_image_topic, Image)
         depth_camera_info_sub = message_filters.Subscriber(
             self._depth_info_topic, CameraInfo
         )
@@ -90,8 +91,11 @@ class Recognise(smach.State):
             response = recognise(request)
 
             if len(response.detections) == 0:
-                rospy.logwarn("No detections found.")
-                return "failed"
+                # Assume host
+                rospy.logwarn("No guests detected, assuming host.")
+                named_guest_detection = Detection3D()
+                named_guest_detection.name = "unkown"
+                userdata.named_guest_detection = named_guest_detection
             else:
                 # Assume we have already cropped the image
                 userdata.named_guest_detection = response.detections[0]
@@ -106,38 +110,59 @@ class Recognise(smach.State):
 class GetGuestData(smach.State):
 
     _guest_to_introduce: Optional[str]
+    _guest_to_introduce_to: Optional[str]
 
-    def __init__(self, guest_to_introduce: Optional[str] = None):
+    def __init__(
+        self,
+        guest_to_introduce: Optional[str] = None,
+        guest_to_introduce_to: Optional[str] = None,
+    ):
         super().__init__(
             outcomes=["succeeded", "failed"],
-            input_keys=["guest_data", "named_guest_detection", "person_index"],
+            input_keys=["guest_data", "named_guest_detection"],
             output_keys=["relevant_guest_data", "introduce_to"],
         )
+
+        """
+        Input keys are :
+         - guest_data: A dictionary containing the data of all guests, where the keys are
+           the ids (host, guest1, guest2) of the guests and the values are dictionaries with 
+           their data (name, drink, interest).
+         - named_guest_detection: The detection of the guest to introduce, which contains
+           the id of the guest to introduce.
+        
+        
+        Output keys are :
+         - relevant_guest_data: The data of the guest to introduce, a dictionary
+           containing their name, drink, and interest.
+         - introduce_to: The name (string) of the guest to introduce the guest to.
+        """
         # If this is None, we assume we have to infer the guest to introduce
-        # based on the person_index
+        # based on the named detection
         self._guest_to_introduce = guest_to_introduce
+        self._guest_to_introduce_to = guest_to_introduce_to
 
     def execute(self, userdata: UserData) -> str:
         if self._guest_to_introduce is not None:
             userdata.relevant_guest_data = userdata.guest_data[self._guest_to_introduce]
 
-            userdata.introduce_to = userdata.named_guest_detection[
-                userdata.person_index
-            ].name
+            introduce_to_reid = userdata.named_guest_detection.name
+            if introduce_to_reid not in userdata.guest_data:
+                userdata.introduce_to = userdata.guest_data["host"]["name"]
+            else:
+                userdata.introduce_to = userdata.guest_data[introduce_to_reid]["name"]
         else:
-            guest_to_introduce_name = userdata.named_guest_detection[
-                userdata.person_index
-            ].name
+            guest_to_introduce_reid = userdata.named_guest_detection.name
+            if guest_to_introduce_reid not in userdata.guest_data:
+                userdata.relevant_guest_data = userdata.guest_data["host"]
+            else:
+                userdata.relevant_guest_data = userdata.guest_data[
+                    guest_to_introduce_reid
+                ]
 
-            userdata.introduce_to = userdata.guest_data[guest_to_introduce_name]["name"]
-            for guest_info in userdata.guest_data.values():
-                if guest_info["name"] == guest_to_introduce_name:
-                    userdata.relevant_guest_data = guest_info
-                    break
-
-        rospy.loginfo(
-            f"Introducing {userdata.relevant_guest_data['name']} to {userdata.introduce_to}."
-        )
+            userdata.introduce_to = userdata.guest_data[
+                self._guest_to_introduce_to
+            ].get("name", "unknown")
 
         return "succeeded"
 
@@ -184,11 +209,11 @@ class Introduce(smach.StateMachine):
         if index < len(userdata.seated_guest_locs):
             look_point = PointStamped(
                 header=rospy.Header(frame_id="map"),
-                point=userdata.seated_guest_locs[index].point,
+                point=userdata.seated_guest_locs[index],
             )
             userdata.look_point = look_point
             rospy.loginfo(
-                f"Look point set to: {userdata.look_point.point.x}, {userdata.look_point.point.y}, {userdata.look_point.point.z}"
+                f"Look point set to: {look_point.point.x}, {look_point.point.y}, {look_point.point.z}"
             )
             return "succeeded"
         else:
@@ -209,6 +234,7 @@ class Introduce(smach.StateMachine):
                 it=lambda: range(len(self.userdata.seated_guest_locs)),
                 it_label="person_index",
                 input_keys=["seated_guest_locs", "guest_data", "guest_seat_point"],
+                output_keys=["look_point", "relevant_guest_data", "introduce_to"],
                 exhausted_outcome="succeeded",
                 outcomes=["succeeded", "failed"],
             )
@@ -220,6 +246,20 @@ class Introduce(smach.StateMachine):
                         "guest_seat_point",
                         "seated_guest_locs",
                         "person_index",
+                        "look_point",
+                        "introduce_to",
+                        "relevant_guest_data",
+                        "named_guest_detection",
+                    ],
+                    output_keys=[
+                        "guest_data",
+                        "guest_seat_point",
+                        "seated_guest_locs",
+                        "person_index",
+                        "look_point",
+                        "introduce_to",
+                        "relevant_guest_data",
+                        "named_guest_detection",
                     ],
                 )
                 with container_sm:
@@ -229,6 +269,7 @@ class Introduce(smach.StateMachine):
                             self._get_look_point,
                             input_keys=["seated_guest_locs", "person_index"],
                             output_keys=["look_point"],
+                            outcomes=["succeeded", "failed"],
                         ),
                         transitions={
                             "succeeded": "LOOK_TO_GUEST_1",
@@ -250,8 +291,7 @@ class Introduce(smach.StateMachine):
                         Wait(0.25),
                         transitions={
                             "succeeded": "RECOGNISE",
-                            "aborted": "failed",
-                            "timed_out": "failed",
+                            "failed": "failed",
                         },
                     )
                     smach.StateMachine.add(
@@ -269,7 +309,7 @@ class Introduce(smach.StateMachine):
                     )
                     smach.StateMachine.add(
                         "GET_GUEST_DATA_1",
-                        GetGuestData(),
+                        GetGuestData(guest_to_introduce=self._guest_to_introduce),
                         transitions={
                             "succeeded": "GET_INTRODUCTION_STR_1",
                             "failed": "failed",
@@ -312,7 +352,7 @@ class Introduce(smach.StateMachine):
                     )
                     smach.StateMachine.add(
                         "GET_GUEST_DATA_2",
-                        GetGuestData(guest_to_introduce=self._guest_to_introduce),
+                        GetGuestData(guest_to_introduce_to=self._guest_to_introduce),
                         transitions={
                             "succeeded": "GET_INTRODUCTION_STR_2",
                             "failed": "failed",
@@ -343,7 +383,7 @@ class Introduce(smach.StateMachine):
                         },
                         remapping={"text": "text"},
                     )
-                smach.Iterato.set_contained_state(
+                smach.Iterator.set_contained_state(
                     "CONTAINER_SM",
                     container_sm,
                     loop_outcomes=["continue"],

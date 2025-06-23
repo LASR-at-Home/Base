@@ -18,6 +18,7 @@ from receptionist.states import (
     Introduce,
     WelcomeGuest,
     FindDrinkOnTable,
+    GetCommonInterest,
 )
 from shapely.geometry import Polygon
 from std_msgs.msg import Empty
@@ -55,6 +56,8 @@ class Receptionist(smach.StateMachine):
         self.centre_table_area = centre_table_area
         self.seat_pose = seat_pose
         self.seat_area = seat_area
+        self.sofa_area = sofa_area
+        self.sofa_point = sofa_point
 
         with self:
             self.userdata.guest_data = {
@@ -253,9 +256,19 @@ class Receptionist(smach.StateMachine):
                 "INTRODUCE_GUEST_2",
                 Introduce(guest_to_introduce="guest2"),
                 transitions={
+                    "succeeded": "GET_COMMON_INTEREST",
+                    "failed": "GET_COMMON_INTEREST",
+                },
+            )
+
+            smach.StateMachine.add(
+                "GET_COMMON_INTEREST",
+                GetCommonInterest(),
+                transitions={
                     "succeeded": "SAY_GOODBYE",
                     "failed": "SAY_GOODBYE",
                 },
+                remapping={"guest_data": "guest_data"},
             )
 
             """
