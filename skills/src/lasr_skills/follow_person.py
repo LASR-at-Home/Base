@@ -77,6 +77,7 @@ class PersonFollowingUserData(smach.UserData):
         self.recovery_mode_active = False
         self.condition_flag_state = True
         self.first_tracking_done = False
+        self.say_started = False
 
         # Recovery behavior data
         self.recovery_scan_positions = []
@@ -90,12 +91,12 @@ class PersonFollowingUserData(smach.UserData):
         self.last_position = None
 
         # Configuration parameters with defaults
-        self.new_goal_threshold_min = 0.1
+        self.new_goal_threshold_min = 0.2
         self.new_goal_threshold_max = 2.0
-        self.stopping_distance = 1.75
+        self.stopping_distance = 2.15
         self.max_speed = 0.4
         self.max_following_distance = 4.0
-        self.min_following_distance = 0.2
+        self.min_following_distance = 0.25
         self.speak = True
         self.timeout = 0.0
         self.replan_distance = 2.0
@@ -379,7 +380,7 @@ class FollowPerson(smach.StateMachine):
             # Clear existing costmaps
             rospy.ServiceProxy("/move_base/clear_costmaps", Empty)()
 
-            rospy.sleep(1)
+            rospy.sleep(0.1)
             rospy.loginfo("Navigation parameters configured")
         except Exception as e:
             rospy.logwarn(f"Failed to configure navigation: {e}")
@@ -564,6 +565,9 @@ class FollowPerson(smach.StateMachine):
 
     def _detection3d_callback(self, msg: Detection3DArray):
         """Callback for SAM2 3D detections - updates userdata"""
+        if not self.userdata.say_started:
+            return
+
         for detection in msg.detections:
             if int(detection.name) == self.userdata.track_id:
                 # Quality check logic
@@ -606,9 +610,10 @@ class FollowPerson(smach.StateMachine):
                         poses = self._plan_and_sample_targets(
                             self.userdata.robot_pose,
                             map_pose,
-                            radius=self.userdata.stopping_distance,
-                            num_samples=8,
+                            radius=self.userdata.min_following_distance,
+                            num_samples=3,
                         )
+                        rospy.logwarn(f"Sampled {poses}")
                         for p in poses:
                             self._update_target_list(p)
                     self._update_target_list(map_pose)
@@ -755,48 +760,89 @@ class FollowPerson(smach.StateMachine):
         return self.make_plan_service(req)
 
     def _plan_and_sample_targets(
-        self,
-        start_pose: PoseStamped,
-        goal_pose: PoseStamped,
-        radius: float,
-        num_samples: int = 3,
+            self,
+            start_pose: PoseStamped,
+            goal_pose: PoseStamped,
+            radius: float,
+            num_samples: int = 3,
+            max_radius: float = 2.0,
+            n_steps: int = 10,
     ):
         """
-        1. Compute a new goal located on the line (goal → robot) at exactly <radius>
-        2. Call /move_base/make_plan(start, new_goal)
-        3. Evenly take <num_samples> poses (near → far)
-        4. Rotate every pose to face the original goal
-        5. Return List[PoseStamped]
+        Plan a short global path to a point that lies on the line (goal → robot),
+        at progressively larger radii, and sample poses along that path.
+
+        Args:
+            start_pose (PoseStamped): Current robot pose (in the map frame).
+            goal_pose  (PoseStamped): Original navigation goal (in the map frame).
+            radius     (float)      : Initial distance (m) from goal to place the new target.
+            num_samples(int)        : How many poses to take evenly along the path.
+            max_radius (float)      : Upper bound for the fallback search (m).
+            n_steps    (int)        : Number of radii to test between radius and max_radius
+                                      (inclusive). Must be ≥ 2 to allow at least one retry.
+
+        Returns:
+            List[PoseStamped]: `num_samples` poses facing the original goal,
+                               or an empty list if no path could be found.
         """
-        # ------------------------------------------------------------------
-        # Step-0: build a new goal on the desired circle
-        # ------------------------------------------------------------------
+        rospy.logwarn("Generating candidate goals.")
+
+        # Unpack start / goal positions once
         sx, sy = start_pose.pose.position.x, start_pose.pose.position.y
         gx, gy = goal_pose.pose.position.x, goal_pose.pose.position.y
         vec_x, vec_y = sx - gx, sy - gy  # goal → robot
         dist = math.hypot(vec_x, vec_y)
-        if dist < 1e-3:  # almost same point
+        if dist < 1e-3:
             rospy.logwarn("Robot already at goal; no path needed")
             return []
-        # shrink / expand to exactly <radius>
-        scale = radius / dist
-        target_x = gx + vec_x * scale
-        target_y = gy + vec_y * scale
 
-        new_goal = PoseStamped()
-        new_goal.header = goal_pose.header  # keep same frame
-        new_goal.pose.position.x = target_x
-        new_goal.pose.position.y = target_y
-        new_goal.pose.position.z = goal_pose.pose.position.z
-        # orientation will be ignored by planner; keep as-is
-        new_goal.pose.orientation = goal_pose.pose.orientation
-        resp = self._make_plan(start_pose, new_goal, tolerance=0.5)
-        path = resp.plan.poses
-        if not path:
-            rospy.logwarn("Global planner returned empty path")
+        # ------------------------------------------------------------------
+        # Step-0: iterate over a sequence of radii until a path is found
+        # ------------------------------------------------------------------
+        radii = np.linspace(radius, max_radius, max(2, n_steps))
+        path = []
+        tried_radii = []
+
+        for r in radii:
+            # 1. Build a new target on the desired circle (distance = r)
+            scale = r / dist
+            target_x = gx + vec_x * scale
+            target_y = gy + vec_y * scale
+
+            new_goal = PoseStamped()
+            new_goal.header.frame_id = goal_pose.header.frame_id
+            new_goal.header.stamp = rospy.Time(0)  # safest for TF
+            new_goal.pose.position.x = target_x
+            new_goal.pose.position.y = target_y
+            new_goal.pose.position.z = goal_pose.pose.position.z
+            new_goal.pose.orientation = goal_pose.pose.orientation
+
+            # 2. Ask the global planner for a path
+            resp = self._make_plan(start_pose, new_goal, tolerance=0.5)
+            path = resp.plan.poses
+            tried_radii.append(r)
+
+            if path:  # success!
+                rospy.loginfo(f"Found path at r = {r:.2f} m")
+                break  # leave the loop
+
+        else:
+            # The for-loop exhausted all radii without breaking => no path
+            rospy.logwarn(
+                f"Global planner returned empty path for all radii "
+                f"{[f'{r:.2f}' for r in tried_radii]}"
+            )
             return []
+
+        # ------------------------------------------------------------------
+        # Step-1: evenly sample <num_samples> poses along the found path
+        # ------------------------------------------------------------------
         idxs = np.linspace(0, len(path) - 1, num_samples, dtype=int)
         sampled = [copy.deepcopy(path[i]) for i in idxs]
+
+        # ------------------------------------------------------------------
+        # Step-2: rotate every pose to face the original goal
+        # ------------------------------------------------------------------
         for p in sampled:
             dx, dy = gx - p.pose.position.x, gy - p.pose.position.y
             yaw = math.atan2(dy, dx)
@@ -804,6 +850,7 @@ class FollowPerson(smach.StateMachine):
             p.pose.orientation.x, p.pose.orientation.y = qx, qy
             p.pose.orientation.z, p.pose.orientation.w = qz, qw
 
+        rospy.logwarn("Candidate goals generated.")
         return sampled
 
     def _cleanup(self):
@@ -1064,7 +1111,7 @@ class PersonDetectionState(SyncUserdataState):
         prompt_msg.point_array = []
         prompt_msg.reset = True
         self.sm_manager.prompt_pub.publish(prompt_msg)
-        rospy.sleep(0.5)
+        rospy.sleep(0.1)
 
         # Start tracking
         self.sm_manager.track_flag_pub.publish(Bool(data=True))
@@ -1105,10 +1152,11 @@ class TrackingActiveState(SyncUserdataState):
         self.sync_userdata_from_manager(userdata)
         rospy.loginfo("Active tracking mode")
 
-        if len(userdata.target_list) > 0:
+        if not userdata.first_tracking_done:
             self.sm_manager._tts("I will start to follow you.", wait=True)
+            userdata.say_started = True
 
-        rate = rospy.Rate(10)
+        rate = rospy.Rate(15)
 
         while not rospy.is_shutdown():
             self.sync_userdata_from_manager(userdata)
@@ -1156,6 +1204,7 @@ class TrackingActiveState(SyncUserdataState):
                 rospy.loginfo(
                     f"Processing target list with {len(userdata.target_list)} poses"
                 )
+                self.sync_userdata_from_manager(userdata)
 
                 # Find suitable target pose within boundary (used for both navigation decision and orientation)
                 target_pose = None
@@ -1271,6 +1320,7 @@ class TrackingActiveState(SyncUserdataState):
 
     def _send_navigation_goal(self, userdata, target_pose, orientation_reference_pose):
         """Send navigation goal to move_base and return success status"""
+        userdata.first_tracking_done = True
         try:
             # Compute goal orientation to face the person
             goal_orientation = _compute_face_quat(
@@ -1301,6 +1351,8 @@ class TrackingActiveState(SyncUserdataState):
             userdata.current_goal = target_pose
             userdata.previous_target = target_pose
             self.just_started = False
+
+            self.sync_userdata_to_manager(userdata)
 
             rospy.loginfo("Navigation goal sent successfully")
             return True
@@ -1338,7 +1390,7 @@ class NavigationState(SyncUserdataState):
             return "navigation_complete"
 
         # Monitor navigation progress
-        rate = rospy.Rate(10)
+        rate = rospy.Rate(15)
         while not rospy.is_shutdown():
             self.sync_userdata_from_manager(userdata)
             # Keep looking at detected person during navigation
@@ -1363,38 +1415,37 @@ class NavigationState(SyncUserdataState):
                         f"Target deviation: {deviation_distance:.2f}m vs threshold: {userdata.replan_distance:.2f}m"
                     )
 
-                    if deviation_distance > userdata.replan_distance:
-                        rospy.loginfo(
-                            f"Target deviated too much ({deviation_distance:.2f}m), canceling current navigation"
-                        )
-
-                        # Cancel current navigation goal
-                        userdata.last_canceled_goal_time = rospy.Time.now()
-                        self.sm_manager.move_base_client.cancel_goal()
-                        userdata.previous_target = None
-                        rospy.loginfo("Current navigation goal canceled")
-                        userdata.target_list = (
-                            []
-                        )  # refresh the target list by replaning (will be trigured automatically)
-                        userdata.person_trajectory = PoseArray()
-                        userdata.person_trajectory.header.frame_id = "map"
-                        self.sync_userdata_to_manager(
-                            userdata
-                        )  # refresh self.userdata of parent state machine
-                        # Send a rotation-only goal to face the real target
-                        if self._send_face_target_goal(userdata, newest_target):
-                            rospy.loginfo(
-                                "Face-target goal sent, staying in navigation state"
-                            )
-                            # Stay in navigation state to monitor the rotation
-                        else:
-                            rospy.logwarn("Failed to send face-target goal")
-                            self.sync_userdata_to_manager(userdata)
-                            return "navigation_complete"
-
-                        # Update current goal to the new target
-                        userdata.current_goal = newest_target
-                        continue
+                    # if deviation_distance > userdata.replan_distance:
+                    #     rospy.loginfo(
+                    #         f"Target deviated too much ({deviation_distance:.2f}m), canceling current navigation"
+                    #     )
+                    #     # Cancel current navigation goal
+                    #     userdata.last_canceled_goal_time = rospy.Time.now()
+                    #     self.sm_manager.move_base_client.cancel_goal()
+                    #     userdata.previous_target = None
+                    #     rospy.loginfo("Current navigation goal canceled")
+                    #     userdata.target_list = (
+                    #         []
+                    #     )  # refresh the target list by replaning (will be trigured automatically)
+                    #     userdata.person_trajectory = PoseArray()
+                    #     userdata.person_trajectory.header.frame_id = "map"
+                    #     self.sync_userdata_to_manager(
+                    #         userdata
+                    #     )  # refresh self.userdata of parent state machine
+                    #     # Send a rotation-only goal to face the real target
+                    #     if self._send_face_target_goal(userdata, newest_target):
+                    #         rospy.loginfo(
+                    #             "Face-target goal sent, staying in navigation state"
+                    #         )
+                    #         # Stay in navigation state to monitor the rotation
+                    #     else:
+                    #         rospy.logwarn("Failed to send face-target goal")
+                    #         self.sync_userdata_to_manager(userdata)
+                    #         return "navigation_complete"
+                    #
+                    #     # Update current goal to the new target
+                    #     userdata.current_goal = newest_target
+                    #     continue
 
                 # Issue distance warning if target is too far
                 distance_to_target = _euclidean_distance(
