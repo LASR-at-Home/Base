@@ -42,7 +42,7 @@ class IntroduceAndSeatGuest(smach.StateMachine):
         smach.StateMachine.__init__(
             self, outcomes=["succeeded", "failed"], input_keys=["guest_data"]
         )
-        
+
         with self:
 
             class HandleSofaDetections(smach.State):
