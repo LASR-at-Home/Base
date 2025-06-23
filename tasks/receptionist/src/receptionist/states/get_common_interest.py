@@ -37,6 +37,7 @@ class GetInterest(smach.State):
             rospy.logerr("Failed to call LLM service.")
             userdata.interest_message = "I'm afraid I couldn't find a common interest between you all, you'll have to make do with small talk."
             return "failed"
+        return "succeeded"
 
 
 class GetCommonInterest(smach.StateMachine):
