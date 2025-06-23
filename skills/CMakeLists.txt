@@ -9,8 +9,11 @@ project(lasr_skills)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   rospy
+  navigation_helpers
   lasr_vision_msgs
   lasr_vector_databases_msgs
+  lasr_vision_sam2
+  lasr_vision_yolo
 )
 
 ## System dependencies are found with CMake's conventions

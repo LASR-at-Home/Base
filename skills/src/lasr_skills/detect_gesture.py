@@ -24,12 +24,12 @@ class DetectGesture(smach.State):
     """
 
     def __init__(
-            self,
-            gesture_to_detect: Union[str, None] = None,
-            yolo_model: str = "yolov8n-pose.pt",
-            yolo_confidence: float = 0.5,
-            buffer_width: int = 50,
-            debug_publisher: str = "/skills/gesture_detection/debug",
+        self,
+        gesture_to_detect: Union[str, None] = None,
+        yolo_model: str = "yolov8n-pose.pt",
+        yolo_confidence: float = 0.5,
+        buffer_width: int = 50,
+        debug_publisher: str = "/skills/gesture_detection/debug",
     ):
         smach.State.__init__(
             self,
@@ -98,8 +98,8 @@ class DetectGesture(smach.State):
         # Pointing to the left - check if left wrist is significantly to the right of left shoulder
         if "left_shoulder" in keypoint_info and "left_wrist" in keypoint_info:
             if (
-                    keypoint_info["left_wrist"]["x"] - self.buffer_width
-                    > keypoint_info["left_shoulder"]["x"]
+                keypoint_info["left_wrist"]["x"] - self.buffer_width
+                > keypoint_info["left_shoulder"]["x"]
             ):
                 detected_gesture = "pointing_to_the_left"
 
@@ -111,8 +111,8 @@ class DetectGesture(smach.State):
         # Pointing to the right - check if right wrist is significantly to the left of right shoulder
         if "right_shoulder" in keypoint_info and "right_wrist" in keypoint_info:
             if (
-                    keypoint_info["right_shoulder"]["x"] - self.buffer_width
-                    > keypoint_info["right_wrist"]["x"]
+                keypoint_info["right_shoulder"]["x"] - self.buffer_width
+                > keypoint_info["right_wrist"]["x"]
             ):
                 detected_gesture = "pointing_to_the_right"
 
