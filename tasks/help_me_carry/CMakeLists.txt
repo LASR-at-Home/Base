@@ -12,9 +12,9 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   std_msgs
   lasr_skills
-  lasr_vision_sam2
-  lasr_vision_yolo
-  lasr_vision_lang_sam
+  # lasr_vision_sam2
+  # lasr_vision_yolo
+  # lasr_vision_lang_sam
 )
 
 ## System dependencies are found with CMake's conventions

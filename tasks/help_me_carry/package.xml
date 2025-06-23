@@ -64,9 +64,9 @@
   <exec_depend>std_msgs</exec_depend>
   <build_depend>catkin_virtualenv</build_depend>
   <depend>lasr_skills</depend>
-  <depend>lasr_vision_sam2</depend>
+  <!-- <depend>lasr_vision_sam2</depend>
   <depend>lasr_vision_yolo</depend>
-  <depend>lasr_vision_lang_sam</depend>
+  <depend>lasr_vision_lang_sam</depend> -->
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>
