@@ -2,8 +2,8 @@
     <!-- Person Following backend -->
     <!-- <include file="$(find lasr_person_following)/launch/joint_leg_tracker.launch"/> -->
     <rosparam command="load" file="$(find lasr_skills)/config/motions.yaml" />
-    <!-- <include file="$(find lasr_vision_sam2)/launch/sam2.launch"/>
-    <include file="$(find lasr_vision_yolo)/launch/service.launch"/> -->
+    <include file="$(find lasr_vision_sam2)/launch/sam2.launch"/>
+    <include file="$(find lasr_vision_yolo)/launch/service.launch"/>
 
     <!-- Bag Manipulation play motion -->
     <rosparam command="load" file="$(find help_me_carry)/config/help_me_carry_motions.yaml" />
