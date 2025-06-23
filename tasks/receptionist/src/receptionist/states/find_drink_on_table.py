@@ -44,15 +44,6 @@ class FindDrinkOnTable(smach.StateMachine):
                 },
             )
 
-            # smach.StateMachine.add(
-            #     "DETECT_DRINKS_ON_TABLE",
-            #     Detect3DInArea(area_polygon=table_area, filter=self.possible_drinks),
-            #     transitions={
-            #         "succeeded": "PROCESS_DETECTED_DRINKS",
-            #         "failed": "failed",
-            #     },
-            # )
-
             smach.StateMachine.add(
                 "DETECT_DRINKS_ON_TABLE",
                 DetectAllInPolygon(
@@ -63,7 +54,7 @@ class FindDrinkOnTable(smach.StateMachine):
                 ),
                 transitions={
                     "succeeded": "PROCESS_DETECTED_DRINKS",
-                    "failed": "failed",
+                    "failed": "POCESS_DETECTED_DRINKS",
                 },
                 remapping={
                     "detected_objects": "detected_objects",

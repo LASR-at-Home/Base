@@ -28,7 +28,7 @@ class ProcessDetections(smach.State):
             self,
             outcomes=["succeeded", "failed"],
             input_keys=["non_sofa_detections", "sofa_detections"],
-            output_keys=["guest_seat_point", "seated_guest_locs"],
+            output_keys=["guest_seat_point", "seated_guest_locs", "seating_string"],
         )
         self._max_people_on_sofa = max_people_on_sofa
         self._sofa_point = sofa_point
@@ -66,6 +66,13 @@ class ProcessDetections(smach.State):
                 header=Header(frame_id="map"),
                 point=self._sofa_point,
             )
+            if len(userdata.sofa_detections) == 0:
+                userdata.seating_string = "The sofa that I'm looking at is empty. Please take a seat anywhere on the sofa."
+            elif len(userdata.sofa_detections) == 1:
+                userdata.seating_string = (
+                    "The sofa that I'm looking at is occupied by one person. "
+                    "Please take a seat next to them on the sofa."
+                )
         else:
             seated_guests_xywh = [
                 detection.xywh
@@ -117,6 +124,7 @@ class ProcessDetections(smach.State):
                                 z=detection.point.z,
                             ),
                         )
+                        userdata.seating_string = "The sofa is full, but I have found a chair for you. Please take a seat on the chair that I'm looking at."
                         done = True
 
         return "succeeded"
@@ -225,13 +233,14 @@ class SeatGuest(smach.StateMachine):
             )
             smach.StateMachine.add(
                 "SAY_SEAT_GUEST",
-                Say(
-                    "Please have sit on the seat that I am looking at, and then I will begin introductions."
-                ),
+                Say(),
                 transitions={
                     "succeeded": "WAIT_FOR_GUEST_TO_SEAT",
                     "aborted": "failed",
                     "preempted": "failed",
+                },
+                remapping={
+                    "text": "seating_string",
                 },
             )
             smach.StateMachine.add(
