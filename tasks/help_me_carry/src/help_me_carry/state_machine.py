@@ -31,23 +31,29 @@ class CarryMyLuggage(smach.StateMachine):
                 f"POST_FOLLOW",
                 PlayMotion(motion_name="following_post_navigation"),
                 transitions={
-                    "succeeded": f"succeeded",
-                    "preempted": "failed",
-                    "aborted": "failed",
+                    "succeeded": f"GO_TO_BAG",
+                    "preempted": "GO_TO_BAG",
+                    "aborted": "GO_TO_BAG",
                 },
             )
 
-            # smach.StateMachine.add(
-            #     "GO_TO_BAG",
-            #     GoToBag(),
-            #     transitions={"succeeded": "PICK_UP_BAG", "failed": "failed"},
-            # )
+            smach.StateMachine.add(
+                "GO_TO_BAG",
+                GoToBag(),
+                transitions={
+                    "succeeded": "PICK_UP_BAG",
+                    "failed": "failed",
+                },
+            )
 
-            # smach.StateMachine.add(
-            #     "PICK_UP_BAG",
-            #     BagPickAndPlace(),
-            #     transitions={"succeeded": "succeeded", "failed": "failed"},
-            # )
+            smach.StateMachine.add(
+                "PICK_UP_BAG",
+                BagPickAndPlace(),
+                transitions={
+                    "succeeded": "succeeded",
+                    "failed": "failed",
+                },
+            )
 
 
 def main():
