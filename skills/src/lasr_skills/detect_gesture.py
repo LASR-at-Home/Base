@@ -26,7 +26,7 @@ class DetectGesture(smach.State):
     def __init__(
         self,
         gesture_to_detect: Union[str, None] = None,
-        yolo_model: str = "yolov8n-pose.pt",
+        yolo_model: str = "yolov11n-pose.pt",
         yolo_confidence: float = 0.5,
         buffer_width: int = 50,
         debug_publisher: str = "/skills/gesture_detection/debug",
@@ -126,9 +126,6 @@ class DetectGesture(smach.State):
 
         # Create debug image with gesture annotation
         cv2_gesture_img = cv2_img.msg_to_cv2_img(userdata.img_msg)
-
-        # Draw keypoints on the image for debugging
-        self._draw_keypoints(cv2_gesture_img, keypoint_info)
 
         # Add gesture text to the image
         cv2.putText(
