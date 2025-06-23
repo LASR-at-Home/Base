@@ -3,7 +3,7 @@ from typing import List
 import smach
 import rospy
 
-from lasr_skills import Detect3DInArea, Say, LookToPoint
+from lasr_skills import DetectAllInPolygon, Say, LookToPoint
 from shapely.geometry import Point
 from shapely.geometry.polygon import Polygon as ShapelyPolygon
 from geometry_msgs.msg import PointStamped
@@ -44,14 +44,32 @@ class FindDrinkOnTable(smach.StateMachine):
                 },
             )
 
+            # smach.StateMachine.add(
+            #     "DETECT_DRINKS_ON_TABLE",
+            #     Detect3DInArea(area_polygon=table_area, filter=self.possible_drinks),
+            #     transitions={
+            #         "succeeded": "PROCESS_DETECTED_DRINKS",
+            #         "failed": "failed",
+            #     },
+            # )
+
             smach.StateMachine.add(
                 "DETECT_DRINKS_ON_TABLE",
-                Detect3DInArea(area_polygon=table_area, filter=self.possible_drinks),
+                DetectAllInPolygon(
+                    polygon=table_area,
+                    object_filter=self.possible_drinks,
+                    min_coverage=0.95,
+                    min_new_object_dist=0.30,
+                ),
                 transitions={
                     "succeeded": "PROCESS_DETECTED_DRINKS",
                     "failed": "failed",
                 },
+                remapping={
+                    "detected_objects": "detected_objects",
+                },
             )
+
             smach.StateMachine.add(
                 "PROCESS_DETECTED_DRINKS",
                 self.ProcessDetectedDrinks(
@@ -65,7 +83,7 @@ class FindDrinkOnTable(smach.StateMachine):
                     "failed": "GET_DRINK_STRING",
                 },
                 remapping={
-                    "detections_3d": "detections_3d",
+                    "detected_objects": "detected_objects",
                     "guest_data": "guest_data",
                     "drink_location": "drink_location",
                 },
@@ -105,7 +123,7 @@ class FindDrinkOnTable(smach.StateMachine):
             smach.State.__init__(
                 self,
                 outcomes=["succeeded", "failed"],
-                input_keys=["detections_3d", "guest_data"],
+                input_keys=["detected_objects", "guest_data"],
                 output_keys=["drink_location"],  # Left, Centre, Right, or None
             )
             self._guest_id = guest_id
@@ -120,7 +138,7 @@ class FindDrinkOnTable(smach.StateMachine):
             if favourite_drink is None:
                 pass
             else:
-                detected_drinks = userdata.detections_3d
+                detected_drinks = userdata.detected_objects
                 for drink in detected_drinks:
                     if drink.name.lower() == favourite_drink.lower():
                         point = Point(drink.point.x, drink.point.y)
