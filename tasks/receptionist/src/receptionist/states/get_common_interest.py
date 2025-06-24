@@ -8,6 +8,8 @@ from lasr_llm_msgs.srv import Llm, LlmRequest
 class GetInterest(smach.State):
     """Prompts an LLM to find a common interest between the guests and the host."""
 
+    _llm: rospy.ServiceProxy
+
     def __init__(self):
         smach.State.__init__(
             self,
@@ -19,6 +21,7 @@ class GetInterest(smach.State):
         self._llm.wait_for_service()
 
     def execute(self, userdata):
+        failure_message = "I'm afraid I couldn't find a common interest between you all, you'll have to make do with small talk."
         try:
             request = LlmRequest()
             request.system_prompt = f"You are a robot acting as a party host. You are tasked with finding a common interest between two people, out of a group of three people. You will receive input such as 'Name: James, Interest: football. Name: Chloe, Interest: baking. Name: John, Interest: tennis'. You should output exactly three words, the names of the two people who share a common interest, and the common interest itself. In the example, this might be 'James, John, sports'. If you cannot find any common interest, output 'none'."
@@ -29,9 +32,12 @@ class GetInterest(smach.State):
             commonality = commonality.replace(".", "").replace(",", "").split()
             if len(commonality) != 3 or commonality[0] == "none":
                 rospy.logerr("Failed to get common interest from LLM.")
-                userdata.interest_message = "I'm afraid I couldn't find a common interest between you all, you'll have to make do with small talk."
+                userdata.interest_message = failure_message
                 return "failed"
             name_1, name_2, common_interest = commonality
+            if name_1 == name_2:
+                userdata.interest_message = failure_message
+                return "failed"
             userdata.interest_message = f"To get the conversation going, you might like to know that {name_1} and {name_2} both share an interest in {common_interest}. Do with that what you will."
         except:
             rospy.logerr("Failed to call LLM service.")

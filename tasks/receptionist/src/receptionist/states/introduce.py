@@ -14,7 +14,7 @@ from smach import UserData
 from sensor_msgs.msg import Image, CameraInfo
 from geometry_msgs.msg import PointStamped
 
-from lasr_skills import LookToPoint, Say, Wait
+from lasr_skills import LookToPoint, Say, Wait, StartEyeTracker, StopEyeTracker
 from lasr_vision_msgs.msg import Detection3D
 from lasr_vision_msgs.srv import Recognise3D, Recognise3DRequest
 
@@ -285,7 +285,7 @@ class Introduce(smach.StateMachine):
                             "aborted": "failed",
                             "timed_out": "failed",
                         },
-                    )
+                    )   
                     smach.StateMachine.add(
                         "WAIT",
                         Wait(0.25),

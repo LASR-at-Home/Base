@@ -253,7 +253,7 @@ class EyeTracker:
                 g = PointHeadGoal(
                     pointing_frame="head_2_link",
                     pointing_axis=Point(1.0, 0.0, 0.0),
-                    max_velocity=0.5,
+                    max_velocity=1.0,
                     target=PointStamped(
                         header=Header(frame_id="map"),
                         point=self._eyes,
