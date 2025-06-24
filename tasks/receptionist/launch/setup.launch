@@ -20,6 +20,8 @@
     <!--      PERCEPTION     -->
     <node pkg="lasr_vision_clip" name="clip_service" type="vqa" output="screen"/>
     <node pkg="lasr_vision_reid" type="service.py" name="reid_service" output="screen"/>
+    <node pkg ="lasr_vision_eye_tracker" type="eye_tracker_server.py" name="eye_tracker_service" output="screen"/>
     <node name="yolo" pkg="lasr_vision_yolo" type="service.py" output="screen"/>
+
 
 </launch>
