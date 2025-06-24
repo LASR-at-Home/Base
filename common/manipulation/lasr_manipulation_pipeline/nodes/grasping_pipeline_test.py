@@ -172,7 +172,7 @@ class GraspingPipeline:
         self._collision_object_pub.publish(obj)
 
         # Call GPD on the aligned mesh
-        grasps, scores, openings = gpd.generate_grasps(
+        grasps, approaches, scores, openings = gpd.generate_grasps(
             mesh_pcd,
             self._gpd_pcd_path,
             self._gpd_executable_path,
@@ -183,7 +183,9 @@ class GraspingPipeline:
         self._publish_grasp_poses(grasps, pcl.header.frame_id)
 
         moveit_grasps = []
-        for i, (grasp, score, opening) in enumerate(zip(grasps, scores, openings)):
+        for i, (grasp, approach, score, opening) in enumerate(
+            zip(grasps, approaches, scores, openings)
+        ):
             moveit_grasp = Grasp()
             moveit_grasp.id = str(i)
             moveit_grasp.pre_grasp_posture.joint_names = [
@@ -212,11 +214,17 @@ class GraspingPipeline:
             moveit_grasp.grasp_quality = score
 
             moveit_grasp.pre_grasp_approach.direction.header.frame_id = (
-                "gripper_grasping_frame"
+                pcl.header.frame_id
             )
-            moveit_grasp.pre_grasp_approach.direction.vector.x = -1.0
-            moveit_grasp.pre_grasp_approach.direction.vector.y = 0.0
-            moveit_grasp.pre_grasp_approach.direction.vector.z = 0.0
+            moveit_grasp.pre_grasp_approach.direction.vector.x = approach.x
+            moveit_grasp.pre_grasp_approach.direction.vector.y = approach.y
+            moveit_grasp.pre_grasp_approach.direction.vector.z = approach.z
+            # moveit_grasp.pre_grasp_approach.direction.header.frame_id = (
+            #     "gripper_grasping_frame"
+            # )
+            # moveit_grasp.pre_grasp_approach.direction.vector.x = -1.0
+            # moveit_grasp.pre_grasp_approach.direction.vector.y = 0.0
+            # moveit_grasp.pre_grasp_approach.direction.vector.z = 0.0
             moveit_grasp.pre_grasp_approach.desired_distance = 0.1
             moveit_grasp.pre_grasp_approach.min_distance = 0.05
 
@@ -234,6 +242,7 @@ class GraspingPipeline:
 
         goal = PickupGoal()
         goal.target_name = "obj"
+        goal.allowed_touch_objects = ["obj"]
         goal.possible_grasps = moveit_grasps
         goal.group_name = self._move_group.get_name()
         goal.allowed_planning_time = self._move_group.get_planning_time()

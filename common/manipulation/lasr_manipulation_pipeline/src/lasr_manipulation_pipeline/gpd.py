@@ -5,7 +5,7 @@ import tf.transformations
 import subprocess
 import numpy as np
 
-from geometry_msgs.msg import Pose, Point, Quaternion
+from geometry_msgs.msg import Pose, Point, Quaternion, Vector3
 
 
 def grasp_to_pose(
@@ -18,10 +18,12 @@ def grasp_to_pose(
     homogeneous_matrix = np.eye(4)
     homogeneous_matrix[:3, :3] = rotation_matrix
     quaternion = tf.transformations.quaternion_from_matrix(homogeneous_matrix)
-    return Pose(position=Point(*position), orientation=Quaternion(*quaternion))
+    return Pose(
+        position=Point(*position), orientation=Quaternion(*quaternion)
+    ), Vector3(*approach)
 
 
-def grasp_from_str(grasp_str: str) -> Tuple[Pose, float, float]:
+def grasp_from_str(grasp_str: str) -> Tuple[Pose, Vector3, float, float]:
     xs = np.array(grasp_str.split(","), dtype=float)
     position = xs[:3]
     axis = xs[3:6]
@@ -29,8 +31,8 @@ def grasp_from_str(grasp_str: str) -> Tuple[Pose, float, float]:
     binormal = xs[9:12]
     opening = xs[12]  # unused
     score = xs[13]
-    pose = grasp_to_pose(position, axis, approach, binormal)
-    return pose, score, opening
+    pose, approach = grasp_to_pose(position, axis, approach, binormal)
+    return pose, approach, score, opening
 
 
 def generate_grasps(
@@ -38,7 +40,7 @@ def generate_grasps(
     path_to_pcd: str,
     path_to_gpd: str,
     path_to_gpd_cfg: str,
-) -> Tuple[List[Pose], List[float], List[float]]:
+) -> Tuple[List[Pose], List[Vector3], List[float], List[float]]:
 
     # Write pcd to disk
     o3d.io.write_point_cloud(path_to_pcd, pcd)
@@ -52,20 +54,23 @@ def generate_grasps(
 
     # Build lists
     poses = []
+    approaches = []
     scores = []
     openings = []
     for line in output:
-        pose, score, opening = grasp_from_str(line)
+        pose, approach, score, opening = grasp_from_str(line)
         poses.append(pose)
+        approaches.append(approach)
         scores.append(score)
         openings.append(opening)
 
     sorted_pairs = sorted(
-        zip(poses, scores, openings), key=lambda x: x[1], reverse=True
+        zip(poses, approaches, scores, openings), key=lambda x: x[2], reverse=True
     )
-    poses, scores, openings = zip(*sorted_pairs)
+    poses, approaches, scores, openings = zip(*sorted_pairs)
     poses = list(poses)
+    approaches = list(approaches)
     scores = list(scores)
     openings = list(openings)
 
-    return poses, scores, openings
+    return poses, approaches, scores, openings
