@@ -1,4 +1,5 @@
 import smach
+import actionlib
 
 from lasr_vision_msgs.msg import (
     EyeTrackerAction,
@@ -7,13 +8,16 @@ from lasr_vision_msgs.msg import (
 
 
 class StartEyeTracker(smach.State):
+
+    _action_client: actionlib.SimpleActionClient
+
     def __init__(self):
         smach.State.__init__(
             self,
-            outcomes=["succeeded", "aborted"],
+            outcomes=["succeeded", "failed"],
             input_keys=["person_point"],
         )
-        self._action_client = smach.SimpleActionClient(
+        self._action_client = actionlib.SimpleActionClient(
             "/lasr_vision_eye_tracker/track_eyes", EyeTrackerAction
         )
         self._action_client.wait_for_server()
@@ -26,14 +30,17 @@ class StartEyeTracker(smach.State):
 
 
 class StopEyeTracker(smach.State):
+
+    _action_client: actionlib.SimpleActionClient
+
     def __init__(self):
         smach.State.__init__(
             self,
-            outcomes=["succeeded", "aborted"],
+            outcomes=["succeeded", "failed"],
             input_keys=["person_point"],
             output_keys=["eyes"],
         )
-        self._action_client = smach.SimpleActionClient(
+        self._action_client = actionlib.SimpleActionClient(
             "/lasr_vision_eye_tracker/track_eyes", EyeTrackerAction
         )
         self._action_client.wait_for_server()

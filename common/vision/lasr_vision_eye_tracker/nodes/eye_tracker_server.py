@@ -25,7 +25,7 @@ from control_msgs.msg import (
 )
 from trajectory_msgs.msg import JointTrajectoryPoint
 
-from geometry_msgs.msg import PointStamped, Point
+from geometry_msgs.msg import PointStamped, Point, PoseStamped
 from sensor_msgs.msg import Image, CameraInfo
 from std_msgs.msg import Header
 
@@ -50,6 +50,9 @@ class EyeTracker:
     _head_action_client: actionlib.SimpleActionClient
     _eyes: Optional[Point] = None
     _head_point_action_client: actionlib.SimpleActionClient
+    _robot_pose_sub = rospy.Subscriber
+    _yolo_keypoint_service: rospy.ServiceProxy
+    _robot_point: Optional[Point] = None
 
     def __init__(self):
 
@@ -62,6 +65,13 @@ class EyeTracker:
         self._action_server.start()
         self._done = False
         self._eyes = None
+        self._robot_point = None
+
+        self._robot_pose_sub = rospy.Subscriber(
+            "/amcl_pose",
+            PoseStamped,
+            self._robot_pose_callback,
+        )
 
         self._yolo_keypoint_service = rospy.ServiceProxy(
             "/yolo/detect3d_pose",
@@ -80,6 +90,14 @@ class EyeTracker:
         self._head_point_action_client.wait_for_server()
 
         rospy.loginfo("Eye Tracker Action Server started.")
+
+    def _robot_pose_callback(self, msg: PoseStamped) -> None:
+        """Callback for the robot pose subscriber.
+
+        Updates the robot point based on the received pose.
+        """
+        self._robot_point = msg.pose.position
+        rospy.loginfo(f"Robot pose updated: {self._robot_point}")
 
     def _get_head_join_values(self) -> Optional[Tuple[float, float]]:
         """Returns the x,y position of the head joints.
@@ -161,7 +179,14 @@ class EyeTracker:
                 rospy.loginfo("No keypoints detected.")
                 self._eyes = None
                 return
+            if not self._robot_point:
+                rospy.logwarn("Robot point not set, cannot calculate eyes position.")
+                self._eyes = None
+                return
+            closest_eye_midpoint = None
+            closest_distance = float("inf")
             for det in detected_keypoints:
+                eye_midpoint = None
                 for keypoint in det.keypoints:
                     if keypoint.keypoint_name == "left_eye":
                         left_eye_point = keypoint.point
@@ -174,18 +199,32 @@ class EyeTracker:
                         midpoint_y = (left_eye_point.y + right_eye_point.y) / 2.0
                         midpoint_z = (left_eye_point.z + right_eye_point.z) / 2.0
 
-                        self._eyes = Point(midpoint_x, midpoint_y, midpoint_z)
+                        eye_midpoint = Point(midpoint_x, midpoint_y, midpoint_z)
                         rospy.loginfo(f"Eyes found at midpoint: {self._eyes}")
                     elif left_eye_point:
-                        self._eyes = Point(
+                        eye_midpoint = Point(
                             left_eye_point.x, left_eye_point.y, left_eye_point.z
                         )
                         rospy.loginfo(f"Only left eye found at: {self._eyes}")
                     elif right_eye_point:
-                        self._eyes = Point(
+                        eye_midpoint = Point(
                             right_eye_point.x, right_eye_point.y, right_eye_point.z
                         )
                         rospy.loginfo(f"Only right eye found at: {self._eyes}")
+                if eye_midpoint is not None:
+                    # Calculate the distance from the robot point to the eye midpoint
+                    distance = (
+                        (eye_midpoint.x - self._robot_point.x) ** 2
+                        + (eye_midpoint.y - self._robot_point.y) ** 2
+                        + (eye_midpoint.z - self._robot_point.z) ** 2
+                    ) ** 0.5
+                    rospy.loginfo(f"Distance to eye midpoint: {distance}")
+                    if distance < closest_distance:
+                        closest_distance = distance
+                        closest_eye_midpoint = eye_midpoint
+            if closest_eye_midpoint is not None:
+                rospy.loginfo(f"Closest eye midpoint found at: {closest_eye_midpoint}")
+                self._eyes = closest_eye_midpoint
 
         image_sub = message_filters.Subscriber("/xtion/rgb/image_raw", Image)
         depth_sub = message_filters.Subscriber(
