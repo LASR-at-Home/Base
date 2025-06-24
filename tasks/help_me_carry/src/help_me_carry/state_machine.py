@@ -2,7 +2,7 @@ import rospy
 import smach
 import smach_ros
 from help_me_carry import GoToBag, BagPickAndPlace
-from lasr_skills import FollowPerson, PlayMotion
+from lasr_skills import FollowPerson, PlayMotion, GoToLocation
 
 
 class CarryMyLuggage(smach.StateMachine):
@@ -29,7 +29,7 @@ class CarryMyLuggage(smach.StateMachine):
                 f"POST_FOLLOW",
                 PlayMotion(motion_name="following_post_navigation"),
                 transitions={
-                    "succeeded": f"GO_TO_BAG",
+                    "succeeded": "GO_TO_BAG",
                     "preempted": "GO_TO_BAG",
                     "aborted": "GO_TO_BAG",
                 },
@@ -48,8 +48,17 @@ class CarryMyLuggage(smach.StateMachine):
                 "PICK_UP_BAG",
                 BagPickAndPlace(),
                 transitions={
+                    "succeeded": "GO_BACK_TO_START_POINT",
+                    "failed": "GO_BACK_TO_START_POINT",
+                },
+            )
+
+            smach.StateMachine.add(
+                f"GO_BACK_TO_START_POINT",
+                GoToLocation(),
+                transitions={
                     "succeeded": "succeeded",
-                    "failed": "failed",
+                    "failed": "succeeded",
                 },
             )
 
