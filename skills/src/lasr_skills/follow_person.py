@@ -35,11 +35,11 @@ from lasr_vision_msgs.srv import YoloDetection3D, YoloDetection3DRequest
 import message_filters
 
 
-class PersonFollowingUserData(smach.UserData):
+class PersonFollowingData:
     """UserData structure for person following state machine"""
 
     def __init__(self, **config_params):
-        super(PersonFollowingUserData, self).__init__()
+        super(PersonFollowingData, self).__init__()
 
         # Sensor data - continuously updated
         self.current_image = None
@@ -93,7 +93,7 @@ class PersonFollowingUserData(smach.UserData):
         self.last_position = None
 
         # Configuration parameters with defaults
-        self.new_goal_threshold_min = 0.25
+        self.new_goal_threshold_min = 0.35
         self.new_goal_threshold_max = 4.0
         self.stopping_distance = 2.25
         self.max_speed = 0.4
@@ -139,7 +139,6 @@ class PersonFollowingUserData(smach.UserData):
         self.costmap_height = 4
         self.inflation_radius = 0.2
         self.previous_target = None
-        self.target_speed_history = []
         self.last_target_position = None
         self.last_target_time = None
 
@@ -162,26 +161,6 @@ class PersonFollowingUserData(smach.UserData):
         self.scan_position_duration = rospy.Duration(self.scan_position_duration)
         self.recovery_timeout_duration = rospy.Duration(self.recovery_timeout)
         self.cancel_goal_duration = rospy.Duration(self.cancel_goal_timeout)
-
-    def update_parameters(self, **params):
-        """Update parameters after initialisation"""
-        for key, value in params.items():
-            if hasattr(self, key):
-                setattr(self, key, value)
-                rospy.loginfo(f"Updated parameter {key} = {value}")
-            else:
-                rospy.logwarn(f"Unknown parameter: {key}")
-
-        # Update Duration objects
-        self.good_detection_timeout_duration = rospy.Duration(
-            self.good_detection_timeout
-        )
-        self.target_moving_timeout_duration = rospy.Duration(self.target_moving_timeout)
-        self.distance_warning_interval_duration = rospy.Duration(
-            self.distance_warning_interval
-        )
-        self.scan_position_duration = rospy.Duration(self.scan_position_duration)
-        self.recovery_timeout_duration = rospy.Duration(self.recovery_timeout)
 
 
 def _euclidean_distance(
@@ -208,14 +187,6 @@ def _compute_face_quat(p1: Pose, p2: Pose) -> Quaternion:
     return Quaternion(x, y, z, w)
 
 
-def _discover_userdata_keys(ud):
-    keys = set()
-    keys.update(ud.__dict__.keys())
-    if hasattr(ud, "_data") and isinstance(ud._data, dict):
-        keys.update(ud._data.keys())
-    return [k for k in keys if not k.startswith("_")]
-
-
 class FollowPerson(smach.StateMachine):
     """
     Complete person following state machine that can be used as:
@@ -224,16 +195,12 @@ class FollowPerson(smach.StateMachine):
     """
 
     def __init__(self, camera_name="xtion", **config_params):
-        # Get all attribute names from PersonFollowingUserData for dynamic key declaration
-        _temp_userdata = PersonFollowingUserData()
-        self._all_userdata_keys = _discover_userdata_keys(_temp_userdata)
-
         # Initialise as StateMachine with dynamic input/output keys
         smach.StateMachine.__init__(
             self,
             outcomes=["succeeded", "failed"],
-            input_keys=self._all_userdata_keys,
-            output_keys=self._all_userdata_keys,
+            input_keys=[],
+            output_keys=[],
         )
 
         # Store camera name
@@ -245,7 +212,7 @@ class FollowPerson(smach.StateMachine):
         self.depth_camera_info_topic = f"/{self.camera}/depth_registered/camera_info"
 
         # Initialise UserData with configuration parameters
-        self.userdata = PersonFollowingUserData(**config_params)
+        self.shared_data = PersonFollowingData(**config_params)
 
         # Setup synchronized camera subscribers for continuous data update
         image_sub = message_filters.Subscriber(self.image_topic, Image)
@@ -327,14 +294,14 @@ class FollowPerson(smach.StateMachine):
         self.detection = None
 
         # Initialise head scan positions for recovery behavior
-        self.userdata.recovery_scan_positions = []
-        for angle in self.userdata.recovery_scan_angles:
+        self.shared_data.recovery_scan_positions = []
+        for angle in self.shared_data.recovery_scan_angles:
             angle_rad = math.radians(angle)
-            x = self.userdata.recovery_scan_distance * math.cos(angle_rad)
-            y = self.userdata.recovery_scan_distance * math.sin(angle_rad)
-            z = self.userdata.recovery_scan_height
+            x = self.shared_data.recovery_scan_distance * math.cos(angle_rad)
+            y = self.shared_data.recovery_scan_distance * math.sin(angle_rad)
+            z = self.shared_data.recovery_scan_height
             point = Point(x=x, y=y, z=z)
-            self.userdata.recovery_scan_positions.append(point)
+            self.shared_data.recovery_scan_positions.append(point)
 
         # Setup detection subscriber
         self.detection3d_sub = rospy.Subscriber(
@@ -348,17 +315,17 @@ class FollowPerson(smach.StateMachine):
             # Set costmap size using userdata parameters
             config = Config()
             config.ints.append(
-                IntParameter(name="width", value=self.userdata.costmap_width)
+                IntParameter(name="width", value=self.shared_data.costmap_width)
             )
             config.ints.append(
-                IntParameter(name="height", value=self.userdata.costmap_height)
+                IntParameter(name="height", value=self.shared_data.costmap_height)
             )
             self.dynamic_costmap(config)
 
             # Set maximum velocity
             config = Config()
             config.doubles.append(
-                DoubleParameter(name="max_vel_x", value=self.userdata.max_speed)
+                DoubleParameter(name="max_vel_x", value=self.shared_data.max_speed)
             )
             self.dynamic_velocity(config)
 
@@ -377,7 +344,7 @@ class FollowPerson(smach.StateMachine):
             config.bools.append(BoolParameter(name="enabled", value=1))
             config.doubles.append(
                 DoubleParameter(
-                    name="inflation_radius", value=self.userdata.inflation_radius
+                    name="inflation_radius", value=self.shared_data.inflation_radius
                 )
             )
             self.dynamic_local_costmap(config)
@@ -393,6 +360,7 @@ class FollowPerson(smach.StateMachine):
         # Build the state machine structure
         self._build_state_machine()
 
+        rospy.sleep(1.0)
         rospy.loginfo("Person following state machine initialised")
 
     def _build_state_machine(self):
@@ -445,43 +413,23 @@ class FollowPerson(smach.StateMachine):
                 },
             )
 
-    # def _sync_userdata_from_external_userdata(self, external_userdata):
-    #     for key in self._all_userdata_keys:
-    #         if hasattr(external_userdata, key):
-    #             try:
-    #                 setattr(self.userdata, key, getattr(external_userdata, key))
-    #             except:
-    #                 pass
-    #
-    # def _sync_external_userdata_from_userdata(self, external_userdata):
-    #     for key in self._all_userdata_keys:
-    #         if hasattr(self.userdata, key):
-    #             try:
-    #                 setattr(external_userdata, key, getattr(self.userdata, key))
-    #             except:
-    #                 pass
-
-    def execute(self, external_userdata=None):
+    def execute(self, userdata):
         """
         Execute the state machine
         Can be called directly or as part of a larger state machine
         """
-        # # Create execution userdata and populate with StateMachine data
-        # self._sync_userdata_from_external_userdata(external_userdata)
 
         # Initialize execution-specific data
-        self.userdata.person_trajectory.header.frame_id = "map"
-        self.userdata.start_time = rospy.Time.now()
+        self.shared_data.person_trajectory.header.frame_id = "map"
+        self.shared_data.start_time = rospy.Time.now()
 
         # Execute the state machine with populated userdata
-        outcome = smach.StateMachine.execute(self, self.userdata)
+        outcome = smach.StateMachine.execute(self, self.shared_data)
 
         # Calculate final metrics
-        self.userdata.following_duration = (
-            rospy.Time.now() - self.userdata.start_time
+        self.shared_data.following_duration = (
+            rospy.Time.now() - self.shared_data.start_time
         ).to_sec()
-
-        # self._sync_external_userdata_from_userdata(external_userdata)
 
         # Cleanup resources
         self._cleanup()
@@ -492,9 +440,9 @@ class FollowPerson(smach.StateMachine):
         self, image: Image, depth_image: Image, depth_camera_info: CameraInfo
     ):
         """Continuous callback for synchronized camera data"""
-        self.userdata.current_image = image
-        self.userdata.depth_image = depth_image
-        self.userdata.camera_info = depth_camera_info
+        self.shared_data.current_image = image
+        self.shared_data.depth_image = depth_image
+        self.shared_data.camera_info = depth_camera_info
 
     def _robot_pose_callback(self, msg):
         """Callback for robot odometry updates - transforms pose to map frame"""
@@ -515,7 +463,7 @@ class FollowPerson(smach.StateMachine):
             map_pose = self.tf_buffer.transform(odom_pose, "map", rospy.Duration(0.1))
 
             # Store the transformed pose
-            self.userdata.robot_pose = map_pose
+            self.shared_data.robot_pose = map_pose
 
         except (
             tf.LookupException,
@@ -531,23 +479,24 @@ class FollowPerson(smach.StateMachine):
             robot_pose.pose = msg.pose.pose
             if robot_pose.header.frame_id.startswith("/"):
                 robot_pose.header.frame_id = robot_pose.header.frame_id[1:]
-            self.userdata.robot_pose = robot_pose
+            self.shared_data.robot_pose = robot_pose
         rospy.sleep(0.2)
 
     def _detection3d_callback(self, msg: Detection3DArray):
+        this_time = rospy.Time.now()
         """Callback for SAM2 3D detections - updates userdata"""
-        if not self.userdata.say_started:
+        if not self.shared_data.say_started:
             return
 
         for detection in msg.detections:
-            if int(detection.name) == self.userdata.track_id:
+            if int(detection.name) == self.shared_data.track_id:
                 # Quality check logic
                 is_good_quality = self._assess_detection_quality(detection)
 
                 if is_reasonable_detection(
-                        detection, self.userdata.min_confidence_threshold
+                        detection, self.shared_data.min_confidence_threshold
                 ):
-                    self.userdata.newest_detection = detection
+                    self.shared_data.newest_detection = detection
 
                 if is_good_quality:
                     for _retry in range(5):
@@ -564,23 +513,23 @@ class FollowPerson(smach.StateMachine):
                             "Failed to publish good-quality flag after 5 attempts"
                         )
 
-                    self.userdata.condition_flag_state = True
-                    self.userdata.last_good_detection_time = rospy.Time.now()
+                    self.shared_data.condition_flag_state = True
+                    self.shared_data.last_good_detection_time = this_time
 
                     self.detection = detection
 
                     # transpose into the map point
                     map_pose = PoseStamped()
                     map_pose.header.frame_id = "map"
-                    map_pose.header.stamp = rospy.Time.now()
+                    map_pose.header.stamp = this_time
                     map_pose.pose.position = self.detection.point
                     map_pose.pose.orientation.w = 1.0  # Identity orientation
 
                     # Calculate target speed based on recent trajectory positions (dynamic window of up to 5 poses)
-                    if len(self.userdata.person_pose_stampeds) >= 2:
-                        # Use the last few poses (up to 5) for speed calculation
-                        window_size = min(5, len(self.userdata.person_pose_stampeds))
-                        recent_poses = self.userdata.person_pose_stampeds[-window_size:]
+                    if len(self.shared_data.person_pose_stampeds) >= 2:
+                        # Use the last few poses (up to 10) for speed calculation
+                        window_size = min(10, len(self.shared_data.person_pose_stampeds))
+                        recent_poses = self.shared_data.person_pose_stampeds[-window_size:]
 
                         total_distance = 0.0
                         total_time = 0.0
@@ -598,31 +547,31 @@ class FollowPerson(smach.StateMachine):
 
                         # Calculate average speed (m/s)
                         if total_time > 0:
-                            self.userdata.target_speed = total_distance / total_time
-                            if self.userdata.target_speed <= 0.15:
-                                self.userdata.target_speed = 0.0
+                            self.shared_data.target_speed = total_distance / total_time
+                            if self.shared_data.target_speed <= 0.15:
+                                self.shared_data.target_speed = 0.0
                         else:
-                            self.userdata.target_speed = 0.0
+                            self.shared_data.target_speed = 0.0
                     else:
                         # Not enough trajectory data, set speed to 0
-                        self.userdata.target_speed = 0.0
+                        self.shared_data.target_speed = 0.0
 
-                    rospy.loginfo(f"Target speed: {self.userdata.target_speed}.")
+                    rospy.loginfo(f"Target speed: {self.shared_data.target_speed}.")
 
-                    if len(self.userdata.target_list) == 0:
+                    if len(self.shared_data.target_list) == 0:
                         # sample <num_samples> way-points inside stopping_distance
-                        distance = _euclidean_distance(self.userdata.robot_pose, map_pose)
+                        distance = _euclidean_distance(self.shared_data.robot_pose, map_pose)
                         rospy.loginfo(f"Distance: {distance}")
                         if distance >= 1.75:
                             poses = self._plan_and_sample_targets(
-                                self.userdata.robot_pose,
+                                self.shared_data.robot_pose,
                                 map_pose,
-                                radius=self.userdata.min_following_distance,
+                                radius=self.shared_data.min_following_distance,
                                 num_samples=3,
                             )
                             rospy.logwarn(f"Sampled {poses}")
                             for p in poses:
-                                self._update_target_list(p)
+                                self._update_target_list(p, add_traj=False)
                     self._update_target_list(map_pose)
                 else:
                     for _retry in range(5):
@@ -639,29 +588,10 @@ class FollowPerson(smach.StateMachine):
                             "Failed to publish bad-quality flag after 5 attempts"
                         )
 
-                    self.userdata.condition_flag_state = False
+                    self.shared_data.condition_flag_state = False
                 break
-        if len(self.userdata.person_trajectory.poses) > 0:
-            self.trajectory_pose_pub.publish(self.userdata.person_trajectory)
-
-    # def make_target_list_from_empty(self):
-    #     # transpose into the map point
-    #     map_pose = PoseStamped()
-    #     map_pose.header.frame_id = "map"
-    #     map_pose.header.stamp = rospy.Time.now()
-    #     map_pose.pose.position = self.detection.point
-    #     map_pose.pose.orientation.w = 1.0  # Identity orientation
-    #
-    #     if len(self.userdata.target_list) == 0:
-    #         # sample <num_samples> way-points inside stopping_distance
-    #         poses = self._plan_and_sample_targets(
-    #             self.userdata.robot_pose,
-    #             map_pose,
-    #             radius=self.userdata.stopping_distance,
-    #             num_samples=8)
-    #         for p in poses:
-    #             self._update_target_list(p)
-    #     self._update_target_list(map_pose)
+        if len(self.shared_data.person_trajectory.poses) > 0:
+            self.trajectory_pose_pub.publish(self.shared_data.person_trajectory)
 
     def _assess_detection_quality(self, detection):
         """Assess detection quality based on various metrics"""
@@ -675,9 +605,9 @@ class FollowPerson(smach.StateMachine):
 
         image_width = 640
         image_height = 480
-        if self.userdata.camera_info:
-            image_width = self.userdata.camera_info.width
-            image_height = self.userdata.camera_info.height
+        if self.shared_data.camera_info:
+            image_width = self.shared_data.camera_info.width
+            image_height = self.shared_data.camera_info.height
 
         center_x = xywh[0] + box_width / 2
         center_y = xywh[1] + box_height / 2
@@ -692,30 +622,31 @@ class FollowPerson(smach.StateMachine):
         normalized_area = box_area / (image_width * image_height)
 
         return (
-            normalized_distance < self.userdata.max_distance_threshold
-            and normalized_area > self.userdata.min_area_threshold
-            and detection.confidence > self.userdata.min_confidence_threshold
+            normalized_distance < self.shared_data.max_distance_threshold
+            and normalized_area > self.shared_data.min_area_threshold
+            and detection.confidence > self.shared_data.min_confidence_threshold
         )
 
-    def _update_target_list(self, pose_stamped):
+    def _update_target_list(self, pose_stamped, add_traj=True):
         """Update target list with new pose"""
-        self.userdata.person_trajectory.poses.append(pose_stamped.pose)  # trajectory should always be added
-        self.userdata.person_pose_stampeds.append(pose_stamped)  # trajectory should always be added
-        if len(self.userdata.target_list) == 0:
-            self.userdata.target_list.append(pose_stamped.pose)
-            self.userdata.added_new_target_time = rospy.Time.now()
+        if add_traj:
+            self.shared_data.person_trajectory.poses.append(pose_stamped.pose)  # trajectory should always be added
+            self.shared_data.person_pose_stampeds.append(pose_stamped)  # trajectory should always be added
+        if len(self.shared_data.target_list) == 0:
+            self.shared_data.target_list.append(pose_stamped.pose)
+            self.shared_data.added_new_target_time = rospy.Time.now()
             rospy.loginfo(f"Adding target pose: {pose_stamped}")
             return True
         else:
-            prev_pose = self.userdata.target_list[-1]
+            prev_pose = self.shared_data.target_list[-1]
             dist_to_prev = _euclidean_distance(prev_pose, pose_stamped.pose)
             if (
-                self.userdata.new_goal_threshold_min
+                self.shared_data.new_goal_threshold_min
                 < dist_to_prev
-                < self.userdata.new_goal_threshold_max
+                < self.shared_data.new_goal_threshold_max
             ):
-                self.userdata.target_list.append(pose_stamped.pose)
-                self.userdata.added_new_target_time = rospy.Time.now()
+                self.shared_data.target_list.append(pose_stamped.pose)
+                self.shared_data.added_new_target_time = rospy.Time.now()
                 rospy.loginfo(f"Adding target pose: {pose_stamped}")
                 return True
         return False
@@ -778,7 +709,6 @@ class FollowPerson(smach.StateMachine):
         """
         Plan a short global path to a point that lies on the line (goal → robot),
         at progressively larger radii, and sample poses along that path.
-
         Args:
             start_pose (PoseStamped): Current robot pose (in the map frame).
             goal_pose  (PoseStamped): Original navigation goal (in the map frame).
@@ -787,7 +717,6 @@ class FollowPerson(smach.StateMachine):
             max_radius (float)      : Upper bound for the fallback search (m).
             n_steps    (int)        : Number of radii to test between radius and max_radius
                                       (inclusive). Must be ≥ 2 to allow at least one retry.
-
         Returns:
             List[PoseStamped]: `num_samples` poses facing the original goal,
                                or an empty list if no path could be found.
@@ -803,9 +732,7 @@ class FollowPerson(smach.StateMachine):
             rospy.logwarn("Robot already at goal; no path needed")
             return []
 
-        # ------------------------------------------------------------------
-        # Step-0: iterate over a sequence of radii until a path is found
-        # ------------------------------------------------------------------
+        # Iterate over a sequence of radii until a path is found
         radii = np.linspace(radius, max_radius, max(2, n_steps))
         path = []
         tried_radii = []
@@ -841,15 +768,11 @@ class FollowPerson(smach.StateMachine):
             )
             return []
 
-        # ------------------------------------------------------------------
-        # Step-1: evenly sample <num_samples> poses along the found path
-        # ------------------------------------------------------------------
+        # Evenly sample <num_samples> poses along the found path
         idxs = np.linspace(0, len(path) - 1, num_samples, dtype=int)
         sampled = [copy.deepcopy(path[i]) for i in idxs]
 
-        # ------------------------------------------------------------------
-        # Step-2: rotate every pose to face the original goal
-        # ------------------------------------------------------------------
+        # Rotate every pose to face the original goal
         for p in sampled:
             dx, dy = gx - p.pose.position.x, gy - p.pose.position.y
             yaw = math.atan2(dy, dx)
@@ -870,10 +793,10 @@ class FollowPerson(smach.StateMachine):
     def get_results(self):
         """Get execution results - useful when used as sub-state machine"""
         return {
-            "distance_traveled": self.userdata.distance_traveled,
-            "following_duration": self.userdata.following_duration,
-            "completion_reason": self.userdata.completion_reason,
-            "person_trajectory": self.userdata.person_trajectory,
+            "distance_traveled": self.shared_data.distance_traveled,
+            "following_duration": self.shared_data.following_duration,
+            "completion_reason": self.shared_data.completion_reason,
+            "person_trajectory": self.shared_data.person_trajectory,
         }
 
     def _tts(self, text: str, wait: bool = False):
@@ -881,7 +804,7 @@ class FollowPerson(smach.StateMachine):
         rospy.logwarn(f"You are saying '{text}'.")
         if not self.tts_client:
             return
-        if self.userdata.speak:
+        if self.shared_data.speak:
             tts_goal = TtsGoal()
             tts_goal.rawtext.text = text
             tts_goal.rawtext.lang_id = "en_GB"
@@ -893,8 +816,8 @@ class FollowPerson(smach.StateMachine):
 
     def _look_at_point(self, target_point: Point, target_frame: str = "map"):
         current_time = rospy.Time.now()
-        if current_time - self.userdata.look_at_point_time < rospy.Duration(
-            self.userdata.head_movement_interval
+        if current_time - self.shared_data.look_at_point_time < rospy.Duration(
+            self.shared_data.head_movement_interval
         ):
             return
 
@@ -902,22 +825,22 @@ class FollowPerson(smach.StateMachine):
         goal.target.header.stamp = rospy.Time(0)
         goal.target.header.frame_id = target_frame
         goal.target.point = target_point
-        goal.pointing_frame = self.userdata.head_pointing_frame
+        goal.pointing_frame = self.shared_data.head_pointing_frame
         goal.pointing_axis.x = 0.0
         goal.pointing_axis.y = 0.0
         goal.pointing_axis.z = 1.0
-        goal.min_duration = rospy.Duration(self.userdata.head_min_duration)
-        goal.max_velocity = self.userdata.head_max_velocity
+        goal.min_duration = rospy.Duration(self.shared_data.head_min_duration)
+        goal.max_velocity = self.shared_data.head_max_velocity
 
         self.point_head_client.send_goal(goal)
-        self.userdata.look_at_point_time = current_time
+        self.shared_data.look_at_point_time = current_time
 
     def _look_centre_point(self):
         """Look at center point"""
         point = Point(
-            x=self.userdata.center_look_point[0],
-            y=self.userdata.center_look_point[1],
-            z=self.userdata.center_look_point[2],
+            x=self.shared_data.center_look_point[0],
+            y=self.shared_data.center_look_point[1],
+            z=self.shared_data.center_look_point[2],
         )
         self._look_at_point(point, target_frame="base_link")
 
@@ -964,100 +887,69 @@ class FollowPerson(smach.StateMachine):
         self._look_at_point(point, target_frame="base_link")
 
 
-class SyncUserdataState(smach.State):
-    def __init__(self, sm_manager):
-        self.sm_manager = sm_manager
-
-    def sync_userdata_from_manager(self, userdata):
-        if hasattr(self.sm_manager, "userdata"):
-            for key in userdata.keys():
-                if hasattr(self.sm_manager.userdata, key):
-                    setattr(userdata, key, getattr(self.sm_manager.userdata, key))
-
-    def sync_userdata_to_manager(self, userdata):
-        if hasattr(self.sm_manager, "userdata"):
-            for key in userdata.keys():
-                if hasattr(userdata, key):
-                    setattr(self.sm_manager.userdata, key, getattr(userdata, key))
-
-
 # State classes remain the same but without the IdleState
-class InitialisingState(SyncUserdataState):
+class InitialisingState(smach.State):
     """Initialise tracking and setup systems"""
 
     def __init__(self, sm_manager):
-        super().__init__(sm_manager)
-        # Get all attribute names from PersonFollowingUserData for dynamic key declaration
-        _temp_userdata = PersonFollowingUserData()
-        _all_userdata_keys = _discover_userdata_keys(_temp_userdata)
-
+        self.sm_manager = sm_manager
         smach.State.__init__(
             self,
             outcomes=["initialised", "failed"],
-            input_keys=_all_userdata_keys,
-            output_keys=_all_userdata_keys,
+            input_keys=[],
+            output_keys=[],
         )
 
     def execute(self, userdata):
-        self.sync_userdata_from_manager(userdata)
         rospy.loginfo("Initialising person following system")
 
-        # Wait for sensor data to be available
-        while not rospy.is_shutdown():
-            self.sync_userdata_from_manager(userdata)
-            if userdata.current_image and userdata.depth_image and userdata.camera_info:
-                break
-            rospy.sleep(0.1)
-
         # Initialise tracking data
-        userdata.target_list = []
+        self.sm_manager.shared_data.target_list = []
         person_trajectory = PoseArray()
         person_trajectory.header.frame_id = "map"
-        userdata.person_trajectory = person_trajectory
-        userdata.last_movement_time = rospy.Time.now()
-        userdata.last_good_detection_time = rospy.Time.now()
+        self.sm_manager.shared_data.person_trajectory = person_trajectory
+        self.sm_manager.shared_data.last_movement_time = rospy.Time.now()
+        self.sm_manager.shared_data.last_good_detection_time = rospy.Time.now()
 
-        if userdata.robot_pose:
-            userdata.last_position = userdata.robot_pose
+        if self.sm_manager.shared_data.robot_pose:
+            self.sm_manager.shared_data.last_position = self.sm_manager.shared_data.robot_pose
 
         rospy.loginfo("Initialisation complete")
-        self.sync_userdata_to_manager(userdata)
         return "initialised"
 
 
-class PersonDetectionState(SyncUserdataState):
+class PersonDetectionState(smach.State):
     """Detect and select person to follow"""
 
     def __init__(self, sm_manager):
-        super().__init__(sm_manager)
-        # Get all attribute names from PersonFollowingUserData for dynamic key declaration
-        _temp_userdata = PersonFollowingUserData()
-        _all_userdata_keys = _discover_userdata_keys(_temp_userdata)
-
+        self.sm_manager = sm_manager
         smach.State.__init__(
             self,
             outcomes=["person_detected", "no_person_found", "failed"],
-            input_keys=_all_userdata_keys,
-            output_keys=_all_userdata_keys,
+            input_keys=[],
+            output_keys=[],
         )
 
     def execute(self, userdata):
-        self.sync_userdata_from_manager(userdata)
         rospy.loginfo("Starting person detection")
 
         # Look forward and scan for people
         self.sm_manager._look_centre_point()
         self.sm_manager._tts("Please wait for me to detect you.", wait=True)
-        rospy.sleep(2.0)
+
+        # Wait for sensor data to be available
+        while not rospy.is_shutdown():
+            if self.sm_manager.shared_data.current_image and self.sm_manager.shared_data.depth_image and self.sm_manager.shared_data.camera_info:
+                break
+            rospy.sleep(0.1)
 
         # Call YOLO detection service
-        self.sync_userdata_from_manager(userdata)
         req = YoloDetection3DRequest(
-            image_raw=userdata.current_image,
-            depth_image=userdata.depth_image,
-            depth_camera_info=userdata.camera_info,
-            model=userdata.yolo_model,
-            confidence=userdata.yolo_confidence,
+            image_raw=self.sm_manager.shared_data.current_image,
+            depth_image=self.sm_manager.shared_data.depth_image,
+            depth_camera_info=self.sm_manager.shared_data.camera_info,
+            model=self.sm_manager.shared_data.yolo_model,
+            confidence=self.sm_manager.shared_data.yolo_confidence,
             target_frame="map",
         )
 
@@ -1071,7 +963,6 @@ class PersonDetectionState(SyncUserdataState):
 
         if not detected_people["point"]:
             rospy.logwarn("No people detected for tracking")
-            self.sync_userdata_to_manager(userdata)
             return "no_person_found"
 
         # Find nearest person to follow
@@ -1094,12 +985,11 @@ class PersonDetectionState(SyncUserdataState):
                 nearest_index = i
 
         if nearest_index == -1:
-            self.sync_userdata_to_manager(userdata)
             return "no_person_found"
 
         # Store tracking information
-        userdata.track_bbox = detected_people["xywh"][nearest_index]
-        userdata.track_id = nearest_index
+        self.sm_manager.shared_data.track_bbox = detected_people["xywh"][nearest_index]
+        self.sm_manager.shared_data.track_id = nearest_index
 
         rospy.loginfo(
             f"Selected person at distance {min_dist:.2f}m with ID {nearest_index}"
@@ -1120,30 +1010,26 @@ class PersonDetectionState(SyncUserdataState):
         prompt_msg.point_array = []
         prompt_msg.reset = True
         self.sm_manager.prompt_pub.publish(prompt_msg)
-        rospy.sleep(0.1)
+        rospy.sleep(0.5)
+        self.sm_manager.prompt_pub.publish(prompt_msg)
+        rospy.sleep(0.5)
 
         # Start tracking
         self.sm_manager.track_flag_pub.publish(Bool(data=True))
         rospy.sleep(0.1)
 
         self.sm_manager.condition_frame_flag_pub.publish(Bool(data=True))
-        userdata.condition_flag_state = True
-        userdata.is_person_detected = True
+        self.sm_manager.shared_data.condition_flag_state = True
+        self.sm_manager.shared_data.is_person_detected = True
 
         rospy.loginfo(f"Started tracking person with ID {nearest_index}")
-        self.sync_userdata_to_manager(userdata)
         return "person_detected"
 
 
-class TrackingActiveState(SyncUserdataState):
+class TrackingActiveState(smach.State):
     """Active tracking state - monitors target, sends navigation goals, and manages distance warnings"""
-
     def __init__(self, sm_manager):
-        super().__init__(sm_manager)
-        # Get all attribute names from PersonFollowingUserData for dynamic key declaration
-        _temp_userdata = PersonFollowingUserData()
-        _all_userdata_keys = _discover_userdata_keys(_temp_userdata)
-
+        self.sm_manager = sm_manager
         smach.State.__init__(
             self,
             outcomes=[
@@ -1152,59 +1038,54 @@ class TrackingActiveState(SyncUserdataState):
                 "following_complete",
                 "failed",
             ],
-            input_keys=_all_userdata_keys,
-            output_keys=_all_userdata_keys,
+            input_keys=[],
+            output_keys=[],
         )
         self.just_started = True
 
     def execute(self, userdata):
-        self.sync_userdata_from_manager(userdata)
         rospy.loginfo("Active tracking mode")
 
-        if not userdata.first_tracking_done:
+        if not self.sm_manager.shared_data.first_tracking_done:
             self.sm_manager._tts("I will start to follow you.", wait=True)
-            userdata.say_started = True
+            self.sm_manager.shared_data.say_started = True
 
         rate = rospy.Rate(15)
 
         while not rospy.is_shutdown():
-            self.sync_userdata_from_manager(userdata)
-
             # Check if following is complete (no movement for a while)
             if (
-                    userdata.first_tracking_done and
-                    rospy.Time.now() - userdata.last_movement_time
-                    > userdata.target_moving_timeout_duration * 1.0
+                    self.sm_manager.shared_data.first_tracking_done and
+                    rospy.Time.now() - self.sm_manager.shared_data.last_movement_time
+                    > self.sm_manager.shared_data.target_moving_timeout_duration * 1.0
             ):
                 rospy.loginfo("Following complete - force to stop by timeout.")
                 self.sm_manager._tts(
                     "Have we arrived? I will stop following.", wait=False
                 )
-                userdata.completion_reason = "ARRIVED"
-                self.sync_userdata_to_manager(userdata)
+                self.sm_manager.shared_data.completion_reason = "ARRIVED"
                 return "following_complete"
 
             # Look at detected person
-            if userdata.newest_detection:
+            if self.sm_manager.shared_data.newest_detection:
                 self.sm_manager._look_at_point(
-                    userdata.newest_detection.point, target_frame="map"
+                    self.sm_manager.shared_data.newest_detection.point, target_frame="map"
                 )
 
             # Update distance traveled
-            if userdata.last_position and userdata.robot_pose:
+            if self.sm_manager.shared_data.last_position and self.sm_manager.shared_data.robot_pose:
                 distance_increment = _euclidean_distance(
-                    userdata.last_position, userdata.robot_pose
+                    self.sm_manager.shared_data.last_position, self.sm_manager.shared_data.robot_pose
                 )
-                userdata.distance_traveled += distance_increment
-                userdata.last_position = userdata.robot_pose
+                self.sm_manager.shared_data.distance_traveled += distance_increment
+                self.sm_manager.shared_data.last_position = self.sm_manager.shared_data.robot_pose
 
             # Check if target is lost
             if (
-                    rospy.Time.now() - userdata.last_good_detection_time
-                    > userdata.target_moving_timeout_duration
+                    rospy.Time.now() - self.sm_manager.shared_data.last_good_detection_time
+                    > self.sm_manager.shared_data.target_moving_timeout_duration
             ):
                 rospy.loginfo("Target lost - no good detection")
-                self.sync_userdata_to_manager(userdata)
                 return "target_lost"
 
             # Check if navigation is currently active
@@ -1217,29 +1098,27 @@ class TrackingActiveState(SyncUserdataState):
                     rospy.loginfo(
                         f"Navigation active (state: {nav_state}), transitioning to NAVIGATION state"
                     )
-                    self.sync_userdata_to_manager(userdata)
                     return "navigation_started"
             else:
                 nav_active = False
 
             # Handle distance warning and navigation decision
-            if len(userdata.target_list) > 0:
+            if len(self.sm_manager.shared_data.target_list) > 0:
                 rospy.loginfo(
-                    f"Processing target list with {len(userdata.target_list)} poses"
+                    f"Processing target list with {len(self.sm_manager.shared_data.target_list)} poses"
                 )
-                self.sync_userdata_from_manager(userdata)
 
                 # Find suitable target pose within boundary using dynamic stopping distance
                 target_pose = None
-                last_pose_in_list = userdata.target_list[-1]
+                last_pose_in_list = self.sm_manager.shared_data.target_list[-1]
 
-                target_speed = userdata.target_speed
+                target_speed = self.sm_manager.shared_data.target_speed
                 dynamic_stopping_distance = max(
-                    userdata.min_following_distance, userdata.stopping_distance - abs(target_speed * userdata.stopping_distance * 1.25)
+                    self.sm_manager.shared_data.min_following_distance, self.sm_manager.shared_data.stopping_distance - abs(target_speed * self.sm_manager.shared_data.stopping_distance * 1.25)
                 )
-                for i in reversed(range(len(userdata.target_list))):
+                for i in reversed(range(len(self.sm_manager.shared_data.target_list))):
                     distance_to_last = _euclidean_distance(
-                        userdata.target_list[i], last_pose_in_list
+                        self.sm_manager.shared_data.target_list[i], last_pose_in_list
                     )
                     rospy.loginfo(
                         f"Checking pose {i}: distance to latest pose = {distance_to_last:.2f}m "
@@ -1247,7 +1126,7 @@ class TrackingActiveState(SyncUserdataState):
                     )
 
                     if abs(dynamic_stopping_distance - distance_to_last) <= 0.25:
-                        target_pose = userdata.target_list[i]
+                        target_pose = self.sm_manager.shared_data.target_list[i]
                         rospy.loginfo(
                             f"Selected target pose at index {i} (dynamic distance threshold met)"
                         )
@@ -1262,18 +1141,18 @@ class TrackingActiveState(SyncUserdataState):
 
                     # Check if target is different enough from previous
                     if (
-                            userdata.previous_target
-                            and userdata.previous_target != userdata.current_goal
+                            self.sm_manager.shared_data.previous_target
+                            and self.sm_manager.shared_data.previous_target != self.sm_manager.shared_data.current_goal
                     ):
                         distance_to_previous = _euclidean_distance(
-                            target_pose, userdata.previous_target
+                            target_pose, self.sm_manager.shared_data.previous_target
                         )
                         rospy.loginfo(
                             f"Distance to previous target: {distance_to_previous:.2f}m "
-                            f"(threshold: {userdata.new_goal_threshold_min:.2f}m)"
+                            f"(threshold: {self.sm_manager.shared_data.new_goal_threshold_min:.2f}m)"
                         )
 
-                        if distance_to_previous < userdata.new_goal_threshold_min:
+                        if distance_to_previous < self.sm_manager.shared_data.new_goal_threshold_min:
                             rospy.loginfo(
                                 "Target too similar to previous - skipping navigation"
                             )
@@ -1284,29 +1163,28 @@ class TrackingActiveState(SyncUserdataState):
                         )
 
                     # Check robot distance if we have a valid target
-                    if target_pose is not None and userdata.robot_pose:
+                    if target_pose is not None and self.sm_manager.shared_data.robot_pose:
                         distance_to_target = _euclidean_distance(
-                            userdata.robot_pose.pose, target_pose
+                            self.sm_manager.shared_data.robot_pose.pose, target_pose
                         )
                         rospy.loginfo(
                             f"Robot distance to target: {distance_to_target:.2f}m "
-                            f"(min following distance: {userdata.min_following_distance:.2f}m, "
-                            f"max following distance: {userdata.max_following_distance:.2f}m)"
+                            f"(min following distance: {self.sm_manager.shared_data.min_following_distance:.2f}m, "
+                            f"max following distance: {self.sm_manager.shared_data.max_following_distance:.2f}m)"
                         )
 
                         # Only navigate if we're not already close enough
-                        if distance_to_target >= userdata.min_following_distance:
+                        if distance_to_target >= self.sm_manager.shared_data.min_following_distance:
                             rospy.loginfo(
                                 "Distance check passed - sending navigation goal"
                             )
                             # Send navigation goal directly here
                             if self._send_navigation_goal(
-                                    userdata, target_pose, last_pose_in_list
+                                    self.sm_manager.shared_data, target_pose, last_pose_in_list
                             ):
                                 rospy.loginfo(
                                     "Navigation goal sent successfully, transitioning to NAVIGATION state"
                                 )
-                                self.sync_userdata_to_manager(userdata)
                                 return "navigation_started"
                             else:
                                 rospy.logwarn("Failed to send navigation goal")
@@ -1326,28 +1204,25 @@ class TrackingActiveState(SyncUserdataState):
             if (
                     not nav_active
                     and not self.just_started
-                    and rospy.Time.now() - userdata.last_movement_time
-                    > userdata.target_moving_timeout_duration
-                    and rospy.Time.now() - userdata.added_new_target_time
-                    > userdata.target_moving_timeout_duration
+                    and rospy.Time.now() - self.sm_manager.shared_data.last_movement_time
+                    > self.sm_manager.shared_data.target_moving_timeout_duration
+                    and rospy.Time.now() - self.sm_manager.shared_data.added_new_target_time
+                    > self.sm_manager.shared_data.target_moving_timeout_duration
             ):
                 rospy.loginfo("Following complete - no movement detected")
                 self.sm_manager._tts(
                     "Have we arrived? I will stop following.", wait=False
                 )
-                userdata.completion_reason = "ARRIVED"
-                self.sync_userdata_to_manager(userdata)
+                self.sm_manager.shared_data.completion_reason = "ARRIVED"
                 return "following_complete"
 
-            self.sync_userdata_to_manager(userdata)
             rate.sleep()
 
-        self.sync_userdata_to_manager(userdata)
         return "failed"
 
     def _send_navigation_goal(self, userdata, target_pose, orientation_reference_pose):
         """Send navigation goal to move_base and return success status"""
-        userdata.first_tracking_done = True
+        self.sm_manager.shared_data.first_tracking_done = True
         try:
             # Compute goal orientation to face the person
             goal_orientation = _compute_face_quat(
@@ -1375,11 +1250,9 @@ class TrackingActiveState(SyncUserdataState):
             self.sm_manager.move_base_client.send_goal(goal)
 
             # Update tracking state
-            userdata.current_goal = target_pose
-            userdata.previous_target = target_pose
+            self.sm_manager.shared_data.current_goal = target_pose
+            self.sm_manager.shared_data.previous_target = target_pose
             self.just_started = False
-
-            self.sync_userdata_to_manager(userdata)
 
             rospy.loginfo("Navigation goal sent successfully")
             return True
@@ -1389,100 +1262,92 @@ class TrackingActiveState(SyncUserdataState):
             return False
 
 
-class NavigationState(SyncUserdataState):
+class NavigationState(smach.State):
     """Monitor navigation progress, handle head tracking, and detect completion/failure"""
-
     def __init__(self, sm_manager):
-        super().__init__(sm_manager)
-        # Get all attribute names from PersonFollowingUserData for dynamic key declaration
-        _temp_userdata = PersonFollowingUserData()
-        _all_userdata_keys = _discover_userdata_keys(_temp_userdata)
-
+        self.sm_manager = sm_manager
         smach.State.__init__(
             self,
             outcomes=["navigation_complete", "target_lost", "failed"],
-            input_keys=_all_userdata_keys,
-            output_keys=_all_userdata_keys,
+            input_keys=[],
+            output_keys=[],
         )
 
     def execute(self, userdata):
-        self.sync_userdata_from_manager(userdata)
         rospy.loginfo("Monitoring navigation progress")
-        userdata.last_canceled_goal_time = rospy.Time.now()
+        self.sm_manager.shared_data.last_canceled_goal_time = rospy.Time.now()
 
-        start_robot_pose = userdata.robot_pose
+        start_robot_pose = self.sm_manager.shared_data.robot_pose
 
         # Verify that navigation is indeed active
-        if not self._is_navigation_active() and userdata.first_tracking_done:
+        if not self._is_navigation_active() and self.sm_manager.shared_data.first_tracking_done:
             rospy.logwarn("Entered NAVIGATION state but no active navigation found")
-            self.sync_userdata_to_manager(userdata)
             return "navigation_complete"
 
         # Monitor navigation progress
         rate = rospy.Rate(15)
         while not rospy.is_shutdown():
-            self.sync_userdata_from_manager(userdata)
             # Keep looking at detected person during navigation
-            if userdata.newest_detection:
+            if self.sm_manager.shared_data.newest_detection:
                 self.sm_manager._look_at_point(
-                    userdata.newest_detection.point, target_frame="map"
+                    self.sm_manager.shared_data.newest_detection.point, target_frame="map"
                 )
 
-            current_goal = userdata.current_goal
-            if len(userdata.target_list) > 0 and userdata.robot_pose:
-                newest_target = userdata.target_list[-1]
+            current_goal = self.sm_manager.shared_data.current_goal
+            if len(self.sm_manager.shared_data.target_list) > 0 and self.sm_manager.shared_data.robot_pose:
+                newest_target = self.sm_manager.shared_data.target_list[-1]
                 # Check if current target has deviated too much from the real target
                 # if (
-                #     rospy.Time.now() - userdata.last_canceled_goal_time
-                #     > userdata.cancel_goal_duration
+                #     rospy.Time.now() - self.sm_manager.shared_data.last_canceled_goal_time
+                #     > self.sm_manager.shared_data.cancel_goal_duration
                 #     and current_goal
                 # ):
                 #     deviation_distance = _euclidean_distance(
                 #         current_goal, newest_target
                 #     )
                 #     rospy.logdebug(
-                #         f"Target deviation: {deviation_distance:.2f}m vs threshold: {userdata.replan_distance:.2f}m"
+                #         f"Target deviation: {deviation_distance:.2f}m vs threshold: {self.sm_manager.shared_data.replan_distance:.2f}m"
                 #     )
 
-                    # if deviation_distance > userdata.replan_distance:
+                    # if deviation_distance > self.sm_manager.shared_data.replan_distance:
                     #     rospy.loginfo(
                     #         f"Target deviated too much ({deviation_distance:.2f}m), canceling current navigation"
                     #     )
                     #     # Cancel current navigation goal
-                    #     userdata.last_canceled_goal_time = rospy.Time.now()
+                    #     self.sm_manager.shared_data.last_canceled_goal_time = rospy.Time.now()
                     #     self.sm_manager.move_base_client.cancel_goal()
-                    #     userdata.previous_target = None
+                    #     self.sm_manager.shared_data.previous_target = None
                     #     rospy.loginfo("Current navigation goal canceled")
-                    #     userdata.target_list = (
+                    #     self.sm_manager.shared_data.target_list = (
                     #         []
                     #     )  # refresh the target list by replaning (will be trigured automatically)
-                    #     userdata.person_trajectory = PoseArray()
-                    #     userdata.person_trajectory.header.frame_id = "map"
-                    #     self.sync_userdata_to_manager(
-                    #         userdata
-                    #     )  # refresh self.userdata of parent state machine
+                    #     self.sm_manager.shared_data.person_trajectory = PoseArray()
+                    #     self.sm_manager.shared_data.person_trajectory.header.frame_id = "map"
+                    #     self.sync_self.sm_manager.shared_data_to_manager(
+                    #         self.sm_manager.shared_data
+                    #     )  # refresh self.shared_data of parent state machine
                     #     # Send a rotation-only goal to face the real target
-                    #     if self._send_face_target_goal(userdata, newest_target):
+                    #     if self._send_face_target_goal(self.sm_manager.shared_data, newest_target):
                     #         rospy.loginfo(
                     #             "Face-target goal sent, staying in navigation state"
                     #         )
                     #         # Stay in navigation state to monitor the rotation
                     #     else:
                     #         rospy.logwarn("Failed to send face-target goal")
-                    #         self.sync_userdata_to_manager(userdata)
+                    #         self.sync_self.sm_manager.shared_data_to_manager(self.sm_manager.shared_data)
                     #         return "navigation_complete"
                     #
                     #     # Update current goal to the new target
-                    #     userdata.current_goal = newest_target
+                    #     self.sm_manager.shared_data.current_goal = newest_target
                     #     continue
 
                 # Issue distance warning if target is too far
                 distance_to_target = _euclidean_distance(
                     current_goal, newest_target
                 )
-                if distance_to_target > userdata.max_following_distance and (
-                    rospy.Time.now() - userdata.last_distance_warning_time
-                    > userdata.distance_warning_interval_duration
+                if distance_to_target > self.sm_manager.shared_data.max_following_distance and (
+                    rospy.Time.now() - self.sm_manager.shared_data.last_distance_warning_time
+                    > self.sm_manager.shared_data.distance_warning_interval_duration
                 ):
                     rospy.loginfo(
                         f"Issuing distance warning - target too far: {distance_to_target:.2f}m"
@@ -1490,7 +1355,7 @@ class NavigationState(SyncUserdataState):
                     self.sm_manager._tts(
                         "Please wait for me. You are too far away.", wait=False
                     )
-                    userdata.last_distance_warning_time = rospy.Time.now()
+                    self.sm_manager.shared_data.last_distance_warning_time = rospy.Time.now()
 
             # Check navigation status
             nav_state = self.sm_manager.move_base_client.get_state()
@@ -1501,36 +1366,33 @@ class NavigationState(SyncUserdataState):
                 else:
                     rospy.logwarn(f"Navigation ended with status: {nav_state}")
 
-                end_robot_pose = userdata.robot_pose
+                end_robot_pose = self.sm_manager.shared_data.robot_pose
                 movement = _euclidean_distance(start_robot_pose.pose, end_robot_pose.pose)
 
                 # Update movement time continuously during navigation
                 if movement >= 0.01:
-                    userdata.last_movement_time = rospy.Time.now()
-                    userdata.added_new_target_time = rospy.Time.now()
+                    self.sm_manager.shared_data.last_movement_time = rospy.Time.now()
+                    self.sm_manager.shared_data.added_new_target_time = rospy.Time.now()
 
                 # Always return to tracking active, even if navigation failed
-                self.sync_userdata_to_manager(userdata)
                 return "navigation_complete"
 
-            self.sync_userdata_to_manager(userdata)
             rate.sleep()
 
-        self.sync_userdata_to_manager(userdata)
         return "failed"
 
     def _send_face_target_goal(self, userdata, target_pose):
         """Send a rotation-only goal to face the target. Robot stays at current position but rotates."""
         try:
-            if not userdata.robot_pose:
+            if not self.sm_manager.shared_data.robot_pose:
                 rospy.logwarn("No robot pose available for face-target goal")
                 return False
 
             # Create goal at current robot position but with orientation facing the target
-            goal_orientation = _compute_face_quat(userdata.robot_pose.pose, target_pose)
+            goal_orientation = _compute_face_quat(self.sm_manager.shared_data.robot_pose.pose, target_pose)
 
             pose_with_orientation = Pose(
-                position=userdata.robot_pose.pose.position,  # Stay at current position
+                position=self.sm_manager.shared_data.robot_pose.pose.position,  # Stay at current position
                 orientation=goal_orientation,  # Face the target
             )
 
@@ -1564,94 +1426,84 @@ class NavigationState(SyncUserdataState):
         return nav_state in [GoalStatus.PENDING, GoalStatus.ACTIVE]
 
 
-class RecoveryScanningState(SyncUserdataState):
+class RecoveryScanningState(smach.State):
     """Recovery behavior when target is lost"""
 
     def __init__(self, sm_manager):
-        super().__init__(sm_manager)
-        # Get all attribute names from PersonFollowingUserData for dynamic key declaration
-        _temp_userdata = PersonFollowingUserData()
-        _all_userdata_keys = _discover_userdata_keys(_temp_userdata)
-
         smach.State.__init__(
             self,
             outcomes=["target_recovered", "recovery_failed", "failed"],
-            input_keys=_all_userdata_keys,
-            output_keys=_all_userdata_keys,
+            input_keys=[],
+            output_keys=[],
         )
         self.sm_manager = sm_manager
 
     def execute(self, userdata):
-        self.sync_userdata_from_manager(userdata)
         rospy.loginfo("Starting recovery scanning behavior")
 
         # Cancel any active navigation
         if self.sm_manager.move_base_client:
             self.sm_manager.move_base_client.cancel_all_goals()
-        userdata.is_navigation_active = False
+        self.sm_manager.shared_data.is_navigation_active = False
 
         # Initialise recovery mode
-        userdata.recovery_mode_active = True
-        userdata.current_scan_index = 0
-        userdata.recovery_start_time = rospy.Time.now()
-        userdata.last_scan_position_time = rospy.Time.now()
+        self.sm_manager.shared_data.recovery_mode_active = True
+        self.sm_manager.shared_data.current_scan_index = 0
+        self.sm_manager.shared_data.recovery_start_time = rospy.Time.now()
+        self.sm_manager.shared_data.last_scan_position_time = rospy.Time.now()
 
         self.sm_manager._tts("Let me look for you.", wait=False)
 
         # Start scanning
-        if userdata.recovery_scan_positions:
+        if self.sm_manager.shared_data.recovery_scan_positions:
             self.sm_manager._look_at_point(
-                userdata.recovery_scan_positions[0], target_frame="base_link"
+                self.sm_manager.shared_data.recovery_scan_positions[0], target_frame="base_link"
             )
 
         rate = rospy.Rate(10)
 
         while not rospy.is_shutdown():
-            self.sync_userdata_from_manager(userdata)
             # Check recovery timeout
             if (
-                rospy.Time.now() - userdata.recovery_start_time
-                > userdata.recovery_timeout_duration
+                rospy.Time.now() - self.sm_manager.shared_data.recovery_start_time
+                > self.sm_manager.shared_data.recovery_timeout_duration
             ):
                 rospy.logwarn("Recovery behavior timed out")
-                userdata.recovery_mode_active = False
-                userdata.completion_reason = "LOST_PERSON"
-                self.sync_userdata_to_manager(userdata)
+                self.sm_manager.shared_data.recovery_mode_active = False
+                self.sm_manager.shared_data.completion_reason = "LOST_PERSON"
                 return "recovery_failed"
 
             # Check if target is recovered
-            if rospy.Time.now() - userdata.last_good_detection_time < rospy.Duration(
+            if rospy.Time.now() - self.sm_manager.shared_data.last_good_detection_time < rospy.Duration(
                 2.0
             ):
                 rospy.loginfo("Target recovered during scanning!")
                 self.sm_manager._tts("Found you! Continuing to follow.", wait=False)
-                userdata.recovery_mode_active = False
-                userdata.last_movement_time = rospy.Time.now()
-                userdata.added_new_target_time = rospy.Time.now()
-                # userdata.just_started = True  # not sure if this is really needed.
-                self.sync_userdata_to_manager(userdata)
+                self.sm_manager.shared_data.recovery_mode_active = False
+                self.sm_manager.shared_data.last_movement_time = rospy.Time.now()
+                self.sm_manager.shared_data.added_new_target_time = rospy.Time.now()
+                # self.sm_manager.shared_data.just_started = True  # not sure if this is really needed.
                 return "target_recovered"
 
             # Move to next scan position
             if (
-                rospy.Time.now() - userdata.last_scan_position_time
-                > userdata.scan_position_duration
+                rospy.Time.now() - self.sm_manager.shared_data.last_scan_position_time
+                > self.sm_manager.shared_data.scan_position_duration
             ):
-                userdata.current_scan_index += 1
+                self.sm_manager.shared_data.current_scan_index += 1
 
-                if userdata.current_scan_index >= len(userdata.recovery_scan_positions):
-                    userdata.current_scan_index = 0
+                if self.sm_manager.shared_data.current_scan_index >= len(self.sm_manager.shared_data.recovery_scan_positions):
+                    self.sm_manager.shared_data.current_scan_index = 0
                     rospy.loginfo("Completed one full scan cycle, starting over")
 
-                scan_point = userdata.recovery_scan_positions[
-                    userdata.current_scan_index
+                scan_point = self.sm_manager.shared_data.recovery_scan_positions[
+                    self.sm_manager.shared_data.current_scan_index
                 ]
                 self.sm_manager._look_at_point(scan_point, target_frame="base_link")
-                userdata.last_scan_position_time = rospy.Time.now()
+                self.sm_manager.shared_data.last_scan_position_time = rospy.Time.now()
 
             rate.sleep()
 
-        self.sync_userdata_to_manager(userdata)
         return "failed"
 
 
