@@ -108,13 +108,6 @@ catkin_package(
 #  CATKIN_DEPENDS other_catkin_pkg
 #  DEPENDS system_lib
 )
-# )
-# catkin_install_python(PROGRAMS
-#   nodes/grasp_contact_graspnet.py
-#   nodes/placing.py
-#   nodes/segmentation_node.py
-#   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-# )
 
 
 ###########

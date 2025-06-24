@@ -141,4 +141,3 @@ mypy.ini
 
 # Pycharm extension setup files
 .idea/*
-src/Base/common/manipulation/lasr_grasping/dataset/
