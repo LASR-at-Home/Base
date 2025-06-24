@@ -18,6 +18,8 @@ from geometry_msgs.msg import PointStamped, Point
 from lasr_vision_msgs.srv import LangSamRequest
 from lasr_vision_msgs.srv import LangSam
 
+from lasr_vision_msgs.srv import YoloPoseDetection3D, YoloPoseDetection3DRequest
+
 
 class GoToBag(smach.State):
     def __init__(self):
@@ -60,6 +62,9 @@ class GoToBag(smach.State):
         rospy.wait_for_service("/lasr_vision/lang_sam")
         self.langsam_srv = rospy.ServiceProxy("/lasr_vision/lang_sam", LangSam)
 
+        rospy.wait_for_service("/yolo/detect3d_pose")
+        self.detect3d = rospy.ServiceProxy("/yolo/detect3d_pose", YoloPoseDetection3D)
+
         cv2.namedWindow("Auto-segmented bag", cv2.WINDOW_NORMAL)
 
     def amcl_pose_callback(self, msg):
@@ -73,6 +78,46 @@ class GoToBag(smach.State):
         except Exception as e:
             rospy.logerr(f"CV bridge error: {e}")
 
+    def get_human_keypoints_3d(self):
+        if (
+            self.latest_rgb is None
+            or self.latest_depth is None
+            or self.depth_info is None
+        ):
+            return None
+
+        # Check if latest_depth is uint16 (16UC1)
+        if self.latest_depth.dtype == np.uint16:
+            # Convert from mm to meters, cast to float32
+            depth_float = (self.latest_depth.astype(np.float32)) / 1000.0
+        else:
+            # Assume it's already float32 in meters
+            depth_float = self.latest_depth
+
+        req = YoloPoseDetection3DRequest(
+            image_raw=self.bridge.cv2_to_imgmsg(self.latest_rgb, "bgr8"),
+            depth_image=self.bridge.cv2_to_imgmsg(depth_float, "32FC1"),
+            depth_camera_info=self.depth_info,
+            model=rospy.get_param("~model", "yolo11n-pose.pt"),
+            confidence=0.5,
+        )
+        try:
+            res = self.detect3d(req)
+        except rospy.ServiceException as e:
+            rospy.logerr(f"YOLOPoseDetection3D call failed: {e}")
+            return None
+        if not res.detections:
+            return None
+
+        # take first detection
+        kp_list = res.detections[0].keypoints
+        return {
+            kp.keypoint_name: np.array(
+                [kp.point.x / 1000, kp.point.y / 1000, kp.point.z / 1000]
+            )
+            for kp in kp_list
+        }
+
     def execute(self, userdata):
         # Wait for image & depth as before
         while not rospy.is_shutdown():
@@ -83,6 +128,9 @@ class GoToBag(smach.State):
             ):
                 break
             rospy.sleep(0.1)
+
+        # ------ NEW: Look where the person points ------
+        self.look_where_person_points()
 
         # Prepare the request (assuming self.latest_rgb is a cv2 image)
         rgb_msg = self.bridge.cv2_to_imgmsg(self.latest_rgb, "bgr8")
@@ -152,6 +200,64 @@ class GoToBag(smach.State):
             rospy.sleep(0.2)
             cv2.destroyAllWindows()
             return "failed"
+
+    def look_where_person_points(self):
+        rospy.loginfo("Looking for pointing gesture...")
+        kps = self.get_human_keypoints_3d()
+        if not kps:
+            rospy.logwarn("No human keypoints detected!")
+            return False
+
+        camera_z_axis = np.array([0.0, 0.0, 1.0])
+        best_score = -1.0
+        best_hit = None
+
+        for side in ["right", "left"]:
+            elbow_key = f"{side}_elbow"
+            wrist_key = f"{side}_wrist"
+            if elbow_key in kps and wrist_key in kps:
+                o = kps[elbow_key]
+                w = kps[wrist_key]
+                vec = w - o
+                norm = np.linalg.norm(vec)
+                if norm < 1e-6:
+                    continue
+                dirv = vec / norm
+                # Prefer arm most aligned with camera forward (Z)
+                score = float(np.dot(dirv, camera_z_axis))
+                if score > best_score and score > 0.5:
+                    print("Hello")
+                    floor_pt = self.find_pointed_floor(o, dirv)
+                    if floor_pt is not None:
+                        best_score = score
+                        best_hit = floor_pt
+
+        if best_hit is not None:
+            # Transform to map frame, then use look_at_point
+            head_point = self.transform_from_camera_to_map(best_hit)
+            if head_point is not None:
+                self.look_at_point(head_point, "map")
+                rospy.loginfo(f"Looking at pointed floor position: {head_point}")
+                rospy.sleep(1.0)
+                return True
+
+        rospy.logwarn("No valid pointing direction found.")
+        return False
+
+    def find_pointed_floor(self, origin, direction, max_dist=4.0, step=0.02):
+        for d in np.arange(0, max_dist, step):
+            pt = origin - direction * d
+            if pt[2] <= 0:
+                if d == 0:
+                    print(f"Ray starts below floor at: {pt}")
+                    return pt
+                prev_pt = origin + direction * (d - step)
+                alpha = prev_pt[2] / (prev_pt[2] - pt[2])
+                hit_pt = prev_pt + alpha * (pt - prev_pt)
+                print(f"Ray hits floor at: {hit_pt}")
+                return hit_pt
+        print(f"Ray never hits floor for origin={origin}, direction={direction}")
+        return None
 
     def get_mask_median(self, mask):
         ys, xs = np.where(mask)
