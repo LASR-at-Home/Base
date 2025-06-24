@@ -127,7 +127,6 @@ class LangSamState(smach.State):
             return "failed"
 
 
-
 # ------------------------------------
 # Helper: Extract 3D points from cloud
 # ------------------------------------
