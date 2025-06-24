@@ -1056,7 +1056,7 @@ class TrackingActiveState(smach.State):
             ):
                 rospy.loginfo("Following complete - force to stop by timeout.")
                 self.sm_manager._tts(
-                    "Have we arrived? I will stop following.", wait=False
+                    "Have we arrived? I will stop following.", wait=True
                 )
                 self.sm_manager.shared_data.completion_reason = "ARRIVED"
                 return "following_complete"
@@ -1208,7 +1208,7 @@ class TrackingActiveState(smach.State):
             ):
                 rospy.loginfo("Following complete - no movement detected")
                 self.sm_manager._tts(
-                    "Have we arrived? I will stop following.", wait=False
+                    "Have we arrived? I will stop following.", wait=True
                 )
                 self.sm_manager.shared_data.completion_reason = "ARRIVED"
                 return "following_complete"
