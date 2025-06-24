@@ -45,7 +45,6 @@ class PersonFollowingData:
         self.current_image = None
         self.depth_image = None
         self.camera_info = None
-        self.robot_pose = None
 
         # Tracking data
         self.track_id = None
@@ -200,7 +199,7 @@ class FollowPerson(smach.StateMachine):
             self,
             outcomes=["succeeded", "failed"],
             input_keys=[],
-            output_keys=[],
+            output_keys=["start_pose", "end_pose", "location"],
         )
 
         # Store camera name
@@ -282,13 +281,6 @@ class FollowPerson(smach.StateMachine):
         # Setup TF buffer and listener
         self.tf_buffer = tf.Buffer(cache_time=rospy.Duration.from_sec(10.0))
         self.tf_listener = tf.TransformListener(self.tf_buffer)
-
-        self.odom_sub = rospy.Subscriber(
-            "/mobile_base_controller/odom",
-            Odometry,
-            self._robot_pose_callback,
-            queue_size=1,
-        )
 
         # temp detection:
         self.detection = None
@@ -418,22 +410,21 @@ class FollowPerson(smach.StateMachine):
         Execute the state machine
         Can be called directly or as part of a larger state machine
         """
-
+        start_pose = self._get_robot_pose_in_map()
+        userdata.start_pose = start_pose
         # Initialize execution-specific data
         self.shared_data.person_trajectory.header.frame_id = "map"
         self.shared_data.start_time = rospy.Time.now()
-
         # Execute the state machine with populated userdata
         outcome = smach.StateMachine.execute(self, self.shared_data)
-
         # Calculate final metrics
         self.shared_data.following_duration = (
             rospy.Time.now() - self.shared_data.start_time
         ).to_sec()
-
         # Cleanup resources
         self._cleanup()
-
+        userdata.end_pose = self._get_robot_pose_in_map()
+        userdata.location = start_pose.pose
         return outcome
 
     def _sensor_callback(
@@ -444,43 +435,45 @@ class FollowPerson(smach.StateMachine):
         self.shared_data.depth_image = depth_image
         self.shared_data.camera_info = depth_camera_info
 
-    def _robot_pose_callback(self, msg):
-        """Callback for robot odometry updates - transforms pose to map frame"""
-        # rospy.loginfo(f"[odom] seq={msg.header.seq} stamp={msg.header.stamp.to_sec():.3f}")
+    def _get_robot_pose_in_map(self) -> PoseStamped or None:
+        """
+        Get the current robot pose in the map coordinate frame.
+        Returns:
+            PoseStamped: Current robot pose in map frame
+        Raises:
+            tf.LookupException: If the transform cannot be found
+            tf.ExtrapolationException: If the transform is too old
+            tf.ConnectivityException: If the transform chain is broken
+        """
         try:
-            # Create pose stamped from odometry message
-            odom_pose = PoseStamped()
-            odom_pose.header = msg.header
-            odom_pose.pose = msg.pose.pose
-
-            # Clean frame_id (remove leading slash if present)
-            if odom_pose.header.frame_id.startswith("/"):
-                odom_pose.header.frame_id = odom_pose.header.frame_id[1:]
-
-            odom_pose.header.stamp = rospy.Time(0)
-
-            # Transform pose to map frame
-            map_pose = self.tf_buffer.transform(odom_pose, "map", rospy.Duration(0.1))
-
-            # Store the transformed pose
-            self.shared_data.robot_pose = map_pose
-
-        except (
-            tf.LookupException,
-            tf.ConnectivityException,
-            tf.ExtrapolationException,
-        ) as e:
-            rospy.logwarn_throttle(
-                1.0, f"Failed to transform robot pose to map frame: {e}"
+            # Look up the transform from base_link to map
+            transform = self.tf_buffer.lookup_transform(
+                "map",  # target frame
+                "base_link",  # source frame
+                rospy.Time(0),  # get latest available transform
+                rospy.Duration(0.1),  # timeout
             )
-            # Fallback: still store the original pose if transform fails
+            # Create a PoseStamped message for the robot's current pose
             robot_pose = PoseStamped()
-            robot_pose.header = msg.header
-            robot_pose.pose = msg.pose.pose
-            if robot_pose.header.frame_id.startswith("/"):
-                robot_pose.header.frame_id = robot_pose.header.frame_id[1:]
-            self.shared_data.robot_pose = robot_pose
-        rospy.sleep(0.2)
+            robot_pose.header.frame_id = "map"
+            robot_pose.header.stamp = rospy.Time.now()
+            # Extract position from transform
+            robot_pose.pose.position.x = transform.transform.translation.x
+            robot_pose.pose.position.y = transform.transform.translation.y
+            robot_pose.pose.position.z = transform.transform.translation.z
+            # Extract orientation from transform
+            robot_pose.pose.orientation.x = transform.transform.rotation.x
+            robot_pose.pose.orientation.y = transform.transform.rotation.y
+            robot_pose.pose.orientation.z = transform.transform.rotation.z
+            robot_pose.pose.orientation.w = transform.transform.rotation.w
+            return robot_pose
+        except (
+                tf.LookupException,
+                tf.ExtrapolationException,
+                tf.ConnectivityException,
+        ) as e:
+            rospy.logerr(f"Failed to get robot pose in map frame: {e}")
+            return None
 
     def _detection3d_callback(self, msg: Detection3DArray):
         this_time = rospy.Time.now()
@@ -559,15 +552,16 @@ class FollowPerson(smach.StateMachine):
                     rospy.loginfo(f"Target speed: {self.shared_data.target_speed}.")
 
                     if len(self.shared_data.target_list) == 0:
+                        robot_pose = self._get_robot_pose_in_map()
                         # sample <num_samples> way-points inside stopping_distance
-                        distance = _euclidean_distance(self.shared_data.robot_pose, map_pose)
+                        distance = _euclidean_distance(robot_pose, map_pose)
                         rospy.loginfo(f"Distance: {distance}")
                         if distance >= 1.75:
                             poses = self._plan_and_sample_targets(
-                                self.shared_data.robot_pose,
+                                robot_pose,
                                 map_pose,
                                 radius=self.shared_data.min_following_distance,
-                                num_samples=3,
+                                num_samples=8,
                             )
                             rospy.logwarn(f"Sampled {poses}")
                             for p in poses:
@@ -911,8 +905,9 @@ class InitialisingState(smach.State):
         self.sm_manager.shared_data.last_movement_time = rospy.Time.now()
         self.sm_manager.shared_data.last_good_detection_time = rospy.Time.now()
 
-        if self.sm_manager.shared_data.robot_pose:
-            self.sm_manager.shared_data.last_position = self.sm_manager.shared_data.robot_pose
+        robot_pose = self.sm_manager._get_robot_pose_in_map()
+        if robot_pose:
+            self.sm_manager.shared_data.last_position = robot_pose
 
         rospy.loginfo("Initialisation complete")
         return "initialised"
@@ -1073,12 +1068,13 @@ class TrackingActiveState(smach.State):
                 )
 
             # Update distance traveled
-            if self.sm_manager.shared_data.last_position and self.sm_manager.shared_data.robot_pose:
+            robot_pose = self.sm_manager._get_robot_pose_in_map()
+            if self.sm_manager.shared_data.last_position and robot_pose:
                 distance_increment = _euclidean_distance(
-                    self.sm_manager.shared_data.last_position, self.sm_manager.shared_data.robot_pose
+                    self.sm_manager.shared_data.last_position, robot_pose
                 )
                 self.sm_manager.shared_data.distance_traveled += distance_increment
-                self.sm_manager.shared_data.last_position = self.sm_manager.shared_data.robot_pose
+                self.sm_manager.shared_data.last_position = robot_pose
 
             # Check if target is lost
             if (
@@ -1163,9 +1159,10 @@ class TrackingActiveState(smach.State):
                         )
 
                     # Check robot distance if we have a valid target
-                    if target_pose is not None and self.sm_manager.shared_data.robot_pose:
+                    robot_pose = self.sm_manager._get_robot_pose_in_map()
+                    if target_pose is not None and robot_pose:
                         distance_to_target = _euclidean_distance(
-                            self.sm_manager.shared_data.robot_pose.pose, target_pose
+                            robot_pose.pose, target_pose
                         )
                         rospy.loginfo(
                             f"Robot distance to target: {distance_to_target:.2f}m "
@@ -1277,7 +1274,7 @@ class NavigationState(smach.State):
         rospy.loginfo("Monitoring navigation progress")
         self.sm_manager.shared_data.last_canceled_goal_time = rospy.Time.now()
 
-        start_robot_pose = self.sm_manager.shared_data.robot_pose
+        start_robot_pose = self.sm_manager._get_robot_pose_in_map()
 
         # Verify that navigation is indeed active
         if not self._is_navigation_active() and self.sm_manager.shared_data.first_tracking_done:
@@ -1293,8 +1290,10 @@ class NavigationState(smach.State):
                     self.sm_manager.shared_data.newest_detection.point, target_frame="map"
                 )
 
+            robot_pose = self.sm_manager._get_robot_pose_in_map()
+
             current_goal = self.sm_manager.shared_data.current_goal
-            if len(self.sm_manager.shared_data.target_list) > 0 and self.sm_manager.shared_data.robot_pose:
+            if len(self.sm_manager.shared_data.target_list) > 0 and robot_pose:
                 newest_target = self.sm_manager.shared_data.target_list[-1]
                 # Check if current target has deviated too much from the real target
                 # if (
@@ -1366,7 +1365,7 @@ class NavigationState(smach.State):
                 else:
                     rospy.logwarn(f"Navigation ended with status: {nav_state}")
 
-                end_robot_pose = self.sm_manager.shared_data.robot_pose
+                end_robot_pose = robot_pose
                 movement = _euclidean_distance(start_robot_pose.pose, end_robot_pose.pose)
 
                 # Update movement time continuously during navigation
@@ -1384,15 +1383,16 @@ class NavigationState(smach.State):
     def _send_face_target_goal(self, userdata, target_pose):
         """Send a rotation-only goal to face the target. Robot stays at current position but rotates."""
         try:
-            if not self.sm_manager.shared_data.robot_pose:
+            robot_pose = self.sm_manager._get_robot_pose_in_map()
+            if not robot_pose:
                 rospy.logwarn("No robot pose available for face-target goal")
                 return False
 
             # Create goal at current robot position but with orientation facing the target
-            goal_orientation = _compute_face_quat(self.sm_manager.shared_data.robot_pose.pose, target_pose)
+            goal_orientation = _compute_face_quat(robot_pose.pose, target_pose)
 
             pose_with_orientation = Pose(
-                position=self.sm_manager.shared_data.robot_pose.pose.position,  # Stay at current position
+                position=robot_pose.pose.position,  # Stay at current position
                 orientation=goal_orientation,  # Face the target
             )
 
