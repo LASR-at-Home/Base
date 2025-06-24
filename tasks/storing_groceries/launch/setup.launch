@@ -30,5 +30,7 @@
 
     </node>
 
+    <node pkg="lasr_vision_lang_sam" type="lang_sam_service.py" name="lang_sam_service" output="screen" />
+
 
 </launch>
