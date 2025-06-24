@@ -10,7 +10,7 @@ from lasr_skills import (
     Say,
     Wait,
     WaitForPersonInArea,
-    Spin,
+    Rotate,
 )
 from receptionist.states import (
     HandleNameInterest,
@@ -382,15 +382,15 @@ class Receptionist(smach.StateMachine):
             f"SAY_ARRIVE_GUEST_{guest_id}",
             Say(text="This is the beverage area. Please wait behind me."),
             transitions={
-                "succeeded": f"SPIN_GUEST_{guest_id}",
+                "succeeded": f"ROTATE_GUEST_{guest_id}",
                 "preempted": "failed",
                 "aborted": "failed",
             },
         )
 
         smach.StateMachine.add(
-            f"SPIN_GUEST_{guest_id}",
-            Spin(angle_radians=3.14),
+            f"ROTATE_GUEST_{guest_id}",
+            Rotate(angle_radians=180),
             transitions={
                 "succeeded": f"HANDLE_FAVOURITE_DRINK_GUEST_{guest_id}",
                 "failed": f"HANDLE_FAVOURITE_DRINK_GUEST_{guest_id}",
