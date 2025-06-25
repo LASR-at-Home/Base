@@ -2,51 +2,32 @@
 
 import rospy
 import cv2
-import torch
 import numpy as np
-import os
+import math
+import copy
 import actionlib
 import tf
 import tf.transformations as tft
 
-import copy
-import math
-
-import smach
-
 from sensor_msgs.msg import Image, JointState
 from cv_bridge import CvBridge
 from geometry_msgs.msg import PoseStamped
-from segment_anything import sam_model_registry, SamPredictor
-from moveit_msgs import *
 from moveit_commander import (
     MoveGroupCommander,
     roscpp_initialize,
     roscpp_shutdown,
     PlanningSceneInterface,
 )
-
 from message_filters import Subscriber, ApproximateTimeSynchronizer
 from control_msgs.msg import FollowJointTrajectoryAction, FollowJointTrajectoryGoal
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 from pal_interaction_msgs.msg import TtsAction, TtsGoal, TtsText
 from play_motion_msgs.msg import PlayMotionAction, PlayMotionGoal
-from controller_manager_msgs.srv import SwitchController, SwitchControllerRequest
-from play_motion_msgs.msg import PlayMotionGoal, PlayMotionAction
-from sensor_msgs.msg import PointCloud2, PointField
-import sensor_msgs.point_cloud2 as pc2
-from geometry_msgs.msg import Point, Pose, PoseStamped, Quaternion, Vector3Stamped
-from std_msgs.msg import Int64, Header
-from std_srvs.srv import Empty
-from visualization_msgs.msg import Marker, MarkerArray
 from moveit_msgs.srv import GetPlanningScene, ApplyPlanningSceneRequest
-from moveit_msgs.msg import (
-    PlanningScene,
-    AllowedCollisionEntry,
-    Grasp,
-    GripperTranslation,
-)
-from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
+from moveit_msgs.msg import AllowedCollisionEntry
+from lasr_vision_msgs.srv import LangSam, LangSamRequest
+
+import smach
 
 
 def allow_collisions_with_object(obj_name, scene):
@@ -59,9 +40,6 @@ def allow_collisions_with_object(obj_name, scene):
     request = GetPlanningScene()
     request.components = 0  # Get just the Allowed Collision Matrix
     planning_scene = _get_planning_scene.call(request)
-    print(
-        f"\n\n\n--- allowed_collision_matrix before update:{planning_scene.scene.allowed_collision_matrix} ---\n\n\n"
-    )
 
     # Set this object to ignore collisions with all objects. The entry values are not updated
     planning_scene.scene.allowed_collision_matrix.entry_names.append(obj_name)
@@ -94,30 +72,17 @@ def allow_collisions_with_object(obj_name, scene):
     # planning_scene_pub = rospy.Publisher("planning_scene", PlanningScene, queue_size=5)
     # planning_scene_pub.publish(planning_scene.scene)
 
-    print(f"\n--- Sent message:{planning_scene.scene.allowed_collision_matrix} ---\n")
-
     # The planning scene retrieved after the update should have taken place shows the Allowed Collision Matrix is the same as before
     request = GetPlanningScene()
     request.components = 0  # Get just the Allowed Collision Matrix
     planning_scene = _get_planning_scene.call(request)
-    print(
-        f"\n--- allowed_collision_matrix after update:{planning_scene.scene.allowed_collision_matrix} ---\n"
-    )
+
+    rospy.loginfo("Collision object added to disregard to the planning scene!")
 
 
 class BagPickAndPlace(smach.State):
     def __init__(self):
         smach.State.__init__(self, outcomes=["succeeded", "failed"])
-
-        # --- SAM2 setup ---
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        root = os.path.dirname(__file__)
-        pkg = os.path.dirname(root)
-        ckpt = os.path.join(pkg, "models", "sam_vit_b_01ec64.pth")
-        sam = sam_model_registry["vit_b"](checkpoint=ckpt)
-        sam.to(self.device)
-        self.predictor = SamPredictor(sam)
-        # -------------------
 
         self.bridge = CvBridge()
         self.latest_rgb = None
@@ -169,6 +134,12 @@ class BagPickAndPlace(smach.State):
         self.planning_scene_interface = PlanningSceneInterface()
         self.planning_scene_interface.clear()
 
+        # --- LangSAM client ---
+        rospy.loginfo("Waiting for /lasr_vision/lang_sam service...")
+        rospy.wait_for_service("/lasr_vision/lang_sam")
+        self.langsam_srv = rospy.ServiceProxy("/lasr_vision/lang_sam", LangSam)
+        rospy.loginfo("/lasr_vision/lang_sam service connected.")
+
     def on_mouse_click(self, event, x, y, flags, param):
         if event == cv2.EVENT_LBUTTONDOWN:
             self.click = (x, y)
@@ -184,7 +155,7 @@ class BagPickAndPlace(smach.State):
     def execute(self, userdata):
         try:
             self.adjust_torso(0.1)
-            rate = rospy.Rate(30)
+            rate = rospy.Rate(5)
             start = rospy.Time.now()
 
             # Wait for RGB image
@@ -192,44 +163,45 @@ class BagPickAndPlace(smach.State):
                 if self.latest_rgb is not None:
                     break
                 rate.sleep()
-                if (rospy.Time.now() - start).to_sec() > 10:  # 10s timeout
+                if (rospy.Time.now() - start).to_sec() > 10:
                     rospy.logwarn("Timeout waiting for camera.")
-                    cv2.destroyWindow("Live View")
                     return "failed"
 
-            frame = self.latest_rgb.copy()
-            cv2.imshow("Live View", frame)
-            cv2.waitKey(1)
-            self.click = None
+            # --- LangSAM automatic bag segmentation ---
+            rgb_msg = self.bridge.cv2_to_imgmsg(self.latest_rgb, "bgr8")
+            langsam_req = LangSamRequest()
+            langsam_req.image_raw = rgb_msg
+            langsam_req.prompt = "bag"
 
-            # Wait for click, with a timeout
-            click_start = rospy.Time.now()
-            while not rospy.is_shutdown() and self.click is None:
-                cv2.imshow("Live View", frame)
-                cv2.waitKey(1)
-                rate.sleep()
-                if (rospy.Time.now() - click_start).to_sec() > 15:  # 15s timeout
-                    rospy.logwarn("Timeout waiting for click.")
-                    cv2.destroyWindow("Live View")
-                    return "failed"
-
-            if not self.click:
-                rospy.logwarn("No click received.")
-                cv2.destroyWindow("Live View")
+            try:
+                resp = self.langsam_srv(langsam_req)
+            except rospy.ServiceException as e:
+                rospy.logerr(f"LangSAM service call failed: {e}")
                 return "failed"
 
-            u, v = self.click
-            self.click = None
+            if not resp.detections:
+                rospy.logwarn("No bags detected.")
+                return "failed"
 
-            # 1) segment with SAM
-            self.predictor.set_image(frame)
-            coords = np.array([[u, v]], dtype=float)
-            labs = np.array([1], dtype=int)
-            masks, _, _ = self.predictor.predict(
-                point_coords=coords, point_labels=labs, multimask_output=False
-            )
-            mask = masks[0].astype(bool)
+            # Pick detection with highest detection_score
+            best_det = max(resp.detections, key=lambda det: det.detection_score)
+            mask_flat = np.array(best_det.seg_mask, dtype=np.uint8)
+            height, width = self.latest_rgb.shape[:2]
+            if mask_flat.size != height * width:
+                rospy.logerr(
+                    f"Mask size {mask_flat.size} does not match image size {height}x{width}"
+                )
+                return "failed"
+            mask = mask_flat.reshape((height, width))
 
+            # --- show the segmentation overlay for debugging
+            overlay = self.latest_rgb.copy()
+            overlay[mask > 0] = [0, 0, 255]  # mark mask in red
+            cv2.imshow("Auto-segmented bag", overlay)
+            cv2.waitKey(1000)
+            cv2.destroyWindow("Auto-segmented bag")
+
+            # --- 3D points as before
             pts = []
             h, w = mask.shape
             fx = fy = 579.653076171875  # verify with camera_info!
@@ -241,8 +213,7 @@ class BagPickAndPlace(smach.State):
                     Y = (yy - cy) * z / fy
                     pts.append((X, Y, z))
             if not pts:
-                rospy.logwarn("No valid 3D points—try clicking elsewhere.")
-                cv2.destroyWindow("Live View")
+                rospy.logwarn("No valid 3D points in mask.")
                 return "failed"
             pts = np.array(pts)
             centroid = np.median(pts, axis=0)
@@ -258,7 +229,7 @@ class BagPickAndPlace(smach.State):
             closest_pose = self.find_closest_pose_footprint(pts)
             centroid_pose = self.transform_centroid_pose_footprint(centroid, yaw)
 
-            # self.create_collision_object_from_pcl(pts)
+            self.create_collision_object_from_pcl(pts)
             rospy.sleep(1.0)
             self.prepare_pick()
             result = self.pick(centroid_pose, closest_pose)
@@ -266,71 +237,57 @@ class BagPickAndPlace(smach.State):
                 self.ask_for_bag()
 
             self.stow_bag()
-            cv2.destroyWindow("Live View")
+            self.hold_gripper_position()
+
             return "succeeded"
         except Exception as e:
             rospy.logerr(f"Exception in skill: {e}")
             try:
-                cv2.destroyWindow("Live View")
+                cv2.destroyAllWindows()
             except:
                 pass
             return "failed"
 
     def create_collision_object_from_pcl(self, points):
-        # Optional: remove outliers based on percentiles (e.g., filtering out the extreme points)
-        # lower = np.percentile(points, 1, axis=0)
-        # upper = np.percentile(points, 99, axis=0)
-
-        # Filter points based on the percentile ranges
-        # mask = np.all((points >= lower) & (points <= upper), axis=1)
-        # points = points[mask]
-
-        # Find the min and max of the points
         min_pt = points.min(axis=0)
         max_pt = points.max(axis=0)
 
-        # Calculate the center of the bounding box and its size
         center = (min_pt + max_pt) / 2.0
         size = (max_pt - min_pt) / 1000.0
+
+        # --- PCA on XY as you do elsewhere
+        xy = points[:, :2] - center[:2]
+        cov = np.cov(xy, rowvar=False)
+        evals, evecs = np.linalg.eigh(cov)
+        # The principal axis in the XY plane
+        long_axis = evecs[:, np.argmax(evals)]
+        orth = np.array([-long_axis[1], long_axis[0]])  # orthogonal
+
+        # Build rotation matrix
+        x_axis = np.array([long_axis[0], long_axis[1], 0])
+        y_axis = np.array([orth[0], orth[1], 0])
+        z_axis = np.array([0, 0, 1])
+        R = np.stack([x_axis, y_axis, z_axis], axis=1)  # shape (3,3)
+
+        quat = tft.quaternion_from_matrix(
+            np.vstack([np.hstack([R, np.zeros((3, 1))]), [0, 0, 0, 1]])  # shape (3,4)
+        )
 
         p = PoseStamped()
         frame_id = "xtion_rgb_optical_frame"
         p.header.frame_id = frame_id
         p.header.stamp = rospy.Time.now()
-        # p.pose.position.x = obj.centroid.x
-        # p.pose.position.y = obj.centroid.y
-        # p.pose.position.z = obj.centroid.z
         p.pose.position.x = center[0] / 1000.0
         p.pose.position.y = center[1] / 1000.0
         p.pose.position.z = center[2] / 1000.0
+        p.pose.orientation.x = quat[0]
+        p.pose.orientation.y = quat[1]
+        p.pose.orientation.z = quat[2]
+        p.pose.orientation.w = quat[3]
 
-        p.pose.orientation.w = 1
         rospy.loginfo(p)
         self.planning_scene_interface.add_box("obj", p, size=size)
 
-        # # Create the collision object (bounding box)
-        # collision_object = CollisionObject()
-        # collision_object.header.frame_id = frame_id
-        # collision_object.id = "object"
-
-        # # Define a SolidPrimitive (box)
-        # box = SolidPrimitive()
-        # box.type = SolidPrimitive.BOX
-        # box.dimensions = [size[0], size[1], size[2]]
-
-        # # Define the pose of the collision object
-        # pose = Pose()
-        # pose.position.x = center[0]
-        # pose.position.y = center[1]
-        # pose.position.z = center[2]
-        # pose.orientation.w = 1.0  # No rotation, just the position
-
-        # collision_object.primitives = [box]
-        # collision_object.primitive_poses = [pose]
-        # collision_object.operation = CollisionObject.ADD
-
-        # Add the collision object to the planning scene
-        # planning_scene_interface.apply_collision_object(collision_object)
         allow_collisions_with_object("obj", self.planning_scene_interface)
         rospy.loginfo("Collision object added to the planning scene!")
 
@@ -470,14 +427,14 @@ class BagPickAndPlace(smach.State):
         if result == False:
             return result
 
-        result = self.sync_shift_ee(self.arm, 0.35, 0.0, 0.0)
+        result = self.sync_shift_ee(self.arm, 0.30, 0.0, 0.0)
         if result == False:
             return result
         self.close_gripper()
         rospy.loginfo("Bag pick complete!")
-        self.sync_shift_ee(self.arm, -0.35, 0.0, 0.0)
+        self.sync_shift_ee(self.arm, -0.30, 0.0, 0.0)
 
-        return self.is_picked_up(0.003, 0.20)
+        return self.is_picked_up(0.002, 0.19)
 
     def sync_shift_ee(self, move_group, x, y, z):
         from tf.transformations import euler_from_quaternion, euler_matrix
@@ -502,7 +459,8 @@ class BagPickAndPlace(smach.State):
         return result
 
     def is_picked_up(self, pos_thresh=0.002, effort_thresh=0.05):
-        rospy.sleep(0.1)
+        self.close_gripper()
+        rospy.sleep(0.2)
         js = rospy.wait_for_message("/joint_states", JointState, timeout=1.0)
         lidx = js.name.index("gripper_left_finger_joint")
         ridx = js.name.index("gripper_right_finger_joint")
@@ -572,11 +530,28 @@ class BagPickAndPlace(smach.State):
         self.gripper_client.send_goal(goal)
         self.gripper_client.wait_for_result()
 
+    def hold_gripper_position(self, duration=1.0):
+        js = rospy.wait_for_message("/joint_states", JointState, timeout=1.0)
+
+        lidx = js.name.index("gripper_left_finger_joint")
+        ridx = js.name.index("gripper_right_finger_joint")
+        pos_l = js.position[lidx]
+        pos_r = js.position[ridx]
+
+        goal = FollowJointTrajectoryGoal()
+        traj = JointTrajectory()
+        traj.joint_names = ["gripper_left_finger_joint", "gripper_right_finger_joint"]
+        pt = JointTrajectoryPoint()
+        pt.positions = [pos_l, pos_r]
+        pt.time_from_start = rospy.Duration(duration)
+        traj.points = [pt]
+        goal.trajectory = traj
+
+        self.gripper_client.send_goal(goal)
+
 
 if __name__ == "__main__":
-    import smach
-
-    rospy.init_node("bag_pick_and_place_skill_runner")
+    rospy.init_node("bag_pick_up")
     sm = smach.StateMachine(outcomes=["succeeded", "failed"])
     with sm:
         smach.StateMachine.add(

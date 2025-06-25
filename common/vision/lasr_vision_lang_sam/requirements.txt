@@ -18,7 +18,7 @@ gradio==5.29.0            # via -r requirements.in, lang-sam
 gradio-client==1.10.0     # via gradio
 groovy==0.1.2             # via gradio
 h11==0.16.0               # via httpcore, uvicorn
-hf-xet==1.1.4             # via huggingface-hub
+hf-xet==1.1.5             # via huggingface-hub
 httpcore==1.0.9           # via httpx
 httptools==0.6.4          # via uvicorn
 httpx==0.28.1             # via gradio, gradio-client, safehttpx
@@ -60,7 +60,7 @@ portalocker==3.2.0        # via iopath
 pydantic==2.11.7          # via -r requirements.in, fastapi, gradio, lang-sam
 pydantic-core==2.33.2     # via pydantic
 pydub==0.25.1             # via gradio
-pygments==2.19.1          # via rich
+pygments==2.19.2          # via rich
 pyparsing==3.2.3          # via matplotlib
 python-dateutil==2.9.0.post0  # via matplotlib, pandas
 python-dotenv==1.1.0      # via uvicorn

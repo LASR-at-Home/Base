@@ -9,9 +9,13 @@ project(help_me_carry)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   catkin_virtualenv
-  lasr_skills
   rospy
   std_msgs
+  # lasr_vision_lang_sam  # this won't actually work since it has a different python version,
+  # run 'catkin build help_me_carry && catkin build lasr_vision_lang_sam' instead will just work.
+  lasr_skills
+  lasr_vision_sam2
+  lasr_vision_yolo
 )
 
 ## System dependencies are found with CMake's conventions
