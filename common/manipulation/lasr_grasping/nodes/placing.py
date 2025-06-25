@@ -310,7 +310,6 @@ def place_at(x, y, z,
     tool_goal.pose.position.x = x 
     tool_goal.pose.position.y = y 
     tool_goal.pose.position.z = z + box_offset_z
-    # tool_goal.pose.position.z = z 
     tool_goal.pose.orientation.w = 1.0
 
     # 1) Plan and execute move to tool_goal
