@@ -1,10 +1,8 @@
 import rospy
 import smach
 import smach_ros
-
-# from help_me_carry import follow_person, go_to_bag, pick_up_bag
 from help_me_carry import GoToBag, BagPickAndPlace
-from lasr_skills import FollowPerson, PlayMotion
+from lasr_skills import FollowPerson, PlayMotion, GoToLocation, Say
 
 
 class CarryMyLuggage(smach.StateMachine):
@@ -28,12 +26,48 @@ class CarryMyLuggage(smach.StateMachine):
             # )
 
             smach.StateMachine.add(
+                "SAY_START",
+                Say(text="Start of help me carry task."),
+                transitions={
+                    "succeeded": "PRE_FOLLOW",
+                    "aborted": "PRE_FOLLOW",
+                    "preempted": "PRE_FOLLOW",
+                },
+            )
+
+            smach.StateMachine.add(
+                f"PRE_FOLLOW",
+                PlayMotion(motion_name="pre_navigation"),
+                transitions={
+                    "succeeded": f"FOLLOW_PERSON",
+                    "preempted": "FOLLOW_PERSON",
+                    "aborted": "FOLLOW_PERSON",
+                },
+            )
+
+            smach.StateMachine.add(
+                "FOLLOW_PERSON",
+                FollowPerson(),
+                transitions={"succeeded": "POST_FOLLOW", "failed": "POST_FOLLOW"},
+            )
+
+            smach.StateMachine.add(
                 f"POST_FOLLOW",
                 PlayMotion(motion_name="following_post_navigation"),
                 transitions={
-                    "succeeded": f"GO_TO_BAG",
-                    "preempted": "GO_TO_BAG",
+                    "succeeded": "SAY_GO_TO_BAG",
+                    "preempted": "SAY_GO_TO_BAG",
+                    "aborted": "SAY_GO_TO_BAG",
+                },
+            )
+
+            smach.StateMachine.add(
+                "SAY_GO_TO_BAG",
+                Say(text="Please point me the bag and I will pick it up for you."),
+                transitions={
+                    "succeeded": "GO_TO_BAG",
                     "aborted": "GO_TO_BAG",
+                    "preempted": "GO_TO_BAG",
                 },
             )
 
@@ -41,8 +75,18 @@ class CarryMyLuggage(smach.StateMachine):
                 "GO_TO_BAG",
                 GoToBag(),
                 transitions={
-                    "succeeded": "PICK_UP_BAG",
+                    "succeeded": "SAY_PICK_UP_BAG",
                     "failed": "failed",
+                },
+            )
+
+            smach.StateMachine.add(
+                "SAY_PICK_UP_BAG",
+                Say(text="Picking up the bag."),
+                transitions={
+                    "succeeded": "PICK_UP_BAG",
+                    "aborted": "PICK_UP_BAG",
+                    "preempted": "PICK_UP_BAG",
                 },
             )
 
@@ -50,8 +94,37 @@ class CarryMyLuggage(smach.StateMachine):
                 "PICK_UP_BAG",
                 BagPickAndPlace(),
                 transitions={
+                    "succeeded": "SAY_GOING_BACK",
+                    "failed": "SAY_GOING_BACK",
+                },
+            )
+
+            smach.StateMachine.add(
+                "SAY_GOING_BACK",
+                Say(text="Going back to start point."),
+                transitions={
+                    "succeeded": "GO_BACK_TO_START_POINT",
+                    "aborted": "GO_BACK_TO_START_POINT",
+                    "preempted": "GO_BACK_TO_START_POINT",
+                },
+            )
+
+            smach.StateMachine.add(
+                f"GO_BACK_TO_START_POINT",
+                GoToLocation(),
+                transitions={
+                    "succeeded": "SAY_END",
+                    "failed": "SAY_END",
+                },
+            )
+
+            smach.StateMachine.add(
+                "SAY_END",
+                Say(text="End of help me carry task."),
+                transitions={
                     "succeeded": "succeeded",
-                    "failed": "failed",
+                    "aborted": "succeeded",
+                    "preempted": "succeeded",
                 },
             )
 
