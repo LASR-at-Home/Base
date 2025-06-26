@@ -285,7 +285,7 @@ class Introduce(smach.StateMachine):
                             "aborted": "failed",
                             "timed_out": "failed",
                         },
-                    )   
+                    )
                     smach.StateMachine.add(
                         "WAIT",
                         Wait(0.25),

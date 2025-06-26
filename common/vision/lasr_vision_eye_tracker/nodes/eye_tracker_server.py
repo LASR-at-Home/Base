@@ -58,9 +58,9 @@ class EyeTracker:
     _robot_pose_sub = rospy.Subscriber
     _yolo_keypoint_service: rospy.ServiceProxy
     _robot_point: Optional[Point] = None
-    _max_eye_distance: float = 0.5
+    _max_eye_distance: float = 1.5
 
-    def __init__(self, max_eye_distance: float = 0.5):
+    def __init__(self, max_eye_distance: float = 1.5):
 
         self._action_server = actionlib.SimpleActionServer(
             "/lasr_vision_eye_tracker/track_eyes",
@@ -226,7 +226,6 @@ class EyeTracker:
                     distance = (
                         (eye_midpoint.x - self._robot_point.x) ** 2
                         + (eye_midpoint.y - self._robot_point.y) ** 2
-                        + (eye_midpoint.z - self._robot_point.z) ** 2
                     ) ** 0.5
                     rospy.loginfo(f"Distance to eye midpoint: {distance}")
                     if distance < closest_distance:

@@ -278,13 +278,17 @@ class SeatGuest(smach.StateMachine):
                 },
             )
             # Process detections
+            if learn_host:
+                detection_transition = "LEARN_HOST_FACE"
+            else:
+                detection_transition = "LOOK_TO_SEAT"
             smach.StateMachine.add(
                 "PROCESS_DETECTIONS",
                 ProcessDetections(
                     max_people_on_sofa=max_people_on_sofa, sofa_point=sofa_point
                 ),
                 transitions={
-                    "succeeded": "LOOK_TO_SEAT",
+                    "succeeded": detection_transition,
                     "failed": "failed",
                 },
                 remapping={
@@ -294,7 +298,18 @@ class SeatGuest(smach.StateMachine):
             )
             if learn_host:
                 # Look to the only person detection and learn the host's face.
-                smach.StateMachine.add()
+                smach.StateMachine.add(
+                    "LEARN_HOST_FACE",
+                    LearnHostFace(),
+                    transitions={
+                        "succeeded": "LOOK_TO_SEAT",
+                        "failed": "failed",
+                    },
+                    remapping={
+                        "guest_data": "guest_data",
+                        "seated_guest_locs": "seated_guest_locs",
+                    },
+                )
 
             smach.StateMachine.add(
                 "LOOK_TO_SEAT",
