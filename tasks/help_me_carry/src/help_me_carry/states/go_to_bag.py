@@ -4,8 +4,6 @@ import smach
 import rospy
 import numpy as np
 import cv2
-import torch
-import os
 import actionlib
 import tf
 from sensor_msgs.msg import Image, CameraInfo
@@ -14,9 +12,13 @@ from cv_bridge import CvBridge
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from message_filters import Subscriber, ApproximateTimeSynchronizer
 
-from segment_anything import sam_model_registry, SamPredictor
 from control_msgs.msg import PointHeadAction, PointHeadGoal
 from geometry_msgs.msg import PointStamped, Point
+
+from lasr_vision_msgs.srv import LangSamRequest
+from lasr_vision_msgs.srv import LangSam
+
+from lasr_vision_msgs.srv import YoloPoseDetection3D, YoloPoseDetection3DRequest
 
 
 class GoToBag(smach.State):
@@ -27,10 +29,6 @@ class GoToBag(smach.State):
         self.latest_rgb = None
         self.latest_depth = None
         self.depth_info = None
-        self.click_pixel = None
-
-        cv2.namedWindow("Click to segment", cv2.WINDOW_NORMAL)
-        cv2.setMouseCallback("Click to segment", self.on_mouse_click)
 
         # Subscribers
         rgb_sub = Subscriber("/xtion/rgb/image_raw", Image)
@@ -56,27 +54,21 @@ class GoToBag(smach.State):
             "/amcl_pose", PoseWithCovarianceStamped, self.amcl_pose_callback
         )
 
-        # Load SAM model
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        root = os.path.dirname(__file__)
-        pkg = os.path.dirname(root)
-        ckpt = os.path.join(pkg, "models", "sam_vit_b_01ec64.pth")
-        sam = sam_model_registry["vit_b"](checkpoint=ckpt)
-        sam.to(self.device)
-        self.predictor = SamPredictor(sam)
-
         self.point_head_client = actionlib.SimpleActionClient(
             "/head_controller/point_head_action", PointHeadAction
         )
         self.point_head_client.wait_for_server()
 
+        self.langsam_srv = rospy.ServiceProxy("/lasr_vision/lang_sam", LangSam)
+        self.langsam_srv.wait_for_service()
+
+        rospy.wait_for_service("/yolo/detect3d_pose")
+        self.detect3d = rospy.ServiceProxy("/yolo/detect3d_pose", YoloPoseDetection3D)
+
+        cv2.namedWindow("Auto-segmented bag", cv2.WINDOW_NORMAL)
+
     def amcl_pose_callback(self, msg):
         self.latest_amcl_pose = msg
-
-    def on_mouse_click(self, event, x, y, flags, param):
-        if event == cv2.EVENT_LBUTTONDOWN:
-            self.click_pixel = (x, y)
-            rospy.loginfo(f"User clicked: {self.click_pixel}")
 
     def synced_callback(self, rgb_msg, depth_msg, info_msg):
         try:
@@ -86,8 +78,48 @@ class GoToBag(smach.State):
         except Exception as e:
             rospy.logerr(f"CV bridge error: {e}")
 
+    def get_human_keypoints_3d(self):
+        if (
+            self.latest_rgb is None
+            or self.latest_depth is None
+            or self.depth_info is None
+        ):
+            return None
+
+        # Check if latest_depth is uint16 (16UC1)
+        if self.latest_depth.dtype == np.uint16:
+            # Convert from mm to meters, cast to float32
+            depth_float = (self.latest_depth.astype(np.float32)) / 1000.0
+        else:
+            # Assume it's already float32 in meters
+            depth_float = self.latest_depth
+
+        req = YoloPoseDetection3DRequest(
+            image_raw=self.bridge.cv2_to_imgmsg(self.latest_rgb, "bgr8"),
+            depth_image=self.bridge.cv2_to_imgmsg(depth_float, "32FC1"),
+            depth_camera_info=self.depth_info,
+            model=rospy.get_param("~model", "yolo11n-pose.pt"),
+            confidence=0.5,
+        )
+        try:
+            res = self.detect3d(req)
+        except rospy.ServiceException as e:
+            rospy.logerr(f"YOLOPoseDetection3D call failed: {e}")
+            return None
+        if not res.detections:
+            return None
+
+        # take first detection
+        kp_list = res.detections[0].keypoints
+        return {
+            kp.keypoint_name: np.array(
+                [kp.point.x / 1000, kp.point.y / 1000, kp.point.z / 1000]
+            )
+            for kp in kp_list
+        }
+
     def execute(self, userdata):
-        # Wait for all sensors to have valid data
+        # Wait for image & depth as before
         while not rospy.is_shutdown():
             if (
                 self.latest_rgb is not None
@@ -97,83 +129,135 @@ class GoToBag(smach.State):
                 break
             rospy.sleep(0.1)
 
-        # Show frame and wait for user click
-        while not rospy.is_shutdown() and self.click_pixel is None:
-            frame = self.latest_rgb.copy()
-            cv2.imshow("Click to segment", frame)
-            cv2.waitKey(1)
-            rospy.sleep(0.05)
+        # ------ NEW: Look where the person points ------
+        self.look_where_person_points()
 
-        # Once clicked, do everything once
-        if self.click_pixel:
-            u, v = self.click_pixel
-            self.click_pixel = None
+        # Prepare the request (assuming self.latest_rgb is a cv2 image)
+        rgb_msg = self.bridge.cv2_to_imgmsg(self.latest_rgb, "bgr8")
+        langsam_req = LangSamRequest()
+        langsam_req.image_raw = rgb_msg
+        langsam_req.prompt = "bag"
 
-            # Segment
-            mask = self.get_click_mask(self.latest_rgb, u, v)
-            if np.sum(mask) == 0:
-                rospy.logwarn("SAM did not find a mask at click point.")
-                cv2.destroyWindow("Click to segment")
-                return "failed"
-            mu, mv = self.get_mask_median(mask)
-            if mu is None or mv is None:
-                rospy.logwarn("No valid median pixel in mask.")
-                cv2.destroyWindow("Click to segment")
-                return "failed"
-
-            overlay = self._make_overlay(self.latest_rgb, mask)
-            cv2.circle(overlay, (mu, mv), 8, (0, 255, 0), -1)
-            cv2.imshow("Click to segment", overlay)
-            cv2.waitKey(1)
-
-            p_cam = self.pixel_to_3d(mu, mv)
-            if p_cam is None:
-                rospy.logwarn("No valid depth at median pixel.")
-                cv2.destroyWindow("Click to segment")
-                return "failed"
-
-            head_point = self.transform_from_camera_to_map(p_cam)
-            print(head_point)
-
-            x_bag, y_bag = self.navigate_to_closest_feasible_point(p_cam)
-            if x_bag is not None and y_bag is not None:
-                rospy.loginfo(
-                    "[SAM-CLICK] Navigation succeeded! Now adjusting orientation with AMCL pose."
-                )
-                self.face_point_with_amcl(x_bag, y_bag)
-                self.look_at_point(head_point, "map")
-                cv2.destroyWindow("Click to segment")
-                return "succeeded"
-            else:
-                cv2.destroyWindow("Click to segment")
-                return "failed"
-        else:
-            cv2.destroyWindow("Click to segment")
+        try:
+            resp = self.langsam_srv(langsam_req)
+        except rospy.ServiceException as e:
+            rospy.logerr(f"LangSAM service call failed: {e}")
             return "failed"
 
-    # --- all your existing helper methods (unchanged, just copy from your node) ---
-    def get_click_mask(self, rgb_bgr, u, v):
-        img_rgb = cv2.cvtColor(rgb_bgr, cv2.COLOR_BGR2RGB)
-        self.predictor.set_image(img_rgb)
-        point_coords = np.array([[u, v]])
-        point_labels = np.array([1])
-        masks, _, _ = self.predictor.predict(
-            point_coords=point_coords, point_labels=point_labels, multimask_output=True
-        )
-        H, W = rgb_bgr.shape[:2]
-        combined = np.zeros((H, W), dtype=np.uint8)
-        for m in masks:
-            combined = np.logical_or(combined, m).astype(np.uint8)
-        # Largest connected component
-        num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(
-            combined, connectivity=8
-        )
-        if num_labels <= 1:
-            return np.zeros((H, W), dtype=np.uint8)
-        areas = stats[1:, cv2.CC_STAT_AREA]
-        largest_label = 1 + np.argmax(areas)
-        mask = (labels == largest_label).astype(np.uint8)
-        return mask
+        if not resp.detections:
+            rospy.logwarn("No bags detected.")
+            cv2.destroyAllWindows()
+            return "failed"
+
+        # Pick detection with highest detection_score
+        best_det = max(resp.detections, key=lambda det: det.detection_score)
+        mask_flat = np.array(best_det.seg_mask, dtype=np.uint8)
+        height, width = self.latest_rgb.shape[:2]
+        if mask_flat.size != height * width:
+            rospy.logerr(
+                f"Mask size {mask_flat.size} does not match image size {height}x{width}"
+            )
+            cv2.destroyAllWindows()
+            return "failed"
+        mask = mask_flat.reshape((height, width))
+
+        self.visualize_segmentation(self.latest_rgb, mask)
+
+        ys, xs = np.where(mask)
+        pts = []
+        for v, u in zip(ys, xs):
+            raw_depth_mm = float(self.latest_depth[v, u])
+            if np.isfinite(raw_depth_mm) and raw_depth_mm > 0.0:
+                z_cam = raw_depth_mm * 0.001
+                fx = self.depth_info.K[0]
+                fy = self.depth_info.K[4]
+                cx = self.depth_info.K[2]
+                cy = self.depth_info.K[5]
+                x_cam = (u - cx) * z_cam / fx
+                y_cam = (v - cy) * z_cam / fy
+                pts.append([x_cam, y_cam, z_cam])
+        if not pts:
+            rospy.logwarn("No valid depth points in mask.")
+            cv2.destroyAllWindows()
+            return "failed"
+
+        pts = np.array(pts)
+        centroid = np.median(pts, axis=0)
+        p_cam = centroid
+
+        head_point = self.transform_from_camera_to_map(p_cam)
+        x_bag, y_bag = self.navigate_to_closest_feasible_point(p_cam)
+        if x_bag is not None and y_bag is not None:
+            rospy.loginfo(
+                "[LangSAM] Navigation succeeded! Adjusting orientation with AMCL pose."
+            )
+            self.face_point_with_amcl(x_bag, y_bag)
+            self.look_at_point(head_point, "map")
+            rospy.sleep(0.2)
+            cv2.destroyAllWindows()
+            return "succeeded"
+        else:
+            rospy.sleep(0.2)
+            cv2.destroyAllWindows()
+            return "failed"
+
+    def look_where_person_points(self):
+        rospy.loginfo("Looking for pointing gesture...")
+        kps = self.get_human_keypoints_3d()
+        if not kps:
+            rospy.logwarn("No human keypoints detected!")
+            return False
+
+        camera_z_axis = np.array([0.0, 0.0, 1.0])
+        best_score = -1.0
+        best_hit = None
+
+        for side in ["right", "left"]:
+            elbow_key = f"{side}_elbow"
+            wrist_key = f"{side}_wrist"
+            if elbow_key in kps and wrist_key in kps:
+                o = kps[elbow_key]
+                w = kps[wrist_key]
+                vec = w - o
+                norm = np.linalg.norm(vec)
+                if norm < 1e-6:
+                    continue
+                dirv = vec / norm
+                # Prefer arm most aligned with camera forward (Z)
+                score = float(np.dot(dirv, camera_z_axis))
+                if score > best_score and score > 0.5:
+                    print("Hello")
+                    floor_pt = self.find_pointed_floor(o, dirv)
+                    if floor_pt is not None:
+                        best_score = score
+                        best_hit = floor_pt
+
+        if best_hit is not None:
+            # Transform to map frame, then use look_at_point
+            head_point = self.transform_from_camera_to_map(best_hit)
+            if head_point is not None:
+                self.look_at_point(head_point, "map")
+                rospy.loginfo(f"Looking at pointed floor position: {head_point}")
+                rospy.sleep(1.0)
+                return True
+
+        rospy.logwarn("No valid pointing direction found.")
+        return False
+
+    def find_pointed_floor(self, origin, direction, max_dist=4.0, step=0.02):
+        for d in np.arange(0, max_dist, step):
+            pt = origin - direction * d
+            if pt[2] <= 0:
+                if d == 0:
+                    print(f"Ray starts below floor at: {pt}")
+                    return pt
+                prev_pt = origin + direction * (d - step)
+                alpha = prev_pt[2] / (prev_pt[2] - pt[2])
+                hit_pt = prev_pt + alpha * (pt - prev_pt)
+                print(f"Ray hits floor at: {hit_pt}")
+                return hit_pt
+        print(f"Ray never hits floor for origin={origin}, direction={direction}")
+        return None
 
     def get_mask_median(self, mask):
         ys, xs = np.where(mask)
@@ -264,14 +348,15 @@ class GoToBag(smach.State):
         dx = x_robot - x_bag
         dy = y_robot - y_bag
         dist = np.hypot(dx, dy)
+
         if dist < 1e-4:
             dx, dy = 1.0, 0.0
             dist = 1.0
         ux = dx / dist
         uy = dy / dist
 
-        # Try moving to increasing distances back from the bag, up to 2m away
-        approach_min = 0.2  # minimum approach distance (meters)
+        # Try moving to increasing distances back from the bag, up to 1m away
+        approach_min = 0.1  # minimum approach distance (meters)
         approach_max = min(2.0, dist - 0.05)  # max backoff, never behind robot
         step = 0.05  # meters
 
@@ -299,24 +384,22 @@ class GoToBag(smach.State):
             goal.target_pose.pose.orientation.w = quat[3]
 
             rospy.loginfo(
-                f"[SAM-CLICK] Trying to navigate to ({goal_x:.2f}, {goal_y:.2f}) dist {approach_dist:.2f} from bag"
+                f"Trying to navigate to ({goal_x:.2f}, {goal_y:.2f}) dist {approach_dist:.2f} from bag"
             )
             self.move_base.send_goal(goal)
-            ok = self.move_base.wait_for_result(rospy.Duration(12.0))
+            ok = self.move_base.wait_for_result()
             if ok and self.move_base.get_state() == actionlib.GoalStatus.SUCCEEDED:
-                rospy.loginfo(
-                    "[SAM-CLICK] Navigation succeeded at closest feasible point!"
-                )
+                rospy.loginfo("Navigation succeeded at closest feasible point!")
                 return (
                     x_bag,
                     y_bag,
                 )  # return the true target for use in face_point_with_amcl
             else:
                 rospy.logwarn(
-                    "[SAM-CLICK] Navigation failed at this distance, trying further away..."
+                    "Navigation failed at this distance, trying further away..."
                 )
 
-        rospy.logerr("[SAM-CLICK] Could not find any feasible approach point.")
+        rospy.logerr("Could not find any feasible approach point.")
         return (None, None)
 
     def face_point_with_amcl(self, target_x, target_y):
@@ -369,25 +452,25 @@ class GoToBag(smach.State):
             goal.target_pose.pose.orientation.z = q_desired[2]
             goal.target_pose.pose.orientation.w = q_desired[3]
 
-            rospy.loginfo(f"[SAM-CLICK] Rotating in place to yaw {desired_yaw:.2f} rad")
+            rospy.loginfo(f"Rotating in place to yaw {desired_yaw:.2f} rad")
             self.move_base.send_goal(goal)
             ok = self.move_base.wait_for_result(rospy.Duration(6.0))
             if ok and self.move_base.get_state() == actionlib.GoalStatus.SUCCEEDED:
-                rospy.loginfo("[SAM-CLICK] Rotation succeeded!")
+                rospy.loginfo("Rotation succeeded!")
                 return True
             else:
-                rospy.logwarn("[SAM-CLICK] Rotation failed, retrying...")
+                rospy.logwarn("Rotation failed, retrying...")
                 rospy.sleep(0.5)
-        rospy.logerr("[SAM-CLICK] Failed to adjust orientation after multiple tries.")
+        rospy.logerr("Failed to adjust orientation after multiple tries.")
         return False
 
-    def _make_overlay(self, rgb_img: np.ndarray, mask: np.ndarray) -> np.ndarray:
-        # Overlay mask in red, semi-transparent
-        red_mask = np.zeros_like(rgb_img, dtype=np.uint8)
-        red_mask[:, :, 2] = (mask * 255).astype(np.uint8)
-        alpha = 0.4
-        overlay = cv2.addWeighted(rgb_img, 1.0, red_mask, alpha, 0.0)
-        return overlay
+    def visualize_segmentation(self, rgb_img, mask):
+        overlay = rgb_img.copy()
+        overlay[mask > 0] = [0, 0, 255]
+        print("RGB min/max", overlay.min(), overlay.max())
+        print("Mask sum", mask.sum())
+        cv2.imshow("Auto-segmented bag", overlay)
+        cv2.waitKey(1000)
 
     def look_at_point(self, target_point, target_frame):
         if not self.point_head_client:
@@ -420,9 +503,8 @@ class GoToBag(smach.State):
 
 
 if __name__ == "__main__":
-    import smach
 
-    rospy.init_node("go_to_bag_skill_runner")
+    rospy.init_node("go_to_bag")
     sm = smach.StateMachine(outcomes=["succeeded", "failed"])
     with sm:
         smach.StateMachine.add(

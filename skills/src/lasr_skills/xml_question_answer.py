@@ -3,7 +3,6 @@
 import rospy
 import smach
 import xml.etree.ElementTree as ET
-from lasr_voice import Voice
 
 from lasr_vector_databases_msgs.srv import TxtQuery, TxtQueryRequest
 
