@@ -44,16 +44,14 @@ from lasr_manipulation_pipeline import sam
 from lasr_manipulation_pipeline import visualisation
 
 PACKAGE_PATH: str = rospkg.RosPack().get_path("lasr_manipulation_pipeline")
-MESH_NAME: str = "starbucks_coffee.ply"
+MESH_NAME: str = "breadsticks.ply"
 
 
 class GraspingPipeline:
 
-    _mesh_path: str = os.path.join(PACKAGE_PATH, "meshes", MESH_NAME)  # path to a .ply
+    _mesh_path: str = os.path.join(PACKAGE_PATH, "meshes", MESH_NAME)
     _gpd_executable_path: str = "/opt/gpd/build/detect_grasps"
-    _gpd_config_path: str = (
-        "/home/jared/robocup/Base/common/third_party/gpd_ros/cfg/tiago.cfg"
-    )
+    _gpd_config_path: str = os.path.join(PACKAGE_PATH, "cfg", "tiago.cfg")
     _gpd_pcd_path: str = "/tmp/gpd.pcd"
 
     def __init__(self):
@@ -430,10 +428,10 @@ class GraspingPipeline:
 
         # Call GPD on the aligned mesh
         grasps, approaches, scores, openings = gpd.generate_grasps(
-            mesh_pcd,
             self._gpd_pcd_path,
             self._gpd_executable_path,
             self._gpd_config_path,
+            pcd=mesh_pcd,
         )
         rospy.loginfo(f"Detected {len(grasps)} grasps")
 
@@ -469,10 +467,10 @@ class GraspingPipeline:
         if self._move_group.go(wait=True):
             self._allow_collisions_with_obj("obj")
             rospy.sleep(5.0)  # give time for planning scene to update
-            eef_pose = self._move_group.get_current_pose("gripper_grasping_frame")
+            eef_pose_base = self._get_eef_pose()
             eef_pose = transformations.tf_poses(
-                [eef_pose.pose],
-                eef_pose.header.frame_id,
+                [eef_pose_base],
+                "base_footprint",
                 "gripper_grasping_frame",
                 self._tf_buffer,
             )[0]

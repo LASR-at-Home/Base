@@ -1,4 +1,4 @@
-from typing import Tuple, List
+from typing import Tuple, List, Union, Optional
 
 import open3d as o3d
 import tf.transformations
@@ -36,14 +36,14 @@ def grasp_from_str(grasp_str: str) -> Tuple[Pose, Vector3, float, float]:
 
 
 def generate_grasps(
-    pcd: o3d.geometry.PointCloud,
     path_to_pcd: str,
     path_to_gpd: str,
     path_to_gpd_cfg: str,
+    pcd: Optional[o3d.geometry.PointCloud] = None,
 ) -> Tuple[List[Pose], List[Vector3], List[float], List[float]]:
 
-    # Write pcd to disk
-    o3d.io.write_point_cloud(path_to_pcd, pcd)
+    if pcd is not None:
+        o3d.io.write_point_cloud(path_to_pcd, pcd)
 
     # Run GPD executable
     subprocess.run([path_to_gpd, path_to_gpd_cfg, path_to_pcd])
@@ -59,10 +59,11 @@ def generate_grasps(
     openings = []
     for line in output:
         pose, approach, score, opening = grasp_from_str(line)
-        poses.append(pose)
-        approaches.append(approach)
-        scores.append(score)
-        openings.append(opening)
+        if score > 0.0:
+            poses.append(pose)
+            approaches.append(approach)
+            scores.append(score)
+            openings.append(opening)
 
     sorted_pairs = sorted(
         zip(poses, approaches, scores, openings), key=lambda x: x[2], reverse=True
