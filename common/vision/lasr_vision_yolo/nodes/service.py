@@ -291,6 +291,8 @@ class YOLOService:
             for idx, name in KEYPOINT_MAPPING.items():
                 u = result.keypoints.xy.squeeze()[idx, 0].round().int().item()
                 v = result.keypoints.xy.squeeze()[idx, 1].round().int().item()
+                u = min(639, u)
+                v = min(479, v)
 
                 # TODO check u,v are in range.
 

@@ -65,6 +65,11 @@ class GoToBag(smach.State):
         rospy.wait_for_service("/yolo/detect3d_pose")
         self.detect3d = rospy.ServiceProxy("/yolo/detect3d_pose", YoloPoseDetection3D)
 
+        self.last_pointing_origin = None
+        self.last_pointing_direction = None
+
+        rospy.sleep(5)
+
         cv2.namedWindow("Auto-segmented bag", cv2.WINDOW_NORMAL)
 
     def amcl_pose_callback(self, msg):
@@ -112,7 +117,9 @@ class GoToBag(smach.State):
         # take first detection
         kp_list = res.detections[0].keypoints
         return {
-            kp.keypoint_name: np.array([kp.point.x, kp.point.y, kp.point.z])
+            kp.keypoint_name: np.array(
+                [kp.point.x / 1000, kp.point.y / 1000, kp.point.z / 1000]
+            )
             for kp in kp_list
         }
 
@@ -127,7 +134,7 @@ class GoToBag(smach.State):
                 break
             rospy.sleep(0.1)
 
-        # ------ Look where the person points ------
+        # ------ NEW: Look where the person points ------
         self.look_where_person_points()
 
         # Prepare the request (assuming self.latest_rgb is a cv2 image)
@@ -199,83 +206,149 @@ class GoToBag(smach.State):
             cv2.destroyAllWindows()
             return "failed"
 
-    def look_where_person_points(self):
-        rospy.loginfo("Looking for pointing gesture (least downward in map frame)...")
-        kps = self.get_human_keypoints_3d()
-        if not kps:
-            rospy.logwarn("No human keypoints detected!")
-            return False
+    def look_where_person_points(self, max_head_moves=8, angle_step_deg=15.0):
+        rospy.loginfo("Looking for pointing gesture...")
 
-        # Transform all keypoints to map frame
-        kps_map = {}
-        for name, p_cam in kps.items():
-            p_map = self.transform_from_camera_to_map(p_cam)
-            if p_map is not None:
-                kps_map[name] = np.array(p_map)
-            else:
-                rospy.logwarn(f"Could not transform {name} to map frame")
+        # Initial head angle
+        current_pan = 0.0
+        for attempt in range(max_head_moves):
+            # Try to detect human and pointing direction
+            kps = self.get_human_keypoints_3d()
+            new_gesture_found = False
 
-        map_down_axis = np.array([0, 0, -1])
+            if kps:
+                camera_z_axis = np.array([0.0, 0.0, 1.0])
+                best_score = -1.0
+                for side in ["right", "left"]:
+                    elbow_key = f"{side}_elbow"
+                    wrist_key = f"{side}_wrist"
+                    if elbow_key in kps and wrist_key in kps:
+                        o = kps[elbow_key]
+                        w = kps[wrist_key]
+                        vec = w - o
+                        norm = np.linalg.norm(vec)
+                        if norm < 1e-6:
+                            continue
+                        dirv = vec / norm
+                        score = float(np.dot(dirv, camera_z_axis))
+                        if score > best_score and score > 0.5:
+                            best_score = score
+                            self.last_pointing_origin = o
+                            self.last_pointing_direction = dirv
+                            new_gesture_found = True
+                if new_gesture_found:
+                    rospy.loginfo("Updated cached pointing gesture.")
 
-        best_side = None
-        best_score = float("inf")  # We want the minimum score!
-        best_dir = None
-        best_origin = None
-
-        for side in ["right", "left"]:
-            elbow_key = f"{side}_elbow"
-            wrist_key = f"{side}_wrist"
-            if all(k in kps_map for k in [elbow_key, wrist_key]):
-                origin = kps_map[elbow_key]
-                wrist = kps_map[wrist_key]
-
-                vec = wrist - origin
-                norm = np.linalg.norm(vec)
-                if norm < 1e-6:
+            # Use cached pointing if we have it
+            if (
+                self.last_pointing_origin is not None
+                and self.last_pointing_direction is not None
+            ):
+                o = self.last_pointing_origin
+                dirv = self.last_pointing_direction
+                floor_pt = self.find_pointed_floor(o, dirv)
+                if isinstance(floor_pt, np.ndarray):
+                    # Success: in frame!
+                    head_point = self.transform_from_camera_to_map(floor_pt)
+                    if head_point is not None:
+                        self.look_at_point(head_point, "map")
+                        rospy.loginfo(
+                            f"Looking at pointed floor position: {head_point}"
+                        )
+                        rospy.sleep(1.0)
+                        return True
+                elif isinstance(floor_pt, str):
+                    # Out of frame, rotate head
+                    direction = floor_pt
+                    rospy.loginfo(
+                        f"Pointed direction is out of frame: {direction}. Rotating head."
+                    )
+                    self.rotate_head(direction, angle_step_deg)
+                    rospy.sleep(0.7)  # Wait for head to move and image to update
                     continue
-                dirv = vec / norm
+                else:
+                    rospy.logwarn("Ray did not hit the floor or left frame.")
+            else:
+                rospy.logwarn("No valid pointing direction cached or detected!")
+                rospy.sleep(0.7)
+                continue
 
-                # Downward alignment
-                downward = np.dot(dirv, map_down_axis)  # -dirv[2]
-
-                rospy.loginfo(f"{side} arm downward={downward:.2f}")
-
-                # Filter: Require some arm extension (optional, e.g. > 0.2m)
-                if downward < best_score:
-                    best_score = downward
-                    best_side = side
-                    best_dir = dirv
-                    best_origin = origin
-
-        if best_side is None:
-            rospy.logwarn("No arm detected?")
-            return False
-
-        floor_pt = self.find_pointed_floor(best_origin, best_dir)
-        floor_pt[2] = 0.75
-        if floor_pt is not None:
-            self.look_at_point(floor_pt, "map")
-            rospy.loginfo(f"Looking at pointed floor position (map): {floor_pt}")
-            rospy.sleep(1.0)
-            return True
-
-        rospy.logwarn("No valid pointing direction found (in map frame).")
+        rospy.logwarn("Max attempts reached. Could not find pointing intersection.")
         return False
 
-    def find_pointed_floor(self, origin, direction, max_dist=4.0):
-        # direction: should be unit vector, both in map frame
-        if abs(direction[2]) < 1e-6:
-            rospy.logwarn(
-                "Pointing direction is parallel to the floor, no intersection."
-            )
-            return None
-        d = -origin[2] / direction[2]
-        if d < 0 or d > max_dist:
-            rospy.logwarn("Intersection behind or too far away.")
-            return None
-        hit_pt = origin + direction * d
-        rospy.loginfo(f"Ray hits floor at: {hit_pt}")
-        return hit_pt
+    def find_pointed_floor(self, origin, direction, max_dist=4.0, step=0.02):
+        for d in np.arange(0, max_dist, step):
+            pt = origin - direction * d
+            if pt[2] <= 0:
+                if d == 0:
+                    print(f"Ray starts below floor at: {pt}")
+                    return pt
+                prev_pt = origin + direction * (d - step)
+                alpha = prev_pt[2] / (prev_pt[2] - pt[2])
+                hit_pt = prev_pt + alpha * (pt - prev_pt)
+                print(f"Ray hits floor at: {hit_pt}")
+                return hit_pt
+        print(f"Ray never hits floor for origin={origin}, direction={direction}")
+        return None
+
+    def rotate_head(self, direction, angle_step_deg=15.0):
+        # This assumes you can control head pan via PointHeadAction.
+        # You might want to keep track of head pan angle as a class variable if needed.
+        # This simple version just sends a new pan in the given direction.
+        axis_map = {
+            "left": +1,
+            "right": -1,
+            "up": -1,  # for pitch, negative is up if using ROS standard (check your robot!)
+            "down": +1,
+        }
+        angle_rad = np.deg2rad(angle_step_deg)
+        # We'll rotate in pan only for left/right, pitch for up/down.
+        # For a real robot, you may need to track limits!
+        pan = 0.0
+        tilt = 0.0
+
+        if direction in ["left", "right"]:
+            pan = axis_map[direction] * angle_rad
+        elif direction in ["up", "down"]:
+            tilt = axis_map[direction] * angle_rad
+
+        # Compose target point a bit out in front in the new direction
+        # (here, z=1.5m ahead; pan/tilt in camera frame)
+        R_pan = np.array(
+            [
+                [np.cos(pan), 0, np.sin(pan)],
+                [0, 1, 0],
+                [-np.sin(pan), 0, np.cos(pan)],
+            ]
+        )
+        R_tilt = np.array(
+            [
+                [1, 0, 0],
+                [0, np.cos(tilt), -np.sin(tilt)],
+                [0, np.sin(tilt), np.cos(tilt)],
+            ]
+        )
+        # Combined rotation
+        R = R_pan @ R_tilt
+        look_vec = np.dot(R, np.array([0, 0, 1.5]))
+        pt = Point()
+        pt.x = float(look_vec[0])
+        pt.y = float(look_vec[1])
+        pt.z = float(look_vec[2])
+        goal = PointHeadGoal()
+        goal.target.header.stamp = rospy.Time(0)
+        goal.target.header.frame_id = "xtion_rgb_optical_frame"
+        goal.target.point = pt
+        goal.pointing_frame = "xtion_rgb_optical_frame"
+        goal.pointing_axis.x = 0.0
+        goal.pointing_axis.y = 0.0
+        goal.pointing_axis.z = 1.0
+        goal.min_duration = rospy.Duration(0.2)
+        goal.max_velocity = 0.6
+        self.point_head_client.send_goal(goal)
+        rospy.loginfo(
+            f"Rotating head: pan {np.rad2deg(pan):.1f}°, tilt {np.rad2deg(tilt):.1f}°"
+        )
 
     def get_mask_median(self, mask):
         ys, xs = np.where(mask)
@@ -301,7 +374,7 @@ class GoToBag(smach.State):
         return np.array([x_cam, y_cam, z_cam])
 
     def transform_from_camera_to_map(self, p_cam):
-        cam_frame = "xtion_rgb_optical_frame"
+        cam_frame = "xtion_depth_optical_frame"
 
         # Create the PointStamped in camera frame
         target_pt = PointStamped()
