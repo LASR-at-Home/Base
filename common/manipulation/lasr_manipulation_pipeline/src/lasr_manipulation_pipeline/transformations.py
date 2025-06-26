@@ -117,3 +117,35 @@ def transform_to_matrix(transform_msg):
     rotation_matrix[2, 3] = translation.z
 
     return rotation_matrix
+
+
+def get_lift_direction(pose: Pose) -> float:
+    """
+    Determine if lifting should be positive or negative along z in base_footprint
+    based on the orientation of the gripper.
+
+    Returns:
+        +1.0 if gripper z-axis points down in base_footprint (i.e., lift = +z)
+        -1.0 if gripper z-axis points up (i.e., lift = -z)
+    """
+    # Convert pose orientation to rotation matrix
+    quat = [
+        pose.orientation.x,
+        pose.orientation.y,
+        pose.orientation.z,
+        pose.orientation.w,
+    ]
+    rot = tf.transformations.quaternion_matrix(quat)
+
+    # Get the gripper's z-axis in its own frame
+    z_axis = np.array([0, 0, 1, 0])  # homogeneous vector
+
+    # Transform z_axis into base_footprint frame
+    z_axis_world = rot @ z_axis
+    z_dir = z_axis_world[:3]
+
+    # The higher the z_dir[2], the more "up" it points in base_footprint
+    if z_dir[2] < 0:
+        return -1.0  # gripper is upside down — lift upward (+z)
+    else:
+        return +1.0  # gripper is upright — lift downward (-z)

@@ -12,12 +12,15 @@ from typing import Tuple
 import math
 
 
-def _quality_ok(fitness: float,
-                rmse: float,
-                res: float,
-                fit_thresh: float = 0.80,
-                rmse_factor: float = 1.0) -> bool:
+def _quality_ok(
+    fitness: float,
+    rmse: float,
+    res: float,
+    fit_thresh: float = 0.80,
+    rmse_factor: float = 1.0,
+) -> bool:
     return (fitness >= fit_thresh) and (rmse <= rmse_factor * res)
+
 
 def generate_fake_data(pcd):
     """
@@ -32,14 +35,15 @@ def generate_fake_data(pcd):
     pcd.transform(T)
     return pcd
 
+
 def pre_align_pca(pcd: o3d.geometry.PointCloud) -> np.ndarray:
     obb = pcd.get_oriented_bounding_box()
-    R_obb = obb.R       
-    c = obb.center       
+    R_obb = obb.R
+    c = obb.center
     T = np.eye(4)
     T[:3, :3] = R_obb.T
-    T[:3,  3] = -R_obb.T @ c
-    pcd.transform(T)     
+    T[:3, 3] = -R_obb.T @ c
+    pcd.transform(T)
     return T
 
 
@@ -84,7 +88,7 @@ def estimate_voxel_size(pcd, target_points=20000):
     """
     res = estimate_resolution(pcd)
     m = np.asarray(pcd.points).shape[0]
-    scale = (m / target_points) ** (1/3)
+    scale = (m / target_points) ** (1 / 3)
     return res * scale
 
 
@@ -100,15 +104,16 @@ def estimate_denoise_params(pcd):
     nb_neighbors = int(np.clip(20 * (res + 1e-6), 10, 50))
     min_points = int(np.clip(10 * (res + 1e-6), 5, 30))
     return {
-        'nb_neighbors': nb_neighbors,
-        'std_ratio': std_ratio,
-        'radius': radius,
-        'min_points': min_points
+        "nb_neighbors": nb_neighbors,
+        "std_ratio": std_ratio,
+        "radius": radius,
+        "min_points": min_points,
     }
 
 
-def estimate_ransac_params(res, p_inlier=0.05, sample_size=3,
-                            success_prob=0.99, factors=(3, 5, 7)):
+def estimate_ransac_params(
+    res, p_inlier=0.05, sample_size=3, success_prob=0.99, factors=(3, 5, 7)
+):
     """
     Compute adaptive RANSAC thresholds and iteration count.
     """
@@ -116,7 +121,8 @@ def estimate_ransac_params(res, p_inlier=0.05, sample_size=3,
     distances = [res * f for f in factors]
     # number of iterations for desired success probability
     import math
-    its = int(math.log(1 - success_prob) / math.log(1 - p_inlier ** sample_size))
+
+    its = int(math.log(1 - success_prob) / math.log(1 - p_inlier**sample_size))
     return distances, max(its, 1000)
 
 
@@ -138,32 +144,30 @@ def preprocess(pcd, voxel, compute_fpfh=True):
     fpfh = None
     if compute_fpfh:
         fpfh = o3d.pipelines.registration.compute_fpfh_feature(
-            down,
-            o3d.geometry.KDTreeSearchParamHybrid(radius=voxel * 5, max_nn=100)
+            down, o3d.geometry.KDTreeSearchParamHybrid(radius=voxel * 5, max_nn=100)
         )
     return down, fpfh
 
 
-def register_object(
+def _register_object(
     source_pcd: o3d.geometry.PointCloud,
     target_pcd: o3d.geometry.PointCloud,
     target_points: int = 20000,
     downsample: bool = True,
-    verbose: bool = False
+    verbose: bool = False,
 ) -> Tuple[np.ndarray, float, float]:
     """
     Fully automatic RANSAC+ICP registration with self-tuning parameters.
     """
     # 1. Denoise both clouds
     d_params = estimate_denoise_params(source_pcd)
+
     def denoise(p):
         pc, _ = p.remove_statistical_outlier(
-            nb_neighbors=d_params['nb_neighbors'],
-            std_ratio=d_params['std_ratio']
+            nb_neighbors=d_params["nb_neighbors"], std_ratio=d_params["std_ratio"]
         )
         pc, _ = pc.remove_radius_outlier(
-            nb_points=d_params['min_points'],
-            radius=d_params['radius']
+            nb_points=d_params["min_points"], radius=d_params["radius"]
         )
         return pc
 
@@ -199,19 +203,24 @@ def register_object(
     tgt_down.normalize_normals()
     for dist in distances:
         result = o3d.pipelines.registration.registration_ransac_based_on_feature_matching(
-            src_down, tgt_down, src_fpfh, tgt_fpfh,
+            src_down,
+            tgt_down,
+            src_fpfh,
+            tgt_fpfh,
             mutual_filter=True,
             max_correspondence_distance=dist,
-            estimation_method=o3d.pipelines.registration.
-                TransformationEstimationPointToPoint(False),
+            estimation_method=o3d.pipelines.registration.TransformationEstimationPointToPoint(
+                False
+            ),
             ransac_n=3,
-            criteria=o3d.pipelines.registration.
-                RANSACConvergenceCriteria(ransac_iters, 1000),
+            criteria=o3d.pipelines.registration.RANSACConvergenceCriteria(
+                ransac_iters, 1000
+            ),
             checkers=[
                 o3d.pipelines.registration.CorrespondenceCheckerBasedOnDistance(dist),
                 o3d.pipelines.registration.CorrespondenceCheckerBasedOnEdgeLength(0.9),
                 # o3d.pipelines.registration.CorrespondenceCheckerBasedOnNormal(
-                #     math.radians(60.0)  
+                #     math.radians(60.0)
                 # )
             ],
         )
@@ -235,12 +244,12 @@ def register_object(
     for s in scales:
         thresh = res * s
         icp = o3d.pipelines.registration.registration_icp(
-            src_clean, tgt_clean,
+            src_clean,
+            tgt_clean,
             max_correspondence_distance=thresh,
             init=current_T,
-            estimation_method=
-                o3d.pipelines.registration.TransformationEstimationPointToPlane(),
-            criteria=o3d.pipelines.registration.ICPConvergenceCriteria(30)
+            estimation_method=o3d.pipelines.registration.TransformationEstimationPointToPlane(),
+            criteria=o3d.pipelines.registration.ICPConvergenceCriteria(30),
         )
         score = icp.fitness - 0.3 * (icp.inlier_rmse / thresh)
         if score > best_score:
@@ -256,26 +265,25 @@ def register_object(
     T = T @ T_pca
     return T, best_ransac.fitness, best_icp.fitness
 
-def register_object_service(
+
+def register_object(
     src_pcd: o3d.geometry.PointCloud,
     tgt_pcd: o3d.geometry.PointCloud,
     *,
     max_attempts: int = 10,
-    fit_thresh: float = 0.30,
+    fit_thresh: float = 0.0,
     rmse_factor: float = 3.0,
-    **kwargs
+    **kwargs,
 ):
 
-    res = estimate_resolution(src_pcd)            
+    res = estimate_resolution(src_pcd)
     best_T, best_fit, best_rmse = None, -1.0, np.inf
 
     for k in range(1, max_attempts + 1):
         print(f"\n=== Attempt {k}/{max_attempts} ===")
 
         # --- run your original registration routine ---
-        T, fit_ransac, fit_icp = register_object(
-            src_pcd, tgt_pcd, **kwargs
-        )
+        T, fit_ransac, fit_icp = _register_object(src_pcd, tgt_pcd, **kwargs)
         rmse = getattr(fit_icp, "inlier_rmse", 0.0)
 
         print(f"fitness = {fit_icp:.3f}, rmse = {rmse:.4f}")
@@ -285,14 +293,16 @@ def register_object_service(
             best_T, best_fit, best_rmse = T, fit_icp, rmse
 
         # Check quality; exit early if constraints are satisfied
-        if _quality_ok(fit_icp, rmse, res, fit_thresh, rmse_factor):
-            print(" Quality met — exiting early")
-            return best_T, best_fit, best_rmse, k
+        # if _quality_ok(fit_icp, rmse, res, fit_thresh, rmse_factor):
+        #     print(" Quality met — exiting early")
+        #     return best_T, best_fit, best_rmse, k
 
         # (Optional) Insert tweaks here:
         #   e.g. jitter target, increase RANSAC thresholds, etc.
         # Current version simply retries with the same parameters
 
-    print("[WARN] Quality target not reached after all attempts — "
-          "returning best found result")
-    return best_T, best_fit, best_rmse, max_attempts
+    print(
+        "[WARN] Quality target not reached after all attempts — "
+        "returning best found result"
+    )
+    return best_T, best_fit, best_rmse

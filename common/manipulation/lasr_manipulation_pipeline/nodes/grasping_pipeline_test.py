@@ -1,4 +1,4 @@
-r#!/usr/bin/env python3
+#!/usr/bin/env python3
 from typing import Tuple, List
 
 import rospy
@@ -33,6 +33,7 @@ from shape_msgs.msg import SolidPrimitive
 import sys
 import open3d as o3d
 import numpy as np
+import copy
 
 from lasr_manipulation_pipeline import registration
 from lasr_manipulation_pipeline import gpd
@@ -225,10 +226,6 @@ class GraspingPipeline:
         Transform mesh and point cloud to base_footprint, detect a horizontal plane underneath,
         and publish it as a CollisionObject.
         """
-        import copy
-        import numpy as np
-        import open3d as o3d
-
         target_frame = "base_footprint"
         rospy.loginfo(f"Transforming mesh and point cloud to {target_frame}...")
 
@@ -393,7 +390,7 @@ class GraspingPipeline:
         # Register mesh with scene and apply the transformation
 
         target_pcd = conversions.ros_to_o3d(pcl)
-        transform, _, _ = registration.register_object(mesh_pcd, target_pcd)
+        transform = registration.register_object(mesh_pcd, target_pcd)[0]
         rospy.loginfo("Registered mesh")
 
         mesh_pcd.transform(transform)
@@ -471,7 +468,7 @@ class GraspingPipeline:
 
         if self._move_group.go(wait=True):
             self._allow_collisions_with_obj("obj")
-            rospy.sleep(5.0)
+            rospy.sleep(5.0)  # give time for planning scene to update
             eef_pose = self._move_group.get_current_pose("gripper_grasping_frame")
             eef_pose = transformations.tf_poses(
                 [eef_pose.pose],
@@ -505,7 +502,10 @@ class GraspingPipeline:
 
                 eef_pose_base = self._get_eef_pose()
                 lifted_pose = transformations.offset_grasps(
-                    [eef_pose_base], 0.0, 0.0, 0.10
+                    [eef_pose_base],
+                    0.0,
+                    0.0,
+                    transformations.get_lift_direction(eef_pose_base) * 0.10,
                 )[0]
 
                 self._publish_grasp_poses([lifted_pose], "base_footprint")
