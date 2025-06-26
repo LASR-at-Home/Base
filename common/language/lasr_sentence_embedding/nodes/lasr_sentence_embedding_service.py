@@ -4,7 +4,7 @@ import numpy as np
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 
-from lasr_msgs.srv import (
+from lasr_llm_msgs.srv import (
     SentenceEmbedding,
     SentenceEmbeddingResponse,
     SentenceEmbeddingRequest,
@@ -40,8 +40,8 @@ class LASRSentenceEmbeddingService:
         try:
             # Compute embeddings
             embeddings = self._model.encode(sentences)
-            cosine_similarity = cosine_similarity(embeddings)
-            val, most_similar_idx = self._max_off_diagonal(embeddings)
+            sim = cosine_similarity(embeddings)
+            val, most_similar_idx = self._max_off_diagonal(sim)
             most_similar_1 = sentences[most_similar_idx[0]]
             most_similar_2 = sentences[most_similar_idx[1]]
 
@@ -65,3 +65,9 @@ class LASRSentenceEmbeddingService:
         # Convert flat index back to 2D index using where
         row, col = np.where(mask)
         return value, (row[max_idx_flat], col[max_idx_flat])
+
+
+if __name__ == "__main__":
+    rospy.init_node("lasr_sentence_embedding_service")
+    llm_service = LASRSentenceEmbeddingService()
+    rospy.spin()
