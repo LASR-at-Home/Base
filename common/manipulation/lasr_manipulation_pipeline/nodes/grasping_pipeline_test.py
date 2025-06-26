@@ -434,6 +434,12 @@ class GraspingPipeline:
             pcd=mesh_pcd,
         )
         rospy.loginfo(f"Detected {len(grasps)} grasps")
+        grasps, approaches, scores, openings = gpd.filter_grasps_by_score(
+            grasps, approaches, scores, openings
+        )
+        grasps, approaches, scores, openings = gpd.filter_grasps_on_surface(
+            mesh_pcd, grasps, approaches, scores, openings
+        )
 
         if debug:
             visualisation.visualize_grasps_on_scene(mesh_pcd, grasps, "Mesh grasps")
@@ -474,7 +480,7 @@ class GraspingPipeline:
                 "gripper_grasping_frame",
                 self._tf_buffer,
             )[0]
-            eef_target_pose = transformations.offset_grasps([eef_pose], 0.12, 0.0, 0.0)[
+            eef_target_pose = transformations.offset_grasps([eef_pose], 0.06, 0.0, 0.0)[
                 0
             ]
             eef_target_pose = transformations.tf_poses(
@@ -503,14 +509,14 @@ class GraspingPipeline:
                     [eef_pose_base],
                     0.0,
                     0.0,
-                    transformations.get_lift_direction(eef_pose_base) * 0.10,
+                    transformations.get_lift_direction(eef_pose_base) * 0.15,
                 )[0]
 
                 self._publish_grasp_poses([lifted_pose], "base_footprint")
 
                 self._move_group.set_pose_target(lifted_pose, "gripper_grasping_frame")
-                if self._move_group.go(wait=True):
-                    self._play_motion("pregrasp")
+                self._move_group.go(wait=True)
+                self._play_motion("pregrasp")
 
         self._move_group.stop()
 

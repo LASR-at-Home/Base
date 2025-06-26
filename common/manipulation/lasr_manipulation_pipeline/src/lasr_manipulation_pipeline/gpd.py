@@ -75,3 +75,76 @@ def generate_grasps(
     openings = list(openings)
 
     return poses, approaches, scores, openings
+
+
+def filter_grasps_by_score(
+    poses: List[Pose],
+    approaches: List[Vector3],
+    scores: List[float],
+    openings: List[float],
+    score_threshold: float = 0.0,
+) -> Tuple[List[Pose], List[Vector3], List[float], List[float]]:
+    """
+    Filter grasps below a given score.
+    """
+    original_count = len(scores)
+
+    filtered_poses = []
+    filtered_approaches = []
+    filtered_scores = []
+    filtered_openings = []
+
+    for pose, approach, score, opening in zip(poses, approaches, scores, openings):
+        if score >= score_threshold:
+            filtered_poses.append(pose)
+            filtered_approaches.append(approach)
+            filtered_scores.append(score)
+            filtered_openings.append(opening)
+
+    filtered_count = len(filtered_scores)
+    print(
+        f"[Score Filter] Kept {filtered_count} / {original_count} grasps (threshold: {score_threshold})"
+    )
+
+    return filtered_poses, filtered_approaches, filtered_scores, filtered_openings
+
+
+def filter_grasps_on_surface(
+    pcd: o3d.geometry.PointCloud,
+    poses: List[Pose],
+    approaches: List[Vector3],
+    scores: List[float],
+    openings: List[float],
+    surface_threshold: float = 0.01,
+) -> Tuple[List[Pose], List[Vector3], List[float], List[float]]:
+    """
+    Filter grasps to only include those within a distance threshold of the object's surface.
+    """
+    if len(pcd.points) == 0:
+        raise ValueError("Point cloud is empty.")
+
+    original_count = len(poses)
+    kdtree = o3d.geometry.KDTreeFlann(pcd)
+
+    filtered_poses = []
+    filtered_approaches = []
+    filtered_scores = []
+    filtered_openings = []
+
+    for pose, approach, score, opening in zip(poses, approaches, scores, openings):
+        grasp_pos = np.array([pose.position.x, pose.position.y, pose.position.z])
+        [_, idx, dists] = kdtree.search_knn_vector_3d(grasp_pos, 1)
+        nearest_dist = np.sqrt(dists[0]) if dists else np.inf
+
+        if nearest_dist <= surface_threshold:
+            filtered_poses.append(pose)
+            filtered_approaches.append(approach)
+            filtered_scores.append(score)
+            filtered_openings.append(opening)
+
+    filtered_count = len(filtered_scores)
+    print(
+        f"[Surface Filter] Kept {filtered_count} / {original_count} grasps (threshold: {surface_threshold:.4f} m)"
+    )
+
+    return filtered_poses, filtered_approaches, filtered_scores, filtered_openings
