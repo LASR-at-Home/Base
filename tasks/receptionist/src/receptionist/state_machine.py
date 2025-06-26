@@ -63,8 +63,20 @@ class Receptionist(smach.StateMachine):
         with self:
             self.userdata.guest_data = {
                 "host": host_data,
-                "guest1": {"name": "", "drink": "", "interest": "", "detection": False},
-                "guest2": {"name": "", "drink": "", "interest": "", "detection": False},
+                "guest1": {
+                    "name": "",
+                    "drink": "",
+                    "interest": "",
+                    "detection": False,
+                    "seating_detection": False,
+                },
+                "guest2": {
+                    "name": "",
+                    "drink": "",
+                    "interest": "",
+                    "detection": False,
+                    "seating_detection": False,
+                },
             }
             self.userdata.confidence = face_detection_confidence
             self.userdata.dataset = "receptionist"
@@ -165,7 +177,7 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "INTRODUCE_GUEST_1",
-                Introduce(guest_to_introduce="guest1"),
+                Introduce(guest_to_introduce="guest1", can_detect_second_guest=False),
                 transitions={
                     "succeeded": "SAY_RETURN_WAITING_AREA",
                     "failed": "SAY_RETURN_WAITING_AREA",
@@ -256,7 +268,7 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "INTRODUCE_GUEST_2",
-                Introduce(guest_to_introduce="guest2"),
+                Introduce(guest_to_introduce="guest2", can_detect_second_guest=True),
                 transitions={
                     "succeeded": "GET_COMMON_INTEREST",
                     "failed": "GET_COMMON_INTEREST",

@@ -136,6 +136,7 @@ if __name__ == "__main__":
             "interest": "robots",
             "dataset": "receptionist",
             "detection": False,
+            "seating_detection": False,
         },
         max_people_on_sofa=max_people_on_sofa,
     )

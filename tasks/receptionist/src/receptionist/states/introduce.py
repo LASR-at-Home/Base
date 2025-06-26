@@ -22,6 +22,25 @@ from lasr_vision_msgs.msg import Detection3D
 from lasr_vision_msgs.srv import Recognise3D, Recognise3DRequest, YoloDetection3D
 
 
+class ClearSeatingDetections(smach.State):
+
+    def __init__(self):
+        super().__init__(
+            outcomes=["succeeded", "failed"],
+            input_keys=["guest_data"],
+            output_keys=["guest_data"],
+        )
+
+    def execute(self, userdata: UserData) -> str:
+        """
+        Clears the seating detection for all guests in the guest data.
+        This is to ensure that we can re-detect guests when they are seated.
+        """
+        for guest_id in userdata.guest_data:
+            userdata.guest_data[guest_id]["seating_detection"] = False
+        return "succeeded"
+
+
 class Recognise(smach.State):
 
     _rgb_image: Image
@@ -30,12 +49,14 @@ class Recognise(smach.State):
     _rgb_image_topic: str
     _depth_image_topic: str
     _depth_info_topic: str
+    _bridge: CvBridge
+    _can_detect_second_guest: bool = False
 
-    def __init__(self):
+    def __init__(self, can_detect_second_guest: bool = False):
         super().__init__(
             outcomes=["succeeded", "failed"],
             input_keys=["guest_data", "guest_seat_point", "seated_guest_locs"],
-            output_keys=["named_guest_detection"],
+            output_keys=["named_guest_detection", "guest_data"],
         )
         self._rgb_image = None
         self._depth_image = None
@@ -45,6 +66,8 @@ class Recognise(smach.State):
         self._depth_image_topic = "/xtion/depth_registered/image_raw"
         self._depth_info_topic = "/xtion/depth_registered/camera_info"
 
+        self._can_detect_second_guest = can_detect_second_guest
+
         self._bridge = CvBridge()
 
     def _handle_no_detections(self, guest_data: Dict) -> Detection3D:
@@ -53,7 +76,14 @@ class Recognise(smach.State):
         (if any) have already been detected in the sweep. If no guests have been
         detected yet, we assume that we are looking at the host.
         """
-        return Detection3D()
+        for guest_id, data in guest_data.items():
+            if data["seating_detection"]:
+                continue
+            if guest_id == "guest2" and not self._can_detect_second_guest:
+                continue
+            detection = Detection3D()
+            detection.name = guest_id
+            return detection
 
     def _crop_image(
         self,
@@ -177,14 +207,21 @@ class Recognise(smach.State):
             response = recognise(request)
 
             if len(response.detections) == 0:
-                # Assume host
-                rospy.logwarn("No guests detected, assuming host.")
-                named_guest_detection = Detection3D()
-                named_guest_detection.name = "unkown"
-                userdata.named_guest_detection = named_guest_detection
+                named_guest_detection = self._handle_no_detections(userdata.guest_data)
             else:
-                # Assume we have already cropped the image
-                userdata.named_guest_detection = response.detections[0]
+                detection_id = response.detections[0].name
+                if userdata.guest_data[detection_id]["seating_detection"]:
+                    # We have already detected this guest in the seating area
+                    named_guest_detection = self._handle_no_detections(
+                        userdata.guest_data
+                    )
+                else:
+                    named_guest_detection = response.detections[0]
+                    userdata.guest_data[named_guest_detection.name][
+                        "seating_detection"
+                    ] = True
+
+            userdata.named_guest_detection = named_guest_detection
 
         except rospy.ServiceException as e:
             rospy.logwarn(f"Unable to perform recognition. ({str(e)})")
@@ -309,6 +346,7 @@ class Introduce(smach.StateMachine):
     def __init__(
         self,
         guest_to_introduce: str,
+        can_detect_second_guest: bool = False,
     ):
         super().__init__(
             outcomes=["succeeded", "failed"],
@@ -382,7 +420,7 @@ class Introduce(smach.StateMachine):
                     )
                     smach.StateMachine.add(
                         "RECOGNISE",
-                        Recognise(),
+                        Recognise(can_detect_second_guest=can_detect_second_guest),
                         transitions={
                             "succeeded": "GET_GUEST_DATA_1",
                             "failed": "failed",
@@ -478,7 +516,17 @@ class Introduce(smach.StateMachine):
                 "INTRODUCTION_ITERATOR",
                 introduction_iterator,
                 transitions={
+                    "succeeded": "CLEAR_SEATING_DETECTIONS",
+                    "failed": "CLEAR_SEATING_DETECTIONS",
+                },
+            )
+
+            self.add(
+                "CLEAR_SEATING_DETECTIONS",
+                ClearSeatingDetections(),
+                transitions={
                     "succeeded": "succeeded",
                     "failed": "failed",
                 },
+                remapping={"guest_data": "guest_data"},
             )
