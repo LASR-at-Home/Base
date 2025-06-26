@@ -92,3 +92,28 @@ def offset_grasps(grasps: List[Pose], dx: float, dy: float, dz: float) -> List[P
         offset_grasps.append(new_pose)
 
     return offset_grasps
+
+
+def transform_to_matrix(transform_msg):
+    """
+    Converts a geometry_msgs/Transform message into a 4x4 transformation matrix.
+
+    Args:
+        transform_msg (geometry_msgs.msg.Transform): The transform to convert.
+
+    Returns:
+        np.ndarray: A 4x4 homogeneous transformation matrix.
+    """
+    translation = transform_msg.translation
+    rotation = transform_msg.rotation
+
+    # Convert quaternion to rotation matrix
+    quat = [rotation.x, rotation.y, rotation.z, rotation.w]
+    rotation_matrix = tf.transformations.quaternion_matrix(quat)  # 4x4
+
+    # Set translation
+    rotation_matrix[0, 3] = translation.x
+    rotation_matrix[1, 3] = translation.y
+    rotation_matrix[2, 3] = translation.z
+
+    return rotation_matrix
