@@ -4,19 +4,22 @@ seating area.
 
 """
 
-from typing import Optional
+from typing import Optional, Dict, List, Tuple
 
 import rospy
+import numpy as np
 import message_filters
 import smach
+import cv2
 
 from smach import UserData
+from cv_bridge import CvBridge
 from sensor_msgs.msg import Image, CameraInfo
 from geometry_msgs.msg import PointStamped
 
-from lasr_skills import LookToPoint, Say, Wait, StartEyeTracker, StopEyeTracker
+from lasr_skills import LookToPoint, Say, Wait
 from lasr_vision_msgs.msg import Detection3D
-from lasr_vision_msgs.srv import Recognise3D, Recognise3DRequest
+from lasr_vision_msgs.srv import Recognise3D, Recognise3DRequest, YoloDetection3D
 
 
 class Recognise(smach.State):
@@ -42,10 +45,83 @@ class Recognise(smach.State):
         self._depth_image_topic = "/xtion/depth_registered/image_raw"
         self._depth_info_topic = "/xtion/depth_registered/camera_info"
 
+        self._bridge = CvBridge()
+
+    def _handle_no_detections(self, guest_data: Dict) -> Detection3D:
+        """
+        Handles the case where no detections are made, by checking which guests
+        (if any) have already been detected in the sweep. If no guests have been
+        detected yet, we assume that we are looking at the host.
+        """
+        return Detection3D()
+
+    def _crop_image(
+        self,
+        person_detections: List[Detection3D],
+        rgb_image: Image,
+    ) -> Tuple[Image, Image]:
+        """Crops the RGB and depth images to the most centred person in the detections, This is
+        to handle the case where multiple people are detected, so that when we pass to the
+        REID service, we only detect the nearest person.
+
+        Args:
+            person_detections (List[Detection3D]): List of person detections
+            returned by the YOLO service call.
+
+            rgb_image (Image): Raw RGB image that the detection was made on.
+
+            depth_image (Image): Raw depth image that the detection was made on.
+
+        Returns:
+            Tuple[Image, Image]: A tuple containing the cropped RGB and depth images.
+        """
+        image_width, image_height = rgb_image.width, rgb_image.height
+        centre_x = image_width // 2
+        centre_y = image_height // 2
+        closest_distance = float("inf")
+        closest_detection = None
+        for detection in person_detections:
+            if detection.name != "person":
+                raise ValueError(
+                    f"Somehow a non-person detection was passed to the cropping function: {detection.name}"
+                )
+            x, y, w, h = detection.bbox
+            # Find the centre of the bounding box
+            bbox_centre_x = x + w // 2
+            bbox_centre_y = y + h // 2
+
+            distance_to_centre = np.abs(bbox_centre_x - centre_x) + np.abs(
+                bbox_centre_y - centre_y
+            )
+            if distance_to_centre < closest_distance:
+                closest_distance = distance_to_centre
+                closest_detection = detection
+
+        assert closest_detection is not None, "No person detection found to crop."
+
+        # Crop the images using the segmentation mask of the closest detection.
+        seg_mask = closest_detection.xyseg  # Binary mask
+
+        rgb_image_raw = self._bridge.imgmsg_to_cv2(rgb_image, desired_encoding="rgb8")
+        # Taken from https://stackoverflow.com/questions/37912928/fill-the-outside-of-contours-opencv
+        mask = np.array(seg_mask).reshape(-1, 2)
+        stencil = np.zeros(rgb_image_raw.shape).astype(rgb_image_raw.dtype)
+        colour = (255, 255, 255)
+        cv2.fillPoly(stencil, [mask], colour)
+        # Bitwise AND with 0s is 0s, hence we get the image only where the mask is
+        # with black elsewhere.
+        masked_image = cv2.bitwise_and(rgb_image_raw, stencil)
+
+        # Convert back to ROS Image message
+        return self._bridge.cv2_to_imgmsg(masked_image, encoding="rgb8")
+
     def execute(self, userdata: UserData) -> str:
 
         recognise = rospy.ServiceProxy("/lasr_vision_reid/recognise", Recognise3D)
         recognise.wait_for_service()
+
+        yolo_detection = rospy.ServiceProxy("/yolo/detect3d", YoloDetection3D)
+        yolo_detection.wait_for_service()
 
         def get_images_cb(
             image: Image, depth_image: Image, depth_camera_info: CameraInfo
@@ -80,8 +156,18 @@ class Recognise(smach.State):
         ):
             rospy.sleep(0.05)
 
-        request = Recognise3DRequest(
+        yolo_request = YoloDetection3D(
             image_raw=self._rgb_image,
+            depth_image=self._depth_image,
+            depth_camera_info=self._depth_camera_info,
+            filter=["person"],
+            target_frame="map",
+        )
+        response = yolo_detection(yolo_request)
+        cropped_rgb_image = self._crop_image(response.detections, self._rgb_image)
+
+        request = Recognise3DRequest(
+            image_raw=cropped_rgb_image,
             depth_image=self._depth_image,
             depth_camera_info=self._depth_camera_info,
             threshold=0.5,
