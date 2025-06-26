@@ -151,6 +151,7 @@ class Receptionist(smach.StateMachine):
                     sofa_area=self.sofa_area,
                     sofa_point=self.sofa_point,
                     max_people_on_sofa=max_people_on_sofa,
+                    learn_host=True,
                 ),
                 transitions={
                     "succeeded": "INTRODUCE_GUEST_1",

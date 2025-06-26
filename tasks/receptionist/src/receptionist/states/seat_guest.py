@@ -6,6 +6,7 @@ from shapely.geometry import Polygon as ShapelyPolygon
 import numpy as np
 
 from geometry_msgs.msg import Point, PointStamped
+from receptionist.states import ReceptionistLearnFaces
 from lasr_skills import (
     PlayMotion,
     Detect3DInArea,
@@ -16,6 +17,78 @@ from lasr_skills import (
 )
 
 from std_msgs.msg import Header
+
+
+class LearnHostFace(smach.StateMachine):
+    """State machine to learn the host's face."""
+
+    def __init__(self):
+        smach.StateMachine.__init__(
+            self,
+            outcomes=["succeeded", "failed"],
+            input_keys=["guest_data", "seated_guest_locs"],
+            output_keys=["guest_data"],
+        )
+
+        with self:
+            smach.StateMachine.add(
+                "GET_HOST_LOOK_POINT",
+                GetLookPoint(),
+                transitions={
+                    "succeeded": "LOOK_TO_HOST",
+                    "failed": "failed",
+                },
+            )
+            smach.StateMachine.add(
+                "LOOK_TO_HOST",
+                LookToPoint(),
+                transitions={
+                    "succeeded": "LEARN_HOST_FACE",
+                    "aborted": "failed",
+                    "timed_out": "failed",
+                },
+                remapping={
+                    "pointstamped": "pointstamped",
+                },
+            )
+            smach.StateMachine.add(
+                "LEARN_HOST_FACE",
+                ReceptionistLearnFaces(
+                    guest_id="host",
+                    dataset_size=10,
+                ),
+                transitions={
+                    "succeeded": "succeeded",
+                    "failed": "failed",
+                },
+                remapping={
+                    "guest_data": "guest_data",
+                },
+            )
+
+
+class GetLookPoint(smach.State):
+    """State to get the look point for the guest to be seated."""
+
+    def __init__(self):
+        smach.State.__init__(
+            self,
+            outcomes=["succeeded", "failed"],
+            input_keys=["seated_guest_locs"],
+            output_keys=["pointstamped"],
+        )
+
+    def execute(self, userdata):
+        """Set the pointstamped to the guest seat point."""
+        if not userdata.seated_guest_locs:
+            rospy.logwarn("No seated guest locations provided.")
+            return "failed"
+        point = userdata.seated_guest_locs[0]
+        userdata.pointstamped = PointStamped(
+            header=Header(frame_id="map"),
+            point=point,
+        )
+        return "succeeded"
 
 
 class ProcessDetections(smach.State):
@@ -138,6 +211,7 @@ class SeatGuest(smach.StateMachine):
         sofa_area: ShapelyPolygon,
         sofa_point: Point,
         max_people_on_sofa: int = 2,
+        learn_host: bool = False,
     ):
         smach.StateMachine.__init__(
             self,
@@ -218,6 +292,9 @@ class SeatGuest(smach.StateMachine):
                     "seating_detections": "seating_detections",
                 },
             )
+            if learn_host:
+                # Look to the only person detection and learn the host's face.
+                smach.StateMachine.add()
 
             smach.StateMachine.add(
                 "LOOK_TO_SEAT",

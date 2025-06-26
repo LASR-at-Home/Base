@@ -38,8 +38,8 @@ class GetInterest(smach.State):
 
             userdata.interest_message = (
                 "To break the ice, I thought you'd like to know that "
-                f"{most_similar_1_name} and {most_similar_2_name} have a common interest in "
-                f"'{most_similar_1}'."
+                f"{most_similar_1_name} and {most_similar_2_name} have a common interest as they both like "
+                f"{most_similar_1} and {most_similar_2}."
             )
         except:
             return "failed"
