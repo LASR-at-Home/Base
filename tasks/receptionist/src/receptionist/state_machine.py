@@ -363,18 +363,8 @@ class Receptionist(smach.StateMachine):
             f"GO_TO_TABLE_LOCATION_GUEST_{guest_id}",
             GoToLocation(self.table_pose),
             transitions={
-                "succeeded": f"LOOK_EYES_TABLE_{guest_id}",
-                "failed": f"GO_TO_TABLE_LOCATION_GUEST_{guest_id}",
-            },
-        )
-
-        smach.StateMachine.add(
-            f"LOOK_EYES_TABLE_{guest_id}",
-            PlayMotion(motion_name="look_very_left"),
-            transitions={
                 "succeeded": f"SAY_ARRIVE_GUEST_{guest_id}",
-                "preempted": "failed",
-                "aborted": "failed",
+                "failed": f"SAY_ARRIVE_GUEST_{guest_id}",
             },
         )
 
@@ -390,7 +380,7 @@ class Receptionist(smach.StateMachine):
 
         smach.StateMachine.add(
             f"ROTATE_GUEST_{guest_id}",
-            Rotate(angle_radians=180),
+            Rotate(180),
             transitions={
                 "succeeded": f"HANDLE_FAVOURITE_DRINK_GUEST_{guest_id}",
                 "failed": f"HANDLE_FAVOURITE_DRINK_GUEST_{guest_id}",

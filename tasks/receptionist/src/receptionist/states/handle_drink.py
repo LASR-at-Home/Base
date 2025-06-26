@@ -6,6 +6,7 @@ from lasr_skills import (
     Detect3D,
     StartEyeTracker,
     StopEyeTracker,
+    Rotate,
 )
 from receptionist.states import (
     GetDrink,
@@ -100,3 +101,20 @@ class HandleDrink(smach.StateMachine):
                 },
                 remapping={"guest_transcription": "transcribed_speech"},
             )
+
+            smach.StateMachine.add(
+                f"STOP_EYE_TRACKER_GUEST_{guest_id}",
+                StopEyeTracker(),
+                transitions={
+                    "succeeded": f"FACE_TABLE_GUEST_{guest_id}",
+                    "failed": f"FACE_TABLE_GUEST_{guest_id}",
+                },
+            )
+            smach.StateMachine.add(
+                f"FACE_TABLE_GUEST_{guest_id}",
+                Rotate(180),
+                transitions={
+                    "succeeded": "succeeded",
+                    "failed": "failed",
+                },
+            ) 

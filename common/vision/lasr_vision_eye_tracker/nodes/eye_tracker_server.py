@@ -25,7 +25,12 @@ from control_msgs.msg import (
 )
 from trajectory_msgs.msg import JointTrajectoryPoint
 
-from geometry_msgs.msg import PointStamped, Point, PoseStamped
+from geometry_msgs.msg import (
+    PointStamped,
+    Point,
+    PoseStamped,
+    PoseWithCovarianceStamped,
+)
 from sensor_msgs.msg import Image, CameraInfo
 from std_msgs.msg import Header
 
@@ -53,8 +58,9 @@ class EyeTracker:
     _robot_pose_sub = rospy.Subscriber
     _yolo_keypoint_service: rospy.ServiceProxy
     _robot_point: Optional[Point] = None
+    _max_eye_distance: float = 0.5
 
-    def __init__(self):
+    def __init__(self, max_eye_distance: float = 0.5):
 
         self._action_server = actionlib.SimpleActionServer(
             "/lasr_vision_eye_tracker/track_eyes",
@@ -66,10 +72,11 @@ class EyeTracker:
         self._done = False
         self._eyes = None
         self._robot_point = None
+        self._max_eye_distance = max_eye_distance
 
         self._robot_pose_sub = rospy.Subscriber(
-            "/amcl_pose",
-            PoseStamped,
+            "/robot_pose",
+            PoseWithCovarianceStamped,
             self._robot_pose_callback,
         )
 
@@ -96,8 +103,8 @@ class EyeTracker:
 
         Updates the robot point based on the received pose.
         """
-        self._robot_point = msg.pose.position
-        rospy.loginfo(f"Robot pose updated: {self._robot_point}")
+        self._robot_point = msg.pose.pose.position
+        # rospy.loginfo(f"Robot pose updated: {self._robot_point}")
 
     def _get_head_join_values(self) -> Optional[Tuple[float, float]]:
         """Returns the x,y position of the head joints.
@@ -141,7 +148,10 @@ class EyeTracker:
 
     def execute(self, goal: EyeTrackerGoal):
         rospy.loginfo("Beginning eye tracking...")
-
+        self._robot_point = rospy.wait_for_message(
+            "/robot_pose", PoseWithCovarianceStamped, timeout=5.0
+        ).pose.pose.position
+        rospy.loginfo(f"Robot point set to: {self._robot_point}")
         # First, look to person_point
         if goal.person_point is None:
             rospy.logerr("No person point provided in goal.")
@@ -184,7 +194,7 @@ class EyeTracker:
                 self._eyes = None
                 return
             closest_eye_midpoint = None
-            closest_distance = float("inf")
+            closest_distance = self._max_eye_distance
             for det in detected_keypoints:
                 eye_midpoint = None
                 for keypoint in det.keypoints:
@@ -248,6 +258,7 @@ class EyeTracker:
                     continue
                 # Move the head up by a small delta
                 self._move_head_up(current_head_position, y_delta=0.25)
+                rospy.sleep(0.5)  # Wait for the head to move
             else:
                 rospy.loginfo(f"Tracking eyes at position: {self._eyes}")
                 g = PointHeadGoal(

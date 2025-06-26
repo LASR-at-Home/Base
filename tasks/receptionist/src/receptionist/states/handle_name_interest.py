@@ -97,7 +97,7 @@ class HandleNameInterest(smach.StateMachine):
                 },
             )
 
-            smach.state_machine.add(
+            smach.StateMachine.add(
                 "START_EYE_TRACKER",
                 StartEyeTracker(),
                 transitions={
@@ -210,7 +210,7 @@ class HandleNameInterest(smach.StateMachine):
                     f"PARSE_NAME_INTEREST_{guest_id}",
                     GetNameAndInterest(guest_id, False),
                     transitions={
-                        "succeeded": "SAY_LEARN_FACE",
+                        "succeeded": f"SAY_LEARN_FACE_GUEST_{guest_id}",
                         "failed": f"REPEAT_GET_NAME_INTEREST_{guest_id}",
                     },
                     remapping={"guest_transcription": "transcribed_speech"},
@@ -223,7 +223,7 @@ class HandleNameInterest(smach.StateMachine):
                     ),
                     transitions={
                         "succeeded": f"REPEAT_PARSE_NAME_INTEREST_{guest_id}",
-                        "failed": "succeeded",
+                        "failed": f"SAY_LEARN_FACE_GUEST_{guest_id}",
                     },
                 )
 
@@ -231,10 +231,20 @@ class HandleNameInterest(smach.StateMachine):
                     f"REPEAT_PARSE_NAME_INTEREST_{guest_id}",
                     GetNameAndInterest(guest_id, True),
                     transitions={
-                        "succeeded": "succeeded",
-                        "failed": "succeeded",
+                        "succeeded": f"SAY_LEARN_FACE_GUEST_{guest_id}",
+                        "failed": f"SAY_LEARN_FACE_GUEST_{guest_id}",
                     },
                     remapping={"guest_transcription": "transcribed_speech"},
+                )
+
+                smach.StateMachine.add(
+                    f"SAY_LEARN_FACE_GUEST_{guest_id}",
+                    Say(text="I am quickly remembering your face, 2secs please."),
+                    transitions={
+                        "succeeded": f"succeeded",
+                        "aborted": f"succeeded",
+                        "preempted": f"succeeded",
+                    },
                 )
 
     class GetAttributesAndLearnFace(smach.StateMachine):

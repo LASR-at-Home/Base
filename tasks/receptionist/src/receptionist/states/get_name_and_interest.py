@@ -88,6 +88,11 @@ class GetNameAndInterest(smach.StateMachine):
             response = self._llm(request)
             # Maxsplit in case the interest is more than one word.
             llm_name, interest = response.output.strip().split(",", maxsplit=1)
+            interest_n_words = len(interest.split())
+            if interest_n_words > 2:
+                interest = interest.split()[
+                    :2
+                ]  # Take only the first two word of interest
             interest = interest.strip()
 
             # Try to match an exact name from transcription
