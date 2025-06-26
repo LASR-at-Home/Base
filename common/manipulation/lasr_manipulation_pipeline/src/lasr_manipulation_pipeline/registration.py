@@ -22,20 +22,6 @@ def _quality_ok(
     return (fitness >= fit_thresh) and (rmse <= rmse_factor * res)
 
 
-def generate_fake_data(pcd):
-    """
-    Apply a similarity transform (scale + rotation) to a point cloud.
-    Used to create synthetic partial data for testing.
-    """
-    T = np.eye(4)
-    s = 1.0
-    yaw, pitch, roll = 30, -10, 80
-    R_mat = R.from_euler("ZYX", [yaw, pitch, roll], degrees=True).as_matrix()
-    T[:3, :3] = s * R_mat
-    pcd.transform(T)
-    return pcd
-
-
 def pre_align_pca(pcd: o3d.geometry.PointCloud) -> np.ndarray:
     obb = pcd.get_oriented_bounding_box()
     R_obb = obb.R
