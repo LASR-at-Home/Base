@@ -13,6 +13,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import copy, numpy as np
 import os
 
+
 def _quality_ok(
     fitness: float,
     rmse: float,
@@ -22,16 +23,31 @@ def _quality_ok(
 ) -> bool:
     return (fitness >= fit_thresh) and (rmse <= rmse_factor * res)
 
-def _one_trial(seed, shared    
-               ):
+
+def _one_trial(seed, shared):
     np.random.seed(seed)
-    (src_clean, tgt_clean, src_down, tgt_down,
-     src_fpfh, tgt_fpfh, res, T_pca, voxel) = shared
+    (
+        src_clean,
+        tgt_clean,
+        src_down,
+        tgt_down,
+        src_fpfh,
+        tgt_fpfh,
+        res,
+        T_pca,
+        voxel,
+    ) = shared
     return pcl_register(
-        copy.deepcopy(src_clean), copy.deepcopy(tgt_clean),
-        src_fpfh, tgt_fpfh,
-        copy.deepcopy(src_down), copy.deepcopy(tgt_down),
-        res, T_pca, voxel, verbose=False
+        copy.deepcopy(src_clean),
+        copy.deepcopy(tgt_clean),
+        src_fpfh,
+        tgt_fpfh,
+        copy.deepcopy(src_down),
+        copy.deepcopy(tgt_down),
+        res,
+        T_pca,
+        voxel,
+        verbose=False,
     )
 
 
@@ -131,14 +147,17 @@ def estimate_icp_scales(res, max_scale=4.0, min_scale=0.5, steps=4):
     """
     return list(np.geomspace(max_scale, min_scale, num=steps))
 
-def preprocess(source_pcd: o3d.geometry.PointCloud, target_pcd: o3d.geometry.PointCloud,
-               target_points: int = 20000,
-               downsample: bool = True,
-               verbose: bool = False
-               ):
+
+def preprocess(
+    source_pcd: o3d.geometry.PointCloud,
+    target_pcd: o3d.geometry.PointCloud,
+    target_points: int = 20000,
+    downsample: bool = True,
+    verbose: bool = False,
+):
     # 1. Denoise both clouds
     d_params = estimate_denoise_params(source_pcd)
-    
+
     def denoise(p):
         pc, _ = p.remove_statistical_outlier(
             nb_neighbors=d_params["nb_neighbors"], std_ratio=d_params["std_ratio"]
@@ -147,9 +166,8 @@ def preprocess(source_pcd: o3d.geometry.PointCloud, target_pcd: o3d.geometry.Poi
             nb_points=d_params["min_points"], radius=d_params["radius"]
         )
         return pc
-    
+
     def preprocess_function(pcd, voxel, compute_fpfh=True):
-        
         """
         Downsample, estimate normals, and optionally compute FPFH features.
         """
@@ -160,8 +178,7 @@ def preprocess(source_pcd: o3d.geometry.PointCloud, target_pcd: o3d.geometry.Poi
         fpfh = None
         if compute_fpfh:
             fpfh = o3d.pipelines.registration.compute_fpfh_feature(
-                down,
-                o3d.geometry.KDTreeSearchParamHybrid(radius=voxel * 5, max_nn=100)
+                down, o3d.geometry.KDTreeSearchParamHybrid(radius=voxel * 5, max_nn=100)
             )
         return down, fpfh
 
@@ -190,8 +207,17 @@ def preprocess(source_pcd: o3d.geometry.PointCloud, target_pcd: o3d.geometry.Poi
         src_down, src_fpfh = src_clean, None
         tgt_down, tgt_fpfh = tgt_clean, None
 
-    return (src_clean, tgt_clean, src_down, tgt_down,
-            src_fpfh, tgt_fpfh, T_pca, res, voxel)  
+    return (
+        src_clean,
+        tgt_clean,
+        src_down,
+        tgt_down,
+        src_fpfh,
+        tgt_fpfh,
+        T_pca,
+        res,
+        voxel,
+    )
 
 
 def pcl_register(
@@ -204,12 +230,12 @@ def pcl_register(
     res: float,
     T_pca: np.ndarray,
     voxel: float,
-    verbose: bool = False
+    verbose: bool = False,
 ) -> Tuple[np.ndarray, float, float]:
     """
     Fully automatic RANSAC+ICP registration with self-tuning parameters.
     """
-    
+
     # 4. Adaptive RANSAC
     distances, ransac_iters = estimate_ransac_params(res)
     best_ransac = None
@@ -217,7 +243,10 @@ def pcl_register(
     tgt_down.normalize_normals()
     for dist in distances:
         result = o3d.pipelines.registration.registration_ransac_based_on_feature_matching(
-            src_down, tgt_down, src_fpfh, tgt_fpfh,
+            src_down,
+            tgt_down,
+            src_fpfh,
+            tgt_fpfh,
             mutual_filter=False,
             max_correspondence_distance=dist,
             estimation_method=o3d.pipelines.registration.TransformationEstimationPointToPoint(
@@ -276,53 +305,67 @@ def pcl_register(
     T = T @ T_pca
     return T, best_ransac.fitness, best_icp.fitness
 
-def pcl_register_service(
+
+def register_object(
     src_pcd: o3d.geometry.PointCloud,
     tgt_pcd: o3d.geometry.PointCloud,
     *,
-    max_attempts: int = 5,
-    fit_thresh: float = 0.30,
-    rmse_factor: float = 3.0,
+    max_attempts: int = 25,
+    fit_thresh: float = 0.7,
+    rmse_factor: float = 1.0,
     **kwargs,
 ):
-    res = estimate_resolution(src_pcd)            
+    res = estimate_resolution(src_pcd)
     best_T, best_fit, best_rmse = None, -1.0, np.inf
     seeds = np.random.randint(0, 2**32 - 1, size=max_attempts)
-    
 
-    (src_clean, tgt_clean,
-    src_down, tgt_down,
-    src_fpfh, tgt_fpfh,
-    T_pca, res, voxel) = preprocess(src_pcd, tgt_pcd, verbose=True)
+    (
+        src_clean,
+        tgt_clean,
+        src_down,
+        tgt_down,
+        src_fpfh,
+        tgt_fpfh,
+        T_pca,
+        res,
+        voxel,
+    ) = preprocess(src_pcd, tgt_pcd, verbose=True)
 
-    shared = (src_clean, tgt_clean,
-          src_down, tgt_down,
-          src_fpfh, tgt_fpfh,
-          res, T_pca, voxel)
+    shared = (
+        src_clean,
+        tgt_clean,
+        src_down,
+        tgt_down,
+        src_fpfh,
+        tgt_fpfh,
+        res,
+        T_pca,
+        voxel,
+    )
 
     with ThreadPoolExecutor(max_workers=os.cpu_count()) as pool:
         futures = [pool.submit(_one_trial, s, shared) for s in seeds]
         for fut in as_completed(futures):
             T, _, fit_icp = fut.result()
-            rmse = getattr(fit_icp, 'inlier_rmse', 0.0)
+            rmse = getattr(fit_icp, "inlier_rmse", 0.0)
 
             if fit_icp > best_fit:
                 best_T, best_fit, best_rmse = T, fit_icp, rmse
             if _quality_ok(fit_icp, rmse, res, fit_thresh, rmse_factor):
-                for f in futures:         
+                for f in futures:
                     f.cancel()
                 break
     return best_T, best_fit, best_rmse
 
 
-
-
 if __name__ == "__main__":
     transformation, fitness, rmse, tries = pcl_register_service(
-        source, target, max_attempts=50,
+        source,
+        target,
+        max_attempts=50,
         target_points=20000,
         downsample=True,
         verbose=True,
         fit_thresh=0.70,
-        rmse_factor=1.0
+        rmse_factor=1.0,
     )
