@@ -25,31 +25,31 @@ class CarryMyLuggage(smach.StateMachine):
             #     transitions={"succeeded": "POST_FOLLOW", "failed": "POST_FOLLOW"},
             # )
 
-            smach.StateMachine.add(
-                "SAY_START",
-                Say(text="Start of help me carry task."),
-                transitions={
-                    "succeeded": "PRE_FOLLOW",
-                    "aborted": "PRE_FOLLOW",
-                    "preempted": "PRE_FOLLOW",
-                },
-            )
+            # smach.StateMachine.add(
+            #     "SAY_START",
+            #     Say(text="Start of help me carry task."),
+            #     transitions={
+            #         "succeeded": "PRE_FOLLOW",
+            #         "aborted": "PRE_FOLLOW",
+            #         "preempted": "PRE_FOLLOW",
+            #     },
+            # )
 
-            smach.StateMachine.add(
-                f"PRE_FOLLOW",
-                PlayMotion(motion_name="pre_navigation"),
-                transitions={
-                    "succeeded": f"FOLLOW_PERSON",
-                    "preempted": "FOLLOW_PERSON",
-                    "aborted": "FOLLOW_PERSON",
-                },
-            )
+            # smach.StateMachine.add(
+            #     f"PRE_FOLLOW",
+            #     PlayMotion(motion_name="pre_navigation"),
+            #     transitions={
+            #         "succeeded": f"FOLLOW_PERSON",
+            #         "preempted": "FOLLOW_PERSON",
+            #         "aborted": "FOLLOW_PERSON",
+            #     },
+            # )
 
-            smach.StateMachine.add(
-                "FOLLOW_PERSON",
-                FollowPerson(),
-                transitions={"succeeded": "POST_FOLLOW", "failed": "POST_FOLLOW"},
-            )
+            # smach.StateMachine.add(
+            #     "FOLLOW_PERSON",
+            #     FollowPerson(),
+            #     transitions={"succeeded": "POST_FOLLOW", "failed": "POST_FOLLOW"},
+            # )
 
             smach.StateMachine.add(
                 f"POST_FOLLOW",

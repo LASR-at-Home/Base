@@ -19,6 +19,7 @@ from lasr_vision_msgs.srv import LangSamRequest
 from lasr_vision_msgs.srv import LangSam
 
 from lasr_vision_msgs.srv import YoloPoseDetection3D, YoloPoseDetection3DRequest
+from play_motion_msgs.msg import PlayMotionGoal, PlayMotionAction
 
 
 class GoToBag(smach.State):
@@ -64,6 +65,20 @@ class GoToBag(smach.State):
 
         rospy.wait_for_service("/yolo/detect3d_pose")
         self.detect3d = rospy.ServiceProxy("/yolo/detect3d_pose", YoloPoseDetection3D)
+
+        self.motion_client = actionlib.SimpleActionClient(
+            "/play_motion", PlayMotionAction
+        )
+        rospy.loginfo("Waiting for /play_motion action server...")
+        self.motion_client.wait_for_server()
+        rospy.loginfo("/play_motion action server connected")
+
+        rospy.sleep(0.1)
+        self.recovery_motions = [
+            "look_down_centre",
+            "look_down_left",
+            "look_down_right",
+        ]
 
         cv2.namedWindow("Auto-segmented bag", cv2.WINDOW_NORMAL)
 
@@ -130,25 +145,23 @@ class GoToBag(smach.State):
         # ------ Look where the person points ------
         self.look_where_person_points()
 
-        # Prepare the request (assuming self.latest_rgb is a cv2 image)
-        rgb_msg = self.bridge.cv2_to_imgmsg(self.latest_rgb, "bgr8")
-        langsam_req = LangSamRequest()
-        langsam_req.image_raw = rgb_msg
-        langsam_req.prompt = "bag"
+        lang_sam_resp = self.detect_bag_with_lang_sam(prompt="bag")
 
-        try:
-            resp = self.langsam_srv(langsam_req)
-        except rospy.ServiceException as e:
-            rospy.logerr(f"LangSAM service call failed: {e}")
-            return "failed"
+        recovery_counter = 0
+        while lang_sam_resp is None and recovery_counter < 3:
+            rospy.logwarn(
+                f"Recovery mode with head looking {self.recovery_motions[recovery_counter]}"
+            )
+            self.execute_play_motion(self.recovery_motions[recovery_counter])
+            lang_sam_resp = self.detect_bag_with_lang_sam(prompt="bag")
+            recovery_counter = recovery_counter + 1
 
-        if not resp.detections:
-            rospy.logwarn("No bags detected.")
-            cv2.destroyAllWindows()
+        if lang_sam_resp is None:
+            rospy.logwarn("No bag detected in recovery mode!")
             return "failed"
 
         # Pick detection with highest detection_score
-        best_det = max(resp.detections, key=lambda det: det.detection_score)
+        best_det = max(lang_sam_resp.detections, key=lambda det: det.detection_score)
         mask_flat = np.array(best_det.seg_mask, dtype=np.uint8)
         height, width = self.latest_rgb.shape[:2]
         if mask_flat.size != height * width:
@@ -216,11 +229,7 @@ class GoToBag(smach.State):
                 rospy.logwarn(f"Could not transform {name} to map frame")
 
         map_down_axis = np.array([0, 0, -1])
-
-        best_side = None
-        best_score = float("inf")  # We want the minimum score!
-        best_dir = None
-        best_origin = None
+        arms = []
 
         for side in ["right", "left"]:
             elbow_key = f"{side}_elbow"
@@ -240,26 +249,28 @@ class GoToBag(smach.State):
 
                 rospy.loginfo(f"{side} arm downward={downward:.2f}")
 
-                # Filter: Require some arm extension (optional, e.g. > 0.2m)
-                if downward < best_score:
-                    best_score = downward
-                    best_side = side
-                    best_dir = dirv
-                    best_origin = origin
+                arms.append(
+                    {"side": side, "downward": downward, "dirv": dirv, "origin": origin}
+                )
 
-        if best_side is None:
-            rospy.logwarn("No arm detected?")
-            return False
+        # Sort arms by 'downward' (smallest/most negative is "most downward")
+        arms = sorted(arms, key=lambda x: x["downward"])
 
-        floor_pt = self.find_pointed_floor(best_origin, best_dir)
-        floor_pt[2] = 0.75
-        if floor_pt is not None:
-            self.look_at_point(floor_pt, "map")
-            rospy.loginfo(f"Looking at pointed floor position (map): {floor_pt}")
-            rospy.sleep(1.0)
-            return True
+        for arm in arms:
+            rospy.loginfo(f"Trying {arm['side']} arm for pointing ray...")
+            floor_pt = self.find_pointed_floor(arm["origin"], arm["dirv"])
+            if floor_pt is not None:
+                floor_pt[2] = 0.65  # Force Z up from ground for natural gaze
+                self.look_at_point(floor_pt, "map")
+                rospy.loginfo(f"Looking at pointed floor position (map): {floor_pt}")
+                rospy.sleep(1.0)
+                return True
+            else:
+                rospy.logwarn(f"No valid floor intersection for {arm['side']} arm.")
 
-        rospy.logwarn("No valid pointing direction found (in map frame).")
+        rospy.logwarn(
+            "No valid pointing direction found (in map frame) with either arm."
+        )
         return False
 
     def find_pointed_floor(self, origin, direction, max_dist=4.0):
@@ -273,9 +284,47 @@ class GoToBag(smach.State):
         if d < 0 or d > max_dist:
             rospy.logwarn("Intersection behind or too far away.")
             return None
+        elif d > max_dist:
+            rospy.logwarn("Intersection behind or too far away.")
+            return None
         hit_pt = origin + direction * d
         rospy.loginfo(f"Ray hits floor at: {hit_pt}")
         return hit_pt
+
+    def detect_bag_with_lang_sam(self, prompt="bag"):
+        """
+        Calls the LangSAM segmentation service to detect a bag using the latest RGB image.
+        Returns: resp (service response) on success, None on failure.
+        """
+        if self.latest_rgb is None:
+            rospy.logerr("No RGB image available for segmentation.")
+            return None
+
+        rgb_msg = self.bridge.cv2_to_imgmsg(self.latest_rgb, "bgr8")
+        langsam_req = LangSamRequest()
+        langsam_req.image_raw = rgb_msg
+        langsam_req.prompt = prompt
+
+        try:
+            resp = self.langsam_srv(langsam_req)
+        except rospy.ServiceException as e:
+            rospy.logerr(f"LangSAM service call failed: {e}")
+            return None
+
+        if not resp.detections:
+            rospy.logwarn(f"No '{prompt}' detected by LangSAM.")
+            cv2.destroyAllWindows()
+            return None
+
+        return resp
+
+    def execute_play_motion(self, motion_name):
+        goal = PlayMotionGoal()
+        goal.motion_name = motion_name
+        goal.skip_planning = False
+        self.motion_client.send_goal(goal)
+        self.motion_client.wait_for_result()
+        rospy.loginfo(f"Motion {motion_name} played")
 
     def get_mask_median(self, mask):
         ys, xs = np.where(mask)
