@@ -1,9 +1,10 @@
-from typing import Tuple, List, Union, Optional
+from typing import Tuple, List, Optional
 
 import open3d as o3d
 import tf.transformations
 import subprocess
 import numpy as np
+import copy
 
 from geometry_msgs.msg import Pose, Point, Quaternion, Vector3
 
@@ -108,16 +109,20 @@ def filter_grasps_by_score(
     return filtered_poses, filtered_approaches, filtered_scores, filtered_openings
 
 
-def filter_grasps_on_surface(
+def shift_or_filter_grasps_to_surface(
     pcd: o3d.geometry.PointCloud,
     poses: List[Pose],
     approaches: List[Vector3],
     scores: List[float],
     openings: List[float],
     surface_threshold: float = 0.01,
+    max_shift: float = 0.12,
+    step_size: float = 0.001,
 ) -> Tuple[List[Pose], List[Vector3], List[float], List[float]]:
     """
-    Filter grasps to only include those within a distance threshold of the object's surface.
+    Filter grasps within a distance threshold of the surface,
+    shifting them forward along the local X-axis (approach direction)
+    if not close enough.
     """
     if len(pcd.points) == 0:
         raise ValueError("Point cloud is empty.")
@@ -132,18 +137,53 @@ def filter_grasps_on_surface(
 
     for pose, approach, score, opening in zip(poses, approaches, scores, openings):
         grasp_pos = np.array([pose.position.x, pose.position.y, pose.position.z])
-        [_, idx, dists] = kdtree.search_knn_vector_3d(grasp_pos, 1)
-        nearest_dist = np.sqrt(dists[0]) if dists else np.inf
+
+        # Rotation matrix from quaternion (x,y,z,w)
+        qx, qy, qz, qw = (
+            pose.orientation.x,
+            pose.orientation.y,
+            pose.orientation.z,
+            pose.orientation.w,
+        )
+        R = o3d.geometry.get_rotation_matrix_from_quaternion([qw, qx, qy, qz])
+        approach_dir = R[:, 0]  # Local X axis (approach direction)
+
+        # Distance at original position
+        _, idx, dists = kdtree.search_knn_vector_3d(grasp_pos, 1)
+        nearest_dist = np.sqrt(dists[0]) if len(dists) > 0 else np.inf
 
         if nearest_dist <= surface_threshold:
             filtered_poses.append(pose)
             filtered_approaches.append(approach)
             filtered_scores.append(score)
             filtered_openings.append(opening)
+            continue
 
-    filtered_count = len(filtered_scores)
+        # Try shifting forward along +X axis (approach direction)
+        shifted_pose = None
+        for d in np.arange(0, max_shift + step_size, step_size):
+            shifted_pos = grasp_pos + d * approach_dir  # SHIFT FORWARD now
+            _, idx, dists = kdtree.search_knn_vector_3d(shifted_pos, 1)
+            if len(dists) == 0:
+                continue
+            dist = np.sqrt(dists[0])
+            if dist <= surface_threshold:
+                new_pose = copy.deepcopy(pose)
+                new_pose.position.x = shifted_pos[0]
+                new_pose.position.y = shifted_pos[1]
+                new_pose.position.z = shifted_pos[2]
+                shifted_pose = new_pose
+                break
+
+        if shifted_pose is not None:
+            filtered_poses.append(shifted_pose)
+            filtered_approaches.append(approach)
+            filtered_scores.append(score)
+            filtered_openings.append(opening)
+
+    filtered_count = len(filtered_poses)
     print(
-        f"[Surface Filter] Kept {filtered_count} / {original_count} grasps (threshold: {surface_threshold:.4f} m)"
+        f"[Surface Filter + Shift] Kept {filtered_count} / {original_count} grasps (threshold: {surface_threshold:.4f} m)"
     )
 
     return filtered_poses, filtered_approaches, filtered_scores, filtered_openings
