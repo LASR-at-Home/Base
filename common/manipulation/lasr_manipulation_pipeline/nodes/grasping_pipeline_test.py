@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from typing import Tuple, List
+from typing import List
 
 import rospy
 import rospkg
@@ -44,7 +44,15 @@ from lasr_manipulation_pipeline import sam
 from lasr_manipulation_pipeline import visualisation
 
 PACKAGE_PATH: str = rospkg.RosPack().get_path("lasr_manipulation_pipeline")
-MESH_NAME: str = "breadsticks.ply"
+MESH_NAME: str = "stapler.ply"
+"""
+TODO:
+    - Fix registration.
+    - Fix plane detection + support surface.
+    - Push all grasp candidates forward onto the object?
+    - Sometimes grasps are generated that are away from the object. This results in us missing the object.
+    - Need to be careful with how far we push forward when we are grabbing the object. We don't want to push down into something. Maybe try and calculate how far we push down dynamically?
+"""
 
 
 class GraspingPipeline:
@@ -221,17 +229,12 @@ class GraspingPipeline:
 
     def _detect_support_plane_beneath_object(self, full_scene_pcd, mesh, pcl_frame_id):
         """
-        Transform mesh and point cloud to base_footprint, detect a horizontal plane underneath,
-        and publish it as a CollisionObject.
+        Detect the horizontal plane that the object lies on and add it to the planning scene.
+        The plane could be a table, shelf, or floor. The object mesh and point cloud are first
+        transformed to the base_footprint frame for consistent reasoning.
         """
         target_frame = "base_footprint"
         rospy.loginfo(f"Transforming mesh and point cloud to {target_frame}...")
-
-        # Transform mesh to base_footprint
-        mesh_tf = PoseStamped()
-        mesh_tf.header.frame_id = pcl_frame_id
-        mesh_tf.pose.orientation.w = 1.0
-        mesh_tf.header.stamp = rospy.Time(0)
 
         try:
             transform = self._tf_buffer.lookup_transform(
@@ -244,12 +247,13 @@ class GraspingPipeline:
             rospy.logwarn(f"TF transform failed: {e}")
             return
 
-        rospy.loginfo("Detecting horizontal planes in base_footprint...")
+        rospy.loginfo("Segmenting horizontal planes in base_footprint...")
 
         planes = []
         remaining = copy.deepcopy(pcd_base)
-        max_planes = 8
+        max_planes = 10
         distance_threshold = 0.008
+        min_plane_points = 80
 
         for _ in range(max_planes):
             try:
@@ -262,7 +266,7 @@ class GraspingPipeline:
                 rospy.logwarn(f"Plane segmentation failed: {e}")
                 break
 
-            if len(inliers) < 80:
+            if len(inliers) < min_plane_points:
                 break
 
             [a, b, c, d] = plane_model
@@ -276,36 +280,43 @@ class GraspingPipeline:
             rospy.logwarn("No horizontal planes detected in base_footprint.")
             return
 
-        # Find bottom of the mesh in Z
         mesh_aabb = mesh_base.get_axis_aligned_bounding_box()
         mesh_bottom = mesh_aabb.get_min_bound()[2]
         mesh_center_xy = mesh_aabb.get_center()[:2]
 
         best_plane = None
-        min_gap = float("inf")
+        best_gap = float("inf")
+
+        GAP_TOLERANCE = 0.01  # allow up to 1 cm penetration
+        MAX_PLANE_GAP = 0.06  # ignore planes far below object
 
         for model, cloud in planes:
             z_mean = np.mean(np.asarray(cloud.points)[:, 2])
             gap = mesh_bottom - z_mean
-            if 0.0 < gap < min_gap:
-                # Optional: Check x/y overlap
-                aabb = cloud.get_axis_aligned_bounding_box()
-                min_xy = aabb.get_min_bound()[:2]
-                max_xy = aabb.get_max_bound()[:2]
+            rospy.loginfo(f"Plane candidate at z={z_mean:.3f}, gap={gap:.3f}")
+
+            if -GAP_TOLERANCE <= gap < MAX_PLANE_GAP:
+                # Check XY overlap
+                plane_aabb = cloud.get_axis_aligned_bounding_box()
+                min_xy = plane_aabb.get_min_bound()[:2]
+                max_xy = plane_aabb.get_max_bound()[:2]
                 if np.all(mesh_center_xy > min_xy) and np.all(mesh_center_xy < max_xy):
-                    best_plane = (model, cloud, z_mean)
-                    min_gap = gap
+                    if gap < best_gap:
+                        best_plane = (model, cloud, z_mean)
+                        best_gap = gap
 
         if best_plane is None:
-            rospy.logwarn("No supporting plane found under mesh in base_footprint.")
+            rospy.logwarn("No suitable support plane found under object.")
             return
+
+        rospy.loginfo("Publishing detected support plane to planning scene...")
 
         _, plane_cloud, z_plane = best_plane
         aabb = plane_cloud.get_axis_aligned_bounding_box()
         center = aabb.get_center()
         extent = aabb.get_extent()
 
-        # Build support plane CollisionObject
+        # Create a flat box CollisionObject at the plane's height
         support = CollisionObject()
         support.id = "support_plane"
         support.header.frame_id = target_frame
@@ -313,15 +324,15 @@ class GraspingPipeline:
         box = SolidPrimitive()
         box.type = SolidPrimitive.BOX
         box.dimensions = [
-            extent[0] + 0.1,
+            extent[0] + 0.1,  # pad by 5 cm on each side
             extent[1] + 0.1,
-            0.01,
+            0.01,  # thin flat box
         ]
 
         pose = Pose()
         pose.position.x = center[0]
         pose.position.y = center[1]
-        pose.position.z = z_plane - 0.005
+        pose.position.z = z_plane - 0.005  # center of the thin box
         pose.orientation.w = 1.0
 
         support.primitives = [box]
@@ -329,7 +340,7 @@ class GraspingPipeline:
         support.operation = CollisionObject.ADD
 
         self._collision_object_pub.publish(support)
-        rospy.loginfo("Published real support plane in base_footprint.")
+        rospy.loginfo("Support plane added to planning scene.")
 
     def _get_eef_pose(
         self,
@@ -353,7 +364,6 @@ class GraspingPipeline:
             return None
 
     def run(self, debug: bool = False, execute: bool = True):
-        print(self._move_group.get_end_effector_link())
         if execute:
             rospy.loginfo("Sending pregrasp motion...")
             self._play_motion("pregrasp")
@@ -480,7 +490,7 @@ class GraspingPipeline:
                 "gripper_grasping_frame",
                 self._tf_buffer,
             )[0]
-            eef_target_pose = transformations.offset_grasps([eef_pose], 0.06, 0.0, 0.0)[
+            eef_target_pose = transformations.offset_grasps([eef_pose], 0.12, 0.0, 0.0)[
                 0
             ]
             eef_target_pose = transformations.tf_poses(
@@ -504,18 +514,18 @@ class GraspingPipeline:
                 )
                 self._close_gripper()
 
-                eef_pose_base = self._get_eef_pose()
-                lifted_pose = transformations.offset_grasps(
-                    [eef_pose_base],
-                    0.0,
-                    0.0,
-                    transformations.get_lift_direction(eef_pose_base) * 0.15,
-                )[0]
+                # eef_pose_base = self._get_eef_pose()
+                # lifted_pose = transformations.offset_grasps(
+                #     [eef_pose_base],
+                #     0.0,
+                #     0.0,
+                #     transformations.get_lift_direction(eef_pose_base) * 0.15,
+                # )[0]
 
-                self._publish_grasp_poses([lifted_pose], "base_footprint")
+                # self._publish_grasp_poses([lifted_pose], "base_footprint")
 
-                self._move_group.set_pose_target(lifted_pose, "gripper_grasping_frame")
-                self._move_group.go(wait=True)
+                # self._move_group.set_pose_target(lifted_pose, "gripper_grasping_frame")
+                # self._move_group.go(wait=True)
                 self._play_motion("pregrasp")
 
         self._move_group.stop()
