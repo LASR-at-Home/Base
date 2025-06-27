@@ -44,15 +44,7 @@ from lasr_manipulation_pipeline import sam
 from lasr_manipulation_pipeline import visualisation
 
 PACKAGE_PATH: str = rospkg.RosPack().get_path("lasr_manipulation_pipeline")
-MESH_NAME: str = "stapler.ply"
-"""
-TODO:
-    - Fix registration.
-    - Fix plane detection + support surface.
-    - Push all grasp candidates forward onto the object?
-    - Sometimes grasps are generated that are away from the object. This results in us missing the object.
-    - Need to be careful with how far we push forward when we are grabbing the object. We don't want to push down into something. Maybe try and calculate how far we push down dynamically?
-"""
+MESH_NAME: str = "pringles.ply"
 
 
 class GraspingPipeline:
@@ -287,7 +279,7 @@ class GraspingPipeline:
         best_plane = None
         best_gap = float("inf")
 
-        GAP_TOLERANCE = 0.01  # allow up to 1 cm penetration
+        GAP_TOLERANCE = 0.05  # allow up to 1 cm penetration
         MAX_PLANE_GAP = 0.06  # ignore planes far below object
 
         for model, cloud in planes:
@@ -362,6 +354,56 @@ class GraspingPipeline:
                 f"Failed to get transform from {base_frame} to {ee_frame}: {e}"
             )
             return None
+
+    def _determine_forward_distance(
+        self,
+        pregrasp_pose: Pose,
+        mesh: o3d.geometry.PointCloud,
+        max_advance: float = 0.12,  # max finger length
+        step: float = 0.001,
+        contact_threshold: float = 0.005,
+    ) -> float:
+        """
+        Determines how far to move forward (along gripper x-axis) from the pregrasp pose
+        before contacting the object. Avoids pushing through the object.
+        """
+
+        # Build KDTree from mesh
+        if not mesh.has_points():
+            raise ValueError("Mesh point cloud is empty.")
+
+        kdtree = o3d.geometry.KDTreeFlann(mesh)
+
+        # Extract pregrasp position
+        origin = np.array(
+            [
+                pregrasp_pose.position.x,
+                pregrasp_pose.position.y,
+                pregrasp_pose.position.z,
+            ]
+        )
+
+        # Get gripper x-axis (forward) in world frame from pose orientation
+        quat = [
+            pregrasp_pose.orientation.x,
+            pregrasp_pose.orientation.y,
+            pregrasp_pose.orientation.z,
+            pregrasp_pose.orientation.w,
+        ]
+        rot_matrix = o3d.geometry.get_rotation_matrix_from_quaternion(quat)
+        forward_dir = rot_matrix[:, 0]  # x-axis of gripper
+
+        # Step along -x (into the object)
+        for d in np.arange(0, max_advance, step):
+            probe = origin - d * forward_dir
+            [_, _, dists] = kdtree.search_knn_vector_3d(probe, 1)
+
+            if dists and np.sqrt(dists[0]) <= contact_threshold:
+                # Found surface contact
+                return d
+
+        # Default: full reach
+        return max_advance
 
     def run(self, debug: bool = False, execute: bool = True):
         if execute:
@@ -444,10 +486,15 @@ class GraspingPipeline:
             pcd=mesh_pcd,
         )
         rospy.loginfo(f"Detected {len(grasps)} grasps")
-        grasps, approaches, scores, openings = gpd.filter_grasps_by_score(
-            grasps, approaches, scores, openings
-        )
-        grasps, approaches, scores, openings = gpd.filter_grasps_on_surface(
+        if debug:
+            visualisation.visualize_grasps_on_scene(
+                mesh_pcd, grasps, "Mesh grasps (pre-filtering)"
+            )
+
+        # grasps, approaches, scores, openings = gpd.filter_grasps_by_score(
+        #     grasps, approaches, scores, openings
+        # )
+        grasps, approaches, scores, openings = gpd.shift_or_filter_grasps_to_surface(
             mesh_pcd, grasps, approaches, scores, openings
         )
 
@@ -490,9 +537,12 @@ class GraspingPipeline:
                 "gripper_grasping_frame",
                 self._tf_buffer,
             )[0]
-            eef_target_pose = transformations.offset_grasps([eef_pose], 0.12, 0.0, 0.0)[
-                0
-            ]
+            eef_target_pose = transformations.offset_grasps(
+                [eef_pose],
+                self._determine_forward_distance(eef_pose, mesh_pcd),
+                0.0,
+                0.0,
+            )[0]
             eef_target_pose = transformations.tf_poses(
                 [eef_target_pose],
                 "gripper_grasping_frame",
@@ -513,19 +563,6 @@ class GraspingPipeline:
                     ],
                 )
                 self._close_gripper()
-
-                # eef_pose_base = self._get_eef_pose()
-                # lifted_pose = transformations.offset_grasps(
-                #     [eef_pose_base],
-                #     0.0,
-                #     0.0,
-                #     transformations.get_lift_direction(eef_pose_base) * 0.15,
-                # )[0]
-
-                # self._publish_grasp_poses([lifted_pose], "base_footprint")
-
-                # self._move_group.set_pose_target(lifted_pose, "gripper_grasping_frame")
-                # self._move_group.go(wait=True)
                 self._play_motion("pregrasp")
 
         self._move_group.stop()
