@@ -59,11 +59,10 @@ def generate_grasps(
     openings = []
     for line in output:
         pose, approach, score, opening = grasp_from_str(line)
-        if score > 0.0:
-            poses.append(pose)
-            approaches.append(approach)
-            scores.append(score)
-            openings.append(opening)
+        poses.append(pose)
+        approaches.append(approach)
+        scores.append(score)
+        openings.append(opening)
 
     sorted_pairs = sorted(
         zip(poses, approaches, scores, openings), key=lambda x: x[2], reverse=True
