@@ -1,0 +1,17 @@
+min_height: 0.15
+max_height: 2.0
+
+angle_min      : !degrees -15.0
+angle_max      : !degrees  20.0
+angle_increment: !degrees  0.3333
+scan_time: 0.166 # 6Hz
+
+range_min: 1.2
+range_max: 5.0
+
+target_frame: rgbd_laser_link
+
+use_concurrency: 2 #use two parallel threads
+use_inf        : true
+
+transform_tolerance: 0.02
