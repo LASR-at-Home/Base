@@ -11,110 +11,67 @@ from sensor_msgs.msg import Image as SensorImage, PointCloud2
 from lasr_vision_msgs.srv import LangSam, LangSamRequest
 import sensor_msgs.point_cloud2 as pc2
 
-# --------------------------
-# LangSAM State (gets mask)
-# --------------------------
 import rospy
 import smach
-import numpy as np
-from cv_bridge import CvBridge
-from sensor_msgs.msg import Image as SensorImage
+import smach_ros
+
 from lasr_vision_msgs.srv import LangSam, LangSamRequest
+from sensor_msgs.msg import Image
 
-
-"""
-1. LangSam
-- return mask
-- if not mask return a box cutting out the edges or side
-2. getDepth
-- collect Depth on mask
-- return Depth
-* RotateDepth
-- face with door
-3. analyseDepth
-- longDepth > set safety line
-- shortDepth > handle
-4. analyseHandle > width, height
-
-pos_1(x: shortDepth - 0.01, y: point of shortest depth starts close to robot +- width/2 (+ assume right, - assume left..?), shortDepth starts + height/2)
-
-if width shorter: handle shape []
-if height shorter: handle shape =
-
-Wide open handle
-pos_2(x: shortDepth + (longDepth - shortDepth)/2, ", ")
-
-Close handle according to width
-
-4. Pull, Push, Rotate logic for door openning 
-"""
-
+import numpy 
 
 class LangSamState(smach.State):
-    def __init__(self, prompt: str, rgb_topic="/xtion/rgb/image_raw"):
-        smach.State.__init__(self, outcomes=["succeeded", "failed"], output_keys=["sam_detections"])
+    def __init__(self, prompt: str, image_topic: str = "/xtion/rgb/image_raw"):
+        smach.State.__init__(self, outcomes=["succeeded", "failed"], output_keys=['sam_detections'])
+
         self.prompt = prompt
-        self.rgb_topic = rgb_topic
+        self.image_topic = image_topic
+        self.lang_sam_topic = "/lasr_vision/lang_sam"
 
-        self.mask_pub = rospy.Publisher("/langsam/mask_image", SensorImage, queue_size=1)
-        self.bridge = CvBridge()
-
-        rospy.loginfo("[LangSamState] Waiting for LangSAM service...")
-        rospy.wait_for_service("/lasr_vision/lang_sam", timeout=5)
-        self._client = rospy.ServiceProxy("/lasr_vision/lang_sam", LangSam)
-        rospy.loginfo("[LangSamState] Connected to LangSAM service.")
+        try:
+            rospy.loginfo("[LangSamState] Waiting for LangSAM service")
+            rospy.wait_for_service(self.lang_sam_topic, timeout=5)
+            self._client = rospy.ServiceProxy(self.lang_sam_topic, LangSam)
+            rospy.loginfo("[LangSamState] Loaded LangSAM service")
+        except rospy.ROSException:
+            rospy.logerr(f"[LangSamState] Timeout: LangSAM service")
 
     def execute(self, userdata):
-        rospy.loginfo(f"[LangSamState] Waiting for image on topic: {self.rgb_topic}")
+
         try:
-            image_msg = rospy.wait_for_message(self.rgb_topic, SensorImage, timeout=5.0)
+            rospy.loginfo(f"[LangSamState] Waiting for {self.image_topic}")
+            image_msg = rospy.wait_for_message(self.image_topic, Image, timeout=5)
+            rospy.loginfo(f"[LangSamState] Loaded {self.image_topic}")
         except rospy.ROSException:
-            rospy.logerr("[LangSamState] Timeout while waiting for RGB image.")
+            rospy.logerr(f"[LangSamState] Timeout: {self.image_topic}")
             return "failed"
-
-        req = LangSamRequest()
-        req.prompt = self.prompt
-        req.image_raw = image_msg
+            
+        request = LangSamRequest()
+        request.prompt = self.prompt
+        request.image_raw = image_msg
 
         try:
-            resp = self._client(req)
+            response = self._client(request)
 
-            if not resp.detections:
-                return "failed"
+            if not response.detections:           
+                rospy.logwarn("[LangSamState] No detection from LangSam")
+                return "failed" 
+            
+            rospy.loginfo(f"[LangSamState] LangSAM result: {len(response.detections)}")
 
-            rospy.loginfo(f"[LangSamState] LangSAM returned {len(resp.detections)} detections.")
-
-            best_idx = np.argmax([d.seg_mask_score for d in resp.detections])
-            det = resp.detections[best_idx]
+            best_idx = numpy.argmax([d.seg_mask_score for d in response.detections])
+            detection = response.detections[best_idx]
 
             width = image_msg.width
             height = image_msg.height
 
-            # Convert flat mask list to 2D binary mask
-            flat_mask = np.array(det.seg_mask, dtype=np.uint8)
+            flat_mask = numpy.array(detection.seg_mask, dtype=numpy.uint8)
             mask_np = flat_mask.reshape((height, width))
 
-            # Filter: Reject mask if too small or touches image borders
-            mask_area = np.count_nonzero(mask_np)
-            edge_threshold = 10  # pixels
-            margin_mask = mask_np[
-                edge_threshold:-edge_threshold,
-                edge_threshold:-edge_threshold
-            ]
-            interior_area = np.count_nonzero(margin_mask)
-            interior_ratio = interior_area / (mask_area + 1e-6)
-
-            if mask_area < 5000 or interior_ratio < 0.7:
-                rospy.logwarn(f"[LangSamState] Mask too small or touches image edge. Area={mask_area}, Interior Ratio={interior_ratio:.2f}")
+            if numpy.count_nonzero(mask_np) < 5000:
+                rospy.logwarn("[LangSamState] Mask too small")
                 return "failed"
 
-            # Publish mask for visualization
-            vis_mask = mask_np * 255
-            mask_msg = self.bridge.cv2_to_imgmsg(vis_mask, encoding="mono8")
-            mask_msg.header = image_msg.header
-            self.mask_pub.publish(mask_msg)
-
-            # Pass result to userdata
             userdata.sam_detections = {
                 "mask": mask_np,
                 "image_header": image_msg.header
@@ -123,7 +80,7 @@ class LangSamState(smach.State):
             return "succeeded"
 
         except rospy.ServiceException as e:
-            rospy.logerr(f"LangSAM service call failed: {e}")
+            rospy.logerr(f"[LangSamState] LangSAM service call failed: {e}")
             return "failed"
 
 
@@ -218,105 +175,86 @@ class EstimateAverageDepthState(smach.State):
         userdata.sam_detections["min_depth"] = min_depth
         userdata.sam_detections["max_depth"] = max_depth
         return "done"
-    
+
 import rospy
 import smach
 import numpy as np
+from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion
+import tf
 from sklearn.decomposition import PCA
-from sklearn.cluster import DBSCAN
-from geometry_msgs.msg import Point, Quaternion
-from tf.transformations import quaternion_from_matrix
 
 class DetectHandleState(smach.State):
-    def __init__(self, use_dbscan=True):
-        smach.State.__init__(
-            self,
-            outcomes=["done", "failed"],
-            input_keys=["sam_detections"],
-            output_keys=["handle_pose"]
-        )
-        self.use_dbscan = use_dbscan
+    def __init__(self, reference_frame="base_footprint"):
+        smach.State.__init__(self,
+                             outcomes=["succeeded", "failed"],
+                             input_keys=["sam_detections"],
+                             output_keys=["handle_pose_stamped", "sam_detections"])
+        self.reference_frame = reference_frame
 
     def execute(self, userdata):
-        points = userdata.sam_detections.get("points_3d", [])
-        if not points:
-            rospy.logwarn("[DetectHandleState] No 3D points provided.")
-            return "failed"
+        rospy.loginfo("[DetectHandleState] Starting grasp analysis...")
 
-        points_np = np.array(points)
-
-        # Step 1: DBSCAN clustering (optional)
-        if self.use_dbscan:
-            try:
-                clustering = DBSCAN(eps=0.02, min_samples=10).fit(points_np)
-                labels = clustering.labels_
-
-                # Filter out noise
-                mask = labels != -1
-                labels = labels[mask]
-                clustered_points = points_np[mask]
-
-                # Heuristic: find cluster closest to robot (min z)
-                cluster_ids = np.unique(labels)
-                best_cluster_id = None
-                best_min_z = float('inf')
-                for cid in cluster_ids:
-                    cluster_pts = clustered_points[labels == cid]
-                    min_z = np.min(cluster_pts[:, 2])
-                    if min_z < best_min_z:
-                        best_min_z = min_z
-                        best_cluster_id = cid
-
-                handle_points = clustered_points[labels == best_cluster_id]
-                rospy.loginfo(f"[DetectHandleState] Selected cluster {best_cluster_id} with {len(handle_points)} points.")
-            except Exception as e:
-                rospy.logerr(f"[DetectHandleState] DBSCAN error: {e}")
-                return "failed"
-        else:
-            handle_points = points_np
-
-        if len(handle_points) < 10:
-            rospy.logwarn("[DetectHandleState] Not enough points to estimate handle.")
-            return "failed"
-
-        # Step 2: PCA for orientation and size
         try:
-            pca = PCA(n_components=3)
-            pca.fit(handle_points)
-            center = pca.mean_
-
-            # Project to PCA space
-            proj = pca.transform(handle_points)
-            width = proj[:, 1].ptp()  # range along axis 1
-            height = proj[:, 2].ptp()  # range along axis 2
-            handle_width = min(width, height)
-
-            # Orientation from PCA axes
-            x_axis = pca.components_[0]
-            y_axis = pca.components_[1]
-            z_axis = np.cross(x_axis, y_axis)
-
-            # Rotation matrix to quaternion
-            rot = np.eye(4)
-            rot[:3, 0] = x_axis
-            rot[:3, 1] = y_axis
-            rot[:3, 2] = z_axis
-            qx, qy, qz, qw = quaternion_from_matrix(rot)
-
-            rospy.loginfo(f"[DetectHandleState] Handle center: {center}")
-            rospy.loginfo(f"[DetectHandleState] Width: {width:.3f}, Height: {height:.3f}")
-            rospy.loginfo(f"[DetectHandleState] Orientation (quat): {[qx, qy, qz, qw]}")
-
-            userdata.handle_pose = {
-                "position": center.tolist(),
-                "quaternion": [qx, qy, qz, qw],
-                "width": float(handle_width)
-            }
-            return "done"
-
-        except Exception as e:
-            rospy.logerr(f"[DetectHandleState] PCA error: {e}")
+            points_3d = np.array(userdata.sam_detections["points_3d"])
+        except KeyError:
+            rospy.logerr("[DetectHandleState] No 3D points found in userdata.")
             return "failed"
+
+        if points_3d.shape[0] == 0:
+            rospy.logwarn("[DetectHandleState] Empty 3D point cloud.")
+            return "failed"
+
+        # ✅ Step 1: Compute 3D center of mass
+        center = np.mean(points_3d, axis=0)
+        rospy.loginfo(f"[DetectHandleState] 3D center: {center}")
+
+        # ✅ Step 2: Tight spatial filtering (±5 cm box)
+        spatial_margin = 0.05
+        spatial_filtered = points_3d[np.all(np.abs(points_3d - center) < spatial_margin, axis=1)]
+        rospy.loginfo(f"[DetectHandleState] Spatially filtered points: {spatial_filtered.shape[0]}")
+
+        # ✅ Step 3: Optional depth filtering (±1 cm)
+        depth_center = center[2]
+        depth_margin = 0.01
+        depth_filtered = spatial_filtered[np.abs(spatial_filtered[:, 2] - depth_center) < depth_margin]
+        rospy.loginfo(f"[DetectHandleState] After depth filtering: {depth_filtered.shape[0]}")
+
+        if depth_filtered.shape[0] < 10:
+            rospy.logwarn("[DetectHandleState] Not enough points after filtering.")
+            return "failed"
+
+        # ✅ Step 4: PCA on filtered points
+        centered = depth_filtered - np.mean(depth_filtered, axis=0)
+        pca = PCA(n_components=3)
+        pca.fit(centered)
+        transformed = pca.transform(centered)
+
+        width = np.max(transformed[:, 0]) - np.min(transformed[:, 0])
+        height = np.max(transformed[:, 1]) - np.min(transformed[:, 1])
+
+        # ✅ Step 5: Sanity check
+        if width > 0.3:
+            rospy.logwarn(f"[DetectHandleState] Warning: large handle width: {width:.3f} m — possibly over-segmented.")
+
+        rospy.loginfo(f"[DetectHandleState] Estimated handle width: {width:.4f} m")
+        rospy.loginfo(f"[DetectHandleState] Estimated handle height: {height:.4f} m")
+
+        # ✅ Step 6: Create PoseStamped
+        quat = tf.transformations.quaternion_from_euler(0, np.pi, 0)
+        pose_stamped = PoseStamped()
+        pose_stamped.header.stamp = rospy.Time.now()
+        pose_stamped.header.frame_id = self.reference_frame
+        pose_stamped.pose = Pose(
+            position=Point(*center.tolist()),
+            orientation=Quaternion(*quat)
+        )
+
+        # ✅ Step 7: Store in userdata
+        userdata.handle_pose_stamped = pose_stamped
+        userdata.sam_detections["handle_width"] = float(width)
+        userdata.sam_detections["handle_height"] = float(height)
+
+        return "succeeded"
 
 
     
@@ -634,7 +572,7 @@ def main():
     with sm:
         smach.StateMachine.add(
             "SEGMENT_DOOR",
-            LangSamState(prompt="a door"),
+            LangSamState(prompt="door handel"),
             transitions={"succeeded": "POINTCLOUD_EXTRACTION", "failed": "FAILED"}
         )
 
@@ -659,7 +597,7 @@ def main():
         smach.StateMachine.add(
             "DETECT_HANDLE",
             DetectHandleState(),
-            transitions={"done": "DONE", "failed": "FAILED"}
+            transitions={"succeeded": "DONE", "failed": "FAILED"}
         )
 
         # smach.StateMachine.add(
@@ -703,248 +641,248 @@ if __name__ == "__main__":
     main()
 
 
-#!/usr/bin/env python
+# #!/usr/bin/env python
 
-import sys
-import copy
-import rospy
-import actionlib
-import moveit_commander
-from geometry_msgs.msg import PointStamped, PoseStamped
-from visualization_msgs.msg import Marker
-from play_motion_msgs.msg import PlayMotionGoal, PlayMotionAction
-import tf2_ros
-from tf2_geometry_msgs.tf2_geometry_msgs import do_transform_pose
-from moveit_commander.exception import MoveItCommanderException
-from trajectory_msgs.msg import JointTrajectory
-import math
+# import sys
+# import copy
+# import rospy
+# import actionlib
+# import moveit_commander
+# from geometry_msgs.msg import PointStamped, PoseStamped
+# from visualization_msgs.msg import Marker
+# from play_motion_msgs.msg import PlayMotionGoal, PlayMotionAction
+# import tf2_ros
+# from tf2_geometry_msgs.tf2_geometry_msgs import do_transform_pose
+# from moveit_commander.exception import MoveItCommanderException
+# from trajectory_msgs.msg import JointTrajectory
+# import math
 
-USE_CLICKED_POINT = True      
-TORSO_LIFT        = 0.25       
-TABLE_THICK       = 0.01      
-TABLE_Z           = 0.41       
-VEL_SCALE         = 0.15     
-ACC_SCALE         = 0.15
-STAMP_DELAY       = 0.25       
+# USE_CLICKED_POINT = True      
+# TORSO_LIFT        = 0.25       
+# TABLE_THICK       = 0.01      
+# TABLE_Z           = 0.41       
+# VEL_SCALE         = 0.15     
+# ACC_SCALE         = 0.15
+# STAMP_DELAY       = 0.25       
 
-clicked_point = None
-marker_pub    = None
+# clicked_point = None
+# marker_pub    = None
 
-def clicked_point_cb(msg: PointStamped):
-    """Callback for RViz /clicked_point: store the point and publish a green sphere."""
-    global clicked_point, marker_pub
-    clicked_point = msg
-    m = Marker()
-    m.header = msg.header
-    m.ns, m.id, m.type, m.action = "clicked_points", 0, Marker.SPHERE, Marker.ADD
-    m.pose.position, m.pose.orientation.w = msg.point, 1.0
-    m.scale.x = m.scale.y = m.scale.z = 0.10
-    m.color.r, m.color.a = 1.0, 0.8
-    marker_pub.publish(m)
+# def clicked_point_cb(msg: PointStamped):
+#     """Callback for RViz /clicked_point: store the point and publish a green sphere."""
+#     global clicked_point, marker_pub
+#     clicked_point = msg
+#     m = Marker()
+#     m.header = msg.header
+#     m.ns, m.id, m.type, m.action = "clicked_points", 0, Marker.SPHERE, Marker.ADD
+#     m.pose.position, m.pose.orientation.w = msg.point, 1.0
+#     m.scale.x = m.scale.y = m.scale.z = 0.10
+#     m.color.r, m.color.a = 1.0, 0.8
+#     marker_pub.publish(m)
 
-def wait_marker_connection():
-    """Block until at least one subscriber is connected to the marker topic."""
-    while marker_pub.get_num_connections() == 0 and not rospy.is_shutdown():
-        rospy.sleep(0.05)
+# def wait_marker_connection():
+#     """Block until at least one subscriber is connected to the marker topic."""
+#     while marker_pub.get_num_connections() == 0 and not rospy.is_shutdown():
+#         rospy.sleep(0.05)
 
-def publish_arrow(pose: PoseStamped):
-    """Publish a green arrow marker at the given pose."""
-    a = Marker()
-    a.header = pose.header
-    a.ns, a.id, a.type, a.action = "clicked_points", 0, Marker.ARROW, Marker.ADD
-    a.pose = pose.pose
-    a.scale.x = 0.20
-    a.scale.y = a.scale.z = 0.03
-    a.color.g, a.color.a = 1.0, 0.9
-    marker_pub.publish(a)
+# def publish_arrow(pose: PoseStamped):
+#     """Publish a green arrow marker at the given pose."""
+#     a = Marker()
+#     a.header = pose.header
+#     a.ns, a.id, a.type, a.action = "clicked_points", 0, Marker.ARROW, Marker.ADD
+#     a.pose = pose.pose
+#     a.scale.x = 0.20
+#     a.scale.y = a.scale.z = 0.03
+#     a.color.g, a.color.a = 1.0, 0.9
+#     marker_pub.publish(a)
 
-def add_time_offset(traj: JointTrajectory, offset: float):
-    """Add a time offset to every point in the JointTrajectory."""
-    for p in traj.points:
-        p.time_from_start += rospy.Duration.from_sec(offset)
+# def add_time_offset(traj: JointTrajectory, offset: float):
+#     """Add a time offset to every point in the JointTrajectory."""
+#     for p in traj.points:
+#         p.time_from_start += rospy.Duration.from_sec(offset)
 
-def place_at(x, y, z,
-             arm: moveit_commander.MoveGroupCommander,
-             play: actionlib.SimpleActionClient,
-             gripper_link: str,
-             scene: moveit_commander.PlanningSceneInterface,
-             box_id: str):
-    """
-    Core placement routine:
-    1) Compute the tool-frame goal so that the attached cube's center lands at (x,y,z).
-    2) Plan and execute a motion to that goal.
-    3) Detach the object and open the gripper.
-    Returns True on complete success, False otherwise.
-    """
-    # compute how far below the gripper_link the cube is attached
-    box_offset_z = abs(-0.10)  # same as box_pose.pose.position.z magnitude
+# def place_at(x, y, z,
+#              arm: moveit_commander.MoveGroupCommander,
+#              play: actionlib.SimpleActionClient,
+#              gripper_link: str,
+#              scene: moveit_commander.PlanningSceneInterface,
+#              box_id: str):
+#     """
+#     Core placement routine:
+#     1) Compute the tool-frame goal so that the attached cube's center lands at (x,y,z).
+#     2) Plan and execute a motion to that goal.
+#     3) Detach the object and open the gripper.
+#     Returns True on complete success, False otherwise.
+#     """
+#     # compute how far below the gripper_link the cube is attached
+#     box_offset_z = abs(-0.10)  # same as box_pose.pose.position.z magnitude
 
-    # tool_goal is the pose we want the gripper_link to reach
-    tool_goal = PoseStamped()
-    tool_goal.header.frame_id = arm.get_planning_frame()
-    tool_goal.pose.position.x = x 
-    tool_goal.pose.position.y = y 
-    tool_goal.pose.position.z = z + box_offset_z
-    # tool_goal.pose.position.z = z 
-    tool_goal.pose.orientation.w = 1.0
+#     # tool_goal is the pose we want the gripper_link to reach
+#     tool_goal = PoseStamped()
+#     tool_goal.header.frame_id = arm.get_planning_frame()
+#     tool_goal.pose.position.x = x 
+#     tool_goal.pose.position.y = y 
+#     tool_goal.pose.position.z = z + box_offset_z
+#     # tool_goal.pose.position.z = z 
+#     tool_goal.pose.orientation.w = 1.0
 
-    # 1) Plan and execute move to tool_goal
-    arm.set_position_target(
-        [tool_goal.pose.position.x,
-         tool_goal.pose.position.y,
-         tool_goal.pose.position.z],
-        gripper_link
-    )
-    ok, plan, _, _ = arm.plan()
-    if not ok:
-        rospy.logerr("Planning to placement goal failed")
-        return False
-    if not arm.execute(plan, wait=True):
-        rospy.logerr("Execution to placement goal failed")
-        return False
-    arm.stop()
-    arm.clear_pose_targets()
-    rospy.sleep(0.5)
+#     # 1) Plan and execute move to tool_goal
+#     arm.set_position_target(
+#         [tool_goal.pose.position.x,
+#          tool_goal.pose.position.y,
+#          tool_goal.pose.position.z],
+#         gripper_link
+#     )
+#     ok, plan, _, _ = arm.plan()
+#     if not ok:
+#         rospy.logerr("Planning to placement goal failed")
+#         return False
+#     if not arm.execute(plan, wait=True):
+#         rospy.logerr("Execution to placement goal failed")
+#         return False
+#     arm.stop()
+#     arm.clear_pose_targets()
+#     rospy.sleep(0.5)
 
-    # 2) Detach cube and open gripper
-    scene.remove_attached_object(gripper_link, box_id)
-    open_goal = PlayMotionGoal()
-    open_goal.motion_name   = "open_gripper"
-    open_goal.skip_planning = False
-    play.send_goal_and_wait(open_goal)
-    rospy.sleep(0.5)
+#     # 2) Detach cube and open gripper
+#     scene.remove_attached_object(gripper_link, box_id)
+#     open_goal = PlayMotionGoal()
+#     open_goal.motion_name   = "open_gripper"
+#     open_goal.skip_planning = False
+#     play.send_goal_and_wait(open_goal)
+#     rospy.sleep(0.5)
 
-    return True
+#     return True
 
-def main():
-    global marker_pub, clicked_point
+# def main():
+#     global marker_pub, clicked_point
 
-    rospy.init_node("tiago_place_node")
-    moveit_commander.roscpp_initialize(sys.argv)
+#     rospy.init_node("tiago_place_node")
+#     moveit_commander.roscpp_initialize(sys.argv)
 
-    # set up TF listener and marker publisher
-    tf_buffer   = tf2_ros.Buffer()
-    tf_listener = tf2_ros.TransformListener(tf_buffer)
-    marker_pub  = rospy.Publisher("/click_marker",
-                                 Marker, queue_size=1, latch=True)
+#     # set up TF listener and marker publisher
+#     tf_buffer   = tf2_ros.Buffer()
+#     tf_listener = tf2_ros.TransformListener(tf_buffer)
+#     marker_pub  = rospy.Publisher("/click_marker",
+#                                  Marker, queue_size=1, latch=True)
 
-    robot = moveit_commander.RobotCommander()
-    scene = moveit_commander.PlanningSceneInterface()
-    rospy.sleep(1.0)
+#     robot = moveit_commander.RobotCommander()
+#     scene = moveit_commander.PlanningSceneInterface()
+#     rospy.sleep(1.0)
 
-    rospy.loginfo("Waiting for planning scene to update …")
+#     rospy.loginfo("Waiting for planning scene to update …")
 
-    # 1) Attach a small cube to the gripper as a collision object
-    gripper_link = "gripper_tool_link"
-    box_id       = "held_obj"
-    box_pose = PoseStamped()
-    box_pose.header.frame_id    = gripper_link
-    box_pose.pose.position.z    = -0.10   # cube center is 10cm below tool link
-    box_pose.pose.orientation.w = 1.0
-    scene.add_box(box_id, box_pose, size=(0.04, 0.04, 0.04))
-    rospy.loginfo("Added box %s to scene at %s", box_id, box_pose)
-    rospy.sleep(0.3)
-    scene.attach_box(gripper_link, box_id,
-                     touch_links=robot.get_link_names("gripper"))
-    rospy.loginfo("Attached box %s to gripper link %s", box_id, gripper_link)
-    # 2) Set up play_motion client and do pregrasp + close_gripper
-    play = actionlib.SimpleActionClient("play_motion", PlayMotionAction)
-    play.wait_for_server()
-    rospy.loginfo("Connected to play_motion server")
-    pre = PlayMotionGoal()
-    pre.motion_name   = "deliver_preplace_pose"
-    pre.skip_planning = False
-    play.send_goal_and_wait(pre)
-    rospy.loginfo("Pregrasp motion done, closing gripper …")
+#     # 1) Attach a small cube to the gripper as a collision object
+#     gripper_link = "gripper_tool_link"
+#     box_id       = "held_obj"
+#     box_pose = PoseStamped()
+#     box_pose.header.frame_id    = gripper_link
+#     box_pose.pose.position.z    = -0.10   # cube center is 10cm below tool link
+#     box_pose.pose.orientation.w = 1.0
+#     scene.add_box(box_id, box_pose, size=(0.04, 0.04, 0.04))
+#     rospy.loginfo("Added box %s to scene at %s", box_id, box_pose)
+#     rospy.sleep(0.3)
+#     scene.attach_box(gripper_link, box_id,
+#                      touch_links=robot.get_link_names("gripper"))
+#     rospy.loginfo("Attached box %s to gripper link %s", box_id, gripper_link)
+#     # 2) Set up play_motion client and do pregrasp + close_gripper
+#     play = actionlib.SimpleActionClient("play_motion", PlayMotionAction)
+#     play.wait_for_server()
+#     rospy.loginfo("Connected to play_motion server")
+#     pre = PlayMotionGoal()
+#     pre.motion_name   = "deliver_preplace_pose"
+#     pre.skip_planning = False
+#     play.send_goal_and_wait(pre)
+#     rospy.loginfo("Pregrasp motion done, closing gripper …")
 
-    pre = PlayMotionGoal()
-    pre.motion_name   = "home_to_preplace"
-    pre.skip_planning = False
-    play.send_goal_and_wait(pre)
-    rospy.loginfo("Moved to pre-place pose, closing gripper …")
-
-
-    # 3) Define target place pose (can also subscribe to /clicked_point)
-    target = PoseStamped()
-    target.header.frame_id = "base_footprint"
-    target.pose.position.x = 0.6
-    target.pose.position.y = 0.0
-    target.pose.position.z = 0.4
-    target.pose.orientation.w = 1.0
-
-    wait_marker_connection()
-    publish_arrow(target)
-
-    if USE_CLICKED_POINT:
-        rospy.Subscriber("/clicked_point", PointStamped, clicked_point_cb)
-        rospy.loginfo("Waiting for RViz click …")
-        while clicked_point is None and not rospy.is_shutdown():
-            rospy.sleep(0.05)
-        target.pose.position = clicked_point.point
-        target.header        = clicked_point.header
-        publish_arrow(target)
-
-    # 4) Initialize MoveIt commander for the arm
-    arm = moveit_commander.MoveGroupCommander("arm_torso")
-    arm.set_end_effector_link(gripper_link)
-    arm.set_pose_reference_frame("base_footprint")
-    arm.set_planning_time(30.0)
-    arm.set_num_planning_attempts(10)
-    arm.set_max_velocity_scaling_factor(VEL_SCALE)
-    arm.set_max_acceleration_scaling_factor(ACC_SCALE)
-    arm.set_goal_tolerance(0.01)
-    arm.set_goal_orientation_tolerance(math.pi)
-
-    # wait for current joint states
-    while len(arm.get_current_joint_values()) != len(arm.get_active_joints()) \
-          and not rospy.is_shutdown():
-        rospy.sleep(0.05)
-
-    # 5) Raise the torso
-    arm.set_joint_value_target({'torso_lift_joint': TORSO_LIFT})
-    arm.go(wait=True)
-    arm.stop(); arm.clear_pose_targets()
-
-    # 6) Add the table to the planning scene
-    # table_pose = PoseStamped()
-    # table_pose.header.frame_id = "base_footprint"
-    # table_pose.pose.position.x = 0.8
-    # table_pose.pose.position.z = TABLE_Z
-    # table_pose.pose.orientation.w = 1.0
-    # scene.add_box("table", table_pose, size=(1.0, 1.2, TABLE_THICK))
-    # arm.set_support_surface_name("table")
+#     pre = PlayMotionGoal()
+#     pre.motion_name   = "home_to_preplace"
+#     pre.skip_planning = False
+#     play.send_goal_and_wait(pre)
+#     rospy.loginfo("Moved to pre-place pose, closing gripper …")
 
 
-    # transform target into the arm's planning frame if needed
-    planning_frame = arm.get_planning_frame()
-    if target.header.frame_id != planning_frame:
-        tr = tf_buffer.lookup_transform(planning_frame,
-                                        target.header.frame_id,
-                                        rospy.Time(0),
-                                        rospy.Duration(1.0))
-        target = do_transform_pose(target, tr)
+#     # 3) Define target place pose (can also subscribe to /clicked_point)
+#     target = PoseStamped()
+#     target.header.frame_id = "base_footprint"
+#     target.pose.position.x = 0.6
+#     target.pose.position.y = 0.0
+#     target.pose.position.z = 0.4
+#     target.pose.orientation.w = 1.0
 
-    # 7) Call the placement function
-    success = place_at(
-        target.pose.position.x,
-        target.pose.position.y,
-        target.pose.position.z,
-        arm=arm,
-        play=play,
-        gripper_link=gripper_link,
-        scene=scene,
-        box_id=box_id
-    )
-    rospy.loginfo("Place operation %s", "SUCCEEDED" if success else "FAILED")
+#     wait_marker_connection()
+#     publish_arrow(target)
 
-    # 8) Return to home
-    home = PlayMotionGoal()
-    home.motion_name   = "home"
-    home.skip_planning = False
-    play.send_goal_and_wait(home)
+#     if USE_CLICKED_POINT:
+#         rospy.Subscriber("/clicked_point", PointStamped, clicked_point_cb)
+#         rospy.loginfo("Waiting for RViz click …")
+#         while clicked_point is None and not rospy.is_shutdown():
+#             rospy.sleep(0.05)
+#         target.pose.position = clicked_point.point
+#         target.header        = clicked_point.header
+#         publish_arrow(target)
 
-    moveit_commander.roscpp_shutdown()
+#     # 4) Initialize MoveIt commander for the arm
+#     arm = moveit_commander.MoveGroupCommander("arm_torso")
+#     arm.set_end_effector_link(gripper_link)
+#     arm.set_pose_reference_frame("base_footprint")
+#     arm.set_planning_time(30.0)
+#     arm.set_num_planning_attempts(10)
+#     arm.set_max_velocity_scaling_factor(VEL_SCALE)
+#     arm.set_max_acceleration_scaling_factor(ACC_SCALE)
+#     arm.set_goal_tolerance(0.01)
+#     arm.set_goal_orientation_tolerance(math.pi)
 
-if __name__ == "__main__":
-    main()
+#     # wait for current joint states
+#     while len(arm.get_current_joint_values()) != len(arm.get_active_joints()) \
+#           and not rospy.is_shutdown():
+#         rospy.sleep(0.05)
+
+#     # 5) Raise the torso
+#     arm.set_joint_value_target({'torso_lift_joint': TORSO_LIFT})
+#     arm.go(wait=True)
+#     arm.stop(); arm.clear_pose_targets()
+
+#     # 6) Add the table to the planning scene
+#     # table_pose = PoseStamped()
+#     # table_pose.header.frame_id = "base_footprint"
+#     # table_pose.pose.position.x = 0.8
+#     # table_pose.pose.position.z = TABLE_Z
+#     # table_pose.pose.orientation.w = 1.0
+#     # scene.add_box("table", table_pose, size=(1.0, 1.2, TABLE_THICK))
+#     # arm.set_support_surface_name("table")
+
+
+#     # transform target into the arm's planning frame if needed
+#     planning_frame = arm.get_planning_frame()
+#     if target.header.frame_id != planning_frame:
+#         tr = tf_buffer.lookup_transform(planning_frame,
+#                                         target.header.frame_id,
+#                                         rospy.Time(0),
+#                                         rospy.Duration(1.0))
+#         target = do_transform_pose(target, tr)
+
+#     # 7) Call the placement function
+#     success = place_at(
+#         target.pose.position.x,
+#         target.pose.position.y,
+#         target.pose.position.z,
+#         arm=arm,
+#         play=play,
+#         gripper_link=gripper_link,
+#         scene=scene,
+#         box_id=box_id
+#     )
+#     rospy.loginfo("Place operation %s", "SUCCEEDED" if success else "FAILED")
+
+#     # 8) Return to home
+#     home = PlayMotionGoal()
+#     home.motion_name   = "home"
+#     home.skip_planning = False
+#     play.send_goal_and_wait(home)
+
+#     moveit_commander.roscpp_shutdown()
+
+# if __name__ == "__main__":
+#     main()
 
