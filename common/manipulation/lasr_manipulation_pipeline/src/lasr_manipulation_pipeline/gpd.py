@@ -187,3 +187,50 @@ def shift_or_filter_grasps_to_surface(
     )
 
     return filtered_poses, filtered_approaches, filtered_scores, filtered_openings
+
+
+def angle_between(v1: np.ndarray, v2: np.ndarray) -> float:
+    """
+    Returns the angle (in radians) between two vectors.
+    """
+    v1_u = v1 / np.linalg.norm(v1)
+    v2_u = v2 / np.linalg.norm(v2)
+    return np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0, 1.0))
+
+
+def filter_by_approach_angles(
+    grasps: List[Pose],
+    angle_threshold_deg: float = 15.0,
+) -> List[Pose]:
+    """
+    Filters grasps so that their x-axis (approach vector) is close to canonical directions (minus bottom up)
+    """
+
+    # Canonical approach directions (unit vectors)
+    canonical_dirs = [
+        np.array([1, 0, 0]),  # front
+        np.array([-1, 0, 0]),  # back
+        np.array([0, 1, 0]),  # left
+        np.array([0, -1, 0]),  # right
+        np.array([0, 0, -1]),  # top-down
+    ]
+
+    threshold_rad = np.deg2rad(angle_threshold_deg)
+    filtered_grasps = []
+
+    for pose in grasps:
+        quat = [
+            pose.orientation.x,
+            pose.orientation.y,
+            pose.orientation.z,
+            pose.orientation.w,
+        ]
+        rot = o3d.geometry.get_rotation_matrix_from_quaternion(quat)
+        x_axis = rot[:, 0]  # gripper x-axis (approach)
+
+        if any(angle_between(x_axis, ref) < threshold_rad for ref in canonical_dirs):
+            filtered_grasps.append(pose)
+
+    print(f"[Angle Filter] Kept {len(filtered_grasps)} / {len(grasps)} grasps")
+
+    return filtered_grasps

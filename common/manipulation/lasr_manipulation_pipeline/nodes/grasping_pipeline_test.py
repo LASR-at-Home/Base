@@ -44,7 +44,11 @@ from lasr_manipulation_pipeline import sam
 from lasr_manipulation_pipeline import visualisation
 
 PACKAGE_PATH: str = rospkg.RosPack().get_path("lasr_manipulation_pipeline")
-MESH_NAME: str = "pringles.ply"
+MESH_NAME: str = "starbucks_coffee.ply"
+
+"""
+Ensure grasp approach is forwards.
+"""
 
 
 class GraspingPipeline:
@@ -362,22 +366,22 @@ class GraspingPipeline:
         self,
         pregrasp_pose: Pose,
         mesh: o3d.geometry.PointCloud,
-        max_advance: float = 0.12,  # max finger length
+        max_advance: float = 0.12,
         step: float = 0.001,
         contact_threshold: float = 0.005,
+        palm_clearance: float = 0.03,
     ) -> float:
         """
-        Determines how far to move forward (along gripper x-axis) from the pregrasp pose
-        before contacting the object. Avoids pushing through the object.
+        Determines how far to move forward along the gripper's x-axis from the pregrasp pose
+        to make contact with the object, while avoiding pushing through or colliding with it.
         """
-
-        # Build KDTree from mesh
         if not mesh.has_points():
             raise ValueError("Mesh point cloud is empty.")
 
+        # KD-tree for contact checking
         kdtree = o3d.geometry.KDTreeFlann(mesh)
 
-        # Extract pregrasp position
+        # Position and orientation
         origin = np.array(
             [
                 pregrasp_pose.position.x,
@@ -385,8 +389,6 @@ class GraspingPipeline:
                 pregrasp_pose.position.z,
             ]
         )
-
-        # Get gripper x-axis (forward) in world frame from pose orientation
         quat = [
             pregrasp_pose.orientation.x,
             pregrasp_pose.orientation.y,
@@ -394,19 +396,41 @@ class GraspingPipeline:
             pregrasp_pose.orientation.w,
         ]
         rot_matrix = o3d.geometry.get_rotation_matrix_from_quaternion(quat)
-        forward_dir = rot_matrix[:, 0]  # x-axis of gripper
+        forward_dir = rot_matrix[:, 0]  # Gripper's x-axis (world frame)
+        forward_dir = forward_dir / np.linalg.norm(forward_dir)
 
-        # Step along -x (into the object)
-        for d in np.arange(0, max_advance, step):
+        # Estimate object width in approach direction
+        object_width = self._estimate_object_width_along_vector(mesh, forward_dir)
+        max_safe_forward = max(0.0, 0.5 * object_width - palm_clearance)
+        max_safe_forward = min(max_safe_forward, max_advance)
+
+        # Raycast-style probe
+        for d in np.arange(0, max_safe_forward, step):
             probe = origin - d * forward_dir
             [_, _, dists] = kdtree.search_knn_vector_3d(probe, 1)
-
             if dists and np.sqrt(dists[0]) <= contact_threshold:
-                # Found surface contact
-                return d
+                return max(0.0, d - palm_clearance)
 
-        # Default: full reach
-        return max_advance
+        return max_safe_forward
+
+    def _estimate_object_width_along_vector(
+        self,
+        mesh: o3d.geometry.PointCloud,
+        approach_vector: np.ndarray,
+    ) -> float:
+        """
+        Estimate the object's width in the direction of the grasp approach vector.
+        """
+        obb = mesh.get_oriented_bounding_box()
+        obb_axes = obb.R  # Columns are principal axes
+        obb_extents = obb.extent  # Lengths along each axis
+
+        approach_vector = approach_vector / np.linalg.norm(approach_vector)
+
+        # Project approach vector onto OBB axes
+        projections = [abs(np.dot(approach_vector, axis)) for axis in obb_axes.T]
+        width = sum(p * e for p, e in zip(projections, obb_extents))
+        return width
 
     def run(self, debug: bool = False, execute: bool = True):
         if execute:
@@ -499,6 +523,16 @@ class GraspingPipeline:
         # )
         grasps, approaches, scores, openings = gpd.shift_or_filter_grasps_to_surface(
             mesh_pcd, grasps, approaches, scores, openings
+        )
+        grasps_base_footprint = transformations.tf_poses(
+            grasps, pcl.header.frame_id, "base_footprint", self._tf_buffer
+        )
+        grasps_base_footprint = gpd.filter_by_approach_angles(grasps_base_footprint)
+        grasps = transformations.tf_poses(
+            grasps_base_footprint,
+            "base_footprint",
+            pcl.header.frame_id,
+            self._tf_buffer,
         )
 
         if debug:
