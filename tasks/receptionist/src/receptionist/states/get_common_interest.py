@@ -48,10 +48,11 @@ class GetInterest(smach.State):
             commonality = llm_response.output.strip().lower()
             if commonality:
                 commonality = commonality.split(" ", 1)[0]
+                commonality = "in " + commonality
 
             userdata.interest_message = (
                 "To break the ice, I thought you'd like to know that "
-                f"{most_similar_1_name} and {most_similar_2_name} have a common interest in {commonality} as they both like "
+                f"{most_similar_1_name} and {most_similar_2_name} have a common interest {commonality} as they both like "
                 f"{most_similar_1} and {most_similar_2}."
             )
         except:
