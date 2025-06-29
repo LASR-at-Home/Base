@@ -85,6 +85,7 @@ class GetDrink(smach.StateMachine):
             request = LlmRequest()
             request.system_prompt = f"You are a robot acting as a party host. You are tasked with identifying the favourite drink belonging to a guest. The possible drinks are {','.join(self._possible_drinks)}. You will receive input such as 'my favourite drink is cola'. Output only the drink. If you can't identify the drink, output 'None'."
             request.prompt = transcription
+            request.max_tokens = 3  # Limit to a single word response
             response = self._llm(request)
             drink = response.output.strip()
 
