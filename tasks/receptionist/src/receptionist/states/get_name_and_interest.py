@@ -94,6 +94,7 @@ class GetNameAndInterest(smach.StateMachine):
                 interest = interest.split()[
                     :2
                 ]  # Take only the first two word of interest
+                interest = " ".join(interest)
             interest = interest.strip()
 
             # Try to match an exact name from transcription

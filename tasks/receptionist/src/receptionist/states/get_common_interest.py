@@ -2,7 +2,7 @@ import rospy
 import smach
 
 from lasr_skills import Say
-from lasr_llm_msgs.srv import SentenceEmbedding, Llm
+from lasr_llm_msgs.srv import SentenceEmbedding, Llm, LlmRequest
 
 
 class GetInterest(smach.State):
@@ -39,13 +39,13 @@ class GetInterest(smach.State):
             most_similar_1_name = guest_ids[interests.index(most_similar_1)]
             most_similar_2_name = guest_ids[interests.index(most_similar_2)]
 
-            llm_request = Llm(
+            llm_request = LlmRequest(
                 system_prompt="Please give a single world to describe the similarities between two interests. For example, you may be given 'football, tennis', and you should output something like 'sports'. Please output only one word.",
                 prompt=f"{most_similar_1}, {most_similar_2}",
                 max_tokens=5,
             )
             llm_response = self._llm_srv(llm_request)
-            commonality = llm_response.output.strip().lower()
+            commonality = llm_response.output.strip()
             if commonality:
                 commonality = commonality.split(" ", 1)[0]
                 commonality = "in " + commonality
@@ -55,7 +55,11 @@ class GetInterest(smach.State):
                 f"{most_similar_1_name} and {most_similar_2_name} have a common interest {commonality} as they both like "
                 f"{most_similar_1} and {most_similar_2}."
             )
-        except:
+        except Exception as e:
+            rospy.logerr(f"Error in GetInterest state: {e}")
+            userdata.interest_message = (
+                "I couldn't find a common interest between the guests."
+            )
             return "failed"
 
         return "succeeded"
