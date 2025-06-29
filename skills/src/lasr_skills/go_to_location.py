@@ -112,104 +112,111 @@ class GoToLocation(smach.StateMachine):
                     },
                 )
 
-                if location is not None:
-                    smach.StateMachine.add(
-                        "GO_TO_LOCATION",
-                        smach_ros.SimpleActionState(
-                            "move_base",
-                            MoveBaseAction,
-                            goal=MoveBaseGoal(
-                                target_pose=PoseStamped(
-                                    pose=location, header=Header(frame_id="map")
-                                )
-                            ),
-                        ),
-                        transitions={
-                            "succeeded": "DISABLE_HEAD_MANAGER",
-                            "aborted": "CHECK_RETRY",
-                            "preempted": "CHECK_RETRY",
-                        },
-                    )
-                elif location_param is not None:
-                    smach.StateMachine.add(
-                        "GO_TO_LOCATION",
-                        smach_ros.SimpleActionState(
-                            "move_base",
-                            MoveBaseAction,
-                            goal=MoveBaseGoal(
-                                target_pose=PoseStamped(
-                                    pose=Pose(
-                                        position=Point(
-                                            **rospy.get_param(
-                                                f"{location_param}/position"
-                                            )
-                                        ),
-                                        orientation=Quaternion(
-                                            **rospy.get_param(
-                                                f"{location_param}/orientation"
-                                            )
-                                        ),
-                                    ),
-                                    header=Header(frame_id="map"),
-                                )
-                            ),
-                        ),
-                        transitions={
-                            "succeeded": "DISABLE_HEAD_MANAGER",
-                            "aborted": "CHECK_RETRY",
-                            "preempted": "CHECK_RETRY",
-                        },
-                    )
-                else:
-                    smach.StateMachine.add(
-                        "GO_TO_LOCATION",
-                        smach_ros.SimpleActionState(
-                            "move_base",
-                            MoveBaseAction,
-                            goal_cb=lambda ud, _: MoveBaseGoal(
-                                target_pose=PoseStamped(
-                                    pose=ud.location, header=Header(frame_id="map")
-                                )
-                            ),
-                            input_keys=["location"],
-                        ),
-                        transitions={
-                            "succeeded": "DISABLE_HEAD_MANAGER",
-                            "aborted": "CHECK_RETRY",
-                            "preempted": "CHECK_RETRY",
-                        },
-                    )
-
+            if location is not None:
                 smach.StateMachine.add(
-                    "CHECK_RETRY",
-                    CheckRetry(self._retry_attempts),
-                    transitions={
-                        "retry": "CLEAR_COST_MAPS",
-                        "done": "RAISE_BASE",
-                    },
-                    remapping={"retry_count": "retry_count"},
-                )
-
-                smach.StateMachine.add(
-                    "DISABLE_HEAD_MANAGER",
-                    smach_ros.ServiceState(
-                        "/pal_startup_control/stop",
-                        StartupStop,
-                        request=StartupStopRequest("head_manager"),
+                    "GO_TO_LOCATION",
+                    smach_ros.SimpleActionState(
+                        "move_base",
+                        MoveBaseAction,
+                        goal=MoveBaseGoal(
+                            target_pose=PoseStamped(
+                                pose=location, header=Header(frame_id="map")
+                            )
+                        ),
                     ),
                     transitions={
-                        "succeeded": "RAISE_BASE",
-                        "aborted": "failed",
-                        "preempted": "failed",
+                        "succeeded": "DISABLE_HEAD_MANAGER",
+                        "aborted": "CHECK_RETRY",
+                        "preempted": "CHECK_RETRY",
+                    },
+                )
+            elif location_param is not None:
+                smach.StateMachine.add(
+                    "GO_TO_LOCATION",
+                    smach_ros.SimpleActionState(
+                        "move_base",
+                        MoveBaseAction,
+                        goal=MoveBaseGoal(
+                            target_pose=PoseStamped(
+                                pose=Pose(
+                                    position=Point(
+                                        **rospy.get_param(f"{location_param}/position")
+                                    ),
+                                    orientation=Quaternion(
+                                        **rospy.get_param(
+                                            f"{location_param}/orientation"
+                                        )
+                                    ),
+                                ),
+                                header=Header(frame_id="map"),
+                            )
+                        ),
+                    ),
+                    transitions={
+                        "succeeded": "DISABLE_HEAD_MANAGER",
+                        "aborted": "CHECK_RETRY",
+                        "preempted": "CHECK_RETRY",
+                    },
+                )
+            else:
+                smach.StateMachine.add(
+                    "GO_TO_LOCATION",
+                    smach_ros.SimpleActionState(
+                        "move_base",
+                        MoveBaseAction,
+                        goal_cb=lambda ud, _: MoveBaseGoal(
+                            target_pose=PoseStamped(
+                                pose=ud.location, header=Header(frame_id="map")
+                            )
+                        ),
+                        input_keys=["location"],
+                    ),
+                    transitions={
+                        "succeeded": "DISABLE_HEAD_MANAGER",
+                        "aborted": "CHECK_RETRY",
+                        "preempted": "CHECK_RETRY",
                     },
                 )
 
-                smach.StateMachine.add(
-                    "RAISE_BASE",
-                    PlayMotion("post_navigation"),
-                    transitions={
-                        "succeeded": "succeeded",
-                        "aborted": "failed",
-                        "preempted": "failed",
-                    },
-                )
+            smach.StateMachine.add(
+                "CHECK_RETRY",
+                CheckRetry(self._retry_attempts),
+                transitions={
+                    "retry": "CLEAR_COST_MAPS",
+                    "done": "RAISE_BASE",
+                },
+                remapping={"retry_count": "retry_count"},
+            )
+
+            smach.StateMachine.add(
+                "CLEAR_COST_MAPS",
+                ClearCostMaps(),
+                transitions={
+                    "succeeded": "GO_TO_LOCATION",
+                    "failed": "RAISE_BASE",
+                },
+            )
+
+            smach.StateMachine.add(
+                "DISABLE_HEAD_MANAGER",
+                smach_ros.ServiceState(
+                    "/pal_startup_control/stop",
+                    StartupStop,
+                    request=StartupStopRequest("head_manager"),
+                ),
+                transitions={
+                    "succeeded": "RAISE_BASE",
+                    "aborted": "failed",
+                    "preempted": "failed",
+                },
+            )
+
+            smach.StateMachine.add(
+                "RAISE_BASE",
+                PlayMotion("post_navigation"),
+                transitions={
+                    "succeeded": "succeeded",
+                    "aborted": "failed",
+                    "preempted": "failed",
+                },
+            )
