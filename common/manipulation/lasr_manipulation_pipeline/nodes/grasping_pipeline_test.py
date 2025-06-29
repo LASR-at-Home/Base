@@ -88,7 +88,10 @@ class GraspingPipeline:
             "/collision_object", CollisionObject, queue_size=1, latch=True
         )
 
-        self._pcd = o3d.io.read_point_cloud(self._mesh_path)
+        mesh = o3d.io.read_triangle_mesh(self._mesh_path)
+        self._pcd = mesh.sample_points_poisson_disk(
+            number_of_points=10000, init_factor=5
+        )
         rospy.loginfo("Read mesh.")
 
         self._tf_buffer = tf2_ros.Buffer(cache_time=rospy.Duration(10.0))
