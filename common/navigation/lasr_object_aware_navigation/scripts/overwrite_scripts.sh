@@ -9,7 +9,7 @@
 set -e
 
 # ----------------------------
-# 1. Overwrite recovery_behaviors_rgbd.yaml
+# Overwrite recovery_behaviors_rgbd.yaml
 # ----------------------------
 
 sudo tee "/opt/pal/gallium/share/pal_navigation_cfg_tiago/config/base/common/recovery_behaviors_rgbd.yaml" > /dev/null <<EOF
@@ -40,7 +40,7 @@ EOF
 echo "[INFO] Successfully replaced recovery_behaviors_rgbd.yaml"
 
 # ----------------------------
-# 2. Overwrite global_costmap_plugins_rgbd.yaml
+# Overwrite global_costmap_plugins_rgbd.yaml
 # ----------------------------
 
 sudo tee "/opt/pal/gallium/share/pal_navigation_cfg_tiago/config/base/common/global_costmap_plugins_rgbd.yaml" > /dev/null <<EOF
@@ -69,10 +69,216 @@ EOF
 echo "[INFO] Successfully replaced global_costmap_plugins_rgbd.yaml"
 
 # ----------------------------
-# 3. Overwrite move_base.launch
+# Overwrite local_costmap_plugins_rgbd.yaml
+# ----------------------------
+sudo tee "/opt/pal/gallium/share/pal_navigation_cfg_tiago/config/base/common/local_costmap_plugins_rgbd.yaml" > /dev/null <<'EOF'
+# Independent settings for the local costmap
+local_costmap:
+  # attention, the order and combination method matters
+  plugins:
+    - name: obstacle_laser_layer
+      type: 'costmap_2d::ObstacleLayer'
+    - name: ramp_layer
+      type: 'polycost::PolyCostLayer'
+    - name: obstacle_sonar_layer
+      type: 'range_sensor_layer::RangeSensorLayer'
+    - name: static_vo_layer
+      type: 'costmap_2d::StaticLayer'
+    - name: obstacle_rgbd_layer
+      type: 'costmap_2d::ObstacleLayer'
+    - name: inflation_layer
+      type: 'costmap_2d::InflationLayer'
+EOF
+
+# ----------------------------
+# Overwrite global_costmap.yaml
 # ----------------------------
 
-sudo tee "/opt/pal/gallium/share/tiago_2dnav/launch/move_base.launch" > /dev/null <<EOF
+sudo tee "/opt/pal/gallium/share/pal_navigation_cfg_tiago/config/base/common/global_costmap.yaml" > /dev/null <<EOF
+# Independent settings for the planner's costmap
+global_costmap:
+  global_frame    : map
+  robot_base_frame: base_footprint
+  transform_tolerance: 0.3
+
+  update_frequency : 10.0
+  publish_frequency: 1.0
+
+  track_unknown_space: true
+  unknown_cost_value : 255
+
+  robot_radius: 0.275
+
+  #plugins are loaded in a separate yaml file
+
+  static_layer:
+    enabled  : true
+    map_topic: map
+
+  obstacle_laser_layer:
+    enabled: true
+    observation_sources: base_scan
+    combination_method: 0 # can erase static layer
+
+    base_scan:
+      sensor_frame: base_laser_link
+      data_type: LaserScan
+      topic: scan
+      expected_update_rate: 0.3
+      observation_persistence: 0.0
+      inf_is_valid: true
+      marking: true
+      clearing: true
+      raytrace_range: 4.0
+      obstacle_range: 3.0
+
+  obstacle_sonar_layer:
+    enabled: false
+    ns: ""
+    topics: ["/sonar_base"]
+    no_readings_timeout: 0.0
+    clear_threshold: 0.20
+    mark_threshold: 0.80
+    clear_on_max_reading: true
+
+  ramp_layer:
+    enabled : true
+    fill_polygons: true
+    enable_invert: false
+    keep_free: true
+
+  static_highway_layer:
+    enabled  : true
+    map_topic: highways_map
+    first_map_only: false           # subscribes to the map_topic for receiving updates
+    trinary_costmap: false
+    use_maximum: true               # do not override the previous layers of the costmap
+
+  static_vo_layer:
+    enabled  : true
+    map_topic: vo_map
+    first_map_only: false           # subscribes to the map_topic for receiving updates
+    use_maximum: true               # do not override the previous layers of the costmap
+
+  obstacle_rgbd_layer:
+    enabled: true
+    observation_sources: rgbd_scan
+    combination_method: 1
+    rgbd_scan:
+      sensor_frame: rgbd_laser_link
+      data_type: LaserScan
+      topic: rgbd_scan
+      expected_update_rate: 0.5
+      observation_persistence: 0.0
+      inf_is_valid: true
+      marking: true
+      clearing: true
+      raytrace_range: 2.9
+      obstacle_range: 2.8
+      blanking_range: 1.55
+      mark_blanking: true
+      debug: false
+
+  inflation_layer:
+    enabled            : true
+    inflation_radius   : 0.6
+    cost_scaling_factor: 25.0
+EOF
+
+echo "[INFO] Successfully replaced global_costmap.yaml"
+
+# ----------------------------
+# Overwrite local_costmap.launch
+# ----------------------------
+sudo tee "/opt/pal/gallium/share/pal_navigation_cfg_tiago/config/base/common/local_costmap.yaml" > /dev/null <<'EOF'
+# Independent settings for the local costmap
+local_costmap:
+  global_frame    : odom
+  robot_base_frame: base_footprint
+  transform_tolerance: 0.3
+
+  update_frequency : 10.0
+  publish_frequency: 1.0
+
+  rolling_window: true
+  width         : 4.0
+  height        : 4.0
+  resolution    : 0.025
+
+  robot_radius: 0.275
+
+  #plugins are loaded in a separate yaml file
+
+
+  obstacle_laser_layer:
+    enabled: true
+    observation_sources: base_scan
+    combination_method: 0 # can erase static layer
+
+    base_scan:
+      sensor_frame: base_laser_link
+      data_type: LaserScan
+      topic: scan
+      expected_update_rate: 0.3
+      observation_persistence: 1.0
+      inf_is_valid: true
+      marking: true
+      clearing: true
+      raytrace_range: 4.0
+      obstacle_range: 3.0
+
+  obstacle_sonar_layer:
+    enabled: false
+    ns: ""
+    topics: ["/sonar_base"]
+    no_readings_timeout: 0.0
+    clear_threshold: 0.20
+    mark_threshold: 0.80
+    clear_on_max_reading: true
+
+  ramp_layer:
+    enabled : true
+    fill_polygons: true
+    enable_invert: true
+
+  static_vo_layer:
+    enabled  : true
+    map_topic: vo_map
+    first_map_only: false
+    use_maximum: true
+    track_unknown_space: false
+
+  obstacle_rgbd_layer:
+    enabled: true
+    observation_sources: rgbd_scan
+    combination_method: 1
+    rgbd_scan:
+      sensor_frame: rgbd_laser_link
+      data_type: LaserScan
+      topic: rgbd_scan
+      expected_update_rate: 0.5
+      observation_persistence: 0.0
+      inf_is_valid: true
+      marking: true
+      clearing: true
+      raytrace_range: 2.9
+      obstacle_range: 2.8
+      blanking_range: 1.55
+      mark_blanking: true
+      debug: false
+
+  inflation_layer:
+    enabled            : false # not used for pal_local_planner
+    inflation_radius   : 0.55
+    cost_scaling_factor: 25.0
+EOF
+
+echo "[INFO] Successfully replaced local_costmap.yaml"
+
+# ----------------------------
+# Overwrite move_base.launch
+# ----------------------------
+sudo tee "/opt/pal/gallium/share/tiago_2dnav/launch/move_base.launch" > /dev/null <<'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <launch>
 
