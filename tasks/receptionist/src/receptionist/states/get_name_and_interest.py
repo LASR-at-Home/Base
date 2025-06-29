@@ -84,7 +84,7 @@ class GetNameAndInterest(smach.StateMachine):
                 "and interest, e.g. 'john,robotics'. Make sure that the interest is only one or two words. If you can't identify the name or interest, output 'unknown', e.g. 'john,unknown'."
             )
             request.prompt = transcription
-            request.max_tokens = 5
+            request.max_tokens = 10
 
             response = self._llm(request)
             # Maxsplit in case the interest is more than one word.

@@ -125,9 +125,6 @@ class EyeTracker:
             y_delta (float): The amount to move the head up by. Defaults to 0.25.
         """
 
-        rospy.loginfo(
-            f"Moving head up from position {current_head_position} to {current_head_position[1] + y_delta}"
-        )
         goal = FollowJointTrajectoryGoal()
         goal.trajectory.joint_names = ["head_1_joint", "head_2_joint"]
         point = JointTrajectoryPoint()
@@ -144,14 +141,12 @@ class EyeTracker:
 
         result = self._head_action_client.send_goal_and_wait(goal)
         self._move_up_count += 1
-        rospy.loginfo(f"Head moved with result {result}")
 
     def execute(self, goal: EyeTrackerGoal):
         rospy.loginfo("Beginning eye tracking...")
         self._robot_point = rospy.wait_for_message(
             "/robot_pose", PoseWithCovarianceStamped, timeout=5.0
         ).pose.pose.position
-        rospy.loginfo(f"Robot point set to: {self._robot_point}")
         # First, look to person_point
         if goal.person_point is None:
             rospy.logerr("No person point provided in goal.")
@@ -159,7 +154,6 @@ class EyeTracker:
                 result=EyeTrackerResult(), text="No person point provided."
             )
             return
-        rospy.loginfo(f"Looking to person point: {goal.person_point}")
         g = PointHeadGoal(
             pointing_frame="head_2_link",
             pointing_axis=Point(1.0, 0.0, 0.0),

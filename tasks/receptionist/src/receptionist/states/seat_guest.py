@@ -55,7 +55,7 @@ class LearnHostFace(smach.StateMachine):
                 "LEARN_HOST_FACE",
                 ReceptionistLearnFaces(
                     guest_id="host",
-                    dataset_size=10,
+                    dataset_size=5,
                 ),
                 transitions={
                     "succeeded": "succeeded",
@@ -222,6 +222,17 @@ class SeatGuest(smach.StateMachine):
 
         with self:
             smach.StateMachine.add(
+                "SAY_FINDING_SEAT",
+                Say(
+                    "We've arrived at the seating area. I will now find a seat for you."
+                ),
+                transitions={
+                    "succeeded": "LOOK_TO_SOFA",
+                    "aborted": "LOOK_TO_SOFA",
+                    "preempted": "LOOK_TO_SOFA",
+                },
+            )
+            smach.StateMachine.add(
                 "LOOK_TO_SOFA",
                 LookToPoint(
                     pointstamped=PointStamped(
@@ -279,7 +290,7 @@ class SeatGuest(smach.StateMachine):
             )
             # Process detections
             if learn_host:
-                detection_transition = "LEARN_HOST_FACE"
+                detection_transition = "SAY_LEARN_HOST_FACE"
             else:
                 detection_transition = "LOOK_TO_SEAT"
             smach.StateMachine.add(
@@ -298,6 +309,15 @@ class SeatGuest(smach.StateMachine):
             )
             if learn_host:
                 # Look to the only person detection and learn the host's face.
+                smach.StateMachine.add(
+                    "SAY_LEARN_HOST_FACE",
+                    Say("I'm quickly remembering the host's face."),
+                    transitions={
+                        "succeeded": "LEARN_HOST_FACE",
+                        "aborted": "failed",
+                        "preempted": "failed",
+                    },
+                )
                 smach.StateMachine.add(
                     "LEARN_HOST_FACE",
                     LearnHostFace(),

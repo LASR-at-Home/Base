@@ -376,7 +376,7 @@ class Receptionist(smach.StateMachine):
             GoToLocation(self.table_pose),
             transitions={
                 "succeeded": f"SAY_ARRIVE_GUEST_{guest_id}",
-                "failed": f"SAY_ARRIVE_GUEST_{guest_id}",
+                "failed": f"GO_TO_TABLE_LOCATION_GUEST_{guest_id}",
             },
         )
 
@@ -421,36 +421,7 @@ class Receptionist(smach.StateMachine):
             f"GO_TO_SEAT_LOCATION_GUEST_{guest_id}",
             GoToLocation(self.seat_pose),
             transitions={
-                "succeeded": f"SAY_WAIT_GUEST_{guest_id}",
-                "failed": f"GO_TO_SEAT_LOCATION_GUEST_{guest_id}",
-            },
-        )
-
-        smach.StateMachine.add(
-            f"SAY_WAIT_GUEST_{guest_id}",
-            Say(text="Please wait here on my left."),
-            transitions={
-                "succeeded": f"LOOK_EYES_{guest_id}",
-                "preempted": "failed",
-                "aborted": "failed",
-            },
-        )
-
-        smach.StateMachine.add(
-            f"LOOK_EYES_{guest_id}",
-            PlayMotion(motion_name="look_very_left"),
-            transitions={
-                "succeeded": f"WAIT_{guest_id}_2",
-                "preempted": "failed",
-                "aborted": "failed",
-            },
-        )
-
-        smach.StateMachine.add(
-            f"WAIT_{guest_id}_2",
-            Wait(1),
-            transitions={
                 "succeeded": f"SEAT_GUEST_{guest_id}",
-                "failed": f"SEAT_GUEST_{guest_id}",
+                "failed": f"GO_TO_SEAT_LOCATION_GUEST_{guest_id}",
             },
         )

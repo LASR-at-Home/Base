@@ -3,7 +3,12 @@
 import rospy
 import smach
 
-from lasr_vision_msgs.srv import AddFace, AddFaceRequest, YoloPoseDetection
+from lasr_vision_msgs.srv import (
+    AddFace,
+    AddFaceRequest,
+    YoloPoseDetection,
+    YoloPoseDetectionRequest,
+)
 from lasr_skills.vision import CropImage3D
 from lasr_skills import Detect3D
 from cv_bridge import CvBridge
@@ -31,7 +36,7 @@ class ReceptionistLearnFaces(smach.StateMachine):
 
         def execute(self, userdata):
             image_raw = userdata.image_raw
-            req = YoloPoseDetection()
+            req = YoloPoseDetectionRequest()
             req.image_raw = image_raw
             req.model = "yolo11n-pose.pt"
             req.confidence = 0.5
@@ -43,7 +48,7 @@ class ReceptionistLearnFaces(smach.StateMachine):
                 else:
                     for keypoint_detection in response.detections:
                         for keypoint in keypoint_detection.keypoints:
-                            if "eye" in keypoint.name.lower():
+                            if "eye" in keypoint.keypoint_name.lower():
                                 result = "succeeded"
                                 break
             except rospy.ServiceException as e:
@@ -101,7 +106,7 @@ class ReceptionistLearnFaces(smach.StateMachine):
                 )
                 return "failed"
 
-    def __init__(self, guest_id: str, dataset_size: int = 10):
+    def __init__(self, guest_id: str, dataset_size: int = 5):
         smach.StateMachine.__init__(
             self, outcomes=["succeeded", "failed"], input_keys=["guest_data"]
         )

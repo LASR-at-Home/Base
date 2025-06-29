@@ -210,7 +210,7 @@ class HandleNameInterest(smach.StateMachine):
                     f"PARSE_NAME_INTEREST_{guest_id}",
                     GetNameAndInterest(guest_id, False),
                     transitions={
-                        "succeeded": f"SAY_LEARN_FACE_GUEST_{guest_id}",
+                        "succeeded": f"succeeded",
                         "failed": f"REPEAT_GET_NAME_INTEREST_{guest_id}",
                     },
                     remapping={"guest_transcription": "transcribed_speech"},

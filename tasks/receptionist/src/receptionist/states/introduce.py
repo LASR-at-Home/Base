@@ -139,7 +139,7 @@ class Recognise(smach.State):
                 raise ValueError(
                     f"Somehow a non-person detection was passed to the cropping function: {detection.name}"
                 )
-            x, y, w, h = detection.bbox
+            x, y, w, h = detection.xywh
             # Find the centre of the bounding box
             bbox_centre_x = x + w // 2
             bbox_centre_y = y + h // 2
@@ -219,7 +219,7 @@ class Recognise(smach.State):
             target_frame="map",
         )
         response = yolo_detection(yolo_request)
-        cropped_rgb_image = self._crop_image(response.detections, self._rgb_image)
+        cropped_rgb_image = self._crop_image(response.detected_objects, self._rgb_image)
 
         request = Recognise3DRequest(
             image_raw=cropped_rgb_image,

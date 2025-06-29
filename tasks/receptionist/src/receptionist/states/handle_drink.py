@@ -7,6 +7,8 @@ from lasr_skills import (
     StartEyeTracker,
     StopEyeTracker,
     Rotate,
+    PlayMotion,
+    Say,
 )
 from receptionist.states import (
     GetDrink,
@@ -22,7 +24,17 @@ class HandleDrink(smach.StateMachine):
         )
 
         with self:
-            # Detect the neareast person
+            # Detect the nearest person
+            smach.StateMachine.add(
+                f"LOOK_CENTRE_BEVERAGE_GUEST_{guest_id}",
+                PlayMotion("look_centre"),
+                transitions={
+                    "succeeded": f"DETECT_PERSON_{guest_id}",
+                    "preempted": f"DETECT_PERSON_{guest_id}",
+                    "aborted": f"DETECT_PERSON_{guest_id}",
+                },
+            )
+
             smach.StateMachine.add(
                 f"DETECT_PERSON_{guest_id}",
                 Detect3D(
@@ -106,8 +118,16 @@ class HandleDrink(smach.StateMachine):
                 f"STOP_EYE_TRACKER_GUEST_{guest_id}",
                 StopEyeTracker(),
                 transitions={
-                    "succeeded": f"FACE_TABLE_GUEST_{guest_id}",
-                    "failed": f"FACE_TABLE_GUEST_{guest_id}",
+                    "succeeded": f"SAY_FIND_DRINK_{guest_id}",
+                    "failed": f"SAY_FIND_DRINK_{guest_id}",
+                },
+            )
+            smach.StateMachine.add(
+                f"SAY_FIND_DRINK_{guest_id}",
+                Say("Thank you! I will find your drink now."),
+                transitions={
+                    "succeeded": f"GET_DRINK_GUEST_{guest_id}",
+                    "failed": f"GET_DRINK_GUEST_{guest_id}",
                 },
             )
             smach.StateMachine.add(
@@ -117,4 +137,4 @@ class HandleDrink(smach.StateMachine):
                     "succeeded": "succeeded",
                     "failed": "failed",
                 },
-            ) 
+            )
