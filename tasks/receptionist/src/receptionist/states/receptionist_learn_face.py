@@ -3,13 +3,54 @@
 import rospy
 import smach
 
-from lasr_vision_msgs.srv import AddFace, AddFaceRequest
+from lasr_vision_msgs.srv import AddFace, AddFaceRequest, YoloPoseDetection
 from lasr_skills.vision import CropImage3D
 from lasr_skills import Detect3D
 from cv_bridge import CvBridge
 
 
 class ReceptionistLearnFaces(smach.StateMachine):
+
+    class CheckEyes(smach.State):
+        """Checks if eyes are present in a given RGB image"""
+
+        _yolo_service: rospy.ServiceProxy
+
+        def __init__(self):
+            smach.State.__init__(
+                self,
+                outcomes=["succeeded", "failed"],
+                input_keys=["image_raw"],
+            )
+
+            self._yolo_service = rospy.ServiceProxy(
+                "/yolo/detect_pose",
+                YoloPoseDetection,
+            )
+            self._yolo_service.wait_for_service()
+
+        def execute(self, userdata):
+            image_raw = userdata.image_raw
+            req = YoloPoseDetection()
+            req.image_raw = image_raw
+            req.model = "yolo11n-pose.pt"
+            req.confidence = 0.5
+
+            try:
+                response = self._yolo_service(req)
+                if not response.detections:
+                    result = "failed"
+                else:
+                    for keypoint_detection in response.detections:
+                        for keypoint in keypoint_detection.keypoints:
+                            if "eye" in keypoint.name.lower():
+                                result = "succeeded"
+                                break
+            except rospy.ServiceException as e:
+                rospy.logerr(f"Service call failed: {e}")
+                return "failed"
+
+            return result
 
     class LearnFaceState(smach.State):
         def __init__(self, guest_id: str):
@@ -67,6 +108,8 @@ class ReceptionistLearnFaces(smach.StateMachine):
         self._guest_id = guest_id
         self._dataset_size = dataset_size
 
+        # TODO:
+        # Should add a check for detecting eyes in image befor learning face.
         with self:
             self.userdata.num_images = 0
             smach.StateMachine.add(
@@ -75,8 +118,16 @@ class ReceptionistLearnFaces(smach.StateMachine):
                     filter=["person"],
                 ),
                 transitions={
-                    "succeeded": "CROP_IMAGE_3D",
+                    "succeeded": "CHECK_EYES",
                     "failed": "failed",
+                },
+            )
+            smach.StateMachine.add(
+                "CHECK_EYES",
+                self.CheckEyes(),
+                transitions={
+                    "succeeded": "CROP_IMAGE_3D",
+                    "failed": "DETECT_3D",
                 },
             )
             smach.StateMachine.add(
@@ -89,6 +140,9 @@ class ReceptionistLearnFaces(smach.StateMachine):
                 transitions={
                     "succeeded": "LEARN_FACE",
                     "failed": "failed",
+                },
+                remapping={
+                    "cropped_images": "cropped_images",
                 },
             )
 
