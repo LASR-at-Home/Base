@@ -140,6 +140,8 @@ class BagPickAndPlace(smach.State):
         self.langsam_srv = rospy.ServiceProxy("/lasr_vision/lang_sam", LangSam)
         rospy.loginfo("/lasr_vision/lang_sam service connected.")
 
+        self.tf_listener = tf.TransformListener()
+
     def on_mouse_click(self, event, x, y, flags, param):
         if event == cv2.EVENT_LBUTTONDOWN:
             self.click = (x, y)
@@ -155,90 +157,35 @@ class BagPickAndPlace(smach.State):
     def execute(self, userdata):
         try:
             self.adjust_torso(0.1)
-            rate = rospy.Rate(5)
-            start = rospy.Time.now()
-
-            # Wait for RGB image
-            while not rospy.is_shutdown():
-                if self.latest_rgb is not None:
-                    break
-                rate.sleep()
-                if (rospy.Time.now() - start).to_sec() > 10:
-                    rospy.logwarn("Timeout waiting for camera.")
-                    return "failed"
-
-            # --- LangSAM automatic bag segmentation ---
-            rgb_msg = self.bridge.cv2_to_imgmsg(self.latest_rgb, "bgr8")
-            langsam_req = LangSamRequest()
-            langsam_req.image_raw = rgb_msg
-            langsam_req.prompt = "bag"
-
-            try:
-                resp = self.langsam_srv(langsam_req)
-            except rospy.ServiceException as e:
-                rospy.logerr(f"LangSAM service call failed: {e}")
-                return "failed"
-
-            if not resp.detections:
+            self.wait_for_rgb()
+            resp = self.get_langsam_bags()
+            if not resp or not resp.detections:
                 rospy.logwarn("No bags detected.")
                 return "failed"
 
-            # Pick detection with highest detection_score
-            best_det = max(resp.detections, key=lambda det: det.detection_score)
-            mask_flat = np.array(best_det.seg_mask, dtype=np.uint8)
-            height, width = self.latest_rgb.shape[:2]
-            if mask_flat.size != height * width:
-                rospy.logerr(
-                    f"Mask size {mask_flat.size} does not match image size {height}x{width}"
-                )
+            intrinsics = self.get_camera_intrinsics()
+            result = self.find_closest_detection(
+                resp.detections,
+                self.latest_rgb,
+                self.latest_depth,
+                intrinsics,
+            )
+            if result is None:
+                rospy.logwarn("No valid bag detections found.")
                 return "failed"
-            mask = mask_flat.reshape((height, width))
+            mask, pts, centroid = result["mask"], result["pts"], result["centroid"]
 
-            # --- show the segmentation overlay for debugging
-            overlay = self.latest_rgb.copy()
-            overlay[mask > 0] = [0, 0, 255]  # mark mask in red
-            cv2.imshow("Auto-segmented bag", overlay)
-            cv2.waitKey(1000)
-            cv2.destroyWindow("Auto-segmented bag")
-
-            # --- 3D points as before
-            pts = []
-            h, w = mask.shape
-            fx = fy = 579.653076171875  # verify with camera_info!
-            cx, cy = 319.5, 239.5
-            for yy, xx in zip(*np.where(mask)):
-                z = self.latest_depth[yy, xx]
-                if np.isfinite(z) and z > 0.05:
-                    X = (xx - cx) * z / fx
-                    Y = (yy - cy) * z / fy
-                    pts.append((X, Y, z))
-            if not pts:
-                rospy.logwarn("No valid 3D points in mask.")
-                return "failed"
-            pts = np.array(pts)
-            centroid = np.median(pts, axis=0)
-            rospy.loginfo(f"Bag centroid (m): {centroid}")
-            xy = pts[:, :2] - centroid[:2]
-            cov = np.cov(xy, rowvar=False)
-            evals, evecs = np.linalg.eigh(cov)
-            long_axis = evecs[:, np.argmax(evals)]
-            orth = np.array([-long_axis[1], long_axis[0]])
-            orth /= np.linalg.norm(orth)
-            yaw = math.atan2(orth[1], orth[0])
-
+            self.show_mask_overlay(mask)
+            yaw = self.compute_yaw(pts, centroid)
             closest_pose = self.find_closest_pose_footprint(pts)
             centroid_pose = self.transform_centroid_pose_footprint(centroid, yaw)
-
             self.create_collision_object_from_pcl(pts)
             rospy.sleep(1.0)
             self.prepare_pick()
-            result = self.pick(centroid_pose, closest_pose)
-            if not result:
+            if not self.pick(centroid_pose, closest_pose):
                 self.ask_for_bag()
-
             self.stow_bag()
             self.hold_gripper_position()
-
             return "succeeded"
         except Exception as e:
             rospy.logerr(f"Exception in skill: {e}")
@@ -247,6 +194,103 @@ class BagPickAndPlace(smach.State):
             except:
                 pass
             return "failed"
+
+    def wait_for_rgb(self):
+        rate = rospy.Rate(5)
+        start = rospy.Time.now()
+        while not rospy.is_shutdown():
+            if self.latest_rgb is not None:
+                return
+            rate.sleep()
+            if (rospy.Time.now() - start).to_sec() > 10:
+                raise RuntimeError("Timeout waiting for camera.")
+
+    def get_langsam_bags(self):
+        rgb_msg = self.bridge.cv2_to_imgmsg(self.latest_rgb, "bgr8")
+        req = LangSamRequest()
+        req.image_raw = rgb_msg
+        req.prompt = "bag"
+        try:
+            return self.langsam_srv(req)
+        except rospy.ServiceException as e:
+            rospy.logerr(f"LangSAM service call failed: {e}")
+            return None
+
+    def get_camera_intrinsics(self):
+        # Ideally, fetch from CameraInfo topic!
+        return dict(fx=579.653076171875, fy=579.653076171875, cx=319.5, cy=239.5)
+
+    def mask_to_3d_points(self, mask, depth, fx, fy, cx, cy):
+        yy, xx = np.where(mask)
+        pts = []
+        for y, x in zip(yy, xx):
+            z = depth[y, x]
+            if np.isfinite(z) and z > 0.05:
+                X = (x - cx) * z / fx
+                Y = (y - cy) * z / fy
+                pts.append((X, Y, z))
+        if pts:
+            return np.array(pts)
+        else:
+            return None
+
+    def transform_point_to_base(self, point_xyz):
+        listener = self.tf_listener  # Instantiate tf_listener ONCE in __init__!
+        listener.waitForTransform(
+            "base_footprint",
+            "xtion_rgb_optical_frame",
+            rospy.Time(0),
+            rospy.Duration(1.0),
+        )
+        trans, rot = listener.lookupTransform(
+            "base_footprint", "xtion_rgb_optical_frame", rospy.Time(0)
+        )
+        T = tft.quaternion_matrix(rot)
+        T[0:3, 3] = trans
+        hom = np.hstack([point_xyz / 1000.0, 1.0])
+        pt_base = T @ hom
+        return pt_base[:3]
+
+    def find_closest_detection(self, detections, rgb, depth, intrinsics):
+        height, width = rgb.shape[:2]
+        min_dist = float("inf")
+        best = None
+        for det in detections:
+            mask_flat = np.array(det.seg_mask, dtype=np.uint8)
+            if mask_flat.size != height * width:
+                continue
+            mask = mask_flat.reshape((height, width))
+            pts = self.mask_to_3d_points(mask, depth, **intrinsics)
+            if pts is None:
+                continue
+            centroid = np.median(pts, axis=0)
+            try:
+                centroid_base = self.transform_point_to_base(centroid)
+                dist = np.linalg.norm(centroid_base[:2])
+            except Exception as e:
+                rospy.logwarn(f"TF error: {e}")
+                continue
+            if dist < min_dist:
+                min_dist = dist
+                best = dict(det=det, mask=mask, pts=pts, centroid=centroid)
+        return best
+
+    def show_mask_overlay(self, mask):
+        overlay = self.latest_rgb.copy()
+        overlay[mask > 0] = [0, 0, 255]
+        cv2.imshow("Auto-segmented bag", overlay)
+        cv2.waitKey(1000)
+        cv2.destroyWindow("Auto-segmented bag")
+
+    def compute_yaw(self, pts, centroid):
+        xy = pts[:, :2] - centroid[:2]
+        cov = np.cov(xy, rowvar=False)
+        evals, evecs = np.linalg.eigh(cov)
+        long_axis = evecs[:, np.argmax(evals)]
+        orth = np.array([-long_axis[1], long_axis[0]])
+        orth /= np.linalg.norm(orth)
+        yaw = math.atan2(orth[1], orth[0])
+        return yaw
 
     def create_collision_object_from_pcl(self, points):
         min_pt = points.min(axis=0)
