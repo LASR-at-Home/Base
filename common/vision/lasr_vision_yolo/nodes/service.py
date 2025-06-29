@@ -289,8 +289,15 @@ class YOLOService:
         for result in results:
             keypoints = Keypoint3DList()
             for idx, name in KEYPOINT_MAPPING.items():
+                h, w = 480, 640
                 u = result.keypoints.xy.squeeze()[idx, 0].round().int().item()
+                u = min(u, w - 1)
                 v = result.keypoints.xy.squeeze()[idx, 1].round().int().item()
+                v = min(v, h - 1)
+
+                rospy.loginfo(
+                    f"Keypoint {name} at ({u}, {v}) with confidence {result.keypoints.conf.squeeze()[idx].item()}"
+                )
 
                 # TODO check u,v are in range.
 

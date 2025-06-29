@@ -28,7 +28,7 @@ wait_pose:
     x: 4.761918180769168
     y: 6.349364932781153
     z: 0.0
-  orientation: 
+  orientation:
     x: 0.0
     y: 0.0
     z: 0.6909244042647134
@@ -39,7 +39,7 @@ table_pose:
     x: 0.4134325318979731
     y: 2.532584416117013
     z: 0.0
-  orientation: 
+  orientation:
     x: 0.0
     y: 0.0
     z: 0.6979548950550937
@@ -97,13 +97,12 @@ seat_pose:
     x: 0.7253542411729228
     y: -0.41696111136241965
     z: 0.0
-  orientation: 
+  orientation:
     x: 0.0
     y: 0.0
     z: -0.7903108029987692
     w: 0.6127061568675809
 
-search_motions: ["look_left", "look_right"]
 sofa_point:
   x: 0.9771156311035156
   y: -2.261979103088379

@@ -318,7 +318,9 @@ class DetectAllInPolygon(smach.StateMachine):
             Defaults to 0.1.
         """
 
-        super().__init__(outcomes=["succeeded", "failed"])
+        super().__init__(
+            outcomes=["succeeded", "failed"], output_keys=["detected_objects"]
+        )
 
         self._polygon = polygon
         self._min_coverage = min_coverage

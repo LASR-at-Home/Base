@@ -1,5 +1,5 @@
 # name of the keypoint
 string keypoint_name
 
-# point in camera frame
+# point in target frame
 geometry_msgs/Point point

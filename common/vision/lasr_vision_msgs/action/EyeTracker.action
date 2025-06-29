@@ -1,0 +1,6 @@
+# goal
+geometry_msgs/Point person_point
+---
+# result
+bool person_lost
+---
