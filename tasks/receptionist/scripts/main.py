@@ -84,8 +84,6 @@ if __name__ == "__main__":
     # exclude the sofa area from the seat area
     # seat_area = seat_area.difference(sofa_area)
 
-    search_motions = rospy.get_param("/receptionist/search_motions")
-
     sweep = rospy.get_param("/receptionist/sweep")
 
     wait_area_publisher.publish(
@@ -126,7 +124,6 @@ if __name__ == "__main__":
         right_table_area,
         centre_table_area,
         seat_pose,
-        search_motions,
         seat_area,
         sofa_area,
         sofa_point,

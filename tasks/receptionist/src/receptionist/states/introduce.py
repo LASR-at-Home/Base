@@ -19,7 +19,12 @@ from geometry_msgs.msg import PointStamped
 
 from lasr_skills import LookToPoint, Say, Wait
 from lasr_vision_msgs.msg import Detection3D
-from lasr_vision_msgs.srv import Recognise3D, Recognise3DRequest, YoloDetection3D
+from lasr_vision_msgs.srv import (
+    Recognise3D,
+    Recognise3DRequest,
+    YoloDetection3DRequest,
+    YoloDetection3D,
+)
 
 
 class ClearSeatingDetections(smach.State):
@@ -186,8 +191,9 @@ class Recognise(smach.State):
         ):
             rospy.sleep(0.05)
 
-        yolo_request = YoloDetection3D(
+        yolo_request = YoloDetection3DRequest(
             image_raw=self._rgb_image,
+            model="yolo11n-seg.pt",
             depth_image=self._depth_image,
             depth_camera_info=self._depth_camera_info,
             filter=["person"],

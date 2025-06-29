@@ -37,7 +37,6 @@ class Receptionist(smach.StateMachine):
         table_right_area: Polygon,
         centre_table_area: Polygon,
         seat_pose: Pose,
-        search_motions: List[str],
         seat_area: Polygon,
         sofa_area: Polygon,
         sofa_point: Point,
