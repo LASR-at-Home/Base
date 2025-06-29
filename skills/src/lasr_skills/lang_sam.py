@@ -20,6 +20,8 @@ from sensor_msgs.msg import Image
 
 import numpy 
 
+#
+
 class LangSamState(smach.State):
     def __init__(self, prompt: str, image_topic: str = "/xtion/rgb/image_raw"):
         smach.State.__init__(self, outcomes=["succeeded", "failed"], output_keys=['sam_detections'])
@@ -83,70 +85,67 @@ class LangSamState(smach.State):
             rospy.logerr(f"[LangSamState] LangSAM service call failed: {e}")
             return "failed"
 
+#
 
-# ------------------------------------
-# Helper: Extract 3D points from cloud
-# ------------------------------------
-def extract_points_from_pointcloud(mask_np, cloud_msg):
-    height = cloud_msg.height
-    width = cloud_msg.width
+def filter_point_cloud(mask, cloud_msg):
+        height = cloud_msg.height
+        width = cloud_msg.width
 
-    if mask_np.shape != (height, width):
-        rospy.logwarn("[extract_points_from_pointcloud] Mask shape mismatch.")
-        return []
+        if mask.shape != (height, width):
+            rospy.logwarn("[filter_point_cloud] Mask shape mismatch.")
+            return []
+            
+        cloud_iter = pc2.read_points(cloud_msg, skip_nans=False, field_names=("x", "y", "z"))
+        cloud_array = np.array(list(cloud_iter), dtype=np.float32).reshape((height, width, 3))
+        
+        selected_points = cloud_array[mask.astype(bool)]
+        selected_points = selected_points[~np.isnan(selected_points).any(axis=1)]
 
-    rospy.loginfo(f"[DEBUG] PointCloud size: {width}x{height}")
-    rospy.loginfo(f"[DEBUG] Mask size: {mask_np.shape}")
+        rospy.loginfo(f"[filter_point_cloud] Masked pixels: {np.count_nonzero(mask)}, Valid 3D points: {len(selected_points)}")
 
-    cloud_iter = pc2.read_points(cloud_msg, skip_nans=False, field_names=("x", "y", "z"))
-    cloud_array = np.array(list(cloud_iter), dtype=np.float32).reshape((height, width, 3))
+        return selected_points.tolist()
 
-    selected_points = cloud_array[mask_np.astype(bool)]
-    selected_points = selected_points[~np.isnan(selected_points).any(axis=1)]
-
-    rospy.loginfo(f"[DEBUG] Masked pixels: {np.count_nonzero(mask_np)}, Valid 3D points: {len(selected_points)}")
-
-    return selected_points.tolist()
-
-
-# -------------------------------
-# State: Extract 3D points from cloud
-# -------------------------------
-class PointCloudExtractionState(smach.State):
+class FilterPointCloudState(smach.State):
     def __init__(self, cloud_topic="/xtion/depth_pointsros"):
-        smach.State.__init__(self, outcomes=["done", "failed"],
-                             input_keys=["sam_detections"],
-                             output_keys=["sam_detections"])
+        smach.State.__init__(self, outcomes=["succeeded", "failed"], input_keys=["sam_detections"], output_keys=["sam_detections"])
         self.cloud_topic = cloud_topic
 
     def execute(self, userdata):
-        rospy.loginfo("[PointCloudExtractionState] Waiting for organized point cloud...")
         try:
-            cloud_msg = rospy.wait_for_message(self.cloud_topic, PointCloud2, timeout=5.0)
+            rospy.loginfo(f"[FilterPointCloudState] Waiting for {self.cloud_topic}")
+            cloud_msg = rospy.wait_for_message(self.cloud_topic, PointCloud2, timeout=5)
+            rospy.loginfo(f"[FilterPointCloudState] Received {self.cloud_topic}")
         except rospy.ROSException:
-            rospy.logerr("[PointCloudExtractionState] Failed to get PointCloud2.")
+            rospy.logerr(f"[FilterPointCloudState] Timeout: {self.cloud_topic}")
             return "failed"
-
+        
         mask = userdata.sam_detections["mask"]
-        points_3d = extract_points_from_pointcloud(mask, cloud_msg)
+        filtered_points = self.filter_point_cloud(mask, cloud_msg)
 
-        rospy.loginfo(f"[PointCloudExtractionState] Extracted {len(points_3d)} valid 3D points from point cloud.")
-        userdata.sam_detections["points_3d"] = points_3d
-        return "done"
+        rospy.loginfo(f"[FilterPointCloudState] Filtered {len(filtered_points)} points")
+        userdata.sam_detections["filtered_points"] = filtered_points
+        userdata.sam_detections["raw_points"]=cloud_msg
+        return "succeeded"
 
+# #
 
-# ----------------------
-# Final print/log state
-# ----------------------
-class PrintPointCountState(smach.State):
-    def __init__(self):
-        smach.State.__init__(self, outcomes=["done", "failed"], input_keys=["sam_detections"])
+# class PrintPointCountState(smach.State):
+#     def __init__(self):
+#         smach.State.__init__(self, outcomes=["done", "failed"], input_keys=["sam_detections"])
 
-    def execute(self, userdata):
-        points = userdata.sam_detections.get("points_3d", [])
-        rospy.loginfo(f"[PrintPointCountState] 3D points count: {len(points)}")
-        return "done"
+#     def execute(self, userdata):
+#         points = userdata.sam_detections.get("filtered_points", [])
+#         rospy.loginfo(f"[PrintPointCountState] 3D points count: {len(points)}")
+#         return "done"
     
+# #
+
+def select_depth_with_ratio(points, percentage = 75):
+    depths = numpy.array(points)
+    depths = depths[depths > 0]
+    if len(depths) == 0:
+        return None
+    return np.percentile(depths, percentage)
 
 class EstimateAverageDepthState(smach.State):
     def __init__(self):
@@ -165,9 +164,8 @@ class EstimateAverageDepthState(smach.State):
             userdata.sam_detections["average_depth"] = None
             return "done"
 
-        avg_depth = np.mean(z_values)
-        min_depth = np.min(z_values)
-        max_depth = np.max(z_values)
+        door_depth = select_depth_with_ratio(z_values, 75)
+        handle_depth = np.min(z_values)
 
         rospy.loginfo(f"[EstimateAverageDepthState] Avg depth: {avg_depth:.3f} m, Min: {min_depth:.3f} m, Max: {max_depth:.3f} m")
 
