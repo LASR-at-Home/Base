@@ -223,7 +223,7 @@ class HandleNameInterest(smach.StateMachine):
                     ),
                     transitions={
                         "succeeded": f"REPEAT_PARSE_NAME_INTEREST_{guest_id}",
-                        "failed": f"SAY_LEARN_FACE_GUEST_{guest_id}",
+                        "failed": "succeeded",
                     },
                 )
 
@@ -231,20 +231,10 @@ class HandleNameInterest(smach.StateMachine):
                     f"REPEAT_PARSE_NAME_INTEREST_{guest_id}",
                     GetNameAndInterest(guest_id, True),
                     transitions={
-                        "succeeded": f"SAY_LEARN_FACE_GUEST_{guest_id}",
-                        "failed": f"SAY_LEARN_FACE_GUEST_{guest_id}",
+                        "succeeded": f"succeeded",
+                        "failed": f"succeeded",
                     },
                     remapping={"guest_transcription": "transcribed_speech"},
-                )
-
-                smach.StateMachine.add(
-                    f"SAY_LEARN_FACE_GUEST_{guest_id}",
-                    Say(text="I am quickly remembering your face, 2secs please."),
-                    transitions={
-                        "succeeded": f"succeeded",
-                        "aborted": f"succeeded",
-                        "preempted": f"succeeded",
-                    },
                 )
 
     class GetAttributesAndLearnFace(smach.StateMachine):
