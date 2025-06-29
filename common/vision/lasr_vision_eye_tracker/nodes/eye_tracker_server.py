@@ -58,7 +58,8 @@ class EyeTracker:
     _robot_pose_sub = rospy.Subscriber
     _yolo_keypoint_service: rospy.ServiceProxy
     _robot_point: Optional[Point] = None
-    _max_eye_distance: float = 1.5
+    _max_eye_distance: float = 2.0
+    _move_up_count: float = 0.0
 
     def __init__(self, max_eye_distance: float = 1.5):
 
@@ -73,6 +74,7 @@ class EyeTracker:
         self._eyes = None
         self._robot_point = None
         self._max_eye_distance = max_eye_distance
+        self._move_up_count = 0.0
 
         self._robot_pose_sub = rospy.Subscriber(
             "/robot_pose",
@@ -139,11 +141,19 @@ class EyeTracker:
         goal = FollowJointTrajectoryGoal()
         goal.trajectory.joint_names = ["head_1_joint", "head_2_joint"]
         point = JointTrajectoryPoint()
+        if self._move_up_count >= 5:
+            rospy.logwarn("Moving head up too many times, resetting position.")
+            self._move_up_count = 0
+            point.positions = [
+                current_head_position[0],
+                current_head_position[1] - (y_delta * 2),
+            ]
         point.positions = [current_head_position[0], current_head_position[1] + y_delta]
         point.time_from_start = rospy.Duration(1)
         goal.trajectory.points.append(point)
 
         result = self._head_action_client.send_goal_and_wait(goal)
+        self._move_up_count += 1
         rospy.loginfo(f"Head moved with result {result}")
 
     def execute(self, goal: EyeTrackerGoal):
