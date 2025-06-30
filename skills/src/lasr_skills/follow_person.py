@@ -79,6 +79,7 @@ class PersonFollowingData:
         self.condition_flag_state = True
         self.first_tracking_done = False
         self.say_started = False
+        self.pause_conditional_state = False
 
         # Recovery behavior data
         self.recovery_scan_positions = []
@@ -97,7 +98,7 @@ class PersonFollowingData:
         self.stopping_distance = 2.25
         self.max_speed = 0.4
         self.max_following_distance = 4.0
-        self.min_following_distance = 0.5
+        self.min_following_distance = 0.35
         self.speak = True
         self.timeout = 0.0
         self.replan_distance = 2.0
@@ -140,6 +141,8 @@ class PersonFollowingData:
         self.previous_target = None
         self.last_target_position = None
         self.last_target_time = None
+        self.look_down_duration = 1.0
+        self.look_down_period = 1.25
 
         # Override with provided parameters
         for key, value in config_params.items():
@@ -193,7 +196,7 @@ class FollowPerson(smach.StateMachine):
     2. Sub-state machine - included in larger state machine workflows
     """
 
-    def __init__(self, camera_name="xtion", **config_params):
+    def __init__(self, camera_name="xtion", object_avoidance=False, **config_params):
         # Initialise as StateMachine with dynamic input/output keys
         smach.StateMachine.__init__(
             self,
@@ -204,6 +207,9 @@ class FollowPerson(smach.StateMachine):
 
         # Store camera name
         self.camera = camera_name
+
+        # Whether to put the head down from time to time
+        self.object_avoidance = object_avoidance
 
         # Setup camera topics
         self.image_topic = f"/{self.camera}/rgb/image_raw"
@@ -475,6 +481,18 @@ class FollowPerson(smach.StateMachine):
             rospy.logerr(f"Failed to get robot pose in map frame: {e}")
             return None
 
+    def _publish_condition_flag(self, flag_value):
+        """Publish condition frame flag with retry mechanism"""
+        for _retry in range(5):
+            try:
+                self.condition_frame_flag_pub.publish(Bool(data=flag_value))
+                break  # success
+            except Exception as err:
+                rospy.logdebug(
+                    f"Publish condition flag failed (attempt {_retry + 1}/5): {err}"
+                )
+                rospy.sleep(0.1)
+
     def _detection3d_callback(self, msg: Detection3DArray):
         this_time = rospy.Time.now()
         """Callback for SAM2 3D detections - updates userdata"""
@@ -492,21 +510,12 @@ class FollowPerson(smach.StateMachine):
                     self.shared_data.newest_detection = detection
 
                 if is_good_quality:
-                    for _retry in range(5):
-                        try:
-                            self.condition_frame_flag_pub.publish(Bool(data=True))
-                            break  # success
-                        except Exception as err:
-                            rospy.logdebug(
-                                f"Publish good-quality flag failed (attempt {_retry + 1}/5): {err}"
-                            )
-                            rospy.sleep(0.1)
+                    if not self.shared_data.pause_conditional_state:
+                        self._publish_condition_flag(True)
+                        self.shared_data.condition_flag_state = True
                     else:
-                        rospy.logwarn(
-                            "Failed to publish good-quality flag after 5 attempts"
-                        )
-
-                    self.shared_data.condition_flag_state = True
+                        self._publish_condition_flag(False)
+                        self.shared_data.condition_flag_state = False
                     self.shared_data.last_good_detection_time = this_time
 
                     self.detection = detection
@@ -574,20 +583,7 @@ class FollowPerson(smach.StateMachine):
                                 self._update_target_list(p, add_traj=False)
                     self._update_target_list(map_pose)
                 else:
-                    for _retry in range(5):
-                        try:
-                            self.condition_frame_flag_pub.publish(Bool(data=False))
-                            break  # success
-                        except Exception as err:
-                            rospy.logdebug(
-                                f"Publish bad-quality flag failed (attempt {_retry + 1}/5): {err}"
-                            )
-                            rospy.sleep(0.1)
-                    else:
-                        rospy.logwarn(
-                            "Failed to publish bad-quality flag after 5 attempts"
-                        )
-
+                    self._publish_condition_flag(False)
                     self.shared_data.condition_flag_state = False
                 break
         if len(self.shared_data.person_trajectory.poses) > 0:
@@ -818,7 +814,13 @@ class FollowPerson(smach.StateMachine):
                 self.tts_client.send_goal(tts_goal)
         rospy.loginfo(f"Saying '{text}'")
 
-    def _look_at_point(self, target_point: Point, target_frame: str = "map"):
+    def _tf_pose(self, pose: PoseStamped, target_frame: str):
+        trans = self.tf_buffer.lookup_transform(
+            target_frame, pose.header.frame_id, rospy.Time(0), rospy.Duration(1.0)
+        )
+        return do_transform_pose(pose, trans)
+
+    def look_at_point(self, target_point: Point, target_frame: str = "map"):
         current_time = rospy.Time.now()
         if current_time - self.shared_data.look_at_point_time < rospy.Duration(
             self.shared_data.head_movement_interval
@@ -846,10 +848,13 @@ class FollowPerson(smach.StateMachine):
             y=self.shared_data.center_look_point[1],
             z=self.shared_data.center_look_point[2],
         )
-        self._look_at_point(point, target_frame="base_link")
+        self.look_at_point(point, target_frame="base_link")
 
-    def _look_down_point(self, target_point: Point = None, target_frame: str = "map"):
-        """Look down towards the target direction or center if no target provided."""
+    def look_down_point(self, target_point: Point = None, target_frame: str = "map"):
+        """Look down towards the target direction down."""
+        distance = 2.0
+        look_down_angle = -30.0
+
         if target_point is not None:
             # Transform target point to base_link frame to get direction
             try:
@@ -862,33 +867,48 @@ class FollowPerson(smach.StateMachine):
                 # Transform to base_link frame
                 target_in_base = self._tf_pose(target_pose, "base_link")
 
-                # Calculate direction towards target but look down
+                # Calculate horizontal direction towards target
                 x_dir = target_in_base.pose.position.x
                 y_dir = target_in_base.pose.position.y
 
-                # Normalize the direction and set distance
-                distance = 3.0
+                # Normalize the horizontal direction
                 if x_dir != 0 or y_dir != 0:
-                    norm = math.sqrt(x_dir**2 + y_dir**2)
-                    x_dir = (x_dir / norm) * distance
-                    y_dir = (y_dir / norm) * distance
+                    norm = math.sqrt(x_dir ** 2 + y_dir ** 2)
+                    x_dir = x_dir / norm
+                    y_dir = y_dir / norm
                 else:
                     # Default to forward if target is directly above/below
-                    x_dir = distance
+                    x_dir = 1.0
                     y_dir = 0.0
 
-                # Look down towards the target direction
-                point = Point(x=x_dir, y=y_dir, z=0.5)
+                # Calculate look point with 45 degree downward angle
+                # For 45 degrees down: horizontal_distance = vertical_distance
+                horizontal_distance = distance * math.cos(math.radians(abs(look_down_angle)))
+                vertical_distance = distance * math.sin(math.radians(abs(look_down_angle)))
+
+                # Apply horizontal direction and downward angle
+                point = Point(
+                    x=x_dir * horizontal_distance,
+                    y=y_dir * horizontal_distance,
+                    z=-vertical_distance  # Negative for looking down
+                )
+
+                rospy.loginfo(f"Looking down towards target: x={point.x:.2f}, y={point.y:.2f}, z={point.z:.2f}")
 
             except Exception as e:
                 rospy.logwarn(f"Failed to transform target point: {e}")
-                # Fall back to center point
-                point = Point(x=3.0, y=0.0, z=0.5)
+                # Fall back to center point looking down 45 degrees
+                horizontal_distance = distance * math.cos(math.radians(45))
+                vertical_distance = distance * math.sin(math.radians(45))
+                point = Point(x=horizontal_distance, y=0.0, z=-vertical_distance)
         else:
-            # Default center point when no target provided
-            point = Point(x=3.0, y=0.0, z=0.5)
+            # Default center point looking down 45 degrees
+            horizontal_distance = distance * math.cos(math.radians(45))
+            vertical_distance = distance * math.sin(math.radians(45))
+            point = Point(x=horizontal_distance, y=0.0, z=-vertical_distance)
+            rospy.loginfo(f"Looking down forward: x={point.x:.2f}, y={point.y:.2f}, z={point.z:.2f}")
 
-        self._look_at_point(point, target_frame="base_link")
+        self.look_at_point(point, target_frame="base_link")
 
 
 # State classes remain the same but without the IdleState
@@ -1063,6 +1083,14 @@ class TrackingActiveState(smach.State):
         rate = rospy.Rate(15)
 
         while not rospy.is_shutdown():
+            # Check if target is lost
+            if (
+                rospy.Time.now() - self.sm_manager.shared_data.last_good_detection_time
+                > self.sm_manager.shared_data.target_moving_timeout_duration
+            ):
+                rospy.loginfo("Target lost - no good detection")
+                return "target_lost"
+
             # Check if following is complete (no movement for a while)
             if (
                 self.sm_manager.shared_data.first_tracking_done
@@ -1078,7 +1106,7 @@ class TrackingActiveState(smach.State):
 
             # Look at detected person
             if self.sm_manager.shared_data.newest_detection:
-                self.sm_manager._look_at_point(
+                self.sm_manager.look_at_point(
                     self.sm_manager.shared_data.newest_detection.point,
                     target_frame="map",
                 )
@@ -1091,14 +1119,6 @@ class TrackingActiveState(smach.State):
                 )
                 self.sm_manager.shared_data.distance_traveled += distance_increment
                 self.sm_manager.shared_data.last_position = robot_pose
-
-            # Check if target is lost
-            if (
-                rospy.Time.now() - self.sm_manager.shared_data.last_good_detection_time
-                > self.sm_manager.shared_data.target_moving_timeout_duration
-            ):
-                rospy.loginfo("Target lost - no good detection")
-                return "target_lost"
 
             # Check if navigation is currently active
             if self.sm_manager.move_base_client:
@@ -1140,10 +1160,11 @@ class TrackingActiveState(smach.State):
                     )
                     rospy.loginfo(
                         f"Checking pose {i}: distance to latest pose = {distance_to_last:.2f}m "
-                        f"(dynamic threshold: {dynamic_stopping_distance:.2f}m, based on target speed: {target_speed:.2f}m)"
+                        f"(dynamic threshold: {dynamic_stopping_distance:.2f}m, based on target speed: {target_speed:.2f}m) "
+                        f"The fucking distance is actually {abs(dynamic_stopping_distance - distance_to_last)}......"
                     )
 
-                    if abs(dynamic_stopping_distance - distance_to_last) <= 0.25:
+                    if abs(dynamic_stopping_distance - distance_to_last) >= self.sm_manager.shared_data.min_following_distance and distance_to_last >= self.sm_manager.shared_data.min_following_distance:
                         target_pose = self.sm_manager.shared_data.target_list[i]
                         rospy.loginfo(
                             f"Selected target pose at index {i} (dynamic distance threshold met)"
@@ -1305,6 +1326,7 @@ class NavigationState(smach.State):
     def execute(self, userdata):
         rospy.loginfo("Monitoring navigation progress")
         self.sm_manager.shared_data.last_canceled_goal_time = rospy.Time.now()
+        last_look_down_time = rospy.Time.now() - rospy.Duration(self.sm_manager.shared_data.look_down_period * 0.5)
 
         start_robot_pose = self.sm_manager._get_robot_pose_in_map()
 
@@ -1321,10 +1343,40 @@ class NavigationState(smach.State):
         while not rospy.is_shutdown():
             # Keep looking at detected person during navigation
             if self.sm_manager.shared_data.newest_detection:
-                self.sm_manager._look_at_point(
-                    self.sm_manager.shared_data.newest_detection.point,
-                    target_frame="map",
-                )
+                current_time = rospy.Time.now()
+                time_since_last_look_down = current_time - last_look_down_time
+                look_down_period_duration = rospy.Duration(self.sm_manager.shared_data.look_down_period)
+
+                rospy.loginfo(f"NavigationState: Time since last look down: {time_since_last_look_down.to_sec():.2f}s, "
+                              f"Look down period: {look_down_period_duration.to_sec():.2f}s")
+
+                if time_since_last_look_down >= look_down_period_duration:
+                    rospy.loginfo("NavigationState: Look down period elapsed, executing down swap")
+                    rospy.loginfo(f"NavigationState: Down swap parameters - target_frame: map, "
+                                  f"look_down_time: {self.sm_manager.shared_data.look_down_duration}, "
+                                  f"pause_conditional_frame: True")
+
+                    self._down_swap(
+                        self.sm_manager.shared_data.newest_detection.point,
+                        target_frame="map",
+                        look_down_time=self.sm_manager.shared_data.look_down_duration,
+                        pause_conditional_frame=True,
+                    )
+                    if time_since_last_look_down >= look_down_period_duration * 2:
+                        last_look_down_time = rospy.Time.now()
+                    rospy.loginfo(
+                        f"NavigationState: Down swap completed, updated last_look_down_time to {last_look_down_time}")
+                else:
+                    rospy.loginfo("NavigationState: Look down period not elapsed, continuing to look at person")
+                    rospy.loginfo(f"NavigationState: Looking at point in map frame - "
+                                  f"x: {self.sm_manager.shared_data.newest_detection.point.x:.2f}, "
+                                  f"y: {self.sm_manager.shared_data.newest_detection.point.y:.2f}, "
+                                  f"z: {self.sm_manager.shared_data.newest_detection.point.z:.2f}")
+
+                    self.sm_manager.look_at_point(
+                        self.sm_manager.shared_data.newest_detection.point,
+                        target_frame="map",
+                    )
 
             robot_pose = self.sm_manager._get_robot_pose_in_map()
 
@@ -1423,6 +1475,13 @@ class NavigationState(smach.State):
 
         return "failed"
 
+    def _down_swap(self, target_point: Point = None, target_frame: str = "map", look_down_time=2.0, pause_conditional_frame=True):
+        self.sm_manager.pause_conditional_frame = pause_conditional_frame
+        self.sm_manager.look_down_point(target_point, target_frame)
+        rospy.sleep(look_down_time)
+        # self.sm_manager.look_at_point(target_point, target_frame)
+        self.sm_manager.pause_conditional_frame = False
+
     def _send_face_target_goal(self, userdata, target_pose):
         """Send a rotation-only goal to face the target. Robot stays at current position but rotates."""
         try:
@@ -1499,7 +1558,7 @@ class RecoveryScanningState(smach.State):
 
         # Start scanning
         if self.sm_manager.shared_data.recovery_scan_positions:
-            self.sm_manager._look_at_point(
+            self.sm_manager.look_at_point(
                 self.sm_manager.shared_data.recovery_scan_positions[0],
                 target_frame="base_link",
             )
@@ -1546,7 +1605,7 @@ class RecoveryScanningState(smach.State):
                 scan_point = self.sm_manager.shared_data.recovery_scan_positions[
                     self.sm_manager.shared_data.current_scan_index
                 ]
-                self.sm_manager._look_at_point(scan_point, target_frame="base_link")
+                self.sm_manager.look_at_point(scan_point, target_frame="base_link")
                 self.sm_manager.shared_data.last_scan_position_time = rospy.Time.now()
 
             rate.sleep()
