@@ -53,10 +53,10 @@ class DetectLangSam3D(smach.State):
         self._text_threshold = text_threshold
         self._prompt = prompt
 
-        image_sub = message_filters.Subscriber(self.image_topic, Image)
-        depth_sub = message_filters.Subscriber(self.depth_image_topic, Image)
+        image_sub = message_filters.Subscriber(self._image_topic, Image)
+        depth_sub = message_filters.Subscriber(self._depth_image_topic, Image)
         cam_info_sub = message_filters.Subscriber(
-            self.depth_camera_info_topic, CameraInfo
+            self._depth_camera_info_topic, CameraInfo
         )
 
         self._ts = message_filters.ApproximateTimeSynchronizer(
@@ -70,14 +70,14 @@ class DetectLangSam3D(smach.State):
     def execute(self, userdata):
 
         def callback(image_msg, depth_msg, cam_info_msg):
-            self.data = (image_msg, depth_msg, cam_info_msg)
+            self._data = (image_msg, depth_msg, cam_info_msg)
 
-        self.ts.registerCallback(callback)
+        self._ts.registerCallback(callback)
 
-        while not self.data:
+        while not self._data:
             rospy.sleep(0.1)
 
-        image_msg, depth_msg, cam_info_msg = self.data
+        image_msg, depth_msg, cam_info_msg = self._data
         try:
             prompt = self._prompt if self._prompt else userdata.lang_sam_prompt
             request = LangSamRequest(

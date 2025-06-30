@@ -38,7 +38,7 @@ class TfServer:
                 self._tf_buffer.lookup_transform(
                     req.target_frame,
                     req.input_point_stamped.header.frame_id,
-                    rospy.Time(1),
+                    rospy.Time(0),
                 ),
             )
             return TransformPointResponse(transformed_point)

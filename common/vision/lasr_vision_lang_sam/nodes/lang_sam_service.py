@@ -79,9 +79,8 @@ class LangSamService:
         # ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
         # POSSIBILITY OF SUCH DAMAGE.
         ####################################################################
-
-        dtype, n_channels = self.encoding_to_dtype_with_channels(img_msg.encoding)
-        dtype = np.dtype(dtype)
+        n_channels = 1
+        dtype = np.dtype(np.uint8)
         dtype = dtype.newbyteorder(">" if img_msg.is_bigendian else "<")
 
         img_buf = (
@@ -195,7 +194,7 @@ class LangSamService:
 
                 tf_response = self._tf_service(
                     TransformPointRequest(
-                        point=point_stamped,
+                        input_point_stamped=point_stamped,
                         target_frame=request.target_frame,
                     )
                 )
@@ -218,6 +217,7 @@ class LangSamService:
                 )
 
         response = LangSamResponse(detections=response_results)
+        print(response)
 
         return response
 
