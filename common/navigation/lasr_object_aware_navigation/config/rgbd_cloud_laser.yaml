@@ -1,17 +1,17 @@
-min_height: 0.05
+min_height: 0.3
 max_height: 2.0
 
 angle_min      : !degrees -10.0
 angle_max      : !degrees  10.0
-angle_increment: !degrees  0.3333
+angle_increment: !degrees  0.333
 scan_time: 0.166 # 6Hz
 
-range_min: 0.25
-range_max: 1.2
+range_min: 0.3
+range_max: 10.0
 
 target_frame: base_footprint
 
 use_concurrency: 8  # use two parallel threads
-use_inf        : false
+use_inf        : true  # if false the costmap doesn't get cleaned (?)
 
 transform_tolerance: 0.02

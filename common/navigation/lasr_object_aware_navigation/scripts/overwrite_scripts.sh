@@ -253,7 +253,7 @@ local_costmap:
     observation_sources: rgbd_scan
     combination_method: 1
     rgbd_scan:
-      sensor_frame: rgbd_laser_link
+      sensor_frame: base_footprint
       data_type: LaserScan
       topic: rgbd_scan
       expected_update_rate: 0.5
