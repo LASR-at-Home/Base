@@ -319,6 +319,20 @@ def register_object(
     best_T, best_fit, best_rmse = None, -1.0, np.inf
     seeds = np.random.randint(0, 2**32 - 1, size=max_attempts)
 
+    # Optional: Estimate scale between source and target and normalize
+    scale1 = np.linalg.norm(
+        src_pcd.get_max_bound() - src_pcd.get_min_bound()
+    ) / np.linalg.norm(tgt_pcd.get_max_bound() - tgt_pcd.get_min_bound())
+    scale2 = (bbox_volume(src_pcd) / bbox_volume(tgt_pcd)) ** (1 / 3)
+    scale3 = estimate_scale_from_nn(src_pcd, tgt_pcd, k=1, top_k=100)
+    scale_ratio = np.mean([scale1, scale2, scale3])
+
+    if abs(scale_ratio - 1.0) > 0.05:
+        print(f"Scaling target by ratio {scale_ratio:.4f}")
+        tgt_pcd.scale(scale_ratio, center=tgt_pcd.get_center())
+    else:
+        print("Skipping scaling; size already aligned.")
+
     (
         src_clean,
         tgt_clean,
@@ -356,6 +370,25 @@ def register_object(
                     f.cancel()
                 break
     return best_T, best_fit, best_rmse
+
+
+def bbox_volume(pcd):
+    bounds = pcd.get_max_bound() - pcd.get_min_bound()
+    return np.prod(bounds)
+
+
+def estimate_scale_from_nn(src, tgt, k=1, top_k=100):
+    src_pts = np.asarray(src.points)
+    tgt_kdtree = o3d.geometry.KDTreeFlann(tgt)
+    ratios = []
+    for p in src_pts:
+        _, idx, _ = tgt_kdtree.search_knn_vector_3d(p, k)
+        nn_pts = np.asarray(tgt.points)[idx]
+        dists = np.linalg.norm(nn_pts - p, axis=1)
+        if len(dists) > 0:
+            ratios.append(np.min(dists))
+    ratios = sorted(ratios)[:top_k]
+    return np.mean(ratios)
 
 
 if __name__ == "__main__":
