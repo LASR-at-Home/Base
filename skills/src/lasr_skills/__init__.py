@@ -29,6 +29,7 @@ from .find_person import FindPerson
 from .detect_all_in_polygon import DetectAllInPolygon
 from .eye_tracker import StartEyeTracker, StopEyeTracker
 from .detect_nearest import GetNearestObject
+from .lang_sam_detect_3d import DetectLangSam3D
 
 # from .xml_question_answer import XmlQuestionAnswer
 from .find_person_and_tell import FindPersonAndTell
