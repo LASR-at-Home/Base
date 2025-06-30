@@ -125,7 +125,7 @@ global_costmap:
       data_type: LaserScan
       topic: scan
       expected_update_rate: 0.3
-      observation_persistence: 0.0
+      observation_persistence: 1.25  # this was zero, let's make it none zero
       inf_is_valid: true
       marking: true
       clearing: true
@@ -169,13 +169,13 @@ global_costmap:
       data_type: LaserScan
       topic: rgbd_scan
       expected_update_rate: 0.3
-      observation_persistence: 0.0
+      observation_persistence: 1.25  # this was zero, let's make it none zero
       inf_is_valid: true
       marking: true
       clearing: true
       raytrace_range: 4.0
       obstacle_range: 3.0
-      blanking_range: 0.0
+      blanking_range: 0.1
       mark_blanking: false
       debug: true
 
@@ -263,7 +263,7 @@ local_costmap:
       clearing: true
       raytrace_range: 2.9
       obstacle_range: 2.8
-      blanking_range: 0.0
+      blanking_range: 0.1
       mark_blanking: false
       debug: false
 
