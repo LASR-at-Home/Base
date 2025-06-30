@@ -393,7 +393,7 @@ class FollowPerson(smach.StateMachine):
 
             smach.StateMachine.add(
                 "NAVIGATION",
-                NavigationState(self),
+                NavigationState(self, object_avoidance=self.object_avoidance),
                 transitions={
                     "navigation_complete": "TRACKING_ACTIVE",
                     "target_lost": "RECOVERY_SCANNING",
@@ -1318,8 +1318,9 @@ class TrackingActiveState(smach.State):
 class NavigationState(smach.State):
     """Monitor navigation progress, handle head tracking, and detect completion/failure"""
 
-    def __init__(self, sm_manager):
+    def __init__(self, sm_manager, object_avoidance):
         self.sm_manager = sm_manager
+        self.object_avoidance = object_avoidance
         smach.State.__init__(
             self,
             outcomes=["navigation_complete", "target_lost", "failed"],
@@ -1354,7 +1355,7 @@ class NavigationState(smach.State):
                 rospy.loginfo(f"NavigationState: Time since last look down: {time_since_last_look_down.to_sec():.2f}s, "
                               f"Look down period: {look_down_period_duration.to_sec():.2f}s")
 
-                if time_since_last_look_down >= look_down_period_duration:
+                if self.object_avoidance and time_since_last_look_down >= look_down_period_duration:
                     rospy.loginfo("NavigationState: Look down period elapsed, executing down swap")
                     rospy.loginfo(f"NavigationState: Down swap parameters - target_frame: map, "
                                   f"look_down_time: {self.sm_manager.shared_data.look_down_duration}, "

@@ -31,7 +31,7 @@ class CarryMyLuggage(smach.StateMachine):
 
             smach.StateMachine.add(
                 "FOLLOW_PERSON",
-                FollowPerson(),
+                FollowPerson(object_avoidance=True),
                 transitions={"succeeded": "POST_FOLLOW", "failed": "POST_FOLLOW"},
             )
 
