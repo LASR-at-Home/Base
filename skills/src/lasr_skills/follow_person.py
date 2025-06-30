@@ -96,7 +96,7 @@ class PersonFollowingData:
         self.new_goal_threshold_min = 0.35
         self.new_goal_threshold_max = 4.0
         self.stopping_distance = 2.25
-        self.max_speed = 0.4
+        self.max_speed = 0.45
         self.max_following_distance = 4.0
         self.min_following_distance = 0.35
         self.speak = True
@@ -141,8 +141,8 @@ class PersonFollowingData:
         self.previous_target = None
         self.last_target_position = None
         self.last_target_time = None
-        self.look_down_duration = 1.0
-        self.look_down_period = 2.0
+        self.look_down_duration = 0.25
+        self.look_down_period = 5.0
 
         # Override with provided parameters
         for key, value in config_params.items():
@@ -853,7 +853,7 @@ class FollowPerson(smach.StateMachine):
     def look_down_point(self, target_point: Point = None, target_frame: str = "map"):
         """Look down towards the target direction down."""
         distance = 2.0
-        look_down_angle = -30.0
+        look_down_angle = -20.0
 
         if target_point is not None:
             # Transform target point to base_link frame to get direction
@@ -1155,7 +1155,7 @@ class TrackingActiveState(smach.State):
                     ),
                 )
                 if self.sm_manager.shared_data.first_tracking_done:
-                    dynamic_stopping_distance = self.sm_manager.shared_data.min_following_distance
+                    dynamic_stopping_distance = self.sm_manager.shared_data.stopping_distance / 2
                     rospy.loginfo("First goal, using minimum following threshold.")
                 for i in reversed(range(len(self.sm_manager.shared_data.target_list))):
                     distance_to_last = _euclidean_distance(
@@ -1366,7 +1366,7 @@ class NavigationState(smach.State):
                         look_down_time=self.sm_manager.shared_data.look_down_duration,
                         pause_conditional_frame=True,
                     )
-                    if time_since_last_look_down >= look_down_period_duration * 2:
+                    if time_since_last_look_down >= look_down_period_duration * 1.5:
                         last_look_down_time = rospy.Time.now()
                     rospy.loginfo(
                         f"NavigationState: Down swap completed, updated last_look_down_time to {last_look_down_time}")
