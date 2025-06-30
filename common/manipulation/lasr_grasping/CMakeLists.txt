@@ -7,7 +7,7 @@ project(lasr_grasping)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED catkin_virtualenv)
+find_package(catkin REQUIRED catkin_virtualenv geometry_msgs message_generation)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -54,11 +54,10 @@ catkin_generate_virtualenv(
 # )
 
 ## Generate services in the 'srv' folder
-# add_service_files(
-#   FILES
-#   Service1.srv
-#   Service2.srv
-# )
+add_service_files(
+  FILES
+  PlaceObject.srv
+)
 
 ## Generate actions in the 'action' folder
 # add_action_files(
@@ -72,6 +71,10 @@ catkin_generate_virtualenv(
 #   DEPENDENCIES
 #   std_msgs  # Or other packages containing msgs
 # )
+
+generate_messages(           
+  DEPENDENCIES geometry_msgs std_msgs
+)
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
