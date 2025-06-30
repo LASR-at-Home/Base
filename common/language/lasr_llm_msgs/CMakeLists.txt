@@ -56,8 +56,8 @@ add_message_files(
 add_service_files(
   FILES
   ReceptionistQueryLlm.srv
+  SentenceEmbedding.srv
   StoringGroceriesQueryLlm.srv
-  Llm.srv
 )
 
 ## Generate actions in the 'action' folder

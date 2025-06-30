@@ -1,13 +1,33 @@
-from typing import Optional
-
 import smach
 import rospy
 
 from lasr_skills import Say
-from lasr_llm_msgs.srv import (
-    Llm,
-    LlmRequest,
-)
+
+
+def stringify_guest_data(guest_data: dict) -> str:
+    guest_str = ""
+    if guest_data["attributes"]["long_hair"]:
+        guest_str += "They have long hair. "
+    else:
+        guest_str += "They have short hair. "
+
+    t_shirt = (
+        "short sleeve"
+        if guest_data["attributes"]["short_sleeve_t_shirt"]
+        else "long sleeve"
+    )
+
+    if guest_data["attributes"]["glasses"] and guest_data["attributes"]["hat"]:
+        guest_str += f"They are wearing a {t_shirt} top, glasses and a hat. "
+    elif guest_data["attributes"]["glasses"] and not guest_data["attributes"]["hat"]:
+        guest_str += f"They are wearing a {t_shirt} t shirt and glasses and they are not wearing a hat. "
+    elif not guest_data["attributes"]["glasses"] and guest_data["attributes"]["hat"]:
+        guest_str += f"They wearing a {t_shirt} t shirt and hat and they are not wearing glasses. "
+    elif (
+        not guest_data["attributes"]["glasses"] and not guest_data["attributes"]["hat"]
+    ):
+        guest_str += f"They wearing a {t_shirt} t shirt and they are not wearing glasses or a hat. "
+    return guest_str
 
 
 class WelcomeGuest(smach.StateMachine):
@@ -32,18 +52,6 @@ class WelcomeGuest(smach.StateMachine):
 
         with self:
             smach.StateMachine.add(
-                "GET_SIMILARITY",
-                self.GetSimilarity(),
-                transitions={
-                    "succeeded": "SAY_WELCOME",
-                    "failed": "SAY_WELCOME",
-                },
-                remapping={
-                    "guest_data": "guest_data",
-                    "common_interest": "common_interest",
-                },
-            )
-            smach.StateMachine.add(
                 "SAY_WELCOME",
                 self.GetWelcomeMessage(),
                 transitions={
@@ -67,34 +75,6 @@ class WelcomeGuest(smach.StateMachine):
                 remapping={"text": "welcome_message"},
             )
 
-    class GetSimilarity(smach.State):
-        """State to get the similarity between two guests."""
-
-        def __init__(self):
-            super().__init__(
-                outcomes=["succeeded", "failed"],
-                input_keys=["guest_data"],
-                output_keys=["guest_data", "common_interest"],
-            )
-            self._llm = rospy.ServiceProxy("/lasr_llm/llm", Llm)
-            self._llm.wait_for_service()
-
-        def execute(self, userdata):
-
-            request = LlmRequest()
-            request.system_prompt = f"You are a robot acting as a party host. You are tasked with reasoning about interests between two guests. You will receive input such as 'Person 1 interest: football. Person 2 interest: tennis'. You should reason about what these guests have in common, if anything, and output a single word describing this commonality. In the example, this might be 'sports' or 'exercise'. If you cannot find any commanality, output 'none'."
-            request.prompt = f"Person 1 interest: {userdata.guest_data['guest1']['interest']}. Person 2 interests: {userdata.guest_data['guest2']['interest']}."
-            response = self._llm(request)
-            commonality = response.output.lower()
-
-            if commonality == "none":
-                rospy.logerr("Failed to get similarity from LLM.")
-                userdata.common_interest = "unknown"
-                return "failed"
-            else:
-                userdata.common_interest = commonality
-                return "succeeded"
-
     class GetWelcomeMessage(smach.State):
         """State to get the welcome message for the guest."""
 
@@ -108,10 +88,9 @@ class WelcomeGuest(smach.StateMachine):
         def execute(self, userdata):
             guest_1_name = userdata.guest_data["guest1"]["name"]
             guest_2_name = userdata.guest_data["guest2"]["name"]
-            common_interest = userdata.common_interest
 
             userdata.welcome_message = (
                 f"Hello {guest_2_name}, welcome to the party! "
-                f"You'll get on well with {guest_1_name} who is already here as they share a common interest in {common_interest}."
+                f"{guest_1_name} is already here, you'll recognise them as {stringify_guest_data(userdata.guest_data['guest1'])}."
             )
             return "succeeded"

@@ -4,6 +4,20 @@ string prompt
 # Image to run inference on
 sensor_msgs/Image image_raw
 
+# Depth Image
+sensor_msgs/Image depth_image
+
+# Camera info for depth camera
+sensor_msgs/CameraInfo depth_camera_info
+
+# BBOX threshold
+float32 box_threshold
+
+# Text threshold
+float32 text_threshold
+
+string target_frame
+
 ---
 # Segmentations and other info
 lasr_vision_msgs/LangSamDetection[] detections
