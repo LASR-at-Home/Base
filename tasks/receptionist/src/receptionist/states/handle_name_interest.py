@@ -1,11 +1,30 @@
 import smach
 
-from lasr_skills import AskAndListen, Say
+from lasr_skills import AskAndListen, Say, StartEyeTracker, StopEyeTracker
 from receptionist.states import (
     GetNameAndInterest,
     ReceptionistLearnFaces,
     GetGuestAttributes,
 )
+
+
+class GetPersonPoint(smach.State):
+    """State to get the point of interest of the person."""
+
+    def __init__(self):
+        smach.State.__init__(
+            self,
+            outcomes=["succeeded", "failed"],
+            input_keys=["person_detections"],
+            output_keys=["person_point"],
+        )
+
+    def execute(self, userdata):
+        if not userdata.person_detections:
+            return "failed"
+        # Assuming the first detection is the point of interest
+        userdata.person_point = userdata.person_detections[0].point
+        return "succeeded"
 
 
 class HandleNameInterest(smach.StateMachine):
@@ -15,7 +34,7 @@ class HandleNameInterest(smach.StateMachine):
                 "succeeded",
                 "failed",
             ],
-            input_keys=["guest_data"],
+            input_keys=["guest_data", "person_detections"],
         )
 
         with self:
@@ -66,11 +85,33 @@ class HandleNameInterest(smach.StateMachine):
                 )
 
             smach.StateMachine.add(
+                "GET_PERSON_POINT",
+                GetPersonPoint(),
+                transitions={
+                    "succeeded": "START_EYE_TRACKER",
+                    "failed": "HANDLE_NAME_INTEREST",
+                },
+                remapping={
+                    "person_detections": "person_detections",
+                    "person_point": "person_point",
+                },
+            )
+
+            smach.StateMachine.add(
+                "START_EYE_TRACKER",
+                StartEyeTracker(),
+                transitions={
+                    "succeeded": "HANDLE_NAME_INTEREST",
+                    "failed": "HANDLE_NAME_INTEREST",
+                },
+            )
+
+            smach.StateMachine.add(
                 "HANDLE_NAME_INTEREST",
                 sm_con,
                 transitions={
-                    "succeeded": "succeeded",
-                    "failed": "failed",
+                    "succeeded": "STOP_EYE_TRACKER",
+                    "failed": "STOP_EYE_TRACKER",
                     "vision_failed": "SAY_VISION_FAILED",
                     "get_attributes_failed": "SAY_ATTRIBUTES_FAILED",
                     "learn_face_failed": "SAY_LEARN_FACE_FAILED",
@@ -91,8 +132,8 @@ class HandleNameInterest(smach.StateMachine):
                 "GET_ATTRIBUTES_AND_LEARN_FACE",
                 self.GetAttributesAndLearnFace(guest_id),
                 transitions={
-                    "succeeded": "succeeded",
-                    "failed": "failed",
+                    "succeeded": "STOP_EYE_TRACKER",
+                    "failed": "STOP_EYE_TRACKER",
                     "get_attributes_failed": "failed",
                     "learn_face_failed": "failed",
                 },
@@ -112,8 +153,8 @@ class HandleNameInterest(smach.StateMachine):
                 "GET_ATTRIBUTES",
                 GetGuestAttributes(guest_id),
                 transitions={
-                    "succeeded": "succeeded",
-                    "failed": "failed",
+                    "succeeded": "STOP_EYE_TRACKER",
+                    "failed": "STOP_EYE_TRACKER",
                 },
             )
 
@@ -130,6 +171,15 @@ class HandleNameInterest(smach.StateMachine):
             smach.StateMachine.add(
                 "LEARN_FACE",
                 ReceptionistLearnFaces(guest_id),
+                transitions={
+                    "succeeded": "STOP_EYE_TRACKER",
+                    "failed": "STOP_EYE_TRACKER",
+                },
+            )
+
+            smach.StateMachine.add(
+                "STOP_EYE_TRACKER",
+                StopEyeTracker(),
                 transitions={
                     "succeeded": "succeeded",
                     "failed": "failed",
@@ -160,7 +210,7 @@ class HandleNameInterest(smach.StateMachine):
                     f"PARSE_NAME_INTEREST_{guest_id}",
                     GetNameAndInterest(guest_id, False),
                     transitions={
-                        "succeeded": "succeeded",
+                        "succeeded": f"SAY_LEARN_FACE_GUEST_{guest_id}",
                         "failed": f"REPEAT_GET_NAME_INTEREST_{guest_id}",
                     },
                     remapping={"guest_transcription": "transcribed_speech"},
@@ -173,7 +223,7 @@ class HandleNameInterest(smach.StateMachine):
                     ),
                     transitions={
                         "succeeded": f"REPEAT_PARSE_NAME_INTEREST_{guest_id}",
-                        "failed": "succeeded",
+                        "failed": f"SAY_LEARN_FACE_GUEST_{guest_id}",
                     },
                 )
 
@@ -181,10 +231,20 @@ class HandleNameInterest(smach.StateMachine):
                     f"REPEAT_PARSE_NAME_INTEREST_{guest_id}",
                     GetNameAndInterest(guest_id, True),
                     transitions={
-                        "succeeded": "succeeded",
-                        "failed": "succeeded",
+                        "succeeded": f"SAY_LEARN_FACE_GUEST_{guest_id}",
+                        "failed": f"SAY_LEARN_FACE_GUEST_{guest_id}",
                     },
                     remapping={"guest_transcription": "transcribed_speech"},
+                )
+
+                smach.StateMachine.add(
+                    f"SAY_LEARN_FACE_GUEST_{guest_id}",
+                    Say(text="I am quickly remembering your face, 2secs please."),
+                    transitions={
+                        "succeeded": f"succeeded",
+                        "aborted": f"succeeded",
+                        "preempted": f"succeeded",
+                    },
                 )
 
     class GetAttributesAndLearnFace(smach.StateMachine):
