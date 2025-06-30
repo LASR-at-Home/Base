@@ -21,6 +21,8 @@ from receptionist.states import (
     WelcomeGuest,
     FindDrinkOnTable,
     GetCommonInterest,
+    StartTimer,
+    StopTimer,
 )
 from shapely.geometry import Polygon
 from std_msgs.msg import Empty
@@ -96,8 +98,20 @@ class Receptionist(smach.StateMachine):
                 ),
                 transitions={
                     "valid": "WAIT_START",
-                    "invalid": "SAY_START",
+                    "invalid": "START_TIMER",
                     "preempted": "WAIT_START",
+                },
+            )
+
+            smach.StateMachine.add(
+                "START_TIMER",
+                StartTimer(),
+                transitions={
+                    "succeeded": "SAY_START",
+                    "failed": "SAY_START",
+                },
+                remapping={
+                    "start_time": "start_time",
                 },
             )
 
@@ -310,9 +324,30 @@ class Receptionist(smach.StateMachine):
                 "SAY_FINISHED",
                 Say(text="I am done."),
                 transitions={
+                    "succeeded": "STOP_TIMER",
+                    "aborted": "STOP_TIMER",
+                    "preempted": "STOP_TIMER",
+                },
+            )
+            smach.StateMachine.add(
+                "STOP_TIMER",
+                StopTimer(),
+                transitions={
+                    "succeeded": "SAY_TIME",
+                    "failed": "failed",
+                },
+                remapping={
+                    "duration": "duration",
+                    "text": "time_text",
+                },
+            )
+            smach.StateMachine.add(
+                "SAY_TIME",
+                Say(),
+                transitions={
                     "succeeded": "succeeded",
                     "aborted": "failed",
-                    "preempted": "succeeded",
+                    "preempted": "failed",
                 },
             )
 
