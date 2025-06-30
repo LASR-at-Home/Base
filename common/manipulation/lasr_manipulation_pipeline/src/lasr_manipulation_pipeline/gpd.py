@@ -200,10 +200,10 @@ def angle_between(v1: np.ndarray, v2: np.ndarray) -> float:
 
 def filter_by_approach_angles(
     grasps: List[Pose],
-    angle_threshold_deg: float = 15.0,
+    angle_threshold_deg: float = 25.0,
 ) -> List[Pose]:
     """
-    Filters grasps so that their x-axis (approach vector) is close to canonical directions (minus bottom up)
+    Filters grasps so that their x-axis (approach vector) is close to canonical directions
     """
 
     # Canonical approach directions (unit vectors)
@@ -213,6 +213,7 @@ def filter_by_approach_angles(
         np.array([0, 1, 0]),  # left
         np.array([0, -1, 0]),  # right
         np.array([0, 0, -1]),  # top-down
+        np.array([0, 0, 1]),  # bottom-up
     ]
 
     threshold_rad = np.deg2rad(angle_threshold_deg)
