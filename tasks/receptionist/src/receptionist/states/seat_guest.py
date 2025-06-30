@@ -1,12 +1,17 @@
 import smach
 import rospy
 
+import numpy as np
+import tf2_ros as tf
+
 from shapely.geometry import Polygon as ShapelyPolygon
 
-import numpy as np
-
+from std_msgs.msg import Header
 from geometry_msgs.msg import Point, PointStamped
+from tf2_geometry_msgs import do_transform_point
+
 from receptionist.states import ReceptionistLearnFaces
+from lasr_vision_msgs.msg import Detection3D
 from lasr_skills import (
     PlayMotion,
     Detect3DInArea,
@@ -15,8 +20,6 @@ from lasr_skills import (
     Wait,
     DetectAllInPolygon,
 )
-
-from std_msgs.msg import Header
 
 
 class LearnHostFace(smach.StateMachine):
@@ -95,6 +98,8 @@ class ProcessDetections(smach.State):
 
     _max_people_on_sofa: int
     _sofa_point: Point
+    _tf_buffer: tf.Buffer
+    _tf_listener: tf.TransformListener
 
     def __init__(self, sofa_point: Point, max_people_on_sofa: int = 2):
         smach.State.__init__(
@@ -105,6 +110,45 @@ class ProcessDetections(smach.State):
         )
         self._max_people_on_sofa = max_people_on_sofa
         self._sofa_point = sofa_point
+        self._tf_buffer = tf.Buffer(cache_time=rospy.Duration(10))
+        self._tf_listener = tf.TransformListener(self._tf_buffer)
+
+    def _determine_side_of_sofa(self, sofa_detection: Detection3D) -> str:
+        """Determines which side of the sofa is empty, in order to seat
+        the guest there.
+
+        Args:
+            sofa_detection (Detection3D): Detection of the other
+            guest who is already sat on the sofa.
+
+        Returns:
+            str: "left" or "right" - which side of the sofa is empty.
+        """
+        occupied_pointstamped = PointStamped()
+        occupied_pointstamped.point = sofa_detection.point
+        occupied_pointstamped.header.frame_id = "map"
+
+        sofa_pointstamped = PointStamped()
+        sofa_pointstamped.point = self._sofa_point
+        sofa_pointstamped.header.frame_id = "map"
+
+        transform = self._tf_buffer.lookup_transform(
+            "base_footprint",
+            "map",
+            occupied_pointstamped.stamp,
+            rospy.Duration(1.0),
+        )
+        occupied_point_transformed = do_transform_point(
+            occupied_pointstamped, transform
+        )
+        sofa_point_transformed = do_transform_point(sofa_pointstamped, transform)
+        result = ""
+        if occupied_point_transformed.point.x < sofa_point_transformed.point.x:
+            result = "right"
+        else:
+            result = "left"
+
+        return result
 
     def execute(self, userdata):
         """
@@ -142,9 +186,10 @@ class ProcessDetections(smach.State):
             if len(userdata.sofa_detections) == 0:
                 userdata.seating_string = "The sofa that I'm looking at is empty. Please take a seat anywhere on the sofa."
             elif len(userdata.sofa_detections) == 1:
+                seating_side = self._determine_side_of_sofa(userdata.sofa_detections[0])
                 userdata.seating_string = (
                     "The sofa that I'm looking at is occupied by one person. "
-                    "Please take a seat next to them on the sofa."
+                    f"Please take a seat next to them on the {seating_side} side of the sofa."
                 )
         else:
             seated_guests_xywh = [
@@ -199,6 +244,17 @@ class ProcessDetections(smach.State):
                         )
                         userdata.seating_string = "The sofa is full, but I have found a chair for you. Please take a seat on the chair that I'm looking at."
                         done = True
+
+            if not done:
+                userdata.seating_string = "Uh oh, I couldn't find a seat for you. Please take a seat anywhere in the seating area."
+                userdata.guest_seat_point = PointStamped(
+                    header=Header(frame_id="map"),
+                    point=Point(
+                        x=self._sofa_point.x,
+                        y=self._sofa_point.y,
+                        z=self._sofa_point.z,
+                    ),
+                )
 
         return "succeeded"
 
@@ -323,7 +379,7 @@ class SeatGuest(smach.StateMachine):
                     LearnHostFace(),
                     transitions={
                         "succeeded": "LOOK_TO_SEAT",
-                        "failed": "failed",
+                        "failed": "LOOK_TO_SEAT",
                     },
                     remapping={
                         "guest_data": "guest_data",
@@ -336,8 +392,8 @@ class SeatGuest(smach.StateMachine):
                 LookToPoint(),
                 transitions={
                     "succeeded": "SAY_SEAT_GUEST",
-                    "aborted": "failed",
-                    "timed_out": "failed",
+                    "aborted": "SAY_SEAT_GUEST",
+                    "timed_out": "SAY_SEAT_GUEST",
                 },
                 remapping={
                     "pointstamped": "guest_seat_point",
@@ -348,8 +404,8 @@ class SeatGuest(smach.StateMachine):
                 Say(),
                 transitions={
                     "succeeded": "WAIT_FOR_GUEST_TO_SEAT",
-                    "aborted": "failed",
-                    "preempted": "failed",
+                    "aborted": "WAIT_FOR_GUEST_TO_SEAT",
+                    "preempted": "WAIT_FOR_GUEST_TO_SEAT",
                 },
                 remapping={
                     "text": "seating_string",
@@ -360,7 +416,7 @@ class SeatGuest(smach.StateMachine):
                 Wait(5.0),
                 transitions={
                     "succeeded": "RESET_HEAD_2",
-                    "failed": "failed",
+                    "failed": "RESET_HEAD_2",
                 },
             )
 
@@ -369,7 +425,7 @@ class SeatGuest(smach.StateMachine):
                 PlayMotion("look_centre"),
                 transitions={
                     "succeeded": "succeeded",
-                    "aborted": "failed",
-                    "preempted": "failed",
+                    "aborted": "succeeded",
+                    "preempted": "succeeded",
                 },
             )
