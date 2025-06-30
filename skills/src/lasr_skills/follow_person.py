@@ -142,7 +142,7 @@ class PersonFollowingData:
         self.last_target_position = None
         self.last_target_time = None
         self.look_down_duration = 1.0
-        self.look_down_period = 1.25
+        self.look_down_period = 2.0
 
         # Override with provided parameters
         for key, value in config_params.items():
@@ -1154,10 +1154,14 @@ class TrackingActiveState(smach.State):
                         * 1.25
                     ),
                 )
+                if self.sm_manager.shared_data.first_tracking_done:
+                    dynamic_stopping_distance = self.sm_manager.shared_data.min_following_distance
+                    rospy.loginfo("First goal, using minimum following threshold.")
                 for i in reversed(range(len(self.sm_manager.shared_data.target_list))):
                     distance_to_last = _euclidean_distance(
                         self.sm_manager.shared_data.target_list[i], last_pose_in_list
                     )
+
                     rospy.loginfo(
                         f"Checking pose {i}: distance to latest pose = {distance_to_last:.2f}m "
                         f"(dynamic threshold: {dynamic_stopping_distance:.2f}m, based on target speed: {target_speed:.2f}m) "
