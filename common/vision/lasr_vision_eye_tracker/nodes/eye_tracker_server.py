@@ -115,6 +115,17 @@ class EyeTracker:
             rospy.loginfo("service call failed")
             return None
 
+    def _look_centre(self) -> None:
+        """Moves the head to look at the centre position."""
+
+        goal = FollowJointTrajectoryGoal()
+        goal.trajectory.joint_names = ["head_1_joint", "head_2_joint"]
+        point = JointTrajectoryPoint()
+        point.positions = [0.0, 0.0]  # Look Center
+        point.time_from_start = rospy.Duration(1)
+        goal.trajectory.points.append(point)
+        result = self._head_action_client.send_goal_and_wait(goal)
+
     def _move_head_up(
         self, current_head_position: Tuple[float, float], y_delta: float = 0.25
     ) -> None:
@@ -254,9 +265,9 @@ class EyeTracker:
                 )
                 self._head_point_action_client.send_goal_and_wait(g)
 
-            # Check if the action has been preempted
             if self._action_server.is_preempt_requested():
                 rospy.loginfo("Eye Tracker Action Server preempted, stopping tracking.")
+                self._look_centre()
                 self._action_server.set_preempted()
                 image_sub.unregister()
                 depth_sub.unregister()

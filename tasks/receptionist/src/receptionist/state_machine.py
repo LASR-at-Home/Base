@@ -11,6 +11,7 @@ from lasr_skills import (
     Wait,
     WaitForPersonInArea,
     Rotate,
+    StopEyeTracker,
 )
 from receptionist.states import (
     HandleNameInterest,
@@ -365,9 +366,18 @@ class Receptionist(smach.StateMachine):
             f"SAY_FOLLOW_GUEST_TO_TABLE_{guest_id}",
             Say(text="Please follow me, I will guide you to the beverage area"),
             transitions={
+                "succeeded": f"STOP_EYE_TRACKER_GUEST_{guest_id}",
+                "preempted": f"STOP_EYE_TRACKER_GUEST_{guest_id}",
+                "aborted": f"STOP_EYE_TRACKER_GUEST_{guest_id}",
+            },
+        )
+
+        smach.StateMachine.add(
+            f"STOP_EYE_TRACKER_GUEST_{guest_id}",
+            StopEyeTracker(),
+            transitions={
                 "succeeded": f"GO_TO_TABLE_LOCATION_GUEST_{guest_id}",
-                "preempted": "failed",
-                "aborted": "failed",
+                "failed": f"GO_TO_TABLE_LOCATION_GUEST_{guest_id}",
             },
         )
 

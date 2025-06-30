@@ -172,15 +172,6 @@ class HandleNameInterest(smach.StateMachine):
                 "LEARN_FACE",
                 ReceptionistLearnFaces(guest_id),
                 transitions={
-                    "succeeded": "STOP_EYE_TRACKER",
-                    "failed": "STOP_EYE_TRACKER",
-                },
-            )
-
-            smach.StateMachine.add(
-                "STOP_EYE_TRACKER",
-                StopEyeTracker(),
-                transitions={
                     "succeeded": "succeeded",
                     "failed": "failed",
                 },
