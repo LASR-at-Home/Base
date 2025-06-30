@@ -11,7 +11,7 @@ import tf.transformations as tft
 
 from sensor_msgs.msg import Image, JointState
 from cv_bridge import CvBridge
-from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import PoseStamped, Pose
 from moveit_commander import (
     MoveGroupCommander,
     roscpp_initialize,
@@ -87,11 +87,9 @@ class BagPickAndPlace(smach.State):
         self.bridge = CvBridge()
         self.latest_rgb = None
         self.latest_depth = None
-        self.click = None
 
         # Display window for clicking
         cv2.namedWindow("Live View", cv2.WINDOW_NORMAL)
-        cv2.setMouseCallback("Live View", self.on_mouse_click)
 
         # Sync RGB + depth
         rgb_sub = Subscriber("/xtion/rgb/image_raw", Image)
@@ -142,11 +140,6 @@ class BagPickAndPlace(smach.State):
 
         self.tf_listener = tf.TransformListener()
 
-    def on_mouse_click(self, event, x, y, flags, param):
-        if event == cv2.EVENT_LBUTTONDOWN:
-            self.click = (x, y)
-            rospy.loginfo(f"User click at {self.click}")
-
     def synced_callback(self, rgb_msg, depth_msg):
         try:
             self.latest_rgb = self.bridge.imgmsg_to_cv2(rgb_msg, "bgr8")
@@ -157,6 +150,7 @@ class BagPickAndPlace(smach.State):
     def execute(self, userdata):
         try:
             self.adjust_torso(0.1)
+            self.say("I am detecting the bag")
             self.wait_for_rgb()
             resp = self.get_langsam_bags()
             if not resp or not resp.detections:
@@ -181,6 +175,7 @@ class BagPickAndPlace(smach.State):
             centroid_pose = self.transform_centroid_pose_footprint(centroid, yaw)
             self.create_collision_object_from_pcl(pts)
             rospy.sleep(1.0)
+            self.say("I am picking up the bag now.")
             self.prepare_pick()
             if not self.pick(centroid_pose, closest_pose):
                 self.ask_for_bag()
@@ -483,8 +478,9 @@ class BagPickAndPlace(smach.State):
     def sync_shift_ee(self, move_group, x, y, z):
         from tf.transformations import euler_from_quaternion, euler_matrix
 
-        curr_pose = move_group.get_current_pose()
-        pose = curr_pose.pose
+        pose = self.get_eef_pose_listener(
+            ee_frame="arm_tool_link", base_frame="base_footprint"
+        )
         quat = [
             pose.orientation.x,
             pose.orientation.y,
@@ -497,10 +493,37 @@ class BagPickAndPlace(smach.State):
         pose.position.x += delta[0]
         pose.position.y += delta[1]
         pose.position.z += delta[2]
-        move_group.set_pose_target(curr_pose)
+        move_group.set_pose_target(pose)
         move_group.set_start_state_to_current_state()
         result = move_group.go(wait=True)
         return result
+
+    def get_eef_pose_listener(
+        self, ee_frame="arm_tool_link", base_frame="base_footprint"
+    ):
+        print("MoveIt! end effector link:", self.arm.get_end_effector_link())
+        listener = tf.TransformListener()
+        try:
+            listener.waitForTransform(
+                base_frame, ee_frame, rospy.Time(0), rospy.Duration(1.0)
+            )
+            trans, rot = listener.lookupTransform(base_frame, ee_frame, rospy.Time(0))
+
+            pose = Pose()
+            pose.position.x, pose.position.y, pose.position.z = trans
+            (
+                pose.orientation.x,
+                pose.orientation.y,
+                pose.orientation.z,
+                pose.orientation.w,
+            ) = rot
+            return pose
+
+        except Exception as e:
+            rospy.logerr(
+                f"Failed to get transform from {base_frame} to {ee_frame}: {e}"
+            )
+            return None
 
     def is_picked_up(self, pos_thresh=0.002, effort_thresh=0.05):
         self.close_gripper()
@@ -530,7 +553,16 @@ class BagPickAndPlace(smach.State):
         self.say(
             "I wasn't able to pickup the bag. Please put the bag into my gripper. I will give you 5 seconds."
         )
-        rospy.sleep(5)
+        self.say("5")
+        rospy.sleep(0.5)
+        self.say("4")
+        rospy.sleep(0.5)
+        self.say("3")
+        rospy.sleep(0.5)
+        self.say("2")
+        rospy.sleep(0.5)
+        self.say("1")
+        rospy.sleep(0.5)
         self.close_gripper()
 
     def say(self, text: str):

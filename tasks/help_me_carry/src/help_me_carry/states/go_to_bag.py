@@ -21,6 +21,8 @@ from lasr_vision_msgs.srv import LangSam
 from lasr_vision_msgs.srv import YoloPoseDetection3D, YoloPoseDetection3DRequest
 from play_motion_msgs.msg import PlayMotionGoal, PlayMotionAction
 
+from pal_interaction_msgs.msg import TtsAction, TtsGoal, TtsText
+
 
 class GoToBag(smach.State):
     def __init__(self):
@@ -72,6 +74,11 @@ class GoToBag(smach.State):
         rospy.loginfo("Waiting for /play_motion action server...")
         self.motion_client.wait_for_server()
         rospy.loginfo("/play_motion action server connected")
+
+        self.tts_client = actionlib.SimpleActionClient("tts", TtsAction)
+        rospy.loginfo("Waiting for TTS action server…")
+        self.tts_client.wait_for_server()
+        rospy.loginfo("TTS action server connected.")
 
         rospy.sleep(0.1)
         self.recovery_motions = [
@@ -131,6 +138,14 @@ class GoToBag(smach.State):
             for kp in kp_list
         }
 
+    def say(self, text: str):
+        if hasattr(self, "tts_client"):
+            goal = TtsGoal(rawtext=TtsText(text=text, lang_id="en_GB"))
+            self.tts_client.send_goal(goal)
+            self.tts_client.wait_for_result()
+        else:
+            rospy.loginfo(f"[TTS fallback] {text}")
+
     def execute(self, userdata):
         # Wait for image & depth as before
         while not rospy.is_shutdown():
@@ -143,8 +158,10 @@ class GoToBag(smach.State):
             rospy.sleep(0.1)
 
         # ------ Look where the person points ------
+        self.say("I'm looking at where you're pointing.")
         self.look_where_person_points()
 
+        self.say("I'm trying to find the bag.")
         lang_sam_resp = self.detect_bag_with_lang_sam(prompt="bag")
 
         recovery_counter = 0
@@ -197,6 +214,7 @@ class GoToBag(smach.State):
         p_cam = centroid
 
         head_point = self.transform_from_camera_to_map(p_cam)
+        self.say("I'm navigating to the bag.")
         x_bag, y_bag = self.navigate_to_closest_feasible_point(p_cam)
         if x_bag is not None and y_bag is not None:
             rospy.loginfo(
@@ -213,11 +231,39 @@ class GoToBag(smach.State):
             return "failed"
 
     def look_where_person_points(self):
-        rospy.loginfo("Looking for pointing gesture (least downward in map frame)...")
-        kps = self.get_human_keypoints_3d()
-        if not kps:
+        rospy.loginfo("Looking for pointing gesture (by closest left ankle)...")
+        kps_result = self.get_human_keypoints_3d()
+
+        if not kps_result:
             rospy.logwarn("No human keypoints detected!")
             return False
+
+        # Normalize to a list of dicts
+        if isinstance(kps_result, dict):
+            all_kps = [kps_result]
+        elif isinstance(kps_result, list):
+            all_kps = kps_result
+        else:
+            rospy.logwarn("Keypoints format not recognized!")
+            return False
+
+        # Find the closest person by valid left ankle
+        closest_kps = None
+        min_dist = float("inf")
+        for kps in all_kps:
+            if "left_ankle" not in kps or np.allclose(kps["left_ankle"], 0):
+                continue
+            left_ankle = np.array(kps["left_ankle"])
+            dist = np.linalg.norm(left_ankle)
+            if dist < min_dist:
+                min_dist = dist
+                closest_kps = kps
+
+        if closest_kps is None:
+            rospy.logwarn("No person found with valid left ankle keypoint.")
+            return False
+
+        kps = closest_kps
 
         # Transform all keypoints to map frame
         kps_map = {}
@@ -237,23 +283,17 @@ class GoToBag(smach.State):
             if all(k in kps_map for k in [elbow_key, wrist_key]):
                 origin = kps_map[elbow_key]
                 wrist = kps_map[wrist_key]
-
                 vec = wrist - origin
                 norm = np.linalg.norm(vec)
                 if norm < 1e-6:
                     continue
                 dirv = vec / norm
-
-                # Downward alignment
-                downward = np.dot(dirv, map_down_axis)  # -dirv[2]
-
+                downward = np.dot(dirv, map_down_axis)
                 rospy.loginfo(f"{side} arm downward={downward:.2f}")
-
                 arms.append(
                     {"side": side, "downward": downward, "dirv": dirv, "origin": origin}
                 )
 
-        # Sort arms by 'downward' (smallest/most negative is "most downward")
         arms = sorted(arms, key=lambda x: x["downward"])
 
         for arm in arms:
@@ -471,7 +511,7 @@ class GoToBag(smach.State):
 
     def face_point_with_amcl(self, target_x, target_y):
         rospy.loginfo(
-            f"[SAM-CLICK] Request to face ({target_x:.2f}, {target_y:.2f}) using AMCL pose."
+            f"Request to face ({target_x:.2f}, {target_y:.2f}) using AMCL pose."
         )
         for attempt in range(10):
             if self.latest_amcl_pose is None:
@@ -503,7 +543,7 @@ class GoToBag(smach.State):
                 ((desired_yaw - current_yaw + np.pi) % (2 * np.pi)) - np.pi
             )
             if angle_error < 0.05:  # radians (~3 degrees)
-                rospy.loginfo("[SAM-CLICK] Already facing target.")
+                rospy.loginfo("Already facing target.")
                 return True
 
             # Build a move_base goal to rotate in place
