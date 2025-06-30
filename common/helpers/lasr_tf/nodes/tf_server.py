@@ -14,7 +14,7 @@ class TfServer:
     def __init__(self):
 
         self._tf_buffer = tf.Buffer(cache_time=rospy.Duration(10.0))
-        self._tf_listener = tf.TransformListener(self.tf_buffer)
+        self._tf_listener = tf.TransformListener(self._tf_buffer)
 
         rospy.Service(
             "/tf_server/transform_point", TransformPoint, self._transform_point
@@ -49,3 +49,10 @@ class TfServer:
         ) as e:
             rospy.logerr(f"TF error: {e}")
             return TransformPointResponse(PointStamped())
+
+
+if __name__ == "__main__":
+    rospy.init_node("tf_server")
+    tf_server = TfServer()
+    rospy.loginfo("TF Server is ready!")
+    rospy.spin()

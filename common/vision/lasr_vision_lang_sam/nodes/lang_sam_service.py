@@ -6,13 +6,12 @@ import cv2
 import cv2_img
 import sys
 import numpy as np
-import tf2_ros as tf
 
 from PIL import Image
-from tf2_geometry_msgs.tf2_geometry_msgs import do_transform_point
 
 from lang_sam import LangSAM
 from lang_sam.utils import draw_image
+from lasr_tf.srv import TransformPoint, TransformPointRequest
 from lasr_vision_msgs.srv import LangSam, LangSamRequest, LangSamResponse
 from lasr_vision_msgs.msg import LangSamDetection
 from sensor_msgs.msg import Image as SensorImage
@@ -23,8 +22,7 @@ class LangSamService:
 
     _model: LangSAM
     _service: rospy.Service
-    _tf_buffer: tf.Buffer
-    _tf_listener: tf.TransformListener
+    _tf_service: rospy.ServiceProxy
     debug_publisher: rospy.Publisher
 
     def __init__(self, use_gpu: bool = True):
@@ -35,11 +33,12 @@ class LangSamService:
         if not use_gpu:
             os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
-        self._tf_buffer = tf.Buffer(cache_time=rospy.Duration(10))
-        self._tf_listener = tf.TransformListener(self._tf_buffer)
-
         self._model = LangSAM()
         self._service = rospy.Service("/lasr_vision/lang_sam", LangSam, self._lang_sam)
+        self._tf_service = rospy.ServiceProxy(
+            "/tf_server/transform_point", TransformPoint
+        )
+        self._tf_service.wait_for_service()
         rospy.loginfo("/lasr_vision/lang_sam service is ready!")
 
     def _imgmsg_to_cv2(self, img_msg):
@@ -150,20 +149,6 @@ class LangSamService:
             text_threshold=request.text_threshold,
         )
 
-        try:
-            transform = self._tf_buffer.lookup_transform(
-                request.target_frame,
-                request.depth_image.header.frame_id,
-                request.depth_image.header.stamp,
-                rospy.Duration(1.0),
-            )
-        except (
-            tf.LookupException,
-            tf.ConnectivityException,
-            tf.ExtrapolationException,
-        ) as e:
-            raise rospy.ServiceException(str(e))
-
         response_results: List[LangSamDetection] = []
 
         for result in results:
@@ -207,7 +192,15 @@ class LangSamService:
                 point_stamped = PointStamped()
                 point_stamped.header = request.depth_image.header
                 point_stamped.point = point
-                point_transformed = do_transform_point(point_stamped, transform)
+
+                tf_response = self._tf_service(
+                    TransformPointRequest(
+                        point=point_stamped,
+                        target_frame=request.target_frame,
+                    )
+                )
+                point_transformed = tf_response.transformed_point_stamped
+
                 detection_point = point_transformed.point
 
                 response_results.append(
