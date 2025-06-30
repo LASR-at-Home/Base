@@ -126,6 +126,8 @@ class FilterPointCloudState(smach.State):
         userdata.sam_detections["filtered_points"] = filtered_points
         userdata.sam_detections["raw_points"]=cloud_msg
         return "succeeded"
+    
+    
 
 # #
 
