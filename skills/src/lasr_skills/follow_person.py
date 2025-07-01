@@ -142,7 +142,7 @@ class PersonFollowingData:
         self.last_target_position = None
         self.last_target_time = None
         self.look_down_duration = 0.25
-        self.look_down_period = 5.0
+        self.look_down_period = 4.0
 
         # Override with provided parameters
         for key, value in config_params.items():
