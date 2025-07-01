@@ -32,6 +32,16 @@
         file="$(find lasr_vision_cropped_detection)/launch/cropped_detection.launch"
     />
     <include file="$(find lasr_vision_bodypix)/launch/bodypix.launch"/>
+    <include file="$(find lasr_vision_clip)/launch/clip_vqa.launch"/>
+    <include file="$(find lasr_vision_yolo)/launch/service.launch" />
+
+      <!-- publish your laptop webcam on /camera/image_raw -->
+    <!-- <node
+        pkg="gpsr"
+        type="webcam_pub.py"
+        name="webcam_pub"
+        output="screen"
+    /> -->
 
     <!-- To find the most similar commands -->
     <node 
@@ -41,6 +51,6 @@
         output="screen"
     />
 
-    <include file="$(find lasr_person_following)/launch/person_following.launch"/>
+    <!-- <include file="$(find lasr_person_following)/launch/person_following.launch"/> -->
 
 </launch>

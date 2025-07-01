@@ -1,3 +1,6 @@
 [submodule "common/third_party/leg_tracker"]
 	path = common/third_party/leg_tracker
 	url = https://github.com/LASR-at-Home/leg_tracker
+[submodule "common/third_party/sam2-real-time-ros1"]
+	path = common/third_party/sam2-real-time-ros1
+	url = https://github.com/LASR-at-Home/sam2-real-time-ros1

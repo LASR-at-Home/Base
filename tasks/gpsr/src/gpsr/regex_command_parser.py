@@ -166,7 +166,7 @@ def gpsr_components():
     ]
     question_list = ["question", "quiz"]
 
-    color_list = ["blue", "yellow", "black", "white", "red", "orange", "gray"]
+    color_list = ["green", "blue", "yellow", "black", "white", "red", "orange", "grey", "brown", "purple"]
     clothe_list = ["t shirt", "shirt", "blouse", "sweater", "coat", "jacket"]
     clothes_list = ["t shirts", "shirts", "blouses", "sweaters", "coats", "jackets"]
     color_clothe_list = []
@@ -292,7 +292,8 @@ def gpsr_regex(configuration: Configuration):
     # print(get_possible_sub_commands("atLoc"))
     command(
         "goToLoc",
-        f"{verb('go')} {prep('toLocPrep')} the {Configuration.pick(configuration, 'location', ['loc', 'room'])} then {get_possible_sub_commands('atLoc')}",
+         f"{verb('go')} {prep('toLocPrep')} the {Configuration.pick(configuration, 'location', ['loc', 'room'])} then {get_possible_sub_commands('atLoc')}",
+        
     )
     command(
         "takeObjFromPlcmt",
@@ -435,8 +436,11 @@ def gpsr_compile_and_parse(config: Configuration, input: str) -> Dict:
         input = input[1:]
     print(f"Parsed input: {input}")
     regex_str = gpsr_regex(config)
+    print(f"possible configrations:{config}")
     regex = re.compile(regex_str)
     matches = regex.match(input)
+    print(matches)
+    print(f" matches:{matches}")
     matches = matches.groupdict()
     object_categories = (
         config["object_categories_singular"] + config["object_categories_plural"]

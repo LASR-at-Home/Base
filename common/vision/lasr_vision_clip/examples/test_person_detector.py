@@ -41,7 +41,7 @@ if __name__ == "__main__":
                             method="centered",
                             use_mask=True,
                             object_names=["person"],
-                            yolo_model="yolov8x-seg.pt",
+                            yolo_model="yolo11n-seg.pt",
                             yolo_model_confidence=0.8,
                             yolo_nms_threshold=0.4,
                         )
@@ -65,7 +65,7 @@ if __name__ == "__main__":
                         method="centered",
                         use_mask=True,
                         object_names=["person"],
-                        yolo_model="yolov8x-seg.pt",
+                        yolo_model="yolo11n-seg.pt",
                         yolo_model_confidence=0.8,
                         yolo_nms_threshold=0.4,
                     )

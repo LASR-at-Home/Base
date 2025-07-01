@@ -1,120 +1,80 @@
+#!/usr/bin/env python3
 import smach
 import rospy
-
 from typing import Optional
-from lasr_vision_msgs.srv import (
-    TorchFaceFeatureDetectionDescription,
-)
-from lasr_skills import DescribePeople
+from lasr_skills.clip_vqa import QueryImage
 
+'''
+class DecideClothing(smach.State):
+    def __init__(self, desired_list: list):
+        super().__init__(
+            outcomes=["succeeded", "failed"],
+            input_keys=["detected_clothing"]
+        )
+        self.desired_list = desired_list
 
-colour_list = ["blue", "yellow", "black", "white", "red", "orange", "gray"]
-cloth_list = ["t shirt", "shirt", "blouse", "sweater", "coat", "jacket"]
-cloth_type_map = {
-    "t shirt": "short sleeve top",
-    "shirt": "long sleeve top",
-    "blouse": "long sleeve top",
-    "sweater": "long sleeve top",
-    "coat": "long sleeve outwear",
-    "jacket": "long sleeve outwear",
-}
-cloth_type_rough_map = {
-    "short sleeve top": "top",
-    "long sleeve top": "top",
-    "long sleeve outwear": "outwear",
-}
+    def execute(self, userdata) -> str:
+        return "succeeded" if userdata.detected_clothing in self.desired_list else "failed"
+        
+'''
+class DecideClothing(smach.State):
+    def __init__(self, desired_list: list):
+        super().__init__(
+            outcomes=["succeeded", "failed"],
+            input_keys=["detected_clothing"]
+        )
+        self.desired_list = desired_list
 
+    def execute(self, userdata) -> str:
+        detected = userdata.detected_clothing.strip().lower()
+        rospy.loginfo(f"[CLIP-VQA] Detected clothing: '{detected}'")
+        
+        if detected in self.desired_list:
+            return "succeeded"
+        else:
+            rospy.logwarn(f"[CLIP-VQA] Clothing '{detected}' not in desired list: {self.desired_list}")
+            return "failed"
 
 class DetectClothing(smach.StateMachine):
-
     def __init__(self, clothing_to_detect: Optional[str] = None):
         """
-        clothing_to_detect: "blue shirt"
+        Replace the old face-features pipeline with CLIP-VQA.
+        clothing_to_detect should be e.g. "blue t shirt".
         """
-        smach.State.__init__(
+        smach.StateMachine.__init__(
             self,
             outcomes=["succeeded", "failed"],
             input_keys=["img_msg"],
+            output_keys=["detected_clothing"],
         )
 
-        # self._clothing_to_detect = clothing_to_detect
-
-        colour = clothing_to_detect.split[0]
-        cloth = clothing_to_detect.split[1]
+        desired = clothing_to_detect
 
         with self:
+            # 1) Ask CLIP-VQA “what clothing is this?”, restricting answers to your one desired string
             smach.StateMachine.add(
-                "GET_ATTRIBUTES",
-                DescribePeople(),
+                "QUERY_CLOTHING",
+                QueryImage(possible_answers=[desired]),
                 transitions={
                     "succeeded": "DECIDE",
-                    "failed": "failed",
+                    "aborted":   "failed",
+                    "preempted": "failed",
+                },
+                remapping={
+                    "img_msg": "img_msg",
+                    "answer":  "detected_clothing",
                 },
             )
 
+            # 2) Check if the answer exactly matches your desired clothing string
             smach.StateMachine.add(
                 "DECIDE",
-                self.Descriminator(
-                    colour=colour,
-                    cloth=cloth,
-                ),
+                DecideClothing(desired),
                 transitions={
                     "succeeded": "succeeded",
-                    "failed": "failed",
+                    "failed":    "failed",
+                },
+                remapping={
+                    "detected_clothing": "detected_clothing",
                 },
             )
-
-    class Descriminator(smach.State):
-        def __init__(
-            self,
-            colour: str,
-            cloth: str,
-        ):
-            smach.State.__init__(
-                self,
-                outcomes=[
-                    "succeeded",
-                    "fail",
-                ],
-                input_keys=[
-                    "img_msg",
-                ],
-                output_keys=[],
-            )
-            self.colour = colour
-            self.cloth = cloth
-
-            self.face_features = rospy.ServiceProxy(
-                "/torch/detect/face_features", TorchFaceFeatureDetectionDescription
-            )
-
-            def execute(self, userdata):
-                if self.colour not in colour_list or self.cloth not in cloth_list:
-                    return "failed"
-                if len(userdata.people) == 0:
-                    return "failed"
-
-                feature_dict = userdata.people[0]["features"]
-
-                inquired_cloth_type = cloth_type_map[self.cloth]
-
-                inquired_rough_cloth_type = cloth_type_rough_map[inquired_cloth_type]
-
-                confidence = feature_dict[inquired_rough_cloth_type]
-
-                if confidence < 0.25:
-                    return "failed"
-
-                cloth_type = cloth_type_rough_map["max_" + inquired_rough_cloth_type]
-
-                if inquired_cloth_type != cloth_type:
-                    return "failed"
-
-                colour_percentage = feature_dict[inquired_cloth_type + " colour"]
-
-                largest_colour = max(colour_percentage, key=colour_percentage.get)
-
-                if inquired_cloth_type == largest_colour:
-                    return "succeeded"
-
-                return "failed"

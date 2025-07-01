@@ -48,34 +48,38 @@ class Detect3DInArea(smach.StateMachine):
                 for i in range(0, len(detected_objects))
                 if satisfied_points[i]
             ]
-
+            # List of Detection3D msgs
             userdata["detections_3d"] = filtered_detections
             return "succeeded"
 
     def __init__(
         self,
         area_polygon: ShapelyPolygon,
-        depth_topic: str = "/xtion/depth_registered/points",
-        model: str = "yolov8x-seg.pt",
+        image_topic: str = "/xtion/rgb/image_raw",
+        depth_image_topic: str = "/xtion/depth_registered/image_raw",
+        depth_camera_info_topic: str = "/xtion/depth_registered/camera_info",
+        model: str = "yolo11n-seg.pt",
         filter: Union[List[str], None] = None,
         confidence: float = 0.5,
-        nms: float = 0.3,
+        target_frame: str = "map",
     ):
         smach.StateMachine.__init__(
             self,
             outcomes=["succeeded", "failed"],
-            output_keys=["detections_3d"],
+            output_keys=["detections_3d", "image_raw"],
         )
 
         with self:
             smach.StateMachine.add(
                 "DETECT_OBJECTS_3D",
                 Detect3D(
-                    depth_topic=depth_topic,
+                    image_topic=image_topic,
+                    depth_image_topic=depth_image_topic,
+                    depth_camera_info_topic=depth_camera_info_topic,
                     model=model,
                     filter=filter,
                     confidence=confidence,
-                    nms=nms,
+                    target_frame=target_frame,
                 ),
                 transitions={"succeeded": "FILTER_DETECTIONS", "failed": "failed"},
             )

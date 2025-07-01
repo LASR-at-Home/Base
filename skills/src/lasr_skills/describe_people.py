@@ -30,13 +30,6 @@ class DescribePeople(smach.StateMachine):
         )
 
         with self:
-            # smach.StateMachine.add(
-            #     "GET_IMAGE",
-            #     GetCroppedImage(
-            #         object_name="person",
-            #         method="closest",
-            #         use_mask=True,  # If true prediction can be very wrong!!!
-            #     ),
             smach.StateMachine.add(
                 "GET_IMAGE",
                 GetImage(),

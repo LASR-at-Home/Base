@@ -29,7 +29,7 @@ rasa = True
 class Default:
     def __init__(self):
         rospy.loginfo("YOLO is here")
-        self.yolo = rospy.ServiceProxy("/yolov8/detect", YoloDetection)
+        self.yolo = rospy.ServiceProxy("/yolo/detect", YoloDetection)
         rospy.loginfo("PM is here")
         self.pm = actionlib.SimpleActionClient("/play_motion", PlayMotionAction)
         rospy.loginfo("Controllers is here")

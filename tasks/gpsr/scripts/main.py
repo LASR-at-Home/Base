@@ -65,23 +65,25 @@ def main() -> None:
     instruction_pose.header.frame_id = "map"
     N_COMMANDS: int = 3
     config = load_gpsr_configuration()
-    move_base_client = actionlib.SimpleActionClient("move_base", MoveBaseAction)
-    move_base_client.wait_for_server()
+    #move_base_client = actionlib.SimpleActionClient("move_base", MoveBaseAction)
+    #move_base_client.wait_for_server()
     tts_client = actionlib.SimpleActionClient("tts", TtsAction)
     tts_client.wait_for_server()
-    _tts(tts_client, "Please open the door")
-    rospy.sleep(3)
+    # _tts(tts_client, "Please open the door")
+    # rospy.sleep(3)
     for i in range(N_COMMANDS):
         rospy.loginfo(f"Command {i + 1}")
-        _tts(tts_client, "I am going to the instruction point to receive a command")
-        _move_base(move_base_client, instruction_pose)
+        #_tts(tts_client, "I am going to the instruction point to receive a command")
+        _tts(tts_client, "for testing I will not go to the instruction point")
+        #_move_base(move_base_client, instruction_pose)
         if i > 0:
-            _tts(
-                tts_client,
-                "I will wait 20 seconds to allow you to reset the arena, then I will be ready for the next command",
-            )
+            #_tts(
+            #    tts_client,
+            #    "I will wait 20 seconds to allow you to reset the arena, then I will be ready for the next command",
+            #)
             rospy.sleep(rospy.Duration(20.0))
         try:
+            rospy.loginfo(f"Staring GPSR")
             command_parser_sm = CommandParserStateMachine(data_config=config)
             command_parser_sm.execute()
             parsed_command: Dict = command_parser_sm.userdata.parsed_command

@@ -3,6 +3,7 @@ import rospy
 import smach
 import smach_ros
 from typing import Dict, List
+#from lasr_skills.fake_nav import GoToLocation
 from lasr_skills import (
     GoToLocation,
     FindPerson,
@@ -15,7 +16,7 @@ from lasr_skills import (
     LookToPoint,
 )
 
-from lasr_person_following.msg import FollowAction, FollowGoal
+#from lasr_person_following.msg import FollowAction, FollowGoal
 
 from gpsr.states import (
     Talk,
@@ -105,6 +106,31 @@ OBJECT_CATEGORY_LOCATIONS = {
 """
 Helpers
 """
+
+# right after your imports:
+class ClothingString(str):
+    """
+    A str subclass whose .split property returns [colour, garment],
+    with:
+      - underscores/hyphens → spaces
+      - lowercasing
+      - trailing 's' stripped from the garment
+    """
+    def __new__(cls, raw: str):
+        norm = raw.replace("_", " ").replace("-", " ").lower()
+        return super().__new__(cls, norm)
+
+    @property
+    def split(self):
+        # split into [colour, rest_of_garment]
+        parts = super().split(None, 1)
+        if len(parts) == 1:
+            parts.append("")
+        # singularize plural garments: "t shirts" → "t shirt"
+        col, cloth = parts
+        if cloth.endswith("s"):
+            cloth = cloth[:-1]
+        return [col, cloth]
 
 
 def increment_state_count() -> int:
@@ -248,10 +274,19 @@ def greet(command_param: Dict, sm: smach.StateMachine) -> None:
         criteria = "name"
         criteria_value = command_param["name"]
         output_string += f"{criteria_value} "
+    
     elif "clothes" in command_param:
         criteria = "clothes"
-        criteria_value = command_param["clothes"]
+        # normalize exactly as in count()
+        norm = command_param["clothes"].replace("_", " ").replace("-", " ").lower()
+        parts = norm.split()
+        if parts[-1].endswith("s"):
+            parts[-1] = parts[-1][:-1]
+        criteria_value = " ".join(parts)
+        find_person = True
         output_string += f"the person wearing a {criteria_value} "
+
+
     elif "gesture" in command_param:
         criteria = "gesture"
         criteria_value = command_param["gesture"]
@@ -301,6 +336,18 @@ def greet(command_param: Dict, sm: smach.StateMachine) -> None:
             "failed": f"STATE_{STATE_COUNT + 1}",
         },
     )
+
+    # Then say the greeting
+    sm.add(
+        f"STATE_{increment_state_count()}",
+        Say(text=f"Hello to the person {criteria_value} in the {location_string}"),
+        transitions={
+            "succeeded": f"STATE_{STATE_COUNT + 1}",
+            "preempted": f"STATE_{STATE_COUNT + 1}",
+            "aborted": f"STATE_{STATE_COUNT + 1}",
+        },
+    )
+
 
 
 def talk(command_param: Dict, sm: smach.StateMachine, greet_person: bool) -> None:
@@ -531,9 +578,15 @@ def guide(command_param: Dict, sm: smach.StateMachine) -> None:
         find_person = True
     elif "clothes" in command_param:
         criteria = "clothes"
-        criteria_value = command_param["clothes"]
+        # normalize exactly as in count()
+        norm = command_param["clothes"].replace("_", " ").replace("-", " ").lower()
+        parts = norm.split()
+        if parts[-1].endswith("s"):
+            parts[-1] = parts[-1][:-1]
+        criteria_value = " ".join(parts)
         find_person = True
         output_string += f"the person wearing a {criteria_value} "
+
     elif "gesture" in command_param:
         criteria = "gesture"
         criteria_value = command_param["gesture"]
@@ -575,7 +628,15 @@ def guide(command_param: Dict, sm: smach.StateMachine) -> None:
             transitions={
                 "succeeded": f"STATE_{STATE_COUNT + 1}",
                 "failed": f"STATE_{STATE_COUNT + 1}",
+                #"failed": f"NO_PERSON",
             },
+        )
+
+        # NO_PERSON: if the sub‐SM failed, greet that no one was found and finish
+        sm.add(
+            "NO_PERSON",
+            Say(text=f"Sorry, I couldn’t find anyone wearing {criteria_value} at the {start_loc}."),
+            transitions={ "succeeded":"succeeded", "aborted":"succeeded", "preempted":"succeeded" }
         )
 
         try:
@@ -1042,16 +1103,32 @@ def count(command_param: Dict, sm: smach.StateMachine) -> None:
         criteria_value = command_param["pose"]
         people = True
         output_string += f"{criteria_value} in the "
+        
     elif "gesture" in command_param:
         criteria = "gesture"
         criteria_value = command_param["gesture"]
+        if criteria_value.endswith("_persons"):
+             criteria_value = criteria_value[: -len("_persons")]
+        elif criteria_value.endswith("_people"):
+             criteria_value = criteria_value[: -len("_people")]
         people = True
         output_string += f"{criteria_value} in the "
+
     elif "clothes" in command_param:
         criteria = "clothes"
-        criteria_value = command_param["clothes"]
+        raw_val = command_param["clothes"]                    # e.g. "blue_t_shirts"
+        # 1) normalize underscores/hyphens → spaces, lowercase
+        norm = raw_val.replace("_", " ").replace("-", " ").lower()
+        # 2) split into words
+        parts = norm.split()
+        # 3) singularize the garment if it’s plural (“t shirts” → “t shirt”)
+        if parts[-1].endswith("s"):
+            parts[-1] = parts[-1][:-1]
+        # 4) re-join
+        criteria_value = " ".join(parts)                       # now "blue t shirt"
         people = True
         output_string += f"people wearing {criteria_value} in the "
+
     elif "object_category" in command_param:
         criteria = "object_category"
         criteria_value = command_param["object_category"]
@@ -1079,6 +1156,9 @@ def count(command_param: Dict, sm: smach.StateMachine) -> None:
                 "aborted": f"STATE_{STATE_COUNT + 1}",
             },
         )
+
+         
+
         sm.add(
             f"STATE_{increment_state_count()}",
             CountPeople(
@@ -1112,7 +1192,8 @@ def count(command_param: Dict, sm: smach.StateMachine) -> None:
             ),
             transitions={
                 "succeeded": f"STATE_{STATE_COUNT + 1}",
-                "failed": f"STATE_{STATE_COUNT + 1}",
+                "preempted": f"STATE_{STATE_COUNT + 1}",
+                "aborted": f"STATE_{STATE_COUNT + 1}",
             },
             remapping={"placeholders": "people_count"},
         )
@@ -1176,7 +1257,7 @@ def count(command_param: Dict, sm: smach.StateMachine) -> None:
                 "failed": f"STATE_{STATE_COUNT + 1}",
             },
         )
-
+        '''
         sm.add(
             f"STATE_{increment_state_count()}",
             Say(
@@ -1190,6 +1271,44 @@ def count(command_param: Dict, sm: smach.StateMachine) -> None:
                 "failed": f"STATE_{STATE_COUNT + 1}",
             },
             remapping={"placeholders": "object_count"},
+        )
+        '''
+        # --- insert a branch on zero vs nonzero count ---
+        @smach.cb_interface(
+            input_keys=["people_count"],
+            outcomes=["zero","nonzero"]
+        )
+        def _check_zero_cb(userdata):
+            return "zero" if userdata.people_count==0 else "nonzero"
+
+        sm.add(
+            f"STATE_{increment_state_count()}",
+            smach.CBState(_check_zero_cb),
+            transitions={
+                "zero":   f"STATE_{STATE_COUNT + 1}_NONE",
+                "nonzero":f"STATE_{STATE_COUNT + 1}_COUNT",
+            },
+        )
+
+        # zero-case
+        sm.add(
+            f"STATE_{increment_state_count()}_NONE",
+            Say(text=f"There are no people wearing {criteria_value} in the {command_param['room']}"),
+            transitions={"succeeded":"succeeded", 
+                "aborted":  "succeeded",
+                "preempted":"succeeded",},
+        )
+
+        # non-zero case
+        sm.add(
+            f"STATE_{increment_state_count()}_COUNT",
+            Say(
+                format_str=f"There are {{}} people wearing {criteria_value} in the {command_param['room']}"
+            ),
+            remapping={"placeholders":"people_count"},
+            transitions={"succeeded":"succeeded", 
+                "aborted":  "succeeded",
+                "preempted":"succeeded",},
         )
 
 
@@ -1244,6 +1363,7 @@ def build_state_machine(parsed_command: Dict) -> smach.StateMachine:
         for index, (command_verb, command_param) in enumerate(
             zip(command_verbs, command_params)
         ):
+            rospy.loginfo("I am inside!")
             if command_verb == "greet":
                 greet(command_param, sm)
             elif command_verb == "talk":
@@ -1278,7 +1398,8 @@ def build_state_machine(parsed_command: Dict) -> smach.StateMachine:
             elif command_verb == "count":
                 count(command_param, sm)
             elif command_verb == "follow":
-                follow(command_param, sm, greet_person=len(command_verbs) == 1)
+                pass
+                #follow(command_param, sm, greet_person=len(command_verbs) == 1)
             else:
                 raise ValueError(f"Unrecognised command verb: {command_verb}")
 

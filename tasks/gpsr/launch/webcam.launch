@@ -1,0 +1,19 @@
+<launch>
+  <!-- publish your laptop webcam on /camera/image_raw -->
+  <node
+    pkg="gpsr/launch"
+    type="webcam_pub.py"
+    name="webcam_pub"
+    output="screen"
+  />
+
+  <node pkg="usb_cam" type="usb_cam_node" name="usb_cam" output="screen">
+    <param name="video_device" value="/dev/video0"/>
+    <param name="image_width"  value="640"/>
+    <param name="image_height" value="480"/>
+    <param name="pixel_format" value="mjpeg"/>
+  </node>
+  <!-- remap so that everyone sees /camera/image_raw -->
+  <remap from="/usb_cam/image_raw"   to="/camera/image_raw"/>
+  <remap from="/usb_cam/camera_info" to="/camera/camera_info"/>
+</launch>

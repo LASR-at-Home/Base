@@ -38,8 +38,8 @@ class Context:
         )
         self.point_head_client.wait_for_server()
         rospy.loginfo("Got PH")
-        rospy.wait_for_service("/yolov8/detect")
-        self.yolo = rospy.ServiceProxy("/yolov8/detect", YoloDetection)
+        rospy.wait_for_service("/yolo/detect")
+        self.yolo = rospy.ServiceProxy("/yolo/detect", YoloDetection)
         rospy.loginfo("Got YOLO")
         self.tf_buffer = tf2.Buffer()
         self.tf_listener = tf2.TransformListener(self.tf_buffer)
@@ -86,8 +86,8 @@ class Context:
 
             self.target_object_remappings = data.get("objects", dict())
 
-            self.YOLO_person_model = data.get("yolo_person_model", "yolov8n-seg.pt")
-            self.YOLO_objects_model = data.get("yolo_objects_model", "yolov8n-seg.pt")
+            self.YOLO_person_model = data.get("yolo_person_model", "yolo11n-seg.pt")
+            self.YOLO_objects_model = data.get("yolo_objects_model", "yolo11n-seg.pt")
             self.YOLO_counter_model = data.get("yolo_counter_model", "MK_COUNTER.pt")
 
             if rosparam.list_params("/mmap"):

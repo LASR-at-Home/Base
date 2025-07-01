@@ -2,7 +2,7 @@
 import smach
 import smach_ros
 import rospy
-
+#from lasr_skills.fake_nav import GoToLocation
 from lasr_skills import (
     GoToLocation,
     AskAndListen,
@@ -22,8 +22,8 @@ from geometry_msgs.msg import (
 )
 from lasr_vision_msgs.msg import CDRequest, CDResponse
 from lasr_vision_msgs.srv import (
-    CroppedDetectionRequest,
-    CroppedDetection,
+    YoloDetection,
+    YoloDetectionRequest
 )
 
 
@@ -83,12 +83,21 @@ class CountPeople(smach.StateMachine):
                     ],
                 )
 
+            
+            
             def execute(self, userdata):
+                if len(userdata.responses[0].detections_3d) == 0:
+                    rospy.logwarn("No response available, returning failed.")
+                    return "failed"
+                rospy.loginfo(f"Got {len(userdata.responses[0].detections_3d)} detections")
+                rospy.loginfo(f"Got {len(userdata.responses[0].cropped_imgs)} cropped images")
                 response = userdata.responses[0].detections_3d.pop(0)
                 userdata.response = response
                 userdata.cropped_image = userdata.responses[0].cropped_imgs.pop(0)
                 userdata.person_point = response.point
                 return "succeeded"
+            
+
 
         class AddPerson(smach.State):
             def __init__(self):
@@ -111,14 +120,14 @@ class CountPeople(smach.StateMachine):
             smach.StateMachine.__init__(
                 self,
                 outcomes=["succeeded", "failed"],
-                input_keys=["responses"],
+                input_keys=["responses", "all_people"],
                 output_keys=["responses", "all_people"],
             )
 
             with self:
 
                 if criteria == "gesture":
-
+                    
                     smach.StateMachine.add(
                         "GET_RESPONSE",
                         self.GetResponse(),
@@ -127,13 +136,13 @@ class CountPeople(smach.StateMachine):
                             "failed": "succeeded",
                         },
                     )
-
+                    
                     smach.StateMachine.add(
                         "DETECT_GESTURE",
                         DetectGesture(criteria_value),
                         transitions={
                             "succeeded": "ADD_PERSON",
-                            "missing_keypoints": "GET_RESPONSE",
+                            #"missing_keypoints": "GET_RESPONSE",
                             "failed": "GET_RESPONSE",
                         },
                         remapping={"img_msg": "cropped_image"},
@@ -192,7 +201,6 @@ class CountPeople(smach.StateMachine):
                         },
                         remapping={"img_msg": "cropped_image"},
                     )
-
                     smach.StateMachine.add(
                         "ADD_PERSON",
                         self.AddPerson(),
@@ -201,28 +209,29 @@ class CountPeople(smach.StateMachine):
 
     class CountPeople(smach.State):
 
-        def __init__(self):
-            smach.State.__init__(
-                self,
-                distance_threshold=1.0,
+        def __init__(self, distance_threshold: float = 1.0):
+            # Call the SMACH State constructor
+            super().__init__(
                 outcomes=["succeeded"],
                 input_keys=["all_people"],
                 output_keys=["people_count"],
             )
+            # Now store your threshold
+            self.distance_threshold = distance_threshold
 
         def execute(self, userdata):
+            # your existing code that uses self.distance_threshold
             people = []
             for person in userdata.all_people:
                 if not any(
-                    navigation_helpers.euclidean_distance(person, p)
+                    navigation_helpers.euclidian_distance(person, p)
                     < self.distance_threshold
                     for p in people
                 ):
                     people.append(person)
-
             userdata.people_count = len(people)
-
             return "succeeded"
+
 
     def __init__(
         self,
@@ -249,7 +258,7 @@ class CountPeople(smach.StateMachine):
                 "lying_down",
             ], "Invalid pose"
         elif criteria == "clothes":
-            color_list = ["blue", "yellow", "black", "white", "red", "orange", "gray"]
+            color_list = ["green", "blue", "yellow", "black", "white", "red", "orange", "gray", "brown"]
             clothe_list = ["t shirt", "shirt", "blouse", "sweater", "coat", "jacket"]
             clothes_list = [
                 "t shirts",
@@ -295,8 +304,8 @@ class CountPeople(smach.StateMachine):
             with waypoint_iterator:
                 container_sm = smach.StateMachine(
                     outcomes=["succeeded", "failed", "continue"],
-                    input_keys=["location_index", "all_people"],
-                    output_keys=["all_people"],
+                    input_keys=["waypoints", "location_index", "all_people"],
+                    output_keys=["all_people","image_raw", "responses"],
                 )
 
                 with container_sm:
@@ -313,39 +322,45 @@ class CountPeople(smach.StateMachine):
                         "GO_TO_LOCATION",
                         GoToLocation(),
                         transitions={
-                            "succeeded": "DETECT",
+                            "succeeded": "GET_IMAGE",
                             "failed": "failed",
                         },
+                    )
+                    @smach.cb_interface(output_keys=["image_raw"], outcomes=["succeeded"])
+                    def get_image(userdata):
+                        userdata.image_raw = rospy.wait_for_message("/camera/rgb/image_raw", Image)
+                        return "succeeded"
+                    smach.StateMachine.add(
+                        "GET_IMAGE",
+                        smach.CBState(get_image),
+                        transitions={"succeeded": "DETECT"},
+                        remapping={"image_raw": "image_raw"},
                     )
 
                     smach.StateMachine.add(
                         "DETECT",
                         smach_ros.ServiceState(
-                            "/vision/cropped_detection",
-                            CroppedDetection,
-                            request=CroppedDetectionRequest(
-                                requests=[
-                                    CDRequest(
-                                        method="closest",
-                                        use_mask=True,
-                                        yolo_model="yolov8x-seg.pt",
-                                        yolo_model_confidence=0.5,
-                                        yolo_nms_threshold=0.3,
-                                        return_sensor_reading=False,
-                                        object_names=["person"],
-                                        polygons=[polygon],
-                                    )
-                                ]
+                            "/yolo/detect",
+                            YoloDetection,
+                            request=YoloDetectionRequest(
+                                model="yolo11n-seg.pt",
+                                confidence=0.5,
+                                filter=["person"]
                             ),
-                            output_keys=["responses"],
-                            response_slots=["responses"],
+                            request_slots=["image_raw"],
+                            response_slots=["detected_objects"],
                         ),
                         transitions={
                             "succeeded": "HANDLE_DETECTIONS",
                             "aborted": "continue",
                             "preempted": "continue",
                         },
+                        remapping={
+                            "image_raw": "image_raw",
+                            "detected_objects": "responses",
+                        },
                     )
+
 
                     smach.StateMachine.add(
                         "HANDLE_DETECTIONS",
@@ -356,7 +371,8 @@ class CountPeople(smach.StateMachine):
                         },
                     )
                 waypoint_iterator.set_contained_state(
-                    "CONTAINER_STATE", container_sm, loop_outcomes=["continue"]
+                    "CONTAINER_STATE", container_sm, 
+                    loop_outcomes=["continue"]
                 )
             smach.StateMachine.add(
                 "WAYPOINT_ITERATOR", waypoint_iterator, {"succeeded": "COUNT_PEOPLE"}
