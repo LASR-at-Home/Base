@@ -454,7 +454,7 @@ class YOLOService:
             if filter
             else None
         )
-        results = yolo(img, conf=conf, classes=filter_idx)[0]
+        results = yolo(img, conf=conf, classes=filter_idx, verbose=False)[0]
         return results
 
 
