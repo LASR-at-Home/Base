@@ -37,5 +37,6 @@ from .count_people import CountPeople
 from .json_qa import JsonQuestionAnswer
 from .rotate import Rotate
 from .point_at_person import PointAtPerson
+from .detect_gesture_3d import DetectGesture3D
 
 # from .follow_person import FollowPerson

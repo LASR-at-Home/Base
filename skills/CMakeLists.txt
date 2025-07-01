@@ -170,6 +170,7 @@ catkin_install_python(PROGRAMS
   scripts/unit_test_describe_people.py
   scripts/unit_test_adjust_camera.py
   src/lasr_skills/follow_person.py
+  src/lasr_skills/detect_gesture_3d.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

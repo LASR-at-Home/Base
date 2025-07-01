@@ -2,7 +2,7 @@ import os
 import smach
 import rospy
 from typing import Optional
-from sensor_msgs.msg import Image, PointCloud2
+from sensor_msgs.msg import Image, PointCloud2, CameraInfo
 
 
 class GetImage(smach.State):
@@ -81,3 +81,43 @@ class GetImageAndPointCloud(smach.State):
             return "failed"
 
         return "succeeded"
+
+
+class GetImageAndDepthImage(smach.State):
+    """
+    State for reading RGB image, depth image and camera info for 3D pose detection
+    """
+
+    def __init__(self, camera: str = "xtion"):
+        smach.State.__init__(
+            self,
+            outcomes=["succeeded", "failed"],
+            output_keys=["img_msg", "depth_msg", "camera_info"]
+        )
+
+        self.camera = camera
+        self.image_topic = f"/{camera}/rgb/image_raw"
+        self.depth_topic = f"/{camera}/depth_registered/image_raw"
+        self.depth_camera_info_topic = f"/{camera}/depth_registered/camera_info"
+
+    def execute(self, userdata):
+        try:
+            # Get RGB image
+            rospy.loginfo(f"Waiting for RGB image from {self.image_topic}")
+            userdata.img_msg = rospy.wait_for_message(self.image_topic, Image, timeout=5.0)
+
+            # Get depth image
+            rospy.loginfo(f"Waiting for depth image from {self.depth_topic}")
+            userdata.depth_msg = rospy.wait_for_message(self.depth_topic, Image, timeout=5.0)
+
+            # Get camera info
+            rospy.loginfo(f"Waiting for camera info from {self.depth_camera_info_topic}")
+            userdata.camera_info = rospy.wait_for_message(self.depth_camera_info_topic, CameraInfo, timeout=5.0)
+
+            rospy.loginfo("Successfully acquired all camera data")
+            return "succeeded"
+
+        except Exception as e:
+            rospy.logerr(f"Failed to get camera data: {e}")
+            return "failed"
+
