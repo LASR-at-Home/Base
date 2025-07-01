@@ -295,12 +295,6 @@ class YOLOService:
                 v = result.keypoints.xy.squeeze()[idx, 1].round().int().item()
                 v = min(v, h - 1)
 
-                rospy.loginfo(
-                    f"Keypoint {name} at ({u}, {v}) with confidence {result.keypoints.conf.squeeze()[idx].item()}"
-                )
-
-                # TODO check u,v are in range.
-
                 conf = result.keypoints.conf.squeeze()[idx].item()
                 if conf > 0.0:
                     z = depth_im[v, u]
@@ -460,7 +454,7 @@ class YOLOService:
             if filter
             else None
         )
-        results = yolo(img, conf=conf, classes=filter_idx)[0]
+        results = yolo(img, conf=conf, classes=filter_idx, verbose=False)[0]
         return results
 
 

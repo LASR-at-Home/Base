@@ -11,6 +11,7 @@ from lasr_skills import (
     Wait,
     WaitForPersonInArea,
     Rotate,
+    StopEyeTracker,
 )
 from receptionist.states import (
     HandleNameInterest,
@@ -20,6 +21,8 @@ from receptionist.states import (
     WelcomeGuest,
     FindDrinkOnTable,
     GetCommonInterest,
+    StartTimer,
+    StopTimer,
 )
 from shapely.geometry import Polygon
 from std_msgs.msg import Empty
@@ -95,8 +98,20 @@ class Receptionist(smach.StateMachine):
                 ),
                 transitions={
                     "valid": "WAIT_START",
-                    "invalid": "SAY_START",
+                    "invalid": "START_TIMER",
                     "preempted": "WAIT_START",
+                },
+            )
+
+            smach.StateMachine.add(
+                "START_TIMER",
+                StartTimer(),
+                transitions={
+                    "succeeded": "SAY_START",
+                    "failed": "SAY_START",
+                },
+                remapping={
+                    "start_time": "start_time",
                 },
             )
 
@@ -291,27 +306,38 @@ class Receptionist(smach.StateMachine):
                 "SAY_GOODBYE",
                 Say(text="Enjoy the party!"),
                 transitions={
-                    "succeeded": "GO_TO_FINISH_LOCATION",
-                    "aborted": "failed",
-                    "preempted": "GO_TO_FINISH_LOCATION",
-                },
-            )
-
-            smach.StateMachine.add(
-                "GO_TO_FINISH_LOCATION",
-                GoToLocation(wait_pose),
-                transitions={
                     "succeeded": "SAY_FINISHED",
-                    "failed": "GO_TO_FINISH_LOCATION",
+                    "aborted": "SAY_FINISHED",
+                    "preempted": "SAY_FINISHED",
                 },
             )
             smach.StateMachine.add(
                 "SAY_FINISHED",
                 Say(text="I am done."),
                 transitions={
+                    "succeeded": "STOP_TIMER",
+                    "aborted": "STOP_TIMER",
+                    "preempted": "STOP_TIMER",
+                },
+            )
+            smach.StateMachine.add(
+                "STOP_TIMER",
+                StopTimer(),
+                transitions={
+                    "succeeded": "SAY_TIME",
+                    "failed": "failed",
+                },
+            )
+            smach.StateMachine.add(
+                "SAY_TIME",
+                Say(),
+                transitions={
                     "succeeded": "succeeded",
                     "aborted": "failed",
-                    "preempted": "succeeded",
+                    "preempted": "failed",
+                },
+                remapping={
+                    "text": "time_text",
                 },
             )
 
@@ -365,9 +391,18 @@ class Receptionist(smach.StateMachine):
             f"SAY_FOLLOW_GUEST_TO_TABLE_{guest_id}",
             Say(text="Please follow me, I will guide you to the beverage area"),
             transitions={
+                "succeeded": f"STOP_EYE_TRACKER_GUEST_{guest_id}",
+                "preempted": f"STOP_EYE_TRACKER_GUEST_{guest_id}",
+                "aborted": f"STOP_EYE_TRACKER_GUEST_{guest_id}",
+            },
+        )
+
+        smach.StateMachine.add(
+            f"STOP_EYE_TRACKER_GUEST_{guest_id}",
+            StopEyeTracker(),
+            transitions={
                 "succeeded": f"GO_TO_TABLE_LOCATION_GUEST_{guest_id}",
-                "preempted": "failed",
-                "aborted": "failed",
+                "failed": f"GO_TO_TABLE_LOCATION_GUEST_{guest_id}",
             },
         )
 
@@ -376,7 +411,7 @@ class Receptionist(smach.StateMachine):
             GoToLocation(self.table_pose),
             transitions={
                 "succeeded": f"SAY_ARRIVE_GUEST_{guest_id}",
-                "failed": f"SAY_ARRIVE_GUEST_{guest_id}",
+                "failed": f"GO_TO_TABLE_LOCATION_GUEST_{guest_id}",
             },
         )
 
@@ -421,36 +456,7 @@ class Receptionist(smach.StateMachine):
             f"GO_TO_SEAT_LOCATION_GUEST_{guest_id}",
             GoToLocation(self.seat_pose),
             transitions={
-                "succeeded": f"SAY_WAIT_GUEST_{guest_id}",
-                "failed": f"GO_TO_SEAT_LOCATION_GUEST_{guest_id}",
-            },
-        )
-
-        smach.StateMachine.add(
-            f"SAY_WAIT_GUEST_{guest_id}",
-            Say(text="Please wait here on my left."),
-            transitions={
-                "succeeded": f"LOOK_EYES_{guest_id}",
-                "preempted": "failed",
-                "aborted": "failed",
-            },
-        )
-
-        smach.StateMachine.add(
-            f"LOOK_EYES_{guest_id}",
-            PlayMotion(motion_name="look_very_left"),
-            transitions={
-                "succeeded": f"WAIT_{guest_id}_2",
-                "preempted": "failed",
-                "aborted": "failed",
-            },
-        )
-
-        smach.StateMachine.add(
-            f"WAIT_{guest_id}_2",
-            Wait(1),
-            transitions={
                 "succeeded": f"SEAT_GUEST_{guest_id}",
-                "failed": f"SEAT_GUEST_{guest_id}",
+                "failed": f"GO_TO_SEAT_LOCATION_GUEST_{guest_id}",
             },
         )
