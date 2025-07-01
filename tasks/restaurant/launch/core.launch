@@ -1,7 +1,7 @@
 <launch>
 
     <!--     PARAMS     -->
-    <arg name="config" default=""/>
+    <arg name="config" default="lab"/>
     <rosparam command="load" file="$(find restaurant)/config/$(arg config).yaml" ns="restaurant" />
     
     <!--     MOTIONS     -->
@@ -10,7 +10,7 @@
 
 
     <!--     SPEECH     -->
-    <arg name="whisper_device_param" default="11" />
+    <arg name="whisper_device_param" default="9" />
     <node pkg="lasr_speech_recognition_whisper" type="transcribe_microphone_server" name="transcribe_speech" output="screen" args="--mic_device $(arg whisper_device_param)"/>
 
 

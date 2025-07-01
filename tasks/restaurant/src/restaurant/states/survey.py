@@ -2,7 +2,10 @@ import navigation_helpers
 import rospy
 import smach
 from geometry_msgs.msg import Pose, PoseStamped, PoseWithCovarianceStamped
-from lasr_skills import PlayMotion, Rotate, Detect3D
+from lasr_skills import PlayMotion, Rotate, Detect3D, DetectGesture
+from cv_bridge import CvBridge
+import cv2
+import numpy as np
 
 
 class Survey(smach.StateMachine):
@@ -12,7 +15,7 @@ class Survey(smach.StateMachine):
             def __init__(self):
                 super().__init__(
                     outcomes=["succeeded", "failed"],
-                    input_keys=["responses"],
+                    input_keys=["responses", "image_raw"],
                     output_keys=[
                         "response",
                         "responses",
@@ -20,14 +23,27 @@ class Survey(smach.StateMachine):
                         "cropped_image",
                     ],
                 )
+                self.bridge = CvBridge()
 
             def execute(self, userdata):
-                if len(userdata.responses[0].detections_3d) == 0:
+                if len(userdata.responses.detected_objects) == 0:
                     rospy.logwarn("No response available, returning failed.")
                     return "failed"
-                response = userdata.responses[0].detections_3d.pop(0)
+
+                response = userdata.responses.detected_objects.pop(0)
                 userdata.response = response
-                userdata.cropped_image = userdata.responses[0].cropped_imgs.pop(0)
+
+                cv_im = self.bridge.imgmsg_to_cv2(
+                    userdata.image_raw, desired_encoding="rgb8"
+                )
+                mask = np.array(response.xyseg).reshape(-1, 2)
+                stencil = np.zeros(cv_im.shape).astype(cv_im.dtype)
+                colour = (255, 255, 255)
+                cv2.fillPoly(stencil, [mask], colour)
+                # Bitwise AND with 0s is 0s, hence we get the image only where the mask is
+                # with black elsewhere.
+                masked_image = cv2.bitwise_and(cv_im, stencil)
+                userdata.cropped_image = masked_image
                 userdata.person_point = response.point
                 return "succeeded"
 
@@ -77,7 +93,7 @@ class Survey(smach.StateMachine):
         def __init__(self):
             super().__init__(
                 outcomes=["succeeded", "failed"],
-                input_keys=["responses"],
+                input_keys=["responses", "image_raw"],
                 output_keys=["responses", "customer_approach_pose"],
             )
 
@@ -92,15 +108,15 @@ class Survey(smach.StateMachine):
                     },
                 )
 
-                # smach.StateMachine.add(
-                #     "DETECT_GESTURE",
-                #     DetectGesture("waving"),
-                #     transitions={
-                #         "succeeded": "COMPUTE_APPROACH_POSE",
-                #         "failed": "GET_RESPONSE",
-                #     },
-                #     remapping={"img_msg": "cropped_image"},
-                # )
+                smach.StateMachine.add(
+                    "DETECT_GESTURE",
+                    DetectGesture("waving"),
+                    transitions={
+                        "succeeded": "COMPUTE_APPROACH_POSE",
+                        "failed": "GET_RESPONSE",
+                    },
+                    remapping={"img_msg": "cropped_image"},
+                )
 
                 smach.StateMachine.add(
                     "COMPUTE_APPROACH_POSE",
@@ -170,6 +186,10 @@ class Survey(smach.StateMachine):
                             transitions={
                                 "succeeded": "succeeded",
                                 "failed": "continue",
+                            },
+                            remapping={
+                                "responses": "detections_3d",
+                                "image_raw": "image_raw",
                             },
                         )
 
