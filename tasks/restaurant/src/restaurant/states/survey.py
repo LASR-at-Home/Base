@@ -1,10 +1,8 @@
 import navigation_helpers
-import numpy as np
 import rospy
 import smach
-import smach_ros
-from geometry_msgs.msg import Pose, PoseStamped, PoseWithCovarianceStamped, Quaternion
-from lasr_skills import DetectGesture, GoToLocation, PlayMotion, Rotate, Detect3D
+from geometry_msgs.msg import Pose, PoseStamped, PoseWithCovarianceStamped
+from lasr_skills import PlayMotion, Rotate, Detect3D
 
 
 class Survey(smach.StateMachine):
