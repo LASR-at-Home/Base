@@ -38,9 +38,10 @@ class HandleOrder(smach.State):
             " An order can contain a maximum of three items."
         )
         request.prompt = transcription
-        response = self._llm(request).output
+        response = self._llm(request).output.strip()
         if response == "none":
             return "failed"
         else:
             userdata.order = response.split(",")
             userdata.order_str = response
+            return "succeeded"
