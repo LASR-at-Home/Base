@@ -92,7 +92,7 @@ class GetImageAndDepthImage(smach.State):
         smach.State.__init__(
             self,
             outcomes=["succeeded", "failed"],
-            output_keys=["img_msg", "depth_msg", "camera_info"]
+            output_keys=["img_msg", "depth_msg", "camera_info"],
         )
 
         self.camera = camera
@@ -104,15 +104,23 @@ class GetImageAndDepthImage(smach.State):
         try:
             # Get RGB image
             rospy.loginfo(f"Waiting for RGB image from {self.image_topic}")
-            userdata.img_msg = rospy.wait_for_message(self.image_topic, Image, timeout=5.0)
+            userdata.img_msg = rospy.wait_for_message(
+                self.image_topic, Image, timeout=5.0
+            )
 
             # Get depth image
             rospy.loginfo(f"Waiting for depth image from {self.depth_topic}")
-            userdata.depth_msg = rospy.wait_for_message(self.depth_topic, Image, timeout=5.0)
+            userdata.depth_msg = rospy.wait_for_message(
+                self.depth_topic, Image, timeout=5.0
+            )
 
             # Get camera info
-            rospy.loginfo(f"Waiting for camera info from {self.depth_camera_info_topic}")
-            userdata.camera_info = rospy.wait_for_message(self.depth_camera_info_topic, CameraInfo, timeout=5.0)
+            rospy.loginfo(
+                f"Waiting for camera info from {self.depth_camera_info_topic}"
+            )
+            userdata.camera_info = rospy.wait_for_message(
+                self.depth_camera_info_topic, CameraInfo, timeout=5.0
+            )
 
             rospy.loginfo("Successfully acquired all camera data")
             return "succeeded"
@@ -120,4 +128,3 @@ class GetImageAndDepthImage(smach.State):
         except Exception as e:
             rospy.logerr(f"Failed to get camera data: {e}")
             return "failed"
-

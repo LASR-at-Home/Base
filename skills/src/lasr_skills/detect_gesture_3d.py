@@ -28,12 +28,12 @@ class DetectGesture3D(smach.State):
     """
 
     def __init__(
-            self,
-            yolo_model: str = "yolo11n-pose.pt",
-            yolo_confidence: float = 0.5,
-            buffer_width: int = 50,
-            target_frame: str = "base_footprint",
-            debug_publisher: str = "/skills/gesture_detection_3d/debug",
+        self,
+        yolo_model: str = "yolo11n-pose.pt",
+        yolo_confidence: float = 0.5,
+        buffer_width: int = 50,
+        target_frame: str = "base_footprint",
+        debug_publisher: str = "/skills/gesture_detection_3d/debug",
     ):
         smach.State.__init__(
             self,
@@ -43,7 +43,9 @@ class DetectGesture3D(smach.State):
         )
 
         # Initialize YOLO 3D pose detection service client
-        self.yolo_client = rospy.ServiceProxy("/yolo/detect3d_pose", YoloPoseDetection3D)
+        self.yolo_client = rospy.ServiceProxy(
+            "/yolo/detect3d_pose", YoloPoseDetection3D
+        )
 
         self.yolo_model = yolo_model
         self.yolo_confidence = yolo_confidence
@@ -64,7 +66,9 @@ class DetectGesture3D(smach.State):
         self.tf_listener = tf.TransformListener(self.tf_buffer)
 
         # Publisher for person markers
-        self.person_markers_pub = rospy.Publisher("/detected_people_markers", Marker, queue_size=10)
+        self.person_markers_pub = rospy.Publisher(
+            "/detected_people_markers", Marker, queue_size=10
+        )
 
         rospy.loginfo("DetectGesture3D initialized")
 
@@ -109,11 +113,15 @@ class DetectGesture3D(smach.State):
             # Calculate center point using median of all valid keypoints
             center_point = self._calculate_center_point(keypoint_dict)
             if center_point is None:
-                rospy.logwarn(f"Could not calculate center point for person {person_idx}")
+                rospy.logwarn(
+                    f"Could not calculate center point for person {person_idx}"
+                )
                 continue
 
             # Calculate distance from robot base (assuming base_footprint at origin)
-            distance = np.sqrt(center_point.x ** 2 + center_point.y ** 2 + center_point.z ** 2)
+            distance = np.sqrt(
+                center_point.x**2 + center_point.y**2 + center_point.z**2
+            )
 
             # Detect gesture for this person
             detected_gesture = self._detect_person_gesture(keypoint_dict)
@@ -121,19 +129,23 @@ class DetectGesture3D(smach.State):
             # Create Pose object for medium point
             medium_pose = Pose()
             medium_pose.position = center_point
-            medium_pose.orientation = Quaternion(0.0, 0.0, 0.0, 1.0)  # Default orientation
+            medium_pose.orientation = Quaternion(
+                0.0, 0.0, 0.0, 1.0
+            )  # Default orientation
 
             # Create person dictionary
             person = {
                 "medium_point": medium_pose,
                 "gesture": detected_gesture,
-                "distance": distance
+                "distance": distance,
             }
             detected_people.append(person)
 
-            rospy.loginfo(f"Person {person_idx}: gesture={detected_gesture}, "
-                          f"distance={distance:.2f}m, position=({center_point.x:.2f}, "
-                          f"{center_point.y:.2f}, {center_point.z:.2f})")
+            rospy.loginfo(
+                f"Person {person_idx}: gesture={detected_gesture}, "
+                f"distance={distance:.2f}m, position=({center_point.x:.2f}, "
+                f"{center_point.y:.2f}, {center_point.z:.2f})"
+            )
 
         # Sort people by distance (far to near)
         detected_people.sort(key=lambda p: p["distance"], reverse=True)
@@ -148,7 +160,9 @@ class DetectGesture3D(smach.State):
         rospy.loginfo(f"Successfully detected {len(detected_people)} people")
         return "succeeded"
 
-    def _calculate_center_point(self, keypoint_dict: Dict[str, Point]) -> Union[Point, None]:
+    def _calculate_center_point(
+        self, keypoint_dict: Dict[str, Point]
+    ) -> Union[Point, None]:
         """
         Calculate the center point of a person using median of all valid keypoints.
 
@@ -163,10 +177,17 @@ class DetectGesture3D(smach.State):
         valid_points = []
         for name, point in keypoint_dict.items():
             # Check if point has valid coordinates (not NaN or zero depth)
-            if not (np.isnan(point.x) or np.isnan(point.y) or np.isnan(point.z) or point.z <= 0):
+            if not (
+                np.isnan(point.x)
+                or np.isnan(point.y)
+                or np.isnan(point.z)
+                or point.z <= 0
+            ):
                 valid_points.append([point.x, point.y, point.z])
 
-        if len(valid_points) < 3:  # Need at least 3 points for reliable center calculation
+        if (
+            len(valid_points) < 3
+        ):  # Need at least 3 points for reliable center calculation
             return None
 
         # Calculate median position
@@ -195,7 +216,12 @@ class DetectGesture3D(smach.State):
         for kp_name in self.required_keypoints:
             if kp_name in keypoint_dict:
                 point = keypoint_dict[kp_name]
-                if not (np.isnan(point.x) or np.isnan(point.y) or np.isnan(point.z) or point.z <= 0):
+                if not (
+                    np.isnan(point.x)
+                    or np.isnan(point.y)
+                    or np.isnan(point.z)
+                    or point.z <= 0
+                ):
                     required_points[kp_name] = point
 
         # Gesture detection logic using 3D coordinates
@@ -318,12 +344,12 @@ class DetectHandUp3D(DetectGesture3D):
     """
 
     def __init__(
-            self,
-            yolo_model: str = "yolo11n-pose.pt",
-            yolo_confidence: float = 0.5,
-            buffer_width: int = 50,
-            target_frame: str = "base_footprint",
-            debug_publisher: str = "/skills/hand_up_detection_3d/debug",
+        self,
+        yolo_model: str = "yolo11n-pose.pt",
+        yolo_confidence: float = 0.5,
+        buffer_width: int = 50,
+        target_frame: str = "base_footprint",
+        debug_publisher: str = "/skills/hand_up_detection_3d/debug",
     ):
         # Initialize parent class
         super().__init__(
@@ -331,7 +357,7 @@ class DetectHandUp3D(DetectGesture3D):
             yolo_confidence=yolo_confidence,
             buffer_width=buffer_width,
             target_frame=target_frame,
-            debug_publisher=debug_publisher
+            debug_publisher=debug_publisher,
         )
 
         # Override state definition for different output
@@ -383,11 +409,15 @@ class DetectHandUp3D(DetectGesture3D):
             # Calculate center point using median of all valid keypoints
             center_point = self._calculate_center_point(keypoint_dict)
             if center_point is None:
-                rospy.logwarn(f"Could not calculate center point for person {person_idx}")
+                rospy.logwarn(
+                    f"Could not calculate center point for person {person_idx}"
+                )
                 continue
 
             # Calculate distance from robot base
-            distance = np.sqrt(center_point.x ** 2 + center_point.y ** 2 + center_point.z ** 2)
+            distance = np.sqrt(
+                center_point.x**2 + center_point.y**2 + center_point.z**2
+            )
 
             # Detect gesture for this person
             detected_gesture = self._detect_person_gesture(keypoint_dict)
@@ -395,7 +425,9 @@ class DetectHandUp3D(DetectGesture3D):
             # Only process people with hand-up gestures
             if detected_gesture in ["raising_left_arm", "raising_right_arm"]:
                 # Calculate confidence based on wrist-shoulder relative distance
-                confidence = self._calculate_hand_up_confidence(keypoint_dict, detected_gesture)
+                confidence = self._calculate_hand_up_confidence(
+                    keypoint_dict, detected_gesture
+                )
 
                 # Create Detection3D object
                 detection = Detection3D()
@@ -407,12 +439,16 @@ class DetectHandUp3D(DetectGesture3D):
 
                 detected_people.append(detection)
 
-                rospy.loginfo(f"Hand-up person {person_idx}: gesture={detected_gesture}, "
-                              f"confidence={confidence:.3f}, distance={distance:.2f}m, "
-                              f"position=({center_point.x:.2f}, {center_point.y:.2f}, {center_point.z:.2f})")
+                rospy.loginfo(
+                    f"Hand-up person {person_idx}: gesture={detected_gesture}, "
+                    f"confidence={confidence:.3f}, distance={distance:.2f}m, "
+                    f"position=({center_point.x:.2f}, {center_point.y:.2f}, {center_point.z:.2f})"
+                )
 
         # Sort people by distance (far to near)
-        detected_people.sort(key=lambda d: float(d.name.replace('m', '')), reverse=False)
+        detected_people.sort(
+            key=lambda d: float(d.name.replace("m", "")), reverse=False
+        )
 
         # Store results
         userdata.detected_people = detected_people
@@ -421,10 +457,14 @@ class DetectHandUp3D(DetectGesture3D):
         self._publish_debug_info_detection3d(userdata.img_msg, detected_people)
         self._publish_person_markers_detection3d(detected_people)
 
-        rospy.loginfo(f"Successfully detected {len(detected_people)} people with hand-up gestures")
+        rospy.loginfo(
+            f"Successfully detected {len(detected_people)} people with hand-up gestures"
+        )
         return "succeeded"
 
-    def _calculate_hand_up_confidence(self, keypoint_dict: Dict[str, Point], gesture: str) -> float:
+    def _calculate_hand_up_confidence(
+        self, keypoint_dict: Dict[str, Point], gesture: str
+    ) -> float:
         """
         Calculate confidence based on wrist-shoulder relative distance and shoulder height.
 
@@ -453,9 +493,16 @@ class DetectHandUp3D(DetectGesture3D):
         shoulder_point = keypoint_dict[shoulder_key]
 
         # Validate points
-        if (np.isnan(wrist_point.x) or np.isnan(wrist_point.y) or np.isnan(wrist_point.z) or
-                np.isnan(shoulder_point.x) or np.isnan(shoulder_point.y) or np.isnan(shoulder_point.z) or
-                wrist_point.z <= 0 or shoulder_point.z <= 0):
+        if (
+            np.isnan(wrist_point.x)
+            or np.isnan(wrist_point.y)
+            or np.isnan(wrist_point.z)
+            or np.isnan(shoulder_point.x)
+            or np.isnan(shoulder_point.y)
+            or np.isnan(shoulder_point.z)
+            or wrist_point.z <= 0
+            or shoulder_point.z <= 0
+        ):
             return 0.0
 
         # Calculate vertical distance (wrist above shoulder)
@@ -474,7 +521,9 @@ class DetectHandUp3D(DetectGesture3D):
 
         return confidence
 
-    def _publish_debug_info_detection3d(self, img_msg: Image, detected_people: List[Detection3D]):
+    def _publish_debug_info_detection3d(
+        self, img_msg: Image, detected_people: List[Detection3D]
+    ):
         """
         Publish debug image with hand-up gesture annotations.
 
@@ -536,7 +585,9 @@ class DetectHandUp3D(DetectGesture3D):
             marker.color.a = 1.0
 
             # Add text with confidence and distance info
-            marker.text = f"Hand-up\nconf: {detection.confidence:.2f}\ndist: {detection.name}"
+            marker.text = (
+                f"Hand-up\nconf: {detection.confidence:.2f}\ndist: {detection.name}"
+            )
 
             self.person_markers_pub.publish(marker)
 
@@ -555,32 +606,32 @@ if __name__ == "__main__":
             GetImageAndDepthImage(camera="xtion"),
             transitions={
                 "succeeded": "DETECT_GESTURES",
-                "failed": "GET_CAMERA_DATA"  # Retry on failure
-            }
+                "failed": "GET_CAMERA_DATA",  # Retry on failure
+            },
         )
 
         smach.StateMachine.add(
             "DETECT_GESTURES",
             DetectGesture3D(
                 yolo_confidence=0.3,  # Lower confidence for better detection
-                target_frame="base_footprint"
+                target_frame="base_footprint",
             ),
             transitions={
                 "succeeded": "DETECT_HAND_UP",  # Test hand-up detection after general detection
-                "failed": "GET_CAMERA_DATA"  # Retry on failure
-            }
+                "failed": "GET_CAMERA_DATA",  # Retry on failure
+            },
         )
 
         smach.StateMachine.add(
             "DETECT_HAND_UP",
             DetectHandUp3D(
                 yolo_confidence=0.3,  # Lower confidence for better detection
-                target_frame="base_footprint"
+                target_frame="base_footprint",
             ),
             transitions={
                 "succeeded": "GET_CAMERA_DATA",  # Loop back to get new camera data
-                "failed": "GET_CAMERA_DATA"  # Retry on failure
-            }
+                "failed": "GET_CAMERA_DATA",  # Retry on failure
+            },
         )
 
     # Execute the state machine in a loop
