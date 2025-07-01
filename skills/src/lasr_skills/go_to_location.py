@@ -126,8 +126,8 @@ class GoToLocation(smach.StateMachine):
                     ),
                     transitions={
                         "succeeded": "DISABLE_HEAD_MANAGER",
-                        "aborted": "CHECK_RETRY",
-                        "preempted": "CHECK_RETRY",
+                        "aborted": "failed",
+                        "preempted": "failed",
                     },
                 )
             elif location_param is not None:
@@ -154,8 +154,8 @@ class GoToLocation(smach.StateMachine):
                     ),
                     transitions={
                         "succeeded": "DISABLE_HEAD_MANAGER",
-                        "aborted": "CHECK_RETRY",
-                        "preempted": "CHECK_RETRY",
+                        "aborted": "failed",
+                        "preempted": "failed",
                     },
                 )
             else:
@@ -173,8 +173,8 @@ class GoToLocation(smach.StateMachine):
                     ),
                     transitions={
                         "succeeded": "DISABLE_HEAD_MANAGER",
-                        "aborted": "CHECK_RETRY",
-                        "preempted": "CHECK_RETRY",
+                        "aborted": "failed",
+                        "preempted": "failed",
                     },
                 )
 

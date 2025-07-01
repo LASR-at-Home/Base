@@ -15,6 +15,7 @@ from shapely.affinity import translate
 from sensor_msgs.msg import PointCloud2, Image
 from cv2_img import msg_to_cv2_img, cv2_img_to_msg
 from geometry_msgs.msg import Point, PointStamped
+from lasr_vision_msgs.msg import Detection3D
 
 from lasr_skills import LookToPoint, Detect3DInArea
 
@@ -55,7 +56,7 @@ class ProcessDetections(smach.State):
             """Calculates the Euclidean distance between two points."""
             return np.sqrt((point1.x - point2.x) ** 2 + (point1.y - point2.y) ** 2)
 
-        new_detections = []
+        new_detections: List[Detection3D] = []
 
         try:
             for detection in userdata.detections_3d:
