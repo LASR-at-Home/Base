@@ -411,13 +411,14 @@ class FollowPerson(smach.StateMachine):
                 },
             )
 
-    def execute(self, userdata):
+    def execute(self, userdata, run_by_itself=False):
         """
         Execute the state machine
         Can be called directly or as part of a larger state machine
         """
-        start_pose = self._get_robot_pose_in_map()
-        userdata.start_pose = start_pose
+        if not run_by_itself:
+            start_pose = self._get_robot_pose_in_map()
+            userdata.start_pose = start_pose
         # Initialize execution-specific data
         self.shared_data.person_trajectory.header.frame_id = "map"
         self.shared_data.start_time = rospy.Time.now()
@@ -429,8 +430,9 @@ class FollowPerson(smach.StateMachine):
         ).to_sec()
         # Cleanup resources
         self._cleanup()
-        userdata.end_pose = self._get_robot_pose_in_map()
-        userdata.location = start_pose.pose
+        if not run_by_itself:
+            userdata.end_pose = self._get_robot_pose_in_map()
+            userdata.location = start_pose.pose
         return outcome
 
     def _sensor_callback(
@@ -530,9 +532,7 @@ class FollowPerson(smach.StateMachine):
                     # Calculate target speed based on recent trajectory positions (dynamic window of up to 5 poses)
                     if len(self.shared_data.person_pose_stampeds) >= 2:
                         # Use the last few poses (up to 10) for speed calculation
-                        window_size = min(
-                            10, len(self.shared_data.person_pose_stampeds)
-                        )
+                        window_size = min(5, len(self.shared_data.person_pose_stampeds))
                         recent_poses = self.shared_data.person_pose_stampeds[
                             -window_size:
                         ]
@@ -873,7 +873,7 @@ class FollowPerson(smach.StateMachine):
 
                 # Normalize the horizontal direction
                 if x_dir != 0 or y_dir != 0:
-                    norm = math.sqrt(x_dir ** 2 + y_dir ** 2)
+                    norm = math.sqrt(x_dir**2 + y_dir**2)
                     x_dir = x_dir / norm
                     y_dir = y_dir / norm
                 else:
@@ -883,17 +883,23 @@ class FollowPerson(smach.StateMachine):
 
                 # Calculate look point with 45 degree downward angle
                 # For 45 degrees down: horizontal_distance = vertical_distance
-                horizontal_distance = distance * math.cos(math.radians(abs(look_down_angle)))
-                vertical_distance = distance * math.sin(math.radians(abs(look_down_angle)))
+                horizontal_distance = distance * math.cos(
+                    math.radians(abs(look_down_angle))
+                )
+                vertical_distance = distance * math.sin(
+                    math.radians(abs(look_down_angle))
+                )
 
                 # Apply horizontal direction and downward angle
                 point = Point(
                     x=x_dir * horizontal_distance,
                     y=y_dir * horizontal_distance,
-                    z=-vertical_distance  # Negative for looking down
+                    z=-vertical_distance,  # Negative for looking down
                 )
 
-                rospy.loginfo(f"Looking down towards target: x={point.x:.2f}, y={point.y:.2f}, z={point.z:.2f}")
+                rospy.loginfo(
+                    f"Looking down towards target: x={point.x:.2f}, y={point.y:.2f}, z={point.z:.2f}"
+                )
 
             except Exception as e:
                 rospy.logwarn(f"Failed to transform target point: {e}")
@@ -906,7 +912,9 @@ class FollowPerson(smach.StateMachine):
             horizontal_distance = distance * math.cos(math.radians(45))
             vertical_distance = distance * math.sin(math.radians(45))
             point = Point(x=horizontal_distance, y=0.0, z=-vertical_distance)
-            rospy.loginfo(f"Looking down forward: x={point.x:.2f}, y={point.y:.2f}, z={point.z:.2f}")
+            rospy.loginfo(
+                f"Looking down forward: x={point.x:.2f}, y={point.y:.2f}, z={point.z:.2f}"
+            )
 
         self.look_at_point(point, target_frame="base_link")
 
@@ -1151,11 +1159,13 @@ class TrackingActiveState(smach.State):
                     - abs(
                         target_speed
                         * self.sm_manager.shared_data.stopping_distance
-                        * 1.25
+                        * 1.0
                     ),
                 )
                 if self.sm_manager.shared_data.first_tracking_done:
-                    dynamic_stopping_distance = self.sm_manager.shared_data.stopping_distance / 2
+                    dynamic_stopping_distance = max(
+                        self.sm_manager.shared_data.stopping_distance / 3, 1.0
+                    )
                     rospy.loginfo("First goal, using minimum following threshold.")
                 for i in reversed(range(len(self.sm_manager.shared_data.target_list))):
                     distance_to_last = _euclidean_distance(
@@ -1168,7 +1178,12 @@ class TrackingActiveState(smach.State):
                         f"The fucking distance is actually {abs(dynamic_stopping_distance - distance_to_last)}......"
                     )
 
-                    if abs(dynamic_stopping_distance - distance_to_last) >= self.sm_manager.shared_data.min_following_distance and distance_to_last >= self.sm_manager.shared_data.min_following_distance:
+                    if (
+                        abs(dynamic_stopping_distance - distance_to_last)
+                        >= self.sm_manager.shared_data.min_following_distance
+                        and distance_to_last
+                        >= self.sm_manager.shared_data.min_following_distance
+                    ):
                         target_pose = self.sm_manager.shared_data.target_list[i]
                         rospy.loginfo(
                             f"Selected target pose at index {i} (dynamic distance threshold met)"
@@ -1331,7 +1346,9 @@ class NavigationState(smach.State):
     def execute(self, userdata):
         rospy.loginfo("Monitoring navigation progress")
         self.sm_manager.shared_data.last_canceled_goal_time = rospy.Time.now()
-        last_look_down_time = rospy.Time.now() - rospy.Duration(self.sm_manager.shared_data.look_down_period * 0.5)
+        last_look_down_time = rospy.Time.now() - rospy.Duration(
+            self.sm_manager.shared_data.look_down_period * 0.5
+        )
 
         start_robot_pose = self.sm_manager._get_robot_pose_in_map()
 
@@ -1350,16 +1367,27 @@ class NavigationState(smach.State):
             if self.sm_manager.shared_data.newest_detection:
                 current_time = rospy.Time.now()
                 time_since_last_look_down = current_time - last_look_down_time
-                look_down_period_duration = rospy.Duration(self.sm_manager.shared_data.look_down_period)
+                look_down_period_duration = rospy.Duration(
+                    self.sm_manager.shared_data.look_down_period
+                )
 
-                rospy.loginfo(f"NavigationState: Time since last look down: {time_since_last_look_down.to_sec():.2f}s, "
-                              f"Look down period: {look_down_period_duration.to_sec():.2f}s")
+                rospy.loginfo(
+                    f"NavigationState: Time since last look down: {time_since_last_look_down.to_sec():.2f}s, "
+                    f"Look down period: {look_down_period_duration.to_sec():.2f}s"
+                )
 
-                if self.object_avoidance and time_since_last_look_down >= look_down_period_duration:
-                    rospy.loginfo("NavigationState: Look down period elapsed, executing down swap")
-                    rospy.loginfo(f"NavigationState: Down swap parameters - target_frame: map, "
-                                  f"look_down_time: {self.sm_manager.shared_data.look_down_duration}, "
-                                  f"pause_conditional_frame: True")
+                if (
+                    self.object_avoidance
+                    and time_since_last_look_down >= look_down_period_duration
+                ):
+                    rospy.loginfo(
+                        "NavigationState: Look down period elapsed, executing down swap"
+                    )
+                    rospy.loginfo(
+                        f"NavigationState: Down swap parameters - target_frame: map, "
+                        f"look_down_time: {self.sm_manager.shared_data.look_down_duration}, "
+                        f"pause_conditional_frame: True"
+                    )
 
                     self._down_swap(
                         self.sm_manager.shared_data.newest_detection.point,
@@ -1370,13 +1398,18 @@ class NavigationState(smach.State):
                     if time_since_last_look_down >= look_down_period_duration * 1.5:
                         last_look_down_time = rospy.Time.now()
                     rospy.loginfo(
-                        f"NavigationState: Down swap completed, updated last_look_down_time to {last_look_down_time}")
+                        f"NavigationState: Down swap completed, updated last_look_down_time to {last_look_down_time}"
+                    )
                 else:
-                    rospy.loginfo("NavigationState: Look down period not elapsed, continuing to look at person")
-                    rospy.loginfo(f"NavigationState: Looking at point in map frame - "
-                                  f"x: {self.sm_manager.shared_data.newest_detection.point.x:.2f}, "
-                                  f"y: {self.sm_manager.shared_data.newest_detection.point.y:.2f}, "
-                                  f"z: {self.sm_manager.shared_data.newest_detection.point.z:.2f}")
+                    rospy.loginfo(
+                        "NavigationState: Look down period not elapsed, continuing to look at person"
+                    )
+                    rospy.loginfo(
+                        f"NavigationState: Looking at point in map frame - "
+                        f"x: {self.sm_manager.shared_data.newest_detection.point.x:.2f}, "
+                        f"y: {self.sm_manager.shared_data.newest_detection.point.y:.2f}, "
+                        f"z: {self.sm_manager.shared_data.newest_detection.point.z:.2f}"
+                    )
 
                     self.sm_manager.look_at_point(
                         self.sm_manager.shared_data.newest_detection.point,
@@ -1480,7 +1513,13 @@ class NavigationState(smach.State):
 
         return "failed"
 
-    def _down_swap(self, target_point: Point = None, target_frame: str = "map", look_down_time=2.0, pause_conditional_frame=True):
+    def _down_swap(
+        self,
+        target_point: Point = None,
+        target_frame: str = "map",
+        look_down_time=2.0,
+        pause_conditional_frame=True,
+    ):
         self.sm_manager.pause_conditional_frame = pause_conditional_frame
         self.sm_manager.look_down_point(target_point, target_frame)
         rospy.sleep(look_down_time)
@@ -1641,7 +1680,7 @@ def main():
 
         # Execute the state machine
         rospy.loginfo("Starting person following state machine")
-        outcome = person_following_sm.execute()
+        outcome = person_following_sm.execute(userdata=None, run_by_itself=True)
 
         # Get results
         results = person_following_sm.get_results()
