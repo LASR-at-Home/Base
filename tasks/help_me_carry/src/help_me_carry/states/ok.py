@@ -32,12 +32,6 @@ class GoToBag(smach.State):
         self.latest_rgb = None
         self.latest_depth = None
         self.depth_info = None
-        self.bag_prompt = "carrier bag"
-        self.recovery_motions = [
-            "look_down_centre",
-            "look_down_left",
-            "look_down_right",
-        ]
 
         # Subscribers
         rgb_sub = Subscriber("/xtion/rgb/image_raw", Image)
@@ -87,6 +81,11 @@ class GoToBag(smach.State):
         rospy.loginfo("TTS action server connected.")
 
         rospy.sleep(3)
+        self.recovery_motions = [
+            "look_down_centre",
+            "look_down_left",
+            "look_down_right",
+        ]
 
         cv2.namedWindow("Auto-segmented bag", cv2.WINDOW_NORMAL)
 
@@ -162,24 +161,9 @@ class GoToBag(smach.State):
         self.say("I'm looking at where you're pointing.")
         floor_pt = self.look_where_person_points()
 
-        if floor_pt is None:
-            # Get robot current pose, set z=0.6
-            try:
-                self.tf_listener.waitForTransform(
-                    "map", "base_footprint", rospy.Time(0), rospy.Duration(1.0)
-                )
-                (trans, rot) = self.tf_listener.lookupTransform(
-                    "map", "base_footprint", rospy.Time(0)
-                )
-                robot_point = np.array([trans[0], trans[1], 0.6])
-            except (tf.Exception, tf.LookupException, tf.ConnectivityException):
-                rospy.logwarn("Could not get robot position.")
-                return "failed"
-            floor_pt = robot_point
-
         self.say("I'm trying to find the bag.")
         centroid, mask, det = self.detect_bag_with_lang_sam(
-            prompt=self.bag_prompt, floor_pt=floor_pt
+            prompt="bag", floor_pt=floor_pt
         )
 
         recovery_counter = 0
@@ -189,7 +173,7 @@ class GoToBag(smach.State):
             )
             self.execute_play_motion(self.recovery_motions[recovery_counter])
             centroid, mask, det = self.detect_bag_with_lang_sam(
-                prompt=self.bag_prompt, floor_pt=floor_pt
+                prompt="bag", floor_pt=floor_pt
             )
             recovery_counter = recovery_counter + 1
 
@@ -223,7 +207,7 @@ class GoToBag(smach.State):
 
         if not kps_result:
             rospy.logwarn("No human keypoints detected!")
-            return None
+            return False
 
         # Normalize to a list of dicts
         if isinstance(kps_result, dict):
@@ -232,7 +216,7 @@ class GoToBag(smach.State):
             all_kps = kps_result
         else:
             rospy.logwarn("Keypoints format not recognized!")
-            return None
+            return False
 
         # Find the closest person by valid left ankle
         closest_kps = None
@@ -248,7 +232,7 @@ class GoToBag(smach.State):
 
         if closest_kps is None:
             rospy.logwarn("No person found with valid left ankle keypoint.")
-            return None
+            return False
 
         kps = closest_kps
 
