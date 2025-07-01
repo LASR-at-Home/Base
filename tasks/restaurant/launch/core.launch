@@ -5,17 +5,20 @@
     <rosparam command="load" file="$(find restaurant)/config/$(arg config).yaml" ns="restaurant" />
     
     <!--     MOTIONS     -->
-    <!-- <rosparam command="load" file="$(find lasr_skills)/config/motions.yaml"/> -->
-    <!-- <rosparam command="load" file="$(find restaurant)/config/motions.yaml"/> -->
+    <rosparam command="load" file="$(find lasr_skills)/config/motions.yaml"/>
+    <rosparam command="load" file="$(find restaurant)/config/motions.yaml"/>
 
 
     <!--     SPEECH     -->
     <arg name="whisper_device_param" default="11" />
     <node pkg="lasr_speech_recognition_whisper" type="transcribe_microphone_server" name="transcribe_speech" output="screen" args="--mic_device $(arg whisper_device_param)"/>
 
+
+    <!-- LLM -->
+    <node pkg="lasr_llm" type="llm.py" name="llm_server" output="screen"/>
+
     <!--      PERCEPTION     -->
-    <include file="$(find lasr_vision_cropped_detection)/launch/cropped_detection.launch"/>
-    <node pkg="lasr_vision_bodypix" type="bodypix_services.py" name="bodypix_service" output="screen"/>
+    <node name="yolo" pkg="lasr_vision_yolo" type="service.py" output="screen"/>
 
 
 </launch>
