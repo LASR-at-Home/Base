@@ -44,10 +44,15 @@ from lasr_manipulation_pipeline import sam
 from lasr_manipulation_pipeline import visualisation
 
 PACKAGE_PATH: str = rospkg.RosPack().get_path("lasr_manipulation_pipeline")
-MESH_NAME: str = "banana.ply"
+MESH_NAME: str = "pringles.ply"
 
 """
-Ensure grasp approach is forwards.
+Maybe, we can clip the amount we attempt to go down according to the support surface?
+For small objects, the support surface needs to be thinner? maybe in general it should be thinner..
+Really need to dynamically determine how far to go forwards.
+    - by x+0.12 would take the base of the gripper all the way to the object.
+    - Really we want to move min(0.12, width / 2.0)
+    - Question is how to determine width from a speific pose.
 """
 
 
@@ -375,9 +380,6 @@ class GraspingPipeline:
         Determines how far to move forward along the gripper's x-axis from the pregrasp pose
         to make contact with the object, while avoiding pushing through or colliding with it.
         """
-
-        return 0.035
-
         if not mesh.has_points():
             raise ValueError("Mesh point cloud is empty.")
 
@@ -404,7 +406,7 @@ class GraspingPipeline:
 
         # Estimate object width in approach direction
         object_width = self._estimate_object_width_along_vector(mesh, forward_dir)
-        max_safe_forward = max(0.0, 0.5 * object_width - palm_clearance)
+        max_safe_forward = max(0.0, 1.0 * object_width - palm_clearance)
         max_safe_forward = min(max_safe_forward, max_advance)
 
         # Raycast-style probe
@@ -570,22 +572,18 @@ class GraspingPipeline:
         if self._move_group.go(wait=True):
             self._allow_collisions_with_obj("obj")
             rospy.sleep(5.0)  # give time for planning scene to update
-            eef_pose_base = self._get_eef_pose()
-            eef_pose = transformations.tf_poses(
-                [eef_pose_base],
-                "base_footprint",
-                "gripper_grasping_frame",
-                self._tf_buffer,
-            )[0]
+            eef_pose_base = self._get_eef_pose(base_frame=pcl.header.frame_id)
+            x_forward = self._determine_forward_distance(eef_pose_base, mesh_pcd)
+            rospy.loginfo(f"x forward: {x_forward}")
             eef_target_pose = transformations.offset_grasps(
-                [eef_pose],
-                self._determine_forward_distance(eef_pose, mesh_pcd),
+                [eef_pose_base],
+                x_forward,
                 0.0,
                 0.0,
             )[0]
             eef_target_pose = transformations.tf_poses(
                 [eef_target_pose],
-                "gripper_grasping_frame",
+                pcl.header.frame_id,
                 "base_footprint",
                 self._tf_buffer,
             )[0]

@@ -319,19 +319,19 @@ def register_object(
     best_T, best_fit, best_rmse = None, -1.0, np.inf
     seeds = np.random.randint(0, 2**32 - 1, size=max_attempts)
 
-    # Optional: Estimate scale between source and target and normalize
-    scale1 = np.linalg.norm(
-        src_pcd.get_max_bound() - src_pcd.get_min_bound()
-    ) / np.linalg.norm(tgt_pcd.get_max_bound() - tgt_pcd.get_min_bound())
-    scale2 = (bbox_volume(src_pcd) / bbox_volume(tgt_pcd)) ** (1 / 3)
-    scale3 = estimate_scale_from_nn(src_pcd, tgt_pcd, k=1, top_k=100)
-    scale_ratio = np.mean([scale1, scale2, scale3])
+    # # Optional: Estimate scale between source and target and normalize
+    # scale1 = np.linalg.norm(
+    #     src_pcd.get_max_bound() - src_pcd.get_min_bound()
+    # ) / np.linalg.norm(tgt_pcd.get_max_bound() - tgt_pcd.get_min_bound())
+    # scale2 = (bbox_volume(src_pcd) / bbox_volume(tgt_pcd)) ** (1 / 3)
+    # scale3 = estimate_scale_from_nn(src_pcd, tgt_pcd, k=1, top_k=100)
+    # scale_ratio = np.mean([scale1, scale2, scale3])
 
-    if abs(scale_ratio - 1.0) > 0.05:
-        print(f"Scaling target by ratio {scale_ratio:.4f}")
-        tgt_pcd.scale(scale_ratio, center=tgt_pcd.get_center())
-    else:
-        print("Skipping scaling; size already aligned.")
+    # if abs(scale_ratio - 1.0) > 0.05:
+    #     print(f"Scaling target by ratio {scale_ratio:.4f}")
+    #     tgt_pcd.scale(scale_ratio, center=tgt_pcd.get_center())
+    # else:
+    #     print("Skipping scaling; size already aligned.")
 
     (
         src_clean,
