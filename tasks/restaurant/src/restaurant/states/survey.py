@@ -4,10 +4,7 @@ import rospy
 import smach
 import smach_ros
 from geometry_msgs.msg import Pose, PoseStamped, PoseWithCovarianceStamped, Quaternion
-from lasr_skills import DetectGesture, GoToLocation, PlayMotion, Rotate
-from lasr_vision_msgs.msg import CDRequest, CDResponse
-from lasr_vision_msgs.srv import CroppedDetection, CroppedDetectionRequest
-from scipy.spatial.transform import Rotation as R
+from lasr_skills import DetectGesture, GoToLocation, PlayMotion, Rotate, Detect3D
 
 
 class Survey(smach.StateMachine):
@@ -91,18 +88,21 @@ class Survey(smach.StateMachine):
                 smach.StateMachine.add(
                     "GET_RESPONSE",
                     self.GetResponse(),
-                    transitions={"succeeded": "DETECT_GESTURE", "failed": "failed"},
-                )
-
-                smach.StateMachine.add(
-                    "DETECT_GESTURE",
-                    DetectGesture("waving"),
                     transitions={
                         "succeeded": "COMPUTE_APPROACH_POSE",
-                        "failed": "GET_RESPONSE",
+                        "failed": "failed",
                     },
-                    remapping={"img_msg": "cropped_image"},
                 )
+
+                # smach.StateMachine.add(
+                #     "DETECT_GESTURE",
+                #     DetectGesture("waving"),
+                #     transitions={
+                #         "succeeded": "COMPUTE_APPROACH_POSE",
+                #         "failed": "GET_RESPONSE",
+                #     },
+                #     remapping={"img_msg": "cropped_image"},
+                # )
 
                 smach.StateMachine.add(
                     "COMPUTE_APPROACH_POSE",
@@ -159,30 +159,10 @@ class Survey(smach.StateMachine):
 
                         smach.StateMachine.add(
                             "DETECT",
-                            smach_ros.ServiceState(
-                                "/vision/cropped_detection",
-                                CroppedDetection,
-                                request=CroppedDetectionRequest(
-                                    requests=[
-                                        CDRequest(
-                                            method="closest",
-                                            use_mask=True,
-                                            yolo_model="yolo11n-seg.pt",
-                                            yolo_model_confidence=0.5,
-                                            yolo_nms_threshold=0.3,
-                                            return_sensor_reading=False,
-                                            object_names=["person"],
-                                            polygons=[],
-                                        )
-                                    ]
-                                ),
-                                output_keys=["responses"],
-                                response_slots=["responses"],
-                            ),
+                            Detect3D(filter=["person"]),
                             transitions={
                                 "succeeded": "HANDLE_DETECTIONS",
-                                "aborted": "failed",
-                                "preempted": "failed",
+                                "failed": "failed",
                             },
                         )
 
