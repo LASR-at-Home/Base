@@ -44,7 +44,7 @@ from lasr_manipulation_pipeline import sam
 from lasr_manipulation_pipeline import visualisation
 
 PACKAGE_PATH: str = rospkg.RosPack().get_path("lasr_manipulation_pipeline")
-MESH_NAME: str = "starbucks_coffee.ply"
+MESH_NAME: str = "banana.ply"
 
 """
 Ensure grasp approach is forwards.
@@ -375,6 +375,9 @@ class GraspingPipeline:
         Determines how far to move forward along the gripper's x-axis from the pregrasp pose
         to make contact with the object, while avoiding pushing through or colliding with it.
         """
+
+        return 0.035
+
         if not mesh.has_points():
             raise ValueError("Mesh point cloud is empty.")
 
@@ -600,6 +603,7 @@ class GraspingPipeline:
                     ],
                 )
                 self._close_gripper()
+                rospy.sleep(2.0)
                 self._play_motion("pregrasp")
 
         self._move_group.stop()
