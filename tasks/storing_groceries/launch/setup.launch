@@ -28,9 +28,11 @@
         <remap from="camera_info" to="/xtion/depth_registered/camera_info"/>
         <remap from="points" to="/xtion/depth_pointsros"/> 
 
-    </node>
+    </node> 
 
     <node pkg="lasr_vision_lang_sam" type="lang_sam_service.py" name="lang_sam_service" output="screen" />
+    
+    <node pkg="lasr_tf" type="tf_server.py" name="tf_server_service" output="screen"/>
 
 
 </launch>

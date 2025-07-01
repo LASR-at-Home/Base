@@ -7,7 +7,7 @@ import numpy as np
 import ros_numpy
 
 from cv_bridge import CvBridge
-from sensor_msgs.msg import Image as SensorImage, PointCloud2
+from sensor_msgs.msg import Image as SensorImage, PointCloud2, CameraInfo
 from lasr_vision_msgs.srv import LangSam, LangSamRequest
 import sensor_msgs.point_cloud2 as pc2
 
@@ -22,239 +22,399 @@ import numpy
 
 #
 
+import rospy
+import smach
+from lasr_vision_msgs.srv import LangSam, LangSamRequest
+from sensor_msgs.msg import Image, CameraInfo
+
+from geometry_msgs.msg import Point
+
 class LangSamState(smach.State):
-    def __init__(self, prompt: str, image_topic: str = "/xtion/rgb/image_raw"):
-        smach.State.__init__(self, outcomes=["succeeded", "failed"], output_keys=['sam_detections'])
-
+    def __init__(self, prompt="door handle", target_frame="base_footprint"):  # fixed spelling
+        smach.State.__init__(
+            self,
+            outcomes=['succeeded', 'failed'],
+            input_keys=['prompt', 'target_point'],
+            output_keys=['detections', 'target_point']
+        )
+        self.lang_sam_srv = rospy.ServiceProxy("/lasr_vision/lang_sam", LangSam)
+        self.target_frame = target_frame
         self.prompt = prompt
-        self.image_topic = image_topic
-        self.lang_sam_topic = "/lasr_vision/lang_sam"
+        self.initialized = False
 
-        try:
-            rospy.loginfo("[LangSamState] Waiting for LangSAM service")
-            rospy.wait_for_service(self.lang_sam_topic, timeout=5)
-            self._client = rospy.ServiceProxy(self.lang_sam_topic, LangSam)
-            rospy.loginfo("[LangSamState] Loaded LangSAM service")
-        except rospy.ROSException:
-            rospy.logerr(f"[LangSamState] Timeout: LangSAM service")
+    def initialize(self):
+        rospy.wait_for_service("/lasr_vision/lang_sam")
+        self.initialized = True
 
     def execute(self, userdata):
+        if not self.initialized:
+            self.initialize()
 
         try:
-            rospy.loginfo(f"[LangSamState] Waiting for {self.image_topic}")
-            image_msg = rospy.wait_for_message(self.image_topic, Image, timeout=5)
-            rospy.loginfo(f"[LangSamState] Loaded {self.image_topic}")
-        except rospy.ROSException:
-            rospy.logerr(f"[LangSamState] Timeout: {self.image_topic}")
-            return "failed"
+            image_msg = rospy.wait_for_message('/xtion/rgb/image_raw', Image, timeout=5.0)
+            depth_msg = rospy.wait_for_message('/xtion/depth_registered/image_raw', Image, timeout=5.0)
+            cam_info = rospy.wait_for_message('/xtion/depth_registered/camera_info', CameraInfo, timeout=5.0)
+
+            request = LangSamRequest()
+            request.image_raw = image_msg
+            request.depth_image = depth_msg
+            request.depth_camera_info = cam_info
+            request.prompt = self.prompt
+            request.target_frame = self.target_frame
+            request.box_threshold = 0.3
+            request.text_threshold = 0.25
+
+            response = self.lang_sam_srv(request)
+
+            if not response.detections:
+                rospy.logwarn("LangSAM: No detections found.")
+                return 'failed'
             
-        request = LangSamRequest()
-        request.prompt = self.prompt
-        request.image_raw = image_msg
+            userdata.detections = response.detections
+            best = max(response.detections, key=lambda d: d.seg_mask_score)
+            userdata.target_point = best.point
 
-        try:
-            response = self._client(request)
+            rospy.loginfo(f"{userdata.target_point}")
 
-            if not response.detections:           
-                rospy.logwarn("[LangSamState] No detection from LangSam")
-                return "failed" 
-            
-            rospy.loginfo(f"[LangSamState] LangSAM result: {len(response.detections)}")
 
-            best_idx = numpy.argmax([d.seg_mask_score for d in response.detections])
-            detection = response.detections[best_idx]
 
-            width = image_msg.width
-            height = image_msg.height
-
-            flat_mask = numpy.array(detection.seg_mask, dtype=numpy.uint8)
-            mask_np = flat_mask.reshape((height, width))
-
-            if numpy.count_nonzero(mask_np) < 5000:
-                rospy.logwarn("[LangSamState] Mask too small")
-                return "failed"
-
-            userdata.sam_detections = {
-                "mask": mask_np,
-                "image_header": image_msg.header
-            }
-
-            return "succeeded"
+            return 'succeeded'
 
         except rospy.ServiceException as e:
-            rospy.logerr(f"[LangSamState] LangSAM service call failed: {e}")
+            rospy.logerr(f"LangSAM service call failed: {e}")
+            return 'failed'
+        except rospy.ROSException as e:
+            rospy.logerr(f"Timeout waiting for image/depth/camera info: {e}")
+            return 'failed'
+
+import smach
+import rospy
+import actionlib
+import moveit_commander
+from play_motion_msgs.msg import PlayMotionGoal, PlayMotionAction
+from geometry_msgs.msg import Point
+
+import sys
+import copy
+import rospy
+import actionlib
+import moveit_commander
+from geometry_msgs.msg import PointStamped, PoseStamped
+from visualization_msgs.msg import Marker
+from play_motion_msgs.msg import PlayMotionGoal, PlayMotionAction
+import tf2_ros
+from tf2_geometry_msgs.tf2_geometry_msgs import do_transform_pose
+from moveit_commander.exception import MoveItCommanderException
+from trajectory_msgs.msg import JointTrajectory
+import math
+
+USE_CLICKED_POINT = True      
+TORSO_LIFT        = 0.25       
+TABLE_THICK       = 0.01      
+TABLE_Z           = 0.41       
+VEL_SCALE         = 0.15     
+ACC_SCALE         = 0.15
+STAMP_DELAY       = 0.25 
+
+class GoToOpenPoseState(smach.State):
+    def __init__(self):
+        smach.State.__init__(self, outcomes=["succeeded", "failed"],
+                             input_keys=["target_point"])
+
+        self.gripper_link = "gripper_tool_link"
+        self.arm = moveit_commander.MoveGroupCommander("arm_torso")
+        self.arm.set_end_effector_link(self.gripper_link)
+        self.arm.set_pose_reference_frame("base_footprint")
+        self.arm.set_planning_time(30.0)
+        self.arm.set_max_velocity_scaling_factor(0.15)
+        self.arm.set_max_acceleration_scaling_factor(0.15)
+        self.arm.set_goal_tolerance(0.01)
+
+        self.play = actionlib.SimpleActionClient("play_motion", PlayMotionAction)
+        self.play.wait_for_server()
+
+    def execute(self, userdata):
+        try:
+            p: Point = userdata.target_point
+            self.arm.set_position_target([p.x, p.y, p.z], self.gripper_link)
+
+            ok, plan, _, _ = self.arm.plan()
+            if not ok or not self.arm.execute(plan, wait=True):
+                rospy.logerr("Move to target failed")
+                return "failed"
+
+            self.arm.stop()
+            self.arm.clear_pose_targets()
+
+            # Open gripper
+            open_goal = PlayMotionGoal()
+            open_goal.motion_name = "open_gripper"
+            open_goal.skip_planning = False
+            self.play.send_goal_and_wait(open_goal)
+
+            return "succeeded"
+        
+
+        except Exception as e:
+            rospy.logerr(f"GoToOpenPose failed: {e}")
             return "failed"
+
+
+# class LangSamState(smach.State):
+#     def __init__(self, prompt: str, image_topic: str = "/xtion/rgb/image_raw"):
+#         smach.State.__init__(self, outcomes=["succeeded", "failed"], output_keys=['sam_detections'])
+
+#         self.prompt = prompt
+#         self.image_topic = image_topic
+#         self.lang_sam_topic = "/lasr_vision/lang_sam"
+#         self.depth_image_topic = "/xtion/depth_registered/image_raw"
+#         self.depth_camera_topic = "/xtion/depth_registered/camera_info"
+#         self.target_frame = "map"
+
+#         try:
+#             rospy.loginfo("[LangSamState] Waiting for LangSAM service")
+#             rospy.wait_for_service(self.lang_sam_topic, timeout=5)
+#             self.client = rospy.ServiceProxy(self.lang_sam_topic, LangSam)
+#             rospy.loginfo("[LangSamState] Loaded LangSAM service")
+#         except rospy.ROSException:
+#             rospy.logerr(f"[LangSamState] Timeout: LangSAM service")
+
+#     def execute(self, userdata):
+
+#         try:
+#             rospy.loginfo(f"[LangSamState] Waiting for {self.image_topic}")
+#             image_msg = rospy.wait_for_message(self.image_topic, Image, timeout=5)
+#             rospy.loginfo(f"[LangSamState] Loaded {self.image_topic}")
+#             depth_image_msg = rospy.wait_for_message(self.depth_image_topic, Image, timeout=5)
+#             rospy.loginfo(f"[LangSamState] Loaded {self.depth_image_topic}")
+#             camera_info_msg = rospy.wait_for_message(self.depth_camera_topic, CameraInfo, timeout=5)
+#             rospy.loginfo(f"[LangSamState] Loaded {self.depth_camera_topic}")
+
+
+#         except rospy.ROSException:
+#             rospy.logerr(f"[LangSamState] Timeout: {self.image_topic}")
+#             return "failed"
+            
+#         request = LangSamRequest(
+#                 image_raw=image_msg,
+#                 depth_image=depth_image_msg,
+#                 depth_camera_info=camera_info_msg,
+#                 target_frame=self.target_frame,
+#                 prompt=self.prompt,
+#             )
+
+#         try:
+#             response = self.client(request)
+
+
+#             if not response.detections:           
+#                 rospy.logwarn("[LangSamState] No detection from LangSam")
+#                 return "failed" 
+            
+#             rospy.loginfo(f"[LangSamState] LangSAM result: {len(response.detections)}")
+
+#             best_idx = numpy.argmax([d.seg_mask_score for d in response.detections])
+#             detection = response.detections[best_idx]
+#             point = detection.point
+
+#             rospy.logwarn(f"[LangSamState] {point}")
+
+#             # width = image_msg.width
+#             # height = image_msg.height
+
+#             # flat_mask = numpy.array(detection.seg_mask, dtype=numpy.uint8)
+#             # mask_np = flat_mask.reshape((height, width))
+
+
+#             # # if numpy.count_nonzero(mask_np) < 5000:
+#             # #     rospy.logwarn("[LangSamState] Mask too small")
+#             # #     return "failed"
+
+#             # # userdata.sam_detections = {
+#             # #     "mask": mask_np,
+#             # #     "image_header": image_msg.header
+#             # # }
+
+#             userdata.sam_detections = {
+#                 "point": point
+#             }
+
+#             return "succeeded"
+
+#         except rospy.ServiceException as e:
+#             rospy.logerr(f"[LangSamState] LangSAM service call failed: {e}")
+#             return "failed"
 
 #
 
-def filter_point_cloud(mask, cloud_msg):
-        height = cloud_msg.height
-        width = cloud_msg.width
+# def filter_point_cloud(mask, cloud_msg):
+#         height = cloud_msg.height
+#         width = cloud_msg.width
 
-        if mask.shape != (height, width):
-            rospy.logwarn("[filter_point_cloud] Mask shape mismatch.")
-            return []
+#         if mask.shape != (height, width):
+#             rospy.logwarn("[filter_point_cloud] Mask shape mismatch.")
+#             return []
             
-        cloud_iter = pc2.read_points(cloud_msg, skip_nans=False, field_names=("x", "y", "z"))
-        cloud_array = np.array(list(cloud_iter), dtype=np.float32).reshape((height, width, 3))
+#         cloud_iter = pc2.read_points(cloud_msg, skip_nans=False, field_names=("x", "y", "z"))
+#         cloud_array = np.array(list(cloud_iter), dtype=np.float32).reshape((height, width, 3))
         
-        selected_points = cloud_array[mask.astype(bool)]
-        selected_points = selected_points[~np.isnan(selected_points).any(axis=1)]
+#         selected_points = cloud_array[mask.astype(bool)]
+#         selected_points = selected_points[~np.isnan(selected_points).any(axis=1)]
 
-        rospy.loginfo(f"[filter_point_cloud] Masked pixels: {np.count_nonzero(mask)}, Valid 3D points: {len(selected_points)}")
+#         rospy.loginfo(f"[filter_point_cloud] Masked pixels: {np.count_nonzero(mask)}, Valid 3D points: {len(selected_points)}")
 
-        return selected_points.tolist()
+#         return selected_points.tolist()
 
-class FilterPointCloudState(smach.State):
-    def __init__(self, cloud_topic="/xtion/depth_pointsros"):
-        smach.State.__init__(self, outcomes=["succeeded", "failed"], input_keys=["sam_detections"], output_keys=["sam_detections"])
-        self.cloud_topic = cloud_topic
-
-    def execute(self, userdata):
-        try:
-            rospy.loginfo(f"[FilterPointCloudState] Waiting for {self.cloud_topic}")
-            cloud_msg = rospy.wait_for_message(self.cloud_topic, PointCloud2, timeout=5)
-            rospy.loginfo(f"[FilterPointCloudState] Received {self.cloud_topic}")
-        except rospy.ROSException:
-            rospy.logerr(f"[FilterPointCloudState] Timeout: {self.cloud_topic}")
-            return "failed"
-        
-        mask = userdata.sam_detections["mask"]
-        filtered_points = self.filter_point_cloud(mask, cloud_msg)
-
-        rospy.loginfo(f"[FilterPointCloudState] Filtered {len(filtered_points)} points")
-        userdata.sam_detections["filtered_points"] = filtered_points
-        userdata.sam_detections["raw_points"]=cloud_msg
-        return "succeeded"
-    
-    
-
-# #
-
-# class PrintPointCountState(smach.State):
-#     def __init__(self):
-#         smach.State.__init__(self, outcomes=["done", "failed"], input_keys=["sam_detections"])
+# class FilterPointCloudState(smach.State):
+#     def __init__(self, cloud_topic="/xtion/depth_pointsros"):
+#         smach.State.__init__(self, outcomes=["succeeded", "failed"], input_keys=["sam_detections"], output_keys=["sam_detections"])
+#         self.cloud_topic = cloud_topic
 
 #     def execute(self, userdata):
-#         points = userdata.sam_detections.get("filtered_points", [])
-#         rospy.loginfo(f"[PrintPointCountState] 3D points count: {len(points)}")
-#         return "done"
+#         try:
+#             rospy.loginfo(f"[FilterPointCloudState] Waiting for {self.cloud_topic}")
+#             cloud_msg = rospy.wait_for_message(self.cloud_topic, PointCloud2, timeout=5)
+#             rospy.loginfo(f"[FilterPointCloudState] Received {self.cloud_topic}")
+#         except rospy.ROSException:
+#             rospy.logerr(f"[FilterPointCloudState] Timeout: {self.cloud_topic}")
+#             return "failed"
+        
+#         mask = userdata.sam_detections["mask"]
+#         filtered_points = self.filter_point_cloud(mask, cloud_msg)
+
+#         rospy.loginfo(f"[FilterPointCloudState] Filtered {len(filtered_points)} points")
+#         userdata.sam_detections["filtered_points"] = filtered_points
+#         userdata.sam_detections["raw_points"]=cloud_msg
+#         return "succeeded"
     
-# #
+    
 
-def select_depth_with_ratio(points, percentage = 75):
-    depths = numpy.array(points)
-    depths = depths[depths > 0]
-    if len(depths) == 0:
-        return None
-    return np.percentile(depths, percentage)
+# # #
 
-class EstimateAverageDepthState(smach.State):
-    def __init__(self):
-        smach.State.__init__(self, outcomes=["done"], input_keys=["sam_detections"], output_keys=["sam_detections"])
+# # class PrintPointCountState(smach.State):
+# #     def __init__(self):
+# #         smach.State.__init__(self, outcomes=["done", "failed"], input_keys=["sam_detections"])
 
-    def execute(self, userdata):
-        points = userdata.sam_detections.get("points_3d", [])
-        if not points:
-            rospy.logwarn("[EstimateAverageDepthState] No 3D points to process.")
-            userdata.sam_detections["average_depth"] = None
-            return "done"
+# #     def execute(self, userdata):
+# #         points = userdata.sam_detections.get("filtered_points", [])
+# #         rospy.loginfo(f"[PrintPointCountState] 3D points count: {len(points)}")
+# #         return "done"
+    
+# # #
 
-        z_values = [p[2] for p in points if not np.isnan(p[2])]
-        if not z_values:
-            rospy.logwarn("[EstimateAverageDepthState] All depth values are NaN.")
-            userdata.sam_detections["average_depth"] = None
-            return "done"
+# def select_depth_with_ratio(points, percentage = 75):
+#     depths = numpy.array(points)
+#     depths = depths[depths > 0]
+#     if len(depths) == 0:
+#         return None
+#     return np.percentile(depths, percentage)
 
-        door_depth = select_depth_with_ratio(z_values, 75)
-        handle_depth = np.min(z_values)
+# class EstimateAverageDepthState(smach.State):
+#     def __init__(self):
+#         smach.State.__init__(self, outcomes=["done"], input_keys=["sam_detections"], output_keys=["sam_detections"])
 
-        rospy.loginfo(f"[EstimateAverageDepthState] Avg depth: {avg_depth:.3f} m, Min: {min_depth:.3f} m, Max: {max_depth:.3f} m")
+#     def execute(self, userdata):
+#         points = userdata.sam_detections.get("points_3d", [])
+#         if not points:
+#             rospy.logwarn("[EstimateAverageDepthState] No 3D points to process.")
+#             userdata.sam_detections["average_depth"] = None
+#             return "done"
 
-        userdata.sam_detections["average_depth"] = avg_depth
-        userdata.sam_detections["min_depth"] = min_depth
-        userdata.sam_detections["max_depth"] = max_depth
-        return "done"
+#         z_values = [p[2] for p in points if not np.isnan(p[2])]
+#         if not z_values:
+#             rospy.logwarn("[EstimateAverageDepthState] All depth values are NaN.")
+#             userdata.sam_detections["average_depth"] = None
+#             return "done"
 
-import rospy
-import smach
-import numpy as np
-from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion
-import tf
-from sklearn.decomposition import PCA
+#         door_depth = select_depth_with_ratio(z_values, 75)
+#         handle_depth = np.min(z_values)
 
-class DetectHandleState(smach.State):
-    def __init__(self, reference_frame="base_footprint"):
-        smach.State.__init__(self,
-                             outcomes=["succeeded", "failed"],
-                             input_keys=["sam_detections"],
-                             output_keys=["handle_pose_stamped", "sam_detections"])
-        self.reference_frame = reference_frame
+#         rospy.loginfo(f"[EstimateAverageDepthState] Avg depth: {avg_depth:.3f} m, Min: {min_depth:.3f} m, Max: {max_depth:.3f} m")
 
-    def execute(self, userdata):
-        rospy.loginfo("[DetectHandleState] Starting grasp analysis...")
+#         userdata.sam_detections["average_depth"] = avg_depth
+#         userdata.sam_detections["min_depth"] = min_depth
+#         userdata.sam_detections["max_depth"] = max_depth
+#         return "done"
 
-        try:
-            points_3d = np.array(userdata.sam_detections["points_3d"])
-        except KeyError:
-            rospy.logerr("[DetectHandleState] No 3D points found in userdata.")
-            return "failed"
+# import rospy
+# import smach
+# import numpy as np
+# from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion
+# import tf
+# from sklearn.decomposition import PCA
 
-        if points_3d.shape[0] == 0:
-            rospy.logwarn("[DetectHandleState] Empty 3D point cloud.")
-            return "failed"
+# class DetectHandleState(smach.State):
+#     def __init__(self, reference_frame="base_footprint"):
+#         smach.State.__init__(self,
+#                              outcomes=["succeeded", "failed"],
+#                              input_keys=["sam_detections"],
+#                              output_keys=["handle_pose_stamped", "sam_detections"])
+#         self.reference_frame = reference_frame
 
-        # ✅ Step 1: Compute 3D center of mass
-        center = np.mean(points_3d, axis=0)
-        rospy.loginfo(f"[DetectHandleState] 3D center: {center}")
+#     def execute(self, userdata):
+#         rospy.loginfo("[DetectHandleState] Starting grasp analysis...")
 
-        # ✅ Step 2: Tight spatial filtering (±5 cm box)
-        spatial_margin = 0.05
-        spatial_filtered = points_3d[np.all(np.abs(points_3d - center) < spatial_margin, axis=1)]
-        rospy.loginfo(f"[DetectHandleState] Spatially filtered points: {spatial_filtered.shape[0]}")
+#         try:
+#             points_3d = np.array(userdata.sam_detections["points_3d"])
+#         except KeyError:
+#             rospy.logerr("[DetectHandleState] No 3D points found in userdata.")
+#             return "failed"
 
-        # ✅ Step 3: Optional depth filtering (±1 cm)
-        depth_center = center[2]
-        depth_margin = 0.01
-        depth_filtered = spatial_filtered[np.abs(spatial_filtered[:, 2] - depth_center) < depth_margin]
-        rospy.loginfo(f"[DetectHandleState] After depth filtering: {depth_filtered.shape[0]}")
+#         if points_3d.shape[0] == 0:
+#             rospy.logwarn("[DetectHandleState] Empty 3D point cloud.")
+#             return "failed"
 
-        if depth_filtered.shape[0] < 10:
-            rospy.logwarn("[DetectHandleState] Not enough points after filtering.")
-            return "failed"
+#         # ✅ Step 1: Compute 3D center of mass
+#         center = np.mean(points_3d, axis=0)
+#         rospy.loginfo(f"[DetectHandleState] 3D center: {center}")
 
-        # ✅ Step 4: PCA on filtered points
-        centered = depth_filtered - np.mean(depth_filtered, axis=0)
-        pca = PCA(n_components=3)
-        pca.fit(centered)
-        transformed = pca.transform(centered)
+#         # ✅ Step 2: Tight spatial filtering (±5 cm box)
+#         spatial_margin = 0.05
+#         spatial_filtered = points_3d[np.all(np.abs(points_3d - center) < spatial_margin, axis=1)]
+#         rospy.loginfo(f"[DetectHandleState] Spatially filtered points: {spatial_filtered.shape[0]}")
 
-        width = np.max(transformed[:, 0]) - np.min(transformed[:, 0])
-        height = np.max(transformed[:, 1]) - np.min(transformed[:, 1])
+#         # ✅ Step 3: Optional depth filtering (±1 cm)
+#         depth_center = center[2]
+#         depth_margin = 0.01
+#         depth_filtered = spatial_filtered[np.abs(spatial_filtered[:, 2] - depth_center) < depth_margin]
+#         rospy.loginfo(f"[DetectHandleState] After depth filtering: {depth_filtered.shape[0]}")
 
-        # ✅ Step 5: Sanity check
-        if width > 0.3:
-            rospy.logwarn(f"[DetectHandleState] Warning: large handle width: {width:.3f} m — possibly over-segmented.")
+#         if depth_filtered.shape[0] < 10:
+#             rospy.logwarn("[DetectHandleState] Not enough points after filtering.")
+#             return "failed"
 
-        rospy.loginfo(f"[DetectHandleState] Estimated handle width: {width:.4f} m")
-        rospy.loginfo(f"[DetectHandleState] Estimated handle height: {height:.4f} m")
+#         # ✅ Step 4: PCA on filtered points
+#         centered = depth_filtered - np.mean(depth_filtered, axis=0)
+#         pca = PCA(n_components=3)
+#         pca.fit(centered)
+#         transformed = pca.transform(centered)
 
-        # ✅ Step 6: Create PoseStamped
-        quat = tf.transformations.quaternion_from_euler(0, np.pi, 0)
-        pose_stamped = PoseStamped()
-        pose_stamped.header.stamp = rospy.Time.now()
-        pose_stamped.header.frame_id = self.reference_frame
-        pose_stamped.pose = Pose(
-            position=Point(*center.tolist()),
-            orientation=Quaternion(*quat)
-        )
+#         width = np.max(transformed[:, 0]) - np.min(transformed[:, 0])
+#         height = np.max(transformed[:, 1]) - np.min(transformed[:, 1])
 
-        # ✅ Step 7: Store in userdata
-        userdata.handle_pose_stamped = pose_stamped
-        userdata.sam_detections["handle_width"] = float(width)
-        userdata.sam_detections["handle_height"] = float(height)
+#         # ✅ Step 5: Sanity check
+#         if width > 0.3:
+#             rospy.logwarn(f"[DetectHandleState] Warning: large handle width: {width:.3f} m — possibly over-segmented.")
 
-        return "succeeded"
+#         rospy.loginfo(f"[DetectHandleState] Estimated handle width: {width:.4f} m")
+#         rospy.loginfo(f"[DetectHandleState] Estimated handle height: {height:.4f} m")
+
+#         # ✅ Step 6: Create PoseStamped
+#         quat = tf.transformations.quaternion_from_euler(0, np.pi, 0)
+#         pose_stamped = PoseStamped()
+#         pose_stamped.header.stamp = rospy.Time.now()
+#         pose_stamped.header.frame_id = self.reference_frame
+#         pose_stamped.pose = Pose(
+#             position=Point(*center.tolist()),
+#             orientation=Quaternion(*quat)
+#         )
+
+#         # ✅ Step 7: Store in userdata
+#         userdata.handle_pose_stamped = pose_stamped
+#         userdata.sam_detections["handle_width"] = float(width)
+#         userdata.sam_detections["handle_height"] = float(height)
+
+#         return "succeeded"
 
 
     
@@ -565,40 +725,65 @@ class DetectHandleState(smach.State):
 # ------------------
 # SMACH Main Control
 # ------------------
+import rospy
+import smach
+import moveit_commander
+
 def main():
-    rospy.init_node("lang_sam_pointcloud_pipeline")
+    rospy.init_node("langsam_go_to_point_sm")
+    moveit_commander.roscpp_initialize([])
 
-    sm = smach.StateMachine(outcomes=["DONE", "FAILED"])
+    sm = smach.StateMachine(outcomes=['DONE', 'FAILED'])
+
+    sm.userdata.target_point = Point(x=1.648340, y=0.069282, z=0.925791)  # Fake target
+
     with sm:
-        smach.StateMachine.add(
-            "SEGMENT_DOOR",
-            LangSamState(prompt="door handel"),
-            transitions={"succeeded": "POINTCLOUD_EXTRACTION", "failed": "FAILED"}
-        )
+        # smach.StateMachine.add("DETECT_OBJECT",
+        #                        LangSamState(prompt="door handle", target_frame="base_footprint"),
+        #                        transitions={"succeeded": "GO_TO_POINT", "failed": "FAILED"},
+        #                         remapping={'prompt': 'prompt', 'detections': 'detections', 'target_point': 'target_point'})
 
-        smach.StateMachine.add(
-            "POINTCLOUD_EXTRACTION",
-            PointCloudExtractionState(),
-            transitions={"done": "PRINT_COUNT", "failed": "FAILED"}
-        )
 
-        smach.StateMachine.add(
-            "PRINT_COUNT",
-            PrintPointCountState(),
-            transitions={"done": "ESTIMATE_DEPTH", "failed": "FAILED"}        
-        )
+        smach.StateMachine.add("GO_TO_POINT",
+                               GoToOpenPoseState(),
+                               transitions={"succeeded": "DONE", "failed": "FAILED"},
+                               remapping={"target_point": "target_point"})
+        
+        # smach.StateMachine.add("DETECT_OBJECT",
+        #                        LangSamState(prompt="door handle", target_frame="base_footprint"),
+        #                        transitions={"succeeded": "DONE", "failed": "FAILED"},
+        #                         remapping={'prompt': 'prompt', 'detections': 'detections', 'target_point': 'target_point'})
 
-        smach.StateMachine.add(
-            "ESTIMATE_DEPTH",
-            EstimateAverageDepthState(),
-            transitions={"done": "DETECT_HANDLE"}
-        )
+    outcome = sm.execute()
+    rospy.loginfo(f"State machine finished with outcome: {outcome}")
 
-        smach.StateMachine.add(
-            "DETECT_HANDLE",
-            DetectHandleState(),
-            transitions={"succeeded": "DONE", "failed": "FAILED"}
-        )
+if __name__ == "__main__":
+    main()
+
+
+        # smach.StateMachine.add(
+        #     "POINTCLOUD_EXTRACTION",
+        #     PointCloudExtractionState(),
+        #     transitions={"done": "PRINT_COUNT", "failed": "FAILED"}
+        # )
+
+        # smach.StateMachine.add(
+        #     "PRINT_COUNT",
+        #     PrintPointCountState(),
+        #     transitions={"done": "ESTIMATE_DEPTH", "failed": "FAILED"}        
+        # )
+
+        # smach.StateMachine.add(
+        #     "ESTIMATE_DEPTH",
+        #     EstimateAverageDepthState(),
+        #     transitions={"done": "DETECT_HANDLE"}
+        # )
+
+        # smach.StateMachine.add(
+        #     "DETECT_HANDLE",
+        #     DetectHandleState(),
+        #     transitions={"succeeded": "DONE", "failed": "FAILED"}
+        # )
 
         # smach.StateMachine.add(
         #     "RAISE_TORSO",
@@ -629,16 +814,6 @@ def main():
         #     FilterSafetyDistanceState(max_reach_cm=80.0),  # or whatever Tiago’s arm length is
         #     transitions={"done": "DONE", "failed": "FAILED"}
         # )
-
-
-
-
-    outcome = sm.execute()
-    rospy.loginfo(f"[StateMachine] Final Outcome: {outcome}")
-
-
-if __name__ == "__main__":
-    main()
 
 
 # #!/usr/bin/env python
