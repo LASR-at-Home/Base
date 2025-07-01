@@ -80,7 +80,7 @@ class LangSamService:
         # POSSIBILITY OF SUCH DAMAGE.
         ####################################################################
         n_channels = 1
-        dtype = np.dtype(np.uint8)
+        dtype = np.dtype(np.float32)
         dtype = dtype.newbyteorder(">" if img_msg.is_bigendian else "<")
 
         img_buf = (
@@ -137,9 +137,10 @@ class LangSamService:
         # Convert sensor_msgs/Image to PIL Image
         cv_im = cv2_img.msg_to_cv2_img(sensor_image)
         pil_image = Image.fromarray(cv_im)
-        print(f"Received image with size: {pil_image.size} and prompt: {prompt}")
 
+        # rospy.loginfo(f"Raw depth image: {request.depth_image}")
         depth_image = self._imgmsg_to_cv2(request.depth_image)
+        # rospy.loginfo(f"Processed depth image: {depth_image}")
 
         results = self._model.predict(
             [pil_image],
@@ -217,7 +218,6 @@ class LangSamService:
                 )
 
         response = LangSamResponse(detections=response_results)
-        print(response)
 
         return response
 
