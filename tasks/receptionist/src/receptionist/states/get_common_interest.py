@@ -15,7 +15,7 @@ class GetInterest(smach.State):
             self,
             outcomes=["succeeded", "failed"],
             input_keys=["guest_data"],
-            output_keys=["interest_message"],
+            output_keys=["interest_message", "guest_data"],
         )
         self._sentence_embed_srv = rospy.ServiceProxy(
             "/lasr_sentence_embedding/sentence_embedding", SentenceEmbedding
@@ -52,7 +52,7 @@ class GetInterest(smach.State):
 
             userdata.interest_message = (
                 "To break the ice, I thought you'd like to know that "
-                f"{most_similar_1_name} and {most_similar_2_name} have a common interest {commonality} as they both like "
+                f"{userdata.guest_data[most_similar_1_name]['name']} and {userdata.guest_data[most_similar_2_name]['name']} have a common interest {commonality} as they both like "
                 f"{most_similar_1} and {most_similar_2}."
             )
         except Exception as e:

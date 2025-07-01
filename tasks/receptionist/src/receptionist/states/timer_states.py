@@ -13,8 +13,9 @@ class StartTimer(smach.State):
 
     def execute(self, userdata):
         try:
-            userdata.start_time = time.time()
-            rospy.loginfo("Timer started at: {}".format(userdata.start_time))
+            start_time = time.time()
+            rospy.loginfo("Timer started at: {}".format(start_time))
+            userdata.start_time = start_time
             return "succeeded"
         except Exception as e:
             rospy.logerr(f"Error starting timer: {e}")
@@ -35,10 +36,11 @@ class StopTimer(smach.State):
     def execute(self, userdata):
         try:
             end_time = time.time()
-            userdata.duration = end_time - userdata.start_time
-            rospy.loginfo("Timer stopped. Duration: {}".format(userdata.duration))
-            mins, secs = divmod(userdata.duration, 60)
+            duration = end_time - userdata.start_time
+            rospy.loginfo("Timer stopped. Duration: {}".format(duration))
+            mins, secs = divmod(duration, 60)
             userdata.time_text = f"Receptionist took {int(mins)} minutes and {int(secs)} seconds to complete the task."
+            userdata.duration = duration
             return "succeeded"
         except Exception as e:
             rospy.logerr(f"Error stopping timer: {e}")

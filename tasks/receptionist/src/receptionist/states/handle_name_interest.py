@@ -110,8 +110,8 @@ class HandleNameInterest(smach.StateMachine):
                 "HANDLE_NAME_INTEREST",
                 sm_con,
                 transitions={
-                    "succeeded": "STOP_EYE_TRACKER",
-                    "failed": "STOP_EYE_TRACKER",
+                    "succeeded": "succeeded",
+                    "failed": "failed",
                     "vision_failed": "SAY_VISION_FAILED",
                     "get_attributes_failed": "SAY_ATTRIBUTES_FAILED",
                     "learn_face_failed": "SAY_LEARN_FACE_FAILED",
@@ -132,8 +132,8 @@ class HandleNameInterest(smach.StateMachine):
                 "GET_ATTRIBUTES_AND_LEARN_FACE",
                 self.GetAttributesAndLearnFace(guest_id),
                 transitions={
-                    "succeeded": "STOP_EYE_TRACKER",
-                    "failed": "STOP_EYE_TRACKER",
+                    "succeeded": "succeeded",
+                    "failed": "failed",
                     "get_attributes_failed": "failed",
                     "learn_face_failed": "failed",
                 },
@@ -153,8 +153,8 @@ class HandleNameInterest(smach.StateMachine):
                 "GET_ATTRIBUTES",
                 GetGuestAttributes(guest_id),
                 transitions={
-                    "succeeded": "STOP_EYE_TRACKER",
-                    "failed": "STOP_EYE_TRACKER",
+                    "succeeded": "succeeded",
+                    "failed": "failed",
                 },
             )
 

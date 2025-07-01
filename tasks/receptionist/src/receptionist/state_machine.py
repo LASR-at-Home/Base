@@ -306,18 +306,9 @@ class Receptionist(smach.StateMachine):
                 "SAY_GOODBYE",
                 Say(text="Enjoy the party!"),
                 transitions={
-                    "succeeded": "GO_TO_FINISH_LOCATION",
-                    "aborted": "failed",
-                    "preempted": "GO_TO_FINISH_LOCATION",
-                },
-            )
-
-            smach.StateMachine.add(
-                "GO_TO_FINISH_LOCATION",
-                GoToLocation(wait_pose),
-                transitions={
                     "succeeded": "SAY_FINISHED",
-                    "failed": "GO_TO_FINISH_LOCATION",
+                    "aborted": "SAY_FINISHED",
+                    "preempted": "SAY_FINISHED",
                 },
             )
             smach.StateMachine.add(
@@ -336,10 +327,6 @@ class Receptionist(smach.StateMachine):
                     "succeeded": "SAY_TIME",
                     "failed": "failed",
                 },
-                remapping={
-                    "duration": "duration",
-                    "text": "time_text",
-                },
             )
             smach.StateMachine.add(
                 "SAY_TIME",
@@ -348,6 +335,9 @@ class Receptionist(smach.StateMachine):
                     "succeeded": "succeeded",
                     "aborted": "failed",
                     "preempted": "failed",
+                },
+                remapping={
+                    "text": "time_text",
                 },
             )
 

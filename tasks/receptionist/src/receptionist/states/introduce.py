@@ -46,25 +46,6 @@ class ClearSeatingDetections(smach.State):
         return "succeeded"
 
 
-class ClearSeatingDetections(smach.State):
-
-    def __init__(self):
-        super().__init__(
-            outcomes=["succeeded", "failed"],
-            input_keys=["guest_data"],
-            output_keys=["guest_data"],
-        )
-
-    def execute(self, userdata: UserData) -> str:
-        """
-        Clears the seating detection for all guests in the guest data.
-        This is to ensure that we can re-detect guests when they are seated.
-        """
-        for guest_id in userdata.guest_data:
-            userdata.guest_data[guest_id]["seating_detection"] = False
-        return "succeeded"
-
-
 class Recognise(smach.State):
 
     _rgb_image: Image
@@ -107,6 +88,7 @@ class Recognise(smach.State):
                 continue
             detection = Detection3D()
             detection.name = guest_id
+            guest_data[guest_id]["seating_detection"] = True
             return detection
 
     def _crop_image(
@@ -382,7 +364,12 @@ class Introduce(smach.StateMachine):
             introduction_iterator = smach.Iterator(
                 it=lambda: range(len(self.userdata.seated_guest_locs)),
                 it_label="person_index",
-                input_keys=["seated_guest_locs", "guest_data", "guest_seat_point"],
+                input_keys=[
+                    "seated_guest_locs",
+                    "guest_data",
+                    "guest_seat_point",
+                    "look_point",
+                ],
                 output_keys=["look_point", "relevant_guest_data", "introduce_to"],
                 exhausted_outcome="succeeded",
                 outcomes=["succeeded", "failed"],
@@ -416,7 +403,11 @@ class Introduce(smach.StateMachine):
                         "GET_LOOK_POINT_1",
                         smach.CBState(
                             self._get_look_point,
-                            input_keys=["seated_guest_locs", "person_index"],
+                            input_keys=[
+                                "seated_guest_locs",
+                                "person_index",
+                                "look_point",
+                            ],
                             output_keys=["look_point"],
                             outcomes=["succeeded", "failed"],
                         ),

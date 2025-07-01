@@ -107,6 +107,10 @@ class GetNameAndInterest(smach.StateMachine):
             guest["name"] = name
             guest["interest"] = interest
 
+            rospy.loginfo(
+                f"Parsed name: {name}, interest: {interest} from transcription: {transcription}"
+            )
+
             # Determine outcome
             if name == "unknown" or interest == "unknown":
                 return "failed"

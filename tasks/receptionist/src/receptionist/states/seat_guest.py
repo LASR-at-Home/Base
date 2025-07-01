@@ -135,15 +135,19 @@ class ProcessDetections(smach.State):
         transform = self._tf_buffer.lookup_transform(
             "base_footprint",
             "map",
-            occupied_pointstamped.stamp,
+            occupied_pointstamped.header.stamp,
             rospy.Duration(1.0),
         )
         occupied_point_transformed = do_transform_point(
             occupied_pointstamped, transform
         )
         sofa_point_transformed = do_transform_point(sofa_pointstamped, transform)
+        rospy.loginfo(
+            f"Occupied point transformed: {occupied_point_transformed.point}, "
+            f"Sofa point transformed: {sofa_point_transformed.point}"
+        )
         result = ""
-        if occupied_point_transformed.point.x < sofa_point_transformed.point.x:
+        if occupied_point_transformed.point.y < sofa_point_transformed.point.y:
             result = "right"
         else:
             result = "left"
@@ -168,7 +172,16 @@ class ProcessDetections(smach.State):
             for detection in userdata.sofa_detections
             if detection.name == "person"
         ]
-        userdata.seated_guest_locs = seated_guests_loc + seated_guests_sofa_loc
+        seated_guest_locs = seated_guests_loc + seated_guests_sofa_loc
+        rospy.loginfo(
+            f"Detected {len(seated_guest_locs)} seated guests in the seating area."
+        )
+        rospy.loginfo(f"Detections are: {seated_guest_locs}")
+        if len(seated_guest_locs) > 2:
+            rospy.logwarn(
+                f"Too many people detected: {len(seated_guest_locs)} detected, max allowed is 2."
+            )
+            userdata.seated_guest_locs = seated_guest_locs[:2]
         if len(userdata.sofa_detections) > self._max_people_on_sofa:
             rospy.logwarn(
                 f"Too many people on the sofa: {len(userdata.sofa_detections)} detected, max allowed is {self._max_people_on_sofa}."
@@ -272,6 +285,7 @@ class SeatGuest(smach.StateMachine):
         smach.StateMachine.__init__(
             self,
             outcomes=["succeeded", "failed"],
+            input_keys=["guest_data"],
             output_keys=["guest_seat_point", "seated_guest_locs"],
         )
         seating_area_minus_sofa = seating_area.difference(sofa_area)

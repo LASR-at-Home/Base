@@ -91,7 +91,6 @@ class GetDrink(smach.StateMachine):
 
             if drink.lower() in self._possible_drinks:
                 userdata.guest_data[self._guest_id]["drink"] = drink.lower()
-                rospy.loginfo(f"Guest Drink identified as: {drink}")
             else:
                 userdata.guest_data[self._guest_id]["drink"] = "unknown"
                 rospy.logwarn(
@@ -99,6 +98,7 @@ class GetDrink(smach.StateMachine):
                 )
                 return "failed"
 
+            rospy.loginfo(f"Guest Drink identified as: {drink}")
             return "succeeded"
 
     class PostRecoveryDecision(smach.State):
