@@ -32,7 +32,7 @@ class GoToBag(smach.State):
         self.latest_rgb = None
         self.latest_depth = None
         self.depth_info = None
-        self.bag_prompt = "carrier bag"
+        self.bag_prompt = "carrier bag on the floor"
         self.recovery_motions = [
             "look_down_centre",
             "look_down_left",
@@ -86,7 +86,7 @@ class GoToBag(smach.State):
         self.tts_client.wait_for_server()
         rospy.loginfo("TTS action server connected.")
 
-        rospy.sleep(3)
+        rospy.sleep(0.3)
 
         cv2.namedWindow("Auto-segmented bag", cv2.WINDOW_NORMAL)
 
@@ -234,23 +234,34 @@ class GoToBag(smach.State):
             rospy.logwarn("Keypoints format not recognized!")
             return None
 
-        # Find the closest person by valid left ankle
-        closest_kps = None
-        min_dist = float("inf")
-        for kps in all_kps:
-            if "left_ankle" not in kps or np.allclose(kps["left_ankle"], 0):
-                continue
-            left_ankle = np.array(kps["left_ankle"])
-            dist = np.linalg.norm(left_ankle)
-            if dist < min_dist:
-                min_dist = dist
-                closest_kps = kps
-
-        if closest_kps is None:
-            rospy.logwarn("No person found with valid left ankle keypoint.")
+        if len(all_kps) == 0:
+            rospy.logwarn("No keypoints detected at all!")
             return None
 
-        kps = closest_kps
+        if len(all_kps) == 1:
+            # Only one person detected: just use them
+            kps = all_kps[0]
+        else:
+            # Multiple people: pick the one with the closest valid keypoint (any keypoint)
+            closest_kps = None
+            min_dist = float("inf")
+            for kps in all_kps:
+                found = False
+                for key, pt in kps.items():
+                    if np.allclose(pt, 0):
+                        continue
+                    dist = np.linalg.norm(pt)
+                    if dist < min_dist:
+                        min_dist = dist
+                        closest_kps = kps
+                        found = True
+                        break  # Only consider the first valid keypoint
+                if found:
+                    continue
+            if closest_kps is None:
+                rospy.logwarn("No valid keypoints found for any person.")
+                return None
+            kps = closest_kps
 
         # Transform all keypoints to map frame
         kps_map = {}

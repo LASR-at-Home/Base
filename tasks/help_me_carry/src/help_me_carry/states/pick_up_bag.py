@@ -204,7 +204,7 @@ class BagPickAndPlace(smach.State):
         rgb_msg = self.bridge.cv2_to_imgmsg(self.latest_rgb, "bgr8")
         req = LangSamRequest()
         req.image_raw = rgb_msg
-        req.prompt = "bag"
+        req.prompt = "carrier bag"
         try:
             return self.langsam_srv(req)
         except rospy.ServiceException as e:
@@ -473,7 +473,7 @@ class BagPickAndPlace(smach.State):
         rospy.loginfo("Bag pick complete!")
         self.sync_shift_ee(self.arm, -0.30, 0.0, 0.0)
 
-        return self.is_picked_up(0.002, 0.19)
+        return self.is_picked_up(0.002, 0.10)
 
     def sync_shift_ee(self, move_group, x, y, z):
         from tf.transformations import euler_from_quaternion, euler_matrix
@@ -501,7 +501,6 @@ class BagPickAndPlace(smach.State):
     def get_eef_pose_listener(
         self, ee_frame="arm_tool_link", base_frame="base_footprint"
     ):
-        print("MoveIt! end effector link:", self.arm.get_end_effector_link())
         listener = tf.TransformListener()
         try:
             listener.waitForTransform(
