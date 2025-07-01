@@ -147,7 +147,7 @@ class ProcessDetections(smach.State):
             f"Sofa point transformed: {sofa_point_transformed.point}"
         )
         result = ""
-        if occupied_point_transformed.point.y < sofa_point_transformed.point.y:
+        if occupied_point_transformed.point.x > sofa_point_transformed.point.x:
             result = "right"
         else:
             result = "left"
@@ -182,6 +182,8 @@ class ProcessDetections(smach.State):
                 f"Too many people detected: {len(seated_guest_locs)} detected, max allowed is 2."
             )
             userdata.seated_guest_locs = seated_guest_locs[:2]
+        else:
+            userdata.seated_guest_locs = seated_guest_locs
         if len(userdata.sofa_detections) > self._max_people_on_sofa:
             rospy.logwarn(
                 f"Too many people on the sofa: {len(userdata.sofa_detections)} detected, max allowed is {self._max_people_on_sofa}."
@@ -291,6 +293,7 @@ class SeatGuest(smach.StateMachine):
         seating_area_minus_sofa = seating_area.difference(sofa_area)
 
         with self:
+            self.userdata.seated_guest_locs = []
             smach.StateMachine.add(
                 "SAY_FINDING_SEAT",
                 Say(
