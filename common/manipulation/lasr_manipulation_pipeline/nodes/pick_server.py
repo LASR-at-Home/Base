@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 import rospy
 import rospkg
@@ -102,7 +102,7 @@ class PickServer:
 
         # Clear any existing pose targets
         self._move_group.clear_pose_targets()
-        # Execute pre-grasos
+        # Execute pre-grasps
         rospy.loginfo("Dispatching pre-grasps to MoveIt for execution...")
         self._move_group.set_pose_reference_frame("gripper_grasping_frame")
         self._move_group.set_pose_targets(grasps)
@@ -143,7 +143,7 @@ class PickServer:
 
     def _load_and_transform_mesh(
         self, mesh_name: str, transform: TransformStamped, scale: Vector3Stamped
-    ) -> o3d.geometry.PointCloud | None:
+    ) -> Optional[o3d.geometry.PointCloud]:
         """
         Loads the mesh, applies a transformation and scaling, and returns the processed point cloud.
         """
