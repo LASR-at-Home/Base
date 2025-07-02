@@ -1,6 +1,7 @@
 sensor_msgs/PointCloud2 segmented_pcl # segmented pointcloud of object
 string mesh_name # filename belonging to the meshes
 bool scale # whether to determine scale or not
+int32 max_attempts
 ---
 geometry_msgs/TransformStamped transform # transformation produced by registration
 geometry_msgs/Vector3Stamped scale # per-axis scaling produced by registration
