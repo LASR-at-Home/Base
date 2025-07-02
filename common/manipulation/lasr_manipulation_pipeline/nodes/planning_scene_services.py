@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import rospy
 from moveit_commander import PlanningSceneInterface
 from moveit_msgs.srv import (
@@ -83,7 +84,13 @@ class PlanningSceneServices:
             "gripper_link",
         ]
 
-        # Get current ACM
+        # Check if object exists
+        scene = self._get_planning_scene.call(GetPlanningSceneRequest()).scene
+        if not any(obj.id == obj_name for obj in scene.world.collision_objects):
+            rospy.logwarn(f"Object '{obj_name}' not found in planning scene.")
+            return AllowCollisionsWithObjResponse(success=False)
+
+        # Get ACM
         get_scene_req = GetPlanningSceneRequest()
         get_scene_req.components.components = (
             get_scene_req.components.ALLOWED_COLLISION_MATRIX
@@ -108,14 +115,14 @@ class PlanningSceneServices:
             while len(entry.enabled) < len(acm.entry_names):
                 entry.enabled.append(False)
 
-        # Enable specific collisions
+        # Enable collisions
         for link in allowed_links:
             obj_idx = acm.entry_names.index(obj_name)
             link_idx = acm.entry_names.index(link)
             acm.entry_values[obj_idx].enabled[link_idx] = True
             acm.entry_values[link_idx].enabled[obj_idx] = True
 
-        # Set default policy
+        # Update default entries
         if obj_name not in acm.default_entry_names:
             acm.default_entry_names.append(obj_name)
             acm.default_entry_values.append(False)
@@ -123,7 +130,7 @@ class PlanningSceneServices:
             idx = acm.default_entry_names.index(obj_name)
             acm.default_entry_values[idx] = False
 
-        # Apply updated ACM
+        # Apply
         req = ApplyPlanningSceneRequest()
         req.scene.allowed_collision_matrix = acm
         req.scene.is_diff = True
@@ -143,7 +150,13 @@ class PlanningSceneServices:
             "gripper_link",
         ]
 
-        # Get current ACM
+        # Check if object exists
+        scene = self._get_planning_scene.call(GetPlanningSceneRequest()).scene
+        if not any(obj.id == obj_name for obj in scene.world.collision_objects):
+            rospy.logwarn(f"Object '{obj_name}' not found in planning scene.")
+            return DisallowCollisionsWithObjResponse(success=False)
+
+        # Get ACM
         get_scene_req = GetPlanningSceneRequest()
         get_scene_req.components.components = (
             get_scene_req.components.ALLOWED_COLLISION_MATRIX
@@ -152,10 +165,7 @@ class PlanningSceneServices:
             get_scene_req
         ).scene.allowed_collision_matrix
 
-        if obj_name not in acm.entry_names:
-            rospy.logwarn(f"Object '{obj_name}' not found in ACM entry_names.")
-            return DisallowCollisionsWithObjResponse(success=False)
-
+        # Ensure all links are in ACM
         all_names = set(acm.entry_names)
         for name in disallowed_links:
             if name not in all_names:
@@ -171,7 +181,7 @@ class PlanningSceneServices:
             while len(entry.enabled) < len(acm.entry_names):
                 entry.enabled.append(False)
 
-        # Disable specific collisions
+        # Disable collisions
         obj_idx = acm.entry_names.index(obj_name)
         for link in disallowed_links:
             link_idx = acm.entry_names.index(link)
@@ -186,7 +196,7 @@ class PlanningSceneServices:
             idx = acm.default_entry_names.index(obj_name)
             acm.default_entry_values[idx] = True
 
-        # Apply changes
+        # Apply
         req = ApplyPlanningSceneRequest()
         req.scene.allowed_collision_matrix = acm
         req.scene.is_diff = True
@@ -203,6 +213,12 @@ class PlanningSceneServices:
     ) -> AttachObjectToGripperResponse:
         object_id = request.object_id
         link_name = "gripper_link"
+
+        # Check if object exists
+        scene = self._get_planning_scene.call(GetPlanningSceneRequest()).scene
+        if not any(obj.id == object_id for obj in scene.world.collision_objects):
+            rospy.logwarn(f"Object '{object_id}' not found in planning scene.")
+            return AttachObjectToGripperResponse(success=False)
 
         attached_object = AttachedCollisionObject()
         attached_object.link_name = link_name
@@ -232,6 +248,15 @@ class PlanningSceneServices:
         object_id = request.object_id
         link_name = "gripper_link"
 
+        # Check if object is currently attached
+        scene = self._get_planning_scene.call(GetPlanningSceneRequest()).scene
+        if not any(
+            obj.object.id == object_id
+            for obj in scene.robot_state.attached_collision_objects
+        ):
+            rospy.logwarn(f"Object '{object_id}' is not attached to the gripper.")
+            return DetachObjectFromGripperResponse(success=False)
+
         attached_object = AttachedCollisionObject()
         attached_object.link_name = link_name
         attached_object.object.id = object_id
@@ -251,6 +276,6 @@ class PlanningSceneServices:
 
 
 if __name__ == "__main__":
-    rospy.init_node("/lasr_manipulation_planning_scene")
+    rospy.init_node("lasr_manipulation_planning_scene")
     planning_scene_services = PlanningSceneServices()
     rospy.spin()
