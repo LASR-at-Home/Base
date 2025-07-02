@@ -29,7 +29,7 @@ class DetectLangSam3D(smach.State):
         depth_camera_info_topic: str = "/xtion/depth_registered/camera_info",
         box_threshold: float = 0.3,
         text_threshold: float = 0.3,
-        target_frame: str = "map",
+        target_frame: str = "base_footprint",
         prompt: Optional[str] = None,
         slop=0.1,
     ):
