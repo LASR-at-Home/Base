@@ -53,6 +53,10 @@ find_package(catkin REQUIRED message_generation message_runtime geometry_msgs se
 add_service_files(
   FILES
   Registration.srv
+  AllowCollisionsWithObj.srv
+  DisallowCollisionsWithObj.srv
+  AttachObjectToGripper.srv
+  DetachObjectFromGripper.srv
 )
 
 # Generate actions in the 'action' folder
