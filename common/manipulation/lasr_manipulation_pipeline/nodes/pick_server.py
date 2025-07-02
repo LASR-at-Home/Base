@@ -9,6 +9,9 @@ import numpy as np
 import os
 import subprocess
 from copy import deepcopy
+
+from moveit_commander import MoveGroupCommander
+
 from geometry_msgs.msg import (
     TransformStamped,
     Vector3Stamped,
@@ -17,6 +20,10 @@ from geometry_msgs.msg import (
     Point,
     Quaternion,
 )
+from std_srvs.srv import Empty
+
+import tf2_geometry_msgs
+import tf2_ros
 
 from lasr_manipulation_msgs.msg import PickAction, PickGoal, PickResult
 
@@ -39,17 +46,41 @@ class PickServer:
     _gpd_pcd_path: str = "/tmp/gpd.pcd"
     _gpd_output_file: str = "grasps.txt"
 
+    # MoveIt
+    _move_group: MoveGroupCommander
+    _close_gripper: rospy.ServiceProxy
+
+    # Tf
+    _tf_buffer: tf2_ros.Buffer
+    _tf_listener: tf2_ros.TransformListener
+
     # Action server
     _pick_server: actionlib.SimpleActionServer
 
     def __init__(self) -> None:
-
         self._pick_server = actionlib.SimpleActionServer(
             "/lasr_manipulation/pick",
             PickAction,
             execute_cb=self._pick,
             auto_start=False,
         )
+
+        # Setup Move Group
+        self._move_group = MoveGroupCommander("arm_torso")
+        self._move_group.set_planner_id("RRTConnectkConfigDefault")
+        self._move_group.allow_replanning(True)
+        self._move_group.allow_looking(True)
+        self._move_group.set_planning_time(30)
+        self._move_group.set_num_planning_attempts(30)
+        self._move_group.set_max_velocity_scaling_factor(0.5)
+
+        self._close_gripper = rospy.ServiceProxy(
+            "/parallel_gripper_controller/grasp", Empty
+        )
+        self._close_gripper.wait_for_service()
+
+        self._tf_buffer = tf2_ros.Buffer(cache_time=rospy.Duration(10.0))
+        self._tf_listener = tf2_ros.TransformListener(self._tf_buffer)
 
         self._pick_server.start()
 
@@ -62,10 +93,23 @@ class PickServer:
         scale: Vector3Stamped = goal.scale
 
         # Generate grasps
-        grasps = self._generate_grasps(mesh_name, transform, scale)
+        grasps, scores = self._generate_grasps(mesh_name, transform, scale)
         # If no grasps are outputted, finish.
         if not grasps:
             result = PickResult(success=False)
+            self._pick_server.set_aborted(result)
+            return
+
+        # Clear any existing pose targets
+        self._move_group.clear_pose_targets()
+        # Execute pre-grasos
+        rospy.loginfo("Dispatching pre-grasps to MoveIt for execution...")
+        self._move_group.set_pose_reference_frame("gripper_grasping_frame")
+        self._move_group.set_pose_targets(grasps)
+        success = self._move_group.go(wait=True)
+        if not success:
+            rospy.logwarn("MoveIt failed to execute pre-grasps. Aborting.")
+            result = PickResult(sucess=False)
             self._pick_server.set_aborted(result)
             return
 
@@ -207,6 +251,7 @@ class PickServer:
         max_shift: float = 0.12,
         step_size: float = 0.001,
         angle_threshold_deg: float = 25.0,
+        pregrasp_offset_x: float = 0.12,
     ) -> Tuple[List[PoseStamped], List[float]]:
         """
         Applies postprocessing to grasps.
@@ -217,6 +262,7 @@ class PickServer:
             mesh, grasps, scores, surface_threshold, max_shift, step_size
         )
         grasps, scores = self._filter_by_angles(grasps, scores, angle_threshold_deg)
+        grasps = self._offset_grasps(grasps, pregrasp_offset_x, 0.0, 0.0)
         rospy.loginfo(
             f"Postprocessing and filtering of grasps finished. Kept {len(grasps)} / {original_count} grasps."
         )
@@ -356,6 +402,67 @@ class PickServer:
         )
 
         return filtered_grasps, filtered_scores
+
+    def _offset_grasps(
+        self,
+        grasps: List[PoseStamped],
+        dx: float,
+        dy: float,
+        dz: float,
+        local_frame: str = "gripper_grasping_frame",
+    ) -> List[PoseStamped]:
+        offset_grasps = []
+        source_frame = grasps[0].header.frame_id
+        try:
+            # Get transform to local frame
+            self._tf_buffer.can_transform(
+                local_frame,
+                source_frame,
+                rospy.Time(0),
+                timeout=rospy.Duration(2.0),
+            )
+            transform = self._tf_buffer.lookup_transform(
+                local_frame, source_frame, rospy.Time(0), rospy.Duration(1.0)
+            )
+            for grasp in grasps:
+                # Transform to local frame
+                grasp_local_frame = tf2_geometry_msgs.do_transform_pose(
+                    grasp, transform
+                )
+                rot = tf.quaternion_matrix(
+                    [
+                        grasp_local_frame.pose.orientation.x,
+                        grasp_local_frame.pose.orientation.y,
+                        grasp_local_frame.pose.orientation.z,
+                        grasp_local_frame.pose.orientation.w,
+                    ]
+                )
+                # Apply offset
+                offset_local = np.array([dx, dy, dz, 1.0])
+                pos = np.array(
+                    [
+                        grasp.pose.position.x,
+                        grasp.pose.position.y,
+                        grasp.pose.position.z,
+                    ]
+                )
+                offset = rot @ offset_local
+                new_pos = pos + offset[:3]
+                new_grasp = deepcopy(grasp)
+                new_grasp.pose.position.x = new_pos[0]
+                new_grasp.pose.position.y = new_pos[1]
+                new_grasp.pose.position.z = new_pos[2]
+                offset_grasps.append(new_grasp)
+            return offset_grasps
+        except (
+            tf2_ros.LookupException,
+            tf2_ros.ConnectivityException,
+            tf2_ros.ExtrapolationException,
+        ) as e:
+            rospy.logwarn(
+                f"Transform error from {source_frame} to {local_frame}. No grasps will be returned. {e}"
+            )
+            return []
 
 
 if __name__ == "__main__":
