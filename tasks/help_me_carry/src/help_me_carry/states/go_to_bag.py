@@ -32,7 +32,7 @@ class GoToBag(smach.State):
         self.latest_rgb = None
         self.latest_depth = None
         self.depth_info = None
-        self.bag_prompt = "carrier bag on the floor"
+        self.bag_prompt = "grocery bag on the floor"
         self.recovery_motions = [
             "look_down_centre",
             "look_down_left",
@@ -242,22 +242,20 @@ class GoToBag(smach.State):
             # Only one person detected: just use them
             kps = all_kps[0]
         else:
-            # Multiple people: pick the one with the closest valid keypoint (any keypoint)
+            # Multiple people: pick the one with mean keypoint position closest to robot
             closest_kps = None
             min_dist = float("inf")
-            for kps in all_kps:
-                found = False
-                for key, pt in kps.items():
-                    if np.allclose(pt, 0):
-                        continue
-                    dist = np.linalg.norm(pt)
-                    if dist < min_dist:
-                        min_dist = dist
-                        closest_kps = kps
-                        found = True
-                        break  # Only consider the first valid keypoint
-                if found:
+            for kps_candidate in all_kps:
+                pts = np.array(
+                    [pt for pt in kps_candidate.values() if not np.allclose(pt, 0)]
+                )
+                if pts.size == 0:
                     continue
+                mean_pt = np.mean(pts, axis=0)
+                dist = np.linalg.norm(mean_pt)
+                if dist < min_dist:
+                    min_dist = dist
+                    closest_kps = kps_candidate
             if closest_kps is None:
                 rospy.logwarn("No valid keypoints found for any person.")
                 return None
@@ -360,6 +358,7 @@ class GoToBag(smach.State):
         closest_mask = None
         closest_det = None
 
+        print(len(resp.detections))
         for det in resp.detections:
             mask_flat = np.array(det.seg_mask, dtype=np.uint8)
             if mask_flat.size != height * width:
