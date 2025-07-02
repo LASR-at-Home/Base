@@ -7,7 +7,7 @@ project(lasr_manipulation_msgs)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED message_generation message_runtime geometry_msgs actionlib_msgs actionlib)
+find_package(catkin REQUIRED message_generation message_runtime geometry_msgs sensor_msgs actionlib_msgs actionlib)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -49,12 +49,11 @@ find_package(catkin REQUIRED message_generation message_runtime geometry_msgs ac
 #   Message2.msg
 # )
 
-## Generate services in the 'srv' folder
-# add_service_files(
-#   FILES
-#   Service1.srv
-#   Service2.srv
-# )
+# Generate services in the 'srv' folder
+add_service_files(
+  FILES
+  Registration.srv
+)
 
 # Generate actions in the 'action' folder
 add_action_files(
@@ -66,6 +65,7 @@ add_action_files(
 generate_messages(
   DEPENDENCIES
   geometry_msgs
+  sensor_msgs
   actionlib_msgs
 )
 

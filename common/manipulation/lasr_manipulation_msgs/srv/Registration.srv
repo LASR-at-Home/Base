@@ -1,0 +1,5 @@
+sensor_msgs/PointCloud2 segmented_pcl
+bool scale
+---
+geometry_msgs/TransformStamped transform
+geometry_msgs/Vector3Stamped scale
