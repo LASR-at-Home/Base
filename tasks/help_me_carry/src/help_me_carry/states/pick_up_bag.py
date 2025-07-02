@@ -204,7 +204,7 @@ class BagPickAndPlace(smach.State):
         rgb_msg = self.bridge.cv2_to_imgmsg(self.latest_rgb, "bgr8")
         req = LangSamRequest()
         req.image_raw = rgb_msg
-        req.prompt = "carrier bag"
+        req.prompt = "grocery bag"
         try:
             return self.langsam_srv(req)
         except rospy.ServiceException as e:
@@ -326,9 +326,6 @@ class BagPickAndPlace(smach.State):
 
         rospy.loginfo(p)
         self.planning_scene_interface.add_box("obj", p, size=size)
-
-        allow_collisions_with_object("obj", self.planning_scene_interface)
-        rospy.loginfo("Collision object added to the planning scene!")
 
     def adjust_torso(self, target_height):
         rospy.loginfo("Adjusting torso")
@@ -465,6 +462,9 @@ class BagPickAndPlace(smach.State):
 
         if result == False:
             return result
+
+        allow_collisions_with_object("obj", self.planning_scene_interface)
+        rospy.loginfo("Collision object added to the planning scene!")
 
         result = self.sync_shift_ee(self.arm, 0.30, 0.0, 0.0)
         if result == False:
