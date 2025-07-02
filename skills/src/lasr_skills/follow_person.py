@@ -32,12 +32,13 @@ from lasr_vision_msgs.msg import (
     Detection3D,
 )
 from lasr_vision_msgs.srv import YoloDetection3D, YoloDetection3DRequest
+from lasr_person_tracking_filter.srv import PersonTrackingFilter, PersonTrackingFilterRequest
 import message_filters
+import numpy as np
 
 
 class PersonFollowingData:
     """UserData structure for person following state machine"""
-
     def __init__(self, **config_params):
         super(PersonFollowingData, self).__init__()
 
@@ -50,6 +51,7 @@ class PersonFollowingData:
         self.track_id = None
         self.track_bbox = None
         self.target_list = []
+        self.robot_path_list = []
         self.person_trajectory = PoseArray()
         self.person_pose_stampeds = []
         self.newest_detection = None
@@ -355,6 +357,20 @@ class FollowPerson(smach.StateMachine):
         except Exception as e:
             rospy.logwarn(f"Failed to configure navigation: {e}")
 
+        # Setup Kalman filter service client
+        self.kalman_filter_service = rospy.ServiceProxy(
+            '/person_tracking_kalman_filter',
+            PersonTrackingFilter
+        )
+        rospy.wait_for_service('/person_tracking_kalman_filter')
+        rospy.loginfo("Connected to Kalman filter service")
+
+        # Add timer for prediction updates when no detection
+        self.prediction_timer = rospy.Timer(
+            rospy.Duration(0.1),  # 10Hz prediction rate
+            self._kalman_prediction_callback
+        )
+
         # Build the state machine structure
         self._build_state_machine()
 
@@ -435,6 +451,51 @@ class FollowPerson(smach.StateMachine):
             userdata.location = start_pose.pose
         return outcome
 
+    def _kalman_prediction_callback(self, event):
+        """Timer callback for Kalman filter prediction updates"""
+        if not self.shared_data.say_started:
+            return
+
+        current_time = rospy.Time.now()
+
+        # Only predict if we haven't had a detection recently
+        time_since_last_detection = (current_time - self.shared_data.last_good_detection_time).to_sec()
+
+        if time_since_last_detection > 0.2:  # No detection for 200ms
+            try:
+                # Call prediction service
+                req = PersonTrackingFilterRequest()
+                req.command = "predict"
+                req.timestamp = current_time
+
+                response = self.kalman_filter_service(req)
+
+                if response.success and response.initialized:
+                    # Create predicted pose
+                    predicted_pose = PoseStamped()
+                    predicted_pose.header.frame_id = "map"
+                    predicted_pose.header.stamp = current_time
+                    predicted_pose.pose.position.x = response.position_x
+                    predicted_pose.pose.position.y = response.position_y
+                    predicted_pose.pose.position.z = 0.0  # Assume ground level
+                    predicted_pose.pose.orientation.w = 1.0
+
+                    # Update target speed from Kalman filter
+                    self.shared_data.target_speed = response.speed
+
+                    # Update target list with predicted position (but don't add to trajectory)
+                    self._update_target_list(predicted_pose, add_traj=False)
+
+                    # Create synthetic detection for newest_detection
+                    if hasattr(self, 'detection') and self.detection is not None:
+                        synthetic_detection = self._create_synthetic_detection(
+                            response.position_x, response.position_y
+                        )
+                        self.shared_data.newest_detection = synthetic_detection
+
+            except rospy.ServiceException as e:
+                rospy.logwarn(f"Kalman filter prediction service call failed: {e}")
+
     def _sensor_callback(
         self, image: Image, depth_image: Image, depth_camera_info: CameraInfo
     ):
@@ -496,118 +557,174 @@ class FollowPerson(smach.StateMachine):
                 rospy.sleep(0.1)
 
     def _detection3d_callback(self, msg: Detection3DArray):
+        """Callback for SAM2 3D detections - now with Kalman filtering service"""
         this_time = rospy.Time.now()
-        """Callback for SAM2 3D detections - updates userdata"""
+
         if not self.shared_data.say_started:
             return
 
+        # Record robot position (unchanged)
+        robot_pose = self._get_robot_pose_in_map()
+        self.shared_data.robot_path_list.append(robot_pose)
+
         for detection in msg.detections:
             if int(detection.name) == self.shared_data.track_id:
-                # Quality check logic
-                is_good_quality = self._assess_detection_quality(detection)
+                # Single quality assessment
+                quality_result = self._assess_detection_quality_unified(detection)
+                is_good_quality = quality_result['is_good']
+                quality_score = quality_result['score']
 
-                if is_reasonable_detection(
-                    detection, self.shared_data.min_confidence_threshold
-                ):
+                # Update newest_detection for reasonable detections
+                if is_reasonable_detection(detection, self.shared_data.min_confidence_threshold):
                     self.shared_data.newest_detection = detection
 
                 if is_good_quality:
-                    if not self.shared_data.pause_conditional_state:
-                        self._publish_condition_flag(True)
-                        self.shared_data.condition_flag_state = True
-                    else:
-                        self._publish_condition_flag(False)
-                        self.shared_data.condition_flag_state = False
-                    self.shared_data.last_good_detection_time = this_time
+                    detection_pos_x = detection.point.x
+                    detection_pos_y = detection.point.y
 
-                    self.detection = detection
+                    try:
+                        # Check if detection is reasonable using Kalman filter service
+                        reasonable_req = PersonTrackingFilterRequest()
+                        reasonable_req.command = "is_reasonable"
+                        reasonable_req.x = detection_pos_x
+                        reasonable_req.y = detection_pos_y
+                        reasonable_req.max_deviation = self.shared_data.new_goal_threshold_max
 
-                    # transpose into the map point
-                    map_pose = PoseStamped()
-                    map_pose.header.frame_id = "map"
-                    map_pose.header.stamp = this_time
-                    map_pose.pose.position = self.detection.point
-                    map_pose.pose.orientation.w = 1.0  # Identity orientation
+                        reasonable_response = self.kalman_filter_service(reasonable_req)
 
-                    # Calculate target speed based on recent trajectory positions (dynamic window of up to 5 poses)
-                    if len(self.shared_data.person_pose_stampeds) >= 2:
-                        # Use the last few poses (up to 10) for speed calculation
-                        window_size = min(5, len(self.shared_data.person_pose_stampeds))
-                        recent_poses = self.shared_data.person_pose_stampeds[
-                            -window_size:
-                        ]
+                        if not reasonable_response.is_reasonable:
+                            rospy.logwarn("Detection rejected by Kalman filter - too far from prediction")
+                            continue
 
-                        total_distance = 0.0
-                        total_time = 0.0
+                        # Update Kalman filter with new detection
+                        update_req = PersonTrackingFilterRequest()
+                        update_req.command = "update"
+                        update_req.x = detection_pos_x
+                        update_req.y = detection_pos_y
+                        update_req.timestamp = this_time
+                        update_req.detection_quality = quality_score
 
-                        for i in range(1, len(recent_poses)):
-                            # Calculate distance between consecutive poses
-                            prev_pose = recent_poses[i - 1]
-                            curr_pose = recent_poses[i]
-                            distance = _euclidean_distance(prev_pose, curr_pose)
-                            total_distance += distance
+                        update_response = self.kalman_filter_service(update_req)
 
-                            # Calculate time difference
-                            time_diff = (
-                                curr_pose.header.stamp - prev_pose.header.stamp
-                            ).to_sec()
-                            total_time += time_diff
+                        if update_response.success:
+                            # Use filtered position instead of raw detection
+                            filtered_x = update_response.position_x
+                            filtered_y = update_response.position_y
+                            filtered_speed = update_response.speed
 
-                        # Calculate average speed (m/s)
-                        if total_time > 0:
-                            self.shared_data.target_speed = total_distance / total_time
-                            if self.shared_data.target_speed <= 0.15:
-                                self.shared_data.target_speed = 0.0
+                            # Update shared data with filtered values
+                            self.shared_data.target_speed = filtered_speed
+                            self.shared_data.last_good_detection_time = this_time
+
+                            # Create filtered detection
+                            self.detection = detection  # Keep original for other attributes
+                            self.detection.point.x = filtered_x
+                            self.detection.point.y = filtered_y
+
+                            # Create map pose with filtered position
+                            map_pose = PoseStamped()
+                            map_pose.header.frame_id = "map"
+                            map_pose.header.stamp = this_time
+                            map_pose.pose.position.x = filtered_x
+                            map_pose.pose.position.y = filtered_y
+                            map_pose.pose.position.z = detection.point.z  # Keep original z
+                            map_pose.pose.orientation.w = 1.0
+
+                            # Update condition flags (unchanged logic)
+                            if not self.shared_data.pause_conditional_state:
+                                self._publish_condition_flag(True)
+                                self.shared_data.condition_flag_state = True
+                            else:
+                                self._publish_condition_flag(False)
+                                self.shared_data.condition_flag_state = False
+
+                            rospy.loginfo(f"Filtered target speed: {filtered_speed:.2f} m/s, "
+                                          f"Quality score: {quality_score:.2f}")
+
+                            # Handle target list initialization (unchanged)
+                            if len(self.shared_data.target_list) == 0:
+                                robot_pose = self._get_robot_pose_in_map()
+                                distance = _euclidean_distance(robot_pose, map_pose)
+                                rospy.loginfo(f"Distance: {distance}")
+                                if distance >= 1.75:
+                                    poses = self._plan_and_sample_targets(
+                                        robot_pose,
+                                        map_pose,
+                                        radius=self.shared_data.min_following_distance,
+                                        num_samples=8,
+                                    )
+                                    rospy.logwarn(f"Sampled {poses}")
+                                    for p in poses:
+                                        self._update_target_list(p, add_traj=False)
+
+                            # Update target list with filtered pose
+                            self._update_target_list(map_pose)
                         else:
-                            self.shared_data.target_speed = 0.0
-                    else:
-                        # Not enough trajectory data, set speed to 0
-                        self.shared_data.target_speed = 0.0
+                            rospy.logwarn(f"Kalman filter update failed: {update_response.message}")
 
-                    rospy.loginfo(f"Target speed: {self.shared_data.target_speed}.")
+                    except rospy.ServiceException as e:
+                        rospy.logerr(f"Kalman filter service call failed: {e}")
+                        # Fallback to using raw detection
+                        continue
 
-                    if len(self.shared_data.target_list) == 0:
-                        robot_pose = self._get_robot_pose_in_map()
-                        # sample <num_samples> way-points inside stopping_distance
-                        distance = _euclidean_distance(robot_pose, map_pose)
-                        rospy.loginfo(f"Distance: {distance}")
-                        if distance >= 1.75:
-                            poses = self._plan_and_sample_targets(
-                                robot_pose,
-                                map_pose,
-                                radius=self.shared_data.min_following_distance,
-                                num_samples=8,
-                            )
-                            rospy.logwarn(f"Sampled {poses}")
-                            for p in poses:
-                                self._update_target_list(p, add_traj=False)
-                    self._update_target_list(map_pose)
                 else:
                     self._publish_condition_flag(False)
                     self.shared_data.condition_flag_state = False
                 break
+
+        # Publish trajectory (unchanged)
         if len(self.shared_data.person_trajectory.poses) > 0:
             self.trajectory_pose_pub.publish(self.shared_data.person_trajectory)
 
-    def _assess_detection_quality(self, detection):
-        """Assess detection quality based on various metrics"""
+        def _create_synthetic_detection(self, x, y):
+            """Create a synthetic detection for predicted position"""
+            if hasattr(self, 'detection') and self.detection is not None:
+                # Create a copy of the last detection but update position
+                synthetic_detection = type(self.detection)()
+                # Copy all attributes from last detection
+                for attr in dir(self.detection):
+                    if not attr.startswith('_'):
+                        try:
+                            setattr(synthetic_detection, attr, getattr(self.detection, attr))
+                        except:
+                            pass
+
+                # Update position with filtered prediction
+                synthetic_detection.point.x = x
+                synthetic_detection.point.y = y
+                synthetic_detection.point.z = self.detection.point.z  # Keep original z
+
+                # Mark as synthetic/predicted
+                synthetic_detection.confidence = 0.6  # Lower confidence for predicted
+
+                return synthetic_detection
+            return None
+
+    def _assess_detection_quality_unified(self, detection):
+        """
+        Unified detection quality assessment that returns both boolean decision and quality score
+        Returns: dict with 'is_good' (bool) and 'score' (float 0-1)
+        """
         if not hasattr(detection, "xywh") or len(detection.xywh) != 4:
-            return False
+            return {'is_good': False, 'score': 0.1}
 
         xywh = detection.xywh
         box_width = xywh[2]
         box_height = xywh[3]
         box_area = box_width * box_height
 
+        # Get image dimensions
         image_width = 640
         image_height = 480
         if self.shared_data.camera_info:
             image_width = self.shared_data.camera_info.width
             image_height = self.shared_data.camera_info.height
 
+        # Calculate detection center
         center_x = xywh[0] + box_width / 2
         center_y = xywh[1] + box_height / 2
 
+        # Calculate normalized distance from image center
         image_center_x = image_width / 2
         image_center_y = image_height / 2
         normalized_distance = math.sqrt(
@@ -615,13 +732,38 @@ class FollowPerson(smach.StateMachine):
             + ((center_y - image_center_y) / image_height) ** 2
         )
 
+        # Calculate normalized area
         normalized_area = box_area / (image_width * image_height)
 
-        return (
-            normalized_distance < self.shared_data.max_distance_threshold
-            and normalized_area > self.shared_data.min_area_threshold
-            and detection.confidence > self.shared_data.min_confidence_threshold
-        )
+        # Boolean quality checks (original thresholds)
+        distance_ok = normalized_distance < self.shared_data.max_distance_threshold
+        area_ok = normalized_area > self.shared_data.min_area_threshold
+        confidence_ok = detection.confidence > self.shared_data.min_confidence_threshold
+
+        is_good_quality = distance_ok and area_ok and confidence_ok
+
+        # Calculate continuous quality score (0-1)
+        # Start with confidence as base score
+        quality_score = detection.confidence
+
+        # Distance penalty: closer to center is better
+        distance_score = max(0.0, 1.0 - normalized_distance * 2.0)  # Penalty for being far from center
+        quality_score *= (0.7 + 0.3 * distance_score)  # Weight: 70% confidence, 30% position
+
+        # Area bonus: prefer medium-sized detections
+        if normalized_area > 0.005:  # Avoid very small detections
+            area_score = min(normalized_area * 20, 1.0)  # Scale and cap
+            quality_score *= (0.8 + 0.2 * area_score)  # Small bonus for good size
+        else:
+            quality_score *= 0.5  # Penalty for very small detections
+
+        # Clamp final score
+        quality_score = max(min(quality_score, 1.0), 0.1)
+
+        return {
+            'is_good': is_good_quality,
+            'score': quality_score
+        }
 
     def _update_target_list(self, pose_stamped, add_traj=True):
         """Update target list with new pose"""

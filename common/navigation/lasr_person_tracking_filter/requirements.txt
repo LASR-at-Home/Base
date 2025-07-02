@@ -1,0 +1,15 @@
+contourpy==1.1.1          # via matplotlib
+cycler==0.12.1            # via matplotlib
+filterpy==1.4.5           # via -r requirements.in
+fonttools==4.57.0         # via matplotlib
+importlib-resources==6.4.5  # via matplotlib
+kiwisolver==1.4.7         # via matplotlib
+matplotlib==3.7.5         # via filterpy
+numpy==1.24.4             # via contourpy, filterpy, matplotlib, scipy
+packaging==25.0           # via matplotlib
+pillow==10.4.0            # via matplotlib
+pyparsing==3.1.4          # via matplotlib
+python-dateutil==2.9.0.post0  # via matplotlib
+scipy==1.10.1             # via filterpy
+six==1.17.0               # via python-dateutil
+zipp==3.20.2              # via importlib-resources

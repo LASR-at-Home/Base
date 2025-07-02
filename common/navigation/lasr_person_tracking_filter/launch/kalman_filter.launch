@@ -1,0 +1,3 @@
+<launch>
+    <node pkg="lasr_person_tracking_filter" type="kalman_filter_service.py" name="kalman_filter" output="screen" />
+</launch>
