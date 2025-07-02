@@ -1,6 +1,7 @@
 string object_id # name of object in the planning scene
 string mesh_name # filename belonging to the meshes
 geometry_msgs/TransformStamped transform # transform produced by registration
+geometry_msgs/Vector3Stamped scale # scale produced by registration
 ---
 bool success
 ---
