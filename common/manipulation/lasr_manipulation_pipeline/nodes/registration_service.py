@@ -18,7 +18,7 @@ from lasr_manipulation_msgs.srv import (
 )
 
 from geometry_msgs.msg import Vector3Stamped, TransformStamped
-from sensor_msgs.msg import PointCloud2, PointField
+from sensor_msgs.msg import PointCloud2
 import sensor_msgs.point_cloud2 as point_cloud2
 
 
