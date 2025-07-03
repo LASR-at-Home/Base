@@ -31,8 +31,8 @@ wait_pose:
   orientation:
     x: 0.0
     y: 0.0
-    z: 0.6909244042647134
-    w: 0.7229270140141748
+    z: -0.71614172
+    w: 0.6979549
 
 table_pose:
   position:

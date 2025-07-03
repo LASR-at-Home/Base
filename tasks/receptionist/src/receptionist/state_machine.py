@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 
 import rospy
 import smach
@@ -43,8 +43,8 @@ class Receptionist(smach.StateMachine):
         seat_area: Polygon,
         sofa_area: Polygon,
         sofa_point: Point,
-        host_data: dict,
-        max_people_on_sofa: int = 3,
+        host_data: Dict,
+        max_people_on_sofa: int = 2,
         face_detection_confidence: float = 0.2,
     ):
         smach.StateMachine.__init__(self, outcomes=["succeeded", "failed"])
@@ -61,6 +61,9 @@ class Receptionist(smach.StateMachine):
         self.seat_area = seat_area
         self.sofa_area = sofa_area
         self.sofa_point = sofa_point
+
+        prior_data: Dict[str, List[str]] = rospy.get_param("/receptionist/priors")
+        self.possible_drinks = [drink.lower() for drink in prior_data["names"]]
 
         with self:
             self.userdata.guest_data = {
@@ -80,9 +83,14 @@ class Receptionist(smach.StateMachine):
                     "seating_detection": False,
                 },
             }
+            drink_detections = {
+                drink: {"detected": False, "location": ""}
+                for drink in self.possible_drinks
+            }
+
+            self.userdata.drink_detections = drink_detections
             self.userdata.confidence = face_detection_confidence
             self.userdata.dataset = "receptionist"
-            self.userdata.seat_position = PointStamped()
             self.userdata.drink_position = PointStamped()
 
             def wait_cb(ud, msg):
@@ -152,7 +160,7 @@ class Receptionist(smach.StateMachine):
                 FindDrinkOnTable(
                     guest_id="guest1",
                     table_point=self.table_point,
-                    possible_drinks=["cup", "bottle"],
+                    possible_drinks=self.possible_drinks,
                     table_area=self.table_area,
                     table_left_area=self.left_table_area,
                     table_right_area=self.right_table_area,
@@ -417,20 +425,11 @@ class Receptionist(smach.StateMachine):
 
         smach.StateMachine.add(
             f"SAY_ARRIVE_GUEST_{guest_id}",
-            Say(text="This is the beverage area. Please wait behind me."),
-            transitions={
-                "succeeded": f"ROTATE_GUEST_{guest_id}",
-                "preempted": "failed",
-                "aborted": "failed",
-            },
-        )
-
-        smach.StateMachine.add(
-            f"ROTATE_GUEST_{guest_id}",
-            Rotate(180),
+            Say(text="This is the beverage area."),
             transitions={
                 "succeeded": f"HANDLE_FAVOURITE_DRINK_GUEST_{guest_id}",
-                "failed": f"HANDLE_FAVOURITE_DRINK_GUEST_{guest_id}",
+                "preempted": f"HANDLE_FAVOURITE_DRINK_GUEST_{guest_id}",
+                "aborted": f"HANDLE_FAVOURITE_DRINK_GUEST_{guest_id}",
             },
         )
 
