@@ -1,5 +1,14 @@
 #!/usr/bin/env python3
+from typing import Optional
+
 import rospy
+import rospkg
+import open3d as o3d
+import os
+import copy
+import numpy as np
+import tf.transformations as tf
+import tf2_ros
 from moveit_commander import PlanningSceneInterface
 from moveit_msgs.srv import (
     GetPlanningScene,
@@ -13,6 +22,17 @@ from moveit_msgs.msg import (
     AttachedCollisionObject,
     PlanningScene,
 )
+from shape_msgs.msg import SolidPrimitive
+from geometry_msgs.msg import (
+    TransformStamped,
+    Vector3Stamped,
+    Pose,
+    Point,
+    Quaternion,
+    Vector3,
+)
+import sensor_msgs.point_cloud2 as point_cloud2
+
 
 from lasr_manipulation_msgs.srv import (
     AllowCollisionsWithObj,
@@ -27,6 +47,21 @@ from lasr_manipulation_msgs.srv import (
     DetachObjectFromGripper,
     DetachObjectFromGripperRequest,
     DetachObjectFromGripperResponse,
+    AddCollisionObject,
+    AddCollisionObjectRequest,
+    AddCollisionObjectResponse,
+    RemoveCollisionObject,
+    RemoveCollisionObjectRequest,
+    RemoveCollisionObjectResponse,
+    DetectAndAddSupportSurface,
+    DetectAndAddSupportSurfaceRequest,
+    DetectAndAddSupportSurfaceResponse,
+    AddSupportSurface,
+    AddSupportSurfaceRequest,
+    AddSupportSurfaceResponse,
+    RemoveSupportSurface,
+    RemoveSupportSurfaceRequest,
+    RemoveSupportSurfaceResponse,
 )
 
 
@@ -34,6 +69,12 @@ class PlanningSceneServices:
     """
     A collection of services to interface with the planning scene.
     """
+
+    # Meshes
+    _mesh_dir: str = os.path.join(
+        rospkg.RosPack().get_path("lasr_manipulation_pipeline"), "meshes"
+    )
+    _mesh_path: str = "/tmp/mesh.ply"
 
     def __init__(self):
         self._planning_scene = PlanningSceneInterface()
@@ -49,6 +90,9 @@ class PlanningSceneServices:
             "/apply_planning_scene", ApplyPlanningScene
         )
         self._apply_planning_scene.wait_for_service()
+
+        self._tf_buffer = tf2_ros.Buffer(cache_time=rospy.Duration(10.0))
+        self._tf_listener = tf2_ros.TransformListener(self._tf_buffer)
 
         self._allow_collisions_with_obj_service = rospy.Service(
             "/lasr_manipulation_planning_scene/allow_collisions_with_obj",
@@ -73,6 +117,26 @@ class PlanningSceneServices:
             DetachObjectFromGripper,
             self._detach_object_from_gripper,
         )
+
+        self._add_collision_object_service = rospy.Service(
+            "/lasr_manipulation_planning_scene/add_collision_object",
+            AddCollisionObject,
+            self._add_collision_object,
+        )
+
+        self._remove_collision_object_service = rospy.Service(
+            "/lasr_manipulation_planning_scene/remove_collision_object",
+            RemoveCollisionObject,
+            self._remove_collision_object,
+        )
+
+        self.__detect_and_add_support_surface_service = rospy.Service(
+            "/lasr_manipulation_planning_scene/detect_and_add_support_surface",
+            DetectAndAddSupportSurface,
+            self._detect_and_add_support_surface,
+        )
+
+        rospy.loginfo("lasr_manipulation_planning_scene services ready!")
 
     def _allow_collisions_with_obj(
         self, request: AllowCollisionsWithObjRequest
@@ -273,6 +337,242 @@ class PlanningSceneServices:
 
         rospy.loginfo(f"Detached object '{object_id}' from '{link_name}'")
         return DetachObjectFromGripperResponse(success=True)
+
+    def _transform_to_matrix(
+        self, transform: TransformStamped, scale: Vector3Stamped
+    ) -> np.ndarray:
+
+        trans = transform.transform.translation
+        quat = transform.transform.rotation
+        rot_mat = tf.quaternion_matrix([quat.x, quat.y, quat.z, quat.w])[:3, :3]
+
+        sx, sy, sz = scale.vector.x, scale.vector.y, scale.vector.z
+        scale_mat = np.diag([sx, sy, sz])
+
+        rs_mat = np.dot(rot_mat, scale_mat)
+
+        T = np.eye(4)
+        T[:3, :3] = rs_mat
+        T[:3, 3] = [trans.x, trans.y, trans.z]
+
+        return T
+
+    def _load_and_transform_mesh(
+        self, mesh_name: str, transform: TransformStamped, scale: Vector3Stamped
+    ) -> Optional[o3d.geometry.PointCloud]:
+        """
+        Loads the mesh, applies a transformation and scaling, and returns the processed point cloud.
+        """
+        mesh_path = os.path.join(self._mesh_dir, f"{mesh_name}.ply")
+        mesh = o3d.io.read_triangle_mesh(mesh_path)
+
+        if mesh.is_empty():
+            rospy.logwarn("Mesh is empty, so no grasps will be generated.")
+            return None
+
+        pcd = mesh.sample_points_poisson_disk(number_of_points=10000, init_factor=5)
+        rospy.loginfo(f"Read a mesh with {pcd.points.shape[0]} points.")
+
+        T = self._transform_to_matrix(transform, scale)
+        rospy.loginfo(f"Constructed non-rigid transformation matrix:\n{T}")
+
+        pcd.transform(T)
+
+        return pcd
+
+    def _add_collision_object(
+        self, request: AddCollisionObjectRequest
+    ) -> AddCollisionObjectResponse:
+        mesh = self._load_and_transform_mesh(
+            request.mesh_name, request.transform, request.scale
+        )
+
+        if mesh is None:
+            return AddCollisionObjectResponse(success=False)
+
+        o3d.io.write_point_cloud(self._mesh_path, mesh)
+        rospy.loginfo(f"Wrote mesh to {self._mesh_path}")
+        self._planning_scene.addMesh(
+            request.object_id,
+            Pose(position=Point(0, 0, 0), orientation=Quaternion(0, 0, 0, 1)),
+            self._mesh_path,
+        )
+        rospy.loginfo(
+            f"{request.object_id} ({request.mesh_name}) added to planning scene!"
+        )
+        return AddCollisionObjectResponse(success=True)
+
+    def _remove_collision_object(
+        self, request: RemoveCollisionObjectRequest
+    ) -> RemoveCollisionObjectResponse:
+        self._planning_scene.removeCollisionObject(request.object_id)
+        rospy.loginfo(f"Removed {request.object_id} from planning scene!")
+        return RemoveCollisionObjectResponse(success=True)
+
+    def _detect_and_add_support_surface(
+        self, request: DetectAndAddSupportSurfaceRequest
+    ) -> DetectAndAddSupportSurfaceResponse:
+
+        # Load mesh
+        mesh = self._load_and_transform_mesh(
+            request.mesh_name, request.transform, request.scale
+        )
+        if mesh is None:
+            return DetectAndAddSupportSurfaceResponse(success=False)
+
+        # Convert PointCloud2 to open3d
+        scene_points = list(
+            point_cloud2.read_points(
+                request.scene_pcl, field_names=("x", "y", "z"), skip_nans=True
+            )
+        )
+        scene_pcd = o3d.geometry.PointCloud()
+        scene_pcd.points = o3d.utility.Vector3dVector(np.array(scene_points))
+
+        # Transform open3d pointclouds to base_footprint
+        # This assumes that both mesh and scene are in pcl.header.frame_id
+        try:
+            transform = self._tf_buffer.lookup_transform(
+                "base_footprint",
+                request.scene_pcl.header.frame_id,
+                rospy.Time(0),
+                rospy.Duration(1.0),
+            )
+            T = self._transform_to_matrix(
+                transform, Vector3Stamped(vector=Vector3(1.0, 1.0, 1.0))
+            )
+            mesh_base = mesh.transform(T)
+            scene_base = scene_pcd.transform(T)
+        except Exception as e:
+            rospy.logwarn(f"TF transform failed: {e}")
+            return DetectAndAddSupportSurfaceResponse(success=False)
+
+        rospy.loginfo("Transformed pointclouds to base_footprint")
+
+        rospy.loginfo(("Segmenting horizontal planes in base_footprint..."))
+
+        # Plane detection
+        planes = []
+        remaining = copy.deepcopy(scene_base)
+        max_planes = 10
+        distance_threshold = 0.008
+        min_plane_points = 80
+        for _ in range(max_planes):
+            try:
+                plane_model, inliers = remaining.segment_plane(
+                    distance_threshold=distance_threshold,
+                    ransac_n=3,
+                    num_iterations=1000,
+                )
+            except Exception as e:
+                rospy.logwarn(f"Plane segmentation failed: {e}")
+                break
+
+            if len(inliers) < min_plane_points:
+                break
+
+            [a, b, c, d] = plane_model
+            if abs(c) > 0.95:  # horizontal in base_footprint
+                plane_cloud = remaining.select_by_index(inliers)
+                planes.append((plane_model, plane_cloud))
+
+            remaining = remaining.select_by_index(inliers, invert=True)
+
+        if not planes:
+            rospy.logwarn("No horizontal planes detected in base_footprint.")
+            return DetectAndAddSupportSurfaceResponse(success=False)
+
+        rospy.loginfo(f"Detected {len(planes)} candidate planes")
+
+        mesh_aabb = mesh_base.get_axis_aligned_bounding_box()
+        mesh_bottom = mesh_aabb.get_min_bound()[2]
+        mesh_center_xy = mesh_aabb.get_center()[:2]
+
+        best_plane = None
+        best_gap = float("inf")
+
+        GAP_TOLERANCE = 0.05  # allow up to 1 cm penetration
+        MAX_PLANE_GAP = 0.06  # ignore planes far below object
+
+        for model, cloud in planes:
+            z_mean = np.mean(np.asarray(cloud.points)[:, 2])
+            gap = mesh_bottom - z_mean
+            rospy.loginfo(f"Plane candidate at z={z_mean:.3f}, gap={gap:.3f}")
+
+            if -GAP_TOLERANCE <= gap < MAX_PLANE_GAP:
+                # Check XY overlap
+                plane_aabb = cloud.get_axis_aligned_bounding_box()
+                min_xy = plane_aabb.get_min_bound()[:2]
+                max_xy = plane_aabb.get_max_bound()[:2]
+                if np.all(mesh_center_xy > min_xy) and np.all(mesh_center_xy < max_xy):
+                    if gap < best_gap:
+                        best_plane = (model, cloud, z_mean)
+                        best_gap = gap
+
+        if best_plane is None:
+            rospy.logwarn("No suitable support plane found under object.")
+            return DetectAndAddSupportSurfaceResponse(success=False)
+
+        rospy.loginfo(f"Selected plane at z={best_plane[2]}")
+
+        _, plane_cloud, z_plane = best_plane
+        aabb = plane_cloud.get_axis_aligned_bounding_box()
+        center = aabb.get_center()
+        extent = aabb.get_extent()
+
+        surface = SolidPrimitive()
+        surface.type = SolidPrimitive.BOX
+        surface.dimensions = [
+            extent[0] + 0.05 # 5cm padding
+            extent[1] + 0.05,
+            0.01 # thin box
+        ]
+
+        pose = Pose()
+        pose.position.x = center[0]
+        pose.position.y = center[1]
+        pose.position.z = z_plane - 0.005  # center of the thin box
+        pose.orientation.w = 1.0
+
+        self._planning_scene.addSolidPrimitive(
+            request.surface_id,
+            surface,
+            pose,
+            frame_id="base_footprint",
+        )
+
+        rospy.loginfo(f"Added {request.surface_id} to planning scene!")
+
+        return DetectAndAddSupportSurfaceResponse(success=True)
+
+    def _add_support_surface(
+        self, request: AddSupportSurfaceRequest
+    ) -> AddSupportSurfaceResponse:
+        surface = SolidPrimitive()
+        surface.type = SolidPrimitive.BOX
+        surface.dimensions = [
+            request.dimensions.x,
+            request.dimensions.y,
+            request.dimensions.z,
+        ]
+
+        self._planning_scene.addSolidPrimitive(
+            request.surface_id,
+            surface,
+            request.pose.pose,
+            frame_id=request.pose.fame_id,
+        )
+
+        rospy.loginfo(f"Added {request.surface_id} to planning scene!")
+
+        return AddSupportSurfaceResponse(success=True)
+
+    def _remove_support_surface(
+        self, request: RemoveSupportSurfaceRequest
+    ) -> RemoveSupportSurfaceResponse:
+        self._planning_scene.removeCollisionObject(request.object_id)
+        rospy.loginfo(f"Removed {request.surface_id} from planning scene!")
+        return RemoveSupportSurfaceResponse(success=True)
 
 
 if __name__ == "__main__":
