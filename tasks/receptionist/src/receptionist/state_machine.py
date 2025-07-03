@@ -10,6 +10,8 @@ from lasr_skills import (
     Say,
     Wait,
     WaitForPersonInArea,
+    Rotate,
+    StopEyeTracker,
 )
 from receptionist.states import (
     HandleNameInterest,
@@ -18,6 +20,9 @@ from receptionist.states import (
     Introduce,
     WelcomeGuest,
     FindDrinkOnTable,
+    GetCommonInterest,
+    StartTimer,
+    StopTimer,
 )
 from shapely.geometry import Polygon
 from std_msgs.msg import Empty
@@ -35,7 +40,6 @@ class Receptionist(smach.StateMachine):
         table_right_area: Polygon,
         centre_table_area: Polygon,
         seat_pose: Pose,
-        search_motions: List[str],
         seat_area: Polygon,
         sofa_area: Polygon,
         sofa_point: Point,
@@ -55,12 +59,26 @@ class Receptionist(smach.StateMachine):
         self.centre_table_area = centre_table_area
         self.seat_pose = seat_pose
         self.seat_area = seat_area
+        self.sofa_area = sofa_area
+        self.sofa_point = sofa_point
 
         with self:
             self.userdata.guest_data = {
                 "host": host_data,
-                "guest1": {"name": "", "drink": "", "interest": "", "detection": False},
-                "guest2": {"name": "", "drink": "", "interest": "", "detection": False},
+                "guest1": {
+                    "name": "",
+                    "drink": "",
+                    "interest": "",
+                    "detection": False,
+                    "seating_detection": False,
+                },
+                "guest2": {
+                    "name": "",
+                    "drink": "",
+                    "interest": "",
+                    "detection": False,
+                    "seating_detection": False,
+                },
             }
             self.userdata.confidence = face_detection_confidence
             self.userdata.dataset = "receptionist"
@@ -80,8 +98,20 @@ class Receptionist(smach.StateMachine):
                 ),
                 transitions={
                     "valid": "WAIT_START",
-                    "invalid": "SAY_START",
+                    "invalid": "START_TIMER",
                     "preempted": "WAIT_START",
+                },
+            )
+
+            smach.StateMachine.add(
+                "START_TIMER",
+                StartTimer(),
+                transitions={
+                    "succeeded": "SAY_START",
+                    "failed": "SAY_START",
+                },
+                remapping={
+                    "start_time": "start_time",
                 },
             )
 
@@ -142,16 +172,26 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "SEAT_GUEST_1",
-                SeatGuest(),
+                SeatGuest(
+                    seating_area=self.seat_area,
+                    sofa_area=self.sofa_area,
+                    sofa_point=self.sofa_point,
+                    max_people_on_sofa=max_people_on_sofa,
+                    learn_host=True,
+                ),
                 transitions={
                     "succeeded": "INTRODUCE_GUEST_1",
-                    "succeeded": "INTRODUCE_GUEST_1",
+                    "failed": "INTRODUCE_GUEST_1",
+                },
+                remapping={
+                    "guest_seat_point": "guest_seat_point",
+                    "seated_guest_locs": "seated_guest_locs",
                 },
             )
 
             smach.StateMachine.add(
                 "INTRODUCE_GUEST_1",
-                Introduce(guest_to_introduce="guest1"),
+                Introduce(guest_to_introduce="guest1", can_detect_second_guest=False),
                 transitions={
                     "succeeded": "SAY_RETURN_WAITING_AREA",
                     "failed": "SAY_RETURN_WAITING_AREA",
@@ -224,20 +264,39 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "SEAT_GUEST_2",
-                SeatGuest(),
+                SeatGuest(
+                    seating_area=self.seat_area,
+                    sofa_area=self.sofa_area,
+                    sofa_point=self.sofa_point,
+                    max_people_on_sofa=max_people_on_sofa,
+                ),
                 transitions={
                     "succeeded": "INTRODUCE_GUEST_2",
-                    "succeeded": "INTRODUCE_GUEST_2",
+                    "failed": "INTRODUCE_GUEST_2",
+                },
+                remapping={
+                    "guest_seat_point": "guest_seat_point",
+                    "seated_guest_locs": "seated_guest_locs",
                 },
             )
 
             smach.StateMachine.add(
                 "INTRODUCE_GUEST_2",
-                Introduce(guest_to_introduce="guest2"),
+                Introduce(guest_to_introduce="guest2", can_detect_second_guest=True),
+                transitions={
+                    "succeeded": "GET_COMMON_INTEREST",
+                    "failed": "GET_COMMON_INTEREST",
+                },
+            )
+
+            smach.StateMachine.add(
+                "GET_COMMON_INTEREST",
+                GetCommonInterest(),
                 transitions={
                     "succeeded": "SAY_GOODBYE",
                     "failed": "SAY_GOODBYE",
                 },
+                remapping={"guest_data": "guest_data"},
             )
 
             """
@@ -247,27 +306,38 @@ class Receptionist(smach.StateMachine):
                 "SAY_GOODBYE",
                 Say(text="Enjoy the party!"),
                 transitions={
-                    "succeeded": "GO_TO_FINISH_LOCATION",
-                    "aborted": "failed",
-                    "preempted": "GO_TO_FINISH_LOCATION",
-                },
-            )
-
-            smach.StateMachine.add(
-                "GO_TO_FINISH_LOCATION",
-                GoToLocation(wait_pose),
-                transitions={
                     "succeeded": "SAY_FINISHED",
-                    "failed": "GO_TO_FINISH_LOCATION",
+                    "aborted": "SAY_FINISHED",
+                    "preempted": "SAY_FINISHED",
                 },
             )
             smach.StateMachine.add(
                 "SAY_FINISHED",
                 Say(text="I am done."),
                 transitions={
+                    "succeeded": "STOP_TIMER",
+                    "aborted": "STOP_TIMER",
+                    "preempted": "STOP_TIMER",
+                },
+            )
+            smach.StateMachine.add(
+                "STOP_TIMER",
+                StopTimer(),
+                transitions={
+                    "succeeded": "SAY_TIME",
+                    "failed": "failed",
+                },
+            )
+            smach.StateMachine.add(
+                "SAY_TIME",
+                Say(),
+                transitions={
                     "succeeded": "succeeded",
                     "aborted": "failed",
-                    "preempted": "succeeded",
+                    "preempted": "failed",
+                },
+                remapping={
+                    "text": "time_text",
                 },
             )
 
@@ -304,6 +374,9 @@ class Receptionist(smach.StateMachine):
                 "succeeded": f"HANDLE_NAME_INTEREST_{guest_id}",
                 "failed": f"HANDLE_NAME_INTEREST_{guest_id}",
             },
+            remapping={
+                "detections_3d": "person_detections",
+            },
         )
 
     def _guide_guest_to_table(self, guest_id: int) -> None:
@@ -318,9 +391,18 @@ class Receptionist(smach.StateMachine):
             f"SAY_FOLLOW_GUEST_TO_TABLE_{guest_id}",
             Say(text="Please follow me, I will guide you to the beverage area"),
             transitions={
+                "succeeded": f"STOP_EYE_TRACKER_GUEST_{guest_id}",
+                "preempted": f"STOP_EYE_TRACKER_GUEST_{guest_id}",
+                "aborted": f"STOP_EYE_TRACKER_GUEST_{guest_id}",
+            },
+        )
+
+        smach.StateMachine.add(
+            f"STOP_EYE_TRACKER_GUEST_{guest_id}",
+            StopEyeTracker(),
+            transitions={
                 "succeeded": f"GO_TO_TABLE_LOCATION_GUEST_{guest_id}",
-                "preempted": "failed",
-                "aborted": "failed",
+                "failed": f"GO_TO_TABLE_LOCATION_GUEST_{guest_id}",
             },
         )
 
@@ -328,28 +410,27 @@ class Receptionist(smach.StateMachine):
             f"GO_TO_TABLE_LOCATION_GUEST_{guest_id}",
             GoToLocation(self.table_pose),
             transitions={
-                "succeeded": f"LOOK_EYES_TABLE_{guest_id}",
+                "succeeded": f"SAY_ARRIVE_GUEST_{guest_id}",
                 "failed": f"GO_TO_TABLE_LOCATION_GUEST_{guest_id}",
             },
         )
 
         smach.StateMachine.add(
-            f"LOOK_EYES_TABLE_{guest_id}",
-            PlayMotion(motion_name="look_very_left"),
+            f"SAY_ARRIVE_GUEST_{guest_id}",
+            Say(text="This is the beverage area. Please wait behind me."),
             transitions={
-                "succeeded": f"SAY_ARRIVE_GUEST_{guest_id}",
+                "succeeded": f"ROTATE_GUEST_{guest_id}",
                 "preempted": "failed",
                 "aborted": "failed",
             },
         )
 
         smach.StateMachine.add(
-            f"SAY_ARRIVE_GUEST_{guest_id}",
-            Say(text="This is the beverage area."),
+            f"ROTATE_GUEST_{guest_id}",
+            Rotate(180),
             transitions={
                 "succeeded": f"HANDLE_FAVOURITE_DRINK_GUEST_{guest_id}",
-                "preempted": "failed",
-                "aborted": "failed",
+                "failed": f"HANDLE_FAVOURITE_DRINK_GUEST_{guest_id}",
             },
         )
 
@@ -375,36 +456,7 @@ class Receptionist(smach.StateMachine):
             f"GO_TO_SEAT_LOCATION_GUEST_{guest_id}",
             GoToLocation(self.seat_pose),
             transitions={
-                "succeeded": f"SAY_WAIT_GUEST_{guest_id}",
-                "failed": f"GO_TO_SEAT_LOCATION_GUEST_{guest_id}",
-            },
-        )
-
-        smach.StateMachine.add(
-            f"SAY_WAIT_GUEST_{guest_id}",
-            Say(text="Please wait here on my left."),
-            transitions={
-                "succeeded": f"LOOK_EYES_{guest_id}",
-                "preempted": "failed",
-                "aborted": "failed",
-            },
-        )
-
-        smach.StateMachine.add(
-            f"LOOK_EYES_{guest_id}",
-            PlayMotion(motion_name="look_very_left"),
-            transitions={
-                "succeeded": f"WAIT_{guest_id}_2",
-                "preempted": "failed",
-                "aborted": "failed",
-            },
-        )
-
-        smach.StateMachine.add(
-            f"WAIT_{guest_id}_2",
-            Wait(1),
-            transitions={
                 "succeeded": f"SEAT_GUEST_{guest_id}",
-                "failed": f"SEAT_GUEST_{guest_id}",
+                "failed": f"GO_TO_SEAT_LOCATION_GUEST_{guest_id}",
             },
         )

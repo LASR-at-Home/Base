@@ -1,4 +1,5 @@
 string system_prompt
 string prompt
+int32 max_tokens # Max tokens for the LLM to generate 
 ---
 string output

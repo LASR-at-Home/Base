@@ -57,6 +57,7 @@ add_service_files(
   FILES
   Llm.srv
   ReceptionistQueryLlm.srv
+  SentenceEmbedding.srv
 )
 
 ## Generate actions in the 'action' folder

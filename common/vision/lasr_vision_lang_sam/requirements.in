@@ -8,5 +8,5 @@ transformers==4.44.2
 uvloop==0.20.0
 torch==2.4.1
 torchvision==0.19.1
-lang-sam @ git+https://github.com/LASR-at-Home/lang-segment-anything.git@main
+lang-sam @ git+https://github.com/LASR-at-Home/lang-segment-anything.git@main   
 
