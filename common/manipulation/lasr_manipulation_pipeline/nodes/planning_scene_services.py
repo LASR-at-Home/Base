@@ -7,6 +7,7 @@ import os
 import copy
 import numpy as np
 import tf.transformations as tf
+import tf2_geometry_msgs
 import tf2_ros
 from moveit_commander import PlanningSceneInterface
 from moveit_msgs.srv import (
@@ -29,7 +30,9 @@ from geometry_msgs.msg import (
     Point,
     Quaternion,
     Vector3,
+    PoseStamped,
 )
+from std_msgs.msg import Header
 import sensor_msgs.point_cloud2 as point_cloud2
 
 
@@ -376,7 +379,7 @@ class PlanningSceneServices:
 
     def _load_and_transform_mesh(
         self, mesh_name: str, transform: TransformStamped, scale: Vector3Stamped
-    ) -> Optional[o3d.geometry.PointCloud]:
+    ) -> Optional[o3d.geometry.TriangleMesh]:
         """
         Loads the mesh, applies a transformation and scaling, and returns the processed point cloud.
         """
@@ -387,15 +390,16 @@ class PlanningSceneServices:
             rospy.logwarn("Mesh is empty, so no grasps will be generated.")
             return None
 
-        pcd = mesh.sample_points_poisson_disk(number_of_points=10000, init_factor=5)
-        rospy.loginfo(f"Read a mesh with {pcd.points.shape[0]} points.")
+        rospy.loginfo(
+            f"Read a mesh with {np.asarray(mesh.vertices).shape[0]} vertices."
+        )
 
         T = self._transform_to_matrix(transform, scale)
         rospy.loginfo(f"Constructed non-rigid transformation matrix:\n{T}")
 
-        pcd.transform(T)
+        mesh.transform(T)
 
-        return pcd
+        return mesh
 
     def _add_collision_object(
         self, request: AddCollisionObjectRequest
@@ -407,11 +411,15 @@ class PlanningSceneServices:
         if mesh is None:
             return AddCollisionObjectResponse(success=False)
 
-        o3d.io.write_point_cloud(self._mesh_path, mesh)
+        o3d.io.write_triangle_mesh(self._mesh_path, mesh)
         rospy.loginfo(f"Wrote mesh to {self._mesh_path}")
-        self._planning_scene.addMesh(
+
+        self._planning_scene.add_mesh(
             request.object_id,
-            Pose(position=Point(0, 0, 0), orientation=Quaternion(0, 0, 0, 1)),
+            PoseStamped(
+                pose=Pose(position=Point(0, 0, 0), orientation=Quaternion(0, 0, 0, 1)),
+                header=Header(frame_id=request.transform.header.frame_id),
+            ),
             self._mesh_path,
         )
         rospy.loginfo(
@@ -422,7 +430,7 @@ class PlanningSceneServices:
     def _remove_collision_object(
         self, request: RemoveCollisionObjectRequest
     ) -> RemoveCollisionObjectResponse:
-        self._planning_scene.removeCollisionObject(request.object_id)
+        self._planning_scene.remove_world_object(request.object_id)
         rospy.loginfo(f"Removed {request.object_id} from planning scene!")
         return RemoveCollisionObjectResponse(success=True)
 
@@ -537,25 +545,16 @@ class PlanningSceneServices:
         center = aabb.get_center()
         extent = aabb.get_extent()
 
-        surface = SolidPrimitive()
-        surface.type = SolidPrimitive.BOX
-        surface.dimensions = [
-            extent[0] + 0.05,  # 5cm padding
-            extent[1] + 0.05,
-            0.01,  # thin box
-        ]
-
         pose = Pose()
         pose.position.x = center[0]
         pose.position.y = center[1]
         pose.position.z = z_plane - 0.005  # center of the thin box
         pose.orientation.w = 1.0
 
-        self._planning_scene.addSolidPrimitive(
+        self._planning_scene.add_box(
             request.surface_id,
-            surface,
-            pose,
-            frame_id="base_footprint",
+            PoseStamped(pose=pose, header=Header(frame_id="base_footprint")),
+            size=(extent[0], extent[1], 0.01),
         )
 
         rospy.loginfo(f"Added {request.surface_id} to planning scene!")
@@ -565,19 +564,11 @@ class PlanningSceneServices:
     def _add_support_surface(
         self, request: AddSupportSurfaceRequest
     ) -> AddSupportSurfaceResponse:
-        surface = SolidPrimitive()
-        surface.type = SolidPrimitive.BOX
-        surface.dimensions = [
-            request.dimensions.x,
-            request.dimensions.y,
-            request.dimensions.z,
-        ]
 
-        self._planning_scene.addSolidPrimitive(
+        self._planning_scene.add_box(
             request.surface_id,
-            surface,
-            request.pose.pose,
-            frame_id=request.pose.fame_id,
+            request.pose,
+            size=(request.dimensions.x, request.dimensions.y, request.dimensions.z),
         )
 
         rospy.loginfo(f"Added {request.surface_id} to planning scene!")
@@ -587,7 +578,7 @@ class PlanningSceneServices:
     def _remove_support_surface(
         self, request: RemoveSupportSurfaceRequest
     ) -> RemoveSupportSurfaceResponse:
-        self._planning_scene.removeCollisionObject(request.object_id)
+        self._planning_scene.remove_world_object(request.object_id)
         rospy.loginfo(f"Removed {request.surface_id} from planning scene!")
         return RemoveSupportSurfaceResponse(success=True)
 
