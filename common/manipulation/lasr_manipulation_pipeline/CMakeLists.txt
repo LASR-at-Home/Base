@@ -161,6 +161,8 @@ include_directories(
 ## in contrast to setup.py, you can choose the destination
 catkin_install_python(PROGRAMS
   nodes/grasping_pipeline_test.py
+  nodes/planning_scene_services.py
+  nodes/registration_service.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
