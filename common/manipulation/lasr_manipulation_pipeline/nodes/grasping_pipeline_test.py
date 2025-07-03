@@ -111,10 +111,15 @@ class GraspingPipeline:
         )
         self._allow_collisions_with_obj.wait_for_service()
         self._attach_object_to_gripper = rospy.ServiceProxy(
-            "/lasr_manipulation_planning_scene/allow_collisions_with_obj",
+            "/lasr_manipulation_planning_scene/attach_object_to_gripper",
             AttachObjectToGripper,
         )
         self._attach_object_to_gripper.wait_for_service()
+
+        self._clear_planning_scene = rospy.ServiceProxy(
+            "/lasr_manipulation_planning_scene/clear", Empty
+        )
+        self._clear_planning_scene.wait_for_service()
 
     def _publish_grasp_poses(self, poses: List[Pose], frame_id: str = "base_link"):
         marker_array = MarkerArray()
@@ -127,7 +132,7 @@ class GraspingPipeline:
             marker.type = Marker.ARROW
             marker.action = Marker.ADD
             marker.pose = pose
-            marker.scale.x = 0.12  # shaft length
+            marker.scale.x = 0.09  # shaft length
             marker.scale.y = 0.02  # shaft diameter
             marker.scale.z = 0.02  # head diameter
             marker.color.r = 0.0
@@ -170,7 +175,7 @@ class GraspingPipeline:
         self,
         pregrasp_pose: Pose,
         mesh: o3d.geometry.PointCloud,
-        max_advance: float = 0.12,
+        max_advance: float = 0.09,
         step: float = 0.001,
         contact_threshold: float = 0.005,
         palm_clearance: float = 0.03,
@@ -245,7 +250,7 @@ class GraspingPipeline:
             self._play_motion("open_gripper")
             rospy.loginfo("Pregrasp open_gripper finished!")
             self._clear_octomap()
-
+        self._clear_planning_scene()
         # Clone the mesh point cloud
         mesh_pcd = o3d.geometry.PointCloud(self._pcd)
 
@@ -273,7 +278,7 @@ class GraspingPipeline:
 
         target_pcd = conversions.ros_to_o3d(pcl)
 
-        response = self._register_object(pcl, MESH_NAME.replace(".ply", ""), False, 25)
+        response = self._register_object(pcl, MESH_NAME.replace(".ply", ""), False, 5)
         ros_transform = response.transform
         ros_scale = response.scale
         trans = ros_transform.transform.translation
@@ -355,15 +360,19 @@ class GraspingPipeline:
         grasp_poses = transformations.tf_poses(
             grasps, pcl.header.frame_id, "gripper_grasping_frame", self._tf_buffer
         )
-        grasp_poses = transformations.offset_grasps(grasp_poses, -0.12, 0.0, 0.0)
+        grasp_poses = transformations.offset_grasps(grasp_poses, -0.09, 0.0, 0.0)
         grasp_poses_base_footprint = transformations.tf_poses(
             grasp_poses, "gripper_grasping_frame", "base_footprint", self._tf_buffer
         )
-        grasp_poses_camera = transformations.tf_poses(
-            grasp_poses, "gripper_grasping_frame", pcl.header.frame_id, self._tf_buffer
-        )
 
         if debug:
+            grasp_poses_camera = transformations.tf_poses(
+                grasp_poses,
+                "gripper_grasping_frame",
+                pcl.header.frame_id,
+                self._tf_buffer,
+            )
+
             visualisation.visualize_grasps_on_scene(
                 target_pcd, grasp_poses_camera, "Object grasps (offset)"
             )
@@ -376,18 +385,19 @@ class GraspingPipeline:
 
         if self._move_group.go(wait=True):
             self._allow_collisions_with_obj(MESH_NAME.replace(".ply", ""))
-            eef_pose_base = self._get_eef_pose(base_frame=pcl.header.frame_id)
-            x_forward = self._determine_forward_distance(eef_pose_base, mesh_pcd)
+            rospy.sleep(5.0)
+            eef_pose = self._get_eef_pose(base_frame="gripper_grasping_frame")
+            x_forward = 0.09
             rospy.loginfo(f"x forward: {x_forward}")
             eef_target_pose = transformations.offset_grasps(
-                [eef_pose_base],
+                [eef_pose],
                 x_forward,
                 0.0,
                 0.0,
             )[0]
             eef_target_pose = transformations.tf_poses(
                 [eef_target_pose],
-                pcl.header.frame_id,
+                "gripper_grasping_frame",
                 "base_footprint",
                 self._tf_buffer,
             )[0]
@@ -406,6 +416,6 @@ class GraspingPipeline:
 if __name__ == "__main__":
     rospy.init_node("lasr_grasping_pipeline_test")
     grasping_pipeline = GraspingPipeline()
-    grasping_pipeline.run(debug=True, execute=True)
+    grasping_pipeline.run(debug=False, execute=True)
     rospy.spin()
     moveit_commander.roscpp_shutdown()
