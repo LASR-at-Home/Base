@@ -1,3 +1,3 @@
-# WakewordTrigger.srv
+string keyword
 ---
 bool success
