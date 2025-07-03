@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 from typing import Optional
 
 import rospy
@@ -63,6 +62,8 @@ from lasr_manipulation_msgs.srv import (
     RemoveSupportSurfaceRequest,
     RemoveSupportSurfaceResponse,
 )
+
+from std_srvs.srv import Empty, EmptyRequest, EmptyResponse
 
 
 class PlanningSceneServices:
@@ -130,10 +131,28 @@ class PlanningSceneServices:
             self._remove_collision_object,
         )
 
-        self.__detect_and_add_support_surface_service = rospy.Service(
+        self._detect_and_add_support_surface_service = rospy.Service(
             "/lasr_manipulation_planning_scene/detect_and_add_support_surface",
             DetectAndAddSupportSurface,
             self._detect_and_add_support_surface,
+        )
+
+        self._add_support_surface_service = rospy.Service(
+            "/lasr_manipulation_planning_scene/add_support_surface",
+            AddSupportSurface,
+            self._add_support_surface
+        )
+
+        self._remove_support_surface_service = rospy.Service(
+            "/lasr_manipulation_planning_scene/remove_support_surface",
+            RemoveSupportSurface,
+            self._remove_support_surface
+        )  
+
+        self._clear_planning_scene_service = rospy.Service(
+            "/lasr_manipulation_planning_scene/clear",
+            Empty,
+            self._clear_planning_scene
         )
 
         rospy.loginfo("lasr_manipulation_planning_scene services ready!")
@@ -574,6 +593,12 @@ class PlanningSceneServices:
         rospy.loginfo(f"Removed {request.surface_id} from planning scene!")
         return RemoveSupportSurfaceResponse(success=True)
 
+    def _clear_planning_scene(
+        self, request: EmptyRequest
+    ) -> EmptyResponse:
+        self._planning_scene.clear()
+        rospy.loginfo("Cleared planning scene!")
+        return EmptyResponse()
 
 if __name__ == "__main__":
     rospy.init_node("lasr_manipulation_planning_scene")
