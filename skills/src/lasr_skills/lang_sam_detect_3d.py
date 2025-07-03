@@ -91,6 +91,9 @@ class DetectLangSam3D(smach.State):
             )
             resp = self._lang_sam_service(request)
             userdata.lang_sam_detections_3d = resp.detections
+            for det in resp.detections:
+                rospy.loginfo(f"Detection Point: {det.point}")
+                rospy.loginfo(f"Detection Name: {det.name}")
             userdata.image_raw = image_msg
         except Exception as e:
             rospy.logerr(f"Failed LangSam Request: {e}")
@@ -101,7 +104,10 @@ class DetectLangSam3D(smach.State):
 if __name__ == "__main__":
     rospy.init_node("detect")
     while not rospy.is_shutdown():
-        detect = DetectLangSam3D(slop=10.0, prompt="person")
+        detect = DetectLangSam3D(
+            slop=10.0,
+            prompt="costa coffee cup. breadsticks. batteries. milk carton. banana. small plastic bottle. large plastic bottle. pringles tube.",
+        )
         sm = smach.StateMachine(outcomes=["succeeded", "failed"])
         with sm:
             smach.StateMachine.add(

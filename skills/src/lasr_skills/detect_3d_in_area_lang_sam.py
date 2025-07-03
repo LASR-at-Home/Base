@@ -9,7 +9,7 @@ from shapely.geometry.polygon import Polygon as ShapelyPolygon
 from std_msgs.msg import Header
 
 
-class Detect3DInArea(smach.StateMachine):
+class Detect3DInAreaLangSam(smach.StateMachine):
     class FilterDetections(smach.State):
         def __init__(
             self,
