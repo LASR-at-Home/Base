@@ -279,32 +279,73 @@ class Receptionist(smach.StateMachine):
                     max_people_on_sofa=max_people_on_sofa,
                 ),
                 transitions={
-                    "succeeded": "INTRODUCE_GUEST_2",
-                    "failed": "INTRODUCE_GUEST_2",
+                    "succeeded": "INTRODUCE_COMMON_INTEREST_CON",
+                    "failed": "INTRODUCE_COMMON_INTEREST_CON",
                 },
                 remapping={
                     "guest_seat_point": "guest_seat_point",
                     "seated_guest_locs": "seated_guest_locs",
                 },
             )
-
-            smach.StateMachine.add(
-                "INTRODUCE_GUEST_2",
-                Introduce(guest_to_introduce="guest2", can_detect_second_guest=True),
-                transitions={
-                    "succeeded": "GET_COMMON_INTEREST",
-                    "failed": "GET_COMMON_INTEREST",
+            sm_con = smach.Concurrence(
+                outcomes=["succeeded", "failed"],
+                default_outcome="failed",
+                outcome_map={
+                    "succeeded": {
+                        "INTRODUCE_GUEST_2": "succeeded",
+                        "GET_COMMON_INTEREST": "succeeded",
+                    },
+                    "failed": {
+                        "INTRODUCE_GUEST_2": "failed",
+                        "GET_COMMON_INTEREST": "failed",
+                    },
                 },
             )
+            with sm_con:
+                smach.Concurrence.add(
+                    "INTRODUCE_GUEST_2",
+                    Introduce(
+                        guest_to_introduce="guest2", can_detect_second_guest=True
+                    ),
+                    transitions={
+                        "succeeded": "succeeded",
+                        "failed": "failed",
+                    },
+                )
 
+                smach.Concurrence.add(
+                    "GET_COMMON_INTEREST",
+                    GetCommonInterest(),
+                    transitions={
+                        "succeeded": "succeeded",
+                        "failed": "succeeded",
+                    },
+                    remapping={
+                        "guest_data": "guest_data",
+                        "interest_message": "interest_message",
+                    },
+                )
             smach.StateMachine.add(
-                "GET_COMMON_INTEREST",
-                GetCommonInterest(),
+                "INTRODUCE_COMMON_INTEREST_CON",
+                sm_con,
+                transitions={
+                    "succeeded": "SAY_COMMON_INTEREST",
+                    "failed": "SAY_COMMON_INTEREST",
+                },
+                remapping={
+                    "guest_data": "guest_data",
+                    "interest_message": "interest_message",
+                },
+            )
+            smach.StateMachine.add(
+                "SAY_INTEREST",
+                Say(),
                 transitions={
                     "succeeded": "SAY_GOODBYE",
-                    "failed": "SAY_GOODBYE",
+                    "aborted": "SAY_GOODBYE",
+                    "preempted": "SAY_GOODBYE",
                 },
-                remapping={"guest_data": "guest_data"},
+                remapping={"text": "interest_message"},
             )
 
             """
