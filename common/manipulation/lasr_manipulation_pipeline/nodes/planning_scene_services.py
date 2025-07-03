@@ -140,19 +140,17 @@ class PlanningSceneServices:
         self._add_support_surface_service = rospy.Service(
             "/lasr_manipulation_planning_scene/add_support_surface",
             AddSupportSurface,
-            self._add_support_surface
+            self._add_support_surface,
         )
 
         self._remove_support_surface_service = rospy.Service(
             "/lasr_manipulation_planning_scene/remove_support_surface",
             RemoveSupportSurface,
-            self._remove_support_surface
-        )  
+            self._remove_support_surface,
+        )
 
         self._clear_planning_scene_service = rospy.Service(
-            "/lasr_manipulation_planning_scene/clear",
-            Empty,
-            self._clear_planning_scene
+            "/lasr_manipulation_planning_scene/clear", Empty, self._clear_planning_scene
         )
 
         rospy.loginfo("lasr_manipulation_planning_scene services ready!")
@@ -542,9 +540,9 @@ class PlanningSceneServices:
         surface = SolidPrimitive()
         surface.type = SolidPrimitive.BOX
         surface.dimensions = [
-            extent[0] + 0.05 # 5cm padding
+            extent[0] + 0.05,  # 5cm padding
             extent[1] + 0.05,
-            0.01 # thin box
+            0.01,  # thin box
         ]
 
         pose = Pose()
@@ -593,12 +591,11 @@ class PlanningSceneServices:
         rospy.loginfo(f"Removed {request.surface_id} from planning scene!")
         return RemoveSupportSurfaceResponse(success=True)
 
-    def _clear_planning_scene(
-        self, request: EmptyRequest
-    ) -> EmptyResponse:
+    def _clear_planning_scene(self, request: EmptyRequest) -> EmptyResponse:
         self._planning_scene.clear()
         rospy.loginfo("Cleared planning scene!")
         return EmptyResponse()
+
 
 if __name__ == "__main__":
     rospy.init_node("lasr_manipulation_planning_scene")
