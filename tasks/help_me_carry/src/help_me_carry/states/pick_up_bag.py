@@ -9,7 +9,7 @@ import actionlib
 import tf
 import tf.transformations as tft
 
-from sensor_msgs.msg import Image, JointState
+from sensor_msgs.msg import Image, JointState, CameraInfo
 from cv_bridge import CvBridge
 from geometry_msgs.msg import PoseStamped, Pose
 from moveit_commander import (
@@ -87,14 +87,20 @@ class BagPickAndPlace(smach.State):
         self.bridge = CvBridge()
         self.latest_rgb = None
         self.latest_depth = None
+        self.depth_info = None
+        self.latest_rgb_msg = None
+        self.latest_depth_msg = None
 
         # Display window for clicking
         cv2.namedWindow("Live View", cv2.WINDOW_NORMAL)
 
         # Sync RGB + depth
         rgb_sub = Subscriber("/xtion/rgb/image_raw", Image)
-        depth_sub = Subscriber("/xtion/depth/image_raw", Image)
-        ats = ApproximateTimeSynchronizer([rgb_sub, depth_sub], queue_size=5, slop=0.1)
+        depth_sub = Subscriber("/xtion/depth_registered/image_raw", Image)
+        info_sub = Subscriber("/xtion/depth_registered/camera_info", CameraInfo)
+        ats = ApproximateTimeSynchronizer(
+            [rgb_sub, depth_sub, info_sub], queue_size=5, slop=0.1
+        )
         ats.registerCallback(self.synced_callback)
 
         # --- MoveIt! arm setup ---
@@ -140,12 +146,19 @@ class BagPickAndPlace(smach.State):
 
         self.tf_listener = tf.TransformListener()
 
-    def synced_callback(self, rgb_msg, depth_msg):
+    def synced_callback(self, rgb_msg, depth_msg, info_msg):
         try:
-            self.latest_rgb = self.bridge.imgmsg_to_cv2(rgb_msg, "bgr8")
-            self.latest_depth = self.bridge.imgmsg_to_cv2(depth_msg, "passthrough")
+            self.latest_rgb = self.bridge.imgmsg_to_cv2(
+                rgb_msg, desired_encoding="bgr8"
+            )
+            self.latest_rgb_msg = rgb_msg
+            self.latest_depth_msg = depth_msg
+            self.latest_depth = self.bridge.imgmsg_to_cv2(
+                depth_msg, desired_encoding="passthrough"
+            )
+            self.depth_info = info_msg
         except Exception as e:
-            rospy.logerr(f"cv_bridge error: {e}")
+            rospy.logerr(f"CV bridge error: {e}")
 
     def execute(self, userdata):
         try:
@@ -201,10 +214,16 @@ class BagPickAndPlace(smach.State):
                 raise RuntimeError("Timeout waiting for camera.")
 
     def get_langsam_bags(self):
-        rgb_msg = self.bridge.cv2_to_imgmsg(self.latest_rgb, "bgr8")
+        rgb_msg = self.latest_rgb_msg
+        depth_msg = self.latest_depth_msg
         req = LangSamRequest()
         req.image_raw = rgb_msg
         req.prompt = "grocery bag"
+        req.depth_image = depth_msg
+        req.depth_camera_info = self.depth_info
+        req.box_threshold = 0.3
+        req.text_threshold = 0.3
+        req.target_frame = "xtion_rgb_optical_frame"
         try:
             return self.langsam_srv(req)
         except rospy.ServiceException as e:
@@ -242,7 +261,7 @@ class BagPickAndPlace(smach.State):
         )
         T = tft.quaternion_matrix(rot)
         T[0:3, 3] = trans
-        hom = np.hstack([point_xyz / 1000.0, 1.0])
+        hom = np.hstack([point_xyz, 1.0])
         pt_base = T @ hom
         return pt_base[:3]
 
@@ -292,7 +311,7 @@ class BagPickAndPlace(smach.State):
         max_pt = points.max(axis=0)
 
         center = (min_pt + max_pt) / 2.0
-        size = (max_pt - min_pt) / 1000.0
+        size = max_pt - min_pt
 
         # --- PCA on XY as you do elsewhere
         xy = points[:, :2] - center[:2]
@@ -316,9 +335,9 @@ class BagPickAndPlace(smach.State):
         frame_id = "xtion_rgb_optical_frame"
         p.header.frame_id = frame_id
         p.header.stamp = rospy.Time.now()
-        p.pose.position.x = center[0] / 1000.0
-        p.pose.position.y = center[1] / 1000.0
-        p.pose.position.z = center[2] / 1000.0
+        p.pose.position.x = center[0]
+        p.pose.position.y = center[1]
+        p.pose.position.z = center[2]
         p.pose.orientation.x = quat[0]
         p.pose.orientation.y = quat[1]
         p.pose.orientation.z = quat[2]
@@ -366,7 +385,7 @@ class BagPickAndPlace(smach.State):
         T = tft.quaternion_matrix(rot)
         T[0:3, 3] = trans
 
-        pts_m = pts / 1000.0  # if needed
+        pts_m = pts  # if needed
         pts_hom = np.hstack([pts_m, np.ones((pts_m.shape[0], 1))])
         pts_base = (T @ pts_hom.T).T[:, :3]
 
@@ -397,7 +416,7 @@ class BagPickAndPlace(smach.State):
 
     def transform_centroid_pose_footprint(self, centroid_mm, yaw):
         x_mm, y_mm, z_mm = centroid_mm
-        x_cam, y_cam, z_cam = x_mm / 1000.0, y_mm / 1000.0, z_mm / 1000.0
+        x_cam, y_cam, z_cam = x_mm, y_mm, z_mm
 
         listener = tf.TransformListener()
         listener.waitForTransform(

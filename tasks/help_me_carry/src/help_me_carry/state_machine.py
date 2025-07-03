@@ -51,15 +51,15 @@ class CarryMyLuggage(smach.StateMachine):
             #     transitions={"succeeded": "POST_FOLLOW", "failed": "POST_FOLLOW"},
             # )
 
-            # smach.StateMachine.add(
-            #     f"POST_FOLLOW",
-            #     PlayMotion(motion_name="following_post_navigation"),
-            #     transitions={
-            #         "succeeded": "SAY_GO_TO_BAG",
-            #         "preempted": "SAY_GO_TO_BAG",
-            #         "aborted": "SAY_GO_TO_BAG",
-            #     },
-            # )
+            smach.StateMachine.add(
+                f"POST_FOLLOW",
+                PlayMotion(motion_name="following_post_navigation"),
+                transitions={
+                    "succeeded": "SAY_GO_TO_BAG",
+                    "preempted": "SAY_GO_TO_BAG",
+                    "aborted": "SAY_GO_TO_BAG",
+                },
+            )
 
             smach.StateMachine.add(
                 "SAY_GO_TO_BAG",

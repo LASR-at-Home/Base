@@ -32,7 +32,9 @@ class GoToBag(smach.State):
         self.latest_rgb = None
         self.latest_depth = None
         self.depth_info = None
-        self.bag_prompt = "grocery bag on the floor"
+        self.latest_depth_msg = None
+        self.latest_rgb_msg = None
+        self.bag_prompt = "grocery bag"
         self.recovery_motions = [
             "look_down_centre",
             "look_down_left",
@@ -41,8 +43,8 @@ class GoToBag(smach.State):
 
         # Subscribers
         rgb_sub = Subscriber("/xtion/rgb/image_raw", Image)
-        depth_sub = Subscriber("/xtion/depth/image_raw", Image)
-        info_sub = Subscriber("/xtion/depth/camera_info", CameraInfo)
+        depth_sub = Subscriber("/xtion/depth_registered/image_raw", Image)
+        info_sub = Subscriber("/xtion/depth_registered/camera_info", CameraInfo)
         ats = ApproximateTimeSynchronizer(
             [rgb_sub, depth_sub, info_sub], queue_size=5, slop=0.1
         )
@@ -86,7 +88,7 @@ class GoToBag(smach.State):
         self.tts_client.wait_for_server()
         rospy.loginfo("TTS action server connected.")
 
-        rospy.sleep(0.3)
+        rospy.sleep(3)
 
         cv2.namedWindow("Auto-segmented bag", cv2.WINDOW_NORMAL)
 
@@ -95,8 +97,14 @@ class GoToBag(smach.State):
 
     def synced_callback(self, rgb_msg, depth_msg, info_msg):
         try:
-            self.latest_rgb = self.bridge.imgmsg_to_cv2(rgb_msg, "bgr8")
-            self.latest_depth = self.bridge.imgmsg_to_cv2(depth_msg, "passthrough")
+            self.latest_rgb = self.bridge.imgmsg_to_cv2(
+                rgb_msg, desired_encoding="bgr8"
+            )
+            self.latest_rgb_msg = rgb_msg
+            self.latest_depth_msg = depth_msg
+            self.latest_depth = self.bridge.imgmsg_to_cv2(
+                depth_msg, desired_encoding="passthrough"
+            )
             self.depth_info = info_msg
         except Exception as e:
             rospy.logerr(f"CV bridge error: {e}")
@@ -112,14 +120,14 @@ class GoToBag(smach.State):
         # Check if latest_depth is uint16 (16UC1)
         if self.latest_depth.dtype == np.uint16:
             # Convert from mm to meters, cast to float32
-            depth_float = (self.latest_depth.astype(np.float32)) / 1000.0
+            depth_float = self.latest_depth.astype(np.float32)
         else:
             # Assume it's already float32 in meters
             depth_float = self.latest_depth
 
         req = YoloPoseDetection3DRequest(
-            image_raw=self.bridge.cv2_to_imgmsg(self.latest_rgb, "bgr8"),
-            depth_image=self.bridge.cv2_to_imgmsg(depth_float, "32FC1"),
+            image_raw=self.bridge.cv2_to_imgmsg(self.latest_rgb, encoding="bgr8"),
+            depth_image=self.bridge.cv2_to_imgmsg(depth_float, encoding="32FC1"),
             depth_camera_info=self.depth_info,
             model=rospy.get_param("~model", "yolo11n-pose.pt"),
             confidence=0.5,
@@ -336,10 +344,20 @@ class GoToBag(smach.State):
             rospy.logerr("No RGB image available for segmentation.")
             return None, None, None
 
-        rgb_msg = self.bridge.cv2_to_imgmsg(self.latest_rgb, "bgr8")
+        if self.latest_depth is None:
+            rospy.logerr("No depth image available for segmentation.")
+            return None, None, None
+
+        rgb_msg = self.latest_rgb_msg
+        depth_msg = self.latest_depth_msg
         langsam_req = LangSamRequest()
         langsam_req.image_raw = rgb_msg
         langsam_req.prompt = prompt
+        langsam_req.depth_image = depth_msg
+        langsam_req.depth_camera_info = self.depth_info
+        langsam_req.box_threshold = 0.3
+        langsam_req.text_threshold = 0.3
+        langsam_req.target_frame = "xtion_rgb_optical_frame"
 
         try:
             resp = self.langsam_srv(langsam_req)
@@ -417,7 +435,7 @@ class GoToBag(smach.State):
         raw_depth_mm = float(self.latest_depth[v, u])
         if not np.isfinite(raw_depth_mm) or raw_depth_mm <= 0.0:
             return None
-        z_cam = raw_depth_mm * 0.001  # meters
+        z_cam = raw_depth_mm  # meters
         if z_cam > 50.0:
             return None
         fx = self.depth_info.K[0]
