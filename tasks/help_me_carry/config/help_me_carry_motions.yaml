@@ -9,6 +9,6 @@ play_motion:
     following_post_navigation:  # the torso will still stay low and look slightly down
       joints: [torso_lift_joint, head_1_joint, head_2_joint]
       points:
-        - positions: [0.15, 0.0, -0.2]
+        - positions: [0.15, 0.0, 0.0]
           time_from_start: 0.0
       

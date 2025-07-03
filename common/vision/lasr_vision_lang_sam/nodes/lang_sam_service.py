@@ -192,7 +192,6 @@ class LangSamService:
                 point_stamped = PointStamped()
                 point_stamped.header = request.depth_image.header
                 point_stamped.point = point
-
                 tf_response = self._tf_service(
                     TransformPointRequest(
                         input_point_stamped=point_stamped,
@@ -223,6 +222,7 @@ class LangSamService:
 
 
 if __name__ == "__main__":
+    use_gpu = bool(sys.argv[1])
     rospy.init_node("lasr_vision_lang_sam")
-    lang_sam_service = LangSamService()
+    lang_sam_service = LangSamService(use_gpu=use_gpu)
     rospy.spin()

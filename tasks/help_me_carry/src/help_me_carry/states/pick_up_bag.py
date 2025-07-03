@@ -9,9 +9,9 @@ import actionlib
 import tf
 import tf.transformations as tft
 
-from sensor_msgs.msg import Image, JointState
+from sensor_msgs.msg import Image, JointState, CameraInfo
 from cv_bridge import CvBridge
-from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import PoseStamped, Pose
 from moveit_commander import (
     MoveGroupCommander,
     roscpp_initialize,
@@ -87,16 +87,20 @@ class BagPickAndPlace(smach.State):
         self.bridge = CvBridge()
         self.latest_rgb = None
         self.latest_depth = None
-        self.click = None
+        self.depth_info = None
+        self.latest_rgb_msg = None
+        self.latest_depth_msg = None
 
         # Display window for clicking
         cv2.namedWindow("Live View", cv2.WINDOW_NORMAL)
-        cv2.setMouseCallback("Live View", self.on_mouse_click)
 
         # Sync RGB + depth
         rgb_sub = Subscriber("/xtion/rgb/image_raw", Image)
-        depth_sub = Subscriber("/xtion/depth/image_raw", Image)
-        ats = ApproximateTimeSynchronizer([rgb_sub, depth_sub], queue_size=5, slop=0.1)
+        depth_sub = Subscriber("/xtion/depth_registered/image_raw", Image)
+        info_sub = Subscriber("/xtion/depth_registered/camera_info", CameraInfo)
+        ats = ApproximateTimeSynchronizer(
+            [rgb_sub, depth_sub, info_sub], queue_size=5, slop=0.1
+        )
         ats.registerCallback(self.synced_callback)
 
         # --- MoveIt! arm setup ---
@@ -140,105 +144,56 @@ class BagPickAndPlace(smach.State):
         self.langsam_srv = rospy.ServiceProxy("/lasr_vision/lang_sam", LangSam)
         rospy.loginfo("/lasr_vision/lang_sam service connected.")
 
-    def on_mouse_click(self, event, x, y, flags, param):
-        if event == cv2.EVENT_LBUTTONDOWN:
-            self.click = (x, y)
-            rospy.loginfo(f"User click at {self.click}")
+        self.tf_listener = tf.TransformListener()
 
-    def synced_callback(self, rgb_msg, depth_msg):
+    def synced_callback(self, rgb_msg, depth_msg, info_msg):
         try:
-            self.latest_rgb = self.bridge.imgmsg_to_cv2(rgb_msg, "bgr8")
-            self.latest_depth = self.bridge.imgmsg_to_cv2(depth_msg, "passthrough")
+            self.latest_rgb = self.bridge.imgmsg_to_cv2(
+                rgb_msg, desired_encoding="bgr8"
+            )
+            self.latest_rgb_msg = rgb_msg
+            self.latest_depth_msg = depth_msg
+            self.latest_depth = self.bridge.imgmsg_to_cv2(
+                depth_msg, desired_encoding="passthrough"
+            )
+            self.depth_info = info_msg
         except Exception as e:
-            rospy.logerr(f"cv_bridge error: {e}")
+            rospy.logerr(f"CV bridge error: {e}")
 
     def execute(self, userdata):
         try:
             self.adjust_torso(0.1)
-            rate = rospy.Rate(5)
-            start = rospy.Time.now()
-
-            # Wait for RGB image
-            while not rospy.is_shutdown():
-                if self.latest_rgb is not None:
-                    break
-                rate.sleep()
-                if (rospy.Time.now() - start).to_sec() > 10:
-                    rospy.logwarn("Timeout waiting for camera.")
-                    return "failed"
-
-            # --- LangSAM automatic bag segmentation ---
-            rgb_msg = self.bridge.cv2_to_imgmsg(self.latest_rgb, "bgr8")
-            langsam_req = LangSamRequest()
-            langsam_req.image_raw = rgb_msg
-            langsam_req.prompt = "bag"
-
-            try:
-                resp = self.langsam_srv(langsam_req)
-            except rospy.ServiceException as e:
-                rospy.logerr(f"LangSAM service call failed: {e}")
-                return "failed"
-
-            if not resp.detections:
+            self.say("I am detecting the bag")
+            self.wait_for_rgb()
+            resp = self.get_langsam_bags()
+            if not resp or not resp.detections:
                 rospy.logwarn("No bags detected.")
                 return "failed"
 
-            # Pick detection with highest detection_score
-            best_det = max(resp.detections, key=lambda det: det.detection_score)
-            mask_flat = np.array(best_det.seg_mask, dtype=np.uint8)
-            height, width = self.latest_rgb.shape[:2]
-            if mask_flat.size != height * width:
-                rospy.logerr(
-                    f"Mask size {mask_flat.size} does not match image size {height}x{width}"
-                )
+            intrinsics = self.get_camera_intrinsics()
+            result = self.find_closest_detection(
+                resp.detections,
+                self.latest_rgb,
+                self.latest_depth,
+                intrinsics,
+            )
+            if result is None:
+                rospy.logwarn("No valid bag detections found.")
                 return "failed"
-            mask = mask_flat.reshape((height, width))
+            mask, pts, centroid = result["mask"], result["pts"], result["centroid"]
 
-            # --- show the segmentation overlay for debugging
-            overlay = self.latest_rgb.copy()
-            overlay[mask > 0] = [0, 0, 255]  # mark mask in red
-            cv2.imshow("Auto-segmented bag", overlay)
-            cv2.waitKey(1000)
-            cv2.destroyWindow("Auto-segmented bag")
-
-            # --- 3D points as before
-            pts = []
-            h, w = mask.shape
-            fx = fy = 579.653076171875  # verify with camera_info!
-            cx, cy = 319.5, 239.5
-            for yy, xx in zip(*np.where(mask)):
-                z = self.latest_depth[yy, xx]
-                if np.isfinite(z) and z > 0.05:
-                    X = (xx - cx) * z / fx
-                    Y = (yy - cy) * z / fy
-                    pts.append((X, Y, z))
-            if not pts:
-                rospy.logwarn("No valid 3D points in mask.")
-                return "failed"
-            pts = np.array(pts)
-            centroid = np.median(pts, axis=0)
-            rospy.loginfo(f"Bag centroid (m): {centroid}")
-            xy = pts[:, :2] - centroid[:2]
-            cov = np.cov(xy, rowvar=False)
-            evals, evecs = np.linalg.eigh(cov)
-            long_axis = evecs[:, np.argmax(evals)]
-            orth = np.array([-long_axis[1], long_axis[0]])
-            orth /= np.linalg.norm(orth)
-            yaw = math.atan2(orth[1], orth[0])
-
+            self.show_mask_overlay(mask)
+            yaw = self.compute_yaw(pts, centroid)
             closest_pose = self.find_closest_pose_footprint(pts)
             centroid_pose = self.transform_centroid_pose_footprint(centroid, yaw)
-
             self.create_collision_object_from_pcl(pts)
             rospy.sleep(1.0)
+            self.say("I am picking up the bag now.")
             self.prepare_pick()
-            result = self.pick(centroid_pose, closest_pose)
-            if not result:
+            if not self.pick(centroid_pose, closest_pose):
                 self.ask_for_bag()
-
             self.stow_bag()
             self.hold_gripper_position()
-
             return "succeeded"
         except Exception as e:
             rospy.logerr(f"Exception in skill: {e}")
@@ -248,12 +203,115 @@ class BagPickAndPlace(smach.State):
                 pass
             return "failed"
 
+    def wait_for_rgb(self):
+        rate = rospy.Rate(5)
+        start = rospy.Time.now()
+        while not rospy.is_shutdown():
+            if self.latest_rgb is not None:
+                return
+            rate.sleep()
+            if (rospy.Time.now() - start).to_sec() > 10:
+                raise RuntimeError("Timeout waiting for camera.")
+
+    def get_langsam_bags(self):
+        rgb_msg = self.latest_rgb_msg
+        depth_msg = self.latest_depth_msg
+        req = LangSamRequest()
+        req.image_raw = rgb_msg
+        req.prompt = "grocery bag"
+        req.depth_image = depth_msg
+        req.depth_camera_info = self.depth_info
+        req.box_threshold = 0.3
+        req.text_threshold = 0.3
+        req.target_frame = "xtion_rgb_optical_frame"
+        try:
+            return self.langsam_srv(req)
+        except rospy.ServiceException as e:
+            rospy.logerr(f"LangSAM service call failed: {e}")
+            return None
+
+    def get_camera_intrinsics(self):
+        # Ideally, fetch from CameraInfo topic!
+        return dict(fx=579.653076171875, fy=579.653076171875, cx=319.5, cy=239.5)
+
+    def mask_to_3d_points(self, mask, depth, fx, fy, cx, cy):
+        yy, xx = np.where(mask)
+        pts = []
+        for y, x in zip(yy, xx):
+            z = depth[y, x]
+            if np.isfinite(z) and z > 0.05:
+                X = (x - cx) * z / fx
+                Y = (y - cy) * z / fy
+                pts.append((X, Y, z))
+        if pts:
+            return np.array(pts)
+        else:
+            return None
+
+    def transform_point_to_base(self, point_xyz):
+        listener = self.tf_listener  # Instantiate tf_listener ONCE in __init__!
+        listener.waitForTransform(
+            "base_footprint",
+            "xtion_rgb_optical_frame",
+            rospy.Time(0),
+            rospy.Duration(1.0),
+        )
+        trans, rot = listener.lookupTransform(
+            "base_footprint", "xtion_rgb_optical_frame", rospy.Time(0)
+        )
+        T = tft.quaternion_matrix(rot)
+        T[0:3, 3] = trans
+        hom = np.hstack([point_xyz, 1.0])
+        pt_base = T @ hom
+        return pt_base[:3]
+
+    def find_closest_detection(self, detections, rgb, depth, intrinsics):
+        height, width = rgb.shape[:2]
+        min_dist = float("inf")
+        best = None
+        for det in detections:
+            mask_flat = np.array(det.seg_mask, dtype=np.uint8)
+            if mask_flat.size != height * width:
+                continue
+            mask = mask_flat.reshape((height, width))
+            pts = self.mask_to_3d_points(mask, depth, **intrinsics)
+            if pts is None:
+                continue
+            centroid = np.median(pts, axis=0)
+            try:
+                centroid_base = self.transform_point_to_base(centroid)
+                dist = np.linalg.norm(centroid_base[:2])
+            except Exception as e:
+                rospy.logwarn(f"TF error: {e}")
+                continue
+            if dist < min_dist:
+                min_dist = dist
+                best = dict(det=det, mask=mask, pts=pts, centroid=centroid)
+        return best
+
+    def show_mask_overlay(self, mask):
+        overlay = self.latest_rgb.copy()
+        overlay[mask > 0] = [0, 0, 255]
+        cv2.imshow("Auto-segmented bag", overlay)
+        cv2.waitKey(1000)
+        cv2.destroyWindow("Auto-segmented bag")
+
+    def compute_yaw(self, pts, centroid):
+        xy = pts[:, :2] - centroid[:2]
+        cov = np.cov(xy, rowvar=False)
+        evals, evecs = np.linalg.eigh(cov)
+        long_axis = evecs[:, np.argmax(evals)]
+        orth = np.array([-long_axis[1], long_axis[0]])
+        orth /= np.linalg.norm(orth)
+        yaw = math.atan2(orth[1], orth[0])
+        return yaw
+
     def create_collision_object_from_pcl(self, points):
         min_pt = points.min(axis=0)
         max_pt = points.max(axis=0)
 
         center = (min_pt + max_pt) / 2.0
-        size = (max_pt - min_pt) / 1000.0
+        size = max_pt - min_pt
 
         # --- PCA on XY as you do elsewhere
         xy = points[:, :2] - center[:2]
@@ -277,9 +335,9 @@ class BagPickAndPlace(smach.State):
         frame_id = "xtion_rgb_optical_frame"
         p.header.frame_id = frame_id
         p.header.stamp = rospy.Time.now()
-        p.pose.position.x = center[0] / 1000.0
-        p.pose.position.y = center[1] / 1000.0
-        p.pose.position.z = center[2] / 1000.0
+        p.pose.position.x = center[0]
+        p.pose.position.y = center[1]
+        p.pose.position.z = center[2]
         p.pose.orientation.x = quat[0]
         p.pose.orientation.y = quat[1]
         p.pose.orientation.z = quat[2]
@@ -287,9 +345,6 @@ class BagPickAndPlace(smach.State):
 
         rospy.loginfo(p)
         self.planning_scene_interface.add_box("obj", p, size=size)
-
-        allow_collisions_with_object("obj", self.planning_scene_interface)
-        rospy.loginfo("Collision object added to the planning scene!")
 
     def adjust_torso(self, target_height):
         rospy.loginfo("Adjusting torso")
@@ -330,7 +385,7 @@ class BagPickAndPlace(smach.State):
         T = tft.quaternion_matrix(rot)
         T[0:3, 3] = trans
 
-        pts_m = pts / 1000.0  # if needed
+        pts_m = pts  # if needed
         pts_hom = np.hstack([pts_m, np.ones((pts_m.shape[0], 1))])
         pts_base = (T @ pts_hom.T).T[:, :3]
 
@@ -361,7 +416,7 @@ class BagPickAndPlace(smach.State):
 
     def transform_centroid_pose_footprint(self, centroid_mm, yaw):
         x_mm, y_mm, z_mm = centroid_mm
-        x_cam, y_cam, z_cam = x_mm / 1000.0, y_mm / 1000.0, z_mm / 1000.0
+        x_cam, y_cam, z_cam = x_mm, y_mm, z_mm
 
         listener = tf.TransformListener()
         listener.waitForTransform(
@@ -427,6 +482,9 @@ class BagPickAndPlace(smach.State):
         if result == False:
             return result
 
+        allow_collisions_with_object("obj", self.planning_scene_interface)
+        rospy.loginfo("Collision object added to the planning scene!")
+
         result = self.sync_shift_ee(self.arm, 0.30, 0.0, 0.0)
         if result == False:
             return result
@@ -434,13 +492,14 @@ class BagPickAndPlace(smach.State):
         rospy.loginfo("Bag pick complete!")
         self.sync_shift_ee(self.arm, -0.30, 0.0, 0.0)
 
-        return self.is_picked_up(0.002, 0.19)
+        return self.is_picked_up(0.002, 0.10)
 
     def sync_shift_ee(self, move_group, x, y, z):
         from tf.transformations import euler_from_quaternion, euler_matrix
 
-        curr_pose = move_group.get_current_pose()
-        pose = curr_pose.pose
+        pose = self.get_eef_pose_listener(
+            ee_frame="arm_tool_link", base_frame="base_footprint"
+        )
         quat = [
             pose.orientation.x,
             pose.orientation.y,
@@ -453,10 +512,36 @@ class BagPickAndPlace(smach.State):
         pose.position.x += delta[0]
         pose.position.y += delta[1]
         pose.position.z += delta[2]
-        move_group.set_pose_target(curr_pose)
+        move_group.set_pose_target(pose)
         move_group.set_start_state_to_current_state()
         result = move_group.go(wait=True)
         return result
+
+    def get_eef_pose_listener(
+        self, ee_frame="arm_tool_link", base_frame="base_footprint"
+    ):
+        listener = tf.TransformListener()
+        try:
+            listener.waitForTransform(
+                base_frame, ee_frame, rospy.Time(0), rospy.Duration(1.0)
+            )
+            trans, rot = listener.lookupTransform(base_frame, ee_frame, rospy.Time(0))
+
+            pose = Pose()
+            pose.position.x, pose.position.y, pose.position.z = trans
+            (
+                pose.orientation.x,
+                pose.orientation.y,
+                pose.orientation.z,
+                pose.orientation.w,
+            ) = rot
+            return pose
+
+        except Exception as e:
+            rospy.logerr(
+                f"Failed to get transform from {base_frame} to {ee_frame}: {e}"
+            )
+            return None
 
     def is_picked_up(self, pos_thresh=0.002, effort_thresh=0.05):
         self.close_gripper()
@@ -486,7 +571,16 @@ class BagPickAndPlace(smach.State):
         self.say(
             "I wasn't able to pickup the bag. Please put the bag into my gripper. I will give you 5 seconds."
         )
-        rospy.sleep(5)
+        self.say("5")
+        rospy.sleep(0.5)
+        self.say("4")
+        rospy.sleep(0.5)
+        self.say("3")
+        rospy.sleep(0.5)
+        self.say("2")
+        rospy.sleep(0.5)
+        self.say("1")
+        rospy.sleep(0.5)
         self.close_gripper()
 
     def say(self, text: str):

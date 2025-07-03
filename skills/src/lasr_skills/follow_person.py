@@ -1301,6 +1301,111 @@ class NavigationState(smach.State):
             input_keys=[],
             output_keys=[],
         )
+        return self.make_plan_service(req)
+
+    def _plan_and_sample_targets(
+        self,
+        start_pose: PoseStamped,
+        goal_pose: PoseStamped,
+        radius: float,
+        num_samples: int = 3,
+    ):
+        """
+        1. Compute a new goal located on the line (goal → robot) at exactly <radius>
+        2. Call /move_base/make_plan(start, new_goal)
+        3. Evenly take <num_samples> poses (near → far)
+        4. Rotate every pose to face the original goal
+        5. Return List[PoseStamped]
+        """
+        # ------------------------------------------------------------------
+        # Step-0: build a new goal on the desired circle
+        # ------------------------------------------------------------------
+        sx, sy = start_pose.pose.position.x, start_pose.pose.position.y
+        gx, gy = goal_pose.pose.position.x, goal_pose.pose.position.y
+        vec_x, vec_y = sx - gx, sy - gy  # goal → robot
+        dist = math.hypot(vec_x, vec_y)
+        if dist < 1e-3:  # almost same point
+            rospy.logwarn("Robot already at goal; no path needed")
+            return []
+        # shrink / expand to exactly <radius>
+        scale = radius / dist
+        target_x = gx + vec_x * scale
+        target_y = gy + vec_y * scale
+
+        new_goal = PoseStamped()
+        new_goal.header = goal_pose.header  # keep same frame
+        new_goal.pose.position.x = target_x
+        new_goal.pose.position.y = target_y
+        new_goal.pose.position.z = goal_pose.pose.position.z
+        # orientation will be ignored by planner; keep as-is
+        new_goal.pose.orientation = goal_pose.pose.orientation
+        resp = self._make_plan(start_pose, new_goal, tolerance=0.5)
+        path = resp.plan.poses
+        if not path:
+            rospy.logwarn("Global planner returned empty path")
+            return []
+        idxs = np.linspace(0, len(path) - 1, num_samples, dtype=int)
+        sampled = [copy.deepcopy(path[i]) for i in idxs]
+        for p in sampled:
+            dx, dy = gx - p.pose.position.x, gy - p.pose.position.y
+            yaw = math.atan2(dy, dx)
+            qx, qy, qz, qw = quaternion_from_euler(0.0, 0.0, yaw)
+            p.pose.orientation.x, p.pose.orientation.y = qx, qy
+            p.pose.orientation.z, p.pose.orientation.w = qz, qw
+
+        return sampled
+
+    def _cleanup(self):
+        """Clean up resources after execution"""
+        self.track_flag_pub.publish(Bool(data=False))
+        if self.move_base_client:
+            self.move_base_client.cancel_all_goals()
+        rospy.loginfo("State machine cleaned up")
+
+    def get_results(self):
+        """Get execution results - useful when used as sub-state machine"""
+        return {
+            "distance_traveled": self.userdata.distance_traveled,
+            "following_duration": self.userdata.following_duration,
+            "completion_reason": self.userdata.completion_reason,
+            "person_trajectory": self.userdata.person_trajectory,
+        }
+
+    def _tts(self, text: str, wait: bool = False):
+        """Text-to-speech with speaking flag check"""
+        if not self.tts_client:
+            rospy.logwarn(f"TTS client not initialised, you are saying '{text}'.")
+            return
+        if self.userdata.speak:
+            tts_goal = TtsGoal()
+            tts_goal.rawtext.text = text
+            tts_goal.rawtext.lang_id = "en_GB"
+            if wait:
+                self.tts_client.send_goal_and_wait(tts_goal)
+            else:
+                self.tts_client.send_goal(tts_goal)
+        rospy.loginfo(f"Saying '{text}'")
+
+    def _look_at_point(self, target_point: Point, target_frame: str = "map"):
+        current_time = rospy.Time.now()
+        if current_time - self.userdata.look_at_point_time < rospy.Duration(
+            self.userdata.head_movement_interval
+        ):
+            return
+
+        goal = PointHeadGoal()
+        goal.target.header.stamp = rospy.Time(0)
+        goal.target.header.frame_id = target_frame
+        goal.target.point = target_point
+        goal.pointing_frame = self.userdata.head_pointing_frame
+        goal.pointing_axis.x = 0.0
+        goal.pointing_axis.y = 0.0
+        goal.pointing_axis.z = 1.0
+        goal.min_duration = rospy.Duration(self.userdata.head_min_duration)
+        goal.max_velocity = self.userdata.head_max_velocity
+
+        self.point_head_client.send_goal(goal)
+        self.userdata.look_at_point_time = current_time
 
     def execute(self, userdata):
         rospy.loginfo("Monitoring navigation progress")
