@@ -75,7 +75,7 @@ class PlaceServer:
         self._move_group.set_support_surface_name(goal.surface_id)
 
         # Execute
-        self._move_group.set_pose_reference_frame(goal.pose.header_frame_id)
+        self._move_group.set_pose_reference_frame(goal.pose.header.frame_id)
         self._move_group.set_pose_target(goal.pose.pose)
         success = self._move_group.go(wait=True)
         if not success:
