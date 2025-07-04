@@ -30,10 +30,14 @@ class PersonTrackingDualInputKalmanFilterService:
                               [0., 1., 0., 0.]])
 
         # Default measurement noise - conservative for rough signals
-        self.kf.R = np.eye(2) * 0.25  # 50cm standard deviation - generous for noisy inputs
+        self.kf.R = np.eye(2) * 1.25
 
         # Process noise covariance - conservative for stability
-        self.kf.Q = np.eye(4) * 0.04  # Allow for moderate acceleration changes
+        self.kf.Q = np.eye(4) * 1.25
+
+        # Make velocity states more uncertain
+        self.kf.Q[2, 2] *= 3.0  # 3x more uncertainty for vx
+        self.kf.Q[3, 3] *= 3.0  # 3x more uncertainty for vy
 
         # Initial state covariance - high uncertainty for first detection
         self.kf.P = np.eye(4) * 2000.  # High initial uncertainty
@@ -88,15 +92,24 @@ class PersonTrackingDualInputKalmanFilterService:
 
         try:
             if req.command == "initialize":
-                success = self._initialize(req.x, req.y, req.timestamp)
+                # Support both old and new initialization methods
+                init_x = getattr(req, 'sensor_a_x', None) or getattr(req, 'x', 0.0)
+                init_y = getattr(req, 'sensor_a_y', None) or getattr(req, 'y', 0.0)
+                success = self._initialize(init_x, init_y, req.timestamp)
                 response.success = success
                 response.message = "Filter initialized" if success else "Initialization failed"
 
-            elif req.command == "update":
+            elif req.command == "update" or req.command == "update_single":  # Support both commands
                 # Handle single sensor update asynchronously
-                success = self._update_with_single_sensor_async(
-                    req.x, req.y, req.timestamp, req.detection_quality, 'a'
-                )
+                x = getattr(req, 'sensor_a_x', None) or getattr(req, 'x', None)
+                y = getattr(req, 'sensor_a_y', None) or getattr(req, 'y', None)
+                quality = getattr(req, 'sensor_a_quality', None) or getattr(req, 'detection_quality', 0.5)
+
+                if x is not None and y is not None:
+                    success = self._update_with_single_sensor_async(x, y, req.timestamp, quality, 'a')
+                else:
+                    success = False
+
                 response.success = success
                 response.message = "Single sensor async update" if success else "Single update failed"
 
@@ -117,10 +130,13 @@ class PersonTrackingDualInputKalmanFilterService:
                 response.success = True
                 response.message = "State retrieved (predicted to current time)"
 
-            elif req.command == "is_reasonable":
+            elif req.command == "is_reasonable" or req.command == "check_reasonable":  # Support both commands
                 # Predict to current time before checking reasonableness
                 self._predict_to_time(req.timestamp)
-                is_reasonable = self._is_detection_reasonable(req.x, req.y, req.max_deviation)
+                x = getattr(req, 'sensor_a_x', None) or getattr(req, 'x', 0.0)
+                y = getattr(req, 'sensor_a_y', None) or getattr(req, 'y', 0.0)
+                max_dev = getattr(req, 'max_deviation', 3.0)
+                is_reasonable = self._is_detection_reasonable(x, y, max_dev)
                 response.success = True
                 response.is_reasonable = is_reasonable
                 response.message = f"Detection reasonableness: {is_reasonable}"
@@ -176,20 +192,20 @@ class PersonTrackingDualInputKalmanFilterService:
             # Update sensor buffers based on availability
             if getattr(req, 'sensor_a_available', False):
                 self.last_sensor_a.update({
-                    'x': req.x if hasattr(req, 'x') else None,
-                    'y': req.y if hasattr(req, 'y') else None,
+                    'x': getattr(req, 'sensor_a_x', None),  # Fixed: was req.x
+                    'y': getattr(req, 'sensor_a_y', None),  # Fixed: was req.y
                     'time': current_time,
-                    'quality': getattr(req, 'detection_quality', 0.5),
+                    'quality': getattr(req, 'sensor_a_quality', 0.5),  # Fixed: was detection_quality
                     'update_count': self.last_sensor_a['update_count'] + 1,
                     'last_used_time': current_time
                 })
 
             if getattr(req, 'sensor_b_available', False):
                 self.last_sensor_b.update({
-                    'x': getattr(req, 'sensor_b_x', None),
-                    'y': getattr(req, 'sensor_b_y', None),
+                    'x': getattr(req, 'sensor_b_x', None),  # This was already correct
+                    'y': getattr(req, 'sensor_b_y', None),  # This was already correct
                     'time': current_time,
-                    'quality': getattr(req, 'sensor_b_quality', 0.5),
+                    'quality': getattr(req, 'sensor_b_quality', 0.5),  # This was already correct
                     'update_count': self.last_sensor_b['update_count'] + 1,
                     'last_used_time': current_time
                 })
@@ -386,7 +402,7 @@ class PersonTrackingDualInputKalmanFilterService:
                     self.consecutive_conflicts += 1
 
             elif strategy['type'] == 'dual':
-                # Dual sensor fusion with temporal considerations
+                # Dual sensor fusion with sequential updates - much safer!
                 data_a = strategy['data_a']
                 data_b = strategy['data_b']
 
@@ -401,31 +417,27 @@ class PersonTrackingDualInputKalmanFilterService:
                     noise_a *= 1.5
                     noise_b *= 1.5
 
-                # Construct dual observation
-                z = np.array([data_a['x'], data_a['y'], data_b['x'], data_b['y']])
-                R = np.diag([noise_a ** 2, noise_a ** 2, noise_b ** 2, noise_b ** 2])
-                H = np.array([[1., 0., 0., 0.],
-                              [0., 1., 0., 0.],
-                              [1., 0., 0., 0.],
-                              [0., 1., 0., 0.]])
+                # Validate measurements before updating
+                if (data_a['x'] is None or data_a['y'] is None or
+                        data_b['x'] is None or data_b['y'] is None):
+                    rospy.logwarn("Invalid dual sensor measurements, skipping fusion")
+                    return
 
-                # Apply dual sensor update
-                original_dim_z = self.kf.dim_z
-                original_H = self.kf.H.copy()
-                original_R = self.kf.R.copy()
+                # Sequential updates - no dimension changes needed!
+                # First update with sensor A
+                self.kf.R = np.eye(2) * (noise_a ** 2)
+                z_a = np.array([data_a['x'], data_a['y']])
+                self.kf.update(z_a)
 
-                self.kf.dim_z = 4
-                self.kf.H = H
-                self.kf.R = R
+                # Then update with sensor B (using the updated state)
+                self.kf.R = np.eye(2) * (noise_b ** 2)
+                z_b = np.array([data_b['x'], data_b['y']])
+                self.kf.update(z_b)
 
-                self.kf.update(z)
+                self.fusion_mode = f"dual_{strategy['fusion_type']}_sequential"
 
-                # Restore original dimensions
-                self.kf.dim_z = original_dim_z
-                self.kf.H = original_H
-                self.kf.R = original_R
-
-                self.fusion_mode = f"dual_{strategy['fusion_type']}_temporal"
+                # Reset consecutive conflicts since we successfully fused
+                self.consecutive_conflicts = 0
 
             # Update sensor reliability based on successful fusion
             if 'sensor_id' in strategy:
@@ -438,6 +450,8 @@ class PersonTrackingDualInputKalmanFilterService:
 
         except Exception as e:
             rospy.logerr(f"Failed to apply temporal fusion: {e}")
+            # Optional: Reset to single sensor mode on failure
+            self.fusion_mode = "error_fallback"
 
     def _predict_to_time(self, target_time):
         """Predict filter state to target time"""
@@ -530,16 +544,42 @@ class PersonTrackingDualInputKalmanFilterService:
                 float(pos_cov[1, 0]), float(pos_cov[1, 1])
             ]
 
-            # Add asynchronous sensor specific information to message
-            if hasattr(response, 'message') and 'retrieved' in response.message:
-                sensor_a_age = "N/A" if self.last_sensor_a[
-                                            'time'] is None else f"{(rospy.Time.now() - self.last_sensor_a['time']).to_sec():.1f}s"
-                sensor_b_age = "N/A" if self.last_sensor_b[
-                                            'time'] is None else f"{(rospy.Time.now() - self.last_sensor_b['time']).to_sec():.1f}s"
+            # Fill dual sensor specific fields
+            response.fusion_mode = self.fusion_mode
+            response.sensor_a_reliability = float(self.sensor_reliability['a'])
+            response.sensor_b_reliability = float(self.sensor_reliability['b'])
+            response.consecutive_conflicts = int(self.consecutive_conflicts)
 
-                response.message += f" | Mode: {self.fusion_mode} | Prediction: {self.prediction_mode}"
-                response.message += f" | SensorA: {sensor_a_age} | SensorB: {sensor_b_age}"
-                response.message += f" | Reliability: A={self.sensor_reliability['a']:.2f}, B={self.sensor_reliability['b']:.2f}"
+            # Calculate sensor agreement distance if both sensors are available
+            if (self.last_sensor_a['x'] is not None and self.last_sensor_b['x'] is not None):
+                dx = self.last_sensor_a['x'] - self.last_sensor_b['x']
+                dy = self.last_sensor_a['y'] - self.last_sensor_b['y']
+                response.sensor_agreement_distance = float(np.sqrt(dx * dx + dy * dy))
+            else:
+                response.sensor_agreement_distance = -1.0
+
+            # Set conflict detection flag
+            response.conflict_detected = (self.consecutive_conflicts > 0)
+
+            # Calculate confidence level based on fusion mode and sensor reliability
+            if self.fusion_mode.startswith('dual'):
+                response.confidence_level = min(self.sensor_reliability['a'], self.sensor_reliability['b'])
+            elif 'single_a' in self.fusion_mode:
+                response.confidence_level = self.sensor_reliability['a'] * 0.8
+            elif 'single_b' in self.fusion_mode:
+                response.confidence_level = self.sensor_reliability['b'] * 0.8
+            else:
+                response.confidence_level = 0.3  # prediction only
+
+            # Set system health
+            if self.fusion_mode.startswith('dual'):
+                response.system_health = "healthy"
+            elif 'single' in self.fusion_mode:
+                response.system_health = "warning"
+            elif 'predict_only' in self.fusion_mode:
+                response.system_health = "degraded"
+            else:
+                response.system_health = "healthy"
 
         else:
             response.position_x = 0.0
@@ -548,6 +588,14 @@ class PersonTrackingDualInputKalmanFilterService:
             response.velocity_y = 0.0
             response.speed = 0.0
             response.position_covariance = [0.0, 0.0, 0.0, 0.0]
+            response.fusion_mode = "uninitialized"
+            response.sensor_a_reliability = 1.0
+            response.sensor_b_reliability = 1.0
+            response.consecutive_conflicts = 0
+            response.sensor_agreement_distance = -1.0
+            response.conflict_detected = False
+            response.confidence_level = 0.0
+            response.system_health = "uninitialized"
 
 
 def main():

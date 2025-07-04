@@ -17,6 +17,7 @@ find_package(catkin REQUIRED COMPONENTS
   lasr_vision_sam2
   lasr_vision_yolo
   lasr_person_tracking_filter
+  leg_tracker
 )
 
 ## System dependencies are found with CMake's conventions

@@ -11,5 +11,5 @@
     <rosparam command="load" file="$(find help_me_carry)/config/help_me_carry_motions.yaml" />
 
     <!--  lang_sam_service node -->
-    <node pkg="lasr_vision_lang_sam" type="lang_sam_service.py" name="lang_sam_service" output="screen" />
+<!--     <node pkg="lasr_vision_lang_sam" type="lang_sam_service.py" name="lang_sam_service" output="screen" /> -->
 </launch>

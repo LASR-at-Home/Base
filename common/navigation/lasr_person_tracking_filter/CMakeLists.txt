@@ -68,6 +68,7 @@ catkin_generate_virtualenv(
 add_service_files(
   FILES
   PersonTrackingFilter.srv
+  DualSensorPersonTrackingFilter.srv
 )
 
 # Generate actions in the 'action' folder
