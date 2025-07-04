@@ -9,3 +9,6 @@ float32 detection_score
 
 # Confidence score for segmentation mask
 float32 seg_mask_score
+
+# Point in target frame
+geometry_msgs/Point point

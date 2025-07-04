@@ -1,0 +1,158 @@
+from typing import List
+
+import smach
+import rospy
+
+from lasr_skills import Detect3DInArea, Say, LookToPoint
+from shapely.geometry import Point
+from shapely.geometry.polygon import Polygon as ShapelyPolygon
+from geometry_msgs.msg import PointStamped
+from std_msgs.msg import Header
+
+
+class FindObjectOnLoc(smach.StateMachine):
+    def __init__(
+        self,
+        guest_id: str,
+        table_point: Point,
+        table_area: ShapelyPolygon,
+        table_left_area: ShapelyPolygon,
+        table_right_area: ShapelyPolygon,
+        table_centre_area: ShapelyPolygon,
+        possible_objects: List[str],
+    ):
+        smach.StateMachine.__init__(
+            self,
+            outcomes=["succeeded", "failed"],
+            input_keys=["guest_data"],
+        )
+        self._guest_id = guest_id
+        self.possible_objects = possible_objects
+
+        with self:
+            smach.StateMachine.add(
+                "LOOK_AT_TABLE",
+                LookToPoint(
+                    pointstamped=PointStamped(
+                        point=table_point, header=Header(frame_id="map")
+                    )
+                ),
+                transitions={
+                    "succeeded": "DETECT_OBJECT_ON_LOCATION",
+                    "aborted": "DETECT_OBJECT_ON_LOCATION",
+                    "timed_out": "DETECT_OBJECT_ON_LOCATION",
+                },
+            )
+
+            smach.StateMachine.add(
+                "DETECT_OBJECT_ON_LOCATION",
+                Detect3DInArea(area_polygon=table_area, filter=self.possible_objects),
+                transitions={
+                    "succeeded": "PROCESS_DETECTED_OBJECT",
+                    "failed": "failed",
+                },
+            )
+            smach.StateMachine.add(
+                "PROCESS_DETECTED_OBJECT",
+                self.ProcessDetectedobjects(
+                    guest_id=self._guest_id,
+                    table_left_area=table_left_area,
+                    table_right_area=table_right_area,
+                    table_centre_area=table_centre_area,
+                ),
+                transitions={
+                    "succeeded": "GET_OBJECT_STRING",
+                    "failed": "GET_OBJECT_STRING",
+                },
+                remapping={
+                    "detections_3d": "detections_3d",
+                    "guest_data": "guest_data",
+                    "object_location": "object_location",
+                },
+            )
+            smach.StateMachine.add(
+                "GET_object_STRING",
+                self.GetobjectString(),
+                transitions={
+                    "succeeded": "SAY_OBJECT_STRING",
+                    "failed": "SAY_OBJECT_STRING",
+                },
+                remapping={
+                    "guest_data": "guest_data",
+                    "object_location": "object_location",
+                    "object_string": "object_string",
+                },
+            )
+            smach.StateMachine.add(
+                "SAY_OBJECT_STRING",
+                Say(),
+                transitions={
+                    "succeeded": "succeeded",
+                    "aborted": "failed",
+                    "preempted": "failed",
+                },
+                remapping={"text": "object_string"},
+            )
+
+    class ProcessDetectedobjects(smach.State):
+        def __init__(
+            self,
+            guest_id: str,
+            table_left_area: ShapelyPolygon,
+            table_right_area: ShapelyPolygon,
+            table_centre_area: ShapelyPolygon,
+        ):
+            smach.State.__init__(
+                self,
+                outcomes=["succeeded", "failed"],
+                input_keys=["detections_3d", "guest_data"],
+                output_keys=["object_location"],  # Left, Centre, Right, or None
+            )
+            self._guest_id = guest_id
+            self._table_left_area = table_left_area
+            self._table_right_area = table_right_area
+            self._table_centre_area = table_centre_area
+
+        def execute(self, userdata):
+            favourite_object = userdata.guest_data[self._guest_id].get("object", None)
+            object_location = "None"
+
+            if favourite_object is None:
+                pass
+            else:
+                detected_objects = userdata.detections_3d
+                for object in detected_objects:
+                    if object.name.lower() == favourite_object.lower():
+                        point = Point(object.point.x, object.point.y)
+                        if self._table_left_area.contains(point):
+                            object_location = "Left"
+                        elif self._table_right_area.contains(point):
+                            object_location = "Right"
+                        elif self._table_centre_area.contains(point):
+                            object_location = "Centre"
+                        else:
+                            object_location = "None"
+                        break
+            userdata.object_location = object_location
+            return "succeeded"
+
+    class GetobjectString(smach.State):
+        def __init__(self):
+            smach.State.__init__(
+                self,
+                outcomes=["succeeded", "failed"],
+                input_keys=["guest_data", "object_location"],
+                output_keys=["object_string"],
+            )
+
+        def execute(self, userdata):
+            object_location = userdata.object_location
+            object_str = ""
+            if object_location == "None":
+                object_str += "Unfortunately, I couldn't find your object on the table. "
+            else:
+                object_str += (
+                    f"Your object is located at the {object_location} of the table. "
+                )
+            userdata.object_string = object_str
+            return "succeeded"

@@ -1,13 +1,19 @@
+<<<<<<< HEAD
 from typing import Optional
 
+=======
+>>>>>>> origin/main
 import smach
 import rospy
 
 from lasr_skills import Say
+<<<<<<< HEAD
 from lasr_llm_msgs.srv import (
     Llm,
     LlmRequest,
 )
+=======
+>>>>>>> origin/main
 
 
 def stringify_guest_data(guest_data: dict) -> str:
@@ -58,6 +64,7 @@ class WelcomeGuest(smach.StateMachine):
 
         with self:
             smach.StateMachine.add(
+<<<<<<< HEAD
                 "GET_SIMILARITY",
                 self.GetSimilarity(),
                 transitions={
@@ -70,6 +77,8 @@ class WelcomeGuest(smach.StateMachine):
                 },
             )
             smach.StateMachine.add(
+=======
+>>>>>>> origin/main
                 "SAY_WELCOME",
                 self.GetWelcomeMessage(),
                 transitions={
@@ -93,6 +102,7 @@ class WelcomeGuest(smach.StateMachine):
                 remapping={"text": "welcome_message"},
             )
 
+<<<<<<< HEAD
     class GetSimilarity(smach.State):
         """State to get the similarity between two guests."""
 
@@ -121,6 +131,8 @@ class WelcomeGuest(smach.StateMachine):
                 userdata.common_interest = commonality
                 return "succeeded"
 
+=======
+>>>>>>> origin/main
     class GetWelcomeMessage(smach.State):
         """State to get the welcome message for the guest."""
 
@@ -134,11 +146,18 @@ class WelcomeGuest(smach.StateMachine):
         def execute(self, userdata):
             guest_1_name = userdata.guest_data["guest1"]["name"]
             guest_2_name = userdata.guest_data["guest2"]["name"]
+<<<<<<< HEAD
             common_interest = userdata.common_interest
 
             userdata.welcome_message = (
                 f"Hello {guest_2_name}, welcome to the party! "
                 f"You'll get on well with {guest_1_name} who is already here as they share a common interest in {common_interest}. "
                 f"You'll recognise them as {stringify_guest_data(userdata.guest_data['guest1'])}."
+=======
+
+            userdata.welcome_message = (
+                f"Hello {guest_2_name}, welcome to the party! "
+                f"{guest_1_name} is already here, you'll recognise them as {stringify_guest_data(userdata.guest_data['guest1'])}."
+>>>>>>> origin/main
             )
             return "succeeded"

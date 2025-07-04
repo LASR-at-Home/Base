@@ -83,8 +83,11 @@ if __name__ == "__main__":
     table_point = Point(**table_point_param)
     # exclude the sofa area from the seat area
     # seat_area = seat_area.difference(sofa_area)
+<<<<<<< HEAD
 
     search_motions = rospy.get_param("/receptionist/search_motions")
+=======
+>>>>>>> origin/main
 
     sweep = rospy.get_param("/receptionist/sweep")
 
@@ -126,7 +129,6 @@ if __name__ == "__main__":
         right_table_area,
         centre_table_area,
         seat_pose,
-        search_motions,
         seat_area,
         sofa_area,
         sofa_point,
@@ -136,6 +138,7 @@ if __name__ == "__main__":
             "interest": "robots",
             "dataset": "receptionist",
             "detection": False,
+            "seating_detection": False,
         },
         max_people_on_sofa=max_people_on_sofa,
     )

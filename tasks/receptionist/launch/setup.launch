@@ -20,6 +20,13 @@
     <!--      PERCEPTION     -->
     <node pkg="lasr_vision_clip" name="clip_service" type="vqa" output="screen"/>
     <node pkg="lasr_vision_reid" type="service.py" name="reid_service" output="screen"/>
+<<<<<<< HEAD
     <node name="yolo" pkg="lasr_vision_yolo" type="service.py" output="screen"/>
+=======
+    <node pkg ="lasr_vision_eye_tracker" type="eye_tracker_server.py" name="eye_tracker_service" output="screen"/>
+    <node name="yolo" pkg="lasr_vision_yolo" type="service.py" output="screen"/>
+    <node pkg="lasr_sentence_embedding" type="lasr_sentence_embedding_service.py" name="sentence_embedding_service" output="screen"/>
+
+>>>>>>> origin/main
 
 </launch>

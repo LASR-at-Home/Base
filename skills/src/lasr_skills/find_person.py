@@ -3,9 +3,7 @@ import smach
 import smach_ros
 import rospy
 
-#from lasr_skills.fake_nav import GoToLocation
 from lasr_skills import (
-    Say,
     GoToLocation,
     AskAndListen,
     DetectGesture,
@@ -13,7 +11,6 @@ from lasr_skills import (
     DetectPose,
 )
 import navigation_helpers
-from lasr_skills.detect_shirt_color import DetectShirtColor
 
 from geometry_msgs.msg import (
     Pose,
@@ -25,11 +22,10 @@ from geometry_msgs.msg import (
 )
 from lasr_vision_msgs.msg import CDRequest, CDResponse
 from lasr_vision_msgs.srv import (
-    YoloDetection,
-    YoloDetectionRequest
+    CroppedDetectionRequest,
+    CroppedDetection,
 )
 
-from sensor_msgs.msg import Image
 
 from typing import List, Literal
 import itertools
@@ -86,31 +82,14 @@ class FindPerson(smach.StateMachine):
                 )
 
             def execute(self, userdata):
-                detections = userdata.responses
-
-                if not isinstance(detections, list) or len(detections) == 0:
-                    rospy.logwarn("[YOLO] No 2D detections received.")
+                if len(userdata.responses[0].detections_3d) == 0:
+                    rospy.logwarn("No response available, returning failed.")
                     return "failed"
-
-                detection = detections.pop(0)
-
-                rospy.loginfo(f"[YOLO] Got detection: {detection.name} with confidence {detection.confidence}")
-
-                # estimate center of bbox if present
-                if len(detection.xywh) == 4:
-                    x, y, w, h = detection.xywh
-                    person_point = Point(x=x + w / 2, y=y + h / 2, z=0.0)
-                else:
-                    person_point = Point(x=0.0, y=0.0, z=0.0)
-
-                userdata.response = detection
-                userdata.person_point = person_point
-                userdata.cropped_image = None  # YOLO 2D doesn't return crops
-
+                response = userdata.responses[0].detections_3d.pop(0)
+                userdata.response = response
+                userdata.cropped_image = userdata.responses[0].cropped_imgs.pop(0)
+                userdata.person_point = response.point
                 return "succeeded"
-
-
-
 
         class ApproachPerson(smach.StateMachine):
 
@@ -324,49 +303,17 @@ class FindPerson(smach.StateMachine):
                             "failed": "failed",
                         },
                     )
-                    
-                    rospy.loginfo(criteria_value)
+
                     smach.StateMachine.add(
                         "DETECT_CLOTHING",
                         DetectClothing(criteria_value),
                         transitions={
-                            "succeeded": "LOG_CLOTHING",
+                            "succeeded": "GO_TO_PERSON",
                             "failed": "GET_RESPONSE",
                         },
-                        remapping={"img_msg": "cropped_image",  "detected_clothing": "detected_clothing"},
-                    )
-                    @smach.cb_interface(input_keys=["detected_clothing"], outcomes=["succeeded"])
-                    def log_detected_clothing(userdata):
-                        rospy.loginfo(f"[Clothing Debug] Detected: {userdata.detected_clothing}")
-                        return "succeeded"
-                    smach.StateMachine.add(
-                        "LOG_CLOTHING",
-                        smach.CBState(log_detected_clothing),
-                        transitions={"succeeded": "GO_TO_PERSON"},
-                        remapping={"detected_clothing": "detected_clothing"}, 
+                        remapping={"img_msg": "cropped_image"},
                     )
 
-                    '''
-                    smach.StateMachine.add(
-                        "DETECT_SHIRT_COLOR",
-                        DetectShirtColor(),
-                        transitions={"succeeded": "CHECK_PURPLE"},
-                        remapping={"cropped_image":"cropped_image","shirt_color":"detected_color"}
-                    )
-
-                    # now you have userdata.detected_color = "dark_purple"/"purple"/"light_purple"/"unknown"
-                    # Your callback was named _blue_cb but used _green_cb below — fix the name
-                    @smach.cb_interface(input_keys=["detected_color"], outcomes=["is_purple","not_purple"])
-                    def _purple_cb(userdata):
-                        return "is_purple" if userdata.detected_color in ("dark_purple", "purple", "light_purple") else "not_purple"
-
-                    smach.StateMachine.add(
-                        "CHECK_PURPLE",
-                        smach.CBState(_purple_cb),  # <- FIXED: it was _green_cb
-                        transitions={"is_purple": "GO_TO_PERSON", "not_purple": "GET_RESPONSE"}
-                    )
-
-                    '''
                     smach.StateMachine.add(
                         "GO_TO_PERSON",
                         self.ApproachPerson(),
@@ -402,7 +349,7 @@ class FindPerson(smach.StateMachine):
                 "lying_down",
             ], "Invalid pose"
         elif criteria == "clothes":
-            color_list = ["blue", "yellow", "black", "white", "red", "orange", "gray","purple"]
+            color_list = ["blue", "yellow", "black", "white", "red", "orange", "gray"]
             clothe_list = ["t shirt", "shirt", "blouse", "sweater", "coat", "jacket"]
             clothes_list = [
                 "t shirts",
@@ -445,7 +392,7 @@ class FindPerson(smach.StateMachine):
                 container_sm = smach.StateMachine(
                     outcomes=["succeeded", "failed", "continue"],
                     input_keys=["location_index", "waypoints"],
-                    output_keys=["person_point", "image_raw", "responses"],
+                    output_keys=["person_point"],
                 )
 
                 with container_sm:
@@ -463,55 +410,35 @@ class FindPerson(smach.StateMachine):
                             "failed": "failed",
                         },
                     )
-                    @smach.cb_interface(output_keys=['cd_request'], outcomes=['succeeded'])
-                    def build_cd_request(userdata):
-                        rgb_image = rospy.wait_for_message('/camera/rgb/image_raw', Image)
-                        pointcloud = rospy.wait_for_message('/camera/depth/points', PointCloud2)
-
-                    
-                    
-                    @smach.cb_interface(output_keys=["image_raw"], outcomes=["succeeded"])
-                    def get_image(userdata):
-                        userdata.image_raw = rospy.wait_for_message("/camera/rgb/image_raw", Image)
-                        return "succeeded"
-
-                    smach.StateMachine.add(
-                        "GET_IMAGE",
-                        smach.CBState(get_image),
-                        transitions={"succeeded": "DETECT"},
-                        remapping={"image_raw": "image_raw"},
-                    )
-
 
                     smach.StateMachine.add(
                         "DETECT",
                         smach_ros.ServiceState(
-                            "/yolo/detect",
-                            YoloDetection,
-                            request=YoloDetectionRequest(
-                                model="yolo11n-seg.pt",
-                                confidence=0.5,
-                                filter=["person"]
+                            "/vision/cropped_detection",
+                            CroppedDetection,
+                            request=CroppedDetectionRequest(
+                                requests=[
+                                    CDRequest(
+                                        method="closest",
+                                        use_mask=True,
+                                        yolo_model="yolo11n-seg.pt",
+                                        yolo_model_confidence=0.5,
+                                        yolo_nms_threshold=0.3,
+                                        return_sensor_reading=False,
+                                        object_names=["person"],
+                                        polygons=[polygon],
+                                    )
+                                ]
                             ),
-                            input_keys=["image_raw"],
-                            request_slots=["image_raw"],
-                            response_slots=["detected_objects"],
+                            output_keys=["responses"],
+                            response_slots=["responses"],
                         ),
                         transitions={
                             "succeeded": "HANDLE_DETECTIONS",
                             "aborted": "failed",
                             "preempted": "failed",
                         },
-                        
-                        remapping={
-                            "img_msg": "image_raw",            
-                            "detected_objects": "responses",    
-                        },
-                        
                     )
-
-
-
 
                     smach.StateMachine.add(
                         "HANDLE_DETECTIONS",
@@ -528,14 +455,9 @@ class FindPerson(smach.StateMachine):
                 "WAYPOINT_ITERATOR",
                 waypoint_iterator,
                 {"succeeded": "succeeded", "failed": "failed"},
-                #{"succeeded": "succeeded", "failed": "SAY_NO_MATCH"},
             )
-            '''
-            smach.StateMachine.add(
-                "SAY_NO_MATCH",
-                Say("I could not find anyone wearing purple."),
-                transitions={"succeeded": "failed", "aborted": "failed", "preempted": "failed"},
-            )'''
+
+
 if __name__ == "__main__":
     import rospy
     from geometry_msgs.msg import Point, Quaternion, Pose

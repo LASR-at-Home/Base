@@ -12,7 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
   navigation_helpers
   lasr_vision_msgs
   lasr_vector_databases_msgs
-#  lasr_vision_sam2
+  lasr_vision_sam2
   lasr_vision_yolo
   lasr_speech_recognition_msgs
   cv2_pcl

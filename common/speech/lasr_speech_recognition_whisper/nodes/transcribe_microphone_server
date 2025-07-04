@@ -35,7 +35,7 @@ class speech_model_params:
         pause_threshold (Optional[float]): Seconds of non-speaking audio before a phrase is considered complete. Defaults to 0.8 seconds.
     """
 
-    model_name: str = "medium.en"
+    model_name: str = "base.en"
     device: str = "cuda" if torch.cuda.is_available() else "cpu"
     start_timeout: float = 5.0
     phrase_duration: Optional[float] = 10
@@ -53,9 +53,9 @@ class TranscribeSpeechAction(object):
     _result = lasr_speech_recognition_msgs.msg.TranscribeSpeechResult()
 
     def __init__(
-            self,
-            action_name: str,
-            model_params: speech_model_params,
+        self,
+        action_name: str,
+        model_params: speech_model_params,
     ) -> None:
         """Starts an action server for transcribing speech.
 
@@ -117,9 +117,9 @@ class TranscribeSpeechAction(object):
             )
 
     def _configure_recogniser(
-            self,
-            energy_threshold: Optional[float] = None,
-            pause_threshold: Optional[float] = None,
+        self,
+        energy_threshold: Optional[float] = None,
+        pause_threshold: Optional[float] = None,
     ) -> sr.Recognizer:
         """Configures the speech recogniser object.
 
@@ -198,8 +198,8 @@ class TranscribeSpeechAction(object):
             ).get_wav_data()
         # Magic number 32768.0 is the maximum value of a 16-bit signed integer
         float_data = (
-                np.frombuffer(wav_data, dtype=np.int16).astype(np.float32, order="C")
-                / 32768.0
+            np.frombuffer(wav_data, dtype=np.int16).astype(np.float32, order="C")
+            / 32768.0
         )
 
         if self._action_server.is_preempt_requested():
@@ -251,7 +251,7 @@ def parse_args() -> dict:
     parser.add_argument(
         "--model_name",
         type=str,
-        default="medium.en",
+        default="base.en",
         help="Name of the speech recognition model.",
     )
     parser.add_argument(

@@ -240,8 +240,19 @@ def get_look_point(location: str) -> PointStamped:
     )
 
 
-def get_objects_from_category(category: str) -> List[str]:
-    return rospy.get_param(f"/gpsr/objects/{category}")
+def get_objects_from_category(object_name: str) -> str:
+    object_name = object_name.lower().strip()
+    if object_name.endswith("s"):
+        singular = object_name[:-1]
+    else:
+        singular = object_name
+
+    object_groups = rospy.get_param("/gpsr/objects")
+    for group in object_groups:
+        for category, items in group.items():
+            if object_name in items or singular in items:
+                return category
+    raise ValueError(f"Object '{object_name}' not found in any category.")
 
 
 """
@@ -1129,10 +1140,14 @@ def count(command_param: Dict, sm: smach.StateMachine) -> None:
         people = True
         output_string += f"people wearing {criteria_value} in the "
 
-    elif "object_category" in command_param:
+    
+    elif "object_category" in command_param or "object" in command_param:
         criteria = "object_category"
-        criteria_value = command_param["object_category"]
-        output_string += f"number of {criteria_value} on the "
+        #criteria_value = command_param["object_category"]
+        criteria_value = command_param.get("object_category", command_param.get("object"))
+        output_string += f"number of {criteria_value} on the "        
+        
+
     else:
         raise ValueError(
             "Count command received with no pose, gesture, clothes, or object category in command parameters"
@@ -1208,6 +1223,7 @@ def count(command_param: Dict, sm: smach.StateMachine) -> None:
             get_location_room((command_param["location"]))
         )
         output_string += command_param["location"]
+        '''
         sm.add(
             f"STATE_{increment_state_count()}",
             Say(text=output_string),
@@ -1217,6 +1233,7 @@ def count(command_param: Dict, sm: smach.StateMachine) -> None:
                 "aborted": f"STATE_{STATE_COUNT + 1}",
             },
         )
+        
         sm.add(
             f"STATE_{increment_state_count()}",
             GoToLocation(location=location_pose),
@@ -1225,7 +1242,7 @@ def count(command_param: Dict, sm: smach.StateMachine) -> None:
                 "failed": f"STATE_{STATE_COUNT + 1}",
             },
         )
-
+        
         sm.add(
             f"STATE_{increment_state_count()}",
             LookToPoint(pointstamped=get_look_point(command_param["location"])),
@@ -1235,12 +1252,14 @@ def count(command_param: Dict, sm: smach.StateMachine) -> None:
                 "timed_out": f"STATE_{STATE_COUNT + 1}",
             },
         )
+        '''
 
         sm.add(
             f"STATE_{increment_state_count()}",
             CountObject(
                 location_polygon,
-                objects=get_objects_from_category(command_param["object_category"]),
+                #objects=get_objects_from_category(command_param["object_category"]),
+                objects=get_objects_from_category(criteria_value),
                 model="best.pt",
             ),
             transitions={
@@ -1251,13 +1270,27 @@ def count(command_param: Dict, sm: smach.StateMachine) -> None:
 
         sm.add(
             f"STATE_{increment_state_count()}",
+            CountObject(
+                location_polygon,
+                model="best.pt",
+                objects=get_objects_from_category(criteria_value),
+            ),
+            transitions={
+                "succeeded": f"STATE_{STATE_COUNT + 1}",
+                "failed": f"STATE_{STATE_COUNT + 1}",
+            },
+        )
+
+
+        sm.add(
+            f"STATE_{increment_state_count()}",
             GoToLocation(location=get_current_pose()),
             transitions={
                 "succeeded": f"STATE_{STATE_COUNT + 1}",
                 "failed": f"STATE_{STATE_COUNT + 1}",
             },
         )
-        '''
+        
         sm.add(
             f"STATE_{increment_state_count()}",
             Say(
@@ -1267,49 +1300,55 @@ def count(command_param: Dict, sm: smach.StateMachine) -> None:
                 + command_param["location"]
             ),
             transitions={
-                "succeeded": f"STATE_{STATE_COUNT + 1}",
-                "failed": f"STATE_{STATE_COUNT + 1}",
+                "succeeded":f"STATE_{STATE_COUNT + 1}", 
+                "aborted":  f"STATE_{STATE_COUNT + 1}",
+                "preempted": f"STATE_{STATE_COUNT + 1}",
             },
             remapping={"placeholders": "object_count"},
         )
-        '''
+        
         # --- insert a branch on zero vs nonzero count ---
-        @smach.cb_interface(
-            input_keys=["people_count"],
-            outcomes=["zero","nonzero"]
-        )
-        def _check_zero_cb(userdata):
-            return "zero" if userdata.people_count==0 else "nonzero"
+        if people:
+            # --- insert a branch on zero vs nonzero count ---
+            @smach.cb_interface(
+                input_keys=["people_count"],
+                outcomes=["zero","nonzero"]
+            )
+            def _check_zero_cb(userdata):
+                return "zero" if userdata.people_count == 0 else "nonzero"
 
-        sm.add(
-            f"STATE_{increment_state_count()}",
-            smach.CBState(_check_zero_cb),
-            transitions={
-                "zero":   f"STATE_{STATE_COUNT + 1}_NONE",
-                "nonzero":f"STATE_{STATE_COUNT + 1}_COUNT",
-            },
-        )
+            sm.add(
+                f"STATE_{increment_state_count()}",
+                smach.CBState(_check_zero_cb),
+                transitions={
+                    "zero":   f"STATE_{STATE_COUNT + 1}_NONE",
+                    "nonzero":f"STATE_{STATE_COUNT + 1}_COUNT",
+                },
+            )
 
-        # zero-case
-        sm.add(
-            f"STATE_{increment_state_count()}_NONE",
-            Say(text=f"There are no people wearing {criteria_value} in the {command_param['room']}"),
-            transitions={"succeeded":"succeeded", 
-                "aborted":  "succeeded",
-                "preempted":"succeeded",},
-        )
+            # zero-case
+            sm.add(
+                f"STATE_{increment_state_count()}_NONE",
+                Say(text=f"There are no people wearing {criteria_value} in the {command_param['room']}"),
+                transitions={"succeeded": "succeeded",
+                            "aborted": "succeeded",
+                            "preempted": "succeeded"},
+            )
 
-        # non-zero case
-        sm.add(
-            f"STATE_{increment_state_count()}_COUNT",
-            Say(
-                format_str=f"There are {{}} people wearing {criteria_value} in the {command_param['room']}"
-            ),
-            remapping={"placeholders":"people_count"},
-            transitions={"succeeded":"succeeded", 
-                "aborted":  "succeeded",
-                "preempted":"succeeded",},
-        )
+            # non-zero case
+            sm.add(
+                f"STATE_{increment_state_count()}_COUNT",
+                Say(
+                    format_str=f"There are {{}} people wearing {criteria_value} in the {command_param['room']}"
+                ),
+                remapping={"placeholders": "people_count"},
+                transitions={"succeeded": "succeeded",
+                            "aborted": "succeeded",
+                            "preempted": "succeeded"},
+            )
+        else:
+            # nothing to do here — object_count already handled
+            pass
 
 
 def follow(command_param: Dict, sm: smach.StateMachine, greet_person: bool) -> None:

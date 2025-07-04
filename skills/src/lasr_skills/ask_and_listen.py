@@ -154,7 +154,9 @@ class AskAndListen(smach.StateMachine):
     def execute(self, userdata):
         #cmd = self._cmdgen.generate_command_start(cmd_category="people")
         #cmd = "tell me how many waving persons are in the kitchen"
-        cmd = "tell me how many people in the hallway are wearing blue t shirts"
+        #cmd = "tell me how many people in the hallway are wearing blue t shirts"
+        #cmd = "Count spoons there are on the kitchen counter"
+        cmd = "tell me how many spoons there are on the kitchen counter"
         #cmd = "Guide the person wearing a purple t shirt from the kitchen cabinet to the dinner table"
         userdata.transcribed_speech = cmd
 

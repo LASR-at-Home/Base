@@ -55,7 +55,7 @@
   <depend>navigation_helpers</depend>
   <depend>lasr_vision_msgs</depend>
   <depend>lasr_vector_databases_msgs</depend>
-  <!-- <depend>lasr_vision_sam2</depend> -->
+  <depend>lasr_vision_sam2</depend>
   <depend>lasr_vision_yolo</depend>
   <depend>lasr_speech_recognition_msgs</depend>
   <depend>cv2_pcl</depend>

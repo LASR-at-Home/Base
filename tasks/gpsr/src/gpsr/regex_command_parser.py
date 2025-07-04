@@ -311,10 +311,21 @@ def gpsr_regex(configuration: Configuration):
         "meetPrsAtBeac",
         f"{verb('meet')} {Configuration.pick(configuration, 'name', ['name'])} {prep('inLocPrep')} the {Configuration.pick(configuration, 'location', ['room'])} and {get_possible_sub_commands('foundPers')}",
     )
-    command(
+    '''command(
         "countObjOnPlcmt",
         f"{verb('count')} {Configuration.pick(configuration, 'object', ['plurCat'])} there are {prep('onLocPrep')} the {Configuration.pick(configuration, 'location', ['plcmtLoc'])}",
+    )'''
+
+    # match either a category‐plural (e.g. "dishes") OR a specific object name (singular) with optional "s"
+    plurals = "|".join(re.escape(cat) for cat in configuration["object_categories_plural"])
+    objs     = "|".join(re.escape(obj) for obj in configuration["object_names"])
+
+    command(
+    "countObjOnPlcmt",
+    rf"{verb('count')} (?P<object>(?:{plurals})|(?:{objs})s?) there are {prep('onLocPrep')} the {Configuration.pick(configuration, 'location', ['plcmtLoc'])}"
     )
+    
+
     command(
         "countPrsInRoom",
         f"{verb('count')} (?:{gesture_person_plural_list}|{pose_person_plural_list}) are {prep('inLocPrep')} the {Configuration.pick(configuration, 'location', ['room'])}",

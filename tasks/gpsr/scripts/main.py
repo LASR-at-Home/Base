@@ -67,14 +67,14 @@ def main() -> None:
     config = load_gpsr_configuration()
     #move_base_client = actionlib.SimpleActionClient("move_base", MoveBaseAction)
     #move_base_client.wait_for_server()
-    tts_client = actionlib.SimpleActionClient("tts", TtsAction)
-    tts_client.wait_for_server()
+    #tts_client = actionlib.SimpleActionClient("tts", TtsAction)
+    #tts_client.wait_for_server()
     # _tts(tts_client, "Please open the door")
     # rospy.sleep(3)
     for i in range(N_COMMANDS):
         rospy.loginfo(f"Command {i + 1}")
         #_tts(tts_client, "I am going to the instruction point to receive a command")
-        _tts(tts_client, "for testing I will not go to the instruction point")
+        #_tts(tts_client, "for testing I will not go to the instruction point")
         #_move_base(move_base_client, instruction_pose)
         if i > 0:
             #_tts(
@@ -91,8 +91,10 @@ def main() -> None:
             sm = build_state_machine(parsed_command)
             sm.execute()
         except:
-            _tts(tts_client, "Something went wrong, I couldn't execute the command")
-    _tts(tts_client, "I am done")
+            rospy.loginfo(f"Something went wrong, I couldn't execute the command")
+            #_tts(tts_client, "Something went wrong, I couldn't execute the command")
+    rospy.loginfo(f"I am done")
+    #_tts(tts_client, "I am done")
 
 
 if __name__ == "__main__":
