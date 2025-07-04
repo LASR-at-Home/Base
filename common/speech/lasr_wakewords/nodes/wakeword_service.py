@@ -1,92 +1,102 @@
-#!/usr/bin/env python3
-
 import rospy
-import sys
-
-# print(f"Interpreter: {sys.executable}")
-# print(f"Script path: {__file__}")
-
-from lasr_wakewords.srv import WakewordTrigger, WakewordTriggerResponse
-import sounddevice as sd, numpy as np
-from openwakeword.model import Model
-import threading
 import rospkg
+import threading
 import os
+import time
+
+import sounddevice as sd
+import numpy as np
 import openwakeword
+from openwakeword.model import Model
 
-# # Check available audio devices and their capabilities
-# for i, dev in enumerate(sd.query_devices()):
-#     try:
-#         sd.check_input_settings(device=i, channels=1, samplerate=16000)
-#         print(f"[{i}] {dev['name']} supports 16kHz mono input")
-#     except Exception as e:
-#         print(f"[{i}] {dev['name']} does NOT support 16kHz mono: {e}")
-
-# Download model index (only needed once)
-openwakeword.utils.download_models()
-
-# Audio input configuration
-DEVICE = 9  # Set this to the device index that supports 16kHz mono
-SAMPLE_RATE = 16000
-FRAME_SAMPLES = 1280
-
-# Global state
-model = None
-WAKEWORD = None
-detected = threading.Event()
-
-# Locate package path
-rospack = rospkg.RosPack()
-pkg_path = rospack.get_path("lasr_wakewords")
+from lasr_speech_recognition_msgs.srv import (
+    WakewordTrigger,
+    WakewordTriggerResponse,
+    WakewordTriggerRequest,
+)
 
 
-# Audio callback for streaming audio to the model
-def audio_callback(indata, frames, t, status):
-    if status:
-        rospy.logwarn(status)
-    pcm = (indata[:, 0] * 32768).astype(np.int16)
-    score = model.predict(pcm)[WAKEWORD]
-    if score > 0.3:
-        rospy.loginfo(f"Wake-word '{WAKEWORD}' detected (score={score:.3f})")
-        detected.set()
+class WakewordService:
 
+    def __init__(self, device_index: int, sample_rate: int, frame_samples: int):
+        self._device_index = device_index
+        self._sample_rate = sample_rate
+        self._frame_samples = frame_samples
 
-# Service callback function
-def handle_request(req):
-    global model, WAKEWORD
+        self._model_path = os.path.join(
+            rospkg.RosPack().get_path("lasr_wakewords"), "models"
+        )
 
-    WAKEWORD = req.keyword.strip().lower()
-    rospy.loginfo(f"Wakeword service called. Listening for '{WAKEWORD}'...")
-    detected.clear()
+        self._detect_wakeword_service = rospy.Service(
+            "/lasr_wakewords/detect", WakewordTrigger, self._detect_wakeword
+        )
 
-    # Load corresponding model
-    model_path = os.path.join(pkg_path, "model", f"{WAKEWORD}.tflite")
-    if not os.path.exists(model_path):
-        rospy.logerr(f"Model file not found: {model_path}")
-        return WakewordTriggerResponse(success=False)
+        rospy.loginfo("/lasr_wakewords/detect is ready!")
 
-    model = Model([model_path])
+    def _detect_wakeword(
+        self, request: WakewordTriggerRequest
+    ) -> WakewordTriggerResponse:
+        wakeword = request.keyword.strip().lower()
+        threshold = request.threshold
+        max_duration = request.timeout
+        detected = threading.Event()
 
-    try:
-        with sd.InputStream(
-            device=DEVICE,
-            channels=1,
-            samplerate=SAMPLE_RATE,
-            blocksize=FRAME_SAMPLES,
-            dtype="float32",
-            callback=audio_callback,
-        ):
-            while not rospy.is_shutdown() and not detected.wait(timeout=0.1):
-                pass
-    except Exception as e:
-        rospy.logerr(f"Error opening InputStream: {e}")
-        return WakewordTriggerResponse(success=False)
+        rospy.loginfo(
+            f"Listening for wakeword '{wakeword}' with threshold {threshold} and timeout {max_duration}s"
+        )
 
-    return WakewordTriggerResponse(success=True)
+        model_path = os.path.join(self._model_path, f"{wakeword}.tflite")
+        if not os.path.exists(model_path):
+            rospy.logwarn(f"{model_path} does not exist.")
+            return WakewordTriggerResponse(success=False)
+
+        try:
+            model = Model([model_path])
+        except Exception as e:
+            rospy.logerr(f"Failed to load model: {e}")
+            return WakewordTriggerResponse(success=False)
+
+        def audio_callback(indata, frames, time_info, status):
+            if status:
+                rospy.logwarn(f"Audio stream status: {status}")
+            pcm = (indata[:, 0] * 32768).astype(np.int16)
+            score = model.predict(pcm)[wakeword]
+            rospy.loginfo(score)
+            if score > threshold:
+                rospy.loginfo(f"Wakeword '{wakeword}' detected (score={score:.3f})")
+                detected.set()
+
+        try:
+            with sd.InputStream(
+                device=self._device_index,
+                channels=1,
+                samplerate=self._sample_rate,
+                blocksize=self._frame_samples,
+                dtype="float32",
+                callback=audio_callback,
+            ):
+                start_time = time.monotonic()
+
+                while not rospy.is_shutdown() and not detected.is_set():
+                    elapsed = time.monotonic() - start_time
+                    if max_duration > 0 and elapsed >= max_duration:
+                        rospy.loginfo(f"Timeout reached after {elapsed:.1f} seconds")
+                        break
+                    detected.wait(timeout=0.1)
+        except Exception as e:
+            rospy.logerr(f"Error opening InputStream: {e}")
+            return WakewordTriggerResponse(success=False)
+
+        return WakewordTriggerResponse(success=True)
 
 
 if __name__ == "__main__":
-    rospy.init_node("wakeword_listener_service")
-    service = rospy.Service("wakeword_detect", WakewordTrigger, handle_request)
-    rospy.loginfo("Wakeword listening service ready. Waiting for calls...")
+    openwakeword.utils.download_models()
+    rospy.init_node("lasr_wakewords_service")
+
+    device_index = rospy.get_param("~device_index", 9)
+    sample_rate = rospy.get_param("~sample_rate", 16000)
+    frame_samples = rospy.get_param("~frame_samples", 1280)
+
+    service = WakewordService(device_index, sample_rate, frame_samples)
     rospy.spin()
