@@ -49,16 +49,23 @@ class PickServer:
     _gpd_pcd_path: str = "/tmp/gpd.pcd"
     _gpd_output_file: str = "grasps.txt"
 
+    # Action server
+    _pick_server: actionlib.SimpleActionServer
+
     # MoveIt
     _move_group: MoveGroupCommander
     _close_gripper: rospy.ServiceProxy
+
+    # Planning scene services
+    _allow_collisions_with_obj: rospy.ServiceProxy
+    _attach_object_to_gripper: rospy.ServiceProxy
 
     # Tf
     _tf_buffer: tf2_ros.Buffer
     _tf_listener: tf2_ros.TransformListener
 
-    # Action server
-    _pick_server: actionlib.SimpleActionServer
+    # Debug publisher
+    _grasp_markers_pub: rospy.Publisher
 
     def __init__(self) -> None:
         self._pick_server = actionlib.SimpleActionServer(
