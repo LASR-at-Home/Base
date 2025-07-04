@@ -1,17 +1,24 @@
-import copy
-import pathlib
-import numpy as np
-import open3d as o3d
-from scipy.spatial.transform import Rotation as R
-import time
-import open3d as o3d
-import numpy as np
-import copy
-from typing import Tuple
-import math
-from concurrent.futures import ThreadPoolExecutor, as_completed
-import copy, numpy as np
+from typing import Optional, Tuple
+
+import rospy
+import rospkg
 import os
+import open3d as o3d
+import numpy as np
+import tf.transformations as tf
+import copy
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+
+from lasr_manipulation_msgs.srv import (
+    Registration,
+    RegistrationRequest,
+    RegistrationResponse,
+)
+
+from geometry_msgs.msg import Vector3Stamped, TransformStamped
+from sensor_msgs.msg import PointCloud2
+import sensor_msgs.point_cloud2 as point_cloud2
 
 
 def _quality_ok(
@@ -313,26 +320,29 @@ def register_object(
     max_attempts: int = 25,
     fit_thresh: float = 0.7,
     rmse_factor: float = 1.0,
+    scale: bool = False,
     **kwargs,
 ):
     res = estimate_resolution(src_pcd)
     best_T, best_fit, best_rmse = None, -1.0, np.inf
     seeds = np.random.randint(0, 2**32 - 1, size=max_attempts)
 
-    # # Optional: Estimate scale between source and target and normalize
-    # scale1 = np.linalg.norm(
-    #     src_pcd.get_max_bound() - src_pcd.get_min_bound()
-    # ) / np.linalg.norm(tgt_pcd.get_max_bound() - tgt_pcd.get_min_bound())
-    # scale2 = (bbox_volume(src_pcd) / bbox_volume(tgt_pcd)) ** (1 / 3)
-    # scale3 = estimate_scale_from_nn(src_pcd, tgt_pcd, k=1, top_k=100)
-    # scale_ratio = np.mean([scale1, scale2, scale3])
+    if scale:
+        # Optional: Estimate scale between source and target and normalize
+        scale1 = np.linalg.norm(
+            src_pcd.get_max_bound() - src_pcd.get_min_bound()
+        ) / np.linalg.norm(tgt_pcd.get_max_bound() - tgt_pcd.get_min_bound())
+        scale2 = (bbox_volume(src_pcd) / bbox_volume(tgt_pcd)) ** (1 / 3)
+        scale3 = estimate_scale_from_nn(src_pcd, tgt_pcd, k=1, top_k=100)
+        scale_ratio = np.mean([scale1, scale2, scale3])
 
-    # if abs(scale_ratio - 1.0) > 0.05:
-    #     print(f"Scaling target by ratio {scale_ratio:.4f}")
-    #     tgt_pcd.scale(scale_ratio, center=tgt_pcd.get_center())
-    # else:
-    #     print("Skipping scaling; size already aligned.")
-
+        if abs(scale_ratio - 1.0) > 0.05:
+            print(f"Scaling target by ratio {scale_ratio:.4f}")
+            tgt_pcd.scale(scale_ratio, center=tgt_pcd.get_center())
+        else:
+            print("Skipping scaling; size already aligned.")
+    else:
+        scale_ratio = 1.0
     (
         src_clean,
         tgt_clean,
@@ -369,7 +379,7 @@ def register_object(
                 for f in futures:
                     f.cancel()
                 break
-    return best_T, best_fit, best_rmse
+    return best_T, scale_ratio, best_fit, best_rmse
 
 
 def bbox_volume(pcd):
@@ -391,14 +401,105 @@ def estimate_scale_from_nn(src, tgt, k=1, top_k=100):
     return np.mean(ratios)
 
 
-if __name__ == "__main__":
-    transformation, fitness, rmse, tries = pcl_register_service(
-        source,
-        target,
-        max_attempts=50,
-        target_points=20000,
-        downsample=True,
-        verbose=True,
-        fit_thresh=0.70,
-        rmse_factor=1.0,
+class RegistrationService:
+    """
+    A service for registering meshes with pointclouds.
+    """
+
+    # Meshes
+    _mesh_dir: str = os.path.join(
+        rospkg.RosPack().get_path("lasr_manipulation_pipeline"), "meshes"
     )
+
+    # Service
+    _registration_service: rospy.Service
+
+    def __init__(self):
+
+        self._registration_service = rospy.Service(
+            "/lasr_manipulation/registration", Registration, self._perform_registration
+        )
+        rospy.loginfo("/lasr_manipulation/registration service is ready!")
+
+    def _ros_to_o3d(self, pcl_msg: PointCloud2) -> o3d.geometry.PointCloud:
+        points = list(
+            point_cloud2.read_points(
+                pcl_msg, field_names=("x", "y", "z"), skip_nans=True
+            )
+        )
+        pcd = o3d.geometry.PointCloud()
+        pcd.points = o3d.utility.Vector3dVector(np.array(points))
+        return pcd
+
+    def _transform_to_ros(self, T: np.ndarray, frame_id) -> TransformStamped:
+        transform = TransformStamped()
+        transform.header.stamp = rospy.Time.now()
+        transform.header.frame_id = frame_id
+
+        translation = T[:3, 3]
+        rotation = tf.quaternion_from_matrix(T)
+
+        transform.transform.translation.x = translation[0]
+        transform.transform.translation.y = translation[1]
+        transform.transform.translation.z = translation[2]
+        transform.transform.rotation.x = rotation[0]
+        transform.transform.rotation.y = rotation[1]
+        transform.transform.rotation.z = rotation[2]
+        transform.transform.rotation.w = rotation[3]
+        return transform
+
+    def _scale_to_ros(self, s: float, frame_id: str) -> Vector3Stamped:
+        vec = Vector3Stamped()
+        vec.header.stamp = rospy.Time.now()
+        vec.header.frame_id = frame_id
+        vec.vector.x = s
+        vec.vector.y = s
+        vec.vector.z = s
+        return vec
+
+    def _load_mesh(self, mesh_name: str) -> Optional[o3d.geometry.PointCloud]:
+        mesh_path = os.path.join(self._mesh_dir, f"{mesh_name}.ply")
+        mesh = o3d.io.read_triangle_mesh(mesh_path)
+
+        if mesh.is_empty():
+            rospy.logwarn("Mesh is empty, so registration will not be performed.")
+            return None
+
+        pcd = mesh.sample_points_poisson_disk(number_of_points=10000, init_factor=5)
+        rospy.loginfo(f"Read a mesh with {np.asarray(pcd.points).shape[0]} points.")
+        return pcd
+
+    def _perform_registration(
+        self, request: RegistrationRequest
+    ) -> RegistrationResponse:
+        response = RegistrationResponse()
+
+        source = self._load_mesh(request.mesh_name)
+        if source is None:
+            response.success = False
+            return response
+
+        target = self._ros_to_o3d(request.segmented_pcl)
+
+        try:
+            best_T, scale_factor, best_fit, best_rmse = register_object(
+                source, target, scale=request.scale
+            )
+            response.transform = self._transform_to_ros(
+                best_T, request.segmented_pcl.header.frame_id
+            )
+            response.scale = self._scale_to_ros(
+                scale_factor, request.segmented_pcl.header.frame_id
+            )
+            response.success = True
+        except Exception as e:
+            rospy.logerr(f"Registration failed: {e}")
+            response.success = False
+
+        return response
+
+
+if __name__ == "__main__":
+    rospy.init_node("lasr_manipulation_registration")
+    registration_service = RegistrationService()
+    rospy.spin()
