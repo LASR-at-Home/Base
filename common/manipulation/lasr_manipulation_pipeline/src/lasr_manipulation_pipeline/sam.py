@@ -1,13 +1,32 @@
+import rospy
 import ultralytics
 import cv2
 import numpy as np
 
 import cv2_pcl
 
-from sensor_msgs.msg import PointCloud2
+from sensor_msgs.msg import PointCloud2, PointField
 import sensor_msgs.point_cloud2 as point_cloud2
+from std_msgs.msg import Header
 
-from . import conversions
+
+def np_to_ros(points: np.ndarray, frame_id: str) -> PointCloud2:
+    header = Header()
+    header.stamp = rospy.Time.now()
+    header.frame_id = frame_id
+
+    fields = [
+        PointField(name="x", offset=0, datatype=PointField.FLOAT32, count=1),
+        PointField(name="y", offset=4, datatype=PointField.FLOAT32, count=1),
+        PointField(name="z", offset=8, datatype=PointField.FLOAT32, count=1),
+    ]
+
+    # pack the points into a list of tuples
+    points_list = [tuple(p) for p in points]
+
+    pcl2_msg = point_cloud2.create_cloud(header, fields, points_list)
+
+    return pcl2_msg
 
 
 def segment(pcl: PointCloud2) -> PointCloud2:
@@ -87,6 +106,6 @@ def segment(pcl: PointCloud2) -> PointCloud2:
     masked_points = pcl_xyz[indices[:, 0], indices[:, 1]]
     masked_points = masked_points[~np.isnan(masked_points).any(axis=1)]
     masked_points = masked_points[~np.all(masked_points == 0, axis=1)]
-    masked_cloud = conversions.np_to_ros(masked_points, pcl.header.frame_id)
+    masked_cloud = np_to_ros(masked_points, pcl.header.frame_id)
 
     return masked_cloud

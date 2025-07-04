@@ -4,4 +4,5 @@ geometry_msgs/TransformStamped transform # transform produced by registration
 geometry_msgs/Vector3Stamped scale # scale produced by registration
 ---
 bool success
+geometry_msgs/PoseStamped grasp_pose # pose of final grasp
 ---

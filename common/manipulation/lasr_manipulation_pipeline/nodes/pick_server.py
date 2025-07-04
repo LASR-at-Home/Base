@@ -49,16 +49,23 @@ class PickServer:
     _gpd_pcd_path: str = "/tmp/gpd.pcd"
     _gpd_output_file: str = "grasps.txt"
 
+    # Action server
+    _pick_server: actionlib.SimpleActionServer
+
     # MoveIt
     _move_group: MoveGroupCommander
     _close_gripper: rospy.ServiceProxy
+
+    # Planning scene services
+    _allow_collisions_with_obj: rospy.ServiceProxy
+    _attach_object_to_gripper: rospy.ServiceProxy
 
     # Tf
     _tf_buffer: tf2_ros.Buffer
     _tf_listener: tf2_ros.TransformListener
 
-    # Action server
-    _pick_server: actionlib.SimpleActionServer
+    # Debug publisher
+    _grasp_markers_pub: rospy.Publisher
 
     def __init__(self) -> None:
         self._pick_server = actionlib.SimpleActionServer(
@@ -182,7 +189,7 @@ class PickServer:
         self._attach_object_to_gripper(object_id)
         rospy.loginfo(f"Attached {object_id} to gripper")
 
-        result = PickResult(success=True)
+        result = PickResult(success=True, grasp_pose=final_grasp_pose)
         self._pick_server.set_succeeded(result)
         rospy.loginfo("Pick was successful")
 
@@ -614,6 +621,6 @@ class PickServer:
 
 
 if __name__ == "__main__":
-    rospy.init_node("lasr_manipulation")
+    rospy.init_node("lasr_manipulation_picking")
     pick_server = PickServer()
     rospy.spin()

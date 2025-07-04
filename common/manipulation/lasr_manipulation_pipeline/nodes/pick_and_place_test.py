@@ -17,7 +17,7 @@ from lasr_manipulation_msgs.srv import (
     AddCollisionObject,
 )
 
-from lasr_manipulation_msgs.msg import PickAction, PickGoal
+from lasr_manipulation_msgs.msg import PickAction, PickGoal, PlaceAction, PlaceGoal
 
 
 PACKAGE_PATH: str = rospkg.RosPack().get_path("lasr_manipulation_pipeline")
@@ -62,6 +62,11 @@ class GraspingPipeline:
         )
         self._pick_client.wait_for_server()
 
+        self._place_client = actionlib.SimpleActionClient(
+            "/lasr_manipulation/place", PlaceAction
+        )
+        self._place_client.wait_for_server()
+
     def _play_motion(self, motion_name: str):
         goal = PlayMotionGoal()
         goal.skip_planning = False
@@ -98,7 +103,7 @@ class GraspingPipeline:
             ros_scale,
         )
 
-        result = self._pick_client.send_goal_and_wait(
+        self._pick_client.send_goal_and_wait(
             PickGoal(
                 MESH_NAME.replace(".ply", ""),
                 MESH_NAME.replace(".ply", ""),
@@ -106,9 +111,20 @@ class GraspingPipeline:
                 ros_scale,
             )
         )
+        pick_result = self._pick_client.get_result()
+        rospy.loginfo(f"Pick result: {pick_result.success}")
 
-        rospy.loginfo(f"Result: {result}")
-        rospy.loginfo(self._pick_client.get_result())
+        if not pick_result.success:
+            rospy.loginfo("Pick failed. Will not place.")
+            return
+
+        self._play_motion("pregrasp")
+
+        self._place_client.send_goal_and_wait(
+            PlaceGoal(MESH_NAME.replace(".ply", ""), "table", pick_result.grasp_pose)
+        )
+        place_result = self._place_client.get_result()
+        rospy.loginfo(f"Place result: {place_result.success}")
 
 
 if __name__ == "__main__":
