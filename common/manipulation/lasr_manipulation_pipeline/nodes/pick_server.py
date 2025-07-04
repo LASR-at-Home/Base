@@ -189,7 +189,7 @@ class PickServer:
         self._attach_object_to_gripper(object_id)
         rospy.loginfo(f"Attached {object_id} to gripper")
 
-        result = PickResult(success=True)
+        result = PickResult(success=True, grasp_pose=final_grasp_pose)
         self._pick_server.set_succeeded(result)
         rospy.loginfo("Pick was successful")
 
