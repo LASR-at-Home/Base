@@ -48,7 +48,7 @@ class PlaceServer:
         self._move_group.set_goal_tolerance(
             0.01
         )  # for placing we can be less precise than picking
-        self._move_group.set_goal_orientation(0.1)
+        self._move_group.set_goal_orientation_tolerance(0.1)
 
         self._open_gripper = rospy.ServiceProxy(
             "/parallel_gripper_controller/release", Empty
