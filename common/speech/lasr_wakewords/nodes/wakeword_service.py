@@ -2,6 +2,7 @@
 
 import rospy
 import sys
+
 # print(f"Interpreter: {sys.executable}")
 # print(f"Script path: {__file__}")
 
@@ -25,7 +26,7 @@ import openwakeword
 openwakeword.utils.download_models()
 
 # Audio input configuration
-DEVICE = 9            # Set this to the device index that supports 16kHz mono
+DEVICE = 9  # Set this to the device index that supports 16kHz mono
 SAMPLE_RATE = 16000
 FRAME_SAMPLES = 1280
 
@@ -36,7 +37,8 @@ detected = threading.Event()
 
 # Locate package path
 rospack = rospkg.RosPack()
-pkg_path = rospack.get_path('lasr_wakewords')
+pkg_path = rospack.get_path("lasr_wakewords")
+
 
 # Audio callback for streaming audio to the model
 def audio_callback(indata, frames, t, status):
@@ -48,6 +50,7 @@ def audio_callback(indata, frames, t, status):
         rospy.loginfo(f"Wake-word '{WAKEWORD}' detected (score={score:.3f})")
         detected.set()
 
+
 # Service callback function
 def handle_request(req):
     global model, WAKEWORD
@@ -57,7 +60,7 @@ def handle_request(req):
     detected.clear()
 
     # Load corresponding model
-    model_path = os.path.join(pkg_path, 'model', f"{WAKEWORD}.tflite")
+    model_path = os.path.join(pkg_path, "model", f"{WAKEWORD}.tflite")
     if not os.path.exists(model_path):
         rospy.logerr(f"Model file not found: {model_path}")
         return WakewordTriggerResponse(success=False)
@@ -65,9 +68,14 @@ def handle_request(req):
     model = Model([model_path])
 
     try:
-        with sd.InputStream(device=DEVICE, channels=1,
-                            samplerate=SAMPLE_RATE, blocksize=FRAME_SAMPLES,
-                            dtype="float32", callback=audio_callback):
+        with sd.InputStream(
+            device=DEVICE,
+            channels=1,
+            samplerate=SAMPLE_RATE,
+            blocksize=FRAME_SAMPLES,
+            dtype="float32",
+            callback=audio_callback,
+        ):
             while not rospy.is_shutdown() and not detected.wait(timeout=0.1):
                 pass
     except Exception as e:
@@ -75,6 +83,7 @@ def handle_request(req):
         return WakewordTriggerResponse(success=False)
 
     return WakewordTriggerResponse(success=True)
+
 
 if __name__ == "__main__":
     rospy.init_node("wakeword_listener_service")
