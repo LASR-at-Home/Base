@@ -164,6 +164,7 @@ catkin_install_python(PROGRAMS
   nodes/planning_scene_services.py
   nodes/registration_service.py
   nodes/pick_server.py
+  nodes/place_server.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

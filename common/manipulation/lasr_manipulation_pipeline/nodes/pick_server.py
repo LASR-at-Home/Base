@@ -614,6 +614,6 @@ class PickServer:
 
 
 if __name__ == "__main__":
-    rospy.init_node("lasr_manipulation")
+    rospy.init_node("lasr_manipulation_picking")
     pick_server = PickServer()
     rospy.spin()
