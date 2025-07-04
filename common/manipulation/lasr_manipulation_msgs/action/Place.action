@@ -1,2 +1,6 @@
+string object_id # name of object in the planning scene
+string surface_id # id of surface in planning scene 
+geometry_msgs/PoseStamped pose # pose of end-effector for placing.
 ---
+bool success
 ---
