@@ -86,31 +86,30 @@ class FindPerson(smach.StateMachine):
                 )
 
             def execute(self, userdata):
-                detections = userdata.responses  # list of lasr_vision_msgs/Detection
+                detections = userdata.responses
 
-                if not detections or len(detections) == 0:
-                    rospy.logwarn("[YOLO] No detections found.")
+                if not isinstance(detections, list) or len(detections) == 0:
+                    rospy.logwarn("[YOLO] No 2D detections received.")
                     return "failed"
 
-                # Just grab the first detected object (assuming it's a person, as filtered)
                 detection = detections.pop(0)
 
-                rospy.loginfo(f"[YOLO] Found detection: {detection.name} with confidence {detection.confidence}")
+                rospy.loginfo(f"[YOLO] Got detection: {detection.name} with confidence {detection.confidence}")
 
-                # Create a dummy 2D point in the image plane or estimate something basic
-                bbox = detection.xywh
-                if len(bbox) == 4:
-                    x, y, w, h = bbox
-                    # Estimate center of bounding box
+                # estimate center of bbox if present
+                if len(detection.xywh) == 4:
+                    x, y, w, h = detection.xywh
                     person_point = Point(x=x + w / 2, y=y + h / 2, z=0.0)
                 else:
-                    person_point = Point(x=0.0, y=0.0, z=0.0)  # fallback
+                    person_point = Point(x=0.0, y=0.0, z=0.0)
 
                 userdata.response = detection
                 userdata.person_point = person_point
-                userdata.cropped_image = None  # No image provided by YOLO
+                userdata.cropped_image = None  # YOLO 2D doesn't return crops
 
                 return "succeeded"
+
+
 
 
         class ApproachPerson(smach.StateMachine):
@@ -494,6 +493,7 @@ class FindPerson(smach.StateMachine):
                                 confidence=0.5,
                                 filter=["person"]
                             ),
+                            input_keys=["image_raw"],
                             request_slots=["image_raw"],
                             response_slots=["detected_objects"],
                         ),
@@ -502,10 +502,12 @@ class FindPerson(smach.StateMachine):
                             "aborted": "failed",
                             "preempted": "failed",
                         },
+                        
                         remapping={
-                            "image_raw": "image_raw",
-                            "detected_objects": "responses",  # What HandleDetections expects
+                            "img_msg": "image_raw",            
+                            "detected_objects": "responses",    
                         },
+                        
                     )
 
 
