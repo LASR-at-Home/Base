@@ -34,19 +34,6 @@ from geometry_msgs.msg import (
 from sensor_msgs.msg import Image, CameraInfo
 from std_msgs.msg import Header
 
-# Needs to be an action server, so it can be cancelled
-# when we want tracking to stop.
-
-# Request:
-#   - person_point: PointStamped
-
-
-# Look to person
-# If can't see eyes, look up, repeat
-# Look to midpoint of two eyes
-# If midpoint as changed by some delta, look to midpoint again
-# Maybe handle case where eyes move out of frame?
-
 
 class EyeTracker:
 
@@ -60,6 +47,7 @@ class EyeTracker:
     _robot_point: Optional[Point] = None
     _max_eye_distance: float = 2.0
     _move_up_count: float = 0.0
+    _max_move_up_count: int = 2  # Maximum number of times to move the head up
 
     def __init__(self, max_eye_distance: float = 1.5):
 
@@ -75,6 +63,7 @@ class EyeTracker:
         self._robot_point = None
         self._max_eye_distance = max_eye_distance
         self._move_up_count = 0.0
+        self._max_move_up_count = 2  # Maximum number of times to move the head up
 
         self._robot_pose_sub = rospy.Subscriber(
             "/robot_pose",
@@ -126,6 +115,17 @@ class EyeTracker:
             rospy.loginfo("service call failed")
             return None
 
+    def _look_centre(self) -> None:
+        """Moves the head to look at the centre position."""
+
+        goal = FollowJointTrajectoryGoal()
+        goal.trajectory.joint_names = ["head_1_joint", "head_2_joint"]
+        point = JointTrajectoryPoint()
+        point.positions = [0.0, 0.0]  # Look Center
+        point.time_from_start = rospy.Duration(1)
+        goal.trajectory.points.append(point)
+        result = self._head_action_client.send_goal_and_wait(goal)
+
     def _move_head_up(
         self, current_head_position: Tuple[float, float], y_delta: float = 0.25
     ) -> None:
@@ -133,35 +133,31 @@ class EyeTracker:
 
         Args:
             current_head_position (Tuple[float, float]): The current head joint values.
+            y_delta (float): The amount to move the head up by. Defaults to 0.25.
         """
 
-        rospy.loginfo(
-            f"Moving head up from position {current_head_position} to {current_head_position[1] + y_delta}"
-        )
         goal = FollowJointTrajectoryGoal()
         goal.trajectory.joint_names = ["head_1_joint", "head_2_joint"]
         point = JointTrajectoryPoint()
-        if self._move_up_count >= 5:
-            rospy.logwarn("Moving head up too many times, resetting position.")
+        if self._move_up_count >= self._max_move_up_count:
             self._move_up_count = 0
+            point.positions = [0.0, 0.0]  # Look Center
+        else:
             point.positions = [
                 current_head_position[0],
-                current_head_position[1] - (y_delta * 2),
+                current_head_position[1] + y_delta,
             ]
-        point.positions = [current_head_position[0], current_head_position[1] + y_delta]
         point.time_from_start = rospy.Duration(1)
         goal.trajectory.points.append(point)
 
         result = self._head_action_client.send_goal_and_wait(goal)
         self._move_up_count += 1
-        rospy.loginfo(f"Head moved with result {result}")
 
     def execute(self, goal: EyeTrackerGoal):
         rospy.loginfo("Beginning eye tracking...")
         self._robot_point = rospy.wait_for_message(
             "/robot_pose", PoseWithCovarianceStamped, timeout=5.0
         ).pose.pose.position
-        rospy.loginfo(f"Robot point set to: {self._robot_point}")
         # First, look to person_point
         if goal.person_point is None:
             rospy.logerr("No person point provided in goal.")
@@ -169,7 +165,6 @@ class EyeTracker:
                 result=EyeTrackerResult(), text="No person point provided."
             )
             return
-        rospy.loginfo(f"Looking to person point: {goal.person_point}")
         g = PointHeadGoal(
             pointing_frame="head_2_link",
             pointing_axis=Point(1.0, 0.0, 0.0),
@@ -192,15 +187,12 @@ class EyeTracker:
             )
             response = self._yolo_keypoint_service(req)
             detected_keypoints = response.detections
-            rospy.loginfo(f"Detected keypoints: {detected_keypoints}")
             left_eye_point = None
             right_eye_point = None
             if not detected_keypoints:
-                rospy.loginfo("No keypoints detected.")
                 self._eyes = None
                 return
             if not self._robot_point:
-                rospy.logwarn("Robot point not set, cannot calculate eyes position.")
                 self._eyes = None
                 return
             closest_eye_midpoint = None
@@ -220,29 +212,24 @@ class EyeTracker:
                         midpoint_z = (left_eye_point.z + right_eye_point.z) / 2.0
 
                         eye_midpoint = Point(midpoint_x, midpoint_y, midpoint_z)
-                        rospy.loginfo(f"Eyes found at midpoint: {self._eyes}")
                     elif left_eye_point:
                         eye_midpoint = Point(
                             left_eye_point.x, left_eye_point.y, left_eye_point.z
                         )
-                        rospy.loginfo(f"Only left eye found at: {self._eyes}")
                     elif right_eye_point:
                         eye_midpoint = Point(
                             right_eye_point.x, right_eye_point.y, right_eye_point.z
                         )
-                        rospy.loginfo(f"Only right eye found at: {self._eyes}")
                 if eye_midpoint is not None:
                     # Calculate the distance from the robot point to the eye midpoint
                     distance = (
                         (eye_midpoint.x - self._robot_point.x) ** 2
                         + (eye_midpoint.y - self._robot_point.y) ** 2
                     ) ** 0.5
-                    rospy.loginfo(f"Distance to eye midpoint: {distance}")
                     if distance < closest_distance:
                         closest_distance = distance
                         closest_eye_midpoint = eye_midpoint
             if closest_eye_midpoint is not None:
-                rospy.loginfo(f"Closest eye midpoint found at: {closest_eye_midpoint}")
                 self._eyes = closest_eye_midpoint
 
         image_sub = message_filters.Subscriber("/xtion/rgb/image_raw", Image)
@@ -260,16 +247,13 @@ class EyeTracker:
         self._done = False
         while not self._done:
             if self._eyes is None:
-                rospy.loginfo("No eyes detected, moving head up to try again.")
                 current_head_position = self._get_head_join_values()
                 if current_head_position is None:
-                    rospy.logerr("Failed to get head joint values.")
                     continue
                 # Move the head up by a small delta
                 self._move_head_up(current_head_position, y_delta=0.25)
                 rospy.sleep(0.5)  # Wait for the head to move
             else:
-                rospy.loginfo(f"Tracking eyes at position: {self._eyes}")
                 g = PointHeadGoal(
                     pointing_frame="head_2_link",
                     pointing_axis=Point(1.0, 0.0, 0.0),
@@ -281,9 +265,9 @@ class EyeTracker:
                 )
                 self._head_point_action_client.send_goal_and_wait(g)
 
-            # Check if the action has been preempted
             if self._action_server.is_preempt_requested():
                 rospy.loginfo("Eye Tracker Action Server preempted, stopping tracking.")
+                self._look_centre()
                 self._action_server.set_preempted()
                 image_sub.unregister()
                 depth_sub.unregister()

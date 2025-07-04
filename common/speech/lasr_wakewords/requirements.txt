@@ -1,0 +1,24 @@
+certifi==2025.6.15        # via requests
+cffi==1.17.1              # via sounddevice
+charset-normalizer==3.4.2  # via requests
+coloredlogs==15.0.1       # via onnxruntime
+flatbuffers==25.2.10      # via onnxruntime
+humanfriendly==10.0       # via coloredlogs
+idna==3.10                # via requests
+joblib==1.4.2             # via scikit-learn
+mpmath==1.3.0             # via sympy
+numpy==1.24.4             # via onnxruntime, scikit-learn, scipy, tflite-runtime
+onnxruntime==1.19.2       # via openwakeword
+openwakeword==0.6.0       # via -r requirements.in
+packaging==25.0           # via onnxruntime
+protobuf==5.29.5          # via onnxruntime
+pycparser==2.22           # via cffi
+requests==2.32.4          # via openwakeword
+scikit-learn==1.3.2       # via openwakeword
+scipy==1.10.1             # via openwakeword, scikit-learn
+sounddevice==0.5.2        # via -r requirements.in
+sympy==1.13.3             # via onnxruntime
+tflite-runtime==2.14.0    # via openwakeword
+threadpoolctl==3.5.0      # via scikit-learn
+tqdm==4.67.1              # via openwakeword
+urllib3==2.2.3            # via requests

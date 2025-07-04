@@ -81,9 +81,10 @@ class GetNameAndInterest(smach.StateMachine):
                 "You are a robot acting as a party host. You are tasked with identifying the name "
                 f"and interest belonging to a guest. The possible names are {','.join(self._possible_names)}. "
                 "You will receive input such as 'my name is john and I like robotics'. Output only the name "
-                "and interest, e.g. 'john,robotics'. Make sure that the interest is only one word. If you can't identify the name or interest, output 'unknown', e.g. 'john,unknown'."
+                "and interest, e.g. 'john,robotics'. Make sure that the interest is only one or two words. If you can't identify the name or interest, output 'unknown', e.g. 'john,unknown'."
             )
             request.prompt = transcription
+            request.max_tokens = 10
 
             response = self._llm(request)
             # Maxsplit in case the interest is more than one word.
@@ -93,6 +94,7 @@ class GetNameAndInterest(smach.StateMachine):
                 interest = interest.split()[
                     :2
                 ]  # Take only the first two word of interest
+                interest = " ".join(interest)
             interest = interest.strip()
 
             # Try to match an exact name from transcription
@@ -104,6 +106,10 @@ class GetNameAndInterest(smach.StateMachine):
             guest = userdata.guest_data[self._guest_id]
             guest["name"] = name
             guest["interest"] = interest
+
+            rospy.loginfo(
+                f"Parsed name: {name}, interest: {interest} from transcription: {transcription}"
+            )
 
             # Determine outcome
             if name == "unknown" or interest == "unknown":

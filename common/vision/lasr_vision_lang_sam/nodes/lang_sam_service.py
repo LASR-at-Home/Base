@@ -83,7 +83,7 @@ class LangSamService:
         # POSSIBILITY OF SUCH DAMAGE.
         ####################################################################
         n_channels = 1
-        dtype = np.dtype(np.uint8)
+        dtype = np.dtype(np.float32)
         dtype = dtype.newbyteorder(">" if img_msg.is_bigendian else "<")
 
         img_buf = (
@@ -140,9 +140,10 @@ class LangSamService:
         # Convert sensor_msgs/Image to PIL Image
         cv_im = cv2_img.msg_to_cv2_img(sensor_image)
         pil_image = Image.fromarray(cv_im)
-        print(f"Received image with size: {pil_image.size} and prompt: {prompt}")
 
+        # rospy.loginfo(f"Raw depth image: {request.depth_image}")
         depth_image = self._imgmsg_to_cv2(request.depth_image)
+        # rospy.loginfo(f"Processed depth image: {depth_image}")
 
         results = self._model.predict(
             [pil_image],
@@ -194,7 +195,6 @@ class LangSamService:
                 point_stamped = PointStamped()
                 point_stamped.header = request.depth_image.header
                 point_stamped.point = point
-
                 tf_response = self._tf_service(
                     TransformPointRequest(
                         input_point_stamped=point_stamped,
@@ -220,12 +220,12 @@ class LangSamService:
                 )
 
         response = LangSamResponse(detections=response_results)
-        print(response)
 
         return response
 
 
 if __name__ == "__main__":
+    use_gpu = bool(sys.argv[1])
     rospy.init_node("lasr_vision_lang_sam")
-    lang_sam_service = LangSamService()
+    lang_sam_service = LangSamService(use_gpu=use_gpu)
     rospy.spin()

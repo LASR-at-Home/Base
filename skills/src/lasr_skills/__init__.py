@@ -29,6 +29,7 @@ from .find_person import FindPerson
 from .detect_all_in_polygon import DetectAllInPolygon
 from .eye_tracker import StartEyeTracker, StopEyeTracker
 from .detect_nearest import GetNearestObject
+from .detect_keypoints_3d import DetectKeypoints3D
 from .lang_sam_detect_3d import DetectLangSam3D
 
 # from .xml_question_answer import XmlQuestionAnswer
@@ -37,4 +38,7 @@ from .count_people import CountPeople
 from .json_qa import JsonQuestionAnswer
 from .rotate import Rotate
 from .point_at_person import PointAtPerson
+from .detect_gesture_3d import DetectGesture3D, DetectHandUp3D
+
 from .follow_person import FollowPerson
+from .listen_for_wakeword import ListenForWakeword
