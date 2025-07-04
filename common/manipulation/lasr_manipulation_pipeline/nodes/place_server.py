@@ -45,6 +45,10 @@ class PlaceServer:
         self._move_group.set_planning_time(30)
         self._move_group.set_num_planning_attempts(30)
         self._move_group.set_max_velocity_scaling_factor(0.5)
+        self._move_group.set_goal_tolerance(
+            0.01
+        )  # for placing we can be less precise than picking
+        self._move_group.set_goal_orientation(0.1)
 
         self._open_gripper = rospy.ServiceProxy(
             "/parallel_gripper_controller/release", Empty
