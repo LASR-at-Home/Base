@@ -3,10 +3,7 @@
 import rospy
 import sys
 
-# print(f"Interpreter: {sys.executable}")
-# print(f"Script path: {__file__}")
-
-from lasr_wakewords.srv import WakewordTrigger, WakewordTriggerResponse
+from lasr_speech_recoginition_msgs.srv import WakewordTrigger, WakewordTriggerResponse
 import sounddevice as sd, numpy as np
 from openwakeword.model import Model
 import threading
