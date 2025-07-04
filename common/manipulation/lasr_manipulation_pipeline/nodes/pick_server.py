@@ -367,8 +367,13 @@ class PickServer:
         grasps, scores = self._filter_or_shift_to_surface(
             mesh, grasps, scores, surface_threshold, max_shift, step_size
         )
-        # grasps, scores = self._filter_by_angles(grasps, scores, angle_threshold_deg)
-        grasps_gripper_frame = self._tf_poses(grasps, "gripper_grasping_frame")
+        grasps_base_footprint = self._tf_poses(grasps, "base_footprint")
+        grasps_base_footprint, scores = self._filter_by_angles(
+            grasps_base_footprint, scores, angle_threshold_deg
+        )
+        grasps_gripper_frame = self._tf_poses(
+            grasps_base_footprint, "gripper_grasping_frame"
+        )
         grasps_gripper_frame = self._offset_grasps(
             grasps_gripper_frame, pregrasp_offset_x, 0.0, 0.0
         )
