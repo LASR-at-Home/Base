@@ -2,8 +2,7 @@ import smach
 import smach_ros
 from geometry_msgs.msg import Pose
 from lasr_skills import AskAndListen, GoToLocation, Rotate, Say, Wait
-from restaurant.speech.speech_handlers import handle_speech
-from restaurant.states import Survey
+from restaurant.states import Survey, HandleOrder
 from std_msgs.msg import Empty
 
 
@@ -59,30 +58,13 @@ class Restaurant(smach.StateMachine):
                     tts_phrase="Hello, I'm TIAGo. What can I get for you today?"
                 ),
                 remapping={"transcribed_speech": "order_str"},
-                transitions={"succeeded": "PROCESS_ORDER", "failed": "failed"},
+                transitions={"succeeded": "HANDLE_ORDER", "failed": "failed"},
             )
-
-            @smach.cb_interface(
-                input_keys=["order_str"],
-                output_keys=["order_str"],
-                outcomes=["succeeded", "failed"],
-            )
-            def speech_postprocess_cb(ud):
-                parsed_order = handle_speech(ud.order_str, False)
-                print(parsed_order)
-                order_string = ", ".join(
-                    [
-                        f"{count} {item if count == 1 or item.endswith('s') else item+'s'}"
-                        for count, item in parsed_order
-                    ]
-                )
-                ud.order_str = order_string
-                print(order_string)
-                return "succeeded"
 
             smach.StateMachine.add(
-                "PROCESS_ORDER",
-                smach.CBState(speech_postprocess_cb),
+                "HANDLE_ORDER",
+                HandleOrder(),
+                remapping={"customer_transcription": "order_str"},
                 transitions={"succeeded": "SAY_ORDER", "failed": "failed"},
             )
 
