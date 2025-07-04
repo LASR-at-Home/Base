@@ -88,8 +88,6 @@ class GoToBag(smach.State):
         self.tts_client.wait_for_server()
         rospy.loginfo("TTS action server connected.")
 
-        rospy.sleep(3)
-
         cv2.namedWindow("Auto-segmented bag", cv2.WINDOW_NORMAL)
 
     def amcl_pose_callback(self, msg):
@@ -156,6 +154,7 @@ class GoToBag(smach.State):
             rospy.loginfo(f"[TTS fallback] {text}")
 
     def execute(self, userdata):
+        rospy.sleep(3)
         # Wait for image & depth as before
         while not rospy.is_shutdown():
             if (

@@ -1,7 +1,7 @@
 import rospy
 import smach
 import smach_ros
-from help_me_carry import GoToBag, BagPickAndPlace
+from help_me_carry import GoToBag, BagPickAndPlace, GoToBagFailed
 from lasr_skills import FollowPerson, PlayMotion, GoToLocation, Say
 
 
@@ -76,6 +76,25 @@ class CarryMyLuggage(smach.StateMachine):
                 GoToBag(),
                 transitions={
                     "succeeded": "SAY_PICK_UP_BAG",
+                    "failed": "SAY_GO_TO_BAG_FAILED",
+                },
+            )
+
+            smach.StateMachine.add(
+                "SAY_GO_TO_BAG_FAILED",
+                Say(text="Please step away I will reach my arm out."),
+                transitions={
+                    "succeeded": "GO_TO_BAG_FAILED",
+                    "aborted": "GO_TO_BAG_FAILED",
+                    "preempted": "GO_TO_BAG_FAILED",
+                },
+            )
+
+            smach.StateMachine.add(
+                "GO_TO_BAG_FAILED",
+                GoToBagFailed(),
+                transitions={
+                    "succeeded": "SAY_GOING_BACK",
                     "failed": "failed",
                 },
             )
