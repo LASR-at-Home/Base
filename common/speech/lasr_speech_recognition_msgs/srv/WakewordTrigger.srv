@@ -1,3 +1,5 @@
-string keyword
+string keyword # keyword to detect, should match a model name
+float32 timeout # number of seconds after which to exit
+float32 threshold # confidence threshold for keyword detection
 ---
 bool success
