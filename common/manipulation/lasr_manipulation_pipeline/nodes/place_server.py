@@ -76,7 +76,7 @@ class PlaceServer:
 
         # Execute
         self._move_group.set_pose_reference_frame(goal.pose.header.frame_id)
-        self._move_group.set_pose_target(goal.pose.pose)
+        self._move_group.set_pose_target(goal.pose.pose, "gripper_grasping_frame")
         success = self._move_group.go(wait=True)
         if not success:
             rospy.loginfo("MoveIt failed to execute place. Aborting.")
