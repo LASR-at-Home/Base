@@ -101,7 +101,13 @@ class ProcessDetections(smach.State):
     _tf_buffer: tf.Buffer
     _tf_listener: tf.TransformListener
 
-    def __init__(self, sofa_point: Point, max_people_on_sofa: int = 2):
+    def __init__(
+        self,
+        sofa_point: Point,
+        left_sofa_area: ShapelyPolygon,
+        right_sofa_area: ShapelyPolygon,
+        max_people_on_sofa: int = 2,
+    ):
         smach.State.__init__(
             self,
             outcomes=["succeeded", "failed"],
@@ -110,6 +116,8 @@ class ProcessDetections(smach.State):
         )
         self._max_people_on_sofa = max_people_on_sofa
         self._sofa_point = sofa_point
+        self._left_sofa_area = left_sofa_area
+        self._right_sofa_area = right_sofa_area
         self._tf_buffer = tf.Buffer(cache_time=rospy.Duration(10))
         self._tf_listener = tf.TransformListener(self._tf_buffer)
 
@@ -124,33 +132,22 @@ class ProcessDetections(smach.State):
         Returns:
             str: "left" or "right" - which side of the sofa is empty.
         """
-        occupied_pointstamped = PointStamped()
-        occupied_pointstamped.point = sofa_detection.point
-        occupied_pointstamped.header.frame_id = "map"
+        sofa_guest_point = sofa_detection.point
 
-        sofa_pointstamped = PointStamped()
-        sofa_pointstamped.point = self._sofa_point
-        sofa_pointstamped.header.frame_id = "map"
-
-        transform = self._tf_buffer.lookup_transform(
-            "base_footprint",
-            "map",
-            occupied_pointstamped.header.stamp,
-            rospy.Duration(1.0),
-        )
-        occupied_point_transformed = do_transform_point(
-            occupied_pointstamped, transform
-        )
-        sofa_point_transformed = do_transform_point(sofa_pointstamped, transform)
-        rospy.loginfo(
-            f"Occupied point transformed: {occupied_point_transformed.point}, "
-            f"Sofa point transformed: {sofa_point_transformed.point}"
-        )
-        result = ""
-        if occupied_point_transformed.point.x > sofa_point_transformed.point.x:
+        if self._left_sofa_area.contains(
+            ShapelyPolygon([(sofa_guest_point.x, sofa_guest_point.y)])
+        ):
             result = "right"
-        else:
+        elif self._right_sofa_area.contains(
+            ShapelyPolygon([(sofa_guest_point.x, sofa_guest_point.y)])
+        ):
             result = "left"
+        else:
+            rospy.logwarn(
+                "Sofa guest point is not within the left or right sofa area. "
+                "Defaulting to 'right'."
+            )
+            result = "right"
 
         return result
 
@@ -281,6 +278,8 @@ class SeatGuest(smach.StateMachine):
         seating_area: ShapelyPolygon,
         sofa_area: ShapelyPolygon,
         sofa_point: Point,
+        left_sofa_area: ShapelyPolygon,
+        right_sofa_area: ShapelyPolygon,
         max_people_on_sofa: int = 2,
         learn_host: bool = False,
     ):
@@ -367,7 +366,10 @@ class SeatGuest(smach.StateMachine):
             smach.StateMachine.add(
                 "PROCESS_DETECTIONS",
                 ProcessDetections(
-                    max_people_on_sofa=max_people_on_sofa, sofa_point=sofa_point
+                    max_people_on_sofa=max_people_on_sofa,
+                    sofa_point=sofa_point,
+                    left_sofa_area=left_sofa_area,
+                    right_sofa_area=right_sofa_area,
                 ),
                 transitions={
                     "succeeded": detection_transition,

@@ -43,6 +43,8 @@ class Receptionist(smach.StateMachine):
         seat_pose: Pose,
         seat_area: Polygon,
         sofa_area: Polygon,
+        left_sofa_area: Polygon,
+        right_sofa_area: Polygon,
         sofa_point: Point,
         host_data: Dict,
         max_people_on_sofa: int = 2,
@@ -62,6 +64,8 @@ class Receptionist(smach.StateMachine):
         self.seat_pose = seat_pose
         self.seat_area = seat_area
         self.sofa_area = sofa_area
+        self.left_sofa_area = left_sofa_area
+        self.right_sofa_area = right_sofa_area
         self.sofa_point = sofa_point
         self.detect_drinks_once = detect_drinks_once
 
@@ -208,6 +212,8 @@ class Receptionist(smach.StateMachine):
                     seating_area=self.seat_area,
                     sofa_area=self.sofa_area,
                     sofa_point=self.sofa_point,
+                    left_sofa_area=self.left_sofa_area,
+                    right_sofa_area=self.right_sofa_area,
                     max_people_on_sofa=max_people_on_sofa,
                     learn_host=True,
                 ),
@@ -336,6 +342,8 @@ class Receptionist(smach.StateMachine):
                     seating_area=self.seat_area,
                     sofa_area=self.sofa_area,
                     sofa_point=self.sofa_point,
+                    left_sofa_area=self.left_sofa_area,
+                    right_sofa_area=self.right_sofa_area,
                     max_people_on_sofa=max_people_on_sofa,
                 ),
                 transitions={
