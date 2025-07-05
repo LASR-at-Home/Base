@@ -23,6 +23,7 @@ from receptionist.states import (
     GetCommonInterest,
     StartTimer,
     StopTimer,
+    RecallDrinkOnTable,
 )
 from shapely.geometry import Polygon
 from std_msgs.msg import Empty
@@ -46,6 +47,7 @@ class Receptionist(smach.StateMachine):
         host_data: Dict,
         max_people_on_sofa: int = 2,
         face_detection_confidence: float = 0.2,
+        detect_drinks_once: bool = True,
     ):
         smach.StateMachine.__init__(self, outcomes=["succeeded", "failed"])
 
@@ -61,6 +63,7 @@ class Receptionist(smach.StateMachine):
         self.seat_area = seat_area
         self.sofa_area = sofa_area
         self.sofa_point = sofa_point
+        self.detect_drinks_once = detect_drinks_once
 
         prior_data: Dict[str, List[str]] = rospy.get_param("/receptionist/priors")
         self.possible_drinks = [drink.lower() for drink in prior_data["drinks"]]
@@ -283,33 +286,47 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "HANDLE_FAVOURITE_DRINK_GUEST_2",
-                HandleDrink("guest2"),
+                HandleDrink("guest2", face_table=(not self.detect_drinks_once)),
                 transitions={
                     "succeeded": "FIND_DRINK_ON_TABLE_GUEST_2",
                     "failed": "FIND_DRINK_ON_TABLE_GUEST_2",
                 },
             )
 
-            smach.StateMachine.add(
-                "FIND_DRINK_ON_TABLE_GUEST_2",
-                FindDrinkOnTable(
-                    guest_id="guest2",
-                    table_point=self.table_point,
-                    possible_drinks=["cup", "bottle"],
-                    table_area=self.table_area,
-                    table_left_area=self.left_table_area,
-                    table_right_area=self.right_table_area,
-                    table_centre_area=self.centre_table_area,
-                ),
-                transitions={
-                    "succeeded": "SAY_FOLLOW_GUEST_2",
-                    "failed": "SAY_FOLLOW_GUEST_2",
-                },
-                remapping={
-                    "guest_data": "guest_data",
-                    "drink_location": "drink_position",
-                },
-            )
+            if self.detect_drinks_once:
+                smach.StateMachine.add(
+                    "FIND_DRINK_ON_TABLE_GUEST_2",
+                    RecallDrinkOnTable(guest_id="guest2"),
+                    transitions={
+                        "succeeded": "SAY_FOLLOW_GUEST_2",
+                        "failed": "SAY_FOLLOW_GUEST_2",
+                    },
+                    remapping={
+                        "guest_data": "guest_data",
+                        "drink_location": "drink_position",
+                    },
+                )
+            else:
+                smach.StateMachine.add(
+                    "FIND_DRINK_ON_TABLE_GUEST_2",
+                    FindDrinkOnTable(
+                        guest_id="guest2",
+                        table_point=self.table_point,
+                        possible_drinks=["cup", "bottle"],
+                        table_area=self.table_area,
+                        table_left_area=self.left_table_area,
+                        table_right_area=self.right_table_area,
+                        table_centre_area=self.centre_table_area,
+                    ),
+                    transitions={
+                        "succeeded": "SAY_FOLLOW_GUEST_2",
+                        "failed": "SAY_FOLLOW_GUEST_2",
+                    },
+                    remapping={
+                        "guest_data": "guest_data",
+                        "drink_location": "drink_position",
+                    },
+                )
 
             self._guide_guest(guest_id=2)
 

@@ -16,12 +16,14 @@ from receptionist.states import (
 
 
 class HandleDrink(smach.StateMachine):
-    def __init__(self, guest_id: str):
+    def __init__(self, guest_id: str, face_table: bool = True):
         super().__init__(
             outcomes=["succeeded", "failed"],
             input_keys=["guest_data"],
             output_keys=["guest_data"],
         )
+
+        self._face_table = face_table
 
         with self:
             # Detect the nearest person
@@ -124,19 +126,27 @@ class HandleDrink(smach.StateMachine):
                     "aborted": f"STOP_EYE_TRACKER_GUEST_{guest_id}",
                 },
             )
+
+            if self._face_table:
+                stop_eye_tracker_transition = f"FACE_TABLE_GUEST_{guest_id}"
+            else:
+                stop_eye_tracker_transition = "succeeded"
+
             smach.StateMachine.add(
                 f"STOP_EYE_TRACKER_GUEST_{guest_id}",
                 StopEyeTracker(),
                 transitions={
-                    "succeeded": f"FACE_TABLE_GUEST_{guest_id}",
-                    "failed": f"FACE_TABLE_GUEST_{guest_id}",
+                    "succeeded": stop_eye_tracker_transition,
+                    "failed": stop_eye_tracker_transition,
                 },
             )
-            smach.StateMachine.add(
-                f"FACE_TABLE_GUEST_{guest_id}",
-                Rotate(180),
-                transitions={
-                    "succeeded": "succeeded",
-                    "failed": "failed",
-                },
-            )
+
+            if self._face_table:
+                smach.StateMachine.add(
+                    f"FACE_TABLE_GUEST_{guest_id}",
+                    Rotate(180),
+                    transitions={
+                        "succeeded": "succeeded",
+                        "failed": "failed",
+                    },
+                )
