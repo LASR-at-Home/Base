@@ -168,6 +168,10 @@ class GoToBag(smach.State):
         # ------ Look where the person points ------
         self.say("I'm looking at where you're pointing.")
         floor_pt = self.look_where_person_points()
+        if floor_pt is None:
+            self.say("I couldn't see where you were pointing, please point again")
+            rospy.sleep(3)
+            floor_pt = self.look_where_person_points()
 
         if floor_pt is None:
             # Get robot current pose, set z=0.6
@@ -217,11 +221,11 @@ class GoToBag(smach.State):
             self.face_point_with_amcl(x_bag, y_bag)
             self.look_at_point(head_point, "map")
             rospy.sleep(0.2)
-            cv2.destroyAllWindows()
+            # cv2.destroyAllWindows()
             return "succeeded"
         else:
             rospy.sleep(0.2)
-            cv2.destroyAllWindows()
+            # cv2.destroyAllWindows()
             return "failed"
 
     def look_where_person_points(self):
@@ -366,7 +370,7 @@ class GoToBag(smach.State):
 
         if not resp.detections:
             rospy.logwarn(f"No '{prompt}' detected by LangSAM.")
-            cv2.destroyAllWindows()
+            # cv2.destroyAllWindows()
             return None, None, None
 
         height, width = self.latest_rgb.shape[:2]
@@ -417,7 +421,7 @@ class GoToBag(smach.State):
 
         if closest_centroid is None:
             rospy.logwarn("No valid bag centroid near the pointing floor point.")
-            cv2.destroyAllWindows()
+            # cv2.destroyAllWindows()
             return None, None, None
 
         return closest_centroid, closest_mask, closest_det
@@ -573,7 +577,13 @@ class GoToBag(smach.State):
         rospy.logerr("Could not find any feasible approach point.")
         return (None, None)
 
-    def face_point_with_amcl(self, target_x, target_y):
+    def face_point_with_amcl(self, target_x, target_y, move_tolerance=0.8):
+        """
+        Rotates the robot in place to face (target_x, target_y) using AMCL pose.
+        Skips rotation if this would require any significant translation.
+        Returns True if rotation succeeded or was unnecessary, False otherwise.
+        """
+
         rospy.loginfo(
             f"Request to face ({target_x:.2f}, {target_y:.2f}) using AMCL pose."
         )
@@ -593,6 +603,15 @@ class GoToBag(smach.State):
             dy = target_y - robot_y
             desired_yaw = np.arctan2(dy, dx)
 
+            # Check if already close enough in position (prevent unwanted move)
+            distance = np.hypot(dx, dy)
+            if distance > move_tolerance:
+                rospy.logwarn(
+                    f"Skipping rotation: would require translation of {distance:.3f}m "
+                    f"(current: ({robot_x:.2f}, {robot_y:.2f}), target: ({target_x:.2f}, {target_y:.2f}))"
+                )
+                return False
+
             # Get current yaw
             quat = [
                 pose.orientation.x,
@@ -602,7 +621,7 @@ class GoToBag(smach.State):
             ]
             _, _, current_yaw = tf.transformations.euler_from_quaternion(quat)
 
-            # Check if already close enough
+            # Check if already facing target
             angle_error = np.abs(
                 ((desired_yaw - current_yaw + np.pi) % (2 * np.pi)) - np.pi
             )

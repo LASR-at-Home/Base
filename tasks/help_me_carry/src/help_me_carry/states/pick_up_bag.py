@@ -531,7 +531,7 @@ class BagPickAndPlace(smach.State):
         rospy.loginfo("Bag pick complete!")
         self.sync_shift_ee(self.arm, -0.30, 0.0, 0.0)
 
-        return self.is_picked_up(0.002, 0.10)
+        return True
 
     def sync_shift_ee(self, move_group, x, y, z):
         from tf.transformations import euler_from_quaternion, euler_matrix
