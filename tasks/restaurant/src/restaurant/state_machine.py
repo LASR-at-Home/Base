@@ -36,6 +36,7 @@ class Restaurant(smach.StateMachine):
                 },
             )
 
+            # To attempt to build a map
             smach.StateMachine.add(
                 "ROTATE_360",
                 Rotate(angle=360.0),
@@ -50,8 +51,11 @@ class Restaurant(smach.StateMachine):
                 "SURVEY",
                 Survey((-71.0, 71.0), 10),
                 transitions={
-                    "customer_found": "succeeded",
-                    "customer_not_found": "failed",
+                    "customer_found": "GET_APPROACH_POSE",
+                    "customer_not_found": "SURVEY",
+                },
+                remapping={
+                    "hands_up_detections": "hands_up_detections",
                 },
             )
 
