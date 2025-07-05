@@ -51,6 +51,26 @@ class PersonTrackingKalmanFilterService:
 
         rospy.loginfo("Person tracking Kalman filter service started")
 
+    def _reset_filter(self):
+        """Reset filter to zero state"""
+        try:
+            # Reset state vector to zeros
+            self.kf.x = np.zeros(4)
+
+            # Reset state covariance to high initial uncertainty
+            self.kf.P = np.eye(4) * 1000.
+
+            # Reset filter status
+            self.initialized = False
+            self.last_update_time = None
+            self.last_prediction_time = None
+
+            rospy.loginfo("Kalman filter reset to zero state")
+            return True
+        except Exception as e:
+            rospy.logerr(f"Failed to reset Kalman filter: {e}")
+            return False
+
     def handle_filter_request(self, req):
         """Handle incoming service requests"""
         response = PersonTrackingFilterResponse()
@@ -82,6 +102,11 @@ class PersonTrackingKalmanFilterService:
                 response.success = True
                 response.is_reasonable = is_reasonable
                 response.message = f"Detection reasonableness: {is_reasonable}"
+
+            elif req.command == "reset":
+                success = self._reset_filter()
+                response.success = success
+                response.message = "Filter reset to zero state" if success else "Reset failed"
 
             else:
                 response.success = False

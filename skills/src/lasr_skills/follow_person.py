@@ -11,6 +11,7 @@ from math import atan2
 from tf.transformations import quaternion_from_euler  # this is tf tool pack, not tf1
 import tf2_ros as tf
 from tf2_geometry_msgs import do_transform_pose
+from rospy import ServiceException
 from scipy.spatial.transform import Rotation as R
 from std_msgs.msg import Bool
 from geometry_msgs.msg import Point, Pose, PoseStamped, PointStamped, Quaternion, PoseArray
@@ -85,6 +86,13 @@ class PersonFollowingData:
         self.say_started = False
         self.pause_conditional_state = False
 
+        # kalman protection - kalman filter can be very crazy sometimes...
+        # self.kalman_protection = True
+        self.leg_tracker_callbacks = 0
+        self.sam2_callbacks = 0
+        self.leg_tracker_callbacks_threshold = 15
+        self.sam2_callbacks_threshold = 5
+
         # Recovery behavior data
         self.recovery_scan_positions = []
         self.current_scan_index = 0
@@ -121,7 +129,7 @@ class PersonFollowingData:
         self.min_confidence_threshold = 0.5
 
         # YOLO parameters
-        self.yolo_model = "yolo11n-pose.pt"
+        self.yolo_model = "yolo11n-seg.pt"
         self.yolo_confidence = 0.6
 
         # Head control parameters
@@ -474,6 +482,12 @@ class FollowPerson(smach.StateMachine):
         if not self.shared_data.say_started:
             return
 
+        if not (
+            self.shared_data.leg_tracker_callbacks >= self.shared_data.leg_tracker_callbacks_threshold and
+            self.shared_data.sam2_callbacks >= self.shared_data.sam2_callbacks_threshold
+        ):
+            return
+
         current_time = rospy.Time.now()
 
         # Call prediction service and get system health
@@ -481,7 +495,11 @@ class FollowPerson(smach.StateMachine):
         req.command = "get_state"  # Use get_state to get full status
         req.timestamp = current_time
 
-        response = self.kalman_filter_service(req)
+        try:
+            response = self.kalman_filter_service(req)
+        except ServiceException as e:
+            rospy.logwarn(f"Kalman filter service call failed: {e}")
+            return
 
         if response.success and response.initialized:
             # Create predicted pose
@@ -601,6 +619,7 @@ class FollowPerson(smach.StateMachine):
 
             if target_person:
                 try:
+                    self.shared_data.leg_tracker_callbacks += 1
                     req = DualSensorPersonTrackingFilterRequest()
                     req.command = "update_dual"  # Use update_dual for async single sensor
                     req.timestamp = this_time
@@ -640,13 +659,14 @@ class FollowPerson(smach.StateMachine):
                 #     self.shared_data.newest_detection = detection
 
                 try:
-                    req = DualSensorPersonTrackingFilterRequest()
-                    req.command = "update_dual"  # Use update_dual for async single sensor
-                    req.timestamp = this_time
-                    req.sensor_a_available = False
-                    req.sensor_b_available = is_good_quality
-
                     if is_good_quality:
+                        self.shared_data.sam2_callbacks += 1
+
+                        req = DualSensorPersonTrackingFilterRequest()
+                        req.command = "update_dual"  # Use update_dual for async single sensor
+                        req.timestamp = this_time
+                        req.sensor_a_available = False
+                        req.sensor_b_available = True
                         req.sensor_b_x = detection.point.x
                         req.sensor_b_y = detection.point.y
                         req.sensor_b_quality = quality_score
@@ -1132,13 +1152,17 @@ class PersonDetectionState(smach.State):
             input_keys=[],
             output_keys=[],
         )
+        self.wait_for_detection_said = False
+        self.wait_for_leg_detection_said = False
 
     def execute(self, userdata):
         rospy.loginfo("Starting person detection")
 
         # Look forward and scan for people
         self.sm_manager._look_centre_point()
-        self.sm_manager._tts("Please wait for me to detect you.", wait=True)
+        if not self.wait_for_detection_said:
+            self.sm_manager._tts("Please wait for me to detect you.", wait=True)
+            self.wait_for_detection_said = True
 
         # Wait for sensor data to be available
         while not rospy.is_shutdown():
@@ -1239,6 +1263,9 @@ class PersonDetectionState(smach.State):
             people = tracks.people
             if len(people) > 0:
                 break
+            elif not self.wait_for_leg_detection_said:
+                self.sm_manager._tts("You can walk forward and backward a bit so that I can detect your legs.", wait=False)
+                self.wait_for_leg_detection_said = True
 
         # Find leg tracker person closest to YOLO person
         min_dist_to_yolo = float("inf")

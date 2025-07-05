@@ -86,6 +86,45 @@ class PersonTrackingDualInputKalmanFilterService:
 
         rospy.loginfo("Dual-input asynchronous person tracking Kalman filter service started")
 
+    def _reset_filter(self):
+        """Reset dual filter to zero state"""
+        try:
+            # Reset state vector to zeros
+            self.kf.x = np.zeros(4)
+
+            # Reset state covariance to high initial uncertainty
+            self.kf.P = np.eye(4) * 2000.
+
+            # Reset filter status
+            self.initialized = False
+            self.last_update_time = None
+            self.last_prediction_time = None
+            self.last_filter_update_time = None
+
+            # Reset sensor buffers
+            self.last_sensor_a = {
+                'x': None, 'y': None, 'time': None, 'quality': 0.0,
+                'update_count': 0, 'last_used_time': None
+            }
+            self.last_sensor_b = {
+                'x': None, 'y': None, 'time': None, 'quality': 0.0,
+                'update_count': 0, 'last_used_time': None
+            }
+
+            # Reset sensor reliability
+            self.sensor_reliability = {'a': 1.0, 'b': 1.0}
+
+            # Reset fusion state
+            self.fusion_mode = 'normal'
+            self.consecutive_conflicts = 0
+            self.prediction_mode = False
+
+            rospy.loginfo("Dual Kalman filter reset to zero state")
+            return True
+        except Exception as e:
+            rospy.logerr(f"Failed to reset dual Kalman filter: {e}")
+            return False
+
     def handle_filter_request(self, req):
         """Handle incoming service requests with full asynchronous support"""
         response = DualSensorPersonTrackingFilterResponse()
@@ -140,6 +179,11 @@ class PersonTrackingDualInputKalmanFilterService:
                 response.success = True
                 response.is_reasonable = is_reasonable
                 response.message = f"Detection reasonableness: {is_reasonable}"
+
+            elif req.command == "reset":
+                success = self._reset_filter()
+                response.success = success
+                response.message = "Dual filter reset to zero state" if success else "Reset failed"
 
             else:
                 response.success = False
