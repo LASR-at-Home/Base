@@ -208,7 +208,7 @@ class GoToBag(smach.State):
         p_cam = centroid
 
         head_point = self.transform_from_camera_to_map(p_cam)
-        self.say("I'm navigating to the bag.")
+        self.say("I'm navigating to the bag. Please step away from the bag.")
         x_bag, y_bag = self.navigate_to_closest_feasible_point(p_cam)
         if x_bag is not None and y_bag is not None:
             rospy.loginfo(
@@ -334,7 +334,7 @@ class GoToBag(smach.State):
         rospy.loginfo(f"Ray hits floor at: {hit_pt}")
         return hit_pt
 
-    def detect_bag_with_lang_sam(self, floor_pt, prompt="bag"):
+    def detect_bag_with_lang_sam(self, floor_pt, prompt = "bag", coverage_limit = 0.6):
         """
         Calls the LangSAM segmentation service to detect a bag using the latest RGB image.
         Returns: (centroid_cam, mask, detection) for the bag closest to floor_pt, or (None, None, None) on failure.
@@ -382,6 +382,14 @@ class GoToBag(smach.State):
                 rospy.logwarn(f"Skipping mask with wrong shape")
                 continue
             mask = mask_flat.reshape((height, width))
+
+             # Filter out masks covering most of the image (probably the floor)
+            mask_area = np.count_nonzero(mask)
+            img_area = height * width
+            coverage = mask_area / img_area
+            if coverage > coverage_limit:
+                rospy.loginfo(f"Skipping mask covering {coverage:.2%} of image (likely floor)")
+                continue
 
             # Find median centroid in image space
             ys, xs = np.where(mask)
