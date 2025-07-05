@@ -169,7 +169,7 @@ class GoToBag(smach.State):
         self.say("I'm looking at where you're pointing.")
         floor_pt = self.look_where_person_points()
         if floor_pt is None:
-            self.say("I couldn't see where you were pointing, please point again")
+            self.say("I couldn't see where you were pointing, please point again. Make sure I can see you.")
             rospy.sleep(3)
             floor_pt = self.look_where_person_points()
 
