@@ -60,7 +60,7 @@ class PersonTrackingDualInputKalmanFilterService:
             0.5
         )  # 500ms window for temporal fusion
         self.max_temporal_gap = rospy.Duration.from_sec(
-            2.0
+            2.5
         )  # 2s max gap before considering sensor dead
 
         # Enhanced sensor tracking with temporal information
@@ -100,6 +100,18 @@ class PersonTrackingDualInputKalmanFilterService:
             "/person_tracking_dual_kalman_filter",
             DualSensorPersonTrackingFilter,
             self.handle_filter_request,
+        )
+
+        # Sensor role definitions based on quality - conservative approach
+        self.sensor_roles = {
+            "a": "secondary",
+            "b": "secondary",
+        }  # Default both as secondary
+        self.primary_sensor_threshold = (
+            0.75  # Quality threshold to be considered primary
+        )
+        self.reliability_decay_rate = (
+            0.005  # Conservative decay rate for unused sensors
         )
 
         rospy.loginfo(
@@ -342,6 +354,9 @@ class PersonTrackingDualInputKalmanFilterService:
             # Determine which sensors are currently viable
             viable_sensors = self._get_viable_sensors(current_time)
 
+            # Analyze and update sensor roles based on recent quality patterns
+            self._analyze_sensor_roles(current_time)
+
             if not viable_sensors:
                 # No viable sensors, stay in prediction mode
                 self.fusion_mode = "predict_only"
@@ -391,6 +406,19 @@ class PersonTrackingDualInputKalmanFilterService:
 
         return viable
 
+    def _analyze_sensor_roles(self, current_time):
+        """Analyze and update sensor roles based on quality patterns - conservative approach"""
+        # Update sensor roles based on average quality over recent updates
+        for sensor_id in ["a", "b"]:
+            sensor_data = self.last_sensor_a if sensor_id == "a" else self.last_sensor_b
+
+            if sensor_data["quality"] >= self.primary_sensor_threshold:
+                self.sensor_roles[sensor_id] = "primary"
+            elif sensor_data["quality"] >= 0.25:  # Medium quality threshold
+                self.sensor_roles[sensor_id] = "secondary"
+            else:
+                self.sensor_roles[sensor_id] = "auxiliary"  # Low quality
+
     def _analyze_temporal_fusion_strategy(self, viable_sensors, current_time):
         """Analyze fusion strategy considering temporal aspects"""
         if len(viable_sensors) == 0:
@@ -422,6 +450,12 @@ class PersonTrackingDualInputKalmanFilterService:
             weight_a = max(0.1, 1.0 - age_a / self.sensor_buffer_window.to_sec())
             weight_b = max(0.1, 1.0 - age_b / self.sensor_buffer_window.to_sec())
 
+            # Apply conservative role-based weight adjustments for dual fusion
+            if self.sensor_roles["a"] == "primary":
+                weight_a *= 1.2  # 20% bonus for primary sensor
+            if self.sensor_roles["b"] == "primary":
+                weight_b *= 1.2
+
             # Check spatial agreement (project older measurement to current time if needed)
             projected_a = self._project_measurement_to_time(
                 self.last_sensor_a, current_time
@@ -444,19 +478,26 @@ class PersonTrackingDualInputKalmanFilterService:
                 elif distance < self.agreement_thresholds["poor_agreement"]:
                     fusion_type = "cautious"
                 else:
-                    # Large disagreement - choose better sensor
+                    # Large disagreement - choose better sensor with role-based weighting
+                    # Primary sensors get priority, but conservatively
+                    role_bonus_a = 1.3 if self.sensor_roles["a"] == "primary" else 1.0
+                    role_bonus_b = 1.3 if self.sensor_roles["b"] == "primary" else 1.0
+
                     score_a = (
                         self.sensor_reliability["a"]
                         * weight_a
                         * self.last_sensor_a["quality"]
+                        * role_bonus_a  # Conservative 30% bonus for primary sensors
                     )
                     score_b = (
                         self.sensor_reliability["b"]
                         * weight_b
                         * self.last_sensor_b["quality"]
+                        * role_bonus_b
                     )
 
                     better_sensor = "a" if score_a > score_b else "b"
+
                     return {
                         "type": "conflict_single",
                         "sensor_id": better_sensor,
@@ -591,17 +632,38 @@ class PersonTrackingDualInputKalmanFilterService:
                 # Reset consecutive conflicts since we successfully fused
                 self.consecutive_conflicts = 0
 
-            # Update sensor reliability based on successful fusion
+            # Update sensor reliability with conservative role-based adjustments
             if "sensor_id" in strategy:
-                self.sensor_reliability[strategy["sensor_id"]] = min(
-                    1.0, self.sensor_reliability[strategy["sensor_id"]] + 0.01
-                )
+                sensor_id = strategy["sensor_id"]
+                if strategy["type"] == "single":
+                    # Single sensor mode: reduce reliability slightly (conservative approach)
+                    self.sensor_reliability[sensor_id] = max(
+                        0.1, self.sensor_reliability[sensor_id] - 0.002
+                    )
+                    # Decay unused sensor more significantly
+                    other_sensor = "b" if sensor_id == "a" else "a"
+                    self.sensor_reliability[other_sensor] = max(
+                        0.1,
+                        self.sensor_reliability[other_sensor]
+                        - self.reliability_decay_rate,
+                    )
+                else:  # conflict_single case
+                    # Successful conflict resolution: small increase for winner
+                    self.sensor_reliability[sensor_id] = min(
+                        1.0, self.sensor_reliability[sensor_id] + 0.005
+                    )
+                    # Larger decrease for rejected sensor
+                    other_sensor = "b" if sensor_id == "a" else "a"
+                    self.sensor_reliability[other_sensor] = max(
+                        0.1, self.sensor_reliability[other_sensor] - 0.02
+                    )
             else:
+                # Dual sensor success: both sensors gain reliability
                 self.sensor_reliability["a"] = min(
-                    1.0, self.sensor_reliability["a"] + 0.01
+                    1.0, self.sensor_reliability["a"] + 0.008
                 )
                 self.sensor_reliability["b"] = min(
-                    1.0, self.sensor_reliability["b"] + 0.01
+                    1.0, self.sensor_reliability["b"] + 0.008
                 )
 
         except Exception as e:

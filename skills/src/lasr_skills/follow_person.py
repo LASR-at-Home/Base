@@ -212,6 +212,19 @@ def _compute_face_quat(p1: Pose, p2: Pose) -> Quaternion:
     return Quaternion(x, y, z, w)
 
 
+def is_reasonable_detection(detection, min_confidence_threshold=0.5):
+    """Check if detection has reasonable properties"""
+    if not hasattr(detection, "xywh") or len(detection.xywh) != 4:
+        return False
+
+    xywh = detection.xywh
+    box_width = xywh[2]
+    box_height = xywh[3]
+    aspect_ratio = box_width / max(box_height, 1)
+
+    return detection.confidence > min_confidence_threshold and 0.3 < aspect_ratio < 3.0
+
+
 class FollowPerson(smach.StateMachine):
     """
     Complete person following state machine that can be used as:
@@ -219,7 +232,13 @@ class FollowPerson(smach.StateMachine):
     2. Sub-state machine - included in larger state machine workflows
     """
 
-    def __init__(self, camera_name="xtion", object_avoidance=False, **config_params):
+    def __init__(
+        self,
+        camera_name="xtion",
+        object_avoidance=False,
+        fallback=False,
+        **config_params,
+    ):
         # Initialise as StateMachine with dynamic input/output keys
         smach.StateMachine.__init__(
             self,
@@ -233,6 +252,9 @@ class FollowPerson(smach.StateMachine):
 
         # Whether to put the head down from time to time
         self.object_avoidance = object_avoidance
+
+        # Whether to move backward if too close
+        self.fallback = fallback
 
         # Setup camera topics
         self.image_topic = f"/{self.camera}/rgb/image_raw"
@@ -349,7 +371,7 @@ class FollowPerson(smach.StateMachine):
 
         # Add timer for prediction updates when no detection
         self.prediction_timer = rospy.Timer(
-            rospy.Duration(0.5), self._kalman_prediction_callback
+            rospy.Duration(0.25), self._kalman_prediction_callback
         )
 
         # Simple feedback tracking
@@ -431,16 +453,28 @@ class FollowPerson(smach.StateMachine):
                 },
             )
 
-            smach.StateMachine.add(
-                "TRACKING_ACTIVE",
-                TrackingActiveState(self),
-                transitions={
-                    "navigation_started": "NAVIGATION",
-                    "target_lost": "RECOVERY_SCANNING",
-                    "following_complete": "succeeded",
-                    "failed": "failed",
-                },
-            )
+            if self.fallback:
+                smach.StateMachine.add(
+                    "TRACKING_ACTIVE",
+                    TrackingActiveState(self),
+                    transitions={
+                        "navigation_started": "NAVIGATION",
+                        "target_lost": "RECOVERY_SCANNING",
+                        "following_complete": "Fallback",
+                        "failed": "failed",
+                    },
+                )
+            else:
+                smach.StateMachine.add(
+                    "TRACKING_ACTIVE",
+                    TrackingActiveState(self),
+                    transitions={
+                        "navigation_started": "NAVIGATION",
+                        "target_lost": "RECOVERY_SCANNING",
+                        "following_complete": "succeeded",
+                        "failed": "failed",
+                    },
+                )
 
             smach.StateMachine.add(
                 "NAVIGATION",
@@ -462,13 +496,23 @@ class FollowPerson(smach.StateMachine):
                 },
             )
 
+            if self.fallback:
+                smach.StateMachine.add(
+                    "Fallback",
+                    FallbackState(self),
+                    transitions={
+                        "succeeded": "succeeded",
+                        "failed": "failed",
+                    },
+                )
+
     def execute(self, userdata, run_by_itself=False):
         """
         Execute the state machine
         Can be called directly or as part of a larger state machine
         """
         if not run_by_itself:
-            start_pose = self._get_robot_pose_in_map()
+            start_pose = self.get_robot_pose_in_map()
             userdata.start_pose = start_pose
         # Initialize execution-specific data
         self.shared_data.person_trajectory.header.frame_id = "map"
@@ -479,15 +523,18 @@ class FollowPerson(smach.StateMachine):
         self.shared_data.following_duration = (
             rospy.Time.now() - self.shared_data.start_time
         ).to_sec()
-        # Cleanup resources
-        self._cleanup()
         if not run_by_itself:
-            userdata.end_pose = self._get_robot_pose_in_map()
+            userdata.end_pose = self.get_robot_pose_in_map()
             userdata.location = start_pose.pose
         return outcome
 
     def _kalman_prediction_callback(self, event):
         """Timer callback for Kalman filter prediction updates and health monitoring"""
+
+        # Record robot position (unchanged)
+        robot_pose = self.get_robot_pose_in_map()
+        self.shared_data.robot_path_list.append(robot_pose)
+
         if not self.shared_data.say_started:
             return
 
@@ -512,6 +559,11 @@ class FollowPerson(smach.StateMachine):
             response = self.kalman_filter_service(req)
         except ServiceException as e:
             rospy.logwarn(f"Kalman filter service call failed: {e}")
+            try:
+                req.command = "reset"
+                response = self.kalman_filter_service(req)
+            except ServiceException as e:
+                rospy.logwarn(f"Reset Failed!")
             return
 
         if response.success and response.initialized:
@@ -532,11 +584,10 @@ class FollowPerson(smach.StateMachine):
             self._update_target_list(predicted_pose, add_traj=True)
 
             # Create synthetic detection for newest_detection
-            if hasattr(self, "detection") and self.detection is not None:
-                synthetic_detection = self._create_synthetic_detection(
-                    response.position_x, response.position_y, current_time
-                )
-                self.shared_data.newest_detection = synthetic_detection
+            synthetic_detection = self._create_synthetic_detection(
+                response.position_x, response.position_y, current_time
+            )
+            self.shared_data.newest_detection = synthetic_detection
 
             # Simple health check - trigger recovery if system is degraded
             if (
@@ -548,12 +599,21 @@ class FollowPerson(smach.StateMachine):
                 )
 
             # Log conflicts if they're excessive
-            if (
-                hasattr(response, "consecutive_conflicts")
-                and response.consecutive_conflicts > 5
-            ):
+            # if (
+            #     hasattr(response, "consecutive_conflicts")
+            #     and response.consecutive_conflicts > 5
+            # ):
+            #     rospy.logwarn(
+            #         f"Excessive sensor conflicts detected: {response.consecutive_conflicts}"
+            #     )
+            if response.fusion_mode in [
+                "single_a",
+                "single_b",
+                "conflict",
+                "predict_only",
+            ]:
                 rospy.logwarn(
-                    f"Excessive sensor conflicts detected: {response.consecutive_conflicts}"
+                    f"Severe Risk, current filter process mode: {response.fusion_mode}"
                 )
 
         else:
@@ -569,7 +629,7 @@ class FollowPerson(smach.StateMachine):
         self.shared_data.depth_image = depth_image
         self.shared_data.camera_info = depth_camera_info
 
-    def _get_robot_pose_in_map(self) -> PoseStamped or None:
+    def get_robot_pose_in_map(self) -> PoseStamped or None:
         """
         Get the current robot pose in the map coordinate frame.
         Returns:
@@ -585,7 +645,7 @@ class FollowPerson(smach.StateMachine):
                 "map",  # target frame
                 "base_link",  # source frame
                 rospy.Time(0),  # get latest available transform
-                rospy.Duration(0.1),  # timeout
+                rospy.Duration(0.5),  # timeout
             )
             # Create a PoseStamped message for the robot's current pose
             robot_pose = PoseStamped()
@@ -659,6 +719,11 @@ class FollowPerson(smach.StateMachine):
                     self.kalman_filter_service(req)
                 except rospy.ServiceException as e:
                     rospy.logerr(f"Leg tracker Kalman service failed: {e}")
+                    try:
+                        req.command = "reset"
+                        response = self.kalman_filter_service(req)
+                    except ServiceException as e:
+                        rospy.logwarn(f"Reset Failed!")
 
     def _detection3d_callback(self, msg: Detection3DArray):
         """Callback for SAM2 3D detections - now with Kalman filtering as sensor B"""
@@ -670,10 +735,6 @@ class FollowPerson(smach.StateMachine):
         # Update feedback stats
         self.sensor_feedback["detection3d_count"] += 1
         self.sensor_feedback["last_detection3d_time"] = this_time
-
-        # Record robot position (unchanged)
-        robot_pose = self._get_robot_pose_in_map()
-        self.shared_data.robot_path_list.append(robot_pose)
 
         for detection in msg.detections:
             if int(detection.name) == self.shared_data.track_id:
@@ -708,7 +769,14 @@ class FollowPerson(smach.StateMachine):
                             self._publish_condition_flag(False)
                             self.shared_data.condition_flag_state = False
 
-                    response = self.kalman_filter_service(req)
+                        try:
+                            response = self.kalman_filter_service(req)
+                        except ServiceException as e:
+                            try:
+                                req.command = "reset"
+                                response = self.kalman_filter_service(req)
+                            except ServiceException as e:
+                                rospy.logwarn(f"Reset Failed!")
 
                     # stop using pre planned goals as they might confuse the kalman filter
                     # if (
@@ -886,7 +954,7 @@ class FollowPerson(smach.StateMachine):
                 # Wait with timeout to avoid infinite blocking
                 timeout_duration = rospy.Duration(10.0)  # 10 seconds timeout
                 start_wait_time = rospy.Time.now()
-                rate = rospy.Rate(10)  # 10 Hz check rate
+                rate = rospy.Rate(3)  # 10 Hz check rate
                 while not rospy.is_shutdown():
                     current_state = self.move_base_client.get_state()
                     # Check if navigation completed (any terminal state)
@@ -1003,13 +1071,6 @@ class FollowPerson(smach.StateMachine):
         rospy.logwarn("Candidate goals generated.")
         return sampled
 
-    def _cleanup(self):
-        """Clean up resources after execution"""
-        self.track_flag_pub.publish(Bool(data=False))
-        if self.move_base_client:
-            self.move_base_client.cancel_all_goals()
-        rospy.loginfo("State machine cleaned up")
-
     def get_results(self):
         """Get execution results - useful when used as sub-state machine"""
         return {
@@ -1059,7 +1120,7 @@ class FollowPerson(smach.StateMachine):
         goal.max_velocity = self.shared_data.head_max_velocity
 
         self.point_head_client.send_goal(goal)
-        rospy.logwarn(f"Moving head to {target_point}")
+        # rospy.logwarn(f"Moving head to {target_point}")
         self.shared_data.look_at_point_time = current_time
 
     def _look_centre_point(self):
@@ -1164,7 +1225,7 @@ class InitialisingState(smach.State):
         self.sm_manager.shared_data.last_movement_time = rospy.Time.now()
         self.sm_manager.shared_data.last_good_detection_time = rospy.Time.now()
 
-        robot_pose = self.sm_manager._get_robot_pose_in_map()
+        robot_pose = self.sm_manager.get_robot_pose_in_map()
         if robot_pose:
             self.sm_manager.shared_data.last_position = robot_pose
 
@@ -1289,6 +1350,8 @@ class PersonDetectionState(smach.State):
         rospy.sleep(0.1)
         self.sm_manager.track_flag_pub.publish(Bool(data=True))
         rospy.sleep(0.1)
+        self.sm_manager.track_flag_pub.publish(Bool(data=True))
+        rospy.sleep(0.1)
 
         # Now get leg tracker data and find closest person to YOLO selection
         while True:
@@ -1359,11 +1422,14 @@ class TrackingActiveState(smach.State):
     def execute(self, userdata):
         rospy.loginfo("Active tracking mode")
 
-        if not self.sm_manager.shared_data.first_tracking_done:
+        if (
+            not self.sm_manager.shared_data.first_tracking_done
+            and not self.sm_manager.shared_data.say_started
+        ):
             self.sm_manager._tts("I will start to follow you.", wait=True)
             self.sm_manager.shared_data.say_started = True
 
-        rate = rospy.Rate(15)
+        rate = rospy.Rate(3)
 
         while not rospy.is_shutdown():
             # Check if target is lost
@@ -1389,13 +1455,14 @@ class TrackingActiveState(smach.State):
 
             # Look at detected person
             if self.sm_manager.shared_data.newest_detection:
+                # rospy.logwarn(f"Looking at newest point: {self.sm_manager.shared_data.newest_detection}")
                 self.sm_manager.look_at_point(
                     self.sm_manager.shared_data.newest_detection.point,
                     target_frame="map",
                 )
 
             # Update distance traveled
-            robot_pose = self.sm_manager._get_robot_pose_in_map()
+            robot_pose = self.sm_manager.get_robot_pose_in_map()
             if self.sm_manager.shared_data.last_position and robot_pose:
                 distance_increment = _euclidean_distance(
                     self.sm_manager.shared_data.last_position, robot_pose
@@ -1437,11 +1504,11 @@ class TrackingActiveState(smach.State):
                         * 1.0
                     ),
                 )
-                if self.sm_manager.shared_data.first_tracking_done:
+                if not self.sm_manager.shared_data.first_tracking_done:
                     dynamic_stopping_distance = max(
-                        self.sm_manager.shared_data.stopping_distance / 3, 0.5
+                        self.sm_manager.shared_data.stopping_distance / 5, 0.5
                     )
-                    rospy.loginfo("First goal, using minimum following threshold.")
+                    rospy.logwarn("First goal, using minimum following threshold.")
                 for i in reversed(range(len(self.sm_manager.shared_data.target_list))):
                     distance_to_last = _euclidean_distance(
                         self.sm_manager.shared_data.target_list[i], last_pose_in_list
@@ -1500,7 +1567,7 @@ class TrackingActiveState(smach.State):
                         )
 
                     # Check robot distance if we have a valid target
-                    robot_pose = self.sm_manager._get_robot_pose_in_map()
+                    robot_pose = self.sm_manager.get_robot_pose_in_map()
                     if target_pose is not None and robot_pose:
                         distance_to_target = _euclidean_distance(
                             robot_pose.pose, target_pose
@@ -1729,7 +1796,7 @@ class NavigationState(smach.State):
             self.sm_manager.shared_data.look_down_period * 0.5
         )
 
-        start_robot_pose = self.sm_manager._get_robot_pose_in_map()
+        start_robot_pose = self.sm_manager.get_robot_pose_in_map()
 
         # Verify that navigation is indeed active
         if (
@@ -1740,7 +1807,7 @@ class NavigationState(smach.State):
             return "navigation_complete"
 
         # Monitor navigation progress
-        rate = rospy.Rate(15)
+        rate = rospy.Rate(3)
         while not rospy.is_shutdown():
             # Keep looking at detected person during navigation
             if self.sm_manager.shared_data.newest_detection:
@@ -1768,6 +1835,9 @@ class NavigationState(smach.State):
                         f"pause_conditional_frame: True"
                     )
 
+                    rospy.loginfo(
+                        f"Looking down towards newst point: {self.sm_manager.shared_data.newest_detection}"
+                    )
                     self._down_swap(
                         self.sm_manager.shared_data.newest_detection.point,
                         target_frame="map",
@@ -1790,12 +1860,13 @@ class NavigationState(smach.State):
                         f"z: {self.sm_manager.shared_data.newest_detection.point.z:.2f}"
                     )
 
+                    # rospy.logwarn(f"Looking at newest point: {self.sm_manager.shared_data.newest_detection}")
                     self.sm_manager.look_at_point(
                         self.sm_manager.shared_data.newest_detection.point,
                         target_frame="map",
                     )
 
-            robot_pose = self.sm_manager._get_robot_pose_in_map()
+            robot_pose = self.sm_manager.get_robot_pose_in_map()
 
             current_goal = self.sm_manager.shared_data.current_goal
             if len(self.sm_manager.shared_data.target_list) > 0 and robot_pose:
@@ -1908,7 +1979,7 @@ class NavigationState(smach.State):
     def _send_face_target_goal(self, userdata, target_pose):
         """Send a rotation-only goal to face the target. Robot stays at current position but rotates."""
         try:
-            robot_pose = self.sm_manager._get_robot_pose_in_map()
+            robot_pose = self.sm_manager.get_robot_pose_in_map()
             if not robot_pose:
                 rospy.logwarn("No robot pose available for face-target goal")
                 return False
@@ -1986,7 +2057,7 @@ class RecoveryScanningState(smach.State):
                 target_frame="base_link",
             )
 
-        rate = rospy.Rate(10)
+        rate = rospy.Rate(3)
 
         while not rospy.is_shutdown():
             # Check recovery timeout
@@ -2036,17 +2107,66 @@ class RecoveryScanningState(smach.State):
         return "failed"
 
 
-def is_reasonable_detection(detection, min_confidence_threshold=0.5):
-    """Check if detection has reasonable properties"""
-    if not hasattr(detection, "xywh") or len(detection.xywh) != 4:
-        return False
+class FallbackState(smach.State):
+    def __init__(self, sm_manager):
+        self.sm_manager = sm_manager
+        smach.State.__init__(
+            self,
+            outcomes=["succeeded", "failed"],
+            input_keys=[],
+            output_keys=[],
+        )
 
-    xywh = detection.xywh
-    box_width = xywh[2]
-    box_height = xywh[3]
-    aspect_ratio = box_width / max(box_height, 1)
+    def execute(self, userdata):
+        current_position = self.sm_manager.get_robot_pose_in_map()
+        last_target = self.sm_manager.shared_data.target_list[-1]
+        distance_to_last = _euclidean_distance(current_position.pose, last_target)
+        if distance_to_last < self.sm_manager.shared_data.max_following_distance * 0.8:
+            for i in reversed(range(len(self.sm_manager.shared_data.target_list))):
+                if (
+                    _euclidean_distance(
+                        self.sm_manager.shared_data.target_list[i], last_target
+                    )
+                    >= self.sm_manager.shared_data.max_following_distance
+                ):
+                    self.sm_manager._tts(
+                        "I will go back a bit to see you clearer.", wait=True
+                    )
+                    goal_orientation = _compute_face_quat(
+                        self.sm_manager.shared_data.target_list[i], last_target
+                    )
+                    pose_with_orientation = Pose(
+                        position=self.sm_manager.shared_data.target_list[i].position,
+                        orientation=goal_orientation,
+                    )
+                    pose_stamped = PoseStamped()
+                    pose_stamped.header.frame_id = "map"
+                    pose_stamped.header.stamp = rospy.Time.now()
+                    pose_stamped.pose = pose_with_orientation
 
-    return detection.confidence > min_confidence_threshold and 0.3 < aspect_ratio < 3.0
+                    # Transform to map frame for navigation
+                    goal_pose = self.sm_manager.tf_buffer.transform(
+                        pose_stamped, "map", rospy.Duration(1.0)
+                    )
+
+                    # Send navigation goal (rotation-only)
+                    goal = MoveBaseGoal()
+                    goal.target_pose = goal_pose
+                    self.sm_manager.move_base_client.send_goal(goal)
+
+                    rospy.sleep(0.1)
+                    while self._is_navigation_active():
+                        continue
+                    break
+        return "succeeded"
+
+    #
+    def _is_navigation_active(self):
+        """Check if navigation is currently active based on move_base client state"""
+        if not self.sm_manager.move_base_client:
+            return False
+        nav_state = self.sm_manager.move_base_client.get_state()
+        return nav_state in [GoalStatus.PENDING, GoalStatus.ACTIVE]
 
 
 def main():

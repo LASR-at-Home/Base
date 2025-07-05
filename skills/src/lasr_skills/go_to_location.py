@@ -92,25 +92,25 @@ class GoToLocation(smach.StateMachine):
                     "LOWER_BASE",
                     PlayMotion("pre_navigation"),
                     transitions={
-                        "succeeded": "ENABLE_HEAD_MANAGER",
+                        "succeeded": "GO_TO_LOCATION",
                         "aborted": "failed",
                         "preempted": "failed",
                     },
                 )
 
-                smach.StateMachine.add(
-                    "ENABLE_HEAD_MANAGER",
-                    smach_ros.ServiceState(
-                        "/pal_startup_control/start",
-                        StartupStart,
-                        request=StartupStartRequest("head_manager", ""),
-                    ),
-                    transitions={
-                        "succeeded": "GO_TO_LOCATION",
-                        "preempted": "failed",
-                        "aborted": "failed",
-                    },
-                )
+                # smach.StateMachine.add(
+                #     "ENABLE_HEAD_MANAGER",
+                #     smach_ros.ServiceState(
+                #         "/pal_startup_control/start",
+                #         StartupStart,
+                #         request=StartupStartRequest("head_manager", ""),
+                #     ),
+                #     transitions={
+                #         "succeeded": "GO_TO_LOCATION",
+                #         "preempted": "failed",
+                #         "aborted": "failed",
+                #     },
+                # )
 
             if location is not None:
                 smach.StateMachine.add(

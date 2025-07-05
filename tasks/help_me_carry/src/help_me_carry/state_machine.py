@@ -10,6 +10,16 @@ class CarryMyLuggage(smach.StateMachine):
         smach.StateMachine.__init__(self, outcomes=["succeeded", "failed"])
         with self:
             smach.StateMachine.add(
+                "SAY_START",
+                Say(text="Start of help me carry task."),
+                transitions={
+                    "succeeded": "PRE_FOLLOW",
+                    "aborted": "PRE_FOLLOW",
+                    "preempted": "PRE_FOLLOW",
+                },
+            )
+
+            smach.StateMachine.add(
                 f"PRE_FOLLOW",
                 PlayMotion(motion_name="pre_navigation"),
                 transitions={
@@ -21,13 +31,13 @@ class CarryMyLuggage(smach.StateMachine):
 
             smach.StateMachine.add(
                 "FOLLOW_PERSON",
-                FollowPerson(),
+                FollowPerson(fallback=True),
                 transitions={"succeeded": "POST_FOLLOW", "failed": "POST_FOLLOW"},
             )
 
             # smach.StateMachine.add(
             #     "FOLLOW_PERSON",
-            #     FollowPerson(object_avoidance=True),
+            #     FollowPerson(object_avoidance=True, fallback=True),
             #     transitions={"succeeded": "POST_FOLLOW", "failed": "POST_FOLLOW"},
             # )
 
