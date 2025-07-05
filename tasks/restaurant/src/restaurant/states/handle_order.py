@@ -1,5 +1,6 @@
-import rospy
+from typing import List
 
+import rospy
 import smach
 
 from lasr_llm_msgs.srv import (
@@ -10,8 +11,10 @@ from lasr_llm_msgs.srv import (
 
 class HandleOrder(smach.State):
 
-    def __init__(self):
+    _llm: rospy.ServiceProxy
+    _possible_items: List[str]
 
+    def __init__(self):
         smach.StateMachine.__init__(
             self,
             outcomes=["succeeded", "failed"],
@@ -37,11 +40,13 @@ class HandleOrder(smach.State):
             " Do not output anything else. If you fail to process the order, output 'none'."
             " An order can contain a maximum of three items."
         )
-        request.prompt = transcription
+        request.max_tokens = 5
+        request.prompt = f"The user says: {transcription}"
         response = self._llm(request).output.strip()
         if response == "none":
             return "failed"
         else:
             userdata.order = response.split(",")
+            rospy.loginfo(f"Order identified as: {userdata.order}")
             userdata.order_str = response
             return "succeeded"
