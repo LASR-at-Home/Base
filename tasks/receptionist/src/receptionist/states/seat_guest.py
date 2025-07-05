@@ -296,9 +296,7 @@ class SeatGuest(smach.StateMachine):
             self.userdata.seated_guest_locs = []
             smach.StateMachine.add(
                 "SAY_FINDING_SEAT",
-                Say(
-                    "We've arrived at the seating area. I will now find a seat for you."
-                ),
+                Say("I will now find a seat for you."),
                 transitions={
                     "succeeded": "LOOK_TO_SOFA",
                     "aborted": "LOOK_TO_SOFA",
@@ -384,6 +382,8 @@ class SeatGuest(smach.StateMachine):
                 # Look to the only person detection and learn the host's face.
                 sm_con = smach.Concurrence(
                     outcomes=["succeeded", "failed"],
+                    input_keys=["guest_data", "seated_guest_locs"],
+                    output_keys=["guest_data", "seated_guest_locs"],
                     default_outcome="failed",
                     outcome_map={
                         "succeeded": {
@@ -391,7 +391,7 @@ class SeatGuest(smach.StateMachine):
                             "LEARN_HOST_FACE": "succeeded",
                         },
                         "failed": {
-                            "SAY_LEARN_HOST_FACE": "failed",
+                            "SAY_LEARN_HOST_FACE": "aborted",
                             "LEARN_HOST_FACE": "failed",
                         },
                     },
@@ -400,24 +400,8 @@ class SeatGuest(smach.StateMachine):
                     smach.Concurrence.add(
                         "SAY_LEARN_HOST_FACE",
                         Say("I'm quickly remembering the host's face."),
-                        transitions={
-                            "succeeded": "succeeded",
-                            "aborted": "failed",
-                            "preempted": "failed",
-                        },
                     )
-                    smach.Concurrence.add(
-                        "LEARN_HOST_FACE",
-                        LearnHostFace(),
-                        transitions={
-                            "succeeded": "succeeded",
-                            "failed": "failed",
-                        },
-                        remapping={
-                            "guest_data": "guest_data",
-                            "seated_guest_locs": "seated_guest_locs",
-                        },
-                    )
+                    smach.Concurrence.add("LEARN_HOST_FACE", LearnHostFace())
                 smach.StateMachine.add(
                     "SAY_AND_LEARN_HOST_FACE",
                     sm_con,

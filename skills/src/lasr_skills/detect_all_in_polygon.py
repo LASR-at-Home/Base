@@ -17,7 +17,7 @@ from cv2_img import msg_to_cv2_img, cv2_img_to_msg
 from geometry_msgs.msg import Point, PointStamped
 from lasr_vision_msgs.msg import Detection3D
 
-from lasr_skills import LookToPoint, Detect3DInArea, Detect3DInAreaLangSam
+from lasr_skills import LookToPoint, Detect3DInArea
 
 
 class ProcessDetections(smach.State):
@@ -524,24 +524,25 @@ class DetectAllInPolygon(smach.StateMachine):
                     transitions={"succeeded": "DETECT_OBJECTS"},
                 )
                 if self._prompt is not None:
-                    smach.StateMachine.add(
-                        "DETECT_OBJECTS",
-                        Detect3DInAreaLangSam(
-                            area_polygon=self._polygon,
-                            box_threshold=self._min_confidence,
-                            text_threshold=self._min_confidence,
-                            target_frame="map",
-                            prompt=self._prompt,
-                        ),
-                        transitions={
-                            "succeeded": "PROCESS_DETECTIONS",
-                            "failed": "failed",
-                        },
-                        remapping={
-                            "lang_sam_detections_3d": "detections_3d",
-                            "image_raw": "image_raw",
-                        },
-                    )
+                    pass
+                    # smach.StateMachine.add(
+                    #     "DETECT_OBJECTS",
+                    #     Detect3DInAreaLangSam(
+                    #         area_polygon=self._polygon,
+                    #         box_threshold=self._min_confidence,
+                    #         text_threshold=self._min_confidence,
+                    #         target_frame="map",
+                    #         prompt=self._prompt,
+                    #     ),
+                    #     transitions={
+                    #         "succeeded": "PROCESS_DETECTIONS",
+                    #         "failed": "failed",
+                    #     },
+                    #     remapping={
+                    #         "lang_sam_detections_3d": "detections_3d",
+                    #         "image_raw": "image_raw",
+                    #     },
+                    # )
                 else:
                     smach.StateMachine.add(
                         "DETECT_OBJECTS",

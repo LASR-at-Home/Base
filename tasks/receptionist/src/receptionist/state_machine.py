@@ -63,7 +63,7 @@ class Receptionist(smach.StateMachine):
         self.sofa_point = sofa_point
 
         prior_data: Dict[str, List[str]] = rospy.get_param("/receptionist/priors")
-        self.possible_drinks = [drink.lower() for drink in prior_data["names"]]
+        self.possible_drinks = [drink.lower() for drink in prior_data["drinks"]]
 
         with self:
             self.userdata.guest_data = {
@@ -289,6 +289,8 @@ class Receptionist(smach.StateMachine):
             )
             sm_con = smach.Concurrence(
                 outcomes=["succeeded", "failed"],
+                input_keys=["guest_data", "seated_guest_locs", "guest_seat_point"],
+                output_keys=["interest_message"],
                 default_outcome="failed",
                 outcome_map={
                     "succeeded": {
@@ -307,30 +309,15 @@ class Receptionist(smach.StateMachine):
                     Introduce(
                         guest_to_introduce="guest2", can_detect_second_guest=True
                     ),
-                    transitions={
-                        "succeeded": "succeeded",
-                        "failed": "failed",
-                    },
                 )
 
-                smach.Concurrence.add(
-                    "GET_COMMON_INTEREST",
-                    GetCommonInterest(),
-                    transitions={
-                        "succeeded": "succeeded",
-                        "failed": "succeeded",
-                    },
-                    remapping={
-                        "guest_data": "guest_data",
-                        "interest_message": "interest_message",
-                    },
-                )
+                smach.Concurrence.add("GET_COMMON_INTEREST", GetCommonInterest())
             smach.StateMachine.add(
                 "INTRODUCE_COMMON_INTEREST_CON",
                 sm_con,
                 transitions={
-                    "succeeded": "SAY_COMMON_INTEREST",
-                    "failed": "SAY_COMMON_INTEREST",
+                    "succeeded": "SAY_INTEREST",
+                    "failed": "SAY_INTEREST",
                 },
                 remapping={
                     "guest_data": "guest_data",
