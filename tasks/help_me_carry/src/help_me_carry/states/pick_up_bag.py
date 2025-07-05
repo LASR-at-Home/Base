@@ -92,9 +92,6 @@ class BagPickAndPlace(smach.State):
         self.latest_depth_msg = None
         self.bag_prompt = "grocery bag"
 
-        # Display window for clicking
-        cv2.namedWindow("Live View", cv2.WINDOW_NORMAL)
-
         # Sync RGB + depth
         rgb_sub = Subscriber("/xtion/rgb/image_raw", Image)
         depth_sub = Subscriber("/xtion/depth_registered/image_raw", Image)
@@ -331,7 +328,6 @@ class BagPickAndPlace(smach.State):
         overlay[mask > 0] = [0, 0, 255]
         cv2.imshow("Auto-segmented bag", overlay)
         cv2.waitKey(1000)
-        cv2.destroyWindow("Auto-segmented bag")
 
     def compute_yaw(self, pts, centroid):
         xy = pts[:, :2] - centroid[:2]
