@@ -29,6 +29,7 @@ from lasr_vision_msgs.srv import LangSam, LangSamRequest
 
 import smach
 
+
 class GoToBagFailed(smach.State):
     def __init__(self):
         smach.State.__init__(self, outcomes=["succeeded", "failed"])
@@ -109,13 +110,12 @@ class GoToBagFailed(smach.State):
         except Exception as e:
             rospy.logerr(f"CV bridge error: {e}")
 
-
     def execute(self, userdata):
         self.ask_for_bag()
         self.stow_bag()
         self.hold_gripper_position()
         return "succeeded"
-        
+
     def ask_for_bag(self):
         self.open_gripper()
         goal = PlayMotionGoal()
@@ -220,8 +220,6 @@ class GoToBagFailed(smach.State):
         goal.trajectory.points.append(point)
         self.torso_client.send_goal(goal)
         self.torso_client.wait_for_result()
-        
-
 
 
 if __name__ == "__main__":

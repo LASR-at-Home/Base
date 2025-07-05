@@ -62,7 +62,9 @@ class LangSamService:
             "/lasr_vision/lang_sam/debug", SensorImage, queue_size=10
         )
 
-        rospy.loginfo(f"Initializing LangSAM with GPU {'enabled' if GPU_ENABLED else 'disabled'}")
+        rospy.loginfo(
+            f"Initializing LangSAM with GPU {'enabled' if GPU_ENABLED else 'disabled'}"
+        )
         self._model = LangSAM()
         self._service = rospy.Service("/lasr_vision/lang_sam", LangSam, self._lang_sam)
         self._tf_service = rospy.ServiceProxy(
@@ -185,7 +187,9 @@ class LangSamService:
                     valid = z > 0
 
                     if not np.any(valid):
-                        rospy.logwarn("No valid depth points found for detection %d", det)
+                        rospy.logwarn(
+                            "No valid depth points found for detection %d", det
+                        )
                         continue
 
                     z = z[valid]

@@ -4,7 +4,10 @@ import rospy
 import numpy as np
 from filterpy.kalman import KalmanFilter
 from filterpy.common import Q_discrete_white_noise
-from lasr_person_tracking_filter.srv import PersonTrackingFilter, PersonTrackingFilterResponse
+from lasr_person_tracking_filter.srv import (
+    PersonTrackingFilter,
+    PersonTrackingFilterResponse,
+)
 
 
 class PersonTrackingKalmanFilterService:
@@ -19,14 +22,17 @@ class PersonTrackingKalmanFilterService:
         # y_k+1 = y_k + vy_k * dt
         # vx_k+1 = vx_k
         # vy_k+1 = vy_k
-        self.kf.F = np.array([[1., 0., 1., 0.],
-                              [0., 1., 0., 1.],
-                              [0., 0., 1., 0.],
-                              [0., 0., 0., 1.]])
+        self.kf.F = np.array(
+            [
+                [1.0, 0.0, 1.0, 0.0],
+                [0.0, 1.0, 0.0, 1.0],
+                [0.0, 0.0, 1.0, 0.0],
+                [0.0, 0.0, 0.0, 1.0],
+            ]
+        )
 
         # Measurement function (observe position only)
-        self.kf.H = np.array([[1., 0., 0., 0.],
-                              [0., 1., 0., 0.]])
+        self.kf.H = np.array([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0]])
 
         # Measurement noise covariance (will be adjusted based on detection quality)
         self.kf.R = np.eye(2) * 0.1  # Default: 10cm standard deviation
@@ -35,7 +41,7 @@ class PersonTrackingKalmanFilterService:
         self.kf.Q = np.eye(4) * 0.01
 
         # Initial state covariance
-        self.kf.P = np.eye(4) * 1000.  # High initial uncertainty
+        self.kf.P = np.eye(4) * 1000.0  # High initial uncertainty
 
         # State tracking
         self.initialized = False
@@ -44,9 +50,9 @@ class PersonTrackingKalmanFilterService:
 
         # Initialize ROS service
         self.service = rospy.Service(
-            '/person_tracking_kalman_filter',
+            "/person_tracking_kalman_filter",
             PersonTrackingFilter,
-            self.handle_filter_request
+            self.handle_filter_request,
         )
 
         rospy.loginfo("Person tracking Kalman filter service started")
@@ -58,7 +64,7 @@ class PersonTrackingKalmanFilterService:
             self.kf.x = np.zeros(4)
 
             # Reset state covariance to high initial uncertainty
-            self.kf.P = np.eye(4) * 1000.
+            self.kf.P = np.eye(4) * 1000.0
 
             # Reset filter status
             self.initialized = False
@@ -79,7 +85,9 @@ class PersonTrackingKalmanFilterService:
             if req.command == "initialize":
                 success = self._initialize(req.x, req.y, req.timestamp)
                 response.success = success
-                response.message = "Filter initialized" if success else "Initialization failed"
+                response.message = (
+                    "Filter initialized" if success else "Initialization failed"
+                )
 
             elif req.command == "update":
                 success = self._update_with_detection(
@@ -91,14 +99,18 @@ class PersonTrackingKalmanFilterService:
             elif req.command == "predict":
                 success = self._predict_forward(req.timestamp)
                 response.success = success
-                response.message = "Prediction updated" if success else "Prediction failed"
+                response.message = (
+                    "Prediction updated" if success else "Prediction failed"
+                )
 
             elif req.command == "get_state":
                 response.success = True
                 response.message = "State retrieved"
 
             elif req.command == "is_reasonable":
-                is_reasonable = self._is_detection_reasonable(req.x, req.y, req.max_deviation)
+                is_reasonable = self._is_detection_reasonable(
+                    req.x, req.y, req.max_deviation
+                )
                 response.success = True
                 response.is_reasonable = is_reasonable
                 response.message = f"Detection reasonableness: {is_reasonable}"
@@ -106,7 +118,9 @@ class PersonTrackingKalmanFilterService:
             elif req.command == "reset":
                 success = self._reset_filter()
                 response.success = success
-                response.message = "Filter reset to zero state" if success else "Reset failed"
+                response.message = (
+                    "Filter reset to zero state" if success else "Reset failed"
+                )
 
             else:
                 response.success = False
@@ -126,7 +140,7 @@ class PersonTrackingKalmanFilterService:
     def _initialize(self, x, y, timestamp):
         """Initialize filter with first detection"""
         try:
-            self.kf.x = np.array([x, y, 0., 0.])  # Initial velocity = 0
+            self.kf.x = np.array([x, y, 0.0, 0.0])  # Initial velocity = 0
             self.initialized = True
             self.last_update_time = timestamp
             self.last_prediction_time = timestamp
@@ -158,7 +172,7 @@ class PersonTrackingKalmanFilterService:
             # Adjust measurement noise based on detection quality
             # Lower quality = higher noise
             measurement_noise = 0.05 / max(detection_quality, 0.1)  # 5cm to 50cm
-            self.kf.R = np.eye(2) * (measurement_noise ** 2)
+            self.kf.R = np.eye(2) * (measurement_noise**2)
 
             # Predict step
             self.kf.predict()
@@ -229,8 +243,10 @@ class PersonTrackingKalmanFilterService:
             # Flatten position covariance matrix (2x2 -> 4 elements)
             pos_cov = self.kf.P[:2, :2]
             response.position_covariance = [
-                float(pos_cov[0, 0]), float(pos_cov[0, 1]),
-                float(pos_cov[1, 0]), float(pos_cov[1, 1])
+                float(pos_cov[0, 0]),
+                float(pos_cov[0, 1]),
+                float(pos_cov[1, 0]),
+                float(pos_cov[1, 1]),
             ]
         else:
             response.position_x = 0.0
@@ -242,7 +258,7 @@ class PersonTrackingKalmanFilterService:
 
 
 def main():
-    rospy.init_node('person_tracking_kalman_filter_service')
+    rospy.init_node("person_tracking_kalman_filter_service")
 
     try:
         filter_service = PersonTrackingKalmanFilterService()
@@ -252,5 +268,5 @@ def main():
         rospy.loginfo("Kalman filter service shutdown")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

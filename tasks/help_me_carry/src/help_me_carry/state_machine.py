@@ -1,7 +1,7 @@
 import rospy
 import smach
 import smach_ros
-from help_me_carry import GoToBag, BagPickAndPlace
+from help_me_carry import GoToBag, BagPickAndPlace, GoToBagFailed
 from lasr_skills import FollowPerson, PlayMotion, GoToLocation, Say
 
 
