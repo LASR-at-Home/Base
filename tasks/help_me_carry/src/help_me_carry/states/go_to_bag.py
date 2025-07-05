@@ -229,7 +229,7 @@ class GoToBag(smach.State):
             return "failed"
 
     def look_where_person_points(self):
-        rospy.loginfo("Looking for pointing gesture (by closest left ankle)...")
+        rospy.loginfo("Looking for pointing gesture (by closest mean position)...")
         kps_result = self.get_human_keypoints_3d()
 
         if not kps_result:
