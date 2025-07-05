@@ -8,9 +8,6 @@ import sys
 import numpy as np
 
 from PIL import Image
-import os
-
-os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
 from lang_sam import LangSAM
 from lang_sam.utils import draw_image

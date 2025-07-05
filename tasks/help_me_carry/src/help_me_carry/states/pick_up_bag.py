@@ -168,7 +168,11 @@ class BagPickAndPlace(smach.State):
             resp = self.get_langsam_bags()
             if not resp or not resp.detections:
                 rospy.logwarn("No bags detected.")
-                return "failed"
+                self.say("Please step back, I will reach my arm out.")
+                self.ask_for_bag()
+                self.stow_bag()
+                self.hold_gripper_position()
+                return "succeeded"
 
             intrinsics = self.get_camera_intrinsics()
             result = self.find_closest_detection(
