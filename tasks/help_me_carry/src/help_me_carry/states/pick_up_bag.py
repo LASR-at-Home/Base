@@ -488,6 +488,7 @@ class BagPickAndPlace(smach.State):
 
         allow_collisions_with_object("obj", self.planning_scene_interface)
         rospy.loginfo("Collision object added to the planning scene!")
+        rospy.sleep(0.5)
 
         result = self.sync_shift_ee(self.arm, 0.30, 0.0, 0.0)
         if result == False:

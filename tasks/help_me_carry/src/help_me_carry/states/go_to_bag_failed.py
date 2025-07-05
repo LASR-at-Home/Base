@@ -125,8 +125,18 @@ class GoToBagFailed(smach.State):
         self.motion_client.wait_for_result()
         rospy.loginfo("Gripper offered.")
         self.say(
-            "I wasn't able to detect the bag. Please put the bag into my gripper. I will give you 5 seconds."
+            "I wasn't able to detect the bag. Please put the bag into my gripper. I will give you 10 seconds."
         )
+        self.say("10")
+        rospy.sleep(0.5)
+        self.say("9")
+        rospy.sleep(0.5)
+        self.say("8")
+        rospy.sleep(0.5)
+        self.say("7")
+        rospy.sleep(0.5)
+        self.say("6")
+        rospy.sleep(0.5)
         self.say("5")
         rospy.sleep(0.5)
         self.say("4")
