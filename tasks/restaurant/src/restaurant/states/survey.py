@@ -3,11 +3,12 @@ import rospy
 import smach
 import smach_ros
 import numpy as np
+import math
+
 from control_msgs.msg import FollowJointTrajectoryAction, FollowJointTrajectoryGoal
 from trajectory_msgs.msg import JointTrajectoryPoint, JointTrajectory
-from lasr_skills import Detect3D, DetectHandUp3D, GetImageAndDepthImage
-import actionlib
-import math
+from restaurant.states import ComputeApproach
+from lasr_skills import DetectHandUp3D, GetImageAndDepthImage, GoToLocation
 
 
 class AnalyseDetections(smach.State):
