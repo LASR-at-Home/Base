@@ -115,21 +115,42 @@ class Receptionist(smach.StateMachine):
                 "START_TIMER",
                 StartTimer(),
                 transitions={
-                    "succeeded": "SAY_START",
-                    "failed": "SAY_START",
+                    "succeeded": "START_CON",
+                    "failed": "START_CON",
                 },
                 remapping={
                     "start_time": "start_time",
                 },
             )
 
+            start_con_sm = smach.Concurrence(
+                outcomes=["succeeded", "failed"],
+                default_outcome="failed",
+                outcome_map={
+                    "succeeded": {
+                        "SAY_START": "succeeded",
+                        "GO_TO_WAIT_LOCATION_GUEST_1": "succeeded",
+                    },
+                    "failed": {
+                        "SAY_START": "aborted",
+                        "GO_TO_WAIT_LOCATION_GUEST_1": "failed",
+                    },
+                },
+            )
+            with start_con_sm:
+                smach.Concurrence.add(
+                    "SAY_START", Say(text="Start of receptionist task.")
+                )
+
+                smach.Concurrence.add(
+                    f"GO_TO_WAIT_LOCATION_GUEST_1", GoToLocation(self.wait_pose)
+                )
             smach.StateMachine.add(
-                "SAY_START",
-                Say(text="Start of receptionist task."),
+                "START_CON",
+                start_con_sm,
                 transitions={
-                    "succeeded": "GO_TO_WAIT_LOCATION_GUEST_1",
-                    "aborted": "GO_TO_WAIT_LOCATION_GUEST_1",
-                    "preempted": "GO_TO_WAIT_LOCATION_GUEST_1",
+                    "succeeded": "SAY_WAITING_GUEST_1",
+                    "failed": "SAY_WAITING_GUEST_1",
                 },
             )
 
@@ -201,18 +222,40 @@ class Receptionist(smach.StateMachine):
                 "INTRODUCE_GUEST_1",
                 Introduce(guest_to_introduce="guest1", can_detect_second_guest=False),
                 transitions={
-                    "succeeded": "SAY_RETURN_WAITING_AREA",
-                    "failed": "SAY_RETURN_WAITING_AREA",
+                    "succeeded": "RETURN_CON",
+                    "failed": "RETURN_CON",
                 },
             )
 
+            return_con_sm = smach.Concurrence(
+                outcomes=["succeeded", "failed"],
+                default_outcome="failed",
+                outcome_map={
+                    "succeeded": {
+                        "SAY_RETURN_WAITING_AREA": "succeeded",
+                        "GO_TO_WAIT_LOCATION_GUEST_2": "succeeded",
+                    },
+                    "failed": {
+                        "SAY_RETURN_WAITING_AREA": "aborted",
+                        "GO_TO_WAIT_LOCATION_GUEST_2": "failed",
+                    },
+                },
+            )
+            with return_con_sm:
+                smach.Concurrence.add(
+                    "SAY_RETURN_WAITING_AREA",
+                    Say(text="Let me go back to the waiting area."),
+                )
+
+                smach.Concurrence.add(
+                    f"GO_TO_WAIT_LOCATION_GUEST_2", GoToLocation(self.wait_pose)
+                )
             smach.StateMachine.add(
-                "SAY_RETURN_WAITING_AREA",
-                Say(text="Let me go back to the waiting area."),
+                "RETURN_CON",
+                return_con_sm,
                 transitions={
-                    "succeeded": "GO_TO_WAIT_LOCATION_GUEST_2",
-                    "aborted": "GO_TO_WAIT_LOCATION_GUEST_2",
-                    "preempted": "GO_TO_WAIT_LOCATION_GUEST_2",
+                    "succeeded": "SAY_WAITING_GUEST_2",
+                    "failed": "SAY_WAITING_GUEST_2",
                 },
             )
 
@@ -383,15 +426,6 @@ class Receptionist(smach.StateMachine):
         Args:
             guest_id (int): Identifier for the guest.
         """
-
-        smach.StateMachine.add(
-            f"GO_TO_WAIT_LOCATION_GUEST_{guest_id}",
-            GoToLocation(self.wait_pose),
-            transitions={
-                "succeeded": f"SAY_WAITING_GUEST_{guest_id}",
-                "failed": f"GO_TO_WAIT_LOCATION_GUEST_{guest_id}",
-            },
-        )
 
         smach.StateMachine.add(
             f"SAY_WAITING_GUEST_{guest_id}",
