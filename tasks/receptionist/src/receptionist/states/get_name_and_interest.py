@@ -36,7 +36,14 @@ class GetNameAndInterest(smach.StateMachine):
             smach.StateMachine.add(
                 "PARSE_NAME_AND_INTEREST",
                 self.ParseNameAndInterest(
-                    guest_id=self._guest_id, param_key=self._param_key
+                    guest_id=self._guest_id,last_resort = self._last_resort, param_key=self._param_key
+                ),
+                transitions={"succeeded": "succeeded", "failed": "failed", "recovery": "SPEECH_RECOVERY"},
+            )
+            smach.StateMachine.add(
+                "SPEECH_RECOVERY",
+                self.SpeechRecovery(
+                    guest_id=self._guest_id,last_resort = self._last_resort, info_type = "name", param_key = self._param_key
                 ),
                 transitions={"succeeded": "succeeded", "failed": "failed"},
             )
@@ -45,6 +52,7 @@ class GetNameAndInterest(smach.StateMachine):
         def __init__(
             self,
             guest_id: str,
+            last_resort: bool, 
             param_key: str = "/receptionist/priors",
         ):
             """Parses the transcription of the guests' name and interest.
@@ -64,6 +72,7 @@ class GetNameAndInterest(smach.StateMachine):
             self._guest_id = guest_id
             prior_data: Dict[str, List[str]] = rospy.get_param(param_key)
             self._possible_names = [name.lower() for name in prior_data["names"]]
+            self._last_resort = last_resort
 
         def execute(self, userdata: UserData) -> str:
             """Parses the transcription of the guest's name and interest.
@@ -118,12 +127,63 @@ class GetNameAndInterest(smach.StateMachine):
             )
 
             # Determine outcome
-            if name == "unknown" or interest == "unknown":
-                return "failed"
-            if name not in self._possible_names:
-                return "failed"
+            if not self._last_resort:
+                if name == "unknown" or interest == "unknown":
+                    return "failed"
+                if name not in self._possible_names:
+                    return "failed"
 
-            return "succeeded"
+                return "succeeded"
+            else:
+                if interest == "unknown":
+                    request = LlmRequest()
+                    request.system_prompt = (
+                        "You are a robot acting as a party host. You are tasked with identifying the interest belonging to a guest. "
+                        "You will receive input such as 'my name is john and I like robotics'. Output only the "
+                        "interest, e.g. 'robotics'. Make sure that the interest is only one or two words. If you can't identify the name or interest, try your best to infer from the input, but only output one or two words."
+                    )
+                    request.prompt = transcription
+                    request.max_tokens = 10
+
+                    response = self._llm(request)
+                    # Maxsplit in case the interest is more than one word.
+                    interest = response.output.strip()
+                        
+                    interest_n_words = len(interest.split())
+                    if interest_n_words == 0:
+                        guest["interest"] = "unknown"
+                        return "failed"
+                    if interest_n_words > 2:
+                        interest = interest.split()[
+                            :2
+                        ]  # Take only the first two word of interest
+                        interest = " ".join(interest)
+                    interest = interest.strip()
+
+                    # Update guest data
+                    guest = userdata.guest_data[self._guest_id]
+                    guest["interest"] = interest
+
+                    rospy.loginfo(
+                        f"Parsed interest: {interest} from transcription: {transcription}"
+                    )
+
+                if name == "unknown":
+                    for key_phrase in self._possible_names:
+                        if key_phrase in transcription:
+                            guest["name"] = key_phrase
+                            rospy.loginfo(
+                                f"Name identified as: {key_phrase}"
+                            )
+                            information_found = True
+                            break
+                    if not information_found:
+                        rospy.loginfo(f"Name not found in transcription")
+                        guest["name"] = "unknown"
+                        return "recovery"
+                    
+    
+
 
     class PostRecoveryDecision(smach.State):
         def __init__(
@@ -164,3 +224,4 @@ class GetNameAndInterest(smach.StateMachine):
                 if userdata.guest_data[self._guest_id]["interest"] == "unknown":
                     return True
             return False
+        
