@@ -24,7 +24,7 @@ class GetDrink(smach.StateMachine):
     ):
         smach.StateMachine.__init__(
             self,
-            outcomes=["succeeded", "failed"],
+            outcomes=["succeeded", "failed", "retry"],
             input_keys=["guest_transcription", "guest_data"],
             output_keys=["guest_data", "guest_transcription"],
         )
@@ -36,7 +36,11 @@ class GetDrink(smach.StateMachine):
             smach.StateMachine.add(
                 "PARSE_DRINK",
                 self.ParseDrink(guest_id=self._guest_id, param_key=self._param_key),
-                transitions={"succeeded": "succeeded", "failed": "failed"},
+                transitions={
+                    "succeeded": "succeeded",
+                    "failed": "failed",
+                    "retry": "retry",
+                },
             )
 
     class ParseDrink(smach.State):

@@ -169,6 +169,8 @@ class FindDrinkOnTable(smach.StateMachine):
                     "location"
                 ] = drink_location
 
+            rospy.loginfo(f"Detected drinks: {userdata.drink_detections}")
+
             userdata.drink_location = favourite_drink_location
             return "succeeded"
 

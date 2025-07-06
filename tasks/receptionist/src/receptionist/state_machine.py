@@ -318,7 +318,7 @@ class Receptionist(smach.StateMachine):
                     FindDrinkOnTable(
                         guest_id="guest2",
                         table_point=self.table_point,
-                        possible_drinks=["cup", "bottle"],
+                        possible_drinks=self.possible_drinks,
                         table_area=self.table_area,
                         table_left_area=self.left_table_area,
                         table_right_area=self.right_table_area,
