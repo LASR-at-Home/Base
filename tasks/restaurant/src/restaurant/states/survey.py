@@ -7,7 +7,6 @@ import math
 
 from control_msgs.msg import FollowJointTrajectoryAction, FollowJointTrajectoryGoal
 from trajectory_msgs.msg import JointTrajectoryPoint, JointTrajectory
-from restaurant.states import ComputeApproach
 from lasr_skills import DetectHandUp3D, GetImageAndDepthImage, GoToLocation
 
 
