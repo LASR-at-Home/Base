@@ -1,12 +1,36 @@
-from typing import List
-
 import os
+import sys
+from typing import List, Optional
+
+
+# CRITICAL: Configure GPU before importing any deep learning libraries
+def configure_gpu_from_args():
+    """Configure GPU settings from command line arguments before any imports."""
+    if len(sys.argv) > 1:
+        try:
+            use_gpu = bool(int(sys.argv[1]))
+            if not use_gpu:
+                os.environ["CUDA_VISIBLE_DEVICES"] = ""
+                print(f"[LangSAM] GPU disabled - CUDA_VISIBLE_DEVICES set to empty")
+                return False
+            else:
+                print(f"[LangSAM] GPU enabled")
+                return True
+        except (ValueError, IndexError):
+            print(f"[LangSAM] Invalid GPU argument, defaulting to GPU enabled")
+            return True
+    print(f"[LangSAM] No GPU argument provided, defaulting to GPU enabled")
+    return True
+
+
+# Configure GPU settings immediately
+GPU_ENABLED = configure_gpu_from_args()
+
+# Now safe to import deep learning libraries
 import rospy
 import cv2
 import cv2_img
-import sys
 import numpy as np
-
 from PIL import Image
 
 from lang_sam import LangSAM
@@ -25,14 +49,15 @@ class LangSamService:
     _tf_service: rospy.ServiceProxy
     debug_publisher: rospy.Publisher
 
-    def __init__(self, use_gpu: bool = True):
+    def __init__(self):
+        """Initialize the LangSAM service."""
         self.debug_publisher = rospy.Publisher(
             "/lasr_vision/lang_sam/debug", SensorImage, queue_size=10
         )
 
-        if not use_gpu:
-            os.environ["CUDA_VISIBLE_DEVICES"] = ""
-
+        rospy.loginfo(
+            f"Initializing LangSAM with GPU {'enabled' if GPU_ENABLED else 'disabled'}"
+        )
         self._model = LangSAM()
         self._service = rospy.Service("/lasr_vision/lang_sam", LangSam, self._lang_sam)
         self._tf_service = rospy.ServiceProxy(
@@ -222,9 +247,16 @@ class LangSamService:
         return response
 
 
-if __name__ == "__main__":
-    use_gpu = bool(sys.argv[1])
+def main():
+    """Main entry point for the LangSAM service."""
     rospy.init_node("lasr_vision_lang_sam")
-    lang_sam_service = LangSamService(use_gpu=use_gpu)
+
+    # Create service instance
+    lang_sam_service = LangSamService()
+
+    rospy.loginfo("LangSAM service initialized successfully")
     rospy.spin()
-    
+
+
+if __name__ == "__main__":
+    main()
