@@ -5,6 +5,7 @@ import numpy as np
 import tf2_ros as tf
 
 from shapely.geometry import Polygon as ShapelyPolygon
+from shapely.geometry import Point as ShapelyPoint
 
 from std_msgs.msg import Header
 from geometry_msgs.msg import Point, PointStamped
@@ -135,11 +136,11 @@ class ProcessDetections(smach.State):
         sofa_guest_point = sofa_detection.point
 
         if self._left_sofa_area.contains(
-            ShapelyPolygon([(sofa_guest_point.x, sofa_guest_point.y)])
+            ShapelyPoint(sofa_guest_point.x, sofa_guest_point.y)
         ):
             result = "right"
         elif self._right_sofa_area.contains(
-            ShapelyPolygon([(sofa_guest_point.x, sofa_guest_point.y)])
+            ShapelyPoint(sofa_guest_point.x, sofa_guest_point.y)
         ):
             result = "left"
         else:

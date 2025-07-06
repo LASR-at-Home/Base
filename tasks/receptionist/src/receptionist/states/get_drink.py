@@ -35,7 +35,7 @@ class GetDrink(smach.StateMachine):
         with self:
             smach.StateMachine.add(
                 "PARSE_DRINK",
-                self.ParseDrink(guest_id=self._guest_id, param_key=self._param_key),
+                self.ParseDrink(guest_id=self._guest_id, last_resort=self._last_resort, param_key=self._param_key, ),
                 transitions={
                     "succeeded": "succeeded",
                     "failed": "failed",
@@ -47,8 +47,9 @@ class GetDrink(smach.StateMachine):
         def __init__(
             self,
             guest_id: str,
+            last_resort: bool,
             param_key: str = "/receptionist/priors",
-            max_retries: int = 1,
+            
         ):
             """Parses the transcription of the guests' favourite drink.
 
@@ -66,9 +67,9 @@ class GetDrink(smach.StateMachine):
             self._llm.wait_for_service()
             self._guest_id = guest_id
             self._retry_count = 0
-            self._max_retries = max_retries
             prior_data: Dict[str, List[str]] = rospy.get_param(param_key)
             self._possible_drinks = [drink.lower() for drink in prior_data["drinks"]]
+            self._last_resort = last_resort
 
         def execute(self, userdata: UserData) -> str:
             """Parses the transcription of the favourite drink.
@@ -99,8 +100,7 @@ class GetDrink(smach.StateMachine):
                     userdata.guest_data[self._guest_id]["drink"] = drink
                     rospy.loginfo(f"Guest Drink identified as: {drink}")
                     return "succeeded"
-            if self._retry_count < self._max_retries:
-                self._retry_count += 1
+            if not self._last_resort:
                 rospy.logwarn(
                     f"Could not identify drink from transcription: {transcription}. Retrying..."
                 )
