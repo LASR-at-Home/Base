@@ -74,28 +74,18 @@ class GetCommonInterest(smach.StateMachine):
             self,
             outcomes=["succeeded", "failed"],
             input_keys=["guest_data"],
-            output_keys=["guest_data"],
+            output_keys=["guest_data", "interest_message"],
         )
         with self:
             smach.StateMachine.add(
                 "GET_INTEREST_MESSAGE",
                 GetInterest(),
                 transitions={
-                    "succeeded": "SAY_INTEREST",
-                    "failed": "SAY_INTEREST",
+                    "succeeded": "succeeded",
+                    "failed": "failed",
                 },
                 remapping={
                     "guest_data": "guest_data",
                     "interest_message": "interest_message",
                 },
-            )
-            smach.StateMachine.add(
-                "SAY_INTEREST",
-                Say(),
-                transitions={
-                    "succeeded": "succeeded",
-                    "aborted": "failed",
-                    "preempted": "failed",
-                },
-                remapping={"text": "interest_message"},
             )

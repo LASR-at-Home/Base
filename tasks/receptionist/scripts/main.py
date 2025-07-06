@@ -50,6 +50,8 @@ if __name__ == "__main__":
     seat_area_param = rospy.get_param("/receptionist/seat_area")
 
     sofa_area_param = rospy.get_param("/receptionist/sofa_area")
+    left_sofa_area_param = rospy.get_param("/receptionist/left_sofa_area")
+    right_sofa_area_param = rospy.get_param("/receptionist/right_sofa_area")
 
     sofa_point_param = rospy.get_param("/receptionist/sofa_point")
 
@@ -65,6 +67,8 @@ if __name__ == "__main__":
     assert seat_area.is_valid, "Seat area is not valid"
 
     sofa_area = ShapelyPolygon(sofa_area_param)
+    left_sofa_area = ShapelyPolygon(left_sofa_area_param)
+    right_sofa_area = ShapelyPolygon(right_sofa_area_param)
     sofa_area_publisher.publish(
         PolygonStamped(
             polygon=Polygon(
@@ -126,6 +130,8 @@ if __name__ == "__main__":
         seat_pose,
         seat_area,
         sofa_area,
+        left_sofa_area,
+        right_sofa_area,
         sofa_point,
         {
             "name": "john",

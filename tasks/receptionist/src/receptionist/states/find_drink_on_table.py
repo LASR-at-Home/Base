@@ -10,6 +10,26 @@ from geometry_msgs.msg import PointStamped
 from std_msgs.msg import Header
 
 
+class GetDrinkString(smach.State):
+    def __init__(self):
+        smach.State.__init__(
+            self,
+            outcomes=["succeeded", "failed"],
+            input_keys=["guest_data", "drink_location"],
+            output_keys=["drink_string"],
+        )
+
+    def execute(self, userdata):
+        drink_location = userdata.drink_location
+        drink_str = ""
+        if drink_location == "None":
+            drink_str += "Unfortunately, I couldn't find your drink on the table. "
+        else:
+            drink_str += f"Your drink is located at the {drink_location} of the table. "
+        userdata.drink_string = drink_str
+        return "succeeded"
+
+
 class FindDrinkOnTable(smach.StateMachine):
     def __init__(
         self,
@@ -24,7 +44,8 @@ class FindDrinkOnTable(smach.StateMachine):
         smach.StateMachine.__init__(
             self,
             outcomes=["succeeded", "failed"],
-            input_keys=["guest_data"],
+            input_keys=["guest_data", "drink_detections"],
+            output_keys=["drink_detections"],
         )
         self._guest_id = guest_id
         self.possible_drinks = possible_drinks
@@ -81,7 +102,7 @@ class FindDrinkOnTable(smach.StateMachine):
             )
             smach.StateMachine.add(
                 "GET_DRINK_STRING",
-                self.GetDrinkString(),
+                GetDrinkString(),
                 transitions={
                     "succeeded": "SAY_DRINK_STRING",
                     "failed": "SAY_DRINK_STRING",
@@ -114,8 +135,11 @@ class FindDrinkOnTable(smach.StateMachine):
             smach.State.__init__(
                 self,
                 outcomes=["succeeded", "failed"],
-                input_keys=["detected_objects", "guest_data"],
-                output_keys=["drink_location"],  # Left, Centre, Right, or None
+                input_keys=["detected_objects", "guest_data", "drink_detections"],
+                output_keys=[
+                    "drink_location",  # Left, Centre, Right, or None
+                    "drink_detections",
+                ],
             )
             self._guest_id = guest_id
             self._table_left_area = table_left_area
@@ -124,44 +148,98 @@ class FindDrinkOnTable(smach.StateMachine):
 
         def execute(self, userdata):
             favourite_drink = userdata.guest_data[self._guest_id].get("drink", None)
-            drink_location = "None"
+            favourite_drink_location = "None"
 
-            if favourite_drink is None:
-                pass
-            else:
-                detected_drinks = userdata.detected_objects
-                for drink in detected_drinks:
-                    if drink.name.lower() == favourite_drink.lower():
-                        point = Point(drink.point.x, drink.point.y)
-                        if self._table_left_area.contains(point):
-                            drink_location = "Left"
-                        elif self._table_right_area.contains(point):
-                            drink_location = "Right"
-                        elif self._table_centre_area.contains(point):
-                            drink_location = "Centre"
-                        else:
-                            drink_location = "None"
-                        break
-            userdata.drink_location = drink_location
+            detected_drinks = userdata.detected_objects
+            for drink in detected_drinks:
+                point = Point(drink.point.x, drink.point.y)
+                if self._table_left_area.contains(point):
+                    drink_location = "Left"
+                elif self._table_right_area.contains(point):
+                    drink_location = "Right"
+                elif self._table_centre_area.contains(point):
+                    drink_location = "Centre"
+                else:
+                    drink_location = "None"
+                if drink.name.lower() == favourite_drink.lower():
+                    favourite_drink_location = drink_location
+
+                userdata.drink_detections[drink.name.lower()]["detected"] = True
+                userdata.drink_detections[drink.name.lower()][
+                    "location"
+                ] = drink_location
+
+            rospy.loginfo(f"Detected drinks: {userdata.drink_detections}")
+
+            userdata.drink_location = favourite_drink_location
             return "succeeded"
 
-    class GetDrinkString(smach.State):
-        def __init__(self):
-            smach.State.__init__(
-                self,
-                outcomes=["succeeded", "failed"],
-                input_keys=["guest_data", "drink_location"],
-                output_keys=["drink_string"],
+
+class GetDrinkLocationFromMemory(smach.State):
+    def __init__(self, guest_id: str):
+        smach.State.__init__(
+            self,
+            outcomes=["succeeded", "failed"],
+            input_keys=["drink_detections", "guest_data"],
+            output_keys=["drink_location"],
+        )
+
+        self._guest_id = guest_id
+
+    def execute(self, userdata):
+        favourite_drink = userdata.guest_data[self._guest_id].get("drink", None)
+        favourite_drink_location = "None"
+
+        if favourite_drink is not None:
+            favourite_drink_location = userdata.drink_detections[
+                favourite_drink.lower()
+            ]["location"]
+        userdata.drink_location = favourite_drink_location
+        return "succeeded"
+
+
+class RecallDrinkOnTable(smach.StateMachine):
+    def __init__(self, guest_id: str):
+        smach.StateMachine.__init__(
+            self,
+            outcomes=["succeeded", "failed"],
+            input_keys=["guest_data", "drink_detections"],
+        )
+
+        with self:
+            smach.StateMachine.add(
+                "GET_DRINK_LOCATION_FROM_MEMORY",
+                GetDrinkLocationFromMemory(guest_id=guest_id),
+                transitions={
+                    "succeeded": "GET_DRINK_STRING",
+                    "failed": "GET_DRINK_STRING",
+                },
+                remapping={
+                    "guest_data": "guest_data",
+                    "drink_detections": "drink_detections",
+                    "drink_location": "drink_location",
+                },
             )
-
-        def execute(self, userdata):
-            drink_location = userdata.drink_location
-            drink_str = ""
-            if drink_location == "None":
-                drink_str += "Unfortunately, I couldn't find your drink on the table. "
-            else:
-                drink_str += (
-                    f"Your drink is located at the {drink_location} of the table. "
-                )
-            userdata.drink_string = drink_str
-            return "succeeded"
+            smach.StateMachine.add(
+                "GET_DRINK_STRING",
+                GetDrinkString(),
+                transitions={
+                    "succeeded": "SAY_DRINK_STRING",
+                    "failed": "SAY_DRINK_STRING",
+                },
+                remapping={
+                    "guest_data": "guest_data",
+                    "drink_location": "drink_location",
+                    "drink_string": "drink_string",
+                },
+            )
+            smach.StateMachine.add(
+                "SAY_DRINK_STRING",
+                Say(),
+                transitions={
+                    "succeeded": "succeeded",
+                    "aborted": "failed",
+                    "preempted": "failed",
+                },
+                remapping={"text": "drink_string"},
+            )

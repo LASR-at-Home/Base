@@ -10,9 +10,9 @@ import openwakeword
 from openwakeword.model import Model
 
 from lasr_speech_recognition_msgs.srv import (
-    WakewordTrigger,
-    WakewordTriggerResponse,
-    WakewordTriggerRequest,
+    Wakeword,
+    WakewordResponse,
+    WakewordRequest,
 )
 
 
@@ -28,42 +28,45 @@ class WakewordService:
         )
 
         self._detect_wakeword_service = rospy.Service(
-            "/lasr_wakewords/detect", WakewordTrigger, self._detect_wakeword
+            "/lasr_wakewords/detect", Wakeword, self._detect_wakeword
         )
 
         rospy.loginfo("/lasr_wakewords/detect is ready!")
 
-    def _detect_wakeword(
-        self, request: WakewordTriggerRequest
-    ) -> WakewordTriggerResponse:
-        wakeword = request.keyword.strip().lower()
+    def _detect_wakeword(self, request: WakewordRequest) -> WakewordResponse:
+        wakewords = request.keywords
         threshold = request.threshold
         max_duration = request.timeout
         detected = threading.Event()
+        detected_keyword = ""
 
         rospy.loginfo(
-            f"Listening for wakeword '{wakeword}' with threshold {threshold} and timeout {max_duration}s"
+            f"Listening for wakewords: {wakewords}, with threshold {threshold} and timeout {max_duration}s"
         )
 
-        model_path = os.path.join(self._model_path, f"{wakeword}.tflite")
-        if not os.path.exists(model_path):
-            rospy.logwarn(f"{model_path} does not exist.")
-            return WakewordTriggerResponse(success=False)
+        model_paths = [
+            os.path.join(self._model_path, f"{wakeword}.tflite")
+            for wakeword in wakewords
+        ]
 
         try:
-            model = Model([model_path])
+            model = Model(model_paths)
         except Exception as e:
             rospy.logerr(f"Failed to load model: {e}")
-            return WakewordTriggerResponse(success=False)
+            return WakewordResponse(success=False)
 
         def audio_callback(indata, frames, time_info, status):
+            nonlocal detected_keyword
             if status:
                 rospy.logwarn(f"Audio stream status: {status}")
             pcm = (indata[:, 0] * 32768).astype(np.int16)
-            score = model.predict(pcm)[wakeword]
-            rospy.loginfo(score)
+            result = model.predict(pcm)
+            rospy.loginfo(result)
+            wakeword = max(result, key=lambda k: result[k])
+            score = result[wakeword]
             if score > threshold:
                 rospy.loginfo(f"Wakeword '{wakeword}' detected (score={score:.3f})")
+                detected_keyword = wakeword
                 detected.set()
 
         try:
@@ -85,9 +88,9 @@ class WakewordService:
                     detected.wait(timeout=0.1)
         except Exception as e:
             rospy.logerr(f"Error opening InputStream: {e}")
-            return WakewordTriggerResponse(success=False)
+            return WakewordResponse(success=False)
 
-        return WakewordTriggerResponse(success=True)
+        return WakewordResponse(success=True, keyword=detected_keyword)
 
 
 if __name__ == "__main__":
