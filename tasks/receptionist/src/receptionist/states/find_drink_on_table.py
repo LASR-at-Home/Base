@@ -191,9 +191,12 @@ class GetDrinkLocationFromMemory(smach.State):
         favourite_drink_location = "None"
 
         if favourite_drink is not None:
-            favourite_drink_location = userdata.drink_detections[
-                favourite_drink.lower()
-            ]["location"]
+            try:
+                favourite_drink_location = userdata.drink_detections[
+                    favourite_drink.lower()
+                ]["location"]
+            except:
+                return "failed"
         userdata.drink_location = favourite_drink_location
         return "succeeded"
 
