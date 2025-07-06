@@ -257,12 +257,13 @@ class BagPickAndPlace(smach.State):
             if frac < max_mask_fraction:  # Only keep masks smaller than threshold
                 filtered_detections.append(det)
             else:
-                rospy.logwarn(f"Filtered out mask covering {frac:.1%} of image (likely floor).")
+                rospy.logwarn(
+                    f"Filtered out mask covering {frac:.1%} of image (likely floor)."
+                )
 
         # Return a new response with filtered detections
         resp.detections = filtered_detections
         return resp if filtered_detections else None
-
 
     def get_camera_intrinsics(self):
         # Ideally, fetch from CameraInfo topic!

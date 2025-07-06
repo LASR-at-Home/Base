@@ -637,10 +637,10 @@ class FollowPerson(smach.StateMachine):
             #         f"Excessive sensor conflicts detected: {response.consecutive_conflicts}"
             #     )
             if response.fusion_mode in [
-                "single_a_temporal", 
-                "single_b_temporal",   
-                "predict_only",     
-                "error_fallback",      
+                "single_a_temporal",
+                "single_b_temporal",
+                "predict_only",
+                "error_fallback",
             ]:
                 rospy.logwarn(
                     f"Severe Risk, current filter process mode: {response.fusion_mode}"
@@ -1138,10 +1138,15 @@ class FollowPerson(smach.StateMachine):
         )
         return do_transform_pose(pose, trans)
 
-    def look_at_point(self, target_point: Point, target_frame: str = "map", wait_for_completion: bool = False):
+    def look_at_point(
+        self,
+        target_point: Point,
+        target_frame: str = "map",
+        wait_for_completion: bool = False,
+    ):
         current_time = rospy.Time.now()
         if current_time - self.shared_data.look_at_point_time < rospy.Duration(
-                self.shared_data.head_movement_interval
+            self.shared_data.head_movement_interval
         ):
             return
 
@@ -1480,7 +1485,8 @@ class TrackingActiveState(smach.State):
             # Check if target is lost
             if (
                 self.sm_manager.shared_data.first_tracking_done
-                and rospy.Time.now() - self.sm_manager.shared_data.last_good_detection_time
+                and rospy.Time.now()
+                - self.sm_manager.shared_data.last_good_detection_time
                 > self.sm_manager.shared_data.target_moving_timeout_duration
             ):
                 rospy.loginfo("Target lost - no good detection")
@@ -1746,8 +1752,8 @@ class NavigationState(smach.State):
 
         # Verify that navigation is indeed active
         if (
-                not self._is_navigation_active()
-                and self.sm_manager.shared_data.first_tracking_done
+            not self._is_navigation_active()
+            and self.sm_manager.shared_data.first_tracking_done
         ):
             rospy.logwarn("Entered NAVIGATION state but no active navigation found")
             # TODO: the orentation is not handled yet!!!
@@ -1761,10 +1767,14 @@ class NavigationState(smach.State):
             navigation_elapsed_time = (current_time - navigation_start_time).to_sec()
 
             if navigation_elapsed_time >= self.navigation_timeout:
-                rospy.logwarn(f"Navigation timeout reached ({self.navigation_timeout}s). Canceling current goal.")
+                rospy.logwarn(
+                    f"Navigation timeout reached ({self.navigation_timeout}s). Canceling current goal."
+                )
                 # Cancel the current navigation goal
                 self.sm_manager.move_base_client.cancel_goal()
-                rospy.loginfo("Navigation goal canceled due to timeout, treating as successful completion")
+                rospy.loginfo(
+                    "Navigation goal canceled due to timeout, treating as successful completion"
+                )
                 self.sm_manager.shared_data.last_movement_time = rospy.Time.now()
                 self.sm_manager.shared_data.added_new_target_time = rospy.Time.now()
                 return "navigation_complete"
@@ -1782,8 +1792,8 @@ class NavigationState(smach.State):
                 )
 
                 if (
-                        self.object_avoidance
-                        # and time_since_last_look_down >= look_down_period_duration
+                    self.object_avoidance
+                    # and time_since_last_look_down >= look_down_period_duration
                 ):
                     rospy.loginfo(
                         "NavigationState: Look down period elapsed, executing down swap"
@@ -1833,13 +1843,13 @@ class NavigationState(smach.State):
                 # Issue distance warning if target is too far
                 distance_to_target = _euclidean_distance(current_goal, newest_target)
                 if (
-                        distance_to_target
-                        > self.sm_manager.shared_data.max_following_distance
-                        and (
+                    distance_to_target
+                    > self.sm_manager.shared_data.max_following_distance
+                    and (
                         rospy.Time.now()
                         - self.sm_manager.shared_data.last_distance_warning_time
                         > self.sm_manager.shared_data.distance_warning_interval_duration
-                )
+                    )
                 ):
                     rospy.loginfo(
                         f"Issuing distance warning - target too far: {distance_to_target:.2f}m"
