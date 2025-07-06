@@ -106,7 +106,7 @@ class DetectDoorOpening(smach.State):
             queue_size=1,
         )
 
-        while (not self._door_opened) or ((time.time() - start_time) < self._timeout):
+        while (not self._door_opened) and ((time.time() - start_time) < self._timeout):
             rospy.sleep(0.1)
 
         self._scan_subscriber.unregister()
