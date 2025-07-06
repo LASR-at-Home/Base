@@ -17,6 +17,11 @@
     <!-- LLM -->
     <node pkg="lasr_llm" type="llm.py" name="llm_server" output="screen"/>
 
+    <!-- Wakewords -->
+    <node pkg="lasr_wakewords" type="wakeword_service.py" name="wakeword_service" output="screen">
+        <param name="~device_index" value="$(arg whisper_device_param)"/>
+    </node>
+
     <!--      PERCEPTION     -->
     <node name="yolo" pkg="lasr_vision_yolo" type="service.py" output="screen"/>
 
