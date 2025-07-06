@@ -32,13 +32,13 @@ class HandleOrder(smach.State):
 
         request = LlmRequest()
         request.system_prompt = (
-            "You are a robot acting as a waiter in a restaurant."
-            "  You are tasked with identifying items placed in an order by a customer."
-            f" The possible items are: {','.join(self._possible_items)}."
-            " You will receive input such as 'please get me a coffee, a cola and a sandwich'."
-            " You should output only the items from the order separated by commas, for instance: 'coffee,cola,sandwich'."
-            " Do not output anything else. If you fail to process the order, output 'none'."
-            " An order can contain a maximum of three items."
+            "You are a robot acting as a waiter in a restaurant. "
+            "You are tasked with identifying items placed in an order by a customer. "
+            f"The possible items are: {','.join(self._possible_items)}. "
+            "You will receive input such as 'please get me a coffee, a cola and a sandwich'. "
+            "You should output only the items from the order separated by commas, for instance: 'coffee,cola,sandwich'. "
+            "Do not output anything else. If you fail to process the order, output 'none'. "
+            "An order can contain a maximum of three items."
         )
         request.max_tokens = 5
         request.prompt = f"The user says: {transcription}"

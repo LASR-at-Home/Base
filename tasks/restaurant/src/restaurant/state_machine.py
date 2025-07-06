@@ -1,8 +1,22 @@
 import smach
 import smach_ros
 from geometry_msgs.msg import Pose
-from lasr_skills import AskAndListen, GoToLocation, Rotate, Say, Wait, LookToPoint
-from restaurant.states import Survey, HandleOrder, GetPoses, ComputeApproach
+from lasr_skills import (
+    AskAndListen,
+    GoToLocation,
+    Rotate,
+    Say,
+    Wait,
+    LookToPoint,
+    Listen,
+)
+from restaurant.states import (
+    Survey,
+    HandleOrder,
+    GetPoses,
+    ComputeApproach,
+    SwitchToMappingMode,
+)
 from std_msgs.msg import Empty
 
 
@@ -44,8 +58,15 @@ class Restaurant(smach.StateMachine):
                 transitions={
                     "valid": "WAIT_START",
                     "preempted": "WAIT_START",
-                    "invalid": "SAY_START",
+                    "invalid": "SWITCH_TO_MAPPING_MODE",
                 },
+            )
+
+            # In practie we'll do this in the queue
+            smach.StateMachine.add(
+                "SWITCH_TO_MAPPING_MODE",
+                SwitchToMappingMode(),
+                transitions={"succeeded": "SAY_START", "failed": "failed"},
             )
 
             smach.StateMachine.add(
@@ -146,7 +167,7 @@ class Restaurant(smach.StateMachine):
             smach.StateMachine.add(
                 "TAKE_ORDER",
                 AskAndListen(
-                    tts_phrase="Hello, I'm TIAGo. What can I get for you today?"
+                    tts_phrase="Hello, I'm TIAGo. Please say Hi Tiago to me before speaking. What can I get for you today?"
                 ),
                 remapping={"transcribed_speech": "order_str"},
                 transitions={"succeeded": "HANDLE_ORDER", "failed": "failed"},
@@ -161,7 +182,62 @@ class Restaurant(smach.StateMachine):
 
             smach.StateMachine.add(
                 "SAY_ORDER",
-                Say(format_str="Your order is: {}. I will deliver it shortly."),
+                Say(
+                    format_str="I processed your order as: {}. Is this correct?. Please say Hi Tiago Yes or Hi Tiago No."
+                ),
+                remapping={"placeholders": "order_str"},
+                transitions={
+                    "succeeded": "LISTEN_TO_CONFIRMATION",
+                    "preempted": "LISTEN_TO_CONFIRMATION",
+                    "aborted": "LISTEN_TO_CONFIRMATION",
+                },
+            )
+
+            smach.StateMachine.add(
+                "LISTEN_TO_CONFIRMATION",
+                Listen(),
+                remapping={"transcribed_speech": "confirmation_str"},
+                transitions={
+                    "succeeded": "CHECK_CONFIRMATION",
+                    "aborted": "failed",
+                    "preempted": "failed",
+                },
+            )
+
+            smach.StateMachine.add(
+                "CHECK_CONFIRMATION",
+                smach.CBState(
+                    lambda ud: (
+                        "succeeded"
+                        if "yes" in ud.confirmation_str.lower()
+                        else "failed"
+                    ),
+                    input_keys=["confirmation_str"],
+                ),
+                transitions={"succeeded": "GO_TO_BAR", "failed": "RETAKE_ORDER"},
+            )
+
+            smach.StateMachine.add(
+                "RETAKE_ORDER",
+                AskAndListen(
+                    tts_phrase="Let's try again. Please say Hi Tiago to me before speaking. What can I get for you today?"
+                ),
+                remapping={"transcribed_speech": "order_str"},
+                transitions={"succeeded": "HANDLE_RETRY_ORDER", "failed": "failed"},
+            )
+
+            smach.StateMachine.add(
+                "HANDLE_RETRY_ORDER",
+                HandleOrder(),
+                remapping={"customer_transcription": "order_str"},
+                transitions={"succeeded": "SAY_ORDER_RETRY", "failed": "failed"},
+            )
+
+            smach.StateMachine.add(
+                "SAY_ORDER_RETRY",
+                Say(
+                    format_str="I processed your order as: {}. I hope this is now correct. I will go to the bar to get it for you."
+                ),
                 remapping={"placeholders": "order_str"},
                 transitions={
                     "succeeded": "GO_TO_BAR",
