@@ -9,6 +9,7 @@ from lasr_skills import (
     Wait,
     LookToPoint,
     Listen,
+    ListenForWakeword,
 )
 from restaurant.states import (
     Survey,
@@ -183,7 +184,7 @@ class Restaurant(smach.StateMachine):
             smach.StateMachine.add(
                 "SAY_ORDER",
                 Say(
-                    format_str="I processed your order as: {}. Is this correct?. Please say Hi Tiago Yes or Hi Tiago No."
+                    format_str="I processed your order as: {}. Is this correct?. Please say 'Yes' or 'No'."
                 ),
                 remapping={"placeholders": "order_str"},
                 transitions={
@@ -195,24 +196,18 @@ class Restaurant(smach.StateMachine):
 
             smach.StateMachine.add(
                 "LISTEN_TO_CONFIRMATION",
-                Listen(),
-                remapping={"transcribed_speech": "confirmation_str"},
+                ListenForWakeword(["yes", "no"]),
                 transitions={
                     "succeeded": "CHECK_CONFIRMATION",
-                    "aborted": "failed",
-                    "preempted": "failed",
+                    "failed": "CHECK_CONFIRMATION",  # TODO: handle failure properly
                 },
             )
 
             smach.StateMachine.add(
                 "CHECK_CONFIRMATION",
                 smach.CBState(
-                    lambda ud: (
-                        "succeeded"
-                        if "yes" in ud.confirmation_str.lower()
-                        else "failed"
-                    ),
-                    input_keys=["confirmation_str"],
+                    lambda ud: ud.keyword == "yes",
+                    input_keys=["keyword"],
                 ),
                 transitions={"succeeded": "GO_TO_BAR", "failed": "RETAKE_ORDER"},
             )
