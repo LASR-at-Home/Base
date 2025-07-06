@@ -13,6 +13,7 @@ import tf2_ros as tf
 from tf2_geometry_msgs import do_transform_pose
 from rospy import ServiceException
 from scipy.spatial.transform import Rotation as R
+from lasr_skills.listen_for_wakeword import ListenForWakeword
 from std_msgs.msg import Bool
 from geometry_msgs.msg import (
     Point,
@@ -439,7 +440,7 @@ class FollowPerson(smach.StateMachine):
         """Build the complete state machine structure"""
         with self:
             smach.StateMachine.add(
-                "Initialising",
+                "INIT",
                 InitialisingState(self),
                 transitions={"initialised": "PERSON_DETECTION", "failed": "failed"},
             )
@@ -454,6 +455,17 @@ class FollowPerson(smach.StateMachine):
                 },
             )
 
+            # smach.StateMachine.add(
+            #     "TRACKING_ACTIVE",
+            #     TrackingActiveState(self),
+            #     transitions={
+            #         "navigation_started": "NAVIGATION",
+            #         "target_lost": "RECOVERY_SCANNING",
+            #         "following_complete": "WAKEWORD",
+            #         "failed": "WAKEWORD",
+            #     },
+            # )
+
             if self.fallback:
                 smach.StateMachine.add(
                     "TRACKING_ACTIVE",
@@ -465,6 +477,14 @@ class FollowPerson(smach.StateMachine):
                         "failed": "failed",
                     },
                 )
+                # smach.StateMachine.add(
+                #     "WAKEWORD",
+                #     ListenForWakeword(wakeword="no", timeout=5.0, threshold=0.3),
+                #     transitions={
+                #         "failed": "Fallback",
+                #         "succeeded": "PERSON_DETECTION",
+                #     },
+                # )
             else:
                 smach.StateMachine.add(
                     "TRACKING_ACTIVE",
@@ -476,6 +496,14 @@ class FollowPerson(smach.StateMachine):
                         "failed": "failed",
                     },
                 )
+                # smach.StateMachine.add(
+                #     "WAKEWORD",
+                #     ListenForWakeword(wakeword="no", timeout=5.0, threshold=0.3),
+                #     transitions={
+                #         "failed": "succeeded",
+                #         "succeeded": "PERSON_DETECTION",
+                #     },
+                # )
 
             smach.StateMachine.add(
                 "NAVIGATION",
@@ -609,10 +637,10 @@ class FollowPerson(smach.StateMachine):
             #         f"Excessive sensor conflicts detected: {response.consecutive_conflicts}"
             #     )
             if response.fusion_mode in [
-                "single_a",
-                "single_b",
-                "conflict",
-                "predict_only",
+                "single_a_temporal", 
+                "single_b_temporal",   
+                "predict_only",     
+                "error_fallback",      
             ]:
                 rospy.logwarn(
                     f"Severe Risk, current filter process mode: {response.fusion_mode}"
@@ -1110,10 +1138,10 @@ class FollowPerson(smach.StateMachine):
         )
         return do_transform_pose(pose, trans)
 
-    def look_at_point(self, target_point: Point, target_frame: str = "map"):
+    def look_at_point(self, target_point: Point, target_frame: str = "map", wait_for_completion: bool = False):
         current_time = rospy.Time.now()
         if current_time - self.shared_data.look_at_point_time < rospy.Duration(
-            self.shared_data.head_movement_interval
+                self.shared_data.head_movement_interval
         ):
             return
 
@@ -1128,8 +1156,16 @@ class FollowPerson(smach.StateMachine):
         goal.min_duration = rospy.Duration(self.shared_data.head_min_duration)
         goal.max_velocity = self.shared_data.head_max_velocity
 
-        self.point_head_client.send_goal(goal)
-        # rospy.logwarn(f"Moving head to {target_point}")
+        if wait_for_completion:
+            # Send goal and wait for action to complete
+            self.point_head_client.send_goal_and_wait(goal)
+            rospy.loginfo(f"Head movement to {target_point} completed")
+            rospy.sleep(0.5)
+        else:
+            # Send goal without waiting (original behavior)
+            self.point_head_client.send_goal(goal)
+            # rospy.logwarn(f"Moving head to {target_point}")
+
         self.shared_data.look_at_point_time = current_time
 
     def _look_centre_point(self):
@@ -1144,7 +1180,7 @@ class FollowPerson(smach.StateMachine):
     def look_down_point(self, target_point: Point = None, target_frame: str = "map"):
         """Look down towards the target direction down."""
         distance = 2.0
-        look_down_angle = -20.0
+        look_down_angle = -45.0
 
         if target_point is not None:
             # Transform target point to base_link frame to get direction
@@ -1435,7 +1471,7 @@ class TrackingActiveState(smach.State):
             not self.sm_manager.shared_data.first_tracking_done
             and not self.sm_manager.shared_data.say_started
         ):
-            self.sm_manager._tts("I will start to follow you.", wait=True)
+            self.sm_manager._tts("I am going to follow.", wait=True)
             self.sm_manager.shared_data.say_started = True
 
         rate = rospy.Rate(3)
@@ -1459,7 +1495,7 @@ class TrackingActiveState(smach.State):
                 self.sm_manager.shared_data.pause_add_targets = True
                 rospy.loginfo("Following complete - force to stop by timeout.")
                 self.sm_manager._tts(
-                    "Have we arrived? I will stop following.", wait=True
+                    "Have we arrived? Please say yes or no.", wait=True
                 )
                 self.sm_manager.shared_data.completion_reason = "ARRIVED"
                 return "following_complete"
@@ -1470,6 +1506,7 @@ class TrackingActiveState(smach.State):
                 self.sm_manager.look_at_point(
                     self.sm_manager.shared_data.newest_detection.point,
                     target_frame="map",
+                    wait_for_completion=True,
                 )
 
             # Update distance traveled
@@ -1686,119 +1723,16 @@ class TrackingActiveState(smach.State):
 class NavigationState(smach.State):
     """Monitor navigation progress, handle head tracking, and detect completion/failure"""
 
-    def __init__(self, sm_manager, object_avoidance):
+    def __init__(self, sm_manager, object_avoidance, navigation_timeout=8.0):
         self.sm_manager = sm_manager
         self.object_avoidance = object_avoidance
+        self.navigation_timeout = navigation_timeout  # Timeout in seconds
         smach.State.__init__(
             self,
             outcomes=["navigation_complete", "target_lost", "failed"],
             input_keys=[],
             output_keys=[],
         )
-
-    def _plan_and_sample_targets(
-        self,
-        start_pose: PoseStamped,
-        goal_pose: PoseStamped,
-        radius: float,
-        num_samples: int = 3,
-    ):
-        """
-        1. Compute a new goal located on the line (goal → robot) at exactly <radius>
-        2. Call /move_base/make_plan(start, new_goal)
-        3. Evenly take <num_samples> poses (near → far)
-        4. Rotate every pose to face the original goal
-        5. Return List[PoseStamped]
-        """
-        # ------------------------------------------------------------------
-        # Step-0: build a new goal on the desired circle
-        # ------------------------------------------------------------------
-        sx, sy = start_pose.pose.position.x, start_pose.pose.position.y
-        gx, gy = goal_pose.pose.position.x, goal_pose.pose.position.y
-        vec_x, vec_y = sx - gx, sy - gy  # goal → robot
-        dist = math.hypot(vec_x, vec_y)
-        if dist < 1e-3:  # almost same point
-            rospy.logwarn("Robot already at goal; no path needed")
-            return []
-        # shrink / expand to exactly <radius>
-        scale = radius / dist
-        target_x = gx + vec_x * scale
-        target_y = gy + vec_y * scale
-
-        new_goal = PoseStamped()
-        new_goal.header = goal_pose.header  # keep same frame
-        new_goal.pose.position.x = target_x
-        new_goal.pose.position.y = target_y
-        new_goal.pose.position.z = goal_pose.pose.position.z
-        # orientation will be ignored by planner; keep as-is
-        new_goal.pose.orientation = goal_pose.pose.orientation
-        resp = self._make_plan(start_pose, new_goal, tolerance=0.5)
-        path = resp.plan.poses
-        if not path:
-            rospy.logwarn("Global planner returned empty path")
-            return []
-        idxs = np.linspace(0, len(path) - 1, num_samples, dtype=int)
-        sampled = [copy.deepcopy(path[i]) for i in idxs]
-        for p in sampled:
-            dx, dy = gx - p.pose.position.x, gy - p.pose.position.y
-            yaw = math.atan2(dy, dx)
-            qx, qy, qz, qw = quaternion_from_euler(0.0, 0.0, yaw)
-            p.pose.orientation.x, p.pose.orientation.y = qx, qy
-            p.pose.orientation.z, p.pose.orientation.w = qz, qw
-
-        return sampled
-
-    def _cleanup(self):
-        """Clean up resources after execution"""
-        self.track_flag_pub.publish(Bool(data=False))
-        if self.move_base_client:
-            self.move_base_client.cancel_all_goals()
-        rospy.loginfo("State machine cleaned up")
-
-    def get_results(self):
-        """Get execution results - useful when used as sub-state machine"""
-        return {
-            "distance_traveled": self.userdata.distance_traveled,
-            "following_duration": self.userdata.following_duration,
-            "completion_reason": self.userdata.completion_reason,
-            "person_trajectory": self.userdata.person_trajectory,
-        }
-
-    def _tts(self, text: str, wait: bool = False):
-        """Text-to-speech with speaking flag check"""
-        if not self.tts_client:
-            rospy.logwarn(f"TTS client not initialised, you are saying '{text}'.")
-            return
-        if self.userdata.speak:
-            tts_goal = TtsGoal()
-            tts_goal.rawtext.text = text
-            tts_goal.rawtext.lang_id = "en_GB"
-            if wait:
-                self.tts_client.send_goal_and_wait(tts_goal)
-            else:
-                self.tts_client.send_goal(tts_goal)
-        rospy.loginfo(f"Saying '{text}'")
-
-    def _look_at_point(self, target_point: Point, target_frame: str = "map"):
-        current_time = rospy.Time.now()
-        if current_time - self.userdata.look_at_point_time < rospy.Duration(
-            self.userdata.head_movement_interval
-        ):
-            return
-
-        goal = PointHeadGoal()
-        goal.target.header.stamp = rospy.Time(0)
-        goal.target.header.frame_id = target_frame
-        goal.target.point = target_point
-        goal.pointing_frame = self.userdata.head_pointing_frame
-        goal.pointing_axis.x = 0.0
-        goal.pointing_axis.y = 0.0
-        goal.pointing_axis.z = 1.0
-        goal.min_duration = rospy.Duration(self.userdata.head_min_duration)
-        goal.max_velocity = self.userdata.head_max_velocity
-
-        self.point_head_client.send_goal(goal)
-        self.userdata.look_at_point_time = current_time
 
     def execute(self, userdata):
         rospy.loginfo("Monitoring navigation progress")
@@ -1808,21 +1742,35 @@ class NavigationState(smach.State):
         )
 
         start_robot_pose = self.sm_manager.get_robot_pose_in_map()
+        navigation_start_time = rospy.Time.now()  # Record navigation start time
 
         # Verify that navigation is indeed active
         if (
-            not self._is_navigation_active()
-            and self.sm_manager.shared_data.first_tracking_done
+                not self._is_navigation_active()
+                and self.sm_manager.shared_data.first_tracking_done
         ):
             rospy.logwarn("Entered NAVIGATION state but no active navigation found")
+            # TODO: the orentation is not handled yet!!!
             return "navigation_complete"
 
         # Monitor navigation progress
         rate = rospy.Rate(3)
         while not rospy.is_shutdown():
+            # Check for navigation timeout
+            current_time = rospy.Time.now()
+            navigation_elapsed_time = (current_time - navigation_start_time).to_sec()
+
+            if navigation_elapsed_time >= self.navigation_timeout:
+                rospy.logwarn(f"Navigation timeout reached ({self.navigation_timeout}s). Canceling current goal.")
+                # Cancel the current navigation goal
+                self.sm_manager.move_base_client.cancel_goal()
+                rospy.loginfo("Navigation goal canceled due to timeout, treating as successful completion")
+                self.sm_manager.shared_data.last_movement_time = rospy.Time.now()
+                self.sm_manager.shared_data.added_new_target_time = rospy.Time.now()
+                return "navigation_complete"
+
             # Keep looking at detected person during navigation
             if self.sm_manager.shared_data.newest_detection:
-                current_time = rospy.Time.now()
                 time_since_last_look_down = current_time - last_look_down_time
                 look_down_period_duration = rospy.Duration(
                     self.sm_manager.shared_data.look_down_period
@@ -1834,8 +1782,8 @@ class NavigationState(smach.State):
                 )
 
                 if (
-                    self.object_avoidance
-                    # and time_since_last_look_down >= look_down_period_duration
+                        self.object_avoidance
+                        # and time_since_last_look_down >= look_down_period_duration
                 ):
                     rospy.loginfo(
                         "NavigationState: Look down period elapsed, executing down swap"
@@ -1882,61 +1830,16 @@ class NavigationState(smach.State):
             current_goal = self.sm_manager.shared_data.current_goal
             if len(self.sm_manager.shared_data.target_list) > 0 and robot_pose:
                 newest_target = self.sm_manager.shared_data.target_list[-1]
-                # Check if current target has deviated too much from the real target
-                # if (
-                #     rospy.Time.now() - self.sm_manager.shared_data.last_canceled_goal_time
-                #     > self.sm_manager.shared_data.cancel_goal_duration
-                #     and current_goal
-                # ):
-                #     deviation_distance = _euclidean_distance(
-                #         current_goal, newest_target
-                #     )
-                #     rospy.logdebug(
-                #         f"Target deviation: {deviation_distance:.2f}m vs threshold: {self.sm_manager.shared_data.replan_distance:.2f}m"
-                #     )
-
-                # if deviation_distance > self.sm_manager.shared_data.replan_distance:
-                #     rospy.loginfo(
-                #         f"Target deviated too much ({deviation_distance:.2f}m), canceling current navigation"
-                #     )
-                #     # Cancel current navigation goal
-                #     self.sm_manager.shared_data.last_canceled_goal_time = rospy.Time.now()
-                #     self.sm_manager.move_base_client.cancel_goal()
-                #     self.sm_manager.shared_data.previous_target = None
-                #     rospy.loginfo("Current navigation goal canceled")
-                #     self.sm_manager.shared_data.target_list = (
-                #         []
-                #     )  # refresh the target list by replaning (will be trigured automatically)
-                #     self.sm_manager.shared_data.person_trajectory = PoseArray()
-                #     self.sm_manager.shared_data.person_trajectory.header.frame_id = "map"
-                #     self.sync_self.sm_manager.shared_data_to_manager(
-                #         self.sm_manager.shared_data
-                #     )  # refresh self.shared_data of parent state machine
-                #     # Send a rotation-only goal to face the real target
-                #     if self._send_face_target_goal(self.sm_manager.shared_data, newest_target):
-                #         rospy.loginfo(
-                #             "Face-target goal sent, staying in navigation state"
-                #         )
-                #         # Stay in navigation state to monitor the rotation
-                #     else:
-                #         rospy.logwarn("Failed to send face-target goal")
-                #         self.sync_self.sm_manager.shared_data_to_manager(self.sm_manager.shared_data)
-                #         return "navigation_complete"
-                #
-                #     # Update current goal to the new target
-                #     self.sm_manager.shared_data.current_goal = newest_target
-                #     continue
-
                 # Issue distance warning if target is too far
                 distance_to_target = _euclidean_distance(current_goal, newest_target)
                 if (
-                    distance_to_target
-                    > self.sm_manager.shared_data.max_following_distance
-                    and (
+                        distance_to_target
+                        > self.sm_manager.shared_data.max_following_distance
+                        and (
                         rospy.Time.now()
                         - self.sm_manager.shared_data.last_distance_warning_time
                         > self.sm_manager.shared_data.distance_warning_interval_duration
-                    )
+                )
                 ):
                     rospy.loginfo(
                         f"Issuing distance warning - target too far: {distance_to_target:.2f}m"
@@ -1963,9 +1866,9 @@ class NavigationState(smach.State):
                 )
 
                 # Update movement time continuously during navigation
-                if movement >= 0.01:
-                    self.sm_manager.shared_data.last_movement_time = rospy.Time.now()
-                    self.sm_manager.shared_data.added_new_target_time = rospy.Time.now()
+                # if movement >= 0.01:
+                self.sm_manager.shared_data.last_movement_time = rospy.Time.now()
+                self.sm_manager.shared_data.added_new_target_time = rospy.Time.now()
 
                 # Always return to tracking active, even if navigation failed
                 return "navigation_complete"

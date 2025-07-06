@@ -61,6 +61,7 @@
   <depend>cv2_pcl</depend>
   <depend>markers</depend>
   <depend>tf_pcl</depend>
+  <depend>lasr_wakewords</depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>

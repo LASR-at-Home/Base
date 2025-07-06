@@ -18,6 +18,7 @@ find_package(catkin REQUIRED COMPONENTS
   cv2_pcl
   markers
   tf_pcl
+  lasr_wakewords
 )
 
 ## System dependencies are found with CMake's conventions

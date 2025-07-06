@@ -9,8 +9,6 @@ REMOTE_HOST="tiago-157c"
 # todo: NEVER PUT REAL PASSWORD HERE!
 SSH_PASSWORD="your_ssh_password_here"
 SUDO_PASSWORD="your_sudo_password_here"
-SSH_PASSWORD="pal"
-SUDO_PASSWORD="palroot"
 
 LOCAL_SCRIPT="overwrite_scripts.sh"
 REMOTE_SCRIPT="/home/${REMOTE_USER}/overwrite_scripts.sh"
