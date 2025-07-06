@@ -169,7 +169,7 @@ global_costmap:
       data_type: LaserScan
       topic: rgbd_scan
       expected_update_rate: 0.3
-      observation_persistence: 1.25  # this was zero, let's make it none zero
+      observation_persistence: 5.0
       inf_is_valid: true
       marking: true
       clearing: true
@@ -251,18 +251,18 @@ local_costmap:
   obstacle_rgbd_layer:
     enabled: true
     observation_sources: rgbd_scan
-    combination_method: 1
+    combination_method: 0
     rgbd_scan:
       sensor_frame: base_footprint
       data_type: LaserScan
       topic: rgbd_scan
       expected_update_rate: 0.5
-      observation_persistence: 0.0
+      observation_persistence: 1.5
       inf_is_valid: true
       marking: true
       clearing: true
-      raytrace_range: 2.9
-      obstacle_range: 2.8
+      raytrace_range: 3.5
+      obstacle_range: 3.0
       blanking_range: 0.1
       mark_blanking: false
       debug: false

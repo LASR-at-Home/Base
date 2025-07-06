@@ -96,6 +96,7 @@ class PersonFollowingData:
         self.first_tracking_done = False
         self.say_started = False
         self.pause_conditional_state = False
+        self.pause_add_targets = False
 
         # kalman protection - kalman filter can be very crazy sometimes...
         # self.kalman_protection = True
@@ -116,7 +117,7 @@ class PersonFollowingData:
         self.last_position = None
 
         # Configuration parameters with defaults
-        self.new_goal_threshold_min = 0.5
+        self.new_goal_threshold_min = 0.25
         self.new_goal_threshold_max = 4.0
         self.stopping_distance = 2.25
         self.max_speed = 0.45
@@ -581,7 +582,8 @@ class FollowPerson(smach.StateMachine):
             self.shared_data.last_good_detection_time = current_time
 
             # Update target list with predicted position
-            self._update_target_list(predicted_pose, add_traj=True)
+            if not self.shared_data.pause_add_targets:
+                self._update_target_list(predicted_pose, add_traj=True)
 
             # Create synthetic detection for newest_detection
             synthetic_detection = self._create_synthetic_detection(
@@ -913,17 +915,17 @@ class FollowPerson(smach.StateMachine):
 
     def _update_target_list(self, pose_stamped, add_traj=True):
         """Update target list with new pose"""
-        if add_traj:
-            self.shared_data.person_trajectory.poses.append(
-                pose_stamped.pose
-            )  # trajectory should always be added
-            self.shared_data.person_pose_stampeds.append(
-                pose_stamped
-            )  # trajectory should always be added
         if len(self.shared_data.target_list) == 0:
             self.shared_data.target_list.append(pose_stamped.pose)
             self.shared_data.added_new_target_time = rospy.Time.now()
             rospy.loginfo(f"Adding target pose: {pose_stamped}")
+            if add_traj:
+                self.shared_data.person_trajectory.poses.append(
+                    pose_stamped.pose
+                )  # trajectory should always be added
+                self.shared_data.person_pose_stampeds.append(
+                    pose_stamped
+                )  # trajectory should always be added
             return True
         else:
             prev_pose = self.shared_data.target_list[-1]
@@ -936,6 +938,13 @@ class FollowPerson(smach.StateMachine):
                 self.shared_data.target_list.append(pose_stamped.pose)
                 self.shared_data.added_new_target_time = rospy.Time.now()
                 rospy.loginfo(f"Adding target pose: {pose_stamped}")
+                if add_traj:
+                    self.shared_data.person_trajectory.poses.append(
+                        pose_stamped.pose
+                    )  # trajectory should always be added
+                    self.shared_data.person_pose_stampeds.append(
+                        pose_stamped
+                    )  # trajectory should always be added
                 return True
         return False
 
@@ -1339,11 +1348,11 @@ class PersonDetectionState(smach.State):
         prompt_msg.point_array = []
         prompt_msg.reset = True
         self.sm_manager.prompt_pub.publish(prompt_msg)
-        rospy.sleep(0.25)
+        rospy.sleep(0.5)
         self.sm_manager.prompt_pub.publish(prompt_msg)
-        rospy.sleep(0.25)
+        rospy.sleep(0.5)
         self.sm_manager.prompt_pub.publish(prompt_msg)
-        rospy.sleep(0.25)
+        rospy.sleep(0.5)
 
         # Start tracking
         self.sm_manager.track_flag_pub.publish(Bool(data=True))
@@ -1434,7 +1443,8 @@ class TrackingActiveState(smach.State):
         while not rospy.is_shutdown():
             # Check if target is lost
             if (
-                rospy.Time.now() - self.sm_manager.shared_data.last_good_detection_time
+                self.sm_manager.shared_data.first_tracking_done
+                and rospy.Time.now() - self.sm_manager.shared_data.last_good_detection_time
                 > self.sm_manager.shared_data.target_moving_timeout_duration
             ):
                 rospy.loginfo("Target lost - no good detection")
@@ -1446,6 +1456,7 @@ class TrackingActiveState(smach.State):
                 and rospy.Time.now() - self.sm_manager.shared_data.last_movement_time
                 > self.sm_manager.shared_data.target_moving_timeout_duration * 1.0
             ):
+                self.sm_manager.shared_data.pause_add_targets = True
                 rospy.loginfo("Following complete - force to stop by timeout.")
                 self.sm_manager._tts(
                     "Have we arrived? I will stop following.", wait=True
@@ -1501,7 +1512,7 @@ class TrackingActiveState(smach.State):
                     - abs(
                         target_speed
                         * self.sm_manager.shared_data.stopping_distance
-                        * 1.0
+                        * 1.5
                     ),
                 )
                 if not self.sm_manager.shared_data.first_tracking_done:
@@ -1824,7 +1835,7 @@ class NavigationState(smach.State):
 
                 if (
                     self.object_avoidance
-                    and time_since_last_look_down >= look_down_period_duration
+                    # and time_since_last_look_down >= look_down_period_duration
                 ):
                     rospy.loginfo(
                         "NavigationState: Look down period elapsed, executing down swap"
@@ -1841,7 +1852,7 @@ class NavigationState(smach.State):
                     self._down_swap(
                         self.sm_manager.shared_data.newest_detection.point,
                         target_frame="map",
-                        look_down_time=self.sm_manager.shared_data.look_down_duration,
+                        # look_down_time=self.sm_manager.shared_data.look_down_duration,
                         pause_conditional_frame=True,
                     )
                     if time_since_last_look_down >= look_down_period_duration * 1.5:
@@ -1967,12 +1978,12 @@ class NavigationState(smach.State):
         self,
         target_point: Point = None,
         target_frame: str = "map",
-        look_down_time=2.0,
+        # look_down_time=2.0,
         pause_conditional_frame=True,
     ):
         self.sm_manager.pause_conditional_frame = pause_conditional_frame
         self.sm_manager.look_down_point(target_point, target_frame)
-        rospy.sleep(look_down_time)
+        # rospy.sleep(look_down_time)
         # self.sm_manager.look_at_point(target_point, target_frame)
         self.sm_manager.pause_conditional_frame = False
 
@@ -2121,13 +2132,13 @@ class FallbackState(smach.State):
         current_position = self.sm_manager.get_robot_pose_in_map()
         last_target = self.sm_manager.shared_data.target_list[-1]
         distance_to_last = _euclidean_distance(current_position.pose, last_target)
-        if distance_to_last < self.sm_manager.shared_data.max_following_distance * 0.8:
+        if distance_to_last < self.sm_manager.shared_data.stopping_distance * 0.8:
             for i in reversed(range(len(self.sm_manager.shared_data.target_list))):
                 if (
                     _euclidean_distance(
                         self.sm_manager.shared_data.target_list[i], last_target
                     )
-                    >= self.sm_manager.shared_data.max_following_distance
+                    >= self.sm_manager.shared_data.stopping_distance
                 ):
                     self.sm_manager._tts(
                         "I will go back a bit to see you clearer.", wait=True

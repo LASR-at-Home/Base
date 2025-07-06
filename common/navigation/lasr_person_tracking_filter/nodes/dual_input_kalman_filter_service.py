@@ -36,10 +36,10 @@ class PersonTrackingDualInputKalmanFilterService:
         self.kf.H = np.array([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0]])
 
         # Default measurement noise - conservative for rough signals
-        self.kf.R = np.eye(2) * 1.25
+        self.kf.R = np.eye(2) * 2.0
 
         # Process noise covariance - conservative for stability
-        self.kf.Q = np.eye(4) * 1.25
+        self.kf.Q = np.eye(4) * 2.0
 
         # Make velocity states more uncertain
         self.kf.Q[2, 2] *= 3.0  # 3x more uncertainty for vx

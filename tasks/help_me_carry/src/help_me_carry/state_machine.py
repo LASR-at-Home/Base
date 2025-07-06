@@ -29,17 +29,17 @@ class CarryMyLuggage(smach.StateMachine):
                 },
             )
 
-            smach.StateMachine.add(
-                "FOLLOW_PERSON",
-                FollowPerson(fallback=True),
-                transitions={"succeeded": "POST_FOLLOW", "failed": "POST_FOLLOW"},
-            )
-
             # smach.StateMachine.add(
             #     "FOLLOW_PERSON",
-            #     FollowPerson(object_avoidance=True, fallback=True),
+            #     FollowPerson(fallback=True),
             #     transitions={"succeeded": "POST_FOLLOW", "failed": "POST_FOLLOW"},
             # )
+
+            smach.StateMachine.add(
+                "FOLLOW_PERSON",
+                FollowPerson(object_avoidance=True, fallback=True),
+                transitions={"succeeded": "POST_FOLLOW", "failed": "POST_FOLLOW"},
+            )
 
             smach.StateMachine.add(
                 f"POST_FOLLOW",
@@ -112,9 +112,19 @@ class CarryMyLuggage(smach.StateMachine):
                 "SAY_GOING_BACK",
                 Say(text="Going back to start point."),
                 transitions={
+                    "succeeded": "PRE_GO_BACK",
+                    "aborted": "PRE_GO_BACK",
+                    "preempted": "PRE_GO_BACK",
+                },
+            )
+
+            smach.StateMachine.add(
+                f"PRE_GO_BACK",
+                PlayMotion(motion_name="pre_navigation_look_down"),
+                transitions={
                     "succeeded": "GO_BACK_TO_START_POINT",
-                    "aborted": "GO_BACK_TO_START_POINT",
                     "preempted": "GO_BACK_TO_START_POINT",
+                    "aborted": "GO_BACK_TO_START_POINT",
                 },
             )
 
