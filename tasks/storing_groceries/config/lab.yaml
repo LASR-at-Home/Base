@@ -1,0 +1,72 @@
+table:
+  pose:
+    position:
+      x: 0.0
+      y: 0.0
+      z: 0.0
+    orientation:
+      x: 0.0
+      y: 0.0
+      z: 0.0
+      w: 0.0
+  polygon:
+    [
+      [0.0, 0.0],
+      [0.0, 0.0],
+      [0.0, 0.0],
+      [0.0, 0.0]
+    ]
+  surface:
+    pose:
+      position:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+      orientation:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+        w: 0.0
+    dimensions:
+      x: 0.0
+      y: 0.0
+      z: 0.0
+cabinet:
+  pose:
+    position:
+      x: 0.0
+      y: 0.0
+      z: 0.0
+    orientation:
+      x: 0.0
+      y: 0.0
+      z: 0.0
+      w: 0.0
+  shelves:
+    a:
+      polygon:
+        [
+          [0.0, 0.0],
+          [0.0, 0.0],
+          [0.0, 0.0],
+          [0.0, 0.0]
+        ]
+      surface:
+        pose:
+          position:
+            x: 0.0
+            y: 0.0
+            z: 0.0
+          orientation:
+            x: 0.0
+            y: 0.0
+            z: 0.0
+            w: 0.0
+        dimensions:
+          x: 0.0
+          y: 0.0
+          z: 0.0
+objects:
+  apple:
+    graspable: true
+    category: "fruits"
