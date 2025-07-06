@@ -40,13 +40,13 @@ class HandleOrder(smach.State):
             "Do not output anything else. If you fail to process the order, output 'none'. "
             "An order can contain a maximum of three items."
         )
-        request.max_tokens = 5
+        request.max_tokens = 10
         request.prompt = f"The user says: {transcription}"
         response = self._llm(request).output.strip()
         if response == "none":
             return "failed"
         else:
             userdata.order = response.split(",")
-            rospy.loginfo(f"Order identified as: {userdata.order}")
+            rospy.loginfo(f"Order identified as: {response.split(',')}")
             userdata.order_str = response
             return "succeeded"

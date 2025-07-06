@@ -24,7 +24,7 @@ class ComputeApproach(smach.State):
     # Movebase planner
     _movebase_planner: rospy.ServiceProxy
 
-    def __init__(self, map_frame_min_distance: float = 0.5, n_samples: int = 25):
+    def __init__(self, map_frame_min_distance: float = 1, n_samples: int = 25):
         """
         Args:
             map_frame_min_distance (float, optional): minimum (Eucl)
@@ -128,7 +128,7 @@ class ComputeApproach(smach.State):
             plan = self._movebase_planner(
                 start=current_pose_stamped,
                 goal=target_pose_stamped,
-                tolerance=0.1,
+                tolerance=0.25,
             ).plan
             return len(plan.poses) > 0
         except rospy.ServiceException as e:
@@ -147,9 +147,7 @@ class ComputeApproach(smach.State):
         for pose in approach_poses:
             if self._can_reach_pose(current_pose, pose):
                 userdata.customer_approach_pose = pose
-                rospy.loginfo(
-                    "Computed approach pose: %s", userdata.customer_approach_pose
-                )
+                rospy.loginfo("Computed approach pose: %s", pose)
                 return "succeeded"
         rospy.logwarn("No reachable approach pose found.")
         return "failed"

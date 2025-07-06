@@ -1,6 +1,7 @@
 import smach
 import smach_ros
-from geometry_msgs.msg import Pose
+from geometry_msgs.msg import Pose, PointStamped
+from std_msgs.msg import Header
 from lasr_skills import (
     AskAndListen,
     GoToLocation,
@@ -21,6 +22,31 @@ from restaurant.states import (
 from std_msgs.msg import Empty
 
 
+class GetLookPoint(smach.State):
+    """
+    State to get the look point from the waving person detection.
+    It sets the point in the userdata.
+    """
+
+    def __init__(self):
+        smach.State.__init__(
+            self,
+            outcomes=["succeeded", "failed"],
+            input_keys=["waving_person_detection"],
+            output_keys=["waving_person_detection_point"],
+        )
+
+    def execute(self, userdata):
+        if userdata.waving_person_detection:
+            userdata.waving_person_detection_point = PointStamped(
+                header=Header(frame_id="map"),
+                point=userdata.waving_person_detection.point,
+            )
+            return "succeeded"
+        else:
+            return "failed"
+
+
 class ChooseWavingPerson(smach.State):
     """
     State to choose a waving person from the list of detected people.
@@ -37,7 +63,7 @@ class ChooseWavingPerson(smach.State):
 
     def execute(self, userdata):
         if userdata.hands_up_detections:
-            userdata.chosen_person = userdata.hands_up_detections.pop()
+            userdata.waving_person_detection = userdata.hands_up_detections.pop()
             return "succeeded"
         else:
             return "failed"
@@ -74,7 +100,7 @@ class Restaurant(smach.StateMachine):
                 "SAY_START",
                 Say(text="Start of Restaurant task."),
                 transitions={
-                    "succeeded": "SURVEY",
+                    "succeeded": "ROTATE_360",
                     "aborted": "failed",
                     "preempted": "failed",
                 },
@@ -131,37 +157,11 @@ class Restaurant(smach.StateMachine):
                 "GO_TO_CUSTOMER",
                 GoToLocation(),
                 transitions={
-                    "succeeded": "GET_LOOK_POINT",
+                    "succeeded": "TAKE_ORDER",
                     "failed": "GO_TO_CUSTOMER",
                 },
                 remapping={
                     "location": "customer_approach_pose",
-                },
-            )
-
-            smach.StateMachine.add(
-                "GET_LOOK_POINT",
-                smach.CBState(
-                    lambda ud: setattr(
-                        ud,
-                        "waving_person_detection_point",
-                        ud.waving_person_detection.point,
-                    ),
-                    input_keys=["waving_person_detection"],
-                    output_keys=["waving_person_detection_point"],
-                ),
-                transitions={"succeeded": "LOOK_TO_CUSTOMER"},
-            )
-
-            smach.StateMachine.add(
-                "LOOK_TO_CUSTOMER",
-                LookToPoint(),
-                transitions={
-                    "succeeded": "TAKE_ORDER",
-                    "failed": "TAKE_ORDER",
-                },
-                remapping={
-                    "point": "waving_person_detection_point",
                 },
             )
 
@@ -196,7 +196,7 @@ class Restaurant(smach.StateMachine):
 
             smach.StateMachine.add(
                 "LISTEN_TO_CONFIRMATION",
-                ListenForWakeword(["yes", "no"]),
+                ListenForWakeword(["yes", "no"], timeout=10.0, threshold=0.3),
                 transitions={
                     "succeeded": "CHECK_CONFIRMATION",
                     "failed": "CHECK_CONFIRMATION",  # TODO: handle failure properly
@@ -208,6 +208,7 @@ class Restaurant(smach.StateMachine):
                 smach.CBState(
                     lambda ud: ud.keyword == "yes",
                     input_keys=["keyword"],
+                    outcomes=["succeeded", "failed"],
                 ),
                 transitions={"succeeded": "GO_TO_BAR", "failed": "RETAKE_ORDER"},
             )

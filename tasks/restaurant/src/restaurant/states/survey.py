@@ -46,6 +46,7 @@ class Survey(smach.StateMachine):
     ) -> None:
         super().__init__(
             outcomes=["customer_found", "customer_not_found"],
+            input_keys=["hands_up_detections"],
             output_keys=["hands_up_detections"],
         )
 
@@ -122,7 +123,7 @@ class Survey(smach.StateMachine):
                         "HANDLE_DETECTIONS",
                         smach.CBState(
                             self._handle_detections,
-                            input_keys=["detected_people"],
+                            input_keys=["detected_people", "hands_up_detections"],
                             output_keys=["hands_up_detections"],
                             outcomes=["succeeded"],
                         ),
