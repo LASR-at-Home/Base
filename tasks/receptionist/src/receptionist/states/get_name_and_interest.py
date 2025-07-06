@@ -42,8 +42,8 @@ class GetNameAndInterest(smach.StateMachine):
             )
             smach.StateMachine.add(
                 "SPEECH_RECOVERY",
-                self.SpeechRecovery(
-                    guest_id=self._guest_id,last_resort = self._last_resort, info_type = "name", param_key = self._param_key
+                SpeechRecovery(
+                    guest_id=self._guest_id,last_resort = self._last_resort, input_type = "name", param_key = self._param_key
                 ),
                 transitions={"succeeded": "succeeded", "failed": "failed"},
             )
@@ -63,7 +63,7 @@ class GetNameAndInterest(smach.StateMachine):
             """
             smach.State.__init__(
                 self,
-                outcomes=["succeeded", "failed"],
+                outcomes=["succeeded", "failed", "recovery"],
                 input_keys=["guest_transcription", "guest_data"],
                 output_keys=["guest_data", "guest_transcription"],
             )
@@ -84,6 +84,8 @@ class GetNameAndInterest(smach.StateMachine):
                 str: State outcome. Updates 'guest_data' in userdata with parsed name and interest.
             """
             transcription = userdata["guest_transcription"].lower()
+
+            guest = userdata.guest_data[self._guest_id]
 
             request = LlmRequest()
             request.system_prompt = (
@@ -118,7 +120,6 @@ class GetNameAndInterest(smach.StateMachine):
             )
 
             # Update guest data
-            guest = userdata.guest_data[self._guest_id]
             guest["name"] = name
             guest["interest"] = interest
 
@@ -169,6 +170,7 @@ class GetNameAndInterest(smach.StateMachine):
                     )
 
                 if name == "unknown":
+                    information_found = False
                     for key_phrase in self._possible_names:
                         if key_phrase in transcription:
                             guest["name"] = key_phrase
@@ -181,6 +183,7 @@ class GetNameAndInterest(smach.StateMachine):
                         rospy.loginfo(f"Name not found in transcription")
                         guest["name"] = "unknown"
                         return "recovery"
+                    return "success"
                     
     
 
