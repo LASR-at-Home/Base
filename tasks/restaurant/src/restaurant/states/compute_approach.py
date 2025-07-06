@@ -144,10 +144,23 @@ class ComputeApproach(smach.State):
         point_samples = self._sample_points(customer_point)
         approach_poses = self._calculate_poses(customer_point, point_samples)
 
+        closest_distance = float("inf")
+        closest_pose = None
+
         for pose in approach_poses:
             if self._can_reach_pose(current_pose, pose):
-                userdata.customer_approach_pose = pose
-                rospy.loginfo("Computed approach pose: %s", pose)
-                return "succeeded"
-        rospy.logwarn("No reachable approach pose found.")
-        return "failed"
+                distance = np.linalg.norm(
+                    np.array([pose.position.x, pose.position.y])
+                    - np.array([current_pose.x, current_pose.y])
+                )
+
+                if distance < closest_distance:
+                    closest_distance = distance
+                    closest_pose = pose
+        if closest_pose is not None:
+            userdata.customer_approach_pose = closest_pose
+            rospy.loginfo("Approach pose computed successfully.")
+            return "succeeded"
+        else:
+            rospy.logwarn("No reachable approach pose found.")
+            return "failed"
