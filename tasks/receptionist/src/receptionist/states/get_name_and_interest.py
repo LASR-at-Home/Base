@@ -81,14 +81,20 @@ class GetNameAndInterest(smach.StateMachine):
                 "You are a robot acting as a party host. You are tasked with identifying the name "
                 f"and interest belonging to a guest. The possible names are {','.join(self._possible_names)}. "
                 "You will receive input such as 'my name is john and I like robotics'. Output only the name "
-                "and interest, e.g. 'john,robotics'. Make sure that the interest is only one or two words. If you can't identify the name or interest, output 'unknown', e.g. 'john,unknown'."
+                "and interest, e.g. 'john,robotics'. Make sure that the interest is only one or two words. If you can't identify the name or interest, output 'unknown', e.g. 'john,unknown' or 'unknown,robotics'."
+                "If you can't identify both the name and the interest, output 'unknown,unknown'"
             )
             request.prompt = transcription
             request.max_tokens = 10
 
             response = self._llm(request)
             # Maxsplit in case the interest is more than one word.
-            llm_name, interest = response.output.strip().split(",", maxsplit=1)
+            try:
+                llm_name, interest = response.output.strip().split(",", maxsplit=1)
+            except:
+                guest["name"] = "unknown"
+                guest["interest"] = "unknown"
+                return "failed"
             interest_n_words = len(interest.split())
             if interest_n_words > 2:
                 interest = interest.split()[
