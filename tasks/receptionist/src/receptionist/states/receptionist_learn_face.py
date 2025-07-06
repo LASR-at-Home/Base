@@ -106,7 +106,7 @@ class ReceptionistLearnFaces(smach.StateMachine):
                 )
                 return "failed"
 
-    def __init__(self, guest_id: str, dataset_size: int = 5):
+    def __init__(self, guest_id: str, dataset_size: int = 3):
         smach.StateMachine.__init__(
             self, outcomes=["succeeded", "failed"], input_keys=["guest_data"]
         )

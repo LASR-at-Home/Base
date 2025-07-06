@@ -12,3 +12,6 @@ float32 seg_mask_score
 
 # Point in target frame
 geometry_msgs/Point point
+
+# Name of detection
+string name

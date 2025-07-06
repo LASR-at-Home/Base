@@ -213,6 +213,7 @@ class LangSamService:
                             else float(result["mask_scores"])
                         ),  # If only one detection, it returns a 0D array
                         point=detection_point,
+                        name=result["labels"][det].lower(),
                     )
                 )
 
