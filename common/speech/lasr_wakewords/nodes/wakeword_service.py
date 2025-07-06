@@ -56,6 +56,7 @@ class WakewordService:
             return WakewordResponse(success=False)
 
         def audio_callback(indata, frames, time_info, status):
+            nonlocal detected_keyword
             if status:
                 rospy.logwarn(f"Audio stream status: {status}")
             pcm = (indata[:, 0] * 32768).astype(np.int16)
