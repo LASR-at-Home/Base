@@ -1,0 +1,42 @@
+# Request - Dual sensor person tracking filter service
+string command                      # Command: "initialize", "update_single", "update_dual", "predict", "get_state", "check_reasonable"
+time timestamp                      # Timestamp for the operation
+
+# Sensor A data (primary sensor)
+bool sensor_a_available            # Whether sensor A data is available and valid
+float64 sensor_a_x                 # Position x from sensor A (meters)
+float64 sensor_a_y                 # Position y from sensor A (meters)
+float64 sensor_a_quality           # Quality score for sensor A [0.0-1.0], higher is better
+
+# Sensor B data (secondary sensor)
+bool sensor_b_available            # Whether sensor B data is available and valid
+float64 sensor_b_x                 # Position x from sensor B (meters)
+float64 sensor_b_y                 # Position y from sensor B (meters)
+float64 sensor_b_quality           # Quality score for sensor B [0.0-1.0], higher is better
+
+# Optional parameters for reasonableness check
+float64 max_deviation              # Maximum allowed deviation from prediction (meters)
+bool auto_resolve_conflicts        # Whether to automatically resolve sensor conflicts
+---
+# Response - Current filter state and dual sensor status
+bool success                       # Operation success flag
+string message                     # Status/error message
+
+# Core tracking state
+bool initialized                   # Whether filter has been initialized
+float64 position_x                # Current estimated position x (meters)
+float64 position_y                # Current estimated position y (meters)
+float64 velocity_x                # Current estimated velocity x (m/s)
+float64 velocity_y                # Current estimated velocity y (m/s)
+float64 speed                     # Current estimated speed magnitude (m/s)
+float64[] position_covariance     # Position covariance matrix flattened [xx, xy, yx, yy]
+
+# Dual sensor fusion status
+string fusion_mode                # Current fusion mode: "dual_optimal", "dual_cautious", "single_a", "single_b", "conflict", "predict_only", "uninitialized"
+float64 sensor_a_reliability      # Sensor A reliability score [0.0-1.0]
+float64 sensor_b_reliability      # Sensor B reliability score [0.0-1.0]
+int32 consecutive_conflicts       # Number of consecutive sensor conflicts detected
+float64 sensor_agreement_distance # Distance between sensor readings (meters), -1.0 if unavailable
+bool conflict_detected           # Whether sensor conflict was detected in this update
+float64 confidence_level         # Overall tracking confidence [0.0-1.0]
+string system_health            # Overall system health: "healthy", "warning", "degraded", "uninitialized"

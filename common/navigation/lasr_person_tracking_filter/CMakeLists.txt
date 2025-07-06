@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(help_me_carry)
+project(lasr_person_tracking_filter)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
@@ -10,14 +10,14 @@ project(help_me_carry)
 find_package(catkin REQUIRED COMPONENTS
   catkin_virtualenv
   rospy
+  message_runtime
+  sensor_msgs
+  geometry_msgs
+  message_generation
+  genmsg
+  actionlib_msgs
+  actionlib
   std_msgs
-  # lasr_vision_lang_sam  # this won't actually work since it has a different python version,
-  # run 'catkin build help_me_carry && catkin build lasr_vision_lang_sam' instead will just work.
-  lasr_skills
-  lasr_vision_sam2
-  lasr_vision_yolo
-  lasr_person_tracking_filter
-  leg_tracker
 )
 
 ## System dependencies are found with CMake's conventions
@@ -29,8 +29,8 @@ find_package(catkin REQUIRED COMPONENTS
 ## See http://ros.org/doc/api/catkin/html/user_guide/setup_dot_py.html
 catkin_python_setup()
 catkin_generate_virtualenv(
- INPUT_REQUIREMENTS requirements.in
- PYTHON_INTERPRETER python3.8
+  INPUT_REQUIREMENTS requirements.in
+  PYTHON_INTERPRETER python3.8
 )
 
 ################################################
@@ -65,24 +65,23 @@ catkin_generate_virtualenv(
 # )
 
 ## Generate services in the 'srv' folder
-# add_service_files(
-#   FILES
-#   Service1.srv
-#   Service2.srv
-# )
+add_service_files(
+  FILES
+  PersonTrackingFilter.srv
+  DualSensorPersonTrackingFilter.srv
+)
 
-## Generate actions in the 'action' folder
+# Generate actions in the 'action' folder
 # add_action_files(
 #   FILES
-#   Action1.action
-#   Action2.action
+#   Follow.action
 # )
 
 ## Generate added messages and services with any dependencies listed here
-# generate_messages(
-#   DEPENDENCIES
-#   std_msgs  # Or other packages containing msgs
-# )
+generate_messages(
+  DEPENDENCIES
+  std_msgs  # Or other packages containing msgs
+)
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -115,8 +114,8 @@ catkin_generate_virtualenv(
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 #  INCLUDE_DIRS include
-#  LIBRARIES carry_my_luggage
-#  CATKIN_DEPENDS rospy
+#  LIBRARIES person_following
+#  CATKIN_DEPENDS leg_tracker rospy
 #  DEPENDS system_lib
 )
 
@@ -128,12 +127,12 @@ catkin_package(
 ## Your package locations should be listed before other locations
 include_directories(
 # include
-  ${catkin_INCLUDE_DIRS}
+#  ${catkin_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/carry_my_luggage.cpp
+#   src/${PROJECT_NAME}/person_following.cpp
 # )
 
 ## Add cmake target dependencies of the library
@@ -144,7 +143,7 @@ include_directories(
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-# add_executable(${PROJECT_NAME}_node src/carry_my_luggage_node.cpp)
+# add_executable(${PROJECT_NAME}_node src/person_following_node.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -168,11 +167,11 @@ include_directories(
 # all install targets should use catkin DESTINATION variables
 # See http://ros.org/doc/api/catkin/html/adv_user_guide/variables.html
 
-## Mark executable scripts (Python etc.) for installation
-## in contrast to setup.py, you can choose the destination
+# Mark executable scripts (Python etc.) for installation
+# in contrast to setup.py, you can choose the destination
 catkin_install_python(PROGRAMS
-  scripts/main.py
-  src/help_me_carry/state_machine.py
+  nodes/kalman_filter_service.py
+  nodes/dual_input_kalman_filter_service.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
@@ -209,7 +208,7 @@ catkin_install_python(PROGRAMS
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_carry_my_luggage.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_person_following.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()

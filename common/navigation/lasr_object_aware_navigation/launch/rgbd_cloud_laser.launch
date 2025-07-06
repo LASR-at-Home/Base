@@ -1,0 +1,11 @@
+<launch>
+  <arg name="cloud" default="throttle_filtering_points/filtered_points"/>
+  <arg name="scan"  default="rgbd_scan"/>
+
+  <node pkg="pointcloud_to_laserscan" type="pointcloud_to_laserscan_node" name="pointcloud_to_laserscan">
+    <remap from="cloud_in" to="$(arg cloud)"/>
+    <remap from="scan"     to="$(arg scan)"/>
+
+    <rosparam file="$(find lasr_object_aware_navigation)/config/rgbd_cloud_laser.yaml" command="load"/>
+  </node>
+</launch>
