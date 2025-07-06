@@ -1,7 +1,10 @@
+#!/usr/bin/env python3
 import smach
 import time
 import rospy
 import numpy as np
+
+from typing import Optional
 
 from sensor_msgs.msg import LaserScan
 
@@ -19,7 +22,7 @@ class DetectDoorOpening(smach.State):
     _door_opened: bool
     _opened_delta: float
     _timeout: float
-    _initial_mean_distance: float
+    _initial_mean_distance: Optional[float]
 
     def __init__(
         self,
@@ -57,11 +60,15 @@ class DetectDoorOpening(smach.State):
         Args:
             msg (LaserScan): The laser scan message containing distance data.
         """
+        if self._door_opened:
+            return
         range_data = np.array(msg.ranges)
         max_dist = msg.range_max
         min_dist = msg.range_min
         range_data[range_data == max_dist] = np.nan
         range_data[range_data == min_dist] = np.nan
+        range_data[range_data == np.inf] = np.nan
+        range_data[range_data == -np.inf] = np.nan
         mean_distance = np.nanmean(range_data)
 
         if self._initial_mean_distance is None:
@@ -69,6 +76,7 @@ class DetectDoorOpening(smach.State):
                 "Initial mean distance not set. Cannot determine if door is opened."
             )
             return
+        rospy.loginfo(f"Current mean distance: {mean_distance:.2f}")
         if mean_distance - self._initial_mean_distance > self._opened_delta:
             rospy.loginfo("Door has been opened.")
             self._door_opened = True
@@ -86,6 +94,8 @@ class DetectDoorOpening(smach.State):
         initial_range_data = np.array(initial_scan.ranges)
         initial_range_data[initial_range_data == max_dist] = np.nan
         initial_range_data[initial_range_data == min_dist] = np.nan
+        initial_range_data[initial_range_data == np.inf] = np.nan
+        initial_range_data[initial_range_data == -np.inf] = np.nan
 
         self._initial_mean_distance = np.nanmean(initial_range_data)
 
@@ -96,7 +106,22 @@ class DetectDoorOpening(smach.State):
             queue_size=1,
         )
 
-        while not self._door_opened() or (time.time() - start_time) < self._timeout:
+        while (not self._door_opened) or ((time.time() - start_time) < self._timeout):
             rospy.sleep(0.1)
 
+        self._scan_subscriber.unregister()
+
         return "door_opened"
+
+
+if __name__ == "__main__":
+    rospy.init_node("detect_door_opening")
+    detect = DetectDoorOpening()
+    sm = smach.StateMachine(outcomes=["succeeded", "failed"])
+    with sm:
+        smach.StateMachine.add(
+            "DETECT_DOOR_OPENING",
+            detect,
+            transitions={"door_opened": "succeeded"},
+        )
+    sm.execute()
