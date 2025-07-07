@@ -88,6 +88,7 @@ class PersonFollowingData:
         self.last_distance_warning_time = rospy.Time.now()
         self.last_scan_position_time = rospy.Time.now()
         self.last_canceled_goal_time = rospy.Time.now()
+        self.last_reselect_legs_time = rospy.Time.now()
 
         # Status flags
         self.is_person_detected = False
@@ -118,7 +119,7 @@ class PersonFollowingData:
         self.last_position = None
 
         # Configuration parameters with defaults
-        self.new_goal_threshold_min = 0.25
+        self.new_goal_threshold_min = 0.5
         self.new_goal_threshold_max = 4.0
         self.stopping_distance = 2.25
         self.max_speed = 0.45
@@ -188,6 +189,7 @@ class PersonFollowingData:
         self.scan_position_duration = rospy.Duration(self.scan_position_duration)
         self.recovery_timeout_duration = rospy.Duration(self.recovery_timeout)
         self.cancel_goal_duration = rospy.Duration(self.cancel_goal_timeout)
+        self.reselect_legs_time_duration = rospy.Duration(5.0)
 
 
 def _euclidean_distance(
@@ -772,9 +774,43 @@ class FollowPerson(smach.StateMachine):
                 is_good_quality = quality_result["is_good"]
                 quality_score = quality_result["score"]
 
-                # Update newest_detection for reasonable detections
-                # if is_reasonable_detection(detection, self.shared_data.min_confidence_threshold):
-                #     self.shared_data.newest_detection = detection
+                # Check if need to reselect leg tracker target
+                if (hasattr(self.shared_data, 'last_reselect_legs_time') and
+                        hasattr(self.shared_data, 'reselect_legs_time_duration') and
+                        (
+                                this_time - self.shared_data.last_reselect_legs_time) > self.shared_data.reselect_legs_time_duration):
+
+                    # Get current leg tracker data
+                    try:
+                        leg_msg = rospy.wait_for_message("/people_tracked", PersonArray, timeout=1.0)
+                        if len(leg_msg.people) > 0:
+                            # Find closest leg person to current 3D detection
+                            min_dist = float("inf")
+                            closest_leg_id = None
+
+                            for person in leg_msg.people:
+                                dx = person.pose.position.x - detection.point.x
+                                dy = person.pose.position.y - detection.point.y
+                                dist = math.sqrt(dx * dx + dy * dy)
+
+                                if dist < min_dist:
+                                    min_dist = dist
+                                    closest_leg_id = person.id
+
+                            if closest_leg_id is not None:
+                                old_id = self.shared_data.track_id_leg
+                                self.shared_data.track_id_leg = closest_leg_id
+                                rospy.loginfo(
+                                    f"Reselected leg tracker ID: {old_id} -> {closest_leg_id} (distance: {min_dist:.2f}m)")
+                            else:
+                                rospy.logwarn("No leg tracker targets available for reselection")
+                        else:
+                            rospy.logwarn("No people found in leg tracker for reselection")
+                    except rospy.ROSException:
+                        rospy.logwarn("Failed to get leg tracker data for reselection")
+
+                    # Reset reselect timer
+                    self.shared_data.last_reselect_legs_time = this_time
 
                 try:
                     if is_good_quality:
@@ -808,49 +844,47 @@ class FollowPerson(smach.StateMachine):
                             except ServiceException as e:
                                 rospy.logwarn(f"Reset Failed!")
 
-                    # stop using pre planned goals as they might confuse the kalman filter
-                    # if (
-                    #         response.success
-                    #         and response.initialized
-                    #         and is_good_quality
-                    #         and len(self.shared_data.target_list) == 0
-                    # ):
-                    #     # Use filtered position
-                    #     filtered_x = response.position_x
-                    #     filtered_y = response.position_y
-                    #     filtered_speed = response.speed
-                    #
-                    #     # Create filtered detection
-                    #     self.detection = detection
-                    #     self.detection.point.x = filtered_x
-                    #     self.detection.point.y = filtered_y
-                    #
-                    #     # Create map pose with filtered position
-                    #     map_pose = PoseStamped()
-                    #     map_pose.header.frame_id = "map"
-                    #     map_pose.header.stamp = this_time
-                    #     map_pose.pose.position.x = filtered_x
-                    #     map_pose.pose.position.y = filtered_y
-                    #     map_pose.pose.position.z = detection.point.z
-                    #     map_pose.pose.orientation.w = 1.0
-                    #
-                    #     # target list initialization
-                    #     robot_pose = self._get_robot_pose_in_map()
-                    #     distance = _euclidean_distance(robot_pose, map_pose)
-                    #     if distance >= 1.75:
-                    #         poses = self._plan_and_sample_targets(
-                    #             robot_pose, map_pose,
-                    #             radius=self.shared_data.min_following_distance,
-                    #             num_samples=8,
-                    #         )
-                    #         for p in poses:
-                    #             self._update_target_list(p, add_traj=False)
-                    #
-                    #     # Update target list with filtered pose
-                    #     self._update_target_list(map_pose)
-                    # else:
-                    self._publish_condition_flag(False)
-                    self.shared_data.condition_flag_state = False
+                        if (
+                                response.success
+                                and response.initialized
+                                and len(self.shared_data.target_list) == 0
+                        ):
+                            # Use filtered position
+                            filtered_x = response.position_x
+                            filtered_y = response.position_y
+                            filtered_speed = response.speed
+
+                            # Create filtered detection
+                            self.detection = detection
+                            self.detection.point.x = filtered_x
+                            self.detection.point.y = filtered_y
+
+                            # Create map pose with filtered position
+                            map_pose = PoseStamped()
+                            map_pose.header.frame_id = "map"
+                            map_pose.header.stamp = this_time
+                            map_pose.pose.position.x = filtered_x
+                            map_pose.pose.position.y = filtered_y
+                            map_pose.pose.position.z = detection.point.z
+                            map_pose.pose.orientation.w = 1.0
+
+                            # target list initialization
+                            robot_pose = self.get_robot_pose_in_map()
+                            distance = _euclidean_distance(robot_pose, map_pose)
+                            if distance >= 1.75:
+                                poses = self._plan_and_sample_targets(
+                                    robot_pose, map_pose,
+                                    radius=self.shared_data.min_following_distance,
+                                    num_samples=8,
+                                )
+                                for p in poses:
+                                    self._update_target_list(p, add_traj=False)
+
+                            # Update target list with filtered pose
+                            self._update_target_list(map_pose)
+                        else:
+                            self._publish_condition_flag(False)
+                            self.shared_data.condition_flag_state = False
 
                 except rospy.ServiceException as e:
                     rospy.logerr(f"Detection3D Kalman service failed: {e}")
@@ -941,38 +975,73 @@ class FollowPerson(smach.StateMachine):
 
         return {"is_good": is_good_quality, "score": quality_score}
 
-    def _update_target_list(self, pose_stamped, add_traj=True):
-        """Update target list with new pose"""
+    def _update_target_list(self, pose_stamped, add_traj=True, enable_zigzag_filter=True,
+                            zigzag_angle_threshold=120.0, min_zigzag_distance=1.5, zigzag_check_window=4):
+        """Update target list with new pose and filter out zigzag patterns"""
         if len(self.shared_data.target_list) == 0:
             self.shared_data.target_list.append(pose_stamped.pose)
             self.shared_data.added_new_target_time = rospy.Time.now()
             rospy.loginfo(f"Adding target pose: {pose_stamped}")
             if add_traj:
-                self.shared_data.person_trajectory.poses.append(
-                    pose_stamped.pose
-                )  # trajectory should always be added
-                self.shared_data.person_pose_stampeds.append(
-                    pose_stamped
-                )  # trajectory should always be added
+                self.shared_data.person_trajectory.poses.append(pose_stamped.pose)
+                self.shared_data.person_pose_stampeds.append(pose_stamped)
             return True
         else:
             prev_pose = self.shared_data.target_list[-1]
             dist_to_prev = _euclidean_distance(prev_pose, pose_stamped.pose)
             if (
-                self.shared_data.new_goal_threshold_min
-                < dist_to_prev
-                < self.shared_data.new_goal_threshold_max
+                    self.shared_data.new_goal_threshold_min
+                    < dist_to_prev
+                    < self.shared_data.new_goal_threshold_max
             ):
                 self.shared_data.target_list.append(pose_stamped.pose)
                 self.shared_data.added_new_target_time = rospy.Time.now()
                 rospy.loginfo(f"Adding target pose: {pose_stamped}")
                 if add_traj:
-                    self.shared_data.person_trajectory.poses.append(
-                        pose_stamped.pose
-                    )  # trajectory should always be added
-                    self.shared_data.person_pose_stampeds.append(
-                        pose_stamped
-                    )  # trajectory should always be added
+                    self.shared_data.person_trajectory.poses.append(pose_stamped.pose)
+                    self.shared_data.person_pose_stampeds.append(pose_stamped)
+
+                # Filter zigzag patterns after adding new target
+                if len(self.shared_data.target_list) >= 4 and enable_zigzag_filter:
+                    targets = self.shared_data.target_list
+
+                    # Check last N targets for zigzag pattern
+                    check_count = min(len(targets), zigzag_check_window)
+                    if check_count >= 4:
+                        recent_targets = targets[-check_count:]
+
+                        # Detect two consecutive reversals
+                        reversal_indices = []
+                        for i in range(1, len(recent_targets) - 1):
+                            # Calculate vectors: (i-1) -> i and i -> (i+1)
+                            v1_x = recent_targets[i].position.x - recent_targets[i - 1].position.x
+                            v1_y = recent_targets[i].position.y - recent_targets[i - 1].position.y
+                            v2_x = recent_targets[i + 1].position.x - recent_targets[i].position.x
+                            v2_y = recent_targets[i + 1].position.y - recent_targets[i].position.y
+
+                            # Calculate angle between vectors (dot product)
+                            dot_product = v1_x * v2_x + v1_y * v2_y
+                            mag1 = math.sqrt(v1_x ** 2 + v1_y ** 2)
+                            mag2 = math.sqrt(v2_x ** 2 + v2_y ** 2)
+
+                            if mag1 > min_zigzag_distance and mag2 > min_zigzag_distance:
+                                cos_angle = dot_product / (mag1 * mag2)
+                                cos_angle = max(-1.0, min(1.0, cos_angle))  # Clamp to [-1, 1]
+                                angle_degrees = math.degrees(math.acos(abs(cos_angle)))
+
+                                if angle_degrees > zigzag_angle_threshold:
+                                    reversal_indices.append(len(targets) - check_count + i)
+
+                        # If we have two consecutive reversals, remove the first one
+                        if len(reversal_indices) >= 2:
+                            for j in range(len(reversal_indices) - 1):
+                                if reversal_indices[j + 1] - reversal_indices[j] <= 2:
+                                    remove_idx = reversal_indices[j]
+                                    if 0 < remove_idx < len(targets) - 1:  # Don't remove first or last
+                                        removed_pose = targets.pop(remove_idx)
+                                        rospy.loginfo(f"Filtered zigzag target at index {remove_idx}: {removed_pose}")
+                                        break
+
                 return True
         return False
 
@@ -1316,105 +1385,104 @@ class PersonDetectionState(smach.State):
                 break
             rospy.sleep(0.1)
 
-        # Get robot pose for distance calculation
-        transform = self.sm_manager.tf_buffer.lookup_transform(
-            "map", "base_link", rospy.Time(0), rospy.Duration(1.0)
-        )
-        robot_x = transform.transform.translation.x
-        robot_y = transform.transform.translation.y
+        for i in range(2):
+            # Get robot pose for distance calculation
+            transform = self.sm_manager.tf_buffer.lookup_transform(
+                "map", "base_link", rospy.Time(0), rospy.Duration(1.0)
+            )
+            robot_x = transform.transform.translation.x
+            robot_y = transform.transform.translation.y
 
-        # Call YOLO detection service first
-        req = YoloDetection3DRequest(
-            image_raw=self.sm_manager.shared_data.current_image,
-            depth_image=self.sm_manager.shared_data.depth_image,
-            depth_camera_info=self.sm_manager.shared_data.camera_info,
-            model=self.sm_manager.shared_data.yolo_model,
-            confidence=self.sm_manager.shared_data.yolo_confidence,
-            target_frame="map",
-        )
+            # Call YOLO detection service first
+            req = YoloDetection3DRequest(
+                image_raw=self.sm_manager.shared_data.current_image,
+                depth_image=self.sm_manager.shared_data.depth_image,
+                depth_camera_info=self.sm_manager.shared_data.camera_info,
+                model=self.sm_manager.shared_data.yolo_model,
+                confidence=self.sm_manager.shared_data.yolo_confidence,
+                target_frame="map",
+            )
 
-        response = self.sm_manager.yolo(req)
-        detections = response.detected_objects
+            response = self.sm_manager.yolo(req)
+            detections = response.detected_objects
 
-        detected_people = {"xywh": [], "point": []}
-        for detection in detections:
-            detected_people["point"].append(detection.point)
-            detected_people["xywh"].append(detection.xywh)
+            detected_people = {"xywh": [], "point": []}
+            for detection in detections:
+                detected_people["point"].append(detection.point)
+                detected_people["xywh"].append(detection.xywh)
 
-        if not detected_people["point"]:
-            rospy.logwarn("No people detected by YOLO for tracking")
-            return "no_person_found"
+            if not detected_people["point"]:
+                rospy.logwarn("No people detected by YOLO for tracking")
+                return "no_person_found"
 
-        # Find nearest person from YOLO
-        min_dist = float("inf")
-        nearest_index = -1
+            # Find nearest person from YOLO
+            min_dist = float("inf")
+            nearest_index = -1
 
-        for i, point in enumerate(detected_people["point"]):
-            dx = point.x - robot_x
-            dy = point.y - robot_y
-            dist = math.hypot(dx, dy)
+            for i, point in enumerate(detected_people["point"]):
+                dx = point.x - robot_x
+                dy = point.y - robot_y
+                dist = math.hypot(dx, dy)
 
-            if dist < min_dist:
-                min_dist = dist
-                nearest_index = i
+                if dist < min_dist:
+                    min_dist = dist
+                    nearest_index = i
 
-        if nearest_index == -1:
-            return "no_person_found"
+            if nearest_index == -1:
+                return "no_person_found"
 
-        # Store YOLO tracking information
-        self.sm_manager.shared_data.track_bbox = detected_people["xywh"][nearest_index]
-        self.sm_manager.shared_data.track_id = nearest_index
+            # Store YOLO tracking information
+            self.sm_manager.shared_data.track_bbox = detected_people["xywh"][nearest_index]
+            self.sm_manager.shared_data.track_id = nearest_index
 
-        # Get selected YOLO person position
-        yolo_person_x = detected_people["point"][nearest_index].x
-        yolo_person_y = detected_people["point"][nearest_index].y
+            # Get selected YOLO person position
+            yolo_person_x = detected_people["point"][nearest_index].x
+            yolo_person_y = detected_people["point"][nearest_index].y
 
-        rospy.loginfo(
-            f"Selected YOLO person at ({yolo_person_x:.2f}, {yolo_person_y:.2f})"
-        )
-        rospy.loginfo(f"YOLO person idx: {nearest_index}")
+            rospy.loginfo(
+                f"Selected YOLO person at ({yolo_person_x:.2f}, {yolo_person_y:.2f})"
+            )
+            rospy.loginfo(f"YOLO person idx: {nearest_index}")
 
-        # Setup SAM2 tracking
-        bbox_list = []
-        for i, bbox in enumerate(detected_people["xywh"]):
-            bbox_msg = BboxWithFlag()
-            bbox_msg.obj_id = i
-            bbox_msg.reset = False
-            bbox_msg.clear_old_points = True
-            bbox_msg.xywh = bbox
-            bbox_list.append(bbox_msg)
+            # Setup SAM2 tracking
+            bbox_list = []
+            for i, bbox in enumerate(detected_people["xywh"]):
+                bbox_msg = BboxWithFlag()
+                bbox_msg.obj_id = i
+                bbox_msg.reset = False
+                bbox_msg.clear_old_points = True
+                bbox_msg.xywh = bbox
+                bbox_list.append(bbox_msg)
 
-        prompt_msg = PromptArrays()
-        prompt_msg.bbox_array = bbox_list
-        prompt_msg.point_array = []
-        prompt_msg.reset = True
-        self.sm_manager.prompt_pub.publish(prompt_msg)
-        rospy.sleep(0.5)
-        self.sm_manager.prompt_pub.publish(prompt_msg)
-        rospy.sleep(0.5)
-        self.sm_manager.prompt_pub.publish(prompt_msg)
-        rospy.sleep(0.5)
+            prompt_msg = PromptArrays()
+            prompt_msg.bbox_array = bbox_list
+            prompt_msg.point_array = []
+            prompt_msg.reset = True
+            self.sm_manager.prompt_pub.publish(prompt_msg)
+            rospy.sleep(0.5)
+            self.sm_manager.prompt_pub.publish(prompt_msg)
+            rospy.sleep(0.5)
 
-        # Start tracking
-        self.sm_manager.track_flag_pub.publish(Bool(data=True))
-        rospy.sleep(0.1)
-        self.sm_manager.track_flag_pub.publish(Bool(data=True))
-        rospy.sleep(0.1)
-        self.sm_manager.track_flag_pub.publish(Bool(data=True))
-        rospy.sleep(0.1)
+            # Start tracking
+            self.sm_manager.track_flag_pub.publish(Bool(data=True))
+            rospy.sleep(0.1)
+            self.sm_manager.track_flag_pub.publish(Bool(data=True))
+            rospy.sleep(0.1)
+            self.sm_manager.track_flag_pub.publish(Bool(data=True))
+            rospy.sleep(0.1)
 
-        # Now get leg tracker data and find closest person to YOLO selection
-        while True:
-            tracks = rospy.wait_for_message("/people_tracked", PersonArray)
-            people = tracks.people
-            if len(people) > 0:
-                break
-            elif not self.wait_for_leg_detection_said:
-                self.sm_manager._tts(
-                    "You can walk forward and backward a bit so that I can detect your legs.",
-                    wait=False,
-                )
-                self.wait_for_leg_detection_said = True
+            # Now get leg tracker data and find closest person to YOLO selection
+            while True:
+                tracks = rospy.wait_for_message("/people_tracked", PersonArray)
+                people = tracks.people
+                if len(people) > 0:
+                    break
+                elif not self.wait_for_leg_detection_said:
+                    self.sm_manager._tts(
+                        "You can walk forward and backward a bit so that I can detect your legs.",
+                        wait=False,
+                    )
+                    self.wait_for_leg_detection_said = True
 
         # Find leg tracker person closest to YOLO person
         min_dist_to_yolo = float("inf")
@@ -1447,6 +1515,8 @@ class PersonDetectionState(smach.State):
         self.sm_manager.condition_frame_flag_pub.publish(Bool(data=True))
         self.sm_manager.shared_data.condition_flag_state = True
         self.sm_manager.shared_data.is_person_detected = True
+
+        self.sm_manager.shared_data.last_reselect_legs_time = rospy.Time.now()
 
         return "person_detected"
 
@@ -1555,7 +1625,7 @@ class TrackingActiveState(smach.State):
                     - abs(
                         target_speed
                         * self.sm_manager.shared_data.stopping_distance
-                        * 1.5
+                        * 2.5
                     ),
                 )
                 if not self.sm_manager.shared_data.first_tracking_done:
@@ -1563,6 +1633,7 @@ class TrackingActiveState(smach.State):
                         self.sm_manager.shared_data.stopping_distance / 5, 0.5
                     )
                     rospy.logwarn("First goal, using minimum following threshold.")
+
                 for i in reversed(range(len(self.sm_manager.shared_data.target_list))):
                     distance_to_last = _euclidean_distance(
                         self.sm_manager.shared_data.target_list[i], last_pose_in_list
@@ -1570,19 +1641,16 @@ class TrackingActiveState(smach.State):
 
                     rospy.loginfo(
                         f"Checking pose {i}: distance to latest pose = {distance_to_last:.2f}m "
-                        f"(dynamic threshold: {dynamic_stopping_distance:.2f}m, based on target speed: {target_speed:.2f}m) "
-                        f"The fucking distance is actually {abs(dynamic_stopping_distance - distance_to_last)}......"
+                        f"(dynamic threshold: {dynamic_stopping_distance:.2f}m, based on target speed: {target_speed:.2f}m)"
                     )
 
-                    if (
-                        abs(dynamic_stopping_distance - distance_to_last)
-                        >= self.sm_manager.shared_data.min_following_distance
-                        and distance_to_last
-                        >= self.sm_manager.shared_data.min_following_distance
-                    ):
+                    # Selected target must be at least min_following_distance away from final target
+                    # and at least dynamic_stopping_distance away from final target
+                    if (distance_to_last >= dynamic_stopping_distance and
+                            distance_to_last >= self.sm_manager.shared_data.min_following_distance):
                         target_pose = self.sm_manager.shared_data.target_list[i]
                         rospy.loginfo(
-                            f"Selected target pose at index {i} (dynamic distance threshold met)"
+                            f"Selected target pose at index {i} (distance to final target: {distance_to_last:.2f}m)"
                         )
                         break
 
@@ -1673,9 +1741,10 @@ class TrackingActiveState(smach.State):
                 and rospy.Time.now() - self.sm_manager.shared_data.added_new_target_time
                 > self.sm_manager.shared_data.target_moving_timeout_duration
             ):
-                rospy.loginfo("Following complete - no movement detected")
+                self.sm_manager.shared_data.pause_add_targets = True
+                rospy.loginfo("Following complete - force to stop by timeout.")
                 self.sm_manager._tts(
-                    "Have we arrived? I will stop following.", wait=True
+                    "Have we arrived? Please say yes or no.", wait=True
                 )
                 self.sm_manager.shared_data.completion_reason = "ARRIVED"
                 return "following_complete"
@@ -1729,7 +1798,7 @@ class TrackingActiveState(smach.State):
 class NavigationState(smach.State):
     """Monitor navigation progress, handle head tracking, and detect completion/failure"""
 
-    def __init__(self, sm_manager, object_avoidance, navigation_timeout=8.0):
+    def __init__(self, sm_manager, object_avoidance, navigation_timeout=5.0):
         self.sm_manager = sm_manager
         self.object_avoidance = object_avoidance
         self.navigation_timeout = navigation_timeout  # Timeout in seconds
@@ -1750,14 +1819,13 @@ class NavigationState(smach.State):
         start_robot_pose = self.sm_manager.get_robot_pose_in_map()
         navigation_start_time = rospy.Time.now()  # Record navigation start time
 
-        # Verify that navigation is indeed active
-        if (
-            not self._is_navigation_active()
-            and self.sm_manager.shared_data.first_tracking_done
-        ):
-            rospy.logwarn("Entered NAVIGATION state but no active navigation found")
-            # TODO: the orentation is not handled yet!!!
-            return "navigation_complete"
+        # # Verify that navigation is indeed active
+        # if (
+        #     not self._is_navigation_active()
+        #     and self.sm_manager.shared_data.first_tracking_done
+        # ):
+        #     rospy.logwarn("Entered NAVIGATION state but no active navigation found")
+        #     return "navigation_complete"
 
         # Monitor navigation progress
         rate = rospy.Rate(3)
@@ -1777,6 +1845,7 @@ class NavigationState(smach.State):
                 )
                 self.sm_manager.shared_data.last_movement_time = rospy.Time.now()
                 self.sm_manager.shared_data.added_new_target_time = rospy.Time.now()
+                self._send_face_target_goal(self.sm_manager.shared_data.current_goal)
                 return "navigation_complete"
 
             # Keep looking at detected person during navigation
@@ -1900,7 +1969,7 @@ class NavigationState(smach.State):
         # self.sm_manager.look_at_point(target_point, target_frame)
         self.sm_manager.pause_conditional_frame = False
 
-    def _send_face_target_goal(self, userdata, target_pose):
+    def _send_face_target_goal(self, target_pose):
         """Send a rotation-only goal to face the target. Robot stays at current position but rotates."""
         try:
             robot_pose = self.sm_manager.get_robot_pose_in_map()
@@ -1929,7 +1998,7 @@ class NavigationState(smach.State):
             # Send navigation goal (rotation-only)
             goal = MoveBaseGoal()
             goal.target_pose = goal_pose
-            self.sm_manager.move_base_client.send_goal(goal)
+            self.sm_manager.move_base_client.send_goal_and_wait(goal)
 
             rospy.loginfo("Face-target goal sent successfully")
             return True
@@ -2045,7 +2114,7 @@ class FallbackState(smach.State):
         current_position = self.sm_manager.get_robot_pose_in_map()
         last_target = self.sm_manager.shared_data.target_list[-1]
         distance_to_last = _euclidean_distance(current_position.pose, last_target)
-        if distance_to_last < self.sm_manager.shared_data.stopping_distance * 0.8:
+        if distance_to_last < self.sm_manager.shared_data.stopping_distance * 0.75:
             for i in reversed(range(len(self.sm_manager.shared_data.target_list))):
                 if (
                     _euclidean_distance(
