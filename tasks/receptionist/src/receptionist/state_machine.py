@@ -25,6 +25,14 @@ from receptionist.states import (
     StopTimer,
     RecallDrinkOnTable,
 )
+from receptionist.states import (
+    HandleNameInterest,
+    HandleDrink,
+    SeatGuest,
+    Introduce,
+    WelcomeGuest,
+    FindDrinkOnTable,
+)
 from shapely.geometry import Polygon
 from std_msgs.msg import Empty
 
@@ -517,6 +525,15 @@ class Receptionist(smach.StateMachine):
                 "succeeded": f"HANDLE_FAVOURITE_DRINK_GUEST_{guest_id}",
                 "preempted": f"HANDLE_FAVOURITE_DRINK_GUEST_{guest_id}",
                 "aborted": f"HANDLE_FAVOURITE_DRINK_GUEST_{guest_id}",
+            },
+        )
+
+        smach.StateMachine.add(
+            f"ROTATE_GUEST_{guest_id}",
+            Rotate(180),
+            transitions={
+                "succeeded": f"HANDLE_FAVOURITE_DRINK_GUEST_{guest_id}",
+                "failed": f"HANDLE_FAVOURITE_DRINK_GUEST_{guest_id}",
             },
         )
 

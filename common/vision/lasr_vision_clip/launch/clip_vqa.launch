@@ -1,0 +1,15 @@
+<launch>
+  <!-- allow override but default to CPU -->
+  <arg name="model_device" default="cpu"/>
+
+  <!-- make sure ROS param is set in the global namespace -->
+  <param name="model_device" value="$(arg model_device)" />
+
+  <node pkg="lasr_vision_clip"
+        type="vqa.py"
+        name="clip_vqa_service"
+        output="screen">
+    <!-- also pass it directly to this node’s private namespace -->
+    <param name="model_device" value="$(arg model_device)" />
+  </node>
+</launch>

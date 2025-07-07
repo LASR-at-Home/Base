@@ -45,6 +45,9 @@ class VqaService:
 
 if __name__ == "__main__":
     rospy.init_node("clip_vqa_service")
-    service = VqaService()
+    # read the arg we wired up in clip_vqa.launch:
+    model_dev = rospy.get_param("~model_device", "cpu")
+    rospy.loginfo(f"[clip_vqa_service] using model_device={model_dev}")
+    service = VqaService(model_dev)
     rospy.Service("/clip_vqa/query_service", Vqa, service.query_clip)
     rospy.spin()

@@ -158,6 +158,6 @@ class GPSRDataLoader:
 
 
 if __name__ == "__main__":
-    loader = GPSRDataLoader()
+    loader = GPSRDataLoader(data_dir="../data/german_open_data/")
     data = loader.load_data()
     print(data)

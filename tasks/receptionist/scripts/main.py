@@ -87,6 +87,11 @@ if __name__ == "__main__":
     table_point = Point(**table_point_param)
     # exclude the sofa area from the seat area
     # seat_area = seat_area.difference(sofa_area)
+<<<<<<< HEAD
+
+    search_motions = rospy.get_param("/receptionist/search_motions")
+=======
+>>>>>>> origin/main
 
     sweep = rospy.get_param("/receptionist/sweep")
 

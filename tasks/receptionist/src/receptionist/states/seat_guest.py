@@ -21,17 +21,40 @@ from lasr_skills import (
     DetectAllInPolygon,
 )
 
+<<<<<<< HEAD
+<<<<<<< HEAD
+# from receptionist.states import PointCloudSweep, RunAndProcessDetections
+# from receptionist.states import RunAndProcessDetections
+
+=======
+>>>>>>> origin/main
+from std_msgs.msg import Header
+
+
+class SeatGuest(smach.StateMachine):
+
+    def __init__(
+        self,
+    ):
+=======
 
 class LearnHostFace(smach.StateMachine):
     """State machine to learn the host's face."""
 
     def __init__(self):
+>>>>>>> origin/main
         smach.StateMachine.__init__(
             self,
             outcomes=["succeeded", "failed"],
             input_keys=["guest_data", "seated_guest_locs"],
             output_keys=["guest_data"],
         )
+<<<<<<< HEAD
+        with self:
+            smach.StateMachine.add(
+                "SAY_SIT",
+                Say("Please take a seat."),
+=======
 
         with self:
             smach.StateMachine.add(
@@ -60,6 +83,7 @@ class LearnHostFace(smach.StateMachine):
                     guest_id="host",
                     dataset_size=5,
                 ),
+>>>>>>> origin/main
                 transitions={
                     "succeeded": "succeeded",
                     "failed": "failed",

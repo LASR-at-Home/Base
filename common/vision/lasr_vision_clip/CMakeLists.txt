@@ -155,12 +155,18 @@ include_directories(
 
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
+# existing python scripts, etc…
 catkin_install_python(PROGRAMS
-  nodes/vqa
+  nodes/vqa.py
   nodes/img_encoder.py
   nodes/learn_face.py
   examples/encode_image_example.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
+
+# install your launch files
+install(DIRECTORY launch/
+        DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch
 )
 
 ## Mark executables for installation

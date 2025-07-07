@@ -2,6 +2,10 @@ from .speech_recovery import SpeechRecovery
 from .get_attributes import GetGuestAttributes
 from .introduce import Introduce
 from .receptionist_learn_face import ReceptionistLearnFaces
+from .recognise_people import RecognisePeople
+from .seat_guest import SeatGuest
+from .introduce_and_seat_guest import IntroduceAndSeatGuest
+from .get_name import GetName
 from .seat_guest import SeatGuest
 from .get_drink import GetDrink
 from .get_name_and_interest import GetNameAndInterest

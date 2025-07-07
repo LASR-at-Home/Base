@@ -20,11 +20,6 @@ from geometry_msgs.msg import (
     Point,
     Quaternion,
 )
-from lasr_vision_msgs.msg import CDRequest, CDResponse
-from lasr_vision_msgs.srv import (
-    CroppedDetectionRequest,
-    CroppedDetection,
-)
 
 
 from typing import List, Literal

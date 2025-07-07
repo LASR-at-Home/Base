@@ -1,0 +1,94 @@
+{
+    "chair": {
+        "placeable": true,
+        "object_category": null
+    },
+    "desk": {
+        "placeable": true,
+        "object_category": "snacks"
+    },
+    "office chair": {
+        "placeable": false,
+        "object_category": null
+    },
+    "bookshelf": {
+        "placeable": true,
+        "object_category": null
+    },
+    "plant": {
+        "placeable": false,
+        "object_category": null
+    },
+    "dresser": {
+        "placeable": true,
+        "object_category": null
+    },
+    "bed": {
+        "placeable": true,
+        "object_category": null
+    },
+    "side table": {
+        "placeable": true,
+        "object_category": "toiletries"
+    },
+    "fridge": {
+        "placeable": true,
+        "object_category": "cleaning supplies"
+    },
+    "sink table": {
+        "placeable": true,
+        "object_category": null
+    },
+    "dishwasher": {
+        "placeable": true,
+        "object_category": "dishes"
+    },
+    "kitchen counter": {
+        "placeable": true,
+        "object_category": "food, container"
+    },
+    "kitchen table": {
+        "placeable": true,
+        "object_category": null
+    },
+    "trash can": {
+        "placeable": true,
+        "object_category": null
+    },
+    "tv sideboard": {
+        "placeable": true,
+        "object_category": null
+    },
+    "couch table": {
+        "placeable": true,
+        "object_category": "fruits"
+    },
+    "sofa": {
+        "placeable": false,
+        "object_category": null
+    },
+    "bar": {
+        "placeable": true,
+        "object_category": "drinks"
+    },
+    "armchair": {
+        "placeable": true,
+        "object_category": false
+    },
+    "coat rack": {
+        "placeable": false,
+        "object_category": null
+    },
+    "cabinet": {
+        "placeable": true,
+        "object_category": null
+    },
+    "entrance": {
+        "placeable": false,
+        "object_category": null
+    },
+    "exit": {
+        "placeable": false,
+        "object_category": null
+    }
+}

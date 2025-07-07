@@ -1,7 +1,19 @@
+<<<<<<< HEAD
+from typing import Optional
+
+=======
+>>>>>>> origin/main
 import smach
 import rospy
 
 from lasr_skills import Say
+<<<<<<< HEAD
+from lasr_llm_msgs.srv import (
+    Llm,
+    LlmRequest,
+)
+=======
+>>>>>>> origin/main
 
 
 def stringify_guest_data(guest_data: dict) -> str:
@@ -52,6 +64,21 @@ class WelcomeGuest(smach.StateMachine):
 
         with self:
             smach.StateMachine.add(
+<<<<<<< HEAD
+                "GET_SIMILARITY",
+                self.GetSimilarity(),
+                transitions={
+                    "succeeded": "SAY_WELCOME",
+                    "failed": "SAY_WELCOME",
+                },
+                remapping={
+                    "guest_data": "guest_data",
+                    "common_interest": "common_interest",
+                },
+            )
+            smach.StateMachine.add(
+=======
+>>>>>>> origin/main
                 "SAY_WELCOME",
                 self.GetWelcomeMessage(),
                 transitions={
@@ -75,6 +102,37 @@ class WelcomeGuest(smach.StateMachine):
                 remapping={"text": "welcome_message"},
             )
 
+<<<<<<< HEAD
+    class GetSimilarity(smach.State):
+        """State to get the similarity between two guests."""
+
+        def __init__(self):
+            super().__init__(
+                outcomes=["succeeded", "failed"],
+                input_keys=["guest_data"],
+                output_keys=["guest_data", "common_interest"],
+            )
+            self._llm = rospy.ServiceProxy("/lasr_llm/llm", Llm)
+            self._llm.wait_for_service()
+
+        def execute(self, userdata):
+
+            request = LlmRequest()
+            request.system_prompt = f"You are a robot acting as a party host. You are tasked with reasoning about interests between two guests. You will receive input such as 'Person 1 interest: football. Person 2 interest: tennis'. You should reason about what these guests have in common, if anything, and output a single word describing this commonality. In the example, this might be 'sports' or 'exercise'. If you cannot find any commanality, output 'none'."
+            request.prompt = f"Person 1 interest: {userdata.guest_data['guest1']['interest']}. Person 2 interests: {userdata.guest_data['guest2']['interest']}."
+            response = self._llm(request)
+            commonality = response.output.lower()
+
+            if commonality == "none":
+                rospy.logerr("Failed to get similarity from LLM.")
+                userdata.common_interest = "unknown"
+                return "failed"
+            else:
+                userdata.common_interest = commonality
+                return "succeeded"
+
+=======
+>>>>>>> origin/main
     class GetWelcomeMessage(smach.State):
         """State to get the welcome message for the guest."""
 
@@ -88,9 +146,18 @@ class WelcomeGuest(smach.StateMachine):
         def execute(self, userdata):
             guest_1_name = userdata.guest_data["guest1"]["name"]
             guest_2_name = userdata.guest_data["guest2"]["name"]
+<<<<<<< HEAD
+            common_interest = userdata.common_interest
+
+            userdata.welcome_message = (
+                f"Hello {guest_2_name}, welcome to the party! "
+                f"You'll get on well with {guest_1_name} who is already here as they share a common interest in {common_interest}. "
+                f"You'll recognise them as {stringify_guest_data(userdata.guest_data['guest1'])}."
+=======
 
             userdata.welcome_message = (
                 f"Hello {guest_2_name}, welcome to the party! "
                 f"{guest_1_name} is already here, you'll recognise them as {stringify_guest_data(userdata.guest_data['guest1'])}."
+>>>>>>> origin/main
             )
             return "succeeded"

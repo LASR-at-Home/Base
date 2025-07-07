@@ -160,6 +160,9 @@ catkin_install_python(PROGRAMS
   nodes/command_parser
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
+## at the bottom of CMakeLists.txt, after catkin_install_python()
+install(DIRECTORY launch/
+        DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch)
 
 ## Mark executables for installation
 ## See http://docs.ros.org/melodic/api/catkin/html/howto/format1/building_executables.html

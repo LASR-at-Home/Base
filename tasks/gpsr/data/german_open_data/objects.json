@@ -1,64 +1,74 @@
 {
     "cleaning supplies": {
         "items": [
-            "soap",
+            "cleaning rag",
             "dishwasher tab",
-            "washcloth",
-            "sponges"
+            "kitchen cleaner",
+            "sponge",
+            "dust cloth"
         ],
         "singular": "cleaning supply"
     },
+    "container": {
+        "items": [
+            "cornflakes container"
+        ],
+        "singular": "container"
+    },
     "drinks": {
         "items": [
-            "cola",
-            "ice tea",
-            "water",
+            "apple juice",
+            "oat milk",
+            "mezzo mix",
             "milk",
-            "big coke",
-            "fanta",
-            "dubbelfris"
+            "iced tea",
+            "sprite",
+            "tea",
+            "coke"
         ],
         "singular": "drink"
     },
     "food": {
         "items": [
+            "pasta",
             "cornflakes",
-            "pea soup",
             "curry",
-            "pancake mix",
-            "hagelslag",
-            "sausages",
-            "mayonaise"
+            "sweetener",
+            "creamer",
+            "tomato soup",
+            "instant noodels",
+            "red cabbage"
         ],
         "singular": "food"
     },
-    "decorations": {
+    "toiletries": {
         "items": [
-            "candle"
+            "cotton pads",
+            "tissue",
+            "q tips",
+            "toothpaste"
         ],
-        "singular": "decoration"
+        "singular": "toiletry"
     },
     "fruits": {
         "items": [
             "pear",
             "plum",
-            "peach",
+            "apple",
             "lemon",
-            "orange",
+            "peach",
             "strawberry",
-            "banana",
-            "apple"
+            "orange",
+            "banana"
         ],
         "singular": "fruit"
     },
     "snacks": {
         "items": [
-            "stroopwafel",
-            "candy",
-            "liquorice",
             "crisps",
-            "pringles",
-            "tictac"
+            "gum",
+            "chocolate peanuts",
+            "cracker"
         ],
         "singular": "snack"
     },

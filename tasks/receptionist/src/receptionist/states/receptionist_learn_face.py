@@ -2,7 +2,6 @@
 
 import rospy
 import smach
-
 from lasr_vision_msgs.srv import (
     AddFace,
     AddFaceRequest,
@@ -112,7 +111,6 @@ class ReceptionistLearnFaces(smach.StateMachine):
         )
         self._guest_id = guest_id
         self._dataset_size = dataset_size
-
         # TODO:
         # Should add a check for detecting eyes in image befor learning face.
         with self:
