@@ -44,7 +44,7 @@ class PickServer:
     # GPD
     _gpd_binary_path: str = "/opt/gpd/build/detect_grasps"
     _gpd_config_path: str = os.path.join(
-        rospkg.RosPack().get_path("lasr_manipulation_pipeline"), "cfg", "tiago.cfg"
+        rospkg.RosPack().get_path("lasr_manipulation_pipeline"), "config", "tiago.cfg"
     )
     _gpd_pcd_path: str = "/tmp/gpd.pcd"
     _gpd_output_file: str = "grasps.txt"
