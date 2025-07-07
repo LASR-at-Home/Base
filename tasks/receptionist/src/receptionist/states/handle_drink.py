@@ -1,8 +1,5 @@
 import smach
 
-<<<<<<< HEAD
-from lasr_skills import AskAndListen
-=======
 from lasr_skills import (
     AskAndListen,
     GetNearestObject,
@@ -13,27 +10,20 @@ from lasr_skills import (
     PlayMotion,
     Say,
 )
->>>>>>> origin/main
 from receptionist.states import (
     GetDrink,
 )
 
 
 class HandleDrink(smach.StateMachine):
-    def __init__(self, guest_id: str):
+    def __init__(self, guest_id: str, face_table: bool = True):
         super().__init__(
             outcomes=["succeeded", "failed"],
             input_keys=["guest_data"],
-<<<<<<< HEAD
-        )
-
-        with self:
-            smach.StateMachine.add(
-                "GET_DRINK",
-                self.DrinkFlow(guest_id),
-=======
             output_keys=["guest_data"],
         )
+
+        self._face_table = face_table
 
         with self:
             # Detect the nearest person
@@ -101,6 +91,7 @@ class HandleDrink(smach.StateMachine):
                 transitions={
                     "succeeded": f"SAY_FIND_DRINK_{guest_id}",
                     "failed": f"REPEAT_GET_DRINK_GUEST_{guest_id}",
+                    "retry": f"REPEAT_GET_DRINK_GUEST_{guest_id}",
                 },
                 remapping={"guest_transcription": "transcribed_speech"},
             )
@@ -122,6 +113,7 @@ class HandleDrink(smach.StateMachine):
                 transitions={
                     "succeeded": f"SAY_FIND_DRINK_{guest_id}",
                     "failed": f"SAY_FIND_DRINK_{guest_id}",
+                    "retry": f"SAY_FIND_DRINK_{guest_id}",
                 },
                 remapping={"guest_transcription": "transcribed_speech"},
             )
@@ -135,74 +127,27 @@ class HandleDrink(smach.StateMachine):
                     "aborted": f"STOP_EYE_TRACKER_GUEST_{guest_id}",
                 },
             )
+
+            if self._face_table:
+                stop_eye_tracker_transition = f"FACE_TABLE_GUEST_{guest_id}"
+            else:
+                stop_eye_tracker_transition = "succeeded"
+
             smach.StateMachine.add(
                 f"STOP_EYE_TRACKER_GUEST_{guest_id}",
                 StopEyeTracker(),
                 transitions={
-                    "succeeded": f"FACE_TABLE_GUEST_{guest_id}",
-                    "failed": f"FACE_TABLE_GUEST_{guest_id}",
+                    "succeeded": stop_eye_tracker_transition,
+                    "failed": stop_eye_tracker_transition,
                 },
             )
-            smach.StateMachine.add(
-                f"FACE_TABLE_GUEST_{guest_id}",
-                Rotate(180),
->>>>>>> origin/main
-                transitions={
-                    "succeeded": "succeeded",
-                    "failed": "failed",
-                },
-            )
-<<<<<<< HEAD
 
-    class DrinkFlow(smach.StateMachine):
-        def __init__(self, guest_id: str):
-            super().__init__(
-                outcomes=["succeeded", "failed"],
-                input_keys=["guest_data"],
-                output_keys=["guest_data"],
-            )
-
-            with self:
+            if self._face_table:
                 smach.StateMachine.add(
-                    f"GET_DRINK_GUEST_{guest_id}",
-                    AskAndListen(
-                        "Please say 'Hi Tiago' for me to begin listening. What is your favourite drink?"
-                    ),
-                    transitions={
-                        "succeeded": f"PARSE_DRINK_GUEST_{guest_id}",
-                        "failed": f"PARSE_DRINK_GUEST_{guest_id}",
-                    },
-                )
-
-                smach.StateMachine.add(
-                    f"PARSE_DRINK_GUEST_{guest_id}",
-                    GetDrink(guest_id, False),
+                    f"FACE_TABLE_GUEST_{guest_id}",
+                    Rotate(180),
                     transitions={
                         "succeeded": "succeeded",
-                        "failed": f"REPEAT_GET_DRINK_GUEST_{guest_id}",
-                    },
-                    remapping={"guest_transcription": "transcribed_speech"},
-                )
-
-                smach.StateMachine.add(
-                    f"REPEAT_GET_DRINK_GUEST_{guest_id}",
-                    AskAndListen(
-                        "Please speak louder. What is your favourite drink?",
-                    ),
-                    transitions={
-                        "succeeded": f"REPEAT_PARSE_DRINK_GUEST_{guest_id}",
-                        "failed": "succeeded",
+                        "failed": "failed",
                     },
                 )
-
-                smach.StateMachine.add(
-                    f"REPEAT_PARSE_DRINK_GUEST_{guest_id}",
-                    GetDrink(guest_id, True),
-                    transitions={
-                        "succeeded": "succeeded",
-                        "failed": "succeeded",
-                    },
-                    remapping={"guest_transcription": "transcribed_speech"},
-                )
-=======
->>>>>>> origin/main

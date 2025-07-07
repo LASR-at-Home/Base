@@ -90,9 +90,7 @@ class BagPickAndPlace(smach.State):
         self.depth_info = None
         self.latest_rgb_msg = None
         self.latest_depth_msg = None
-
-        # Display window for clicking
-        cv2.namedWindow("Live View", cv2.WINDOW_NORMAL)
+        self.bag_prompt = "grocery bag"
 
         # Sync RGB + depth
         rgb_sub = Subscriber("/xtion/rgb/image_raw", Image)
@@ -168,7 +166,11 @@ class BagPickAndPlace(smach.State):
             resp = self.get_langsam_bags()
             if not resp or not resp.detections:
                 rospy.logwarn("No bags detected.")
-                return "failed"
+                self.say("Please step back, I will reach my arm out.")
+                self.ask_for_bag()
+                self.stow_bag()
+                self.hold_gripper_position()
+                return "succeeded"
 
             intrinsics = self.get_camera_intrinsics()
             result = self.find_closest_detection(
@@ -213,22 +215,55 @@ class BagPickAndPlace(smach.State):
             if (rospy.Time.now() - start).to_sec() > 10:
                 raise RuntimeError("Timeout waiting for camera.")
 
-    def get_langsam_bags(self):
+    def get_langsam_bags(self, max_mask_fraction=0.6):
+        """
+        Call LangSAM and filter out detections where the mask covers too much of the image
+        (e.g., floor detected as bag).
+        """
         rgb_msg = self.latest_rgb_msg
         depth_msg = self.latest_depth_msg
         req = LangSamRequest()
         req.image_raw = rgb_msg
-        req.prompt = "grocery bag"
+        req.prompt = self.bag_prompt
         req.depth_image = depth_msg
         req.depth_camera_info = self.depth_info
         req.box_threshold = 0.3
         req.text_threshold = 0.3
         req.target_frame = "xtion_rgb_optical_frame"
         try:
-            return self.langsam_srv(req)
+            resp = self.langsam_srv(req)
         except rospy.ServiceException as e:
             rospy.logerr(f"LangSAM service call failed: {e}")
             return None
+
+        # No detections or failed service call
+        if not resp or not hasattr(resp, "detections") or not resp.detections:
+            return None
+
+        # Get image size
+        height, width = self.latest_rgb.shape[:2]
+        image_area = height * width
+
+        # Filter detections
+        filtered_detections = []
+        for det in resp.detections:
+            mask_flat = np.array(det.seg_mask, dtype=np.uint8)
+            if mask_flat.size != image_area:
+                # Mask size mismatch, skip
+                continue
+            mask = mask_flat.reshape((height, width))
+            mask_area = np.count_nonzero(mask)
+            frac = mask_area / image_area
+            if frac < max_mask_fraction:  # Only keep masks smaller than threshold
+                filtered_detections.append(det)
+            else:
+                rospy.logwarn(
+                    f"Filtered out mask covering {frac:.1%} of image (likely floor)."
+                )
+
+        # Return a new response with filtered detections
+        resp.detections = filtered_detections
+        return resp if filtered_detections else None
 
     def get_camera_intrinsics(self):
         # Ideally, fetch from CameraInfo topic!
@@ -294,7 +329,6 @@ class BagPickAndPlace(smach.State):
         overlay[mask > 0] = [0, 0, 255]
         cv2.imshow("Auto-segmented bag", overlay)
         cv2.waitKey(1000)
-        cv2.destroyWindow("Auto-segmented bag")
 
     def compute_yaw(self, pts, centroid):
         xy = pts[:, :2] - centroid[:2]
@@ -345,6 +379,8 @@ class BagPickAndPlace(smach.State):
 
         rospy.loginfo(p)
         self.planning_scene_interface.add_box("obj", p, size=size)
+
+        rospy.loginfo("Collision object added to the planning scene!")
 
     def adjust_torso(self, target_height):
         rospy.loginfo("Adjusting torso")
@@ -483,7 +519,7 @@ class BagPickAndPlace(smach.State):
             return result
 
         allow_collisions_with_object("obj", self.planning_scene_interface)
-        rospy.loginfo("Collision object added to the planning scene!")
+        rospy.sleep(0.5)
 
         result = self.sync_shift_ee(self.arm, 0.30, 0.0, 0.0)
         if result == False:
@@ -492,7 +528,7 @@ class BagPickAndPlace(smach.State):
         rospy.loginfo("Bag pick complete!")
         self.sync_shift_ee(self.arm, -0.30, 0.0, 0.0)
 
-        return self.is_picked_up(0.002, 0.10)
+        return True
 
     def sync_shift_ee(self, move_group, x, y, z):
         from tf.transformations import euler_from_quaternion, euler_matrix

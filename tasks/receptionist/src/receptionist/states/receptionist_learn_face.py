@@ -2,44 +2,6 @@
 
 import rospy
 import smach
-<<<<<<< HEAD
-
-from lasr_vision_msgs.srv import AddFace
-from lasr_skills.vision import CropImage3D
-from lasr_skills import Detect3D
-from cv_bridge import CvBridge
-
-
-class ReceptionistLearnFaces(smach.StateMachine):
-
-    class LearnFaceState(smach.State):
-        def __init__(self, guest_id: str):
-            self._guest_id = guest_id
-            self._bridge = CvBridge()
-            self._learn_face = rospy.ServiceProxy("/lasr_vision_reid/add_face", AddFace)
-            self._learn_face.wait_for_service()
-            smach.State.__init__(
-                self, outcomes=["succeeded", "failed"], input_keys=["cropped_images"]
-            )
-
-        def execute(self, userdata):
-            self._learn_face()
-            try:
-                success = self._learn_face(
-                    self._bridge.cv2_to_imgmsg(
-                        userdata.cropped_images["person"], encoding="rgb8"
-                    ),
-                    self._guest_id,
-                )
-            except rospy.ServiceException as e:
-                rospy.logerr(f"Service call failed: {e}")
-                return "failed"
-
-            return "succeeded" if success else "failed"
-
-    def __init__(self, guest_id: str, dataset_size: int = 10):
-=======
-
 from lasr_vision_msgs.srv import (
     AddFace,
     AddFaceRequest,
@@ -143,40 +105,27 @@ class ReceptionistLearnFaces(smach.StateMachine):
                 )
                 return "failed"
 
-    def __init__(self, guest_id: str, dataset_size: int = 5):
->>>>>>> origin/main
+    def __init__(self, guest_id: str, dataset_size: int = 3):
         smach.StateMachine.__init__(
             self, outcomes=["succeeded", "failed"], input_keys=["guest_data"]
         )
         self._guest_id = guest_id
         self._dataset_size = dataset_size
-
-<<<<<<< HEAD
-        with self:
-            self.userdata.guest_images = []
-=======
         # TODO:
         # Should add a check for detecting eyes in image befor learning face.
         with self:
             self.userdata.num_images = 0
->>>>>>> origin/main
             smach.StateMachine.add(
                 "DETECT_3D",
                 Detect3D(
                     filter=["person"],
                 ),
                 transitions={
-<<<<<<< HEAD
-                    "succeeded": "CROP_IMAGE_3D",
-=======
                     "succeeded": "CHECK_EYES",
->>>>>>> origin/main
                     "failed": "failed",
                 },
             )
             smach.StateMachine.add(
-<<<<<<< HEAD
-=======
                 "CHECK_EYES",
                 self.CheckEyes(),
                 transitions={
@@ -185,7 +134,6 @@ class ReceptionistLearnFaces(smach.StateMachine):
                 },
             )
             smach.StateMachine.add(
->>>>>>> origin/main
                 "CROP_IMAGE_3D",
                 CropImage3D(
                     filters=["person"],
@@ -193,25 +141,11 @@ class ReceptionistLearnFaces(smach.StateMachine):
                     crop_type="masked",
                 ),
                 transitions={
-<<<<<<< HEAD
-                    "succeeded": "APPEND_DETECTIONS",
-                    "failed": "failed",
-                },
-            )
-            smach.StateMachine.add(
-                "APPEND_DETECTIONS",
-                self.AppendDetections(number_of_images=self._dataset_size),
-                transitions={
-                    "succeeded": "DETECT_3D",
-                    "finished": "LEARN_FACE",
-                    "failed": "failed",
-=======
                     "succeeded": "LEARN_FACE",
                     "failed": "failed",
                 },
                 remapping={
                     "cropped_images": "cropped_images",
->>>>>>> origin/main
                 },
             )
 
@@ -219,12 +153,6 @@ class ReceptionistLearnFaces(smach.StateMachine):
                 "LEARN_FACE",
                 self.LearnFaceState(self._guest_id),
                 transitions={
-<<<<<<< HEAD
-                    "succeeded": "succeeded",
-                    "failed": "failed",
-                },
-            )
-=======
                     "succeeded": "CHECK_DONE",
                     "failed": "failed",
                 },
@@ -237,4 +165,3 @@ class ReceptionistLearnFaces(smach.StateMachine):
                     "failed": "DETECT_3D",
                 },
             )
->>>>>>> origin/main

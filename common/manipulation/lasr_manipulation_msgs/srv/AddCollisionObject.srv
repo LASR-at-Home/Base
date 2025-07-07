@@ -1,0 +1,6 @@
+string object_id # id in planning scene
+string mesh_name # name of mesh
+geometry_msgs/TransformStamped transform # transformation
+geometry_msgs/Vector3Stamped scale # per-axis scaling
+---
+bool success

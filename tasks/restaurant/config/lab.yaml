@@ -6,3 +6,34 @@ survey_angle_increments:
   - -90
   - -90
   - -90
+
+priors:
+  items:
+    - cornflakes
+    - curry
+    - hagelslag
+    - mayonaise
+    - pancake mix
+    - pea soup
+    - sausages
+    - big coke
+    - cola
+    - dubbelfris
+    - fanta
+    - ice tea
+    - milk
+    - water
+    - apple
+    - banana
+    - lemon
+    - orange
+    - peach
+    - pear
+    - plum
+    - strawberry
+    - candy
+    - crisps
+    - liqourice
+    - pringles
+    - stroopwafel
+    - tictac

@@ -1,0 +1,7 @@
+string surface_id # id in planning scene
+sensor_msgs/PointCloud2 scene_pcl # full pointcloud of scene
+string mesh_name # name of mesh of which we are adding a support surface underneath
+geometry_msgs/TransformStamped transform # transformation for mesh
+geometry_msgs/Vector3Stamped scale # per-axis scaling for mesh
+---
+bool success
