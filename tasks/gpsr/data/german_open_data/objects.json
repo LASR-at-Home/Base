@@ -1,0 +1,86 @@
+{
+    "cleaning supplies": {
+        "items": [
+            "cleaning rag",
+            "dishwasher tab",
+            "kitchen cleaner",
+            "sponge",
+            "dust cloth"
+        ],
+        "singular": "cleaning supply"
+    },
+    "container": {
+        "items": [
+            "cornflakes container"
+        ],
+        "singular": "container"
+    },
+    "drinks": {
+        "items": [
+            "apple juice",
+            "oat milk",
+            "mezzo mix",
+            "milk",
+            "iced tea",
+            "sprite",
+            "tea",
+            "coke"
+        ],
+        "singular": "drink"
+    },
+    "food": {
+        "items": [
+            "pasta",
+            "cornflakes",
+            "curry",
+            "sweetener",
+            "creamer",
+            "tomato soup",
+            "instant noodels",
+            "red cabbage"
+        ],
+        "singular": "food"
+    },
+    "toiletries": {
+        "items": [
+            "cotton pads",
+            "tissue",
+            "q tips",
+            "toothpaste"
+        ],
+        "singular": "toiletry"
+    },
+    "fruits": {
+        "items": [
+            "pear",
+            "plum",
+            "apple",
+            "lemon",
+            "peach",
+            "strawberry",
+            "orange",
+            "banana"
+        ],
+        "singular": "fruit"
+    },
+    "snacks": {
+        "items": [
+            "crisps",
+            "gum",
+            "chocolate peanuts",
+            "cracker"
+        ],
+        "singular": "snack"
+    },
+    "dishes": {
+        "items": [
+            "spoon",
+            "plate",
+            "cup",
+            "fork",
+            "bowl",
+            "knife"
+        ],
+        "singular": "dish"
+    }
+}
