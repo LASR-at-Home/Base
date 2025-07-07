@@ -65,16 +65,16 @@ class ReceptionistLearnFaces(smach.StateMachine):
             smach.State.__init__(
                 self,
                 outcomes=["succeeded", "failed"],
-                input_keys=["cropped_images", "num_images"],
+                input_keys=["cropped_detections", "num_images"],
                 output_keys=["num_images"],
             )
 
         def execute(self, userdata):
             try:
                 request = AddFaceRequest(
-                    image_raw=self._bridge.cv2_to_imgmsg(
-                        userdata.cropped_images["person"], encoding="rgb8"
-                    ),
+                    userdata.cropped_detections["person"][0][
+                        "cropped_image"
+                    ],  # 0 As want closest person -- sorted from closest to farthest
                     name=self._guest_id,
                 )
                 response = self._learn_face(request)
@@ -145,7 +145,7 @@ class ReceptionistLearnFaces(smach.StateMachine):
                     "failed": "failed",
                 },
                 remapping={
-                    "cropped_images": "cropped_images",
+                    "cropped_detections": "cropped_detections",
                 },
             )
 

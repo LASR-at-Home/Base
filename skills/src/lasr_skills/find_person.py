@@ -9,7 +9,9 @@ from lasr_skills import (
     DetectGesture,
     DetectClothing,
     DetectPose,
+    Detect3DInArea,
 )
+from lasr_skills.vision import CropImage3D
 import navigation_helpers
 
 from geometry_msgs.msg import (
@@ -67,23 +69,23 @@ class FindPerson(smach.StateMachine):
                 smach.State.__init__(
                     self,
                     outcomes=["succeeded", "failed"],
-                    input_keys=["responses"],
+                    input_keys=["cropped_detections"],
                     output_keys=[
-                        "response",
-                        "responses",
+                        "detection",
+                        "cropped_detections",
                         "person_point",
                         "cropped_image",
                     ],
                 )
 
             def execute(self, userdata):
-                if len(userdata.responses[0].detections_3d) == 0:
+                if len(userdata.cropped_detections["person"]) == 0:
                     rospy.logwarn("No response available, returning failed.")
                     return "failed"
-                response = userdata.responses[0].detections_3d.pop(0)
-                userdata.response = response
-                userdata.cropped_image = userdata.responses[0].cropped_imgs.pop(0)
-                userdata.person_point = response.point
+                closest_person = userdata.cropped_detections["person"].pop(0)
+                userdata.cropped_detection = closest_person["detection_3d"]
+                userdata.cropped_image = closest_person["cropped_image"]
+                userdata.person_point = closest_person["detection_3d"].point
                 return "succeeded"
 
         class ApproachPerson(smach.StateMachine):
@@ -166,8 +168,8 @@ class FindPerson(smach.StateMachine):
             smach.StateMachine.__init__(
                 self,
                 outcomes=["succeeded", "failed"],
-                input_keys=["responses"],
-                output_keys=["responses", "person_point"],
+                input_keys=["cropped_detections"],
+                output_keys=["cropped_detections", "person_point"],
             )
 
             with self:
@@ -196,7 +198,7 @@ class FindPerson(smach.StateMachine):
                             "succeeded": "GO_TO_PERSON",
                             "failed": "failed",
                         },
-                        remapping={"img_msg": "cropped_image"},
+                        remapping={"cropped_detections": "cropped_detections"},
                     )
 
                     smach.StateMachine.add(
@@ -401,37 +403,47 @@ class FindPerson(smach.StateMachine):
                         "GO_TO_LOCATION",
                         GoToLocation(),
                         transitions={
-                            "succeeded": "DETECT",
+                            "succeeded": "DETECT_IN_ROOM",
                             "failed": "failed",
                         },
                     )
 
                     smach.StateMachine.add(
-                        "DETECT",
-                        smach_ros.ServiceState(
-                            "/vision/cropped_detection",
-                            CroppedDetection,
-                            request=CroppedDetectionRequest(
-                                requests=[
-                                    CDRequest(
-                                        method="closest",
-                                        use_mask=True,
-                                        yolo_model="yolo11n-seg.pt",
-                                        yolo_model_confidence=0.5,
-                                        yolo_nms_threshold=0.3,
-                                        return_sensor_reading=False,
-                                        object_names=["person"],
-                                        polygons=[polygon],
-                                    )
-                                ]
-                            ),
-                            output_keys=["responses"],
-                            response_slots=["responses"],
+                        "DETECT_IN_ROOM",
+                        Detect3DInArea(
+                            area_polygon=polygon,
+                            image_topic="/xtion/rgb/image_raw",
+                            depth_image_topic="/xtion/depth_registered/image_raw",
+                            depth_camera_info_topic="/xtion/depth_registered/camera_info",
+                            model="yolo11n-seg.pt",
+                            filter=["person"],
+                            confidence=0.5,
+                            target_frame="map",
+                        ),
+                        transitions={
+                            "succeeded": "CROP_TO_CLOSEST_PERSON",
+                            "failed": "failed",
+                        },
+                        remapping={
+                            "detections_3d": "detections_3d",
+                            "image_raw": "image_raw",
+                        },
+                    )
+
+                    smach.StateMachine.add(
+                        "CROP_TO_CLOSEST_PERSON",
+                        CropImage3D(
+                            robot_pose_topic="/robot_pose",
+                            filters=["person"],
+                            crop_logic="nearest",
+                            crop_type="masked",
                         ),
                         transitions={
                             "succeeded": "HANDLE_DETECTIONS",
-                            "aborted": "failed",
-                            "preempted": "failed",
+                            "failed": "continue",
+                        },
+                        remapping={
+                            "cropped_detections": "cropped_detections"  # Dict[List[Dict[str, Union[Image, Detection3D]]]]
                         },
                     )
 

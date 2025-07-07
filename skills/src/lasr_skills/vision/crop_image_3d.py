@@ -24,8 +24,6 @@ class CropImage3D(smach.State):
         """Returns cropped RGB images based on 3D detections. For example, cropping the RGB
         image around the closest person to the robot.
 
-
-
         Args:
             robot_pose_topic (str, optional): Topic to get the map frame position of the robot
             . Defaults to "/amcl_pose".
@@ -41,15 +39,18 @@ class CropImage3D(smach.State):
 
         Returns:
             (in userdata["cropped_images"]):
-            dict: Dictionary of cropped images with class names as keys. If no detections
-            match the filters, the dictionary will contain None for those classes.
+            dict: Dictionary of cropped detections with class names as keys. If no detections
+            match the filters, the dictionary will contain None for those classes. Values
+            are Lists of dictionaries with keys "cropped_image" and "detection_3d", sorted according
+            to crop logic, where "cropped_image" is a ROS Image message and "detection_3d" is the
+            corresponding Detection3D message.
         """
         self.robot_pose_topic = robot_pose_topic
         smach.State.__init__(
             self,
             outcomes=["succeeded", "failed"],
             input_keys=["detections_3d", "image_raw"],
-            output_keys=["cropped_images"],
+            output_keys=["cropped_detections"],
         )
         self.filters = filters or []
         self.crop_logic = crop_logic
@@ -103,11 +104,8 @@ class CropImage3D(smach.State):
         reverse = self.crop_logic == "farthest"
         detections.sort(key=eucl_dist, reverse=reverse)
 
-        cropped_images = {k: None for k in self.filters}
+        cropped_detections = {k: None for k in self.filters}
         for det in detections:
-            # Already have the closest/farthest detection for this class
-            if cropped_images[det.name] is not None:
-                continue
 
             if self.crop_type == "masked":
                 # x,y coords of the detection
@@ -131,15 +129,35 @@ class CropImage3D(smach.State):
                     y - h // 2 : y + h // 2, x - w // 2 : x + w // 2
                 ]
 
-            cropped_images[det.name] = masked_image
+            masked_img_msg = self._bridge.cv2_to_imgmsg(masked_image, encoding="rgb8")
+            if cropped_detections[det.name]:
+                cropped_detections[det.name].append(
+                    {
+                        "cropped_image": masked_img_msg,
+                        "detection_3d": det,
+                    }
+                )
+            else:
+                cropped_detections[det.name] = [
+                    {
+                        "cropped_image": masked_img_msg,
+                        "detection_3d": det,
+                    }
+                ]
 
         # Convert image to ROS Image message for debugging
-        if cropped_images:
-            debug_image = next(iter(cropped_images.values()))
-            debug_image_msg = self._bridge.cv2_to_imgmsg(debug_image, encoding="rgb8")
+        if cropped_detections:
+            all_cropped_images = [
+                cropped_detections[det_name]["cropped_image"]
+                for det_name in cropped_detections
+                if cropped_detections[det_name] is not None
+            ]
+            debug_image_msg = self._bridge.cv2_to_imgmsg(
+                all_cropped_images[0], encoding="rgb8"
+            )
             self.debug_publisher.publish(debug_image_msg)
 
-        userdata["cropped_images"] = cropped_images
+        userdata["cropped_detections"] = cropped_detections
 
         return "succeeded"
 
