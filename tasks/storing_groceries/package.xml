@@ -49,7 +49,11 @@
   <!-- Use doc_depend for packages you need only for building documentation: -->
   <!--   <doc_depend>doxygen</doc_depend> -->
   <buildtool_depend>catkin</buildtool_depend>
-
+  <exec_depend>lasr_manipulation_pipeline</exec_depend>
+  <exec_depend>lasr_manipulation_msgs</exec_depend>
+  <exec_depend>lasr_vision_yolo</exec_depend>
+  <exec_depend>lasr_vision_msgs</exec_depend>
+  <exec_depend>lasr_skills</exec_depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>

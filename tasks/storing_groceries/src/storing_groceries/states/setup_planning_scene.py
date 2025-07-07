@@ -5,7 +5,7 @@ import smach_ros
 
 from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion, Vector3
 from std_msgs.msg import Header
-from std_srvs.srv import Empty
+from std_srvs.srv import Empty, EmptyRequest
 
 from lasr_manipulation_msgs.srv import AddSupportSurface, AddSupportSurfaceRequest
 
@@ -13,14 +13,16 @@ from lasr_manipulation_msgs.srv import AddSupportSurface, AddSupportSurfaceReque
 class SetupPlanningScene(smach.StateMachine):
 
     def __init__(self):
-        super().__init__(self, outcomes=["succeeded", "failed"])
+        super().__init__(outcomes=["succeeded", "failed"])
 
         with self:
 
             smach.StateMachine.add(
                 "CLEAR_PLANNING_SCENE",
                 smach_ros.ServiceState(
-                    "/lasr_manipulation_planning_scene/clear", Empty, request=Empty()
+                    "/lasr_manipulation_planning_scene/clear",
+                    Empty,
+                    request=EmptyRequest(),
                 ),
                 transitions={
                     "succeeded": "ADD_TABLE_SURFACE",
@@ -32,7 +34,7 @@ class SetupPlanningScene(smach.StateMachine):
             smach.StateMachine.add(
                 "ADD_TABLE_SURFACE",
                 smach_ros.ServiceState(
-                    "/lasr_manipulation_planning_scene/detect_and_add_support_surface",
+                    "/lasr_manipulation_planning_scene/add_support_surface",
                     AddSupportSurface,
                     request=AddSupportSurfaceRequest(
                         "table",
@@ -52,7 +54,9 @@ class SetupPlanningScene(smach.StateMachine):
                             ),
                         ),
                         Vector3(
-                            **rospy.get_param("/storing_groceries/table/dimensions")
+                            **rospy.get_param(
+                                "/storing_groceries/table/surface/dimensions"
+                            )
                         ),
                     ),
                     output_keys=["success"],
@@ -70,6 +74,8 @@ class SetupPlanningScene(smach.StateMachine):
                 it=rospy.get_param("/storing_groceries/cabinet/shelves"),
                 it_label="shelf_name",
                 exhausted_outcome="succeeded",
+                input_keys=[],
+                output_keys=[],
             )
 
             with shelf_iterator:
@@ -80,12 +86,13 @@ class SetupPlanningScene(smach.StateMachine):
 
                 with container_sm:
                     smach.StateMachine.add(
+                        "ADD_SUPPORT_SURFACE",
                         smach_ros.ServiceState(
-                            "/lasr_manipulation_planning_scene/detect_and_add_support_surface",
+                            "/lasr_manipulation_planning_scene/add_support_surface",
                             AddSupportSurface,
                             request_cb=self._shelf_request_cb,
                             output_keys=["success"],
-                            respone_slots=["success"],
+                            response_slots=["success"],
                             input_keys=["shelf_name"],
                         ),
                         transitions={
@@ -104,7 +111,7 @@ class SetupPlanningScene(smach.StateMachine):
                 transitions={"succeeded": "succeeded", "failed": "failed"},
             )
 
-    def _shelf_request_cb(self, userdata):
+    def _shelf_request_cb(self, userdata, _):
         return AddSupportSurfaceRequest(
             userdata.shelf_name,
             PoseStamped(
@@ -112,19 +119,19 @@ class SetupPlanningScene(smach.StateMachine):
                 pose=Pose(
                     position=Point(
                         **rospy.get_param(
-                            f"/storing_groceries/cabinet/shelves/{userdata.shelf_name}/pose/position"
+                            f"/storing_groceries/cabinet/shelves/{userdata.shelf_name}/surface/pose/position"
                         ),
                     ),
                     orientation=Quaternion(
                         **rospy.get_param(
-                            f"/storing_groceries/cabinet/shelves/{userdata.shelf_name}/pose/orientation"
+                            f"/storing_groceries/cabinet/shelves/{userdata.shelf_name}/surface/pose/orientation"
                         )
                     ),
                 ),
             ),
             Vector3(
                 **rospy.get_param(
-                    f"/storing_groceries/cabinet/shelves/{userdata.shelf_name}/dimensions"
+                    f"/storing_groceries/cabinet/shelves/{userdata.shelf_name}/surface/dimensions"
                 )
             ),
         )
