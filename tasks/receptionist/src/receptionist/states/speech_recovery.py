@@ -17,6 +17,7 @@ class SpeechRecovery(smach.State):
         guest_id: int,
         last_resort: bool,
         input_type: str = "",
+        recover_from_llm: bool = False,
         param_key: str = "/receptionist/priors",
     ):
         """Recover the correct name and / or drink by parsing the transcription.
@@ -38,6 +39,7 @@ class SpeechRecovery(smach.State):
         self._guest_id = guest_id
         self._last_resort = last_resort
         self._input_type = input_type
+        self._recover_from_llm = recover_from_llm
         prior_data: Dict[str, List[str]] = rospy.get_param(param_key)
         self._available_names = [name.lower() for name in prior_data["names"]]
         
@@ -50,7 +52,7 @@ class SpeechRecovery(smach.State):
         ]
         self._available_double_drinks = [
             "ice",
-            "tea",
+            "tea",userdata.guest_data[self._guest_id]
             "big",
             "coke",
         ]
@@ -103,14 +105,19 @@ class SpeechRecovery(smach.State):
             str: state outcome. Updates the userdata with the parsed information (drink or name), under
             the parameter "guest_data".
         """
-        filtered_sentence = userdata.guest_transcription.lower().translate(
-            str.maketrans("", "", string.punctuation)
-        )
-        sentence_split = filtered_sentence.split()
-        sentence_list = list(set(sentence_split) - set(self._excluded_words))
+        if self._recover_from_llm:
+            sentence_list = userdata.guest_data[self._guest_id]["name"]
+            if not sentence_list == "unknown":
+                return "failed"
+        else:
+            filtered_sentence = userdata.guest_transcription.lower().translate(
+                str.maketrans("", "", string.punctuation)
+            )
+            sentence_split = filtered_sentence.split()
+            sentence_list = list(set(sentence_split) - set(self._excluded_words))
         if not sentence_list:
             return "failed"
-        print(sentence_split)
+        print(sentence_list)
         if self._input_type == "name":
             final_name = self._handle_name(sentence_list, self._last_resort)
             if final_name != "unknown":

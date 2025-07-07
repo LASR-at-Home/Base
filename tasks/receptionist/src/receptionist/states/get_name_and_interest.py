@@ -38,7 +38,57 @@ class GetNameAndInterest(smach.StateMachine):
                 self.ParseNameAndInterest(
                     guest_id=self._guest_id,last_resort = self._last_resort, param_key=self._param_key
                 ),
-                transitions={"succeeded": "succeeded", "failed": "failed", "recovery": "SPEECH_RECOVERY"},
+                transitions={"succeeded": "succeeded", "failed": "RECOVERY_DECISION"},
+            )
+            smach.StateMachine.add(
+                "RECOVERY_DECISION",
+                self.RecoveryDecision(
+                    guest_id=self._guest_id,last_resort = self._last_resort, param_key=self._param_key
+                ),
+                transitions={"failed_name": "RECOVER_NAME", "failed_interest": "RECOVER_INTEREST", "failed": "RECOVER_BOTH_INTEREST"},
+            )
+            smach.StateMachine.add(
+                "RECOVER_NAME",
+                self.RecoverName(
+                    guest_id=self._guest_id,last_resort = self._last_resort, param_key=self._param_key
+                ),
+                transitions={"failed": "SPEECH_RECOVERY_NAME_LLM", "failed_last_resort": "SPEECH_RECOVERY_NAME_LLM_LAST_RESORT", "succeeded": "succeeded"},
+            )
+            smach.StateMachine.add(
+                "SPEECH_RECOVERY_NAME_LLM",
+                SpeechRecovery(
+                    guest_id=self._guest_id,last_resort = self._last_resort, input_type = "name", recover_from_llm = True, param_key=self._param_key
+                ),
+                transitions={"succeeded": "succeeded", "failed": "failed"},
+            )
+            
+            smach.StateMachine.add(
+                "SPEECH_RECOVERY_NAME_LLM_LAST_RESORT",
+                SpeechRecovery(
+                    guest_id=self._guest_id,last_resort = self._last_resort, input_type = "name", recover_from_llm = True, param_key=self._param_key
+                ),
+                transitions={"succeeded": "succeeded", "failed": "SPEECH_RECOVERY_NAME_TRANSCRIPTION_LAST_RESORT"},
+            )
+            smach.StateMachine.add(
+                "SPEECH_RECOVERY_NAME_TRANSCRIPTION_LAST_RESORT",
+                SpeechRecovery(
+                    guest_id=self._guest_id,last_resort = self._last_resort, input_type = "name", recover_from_llm = False, param_key=self._param_key
+                ),
+                transitions={"succeeded": "succeeded", "failed": "failed"},
+            )
+            smach.StateMachine.add(
+                "RECOVER_INTEREST",
+                self.RecoverInterest(
+                    guest_id=self._guest_id,last_resort = self._last_resort, param_key=self._param_key
+                ),
+                transitions={"failed": "failed", "succeeded": "succeeded"},
+            )
+            smach.StateMachine.add(
+                "RECOVER_BOTH_INTEREST",
+                self.RecoverInterest(
+                    guest_id=self._guest_id,last_resort = self._last_resort, param_key=self._param_key
+                ),
+                transitions={"failed": "SPEECH_RECOVERY_NAME_LLM", "succeeded": "SPEECH_RECOVERY_NAME_LLM"},
             )
             smach.StateMachine.add(
                 "SPEECH_RECOVERY",
@@ -63,7 +113,7 @@ class GetNameAndInterest(smach.StateMachine):
             """
             smach.State.__init__(
                 self,
-                outcomes=["succeeded", "failed", "recovery"],
+                outcomes=["succeeded", "failed"],
                 input_keys=["guest_transcription", "guest_data"],
                 output_keys=["guest_data", "guest_transcription"],
             )
@@ -128,75 +178,24 @@ class GetNameAndInterest(smach.StateMachine):
             )
 
             # Determine outcome
-            if not self._last_resort:
-                if name == "unknown" or interest == "unknown":
-                    return "failed"
-                if name not in self._possible_names:
-                    return "failed"
+            if name == "unknown" or interest == "unknown":
+                return "failed"
+            if name not in self._possible_names:
+                return "failed"
 
-                return "succeeded"
-            else:
-                if interest == "unknown":
-                    request = LlmRequest()
-                    request.system_prompt = (
-                        "You are a robot acting as a party host. You are tasked with identifying the interest belonging to a guest. "
-                        "You will receive input such as 'my name is john and I like robotics'. Output only the "
-                        "interest, e.g. 'robotics'. Make sure that the interest is only one or two words. If you can't identify the name or interest, try your best to infer from the input, but only output one or two words."
-                    )
-                    request.prompt = transcription
-                    request.max_tokens = 10
-
-                    response = self._llm(request)
-                    # Maxsplit in case the interest is more than one word.
-                    interest = response.output.strip()
-                        
-                    interest_n_words = len(interest.split())
-                    if interest_n_words == 0:
-                        guest["interest"] = "unknown"
-                        return "failed"
-                    if interest_n_words > 2:
-                        interest = interest.split()[
-                            :2
-                        ]  # Take only the first two word of interest
-                        interest = " ".join(interest)
-                    interest = interest.strip()
-
-                    # Update guest data
-                    guest = userdata.guest_data[self._guest_id]
-                    guest["interest"] = interest
-
-                    rospy.loginfo(
-                        f"Parsed interest: {interest} from transcription: {transcription}"
-                    )
-
-                if name == "unknown":
-                    information_found = False
-                    for key_phrase in self._possible_names:
-                        if key_phrase in transcription:
-                            guest["name"] = key_phrase
-                            rospy.loginfo(
-                                f"Name identified as: {key_phrase}"
-                            )
-                            information_found = True
-                            break
-                    if not information_found:
-                        rospy.loginfo(f"Name not found in transcription")
-                        guest["name"] = "unknown"
-                        return "recovery"
-                    return "success"
+            return "succeeded"
                     
-    
 
-
-    class PostRecoveryDecision(smach.State):
+    class RecoveryDecision(smach.State):
         def __init__(
             self,
             guest_id: str,
+            last_resort: bool,
             param_key: str = "/receptionist/priors",
         ):
             smach.State.__init__(
                 self,
-                outcomes=["succeeded", "failed"],
+                outcomes=["failed_name", "failed_interest", "failed"],
                 input_keys=["guest_transcription", "guest_data"],
                 output_keys=["guest_data", "guest_transcription"],
             )
@@ -206,6 +205,7 @@ class GetNameAndInterest(smach.StateMachine):
             self._possible_interests = [
                 interest.lower() for interest in prior_data["interests"]
             ]
+            self._last_resort = last_resort
 
         def execute(self, userdata: UserData) -> str:
             if not self._recovery_name_and_interest_required(userdata):
@@ -228,3 +228,77 @@ class GetNameAndInterest(smach.StateMachine):
                     return True
             return False
         
+    class RecoverName(smach.State):
+        def __init__(
+            self,
+            guest_id: str,
+            last_resort: bool,
+            param_key: str = "/receptionist/priors",
+        ):
+            smach.State.__init__(
+                self,
+                outcomes=["failed", "failed_last_resort", "succeeded"],
+                input_keys=["guest_transcription", "guest_data"],
+                output_keys=["guest_data", "guest_transcription"],
+            )
+            self._guest_id = guest_id
+            prior_data: Dict[str, List[str]] = rospy.get_param(param_key)
+            self._possible_names = [name.lower() for name in prior_data["names"]]
+            self._possible_interests = [
+                interest.lower() for interest in prior_data["interests"]
+            ]
+            self._last_resort = last_resort
+
+        def execute(self, userdata: UserData) -> str:
+            transcription = userdata["guest_transcription"].lower()
+            guest = userdata.guest_data[self._guest_id]
+            information_found = False
+
+            for key_phrase in self._possible_names:
+                if key_phrase in transcription:
+                    guest["name"] = key_phrase
+                    rospy.loginfo(
+                        f"Name identified as: {key_phrase}"
+                    )
+                    information_found = True
+                    break
+            if not information_found:
+                rospy.loginfo(f"Name not found in transcription")
+                if self._last_resort:
+                    return "failed_last_resort"
+                else:
+                    return "failed"
+            return "succeeded"
+        
+    class RecoverInterest(smach.State):
+        def __init__(
+            self,
+            guest_id: str,
+            last_resort: bool,
+            param_key: str = "/receptionist/priors",
+        ):
+            smach.State.__init__(
+                self,
+                outcomes=["failed", "succeeded"],
+                input_keys=["guest_transcription", "guest_data"],
+                output_keys=["guest_data", "guest_transcription"],
+            )
+            self._guest_id = guest_id
+            prior_data: Dict[str, List[str]] = rospy.get_param(param_key)
+            self._possible_names = [name.lower() for name in prior_data["names"]]
+            self._possible_interests = [
+                interest.lower() for interest in prior_data["interests"]
+            ]
+            self._last_resort = last_resort
+
+        def execute(self, userdata: UserData) -> str:
+            if not self._last_resort:
+                return "failed"
+
+            guest = userdata.guest_data[self._guest_id]
+            guest["interest"] = "technology"
+
+            rospy.loginfo(
+                f"Resort to recovering interest as technology"
+            )
+            return "succeeded"

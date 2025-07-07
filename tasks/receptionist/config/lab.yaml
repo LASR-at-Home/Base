@@ -1,19 +1,51 @@
 priors:
   names:
-    - Adel
-    - Angel
-    - Axel
-    - Charlie
-    - Jane
-    - Jules
-    - Morgan
-    - Paris
-    - Robin
-    - Simone
+    - olivia
+    - noah
+    - amelia
+    - liam
+    - emma
+    - oliver
+    - sophia
+    - elijah
+    - charlotte
+    - mateo
+    - isabella
+    - lucas
+    - ava
+    - levi
+    - mia
+    - ezra
+    - ellie
+    - asher
+    - luna
+    - leo
+    - harper
+    - james
+    - aurora
+    - luca
+    - evelyn
+    - henry
+    - eliana
+    - hudson
+    - aria
+    - ethan
+
   drinks:
-    - cup
+    - apple juice
+    - coke
+    - iced tea
+    - mezzo mix
+    - milk
+    - oat milk
+    - sprite
+    - tea
+
     - bottle
+    - cup
     - banana
+
+
 
 #WAIT POSE LAB:
 wait_pose:
