@@ -27,6 +27,7 @@ from .detect_clothing import DetectClothing
 from .detect_pose import DetectPose
 from .find_person import FindPerson
 from .detect_all_in_polygon import DetectAllInPolygon
+from .detect_all_in_polygon_sensor_data import DetectAllInPolygonSensorData
 from .eye_tracker import StartEyeTracker, StopEyeTracker
 from .detect_nearest import GetNearestObject
 from .detect_keypoints_3d import DetectKeypoints3D
@@ -43,3 +44,4 @@ from .detect_gesture_3d import DetectGesture3D, DetectHandUp3D
 
 from .follow_person import FollowPerson
 from .listen_for_wakeword import ListenForWakeword
+from .detect_door_opening import DetectDoorOpening
