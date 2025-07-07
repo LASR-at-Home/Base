@@ -565,6 +565,21 @@ class PlanningSceneServices:
         self, request: AddSupportSurfaceRequest
     ) -> AddSupportSurfaceResponse:
 
+        if request.pose.header.frame_id != "base_footprint":
+            rospy.logwarn("Supplied pose is not in base_footprint, so transforming it.")
+
+        try:
+            transform = self._tf_buffer.lookup_transform(
+                "base_footprint",
+                request.pose.header.frame_id,
+                rospy.Time(0),
+                rospy.Duration(1.0),
+            )
+            request.pose = tf2_geometry_msgs.do_transform_pose(request.pose, transform)
+        except Exception as e:
+            rospy.logwarn(f"TF transform failed: {e}")
+            return AddSupportSurfaceResponse(success=False)
+
         self._planning_scene.add_box(
             request.surface_id,
             request.pose,
