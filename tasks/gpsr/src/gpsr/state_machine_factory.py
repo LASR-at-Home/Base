@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
+import os
 import rospy
 import smach
 import smach_ros
+import rospkg
 from typing import Dict, List
 
-# from lasr_skills.fake_nav import GoToLocation
 from lasr_skills import (
     GoToLocation,
     FindPerson,
@@ -26,8 +27,6 @@ from gpsr.states import (
     ObjectComparison,
     CountObject,
 )
-import os
-import rospkg
 
 from geometry_msgs.msg import (
     Pose,
@@ -38,8 +37,6 @@ from geometry_msgs.msg import (
     PointStamped,
 )
 from std_msgs.msg import Header
-
-from lasr_skills import GoToLocation
 
 STATE_COUNT = 0
 
@@ -455,6 +452,7 @@ def talk(command_param: Dict, sm: smach.StateMachine, greet_person: bool) -> Non
                 "succeeded": f"STATE_{STATE_COUNT + 1}",
                 "failed": f"STATE_{STATE_COUNT + 1}",
             },
+            remapping={"query_result": "query_result"},
         )
 
         if "destination" in command_param:
