@@ -3,11 +3,12 @@
 from typing import Dict, Union, List, Tuple
 
 import rospy
-
+import rospkg
 import ultralytics
 import torch
 import numpy as np
 import cv2
+import os
 
 from lasr_vision_msgs.srv import (
     YoloDetection,
@@ -460,5 +461,6 @@ class YOLOService:
 
 if __name__ == "__main__":
     rospy.init_node("yolo")
+    os.chdir(os.path.join(rospkg.RosPack().get_path("lasr_vision_yolo"), "models"))
     yolo = YOLOService()
     rospy.spin()
