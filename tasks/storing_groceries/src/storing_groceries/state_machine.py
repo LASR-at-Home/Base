@@ -4,7 +4,12 @@ import smach
 import smach_ros
 from shapely import Polygon as ShapelyPolygon
 
-from storing_groceries.states import SetupPlanningScene, SelectObject, SegmentObject
+from storing_groceries.states import (
+    SetupPlanningScene,
+    SelectObject,
+    SegmentObject,
+    ScanShelves,
+)
 
 from lasr_skills import (
     Say,
@@ -35,6 +40,7 @@ from std_msgs.msg import Empty, Header
 
 """
 Looks like we can't have everything setup in the planning scene apriori, we need to dynamically add things, as they are all in the base footprint...
+We need to lift the object off the surface first. I can't understand why, but sometimes the planner fucks up.
 """
 
 
@@ -99,7 +105,7 @@ class StoringGroceries(smach.StateMachine):
                 "SAY_GOING_TO_TABLE",
                 Say(text="I am going to the table"),
                 transitions={
-                    "succeeded": "LOOK_AT_TABLE",
+                    "succeeded": "GO_TO_TABLE",
                     "aborted": "failed",
                     "preempted": "failed",
                 },
@@ -119,7 +125,7 @@ class StoringGroceries(smach.StateMachine):
                 LookToPoint(
                     pointstamped=PointStamped(
                         point=Point(
-                            **rospy.get_param("/storing_groceries/table/pose/position")
+                            **rospy.get_param("/storing_groceries/table/look_point")
                         ),
                         header=Header(frame_id="map"),
                     )
@@ -286,9 +292,15 @@ class StoringGroceries(smach.StateMachine):
                 "GO_TO_CABINET",
                 GoToLocation(location_param="/storing_groceries/cabinet/pose"),
                 transitions={
-                    "succeeded": "SAY_PLACE",
+                    "succeeded": "SCAN_SHELVES",
                     "failed": "failed",
                 },
+            )
+
+            smach.StateMachine.add(
+                "SCAN_SHELVES",
+                ScanShelves(),
+                transitions={"succeeded": "SAY_PLACE", "failed": "failed"},
             )
 
             smach.StateMachine.add(
