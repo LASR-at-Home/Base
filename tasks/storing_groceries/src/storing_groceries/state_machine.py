@@ -24,11 +24,14 @@ from lasr_manipulation_msgs.srv import (
     DetectAndAddSupportSurfaceRequest,
     RemoveSupportSurface,
     RemoveSupportSurfaceRequest,
+    DetachObjectFromGripperRequest,
+    DetachObjectFromGripper,
 )
 
 from lasr_manipulation_msgs.msg import PickAction, PickGoal
 from geometry_msgs.msg import Point, PointStamped
 from std_msgs.msg import Empty, Header
+
 
 """
 Looks like we can't have everything setup in the planning scene apriori, we need to dynamically add things, as they are all in the base footprint...
@@ -96,7 +99,7 @@ class StoringGroceries(smach.StateMachine):
                 "SAY_GOING_TO_TABLE",
                 Say(text="I am going to the table"),
                 transitions={
-                    "succeeded": "GO_TO_TABLE",
+                    "succeeded": "LOOK_AT_TABLE",
                     "aborted": "failed",
                     "preempted": "failed",
                 },
@@ -138,6 +141,7 @@ class StoringGroceries(smach.StateMachine):
                     min_coverage=0.9,
                     min_confidence=0.1,
                     z_axis=0.8,
+                    model="lasr.pt",
                 ),
                 transitions={"succeeded": "SELECT_OBJECT", "failed": "failed"},
             )
@@ -236,7 +240,7 @@ class StoringGroceries(smach.StateMachine):
                     input_keys=["selected_object", "transform", "scale"],
                 ),
                 transitions={
-                    "succeeded": "PLAY_PREGRASP_MOTION",
+                    "succeeded": "PLAY_PREGRASP_MOTION_POSTGRASP",
                     "preempted": "failed",
                     "aborted": "failed",
                 },
@@ -256,33 +260,33 @@ class StoringGroceries(smach.StateMachine):
                 "PLAY_HOME_MOTION",
                 PlayMotion(motion_name="home"),
                 transitions={
-                    "succeeded": "REMOVE_TABLE_SUPPORT_SURFACE",
-                    "preempted": "failed",
-                    "aborted": "failed",
-                },
-            )
-
-            smach.StateMachine.add(
-                "REMOVE_TABLE_SUPPORT_SURFACE",
-                smach_ros.ServiceState(
-                    "/lasr_manipulation_planning_scene/remove_support_surface",
-                    RemoveSupportSurface,
-                    request_cb=self._remove_table_support_surface_cb,
-                    output_keys=["success"],
-                    response_slots=["success"],
-                ),
-                transitions={
                     "succeeded": "GO_TO_CABINET",
                     "preempted": "failed",
                     "aborted": "failed",
                 },
             )
 
+            # smach.StateMachine.add(
+            #     "REMOVE_TABLE_SUPPORT_SURFACE",
+            #     smach_ros.ServiceState(
+            #         "/lasr_manipulation_planning_scene/remove_support_surface",
+            #         RemoveSupportSurface,
+            #         request_cb=self._remove_table_support_surface_cb,
+            #         output_keys=["success"],
+            #         response_slots=["success"],
+            #     ),
+            #     transitions={
+            #         "succeeded": "GO_TO_CABINET",
+            #         "preempted": "failed",
+            #         "aborted": "failed",
+            #     },
+            # )
+
             smach.StateMachine.add(
                 "GO_TO_CABINET",
                 GoToLocation(location_param="/storing_groceries/cabinet/pose"),
                 transitions={
-                    "succeeded": "DETECT_OBJECTS",
+                    "succeeded": "SAY_PLACE",
                     "failed": "failed",
                 },
             )
@@ -293,17 +297,33 @@ class StoringGroceries(smach.StateMachine):
                     "Please grab the object from my gripper and place it on the shelf. I will give you 5 seconds. 5... 4... 3... 2... 1..."
                 ),
                 transitions={
-                    "succeeded": "OPEN_GRIPPER_RELASE_OBJECT",
+                    "succeeded": "OPEN_GRIPPER_RELEASE_OBJECT",
                     "aborted": "failed",
                     "preempted": "failed",
                 },
             )
 
             smach.StateMachine.add(
-                "OPEN_GRIPPER_RELASE_OBJECT",
+                "OPEN_GRIPPER_RELEASE_OBJECT",
                 PlayMotion(motion_name="open_gripper"),
                 transitions={
-                    "succeeded": "PICK_OBJECT",
+                    "succeeded": "DETACH_OBJECT_FROM_GRIPPER",
+                    "preempted": "failed",
+                    "aborted": "failed",
+                },
+            )
+
+            smach.StateMachine.add(
+                "DETACH_OBJECT_FROM_GRIPPER",
+                smach_ros.ServiceState(
+                    "/lasr_manipulation_planning_scene/detach_object_from_gripper",
+                    DetachObjectFromGripper,
+                    request_cb=self._detach_object_from_gripper_cb,
+                    output_keys=[],
+                    input_keys=["selected_object"],
+                ),
+                transitions={
+                    "succeeded": "GO_TO_TABLE",
                     "preempted": "failed",
                     "aborted": "failed",
                 },
@@ -311,7 +331,12 @@ class StoringGroceries(smach.StateMachine):
 
     def _register_object_cb(self, userdata, request):
         return RegistrationRequest(
-            userdata.masked_cloud, userdata.selected_object[0].name, False, 10
+            userdata.masked_cloud,
+            userdata.selected_object[0].name,
+            rospy.get_param(
+                f"/storing_groceries/objects/{userdata.selected_object[0].name}/scale"
+            ),
+            25,
         )
 
     def _add_collision_object_cb(self, userdata, request):
@@ -342,4 +367,5 @@ class StoringGroceries(smach.StateMachine):
     def _remove_table_support_surface_cb(self, userdata, request):
         return RemoveSupportSurfaceRequest("table")
 
-    # def _detach_
+    def _detach_object_from_gripper_cb(self, userdata, request):
+        return DetachObjectFromGripperRequest(userdata.selected_object[0].name)
