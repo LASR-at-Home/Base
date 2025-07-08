@@ -66,7 +66,6 @@ class GetDrink(smach.StateMachine):
             self._llm = rospy.ServiceProxy("/lasr_llm/llm", Llm)
             self._llm.wait_for_service()
             self._guest_id = guest_id
-            self._retry_count = 0
             prior_data: Dict[str, List[str]] = rospy.get_param(param_key)
             self._possible_drinks = [drink.lower() for drink in prior_data["drinks"]]
             self._last_resort = last_resort

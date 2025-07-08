@@ -52,7 +52,7 @@ class SpeechRecovery(smach.State):
         ]
         self._available_double_drinks = [
             "ice",
-            "tea",userdata.guest_data[self._guest_id]
+            "tea",
             "big",
             "coke",
         ]
@@ -106,8 +106,8 @@ class SpeechRecovery(smach.State):
             the parameter "guest_data".
         """
         if self._recover_from_llm:
-            sentence_list = userdata.guest_data[self._guest_id]["name"]
-            if not sentence_list == "unknown":
+            sentence_list = list(userdata.guest_data[self._guest_id]["name"])
+            if sentence_list == "unknown":
                 return "failed"
         else:
             filtered_sentence = userdata.guest_transcription.lower().translate(

@@ -88,7 +88,7 @@ class GetNameAndInterest(smach.StateMachine):
                 self.RecoverInterest(
                     guest_id=self._guest_id,last_resort = self._last_resort, param_key=self._param_key
                 ),
-                transitions={"failed": "SPEECH_RECOVERY_NAME_LLM", "succeeded": "SPEECH_RECOVERY_NAME_LLM"},
+                transitions={"failed": "RECOVER_NAME", "succeeded": "RECOVER_NAME"},
             )
             smach.StateMachine.add(
                 "SPEECH_RECOVERY",
@@ -151,11 +151,19 @@ class GetNameAndInterest(smach.StateMachine):
             response = self._llm(request)
             # Maxsplit in case the interest is more than one word.
             try:
+                if not response:
+                    rospy.logwarn("LLM Response Empty")
+                    guest["name"] = "unknown"
+                    guest["interest"] = "unknown"
+                    return "failed"
                 llm_name, interest = response.output.strip().split(",", maxsplit=1)
             except:
+                rospy.logwarn("LLM Response Error")
                 guest["name"] = "unknown"
                 guest["interest"] = "unknown"
                 return "failed"
+            
+
             interest_n_words = len(interest.split())
             if interest_n_words > 2:
                 interest = interest.split()[
@@ -163,6 +171,8 @@ class GetNameAndInterest(smach.StateMachine):
                 ]  # Take only the first two word of interest
                 interest = " ".join(interest)
             interest = interest.strip()
+            if "unknown" in interest.lower():
+                interest = "unknown"
 
             # Try to match an exact name from transcription
             name = next(
@@ -202,9 +212,6 @@ class GetNameAndInterest(smach.StateMachine):
             self._guest_id = guest_id
             prior_data: Dict[str, List[str]] = rospy.get_param(param_key)
             self._possible_names = [name.lower() for name in prior_data["names"]]
-            self._possible_interests = [
-                interest.lower() for interest in prior_data["interests"]
-            ]
             self._last_resort = last_resort
 
         def execute(self, userdata: UserData) -> str:
@@ -223,7 +230,7 @@ class GetNameAndInterest(smach.StateMachine):
             Returns:
                 bool: True if both attributes require recovery.
             """
-            if userdata.guest_data[self._guest_id]["name"] == "unknown":
+            if userdata.guest_data[self._guest_id]["name"] == "unknown" or userdata.guest_data[self._guest_id]["name"] not in self._possible_names:
                 if userdata.guest_data[self._guest_id]["interest"] == "unknown":
                     return True
             return False
@@ -244,9 +251,6 @@ class GetNameAndInterest(smach.StateMachine):
             self._guest_id = guest_id
             prior_data: Dict[str, List[str]] = rospy.get_param(param_key)
             self._possible_names = [name.lower() for name in prior_data["names"]]
-            self._possible_interests = [
-                interest.lower() for interest in prior_data["interests"]
-            ]
             self._last_resort = last_resort
 
         def execute(self, userdata: UserData) -> str:
@@ -286,9 +290,6 @@ class GetNameAndInterest(smach.StateMachine):
             self._guest_id = guest_id
             prior_data: Dict[str, List[str]] = rospy.get_param(param_key)
             self._possible_names = [name.lower() for name in prior_data["names"]]
-            self._possible_interests = [
-                interest.lower() for interest in prior_data["interests"]
-            ]
             self._last_resort = last_resort
 
         def execute(self, userdata: UserData) -> str:
