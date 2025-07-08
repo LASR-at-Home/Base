@@ -65,6 +65,9 @@ cabinet:
           z: 0.0
 
 objects:
-  apple:
+  # apple:
+  #   graspable: true
+  #   category: "fruits"
+  banana:
     graspable: true
     category: "fruits"
