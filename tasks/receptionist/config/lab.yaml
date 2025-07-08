@@ -32,15 +32,6 @@ priors:
     - ethan
 
   drinks:
-    - apple juice
-    - coke
-    - iced tea
-    - mezzo mix
-    - milk
-    - oat milk
-    - sprite
-    - tea
-
     - bottle
     - cup
     - banana

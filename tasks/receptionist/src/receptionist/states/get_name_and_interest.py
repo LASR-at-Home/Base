@@ -59,7 +59,7 @@ class GetNameAndInterest(smach.StateMachine):
                 SpeechRecovery(
                     guest_id=self._guest_id,last_resort = self._last_resort, input_type = "name", recover_from_llm = True, param_key=self._param_key
                 ),
-                transitions={"succeeded": "succeeded", "failed": "failed"},
+                transitions={"succeeded": "POST_RECOVERY_DECISION", "failed": "POST_RECOVERY_DECISION"},
             )
             
             smach.StateMachine.add(
@@ -67,14 +67,14 @@ class GetNameAndInterest(smach.StateMachine):
                 SpeechRecovery(
                     guest_id=self._guest_id,last_resort = self._last_resort, input_type = "name", recover_from_llm = True, param_key=self._param_key
                 ),
-                transitions={"succeeded": "succeeded", "failed": "SPEECH_RECOVERY_NAME_TRANSCRIPTION_LAST_RESORT"},
+                transitions={"succeeded": "POST_RECOVERY_DECISION", "failed": "SPEECH_RECOVERY_NAME_TRANSCRIPTION_LAST_RESORT"},
             )
             smach.StateMachine.add(
                 "SPEECH_RECOVERY_NAME_TRANSCRIPTION_LAST_RESORT",
                 SpeechRecovery(
                     guest_id=self._guest_id,last_resort = self._last_resort, input_type = "name", recover_from_llm = False, param_key=self._param_key
                 ),
-                transitions={"succeeded": "succeeded", "failed": "failed"},
+                transitions={"succeeded": "POST_RECOVERY_DECISION", "failed": "POST_RECOVERY_DECISION"},
             )
             smach.StateMachine.add(
                 "RECOVER_INTEREST",
@@ -91,9 +91,9 @@ class GetNameAndInterest(smach.StateMachine):
                 transitions={"failed": "RECOVER_NAME", "succeeded": "RECOVER_NAME"},
             )
             smach.StateMachine.add(
-                "SPEECH_RECOVERY",
-                SpeechRecovery(
-                    guest_id=self._guest_id,last_resort = self._last_resort, input_type = "name", param_key = self._param_key
+                "POST_RECOVERY_DECISION",
+                self.PostRecoveryDecision(
+                    guest_id=self._guest_id,last_resort = self._last_resort, param_key=self._param_key
                 ),
                 transitions={"succeeded": "succeeded", "failed": "failed"},
             )
@@ -216,7 +216,7 @@ class GetNameAndInterest(smach.StateMachine):
 
         def execute(self, userdata: UserData) -> str:
             if not self._recovery_name_and_interest_required(userdata):
-                if userdata.guest_data[self._guest_id]["name"] == "unknown":
+                if userdata.guest_data[self._guest_id]["name"] == "unknown" or userdata.guest_data[self._guest_id]["name"] not in self._possible_names:
                     outcome = "failed_name"
                 else:
                     outcome = "failed_interest"
@@ -303,3 +303,30 @@ class GetNameAndInterest(smach.StateMachine):
                 f"Resort to recovering interest as technology"
             )
             return "succeeded"
+        
+    class PostRecoveryDecision(smach.State):
+        def __init__(
+            self,
+            guest_id: str,
+            last_resort: bool,
+            param_key: str = "/receptionist/priors",
+        ):
+            smach.State.__init__(
+                self,
+                outcomes=["succeeded", "failed"],
+                input_keys=["guest_transcription", "guest_data"],
+                output_keys=["guest_data", "guest_transcription"],
+            )
+            self._guest_id = guest_id
+            prior_data: Dict[str, List[str]] = rospy.get_param(param_key)
+            self._possible_names = [name.lower() for name in prior_data["names"]]
+            self._last_resort = last_resort
+
+        def execute(self, userdata: UserData) -> str:
+            if userdata.guest_data[self._guest_id]["name"] == "unknown" or userdata.guest_data[self._guest_id]["name"] not in self._possible_names:
+                outcome = "failed"
+            elif userdata.guest_data[self._guest_id]["interest"] == "unknown":
+                outcome = "failed"
+            else:
+                outcome = "succeeded"
+            return outcome
