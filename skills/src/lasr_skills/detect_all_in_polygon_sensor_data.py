@@ -387,7 +387,7 @@ class DetectAllInPolygonSensorData(smach.StateMachine):
         Returns:
             str: Outcome of the state, "succeeded".
         """
-        rospy.sleep(0.25)
+        rospy.sleep(1.0)
         return "succeeded"
 
     def _publish_detected_objects(self, userdata: smach.UserData) -> str:
