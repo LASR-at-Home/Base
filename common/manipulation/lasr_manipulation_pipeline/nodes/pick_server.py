@@ -30,6 +30,13 @@ from lasr_manipulation_msgs.msg import PickAction, PickGoal, PickResult
 from lasr_manipulation_msgs.srv import AllowCollisionsWithObj, AttachObjectToGripper
 from visualization_msgs.msg import Marker, MarkerArray
 
+from pal_startup_msgs.srv import (
+    StartupStart,
+    StartupStartRequest,
+    StartupStop,
+    StartupStopRequest,
+)
+
 
 class PickServer:
     """
@@ -103,6 +110,13 @@ class PickServer:
         self._tf_buffer = tf2_ros.Buffer(cache_time=rospy.Duration(10.0))
         self._tf_listener = tf2_ros.TransformListener(self._tf_buffer)
 
+        self._enable_head_manager = rospy.ServiceProxy(
+            "/pal_startup_control/start", StartupStart
+        )
+        self._disable_head_manager = rospy.ServiceProxy(
+            "/pal_startup_control/start", StartupStop
+        )
+
         self._grasp_markers_pub = rospy.Publisher(
             "/grasp_markers", MarkerArray, queue_size=10, latch=True
         )
@@ -154,8 +168,6 @@ class PickServer:
             self._pick_server.set_preempted()
             return
 
-        rospy.loginfo(grasps[0].header.frame_id)
-        rospy.loginfo(grasps)
         success = self._move_group.go(wait=True)
         if not success:
             rospy.logwarn("MoveIt failed to execute pre-grasps. Aborting.")
@@ -191,6 +203,8 @@ class PickServer:
             rospy.loginfo("Pick goal preempted before final grasp execution.")
             self._pick_server.set_preempted()
             return
+
+        self._enable_head_manager(StartupStartRequest("head_manager", ""))
 
         success = self._move_group.go(wait=True)
         if not success:
