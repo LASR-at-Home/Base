@@ -117,17 +117,30 @@ class PickServer:
         transform: TransformStamped = goal.transform
         scale: Vector3Stamped = goal.scale
 
+        if self._pick_server.is_preempt_requested():
+            rospy.loginfo("Pick goal preempted before starting.")
+            self._pick_server.set_preempted()
+            return
+
         # Generate grasps
         grasps, scores = self._generate_grasps(mesh_name, transform, scale)
+
+        if self._pick_server.is_preempt_requested():
+            rospy.loginfo("Pick goal preempted after grasp generation.")
+            self._pick_server.set_preempted()
+            return
+
         # If no grasps are outputted, finish.
         if not grasps:
             result = PickResult(success=False)
             self._pick_server.set_aborted(result)
             return
+
         self._publish_grasp_poses([g.pose for g in grasps], grasps[0].header.frame_id)
 
         # Clear any existing pose targets
         self._move_group.clear_pose_targets()
+
         # Execute pre-grasps
         rospy.loginfo("Dispatching pre-grasps to MoveIt for execution...")
         rospy.loginfo(f"Setting frame ID to {grasps[0].header.frame_id}")
@@ -135,6 +148,12 @@ class PickServer:
         self._move_group.set_pose_targets(
             [g.pose for g in grasps], "gripper_grasping_frame"
         )
+
+        if self._pick_server.is_preempt_requested():
+            rospy.loginfo("Pick goal preempted before pre-grasp execution.")
+            self._pick_server.set_preempted()
+            return
+
         rospy.loginfo(grasps[0].header.frame_id)
         rospy.loginfo(grasps)
         success = self._move_group.go(wait=True)
@@ -143,7 +162,13 @@ class PickServer:
             result = PickResult(success=False)
             self._pick_server.set_aborted(result)
             return
+
         rospy.loginfo("Reached pre-grasp pose")
+
+        if self._pick_server.is_preempt_requested():
+            rospy.loginfo("Pick goal preempted after reaching pre-grasp.")
+            self._pick_server.set_preempted()
+            return
 
         # Allow the end-effector to touch the object
         self._allow_collisions_with_obj(object_id)
@@ -155,25 +180,40 @@ class PickServer:
             [final_grasp_pose.pose], final_grasp_pose.header.frame_id
         )
 
-        # Clear any existing pose targets
         self._move_group.clear_pose_targets()
 
-        # Execute final grasp pose
         self._move_group.set_pose_reference_frame(final_grasp_pose.header.frame_id)
         self._move_group.set_pose_target(
             final_grasp_pose.pose, "gripper_grasping_frame"
         )
+
+        if self._pick_server.is_preempt_requested():
+            rospy.loginfo("Pick goal preempted before final grasp execution.")
+            self._pick_server.set_preempted()
+            return
+
         success = self._move_group.go(wait=True)
         if not success:
             rospy.loginfo("MoveIt failed to execute final grasp. Aborting.")
             result = PickResult(success=False)
             self._pick_server.set_aborted(result)
             return
-        rospy.loginfo("Reached final graps pose")
+
+        rospy.loginfo("Reached final grasp pose")
+
+        if self._pick_server.is_preempt_requested():
+            rospy.loginfo("Pick goal preempted before closing gripper.")
+            self._pick_server.set_preempted()
+            return
 
         # Close gripper
         self._close_gripper()
         rospy.loginfo("Closed gripper")
+
+        if self._pick_server.is_preempt_requested():
+            rospy.loginfo("Pick goal preempted after closing gripper.")
+            self._pick_server.set_preempted()
+            return
 
         # Check if grasp was successful
         success = not self._eef_is_fully_closed()
@@ -184,6 +224,7 @@ class PickServer:
             result = PickResult(success=False)
             self._pick_server.set_aborted(result)
             return
+
         rospy.loginfo("Grasp was successful")
 
         self._attach_object_to_gripper(object_id)
