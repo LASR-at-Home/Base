@@ -19,6 +19,7 @@ find_package(catkin REQUIRED COMPONENTS
   markers
   tf_pcl
   lasr_wakewords
+  lasr_object_aware_navigation
 )
 
 ## System dependencies are found with CMake's conventions

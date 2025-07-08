@@ -64,6 +64,9 @@ global_costmap:
       type: 'costmap_2d::ObstacleLayer'
     - name: inflation_layer
       type: 'costmap_2d::InflationLayer'
+#    - name: custom_static_layer
+#      type: 'costmap_2d::StaticLayer'
+
 EOF
 
 echo "[INFO] Successfully replaced global_costmap_plugins_rgbd.yaml"
@@ -88,6 +91,8 @@ local_costmap:
       type: 'costmap_2d::ObstacleLayer'
     - name: inflation_layer
       type: 'costmap_2d::InflationLayer'
+#    - name: custom_static_layer
+#      type: 'costmap_2d::StaticLayer'
 EOF
 
 # ----------------------------
@@ -165,7 +170,7 @@ global_costmap:
     observation_sources: rgbd_scan
     combination_method: 0
     rgbd_scan:
-      sensor_frame: base_footprint
+      sensor_frame: map
       data_type: LaserScan
       topic: rgbd_scan
       expected_update_rate: 0.3
@@ -183,6 +188,18 @@ global_costmap:
     enabled            : true
     inflation_radius   : 0.6
     cost_scaling_factor: 25.0
+
+#  custom_static_layer:
+#    enabled        : true
+#    map_topic      : /custom_obstacle_map
+#    first_map_only : false        # <– you probably want “false” only if you
+#                                  #     will keep publishing updates
+#    use_maximum    : true
+#    trinary_costmap: false
+#    # NEW:
+#    subscribe_to_updates: true    # make sure the layer accepts delta updates
+
+
 EOF
 
 echo "[INFO] Successfully replaced global_costmap.yaml"
@@ -253,7 +270,7 @@ local_costmap:
     observation_sources: rgbd_scan
     combination_method: 0
     rgbd_scan:
-      sensor_frame: base_footprint
+      sensor_frame: map
       data_type: LaserScan
       topic: rgbd_scan
       expected_update_rate: 0.5
@@ -271,6 +288,17 @@ local_costmap:
     enabled            : false # not used for pal_local_planner
     inflation_radius   : 0.55
     cost_scaling_factor: 25.0
+
+#  custom_static_layer:
+#    enabled        : true
+#    map_topic      : /custom_obstacle_map
+#    first_map_only : false        # <– you probably want “false” only if you
+#                                  #     will keep publishing updates
+#    use_maximum    : true
+#    trinary_costmap: false
+#    # NEW:
+#    subscribe_to_updates: true    # make sure the layer accepts delta updates
+
 EOF
 
 echo "[INFO] Successfully replaced local_costmap.yaml"

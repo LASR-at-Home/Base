@@ -15,9 +15,13 @@
     <!-- Bag Manipulation play motion -->
     <rosparam command="load" file="$(find help_me_carry)/config/help_me_carry_motions.yaml" />
 
-   <!--  lang_sam_service node -->
+    <node pkg="lasr_tf" type="tf_server.py" name="tf_server" output="screen" />
+
+    <!-- lang_sam_service node -->
     <arg name="use_gpu" default="0"/>
     <node pkg="lasr_vision_lang_sam" type="lang_sam_service.py" name="lang_sam_service" output="screen" args="$(arg use_gpu)" />
 
-    <node pkg="lasr_tf" type="tf_server.py" name="tf_server" output="screen" />
+    <!-- yolo lasr scan node -->
+    <node pkg="lasr_object_aware_navigation" type="yolo_to_costmap_node.py" name="yolo_to_costmap_node" output="screen" />
+
 </launch>

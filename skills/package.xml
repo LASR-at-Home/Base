@@ -62,6 +62,7 @@
   <depend>markers</depend>
   <depend>tf_pcl</depend>
   <depend>lasr_wakewords</depend>
+  <depend>lasr_object_aware_navigation</depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>

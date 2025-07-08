@@ -13,7 +13,7 @@ import tf2_ros as tf
 from tf2_geometry_msgs import do_transform_pose
 from rospy import ServiceException
 from scipy.spatial.transform import Rotation as R
-from lasr_skills.listen_for_wakeword import ListenForWakeword
+from lasr_skills.listen_for_wakeword import ListenForWakeword, Rotate
 from std_msgs.msg import Bool
 from geometry_msgs.msg import (
     Point,
@@ -169,6 +169,7 @@ class PersonFollowingData:
         self.last_target_time = None
         self.look_down_duration = 0.25
         self.look_down_period = 4.0
+        self.last_sam2_target = None
 
         # Override with provided parameters
         for key, value in config_params.items():
@@ -868,6 +869,8 @@ class FollowPerson(smach.StateMachine):
                             map_pose.pose.position.z = detection.point.z
                             map_pose.pose.orientation.w = 1.0
 
+                            self.shared_data.last_sam2_target = map_pose
+
                             # target list initialization
                             robot_pose = self.get_robot_pose_in_map()
                             distance = _euclidean_distance(robot_pose, map_pose)
@@ -1249,12 +1252,12 @@ class FollowPerson(smach.StateMachine):
             y=self.shared_data.center_look_point[1],
             z=self.shared_data.center_look_point[2],
         )
-        self.look_at_point(point, target_frame="base_link")
+        self.look_at_point(point, target_frame="base_link", wait_for_completion=True)
 
     def look_down_point(self, target_point: Point = None, target_frame: str = "map"):
         """Look down towards the target direction down."""
         distance = 2.0
-        look_down_angle = -45.0
+        look_down_angle = -15.0
 
         if target_point is not None:
             # Transform target point to base_link frame to get direction
@@ -1577,7 +1580,13 @@ class TrackingActiveState(smach.State):
                 return "following_complete"
 
             # Look at detected person
-            if self.sm_manager.shared_data.newest_detection:
+            if self.sm_manager.shared_data.last_sam2_target:
+                self.sm_manager.look_at_point(
+                    self.sm_manager.shared_data.last_sam2_target.point,
+                    target_frame="map",
+                    wait_for_completion=True,
+                )
+            elif self.sm_manager.shared_data.newest_detection:
                 # rospy.logwarn(f"Looking at newest point: {self.sm_manager.shared_data.newest_detection}")
                 self.sm_manager.look_at_point(
                     self.sm_manager.shared_data.newest_detection.point,
@@ -1798,7 +1807,7 @@ class TrackingActiveState(smach.State):
 class NavigationState(smach.State):
     """Monitor navigation progress, handle head tracking, and detect completion/failure"""
 
-    def __init__(self, sm_manager, object_avoidance, navigation_timeout=5.0):
+    def __init__(self, sm_manager, object_avoidance, navigation_timeout=10.0):
         self.sm_manager = sm_manager
         self.object_avoidance = object_avoidance
         self.navigation_timeout = navigation_timeout  # Timeout in seconds
@@ -1873,15 +1882,26 @@ class NavigationState(smach.State):
                         f"pause_conditional_frame: True"
                     )
 
-                    rospy.loginfo(
-                        f"Looking down towards newst point: {self.sm_manager.shared_data.newest_detection}"
-                    )
-                    self._down_swap(
-                        self.sm_manager.shared_data.newest_detection.point,
-                        target_frame="map",
-                        # look_down_time=self.sm_manager.shared_data.look_down_duration,
-                        pause_conditional_frame=True,
-                    )
+                    if self.sm_manager.shared_data.last_sam2_target:
+                        rospy.loginfo(
+                            f"Looking down towards newst point: {self.sm_manager.shared_data.last_sam2_target}"
+                        )
+                        self._down_swap(
+                            self.sm_manager.shared_data.last_sam2_target.point,
+                            target_frame="map",
+                            # look_down_time=self.sm_manager.shared_data.look_down_duration,
+                            pause_conditional_frame=True,
+                        )
+                    else:
+                        rospy.loginfo(
+                            f"Looking down towards newst point: {self.sm_manager.shared_data.newest_detection}"
+                        )
+                        self._down_swap(
+                            self.sm_manager.shared_data.newest_detection.point,
+                            target_frame="map",
+                            # look_down_time=self.sm_manager.shared_data.look_down_duration,
+                            pause_conditional_frame=True,
+                        )
                     if time_since_last_look_down >= look_down_period_duration * 1.5:
                         last_look_down_time = rospy.Time.now()
                     rospy.loginfo(
@@ -1898,11 +1918,17 @@ class NavigationState(smach.State):
                         f"z: {self.sm_manager.shared_data.newest_detection.point.z:.2f}"
                     )
 
-                    # rospy.logwarn(f"Looking at newest point: {self.sm_manager.shared_data.newest_detection}")
-                    self.sm_manager.look_at_point(
-                        self.sm_manager.shared_data.newest_detection.point,
-                        target_frame="map",
-                    )
+                    if self.sm_manager.shared_data.last_sam2_target:
+                        self.sm_manager.look_at_point(
+                            self.sm_manager.shared_data.last_sam2_target.point,
+                            target_frame="map",
+                        )
+                    else:
+                        # rospy.logwarn(f"Looking at newest point: {self.sm_manager.shared_data.newest_detection}")
+                        self.sm_manager.look_at_point(
+                            self.sm_manager.shared_data.newest_detection.point,
+                            target_frame="map",
+                        )
 
             robot_pose = self.sm_manager.get_robot_pose_in_map()
 
@@ -2016,7 +2042,7 @@ class NavigationState(smach.State):
 
 
 class RecoveryScanningState(smach.State):
-    """Recovery behavior when target is lost"""
+    """Recovery behavior when target is lost - now with sub-states"""
 
     def __init__(self, sm_manager):
         smach.State.__init__(
@@ -2026,37 +2052,70 @@ class RecoveryScanningState(smach.State):
             output_keys=[],
         )
         self.sm_manager = sm_manager
+        self.recovery_sm = None
+        self._build_recovery_state_machine()
 
-    def execute(self, userdata):
-        rospy.loginfo("Starting recovery scanning behavior")
+    class InitializeState(smach.State):
+        """Initialize recovery scanning"""
 
-        # Cancel any active navigation
-        if self.sm_manager.move_base_client:
-            self.sm_manager.move_base_client.cancel_all_goals()
-        self.sm_manager.shared_data.is_navigation_active = False
+        def __init__(self, sm_manager):
+            smach.State.__init__(self, outcomes=["start_scanning", "failed"])
+            self.sm_manager = sm_manager
 
-        # Initialise recovery mode
-        self.sm_manager.shared_data.recovery_mode_active = True
-        self.sm_manager.shared_data.current_scan_index = 0
-        self.sm_manager.shared_data.recovery_start_time = rospy.Time.now()
-        self.sm_manager.shared_data.last_scan_position_time = rospy.Time.now()
+        def execute(self, userdata):
+            rospy.loginfo("Starting recovery scanning behavior")
 
-        self.sm_manager._tts("Let me look for you.", wait=False)
+            # Cancel any active navigation
+            if self.sm_manager.move_base_client:
+                self.sm_manager.move_base_client.cancel_all_goals()
+            self.sm_manager.shared_data.is_navigation_active = False
 
-        # Start scanning
-        if self.sm_manager.shared_data.recovery_scan_positions:
-            self.sm_manager.look_at_point(
-                self.sm_manager.shared_data.recovery_scan_positions[0],
-                target_frame="base_link",
-            )
+            # Initialise recovery mode
+            self.sm_manager.shared_data.recovery_mode_active = True
+            self.sm_manager.shared_data.current_scan_index = 0
+            self.sm_manager.shared_data.recovery_start_time = rospy.Time.now()
+            self.sm_manager.shared_data.last_scan_position_time = rospy.Time.now()
 
-        rate = rospy.Rate(3)
+            self.sm_manager._tts("Let me look for you.", wait=False)
 
-        while not rospy.is_shutdown():
+            # Start scanning
+            if self.sm_manager.shared_data.recovery_scan_positions:
+                self.sm_manager.look_at_point(
+                    self.sm_manager.shared_data.recovery_scan_positions[0],
+                    target_frame="base_link",
+                )
+                return "start_scanning"
+            return "failed"
+
+    class CheckHandupState(smach.State):
+        """Check handup gesture - placeholder"""
+
+        def __init__(self, sm_manager):
+            smach.State.__init__(self, outcomes=["continue"])
+            self.sm_manager = sm_manager
+
+        def execute(self, userdata):
+            return "continue"
+
+    class ScanningState(smach.State):
+        """Main scanning loop"""
+
+        def __init__(self, sm_manager):
+            smach.State.__init__(self, outcomes=["target_recovered", "next_position", "full_cycle", "recovery_failed",
+                                                 "failed"])
+            self.sm_manager = sm_manager
+
+        def execute(self, userdata):
+            rate = rospy.Rate(3)
+
+            # Single iteration of the original while loop
+            if rospy.is_shutdown():
+                return "failed"
+
             # Check recovery timeout
             if (
-                rospy.Time.now() - self.sm_manager.shared_data.recovery_start_time
-                > self.sm_manager.shared_data.recovery_timeout_duration
+                    rospy.Time.now() - self.sm_manager.shared_data.recovery_start_time
+                    > self.sm_manager.shared_data.recovery_timeout_duration
             ):
                 rospy.logwarn("Recovery behavior timed out")
                 self.sm_manager.shared_data.recovery_mode_active = False
@@ -2065,39 +2124,127 @@ class RecoveryScanningState(smach.State):
 
             # Check if target is recovered
             if (
-                rospy.Time.now() - self.sm_manager.shared_data.last_good_detection_time
-                < rospy.Duration(2.0)
+                    rospy.Time.now() - self.sm_manager.shared_data.last_good_detection_time
+                    < rospy.Duration(2.0)
             ):
                 rospy.loginfo("Target recovered during scanning!")
                 self.sm_manager._tts("Found you! Continuing to follow.", wait=False)
                 self.sm_manager.shared_data.recovery_mode_active = False
                 self.sm_manager.shared_data.last_movement_time = rospy.Time.now()
                 self.sm_manager.shared_data.added_new_target_time = rospy.Time.now()
-                # self.sm_manager.shared_data.just_started = True  # not sure if this is really needed.
                 return "target_recovered"
 
             # Move to next scan position
             if (
-                rospy.Time.now() - self.sm_manager.shared_data.last_scan_position_time
-                > self.sm_manager.shared_data.scan_position_duration
+                    rospy.Time.now() - self.sm_manager.shared_data.last_scan_position_time
+                    > self.sm_manager.shared_data.scan_position_duration
             ):
                 self.sm_manager.shared_data.current_scan_index += 1
 
                 if self.sm_manager.shared_data.current_scan_index >= len(
-                    self.sm_manager.shared_data.recovery_scan_positions
+                        self.sm_manager.shared_data.recovery_scan_positions
                 ):
                     self.sm_manager.shared_data.current_scan_index = 0
                     rospy.loginfo("Completed one full scan cycle, starting over")
+                    return "full_cycle"
 
                 scan_point = self.sm_manager.shared_data.recovery_scan_positions[
                     self.sm_manager.shared_data.current_scan_index
                 ]
                 self.sm_manager.look_at_point(scan_point, target_frame="base_link")
                 self.sm_manager.shared_data.last_scan_position_time = rospy.Time.now()
+                return "next_position"
 
             rate.sleep()
+            return "next_position"  # Continue scanning
 
-        return "failed"
+    class Rotate180WithRecoveryCheck(smach.StateMachine):
+        """Rotate 180 degrees with recovery timeout and target detection checks"""
+
+        class MonitorRotation(smach.State):
+            """Monitor rotation for recovery timeout and target detection"""
+
+            def __init__(self, sm_manager):
+                smach.State.__init__(self, outcomes=["target_recovered", "recovery_failed", "continue"])
+                self.sm_manager = sm_manager
+
+            def execute(self, userdata):
+                # Check recovery timeout
+                if (
+                        rospy.Time.now() - self.sm_manager.shared_data.recovery_start_time
+                        > self.sm_manager.shared_data.recovery_timeout_duration
+                ):
+                    rospy.logwarn("Recovery behavior timed out during rotation")
+                    self.sm_manager.shared_data.recovery_mode_active = False
+                    self.sm_manager.shared_data.completion_reason = "LOST_PERSON"
+                    return "recovery_failed"
+
+                # Check if target is recovered
+                if (
+                        rospy.Time.now() - self.sm_manager.shared_data.last_good_detection_time
+                        < rospy.Duration(2.0)
+                ):
+                    rospy.loginfo("Target recovered during rotation!")
+                    self.sm_manager._tts("Found you! Continuing to follow.", wait=False)
+                    self.sm_manager.shared_data.recovery_mode_active = False
+                    self.sm_manager.shared_data.last_movement_time = rospy.Time.now()
+                    self.sm_manager.shared_data.added_new_target_time = rospy.Time.now()
+                    return "target_recovered"
+
+                return "continue"
+
+        def __init__(self, sm_manager):
+            smach.StateMachine.__init__(self,
+                                        outcomes=["rotation_complete", "target_recovered", "recovery_failed", "failed"])
+            self.sm_manager = sm_manager
+
+            with self:
+                smach.StateMachine.add(
+                    "MONITOR_ROTATION",
+                    self.MonitorRotation(sm_manager),
+                    transitions={
+                        "target_recovered": "target_recovered",
+                        "recovery_failed": "recovery_failed",
+                        "continue": "ROTATE_180"
+                    }
+                )
+
+                smach.StateMachine.add(
+                    "ROTATE_180",
+                    Rotate(180.0),
+                    transitions={
+                        "succeeded": "rotation_complete",
+                        "failed": "failed"
+                    }
+                )
+
+    def _build_recovery_state_machine(self):
+        """Build recovery state machine preserving original logic"""
+        self.recovery_sm = smach.StateMachine(outcomes=["target_recovered", "recovery_failed", "failed"])
+
+        with self.recovery_sm:
+            smach.StateMachine.add("INITIALIZE", self.InitializeState(self.sm_manager),
+                                   transitions={"start_scanning": "SCANNING", "failed": "failed"})
+
+            smach.StateMachine.add("SCANNING", self.ScanningState(self.sm_manager),
+                                   transitions={"target_recovered": "target_recovered",
+                                                "next_position": "CHECK_HANDUP",
+                                                "full_cycle": "ROTATE_180",
+                                                "recovery_failed": "recovery_failed",
+                                                "failed": "failed"})
+
+            smach.StateMachine.add("CHECK_HANDUP", self.CheckHandupState(self.sm_manager),
+                                   transitions={"continue": "SCANNING"})
+
+            smach.StateMachine.add("ROTATE_180", self.Rotate180WithRecoveryCheck(self.sm_manager),
+                                   transitions={"rotation_complete": "SCANNING",
+                                                "target_recovered": "target_recovered",
+                                                "recovery_failed": "recovery_failed",
+                                                "failed": "failed"})
+
+    def execute(self, userdata):
+        """Execute recovery state machine"""
+        return self.recovery_sm.execute(userdata)
 
 
 class FallbackState(smach.State):
