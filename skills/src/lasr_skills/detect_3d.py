@@ -21,7 +21,7 @@ class Detect3D(smach.State):
         filter: Union[List[str], None] = None,
         confidence: float = 0.5,
         target_frame: str = "map",
-        slop=0.1,
+        slop=1.0,
     ):
         smach.State.__init__(
             self,
@@ -59,8 +59,15 @@ class Detect3D(smach.State):
 
     def execute(self, userdata):
 
-        def callback(image_msg, depth_msg, cam_info_msg):
-            self.data = (image_msg, depth_msg, cam_info_msg)
+        if self.point_cloud_topic is not None:
+
+            def callback(image_msg, depth_msg, cam_info_msg, pcl_msg):
+                self.data = (image_msg, depth_msg, cam_info_msg, pcl_msg)
+
+        else:
+
+            def callback(image_msg, depth_msg, cam_info_msg):
+                self.data = (image_msg, depth_msg, cam_info_msg)
 
         self.ts.registerCallback(callback)
 

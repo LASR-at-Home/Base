@@ -37,7 +37,7 @@ class ProcessDetections(smach.State):
                 "detected_objects",
                 "image_raw",
                 "debug_images",
-                "pcl_msg",
+                "pcl",
             ],
             output_keys=["detected_objects", "debug_images"],
         )
@@ -81,7 +81,7 @@ class ProcessDetections(smach.State):
                         break
 
                 if is_new_object:
-                    new_detections.append((detection, userdata.pcl_msg))
+                    new_detections.append((detection, userdata.pcl))
 
             userdata.debug_images.append((userdata.image_raw, new_detections))
             userdata.detected_objects.extend(new_detections)
@@ -89,7 +89,7 @@ class ProcessDetections(smach.State):
                 f"Processed detections. Total detected objects: {len(userdata.detected_objects)}"
             )
             rospy.loginfo("Detected objects:")
-            for obj in userdata.detected_objects:
+            for obj, pcl in userdata.detected_objects:
                 rospy.loginfo(
                     f" - {obj.name} at ({obj.point.x}, {obj.point.y}, {obj.point.z})"
                 )
@@ -305,6 +305,8 @@ class DetectAllInPolygonSensorData(smach.StateMachine):
         min_new_object_dist: float = 0.1,
         use_lang_sam: bool = False,
         prompt: Optional[str] = None,
+        z_axis: float = 0.7,
+        model: str = "yolo11n-seg.pt",
     ):
         """
         Args:
@@ -343,7 +345,9 @@ class DetectAllInPolygonSensorData(smach.StateMachine):
             Image,
             queue_size=10,
         )
+        self._z_axis = z_axis
         self._prompt = prompt
+        self._model = model
         if use_lang_sam:
             assert (
                 self._prompt is not None
@@ -405,7 +409,7 @@ class DetectAllInPolygonSensorData(smach.StateMachine):
             cv2_image = msg_to_cv2_img(image_raw)
             # Loop over each detection, annotate image with bounding boxes
             # tile images, and publish
-            for detection in detections:
+            for detection, pcl in detections:
                 xywh = detection.xywh
                 label = detection.name
                 confidence = detection.confidence
@@ -453,6 +457,7 @@ class DetectAllInPolygonSensorData(smach.StateMachine):
             CalculateSweepPoints(
                 polygon=self._polygon,
                 min_coverage=self._min_coverage,
+                z_axis=self._z_axis,
             ),
             transitions={"succeeded": "LOOK_AND_DETECT", "failed": "failed"},
             remapping={"sweep_points": "sweep_points"},
@@ -552,6 +557,8 @@ class DetectAllInPolygonSensorData(smach.StateMachine):
                             area_polygon=self._polygon,
                             filter=self._object_filter,
                             confidence=self._min_confidence,
+                            point_cloud_topic="/xtion/depth_registered/points",
+                            model=self._model,
                         ),
                         transitions={
                             "succeeded": "PROCESS_DETECTIONS",

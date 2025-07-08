@@ -1,7 +1,7 @@
 import smach
 import rospy
 from lasr_skills import Detect3D
-from typing import List, Union
+from typing import List, Union, Optional
 
 from geometry_msgs.msg import Polygon, Point, Point32, PolygonStamped
 from shapely.geometry import Point
@@ -58,6 +58,7 @@ class Detect3DInArea(smach.StateMachine):
         image_topic: str = "/xtion/rgb/image_raw",
         depth_image_topic: str = "/xtion/depth_registered/image_raw",
         depth_camera_info_topic: str = "/xtion/depth_registered/camera_info",
+        point_cloud_topic: Optional[str] = None,
         model: str = "yolo11n-seg.pt",
         filter: Union[List[str], None] = None,
         confidence: float = 0.5,
@@ -66,7 +67,7 @@ class Detect3DInArea(smach.StateMachine):
         smach.StateMachine.__init__(
             self,
             outcomes=["succeeded", "failed"],
-            output_keys=["detections_3d", "image_raw"],
+            output_keys=["detections_3d", "image_raw", "pcl"],
         )
 
         with self:
@@ -76,6 +77,7 @@ class Detect3DInArea(smach.StateMachine):
                     image_topic=image_topic,
                     depth_image_topic=depth_image_topic,
                     depth_camera_info_topic=depth_camera_info_topic,
+                    point_cloud_topic=point_cloud_topic,
                     model=model,
                     filter=filter,
                     confidence=confidence,
