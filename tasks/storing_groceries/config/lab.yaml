@@ -25,8 +25,18 @@ cabinet:
       y: 0.0
       z: -0.7100081451484064
       w: 0.7041934633486167
+  shelves:
+    bottom:
+      name: "bottom"
+      torso_lift_joint: 0.1
+      polygon:
+        - []
+        - []
+        - []
+        - []
 
 objects:
   breadsticks:
     graspable: true
     category: "snacks"
+    scale: false

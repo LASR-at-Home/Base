@@ -35,7 +35,7 @@ cabinet:
     position: 
       x: -3.44914037254213
       y: -7.824393894466196
-      z: 0.0
+      z: 0.0  
     orientation: 
       x: 0.0
       y: 0.0
@@ -65,9 +65,7 @@ cabinet:
           z: 0.0
 
 objects:
-  # apple:
-  #   graspable: true
-  #   category: "fruits"
   banana:
     graspable: true
     category: "fruits"
+    scale: true
