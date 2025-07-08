@@ -2,8 +2,8 @@ import smach
 import smach_ros
 from shapely.geometry.polygon import Polygon
 from typing import List, Literal, Optional
-from lasr_vision_msgs.srv import CroppedDetection, CroppedDetectionRequest
-from lasr_vision_msgs.msg import CDRequest
+from lasr_skills import Detect3DInArea
+from lasr_skills.vision import CropImage3D
 
 
 class ObjectComparison(smach.StateMachine):
@@ -152,10 +152,15 @@ class ObjectComparison(smach.StateMachine):
     ]
 
     def _compare_objects(self, userdata):
-        detections = userdata.responses[0].detections_3d
+        # Cropped detections are a dictionary with keys as object names and values as lists of dictionaries
+        # Each dictionary contains "detection_3d" and "cropped_image"
+        # Example: {"apple": [{"detection_3d": Detection3D, "cropped_image": Image}, ...], ...}
+        detections = userdata.cropped_detections
+        detected_objects = set(detections.keys())
+
         if self._query == "biggest":
             biggest_object = next(
-                (obj for obj in self._biggest_list if obj in detections), None
+                (obj for obj in self._biggest_list if obj in detected_objects), None
             )
             if not biggest_object:
                 return "failed"
@@ -163,7 +168,7 @@ class ObjectComparison(smach.StateMachine):
             return "succeeded"
         elif self._query == "largest":
             largest_object = next(
-                (obj for obj in self._largest_list if obj in detections), None
+                (obj for obj in self._largest_list if obj in detected_objects), None
             )
             if not largest_object:
                 return "failed"
@@ -171,7 +176,7 @@ class ObjectComparison(smach.StateMachine):
             return "succeeded"
         elif self._query == "smallest":
             smallest_object = next(
-                (obj for obj in self._smallest_list if obj in detections), None
+                (obj for obj in self._smallest_list if obj in detected_objects), None
             )
             if not smallest_object:
                 return "failed"
@@ -179,7 +184,7 @@ class ObjectComparison(smach.StateMachine):
             return "succeeded"
         elif self._query == "heaviest":
             heaviest_object = next(
-                (obj for obj in self._heaviest_list if obj in detections), None
+                (obj for obj in self._heaviest_list if obj in detected_objects), None
             )
             if not heaviest_object:
                 return "failed"
@@ -187,7 +192,7 @@ class ObjectComparison(smach.StateMachine):
             return "succeeded"
         elif self._query == "lightest":
             lightest_object = next(
-                (obj for obj in self._lightest_list if obj in detections), None
+                (obj for obj in self._lightest_list if obj in detected_objects), None
             )
             if not lightest_object:
                 return "failed"
@@ -195,7 +200,7 @@ class ObjectComparison(smach.StateMachine):
             return "succeeded"
         elif self._query == "thinnest":
             thinnest_object = next(
-                (obj for obj in self._thinnest_list if obj in detections), None
+                (obj for obj in self._thinnest_list if obj in detected_objects), None
             )
             if not thinnest_object:
                 return "failed"
@@ -223,33 +228,39 @@ class ObjectComparison(smach.StateMachine):
         )
 
         with self:
-
             smach.StateMachine.add(
-                "DETECT_OBJECTS_3D",
-                smach_ros.ServiceState(
-                    "/vision/cropped_detection",
-                    CroppedDetection,
-                    request=CroppedDetectionRequest(
-                        requests=[
-                            CDRequest(
-                                method="closest",
-                                use_mask=True,
-                                yolo_model=model,
-                                yolo_model_confidence=confidence,
-                                yolo_nms_threshold=nms,
-                                return_sensor_reading=False,
-                                object_names=objects,
-                                polygons=[area_polygon],
-                            )
-                        ]
-                    ),
-                    output_keys=["responses"],
-                    response_slots=["responses"],
+                "DETECT_OBJECTS",
+                Detect3DInArea(
+                    area_polygon=area_polygon,  # Contains the whole room, so need to crop
+                    filter=objects,
+                    model=model,
+                    confidence=confidence,
+                    nms=nms,
+                    target_frame="map",
+                ),
+                transitions={
+                    "succeeded": "CROP_OBJECTS",
+                    "failed": "failed",
+                },
+                remapping={
+                    "detections_3d": "detections_3d",
+                    "image_raw": "image_raw",
+                },
+            )
+            smach.StateMachine.add(
+                "CROP_OBJECTS",
+                CropImage3D(
+                    robot_pose_topic="/robot_pose",
+                    filters=objects,
+                    crop_logic="nearest",
+                    crop_types="masked",
                 ),
                 transitions={
                     "succeeded": "COMPARE_OBJECTS",
-                    "aborted": "failed",
-                    "preempted": "failed",
+                    "failed": "failed",
+                },
+                remapping={
+                    "cropped_detections": "cropped_detections"  # Dict[List[Dict[str, Union[Image, Detection3D]]]]
                 },
             )
 
@@ -258,7 +269,7 @@ class ObjectComparison(smach.StateMachine):
                 smach.CBState(
                     self._compare_objects,
                     outcomes=["succeeded", "failed"],
-                    input_keys=["responses"],
+                    input_keys=["cropped_detections"],
                 ),
                 transitions={"succeeded": "succeeded"},
             )

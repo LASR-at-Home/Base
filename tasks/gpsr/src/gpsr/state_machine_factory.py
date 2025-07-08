@@ -646,7 +646,7 @@ def guide(command_param: Dict, sm: smach.StateMachine) -> None:
         sm.add(
             "NO_PERSON",
             Say(
-                text=f"Sorry, I couldn’t find anyone wearing {criteria_value} at the {start_loc}."
+                text=f"Sorry, I couldn't find anyone wearing {criteria_value} at the {start_loc}."
             ),
             transitions={
                 "succeeded": "succeeded",
