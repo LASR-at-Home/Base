@@ -106,8 +106,9 @@ class SpeechRecovery(smach.State):
             the parameter "guest_data".
         """
         if self._recover_from_llm:
-            sentence_list = list(userdata.guest_data[self._guest_id]["name"])
-            if sentence_list == "unknown":
+            sentence_list = []
+            sentence_list.append(userdata.guest_data[self._guest_id]["name"])
+            if sentence_list[0] == "unknown":
                 return "failed"
         else:
             filtered_sentence = userdata.guest_transcription.lower().translate(
@@ -272,7 +273,6 @@ class SpeechRecovery(smach.State):
                     input_word, available_word
                 )
                 if distance <= distance_threshold:
-                    print(input_word, available_word)
                     return available_word
         return "unknown"
 
