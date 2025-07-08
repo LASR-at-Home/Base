@@ -12,6 +12,7 @@ from lasr_skills import (
     GoToLocation,
     DetectAllInPolygonSensorData,
     PlayMotion,
+    LookToPoint,
 )
 
 from lasr_manipulation_msgs.srv import (
@@ -19,11 +20,19 @@ from lasr_manipulation_msgs.srv import (
     RegistrationRequest,
     AddCollisionObject,
     AddCollisionObjectRequest,
+    DetectAndAddSupportSurface,
+    DetectAndAddSupportSurfaceRequest,
+    RemoveSupportSurface,
+    RemoveSupportSurfaceRequest,
 )
 
 from lasr_manipulation_msgs.msg import PickAction, PickGoal
+from geometry_msgs.msg import Point, PointStamped
+from std_msgs.msg import Empty, Header
 
-from std_msgs.msg import Empty
+"""
+Looks like we can't have everything setup in the planning scene apriori, we need to dynamically add things, as they are all in the base footprint...
+"""
 
 
 class StoringGroceries(smach.StateMachine):
@@ -77,7 +86,7 @@ class StoringGroceries(smach.StateMachine):
 
             smach.StateMachine.add(
                 "WAIT_FOR_DOOR_TO_OPEN",
-                DetectDoorOpening(),
+                DetectDoorOpening(timeout=1.0),
                 transitions={
                     "door_opened": "SAY_GOING_TO_TABLE",
                 },
@@ -97,8 +106,25 @@ class StoringGroceries(smach.StateMachine):
                 "GO_TO_TABLE",
                 GoToLocation(location_param="/storing_groceries/table/pose"),
                 transitions={
-                    "succeeded": "succeeded",
+                    "succeeded": "LOOK_AT_TABLE",
                     "failed": "failed",
+                },
+            )
+
+            smach.StateMachine.add(
+                "LOOK_AT_TABLE",
+                LookToPoint(
+                    pointstamped=PointStamped(
+                        point=Point(
+                            **rospy.get_param("/storing_groceries/table/pose/position")
+                        ),
+                        header=Header(frame_id="map"),
+                    )
+                ),
+                transitions={
+                    "succeeded": "DETECT_OBJECTS",
+                    "aborted": "failed",
+                    "timed_out": "failed",
                 },
             )
 
@@ -109,9 +135,11 @@ class StoringGroceries(smach.StateMachine):
                     object_filter=[
                         k for k in rospy.get_param("/storing_groceries/objects")
                     ],
-                    min_coverage=1.0,
-                    min_confidence=0.7,
+                    min_coverage=0.9,
+                    min_confidence=0.1,
+                    z_axis=0.8,
                 ),
+                transitions={"succeeded": "SELECT_OBJECT", "failed": "failed"},
             )
 
             smach.StateMachine.add(
@@ -154,6 +182,23 @@ class StoringGroceries(smach.StateMachine):
                     input_keys=["selected_object", "transform", "scale"],
                 ),
                 transitions={
+                    "succeeded": "ADD_TABLE_SUPPORT_SURFACE",
+                    "preempted": "failed",
+                    "aborted": "failed",
+                },
+            )
+
+            smach.StateMachine.add(
+                "ADD_TABLE_SUPPORT_SURFACE",
+                smach_ros.ServiceState(
+                    "/lasr_manipulation_planning_scene/detect_and_add_support_surface",
+                    DetectAndAddSupportSurface,
+                    request_cb=self._detect_and_add_table_support_surface_cb,
+                    output_keys=["success"],
+                    response_slots=["success"],
+                    input_keys=["selected_object", "transform", "scale"],
+                ),
+                transitions={
                     "succeeded": "PLAY_PREGRASP_MOTION",
                     "preempted": "failed",
                     "aborted": "failed",
@@ -163,6 +208,16 @@ class StoringGroceries(smach.StateMachine):
             smach.StateMachine.add(
                 "PLAY_PREGRASP_MOTION",
                 PlayMotion(motion_name="pregrasp"),
+                transitions={
+                    "succeeded": "OPEN_GRIPPER",
+                    "preempted": "failed",
+                    "aborted": "failed",
+                },
+            )
+
+            smach.StateMachine.add(
+                "OPEN_GRIPPER",
+                PlayMotion(motion_name="open_gripper"),
                 transitions={
                     "succeeded": "PICK_OBJECT",
                     "preempted": "failed",
@@ -181,7 +236,7 @@ class StoringGroceries(smach.StateMachine):
                     input_keys=["selected_object", "transform", "scale"],
                 ),
                 transitions={
-                    "succeeded": "PLAY_PREGRASP_MOTION_POSTGRASP",
+                    "succeeded": "PLAY_PREGRASP_MOTION",
                     "preempted": "failed",
                     "aborted": "failed",
                 },
@@ -191,18 +246,75 @@ class StoringGroceries(smach.StateMachine):
                 "PLAY_PREGRASP_MOTION_POSTGRASP",
                 PlayMotion(motion_name="pregrasp"),
                 transitions={
-                    "succeeded": "succeeded",
+                    "succeeded": "PLAY_HOME_MOTION",
                     "preempted": "failed",
                     "aborted": "failed",
                 },
             )
 
-    def _register_object_cb(self, userdata):
+            smach.StateMachine.add(
+                "PLAY_HOME_MOTION",
+                PlayMotion(motion_name="home"),
+                transitions={
+                    "succeeded": "REMOVE_TABLE_SUPPORT_SURFACE",
+                    "preempted": "failed",
+                    "aborted": "failed",
+                },
+            )
+
+            smach.StateMachine.add(
+                "REMOVE_TABLE_SUPPORT_SURFACE",
+                smach_ros.ServiceState(
+                    "/lasr_manipulation_planning_scene/remove_support_surface",
+                    RemoveSupportSurface,
+                    request_cb=self._remove_table_support_surface_cb,
+                    output_keys=["success"],
+                    response_slots=["success"],
+                ),
+                transitions={
+                    "succeeded": "GO_TO_CABINET",
+                    "preempted": "failed",
+                    "aborted": "failed",
+                },
+            )
+
+            smach.StateMachine.add(
+                "GO_TO_CABINET",
+                GoToLocation(location_param="/storing_groceries/cabinet/pose"),
+                transitions={
+                    "succeeded": "DETECT_OBJECTS",
+                    "failed": "failed",
+                },
+            )
+
+            smach.StateMachine.add(
+                "SAY_PLACE",
+                Say(
+                    "Please grab the object from my gripper and place it on the shelf. I will give you 5 seconds. 5... 4... 3... 2... 1..."
+                ),
+                transitions={
+                    "succeeded": "OPEN_GRIPPER_RELASE_OBJECT",
+                    "aborted": "failed",
+                    "preempted": "failed",
+                },
+            )
+
+            smach.StateMachine.add(
+                "OPEN_GRIPPER_RELASE_OBJECT",
+                PlayMotion(motion_name="open_gripper"),
+                transitions={
+                    "succeeded": "PICK_OBJECT",
+                    "preempted": "failed",
+                    "aborted": "failed",
+                },
+            )
+
+    def _register_object_cb(self, userdata, request):
         return RegistrationRequest(
-            userdata.masked_cloud, userdata.selected_object[0].name, 10
+            userdata.masked_cloud, userdata.selected_object[0].name, False, 10
         )
 
-    def _add_collision_object_cb(self, userdata):
+    def _add_collision_object_cb(self, userdata, request):
         return AddCollisionObjectRequest(
             userdata.selected_object[0].name,
             userdata.selected_object[0].name,
@@ -210,10 +322,24 @@ class StoringGroceries(smach.StateMachine):
             userdata.scale,
         )
 
-    def _pick_cb(self, userdata):
+    def _detect_and_add_table_support_surface_cb(self, userdata, request):
+        return DetectAndAddSupportSurfaceRequest(
+            "table",
+            userdata.selected_object[1],
+            userdata.selected_object[0].name,
+            userdata.transform,
+            userdata.scale,
+        )
+
+    def _pick_cb(self, userdata, goal):
         return PickGoal(
             userdata.selected_object[0].name,
             userdata.selected_object[0].name,
             userdata.transform,
             userdata.scale,
         )
+
+    def _remove_table_support_surface_cb(self, userdata, request):
+        return RemoveSupportSurfaceRequest("table")
+
+    # def _detach_
