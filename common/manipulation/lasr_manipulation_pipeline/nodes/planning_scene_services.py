@@ -593,7 +593,7 @@ class PlanningSceneServices:
     def _remove_support_surface(
         self, request: RemoveSupportSurfaceRequest
     ) -> RemoveSupportSurfaceResponse:
-        self._planning_scene.remove_world_object(request.object_id)
+        self._planning_scene.remove_world_object(request.surface_id)
         rospy.loginfo(f"Removed {request.surface_id} from planning scene!")
         return RemoveSupportSurfaceResponse(success=True)
 
