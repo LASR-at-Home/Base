@@ -203,6 +203,8 @@ class HandleNameInterest(smach.StateMachine):
                     transitions={
                         "succeeded": f"succeeded",
                         "failed": f"REPEAT_GET_NAME_INTEREST_{guest_id}",
+                        # "failed_name": f"REPEAT_GET_NAME_{guest_id}",
+                        # "failed_drink": f"REPEAT_GET_INTEREST_{guest_id}",
                     },
                     remapping={"guest_transcription": "transcribed_speech"},
                 )

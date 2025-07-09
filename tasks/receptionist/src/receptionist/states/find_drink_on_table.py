@@ -22,7 +22,7 @@ class GetDrinkString(smach.State):
     def execute(self, userdata):
         drink_location = userdata.drink_location
         drink_str = ""
-        if drink_location == "None":
+        if drink_location == "None" or drink_location == "":
             drink_str += "Unfortunately, I couldn't find your drink on the table. "
         else:
             drink_str += f"Your drink is located at the {drink_location} of the table. "
@@ -192,9 +192,10 @@ class GetDrinkLocationFromMemory(smach.State):
 
         if favourite_drink is not None:
             try:
-                favourite_drink_location = userdata.drink_detections[
-                    favourite_drink.lower()
-                ]["location"]
+                if userdata.drink_detections[favourite_drink.lower()]["detected"]:
+                    favourite_drink_location = userdata.drink_detections[
+                        favourite_drink.lower()
+                    ]["location"]
             except:
                 return "failed"
         userdata.drink_location = favourite_drink_location

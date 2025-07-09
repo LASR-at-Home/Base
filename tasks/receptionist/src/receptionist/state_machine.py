@@ -91,7 +91,7 @@ class Receptionist(smach.StateMachine):
                 },
             }
             drink_detections = {
-                drink: {"detected": False, "location": ""}
+                drink: {"detected": False, "location": "None"}
                 for drink in self.possible_drinks
             }
 
