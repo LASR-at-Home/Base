@@ -68,6 +68,10 @@ objects:
     category: "snacks"
     scale: false
   ritz:
-    graspable: false
+    graspable: true
     category: "snacks"
+    scale: false
+  can:
+    graspable: true
+    category: "drinks"
     scale: false
