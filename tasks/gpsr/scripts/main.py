@@ -66,17 +66,16 @@ def main() -> None:
     instruction_pose.header.frame_id = "map"
     N_COMMANDS: int = 3
     config = load_gpsr_configuration()
-    # move_base_client = actionlib.SimpleActionClient("move_base", MoveBaseAction)
-    # move_base_client.wait_for_server()
-    # tts_client = actionlib.SimpleActionClient("tts", TtsAction)
-    # tts_client.wait_for_server()
-    # _tts(tts_client, "Please open the door")
-    # rospy.sleep(3)
+    move_base_client = actionlib.SimpleActionClient("move_base", MoveBaseAction)
+    move_base_client.wait_for_server()
+    tts_client = actionlib.SimpleActionClient("tts", TtsAction)
+    tts_client.wait_for_server()
+    _tts(tts_client, "Please open the door")
+    rospy.sleep(3)
     for i in range(N_COMMANDS):
         rospy.loginfo(f"Command {i + 1}")
-        # _tts(tts_client, "I am going to the instruction point to receive a command")
-        # _tts(tts_client, "for testing I will not go to the instruction point")
-        # _move_base(move_base_client, instruction_pose)
+        _tts(tts_client, "I am going to the instruction point to receive a command")
+        _move_base(move_base_client, instruction_pose)
         # if i > 0:
         #     # _tts(
         #     #    tts_client,
