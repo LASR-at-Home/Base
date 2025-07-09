@@ -166,7 +166,15 @@ def gpsr_components():
     ]
     question_list = ["question", "quiz"]
 
-    color_list = ["green", "blue", "yellow", "black", "white", "red", "orange", "grey", "brown", "purple"]
+    color_list = [
+        "blue",
+        "yellow",
+        "black",
+        "white",
+        "red",
+        "orange",
+        "gray",
+    ]
     clothe_list = ["t shirt", "shirt", "blouse", "sweater", "coat", "jacket"]
     clothes_list = ["t shirts", "shirts", "blouses", "sweaters", "coats", "jackets"]
     color_clothe_list = []
@@ -292,8 +300,7 @@ def gpsr_regex(configuration: Configuration):
     # print(get_possible_sub_commands("atLoc"))
     command(
         "goToLoc",
-         f"{verb('go')} {prep('toLocPrep')} the {Configuration.pick(configuration, 'location', ['loc', 'room'])} then {get_possible_sub_commands('atLoc')}",
-        
+        f"{verb('go')} {prep('toLocPrep')} the {Configuration.pick(configuration, 'location', ['loc', 'room'])} then {get_possible_sub_commands('atLoc')}",
     )
     command(
         "takeObjFromPlcmt",
@@ -311,20 +318,21 @@ def gpsr_regex(configuration: Configuration):
         "meetPrsAtBeac",
         f"{verb('meet')} {Configuration.pick(configuration, 'name', ['name'])} {prep('inLocPrep')} the {Configuration.pick(configuration, 'location', ['room'])} and {get_possible_sub_commands('foundPers')}",
     )
-    '''command(
-        "countObjOnPlcmt",
-        f"{verb('count')} {Configuration.pick(configuration, 'object', ['plurCat'])} there are {prep('onLocPrep')} the {Configuration.pick(configuration, 'location', ['plcmtLoc'])}",
-    )'''
+    # command(
+    #     "countObjOnPlcmt",
+    #     f"{verb('count')} {Configuration.pick(configuration, 'object', ['plurCat'])} there are {prep('onLocPrep')} the {Configuration.pick(configuration, 'location', ['plcmtLoc'])}",
+    # )
 
     # match either a category‐plural (e.g. "dishes") OR a specific object name (singular) with optional "s"
-    plurals = "|".join(re.escape(cat) for cat in configuration["object_categories_plural"])
-    objs     = "|".join(re.escape(obj) for obj in configuration["object_names"])
+    plurals = "|".join(
+        re.escape(cat) for cat in configuration["object_categories_plural"]
+    )
+    objs = "|".join(re.escape(obj) for obj in configuration["object_names"])
 
     command(
-    "countObjOnPlcmt",
-    rf"{verb('count')} (?P<object>(?:{plurals})|(?:{objs})s?) there are {prep('onLocPrep')} the {Configuration.pick(configuration, 'location', ['plcmtLoc'])}"
+        "countObjOnPlcmt",
+        rf"{verb('count')} (?P<object>(?:{plurals})|(?:{objs})s?) there are {prep('onLocPrep')} the {Configuration.pick(configuration, 'location', ['plcmtLoc'])}",
     )
-    
 
     command(
         "countPrsInRoom",
@@ -435,23 +443,27 @@ def gpsr_parse(matches: Dict[str, str]) -> Dict[str, Any]:
             except:
                 continue
         else:
-            print(f"Unhandled key: {key_to_check}")
+            pass
+            # print(f"Unhandled key: {key_to_check}")
     return result
 
 
 def gpsr_compile_and_parse(config: Configuration, input: str) -> Dict:
     input = input.lower()
+
     # remove punctuation
     input = re.sub(r"[^\w\s]", "", input)
     if input[0] == " ":
         input = input[1:]
-    print(f"Parsed input: {input}")
+    # print(input)
+    # print(f"Parsed input: {input}")
     regex_str = gpsr_regex(config)
-    print(f"possible configrations:{config}")
+    # print(f"possible configrations:{config}")
     regex = re.compile(regex_str)
+    # print(f"Regex: {regex}")
     matches = regex.match(input)
-    print(matches)
-    print(f" matches:{matches}")
+    # print(matches)
+    # print(f" matches:{matches}")
     matches = matches.groupdict()
     object_categories = (
         config["object_categories_singular"] + config["object_categories_plural"]
