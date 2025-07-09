@@ -208,9 +208,9 @@ class Restaurant(smach.StateMachine):
                 smach.CBState(
                     lambda ud: "succeeded" if ud.keyword == "yes" else "failed",
                     input_keys=["keyword"],
-                    outcomes=["True", "False"],
+                    outcomes=["succeeded", "failed"],
                 ),
-                transitions={"suceeded": "GO_TO_BAR", "failed": "RETAKE_ORDER"},
+                transitions={"succeeded": "GO_TO_BAR", "failed": "RETAKE_ORDER"},
             )
 
             smach.StateMachine.add(

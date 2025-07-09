@@ -151,7 +151,7 @@ class ComputeApproach(smach.State):
             if self._can_reach_pose(current_pose, pose):
                 distance = np.linalg.norm(
                     np.array([pose.position.x, pose.position.y])
-                    - np.array([current_pose.x, current_pose.y])
+                    - np.array([current_pose.position.x, current_pose.position.y])
                 )
 
                 if distance < closest_distance:
