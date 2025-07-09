@@ -1,0 +1,28 @@
+header:
+  stamp: {secs: 0, nsecs: 0}
+  frame_id: ''
+goal_id:
+  stamp: {secs: 0, nsecs: 0}
+  id: 'manual_test'
+goal:
+  object_id: "object_1"
+  surface_id: "table"
+  candidate_poses:
+    - header:
+        frame_id: "base_footprint"
+        stamp: {secs: 0, nsecs: 0}
+      pose:
+        position: {x: 0.7, y: -0.15, z: 0.8}
+        orientation: {x: 0.600, y: 0.100, z: 0.048, w: 0.749}
+    - header:
+        frame_id: "base_footprint"
+        stamp: {secs: 0, nsecs: 0}
+      pose:
+        position: {x: 0.65, y: -0.15, z: 0.8}
+        orientation: {x: 0.600, y: 0.100, z: 0.048, w: 0.749}
+    - header:
+        frame_id: "base_footprint"
+        stamp: {secs: 0, nsecs: 0}
+      pose:
+        position: {x: 0.7, y: -0.05, z: 0.8}
+        orientation: {x: 0.600, y: 0.100, z: 0.048, w: 0.749}

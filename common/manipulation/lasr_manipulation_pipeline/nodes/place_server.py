@@ -93,9 +93,36 @@ class PlaceServer:
             self._place_server.set_preempted()
             return
 
-        # Set goal pose
-        self._move_group.set_pose_reference_frame(goal.pose.header.frame_id)
-        self._move_group.set_pose_target(goal.pose.pose, "gripper_grasping_frame")
+        # Set a list of goal pose
+        # Loop through candidate poses
+        success = False
+        for i, pose_stamped in enumerate(goal.candidate_poses):
+            if self._place_server.is_preempt_requested():
+                rospy.loginfo("Place goal preempted before pose %d.", i)
+                self._place_server.set_preempted()
+                return
+
+            rospy.loginfo(f"Trying place pose {i+1}/{len(goal.candidate_poses)}")
+
+            self._move_group.clear_pose_targets()
+            self._move_group.set_pose_reference_frame(pose_stamped.header.frame_id)
+            self._move_group.set_pose_target(pose_stamped.pose, "gripper_grasping_frame")
+
+            move_success = self._move_group.go(wait=True)
+            self._move_group.stop()
+
+            if move_success:
+                rospy.loginfo("Successfully reached candidate pose %d", i)
+                success = True
+                break
+            else:
+                rospy.logwarn("Failed to reach candidate pose %d", i)
+        
+        if not success:
+            rospy.logwarn("All candidate poses failed. Aborting place.")
+            result = PlaceResult(success=False)
+            self._place_server.set_aborted(result)
+            return
 
         if self._place_server.is_preempt_requested():
             rospy.loginfo("Place goal preempted before executing motion.")
