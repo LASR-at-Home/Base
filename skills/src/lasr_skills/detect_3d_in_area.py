@@ -14,6 +14,8 @@ class Detect3DInArea(smach.StateMachine):
         def __init__(
             self,
             area_polygon: Optional[ShapelyPolygon] = None,
+            z_min: Optional[float] = None,
+            z_max: Optional[float] = None,
             debug_publisher: str = "/skills/detect3d_in_area/debug",
         ):
             input_keys = (
@@ -21,12 +23,19 @@ class Detect3DInArea(smach.StateMachine):
                 if area_polygon is None
                 else ["detections_3d", "polygon"]
             )
+            input_keys += (
+                ["z_sweep_min", "z_sweep_max"]
+                if z_min is not None and z_max is not None
+                else []
+            )
             smach.State.__init__(
                 self,
                 outcomes=["succeeded", "failed"],
                 input_keys=input_keys,
                 output_keys=["detections_3d"],
             )
+            self._z_min = z_min
+            self._z_max = z_max
             self.area_polygon = area_polygon
             self.debug_publisher = rospy.Publisher(
                 debug_publisher, PolygonStamped, queue_size=1
@@ -35,7 +44,8 @@ class Detect3DInArea(smach.StateMachine):
         def execute(self, userdata):
             detected_objects = userdata["detections_3d"].detected_objects
             # publish polygon for debugging
-
+            z_sweep_min = userdata.get("z_sweep_min", self._z_min)
+            z_sweep_max = userdata.get("z_sweep_max", self._z_max)
             polygon_msg = Polygon()
             if self.area_polygon is None:
                 if "polygon" not in userdata:
@@ -60,6 +70,12 @@ class Detect3DInArea(smach.StateMachine):
                 for i in range(0, len(detected_objects))
                 if satisfied_points[i]
             ]
+            filtered_detections = [
+                detection
+                for detection in filtered_detections
+                if (detection.point.z >= z_sweep_min)
+                and (detection.point.z <= z_sweep_max)
+            ]
             # List of Detection3D msgs
             userdata["detections_3d"] = filtered_detections
             return "succeeded"
@@ -75,8 +91,15 @@ class Detect3DInArea(smach.StateMachine):
         filter: Union[List[str], None] = None,
         confidence: float = 0.5,
         target_frame: str = "map",
+        z_min: Optional[float] = None,
+        z_max: Optional[float] = None,
     ):
         input_keys = ["polygon"] if area_polygon is None else []
+        input_keys += (
+            ["z_sweep_min", "z_sweep_max"]
+            if z_min is not None and z_max is not None
+            else []
+        )
         smach.StateMachine.__init__(
             self,
             outcomes=["succeeded", "failed"],
@@ -101,6 +124,6 @@ class Detect3DInArea(smach.StateMachine):
             )
             smach.StateMachine.add(
                 "FILTER_DETECTIONS",
-                self.FilterDetections(area_polygon),
+                self.FilterDetections(area_polygon, z_min, z_max),
                 transitions={"succeeded": "succeeded", "failed": "failed"},
             )

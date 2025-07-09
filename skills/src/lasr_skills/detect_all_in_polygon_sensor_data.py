@@ -107,23 +107,28 @@ class CalculateSweepPoints(smach.State):
     _polygon: ShapelyPolygon
     _min_coverage: float
     _tf_buffer: tf.Buffer
-    _z_sweep_min: float
-    _z_sweep_max: float
+    _z_sweep_min: Optional[float]
+    _z_sweep_max: Optional[float]
 
     def __init__(
         self,
-        z_sweep_min: float = 0.2,
-        z_sweep_max: float = 1.0,
+        z_sweep_min: Optional[float] = None,
+        z_sweep_max: Optional[float] = None,
         polygon: Optional[ShapelyPolygon] = None,
         min_coverage: float = 0.8,
     ):
-
+        input_keys = ["sweep_points", "detected_objects"]
+        input_keys += ["polygon"] if polygon is None else []
+        input_keys += (
+            ["z_sweep_min", "z_sweep_max"]
+            if z_sweep_min is not None and z_sweep_max is not None
+            else []
+        )
         smach.State.__init__(
             self,
             outcomes=["succeeded", "failed"],
             output_keys=["sweep_points"],
-            input_keys=["sweep_points", "detected_objects"]
-            + (["polygon"] if polygon is None else []),
+            input_keys=input_keys,
         )
         self._polygon = polygon
         self._min_coverage = min_coverage
@@ -209,7 +214,9 @@ class CalculateSweepPoints(smach.State):
 
         return selected, covered
 
-    def _calculate_sweep_points(self, polygon: ShapelyPolygon) -> List[Point]:
+    def _calculate_sweep_points(
+        self, polygon: ShapelyPolygon, z_sweep_min: float, z_sweep_max: float
+    ) -> List[Point]:
         """
         Calculates the points to sweep based on the polygon and minimum coverage.
 
@@ -259,7 +266,11 @@ class CalculateSweepPoints(smach.State):
         sweep_points = [
             PointStamped(
                 header=rospy.Header(frame_id="map"),
-                point=Point(fp.centroid.x, fp.centroid.y, self._z_axis),
+                point=Point(
+                    fp.centroid.x,
+                    fp.centroid.y,
+                    (z_sweep_min + z_sweep_max) / 2,
+                ),
             )
             for fp in look_at_points
         ]
@@ -281,8 +292,12 @@ class CalculateSweepPoints(smach.State):
 
         # Calculate the points to sweep based on the polygon
         polygon = userdata.get("polygon", self._polygon)
+        z_sweep_min = userdata.get("z_sweep_min", self._z_sweep_min)
+        z_sweep_max = userdata.get("z_sweep_max", self._z_sweep_max)
         try:
-            userdata.sweep_points = self._calculate_sweep_points(polygon)
+            userdata.sweep_points = self._calculate_sweep_points(
+                polygon, z_sweep_min, z_sweep_max
+            )
             return "succeeded"
         except Exception as e:
             rospy.logerr(f"Failed to calculate sweep points: {e}")
@@ -304,8 +319,8 @@ class DetectAllInPolygonSensorData(smach.StateMachine):
     _min_new_object_dist: float
     _debug_publisher: rospy.Publisher
     _prompt: Optional[str]
-    _z_sweep_min: float
-    _z_sweep_max: float
+    _z_sweep_min: Optional[float]
+    _z_sweep_max: Optional[float]
     _model: str
 
     def __init__(
@@ -317,8 +332,8 @@ class DetectAllInPolygonSensorData(smach.StateMachine):
         min_new_object_dist: float = 0.1,
         use_lang_sam: bool = False,
         prompt: Optional[str] = None,
-        z_sweep_min: float = 0.2,
-        z_sweep_max: float = 1.0,
+        z_sweep_min: Optional[float] = None,
+        z_sweep_max: Optional[float] = None,
         model: str = "yolo11n-seg.pt",
     ):
         """
@@ -352,6 +367,11 @@ class DetectAllInPolygonSensorData(smach.StateMachine):
             model (str, optional): Model to use for detection. Defaults to "yolo11n-seg.pt".
         """
         input_keys = ["polygon"] if polygon is None else []
+        input_keys += (
+            ["z_sweep_min", "z_sweep_max"]
+            if z_sweep_min is not None and z_sweep_max is not None
+            else []
+        )
         super().__init__(
             outcomes=["succeeded", "failed"],
             input_keys=input_keys,
@@ -487,16 +507,21 @@ class DetectAllInPolygonSensorData(smach.StateMachine):
             transitions={"succeeded": "LOOK_AND_DETECT", "failed": "failed"},
             remapping={"sweep_points": "sweep_points"},
         )
-
+        input_keys = [
+            "sweep_points",
+            "detected_objects",
+            "look_point",
+            "debug_images",
+        ]
+        input_keys += ["polygon"] if self._polygon is None else []
+        input_keys += (
+            ["z_sweep_min", "z_sweep_max"]
+            if self._z_sweep_min is not None and self._z_sweep_max is not None
+            else []
+        )
         look_and_detect_iterator = smach.Iterator(
             outcomes=["succeeded", "failed"],
-            input_keys=[
-                "sweep_points",
-                "detected_objects",
-                "look_point",
-                "debug_images",
-            ]
-            + (["polygon"] if self._polygon is None else []),
+            input_keys=input_keys,
             output_keys=["detected_objects", "debug_images"],
             it=lambda: range(0, len(self.userdata.sweep_points)),
             it_label="sweep_point_index",
@@ -506,16 +531,7 @@ class DetectAllInPolygonSensorData(smach.StateMachine):
         with look_and_detect_iterator:
             container_sm = smach.StateMachine(
                 outcomes=["continue", "failed", "succeeded"],
-                input_keys=(
-                    [
-                        "sweep_points",
-                        "sweep_point_index",
-                        "detected_objects",
-                        "look_point",
-                        "debug_images",
-                    ]
-                    + (["polygon"] if self._polygon is None else [])
-                ),
+                input_keys=input_keys + ["sweep_point_index"],
                 output_keys=[
                     "look_point",
                     "detections_3d",
@@ -566,6 +582,8 @@ class DetectAllInPolygonSensorData(smach.StateMachine):
                         "DETECT_OBJECTS",
                         Detect3DInArea(
                             area_polygon=self._polygon,
+                            z_min=self._z_sweep_min,
+                            z_max=self._z_sweep_max,
                             filter=self._object_filter,
                             confidence=self._min_confidence,
                             point_cloud_topic="/xtion/depth_registered/points",
