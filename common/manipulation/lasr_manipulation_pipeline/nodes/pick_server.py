@@ -244,6 +244,30 @@ class PickServer:
         self._attach_object_to_gripper(object_id)
         rospy.loginfo(f"Attached {object_id} to gripper")
 
+        # Get post grasp pose
+        post_grasp_pose = self._get_post_grasp_pose()
+        rospy.loginfo("Got pose grasp pose")
+        self._publish_grasp_poses(
+            [post_grasp_pose.pose], post_grasp_pose.header.frame_id
+        )
+
+        self._move_group.clear_pose_targets()
+
+        self._move_group.set_pose_reference_frame(post_grasp_pose.header.frame_id)
+        self._move_group.set_pose_target(post_grasp_pose.pose, "gripper_grasping_frame")
+
+        if self._pick_server.is_preempt_requested():
+            rospy.loginfo("Pick goal preempted before post grasp execution.")
+            self._pick_server.set_preempted()
+            return
+
+        success = self._move_group.go(wait=True)
+        if not success:
+            rospy.loginfo("MoveIt failed to execute post grasp. Aborting.")
+            result = PickResult(success=False)
+            self._pick_server.set_aborted(result)
+            return
+
         result = PickResult(success=True, grasp_pose=final_grasp_pose)
         self._pick_server.set_succeeded(result)
         rospy.loginfo("Pick was successful")
@@ -642,15 +666,19 @@ class PickServer:
     def _get_final_grasp_pose(self) -> PoseStamped:
         # Get current pose of the end-effector
         eef_pose = self._get_eef_pose(base_frame="gripper_grasping_frame")
-        rospy.loginfo(eef_pose)
         x_forward = 0.09  # fixed, for now
         eef_forward_pose = self._offset_grasps([eef_pose], x_forward, 0.0, 0.0)[0]
-        rospy.loginfo(eef_forward_pose)
         eef_forward_pose_base_footprint = self._tf_poses(
             [eef_forward_pose], "base_footprint"
         )[0]
-        rospy.loginfo(eef_forward_pose_base_footprint)
         return eef_forward_pose_base_footprint
+
+    def _get_post_grasp_pose(self) -> PoseStamped:
+        # Get current pose of the end-effector
+        eef_pose = self._get_eef_pose(base_frame="base_footprint")
+        z_up = 0.1
+        eef_up_pose = self._offset_grasps([eef_pose], 0.0, 0.0, z_up)[0]
+        return eef_up_pose
 
     def _get_eef_pose(
         self,
