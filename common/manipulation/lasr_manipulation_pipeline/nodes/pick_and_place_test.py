@@ -21,7 +21,7 @@ from lasr_manipulation_msgs.msg import PickAction, PickGoal, PlaceAction, PlaceG
 
 
 PACKAGE_PATH: str = rospkg.RosPack().get_path("lasr_manipulation_pipeline")
-MESH_NAME: str = "pringles.ply"
+MESH_NAME: str = "ritz.ply"
 
 
 class GraspingPipeline:
@@ -89,7 +89,7 @@ class GraspingPipeline:
 
         pcl = sam.segment(pcl)
         # Register mesh with scene and apply the transformation
-        response = self._register_object(pcl, MESH_NAME.replace(".ply", ""), False, 1)
+        response = self._register_object(pcl, MESH_NAME.replace(".ply", ""), False, 25)
         ros_transform = response.transform
         ros_scale = response.scale
 
@@ -118,7 +118,9 @@ class GraspingPipeline:
             rospy.loginfo("Pick failed. Will not place.")
             return
 
+        rospy.loginfo("Sending pregrasp motion...")
         self._play_motion("pregrasp")
+        rospy.loginfo("Pregrasp motion finished!")
 
         self._place_client.send_goal_and_wait(
             PlaceGoal(MESH_NAME.replace(".ply", ""), "table", pick_result.grasp_pose)
