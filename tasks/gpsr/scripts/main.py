@@ -9,6 +9,7 @@ from gpsr.load_known_data import GPSRDataLoader
 from gpsr.state_machine_factory import build_state_machine
 from gpsr.regex_command_parser import Configuration
 from gpsr.states import CommandParserStateMachine
+from gpsr.regex_command_parser import gpsr_compile_and_parse
 
 import actionlib
 from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion
@@ -76,17 +77,19 @@ def main() -> None:
         # _tts(tts_client, "I am going to the instruction point to receive a command")
         # _tts(tts_client, "for testing I will not go to the instruction point")
         # _move_base(move_base_client, instruction_pose)
-        if i > 0:
-            # _tts(
-            #    tts_client,
-            #    "I will wait 20 seconds to allow you to reset the arena, then I will be ready for the next command",
-            # )
-            rospy.sleep(rospy.Duration(20.0))
+        # if i > 0:
+        #     # _tts(
+        #     #    tts_client,
+        #     #    "I will wait 20 seconds to allow you to reset the arena, then I will be ready for the next command",
+        #     # )
+        #     rospy.sleep(rospy.Duration(20.0))
         try:
             rospy.loginfo(f"Staring GPSR")
-            command_parser_sm = CommandParserStateMachine(data_config=config)
-            command_parser_sm.execute()
-            parsed_command: Dict = command_parser_sm.userdata.parsed_command
+            # command_parser_sm = CommandParserStateMachine(data_config=config)
+            # command_parser_sm.execute()
+            # parsed_command: Dict = command_parser_sm.userdata.parsed_command
+            command = "go to the plant then meet luna and tell your teams country"
+            parsed_command = gpsr_compile_and_parse(config, command)
             rospy.loginfo(f"Parsed command: {parsed_command}")
             sm = build_state_machine(parsed_command)
             sm.execute()

@@ -388,7 +388,7 @@ def gpsr_regex(configuration: Configuration):
     )
     command(
         "meetNameAtLocThenFindInRm",
-        f"{verb('meet')} {Configuration.pick(configuration, 'name', ['name'])} {prep('atLocPrep')} the {Configuration.pick(configuration, 'location', ['room'])} then {verb('find')} them {prep('inLocPrep')} the {Configuration.pick(configuration, 'destination', ['room'])}",
+        f"{verb('meet')} {Configuration.pick(configuration, 'name', ['name'])} {prep('atLocPrep')} the {Configuration.pick(configuration, 'location', ['loc','room'])} then {verb('find')} them {prep('inLocPrep')} the {Configuration.pick(configuration, 'destination', ['room'])}",
     )
     command(
         "countClothPrsInRoom",
@@ -396,7 +396,7 @@ def gpsr_regex(configuration: Configuration):
     )
     command(
         "tellPrsInfoAtLocToPrsAtLoc",
-        f"{verb('tell')} the {person_info_list} of the person {prep('atLocPrep')} the {Configuration.pick(configuration, 'location', ['room'])} to the person {prep('atLocPrep')} the {Configuration.pick(configuration, 'destination', ['room'])}",
+        f"{verb('tell')} the {person_info_list} of the person {prep('atLocPrep')} the {Configuration.pick(configuration, 'location', ['loc','room'])} to the person {prep('atLocPrep')} the {Configuration.pick(configuration, 'destination', ['room', 'loc'])}",
     )
     command(
         "followPrsAtLoc",
@@ -448,26 +448,64 @@ def gpsr_parse(matches: Dict[str, str]) -> Dict[str, Any]:
     return result
 
 
-def gpsr_compile_and_parse(config: Configuration, input: str) -> Dict:
-    input = input.lower()
+def gpsr_compile_and_parse(config: Configuration, input: Union[str, List[str]]) -> Dict:
+    if isinstance(input, list):
+        regex_str = gpsr_regex(config)
+        regex = re.compile(regex_str)
+        successful_parses = 0
+        failed_parses = 0
+        for inp in input:
+            inp = inp.lower()
 
-    # remove punctuation
-    input = re.sub(r"[^\w\s]", "", input)
-    if input[0] == " ":
-        input = input[1:]
-    # print(input)
-    # print(f"Parsed input: {input}")
-    regex_str = gpsr_regex(config)
-    # print(f"possible configrations:{config}")
-    regex = re.compile(regex_str)
-    # print(f"Regex: {regex}")
-    matches = regex.match(input)
-    # print(matches)
-    # print(f" matches:{matches}")
-    matches = matches.groupdict()
-    object_categories = (
-        config["object_categories_singular"] + config["object_categories_plural"]
-    )
+            # remove punctuation
+            inp = re.sub(r"[^\w\s]", "", inp)
+            if inp[0] == " ":
+                inp = inp[1:]
+            # print(input)
+            # print(f"Parsed input: {input}")
+            # print(f"possible configrations:{config}")
+            # print(f"Regex: {regex}")
+            matches = regex.match(inp)
+            # print(matches)
+            # print(f" matches:{matches}")
+            try:
+                matches = matches.groupdict()
+            except:
+                print(f"Failed to parse input: {inp}")
+                failed_parses += 1
+            object_categories = (
+                config["object_categories_singular"]
+                + config["object_categories_plural"]
+            )
+            successful_parses += 1
+            # print(f"Successful parse {successful_parses} of {len(input)}: {inp}")
+        print(
+            f"Succeeded parse percentage: {successful_parses / len(input) * 100:.2f}%"
+        )
+        print(f"Failed parse percentage: {failed_parses / len(input) * 100:.2f}%")
+    else:
+        input = input.lower()
+
+        # remove punctuation
+        input = re.sub(r"[^\w\s]", "", input)
+        if input[0] == " ":
+            input = input[1:]
+        # print(input)
+        # print(f"Parsed input: {input}")
+        regex_str = gpsr_regex(config)
+        # print(f"possible configrations:{config}")
+        regex = re.compile(regex_str)
+        # print(f"Regex: {regex}")
+        matches = regex.match(input)
+        # print(matches)
+        # print(f" matches:{matches}")
+        matches = matches.groupdict()
+        object_categories = (
+            config["object_categories_singular"] + config["object_categories_plural"]
+        )
+        return parse_result_dict(
+            gpsr_parse(matches), object_categories, config["room_names"]
+        )
     return parse_result_dict(
         gpsr_parse(matches), object_categories, config["room_names"]
     )

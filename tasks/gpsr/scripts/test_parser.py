@@ -33,24 +33,26 @@ if __name__ == "__main__":
     commands = [commands.strip().lower() for commands in commands if commands.strip()]
     failed_commands = []
 
-    print(f"Loaded configuration: {config}")
+    gpsr_compile_and_parse(config, commands)
 
-    for index, command in tqdm(enumerate(commands)):
-        try:
-            parsed_command = gpsr_compile_and_parse(config, command)
-        except:
-            failed_commands.append(command)
+    # print(f"Loaded configuration: {config}")
 
-        print(
-            f"[INDEX] [{index}] Failed command Percentage: {(len(failed_commands) / (index + 1)) * 100:.2f}%"
-        )
-        if index % 1000 == 0:
-            with open("failed_commands.txt", "w") as f:
-                for failed_command in failed_commands:
-                    f.write(f"{failed_command}\n")
+    # for index, command in tqdm(enumerate(commands)):
+    #     try:
+    #         parsed_command = gpsr_compile_and_parse(config, command)
+    #     except:
+    #         failed_commands.append(command)
 
-    print(
-        f"Failed command percentage: {len(failed_commands) / len(commands) * 100:.2f}%"
-    )
+    #     print(
+    #         f"[INDEX] [{index}] Failed command Percentage: {(len(failed_commands) / (index + 1)) * 100:.2f}%"
+    #     )
+    #     if index % 1000 == 0:
+    #         with open("failed_commands.txt", "w") as f:
+    #             for failed_command in failed_commands:
+    #                 f.write(f"{failed_command}\n")
+
+    # print(
+    #     f"Failed command percentage: {len(failed_commands) / len(commands) * 100:.2f}%"
+    # )
 
     rospy.spin()

@@ -28,10 +28,6 @@
 
 
         <!--      PERCEPTION     -->
-    <include 
-        file="$(find lasr_vision_cropped_detection)/launch/cropped_detection.launch"
-    />
-    <include file="$(find lasr_vision_bodypix)/launch/bodypix.launch"/>
     <include file="$(find lasr_vision_clip)/launch/clip_vqa.launch"/>
     <include file="$(find lasr_vision_yolo)/launch/service.launch" />
 
