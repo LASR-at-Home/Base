@@ -13,13 +13,18 @@ class Detect3DInArea(smach.StateMachine):
     class FilterDetections(smach.State):
         def __init__(
             self,
-            area_polygon: ShapelyPolygon,
+            area_polygon: Optional[ShapelyPolygon] = None,
             debug_publisher: str = "/skills/detect3d_in_area/debug",
         ):
+            input_keys = (
+                ["detections_3d"]
+                if area_polygon is None
+                else ["detections_3d", "polygon"]
+            )
             smach.State.__init__(
                 self,
                 outcomes=["succeeded", "failed"],
-                input_keys=["detections_3d"],
+                input_keys=input_keys,
                 output_keys=["detections_3d"],
             )
             self.area_polygon = area_polygon
@@ -32,15 +37,22 @@ class Detect3DInArea(smach.StateMachine):
             # publish polygon for debugging
 
             polygon_msg = Polygon()
+            if self.area_polygon is None:
+                if "polygon" not in userdata:
+                    rospy.logerr("No polygon provided in userdata.")
+                    return "failed"
+                area_polygon = userdata["polygon"]
+            else:
+                area_polygon = self.area_polygon
             polygon_msg.points = [
                 Point32(x=point[0], y=point[1], z=0.0)
-                for point in self.area_polygon.exterior.coords
+                for point in area_polygon.exterior.coords
             ]
             self.debug_publisher.publish(
                 PolygonStamped(polygon=polygon_msg, header=Header(frame_id="map"))
             )
             satisfied_points = [
-                self.area_polygon.contains(Point(object.point.x, object.point.y))
+                area_polygon.contains(Point(object.point.x, object.point.y))
                 for object in detected_objects
             ]
             filtered_detections = [
@@ -54,7 +66,7 @@ class Detect3DInArea(smach.StateMachine):
 
     def __init__(
         self,
-        area_polygon: ShapelyPolygon,
+        area_polygon: Optional[ShapelyPolygon] = None,
         image_topic: str = "/xtion/rgb/image_raw",
         depth_image_topic: str = "/xtion/depth_registered/image_raw",
         depth_camera_info_topic: str = "/xtion/depth_registered/camera_info",
@@ -64,9 +76,11 @@ class Detect3DInArea(smach.StateMachine):
         confidence: float = 0.5,
         target_frame: str = "map",
     ):
+        input_keys = ["polygon"] if area_polygon is None else []
         smach.StateMachine.__init__(
             self,
             outcomes=["succeeded", "failed"],
+            input_keys=input_keys,
             output_keys=["detections_3d", "image_raw", "pcl"],
         )
 
