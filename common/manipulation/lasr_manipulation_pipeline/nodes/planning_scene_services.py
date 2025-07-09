@@ -549,6 +549,7 @@ class PlanningSceneServices:
         pose.position.x = center[0]
         pose.position.y = center[1]
         pose.position.z = z_plane - 0.005  # center of the thin box
+        pose.position.z -= 0.02
         pose.orientation.w = 1.0
 
         self._planning_scene.add_box(
