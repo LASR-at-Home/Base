@@ -4,9 +4,7 @@ import rospy
 import smach
 import smach_ros
 from geometry_msgs.msg import Point, PointStamped, Pose
-from lasr_skills import (
-    Say, GoToLocation
-)
+from lasr_skills import Say, GoToLocation
 from lasr_vision_msgs.srv import Recognise
 from storing_groceries.states import WaitDoorOpen, ObjectSortingLoop, PourCereal
 from shapely.geometry import Polygon
@@ -120,7 +118,7 @@ class StoringGroceries(smach.StateMachine):
 
             smach.StateMachine.add(
                 "SAY_DONE_OBJECT_SORTING_LOOP",
-                Say("No more object to put in cabinet"),                
+                Say("No more object to put in cabinet"),
                 transitions={
                     "succeeded": "POUR_CEREAL",
                     "aborted": "POUR_CEREAL",
@@ -158,11 +156,10 @@ class StoringGroceries(smach.StateMachine):
                     "preempted": "succeeded",
                 },
             )
-    
+
     def go_to_waiting_area(self) -> None:
-        """Adds the states to go to table area.
-        """
-        
+        """Adds the states to go to table area."""
+
         smach.StateMachine.add(
             f"GO_TO_WAITING_AREA",
             GoToLocation(self.wait_pose),
@@ -171,7 +168,7 @@ class StoringGroceries(smach.StateMachine):
                 "failed": f"SAY_ARRIVE_WAITING_AREA",
             },
         )
-    
+
         smach.StateMachine.add(
             f"SAY_ARRIVE_WAITING_AREA",
             Say(text="Arrived waiting area"),
@@ -181,5 +178,3 @@ class StoringGroceries(smach.StateMachine):
                 "preempted": f"SAY_WAIT",
             },
         )
-
-   

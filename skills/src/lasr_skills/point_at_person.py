@@ -131,7 +131,6 @@ class PointAt(smach.State):
 
 
 class PointAtPerson(smach.StateMachine):
-
     def __init__(
         self,
         target_point: Optional[Point] = None,

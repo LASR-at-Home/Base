@@ -24,7 +24,7 @@ class StoringGroceriesQueryLlmService:
         rospy.Service(
             "/storing_groceries/query_llm",
             StoringGroceriesQueryLlm,
-            self.storing_groceries_query_llm
+            self.storing_groceries_query_llm,
         )
         config = ModelConfig(model_name="Qwen/Qwen2.5-1.5B", model_type="llm")
         self.llm_inference = LLMInference(config)
@@ -51,7 +51,7 @@ class StoringGroceriesQueryLlmService:
             )
         elif task == "LinkCategory":
             object_name = llm_input[0]
-            categories = ', '.join(llm_input[1:])
+            categories = ", ".join(llm_input[1:])
             query = (
                 "Respond with only one word. "
                 f"What does '{object_name}' belong to the most or none: nothing, {categories}?"
@@ -75,7 +75,7 @@ class StoringGroceriesQueryLlmService:
         if match:
             predicted_category = match.group(1)
         else:
-            predicted_category = llm_output_clean.split()[-1].strip(",.\"\':")
+            predicted_category = llm_output_clean.split()[-1].strip(",.\"':")
 
         if task == "LinkCategory":
             valid_categories = [cat.lower() for cat in llm_input[1:]]

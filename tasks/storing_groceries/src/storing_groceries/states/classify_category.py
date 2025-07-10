@@ -6,51 +6,113 @@ from lasr_llm_msgs.srv import (
     StoringGroceriesQueryLlmRequest,
 )
 
+
 class ClassifyCategory(smach.State):
     def __init__(self, task):
         super().__init__(
             outcomes=["succeeded", "failed", "empty"],
-            input_keys=["table_object", "cabinets_objects", "table_object_category", "cabinet_categories"],
+            input_keys=[
+                "table_object",
+                "cabinets_objects",
+                "table_object_category",
+                "cabinet_categories",
+            ],
             output_keys=["table_object_category", "cabinet_categories", "cabinet_num"],
         )
 
-        self.task = task #"object" or "cabinet"
+        self.task = task  # "object" or "cabinet"
 
         # Define known category sets for safety
         self.category_map = {
             "fruit": {
-                "apple", "banana", "orange", "grape", "pineapple", "lemon", "lime", "peach",
-                "plum", "pear", "mango", "watermelon", "strawberry", "blueberry"
+                "apple",
+                "banana",
+                "orange",
+                "grape",
+                "pineapple",
+                "lemon",
+                "lime",
+                "peach",
+                "plum",
+                "pear",
+                "mango",
+                "watermelon",
+                "strawberry",
+                "blueberry",
             },
             "vegetable": {
-                "carrot", "tomato", "cucumber", "lettuce", "onion", "broccoli", "cabbage",
-                "pepper", "zucchini", "radish", "corn", "potato", "garlic"
+                "carrot",
+                "tomato",
+                "cucumber",
+                "lettuce",
+                "onion",
+                "broccoli",
+                "cabbage",
+                "pepper",
+                "zucchini",
+                "radish",
+                "corn",
+                "potato",
+                "garlic",
             },
             "beverage": {
-                "bottle", "can", "water bottle", "juice box", "milk carton", "soda can",
-                "coffee cup", "energy drink", "thermos"
+                "bottle",
+                "can",
+                "water bottle",
+                "juice box",
+                "milk carton",
+                "soda can",
+                "coffee cup",
+                "energy drink",
+                "thermos",
             },
             "clothing": {
-                "t-shirt", "shirt", "pants", "socks", "jacket", "hat", "cap", "skirt",
-                "shorts", "glasses", "scarf", "sneakers", "shoes", "boots"
+                "t-shirt",
+                "shirt",
+                "pants",
+                "socks",
+                "jacket",
+                "hat",
+                "cap",
+                "skirt",
+                "shorts",
+                "glasses",
+                "scarf",
+                "sneakers",
+                "shoes",
+                "boots",
             },
             "snack": {
-                "chips", "crackers", "candy", "chocolate bar", "cookie", "snack bag",
-                "biscuit", "granola bar", "popcorn"
+                "chips",
+                "crackers",
+                "candy",
+                "chocolate bar",
+                "cookie",
+                "snack bag",
+                "biscuit",
+                "granola bar",
+                "popcorn",
             },
             "cleaning": {
-                "soap", "sponge", "brush", "cleaner", "detergent", "tissue box", "toilet paper",
-                "broom", "mop", "spray bottle", "bucket"
+                "soap",
+                "sponge",
+                "brush",
+                "cleaner",
+                "detergent",
+                "tissue box",
+                "toilet paper",
+                "broom",
+                "mop",
+                "spray bottle",
+                "bucket",
             },
-            "new": {
-                "unknown", "misc", "empty", "unrecognized", "?"
-            }
+            "new": {"unknown", "misc", "empty", "unrecognized", "?"},
         }
 
-
-
         rospy.wait_for_service("/storing_groceries/query_llm")
-        self.llm_service = rospy.ServiceProxy("/storing_groceries/query_llm", StoringGroceriesQueryLlm)
+        self.llm_service = rospy.ServiceProxy(
+            "/storing_groceries/query_llm", StoringGroceriesQueryLlm
+        )
 
     def execute(self, userdata):
         if self.task == "object":
@@ -65,7 +127,7 @@ class ClassifyCategory(smach.State):
                     userdata.table_object_category = category
                     rospy.loginfo(f"Found in predefined category: {category}")
                     return "succeeded"
-            
+
             try:
                 request = StoringGroceriesQueryLlmRequest()
                 request.task = "ClassifyObject"
@@ -79,22 +141,22 @@ class ClassifyCategory(smach.State):
                 else:
                     rospy.logwarn("LLM returned empty category.")
                     return "failed"
-                
+
             except rospy.ServiceException as e:
                 rospy.logerr(f"service call failed: {e}")
                 return "failed"
-        
+
         elif self.task == "cabinet":
             if not userdata.cabinets_objects:
                 rospy.loginfo("No objects detected.")
                 return "empty"
-            
+
             userdata.cabinet_categories = []
 
             for cabinet_objects in userdata.cabinets_objects:
                 names = [obj["name"] for obj in cabinet_objects if "name" in obj]
                 found_category = None
-                
+
                 for name in names:
                     name = name.lower()
                     for category, items in self.category_map.items():
@@ -103,7 +165,7 @@ class ClassifyCategory(smach.State):
                             break
                     if found_category:
                         break
-                    
+
                 if found_category:
                     cabinet_category = found_category
                     rospy.loginfo(f"Predefined category found: {cabinet_category}")
@@ -114,46 +176,58 @@ class ClassifyCategory(smach.State):
                         request.llm_input = names
                         response = self.llm_service(request)
 
-                        cabinet_category = response.category if response.category else "unknown"
-                        rospy.loginfo(f"LLM returned category: {cabinet_category}")      
+                        cabinet_category = (
+                            response.category if response.category else "unknown"
+                        )
+                        rospy.loginfo(f"LLM returned category: {cabinet_category}")
 
                     except rospy.ServiceException as e:
                         rospy.logerr(f"service call failed: {e}")
                         return "failed"
-                
+
                 userdata.cabinet_categories.append(cabinet_category)
 
             return "succeeded"
-        
+
         elif self.task == "link":
             if not userdata.cabinet_categories and not userdata.table_object_category:
                 rospy.loginfo("No objects detected.")
                 return "empty"
-            
+
             if userdata.table_object_category in userdata.cabinet_categories:
-                userdata.cabinet_num = userdata.cabinet_categories.index(userdata.table_object_category)
+                userdata.cabinet_num = userdata.cabinet_categories.index(
+                    userdata.table_object_category
+                )
                 return "succeeded"
             else:
                 try:
                     request = StoringGroceriesQueryLlmRequest()
                     request.task = "LinkCategory"
-                    request.llm_input = [userdata.table_object_category] + userdata.cabinet_categories
+                    request.llm_input = [
+                        userdata.table_object_category
+                    ] + userdata.cabinet_categories
                     response = self.llm_service(request)
 
-                    link_category = response.category if response.category and response.category != "nothing" else "new"
+                    link_category = (
+                        response.category
+                        if response.category and response.category != "nothing"
+                        else "new"
+                    )
                     rospy.loginfo(f"LLM returned category: {link_category}")
-                    
+
                     if link_category in userdata.cabinet_categories:
-                        userdata.cabinet_num = userdata.cabinet_categories.index(link_category)
+                        userdata.cabinet_num = userdata.cabinet_categories.index(
+                            link_category
+                        )
                     else:
-                        userdata.cabinet_num = -1 
-                        
+                        userdata.cabinet_num = -1
+
                     return "succeeded"
 
                 except rospy.ServiceException as e:
                     rospy.logerr(f"service call failed: {e}")
                     return "failed"
-    
+
         else:
             rospy.logerr(f"Unknown task type: {self.task}")
             return "failed"

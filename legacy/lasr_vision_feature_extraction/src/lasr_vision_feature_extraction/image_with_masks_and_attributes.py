@@ -131,7 +131,7 @@ def _softmax(x: list[float]) -> list[float]:
 
 def _exp(x):
     """Compute e^x for a given x. A simple implementation of the exponential function."""
-    return 2.718281828459045**x  # Using an approximation of Euler's number e
+    return 2.718281828459045 ** x  # Using an approximation of Euler's number e
 
 
 class ImageWithMasksAndAttributes:

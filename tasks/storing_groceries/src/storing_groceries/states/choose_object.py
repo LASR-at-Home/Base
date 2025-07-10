@@ -1,6 +1,7 @@
 import smach
 import rospy
 
+
 class ChooseObject(smach.State):
     def __init__(self, category_filter=None):
         """
@@ -11,7 +12,7 @@ class ChooseObject(smach.State):
             outcomes=["succeeded", "failed", "empty"],
             input_keys=["table_objects", "not_graspable"],
             output_keys=["table_object"],
-        )       
+        )
         self.category_filter = category_filter
 
         # Define known category sets
@@ -62,9 +63,11 @@ class ChooseObject(smach.State):
 
         if best_obj:
             userdata.table_object = best_obj
-            #only for testing should remove this in the future.
+            # only for testing should remove this in the future.
             userdata.table_objects.remove(best_obj)
-            rospy.loginfo(f"Selected: {best_obj['name']} (conf: {best_obj['confidence']:.2f})")
+            rospy.loginfo(
+                f"Selected: {best_obj['name']} (conf: {best_obj['confidence']:.2f})"
+            )
             return "succeeded"
         else:
             rospy.loginfo("No suitable object found for this category.")

@@ -31,7 +31,6 @@ from typing import List, Literal
 
 
 class FindPersonAndTell(smach.StateMachine):
-
     class GetLocation(smach.State):
         def __init__(self):
             smach.State.__init__(
@@ -65,7 +64,6 @@ class FindPersonAndTell(smach.StateMachine):
             return "succeeded"
 
     class HandleDetections(smach.StateMachine):
-
         class GetResponse(smach.State):
             def __init__(self):
                 smach.State.__init__(
@@ -91,9 +89,7 @@ class FindPersonAndTell(smach.StateMachine):
                 return "succeeded"
 
         class ApproachPerson(smach.StateMachine):
-
             class ComputeApproachPose(smach.State):
-
                 def __init__(self):
                     smach.State.__init__(
                         self,

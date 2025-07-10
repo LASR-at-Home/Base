@@ -23,7 +23,7 @@
 # # e.g., get the planning frame for the 'arm' group
 # print(f"Planning frame for {group_names[0]}: {arm_group.get_planning_frame()}")
 
-# 
+#
 
 import sys
 import copy
@@ -41,7 +41,8 @@ except:
 
     def dist(p, q):
         return sqrt(sum(p_i - q_i in zip(p, q)))
-    
+
+
 from std_msgs.msg import String
 from moveit_commander.conversions import pose_to_list
 
@@ -51,12 +52,9 @@ rospy.init_node("send_goal_to_point", anonymous=True)
 robot = moveit_commander.RobotCommander()
 scene = moveit_commander.PlanningSceneInterface()
 
-#arm, arm_torso, gripper
+# arm, arm_torso, gripper
 group_name = "arm"
 move_group = moveit_commander.MoveGroupCommander(group_name)
-
-
-
 
 
 # #!/usr/bin/env python
@@ -75,13 +73,13 @@ move_group = moveit_commander.MoveGroupCommander(group_name)
 # from trajectory_msgs.msg import JointTrajectory
 # import math
 
-# USE_CLICKED_POINT = True      
-# TORSO_LIFT        = 0.25       
-# TABLE_THICK       = 0.01      
-# TABLE_Z           = 0.41       
-# VEL_SCALE         = 0.15     
+# USE_CLICKED_POINT = True
+# TORSO_LIFT        = 0.25
+# TABLE_THICK       = 0.01
+# TABLE_Z           = 0.41
+# VEL_SCALE         = 0.15
 # ACC_SCALE         = 0.15
-# STAMP_DELAY       = 0.25       
+# STAMP_DELAY       = 0.25
 
 # clicked_point = None
 # marker_pub    = None
@@ -138,10 +136,10 @@ move_group = moveit_commander.MoveGroupCommander(group_name)
 #     # tool_goal is the pose we want the gripper_link to reach
 #     tool_goal = PoseStamped()
 #     tool_goal.header.frame_id = arm.get_planning_frame()
-#     tool_goal.pose.position.x = x 
-#     tool_goal.pose.position.y = y 
+#     tool_goal.pose.position.x = x
+#     tool_goal.pose.position.y = y
 #     tool_goal.pose.position.z = z + box_offset_z
-#     # tool_goal.pose.position.z = z 
+#     # tool_goal.pose.position.z = z
 #     tool_goal.pose.orientation.w = 1.0
 
 #     # 1) Plan and execute move to tool_goal
@@ -303,4 +301,3 @@ move_group = moveit_commander.MoveGroupCommander(group_name)
 
 # if __name__ == "__main__":
 #     main()
-

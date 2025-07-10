@@ -45,7 +45,9 @@ class DetectDict(smach.State):
         self.frames = []
         sub = rospy.Subscriber(self.topic, Image, self.image_callback)
 
-        rospy.loginfo(f"[DetectDict] Collecting images from {self.topic} for {self.duration} seconds.")
+        rospy.loginfo(
+            f"[DetectDict] Collecting images from {self.topic} for {self.duration} seconds."
+        )
         start_time = time.time()
         while time.time() - start_time < self.duration:
             rospy.sleep(0.1)
@@ -70,11 +72,13 @@ class DetectDict(smach.State):
                     if key in names_seen:
                         continue
                     names_seen.add(key)
-                    detections.append({
-                        "name": det.name,
-                        "confidence": det.confidence,
-                        "bbox": det.xywh
-                    })
+                    detections.append(
+                        {
+                            "name": det.name,
+                            "confidence": det.confidence,
+                            "bbox": det.xywh,
+                        }
+                    )
 
             except rospy.ServiceException as e:
                 rospy.logwarn(f"[DetectDict] YOLO service failed: {e}")
@@ -82,6 +86,8 @@ class DetectDict(smach.State):
                 return "failed"
 
         userdata.detections = detections
-        rospy.loginfo(f"[DetectDict] Final detections (len={len(detections)}): {detections}")
+        rospy.loginfo(
+            f"[DetectDict] Final detections (len={len(detections)}): {detections}"
+        )
 
         return "succeeded" if detections else "failed"

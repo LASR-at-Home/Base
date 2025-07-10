@@ -272,7 +272,6 @@ class ProcessDetections(smach.State):
 
 
 class SeatGuest(smach.StateMachine):
-
     def __init__(
         self,
         seating_area: ShapelyPolygon,

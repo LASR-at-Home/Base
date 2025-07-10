@@ -1,5 +1,3 @@
-
-
 def main():
     rospy.init_node("lang_sam_state_machine")
 
@@ -8,13 +6,12 @@ def main():
         smach.StateMachine.add(
             "SEGMENT_DOOR",
             LangSamState(prompt="a door"),
-            transitions={"succeeded": "DONE", "failed": "FAILED"}
+            transitions={"succeeded": "DONE", "failed": "FAILED"},
         )
 
     outcome = sm.execute()
     rospy.loginfo(f"State machine outcome: {outcome}")
 
+
 if __name__ == "__main__":
     main()
-
-

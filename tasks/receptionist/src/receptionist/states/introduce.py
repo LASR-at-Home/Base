@@ -28,7 +28,6 @@ from lasr_vision_msgs.srv import (
 
 
 class ClearSeatingDetections(smach.State):
-
     def __init__(self):
         super().__init__(
             outcomes=["succeeded", "failed"],
@@ -298,7 +297,6 @@ class GetGuestData(smach.State):
 
 
 class GetIntroductionStr(smach.State):
-
     def __init__(self):
         super().__init__(
             outcomes=["succeeded", "failed"],

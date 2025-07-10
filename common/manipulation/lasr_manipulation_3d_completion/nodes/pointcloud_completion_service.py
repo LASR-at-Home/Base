@@ -10,7 +10,6 @@ from pointcloud_completion import complete_pointcloud, build_and_load_model
 
 
 class CompletionService:
-
     def __init__(self):
         rospy.loginfo("Initializing shape completion service...")
 

@@ -6,7 +6,6 @@ from lasr_skills import GoToLocation, Say
 
 
 class Guide(smach.StateMachine):
-
     def __init__(self, location_name: str, location_pose: Pose):
 
         smach.StateMachine.__init__(self, outcomes=["succeeded", "failed"])

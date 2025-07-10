@@ -7,7 +7,6 @@ from std_msgs.msg import Empty
 
 
 class Restaurant(smach.StateMachine):
-
     def __init__(self) -> None:
         super().__init__(outcomes=["succeeded", "failed"])
 

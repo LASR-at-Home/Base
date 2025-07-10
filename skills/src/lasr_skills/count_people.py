@@ -32,7 +32,6 @@ import itertools
 
 
 class CountPeople(smach.StateMachine):
-
     class GetLocation(smach.State):
         def __init__(self):
             smach.State.__init__(
@@ -66,7 +65,6 @@ class CountPeople(smach.StateMachine):
             return "succeeded"
 
     class HandleDetections(smach.StateMachine):
-
         class GetResponse(smach.State):
             def __init__(self):
                 smach.State.__init__(
@@ -200,7 +198,6 @@ class CountPeople(smach.StateMachine):
                     )
 
     class CountPeople(smach.State):
-
         def __init__(self):
             smach.State.__init__(
                 self,

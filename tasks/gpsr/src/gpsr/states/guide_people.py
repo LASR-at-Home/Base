@@ -16,9 +16,7 @@ pose = Pose(position=Point(**location['pose']['position'], orientation=Quaternio
 
 
 class WaitForPersonInArea(smach.StateMachine):
-
     class CheckForPerson(smach.State):
-
         def __init__(self):
             smach.State.__init__(
                 self, outcomes=["done", "not_done"], input_keys=["detections_3d"]

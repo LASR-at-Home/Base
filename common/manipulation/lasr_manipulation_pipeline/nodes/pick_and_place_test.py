@@ -25,7 +25,6 @@ MESH_NAME: str = "pringles.ply"
 
 
 class GraspingPipeline:
-
     def __init__(self):
 
         self._play_motion_client = actionlib.SimpleActionClient(

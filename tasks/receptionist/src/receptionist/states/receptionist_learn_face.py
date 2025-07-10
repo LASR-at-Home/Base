@@ -15,7 +15,6 @@ from cv_bridge import CvBridge
 
 
 class ReceptionistLearnFaces(smach.StateMachine):
-
     class CheckEyes(smach.State):
         """Checks if eyes are present in a given RGB image"""
 

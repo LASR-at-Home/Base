@@ -3,25 +3,52 @@ import smach
 from lasr_skills import Say, AdjustCamera, GoToLocation, DetectDict
 from storing_groceries.states import *
 
+
 class PourCereal(smach.StateMachine):
     def __init__(self, table_pose):
         super().__init__(
-            outcomes=["succeeded","failed",],
+            outcomes=[
+                "succeeded",
+                "failed",
+            ],
             input_keys=[],
         )
 
         self.table_pose = table_pose
         self.userdata.cereal = []
-        self.userdata.not_graspable = ["tv", "television", "chair", "table", "couch", "person", "dog", "cat", "monitor", "computer",
-                "fan", "microwave", "stove", "refrigerator", "cabinet", "door", "laptop", 
-                "printer", "keyboard", "plant", "sink", "bed", "sofa", "board"]
+        self.userdata.not_graspable = [
+            "tv",
+            "television",
+            "chair",
+            "table",
+            "couch",
+            "person",
+            "dog",
+            "cat",
+            "monitor",
+            "computer",
+            "fan",
+            "microwave",
+            "stove",
+            "refrigerator",
+            "cabinet",
+            "door",
+            "laptop",
+            "printer",
+            "keyboard",
+            "plant",
+            "sink",
+            "bed",
+            "sofa",
+            "board",
+        ]
 
         with self:
             self.go_to_table()
 
             smach.StateMachine.add(
                 "SAY_DETECT_CEREAL",
-                Say("Start detecting table for cereal and container"),                
+                Say("Start detecting table for cereal and container"),
                 transitions={
                     "succeeded": "DETECT_CEREAL",
                     "aborted": "DETECT_CEREAL",
@@ -36,7 +63,7 @@ class PourCereal(smach.StateMachine):
                     "succeeded": "CHOOSE_CEREAL",
                     "failed": "CHOOSE_CEREAL",
                 },
-                remapping = {'detections': 'table_objects'}
+                remapping={"detections": "table_objects"},
             )
 
             smach.StateMachine.add(
@@ -45,7 +72,7 @@ class PourCereal(smach.StateMachine):
                 transitions={
                     "succeeded": "SAY_DETECTED_CEREAL",
                     "failed": "SAY_NOT_DETECTED_CEREAL",
-                    "empty": "SAY_NOT_DETECTED_CEREAL", #should return escape in future 
+                    "empty": "SAY_NOT_DETECTED_CEREAL",  # should return escape in future
                 },
             )
 
@@ -67,7 +94,7 @@ class PourCereal(smach.StateMachine):
                     "aborted": "succeeded",
                     "preempted": "succeeded",
                 },
-            ) #recovery befaviour needed
+            )  # recovery befaviour needed
 
             smach.StateMachine.add(
                 "GRAB_OBJECT",
@@ -90,9 +117,8 @@ class PourCereal(smach.StateMachine):
             )
 
     def go_to_table(self) -> None:
-        """Adds the states to go to table area.
-        """
-        
+        """Adds the states to go to table area."""
+
         smach.StateMachine.add(
             f"GO_TO_CEREAL",
             GoToLocation(self.table_pose),
@@ -101,7 +127,7 @@ class PourCereal(smach.StateMachine):
                 "failed": f"SAY_ARRIVE_CEREAL",
             },
         )
-        
+
         smach.StateMachine.add(
             f"SAY_ARRIVE_CEREAL",
             Say(text="Arrive table"),

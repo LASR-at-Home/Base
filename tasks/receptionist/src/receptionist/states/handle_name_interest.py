@@ -229,7 +229,6 @@ class HandleNameInterest(smach.StateMachine):
                 )
 
     class GetAttributesAndLearnFace(smach.StateMachine):
-
         def __init__(self, guest_id: str):
 
             super().__init__(

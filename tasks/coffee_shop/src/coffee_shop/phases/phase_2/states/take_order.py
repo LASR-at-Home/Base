@@ -102,14 +102,17 @@ class TakeOrder(smach.State):
                 robot_pose = rospy.wait_for_message(
                     "/amcl_pose", PoseWithCovarianceStamped
                 ).pose.pose
-                target_orientation = R.from_quat(
-                    [
-                        robot_pose.orientation.x,
-                        robot_pose.orientation.y,
-                        robot_pose.orientation.z,
-                        robot_pose.orientation.w,
-                    ]
-                ) * R.from_euler("z", 180.0, degrees=True)
+                target_orientation = (
+                    R.from_quat(
+                        [
+                            robot_pose.orientation.x,
+                            robot_pose.orientation.y,
+                            robot_pose.orientation.z,
+                            robot_pose.orientation.w,
+                        ]
+                    )
+                    * R.from_euler("z", 180.0, degrees=True)
+                )
                 move_base_goal = MoveBaseGoal()
                 move_base_goal.target_pose.header.frame_id = "map"
                 move_base_goal.target_pose.pose = Pose(

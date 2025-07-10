@@ -9,7 +9,6 @@ import actionlib
 
 
 class NavigationCameraMgr:
-
     def __init__(self):
         self.previous_status = None
 

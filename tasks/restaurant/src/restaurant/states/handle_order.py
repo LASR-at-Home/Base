@@ -9,7 +9,6 @@ from lasr_llm_msgs.srv import (
 
 
 class HandleOrder(smach.State):
-
     def __init__(self):
 
         smach.StateMachine.__init__(

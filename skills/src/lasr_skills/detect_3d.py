@@ -50,7 +50,6 @@ class Detect3D(smach.State):
         self.yolo.wait_for_service()
 
     def execute(self, userdata):
-
         def callback(image_msg, depth_msg, cam_info_msg):
             self.data = (image_msg, depth_msg, cam_info_msg)
 

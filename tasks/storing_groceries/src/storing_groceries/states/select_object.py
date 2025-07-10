@@ -3,12 +3,13 @@ import smach
 from storing_groceries.states import ChooseObject
 from lasr_skills import Say
 
+
 class SelectObject(smach.StateMachine):
     def __init__(self):
         super().__init__(
             outcomes=["succeeded", "failed", "escape"],
             input_keys=["table_objects", "not_graspable"],
-            output_keys=["table_object"]
+            output_keys=["table_object"],
         )
 
         with self:
@@ -18,10 +19,6 @@ class SelectObject(smach.StateMachine):
                 transitions={
                     "succeeded": "succeeded",
                     "failed": "succeeded",
-                    "empty": "escape", #should return escape in future 
+                    "empty": "escape",  # should return escape in future
                 },
             )
-            
-            
-
-    

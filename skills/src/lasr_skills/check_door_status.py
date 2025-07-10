@@ -12,12 +12,23 @@ from sklearn.cluster import KMeans
 
 
 class CheckDoorStatus(smach.State):
-    def __init__(self, expected_closed_depth=None, roi=None, change_thresh=0.5, open_thresh=0.6, score_thresh=1.0):
+    def __init__(
+        self,
+        expected_closed_depth=None,
+        roi=None,
+        change_thresh=0.5,
+        open_thresh=0.6,
+        score_thresh=1.0,
+    ):
         smach.State.__init__(self, outcomes=["open", "closed", "error"])
         self.expected_depth = expected_closed_depth  # trusted, map-based depth
-        self.change_thresh = change_thresh  # how much observed baseline can differ from expected
+        self.change_thresh = (
+            change_thresh  # how much observed baseline can differ from expected
+        )
         self.open_thresh = open_thresh  # how much deeper to consider door open
-        self.score_thresh = score_thresh  # minimum weighted score to confirm door is open
+        self.score_thresh = (
+            score_thresh  # minimum weighted score to confirm door is open
+        )
 
         self.roi = roi
 
@@ -25,7 +36,9 @@ class CheckDoorStatus(smach.State):
         self.latest_cloud = None
         self.ready = False
 
-        self.sub = rospy.Subscriber("/xtion/depth_pointsros", PointCloud2, self.callback)
+        self.sub = rospy.Subscriber(
+            "/xtion/depth_pointsros", PointCloud2, self.callback
+        )
 
     def callback(self, msg):
         with self.lock:
@@ -37,14 +50,18 @@ class CheckDoorStatus(smach.State):
             if self.latest_cloud is None:
                 return None, "no_data"
             try:
-                cloud = ros_numpy.point_cloud2.pointcloud2_to_xyz_array(self.latest_cloud, remove_nans=True)
+                cloud = ros_numpy.point_cloud2.pointcloud2_to_xyz_array(
+                    self.latest_cloud, remove_nans=True
+                )
 
                 if self.roi is None:
                     self.roi = self.auto_roi(cloud)
 
                 mask = (
-                    (cloud[:, 0] > self.roi['x'][0]) & (cloud[:, 0] < self.roi['x'][1]) &
-                    (cloud[:, 1] > self.roi['y'][0]) & (cloud[:, 1] < self.roi['y'][1])
+                    (cloud[:, 0] > self.roi["x"][0])
+                    & (cloud[:, 0] < self.roi["x"][1])
+                    & (cloud[:, 1] > self.roi["y"][0])
+                    & (cloud[:, 1] < self.roi["y"][1])
                 )
                 roi_points = cloud[mask]
 
@@ -60,7 +77,7 @@ class CheckDoorStatus(smach.State):
     def auto_roi(self, cloud):
         x_min, x_max = np.percentile(cloud[:, 0], [40, 60])
         y_min, y_max = np.percentile(cloud[:, 1], [40, 60])
-        return {'x': (x_min, x_max), 'y': (y_min, y_max), 'z': (0.3, 4.0)}
+        return {"x": (x_min, x_max), "y": (y_min, y_max), "z": (0.3, 4.0)}
 
     def analyze_depth(self, depth_data):
         if depth_data is None or len(depth_data) == 0:
@@ -73,20 +90,26 @@ class CheckDoorStatus(smach.State):
         edge_drop = np.max(np.abs(np.diff(sorted_data))) > 0.5
         multi_cluster = self.cluster_depths(sorted_data)
 
-        rospy.loginfo("Avg: %.3f, Var: %.4f, Grad: %.4f, EdgeDrop: %s, MultiCluster: %s",
-                      avg, variance, gradient, edge_drop, multi_cluster)
+        rospy.loginfo(
+            "Avg: %.3f, Var: %.4f, Grad: %.4f, EdgeDrop: %s, MultiCluster: %s",
+            avg,
+            variance,
+            gradient,
+            edge_drop,
+            multi_cluster,
+        )
 
         return {
             "avg": avg,
             "variance": variance,
             "gradient": gradient,
             "edge_drop": edge_drop,
-            "multi_cluster": multi_cluster
+            "multi_cluster": multi_cluster,
         }
 
     def cluster_depths(self, depth_data):
         try:
-            kmeans = KMeans(n_clusters=2, n_init='auto').fit(depth_data.reshape(-1, 1))
+            kmeans = KMeans(n_clusters=2, n_init="auto").fit(depth_data.reshape(-1, 1))
             centers = np.sort(kmeans.cluster_centers_.flatten())
             return abs(centers[1] - centers[0]) > 0.3
         except Exception:
@@ -126,12 +149,16 @@ class CheckDoorStatus(smach.State):
 
         if self.expected_depth is not None:
             if observed_avg > self.expected_depth + self.change_thresh:
-                rospy.logwarn("Observed baseline is deeper than expected — validating with structure...")
+                rospy.logwarn(
+                    "Observed baseline is deeper than expected — validating with structure..."
+                )
                 if observed_result["edge_drop"] or observed_result["multi_cluster"]:
                     rospy.logwarn("Also found structural cues — likely open")
                     return "open"
                 else:
-                    rospy.loginfo("Deeper but structurally consistent — trusting as closed")
+                    rospy.loginfo(
+                        "Deeper but structurally consistent — trusting as closed"
+                    )
             else:
                 rospy.loginfo("Baseline matches expected — trusting it")
         else:
@@ -158,7 +185,9 @@ class CheckDoorStatus(smach.State):
         if result["edge_drop"]:
             open_score += 1.0
 
-        rospy.loginfo("Open score: %.2f (threshold: %.2f)", open_score, self.score_thresh)
+        rospy.loginfo(
+            "Open score: %.2f (threshold: %.2f)", open_score, self.score_thresh
+        )
 
         if open_score >= self.score_thresh:
             return "open"
@@ -176,18 +205,23 @@ def main():
     with sm:
         smach.StateMachine.add(
             "CHECK_DOOR_STATUS",
-            CheckDoorStatus(expected_closed_depth=2, change_thresh=0.4, open_thresh=0.6, score_thresh=1.0),
+            CheckDoorStatus(
+                expected_closed_depth=2,
+                change_thresh=0.4,
+                open_thresh=0.6,
+                score_thresh=1.0,
+            ),
             transitions={
                 "open": "SAY_DOOR_STATUS",
                 "closed": "DONE",
                 "no_object": "FAILED",
-                "error": "FAILED"
-            }
+                "error": "FAILED",
+            },
         )
 
         smach.StateMachine.add(
             "SAY_DOOR_STATUS",
-            Say(text = "Door is open"),
+            Say(text="Door is open"),
             transitions={
                 "succeeded": f"DONE",
                 "aborted": f"DONE",

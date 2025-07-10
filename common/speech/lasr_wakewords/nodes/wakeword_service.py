@@ -17,7 +17,6 @@ from lasr_speech_recognition_msgs.srv import (
 
 
 class WakewordService:
-
     def __init__(self, device_index: int, sample_rate: int, frame_samples: int):
         self._device_index = device_index
         self._sample_rate = sample_rate

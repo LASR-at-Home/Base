@@ -10,7 +10,6 @@ from lasr_vision_msgs.srv import (
 
 
 class ValidateKeypoints(smach.State):
-
     def __init__(
         self,
         keypoints_to_detect: List[str],

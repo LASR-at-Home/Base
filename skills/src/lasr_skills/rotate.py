@@ -9,7 +9,6 @@ from scipy.spatial.transform import Rotation as R
 
 
 class Rotate(smach.StateMachine):
-
     class GetRotatedPose(smach.State):
         def __init__(self, angle: Optional[float] = None):
             super().__init__(

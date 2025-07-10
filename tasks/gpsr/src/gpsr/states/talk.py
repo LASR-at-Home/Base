@@ -18,9 +18,9 @@ class Talk(smach.StateMachine):
 
         def _create_responses(self) -> Dict[str, str]:
             response = {}
-            response["something about yourself"] = (
-                "I am a Tiago -- a helpful assistive robot developed by PAL Robotics."
-            )
+            response[
+                "something about yourself"
+            ] = "I am a Tiago -- a helpful assistive robot developed by PAL Robotics."
             current_time = time.strftime("%H:%M")
             response["the_time"] = f"The current time is {current_time}."
             current_day = time.strftime("%A")
@@ -29,16 +29,16 @@ class Talk(smach.StateMachine):
             response["what_day_is_tomorrow"] = f"Tomorrow is {tomorrow}."
             response["your_teams_name"] = "Our team is called LASR."
             response["your_teams_country"] = "Our team is from the United Kingdom."
-            response["your_teams_affiliation"] = (
-                "Our team is affiliated with King's College London."
-            )
+            response[
+                "your_teams_affiliation"
+            ] = "Our team is affiliated with King's College London."
             day_of_the_week = current_day
             day_of_the_month = time.strftime("%d")
             response["the_day_of_the_week"] = f"Today is {day_of_the_week}."
 
-            response["the_day_of_the_month"] = (
-                f"The_day_of_the_month_is {day_of_the_month}."
-            )
+            response[
+                "the_day_of_the_month"
+            ] = f"The_day_of_the_month_is {day_of_the_month}."
             return response
 
         def execute(self, userdata):

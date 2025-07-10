@@ -42,9 +42,7 @@ class ParseCommand(smach.State):
 
 
 class CommandParserStateMachine(smach.StateMachine):
-
     class CheckResponse(smach.State):
-
         def __init__(self):
             smach.State.__init__(
                 self,
@@ -58,7 +56,6 @@ class CommandParserStateMachine(smach.StateMachine):
             return "incorrect"
 
     class QRCodeToCommand(smach.StateMachine):
-
         class DetectQRCode(smach.State):
 
             _qr_code_detector: cv2.QRCodeDetector

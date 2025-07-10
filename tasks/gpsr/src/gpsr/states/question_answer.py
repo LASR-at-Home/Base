@@ -4,7 +4,6 @@ from lasr_skills import AskAndListen, JsonQuestionAnswer, Say
 
 
 class QuestionAnswer(smach.StateMachine):
-
     def __init__(self, index_path: str, txt_path: str, json_path: str, k: int = 1):
         smach.StateMachine.__init__(
             self,

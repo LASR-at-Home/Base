@@ -7,7 +7,6 @@ from lasr_speech_recognition_msgs.srv import Wakeword, WakewordRequest
 
 
 class ListenForWakeword(smach.StateMachine):
-
     def __init__(
         self, wakeword: Union[str, List[str]], timeout: float, threshold: float
     ) -> None:

@@ -26,7 +26,6 @@ cloth_type_rough_map = {
 
 
 class DetectClothing(smach.StateMachine):
-
     def __init__(self, clothing_to_detect: Optional[str] = None):
         """
         clothing_to_detect: "blue shirt"

@@ -32,7 +32,6 @@ import itertools
 
 
 class FindPerson(smach.StateMachine):
-
     class GetLocation(smach.State):
         def __init__(self):
             smach.State.__init__(
@@ -66,7 +65,6 @@ class FindPerson(smach.StateMachine):
             return "succeeded"
 
     class HandleDetections(smach.StateMachine):
-
         class GetResponse(smach.State):
             def __init__(self):
                 smach.State.__init__(
@@ -92,9 +90,7 @@ class FindPerson(smach.StateMachine):
                 return "succeeded"
 
         class ApproachPerson(smach.StateMachine):
-
             class ComputeApproachPose(smach.State):
-
                 def __init__(self):
                     smach.State.__init__(
                         self,
@@ -180,7 +176,6 @@ class FindPerson(smach.StateMachine):
                 if criteria == "name":
 
                     class HandleSpeechResponse(smach.State):
-
                         def __init__(self):
                             smach.State.__init__(
                                 self,
