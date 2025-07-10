@@ -44,3 +44,31 @@ class ListenForWakeword(smach.StateMachine):
                 ),
                 transitions={"succeeded": "succeeded", "failed": "failed"},
             )
+
+
+if __name__ == "__main__":
+    import rospy
+
+    rospy.init_node('test_wakeword')
+
+    print("Testing Wakeword Detection")
+    print("=" * 30)
+
+    # Test 1: Only 'no'
+    print("\nTest 1: Say 'no' (10 seconds)")
+    sm1 = ListenForWakeword(wakeword="no", timeout=10.0, threshold=0.15)
+    outcome1 = sm1.execute()
+    print(f"Result: {outcome1}")
+    if 'keyword' in sm1.userdata:
+        print(f"Detected: {sm1.userdata.keyword}")
+
+    # Test 2: 'yes' or 'no'
+    print("\nTest 2: Say 'yes' or 'no' (10 seconds)")
+    sm2 = ListenForWakeword(wakeword=["yes", "no", "hi_tiago"], timeout=10.0, threshold=0.15)
+    outcome2 = sm2.execute()
+    print(f"Result: {outcome2}")
+    if 'keyword' in sm2.userdata:
+        print(f"Detected: {sm2.userdata.keyword}")
+
+    print("\nTests completed!")
+

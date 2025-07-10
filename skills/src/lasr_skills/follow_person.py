@@ -15,6 +15,7 @@ from rospy import ServiceException
 from scipy.spatial.transform import Rotation as R
 from lasr_skills.listen_for_wakeword import ListenForWakeword
 from lasr_skills.rotate import Rotate
+from lasr_skills.detect_gesture_3d import DetectHandUp3D
 from std_msgs.msg import Bool
 from geometry_msgs.msg import (
     Point,
@@ -391,51 +392,51 @@ class FollowPerson(smach.StateMachine):
             "last_leg_tracker_time": rospy.Time(0),
         }
 
-        # try:
-        #     # Set costmap size using userdata parameters
-        #     config = Config()
-        #     config.ints.append(
-        #         IntParameter(name="width", value=self.shared_data.costmap_width)
-        #     )
-        #     config.ints.append(
-        #         IntParameter(name="height", value=self.shared_data.costmap_height)
-        #     )
-        #     self.dynamic_costmap(config)
-        #
-        #     # Set maximum velocity
-        #     config = Config()
-        #     config.doubles.append(
-        #         DoubleParameter(name="max_vel_x", value=self.shared_data.max_speed)
-        #     )
-        #     self.dynamic_velocity(config)
-        #
-        #     # Disable recovery behaviors
-        #     config = Config()
-        #     config.bools.append(
-        #         BoolParameter(name="recovery_behavior_enabled", value=0)
-        #     )
-        #     config.bools.append(
-        #         BoolParameter(name="clearing_rotation_allowed", value=0)
-        #     )
-        #     self.dynamic_recovery(config)
-        #
-        #     # Set local costmap inflation radius
-        #     config = Config()
-        #     config.bools.append(BoolParameter(name="enabled", value=1))
-        #     config.doubles.append(
-        #         DoubleParameter(
-        #             name="inflation_radius", value=self.shared_data.inflation_radius
-        #         )
-        #     )
-        #     self.dynamic_local_costmap(config)
-        #
-        #     # Clear existing costmaps
-        #     rospy.ServiceProxy("/move_base/clear_costmaps", Empty)()
-        #
-        #     rospy.sleep(0.1)
-        #     rospy.loginfo("Navigation parameters configured")
-        # except Exception as e:
-        #     rospy.logwarn(f"Failed to configure navigation: {e}")
+        try:
+            # Set costmap size using userdata parameters
+            config = Config()
+            config.ints.append(
+                IntParameter(name="width", value=self.shared_data.costmap_width)
+            )
+            config.ints.append(
+                IntParameter(name="height", value=self.shared_data.costmap_height)
+            )
+            self.dynamic_costmap(config)
+
+            # Set maximum velocity
+            config = Config()
+            config.doubles.append(
+                DoubleParameter(name="max_vel_x", value=self.shared_data.max_speed)
+            )
+            self.dynamic_velocity(config)
+
+            # Disable recovery behaviors
+            config = Config()
+            config.bools.append(
+                BoolParameter(name="recovery_behavior_enabled", value=0)
+            )
+            config.bools.append(
+                BoolParameter(name="clearing_rotation_allowed", value=0)
+            )
+            self.dynamic_recovery(config)
+
+            # Set local costmap inflation radius
+            config = Config()
+            config.bools.append(BoolParameter(name="enabled", value=1))
+            config.doubles.append(
+                DoubleParameter(
+                    name="inflation_radius", value=self.shared_data.inflation_radius
+                )
+            )
+            self.dynamic_local_costmap(config)
+
+            # Clear existing costmaps
+            rospy.ServiceProxy("/move_base/clear_costmaps", Empty)()
+
+            rospy.sleep(0.1)
+            rospy.loginfo("Navigation parameters configured")
+        except Exception as e:
+            rospy.logwarn(f"Failed to configure navigation: {e}")
 
         # Build the state machine structure
         self._build_state_machine()
@@ -462,55 +463,55 @@ class FollowPerson(smach.StateMachine):
                 },
             )
 
-            # smach.StateMachine.add(
-            #     "TRACKING_ACTIVE",
-            #     TrackingActiveState(self),
-            #     transitions={
-            #         "navigation_started": "NAVIGATION",
-            #         "target_lost": "RECOVERY_SCANNING",
-            #         "following_complete": "WAKEWORD",
-            #         "failed": "WAKEWORD",
-            #     },
-            # )
+            smach.StateMachine.add(
+                "TRACKING_ACTIVE",
+                TrackingActiveState(self),
+                transitions={
+                    "navigation_started": "NAVIGATION",
+                    "target_lost": "RECOVERY_SCANNING",
+                    "following_complete": "WAKEWORD",
+                    "failed": "WAKEWORD",
+                },
+            )
 
             if self.fallback:
-                smach.StateMachine.add(
-                    "TRACKING_ACTIVE",
-                    TrackingActiveState(self),
-                    transitions={
-                        "navigation_started": "NAVIGATION",
-                        "target_lost": "RECOVERY_SCANNING",
-                        "following_complete": "Fallback",
-                        "failed": "failed",
-                    },
-                )
                 # smach.StateMachine.add(
-                #     "WAKEWORD",
-                #     ListenForWakeword(wakeword="no", timeout=5.0, threshold=0.3),
+                #     "TRACKING_ACTIVE",
+                #     TrackingActiveState(self),
                 #     transitions={
-                #         "failed": "Fallback",
-                #         "succeeded": "PERSON_DETECTION",
+                #         "navigation_started": "NAVIGATION",
+                #         "target_lost": "RECOVERY_SCANNING",
+                #         "following_complete": "Fallback",
+                #         "failed": "failed",
                 #     },
                 # )
+                smach.StateMachine.add(
+                    "WAKEWORD",
+                    ListenForWakeword(wakeword="no", timeout=5.0, threshold=0.1),
+                    transitions={
+                        "failed": "Fallback",
+                        "succeeded": "PERSON_DETECTION",
+                    },
+                )
             else:
-                smach.StateMachine.add(
-                    "TRACKING_ACTIVE",
-                    TrackingActiveState(self),
-                    transitions={
-                        "navigation_started": "NAVIGATION",
-                        "target_lost": "RECOVERY_SCANNING",
-                        "following_complete": "succeeded",
-                        "failed": "failed",
-                    },
-                )
                 # smach.StateMachine.add(
-                #     "WAKEWORD",
-                #     ListenForWakeword(wakeword="no", timeout=5.0, threshold=0.3),
+                #     "TRACKING_ACTIVE",
+                #     TrackingActiveState(self),
                 #     transitions={
-                #         "failed": "succeeded",
-                #         "succeeded": "PERSON_DETECTION",
+                #         "navigation_started": "NAVIGATION",
+                #         "target_lost": "RECOVERY_SCANNING",
+                #         "following_complete": "succeeded",
+                #         "failed": "failed",
                 #     },
                 # )
+                smach.StateMachine.add(
+                    "WAKEWORD",
+                    ListenForWakeword(wakeword="no", timeout=5.0, threshold=0.1),
+                    transitions={
+                        "failed": "succeeded",
+                        "succeeded": "PERSON_DETECTION",
+                    },
+                )
 
             smach.StateMachine.add(
                 "NAVIGATION",
@@ -1998,7 +1999,7 @@ class RecoveryScanningState(smach.State):
                 self.sm_manager.move_base_client.cancel_all_goals()
             self.sm_manager.shared_data.is_navigation_active = False
 
-            # Initialise recovery mode
+            # Initialize recovery mode
             self.sm_manager.shared_data.recovery_mode_active = True
             self.sm_manager.shared_data.current_scan_index = 0
             self.sm_manager.shared_data.recovery_start_time = rospy.Time.now()
@@ -2016,14 +2017,138 @@ class RecoveryScanningState(smach.State):
             return "failed"
 
     class CheckHandupState(smach.State):
-        """Check handup gesture - placeholder"""
+        """Check for hand-up gestures and set new tracking target if found"""
 
         def __init__(self, sm_manager):
-            smach.State.__init__(self, outcomes=["continue"])
+            smach.State.__init__(
+                self,
+                outcomes=["new_target_found", "continue"],
+                input_keys=[],
+                output_keys=[]
+            )
             self.sm_manager = sm_manager
+            # Initialize DetectHandUp3D skill
+            self.detect_handup = DetectHandUp3D(
+                yolo_model="yolo11n-pose.pt",
+                yolo_confidence=0.5,
+                target_frame="map"
+            )
 
         def execute(self, userdata):
+            # Check if sensor data is available
+            if not (self.sm_manager.shared_data.current_image and
+                    self.sm_manager.shared_data.depth_image and
+                    self.sm_manager.shared_data.camera_info):
+                return "continue"
+
+            # Prepare userdata for DetectHandUp3D
+            handup_userdata = smach.UserData()
+            handup_userdata.img_msg = self.sm_manager.shared_data.current_image
+            handup_userdata.depth_msg = self.sm_manager.shared_data.depth_image
+            handup_userdata.camera_info = self.sm_manager.shared_data.camera_info
+
+            # Execute hand-up detection
+            result = self.detect_handup.execute(handup_userdata)
+
+            if result == "succeeded" and handup_userdata.detected_people:
+                # Sort by distance and get the nearest person
+                nearest_person = handup_userdata.detected_people[0]
+
+                rospy.loginfo(f"Hand-up detected! Setting new tracking target at distance {nearest_person.name}")
+
+                # Set new tracking target based on hand-up detection
+                self._set_new_tracking_target(nearest_person)
+
+                # Announce new target found
+                self.sm_manager._tts("I see you waving! Following you now.", wait=False)
+
+                return "new_target_found"
+
             return "continue"
+
+        def _set_new_tracking_target(self, detection):
+            """Set new tracking target based on hand-up detection"""
+            # Get robot pose for coordinate transformation
+            try:
+                transform = self.sm_manager.tf_buffer.lookup_transform(
+                    "map", "base_link", rospy.Time(0), rospy.Duration(1.0)
+                )
+                robot_x = transform.transform.translation.x
+                robot_y = transform.transform.translation.y
+            except Exception as e:
+                rospy.logerr(f"Failed to get robot pose: {e}")
+                return
+
+            # Create a mock YOLO detection for the hand-up person
+            # This ensures compatibility with existing tracking system
+            detected_people = {"xywh": [], "point": []}
+
+            # Create a dummy bounding box (will be updated by SAM2)
+            dummy_bbox = [0, 0, 100, 100]  # Will be refined by tracking
+            detected_people["xywh"].append(dummy_bbox)
+            detected_people["point"].append(detection.point)
+
+            # Store YOLO tracking information
+            self.sm_manager.shared_data.track_bbox = dummy_bbox
+            self.sm_manager.shared_data.track_id = 0
+
+            # Setup SAM2 tracking for the hand-up person
+            bbox_msg = BboxWithFlag()
+            bbox_msg.obj_id = 0
+            bbox_msg.reset = False
+            bbox_msg.clear_old_points = True
+            bbox_msg.xywh = dummy_bbox
+
+            prompt_msg = PromptArrays()
+            prompt_msg.bbox_array = [bbox_msg]
+            prompt_msg.point_array = []
+            prompt_msg.reset = True
+            self.sm_manager.prompt_pub.publish(prompt_msg)
+            rospy.sleep(0.5)
+
+            # Start tracking
+            self.sm_manager.track_flag_pub.publish(Bool(data=True))
+            rospy.sleep(0.1)
+
+            # Try to match with leg tracker
+            try:
+                tracks = rospy.wait_for_message("/people_tracked", PersonArray, timeout=1.0)
+                people = tracks.people
+
+                if people:
+                    # Find leg tracker person closest to hand-up person
+                    min_dist = float("inf")
+                    closest_leg_person = None
+
+                    for person in people:
+                        dx = person.pose.position.x - detection.point.x
+                        dy = person.pose.position.y - detection.point.y
+                        dist = math.hypot(dx, dy)
+
+                        if dist < min_dist:
+                            min_dist = dist
+                            closest_leg_person = person
+
+                    if closest_leg_person:
+                        self.sm_manager.shared_data.track_id_leg = closest_leg_person.id
+                        rospy.loginfo(f"Matched with leg tracker ID: {closest_leg_person.id}")
+                    else:
+                        self.sm_manager.shared_data.track_id_leg = None
+                else:
+                    self.sm_manager.shared_data.track_id_leg = None
+
+            except Exception as e:
+                rospy.logwarn(f"Failed to get leg tracker data: {e}")
+                self.sm_manager.shared_data.track_id_leg = None
+
+            # Update tracking state
+            self.sm_manager.condition_frame_flag_pub.publish(Bool(data=True))
+            self.sm_manager.shared_data.condition_flag_state = True
+            self.sm_manager.shared_data.is_person_detected = True
+            self.sm_manager.shared_data.last_good_detection_time = rospy.Time.now()
+            self.sm_manager.shared_data.last_movement_time = rospy.Time.now()
+            self.sm_manager.shared_data.added_new_target_time = rospy.Time.now()
+            self.sm_manager.shared_data.last_reselect_legs_time = rospy.Time.now()
 
     class ScanningState(smach.State):
         """Main scanning loop"""
@@ -2162,7 +2287,8 @@ class RecoveryScanningState(smach.State):
                                                 "failed": "failed"})
 
             smach.StateMachine.add("CHECK_HANDUP", self.CheckHandupState(self.sm_manager),
-                                   transitions={"continue": "SCANNING"})
+                                   transitions={"new_target_found": "target_recovered",
+                                                "continue": "SCANNING"})
 
             smach.StateMachine.add("ROTATE_180", self.Rotate180WithRecoveryCheck(self.sm_manager),
                                    transitions={"rotation_complete": "SCANNING",

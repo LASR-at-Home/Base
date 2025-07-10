@@ -173,6 +173,7 @@ catkin_install_python(PROGRAMS
   scripts/unit_test_adjust_camera.py
   src/lasr_skills/follow_person.py
   src/lasr_skills/detect_gesture_3d.py
+  src/lasr_skills/listen_for_wakeword.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
