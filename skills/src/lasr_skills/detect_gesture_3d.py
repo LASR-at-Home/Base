@@ -120,7 +120,7 @@ class DetectGesture3D(smach.State):
 
             # Calculate distance from robot base (assuming base_footprint at origin)
             distance = np.sqrt(
-                center_point.x ** 2 + center_point.y ** 2 + center_point.z ** 2
+                center_point.x**2 + center_point.y**2 + center_point.z**2
             )
 
             # Detect gesture for this person
@@ -416,7 +416,7 @@ class DetectHandUp3D(DetectGesture3D):
 
             # Calculate distance from robot base
             distance = np.sqrt(
-                center_point.x ** 2 + center_point.y ** 2 + center_point.z ** 2
+                center_point.x**2 + center_point.y**2 + center_point.z**2
             )
 
             # Detect gesture for this person

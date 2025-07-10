@@ -144,7 +144,7 @@ def estimate_ransac_params(
     # number of iterations for desired success probability
     import math
 
-    its = int(math.log(1 - success_prob) / math.log(1 - p_inlier ** sample_size))
+    its = int(math.log(1 - success_prob) / math.log(1 - p_inlier**sample_size))
     return distances, max(its, 1000)
 
 
@@ -325,7 +325,7 @@ def register_object(
 ):
     res = estimate_resolution(src_pcd)
     best_T, best_fit, best_rmse = None, -1.0, np.inf
-    seeds = np.random.randint(0, 2 ** 32 - 1, size=max_attempts)
+    seeds = np.random.randint(0, 2**32 - 1, size=max_attempts)
 
     if scale:
         # Optional: Estimate scale between source and target and normalize

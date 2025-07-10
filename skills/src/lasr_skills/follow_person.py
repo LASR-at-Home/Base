@@ -1205,7 +1205,7 @@ class FollowPerson(smach.StateMachine):
 
                 # Normalize the horizontal direction
                 if x_dir != 0 or y_dir != 0:
-                    norm = math.sqrt(x_dir ** 2 + y_dir ** 2)
+                    norm = math.sqrt(x_dir**2 + y_dir**2)
                     x_dir = x_dir / norm
                     y_dir = y_dir / norm
                 else:

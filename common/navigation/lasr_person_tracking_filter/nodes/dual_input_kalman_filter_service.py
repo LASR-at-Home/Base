@@ -577,7 +577,7 @@ class PersonTrackingDualInputKalmanFilterService:
                     obs_x, obs_y = sensor_data["x"], sensor_data["y"]
 
                 # Apply single sensor update
-                self.kf.R = np.eye(2) * (noise ** 2)
+                self.kf.R = np.eye(2) * (noise**2)
                 z = np.array([obs_x, obs_y])
                 self.kf.update(z)
 
@@ -618,12 +618,12 @@ class PersonTrackingDualInputKalmanFilterService:
 
                 # Sequential updates - no dimension changes needed!
                 # First update with sensor A
-                self.kf.R = np.eye(2) * (noise_a ** 2)
+                self.kf.R = np.eye(2) * (noise_a**2)
                 z_a = np.array([data_a["x"], data_a["y"]])
                 self.kf.update(z_a)
 
                 # Then update with sensor B (using the updated state)
-                self.kf.R = np.eye(2) * (noise_b ** 2)
+                self.kf.R = np.eye(2) * (noise_b**2)
                 z_b = np.array([data_b["x"], data_b["y"]])
                 self.kf.update(z_b)
 

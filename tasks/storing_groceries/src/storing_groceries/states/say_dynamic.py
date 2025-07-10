@@ -104,9 +104,11 @@ else:
                     TtsAction,
                     goal_cb=lambda ud, _: TtsGoal(
                         rawtext=TtsText(
-                            text=format_str.format(*ud.placeholders)
-                            if isinstance(ud.placeholders, (list, tuple))
-                            else format_str.format(ud.placeholders),
+                            text=(
+                                format_str.format(*ud.placeholders)
+                                if isinstance(ud.placeholders, (list, tuple))
+                                else format_str.format(ud.placeholders)
+                            ),
                             lang_id="en_GB",
                         )
                     ),

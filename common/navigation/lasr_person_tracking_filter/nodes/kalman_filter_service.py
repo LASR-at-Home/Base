@@ -172,7 +172,7 @@ class PersonTrackingKalmanFilterService:
             # Adjust measurement noise based on detection quality
             # Lower quality = higher noise
             measurement_noise = 0.05 / max(detection_quality, 0.1)  # 5cm to 50cm
-            self.kf.R = np.eye(2) * (measurement_noise ** 2)
+            self.kf.R = np.eye(2) * (measurement_noise**2)
 
             # Predict step
             self.kf.predict()

@@ -336,7 +336,7 @@ class PersonFollower:
                 # Normalize the direction and set distance
                 distance = 3.0
                 if x_dir != 0 or y_dir != 0:
-                    norm = math.sqrt(x_dir ** 2 + y_dir ** 2)
+                    norm = math.sqrt(x_dir**2 + y_dir**2)
                     x_dir = (x_dir / norm) * distance
                     y_dir = (y_dir / norm) * distance
                 else:
