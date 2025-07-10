@@ -1,235 +1,186 @@
-import navigation_helpers
-import numpy as np
+from typing import Tuple
 import rospy
 import smach
 import smach_ros
-from geometry_msgs.msg import Pose, PoseStamped, PoseWithCovarianceStamped, Quaternion
-from lasr_skills import DetectGesture, GoToLocation, PlayMotion, Rotate
-from lasr_vision_msgs.msg import CDRequest, CDResponse
-from lasr_vision_msgs.srv import CroppedDetection, CroppedDetectionRequest
-from scipy.spatial.transform import Rotation as R
+import numpy as np
+from control_msgs.msg import FollowJointTrajectoryAction, FollowJointTrajectoryGoal
+from trajectory_msgs.msg import JointTrajectoryPoint, JointTrajectory
+from lasr_skills import Detect3D
+import actionlib
+import math
 
 
 class Survey(smach.StateMachine):
+    """
+    Looks left and right, detecting waving people.
+    At the end, outputs the closest waving person.
+    """
 
-    class HandleDetections(smach.StateMachine):
-        class GetResponse(smach.State):
-            def __init__(self):
-                super().__init__(
-                    outcomes=["succeeded", "failed"],
-                    input_keys=["responses"],
-                    output_keys=[
-                        "response",
-                        "responses",
-                        "person_point",
-                        "cropped_image",
-                    ],
-                )
-
-            def execute(self, userdata):
-                if len(userdata.responses[0].detections_3d) == 0:
-                    rospy.logwarn("No response available, returning failed.")
-                    return "failed"
-                response = userdata.responses[0].detections_3d.pop(0)
-                userdata.response = response
-                userdata.cropped_image = userdata.responses[0].cropped_imgs.pop(0)
-                userdata.person_point = response.point
-                return "succeeded"
-
-        class ComputeApproachPose(smach.State):
-
-            def __init__(self):
-
-                super().__init__(
-                    outcomes=["succeeded", "failed"],
-                    input_keys=["person_point"],
-                    output_keys=["customer_approach_pose"],
-                )
-
-            def execute(self, userdata):
-                robot_pose_with_covariance = rospy.wait_for_message(
-                    "/robot_pose", PoseWithCovarianceStamped
-                )
-                robot_pose = PoseStamped(
-                    pose=robot_pose_with_covariance.pose.pose,
-                    header=robot_pose_with_covariance.header,
-                )
-
-                person_pose = PoseStamped(
-                    pose=Pose(
-                        position=userdata.person_point,
-                        orientation=robot_pose.pose.orientation,
-                    ),
-                    header=robot_pose.header,
-                )
-                approach_pose = navigation_helpers.get_pose_on_path(
-                    robot_pose,
-                    person_pose,
-                )
-                rospy.loginfo(approach_pose)
-
-                if approach_pose is None:
-                    return "failed"
-
-                approach_pose.pose.orientation = navigation_helpers.compute_face_quat(
-                    approach_pose.pose,
-                    person_pose.pose,
-                )
-                userdata.customer_approach_pose = approach_pose.pose
-
-                return "succeeded"
-
-        def __init__(self):
-            super().__init__(
-                outcomes=["succeeded", "failed"],
-                input_keys=["responses"],
-                output_keys=["responses", "customer_approach_pose"],
-            )
-
-            with self:
-
-                smach.StateMachine.add(
-                    "GET_RESPONSE",
-                    self.GetResponse(),
-                    transitions={"succeeded": "DETECT_GESTURE", "failed": "failed"},
-                )
-
-                smach.StateMachine.add(
-                    "DETECT_GESTURE",
-                    DetectGesture("waving"),
-                    transitions={
-                        "succeeded": "COMPUTE_APPROACH_POSE",
-                        "failed": "GET_RESPONSE",
-                    },
-                    remapping={"img_msg": "cropped_image"},
-                )
-
-                smach.StateMachine.add(
-                    "COMPUTE_APPROACH_POSE",
-                    self.ComputeApproachPose(),
-                    transitions={"succeeded": "succeeded", "failed": "GET_RESPONSE"},
-                )
-
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        look_range_deg: Tuple[float, float],
+        n_look_points: int,
+        same_detection_threshold: float = 0.4,
+    ) -> None:
         super().__init__(
             outcomes=["customer_found", "customer_not_found"],
             output_keys=["customer_approach_pose"],
         )
 
+        look_range = (np.deg2rad(look_range_deg[0]), np.deg2rad(look_range_deg[1]))
+        look_points = np.linspace(look_range[0], look_range[1], n_look_points)
+        self._same_detection_threshold = same_detection_threshold
+        self.userdata.all_detections = []
+        self.userdata.all_images = []
+
         with self:
 
-            angle_iterator = smach.Iterator(
+            joint_iterator = smach.Iterator(
                 outcomes=["succeeded", "failed"],
-                it=rospy.get_param("/restaurant/survey_angle_increments"),
-                it_label="angle_increment",
-                input_keys=[],
-                output_keys=["customer_approach_pose"],
-                exhausted_outcome="failed",
+                input_keys=["all_detections", "all_images"],
+                output_keys=["all_detections", "all_images"],
+                it=look_points,
+                it_label="head_1_joint",
+                exhausted_outcome="succeeded",
             )
 
-            with angle_iterator:
-
-                motion_iterator = smach.Iterator(
-                    outcomes=["succeeded", "failed"],
-                    it=rospy.get_param("/restaurant/survey_motions"),
-                    it_label="motion_name",
-                    input_keys=[],
-                    output_keys=["customer_approach_pose"],
-                    exhausted_outcome="failed",
+            with joint_iterator:
+                container_sm = smach.StateMachine(
+                    outcomes=["continue", "failed", "succeeded"],
+                    input_keys=["head_1_joint", "all_detections", "all_images"],
+                    output_keys=["all_detections", "all_images"],
                 )
-
-                with motion_iterator:
-
-                    container_sm = smach.StateMachine(
-                        outcomes=["succeeded", "failed", "continue"],
-                        input_keys=["motion_name"],
-                        output_keys=["customer_approach_pose"],
-                    )
-
-                    with container_sm:
-                        smach.StateMachine.add(
-                            "SURVEY_MOTION",
-                            PlayMotion(),
-                            transitions={
-                                "succeeded": "DETECT",
-                                "aborted": "failed",
-                                "preempted": "failed",
-                            },
-                        )
-
-                        smach.StateMachine.add(
-                            "DETECT",
-                            smach_ros.ServiceState(
-                                "/vision/cropped_detection",
-                                CroppedDetection,
-                                request=CroppedDetectionRequest(
-                                    requests=[
-                                        CDRequest(
-                                            method="closest",
-                                            use_mask=True,
-                                            yolo_model="yolo11n-seg.pt",
-                                            yolo_model_confidence=0.5,
-                                            yolo_nms_threshold=0.3,
-                                            return_sensor_reading=False,
-                                            object_names=["person"],
-                                            polygons=[],
+                with container_sm:
+                    smach.StateMachine.add(
+                        "LOOK_AND_DETECT",
+                        smach_ros.SimpleActionState(
+                            "/head_controller/follow_joint_trajectory",
+                            FollowJointTrajectoryAction,
+                            goal_cb=lambda ud, _: FollowJointTrajectoryGoal(
+                                trajectory=JointTrajectory(
+                                    joint_names=["head_1_joint", "head_2_joint"],
+                                    points=[
+                                        JointTrajectoryPoint(
+                                            positions=[ud.head_1_joint, 0.0],
+                                            time_from_start=rospy.Duration.from_sec(
+                                                1.0
+                                            ),
                                         )
-                                    ]
-                                ),
-                                output_keys=["responses"],
-                                response_slots=["responses"],
+                                    ],
+                                )
                             ),
-                            transitions={
-                                "succeeded": "HANDLE_DETECTIONS",
-                                "aborted": "failed",
-                                "preempted": "failed",
-                            },
-                        )
-
-                        smach.StateMachine.add(
-                            "HANDLE_DETECTIONS",
-                            self.HandleDetections(),
-                            transitions={
-                                "succeeded": "succeeded",
-                                "failed": "continue",
-                            },
-                        )
-
-                    motion_iterator.set_contained_state(
-                        "CONTAINER_STATE", container_sm, loop_outcomes=["continue"]
-                    )
-
-                angle_container_sm = smach.StateMachine(
-                    outcomes=["succeeded", "failed", "continue"],
-                    input_keys=["angle_increment"],
-                    output_keys=["customer_approach_pose"],
-                )
-                with angle_container_sm:
-
-                    smach.StateMachine.add(
-                        "ROTATE",
-                        Rotate(),
-                        transitions={"succeeded": "MOTION_ITERATOR"},
-                        remapping={"angle": "angle_increment"},
-                    )
-
-                    smach.StateMachine.add(
-                        "MOTION_ITERATOR",
-                        motion_iterator,
+                            input_keys=["head_1_joint"],
+                        ),
                         transitions={
-                            "succeeded": "succeeded",
+                            "succeeded": "DETECT_PEOPLE",
+                            "aborted": "failed",
+                            "preempted": "failed",
+                        },
+                    )
+                    smach.StateMachine.add(
+                        "DETECT_PEOPLE",
+                        Detect3D(filter=["person"]),
+                        transitions={
+                            "succeeded": "HANDLE_DETECTIONS",
                             "failed": "failed",
                         },
                     )
-                angle_iterator.set_contained_state(
-                    "CONTAINER_STATE", angle_container_sm, loop_outcomes=["continue"]
+                    smach.StateMachine.add(
+                        "HANDLE_DETECTIONS",
+                        smach.CBState(
+                            self._handle_detections,
+                            input_keys=[
+                                "all_detections",
+                                "all_images",
+                                "detections_3d",
+                                "image_raw",
+                            ],
+                            output_keys=["all_detections", "all_images"],
+                            outcomes=["succeeded"],
+                        ),
+                        transitions={"succeeded": "continue"},
+                    )
+                smach.Iterator.set_contained_state(
+                    "CONTAINER_SM",
+                    container_sm,
+                    loop_outcomes=["continue"],
                 )
-
             smach.StateMachine.add(
-                "ANGLE_ITERATOR",
-                angle_iterator,
+                "LOOK_AND_DETECT",
+                joint_iterator,
+                transitions={
+                    "succeeded": "PRINT_RESULTS",
+                    "failed": "customer_not_found",
+                },
+            )
+            smach.StateMachine.add(
+                "PRINT_RESULTS",
+                smach.CBState(
+                    self._print_detections,
+                    input_keys=["all_detections", "all_images"],
+                    outcomes=["succeeded"],
+                ),
+                transitions={"succeeded": "DETECTION_ITERATOR"},
+            )
+
+            detection_iterator = smach.Iterator(
+                outcomes=["succeeded", "failed"],
+                input_keys=["all_detections", "all_images"],
+                output_keys=["all_waving"],
+                it=self.userdata.all_detections,
+                it_label="detection",
+                exhausted_outcome="succeeded",
+            )
+
+            with detection_iterator:
+                container_sm = smach.StateMachine(
+                    outcomes=["continue", "failed", "succeeded"],
+                    input_keys=["detection", "all_waving"],
+                    output_keys=["all_waving"],
+                )
+                with container_sm:
+                    smach.StateMachine.add(
+                        "PRINT_DETECTION",
+                        smach.CBState(
+                            self._print_individual_detection,
+                            input_keys=["detection"],
+                            outcomes=["succeeded"],
+                        ),
+                        transitions={"succeeded": "continue"},
+                    )
+                smach.Iterator.set_contained_state(
+                    "CONTAINER_SM", container_sm, loop_outcomes=["continue"]
+                )
+            smach.StateMachine.add(
+                "DETECTION_ITERATOR",
+                detection_iterator,
                 transitions={
                     "succeeded": "customer_found",
                     "failed": "customer_not_found",
                 },
             )
+
+    def _handle_detections(self, userdata) -> str:
+        new_detections = userdata.detections_3d.detected_objects
+
+        for detection in new_detections:
+            x, y = detection.point.x, detection.point.y
+            is_new = all(
+                math.dist([x, y], [existing.point.x, existing.point.y])
+                >= self._same_detection_threshold
+                for existing, _ in userdata.all_detections
+            )
+            if is_new:
+                userdata.all_detections.append((detection, userdata.image_raw))
+
+        userdata.all_images.append(userdata.image_raw)
+        return "succeeded"
+
+    def _print_detections(self, userdata) -> str:
+        rospy.loginfo(f"There are {len(userdata.all_detections)} detections.")
+        rospy.loginfo(userdata.all_detections)
+        return "succeeded"
+
+    def _print_individual_detection(self, userdata) -> str:
+        rospy.loginfo(userdata.detection[0])
+        return "succeeded"

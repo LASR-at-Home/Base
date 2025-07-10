@@ -19,6 +19,9 @@ from lasr_vision_msgs.srv import LangSamRequest
 from lasr_vision_msgs.srv import LangSam
 
 from lasr_vision_msgs.srv import YoloPoseDetection3D, YoloPoseDetection3DRequest
+from play_motion_msgs.msg import PlayMotionGoal, PlayMotionAction
+
+from pal_interaction_msgs.msg import TtsAction, TtsGoal, TtsText
 
 
 class GoToBag(smach.State):
@@ -29,11 +32,19 @@ class GoToBag(smach.State):
         self.latest_rgb = None
         self.latest_depth = None
         self.depth_info = None
+        self.latest_depth_msg = None
+        self.latest_rgb_msg = None
+        self.bag_prompt = "grocery bag"
+        self.recovery_motions = [
+            "look_down_centre",
+            "look_down_left",
+            "look_down_right",
+        ]
 
         # Subscribers
         rgb_sub = Subscriber("/xtion/rgb/image_raw", Image)
-        depth_sub = Subscriber("/xtion/depth/image_raw", Image)
-        info_sub = Subscriber("/xtion/depth/camera_info", CameraInfo)
+        depth_sub = Subscriber("/xtion/depth_registered/image_raw", Image)
+        info_sub = Subscriber("/xtion/depth_registered/camera_info", CameraInfo)
         ats = ApproximateTimeSynchronizer(
             [rgb_sub, depth_sub, info_sub], queue_size=5, slop=0.1
         )
@@ -59,11 +70,23 @@ class GoToBag(smach.State):
         )
         self.point_head_client.wait_for_server()
 
+        rospy.wait_for_service("/lasr_vision/lang_sam")
         self.langsam_srv = rospy.ServiceProxy("/lasr_vision/lang_sam", LangSam)
-        self.langsam_srv.wait_for_service()
 
         rospy.wait_for_service("/yolo/detect3d_pose")
         self.detect3d = rospy.ServiceProxy("/yolo/detect3d_pose", YoloPoseDetection3D)
+
+        self.motion_client = actionlib.SimpleActionClient(
+            "/play_motion", PlayMotionAction
+        )
+        rospy.loginfo("Waiting for /play_motion action server...")
+        self.motion_client.wait_for_server()
+        rospy.loginfo("/play_motion action server connected")
+
+        self.tts_client = actionlib.SimpleActionClient("tts", TtsAction)
+        rospy.loginfo("Waiting for TTS action server…")
+        self.tts_client.wait_for_server()
+        rospy.loginfo("TTS action server connected.")
 
         cv2.namedWindow("Auto-segmented bag", cv2.WINDOW_NORMAL)
 
@@ -72,8 +95,14 @@ class GoToBag(smach.State):
 
     def synced_callback(self, rgb_msg, depth_msg, info_msg):
         try:
-            self.latest_rgb = self.bridge.imgmsg_to_cv2(rgb_msg, "bgr8")
-            self.latest_depth = self.bridge.imgmsg_to_cv2(depth_msg, "passthrough")
+            self.latest_rgb = self.bridge.imgmsg_to_cv2(
+                rgb_msg, desired_encoding="bgr8"
+            )
+            self.latest_rgb_msg = rgb_msg
+            self.latest_depth_msg = depth_msg
+            self.latest_depth = self.bridge.imgmsg_to_cv2(
+                depth_msg, desired_encoding="passthrough"
+            )
             self.depth_info = info_msg
         except Exception as e:
             rospy.logerr(f"CV bridge error: {e}")
@@ -89,14 +118,14 @@ class GoToBag(smach.State):
         # Check if latest_depth is uint16 (16UC1)
         if self.latest_depth.dtype == np.uint16:
             # Convert from mm to meters, cast to float32
-            depth_float = (self.latest_depth.astype(np.float32)) / 1000.0
+            depth_float = self.latest_depth.astype(np.float32)
         else:
             # Assume it's already float32 in meters
             depth_float = self.latest_depth
 
         req = YoloPoseDetection3DRequest(
-            image_raw=self.bridge.cv2_to_imgmsg(self.latest_rgb, "bgr8"),
-            depth_image=self.bridge.cv2_to_imgmsg(depth_float, "32FC1"),
+            image_raw=self.bridge.cv2_to_imgmsg(self.latest_rgb, encoding="bgr8"),
+            depth_image=self.bridge.cv2_to_imgmsg(depth_float, encoding="32FC1"),
             depth_camera_info=self.depth_info,
             model=rospy.get_param("~model", "yolo11n-pose.pt"),
             confidence=0.5,
@@ -112,13 +141,20 @@ class GoToBag(smach.State):
         # take first detection
         kp_list = res.detections[0].keypoints
         return {
-            kp.keypoint_name: np.array(
-                [kp.point.x / 1000, kp.point.y / 1000, kp.point.z / 1000]
-            )
+            kp.keypoint_name: np.array([kp.point.x, kp.point.y, kp.point.z])
             for kp in kp_list
         }
 
+    def say(self, text: str):
+        if hasattr(self, "tts_client"):
+            goal = TtsGoal(rawtext=TtsText(text=text, lang_id="en_GB"))
+            self.tts_client.send_goal(goal)
+            self.tts_client.wait_for_result()
+        else:
+            rospy.loginfo(f"[TTS fallback] {text}")
+
     def execute(self, userdata):
+        rospy.sleep(3)
         # Wait for image & depth as before
         while not rospy.is_shutdown():
             if (
@@ -129,63 +165,56 @@ class GoToBag(smach.State):
                 break
             rospy.sleep(0.1)
 
-        # ------ NEW: Look where the person points ------
-        self.look_where_person_points()
-
-        # Prepare the request (assuming self.latest_rgb is a cv2 image)
-        rgb_msg = self.bridge.cv2_to_imgmsg(self.latest_rgb, "bgr8")
-        langsam_req = LangSamRequest()
-        langsam_req.image_raw = rgb_msg
-        langsam_req.prompt = "bag"
-
-        try:
-            resp = self.langsam_srv(langsam_req)
-        except rospy.ServiceException as e:
-            rospy.logerr(f"LangSAM service call failed: {e}")
-            return "failed"
-
-        if not resp.detections:
-            rospy.logwarn("No bags detected.")
-            cv2.destroyAllWindows()
-            return "failed"
-
-        # Pick detection with highest detection_score
-        best_det = max(resp.detections, key=lambda det: det.detection_score)
-        mask_flat = np.array(best_det.seg_mask, dtype=np.uint8)
-        height, width = self.latest_rgb.shape[:2]
-        if mask_flat.size != height * width:
-            rospy.logerr(
-                f"Mask size {mask_flat.size} does not match image size {height}x{width}"
+        # ------ Look where the person points ------
+        self.say("I'm looking at where you're pointing.")
+        floor_pt = self.look_where_person_points()
+        if floor_pt is None:
+            self.say(
+                "I couldn't see where you were pointing, please point again. Make sure I can see you."
             )
-            cv2.destroyAllWindows()
+            rospy.sleep(3)
+            floor_pt = self.look_where_person_points()
+
+        if floor_pt is None:
+            # Get robot current pose, set z=0.6
+            try:
+                self.tf_listener.waitForTransform(
+                    "map", "base_footprint", rospy.Time(0), rospy.Duration(1.0)
+                )
+                (trans, rot) = self.tf_listener.lookupTransform(
+                    "map", "base_footprint", rospy.Time(0)
+                )
+                robot_point = np.array([trans[0], trans[1], 0.6])
+            except (tf.Exception, tf.LookupException, tf.ConnectivityException):
+                rospy.logwarn("Could not get robot position.")
+                return "failed"
+            floor_pt = robot_point
+
+        self.say("I'm trying to find the bag.")
+        centroid, mask, det = self.detect_bag_with_lang_sam(
+            prompt=self.bag_prompt, floor_pt=floor_pt
+        )
+
+        recovery_counter = 0
+        while centroid is None and recovery_counter < 3:
+            rospy.logwarn(
+                f"Recovery mode with head looking {self.recovery_motions[recovery_counter]}"
+            )
+            self.execute_play_motion(self.recovery_motions[recovery_counter])
+            centroid, mask, det = self.detect_bag_with_lang_sam(
+                prompt=self.bag_prompt, floor_pt=floor_pt
+            )
+            recovery_counter = recovery_counter + 1
+
+        if centroid is None:
+            rospy.logwarn("No bag detected in recovery mode!")
             return "failed"
-        mask = mask_flat.reshape((height, width))
 
         self.visualize_segmentation(self.latest_rgb, mask)
-
-        ys, xs = np.where(mask)
-        pts = []
-        for v, u in zip(ys, xs):
-            raw_depth_mm = float(self.latest_depth[v, u])
-            if np.isfinite(raw_depth_mm) and raw_depth_mm > 0.0:
-                z_cam = raw_depth_mm * 0.001
-                fx = self.depth_info.K[0]
-                fy = self.depth_info.K[4]
-                cx = self.depth_info.K[2]
-                cy = self.depth_info.K[5]
-                x_cam = (u - cx) * z_cam / fx
-                y_cam = (v - cy) * z_cam / fy
-                pts.append([x_cam, y_cam, z_cam])
-        if not pts:
-            rospy.logwarn("No valid depth points in mask.")
-            cv2.destroyAllWindows()
-            return "failed"
-
-        pts = np.array(pts)
-        centroid = np.median(pts, axis=0)
         p_cam = centroid
 
         head_point = self.transform_from_camera_to_map(p_cam)
+        self.say("I'm navigating to the bag. Please step away from the bag.")
         x_bag, y_bag = self.navigate_to_closest_feasible_point(p_cam)
         if x_bag is not None and y_bag is not None:
             rospy.loginfo(
@@ -194,70 +223,220 @@ class GoToBag(smach.State):
             self.face_point_with_amcl(x_bag, y_bag)
             self.look_at_point(head_point, "map")
             rospy.sleep(0.2)
-            cv2.destroyAllWindows()
+            # cv2.destroyAllWindows()
             return "succeeded"
         else:
             rospy.sleep(0.2)
-            cv2.destroyAllWindows()
+            # cv2.destroyAllWindows()
             return "failed"
 
     def look_where_person_points(self):
-        rospy.loginfo("Looking for pointing gesture...")
-        kps = self.get_human_keypoints_3d()
-        if not kps:
-            rospy.logwarn("No human keypoints detected!")
-            return False
+        rospy.loginfo("Looking for pointing gesture (by closest mean position)...")
+        kps_result = self.get_human_keypoints_3d()
 
-        camera_z_axis = np.array([0.0, 0.0, 1.0])
-        best_score = -1.0
-        best_hit = None
+        if not kps_result:
+            rospy.logwarn("No human keypoints detected!")
+            return None
+
+        # Normalize to a list of dicts
+        if isinstance(kps_result, dict):
+            all_kps = [kps_result]
+        elif isinstance(kps_result, list):
+            all_kps = kps_result
+        else:
+            rospy.logwarn("Keypoints format not recognized!")
+            return None
+
+        if len(all_kps) == 0:
+            rospy.logwarn("No keypoints detected at all!")
+            return None
+
+        if len(all_kps) == 1:
+            # Only one person detected: just use them
+            kps = all_kps[0]
+        else:
+            # Multiple people: pick the one with mean keypoint position closest to robot
+            closest_kps = None
+            min_dist = float("inf")
+            for kps_candidate in all_kps:
+                pts = np.array(
+                    [pt for pt in kps_candidate.values() if not np.allclose(pt, 0)]
+                )
+                if pts.size == 0:
+                    continue
+                mean_pt = np.mean(pts, axis=0)
+                dist = np.linalg.norm(mean_pt)
+                if dist < min_dist:
+                    min_dist = dist
+                    closest_kps = kps_candidate
+            if closest_kps is None:
+                rospy.logwarn("No valid keypoints found for any person.")
+                return None
+            kps = closest_kps
+
+        # Transform all keypoints to map frame
+        kps_map = {}
+        for name, p_cam in kps.items():
+            p_map = self.transform_from_camera_to_map(p_cam)
+            if p_map is not None:
+                kps_map[name] = np.array(p_map)
+            else:
+                rospy.logwarn(f"Could not transform {name} to map frame")
+
+        map_down_axis = np.array([0, 0, -1])
+        arms = []
 
         for side in ["right", "left"]:
             elbow_key = f"{side}_elbow"
             wrist_key = f"{side}_wrist"
-            if elbow_key in kps and wrist_key in kps:
-                o = kps[elbow_key]
-                w = kps[wrist_key]
-                vec = w - o
+            if all(k in kps_map for k in [elbow_key, wrist_key]):
+                origin = kps_map[elbow_key]
+                wrist = kps_map[wrist_key]
+                vec = wrist - origin
                 norm = np.linalg.norm(vec)
                 if norm < 1e-6:
                     continue
                 dirv = vec / norm
-                # Prefer arm most aligned with camera forward (Z)
-                score = float(np.dot(dirv, camera_z_axis))
-                if score > best_score and score > 0.5:
-                    print("Hello")
-                    floor_pt = self.find_pointed_floor(o, dirv)
-                    if floor_pt is not None:
-                        best_score = score
-                        best_hit = floor_pt
+                downward = np.dot(dirv, map_down_axis)
+                rospy.loginfo(f"{side} arm downward={downward:.2f}")
+                arms.append(
+                    {"side": side, "downward": downward, "dirv": dirv, "origin": origin}
+                )
 
-        if best_hit is not None:
-            # Transform to map frame, then use look_at_point
-            head_point = self.transform_from_camera_to_map(best_hit)
-            if head_point is not None:
-                self.look_at_point(head_point, "map")
-                rospy.loginfo(f"Looking at pointed floor position: {head_point}")
+        arms = sorted(arms, key=lambda x: x["downward"])
+
+        for arm in arms:
+            rospy.loginfo(f"Trying {arm['side']} arm for pointing ray...")
+            floor_pt = self.find_pointed_floor(arm["origin"], arm["dirv"])
+            if floor_pt is not None:
+                floor_pt[2] = 0.65  # Force Z up from ground for natural gaze
+                self.look_at_point(floor_pt, "map")
+                rospy.loginfo(f"Looking at pointed floor position (map): {floor_pt}")
                 rospy.sleep(1.0)
-                return True
+                return floor_pt
+            else:
+                rospy.logwarn(f"No valid floor intersection for {arm['side']} arm.")
 
-        rospy.logwarn("No valid pointing direction found.")
-        return False
-
-    def find_pointed_floor(self, origin, direction, max_dist=4.0, step=0.02):
-        for d in np.arange(0, max_dist, step):
-            pt = origin - direction * d
-            if pt[2] <= 0:
-                if d == 0:
-                    print(f"Ray starts below floor at: {pt}")
-                    return pt
-                prev_pt = origin + direction * (d - step)
-                alpha = prev_pt[2] / (prev_pt[2] - pt[2])
-                hit_pt = prev_pt + alpha * (pt - prev_pt)
-                print(f"Ray hits floor at: {hit_pt}")
-                return hit_pt
-        print(f"Ray never hits floor for origin={origin}, direction={direction}")
+        rospy.logwarn(
+            "No valid pointing direction found (in map frame) with either arm."
+        )
         return None
+
+    def find_pointed_floor(self, origin, direction, max_dist=4.0):
+        # direction: should be unit vector, both in map frame
+        if abs(direction[2]) < 1e-6:
+            rospy.logwarn(
+                "Pointing direction is parallel to the floor, no intersection."
+            )
+            return None
+        d = -origin[2] / direction[2]
+        if d < 0 or d > max_dist:
+            rospy.logwarn("Intersection behind or too far away.")
+            return None
+        elif d > max_dist:
+            rospy.logwarn("Intersection behind or too far away.")
+            return None
+        hit_pt = origin + direction * d
+        rospy.loginfo(f"Ray hits floor at: {hit_pt}")
+        return hit_pt
+
+    def detect_bag_with_lang_sam(self, floor_pt, prompt="bag", coverage_limit=0.6):
+        """
+        Calls the LangSAM segmentation service to detect a bag using the latest RGB image.
+        Returns: (centroid_cam, mask, detection) for the bag closest to floor_pt, or (None, None, None) on failure.
+        """
+        if self.latest_rgb is None:
+            rospy.logerr("No RGB image available for segmentation.")
+            return None, None, None
+
+        if self.latest_depth is None:
+            rospy.logerr("No depth image available for segmentation.")
+            return None, None, None
+
+        rgb_msg = self.latest_rgb_msg
+        depth_msg = self.latest_depth_msg
+        langsam_req = LangSamRequest()
+        langsam_req.image_raw = rgb_msg
+        langsam_req.prompt = prompt
+        langsam_req.depth_image = depth_msg
+        langsam_req.depth_camera_info = self.depth_info
+        langsam_req.box_threshold = 0.3
+        langsam_req.text_threshold = 0.3
+        langsam_req.target_frame = "xtion_rgb_optical_frame"
+
+        try:
+            resp = self.langsam_srv(langsam_req)
+        except rospy.ServiceException as e:
+            rospy.logerr(f"LangSAM service call failed: {e}")
+            return None, None, None
+
+        if not resp.detections:
+            rospy.logwarn(f"No '{prompt}' detected by LangSAM.")
+            # cv2.destroyAllWindows()
+            return None, None, None
+
+        height, width = self.latest_rgb.shape[:2]
+        closest_dist = float("inf")
+        closest_centroid = None
+        closest_mask = None
+        closest_det = None
+
+        print(len(resp.detections))
+        for det in resp.detections:
+            mask_flat = np.array(det.seg_mask, dtype=np.uint8)
+            if mask_flat.size != height * width:
+                rospy.logwarn(f"Skipping mask with wrong shape")
+                continue
+            mask = mask_flat.reshape((height, width))
+
+            # Filter out masks covering most of the image (probably the floor)
+            mask_area = np.count_nonzero(mask)
+            img_area = height * width
+            coverage = mask_area / img_area
+            if coverage > coverage_limit:
+                rospy.loginfo(
+                    f"Skipping mask covering {coverage:.2%} of image (likely floor)"
+                )
+                continue
+
+            # Find median centroid in image space
+            ys, xs = np.where(mask)
+            if len(xs) == 0 or len(ys) == 0:
+                continue
+            u = int(np.median(xs))
+            v = int(np.median(ys))
+
+            # Convert to 3D (camera frame)
+            p_cam = self.pixel_to_3d(u, v)
+            if p_cam is None:
+                continue
+
+            # Transform to map frame for comparison
+            centroid_map = self.transform_from_camera_to_map(p_cam)
+            if centroid_map is None:
+                continue
+
+            dist = np.linalg.norm(np.array(centroid_map[:2]) - np.array(floor_pt[:2]))
+            if dist < closest_dist:
+                closest_dist = dist
+                closest_centroid = p_cam
+                closest_mask = mask
+                closest_det = det
+
+        if closest_centroid is None:
+            rospy.logwarn("No valid bag centroid near the pointing floor point.")
+            # cv2.destroyAllWindows()
+            return None, None, None
+
+        return closest_centroid, closest_mask, closest_det
+
+    def execute_play_motion(self, motion_name):
+        goal = PlayMotionGoal()
+        goal.motion_name = motion_name
+        goal.skip_planning = False
+        self.motion_client.send_goal(goal)
+        self.motion_client.wait_for_result()
+        rospy.loginfo(f"Motion {motion_name} played")
 
     def get_mask_median(self, mask):
         ys, xs = np.where(mask)
@@ -271,7 +450,7 @@ class GoToBag(smach.State):
         raw_depth_mm = float(self.latest_depth[v, u])
         if not np.isfinite(raw_depth_mm) or raw_depth_mm <= 0.0:
             return None
-        z_cam = raw_depth_mm * 0.001  # meters
+        z_cam = raw_depth_mm  # meters
         if z_cam > 50.0:
             return None
         fx = self.depth_info.K[0]
@@ -283,7 +462,7 @@ class GoToBag(smach.State):
         return np.array([x_cam, y_cam, z_cam])
 
     def transform_from_camera_to_map(self, p_cam):
-        cam_frame = "xtion_depth_optical_frame"
+        cam_frame = "xtion_rgb_optical_frame"
 
         # Create the PointStamped in camera frame
         target_pt = PointStamped()
@@ -402,9 +581,15 @@ class GoToBag(smach.State):
         rospy.logerr("Could not find any feasible approach point.")
         return (None, None)
 
-    def face_point_with_amcl(self, target_x, target_y):
+    def face_point_with_amcl(self, target_x, target_y, move_tolerance=0.8):
+        """
+        Rotates the robot in place to face (target_x, target_y) using AMCL pose.
+        Skips rotation if this would require any significant translation.
+        Returns True if rotation succeeded or was unnecessary, False otherwise.
+        """
+
         rospy.loginfo(
-            f"[SAM-CLICK] Request to face ({target_x:.2f}, {target_y:.2f}) using AMCL pose."
+            f"Request to face ({target_x:.2f}, {target_y:.2f}) using AMCL pose."
         )
         for attempt in range(10):
             if self.latest_amcl_pose is None:
@@ -422,6 +607,15 @@ class GoToBag(smach.State):
             dy = target_y - robot_y
             desired_yaw = np.arctan2(dy, dx)
 
+            # Check if already close enough in position (prevent unwanted move)
+            distance = np.hypot(dx, dy)
+            if distance > move_tolerance:
+                rospy.logwarn(
+                    f"Skipping rotation: would require translation of {distance:.3f}m "
+                    f"(current: ({robot_x:.2f}, {robot_y:.2f}), target: ({target_x:.2f}, {target_y:.2f}))"
+                )
+                return False
+
             # Get current yaw
             quat = [
                 pose.orientation.x,
@@ -431,12 +625,12 @@ class GoToBag(smach.State):
             ]
             _, _, current_yaw = tf.transformations.euler_from_quaternion(quat)
 
-            # Check if already close enough
+            # Check if already facing target
             angle_error = np.abs(
                 ((desired_yaw - current_yaw + np.pi) % (2 * np.pi)) - np.pi
             )
             if angle_error < 0.05:  # radians (~3 degrees)
-                rospy.loginfo("[SAM-CLICK] Already facing target.")
+                rospy.loginfo("Already facing target.")
                 return True
 
             # Build a move_base goal to rotate in place

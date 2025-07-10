@@ -31,6 +31,7 @@ from .eye_tracker import StartEyeTracker, StopEyeTracker
 from .detect_nearest import GetNearestObject
 from .detect_keypoints_3d import DetectKeypoints3D
 from .lang_sam_detect_3d import DetectLangSam3D
+from .detect_3d_in_area_lang_sam import Detect3DInAreaLangSam
 
 # from .xml_question_answer import XmlQuestionAnswer
 from .find_person_and_tell import FindPersonAndTell
@@ -40,5 +41,7 @@ from .rotate import Rotate
 from .check_door_status import CheckDoorStatus
 from .detect_dict import DetectDict
 from .point_at_person import PointAtPerson
+from .detect_gesture_3d import DetectGesture3D, DetectHandUp3D
 
-# from .follow_person import FollowPerson
+from .follow_person import FollowPerson
+from .listen_for_wakeword import ListenForWakeword

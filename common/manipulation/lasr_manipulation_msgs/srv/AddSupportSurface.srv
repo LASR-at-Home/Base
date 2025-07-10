@@ -1,0 +1,5 @@
+string surface_id # id in planning scene 
+geometry_msgs/PoseStamped pose # pose at centre of support surface
+geometry_msgs/Vector3 dimensions # dimenions of support surface
+---
+bool success

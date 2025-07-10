@@ -101,7 +101,13 @@ class ProcessDetections(smach.State):
     _tf_buffer: tf.Buffer
     _tf_listener: tf.TransformListener
 
-    def __init__(self, sofa_point: Point, max_people_on_sofa: int = 2):
+    def __init__(
+        self,
+        sofa_point: Point,
+        left_sofa_area: ShapelyPolygon,
+        right_sofa_area: ShapelyPolygon,
+        max_people_on_sofa: int = 2,
+    ):
         smach.State.__init__(
             self,
             outcomes=["succeeded", "failed"],
@@ -110,6 +116,8 @@ class ProcessDetections(smach.State):
         )
         self._max_people_on_sofa = max_people_on_sofa
         self._sofa_point = sofa_point
+        self._left_sofa_area = left_sofa_area
+        self._right_sofa_area = right_sofa_area
         self._tf_buffer = tf.Buffer(cache_time=rospy.Duration(10))
         self._tf_listener = tf.TransformListener(self._tf_buffer)
 
@@ -124,33 +132,22 @@ class ProcessDetections(smach.State):
         Returns:
             str: "left" or "right" - which side of the sofa is empty.
         """
-        occupied_pointstamped = PointStamped()
-        occupied_pointstamped.point = sofa_detection.point
-        occupied_pointstamped.header.frame_id = "map"
+        sofa_guest_point = sofa_detection.point
 
-        sofa_pointstamped = PointStamped()
-        sofa_pointstamped.point = self._sofa_point
-        sofa_pointstamped.header.frame_id = "map"
-
-        transform = self._tf_buffer.lookup_transform(
-            "base_footprint",
-            "map",
-            occupied_pointstamped.header.stamp,
-            rospy.Duration(1.0),
-        )
-        occupied_point_transformed = do_transform_point(
-            occupied_pointstamped, transform
-        )
-        sofa_point_transformed = do_transform_point(sofa_pointstamped, transform)
-        rospy.loginfo(
-            f"Occupied point transformed: {occupied_point_transformed.point}, "
-            f"Sofa point transformed: {sofa_point_transformed.point}"
-        )
-        result = ""
-        if occupied_point_transformed.point.y < sofa_point_transformed.point.y:
+        if self._left_sofa_area.contains(
+            ShapelyPolygon([(sofa_guest_point.x, sofa_guest_point.y)])
+        ):
             result = "right"
-        else:
+        elif self._right_sofa_area.contains(
+            ShapelyPolygon([(sofa_guest_point.x, sofa_guest_point.y)])
+        ):
             result = "left"
+        else:
+            rospy.logwarn(
+                "Sofa guest point is not within the left or right sofa area. "
+                "Defaulting to 'right'."
+            )
+            result = "right"
 
         return result
 
@@ -182,6 +179,8 @@ class ProcessDetections(smach.State):
                 f"Too many people detected: {len(seated_guest_locs)} detected, max allowed is 2."
             )
             userdata.seated_guest_locs = seated_guest_locs[:2]
+        else:
+            userdata.seated_guest_locs = seated_guest_locs
         if len(userdata.sofa_detections) > self._max_people_on_sofa:
             rospy.logwarn(
                 f"Too many people on the sofa: {len(userdata.sofa_detections)} detected, max allowed is {self._max_people_on_sofa}."
@@ -279,6 +278,8 @@ class SeatGuest(smach.StateMachine):
         seating_area: ShapelyPolygon,
         sofa_area: ShapelyPolygon,
         sofa_point: Point,
+        left_sofa_area: ShapelyPolygon,
+        right_sofa_area: ShapelyPolygon,
         max_people_on_sofa: int = 2,
         learn_host: bool = False,
     ):
@@ -291,11 +292,10 @@ class SeatGuest(smach.StateMachine):
         seating_area_minus_sofa = seating_area.difference(sofa_area)
 
         with self:
+            self.userdata.seated_guest_locs = []
             smach.StateMachine.add(
                 "SAY_FINDING_SEAT",
-                Say(
-                    "We've arrived at the seating area. I will now find a seat for you."
-                ),
+                Say("I will now find a seat for you."),
                 transitions={
                     "succeeded": "LOOK_TO_SOFA",
                     "aborted": "LOOK_TO_SOFA",
@@ -360,13 +360,16 @@ class SeatGuest(smach.StateMachine):
             )
             # Process detections
             if learn_host:
-                detection_transition = "SAY_LEARN_HOST_FACE"
+                detection_transition = "SAY_AND_LEARN_HOST_FACE"
             else:
                 detection_transition = "LOOK_TO_SEAT"
             smach.StateMachine.add(
                 "PROCESS_DETECTIONS",
                 ProcessDetections(
-                    max_people_on_sofa=max_people_on_sofa, sofa_point=sofa_point
+                    max_people_on_sofa=max_people_on_sofa,
+                    sofa_point=sofa_point,
+                    left_sofa_area=left_sofa_area,
+                    right_sofa_area=right_sofa_area,
                 ),
                 transitions={
                     "succeeded": detection_transition,
@@ -379,25 +382,34 @@ class SeatGuest(smach.StateMachine):
             )
             if learn_host:
                 # Look to the only person detection and learn the host's face.
-                smach.StateMachine.add(
-                    "SAY_LEARN_HOST_FACE",
-                    Say("I'm quickly remembering the host's face."),
-                    transitions={
-                        "succeeded": "LEARN_HOST_FACE",
-                        "aborted": "failed",
-                        "preempted": "failed",
+                sm_con = smach.Concurrence(
+                    outcomes=["succeeded", "failed"],
+                    input_keys=["guest_data", "seated_guest_locs"],
+                    output_keys=["guest_data", "seated_guest_locs"],
+                    default_outcome="failed",
+                    outcome_map={
+                        "succeeded": {
+                            "SAY_LEARN_HOST_FACE": "succeeded",
+                            "LEARN_HOST_FACE": "succeeded",
+                        },
+                        "failed": {
+                            "SAY_LEARN_HOST_FACE": "aborted",
+                            "LEARN_HOST_FACE": "failed",
+                        },
                     },
                 )
+                with sm_con:
+                    smach.Concurrence.add(
+                        "SAY_LEARN_HOST_FACE",
+                        Say("I'm quickly remembering the host's face."),
+                    )
+                    smach.Concurrence.add("LEARN_HOST_FACE", LearnHostFace())
                 smach.StateMachine.add(
-                    "LEARN_HOST_FACE",
-                    LearnHostFace(),
+                    "SAY_AND_LEARN_HOST_FACE",
+                    sm_con,
                     transitions={
                         "succeeded": "LOOK_TO_SEAT",
                         "failed": "LOOK_TO_SEAT",
-                    },
-                    remapping={
-                        "guest_data": "guest_data",
-                        "seated_guest_locs": "seated_guest_locs",
                     },
                 )
 

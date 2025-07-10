@@ -292,6 +292,7 @@ class DetectAllInPolygon(smach.StateMachine):
     _min_confidence: float
     _min_new_object_dist: float
     _debug_publisher: rospy.Publisher
+    _prompt: Optional[str]
 
     def __init__(
         self,
@@ -300,6 +301,8 @@ class DetectAllInPolygon(smach.StateMachine):
         object_filter: Optional[List[str]] = None,
         min_confidence: float = 0.5,
         min_new_object_dist: float = 0.1,
+        use_lang_sam: bool = False,
+        prompt: Optional[str] = None,
     ):
         """
         Args:
@@ -317,6 +320,11 @@ class DetectAllInPolygon(smach.StateMachine):
             min_new_object_dist (float, optional): Minimum distance between detected
             objects of the same class in order to count a detection as a new object.
             Defaults to 0.1.
+
+            use_lang_sam (bool, optional): Whether to use the LangSam detection model,
+            if true, requires a prompt. Defaults to False, mneaning use YOLO instead.
+
+            prompt (Optional[str], optional): Prompt for the LangSam model, if used.
         """
 
         super().__init__(
@@ -333,6 +341,11 @@ class DetectAllInPolygon(smach.StateMachine):
             Image,
             queue_size=10,
         )
+        self._prompt = prompt
+        if use_lang_sam:
+            assert (
+                self._prompt is not None
+            ), "Prompt must be provided for LangSam model."
 
         with self:
             self.build_state_machine()
@@ -510,19 +523,43 @@ class DetectAllInPolygon(smach.StateMachine):
                     ),
                     transitions={"succeeded": "DETECT_OBJECTS"},
                 )
-                smach.StateMachine.add(
-                    "DETECT_OBJECTS",
-                    Detect3DInArea(
-                        area_polygon=self._polygon,
-                        filter=self._object_filter,
-                        confidence=self._min_confidence,
-                    ),
-                    transitions={"succeeded": "PROCESS_DETECTIONS", "failed": "failed"},
-                    remapping={
-                        "detections_3d": "detections_3d",
-                        "image_raw": "image_raw",
-                    },
-                )
+                if self._prompt is not None:
+                    pass
+                    # smach.StateMachine.add(
+                    #     "DETECT_OBJECTS",
+                    #     Detect3DInAreaLangSam(
+                    #         area_polygon=self._polygon,
+                    #         box_threshold=self._min_confidence,
+                    #         text_threshold=self._min_confidence,
+                    #         target_frame="map",
+                    #         prompt=self._prompt,
+                    #     ),
+                    #     transitions={
+                    #         "succeeded": "PROCESS_DETECTIONS",
+                    #         "failed": "failed",
+                    #     },
+                    #     remapping={
+                    #         "lang_sam_detections_3d": "detections_3d",
+                    #         "image_raw": "image_raw",
+                    #     },
+                    # )
+                else:
+                    smach.StateMachine.add(
+                        "DETECT_OBJECTS",
+                        Detect3DInArea(
+                            area_polygon=self._polygon,
+                            filter=self._object_filter,
+                            confidence=self._min_confidence,
+                        ),
+                        transitions={
+                            "succeeded": "PROCESS_DETECTIONS",
+                            "failed": "failed",
+                        },
+                        remapping={
+                            "detections_3d": "detections_3d",
+                            "image_raw": "image_raw",
+                        },
+                    )
                 smach.StateMachine.add(
                     "PROCESS_DETECTIONS",
                     ProcessDetections(min_new_object_dist=self._min_new_object_dist),

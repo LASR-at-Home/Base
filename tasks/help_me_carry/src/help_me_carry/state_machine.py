@@ -1,7 +1,7 @@
 import rospy
 import smach
 import smach_ros
-from help_me_carry import GoToBag, BagPickAndPlace
+from help_me_carry import GoToBag, BagPickAndPlace, GoToBagFailed
 from lasr_skills import FollowPerson, PlayMotion, GoToLocation, Say
 
 
@@ -29,9 +29,15 @@ class CarryMyLuggage(smach.StateMachine):
                 },
             )
 
+            # smach.StateMachine.add(
+            #     "FOLLOW_PERSON",
+            #     FollowPerson(fallback=True),
+            #     transitions={"succeeded": "POST_FOLLOW", "failed": "POST_FOLLOW"},
+            # )
+
             smach.StateMachine.add(
                 "FOLLOW_PERSON",
-                FollowPerson(),
+                FollowPerson(object_avoidance=True, fallback=True),
                 transitions={"succeeded": "POST_FOLLOW", "failed": "POST_FOLLOW"},
             )
 
@@ -60,6 +66,25 @@ class CarryMyLuggage(smach.StateMachine):
                 GoToBag(),
                 transitions={
                     "succeeded": "SAY_PICK_UP_BAG",
+                    "failed": "SAY_GO_TO_BAG_FAILED",
+                },
+            )
+
+            smach.StateMachine.add(
+                "SAY_GO_TO_BAG_FAILED",
+                Say(text="Please step away I will reach my arm out."),
+                transitions={
+                    "succeeded": "GO_TO_BAG_FAILED",
+                    "aborted": "GO_TO_BAG_FAILED",
+                    "preempted": "GO_TO_BAG_FAILED",
+                },
+            )
+
+            smach.StateMachine.add(
+                "GO_TO_BAG_FAILED",
+                GoToBagFailed(),
+                transitions={
+                    "succeeded": "SAY_GOING_BACK",
                     "failed": "failed",
                 },
             )
@@ -87,9 +112,19 @@ class CarryMyLuggage(smach.StateMachine):
                 "SAY_GOING_BACK",
                 Say(text="Going back to start point."),
                 transitions={
+                    "succeeded": "PRE_GO_BACK",
+                    "aborted": "PRE_GO_BACK",
+                    "preempted": "PRE_GO_BACK",
+                },
+            )
+
+            smach.StateMachine.add(
+                f"PRE_GO_BACK",
+                PlayMotion(motion_name="pre_navigation_look_down"),
+                transitions={
                     "succeeded": "GO_BACK_TO_START_POINT",
-                    "aborted": "GO_BACK_TO_START_POINT",
                     "preempted": "GO_BACK_TO_START_POINT",
+                    "aborted": "GO_BACK_TO_START_POINT",
                 },
             )
 
