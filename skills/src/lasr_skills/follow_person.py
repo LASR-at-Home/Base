@@ -8,12 +8,13 @@ import math
 import numpy as np
 from typing import List, Tuple, Union
 from math import atan2
-from tf.transformations import quaternion_from_euler  # this is tf tool pack, not tf1
+from tf.transformations import quaternion_from_euler, euler_from_quaternion  # this is tf tool pack, not tf1
 import tf2_ros as tf
 from tf2_geometry_msgs import do_transform_pose
 from rospy import ServiceException
 from scipy.spatial.transform import Rotation as R
-from lasr_skills.listen_for_wakeword import ListenForWakeword, Rotate
+from lasr_skills.listen_for_wakeword import ListenForWakeword
+from lasr_skills.rotate import Rotate
 from std_msgs.msg import Bool
 from geometry_msgs.msg import (
     Point,
@@ -276,7 +277,7 @@ class FollowPerson(smach.StateMachine):
             self.depth_camera_info_topic, CameraInfo
         )
         ts = message_filters.ApproximateTimeSynchronizer(
-            [image_sub, depth_sub, depth_camera_info_sub], 10, 0.1
+            [image_sub, depth_sub, depth_camera_info_sub], 10, 1.0
         )
         ts.registerCallback(self._sensor_callback)
 
@@ -335,6 +336,7 @@ class FollowPerson(smach.StateMachine):
             rospy.loginfo("TTS server connected successfully")
 
         # Setup TF buffer and listener
+        rospy.loginfo("Preparing tf...")
         self.tf_buffer = tf.Buffer(cache_time=rospy.Duration.from_sec(10.0))
         self.tf_listener = tf.TransformListener(self.tf_buffer)
 
@@ -358,6 +360,7 @@ class FollowPerson(smach.StateMachine):
             self._detection3d_callback,
             queue_size=1,
         )
+        rospy.loginfo("Detection 3D callback subscribed")
 
         # Setup leg tracker subscriber - new sensor input
         self.leg_tracker_sub = rospy.Subscriber(
@@ -366,6 +369,7 @@ class FollowPerson(smach.StateMachine):
             self._leg_tracker_callback,
             queue_size=1,
         )
+        rospy.loginfo("Leg tracker callback subscribed")
 
         # Setup Kalman filter service client
         self.kalman_filter_service = rospy.ServiceProxy(
@@ -387,51 +391,51 @@ class FollowPerson(smach.StateMachine):
             "last_leg_tracker_time": rospy.Time(0),
         }
 
-        try:
-            # Set costmap size using userdata parameters
-            config = Config()
-            config.ints.append(
-                IntParameter(name="width", value=self.shared_data.costmap_width)
-            )
-            config.ints.append(
-                IntParameter(name="height", value=self.shared_data.costmap_height)
-            )
-            self.dynamic_costmap(config)
-
-            # Set maximum velocity
-            config = Config()
-            config.doubles.append(
-                DoubleParameter(name="max_vel_x", value=self.shared_data.max_speed)
-            )
-            self.dynamic_velocity(config)
-
-            # Disable recovery behaviors
-            config = Config()
-            config.bools.append(
-                BoolParameter(name="recovery_behavior_enabled", value=0)
-            )
-            config.bools.append(
-                BoolParameter(name="clearing_rotation_allowed", value=0)
-            )
-            self.dynamic_recovery(config)
-
-            # Set local costmap inflation radius
-            config = Config()
-            config.bools.append(BoolParameter(name="enabled", value=1))
-            config.doubles.append(
-                DoubleParameter(
-                    name="inflation_radius", value=self.shared_data.inflation_radius
-                )
-            )
-            self.dynamic_local_costmap(config)
-
-            # Clear existing costmaps
-            rospy.ServiceProxy("/move_base/clear_costmaps", Empty)()
-
-            rospy.sleep(0.1)
-            rospy.loginfo("Navigation parameters configured")
-        except Exception as e:
-            rospy.logwarn(f"Failed to configure navigation: {e}")
+        # try:
+        #     # Set costmap size using userdata parameters
+        #     config = Config()
+        #     config.ints.append(
+        #         IntParameter(name="width", value=self.shared_data.costmap_width)
+        #     )
+        #     config.ints.append(
+        #         IntParameter(name="height", value=self.shared_data.costmap_height)
+        #     )
+        #     self.dynamic_costmap(config)
+        #
+        #     # Set maximum velocity
+        #     config = Config()
+        #     config.doubles.append(
+        #         DoubleParameter(name="max_vel_x", value=self.shared_data.max_speed)
+        #     )
+        #     self.dynamic_velocity(config)
+        #
+        #     # Disable recovery behaviors
+        #     config = Config()
+        #     config.bools.append(
+        #         BoolParameter(name="recovery_behavior_enabled", value=0)
+        #     )
+        #     config.bools.append(
+        #         BoolParameter(name="clearing_rotation_allowed", value=0)
+        #     )
+        #     self.dynamic_recovery(config)
+        #
+        #     # Set local costmap inflation radius
+        #     config = Config()
+        #     config.bools.append(BoolParameter(name="enabled", value=1))
+        #     config.doubles.append(
+        #         DoubleParameter(
+        #             name="inflation_radius", value=self.shared_data.inflation_radius
+        #         )
+        #     )
+        #     self.dynamic_local_costmap(config)
+        #
+        #     # Clear existing costmaps
+        #     rospy.ServiceProxy("/move_base/clear_costmaps", Empty)()
+        #
+        #     rospy.sleep(0.1)
+        #     rospy.loginfo("Navigation parameters configured")
+        # except Exception as e:
+        #     rospy.logwarn(f"Failed to configure navigation: {e}")
 
         # Build the state machine structure
         self._build_state_machine()
@@ -775,47 +779,58 @@ class FollowPerson(smach.StateMachine):
                 is_good_quality = quality_result["is_good"]
                 quality_score = quality_result["score"]
 
-                # Check if need to reselect leg tracker target
-                if (hasattr(self.shared_data, 'last_reselect_legs_time') and
-                        hasattr(self.shared_data, 'reselect_legs_time_duration') and
-                        (
-                                this_time - self.shared_data.last_reselect_legs_time) > self.shared_data.reselect_legs_time_duration):
-
-                    # Get current leg tracker data
-                    try:
-                        leg_msg = rospy.wait_for_message("/people_tracked", PersonArray, timeout=1.0)
-                        if len(leg_msg.people) > 0:
-                            # Find closest leg person to current 3D detection
-                            min_dist = float("inf")
-                            closest_leg_id = None
-
-                            for person in leg_msg.people:
-                                dx = person.pose.position.x - detection.point.x
-                                dy = person.pose.position.y - detection.point.y
-                                dist = math.sqrt(dx * dx + dy * dy)
-
-                                if dist < min_dist:
-                                    min_dist = dist
-                                    closest_leg_id = person.id
-
-                            if closest_leg_id is not None:
-                                old_id = self.shared_data.track_id_leg
-                                self.shared_data.track_id_leg = closest_leg_id
-                                rospy.loginfo(
-                                    f"Reselected leg tracker ID: {old_id} -> {closest_leg_id} (distance: {min_dist:.2f}m)")
-                            else:
-                                rospy.logwarn("No leg tracker targets available for reselection")
-                        else:
-                            rospy.logwarn("No people found in leg tracker for reselection")
-                    except rospy.ROSException:
-                        rospy.logwarn("Failed to get leg tracker data for reselection")
-
-                    # Reset reselect timer
-                    self.shared_data.last_reselect_legs_time = this_time
-
                 try:
                     if is_good_quality:
                         self.shared_data.sam2_callbacks += 1
+
+                        _detection = PointStamped()
+                        _detection.header.frame_id = "map"
+                        _detection.header.stamp = this_time
+
+                        # Update position with filtered prediction
+                        _detection.point.x = detection.point.x
+                        _detection.point.y = detection.point.y
+                        _detection.point.z = 1.2
+
+                        self.shared_data.last_sam2_target = _detection
+
+                        # Check if need to reselect leg tracker target
+                        if (hasattr(self.shared_data, 'last_reselect_legs_time') and
+                                hasattr(self.shared_data, 'reselect_legs_time_duration') and
+                                (
+                                        this_time - self.shared_data.last_reselect_legs_time) > self.shared_data.reselect_legs_time_duration):
+
+                            # Get current leg tracker data
+                            try:
+                                leg_msg = rospy.wait_for_message("/people_tracked", PersonArray, timeout=1.0)
+                                if len(leg_msg.people) > 0:
+                                    # Find closest leg person to current 3D detection
+                                    min_dist = float("inf")
+                                    closest_leg_id = None
+
+                                    for person in leg_msg.people:
+                                        dx = person.pose.position.x - detection.point.x
+                                        dy = person.pose.position.y - detection.point.y
+                                        dist = math.sqrt(dx * dx + dy * dy)
+
+                                        if dist < min_dist:
+                                            min_dist = dist
+                                            closest_leg_id = person.id
+
+                                    if closest_leg_id is not None:
+                                        old_id = self.shared_data.track_id_leg
+                                        self.shared_data.track_id_leg = closest_leg_id
+                                        rospy.loginfo(
+                                            f"Reselected leg tracker ID: {old_id} -> {closest_leg_id} (distance: {min_dist:.2f}m)")
+                                    else:
+                                        rospy.logwarn("No leg tracker targets available for reselection")
+                                else:
+                                    rospy.logwarn("No people found in leg tracker for reselection")
+                            except rospy.ROSException:
+                                rospy.logwarn("Failed to get leg tracker data for reselection")
+
+                            # Reset reselect timer
+                            self.shared_data.last_reselect_legs_time = this_time
 
                         req = DualSensorPersonTrackingFilterRequest()
                         req.command = (
@@ -868,8 +883,6 @@ class FollowPerson(smach.StateMachine):
                             map_pose.pose.position.y = filtered_y
                             map_pose.pose.position.z = detection.point.z
                             map_pose.pose.orientation.w = 1.0
-
-                            self.shared_data.last_sam2_target = map_pose
 
                             # target list initialization
                             robot_pose = self.get_robot_pose_in_map()
@@ -1254,11 +1267,9 @@ class FollowPerson(smach.StateMachine):
         )
         self.look_at_point(point, target_frame="base_link", wait_for_completion=True)
 
-    def look_down_point(self, target_point: Point = None, target_frame: str = "map"):
-        """Look down towards the target direction down."""
-        distance = 2.0
-        look_down_angle = -15.0
 
+    def look_down_point(self, target_point: Point = None, target_frame: str = "map"):
+        """Look down towards the target direction or center if no target provided."""
         if target_point is not None:
             # Transform target point to base_link frame to get direction
             try:
@@ -1271,54 +1282,31 @@ class FollowPerson(smach.StateMachine):
                 # Transform to base_link frame
                 target_in_base = self._tf_pose(target_pose, "base_link")
 
-                # Calculate horizontal direction towards target
+                # Calculate direction towards target but look down
                 x_dir = target_in_base.pose.position.x
                 y_dir = target_in_base.pose.position.y
 
-                # Normalize the horizontal direction
+                # Normalize the direction and set distance
+                distance = 3.0
                 if x_dir != 0 or y_dir != 0:
                     norm = math.sqrt(x_dir**2 + y_dir**2)
-                    x_dir = x_dir / norm
-                    y_dir = y_dir / norm
+                    x_dir = (x_dir / norm) * distance
+                    y_dir = (y_dir / norm) * distance
                 else:
                     # Default to forward if target is directly above/below
-                    x_dir = 1.0
+                    x_dir = distance
                     y_dir = 0.0
 
-                # Calculate look point with 45 degree downward angle
-                # For 45 degrees down: horizontal_distance = vertical_distance
-                horizontal_distance = distance * math.cos(
-                    math.radians(abs(look_down_angle))
-                )
-                vertical_distance = distance * math.sin(
-                    math.radians(abs(look_down_angle))
-                )
-
-                # Apply horizontal direction and downward angle
-                point = Point(
-                    x=x_dir * horizontal_distance,
-                    y=y_dir * horizontal_distance,
-                    z=-vertical_distance,  # Negative for looking down
-                )
-
-                rospy.loginfo(
-                    f"Looking down towards target: x={point.x:.2f}, y={point.y:.2f}, z={point.z:.2f}"
-                )
+                # Look down towards the target direction
+                point = Point(x=x_dir, y=y_dir, z=0.6)
 
             except Exception as e:
                 rospy.logwarn(f"Failed to transform target point: {e}")
-                # Fall back to center point looking down 45 degrees
-                horizontal_distance = distance * math.cos(math.radians(45))
-                vertical_distance = distance * math.sin(math.radians(45))
-                point = Point(x=horizontal_distance, y=0.0, z=-vertical_distance)
+                # Fall back to center point
+                point = Point(x=3.0, y=0.0, z=0.6)
         else:
-            # Default center point looking down 45 degrees
-            horizontal_distance = distance * math.cos(math.radians(45))
-            vertical_distance = distance * math.sin(math.radians(45))
-            point = Point(x=horizontal_distance, y=0.0, z=-vertical_distance)
-            rospy.loginfo(
-                f"Looking down forward: x={point.x:.2f}, y={point.y:.2f}, z={point.z:.2f}"
-            )
+            # Default center point when no target provided
+            point = Point(x=3.0, y=0.0, z=0.6)
 
         self.look_at_point(point, target_frame="base_link")
 
@@ -1396,6 +1384,7 @@ class PersonDetectionState(smach.State):
             robot_x = transform.transform.translation.x
             robot_y = transform.transform.translation.y
 
+            # self.sm_manager._tts("calling yolo...")
             # Call YOLO detection service first
             req = YoloDetection3DRequest(
                 image_raw=self.sm_manager.shared_data.current_image,
@@ -1407,6 +1396,7 @@ class PersonDetectionState(smach.State):
             )
 
             response = self.sm_manager.yolo(req)
+            # self.sm_manager._tts("yolo replied...")
             detections = response.detected_objects
 
             detected_people = {"xywh": [], "point": []}
@@ -1584,14 +1574,6 @@ class TrackingActiveState(smach.State):
                 self.sm_manager.look_at_point(
                     self.sm_manager.shared_data.last_sam2_target.point,
                     target_frame="map",
-                    wait_for_completion=True,
-                )
-            elif self.sm_manager.shared_data.newest_detection:
-                # rospy.logwarn(f"Looking at newest point: {self.sm_manager.shared_data.newest_detection}")
-                self.sm_manager.look_at_point(
-                    self.sm_manager.shared_data.newest_detection.point,
-                    target_frame="map",
-                    wait_for_completion=True,
                 )
 
             # Update distance traveled
@@ -1843,19 +1825,19 @@ class NavigationState(smach.State):
             current_time = rospy.Time.now()
             navigation_elapsed_time = (current_time - navigation_start_time).to_sec()
 
-            if navigation_elapsed_time >= self.navigation_timeout:
-                rospy.logwarn(
-                    f"Navigation timeout reached ({self.navigation_timeout}s). Canceling current goal."
-                )
-                # Cancel the current navigation goal
-                self.sm_manager.move_base_client.cancel_goal()
-                rospy.loginfo(
-                    "Navigation goal canceled due to timeout, treating as successful completion"
-                )
-                self.sm_manager.shared_data.last_movement_time = rospy.Time.now()
-                self.sm_manager.shared_data.added_new_target_time = rospy.Time.now()
-                self._send_face_target_goal(self.sm_manager.shared_data.current_goal)
-                return "navigation_complete"
+            # if navigation_elapsed_time >= self.navigation_timeout:
+            #     rospy.logwarn(
+            #         f"Navigation timeout reached ({self.navigation_timeout}s). Canceling current goal."
+            #     )
+            #     # Cancel the current navigation goal
+            #     self.sm_manager.move_base_client.cancel_goal()
+            #     rospy.loginfo(
+            #         "Navigation goal canceled due to timeout, treating as successful completion"
+            #     )
+            #     self.sm_manager.shared_data.last_movement_time = rospy.Time.now()
+            #     self.sm_manager.shared_data.added_new_target_time = rospy.Time.now()
+            #     self._send_face_target_goal(self.sm_manager.shared_data.current_goal)
+            #     return "navigation_complete"
 
             # Keep looking at detected person during navigation
             if self.sm_manager.shared_data.newest_detection:
@@ -1873,60 +1855,19 @@ class NavigationState(smach.State):
                     self.object_avoidance
                     # and time_since_last_look_down >= look_down_period_duration
                 ):
-                    rospy.loginfo(
-                        "NavigationState: Look down period elapsed, executing down swap"
-                    )
-                    rospy.loginfo(
-                        f"NavigationState: Down swap parameters - target_frame: map, "
-                        f"look_down_time: {self.sm_manager.shared_data.look_down_duration}, "
-                        f"pause_conditional_frame: True"
-                    )
-
                     if self.sm_manager.shared_data.last_sam2_target:
                         rospy.loginfo(
                             f"Looking down towards newst point: {self.sm_manager.shared_data.last_sam2_target}"
                         )
-                        self._down_swap(
-                            self.sm_manager.shared_data.last_sam2_target.point,
-                            target_frame="map",
-                            # look_down_time=self.sm_manager.shared_data.look_down_duration,
-                            pause_conditional_frame=True,
-                        )
-                    else:
-                        rospy.loginfo(
-                            f"Looking down towards newst point: {self.sm_manager.shared_data.newest_detection}"
-                        )
-                        self._down_swap(
-                            self.sm_manager.shared_data.newest_detection.point,
-                            target_frame="map",
-                            # look_down_time=self.sm_manager.shared_data.look_down_duration,
-                            pause_conditional_frame=True,
-                        )
-                    if time_since_last_look_down >= look_down_period_duration * 1.5:
-                        last_look_down_time = rospy.Time.now()
-                    rospy.loginfo(
-                        f"NavigationState: Down swap completed, updated last_look_down_time to {last_look_down_time}"
-                    )
+                        # self.sm_manager.look_at_point(
+                        #     self.sm_manager.shared_data.last_sam2_target.point,
+                        #     target_frame="map",
+                        # )
+                        self.sm_manager.look_down_point(self.sm_manager.shared_data.last_sam2_target.point, "map")
                 else:
-                    rospy.loginfo(
-                        "NavigationState: Look down period not elapsed, continuing to look at person"
-                    )
-                    rospy.loginfo(
-                        f"NavigationState: Looking at point in map frame - "
-                        f"x: {self.sm_manager.shared_data.newest_detection.point.x:.2f}, "
-                        f"y: {self.sm_manager.shared_data.newest_detection.point.y:.2f}, "
-                        f"z: {self.sm_manager.shared_data.newest_detection.point.z:.2f}"
-                    )
-
                     if self.sm_manager.shared_data.last_sam2_target:
                         self.sm_manager.look_at_point(
                             self.sm_manager.shared_data.last_sam2_target.point,
-                            target_frame="map",
-                        )
-                    else:
-                        # rospy.logwarn(f"Looking at newest point: {self.sm_manager.shared_data.newest_detection}")
-                        self.sm_manager.look_at_point(
-                            self.sm_manager.shared_data.newest_detection.point,
                             target_frame="map",
                         )
 
@@ -1981,19 +1922,6 @@ class NavigationState(smach.State):
             rate.sleep()
 
         return "failed"
-
-    def _down_swap(
-        self,
-        target_point: Point = None,
-        target_frame: str = "map",
-        # look_down_time=2.0,
-        pause_conditional_frame=True,
-    ):
-        self.sm_manager.pause_conditional_frame = pause_conditional_frame
-        self.sm_manager.look_down_point(target_point, target_frame)
-        # rospy.sleep(look_down_time)
-        # self.sm_manager.look_at_point(target_point, target_frame)
-        self.sm_manager.pause_conditional_frame = False
 
     def _send_face_target_goal(self, target_pose):
         """Send a rotation-only goal to face the target. Robot stays at current position but rotates."""
@@ -2315,7 +2243,7 @@ def main():
 
     try:
         # Create the state machine with custom parameters
-        person_following_sm = FollowPerson()
+        person_following_sm = FollowPerson(object_avoidance=True, fallback=True)
 
         # Execute the state machine
         rospy.loginfo("Starting person following state machine")

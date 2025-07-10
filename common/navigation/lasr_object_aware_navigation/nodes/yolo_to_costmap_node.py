@@ -9,6 +9,7 @@ import sensor_msgs.point_cloud2 as pc2
 from cv_bridge import CvBridge
 from nav_msgs.msg import OccupancyGrid
 from geometry_msgs.msg import Pose, PointStamped, Point
+from visualization_msgs.msg import Marker, MarkerArray  # Add marker imports
 
 from lasr_vision_msgs.srv import YoloDetection3D, YoloDetection3DRequest
 
@@ -84,6 +85,8 @@ class YoloToCostmapNode:
         self.pointcloud_pub = rospy.Publisher("/_rgbd_scan", PointCloud2, queue_size=1)
         # Additional LaserScan publisher for simulated scan
         self.laserscan_pub = rospy.Publisher("/rgbd_scan", LaserScan, queue_size=1)
+        # Add marker publisher for object visualization
+        self.marker_pub = rospy.Publisher("/detected_objects_markers", MarkerArray, queue_size=1)
 
         # TF listener for frame conversion
         self.tf_buffer = tf2_ros.Buffer()
@@ -134,6 +137,84 @@ class YoloToCostmapNode:
         req.target_frame = self.target_frame
         resp = self.yolo_srv(req)
         return resp.detected_objects
+
+    def create_object_markers(self, detections):
+        """Create marker array for detected objects"""
+        marker_array = MarkerArray()
+
+        for idx, det in enumerate(detections):
+            # Skip if no valid 3D point
+            if not hasattr(det, "point") or det.point is None:
+                continue
+
+            label = getattr(det, "name", "unknown")
+
+            # Skip ignored labels
+            if label.lower() in self.ignore_labels:
+                continue
+
+            # Create cylinder marker for object
+            marker = Marker()
+            marker.header.frame_id = self.target_frame
+            marker.header.stamp = rospy.Time.now()
+            marker.ns = "detected_objects"
+            marker.id = idx
+            marker.type = Marker.CYLINDER
+            marker.action = Marker.ADD
+
+            # Set position
+            marker.pose.position.x = det.point.x
+            marker.pose.position.y = det.point.y
+            marker.pose.position.z = det.point.z
+            marker.pose.orientation.w = 1.0
+
+            # Set size based on obstacle radius
+            marker.scale.x = self.obstacle_radius * 2  # diameter
+            marker.scale.y = self.obstacle_radius * 2  # diameter
+            marker.scale.z = 0.1  # height
+
+            # Set color based on object class
+            marker.color.a = 0.7  # alpha
+            marker.color.r = 0.0
+            marker.color.g = 1.0
+            marker.color.b = 0.0
+
+            # Set lifetime
+            marker.lifetime = rospy.Duration(self.detection_interval * 2)
+
+            marker_array.markers.append(marker)
+
+            # Create text marker for label
+            text_marker = Marker()
+            text_marker.header.frame_id = self.target_frame
+            text_marker.header.stamp = rospy.Time.now()
+            text_marker.ns = "object_labels"
+            text_marker.id = idx
+            text_marker.type = Marker.TEXT_VIEW_FACING
+            text_marker.action = Marker.ADD
+
+            # Position text above object
+            text_marker.pose.position.x = det.point.x
+            text_marker.pose.position.y = det.point.y
+            text_marker.pose.position.z = det.point.z + 0.3
+            text_marker.pose.orientation.w = 1.0
+
+            # Set text properties
+            text_marker.text = f"{label} ({det.confidence:.2f})" if hasattr(det, "confidence") else label
+            text_marker.scale.z = 0.2  # text size
+
+            # Text color
+            text_marker.color.a = 1.0
+            text_marker.color.r = 1.0
+            text_marker.color.g = 1.0
+            text_marker.color.b = 1.0
+
+            # Set lifetime
+            text_marker.lifetime = rospy.Duration(self.detection_interval * 2)
+
+            marker_array.markers.append(text_marker)
+
+        return marker_array
 
     def line_circle_intersection(self, beam_dx, beam_dy, circle_x, circle_y, radius):
         """
@@ -349,6 +430,12 @@ class YoloToCostmapNode:
         self.costmap_pub.publish(msg)
         rospy.loginfo_throttle(2.0, "Published %d virtual obstacles to /custom_obstacle_map", count)
 
+        # Publish markers for detected objects
+        marker_array = self.create_object_markers(detections)
+        self.marker_pub.publish(marker_array)
+        rospy.loginfo_throttle(2.0, "Published %d object markers to /detected_objects_markers",
+                               len(marker_array.markers))
+
         # Store current frame's obstacle_points for high-rate publishing
         self.latest_obstacle_points = obstacle_points
         if obstacle_points:
@@ -427,6 +514,7 @@ class YoloToCostmapNode:
         self.laserscan_pub.publish(scan_msg)
         rospy.loginfo_throttle(2.0,
                                f"Published LaserScan with {len(all_center_points)} circular obstacles to /rgbd_scan")
+
 
 if __name__ == "__main__":
     rospy.init_node("yolo_to_costmap_node")
