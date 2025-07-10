@@ -28,7 +28,7 @@ class GetNameAndInterest(smach.StateMachine):
 
         smach.StateMachine.__init__(
             self,
-            outcomes=["succeeded", "failed"],
+            outcomes=["succeeded", "failed", "failed_interest", "failed_name"],
             input_keys=["guest_transcription", "guest_data"],
             output_keys=["guest_data", "guest_transcription"],
         )
@@ -136,7 +136,7 @@ class GetNameAndInterest(smach.StateMachine):
                     last_resort=self._last_resort,
                     param_key=self._param_key,
                 ),
-                transitions={"succeeded": "succeeded", "failed": "failed"},
+                transitions={"succeeded": "succeeded", "failed": "failed", "failed_name": "failed_name", "failed_interest":"failed_interest"},
             )
 
     class ParseNameAndInterest(smach.State):
@@ -366,14 +366,32 @@ class GetNameAndInterest(smach.StateMachine):
             self._last_resort = last_resort
 
         def execute(self, userdata: UserData) -> str:
+            if not self._recovery_name_and_interest_required(userdata):
+                if (
+                    userdata.guest_data[self._guest_id]["name"] == "unknown"
+                    or userdata.guest_data[self._guest_id]["name"]
+                    not in self._possible_names
+                ):
+                    outcome = "failed_name"
+                elif userdata.guest_data[self._guest_id]["interest"] == "unknown":
+                    "failed_interest"
+                else:
+                    outcome = "succeeded"
+            else:
+                outcome = "failed"
+            return outcome
+
+        def _recovery_name_and_interest_required(self, userdata: UserData) -> bool:
+            """Determine whether both the name and interest requires recovery.
+
+            Returns:
+                bool: True if both attributes require recovery.
+            """
             if (
                 userdata.guest_data[self._guest_id]["name"] == "unknown"
                 or userdata.guest_data[self._guest_id]["name"]
                 not in self._possible_names
             ):
-                outcome = "failed"
-            elif userdata.guest_data[self._guest_id]["interest"] == "unknown":
-                outcome = "failed"
-            else:
-                outcome = "succeeded"
-            return outcome
+                if userdata.guest_data[self._guest_id]["interest"] == "unknown":
+                    return True
+            return False

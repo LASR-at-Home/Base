@@ -3,6 +3,8 @@ import smach
 from lasr_skills import AskAndListen, Say, StartEyeTracker, StopEyeTracker
 from receptionist.states import (
     GetNameAndInterest,
+    GetName,
+    GetInterest
     ReceptionistLearnFaces,
     GetGuestAttributes,
 )
@@ -203,8 +205,8 @@ class HandleNameInterest(smach.StateMachine):
                     transitions={
                         "succeeded": f"succeeded",
                         "failed": f"REPEAT_GET_NAME_INTEREST_{guest_id}",
-                        # "failed_name": f"REPEAT_GET_NAME_{guest_id}",
-                        # "failed_drink": f"REPEAT_GET_INTEREST_{guest_id}",
+                        "failed_name": f"REPEAT_GET_NAME_{guest_id}",
+                        "failed_drink": f"REPEAT_GET_INTEREST_{guest_id}",
                     },
                     remapping={"guest_transcription": "transcribed_speech"},
                 )
@@ -221,8 +223,50 @@ class HandleNameInterest(smach.StateMachine):
                 )
 
                 smach.StateMachine.add(
+                    f"REPEAT_GET_NAME_{guest_id}",
+                    AskAndListen(
+                        "Please speak louder. What is your name?",
+                    ),
+                    transitions={
+                        "succeeded": f"REPEAT_PARSE_NAME_{guest_id}",
+                        "failed": "succeeded",
+                    },
+                )
+
+                smach.StateMachine.add(
+                    f"REPEAT_GET_INTEREST_{guest_id}",
+                    AskAndListen(
+                        "Please speak louder. What is your interest?",
+                    ),
+                    transitions={
+                        "succeeded": f"REPEAT_PARSE_INTEREST_{guest_id}",
+                        "failed": "succeeded",
+                    },
+                )
+
+                smach.StateMachine.add(
                     f"REPEAT_PARSE_NAME_INTEREST_{guest_id}",
                     GetNameAndInterest(guest_id, True),
+                    transitions={
+                        "succeeded": f"succeeded",
+                        "failed": f"succeeded",
+                    },
+                    remapping={"guest_transcription": "transcribed_speech"},
+                )
+
+                smach.StateMachine.add(
+                    f"REPEAT_PARSE_NAME_{guest_id}",
+                    GetName(guest_id, True),
+                    transitions={
+                        "succeeded": f"succeeded",
+                        "failed": f"succeeded",
+                    },
+                    remapping={"guest_transcription": "transcribed_speech"},
+                )
+
+                smach.StateMachine.add(
+                    f"REPEAT_PARSE_INTEREST_{guest_id}",
+                    GetInterest(guest_id, True),
                     transitions={
                         "succeeded": f"succeeded",
                         "failed": f"succeeded",
