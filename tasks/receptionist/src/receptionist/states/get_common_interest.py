@@ -80,10 +80,7 @@ class GetCommonInterest(smach.StateMachine):
             smach.StateMachine.add(
                 "GET_INTEREST_MESSAGE",
                 GetInterest(),
-                transitions={
-                    "succeeded": "succeeded",
-                    "failed": "failed",
-                },
+                transitions={"succeeded": "succeeded", "failed": "failed"},
                 remapping={
                     "guest_data": "guest_data",
                     "interest_message": "interest_message",

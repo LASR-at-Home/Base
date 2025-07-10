@@ -8,18 +8,12 @@ import smach
 from smach import UserData
 from typing import List, Dict, Any
 from receptionist.states import SpeechRecovery
-from lasr_llm_msgs.srv import (
-    Llm,
-    LlmRequest,
-)
+from lasr_llm_msgs.srv import Llm, LlmRequest
 
 
 class GetInterest(smach.StateMachine):
     def __init__(
-        self,
-        guest_id: str,
-        last_resort: bool,
-        param_key: str = "/receptionist/priors",
+        self, guest_id: str, last_resort: bool, param_key: str = "/receptionist/priors"
     ):
 
         self._guest_id = guest_id
@@ -49,10 +43,7 @@ class GetInterest(smach.StateMachine):
                     last_resort=self._last_resort,
                     param_key=self._param_key,
                 ),
-                transitions={
-                    "failed": "failed",
-                    "succeeded": "succeeded",
-                },
+                transitions={"failed": "failed", "succeeded": "succeeded"},
             )
 
     class ParseInterest(smach.State):
@@ -165,4 +156,3 @@ class GetInterest(smach.StateMachine):
 
             rospy.loginfo(f"Resort to recovering interest as technology")
             return "succeeded"
-

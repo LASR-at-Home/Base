@@ -10,9 +10,7 @@ from lasr_skills import (
     PlayMotion,
     Say,
 )
-from receptionist.states import (
-    GetDrink,
-)
+from receptionist.states import GetDrink
 
 
 class HandleDrink(smach.StateMachine):
@@ -39,19 +37,12 @@ class HandleDrink(smach.StateMachine):
 
             smach.StateMachine.add(
                 f"DETECT_PERSON_{guest_id}",
-                Detect3D(
-                    filter=["person"],
-                    confidence=0.5,
-                    target_frame="map",
-                ),
+                Detect3D(filter=["person"], confidence=0.5, target_frame="map"),
                 transitions={
                     "succeeded": f"GET_NEAREST_PERSON_{guest_id}",
                     "failed": f"GET_DRINK_GUEST_{guest_id}",
                 },
-                remapping={
-                    "detections_3d": "detections_3d",
-                    "image_raw": "image_raw",
-                },
+                remapping={"detections_3d": "detections_3d", "image_raw": "image_raw"},
             )
             smach.StateMachine.add(
                 f"GET_NEAREST_PERSON_{guest_id}",
@@ -60,9 +51,7 @@ class HandleDrink(smach.StateMachine):
                     "succeeded": f"START_EYE_TRACKER_GUEST_{guest_id}",
                     "failed": f"GET_DRINK_GUEST_{guest_id}",
                 },
-                remapping={
-                    "nearest_object": "person_point",
-                },
+                remapping={"nearest_object": "person_point"},
             )
             # If there, begin eye tracker, else, say can't see but trust you are there
             smach.StateMachine.add(
@@ -98,9 +87,7 @@ class HandleDrink(smach.StateMachine):
 
             smach.StateMachine.add(
                 f"REPEAT_GET_DRINK_GUEST_{guest_id}",
-                AskAndListen(
-                    "Please speak louder. What is your favourite drink?",
-                ),
+                AskAndListen("Please speak louder. What is your favourite drink?"),
                 transitions={
                     "succeeded": f"REPEAT_PARSE_DRINK_GUEST_{guest_id}",
                     "failed": f"SAY_FIND_DRINK_{guest_id}",
@@ -146,8 +133,5 @@ class HandleDrink(smach.StateMachine):
                 smach.StateMachine.add(
                     f"FACE_TABLE_GUEST_{guest_id}",
                     Rotate(180),
-                    transitions={
-                        "succeeded": "succeeded",
-                        "failed": "failed",
-                    },
+                    transitions={"succeeded": "succeeded", "failed": "failed"},
                 )

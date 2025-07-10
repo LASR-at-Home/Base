@@ -9,18 +9,12 @@ import smach
 from smach import UserData
 from typing import List, Dict, Any
 from receptionist.states import SpeechRecovery
-from lasr_llm_msgs.srv import (
-    Llm,
-    LlmRequest,
-)
+from lasr_llm_msgs.srv import Llm, LlmRequest
 
 
 class GetDrink(smach.StateMachine):
     def __init__(
-        self,
-        guest_id: str,
-        last_resort: bool,
-        param_key: str = "/receptionist/priors",
+        self, guest_id: str, last_resort: bool, param_key: str = "/receptionist/priors"
     ):
         smach.StateMachine.__init__(
             self,
@@ -35,7 +29,11 @@ class GetDrink(smach.StateMachine):
         with self:
             smach.StateMachine.add(
                 "PARSE_DRINK",
-                self.ParseDrink(guest_id=self._guest_id, last_resort=self._last_resort, param_key=self._param_key, ),
+                self.ParseDrink(
+                    guest_id=self._guest_id,
+                    last_resort=self._last_resort,
+                    param_key=self._param_key,
+                ),
                 transitions={
                     "succeeded": "succeeded",
                     "failed": "failed",
@@ -49,7 +47,6 @@ class GetDrink(smach.StateMachine):
             guest_id: str,
             last_resort: bool,
             param_key: str = "/receptionist/priors",
-            
         ):
             """Parses the transcription of the guests' favourite drink.
 
@@ -125,11 +122,7 @@ class GetDrink(smach.StateMachine):
             return "succeeded"
 
     class PostRecoveryDecision(smach.State):
-        def __init__(
-            self,
-            guest_id: str,
-            param_key: str = "/receptionist/priors",
-        ):
+        def __init__(self, guest_id: str, param_key: str = "/receptionist/priors"):
             smach.State.__init__(
                 self,
                 outcomes=["succeeded", "failed"],

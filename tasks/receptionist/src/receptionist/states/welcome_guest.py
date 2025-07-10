@@ -35,10 +35,7 @@ class WelcomeGuest(smach.StateMachine):
     tell guest 2 the interests they have in common with guest 1."""
 
     def __init__(self):
-        super().__init__(
-            outcomes=["succeeded", "failed"],
-            input_keys=["guest_data"],
-        )
+        super().__init__(outcomes=["succeeded", "failed"], input_keys=["guest_data"])
 
         """
         Rough plan:
@@ -54,10 +51,7 @@ class WelcomeGuest(smach.StateMachine):
             smach.StateMachine.add(
                 "SAY_WELCOME",
                 self.GetWelcomeMessage(),
-                transitions={
-                    "succeeded": "SAY_WELCOME_MESSAGE",
-                    "failed": "failed",
-                },
+                transitions={"succeeded": "SAY_WELCOME_MESSAGE", "failed": "failed"},
                 remapping={
                     "guest_data": "guest_data",
                     "common_interest": "common_interest",

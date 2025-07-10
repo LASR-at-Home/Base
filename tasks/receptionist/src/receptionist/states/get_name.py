@@ -8,18 +8,12 @@ import smach
 from smach import UserData
 from typing import List, Dict, Any
 from receptionist.states import SpeechRecovery
-from lasr_llm_msgs.srv import (
-    Llm,
-    LlmRequest,
-)
+from lasr_llm_msgs.srv import Llm, LlmRequest
 
 
 class GetName(smach.StateMachine):
     def __init__(
-        self,
-        guest_id: str,
-        last_resort: bool,
-        param_key: str = "/receptionist/priors",
+        self, guest_id: str, last_resort: bool, param_key: str = "/receptionist/priors"
     ):
 
         self._guest_id = guest_id
@@ -64,10 +58,7 @@ class GetName(smach.StateMachine):
                     recover_from_llm=True,
                     param_key=self._param_key,
                 ),
-                transitions={
-                    "succeeded": "succeeded",
-                    "failed": "failed",
-                },
+                transitions={"succeeded": "succeeded", "failed": "failed"},
             )
 
             smach.StateMachine.add(
@@ -93,10 +84,7 @@ class GetName(smach.StateMachine):
                     recover_from_llm=False,
                     param_key=self._param_key,
                 ),
-                transitions={
-                    "succeeded": "succeeded",
-                    "failed": "failed",
-                },
+                transitions={"succeeded": "succeeded", "failed": "failed"},
             )
 
     class ParseName(smach.State):
@@ -161,7 +149,6 @@ class GetName(smach.StateMachine):
                 guest["name"] = "unknown"
                 return "failed"
 
-
             # Try to match an exact name from transcription
             name = next(
                 (n for n in self._possible_names if n in transcription), llm_name
@@ -170,9 +157,7 @@ class GetName(smach.StateMachine):
             # Update guest data
             guest["name"] = name
 
-            rospy.loginfo(
-                f"Parsed name: {name} from transcription: {transcription}"
-            )
+            rospy.loginfo(f"Parsed name: {name} from transcription: {transcription}")
 
             # Determine outcome
             if name == "unknown":
@@ -181,7 +166,6 @@ class GetName(smach.StateMachine):
                 return "failed"
 
             return "succeeded"
-
 
     class RecoverName(smach.State):
         def __init__(

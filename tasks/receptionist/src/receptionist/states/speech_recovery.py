@@ -42,20 +42,9 @@ class SpeechRecovery(smach.State):
         self._recover_from_llm = recover_from_llm
         prior_data: Dict[str, List[str]] = rospy.get_param(param_key)
         self._available_names = [name.lower() for name in prior_data["names"]]
-        
-        self._available_single_drinks = [
-            "cola",
-            "water",
-            "milk",
-            "fanta",
-            "dubbelfris",
-        ]
-        self._available_double_drinks = [
-            "ice",
-            "tea",
-            "big",
-            "coke",
-        ]
+
+        self._available_single_drinks = ["cola", "water", "milk", "fanta", "dubbelfris"]
+        self._available_double_drinks = ["ice", "tea", "big", "coke"]
         self._double_drinks_dict = {
             "ice": "ice tea",
             "tea": "ice tea",
@@ -94,7 +83,7 @@ class SpeechRecovery(smach.State):
         ]
 
     def execute(self, userdata: UserData) -> str:
-        """Optimise the transcription, then attempt to recover the drink or / and name.
+        """Attempt to recover the drink or / and name from the LLM response or the transcription.
 
         Args:
             userdata (UserData): State machine userdata assumed to contain a key

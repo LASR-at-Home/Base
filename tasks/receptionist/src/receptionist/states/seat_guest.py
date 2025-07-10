@@ -38,10 +38,7 @@ class LearnHostFace(smach.StateMachine):
             smach.StateMachine.add(
                 "GET_HOST_LOOK_POINT",
                 GetLookPoint(),
-                transitions={
-                    "succeeded": "LOOK_TO_HOST",
-                    "failed": "failed",
-                },
+                transitions={"succeeded": "LOOK_TO_HOST", "failed": "failed"},
             )
             smach.StateMachine.add(
                 "LOOK_TO_HOST",
@@ -51,23 +48,13 @@ class LearnHostFace(smach.StateMachine):
                     "aborted": "failed",
                     "timed_out": "failed",
                 },
-                remapping={
-                    "pointstamped": "pointstamped",
-                },
+                remapping={"pointstamped": "pointstamped"},
             )
             smach.StateMachine.add(
                 "LEARN_HOST_FACE",
-                ReceptionistLearnFaces(
-                    guest_id="host",
-                    dataset_size=5,
-                ),
-                transitions={
-                    "succeeded": "succeeded",
-                    "failed": "failed",
-                },
-                remapping={
-                    "guest_data": "guest_data",
-                },
+                ReceptionistLearnFaces(guest_id="host", dataset_size=5),
+                transitions={"succeeded": "succeeded", "failed": "failed"},
+                remapping={"guest_data": "guest_data"},
             )
 
 
@@ -88,10 +75,7 @@ class GetLookPoint(smach.State):
             rospy.logwarn("No seated guest locations provided.")
             return "failed"
         point = userdata.seated_guest_locs[0]
-        userdata.pointstamped = PointStamped(
-            header=Header(frame_id="map"),
-            point=point,
-        )
+        userdata.pointstamped = PointStamped(header=Header(frame_id="map"), point=point)
         return "succeeded"
 
 
@@ -193,8 +177,7 @@ class ProcessDetections(smach.State):
 
         if seat_sofa:
             userdata.guest_seat_point = PointStamped(
-                header=Header(frame_id="map"),
-                point=self._sofa_point,
+                header=Header(frame_id="map"), point=self._sofa_point
             )
             if len(userdata.sofa_detections) == 0:
                 userdata.seating_string = "The sofa that I'm looking at is empty. Please take a seat anywhere on the sofa."
@@ -263,9 +246,7 @@ class ProcessDetections(smach.State):
                 userdata.guest_seat_point = PointStamped(
                     header=Header(frame_id="map"),
                     point=Point(
-                        x=self._sofa_point.x,
-                        y=self._sofa_point.y,
-                        z=self._sofa_point.z,
+                        x=self._sofa_point.x, y=self._sofa_point.y, z=self._sofa_point.z
                     ),
                 )
 
@@ -273,7 +254,6 @@ class ProcessDetections(smach.State):
 
 
 class SeatGuest(smach.StateMachine):
-
     def __init__(
         self,
         seating_area: ShapelyPolygon,
@@ -307,8 +287,7 @@ class SeatGuest(smach.StateMachine):
                 "LOOK_TO_SOFA",
                 LookToPoint(
                     pointstamped=PointStamped(
-                        header=Header(frame_id="map"),
-                        point=sofa_point,
+                        header=Header(frame_id="map"), point=sofa_point
                     )
                 ),
                 transitions={
@@ -319,18 +298,9 @@ class SeatGuest(smach.StateMachine):
             )
             smach.StateMachine.add(
                 "DETECT_SOFA",
-                Detect3DInArea(
-                    sofa_area,
-                    filter=["person"],
-                    confidence=0.7,
-                ),
-                transitions={
-                    "succeeded": "RESET_HEAD_1",
-                    "failed": "failed",
-                },
-                remapping={
-                    "detections_3d": "sofa_detections",
-                },
+                Detect3DInArea(sofa_area, filter=["person"], confidence=0.7),
+                transitions={"succeeded": "RESET_HEAD_1", "failed": "failed"},
+                remapping={"detections_3d": "sofa_detections"},
             )
             smach.StateMachine.add(
                 "RESET_HEAD_1",
@@ -351,13 +321,8 @@ class SeatGuest(smach.StateMachine):
                     min_new_object_dist=0.50,
                     min_confidence=0.5,
                 ),
-                transitions={
-                    "succeeded": "PROCESS_DETECTIONS",
-                    "failed": "failed",
-                },
-                remapping={
-                    "detected_objects": "non_sofa_detections",
-                },
+                transitions={"succeeded": "PROCESS_DETECTIONS", "failed": "failed"},
+                remapping={"detected_objects": "non_sofa_detections"},
             )
             # Process detections
             if learn_host:
@@ -372,10 +337,7 @@ class SeatGuest(smach.StateMachine):
                     left_sofa_area=left_sofa_area,
                     right_sofa_area=right_sofa_area,
                 ),
-                transitions={
-                    "succeeded": detection_transition,
-                    "failed": "failed",
-                },
+                transitions={"succeeded": detection_transition, "failed": "failed"},
                 remapping={
                     "guest_seat_point": "guest_seat_point",
                     "seating_detections": "seating_detections",
@@ -408,10 +370,7 @@ class SeatGuest(smach.StateMachine):
                 smach.StateMachine.add(
                     "SAY_AND_LEARN_HOST_FACE",
                     sm_con,
-                    transitions={
-                        "succeeded": "LOOK_TO_SEAT",
-                        "failed": "LOOK_TO_SEAT",
-                    },
+                    transitions={"succeeded": "LOOK_TO_SEAT", "failed": "LOOK_TO_SEAT"},
                 )
 
             smach.StateMachine.add(
@@ -422,9 +381,7 @@ class SeatGuest(smach.StateMachine):
                     "aborted": "SAY_SEAT_GUEST",
                     "timed_out": "SAY_SEAT_GUEST",
                 },
-                remapping={
-                    "pointstamped": "guest_seat_point",
-                },
+                remapping={"pointstamped": "guest_seat_point"},
             )
             smach.StateMachine.add(
                 "SAY_SEAT_GUEST",
@@ -434,17 +391,12 @@ class SeatGuest(smach.StateMachine):
                     "aborted": "WAIT_FOR_GUEST_TO_SEAT",
                     "preempted": "WAIT_FOR_GUEST_TO_SEAT",
                 },
-                remapping={
-                    "text": "seating_string",
-                },
+                remapping={"text": "seating_string"},
             )
             smach.StateMachine.add(
                 "WAIT_FOR_GUEST_TO_SEAT",
                 Wait(5.0),
-                transitions={
-                    "succeeded": "RESET_HEAD_2",
-                    "failed": "RESET_HEAD_2",
-                },
+                transitions={"succeeded": "RESET_HEAD_2", "failed": "RESET_HEAD_2"},
             )
 
             smach.StateMachine.add(

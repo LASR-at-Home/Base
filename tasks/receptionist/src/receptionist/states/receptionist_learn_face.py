@@ -15,7 +15,6 @@ from cv_bridge import CvBridge
 
 
 class ReceptionistLearnFaces(smach.StateMachine):
-
     class CheckEyes(smach.State):
         """Checks if eyes are present in a given RGB image"""
 
@@ -23,14 +22,11 @@ class ReceptionistLearnFaces(smach.StateMachine):
 
         def __init__(self):
             smach.State.__init__(
-                self,
-                outcomes=["succeeded", "failed"],
-                input_keys=["image_raw"],
+                self, outcomes=["succeeded", "failed"], input_keys=["image_raw"]
             )
 
             self._yolo_service = rospy.ServiceProxy(
-                "/yolo/detect_pose",
-                YoloPoseDetection,
+                "/yolo/detect_pose", YoloPoseDetection
             )
             self._yolo_service.wait_for_service()
 
@@ -90,9 +86,7 @@ class ReceptionistLearnFaces(smach.StateMachine):
     class CheckDoneState(smach.State):
         def __init__(self, dataset_size: int):
             smach.State.__init__(
-                self,
-                outcomes=["succeeded", "failed"],
-                input_keys=["num_images"],
+                self, outcomes=["succeeded", "failed"], input_keys=["num_images"]
             )
             self._dataset_size = dataset_size
 
@@ -119,51 +113,30 @@ class ReceptionistLearnFaces(smach.StateMachine):
             self.userdata.num_images = 0
             smach.StateMachine.add(
                 "DETECT_3D",
-                Detect3D(
-                    filter=["person"],
-                ),
-                transitions={
-                    "succeeded": "CHECK_EYES",
-                    "failed": "failed",
-                },
+                Detect3D(filter=["person"]),
+                transitions={"succeeded": "CHECK_EYES", "failed": "failed"},
             )
             smach.StateMachine.add(
                 "CHECK_EYES",
                 self.CheckEyes(),
-                transitions={
-                    "succeeded": "CROP_IMAGE_3D",
-                    "failed": "DETECT_3D",
-                },
+                transitions={"succeeded": "CROP_IMAGE_3D", "failed": "DETECT_3D"},
             )
             smach.StateMachine.add(
                 "CROP_IMAGE_3D",
                 CropImage3D(
-                    filters=["person"],
-                    crop_logic="nearest",
-                    crop_type="masked",
+                    filters=["person"], crop_logic="nearest", crop_type="masked"
                 ),
-                transitions={
-                    "succeeded": "LEARN_FACE",
-                    "failed": "failed",
-                },
-                remapping={
-                    "cropped_images": "cropped_images",
-                },
+                transitions={"succeeded": "LEARN_FACE", "failed": "failed"},
+                remapping={"cropped_images": "cropped_images"},
             )
 
             smach.StateMachine.add(
                 "LEARN_FACE",
                 self.LearnFaceState(self._guest_id),
-                transitions={
-                    "succeeded": "CHECK_DONE",
-                    "failed": "failed",
-                },
+                transitions={"succeeded": "CHECK_DONE", "failed": "failed"},
             )
             smach.StateMachine.add(
                 "CHECK_DONE",
                 self.CheckDoneState(self._dataset_size),
-                transitions={
-                    "succeeded": "succeeded",
-                    "failed": "DETECT_3D",
-                },
+                transitions={"succeeded": "succeeded", "failed": "DETECT_3D"},
             )

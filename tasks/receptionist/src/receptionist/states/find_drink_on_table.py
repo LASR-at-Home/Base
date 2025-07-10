@@ -77,9 +77,7 @@ class FindDrinkOnTable(smach.StateMachine):
                     "succeeded": "PROCESS_DETECTED_DRINKS",
                     "failed": "PROCESS_DETECTED_DRINKS",
                 },
-                remapping={
-                    "detected_objects": "detected_objects",
-                },
+                remapping={"detected_objects": "detected_objects"},
             )
 
             smach.StateMachine.add(

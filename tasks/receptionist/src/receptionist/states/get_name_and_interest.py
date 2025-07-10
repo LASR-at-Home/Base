@@ -8,18 +8,12 @@ import smach
 from smach import UserData
 from typing import List, Dict, Any
 from receptionist.states import SpeechRecovery
-from lasr_llm_msgs.srv import (
-    Llm,
-    LlmRequest,
-)
+from lasr_llm_msgs.srv import Llm, LlmRequest
 
 
 class GetNameAndInterest(smach.StateMachine):
     def __init__(
-        self,
-        guest_id: str,
-        last_resort: bool,
-        param_key: str = "/receptionist/priors",
+        self, guest_id: str, last_resort: bool, param_key: str = "/receptionist/priors"
     ):
 
         self._guest_id = guest_id
@@ -118,7 +112,10 @@ class GetNameAndInterest(smach.StateMachine):
                     last_resort=self._last_resort,
                     param_key=self._param_key,
                 ),
-                transitions={"failed": "POST_RECOVERY_DECISION", "succeeded": "POST_RECOVERY_DECISION"},
+                transitions={
+                    "failed": "POST_RECOVERY_DECISION",
+                    "succeeded": "POST_RECOVERY_DECISION",
+                },
             )
             smach.StateMachine.add(
                 "RECOVER_BOTH_INTEREST",
@@ -136,7 +133,12 @@ class GetNameAndInterest(smach.StateMachine):
                     last_resort=self._last_resort,
                     param_key=self._param_key,
                 ),
-                transitions={"succeeded": "succeeded", "failed": "failed", "failed_name": "failed_name", "failed_interest":"failed_interest"},
+                transitions={
+                    "succeeded": "succeeded",
+                    "failed": "failed",
+                    "failed_name": "failed_name",
+                    "failed_interest": "failed_interest",
+                },
             )
 
     class ParseNameAndInterest(smach.State):
