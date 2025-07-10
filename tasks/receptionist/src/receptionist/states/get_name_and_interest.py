@@ -118,7 +118,7 @@ class GetNameAndInterest(smach.StateMachine):
                     last_resort=self._last_resort,
                     param_key=self._param_key,
                 ),
-                transitions={"failed": "failed", "succeeded": "succeeded"},
+                transitions={"failed": "POST_RECOVERY_DECISION", "succeeded": "POST_RECOVERY_DECISION"},
             )
             smach.StateMachine.add(
                 "RECOVER_BOTH_INTEREST",
@@ -356,7 +356,7 @@ class GetNameAndInterest(smach.StateMachine):
         ):
             smach.State.__init__(
                 self,
-                outcomes=["succeeded", "failed"],
+                outcomes=["succeeded", "failed", "failed_name", "failed_interest"],
                 input_keys=["guest_transcription", "guest_data"],
                 output_keys=["guest_data", "guest_transcription"],
             )
@@ -374,7 +374,7 @@ class GetNameAndInterest(smach.StateMachine):
                 ):
                     outcome = "failed_name"
                 elif userdata.guest_data[self._guest_id]["interest"] == "unknown":
-                    "failed_interest"
+                    outcome = "failed_interest"
                 else:
                     outcome = "succeeded"
             else:

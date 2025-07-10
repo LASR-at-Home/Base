@@ -14,7 +14,7 @@ from lasr_llm_msgs.srv import (
 )
 
 
-class GetNameAndInterest(smach.StateMachine):
+class GetInterest(smach.StateMachine):
     def __init__(
         self,
         guest_id: str,
@@ -44,7 +44,7 @@ class GetNameAndInterest(smach.StateMachine):
             )
             smach.StateMachine.add(
                 "RECOVER_INTEREST",
-                self.RecoveryDecision(
+                self.RecoverInterest(
                     guest_id=self._guest_id,
                     last_resort=self._last_resort,
                     param_key=self._param_key,

@@ -65,8 +65,8 @@ class GetName(smach.StateMachine):
                     param_key=self._param_key,
                 ),
                 transitions={
-                    "succeeded": "POST_RECOVERY_DECISION",
-                    "failed": "POST_RECOVERY_DECISION",
+                    "succeeded": "succeeded",
+                    "failed": "failed",
                 },
             )
 
@@ -80,7 +80,7 @@ class GetName(smach.StateMachine):
                     param_key=self._param_key,
                 ),
                 transitions={
-                    "succeeded": "POST_RECOVERY_DECISION",
+                    "succeeded": "succeeded",
                     "failed": "SPEECH_RECOVERY_NAME_TRANSCRIPTION_LAST_RESORT",
                 },
             )

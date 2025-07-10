@@ -4,7 +4,7 @@ from lasr_skills import AskAndListen, Say, StartEyeTracker, StopEyeTracker
 from receptionist.states import (
     GetNameAndInterest,
     GetName,
-    GetInterest
+    GetInterest,
     ReceptionistLearnFaces,
     GetGuestAttributes,
 )
@@ -206,7 +206,7 @@ class HandleNameInterest(smach.StateMachine):
                         "succeeded": f"succeeded",
                         "failed": f"REPEAT_GET_NAME_INTEREST_{guest_id}",
                         "failed_name": f"REPEAT_GET_NAME_{guest_id}",
-                        "failed_drink": f"REPEAT_GET_INTEREST_{guest_id}",
+                        "failed_interest": f"REPEAT_GET_INTEREST_{guest_id}",
                     },
                     remapping={"guest_transcription": "transcribed_speech"},
                 )
@@ -249,7 +249,9 @@ class HandleNameInterest(smach.StateMachine):
                     GetNameAndInterest(guest_id, True),
                     transitions={
                         "succeeded": f"succeeded",
-                        "failed": f"succeeded",
+                        "failed": f"failed",
+                        "failed_name": f"failed",
+                        "failed_interest": f"failed",
                     },
                     remapping={"guest_transcription": "transcribed_speech"},
                 )
@@ -259,7 +261,7 @@ class HandleNameInterest(smach.StateMachine):
                     GetName(guest_id, True),
                     transitions={
                         "succeeded": f"succeeded",
-                        "failed": f"succeeded",
+                        "failed": f"failed",
                     },
                     remapping={"guest_transcription": "transcribed_speech"},
                 )
@@ -269,7 +271,7 @@ class HandleNameInterest(smach.StateMachine):
                     GetInterest(guest_id, True),
                     transitions={
                         "succeeded": f"succeeded",
-                        "failed": f"succeeded",
+                        "failed": f"failed",
                     },
                     remapping={"guest_transcription": "transcribed_speech"},
                 )
