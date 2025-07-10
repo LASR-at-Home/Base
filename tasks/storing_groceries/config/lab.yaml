@@ -42,6 +42,26 @@ cabinet:
         x: 0.8395374417304993
         y: 0.3491870164871216
         z: 0.58270263671875
+    candidate_locations:
+      - header:
+        frame_id: "base_footprint"
+        stamp: {secs: 0, nsecs: 0}
+        pose:
+          position: {x: 0.7, y: -0.15, z: 0.8}
+          orientation: {x: 0.600, y: 0.100, z: 0.048, w: 0.749}
+      - header:
+        frame_id: "base_footprint"
+        stamp: {secs: 0, nsecs: 0}
+        pose:
+          position: {x: 0.65, y: -0.15, z: 0.8}
+          orientation: {x: 0.600, y: 0.100, z: 0.048, w: 0.749}
+      - header:
+        frame_id: "base_footprint"
+        stamp: {secs: 0, nsecs: 0}
+        pose:
+          position: {x: 0.7, y: -0.05, z: 0.8}
+          orientation: {x: 0.600, y: 0.100, z: 0.048, w: 0.749}
+
 objects:
   breadsticks:
     graspable: true

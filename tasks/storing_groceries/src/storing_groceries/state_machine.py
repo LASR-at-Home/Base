@@ -33,7 +33,7 @@ from lasr_manipulation_msgs.srv import (
     DetachObjectFromGripper,
 )
 
-from lasr_manipulation_msgs.msg import PickAction, PickGoal
+from lasr_manipulation_msgs.msg import PickAction, PickGoal, PlaceGoal, PlaceAction
 from geometry_msgs.msg import Point, PointStamped
 from std_msgs.msg import Empty, Header
 
@@ -82,6 +82,8 @@ class StoringGroceries(smach.StateMachine):
                     "failed": "failed",
                 },
             )
+
+          
 
             smach.StateMachine.add(
                 "SAY_WAITING",
@@ -303,15 +305,21 @@ class StoringGroceries(smach.StateMachine):
                 transitions={"succeeded": "SAY_PLACE", "failed": "failed"},
             )
 
+        
             smach.StateMachine.add(
-                "SAY_PLACE",
-                Say(
-                    "Please grab the object from my gripper and place it on the shelf. I will give you 5 seconds. 5... 4... 3... 2... 1..."
+                "PLACE_OBJECT",
+                smach_ros.SimpleActionState(
+                    "/lasr_manipulation/place",
+                    PlaceAction,
+                    goal_cb=self._place_cb,
+                    output_keys=["success"],
+                    result_slots=["success"],
+                    input_keys=["selected_object", "surface", "candidate_poses"],
                 ),
                 transitions={
                     "succeeded": "OPEN_GRIPPER_RELEASE_OBJECT",
-                    "aborted": "failed",
                     "preempted": "failed",
+                    "aborted": "failed",
                 },
             )
 
@@ -376,6 +384,14 @@ class StoringGroceries(smach.StateMachine):
             userdata.scale,
         )
 
+
+    def _place_cb(self, userdata, goal):
+        return PlaceGoal(
+            userdata.selected_object[0].name,
+            userdata.surfaceid,
+            userdata.candidate_poses,
+        )
+    
     def _remove_table_support_surface_cb(self, userdata, request):
         return RemoveSupportSurfaceRequest("table")
 
