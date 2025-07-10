@@ -31,6 +31,7 @@ COCO_CLASSES = [
     "toothbrush"
 ]
 
+
 class YoloToCostmapNode:
     def __init__(self):
         # Basic parameters for costmap and detection
@@ -38,7 +39,7 @@ class YoloToCostmapNode:
         self.grid_resolution = rospy.get_param("~resolution", 0.05)
         self.grid_width = rospy.get_param("~width", 200)
         self.grid_height = rospy.get_param("~height", 200)
-        self.obstacle_radius = rospy.get_param("~obstacle_radius", 0.75)
+        self.obstacle_radius = rospy.get_param("~obstacle_radius", 0.25)
         self.yolo_service = rospy.get_param("~yolo_service", "/yolo/detect3d")
         self.yolo_model = rospy.get_param("~yolo_model", "yolo11l-seg.pt")
         self.confidence = rospy.get_param("~confidence", 0.15)
@@ -47,11 +48,11 @@ class YoloToCostmapNode:
 
         # New: buffer and publish rates
         self.scan_buffer_size = rospy.get_param("~scan_buffer_size", 30)  # frames for historical filter
-        self.scan_publish_rate = rospy.get_param("~scan_publish_rate", 5.0)  # Hz
+        self.scan_publish_rate = rospy.get_param("~scan_publish_rate", 4.0)  # Hz
 
         # LaserScan simulation params (now parameterized)
-        self.scan_angle_min = rospy.get_param("~scan_angle_min", -math.pi/3)
-        self.scan_angle_max = rospy.get_param("~scan_angle_max", math.pi/3)
+        self.scan_angle_min = rospy.get_param("~scan_angle_min", -math.pi)
+        self.scan_angle_max = rospy.get_param("~scan_angle_max", math.pi)
         self.scan_angle_inc = rospy.get_param("~scan_angle_inc", math.radians(1.0))
         self.scan_range_min = rospy.get_param("~scan_range_min", 0.05)
         self.scan_range_max = rospy.get_param("~scan_range_max", 10.0)
@@ -64,6 +65,9 @@ class YoloToCostmapNode:
         self.image_topic = rospy.get_param("~image_topic", "/xtion/rgb/image_raw")
         self.depth_topic = rospy.get_param("~depth_image_topic", "/xtion/depth_registered/image_raw")
         self.camera_info_topic = rospy.get_param("~depth_camera_info_topic", "/xtion/depth_registered/camera_info")
+
+        # Pointcloud density parameter
+        self.pointcloud_density = rospy.get_param("~pointcloud_density", 4.0)  # points per m²
 
         self.bridge = CvBridge()
         self.latest_image = None
@@ -96,7 +100,7 @@ class YoloToCostmapNode:
         # Main detection timer (YOLO + grid update)
         self.timer = rospy.Timer(rospy.Duration(self.detection_interval), self.timer_cb)
         # High-rate scan/pointcloud publisher timer
-        self.scan_timer = rospy.Timer(rospy.Duration(1.0/self.scan_publish_rate), self.scan_publish_cb)
+        self.scan_timer = rospy.Timer(rospy.Duration(1.0 / self.scan_publish_rate), self.scan_publish_cb)
 
         self.latest_obstacle_points = []
 
@@ -130,6 +134,107 @@ class YoloToCostmapNode:
         req.target_frame = self.target_frame
         resp = self.yolo_srv(req)
         return resp.detected_objects
+
+    def line_circle_intersection(self, beam_dx, beam_dy, circle_x, circle_y, radius):
+        """
+        Calculate the intersection distance between a laser beam and a circle
+        Beam starts from origin (0,0) with direction (beam_dx, beam_dy)
+        Circle centered at (circle_x, circle_y) with given radius
+        Returns the closest intersection distance, or None if no intersection
+        """
+        # Parametric line: point = t * (beam_dx, beam_dy)
+        # Circle: (x - circle_x)² + (y - circle_y)² = radius²
+        # Substitute: (t*beam_dx - circle_x)² + (t*beam_dy - circle_y)² = radius²
+
+        # Expand to quadratic: at² + bt + c = 0
+        a = beam_dx ** 2 + beam_dy ** 2
+        b = -2 * (beam_dx * circle_x + beam_dy * circle_y)
+        c = circle_x ** 2 + circle_y ** 2 - radius ** 2
+
+        # Solve quadratic equation
+        discriminant = b ** 2 - 4 * a * c
+
+        if discriminant < 0:
+            return None  # No intersection
+
+        # Two solutions
+        sqrt_disc = math.sqrt(discriminant)
+        t1 = (-b - sqrt_disc) / (2 * a)
+        t2 = (-b + sqrt_disc) / (2 * a)
+
+        # We want the closest positive intersection
+        valid_t = []
+        if t1 > 0:
+            valid_t.append(t1)
+        if t2 > 0:
+            valid_t.append(t2)
+
+        if not valid_t:
+            return None  # No positive intersection
+
+        # Return the closest positive intersection distance
+        closest_t = min(valid_t)
+        return closest_t
+
+    def generate_pointcloud_from_obstacles(self, obstacle_points):
+        """
+        Generate dense pointcloud from obstacle center points using obstacle_radius
+        Returns list of (x, y, z) points
+        """
+        if not obstacle_points:
+            return []
+
+        expanded_points = []
+        for x, y, z in obstacle_points:
+            # Calculate number of points based on obstacle radius and density
+            num_points = max(1, int(math.pi * self.obstacle_radius ** 2 * self.pointcloud_density))
+
+            # Generate points in a circular pattern around the center
+            for i in range(num_points):
+                angle = 2 * math.pi * i / num_points
+                radius = self.obstacle_radius * math.sqrt(
+                    np.random.uniform(0, 1))  # Random radius for uniform distribution
+
+                # Calculate offset position
+                offset_x = radius * math.cos(angle)
+                offset_y = radius * math.sin(angle)
+
+                # Add the expanded point
+                expanded_points.append((x + offset_x, y + offset_y, z))
+
+        return expanded_points
+
+    def calculate_laser_scan_with_circles(self, obstacle_points, scan_ranges):
+        """
+        Calculate laser scan by finding intersection with circular obstacles
+        Uses obstacle_radius as circle radius for each obstacle center
+        """
+        if not obstacle_points:
+            return
+
+        num_beams = len(scan_ranges)
+
+        # For each obstacle
+        for x, y, z in obstacle_points:
+            # For each laser beam
+            for i in range(num_beams):
+                # Calculate beam angle
+                angle = self.scan_angle_min + i * self.scan_angle_inc
+
+                # Beam direction
+                beam_dx = math.cos(angle)
+                beam_dy = math.sin(angle)
+
+                # Find intersection with circle centered at (x, y) with radius obstacle_radius
+                intersection_distance = self.line_circle_intersection(
+                    beam_dx, beam_dy, x, y, self.obstacle_radius
+                )
+
+                if intersection_distance is not None:
+                    # Clamp to valid range
+                    if self.scan_range_min <= intersection_distance <= self.scan_range_max:
+                        # Update scan range with closer obstacle
+                        scan_ranges[i] = min(scan_ranges[i], intersection_distance)
 
     def publish_obstacle_grid(self, detections):
         grid = np.zeros((self.grid_height, self.grid_width), dtype=np.int8)
@@ -195,7 +300,8 @@ class YoloToCostmapNode:
                     try:
                         pt_map = self.tf_buffer.transform(pt_cam, self.target_frame, rospy.Duration(0.25))
                         real_height = abs(pt_map.point.z)
-                        rospy.loginfo(info_msg + f"Mask median point height: {real_height:.3f} m (z in {self.target_frame})")
+                        rospy.loginfo(
+                            info_msg + f"Mask median point height: {real_height:.3f} m (z in {self.target_frame})")
                     except Exception as ex:
                         rospy.logwarn(info_msg + f"TF transform failed: {ex}")
                         continue
@@ -208,10 +314,11 @@ class YoloToCostmapNode:
             # Filter out by real height
             if self.max_height > 0 and real_height is not None:
                 if real_height > self.max_height:
-                    rospy.loginfo(info_msg + f"Skipped: mask median height {real_height:.3f} > max_height={self.max_height:.2f}")
+                    rospy.loginfo(
+                        info_msg + f"Skipped: mask median height {real_height:.3f} > max_height={self.max_height:.2f}")
                     continue
 
-            # Draw obstacle on occupancy grid (center in map frame)
+            # Draw obstacle on occupancy grid (center in map frame) - using obstacle_radius
             if not hasattr(det, "point") or det.point is None:
                 rospy.logwarn(info_msg + "-- Skipped: No valid 3D point.")
                 continue
@@ -242,7 +349,7 @@ class YoloToCostmapNode:
         self.costmap_pub.publish(msg)
         rospy.loginfo_throttle(2.0, "Published %d virtual obstacles to /custom_obstacle_map", count)
 
-        # Add current frame's obstacle_points to buffer (for scan/pointcloud publishing)
+        # Store current frame's obstacle_points for high-rate publishing
         self.latest_obstacle_points = obstacle_points
         if obstacle_points:
             self.obstacle_point_buffer.append(obstacle_points)
@@ -251,35 +358,58 @@ class YoloToCostmapNode:
             self.obstacle_point_buffer.append([])
 
     def scan_publish_cb(self, event):
-        # Publish at high rate using latest N frames in buffer (for smooth and dense signal)
+        """
+        Publish PointCloud2 and LaserScan at high rate using unified obstacle_radius control
+        """
         # Combine all points from buffer
-        all_points = [pt for frame in self.obstacle_point_buffer for pt in frame]
-        if not all_points:
+        all_center_points = [pt for frame in self.obstacle_point_buffer for pt in frame]
+
+        if not all_center_points:
+            # Publish empty scan when no obstacles - use inf as original logic
+            n_scan = int((self.scan_angle_max - self.scan_angle_min) / self.scan_angle_inc) + 1
+            scan_ranges = [float('inf')] * n_scan
+            scan_msg = LaserScan()
+            scan_msg.header.stamp = rospy.Time.now()
+            scan_msg.header.frame_id = self.target_frame
+            scan_msg.angle_min = self.scan_angle_min
+            scan_msg.angle_max = self.scan_angle_max
+            scan_msg.angle_increment = self.scan_angle_inc
+            scan_msg.time_increment = 0.0
+            scan_msg.scan_time = 1.0 / self.scan_publish_rate
+            scan_msg.range_min = self.scan_range_min
+            scan_msg.range_max = self.scan_range_max
+            scan_msg.ranges = scan_ranges
+            scan_msg.intensities = []
+
+            self.laserscan_pub.publish(scan_msg)
+
+            # Publish empty pointcloud
+            empty_pc2 = pc2.create_cloud_xyz32(
+                header=rospy.Header(stamp=rospy.Time.now(), frame_id=self.target_frame),
+                points=[]
+            )
+            self.pointcloud_pub.publish(empty_pc2)
+
             rospy.loginfo_throttle(2.0, "[scan_publish_cb] No obstacle points to publish.")
             return
 
-        # ======= Publish PointCloud2 =======
+        # ======= Generate expanded PointCloud2 using obstacle_radius =======
+        expanded_points = self.generate_pointcloud_from_obstacles(all_center_points)
+
         pc2_msg = pc2.create_cloud_xyz32(
-            header=rospy.Header(
-                stamp=rospy.Time.now(),
-                frame_id=self.target_frame
-            ),
-            points=all_points
+            header=rospy.Header(stamp=rospy.Time.now(), frame_id=self.target_frame),
+            points=expanded_points
         )
         self.pointcloud_pub.publish(pc2_msg)
-        rospy.loginfo_throttle(2.0, f"Published {len(all_points)} points to /_rgbd_scan (filtered)")
+        rospy.loginfo_throttle(2.0,
+                               f"Published {len(expanded_points)} expanded points to /_rgbd_scan (from {len(all_center_points)} obstacles)")
 
-        # ======= Publish LaserScan (simulated from all buffer points) =======
+        # ======= Generate LaserScan using circle intersection method =======
         n_scan = int((self.scan_angle_max - self.scan_angle_min) / self.scan_angle_inc) + 1
-        scan_ranges = [float('inf')] * n_scan
+        scan_ranges = [float('inf')] * n_scan  # Keep using inf as original logic
 
-        for x, y, z in all_points:
-            angle = math.atan2(y, x)
-            dist = math.hypot(x, y)
-            idx = int((angle - self.scan_angle_min) / self.scan_angle_inc)
-            if 0 <= idx < n_scan and dist > self.scan_range_min:
-                if scan_ranges[idx] > dist:
-                    scan_ranges[idx] = dist
+        # Calculate intersections with circular obstacles
+        self.calculate_laser_scan_with_circles(all_center_points, scan_ranges)
 
         scan_msg = LaserScan()
         scan_msg.header.stamp = rospy.Time.now()
@@ -295,7 +425,8 @@ class YoloToCostmapNode:
         scan_msg.intensities = []
 
         self.laserscan_pub.publish(scan_msg)
-        rospy.loginfo_throttle(2.0, f"Published filtered LaserScan with {len(all_points)} points to /rgbd_scan")
+        rospy.loginfo_throttle(2.0,
+                               f"Published LaserScan with {len(all_center_points)} circular obstacles to /rgbd_scan")
 
 if __name__ == "__main__":
     rospy.init_node("yolo_to_costmap_node")
