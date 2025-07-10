@@ -197,6 +197,7 @@ class GetDrinkLocationFromMemory(smach.State):
                         favourite_drink.lower()
                     ]["location"]
             except:
+                userdata.drink_location = favourite_drink_location
                 return "failed"
         userdata.drink_location = favourite_drink_location
         return "succeeded"
