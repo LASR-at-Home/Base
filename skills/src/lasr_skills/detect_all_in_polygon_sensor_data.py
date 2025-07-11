@@ -66,7 +66,7 @@ class ProcessDetections(smach.State):
 
                 # Check if the detection is a new object
                 is_new_object = True
-                for existing_detection in userdata.detected_objects:
+                for existing_detection, pcl in userdata.detected_objects:
                     if (
                         existing_detection.name == detection.name
                         and euclidean_distance(
@@ -121,7 +121,7 @@ class CalculateSweepPoints(smach.State):
         input_keys += ["polygon"] if polygon is None else []
         input_keys += (
             ["z_sweep_min", "z_sweep_max"]
-            if z_sweep_min is not None and z_sweep_max is not None
+            if z_sweep_min is None and z_sweep_max is None
             else []
         )
         smach.State.__init__(
@@ -291,9 +291,18 @@ class CalculateSweepPoints(smach.State):
         """
 
         # Calculate the points to sweep based on the polygon
-        polygon = userdata.get("polygon", self._polygon)
-        z_sweep_min = userdata.get("z_sweep_min", self._z_sweep_min)
-        z_sweep_max = userdata.get("z_sweep_max", self._z_sweep_max)
+        if self._polygon is None:
+            polygon = userdata.polygon
+        else:
+            polygon = self._polygon
+        if self._z_sweep_min is None:
+            z_sweep_min = userdata.z_sweep_min
+        else:
+            z_sweep_min = self._z_sweep_min
+        if self._z_sweep_max is None:
+            z_sweep_max = userdata.z_sweep_max
+        else:
+            z_sweep_max = self._z_sweep_max
         try:
             userdata.sweep_points = self._calculate_sweep_points(
                 polygon, z_sweep_min, z_sweep_max
@@ -369,7 +378,7 @@ class DetectAllInPolygonSensorData(smach.StateMachine):
         input_keys = ["polygon"] if polygon is None else []
         input_keys += (
             ["z_sweep_min", "z_sweep_max"]
-            if z_sweep_min is not None and z_sweep_max is not None
+            if z_sweep_min is None and z_sweep_max is None
             else []
         )
         super().__init__(
@@ -516,7 +525,7 @@ class DetectAllInPolygonSensorData(smach.StateMachine):
         input_keys += ["polygon"] if self._polygon is None else []
         input_keys += (
             ["z_sweep_min", "z_sweep_max"]
-            if self._z_sweep_min is not None and self._z_sweep_max is not None
+            if self._z_sweep_min is None and self._z_sweep_max is None
             else []
         )
         look_and_detect_iterator = smach.Iterator(

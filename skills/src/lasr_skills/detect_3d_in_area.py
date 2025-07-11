@@ -19,13 +19,13 @@ class Detect3DInArea(smach.StateMachine):
             debug_publisher: str = "/skills/detect3d_in_area/debug",
         ):
             input_keys = (
-                ["detections_3d"]
+                ["detections_3d", "polygon"]
                 if area_polygon is None
-                else ["detections_3d", "polygon"]
+                else ["detections_3d"]
             )
             input_keys += (
                 ["z_sweep_min", "z_sweep_max"]
-                if z_min is not None and z_max is not None
+                if z_min is None and z_max is None
                 else []
             )
             smach.State.__init__(
@@ -44,14 +44,17 @@ class Detect3DInArea(smach.StateMachine):
         def execute(self, userdata):
             detected_objects = userdata["detections_3d"].detected_objects
             # publish polygon for debugging
-            z_sweep_min = userdata.get("z_sweep_min", self._z_min)
-            z_sweep_max = userdata.get("z_sweep_max", self._z_max)
+            if self._z_min is None:
+                z_sweep_min = userdata.z_sweep_min
+            else:
+                z_sweep_min = self._z_min
+            if self._z_max is None:
+                z_sweep_max = userdata.z_sweep_max
+            else:
+                z_sweep_min = self._z_max
             polygon_msg = Polygon()
             if self.area_polygon is None:
-                if "polygon" not in userdata:
-                    rospy.logerr("No polygon provided in userdata.")
-                    return "failed"
-                area_polygon = userdata["polygon"]
+                area_polygon = userdata.polygon
             else:
                 area_polygon = self.area_polygon
             polygon_msg.points = [
@@ -96,9 +99,7 @@ class Detect3DInArea(smach.StateMachine):
     ):
         input_keys = ["polygon"] if area_polygon is None else []
         input_keys += (
-            ["z_sweep_min", "z_sweep_max"]
-            if z_min is not None and z_max is not None
-            else []
+            ["z_sweep_min", "z_sweep_max"] if z_min is None and z_max is None else []
         )
         smach.StateMachine.__init__(
             self,
