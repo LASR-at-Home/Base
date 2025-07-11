@@ -49,9 +49,8 @@ We need to lift the object off the surface first. I can't understand why, but so
 
 class StoringGroceries(smach.StateMachine):
 
-    def __init__(self, use_arm=True) -> None:
+    def __init__(self, use_arm: bool = True) -> None:
         super().__init__(outcomes=["succeeded", "failed"])
-        self.use_arm = use_arm
 
         with self:
             smach.StateMachine.add(
@@ -72,25 +71,9 @@ class StoringGroceries(smach.StateMachine):
                 "SAY_START",
                 Say(text="Start of Storing Groceries task."),
                 transitions={
-                    "succeeded": (
-                        "CLEAR_PLANNING_SCENE" if self.use_arm else "SAY_WAITING"
-                    ),
-                    "aborted": "failed",
-                    "preempted": "failed",
-                },
-            )
-
-            smach.StateMachine.add(
-                "CLEAR_PLANNING_SCENE",
-                smach_ros.ServiceState(
-                    "/lasr_manipulation_planning_scene/clear",
-                    EmptySrv,
-                    request=EmptyRequest(),
-                ),
-                transitions={
                     "succeeded": "SAY_WAITING",
-                    "preempted": "failed",
                     "aborted": "failed",
+                    "preempted": "failed",
                 },
             )
 
@@ -126,8 +109,24 @@ class StoringGroceries(smach.StateMachine):
                 "GO_TO_TABLE",
                 GoToLocation(location_param="/storing_groceries/table/pose"),
                 transitions={
-                    "succeeded": "ADD_TABLE_SURFACE",
+                    "succeeded": (
+                        "CLEAR_PLANNING_SCENE_AT_TABLE" if use_arm else "LOOK_AT_TABLE"
+                    ),
                     "failed": "failed",
+                },
+            )
+
+            smach.StateMachine.add(
+                "CLEAR_PLANNING_SCENE_AT_TABLE",
+                smach_ros.ServiceState(
+                    "/lasr_manipulation_planning_scene/clear",
+                    EmptySrv,
+                    request=EmptyRequest(),
+                ),
+                transitions={
+                    "succeeded": "ADD_TABLE_SURFACE",
+                    "preempted": "failed",
+                    "aborted": "failed",
                 },
             )
 
@@ -204,16 +203,17 @@ class StoringGroceries(smach.StateMachine):
             smach.StateMachine.add(
                 "SELECT_OBJECT",
                 SelectObject(),
-                transitions={"succeeded": "SEGMENT_OBJECT", "failed": "failed"},
+                transitions={
+                    "succeeded": "SEGMENT_OBJECT" if use_arm else "HELP_ME_GRASPING",
+                    "failed": "failed",
+                },
             )
 
             smach.StateMachine.add(
                 "SEGMENT_OBJECT",
                 SegmentObject(),
                 transitions={
-                    "succeeded": (
-                        "REGISTER_OBJECT" if self.use_arm else "HELP_ME_GRASPING"
-                    ),
+                    "succeeded": "REGISTER_OBJECT",
                     "failed": "failed",
                 },
             )
@@ -401,17 +401,15 @@ class StoringGroceries(smach.StateMachine):
                 },
             )
 
-            smach.StateMachine(
-                "ADD_SHELVES_TO_PLANNING_SCENE",
-                AddShelvesToPlanningScene(),
-                transitions={"succeeded": "SCAN_SHELVES", "failed": "failed"},
-            )
-
             smach.StateMachine.add(
                 "SCAN_SHELVES",
                 ScanShelves(),
                 transitions={
-                    "succeeded": "PLACE_OBJECT" if self.use_arm else "HELP_ME_PLACING",
+                    "succeeded": (
+                        "ADD_SHELVES_TO_PLANNING_SCENE"
+                        if use_arm
+                        else "HELP_ME_PLACING"
+                    ),
                     "failed": "failed",
                 },
             )
@@ -429,6 +427,12 @@ class StoringGroceries(smach.StateMachine):
                 },
             )
 
+            smach.StateMachine(
+                "ADD_SHELVES_TO_PLANNING_SCENE",
+                AddShelvesToPlanningScene(),
+                transitions={"succeeded": "PLACE_OBJECT", "failed": "failed"},
+            )
+
             smach.StateMachine.add(
                 "PLACE_OBJECT",
                 smach_ros.SimpleActionState(
@@ -437,40 +441,40 @@ class StoringGroceries(smach.StateMachine):
                     goal_cb=self._place_cb,
                     output_keys=["success"],
                     result_slots=["success"],
-                    input_keys=["selected_object", "surface", "candidate_poses"],
+                    input_keys=["selected_object", "selected_shelf"],
                 ),
                 transitions={
-                    "succeeded": "OPEN_GRIPPER_RELEASE_OBJECT",
+                    "succeeded": "SAY_GOING_TO_TABLE",
                     "preempted": "failed",
                     "aborted": "failed",
                 },
             )
 
-            smach.StateMachine.add(
-                "OPEN_GRIPPER_RELEASE_OBJECT",
-                PlayMotion(motion_name="open_gripper"),
-                transitions={
-                    "succeeded": "DETACH_OBJECT_FROM_GRIPPER",
-                    "preempted": "failed",
-                    "aborted": "failed",
-                },
-            )
+            # smach.StateMachine.add(
+            #     "OPEN_GRIPPER_RELEASE_OBJECT",
+            #     PlayMotion(motion_name="open_gripper"),
+            #     transitions={
+            #         "succeeded": "DETACH_OBJECT_FROM_GRIPPER",
+            #         "preempted": "failed",
+            #         "aborted": "failed",
+            #     },
+            # )
 
-            smach.StateMachine.add(
-                "DETACH_OBJECT_FROM_GRIPPER",
-                smach_ros.ServiceState(
-                    "/lasr_manipulation_planning_scene/detach_object_from_gripper",
-                    DetachObjectFromGripper,
-                    request_cb=self._detach_object_from_gripper_cb,
-                    output_keys=[],
-                    input_keys=["selected_object"],
-                ),
-                transitions={
-                    "succeeded": "GO_TO_TABLE",
-                    "preempted": "failed",
-                    "aborted": "failed",
-                },
-            )
+            # smach.StateMachine.add(
+            #     "DETACH_OBJECT_FROM_GRIPPER",
+            #     smach_ros.ServiceState(
+            #         "/lasr_manipulation_planning_scene/detach_object_from_gripper",
+            #         DetachObjectFromGripper,
+            #         request_cb=self._detach_object_from_gripper_cb,
+            #         output_keys=[],
+            #         input_keys=["selected_object"],
+            #     ),
+            #     transitions={
+            #         "succeeded": "GO_TO_TABLE",
+            #         "preempted": "failed",
+            #         "aborted": "failed",
+            #     },
+            # )
 
     def _register_object_cb(self, userdata, request):
         return RegistrationRequest(
@@ -508,10 +512,20 @@ class StoringGroceries(smach.StateMachine):
         )
 
     def _place_cb(self, userdata, goal):
+        place_poses = [
+            PoseStamped(
+                pose=Pose(
+                    position=Point(**p["position"]),
+                    orientation=Quaternion(**p["orientation"]),
+                ),
+                header=Header(frame_id="map"),
+            )
+            for p in rospy.get_param(
+                f"/storing_groceries/cabinet/shelves/{userdata.selected_shelf}/place_candidates"
+            )
+        ]
         return PlaceGoal(
-            userdata.selected_object[0].name,
-            userdata.surfaceid,
-            userdata.candidate_poses,
+            userdata.selected_object[0].name, userdata.selected_shelf, place_poses
         )
 
     def _remove_table_support_surface_cb(self, userdata, request):
