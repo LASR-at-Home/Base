@@ -46,9 +46,10 @@ We need to lift the object off the surface first. I can't understand why, but so
 
 class StoringGroceries(smach.StateMachine):
 
-    def __init__(self) -> None:
+    def __init__(self, use_arm=True) -> None:
         super().__init__(outcomes=["succeeded", "failed"])
-
+        self.use_arm = use_arm
+    
         with self:
             smach.StateMachine.add(
                 "WAIT_START",
@@ -68,7 +69,7 @@ class StoringGroceries(smach.StateMachine):
                 "SAY_START",
                 Say(text="Start of Storing Groceries task."),
                 transitions={
-                    "succeeded": "SETUP_PLANNING_SCENE",
+                    "succeeded": "SETUP_PLANNING_SCENE" if self.use_arm else "SAY_WAITING",
                     "aborted": "failed",
                     "preempted": "failed",
                 },
@@ -83,7 +84,6 @@ class StoringGroceries(smach.StateMachine):
                 },
             )
 
-          
 
             smach.StateMachine.add(
                 "SAY_WAITING",
@@ -163,7 +163,7 @@ class StoringGroceries(smach.StateMachine):
             smach.StateMachine.add(
                 "SEGMENT_OBJECT",
                 SegmentObject(),
-                transitions={"succeeded": "REGISTER_OBJECT", "failed": "failed"},
+                transitions={"succeeded": "REGISTER_OBJECT" if self.use_arm else "HELP_ME_GRASPING", "failed": "failed"},
             )
 
             smach.StateMachine.add(
@@ -290,6 +290,17 @@ class StoringGroceries(smach.StateMachine):
             #     },
             # )
 
+            # if not using the arm
+            smach.StateMachine.add(
+                "HELP_ME_GRASPING",
+                Say(text="I'm not able to grasping the objects myself, would you please place the groceries on my back?"),
+                transitions={
+                    "succeeded": "GO_TO_CABINET",
+                    "aborted": "failed",
+                    "preempted": "failed",
+                },
+            )
+
             smach.StateMachine.add(
                 "GO_TO_CABINET",
                 GoToLocation(location_param="/storing_groceries/cabinet/pose"),
@@ -302,7 +313,18 @@ class StoringGroceries(smach.StateMachine):
             smach.StateMachine.add(
                 "SCAN_SHELVES",
                 ScanShelves(),
-                transitions={"succeeded": "SAY_PLACE", "failed": "failed"},
+                transitions={"succeeded": "PLACE_OBJECT" if self.use_arm else "HELP_ME_PLACING", "failed": "failed"},
+            )
+
+            # if not using the arm
+            smach.StateMachine.add(
+                "HELP_ME_PLACING",
+                Say(text="I'm not able to placing the objects myself, would you please place the groceries on the shelf for me?"),
+                transitions={
+                    "succeeded": "GO_TO_TABLE",
+                    "aborted": "failed",
+                    "preempted": "failed",
+                },
             )
 
         

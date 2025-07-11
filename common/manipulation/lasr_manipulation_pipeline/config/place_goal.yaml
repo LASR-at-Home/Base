@@ -8,21 +8,48 @@ goal:
   object_id: "object_1"
   surface_id: "table"
   candidate_poses:
+    # - header:
+    #     frame_id: "base_footprint"
+    #     stamp: {secs: 0, nsecs: 0}
+    #   pose:
+    #     position: {x: 0.97, y: 0.07, z: 0.9}
+    #     orientation: {x: 0.600, y: 0.100, z: 0.048, w: 0.749}
+    # - header:
+    #     frame_id: "base_footprint"
+    #     stamp: {secs: 0, nsecs: 0}
+    #   pose:
+    #     position: {x: 0.65, y: -0.3, z: 0.9}
+    #     orientation: {x: 0.600, y: 0.100, z: 0.048, w: 0.749}
+    # - header:
+    #     frame_id: "base_footprint"
+    #     stamp: {secs: 0, nsecs: 0}
+    #   pose:
+    #     position: {x: 0.7, y: -0.3, z: 0.9}
+    #     orientation: {x: 0.600, y: 0.100, z: 0.048, w: 0.749}
     - header:
         frame_id: "base_footprint"
         stamp: {secs: 0, nsecs: 0}
       pose:
-        position: {x: 0.7, y: -0.15, z: 0.8}
+        position: {x: 0.7, y: -0.15, z: 0.95}
         orientation: {x: 0.600, y: 0.100, z: 0.048, w: 0.749}
     - header:
         frame_id: "base_footprint"
         stamp: {secs: 0, nsecs: 0}
       pose:
-        position: {x: 0.65, y: -0.15, z: 0.8}
+        position: {x: 0.7, y: -0.1, z: 0.95}
         orientation: {x: 0.600, y: 0.100, z: 0.048, w: 0.749}
     - header:
         frame_id: "base_footprint"
         stamp: {secs: 0, nsecs: 0}
       pose:
-        position: {x: 0.7, y: -0.05, z: 0.8}
+        position: {x: 0.7, y: 0.1, z: 0.95}
         orientation: {x: 0.600, y: 0.100, z: 0.048, w: 0.749}
+    - header:
+        frame_id: "base_footprint"
+        stamp: {secs: 0, nsecs: 0}
+      pose:
+        position: {x: 0.7, y: 0.2, z: 0.95}
+        orientation: {x: 0.600, y: 0.100, z: 0.048, w: 0.749}
+    
+
+
