@@ -31,6 +31,29 @@ def check_polygons():
         )
     )
 
+    shelf_publisher = rospy.Publisher(
+        "/storing_groceries/shelves", PolygonStamped, queue_size=10, latch=True
+    )
+
+    for shelf in rospy.get_param("/storing_groceries/cabinet/shelves"):
+
+        polygon = ShapelyPolygon(shelf["polygon"])
+        assert (
+            polygon.is_valid
+        ), f"{shelf['name']} polygon is not valid: {explain_validity(polygon)}"
+
+        shelf_publisher.publish(
+            PolygonStamped(
+                polygon=Polygon(
+                    points=[
+                        Point(x=x, y=y, z=shelf["z_min"])
+                        for (x, y) in polygon.exterior.coords
+                    ]
+                ),
+                header=Header(frame_id="map"),
+            )
+        )
+
 
 if __name__ == "__main__":
     rospy.init_node("storing_groceries")
