@@ -42,10 +42,7 @@ class GetGuestAttributes(smach.StateMachine):
             userdata.guest_data[self._guest_id]["detection"] = True
             return "succeeded"
 
-    def __init__(
-        self,
-        guest_id: str,
-    ):
+    def __init__(self, guest_id: str):
         smach.StateMachine.__init__(
             self,
             outcomes=["succeeded", "failed"],
@@ -74,8 +71,5 @@ class GetGuestAttributes(smach.StateMachine):
             smach.StateMachine.add(
                 "HANDLE_GUEST_ATTRIBUTES",
                 self.HandleGuestAttributes(self._guest_id),
-                transitions={
-                    "succeeded": "succeeded",
-                    "failed": "failed",
-                },
+                transitions={"succeeded": "succeeded", "failed": "failed"},
             )
