@@ -5,10 +5,10 @@ import smach_ros
 from shapely import Polygon as ShapelyPolygon
 
 from storing_groceries.states import (
-    SetupPlanningScene,
     SelectObject,
     SegmentObject,
     ScanShelves,
+    AddShelvesToPlanningScene,
 )
 
 from lasr_skills import (
@@ -36,11 +36,14 @@ from lasr_manipulation_msgs.srv import (
 from lasr_manipulation_msgs.msg import PickAction, PickGoal, PlaceGoal, PlaceAction
 from geometry_msgs.msg import Point, PointStamped
 from std_msgs.msg import Empty, Header
+from std_srvs.srv import Empty as EmptySrv, EmptyRequest
+from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion, Vector3
+from lasr_manipulation_msgs.srv import AddSupportSurface, AddSupportSurfaceRequest
 
 
 """
 Looks like we can't have everything setup in the planning scene apriori, we need to dynamically add things, as they are all in the base footprint...
-We need to lift the object off the surface first. I can't understand why, but sometimes the planner fucks up.
+We need to lift the object off the surface first. I can't understand why, but sometimes the planner fucks up. I think this is because the support surface is touching/colliding with  the object.
 """
 
 
@@ -49,7 +52,7 @@ class StoringGroceries(smach.StateMachine):
     def __init__(self, use_arm=True) -> None:
         super().__init__(outcomes=["succeeded", "failed"])
         self.use_arm = use_arm
-    
+
         with self:
             smach.StateMachine.add(
                 "WAIT_START",
@@ -69,21 +72,27 @@ class StoringGroceries(smach.StateMachine):
                 "SAY_START",
                 Say(text="Start of Storing Groceries task."),
                 transitions={
-                    "succeeded": "SETUP_PLANNING_SCENE" if self.use_arm else "SAY_WAITING",
+                    "succeeded": (
+                        "CLEAR_PLANNING_SCENE" if self.use_arm else "SAY_WAITING"
+                    ),
                     "aborted": "failed",
                     "preempted": "failed",
                 },
             )
 
             smach.StateMachine.add(
-                "SETUP_PLANNING_SCENE",
-                SetupPlanningScene(),
+                "CLEAR_PLANNING_SCENE",
+                smach_ros.ServiceState(
+                    "/lasr_manipulation_planning_scene/clear",
+                    EmptySrv,
+                    request=EmptyRequest(),
+                ),
                 transitions={
                     "succeeded": "SAY_WAITING",
-                    "failed": "failed",
+                    "preempted": "failed",
+                    "aborted": "failed",
                 },
             )
-
 
             smach.StateMachine.add(
                 "SAY_WAITING",
@@ -117,8 +126,46 @@ class StoringGroceries(smach.StateMachine):
                 "GO_TO_TABLE",
                 GoToLocation(location_param="/storing_groceries/table/pose"),
                 transitions={
-                    "succeeded": "LOOK_AT_TABLE",
+                    "succeeded": "ADD_TABLE_SURFACE",
                     "failed": "failed",
+                },
+            )
+
+            smach.StateMachine.add(
+                "ADD_TABLE_SURFACE",
+                smach_ros.ServiceState(
+                    "/lasr_manipulation_planning_scene/add_support_surface",
+                    AddSupportSurface,
+                    request=AddSupportSurfaceRequest(
+                        "table",
+                        PoseStamped(
+                            header=Header(frame_id="map"),
+                            pose=Pose(
+                                position=Point(
+                                    **rospy.get_param(
+                                        "/storing_groceries/table/surface/pose/position"
+                                    ),
+                                ),
+                                orientation=Quaternion(
+                                    **rospy.get_param(
+                                        "/storing_groceries/table/surface/pose/orientation"
+                                    )
+                                ),
+                            ),
+                        ),
+                        Vector3(
+                            **rospy.get_param(
+                                "/storing_groceries/table/surface/dimensions"
+                            )
+                        ),
+                    ),
+                    output_keys=["success"],
+                    response_slots=["success"],
+                ),
+                transitions={
+                    "succeeded": "LOOK_AT_TABLE",
+                    "preempted": "failed",
+                    "aborted": "failed",
                 },
             )
 
@@ -163,7 +210,12 @@ class StoringGroceries(smach.StateMachine):
             smach.StateMachine.add(
                 "SEGMENT_OBJECT",
                 SegmentObject(),
-                transitions={"succeeded": "REGISTER_OBJECT" if self.use_arm else "HELP_ME_GRASPING", "failed": "failed"},
+                transitions={
+                    "succeeded": (
+                        "REGISTER_OBJECT" if self.use_arm else "HELP_ME_GRASPING"
+                    ),
+                    "failed": "failed",
+                },
             )
 
             smach.StateMachine.add(
@@ -194,21 +246,42 @@ class StoringGroceries(smach.StateMachine):
                     input_keys=["selected_object", "transform", "scale"],
                 ),
                 transitions={
-                    "succeeded": "ADD_TABLE_SUPPORT_SURFACE",
+                    "succeeded": "ADD_TABLE_TO_PLANNING_SCENE",
                     "preempted": "failed",
                     "aborted": "failed",
                 },
             )
 
             smach.StateMachine.add(
-                "ADD_TABLE_SUPPORT_SURFACE",
+                "ADD_TABLE_TO_PLANNING_SCENE",
                 smach_ros.ServiceState(
-                    "/lasr_manipulation_planning_scene/detect_and_add_support_surface",
-                    DetectAndAddSupportSurface,
-                    request_cb=self._detect_and_add_table_support_surface_cb,
+                    "/lasr_manipulation_planning_scene/add_support_surface",
+                    AddSupportSurface,
+                    request=AddSupportSurfaceRequest(
+                        "table",
+                        PoseStamped(
+                            header=Header(frame_id="map"),
+                            pose=Pose(
+                                position=Point(
+                                    **rospy.get_param(
+                                        "/storing_groceries/table/surface/pose/position"
+                                    ),
+                                ),
+                                orientation=Quaternion(
+                                    **rospy.get_param(
+                                        "/storing_groceries/table/surface/pose/orientation"
+                                    )
+                                ),
+                            ),
+                        ),
+                        Vector3(
+                            **rospy.get_param(
+                                "/storing_groceries/table/surface/dimensions"
+                            )
+                        ),
+                    ),
                     output_keys=["success"],
                     response_slots=["success"],
-                    input_keys=["selected_object", "transform", "scale"],
                 ),
                 transitions={
                     "succeeded": "PLAY_PREGRASP_MOTION",
@@ -268,32 +341,34 @@ class StoringGroceries(smach.StateMachine):
                 "PLAY_HOME_MOTION",
                 PlayMotion(motion_name="home"),
                 transitions={
+                    "succeeded": "REMOVE_TABLE_FROM_PLANNING_SCENE",
+                    "preempted": "failed",
+                    "aborted": "failed",
+                },
+            )
+
+            smach.StateMachine.add(
+                "REMOVE_TABLE_FROM_PLANNING_SCENE",
+                smach_ros.ServiceState(
+                    "/lasr_manipulation_planning_scene/remove_support_surface",
+                    RemoveSupportSurface,
+                    request_cb=self._remove_table_support_surface_cb,
+                    output_keys=["success"],
+                    response_slots=["success"],
+                ),
+                transitions={
                     "succeeded": "GO_TO_CABINET",
                     "preempted": "failed",
                     "aborted": "failed",
                 },
             )
 
-            # smach.StateMachine.add(
-            #     "REMOVE_TABLE_SUPPORT_SURFACE",
-            #     smach_ros.ServiceState(
-            #         "/lasr_manipulation_planning_scene/remove_support_surface",
-            #         RemoveSupportSurface,
-            #         request_cb=self._remove_table_support_surface_cb,
-            #         output_keys=["success"],
-            #         response_slots=["success"],
-            #     ),
-            #     transitions={
-            #         "succeeded": "GO_TO_CABINET",
-            #         "preempted": "failed",
-            #         "aborted": "failed",
-            #     },
-            # )
-
             # if not using the arm
             smach.StateMachine.add(
                 "HELP_ME_GRASPING",
-                Say(text="I'm not able to grasping the objects myself, would you please place the groceries on my back?"),
+                Say(
+                    text="I'm not able to grasping the objects myself, would you please place the groceries on my back?"
+                ),
                 transitions={
                     "succeeded": "GO_TO_CABINET",
                     "aborted": "failed",
@@ -310,16 +385,27 @@ class StoringGroceries(smach.StateMachine):
                 },
             )
 
+            smach.StateMachine(
+                "ADD_SHELVES_TO_PLANNING_SCENE",
+                AddShelvesToPlanningScene(),
+                transitions={"succeeded": "SCAN_SHELVES", "failed": "failed"},
+            )
+
             smach.StateMachine.add(
                 "SCAN_SHELVES",
                 ScanShelves(),
-                transitions={"succeeded": "PLACE_OBJECT" if self.use_arm else "HELP_ME_PLACING", "failed": "failed"},
+                transitions={
+                    "succeeded": "PLACE_OBJECT" if self.use_arm else "HELP_ME_PLACING",
+                    "failed": "failed",
+                },
             )
 
             # if not using the arm
             smach.StateMachine.add(
                 "HELP_ME_PLACING",
-                Say(text="I'm not able to placing the objects myself, would you please place the groceries on the shelf for me?"),
+                Say(
+                    text="I'm not able to placing the objects myself, would you please place the groceries on the shelf for me?"
+                ),
                 transitions={
                     "succeeded": "GO_TO_TABLE",
                     "aborted": "failed",
@@ -327,7 +413,6 @@ class StoringGroceries(smach.StateMachine):
                 },
             )
 
-        
             smach.StateMachine.add(
                 "PLACE_OBJECT",
                 smach_ros.SimpleActionState(
@@ -406,14 +491,13 @@ class StoringGroceries(smach.StateMachine):
             userdata.scale,
         )
 
-
     def _place_cb(self, userdata, goal):
         return PlaceGoal(
             userdata.selected_object[0].name,
             userdata.surfaceid,
             userdata.candidate_poses,
         )
-    
+
     def _remove_table_support_surface_cb(self, userdata, request):
         return RemoveSupportSurfaceRequest("table")
 
