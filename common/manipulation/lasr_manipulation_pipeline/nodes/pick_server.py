@@ -37,6 +37,10 @@ from pal_startup_msgs.srv import (
     StartupStopRequest,
 )
 
+CALIBRATION_OFFSET_X: float = 0.0
+CALIBRATION_OFFSET_Y: float = -0.025
+CALIBRATION_OFFSET_Z: float = 0.0
+
 
 class PickServer:
     """
@@ -456,6 +460,12 @@ class PickServer:
         )
         grasps_gripper_frame = self._offset_grasps(
             grasps_gripper_frame, pregrasp_offset_x, 0.0, 0.0
+        )
+        grasps_gripper_frame = self._offset_grasps(
+            grasps_gripper_frame,
+            CALIBRATION_OFFSET_X,
+            CALIBRATION_OFFSET_Y,
+            CALIBRATION_OFFSET_Z,
         )
         grasps_base_footprint = self._tf_poses(grasps_gripper_frame, "base_footprint")
         rospy.loginfo(
