@@ -37,7 +37,7 @@ class CheckDoorStatus(smach.State):
         self.ready = False
 
         self.sub = rospy.Subscriber(
-            "/xtion/depth_pointsros", PointCloud2, self.callback
+            "/xtion/depth_registered/points", PointCloud2, self.callback
         )
 
     def callback(self, msg):
