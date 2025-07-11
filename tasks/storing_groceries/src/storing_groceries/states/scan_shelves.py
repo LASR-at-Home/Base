@@ -2,11 +2,11 @@ import smach
 import rospy
 import smach_ros
 
-# from control_msgs.msg import (
-#     FollowJointTrajectoryActionGoal,
-#     FollowJointTrajectoryAction,
-#     JointTrajectoryPoint,
-# )
+from control_msgs.msg import (
+    FollowJointTrajectoryActionGoal,
+    FollowJointTrajectoryAction,
+    JointTrajectoryPoint,
+)
 from geometry_msgs.msg import Point, PointStamped
 from std_msgs.msg import Header
 
@@ -134,12 +134,28 @@ class ScanShelves(smach.StateMachine):
                 with container_sm:
 
                     smach.StateMachine.add(
+                        "GET_SHELF_DATA",
+                        smach.CBState(
+                            self._get_shelf_data,
+                            output_keys=[
+                                "torso_height",
+                                "look_point",
+                                "polygon",
+                                "z_sweep_min",
+                                "z_sweep_max",
+                            ],
+                            input_keys=["shelf_id"],
+                        ),
+                        transitions={"succeeded": "succeeded"},
+                    )
+
+                    smach.StateMachine.add(
                         "ADJUST_TORSO",
                         smach_ros.SimpleActionState(
                             "/torso_controller/follow_joint_trajectory",
                             FollowJointTrajectoryAction,
                             goal_cb=self._adjust_torso_goal_cb,
-                            ouput_keys=[],
+                            output_keys=[],
                             input_keys=["shelf_id"],
                         ),
                         transitions={
@@ -152,18 +168,12 @@ class ScanShelves(smach.StateMachine):
                     smach.StateMachine.add(
                         "DETECT_OBJECTS",
                         DetectAllInPolygonSensorData(
-                            # ShapelyPolygon(
-                            #     rospy.get_param(
-                            #         "/storing_groceries/cabinet/shelves/bottom/polygon"
-                            #     )
-                            # ),
-                            # object_filter=[
-                            #     k for k in rospy.get_param("/storing_groceries/objects")
-                            # ],
-                            # min_coverage=0.9,
-                            # min_confidence=0.1,
-                            # z_axis=0.8,
-                            # model="lasr.pt",
+                            object_filter=[
+                                k for k in rospy.get_param("/storing_groceries/objects")
+                            ],
+                            min_coverage=0.9,
+                            min_confidence=0.1,
+                            model="lasr.pt",
                         ),
                         transitions={"succeeded": "SELECT_OBJECT", "failed": "failed"},
                     )
@@ -172,14 +182,31 @@ class ScanShelves(smach.StateMachine):
         goal = FollowJointTrajectoryActionGoal()
         goal.trajectory.joint_names = ["torso_lift_joint"]
         point = JointTrajectoryPoint()
-        point.positions = [
-            rospy.get_param(
-                f"/storing_groceries/cabinet/shelves/{userdata.shelf_id}/torso_lift_joint"
-            )
-        ]
+        point.positions = [userdata.torso_height]
         point.time_from_start = rospy.Duration(1)
         goal.trajectory.points.append(point)
         return goal
+
+    def _get_shelf_data(self, userdata):
+        userdata.torso_height = rospy.get_param(
+            f"/storing_groceries/cabinet/shelves/{userdata.shelf_id}/torso_lift_joint"
+        )
+        userdata.look_point = rospy.get_param(
+            f"/storing_groceries/cabinet/shelves/{userdata.shelf_id}/look_point"
+        )
+        userdata.polygon = ShapelyPolygon(
+            rospy.get_param(
+                f"/storing_groceries/cabinet/shelves/{userdata.shelf_id}/polygon"
+            )
+        )
+        userdata.z_sweep_min = rospy.get_param(
+            f"/storing_groceroes/cabinet/shelves/{userdata.shelf_id}/z_min"
+        )
+        userdata.z_sweep_max = rospy.get_param(
+            f"/storing_groceries/cabinet/shelves/{userdata.shelf_idz}z_max"
+        )
+
+        return "succeeded"
 
     def _classify_shelf(self, userdata):
 
