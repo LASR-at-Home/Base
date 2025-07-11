@@ -106,7 +106,9 @@ class PlaceServer:
 
             self._move_group.clear_pose_targets()
             self._move_group.set_pose_reference_frame(pose_stamped.header.frame_id)
-            self._move_group.set_pose_target(pose_stamped.pose, "gripper_grasping_frame")
+            self._move_group.set_pose_target(
+                pose_stamped.pose, "gripper_grasping_frame"
+            )
 
             move_success = self._move_group.go(wait=True)
             self._move_group.stop()
@@ -117,7 +119,7 @@ class PlaceServer:
                 break
             else:
                 rospy.logwarn("Failed to reach candidate pose %d", i)
-        
+
         if not success:
             rospy.logwarn("All candidate poses failed. Aborting place.")
             result = PlaceResult(success=False)
