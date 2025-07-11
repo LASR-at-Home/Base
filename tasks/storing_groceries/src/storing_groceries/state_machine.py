@@ -357,7 +357,7 @@ class StoringGroceries(smach.StateMachine):
                     response_slots=["success"],
                 ),
                 transitions={
-                    "succeeded": "GO_TO_CABINET",
+                    "succeeded": "ASK_OPEN_CABINET_DOOR",
                     "preempted": "failed",
                     "aborted": "failed",
                 },
@@ -370,10 +370,26 @@ class StoringGroceries(smach.StateMachine):
                     text="I'm not able to grasping the objects myself, would you please place the groceries on my back?"
                 ),
                 transitions={
-                    "succeeded": "GO_TO_CABINET",
+                    "succeeded": "ASK_OPEN_CABINET_DOOR",
                     "aborted": "failed",
                     "preempted": "failed",
                 },
+            )
+
+            smach.StateMachine.add(
+                "ASK_OPEN_CABINET_DOOR",
+                Say(text="Could you please open the cabinet door for me?"),
+                transitions={
+                    "succeeded": "WAIT_FOR_CABINET_DOOR_OPEN",
+                    "aborted": "failed",
+                    "preempted": "failed",
+                },
+            )
+
+            smach.StateMachine.add(
+                "WAIT_FOR_CABINET_DOOR_OPEN",
+                smach.CBState(lambda ud: rospy.sleep(3.0) or "succeeded"),
+                transitions={"succeeded": "GO_TO_CABINET"},
             )
 
             smach.StateMachine.add(
