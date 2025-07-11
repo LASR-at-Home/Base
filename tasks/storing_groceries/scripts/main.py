@@ -11,8 +11,10 @@ from shapely.validation import explain_validity
 
 from std_msgs.msg import Header
 
+
 def polygon_from_coords(coords):
     return Polygon(points=[Point(x=x, y=y, z=0.0) for x, y in coords])
+
 
 def get_pose_param(param_name):
     if not rospy.has_param(param_name):
@@ -23,7 +25,7 @@ def get_pose_param(param_name):
         param = rospy.get_param(param_name)
         pose = Pose(
             position=Point(**param["position"]),
-            orientation=Quaternion(**param["orientation"])
+            orientation=Quaternion(**param["orientation"]),
         )
         rospy.loginfo(f"Loaded pose for {param_name}: {param}")
         return pose
@@ -32,13 +34,20 @@ def get_pose_param(param_name):
         rospy.signal_shutdown(f"Bad parameter: {param_name}")
         return None
 
+
 if __name__ == "__main__":
     rospy.init_node("storing_groceries_robocup")
 
     # Publishers
-    wait_area_pub = rospy.Publisher("/storing_groceries/wait_area", PolygonStamped, queue_size=1, latch=True)
-    table_area_pub = rospy.Publisher("/storing_groceries/table_area", PolygonStamped, queue_size=1, latch=True)
-    cabinet_area_pub = rospy.Publisher("/storing_groceries/cabinet_area", PolygonStamped, queue_size=1, latch=True)
+    wait_area_pub = rospy.Publisher(
+        "/storing_groceries/wait_area", PolygonStamped, queue_size=1, latch=True
+    )
+    table_area_pub = rospy.Publisher(
+        "/storing_groceries/table_area", PolygonStamped, queue_size=1, latch=True
+    )
+    cabinet_area_pub = rospy.Publisher(
+        "/storing_groceries/cabinet_area", PolygonStamped, queue_size=1, latch=True
+    )
 
     # Load poses safely
     wait_pose = get_pose_param("/storing_groceries/wait_pose")
@@ -59,7 +68,11 @@ if __name__ == "__main__":
     table_area = ShapelyPolygon(table_area_param)
     cabinet_area = ShapelyPolygon(cabinet_area_param)
 
-    for name, poly in [("wait_area", wait_area), ("table_area", table_area), ("cabinet_area", cabinet_area)]:
+    for name, poly in [
+        ("wait_area", wait_area),
+        ("table_area", table_area),
+        ("cabinet_area", cabinet_area),
+    ]:
         if not poly.is_valid:
             rospy.logerr(f"{name} polygon is invalid: {explain_validity(poly)}")
             rospy.signal_shutdown(f"Invalid polygon: {name}")
@@ -68,9 +81,24 @@ if __name__ == "__main__":
             rospy.loginfo(f"{name} polygon is valid.")
 
     # Publish areas
-    wait_area_pub.publish(PolygonStamped(header=Header(frame_id="map"), polygon=polygon_from_coords(wait_area.exterior.coords)))
-    table_area_pub.publish(PolygonStamped(header=Header(frame_id="map"), polygon=polygon_from_coords(table_area.exterior.coords)))
-    cabinet_area_pub.publish(PolygonStamped(header=Header(frame_id="map"), polygon=polygon_from_coords(cabinet_area.exterior.coords)))
+    wait_area_pub.publish(
+        PolygonStamped(
+            header=Header(frame_id="map"),
+            polygon=polygon_from_coords(wait_area.exterior.coords),
+        )
+    )
+    table_area_pub.publish(
+        PolygonStamped(
+            header=Header(frame_id="map"),
+            polygon=polygon_from_coords(table_area.exterior.coords),
+        )
+    )
+    cabinet_area_pub.publish(
+        PolygonStamped(
+            header=Header(frame_id="map"),
+            polygon=polygon_from_coords(cabinet_area.exterior.coords),
+        )
+    )
 
     # Load shelf point
     try:

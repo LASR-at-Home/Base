@@ -144,6 +144,7 @@ class LLMInference:
 
         if self.config.quantize:
             from transformers import BitsAndBytesConfig
+
             try:
                 kwargs["quantization_config"] = BitsAndBytesConfig(
                     load_in_4bit=True,
@@ -227,12 +228,16 @@ def interest_commonality_llm(interests: list[str]) -> str:
     """
     config = ModelConfig(model_name=models["Qwen"], model_type="llm", quantize=True)
     sentence = ", ".join(interests)
-    query = create_query(sentence, "Create a sentence that find and introduce commeness of interests given")
+    query = create_query(
+        sentence,
+        "Create a sentence that find and introduce commeness of interests given",
+    )
     inference = LLMInference(config, query)
     response = inference.run_inference()
     # print(response)
     parsed_response = truncate_llm_output(response[0])
     return parsed_response
+
 
 def introduce_llm(name: str, drink: str, interests: str) -> str:
     """
@@ -249,6 +254,7 @@ def introduce_llm(name: str, drink: str, interests: str) -> str:
 
     return parsed_response
 
+
 def classify_category(objects: List[str]) -> str:
     """
     Classify category between a list of objects.
@@ -257,12 +263,15 @@ def classify_category(objects: List[str]) -> str:
     """
     config = ModelConfig(model_name=models["Qwen"], model_type="llm", quantize=True)
     sentence = ", ".join(objects)
-    query = create_query(sentence, "Detect which category these or a object belongs to.")
+    query = create_query(
+        sentence, "Detect which category these or a object belongs to."
+    )
     inference = LLMInference(config, query)
     response = inference.run_inference()
     # print(response)
     parsed_response = truncate_llm_output(response[0])
     return parsed_response
+
 
 def link_category(object: str, category: list[str]) -> str:
     """
@@ -271,12 +280,16 @@ def link_category(object: str, category: list[str]) -> str:
     :return: category
     """
     config = ModelConfig(model_name=models["Qwen"], model_type="llm", quantize=True)
-    query = create_query(category, "Detect which category {object} belongs to the most. If not appropreate category to go return 'new'")
+    query = create_query(
+        category,
+        "Detect which category {object} belongs to the most. If not appropreate category to go return 'new'",
+    )
     inference = LLMInference(config, query)
     response = inference.run_inference()
     # print(response)
     parsed_response = truncate_llm_output(response[0])
     return parsed_response
+
 
 # def extract_fields_llm(text: str, fields: list[str] = None):
 #     """
@@ -287,6 +300,7 @@ def link_category(object: str, category: list[str]) -> str:
 #     config = ModelConfig(model_name=models["Qwen"], model_type="llm", quantize=True)
 #     if fields is None:
 #         fields = ["Name", "Favourite drink", "Interests"]  # all for receptionist
+
 
 def extract_fields_llm(text: str, fields: List[str]) -> Dict:
     """
@@ -325,7 +339,6 @@ def main():
     # response = inference.run_inference()
     # print(response)
     # inference.log_output(response)
-
 
     print("\n🔍 TEST: extract_fields_llm")
     sentence = "Oh hi yeah, I'm John erm I drink tea usually green, and I am a robotics enthusiast. I also like to play chess and watch movies when I can."

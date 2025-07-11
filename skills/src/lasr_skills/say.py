@@ -21,7 +21,7 @@ if PUBLIC_CONTAINER or SIMULATION:
 
         text: Union[str, None] = None
         format_str: Union[str, None] = None
-        
+
         def __init__(
             self, text: Union[str, None] = None, format_str: Union[str, None] = None
         ):

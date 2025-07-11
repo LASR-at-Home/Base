@@ -18,7 +18,7 @@ import smach_ros
 from lasr_vision_msgs.srv import LangSam, LangSamRequest
 from sensor_msgs.msg import Image
 
-import numpy 
+import numpy
 
 #
 
@@ -35,13 +35,14 @@ from lasr_vision_msgs.srv import LangSam, LangSamRequest
 from sensor_msgs.msg import Image, CameraInfo
 from geometry_msgs.msg import Point
 
+
 class LangSamState(smach.State):
     def __init__(self, prompt="door handle", target_frame="odom"):
         smach.State.__init__(
             self,
-            outcomes=['succeeded', 'failed'],
-            input_keys=['prompt'],
-            output_keys=['target_point', 'detections']
+            outcomes=["succeeded", "failed"],
+            input_keys=["prompt"],
+            output_keys=["target_point", "detections"],
         )
         self.prompt = prompt
         self.target_frame = target_frame
@@ -58,9 +59,15 @@ class LangSamState(smach.State):
 
         try:
             # Get RGB, depth, and camera info
-            image_msg = rospy.wait_for_message('/xtion/rgb/image_raw', Image, timeout=5.0)
-            depth_msg = rospy.wait_for_message('/xtion/depth_registered/image_raw', Image, timeout=5.0)
-            cam_info = rospy.wait_for_message('/xtion/depth_registered/camera_info', CameraInfo, timeout=5.0)
+            image_msg = rospy.wait_for_message(
+                "/xtion/rgb/image_raw", Image, timeout=5.0
+            )
+            depth_msg = rospy.wait_for_message(
+                "/xtion/depth_registered/image_raw", Image, timeout=5.0
+            )
+            cam_info = rospy.wait_for_message(
+                "/xtion/depth_registered/camera_info", CameraInfo, timeout=5.0
+            )
 
             req = LangSamRequest()
             req.image_raw = image_msg
@@ -75,21 +82,24 @@ class LangSamState(smach.State):
 
             if not resp.detections:
                 rospy.logwarn("No detections found.")
-                return 'failed'
+                return "failed"
 
             # Take the first detection
             p: Point = resp.detections[0].point
-            rospy.loginfo(f"LangSAM detection point (in {self.target_frame}): x={p.x:.3f}, y={p.y:.3f}, z={p.z:.3f}")
+            rospy.loginfo(
+                f"LangSAM detection point (in {self.target_frame}): x={p.x:.3f}, y={p.y:.3f}, z={p.z:.3f}"
+            )
 
             userdata.target_point = p
             userdata.detections = resp.detections
 
-            return 'succeeded'
+            return "succeeded"
 
         except Exception as e:
             rospy.logerr(f"LangSam service failed: {e}")
-            return 'failed'
-        
+            return "failed"
+
+
 import rospy
 import smach
 import moveit_commander
@@ -111,9 +121,7 @@ from control_msgs.msg import FollowJointTrajectoryAction, FollowJointTrajectoryG
 class GoToHandoverPose(smach.State):
     def __init__(self):
         smach.State.__init__(
-            self,
-            outcomes=['succeeded', 'aborted'],
-            input_keys=['target_pose']
+            self, outcomes=["succeeded", "aborted"], input_keys=["target_pose"]
         )
 
         # Initialize MoveIt for arm group
@@ -126,8 +134,7 @@ class GoToHandoverPose(smach.State):
 
         # Initialize gripper action client
         self.gripper_client = actionlib.SimpleActionClient(
-            '/gripper_controller/follow_joint_trajectory',
-            FollowJointTrajectoryAction
+            "/gripper_controller/follow_joint_trajectory", FollowJointTrajectoryAction
         )
 
         rospy.loginfo("Waiting for gripper action server...")
@@ -140,7 +147,7 @@ class GoToHandoverPose(smach.State):
         target_pose = userdata.target_pose
         if not isinstance(target_pose, PoseStamped):
             rospy.logerr("userdata.target_pose must be a PoseStamped.")
-            return 'aborted'
+            return "aborted"
 
         # Plan to the handover pose
         rospy.loginfo("Planning to the target pose...")
@@ -150,13 +157,13 @@ class GoToHandoverPose(smach.State):
         if not success or not plan.joint_trajectory.points:
             rospy.logwarn("Failed to plan trajectory to handover pose.")
             self.arm_group.clear_pose_targets()
-            return 'aborted'
+            return "aborted"
 
         rospy.loginfo("Executing arm motion...")
         if not self.arm_group.execute(plan, wait=True):
             rospy.logwarn("Arm motion execution failed.")
             self.arm_group.clear_pose_targets()
-            return 'aborted'
+            return "aborted"
 
         self.arm_group.stop()
         self.arm_group.clear_pose_targets()
@@ -165,15 +172,15 @@ class GoToHandoverPose(smach.State):
         rospy.loginfo("Opening gripper...")
         if not self.open_gripper():
             rospy.logwarn("Gripper did not respond correctly.")
-            return 'aborted'
+            return "aborted"
 
-        return 'succeeded'
+        return "succeeded"
 
     def open_gripper(self):
         goal = FollowJointTrajectoryGoal()
         goal.trajectory.joint_names = [
-            'gripper_left_finger_joint',
-            'gripper_right_finger_joint'
+            "gripper_left_finger_joint",
+            "gripper_right_finger_joint",
         ]
 
         point = JointTrajectoryPoint()
@@ -187,6 +194,7 @@ class GoToHandoverPose(smach.State):
         result = self.gripper_client.get_result()
         return result is not None
 
+
 # ------------------
 # SMACH Main Control
 # ------------------
@@ -194,13 +202,16 @@ import rospy
 import smach
 import moveit_commander
 
+
 def main():
     rospy.init_node("langsam_go_to_point_sm")
     moveit_commander.roscpp_initialize([])
 
-    sm = smach.StateMachine(outcomes=['DONE', 'FAILED'])
+    sm = smach.StateMachine(outcomes=["DONE", "FAILED"])
 
-    sm.userdata.target_point = Point(x=1.125100, y=0.-0.172877, z=1.023482)  # Fake target
+    sm.userdata.target_point = Point(
+        x=1.125100, y=0.0 - 0.172877, z=1.023482
+    )  # Fake target
 
     with sm:
         # smach.StateMachine.add("DETECT_OBJECT",
@@ -208,12 +219,13 @@ def main():
         #                        transitions={"succeeded": "GO_TO_POINT", "failed": "FAILED"},
         #                         remapping={'prompt': 'prompt', 'detections': 'detections', 'target_point': 'target_point'})
 
+        smach.StateMachine.add(
+            "GO_TO_POINT",
+            GoToHandoverPose(),
+            transitions={"succeeded": "DONE", "failed": "FAILED"},
+            remapping={"target_point": "target_point"},
+        )
 
-        smach.StateMachine.add("GO_TO_POINT",
-                               GoToHandoverPose(),
-                               transitions={"succeeded": "DONE", "failed": "FAILED"},
-                               remapping={"target_point": "target_point"})
-        
         # smach.StateMachine.add("DETECT_OBJECT",
         #                        LangSamState(prompt="door handle", target_frame="base_footprint"),
         #                        transitions={"succeeded": "DONE", "failed": "FAILED"},
@@ -221,6 +233,7 @@ def main():
 
     outcome = sm.execute()
     rospy.loginfo(f"State machine finished with outcome: {outcome}")
+
 
 if __name__ == "__main__":
     main()
@@ -243,13 +256,13 @@ if __name__ == "__main__":
 # import math
 # import copy
 
-# USE_CLICKED_POINT = True      
-# TORSO_LIFT        = 0.25       
-# TABLE_THICK       = 0.01      
-# TABLE_Z           = 0.41       
-# VEL_SCALE         = 0.15     
+# USE_CLICKED_POINT = True
+# TORSO_LIFT        = 0.25
+# TABLE_THICK       = 0.01
+# TABLE_Z           = 0.41
+# VEL_SCALE         = 0.15
 # ACC_SCALE         = 0.15
-# STAMP_DELAY       = 0.25       
+# STAMP_DELAY       = 0.25
 
 # clicked_point = None
 # marker_pub    = None
@@ -306,10 +319,10 @@ if __name__ == "__main__":
 #     # tool_goal is the pose we want the gripper_link to reach
 #     tool_goal = PoseStamped()
 #     tool_goal.header.frame_id = arm.get_planning_frame()
-#     tool_goal.pose.position.x = x 
-#     tool_goal.pose.position.y = y 
+#     tool_goal.pose.position.x = x
+#     tool_goal.pose.position.y = y
 #     tool_goal.pose.position.z = z + box_offset_z
-#     # tool_goal.pose.position.z = z 
+#     # tool_goal.pose.position.z = z
 #     tool_goal.pose.orientation.w = 1.0
 
 #     # 1) Plan and execute move to tool_goal
@@ -483,7 +496,6 @@ if __name__ == "__main__":
 #     main()
 
 
-
 # class LangSamState(smach.State):
 #     def __init__(self, prompt: str, image_topic: str = "/xtion/rgb/image_raw"):
 #         smach.State.__init__(self, outcomes=["succeeded", "failed"], output_keys=['sam_detections'])
@@ -518,7 +530,7 @@ if __name__ == "__main__":
 #         except rospy.ROSException:
 #             rospy.logerr(f"[LangSamState] Timeout: {self.image_topic}")
 #             return "failed"
-            
+
 #         request = LangSamRequest(
 #                 image_raw=image_msg,
 #                 depth_image=depth_image_msg,
@@ -531,10 +543,10 @@ if __name__ == "__main__":
 #             response = self.client(request)
 
 
-#             if not response.detections:           
+#             if not response.detections:
 #                 rospy.logwarn("[LangSamState] No detection from LangSam")
-#                 return "failed" 
-            
+#                 return "failed"
+
 #             rospy.loginfo(f"[LangSamState] LangSAM result: {len(response.detections)}")
 
 #             best_idx = numpy.argmax([d.seg_mask_score for d in response.detections])
@@ -578,10 +590,10 @@ if __name__ == "__main__":
 #         if mask.shape != (height, width):
 #             rospy.logwarn("[filter_point_cloud] Mask shape mismatch.")
 #             return []
-            
+
 #         cloud_iter = pc2.read_points(cloud_msg, skip_nans=False, field_names=("x", "y", "z"))
 #         cloud_array = np.array(list(cloud_iter), dtype=np.float32).reshape((height, width, 3))
-        
+
 #         selected_points = cloud_array[mask.astype(bool)]
 #         selected_points = selected_points[~np.isnan(selected_points).any(axis=1)]
 
@@ -602,7 +614,7 @@ if __name__ == "__main__":
 #         except rospy.ROSException:
 #             rospy.logerr(f"[FilterPointCloudState] Timeout: {self.cloud_topic}")
 #             return "failed"
-        
+
 #         mask = userdata.sam_detections["mask"]
 #         filtered_points = self.filter_point_cloud(mask, cloud_msg)
 
@@ -610,8 +622,7 @@ if __name__ == "__main__":
 #         userdata.sam_detections["filtered_points"] = filtered_points
 #         userdata.sam_detections["raw_points"]=cloud_msg
 #         return "succeeded"
-    
-    
+
 
 # # #
 
@@ -623,7 +634,7 @@ if __name__ == "__main__":
 # #         points = userdata.sam_detections.get("filtered_points", [])
 # #         rospy.loginfo(f"[PrintPointCountState] 3D points count: {len(points)}")
 # #         return "done"
-    
+
 # # #
 
 # def select_depth_with_ratio(points, percentage = 75):
@@ -741,7 +752,6 @@ if __name__ == "__main__":
 #         return "succeeded"
 
 
-    
 # import rospy
 # import smach
 # import numpy as np
@@ -805,8 +815,8 @@ if __name__ == "__main__":
 #         except Exception as e:
 #             rospy.logerr(f"[DetectHandleState] Error during handle detection: {e}")
 #             return "failed"
-       
-        
+
+
 # import rospy
 # import smach
 # import actionlib
@@ -1007,7 +1017,6 @@ if __name__ == "__main__":
 #         return "done" if success else "failed"
 
 
-    
 # import smach
 # import numpy as np
 # import rospy
@@ -1045,62 +1054,56 @@ if __name__ == "__main__":
 #         return "done"
 
 
+# smach.StateMachine.add(
+#     "POINTCLOUD_EXTRACTION",
+#     PointCloudExtractionState(),
+#     transitions={"done": "PRINT_COUNT", "failed": "FAILED"}
+# )
+
+# smach.StateMachine.add(
+#     "PRINT_COUNT",
+#     PrintPointCountState(),
+#     transitions={"done": "ESTIMATE_DEPTH", "failed": "FAILED"}
+# )
+
+# smach.StateMachine.add(
+#     "ESTIMATE_DEPTH",
+#     EstimateAverageDepthState(),
+#     transitions={"done": "DETECT_HANDLE"}
+# )
+
+# smach.StateMachine.add(
+#     "DETECT_HANDLE",
+#     DetectHandleState(),
+#     transitions={"succeeded": "DONE", "failed": "FAILED"}
+# )
+
+# smach.StateMachine.add(
+#     "RAISE_TORSO",
+#     RaiseTorsoState(height=0.15),
+#     transitions={"succeeded": "MOVE_TO_HANDLE", "failed": "FAILED"}
+# )
+
+# smach.StateMachine.add(
+#     "MOVE_TO_HANDLE",
+#     MoveToHandleState(),
+#     transitions={"succeeded": "DONE", "failed": "FAILED"},
+#     remapping={"handle_pose": "handle_pose"}
+# )
 
 
-
-        # smach.StateMachine.add(
-        #     "POINTCLOUD_EXTRACTION",
-        #     PointCloudExtractionState(),
-        #     transitions={"done": "PRINT_COUNT", "failed": "FAILED"}
-        # )
-
-        # smach.StateMachine.add(
-        #     "PRINT_COUNT",
-        #     PrintPointCountState(),
-        #     transitions={"done": "ESTIMATE_DEPTH", "failed": "FAILED"}        
-        # )
-
-        # smach.StateMachine.add(
-        #     "ESTIMATE_DEPTH",
-        #     EstimateAverageDepthState(),
-        #     transitions={"done": "DETECT_HANDLE"}
-        # )
-
-        # smach.StateMachine.add(
-        #     "DETECT_HANDLE",
-        #     DetectHandleState(),
-        #     transitions={"succeeded": "DONE", "failed": "FAILED"}
-        # )
-
-        # smach.StateMachine.add(
-        #     "RAISE_TORSO",
-        #     RaiseTorsoState(height=0.15),
-        #     transitions={"succeeded": "MOVE_TO_HANDLE", "failed": "FAILED"}
-        # )
-
-        # smach.StateMachine.add(
-        #     "MOVE_TO_HANDLE",
-        #     MoveToHandleState(),
-        #     transitions={"succeeded": "DONE", "failed": "FAILED"},
-        #     remapping={"handle_pose": "handle_pose"}
-        # )
+# smach.StateMachine.add(
+#     "MOVE_ARM_TO_HANDLE",
+#     MoveArmToHandleState(group_name="arm_torso"),
+#     transitions={"done":"DONE", "failed":"FAILED"}
+# )
 
 
-        # smach.StateMachine.add(
-        #     "MOVE_ARM_TO_HANDLE",
-        #     MoveArmToHandleState(group_name="arm_torso"),
-        #     transitions={"done":"DONE", "failed":"FAILED"}
-        # )
-
-
-        
-
-
-        # smach.StateMachine.add(
-        #     "FILTER_SAFETY_DISTANCE",
-        #     FilterSafetyDistanceState(max_reach_cm=80.0),  # or whatever Tiago’s arm length is
-        #     transitions={"done": "DONE", "failed": "FAILED"}
-        # )
+# smach.StateMachine.add(
+#     "FILTER_SAFETY_DISTANCE",
+#     FilterSafetyDistanceState(max_reach_cm=80.0),  # or whatever Tiago’s arm length is
+#     transitions={"done": "DONE", "failed": "FAILED"}
+# )
 
 
 # #!/usr/bin/env python
@@ -1119,13 +1122,13 @@ if __name__ == "__main__":
 # from trajectory_msgs.msg import JointTrajectory
 # import math
 
-# USE_CLICKED_POINT = True      
-# TORSO_LIFT        = 0.25       
-# TABLE_THICK       = 0.01      
-# TABLE_Z           = 0.41       
-# VEL_SCALE         = 0.15     
+# USE_CLICKED_POINT = True
+# TORSO_LIFT        = 0.25
+# TABLE_THICK       = 0.01
+# TABLE_Z           = 0.41
+# VEL_SCALE         = 0.15
 # ACC_SCALE         = 0.15
-# STAMP_DELAY       = 0.25       
+# STAMP_DELAY       = 0.25
 
 # clicked_point = None
 # marker_pub    = None
@@ -1182,10 +1185,10 @@ if __name__ == "__main__":
 #     # tool_goal is the pose we want the gripper_link to reach
 #     tool_goal = PoseStamped()
 #     tool_goal.header.frame_id = arm.get_planning_frame()
-#     tool_goal.pose.position.x = x 
-#     tool_goal.pose.position.y = y 
+#     tool_goal.pose.position.x = x
+#     tool_goal.pose.position.y = y
 #     tool_goal.pose.position.z = z + box_offset_z
-#     # tool_goal.pose.position.z = z 
+#     # tool_goal.pose.position.z = z
 #     tool_goal.pose.orientation.w = 1.0
 
 #     # 1) Plan and execute move to tool_goal
@@ -1347,4 +1350,3 @@ if __name__ == "__main__":
 
 # if __name__ == "__main__":
 #     main()
-

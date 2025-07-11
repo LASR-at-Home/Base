@@ -22,13 +22,18 @@ if PUBLIC_CONTAINER or SIMULATION:
             self,
             text: Union[str, None] = None,
             format_str: Union[str, None] = None,
-            text_fn=None
+            text_fn=None,
         ):
             input_keys = []
             if format_str is not None:
                 input_keys = ["placeholders"]
             elif text_fn is not None:
-                input_keys = ["table_object", "table_object_category", "cabinet_categories", "cabinet_num"]  # Dummy to allow full userdata access
+                input_keys = [
+                    "table_object",
+                    "table_object_category",
+                    "cabinet_categories",
+                    "cabinet_num",
+                ]  # Dummy to allow full userdata access
 
             super(SayDynamic, self).__init__(
                 outcomes=["succeeded", "aborted", "preempted"],
@@ -40,9 +45,13 @@ if PUBLIC_CONTAINER or SIMULATION:
             self.text_fn = text_fn
 
             if PUBLIC_CONTAINER:
-                rospy.logwarn("SayDynamic: Public container detected; speech will not be executed.")
+                rospy.logwarn(
+                    "SayDynamic: Public container detected; speech will not be executed."
+                )
             elif SIMULATION:
-                rospy.logwarn("SayDynamic: Simulation detected; speech will not be executed.")
+                rospy.logwarn(
+                    "SayDynamic: Simulation detected; speech will not be executed."
+                )
 
         def execute(self, userdata):
             if self.text is not None:
@@ -80,15 +89,13 @@ else:
             self,
             text: Union[str, None] = None,
             format_str: Union[str, None] = None,
-            text_fn=None
+            text_fn=None,
         ):
             if text is not None:
                 super().__init__(
                     "tts",
                     TtsAction,
-                    goal=TtsGoal(
-                        rawtext=TtsText(text=text, lang_id="en_GB")
-                    ),
+                    goal=TtsGoal(rawtext=TtsText(text=text, lang_id="en_GB")),
                 )
 
             elif format_str is not None:
@@ -97,10 +104,12 @@ else:
                     TtsAction,
                     goal_cb=lambda ud, _: TtsGoal(
                         rawtext=TtsText(
-                            text=format_str.format(*ud.placeholders)
-                            if isinstance(ud.placeholders, (list, tuple))
-                            else format_str.format(ud.placeholders),
-                            lang_id="en_GB"
+                            text=(
+                                format_str.format(*ud.placeholders)
+                                if isinstance(ud.placeholders, (list, tuple))
+                                else format_str.format(ud.placeholders)
+                            ),
+                            lang_id="en_GB",
                         )
                     ),
                     input_keys=["placeholders"],
@@ -111,12 +120,14 @@ else:
                     "tts",
                     TtsAction,
                     goal_cb=lambda ud, _: TtsGoal(
-                        rawtext=TtsText(
-                            text=text_fn(ud),
-                            lang_id="en_GB"
-                        )
+                        rawtext=TtsText(text=text_fn(ud), lang_id="en_GB")
                     ),
-                    input_keys = ["table_object", "table_object_category", "cabinet_categories", "cabinet_num"]  # Dummy to allow full userdata access
+                    input_keys=[
+                        "table_object",
+                        "table_object_category",
+                        "cabinet_categories",
+                        "cabinet_num",
+                    ],  # Dummy to allow full userdata access
                 )
 
             else:
@@ -124,10 +135,7 @@ else:
                     "tts",
                     TtsAction,
                     goal_cb=lambda ud, _: TtsGoal(
-                        rawtext=TtsText(
-                            text=ud.text,
-                            lang_id="en_GB"
-                        )
+                        rawtext=TtsText(text=ud.text, lang_id="en_GB")
                     ),
                     input_keys=["text"],
                 )
