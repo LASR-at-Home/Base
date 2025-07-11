@@ -175,8 +175,30 @@ class ScanShelves(smach.StateMachine):
                             min_confidence=0.1,
                             model="lasr.pt",
                         ),
-                        transitions={"succeeded": "SELECT_OBJECT", "failed": "failed"},
+                        transitions={"succeeded": "CLASSIFY_SHELF", "failed": "failed"},
                     )
+
+                smach.StateMachine.add(
+                    "CLASSIFY_SHELF",
+                    smach.CBState(
+                        self._classify_shelf,
+                        output_keys=["shelf_category"],
+                        input_keys=["detected_objects"],
+                        outcomes=["succeeded", "failed"],
+                    ),
+                    transitions={"succeeded": "SAY_CLASSIFICATION", "failed": "failed"},
+                )
+
+                smach.StateMachine.add(
+                    "SAY_CLASSIFICATION",
+                    Say(format_str="This shelf contains {}"),
+                    remapping={"placeholders": "shelf_category"},
+                    transitions={
+                        "succeeded": "succeeded",
+                        "preempted": "failed",
+                        "aborted": "failed",
+                    },
+                )
 
     def _adjust_torso_goal_cb(self, userdata, goal):
         goal = FollowJointTrajectoryActionGoal()
@@ -235,3 +257,9 @@ class ScanShelves(smach.StateMachine):
         else:
             userdata.say_str = f"{userdata.selected_object[0].name} is a {object_category}. This shelf contains {userdata.shelf_category}, so I will place the {userdata.selected_object[0].name} here."
         return "succeeded"
+
+
+if __name__ == "__main__":
+    rospy.init_node("test_scan_shelves")
+    scan_shelves = ScanShelves()
+    scan_shelves.execute()

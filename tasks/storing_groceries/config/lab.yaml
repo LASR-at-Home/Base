@@ -18,6 +18,21 @@ table:
     x: 2.560809850692749
     y: 0.5178748965263367
     z: 0.719818115234375
+  surface:
+    pose:
+      position: 
+        x: 1.9334901941829357
+        y: 0.4792069780138385
+        z: 0.0
+      orientation: 
+        x: 0.0
+        y: 0.0
+        z: -0.009038449761356088
+        w: 0.9999591523786916
+    dimensions:
+      x: 0.1
+      y: 0.1
+      z: 0.1
 cabinet:
   pose: 
     position: 
@@ -55,13 +70,26 @@ cabinet:
         pose:
           position: {x: 0.65, y: -0.15, z: 0.8}
           orientation: {x: 0.600, y: 0.100, z: 0.048, w: 0.749}
-      - header:
-        frame_id: "base_footprint"
-        stamp: {secs: 0, nsecs: 0}
-        pose:
-          position: {x: 0.7, y: -0.05, z: 0.8}
-          orientation: {x: 0.600, y: 0.100, z: 0.048, w: 0.749}
-
+      - pose:
+        position: {x: 0.7, y: -0.05, z: 0.8}
+        orientation: {x: 0.600, y: 0.100, z: 0.048, w: 0.749}
+    z_min: 0.5
+    z_max: 0.6
+    surface:
+      pose:
+        position: 
+          x: 1.9334901941829357
+          y: 0.4792069780138385
+          z: 0.0
+        orientation: 
+          x: 0.0
+          y: 0.0
+          z: -0.009038449761356088
+          w: 0.9999591523786916
+      dimensions:
+        x: 0.1
+        y: 0.1
+        z: 0.1
 objects:
   breadsticks:
     graspable: true
