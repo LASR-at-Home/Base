@@ -45,51 +45,73 @@ cabinet:
       z: -0.6933070940957599
       w: 0.7206422644256256
   shelves:
+    top:
+      name: "top"
+      torso_lift_joint: 0.3
+      polygon:
+        - [-0.16032972931861877, 0.9931508898735046]
+        - [-0.10229244828224182,1.3820173740386963]
+        - [0.09409210085868835, 1.3620244264602661]
+        - [0.05013677477836609, 0.9993466734886169]
+      look_point:
+        x: -0.01798279583454132
+        y: 1.1870265007019043
+        z: 1.1823651790618896
+      z_min: 1.1
+      z_max: 1.45
     bottom:
       name: "bottom"
       torso_lift_joint: 0.1
       polygon:
-        - [0.8792908191680908, 0.15294300019741058]
-        - [0.6266437768936157, 0.17497380077838898]
-        - [0.631203293800354, 0.49910739064216614]
-        - [0.8912732005119324, 0.4947992265224457]
+        - [-0.3325481712818146, 0.8379184007644653]
+        - [-0.18867127597332,1.2257574796676636]
+        - [0.12665027379989624, 1.2488300800323486]
+        - [0.09769654273986816, 0.763494074344635]
       look_point:
-        x: 0.8395374417304993
-        y: 0.3491870164871216
-        z: 0.58270263671875
-    candidate_locations:
-      - header:
-        frame_id: "base_footprint"
-        stamp: {secs: 0, nsecs: 0}
-        pose:
-          position: {x: 0.7, y: -0.15, z: 0.8}
-          orientation: {x: 0.600, y: 0.100, z: 0.048, w: 0.749}
-      - header:
-        frame_id: "base_footprint"
-        stamp: {secs: 0, nsecs: 0}
-        pose:
-          position: {x: 0.65, y: -0.15, z: 0.8}
-          orientation: {x: 0.600, y: 0.100, z: 0.048, w: 0.749}
-      - pose:
-        position: {x: 0.7, y: -0.05, z: 0.8}
-        orientation: {x: 0.600, y: 0.100, z: 0.048, w: 0.749}
-    z_min: 0.5
-    z_max: 0.6
-    surface:
-      pose:
-        position: 
-          x: 1.9334901941829357
-          y: 0.4792069780138385
-          z: 0.0
-        orientation: 
-          x: 0.0
-          y: 0.0
-          z: -0.009038449761356088
-          w: 0.9999591523786916
-      dimensions:
-        x: 0.1
-        y: 0.1
-        z: 0.1
+        x: -0.042402029037475586
+        y: 1.2458274364471436
+        z: 0.8755102157592773
+      z_min: 0.8
+      z_max: 1.09  
+    # bottom:
+    #   name: "bottom"
+    #   torso_lift_joint: 0.1
+    #   polygon:
+    #     - [0.8792908191680908, 0.15294300019741058]
+    #     - [0.6266437768936157, 0.17497380077838898]
+    #     - [0.631203293800354, 0.49910739064216614]
+    #     - [0.8912732005119324, 0.4947992265224457]
+    #   look_point:
+    #     x: 0.8395374417304993
+    #     y: 0.3491870164871216
+    #     z: 0.58270263671875
+    #   candidate_locations:
+    #       - pose:
+    #         position: {x: 0.7, y: -0.15, z: 0.8}
+    #         orientation: {x: 0.600, y: 0.100, z: 0.048, w: 0.749}
+    #       - pose:
+    #         position: {x: 0.65, y: -0.15, z: 0.8}
+    #         orientation: {x: 0.600, y: 0.100, z: 0.048, w: 0.749}
+    #       - pose:
+    #         position: {x: 0.7, y: -0.05, z: 0.8}
+    #         orientation: {x: 0.600, y: 0.100, z: 0.048, w: 0.749}
+    #   z_min: 0.5
+    #   z_max: 0.6
+    #   surface:
+    #     pose:
+    #       position: 
+    #         x: 1.9334901941829357
+    #         y: 0.4792069780138385
+    #         z: 0.0
+    #       orientation: 
+    #         x: 0.0
+    #         y: 0.0
+    #         z: -0.009038449761356088
+    #         w: 0.9999591523786916
+    #     dimensions:
+    #       x: 0.1
+    #       y: 0.1
+    #       z: 0.1
 objects:
   breadsticks:
     graspable: true
@@ -102,4 +124,16 @@ objects:
   can:
     graspable: true
     category: "drinks"
+    scale: false
+  cocktail_sticks:
+    graspable: false
+    category: "misc"
+    scale: false
+  pasta:
+    graspable: false
+    category: "food"
+    scale: false
+  pringles:
+    graspable: true
+    category: "snacks"
     scale: false
