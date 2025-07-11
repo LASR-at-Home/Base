@@ -2,15 +2,13 @@ import smach
 import rospy
 import smach_ros
 
-from control_msgs.msg import (
-    FollowJointTrajectoryActionGoal,
-    FollowJointTrajectoryAction,
-    JointTrajectoryPoint,
-)
+from control_msgs.msg import FollowJointTrajectoryAction, FollowJointTrajectoryGoal
+
+from trajectory_msgs.msg import JointTrajectoryPoint
 from geometry_msgs.msg import Point, PointStamped
 from std_msgs.msg import Header
 
-from lasr_skills import DetectAllInPolygonSensorData, LookToPoint, Say
+from lasr_skills import DetectAllInPolygonSensorData, LookToPoint, Say, Wait
 from shapely import Polygon as ShapelyPolygon
 from collections import defaultdict
 
@@ -145,8 +143,9 @@ class ScanShelves(smach.StateMachine):
                                 "z_sweep_max",
                             ],
                             input_keys=["shelf_id"],
+                            outcomes=["succeeded"],
                         ),
-                        transitions={"succeeded": "succeeded"},
+                        transitions={"succeeded": "ADJUST_TORSO"},
                     )
 
                     smach.StateMachine.add(
@@ -156,13 +155,24 @@ class ScanShelves(smach.StateMachine):
                             FollowJointTrajectoryAction,
                             goal_cb=self._adjust_torso_goal_cb,
                             output_keys=[],
-                            input_keys=["shelf_id"],
+                            input_keys=["torso_height"],
                         ),
                         transitions={
-                            "succeeded": "DETECT_OBJECTS",
-                            "preempted": "failed",
-                            "aborted": "failed",
+                            "succeeded": "LOOK_AT_SHELF",
+                            "preempted": "LOOK_AT_SHELF",
+                            "aborted": "LOOK_AT_SHELF",  # always aborts?
                         },
+                    )
+
+                    smach.StateMachine.add(
+                        "LOOK_AT_SHELF",
+                        LookToPoint(),
+                        transitions={
+                            "succeeded": "DETECT_OBJECTS",
+                            "aborted": "failed",
+                            "timed_out": "failed",
+                        },
+                        remapping={"pointstamped": "look_point"},
                     )
 
                     smach.StateMachine.add(
@@ -171,41 +181,57 @@ class ScanShelves(smach.StateMachine):
                             object_filter=[
                                 k for k in rospy.get_param("/storing_groceries/objects")
                             ],
-                            min_coverage=0.9,
+                            min_coverage=1.0,
                             min_confidence=0.1,
                             model="lasr.pt",
                         ),
-                        transitions={"succeeded": "CLASSIFY_SHELF", "failed": "failed"},
+                        transitions={
+                            "succeeded": "CLASSIFY_SHELF",
+                            "failed": "CLASSIFY_SHELF",
+                        },
                     )
 
-                smach.StateMachine.add(
-                    "CLASSIFY_SHELF",
-                    smach.CBState(
-                        self._classify_shelf,
-                        output_keys=["shelf_category"],
-                        input_keys=["detected_objects"],
-                        outcomes=["succeeded", "failed"],
-                    ),
-                    transitions={"succeeded": "SAY_CLASSIFICATION", "failed": "failed"},
+                    smach.StateMachine.add(
+                        "CLASSIFY_SHELF",
+                        smach.CBState(
+                            self._classify_shelf,
+                            output_keys=["shelf_category"],
+                            input_keys=["detected_objects"],
+                            outcomes=["succeeded", "failed"],
+                        ),
+                        transitions={
+                            "succeeded": "SAY_CLASSIFICATION",
+                            "failed": "failed",
+                        },
+                    )
+
+                    smach.StateMachine.add(
+                        "SAY_CLASSIFICATION",
+                        Say(format_str="This shelf contains {}"),
+                        remapping={"placeholders": "shelf_category"},
+                        transitions={
+                            "succeeded": "continue",
+                            "preempted": "failed",
+                            "aborted": "failed",
+                        },
+                    )
+
+                shelf_iterator.set_contained_state(
+                    "CONTAINER_STATE", container_sm, loop_outcomes=["continue"]
                 )
 
-                smach.StateMachine.add(
-                    "SAY_CLASSIFICATION",
-                    Say(format_str="This shelf contains {}"),
-                    remapping={"placeholders": "shelf_category"},
-                    transitions={
-                        "succeeded": "succeeded",
-                        "preempted": "failed",
-                        "aborted": "failed",
-                    },
-                )
+            smach.StateMachine.add(
+                "ITERATE_SHELVES",
+                shelf_iterator,
+                transitions={"succeeded": "succeeded"},
+            )
 
     def _adjust_torso_goal_cb(self, userdata, goal):
-        goal = FollowJointTrajectoryActionGoal()
+        goal = FollowJointTrajectoryGoal()
         goal.trajectory.joint_names = ["torso_lift_joint"]
         point = JointTrajectoryPoint()
         point.positions = [userdata.torso_height]
-        point.time_from_start = rospy.Duration(1)
+        point.time_from_start = rospy.Duration(2.0)
         goal.trajectory.points.append(point)
         return goal
 
@@ -213,8 +239,13 @@ class ScanShelves(smach.StateMachine):
         userdata.torso_height = rospy.get_param(
             f"/storing_groceries/cabinet/shelves/{userdata.shelf_id}/torso_lift_joint"
         )
-        userdata.look_point = rospy.get_param(
-            f"/storing_groceries/cabinet/shelves/{userdata.shelf_id}/look_point"
+        userdata.look_point = PointStamped(
+            point=Point(
+                **rospy.get_param(
+                    f"/storing_groceries/cabinet/shelves/{userdata.shelf_id}/look_point"
+                )
+            ),
+            header=Header(frame_id="map"),
         )
         userdata.polygon = ShapelyPolygon(
             rospy.get_param(
@@ -222,10 +253,10 @@ class ScanShelves(smach.StateMachine):
             )
         )
         userdata.z_sweep_min = rospy.get_param(
-            f"/storing_groceroes/cabinet/shelves/{userdata.shelf_id}/z_min"
+            f"/storing_groceries/cabinet/shelves/{userdata.shelf_id}/z_min"
         )
         userdata.z_sweep_max = rospy.get_param(
-            f"/storing_groceries/cabinet/shelves/{userdata.shelf_idz}z_max"
+            f"/storing_groceries/cabinet/shelves/{userdata.shelf_id}/z_max"
         )
 
         return "succeeded"
@@ -235,7 +266,8 @@ class ScanShelves(smach.StateMachine):
         category_counts = defaultdict(int)
 
         if not userdata.detected_objects:
-            return "failed"
+            userdata.shelf_category = "empty"
+            return "succeeded"
 
         for obj, _ in userdata.detected_objects:
             category = rospy.get_param(
@@ -243,7 +275,7 @@ class ScanShelves(smach.StateMachine):
             )
             category_counts[category] += 1
 
-        shelf_category = max(category_counts, lambda key: category_counts[key])
+        shelf_category = max(category_counts, key=lambda key: category_counts[key])
         userdata.shelf_category = shelf_category
 
         return "succeeded"
