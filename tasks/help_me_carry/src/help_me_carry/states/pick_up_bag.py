@@ -608,15 +608,15 @@ class BagPickAndPlace(smach.State):
             "I wasn't able to pickup the bag. Please put the bag into my gripper. I will give you 5 seconds."
         )
         self.say("5")
-        rospy.sleep(0.5)
+        rospy.sleep(0.25)
         self.say("4")
-        rospy.sleep(0.5)
+        rospy.sleep(0.25)
         self.say("3")
-        rospy.sleep(0.5)
+        rospy.sleep(0.25)
         self.say("2")
-        rospy.sleep(0.5)
+        rospy.sleep(0.25)
         self.say("1")
-        rospy.sleep(0.5)
+        rospy.sleep(0.25)
         self.close_gripper()
 
     def say(self, text: str):
@@ -629,12 +629,19 @@ class BagPickAndPlace(smach.State):
 
     def stow_bag(self):
         self.adjust_torso(0.3)
+
+        now_str = rospy.Time.now().to_sec()
+        rospy.loginfo(f"[DEBUG] Sending stow_bag motion at {now_str:.2f}")
+
         goal = PlayMotionGoal()
         goal.motion_name = "stow_bag"
         goal.skip_planning = False
+        goal.priority = 0
         self.motion_client.send_goal(goal)
         self.motion_client.wait_for_result()
-        rospy.loginfo("Reached stow pose.")
+
+        state = self.motion_client.get_state()
+        rospy.loginfo(f"stow_bag finished with state={state}")
 
     def close_gripper(self, width=0.00, duration=1.0):
         goal = FollowJointTrajectoryGoal()

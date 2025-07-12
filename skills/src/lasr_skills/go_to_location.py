@@ -70,11 +70,11 @@ class GoToLocation(smach.StateMachine):
     ):
         if location is not None or location_param is not None:
             super(GoToLocation, self).__init__(
-                outcomes=["succeeded", "failed"], input_keys=["retry_count"]
+                outcomes=["succeeded", "failed"], input_keys=["retry_count"], output_keys=["retry_count"]
             )
         else:
             super(GoToLocation, self).__init__(
-                outcomes=["succeeded", "failed"], input_keys=["location", "retry_count"]
+                outcomes=["succeeded", "failed"], input_keys=["location", "retry_count"], output_keys=["retry_count"]
             )
 
         if safe_navigation:
@@ -92,25 +92,25 @@ class GoToLocation(smach.StateMachine):
                     "LOWER_BASE",
                     PlayMotion("pre_navigation"),
                     transitions={
-                        "succeeded": "GO_TO_LOCATION",
+                        "succeeded": "ENABLE_HEAD_MANAGER",
                         "aborted": "failed",
                         "preempted": "failed",
                     },
                 )
 
-                # smach.StateMachine.add(
-                #     "ENABLE_HEAD_MANAGER",
-                #     smach_ros.ServiceState(
-                #         "/pal_startup_control/start",
-                #         StartupStart,
-                #         request=StartupStartRequest("head_manager", ""),
-                #     ),
-                #     transitions={
-                #         "succeeded": "GO_TO_LOCATION",
-                #         "preempted": "failed",
-                #         "aborted": "failed",
-                #     },
-                # )
+                smach.StateMachine.add(
+                    "ENABLE_HEAD_MANAGER",
+                    smach_ros.ServiceState(
+                        "/pal_startup_control/start",
+                        StartupStart,
+                        request=StartupStartRequest("head_manager", ""),
+                    ),
+                    transitions={
+                        "succeeded": "GO_TO_LOCATION",
+                        "preempted": "failed",
+                        "aborted": "failed",
+                    },
+                )
 
             if location is not None:
                 smach.StateMachine.add(

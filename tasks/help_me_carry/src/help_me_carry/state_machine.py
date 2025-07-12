@@ -130,7 +130,7 @@ class CarryMyLuggage(smach.StateMachine):
 
             smach.StateMachine.add(
                 f"GO_BACK_TO_START_POINT",
-                GoToLocation(),
+                GoToLocation(safe_navigation=False),
                 transitions={
                     "succeeded": "SAY_END",
                     "failed": "SAY_END",

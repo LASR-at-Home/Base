@@ -28,7 +28,7 @@ play_motion:
     pre_navigation_look_down:
       joints: [ torso_lift_joint, head_1_joint, head_2_joint]
       points:
-        - positions: [ 0.15, 0.0, -0.5 ]
+        - positions: [ 0.15, 0.0, -0.6 ]
           time_from_start: 0.0
     post_navigation:
       joints: [torso_lift_joint, head_1_joint, head_2_joint]
