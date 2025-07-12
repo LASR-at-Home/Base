@@ -11,7 +11,7 @@ class CommandSimilarityMatcher(smach.State):
         smach.State.__init__(
             self,
             outcomes=["succeeded", "failed"],
-            input_keys=["command", "n_vecs_per_txt_file"],
+            input_keys=["command"],
             output_keys=["matched_command"],
         )
         self._n_vecs_per_txt_file = n_vecs_per_txt_file
@@ -24,11 +24,13 @@ class CommandSimilarityMatcher(smach.State):
             rospkg.RosPack().get_path("gpsr"), "data", "faiss_indices"
         )
         self._text_paths = [
-            os.path.join(self._text_directory, f"all_gpsr_commands_chunk_{i+1}.txt")
-            for i in range(10)
+            os.path.join(
+                self._text_directory, f"all_commands_german_open.txt_chunk_{i+1}.txt"
+            )
+            for i in range(20)
         ]
         self._index_paths = [
-            os.path.join(self._index_directory, f"all_gpsr_commands.index")
+            os.path.join(self._index_directory, f"all_gpsr_commands_german_open.index")
         ]
 
     def execute(self, userdata):
@@ -51,38 +53,14 @@ if __name__ == "__main__":
 
     sm = smach.StateMachine(outcomes=["succeeded", "failed"])
     with sm:
-        sm.userdata.tts_phrase = "Please tell me your command."
-        # smach.StateMachine.add(
-        #     "ASK_FOR_COMMAND",
-        #     AskAndListen(),
-        #     transitions={"succeeded": "COMMAND_SIMILARITY_MATCHER", "failed": "failed"},
-        #     remapping={"transcribed_speech": "command"},
-        # )
-        sm.add(
-            "LISTEN",
-            Listen(),
-            transitions={
-                "succeeded": "COMMAND_SIMILARITY_MATCHER",
-                "preempted": "failed",
-                "aborted": "failed",
-            },
-            remapping={"sequence": "command"},
+        sm.userdata.command = (
+            "go to the plant then meet lua and tell your teams country"
         )
         sm.add(
             "COMMAND_SIMILARITY_MATCHER",
-            CommandSimilarityMatcher([840342] * 10),
-            transitions={"succeeded": "LISTEN", "failed": "failed"},
+            CommandSimilarityMatcher([2339251] * 20),
+            transitions={"succeeded": "succeeded", "failed": "failed"},
         )
-        # sm.add(
-        #     "SAY_MATCHED_COMMAND",
-        #     Say(),
-        #     transitions={
-        #         "succeeded": "ASK_FOR_COMMAND",
-        #         "aborted": "failed",
-        #         "preempted": "failed",
-        #     },
-        #     remapping={"text": "matched_command"},
-        # )
 
     sm.execute()
     rospy.spin()

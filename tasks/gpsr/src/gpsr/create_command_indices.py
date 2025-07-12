@@ -16,7 +16,7 @@ if __name__ == "__main__":
 
     request.txt_paths = txt_paths
     request.index_paths = [
-        "/home/mattbarker/robot_club/lasr_ws/src/lasr-base/tasks/gpsr/data/command_data/all_gpsr_commands.index"
+        "/home/mattbarker/robot_club/lasr_ws/src/Base/tasks/gpsr/data/faiss_indices/all_gpsr_commands_german_open.index"
     ]
     request.index_factory_string = "IVF4096,PQ32"
 
