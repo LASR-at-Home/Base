@@ -54,9 +54,12 @@ def check_polygons():
             )
         )
 
+    print("All polygons okay!")
+
 
 if __name__ == "__main__":
     rospy.init_node("storing_groceries")
     check_polygons()
-    sm = StoringGroceries()
+    no_arm = True
+    sm = StoringGroceries(no_arm)
     sm.execute()
