@@ -1,6 +1,7 @@
-# !/usr/bin/env python3
+#!/usr/bin/env python3
 
 import rospy
+import rosparam
 import numpy as np
 from sensor_msgs.msg import Image, CameraInfo
 from visualization_msgs.msg import Marker, MarkerArray
@@ -27,13 +28,21 @@ class TrackedBarrier:
         self.direction = direction.copy()
         self.length = length
         self.points = points.copy()
-        self.confidence = 0.1  # Start with lower confidence
+        self.confidence = 0.3  # 更高的初始置信度
         self.last_seen = time.time()
         self.detection_count = 1
         self.consecutive_detections = 1  # Track consecutive detections
         self.consecutive_misses = 0  # Track consecutive misses
         self.stable_id = None
         self.is_published = False  # Track if this barrier is being published
+
+        # 增加强记忆机制
+        self.peak_confidence = 0.3  # 记录历史最高置信度
+        self.total_observation_time = 0.0  # 总观测时间
+        self.first_seen = time.time()  # 首次观测时间
+
+        # VO layer integration
+        self.vo_point_ids = []  # 存储分配给该障碍物的VO点ID
 
         # Ground projection attributes
         self.ground_projection = None
@@ -67,8 +76,8 @@ class TrackedBarrier:
 
     def update(self, new_center, new_direction, new_length, new_points):
         """Update barrier with new detection using weighted average"""
-        # Use simple exponential smoothing
-        alpha = 0.2  # Reduced learning rate for more stability
+        # 更快的学习率，更快收敛
+        alpha = 0.3  # 增加学习率
 
         self.center = (1 - alpha) * self.center + alpha * new_center
         self.direction = (1 - alpha) * self.direction + alpha * new_direction
@@ -84,43 +93,77 @@ class TrackedBarrier:
         self.detection_count += 1
         self.last_seen = time.time()
 
-        # Increase confidence more gradually
-        self.confidence = min(1.0, self.confidence + 0.1)
+        # 更快的置信度增长
+        confidence_boost = 0.15  # 增加置信度提升
+        self.confidence = min(1.0, self.confidence + confidence_boost)
+
+        # 更新历史最高置信度
+        self.peak_confidence = max(self.peak_confidence, self.confidence)
+
+        # 更新总观测时间
+        self.total_observation_time += time.time() - self.first_seen
 
     def decay(self):
-        """Reduce confidence when not detected"""
+        """Reduce confidence when not detected - 使用更温和的衰减"""
         self.consecutive_misses += 1
         self.consecutive_detections = 0
-        self.confidence *= 0.85  # Slower decay
 
-    def is_similar(self, center, direction, distance_thresh=1.0, angle_thresh=0.5):
-        """Check if new detection is similar to this tracked barrier"""
-        # Check center distance
+        # 基于历史置信度的温和衰减
+        if self.peak_confidence > 0.8:  # 如果历史上置信度很高
+            self.confidence *= 0.95  # 非常温和的衰减
+        elif self.peak_confidence > 0.6:
+            self.confidence *= 0.90  # 温和的衰减
+        else:
+            self.confidence *= 0.85  # 标准衰减
+
+    def is_similar(self, center, direction, distance_thresh=1.5, angle_thresh=0.6):
+        """Check if new detection is similar to this tracked barrier - 放宽匹配条件"""
+        # Check center distance - 放宽距离阈值
         center_dist = np.linalg.norm(self.center - center)
         if center_dist > distance_thresh:
             return False
 
-        # Check direction similarity (cosine similarity)
+        # Check direction similarity (cosine similarity) - 放宽角度阈值
         cos_angle = np.abs(np.dot(self.direction, direction))
         if cos_angle < np.cos(angle_thresh):  # angle_thresh in radians
             return False
 
         return True
 
-    def should_start_publishing(self, min_consecutive_detections=5, min_confidence=0.4):
-        """Check if barrier should start being published (more strict)"""
+    def should_start_publishing(self, min_consecutive_detections=2, min_confidence=0.3):
+        """Check if barrier should start being published - 更宽松的发布条件"""
         return (self.consecutive_detections >= min_consecutive_detections and
                 self.confidence >= min_confidence)
 
-    def should_stop_publishing(self, max_consecutive_misses=15, min_confidence=0.2):
-        """Check if barrier should stop being published (more lenient)"""
-        return (self.consecutive_misses >= max_consecutive_misses or
-                self.confidence < min_confidence)
+    def should_stop_publishing(self, max_consecutive_misses=120, min_confidence=0.1):
+        """Check if barrier should stop being published - 更宽松的保持条件"""
+        # 基于历史置信度的动态阈值
+        if self.peak_confidence > 0.8:
+            effective_max_misses = max_consecutive_misses * 2  # 高置信度障碍物保持更久
+            effective_min_confidence = min_confidence * 0.5
+        else:
+            effective_max_misses = max_consecutive_misses
+            effective_min_confidence = min_confidence
 
-    def should_delete(self, max_age=10.0, min_confidence=0.05):
-        """Check if barrier should be deleted completely (very lenient)"""
+        return (self.consecutive_misses >= effective_max_misses or
+                self.confidence < effective_min_confidence)
+
+    def should_delete(self, max_age=60.0, min_confidence=0.02):
+        """Check if barrier should be deleted completely - 非常宽松的删除条件"""
         age = time.time() - self.last_seen
-        return age > max_age or self.confidence < min_confidence
+
+        # 基于历史置信度的动态删除阈值
+        if self.peak_confidence > 0.8:
+            effective_max_age = max_age * 3  # 高置信度障碍物保存更久
+            effective_min_confidence = min_confidence * 0.3
+        elif self.peak_confidence > 0.6:
+            effective_max_age = max_age * 2
+            effective_min_confidence = min_confidence * 0.5
+        else:
+            effective_max_age = max_age
+            effective_min_confidence = min_confidence
+
+        return age > effective_max_age or self.confidence < effective_min_confidence
 
 
 class DepthBarrierDetector:
@@ -129,39 +172,48 @@ class DepthBarrierDetector:
         self.height_min = rospy.get_param("~height_min", 0.30)
         self.height_max = rospy.get_param("~height_max", 2.50)
         self.rope_r_min = rospy.get_param("~rope_radius_min", 0.001)
-        self.rope_r_max = rospy.get_param("~rope_radius_max", 0.15)
+        self.rope_r_max = rospy.get_param("~rope_radius_max", 0.30)
         self.voxel_size = rospy.get_param("~voxel_size", 0.01)
         self.db_eps = rospy.get_param("~db_eps", 0.03)
-        self.db_min_pts = rospy.get_param("~db_min_pts", 30)
-        self.eigen_ratio = rospy.get_param("~eigen_ratio", 10.0)
+        self.db_min_pts = rospy.get_param("~db_min_pts", 20)  # 减少最小点数，更容易检测
+        self.eigen_ratio = rospy.get_param("~eigen_ratio", 8.0)  # 放宽线性度要求
         self.marker_w = rospy.get_param("~marker_width", 0.01)
         self.target_frame = rospy.get_param("~target_frame", "map")
         self.range_min = rospy.get_param("~range_min", 0.30)
         self.range_max = rospy.get_param("~range_max", 5.00)
 
-        # Enhanced tracking parameters
-        self.association_distance = rospy.get_param("~association_distance", 1.0)
-        self.association_angle = rospy.get_param("~association_angle", 0.5)
+        # Enhanced tracking parameters - 更宽松的关联条件
+        self.association_distance = rospy.get_param("~association_distance", 1.5)
+        self.association_angle = rospy.get_param("~association_angle", 0.6)
 
-        # Publishing control parameters
-        self.min_consecutive_detections = rospy.get_param("~min_consecutive_detections", 5)
-        self.min_confidence_to_publish = rospy.get_param("~min_confidence_to_publish", 0.4)
-        self.max_consecutive_misses = rospy.get_param("~max_consecutive_misses", 60)
-        self.min_confidence_to_keep = rospy.get_param("~min_confidence_to_keep", 0.2)
+        # Publishing control parameters - 更快的发布，更长的记忆
+        self.min_consecutive_detections = rospy.get_param("~min_consecutive_detections", 2)
+        self.min_confidence_to_publish = rospy.get_param("~min_confidence_to_publish", 0.3)
+        self.max_consecutive_misses = rospy.get_param("~max_consecutive_misses", 120)
+        self.min_confidence_to_keep = rospy.get_param("~min_confidence_to_keep", 0.1)
 
-        # Deletion parameters
-        self.max_age = rospy.get_param("~max_age", 10.0)
-        self.min_confidence_to_exist = rospy.get_param("~min_confidence_to_exist", 0.05)
+        # Deletion parameters - 更长的记忆保持
+        self.max_age = rospy.get_param("~max_age", 60.0)
+        self.min_confidence_to_exist = rospy.get_param("~min_confidence_to_exist", 0.02)
 
         # Ground projection parameters
         self.ground_z = rospy.get_param("~ground_z", 0.0)
         self.ground_margin = rospy.get_param("~ground_margin", 0.2)  # Extra margin around ground projection
 
-        # Scanning frequency control
-        self.scan_frequency = rospy.get_param("~scan_frequency", 0.5)
+        # Scanning frequency control - 更高的扫描频率
+        self.scan_frequency = rospy.get_param("~scan_frequency", 2.0)  # 增加到2Hz
         self.last_scan_time = 0.0
         self.scan_interval = 1.0 / self.scan_frequency if self.scan_frequency > 0 else 0.0
         self.latest_image_msg = None  # Store latest image for controlled processing
+
+        # VO layer parameters
+        self.vo_namespace = rospy.get_param("~vo_namespace", "mmap/vo/submap_0")
+        self.vo_update_enabled = rospy.get_param("~vo_update_enabled", True)
+        self.vo_update_frequency = rospy.get_param("~vo_update_frequency", 2.0)  # 增加VO更新频率
+
+        # VO point management - 修复关键问题
+        self.vo_global_counter = 0  # 全局计数器，只增不减
+        self.vo_assigned_ids = {}  # 映射 barrier_id -> [vo_point_ids]
 
         # ROS communication
         self.bridge = CvBridge()
@@ -193,13 +245,22 @@ class DepthBarrierDetector:
             rospy.Subscriber("/xtion/depth_registered/image_raw", Image, self._depth_cb, queue_size=1,
                              buff_size=2 ** 22)
 
+        # Timer for VO layer updates
+        if self.vo_update_enabled and self.vo_update_frequency > 0:
+            vo_update_interval = 1.0 / self.vo_update_frequency
+            self.vo_timer = rospy.Timer(rospy.Duration(vo_update_interval), self._vo_update_timer_cb)
+
         # Log parameters
-        rospy.loginfo(f"Enhanced tracking parameters:")
-        rospy.loginfo(f"  - Scan frequency: {self.scan_frequency} Hz")
-        rospy.loginfo(f"  - Min consecutive detections to publish: {self.min_consecutive_detections}")
-        rospy.loginfo(f"  - Max consecutive misses before unpublish: {self.max_consecutive_misses}")
-        rospy.loginfo(f"  - Max age before deletion: {self.max_age}s")
+        rospy.loginfo(f"Optimized tracking parameters for navigation:")
+        rospy.loginfo(f"  - Scan frequency: {self.scan_frequency} Hz (faster detection)")
+        rospy.loginfo(
+            f"  - Min consecutive detections to publish: {self.min_consecutive_detections} (faster publishing)")
+        rospy.loginfo(f"  - Max consecutive misses before unpublish: {self.max_consecutive_misses} (longer memory)")
+        rospy.loginfo(f"  - Max age before deletion: {self.max_age}s (extended memory)")
         rospy.loginfo(f"  - Ground projections in frame: {self.target_frame}")
+        rospy.loginfo(f"  - VO layer update enabled: {self.vo_update_enabled}")
+        rospy.loginfo(f"  - VO layer update frequency: {self.vo_update_frequency} Hz")
+        rospy.loginfo(f"  - VO namespace: {self.vo_namespace}")
 
     def _cam_info_cb(self, msg: CameraInfo):
         """Initialize camera intrinsics once"""
@@ -233,6 +294,103 @@ class DepthBarrierDetector:
 
             # Always publish markers to reflect current state
             self._publish_markers(self.latest_image_msg.header.stamp)
+
+    def _vo_update_timer_cb(self, event):
+        """Timer callback for VO layer updates"""
+        if self.vo_update_enabled:
+            self.update_vo_layer()
+
+    def _allocate_vo_ids_for_barrier(self, barrier):
+        """为barrier分配固定的VO点ID"""
+        if barrier.stable_id not in self.vo_assigned_ids:
+            # 分配两个连续的VO点ID
+            point_id_1 = f"vo_{self.vo_global_counter:04d}"
+            self.vo_global_counter += 1
+            point_id_2 = f"vo_{self.vo_global_counter:04d}"
+            self.vo_global_counter += 1
+
+            self.vo_assigned_ids[barrier.stable_id] = [point_id_1, point_id_2]
+            rospy.loginfo(f"Allocated VO IDs {point_id_1}, {point_id_2} for barrier {barrier.stable_id}")
+
+        return self.vo_assigned_ids[barrier.stable_id]
+
+    def _cleanup_vo_ids_for_barrier(self, barrier_id):
+        """清理已删除barrier的VO点ID"""
+        if barrier_id in self.vo_assigned_ids:
+            old_ids = self.vo_assigned_ids[barrier_id]
+            del self.vo_assigned_ids[barrier_id]
+            rospy.loginfo(f"Cleaned up VO IDs {old_ids} for barrier {barrier_id}")
+            return old_ids
+        return []
+
+    def get_barriers_dict(self):
+        """Get barriers formatted as dictionary for VO layer parameter update"""
+        vo_dict = {}
+
+        for barrier in self.tracked_barriers:
+            # Only include published barriers
+            if not barrier.is_published or barrier.stable_id is None:
+                continue
+
+            # Only include barriers with valid ground projection
+            if barrier.ground_endpoints is None or len(barrier.ground_endpoints) < 2:
+                continue
+
+            # Get or allocate VO IDs for this barrier
+            vo_point_ids = self._allocate_vo_ids_for_barrier(barrier)
+
+            # Create unique line label for this barrier
+            line_label = f"line{barrier.stable_id}"
+
+            # Add the two endpoints of the ground projection with fixed IDs
+            for i, (point_id, endpoint) in enumerate(zip(vo_point_ids, barrier.ground_endpoints)):
+                # Format: ["submap_0", "line_label", x, y, z]
+                vo_params = ["submap_0", line_label, float(endpoint[0]), float(endpoint[1]), 0.0]
+                vo_dict[point_id] = vo_params
+
+        return vo_dict
+
+    def update_vo_layer(self):
+        """Update VO layer parameters using rosparam.upload_params"""
+        try:
+            # Get current barriers as parameter dictionary
+            vo_dict = self.get_barriers_dict()
+
+            # Get all currently published barrier IDs
+            current_published_ids = set([b.stable_id for b in self.tracked_barriers if b.is_published])
+
+            # Clean up VO IDs for barriers that are no longer published
+            ids_to_cleanup = []
+            for barrier_id in list(self.vo_assigned_ids.keys()):
+                if barrier_id not in current_published_ids:
+                    ids_to_cleanup.extend(self._cleanup_vo_ids_for_barrier(barrier_id))
+
+            # Clear old VO parameters that are no longer needed
+            try:
+                existing_params = rospy.get_param(self.vo_namespace, {})
+                for param_name in existing_params.keys():
+                    if param_name.startswith('vo_'):
+                        # Only delete if it's in our cleanup list or not in current dict
+                        if param_name in ids_to_cleanup or param_name not in vo_dict:
+                            full_param_path = f"{self.vo_namespace}/{param_name}"
+                            rospy.delete_param(full_param_path)
+                            rospy.logdebug(f"Deleted parameter: {full_param_path}")
+            except Exception as e:
+                rospy.logwarn(f"Error clearing old VO parameters: {e}")
+
+            # Upload new/updated VO parameters
+            for vo_id, params in vo_dict.items():
+                param_path = f"{self.vo_namespace}/{vo_id}"
+                rosparam.upload_params(param_path, params)
+                rospy.logdebug(f"Uploaded parameter {param_path}: {params}")
+
+            active_barriers = len([b for b in self.tracked_barriers if b.is_published])
+            rospy.loginfo(f"[VO Layer] Updated {len(vo_dict)} endpoints from {active_barriers} active barriers")
+
+        except Exception as e:
+            rospy.logwarn(f"Failed to update VO layer: {e}")
+            import traceback
+            rospy.logwarn(traceback.format_exc())
 
     def _extract_line_features(self, cluster_pts):
         """Extract center, direction, and length from cluster points"""
@@ -476,12 +634,21 @@ class DepthBarrierDetector:
 
     def _update_barrier_status(self):
         """Update barrier status (called by timer)"""
-        # Remove old tracks
-        old_count = len(self.tracked_barriers)
-        self.tracked_barriers = [barrier for barrier in self.tracked_barriers
-                                 if not barrier.should_delete(self.max_age, self.min_confidence_to_exist)]
+        # Remove old tracks and clean up their VO IDs
+        barriers_to_remove = []
+        for barrier in self.tracked_barriers:
+            if barrier.should_delete(self.max_age, self.min_confidence_to_exist):
+                barriers_to_remove.append(barrier)
 
-        if len(self.tracked_barriers) < old_count:
+        old_count = len(self.tracked_barriers)
+        if barriers_to_remove:
+            # Clean up VO IDs for deleted barriers
+            for barrier in barriers_to_remove:
+                if barrier.stable_id is not None:
+                    self._cleanup_vo_ids_for_barrier(barrier.stable_id)
+
+            # Remove barriers
+            self.tracked_barriers = [b for b in self.tracked_barriers if b not in barriers_to_remove]
             rospy.loginfo(f"Removed {old_count - len(self.tracked_barriers)} expired barriers")
 
         # Assign stable IDs and manage publishing status
@@ -549,25 +716,31 @@ class DepthBarrierDetector:
                 barrier_marker.scale.x = self.marker_w
                 barrier_marker.lifetime = rospy.Duration(0)  # Persistent markers
 
-                # Color based on confidence and recent detection
+                # 改进的颜色编码：基于历史置信度和当前状态
                 if barrier.consecutive_misses == 0:
                     # Recently detected - bright green
                     barrier_marker.color.r, barrier_marker.color.g, barrier_marker.color.b, barrier_marker.color.a = (0,
                                                                                                                       1,
                                                                                                                       0,
                                                                                                                       1)
-                elif barrier.consecutive_misses < 5:
+                elif barrier.consecutive_misses < 10:
                     # Recently seen - yellow
                     barrier_marker.color.r, barrier_marker.color.g, barrier_marker.color.b, barrier_marker.color.a = (1,
                                                                                                                       1,
                                                                                                                       0,
                                                                                                                       1)
+                elif barrier.peak_confidence > 0.8:
+                    # High confidence memory - blue
+                    barrier_marker.color.r, barrier_marker.color.g, barrier_marker.color.b, barrier_marker.color.a = (0,
+                                                                                                                      0,
+                                                                                                                      1,
+                                                                                                                      0.8)
                 else:
                     # Not seen for a while - orange
                     barrier_marker.color.r, barrier_marker.color.g, barrier_marker.color.b, barrier_marker.color.a = (1,
                                                                                                                       0.5,
                                                                                                                       0,
-                                                                                                                      1)
+                                                                                                                      0.7)
 
                 barrier_marker.points = [Point(x=float(p[0]), y=float(p[1]), z=float(p[2]))
                                          for p in barrier.points]
@@ -626,5 +799,5 @@ class DepthBarrierDetector:
 if __name__ == "__main__":
     rospy.init_node("depth_barrier_detector", anonymous=False)
     DepthBarrierDetector()
-    rospy.loginfo("Enhanced depth barrier detector with controlled scan frequency started.")
+    rospy.loginfo("Optimized depth barrier detector for navigation safety started.")
     rospy.spin()
