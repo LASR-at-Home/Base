@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+# !/usr/bin/env python3
 
 import rospy
 import numpy as np
@@ -20,17 +20,20 @@ def estimate_radius(eigen_vals: np.ndarray) -> float:
 
 
 class TrackedBarrier:
-    """Simple tracked barrier object for stability"""
+    """Simple tracked barrier object for stability with enhanced frame-based tracking"""
 
     def __init__(self, center, direction, length, points):
         self.center = center.copy()
         self.direction = direction.copy()
         self.length = length
         self.points = points.copy()
-        self.confidence = 0.3  # Start with low confidence
+        self.confidence = 0.1  # Start with lower confidence
         self.last_seen = time.time()
         self.detection_count = 1
+        self.consecutive_detections = 1  # Track consecutive detections
+        self.consecutive_misses = 0  # Track consecutive misses
         self.stable_id = None
+        self.is_published = False  # Track if this barrier is being published
 
         # Ground projection attributes
         self.ground_projection = None
@@ -65,7 +68,7 @@ class TrackedBarrier:
     def update(self, new_center, new_direction, new_length, new_points):
         """Update barrier with new detection using weighted average"""
         # Use simple exponential smoothing
-        alpha = 0.3  # Learning rate
+        alpha = 0.2  # Reduced learning rate for more stability
 
         self.center = (1 - alpha) * self.center + alpha * new_center
         self.direction = (1 - alpha) * self.direction + alpha * new_direction
@@ -75,14 +78,20 @@ class TrackedBarrier:
         # Update ground projection
         self._update_ground_projection()
 
-        # Increase confidence
-        self.confidence = min(1.0, self.confidence + 0.2)
-        self.last_seen = time.time()
+        # Update tracking counters
+        self.consecutive_detections += 1
+        self.consecutive_misses = 0
         self.detection_count += 1
+        self.last_seen = time.time()
+
+        # Increase confidence more gradually
+        self.confidence = min(1.0, self.confidence + 0.1)
 
     def decay(self):
         """Reduce confidence when not detected"""
-        self.confidence *= 0.7
+        self.consecutive_misses += 1
+        self.consecutive_detections = 0
+        self.confidence *= 0.85  # Slower decay
 
     def is_similar(self, center, direction, distance_thresh=1.0, angle_thresh=0.5):
         """Check if new detection is similar to this tracked barrier"""
@@ -98,12 +107,18 @@ class TrackedBarrier:
 
         return True
 
-    def should_confirm(self, min_detections=3, min_confidence=0.6):
-        """Check if barrier should be confirmed as real"""
-        return self.detection_count >= min_detections and self.confidence >= min_confidence
+    def should_start_publishing(self, min_consecutive_detections=5, min_confidence=0.4):
+        """Check if barrier should start being published (more strict)"""
+        return (self.consecutive_detections >= min_consecutive_detections and
+                self.confidence >= min_confidence)
 
-    def should_delete(self, max_age=2.0, min_confidence=0.1):
-        """Check if barrier should be deleted"""
+    def should_stop_publishing(self, max_consecutive_misses=15, min_confidence=0.2):
+        """Check if barrier should stop being published (more lenient)"""
+        return (self.consecutive_misses >= max_consecutive_misses or
+                self.confidence < min_confidence)
+
+    def should_delete(self, max_age=10.0, min_confidence=0.05):
+        """Check if barrier should be deleted completely (very lenient)"""
         age = time.time() - self.last_seen
         return age > max_age or self.confidence < min_confidence
 
@@ -124,16 +139,29 @@ class DepthBarrierDetector:
         self.range_min = rospy.get_param("~range_min", 0.30)
         self.range_max = rospy.get_param("~range_max", 5.00)
 
-        # Tracking parameters
+        # Enhanced tracking parameters
         self.association_distance = rospy.get_param("~association_distance", 1.0)
         self.association_angle = rospy.get_param("~association_angle", 0.5)
-        self.min_detections = rospy.get_param("~min_detections", 3)
-        self.min_confidence = rospy.get_param("~min_confidence", 0.6)
-        self.max_age = rospy.get_param("~max_age", 2.0)
+
+        # Publishing control parameters
+        self.min_consecutive_detections = rospy.get_param("~min_consecutive_detections", 5)
+        self.min_confidence_to_publish = rospy.get_param("~min_confidence_to_publish", 0.4)
+        self.max_consecutive_misses = rospy.get_param("~max_consecutive_misses", 60)
+        self.min_confidence_to_keep = rospy.get_param("~min_confidence_to_keep", 0.2)
+
+        # Deletion parameters
+        self.max_age = rospy.get_param("~max_age", 10.0)
+        self.min_confidence_to_exist = rospy.get_param("~min_confidence_to_exist", 0.05)
 
         # Ground projection parameters
         self.ground_z = rospy.get_param("~ground_z", 0.0)
         self.ground_margin = rospy.get_param("~ground_margin", 0.2)  # Extra margin around ground projection
+
+        # Scanning frequency control
+        self.scan_frequency = rospy.get_param("~scan_frequency", 0.5)
+        self.last_scan_time = 0.0
+        self.scan_interval = 1.0 / self.scan_frequency if self.scan_frequency > 0 else 0.0
+        self.latest_image_msg = None  # Store latest image for controlled processing
 
         # ROS communication
         self.bridge = CvBridge()
@@ -154,7 +182,24 @@ class DepthBarrierDetector:
 
         # Subscribers
         rospy.Subscriber("/xtion/depth_registered/camera_info", CameraInfo, self._cam_info_cb, queue_size=1)
-        rospy.Subscriber("/xtion/depth_registered/image_raw", Image, self._depth_cb, queue_size=1, buff_size=2 ** 22)
+        rospy.Subscriber("/xtion/depth_registered/image_raw", Image, self._image_store_cb, queue_size=1,
+                         buff_size=2 ** 22)
+
+        # Timer for controlled scanning
+        if self.scan_frequency > 0:
+            self.scan_timer = rospy.Timer(rospy.Duration(self.scan_interval), self._scan_timer_cb)
+        else:
+            # If frequency is 0 or negative, process every image (original behavior)
+            rospy.Subscriber("/xtion/depth_registered/image_raw", Image, self._depth_cb, queue_size=1,
+                             buff_size=2 ** 22)
+
+        # Log parameters
+        rospy.loginfo(f"Enhanced tracking parameters:")
+        rospy.loginfo(f"  - Scan frequency: {self.scan_frequency} Hz")
+        rospy.loginfo(f"  - Min consecutive detections to publish: {self.min_consecutive_detections}")
+        rospy.loginfo(f"  - Max consecutive misses before unpublish: {self.max_consecutive_misses}")
+        rospy.loginfo(f"  - Max age before deletion: {self.max_age}s")
+        rospy.loginfo(f"  - Ground projections in frame: {self.target_frame}")
 
     def _cam_info_cb(self, msg: CameraInfo):
         """Initialize camera intrinsics once"""
@@ -165,6 +210,29 @@ class DepthBarrierDetector:
             )
             self.camera_frame = msg.header.frame_id or "xtion_depth_optical_frame"
             rospy.loginfo("Camera intrinsics received: frame = %s", self.camera_frame)
+
+    def _image_store_cb(self, msg: Image):
+        """Store the latest image for controlled processing"""
+        self.latest_image_msg = msg
+
+    def _scan_timer_cb(self, event):
+        """Timer callback for controlled scanning frequency"""
+        if self.latest_image_msg is not None:
+            # Process the latest stored image
+            self._depth_cb(self.latest_image_msg)
+
+            # Update all unmatched barriers (decay their confidence)
+            current_time = time.time()
+            for barrier in self.tracked_barriers:
+                # If barrier wasn't updated recently, decay it
+                if current_time - barrier.last_seen > self.scan_interval * 1.5:
+                    barrier.decay()
+
+            # Clean up old barriers and update publishing status
+            self._update_barrier_status()
+
+            # Always publish markers to reflect current state
+            self._publish_markers(self.latest_image_msg.header.stamp)
 
     def _extract_line_features(self, cluster_pts):
         """Extract center, direction, and length from cluster points"""
@@ -184,7 +252,7 @@ class DepthBarrierDetector:
         return center, direction, length
 
     def _create_ground_projection_markers(self, barrier, stamp):
-        """Create ground projection markers for a barrier"""
+        """Create ground projection markers for a barrier in the target frame"""
         markers = []
 
         if barrier.ground_projection is None or barrier.ground_endpoints is None:
@@ -193,7 +261,7 @@ class DepthBarrierDetector:
         # Ground line marker
         ground_line = Marker()
         ground_line.header.stamp = stamp
-        ground_line.header.frame_id = self.target_frame
+        ground_line.header.frame_id = self.target_frame  # Ground projections are in target frame (usually map)
         ground_line.ns = "ground_projections"
         ground_line.id = barrier.stable_id
         ground_line.type = Marker.LINE_STRIP
@@ -202,7 +270,7 @@ class DepthBarrierDetector:
         ground_line.lifetime = rospy.Duration(0)
 
         # Red color for ground projection
-        ground_line.color.r, ground_line.color.g, ground_line.color.b, ground_line.color.a = (1, 0, 0, 0.7)
+        ground_line.color.r, ground_line.color.g, ground_line.color.b, ground_line.color.a = (1, 0, 0, 0.8)
 
         # Add points at ground level
         ground_line.points = [
@@ -219,7 +287,7 @@ class DepthBarrierDetector:
         if barrier.ground_projection['length'] > 0:
             area_marker = Marker()
             area_marker.header.stamp = stamp
-            area_marker.header.frame_id = self.target_frame
+            area_marker.header.frame_id = self.target_frame  # Ground areas are in target frame
             area_marker.ns = "ground_areas"
             area_marker.id = barrier.stable_id
             area_marker.type = Marker.CUBE
@@ -247,7 +315,7 @@ class DepthBarrierDetector:
             area_marker.scale.z = 0.02  # Thin rectangle
 
             # Semi-transparent red
-            area_marker.color.r, area_marker.color.g, area_marker.color.b, area_marker.color.a = (1, 0, 0, 0.3)
+            area_marker.color.r, area_marker.color.g, area_marker.color.b, area_marker.color.a = (1, 0, 0, 0.25)
 
             markers.append(area_marker)
 
@@ -284,7 +352,7 @@ class DepthBarrierDetector:
         return matched_pairs, unmatched_detections, unmatched_tracks
 
     def _depth_cb(self, msg: Image):
-        """Main depth processing pipeline with tracking"""
+        """Main depth processing pipeline with tracking (controlled by scan frequency)"""
         if self.intrinsic is None:
             return
 
@@ -377,14 +445,16 @@ class DepthBarrierDetector:
                 except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
                     rospy.logwarn_throttle(5.0, f"TF lookup failed: {e}")
 
-        # Update tracking
-        self._update_tracking(current_detections)
+        # Update tracking only when called by timer or when scan_frequency <= 0
+        if self.scan_frequency <= 0:
+            self._update_tracking(current_detections)
+            self._publish_markers(msg.header.stamp)
+        else:
+            # Just update detections, timer will handle the rest
+            self._update_detections_only(current_detections)
 
-        # Publish markers
-        self._publish_markers(msg.header.stamp)
-
-    def _update_tracking(self, detections):
-        """Update tracking state with current detections"""
+    def _update_detections_only(self, detections):
+        """Update only the detection matching without publishing (used by timer-controlled mode)"""
         # Associate detections with existing tracks
         matched_pairs, unmatched_detections, unmatched_tracks = self._associate_detections(detections)
 
@@ -392,7 +462,55 @@ class DepthBarrierDetector:
         for det_idx, track_idx in matched_pairs:
             detection = detections[det_idx]
             barrier = self.tracked_barriers[track_idx]
+            barrier.update(detection['center'], detection['direction'],
+                           detection['length'], detection['points'])
 
+        # Create new tracks for unmatched detections
+        for det_idx in unmatched_detections:
+            detection = detections[det_idx]
+            new_barrier = TrackedBarrier(
+                detection['center'], detection['direction'],
+                detection['length'], detection['points']
+            )
+            self.tracked_barriers.append(new_barrier)
+
+    def _update_barrier_status(self):
+        """Update barrier status (called by timer)"""
+        # Remove old tracks
+        old_count = len(self.tracked_barriers)
+        self.tracked_barriers = [barrier for barrier in self.tracked_barriers
+                                 if not barrier.should_delete(self.max_age, self.min_confidence_to_exist)]
+
+        if len(self.tracked_barriers) < old_count:
+            rospy.loginfo(f"Removed {old_count - len(self.tracked_barriers)} expired barriers")
+
+        # Assign stable IDs and manage publishing status
+        for barrier in self.tracked_barriers:
+            # Assign stable ID when barrier should start being published
+            if barrier.should_start_publishing(self.min_consecutive_detections, self.min_confidence_to_publish):
+                if barrier.stable_id is None:
+                    barrier.stable_id = self.next_stable_id
+                    self.next_stable_id += 1
+                    rospy.loginfo(f"New stable barrier confirmed with ID {barrier.stable_id} "
+                                  f"(detections: {barrier.consecutive_detections}, confidence: {barrier.confidence:.2f})")
+                barrier.is_published = True
+
+            # Check if should stop publishing
+            elif barrier.is_published and barrier.should_stop_publishing(self.max_consecutive_misses,
+                                                                         self.min_confidence_to_keep):
+                barrier.is_published = False
+                rospy.loginfo(f"Barrier {barrier.stable_id} unpublished "
+                              f"(misses: {barrier.consecutive_misses}, confidence: {barrier.confidence:.2f})")
+
+    def _update_tracking(self, detections):
+        """Update tracking state with current detections (legacy method for non-timer mode)"""
+        # Associate detections with existing tracks
+        matched_pairs, unmatched_detections, unmatched_tracks = self._associate_detections(detections)
+
+        # Update matched tracks
+        for det_idx, track_idx in matched_pairs:
+            detection = detections[det_idx]
+            barrier = self.tracked_barriers[track_idx]
             barrier.update(detection['center'], detection['direction'],
                            detection['length'], detection['points'])
 
@@ -409,25 +527,17 @@ class DepthBarrierDetector:
             )
             self.tracked_barriers.append(new_barrier)
 
-        # Remove old tracks and assign stable IDs to confirmed tracks
-        self.tracked_barriers = [barrier for barrier in self.tracked_barriers
-                                 if not barrier.should_delete(self.max_age)]
-
-        # Assign stable IDs to newly confirmed barriers
-        for barrier in self.tracked_barriers:
-            if barrier.should_confirm(self.min_detections, self.min_confidence) and barrier.stable_id is None:
-                barrier.stable_id = self.next_stable_id
-                self.next_stable_id += 1
-                rospy.loginfo(f"Confirmed new barrier with ID {barrier.stable_id}")
+        # Update barrier status
+        self._update_barrier_status()
 
     def _publish_markers(self, stamp):
-        """Publish markers for confirmed barriers and their ground projections"""
+        """Publish markers for barriers that should be published"""
         marray = MarkerArray()
         current_marker_ids = set()
 
-        # Add markers for confirmed barriers
+        # Add markers for barriers that should be published
         for barrier in self.tracked_barriers:
-            if barrier.should_confirm(self.min_detections, self.min_confidence):
+            if barrier.is_published and barrier.stable_id is not None:
                 # 3D barrier line marker
                 barrier_marker = Marker()
                 barrier_marker.header.stamp = stamp
@@ -439,15 +549,23 @@ class DepthBarrierDetector:
                 barrier_marker.scale.x = self.marker_w
                 barrier_marker.lifetime = rospy.Duration(0)  # Persistent markers
 
-                # Color based on confidence (green = high confidence, yellow = medium)
-                if barrier.confidence > 0.8:
+                # Color based on confidence and recent detection
+                if barrier.consecutive_misses == 0:
+                    # Recently detected - bright green
                     barrier_marker.color.r, barrier_marker.color.g, barrier_marker.color.b, barrier_marker.color.a = (0,
                                                                                                                       1,
                                                                                                                       0,
                                                                                                                       1)
-                else:
+                elif barrier.consecutive_misses < 5:
+                    # Recently seen - yellow
                     barrier_marker.color.r, barrier_marker.color.g, barrier_marker.color.b, barrier_marker.color.a = (1,
                                                                                                                       1,
+                                                                                                                      0,
+                                                                                                                      1)
+                else:
+                    # Not seen for a while - orange
+                    barrier_marker.color.r, barrier_marker.color.g, barrier_marker.color.b, barrier_marker.color.a = (1,
+                                                                                                                      0.5,
                                                                                                                       0,
                                                                                                                       1)
 
@@ -460,7 +578,7 @@ class DepthBarrierDetector:
                 ground_markers = self._create_ground_projection_markers(barrier, stamp)
                 marray.markers.extend(ground_markers)
 
-        # Delete old 3D barrier markers
+        # Delete old markers
         for old_id in self.published_marker_ids - current_marker_ids:
             # Delete 3D barrier
             delete_marker = Marker()
@@ -508,5 +626,5 @@ class DepthBarrierDetector:
 if __name__ == "__main__":
     rospy.init_node("depth_barrier_detector", anonymous=False)
     DepthBarrierDetector()
-    rospy.loginfo("Depth barrier detector with tracking and ground projection started.")
+    rospy.loginfo("Enhanced depth barrier detector with controlled scan frequency started.")
     rospy.spin()
