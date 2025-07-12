@@ -26,12 +26,10 @@ from lasr_manipulation_msgs.srv import (
     RegistrationRequest,
     AddCollisionObject,
     AddCollisionObjectRequest,
-    DetectAndAddSupportSurface,
     DetectAndAddSupportSurfaceRequest,
     RemoveSupportSurface,
     RemoveSupportSurfaceRequest,
     DetachObjectFromGripperRequest,
-    DetachObjectFromGripper,
 )
 
 from lasr_manipulation_msgs.msg import PickAction, PickGoal, PlaceGoal, PlaceAction
@@ -40,12 +38,6 @@ from std_msgs.msg import Empty, Header
 from std_srvs.srv import Empty as EmptySrv, EmptyRequest
 from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion, Vector3
 from lasr_manipulation_msgs.srv import AddSupportSurface, AddSupportSurfaceRequest
-
-
-"""
-Looks like we can't have everything setup in the planning scene apriori, we need to dynamically add things, as they are all in the base footprint...
-We need to lift the object off the surface first. I can't understand why, but sometimes the planner fucks up. I think this is because the support surface is touching/colliding with  the object.
-"""
 
 
 class StoringGroceries(smach.StateMachine):
@@ -483,32 +475,6 @@ class StoringGroceries(smach.StateMachine):
                 },
             )
 
-            # smach.StateMachine.add(
-            #     "OPEN_GRIPPER_RELEASE_OBJECT",
-            #     PlayMotion(motion_name="open_gripper"),
-            #     transitions={
-            #         "succeeded": "DETACH_OBJECT_FROM_GRIPPER",
-            #         "preempted": "failed",
-            #         "aborted": "failed",
-            #     },
-            # )
-
-            # smach.StateMachine.add(
-            #     "DETACH_OBJECT_FROM_GRIPPER",
-            #     smach_ros.ServiceState(
-            #         "/lasr_manipulation_planning_scene/detach_object_from_gripper",
-            #         DetachObjectFromGripper,
-            #         request_cb=self._detach_object_from_gripper_cb,
-            #         output_keys=[],
-            #         input_keys=["selected_object"],
-            #     ),
-            #     transitions={
-            #         "succeeded": "GO_TO_TABLE",
-            #         "preempted": "failed",
-            #         "aborted": "failed",
-            #     },
-            # )
-
     def _register_object_cb(self, userdata, request):
         return RegistrationRequest(
             userdata.masked_cloud,
@@ -522,15 +488,6 @@ class StoringGroceries(smach.StateMachine):
     def _add_collision_object_cb(self, userdata, request):
         return AddCollisionObjectRequest(
             userdata.selected_object[0].name,
-            userdata.selected_object[0].name,
-            userdata.transform,
-            userdata.scale,
-        )
-
-    def _detect_and_add_table_support_surface_cb(self, userdata, request):
-        return DetectAndAddSupportSurfaceRequest(
-            "table",
-            userdata.selected_object[1],
             userdata.selected_object[0].name,
             userdata.transform,
             userdata.scale,
@@ -563,6 +520,3 @@ class StoringGroceries(smach.StateMachine):
 
     def _remove_table_support_surface_cb(self, userdata, request):
         return RemoveSupportSurfaceRequest("table")
-
-    def _detach_object_from_gripper_cb(self, userdata, request):
-        return DetachObjectFromGripperRequest(userdata.selected_object[0].name)
