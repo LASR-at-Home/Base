@@ -9,6 +9,7 @@ from storing_groceries.states import (
     SegmentObject,
     ScanShelves,
     AddShelvesToPlanningScene,
+    ChooseShelf,
 )
 
 from lasr_skills import (
@@ -367,18 +368,19 @@ class StoringGroceries(smach.StateMachine):
             smach.StateMachine.add(
                 "HELP_ME_GRASPING",
                 Say(
-                    text="I'm not able to grasping the objects myself, would you please place the groceries on my back?"
+                    format_str="I'm unable to grasp the {} please place it on my back. I will give you 5 seconds. 5... 4... 3... 2... 1..."
                 ),
                 transitions={
                     "succeeded": "ASK_OPEN_CABINET_DOOR",
                     "aborted": "failed",
                     "preempted": "failed",
                 },
+                remapping={"placeholders": "selected_object_name"},
             )
 
             smach.StateMachine.add(
                 "ASK_OPEN_CABINET_DOOR",
-                Say(text="Could you please open the cabinet door for me?"),
+                Say(text="Please open both cabinet doors fully."),
                 transitions={
                     "succeeded": "WAIT_FOR_CABINET_DOOR_OPEN",
                     "aborted": "failed",
@@ -388,7 +390,7 @@ class StoringGroceries(smach.StateMachine):
 
             smach.StateMachine.add(
                 "WAIT_FOR_CABINET_DOOR_OPEN",
-                smach.CBState(lambda ud: rospy.sleep(3.0) or "succeeded"),
+                smach.CBState(lambda ud: rospy.sleep(5.0) or "succeeded"),
                 transitions={"succeeded": "GO_TO_CABINET"},
             )
 
@@ -405,26 +407,57 @@ class StoringGroceries(smach.StateMachine):
                 "SCAN_SHELVES",
                 ScanShelves(),
                 transitions={
+                    "succeeded": "CHOOSE_SHELF",
+                    "failed": "failed",
+                },
+            )
+
+            smach.StateMachine.add(
+                "CHOOSE_SHELF",
+                ChooseShelf(use_arm),
+                transitions={
                     "succeeded": (
                         "ADD_SHELVES_TO_PLANNING_SCENE"
                         if use_arm
                         else "HELP_ME_PLACING"
                     ),
-                    "failed": "failed",
+                    "failed": "HELP_ME_PLACING_ANYWHERE",
                 },
             )
 
             # if not using the arm
             smach.StateMachine.add(
                 "HELP_ME_PLACING",
+                Say(format_str="I can't place the {} myself."),
+                transitions={
+                    "succeeded": "HELP_ME_PLACING_1",
+                    "aborted": "failed",
+                    "preempted": "failed",
+                },
+                remapping={"placeholders": "selected_object_name"},
+            )
+            smach.StateMachine.add(
+                "HELP_ME_PLACING_1",
+                Say(format_str="Please place it on the {}"),
+                transitions={
+                    "succeeded": "GO_TO_TABLE",
+                    "aborted": "failed",
+                    "preempted": "failed",
+                },
+                remapping={"placeholders": "selected_shelf"},
+            )
+
+            smach.StateMachine.add(
+                "HELP_ME_PLACING_ANYWHERE",
                 Say(
-                    text="I'm not able to placing the objects myself, would you please place the groceries on the shelf for me?"
+                    format_str="I can't place the {} myself, and can't determine where to place it. Please place it on any available shelf."
                 ),
                 transitions={
                     "succeeded": "GO_TO_TABLE",
                     "aborted": "failed",
                     "preempted": "failed",
                 },
+                remapping={"placeholders": "selected_object_name"},
             )
 
             smach.StateMachine(
