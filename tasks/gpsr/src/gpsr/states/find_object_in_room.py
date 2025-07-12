@@ -1,14 +1,64 @@
-class FindObjectInRoom:
-    def __init__(self, room_name, object_name):
-        self.room_name = room_name
-        self.object_name = object_name
+import smach
+import rospy
 
-    def execute(self):
-        # Logic to find the object in the specified room
-        print(f"Searching for {self.object_name} in {self.room_name}...")
-        # Here you would implement the actual search logic
-        found = True  # Simulating that the object was found
-        if found:
-            print(f"{self.object_name} found in {self.room_name}.")
-        else:
-            print(f"{self.object_name} not found in {self.room_name}.")
+from typing import List
+from shapely.geometry import Polygon as ShapelyPolygon
+from geometry_msgs.msg import Pose
+
+from gpsr.states import FindObjectAtLoc
+from lasr_skills import GoToLocation
+
+
+class FindObjectInRoom(smach.StateMachine):
+
+    def __init__(
+        self,
+        object_name: str,
+        location_waypoints: List[Pose],
+        location_polygons: List[ShapelyPolygon],
+    ):
+        """
+        State machine to find an object in a room based on specified waypoints and polygons.
+
+        Args:
+            object_name (str): Name of the object to find.
+            location_waypoints (List[]): List of waypoints to search for the object.
+            location_polygons (List[ShapelyPolygon]): List of polygons defining the search areas.
+        """
+        smach.StateMachine.__init__(
+            self,
+            outcomes=["succeeded", "failed"],
+            output_keys=["object_found"],
+        )
+
+        self._object_name = object_name
+        self._location_waypoints = location_waypoints
+        self._location_polygons = location_polygons
+
+        with self:
+            for i, (waypoint, polygon) in enumerate(
+                zip(self._location_waypoints, self._location_polygons)
+            ):
+                smach.StateMachine.add(
+                    f"GoToLocation_{i}",
+                    GoToLocation(location=waypoint),
+                    transitions={
+                        "succeeded": f"FindObjectAtLoc_{i}",
+                        "failed": f"GoToLocation_{i}",
+                    },
+                )
+                smach.StateMachine.add(
+                    f"FindObjectAtLoc_{i}",
+                    FindObjectAtLoc(
+                        object_name=self._object_name,
+                        location_polygon=polygon,
+                    ),
+                    transitions={
+                        "succeeded": "succeeded",
+                        "failed": (
+                            f"GoToLocation_{i+1}"
+                            if i + 1 < len(self._location_waypoints)
+                            else "failed"
+                        ),
+                    },
+                )

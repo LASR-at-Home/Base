@@ -1,7 +1,7 @@
 import smach
 import rospy
 
-from lasr_skills import DetectAllInPolygon
+from lasr_skills import DetectAllInPolygon, Say
 from shapely.geometry import Polygon as ShapelyPolygon
 
 
@@ -64,4 +64,26 @@ class FindObjectAtLoc(smach.StateMachine):
                     "failed": "failed",
                 },
                 remapping={"detected_objects": "detected_objects"},
+            )
+            smach.StateMachine.add(
+                "PROCESS_DETECTIONS",
+                ProcessDetections(),
+                transitions={
+                    "succeeded": "SAY_OBJECT_FOUND",
+                    "failed": "SAY_OBJECT_NOT_FOUND",
+                },
+                remapping={
+                    "detected_objects": "detected_objects",
+                    "object_found": "object_found",
+                },
+            )
+            smach.StateMachine.add(
+                "SAY_OBJECT_FOUND",
+                Say(f"I have found the {self._object_name}"),
+                transitions={"succeeded": "succeeded"},
+            )
+            smach.StateMachine.add(
+                "SAY_OBJECT_NOT_FOUND",
+                Say(f"I could not find the {self._object_name} here."),
+                transitions={"succeeded": "failed"},
             )
