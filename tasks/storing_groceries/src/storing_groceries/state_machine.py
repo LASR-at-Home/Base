@@ -26,10 +26,8 @@ from lasr_manipulation_msgs.srv import (
     RegistrationRequest,
     AddCollisionObject,
     AddCollisionObjectRequest,
-    DetectAndAddSupportSurfaceRequest,
     RemoveSupportSurface,
     RemoveSupportSurfaceRequest,
-    DetachObjectFromGripperRequest,
 )
 
 from lasr_manipulation_msgs.msg import PickAction, PickGoal, PlaceGoal, PlaceAction
