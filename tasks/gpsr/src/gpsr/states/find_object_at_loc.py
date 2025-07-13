@@ -1,7 +1,7 @@
 import smach
 import rospy
 
-from typing import Union
+from typing import Union, List, Optional
 from lasr_skills import DetectAllInPolygon, Say
 from shapely.geometry import Polygon as ShapelyPolygon
 from geometry_msgs.msg import Polygon
@@ -17,17 +17,20 @@ class ProcessDetections(smach.State):
             self,
             outcomes=["succeeded", "failed"],
             input_keys=["detected_objects"],
-            output_keys=["object_found"],
+            output_keys=["object_found", "object_name"],
         )
 
     def execute(self, userdata):
         rospy.loginfo("Processing detections...")
         if userdata.detected_objects:
             userdata.object_found = True
-            return "succeeded"
         else:
             userdata.object_found = False
             return "failed"
+        found_object = userdata.detected_objects[0]
+        userdata.object_name = found_object.name
+        rospy.loginfo(f"Found object: {found_object.name}")
+        return "succeeded"
 
 
 class FindObjectAtLoc(smach.StateMachine):
@@ -36,13 +39,17 @@ class FindObjectAtLoc(smach.StateMachine):
     specified by a Shapely Polygon.
     """
 
-    _object_name: str
+    _object_name: Union[str, List[str]]
     _location_polygon: ShapelyPolygon
+    _object_category: Optional[str]
 
     def __init__(
         self,
-        object_name: str,
+        object_name: Union[
+            str, List[str]
+        ],  # List as can be told to find a category of object
         location_polygon: Union[ShapelyPolygon, Polygon],
+        object_category: Optional[str] = None,
     ):
         smach.StateMachine.__init__(
             self,
@@ -50,7 +57,9 @@ class FindObjectAtLoc(smach.StateMachine):
             output_keys=["object_found"],
         )
 
-        self._object_name = object_name
+        self._object_name = (
+            [object_name] if isinstance(object_name, str) else object_name
+        )
         self._location_polygon = (
             location_polygon
             if isinstance(location_polygon, ShapelyPolygon)
@@ -58,13 +67,14 @@ class FindObjectAtLoc(smach.StateMachine):
                 [(point.x, point.y) for point in location_polygon.points]
             )
         )
+        self._object_category = object_category
 
         with self:
             smach.StateMachine.add(
                 "DetectObjectsInArea",
                 DetectAllInPolygon(
                     polygon=self._location_polygon,
-                    object_filter=[self._object_name],
+                    object_filter=self._object_name,
                     min_coverage=1.0,
                 ),
                 transitions={
@@ -85,11 +95,23 @@ class FindObjectAtLoc(smach.StateMachine):
                     "object_found": "object_found",
                 },
             )
-            smach.StateMachine.add(
-                "SAY_OBJECT_FOUND",
-                Say(f"I have found the {self._object_name}"),
-                transitions={"succeeded": "succeeded"},
-            )
+            if self._object_category:
+
+                smach.StateMachine.add(
+                    "SAY_OBJECT_FOUND",
+                    Say(
+                        format_str="I have found {} of category "
+                        + self._object_category
+                    ),
+                    transitions={"succeeded": "succeeded"},
+                    remapping={"placeholders": "object_name"},
+                )
+            else:
+                smach.StateMachine.add(
+                    "SAY_OBJECT_FOUND",
+                    Say(f"I have found the {self._object_name}"),
+                    transitions={"succeeded": "succeeded"},
+                )
             smach.StateMachine.add(
                 "SAY_OBJECT_NOT_FOUND",
                 Say(f"I could not find the {self._object_name} here."),

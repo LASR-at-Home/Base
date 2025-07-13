@@ -1,7 +1,7 @@
 import smach
 import rospy
 
-from typing import List, Union
+from typing import List, Union, Optional
 from shapely.geometry import Polygon as ShapelyPolygon
 from geometry_msgs.msg import Pose, Polygon
 
@@ -11,11 +11,17 @@ from lasr_skills import GoToLocation
 
 class FindObjectInRoom(smach.StateMachine):
 
+    _object_name: Union[str, List[str]]
+    _location_waypoints: List[Pose]
+    _location_polygons: List[ShapelyPolygon]
+    _object_category: Optional[str]
+
     def __init__(
         self,
-        object_name: str,
+        object_name: Union[str, List[str]],
         location_waypoints: List[Pose],
         location_polygons: List[Union[Polygon, ShapelyPolygon]],
+        object_category: Optional[str] = None,
     ):
         """
         State machine to find an object in a room based on specified waypoints and polygons.
@@ -41,6 +47,7 @@ class FindObjectInRoom(smach.StateMachine):
             )
             for polygon in location_polygons
         ]
+        self._object_category = object_category
 
         with self:
             for i, (waypoint, polygon) in enumerate(
@@ -59,6 +66,7 @@ class FindObjectInRoom(smach.StateMachine):
                     FindObjectAtLoc(
                         object_name=self._object_name,
                         location_polygon=polygon,
+                        object_category=self._object_category,
                     ),
                     transitions={
                         "succeeded": "succeeded",
