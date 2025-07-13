@@ -26,6 +26,8 @@ from gpsr.states import (
     GoFindTheObject,
     ObjectComparison,
     CountObject,
+    FindObjectAtLoc,
+    FindObjectInRoom,
 )
 
 from geometry_msgs.msg import (
@@ -197,14 +199,30 @@ def get_object_detection_poses(room: str) -> List[Pose]:
     return poses
 
 
-def get_object_detection_polygons(room: str) -> List[ShapelyPolygon]:
+def get_object_detection_polygons(room: str) -> List[Polygon]:
     polygons = []
 
     for beacon in rospy.get_param(f"/gpsr/arena/rooms/{room}/beacons"):
         if "object_detection_polygon" in beacon:
-            polygon_points = beacon["object_detection_polygon"]["points"]
-            polygons.append(ShapelyPolygon([(p["x"], p["y"]) for p in polygon_points]))
+            polygon_points = beacon["object_detection_polygon"]
+            polygon = Polygon([Point(p[0], p[1], 0.0) for p in polygon_points])
+            polygons.append(polygon)
     return polygons
+
+
+def get_location_polygon(location: str) -> Polygon:
+    location_room = get_location_room(location)
+    if "object_detection_polygon" in rospy.get_param(
+        f"/gpsr/arena/rooms/{location_room}/beacons/{location}"
+    ):
+        polygon_points = rospy.get_param(
+            f"/gpsr/arena/rooms/{location_room}/beacons/{location}/object_detection_polygon"
+        )
+        return Polygon([Point(p[0], p[1], 0.0) for p in polygon_points])
+    else:
+        raise ValueError(
+            f"Location {location} does not have an object detection polygon."
+        )
 
 
 def get_look_detection_poses(room: str) -> List[Point]:
@@ -1057,8 +1075,10 @@ def find(command_param: Dict, sm: smach.StateMachine) -> None:
             waypoints = [get_location_pose(command_param["location"], person=False)]
             location_str = command_param["location"]
             look_points = [get_look_point(command_param["location"])]
+            location_polygon = get_location_polygon(command_param["location"])
         elif "room" in command_param:
             waypoints = get_object_detection_poses(command_param["room"])
+            location_polygons = get_object_detection_polygons(command_param["room"])
             location_str = command_param["room"]
             look_points = get_look_detection_poses(command_param["room"])
 
@@ -1069,31 +1089,62 @@ def find(command_param: Dict, sm: smach.StateMachine) -> None:
 
         if "object_category" in command_param:
             object_str = command_param["object_category"]
-            object_filter = OBJECT_CATEGORY_LOCATIONS[command_param["object_category"]]
+            object_name = OBJECT_CATEGORY_LOCATIONS[command_param["object_category"]]
+            object_category = command_param["object_category"]
         elif "object" in command_param:
             object_str = command_param["object"]
-            object_filter = [command_param["object"]]
+            object_name = command_param["object"]
+            object_category = None
 
         sm.add(
             f"STATE_{increment_state_count()}",
             Say(text=f"I will go to the {location_str} and find a {object_str}"),
         )
-        arena_polygon = rospy.get_param("/gpsr/arena/polygon")
-        arena_polygon = Polygon([Point(p[0], p[1], 0.0) for p in arena_polygon])
-        sm.add(
-            f"STATE_{increment_state_count()}",
-            GoFindTheObject(
-                model="best.pt",
-                waypoints=waypoints,
-                filter=object_filter,
-                look_points=look_points,
-                poly_points=[arena_polygon] * len(waypoints),
-            ),
-            transitions={
-                "succeeded": f"STATE_{STATE_COUNT + 1}",
-                "failed": f"STATE_{STATE_COUNT + 1}",
-            },
-        )
+
+        if "location" in command_param:
+            sm.add(
+                f"STATE_{increment_state_count()}",
+                GoToLocation(waypoints[0]),
+                transitions={
+                    "succeeded": f"STATE_{STATE_COUNT + 1}",
+                    "failed": f"STATE_{STATE_COUNT + 1}",
+                },
+            )
+            sm.add(
+                f"STATE_{increment_state_count()}",
+                LookToPoint(pointstamped=look_points[0]),
+                transitions={
+                    "succeeded": f"STATE_{STATE_COUNT + 1}",
+                    "aborted": f"STATE_{STATE_COUNT + 1}",
+                    "timed_out": f"STATE_{STATE_COUNT + 1}",
+                },
+            )
+            sm.add(
+                f"STATE_{increment_state_count()}",
+                FindObjectAtLoc(
+                    object_name=object_name,
+                    location_polygon=location_polygon,
+                    object_category=object_category,
+                ),
+                transitions={
+                    "succeeded": f"STATE_{STATE_COUNT + 1}",
+                    "failed": f"STATE_{STATE_COUNT + 1}",
+                },
+            )
+        elif "room" in command_param:
+            sm.add(
+                f"STATE_{increment_state_count()}",
+                FindObjectInRoom(
+                    object_name=object_name,
+                    location_waypoints=waypoints,
+                    location_polygons=location_polygons,
+                    object_category=object_category,
+                ),
+                transitions={
+                    "succeeded": f"STATE_{STATE_COUNT + 1}",
+                    "failed": f"STATE_{STATE_COUNT + 1}",
+                },
+            )
 
     elif "gesture" in command_param:
         greet(command_param, sm)
