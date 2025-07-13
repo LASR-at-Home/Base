@@ -197,6 +197,16 @@ def get_object_detection_poses(room: str) -> List[Pose]:
     return poses
 
 
+def get_object_detection_polygons(room: str) -> List[ShapelyPolygon]:
+    polygons = []
+
+    for beacon in rospy.get_param(f"/gpsr/arena/rooms/{room}/beacons"):
+        if "object_detection_polygon" in beacon:
+            polygon_points = beacon["object_detection_polygon"]["points"]
+            polygons.append(ShapelyPolygon([(p["x"], p["y"]) for p in polygon_points]))
+    return polygons
+
+
 def get_look_detection_poses(room: str) -> List[Point]:
     poses = []
 

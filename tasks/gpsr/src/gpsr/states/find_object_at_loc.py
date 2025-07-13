@@ -1,8 +1,10 @@
 import smach
 import rospy
 
+from typing import Union
 from lasr_skills import DetectAllInPolygon, Say
 from shapely.geometry import Polygon as ShapelyPolygon
+from geometry_msgs.msg import Polygon
 
 
 class ProcessDetections(smach.State):
@@ -40,7 +42,7 @@ class FindObjectAtLoc(smach.StateMachine):
     def __init__(
         self,
         object_name: str,
-        location_polygon: ShapelyPolygon,
+        location_polygon: Union[ShapelyPolygon, Polygon],
     ):
         smach.StateMachine.__init__(
             self,
@@ -49,7 +51,13 @@ class FindObjectAtLoc(smach.StateMachine):
         )
 
         self._object_name = object_name
-        self._location_polygon = location_polygon
+        self._location_polygon = (
+            location_polygon
+            if isinstance(location_polygon, ShapelyPolygon)
+            else ShapelyPolygon(
+                [(point.x, point.y) for point in location_polygon.points]
+            )
+        )
 
         with self:
             smach.StateMachine.add(

@@ -13,7 +13,7 @@ class Detect3DInArea(smach.StateMachine):
     class FilterDetections(smach.State):
         def __init__(
             self,
-            area_polygon: ShapelyPolygon,
+            area_polygon: Union[ShapelyPolygon, Polygon],
             debug_publisher: str = "/skills/detect3d_in_area/debug",
         ):
             smach.State.__init__(
@@ -22,7 +22,13 @@ class Detect3DInArea(smach.StateMachine):
                 input_keys=["detections_3d"],
                 output_keys=["detections_3d"],
             )
-            self.area_polygon = area_polygon
+            self.area_polygon = (
+                area_polygon
+                if isinstance(area_polygon, ShapelyPolygon)
+                else ShapelyPolygon(
+                    [(point.x, point.y) for point in area_polygon.points]
+                )
+            )
             self.debug_publisher = rospy.Publisher(
                 debug_publisher, PolygonStamped, queue_size=1
             )
@@ -54,7 +60,7 @@ class Detect3DInArea(smach.StateMachine):
 
     def __init__(
         self,
-        area_polygon: ShapelyPolygon,
+        area_polygon: Union[ShapelyPolygon, Polygon],
         image_topic: str = "/xtion/rgb/image_raw",
         depth_image_topic: str = "/xtion/depth_registered/image_raw",
         depth_camera_info_topic: str = "/xtion/depth_registered/camera_info",
