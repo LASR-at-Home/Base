@@ -768,7 +768,7 @@ class PickServer:
 
     def _maybe_filter_top_down_grasps(
         self, grasps: List[PoseStamped], scores: List[float]
-    ) -> List[PoseStamped]:
+    ) -> Tuple[List[PoseStamped], List[float]]:
         if ALLOW_TOP_DOWN_GRASPS:
             return grasps, scores
 
