@@ -21,6 +21,9 @@ class SelectObject(smach.State):
 
     def execute(self, userdata):
 
+        userdata.selected_object = None
+        userdata.selected_object_name = ""
+
         if not userdata.detected_objects:
             return "failed"
 
