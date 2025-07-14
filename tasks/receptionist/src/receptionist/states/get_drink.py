@@ -18,7 +18,7 @@ class GetDrink(smach.StateMachine):
     ):
         smach.StateMachine.__init__(
             self,
-            outcomes=["succeeded", "failed", "retry"],
+            outcomes=["succeeded", "failed"],
             input_keys=["guest_transcription", "guest_data"],
             output_keys=["guest_data", "guest_transcription"],
         )
@@ -37,7 +37,6 @@ class GetDrink(smach.StateMachine):
                 transitions={
                     "succeeded": "succeeded",
                     "failed": "failed",
-                    "retry": "retry",
                 },
             )
 
@@ -56,7 +55,7 @@ class GetDrink(smach.StateMachine):
             """
             smach.State.__init__(
                 self,
-                outcomes=["succeeded", "failed", "retry"],
+                outcomes=["succeeded", "failed"],
                 input_keys=["guest_transcription", "guest_data"],
                 output_keys=["guest_data", "guest_transcription"],
             )
@@ -96,18 +95,26 @@ class GetDrink(smach.StateMachine):
                     userdata.guest_data[self._guest_id]["drink"] = drink
                     rospy.loginfo(f"Guest Drink identified as: {drink}")
                     return "succeeded"
-            if not self._last_resort:
-                rospy.logwarn(
-                    f"Could not identify drink from transcription: {transcription}. Retrying..."
-                )
-                return "retry"
-
+            rospy.logwarn(
+                f"Could not identify drink from transcription: {transcription}. Retrying..."
+            )
+            
             request = LlmRequest()
-            request.system_prompt = f"You are a robot acting as a party host. You are tasked with identifying the favourite drink belonging to a guest. The possible drinks are {','.join(self._possible_drinks)}. You will receive input such as 'my favourite drink is cola'. Output only the drink, which must exactly match one of the possible drinks. In the previous example this would be 'cola'. If you can't identify the drink, output 'None'."
+            request.system_prompt = f"You are a robot acting as a party host. You are tasked with identifying the favourite drink belonging to a guest. The possible drinks are {','.join(self._possible_drinks)}. You will receive input such as 'my favourite drink is cola'. Output only the drink, which must exactly match one of the possible drinks. In the previous example this would be 'cola'. If you can't identify the drink, output 'unknown'."
             request.prompt = f"The user says: {transcription}"
             request.max_tokens = 3  # Limit to a single word response
             response = self._llm(request)
+
             drink = response.output.strip()
+            drink_n_words = len(drink.split())
+            if drink_n_words > 2:
+                drink = drink.split()[
+                    :2
+                ]  # Take only the first two word of drink
+                drink = " ".join(drink)
+            drink = drink.strip()
+            if "unknown" in drink.lower():
+                drink = "unknown"
 
             if drink.lower() in self._possible_drinks:
                 userdata.guest_data[self._guest_id]["drink"] = drink.lower()
@@ -132,7 +139,7 @@ class GetDrink(smach.StateMachine):
             self._guest_id = guest_id
             prior_data: Dict[str, List[str]] = rospy.get_param(param_key)
             self._possible_drinks = [drink.lower() for drink in prior_data["drinks"]]
-
+        
         def execute(self, userdata: UserData) -> str:
             if userdata.guest_data[self._guest_id]["drink"] == "unknown":
                 outcome = "failed"
