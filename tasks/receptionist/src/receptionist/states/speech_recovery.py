@@ -55,7 +55,7 @@ class SpeechRecovery(smach.State):
         #     set(self._available_single_drinks).union(set(self._available_double_drinks))
         # )
 
-        self._available_drinks = [name.lower() for name in prior_data["drinks"]]
+        self._available_drinks = [drink.lower() for drink in prior_data["drinks"]]
         # 1. Double-word drinks = drinks with a space
         self._available_double_drinks = [d for d in self._available_drinks if " " in d]
 
