@@ -317,6 +317,8 @@ class DetectAllInPolygon(smach.StateMachine):
     _polygon: ShapelyPolygon
     _min_coverage: float
     _object_filter: Optional[List[str]]
+    _model: str
+    _models: Optional[List[str]]
     _min_confidence: float
     _min_new_object_dist: float
     _debug_publisher: rospy.Publisher
@@ -326,6 +328,8 @@ class DetectAllInPolygon(smach.StateMachine):
         self,
         polygon: ShapelyPolygon,
         min_coverage: float = 0.8,
+        model: str = "yolo11n-seg.pt",
+        models: Optional[List[str]] = None,
         object_filter: Optional[List[str]] = None,
         min_confidence: float = 0.5,
         min_new_object_dist: float = 0.1,
@@ -362,6 +366,8 @@ class DetectAllInPolygon(smach.StateMachine):
         self._polygon = polygon
         self._min_coverage = min_coverage
         self._object_filter = object_filter
+        self._model = model
+        self._models = models
         self._min_confidence = min_confidence
         self._min_new_object_dist = min_new_object_dist
         self._debug_publisher = rospy.Publisher(
@@ -577,6 +583,8 @@ class DetectAllInPolygon(smach.StateMachine):
                         Detect3DInArea(
                             area_polygon=self._polygon,
                             filter=self._object_filter,
+                            model=self._model,
+                            models=self._models,
                             confidence=self._min_confidence,
                         ),
                         transitions={

@@ -18,6 +18,7 @@ class Detect3D(smach.State):
         depth_camera_info_topic: str = "/xtion/depth_registered/camera_info",
         point_cloud_topic: Optional[str] = None,
         model: str = "yolo11n-seg.pt",
+        models: Union[List[str], None] = None,
         filter: Union[List[str], None] = None,
         confidence: float = 0.5,
         target_frame: str = "map",
@@ -33,6 +34,7 @@ class Detect3D(smach.State):
         self.depth_camera_info_topic = depth_camera_info_topic
         self.point_cloud_topic = point_cloud_topic
         self.model = model
+        self.models = models
         self.filter = filter or []
         self.confidence = confidence
         self.target_frame = target_frame
@@ -86,6 +88,7 @@ class Detect3D(smach.State):
                 depth_image=depth_msg,
                 depth_camera_info=cam_info_msg,
                 model=self.model,
+                models=self.models,
                 confidence=self.confidence,
                 filter=self.filter,
                 target_frame=self.target_frame,
