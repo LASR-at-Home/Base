@@ -55,29 +55,17 @@ class PersonFollowingData:
 
     def __init__(self, **config_params):
         super(PersonFollowingData, self).__init__()
-
-        # Sensor data - continuously updated
-        self.current_image = None
-        self.depth_image = None
-        self.camera_info = None
-
         # Tracking data
-        self.track_id = None
         self.track_id_leg = None
-        self.track_bbox = None
         self.target_list = []
         self.robot_path_list = []
         self.person_trajectory = PoseArray()
-        self.person_pose_stampeds = []
-        self.newest_detection = None
         self.detection_quality_metrics = {}
         self.target_speed = 0.0
 
         # Navigation data
         self.current_goal = None
         self.navigation_state = None
-        self.distance_to_target = float("inf")
-        self.path_history = []
 
         # Timing data
         self.last_good_detection_time = rospy.Time.now()
@@ -613,12 +601,6 @@ class FollowPerson(smach.StateMachine):
             if not self.shared_data.pause_add_targets:
                 self._update_target_list(predicted_pose, add_traj=True)
 
-            # Create synthetic detection for newest_detection
-            synthetic_detection = self._create_synthetic_detection(
-                response.position_x, response.position_y, current_time
-            )
-            self.shared_data.newest_detection = synthetic_detection
-
             # Simple health check - trigger recovery if system is degraded
             if (
                 hasattr(response, "system_health")
@@ -728,6 +710,7 @@ class FollowPerson(smach.StateMachine):
             for person in msg.people:
                 if person.id == self.shared_data.track_id_leg:
                     target_person = person
+                    self.shared_data.last_good_detection_time = rospy.Time.now()
                     break
 
             if target_person:
@@ -771,10 +754,6 @@ class FollowPerson(smach.StateMachine):
                 quality_result = self._assess_detection_quality_unified(detection)
                 is_good_quality = quality_result["is_good"]
                 quality_score = quality_result["score"]
-
-                # Update newest_detection for reasonable detections
-                # if is_reasonable_detection(detection, self.shared_data.min_confidence_threshold):
-                #     self.shared_data.newest_detection = detection
 
                 try:
                     if is_good_quality:
@@ -951,9 +930,6 @@ class FollowPerson(smach.StateMachine):
                 self.shared_data.person_trajectory.poses.append(
                     pose_stamped.pose
                 )  # trajectory should always be added
-                self.shared_data.person_pose_stampeds.append(
-                    pose_stamped
-                )  # trajectory should always be added
             return True
         else:
             prev_pose = self.shared_data.target_list[-1]
@@ -969,9 +945,6 @@ class FollowPerson(smach.StateMachine):
                 if add_traj:
                     self.shared_data.person_trajectory.poses.append(
                         pose_stamped.pose
-                    )  # trajectory should always be added
-                    self.shared_data.person_pose_stampeds.append(
-                        pose_stamped
                     )  # trajectory should always be added
                 return True
         return False
@@ -1506,15 +1479,6 @@ class TrackingActiveState(smach.State):
                 self.sm_manager.shared_data.completion_reason = "ARRIVED"
                 return "following_complete"
 
-            # Look at detected person
-            if self.sm_manager.shared_data.newest_detection:
-                # rospy.logwarn(f"Looking at newest point: {self.sm_manager.shared_data.newest_detection}")
-                self.sm_manager.look_at_point(
-                    self.sm_manager.shared_data.newest_detection.point,
-                    target_frame="map",
-                    wait_for_completion=True,
-                )
-
             # Update distance traveled
             robot_pose = self.sm_manager.get_robot_pose_in_map()
             if self.sm_manager.shared_data.last_position and robot_pose:
@@ -1778,62 +1742,6 @@ class NavigationState(smach.State):
                 self.sm_manager.shared_data.last_movement_time = rospy.Time.now()
                 self.sm_manager.shared_data.added_new_target_time = rospy.Time.now()
                 return "navigation_complete"
-
-            # Keep looking at detected person during navigation
-            if self.sm_manager.shared_data.newest_detection:
-                time_since_last_look_down = current_time - last_look_down_time
-                look_down_period_duration = rospy.Duration(
-                    self.sm_manager.shared_data.look_down_period
-                )
-
-                rospy.loginfo(
-                    f"NavigationState: Time since last look down: {time_since_last_look_down.to_sec():.2f}s, "
-                    f"Look down period: {look_down_period_duration.to_sec():.2f}s"
-                )
-
-                if (
-                    self.object_avoidance
-                    # and time_since_last_look_down >= look_down_period_duration
-                ):
-                    rospy.loginfo(
-                        "NavigationState: Look down period elapsed, executing down swap"
-                    )
-                    rospy.loginfo(
-                        f"NavigationState: Down swap parameters - target_frame: map, "
-                        f"look_down_time: {self.sm_manager.shared_data.look_down_duration}, "
-                        f"pause_conditional_frame: True"
-                    )
-
-                    rospy.loginfo(
-                        f"Looking down towards newst point: {self.sm_manager.shared_data.newest_detection}"
-                    )
-                    self._down_swap(
-                        self.sm_manager.shared_data.newest_detection.point,
-                        target_frame="map",
-                        # look_down_time=self.sm_manager.shared_data.look_down_duration,
-                        pause_conditional_frame=True,
-                    )
-                    if time_since_last_look_down >= look_down_period_duration * 1.5:
-                        last_look_down_time = rospy.Time.now()
-                    rospy.loginfo(
-                        f"NavigationState: Down swap completed, updated last_look_down_time to {last_look_down_time}"
-                    )
-                else:
-                    rospy.loginfo(
-                        "NavigationState: Look down period not elapsed, continuing to look at person"
-                    )
-                    rospy.loginfo(
-                        f"NavigationState: Looking at point in map frame - "
-                        f"x: {self.sm_manager.shared_data.newest_detection.point.x:.2f}, "
-                        f"y: {self.sm_manager.shared_data.newest_detection.point.y:.2f}, "
-                        f"z: {self.sm_manager.shared_data.newest_detection.point.z:.2f}"
-                    )
-
-                    # rospy.logwarn(f"Looking at newest point: {self.sm_manager.shared_data.newest_detection}")
-                    self.sm_manager.look_at_point(
-                        self.sm_manager.shared_data.newest_detection.point,
-                        target_frame="map",
-                    )
 
             robot_pose = self.sm_manager.get_robot_pose_in_map()
 
