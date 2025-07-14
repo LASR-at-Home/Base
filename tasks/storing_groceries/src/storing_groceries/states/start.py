@@ -59,8 +59,8 @@ class Start(smach.StateMachine):
                 Say(text="I am going to the table"),
                 transitions={
                     "succeeded": "GO_TO_TABLE",
-                    "aborted": "failed",
-                    "preempted": "failed",
+                    "aborted": "GO_TO_TABLE",
+                    "preempted": "GO_TO_TABLE",
                 },
             )
 
@@ -68,8 +68,8 @@ class Start(smach.StateMachine):
                 "GO_TO_TABLE",
                 GoToLocation(location_param="/storing_groceries/table/pose"),
                 transitions={
-                    "succeeded": "DETECT_OBJECTS",
-                    "failed": "failed",
+                    "succeeded": "ASK_OPEN_CABINET_DOOR",
+                    "failed": "ASK_OPEN_CABINET_DOOR",
                 },
             )
 

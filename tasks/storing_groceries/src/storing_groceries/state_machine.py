@@ -62,7 +62,7 @@ class StoringGroceries(smach.StateMachine):
 
             smach.StateMachine.add(
                 "SELECT_OBJECT",
-                SelectObject(),
+                SelectObject(use_arm),
                 transitions={
                     "succeeded": "GRASP_OBJECT" if use_arm else "HELP_ME_GRASPING",
                     "failed": "failed",
@@ -73,7 +73,7 @@ class StoringGroceries(smach.StateMachine):
                 "GRASP_OBJECT",
                 GraspObject(),
                 transitions={
-                    "succeeded": "ASK_OPEN_CABINET_DOOR",
+                    "succeeded": "HELP_ME_GRASPING",
                     "failed": "HELP_ME_GRASPING",
                 },
             )
@@ -85,7 +85,7 @@ class StoringGroceries(smach.StateMachine):
                     format_str="I'm unable to grasp the {} please place it on my back. I will give you 5 seconds. 5... 4... 3... 2... 1..."
                 ),
                 transitions={
-                    "succeeded": "ASK_OPEN_CABINET_DOOR",
+                    "succeeded": "GO_TO_CABINET",
                     "aborted": "failed",
                     "preempted": "failed",
                 },

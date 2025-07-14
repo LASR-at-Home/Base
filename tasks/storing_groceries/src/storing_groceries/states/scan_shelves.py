@@ -95,7 +95,7 @@ class ScanShelves(smach.StateMachine):
                             ],
                             min_coverage=1.0,
                             min_confidence=0.1,
-                            model="lasr.pt",
+                            # model="lasr.pt",
                         ),
                         transitions={
                             "succeeded": "CLASSIFY_SHELF",

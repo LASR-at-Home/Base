@@ -45,11 +45,11 @@ class DetectObjects(smach.StateMachine):
                     object_filter=[
                         k for k in rospy.get_param("/storing_groceries/objects")
                     ],
-                    min_coverage=0.9,
+                    min_coverage=1.0,
                     min_confidence=0.1,
                     z_sweep_min=0.0,
-                    z_sweep_max=1.2,
-                    model="lasr.pt",
+                    z_sweep_max=1.8,
+                    # model="lasr.pt",
                 ),
                 transitions={"succeeded": "succeeded", "failed": "failed"},
             )

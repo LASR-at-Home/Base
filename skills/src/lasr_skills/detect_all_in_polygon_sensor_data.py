@@ -16,6 +16,9 @@ from sensor_msgs.msg import PointCloud2, Image
 from cv2_img import msg_to_cv2_img, cv2_img_to_msg
 from geometry_msgs.msg import Point, PointStamped
 from lasr_vision_msgs.msg import Detection3D
+from geometry_msgs.msg import Point, PointStamped, Polygon as ROSPolygon, PolygonStamped
+from sensor_msgs.msg import CameraInfo
+from image_geometry import PinholeCameraModel
 
 from lasr_skills import LookToPoint, Detect3DInArea
 
@@ -116,6 +119,7 @@ class CalculateSweepPoints(smach.State):
         z_sweep_max: Optional[float] = None,
         polygon: Optional[ShapelyPolygon] = None,
         min_coverage: float = 0.8,
+        fov_depth: float = 2.0,
     ):
         input_keys = ["sweep_points", "detected_objects"]
         input_keys += ["polygon"] if polygon is None else []
@@ -134,9 +138,50 @@ class CalculateSweepPoints(smach.State):
         self._min_coverage = min_coverage
         self._z_sweep_min = z_sweep_min
         self._z_sweep_max = z_sweep_max
+        self._fov_depth = fov_depth
 
         self._tf_buffer = tf.Buffer(cache_time=rospy.Duration(10))
         tf.TransformListener(self._tf_buffer)
+
+    def _get_camera_fov_polygon(self) -> ShapelyPolygon:
+        """
+        Projects the camera's FOV to the ground plane using intrinsics and TF.
+
+        Returns:
+            ShapelyPolygon: Footprint of camera FOV in map frame.
+        """
+        from geometry_msgs.msg import PointStamped
+
+        camera_info = rospy.wait_for_message(
+            "/xtion/depth_registered/camera_info", CameraInfo
+        )
+        model = PinholeCameraModel()
+        model.fromCameraInfo(camera_info)
+
+        # Define pixel corners (image boundaries)
+        corners = [
+            (0, 0),  # top-left
+            (model.width, 0),  # top-right
+            (model.width, model.height),  # bottom-right
+            (0, model.height),  # bottom-left
+        ]
+
+        # Transform pixel rays to map frame
+        transformed_points = []
+        for u, v in corners:
+            ray = model.projectPixelTo3dRay((u, v))
+            point_cam = PointStamped()
+            point_cam.header.frame_id = camera_info.header.frame_id
+            point_cam.header.stamp = rospy.Time(0)
+            point_cam.point.x = ray[0] * self._fov_depth
+            point_cam.point.y = ray[1] * self._fov_depth
+            point_cam.point.z = ray[2] * self._fov_depth
+
+            # Transform to map frame
+            point_map = self._tf_buffer.transform(point_cam, "map", rospy.Duration(1.0))
+            transformed_points.append((point_map.point.x, point_map.point.y))
+
+        return ShapelyPolygon(transformed_points)
 
     def _sample_points_in_polygon(
         self, polygon: ShapelyPolygon, num_samples: float = 1000
@@ -178,7 +223,7 @@ class CalculateSweepPoints(smach.State):
         polygon: ShapelyPolygon,
         candidate_footprints,
         coverage_goal=0.9,
-        overlap_penalty=0.5,
+        overlap_penalty=0.0,
     ) -> Tuple[List[ShapelyPolygon], ShapelyPolygon]:
         covered = ShapelyPolygon()
         selected = []
@@ -216,67 +261,54 @@ class CalculateSweepPoints(smach.State):
 
     def _calculate_sweep_points(
         self, polygon: ShapelyPolygon, z_sweep_min: float, z_sweep_max: float
-    ) -> List[Point]:
+    ) -> List[PointStamped]:
         """
-        Calculates the points to sweep based on the polygon and minimum coverage.
+        Calculates the points to sweep based on the polygon and FOV projection.
 
         Returns:
-            List[Point]: List of points to sweep.
+            List[PointStamped]: List of sweep points in map frame.
         """
-        # Get area of the camera view, in the map frame
-        pcl = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
-        trans = self._tf_buffer.lookup_transform(
-            "map",
-            pcl.header.frame_id,
-            rospy.Time(0),
-            rospy.Duration(1.0),
+        rospy.loginfo("Waiting for camera info and TF to map frame...")
+        fov_polygon = self._get_camera_fov_polygon()
+
+        # Optional: visualize FOV
+        pub = rospy.Publisher(
+            "projected_fov_polygon", PolygonStamped, queue_size=1, latch=True
         )
-        pcl_map = pcl_transform(pcl, trans)
-        rospy.loginfo("Transformed point cloud to map frame.")
-        # Project into 2D to get area of camera view in map frame
-        points = np.array(
-            [
-                [p[0], p[1]]
-                for p in pc2.read_points(
-                    pcl_map, field_names=["x", "y"], skip_nans=True
-                )
-            ]
+        pub.publish(
+            PolygonStamped(
+                header=rospy.Header(frame_id="map", stamp=rospy.Time.now()),
+                polygon=ROSPolygon(
+                    points=[
+                        Point(x=x, y=y, z=0.0) for x, y in fov_polygon.exterior.coords
+                    ]
+                ),
+            )
         )
-        rospy.loginfo(f"Number of points in camera view: {len(points)}")
-        camera_view = MultiPoint(points)
-        camera_hull = camera_view.convex_hull
-        relative_camera_hull = self._extract_relative_footprint(camera_hull)
+
+        rel_camera_hull = self._extract_relative_footprint(fov_polygon)
         sampled_points = self._sample_points_in_polygon(polygon, num_samples=1000)
-        rospy.loginfo(f"Sampled {len(sampled_points)} points in polygon.")
         candidate_footprints = [
-            self._place_footprint_at_point(relative_camera_hull, p)
-            for p in sampled_points
+            self._place_footprint_at_point(rel_camera_hull, p) for p in sampled_points
         ]
-        rospy.loginfo(f"Placed {len(candidate_footprints)} candidate footprints.")
-        look_at_points, _ = self._greedy_coverage_min_overlap(
+
+        selected_footprints, _ = self._greedy_coverage_min_overlap(
             polygon,
             candidate_footprints,
             coverage_goal=self._min_coverage,
             overlap_penalty=0.0,
-        )
-        rospy.loginfo(
-            f"Selected {len(look_at_points)} footprints for sweeping with coverage goal of {self._min_coverage:.2%}."
         )
 
         sweep_points = [
             PointStamped(
                 header=rospy.Header(frame_id="map"),
                 point=Point(
-                    fp.centroid.x,
-                    fp.centroid.y,
-                    (z_sweep_min + z_sweep_max) / 2,
+                    fp.centroid.x, fp.centroid.y, (z_sweep_min + z_sweep_max) / 2
                 ),
             )
-            for fp in look_at_points
+            for fp in selected_footprints
         ]
         rospy.loginfo(f"Calculated {len(sweep_points)} sweep points.")
-        rospy.loginfo(f"Sweep points: {sweep_points}")
-
         return sweep_points
 
     def execute(self, userdata: smach.UserData) -> str:
@@ -647,3 +679,10 @@ class DetectAllInPolygonSensorData(smach.StateMachine):
                 "detected_objects": "detected_objects",
             },
         )
+
+    def execute(self, userdata):
+        self.userdata.sweep_points = []
+        self.userdata.detected_objects = []
+        self.userdata.debug_images = []
+        self.userdata.look_point = PointStamped()
+        return super().execute(userdata)
