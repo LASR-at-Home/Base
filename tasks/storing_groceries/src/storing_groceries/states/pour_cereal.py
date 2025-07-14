@@ -58,6 +58,19 @@ class PourCereal(smach.StateMachine):
             )
 
             smach.StateMachine.add(
+                "CHECK_DETECTED",
+                CheckDetectionResult(),
+                transitions={
+                    "found_both": "SELECT_CEREAL",
+                    "retry": "DETECT_CEREAL_CONTAINER"
+                },
+                remapping={
+                    "detected_objects": "detected_objects",
+                    "container_objects": "container_objects"
+                }
+            )
+
+            smach.StateMachine.add(
                 "SELECT_CEREAL",
                 SelectObject(target_name="cereal"),
                 transitions={"succeeded": "REGISTER_OBJECT", "failed": "failed"},
@@ -281,3 +294,34 @@ class SelectObject(smach.State):
 
         rospy.logwarn(f"Target object '{self._target_name}' not found.")
         return "failed"
+    
+
+class CheckDetectionResult(smach.State):
+    def __init__(self):
+        super().__init__(
+            outcomes=["found_both", "retry"],
+            input_keys=["detected_objects"],
+            output_keys=["container_objects"]
+        )
+
+    def execute(self, userdata):
+        has_cereal = False
+        has_container = False
+        container_objs = []
+
+        for obj, _ in userdata.detected_objects:
+            if obj.name == "cereal":
+                has_cereal = True
+            elif obj.name == "container":
+                has_container = True
+                container_objs.append(obj)
+
+        userdata.container_objects = container_objs
+
+        if has_cereal and has_container:
+            rospy.loginfo("[CheckDetectionSuccess] Found both cereal and container.")
+            return "found_both"
+        else:
+            rospy.logwarn("[CheckDetectionSuccess] Missing cereal or container. Retrying...")
+            rospy.sleep(1.0)  # Optional: wait briefly before re-detecting
+            return "retry"
