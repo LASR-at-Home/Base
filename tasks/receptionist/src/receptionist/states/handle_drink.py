@@ -99,7 +99,6 @@ class HandleDrink(smach.StateMachine):
                 transitions={
                     "succeeded": f"SAY_FIND_DRINK_{guest_id}",
                     "failed": f"SAY_FIND_DRINK_{guest_id}",
-                    "retry": f"SAY_FIND_DRINK_{guest_id}",
                 },
                 remapping={"guest_transcription": "transcribed_speech"},
             )
