@@ -461,7 +461,7 @@ class PickServer:
         grasps_gripper_frame = self._offset_grasps(
             grasps_gripper_frame, pregrasp_offset_x, 0.0, 0.0
         )
-        grasps_gripper_frame = self._offset_grasps(
+        grasps_gripper_frame = self._offset_grasps_for_calibration(
             grasps_gripper_frame,
             CALIBRATION_OFFSET_X,
             CALIBRATION_OFFSET_Y,
@@ -666,6 +666,47 @@ class PickServer:
             )
             offset = rot @ offset_local
             new_pos = pos + offset[:3]
+            new_grasp = deepcopy(grasp)
+            new_grasp.pose.position.x = new_pos[0]
+            new_grasp.pose.position.y = new_pos[1]
+            new_grasp.pose.position.z = new_pos[2]
+            offset_grasps.append(new_grasp)
+
+        return offset_grasps
+
+    def _offset_grasps_for_calibration(
+        self,
+        grasps: List[PoseStamped],
+        dx: float,
+        dy: float,
+        dz: float,
+    ) -> List[PoseStamped]:
+        offset_grasps = []
+
+        for grasp in grasps:
+            rot = tf.quaternion_matrix(
+                [
+                    grasp.pose.orientation.x,
+                    grasp.pose.orientation.y,
+                    grasp.pose.orientation.z,
+                    grasp.pose.orientation.w,
+                ]
+            )
+
+            rot_inv = np.linalg.inv(rot)
+            offset_world = np.array([dx, dy, dz, 0.0])
+            offset_local = rot_inv @ offset_world
+            offset_vector = rot @ np.array(
+                [offset_local[0], offset_local[1], offset_local[2], 1.0]
+            )
+            pos = np.array(
+                [
+                    grasp.pose.position.x,
+                    grasp.pose.position.y,
+                    grasp.pose.position.z,
+                ]
+            )
+            new_pos = pos + offset_vector[:3]
             new_grasp = deepcopy(grasp)
             new_grasp.pose.position.x = new_pos[0]
             new_grasp.pose.position.y = new_pos[1]
