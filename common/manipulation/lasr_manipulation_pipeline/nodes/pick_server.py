@@ -34,12 +34,16 @@ from pal_startup_msgs.srv import (
     StartupStart,
     StartupStartRequest,
     StartupStop,
-    StartupStopRequest,
 )
 
 CALIBRATION_OFFSET_X: float = 0.0
 CALIBRATION_OFFSET_Y: float = 0.025
 CALIBRATION_OFFSET_Z: float = 0.0
+
+ALLOW_TOP_DOWN_GRASPS: bool = (
+    False  # this is safer if calibration is poor -- we want to avoid pushing objects down into the table.
+)
+HORIZONTAL_GRASP_THRESHOLD_COS: float = 0.1
 
 
 class PickServer:
@@ -455,6 +459,9 @@ class PickServer:
         grasps_base_footprint, scores = self._filter_by_angles(
             grasps_base_footprint, scores, angle_threshold_deg
         )
+        grasps_base_footprint, scores = self._maybe_filter_top_down_grasps(
+            grasps, scores
+        )
         grasps_gripper_frame = self._tf_poses(
             grasps_base_footprint, "gripper_grasping_frame"
         )
@@ -758,6 +765,35 @@ class PickServer:
             "/parallel_gripper_controller/state", JointTrajectoryControllerState
         )
         return controller_state.desired.positions[0] == 0.0
+
+    def _maybe_filter_top_down_grasps(
+        self, grasps: List[PoseStamped], scores: List[float]
+    ) -> List[PoseStamped]:
+        if ALLOW_TOP_DOWN_GRASPS:
+            return grasps, scores
+
+        filtered_grasps = []
+        filtered_scores = []
+
+        for grasp, score in zip(grasps, scores):
+            quat = [
+                grasp.pose.orientation.x,
+                grasp.pose.orientation.y,
+                grasp.pose.orientation.z,
+                grasp.pose.orientation.w,
+            ]
+            rot = tf.quaternion_matrix(quat)
+
+            x_axis = rot[:3, 0]
+
+            world_z = np.array([0, 0, 1])
+
+            cos_angle = abs(np.dot(x_axis, world_z) / np.linalg.norm(x_axis))
+            if cos_angle < HORIZONTAL_GRASP_THRESHOLD_COS:
+                filtered_grasps.append(grasp)
+                filtered_scores.append(score)
+
+        return filtered_grasps, filtered_scores
 
 
 if __name__ == "__main__":
