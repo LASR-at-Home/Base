@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 
-from typing import Dict, Union, List, Tuple
+from typing import Dict, Union, List, Tuple, List
 
 import rospy
+import os
+import rospkg
 
 import ultralytics
 import torch
@@ -121,29 +123,30 @@ class YOLOService:
         response = YoloDetectionResponse()
 
         cv_im = self._bridge.imgmsg_to_cv2(req.image_raw, desired_encoding="bgr8")
-        results = self._yolo(
-            cv_im, req.model, req.confidence, [cls for cls in req.filter]
+        model_results = self._yolo(
+            cv_im, req.model, req.models, req.confidence, [cls for cls in req.filter]
         )
 
-        has_masks = results.masks is not None
+        for results in model_results:
+            has_masks = results.masks is not None
 
-        for result in results:
+            for result in results:
 
-            detection = Detection()
-            detection.name = result.names[result.boxes.cls.int().item()]
-            detection.confidence = result.boxes.conf.item()
-            detection.xywh = (
-                result.boxes.xywh.round().int().squeeze().cpu().numpy().tolist()
-            )
-
-            if has_masks:
-                detection.xyseg = (
-                    np.array(result.masks.xy).flatten().round().astype(int).tolist()
+                detection = Detection()
+                detection.name = result.names[result.boxes.cls.int().item()]
+                detection.confidence = result.boxes.conf.item()
+                detection.xywh = (
+                    result.boxes.xywh.round().int().squeeze().cpu().numpy().tolist()
                 )
 
-            response.detected_objects.append(detection)
+                if has_masks:
+                    detection.xyseg = (
+                        np.array(result.masks.xy).flatten().round().astype(int).tolist()
+                    )
 
-        self._publish_results(req, results, response)
+                response.detected_objects.append(detection)
+
+        self._publish_results(req, model_results, response)
 
         return response
 
@@ -152,7 +155,7 @@ class YOLOService:
 
         cv_im = self._bridge.imgmsg_to_cv2(req.image_raw, desired_encoding="bgr8")
         results = self._yolo(
-            cv_im, req.model, req.confidence, [cls for cls in req.filter]
+            cv_im, req.model, req.models, req.confidence, [cls for cls in req.filter]
         )
         depth_im = self._bridge.imgmsg_to_cv2(
             req.depth_image, desired_encoding="passthrough"
@@ -239,7 +242,7 @@ class YOLOService:
         response = YoloPoseDetectionResponse()
 
         cv_im = self._bridge.imgmsg_to_cv2(req.image_raw, desired_encoding="bgr8")
-        results = self._yolo(cv_im, req.model, req.confidence, [])
+        results = self._yolo(cv_im, req.model, req.models, req.confidence, [])
 
         for result in results:
             keypoints = KeypointList()
@@ -261,7 +264,7 @@ class YOLOService:
         response = YoloPoseDetection3DResponse()
 
         cv_im = self._bridge.imgmsg_to_cv2(req.image_raw, desired_encoding="bgr8")
-        results = self._yolo(cv_im, req.model, req.confidence, [])
+        results = self._yolo(cv_im, req.model, req.models, req.confidence, [])
         depth_im = self._bridge.imgmsg_to_cv2(
             req.depth_image, desired_encoding="passthrough"
         )
@@ -331,30 +334,39 @@ class YOLOService:
     def _publish_results(
         self,
         req: Union[YoloDetectionRequest, YoloDetection3DRequest],
-        results: ultralytics.engine.results.Results,
+        results: List[ultralytics.engine.results.Results],
         response: Union[YoloDetectionResponse, YoloDetection3DResponse],
     ) -> None:
 
-        if req.model in self._image_publishers:
-            image_publisher = self._image_publishers[req.model]
+        if req.model:
+            pub_key = req.model
         else:
-            image_publisher = self._image_publishers[req.model] = rospy.Publisher(
-                f"/yolo/detect/{req.model}".replace("-", "_").replace(".", "_"),
+            pub_key = "_".join(req.models)
+
+        if pub_key in self._image_publishers:
+            image_publisher = self._image_publishers[pub_key]
+        else:
+            image_publisher = self._image_publishers[pub_key] = rospy.Publisher(
+                f"/yolo/detect/{pub_key}".replace("-", "_").replace(".", "_"),
                 Image,
                 queue_size=10,
             )
 
+        results_plot = results[0].plot()
+        for result in results[1:]:
+            results_plot = result.plot(img=results_plot)
+
         image_publisher.publish(
-            self._bridge.cv2_to_imgmsg(results.plot(), encoding="bgr8")
+            self._bridge.cv2_to_imgmsg(results_plot, encoding="bgr8")
         )
 
         if isinstance(response, YoloDetection3DResponse):
 
-            if req.model in self._marker_publishers:
-                marker_publisher = self._marker_publishers[req.model]
+            if pub_key in self._marker_publishers:
+                marker_publisher = self._marker_publishers[pub_key]
             else:
-                marker_publisher = self._marker_publishers[req.model] = rospy.Publisher(
-                    f"/yolo/detect3d/{req.model}".replace("-", "_").replace(".", "_"),
+                marker_publisher = self._marker_publishers[pub_key] = rospy.Publisher(
+                    f"/yolo/detect3d/{pub_key}".replace("-", "_").replace(".", "_"),
                     Marker,
                     queue_size=10,
                 )
@@ -384,11 +396,11 @@ class YOLOService:
                 marker_publisher.publish(marker)
 
         elif isinstance(response, YoloPoseDetection3DResponse):
-            if req.model in self._marker_publishers:
-                marker_publisher = self._marker_publishers[req.model]
+            if pub_key in self._marker_publishers:
+                marker_publisher = self._marker_publishers[pub_key]
             else:
-                marker_publisher = self._marker_publishers[req.model] = rospy.Publisher(
-                    f"/yolo/pose3d/{req.model}".replace("-", "_").replace(".", "_"),
+                marker_publisher = self._marker_publishers[pub_key] = rospy.Publisher(
+                    f"/yolo/pose3d/{pub_key}".replace("-", "_").replace(".", "_"),
                     MarkerArray,
                     queue_size=10,
                 )
@@ -446,19 +458,32 @@ class YOLOService:
             marker_publisher.publish(marker_array)
 
     def _yolo(
-        self, img, model: str, conf: float, filter: List[str]
-    ) -> ultralytics.engine.results.Results:
-        yolo = self._maybe_load_model(model)
-        filter_idx = (
-            [{v: k for k, v in yolo.names.items()}[cls] for cls in filter]
-            if filter
-            else None
-        )
-        results = yolo(img, conf=conf, classes=filter_idx, verbose=False)[0]
+        self, img, model: str, models: List[str], conf: float, filter: List[str]
+    ) -> List[ultralytics.engine.results.Results]:
+
+        if not models:
+            models = [model]
+
+        yolo_models = [self._maybe_load_model(m) for m in models]
+
+        filter_idx = [
+            (
+                [{v: k for k, v in m.names.items()}[cls] for cls in filter]
+                if filter
+                else None
+            )
+            for m in yolo_models
+        ]
+        results = [
+            m(img, conf=conf, classes=f, verbose=False)[0]
+            for m, f in zip(yolo_models, filter_idx)
+        ]
+
         return results
 
 
 if __name__ == "__main__":
     rospy.init_node("yolo")
+    os.chdir(os.path.join(rospkg.RosPack().get_path("lasr_vision_yolo"), "models"))
     yolo = YOLOService()
     rospy.spin()
