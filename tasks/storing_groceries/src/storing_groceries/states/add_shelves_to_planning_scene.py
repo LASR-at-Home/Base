@@ -12,7 +12,7 @@ from lasr_manipulation_msgs.srv import AddSupportSurface, AddSupportSurfaceReque
 class AddShelvesToPlanningScene(smach.StateMachine):
 
     def __init__(self):
-        super().__init__(self, outcomes=["succeeded", "failed"])
+        super().__init__(outcomes=["succeeded", "failed"])
 
         with self:
 

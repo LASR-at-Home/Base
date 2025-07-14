@@ -8,7 +8,7 @@ class ChooseShelf(smach.State):
     def __init__(self, use_arm: bool = True):
         super().__init__(
             outcomes=["succeeded", "failed"],
-            input_keys=["chosen_shelf"],
+            output_keys=["chosen_shelf"],
             input_keys=["selected_object_name", "shelf_data"],
         )
         self._use_arm = use_arm
@@ -20,8 +20,9 @@ class ChooseShelf(smach.State):
         )
 
         chosen_shelf = None
-
+        rospy.loginfo(userdata.shelf_data)
         for shelf_name in userdata.shelf_data.keys():
+            rospy.loginfo(userdata.shelf_data[shelf_name])
             if userdata.shelf_data[shelf_name]["category"] == object_category:
                 chosen_shelf = shelf_name
                 break

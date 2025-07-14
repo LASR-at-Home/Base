@@ -108,7 +108,7 @@ class ScanShelves(smach.StateMachine):
                         smach.CBState(
                             self._classify_shelf,
                             output_keys=["shelf_data"],
-                            input_keys=["shelf_data", "detected_objects"],
+                            input_keys=["shelf_data", "detected_objects", "shelf_id"],
                             outcomes=["succeeded", "failed"],
                         ),
                         transitions={
@@ -164,13 +164,15 @@ class ScanShelves(smach.StateMachine):
 
     def _classify_shelf(self, userdata):
 
+        userdata.shelf_data[userdata.shelf_id] = {}
+
         category_counts = defaultdict(int)
-        userdata.shelf_data["objects"] = [
+        userdata.shelf_data[userdata.shelf_id]["objects"] = [
             obj.name for obj, _ in userdata.detected_objects
         ]
 
         if not userdata.detected_objects:
-            userdata.shelf_data["category"] = "empty"
+            userdata.shelf_data[userdata.shelf_id]["category"] = "empty"
             return "succeeded"
 
         for obj, _ in userdata.detected_objects:
@@ -180,7 +182,7 @@ class ScanShelves(smach.StateMachine):
             category_counts[category] += 1
 
         shelf_category = max(category_counts, key=lambda key: category_counts[key])
-        userdata.shelf_data["category"] = shelf_category
+        userdata.shelf_data[userdata.shelf_id]["category"] = shelf_category
 
         return "succeeded"
 

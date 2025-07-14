@@ -187,7 +187,20 @@ class GraspObject(smach.StateMachine):
 
         with self:
 
-            prepare_grasp_sm = smach.Concurrence(outcomes=["succeeded", "failed"])
+            prepare_grasp_sm = smach.Concurrence(
+                outcomes=["succeeded", "failed"],
+                input_keys=["selected_object"],
+                default_outcome="failed",
+                outcome_map={
+                    "succeeded": {
+                        "PREPARE_TO_GRASP": "succeeded",
+                        "PREPARE_PLANNING_SCENE": "succeeded",
+                    },
+                    "failed": {
+                        "PREPARE_PLANNING_SCENE": "failed",
+                    },
+                },
+            )
             with prepare_grasp_sm:
                 smach.Concurrence.add("PREPARE_TO_GRASP", PrepareToGrasp())
                 smach.Concurrence.add("PREPARE_PLANNING_SCENE", PreparePlanningScene())
@@ -245,7 +258,7 @@ class GraspObject(smach.StateMachine):
                     response_slots=["success"],
                 ),
                 transitions={
-                    "succeeded": "ASK_OPEN_CABINET_DOOR",
+                    "succeeded": "succeeded",
                     "preempted": "failed",
                     "aborted": "failed",
                 },

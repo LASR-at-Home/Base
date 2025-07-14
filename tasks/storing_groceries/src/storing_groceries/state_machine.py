@@ -31,7 +31,7 @@ class StoringGroceries(smach.StateMachine):
 
         with self:
 
-            smach.StateMachine.adD(
+            smach.StateMachine.add(
                 "START", Start(), transitions={"succeeded": "SAY_GOING_TO_TABLE"}
             )
 
@@ -49,9 +49,7 @@ class StoringGroceries(smach.StateMachine):
                 "GO_TO_TABLE",
                 GoToLocation(location_param="/storing_groceries/table/pose"),
                 transitions={
-                    "succeeded": (
-                        "CLEAR_PLANNING_SCENE_AT_TABLE" if use_arm else "LOOK_AT_TABLE"
-                    ),
+                    "succeeded": "DETECT_OBJECTS",
                     "failed": "failed",
                 },
             )
@@ -106,7 +104,9 @@ class StoringGroceries(smach.StateMachine):
 
             smach.StateMachine.add(
                 "WAIT_FOR_CABINET_DOOR_OPEN",
-                smach.CBState(lambda ud: rospy.sleep(5.0) or "succeeded"),
+                smach.CBState(
+                    lambda ud: rospy.sleep(5.0) or "succeeded", outcomes=["succeeded"]
+                ),
                 transitions={"succeeded": "GO_TO_CABINET"},
             )
 
@@ -160,7 +160,7 @@ class StoringGroceries(smach.StateMachine):
                     "aborted": "failed",
                     "preempted": "failed",
                 },
-                remapping={"placeholders": "selected_shelf"},
+                remapping={"placeholders": "chosen_shelf"},
             )
 
             smach.StateMachine.add(
@@ -176,7 +176,7 @@ class StoringGroceries(smach.StateMachine):
                 remapping={"placeholders": "selected_object_name"},
             )
 
-            smach.StateMachine(
+            smach.StateMachine.add(
                 "ADD_SHELVES_TO_PLANNING_SCENE",
                 AddShelvesToPlanningScene(),
                 transitions={"succeeded": "PLACE_OBJECT", "failed": "failed"},

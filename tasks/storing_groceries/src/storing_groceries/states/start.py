@@ -48,7 +48,7 @@ class Start(smach.StateMachine):
 
             smach.StateMachine.add(
                 "WAIT_FOR_DOOR_TO_OPEN",
-                DetectDoorOpening(timeout=10.0),
+                DetectDoorOpening(timeout=1.0),
                 transitions={
                     "door_opened": "succeeded",
                 },

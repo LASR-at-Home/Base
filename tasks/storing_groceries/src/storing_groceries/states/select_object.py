@@ -1,4 +1,5 @@
 import rospy
+import numpy as np
 
 import smach
 
@@ -7,9 +8,10 @@ class SelectObject(smach.State):
     """
     Selects a target object.
     Prioritises graspable objects.
+    Choose the closest object within range
     """
 
-    def __init__(self, use_arm: bool = True):
+    def __init__(self, use_arm: bool = True, range: float = np.inf):
         super().__init__(
             outcomes=["succeeded", "failed"],
             input_keys=["detected_objects"],
