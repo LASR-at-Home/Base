@@ -38,7 +38,7 @@ from pal_startup_msgs.srv import (
 )
 
 CALIBRATION_OFFSET_X: float = 0.0
-CALIBRATION_OFFSET_Y: float = -0.025
+CALIBRATION_OFFSET_Y: float = 0.025
 CALIBRATION_OFFSET_Z: float = 0.0
 
 
