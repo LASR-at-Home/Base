@@ -10,6 +10,9 @@ float32 confidence
 # Classes to filter, i.e. only detect these classes
 string[] filter
 
+# Optional list of models to use
+string[] models
+
 ---
 # Detection result
 lasr_vision_msgs/Detection[] detected_objects
