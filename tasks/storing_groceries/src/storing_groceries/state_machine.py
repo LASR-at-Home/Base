@@ -32,7 +32,7 @@ class StoringGroceries(smach.StateMachine):
         with self:
 
             smach.StateMachine.add(
-                "START", Start(), transitions={"succeeded": "SAY_GOING_TO_TABLE"}
+                "START", Start(), transitions={"succeeded": "DETECT_OBJECTS"}
             )
 
             smach.StateMachine.add(
@@ -93,24 +93,6 @@ class StoringGroceries(smach.StateMachine):
             )
 
             smach.StateMachine.add(
-                "ASK_OPEN_CABINET_DOOR",
-                Say(text="Please open both cabinet doors fully."),
-                transitions={
-                    "succeeded": "WAIT_FOR_CABINET_DOOR_OPEN",
-                    "aborted": "failed",
-                    "preempted": "failed",
-                },
-            )
-
-            smach.StateMachine.add(
-                "WAIT_FOR_CABINET_DOOR_OPEN",
-                smach.CBState(
-                    lambda ud: rospy.sleep(5.0) or "succeeded", outcomes=["succeeded"]
-                ),
-                transitions={"succeeded": "GO_TO_CABINET"},
-            )
-
-            smach.StateMachine.add(
                 "GO_TO_CABINET",
                 GoToLocation(location_param="/storing_groceries/cabinet/pose"),
                 transitions={
@@ -156,7 +138,7 @@ class StoringGroceries(smach.StateMachine):
                 "HELP_ME_PLACING_1",
                 Say(format_str="Please place it on the {}"),
                 transitions={
-                    "succeeded": "GO_TO_TABLE",
+                    "succeeded": "SAY_GOING_TO_TABLE",
                     "aborted": "failed",
                     "preempted": "failed",
                 },
@@ -169,7 +151,7 @@ class StoringGroceries(smach.StateMachine):
                     format_str="I can't place the {} myself, and can't determine where to place it. Please place it on any available shelf."
                 ),
                 transitions={
-                    "succeeded": "GO_TO_TABLE",
+                    "succeeded": "SAY_GOING_TO_TABLE",
                     "aborted": "failed",
                     "preempted": "failed",
                 },

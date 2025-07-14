@@ -3,7 +3,7 @@ import smach_ros
 
 from std_msgs.msg import Empty
 
-from lasr_skills import DetectDoorOpening, Say
+from lasr_skills import DetectDoorOpening, Say, GoToLocation
 
 
 class Start(smach.StateMachine):
@@ -50,6 +50,37 @@ class Start(smach.StateMachine):
                 "WAIT_FOR_DOOR_TO_OPEN",
                 DetectDoorOpening(timeout=1.0),
                 transitions={
-                    "door_opened": "succeeded",
+                    "door_opened": "SAY_GOING_TO_TABLE",
+                },
+            )
+
+            smach.StateMachine.add(
+                "SAY_GOING_TO_TABLE",
+                Say(text="I am going to the table"),
+                transitions={
+                    "succeeded": "GO_TO_TABLE",
+                    "aborted": "failed",
+                    "preempted": "failed",
+                },
+            )
+
+            smach.StateMachine.add(
+                "GO_TO_TABLE",
+                GoToLocation(location_param="/storing_groceries/table/pose"),
+                transitions={
+                    "succeeded": "DETECT_OBJECTS",
+                    "failed": "failed",
+                },
+            )
+
+            smach.StateMachine.add(
+                "ASK_OPEN_CABINET_DOOR",
+                Say(
+                    text="I am unable to open either of the cabinet doors. Please open them for me."
+                ),
+                transitions={
+                    "succeeded": "succeeded",
+                    "aborted": "succeeded",
+                    "preempted": "succeeded",
                 },
             )
