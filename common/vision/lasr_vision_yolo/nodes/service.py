@@ -154,9 +154,10 @@ class YOLOService:
         response = YoloDetection3DResponse()
 
         cv_im = self._bridge.imgmsg_to_cv2(req.image_raw, desired_encoding="bgr8")
-        results = self._yolo(
+        model_results = self._yolo(
             cv_im, req.model, req.models, req.confidence, [cls for cls in req.filter]
         )
+
         depth_im = self._bridge.imgmsg_to_cv2(
             req.depth_image, desired_encoding="passthrough"
         )
@@ -166,73 +167,77 @@ class YOLOService:
 
         target_frame = req.target_frame or req.depth_image.header.frame_id
 
-        if results:
-            try:
-                transform = self._tf_buffer.lookup_transform(
-                    target_frame,
-                    req.depth_image.header.frame_id,
-                    req.depth_image.header.stamp,
-                    rospy.Duration(1.0),
-                )
-            except (
-                tf.LookupException,
-                tf.ConnectivityException,
-                tf.ExtrapolationException,
-            ) as e:
-                raise rospy.ServiceException(str(e))
+        for results in model_results:
 
-        for result in results:
-            detection = Detection3D()
-            detection.name = result.names[result.boxes.cls.int().item()]
-            detection.confidence = result.boxes.conf.item()
-            # x, y, w, h = (
-            #     result.boxes.xywh.round().int().squeeze().cpu().numpy().tolist()
-            # )
-            # detection.xywh = [x, y, w, h]
-            bbox = result.boxes.xyxy[0].cpu().numpy()
-            x1, y1, x2, y2 = bbox
-            detection.xywh = [
-                int(round(x1)),
-                int(round(y1)),
-                int(round(x2 - x1)),
-                int(round(y2 - y1)),
-            ]
+            if results:
+                try:
+                    transform = self._tf_buffer.lookup_transform(
+                        target_frame,
+                        req.depth_image.header.frame_id,
+                        req.depth_image.header.stamp,
+                        rospy.Duration(1.0),
+                    )
+                except (
+                    tf.LookupException,
+                    tf.ConnectivityException,
+                    tf.ExtrapolationException,
+                ) as e:
+                    raise rospy.ServiceException(str(e))
 
-            has_mask = result.masks is not None
-            if has_mask:
-                detection.xyseg = (
-                    np.array(result.masks.xy).flatten().round().astype(int).tolist()
-                )
-                contours = np.array(detection.xyseg).reshape(-1, 2)
-                mask = np.zeros(depth_im.shape[:2], dtype=np.uint8)
-                cv2.fillPoly(mask, [contours], color=255)
-                roi = cv2.bitwise_and(depth_im, depth_im, mask=mask)
-                v, u = np.where(roi)
-                z = depth_im[v, u]
-                valid = z > 0
-                z = z[valid]
-                u = u[valid]
-                v = v[valid]
-                x = z * (u - cx) / fx
-                y = z * (v - cy) / fy
-                points = np.stack((x, y, z), axis=1)
-                x, y, z = np.median(points, axis=0)
+            for result in results:
+                detection = Detection3D()
+                detection.name = result.names[result.boxes.cls.int().item()]
+                detection.confidence = result.boxes.conf.item()
+                # x, y, w, h = (
+                #     result.boxes.xywh.round().int().squeeze().cpu().numpy().tolist()
+                # )
+                # detection.xywh = [x, y, w, h]
+                bbox = result.boxes.xyxy[0].cpu().numpy()
+                x1, y1, x2, y2 = bbox
+                detection.xywh = [
+                    int(round(x1)),
+                    int(round(y1)),
+                    int(round(x2 - x1)),
+                    int(round(y2 - y1)),
+                ]
 
-                point = Point(x, y, z)
-                point_stamped = PointStamped()
-                point_stamped.header = req.depth_image.header
-                point_stamped.point = point
-                point_stamped_transformed = do_transform_point(point_stamped, transform)
-                detection.point = point_stamped_transformed.point
+                has_mask = result.masks is not None
+                if has_mask:
+                    detection.xyseg = (
+                        np.array(result.masks.xy).flatten().round().astype(int).tolist()
+                    )
+                    contours = np.array(detection.xyseg).reshape(-1, 2)
+                    mask = np.zeros(depth_im.shape[:2], dtype=np.uint8)
+                    cv2.fillPoly(mask, [contours], color=255)
+                    roi = cv2.bitwise_and(depth_im, depth_im, mask=mask)
+                    v, u = np.where(roi)
+                    z = depth_im[v, u]
+                    valid = z > 0
+                    z = z[valid]
+                    u = u[valid]
+                    v = v[valid]
+                    x = z * (u - cx) / fx
+                    y = z * (v - cy) / fy
+                    points = np.stack((x, y, z), axis=1)
+                    x, y, z = np.median(points, axis=0)
 
-            else:
-                rospy.logwarn(
-                    "3D Estimation is not implemented when masks aren't available."
-                )
+                    point = Point(x, y, z)
+                    point_stamped = PointStamped()
+                    point_stamped.header = req.depth_image.header
+                    point_stamped.point = point
+                    point_stamped_transformed = do_transform_point(
+                        point_stamped, transform
+                    )
+                    detection.point = point_stamped_transformed.point
 
-            response.detected_objects.append(detection)
+                else:
+                    rospy.logwarn(
+                        "3D Estimation is not implemented when masks aren't available."
+                    )
 
-        self._publish_results(req, results, response)
+                response.detected_objects.append(detection)
+
+        self._publish_results(req, model_results, response)
 
         return response
 
