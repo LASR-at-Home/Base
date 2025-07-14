@@ -34,7 +34,7 @@ class PourCereal(smach.StateMachine):
     3. move the cereal box to the container location by adding a offset of height
     4. pouring the cereal by flipping the orientation of the pose
     P.S. it might need to change the name of the container to the true label after yolo detection and the offset of the cereal box to the container height.
-    TODO: fix the case that the container or cereal is not detected, just keep detecting until both of them is detected.
+
 
     """
 
@@ -53,7 +53,7 @@ class PourCereal(smach.StateMachine):
                     z_axis=0.8,
                     model="lasr.pt",
                 ),
-                transitions={"succeeded": "SELECT_CEREAL", "failed": "failed"},
+                transitions={"succeeded": "CHECK_DETECTED", "failed": "failed"},
                 remapping={"detected_objects": "detected_objects"} 
             )
 
