@@ -37,7 +37,9 @@ def check_polygons():
 
     for shelf in rospy.get_param("/storing_groceries/cabinet/shelves"):
 
-        polygon = ShapelyPolygon(shelf["polygon"])
+        polygon = ShapelyPolygon(
+            rospy.get_param(f"/storing_groceries/cabinet/shelves/{shelf}/polygon")
+        )
         assert (
             polygon.is_valid
         ), f"{shelf['name']} polygon is not valid: {explain_validity(polygon)}"
@@ -46,7 +48,13 @@ def check_polygons():
             PolygonStamped(
                 polygon=Polygon(
                     points=[
-                        Point(x=x, y=y, z=shelf["z_min"])
+                        Point(
+                            x=x,
+                            y=y,
+                            z=rospy.get_param(
+                                f"/storing_groceries/cabinet/shelves/{shelf}/z_min"
+                            ),
+                        )
                         for (x, y) in polygon.exterior.coords
                     ]
                 ),
@@ -60,6 +68,6 @@ def check_polygons():
 if __name__ == "__main__":
     rospy.init_node("storing_groceries")
     check_polygons()
-    no_arm = True
-    sm = StoringGroceries(no_arm)
+    use_arm = False
+    sm = StoringGroceries(use_arm)
     sm.execute()
