@@ -51,7 +51,7 @@ class Detect3DInArea(smach.StateMachine):
             if self._z_max is None:
                 z_sweep_max = userdata.z_sweep_max
             else:
-                z_sweep_min = self._z_max
+                z_sweep_max = self._z_max
             polygon_msg = Polygon()
             if self.area_polygon is None:
                 area_polygon = userdata.polygon
