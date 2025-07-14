@@ -93,18 +93,16 @@ class SpeechRecovery(smach.State):
             str: state outcome. Updates the userdata with the parsed information (drink or name), under
             the parameter "guest_data".
         """
-        if self._recover_from_llm:
-            sentence_list = []
-            sentence_list.append(userdata.guest_data[self._guest_id]["name"])
-            if sentence_list[0] == "unknown":
-                return "failed"
-        else:
-            filtered_sentence = userdata.guest_transcription.lower().translate(
-                str.maketrans("", "", string.punctuation)
-            )
-            sentence_split = filtered_sentence.split()
-            sentence_list = list(set(sentence_split) - set(self._excluded_words))
+        filtered_sentence = userdata.guest_transcription.lower().translate(
+            str.maketrans("", "", string.punctuation)
+        )
+        sentence_split = filtered_sentence.split()
+        sentence_list = list(set(sentence_split) - set(self._excluded_words))
         if not sentence_list:
+            return "failed"
+        if isinstance(sentence_list, str):
+            sentence_list = [sentence_list]
+        if "unknown" in sentence_list:
             return "failed"
         print(sentence_list)
         if self._input_type == "name":
