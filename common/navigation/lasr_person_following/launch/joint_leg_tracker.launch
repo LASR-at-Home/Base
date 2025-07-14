@@ -3,7 +3,7 @@
   <!-- params -->
     <param name="forest_file" value="$(find lasr_person_following)/config/trained_leg_detector_res_TIAGo.yaml" />
     <param name="scan_topic" value="/scan" />
-    <param name="fixed_frame" value="odom"/>
+    <param name="fixed_frame" value="map"/>
     <param name="scan_frequency" value="15"/>
     <param name="max_detect_distance" value="10.0"/>
     <param name="dist_travelled_together_to_initiate_leg_pair" value="0.1"/>

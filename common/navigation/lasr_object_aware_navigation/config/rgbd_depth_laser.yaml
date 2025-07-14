@@ -1,0 +1,15 @@
+# Configuration for 320x240 (columns x rows);
+# Note that with scan_height = 240 it's rejected because of the camera info
+# cy value, so we use something slightly smaller.
+# This only works with the camera horizontal and parallel to the ground.
+# Even when it's parallel to the ground, the sensor sees the ground, so we
+# must use a scan_height appropriate (much smaller than the #rows).
+scan_height: 100   # pixels
+scan_time  : 0.166 # 6Hz (0.033 -> 30Hz)
+
+# Range [min, max] greater than the actual sensor
+# e.g. Xtion Pro Live is [0.8, 3.5]m
+range_min:  0.45  # m
+range_max: 10.0   # m
+
+output_frame_id: base_footprint

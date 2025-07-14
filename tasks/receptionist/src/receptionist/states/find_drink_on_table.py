@@ -22,7 +22,7 @@ class GetDrinkString(smach.State):
     def execute(self, userdata):
         drink_location = userdata.drink_location
         drink_str = ""
-        if drink_location == "None":
+        if drink_location == "None" or drink_location == "":
             drink_str += "Unfortunately, I couldn't find your drink on the table. "
         else:
             drink_str += f"Your drink is located at the {drink_location} of the table. "
@@ -77,9 +77,7 @@ class FindDrinkOnTable(smach.StateMachine):
                     "succeeded": "PROCESS_DETECTED_DRINKS",
                     "failed": "PROCESS_DETECTED_DRINKS",
                 },
-                remapping={
-                    "detected_objects": "detected_objects",
-                },
+                remapping={"detected_objects": "detected_objects"},
             )
 
             smach.StateMachine.add(
@@ -191,9 +189,14 @@ class GetDrinkLocationFromMemory(smach.State):
         favourite_drink_location = "None"
 
         if favourite_drink is not None:
-            favourite_drink_location = userdata.drink_detections[
-                favourite_drink.lower()
-            ]["location"]
+            try:
+                if userdata.drink_detections[favourite_drink.lower()]["detected"]:
+                    favourite_drink_location = userdata.drink_detections[
+                        favourite_drink.lower()
+                    ]["location"]
+            except:
+                userdata.drink_location = favourite_drink_location
+                return "failed"
         userdata.drink_location = favourite_drink_location
         return "succeeded"
 

@@ -1,10 +1,9 @@
 <launch>
-    <param name="_" command="sed -i '/static_highway_layer/,+1d' /opt/pal/gallium/share/pal_navigation_cfg_tiago/config/base/common/global_costmap_plugins_rgbd.yaml
-"/>
-    <include file="$(find tiago_laser_sensors)/launch/rgbd_cloud_laser.launch"/>
+<!--     <param name="_" command="sed -i '/static_highway_layer/,+1d' /opt/pal/gallium/share/pal_navigation_cfg_tiago/config/base/common/global_costmap_plugins_rgbd.yaml"/> -->
+    <include file="$(find lasr_object_aware_navigation)/launch/rgbd_cloud_laser.launch"/>
 
     <include file="$(find tiago_2dnav)/launch/move_base.launch">
         <arg name="rgbd_sensors" value="true"/>
     </include>
-    <node pkg="tiago_2dnav" type="navigation_camera_mgr.py" name="navigation_camera_mgr" output="screen"/>
+<!--     <node pkg="tiago_2dnav" type="navigation_camera_mgr.py" name="navigation_camera_mgr" output="screen"/> -->
 </launch>
