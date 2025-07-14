@@ -8,7 +8,7 @@ from trajectory_msgs.msg import JointTrajectoryPoint
 from geometry_msgs.msg import Point, PointStamped
 from std_msgs.msg import Header
 
-from lasr_skills import DetectAllInPolygonSensorData, LookToPoint, Say, Wait
+from lasr_skills import DetectAllInPolygonSensorData, LookToPoint
 from shapely import Polygon as ShapelyPolygon
 from collections import defaultdict
 
