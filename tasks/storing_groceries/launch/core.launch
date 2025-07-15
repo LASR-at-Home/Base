@@ -17,4 +17,13 @@
     <!--      PERCEPTION     -->
     <node name="yolo" pkg="lasr_vision_yolo" type="service.py" output="screen"/>
 
+    <!-- LLM -->
+    <node pkg="lasr_llm" type="llm.py" name="llm_server" output="screen"/>
+
+    <!-- WEB VIEW -->
+    <node pkg="web_video_server" type="web_video_server" name="web_video_server">
+        <param name="port" value="8081"/>
+        <param name="address" value="localhost"/>
+    </node>
+
 </launch>
