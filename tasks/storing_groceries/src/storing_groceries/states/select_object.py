@@ -23,7 +23,7 @@ class SelectObject(smach.State):
         base_frame: str = "base_footprint",
     ):
         super().__init__(
-            outcomes=["succeeded", "failed", "not_found"],
+            outcomes=["succeeded", "failed"],
             input_keys=["detected_objects"],
             output_keys=["selected_object", "selected_object_name"],
         )
@@ -78,11 +78,13 @@ class SelectObject(smach.State):
                         if distance < closest_dist:
                             closest_dist = distance
                             closest_obj = (obj, pcl)
+                            closest_img = img
                 except Exception as e:
                     rospy.logwarn(f"TF transform failed for {obj.name}: {e}")
                     continue
             else:
                 closest_obj = (obj, pcl)
+                closest_img = img
                 break
 
         if closest_obj:
@@ -118,4 +120,4 @@ class SelectObject(smach.State):
             return "succeeded"
 
         rospy.logwarn("No suitable object found within range.")
-        return "not_found"
+        return "failed"
