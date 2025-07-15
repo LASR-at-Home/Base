@@ -9,9 +9,10 @@ from geometry_msgs.msg import Point, PointStamped
 from std_msgs.msg import Header
 
 from lasr_skills import DetectAllInPolygonSensorData, LookToPoint
+from lasr_llm_msgs.srv import Llm, LlmRequest
 from shapely import Polygon as ShapelyPolygon
 from collections import defaultdict
- 
+
 
 class ScanShelves(smach.StateMachine):
 
@@ -25,6 +26,8 @@ class ScanShelves(smach.StateMachine):
         with self:
 
             self.userdata.shelf_data = {}
+            self._llm = rospy.ServiceProxy("/lasr_llm/llm", Llm)
+            self._llm.wait_for_service()
 
             shelf_iterator = smach.Iterator(
                 outcomes=["succeeded", "failed"],
@@ -168,14 +171,14 @@ class ScanShelves(smach.StateMachine):
 
         category_counts = defaultdict(int)
         userdata.shelf_data[userdata.shelf_id]["objects"] = [
-            obj.name for obj, _ in userdata.detected_objects
+            obj.name for obj, _, _ in userdata.detected_objects
         ]
 
         if not userdata.detected_objects:
             userdata.shelf_data[userdata.shelf_id]["category"] = "empty"
             return "succeeded"
 
-        for obj, _ in userdata.detected_objects:
+        for obj, _, _ in userdata.detected_objects:
             category = rospy.get_param(
                 f"/storing_groceries/objects/{obj.name}/category", "unknown"
             )
@@ -184,16 +187,16 @@ class ScanShelves(smach.StateMachine):
                 categories = set()
 
                 for name in object_names:
-                    yaml_category = rospy.get_param(f"/storing_groceries/objects/{name}/category", None)
+                    yaml_category = rospy.get_param(
+                        f"/storing_groceries/objects/{name}/category", None
+                    )
                     if yaml_category:
                         categories.add(yaml_category)
 
                 category_list_str = ", ".join(sorted(categories))
 
                 request = LlmRequest()
-                request.system_prompt = (
-                    "You are a robot finding the category of the given object. Respond with only one word."
-                )
+                request.system_prompt = "You are a robot finding the category of the given object. Respond with only one word."
                 request.prompt = f"What category does the object '{obj.name}' belong to the most among {category_list_str}? "
                 request.max_tokens = 10
 
@@ -201,7 +204,7 @@ class ScanShelves(smach.StateMachine):
 
                 response_text = response.output.strip().lower()
                 words = response_text.replace(",", "").split()
-                
+
                 category = "unknown"
                 for word in words:
                     if word in categories:
