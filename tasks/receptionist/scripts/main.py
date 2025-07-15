@@ -144,6 +144,7 @@ if __name__ == "__main__":
         max_people_on_sofa=max_people_on_sofa,
     )
 
+
     outcome = receptionist.execute()
 
     rospy.loginfo(f"Receptionist finished with outcome: {outcome}")

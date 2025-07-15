@@ -9,6 +9,7 @@ from smach import UserData
 from typing import List, Dict, Any
 from receptionist.states import SpeechRecovery
 from lasr_llm_msgs.srv import Llm, LlmRequest
+import string
 
 
 class GetName(smach.StateMachine):
@@ -150,8 +151,10 @@ class GetName(smach.StateMachine):
                 return "failed"
 
             # Try to match an exact name from transcription
+            words = transcription.split()
             name = next(
-                (n for n in self._possible_names if n in transcription), llm_name
+                (n for n in self._possible_names if n in words),
+                llm_name
             )
 
             # Update guest data
@@ -186,20 +189,7 @@ class GetName(smach.StateMachine):
             self._last_resort = last_resort
 
         def execute(self, userdata: UserData) -> str:
-            transcription = userdata["guest_transcription"].lower()
-            guest = userdata.guest_data[self._guest_id]
-            information_found = False
-
-            for key_phrase in self._possible_names:
-                if key_phrase in transcription:
-                    guest["name"] = key_phrase
-                    rospy.loginfo(f"Name identified as: {key_phrase}")
-                    information_found = True
-                    break
-            if not information_found:
-                rospy.loginfo(f"Name not found in transcription")
-                if self._last_resort:
-                    return "failed_last_resort"
-                else:
-                    return "failed"
-            return "succeeded"
+            if self._last_resort:
+                return "failed_last_resort"
+            else:
+                return "failed"

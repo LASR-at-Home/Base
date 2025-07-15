@@ -10,6 +10,7 @@ from smach import UserData
 from typing import List, Dict, Any
 from receptionist.states import SpeechRecovery
 from lasr_llm_msgs.srv import Llm, LlmRequest
+import string
 
 
 class GetDrink(smach.StateMachine):
@@ -118,7 +119,8 @@ class GetDrink(smach.StateMachine):
                 str: state outcome. Updates the userdata with the parsed drink, under
                 the parameter "guest_data".
             """
-            transcription = userdata["guest_transcription"].lower()
+            transcription = userdata["guest_transcription"].lower().translate(
+                str.maketrans("", "", string.punctuation))
             # Remove punctuation and extra spaces
             transcription = (
                 transcription.replace(".", "")
