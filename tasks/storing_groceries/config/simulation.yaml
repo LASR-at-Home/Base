@@ -95,7 +95,3 @@ objects:
     graspable: false
     category: "fruits"
     scale: false
-  orange:
-    graspable: false
-    category: "fruits"
-    scale: false

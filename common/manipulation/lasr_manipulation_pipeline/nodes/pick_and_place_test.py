@@ -22,7 +22,7 @@ from lasr_manipulation_msgs.msg import PickAction, PickGoal, PlaceAction, PlaceG
 
 
 PACKAGE_PATH: str = rospkg.RosPack().get_path("lasr_manipulation_pipeline")
-MESH_NAME: str = "ritz.ply"
+MESH_NAME: str = "pringles.ply"
 
 
 class GraspingPipeline:
@@ -90,7 +90,7 @@ class GraspingPipeline:
 
         pcl = sam.segment(pcl)
         # Register mesh with scene and apply the transformation
-        response = self._register_object(pcl, MESH_NAME.replace(".ply", ""), False, 25)
+        response = self._register_object(pcl, MESH_NAME.replace(".ply", ""), False, 30)
         ros_transform = response.transform
         ros_scale = response.scale
 

@@ -37,8 +37,8 @@ from pal_startup_msgs.srv import (
 )
 
 CALIBRATION_OFFSET_X: float = 0.0
-CALIBRATION_OFFSET_Y: float = 0.025
-CALIBRATION_OFFSET_Z: float = 0.0
+CALIBRATION_OFFSET_Y: float = 0.06
+CALIBRATION_OFFSET_Z: float = 0.02
 
 ALLOW_TOP_DOWN_GRASPS: bool = (
     False  # this is safer if calibration is poor -- we want to avoid pushing objects down into the table.
