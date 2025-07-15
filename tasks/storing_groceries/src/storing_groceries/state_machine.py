@@ -136,7 +136,7 @@ class StoringGroceries(smach.StateMachine):
             )
             smach.StateMachine.add(
                 "HELP_ME_PLACING_1",
-                Say(format_str="Please place it on the {}"),
+                Say(format_str="Please place it on the {} shelf."),
                 transitions={
                     "succeeded": "SAY_GOING_TO_TABLE",
                     "aborted": "failed",
