@@ -118,7 +118,7 @@ class Detect3DInArea(smach.StateMachine):
                     depth_camera_info_topic=depth_camera_info_topic,
                     point_cloud_topic=point_cloud_topic,
                     model=model,
-                    model=models,
+                    models=models,
                     filter=filter,
                     confidence=confidence,
                     target_frame=target_frame,
