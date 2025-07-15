@@ -1,0 +1,9 @@
+# ClassifyObject: a object name as a list
+# ClassifyCabinet: objects as a list 
+# LinkCategory: a object in 0 and cabinet category as following with new
+string[] llm_input
+
+# ClassifyObject, ClassifyCabinet, LinkCategory
+string task
+---
+string category

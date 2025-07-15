@@ -134,11 +134,26 @@ class LLMInference:
         return model_class.from_pretrained(self.model_name, **kwargs)
 
     def load_llm_model(self):
-        device_map = "auto" if self.device != "cpu" else "cpu"
-        torch_dtype = torch.bfloat16 if self.device != "cpu" else torch.float32
+        if self.device == torch.device("cpu"):
+            rospy.logwarn("[LLMInference] CPU detected — skipping quantization.")
+            return AutoModelForCausalLM.from_pretrained(self.model_name)
+
+        device_map = "auto"
+        torch_dtype = torch.bfloat16
         kwargs = {"device_map": device_map, "torch_dtype": torch_dtype}
+
         if self.config.quantize:
-            kwargs["quantization_config"] = self.quantization_config
+            from transformers import BitsAndBytesConfig
+
+            try:
+                kwargs["quantization_config"] = BitsAndBytesConfig(
+                    load_in_4bit=True,
+                    bnb_4bit_quant_type="nf4",
+                    bnb_4bit_compute_dtype=torch.bfloat16,
+                )
+            except Exception as e:
+                rospy.logerr(f"[LLMInference] Failed to create quant config: {e}")
+                rospy.logwarn("[LLMInference] Falling back to full-precision model.")
 
         return AutoModelForCausalLM.from_pretrained(self.model_name, **kwargs)
 
@@ -215,7 +230,7 @@ def interest_commonality_llm(interests: list[str]) -> str:
     sentence = ", ".join(interests)
     query = create_query(
         sentence,
-        "Create a sentence that introduces a person named Eunice, mentioning her interest in green tea and swimming.",
+        "Create a sentence that find and introduce commeness of interests given",
     )
     inference = LLMInference(config, query)
     response = inference.run_inference()
@@ -233,11 +248,58 @@ def introduce_llm(name: str, drink: str, interests: str) -> str:
     prompt = f"Create a sentence that introduces a person named {name}, mentioning their favorite drink ({drink}) and their interest in {interests}."
 
     query = create_query(input_summary, prompt)
-    inference = LLMInference(config, query)
+    inference = LLMInfllerence(config, query)
     response = inference.run_inference()
     parsed_response = truncate_llm_output(response[0])
 
     return parsed_response
+
+
+def classify_category(objects: List[str]) -> str:
+    """
+    Classify category between a list of objects.
+    :param objects: a list of interests
+    :return: category
+    """
+    config = ModelConfig(model_name=models["Qwen"], model_type="llm", quantize=True)
+    sentence = ", ".join(objects)
+    query = create_query(
+        sentence, "Detect which category these or a object belongs to."
+    )
+    inference = LLMInference(config, query)
+    response = inference.run_inference()
+    # print(response)
+    parsed_response = truncate_llm_output(response[0])
+    return parsed_response
+
+
+def link_category(object: str, category: list[str]) -> str:
+    """
+    Classify category between a list of objects.
+    :param objects: a list of interests
+    :return: category
+    """
+    config = ModelConfig(model_name=models["Qwen"], model_type="llm", quantize=True)
+    query = create_query(
+        category,
+        "Detect which category {object} belongs to the most. If not appropreate category to go return 'new'",
+    )
+    inference = LLMInference(config, query)
+    response = inference.run_inference()
+    # print(response)
+    parsed_response = truncate_llm_output(response[0])
+    return parsed_response
+
+
+# def extract_fields_llm(text: str, fields: list[str] = None):
+#     """
+#     A simple receptionist LLM inference function.
+#     :param text: The input sentence to process.
+#     :param fields: A list of fields to return.
+#     """
+#     config = ModelConfig(model_name=models["Qwen"], model_type="llm", quantize=True)
+#     if fields is None:
+#         fields = ["Name", "Favourite drink", "Interests"]  # all for receptionist
 
 
 def extract_fields_llm(text: str, fields: List[str]) -> Dict:
@@ -264,23 +326,49 @@ def extract_fields_llm(text: str, fields: List[str]) -> Dict:
 
 
 def main():
-    # Examples for testing
-    config = ModelConfig(model_name=models["Qwen"], model_type="llm", quantize=True)
+    # # Examples for testing
+    # config = ModelConfig(model_name=models["Qwen"], model_type="llm", quantize=True)
 
-    # sentence = "My name is John, my favourite drink is green tea, and my interests are robotics."
-    # sentence = "I am John, I usually drink green tea, and I really like robotics. I also like to play chess and watch movies."
-    # sentence = "Oh hi yeah, I'm John erm I drink tea usually green, and I am a robotics enthusiast. I also like to play chess and watch movies when I can."
-    sentence = "I would like a vegan hamburger, no cheese please, and a large fries. I also want a large coke and a small salad."
-    # query = f"Extract the following fields from the sentence:\n- Name\n- Favorite drink\n- Interests\n\nSentence: {sentence}"
-    query = f"Extract the following fields from the sentence:\n -Food\n -Requests\n -Drink\n\nSentence: {sentence}."
-    inference = LLMInference(config, query)
-    response = inference.run_inference()
-    print(response)
-    inference.log_output(response)
+    # # sentence = "My name is John, my favourite drink is green tea, and my interests are robotics."
+    # # sentence = "I am John, I usually drink green tea, and I really like robotics. I also like to play chess and watch movies."
+    # # sentence = "Oh hi yeah, I'm John erm I drink tea usually green, and I am a robotics enthusiast. I also like to play chess and watch movies when I can."
+    # sentence = "I would like a vegan hamburger, no cheese please, and a large fries. I also want a large coke and a small salad."
+    # # query = f"Extract the following fields from the sentence:\n- Name\n- Favorite drink\n- Interests\n\nSentence: {sentence}"
+    # query = f"Extract the following fields from the sentence:\n -Food\n -Requests\n -Drink\n\nSentence: {sentence}."
+    # inference = LLMInference(config, query)
+    # response = inference.run_inference()
+    # print(response)
+    # inference.log_output(response)
+
+    print("\n🔍 TEST: extract_fields_llm")
+    sentence = "Oh hi yeah, I'm John erm I drink tea usually green, and I am a robotics enthusiast. I also like to play chess and watch movies when I can."
+    extracted = extract_fields_llm(sentence, ["Name", "Favourite drink", "Interests"])
+    print("Extracted fields:", extracted)
+
+    print("\n🔍 TEST: interest_commonality_llm")
+    interests = ["robotics", "chess"]
+    commonality = interest_commonality_llm(interests)
+    print("Commonality summary:", commonality)
+
+    print("\n🔍 TEST: introduce_llm")
+    intro = introduce_llm(name="Eunice", drink="green tea", interests="swimming")
+    print("Introduction:", intro)
+
+    print("\n🔍 TEST: classify_category")
+    category = classify_category(["apple"])  # FIXED: must pass a list
+    print("Classified category:", category)
+
+    print("\n🔍 TEST: link_category for 'apple'")
+    linked_apple = link_category("apple", ["fruit", "drink", "new"])
+    print("Linked category:", linked_apple)
+
+    print("\n🔍 TEST: link_category for 'basketball'")
+    linked_basketball = link_category("basketball", ["fruit", "drink", "new"])
+    print("Linked category:", linked_basketball)
 
 
 if __name__ == "__main__":
-    # main()
+    main()
     # extract_fields_llm("Oh hi yeah, I'm John erm I drink tea usually green, and I am a robotics enthusiast. I also like to play chess and watch movies when I can.")
     # interest_commonality_llm(["robotics", "chess", "movies"])
-    interest_commonality_llm(["tennis", "football", "basketball"])
+    # interest_commonality_llm(["tennis", "football", "basketball"])

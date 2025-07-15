@@ -67,6 +67,8 @@
   <depend>lasr_skills</depend>
   <depend>lasr_vision_sam2</depend>
   <depend>lasr_vision_yolo</depend>
+  <depend>lasr_person_tracking_filter</depend>
+  <depend>leg_tracker</depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>

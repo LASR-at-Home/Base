@@ -363,6 +363,7 @@ class DetectAllInPolygonSensorData(smach.StateMachine):
     _z_sweep_min: Optional[float]
     _z_sweep_max: Optional[float]
     _model: str
+    _models: Optional[List[str]]
 
     def __init__(
         self,
@@ -376,6 +377,7 @@ class DetectAllInPolygonSensorData(smach.StateMachine):
         z_sweep_min: Optional[float] = None,
         z_sweep_max: Optional[float] = None,
         model: str = "yolo11n-seg.pt",
+        models: Optional[List[str]] = None,
     ):
         """
         Args:
@@ -433,6 +435,7 @@ class DetectAllInPolygonSensorData(smach.StateMachine):
         self._z_sweep_max = z_sweep_max
         self._prompt = prompt
         self._model = model
+        self._models = models
         if use_lang_sam:
             assert (
                 self._prompt is not None
@@ -629,6 +632,7 @@ class DetectAllInPolygonSensorData(smach.StateMachine):
                             confidence=self._min_confidence,
                             point_cloud_topic="/xtion/depth_registered/points",
                             model=self._model,
+                            models=self._models,
                         ),
                         transitions={
                             "succeeded": "PROCESS_DETECTIONS",

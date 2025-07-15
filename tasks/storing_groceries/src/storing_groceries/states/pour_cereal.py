@@ -11,7 +11,6 @@ from storing_groceries.states import (
 from lasr_skills import (
     DetectAllInPolygonSensorData,
     PlayMotion,
-
 )
 
 from lasr_manipulation_msgs.srv import (
@@ -26,6 +25,7 @@ from geometry_msgs.msg import PoseStamped, Point, Quaternion
 import tf
 import moveit_commander
 
+
 class PourCereal(smach.StateMachine):
     """
     State machine for pouring cereal into a bowl.
@@ -38,7 +38,6 @@ class PourCereal(smach.StateMachine):
 
     """
 
-
     def __init__(self) -> None:
         super().__init__(outcomes=["succeeded", "failed"])
 
@@ -47,14 +46,14 @@ class PourCereal(smach.StateMachine):
                 "DETECT_CEREAL_CONTAINER",
                 DetectAllInPolygonSensorData(
                     ShapelyPolygon(rospy.get_param("/storing_groceries/table/polygon")),
-                    object_filter=['cereal', 'container'],
+                    object_filter=["cereal", "container"],
                     min_coverage=0.9,
                     min_confidence=0.1,
                     z_axis=0.8,
                     model="lasr.pt",
                 ),
                 transitions={"succeeded": "CHECK_DETECTED", "failed": "failed"},
-                remapping={"detected_objects": "detected_objects"} 
+                remapping={"detected_objects": "detected_objects"},
             )
 
             smach.StateMachine.add(
@@ -62,12 +61,12 @@ class PourCereal(smach.StateMachine):
                 CheckDetectionResult(),
                 transitions={
                     "found_both": "SELECT_CEREAL",
-                    "retry": "DETECT_CEREAL_CONTAINER"
+                    "retry": "DETECT_CEREAL_CONTAINER",
                 },
                 remapping={
                     "detected_objects": "detected_objects",
-                    "container_objects": "container_objects"
-                }
+                    "container_objects": "container_objects",
+                },
             )
 
             smach.StateMachine.add(
@@ -75,7 +74,7 @@ class PourCereal(smach.StateMachine):
                 SelectObject(target_name="cereal"),
                 transitions={"succeeded": "REGISTER_OBJECT", "failed": "failed"},
                 remapping={
-                    "detected_objects": "detected_objects",     
+                    "detected_objects": "detected_objects",
                     "selected_object": "selected_object",
                 },
             )
@@ -131,13 +130,12 @@ class PourCereal(smach.StateMachine):
                 },
             )
 
-
             smach.StateMachine.add(
                 "MOVE_ABOVE_CONTAINER",
                 MoveToAboveContainer(
-                    container_key="container_objects", 
-                    grasp_key="grasp_pose",           
-                    offset_z=0.15
+                    container_key="container_objects",
+                    grasp_key="grasp_pose",
+                    offset_z=0.15,
                 ),
                 transitions={
                     "succeeded": "POUR_CEREAL",
@@ -145,17 +143,15 @@ class PourCereal(smach.StateMachine):
                 },
             )
 
-
             smach.StateMachine.add(
                 "POUR_CEREAL",
-                PlayMotion(motion_name="pour_cereal"),  
+                PlayMotion(motion_name="pour_cereal"),
                 transitions={
                     "succeeded": "succeeded",
                     "aborted": "failed",
                     "preempted": "failed",
                 },
             )
-
 
     def _register_object_cb(self, userdata, request):
         return RegistrationRequest(
@@ -166,7 +162,7 @@ class PourCereal(smach.StateMachine):
             ),
             25,
         )
-    
+
     def _add_collision_object_cb(self, userdata, request):
         return AddCollisionObjectRequest(
             userdata.selected_object[0].name,
@@ -176,7 +172,6 @@ class PourCereal(smach.StateMachine):
         )
 
 
-
 class MoveToAboveContainer(smach.State):
     """
     move the arm to certain pose:
@@ -184,11 +179,14 @@ class MoveToAboveContainer(smach.State):
     1. container_objects: list of DetectedObject, from DetectAllInPolygonSensorData
     2. grasp_pose: the orientation of the grasp
     """
-    def __init__(self, container_key="container_objects", grasp_key="grasp_pose", offset_z=0.15):
+
+    def __init__(
+        self, container_key="container_objects", grasp_key="grasp_pose", offset_z=0.15
+    ):
         smach.State.__init__(
             self,
             outcomes=["succeeded", "failed"],
-            input_keys=[container_key, grasp_key]
+            input_keys=[container_key, grasp_key],
         )
         group_name = "arm_torso"
         self.group = moveit_commander.MoveGroupCommander(group_name)
@@ -215,7 +213,7 @@ class MoveToAboveContainer(smach.State):
         target_pose.pose.position = Point(
             x=container_pose.pose.position.x,
             y=container_pose.pose.position.y,
-            z=container_pose.pose.position.z + self.offset_z
+            z=container_pose.pose.position.z + self.offset_z,
         )
         target_pose.pose.orientation = grasp_pose.pose.orientation
 
@@ -235,8 +233,11 @@ class PourCereal(smach.State):
     flip the orientation of the cereal box to pour it into the container.
 
     """
+
     def __init__(self, grasp_key="grasp_pose"):
-        smach.State.__init__(self, outcomes=["succeeded", "failed"], input_keys=[grasp_key])
+        smach.State.__init__(
+            self, outcomes=["succeeded", "failed"], input_keys=[grasp_key]
+        )
         self.group = moveit_commander.MoveGroupCommander("arm_torso")
         self.grasp_key = grasp_key
 
@@ -249,12 +250,12 @@ class PourCereal(smach.State):
             grasp_pose.pose.orientation.w,
         )
 
-        q_rot = tf.transformations.quaternion_from_euler(-1.57, 0, 0) 
+        q_rot = tf.transformations.quaternion_from_euler(-1.57, 0, 0)
         q_new = tf.transformations.quaternion_multiply(q_rot, q_orig)
 
         pour_pose = PoseStamped()
         pour_pose.header = grasp_pose.header
-        pour_pose.pose.position = grasp_pose.pose.position  
+        pour_pose.pose.position = grasp_pose.pose.position
         pour_pose.pose.orientation = Quaternion(*q_new)
 
         rospy.loginfo("[PourCereal] Pouring with rotated orientation.")
@@ -264,7 +265,7 @@ class PourCereal(smach.State):
         self.group.clear_pose_targets()
 
         return "succeeded" if success else "failed"
-    
+
 
 class SelectObject(smach.State):
     """
@@ -294,14 +295,14 @@ class SelectObject(smach.State):
 
         rospy.logwarn(f"Target object '{self._target_name}' not found.")
         return "failed"
-    
+
 
 class CheckDetectionResult(smach.State):
     def __init__(self):
         super().__init__(
             outcomes=["found_both", "retry"],
             input_keys=["detected_objects"],
-            output_keys=["container_objects"]
+            output_keys=["container_objects"],
         )
 
     def execute(self, userdata):
@@ -322,6 +323,8 @@ class CheckDetectionResult(smach.State):
             rospy.loginfo("[CheckDetectionSuccess] Found both cereal and container.")
             return "found_both"
         else:
-            rospy.logwarn("[CheckDetectionSuccess] Missing cereal or container. Retrying...")
+            rospy.logwarn(
+                "[CheckDetectionSuccess] Missing cereal or container. Retrying..."
+            )
             rospy.sleep(1.0)  # Optional: wait briefly before re-detecting
             return "retry"

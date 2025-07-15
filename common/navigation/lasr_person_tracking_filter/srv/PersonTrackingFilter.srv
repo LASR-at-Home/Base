@@ -1,0 +1,19 @@
+# Request
+string command  # "initialize", "update", "predict", "get_state", "is_reasonable"
+float64 x  # Position x
+float64 y  # Position y
+time timestamp  # Timestamp for the operation
+float64 detection_quality  # Quality score for update (0-1)
+float64 max_deviation  # Maximum deviation for reasonableness check
+---
+# Response
+bool success  # Operation success flag
+string message  # Status message
+bool initialized  # Whether filter is initialized
+float64 position_x  # Current estimated position x
+float64 position_y  # Current estimated position y
+float64 velocity_x  # Current estimated velocity x
+float64 velocity_y  # Current estimated velocity y
+float64 speed  # Current estimated speed
+bool is_reasonable  # For reasonableness check
+float64[] position_covariance  # Position covariance matrix (flattened 2x2)

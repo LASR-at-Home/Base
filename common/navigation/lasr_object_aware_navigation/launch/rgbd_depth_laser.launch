@@ -1,0 +1,15 @@
+<launch>
+  <arg name="image" default="/xtion/depth_registered/image_raw"/>
+  <arg name="scan"  default="rgbd_scan"/>
+  <arg name="multiple" default="false"/>
+  <arg name="tf_prefix" default=""/>
+
+  <node pkg="depthimage_to_laserscan" type="pointcloud_to_laserscan_node" name="depthimage_to_laserscan">
+    <remap from="image" to="$(arg image)"/>
+    <remap from="scan"  to="$(arg scan)"/>
+
+    <rosparam file="$(find tiago_laser_sensors)/config/rgbd_depth_laser.yaml" command="load"/>
+
+    <param if="$(arg multiple)" name="output_frame_id" value="$(arg tf_prefix)/base_footprint"/>
+  </node>
+</launch>

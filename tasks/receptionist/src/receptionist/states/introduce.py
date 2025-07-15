@@ -28,7 +28,6 @@ from lasr_vision_msgs.srv import (
 
 
 class ClearSeatingDetections(smach.State):
-
     def __init__(self):
         super().__init__(
             outcomes=["succeeded", "failed"],
@@ -92,9 +91,7 @@ class Recognise(smach.State):
             return detection
 
     def _crop_image(
-        self,
-        person_detections: List[Detection3D],
-        rgb_image: Image,
+        self, person_detections: List[Detection3D], rgb_image: Image
     ) -> Tuple[Image, Image]:
         """Crops the RGB and depth images to the most centred person in the detections, This is
         to handle the case where multiple people are detected, so that when we pass to the
@@ -298,7 +295,6 @@ class GetGuestData(smach.State):
 
 
 class GetIntroductionStr(smach.State):
-
     def __init__(self):
         super().__init__(
             outcomes=["succeeded", "failed"],
@@ -350,11 +346,7 @@ class Introduce(smach.StateMachine):
             rospy.logerr("Index out of bounds for people detection points.")
             return "failed"
 
-    def __init__(
-        self,
-        guest_to_introduce: str,
-        can_detect_second_guest: bool = False,
-    ):
+    def __init__(self, guest_to_introduce: str, can_detect_second_guest: bool = False):
         super().__init__(
             outcomes=["succeeded", "failed"],
             input_keys=["guest_data", "guest_seat_point", "seated_guest_locs"],
@@ -429,10 +421,7 @@ class Introduce(smach.StateMachine):
                     smach.StateMachine.add(
                         "WAIT",
                         Wait(0.25),
-                        transitions={
-                            "succeeded": "RECOGNISE",
-                            "failed": "failed",
-                        },
+                        transitions={"succeeded": "RECOGNISE", "failed": "failed"},
                     )
                     smach.StateMachine.add(
                         "RECOGNISE",
@@ -454,9 +443,7 @@ class Introduce(smach.StateMachine):
                             "succeeded": "GET_INTRODUCTION_STR_1",
                             "failed": "failed",
                         },
-                        remapping={
-                            "relevant_guest_data": "relevant_guest_data",
-                        },
+                        remapping={"relevant_guest_data": "relevant_guest_data"},
                     )
 
                     smach.StateMachine.add(
@@ -466,9 +453,7 @@ class Introduce(smach.StateMachine):
                             "succeeded": "SAY_INTRODUCTION",
                             "failed": "failed",
                         },
-                        remapping={
-                            "introduction_str": "text",
-                        },
+                        remapping={"introduction_str": "text"},
                     )
                     smach.StateMachine.add(
                         "SAY_INTRODUCTION",
@@ -509,9 +494,7 @@ class Introduce(smach.StateMachine):
                             "succeeded": "SAY_INTRODUCTION_2",
                             "failed": "failed",
                         },
-                        remapping={
-                            "introduction_str": "text",
-                        },
+                        remapping={"introduction_str": "text"},
                     )
                     smach.StateMachine.add(
                         "SAY_INTRODUCTION_2",
@@ -524,9 +507,7 @@ class Introduce(smach.StateMachine):
                         remapping={"text": "text"},
                     )
                 smach.Iterator.set_contained_state(
-                    "CONTAINER_SM",
-                    container_sm,
-                    loop_outcomes=["continue"],
+                    "CONTAINER_SM", container_sm, loop_outcomes=["continue"]
                 )
             self.add(
                 "INTRODUCTION_ITERATOR",
@@ -540,9 +521,6 @@ class Introduce(smach.StateMachine):
             self.add(
                 "CLEAR_SEATING_DETECTIONS",
                 ClearSeatingDetections(),
-                transitions={
-                    "succeeded": "succeeded",
-                    "failed": "failed",
-                },
+                transitions={"succeeded": "succeeded", "failed": "failed"},
                 remapping={"guest_data": "guest_data"},
             )
