@@ -1,6 +1,6 @@
 table:
   pose: 
-    position: 
+  -position: 
       x: -1.1369509988490056
       y: -5.830103254567616
       z: 0.0

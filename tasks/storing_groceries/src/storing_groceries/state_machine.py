@@ -29,8 +29,7 @@ def create_object_selection_iterator(use_arm=True):
     with recovery_sm:
         smach.StateMachine.add(
             "GO_TO_LOCATION",
-            GoToLocation(location_param_key="" \
-            "current_location"),
+            GoToLocation(location_param_key="current_location"),
             transitions={"succeeded": "DETECT_OBJECTS", "failed": "failed"},
         )
 
@@ -78,34 +77,56 @@ class StoringGroceries(smach.StateMachine):
                 "SAY_GOING_TO_TABLE",
                 Say(text="I am going to the table"),
                 transitions={
-                    "succeeded": "RETRY_SELECT_OBJECT",
+                    "succeeded": "GO_TO_TABLE",
                     "aborted": "failed",
                     "preempted": "failed",
                 },
             )
 
-            recovery_locations = []
-            for p in rospy.get_param("/storing_groceries/table/pose"):
-                recovery_locations.append(
-                    PoseStamped(
-                        header=Header(frame_id="map"),
-                        pose=Pose(
-                            position=Point(**p["position"]),
-                            orientation=Quaternion(**p["orientation"])
-                        )
-                    )
-                )
+            # recovery_locations = []
+            # for p in rospy.get_param("/storing_groceries/table/pose"):
+            #     recovery_locations.append(
+            #         PoseStamped(
+            #             header=Header(frame_id="map"),
+            #             pose=Pose(
+            #                 position=Point(**p["position"]),
+            #                 orientation=Quaternion(**p["orientation"]),
+            #             ),
+            #         )
+            #     )
 
+            # retry_iterator = create_object_selection_iterator(use_arm)
+            # retry_iterator.userdata.recovery_locations = recovery_locations
 
-            retry_iterator = create_object_selection_iterator(use_arm)
-            retry_iterator.userdata.recovery_locations = recovery_locations
+            # smach.StateMachine.add(
+            #     "RETRY_SELECT_OBJECT",
+            #     retry_iterator,
+            #     transitions={
+            #         "succeeded": "GRASP_OBJECT" if use_arm else "HELP_ME_GRASPING",
+            #         "exhausted": "HELP_ME_GRASPING",
+            #         "failed": "failed",
+            #     },
+            # )
 
             smach.StateMachine.add(
-                "RETRY_SELECT_OBJECT",
-                retry_iterator,
+                "GO_TO_TABLE",
+                GoToLocation(location_param="/storing_groceries/table/pose"),
+                transitions={
+                    "succeeded": "DETECT_OBJECTS",
+                    "failed": "failed",
+                },
+            )
+            smach.StateMachine.add(
+                "DETECT_OBJECTS",
+                DetectObjects(),
+                transitions={"succeeded": "SELECT_OBJECT", "failed": "failed"},
+            )
+
+            smach.StateMachine.add(
+                "SELECT_OBJECT",
+                SelectObject(use_arm),
                 transitions={
                     "succeeded": "GRASP_OBJECT" if use_arm else "HELP_ME_GRASPING",
-                    "exhausted": "HELP_ME_GRASPING",
                     "failed": "failed",
                 },
             )

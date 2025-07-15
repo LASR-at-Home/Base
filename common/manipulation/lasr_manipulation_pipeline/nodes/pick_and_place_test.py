@@ -22,7 +22,7 @@ from lasr_manipulation_msgs.msg import PickAction, PickGoal, PlaceAction, PlaceG
 
 
 PACKAGE_PATH: str = rospkg.RosPack().get_path("lasr_manipulation_pipeline")
-MESH_NAME: str = "pringles.ply"
+MESH_NAME: str = "cereal.ply"
 
 
 class GraspingPipeline:
