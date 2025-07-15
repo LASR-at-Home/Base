@@ -4,9 +4,9 @@ import tf2_ros
 import tf2_geometry_msgs
 from geometry_msgs.msg import PoseStamped
 from sensor_msgs.msg import Image
-from cv2_img import msg_to_cv2_img, cv2_img_to_msg
 import cv2
 import smach
+from cv_bridge import CvBridge
 
 
 class SelectObject(smach.State):
@@ -30,6 +30,11 @@ class SelectObject(smach.State):
         self._use_arm = use_arm
         self._range = range
         self._base_frame = base_frame
+        self._referee_pub = rospy.Publisher(
+            "/referee_view", Image, latch=True, queue_size=1
+        )
+        self._bridge = CvBridge()
+
         self.tf_buffer = tf2_ros.Buffer()
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer)
 
@@ -85,7 +90,7 @@ class SelectObject(smach.State):
             userdata.selected_object_name = closest_obj[0].name
             rospy.loginfo(f"Selected object: {closest_obj[0].name}")
 
-            cv_im = msg_to_cv2_img(closest_img)
+            cv_im = self._bridge.imgmsg_to_cv2(closest_img, desired_encoding="rgb8")
             label, xywh, confidence = (
                 closest_obj[0].name,
                 closest_obj[0].xywh,
@@ -107,7 +112,7 @@ class SelectObject(smach.State):
                 (0, 255, 0),
                 2,
             )
-            image_msg = cv2_img_to_msg(cv_im)
+            image_msg = self._bridge.cv2_to_imgmsg(cv_im, encoding="rgb8")
             self._referee_pub.publish(image_msg)
 
             return "succeeded"
