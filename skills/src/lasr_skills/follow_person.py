@@ -131,6 +131,8 @@ class PersonFollowingData:
         self.scan_position_duration = 1.5
         self.recovery_timeout = 30.0
         self.cancel_goal_timeout = 10.0  # this should actually be big
+        self.aborted_times = 0
+        self.aborted_threshold = 3
 
         # Detection quality parameters
         self.max_distance_threshold = 0.9
@@ -1272,9 +1274,14 @@ class TrackingActiveState(smach.State):
 
             # Check if following is complete (no movement for a while)
             if (
-                self.sm_manager.shared_data.first_tracking_done
-                and rospy.Time.now() - self.sm_manager.shared_data.last_movement_time
-                > self.sm_manager.shared_data.target_moving_timeout_duration * 1.0
+                    (
+                            self.sm_manager.shared_data.first_tracking_done
+                            and rospy.Time.now() - self.sm_manager.shared_data.last_movement_time
+                            > self.sm_manager.shared_data.target_moving_timeout_duration * 1.0
+                    ) or (
+                            # this is for if we just cannot complete moves constantly then we give up and ask.
+                            self.sm_manager.shared_data.aborted_times >= self.sm_manager.shared_data.aborted_threshold
+                    )
             ):
                 self.sm_manager.shared_data.pause_add_targets = True
                 rospy.loginfo("Following complete - force to stop by timeout.")
@@ -1336,7 +1343,7 @@ class TrackingActiveState(smach.State):
                 )
                 if not self.sm_manager.shared_data.first_tracking_done:
                     dynamic_stopping_distance = max(
-                        self.sm_manager.shared_data.stopping_distance / 5, 0.5
+                        self.sm_manager.shared_data.stopping_distance / 5, 0.4
                     )
                     rospy.logwarn("First goal, using minimum following threshold.")
 
@@ -1445,7 +1452,7 @@ class TrackingActiveState(smach.State):
                 and rospy.Time.now() - self.sm_manager.shared_data.last_movement_time
                 > self.sm_manager.shared_data.target_moving_timeout_duration
                 and rospy.Time.now() - self.sm_manager.shared_data.added_new_target_time
-                > self.sm_manager.shared_data.target_moving_timeout_duration
+                > self.sm_manager.shared_data.target_moving_timeout_duration  # We probably don't want this restriction anyway, but this is a lot of time already.
             ):
                 self.sm_manager.shared_data.pause_add_targets = True
                 rospy.loginfo("Following complete - force to stop by timeout.")
@@ -1536,19 +1543,20 @@ class NavigationState(smach.State):
             current_time = rospy.Time.now()
             navigation_elapsed_time = (current_time - navigation_start_time).to_sec()
 
-            # if navigation_elapsed_time >= self.navigation_timeout:
-            #     rospy.logwarn(
-            #         f"Navigation timeout reached ({self.navigation_timeout}s). Canceling current goal."
-            #     )
-            #     # Cancel the current navigation goal
-            #     self.sm_manager.move_base_client.cancel_goal()
-            #     rospy.loginfo(
-            #         "Navigation goal canceled due to timeout, treating as successful completion"
-            #     )
-            #     self.sm_manager.shared_data.last_movement_time = rospy.Time.now()
-            #     self.sm_manager.shared_data.added_new_target_time = rospy.Time.now()
-            #     self._send_face_target_goal(self.sm_manager.shared_data.current_goal)
-            #     return "navigation_complete"
+            if navigation_elapsed_time >= self.navigation_timeout:
+                rospy.logwarn(
+                    f"Navigation timeout reached ({self.navigation_timeout}s). Canceling current goal."
+                )
+                # Cancel the current navigation goal
+                self.sm_manager.move_base_client.cancel_goal()
+                rospy.loginfo(
+                    "Navigation goal canceled due to timeout, treating as successful completion"
+                )
+                self.sm_manager.shared_data.last_movement_time = rospy.Time.now()
+                self.sm_manager.shared_data.added_new_target_time = rospy.Time.now()
+                self._send_face_target_goal(self.sm_manager.shared_data.current_goal)
+                self.sm_manager.shared_data.aborted_times += 1
+                return "navigation_complete"
 
             # Keep looking at detected person during navigation
             if self.sm_manager.shared_data.last_sam2_target:
@@ -1599,6 +1607,10 @@ class NavigationState(smach.State):
                 # Navigation has completed (successfully or not)
                 if nav_state == GoalStatus.SUCCEEDED:
                     rospy.loginfo("Navigation completed successfully")
+                    self.sm_manager.shared_data.aborted_times = 0
+                elif nav_state == GoalStatus.ABORTED:
+                    rospy.loginfo("Navigation completed with error")
+                    self.sm_manager.shared_data.aborted_times += 1
                 else:
                     rospy.logwarn(f"Navigation ended with status: {nav_state}")
 
