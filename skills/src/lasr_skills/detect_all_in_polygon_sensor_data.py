@@ -60,7 +60,7 @@ class ProcessDetections(smach.State):
             """Calculates the Euclidean distance between two points."""
             return np.sqrt((point1.x - point2.x) ** 2 + (point1.y - point2.y) ** 2)
 
-        new_detections: List[Tuple[Detection3D, PointCloud2]] = []
+        new_detections: List[Tuple[Detection3D, PointCloud2, Image]] = []
 
         try:
             for detection in userdata.detections_3d:
@@ -69,7 +69,7 @@ class ProcessDetections(smach.State):
 
                 # Check if the detection is a new object
                 is_new_object = True
-                for existing_detection, pcl in userdata.detected_objects:
+                for existing_detection, pcl, img in userdata.detected_objects:
                     if (
                         existing_detection.name == detection.name
                         and euclidean_distance(
@@ -84,7 +84,7 @@ class ProcessDetections(smach.State):
                         break
 
                 if is_new_object:
-                    new_detections.append((detection, userdata.pcl))
+                    new_detections.append((detection, userdata.pcl, userdata.image_raw))
 
             userdata.debug_images.append((userdata.image_raw, new_detections))
             userdata.detected_objects.extend(new_detections)
@@ -92,7 +92,7 @@ class ProcessDetections(smach.State):
                 f"Processed detections. Total detected objects: {len(userdata.detected_objects)}"
             )
             rospy.loginfo("Detected objects:")
-            for obj, pcl in userdata.detected_objects:
+            for obj, pcl, img in userdata.detected_objects:
                 rospy.loginfo(
                     f" - {obj.name} at ({obj.point.x}, {obj.point.y}, {obj.point.z})"
                 )
@@ -497,7 +497,7 @@ class DetectAllInPolygonSensorData(smach.StateMachine):
             cv2_image = msg_to_cv2_img(image_raw)
             # Loop over each detection, annotate image with bounding boxes
             # tile images, and publish
-            for detection, pcl in detections:
+            for detection, pcl, img in detections:
                 xywh = detection.xywh
                 label = detection.name
                 confidence = detection.confidence
