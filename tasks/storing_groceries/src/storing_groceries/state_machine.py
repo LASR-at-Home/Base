@@ -24,6 +24,45 @@ from std_msgs.msg import Header
 from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion
 
 
+def create_object_selection_iterator(use_arm=True):
+    recovery_sm = smach.StateMachine(outcomes=["succeeded", "not_found", "failed"])
+    with recovery_sm:
+        smach.StateMachine.add(
+            "GO_TO_LOCATION",
+            GoToLocation(location_param_key="" \
+            "current_location"),
+            transitions={"succeeded": "DETECT_OBJECTS", "failed": "failed"},
+        )
+
+        smach.StateMachine.add(
+            "DETECT_OBJECTS",
+            DetectObjects(),
+            transitions={"succeeded": "SELECT_OBJECT", "failed": "failed"},
+        )
+
+        smach.StateMachine.add(
+            "SELECT_OBJECT",
+            SelectObject(use_arm),
+            transitions={
+                "succeeded": "succeeded",
+                "not_found": "failed",
+                "failed": "failed",
+            },
+        )
+
+    recovery_iterator = smach.Iterator(
+        outcomes=["succeeded", "failed", "exhausted"],
+        input_keys=["recovery_locations"],
+        output_keys=["selected_object", "selected_object_name"],
+        it=lambda ud: iter(ud.recovery_locations),
+        it_label="current_location",
+        exhausted_outcome="exhausted",
+        state=recovery_sm,
+    )
+
+    return recovery_iterator
+
+
 class StoringGroceries(smach.StateMachine):
 
     def __init__(self, use_arm: bool = True) -> None:
@@ -32,39 +71,41 @@ class StoringGroceries(smach.StateMachine):
         with self:
 
             smach.StateMachine.add(
-                "START", Start(), transitions={"succeeded": "DETECT_OBJECTS"}
+                "START", Start(), transitions={"succeeded": "SAY_GOING_TO_TABLE"}
             )
 
             smach.StateMachine.add(
                 "SAY_GOING_TO_TABLE",
                 Say(text="I am going to the table"),
                 transitions={
-                    "succeeded": "GO_TO_TABLE",
+                    "succeeded": "RETRY_SELECT_OBJECT",
                     "aborted": "failed",
                     "preempted": "failed",
                 },
             )
 
-            smach.StateMachine.add(
-                "GO_TO_TABLE",
-                GoToLocation(location_param="/storing_groceries/table/pose"),
-                transitions={
-                    "succeeded": "DETECT_OBJECTS",
-                    "failed": "failed",
-                },
-            )
+            recovery_locations = []
+            for p in rospy.get_param("/storing_groceries/table/pose"):
+                recovery_locations.append(
+                    PoseStamped(
+                        header=Header(frame_id="map"),
+                        pose=Pose(
+                            position=Point(**p["position"]),
+                            orientation=Quaternion(**p["orientation"])
+                        )
+                    )
+                )
+
+
+            retry_iterator = create_object_selection_iterator(use_arm)
+            retry_iterator.userdata.recovery_locations = recovery_locations
 
             smach.StateMachine.add(
-                "DETECT_OBJECTS",
-                DetectObjects(),
-                transitions={"succeeded": "SELECT_OBJECT", "failed": "failed"},
-            )
-
-            smach.StateMachine.add(
-                "SELECT_OBJECT",
-                SelectObject(use_arm),
+                "RETRY_SELECT_OBJECT",
+                retry_iterator,
                 transitions={
                     "succeeded": "GRASP_OBJECT" if use_arm else "HELP_ME_GRASPING",
+                    "exhausted": "HELP_ME_GRASPING",
                     "failed": "failed",
                 },
             )
@@ -78,7 +119,6 @@ class StoringGroceries(smach.StateMachine):
                 },
             )
 
-            # if not using the arm
             smach.StateMachine.add(
                 "HELP_ME_GRASPING",
                 Say(
@@ -123,7 +163,6 @@ class StoringGroceries(smach.StateMachine):
                 },
             )
 
-            # if not using the arm
             smach.StateMachine.add(
                 "HELP_ME_PLACING",
                 Say(format_str="I can't place the {} myself."),
@@ -134,6 +173,7 @@ class StoringGroceries(smach.StateMachine):
                 },
                 remapping={"placeholders": "selected_object_name"},
             )
+
             smach.StateMachine.add(
                 "HELP_ME_PLACING_1",
                 Say(format_str="Please place it on the {} shelf."),
