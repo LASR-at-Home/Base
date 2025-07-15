@@ -23,7 +23,6 @@ from lasr_skills import (
 from gpsr.states import (
     Talk,
     QuestionAnswer,
-    GoFindTheObject,
     ObjectComparison,
     CountObject,
     FindObjectAtLoc,
@@ -101,38 +100,6 @@ OBJECT_CATEGORY_LOCATIONS = {
     "dishes": "dishwasher",
     "dish": "dishwasher",
 }
-
-
-"""
-Helpers
-"""
-
-
-# right after your imports:
-class ClothingString(str):
-    """
-    A str subclass whose .split property returns [colour, garment],
-    with:
-      - underscores/hyphens → spaces
-      - lowercasing
-      - trailing 's' stripped from the garment
-    """
-
-    def __new__(cls, raw: str):
-        norm = raw.replace("_", " ").replace("-", " ").lower()
-        return super().__new__(cls, norm)
-
-    @property
-    def split(self):
-        # split into [colour, rest_of_garment]
-        parts = super().split(None, 1)
-        if len(parts) == 1:
-            parts.append("")
-        # singularize plural garments: "t shirts" → "t shirt"
-        col, cloth = parts
-        if cloth.endswith("s"):
-            cloth = cloth[:-1]
-        return [col, cloth]
 
 
 def increment_state_count() -> int:
@@ -677,9 +644,9 @@ def guide(command_param: Dict, sm: smach.StateMachine) -> None:
                 text=f"Sorry, I couldn't find anyone wearing {criteria_value} at the {start_loc}."
             ),
             transitions={
-                "succeeded": "succeeded",
-                "aborted": "succeeded",
-                "preempted": "succeeded",
+                "succeeded": f"STATE_{STATE_COUNT + 1}",
+                "aborted": f"STATE_{STATE_COUNT + 1}",
+                "preempted": f"STATE_{STATE_COUNT + 1}",
             },
         )
 
@@ -721,12 +688,41 @@ def deliver(command_param: Dict, sm: smach.StateMachine) -> None:
 
 
     """
+    if "object" in command_param:
+        object_name = command_param["object"]
+    elif "object_category" in command_param:
+        object_name = command_param["object_category"]
+    else:
+        raise ValueError(
+            "Deliver command received with no object or object category in command parameters"
+        )
 
     if "room" in command_param:
         waypoints: List[Pose] = get_person_detection_poses(command_param["room"])
         polygon: Polygon = get_room_polygon(command_param["room"])
     else:
-        raise ValueError("Deliver command received with no room in command parameters")
+        start_pose = rospy.get_param("/gpsr/arena/start_pose")
+        goal = Pose(
+            position=Point(**start_pose["position"]),
+            orientation=Quaternion(**start_pose["orientation"]),
+        )
+        sm.add(
+            f"STATE_{increment_state_count()}",
+            GoToLocation(goal),
+            transitions={
+                "succeeded": f"STATE_{STATE_COUNT + 1}",
+                "failed": f"STATE_{STATE_COUNT + 1}",
+            },
+        )
+        sm.add(
+            f"STATE_{increment_state_count()}",
+            HandoverObject(object_name=object_name),
+            transitions={
+                "succeeded": f"STATE_{STATE_COUNT + 1}",
+                "failed": f"STATE_{STATE_COUNT + 1}",
+            },
+        )
+        return
 
     if "name" in command_param:
         criteria = "name"
@@ -744,15 +740,6 @@ def deliver(command_param: Dict, sm: smach.StateMachine) -> None:
         criteria = None
         waypoints = [get_current_pose()]
     output_string += f" in the {command_param['room']}"
-
-    if "object" in command_param:
-        object_name = command_param["object"]
-    elif "object_category" in command_param:
-        object_name = command_param["object_category"]
-    else:
-        raise ValueError(
-            "Deliver command received with no object or object category in command parameters"
-        )
     output_string.replace("object", object_name)
 
     sm.add(
@@ -1099,6 +1086,11 @@ def find(command_param: Dict, sm: smach.StateMachine) -> None:
         sm.add(
             f"STATE_{increment_state_count()}",
             Say(text=f"I will go to the {location_str} and find a {object_str}"),
+            transitions={
+                "succeeded": f"STATE_{STATE_COUNT + 1}",
+                "aborted": f"STATE_{STATE_COUNT + 1}",
+                "preempted": f"STATE_{STATE_COUNT + 1}",
+            },
         )
 
         if "location" in command_param:
@@ -1395,9 +1387,9 @@ def count(command_param: Dict, sm: smach.StateMachine) -> None:
                     text=f"There are no people wearing {criteria_value} in the {command_param['room']}"
                 ),
                 transitions={
-                    "succeeded": "succeeded",
-                    "aborted": "succeeded",
-                    "preempted": "succeeded",
+                    "succeeded": f"STATE_{STATE_COUNT + 1}",
+                    "aborted": f"STATE_{STATE_COUNT + 1}",
+                    "preempted": f"STATE_{STATE_COUNT + 1}",
                 },
             )
 
@@ -1409,9 +1401,9 @@ def count(command_param: Dict, sm: smach.StateMachine) -> None:
                 ),
                 remapping={"placeholders": "people_count"},
                 transitions={
-                    "succeeded": "succeeded",
-                    "aborted": "succeeded",
-                    "preempted": "succeeded",
+                    "succeeded": f"STATE_{STATE_COUNT + 1}",
+                    "aborted": f"STATE_{STATE_COUNT + 1}",
+                    "preempted": f"STATE_{STATE_COUNT + 1}",
                 },
             )
         else:
@@ -1493,10 +1485,12 @@ def build_state_machine(parsed_command: Dict) -> smach.StateMachine:
             elif command_verb == "go":
                 person = not any(
                     [
-                        param in ["object", "object_category"]
+                        k in ["object", "object_category"]
                         for param in command_params[index:]
+                        for k in param.keys()
                     ]
                 )
+                rospy.loginfo(f"Person: {person}")
                 go(command_param, sm, person)
             elif command_verb == "find":
                 find(command_param, sm)
@@ -1505,8 +1499,7 @@ def build_state_machine(parsed_command: Dict) -> smach.StateMachine:
             elif command_verb == "count":
                 count(command_param, sm)
             elif command_verb == "follow":
-                pass
-                # follow(command_param, sm, greet_person=len(command_verbs) == 1)
+                follow(command_param, sm, greet_person=len(command_verbs) == 1)
             else:
                 raise ValueError(f"Unrecognised command verb: {command_verb}")
 

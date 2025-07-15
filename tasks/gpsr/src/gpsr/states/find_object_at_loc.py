@@ -103,17 +103,29 @@ class FindObjectAtLoc(smach.StateMachine):
                         format_str="I have found {} of category "
                         + self._object_category
                     ),
-                    transitions={"succeeded": "succeeded"},
+                    transitions={
+                        "succeeded": "succeeded",
+                        "preempted": "succeeded",
+                        "aborted": "succeeded",
+                    },
                     remapping={"placeholders": "object_name"},
                 )
             else:
                 smach.StateMachine.add(
                     "SAY_OBJECT_FOUND",
                     Say(f"I have found the {self._object_name}"),
-                    transitions={"succeeded": "succeeded"},
+                    transitions={
+                        "succeeded": "succeeded",
+                        "preempted": "succeeded",
+                        "aborted": "succeeded",
+                    },
                 )
             smach.StateMachine.add(
                 "SAY_OBJECT_NOT_FOUND",
                 Say(f"I could not find the {self._object_name} here."),
-                transitions={"succeeded": "failed"},
+                transitions={
+                    "succeeded": "failed",
+                    "preempted": "failed",
+                    "aborted": "failed",
+                },
             )
