@@ -8,23 +8,15 @@ import smach
 
 
 class SelectObject(smach.State):
-    """
-    Selects a target object.
-    Prioritises graspable objects.
-    Choose the closest object within range
-    """
-
     def __init__(self, use_arm: bool = True, range: float = np.inf, base_frame: str = "base_footprint"):
         super().__init__(
-            outcomes=["succeeded", "failed"],
+            outcomes=["succeeded", "failed", "not_found"],
             input_keys=["detected_objects"],
             output_keys=["selected_object", "selected_object_name"],
         )
         self._use_arm = use_arm
         self._range = range
         self._base_frame = base_frame
-
-
         self.tf_buffer = tf2_ros.Buffer()
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer)
 
@@ -52,20 +44,17 @@ class SelectObject(smach.State):
                         pose_base.pose.position.y,
                         pose_base.pose.position.z,
                     ])
-                    
                     rospy.loginfo(f"Found object '{obj.name}' at distance {distance:.2f}")
-
                     if distance <= self._range and rospy.get_param(f"/storing_groceries/objects/{obj.name}/graspable", False):
                         if distance < closest_dist:
                             closest_dist = distance
                             closest_obj = (obj, pcl)
-
                 except Exception as e:
                     rospy.logwarn(f"TF transform failed for {obj.name}: {e}")
                     continue
             else:
                 closest_obj = (obj, pcl)
-                break 
+                break
 
         if closest_obj:
             userdata.selected_object = closest_obj
@@ -74,4 +63,4 @@ class SelectObject(smach.State):
             return "succeeded"
 
         rospy.logwarn("No suitable object found within range.")
-        return "failed"
+        return "not_found"
