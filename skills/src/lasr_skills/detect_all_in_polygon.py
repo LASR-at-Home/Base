@@ -347,7 +347,7 @@ class DetectAllInPolygon(smach.StateMachine):
         self._min_confidence = min_confidence
         self._min_new_object_dist = min_new_object_dist
         self._debug_publisher = rospy.Publisher(
-            "/detect_all_in_polygon/debug",
+            "/referee_view",
             Image,
             queue_size=10,
         )
