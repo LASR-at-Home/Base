@@ -43,7 +43,7 @@ class SpeechRecovery(smach.State):
         prior_data: Dict[str, List[str]] = rospy.get_param(param_key)
         self._available_names = [name.lower() for name in prior_data["names"]]
 
-        # self._available_single_drinks = ["cola", "water", "milk", "fanta", "dubbelfris"]
+        # self._available_single_drinks = ["cola", "water", "milk", "fanta", "kuat"]
         # self._available_double_drinks = ["ice", "tea", "big", "coke"]
         # self._double_drinks_dict = {
         #     "ice": "ice tea",
@@ -198,8 +198,8 @@ class SpeechRecovery(smach.State):
                 return "unknown"
             else:
                 print("Last resort drink")
-                if self._recover_dubbelfris(sentence_list):
-                    return "dubbelfris"
+                if self._recover_kuat(sentence_list):
+                    return "kuat"
                 closest_spelt = self._handle_closest_spelt(
                     sentence_list, self._available_drinks
                 )
@@ -303,20 +303,20 @@ class SpeechRecovery(smach.State):
                     closest_word = available_word
         return closest_word
 
-    def _recover_dubbelfris(self, sentence_list: List[str]) -> bool:
-        """Recover the drink dubbelfris if any of the words in the sentence list (transcription) is
+    def _recover_kuat(self, sentence_list: List[str]) -> bool:
+        """Recover the drink kuat if any of the words in the sentence list (transcription) is
         similar enough (lower than the threshold) in terms of pronounciation to the word.
 
         Args:
             sentence_list (List[str]): Transcription split up as a list of strings.
 
         Returns:
-            bool: Whether dubbelfris has been recovered
+            bool: Whether kuat has been recovered
         """
         for word in sentence_list:
-            if self._get_levenshtein_soundex_distance("dubbelfris", word) < 3:
+            if self._get_levenshtein_soundex_distance("kuat", word) < 3:
                 print(word)
-                print(self._get_levenshtein_soundex_distance("dubbelfris", word))
+                print(self._get_levenshtein_soundex_distance("kuat", word))
                 return True
         return False
 
