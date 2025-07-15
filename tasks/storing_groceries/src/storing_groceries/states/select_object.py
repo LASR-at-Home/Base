@@ -3,7 +3,9 @@ import numpy as np
 import tf2_ros
 import tf2_geometry_msgs
 from geometry_msgs.msg import PoseStamped
-
+from sensor_msgs.msg import Image
+from cv2_img import msg_to_cv2_img, cv2_img_to_msg
+import cv2
 import smach
 
 
@@ -41,9 +43,10 @@ class SelectObject(smach.State):
             return "failed"
 
         closest_obj = None
+        closest_img = None
         closest_dist = self._range
 
-        for obj, pcl in userdata.detected_objects:
+        for obj, pcl, img in userdata.detected_objects:
             if self._use_arm:
                 try:
                     pose = PoseStamped()
@@ -81,6 +84,32 @@ class SelectObject(smach.State):
             userdata.selected_object = closest_obj
             userdata.selected_object_name = closest_obj[0].name
             rospy.loginfo(f"Selected object: {closest_obj[0].name}")
+
+            cv_im = msg_to_cv2_img(closest_img)
+            label, xywh, confidence = (
+                closest_obj[0].name,
+                closest_obj[0].xywh,
+                closest_obj[0].confidence,
+            )
+            cv2.rectangle(
+                cv_im,
+                (int(xywh[0]), int(xywh[1])),
+                (int(xywh[0] + xywh[2]), int(xywh[1] + xywh[3])),
+                (0, 255, 0),
+                2,
+            )
+            cv2.putText(
+                cv_im,
+                f"{label} {confidence:.2f}",
+                (int(xywh[0]), int(xywh[1] - 10)),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.5,
+                (0, 255, 0),
+                2,
+            )
+            image_msg = cv2_img_to_msg(cv_im)
+            self._referee_pub.publish(image_msg)
+
             return "succeeded"
 
         rospy.logwarn("No suitable object found within range.")

@@ -11,7 +11,7 @@ from std_msgs.msg import Header
 from lasr_skills import DetectAllInPolygonSensorData, LookToPoint
 from shapely import Polygon as ShapelyPolygon
 from collections import defaultdict
-
+ 
 
 class ScanShelves(smach.StateMachine):
 
@@ -177,8 +177,37 @@ class ScanShelves(smach.StateMachine):
 
         for obj, _ in userdata.detected_objects:
             category = rospy.get_param(
-                f"/storing_groceries/objects/{obj.name}/category"
+                f"/storing_groceries/objects/{obj.name}/category", "unknown"
             )
+            if category == "unknown":
+                object_names = rospy.get_param("/storing_groceries/objects").keys()
+                categories = set()
+
+                for name in object_names:
+                    yaml_category = rospy.get_param(f"/storing_groceries/objects/{name}/category", None)
+                    if yaml_category:
+                        categories.add(yaml_category)
+
+                category_list_str = ", ".join(sorted(categories))
+
+                request = LlmRequest()
+                request.system_prompt = (
+                    "You are a robot finding the category of the given object. Respond with only one word."
+                )
+                request.prompt = f"What category does the object '{obj.name}' belong to the most among {category_list_str}? "
+                request.max_tokens = 10
+
+                response = self._llm(request)
+
+                response_text = response.output.strip().lower()
+                words = response_text.replace(",", "").split()
+                
+                category = "unknown"
+                for word in words:
+                    if word in categories:
+                        category = word
+                        break
+
             category_counts[category] += 1
 
         shelf_category = max(category_counts, key=lambda key: category_counts[key])
@@ -190,6 +219,7 @@ class ScanShelves(smach.StateMachine):
         object_category = rospy.get_param(
             f"/storing_groceries/objects/{userdata.selected_object[0].name}/category"
         )
+
         if object_category != userdata.shelf_category:
             userdata.say_str = f"{userdata.selected_object[0].name} is a {object_category}. This shelf contains {userdata.shelf_category}. Since it's the only shelf, I will place it here anwyay."
         else:
