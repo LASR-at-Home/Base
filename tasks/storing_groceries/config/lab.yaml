@@ -81,7 +81,7 @@ cabinet:
         y: 1.5746450424194336
         z: 0.5904803276062012
       z_min: 0.80
-      z_max: 1.09  
+      z_max: 1.09
 
 objects:
   breadsticks:

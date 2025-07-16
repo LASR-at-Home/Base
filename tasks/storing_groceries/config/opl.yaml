@@ -86,3 +86,158 @@ cabinet:
         z: 0.6285148859024048
       z_min: 0.60
       z_max: 0.87
+
+objects:
+
+  # foods
+  mayo:
+    graspable: false
+    category: "foods"
+    scale: false
+  tuna:
+    graspable: false
+    category: "foods"
+    scale: false
+  ketchup:
+    graspable: false
+    category: "foods"
+    scale: false
+  oats:
+    graspable: false
+    category: "foods"
+    scale: false
+  corn_flour:
+    graspable: false
+    category: "foods"
+    scale: false
+  broth:
+    graspable: false
+    category: "foods"
+    scale: false
+  broth_box:
+    graspable: false
+    category: "foods"
+    scale: false
+  
+  # snacks
+  peanuts:
+    graspable: false
+    category: "snacks"
+    scale: false
+  cornflakes:
+    graspable: false
+    category: "snacks"
+    scale: false
+  crisps:
+    graspable: false
+    category: "snacks"
+    scale: false
+  pringles:
+    graspable: false
+    category: "snacks"
+    scale: false
+  cheese_snack:
+    graspable: false
+    category: "snacks"
+    scale: false
+  chocolate_bar:
+    graspable: false
+    category: "snacks"
+    scale: false
+  gum_balls:
+    graspable: false
+    category: "snacks"
+    scale: false
+
+  # fruits
+  apple:
+    graspable: false
+    category: "fruits"
+    scale: false
+  lemon:
+    graspable: false
+    category: "fruits"
+    scale: false
+  lime:
+    graspable: false
+    category: "fruits"
+    scale: false
+  tangerine:
+    graspable: false
+    category: "fruits"
+    scale: false
+  pear:
+    graspable: false
+    category: "fruits"
+    scale: false
+  
+  # dishes
+  spoon:
+    graspable: false
+    category: "dishes"
+    scale: false
+  plate:
+    graspable: false
+    category: "dishes"
+    scale: false
+  cup:
+    graspable: false
+    category: "dishes"
+    scale: false
+  fork:
+    graspable: false
+    category: "dishes"
+    scale: false
+  bowl:
+    graspable: false
+    category: "dishes"
+    scale: false
+  knife:
+    graspable: false
+    category: "dishes"
+    scale: false
+  
+  # cleaning supplies
+  cloth:
+    graspable: false
+    category: "cleaning_supplies"
+    scale: false
+  polish:
+    graspable: false
+    category: "cleaning_supplies"
+    scale: false
+  brush:
+    graspable: false
+    category: "cleaning_supplies"
+    scale: false
+  sponge :
+    graspable: false
+    category: "cleaning_supplies"
+    scale: false
+  
+  # drinks
+  coffee:
+    graspable: false
+    category: "drinks"
+    scale: false
+  kuat:
+    graspable: false
+    category: "drinks"
+    scale: false
+  milk:
+    graspable: false
+    category: "drinks"
+    scale: false
+  orange_juice:
+    graspable: false
+    category: "drinks"
+    scale: false
+  fanta:
+    graspable: false
+    category: "drinks"
+    scale: false
+  coke:
+    graspable: false
+    category: "drinks"
+    scale: false
+  

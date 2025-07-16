@@ -206,20 +206,20 @@ class GoToLocation(smach.StateMachine):
                 "CHECK_RETRY",
                 CheckRetry(self._retry_attempts),
                 transitions={
-                    "retry": "CLEAR_COST_MAPS",
+                    "retry": "GO_TO_LOCATION",
                     "done": "RAISE_BASE",
                 },
                 remapping={"retry_count": "retry_count"},
             )
 
-            smach.StateMachine.add(
-                "CLEAR_COST_MAPS",
-                ClearCostMaps(),
-                transitions={
-                    "succeeded": "GO_TO_LOCATION",
-                    "failed": "RAISE_BASE",
-                },
-            )
+            # smach.StateMachine.add(
+            #     "CLEAR_COST_MAPS",
+            #     ClearCostMaps(),
+            #     transitions={
+            #         "succeeded": "GO_TO_LOCATION",
+            #         "failed": "RAISE_BASE",
+            #     },
+            # )
 
             if not IS_SIMULATION:
 
