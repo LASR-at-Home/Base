@@ -74,12 +74,6 @@ class SpeechRecovery(smach.State):
             w: d for d in self._available_double_drinks_whole for w in d.split()
         }
 
-        print(
-            self._available_double_drinks,
-            self._available_single_drinks,
-            self._double_drinks_dict,
-        )
-
         self._excluded_words = [
             "my",
             "name",
