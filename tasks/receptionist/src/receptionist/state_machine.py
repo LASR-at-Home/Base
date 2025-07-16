@@ -169,8 +169,8 @@ class Receptionist(smach.StateMachine):
                 "HANDLE_FAVOURITE_DRINK_GUEST_1",
                 HandleDrink("guest1"),
                 transitions={
-                    "succeeded": "FIND_DRINK_ON_TABLE_GUEST_1",
-                    "failed": "FIND_DRINK_ON_TABLE_GUEST_1",
+                    "succeeded": "succeeded",
+                    "failed": "succeeded",
                 },
             )
 

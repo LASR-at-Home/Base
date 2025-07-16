@@ -57,13 +57,16 @@ class SpeechRecovery(smach.State):
 
         self._available_drinks = [drink.lower() for drink in prior_data["drinks"]]
         # 1. Double-word drinks = drinks with a space
-        self._available_double_drinks = [d for d in self._available_drinks if " " in d]
+        self._available_double_drinks_whole = [d for d in self._available_drinks if " " in d]
+        self._available_double_drinks = [d.split() for d in self._available_drinks if len(d.split()) > 1][0]
 
         # 2. Single-word drinks = drinks with no space
         self._available_single_drinks = [d for d in self._available_drinks if " " not in d]
 
         # 3. Mapping: Each word in a double drink points to the double drink
-        self._double_drinks_dict = {w: d for d in self._available_double_drinks for w in d.split()}
+        self._double_drinks_dict = {w: d for d in self._available_double_drinks_whole for w in d.split()}
+
+        print(self._available_double_drinks, self._available_single_drinks, self._double_drinks_dict)
 
         
 
@@ -277,9 +280,12 @@ class SpeechRecovery(smach.State):
         Returns:
             str: Recovered drink phrase. 'unknown' is returned if no drink phrase is recovered.
         """
+        print(sentence_list)
+        print(self._available_double_drinks)
         for input_word in sentence_list:
             for available_word in self._available_double_drinks:
                 if input_word == available_word:
+                    print("INFERRED SECOND DRINK")
                     return self._double_drinks_dict[input_word]
         return "unknown"
 

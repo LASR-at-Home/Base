@@ -24,7 +24,7 @@ class HandleDrink(smach.StateMachine):
         self._face_table = face_table
 
         with self:
-            # Detect the nearest person
+            Detect the nearest person
             smach.StateMachine.add(
                 f"LOOK_CENTRE_BEVERAGE_GUEST_{guest_id}",
                 PlayMotion("look_centre"),
@@ -89,7 +89,7 @@ class HandleDrink(smach.StateMachine):
                 AskAndListen("Please speak louder. What is your favourite drink?"),
                 transitions={
                     "succeeded": f"REPEAT_PARSE_DRINK_GUEST_{guest_id}",
-                    "failed": f"SAY_FIND_DRINK_{guest_id}",
+                    "failed": f"REPEAT_PARSE_DRINK_GUEST_{guest_id}",
                 },
             )
 
@@ -107,9 +107,9 @@ class HandleDrink(smach.StateMachine):
                 f"SAY_FIND_DRINK_{guest_id}",
                 Say("Thank you! I will find your drink now."),
                 transitions={
-                    "succeeded": f"STOP_EYE_TRACKER_GUEST_{guest_id}",
-                    "preempted": f"STOP_EYE_TRACKER_GUEST_{guest_id}",
-                    "aborted": f"STOP_EYE_TRACKER_GUEST_{guest_id}",
+                    "succeeded": f"succeeded",
+                    "preempted": f"succeeded",
+                    "aborted": f"succeeded",
                 },
             )
 

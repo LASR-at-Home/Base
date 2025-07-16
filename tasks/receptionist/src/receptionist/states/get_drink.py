@@ -139,11 +139,11 @@ class GetDrink(smach.StateMachine):
                     rospy.loginfo(f"Guest Drink identified as: {drink}")
                     return "succeeded"
             rospy.logwarn(
-                f"Could not identify drink from transcription: {transcription}. Retrying..."
+                f"Could not identify drink directly from transcription: {transcription}."
             )
             
             request = LlmRequest()
-            request.system_prompt = f"You are a robot acting as a party host. You are tasked with identifying the favourite drink belonging to a guest. The possible drinks are {','.join(self._possible_drinks)}. You will receive input such as 'my favourite drink is cola'. Output only the drink, which must exactly match one of the possible drinks. In the previous example this would be 'cola'. If you can't identify the drink, output 'unknown'."
+            request.system_prompt = f"You are a robot acting as a party host. You are tasked with identifying the favourite drink belonging to a guest. You will receive input such as 'my favourite drink is cola'. Output only the drink, which must exactly match one of the possible drinks. In the previous example this would be 'cola'. If you can't identify the drink, output 'unknown'."
             request.prompt = f"The user says: {transcription}"
             request.max_tokens = 3  # Limit to a single word response
             response = self._llm(request)
@@ -164,7 +164,7 @@ class GetDrink(smach.StateMachine):
             else:
                 userdata.guest_data[self._guest_id]["drink"] = "unknown"
                 rospy.logwarn(
-                    f"Could not identify drink from transcription: {transcription}"
+                    f"Could not identify drink from LLM transcription: {transcription}"
                 )
                 return "failed"
 
