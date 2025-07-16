@@ -9,14 +9,14 @@ if __name__ == "__main__":
 
     request = TxtIndexRequest()
     txt_paths = []
-    for i in range(20):
+    for i in range(10):
         txt_paths.append(
-            f"/home/mattbarker/robot_club/lasr_ws/src/Base/tasks/gpsr/data/command_data/all_commands_german_open.txt_chunk_{i+1}.txt"
+            f"/home/mattbarker/robot_club/lasr_ws/src/Base/tasks/gpsr/data/command_data/all_commands_robocup_2025_chunk_{i+1}.txt"
         )
 
     request.txt_paths = txt_paths
     request.index_paths = [
-        "/home/mattbarker/robot_club/lasr_ws/src/Base/tasks/gpsr/data/faiss_indices/all_gpsr_commands_german_open.index"
+        "/home/mattbarker/robot_club/lasr_ws/src/Base/tasks/gpsr/data/faiss_indices/all_gpsr_commands_robocup_2025.index"
     ]
     request.index_factory_string = "IVF4096,PQ32"
 

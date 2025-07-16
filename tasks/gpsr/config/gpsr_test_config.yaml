@@ -26,7 +26,7 @@ arena:
             - - -1.9635904255331527
               - -10.262632978727208
           placeable: true
-        kitchen_counter:
+        kitchen_table:
           object_detection_polygon:
             - - -1.8984840425543874
               - -8.229867021279116

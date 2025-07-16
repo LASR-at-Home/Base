@@ -1,0 +1,66 @@
+{
+    "cleaning supplies": {
+        "items": [
+            "cloth",
+            "polish",
+            "brush",
+            "sponge"
+        ],
+        "singular": "cleaning supply"
+    },
+    "drinks": {
+        "items": [
+            "coffee",
+            "kuat",
+            "milk",
+            "orange juice",
+            "fanta",
+            "coke"
+        ],
+        "singular": "drink"
+    },
+    "foods": {
+        "items": [
+            "mayo",
+            "tuna",
+            "ketchup",
+            "oats",
+            "corn flour",
+            "broth"
+        ],
+        "singular": "food"
+    },
+    "fruits": {
+        "items": [
+            "apple",
+            "lemon",
+            "lime",
+            "tangerine",
+            "pear"
+        ],
+        "singular": "fruit"
+    },
+    "snacks": {
+        "items": [
+            "peanuts",
+            "cornflakes",
+            "crisps",
+            "pringles",
+            "cheese snack",
+            "chocolate bar",
+            "gum balls"
+        ],
+        "singular": "snack"
+    },
+    "dishes": {
+        "items": [
+            "spoon",
+            "plate",
+            "cup",
+            "fork",
+            "bowl",
+            "knife"
+        ],
+        "singular": "dish"
+    }
+}

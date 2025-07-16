@@ -1,0 +1,74 @@
+{
+    "bedside table": {
+        "placeable": true,
+        "object_category": null
+    },
+    "side table": {
+        "placeable": true,
+        "object_category": "snacks"
+    },
+    "bed": {
+        "placeable": true,
+        "object_category": null
+    },
+    "plant": {
+        "placeable": false,
+        "object_category": null
+    },
+    "kitchen table": {
+        "placeable": true,
+        "object_category": "dishes"
+    },
+    "dishwasher": {
+        "placeable": true,
+        "object_category": "cleaning supplies"
+    },
+    "sink": {
+        "placeable": true,
+        "object_category": null
+    },
+    "microwave": {
+        "placeable": false,
+        "object_category": null
+    },
+    "waste basket": {
+        "placeable": true,
+        "object_category": null
+    },
+    "shelf": {
+        "placeable": true,
+        "object_category": null
+    },
+    "refrigerator": {
+        "placeable": true,
+        "object_category": null
+    },
+    "trash bin": {
+        "placeable": true,
+        "object_category": null
+    },
+    "desk": {
+        "placeable": true,
+        "object_category": "fruits"
+    },
+    "bar": {
+        "placeable": true,
+        "object_category": "drinks"
+    },
+    "tv stand": {
+        "placeable": true,
+        "object_category": null
+    },
+    "cabinet": {
+        "placeable": true,
+        "object_category": "foods"
+    },
+    "sofa": {
+        "placeable": true,
+        "object_category": null
+    },
+    "seats": {
+        "placeable": false,
+        "object_category": null
+    }
+}

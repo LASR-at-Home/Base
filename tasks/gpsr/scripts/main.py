@@ -19,7 +19,7 @@ from pal_interaction_msgs.msg import TtsGoal, TtsAction
 
 def load_gpsr_configuration() -> Configuration:
     gpsr_data_dir = os.path.join(
-        rospkg.RosPack().get_path("gpsr"), "data", "german_open_data"
+        rospkg.RosPack().get_path("gpsr"), "data", "salvador_data"
     )
     """Loads the configuration for the GPSR command parser"""
     data_loader = GPSRDataLoader(data_dir=gpsr_data_dir)
@@ -87,7 +87,7 @@ def main() -> None:
             # command_parser_sm = CommandParserStateMachine(data_config=config)
             # command_parser_sm.execute()
             # parsed_command: Dict = command_parser_sm.userdata.parsed_command
-            command = "go to the kitchen counter then find a spoon and take it and bring it to me"
+            command = "go to the kitchen table then find a bowl and take it and bring it to me"
             parsed_command = gpsr_compile_and_parse(config, command)
             rospy.loginfo(f"Parsed command: {parsed_command}")
             sm = build_state_machine(parsed_command)

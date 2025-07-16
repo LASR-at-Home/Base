@@ -62,7 +62,7 @@ def main():
             file.write(f"{command}\n")
 
     loader = GPSRDataLoader(
-        data_dir="/home/mattbarker/robot_club/lasr_ws/src/Base/tasks/gpsr/data/german_open_data"
+        data_dir="/home/mattbarker/robot_club/lasr_ws/src/Base/tasks/gpsr/data/salvador_data"
     )
     data = loader.load_data()
     print(f"Loaded GPSR data: {data}")
@@ -98,7 +98,7 @@ def main():
         rospy.loginfo(f"Generated {len(all_commands)} commands.")
 
     with open(
-        "/home/mattbarker/robot_club/lasr_ws/src/Base/tasks/gpsr/data/command_data/all_commands.txt",
+        "/home/mattbarker/robot_club/lasr_ws/src/Base/tasks/gpsr/data/command_data/all_commands_robocup_2025.txt",
         "w",
     ) as file:
         for command in all_commands:
