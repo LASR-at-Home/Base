@@ -81,18 +81,10 @@ class PersonFollowingData:
         self.is_person_detected = False
         self.is_navigation_active = False
         self.recovery_mode_active = False
-        self.condition_flag_state = True
         self.first_tracking_done = False
         self.say_started = False
         self.pause_conditional_state = False
         self.pause_add_targets = False
-
-        # kalman protection - kalman filter can be very crazy sometimes...
-        # self.kalman_protection = True
-        self.leg_tracker_callbacks = 0
-        self.sam2_callbacks = 0
-        self.leg_tracker_callbacks_threshold = 10
-        self.sam2_callbacks_threshold = 3
 
         # Recovery behavior data
         self.recovery_scan_positions = []
@@ -123,6 +115,8 @@ class PersonFollowingData:
         self.scan_position_duration = 1.5
         self.recovery_timeout = 30.0
         self.cancel_goal_timeout = 10.0  # this should actually be big
+        self.aborted_times = 0
+        self.aborted_threshold = 3
 
         # Detection quality parameters
         self.max_distance_threshold = 0.9
@@ -264,15 +258,6 @@ class FollowPerson(smach.StateMachine):
             [image_sub, depth_sub, depth_camera_info_sub], 10, 0.1
         )
         ts.registerCallback(self._sensor_callback)
-
-        # Setup SAM2 publishers
-        self.prompt_pub = rospy.Publisher(
-            "/sam2/prompt_arrays", PromptArrays, queue_size=1
-        )
-        self.track_flag_pub = rospy.Publisher("/sam2/track_flag", Bool, queue_size=1)
-        self.condition_frame_flag_pub = rospy.Publisher(
-            "/sam2/add_conditioning_frame_flag", Bool, queue_size=1
-        )
 
         # Setup visualization and YOLO service
         self.trajectory_pose_pub = rospy.Publisher(
@@ -426,6 +411,14 @@ class FollowPerson(smach.StateMachine):
 
     def _build_state_machine(self):
         """Build the complete state machine structure"""
+
+        def check_wakeword_result(ud):
+            """Check wakeword detection result and decide next transition"""
+            if hasattr(ud, 'keyword') and ud.keyword == "no":
+                return "heard_no"  # User said "no" - continue tracking
+            else:
+                return "no_response"  # Timeout or no valid detection - proceed to end
+
         with self:
             smach.StateMachine.add(
                 "INIT",
@@ -443,55 +436,65 @@ class FollowPerson(smach.StateMachine):
                 },
             )
 
-            # smach.StateMachine.add(
-            #     "TRACKING_ACTIVE",
-            #     TrackingActiveState(self),
-            #     transitions={
-            #         "navigation_started": "NAVIGATION",
-            #         "target_lost": "RECOVERY_SCANNING",
-            #         "following_complete": "WAKEWORD",
-            #         "failed": "WAKEWORD",
-            #     },
-            # )
+            smach.StateMachine.add(
+                "TRACKING_ACTIVE",
+                TrackingActiveState(self),
+                transitions={
+                    "navigation_started": "NAVIGATION",
+                    "target_lost": "RECOVERY_SCANNING",
+                    "following_complete": "WAKEWORD",
+                    "failed": "WAKEWORD",
+                },
+            )
 
             if self.fallback:
+                # Listen for "no" wakeword with 5 second timeout
                 smach.StateMachine.add(
-                    "TRACKING_ACTIVE",
-                    TrackingActiveState(self),
+                    "WAKEWORD",
+                    ListenForWakeword(wakeword="no", timeout=5.0, threshold=0.1),
                     transitions={
-                        "navigation_started": "NAVIGATION",
-                        "target_lost": "RECOVERY_SCANNING",
-                        "following_complete": "Fallback",
-                        "failed": "failed",
+                        "failed": "Fallback",  # Service failure - go to fallback
+                        "succeeded": "CHECK_WAKEWORD_RESULT",  # Check what was detected
                     },
                 )
-                # smach.StateMachine.add(
-                #     "WAKEWORD",
-                #     ListenForWakeword(wakeword="no", timeout=5.0, threshold=0.3),
-                #     transitions={
-                #         "failed": "Fallback",
-                #         "succeeded": "PERSON_DETECTION",
-                #     },
-                # )
+
+                # Decision state to handle wakeword detection result
+                smach.StateMachine.add(
+                    "CHECK_WAKEWORD_RESULT",
+                    smach.CBState(
+                        check_wakeword_result,
+                        outcomes=["heard_no", "no_response"],
+                        input_keys=["keyword"],
+                    ),
+                    transitions={
+                        "heard_no": "TRACKING_ACTIVE",  # User said "no" - return to tracking
+                        "no_response": "Fallback",  # No response/timeout - go to fallback
+                    },
+                )
             else:
+                # Listen for "no" wakeword with 5 second timeout
                 smach.StateMachine.add(
-                    "TRACKING_ACTIVE",
-                    TrackingActiveState(self),
+                    "WAKEWORD",
+                    ListenForWakeword(wakeword="no", timeout=5.0, threshold=0.1),
                     transitions={
-                        "navigation_started": "NAVIGATION",
-                        "target_lost": "RECOVERY_SCANNING",
-                        "following_complete": "succeeded",
-                        "failed": "failed",
+                        "failed": "succeeded",  # Service failure - end successfully
+                        "succeeded": "CHECK_WAKEWORD_RESULT",  # Check what was detected
                     },
                 )
-                # smach.StateMachine.add(
-                #     "WAKEWORD",
-                #     ListenForWakeword(wakeword="no", timeout=5.0, threshold=0.3),
-                #     transitions={
-                #         "failed": "succeeded",
-                #         "succeeded": "PERSON_DETECTION",
-                #     },
-                # )
+
+                # Decision state to handle wakeword detection result
+                smach.StateMachine.add(
+                    "CHECK_WAKEWORD_RESULT",
+                    smach.CBState(
+                        check_wakeword_result,
+                        outcomes=["heard_no", "no_response"],
+                        input_keys=["keyword"],
+                    ),
+                    transitions={
+                        "heard_no": "TRACKING_ACTIVE",  # User said "no" - return to tracking
+                        "no_response": "succeeded",  # No response/timeout - end successfully
+                    },
+                )
 
             smach.StateMachine.add(
                 "NAVIGATION",
@@ -545,96 +548,8 @@ class FollowPerson(smach.StateMachine):
             userdata.location = start_pose.pose
         return outcome
 
-    def _kalman_prediction_callback(self, event):
-        """Timer callback for Kalman filter prediction updates and health monitoring"""
-
-        # Record robot position (unchanged)
-        robot_pose = self.get_robot_pose_in_map()
-        self.shared_data.robot_path_list.append(robot_pose)
-
-        if not self.shared_data.say_started:
-            return
-
-        if not (
-            self.shared_data.leg_tracker_callbacks
-            >= self.shared_data.leg_tracker_callbacks_threshold
-            and self.shared_data.sam2_callbacks
-            >= self.shared_data.sam2_callbacks_threshold
-        ):
-            self.shared_data.recovery_start_time = rospy.Time.now()
-            self.shared_data.last_movement_time = rospy.Time.now()
-            return
-
-        current_time = rospy.Time.now()
-
-        # Call prediction service and get system health
-        req = DualSensorPersonTrackingFilterRequest()
-        req.command = "get_state"  # Use get_state to get full status
-        req.timestamp = current_time
-
-        try:
-            response = self.kalman_filter_service(req)
-        except ServiceException as e:
-            rospy.logwarn(f"Kalman filter service call failed: {e}")
-            try:
-                req.command = "reset"
-                response = self.kalman_filter_service(req)
-            except ServiceException as e:
-                rospy.logwarn(f"Reset Failed!")
-            return
-
-        if response.success and response.initialized:
-            # Create predicted pose
-            predicted_pose = PoseStamped()
-            predicted_pose.header.frame_id = "map"
-            predicted_pose.header.stamp = current_time
-            predicted_pose.pose.position.x = response.position_x
-            predicted_pose.pose.position.y = response.position_y
-            predicted_pose.pose.position.z = 1.2
-            predicted_pose.pose.orientation.w = 1.0
-
-            # Update target speed from Kalman filter
-            self.shared_data.target_speed = response.speed
-            self.shared_data.last_good_detection_time = current_time
-
-            # Update target list with predicted position
-            if not self.shared_data.pause_add_targets:
-                self._update_target_list(predicted_pose, add_traj=True)
-
-            # Simple health check - trigger recovery if system is degraded
-            if (
-                hasattr(response, "system_health")
-                and response.system_health == "degraded"
-            ):
-                rospy.logwarn(
-                    "Kalman filter health degraded - consider recovery behavior"
-                )
-
-            # Log conflicts if they're excessive
-            # if (
-            #     hasattr(response, "consecutive_conflicts")
-            #     and response.consecutive_conflicts > 5
-            # ):
-            #     rospy.logwarn(
-            #         f"Excessive sensor conflicts detected: {response.consecutive_conflicts}"
-            #     )
-            if response.fusion_mode in [
-                "single_a_temporal",
-                "single_b_temporal",
-                "predict_only",
-                "error_fallback",
-            ]:
-                rospy.logwarn(
-                    f"Severe Risk, current filter process mode: {response.fusion_mode}"
-                )
-
-        else:
-            # Filter not initialized or failed - potential recovery case
-            rospy.logwarn("Kalman filter not available - consider recovery behavior")
-            # You can add recovery trigger here: self._trigger_recovery_behavior()
-
     def _sensor_callback(
-        self, image: Image, depth_image: Image, depth_camera_info: CameraInfo
+            self, image: Image, depth_image: Image, depth_camera_info: CameraInfo
     ):
         """Continuous callback for synchronized camera data"""
         self.shared_data.current_image = image
@@ -681,18 +596,6 @@ class FollowPerson(smach.StateMachine):
             rospy.logerr(f"Failed to get robot pose in map frame: {e}")
             return None
 
-    def _publish_condition_flag(self, flag_value):
-        """Publish condition frame flag with retry mechanism"""
-        for _retry in range(5):
-            try:
-                self.condition_frame_flag_pub.publish(Bool(data=flag_value))
-                break  # success
-            except Exception as err:
-                rospy.logdebug(
-                    f"Publish condition flag failed (attempt {_retry + 1}/5): {err}"
-                )
-                rospy.sleep(0.1)
-
     def _leg_tracker_callback(self, msg: PersonArray):
         """Callback for leg tracker - stores data and auto-selects target"""
         this_time = rospy.Time.now()
@@ -700,225 +603,65 @@ class FollowPerson(smach.StateMachine):
         if not self.shared_data.say_started:
             return
 
-        # Update feedback stats
-        self.sensor_feedback["leg_tracker_count"] += 1
-        self.sensor_feedback["last_leg_tracker_time"] = this_time
-
-        # Send leg tracker data to Kalman filter as sensor A
         if self.shared_data.track_id_leg is not None:
             target_person = None
+            detection = None
             for person in msg.people:
                 if person.id == self.shared_data.track_id_leg:
                     target_person = person
+                    detection = person.pose
                     self.shared_data.last_good_detection_time = rospy.Time.now()
                     break
 
             if target_person:
-                try:
-                    self.shared_data.leg_tracker_callbacks += 1
-                    req = DualSensorPersonTrackingFilterRequest()
-                    req.command = (
-                        "update_dual"  # Use update_dual for async single sensor
-                    )
-                    req.timestamp = this_time
-                    req.sensor_a_available = True
-                    req.sensor_a_x = target_person.pose.position.x
-                    req.sensor_a_y = target_person.pose.position.y
-                    req.sensor_a_quality = (
-                        0.2  # min(1.0, target_person.confidence * 0.8)
-                    )
-                    req.sensor_b_available = False
+                _detection = PointStamped()
+                _detection.header.frame_id = "map"
+                _detection.header.stamp = this_time
 
-                    self.kalman_filter_service(req)
-                except rospy.ServiceException as e:
-                    rospy.logerr(f"Leg tracker Kalman service failed: {e}")
-                    try:
-                        req.command = "reset"
-                        response = self.kalman_filter_service(req)
-                    except ServiceException as e:
-                        rospy.logwarn(f"Reset Failed!")
+                # Update position with filtered prediction
+                _detection.point.x = detection.point.x
+                _detection.point.y = detection.point.y
+                _detection.point.z = 1.2
 
-    def _detection3d_callback(self, msg: Detection3DArray):
-        """Callback for SAM2 3D detections - now with Kalman filtering as sensor B"""
-        this_time = rospy.Time.now()
+                # Create map pose with filtered position
+                map_pose = PoseStamped()
+                map_pose.header.frame_id = "map"
+                map_pose.header.stamp = this_time
+                map_pose.pose.position.x = detection.point.x
+                map_pose.pose.position.y = detection.point.y
+                map_pose.pose.position.z = detection.point.z
+                map_pose.pose.orientation.w = 1.0
 
-        if not self.shared_data.say_started:
-            return
+                # Update target list with filtered pose
+                self._update_target_list(map_pose)
+                self.shared_data.last_good_detection_time = rospy.Time.now()
 
-        # Update feedback stats
-        self.sensor_feedback["detection3d_count"] += 1
-        self.sensor_feedback["last_detection3d_time"] = this_time
-
-        for detection in msg.detections:
-            if int(detection.name) == self.shared_data.track_id:
-                quality_result = self._assess_detection_quality_unified(detection)
-                is_good_quality = quality_result["is_good"]
-                quality_score = quality_result["score"]
-
-                try:
-                    if is_good_quality:
-                        self.shared_data.sam2_callbacks += 1
-
-                        req = DualSensorPersonTrackingFilterRequest()
-                        req.command = (
-                            "update_dual"  # Use update_dual for async single sensor
-                        )
-                        req.timestamp = this_time
-                        req.sensor_a_available = False
-                        req.sensor_b_available = True
-                        req.sensor_b_x = detection.point.x
-                        req.sensor_b_y = detection.point.y
-                        req.sensor_b_quality = quality_score
-
-                        # Update condition flags
-                        if not self.shared_data.pause_conditional_state:
-                            self._publish_condition_flag(True)
-                            self.shared_data.condition_flag_state = True
-                        else:
-                            self._publish_condition_flag(False)
-                            self.shared_data.condition_flag_state = False
-
-                        try:
-                            response = self.kalman_filter_service(req)
-                        except ServiceException as e:
-                            try:
-                                req.command = "reset"
-                                response = self.kalman_filter_service(req)
-                            except ServiceException as e:
-                                rospy.logwarn(f"Reset Failed!")
-
-                    # stop using pre planned goals as they might confuse the kalman filter
-                    # if (
-                    #         response.success
-                    #         and response.initialized
-                    #         and is_good_quality
-                    #         and len(self.shared_data.target_list) == 0
-                    # ):
-                    #     # Use filtered position
-                    #     filtered_x = response.position_x
-                    #     filtered_y = response.position_y
-                    #     filtered_speed = response.speed
-                    #
-                    #     # Create filtered detection
-                    #     self.detection = detection
-                    #     self.detection.point.x = filtered_x
-                    #     self.detection.point.y = filtered_y
-                    #
-                    #     # Create map pose with filtered position
-                    #     map_pose = PoseStamped()
-                    #     map_pose.header.frame_id = "map"
-                    #     map_pose.header.stamp = this_time
-                    #     map_pose.pose.position.x = filtered_x
-                    #     map_pose.pose.position.y = filtered_y
-                    #     map_pose.pose.position.z = detection.point.z
-                    #     map_pose.pose.orientation.w = 1.0
-                    #
-                    #     # target list initialization
-                    #     robot_pose = self._get_robot_pose_in_map()
-                    #     distance = _euclidean_distance(robot_pose, map_pose)
-                    #     if distance >= 1.75:
-                    #         poses = self._plan_and_sample_targets(
-                    #             robot_pose, map_pose,
-                    #             radius=self.shared_data.min_following_distance,
-                    #             num_samples=8,
-                    #         )
-                    #         for p in poses:
-                    #             self._update_target_list(p, add_traj=False)
-                    #
-                    #     # Update target list with filtered pose
-                    #     self._update_target_list(map_pose)
-                    # else:
-                    self._publish_condition_flag(False)
-                    self.shared_data.condition_flag_state = False
-
-                except rospy.ServiceException as e:
-                    rospy.logerr(f"Detection3D Kalman service failed: {e}")
-                    self._publish_condition_flag(False)
-                    self.shared_data.condition_flag_state = False
-                break
-
-        # Publish trajectory
-        if len(self.shared_data.person_trajectory.poses) > 0:
-            self.trajectory_pose_pub.publish(self.shared_data.person_trajectory)
-
-    def _create_synthetic_detection(self, x, y, this_time):
-        """Create a synthetic detection for predicted position"""
-        synthetic_detection = PointStamped()
-        synthetic_detection.header.frame_id = "map"
-        synthetic_detection.header.stamp = this_time
-
-        # Update position with filtered prediction
-        synthetic_detection.point.x = x
-        synthetic_detection.point.y = y
-        synthetic_detection.point.z = 1.2
-
-        return synthetic_detection
-
-    def _assess_detection_quality_unified(self, detection):
-        """
-        Unified detection quality assessment that returns both boolean decision and quality score
-        Returns: dict with 'is_good' (bool) and 'score' (float 0-1)
-        """
-        if not hasattr(detection, "xywh") or len(detection.xywh) != 4:
-            return {"is_good": False, "score": 0.1}
-
-        xywh = detection.xywh
-        box_width = xywh[2]
-        box_height = xywh[3]
-        box_area = box_width * box_height
-
-        # Get image dimensions
-        image_width = 640
-        image_height = 480
-        if self.shared_data.camera_info:
-            image_width = self.shared_data.camera_info.width
-            image_height = self.shared_data.camera_info.height
-
-        # Calculate detection center
-        center_x = xywh[0] + box_width / 2
-        center_y = xywh[1] + box_height / 2
-
-        # Calculate normalized distance from image center
-        image_center_x = image_width / 2
-        image_center_y = image_height / 2
-        normalized_distance = math.sqrt(
-            ((center_x - image_center_x) / image_width) ** 2
-            + ((center_y - image_center_y) / image_height) ** 2
-        )
-
-        # Calculate normalized area
-        normalized_area = box_area / (image_width * image_height)
-
-        # Boolean quality checks (original thresholds)
-        distance_ok = normalized_distance < self.shared_data.max_distance_threshold
-        area_ok = normalized_area > self.shared_data.min_area_threshold
-        confidence_ok = detection.confidence > self.shared_data.min_confidence_threshold
-
-        is_good_quality = distance_ok and area_ok and confidence_ok
-
-        # Calculate continuous quality score (0-1)
-        # Start with confidence as base score
-        quality_score = detection.confidence
-
-        # Distance penalty: closer to center is better
-        distance_score = max(
-            0.0, 1.0 - normalized_distance * 2.0
-        )  # Penalty for being far from center
-        quality_score *= (
-            0.7 + 0.3 * distance_score
-        )  # Weight: 70% confidence, 30% position
-
-        # Area bonus: prefer medium-sized detections
-        if normalized_area > 0.005:  # Avoid very small detections
-            area_score = min(normalized_area * 20, 1.0)  # Scale and cap
-            quality_score *= 0.8 + 0.2 * area_score  # Small bonus for good size
-        else:
-            quality_score *= 0.5  # Penalty for very small detections
-
-        # Clamp final score
-        quality_score = max(min(quality_score, 1.0), 0.9)
-
-        return {"is_good": is_good_quality, "score": quality_score}
+            # Publish trajectory
+            if len(self.shared_data.person_trajectory.poses) > 0:
+                self.trajectory_pose_pub.publish(self.shared_data.person_trajectory)
+                # try:
+                #     self.shared_data.leg_tracker_callbacks += 1
+                #     req = DualSensorPersonTrackingFilterRequest()
+                #     req.command = (
+                #         "update_dual"  # Use update_dual for async single sensor
+                #     )
+                #     req.timestamp = this_time
+                #     req.sensor_a_available = True
+                #     req.sensor_a_x = target_person.pose.position.x
+                #     req.sensor_a_y = target_person.pose.position.y
+                #     req.sensor_a_quality = (
+                #         0.2  # min(1.0, target_person.confidence * 0.8)
+                #     )
+                #     req.sensor_b_available = False
+                #
+                #     self.kalman_filter_service(req)
+                # except rospy.ServiceException as e:
+                #     rospy.logerr(f"Leg tracker Kalman service failed: {e}")
+                #     try:
+                #         req.command = "reset"
+                #         response = self.kalman_filter_service(req)
+                #     except ServiceException as e:
+                #         rospy.logwarn(f"Reset Failed!")
 
     def _update_target_list(self, pose_stamped, add_traj=True):
         """Update target list with new pose"""
@@ -964,7 +707,7 @@ class FollowPerson(smach.StateMachine):
                 # Wait with timeout to avoid infinite blocking
                 timeout_duration = rospy.Duration(10.0)  # 10 seconds timeout
                 start_wait_time = rospy.Time.now()
-                rate = rospy.Rate(3)  # 10 Hz check rate
+                rate = rospy.Rate(3)
                 while not rospy.is_shutdown():
                     current_state = self.move_base_client.get_state()
                     # Check if navigation completed (any terminal state)
@@ -1334,10 +1077,6 @@ class PersonDetectionState(smach.State):
         if nearest_index == -1:
             return "no_person_found"
 
-        # Store YOLO tracking information
-        self.sm_manager.shared_data.track_bbox = detected_people["xywh"][nearest_index]
-        self.sm_manager.shared_data.track_id = nearest_index
-
         # Get selected YOLO person position
         yolo_person_x = detected_people["point"][nearest_index].x
         yolo_person_y = detected_people["point"][nearest_index].y
@@ -1346,35 +1085,6 @@ class PersonDetectionState(smach.State):
             f"Selected YOLO person at ({yolo_person_x:.2f}, {yolo_person_y:.2f})"
         )
         rospy.loginfo(f"YOLO person idx: {nearest_index}")
-
-        # Setup SAM2 tracking
-        bbox_list = []
-        for i, bbox in enumerate(detected_people["xywh"]):
-            bbox_msg = BboxWithFlag()
-            bbox_msg.obj_id = i
-            bbox_msg.reset = False
-            bbox_msg.clear_old_points = True
-            bbox_msg.xywh = bbox
-            bbox_list.append(bbox_msg)
-
-        prompt_msg = PromptArrays()
-        prompt_msg.bbox_array = bbox_list
-        prompt_msg.point_array = []
-        prompt_msg.reset = True
-        self.sm_manager.prompt_pub.publish(prompt_msg)
-        rospy.sleep(0.5)
-        self.sm_manager.prompt_pub.publish(prompt_msg)
-        rospy.sleep(0.5)
-        self.sm_manager.prompt_pub.publish(prompt_msg)
-        rospy.sleep(0.5)
-
-        # Start tracking
-        self.sm_manager.track_flag_pub.publish(Bool(data=True))
-        rospy.sleep(0.1)
-        self.sm_manager.track_flag_pub.publish(Bool(data=True))
-        rospy.sleep(0.1)
-        self.sm_manager.track_flag_pub.publish(Bool(data=True))
-        rospy.sleep(0.1)
 
         # Now get leg tracker data and find closest person to YOLO selection
         while True:
@@ -1417,8 +1127,6 @@ class PersonDetectionState(smach.State):
             f"Dual sensor setup: YOLO={self.sm_manager.shared_data.track_id}, LegTracker={self.sm_manager.shared_data.track_id_leg}"
         )
 
-        self.sm_manager.condition_frame_flag_pub.publish(Bool(data=True))
-        self.sm_manager.shared_data.condition_flag_state = True
         self.sm_manager.shared_data.is_person_detected = True
 
         return "person_detected"
@@ -1467,9 +1175,14 @@ class TrackingActiveState(smach.State):
 
             # Check if following is complete (no movement for a while)
             if (
-                self.sm_manager.shared_data.first_tracking_done
-                and rospy.Time.now() - self.sm_manager.shared_data.last_movement_time
-                > self.sm_manager.shared_data.target_moving_timeout_duration * 1.0
+                    (
+                            self.sm_manager.shared_data.first_tracking_done
+                            and rospy.Time.now() - self.sm_manager.shared_data.last_movement_time
+                            > self.sm_manager.shared_data.target_moving_timeout_duration * 1.0
+                    ) or (
+                    # this is for if we just cannot complete moves constantly then we give up and ask.
+                    self.sm_manager.shared_data.aborted_times >= self.sm_manager.shared_data.aborted_threshold
+            )
             ):
                 self.sm_manager.shared_data.pause_add_targets = True
                 rospy.loginfo("Following complete - force to stop by timeout.")
@@ -1714,14 +1427,14 @@ class NavigationState(smach.State):
         start_robot_pose = self.sm_manager.get_robot_pose_in_map()
         navigation_start_time = rospy.Time.now()  # Record navigation start time
 
-        # Verify that navigation is indeed active
-        if (
-            not self._is_navigation_active()
-            and self.sm_manager.shared_data.first_tracking_done
-        ):
-            rospy.logwarn("Entered NAVIGATION state but no active navigation found")
-            # TODO: the orentation is not handled yet!!!
-            return "navigation_complete"
+        # # Verify that navigation is indeed active
+        # if (
+        #     not self._is_navigation_active()
+        #     and self.sm_manager.shared_data.first_tracking_done
+        # ):
+        #     rospy.logwarn("Entered NAVIGATION state but no active navigation found")
+        #     # TODO: the orentation is not handled yet!!!
+        #     return "navigation_complete"
 
         # Monitor navigation progress
         rate = rospy.Rate(3)
@@ -1741,6 +1454,8 @@ class NavigationState(smach.State):
                 )
                 self.sm_manager.shared_data.last_movement_time = rospy.Time.now()
                 self.sm_manager.shared_data.added_new_target_time = rospy.Time.now()
+                self._send_face_target_goal(self.sm_manager.shared_data.current_goal)
+                self.sm_manager.shared_data.aborted_times += 1
                 return "navigation_complete"
 
             robot_pose = self.sm_manager.get_robot_pose_in_map()
@@ -1775,6 +1490,10 @@ class NavigationState(smach.State):
                 # Navigation has completed (successfully or not)
                 if nav_state == GoalStatus.SUCCEEDED:
                     rospy.loginfo("Navigation completed successfully")
+                    self.sm_manager.shared_data.aborted_times = 0
+                elif nav_state == GoalStatus.ABORTED:
+                    rospy.loginfo("Navigation completed with error")
+                    self.sm_manager.shared_data.aborted_times += 1
                 else:
                     rospy.logwarn(f"Navigation ended with status: {nav_state}")
 
