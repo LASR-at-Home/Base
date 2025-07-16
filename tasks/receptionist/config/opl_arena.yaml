@@ -1,40 +1,28 @@
 priors:
   names:
-    - olivia
-    - noah
-    - amelia
-    - liam
-    - emma
-    - oliver
-    - sophia
-    - elijah
-    - charlotte
-    - mateo
-    - isabella
-    - lucas
-    - ava
-    - levi
-    - mia
-    - ezra
-    - ellie
-    - asher
-    - luna
-    - leo
-    - harper
-    - james
-    - aurora
-    - luca
-    - evelyn
-    - henry
-    - eliana
-    - hudson
-    - aria
-    - ethan
+  - Maria
+  - Francisca
+  - Antonia
+  - Adriana
+  - Juliana
+  - Marcia
+  - Fernanda
+  - Patricia
+  - Aline
+  - Jose
+  - Joao
+  - Antonio
+  - Francisco
+  - Carlos
+  - Ana
 
   drinks:
-    - bottle
-    - cup
-    - banana
+  - coffee
+  - milk
+  - orange juice
+  - fanta
+  - coke
+  - kuat
 
 
 

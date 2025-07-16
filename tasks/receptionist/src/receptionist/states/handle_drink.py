@@ -107,9 +107,9 @@ class HandleDrink(smach.StateMachine):
                 f"SAY_FIND_DRINK_{guest_id}",
                 Say("Thank you! I will find your drink now."),
                 transitions={
-                    "succeeded": f"succeeded",
-                    "preempted": f"succeeded",
-                    "aborted": f"succeeded",
+                    "succeeded": f"STOP_EYE_TRACKER_GUEST_{guest_id}",
+                    "preempted": f"STOP_EYE_TRACKER_GUEST_{guest_id}",
+                    "aborted": f"STOP_EYE_TRACKER_GUEST_{guest_id}",
                 },
             )
 

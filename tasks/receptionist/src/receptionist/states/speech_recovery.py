@@ -1,5 +1,5 @@
 """
-State for recovering the speech transcribed via whisper (name and drink) by using 
+State for recovering the speech transcribed via whisper (name and drink) by using
 the spelling and pronounciation of a word.
 """
 
@@ -57,18 +57,28 @@ class SpeechRecovery(smach.State):
 
         self._available_drinks = [drink.lower() for drink in prior_data["drinks"]]
         # 1. Double-word drinks = drinks with a space
-        self._available_double_drinks_whole = [d for d in self._available_drinks if " " in d]
-        self._available_double_drinks = [d.split() for d in self._available_drinks if len(d.split()) > 1][0]
+        self._available_double_drinks_whole = [
+            d for d in self._available_drinks if " " in d
+        ]
+        self._available_double_drinks = [
+            d.split() for d in self._available_drinks if len(d.split()) > 1
+        ][0]
 
         # 2. Single-word drinks = drinks with no space
-        self._available_single_drinks = [d for d in self._available_drinks if " " not in d]
+        self._available_single_drinks = [
+            d for d in self._available_drinks if " " not in d
+        ]
 
         # 3. Mapping: Each word in a double drink points to the double drink
-        self._double_drinks_dict = {w: d for d in self._available_double_drinks_whole for w in d.split()}
+        self._double_drinks_dict = {
+            w: d for d in self._available_double_drinks_whole for w in d.split()
+        }
 
-        print(self._available_double_drinks, self._available_single_drinks, self._double_drinks_dict)
-
-        
+        print(
+            self._available_double_drinks,
+            self._available_single_drinks,
+            self._double_drinks_dict,
+        )
 
         self._excluded_words = [
             "my",
@@ -83,7 +93,6 @@ class SpeechRecovery(smach.State):
             "me",
         ]
 
-
     def execute(self, userdata: UserData) -> str:
         """Attempt to recover the drink or / and name from the LLM response or the transcription.
 
@@ -97,8 +106,11 @@ class SpeechRecovery(smach.State):
             the parameter "guest_data".
         """
         if self._recover_from_llm:
-            filtered_sentence = userdata.guest_data[self._guest_id]["name"].lower().translate(
-                str.maketrans("", "", string.punctuation))
+            filtered_sentence = (
+                userdata.guest_data[self._guest_id]["name"]
+                .lower()
+                .translate(str.maketrans("", "", string.punctuation))
+            )
         else:
             filtered_sentence = userdata.guest_transcription.lower().translate(
                 str.maketrans("", "", string.punctuation)
@@ -280,8 +292,6 @@ class SpeechRecovery(smach.State):
         Returns:
             str: Recovered drink phrase. 'unknown' is returned if no drink phrase is recovered.
         """
-        print(sentence_list)
-        print(self._available_double_drinks)
         for input_word in sentence_list:
             for available_word in self._available_double_drinks:
                 if input_word == available_word:
