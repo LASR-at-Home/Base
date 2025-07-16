@@ -31,7 +31,7 @@ class TxtIndexService:
                 f"/tmp/xn.dat",
                 dtype="float32",
                 mode="w+",
-                shape=(46785020, 384),
+                shape=(8978240, 384),
             )
             for i, txt_fp in enumerate(txt_fps):
                 sentences_to_embed: List[str] = parse_txt_file(txt_fp)
