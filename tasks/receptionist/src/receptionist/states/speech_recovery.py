@@ -1,5 +1,5 @@
 """
-State for recovering the speech transcribed via whisper (name and drink and interest) by using
+State for recovering the speech transcribed via whisper (name and drink) by using 
 the spelling and pronounciation of a word.
 """
 
@@ -17,14 +17,16 @@ class SpeechRecovery(smach.State):
         guest_id: int,
         last_resort: bool,
         input_type: str = "",
+        recover_from_llm: bool = False,
+        param_key: str = "/receptionist/priors",
     ):
-        """Recover the correct name or interest or drink by parsing the transcription.
+        """Recover the correct name and / or drink by parsing the transcription.
 
         Args:
             guest_id (str): ID of the guest (identifying the guest)
-            last_resort (bool): Whether the program must recover a name or interest or drink
+            last_resort (bool): Whether the program must recover a name or drink
             input_type (str, optional): The type of information to try and extract useful information
-            (name or drink or interest)
+            (drink or name)
         """
 
         smach.State.__init__(
@@ -37,67 +39,12 @@ class SpeechRecovery(smach.State):
         self._guest_id = guest_id
         self._last_resort = last_resort
         self._input_type = input_type
-        self._available_names = [
-            "sophie",
-            "julia",
-            "emma",
-            "sara",
-            "laura",
-            "hayley",
-            "susan",
-            "fleur",
-            "gabrielle",
-            "robin",
-            "john",
-            "liam",
-            "lucas",
-            "william",
-            "kevin",
-            "jesse",
-            "noah",
-            "harrie",
-            "peter",
-        ]
-        self._available_interests = [
-            "football",
-            "robotics",
-            "basketball",
-            "table tennis",
-            "badminton",
-            "running",
-            "swimming",
-            "chess",
-            "cooking",
-            "painting",
-            "reading",
-            "yoga",
-            "robotics",
-            "programming",
-            "electronics",
-            "travel",
-            "hiking",
-            "camping",
-            "dancing",
-            "singing",
-            "playing guitar",
-            "photography",
-            "gardening",
-            "video games",
-            "board games",
-        ]
-        self._available_single_drinks = [
-            "cola",
-            "water",
-            "milk",
-            "fanta",
-            "dubbelfris",
-        ]
-        self._available_double_drinks = [
-            "ice",
-            "tea",
-            "big",
-            "coke",
-        ]
+        self._recover_from_llm = recover_from_llm
+        prior_data: Dict[str, List[str]] = rospy.get_param(param_key)
+        self._available_names = [name.lower() for name in prior_data["names"]]
+
+        self._available_single_drinks = ["cola", "water", "milk", "fanta", "dubbelfris"]
+        self._available_double_drinks = ["ice", "tea", "big", "coke"]
         self._double_drinks_dict = {
             "ice": "ice tea",
             "tea": "ice tea",
@@ -114,7 +61,21 @@ class SpeechRecovery(smach.State):
             "and",
             "favourite",
             "drink",
-            "Interest",
+            "you",
+            "can",
+            "call",
+            "me",
+        ]
+        self._available_drinks = list(
+            set(self._available_single_drinks).union(set(self._available_double_drinks))
+        )
+        self._excluded_words = [
+            "my",
+            "name",
+            "is",
+            "and",
+            "favourite",
+            "drink",
             "you",
             "can",
             "call",
@@ -122,25 +83,31 @@ class SpeechRecovery(smach.State):
         ]
 
     def execute(self, userdata: UserData) -> str:
-        """Optimise the transcription, then attempt to recover the name or drink or interest.
+        """Attempt to recover the drink or / and name from the LLM response or the transcription.
 
         Args:
             userdata (UserData): State machine userdata assumed to contain a key
             called "guest transcription" with the transcription of the guest's name or
-            favourite drink or interest or all.
+            favourite drink or both.
 
         Returns:
-            str: state outcome. Updates the userdata with the parsed information (name or drink or interest), under
+            str: state outcome. Updates the userdata with the parsed information (drink or name), under
             the parameter "guest_data".
         """
-        filtered_sentence = userdata.guest_transcription.lower().translate(
-            str.maketrans("", "", string.punctuation)
-        )
-        sentence_split = filtered_sentence.split()
-        sentence_list = list(set(sentence_split) - set(self._excluded_words))
+        if self._recover_from_llm:
+            sentence_list = []
+            sentence_list.append(userdata.guest_data[self._guest_id]["name"])
+            if sentence_list[0] == "unknown":
+                return "failed"
+        else:
+            filtered_sentence = userdata.guest_transcription.lower().translate(
+                str.maketrans("", "", string.punctuation)
+            )
+            sentence_split = filtered_sentence.split()
+            sentence_list = list(set(sentence_split) - set(self._excluded_words))
         if not sentence_list:
             return "failed"
-        print(sentence_split)  # Do we need this?
+        print(sentence_list)
         if self._input_type == "name":
             final_name = self._handle_name(sentence_list, self._last_resort)
             if final_name != "unknown":
@@ -157,15 +124,7 @@ class SpeechRecovery(smach.State):
                 return "succeeded"
             else:
                 return "failed"
-        elif self._input_type == "interest":
-            final_interest = self._handle_interest(sentence_list, self._last_resort)
-            if final_interest != "unknown":
-                userdata.guest_data[self._guest_id]["interest"] = final_interest
-                print(f"Recovered interest: {final_interest} ")
-                return "succeeded"
-            else:
-                return "failed"
-        else:  # Need for combination?
+        else:
             if userdata.guest_data[self._guest_id]["name"] == "unknown":
                 final_name = self._handle_name(sentence_list, self._last_resort)
                 userdata.guest_data[self._guest_id]["name"] = final_name
@@ -174,14 +133,9 @@ class SpeechRecovery(smach.State):
                 final_drink = self._handle_drink(sentence_list, self._last_resort)
                 userdata.guest_data[self._guest_id]["drink"] = final_drink
                 print(f"Recovered drink: {final_drink} ")
-            if userdata.guest_data[self._guest_id]["interest"] == "unknown":
-                final_interest = self._handle_interest(sentence_list, self._last_resort)
-                userdata.guest_data[self._guest_id]["interest"] = final_interest
-                print(f"Recovered interest: {final_interest} ")
             if (
                 userdata.guest_data[self._guest_id]["name"] == "unknown"
                 or userdata.guest_data[self._guest_id]["drink"] == "unknown"
-                or userdata.guest_data[self._guest_id]["interest"] == "unknown"
             ):
                 return "failed"
             else:
@@ -259,32 +213,6 @@ class SpeechRecovery(smach.State):
                     sentence_list.append(closest_spelt)
                     return self._infer_second_drink(sentence_list)
 
-    def _handle_interest(self, sentence_list: List[str], last_resort: bool) -> str:
-        """Attempt to recover the interest in the transcription. First recover via spelling, then pronounciation.
-        Enter last resort if necessary and recover the closest spelt interest.
-
-        Args:
-            sentence_list (List[str]): Transcription split up as a list of strings.
-            last_resort (bool): Whether the program must recover a interest
-
-        Returns:
-            str: Recovered interest. 'unknown' is returned if no interest is recovered.
-        """
-        result = self._handle_similar_spelt(sentence_list, self._available_interests, 1)
-        if result != "unknown":
-            print(f"interest (spelt): {result}")
-            return result
-        else:
-            result = self._handle_similar_sound(
-                sentence_list, self._available_interests, 0
-            )
-            print(f"interest (sound): {result}")
-        if not last_resort or result != "unknown":
-            return result
-        else:
-            print("Last resort interest")
-            return self._handle_closest_spelt(sentence_list, self._available_interests)
-
     def _handle_similar_spelt(
         self,
         sentence_list: List[str],
@@ -334,7 +262,6 @@ class SpeechRecovery(smach.State):
                     input_word, available_word
                 )
                 if distance <= distance_threshold:
-                    print(input_word, available_word)
                     return available_word
         return "unknown"
 

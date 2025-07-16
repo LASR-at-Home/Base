@@ -91,7 +91,7 @@ class Receptionist(smach.StateMachine):
                 },
             }
             drink_detections = {
-                drink: {"detected": False, "location": ""}
+                drink: {"detected": False, "location": "None"}
                 for drink in self.possible_drinks
             }
 
@@ -106,11 +106,7 @@ class Receptionist(smach.StateMachine):
 
             smach.StateMachine.add(
                 "WAIT_START",
-                smach_ros.MonitorState(
-                    "/receptionist/start",
-                    Empty,
-                    wait_cb,
-                ),
+                smach_ros.MonitorState("/receptionist/start", Empty, wait_cb),
                 transitions={
                     "valid": "WAIT_START",
                     "invalid": "START_TIMER",
@@ -121,13 +117,8 @@ class Receptionist(smach.StateMachine):
             smach.StateMachine.add(
                 "START_TIMER",
                 StartTimer(),
-                transitions={
-                    "succeeded": "START_CON",
-                    "failed": "START_CON",
-                },
-                remapping={
-                    "start_time": "start_time",
-                },
+                transitions={"succeeded": "START_CON", "failed": "START_CON"},
+                remapping={"start_time": "start_time"},
             )
 
             start_con_sm = smach.Concurrence(
@@ -230,10 +221,7 @@ class Receptionist(smach.StateMachine):
             smach.StateMachine.add(
                 "INTRODUCE_GUEST_1",
                 Introduce(guest_to_introduce="guest1", can_detect_second_guest=False),
-                transitions={
-                    "succeeded": "RETURN_CON",
-                    "failed": "RETURN_CON",
-                },
+                transitions={"succeeded": "RETURN_CON", "failed": "RETURN_CON"},
             )
 
             return_con_sm = smach.Concurrence(
@@ -383,10 +371,7 @@ class Receptionist(smach.StateMachine):
             smach.StateMachine.add(
                 "INTRODUCE_COMMON_INTEREST_CON",
                 sm_con,
-                transitions={
-                    "succeeded": "SAY_INTEREST",
-                    "failed": "SAY_INTEREST",
-                },
+                transitions={"succeeded": "SAY_INTEREST", "failed": "SAY_INTEREST"},
                 remapping={
                     "guest_data": "guest_data",
                     "interest_message": "interest_message",
@@ -427,10 +412,7 @@ class Receptionist(smach.StateMachine):
             smach.StateMachine.add(
                 "STOP_TIMER",
                 StopTimer(),
-                transitions={
-                    "succeeded": "SAY_TIME",
-                    "failed": "failed",
-                },
+                transitions={"succeeded": "SAY_TIME", "failed": "failed"},
             )
             smach.StateMachine.add(
                 "SAY_TIME",
@@ -440,9 +422,7 @@ class Receptionist(smach.StateMachine):
                     "aborted": "failed",
                     "preempted": "failed",
                 },
-                remapping={
-                    "text": "time_text",
-                },
+                remapping={"text": "time_text"},
             )
 
     def _goto_waiting_area(self, guest_id: int) -> None:
@@ -469,9 +449,7 @@ class Receptionist(smach.StateMachine):
                 "succeeded": f"HANDLE_NAME_INTEREST_{guest_id}",
                 "failed": f"HANDLE_NAME_INTEREST_{guest_id}",
             },
-            remapping={
-                "detections_3d": "person_detections",
-            },
+            remapping={"detections_3d": "person_detections"},
         )
 
     def _guide_guest_to_table(self, guest_id: int) -> None:
