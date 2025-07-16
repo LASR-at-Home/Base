@@ -1,28 +1,28 @@
 priors:
   names:
   - Maria
-  - Ana
   - Francisca
-  - Antônia
+  - Antonia
   - Adriana
   - Juliana
   - Marcia
   - Fernanda
-  - Patrícia
+  - Patricia
   - Aline
   - Jose
   - Joao
   - Antonio
   - Francisco
   - Carlos
+  - Ana
 
   drinks:
-  - coffee 	
-  - milk 	
-  - orange juice 	
-  - fanta 	
-  - coke 	
-  - kuat 	
+  - coffee
+  - milk
+  - orange juice
+  - fanta
+  - coke
+  - kuat
 
 
 #WAIT POSE LAB:

@@ -9,6 +9,7 @@ from smach import UserData
 from typing import List, Dict, Any
 from receptionist.states import SpeechRecovery
 from lasr_llm_msgs.srv import Llm, LlmRequest
+import string
 
 
 class GetNameAndInterest(smach.StateMachine):
@@ -76,7 +77,6 @@ class GetNameAndInterest(smach.StateMachine):
                     "failed": "POST_RECOVERY_DECISION",
                 },
             )
-
             smach.StateMachine.add(
                 "SPEECH_RECOVERY_NAME_LLM_LAST_RESORT",
                 SpeechRecovery(
@@ -176,7 +176,8 @@ class GetNameAndInterest(smach.StateMachine):
             Returns:
                 str: State outcome. Updates 'guest_data' in userdata with parsed name and interest.
             """
-            transcription = userdata["guest_transcription"].lower()
+            transcription = userdata["guest_transcription"].lower().translate(
+                str.maketrans("", "", string.punctuation))
 
             guest = userdata.guest_data[self._guest_id]
 
@@ -184,8 +185,8 @@ class GetNameAndInterest(smach.StateMachine):
             request.system_prompt = (
                 "You are a robot acting as a party host. You are tasked with identifying the name "
                 "and interest belonging to a guest."
-                "You will receive input such as 'my name is john and I like robotics'. Output only the name "
-                "and interest, e.g. 'john,robotics'. Make sure that the interest is only one or two words. If you can't identify the name or interest, output 'unknown', e.g. 'john,unknown' or 'unknown,robotics'."
+                "You will receive input such as 'my name is john and I like technology'. Output only the name "
+                "and interest, e.g. 'john,technology'. Make sure that the interest is only one or two words. If you can't identify the name or interest, output 'unknown', e.g. 'john,unknown' or 'unknown,technology'."
                 "If you can't identify both the name and the interest, output 'unknown,unknown'"
             )
             request.prompt = transcription
@@ -216,9 +217,15 @@ class GetNameAndInterest(smach.StateMachine):
             if "unknown" in interest.lower():
                 interest = "unknown"
 
+            rospy.loginfo(
+                f"LLM Parsed name: {llm_name}, interest: {interest} from transcription: {transcription}"
+            )
+
             # Try to match an exact name from transcription
+            words = transcription.split()
             name = next(
-                (n for n in self._possible_names if n in transcription), llm_name
+                (n for n in self._possible_names if n in words),
+                llm_name
             )
 
             # Update guest data
@@ -234,9 +241,8 @@ class GetNameAndInterest(smach.StateMachine):
                 return "failed"
             if name not in self._possible_names:
                 return "failed"
-
             return "succeeded"
-
+    
     class RecoveryDecision(smach.State):
         def __init__(
             self,
@@ -303,23 +309,10 @@ class GetNameAndInterest(smach.StateMachine):
             self._last_resort = last_resort
 
         def execute(self, userdata: UserData) -> str:
-            transcription = userdata["guest_transcription"].lower()
-            guest = userdata.guest_data[self._guest_id]
-            information_found = False
-
-            for key_phrase in self._possible_names:
-                if key_phrase in transcription:
-                    guest["name"] = key_phrase
-                    rospy.loginfo(f"Name identified as: {key_phrase}")
-                    information_found = True
-                    break
-            if not information_found:
-                rospy.loginfo(f"Name not found in transcription")
-                if self._last_resort:
-                    return "failed_last_resort"
-                else:
-                    return "failed"
-            return "succeeded"
+            if self._last_resort:
+                return "failed_last_resort"
+            else:
+                return "failed"
 
     class RecoverInterest(smach.State):
         def __init__(

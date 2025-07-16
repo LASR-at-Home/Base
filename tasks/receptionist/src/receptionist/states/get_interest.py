@@ -9,6 +9,7 @@ from smach import UserData
 from typing import List, Dict, Any
 from receptionist.states import SpeechRecovery
 from lasr_llm_msgs.srv import Llm, LlmRequest
+import string
 
 
 class GetInterest(smach.StateMachine):
@@ -81,7 +82,8 @@ class GetInterest(smach.StateMachine):
             Returns:
                 str: State outcome. Updates 'guest_data' in userdata with parsed name and interest.
             """
-            transcription = userdata["guest_transcription"].lower()
+            transcription = userdata["guest_transcription"].lower().translate(
+                str.maketrans("", "", string.punctuation))
 
             guest = userdata.guest_data[self._guest_id]
 
