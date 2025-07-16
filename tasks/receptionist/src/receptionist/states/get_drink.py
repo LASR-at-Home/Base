@@ -81,7 +81,6 @@ class GetDrink(smach.StateMachine):
                 },
             )
 
-
     class ParseDrink(smach.State):
         def __init__(
             self,
@@ -119,8 +118,11 @@ class GetDrink(smach.StateMachine):
                 str: state outcome. Updates the userdata with the parsed drink, under
                 the parameter "guest_data".
             """
-            transcription = userdata["guest_transcription"].lower().translate(
-                str.maketrans("", "", string.punctuation))
+            transcription = (
+                userdata["guest_transcription"]
+                .lower()
+                .translate(str.maketrans("", "", string.punctuation))
+            )
             # Remove punctuation and extra spaces
             transcription = (
                 transcription.replace(".", "")
@@ -129,8 +131,9 @@ class GetDrink(smach.StateMachine):
                 .replace("?", "")
                 .strip()
             )
-
             for drink in self._possible_drinks:
+                if drink == "orange_juice":
+                    drink = "orange juice"
                 if drink in transcription:
                     rospy.loginfo(
                         f"Matched drink in transcription: {drink} with transcription: {transcription}"
@@ -141,7 +144,7 @@ class GetDrink(smach.StateMachine):
             rospy.logwarn(
                 f"Could not identify drink directly from transcription: {transcription}."
             )
-            
+
             request = LlmRequest()
             request.system_prompt = f"You are a robot acting as a party host. You are tasked with identifying the favourite drink belonging to a guest. You will receive input such as 'my favourite drink is cola'. Output only the drink, which must exactly match one of the possible drinks. In the previous example this would be 'cola'. If you can't identify the drink, output 'unknown'."
             request.prompt = f"The user says: {transcription}"
@@ -151,9 +154,7 @@ class GetDrink(smach.StateMachine):
             drink = response.output.strip()
             drink_n_words = len(drink.split())
             if drink_n_words > 2:
-                drink = drink.split()[
-                    :2
-                ]  # Take only the first two word of drink
+                drink = drink.split()[:2]  # Take only the first two word of drink
                 drink = " ".join(drink)
             drink = drink.strip()
             if "unknown" in drink.lower():
@@ -172,7 +173,12 @@ class GetDrink(smach.StateMachine):
             return "succeeded"
 
     class PostRecoveryDecision(smach.State):
-        def __init__(self, guest_id: str, last_resort: bool, param_key: str = "/receptionist/priors"):
+        def __init__(
+            self,
+            guest_id: str,
+            last_resort: bool,
+            param_key: str = "/receptionist/priors",
+        ):
             smach.State.__init__(
                 self,
                 outcomes=["succeeded", "failed"],
@@ -183,7 +189,7 @@ class GetDrink(smach.StateMachine):
             self._last_resort = last_resort
             prior_data: Dict[str, List[str]] = rospy.get_param(param_key)
             self._possible_drinks = [drink.lower() for drink in prior_data["drinks"]]
-        
+
         def execute(self, userdata: UserData) -> str:
             if not self._last_resort:
                 outcome = "failed"

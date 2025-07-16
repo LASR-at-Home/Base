@@ -458,7 +458,11 @@ class YOLOService:
         return results
 
 
+import os
+import rospkg
+
 if __name__ == "__main__":
     rospy.init_node("yolo")
+    os.chdir(os.path.join(rospkg.RosPack().get_path("lasr_vision_yolo"), "models"))
     yolo = YOLOService()
     rospy.spin()

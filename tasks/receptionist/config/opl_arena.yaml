@@ -17,7 +17,12 @@ priors:
     - Ana
 
   drinks:
-    - cup
+    - kuat
+    - fanta
+    - milk
+    - orange_juice
+    - coke
+    - coffee
 
 #WAIT POSE LAB:
 #DONE
@@ -36,14 +41,14 @@ wait_pose:
 #180 away from the table
 table_pose:
   position:
-    x: 9.05261765904875
-    y: 0.7262720346871332
+    x: 9.038286883267693
+    y: 0.8074488834702458
     z: 0.0
   orientation:
     x: 0.0
     y: 0.0
-    z: -0.5247036701459645
-    w: 0.8512849455589796
+    z: -0.7889387733969704
+    w: 0.6144718153266949
 
 #DONE
 # looking_table:
@@ -129,9 +134,9 @@ seat_pose:
 
 #DONE
 sofa_point:
-  x: 0.9771156311035156
-  y: -2.261979103088379
-  z: 0.899420976638794
+  x: 4.500349998474121
+  y: -1.4822187423706055
+  z: 0.650336742401123
 
 # From robot POV: [top left, top right,bottom right, bottom left ]
 #DONE

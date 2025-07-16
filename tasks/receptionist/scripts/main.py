@@ -155,9 +155,9 @@ if __name__ == "__main__":
         right_sofa_area,
         sofa_point,
         {
-            "name": "john",
-            "drink": "milk",
-            "interest": "robots",
+            "name": "antonio",
+            "drink": "fanta",
+            "interest": "rugby",
             "dataset": "receptionist",
             "detection": False,
             "seating_detection": False,

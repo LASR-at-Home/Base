@@ -313,6 +313,8 @@ class DetectAllInPolygon(smach.StateMachine):
         min_new_object_dist: float = 0.1,
         use_lang_sam: bool = False,
         prompt: Optional[str] = None,
+        model: Optional[str] = None,
+        z_axis: float = 0.7,
     ):
         """
         Args:
@@ -352,6 +354,8 @@ class DetectAllInPolygon(smach.StateMachine):
             queue_size=10,
         )
         self._prompt = prompt
+        self._model = model
+        self._z_axis = z_axis
         if use_lang_sam:
             assert (
                 self._prompt is not None
@@ -461,6 +465,7 @@ class DetectAllInPolygon(smach.StateMachine):
             CalculateSweepPoints(
                 polygon=self._polygon,
                 min_coverage=self._min_coverage,
+                z_axis=self._z_axis,
             ),
             transitions={"succeeded": "LOOK_AND_DETECT", "failed": "failed"},
             remapping={"sweep_points": "sweep_points"},
@@ -554,12 +559,14 @@ class DetectAllInPolygon(smach.StateMachine):
                     #     },
                     # )
                 else:
+                    model = "yolo11n-seg.pt" if not self._model else self._model
                     smach.StateMachine.add(
                         "DETECT_OBJECTS",
                         Detect3DInArea(
                             area_polygon=self._polygon,
                             filter=self._object_filter,
                             confidence=self._min_confidence,
+                            model=model,
                         ),
                         transitions={
                             "succeeded": "PROCESS_DETECTIONS",

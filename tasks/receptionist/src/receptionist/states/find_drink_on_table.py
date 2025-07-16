@@ -11,21 +11,23 @@ from std_msgs.msg import Header
 
 
 class GetDrinkString(smach.State):
-    def __init__(self):
+    def __init__(self, guest_id: str):
         smach.State.__init__(
             self,
             outcomes=["succeeded", "failed"],
             input_keys=["guest_data", "drink_location"],
             output_keys=["drink_string"],
         )
+        self._guest_id = guest_id
 
     def execute(self, userdata):
+        favourite_drink = userdata.guest_data[self._guest_id].get("drink", None)
         drink_location = userdata.drink_location
         drink_str = ""
         if drink_location == "None" or drink_location == "":
-            drink_str += "Unfortunately, I couldn't find your drink on the table. "
+            drink_str += f"I couldn't find your drink {favourite_drink} on the table. "
         else:
-            drink_str += f"Your drink is located at the {drink_location} of the table. "
+            drink_str += f"Your drink {favourite_drink} is located at the {drink_location} of the table. "
         userdata.drink_string = drink_str
         return "succeeded"
 
@@ -51,6 +53,7 @@ class FindDrinkOnTable(smach.StateMachine):
         self.possible_drinks = possible_drinks
 
         with self:
+            # Raise Torso
             smach.StateMachine.add(
                 "LOOK_AT_TABLE",
                 LookToPoint(
@@ -72,6 +75,8 @@ class FindDrinkOnTable(smach.StateMachine):
                     object_filter=self.possible_drinks,
                     min_coverage=0.95,
                     min_new_object_dist=0.30,
+                    model="best.pt",
+                    z_axis=0.85,
                 ),
                 transitions={
                     "succeeded": "PROCESS_DETECTED_DRINKS",
@@ -100,7 +105,7 @@ class FindDrinkOnTable(smach.StateMachine):
             )
             smach.StateMachine.add(
                 "GET_DRINK_STRING",
-                GetDrinkString(),
+                GetDrinkString(guest_id=self._guest_id),
                 transitions={
                     "succeeded": "SAY_DRINK_STRING",
                     "failed": "SAY_DRINK_STRING",
