@@ -8,27 +8,18 @@ from dynamic_reconfigure.srv import Reconfigure
 from dynamic_reconfigure.msg import Config, DoubleParameter, BoolParameter, IntParameter
 
 post_door_pose = Pose(
-    position=Point(2.6531456725342917, -0.4460201187208566, 0.0),
-    orientation=Quaternion(0.0, 0.0, -0.16317518460398808, 0.9865971108458885),
+    position=Point(2.9985576089128654, -0.47735297718997116, 0.0),
+    orientation=Quaternion(0.0, 0.0, -0.22572001116393442, 0.9741922174602676),
 )
-
-# inspection_pose = Pose(
-#     position=Point(2.6531456725342917, -0.4460201187208566, 0.0),
-#     orientation=Quaternion(0.0, 0.0, -0.16317518460398808, 0.9865971108458885),
-# )
-
-# leave_arena_pose = Pose(
-#     position=Point(2.6531456725342917, -0.4460201187208566, 0.0),
-#     orientation=Quaternion(0.0, 0.0, -0.16317518460398808, 0.9865971108458885),
-# )
 
 inspection_pose = Pose(
-    position=Point(7.186323768283294, 1.3868814306035047, 0.0),
-    orientation=Quaternion(0.0, 0.0, -0.0011499422095474442, 0.9999993388162388),
+    position=Point(7.242726156271562, 1.6964588646624763, 0.0),
+    orientation=Quaternion(0.0, 0.0, -0.12563732904153996, 0.9920762377717288),
 )
+
 leave_arena_pose = Pose(
-    position=Point(4.863358032281311, 7.099752825063724, 0.0),
-    orientation=Quaternion(0.0, 0.0, 0.9949601424542457, 0.10027120687130096),
+    position=Point(5.031592026750594, 7.318737301317226, 0.0),
+    orientation=Quaternion(0.0, 0.0, 9306984006983658, 0.3657874887656822),
 )
 
 
