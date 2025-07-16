@@ -230,7 +230,7 @@ class RecallDrinkOnTable(smach.StateMachine):
             )
             smach.StateMachine.add(
                 "GET_DRINK_STRING",
-                GetDrinkString(),
+                GetDrinkString(guest_id=guest_id),
                 transitions={
                     "succeeded": "SAY_DRINK_STRING",
                     "failed": "SAY_DRINK_STRING",

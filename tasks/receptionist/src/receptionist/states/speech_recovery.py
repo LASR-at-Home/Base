@@ -56,6 +56,9 @@ class SpeechRecovery(smach.State):
         # )
 
         self._available_drinks = [drink.lower() for drink in prior_data["drinks"]]
+        orange_juice_index = self._available_drinks.index("orange_juice")
+        self._available_drinks[orange_juice_index] = "orange juice"
+
         # 1. Double-word drinks = drinks with a space
         self._available_double_drinks_whole = [
             d for d in self._available_drinks if " " in d
