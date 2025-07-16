@@ -125,8 +125,54 @@ class PourCereal(smach.StateMachine):
                 ),
                 transitions={
                     "succeeded": "MOVE_ABOVE_CONTAINER",
-                    "preempted": "failed",
-                    "aborted": "failed",
+                    "preempted": "SAY_WAIT_CEREAL_GRASP",
+                    "aborted": "SAY_WAIT_CEREAL_GRASP",
+                },
+            )
+
+            smach.StateMachine.add(
+                "SAY_WAIT_CEREAL_GRASP",
+                Say(text="Carful, I will move my arm."),
+                transitions={
+                    transitions={
+                    "succeeded": f"READY_GRASP_CEREAL",
+                    "aborted": f"READY_GRASP_CEREAL",
+                    "preempted": f"READY_GRASP_CEREAL",
+                    },
+                },
+            )
+
+            smach.StateMachine.add(
+                "READY_GRASP_CEREAL",
+                ReadyGraspCereal(),
+                transitions={
+                    transitions={
+                    "succeeded": f"SAY_DONE_READY_GRASP_CEREAL",
+                    "failed": f"SAY_DONE_READY_GRASP_CEREAL",
+                    },
+                },
+            )
+
+            smach.StateMachine.add(
+                "SAY_DONE_READY_GRASP_CEREAL",
+                Say(text="Done. Please put the cereal to my gripper and wait until I close. 5 4 3 2 1"),
+                transitions={
+                    transitions={
+                    "succeeded": f"CLOSE_GRIPER_CEREAL",
+                    "aborted": f"CLOSE_GRIPER_CEREAL",
+                    "preempted": f"CLOSE_GRIPER_CEREAL",
+                    },
+                },
+            )
+
+            smach.StateMachine.add(
+                "CLOSE_GRIPER_CEREAL",
+                CloseGriperCereal(),
+                transitions={
+                    transitions={
+                    "succeeded": f"MOVE_ABOVE_CONTAINER",
+                    "failed": f"MOVE_ABOVE_CONTAINER",
+                    },
                 },
             )
 
@@ -328,3 +374,104 @@ class CheckDetectionResult(smach.State):
             )
             rospy.sleep(1.0)  # Optional: wait briefly before re-detecting
             return "retry"
+
+class ReadyGraspCereal(smach.State):
+    """
+    Play motion to grasp cereal.
+
+    """
+    def __init__(self,):
+        smach.State.__init__(
+            self, outcomes=["succeeded", "failed"], input_keys=[]
+        )
+        self.group = moveit_commander.MoveGroupCommander("arm_torso")
+
+    def execute(self, userdata):
+        moveit_commander.roscpp_initialize(sys.argv)
+
+        robot = moveit_commander.RobotCommander()
+        scene = moveit_commander.PlanningSceneInterface()
+        rospy.sleep(1.0)
+
+        rospy.loginfo("Waiting for planning scene to update …")
+
+        # # 1) Attach a small cube to the gripper as a collision object
+        # gripper_link = "gripper_tool_link"
+        # box_id       = "held_obj"
+        # box_pose = PoseStamped()
+        # box_pose.header.frame_id    = gripper_link
+        # box_pose.pose.position.z    = -0.10   # cube center is 10cm below tool link
+        # box_pose.pose.orientation.w = 1.0
+        # scene.add_box(box_id, box_pose, size=(0.04, 0.04, 0.04))
+        # rospy.loginfo("Added box %s to scene at %s", box_id, box_pose)
+        # rospy.sleep(0.3)
+        # scene.attach_box(gripper_link, box_id,
+        #                 touch_links=robot.get_link_names("gripper"))
+        # rospy.loginfo("Attached box %s to gripper link %s", box_id, gripper_link)
+
+        play = actionlib.SimpleActionClient("play_motion", PlayMotionAction)
+        play.wait_for_server()
+
+        pre = PlayMotionGoal()
+        pre.motion_name   = "home"
+        pre.skip_planning = False
+        play.send_goal_and_wait(pre)
+
+        pre = PlayMotionGoal()
+        pre.motion_name   = "home_to_pregrasp"
+        pre.skip_planning = False
+        play.send_goal_and_wait(pre)
+        rospy.loginfo("Moved to pre-place pose, closing gripper …")
+
+        self.group = moveit_commander.MoveGroupCommander("gripper")
+
+        pre = PlayMotionGoal()
+        pre.motion_name   = "open_gripper"
+        pre.skip_planning = False
+        play.send_goal_and_wait(pre)
+        rospy.loginfo("Open gripper …")
+
+        moveit_commander.roscpp_shutdown()
+
+        #rosparam get /play_motion/motions
+
+        return "succeeded"
+
+
+class CloseGriperCereal(smach.State):
+    """
+    Play motion to grasp cereal.
+
+    """
+    def __init__(self,):
+        smach.State.__init__(
+            self, outcomes=["succeeded", "failed"], input_keys=[]
+        )
+        self.group = moveit_commander.MoveGroupCommander("arm_torso")
+
+    def execute(self, userdata):
+        moveit_commander.roscpp_initialize(sys.argv)
+
+        robot = moveit_commander.RobotCommander()
+        scene = moveit_commander.PlanningSceneInterface()
+        rospy.sleep(5.0) 
+
+        rospy.loginfo("Waiting for planning scene to update …")
+
+        play = actionlib.SimpleActionClient("play_motion", PlayMotionAction)
+        play.wait_for_server()
+
+        self.group = moveit_commander.MoveGroupCommander("gripper")
+
+        pre = PlayMotionGoal()
+        pre.motion_name   = "close_gripper"
+        pre.skip_planning = False
+        play.send_goal_and_wait(pre)
+        rospy.loginfo("close gripper …")
+
+        moveit_commander.roscpp_shutdown()
+
+        return "succeeded"
+
+
+
