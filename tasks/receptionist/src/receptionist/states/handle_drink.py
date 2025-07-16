@@ -24,7 +24,7 @@ class HandleDrink(smach.StateMachine):
         self._face_table = face_table
 
         with self:
-            Detect the nearest person
+            # Detect the nearest person
             smach.StateMachine.add(
                 f"LOOK_CENTRE_BEVERAGE_GUEST_{guest_id}",
                 PlayMotion("look_centre"),
@@ -65,9 +65,7 @@ class HandleDrink(smach.StateMachine):
             )
             smach.StateMachine.add(
                 f"GET_DRINK_GUEST_{guest_id}",
-                AskAndListen(
-                    "Please say 'Hi Tiago' for me to begin listening. What is your favourite drink?"
-                ),
+                AskAndListen("What is your favourite drink?"),
                 transitions={
                     "succeeded": f"PARSE_DRINK_GUEST_{guest_id}",
                     "failed": f"PARSE_DRINK_GUEST_{guest_id}",
@@ -78,7 +76,7 @@ class HandleDrink(smach.StateMachine):
                 f"PARSE_DRINK_GUEST_{guest_id}",
                 GetDrink(guest_id, False),
                 transitions={
-                    "succeeded": f"SAY_FIND_DRINK_{guest_id}",
+                    "succeeded": f"STOP_EYE_TRACKER_GUEST_{guest_id}",
                     "failed": f"REPEAT_GET_DRINK_GUEST_{guest_id}",
                 },
                 remapping={"guest_transcription": "transcribed_speech"},
@@ -97,21 +95,21 @@ class HandleDrink(smach.StateMachine):
                 f"REPEAT_PARSE_DRINK_GUEST_{guest_id}",
                 GetDrink(guest_id, True),
                 transitions={
-                    "succeeded": f"SAY_FIND_DRINK_{guest_id}",
-                    "failed": f"SAY_FIND_DRINK_{guest_id}",
+                    "succeeded": f"STOP_EYE_TRACKER_GUEST_{guest_id}",
+                    "failed": f"STOP_EYE_TRACKER_GUEST_{guest_id}",
                 },
                 remapping={"guest_transcription": "transcribed_speech"},
             )
 
-            smach.StateMachine.add(
-                f"SAY_FIND_DRINK_{guest_id}",
-                Say("Thank you! I will find your drink now."),
-                transitions={
-                    "succeeded": f"STOP_EYE_TRACKER_GUEST_{guest_id}",
-                    "preempted": f"STOP_EYE_TRACKER_GUEST_{guest_id}",
-                    "aborted": f"STOP_EYE_TRACKER_GUEST_{guest_id}",
-                },
-            )
+            # smach.StateMachine.add(
+            #     f"SAY_FIND_DRINK_{guest_id}",
+            #     Say("Thank you! I will find your drink now."),
+            #     transitions={
+            #         "succeeded": f"STOP_EYE_TRACKER_GUEST_{guest_id}",
+            #         "preempted": f"STOP_EYE_TRACKER_GUEST_{guest_id}",
+            #         "aborted": f"STOP_EYE_TRACKER_GUEST_{guest_id}",
+            #     },
+            # )
 
             if self._face_table:
                 stop_eye_tracker_transition = f"FACE_TABLE_GUEST_{guest_id}"

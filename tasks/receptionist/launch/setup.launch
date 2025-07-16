@@ -1,7 +1,7 @@
 <launch>
 
     <!--     PARAMS     -->
-    <arg name="config" default="lab"/>
+    <arg name="config" default="opl_arena"/>
 
     <!--     INTERACTION     -->
     <arg name="whisper_device_param" default="9" />
@@ -24,10 +24,10 @@
     <node name="yolo" pkg="lasr_vision_yolo" type="service.py" output="screen"/>
     <node pkg="lasr_sentence_embedding" type="lasr_sentence_embedding_service.py" name="sentence_embedding_service" output="screen"/>
 
-    <node pkg="web_video_server" type="web_video_server">
+    <!-- <node pkg="web_video_server" type="web_video_server" name="referee_display" output="screen">
         <param name="port" value="8081"/>
         <param address="localhost"/>
-    </node>
+    </node> -->
 
 
 </launch>

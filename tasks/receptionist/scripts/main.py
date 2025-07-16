@@ -24,6 +24,9 @@ if __name__ == "__main__":
     sofa_area_publisher = rospy.Publisher(
         "/receptionist/sofa_area", PolygonStamped, queue_size=1, latch=True
     )
+    bar_area_publisher = rospy.Publisher(
+        "/receptionist/bar_area", PolygonStamped, queue_size=1, latch=True
+    )
 
     wait_pose_param = rospy.get_param("/receptionist/wait_pose")
 
@@ -77,6 +80,7 @@ if __name__ == "__main__":
             header=Header(frame_id="map"),
         )
     )
+
     assert sofa_area.is_valid, f"Sofa area is not valid: {explain_validity(sofa_area)}"
 
     sofa_point = Point(**sofa_point_param)
@@ -116,6 +120,23 @@ if __name__ == "__main__":
         )
     )
 
+    sofa_area_publisher.publish(
+        PolygonStamped(
+            polygon=Polygon(
+                points=[Point(x=x, y=y, z=0.0) for (x, y) in sofa_area.exterior.coords]
+            ),
+            header=Header(frame_id="map"),
+        )
+    )
+
+    bar_area_publisher.publish(
+        PolygonStamped(
+            polygon=Polygon(
+                points=[Point(x=x, y=y, z=0.0) for (x, y) in table_area.exterior.coords]
+            ),
+            header=Header(frame_id="map"),
+        )
+    )
     assert seat_area.is_valid
 
     receptionist = Receptionist(
@@ -143,7 +164,6 @@ if __name__ == "__main__":
         },
         max_people_on_sofa=max_people_on_sofa,
     )
-
 
     outcome = receptionist.execute()
 

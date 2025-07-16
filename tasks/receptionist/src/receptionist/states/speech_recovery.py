@@ -62,7 +62,9 @@ class SpeechRecovery(smach.State):
         ]
         self._available_double_drinks = [
             d.split() for d in self._available_drinks if len(d.split()) > 1
-        ][0]
+        ]
+        if self._available_double_drinks:
+            self._available_double_drinks = self._available_double_drinks[0]
 
         # 2. Single-word drinks = drinks with no space
         self._available_single_drinks = [
@@ -100,8 +102,9 @@ class SpeechRecovery(smach.State):
             the parameter "guest_data".
         """
         if self._recover_from_llm:
+            k = "name" if self._input_type == "name" else "drink"
             filtered_sentence = (
-                userdata.guest_data[self._guest_id]["name"]
+                userdata.guest_data[self._guest_id][k]
                 .lower()
                 .translate(str.maketrans("", "", string.punctuation))
             )
