@@ -28,6 +28,21 @@ cabinet:
         x: 2.99394154548645
         y: 1.3348556756973267
         z: 1.3408424854278564
+      object_id: "object_1"
+      surface_id: "table"
+      candidate_poses:
+        - header:
+            frame_id: "base_footprint"
+            stamp: {secs: 0, nsecs: 0}
+          pose:
+            position: {x: 0.7, y: -0.15, z: 0.95}
+            orientation: {x: 0.600, y: 0.100, z: 0.048, w: 0.749}
+        - header:
+            frame_id: "base_footprint"
+            stamp: {secs: 0, nsecs: 0}
+          pose:
+            position: {x: 0.7, y: -0.1, z: 0.95}
+            orientation: {x: 0.600, y: 0.100, z: 0.048, w: 0.749}
       z_min: 1.21
       z_max: 1.48
     second_bottom:
