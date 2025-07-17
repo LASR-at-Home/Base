@@ -1,0 +1,11 @@
+<launch>
+
+    <!--     MANIPULATION     --> 
+    <node pkg="lasr_manipulation_pipeline" type="registration_service.py" name="registration_service" output="screen"/>
+    <node pkg="lasr_manipulation_pipeline" type="planning_scene_services.py" name="planning_scene_services" output="screen"/>
+    <node pkg="lasr_manipulation_pipeline" type="pick_server.py" name="pick_server" output="screen"/>
+    <node pkg="lasr_manipulation_pipeline" type="place_server.py" name="place_server" output="screen"/>
+    <node pkg="lasr_manipulation_pipeline" type="publisher_pcl.py" name="publisher_pcl" output="screen"/>
+
+
+</launch>
