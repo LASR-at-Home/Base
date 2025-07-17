@@ -25,12 +25,12 @@ class CommandSimilarityMatcher(smach.State):
         )
         self._text_paths = [
             os.path.join(
-                self._text_directory, f"all_commands_german_open.txt_chunk_{i+1}.txt"
+                self._text_directory, f"all_commands_robocup_2025_chunk_{i+1}.txt"
             )
             for i in range(20)
         ]
         self._index_paths = [
-            os.path.join(self._index_directory, f"all_gpsr_commands_german_open.index")
+            os.path.join(self._index_directory, f"all_gpsr_commands_robocup_2025.index")
         ]
 
     def execute(self, userdata):
@@ -54,11 +54,11 @@ if __name__ == "__main__":
     sm = smach.StateMachine(outcomes=["succeeded", "failed"])
     with sm:
         sm.userdata.command = (
-            "go to the plant then meet lua and tell your teams country"
+            "take fork from side table and give to adriana in the kitchen"
         )
         sm.add(
             "COMMAND_SIMILARITY_MATCHER",
-            CommandSimilarityMatcher([2339251] * 20),
+            CommandSimilarityMatcher([897824] * 10),
             transitions={"succeeded": "succeeded", "failed": "failed"},
         )
 

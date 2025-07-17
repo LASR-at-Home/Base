@@ -84,11 +84,11 @@ def main() -> None:
         #     rospy.sleep(rospy.Duration(20.0))
         try:
             rospy.loginfo(f"Staring GPSR")
-            # command_parser_sm = CommandParserStateMachine(data_config=config)
-            # command_parser_sm.execute()
-            # parsed_command: Dict = command_parser_sm.userdata.parsed_command
-            command = "go to the kitchen table then find a bowl and take it and bring it to me"
-            parsed_command = gpsr_compile_and_parse(config, command)
+            command_parser_sm = CommandParserStateMachine(data_config=config)
+            command_parser_sm.execute()
+            parsed_command: Dict = command_parser_sm.userdata.parsed_command
+            # command = "go to the kitchen table then find a bowl and take it and bring it to me"
+            # parsed_command = gpsr_compile_and_parse(config, command)
             rospy.loginfo(f"Parsed command: {parsed_command}")
             sm = build_state_machine(parsed_command)
             sm.execute()

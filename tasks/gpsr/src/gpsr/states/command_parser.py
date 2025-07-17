@@ -10,19 +10,6 @@ from lasr_skills.vision import GetImage
 import cv2_img
 import cv2
 
-class CopyRawToMatched(smach.State):
-    def __init__(self):
-        smach.State.__init__(
-            self,
-            outcomes=["succeeded"],
-            input_keys=["raw_command"],
-            output_keys=["matched_command"],
-        )
-
-    def execute(self, userdata):
-        userdata.matched_command = userdata.raw_command
-        return "succeeded"
-
 
 class ParseCommand(smach.State):
     def __init__(self, data_config: Configuration):
@@ -116,7 +103,7 @@ class CommandParserStateMachine(smach.StateMachine):
     def __init__(
         self,
         data_config: Configuration,
-        n_vecs_per_txt_file: int = 840342,
+        n_vecs_per_txt_file: int = 897824,
         total_txt_files: int = 10,
     ):
         """State machine that takes in a command, matches it to a known command, and
@@ -139,23 +126,12 @@ class CommandParserStateMachine(smach.StateMachine):
                 "ASK_FOR_COMMAND",
                 AskAndListen(tts_phrase="Hello, please tell me your command."),
                 transitions={
-                    "succeeded": "COPY_COMMAND",
+                    "succeeded": "COMMAND_SIMILARITY_MATCHER",
                     "failed": "ASK_FOR_COMMAND",
                 },
-                remapping={
-                    "transcribed_speech": "raw_command",
-                    "matched_command": "raw_command",  
-                },
+                remapping={"transcribed_speech": "raw_command"},
             )
 
-            smach.StateMachine.add(
-                "COPY_COMMAND",
-                CopyRawToMatched(),
-                transitions={"succeeded": "SAY_COMMAND"},
-            )
-
-            
-            '''
             smach.StateMachine.add(
                 "COMMAND_SIMILARITY_MATCHER",
                 CommandSimilarityMatcher([n_vecs_per_txt_file] * total_txt_files),
@@ -164,7 +140,6 @@ class CommandParserStateMachine(smach.StateMachine):
                     "command": "raw_command",
                 },
             )
-            '''
 
             smach.StateMachine.add(
                 "SAY_COMMAND",
@@ -176,7 +151,6 @@ class CommandParserStateMachine(smach.StateMachine):
                 },
                 remapping={"placeholders": "matched_command"},
             )
-
 
             smach.StateMachine.add(
                 "PARSE_COMMAND",
