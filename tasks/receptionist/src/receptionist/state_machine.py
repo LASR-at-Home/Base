@@ -91,7 +91,7 @@ class Receptionist(smach.StateMachine):
                 },
             }
             drink_detections = {
-                drink: {"detected": False, "location": "None"}
+                drink: {"detected": False, "location": "None", "closest_drink": "None"}
                 for drink in self.possible_drinks
             }
 
@@ -209,21 +209,14 @@ class Receptionist(smach.StateMachine):
                     learn_host=True,
                 ),
                 transitions={
-                    "succeeded": "INTRODUCE_GUEST_1",
-                    "failed": "INTRODUCE_GUEST_1",
+                    "succeeded": "RETURN_CON",
+                    "failed": "RETURN_CON",
                 },
                 remapping={
                     "guest_seat_point": "guest_seat_point",
                     "seated_guest_locs": "seated_guest_locs",
                 },
             )
-
-            smach.StateMachine.add(
-                "INTRODUCE_GUEST_1",
-                Introduce(guest_to_introduce="guest1", can_detect_second_guest=False),
-                transitions={"succeeded": "RETURN_CON", "failed": "RETURN_CON"},
-            )
-
             return_con_sm = smach.Concurrence(
                 outcomes=["succeeded", "failed"],
                 default_outcome="failed",

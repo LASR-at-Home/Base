@@ -15,7 +15,7 @@ class GetDrinkString(smach.State):
         smach.State.__init__(
             self,
             outcomes=["succeeded", "failed"],
-            input_keys=["guest_data", "drink_location"],
+            input_keys=["guest_data", "drink_location", "drink_detections"],
             output_keys=["drink_string"],
         )
         self._guest_id = guest_id
@@ -28,6 +28,11 @@ class GetDrinkString(smach.State):
             drink_str += f"I couldn't find your drink {favourite_drink} on the table. "
         else:
             drink_str += f"Your drink {favourite_drink} is located at the {drink_location} of the table. "
+            closest_drink = userdata.drink_detections[favourite_drink.lower()][
+                "closest_drink"
+            ]
+            if closest_drink != "None":
+                drink_str += f"Near the {closest_drink}."
         userdata.drink_string = drink_str
         return "succeeded"
 
@@ -101,6 +106,7 @@ class FindDrinkOnTable(smach.StateMachine):
                     "detected_objects": "detected_objects",
                     "guest_data": "guest_data",
                     "drink_location": "drink_location",
+                    "closest_drink": "closest_drink",
                 },
             )
             smach.StateMachine.add(
@@ -149,6 +155,10 @@ class FindDrinkOnTable(smach.StateMachine):
             self._table_right_area = table_right_area
             self._table_centre_area = table_centre_area
 
+        def _dist_between_points(self, point1: Point, point2: Point) -> float:
+            """Calculate the Euclidean distance between two points."""
+            return ((point1.x - point2.x) ** 2 + (point1.y - point2.y) ** 2) ** 0.5
+
         def execute(self, userdata):
             favourite_drink = userdata.guest_data[self._guest_id].get("drink", None)
             favourite_drink_location = "None"
@@ -171,10 +181,36 @@ class FindDrinkOnTable(smach.StateMachine):
                 userdata.drink_detections[drink.name.lower()][
                     "location"
                 ] = drink_location
+                userdata.drink_detections[drink.name.lower()]["point"] = point
 
             rospy.loginfo(f"Detected drinks: {userdata.drink_detections}")
 
             userdata.drink_location = favourite_drink_location
+
+            # Get the closest drink for each drink detection
+            for drink_name, detection in userdata.drink_detections.items():
+                drink_point = detection["point"]
+                if detection["detected"]:
+                    closest_drink = "None"
+                    closest_distance = float("inf")
+                    for (
+                        other_drink_name,
+                        other_detection,
+                    ) in userdata.drink_detections.items():
+                        if (
+                            other_detection["point"] != drink_point
+                            and other_detection["detected"]
+                        ):
+                            distance = self._dist_between_points(
+                                detection["point"], other_detection["point"]
+                            )
+                            if distance < closest_distance:
+                                closest_distance = distance
+                                closest_drink = other_drink_name
+                    userdata.drink_detections[drink_name][
+                        "closest_drink"
+                    ] = closest_drink
+
             return "succeeded"
 
 
