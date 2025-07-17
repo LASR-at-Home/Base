@@ -180,7 +180,9 @@ class HandleNameInterest(smach.StateMachine):
             with self:
                 smach.StateMachine.add(
                     f"GET_NAME_INTEREST_{guest_id}",
-                    AskAndListen("What is your name and interest?"),
+                    AskAndListen(
+                        "Please step forwards. What is your name and interest?"
+                    ),
                     transitions={
                         "succeeded": f"PARSE_NAME_INTEREST_{guest_id}",
                         "failed": f"PARSE_NAME_INTEREST_{guest_id}",
