@@ -1,180 +1,299 @@
-from typing import List, Tuple
-
 import rospy
+
 import smach
 import smach_ros
-from geometry_msgs.msg import Point, PointStamped, Pose
-from lasr_skills import Say, GoToLocation
-from lasr_vision_msgs.srv import Recognise
-from storing_groceries.states import WaitDoorOpen, ObjectSortingLoop, PourCereal
-from shapely.geometry import Polygon
-from std_msgs.msg import Empty, Header
+from shapely import Polygon as ShapelyPolygon
+
+from storing_groceries.states import (
+    SelectObject,
+    ScanShelves,
+    AddShelvesToPlanningScene,
+    ChooseShelf,
+    Start,
+    DetectObjects,
+    GraspObject,
+    FindAndGoToTable,
+    SelectAndVisualiseObject,
+)
+
+from lasr_skills import (
+    Say,
+    GoToLocation,
+    DetectDoorOpening,
+    DetectAllInPolygonSensorData,
+)
+
+from lasr_manipulation_msgs.msg import PlaceGoal, PlaceAction
+from geometry_msgs.msg import Point
+from std_msgs.msg import Header
+from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion
+from std_msgs.msg import Empty
+from std_srvs.srv import Empty as EmptySrv
 
 
 class StoringGroceries(smach.StateMachine):
-    def __init__(
-        self,
-        wait_pose: Pose,
-        wait_area: Polygon,
-        table_pose: Pose,
-        table_area: Polygon,
-        cabinet_pose: Pose,
-        # search_motions: List[str],
-        cabinet_area: Polygon,
-        shelf_area: Polygon,
-        shelf_point: Point,
-    ):
-        smach.StateMachine.__init__(self, outcomes=["succeeded", "failed"])
 
-        self.wait_pose = wait_pose
-        self.wait_area = wait_area
-        self.table_pose = table_pose
-        self.table_area = table_area
-        self.cabinet_pose = cabinet_pose
-        self.cabinet_area = cabinet_area
-        self.shelf_point = shelf_point
-        self.shelf_area = shelf_area
-
+    def __init__(self, use_arm: bool = True) -> None:
+        super().__init__(outcomes=["succeeded", "failed"])
         with self:
-            self.userdata.dataset = "storing_groceries"
-            # self.userdata.wait_pose = wait_pose
-            # self.userdata.table_pose = table_pose
-            # self.userdata.cabinet_pose = cabinet_pose
 
-            self.userdata.shelf_position = PointStamped()
-            self.userdata.object_position = PointStamped()
-            self.userdata.sereal_position = PointStamped()
-            self.userdata.sereal_container_position = PointStamped()
-            # self.userdata.table_objects=[]
-            # self.userdata.not_graspable=[]
-
-            # def wait_cb(ud, msg):
-            #     rospy.loginfo("Received start signal")
-            #     return False
-
-            # smach.StateMachine.add(
-            #     "WAIT_START",
-            #     smach_ros.MonitorState(
-            #         "/storing_groceries/start",
-            #         Empty,
-            #         wait_cb,
-            #     ),
-            #     transitions={
-            #         "valid": "WAIT_START",
-            #         "invalid": "SAY_START",
-            #         "preempted": "WAIT_START",
-            #     },
-            # )
+            smach.StateMachine.add(
+                "WAIT_START",
+                smach_ros.MonitorState(
+                    "/storing_groceries/start",
+                    Empty,
+                    lambda *_: False,
+                ),
+                transitions={
+                    "valid": "WAIT_START",
+                    "preempted": "WAIT_START",
+                    "invalid": "SAY_START",
+                },
+            )
 
             smach.StateMachine.add(
                 "SAY_START",
-                Say(text="Ready to start"),
+                Say(text="Start of Storing Groceries task."),
                 transitions={
-                    "succeeded": "GO_TO_WAITING_AREA",
-                    "aborted": "GO_TO_WAITING_AREA",
-                    "preempted": "GO_TO_WAITING_AREA",
-                },
-            )
-
-            self.go_to_waiting_area()
-
-            """
-            WaitDoorOpen
-            """
-
-            smach.StateMachine.add(
-                "SAY_WAIT",
-                Say(text="Waiting for door to open"),
-                transitions={
-                    "succeeded": "WAIT_DOOR_OPEN",
-                    "aborted": "WAIT_DOOR_OPEN",
-                    "preempted": "WAIT_DOOR_OPEN",
+                    "succeeded": "SAY_WAITING",
+                    "aborted": "SAY_WAITING",
+                    "preempted": "SAY_WAITING",
                 },
             )
 
             smach.StateMachine.add(
-                "WAIT_DOOR_OPEN",
-                WaitDoorOpen(),
+                "SAY_WAITING",
+                Say(text="Waiting for the door to open."),
                 transitions={
-                    "succeeded": "OBJECT_SORTING_LOOP",
-                    "aborted": "OBJECT_SORTING_LOOP",
-                    "preempted": "OBJECT_SORTING_LOOP",
-                },
-            )
-
-            """
-            ObjectSortingLoop
-            """
-
-            smach.StateMachine.add(
-                "OBJECT_SORTING_LOOP",
-                ObjectSortingLoop(self.table_pose, self.cabinet_pose),
-                transitions={
-                    "succeeded": "SAY_DONE_OBJECT_SORTING_LOOP",
-                    "failed": "SAY_DONE_OBJECT_SORTING_LOOP",
-                    "escape": "SAY_DONE_OBJECT_SORTING_LOOP",
+                    "succeeded": "WAIT_FOR_DOOR_TO_OPEN",
+                    "aborted": "WAIT_FOR_DOOR_TO_OPEN",
+                    "preempted": "WAIT_FOR_DOOR_TO_OPEN",
                 },
             )
 
             smach.StateMachine.add(
-                "SAY_DONE_OBJECT_SORTING_LOOP",
-                Say("No more object to put in cabinet"),
+                "WAIT_FOR_DOOR_TO_OPEN",
+                DetectDoorOpening(timeout=10.0),
                 transitions={
-                    "succeeded": "POUR_CEREAL",
-                    "aborted": "POUR_CEREAL",
-                    "preempted": "POUR_CEREAL",
+                    "door_opened": "SAY_GOING_TO_CABINET",
                 },
             )
-
-            """
-            + ShoppingBagSortingLoop
-            """
-
-            """
-            PourCereal
-            """
 
             smach.StateMachine.add(
-                "POUR_CEREAL",
-                PourCereal(self.table_pose),
+                "SAY_GOING_TO_CABINET",
+                Say(text="I am going to the cabinet."),
                 transitions={
-                    "succeeded": "SAY_FINISHED",
-                    "failed": "SAY_FINISHED",
+                    "succeeded": "GO_TO_CABINET",
+                    "aborted": "GO_TO_CABINET",
+                    "preempted": "GO_TO_CABINET",
                 },
             )
-
-            """
-            Finish
-            """
 
             smach.StateMachine.add(
-                "SAY_FINISHED",
-                Say(text="I am done."),
+                "GO_TO_CABINET",
+                GoToLocation(location_param="/storing_groceries/cabinet/pose"),
                 transitions={
-                    "succeeded": "succeeded",
-                    "aborted": "failed",
-                    "preempted": "succeeded",
+                    "succeeded": "SAY_OPEN_CABINETS",
+                    "failed": "SAY_OPEN_CABINETS",
                 },
             )
 
-    def go_to_waiting_area(self) -> None:
-        """Adds the states to go to table area."""
+            smach.StateMachine.add(
+                "SAY_OPEN_CABINETS",
+                Say(
+                    text="Referee, I am unable to open the cabinets. Please open both cabinets for me. I will give you 5 seconds. 5.. 4.. 3.. 2.. 1.. "
+                ),
+                transitions={
+                    "succeeded": "SCAN_SHELVES",
+                    "preempted": "SCAN_SHELVES",
+                    "aborted": "SCAN_SHELVES",
+                },
+            )
 
-        smach.StateMachine.add(
-            f"GO_TO_WAITING_AREA",
-            GoToLocation(self.wait_pose),
-            transitions={
-                "succeeded": f"SAY_ARRIVE_WAITING_AREA",
-                "failed": f"SAY_ARRIVE_WAITING_AREA",
-            },
-        )
+            smach.StateMachine.add(
+                "SCAN_SHELVES",
+                ScanShelves(),
+                transitions={
+                    "succeeded": "FIND_TABLE",
+                    "failed": "failed",
+                },
+            )
 
-        smach.StateMachine.add(
-            f"SAY_ARRIVE_WAITING_AREA",
-            Say(text="Arrived waiting area"),
-            transitions={
-                "succeeded": f"SAY_WAIT",
-                "aborted": f"SAY_WAIT",
-                "preempted": f"SAY_WAIT",
-            },
+            smach.StateMachine.add(
+                "FIND_TABLE",
+                FindAndGoToTable(),
+                transitions={"succeeded": "DETECT_OBJECTS", "failed": "DETECT_OBJECTS"},
+            )
+
+            smach.StateMachine.add(
+                "DETECT_OBJECTS",
+                DetectAllInPolygonSensorData(
+                    ShapelyPolygon(
+                        rospy.get_param("/storing_groceries/table/search_polygon")
+                    ),
+                    object_filter=[
+                        k for k in rospy.get_param("/storing_groceries/objects")
+                    ],
+                    min_coverage=1.0,
+                    min_confidence=0.1,
+                    z_sweep_min=0.0,
+                    z_sweep_max=1.0,
+                    model="robocup.pt",
+                ),
+                transitions={"succeeded": "SELECT_OBJECT", "failed": "DETECT_OBJECTS"},
+            )
+
+            smach.StateMachine.add(
+                "SELECT_OBJECT",
+                SelectAndVisualiseObject(),
+                transitions={
+                    "succeeded": "OPEN_GRIPPER",
+                    "failed": "DETECT_OBJECTS",
+                },
+            )
+
+            smach.StateMachine.add(
+                "OPEN_GRIPPER",
+                smach_ros.ServiceState(
+                    "/parallel_gripper_controller/release", EmptySrv
+                ),
+                transitions={
+                    "succeeded": "HELP_ME_GRASPING",
+                    "aborted": "HELP_ME_GRASPING",
+                    "preempted": "HELP_ME_GRASPING",
+                },
+            )
+
+            smach.StateMachine.add(
+                "HELP_ME_GRASPING",
+                Say(
+                    format_str="I'm unable to grasp the {} please place it in my gripper. I will give you 5 seconds. 5... 4... 3... 2... 1..."
+                ),
+                transitions={
+                    "succeeded": "CLOSE_GRIPPER",
+                    "aborted": "CLOSE_GRIPPER",
+                    "preempted": "CLOSE_GRIPPER",
+                },
+                remapping={"placeholders": "selected_object_name"},
+            )
+
+            smach.StateMachine.add(
+                "CLOSE_GRIPPER",
+                smach_ros.ServiceState("/parallel_gripper_controller/grasp", EmptySrv),
+                transitions={
+                    "succeeded": "GO_TO_CABINET_1",
+                    "aborted": "GO_TO_CABINET_1",
+                    "preempted": "GO_TO_CABINET_1",
+                },
+            )
+
+            smach.StateMachine.add(
+                "GO_TO_CABINET_1",
+                GoToLocation(location_param="/storing_groceries/cabinet/pose"),
+                transitions={
+                    "succeeded": "CHOOSE_SHELF",
+                    "failed": "GO_TO_CABINET_1",
+                },
+            )
+
+            smach.StateMachine.add(
+                "CHOOSE_SHELF",
+                ChooseShelf(use_arm),
+                transitions={
+                    "succeeded": "HELP_ME_PLACING",
+                    "failed": "HELP_ME_PLACING_ANYWHERE",
+                },
+            )
+
+            smach.StateMachine.add(
+                "HELP_ME_PLACING",
+                Say(format_str="I can't place the {} myself."),
+                transitions={
+                    "succeeded": "HELP_ME_PLACING_1",
+                    "aborted": "HELP_ME_PLACING_1",
+                    "preempted": "HELP_ME_PLACING_1",
+                },
+                remapping={"placeholders": "selected_object_name"},
+            )
+
+            smach.StateMachine.add(
+                "HELP_ME_PLACING_1",
+                Say(format_str="Please place it on the {} shelf."),
+                transitions={
+                    "succeeded": "HELP_ME_PLACING_2",
+                    "aborted": "HELP_ME_PLACING_2",
+                    "preempted": "HELP_ME_PLACING_2",
+                },
+                remapping={"placeholders": "chosen_shelf"},
+            )
+
+            smach.StateMachine.add(
+                "HELP_ME_PLACING_2",
+                Say(
+                    format_str="{}. I will open my gripper in 5 seconds. 5... 4... 3... 2... 1..."
+                ),
+                transitions={
+                    "succeeded": "OPEN_GRIPPER_FOR_PLACING",
+                    "aborted": "OPEN_GRIPPER_FOR_PLACING",
+                    "preempted": "OPEN_GRIPPER_FOR_PLACING",
+                },
+                remapping={"placeholders": "chosen_shelf_str"},
+            )
+
+            smach.StateMachine.add(
+                "OPEN_GRIPPER_FOR_PLACING",
+                smach_ros.ServiceState(
+                    "/parallel_gripper_controller/release", EmptySrv
+                ),
+                transitions={
+                    "succeeded": "SAY_GOING_TO_TABLE_1",
+                    "aborted": "SAY_GOING_TO_TABLE_1",
+                    "preempted": "SAY_GOING_TO_TABLE_1",
+                },
+            )
+            smach.StateMachine.add(
+                "HELP_ME_PLACING_ANYWHERE",
+                Say(
+                    format_str="I can't place the {} myself, and can't determine where to place it. Please place it on any available shelf."
+                ),
+                transitions={
+                    "succeeded": "OPEN_GRIPPER_FOR_PLACING",
+                    "aborted": "OPEN_GRIPPER_FOR_PLACING",
+                    "preempted": "OPEN_GRIPPER_FOR_PLACING",
+                },
+                remapping={"placeholders": "selected_object_name"},
+            )
+
+            smach.StateMachine.add(
+                "SAY_GOING_TO_TABLE_1",
+                Say(text="I am going to the table"),
+                transitions={
+                    "succeeded": "GO_TO_TABLE_1",
+                    "aborted": "GO_TO_TABLE_1",
+                    "preempted": "GO_TO_TABLE_1",
+                },
+            )
+
+            smach.StateMachine.add(
+                "GO_TO_TABLE_1",
+                GoToLocation(),
+                remapping={"location": "table_pose"},
+                transitions={"succeeded": "DETECT_OBJECTS", "failed": "GO_TO_TABLE_1"},
+            )
+
+    def _place_cb(self, userdata, goal):
+        place_poses = [
+            PoseStamped(
+                pose=Pose(
+                    position=Point(**p["position"]),
+                    orientation=Quaternion(**p["orientation"]),
+                ),
+                header=Header(frame_id="map"),
+            )
+            for p in rospy.get_param(
+                f"/storing_groceries/cabinet/shelves/{userdata.selected_shelf}/place_candidates"
+            )
+        ]
+        return PlaceGoal(
+            userdata.selected_object[0].name, userdata.selected_shelf, place_poses
         )

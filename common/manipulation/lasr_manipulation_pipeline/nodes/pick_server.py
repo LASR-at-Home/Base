@@ -30,6 +30,21 @@ from lasr_manipulation_msgs.msg import PickAction, PickGoal, PickResult
 from lasr_manipulation_msgs.srv import AllowCollisionsWithObj, AttachObjectToGripper
 from visualization_msgs.msg import Marker, MarkerArray
 
+from pal_startup_msgs.srv import (
+    StartupStart,
+    StartupStartRequest,
+    StartupStop,
+)
+
+CALIBRATION_OFFSET_X: float = 0.0
+CALIBRATION_OFFSET_Y: float = 0.06
+CALIBRATION_OFFSET_Z: float = 0.02
+
+ALLOW_TOP_DOWN_GRASPS: bool = (
+    False  # this is safer if calibration is poor -- we want to avoid pushing objects down into the table.
+)
+HORIZONTAL_GRASP_THRESHOLD_COS: float = 0.1
+
 
 class PickServer:
     """
@@ -44,7 +59,7 @@ class PickServer:
     # GPD
     _gpd_binary_path: str = "/opt/gpd/build/detect_grasps"
     _gpd_config_path: str = os.path.join(
-        rospkg.RosPack().get_path("lasr_manipulation_pipeline"), "cfg", "tiago.cfg"
+        rospkg.RosPack().get_path("lasr_manipulation_pipeline"), "config", "tiago.cfg"
     )
     _gpd_pcd_path: str = "/tmp/gpd.pcd"
     _gpd_output_file: str = "grasps.txt"
@@ -103,6 +118,13 @@ class PickServer:
         self._tf_buffer = tf2_ros.Buffer(cache_time=rospy.Duration(10.0))
         self._tf_listener = tf2_ros.TransformListener(self._tf_buffer)
 
+        self._enable_head_manager = rospy.ServiceProxy(
+            "/pal_startup_control/start", StartupStart
+        )
+        self._disable_head_manager = rospy.ServiceProxy(
+            "/pal_startup_control/start", StartupStop
+        )
+
         self._grasp_markers_pub = rospy.Publisher(
             "/grasp_markers", MarkerArray, queue_size=10, latch=True
         )
@@ -117,17 +139,30 @@ class PickServer:
         transform: TransformStamped = goal.transform
         scale: Vector3Stamped = goal.scale
 
+        if self._pick_server.is_preempt_requested():
+            rospy.loginfo("Pick goal preempted before starting.")
+            self._pick_server.set_preempted()
+            return
+
         # Generate grasps
         grasps, scores = self._generate_grasps(mesh_name, transform, scale)
+
+        if self._pick_server.is_preempt_requested():
+            rospy.loginfo("Pick goal preempted after grasp generation.")
+            self._pick_server.set_preempted()
+            return
+
         # If no grasps are outputted, finish.
         if not grasps:
             result = PickResult(success=False)
             self._pick_server.set_aborted(result)
             return
+
         self._publish_grasp_poses([g.pose for g in grasps], grasps[0].header.frame_id)
 
         # Clear any existing pose targets
         self._move_group.clear_pose_targets()
+
         # Execute pre-grasps
         rospy.loginfo("Dispatching pre-grasps to MoveIt for execution...")
         rospy.loginfo(f"Setting frame ID to {grasps[0].header.frame_id}")
@@ -135,18 +170,30 @@ class PickServer:
         self._move_group.set_pose_targets(
             [g.pose for g in grasps], "gripper_grasping_frame"
         )
-        rospy.loginfo(grasps[0].header.frame_id)
-        rospy.loginfo(grasps)
+
+        if self._pick_server.is_preempt_requested():
+            rospy.loginfo("Pick goal preempted before pre-grasp execution.")
+            self._pick_server.set_preempted()
+            return
+
         success = self._move_group.go(wait=True)
         if not success:
             rospy.logwarn("MoveIt failed to execute pre-grasps. Aborting.")
             result = PickResult(success=False)
             self._pick_server.set_aborted(result)
             return
+
         rospy.loginfo("Reached pre-grasp pose")
+
+        if self._pick_server.is_preempt_requested():
+            rospy.loginfo("Pick goal preempted after reaching pre-grasp.")
+            self._pick_server.set_preempted()
+            return
 
         # Allow the end-effector to touch the object
         self._allow_collisions_with_obj(object_id)
+
+        self._move_group.set_support_surface_name("table")
 
         # Get final grasp pose
         final_grasp_pose = self._get_final_grasp_pose()
@@ -155,25 +202,40 @@ class PickServer:
             [final_grasp_pose.pose], final_grasp_pose.header.frame_id
         )
 
-        # Clear any existing pose targets
         self._move_group.clear_pose_targets()
 
-        # Execute final grasp pose
         self._move_group.set_pose_reference_frame(final_grasp_pose.header.frame_id)
         self._move_group.set_pose_target(
             final_grasp_pose.pose, "gripper_grasping_frame"
         )
+
+        if self._pick_server.is_preempt_requested():
+            rospy.loginfo("Pick goal preempted before final grasp execution.")
+            self._pick_server.set_preempted()
+            return
+
         success = self._move_group.go(wait=True)
         if not success:
             rospy.loginfo("MoveIt failed to execute final grasp. Aborting.")
             result = PickResult(success=False)
             self._pick_server.set_aborted(result)
             return
-        rospy.loginfo("Reached final graps pose")
+
+        rospy.loginfo("Reached final grasp pose")
+
+        if self._pick_server.is_preempt_requested():
+            rospy.loginfo("Pick goal preempted before closing gripper.")
+            self._pick_server.set_preempted()
+            return
 
         # Close gripper
         self._close_gripper()
         rospy.loginfo("Closed gripper")
+
+        if self._pick_server.is_preempt_requested():
+            rospy.loginfo("Pick goal preempted after closing gripper.")
+            self._pick_server.set_preempted()
+            return
 
         # Check if grasp was successful
         success = not self._eef_is_fully_closed()
@@ -184,13 +246,39 @@ class PickServer:
             result = PickResult(success=False)
             self._pick_server.set_aborted(result)
             return
+
         rospy.loginfo("Grasp was successful")
 
         self._attach_object_to_gripper(object_id)
         rospy.loginfo(f"Attached {object_id} to gripper")
 
+        # Get post grasp pose
+        post_grasp_pose = self._get_post_grasp_pose()
+        rospy.loginfo("Got pose grasp pose")
+        self._publish_grasp_poses(
+            [post_grasp_pose.pose], post_grasp_pose.header.frame_id
+        )
+
+        self._move_group.clear_pose_targets()
+
+        self._move_group.set_pose_reference_frame(post_grasp_pose.header.frame_id)
+        self._move_group.set_pose_target(post_grasp_pose.pose, "gripper_grasping_frame")
+
+        if self._pick_server.is_preempt_requested():
+            rospy.loginfo("Pick goal preempted before post grasp execution.")
+            self._pick_server.set_preempted()
+            return
+
+        success = self._move_group.go(wait=True)
+        if not success:
+            rospy.loginfo("MoveIt failed to execute post grasp. Aborting.")
+            result = PickResult(success=False)
+            self._pick_server.set_aborted(result)
+            return
+
         result = PickResult(success=True, grasp_pose=final_grasp_pose)
         self._pick_server.set_succeeded(result)
+        self._enable_head_manager(StartupStartRequest("head_manager", ""))
         rospy.loginfo("Pick was successful")
 
     def _publish_grasp_poses(self, poses: List[Pose], frame_id: str = "base_footprint"):
@@ -355,8 +443,8 @@ class PickServer:
         score_threshold: float = -np.inf,
         surface_threshold: float = 0.01,
         max_shift: float = 0.12,
-        step_size: float = 0.001,
-        angle_threshold_deg: float = 25.0,
+        step_size: float = 0.01,
+        angle_threshold_deg: float = 10.0,
         pregrasp_offset_x: float = -0.15,
     ) -> Tuple[List[PoseStamped], List[float]]:
         """
@@ -371,15 +459,24 @@ class PickServer:
         grasps_base_footprint, scores = self._filter_by_angles(
             grasps_base_footprint, scores, angle_threshold_deg
         )
+        grasps_base_footprint, scores = self._maybe_filter_top_down_grasps(
+            grasps, scores
+        )
         grasps_gripper_frame = self._tf_poses(
             grasps_base_footprint, "gripper_grasping_frame"
         )
         grasps_gripper_frame = self._offset_grasps(
             grasps_gripper_frame, pregrasp_offset_x, 0.0, 0.0
         )
+        grasps_gripper_frame = self._offset_grasps_for_calibration(
+            grasps_gripper_frame,
+            CALIBRATION_OFFSET_X,
+            CALIBRATION_OFFSET_Y,
+            CALIBRATION_OFFSET_Z,
+        )
         grasps_base_footprint = self._tf_poses(grasps_gripper_frame, "base_footprint")
         rospy.loginfo(
-            f"Postprocessing and filtering of grasps finished. Kept {len(grasps)} / {original_count} grasps."
+            f"Postprocessing and filtering of grasps finished. Kept {len(grasps_base_footprint)} / {original_count} grasps."
         )
         return grasps_base_footprint, scores
 
@@ -584,18 +681,63 @@ class PickServer:
 
         return offset_grasps
 
+    def _offset_grasps_for_calibration(
+        self,
+        grasps: List[PoseStamped],
+        dx: float,
+        dy: float,
+        dz: float,
+    ) -> List[PoseStamped]:
+        offset_grasps = []
+
+        for grasp in grasps:
+            rot = tf.quaternion_matrix(
+                [
+                    grasp.pose.orientation.x,
+                    grasp.pose.orientation.y,
+                    grasp.pose.orientation.z,
+                    grasp.pose.orientation.w,
+                ]
+            )
+
+            rot_inv = np.linalg.inv(rot)
+            offset_world = np.array([dx, dy, dz, 0.0])
+            offset_local = rot_inv @ offset_world
+            offset_vector = rot @ np.array(
+                [offset_local[0], offset_local[1], offset_local[2], 1.0]
+            )
+            pos = np.array(
+                [
+                    grasp.pose.position.x,
+                    grasp.pose.position.y,
+                    grasp.pose.position.z,
+                ]
+            )
+            new_pos = pos + offset_vector[:3]
+            new_grasp = deepcopy(grasp)
+            new_grasp.pose.position.x = new_pos[0]
+            new_grasp.pose.position.y = new_pos[1]
+            new_grasp.pose.position.z = new_pos[2]
+            offset_grasps.append(new_grasp)
+
+        return offset_grasps
+
     def _get_final_grasp_pose(self) -> PoseStamped:
         # Get current pose of the end-effector
         eef_pose = self._get_eef_pose(base_frame="gripper_grasping_frame")
-        rospy.loginfo(eef_pose)
         x_forward = 0.09  # fixed, for now
         eef_forward_pose = self._offset_grasps([eef_pose], x_forward, 0.0, 0.0)[0]
-        rospy.loginfo(eef_forward_pose)
         eef_forward_pose_base_footprint = self._tf_poses(
             [eef_forward_pose], "base_footprint"
         )[0]
-        rospy.loginfo(eef_forward_pose_base_footprint)
         return eef_forward_pose_base_footprint
+
+    def _get_post_grasp_pose(self) -> PoseStamped:
+        # Get current pose of the end-effector
+        eef_pose = self._get_eef_pose(base_frame="base_footprint")
+        z_up = 0.1
+        eef_pose.pose.position.z += z_up
+        return eef_pose
 
     def _get_eef_pose(
         self,
@@ -623,6 +765,35 @@ class PickServer:
             "/parallel_gripper_controller/state", JointTrajectoryControllerState
         )
         return controller_state.desired.positions[0] == 0.0
+
+    def _maybe_filter_top_down_grasps(
+        self, grasps: List[PoseStamped], scores: List[float]
+    ) -> Tuple[List[PoseStamped], List[float]]:
+        if ALLOW_TOP_DOWN_GRASPS:
+            return grasps, scores
+
+        filtered_grasps = []
+        filtered_scores = []
+
+        for grasp, score in zip(grasps, scores):
+            quat = [
+                grasp.pose.orientation.x,
+                grasp.pose.orientation.y,
+                grasp.pose.orientation.z,
+                grasp.pose.orientation.w,
+            ]
+            rot = tf.quaternion_matrix(quat)
+
+            x_axis = rot[:3, 0]
+
+            world_z = np.array([0, 0, 1])
+
+            cos_angle = abs(np.dot(x_axis, world_z) / np.linalg.norm(x_axis))
+            if cos_angle < HORIZONTAL_GRASP_THRESHOLD_COS:
+                filtered_grasps.append(grasp)
+                filtered_scores.append(score)
+
+        return filtered_grasps, filtered_scores
 
 
 if __name__ == "__main__":

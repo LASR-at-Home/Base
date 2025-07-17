@@ -1,0 +1,201 @@
+table:
+  search_polygon:
+    - [0.4976128935813904, -4.9029083251953125]
+    - [0.4475761950016022, -7.956873893737793]
+    - [-2.775938034057617, -7.974327087402344]
+    - [-2.515241861343384, -5.157763481140137]
+cabinet:
+  pose: 
+    position: 
+      x: -4.066995539459048
+      y: -6.38178499997772
+      z: 0.0
+    orientation: 
+      x: 0.0
+      y: 0.0
+      z: 0.836779837646631
+      w: 0.5475394993131343
+  shelves:
+    top:
+      name: "top"
+      torso_lift_joint: 0.15
+      polygon:
+        - [-4.488892078399658, -5.287670612335205]
+        - [-3.6368231773376465, -5.309803009033203]
+        - [-3.6493797302246094, -5.682177543640137]
+        - [-4.498295783996582, -5.664954662322998]
+      look_point:
+        x: -4.0810160636901855
+        y: -5.504173755645752
+        z: 0.8205674886703491
+      z_min: 0.8
+      z_max: 1.2
+    bottom:
+      name: "middle"
+      torso_lift_joint: 0.02
+      polygon:
+        - [-4.493312358856201, -5.288168430328369]
+        - [-3.6348390579223633,-5.313849925994873]
+        - [-3.642612934112549, -5.682580947875977]
+        - [-4.499203681945801, -5.657175540924072]
+      look_point:
+        x: -4.035015106201172
+        y: -5.5037736892700195
+        z: 0.4489777088165283
+      z_min: 0.45
+      z_max: 0.8
+
+objects:
+
+  # foods
+  mayo:
+    graspable: false
+    category: "foods"
+    scale: false
+  tuna:
+    graspable: false
+    category: "foods"
+    scale: false
+  ketchup:
+    graspable: false
+    category: "foods"
+    scale: false
+  oats:
+    graspable: false
+    category: "foods"
+    scale: false
+  corn_flour:
+    graspable: false
+    category: "foods"
+    scale: false
+  broth:
+    graspable: false
+    category: "foods"
+    scale: false
+  broth_box:
+    graspable: false
+    category: "foods"
+    scale: false
+  
+  # snacks
+  peanuts:
+    graspable: false
+    category: "snacks"
+    scale: false
+  cornflakes:
+    graspable: false
+    category: "snacks"
+    scale: false
+  crisps:
+    graspable: false
+    category: "snacks"
+    scale: false
+  pringles:
+    graspable: false
+    category: "snacks"
+    scale: false
+  cheese_snack:
+    graspable: false
+    category: "snacks"
+    scale: false
+  chocolate_bar:
+    graspable: false
+    category: "snacks"
+    scale: false
+  gum_balls:
+    graspable: false
+    category: "snacks"
+    scale: false
+
+  # fruits
+  apple:
+    graspable: false
+    category: "fruits"
+    scale: false
+  lemon:
+    graspable: false
+    category: "fruits"
+    scale: false
+  lime:
+    graspable: false
+    category: "fruits"
+    scale: false
+  tangerine:
+    graspable: false
+    category: "fruits"
+    scale: false
+  pear:
+    graspable: false
+    category: "fruits"
+    scale: false
+  
+  # dishes
+  spoon:
+    graspable: false
+    category: "dishes"
+    scale: false
+  plate:
+    graspable: false
+    category: "dishes"
+    scale: false
+  cup:
+    graspable: false
+    category: "dishes"
+    scale: false
+  fork:
+    graspable: false
+    category: "dishes"
+    scale: false
+  bowl:
+    graspable: false
+    category: "dishes"
+    scale: false
+  knife:
+    graspable: false
+    category: "dishes"
+    scale: false
+  
+  # cleaning supplies
+  cloth:
+    graspable: false
+    category: "cleaning_supplies"
+    scale: false
+  polish:
+    graspable: false
+    category: "cleaning_supplies"
+    scale: false
+  brush:
+    graspable: false
+    category: "cleaning_supplies"
+    scale: false
+  sponge :
+    graspable: false
+    category: "cleaning_supplies"
+    scale: false
+  
+  # drinks
+  coffee:
+    graspable: false
+    category: "drinks"
+    scale: false
+  kuat:
+    graspable: false
+    category: "drinks"
+    scale: false
+  milk:
+    graspable: false
+    category: "drinks"
+    scale: false
+  orange_juice:
+    graspable: false
+    category: "drinks"
+    scale: false
+  fanta:
+    graspable: false
+    category: "drinks"
+    scale: false
+  coke:
+    graspable: false
+    category: "drinks"
+    scale: false
+  
