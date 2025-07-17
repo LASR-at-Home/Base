@@ -29,7 +29,6 @@ class ParseCommand(smach.State):
 
     def execute(self, userdata):
         rospy.loginfo(f"Received command : {userdata.matched_command.lower()}")
-        rospy.loginfo(f"Received command : {userdata.matched_command.lower()}")
         try:
             print(userdata.matched_command.lower())
             userdata.parsed_command = gpsr_compile_and_parse(
