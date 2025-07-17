@@ -184,7 +184,7 @@ class CalculateSweepPoints(smach.State):
         return ShapelyPolygon(transformed_points)
 
     def _sample_points_in_polygon(
-        self, polygon: ShapelyPolygon, num_samples: float = 1000
+        self, polygon: ShapelyPolygon, num_samples: float = 10
     ) -> List[ShapelyPoint]:
         """Randomly samples points within a polygon.
 
@@ -287,7 +287,7 @@ class CalculateSweepPoints(smach.State):
         )
 
         rel_camera_hull = self._extract_relative_footprint(fov_polygon)
-        sampled_points = self._sample_points_in_polygon(polygon, num_samples=1000)
+        sampled_points = self._sample_points_in_polygon(polygon, num_samples=10)
         candidate_footprints = [
             self._place_footprint_at_point(rel_camera_hull, p) for p in sampled_points
         ]

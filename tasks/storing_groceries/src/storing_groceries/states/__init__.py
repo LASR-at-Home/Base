@@ -6,3 +6,6 @@ from .choose_shelf import ChooseShelf
 from .start import Start
 from .detect_objects import DetectObjects
 from .grasp_object import GraspObject
+from .get_approach_pose import ComputeApproach
+from .find_and_go_to_table import FindAndGoToTable
+from .select_and_visualise_object import SelectAndVisualiseObject

@@ -15,7 +15,9 @@ def check_polygons():
         "/storing_groceries/table", PolygonStamped, queue_size=1, latch=True
     )
 
-    table_polygon = ShapelyPolygon(rospy.get_param("/storing_groceries/table/polygon"))
+    table_polygon = ShapelyPolygon(
+        rospy.get_param("/storing_groceries/table/search_polygon")
+    )
     assert (
         table_polygon.is_valid
     ), f"Table polygon is not valid: {explain_validity(table_polygon)}"

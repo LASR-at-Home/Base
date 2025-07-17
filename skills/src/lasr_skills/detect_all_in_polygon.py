@@ -276,7 +276,7 @@ class CalculateSweepPoints(smach.State):
         )
 
         rel_camera_hull = self._extract_relative_footprint(fov_polygon)
-        sampled_points = self._sample_points_in_polygon(self._polygon, num_samples=1000)
+        sampled_points = self._sample_points_in_polygon(self._polygon, num_samples=10)
         candidate_footprints = [
             self._place_footprint_at_point(rel_camera_hull, p) for p in sampled_points
         ]
@@ -585,6 +585,8 @@ class DetectAllInPolygon(smach.StateMachine):
                             filter=self._object_filter,
                             model=self._model,
                             models=self._models,
+                            z_min=0.0,
+                            z_max=10.0,
                             confidence=self._min_confidence,
                         ),
                         transitions={
