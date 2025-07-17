@@ -175,6 +175,7 @@ class ScanShelves(smach.StateMachine):
         ]
 
         if not userdata.detected_objects:
+            userdata.shelf_data[userdata.shelf_id]["category_counts"] = category_counts
             userdata.shelf_data[userdata.shelf_id]["category"] = "empty"
             return "succeeded"
 
@@ -213,6 +214,7 @@ class ScanShelves(smach.StateMachine):
 
             category_counts[category] += 1
 
+        userdata.shelf_data[userdata.shelf_id]["category_counts"] = category_counts
         shelf_category = max(category_counts, key=lambda key: category_counts[key])
         userdata.shelf_data[userdata.shelf_id]["category"] = shelf_category
 

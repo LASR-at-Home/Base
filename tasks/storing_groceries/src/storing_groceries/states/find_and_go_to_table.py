@@ -10,7 +10,11 @@ from storing_groceries.states import ComputeApproach
 class GoToTable(smach.StateMachine):
 
     def __init__(self):
-        super().__init__(outcomes=["succeeded", "failed"], output_keys=["table_pose"])
+        super().__init__(
+            outcomes=["succeeded", "failed"],
+            input_keys=["table_approach_poses"],
+            output_keys=["table_approach_poses", "table_pose"],
+        )
 
         with self:
 
@@ -22,6 +26,7 @@ class GoToTable(smach.StateMachine):
                     outcomes=["succeeded", "failed"],
                     input_keys=["table_approach_poses"],
                 ),
+                transitions={"succeeded": "GO_TO_TABLE", "failed": "failed"},
             )
 
             smach.StateMachine.add(
@@ -88,11 +93,14 @@ class FindAndGoToTable(smach.StateMachine):
                 "GET_TABLE_POSE",
                 smach.CBState(
                     self._get_table_pose,
-                    output_keys=["table_approach_pose"],
+                    output_keys=["table_poses"],
                     outcomes=["succeeded", "failed"],
                     input_keys=["detected_objects"],
                 ),
-                transitions={"succeeded": "succeeded", "failed": "DETECT_TABLE"},
+                transitions={
+                    "succeeded": "GET_CANDIDATE_POSES",
+                    "failed": "DETECT_TABLE",
+                },
             )
             smach.StateMachine.add(
                 "GET_CANDIDATE_POSES",
@@ -101,6 +109,7 @@ class FindAndGoToTable(smach.StateMachine):
                     "succeeded": "GO_TO_TABLE",
                     "failed": "DETECT_TABLE",
                 },
+                remapping={"table_candidate_poses": "table_poses"},
             )
 
             smach.StateMachine.add(
@@ -111,9 +120,9 @@ class FindAndGoToTable(smach.StateMachine):
 
     def _get_table_pose(self, userdata):
         table_poses = [
-            obj.pose
+            obj.point
             for obj in userdata.detected_objects
-            if obj.name in ["dining table" "tv"]
+            if obj.name in ["dining table", "tv"]
         ]
         if table_poses:
             userdata.table_poses = table_poses

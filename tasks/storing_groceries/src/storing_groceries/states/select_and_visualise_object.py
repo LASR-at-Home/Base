@@ -6,6 +6,8 @@ from cv_bridge import CvBridge
 from sensor_msgs.msg import Image
 import cv2
 
+from lasr_skills import Say
+
 
 class SelectAndVisualiseObject(smach.StateMachine):
 
@@ -30,7 +32,19 @@ class SelectAndVisualiseObject(smach.StateMachine):
                     outcomes=["succeeded", "failed"],
                     input_keys=["detected_objects"],
                 ),
-                transitions={"succeeded": "VIS_OBJECT", "failed": "failed"},
+                transitions={"succeeded": "SAY_OBJECT", "failed": "failed"},
+            )
+
+            smach.StateMachine.add(
+                "SAY_OBJECT",
+                Say(
+                    text="I have selected an object, and it is displayed on my screen. Please take a look."
+                ),
+                transitions={
+                    "succeeded": "VIS_OBJECT",
+                    "preempted": "VIS_OBJECT",
+                    "aborted": "VIS_OBJECT",
+                },
             )
 
             smach.StateMachine.add(
@@ -47,7 +61,7 @@ class SelectAndVisualiseObject(smach.StateMachine):
         if not userdata.detected_objects:
             return "failed"
         userdata.selected_object = userdata.detected_objects[0]
-        userdata.selected_object_name = userdata.detected_objects[0].name
+        userdata.selected_object_name = userdata.detected_objects[0][0].name
         return "succeeded"
 
     def _vis_object(self, userdata):

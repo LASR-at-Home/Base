@@ -28,6 +28,7 @@ from geometry_msgs.msg import Point
 from std_msgs.msg import Header
 from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion
 from std_msgs.msg import Empty
+from std_srvs.srv import Empty as EmptySrv
 
 
 class StoringGroceries(smach.StateMachine):
@@ -100,7 +101,7 @@ class StoringGroceries(smach.StateMachine):
             smach.StateMachine.add(
                 "SAY_OPEN_CABINETS",
                 Say(
-                    text="Referee, I am unable to open the cabinets. Please open both cabinets for me. I will give you 10 seconds. 10.. 9.. 8.. 7.. 6.. 5.. 4.. 3.. 2.. 1.. "
+                    text="Referee, I am unable to open the cabinets. Please open both cabinets for me. I will give you 5 seconds. 5.. 4.. 3.. 2.. 1.. "
                 ),
                 transitions={
                     "succeeded": "SCAN_SHELVES",
@@ -121,7 +122,7 @@ class StoringGroceries(smach.StateMachine):
             smach.StateMachine.add(
                 "FIND_TABLE",
                 FindAndGoToTable(),
-                transitions={"succeeded": "succeeded", "failed": "failed"},
+                transitions={"succeeded": "DETECT_OBJECTS", "failed": "DETECT_OBJECTS"},
             )
 
             smach.StateMachine.add(
@@ -139,29 +140,51 @@ class StoringGroceries(smach.StateMachine):
                     z_sweep_max=1.0,
                     model="robocup.pt",
                 ),
-                transitions={"succeeded": "succeeded", "failed": "DETECT_OBJECTS"},
+                transitions={"succeeded": "SELECT_OBJECT", "failed": "DETECT_OBJECTS"},
             )
 
             smach.StateMachine.add(
                 "SELECT_OBJECT",
                 SelectAndVisualiseObject(),
                 transitions={
-                    "succeeded": "HELP_ME_GRASPING",
+                    "succeeded": "OPEN_GRIPPER",
                     "failed": "DETECT_OBJECTS",
+                },
+            )
+
+            smach.StateMachine.add(
+                "OPEN_GRIPPER",
+                smach_ros.ServiceState(
+                    "/parallel_gripper_controller/release", EmptySrv
+                ),
+                transitions={
+                    "succeeded": "HELP_ME_GRASPING",
+                    "aborted": "HELP_ME_GRASPING",
+                    "preempted": "HELP_ME_GRASPING",
                 },
             )
 
             smach.StateMachine.add(
                 "HELP_ME_GRASPING",
                 Say(
-                    format_str="I'm unable to grasp the {} please place it on my back. I will give you 5 seconds. 5... 4... 3... 2... 1..."
+                    format_str="I'm unable to grasp the {} please place it in my gripper. I will give you 5 seconds. 5... 4... 3... 2... 1..."
                 ),
+                transitions={
+                    "succeeded": "CLOSE_GRIPPER",
+                    "aborted": "CLOSE_GRIPPER",
+                    "preempted": "CLOSE_GRIPPER",
+                },
+                remapping={"placeholders": "selected_object_name"},
+            )
+
+            smach.StateMachine.add(
+                "CLOSE_GRIPPER",
+                smach_ros.ServiceState("/parallel_gripper_controller/grasp", EmptySrv),
                 transitions={
                     "succeeded": "GO_TO_CABINET_1",
                     "aborted": "GO_TO_CABINET_1",
                     "preempted": "GO_TO_CABINET_1",
                 },
-                remapping={"placeholders": "selected_object_name"},
             )
 
             smach.StateMachine.add(
@@ -197,22 +220,46 @@ class StoringGroceries(smach.StateMachine):
                 "HELP_ME_PLACING_1",
                 Say(format_str="Please place it on the {} shelf."),
                 transitions={
-                    "succeeded": "SAY_GOING_TO_TABLE_1",
-                    "aborted": "SAY_GOING_TO_TABLE_1",
-                    "preempted": "SAY_GOING_TO_TABLE_1",
+                    "succeeded": "HELP_ME_PLACING_2",
+                    "aborted": "HELP_ME_PLACING_2",
+                    "preempted": "HELP_ME_PLACING_2",
                 },
                 remapping={"placeholders": "chosen_shelf"},
             )
 
+            smach.StateMachine.add(
+                "HELP_ME_PLACING_2",
+                Say(
+                    format_str="{}. I will open my gripper in 5 seconds. 5... 4... 3... 2... 1..."
+                ),
+                transitions={
+                    "succeeded": "OPEN_GRIPPER_FOR_PLACING",
+                    "aborted": "OPEN_GRIPPER_FOR_PLACING",
+                    "preempted": "OPEN_GRIPPER_FOR_PLACING",
+                },
+                remapping={"placeholders": "chosen_shelf_str"},
+            )
+
+            smach.StateMachine.add(
+                "OPEN_GRIPPER_FOR_PLACING",
+                smach_ros.ServiceState(
+                    "/parallel_gripper_controller/release", EmptySrv
+                ),
+                transitions={
+                    "succeeded": "SAY_GOING_TO_TABLE_1",
+                    "aborted": "SAY_GOING_TO_TABLE_1",
+                    "preempted": "SAY_GOING_TO_TABLE_1",
+                },
+            )
             smach.StateMachine.add(
                 "HELP_ME_PLACING_ANYWHERE",
                 Say(
                     format_str="I can't place the {} myself, and can't determine where to place it. Please place it on any available shelf."
                 ),
                 transitions={
-                    "succeeded": "SAY_GOING_TO_TABLE_1",
-                    "aborted": "SAY_GOING_TO_TABLE_1",
-                    "preempted": "SAY_GOING_TO_TABLE_1",
+                    "succeeded": "OPEN_GRIPPER_FOR_PLACING",
+                    "aborted": "OPEN_GRIPPER_FOR_PLACING",
+                    "preempted": "OPEN_GRIPPER_FOR_PLACING",
                 },
                 remapping={"placeholders": "selected_object_name"},
             )
