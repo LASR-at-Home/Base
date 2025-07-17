@@ -1,18 +1,11 @@
 <launch>
 
     <!--     PARAMS     -->
-    <arg name="config" default="simulation"/>
+    <arg name="config" default="opl"/>
     <rosparam command="load" file="$(find storing_groceries)/config/$(arg config).yaml" ns="storing_groceries" />
-    <!-- <rosparam command="load" file="$(find lasr_manipulation_pipeline)/config/motions.yaml"/> -->
 
     <!--     MOTIONS     -->
     <rosparam command="load" file="$(find lasr_skills)/config/motions.yaml"/>
-
-    <!--     MANIPULATION     --> 
-    <!-- <node pkg="lasr_manipulation_pipeline" type="registration_service.py" name="registration_service" output="screen"/>
-    <node pkg="lasr_manipulation_pipeline" type="planning_scene_services.py" name="planning_scene_services" output="screen"/>
-    <node pkg="lasr_manipulation_pipeline" type="pick_server.py" name="pick_server" output="screen"/>
-    <node pkg="lasr_manipulation_pipeline" type="place_server.py" name="place_server" output="screen"/> -->
 
     <!--      PERCEPTION     -->
     <node name="yolo" pkg="lasr_vision_yolo" type="service.py" output="screen"/>
@@ -21,9 +14,13 @@
     <node pkg="lasr_llm" type="llm.py" name="llm_server" output="screen"/>
 
     <!-- WEB VIEW -->
-    <node pkg="web_video_server" type="web_video_server" name="web_video_server">
+    <!-- <node pkg="web_video_server" type="web_video_server" name="web_video_server">
         <param name="port" value="8081"/>
         <param name="address" value="localhost"/>
+    </node> -->
+
+    <node name="rqt_image_view" pkg="rqt_image_view" type="rqt_image_view" output="screen">
+        <param name="image_topic" value="/referee_view"/>
     </node>
 
 </launch>
