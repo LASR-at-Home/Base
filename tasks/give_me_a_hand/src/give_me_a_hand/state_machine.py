@@ -39,9 +39,9 @@ class GiveMeAHand(smach.StateMachine):
             #     },
             # )
 
-            waiting_area = Pose()
-            waiting_area=rospy.get_param("/robocup_2025/start_pose"),
-
+            self.pose = rospy.get_param(f"/arena/start_pose/{waiting_}", "unknown")
+            self.pose = self.convert_yaml_to_pose(pose)
+        
             smach.StateMachine.add(
                 "SAY_START",
                 Say(text="Ready to start"),
@@ -155,8 +155,6 @@ class GiveMeAHand(smach.StateMachine):
             #     },
             # )
 
-#Detect human collect object only near human image
-
             """
             Finish
             """
@@ -170,3 +168,47 @@ class GiveMeAHand(smach.StateMachine):
                     "preempted": "succeeded",
                 },
             )
+
+def convert_yaml_to_pose(yaml_data):
+    pose = Pose()
+    yaml_data
+
+    # Extract start_pose
+    start_pose = yaml_data.get('arena', {}).get('start_pose', {})
+    poses.append({
+        'name': 'start_pose',
+        'position': start_pose.get('position', {}),
+        'orientation': start_pose.get('orientation', {})
+    })
+
+    # Iterate through rooms
+    rooms = yaml_data.get('arena', {}).get('rooms', {})
+    for room_name, room_data in rooms.items():
+        # Room main pose
+        room_pose = room_data.get('pose', {})
+        poses.append({
+            'name': f'{room_name}_pose',
+            'position': room_pose.get('position', {}),
+            'orientation': room_pose.get('orientation', {})
+        })
+
+        # People search poses
+        for idx, psp in enumerate(room_data.get('people_search_poses', [])):
+            poses.append({
+                'name': f'{room_name}_people_search_pose_{idx}',
+                'position': psp.get('position', {}),
+                'orientation': psp.get('orientation', {})
+            })
+
+        # Beacons
+        beacons = room_data.get('beacons', {})
+        for beacon_name, beacon_data in beacons.items():
+            pose = {
+                'name': f'{room_name}_beacon_{beacon_name}',
+                'position': {},  # beacons may not have a single "pose", but just polygon
+                'orientation': {}
+            }
+            poses.append(pose)
+
+    return poses
+        
