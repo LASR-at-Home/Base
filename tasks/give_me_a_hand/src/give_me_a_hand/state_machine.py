@@ -40,7 +40,7 @@ class GiveMeAHand(smach.StateMachine):
             # )
 
             waiting_area = Pose()
-            waiting_area=rospy.get_param("/give_me_a_hand/living_room/shelves"),
+            waiting_area=rospy.get_param("/robocup_2025/start_pose"),
 
             smach.StateMachine.add(
                 "SAY_START",
@@ -170,60 +170,3 @@ class GiveMeAHand(smach.StateMachine):
                     "preempted": "succeeded",
                 },
             )
-
-    def go_to_waiting_area(self) -> None:
-        """Adds the states to go to table area."""
-
-        smach.StateMachine.add(
-            f"GO_TO_WAITING_AREA",
-            GoToLocation(self.wait_pose),
-            transitions={
-                "succeeded": f"SAY_ARRIVE_WAITING_AREA",
-                "failed": f"SAY_ARRIVE_WAITING_AREA",
-            },
-        )
-
-        smach.StateMachine.add(
-            f"SAY_ARRIVE_WAITING_AREA",
-            Say(text="Arrived waiting area"),
-            transitions={
-                "succeeded": f"SAY_WAIT",
-                "aborted": f"SAY_WAIT",
-                "preempted": f"SAY_WAIT",
-            },
-        )
-
- go_to_(self, customer_approach_pose, "succeeded") # Operator
-
-            # smach.StateMachine.add(
-            #     "GO_TO_OPERATORS",
-            #     GoToLocation(),
-            #     remapping={"location": "customer_approach_pose"},
-            #     transitions={"succeeded": "GET_ORDER", "failed": "TRUN_MOVE_BASE"},
-            # )
-
-    def go_to_(self, pose, next_state) -> None:
-        """Adds the states to go to table area."""
-
-        smach.StateMachine.add(
-            f"GO_TO_{next_state}",
-            GoToLocation(pose),
-            transitions={
-                "succeeded": f"{next_state}",
-                "failed": f"GO_TO_RECOVERY",
-            },
-        )
-
-        smach.StateMachine.add(
-            "ENABLE_MOVEBASE_MANAGER",
-            smach_ros.ServiceState(
-            "/pal_startup_control/start",
-            StartupStart,
-            request=StartupStartRequest("move_base", ""),
-            ),
-            transitions={
-                "succeeded": f"GO_TO_{next_state}",
-                "preempted": "failed",
-                "aborted": "failed",
-            },
-        ),
