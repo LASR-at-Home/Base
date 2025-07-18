@@ -108,19 +108,15 @@ def get_current_pose() -> Pose:
     return pose.pose.pose
 
 
-def get_location_pose(location: str, person: bool, dem_manipulation=False) -> Pose:
+def get_location_pose(location: str, person: bool) -> Pose:
     location_room = get_location_room(location)
     if person:
         location_pose: Dict = rospy.get_param(
             f"/gpsr/arena/rooms/{location_room}/beacons/{location}/person_detection_pose"
         )
-    elif not dem_manipulation:
-        location_pose: Dict = rospy.get_param(
-            f"/gpsr/arena/rooms/{location_room}/beacons/{location}/object_detection_pose"
-        )
     else:
         location_pose: Dict = rospy.get_param(
-            f"/gpsr/arena/rooms/{location_room}/beacons/{location}/dem_manipulation_pose"
+            f"/gpsr/arena/rooms/{location_room}/beacons/{location}/object_detection_pose"
         )
 
     return Pose(
@@ -764,9 +760,7 @@ def deliver(command_param: Dict, sm: smach.StateMachine) -> None:
 def place(command_param: Dict, sm: smach.StateMachine) -> None:
 
     if "location" in command_param:
-        location_pose = get_location_pose(
-            command_param["location"], False, dem_manipulation=True
-        )
+        location_pose = get_location_pose(command_param["location"], False)
     else:
         raise ValueError(
             "Place command received with no location in command parameters"
@@ -873,9 +867,7 @@ def take(command_param: Dict, sm: smach.StateMachine) -> None:
     sm.add(
         f"STATE_{increment_state_count()}",
         GoToLocation(
-            location=get_location_pose(
-                command_param["location"], False, dem_manipulation=True
-            ),
+            location=get_location_pose(command_param["location"], False),
         ),
         transitions={
             "succeeded": f"STATE_{STATE_COUNT + 1}",
@@ -1000,9 +992,7 @@ def bring(command_param: Dict, sm: smach.StateMachine) -> None:
     sm.add(
         f"STATE_{increment_state_count()}",
         GoToLocation(
-            location=get_location_pose(
-                command_param["location"], False, dem_manipulation=True
-            ),
+            location=get_location_pose(command_param["location"], False),
         ),
         transitions={
             "succeeded": f"STATE_{STATE_COUNT + 1}",
