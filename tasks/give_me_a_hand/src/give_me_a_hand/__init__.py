@@ -1,1 +1,1 @@
-from state_machine import GiveMeAHand
+from .state_machine import GiveMeAHand
