@@ -123,7 +123,9 @@ class CommandParserStateMachine(smach.StateMachine):
 
             smach.StateMachine.add(
                 "ASK_FOR_COMMAND",
-                AskAndListen(tts_phrase="Hello, please tell me your command."),
+                AskAndListen(
+                    tts_phrase="Hello, please tell me your command. Speak closely and directly into the microphone "
+                ),
                 transitions={
                     "succeeded": "COMMAND_SIMILARITY_MATCHER",
                     "failed": "ASK_FOR_COMMAND",
@@ -142,13 +144,33 @@ class CommandParserStateMachine(smach.StateMachine):
 
             smach.StateMachine.add(
                 "SAY_COMMAND",
-                Say(format_str="I received command: {}"),
+                Say(format_str="I received command: {}. "),
                 transitions={
-                    "succeeded": "PARSE_COMMAND",
-                    "preempted": "PARSE_COMMAND",
-                    "aborted": "PARSE_COMMAND",
+                    "succeeded": "ASK_IF_CORRECT",
+                    "preempted": "ASK_IF_CORRECT",
+                    "aborted": "ASK_IF_CORRECT",
                 },
                 remapping={"placeholders": "matched_command"},
+            )
+
+            smach.StateMachine.add(
+                "ASK_IF_CORRECT",
+                AskAndListen(
+                    tts_phrase="Is this correct? Please Say Hi Tiago Yes or Hi Tiago No."
+                ),
+                transitions={
+                    "succeeded": "CHECK_RESPONSE",
+                    "failed": "CHECK_RESPONSE",
+                },
+            )
+
+            smach.StateMachine.add(
+                "CHECK_RESPONSE",
+                self.CheckResponse(),
+                transitions={
+                    "correct": "PARSE_COMMAND",
+                    "incorrect": "ASK_FOR_COMMAND",
+                },
             )
 
             smach.StateMachine.add(

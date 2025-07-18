@@ -61,14 +61,14 @@ class HandoverObject(smach.StateMachine):
             smach.StateMachine.add(
                 "WAIT_5",
                 Wait(5),
-                transitions={"succeeded": "FOLD_ARM", "failed": "OPEN_GRIPPER"},
+                transitions={"succeeded": "OPEN_GRIPPER", "failed": "OPEN_GRIPPER"},
             )
 
             smach.StateMachine.add(
                 "OPEN_GRIPPER",
                 PlayMotion(motion_name="open_gripper"),
                 transitions={
-                    "succeeded": "WAIT_5",
+                    "succeeded": "succeeded",
                     "aborted": "failed",
                     "preempted": "failed",
                 },

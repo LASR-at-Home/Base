@@ -68,7 +68,7 @@ class Start(smach.StateMachine):
             smach.StateMachine.add(
                 "WAIT_FOR_DOOR_TO_OPEN",
                 DetectDoorOpening(),
-                transitions={"door_opened": "GO_TO_INSTRUCTION_POINT"},
+                transitions={"door_opened": "succeeded"},
             )
 
 
@@ -76,39 +76,36 @@ class GoToInstructionPoint(smach.StateMachine):
 
     def __init__(self):
 
-        super.__init__(self, outcomes=["succeeded"])
+        super().__init__(outcomes=["succeeded", "failed"])
 
         instruction_pose_param = rospy.get_param("gpsr/arena/start_pose")
-        instruction_pose = PoseStamped(
-            pose=Pose(
-                position=Point(**instruction_pose_param["position"]),
-                orientation=Quaternion(**instruction_pose_param["orientation"]),
+        instruction_pose = Pose(
+            position=Point(**instruction_pose_param["position"]),
+            orientation=Quaternion(**instruction_pose_param["orientation"]),
+        )
+        with self:
+            smach.StateMachine.add(
+                "SAY_GOING_TO_START",
+                Say(text="I am going to the instruction point to receive a command."),
+                transitions={
+                    "succeeded": "GO_TO_START",
+                    "preempted": "GO_TO_START",
+                    "aborted": "GO_TO_START",
+                },
             )
-        )
-        instruction_pose.header.frame_id = "map"
 
-        smach.StateMachine.add(
-            "SAY_GOING_TO_START",
-            Say(text="I am going to the instruction point to receive a command."),
-            transitions={
-                "succeeded": "GO_TO_START",
-                "preempted": "GO_TO_START",
-                "aborted": "GO_TO_START",
-            },
-        )
-
-        smach.StateMachine.add(
-            "GO_TO_START",
-            GoToLocation(location=instruction_pose),
-            transitions={"succeeded": "succeeded", "failed": "GO_TO_START"},
-        )
+            smach.StateMachine.add(
+                "GO_TO_START",
+                GoToLocation(location=instruction_pose),
+                transitions={"succeeded": "succeeded", "failed": "GO_TO_START"},
+            )
 
 
 class WaitForWakeword(smach.StateMachine):
 
     def __init__(self, timeout: float):
 
-        super().__init__(self, outcomes=["succeeded"])
+        super().__init__(outcomes=["succeeded"])
 
         with self:
 
@@ -126,11 +123,10 @@ class WaitForWakeword(smach.StateMachine):
 
             smach.StateMachine.add(
                 "LISTEN_FOR_HI_TIAGO",
-                ListenForWakeword(wakeword="hi_tiago", timeout=timeout),
+                ListenForWakeword(wakeword="hi_tiago", timeout=timeout, threshold=0.01),
                 transitions={
                     "succeeded": "succeeded",
-                    "preempted": "succeeded",
-                    "aborted": "succeeded",
+                    "failed": "succeeded",
                 },
             )
 
@@ -160,7 +156,10 @@ def main() -> None:
             rospy.loginfo(f"Parsed command: {parsed_command}")
             sm = build_state_machine(parsed_command)
             sm.execute()
-        except:
+        except Exception as e:
+            rospy.logerr(f"Error executing command: {e}")
+            _tts(tts_client, "I am sorry, I couldn't understand your command")
+
             _tts(tts_client, "Something went wrong, I couldn't execute the command")
     _tts(tts_client, "I am done")
 

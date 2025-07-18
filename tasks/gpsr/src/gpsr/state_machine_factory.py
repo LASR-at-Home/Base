@@ -400,11 +400,20 @@ def talk(command_param: Dict, sm: smach.StateMachine, greet_person: bool) -> Non
             polygon: Polygon = get_room_polygon(command_param["room"])
             location_str = command_param["room"]
         elif "location" in command_param:
-            waypoints: List[Pose] = [get_location_pose(command_param["location"], True)]
-            polygon: Polygon = get_room_polygon(
-                get_location_room((command_param["location"]))
-            )
             location_str = command_param["location"]
+            if location_str in ["office", "living_room", "kitchen", "bedroom"]:
+                waypoints = get_object_detection_poses(location_str)
+                polygon: Polygon = get_room_polygon(location_str)
+                # location_polygons = get_object_detection_polygons(location_str)
+                # look_points = get_look_detection_poses(location_str)
+            else:
+                waypoints: List[Pose] = [
+                    get_location_pose(command_param["location"], True)
+                ]
+                polygon: Polygon = get_room_polygon(
+                    get_location_room((command_param["location"]))
+                )
+                location_str = command_param["location"]
         else:
             raise ValueError(
                 "Tell command received with personinfo, but no room or location in command parameters"
@@ -929,8 +938,12 @@ def go(command_param: Dict, sm: smach.StateMachine, person: bool) -> None:
     """
     location_str = ""
     if "location" in command_param:
-        target_pose = get_location_pose(command_param["location"], person)
         location_str = command_param["location"]
+        if location_str in ["office", "living_room", "kitchen", "bedroom"]:
+            target_pose = get_room_pose(location_str)
+        else:
+            target_pose = get_location_pose(command_param["location"], person)
+            location_str = command_param["location"]
     elif "room" in command_param:
         target_pose = get_room_pose(command_param["room"])
         location_str = command_param["room"]
@@ -1048,15 +1061,20 @@ def find(command_param: Dict, sm: smach.StateMachine) -> None:
     if "object_category" in command_param or "object" in command_param:
         location_str = ""
         if "location" in command_param:
-            waypoints = [get_location_pose(command_param["location"], person=False)]
             location_str = command_param["location"]
-            look_points = [get_look_point(command_param["location"])]
-            location_polygon = get_location_polygon(command_param["location"])
+            if location_str in ["office", "living_room", "kitchen", "bedroom"]:
+                waypoints = [get_object_detection_poses(location_str)]
+                location_polygons = get_object_detection_polygons(location_str)
+                look_points = [get_look_detection_poses(location_str)]
+            else:
+                waypoints = [get_location_pose(command_param["location"], person=False)]
+                look_points = [get_look_point(command_param["location"])]
+                location_polygon = get_location_polygon(command_param["location"])
         elif "room" in command_param:
-            waypoints = get_object_detection_poses(command_param["room"])
+            waypoints = [get_object_detection_poses(command_param["room"])]
             location_polygons = get_object_detection_polygons(command_param["room"])
             location_str = command_param["room"]
-            look_points = get_look_detection_poses(command_param["room"])
+            look_points = [get_look_detection_poses(command_param["room"])]
 
         else:
             raise ValueError(
