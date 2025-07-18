@@ -111,7 +111,7 @@ class GiveMeAHand(smach.StateMachine):
             """
 
             smach.StateMachine.add(
-                "HANDLE_OPERATORS",
+                "FIND_OPERATORS",
                 FindOperators(self.table_pose, self.cabinet_pose),
                 transitions={
                     "succeeded": "COMMUNICATE_OPERATORS",
@@ -138,6 +138,8 @@ class GiveMeAHand(smach.StateMachine):
                     "failed": "FIND_OPERATORS",
                 },
             )
+
+#Detect human collect object only near human image
 
             """
             Finish
