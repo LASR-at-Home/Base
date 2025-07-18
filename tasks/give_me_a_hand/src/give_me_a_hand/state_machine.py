@@ -6,7 +6,7 @@ import smach_ros
 from geometry_msgs.msg import Point, PointStamped, Pose
 from lasr_skills import Say, GoToLocation
 from lasr_vision_msgs.srv import Recognise
-from give_me_a_hand.states import FIND_OPERATORS, ObjectSortingLoop, PourCereal, HandleRequest, CommunicateOperators
+from give_me_a_hand.states import WaitDoorOpen, FindOperators
 from shapely.geometry import Polygon
 from std_msgs.msg import Empty, Header
 
@@ -15,43 +15,12 @@ from std_msgs.msg import Empty, Header
 class GiveMeAHand(smach.StateMachine):
     def __init__(
         self,
-        wait_pose: Pose,
-        wait_area: Polygon,
-        table_pose: Pose,
-        table_area: Polygon,
-        cabinet_pose: Pose,
-        # search_motions: List[str],
-        cabinet_area: Polygon,
-        shelf_area: Polygon,
-        shelf_point: Point,
     ):
         smach.StateMachine.__init__(self, outcomes=["succeeded", "failed"])
 
         # Strategy1. Give every possible pose and pick close, wider to narrow (exclude impossible)
         # Strategy2. If location changes. Yolo detection?
-
-        self.wait_pose = wait_pose
-        self.wait_area = wait_area
-        self.table_pose = table_pose
-        self.table_area = table_area
-        self.cabinet_pose = cabinet_pose
-        self.cabinet_area = cabinet_area
-        self.shelf_point = shelf_point
-        self.shelf_area = shelf_area
-
         with self:
-            self.userdata.dataset = "give_me_a_hand"
-            # self.userdata.wait_pose = wait_pose
-            # self.userdata.table_pose = table_pose
-            # self.userdata.cabinet_pose = cabinet_pose
-
-            self.userdata.shelf_position = PointStamped()
-            self.userdata.object_position = PointStamped()
-            self.userdata.sereal_position = PointStamped()
-            self.userdata.sereal_container_position = PointStamped()
-            # self.userdata.table_objects=[]
-            # self.userdata.not_graspable=[]
-
             # def wait_cb(ud, msg):
             #     rospy.loginfo("Received start signal")
             #     return False
@@ -69,6 +38,9 @@ class GiveMeAHand(smach.StateMachine):
             #         "preempted": "WAIT_START",
             #     },
             # )
+
+            waiting_area = Pose()
+            waiting_area=rospy.get_param("/robocup_2025/start_pose"),
 
             smach.StateMachine.add(
                 "SAY_START",
@@ -112,17 +84,41 @@ class GiveMeAHand(smach.StateMachine):
 
             smach.StateMachine.add(
                 "FIND_OPERATORS",
-                FindOperators(self.table_pose, self.cabinet_pose),
+                FindOperators(),
                 transitions={
-                    "succeeded": "COMMUNICATE_OPERATORS",
-                    "failed": "COMMUNICATE_OPERATORS",
+                    "succeeded": "GO_TO_OPERATORS",
+                    "failed": "GO_TO_OPERATORS",
                     "escape": "SAY_FINISHED",
                 },
             )
 
             smach.StateMachine.add(
-                "COMMUNICATE_OPERATORS",
-                CommunicateOperators("No more object to put in cabinet"),
+                f"GO_TO_OPERATORS",
+                GoToLocation(),
+                remapping={"location": "customer_approach_pose"},
+                transitions={
+                    "succeeded": f"SAY_COMMUNICATE_OPERATORS",
+                    "failed": f"ENABLE_MOVEBASE_MANAGER",
+                },
+            )
+
+            smach.StateMachine.add(
+                "ENABLE_MOVEBASE_MANAGER",
+                smach_ros.ServiceState(
+                "/pal_startup_control/start",
+                StartupStart,
+                request=StartupStartRequest("move_base", ""),
+                ),
+                transitions={
+                    "succeeded": f"GO_TO_OPERATORS",
+                    "preempted": "failed",
+                    "aborted": "failed",
+                },
+            ),
+
+            smach.StateMachine.add(
+                "SAY_COMMUNICATE_OPERATORS",
+                Say("ongoing"),
                 transitions={
                     "succeeded": "GRASP_AND_PUT",
                     "aborted": "GRASP_AND_PUT",
@@ -131,13 +127,33 @@ class GiveMeAHand(smach.StateMachine):
             )
 
             smach.StateMachine.add(
-                "GRASP_AND_PUT",
-                GraspAndPut(self.table_pose),
+                "SAY_GRASP_AND_PLACE",
+                Say("ongoing"),
                 transitions={
-                    "succeeded": "FIND_OPERATORS",
-                    "failed": "FIND_OPERATORS",
+                    "succeeded": "SAY_FINISHED",
+                    "aborted": "SAY_FINISHED",
+                    "preempted": "SAY_FINISHED",
                 },
             )
+
+            # smach.StateMachine.add(
+            #     "COMMUNICATE_OPERATORS",
+            #     CommunicateOperators("No more object to put in cabinet"),
+            #     transitions={
+            #         "succeeded": "GRASP_AND_PUT",
+            #         "aborted": "GRASP_AND_PUT",
+            #         "preempted": "GRASP_AND_PUT",
+            #     },
+            # )
+
+            # smach.StateMachine.add(
+            #     "GRASP_AND_PUT",
+            #     GraspAndPut(),
+            #     transitions={
+            #         "succeeded": "FIND_OPERATORS",
+            #         "failed": "FIND_OPERATORS",
+            #     },
+            # )
 
 #Detect human collect object only near human image
 
@@ -154,25 +170,3 @@ class GiveMeAHand(smach.StateMachine):
                     "preempted": "succeeded",
                 },
             )
-
-    def go_to_waiting_area(self) -> None:
-        """Adds the states to go to table area."""
-
-        smach.StateMachine.add(
-            f"GO_TO_WAITING_AREA",
-            GoToLocation(self.wait_pose),
-            transitions={
-                "succeeded": f"SAY_ARRIVE_WAITING_AREA",
-                "failed": f"SAY_ARRIVE_WAITING_AREA",
-            },
-        )
-
-        smach.StateMachine.add(
-            f"SAY_ARRIVE_WAITING_AREA",
-            Say(text="Arrived waiting area"),
-            transitions={
-                "succeeded": f"SAY_WAIT",
-                "aborted": f"SAY_WAIT",
-                "preempted": f"SAY_WAIT",
-            },
-        )
