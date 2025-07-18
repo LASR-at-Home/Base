@@ -75,7 +75,7 @@ def main() -> None:
     for i in range(N_COMMANDS):
         rospy.loginfo(f"Command {i + 1}")
         # _tts(tts_client, "I am going to the instruction point to receive a command")
-        _move_base(move_base_client, instruction_pose)
+        # _move_base(move_base_client, instruction_pose)
         # if i > 0:
         #     # _tts(
         #     #    tts_client,
@@ -84,11 +84,11 @@ def main() -> None:
         #     rospy.sleep(rospy.Duration(20.0))
         try:
             rospy.loginfo(f"Staring GPSR")
-            command_parser_sm = CommandParserStateMachine(data_config=config)
-            command_parser_sm.execute()
-            parsed_command: Dict = command_parser_sm.userdata.parsed_command
-            # command = "go to the kitchen table then find a bowl and take it and bring it to me"
-            # parsed_command = gpsr_compile_and_parse(config, command)
+            # command_parser_sm = CommandParserStateMachine(data_config=config)
+            # command_parser_sm.execute()
+            # parsed_command: Dict = command_parser_sm.userdata.parsed_command
+            command = "go to the bed then find an apple and take it and bring it to me"
+            parsed_command = gpsr_compile_and_parse(config, command)
             rospy.loginfo(f"Parsed command: {parsed_command}")
             sm = build_state_machine(parsed_command)
             sm.execute()
