@@ -85,20 +85,15 @@ class Restaurant(smach.StateMachine):
                 transitions={
                     "valid": "WAIT_START",
                     "preempted": "WAIT_START",
-                    "invalid": "SWITCH_TO_MAPPING_MODE",
+                    "invalid": "SAY_START",
                 },
-            )
-
-            # In practie we'll do this in the queue
-            smach.StateMachine.add(
-                "SWITCH_TO_MAPPING_MODE",
-                SwitchToMappingMode(),
-                transitions={"succeeded": "SAY_START", "failed": "failed"},
             )
 
             smach.StateMachine.add(
                 "SAY_START",
-                Say(text="Start of Restaurant task."),
+                Say(
+                    text="Start of Restaurant task. I will begin by spinning to get a sense of my surroundings."
+                ),
                 transitions={
                     "succeeded": "ROTATE_360",
                     "aborted": "failed",
@@ -115,6 +110,28 @@ class Restaurant(smach.StateMachine):
 
             smach.StateMachine.add(
                 "GET_POSES", GetPoses(), transitions={"succeeded": "SURVEY"}
+            )
+
+            smach.StateMachine.add(
+                "SAY_GOT_POSES",
+                Say(text="I have remembered the position of the bar."),
+                transitions={
+                    "succeeded": "SAY_SURVEY",
+                    "preempted": "SAY_SURVEY",
+                    "failed": "SAY_SURVEY",
+                },
+            )
+
+            smach.StateMachine.add(
+                "SAY_SURVEY",
+                Say(
+                    text="I am now looking for customers. Please raise your hands up straight in the air, and keep them still."
+                ),
+                transitions={
+                    "succeeded": "SURVEY",
+                    "preempted": "SURVEY",
+                    "aborted": "SURVEY",
+                },
             )
 
             smach.StateMachine.add(
@@ -141,15 +158,28 @@ class Restaurant(smach.StateMachine):
                     "waving_person_detection": "waving_person_detection",
                 },
             )
+
             smach.StateMachine.add(
                 "COMPUTE_APPROACH_POSE",
                 ComputeApproach(),
                 transitions={
-                    "succeeded": "GO_TO_CUSTOMER",
+                    "succeeded": "SAY_FOUND",
                     "failed": "SURVEY",
                 },
                 remapping={
                     "customer_approach_pose": "customer_approach_pose",
+                },
+            )
+
+            smach.StateMachine.add(
+                "SAY_FOUND",
+                Say(
+                    text="I have found a waving customer. I will navigate to them now."
+                ),
+                transitions={
+                    "succeeded": "GO_TO_CUSTOMER",
+                    "preempted": "GO_TO_CUSTOMER",
+                    "aborted": "GO_TO_CUSTOMER",
                 },
             )
 
@@ -252,7 +282,7 @@ class Restaurant(smach.StateMachine):
             smach.StateMachine.add(
                 "REQUEST_ITEMS",
                 Say(
-                    format_str="Please get me {}, I will turn around for you to load the order."
+                    format_str="Please get me {}, I will turn around for you to load the order in my basket."
                 ),
                 remapping={"placeholders": "order_str"},
                 transitions={
@@ -287,7 +317,7 @@ class Restaurant(smach.StateMachine):
             smach.StateMachine.add(
                 "SAY_TAKE_ORDER",
                 Say(
-                    text="Here is your order, I will turn around for you to unload it."
+                    text="Here is your order, I will turn around for you to remove the items from my basket."
                 ),
                 transitions={
                     "succeeded": "ROTATE_UNLOAD",
