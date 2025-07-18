@@ -16,6 +16,8 @@ from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from pal_interaction_msgs.msg import TtsGoal, TtsAction
 
+from lasr_skills import GoToLocation, DetectDoorOpening, Say, ListenForWakeword
+
 
 def load_gpsr_configuration() -> Configuration:
     gpsr_data_dir = os.path.join(
@@ -55,48 +57,112 @@ def _tts(client: actionlib.SimpleActionClient, text: str) -> None:
     client.wait_for_result()
 
 
-def main() -> None:
-    instruction_pose_param: Dict = rospy.get_param("gpsr/arena/start_pose")
-    instruction_pose: PoseStamped = PoseStamped(
-        pose=Pose(
-            position=Point(**instruction_pose_param["position"]),
-            orientation=Quaternion(**instruction_pose_param["orientation"]),
+class Start(smach.StateMachine):
+
+    def __init__(self):
+
+        super().__init__(outcomes=["succeeded"])
+
+        with self:
+
+            smach.StateMachine.add(
+                "WAIT_FOR_DOOR_TO_OPEN",
+                DetectDoorOpening(),
+                transitions={"door_opened": "GO_TO_INSTRUCTION_POINT"},
+            )
+
+
+class GoToInstructionPoint(smach.StateMachine):
+
+    def __init__(self):
+
+        super.__init__(self, outcomes=["succeeded"])
+
+        instruction_pose_param = rospy.get_param("gpsr/arena/start_pose")
+        instruction_pose = PoseStamped(
+            pose=Pose(
+                position=Point(**instruction_pose_param["position"]),
+                orientation=Quaternion(**instruction_pose_param["orientation"]),
+            )
         )
-    )
-    instruction_pose.header.frame_id = "map"
+        instruction_pose.header.frame_id = "map"
+
+        smach.StateMachine.add(
+            "SAY_GOING_TO_START",
+            Say(text="I am going to the instruction point to receive a command."),
+            transitions={
+                "succeeded": "GO_TO_START",
+                "preempted": "GO_TO_START",
+                "aborted": "GO_TO_START",
+            },
+        )
+
+        smach.StateMachine.add(
+            "GO_TO_START",
+            GoToLocation(location=instruction_pose),
+            transitions={"succeeded": "succeeded", "failed": "GO_TO_START"},
+        )
+
+
+class WaitForWakeword(smach.StateMachine):
+
+    def __init__(self, timeout: float):
+
+        super().__init__(self, outcomes=["succeeded"])
+
+        with self:
+
+            smach.StateMachine.add(
+                "SAY_HI_TIAGO",
+                Say(
+                    text="Please say 'hi tiago' when you are ready to give me your command."
+                ),
+                transitions={
+                    "succeeded": "LISTEN_FOR_HI_TIAGO",
+                    "preempted": "LISTEN_FOR_HI_TIAGO",
+                    "aborted": "LISTEN_FOR_HI_TIAGO",
+                },
+            )
+
+            smach.StateMachine.add(
+                "LISTEN_FOR_HI_TIAGO",
+                ListenForWakeword(wakeword="hi_tiago", timeout=timeout),
+                transitions={
+                    "succeeded": "succeeded",
+                    "preempted": "succeeded",
+                    "aborted": "succeeded",
+                },
+            )
+
+
+def main() -> None:
     N_COMMANDS: int = 3
     config = load_gpsr_configuration()
-    move_base_client = actionlib.SimpleActionClient("move_base", MoveBaseAction)
-    move_base_client.wait_for_server()
-    # tts_client = actionlib.SimpleActionClient("tts", TtsAction)
-    # tts_client.wait_for_server()
-    # _tts(tts_client, "Please open the door")
+    tts_client = actionlib.SimpleActionClient("tts", TtsAction)
+    tts_client.wait_for_server()
+    _tts(tts_client, "Please open the door")
+    timeout = 10.0
+    start_sm = Start()
+    start_sm.execute()
     rospy.sleep(3)
     for i in range(N_COMMANDS):
         rospy.loginfo(f"Command {i + 1}")
-        # _tts(tts_client, "I am going to the instruction point to receive a command")
-        # _move_base(move_base_client, instruction_pose)
-        # if i > 0:
-        #     # _tts(
-        #     #    tts_client,
-        #     #    "I will wait 20 seconds to allow you to reset the arena, then I will be ready for the next command",
-        #     # )
-        #     rospy.sleep(rospy.Duration(20.0))
+        go_to_sm = GoToInstructionPoint()
+        go_to_sm.execute()
         try:
-            rospy.loginfo(f"Staring GPSR")
-            # command_parser_sm = CommandParserStateMachine(data_config=config)
-            # command_parser_sm.execute()
-            # parsed_command: Dict = command_parser_sm.userdata.parsed_command
-            command = "go to the bed then find an apple and take it and bring it to me"
-            parsed_command = gpsr_compile_and_parse(config, command)
+            rospy.loginfo(f"Starting GPSR")
+            wakeword_sm = WaitForWakeword(timeout)
+            wakeword_sm.execute()
+            timeout = 120.0
+            command_parser_sm = CommandParserStateMachine(data_config=config)
+            command_parser_sm.execute()
+            parsed_command: Dict = command_parser_sm.userdata.parsed_command
             rospy.loginfo(f"Parsed command: {parsed_command}")
             sm = build_state_machine(parsed_command)
             sm.execute()
         except:
-            rospy.loginfo(f"Something went wrong, I couldn't execute the command")
-            # _tts(tts_client, "Something went wrong, I couldn't execute the command")
-    rospy.loginfo(f"I am done")
-    # _tts(tts_client, "I am done")
+            _tts(tts_client, "Something went wrong, I couldn't execute the command")
+    _tts(tts_client, "I am done")
 
 
 if __name__ == "__main__":
