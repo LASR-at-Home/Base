@@ -30,8 +30,6 @@ class FindOperators(smach.StateMachine):
         )
 
         with self:
-            self.go_to_(self, pose, "ROTATE_360")
-
             smach.StateMachine.add(
                 "SAY_FINISHED",
                 Say(text="It is too noisy, can't find you with sound. Please keep wave the hand to call me"),
@@ -56,42 +54,7 @@ class FindOperators(smach.StateMachine):
                 "SURVEY",
                 Survey((-71.0, 71.0), 10),
                 transitions={
-                    "customer_found": "GO_TO_OPERATORS",
+                    "customer_found": "succeeded",
                     "customer_not_found": "escape",
                 },
             )
-
-            go_to_(self, customer_approach_pose, "succeeded") # Operator
-
-            # smach.StateMachine.add(
-            #     "GO_TO_OPERATORS",
-            #     GoToLocation(),
-            #     remapping={"location": "customer_approach_pose"},
-            #     transitions={"succeeded": "GET_ORDER", "failed": "TRUN_MOVE_BASE"},
-            # )
-
-    def go_to_(self, pose, next_state) -> None:
-        """Adds the states to go to table area."""
-
-        smach.StateMachine.add(
-            f"GO_TO_{next_state}",
-            GoToLocation(pose),
-            transitions={
-                "succeeded": f"{next_state}",
-                "failed": f"GO_TO_RECOVERY",
-            },
-        )
-
-        smach.StateMachine.add(
-            "ENABLE_MOVEBASE_MANAGER",
-            smach_ros.ServiceState(
-            "/pal_startup_control/start",
-            StartupStart,
-            request=StartupStartRequest("move_base", ""),
-            ),
-            transitions={
-                "succeeded": f"GO_TO_{next_state}",
-                "preempted": "failed",
-                "aborted": "failed",
-            },
-        ),
