@@ -5,7 +5,7 @@
 # ========================
 
 REMOTE_USER="pal"
-REMOTE_HOST="tiago-157c"
+REMOTE_HOST="tiago-144c"
 # todo: NEVER PUT REAL PASSWORD HERE!
 SSH_PASSWORD="your_ssh_password_here"
 SUDO_PASSWORD="your_sudo_password_here"

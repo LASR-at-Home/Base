@@ -19,18 +19,45 @@ import cv2
 
 # COCO class names for YOLO detection
 COCO_CLASSES = [
-    "person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck",
-    "boat", "traffic light", "fire hydrant", "stop sign", "parking meter", "bench",
-    "bird", "cat", "dog", "horse", "sheep", "cow", "elephant", "bear", "zebra",
-    "giraffe", "backpack", "umbrella", "handbag", "tie", "suitcase", "frisbee",
-    "skis", "snowboard", "sports ball", "kite", "baseball bat", "baseball glove",
-    "skateboard", "surfboard", "tennis racket", "bottle", "wine glass", "cup",
-    "fork", "knife", "spoon", "bowl", "banana", "apple", "sandwich", "orange",
-    "broccoli", "carrot", "hot dog", "pizza", "donut", "cake", "chair", "couch",
-    "potted plant", "bed", "dining table", "toilet", "tv", "laptop", "mouse",
-    "remote", "keyboard", "cell phone", "microwave", "oven", "toaster", "sink",
-    "refrigerator", "book", "clock", "vase", "scissors", "teddy bear", "hair drier",
-    "toothbrush"
+    "brush",
+    "cloth",
+    "polish",
+    "sponge",
+    "bowl",
+    "cup",
+    "fork",
+    "knife",
+    "plate",
+    "spoon",
+    "coffee",
+    "coke",
+    "fanta",
+    "kuat",
+    "milk",
+    "orange_juice",
+    "broth",
+    "broth_box",
+    "corn_flour",
+    "ketchup",
+    "mayo",
+    "oats",
+    "tuna",
+    "apple",
+    "lemon",
+    "lime",
+    "pear",
+    "tangerine",
+    "cheese_snack",
+    "chocolate_bar",
+    "cornflakes",
+    "crisps",
+    "gum_balls",
+    "peanuts",
+    "pringles",
+    "bag",
+    "dishwasher_tab",
+    "dishwasher_tab_bag",
+    "cornflakes_container"
 ]
 
 
@@ -194,17 +221,18 @@ class YoloToCostmapNode:
         self.target_frame = rospy.get_param("~target_frame", "map")
         self.obstacle_radius = rospy.get_param("~obstacle_radius", 0.15)
         self.yolo_service = rospy.get_param("~yolo_service", "/yolo/detect3d")
-        self.yolo_model = rospy.get_param("~yolo_model", "yolo11l-seg.pt")
+        # self.yolo_model = rospy.get_param("~yolo_model", "yolo11l-seg.pt")
+        self.yolo_model = rospy.get_param("~yolo_model", "last.pt")
         self.confidence = rospy.get_param("~confidence", 0.15)
         # self.class_filter = rospy.get_param("~filter", COCO_CLASSES)
-        self.class_filter = rospy.get_param("~filter", ["banana"])
+        self.class_filter = rospy.get_param("~filter", COCO_CLASSES)  #["banana"])
         self.detection_interval = rospy.get_param("~interval", 1.0)  # Detection frequency in seconds
 
         # Virtual obstacle layer parameters
         self.vo_param_namespace = rospy.get_param("~vo_namespace", "mmap/vo/submap_0")
 
         # Object filtering parameters
-        self.ignore_labels = set([label.lower() for label in rospy.get_param("~ignore_labels", ["person", "handbag"])])
+        self.ignore_labels = set([label.lower() for label in rospy.get_param("~ignore_labels", ["bag"])])
         self.max_height = rospy.get_param("~max_height", 0.2)  # Maximum object height to consider
 
         # Camera and sensor topics

@@ -16,6 +16,7 @@ from scipy.spatial.transform import Rotation as R
 from lasr_skills.listen_for_wakeword import ListenForWakeword
 from lasr_skills.rotate import Rotate
 from lasr_skills.detect_gesture_3d import DetectHandUp3D
+from lasr_skills.play_motion import PlayMotion
 from std_msgs.msg import Bool
 from geometry_msgs.msg import (
     Point,
@@ -115,9 +116,9 @@ class PersonFollowingData:
 
         # Configuration parameters with defaults
         self.new_goal_threshold_min = 0.25
-        self.new_goal_threshold_max = 4.0
+        self.new_goal_threshold_max = 3.5
         self.stopping_distance = 1.75
-        self.max_speed = 0.45
+        self.max_speed = 0.6
         self.max_following_distance = 4.0
         self.min_following_distance = 0.5
         self.speak = True
@@ -452,7 +453,7 @@ class FollowPerson(smach.StateMachine):
                 # Listen for "no" wakeword with 5 second timeout
                 smach.StateMachine.add(
                     "WAKEWORD",
-                    ListenForWakeword(wakeword="no", timeout=5.0, threshold=0.1),
+                    ListenForWakeword(wakeword="no", timeout=5.0, threshold=0.01),
                     transitions={
                         "failed": "Fallback",  # Service failure - go to fallback
                         "succeeded": "CHECK_WAKEWORD_RESULT",  # Check what was detected
@@ -476,7 +477,7 @@ class FollowPerson(smach.StateMachine):
                 # Listen for "no" wakeword with 5 second timeout
                 smach.StateMachine.add(
                     "WAKEWORD",
-                    ListenForWakeword(wakeword="no", timeout=5.0, threshold=0.1),
+                    ListenForWakeword(wakeword="no", timeout=5.0, threshold=0.01),
                     transitions={
                         "failed": "succeeded",  # Service failure - end successfully
                         "succeeded": "CHECK_WAKEWORD_RESULT",  # Check what was detected
@@ -511,9 +512,19 @@ class FollowPerson(smach.StateMachine):
                 "RECOVERY_SCANNING",
                 RecoveryScanningState(self),
                 transitions={
-                    "target_recovered": "TRACKING_ACTIVE",
+                    "target_recovered": "PRE_FOLLOW",
                     "recovery_failed": "failed",
                     "failed": "failed",
+                },
+            )
+
+            smach.StateMachine.add(
+                f"PRE_FOLLOW",
+                PlayMotion(motion_name="pre_navigation"),
+                transitions={
+                    "succeeded": f"TRACKING_ACTIVE",
+                    "preempted": "TRACKING_ACTIVE",
+                    "aborted": "TRACKING_ACTIVE",
                 },
             )
 
@@ -1053,15 +1064,15 @@ class FollowPerson(smach.StateMachine):
                     y_dir = 0.0
 
                 # Look down towards the target direction
-                point = Point(x=x_dir, y=y_dir, z=0.4)
+                point = Point(x=x_dir, y=y_dir, z=0.5)
 
             except Exception as e:
                 rospy.logwarn(f"Failed to transform target point: {e}")
                 # Fall back to center point
-                point = Point(x=3.0, y=0.0, z=0.4)
+                point = Point(x=3.0, y=0.0, z=0.5)
         else:
             # Default center point when no target provided
-            point = Point(x=3.0, y=0.0, z=0.4)
+            point = Point(x=3.0, y=0.0, z=0.5)
 
         self.look_at_point(point, target_frame="base_link")
 
@@ -1263,6 +1274,22 @@ class TrackingActiveState(smach.State):
 
         while not rospy.is_shutdown():
             # Check if target is lost
+            if (
+                self.sm_manager.shared_data.first_tracking_done
+                and rospy.Time.now()
+                - self.sm_manager.shared_data.last_good_detection_time
+                > self.sm_manager.shared_data.target_moving_timeout_duration // 3
+            ) and (
+                rospy.Time.now()
+                - self.sm_manager.shared_data.last_distance_warning_time
+                > self.sm_manager.shared_data.distance_warning_interval_duration
+            ):
+                self.sm_manager.shared_data.last_distance_warning_time = (
+                    rospy.Time.now()
+                )
+                rospy.loginfo("Target lost - give warning.")
+                self.sm_manager._tts("Please walk slower, make sure I can still see you.", wait=False)
+
             if (
                 self.sm_manager.shared_data.first_tracking_done
                 and rospy.Time.now()
@@ -1511,7 +1538,7 @@ class TrackingActiveState(smach.State):
 class NavigationState(smach.State):
     """Monitor navigation progress, handle head tracking, and detect completion/failure"""
 
-    def __init__(self, sm_manager, object_avoidance, navigation_timeout=10.0):
+    def __init__(self, sm_manager, object_avoidance, navigation_timeout=30.0):
         self.sm_manager = sm_manager
         self.object_avoidance = object_avoidance
         self.navigation_timeout = navigation_timeout  # Timeout in seconds
@@ -1524,6 +1551,7 @@ class NavigationState(smach.State):
 
     def execute(self, userdata):
         rospy.loginfo("Monitoring navigation progress")
+        self.sm_manager.shared_data.last_movement_time = rospy.Time.now()
         self.sm_manager.shared_data.last_canceled_goal_time = rospy.Time.now()
         start_robot_pose = self.sm_manager.get_robot_pose_in_map()
         navigation_start_time = rospy.Time.now()  # Record navigation start time
@@ -1556,6 +1584,7 @@ class NavigationState(smach.State):
                 self.sm_manager.shared_data.added_new_target_time = rospy.Time.now()
                 self._send_face_target_goal(self.sm_manager.shared_data.current_goal)
                 self.sm_manager.shared_data.aborted_times += 1
+                self.sm_manager.shared_data.last_movement_time = rospy.Time.now()
                 return "navigation_complete"
 
             # Keep looking at detected person during navigation
@@ -1595,7 +1624,7 @@ class NavigationState(smach.State):
                         f"Issuing distance warning - target too far: {distance_to_target:.2f}m"
                     )
                     self.sm_manager._tts(
-                        "Please wait for me. You are too far away.", wait=False
+                        "Please wait for me till I'm near. You are too far away.", wait=False
                     )
                     self.sm_manager.shared_data.last_distance_warning_time = (
                         rospy.Time.now()

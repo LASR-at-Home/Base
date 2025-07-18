@@ -3,6 +3,8 @@
 from typing import Dict, Union, List, Tuple
 
 import rospy
+import os
+import rospkg
 
 import ultralytics
 import torch
@@ -460,5 +462,6 @@ class YOLOService:
 
 if __name__ == "__main__":
     rospy.init_node("yolo")
+    os.chdir(os.path.join(rospkg.RosPack().get_path("lasr_vision_yolo"), "models"))
     yolo = YOLOService()
     rospy.spin()

@@ -3,8 +3,8 @@
     <rosparam command="load" file="$(find lasr_skills)/config/motions.yaml" />
     <include file="$(find lasr_vision_sam2)/launch/sam2.launch"/>
     <include file="$(find lasr_vision_yolo)/launch/service.launch"/>
-    <include file="$(find lasr_person_tracking_filter)/launch/kalman_filter.launch"/>
-    <include file="$(find lasr_skills)/launch/joint_leg_tracker.launch"/>
+    <!-- <include file="$(find lasr_person_tracking_filter)/launch/kalman_filter.launch"/> -->
+    <!-- <include file="$(find lasr_skills)/launch/joint_leg_tracker.launch"/> -->
 
     <!--     SPEECH     -->
     <arg name="wakewords_device_param" default="9" />
