@@ -56,7 +56,7 @@ if __name__ == "__main__":
 
     # Test 1: Only 'no'
     print("\nTest 1: Say 'no' (10 seconds)")
-    sm1 = ListenForWakeword(wakeword="no", timeout=10.0, threshold=0.3)
+    sm1 = ListenForWakeword(wakeword="hi_tiago", timeout=10.0, threshold=0.3)
     outcome1 = sm1.execute()
     print(f"Result: {outcome1}")
     if 'keyword' in sm1.userdata:

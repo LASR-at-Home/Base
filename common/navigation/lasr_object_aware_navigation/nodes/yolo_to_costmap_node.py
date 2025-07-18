@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python3
 import rospy
 import rosparam
@@ -16,6 +15,7 @@ from lasr_vision_msgs.srv import YoloDetection3D, YoloDetection3DRequest
 import tf2_ros
 import tf2_geometry_msgs
 import cv2
+from std_msgs.msg import String
 
 # COCO class names for YOLO detection
 COCO_CLASSES = [
@@ -225,7 +225,7 @@ class YoloToCostmapNode:
         self.yolo_model = rospy.get_param("~yolo_model", "last.pt")
         self.confidence = rospy.get_param("~confidence", 0.15)
         # self.class_filter = rospy.get_param("~filter", COCO_CLASSES)
-        self.class_filter = rospy.get_param("~filter", COCO_CLASSES)  #["banana"])
+        self.class_filter = rospy.get_param("~filter", COCO_CLASSES)  # ["banana"])
         self.detection_interval = rospy.get_param("~interval", 1.0)  # Detection frequency in seconds
 
         # Virtual obstacle layer parameters
@@ -260,6 +260,9 @@ class YoloToCostmapNode:
         # Publisher for visualization markers
         self.marker_pub = rospy.Publisher("/detected_objects_markers", MarkerArray, queue_size=1)
 
+        # Publisher for detected objects broadcast
+        self.detected_objects_pub = rospy.Publisher("/detected_objects", String, queue_size=1)
+
         # TF2 listener for coordinate transformations
         self.tf_buffer = tf2_ros.Buffer()
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer)
@@ -291,6 +294,8 @@ class YoloToCostmapNode:
         """Main timer callback for YOLO detection and VO layer update"""
         if self.latest_image is None or self.latest_depth is None or self.latest_info is None:
             rospy.logwarn_throttle(10.0, "Waiting for image/depth/camera_info...")
+            # Broadcast empty string when no sensor data available
+            self.broadcast_detected_objects("")
             return
 
         try:
@@ -300,6 +305,8 @@ class YoloToCostmapNode:
             self.process_detections(detections)
         except Exception as e:
             rospy.logwarn("Failed to get YOLO detections or process them: %s", str(e))
+            # Broadcast empty string when detection fails
+            self.broadcast_detected_objects("")
 
     def call_yolo_service(self):
         """Call YOLO 3D detection service with current sensor data"""
@@ -319,6 +326,9 @@ class YoloToCostmapNode:
         # Filter detections based on various criteria
         filtered_detections = self.filter_detections(detections)
 
+        # Broadcast detected object names
+        self.broadcast_detected_objects_from_filtered(filtered_detections)
+
         # Update obstacle manager with filtered detections
         self.obstacle_manager.update_obstacles(filtered_detections)
 
@@ -331,6 +341,33 @@ class YoloToCostmapNode:
 
         # Publish visualization markers for RViz (including hexagon vertices)
         self.publish_markers()
+
+    def broadcast_detected_objects_from_filtered(self, filtered_detections):
+        """Broadcast detected object names from filtered detections"""
+        if filtered_detections:
+            # Extract object names from filtered detections
+            object_names = []
+            for det in filtered_detections:
+                name = getattr(det, "name", "unknown")
+                object_names.append(name)
+
+            # Create comma-separated string
+            objects_string = ",".join(object_names)
+            self.broadcast_detected_objects(objects_string)
+        else:
+            # Broadcast empty string if no objects detected
+            self.broadcast_detected_objects("")
+
+    def broadcast_detected_objects(self, objects_string):
+        """Broadcast detected objects as comma-separated string"""
+        msg = String()
+        msg.data = objects_string
+        self.detected_objects_pub.publish(msg)
+
+        if objects_string:
+            rospy.loginfo(f"[Object Broadcast] Detected objects: {objects_string}")
+        else:
+            rospy.logdebug("[Object Broadcast] No objects detected")
 
     def filter_detections(self, detections):
         """Filter detections based on label blacklist and height constraints"""

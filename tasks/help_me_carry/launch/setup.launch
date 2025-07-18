@@ -3,6 +3,11 @@
     <rosparam command="load" file="$(find lasr_skills)/config/motions.yaml" />
     <include file="$(find lasr_vision_sam2)/launch/sam2.launch"/>
     <include file="$(find lasr_vision_yolo)/launch/service.launch"/>
+
+    <!-- lang_sam_service node -->
+    <arg name="use_gpu" default="0"/>
+    <node pkg="lasr_vision_lang_sam" type="lang_sam_service.py" name="lang_sam_service" output="screen" args="$(arg use_gpu)" />
+
     <!-- <include file="$(find lasr_person_tracking_filter)/launch/kalman_filter.launch"/> -->
     <!-- <include file="$(find lasr_skills)/launch/joint_leg_tracker.launch"/> -->
 
@@ -17,11 +22,8 @@
 
     <node pkg="lasr_tf" type="tf_server.py" name="tf_server" output="screen" />
 
-    <!-- lang_sam_service node -->
-    <arg name="use_gpu" default="0"/>
-    <node pkg="lasr_vision_lang_sam" type="lang_sam_service.py" name="lang_sam_service" output="screen" args="$(arg use_gpu)" />
-
     <!-- yolo lasr scan node -->
     <node pkg="lasr_object_aware_navigation" type="yolo_to_costmap_node.py" name="yolo_to_costmap_node" output="screen" />
+    <node pkg="lasr_object_aware_navigation" type="barrier_line_detector_node.py" name="barrier_line_detector_node" output="screen" />
 
 </launch>

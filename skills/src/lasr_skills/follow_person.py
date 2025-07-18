@@ -46,6 +46,7 @@ from lasr_vision_msgs.msg import (
 from lasr_vision_msgs.srv import YoloDetection3D, YoloDetection3DRequest
 import message_filters
 import numpy as np
+from std_msgs.msg import String
 
 
 class PersonFollowingData:
@@ -98,6 +99,9 @@ class PersonFollowingData:
         self.pause_conditional_state = False
         self.pause_add_targets = False
 
+        self.barrier_detected = False
+        self.detected_objects = ""
+
         # kalman protection - kalman filter can be very crazy sometimes...
         # self.kalman_protection = True
         self.sam2_callbacks = 0
@@ -118,7 +122,7 @@ class PersonFollowingData:
         self.new_goal_threshold_min = 0.25
         self.new_goal_threshold_max = 3.5
         self.stopping_distance = 1.75
-        self.max_speed = 0.6
+        self.max_speed = 0.4
         self.max_following_distance = 4.0
         self.min_following_distance = 0.5
         self.speak = True
@@ -133,7 +137,7 @@ class PersonFollowingData:
         self.recovery_timeout = 30.0
         self.cancel_goal_timeout = 10.0  # this should actually be big
         self.aborted_times = 0
-        self.aborted_threshold = 3
+        self.aborted_threshold = 5
 
         # Detection quality parameters
         self.max_distance_threshold = 0.9
@@ -359,6 +363,24 @@ class FollowPerson(smach.StateMachine):
         )
         rospy.loginfo("Detection 3D callback subscribed")
 
+        # Setup barrier detection subscriber
+        self.barrier_detection_sub = rospy.Subscriber(
+            "/barrier_detected",
+            Bool,
+            self._barrier_detection_callback,
+            queue_size=1,
+        )
+        rospy.loginfo("Barrier detection callback subscribed")
+
+        # Setup detected objects subscriber
+        self.detected_objects_sub = rospy.Subscriber(
+            "/detected_objects",
+            String,
+            self._detected_objects_callback,
+            queue_size=1,
+        )
+        rospy.loginfo("Detected objects callback subscribed")
+
         try:
             # Set costmap size using userdata parameters
             config = Config()
@@ -411,6 +433,19 @@ class FollowPerson(smach.StateMachine):
         rospy.sleep(1.0)
         rospy.loginfo("Person following state machine initialised")
 
+    def _barrier_detection_callback(self, msg):
+        """Callback for barrier detection flag updates"""
+        self.shared_data.barrier_detected = msg.data
+        # rospy.loginfo(f"Barrier detection updated: {self.shared_data.barrier_detected}")
+
+    def _detected_objects_callback(self, msg):
+        """Callback for detected objects string updates"""
+        self.shared_data.detected_objects = msg.data
+        # if self.shared_data.detected_objects:
+        #     rospy.loginfo(f"Detected objects updated: {self.shared_data.detected_objects}")
+        # else:
+        #     rospy.logdebug("No objects detected")
+
     def _build_state_machine(self):
         """Build the complete state machine structure"""
 
@@ -453,7 +488,7 @@ class FollowPerson(smach.StateMachine):
                 # Listen for "no" wakeword with 5 second timeout
                 smach.StateMachine.add(
                     "WAKEWORD",
-                    ListenForWakeword(wakeword="no", timeout=5.0, threshold=0.01),
+                    ListenForWakeword(wakeword="hi_tiago", timeout=10.0, threshold=0.1),
                     transitions={
                         "failed": "Fallback",  # Service failure - go to fallback
                         "succeeded": "CHECK_WAKEWORD_RESULT",  # Check what was detected
@@ -477,7 +512,7 @@ class FollowPerson(smach.StateMachine):
                 # Listen for "no" wakeword with 5 second timeout
                 smach.StateMachine.add(
                     "WAKEWORD",
-                    ListenForWakeword(wakeword="no", timeout=5.0, threshold=0.01),
+                    ListenForWakeword(wakeword="hi_tiago", timeout=10.0, threshold=0.1),
                     transitions={
                         "failed": "succeeded",  # Service failure - end successfully
                         "succeeded": "CHECK_WAKEWORD_RESULT",  # Check what was detected
@@ -543,6 +578,8 @@ class FollowPerson(smach.StateMachine):
         Execute the state machine
         Can be called directly or as part of a larger state machine
         """
+        # rospy.loginfo(f"Executing state machine, press entre...")
+        # input()
         if not run_by_itself:
             start_pose = self.get_robot_pose_in_map()
             userdata.start_pose = start_pose
@@ -1064,15 +1101,15 @@ class FollowPerson(smach.StateMachine):
                     y_dir = 0.0
 
                 # Look down towards the target direction
-                point = Point(x=x_dir, y=y_dir, z=0.5)
+                point = Point(x=x_dir, y=y_dir, z=0.4)
 
             except Exception as e:
                 rospy.logwarn(f"Failed to transform target point: {e}")
                 # Fall back to center point
-                point = Point(x=3.0, y=0.0, z=0.5)
+                point = Point(x=3.0, y=0.0, z=0.4)
         else:
             # Default center point when no target provided
-            point = Point(x=3.0, y=0.0, z=0.5)
+            point = Point(x=3.0, y=0.0, z=0.4)
 
         self.look_at_point(point, target_frame="base_link")
 
@@ -1260,6 +1297,11 @@ class TrackingActiveState(smach.State):
         )
         self.sm_manager.shared_data.just_started = True
 
+        self.ever_said_barrier = False
+        self.ever_said_object = False
+        self.last_barrier_say_time = rospy.Time.now()
+        self.last_object_say_time = rospy.Time.now()
+
     def execute(self, userdata):
         rospy.loginfo("Active tracking mode")
 
@@ -1267,7 +1309,7 @@ class TrackingActiveState(smach.State):
             not self.sm_manager.shared_data.first_tracking_done
             and not self.sm_manager.shared_data.say_started
         ):
-            self.sm_manager._tts("I am going to follow.", wait=True)
+            self.sm_manager._tts("Please walk slow and make sure I can see you most of the times. I am going to follow.", wait=True)
             self.sm_manager.shared_data.say_started = True
 
         rate = rospy.Rate(3)
@@ -1304,7 +1346,7 @@ class TrackingActiveState(smach.State):
                     (
                             self.sm_manager.shared_data.first_tracking_done
                             and rospy.Time.now() - self.sm_manager.shared_data.last_movement_time
-                            > self.sm_manager.shared_data.target_moving_timeout_duration * 1.0
+                            > self.sm_manager.shared_data.target_moving_timeout_duration * 2.0
                     ) or (
                             # this is for if we just cannot complete moves constantly then we give up and ask.
                             self.sm_manager.shared_data.aborted_times >= self.sm_manager.shared_data.aborted_threshold
@@ -1313,7 +1355,7 @@ class TrackingActiveState(smach.State):
                 self.sm_manager.shared_data.pause_add_targets = True
                 rospy.loginfo("Following complete - force to stop by timeout.")
                 self.sm_manager._tts(
-                    "Have we arrived? Please say yes or no.", wait=True
+                    "Say hi tiago if you want me to keep following.", wait=True
                 )
                 self.sm_manager.shared_data.completion_reason = "ARRIVED"
                 return "following_complete"
@@ -1448,6 +1490,25 @@ class TrackingActiveState(smach.State):
                             rospy.loginfo(
                                 "Distance check passed - sending navigation goal"
                             )
+
+                            if not self.ever_said_barrier or rospy.Time.now() - self.last_barrier_say_time > rospy.Duration(60.0):
+                                if self.sm_manager.shared_data.barrier_detected:
+                                    self.sm_manager._tts(
+                                        "I might have detected a barrier, if there is really one in front of me, remove it for me if it is one my way.",
+                                        wait=True,
+                                    )
+                                    rospy.sleep(3.0)
+                                    self.last_barrier_say_time = rospy.Time.now()
+                                    self.ever_said_barrier = True
+                            if not self.ever_said_object or rospy.Time.now() - self.last_object_say_time > rospy.Duration(30.0):
+                                if self.sm_manager.shared_data.detected_objects != "":
+                                    self.sm_manager._tts(
+                                        f"I might have detected {self.sm_manager.shared_data.detected_objects}, "
+                                        f"I will try to avoid them when I move.",
+                                        wait=False,
+                                    )
+                                    self.last_object_say_time = rospy.Time.now()
+                                    self.ever_said_object = True
                             # Send navigation goal directly here
                             if self._send_navigation_goal(
                                 self.sm_manager.shared_data,
@@ -1484,7 +1545,7 @@ class TrackingActiveState(smach.State):
                 self.sm_manager.shared_data.pause_add_targets = True
                 rospy.loginfo("Following complete - force to stop by timeout.")
                 self.sm_manager._tts(
-                    "Have we arrived? Please say yes or no.", wait=True
+                    "If we have not arrived, say hi tiago toward my microphone.", wait=True
                 )
                 self.sm_manager.shared_data.completion_reason = "ARRIVED"
                 return "following_complete"
@@ -1742,7 +1803,7 @@ class RecoveryScanningState(smach.State):
             self.sm_manager.shared_data.last_scan_position_time = rospy.Time.now()
 
             self.sm_manager._tts(
-                "Let me look for you. You may raise your hand high above so that I can identify you.",
+                "Let me look for you. Please make sure you can been seen by my camera and not too far away. You may raise your hand high above so that I can identify you.",
                 wait=False,
             )
 
