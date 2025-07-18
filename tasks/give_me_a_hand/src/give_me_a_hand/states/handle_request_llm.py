@@ -10,22 +10,29 @@ from typing import List, Dict, Any
 from receptionist.states import SpeechRecovery
 from lasr_llm_msgs.srv import Llm, LlmRequest
 import string
+from geometry_msgs.msg import (
+    Pose,
+    Point,
+    Quaternion,
+    Polygon,
+    PoseWithCovarianceStamped,
+    PointStamped,
+)
 
 
 class HandleRequestLLM(smach.StateMachine):
     def __init__(
-        self, guest_id: str, last_resort: bool, param_key: str = "/give_me_a_hand/priors"
+        self, last_resort: bool, param_key: str = "/give_me_a_hand/priors"
     ):
 
-        self._guest_id = guest_id
         self._param_key = param_key
         self._last_resort = last_resort
 
         smach.StateMachine.__init__(
             self,
             outcomes=["succeeded", "failed"],
-            input_keys=["guest_transcription", "guest_data"],
-            output_keys=["guest_data", "guest_transcription"],
+            input_keys=[],
+            output_keys=["location"],
         )
         with self:
             smach.StateMachine.add(
@@ -36,120 +43,13 @@ class HandleRequestLLM(smach.StateMachine):
                 ),
                 transitions={"succeeded":"succeeded","failed":"RECOVER_REQUEST"}
             )
-            # smach.StateMachine.add(
-            #     "PARSE_INTEREST",
-            #     self.ParseInterest(
-            #         guest_id=self._guest_id,
-            #         last_resort=self._last_resort,
-            #         param_key=self._param_key,
-            #     ),
-            #     transitions={"succeeded": "succeeded", "failed": "RECOVER_INTEREST"},
-            # )
-            # smach.StateMachine.add(
-            #     "RECOVER_INTEREST",
-            #     self.RecoverInterest(
-            #         guest_id=self._guest_id,
-            #         last_resort=self._last_resort,
-            #         param_key=self._param_key,
-            #     ),
-            #     transitions={"failed": "failed", "succeeded": "succeeded"},
-            # )
+
 
     class ParseRequest(smach.State):
         def __init__(
             self,
             last_resort: bool,
-            param_key: str = "/receptionist/priors", 
-        ):
-            """Parses the transcription of the operaters' request.
-
-            Args:
-                param_key (str, optional): Name of the parameter that contains the list of
-                prior knowledge . Defaults to "/receptionist/priors".
-            """
-            smach.State.__init__(
-                self,
-                outcomes=["succeeded", "failed"],
-                input_keys=["guest_transcription"],
-                output_keys=["guest_transcription"],
-
-            )
-            self._llm = rospy.ServiceProxy("/lasr_llm/llm", Llm)
-            self._llm.wait_for_service()
-            prior_data: Dict[str, List[str]] = rospy.get_param(param_key)
-            self._possible_names = [name.lower() for name in prior_data["names"]] #### ???????????
-            self._last_resort = last_resort
-        
-        def execute(self,userdata: UserData) -> str:
-            transcription = userdata["guest_transcription"].lower().translate(
-            str.maketrans("", "", string.punctuation))
-
-            request = LlmRequest()
-            # request.system_prompt = (
-            #     "You are a robot acting as a party host. You are tasked with identifying "
-            #     "interest belonging to a guest."
-            #     "You will receive input such as 'I like robotics' or 'My interest is robotics'. Output only the"
-            #     "interest, e.g. 'robotics'. Make sure that the interest is only one or two words. If you can't identify the interest, output 'unknown'."
-            # )
-
-
-            request.system_prompt = (
-                "You are a robot helper. You will receive input such as 'X' or 'X'. Here is a list of locations (lamp,sofa,armchair,desk,). Output the location that matches the input the best. "
-            )
-            request.prompt = transcription
-            request.max_tokens = 10
-
-            response = self._llm(request)
-            # Maxsplit in case the interest is more than one word.
-
-
-
-            # Ideally LLM spits out one location 
-            # Check if location is in list of locations 
-            # If in list of locations, return location 
-            # If not in list of locations -> maybe recovery? 
-
-
-            #With recovery -> if can't recover pick random location and try 
-
-            try:
-                if not response:
-                    rospy.logwarn("LLM Response Empty")
-                    # guest["interest"] = "unknown"
-                    return "failed"
-                interest = response.output.strip()
-            except:
-                rospy.logwarn("LLM Response Error")
-                # guest["interest"] = "unknown"
-                return "failed"
-
-            interest_n_words = len(interest.split())
-            if interest_n_words > 2:
-                interest = interest.split()[
-                    :2
-                ]  # Take only the first two word of interest
-                interest = " ".join(interest)
-            interest = interest.strip()
-            if "unknown" in interest.lower() or interest == "":
-                interest = "unknown"
-
-            guest["interest"] = interest
-
-            rospy.loginfo(
-                f"Parsed  interest: {interest} from transcription: {transcription}"
-            )
-
-            # Determine outcome
-            if interest == "unknown":
-                return "failed"
-            return "succeeded"
-
-    class ParseInterest(smach.State):
-        def __init__(
-            self,
-            guest_id: str,
-            last_resort: bool,
-            param_key: str = "/receptionist/priors",
+            param_key: str = "/give_me_a_hand/priors",
         ):
             """Parses the transcription of the guests' name and interest.
 
@@ -165,98 +65,46 @@ class HandleRequestLLM(smach.StateMachine):
             )
             self._llm = rospy.ServiceProxy("/lasr_llm/llm", Llm)
             self._llm.wait_for_service()
-            self._guest_id = guest_id
             prior_data: Dict[str, List[str]] = rospy.get_param(param_key)
             self._possible_names = [name.lower() for name in prior_data["names"]]
             self._last_resort = last_resort
 
         def execute(self, userdata: UserData) -> str:
-            """Parses the transcription of the guest's name and interest.
 
-            Args:
-                userdata (UserData): Must contain key 'guest_transcription' with guest's transcription.
+            #Do getting location pose from LLM business 
 
-            Returns:
-                str: State outcome. Updates 'guest_data' in userdata with parsed name and interest.
-            """
-            transcription = userdata["guest_transcription"].lower().translate(
-                str.maketrans("", "", string.punctuation))
-
-            guest = userdata.guest_data[self._guest_id]
-
-            request = LlmRequest()
-            request.system_prompt = (
-                "You are a robot acting as a party host. You are tasked with identifying "
-                "interest belonging to a guest."
-                "You will receive input such as 'I like robotics' or 'My interest is robotics'. Output only the"
-                "interest, e.g. 'robotics'. Make sure that the interest is only one or two words. If you can't identify the interest, output 'unknown'."
-            )
-
-
-            request.system_prompt = (
-                "You are a robot helper. You will receive input such as 'X' or 'X'. Here is a list of locations (lamp,sofa,armchair,desk,). Output the location that matches the input the best. "
-            )
-            request.prompt = transcription
-            request.max_tokens = 10
-
-            response = self._llm(request)
-            # Maxsplit in case the interest is more than one word.
-            try:
-                if not response:
-                    rospy.logwarn("LLM Response Empty")
-                    guest["interest"] = "unknown"
-                    return "failed"
-                interest = response.output.strip()
-            except:
-                rospy.logwarn("LLM Response Error")
-                guest["interest"] = "unknown"
-                return "failed"
-
-            interest_n_words = len(interest.split())
-            if interest_n_words > 2:
-                interest = interest.split()[
-                    :2
-                ]  # Take only the first two word of interest
-                interest = " ".join(interest)
-            interest = interest.strip()
-            if "unknown" in interest.lower() or interest == "":
-                interest = "unknown"
-
-            guest["interest"] = interest
-
-            rospy.loginfo(
-                f"Parsed  interest: {interest} from transcription: {transcription}"
-            )
-
-            # Determine outcome
-            if interest == "unknown":
-                return "failed"
+            location_string = "kitchen_table"
+            location_pose = self.get_location_pose(location_string,False,False)
+            userdata.location = location_pose
             return "succeeded"
 
-    class RecoverInterest(smach.State):
-        def __init__(
-            self,
-            guest_id: str,
-            last_resort: bool,
-            param_key: str = "/receptionist/priors",
-        ):
-            smach.State.__init__(
-                self,
-                outcomes=["failed", "succeeded"],
-                input_keys=["guest_transcription", "guest_data"],
-                output_keys=["guest_data", "guest_transcription"],
+
+                
+        def get_location_room(self,location: str) -> str:
+            rooms = rospy.get_param("/gpsr/arena/rooms")
+            for room in rooms:
+                if location in rooms[room]["beacons"]:
+                    return room
+            raise ValueError(f"Location {location} not found in the arena")
+
+        def get_location_pose(self,location: str, person: bool, dem_manipulation=False) -> Pose:
+            location_room = self.get_location_room(location)
+            if person:
+                location_pose: Dict = rospy.get_param(
+                    f"/gpsr/arena/rooms/{location_room}/beacons/{location}/person_detection_pose"
+                )
+            elif not dem_manipulation:
+                location_pose: Dict = rospy.get_param(
+                    f"/gpsr/arena/rooms/{location_room}/beacons/{location}/object_detection_pose"
+                )
+            else:
+                location_pose: Dict = rospy.get_param(
+                    f"/gpsr/arena/rooms/{location_room}/beacons/{location}/dem_manipulation_pose"
+                )
+
+            return Pose(
+                position=Point(**location_pose["position"]),
+                orientation=Quaternion(**location_pose["orientation"]),
             )
-            self._guest_id = guest_id
-            prior_data: Dict[str, List[str]] = rospy.get_param(param_key)
-            self._possible_names = [name.lower() for name in prior_data["names"]]
-            self._last_resort = last_resort
 
-        def execute(self, userdata: UserData) -> str:
-            if not self._last_resort:
-                return "failed"
-
-            guest = userdata.guest_data[self._guest_id]
-            guest["interest"] = "technology"
-
-            rospy.loginfo(f"Resort to recovering interest as technology")
-            return "succeeded"
+        
