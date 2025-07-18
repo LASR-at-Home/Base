@@ -1439,7 +1439,6 @@ def build_state_machine(parsed_command: Dict) -> smach.StateMachine:
         for index, (command_verb, command_param) in enumerate(
             zip(command_verbs, command_params)
         ):
-            rospy.loginfo("I am inside!")
             if command_verb == "greet":
                 greet(command_param, sm)
             elif command_verb == "talk":
