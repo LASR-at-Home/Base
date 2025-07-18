@@ -6,12 +6,12 @@ import smach_ros
 from geometry_msgs.msg import Point, PointStamped, Pose
 from lasr_skills import Say, GoToLocation
 from lasr_vision_msgs.srv import Recognise
-from storing_groceries.states import WaitDoorOpen, ObjectSortingLoop, PourCereal
+from give_me_a_hand.states import FIND_OPERATORS, ObjectSortingLoop, PourCereal
 from shapely.geometry import Polygon
 from std_msgs.msg import Empty, Header
 
 
-class StoringGroceries(smach.StateMachine):
+class GiveMeAHand(smach.StateMachine):
     def __init__(
         self,
         wait_pose: Pose,
@@ -26,6 +26,9 @@ class StoringGroceries(smach.StateMachine):
     ):
         smach.StateMachine.__init__(self, outcomes=["succeeded", "failed"])
 
+        # Strategy1. Give every possible pose and pick close, wider to narrow (exclude impossible)
+        # Strategy2. If location changes. Yolo detection?
+
         self.wait_pose = wait_pose
         self.wait_area = wait_area
         self.table_pose = table_pose
@@ -36,7 +39,7 @@ class StoringGroceries(smach.StateMachine):
         self.shelf_area = shelf_area
 
         with self:
-            self.userdata.dataset = "storing_groceries"
+            self.userdata.dataset = "give_me_a_hand"
             # self.userdata.wait_pose = wait_pose
             # self.userdata.table_pose = table_pose
             # self.userdata.cabinet_pose = cabinet_pose
@@ -55,7 +58,7 @@ class StoringGroceries(smach.StateMachine):
             # smach.StateMachine.add(
             #     "WAIT_START",
             #     smach_ros.MonitorState(
-            #         "/storing_groceries/start",
+            #         "/give_me_a_hand/start",
             #         Empty,
             #         wait_cb,
             #     ),
@@ -76,7 +79,7 @@ class StoringGroceries(smach.StateMachine):
                 },
             )
 
-            self.go_to_waiting_area()
+            # self.go_to_waiting_area() #may be we don't need this
 
             """
             WaitDoorOpen
@@ -96,50 +99,42 @@ class StoringGroceries(smach.StateMachine):
                 "WAIT_DOOR_OPEN",
                 WaitDoorOpen(),
                 transitions={
-                    "succeeded": "OBJECT_SORTING_LOOP",
-                    "aborted": "OBJECT_SORTING_LOOP",
-                    "preempted": "OBJECT_SORTING_LOOP",
+                    "succeeded": "FIND_OPERATORS",
+                    "aborted": "FIND_OPERATORS",
+                    "preempted": "FIND_OPERATORS",
                 },
             )
 
             """
-            ObjectSortingLoop
+            FIND_OPERATORS_LOOP
             """
 
             smach.StateMachine.add(
-                "OBJECT_SORTING_LOOP",
-                ObjectSortingLoop(self.table_pose, self.cabinet_pose),
+                "HANDLE_OPERATORS",
+                FindOperators(self.table_pose, self.cabinet_pose),
                 transitions={
-                    "succeeded": "SAY_DONE_OBJECT_SORTING_LOOP",
-                    "failed": "SAY_DONE_OBJECT_SORTING_LOOP",
-                    "escape": "SAY_DONE_OBJECT_SORTING_LOOP",
+                    "succeeded": "COMMUNICATE_OPERATORS",
+                    "failed": "COMMUNICATE_OPERATORS",
+                    "escape": "SAY_FINISHED",
                 },
             )
 
             smach.StateMachine.add(
-                "SAY_DONE_OBJECT_SORTING_LOOP",
-                Say("No more object to put in cabinet"),
+                "COMMUNICATE_OPERATORS",
+                CommunicateOperators("No more object to put in cabinet"),
                 transitions={
-                    "succeeded": "POUR_CEREAL",
-                    "aborted": "POUR_CEREAL",
-                    "preempted": "POUR_CEREAL",
+                    "succeeded": "GRASP_AND_PUT",
+                    "aborted": "GRASP_AND_PUT",
+                    "preempted": "GRASP_AND_PUT",
                 },
             )
 
-            """
-            + ShoppingBagSortingLoop
-            """
-
-            """
-            PourCereal
-            """
-
             smach.StateMachine.add(
-                "POUR_CEREAL",
-                PourCereal(self.table_pose),
+                "GRASP_AND_PUT",
+                GraspAndPut(self.table_pose),
                 transitions={
-                    "succeeded": "SAY_FINISHED",
-                    "failed": "SAY_FINISHED",
+                    "succeeded": "FIND_OPERATORS",
+                    "failed": "FIND_OPERATORS",
                 },
             )
 

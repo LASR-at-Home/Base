@@ -2,224 +2,38 @@ import rospy
 import smach
 from smach import CBState
 from lasr_skills import Say, AdjustCamera, GoToLocation, CheckDoorStatus, DetectDict
-from storing_groceries.states import (
-    SelectObject,
-    ClassifyCategory,
-    SayDynamic,
-    AppendDetections,
+from give_me_a_hand.states import (
+    Survey, HandleOrder, GetPoses
 )
 
-
-def is_cabinet_checked_cb(userdata):
-    return "true" if userdata.all_cabinet_open else "false"
-
-
-def set_cabinet_checked_cb(userdata):
-    userdata.all_cabinet_open = True
-    return "done"
+import smach
+import smach_ros
+from geometry_msgs.msg import Pose
+from lasr_skills import AskAndListen, GoToLocation, Rotate, Say, Wait
+# from std_msgs.msg import Empty
 
 
-class ObjectSortingLoop(smach.StateMachine):
+# def is_cabinet_checked_cb(userdata):
+#     return "true" if userdata.all_cabinet_open else "false"
+
+
+# def set_cabinet_checked_cb(userdata):
+#     userdata.all_cabinet_open = True
+#     return "done"
+
+
+class FindOperators(smach.StateMachine):
     def __init__(self, table_pose, cabinet_pose):
         super().__init__(
             outcomes=["succeeded", "failed", "escape"],
             input_keys=[],
             output_keys=[],
         )
-        self.table_pose = table_pose
-        self.cabinet_pose = [cabinet_pose, cabinet_pose, cabinet_pose, cabinet_pose]
-        self.userdata.table_objects = [
-            {"name": "apple", "confidence": 0.8, "bbox": [1.0, 0.5, 0.1]},
-            {"name": "orange", "confidence": 0.85, "bbox": [1.0, 0.5, 0.1]},
-            {"name": "hat", "confidence": 0.85, "bbox": [1.0, 0.5, 0.1]},
-        ]
-        self.userdata.table_object = {"name": None, "confidence": None, "bbox": None}
-        self.userdata.not_graspable = [
-            "tv",
-            "television",
-            "chair",
-            "table",
-            "couch",
-            "person",
-            "dog",
-            "cat",
-            "monitor",
-            "computer",
-            "fan",
-            "microwave",
-            "stove",
-            "refrigerator",
-            "cabinet",
-            "door",
-            "laptop",
-            "printer",
-            "keyboard",
-            "plant",
-            "sink",
-            "bed",
-            "sofa",
-            "board",
-        ]
-        self.userdata.table_object_category = None
-        self.userdata.cabinet_objects = []
-        self.userdata.cabinets_objects = [
-            [
-                {"name": "apple", "confidence": 0.8, "bbox": [1.0, 0.5, 0.1]},
-                {"name": "orange", "confidence": 0.85, "bbox": [1.0, 0.5, 0.1]},
-                {"name": "banana", "conf": 0.85, "bbox": [1.0, 0.5, 0.1]},
-            ],
-            [
-                {"name": "hat", "confidence": 0.8, "bbox": [1.0, 0.5, 0.1]},
-                {"name": "t-shirt", "confidence": 0.85, "bbox": [1.0, 0.5, 0.1]},
-                {"name": "shorts", "conf": 0.85, "bbox": [1.0, 0.5, 0.1]},
-            ],
-            [
-                {"name": "cola", "confidence": 0.8, "bbox": [1.0, 0.5, 0.1]},
-                {"name": "cider", "confidence": 0.85, "bbox": [1.0, 0.5, 0.1]},
-                {"name": "coffee", "conf": 0.85, "bbox": [1.0, 0.5, 0.1]},
-            ],
-            [{"name": "empty", "confidence": 0.8, "bbox": [1.0, 0.5, 0.1]}],
-        ]
-        self.userdata.cabinet_categories = []
-        self.userdata.cabinet_num = 0
-        self.userdata.all_cabinet_open = False
-
+        
         with self:
-            self.go_to_table()
+            self.go_to_livingroom()
 
-            smach.StateMachine.add(
-                "SAY_DETECT_TABLE",
-                Say("Start detecting table"),
-                transitions={
-                    "succeeded": "DETECT_TABLE",
-                    "aborted": "DETECT_TABLE",
-                    "preempted": "DETECT_TABLE",
-                },
-            )
 
-            smach.StateMachine.add(
-                "DETECT_TABLE",
-                DetectDict(),
-                transitions={
-                    "succeeded": "SAY_DETECT_TABLE_FINISH",
-                    "failed": "SAY_DETECT_TABLE_FINISH",
-                },
-                remapping={"detections": "table_objects"},
-            )
-
-            smach.StateMachine.add(
-                "SAY_DETECT_TABLE_FINISH",
-                Say("Finished detecting. Will select an graspable object."),
-                transitions={
-                    "succeeded": "SELECT_OBJECT",
-                    "aborted": "SELECT_OBJECT",
-                    "preempted": "SELECT_OBJECT",
-                },
-            )
-
-            smach.StateMachine.add(
-                "SELECT_OBJECT",
-                SelectObject(),
-                transitions={
-                    "succeeded": "SAY_SELECT_OBJECT",
-                    "failed": "SAY_SELECT_OBJECT",
-                    "escape": "escape",
-                },
-            )
-
-            smach.StateMachine.add(
-                "SAY_SELECT_OBJECT",
-                SayDynamic(
-                    text_fn=lambda ud: f"{ud.table_object['name']} is selected."
-                ),
-                transitions={
-                    "succeeded": "CLASSIFY_CATEGORY_OBJECT",
-                    "aborted": "CLASSIFY_CATEGORY_OBJECT",
-                    "preempted": "CLASSIFY_CATEGORY_OBJECT",
-                },
-            )
-
-            smach.StateMachine.add(
-                "CLASSIFY_CATEGORY_OBJECT",
-                ClassifyCategory("object"),
-                transitions={
-                    "succeeded": "SAY_OBJECT_CATEGORY",
-                    "failed": "SAY_OBJECT_CATEGORY",
-                    "empty": "SAY_OBJECT_CATEGORY",
-                },
-            )
-
-            smach.StateMachine.add(
-                "SAY_OBJECT_CATEGORY",
-                SayDynamic(
-                    text_fn=lambda ud: f"{ud.table_object['name']}'s category is {ud.table_object_category}"
-                ),
-                transitions={
-                    "succeeded": "GRAB_OBJECT",
-                    "aborted": "GRAB_OBJECT",
-                    "preempted": "GRAB_OBJECT",
-                },
-            )
-
-            smach.StateMachine.add(
-                "GRAB_OBJECT",
-                Say(text="GRAB_OBJECT is on going"),
-                transitions={
-                    "succeeded": f"GO_TO_CABINET",
-                    "aborted": f"GO_TO_CABINET",
-                    "preempted": f"GO_TO_CABINET",
-                },
-            )
-
-            self.go_to_cabinet()
-
-            self.check_cabinet()  # Do once, but consider the posibility that the door will be closed again.
-
-            smach.StateMachine.add(
-                "SAY_CABINET_CATEGORY",
-                SayDynamic(
-                    text_fn=lambda ud: f"cabinet's categories are {ud.cabinet_categories}"
-                ),
-                transitions={
-                    "succeeded": "LINK_CATEGORY",
-                    "aborted": "LINK_CATEGORY",
-                    "preempted": "LINK_CATEGORY",
-                },
-            )
-
-            smach.StateMachine.add(
-                "LINK_CATEGORY",
-                ClassifyCategory("link"),
-                transitions={
-                    "succeeded": "SAY_LINK_CATEGORY",
-                    "failed": "SAY_LINK_CATEGORY",
-                    "empty": "SAY_LINK_CATEGORY",
-                },
-            )
-
-            smach.StateMachine.add(
-                "SAY_LINK_CATEGORY",
-                SayDynamic(
-                    text_fn=lambda ud: f"{ud.table_object['name']}'s belongs to {ud.cabinet_num} category {ud.cabinet_categories[ud.cabinet_num]}"
-                ),
-                transitions={
-                    "succeeded": f"GO_TO_CABINET_SHELF",
-                    "aborted": f"GO_TO_CABINET_SHELF",
-                    "preempted": f"GO_TO_CABINET_SHELF",
-                },
-            )
-
-            self.go_to_cabinet_shelf()
-
-            smach.StateMachine.add(
-                "PUT_OBJECT",
-                Say(text="PUT_OBJECT is on going"),
-                transitions={
-                    "succeeded": "GO_TO_TABLE",
-                    "aborted": "GO_TO_TABLE",
-                    "preempted": "GO_TO_TABLE",
-                },
-            )
 
     def go_to_table(self) -> None:
         """Adds the states to go to table area."""
