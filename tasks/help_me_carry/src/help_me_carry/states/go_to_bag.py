@@ -23,6 +23,8 @@ from play_motion_msgs.msg import PlayMotionGoal, PlayMotionAction
 
 from pal_interaction_msgs.msg import TtsAction, TtsGoal, TtsText
 
+from sensor_msgs.msg import Image as ROSImage
+
 
 class GoToBag(smach.State):
     def __init__(self):
@@ -88,7 +90,9 @@ class GoToBag(smach.State):
         self.tts_client.wait_for_server()
         rospy.loginfo("TTS action server connected.")
 
-        cv2.namedWindow("Auto-segmented bag", cv2.WINDOW_NORMAL)
+        self.overlay_pub = rospy.Publisher("/bag_overlay", ROSImage, queue_size=1)
+
+        # cv2.namedWindow("Auto-segmented bag", cv2.WINDOW_NORMAL)
 
     def amcl_pose_callback(self, msg):
         self.latest_amcl_pose = msg
@@ -659,12 +663,14 @@ class GoToBag(smach.State):
         return False
 
     def visualize_segmentation(self, rgb_img, mask):
+        # Create the overlay image with red where mask > 0
         overlay = rgb_img.copy()
         overlay[mask > 0] = [0, 0, 255]
-        print("RGB min/max", overlay.min(), overlay.max())
-        print("Mask sum", mask.sum())
-        cv2.imshow("Auto-segmented bag", overlay)
-        cv2.waitKey(1000)
+
+        # Convert to ROS Image and publish
+        ros_overlay = self.bridge.cv2_to_imgmsg(overlay, encoding="bgr8")
+        ros_overlay.header.stamp = rospy.Time.now()
+        self.overlay_pub.publish(ros_overlay)
 
     def look_at_point(self, target_point, target_frame):
         if not self.point_head_client:
