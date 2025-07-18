@@ -3,7 +3,7 @@ import smach
 from smach import CBState
 from lasr_skills import Say, AdjustCamera, GoToLocation, CheckDoorStatus, DetectDict
 from give_me_a_hand.states import (
-    Survey, HandleOrder, GetPoses
+    Survey, GetPoses
 )
 
 import smach
