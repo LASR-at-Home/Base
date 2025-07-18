@@ -6,7 +6,7 @@ import smach_ros
 from geometry_msgs.msg import Point, PointStamped, Pose
 from lasr_skills import Say, GoToLocation
 from lasr_vision_msgs.srv import Recognise
-from give_me_a_hand.states import FIND_OPERATORS, ObjectSortingLoop, PourCereal, HandleRequest, CommunicateOperators
+from give_me_a_hand.states import WaitDoorOpen, FindOperators
 from shapely.geometry import Polygon
 from std_msgs.msg import Empty, Header
 
