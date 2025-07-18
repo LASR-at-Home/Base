@@ -1,0 +1,26 @@
+priors:
+  items:
+    - coffee
+    - coke
+    - fanta
+    - kuat
+    - milk
+    - orange_juice
+    - broth
+    - cornflour
+    - ketchup
+    - mayo
+    - oats
+    - tuna
+    - apple
+    - lemon
+    - lime
+    - pear
+    - tangerine
+    - cheese_snack
+    - chocolate_bar
+    - cornflakes
+    - crisps
+    - gum_balls
+    - peanuts
+    - pringles
