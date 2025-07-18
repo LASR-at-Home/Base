@@ -109,7 +109,7 @@ class Restaurant(smach.StateMachine):
             )
 
             smach.StateMachine.add(
-                "GET_POSES", GetPoses(), transitions={"succeeded": "SURVEY"}
+                "GET_POSES", GetPoses(), transitions={"succeeded": "SAY_GOT_POSES"}
             )
 
             smach.StateMachine.add(
@@ -118,7 +118,7 @@ class Restaurant(smach.StateMachine):
                 transitions={
                     "succeeded": "SAY_SURVEY",
                     "preempted": "SAY_SURVEY",
-                    "failed": "SAY_SURVEY",
+                    "aborted": "SAY_SURVEY",
                 },
             )
 
@@ -198,7 +198,7 @@ class Restaurant(smach.StateMachine):
             smach.StateMachine.add(
                 "TAKE_ORDER",
                 AskAndListen(
-                    tts_phrase="Hello, I'm TIAGo. Please say Hi Tiago to me before speaking. What can I get for you today?"
+                    tts_phrase="Please say Hi Tiago to me before speaking. What can I get for you today?"
                 ),
                 remapping={"transcribed_speech": "order_str"},
                 transitions={"succeeded": "HANDLE_ORDER", "failed": "failed"},
@@ -342,5 +342,5 @@ class Restaurant(smach.StateMachine):
                 "GO_TO_SURVEY",
                 GoToLocation(),
                 remapping={"location": "survey_pose"},
-                transitions={"succeeded": "SURVEY", "failed": "failed"},
+                transitions={"succeeded": "SURVEY", "failed": "GO_TO_SURVEY"},
             )
