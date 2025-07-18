@@ -886,22 +886,34 @@ def take(command_param: Dict, sm: smach.StateMachine) -> None:
 
 
 def answer(command_param: Dict, sm: smach.StateMachine, greet_person: bool) -> None:
-    data_root = os.path.join(rospkg.RosPack().get_path("gpsr"), "data", "qa_data")
+    # data_root = os.path.join(rospkg.RosPack().get_path("gpsr"), "data", "qa_data")
 
     if greet_person:
         greet(command_param, sm)
 
+    # sm.add(
+    #     f"STATE_{increment_state_count()}",
+    #     QuestionAnswer(
+    #         index_path=os.path.join(data_root, "questions.index"),
+    #         txt_path=os.path.join(data_root, "questions.txt"),
+    #         json_path=os.path.join(data_root, "qa_mapping.json"),
+    #         k=1,
+    #     ),
+    #     transitions={
+    #         "succeeded": f"STATE_{STATE_COUNT + 1}",
+    #         "failed": f"STATE_{STATE_COUNT + 1}",
+    #     },
+    # )
+
     sm.add(
         f"STATE_{increment_state_count()}",
-        QuestionAnswer(
-            index_path=os.path.join(data_root, "questions.index"),
-            txt_path=os.path.join(data_root, "questions.txt"),
-            json_path=os.path.join(data_root, "qa_mapping.json"),
-            k=1,
+        Say(
+            text="I am sorry, but I cannot answer questions at the moment. Matt and Jared were too tired and couldn't implement this skill."
         ),
         transitions={
             "succeeded": f"STATE_{STATE_COUNT + 1}",
-            "failed": f"STATE_{STATE_COUNT + 1}",
+            "aborted": f"STATE_{STATE_COUNT + 1}",
+            "preempted": f"STATE_{STATE_COUNT + 1}",
         },
     )
 
@@ -1395,20 +1407,7 @@ def follow(command_param: Dict, sm: smach.StateMachine, greet_person: bool) -> N
 
     sm.add(
         f"STATE_{increment_state_count()}",
-        Say(text="I will follow you"),
-        transitions={
-            "succeeded": f"STATE_{STATE_COUNT + 1}",
-            "aborted": f"STATE_{STATE_COUNT + 1}",
-            "preempted": f"STATE_{STATE_COUNT + 1}",
-        },
-    )
-    sm.add(
-        f"STATE_{increment_state_count()}",
-        smach_ros.SimpleActionState(
-            "/follow_person",
-            FollowAction,
-            goal=FollowGoal(),
-        ),
+        Say(text="I'm sorry, I couldn't follow you"),
         transitions={
             "succeeded": f"STATE_{STATE_COUNT + 1}",
             "aborted": f"STATE_{STATE_COUNT + 1}",

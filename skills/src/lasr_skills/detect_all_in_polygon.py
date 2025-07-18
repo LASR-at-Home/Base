@@ -560,6 +560,7 @@ class DetectAllInPolygon(smach.StateMachine):
                             area_polygon=self._polygon,
                             filter=self._object_filter,
                             confidence=self._min_confidence,
+                            model="best.pt",
                         ),
                         transitions={
                             "succeeded": "PROCESS_DETECTIONS",
