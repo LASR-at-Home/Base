@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>storing_groceries</name>
+  <name>give_me_a_hand</name>
   <version>0.0.0</version>
-  <description>The storing_groceries package</description>
+  <description>The give_me_a_hand package</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag -->
   <!-- Example:  -->
