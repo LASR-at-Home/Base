@@ -31,105 +31,6 @@ class HandoverObject(smach.StateMachine):
             rosparam.upload_params(ns, param)
 
         with self:
-            smach.StateMachine.add(
-                "CLEAR_OCTOMAP",
-                smach_ros.ServiceState("clear_octomap", Empty),
-                transitions={
-                    "succeeded": "LOOK_LEFT",
-                    "aborted": "failed",
-                    "preempted": "failed",
-                },
-            )
-
-            smach.StateMachine.add(
-                "LOOK_LEFT",
-                PlayMotion(motion_name="look_left"),
-                transitions={
-                    "succeeded": "LOOK_DOWN_LEFT",
-                    "aborted": "failed",
-                    "preempted": "failed",
-                },
-            )
-
-            smach.StateMachine.add(
-                "LOOK_DOWN_LEFT",
-                PlayMotion(motion_name="look_down_left"),
-                transitions={
-                    "succeeded": "LOOK_RIGHT",
-                    "aborted": "failed",
-                    "preempted": "failed",
-                },
-            )
-
-            smach.StateMachine.add(
-                "LOOK_RIGHT",
-                PlayMotion(motion_name="look_right"),
-                transitions={
-                    "succeeded": "LOOK_DOWN_RIGHT",
-                    "aborted": "failed",
-                    "preempted": "failed",
-                },
-            )
-
-            smach.StateMachine.add(
-                "LOOK_DOWN_RIGHT",
-                PlayMotion(motion_name="look_down_right"),
-                transitions={
-                    "succeeded": "LOOK_DOWN_CENTRE",
-                    "aborted": "failed",
-                    "preempted": "failed",
-                },
-            )
-
-            smach.StateMachine.add(
-                "LOOK_DOWN_CENTRE",
-                PlayMotion(motion_name="look_centre"),
-                transitions={
-                    "succeeded": "LOOK_CENTRE",
-                    "aborted": "failed",
-                    "preempted": "failed",
-                },
-            )
-
-            smach.StateMachine.add(
-                "LOOK_CENTRE",
-                PlayMotion(motion_name="look_centre"),
-                transitions={
-                    "succeeded": "SAY_REACH_ARM",
-                    "aborted": "failed",
-                    "preempted": "failed",
-                },
-            )
-
-            smach.StateMachine.add(
-                "SAY_REACH_ARM",
-                Say(text="Please step back, I am going to reach my arm out."),
-                transitions={
-                    "succeeded": "REACH_ARM",
-                    "aborted": "REACH_ARM",
-                    "preempted": "REACH_ARM",
-                },
-            )
-            if vertical:
-                smach.StateMachine.add(
-                    "REACH_ARM",
-                    PlayMotion(motion_name="reach_arm_vertical_gripper"),
-                    transitions={
-                        "succeeded": "SAY_TAKE",
-                        "aborted": "failed",
-                        "preempted": "failed",
-                    },
-                )
-            else:
-                smach.StateMachine.add(
-                    "REACH_ARM",
-                    PlayMotion(motion_name="reach_arm_horizontal_gripper"),
-                    transitions={
-                        "succeeded": "SAY_TAKE",
-                        "aborted": "failed",
-                        "preempted": "failed",
-                    },
-                )
 
             if object_name is not None:
                 smach.StateMachine.add(
@@ -168,16 +69,6 @@ class HandoverObject(smach.StateMachine):
                 PlayMotion(motion_name="open_gripper"),
                 transitions={
                     "succeeded": "WAIT_5",
-                    "aborted": "failed",
-                    "preempted": "failed",
-                },
-            )
-
-            smach.StateMachine.add(
-                "FOLD_ARM",
-                PlayMotion(motion_name="home"),
-                transitions={
-                    "succeeded": "succeeded",
                     "aborted": "failed",
                     "preempted": "failed",
                 },
