@@ -184,7 +184,7 @@ class BagPickAndPlace(smach.State):
                 return "failed"
             mask, pts, centroid = result["mask"], result["pts"], result["centroid"]
 
-            self.show_mask_overlay(mask)
+            # self.show_mask_overlay(mask)
             yaw = self.compute_yaw(pts, centroid)
             closest_pose = self.find_closest_pose_footprint(pts)
             centroid_pose = self.transform_centroid_pose_footprint(centroid, yaw)
