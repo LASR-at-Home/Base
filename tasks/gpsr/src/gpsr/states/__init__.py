@@ -8,3 +8,5 @@ from .counting_object import CountObject
 from .find_object_at_loc import FindObjectAtLoc
 from .find_object_in_room import FindObjectInRoom
 from .survey import Survey
+from .compute_approach import ComputeApproach
+from .choose_waving_person import ChooseWavingPerson

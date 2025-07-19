@@ -169,7 +169,7 @@ class CommandParserStateMachine(smach.StateMachine):
                 self.CheckResponse(),
                 transitions={
                     "correct": "PARSE_COMMAND",
-                    "incorrect": "ASK_FOR_COMMAND",
+                    "incorrect": "failed",
                 },
             )
 

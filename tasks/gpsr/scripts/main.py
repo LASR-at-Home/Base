@@ -8,7 +8,12 @@ from typing import Dict, List
 from gpsr.load_known_data import GPSRDataLoader
 from gpsr.state_machine_factory import build_state_machine
 from gpsr.regex_command_parser import Configuration
-from gpsr.states import CommandParserStateMachine, Survey, ChooseWavingPerson, ComputeApproach
+from gpsr.states import (
+    CommandParserStateMachine,
+    Survey,
+    ChooseWavingPerson,
+    ComputeApproach,
+)
 from gpsr.regex_command_parser import gpsr_compile_and_parse
 
 import actionlib
@@ -291,11 +296,18 @@ class PatrolObjectLocations(smach.StateMachine):
 
         # Patrol object locations
         # - Cabinet (living room, foods)
+        # - TV Stand (living room, None)
+        # - Sofa (living room, None)
         # - Desk (office, fruits)
         # - Bar (office, drinks)
         # - Side Table (bedroom, snacks)
+        # - Bed (office, None)
+        # - Bedside Table (bedroom, None)
         # - Kitchen Table (kitchen, Dishes)
         # - Dishwasher (kitchen, cleaning supplies)
+        # - Sink (kitchen, None)
+        # - Shelf (kitchen, None)
+        # - Refrigerator (kitchen, None)
 
         locations = {}
         locations["cabinet"] = (
@@ -338,11 +350,103 @@ class PatrolObjectLocations(smach.StateMachine):
             "detection_pose": get_location_pose("dishwasher", person=False),
             "detection_polygon": get_location_polygon("dishwasher"),
         }
+        locations["tv_stand"] = {
+            "object_category": "None",
+            "detection_pose": get_location_pose("tv_stand", person=False),
+            "detection_polygon": get_location_polygon("tv_stand"),
+        }
+        locations["sofa"] = {
+            "object_category": "None",
+            "detection_pose": get_location_pose("sofa", person=False),
+            "detection_polygon": get_location_polygon("sofa"),
+        }
+        locations["bed"] = {
+            "object_category": "None",
+            "detection_pose": get_location_pose("bed", person=False),
+            "detection_polygon": get_location_polygon("bed"),
+        }
+        locations["bedside_table"] = {
+            "object_category": "None",
+            "detection_pose": get_location_pose("bedside_table", person=False),
+            "detection_polygon": get_location_polygon("bedside_table"),
+        }
+        locations["sink"] = {
+            "object_category": "None",
+            "detection_pose": get_location_pose("sink", person=False),
+            "detection_polygon": get_location_polygon("sink"),
+        }
+        locations["shelf"] = {
+            "object_category": "None",
+            "detection_pose": get_location_pose("shelf", person=False),
+            "detection_polygon": get_location_polygon("shelf"),
+        }
+        locations["refrigerator"] = {
+            "object_category": "None",
+            "detection_pose": get_location_pose("refrigerator", person=False),
+            "detection_polygon": get_location_polygon("refrigerator"),
+        }
 
-        office_pose = Pose()
-        living_room_pose = Pose()
-        kitchen_pose = Pose()
-        bedroom_pose = Pose()
+        office_pose = Pose(
+            position=Point(6.545845364100279, 1.8987864086171355, 0.0),
+            orientation=Quaternion(0.0, 0.0, -0.6584465340264694, 0.7526275053627323),
+        )
+        """OFFICE
+        position: 
+            x: 6.545845364100279
+            y: 1.8987864086171355
+            z: 0.0
+        orientation: 
+            x: 0.0
+            y: 0.0
+            z: -0.6584465340264694
+            w: 0.7526275053627323
+        
+        """
+        living_room_pose = Pose(
+            position=Point(6.576560077776771, 1.8619710776864822, 0.0),
+            orientation=Quaternion(0.0, 0.0, -0.9193216523479134, 0.3935069243663983),
+        )
+        """LIVING ROOM
+        position: 
+            x: 6.576560077776771
+            y: 1.8619710776864822
+            z: 0.0
+        orientation: 
+            x: 0.0
+            y: 0.0
+            z: -0.9193216523479134
+            w: 0.3935069243663983
+        """
+        kitchen_pose = Pose(
+            position=Point(6.457119880826167, 3.636448861465817, 0.0),
+            orientation=Quaternion(0.0, 0.0, 0.8818005401937303, 0.47162252630047835),
+        )
+        """KITCHEN POSE
+        position: 
+            x: 6.457119880826167
+            y: 3.636448861465817
+            z: 0.0
+        orientation: 
+            x: 0.0
+            y: 0.0
+            z: 0.8818005401937303
+            w: 0.47162252630047835
+        """
+        bedroom_pose = Pose(
+            position=Point(7.440938537594531, 2.9093494451150845, 0.0),
+            orientation=Quaternion(0.0, 0.0, 0.12446063864335499, 0.9922245458707863),
+        )
+        """BEDROOM
+        position: 
+            x: 7.440938537594531
+            y: 2.9093494451150845
+            z: 0.0
+        orientation: 
+            x: 0.0
+            y: 0.0
+            z: 0.12446063864335499
+            w: 0.9922245458707863    
+        """
 
         with self:
             location_pose = locations["cabinet"]["detection_pose"]
@@ -383,7 +487,7 @@ class PatrolObjectLocations(smach.StateMachine):
                 ),
                 transitions={
                     "succeeded": "PROCESS_DETECTIONS_IN_CABINET",
-                    "failed": "SAY_GOING_TO_LIVING_ROOM",
+                    "failed": "SAY_GOING_TO_TV_STAND",
                 },
                 remapping={"detected_objects": "detected_objects"},
             )
@@ -406,6 +510,146 @@ class PatrolObjectLocations(smach.StateMachine):
                 "SAY_DONE_WITH_CABINET",
                 Say(),
                 transitions={
+                    "succeeded": "SAY_GOING_TO_TV_STAND",
+                    "preempted": "SAY_GOING_TO_TV_STAND",
+                    "aborted": "SAY_GOING_TO_TV_STAND",
+                },
+                remapping={
+                    "text": "text",
+                },
+            )
+
+            location_pose = locations["tv_stand"]["detection_pose"]
+            object_category = locations["tv_stand"]["object_category"]
+            detection_polygon = locations["tv_stand"]["detection_polygon"]
+            detection_polygon = (
+                detection_polygon
+                if isinstance(detection_polygon, ShapelyPolygon)
+                else ShapelyPolygon(
+                    [(point.x, point.y) for point in detection_polygon.points]
+                )
+            )
+
+            smach.StateMachine.add(
+                "SAY_GOING_TO_TV_STAND",
+                Say(text=f"I am going to the tv stand to check for {object_category}."),
+                transitions={
+                    "succeeded": "GO_TO_TV_STAND",
+                    "preempted": "GO_TO_TV_STAND",
+                    "aborted": "GO_TO_TV_STAND",
+                },
+            )
+
+            smach.StateMachine.add(
+                "GO_TO_TV_STAND",
+                GoToLocation(location=location_pose),
+                transitions={
+                    "succeeded": "DETECT_OBJECTS_IN_TV_STAND",
+                    "failed": "GO_TO_TV_STAND",
+                },
+            )
+
+            smach.StateMachine.add(
+                "DETECT_OBJECTS_IN_TV_STAND",
+                DetectAllInPolygon(
+                    polygon=detection_polygon,
+                    min_coverage=1.0,
+                ),
+                transitions={
+                    "succeeded": "PROCESS_DETECTIONS_IN_TV_STAND",
+                    "failed": "SAY_GOING_TO_SOFA",
+                },
+                remapping={"detected_objects": "detected_objects"},
+            )
+
+            smach.StateMachine.add(
+                "PROCESS_DETECTIONS_IN_TV_STAND",
+                self.ProcessDetectionsInLocation(
+                    expected_object_category=object_category
+                ),
+                transitions={
+                    "succeeded": "SAY_DONE_WITH_TV_STAND",
+                },
+                remapping={
+                    "detected_objects": "detected_objects",
+                    "text": "text",
+                },
+            )
+
+            smach.StateMachine.add(
+                "SAY_DONE_WITH_TV_STAND",
+                Say(),
+                transitions={
+                    "succeeded": "SAY_GOING_TO_SOFA",
+                    "preempted": "SAY_GOING_TO_SOFA",
+                    "aborted": "SAY_GOING_TO_SOFA",
+                },
+                remapping={
+                    "text": "text",
+                },
+            )
+
+            location_pose = locations["sofa"]["detection_pose"]
+            object_category = locations["sofa"]["object_category"]
+            detection_polygon = locations["sofa"]["detection_polygon"]
+            detection_polygon = (
+                detection_polygon
+                if isinstance(detection_polygon, ShapelyPolygon)
+                else ShapelyPolygon(
+                    [(point.x, point.y) for point in detection_polygon.points]
+                )
+            )
+
+            smach.StateMachine.add(
+                "SAY_GOING_TO_SOFA",
+                Say(text=f"I am going to the sofa to check for {object_category}."),
+                transitions={
+                    "succeeded": "GO_TO_SOFA",
+                    "preempted": "GO_TO_SOFA",
+                    "aborted": "GO_TO_SOFA",
+                },
+            )
+
+            smach.StateMachine.add(
+                "GO_TO_SOFA",
+                GoToLocation(location=location_pose),
+                transitions={
+                    "succeeded": "DETECT_OBJECTS_IN_SOFA",
+                    "failed": "GO_TO_SOFA",
+                },
+            )
+
+            smach.StateMachine.add(
+                "DETECT_OBJECTS_IN_SOFA",
+                DetectAllInPolygon(
+                    polygon=detection_polygon,
+                    min_coverage=1.0,
+                ),
+                transitions={
+                    "succeeded": "PROCESS_DETECTIONS_IN_SOFA",
+                    "failed": "SAY_GOING_TO_LIVING_ROOM",
+                },
+                remapping={"detected_objects": "detected_objects"},
+            )
+
+            smach.StateMachine.add(
+                "PROCESS_DETECTIONS_IN_SOFA",
+                self.ProcessDetectionsInLocation(
+                    expected_object_category=object_category
+                ),
+                transitions={
+                    "succeeded": "SAY_DONE_WITH_SOFA",
+                },
+                remapping={
+                    "detected_objects": "detected_objects",
+                    "text": "text",
+                },
+            )
+
+            smach.StateMachine.add(
+                "SAY_DONE_WITH_SOFA",
+                Say(),
+                transitions={
                     "succeeded": "SAY_GOING_TO_LIVING_ROOM",
                     "preempted": "SAY_GOING_TO_LIVING_ROOM",
                     "aborted": "SAY_GOING_TO_LIVING_ROOM",
@@ -414,17 +658,19 @@ class PatrolObjectLocations(smach.StateMachine):
                     "text": "text",
                 },
             )
-            
+
             smach.StateMachine.add(
                 "SAY_GOING_TO_LIVING_ROOM",
-                Say(text="I am going to the living room to check for people that need help."),
+                Say(
+                    text="I am going to the living room to check for people that need help."
+                ),
                 transitions={
                     "succeeded": "GO_TO_LIVING_ROOM",
                     "preempted": "GO_TO_LIVING_ROOM",
                     "aborted": "GO_TO_LIVING_ROOM",
                 },
             )
-            
+
             smach.StateMachine.add(
                 "GO_TO_LIVING_ROOM",
                 GoToLocation(location=living_room_pose),
@@ -433,26 +679,39 @@ class PatrolObjectLocations(smach.StateMachine):
                     "failed": "GO_TO_LIVING_ROOM",
                 },
             )
-            
+
             smach.StateMachine.add(
                 "SURVEY_LIVING_ROOM",
                 Survey(
                     look_range_deg=(-71.0, 71.0),
                     n_look_points=10,
-                )
+                ),
                 transitions={
-                    "customer_found": "SAY_CUSTOMER_FOUND",
-                    "customer_not_found": "SAY_CUSTOMER_NOT_FOUND",
+                    "customer_found": "SAY_PERSON_FOUND_LIVING_ROOM",
+                    "customer_not_found": "SAY_PERSON_NOT_FOUND_LIVING_ROOM",
                 },
                 remapping={"hands_up_detections": "hands_up_detections"},
             )
-            
+
             smach.StateMachine.add(
-                "CHOOSE_WAVING_PERSON",
+                "SAY_PERSON_FOUND_LIVING_ROOM",
+                Say(text="I have found a person in the living room that needs help."),
+                transitions={
+                    "succeeded": "CHOOSE_WAVING_PERSON_LIVING_ROOM",
+                    "preempted": "CHOOSE_WAVING_PERSON_LIVING_ROOM",
+                    "aborted": "CHOOSE_WAVING_PERSON_LIVING_ROOM",
+                },
+                remapping={
+                    "hands_up_detections": "hands_up_detections",
+                },
+            )
+
+            smach.StateMachine.add(
+                "CHOOSE_WAVING_PERSON_LIVING_ROOM",
                 ChooseWavingPerson(),
                 transitions={
-                    "succeeded": "COMPUTE_APPROACH_POSE",
-                    "failed": "SAY_RAISE",
+                    "succeeded": "COMPUTE_APPROACH_POSE_LIVING_ROOM",
+                    "failed": "SAY_GOING_TO_DESK",
                 },
                 remapping={
                     "hands_up_detections": "hands_up_detections",
@@ -461,11 +720,11 @@ class PatrolObjectLocations(smach.StateMachine):
             )
 
             smach.StateMachine.add(
-                "COMPUTE_APPROACH_POSE",
+                "COMPUTE_APPROACH_POSE_LIVING_ROOM",
                 ComputeApproach(),
                 transitions={
-                    "succeeded": "SAY_FOUND",
-                    "failed": "SURVEY",
+                    "succeeded": "GO_TO_PERSON_LIVING_ROOM",
+                    "failed": "SAY_GOING_TO_DESK",
                 },
                 remapping={
                     "customer_approach_pose": "customer_approach_pose",
@@ -473,29 +732,43 @@ class PatrolObjectLocations(smach.StateMachine):
             )
 
             smach.StateMachine.add(
-                "SAY_FOUND",
-                Say(
-                    text="I have found a waving customer. I will navigate to them now."
-                ),
-                transitions={
-                    "succeeded": "GO_TO_CUSTOMER",
-                    "preempted": "GO_TO_BAR",
-                    "aborted": "GO_TO_BAR",
-                },
-            )
-
-            smach.StateMachine.add(
-                "GO_TO_CUSTOMER",
+                "GO_TO_PERSON_LIVING_ROOM",
                 GoToLocation(),
                 transitions={
-                    "succeeded": "TAKE_ORDER",
-                    "failed": "GO_TO_CUSTOMER",
+                    "succeeded": "ASK_FOR_COMMAND_LIVING_ROOM",
+                    "failed": "GO_TO_PERSON_LIVING_ROOM",
                 },
                 remapping={
                     "location": "customer_approach_pose",
                 },
             )
-                
+
+            smach.StateMachine.add(
+                "ASK_FOR_COMMAND_LIVING_ROOM",
+                CommandParserStateMachine(configuration=load_gpsr_configuration()),
+                transitions={
+                    "succeeded": "SAY_COMMAND_PLAN_LIVING_ROOM",
+                    "failed": "RETRY_COMMAND_LIVING_ROOM_1",
+                },
+            )
+
+            smach.StateMachine.add(
+                "RETRY_COMMAND_LIVING_ROOM_1",
+                CommandParserStateMachine(configuration=load_gpsr_configuration()),
+                transitions={
+                    "succeeded": "SAY_COMMAND_PLAN_LIVING_ROOM",
+                    "failed": "RETRY_COMMAND_LIVING_ROOM_2",
+                },
+            )
+
+            smach.StateMachine.add(
+                "RETRY_COMMAND_LIVING_ROOM_2",
+                CommandParserStateMachine(configuration=load_gpsr_configuration()),
+                transitions={
+                    "succeeded": "SAY_COMMAND_PLAN_LIVING_ROOM",
+                    "failed": "SAY_GOING_TO_DESK",
+                },
+            )
 
             location_pose = locations["desk"]["detection_pose"]
             object_category = locations["desk"]["object_category"]
@@ -605,7 +878,7 @@ class PatrolObjectLocations(smach.StateMachine):
                 ),
                 transitions={
                     "succeeded": "PROCESS_DETECTIONS_IN_BAR",
-                    "failed": "SAY_GOING_TO_SIDE_TABLE",
+                    "failed": "SAY_GOING_TO_OFFICE",
                 },
                 remapping={"detected_objects": "detected_objects"},
             )
@@ -628,18 +901,920 @@ class PatrolObjectLocations(smach.StateMachine):
                 "SAY_DONE_WITH_BAR",
                 Say(),
                 transitions={
-                    "succeeded": "SAY_GOING_TO_SIDE_TABLE",
-                    "preempted": "SAY_GOING_TO_SIDE_TABLE",
-                    "aborted": "SAY_GOING_TO_SIDE_TABLE",
+                    "succeeded": "SAY_GOING_TO_OFFICE",
+                    "preempted": "SAY_GOING_TO_OFFICE",
+                    "aborted": "SAY_GOING_TO_OFFICE",
                 },
                 remapping={
                     "text": "text",
                 },
             )
 
+            smach.StateMachine.add(
+                "SAY_GOING_TO_OFFICE",
+                Say(
+                    text="I am going to the office to check for people that need help."
+                ),
+                transitions={
+                    "succeeded": "GO_TO_OFFICE",
+                    "preempted": "GO_TO_OFFICE",
+                    "aborted": "GO_TO_OFFICE",
+                },
+            )
+
+            smach.StateMachine.add(
+                "GO_TO_OFFICE",
+                GoToLocation(location=office_pose),
+                transitions={
+                    "succeeded": "SURVEY_OFFICE",
+                    "failed": "GO_TO_OFFICE",
+                },
+            )
+
+            smach.StateMachine.add(
+                "SURVEY_OFFICE",
+                Survey(
+                    look_range_deg=(-71.0, 71.0),
+                    n_look_points=10,
+                ),
+                transitions={
+                    "customer_found": "SAY_PERSON_FOUND_OFFICE",
+                    "customer_not_found": "SAY_PERSON_NOT_FOUND_OFFICE",
+                },
+                remapping={"hands_up_detections": "hands_up_detections"},
+            )
+
+            smach.StateMachine.add(
+                "SAY_PERSON_FOUND_OFFICE",
+                Say(text="I have found a person in the office that needs help."),
+                transitions={
+                    "succeeded": "CHOOSE_WAVING_PERSON_OFFICE",
+                    "preempted": "CHOOSE_WAVING_PERSON_OFFICE",
+                    "aborted": "CHOOSE_WAVING_PERSON_OFFICE",
+                },
+                remapping={
+                    "hands_up_detections": "hands_up_detections",
+                },
+            )
+
+            smach.StateMachine.add(
+                "CHOOSE_WAVING_PERSON_OFFICE",
+                ChooseWavingPerson(),
+                transitions={
+                    "succeeded": "COMPUTE_APPROACH_POSE_OFFICE",
+                    "failed": "SAY_GOING_TO_SIDE_TABLE",
+                },
+                remapping={
+                    "hands_up_detections": "hands_up_detections",
+                    "waving_person_detection": "waving_person_detection",
+                },
+            )
+
+            smach.StateMachine.add(
+                "COMPUTE_APPROACH_POSE_OFFICE",
+                ComputeApproach(),
+                transitions={
+                    "succeeded": "GO_TO_PERSON_OFFICE",
+                    "failed": "SAY_GOING_TO_SIDE_TABLE",
+                },
+                remapping={
+                    "customer_approach_pose": "customer_approach_pose",
+                },
+            )
+
+            smach.StateMachine.add(
+                "GO_TO_PERSON_OFFICE",
+                GoToLocation(),
+                transitions={
+                    "succeeded": "ASK_FOR_COMMAND_OFFICE",
+                    "failed": "GO_TO_PERSON_OFFICE",
+                },
+                remapping={
+                    "location": "customer_approach_pose",
+                },
+            )
+
+            smach.StateMachine.add(
+                "ASK_FOR_COMMAND_OFFICE",
+                CommandParserStateMachine(configuration=load_gpsr_configuration()),
+                transitions={
+                    "succeeded": "SAY_COMMAND_PLAN_OFFICE",
+                    "failed": "RETRY_COMMAND_OFFICE_1",
+                },
+            )
+
+            smach.StateMachine.add(
+                "RETRY_COMMAND_OFFICE_1",
+                CommandParserStateMachine(configuration=load_gpsr_configuration()),
+                transitions={
+                    "succeeded": "SAY_COMMAND_PLAN_OFFICE",
+                    "failed": "RETRY_COMMAND_OFFICE_2",
+                },
+            )
+
+            smach.StateMachine.add(
+                "RETRY_COMMAND_OFFICE_2",
+                CommandParserStateMachine(configuration=load_gpsr_configuration()),
+                transitions={
+                    "succeeded": "SAY_COMMAND_PLAN_OFFICE",
+                    "failed": "SAY_GOING_TO_SIDE_TABLE",
+                },
+            )
+
+            location_pose = locations["side_table"]["detection_pose"]
+            object_category = locations["side_table"]["object_category"]
+            detection_polygon = locations["side_table"]["detection_polygon"]
+            detection_polygon = (
+                detection_polygon
+                if isinstance(detection_polygon, ShapelyPolygon)
+                else ShapelyPolygon(
+                    [(point.x, point.y) for point in detection_polygon.points]
+                )
+            )
+
+            smach.StateMachine.add(
+                "SAY_GOING_TO_SIDE_TABLE",
+                Say(
+                    text=f"I am going to the side table to check for {object_category}."
+                ),
+                transitions={
+                    "succeeded": "GO_TO_SIDE_TABLE",
+                    "preempted": "GO_TO_SIDE_TABLE",
+                    "aborted": "GO_TO_SIDE_TABLE",
+                },
+            )
+
+            smach.StateMachine.add(
+                "GO_TO_SIDE_TABLE",
+                GoToLocation(location=location_pose),
+                transitions={
+                    "succeeded": "DETECT_OBJECTS_IN_SIDE_TABLE",
+                    "failed": "GO_TO_SIDE_TABLE",
+                },
+            )
+
+            smach.StateMachine.add(
+                "DETECT_OBJECTS_IN_SIDE_TABLE",
+                DetectAllInPolygon(
+                    polygon=detection_polygon,
+                    min_coverage=1.0,
+                ),
+                transitions={
+                    "succeeded": "PROCESS_DETECTIONS_IN_SIDE_TABLE",
+                    "failed": "SAY_GOING_TO_BED",
+                },
+                remapping={"detected_objects": "detected_objects"},
+            )
+
+            smach.StateMachine.add(
+                "PROCESS_DETECTIONS_IN_SIDE_TABLE",
+                self.ProcessDetectionsInLocation(
+                    expected_object_category=object_category
+                ),
+                transitions={
+                    "succeeded": "SAY_DONE_WITH_SIDE_TABLE",
+                },
+                remapping={
+                    "detected_objects": "detected_objects",
+                    "text": "text",
+                },
+            )
+
+            smach.StateMachine.add(
+                "SAY_DONE_WITH_SIDE_TABLE",
+                Say(),
+                transitions={
+                    "succeeded": "SAY_GOING_TO_BED",
+                    "preempted": "SAY_GOING_TO_BED",
+                    "aborted": "SAY_GOING_TO_BED",
+                },
+                remapping={
+                    "text": "text",
+                },
+            )
+
+            location_pose = locations["bed"]["detection_pose"]
+            object_category = locations["bed"]["object_category"]
+            detection_polygon = locations["bed"]["detection_polygon"]
+            detection_polygon = (
+                detection_polygon
+                if isinstance(detection_polygon, ShapelyPolygon)
+                else ShapelyPolygon(
+                    [(point.x, point.y) for point in detection_polygon.points]
+                )
+            )
+
+            smach.StateMachine.add(
+                "SAY_GOING_TO_BED",
+                Say(text=f"I am going to the bed to check for {object_category}."),
+                transitions={
+                    "succeeded": "GO_TO_BED",
+                    "preempted": "GO_TO_BED",
+                    "aborted": "GO_TO_BED",
+                },
+            )
+
+            smach.StateMachine.add(
+                "GO_TO_BED",
+                GoToLocation(location=location_pose),
+                transitions={
+                    "succeeded": "DETECT_OBJECTS_IN_BED",
+                    "failed": "GO_TO_BED",
+                },
+            )
+
+            smach.StateMachine.add(
+                "DETECT_OBJECTS_IN_BED",
+                DetectAllInPolygon(
+                    polygon=detection_polygon,
+                    min_coverage=1.0,
+                ),
+                transitions={
+                    "succeeded": "PROCESS_DETECTIONS_IN_BED",
+                    "failed": "SAY_GOING_TO_BEDSIDE_TABLE",
+                },
+                remapping={"detected_objects": "detected_objects"},
+            )
+
+            smach.StateMachine.add(
+                "PROCESS_DETECTIONS_IN_BED",
+                self.ProcessDetectionsInLocation(
+                    expected_object_category=object_category
+                ),
+                transitions={
+                    "succeeded": "SAY_DONE_WITH_BED",
+                },
+                remapping={
+                    "detected_objects": "detected_objects",
+                    "text": "text",
+                },
+            )
+
+            smach.StateMachine.add(
+                "SAY_DONE_WITH_BED",
+                Say(),
+                transitions={
+                    "succeeded": "SAY_GOING_TO_BEDSIDE_TABLE",
+                    "preempted": "SAY_GOING_TO_BEDSIDE_TABLE",
+                    "aborted": "SAY_GOING_TO_BEDSIDE_TABLE",
+                },
+                remapping={
+                    "text": "text",
+                },
+            )
+
+            location_pose = locations["bedside_table"]["detection_pose"]
+            object_category = locations["bedside_table"]["object_category"]
+            detection_polygon = locations["bedside_table"]["detection_polygon"]
+            detection_polygon = (
+                detection_polygon
+                if isinstance(detection_polygon, ShapelyPolygon)
+                else ShapelyPolygon(
+                    [(point.x, point.y) for point in detection_polygon.points]
+                )
+            )
+
+            smach.StateMachine.add(
+                "SAY_GOING_TO_BEDSIDE_TABLE",
+                Say(
+                    text=f"I am going to the bedside table to check for {object_category}."
+                ),
+                transitions={
+                    "succeeded": "GO_TO_BEDSIDE_TABLE",
+                    "preempted": "GO_TO_BEDSIDE_TABLE",
+                    "aborted": "GO_TO_BEDSIDE_TABLE",
+                },
+            )
+
+            smach.StateMachine.add(
+                "GO_TO_BEDSIDE_TABLE",
+                GoToLocation(location=location_pose),
+                transitions={
+                    "succeeded": "DETECT_OBJECTS_IN_BEDSIDE_TABLE",
+                    "failed": "GO_TO_BEDSIDE_TABLE",
+                },
+            )
+
+            smach.StateMachine.add(
+                "DETECT_OBJECTS_IN_BEDSIDE_TABLE",
+                DetectAllInPolygon(
+                    polygon=detection_polygon,
+                    min_coverage=1.0,
+                ),
+                transitions={
+                    "succeeded": "PROCESS_DETECTIONS_IN_BEDSIDE_TABLE",
+                    "failed": "SAY_GOING_TO_BEDROOM",
+                },
+                remapping={"detected_objects": "detected_objects"},
+            )
+
+            smach.StateMachine.add(
+                "PROCESS_DETECTIONS_IN_BEDSIDE_TABLE",
+                self.ProcessDetectionsInLocation(
+                    expected_object_category=object_category
+                ),
+                transitions={
+                    "succeeded": "SAY_DONE_WITH_BEDSIDE_TABLE",
+                },
+                remapping={
+                    "detected_objects": "detected_objects",
+                    "text": "text",
+                },
+            )
+
+            smach.StateMachine.add(
+                "SAY_DONE_WITH_BEDSIDE_TABLE",
+                Say(),
+                transitions={
+                    "succeeded": "SAY_GOING_TO_BEDROOM",
+                    "preempted": "SAY_GOING_TO_BEDROOM",
+                    "aborted": "SAY_GOING_TO_BEDROOM",
+                },
+                remapping={
+                    "text": "text",
+                },
+            )
+
+            smach.StateMachine.add(
+                "SAY_GOING_TO_BEDROOM",
+                Say(
+                    text="I am going to the office to check for people that need help."
+                ),
+                transitions={
+                    "succeeded": "GO_TO_BEDROOM",
+                    "preempted": "GO_TO_BEDROOM",
+                    "aborted": "GO_TO_BEDROOM",
+                },
+            )
+
+            smach.StateMachine.add(
+                "GO_TO_BEDROOM",
+                GoToLocation(location=bedroom_pose),
+                transitions={
+                    "succeeded": "SURVEY_BEDROOM",
+                    "failed": "GO_TO_BEDROOM",
+                },
+            )
+
+            smach.StateMachine.add(
+                "SURVEY_BEDROOM",
+                Survey(
+                    look_range_deg=(-71.0, 71.0),
+                    n_look_points=10,
+                ),
+                transitions={
+                    "customer_found": "SAY_PERSON_FOUND_BEDROOM",
+                    "customer_not_found": "SAY_PERSON_NOT_FOUND_BEDROOM",
+                },
+                remapping={"hands_up_detections": "hands_up_detections"},
+            )
+
+            smach.StateMachine.add(
+                "SAY_PERSON_FOUND_BEDROOM",
+                Say(text="I have found a person in the bedroom that needs help."),
+                transitions={
+                    "succeeded": "CHOOSE_WAVING_PERSON_BEDROOM",
+                    "preempted": "CHOOSE_WAVING_PERSON_BEDROOM",
+                    "aborted": "CHOOSE_WAVING_PERSON_BEDROOM",
+                },
+                remapping={
+                    "hands_up_detections": "hands_up_detections",
+                },
+            )
+
+            smach.StateMachine.add(
+                "CHOOSE_WAVING_PERSON_BEDROOM",
+                ChooseWavingPerson(),
+                transitions={
+                    "succeeded": "COMPUTE_APPROACH_POSE_BEDROOM",
+                    "failed": "SAY_GOING_TO_DISHWASHER",
+                },
+                remapping={
+                    "hands_up_detections": "hands_up_detections",
+                    "waving_person_detection": "waving_person_detection",
+                },
+            )
+
+            smach.StateMachine.add(
+                "COMPUTE_APPROACH_POSE_BEDROOM",
+                ComputeApproach(),
+                transitions={
+                    "succeeded": "GO_TO_PERSON_BEDROOM",
+                    "failed": "SAY_GOING_TO_DISHWASHER",
+                },
+                remapping={
+                    "customer_approach_pose": "customer_approach_pose",
+                },
+            )
+
+            smach.StateMachine.add(
+                "GO_TO_PERSON_BEDROOM",
+                GoToLocation(),
+                transitions={
+                    "succeeded": "ASK_FOR_COMMAND_BEDROOM",
+                    "failed": "GO_TO_PERSON_BEDROOM",
+                },
+                remapping={
+                    "location": "customer_approach_pose",
+                },
+            )
+
+            smach.StateMachine.add(
+                "ASK_FOR_COMMAND_BEDROOM",
+                CommandParserStateMachine(configuration=load_gpsr_configuration()),
+                transitions={
+                    "succeeded": "SAY_COMMAND_PLAN_BEDROOM",
+                    "failed": "RETRY_COMMAND_BEDROOM_1",
+                },
+            )
+
+            smach.StateMachine.add(
+                "RETRY_COMMAND_BEDROOM_1",
+                CommandParserStateMachine(configuration=load_gpsr_configuration()),
+                transitions={
+                    "succeeded": "SAY_COMMAND_PLAN_BEDROOM",
+                    "failed": "RETRY_COMMAND_BEDROOM_2",
+                },
+            )
+
+            smach.StateMachine.add(
+                "RETRY_COMMAND_BEDROOM_2",
+                CommandParserStateMachine(configuration=load_gpsr_configuration()),
+                transitions={
+                    "succeeded": "SAY_COMMAND_PLAN_BEDROOM",
+                    "failed": "SAY_GOING_TO_DISHWASHER",
+                },
+            )
+
+            location_pose = locations["dishwasher"]["detection_pose"]
+            object_category = locations["dishwasher"]["object_category"]
+            detection_polygon = locations["dishwasher"]["detection_polygon"]
+            detection_polygon = (
+                detection_polygon
+                if isinstance(detection_polygon, ShapelyPolygon)
+                else ShapelyPolygon(
+                    [(point.x, point.y) for point in detection_polygon.points]
+                )
+            )
+
+            smach.StateMachine.add(
+                "SAY_GOING_TO_DISHWASHER",
+                Say(
+                    text=f"I am going to the dishwasher to check for {object_category}."
+                ),
+                transitions={
+                    "succeeded": "GO_TO_DISHWASHER",
+                    "preempted": "GO_TO_DISHWASHER",
+                    "aborted": "GO_TO_DISHWASHER",
+                },
+            )
+
+            smach.StateMachine.add(
+                "GO_TO_DISHWASHER",
+                GoToLocation(location=location_pose),
+                transitions={
+                    "succeeded": "DETECT_OBJECTS_IN_DISHWASHER",
+                    "failed": "GO_TO_DISHWASHER",
+                },
+            )
+
+            smach.StateMachine.add(
+                "DETECT_OBJECTS_IN_DISHWASHER",
+                DetectAllInPolygon(
+                    polygon=detection_polygon,
+                    min_coverage=1.0,
+                ),
+                transitions={
+                    "succeeded": "PROCESS_DETECTIONS_IN_DISHWASHER",
+                    "failed": "SAY_GOING_TO_KITCHEN_TABLE",
+                },
+                remapping={"detected_objects": "detected_objects"},
+            )
+
+            smach.StateMachine.add(
+                "PROCESS_DETECTIONS_IN_DISHWASHER",
+                self.ProcessDetectionsInLocation(
+                    expected_object_category=object_category
+                ),
+                transitions={
+                    "succeeded": "SAY_DONE_WITH_DISHWASHER",
+                },
+                remapping={
+                    "detected_objects": "detected_objects",
+                    "text": "text",
+                },
+            )
+
+            smach.StateMachine.add(
+                "SAY_DONE_WITH_DISHWASHER",
+                Say(),
+                transitions={
+                    "succeeded": "SAY_GOING_TO_KITCHEN_TABLE",
+                    "preempted": "SAY_GOING_TO_KITCHEN_TABLE",
+                    "aborted": "SAY_GOING_TO_KITCHEN_TABLE",
+                },
+                remapping={
+                    "text": "text",
+                },
+            )
+
+            location_pose = locations["kitchen_table"]["detection_pose"]
+            object_category = locations["kitchen_table"]["object_category"]
+            detection_polygon = locations["kitchen_table"]["detection_polygon"]
+            detection_polygon = (
+                detection_polygon
+                if isinstance(detection_polygon, ShapelyPolygon)
+                else ShapelyPolygon(
+                    [(point.x, point.y) for point in detection_polygon.points]
+                )
+            )
+
+            smach.StateMachine.add(
+                "SAY_GOING_TO_KITCHEN_TABLE",
+                Say(
+                    text=f"I am going to the kitchen table to check for {object_category}."
+                ),
+                transitions={
+                    "succeeded": "GO_TO_KITCHEN_TABLE",
+                    "preempted": "GO_TO_KITCHEN_TABLE",
+                    "aborted": "GO_TO_KITCHEN_TABLE",
+                },
+            )
+
+            smach.StateMachine.add(
+                "GO_TO_KITCHEN_TABLE",
+                GoToLocation(location=location_pose),
+                transitions={
+                    "succeeded": "DETECT_OBJECTS_IN_KITCHEN_TABLE",
+                    "failed": "GO_TO_KITCHEN_TABLE",
+                },
+            )
+
+            smach.StateMachine.add(
+                "DETECT_OBJECTS_IN_KITCHEN_TABLE",
+                DetectAllInPolygon(
+                    polygon=detection_polygon,
+                    min_coverage=1.0,
+                ),
+                transitions={
+                    "succeeded": "PROCESS_DETECTIONS_IN_KITCHEN_TABLE",
+                    "failed": "SAY_GOING_TO_SINK",
+                },
+                remapping={"detected_objects": "detected_objects"},
+            )
+
+            smach.StateMachine.add(
+                "PROCESS_DETECTIONS_IN_KITCHEN_TABLE",
+                self.ProcessDetectionsInLocation(
+                    expected_object_category=object_category
+                ),
+                transitions={
+                    "succeeded": "SAY_DONE_WITH_KITCHEN_TABLE",
+                },
+                remapping={
+                    "detected_objects": "detected_objects",
+                    "text": "text",
+                },
+            )
+
+            smach.StateMachine.add(
+                "SAY_DONE_WITH_KITCHEN_TABLE",
+                Say(),
+                transitions={
+                    "succeeded": "SAY_GOING_TO_SINK",
+                    "preempted": "SAY_GOING_TO_SINK",
+                    "aborted": "SAY_GOING_TO_SINK",
+                },
+                remapping={
+                    "text": "text",
+                },
+            )
+
+            location_pose = locations["sink"]["detection_pose"]
+            object_category = locations["sink"]["object_category"]
+            detection_polygon = locations["sink"]["detection_polygon"]
+            detection_polygon = (
+                detection_polygon
+                if isinstance(detection_polygon, ShapelyPolygon)
+                else ShapelyPolygon(
+                    [(point.x, point.y) for point in detection_polygon.points]
+                )
+            )
+
+            smach.StateMachine.add(
+                "SAY_GOING_TO_SINK",
+                Say(text=f"I am going to the sink to check for {object_category}."),
+                transitions={
+                    "succeeded": "GO_TO_SINK",
+                    "preempted": "GO_TO_SINK",
+                    "aborted": "GO_TO_SINK",
+                },
+            )
+
+            smach.StateMachine.add(
+                "GO_TO_SINK",
+                GoToLocation(location=location_pose),
+                transitions={
+                    "succeeded": "DETECT_OBJECTS_IN_SINK",
+                    "failed": "GO_TO_SINK",
+                },
+            )
+
+            smach.StateMachine.add(
+                "DETECT_OBJECTS_IN_SINK",
+                DetectAllInPolygon(
+                    polygon=detection_polygon,
+                    min_coverage=1.0,
+                ),
+                transitions={
+                    "succeeded": "PROCESS_DETECTIONS_IN_SINK",
+                    "failed": "SAY_GOING_TO_SHELF",
+                },
+                remapping={"detected_objects": "detected_objects"},
+            )
+
+            smach.StateMachine.add(
+                "PROCESS_DETECTIONS_IN_SINK",
+                self.ProcessDetectionsInLocation(
+                    expected_object_category=object_category
+                ),
+                transitions={
+                    "succeeded": "SAY_DONE_WITH_SINK",
+                },
+                remapping={
+                    "detected_objects": "detected_objects",
+                    "text": "text",
+                },
+            )
+
+            smach.StateMachine.add(
+                "SAY_DONE_WITH_SINK",
+                Say(),
+                transitions={
+                    "succeeded": "SAY_GOING_TO_SHELF",
+                    "preempted": "SAY_GOING_TO_SHELF",
+                    "aborted": "SAY_GOING_TO_SHELF",
+                },
+                remapping={
+                    "text": "text",
+                },
+            )
+
+            location_pose = locations["shelf"]["detection_pose"]
+            object_category = locations["shelf"]["object_category"]
+            detection_polygon = locations["shelf"]["detection_polygon"]
+            detection_polygon = (
+                detection_polygon
+                if isinstance(detection_polygon, ShapelyPolygon)
+                else ShapelyPolygon(
+                    [(point.x, point.y) for point in detection_polygon.points]
+                )
+            )
+
+            smach.StateMachine.add(
+                "SAY_GOING_TO_SHELF",
+                Say(text=f"I am going to the shelf to check for {object_category}."),
+                transitions={
+                    "succeeded": "GO_TO_SHELF",
+                    "preempted": "GO_TO_SHELF",
+                    "aborted": "GO_TO_SHELF",
+                },
+            )
+
+            smach.StateMachine.add(
+                "GO_TO_SHELF",
+                GoToLocation(location=location_pose),
+                transitions={
+                    "succeeded": "DETECT_OBJECTS_IN_SHELF",
+                    "failed": "GO_TO_SHELF",
+                },
+            )
+
+            smach.StateMachine.add(
+                "DETECT_OBJECTS_IN_SHELF",
+                DetectAllInPolygon(
+                    polygon=detection_polygon,
+                    min_coverage=1.0,
+                ),
+                transitions={
+                    "succeeded": "PROCESS_DETECTIONS_IN_SHELF",
+                    "failed": "SAY_GOING_TO_REFRIGERATOR",
+                },
+                remapping={"detected_objects": "detected_objects"},
+            )
+
+            smach.StateMachine.add(
+                "PROCESS_DETECTIONS_IN_SHELF",
+                self.ProcessDetectionsInLocation(
+                    expected_object_category=object_category
+                ),
+                transitions={
+                    "succeeded": "SAY_DONE_WITH_SHELF",
+                },
+                remapping={
+                    "detected_objects": "detected_objects",
+                    "text": "text",
+                },
+            )
+
+            smach.StateMachine.add(
+                "SAY_DONE_WITH_SHELF",
+                Say(),
+                transitions={
+                    "succeeded": "SAY_GOING_TO_REFRIGERATOR",
+                    "preempted": "SAY_GOING_TO_REFRIGERATOR",
+                    "aborted": "SAY_GOING_TO_REFRIGERATOR",
+                },
+                remapping={
+                    "text": "text",
+                },
+            )
+
+            location_pose = locations["refrigerator"]["detection_pose"]
+            object_category = locations["refrigerator"]["object_category"]
+            detection_polygon = locations["refrigerator"]["detection_polygon"]
+            detection_polygon = (
+                detection_polygon
+                if isinstance(detection_polygon, ShapelyPolygon)
+                else ShapelyPolygon(
+                    [(point.x, point.y) for point in detection_polygon.points]
+                )
+            )
+
+            smach.StateMachine.add(
+                "SAY_GOING_TO_REFRIGERATOR",
+                Say(
+                    text=f"I am going to the refrigerator to check for {object_category}."
+                ),
+                transitions={
+                    "succeeded": "GO_TO_REFRIGERATOR",
+                    "preempted": "GO_TO_REFRIGERATOR",
+                    "aborted": "GO_TO_REFRIGERATOR",
+                },
+            )
+
+            smach.StateMachine.add(
+                "GO_TO_REFRIGERATOR",
+                GoToLocation(location=location_pose),
+                transitions={
+                    "succeeded": "DETECT_OBJECTS_IN_REFRIGERATOR",
+                    "failed": "GO_TO_REFRIGERATOR",
+                },
+            )
+
+            smach.StateMachine.add(
+                "DETECT_OBJECTS_IN_REFRIGERATOR",
+                DetectAllInPolygon(
+                    polygon=detection_polygon,
+                    min_coverage=1.0,
+                ),
+                transitions={
+                    "succeeded": "PROCESS_DETECTIONS_IN_REFRIGERATOR",
+                    "failed": "SAY_GOING_TO_KITCHEN",
+                },
+                remapping={"detected_objects": "detected_objects"},
+            )
+
+            smach.StateMachine.add(
+                "PROCESS_DETECTIONS_IN_REFRIGERATOR",
+                self.ProcessDetectionsInLocation(
+                    expected_object_category=object_category
+                ),
+                transitions={
+                    "succeeded": "SAY_DONE_WITH_REFRIGERATOR",
+                },
+                remapping={
+                    "detected_objects": "detected_objects",
+                    "text": "text",
+                },
+            )
+
+            smach.StateMachine.add(
+                "SAY_DONE_WITH_REFRIGERATOR",
+                Say(),
+                transitions={
+                    "succeeded": "SAY_GOING_TO_KITCHEN",
+                    "preempted": "SAY_GOING_TO_KITCHEN",
+                    "aborted": "SAY_GOING_TO_KITCHEN",
+                },
+                remapping={
+                    "text": "text",
+                },
+            )
+
+            smach.StateMachine.add(
+                "SAY_GOING_TO_KITCHEN",
+                Say(
+                    text="I am going to the kitchen to check for people that need help."
+                ),
+                transitions={
+                    "succeeded": "GO_TO_KITCHEN",
+                    "preempted": "GO_TO_KITCHEN",
+                    "aborted": "GO_TO_KITCHEN",
+                },
+            )
+
+            smach.StateMachine.add(
+                "GO_TO_KITCHEN",
+                GoToLocation(location=kitchen_pose),
+                transitions={
+                    "succeeded": "SURVEY_KITCHEN",
+                    "failed": "GO_TO_KITCHEN",
+                },
+            )
+
+            smach.StateMachine.add(
+                "SURVEY_KITCHEN",
+                Survey(
+                    look_range_deg=(-71.0, 71.0),
+                    n_look_points=10,
+                ),
+                transitions={
+                    "customer_found": "SAY_PERSON_FOUND_KITCHEN",
+                    "customer_not_found": "SAY_PERSON_NOT_FOUND_KITCHEN",
+                },
+                remapping={"hands_up_detections": "hands_up_detections"},
+            )
+
+            smach.StateMachine.add(
+                "SAY_PERSON_FOUND_KITCHEN",
+                Say(text="I have found a person in the kitchen that needs help."),
+                transitions={
+                    "succeeded": "CHOOSE_WAVING_PERSON_KITCHEN",
+                    "preempted": "CHOOSE_WAVING_PERSON_KITCHEN",
+                    "aborted": "CHOOSE_WAVING_PERSON_KITCHEN",
+                },
+                remapping={
+                    "hands_up_detections": "hands_up_detections",
+                },
+            )
+
+            smach.StateMachine.add(
+                "CHOOSE_WAVING_PERSON_KITCHEN",
+                ChooseWavingPerson(),
+                transitions={
+                    "succeeded": "COMPUTE_APPROACH_POSE_KITCHEN",
+                    "failed": "SAY_GOING_TO_KITCHEN",
+                },
+                remapping={
+                    "hands_up_detections": "hands_up_detections",
+                    "waving_person_detection": "waving_person_detection",
+                },
+            )
+
+            smach.StateMachine.add(
+                "COMPUTE_APPROACH_POSE_KITCHEN",
+                ComputeApproach(),
+                transitions={
+                    "succeeded": "GO_TO_PERSON_KITCHEN",
+                    "failed": "SAY_GOING_TO_CABINET",
+                },
+                remapping={
+                    "customer_approach_pose": "customer_approach_pose",
+                },
+            )
+
+            smach.StateMachine.add(
+                "GO_TO_PERSON_KITCHEN",
+                GoToLocation(),
+                transitions={
+                    "succeeded": "ASK_FOR_COMMAND_KITCHEN",
+                    "failed": "GO_TO_PERSON_KITCHEN",
+                },
+                remapping={
+                    "location": "customer_approach_pose",
+                },
+            )
+
+            smach.StateMachine.add(
+                "ASK_FOR_COMMAND_KITCHEN",
+                CommandParserStateMachine(configuration=load_gpsr_configuration()),
+                transitions={
+                    "succeeded": "SAY_COMMAND_PLAN_KITCHEN",
+                    "failed": "RETRY_COMMAND_KITCHEN_1",
+                },
+            )
+
+            smach.StateMachine.add(
+                "RETRY_COMMAND_KITCHEN_1",
+                CommandParserStateMachine(configuration=load_gpsr_configuration()),
+                transitions={
+                    "succeeded": "SAY_COMMAND_PLAN_KITCHEN",
+                    "failed": "RETRY_COMMAND_KITCHEN_2",
+                },
+            )
+
+            smach.StateMachine.add(
+                "RETRY_COMMAND_KITCHEN_2",
+                CommandParserStateMachine(configuration=load_gpsr_configuration()),
+                transitions={
+                    "succeeded": "SAY_COMMAND_PLAN_KITCHEN",
+                    "failed": "SAY_GOING_TO_CABINET",
+                },
+            )
+
 
 def main() -> None:
-    N_COMMANDS: int = 3
     config = load_gpsr_configuration()
     tts_client = actionlib.SimpleActionClient("tts", TtsAction)
     tts_client.wait_for_server()
@@ -648,28 +1823,6 @@ def main() -> None:
     start_sm = Start()
     start_sm.execute()
     rospy.sleep(3)
-
-    # for i in range(N_COMMANDS):
-    #     rospy.loginfo(f"Command {i + 1}")
-    #     go_to_sm = GoToInstructionPoint()
-    #     go_to_sm.execute()
-    #     try:
-    #         rospy.loginfo(f"Starting GPSR")
-    #         wakeword_sm = WaitForWakeword(timeout)
-    #         wakeword_sm.execute()
-    #         timeout = 120.0
-    #         command_parser_sm = CommandParserStateMachine(data_config=config)
-    #         command_parser_sm.execute()
-    #         parsed_command: Dict = command_parser_sm.userdata.parsed_command
-    #         rospy.loginfo(f"Parsed command: {parsed_command}")
-    #         sm = build_state_machine(parsed_command)
-    #         sm.execute()
-    #     except Exception as e:
-    #         rospy.logerr(f"Error executing command: {e}")
-    #         _tts(tts_client, "I am sorry, I couldn't understand your command")
-
-    #         _tts(tts_client, "Something went wrong, I couldn't execute the command")
-    # _tts(tts_client, "I am done")
 
 
 if __name__ == "__main__":
