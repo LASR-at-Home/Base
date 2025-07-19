@@ -17,7 +17,7 @@ class CommunicateOperators(smach.State):
             self,
             outcomes=["succeeded", "failed"],
             input_keys=["transcribed_speech"],
-            output_keys=["location"])
+            output_keys=["location", "question"])
 
             self.trick_words_found = False
             self.location_found = False
@@ -26,6 +26,12 @@ class CommunicateOperators(smach.State):
             self.demonstrative_pronoun_found = False
     
     def execute(self, userdata):
+        trick_words = []
+        location_value = []
+        object_value = []
+        direction_value = []
+        demonstrative_pronoun_value = []
+
         sentence = re.sub(r'[^a-zA-Z\s]', '', userdata.transcribed_speech.lower())
         words = sentence.split()
         rospy.loginfo("Received sentence: %s", sentence)
@@ -38,112 +44,95 @@ class CommunicateOperators(smach.State):
             direction_value = direction_dict.get(word)
             demonstrative_pronoun_found = demonstrative_pronoun_dict.get(word)
 
-            trick_words = []
-            location_value = []
-            object_value = []
-            direction_value = []
-            demonstrative_pronoun_value = []
-
-            if trick_words_value is not None:
+            if  self.trick_words_value is not None:
                 print("Found:", trick_words_value)
                 trick_words.append(trick_words_value)
                 self.trick_words_found = True
-            if location_value is not None:
+            if  self.location_value is not None:
                 print("Found:", location_value)
                 locations.append(location_value)
-                self.location_found = Ture
-            if object_value is not None:
+                self.location_found = True #self.location_found = True
+            if self.object_value is not None:
                 print("Found:", object_value)
                 objects.append(object_value)
-                self.object_found = False
-            if direction_value is not None:
+                self.object_found = True
+            if self.direction_value is not None:
                 print("Found:", direction_value)
                 detection.append(direction_value)
-                self.direction_found = False
-            if  demonstrative_pronoun_value is not None:
+                self.direction_found = True
+            if  self.demonstrative_pronoun_value is not None:
                 print("Found:", demonstrative_pronoun_value)
                 demonstrative_pronouns.append(demonstrative_pronoun_value)
-                self.demonstrative_pronoun_found = False
+                self.demonstrative_pronoun_found = True
 
-            if trick_words_found:
-                if location_found:
+            if self.trick_words_found:
+                if self.location_found:
                     if "but" in trick_words:
-                        idx = locations.index("but")
+                        idx = demonstrative_pronoun.index("but")
                         print("Found at index:", idx)
-                        userdata.location = demonstrative_pronoun[idx]
+                        userdata.location = locations[idx]
                         return "succeeded"
                 else:
-                    if object_found:
-                        ""
+                    if self.object_found:
+                        userdata.question = "Where do you want to put it?"
+                        return "failed"
                     else:
-                        if direction_found:
+                        if self.direction_found:
+                            userdata.question = "What place of {directions}?"
                         else:
-                            if demonstrative_pronoun_found:
-                                if demonstrative_pronoun == :
-                                    if "but" in trick_words:
-                                        idx = locations.index("but")
-                                        print("Found at index:", idx)
-                                        userdata.location = demonstrative_pronoun[idx]
-                                        return "succeeded"
-                                    # if "instead"
-                                    # elif "not":
-                                    # elif "rather":
-                                    # elif "morethen":
-                                    
-                                    # trick_words_dict = {
-                                    #     "not": "",
-                                    #     "but": ""
-                                    #     "rather":"",
-                                    #     "morethen":"",
-                                    # }    
-
-                            
+                            if self.sdemonstrative_pronoun_found:
+                                if "but" in trick_words:
+                                    idx = locations.index("but")
+                                    print("Found at index:", idx)
+                                    userdata.location = demonstrative_pronoun[idx]
+                                    return "succeeded"
+                                # if "instead"
+                                # elif "not":
+                                # elif "rather":
+                                # elif "morethen":
+                                
+                                # trick_words_dict = {
+                                #     "not": "",
+                                #     "but": ""
+                                #     "rather":"",
+                                #     "morethen":"",
+                                # }    
                             else:
                                 userdata.question = "Please repeat with easier sentence."
-                                return "failed",
+                                return "failed"
 
             else:
-                if location_found:
+                if self.location_found:
                     if len(locations) == 1:
                         userdata.location = locations[0]
                         return "succeeded"
                     else:
-                        userdata.question = 
+                        location_list_str = ", ".join(locations)
+                        userdata.question = f"{location_list_str} which one should I go?" 
                         return "failed"
                 else:
-                    if object_found:
-                        ""
+                    if self.object_found:
+                        userdata.question = f"where do you want put it?"
+                        return "failed"
                     else:
-                        if direction_found:
-                        else:
+                        if self.direction_found:
                             if demonstrative_pronoun_found:
-                                if demonstrative_pronoun == :
-                                    if "but" in trick_words:
-                                        idx = locations.index("but")
-                                        print("Found at index:", idx)
-                                        userdata.location = demonstrative_pronoun[idx]
-                                        return "succeeded"
-                                    # if "instead"
-                                    # elif "not":
-                                    # elif "rather":
-                                    # elif "morethen":
-                                    
-                                    # trick_words_dict = {
-                                    #     "not": "",
-                                    #     "but": ""
-                                    #     "rather":"",
-                                    #     "morethen":"",
-                                    # }    
+                                userdata.question = f"{demonstrative_pronouns} {directions} of where?"
+                                return "failed"
+                            else:
+                                userdata.question = f"Please say clearly and simple."
+                                return "failed" 
 
+                            userdata.question = f"{directions} of what or where?"
+                            return "failded"
+                        else:
+                            if self.demonstrative_pronoun_found:
+                                userdata.question = f"{demonstrative_pronoun_found} of what?"
+                                return "failed"
+                            else:
+                                userdata.question = f"Please say clearly and simple."
+                                return "failed" 
 
-
-                
-
-
-                return "succeeded"
-            else:
-                print("Not found")
-        return "failed"
             # trick_words += word
         
         # for word in words:
@@ -169,52 +158,52 @@ location_dict = {
             }
 
 trick_words_dict = {
-                "not": "",
-                "but": ""
-                "rather":"",
-                "morethen":"",
+                "not": "not",
+                "but": "but",
+                "rather":"rather",
+                "morethen":"morethen",
             }
 
 object_dict = {
-    "brush":"",
-    "cloth":"",
-    "polish":"",
-    "sponge":"",
-    "bowl":"",
-    "cup":"",
-    "fork":"",
-    "knife":"",
-    "plate":"",
-    "spoon":"",
-    "coffee":"",
-    "coke":"",
-    "fanta":"",
-    "kuat":"",
-    "milk":"",
-    "orange juice":"",
-    "broth":"",
-    "broth box":"",
-    "corn flour":"",
-    "ketchup":"",
-    "mayo":"",
-    "oats":"",
-    "tuna":"",
-    "apple":"",
-    "lemon":"",
-    "lime":"",
-    "pear":"",
-    "tangerine":"",
-    "cheese snack":"",
-    "chocolate bar":"",
-    "cornflakes":"",
-    "crisps":"",
-    "gum balls":"",
-    "peanuts":"",
-    "pringles":"",
-    "bag":"",
-    "dishwasher tab":"",
-    "dishwasher tab_bag":"",
-    "cornflakes container":"",
+    "brush":"brush",
+    "cloth":"cloth",
+    "polish":"polish",
+    "sponge":"sponge",
+    "bowl":"bowl",
+    "cup":"cup",
+    "fork":"fork",
+    "knife":"knife",
+    "plate":"plate",
+    "spoon":"spoon",
+    "coffee":"coffee",
+    "coke":"coke",
+    "fanta":"fanta",
+    "kuat":"kuat",
+    "milk":"milk",
+    "orange juice":"orange juice",
+    "broth":"broth",
+    "broth box":"broth box",
+    "corn flour":"corn flour",
+    "ketchup":"ketchup",
+    "mayo":"mayo",
+    "oats":"oats",
+    "tuna":"tuna",
+    "apple":"apple",
+    "lemon":"lemon",
+    "lime":"lime",
+    "pear":"pear",
+    "tangerine":"tangerine",
+    "cheese snack":"cheese snack",
+    "chocolate bar":"chocolate bar",
+    "cornflakes":"cornflakes",
+    "crisps":"crisps",
+    "gum balls":"gum balls",
+    "peanuts":"peanuts",
+    "pringles":"pringles",
+    "bag":"bag",
+    "dishwasher tab":"dishwasher tab",
+    "dishwasher tab_bag":"dishwasher tab_bag",
+    "cornflakes container":"cornflakes container",
 }
 
 
