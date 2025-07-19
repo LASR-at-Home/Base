@@ -184,3 +184,12 @@ class Survey(smach.StateMachine):
             )
 
         return "succeeded"
+
+    
+    def execute(self, userdata):
+        """
+        Execute the state machine.
+        This will start the survey process and return the outcome.
+        """
+        userdata.hands_up_detections = []
+        return super().execute(userdata)
