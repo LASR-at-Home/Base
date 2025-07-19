@@ -155,7 +155,7 @@ arena:
             object_detection_point:
               x: 9.175257682800293
               y: 1.72044038772583
-              z: 1.0651931762695312
+              z: 1.15
     bedroom:
       room_polygon:
         [
