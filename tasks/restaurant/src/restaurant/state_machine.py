@@ -178,8 +178,8 @@ class Restaurant(smach.StateMachine):
                 ),
                 transitions={
                     "succeeded": "GO_TO_CUSTOMER",
-                    "preempted": "GO_TO_CUSTOMER",
-                    "aborted": "GO_TO_CUSTOMER",
+                    "preempted": "GO_TO_BAR",
+                    "aborted": "GO_TO_BAR",
                 },
             )
 
@@ -201,14 +201,14 @@ class Restaurant(smach.StateMachine):
                     tts_phrase="Please say Hi Tiago to me before speaking. What can I get for you today?"
                 ),
                 remapping={"transcribed_speech": "order_str"},
-                transitions={"succeeded": "HANDLE_ORDER", "failed": "failed"},
+                transitions={"succeeded": "HANDLE_ORDER", "failed": "TAKE_ORDER"},
             )
 
             smach.StateMachine.add(
                 "HANDLE_ORDER",
                 HandleOrder(),
                 remapping={"customer_transcription": "order_str"},
-                transitions={"succeeded": "SAY_ORDER", "failed": "failed"},
+                transitions={"succeeded": "SAY_ORDER", "failed": "TAKE_ORDER"},
             )
 
             smach.StateMachine.add(
@@ -226,7 +226,7 @@ class Restaurant(smach.StateMachine):
 
             smach.StateMachine.add(
                 "LISTEN_TO_CONFIRMATION",
-                ListenForWakeword(["yes", "no"], timeout=10.0, threshold=0.3),
+                ListenForWakeword(["yes", "no"], timeout=10.0, threshold=0.01),
                 transitions={
                     "succeeded": "CHECK_CONFIRMATION",
                     "failed": "CHECK_CONFIRMATION",  # TODO: handle failure properly
