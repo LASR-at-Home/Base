@@ -118,7 +118,7 @@ class GiveMeAHand(smach.StateMachine):
 
             smach.StateMachine.add(
                 "SAY_COMMUNICATE_OPERATORS",
-                Say("ongoing"),
+                SayCommunicateOperators("ongoing"),
                 transitions={
                     "succeeded": "GRASP_AND_PUT",
                     "aborted": "GRASP_AND_PUT",
