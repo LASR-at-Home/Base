@@ -22,11 +22,11 @@ from pal_startup_msgs.srv import (
 )
 
 class FindOperators(smach.StateMachine):
-    def __init__(self, table_pose, cabinet_pose):
+    def __init__(self):
         super().__init__(
             outcomes=["succeeded", "failed", "escape"],
             input_keys=[],
-            output_keys=[],
+            output_keys=['customer_approach_pose'],
         )
 
         with self:

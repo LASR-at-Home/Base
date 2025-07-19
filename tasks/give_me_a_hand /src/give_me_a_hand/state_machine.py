@@ -18,8 +18,6 @@ class GiveMeAHand(smach.StateMachine):
     ):
         smach.StateMachine.__init__(self, outcomes=["succeeded", "failed"])
 
-        # Strategy1. Give every possible pose and pick close, wider to narrow (exclude impossible)
-        # Strategy2. If location changes. Yolo detection?
         with self:
             # def wait_cb(ud, msg):
             #     rospy.loginfo("Received start signal")
@@ -79,8 +77,16 @@ class GiveMeAHand(smach.StateMachine):
             FIND_OPERATORS_LOOP
             """
 
-            waiting_area = Pose()
-            waiting_area = rospy.get_param("/robocup_2025/start_pose")
+            kitchen_area = Pose()
+
+            kitchen_area.position.position.x = 6.13193967
+            kitchen_area.position.position.y = 6.13193967
+            kitchen_area.position.position.z = 6.13193967
+            kitchen_area.position.orientation.x = 0.0
+            kitchen_area.position.orientation.y = 0.0
+            kitchen_area.position.orientation.z = 0.88
+
+
 
             smach.StateMachine.add(
                 "FIND_OPERATORS",
@@ -97,7 +103,7 @@ class GiveMeAHand(smach.StateMachine):
                 GoToLocation(),
                 remapping={"location": "customer_approach_pose"},
                 transitions={
-                    "succeeded": f"COMMUNICATE_OPERATORS",
+                    "succeeded": f"COMMUNICATE_OPERATOR",
                     "failed": f"ENABLE_MOVEBASE_MANAGER",
                 },
             )
@@ -117,7 +123,7 @@ class GiveMeAHand(smach.StateMachine):
             ),
 
             smach.StateMachine.add(
-                "COMMUNICATE_OPERATORS",
+                "COMMUNICATE_OPERATOR",
                 CommunicateOperator(),
                 transitions={
                     "succeeded": "GRASP_AND_PUT",
@@ -135,27 +141,6 @@ class GiveMeAHand(smach.StateMachine):
                     "preempted": "GO_TO_OPERATORS",
                 },
             )
-
-            # smach.StateMachine.add(
-            #     "COMMUNICATE_OPERATORS",
-            #     CommunicateOperators("No more object to put in cabinet"),
-            #     transitions={
-            #         "succeeded": "GRASP_AND_PUT",
-            #         "aborted": "GRASP_AND_PUT",
-            #         "preempted": "GRASP_AND_PUT",
-            #     },
-            # )
-
-            # smach.StateMachine.add(
-            #     "GRASP_AND_PUT",
-            #     GraspAndPut(),
-            #     transitions={
-            #         "succeeded": "FIND_OPERATORS",
-            #         "failed": "FIND_OPERATORS",
-            #     },
-            # )
-
-#Detect human collect object only near human image
 
             """
             Finish

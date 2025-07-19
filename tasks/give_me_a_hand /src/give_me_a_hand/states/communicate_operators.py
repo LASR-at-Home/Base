@@ -1,103 +1,288 @@
-"""
-State Machine for parsing the transcription of the operators request and using it to create a pose 
-"""
+#!/usr/bin/env python3
 
+import sys
+import copy
 import rospy
-import smach
-from smach import UserData
-from typing import List, Dict, Any
-from give_me_a_hand import HandleRequestLLM
-from lasr_llm_msgs.srv import Llm, LlmRequest
-import string
-from lasr_skills import AskAndListen, GoToLocation
+import moveit_commander
+import moveit_msgs.msg
+import geometry_msgs.msg
+import re
 
-class CommunicateOperator(smach.StateMachine):
+class CommunicateOperators():
     def __init__(
-        self, last_resort: bool, param_key: str = "/give_me_a_hand/priors"
+        self,
     ):
-
-        self._param_key = param_key
-        self._last_resort = last_resort
-        self.request_location_pose = None
-
-        smach.StateMachine.__init__(
+        smach.State.__init__(
             self,
             outcomes=["succeeded", "failed"],
-        )
-        with self:
-            smach.StateMachine.add(
-                f"GET_REQUEST",
-                AskAndListen(
-                    "Please say 'Hi Tiago' for me to begin listening. What is your request?"
-                ),
-                transitions={
-                    "succeeded": f"HANDLE_REQUEST_LLM",
-                    "failed": f"HANDLE_REQUEST_LLM",
-                },
-            )
-            smach.StateMachine.add(
-                f"HANDLE_REQUEST_LLM",
-                HandleRequestLLM(),
-                transitions={
-                    "succeeded": f"GO_TO_PUT_LOCATION",
-                    "failed": f"GO_TO_PUT_LOCATION",
-                },
+            input_key=["sentence"],
+            output_key=["location"])
 
-            )
-            smach.StateMachine.add(
-                f"GO_TO_PUT_LOCATION",
-                GoToLocation(self.request_location_pose),
-                transitions={
-                    "succeeded": f"succeeded",
-                    "failed": f"GO_TO_PUT_LOCATION",
-                },
-            )
+            self.trick_words_found = False,
+            self.location_found = False,
+            self.object_found = False,
+            self.direction_found = False,
+            self.demonstrative_pronoun_found = False,
 
+            self.userdata.sentence = "Take it to the dishwasher"
+    
+    def execute(self, userdata):
+        sentence = re.sub(r'[^a-zA-Z\s]', '', userdata.sentence.lower())
+        words = sentence.split()
+        rospy.loginfo("Received sentence: %s", sentence)
 
+        for word in words:
+            trick_words_value = trick_words_dict.get(word)
+            location_value = location_dict.get(word)
+            object_value = object_dict.get(word)
+            direction_value = object_dict.get(word)
+            demonstrative_pronoun_found = demonstrative_pronoun_dict.get(word)
 
-            # smach.StateMachine.add(
-            #     "PARSE_INTEREST",
-            #     self.ParseInterest(
-            #         guest_id=self._guest_id,
-            #         last_resort=self._last_resort,
-            #         param_key=self._param_key,
-            #     ),
-            #     transitions={"succeeded": "succeeded", "failed": "RECOVER_INTEREST"},
-            # )
-            # smach.StateMachine.add(
-            #     "RECOVER_INTEREST",
-            #     self.RecoverInterest(
-            #         guest_id=self._guest_id,
-            #         last_resort=self._last_resort,
-            #         param_key=self._param_key,
-            #     ),
-            #     transitions={"failed": "failed", "succeeded": "succeeded"},
-            # )
+            if value is not None:
+                print("Found:", value)
+            else:
+                print("Not found")
+                return "failed"
 
- 
+            trick_words += word
+        
+        for word in words:
+            value = location.get(word)
+
+            if value is not None:
+                print("Found:", value)
+                return "succeeded"
+            else:
+                print("Not found")
+                return "failed"
+
+            userdata.question = ""
 
 
-# ASK - "Where should I put the object"
+location_dict = {
+                "dishwasher": "dishwasher",
+                "automatic dishwasher": "dishwasher"
+                "sink":"sink",
+                "table":"table",
+                "fridge":"fridge",
+                "shelf":"shelf",
+            }
 
-# e.g - "Where should I put the object?" "put the object by the microwave"
+trick_words_dict = {
+                "not": "",
+                "but": ""
+                "rather":"",
+                "morethen":"",
+            }
 
-#
+object_dict = {
+    "brush":"",
+    "cloth":"",
+    "polish":"",
+    "sponge":"",
+    "bowl":"",
+    "cup":"",
+    "fork":"",
+    "knife":"",
+    "plate":"",
+    "spoon":"",
+    "coffee":"",
+    "coke":"",
+    "fanta":"",
+    "kuat":"",
+    "milk":"",
+    "orange juice":"",
+    "broth":"",
+    "broth box":"",
+    "corn flour":"",
+    "ketchup":"",
+    "mayo":"",
+    "oats":"",
+    "tuna":"",
+    "apple":"",
+    "lemon":"",
+    "lime":"",
+    "pear":"",
+    "tangerine":"",
+    "cheese snack":"",
+    "chocolate bar":"",
+    "cornflakes":"",
+    "crisps":"",
+    "gum balls":"",
+    "peanuts":"",
+    "pringles":"",
+    "bag":"",
+    "dishwasher tab":"",
+    "dishwasher tab_bag":"",
+    "cornflakes container":"",
+}
 
-# AskAndListen - output transcription 
+
+direction_dict = {
+    "up": "",
+    "down": "",
+    "left": "",
+    "right": "",
+    "front": "",
+    "back": "",
+    "behind": "",
+    "rear": "",
+    "top": "",
+    "bottom": "",
+    "side": "",
+    "center": "",
+    "middle": "",
+    "inside": "",
+    "outside": "",
+    "inner": "",
+    "outer": "",
+    "upper": "",
+    "lower": "",
+    "above": "",
+    "below": "",
+    "beneath": "",
+    "under": "",
+    "underneath": "",
+    "over": "",
+    "across": "",
+    "through": "",
+    "in": "",
+    "inside":"",
+    "outside":"",
+    "out": "",
+    "forward": "",
+    "backward": "",
+    "clockwise": "",
+    "counterclockwise": "",
+    "vertical": "",
+    "horizontal": "",
+    "diagonal": "",
+    "north": "",
+    "south": "",
+    "east": "",
+    "west": "",
+    "northeast": "",
+    "northwest": "",
+    "southeast": "",
+    "southwest": "",
+    "inward": "",
+    "outward": "",
+    "toward": "",
+    "away": "",
+    "adjacent": "",
+    "proximal": "",
+    "distal": "",
+    "dorsal": "",
+    "ventral": "",
+    "lateral": "",
+    "medial": "",
+    "superior": "",
+    "inferior": "",
+    "anterior": "",
+    "posterior": "",
+    "above":"",
+}
+
+demonstrative_pronoun_dict = {
+    "here":"",        
+    "there":"",      
+    "nearby":"",     
+    "far":"",        
+    "away":"",        
+    "along":"",    
+    "around":"",     
+    "near":"",      
+    "next to":"",    
+    "beside":"",      
+    "beyond":"",      
+    "within":"",     
+    "without":"",    
+    "ahead":"",      
+    "behind":"",    
+    "off":"",         
+    "on":"",        
+    "in":"",          
+    "out":"",         
+    "upstairs":"",    
+    "downstairs":"",  
+    "indoors":"",    
+    "outdoors":"",     
+}
 
 
 
-# Pass transcription into HandleRequestLLM 
 
+            
+        
 
-# WHich should output POSE. 
+# # did two or more location been mentioned?
 
+# direction = {
+#     "front": "",
+#     "behind": "",
+#     "next": "",
+#     "up": "",
+#     "down": "",
+#     "rear": "",
+#     "back": "",
+#     "right": "",
+#     "left": "",
+#     "side": "",
+#     "upper side": "",
+#     "lower side": "",
+#     "outside": "",
+#     "inside": "",
+#     "outer": "",
+#     "inner": "",
+#     "west": "",
+#     "east": "",
+#     "south": "",
+#     "north": ""
+# }
 
+# # How many times?
 
-#Pass Pose to GoToLocation 
+# @
 
+# # #& multiple
 
+# #1. nothing (put it, place it)
+# f"Need more information. please tell the location like dishwasher."
+# # f"dishwasher? sink? fridge? shelf? table?"
 
-# DONE
+# #1. only direction (place behind, behind plz)
+# f"{direction} of what or where? Could you explain more?"
+
+# #1. only object (place brush, put cup)
+# f"Where shell I place ?"
+
+# #1. only demonstrative_pronoun (place there, place here)
+# f"{demonstrative_pronoun}? Please explain more."
+
+# #1. only location ()
+# f"I'll put at {location}. Am I right?" #shell I not check?
+
+# #2. direction and object (on the dish, put dish up)
+# f"Dish on where?"
+
+# #2. direction and demonstrative_pronoun (up there, down here)
+# f"{demonstrative_pronoun} where? Shelf? Table? explain more."
+
+# #2. direction and location (inside of the shelf, shelf inside)
+# f"I'll put at {location}. Am I right?"
+
+# #2. direction and Trick words ()
+
+# #2. 
+
+# # Trick words?
+# {
+
+# }
+
+# f"while I'm saying you can always interupted. Just say Hi, tiago." #interupped 
+# #concurrent state
+
+# {there here }
 
 
