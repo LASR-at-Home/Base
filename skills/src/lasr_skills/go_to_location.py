@@ -71,11 +71,15 @@ class GoToLocation(smach.StateMachine):
     ):
         if location is not None or location_param is not None:
             super(GoToLocation, self).__init__(
-                outcomes=["succeeded", "failed"], input_keys=["retry_count"]
+                outcomes=["succeeded", "failed"],
+                input_keys=["retry_count"],
+                output_keys=["retry_count"],
             )
         else:
             super(GoToLocation, self).__init__(
-                outcomes=["succeeded", "failed"], input_keys=["location", "retry_count"]
+                outcomes=["succeeded", "failed"],
+                input_keys=["location", "retry_count"],
+                output_keys=["retry_count"],
             )
 
         if safe_navigation:
