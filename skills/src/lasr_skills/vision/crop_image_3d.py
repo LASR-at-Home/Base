@@ -71,7 +71,7 @@ class CropImage3D(smach.State):
             )
 
     def execute(self, userdata):
-        detections = userdata["detections_3d"].detected_objects
+        detections = userdata["detections_3d"]
         if not detections:
             rospy.logwarn("No 3D detections found.")
             return "failed"

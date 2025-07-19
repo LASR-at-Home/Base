@@ -246,7 +246,6 @@ class PatrolObjectLocations(smach.StateMachine):
         def __init__(self, expected_object_category: str):
             self._object_categories = {
                 "food": ["mayo", "tuna", "ketchup", "oats", "corn_flour", "broth"],
-                "foods": ["mayo", "tuna", "ketchup", "oats", "corn_flour", "broth"],
                 "snack": [
                     "peanuts",
                     "cornflakes",
@@ -256,38 +255,19 @@ class PatrolObjectLocations(smach.StateMachine):
                     "chocolate_bar",
                     "gum_balls",
                 ],
-                "snacks": [
-                    "peanuts",
-                    "cornflakes",
-                    "crisps",
-                    "pringles",
-                    "cheese_snack",
-                    "chocolate_bar",
-                    "gum_balls",
-                ],
                 "fruit": ["apple", "lemon", "lime", "tangerine", "pear"],
-                "fruits": ["apple", "lemon", "lime", "tangerine", "pear"],
                 "dish": ["spoon", "plate", "cup", "fork", "bowl", "knife"],
-                "dishes": ["spoon", "plate", "cup", "fork", "bowl", "knife"],
                 "cleaning_supply": ["cloth", "polish", "brush", "sponge"],
-                "cleaning_supplies": ["cloth", "polish", "brush", "sponge"],
                 "drink": ["coffee", "kuat", "milk", "orange_juice", "fanta", "coke"],
-                "drinks": ["coffee", "kuat", "milk", "orange_juice", "fanta", "coke"],
             }
             self._expected_object_category = expected_object_category
             self._object_category_locations = {
                 "snack": "side_table",
-                "snacks": "side_table",
                 "dish": "kitchen_table",
-                "dishes": "kitchen_table",
                 "cleaning_supply": "dishwasher",
-                "cleaning_supplies": "dishwasher",
                 "fruit": "desk",
-                "fruits": "desk",
                 "drink": "bar",
-                "drinks": "bar",
                 "food": "cabinet",
-                "foods": "cabinet",
             }
 
             super().__init__(
@@ -297,7 +277,7 @@ class PatrolObjectLocations(smach.StateMachine):
             )
 
         def execute(self, userdata: smach.UserData) -> str:
-            detections = userdata.detections
+            detections = userdata.detected_objects
             if not detections:
                 rospy.logwarn("No detections found.")
                 userdata.text = "I couldn't detect any objects"
@@ -330,10 +310,10 @@ class PatrolObjectLocations(smach.StateMachine):
                 for violation, category in zip(object_violations, violation_categories):
                     correct_location = ""
                     for (
-                        expected_category,
+                        category,
                         location,
                     ) in self._object_category_locations.items():
-                        if category in self._object_categories[expected_category]:
+                        if violation in self._object_categories[category]:
                             correct_location = location
                             break
                     text += f"I found a {violation} which is not a {self._expected_object_category} as it is a {category}. It should be moved to the {correct_location}. "
@@ -1984,8 +1964,8 @@ def main() -> None:
     # _tts(tts_client, "Please open the door")
     patrol_sm = PatrolObjectLocations()
     timeout = 10.0
-    start_sm = Start()
-    start_sm.execute()
+    # start_sm = Start()
+    # start_sm.execute()
     rospy.sleep(3)
 
     outcome = patrol_sm.execute()

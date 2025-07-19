@@ -849,7 +849,13 @@ def take(command_param: Dict, sm: smach.StateMachine) -> None:
             "Take command received with no object or object category in command parameters"
         )
     if "location" in command_param:
-        location_pose = get_location_pose(command_param["location"], False)
+        location_str = command_param["location"]
+        if location_str in ["office", "living_room", "kitchen", "bedroom"]:
+            pose = get_room_pose(location_str)
+            location_pose = pose
+        else:
+            location_pose = get_location_pose(command_param["location"], False)
+        
     else:
         raise ValueError("Take command received with no location in command parameters")
 
@@ -857,12 +863,12 @@ def take(command_param: Dict, sm: smach.StateMachine) -> None:
     global COMMAND_STRING
     COMMAND_STRING = (
         COMMAND_STRING
-        + f" I will take the {criteria_value} from the {command_param['location']}"
+        + f" I will take the {criteria_value} from the {location_str}"
     )
     sm.add(
         f"STATE_{increment_state_count()}",
         Say(
-            text=f"I will take the {criteria_value} from the {command_param['location']}"
+            text=f"I will take the {criteria_value} from the {location_str}"
         ),
         transitions={
             "succeeded": f"STATE_{STATE_COUNT + 1}",
@@ -882,7 +888,7 @@ def take(command_param: Dict, sm: smach.StateMachine) -> None:
     sm.add(
         f"STATE_{increment_state_count()}",
         Say(
-            text=f"Please pick up the {criteria_value} on the {command_param['location']} for me."
+            text=f"Please pick up the {criteria_value} on the {location_str} for me."
         ),
         transitions={
             "succeeded": f"STATE_{STATE_COUNT + 1}",
@@ -890,18 +896,7 @@ def take(command_param: Dict, sm: smach.StateMachine) -> None:
             "preempted": f"STATE_{STATE_COUNT + 1}",
         },
     )
-
-    sm.add(
-        f"STATE_{increment_state_count()}",
-        GoToLocation(
-            location=get_location_pose(command_param["location"], False),
-        ),
-        transitions={
-            "succeeded": f"STATE_{STATE_COUNT + 1}",
-            "failed": f"STATE_{STATE_COUNT + 1}",
-        },
-    )
-
+    
     sm.add(
         f"STATE_{increment_state_count()}",
         ReceiveObject(object_name=criteria_value),
