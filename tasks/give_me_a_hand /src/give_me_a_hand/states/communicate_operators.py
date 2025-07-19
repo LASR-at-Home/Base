@@ -7,207 +7,210 @@ import moveit_commander
 import moveit_msgs.msg
 import geometry_msgs.msg
 import re
+import smach
 
-class CommunicateOperators():
+class CommunicateOperators(smach.State):
     def __init__(
         self,
     ):
         smach.State.__init__(
             self,
             outcomes=["succeeded", "failed"],
-            input_key=["transcribed_speech"],
-            output_key=["location"])
+            input_keys=["transcribed_speech"],
+            output_keys=["location"])
 
-            self.trick_words_found = False,
-            self.location_found = False,
-            self.object_found = False,
-            self.direction_found = False,
-            self.demonstrative_pronoun_found = False,
+            # self.trick_words_found = False
+            # self.location_found = False,
+            # self.object_found = False,
+            # self.direction_found = False,
+            # self.demonstrative_pronoun_found = False,
 
-            self.userdata.sentence = "Take it to the dishwasher"
+            # self.userdata.sentence = "Take it to the dishwasher"
     
     def execute(self, userdata):
-        sentence = re.sub(r'[^a-zA-Z\s]', '', userdata.sentence.lower())
+        sentence = re.sub(r'[^a-zA-Z\s]', '', userdata.transcribed_speech.lower())
         words = sentence.split()
         rospy.loginfo("Received sentence: %s", sentence)
 
         for word in words:
-            trick_words_value = trick_words_dict.get(word)
+            rospy.loginfo("Processing word: %s", word)
+            # trick_words_value = trick_words_dict.get(word)
             location_value = location_dict.get(word)
-            object_value = object_dict.get(word)
-            direction_value = object_dict.get(word)
-            demonstrative_pronoun_found = demonstrative_pronoun_dict.get(word)
+            # object_value = object_dict.get(word)
+            # direction_value = object_dict.get(word)
+            # demonstrative_pronoun_found = demonstrative_pronoun_dict.get(word)
 
-            if value is not None:
-                print("Found:", value)
-            else:
-                print("Not found")
-                return "failed"
-
-            trick_words += word
-        
-        for word in words:
-            value = location.get(word)
-
-            if value is not None:
-                print("Found:", value)
+            if location_value is not None:
+                print("Found:", location_value)
+                userdata.location = location_value
                 return "succeeded"
             else:
                 print("Not found")
-                return "failed"
+        return "failed"
+            # trick_words += word
+        
+        # for word in words:
+        #     value = location.get(word)
 
-            userdata.question = ""
+        #     if value is not None:
+        #         print("Found:", value)
+        #         return "succeeded"
+        #     else:
+        #         print("Not found")
+        #         return "failed"
+
+            # userdata.question = ""
 
 
 location_dict = {
                 "dishwasher": "dishwasher",
-                "automatic dishwasher": "dishwasher"
+                "automatic dishwasher": "dishwasher",
                 "sink":"sink",
                 "table":"table",
                 "fridge":"fridge",
                 "shelf":"shelf",
             }
 
-trick_words_dict = {
-                "not": "",
-                "but": ""
-                "rather":"",
-                "morethen":"",
-            }
+# trick_words_dict = {
+#                 "not": "",
+#                 "but": ""
+#                 "rather":"",
+#                 "morethen":"",
+#             }
 
-object_dict = {
-    "brush":"",
-    "cloth":"",
-    "polish":"",
-    "sponge":"",
-    "bowl":"",
-    "cup":"",
-    "fork":"",
-    "knife":"",
-    "plate":"",
-    "spoon":"",
-    "coffee":"",
-    "coke":"",
-    "fanta":"",
-    "kuat":"",
-    "milk":"",
-    "orange juice":"",
-    "broth":"",
-    "broth box":"",
-    "corn flour":"",
-    "ketchup":"",
-    "mayo":"",
-    "oats":"",
-    "tuna":"",
-    "apple":"",
-    "lemon":"",
-    "lime":"",
-    "pear":"",
-    "tangerine":"",
-    "cheese snack":"",
-    "chocolate bar":"",
-    "cornflakes":"",
-    "crisps":"",
-    "gum balls":"",
-    "peanuts":"",
-    "pringles":"",
-    "bag":"",
-    "dishwasher tab":"",
-    "dishwasher tab_bag":"",
-    "cornflakes container":"",
-}
+# object_dict = {
+#     "brush":"",
+#     "cloth":"",
+#     "polish":"",
+#     "sponge":"",
+#     "bowl":"",
+#     "cup":"",
+#     "fork":"",
+#     "knife":"",
+#     "plate":"",
+#     "spoon":"",
+#     "coffee":"",
+#     "coke":"",
+#     "fanta":"",
+#     "kuat":"",
+#     "milk":"",
+#     "orange juice":"",
+#     "broth":"",
+#     "broth box":"",
+#     "corn flour":"",
+#     "ketchup":"",
+#     "mayo":"",
+#     "oats":"",
+#     "tuna":"",
+#     "apple":"",
+#     "lemon":"",
+#     "lime":"",
+#     "pear":"",
+#     "tangerine":"",
+#     "cheese snack":"",
+#     "chocolate bar":"",
+#     "cornflakes":"",
+#     "crisps":"",
+#     "gum balls":"",
+#     "peanuts":"",
+#     "pringles":"",
+#     "bag":"",
+#     "dishwasher tab":"",
+#     "dishwasher tab_bag":"",
+#     "cornflakes container":"",
+# }
 
 
-direction_dict = {
-    "up": "",
-    "down": "",
-    "left": "",
-    "right": "",
-    "front": "",
-    "back": "",
-    "behind": "",
-    "rear": "",
-    "top": "",
-    "bottom": "",
-    "side": "",
-    "center": "",
-    "middle": "",
-    "inside": "",
-    "outside": "",
-    "inner": "",
-    "outer": "",
-    "upper": "",
-    "lower": "",
-    "above": "",
-    "below": "",
-    "beneath": "",
-    "under": "",
-    "underneath": "",
-    "over": "",
-    "across": "",
-    "through": "",
-    "in": "",
-    "inside":"",
-    "outside":"",
-    "out": "",
-    "forward": "",
-    "backward": "",
-    "clockwise": "",
-    "counterclockwise": "",
-    "vertical": "",
-    "horizontal": "",
-    "diagonal": "",
-    "north": "",
-    "south": "",
-    "east": "",
-    "west": "",
-    "northeast": "",
-    "northwest": "",
-    "southeast": "",
-    "southwest": "",
-    "inward": "",
-    "outward": "",
-    "toward": "",
-    "away": "",
-    "adjacent": "",
-    "proximal": "",
-    "distal": "",
-    "dorsal": "",
-    "ventral": "",
-    "lateral": "",
-    "medial": "",
-    "superior": "",
-    "inferior": "",
-    "anterior": "",
-    "posterior": "",
-    "above":"",
-}
+# direction_dict = {
+#     "up": "",
+#     "down": "",
+#     "left": "",
+#     "right": "",
+#     "front": "",
+#     "back": "",
+#     "behind": "",
+#     "rear": "",
+#     "top": "",
+#     "bottom": "",
+#     "side": "",
+#     "center": "",
+#     "middle": "",
+#     "inside": "",
+#     "outside": "",
+#     "inner": "",
+#     "outer": "",
+#     "upper": "",
+#     "lower": "",
+#     "above": "",
+#     "below": "",
+#     "beneath": "",
+#     "under": "",
+#     "underneath": "",
+#     "over": "",
+#     "across": "",
+#     "through": "",
+#     "in": "",
+#     "inside":"",
+#     "outside":"",
+#     "out": "",
+#     "forward": "",
+#     "backward": "",
+#     "clockwise": "",
+#     "counterclockwise": "",
+#     "vertical": "",
+#     "horizontal": "",
+#     "diagonal": "",
+#     "north": "",
+#     "south": "",
+#     "east": "",
+#     "west": "",
+#     "northeast": "",
+#     "northwest": "",
+#     "southeast": "",
+#     "southwest": "",
+#     "inward": "",
+#     "outward": "",
+#     "toward": "",
+#     "away": "",
+#     "adjacent": "",
+#     "proximal": "",
+#     "distal": "",
+#     "dorsal": "",
+#     "ventral": "",
+#     "lateral": "",
+#     "medial": "",
+#     "superior": "",
+#     "inferior": "",
+#     "anterior": "",
+#     "posterior": "",
+#     "above":"",
+# }
 
-demonstrative_pronoun_dict = {
-    "here":"",        
-    "there":"",      
-    "nearby":"",     
-    "far":"",        
-    "away":"",        
-    "along":"",    
-    "around":"",     
-    "near":"",      
-    "next to":"",    
-    "beside":"",      
-    "beyond":"",      
-    "within":"",     
-    "without":"",    
-    "ahead":"",      
-    "behind":"",    
-    "off":"",         
-    "on":"",        
-    "in":"",          
-    "out":"",         
-    "upstairs":"",    
-    "downstairs":"",  
-    "indoors":"",    
-    "outdoors":"",     
-}
+# demonstrative_pronoun_dict = {
+#     "here":"",        
+#     "there":"",      
+#     "nearby":"",     
+#     "far":"",        
+#     "away":"",        
+#     "along":"",    
+#     "around":"",     
+#     "near":"",      
+#     "next to":"",    
+#     "beside":"",      
+#     "beyond":"",      
+#     "within":"",     
+#     "without":"",    
+#     "ahead":"",      
+#     "behind":"",    
+#     "off":"",         
+#     "on":"",        
+#     "in":"",          
+#     "out":"",         
+#     "upstairs":"",    
+#     "downstairs":"",  
+#     "indoors":"",    
+#     "outdoors":"",     
+# }
 
 
 

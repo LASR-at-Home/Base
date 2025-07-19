@@ -128,33 +128,62 @@ class HandoverAndDeliver(smach.StateMachine):
         goal.candidate_poses = [userdata.place_pose] 
         goal.surface_id = userdata.surface_id
         return goal
+    
+
+class LoadPlacePoseByName(smach.State):
+    def __init__(self):
+        smach.State.__init__(
+            self,
+            outcomes=["succeeded", "failed"],
+            input_keys=["place_location_name"],
+            output_keys=["place_pose", "pose", "surface_id", "selected_object"],
+        )
+
+    def execute(self, userdata):
+        name = userdata.place_location_name
+        rospy.loginfo(f"[LoadPlacePoseByName] Looking for location: {name}")
+
+        location_pose = rospy.get_param(
+            f"give_me_a_hand/{name}/pose", None
+        )
+
+        pose = Pose(
+            position=Point(**location_pose["position"]),
+            orientation=Quaternion(**location_pose["orientation"]),
+        )
+
+        userdata.pose = pose
+
+        place_pose = rospy.get_param(
+            f"give_me_a_hand/{name}/place_pose", None
+        )
+
+        place_pose = PoseStamped(
+            header=Header(frame_id="map"),
+            pose=Pose(
+                position=Point(**place_pose["position"]),
+                orientation=Quaternion(**place_pose["orientation"]),
+            ),
+        )
+
+        userdata.place_pose = place_pose
+
+        userdata.surface_id = "table"
+        userdata.selected_object = "object_1"
+
+        return "succeeded"
+
 
 
 if __name__ == "__main__":
     rospy.init_node("handover_and_deliver_test")
-
-    # Define goal location
-    goal_pose_stamped = PoseStamped(
-        header=Header(frame_id="map"),
-        pose=Pose(
-            position=Point(x=0.7, y=-0.15, z=0.95),
-            orientation=Quaternion(x=0.600, y=0.100, z=0.048, w=0.749),
-        ),
-    )
-
-    sm = HandoverAndDeliver(location_pose=goal_pose_stamped.pose)
-
-    sm.userdata.selected_object = type("Obj", (), {"name": "object_1"})()
-    sm.userdata.object_name = sm.userdata.selected_object.name
-
-    sm.userdata.place_pose = PoseStamped(
-        header=Header(frame_id="base_footprint"),
-        pose=Pose(
-            position=Point(x=0.7, y=-0.15, z=0.95),
-            orientation=Quaternion(w=1.0),
-        ),
-    )
-    sm.userdata.goal_pose = goal_pose_stamped  
-    sm.userdata.surface_id = "shelf"
+    sm = HandoverAndDeliver()
+    sm.userdata.place_location_name = "shelf"
     outcome = sm.execute()
-    rospy.loginfo(f"State machine finished with outcome: {outcome}")
+
+
+
+
+
+
+
