@@ -238,7 +238,6 @@ class ObjectComparison(smach.StateMachine):
                     filter=objects,
                     model=model,
                     confidence=confidence,
-                    nms=nms,
                     target_frame="map",
                 ),
                 transitions={
