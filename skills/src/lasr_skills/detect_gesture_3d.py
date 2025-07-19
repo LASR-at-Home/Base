@@ -186,16 +186,20 @@ class DetectGesture3D(smach.State):
                 valid_points.append([point.x, point.y, point.z])
 
         if (
-            len(valid_points) < 3
+            len(valid_points) < 0
         ):  # Need at least 3 points for reliable center calculation
             return None
 
-        # Calculate median position
-        points_array = np.array(valid_points)
-        median_x = np.median(points_array[:, 0])
-        median_y = np.median(points_array[:, 1])
-        median_z = np.median(points_array[:, 2])
-
+        if len(valid_points) > 1:
+            # Calculate median position
+            points_array = np.array(valid_points)
+            median_x = np.median(points_array[:, 0])
+            median_y = np.median(points_array[:, 1])
+            median_z = np.median(points_array[:, 2])
+        elif len(valid_points) == 1:
+            median_x, median_y, median_z = valid_points[0]
+        else:
+            return None
         return Point(median_x, median_y, median_z)
 
     def _detect_person_gesture(self, keypoint_dict: Dict[str, Point]) -> str:

@@ -66,7 +66,7 @@ class GoToLocation(smach.StateMachine):
         location: Union[Pose, None] = None,
         location_param: Union[str, None] = None,
         safe_navigation: bool = True,
-        retry_attempts: int = 0,
+        retry_attempts: int = 3,
     ):
         if location is not None or location_param is not None:
             super(GoToLocation, self).__init__(

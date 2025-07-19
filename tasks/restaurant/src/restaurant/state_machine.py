@@ -96,8 +96,8 @@ class Restaurant(smach.StateMachine):
                 ),
                 transitions={
                     "succeeded": "ROTATE_360",
-                    "aborted": "failed",
-                    "preempted": "failed",
+                    "aborted": "ROTATE_360",
+                    "preempted": "ROTATE_360",
                 },
             )
 
@@ -105,11 +105,11 @@ class Restaurant(smach.StateMachine):
             smach.StateMachine.add(
                 "ROTATE_360",
                 Rotate(angle=360.0),
-                transitions={"succeeded": "GET_POSES", "failed": "failed"},
+                transitions={"succeeded": "GET_POSES", "failed": "GET_POSES"},
             )
 
             smach.StateMachine.add(
-                "GET_POSES", GetPoses(), transitions={"succeeded": "SURVEY"}
+                "GET_POSES", GetPoses(), transitions={"succeeded": "SAY_GOT_POSES"}
             )
 
             smach.StateMachine.add(
@@ -118,14 +118,24 @@ class Restaurant(smach.StateMachine):
                 transitions={
                     "succeeded": "SAY_SURVEY",
                     "preempted": "SAY_SURVEY",
-                    "failed": "SAY_SURVEY",
+                    "aborted": "SAY_SURVEY",
                 },
             )
 
             smach.StateMachine.add(
                 "SAY_SURVEY",
+                Say(text="I am now looking for customers."),
+                transitions={
+                    "succeeded": "SAY_RAISE",
+                    "preempted": "SAY_RAISE",
+                    "aborted": "SAY_RAISE",
+                },
+            )
+
+            smach.StateMachine.add(
+                "SAY_RAISE",
                 Say(
-                    text="I am now looking for customers. Please raise your hands up straight in the air, and keep them still."
+                    text="Please raise your hands up straight in the air, and keep them still."
                 ),
                 transitions={
                     "succeeded": "SURVEY",
@@ -139,7 +149,7 @@ class Restaurant(smach.StateMachine):
                 Survey((-71.0, 71.0), 10),
                 transitions={
                     "customer_found": "CHOOSE_WAVING_PERSON",
-                    "customer_not_found": "SURVEY",
+                    "customer_not_found": "SAY_RAISE",
                 },
                 remapping={
                     "hands_up_detections": "hands_up_detections",
@@ -178,8 +188,8 @@ class Restaurant(smach.StateMachine):
                 ),
                 transitions={
                     "succeeded": "GO_TO_CUSTOMER",
-                    "preempted": "GO_TO_CUSTOMER",
-                    "aborted": "GO_TO_CUSTOMER",
+                    "preempted": "GO_TO_BAR",
+                    "aborted": "GO_TO_BAR",
                 },
             )
 
@@ -198,17 +208,17 @@ class Restaurant(smach.StateMachine):
             smach.StateMachine.add(
                 "TAKE_ORDER",
                 AskAndListen(
-                    tts_phrase="Hello, I'm TIAGo. Please say Hi Tiago to me before speaking. What can I get for you today?"
+                    tts_phrase="Please say Hi Tiago to me before speaking. What can I get for you today?"
                 ),
                 remapping={"transcribed_speech": "order_str"},
-                transitions={"succeeded": "HANDLE_ORDER", "failed": "failed"},
+                transitions={"succeeded": "HANDLE_ORDER", "failed": "TAKE_ORDER"},
             )
 
             smach.StateMachine.add(
                 "HANDLE_ORDER",
                 HandleOrder(last_resort=False),
                 remapping={"customer_transcription": "order_str"},
-                transitions={"succeeded": "SAY_ORDER", "failed": "RETAKE_ORDER"},
+                transitions={"succeeded": "SAY_ORDER", "failed": "TAKE_ORDER"},
             )
 
             smach.StateMachine.add(
@@ -226,7 +236,7 @@ class Restaurant(smach.StateMachine):
 
             smach.StateMachine.add(
                 "LISTEN_TO_CONFIRMATION",
-                ListenForWakeword(["yes", "no"], timeout=10.0, threshold=0.3),
+                ListenForWakeword(["yes", "no"], timeout=10.0, threshold=0.01),
                 transitions={
                     "succeeded": "CHECK_CONFIRMATION",
                     "failed": "CHECK_CONFIRMATION",  # TODO: handle failure properly
@@ -249,17 +259,17 @@ class Restaurant(smach.StateMachine):
                     tts_phrase="Let's try again. Please say Hi Tiago to me before speaking. What can I get for you today?"
                 ),
                 remapping={"transcribed_speech": "order_str"},
-                transitions={"succeeded": "HANDLE_RETRY_ORDER", "failed": "failed"},
+                transitions={
+                    "succeeded": "HANDLE_RETRY_ORDER",
+                    "failed": "RETAKE_ORDER",
+                },
             )
 
             smach.StateMachine.add(
                 "HANDLE_RETRY_ORDER",
                 HandleOrder(last_resort=True),
                 remapping={"customer_transcription": "order_str"},
-                transitions={
-                    "succeeded": "SAY_ORDER_RETRY",
-                    "failed": "SAY_ORDER_RETRY",
-                },
+                transitions={"succeeded": "SAY_ORDER_RETRY", "failed": "RETAKE_ORDER"},
             )
 
             smach.StateMachine.add(
@@ -279,7 +289,7 @@ class Restaurant(smach.StateMachine):
                 "GO_TO_BAR",
                 GoToLocation(),
                 remapping={"location": "bar_pose"},
-                transitions={"succeeded": "REQUEST_ITEMS", "failed": "failed"},
+                transitions={"succeeded": "REQUEST_ITEMS", "failed": "REQUEST_ITEMS"},
             )
 
             smach.StateMachine.add(
@@ -290,21 +300,24 @@ class Restaurant(smach.StateMachine):
                 remapping={"placeholders": "order_str"},
                 transitions={
                     "succeeded": "ROTATE_LOAD",
-                    "aborted": "failed",
-                    "preempted": "failed",
+                    "aborted": "ROTATE_LOAD",
+                    "preempted": "ROTATE_LOAD",
                 },
             )
 
             smach.StateMachine.add(
                 "ROTATE_LOAD",
                 Rotate(angle=180.0),
-                transitions={"succeeded": "WAIT_LOAD", "failed": "failed"},
+                transitions={"succeeded": "WAIT_LOAD", "failed": "WAIT_LOAD"},
             )
 
             smach.StateMachine.add(
                 "WAIT_LOAD",
                 Wait(5),
-                transitions={"succeeded": "RETURN_TO_CUSTOMER", "failed": "failed"},
+                transitions={
+                    "succeeded": "RETURN_TO_CUSTOMER",
+                    "failed": "RETURN_TO_CUSTOMER",
+                },
             )
 
             smach.StateMachine.add(
@@ -338,12 +351,12 @@ class Restaurant(smach.StateMachine):
             smach.StateMachine.add(
                 "WAIT_UNLOAD",
                 Wait(5),
-                transitions={"succeeded": "GO_TO_SURVEY", "failed": "failed"},
+                transitions={"succeeded": "GO_TO_SURVEY", "failed": "WAIT_UNLOAD"},
             )
 
             smach.StateMachine.add(
                 "GO_TO_SURVEY",
                 GoToLocation(),
                 remapping={"location": "survey_pose"},
-                transitions={"succeeded": "SURVEY", "failed": "failed"},
+                transitions={"succeeded": "SURVEY", "failed": "GO_TO_SURVEY"},
             )
