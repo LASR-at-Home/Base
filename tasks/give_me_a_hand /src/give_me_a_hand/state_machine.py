@@ -7,7 +7,7 @@ import smach_ros
 from geometry_msgs.msg import Point, PointStamped, Pose
 from lasr_skills import Say, GoToLocation, AskAndListen
 from lasr_vision_msgs.srv import Recognise
-# from give_me_a_hand.states import WaitDoorOpen, FindOperators, CommunicateOperator, HandoverAndDeliver
+from give_me_a_hand.states import WaitDoorOpen, HandoverAndDeliver
 from give_me_a_hand.states import CommunicateOperators#, HandoverAndDeliver, GraspAndPut
 from shapely.geometry import Polygon
 from std_msgs.msg import Empty, Header
@@ -55,48 +55,48 @@ class GiveMeAHand(smach.StateMachine):
             # WaitDoorOpen
             # """
 
-            # smach.StateMachine.add(
-            #     "SAY_WAIT",
-            #     Say(text="Waiting for door to open"),
-            #     transitions={
-            #         "succeeded": "WAIT_DOOR_OPEN",
-            #         "aborted": "WAIT_DOOR_OPEN",
-            #         "preempted": "WAIT_DOOR_OPEN",
-            #     },
-            # )
+            smach.StateMachine.add(
+                "SAY_WAIT",
+                Say(text="Waiting for door to open"),
+                transitions={
+                    "succeeded": "WAIT_DOOR_OPEN",
+                    "aborted": "WAIT_DOOR_OPEN",
+                    "preempted": "WAIT_DOOR_OPEN",
+                },
+            )
 
-            # smach.StateMachine.add(
-            #     "WAIT_DOOR_OPEN",
-            #     WaitDoorOpen(),
-            #     transitions={
-            #         "succeeded": "FIND_OPERATORS",
-            #         "aborted": "FIND_OPERATORS",
-            #         "preempted": "FIND_OPERATORS",
-            #     },
-            # )
+            smach.StateMachine.add(
+                "WAIT_DOOR_OPEN",
+                WaitDoorOpen(),
+                transitions={
+                    "succeeded": "GO_TO_OPERATORS",
+                    "aborted": "GO_TO_OPERATORS",
+                    "preempted": "GO_TO_OPERATORS",
+                },
+            )
 
-            # """
-            # FIND_OPERATORS_LOOP
-            # """
+            """
+            FIND_OPERATORS_LOOP
+            """
 
-            # kitchen_area = Pose()
+            kitchen_area = Pose()
 
-            # kitchen_area.position.position.x = 6.13193967
-            # kitchen_area.position.position.y = 6.13193967
-            # kitchen_area.position.position.z = 6.13193967
-            # kitchen_area.position.orientation.x = 0.0
-            # kitchen_area.position.orientation.y = 0.0
-            # kitchen_area.position.orientation.z = 0.88
+            kitchen_area.position.x = -2.4909288154765634
+            kitchen_area.position.y = -0.06129342248943135
+            kitchen_area.position.z = 0.0
+            kitchen_area.orientation.x = 0.0
+            kitchen_area.orientation.y = 0.0
+            kitchen_area.orientation.z = -0.22060310817672235
+            kitchen_area.orientation.w = 0.9753636596996883
 
-            # smach.StateMachine.add(
-            #     f"GO_TO_OPERATORS",
-            #     GoToLocation(kitchen_area),
-            #     remapping={"location": "customer_approach_pose"},
-            #     transitions={
-            #         "succeeded": f"FIND_OPERATORS",
-            #         "failed": f"FIND_OPERATORS",
-            #     },
-            # )
+            smach.StateMachine.add(
+                f"GO_TO_OPERATORS",
+                GoToLocation(kitchen_area),
+                transitions={
+                    "succeeded": f"ASK_AND_LISTEN",
+                    "failed": f"GO_TO_OPERATORS",
+                },
+            )
 
             # smach.StateMachine.add(
             #     "FIND_OPERATORS",
@@ -130,7 +130,7 @@ class GiveMeAHand(smach.StateMachine):
             #         "preempted": "failed",
             #         "aborted": "failed",
             #     },
-            # ),
+            # )
 
             smach.StateMachine.add(
                 "ASK_AND_LISTEN",
