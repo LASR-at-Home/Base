@@ -206,9 +206,9 @@ class Restaurant(smach.StateMachine):
 
             smach.StateMachine.add(
                 "HANDLE_ORDER",
-                HandleOrder(),
+                HandleOrder(last_resort=False),
                 remapping={"customer_transcription": "order_str"},
-                transitions={"succeeded": "SAY_ORDER", "failed": "failed"},
+                transitions={"succeeded": "SAY_ORDER", "failed": "RETAKE_ORDER"},
             )
 
             smach.StateMachine.add(
@@ -254,9 +254,12 @@ class Restaurant(smach.StateMachine):
 
             smach.StateMachine.add(
                 "HANDLE_RETRY_ORDER",
-                HandleOrder(),
+                HandleOrder(last_resort=True),
                 remapping={"customer_transcription": "order_str"},
-                transitions={"succeeded": "SAY_ORDER_RETRY", "failed": "failed"},
+                transitions={
+                    "succeeded": "SAY_ORDER_RETRY",
+                    "failed": "SAY_ORDER_RETRY",
+                },
             )
 
             smach.StateMachine.add(
