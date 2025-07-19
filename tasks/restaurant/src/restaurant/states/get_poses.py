@@ -10,7 +10,7 @@ class GetPoses(smach.State):
         smach.State.__init__(
             self,
             outcomes=["succeeded"],
-            output_keys=["survey_pose", "bar_pose"],
+            output_keys=["survey_pose", "bar_pose", "bar_forward_pose"],
         )
 
     def execute(self, userdata):
@@ -31,13 +31,12 @@ class GetPoses(smach.State):
         # Convert to Euler angles
         _, _, yaw = tf.transformations.euler_from_quaternion(quat)
 
-        # Rotate yaw by 180 degrees
+        # ----------------------------------
+        # bar_pose: rotated 180 degrees
         rotated_yaw = yaw + math.pi
-        # Normalise
-        rotated_yaw = (rotated_yaw + math.pi) % (2 * math.pi) - math.pi
-        # Convert back to quaternion
+        rotated_yaw = (rotated_yaw + math.pi) % (2 * math.pi) - math.pi  # Normalize
         new_quat = tf.transformations.quaternion_from_euler(0, 0, rotated_yaw)
-        # Construct pose
+
         rotated_pose = Pose()
         rotated_pose.position = pose.position
         rotated_pose.orientation.x = new_quat[0]
@@ -45,7 +44,18 @@ class GetPoses(smach.State):
         rotated_pose.orientation.z = new_quat[2]
         rotated_pose.orientation.w = new_quat[3]
 
-        # Rotate the pose by 180 degrees and store as bar_pose
         userdata.bar_pose = rotated_pose
+
+        # ----------------------------------
+        # bar_forward_pose: 1 meter forward from original pose
+        forward_pose = Pose()
+        forward_pose.orientation = pose.orientation
+
+        # Calculate 1 meter ahead in the direction of yaw
+        forward_pose.position.x = pose.position.x + 2 * math.cos(yaw)
+        forward_pose.position.y = pose.position.y + 2 * math.sin(yaw)
+        forward_pose.position.z = pose.position.z  # unchanged
+
+        userdata.bar_forward_pose = forward_pose
 
         return "succeeded"

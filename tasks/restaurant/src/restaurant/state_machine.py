@@ -116,10 +116,17 @@ class Restaurant(smach.StateMachine):
                 "SAY_GOT_POSES",
                 Say(text="I have remembered the position of the bar."),
                 transitions={
-                    "succeeded": "SAY_SURVEY",
-                    "preempted": "SAY_SURVEY",
-                    "aborted": "SAY_SURVEY",
+                    "succeeded": "GO_TO_SURVEY_0",
+                    "preempted": "GO_TO_SURVEY_0",
+                    "aborted": "GO_TO_SURVEY_0",
                 },
+            )
+
+            smach.StateMachine.add(
+                "GO_TO_SURVEY_0",
+                GoToLocation(),
+                remapping={"location": "bar_forward_pose"},
+                transitions={"succeeded": "SAY_SURVEY", "failed": "SAY_SURVEY"},
             )
 
             smach.StateMachine.add(
@@ -357,6 +364,6 @@ class Restaurant(smach.StateMachine):
             smach.StateMachine.add(
                 "GO_TO_SURVEY",
                 GoToLocation(),
-                remapping={"location": "survey_pose"},
+                remapping={"location": "bar_forward_pose"},
                 transitions={"succeeded": "SURVEY", "failed": "GO_TO_SURVEY"},
             )
