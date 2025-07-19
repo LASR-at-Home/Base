@@ -16,8 +16,9 @@ from visualization_msgs.msg import Marker
 from markers import create_and_publish_marker
 from lasr_skills.vision import GetImageAndDepthImage
 from lasr_vision_msgs.msg import Detection3D
-
-from typing import Union, List, Dict
+from shapely import Polygon as ShapelyPolygon
+from typing import Union, List, Dict, Optional
+from shapely.geometry import Point
 
 
 class DetectGesture3D(smach.State):
@@ -34,6 +35,7 @@ class DetectGesture3D(smach.State):
         buffer_width: int = 50,
         target_frame: str = "base_footprint",
         debug_publisher: str = "/skills/gesture_detection_3d/debug",
+        polygon: Optional[ShapelyPolygon] = None,
     ):
         smach.State.__init__(
             self,
@@ -69,6 +71,8 @@ class DetectGesture3D(smach.State):
         self.person_markers_pub = rospy.Publisher(
             "/detected_people_markers", Marker, queue_size=10
         )
+
+        self._polygon = polygon
 
         rospy.loginfo("DetectGesture3D initialized")
 
@@ -149,6 +153,19 @@ class DetectGesture3D(smach.State):
 
         # Sort people by distance (far to near)
         detected_people.sort(key=lambda p: p["distance"], reverse=True)
+
+        if self._polygon is not None:
+            filtered_people = [
+                person
+                for person in detected_people
+                if self._polygon.contains(
+                    Point(
+                        person["medium_point"].position.x,
+                        person["medium_point"].position.y,
+                    )
+                )
+            ]
+            detected_people = filtered_people
 
         # Store results
         userdata.detected_people = detected_people
@@ -350,6 +367,7 @@ class DetectHandUp3D(DetectGesture3D):
         buffer_width: int = 50,
         target_frame: str = "base_footprint",
         debug_publisher: str = "/skills/hand_up_detection_3d/debug",
+        polygon: Optional[ShapelyPolygon] = None,
     ):
         # Initialize parent class
         super().__init__(
@@ -358,6 +376,7 @@ class DetectHandUp3D(DetectGesture3D):
             buffer_width=buffer_width,
             target_frame=target_frame,
             debug_publisher=debug_publisher,
+            polygon=polygon,
         )
 
         # Override state definition for different output

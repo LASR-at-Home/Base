@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Tuple, Optional
 import rospy
 import smach
 import smach_ros
@@ -8,6 +8,8 @@ import math
 from control_msgs.msg import FollowJointTrajectoryAction, FollowJointTrajectoryGoal
 from trajectory_msgs.msg import JointTrajectoryPoint, JointTrajectory
 from lasr_skills import DetectHandUp3D, GetImageAndDepthImage, GoToLocation
+
+from shapely import Polygon as ShapelyPolygon
 
 
 class AnalyseDetections(smach.State):
@@ -43,6 +45,7 @@ class Survey(smach.StateMachine):
         n_look_points: int,
         same_detection_threshold: float = 0.4,
         expected_no_customers: int = 2,
+        polygon: Optional[ShapelyPolygon] = None,
     ) -> None:
         super().__init__(
             outcomes=["customer_found", "customer_not_found"],
@@ -112,7 +115,7 @@ class Survey(smach.StateMachine):
 
                     smach.StateMachine.add(
                         "DETECT_HAND_UP",
-                        DetectHandUp3D(target_frame="map"),
+                        DetectHandUp3D(target_frame="map", polygon=polygon),
                         transitions={
                             "succeeded": "HANDLE_DETECTIONS",
                             "failed": "continue",

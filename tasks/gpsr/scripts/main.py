@@ -738,6 +738,9 @@ class PatrolObjectLocations(smach.StateMachine):
                 Survey(
                     look_range_deg=(-71.0, 71.0),
                     n_look_points=10,
+                    polygon=ShapelyPolygon(
+                        rospy.get_param("/gpsr/arena/rooms/living_room/room_polygon")
+                    ),
                 ),
                 transitions={
                     "customer_found": "SAY_PERSON_FOUND_LIVING_ROOM",
@@ -1015,6 +1018,9 @@ class PatrolObjectLocations(smach.StateMachine):
                 Survey(
                     look_range_deg=(-71.0, 71.0),
                     n_look_points=10,
+                    polygon=ShapelyPolygon(
+                        rospy.get_param("/gpsr/arena/rooms/office/room_polygon")
+                    ),
                 ),
                 transitions={
                     "customer_found": "SAY_PERSON_FOUND_OFFICE",
@@ -1366,6 +1372,9 @@ class PatrolObjectLocations(smach.StateMachine):
                 Survey(
                     look_range_deg=(-71.0, 71.0),
                     n_look_points=10,
+                    polygon=ShapelyPolygon(
+                        rospy.get_param("/gpsr/arena/rooms/bedroom/room_polygon")
+                    ),
                 ),
                 transitions={
                     "customer_found": "SAY_PERSON_FOUND_BEDROOM",
@@ -1859,6 +1868,9 @@ class PatrolObjectLocations(smach.StateMachine):
                 Survey(
                     look_range_deg=(-71.0, 71.0),
                     n_look_points=10,
+                    polygon=ShapelyPolygon(
+                        rospy.get_param("/gpsr/arena/rooms/kitchen/room_polygon")
+                    ),
                 ),
                 transitions={
                     "customer_found": "SAY_PERSON_FOUND_KITCHEN",
