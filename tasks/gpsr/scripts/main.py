@@ -346,34 +346,34 @@ class PatrolObjectLocations(smach.StateMachine):
 
         locations = {}
         locations["cabinet"] = {
-            "object_category": "foods",
+            "object_category": "food",
             "detection_pose": get_location_pose("cabinet", person=False),
             "detection_polygon": get_location_polygon("cabinet"),
         }
         locations["desk"] = {
-            "object_category": "fruits",
+            "object_category": "fruit",
             "detection_pose": get_location_pose("desk", person=False),
             "detection_polygon": get_location_polygon("desk"),
         }
 
         locations["bar"] = {
-            "object_category": "drinks",
+            "object_category": "drink",
             "detection_pose": get_location_pose("bar", person=False),
             "detection_polygon": get_location_polygon("bar"),
         }
 
         locations["side_table"] = {
-            "object_category": "snacks",
+            "object_category": "snack",
             "detection_pose": get_location_pose("side_table", person=False),
             "detection_polygon": get_location_polygon("side_table"),
         }
         locations["kitchen_table"] = {
-            "object_category": "dishes",
+            "object_category": "dish",
             "detection_pose": get_location_pose("kitchen_table", person=False),
             "detection_polygon": get_location_polygon("kitchen_table"),
         }
         locations["dishwasher"] = {
-            "object_category": "cleaning supplies",
+            "object_category": "cleaning_supply",
             "detection_pose": get_location_pose("dishwasher", person=False),
             "detection_polygon": get_location_polygon("dishwasher"),
         }
@@ -1964,8 +1964,8 @@ def main() -> None:
     # _tts(tts_client, "Please open the door")
     patrol_sm = PatrolObjectLocations()
     timeout = 10.0
-    # start_sm = Start()
-    # start_sm.execute()
+    start_sm = Start()
+    start_sm.execute()
     rospy.sleep(3)
 
     outcome = patrol_sm.execute()

@@ -309,7 +309,7 @@ class DetectAllInPolygon(smach.StateMachine):
         polygon: ShapelyPolygon,
         min_coverage: float = 0.8,
         object_filter: Optional[List[str]] = None,
-        min_confidence: float = 0.5,
+        min_confidence: float = 0.7,
         min_new_object_dist: float = 0.1,
         use_lang_sam: bool = False,
         prompt: Optional[str] = None,
