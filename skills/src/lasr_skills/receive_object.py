@@ -104,7 +104,7 @@ class ReceiveObject(smach.StateMachine):
 
             smach.StateMachine.add(
                 "SAY_REACH_ARM",
-                Say(text="Please step back, I am going to reach my arm out."),
+                Say(text="Please step back, I am going to reach my arm out in front of me. Stay clear of my sides too."),
                 transitions={
                     "succeeded": "REACH_ARM",
                     "aborted": "REACH_ARM",
@@ -182,14 +182,27 @@ class ReceiveObject(smach.StateMachine):
                 "CLOSE_GRIPPER",
                 smach_ros.ServiceState("parallel_gripper_controller/grasp", Empty),
                 transitions={
-                    "succeeded": "FOLD_ARM",
-                    "aborted": "failed",
-                    "preempted": "failed",
+                    "succeeded": "SAY_KEEP_AWAY",
+                    "aborted": "SAY_KEEP_AWAY",
+                    "preempted": "SAY_KEEP_AWAY",
                 },
             )
+
+            smach.StateMachine.add(
+                "SAY_KEEP_AWAY",
+                Say(
+                    text="Please stay away from me now. I am going to move my arm back to the home position.",
+                ),
+                transitions={
+                    "succeeded": "FOLD_ARM",
+                    "aborted": "FOLD_ARM",
+                    "preempted": "FOLD_ARM",
+                },
+            )
+
             smach.StateMachine.add(
                 "FOLD_ARM",
-                PlayMotion(motion_name="cml_arm_away"),
+                PlayMotion(motion_name="home"),
                 transitions={
                     "succeeded": "succeeded",
                     "aborted": "failed",

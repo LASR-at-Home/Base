@@ -46,3 +46,4 @@ from .detect_door_opening import DetectDoorOpening
 # from .follow_person import FollowPerson
 from .listen_for_wakeword import ListenForWakeword
 from .detect_door_opening import DetectDoorOpening
+from .check_door_status import CheckDoorStatus
