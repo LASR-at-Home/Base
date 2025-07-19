@@ -48,7 +48,7 @@ class GetDrink(smach.StateMachine):
             self,
             guest_id: str,
             param_key: str = "/receptionist/priors",
-            max_retries: int = 1,
+            max_retries: int = 3,
         ):
             """Parses the transcription of the guests' favourite drink.
 
