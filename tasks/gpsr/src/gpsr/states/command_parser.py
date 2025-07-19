@@ -117,7 +117,7 @@ class CommandParserStateMachine(smach.StateMachine):
         self._command_counter = 0
         self._command_counter_threshold = 3
 
-        smach.StateMachine.__init__(self, outcomes=["succeeded", "failed"])
+        smach.StateMachine.__init__(self, outcomes=["succeeded", "failed"], output_keys=["parsed_command"])
 
         with self:
 

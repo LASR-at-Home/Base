@@ -337,41 +337,33 @@ class PatrolObjectLocations(smach.StateMachine):
         # - Refrigerator (kitchen, None)
 
         locations = {}
-        locations["cabinet"] = (
-            {
-                "object_category": "foods",
-                "detection_pose": get_location_pose("cabinet", person=False),
-                "detection_polygon": get_location_polygon("cabinet"),
-            },
-        )
-        locations["desk"] = (
-            {
-                "object_category": "fruits",
-                "detection_pose": get_location_pose("desk", person=False),
-                "detection_polygon": get_location_polygon("desk"),
-            },
-        )
-        locations["bar"] = (
-            {
-                "object_category": "drinks",
-                "detection_pose": get_location_pose("bar", person=False),
-                "detection_polygon": get_location_polygon("bar"),
-            },
-        )
-        locations["side_table"] = (
-            {
-                "object_category": "snacks",
-                "detection_pose": get_location_pose("side_table", person=False),
-                "detection_polygon": get_location_polygon("side_table"),
-            },
-        )
-        locations["kitchen_table"] = (
-            {
-                "object_category": "dishes",
-                "detection_pose": get_location_pose("kitchen_table", person=False),
-                "detection_polygon": get_location_polygon("kitchen_table"),
-            },
-        )
+        locations["cabinet"] = {
+            "object_category": "foods",
+            "detection_pose": get_location_pose("cabinet", person=False),
+            "detection_polygon": get_location_polygon("cabinet"),
+        }
+        locations["desk"] = {
+            "object_category": "fruits",
+            "detection_pose": get_location_pose("desk", person=False),
+            "detection_polygon": get_location_polygon("desk"),
+        }
+
+        locations["bar"] = {
+            "object_category": "drinks",
+            "detection_pose": get_location_pose("bar", person=False),
+            "detection_polygon": get_location_polygon("bar"),
+        }
+
+        locations["side_table"] = {
+            "object_category": "snacks",
+            "detection_pose": get_location_pose("side_table", person=False),
+            "detection_polygon": get_location_polygon("side_table"),
+        }
+        locations["kitchen_table"] = {
+            "object_category": "dishes",
+            "detection_pose": get_location_pose("kitchen_table", person=False),
+            "detection_polygon": get_location_polygon("kitchen_table"),
+        }
         locations["dishwasher"] = {
             "object_category": "cleaning supplies",
             "detection_pose": get_location_pose("dishwasher", person=False),
@@ -785,7 +777,7 @@ class PatrolObjectLocations(smach.StateMachine):
 
             smach.StateMachine.add(
                 "ASK_FOR_COMMAND_LIVING_ROOM",
-                CommandParserStateMachine(configuration=load_gpsr_configuration()),
+                CommandParserStateMachine(load_gpsr_configuration()),
                 transitions={
                     "succeeded": "SAY_COMMAND_PLAN_LIVING_ROOM",
                     "failed": "RETRY_COMMAND_LIVING_ROOM_1",
@@ -794,7 +786,7 @@ class PatrolObjectLocations(smach.StateMachine):
 
             smach.StateMachine.add(
                 "RETRY_COMMAND_LIVING_ROOM_1",
-                CommandParserStateMachine(configuration=load_gpsr_configuration()),
+                CommandParserStateMachine(load_gpsr_configuration()),
                 transitions={
                     "succeeded": "SAY_COMMAND_PLAN_LIVING_ROOM",
                     "failed": "RETRY_COMMAND_LIVING_ROOM_2",
@@ -803,7 +795,7 @@ class PatrolObjectLocations(smach.StateMachine):
 
             smach.StateMachine.add(
                 "RETRY_COMMAND_LIVING_ROOM_2",
-                CommandParserStateMachine(configuration=load_gpsr_configuration()),
+                CommandParserStateMachine(load_gpsr_configuration()),
                 transitions={
                     "succeeded": "SAY_COMMAND_PLAN_LIVING_ROOM",
                     "failed": "SAY_GOING_TO_DESK",
@@ -1062,7 +1054,7 @@ class PatrolObjectLocations(smach.StateMachine):
 
             smach.StateMachine.add(
                 "ASK_FOR_COMMAND_OFFICE",
-                CommandParserStateMachine(configuration=load_gpsr_configuration()),
+                CommandParserStateMachine(load_gpsr_configuration()),
                 transitions={
                     "succeeded": "SAY_COMMAND_PLAN_OFFICE",
                     "failed": "RETRY_COMMAND_OFFICE_1",
@@ -1071,7 +1063,7 @@ class PatrolObjectLocations(smach.StateMachine):
 
             smach.StateMachine.add(
                 "RETRY_COMMAND_OFFICE_1",
-                CommandParserStateMachine(configuration=load_gpsr_configuration()),
+                CommandParserStateMachine(load_gpsr_configuration()),
                 transitions={
                     "succeeded": "SAY_COMMAND_PLAN_OFFICE",
                     "failed": "RETRY_COMMAND_OFFICE_2",
@@ -1080,7 +1072,7 @@ class PatrolObjectLocations(smach.StateMachine):
 
             smach.StateMachine.add(
                 "RETRY_COMMAND_OFFICE_2",
-                CommandParserStateMachine(configuration=load_gpsr_configuration()),
+                CommandParserStateMachine(load_gpsr_configuration()),
                 transitions={
                     "succeeded": "SAY_COMMAND_PLAN_OFFICE",
                     "failed": "SAY_GOING_TO_SIDE_TABLE",
@@ -1413,7 +1405,7 @@ class PatrolObjectLocations(smach.StateMachine):
 
             smach.StateMachine.add(
                 "ASK_FOR_COMMAND_BEDROOM",
-                CommandParserStateMachine(configuration=load_gpsr_configuration()),
+                CommandParserStateMachine(load_gpsr_configuration()),
                 transitions={
                     "succeeded": "SAY_COMMAND_PLAN_BEDROOM",
                     "failed": "RETRY_COMMAND_BEDROOM_1",
@@ -1422,7 +1414,7 @@ class PatrolObjectLocations(smach.StateMachine):
 
             smach.StateMachine.add(
                 "RETRY_COMMAND_BEDROOM_1",
-                CommandParserStateMachine(configuration=load_gpsr_configuration()),
+                CommandParserStateMachine(load_gpsr_configuration()),
                 transitions={
                     "succeeded": "SAY_COMMAND_PLAN_BEDROOM",
                     "failed": "RETRY_COMMAND_BEDROOM_2",
@@ -1431,7 +1423,7 @@ class PatrolObjectLocations(smach.StateMachine):
 
             smach.StateMachine.add(
                 "RETRY_COMMAND_BEDROOM_2",
-                CommandParserStateMachine(configuration=load_gpsr_configuration()),
+                CommandParserStateMachine(load_gpsr_configuration()),
                 transitions={
                     "succeeded": "SAY_COMMAND_PLAN_BEDROOM",
                     "failed": "SAY_GOING_TO_DISHWASHER",
@@ -1906,7 +1898,7 @@ class PatrolObjectLocations(smach.StateMachine):
 
             smach.StateMachine.add(
                 "ASK_FOR_COMMAND_KITCHEN",
-                CommandParserStateMachine(configuration=load_gpsr_configuration()),
+                CommandParserStateMachine(load_gpsr_configuration()),
                 transitions={
                     "succeeded": "SAY_COMMAND_PLAN_KITCHEN",
                     "failed": "RETRY_COMMAND_KITCHEN_1",
@@ -1915,7 +1907,7 @@ class PatrolObjectLocations(smach.StateMachine):
 
             smach.StateMachine.add(
                 "RETRY_COMMAND_KITCHEN_1",
-                CommandParserStateMachine(configuration=load_gpsr_configuration()),
+                CommandParserStateMachine(load_gpsr_configuration()),
                 transitions={
                     "succeeded": "SAY_COMMAND_PLAN_KITCHEN",
                     "failed": "RETRY_COMMAND_KITCHEN_2",
@@ -1924,7 +1916,7 @@ class PatrolObjectLocations(smach.StateMachine):
 
             smach.StateMachine.add(
                 "RETRY_COMMAND_KITCHEN_2",
-                CommandParserStateMachine(configuration=load_gpsr_configuration()),
+                CommandParserStateMachine(load_gpsr_configuration()),
                 transitions={
                     "succeeded": "SAY_COMMAND_PLAN_KITCHEN",
                     "failed": "SAY_GOING_TO_CABINET",
@@ -1947,15 +1939,15 @@ class PatrolObjectLocations(smach.StateMachine):
 
 def main() -> None:
     config = load_gpsr_configuration()
-    tts_client = actionlib.SimpleActionClient("tts", TtsAction)
-    tts_client.wait_for_server()
-    _tts(tts_client, "Please open the door")
+    # tts_client = actionlib.SimpleActionClient("tts", TtsAction)
+    # tts_client.wait_for_server()
+    # _tts(tts_client, "Please open the door")
+    patrol_sm = PatrolObjectLocations()
     timeout = 10.0
     start_sm = Start()
     start_sm.execute()
     rospy.sleep(3)
 
-    patrol_sm = PatrolObjectLocations()
     outcome = patrol_sm.execute()
 
 
