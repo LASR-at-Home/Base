@@ -9,3 +9,5 @@ from .find_operators import FindOperators
 from .communicate_operators import CommunicateOperators
 
 from .get_poses import GetPoses
+
+from .grasp_and_put import GraspAndPut

@@ -86,7 +86,15 @@ class GiveMeAHand(smach.StateMachine):
             kitchen_area.position.orientation.y = 0.0
             kitchen_area.position.orientation.z = 0.88
 
-
+            smach.StateMachine.add(
+                f"GO_TO_OPERATORS",
+                GoToLocation(kitchen_area),
+                remapping={"location": "customer_approach_pose"},
+                transitions={
+                    "succeeded": f"FIND_OPERATORS",
+                    "failed": f"FIND_OPERATORS",
+                },
+            )
 
             smach.StateMachine.add(
                 "FIND_OPERATORS",
@@ -104,23 +112,32 @@ class GiveMeAHand(smach.StateMachine):
                 remapping={"location": "customer_approach_pose"},
                 transitions={
                     "succeeded": f"COMMUNICATE_OPERATOR",
-                    "failed": f"ENABLE_MOVEBASE_MANAGER",
+                    "failed": f"COMMUNICATE_OPERATOR",
                 },
             )
 
+            # smach.StateMachine.add(
+            #     "ENABLE_MOVEBASE_MANAGER",
+            #     smach_ros.ServiceState(
+            #     "/pal_startup_control/start",
+            #     StartupStart,
+            #     request=StartupStartRequest("move_base", ""),
+            #     ),
+            #     transitions={
+            #         "succeeded": f"GO_TO_OPERATORS",
+            #         "preempted": "failed",
+            #         "aborted": "failed",
+            #     },
+            # ),
+
             smach.StateMachine.add(
-                "ENABLE_MOVEBASE_MANAGER",
-                smach_ros.ServiceState(
-                "/pal_startup_control/start",
-                StartupStart,
-                request=StartupStartRequest("move_base", ""),
-                ),
+                "ASK_AND_LISTEN",
+                AskAndListen(f"{userdata.text}"),
                 transitions={
-                    "succeeded": f"GO_TO_OPERATORS",
-                    "preempted": "failed",
-                    "aborted": "failed",
+                    "succeeded": "COMMUNICATE_OPERATOR",
+                    "failed": "COMMUNICATE_OPERATOR",
                 },
-            ),
+            )
 
             smach.StateMachine.add(
                 "COMMUNICATE_OPERATOR",

@@ -15,7 +15,7 @@ class CommunicateOperators():
         smach.State.__init__(
             self,
             outcomes=["succeeded", "failed"],
-            input_key=["sentence"],
+            input_key=["transcribed_speech"],
             output_key=["location"])
 
             self.trick_words_found = False,
