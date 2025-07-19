@@ -707,6 +707,19 @@ class PatrolObjectLocations(smach.StateMachine):
             )
 
             smach.StateMachine.add(
+                "SAY_PERSON_NOT_FOUND_LIVING_ROOM",
+                Say(text="I can't see anyone in the living room that needs help."),
+                transitions={
+                    "succeeded": "SAY_GOING_TO_DESK",
+                    "preempted": "SAY_GOING_TO_DESK",
+                    "aborted": "SAY_GOING_TO_DESK",
+                },
+                remapping={
+                    "hands_up_detections": "hands_up_detections",
+                },
+            )
+
+            smach.StateMachine.add(
                 "CHOOSE_WAVING_PERSON_LIVING_ROOM",
                 ChooseWavingPerson(),
                 transitions={
@@ -951,6 +964,19 @@ class PatrolObjectLocations(smach.StateMachine):
                     "succeeded": "CHOOSE_WAVING_PERSON_OFFICE",
                     "preempted": "CHOOSE_WAVING_PERSON_OFFICE",
                     "aborted": "CHOOSE_WAVING_PERSON_OFFICE",
+                },
+                remapping={
+                    "hands_up_detections": "hands_up_detections",
+                },
+            )
+
+            smach.StateMachine.add(
+                "SAY_PERSON_NOT_FOUND_OFFICE",
+                Say(text="I can't find anyone in the office that needs help."),
+                transitions={
+                    "succeeded": "SAY_GOING_TO_SIDE_TABLE",
+                    "preempted": "SAY_GOING_TO_SIDE_TABLE",
+                    "aborted": "SAY_GOING_TO_SIDE_TABLE",
                 },
                 remapping={
                     "hands_up_detections": "hands_up_detections",
@@ -1238,7 +1264,7 @@ class PatrolObjectLocations(smach.StateMachine):
             smach.StateMachine.add(
                 "SAY_GOING_TO_BEDROOM",
                 Say(
-                    text="I am going to the office to check for people that need help."
+                    text="I am going to the bedroom to check for people that need help."
                 ),
                 transitions={
                     "succeeded": "GO_TO_BEDROOM",
@@ -1276,6 +1302,19 @@ class PatrolObjectLocations(smach.StateMachine):
                     "succeeded": "CHOOSE_WAVING_PERSON_BEDROOM",
                     "preempted": "CHOOSE_WAVING_PERSON_BEDROOM",
                     "aborted": "CHOOSE_WAVING_PERSON_BEDROOM",
+                },
+                remapping={
+                    "hands_up_detections": "hands_up_detections",
+                },
+            )
+
+            smach.StateMachine.add(
+                "SAY_PERSON_NOT_FOUND_BEDROOM",
+                Say(text="I can't find anyone in the bedroom that needs help."),
+                transitions={
+                    "succeeded": "SAY_GOING_TO_DISHWASHER",
+                    "preempted": "SAY_GOING_TO_DISHWASHER",
+                    "aborted": "SAY_GOING_TO_DISHWASHER",
                 },
                 remapping={
                     "hands_up_detections": "hands_up_detections",
@@ -1750,11 +1789,24 @@ class PatrolObjectLocations(smach.StateMachine):
             )
 
             smach.StateMachine.add(
+                "SAY_PERSON_NOT_FOUND_KITCHEN",
+                Say(text="I can't find anyone in the kitchen that needs help."),
+                transitions={
+                    "succeeded": "SAY_GOING_TO_CABINET",
+                    "preempted": "SAY_GOING_TO_CABINET",
+                    "aborted": "SAY_GOING_TO_CABINET",
+                },
+                remapping={
+                    "hands_up_detections": "hands_up_detections",
+                },
+            )
+
+            smach.StateMachine.add(
                 "CHOOSE_WAVING_PERSON_KITCHEN",
                 ChooseWavingPerson(),
                 transitions={
                     "succeeded": "COMPUTE_APPROACH_POSE_KITCHEN",
-                    "failed": "SAY_GOING_TO_KITCHEN",
+                    "failed": "SAY_GOING_TO_CABINET",
                 },
                 remapping={
                     "hands_up_detections": "hands_up_detections",
