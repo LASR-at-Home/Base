@@ -186,6 +186,33 @@ def get_location_polygon(location: str) -> Polygon:
 
 class PatrolObjectLocations(smach.StateMachine):
 
+    class GetCommandString(smach.State):
+        def __init__(self):
+            super().__init__(
+                outcomes=["succeeded", "failed"],
+                input_keys=["parsed_command"],
+                output_keys=["command_string"],
+            )
+
+        def execute(self, userdata: smach.UserData) -> str:
+            try:
+                sm, command_string = build_state_machine(userdata.parsed_command)
+                userdata.command_string = command_string
+                tts_client = actionlib.SimpleActionClient("tts", TtsAction)
+                _tts(tts_client, command_string)
+                sm.execute()
+            except Exception as e:
+                rospy.logerr(f"Error building state machine: {e}")
+                command_string = "I wasn't able to understand your command, sorry."
+                userdata.command_string = command_string
+                try:
+                    tts_client = actionlib.SimpleActionClient("tts", TtsAction)
+                    _tts(tts_client, command_string)
+                except:
+                    return "failed"
+                return "failed"
+            return "succeeded"
+
     class ProcessDetectionsInLocation(smach.State):
 
         def __init__(self, expected_object_category: str):
@@ -783,6 +810,19 @@ class PatrolObjectLocations(smach.StateMachine):
                 },
             )
 
+            smach.StateMachine.add(
+                "SAY_COMMAND_PLAN_LIVING_ROOM",
+                self.GetCommandString(),
+                transitions={
+                    "succeeded": "SAY_GOING_TO_DESK",
+                    "failed": "SAY_GOING_TO_DESK",
+                },
+                remapping={
+                    "parsed_command": "parsed_command",
+                    "command_string": "command_string",
+                },
+            )
+
             location_pose = locations["desk"]["detection_pose"]
             object_category = locations["desk"]["object_category"]
             detection_polygon = locations["desk"]["detection_polygon"]
@@ -1044,6 +1084,19 @@ class PatrolObjectLocations(smach.StateMachine):
                 transitions={
                     "succeeded": "SAY_COMMAND_PLAN_OFFICE",
                     "failed": "SAY_GOING_TO_SIDE_TABLE",
+                },
+            )
+
+            smach.StateMachine.add(
+                "SAY_COMMAND_PLAN_OFFICE",
+                self.GetCommandString(),
+                transitions={
+                    "succeeded": "SAY_GOING_TO_SIDE_TABLE",
+                    "failed": "SAY_GOING_TO_SIDE_TABLE",
+                },
+                remapping={
+                    "parsed_command": "parsed_command",
+                    "command_string": "command_string",
                 },
             )
 
@@ -1382,6 +1435,19 @@ class PatrolObjectLocations(smach.StateMachine):
                 transitions={
                     "succeeded": "SAY_COMMAND_PLAN_BEDROOM",
                     "failed": "SAY_GOING_TO_DISHWASHER",
+                },
+            )
+
+            smach.StateMachine.add(
+                "SAY_COMMAND_PLAN_BEDROOM",
+                self.GetCommandString(),
+                transitions={
+                    "succeeded": "SAY_GOING_TO_DISHWASHER",
+                    "failed": "SAY_GOING_TO_DISHWASHER",
+                },
+                remapping={
+                    "parsed_command": "parsed_command",
+                    "command_string": "command_string",
                 },
             )
 
@@ -1865,6 +1931,19 @@ class PatrolObjectLocations(smach.StateMachine):
                 },
             )
 
+            smach.StateMachine.add(
+                "SAY_COMMAND_PLAN_KITCHEN",
+                self.GetCommandString(),
+                transitions={
+                    "succeeded": "SAY_GOING_TO_CABINET",
+                    "failed": "SAY_GOING_TO_CABINET",
+                },
+                remapping={
+                    "parsed_command": "parsed_command",
+                    "command_string": "command_string",
+                },
+            )
+
 
 def main() -> None:
     config = load_gpsr_configuration()
@@ -1875,6 +1954,9 @@ def main() -> None:
     start_sm = Start()
     start_sm.execute()
     rospy.sleep(3)
+
+    patrol_sm = PatrolObjectLocations()
+    outcome = patrol_sm.execute()
 
 
 if __name__ == "__main__":

@@ -40,7 +40,7 @@ from geometry_msgs.msg import (
 from std_msgs.msg import Header
 
 STATE_COUNT = 0
-
+COMMAND_STRING = ""
 OBJECT_CATEGORIES = {
     "food": ["mayo", "tuna", "ketchup", "oats", "corn_flour", "broth"],
     "foods": ["mayo", "tuna", "ketchup", "oats", "corn_flour", "broth"],
@@ -335,6 +335,8 @@ def greet(command_param: Dict, sm: smach.StateMachine) -> None:
             "aborted": f"STATE_{STATE_COUNT + 1}",
         },
     )
+    global COMMAND_STRING
+    COMMAND_STRING = COMMAND_STRING + output_string
 
 
 def talk(command_param: Dict, sm: smach.StateMachine, greet_person: bool) -> None:
@@ -565,7 +567,7 @@ def guide(command_param: Dict, sm: smach.StateMachine) -> None:
     """
 
     find_person = False
-    output_string = "I will find "
+    output_string = " I will find "
     if "start" not in command_param:
         pass
     elif "name" in command_param:
@@ -669,6 +671,9 @@ def guide(command_param: Dict, sm: smach.StateMachine) -> None:
         },
     )
 
+    global COMMAND_STRING
+    COMMAND_STRING = COMMAND_STRING + output_string
+
 
 def deliver(command_param: Dict, sm: smach.StateMachine) -> None:
     """
@@ -719,15 +724,15 @@ def deliver(command_param: Dict, sm: smach.StateMachine) -> None:
     if "name" in command_param:
         criteria = "name"
         criteria_value = command_param["name"]
-        output_string = f"I will deliver the object to {criteria_value}"
+        output_string = f" I will deliver the object to {criteria_value}"
     elif "gesture" in command_param:
         criteria = "gesture"
         criteria_value = command_param["gesture"]
-        output_string = f"I will deliver the object to the {criteria_value}"
+        output_string = f" I will deliver the object to the {criteria_value}"
     elif "pose" in command_param:
         criteria = "pose"
         criteria_value = command_param["pose"]
-        output_string = f"I will deliver the object to the {criteria_value}"
+        output_string = f" I will deliver the object to the {criteria_value}"
     else:
         criteria = None
         waypoints = [get_current_pose()]
@@ -765,6 +770,9 @@ def deliver(command_param: Dict, sm: smach.StateMachine) -> None:
         },
     )
 
+    global COMMAND_STRING
+    COMMAND_STRING = COMMAND_STRING + output_string
+
 
 def place(command_param: Dict, sm: smach.StateMachine) -> None:
 
@@ -784,6 +792,11 @@ def place(command_param: Dict, sm: smach.StateMachine) -> None:
             "Place command received with no object or object category in command parameters"
         )
 
+    global COMMAND_STRING
+    COMMAND_STRING = (
+        COMMAND_STRING
+        + f" I will place the {object_name} at the {command_param['location']}"
+    )
     sm.add(
         f"STATE_{increment_state_count()}",
         Say(
@@ -841,6 +854,11 @@ def take(command_param: Dict, sm: smach.StateMachine) -> None:
         raise ValueError("Take command received with no location in command parameters")
 
     # TODO: this should use find, to find the object at the location
+    global COMMAND_STRING
+    COMMAND_STRING = (
+        COMMAND_STRING
+        + f" I will take the {criteria_value} from the {command_param['location']}"
+    )
     sm.add(
         f"STATE_{increment_state_count()}",
         Say(
@@ -916,9 +934,7 @@ def answer(command_param: Dict, sm: smach.StateMachine, greet_person: bool) -> N
 
     sm.add(
         f"STATE_{increment_state_count()}",
-        Say(
-            text="I am sorry, but I cannot answer questions at the moment. Matt and Jared were too tired and couldn't implement this skill."
-        ),
+        Say(text="I am sorry, but I cannot answer questions at the moment."),
         transitions={
             "succeeded": f"STATE_{STATE_COUNT + 1}",
             "aborted": f"STATE_{STATE_COUNT + 1}",
@@ -951,6 +967,8 @@ def go(command_param: Dict, sm: smach.StateMachine, person: bool) -> None:
         raise ValueError(
             "Go command received with no location or room in command parameters"
         )
+    global COMMAND_STRING
+    COMMAND_STRING = COMMAND_STRING + f" I will go to the {location_str}"
     sm.add(
         f"STATE_{increment_state_count()}",
         Say(text=f"I am going to the {location_str}"),
@@ -980,6 +998,12 @@ def bring(command_param: Dict, sm: smach.StateMachine) -> None:
 
     location_pose = get_location_pose(command_param["location"], False)
     dest_pose = get_current_pose()
+
+    global COMMAND_STRING
+    COMMAND_STRING = (
+        COMMAND_STRING
+        + f" I will bring you a {command_param['object']} from the {command_param['location']}"
+    )
 
     sm.add(
         f"STATE_{increment_state_count()}",
@@ -1276,6 +1300,12 @@ def count(command_param: Dict, sm: smach.StateMachine) -> None:
             remapping={"placeholders": "people_count"},
         )
 
+        global COMMAND_STRING
+        COMMAND_STRING = (
+            COMMAND_STRING
+            + f" I will count the {criteria_value} in the {command_param['room']}"
+        )
+
     else:
         if not "location" in command_param:
             raise ValueError(
@@ -1449,6 +1479,8 @@ def build_state_machine(parsed_command: Dict) -> smach.StateMachine:
     Returns:
         smach.StateMachine: paramaterized state machine ready to be executed.
     """
+    global COMMAND_STRING
+    COMMAND_STRING = ""
     command_verbs: List[str] = parsed_command["commands"]
     command_params: List[Dict] = parsed_command["command_params"]
     sm = smach.StateMachine(outcomes=["succeeded", "failed"])
@@ -1507,4 +1539,4 @@ def build_state_machine(parsed_command: Dict) -> smach.StateMachine:
         )
 
     rospy.loginfo(f"State machine: {sm}")
-    return sm
+    return sm, COMMAND_STRING
