@@ -30,7 +30,7 @@ class DetectGesture3D(smach.State):
     def __init__(
         self,
         yolo_model: str = "yolo11n-pose.pt",
-        yolo_confidence: float = 0.5,
+        yolo_confidence: float = 0.1,
         buffer_width: int = 50,
         target_frame: str = "base_footprint",
         debug_publisher: str = "/skills/gesture_detection_3d/debug",

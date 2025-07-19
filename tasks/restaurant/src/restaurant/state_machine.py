@@ -161,7 +161,7 @@ class Restaurant(smach.StateMachine):
                 ChooseWavingPerson(),
                 transitions={
                     "succeeded": "COMPUTE_APPROACH_POSE",
-                    "failed": "SURVEY",
+                    "failed": "SAY_RAISE",
                 },
                 remapping={
                     "hands_up_detections": "hands_up_detections",

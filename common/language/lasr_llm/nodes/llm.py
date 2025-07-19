@@ -27,12 +27,22 @@ class LLMService:
     _model: Llama
 
     def __init__(self):
-        self._model = Llama.from_pretrained(
-            repo_id="microsoft/Phi-3-mini-4k-instruct-gguf",
-            verbose=False,
-            filename="*q4.gguf",
+        # self._model = Llama.from_pretrained(
+        #     repo_id="microsoft/Phi-3-mini-4k-instruct-gguf",
+        #     verbose=False,
+        #     filename="*q4.gguf",
+        #     n_ctx=4096,  # Context length
+        #     n_gpu_layers=-1,  # Use all available GPU layers
+        # )
+
+        self._model = Llama(
+            # repo_id="microsoft/Phi-3-mini-4k-instruct-gguf",
+            # verbose=False,
+            # filename="*q4.gguf",
+            model_path="/home/jared/.cache/huggingface/hub/models--microsoft--Phi-3-mini-4k-instruct-gguf/snapshots/999f761fe19e26cf1a339a5ec5f9f201301cbb83/./Phi-3-mini-4k-instruct-q4.gguf",
             n_ctx=4096,  # Context length
             n_gpu_layers=-1,  # Use all available GPU layers
+            # local_files_only=True,  # Use local files only
         )
 
         # Warm up the model
