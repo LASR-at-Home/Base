@@ -6,7 +6,7 @@ import smach_ros
 from geometry_msgs.msg import Point, PointStamped, Pose
 from lasr_skills import Say, GoToLocation
 from lasr_vision_msgs.srv import Recognise
-from give_me_a_hand.states import WaitDoorOpen, FindOperators, CommunicateOperator
+from give_me_a_hand.states import WaitDoorOpen, FindOperators, CommunicateOperator, HandoverAndDeliver
 from shapely.geometry import Polygon
 from std_msgs.msg import Empty, Header
 
@@ -134,7 +134,7 @@ class GiveMeAHand(smach.StateMachine):
 
             smach.StateMachine.add(
                 "GRASP_AND_PLACE",
-                Say("ongoing"),
+                HandoverAndDeliver(),
                 transitions={
                     "succeeded": "GO_TO_OPERATORS",
                     "aborted": "GO_TO_OPERATORS",
