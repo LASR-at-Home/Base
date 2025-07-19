@@ -20,11 +20,12 @@ class CommunicateOperators(smach.State):
             output_keys=["location", "question"])
 
             self.trick_words_found = False
-            self.location_found = False
+            self.location_found = False                        return "succeeded"
+
             self.object_found = False
             self.direction_found = False
             self.demonstrative_pronoun_found = False
-    
+        
     def execute(self, userdata):
         trick_words = []
         location_value = []
@@ -146,6 +147,46 @@ class CommunicateOperators(smach.State):
         #         return "failed"
 
             # userdata.question = ""
+
+def main():
+    import rospy
+    import smach
+
+    rospy.init_node("communicate_operators_node")
+
+    # Create a SMACH state machine
+    sm = smach.StateMachine(outcomes=["DONE"])
+    sm.userdata.transcribed_speech = "put it on the table not the sink"
+
+    with sm:
+        smach.StateMachine.add(
+            "COMMUNICATE_OPERATORS",
+            CommunicateOperators(),
+            transitions={"succeeded": "DONE", "failed": "DONE"},
+            remapping={
+                "transcribed_speech": "transcribed_speech",
+                "location": "location",
+                "question": "question",
+            },
+        )
+
+    # Execute SMACH plan
+    outcome = sm.execute()
+
+    # Print result
+    location = sm.userdata.get("location", None)
+    question = sm.userdata.get("question", None)
+
+    rospy.loginfo(f"State machine finished with outcome: {outcome}")
+    if location:
+        rospy.loginfo(f"Determined location: {location}")
+    if question:
+        rospy.loginfo(f"Generated question: {question}")
+
+
+if __name__ == "__main__":
+    main()
+
 
 
 location_dict = {
@@ -373,5 +414,4 @@ demonstrative_pronoun_dict = {
 # #concurrent state
 
 # {there here }
-
 
