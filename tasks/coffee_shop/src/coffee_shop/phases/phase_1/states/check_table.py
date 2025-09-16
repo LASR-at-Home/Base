@@ -9,8 +9,7 @@ import cv2_img
 import numpy as np
 
 from shapely.geometry import Point as ShapelyPoint
-from shapely.geometry.polygon import Polygon
-
+from shapely.geometry.polygon import Polygon as ShapelyPolygon
 
 class CheckTable(smach.State):
     def __init__(self, context):
@@ -73,7 +72,7 @@ class CheckTable(smach.State):
         ]
         rospy.loginfo(f"All: {[(det.name, pose) for det, pose in detections]}")
         rospy.loginfo(f"Boundary: {polygon}")
-        shapely_polygon = Polygon(polygon)
+        shapely_polygon = ShapelyPolygon(polygon)
         satisfied_points = [
             shapely_polygon.contains(ShapelyPoint(pose[0], pose[1]))
             for _, pose in detections
@@ -109,7 +108,7 @@ class CheckTable(smach.State):
     def execute(self, userdata):
         self.context.stop_head_manager("head_manager")
 
-        self.context.voice_controller.async_tts("I am going to check the table")
+        self.context.say("I am going to check the table")
         self.object_debug_images = []
         self.people_debug_images = []
 
@@ -166,7 +165,7 @@ class CheckTable(smach.State):
         people_text = "person" if people_count == 1 else "people"
         status_text = f"The status of this table is {status}."
         count_text = f"There {'is' if people_count == 1 else 'are'} {people_count} {people_text}."
-        self.context.voice_controller.sync_tts(f"{status_text} {count_text}")
+        self.context.say(f"{status_text} {count_text}")
 
         self.context.start_head_manager("head_manager", "")
 

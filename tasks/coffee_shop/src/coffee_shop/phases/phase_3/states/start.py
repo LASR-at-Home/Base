@@ -9,5 +9,5 @@ class Start(smach.State):
 
     def execute(self, userdata):
         rospy.loginfo(f"Context: {str(self.context)}")
-        self.context.voice_controller.async_tts("I am going to wait for a new customer")
+        self.context.say("I am going to wait for a new customer")
         return "done"

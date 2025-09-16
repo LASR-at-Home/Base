@@ -13,7 +13,7 @@ class DeliverOrder(smach.State):
         self.context = context
 
     def execute(self, userdata):
-        self.context.voice_controller.sync_tts("I am going to deliver the order")
+        self.context.say("I am going to deliver the order")
         location = rospy.get_param(f"/tables/{self.context.current_table}/location")
         position = location["position"]
         orientation = location["orientation"]
@@ -31,7 +31,7 @@ class DeliverOrder(smach.State):
 
         pm_goal = PlayMotionGoal(motion_name="load_unload", skip_planning=True)
         self.context.play_motion_client.send_goal_and_wait(pm_goal)
-        self.context.voice_controller.async_tts(
+        self.context.say(
             "I'll give you some time to unload the order..."
         )
         rospy.sleep(rospy.Duration(10.0))

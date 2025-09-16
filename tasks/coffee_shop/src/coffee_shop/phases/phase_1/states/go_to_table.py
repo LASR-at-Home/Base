@@ -30,7 +30,7 @@ class GoToTable(smach.State):
             ),
         )
         label, next_table = closest_table
-        self.context.voice_controller.async_tts(f"I am going to {label}")
+        self.context.say(f"I am going to {label}")
         position, orientation = (
             next_table["location"]["position"],
             next_table["location"]["orientation"],

@@ -85,7 +85,7 @@ class GuidePerson(smach.State):
                 )
                 utter_clean_phrase = True
             else:
-                self.context.voice_controller.sync_tts(
+                self.context.say(
                     "Sorry, we don't have any free tables at the moment. Please come back later."
                 )
                 return "done"
@@ -118,11 +118,11 @@ class GuidePerson(smach.State):
         self.context.play_motion_client.send_goal_and_wait(pm_goal)
 
         if utter_clean_phrase:
-            self.context.voice_controller.sync_tts(
+            self.context.say(
                 "Please be seated, I will wait for you to sit down! Someone will come to clean this table for you"
             )
         else:
-            self.context.voice_controller.sync_tts(
+            self.context.say(
                 "Please be seated, I will wait for you to sit down!"
             )
 

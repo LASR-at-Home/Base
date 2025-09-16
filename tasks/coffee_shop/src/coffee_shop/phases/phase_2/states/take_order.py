@@ -20,13 +20,13 @@ class TakeOrder(smach.State):
         self.tablet_pub = rospy.Publisher("/tablet/screen", String, queue_size=10)
 
     def listen(self):
-        resp = self.context.speech(True)
-        if not resp.success:
-            self.context.voice_controller.sync_tts(
+        resp = self.context.listen()
+        if resp is None:
+            self.context.say(
                 self.context.get_random_retry_utterance()
             )
             return self.listen()
-        resp = json.loads(resp.json_response)
+        resp = json.loads(resp)
         rospy.loginfo(resp)
         return resp
 
@@ -34,14 +34,14 @@ class TakeOrder(smach.State):
         resp = self.listen()
         if resp["intent"]["name"] != "make_order":
             rospy.logwarn("The intent was wrong")
-            self.context.voice_controller.sync_tts(
+            self.context.say(
                 self.context.get_random_retry_utterance()
             )
             return self.get_order()
         items = resp["entities"].get("item", [])
         if not items:
             rospy.logwarn("There were no items")
-            self.context.voice_controller.sync_tts(
+            self.context.say(
                 self.context.get_random_retry_utterance()
             )
             return self.get_order()
@@ -71,7 +71,7 @@ class TakeOrder(smach.State):
                     continue
             items.extend([item.lower()] * quantity)
         if not items:
-            self.context.voice_controller.sync_tts(
+            self.context.say(
                 self.context.get_random_retry_utterance()
             )
             return self.get_order()
@@ -80,7 +80,7 @@ class TakeOrder(smach.State):
     def affirm(self):
         resp = self.listen()
         if resp["intent"]["name"] not in ["affirm", "deny"]:
-            self.context.voice_controller.sync_tts(
+            self.context.say(
                 self.context.get_random_retry_utterance()
             )
             return self.affirm()
@@ -90,7 +90,7 @@ class TakeOrder(smach.State):
         self.context.stop_head_manager("head_manager")
 
         if self.context.tablet:
-            self.context.voice_controller.sync_tts(
+            self.context.say(
                 "Please use the tablet to make your order."
             )
             if self.context.tablet_on_head:
@@ -136,32 +136,32 @@ class TakeOrder(smach.State):
 
             if len(self.context.tables[self.context.current_table]["people"]) == 1:
                 self.context.point_head_client.send_goal_and_wait(ph_goal)
-                self.context.voice_controller.sync_tts(
+                self.context.say(
                     "Hello, I'm TIAGo, I'll be serving you today."
                 )
-                self.context.voice_controller.sync_tts(
+                self.context.say(
                     "Please state your order after the beep - this indicates that I am listening."
                 )
             elif len(self.context.tables[self.context.current_table]["people"]) == 2:
-                self.context.voice_controller.sync_tts(
+                self.context.say(
                     "Greetings to both of you, I'm TIAGo, I'll be serving you today."
                 )
                 self.context.point_head_client.send_goal_and_wait(ph_goal)
-                self.context.voice_controller.sync_tts(
+                self.context.say(
                     "I choose you to be the one in charge."
                 )
-                self.context.voice_controller.sync_tts(
+                self.context.say(
                     "Please state the order for the two of you after the beep - this indicates that I am listening."
                 )
             else:
-                self.context.voice_controller.sync_tts(
+                self.context.say(
                     "Salutations to all of you, I'm TIAGo, I'll be serving you today."
                 )
                 self.context.point_head_client.send_goal_and_wait(ph_goal)
-                self.context.voice_controller.sync_tts(
+                self.context.say(
                     "I choose you to be the one in charge."
                 )
-                self.context.voice_controller.sync_tts(
+                self.context.say(
                     "Please state the order for the group after the beep - this indicates that I am listening."
                 )
 
@@ -177,11 +177,11 @@ class TakeOrder(smach.State):
                     ]
                 ).replace(", ", ", and ", len(order) - 2)
 
-                self.context.voice_controller.sync_tts(
+                self.context.say(
                     f"You asked for {items_string} so far, can I get you anything else? Please answer yes or no after the beep."
                 )
                 if self.affirm():
-                    self.context.voice_controller.sync_tts(
+                    self.context.say(
                         "Okay, please state the additional items after the beep."
                     )
                 else:
@@ -195,7 +195,7 @@ class TakeOrder(smach.State):
             ]
         ).replace(", ", ", and ", len(order) - 2)
 
-        self.context.voice_controller.sync_tts(f"Your order is {order_string}")
+        self.context.say(f"Your order is {order_string}")
         self.context.tables[self.context.current_table]["order"] = order
         pm_goal = PlayMotionGoal(motion_name="back_to_default", skip_planning=True)
         self.context.play_motion_client.send_goal_and_wait(pm_goal)

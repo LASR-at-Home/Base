@@ -1,6 +1,9 @@
 import rospy
 import rosparam
-from lasr_voice import Voice
+
+from pal_interaction_msgs.msg import TtsAction, TtsGoal, TtsText
+from lasr_speech_recognition_msgs.msg import TranscribeSpeechAction, TranscribeSpeechGoal
+
 from play_motion_msgs.msg import PlayMotionAction
 from control_msgs.msg import PointHeadAction
 from lasr_vision_msgs.srv import YoloDetection
@@ -26,8 +29,11 @@ class Context:
         )
         self.move_base_client.wait_for_server()
         rospy.loginfo("Got MoveBase")
-        self.voice_controller = Voice()
-        rospy.loginfo("Got voice controller")
+
+        self.tts_client = actionlib.SimpleActionClient("tts", TtsAction)
+        rospy.loginfo("Waiting for TTS action server…")
+        self.tts_client.wait_for_server()
+        rospy.loginfo("TTS action server connected.")
         self.play_motion_client = actionlib.SimpleActionClient(
             "/play_motion", PlayMotionAction
         )
@@ -46,10 +52,11 @@ class Context:
         rospy.loginfo("Got TF")
 
         if not tablet:
-            rospy.wait_for_service("/lasr_speech/transcribe_and_parse")
-            self.speech = rospy.ServiceProxy(
-                "/lasr_speech/transcribe_and_parse", Speech
-            )
+            # rospy.wait_for_service("/lasr_speech/transcribe_and_parse")
+            # self.speech = rospy.ServiceProxy(
+            #     "/lasr_speech/transcribe_and_parse", Speech
+            # )
+            self.speech_client = actionlib.SimpleActionClient(TranscribeSpeechAction)
         else:
             self.speech = None
         rospy.loginfo("Speech")
@@ -205,3 +212,24 @@ class Context:
         )
 
         return [do_transform_point(point, trans) for point in points]
+
+    def say(self, text: str):
+        # From help_me_carry task
+        if hasattr(self, "tts_client"):
+            goal = TtsGoal(rawtext=TtsText(text=text, lang_id="en_GB"))
+            self.tts_client.send_goal(goal)
+            self.tts_client.wait_for_result()
+        else:
+            rospy.loginfo(f"[TTS fallback] {text}")
+
+    def listen(self):
+        if self.speech is not None:
+            goal = TranscribeSpeechGoal()
+            self.speech_client.send_goal(goal)
+            self.speech_client.wait_for_result()
+            resp = self.speech_client.get_result()
+            rospy.loginfo(f"[Speech] Heard: {resp.sequence}")
+            return resp.sequence # TranscribeSpeechResult is a string
+        else:
+            rospy.loginfo("[Speech fallback] Listening…")
+            return None

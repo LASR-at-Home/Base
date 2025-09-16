@@ -10,7 +10,7 @@ class GoToCounter(smach.State):
         self.context = context
 
     def execute(self, userdata):
-        self.context.voice_controller.async_tts(
+        self.context.say(
             "I am going to the counter to retrieve the order"
         )
         position = rospy.get_param("counter/location/position")
