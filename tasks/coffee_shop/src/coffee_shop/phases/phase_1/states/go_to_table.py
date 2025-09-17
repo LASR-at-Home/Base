@@ -7,7 +7,7 @@ import numpy as np
 
 class GoToTable(smach.State):
     def __init__(self, context):
-        smach.State.__init__(self, outcomes=["done"])
+        smach.State.__init__(self, outcomes=["done"])  
         self.context = context
 
     def execute(self, userdata):
@@ -15,12 +15,19 @@ class GoToTable(smach.State):
             "/amcl_pose", PoseWithCovarianceStamped
         ).pose.pose
         robot_x, robot_y = robot_pose.position.x, robot_pose.position.y
+  
+
         unvisited = [
-            (label, rospy.get_param(f"/tables/{label}"))
-            for label, table in self.context.tables.items()
-            if table["status"] == "unvisited"
-        ]
-        closest_table = min(
+        (label, rospy.get_param(f"/coffee_shop/tables/{label}"))
+        for label, tbl in self.context.tables.items()
+        if tbl["status"] == "unvisited"
+    ]
+
+        if not unvisited:   
+            self.context.say("No unvisited tables.")
+            return "skip"
+
+        closest_table = min(   
             unvisited,
             key=lambda table: np.linalg.norm(
                 [
@@ -29,8 +36,20 @@ class GoToTable(smach.State):
                 ]
             ),
         )
-        label, next_table = closest_table
+
+        def goal_xy(tbl):
+            pos = tbl.get("approach_pose", {}).get("position", tbl["location"]["position"])
+            return pos["x"], pos["y"]
+
+        #label, next_table = closest_table
+
+        label, next_table = min(
+            unvisited,
+            key=lambda t: np.hypot(goal_xy(t[1])[0] - robot_x, goal_xy(t[1])[1] - robot_y),
+        )
+
         self.context.say(f"I am going to {label}")
+        '''
         position, orientation = (
             next_table["location"]["position"],
             next_table["location"]["orientation"],
@@ -40,6 +59,17 @@ class GoToTable(smach.State):
         move_base_goal.target_pose.pose = Pose(
             position=Point(**position), orientation=Quaternion(**orientation)
         )
+        '''
+        # approach_pose; fallback to saved location
+        approach_pos = next_table.get("approach_pose", {}).get("position") or next_table["location"]["position"]
+        approach_ori = next_table.get("approach_pose", {}).get("orientation") or next_table["location"]["orientation"]
+
+        move_base_goal = MoveBaseGoal()
+        move_base_goal.target_pose.header.frame_id = "map"
+        move_base_goal.target_pose.pose = Pose(
+            position=Point(**approach_pos), orientation=Quaternion(**approach_ori)
+        )
+
         self.context.move_base_client.send_goal_and_wait(move_base_goal)
         self.context.tables[label]["status"] = "currently visiting"
         self.context.current_table = label

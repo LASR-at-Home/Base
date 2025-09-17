@@ -113,12 +113,26 @@ class CheckTable(smach.State):
         self.people_debug_images = []
 
         rospy.loginfo(self.context.current_table)
+        
+        '''
         self.object_polygon = rospy.get_param(
             f"/tables/{self.context.current_table}/objects_cuboid"
         )
         self.person_polygon = rospy.get_param(
             f"/tables/{self.context.current_table}/persons_cuboid"
         )
+        '''
+
+        self.object_polygon = rospy.get_param(
+        f"/coffee_shop/tables/{self.context.current_table}/table_area",
+        rospy.get_param(f"/coffee_shop/tables/{self.context.current_table}/objects_cuboid")
+        )
+        self.person_polygon = rospy.get_param(
+            f"/coffee_shop/tables/{self.context.current_table}/seating_area",
+            rospy.get_param(f"/coffee_shop/tables/{self.context.current_table}/persons_cuboid")
+        )
+
+
         self.detections_objects = []
         self.detections_people = []
 

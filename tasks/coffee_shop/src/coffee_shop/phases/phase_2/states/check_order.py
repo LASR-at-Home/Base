@@ -42,8 +42,15 @@ class CheckOrder(smach.State):
 
         self.n_checks += 1
 
-        position = rospy.get_param("counter/location/position")
-        orientation = rospy.get_param("counter/location/orientation")
+        #position = rospy.get_param("counter/location/position")
+        #orientation = rospy.get_param("counter/location/orientation")
+
+        position = rospy.get_param("counter/approach_pose/position",
+                           rospy.get_param("counter/location/position"))
+        orientation = rospy.get_param("counter/approach_pose/orientation",
+                                    rospy.get_param("counter/location/orientation"))
+
+
         move_base_goal = MoveBaseGoal()
         move_base_goal.target_pose.header.frame_id = "map"
         move_base_goal.target_pose.pose = Pose(
