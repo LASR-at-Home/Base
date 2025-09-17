@@ -6,18 +6,18 @@ import difflib
 from play_motion_msgs.msg import PlayMotionGoal
 from control_msgs.msg import PointHeadGoal
 from geometry_msgs.msg import Point, Pose, Quaternion, PoseWithCovarianceStamped
-from coffee_shop_ui.msg import Order
+# from coffee_shop_ui.msg import Order
 from std_msgs.msg import String
 from move_base_msgs.msg import MoveBaseGoal
-import numpy as np
 from scipy.spatial.transform import Rotation as R
 
+# TODO cannot order from tablet now, add if needed
 
 class TakeOrder(smach.State):
     def __init__(self, context):
         smach.State.__init__(self, outcomes=["done"])
         self.context = context
-        self.tablet_pub = rospy.Publisher("/tablet/screen", String, queue_size=10)
+        # self.tablet_pub = rospy.Publisher("/tablet/screen", String, queue_size=10)
 
     def listen(self):
         resp = self.context.listen()
@@ -122,8 +122,13 @@ class TakeOrder(smach.State):
                 )
                 self.context.play_motion_client.send_goal_and_wait(pm_goal)
 
-            self.tablet_pub.publish(String("order"))
-            order = rospy.wait_for_message("/tablet/order", Order).products
+            # self.tablet_pub.publish(String("order"))
+            self.context.say("order")
+            resp = self.context.listen()
+            if resp is not None:
+                rospy.loginfo(resp)
+                self.context.say(f"You have ordered {resp}")
+            # order = rospy.wait_for_message("/tablet/order", Order).products
         else:
             ph_goal = PointHeadGoal()
             ph_goal.max_velocity = 1.0
