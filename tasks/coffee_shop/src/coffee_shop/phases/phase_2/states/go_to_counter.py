@@ -13,8 +13,15 @@ class GoToCounter(smach.State):
         self.context.say(
             "I am going to the counter to retrieve the order"
         )
-        position = rospy.get_param("counter/location/position")
-        orientation = rospy.get_param("counter/location/orientation")
+        #position = rospy.get_param("counter/location/position")
+        #orientation = rospy.get_param("counter/location/orientation")
+        
+        position = rospy.get_param("/coffee_shop/counter/approach_pose/position",
+                           rospy.get_param("/coffee_shop/counter/location/position"))
+        orientation = rospy.get_param("/coffee_shop/counter/approach_pose/orientation",
+                              rospy.get_param("/coffee_shop/counter/location/orientation"))
+
+        
         move_base_goal = MoveBaseGoal()
         move_base_goal.target_pose.header.frame_id = "map"
         move_base_goal.target_pose.pose = Pose(

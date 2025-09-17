@@ -12,7 +12,12 @@ class Phase1(smach.StateMachine):
         def __init__(self):
             smach.StateMachine.__init__(self, outcomes=["done"])
 
-            idle_location = rospy.get_param("wait/location")
+            #idle_location = rospy.get_param("wait/location")
+             
+            idle_location = rospy.get_param("/coffee_shop/wait/location",
+                                rospy.get_param("/coffee_shop/wait/pose"))
+
+            
             idle_position, idle_orientation = (
                 idle_location["position"],
                 idle_location["orientation"],
