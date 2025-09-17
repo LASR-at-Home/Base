@@ -38,9 +38,7 @@ class LookForPerson(smach.State):
         pcl_msg = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
         cv_im = cv2_pcl.pcl_to_cv2(pcl_msg)
         img_msg = cv2_img.cv2_img_to_msg(cv_im)
-        detections = self.context.yolo(
-            img_msg, self.context.YOLO_person_model, 0.3, 0.3
-        )
+        detections = self.context.yolo(img_msg, self.context.YOLO_person_model, 0.3, [])
         detections = [
             (det, self.estimate_pose(pcl_msg, det))
             for det in detections.detected_objects

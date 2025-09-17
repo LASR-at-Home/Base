@@ -64,7 +64,7 @@ class CheckTable(smach.State):
     def perform_detection(self, pcl_msg, polygon, filter, model):
         cv_im = cv2_pcl.pcl_to_cv2(pcl_msg)
         img_msg = cv2_img.cv2_img_to_msg(cv_im)
-        detections = self.context.yolo(img_msg, model, 0.3, 0.3)
+        detections = self.context.yolo(img_msg, model, 0.3, [])
         detections = [
             (det, self.estimate_pose(pcl_msg, det))
             for det in detections.detected_objects

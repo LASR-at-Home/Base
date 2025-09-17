@@ -100,9 +100,7 @@ class LookForPersonLaser(smach.State):
         img_msg = rospy.wait_for_message("/xtion/rgb/image_raw", Image)
 
         points, pixels = self.get_points_and_pixels_from_laser(lsr_scan)
-        detections = self.context.yolo(
-            img_msg, self.context.YOLO_person_model, 0.3, 0.3
-        )
+        detections = self.context.yolo(img_msg, self.context.YOLO_person_model, 0.3, [])
         waiting_area = Polygon(self.corners)
         pixels_2d = np.array(pixels).reshape(-1, 2)
 
