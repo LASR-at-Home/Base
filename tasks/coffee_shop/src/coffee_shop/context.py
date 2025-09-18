@@ -21,7 +21,8 @@ from tf2_geometry_msgs.tf2_geometry_msgs import do_transform_pose, do_transform_
 
 class Context:
     def __init__(self, config_path=None, tablet=False):
-        self.tablet = tablet
+        self.tablet = False if isinstance(tablet, str) and tablet.lower() in ["false", "0", "no"] else tablet
+        rospy.loginfo(f"DEBUG: Tablet mode: {self.tablet}, type: {type(self.tablet)}")
         self.tablet_on_head = False
         rospy.loginfo(f"Tablet: {self.tablet}, Tablet on head: {self.tablet_on_head}")
         self.move_base_client = actionlib.SimpleActionClient(
@@ -51,15 +52,17 @@ class Context:
         self.tf_listener = tf2.TransformListener(self.tf_buffer)
         rospy.loginfo("Got TF")
 
-        if not tablet:
-            # rospy.wait_for_service("/lasr_speech/transcribe_and_parse")
-            # self.speech = rospy.ServiceProxy(
-            #     "/lasr_speech/transcribe_and_parse", Speech
-            # )
-            self.speech_client = actionlib.SimpleActionClient(TranscribeSpeechAction)
+        if not self.tablet:
+            rospy.loginfo("No tablet, setting up speech recognition.")
+            self.speech_client = actionlib.SimpleActionClient(
+                "/transcribe_speech", TranscribeSpeechAction)
+            rospy.loginfo("Waiting for Speech action server…")
+            self.speech_client.wait_for_server()
+            rospy.loginfo("Speech action server connected.")
+            self.speech = self.speech_client
         else:
+            rospy.loginfo("Tablet mode, no speech recognition.")
             self.speech = None
-        rospy.loginfo("Speech")
 
         if "/pal_startup_control/start" in rosservice.get_service_list():
             # Assume that if the topics are available, then the services are running.
