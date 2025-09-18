@@ -45,7 +45,9 @@ class LookForPersonLaser(smach.State):
         # First get the laser scan points, and then convert to camera frame
         pcl_msg = lg.LaserProjection().projectLaser(msg)
         pcl_points = [
-            p for p in pc2.read_points(pcl_msg, field_names=("x, y, z"), skip_nans=True)
+            p for p in #pc2.read_points(pcl_msg, field_names=("x, y, z"), skip_nans=True)
+            pc2.read_points(pcl_msg, field_names=("x", "y", "z"), skip_nans=True)
+
         ]
 
         padded_points = []
@@ -59,8 +61,10 @@ class LookForPersonLaser(smach.State):
                     )
                 )
 
+       #tf_points = self.context.tf_point_list(padded_points, "base_laser_link", "xtion_rgb_optical_frame")
+
         tf_points = self.context.tf_point_list(
-            padded_points, "base_laser_link", "xtion_rgb_optical_frame"
+            padded_points, msg.header.frame_id, "xtion_rgb_optical_frame"
         )
 
         padded_converted_points = []
@@ -104,19 +108,27 @@ class LookForPersonLaser(smach.State):
 
         for detection in detections.detected_objects:
             if detection.name == "person":
-                shapely_polygon = Polygon(np.array(detection.xyseg).reshape(-1, 2))
+                '''shapely_polygon = Polygon(np.array(detection.xyseg).reshape(-1, 2))
                 satisfied_points = [
                     shapely_polygon.contains(ShapelyPoint(x, y)) for x, y in pixels_2d
                 ]
                 idx = [idx for idx, el in enumerate(satisfied_points) if el]
-                filtered_points = self.convert_points_to_map_frame(
-                    [points[i] for i in idx]
-                )
+                )'''
+ 
+                poly_pix = np.array(detection.xyseg).reshape(-1, 2)
+                shapely_polygon = Polygon(poly_pix).buffer(0.10)  
+ 
+                satisfied_points = [
+                    shapely_polygon.covers(ShapelyPoint(x, y))  # was .contains
+                    for x, y in pixels_2d
+                ]
                 if self.corners is not None:
                     waiting_area_satisfied_points = [
                         waiting_area.contains(ShapelyPoint(*point))
                         for point in filtered_points
                     ]
+                    filtered_points = self.convert_points_to_map_frame([points[i] for i in idx])
+
                     idx = [
                         idx
                         for idx, el in enumerate(waiting_area_satisfied_points)
