@@ -105,7 +105,7 @@ if __name__ == "__main__":
     camera.fromCameraInfo(rospy.wait_for_message("/xtion/rgb/camera_info", CameraInfo))
 
     try:
-        corners = rospy.get_param("/wait/cuboid")
+        corners = rospy.get_param("/coffee_shop/wait/cuboid")
     except KeyError:
         rospy.logwarn("No cuboid found in parameter server.")
         corners = None

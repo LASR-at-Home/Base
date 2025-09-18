@@ -11,7 +11,7 @@ class GoToWaitLocation(smach.State):
         self.done = False
 
     def execute(self, userdata):
-        wait_location = rospy.get_param("/wait")
+        wait_location = rospy.get_param("/coffee_shop/wait")
         position, orientation = (
             wait_location["location"]["position"],
             wait_location["location"]["orientation"],

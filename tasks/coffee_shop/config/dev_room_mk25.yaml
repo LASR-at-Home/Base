@@ -23,16 +23,16 @@ tables:
   table0:
     last_updated: '2024-05-16 12:03:13.636677'
     location:
-    position:
-      x: 2.3944055409380534
-      y: -0.06762505794377859
-      z: 0.0
-    orientation:
-      x: 0.0
-      y: 0.0
-      z: -0.776456002664628
-      w: 0.6301714654965481
-      semantic: end
+      position:
+        x: 2.3944055409380534
+        y: -0.06762505794377859
+        z: 0.0
+      orientation:
+        x: 0.0
+        y: 0.0
+        z: -0.776456002664628
+        w: 0.6301714654965481
+        semantic: end
     num_persons: 0
     objects_cuboid:
     - - -0.18203496932983398
