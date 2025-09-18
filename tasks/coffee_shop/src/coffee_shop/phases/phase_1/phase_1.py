@@ -12,7 +12,7 @@ class Phase1(smach.StateMachine):
         def __init__(self):
             smach.StateMachine.__init__(self, outcomes=["done"])
 
-            idle_location = rospy.get_param("/coffee_shop/wait/location")
+            idle_location = rospy.get_param("/coffee_shop/counter/location")
             
             idle_position, idle_orientation = (
                 idle_location["position"],
@@ -53,6 +53,22 @@ class Phase1(smach.StateMachine):
                     transitions={"succeeded": "done"},
                 )
 
+    class Start(smach.State):
+        def __init__(self, context):
+            smach.State.__init__(self, outcomes=["done"])
+            self.context = context
+
+        def execute(self, userdata):
+            # TODO maybe improve this logic
+            self.context.say("Please say 'start' when you need my help.")
+            for _ in range(10):
+                rospy.sleep(1.0)
+                utterance = self.context.listen()
+                if utterance and "start" in utterance.lower():
+                    self.context.say("I will start my work now.")
+                    return "done"
+            return "not_done"
+
     def __init__(self, context):
         smach.StateMachine.__init__(self, outcomes=["greet_new_customer", "serve"])
 
@@ -65,7 +81,10 @@ class Phase1(smach.StateMachine):
                 return "done"
 
             smach.StateMachine.add(
-                "GO_IDLE", self.GoIdle(), transitions={"done": "RESET_TABLES"}
+                "GO_IDLE", self.GoIdle(), transitions={"done": "START"}
+            )
+            smach.StateMachine.add(
+                "START", self.Start(context), transitions={"done": "RESET_TABLES", "not_done": "START"}
             )
 
             smach.StateMachine.add(

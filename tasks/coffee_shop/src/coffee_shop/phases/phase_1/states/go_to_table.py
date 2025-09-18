@@ -41,8 +41,6 @@ class GoToTable(smach.State):
             pos = tbl.get("approach_pose", {}).get("position", tbl["location"]["position"])
             return pos["x"], pos["y"]
 
-        #label, next_table = closest_table
-
         label, next_table = min(
             unvisited,
             key=lambda t: np.hypot(goal_xy(t[1])[0] - robot_x, goal_xy(t[1])[1] - robot_y),

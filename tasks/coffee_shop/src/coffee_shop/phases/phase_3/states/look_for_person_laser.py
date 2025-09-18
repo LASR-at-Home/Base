@@ -23,7 +23,6 @@ def timeit_rospy(method):
 
     return timed
 
-
 class LookForPersonLaser(smach.State):
     def __init__(self, context):
         smach.State.__init__(self, outcomes=["found", "not found"])
@@ -32,8 +31,6 @@ class LookForPersonLaser(smach.State):
         self.camera.fromCameraInfo(
             rospy.wait_for_message("/xtion/rgb/camera_info", CameraInfo)
         )
-        #self.corners = rospy.get_param("/wait/cuboid")
-
         self.corners = rospy.get_param("/coffee_shop/wait/cuboid")
     @timeit_rospy
     def get_points_and_pixels_from_laser(self, msg):

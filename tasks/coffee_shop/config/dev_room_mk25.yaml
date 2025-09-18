@@ -137,14 +137,14 @@ wait:
   last_updated: '2024-05-16 12:03:13.636677'
   location:
     position:
-      x: 3.1242881017125086
-      y: 2.519295334887309
+      x: 0.9033915917210108
+      y: 1.9126536797667475
       z: 0.0
     orientation:
       x: 0.0
       y: 0.0
-      z: -0.6935006384930328
-      w: 0.7204560114328673
+      z: 0.45115143742533476
+      w: 0.8924474105005035
 objects: {"cup" : "coffee", "banana": "banana", "bottle": "cocacola"}
 yolo_person_model: "yolo11n-seg.pt"
 yolo_objects_model: "yolo11n-seg.pt"
