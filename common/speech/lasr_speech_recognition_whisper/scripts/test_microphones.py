@@ -11,7 +11,6 @@ def parse_args() -> dict:
     Returns:
         dict: name: value pairs of command line arguments
     """
-
     parser = argparse.ArgumentParser(description="Test microphones")
     parser.add_argument("-m", "--microphone", type=int, help="Microphone index")
     parser.add_argument(

@@ -27,18 +27,11 @@ class GoToTable(smach.State):
             self.context.say("No unvisited tables.")
             return "skip"
 
-        closest_table = min(   
-            unvisited,
-            key=lambda table: np.linalg.norm(
-                [
-                    table[1]["location"]["position"]["x"] - robot_x,
-                    table[1]["location"]["position"]["y"] - robot_y,
-                ]
-            ),
-        )
-
         def goal_xy(tbl):
+            self.context.say("Go to table getting goal xy")
             pos = tbl.get("approach_pose", {}).get("position", tbl["location"]["position"])
+            rospy.loginfo(f"DEBUG: Goal position is {pos}")
+            self.context.say("Got the table position")
             return pos["x"], pos["y"]
 
         label, next_table = min(

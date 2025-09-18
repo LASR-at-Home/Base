@@ -1,3 +1,5 @@
+import os
+
 import smach
 import rospy
 
@@ -222,11 +224,18 @@ class CheckTable(smach.State):
             if table["status"] == "needs serving"
         ]
 
-        if len(needs_serving_tables) > 0:
+        self.save_results(f"{os.getcwd()}/table_states.txt")
+        # TODO communicate automatically to MK digital hub??
+
+        if len(unvisited_tables) > 0:
+            return "not_finished"
+        elif len(needs_serving_tables) > 0:
             return "has_needs_serving_tables"
         elif len(free_tables) > 0:
             return "has_free_tables"
-        elif len(unvisited_tables) > 0:
-            return "not_finished"
         else:
             return "idle"
+
+    def save_results(self, output_file):
+        with open(output_file, "w") as f:
+            f.write(str(self.context.tables))

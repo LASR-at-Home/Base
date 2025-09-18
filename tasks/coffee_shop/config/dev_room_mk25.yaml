@@ -32,7 +32,6 @@ tables:
         y: 0.0
         z: 0.07504907992240703
         w: 0.9971798411534402
-        semantic: end
     num_persons: 0
     objects_cuboid:
     - - -0.18203496932983398
