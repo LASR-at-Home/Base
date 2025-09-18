@@ -55,7 +55,7 @@ class Phase1(smach.StateMachine):
 
     class Start(smach.State):
         def __init__(self, context):
-            smach.State.__init__(self, outcomes=["done"])
+            smach.State.__init__(self, outcomes=["done", "not_done"])
             self.context = context
 
         def execute(self, userdata):
