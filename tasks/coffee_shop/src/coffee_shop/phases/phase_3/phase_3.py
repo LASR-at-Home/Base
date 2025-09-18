@@ -30,7 +30,7 @@ class Phase3(smach.StateMachine):
                 transitions={"done": "done", "not done": "LOOK_FOR_PERSON_LASER"},
             )
 
-            '''
+            
             smach.StateMachine.add(
                 "LOOK_FOR_PERSON_LASER",
                 LookForPersonLaser(context),
@@ -53,7 +53,7 @@ class Phase3(smach.StateMachine):
             )
 
             '''
-
+            '''
             @smach.cb_interface(input_keys=["person_detections"], outcomes=["done"])
             def set_person_target_cb(ud):
                 if not ud.person_detections:

@@ -29,6 +29,29 @@ class CheckTable(smach.State):
 
     def estimate_pose(self, pcl_msg, detection):
         centroid_xyz = cv2_pcl.seg_to_centroid(pcl_msg, np.array(detection.xyseg))
+       
+        '''
+        # convert depth cloud to cv2 image to know real size
+        cv_im = cv2_pcl.pcl_to_cv2(pcl_msg)         # H x W
+        H, W = cv_im.shape[:2]
+
+        # figure out detection image size
+        det_w = getattr(detection, "img_width", W)
+        det_h = getattr(detection, "img_height", H)
+        sx, sy = float(W) / det_w, float(H) / det_h
+
+        # rescale polygon
+        poly_pix = np.array(detection.xyseg, dtype=float).reshape(-1, 2)
+        if poly_pix.max() <= 1.5:           
+            poly_pix[:, 0] *= W
+            poly_pix[:, 1] *= H
+        else:
+            poly_pix[:, 0] *= sx
+            poly_pix[:, 1] *= sy
+
+        # centroid from rescaled polygon
+        centroid_xyz = cv2_pcl.seg_to_centroid(pcl_msg, poly_pix)
+        '''
         centroid = PointStamped()
         centroid.point = Point(*centroid_xyz)
         centroid.header = pcl_msg.header
@@ -72,7 +95,7 @@ class CheckTable(smach.State):
         ]
         rospy.loginfo(f"All: {[(det.name, pose) for det, pose in detections]}")
         rospy.loginfo(f"Boundary: {polygon}")
-        shapely_polygon = ShapelyPolygon(polygon)
+        shapely_polygon = ShapelyPolygon(polygon)#.buffer(0.10)
         satisfied_points = [
             shapely_polygon.contains(ShapelyPoint(pose[0], pose[1]))
             for _, pose in detections

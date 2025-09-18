@@ -63,7 +63,8 @@ class Phase1(smach.StateMachine):
             self.context.say("Please say 'start' when you need my help.")
             for _ in range(10):
                 rospy.sleep(1.0)
-                utterance = self.context.listen()
+                #utterance = self.context.listen()
+                utterance = "start"
                 if utterance and "start" in utterance.lower():
                     self.context.say("I will start my work now.")
                     return "done"
