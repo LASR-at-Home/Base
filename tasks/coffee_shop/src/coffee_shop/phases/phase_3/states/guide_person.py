@@ -63,13 +63,13 @@ class GuidePerson(smach.State):
         robot_x, robot_y = robot_pose.position.x, robot_pose.position.y
         utter_clean_phrase = False
         empty_tables = [
-            (label, rospy.get_param(f"/tables/{label}"))
+            (label, rospy.get_param(f"coffee_shop/tables/{label}"))
             for label, table in self.context.tables.items()
             if table["status"] == "ready"
         ]
         if not empty_tables:
             needs_cleaning_tables = [
-                (label, rospy.get_param(f"/tables/{label}"))
+                (label, rospy.get_param(f"coffee_shop/tables/{label}"))
                 for label, table in self.context.tables.items()
                 if table["status"] == "needs cleaning"
             ]
@@ -127,7 +127,7 @@ class GuidePerson(smach.State):
             )
 
         self.person_polygon = rospy.get_param(
-            f"/tables/{self.context.current_table}/persons_cuboid"
+            f"coffee_shop/tables/{self.context.current_table}/persons_cuboid"
         )
 
         motions = ["look_left", "look_right"]

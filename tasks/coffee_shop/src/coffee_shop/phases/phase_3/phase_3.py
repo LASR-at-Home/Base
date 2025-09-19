@@ -29,7 +29,7 @@ class Phase3(smach.StateMachine):
                 GoToWaitLocation(context),
                 transitions={"done": "done", "not done": "LOOK_FOR_PERSON_LASER"},
             )
-
+            '''
             
             smach.StateMachine.add(
                 "LOOK_FOR_PERSON_LASER",
@@ -52,8 +52,7 @@ class Phase3(smach.StateMachine):
             remapping={"detections_3d": "person_detections"},
             )
 
-            '''
-            '''
+           
             @smach.cb_interface(input_keys=["person_detections"], outcomes=["done"])
             def set_person_target_cb(ud):
                 if not ud.person_detections:
@@ -84,7 +83,7 @@ class Phase3(smach.StateMachine):
                 remapping={"person_detections": "person_detections"},
             )
 
-            '''
+            
             smach.StateMachine.add(
                 "GO_CLOSER_TO_PERSON",
                 GoCloserToPerson(context),
