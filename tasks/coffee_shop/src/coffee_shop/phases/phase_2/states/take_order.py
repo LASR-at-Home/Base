@@ -17,7 +17,7 @@ class TakeOrder(smach.State):
     def __init__(self, context):
         smach.State.__init__(self, outcomes=["done"])
         self.context = context
-        # self.tablet_pub = rospy.Publisher("/tablet/screen", String, queue_size=10)
+        self.tablet_pub = rospy.Publisher("/tablet/screen", String, queue_size=10)
 
     def listen(self):
         resp = self.context.listen()
@@ -26,12 +26,13 @@ class TakeOrder(smach.State):
                 self.context.get_random_retry_utterance()
             )
             return self.listen()
-        resp = json.loads(resp)
+        # resp = json.loads(resp)
         rospy.loginfo(resp)
         return resp
 
     def get_order(self):
         resp = self.listen()
+        resp = self.parse_response(resp)
         if resp["intent"]["name"] != "make_order":
             rospy.logwarn("The intent was wrong")
             self.context.say(
@@ -77,14 +78,44 @@ class TakeOrder(smach.State):
             return self.get_order()
         return items
 
+    def parse_response(self, resp: str):
+        response = {"intent": {"name": ""}, "entities": {}}
+        if resp:
+            response["intent"]["name"] = "make_order"
+            entities = []
+            for word in resp.split():
+                if word.lower() in self.context.target_object_remappings.keys():
+                    entities.append({"entity": "item", "value": word.lower()})
+                elif word.isdigit():
+                    entities.append({"entity": "CARDINAL", "value": word})
+            response["entities"] = {"item": [], "CARDINAL": []}
+            index = 0
+            for entity in entities:
+                entity["start"] = index
+                entity["end"] = index + len(entity["value"]) - 1
+                index += len(entity["value"]) + 1
+                response["entities"][entity["entity"]].append(entity)
+            return response
+
     def affirm(self):
         resp = self.listen()
+        resp = self.parse_affirmation(resp)
         if resp["intent"]["name"] not in ["affirm", "deny"]:
             self.context.say(
                 self.context.get_random_retry_utterance()
             )
             return self.affirm()
         return resp["intent"]["name"] == "affirm"
+
+    def parse_affirmation(self, resp: str):
+        response = {"intent": {"name": ""}}
+        if resp:
+            resp = resp.lower()
+            if "yes" in resp or "yeah" in resp or "yep" in resp or "correct" in resp:
+                response["intent"]["name"] = "affirm"
+            elif "no" in resp or "nope" in resp or "nah" in resp or "incorrect" in resp:
+                response["intent"]["name"] = "deny"
+        return response
 
     def execute(self, userdata):
         self.context.stop_head_manager("head_manager")
@@ -122,12 +153,13 @@ class TakeOrder(smach.State):
                 )
                 self.context.play_motion_client.send_goal_and_wait(pm_goal)
 
-            # self.tablet_pub.publish(String("order"))
+            self.tablet_pub.publish(String("order"))
             self.context.say("order")
             resp = self.context.listen()
             if resp is not None:
                 rospy.loginfo(resp)
                 self.context.say(f"You have ordered {resp}")
+            # TODO fix if using tablet
             # order = rospy.wait_for_message("/tablet/order", Order).products
         else:
             ph_goal = PointHeadGoal()
@@ -145,7 +177,7 @@ class TakeOrder(smach.State):
                     "Hello, I'm TIAGo, I'll be serving you today."
                 )
                 self.context.say(
-                    "Please state your order after the beep - this indicates that I am listening."
+                    "Please state your order."
                 )
             elif len(self.context.tables[self.context.current_table]["people"]) == 2:
                 self.context.say(
@@ -156,7 +188,7 @@ class TakeOrder(smach.State):
                     "I choose you to be the one in charge."
                 )
                 self.context.say(
-                    "Please state the order for the two of you after the beep - this indicates that I am listening."
+                    "Please state the order for the two of you."
                 )
             else:
                 self.context.say(
@@ -167,7 +199,7 @@ class TakeOrder(smach.State):
                     "I choose you to be the one in charge."
                 )
                 self.context.say(
-                    "Please state the order for the group after the beep - this indicates that I am listening."
+                    "Please state the order for the group."
                 )
 
             order = []
@@ -183,11 +215,11 @@ class TakeOrder(smach.State):
                 ).replace(", ", ", and ", len(order) - 2)
 
                 self.context.say(
-                    f"You asked for {items_string} so far, can I get you anything else? Please answer yes or no after the beep."
+                    f"You asked for {items_string} so far, can I get you anything else? Please answer yes or no."
                 )
                 if self.affirm():
                     self.context.say(
-                        "Okay, please state the additional items after the beep."
+                        "Okay, please state the additional items."
                     )
                 else:
                     break

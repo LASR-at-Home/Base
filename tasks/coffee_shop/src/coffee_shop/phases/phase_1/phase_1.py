@@ -59,12 +59,16 @@ class Phase1(smach.StateMachine):
 
         def execute(self, userdata):
             # TODO maybe improve this logic
-            self.context.say("Please say 'start' when you need my help.")
+            self.context.say("Please say 'go' when you need my help.")
             for _ in range(10):
                 rospy.sleep(1.0)
                 utterance = self.context.listen()
-                # utterance = "start"
-                if utterance and "start" in utterance.lower():
+                options = ["go", "start", "begin", "help"]
+                for option in options:
+                    if option in utterance.lower():
+                        utterance = "go"
+                        break
+                if utterance and "go" in utterance.lower():
                     self.context.say("I will start my work now.")
                     return "done"
                 elif not utterance:
