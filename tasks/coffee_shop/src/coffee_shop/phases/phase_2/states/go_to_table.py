@@ -16,7 +16,7 @@ class GoToTable(smach.State):
         ).pose.pose
         robot_x, robot_y = robot_pose.position.x, robot_pose.position.y
         tables_need_serving = [
-            (label, rospy.get_param(f"/tables/{label}"))
+            (label, rospy.get_param(f"/coffee_shop/tables/{label}"))
             for label, table in self.context.tables.items()
             if table["status"] == "needs serving"
         ]

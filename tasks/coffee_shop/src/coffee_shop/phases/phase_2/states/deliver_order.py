@@ -14,7 +14,7 @@ class DeliverOrder(smach.State):
 
     def execute(self, userdata):
         self.context.say("I am going to deliver the order")
-        location = rospy.get_param(f"/tables/{self.context.current_table}/location")
+        location = rospy.get_param(f"/coffee_shop/tables/{self.context.current_table}/location")
         position = location["position"]
         orientation = location["orientation"]
         target_orientation = R.from_quat(
