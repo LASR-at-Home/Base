@@ -142,3 +142,4 @@ mypy.ini
 
 # Pycharm extension setup files
 .idea/*
+common/vision/lasr_vision_yolov8/models/*

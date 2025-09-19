@@ -25,41 +25,35 @@ class GoToTable(smach.State):
 
         if not unvisited:   
             self.context.say("No unvisited tables.")
-            return "skip"
+            return "done"
 
+         
         def goal_xy(tbl):
-            self.context.say("Go to table getting goal xy")
-            pos = tbl.get("approach_pose", {}).get("position", tbl["location"]["position"])
-            rospy.loginfo(f"DEBUG: Goal position is {pos}")
-            self.context.say("Got the table position")
+            #self.context.say("Go to table getting goal xy")
+            pos = tbl["location"]["position"]
+            #rospy.loginfo(f"DEBUG: Goal position is {pos}")
+            #self.context.say("Got the table position")
             return pos["x"], pos["y"]
 
-        label, next_table = min(
-            unvisited,
-            key=lambda t: np.hypot(goal_xy(t[1])[0] - robot_x, goal_xy(t[1])[1] - robot_y),
-        )
+        def dist_to_goal(t):
+            gx, gy = goal_xy(t[1])
+            return np.hypot(gx - robot_x, gy - robot_y)
+
+        label, next_table = min(unvisited, key=dist_to_goal)
+
 
         self.context.say(f"I am going to {label}")
-        '''
-        position, orientation = (
-            next_table["location"]["position"],
-            next_table["location"]["orientation"],
-        )
+        # approach_pose; fallback to saved location
+        position = next_table["location"]["position"]
+        orientation = next_table["location"]["orientation"]
+
         move_base_goal = MoveBaseGoal()
         move_base_goal.target_pose.header.frame_id = "map"
+        move_base_goal.target_pose.header.stamp = rospy.Time.now() 
         move_base_goal.target_pose.pose = Pose(
             position=Point(**position), orientation=Quaternion(**orientation)
         )
-        '''
-        # approach_pose; fallback to saved location
-        approach_pos = next_table.get("approach_pose", {}).get("position") or next_table["location"]["position"]
-        approach_ori = next_table.get("approach_pose", {}).get("orientation") or next_table["location"]["orientation"]
 
-        move_base_goal = MoveBaseGoal()
-        move_base_goal.target_pose.header.frame_id = "map"
-        move_base_goal.target_pose.pose = Pose(
-            position=Point(**approach_pos), orientation=Quaternion(**approach_ori)
-        )
 
         self.context.move_base_client.send_goal_and_wait(move_base_goal)
         self.context.tables[label]["status"] = "currently visiting"
