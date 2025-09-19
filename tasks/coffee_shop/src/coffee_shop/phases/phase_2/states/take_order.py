@@ -177,7 +177,7 @@ class TakeOrder(smach.State):
                     "Hello, I'm TIAGo, I'll be serving you today."
                 )
                 self.context.say(
-                    "Please state your order after the beep - this indicates that I am listening."
+                    "Please state your order."
                 )
             elif len(self.context.tables[self.context.current_table]["people"]) == 2:
                 self.context.say(
@@ -188,7 +188,7 @@ class TakeOrder(smach.State):
                     "I choose you to be the one in charge."
                 )
                 self.context.say(
-                    "Please state the order for the two of you after the beep - this indicates that I am listening."
+                    "Please state the order for the two of you."
                 )
             else:
                 self.context.say(
@@ -199,7 +199,7 @@ class TakeOrder(smach.State):
                     "I choose you to be the one in charge."
                 )
                 self.context.say(
-                    "Please state the order for the group after the beep - this indicates that I am listening."
+                    "Please state the order for the group."
                 )
 
             order = []
@@ -215,11 +215,11 @@ class TakeOrder(smach.State):
                 ).replace(", ", ", and ", len(order) - 2)
 
                 self.context.say(
-                    f"You asked for {items_string} so far, can I get you anything else? Please answer yes or no after the beep."
+                    f"You asked for {items_string} so far, can I get you anything else? Please answer yes or no."
                 )
                 if self.affirm():
                     self.context.say(
-                        "Okay, please state the additional items after the beep."
+                        "Okay, please state the additional items."
                     )
                 else:
                     break
