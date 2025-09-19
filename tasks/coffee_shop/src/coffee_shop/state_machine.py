@@ -13,8 +13,8 @@ class CoffeeShop(smach.StateMachine):
                 transitions={"greet_new_customer": "PHASE_3", "serve": "PHASE_2"},
             )
             smach.StateMachine.add(
-                "PHASE_2", Phase3(context), transitions={"done": "PHASE_3"}
+                "PHASE_2", Phase2(context), transitions={"done": "PHASE_3"}
             )
             smach.StateMachine.add(
-                "PHASE_3", Phase2(context), transitions={"done": "PHASE_1"}
+                "PHASE_3", Phase3(context), transitions={"done": "PHASE_1"}
             )

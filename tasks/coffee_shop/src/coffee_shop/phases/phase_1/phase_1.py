@@ -27,7 +27,6 @@ class Phase1(smach.StateMachine):
             idle_goal.target_pose.pose = idle_pose
 
             with self:
-
                 smach.StateMachine.add(
                     "GO_TO_IDLE",
                     smach_ros.SimpleActionState(
@@ -68,13 +67,17 @@ class Phase1(smach.StateMachine):
                 if utterance and "start" in utterance.lower():
                     self.context.say("I will start my work now.")
                     return "done"
+                elif not utterance:
+                    self.context.say(
+                        self.context.get_random_retry_utterance()
+                    )
+
             return "not_done"
 
     def __init__(self, context):
         smach.StateMachine.__init__(self, outcomes=["greet_new_customer", "serve"])
 
         with self:
-
             @smach.cb_interface(input_keys=[], output_keys=[], outcomes=["done"])
             def reset_tables(ud):
                 for table in context.tables.keys():
