@@ -157,6 +157,7 @@ class GuidePerson(smach.State):
 
         pm_goal = PlayMotionGoal(motion_name="back_to_default", skip_planning=True)
         self.context.play_motion_client.send_goal_and_wait(pm_goal)
+        self.context.say("Enjoy your stay!")
 
         self.context.tables[label]["status"] = "needs serving"
         self.context.start_head_manager("head_manager", "")

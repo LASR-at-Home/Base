@@ -69,12 +69,21 @@ class CheckOrder(smach.State):
         ]
         shapely_polygon = Polygon(counter_corners)
         satisfied_points = [
-            shapely_polygon.contains(ShapelyPoint(pose[0], pose[1]))
+            # shapely_polygon.contains(ShapelyPoint(pose[0], pose[1]))
+            True
             for _, pose in detections
         ]
-        given_order = [
-            detections[i] for i in range(0, len(detections)) if satisfied_points[i]
-        ]
+        # given_order = [
+        #     detections[i] for i in range(0, len(detections)) if satisfied_points[i]
+        # ]
+        given_order = []
+        for i in range(0, len(detections)):
+            if satisfied_points[i]:
+                given_order.append(detections[i])
+            else:
+                rospy.loginfo(f"Filtered out {detections[i][0].name} at position {detections[i][1]} for being outside the counter area.")
+                rospy.loginfo(f"Counter area corners: {counter_corners} and polygon: {shapely_polygon}, point: {ShapelyPoint(detections[i][1][0], detections[i][1][1])}")
+
         rospy.loginfo(detections)
         rospy.loginfo(f"Given order before filtering: {[detection[0].name for detection in given_order]}")
         for _, pose in detections:

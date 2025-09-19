@@ -88,7 +88,7 @@ class WaitForOrder(smach.State):
             while True:
                 rospy.sleep(rospy.Duration(5.0))
                 self.context.say(
-                    "Is the order ready to be checked? Please answer with yes or no after the beep."
+                    "Is the order ready to be checked? Please answer with yes or no."
                 )
                 if self.affirm():
                     return "done"
