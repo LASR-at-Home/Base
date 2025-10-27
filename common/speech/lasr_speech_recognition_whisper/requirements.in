@@ -1,6 +1,7 @@
 SpeechRecognition==3.10.0
 sounddevice==0.4.6
-openai-whisper==20231117
+openai-whisper==20240930
+# numpy<1.26.4
 PyAudio~=0.2.13
 PyYaml==6.0.1
 setuptools==60.0.1

@@ -41,7 +41,7 @@ class speech_model_params:
         pause_threshold (Optional[float]): Seconds of non-speaking audio before a phrase is considered complete. Defaults to 0.8 seconds.
     """
 
-    model_name: str = "medium.en"
+    model_name: str = "base.en" # was medium.en
     device: str = "cuda" if torch.cuda.is_available() else "cpu"
     start_timeout: float = 5.0
     phrase_duration: Optional[float] = 10
@@ -271,7 +271,7 @@ def parse_args() -> dict:
     parser.add_argument(
         "--model_name",
         type=str,
-        default="medium.en",
+        default="base.en",
         help="Name of the speech recognition model.",
     )
     parser.add_argument(
