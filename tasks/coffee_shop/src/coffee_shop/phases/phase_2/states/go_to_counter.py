@@ -10,9 +10,7 @@ class GoToCounter(smach.State):
         self.context = context
 
     def execute(self, userdata):
-        self.context.say(
-            "I am going to the counter to retrieve the order"
-        )
+        self.context.say("I am going to the counter to retrieve the order")
         # position = rospy.get_param("counter/location/position")
         # orientation = rospy.get_param("counter/location/orientation")
 

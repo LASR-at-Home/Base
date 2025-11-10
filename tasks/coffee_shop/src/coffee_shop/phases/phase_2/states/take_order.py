@@ -6,6 +6,7 @@ import difflib
 from play_motion_msgs.msg import PlayMotionGoal
 from control_msgs.msg import PointHeadGoal
 from geometry_msgs.msg import Point, Pose, Quaternion, PoseWithCovarianceStamped
+
 # from coffee_shop_ui.msg import Order
 from std_msgs.msg import String
 from move_base_msgs.msg import MoveBaseGoal
@@ -13,6 +14,7 @@ from scipy.spatial.transform import Rotation as R
 
 
 # TODO cannot order from tablet now, add if needed
+
 
 class TakeOrder(smach.State):
     def __init__(self, context):
@@ -23,9 +25,7 @@ class TakeOrder(smach.State):
     def listen(self):
         resp = self.context.listen()
         if resp is None:
-            self.context.say(
-                self.context.get_random_retry_utterance()
-            )
+            self.context.say(self.context.get_random_retry_utterance())
             return self.listen()
         # resp = json.loads(resp)
         rospy.loginfo(resp)
@@ -36,16 +36,12 @@ class TakeOrder(smach.State):
         resp = self.parse_response(resp)
         if resp["intent"]["name"] != "make_order":
             rospy.logwarn("The intent was wrong")
-            self.context.say(
-                self.context.get_random_retry_utterance()
-            )
+            self.context.say(self.context.get_random_retry_utterance())
             return self.get_order()
         items = resp["entities"].get("item", [])
         if not items:
             rospy.logwarn("There were no items")
-            self.context.say(
-                self.context.get_random_retry_utterance()
-            )
+            self.context.say(self.context.get_random_retry_utterance())
             return self.get_order()
         quantities = resp["entities"].get("CARDINAL", [])
         quantified_items = []
@@ -73,9 +69,7 @@ class TakeOrder(smach.State):
                     continue
             items.extend([item.lower()] * quantity)
         if not items:
-            self.context.say(
-                self.context.get_random_retry_utterance()
-            )
+            self.context.say(self.context.get_random_retry_utterance())
             return self.get_order()
         return items
 
@@ -102,9 +96,7 @@ class TakeOrder(smach.State):
         resp = self.listen()
         resp = self.parse_affirmation(resp)
         if resp["intent"]["name"] not in ["affirm", "deny"]:
-            self.context.say(
-                self.context.get_random_retry_utterance()
-            )
+            self.context.say(self.context.get_random_retry_utterance())
             return self.affirm()
         return resp["intent"]["name"] == "affirm"
 
@@ -122,9 +114,7 @@ class TakeOrder(smach.State):
         self.context.stop_head_manager("head_manager")
 
         if self.context.tablet:
-            self.context.say(
-                "Please use the tablet to make your order."
-            )
+            self.context.say("Please use the tablet to make your order.")
             if self.context.tablet_on_head:
                 pm_goal = PlayMotionGoal(motion_name="tablet", skip_planning=True)
                 self.context.play_motion_client.send_goal_and_wait(pm_goal)
@@ -174,34 +164,22 @@ class TakeOrder(smach.State):
 
             if len(self.context.tables[self.context.current_table]["people"]) == 1:
                 self.context.point_head_client.send_goal_and_wait(ph_goal)
-                self.context.say(
-                    "Hello, I'm TIAGo, I'll be serving you today."
-                )
-                self.context.say(
-                    "Please state your order."
-                )
+                self.context.say("Hello, I'm TIAGo, I'll be serving you today.")
+                self.context.say("Please state your order.")
             elif len(self.context.tables[self.context.current_table]["people"]) == 2:
                 self.context.say(
                     "Greetings to both of you, I'm TIAGo, I'll be serving you today."
                 )
                 self.context.point_head_client.send_goal_and_wait(ph_goal)
-                self.context.say(
-                    "I choose you to be the one in charge."
-                )
-                self.context.say(
-                    "Please state the order for the two of you."
-                )
+                self.context.say("I choose you to be the one in charge.")
+                self.context.say("Please state the order for the two of you.")
             else:
                 self.context.say(
                     "Salutations to all of you, I'm TIAGo, I'll be serving you today."
                 )
                 self.context.point_head_client.send_goal_and_wait(ph_goal)
-                self.context.say(
-                    "I choose you to be the one in charge."
-                )
-                self.context.say(
-                    "Please state the order for the group."
-                )
+                self.context.say("I choose you to be the one in charge.")
+                self.context.say("Please state the order for the group.")
 
             order = []
 
@@ -219,9 +197,7 @@ class TakeOrder(smach.State):
                     f"You asked for {items_string} so far, can I get you anything else? Please answer yes or no."
                 )
                 if self.affirm():
-                    self.context.say(
-                        "Okay, please state the additional items."
-                    )
+                    self.context.say("Okay, please state the additional items.")
                 else:
                     break
         print(self.context.target_object_remappings)

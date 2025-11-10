@@ -31,7 +31,7 @@ class Phase3(smach.StateMachine):
                 GoToWaitLocation(context),
                 transitions={"done": "done", "not done": "LOOK_FOR_PERSON_LASER"},
             )
-            '''
+            """
             
             smach.StateMachine.add(
                 "LOOK_FOR_PERSON_LASER",
@@ -41,16 +41,17 @@ class Phase3(smach.StateMachine):
                     "not found": "LOOK_FOR_PERSON_LASER",
                 },
             )
-            '''
+            """
             corners = rospy.get_param("/coffee_shop/wait/cuboid")
             wait_area = Polygon(corners)
 
             smach.StateMachine.add(
                 "LOOK_FOR_PERSON_LASER",
                 WaitForPersonInArea(wait_area),
-                transitions={"succeeded": "GO_CLOSER_TO_PERSON", "failed": "LOOK_FOR_PERSON_LASER"}
-                ,
-
+                transitions={
+                    "succeeded": "GO_CLOSER_TO_PERSON",
+                    "failed": "LOOK_FOR_PERSON_LASER",
+                },
                 remapping={"detections_3d": "person_detections"},
             )
 

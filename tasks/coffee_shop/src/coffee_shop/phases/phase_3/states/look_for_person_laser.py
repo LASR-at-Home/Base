@@ -47,9 +47,10 @@ class LookForPersonLaser(smach.State):
         # First get the laser scan points, and then convert to camera frame
         pcl_msg = lg.LaserProjection().projectLaser(msg)
         pcl_points = [
-            p for p in  # pc2.read_points(pcl_msg, field_names=("x, y, z"), skip_nans=True)
-            pc2.read_points(pcl_msg, field_names=("x", "y", "z"), skip_nans=True)
-
+            p
+            for p in pc2.read_points(  # pc2.read_points(pcl_msg, field_names=("x, y, z"), skip_nans=True)
+                pcl_msg, field_names=("x", "y", "z"), skip_nans=True
+            )
         ]
 
         padded_points = []
@@ -138,12 +139,17 @@ class LookForPersonLaser(smach.State):
                 continue
 
             # map-frame points for those hits
-            filtered_points = self.convert_points_to_map_frame([points[i] for i in idx_hits])
+            filtered_points = self.convert_points_to_map_frame(
+                [points[i] for i in idx_hits]
+            )
 
             if self.corners is not None:
                 # waiting area polygon in MAP frame (softened, boundary-safe)
                 wait_poly = Polygon(self.corners).buffer(0.10)
-                in_area = [wait_poly.covers(ShapelyPoint(px, py)) for (px, py, pz) in filtered_points]
+                in_area = [
+                    wait_poly.covers(ShapelyPoint(px, py))
+                    for (px, py, pz) in filtered_points
+                ]
                 idx_area = [i for i, ok in enumerate(in_area) if ok]
                 if not idx_area:
                     continue

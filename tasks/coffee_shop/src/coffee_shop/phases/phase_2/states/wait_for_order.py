@@ -19,9 +19,7 @@ class WaitForOrder(smach.State):
     def listen(self):
         resp = self.context.listen()
         if resp is None:
-            self.context.say(
-                self.context.get_random_retry_utterance()
-            )
+            self.context.say(self.context.get_random_retry_utterance())
             return self.listen()
         # resp = json.loads(resp)
         # rospy.loginfo(resp)
@@ -31,9 +29,7 @@ class WaitForOrder(smach.State):
         resp = self.listen()
         resp = self.parse_affirmation(resp)
         if resp["intent"]["name"] not in ["affirm", "deny"]:
-            self.context.say(
-                self.context.get_random_retry_utterance()
-            )
+            self.context.say(self.context.get_random_retry_utterance())
             return self.affirm()
         return resp["intent"]["name"] == "affirm"
 

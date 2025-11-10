@@ -122,9 +122,7 @@ class GuidePerson(smach.State):
                 "Please be seated, I will wait for you to sit down! Someone will come to clean this table for you"
             )
         else:
-            self.context.say(
-                "Please be seated, I will wait for you to sit down!"
-            )
+            self.context.say("Please be seated, I will wait for you to sit down!")
 
         self.person_polygon = rospy.get_param(
             f"coffee_shop/tables/{self.context.current_table}/persons_cuboid"
@@ -140,15 +138,15 @@ class GuidePerson(smach.State):
                     "/xtion/depth_registered/points", PointCloud2
                 )
                 customer_seated = (
-                        len(
-                            self.perform_detection(
-                                pcl_msg,
-                                self.person_polygon,
-                                ["person"],
-                                self.context.YOLO_person_model,
-                            )
+                    len(
+                        self.perform_detection(
+                            pcl_msg,
+                            self.person_polygon,
+                            ["person"],
+                            self.context.YOLO_person_model,
                         )
-                        > 0
+                    )
+                    > 0
                 )
                 if customer_seated:
                     break

@@ -37,9 +37,7 @@ class LoadOrder(smach.State):
 
         pm_goal = PlayMotionGoal(motion_name="load_unload", skip_planning=True)
         self.context.play_motion_client.send_goal_and_wait(pm_goal)
-        self.context.say(
-            "I'll give you some time to load the order..."
-        )
+        self.context.say("I'll give you some time to load the order...")
         rospy.sleep(rospy.Duration(10.0))
         self.context.start_head_manager("head_manager", "")
         return "done"

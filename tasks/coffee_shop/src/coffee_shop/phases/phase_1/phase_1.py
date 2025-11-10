@@ -72,9 +72,7 @@ class Phase1(smach.StateMachine):
                     self.context.say("I will start my work now.")
                     return "done"
                 elif not utterance:
-                    self.context.say(
-                        self.context.get_random_retry_utterance()
-                    )
+                    self.context.say(self.context.get_random_retry_utterance())
 
             return "not_done"
 
@@ -82,6 +80,7 @@ class Phase1(smach.StateMachine):
         smach.StateMachine.__init__(self, outcomes=["greet_new_customer", "serve"])
 
         with self:
+
             @smach.cb_interface(input_keys=[], output_keys=[], outcomes=["done"])
             def reset_tables(ud):
                 for table in context.tables.keys():
@@ -92,7 +91,9 @@ class Phase1(smach.StateMachine):
                 "GO_IDLE", self.GoIdle(), transitions={"done": "START"}
             )
             smach.StateMachine.add(
-                "START", self.Start(context), transitions={"done": "RESET_TABLES", "not_done": "START"}
+                "START",
+                self.Start(context),
+                transitions={"done": "RESET_TABLES", "not_done": "START"},
             )
 
             smach.StateMachine.add(

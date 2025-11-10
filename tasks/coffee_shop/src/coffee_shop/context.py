@@ -2,7 +2,10 @@ import rospy
 import rosparam
 
 from pal_interaction_msgs.msg import TtsAction, TtsGoal, TtsText
-from lasr_speech_recognition_msgs.msg import TranscribeSpeechAction, TranscribeSpeechGoal
+from lasr_speech_recognition_msgs.msg import (
+    TranscribeSpeechAction,
+    TranscribeSpeechGoal,
+)
 
 from play_motion_msgs.msg import PlayMotionAction
 from control_msgs.msg import PointHeadAction
@@ -21,7 +24,11 @@ from tf2_geometry_msgs.tf2_geometry_msgs import do_transform_pose, do_transform_
 
 class Context:
     def __init__(self, config_path=None, tablet=False):
-        self.tablet = False if isinstance(tablet, str) and tablet.lower() in ["false", "0", "no"] else tablet
+        self.tablet = (
+            False
+            if isinstance(tablet, str) and tablet.lower() in ["false", "0", "no"]
+            else tablet
+        )
         rospy.loginfo(f"DEBUG: Tablet mode: {self.tablet}, type: {type(self.tablet)}")
         self.tablet_on_head = False
         rospy.loginfo(f"Tablet: {self.tablet}, Tablet on head: {self.tablet_on_head}")
@@ -55,7 +62,8 @@ class Context:
         if not self.tablet:
             rospy.loginfo("No tablet, setting up speech recognition.")
             self.speech_client = actionlib.SimpleActionClient(
-                "/transcribe_speech", TranscribeSpeechAction)
+                "/transcribe_speech", TranscribeSpeechAction
+            )
             rospy.loginfo("Waiting for Speech action server…")
             self.speech_client.wait_for_server()
             rospy.loginfo("Speech action server connected.")
