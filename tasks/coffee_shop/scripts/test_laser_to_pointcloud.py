@@ -18,9 +18,9 @@ def get_transform(from_frame, to_frame):
         )
         return t
     except (
-        tf2_ros.LookupException,
-        tf2_ros.ConnectivityException,
-        tf2_ros.ExtrapolationException,
+            tf2_ros.LookupException,
+            tf2_ros.ConnectivityException,
+            tf2_ros.ExtrapolationException,
     ):
         raise
 

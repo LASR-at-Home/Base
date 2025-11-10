@@ -16,7 +16,7 @@ class MakeOrder(smach.State):
         order = self.context.tables[self.context.current_table]["order"]
         order_string = ", ".join(
             [
-                f"{count} {self.context.target_object_remappings[item] if count == 1 else self.context.target_object_remappings[item]+'s'}"
+                f"{count} {self.context.target_object_remappings[item] if count == 1 else self.context.target_object_remappings[item] + 's'}"
                 for item, count in Counter(order).items()
             ]
         ).replace(", ", ", and ", len(order) - 2)

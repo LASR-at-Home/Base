@@ -2,7 +2,6 @@ import smach
 from coffee_shop.phases import Phase1, Phase2, Phase3
 
 
-
 class CoffeeShop(smach.StateMachine):
     def __init__(self, context):
         smach.StateMachine.__init__(self, outcomes=["done"])

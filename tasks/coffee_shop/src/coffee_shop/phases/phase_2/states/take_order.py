@@ -11,6 +11,7 @@ from std_msgs.msg import String
 from move_base_msgs.msg import MoveBaseGoal
 from scipy.spatial.transform import Rotation as R
 
+
 # TODO cannot order from tablet now, add if needed
 
 class TakeOrder(smach.State):
@@ -209,7 +210,7 @@ class TakeOrder(smach.State):
 
                 items_string = ", ".join(
                     [
-                        f"{count} {self.context.target_object_remappings[item] if count == 1 else self.context.target_object_remappings[item]+'s'}"
+                        f"{count} {self.context.target_object_remappings[item] if count == 1 else self.context.target_object_remappings[item] + 's'}"
                         for item, count in Counter(order).items()
                     ]
                 ).replace(", ", ", and ", len(order) - 2)
@@ -227,7 +228,7 @@ class TakeOrder(smach.State):
         print(order)
         order_string = ", ".join(
             [
-                f"{count} {self.context.target_object_remappings[item] if count == 1 else self.context.target_object_remappings[item]+'s'}"
+                f"{count} {self.context.target_object_remappings[item] if count == 1 else self.context.target_object_remappings[item] + 's'}"
                 for item, count in Counter(order).items()
             ]
         ).replace(", ", ", and ", len(order) - 2)

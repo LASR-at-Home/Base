@@ -23,6 +23,7 @@ def timeit_rospy(method):
 
     return timed
 
+
 class LookForPersonLaser(smach.State):
     def __init__(self, context):
         smach.State.__init__(self, outcomes=["found", "not found"])
@@ -32,6 +33,7 @@ class LookForPersonLaser(smach.State):
             rospy.wait_for_message("/xtion/rgb/camera_info", CameraInfo)
         )
         self.corners = rospy.get_param("/coffee_shop/wait/cuboid")
+
     @timeit_rospy
     def get_points_and_pixels_from_laser(self, msg):
         """Converts a LaserScan message to a collection of points in camera frame, with their corresponding pixel values in a flat array. The method pads out the points to add vertical "pillars" to the point cloud.
@@ -45,7 +47,7 @@ class LookForPersonLaser(smach.State):
         # First get the laser scan points, and then convert to camera frame
         pcl_msg = lg.LaserProjection().projectLaser(msg)
         pcl_points = [
-            p for p in #pc2.read_points(pcl_msg, field_names=("x, y, z"), skip_nans=True)
+            p for p in  # pc2.read_points(pcl_msg, field_names=("x, y, z"), skip_nans=True)
             pc2.read_points(pcl_msg, field_names=("x", "y", "z"), skip_nans=True)
 
         ]
@@ -61,7 +63,7 @@ class LookForPersonLaser(smach.State):
                     )
                 )
 
-       #tf_points = self.context.tf_point_list(padded_points, "base_laser_link", "xtion_rgb_optical_frame")
+        # tf_points = self.context.tf_point_list(padded_points, "base_laser_link", "xtion_rgb_optical_frame")
 
         tf_points = self.context.tf_point_list(
             padded_points, msg.header.frame_id, "xtion_rgb_optical_frame"
@@ -103,7 +105,7 @@ class LookForPersonLaser(smach.State):
 
         points, pixels = self.get_points_and_pixels_from_laser(lsr_scan)
         detections = self.context.yolo(img_msg, self.context.YOLO_person_model, 0.3, [])
-        #waiting_area = Polygon(self.corners)
+        # waiting_area = Polygon(self.corners)
         pixels_2d = np.array(pixels).reshape(-1, 2)
 
         for detection in detections.detected_objects:
@@ -122,7 +124,7 @@ class LookForPersonLaser(smach.State):
                 # if YOLO ran on a resized image, map to the raw image size
                 det_w = getattr(detection, "img_width", W)
                 det_h = getattr(detection, "img_height", H)
-                sx, sy = float(W)/det_w, float(H)/det_h
+                sx, sy = float(W) / det_w, float(H) / det_h
                 poly_pix[:, 0] *= sx
                 poly_pix[:, 1] *= sy
 
@@ -155,7 +157,6 @@ class LookForPersonLaser(smach.State):
             self.context.new_customer_pose = PointStamped(point=Point(*point))
             self.context.new_customer_pose.header.frame_id = "map"
             return "found"
-
 
         self.context.start_head_manager("head_manager", "")
 

@@ -13,7 +13,7 @@ class Phase1(smach.StateMachine):
             smach.StateMachine.__init__(self, outcomes=["done"])
 
             idle_location = rospy.get_param("/coffee_shop/counter/location")
-            
+
             idle_position, idle_orientation = (
                 idle_location["position"],
                 idle_location["orientation"],

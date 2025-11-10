@@ -140,15 +140,15 @@ class GuidePerson(smach.State):
                     "/xtion/depth_registered/points", PointCloud2
                 )
                 customer_seated = (
-                    len(
-                        self.perform_detection(
-                            pcl_msg,
-                            self.person_polygon,
-                            ["person"],
-                            self.context.YOLO_person_model,
+                        len(
+                            self.perform_detection(
+                                pcl_msg,
+                                self.person_polygon,
+                                ["person"],
+                                self.context.YOLO_person_model,
+                            )
                         )
-                    )
-                    > 0
+                        > 0
                 )
                 if customer_seated:
                     break

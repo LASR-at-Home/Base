@@ -33,7 +33,7 @@ class CheckOrder(smach.State):
         )
 
     def execute(self, userdata):
-        if self.n_checks == 1: # TODO change back to 3
+        if self.n_checks == 1:  # TODO change back to 3
             self.context.say(
                 "I think I have something in my eyes, I'm struggling to check the order. I trust you that the order is correct!"
             )
@@ -61,7 +61,8 @@ class CheckOrder(smach.State):
         pcl_msg = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
         cv_im = cv2_pcl.pcl_to_cv2(pcl_msg)
         img_msg = cv2_img.cv2_img_to_msg(cv_im)
-        detections = self.context.yolo(img_msg, self.context.YOLO_counter_model, 0.3, []) # TODO check confidence was 0.6 or 0.3
+        detections = self.context.yolo(img_msg, self.context.YOLO_counter_model, 0.3,
+                                       [])  # TODO check confidence was 0.6 or 0.3
         detections = [
             (det, self.estimate_pose(pcl_msg, det))
             for det in detections.detected_objects
@@ -81,8 +82,10 @@ class CheckOrder(smach.State):
             if satisfied_points[i]:
                 given_order.append(detections[i])
             else:
-                rospy.loginfo(f"Filtered out {detections[i][0].name} at position {detections[i][1]} for being outside the counter area.")
-                rospy.loginfo(f"Counter area corners: {counter_corners} and polygon: {shapely_polygon}, point: {ShapelyPoint(detections[i][1][0], detections[i][1][1])}")
+                rospy.loginfo(
+                    f"Filtered out {detections[i][0].name} at position {detections[i][1]} for being outside the counter area.")
+                rospy.loginfo(
+                    f"Counter area corners: {counter_corners} and polygon: {shapely_polygon}, point: {ShapelyPoint(detections[i][1][0], detections[i][1][1])}")
 
         rospy.loginfo(detections)
         rospy.loginfo(f"Given order before filtering: {[detection[0].name for detection in given_order]}")
@@ -101,14 +104,14 @@ class CheckOrder(smach.State):
         missing_items = list((Counter(order) - Counter(given_order)).elements())
         missing_items_string = ", ".join(
             [
-                f"{count} {self.context.target_object_remappings[item] if count == 1 else self.context.target_object_remappings[item]+'s'}"
+                f"{count} {self.context.target_object_remappings[item] if count == 1 else self.context.target_object_remappings[item] + 's'}"
                 for item, count in Counter(missing_items).items()
             ]
         ).replace(", ", ", and ", len(missing_items) - 2)
         invalid_items = list((Counter(given_order) - Counter(order)).elements())
         invalid_items_string = ", ".join(
             [
-                f"{count} {self.context.target_object_remappings[item] if count == 1 else self.context.target_object_remappings[item]+'s'}"
+                f"{count} {self.context.target_object_remappings[item] if count == 1 else self.context.target_object_remappings[item] + 's'}"
                 for item, count in Counter(invalid_items).items()
             ]
         ).replace(", ", ", and ", len(invalid_items) - 2)

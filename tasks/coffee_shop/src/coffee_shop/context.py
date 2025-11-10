@@ -232,7 +232,7 @@ class Context:
             self.speech_client.wait_for_result()
             resp = self.speech_client.get_result()
             rospy.loginfo(f"[Speech] Heard: {resp.sequence}")
-            return resp.sequence # TranscribeSpeechResult is a string
+            return resp.sequence  # TranscribeSpeechResult is a string
         else:
             rospy.loginfo("[Speech fallback] Listening…")
             return None

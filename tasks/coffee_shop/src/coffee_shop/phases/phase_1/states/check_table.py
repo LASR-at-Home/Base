@@ -13,6 +13,7 @@ import numpy as np
 from shapely.geometry import Point as ShapelyPoint
 from shapely.geometry.polygon import Polygon as ShapelyPolygon
 
+
 class CheckTable(smach.State):
     def __init__(self, context):
         smach.State.__init__(
@@ -31,7 +32,7 @@ class CheckTable(smach.State):
 
     def estimate_pose(self, pcl_msg, detection):
         centroid_xyz = cv2_pcl.seg_to_centroid(pcl_msg, np.array(detection.xyseg))
-       
+
         '''
         # convert depth cloud to cv2 image to know real size
         cv_im = cv2_pcl.pcl_to_cv2(pcl_msg)         # H x W
@@ -97,7 +98,7 @@ class CheckTable(smach.State):
         ]
         rospy.loginfo(f"All: {[(det.name, pose) for det, pose in detections]}")
         rospy.loginfo(f"Boundary: {polygon}")
-        shapely_polygon = ShapelyPolygon(polygon)#.buffer(0.10)
+        shapely_polygon = ShapelyPolygon(polygon)  # .buffer(0.10)
         satisfied_points = [
             shapely_polygon.contains(ShapelyPoint(pose[0], pose[1]))
             for _, pose in detections
@@ -138,7 +139,7 @@ class CheckTable(smach.State):
         self.people_debug_images = []
 
         rospy.loginfo(self.context.current_table)
-        
+
         '''
         self.object_polygon = rospy.get_param(
             f"/tables/{self.context.current_table}/objects_cuboid"
@@ -149,14 +150,13 @@ class CheckTable(smach.State):
         '''
 
         self.object_polygon = rospy.get_param(
-        f"/coffee_shop/tables/{self.context.current_table}/table_area",
-        rospy.get_param(f"/coffee_shop/tables/{self.context.current_table}/objects_cuboid")
+            f"/coffee_shop/tables/{self.context.current_table}/table_area",
+            rospy.get_param(f"/coffee_shop/tables/{self.context.current_table}/objects_cuboid")
         )
         self.person_polygon = rospy.get_param(
             f"/coffee_shop/tables/{self.context.current_table}/seating_area",
             rospy.get_param(f"/coffee_shop/tables/{self.context.current_table}/persons_cuboid")
         )
-
 
         self.detections_objects = []
         self.detections_people = []
