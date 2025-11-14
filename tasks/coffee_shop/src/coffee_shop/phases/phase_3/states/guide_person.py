@@ -36,7 +36,7 @@ class GuidePerson(smach.State):
     def perform_detection(self, pcl_msg, polygon, filter, model):
         cv_im = cv2_pcl.pcl_to_cv2(pcl_msg)
         img_msg = cv2_img.cv2_img_to_msg(cv_im)
-        detections = self.context.yolo(img_msg, model, 0.5, 0.3)
+        detections = self.context.yolo(img_msg, model, 0.5, [])
         detections = [
             (det, self.estimate_pose(pcl_msg, det))
             for det in detections.detected_objects
@@ -63,13 +63,13 @@ class GuidePerson(smach.State):
         robot_x, robot_y = robot_pose.position.x, robot_pose.position.y
         utter_clean_phrase = False
         empty_tables = [
-            (label, rospy.get_param(f"/tables/{label}"))
+            (label, rospy.get_param(f"coffee_shop/tables/{label}"))
             for label, table in self.context.tables.items()
             if table["status"] == "ready"
         ]
         if not empty_tables:
             needs_cleaning_tables = [
-                (label, rospy.get_param(f"/tables/{label}"))
+                (label, rospy.get_param(f"coffee_shop/tables/{label}"))
                 for label, table in self.context.tables.items()
                 if table["status"] == "needs cleaning"
             ]
@@ -85,7 +85,7 @@ class GuidePerson(smach.State):
                 )
                 utter_clean_phrase = True
             else:
-                self.context.voice_controller.sync_tts(
+                self.context.say(
                     "Sorry, we don't have any free tables at the moment. Please come back later."
                 )
                 return "done"
@@ -118,16 +118,14 @@ class GuidePerson(smach.State):
         self.context.play_motion_client.send_goal_and_wait(pm_goal)
 
         if utter_clean_phrase:
-            self.context.voice_controller.sync_tts(
+            self.context.say(
                 "Please be seated, I will wait for you to sit down! Someone will come to clean this table for you"
             )
         else:
-            self.context.voice_controller.sync_tts(
-                "Please be seated, I will wait for you to sit down!"
-            )
+            self.context.say("Please be seated, I will wait for you to sit down!")
 
         self.person_polygon = rospy.get_param(
-            f"/tables/{self.context.current_table}/persons_cuboid"
+            f"coffee_shop/tables/{self.context.current_table}/persons_cuboid"
         )
 
         motions = ["look_left", "look_right"]
@@ -157,6 +155,7 @@ class GuidePerson(smach.State):
 
         pm_goal = PlayMotionGoal(motion_name="back_to_default", skip_planning=True)
         self.context.play_motion_client.send_goal_and_wait(pm_goal)
+        self.context.say("Enjoy your stay!")
 
         self.context.tables[label]["status"] = "needs serving"
         self.context.start_head_manager("head_manager", "")

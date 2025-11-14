@@ -1,16 +1,14 @@
 <launch>
-    <arg name="tablet" default="true"/>
-    <arg name="whisper_matcher" default="by-index" />
-    <arg name="whisper_device_param" default="18" />
-    <arg name="rasa_model" default="$(find lasr_rasa)/assistants/coffee_shop/models"/>
+    <arg name="tablet" default="false"/>
+<!--     <arg name="whisper_matcher" default="by-index" /> -->
+<!--     <arg name="whisper_device_param" default="18" /> -->
+<!--     <arg name="rasa_model" default="$(find lasr_rasa)/assistants/coffee_shop/models"/> -->
 
-    <group unless="$(arg tablet)">
-        <include file = "$(find lasr_speech)/launch/speech.launch">
-            <arg name="matcher" value="$(arg whisper_matcher)"/>
-            <arg name="device_param" value="$(arg whisper_device_param)"/>
-            <arg name="rasa_model" value="$(arg rasa_model)"/>
-        </include>        
-    </group>
+<!--     <group unless="$(arg tablet)"> -->
+<!--     </group> -->
+
+    <arg name="whisper_device_param" default="9" />
+    <node pkg="lasr_speech_recognition_whisper" type="transcribe_microphone_server" name="transcribe_speech" output="screen" args="--mic_device $(arg whisper_device_param)"/>
 
     <include file="$(find lasr_vision_yolo)/launch/service.launch">
         <arg name="preload" value="['yolo11n-seg.pt']" />

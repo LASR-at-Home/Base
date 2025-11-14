@@ -14,5 +14,5 @@ if __name__ == "__main__":
 
     coffee_shop = CoffeeShop(context)
     outcome = coffee_shop.execute()
-    context.voice_controller.sync_tts("I am done.")
+    context.say("I am done.")
     rospy.spin()

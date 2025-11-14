@@ -13,7 +13,7 @@ class GoToPerson(smach.State):
         self.context = context
 
     def execute(self, userdata):
-        location = rospy.get_param("/wait/approach2")
+        location = rospy.get_param("/coffee_shop/wait/approach2")
         position, orientation = location["position"], location["orientation"]
         move_base_goal = MoveBaseGoal()
         move_base_goal.target_pose.header.frame_id = "map"
