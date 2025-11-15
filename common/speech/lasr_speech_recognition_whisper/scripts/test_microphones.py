@@ -1,4 +1,4 @@
-#!/usr/bin python3
+#!/usr/bin/env python3
 
 import os
 import argparse
@@ -15,19 +15,15 @@ def parse_args() -> dict:
     Returns:
         dict: name: value pairs of command line arguments
     """
-
     parser = argparse.ArgumentParser(description="Test microphones")
-    parser.add_argument(
-        "-m", "--microphone", type=int, help="Microphone index", default=None
-    )
+    parser.add_argument("-m", "--microphone", default=9, type=int, help="Microphone index")
     parser.add_argument(
         "-o", "--output_dir", type=str, help="Directory to save audio files"
     )
 
-    # return vars(parser.parse_args())
-    args, _ = parser.parse_known_args()
-    return vars(args)
-
+    return vars(parser.parse_args())
+    # args, _ = parser.parse_known_args()
+    # return vars(args)
 
 def main(args: dict = None) -> None:
     """Generate audio files from microphone input.
@@ -39,7 +35,6 @@ def main(args: dict = None) -> None:
     # Adapted from https://github.com/Uberi/speech_recognition/blob/master/examples/write_audio.py
 
     rclpy.init(args=args)
-
     parser_args = parse_args()
 
     mic_index = parser_args["microphone"]
