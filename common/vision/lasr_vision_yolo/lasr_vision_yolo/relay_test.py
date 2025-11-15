@@ -17,10 +17,10 @@ class ImageListener(Node):
         self.model = model
         self.processing = False
 
-        self.detect_client = self.create_client(YoloDetection, "/yolov8/detect")
+        self.detect_client = self.create_client(YoloDetection, "/yolo/detect")
 
         while not self.detect_client.wait_for_service(timeout_sec=5.0):
-            self.get_logger().warn("Waiting for /yolov8/detect service")
+            self.get_logger().warn("Waiting for /yolo/detect service")
 
         self.subscription = self.create_subscription(
             Image, self.listen_topic, self.image_callback, 10
@@ -64,12 +64,12 @@ def main(args=None):
 
     if len(sys.argv) < 2:
         print(
-            "Usage: ros2 run lasr_objcet_detection_yolov8 relay <source_topic> [model.pt]"
+            "Usage: ros2 run lasr_vision_yolo relay <source_topic> [model.pt]"
         )
         return
 
     listen_topic = sys.argv[1]
-    model = sys.argv[2] if len(sys.argv) >= 3 else "yolov8n.pt"
+    model = sys.argv[2] if len(sys.argv) >= 3 else "yolo11n.pt"
 
     node = ImageListener(listen_topic, model)
 

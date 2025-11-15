@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 import os
 from glob import glob
 
-package_name = "lasr_vision_yolov8"
+package_name = "lasr_vision_yolo"
 
 setup(
     name=package_name,
@@ -20,14 +20,14 @@ setup(
     zip_safe=True,
     maintainer="maayan",
     maintainer_email="maayan.armony@gmail.com",
-    description="YOLOv8 object detection service",
+    description="YOLO object detection service",
     license="MIT",
     tests_require=["pytest"],
     entry_points={
         "console_scripts": [
-            "yolo_service_node = lasr_vision_yolov8.service:main",
-            "yolo_node = src.lasr_vision_yolov8.yolo:main",
-            "relay = lasr_vision_yolov8.relay_test:main",
+            "yolo_service_node = lasr_vision_yolo.service:main",
+            "yolo_node = src.lasr_vision_yolo.yolo:main",
+            "relay = lasr_vision_yolo.relay_test:main",
         ],
     },
 )
