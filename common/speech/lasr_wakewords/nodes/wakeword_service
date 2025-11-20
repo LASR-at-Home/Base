@@ -1,0 +1,170 @@
+#!/usr/bin/env python3
+import os
+import time
+import threading
+
+import numpy as np
+import sounddevice as sd
+import openwakeword
+from openwakeword.model import Model
+
+import rclpy
+from rclpy.node import Node
+from ament_index_python.packages import get_package_share_directory
+
+from lasr_speech_recognition_interfaces.srv import Wakeword
+
+
+class WakewordDetector:
+    """Wraps the wakeword detection logic using openwakeword."""
+
+    def __init__(self, node: Node):
+        self._node = node
+        self._logger = node.get_logger()
+
+        # Declare parameters with defaults (matching ROS1)
+        self._node.declare_parameter("device_index", 9)
+        self._node.declare_parameter("sample_rate", 16000)
+        self._node.declare_parameter("frame_samples", 1280)
+
+        self._device_index = (
+            self._node.get_parameter("device_index").get_parameter_value().integer_value
+        )
+        self._sample_rate = (
+            self._node.get_parameter("sample_rate").get_parameter_value().integer_value
+        )
+        self._frame_samples = (
+            self._node.get_parameter("frame_samples")
+            .get_parameter_value()
+            .integer_value
+        )
+
+        # Model path: use the installed package share directory in ROS2
+        pkg_share = get_package_share_directory("lasr_wakewords")
+        self._model_path = os.path.join(pkg_share, "models")
+
+        self._logger.info(
+            f"WakewordDetector init: device_index={self._device_index}, "
+            f"sample_rate={self._sample_rate}, frame_samples={self._frame_samples}"
+        )
+        self._logger.info(f"Model path: {self._model_path}")
+
+    def detect(self, keywords, timeout: float, threshold: float):
+        """Run wakeword detection for one request.
+
+        Returns (success: bool, keyword: Optional[str]).
+        """
+        wakewords = list(keywords)
+        max_duration = timeout
+        detected = threading.Event()
+        detected_keyword = ""
+
+        self._logger.info(
+            f"Listening for wakewords: {wakewords}, "
+            f"threshold={threshold}, timeout={max_duration}s"
+        )
+
+        model_paths = [
+            os.path.join(self._model_path, f"{wakeword}.tflite")
+            for wakeword in wakewords
+        ]
+
+        try:
+            model = Model(model_paths)
+        except Exception as e:
+            self._logger.error(f"Failed to load model: {e}")
+            return False, None
+
+        def audio_callback(indata, frames, time_info, status):
+            nonlocal detected_keyword
+            if status:
+                self._logger.warn(f"Audio stream status: {status}")
+            # Convert float32 [-1,1] to int16 PCM like ROS1 code
+            pcm = (indata[:, 0] * 32768).astype(np.int16)
+            result = model.predict(pcm)
+            self._logger.info(str(result))
+            wakeword = max(result, key=lambda k: result[k])
+            score = result[wakeword]
+            if score > threshold:
+                self._logger.info(
+                    f"Wakeword '{wakeword}' detected (score={score:.3f})"
+                )
+                detected_keyword = wakeword
+                detected.set()
+
+        try:
+            with sd.InputStream(
+                device=self._device_index,
+                channels=1,
+                samplerate=self._sample_rate,
+                blocksize=self._frame_samples,
+                dtype="float32",
+                callback=audio_callback,
+            ):
+                start_time = time.monotonic()
+
+                while rclpy.ok() and not detected.is_set():
+                    elapsed = time.monotonic() - start_time
+                    if max_duration > 0 and elapsed >= max_duration:
+                        self._logger.info(
+                            f"Timeout reached after {elapsed:.1f} seconds"
+                        )
+                        break
+                    detected.wait(timeout=0.1)
+        except Exception as e:
+            self._logger.error(f"Error opening InputStream: {e}")
+            return False, None
+
+        # If we got here, success is True iff keyword set
+        return (detected_keyword != ""), (detected_keyword or None)
+
+
+class WakewordService(Node):
+    def __init__(self):
+        super().__init__("wakeword_service")
+
+        # Create the detector (loads params, models, etc.)
+        self.detector = WakewordDetector(self)
+
+        # Advertise the service
+        self.srv = self.create_service(
+            Wakeword,
+            "/lasr_wakewords/detect",
+            self.handle_detect,
+        )
+        self.get_logger().info("Wakeword service /lasr_wakewords/detect ready")
+
+    def handle_detect(self, request: Wakeword.Request, response: Wakeword.Response):
+        self.get_logger().info(
+            f"Wakeword request: keywords={list(request.keywords)}, "
+            f"timeout={request.timeout}, threshold={request.threshold}"
+        )
+
+        success, keyword = self.detector.detect(
+            keywords=request.keywords,
+            timeout=float(request.timeout),
+            threshold=float(request.threshold),
+        )
+
+        response.success = bool(success)
+        response.keyword = keyword or ""
+
+        return response
+
+
+def main(args=None):
+    # Downloaded the models 
+    openwakeword.utils.download_models()
+
+    rclpy.init(args=args)
+    node = WakewordService()
+    try:
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        pass
+    node.destroy_node()
+    rclpy.shutdown()
+
+
+if __name__ == "__main__":
+    main()
