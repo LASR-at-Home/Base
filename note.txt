@@ -1,0 +1,9 @@
+cd ~/ros2_ws/src
+ros2 pkg create my_robot_pkg --build-type ament_python --dependencies rclpy geometry_msgs
+
+cd ~/ros2_ws
+colcon build
+colcon build --packages-select xxx
+
+source install/setup.bash
+
