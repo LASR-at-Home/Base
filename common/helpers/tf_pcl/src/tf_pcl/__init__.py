@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from copy import deepcopy
 import numpy as np
+import tf2_ros as tf
 from scipy.spatial.transform import Rotation as R
 from sensor_msgs.msg import PointCloud2
 from geometry_msgs.msg import TransformStamped
@@ -14,6 +15,7 @@ def pcl_transform(
     pcl_arr = deepcopy(
         list(point_cloud2.read_points(pcl, field_names=("x", "y", "z"), skip_nans=True))
     )
+    print(pcl_arr)
 
     translation = transform.transform.translation
     rotation_q = transform.transform.rotation

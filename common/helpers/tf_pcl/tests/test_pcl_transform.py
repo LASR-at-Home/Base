@@ -24,9 +24,13 @@ class TestPclTransformSimple(unittest.TestCase):
             PointField(name="z", offset=8, datatype=PointField.FLOAT32, count=1),
         ]
 
-        # Simple 5 points: [0,0,0], [1,0,0], ...
+        # Simple 5 points: (0,0,0), (1,0,0), ..., (4,0,0)
         points = [(float(i), 0.0, 0.0) for i in range(5)]
         pcl_msg = point_cloud2.create_cloud(header, fields, points)
+
+        # STRUCTURE THE POINT CLOUD (required by pcl_transform)
+        pcl_msg.height = 1
+        pcl_msg.width = 5
 
         return pcl_msg, np.array(points, dtype=np.float32)
 
@@ -49,7 +53,6 @@ class TestPclTransformSimple(unittest.TestCase):
         out_points = list(point_cloud2.read_points(
             pcl_out, field_names=("x", "y", "z"), skip_nans=True
         ))
-        # out_points = list of tuples [(x,y,z), ...]
 
         expected_points = [
             (i + 1.0, 2.0, 3.0)  # (x+tx, y+ty, z+tz)
@@ -68,7 +71,6 @@ class TestPclTransformSimple(unittest.TestCase):
 
         # Verify frame_id
         self.assertEqual(pcl_out.header.frame_id, "map")
-
 
 
 if __name__ == '__main__':
