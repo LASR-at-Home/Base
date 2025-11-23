@@ -1,77 +1,91 @@
-#!/usr/bin/env python3
-import unittest
+import pytest
 import numpy as np
-from sensor_msgs.msg import PointCloud2, PointField
+import ros2_numpy as rnp
 from geometry_msgs.msg import TransformStamped, Quaternion, Vector3
-from sensor_msgs_py import point_cloud2
-from builtin_interfaces.msg import Time
+from sensor_msgs.msg import PointCloud2 
 from std_msgs.msg import Header
+from scipy.spatial.transform import Rotation as R
 
-from tf_pcl import pcl_transform  
+from tf_pcl import pcl_transform 
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
 
-
-class TestPclTransformSimple(unittest.TestCase):
+def create_test_transform(x, y, z, roll, pitch, yaw, frame_id, child_frame_id):
+    """Helper to create a TransformStamped message."""
+    t = TransformStamped()
+    t.header.stamp.sec = 0
+    t.header.stamp.nanosec = 0
+    t.header.frame_id = frame_id
+    t.child_frame_id = child_frame_id
     
-    def create_simple_pointcloud(self):
-        """Creates a PointCloud2 with 3D points along x-axis."""
-        header = Header()
-        header.stamp = Time(sec=0, nanosec=0)
-        header.frame_id = "base_link"
+    t.transform.translation = Vector3(x=float(x), y=float(y), z=float(z))
+    
+    q = R.from_euler('xyz', [roll, pitch, yaw], degrees=False).as_quat()
+    t.transform.rotation = Quaternion(x=q[0], y=q[1], z=q[2], w=q[3])
+    
+    return t
 
-        fields = [
-            PointField(name="x", offset=0, datatype=PointField.FLOAT32, count=1),
-            PointField(name="y", offset=4, datatype=PointField.FLOAT32, count=1),
-            PointField(name="z", offset=8, datatype=PointField.FLOAT32, count=1),
-        ]
+def test_pcl_transform_logic():
+    """
+    Tests if a 2x2 ordered pointcloud is correctly transformed.
+    """
+    data = np.zeros((2, 2), dtype=[
+        ('x', np.float32), 
+        ('y', np.float32), 
+        ('z', np.float32)
+    ])
+    
+    data[0, 0] = (0.0, 0.0, 0.0)
+    data[0, 1] = (1.0, 0.0, 0.0)
+    data[1, 0] = (0.0, 1.0, 0.0)
+    data[1, 1] = (0.0, 0.0, 1.0)
+    
+    input_pcl = rnp.msgify(PointCloud2, data)
+    input_pcl.header.frame_id = "camera_link"
 
-        # Simple 5 points: (0,0,0), (1,0,0), ..., (4,0,0)
-        points = [(float(i), 0.0, 0.0) for i in range(5)]
-        pcl_msg = point_cloud2.create_cloud(header, fields, points)
+    transform_msg = create_test_transform(
+        x=1.0, y=2.0, z=3.0, 
+        roll=0.0, pitch=0.0, yaw=np.pi/2, 
+        frame_id="map", child_frame_id="camera_link"
+    )
 
-        # STRUCTURE THE POINT CLOUD (required by pcl_transform)
-        pcl_msg.height = 1
-        pcl_msg.width = 5
+    output_pcl = pcl_transform(input_pcl, transform_msg, "map")
 
-        return pcl_msg, np.array(points, dtype=np.float32)
+    assert output_pcl.header.frame_id == "map"
+    assert output_pcl.height == 2
+    assert output_pcl.width == 2
+    
+    output_arr = rnp.numpify(output_pcl)
+    
+    np.testing.assert_allclose(
+        [output_arr['x'][0,0], output_arr['y'][0,0], output_arr['z'][0,0]],
+        [1.0, 2.0, 3.0], atol=1e-5
+    )
+    np.testing.assert_allclose(
+        [output_arr['x'][0,1], output_arr['y'][0,1], output_arr['z'][0,1]],
+        [1.0, 3.0, 3.0], atol=1e-5
+    )
 
-    def create_transform(self, tx=1.0, ty=2.0, tz=3.0):
-        tf = TransformStamped()
-        tf.header.stamp = Time(sec=0, nanosec=0)
-        tf.header.frame_id = "base_link"
-        tf.child_frame_id = "map"
-        tf.transform.translation = Vector3(x=tx, y=ty, z=tz)
-        tf.transform.rotation = Quaternion(x=0.0, y=0.0, z=0.0, w=1.0)  # identity rotation
-        return tf
-
-    def test_translation_only(self):
-        pcl_in, arr_in = self.create_simple_pointcloud()
-        transform = self.create_transform(tx=1.0, ty=2.0, tz=3.0)
-
-        pcl_out = pcl_transform(pcl_in, transform, target_frame="map")
-
-        # Read output points
-        out_points = list(point_cloud2.read_points(
-            pcl_out, field_names=("x", "y", "z"), skip_nans=True
-        ))
-
-        expected_points = [
-            (i + 1.0, 2.0, 3.0)  # (x+tx, y+ty, z+tz)
-            for i in range(5)
-        ]
-
-        # Compare length
-        self.assertEqual(len(out_points), len(expected_points))
-
-        # Compare each point
-        for i, (out_pt, exp_pt) in enumerate(zip(out_points, expected_points)):
-            self.assertTrue(
-                np.allclose(out_pt, exp_pt, atol=1e-6),
-                msg=f"Mismatch at {i}: got {out_pt}, expected {exp_pt}"
-            )
-
-        # Verify frame_id
-        self.assertEqual(pcl_out.header.frame_id, "map")
-
-
-if __name__ == '__main__':
-    unittest.main()
+def test_pcl_preserve_extra_fields():
+    """
+    Ensures extra fields like intensity are preserved.
+    """
+    data = np.zeros((2, 2), dtype=[
+        ('x', np.float32), 
+        ('y', np.float32), 
+        ('z', np.float32),
+        ('intensity', np.float32)
+    ])
+    
+    data[0,0] = (5.0, 5.0, 5.0, 0.5) 
+    
+    input_pcl = rnp.msgify(PointCloud2, data)
+    input_pcl.header.frame_id = "base"
+    
+    transform_msg = create_test_transform(0,0,0, 0,0,0, "map", "base")
+    
+    output_pcl = pcl_transform(input_pcl, transform_msg, "map")
+    output_arr = rnp.numpify(output_pcl)
+    
+    assert 'intensity' in output_arr.dtype.names
+    assert output_arr['intensity'][0,0] == 0.5
