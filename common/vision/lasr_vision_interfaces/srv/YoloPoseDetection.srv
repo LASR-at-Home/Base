@@ -1,0 +1,15 @@
+# Image to run inference on
+sensor_msgs/Image image_raw
+
+# YOLO model to use
+string model
+
+# Confidence threshold
+float32 confidence
+
+# target frame for 3D estimate
+string target_frame
+
+---
+# Detection result
+lasr_vision_msgs/KeypointList[] detections
