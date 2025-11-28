@@ -7,6 +7,7 @@ from geometry_msgs.msg import PointStamped
 
 from lasr_helper_interfaces.srv import TransformPoint
 
+
 class TfServer(Node):
 
     _tf_buffer: tf.Buffer
@@ -19,11 +20,12 @@ class TfServer(Node):
         self._tf_listener = tf.TransformListener(self._tf_buffer, self)
 
         self.create_service(
-            TransformPoint,
-            "/tf_server/transform_point", self._transform_point
+            TransformPoint, "/tf_server/transform_point", self._transform_point
         )
 
-    def _transform_point(self, request: TransformPoint.Request, response: TransformPoint.Response) -> TransformPoint.Response:
+    def _transform_point(
+        self, request: TransformPoint.Request, response: TransformPoint.Response
+    ) -> TransformPoint.Response:
         """Transform a point from one frame to another using the tf2 library.
 
         Args:
@@ -56,6 +58,7 @@ class TfServer(Node):
             response.transformed_point_stamped = PointStamped()
             return response
 
+
 def main():
     rclpy.init()
 
@@ -65,5 +68,7 @@ def main():
     rclpy.spin(tf_server)
     tf_server.destroy_node()
     rclpy.shutdown()
+
+
 if __name__ == "__main__":
     main()
