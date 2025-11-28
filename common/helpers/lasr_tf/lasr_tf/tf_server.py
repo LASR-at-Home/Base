@@ -15,13 +15,15 @@ class TfServer(Node):
     _tf_listener: tf.TransformListener
 
     def __init__(self):
-        super().__init__('tf_server')
-        
+        super().__init__("tf_server")
+
         self._tf_buffer = tf.Buffer(cache_time=Duration(seconds=10.0))
         self._tf_listener = tf.TransformListener(self._tf_buffer, self)
 
-        self.create_service(TransformPoint, '/tf_server/transform_point', self._transform_point)
-        self.get_logger().info('TF Server is ready!')
+        self.create_service(
+            TransformPoint, "/tf_server/transform_point", self._transform_point
+        )
+        self.get_logger().info("TF Server is ready!")
 
     def _transform_point(self, request, response):
         """Transform a point from one frame to another using the tf2 library.
@@ -40,23 +42,22 @@ class TfServer(Node):
                 request.target_frame,
                 request.input_point_stamped.header.frame_id,
                 request.input_point_stamped.header.stamp,
-                timeout=Duration(seconds=1.0)
+                timeout=Duration(seconds=1.0),
             )
-            
+
             transformed_point = do_transform_point(
-                request.input_point_stamped,
-                transform
+                request.input_point_stamped, transform
             )
-            
+
             response.transformed_point_stamped = transformed_point
             return response
-            
+
         except (
             tf.LookupException,
             tf.ConnectivityException,
             tf.ExtrapolationException,
         ) as e:
-            self.get_logger().error(f'TF error: {e}')
+            self.get_logger().error(f"TF error: {e}")
             response.transformed_point_stamped = PointStamped()
             return response
 
