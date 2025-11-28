@@ -36,6 +36,7 @@ from geometry_msgs.msg import Point, PointStamped
 from visualization_msgs.msg import Marker, MarkerArray
 
 import tf2_ros as tf
+from tf2_ros.buffer import Buffer
 from tf2_geometry_msgs.tf2_geometry_msgs import do_transform_point
 
 # TODO handle 3D detection service later on
@@ -87,7 +88,8 @@ class YOLOServiceNode:
     _image_publishers: Dict[str, rclpy.node.Publisher]
     _marker_publishers: Dict[str, rclpy.node.Publisher]
     _bridge: CvBridge
-    _tf_buffer: tf.Buffer
+    # _tf_buffer: tf.Buffer
+    _tf_buffer: Buffer
     _tf_listener: tf.TransformListener
 
     def __init__(self):
@@ -107,8 +109,8 @@ class YOLOServiceNode:
         self._marker_publishers = {}
         self._bridge = CvBridge()
 
-        self._tf_buffer = tf.Buffer(cache_time=Duration(seconds=10))
-        self._tf_listener = tf.TransformListener(self._tf_buffer, self.node)
+        self._tf_buffer = Buffer(cache_time=Duration(seconds=10)) # was tf.Buffer()
+        self._tf_listener = tf.TransformListener(self._tf_buffer, self.node) # should be tf.transform_listener.TransformListener ??
 
         self.node.create_service(YoloDetection, "/yolo/detect", self._detect)
         self.node.create_service(YoloDetection3D, "/yolo/detect3d", self._detect3d)
@@ -177,7 +179,9 @@ class YOLOServiceNode:
                 tf.ConnectivityException,
                 tf.ExtrapolationException,
             ) as e:
-                raise rospy.ServiceException(str(e))
+                self.node.get_logger().error(f"Service failed: {e}")
+                response.detected_objects = []
+                return response
 
         for result in results:
             detection = Detection3D()
@@ -224,7 +228,7 @@ class YOLOServiceNode:
                 detection.point = point_stamped_transformed.point
 
             else:
-                rospy.logwarn(
+                self.node.get_logger().warn(
                     "3D Estimation is not implemented when masks aren't available."
                 )
 
@@ -272,6 +276,7 @@ class YOLOServiceNode:
 
         target_frame = req.target_frame or req.depth_image.header.frame_id
 
+        transform = None
         if results:
             try:
                 transform = self._tf_buffer.lookup_transform(
@@ -285,7 +290,9 @@ class YOLOServiceNode:
                 tf.ConnectivityException,
                 tf.ExtrapolationException,
             ) as e:
-                raise rospy.ServiceException(str(e))
+                self.node.get_logger().error(f"Service failed: {e}")
+                response.detected_objects = []
+                return response
 
         for result in results:
             keypoints = Keypoint3DList()
@@ -326,7 +333,7 @@ class YOLOServiceNode:
 
         model = self._cache[model_name] = ultralytics.YOLO(model_name).to(self._device)
 
-        rospy.loginfo(f"Loaded {model_name} model on {self._device}")
+        self.node.get_logger().info(f"Loaded {model_name} model on {self._device}")
         return model
 
     def _publish_results(
@@ -366,7 +373,7 @@ class YOLOServiceNode:
                 marker.header.frame_id = (
                     req.target_frame or req.depth_image.header.frame_id
                 )
-                marker.header.stamp = rospy.Time.now()
+                marker.header.stamp = self.node.get_clock().now().to_msg() # According to https://docs.ros.org/en/galactic/Tutorials/Intermediate/Tf2/Writing-A-Tf2-Broadcaster-Py.html
                 marker.id = i
                 marker.type = Marker.SPHERE
                 marker.action = Marker.ADD
@@ -406,7 +413,7 @@ class YOLOServiceNode:
                     marker.header.frame_id = (
                         req.target_frame or req.depth_image.header.frame_id
                     )
-                    marker.header.stamp = rospy.Time.now()
+                    marker.header.stamp = self.node.get_clock().now().to_msg()
                     marker.id = marker_id
                     marker.ns = f"person_{detection_idx}"
                     marker.type = Marker.SPHERE
@@ -429,7 +436,7 @@ class YOLOServiceNode:
                         line_marker.header.frame_id = (
                             req.target_frame or req.depth_image.header.frame_id
                         )
-                        line_marker.header.stamp = rospy.Time.now()
+                        line_marker.header.stamp = self.node.get_clock().now().to_msg()
                         line_marker.id = marker_id
                         line_marker.ns = f"person_{detection_idx}_lines"
                         line_marker.type = Marker.LINE_LIST

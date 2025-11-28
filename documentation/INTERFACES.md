@@ -17,3 +17,4 @@
 - Service nodes in ROS2 should inherit the `Node` class which is imported from `rclpy.node`.
 - The service class' constructor should initialise the node with its name.
 - The service should then be created in the constructor with the create_service function, taking in the type, name, and callback.
+- Handling exception: `rospy.ServiceException(str(e))` does not exist in ROS2. You can return an empty response immediately and print an error.
