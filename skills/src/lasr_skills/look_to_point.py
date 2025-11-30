@@ -1,6 +1,5 @@
-import smach
+from ros_state import RosState
 import rclpy
-from rclpy.node import Node
 from rclpy.action import ActionClient
 
 from control_msgs.action import PointHead
@@ -9,16 +8,17 @@ from geometry_msgs.msg import Point, PointStamped
 from typing import Union
 
 
-class LookToPoint(smach.State, Node):
+class LookToPoint(RosState):
     _pointstamped: Union[None, PointStamped]
 
     def __init__(
         self,
+        node,
         pointstamped: Union[None, PointStamped] = None,
     ):
-        Node.__init__(self, "look_to_point")
-        smach.State.__init__(
+        super().__init__(
             self,
+            node,
             outcomes=["succeeded", "aborted", "timed_out"],
             input_keys=["pointstamped"] if pointstamped is None else [],
         )
@@ -30,7 +30,7 @@ class LookToPoint(smach.State, Node):
         )
         self.goal_future = None
         self.result_future = None
-        self.get_logger().info("Created State")
+        self.node.get_logger().info("Created State")
 
         self.client.wait_for_server()
 
@@ -48,7 +48,7 @@ class LookToPoint(smach.State, Node):
         )
 
         # Send the goal
-        self.get_logger().info("Sending goal")
+        self.node.get_logger().info("Sending goal")
         future = self.client.send_goal_async(
             goal
         )  # can't call send_goal in cb because of deadlock

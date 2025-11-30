@@ -44,9 +44,7 @@ class PointCloudSweep(smach.StateMachine):
                         "succeeded": f"LookToPoint_{index}",
                         "failed": "failed",
                     },
-                    remapping={
-                        "pointstamped": f"pointstamped_{index}",
-                    },
+                    remapping={"pointstamped": f"pointstamped_{index}"},
                 )
                 smach.StateMachine.add(
                     f"LookToPoint_{index}",
@@ -56,9 +54,7 @@ class PointCloudSweep(smach.StateMachine):
                         "aborted": "failed",
                         "timed_out": f"GetTransformedPointcloud_{index}",
                     },
-                    remapping={
-                        "pointstamped": f"pointstamped_{index}",
-                    },
+                    remapping={"pointstamped": f"pointstamped_{index}"},
                 )
                 if index < len(sweep_points) - 1:
                     transitions = {
@@ -66,16 +62,13 @@ class PointCloudSweep(smach.StateMachine):
                         "failed": "failed",
                     }
                 else:
-                    transitions = {
-                        "succeeded": "succeeded",
-                        "failed": "failed",
-                    }
+                    transitions = {"succeeded": "succeeded", "failed": "failed"}
                 smach.StateMachine.add(
                     f"GetTransformedPointcloud_{index}",
                     self.GetTransformedPointcloud(),
                     transitions=transitions,
                     remapping={
-                        "transformed_pointcloud": f"transformed_pointcloud_{index}",
+                        "transformed_pointcloud": f"transformed_pointcloud_{index}"
                     },
                 )
 
@@ -99,10 +92,7 @@ class PointCloudSweep(smach.StateMachine):
                 )  # TODO fix this
                 # transform pcl to map frame
                 trans = tf_buffer.lookup_transform(
-                    "map",
-                    pcl.header.frame_id,
-                    Time(seconds=0),
-                    Duration(seconds=1.0),
+                    "map", pcl.header.frame_id, Time(seconds=0), Duration(seconds=1.0)
                 )
                 pcl_map = pcl_transform(pcl, trans)
                 userdata.transformed_pointclouds.append(pcl_map)
@@ -129,10 +119,7 @@ class PointCloudSweep(smach.StateMachine):
                     point = userdata.point
                 else:
                     point = self.point
-                pointstamped = PointStamped(
-                    point=point,
-                    header=Header(frame_id="map"),
-                )
+                pointstamped = PointStamped(point=point, header=Header(frame_id="map"))
                 userdata.pointstamped = pointstamped
             except Exception as e:
                 node.get_logger().error(f"Failed to create PointStamped: {str(e)}")
@@ -146,11 +133,7 @@ def main(args=None):
     rclpy.init(args=args)
     node = rclpy.create_node("pointcloud_sweep")
 
-    sweep_points = [
-        (5.78, 3.06, 0.8),
-        (5.06, 3.61, 0.8),
-        (4.31, 4.22, 0.8),
-    ]
+    sweep_points = [(5.78, 3.06, 0.8), (5.06, 3.61, 0.8), (4.31, 4.22, 0.8)]
 
     try:
         sm = PointCloudSweep(sweep_points)

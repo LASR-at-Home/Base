@@ -37,12 +37,15 @@ set(msg_files
 set(srv_files
   "srv/BodyPixMaskDetection.srv"
   "srv/BodyPixKeypointDetection.srv"
-  "srv/DetectWave.srv"
+  "srv/BodyPixWaveDetection.srv"
   "srv/ClipLearnFace.srv"
   "srv/CroppedDetection.srv"
   "srv/LearnFace.srv"
   "srv/YoloDetection.srv"
   "srv/YoloDetection3D.srv"
+  "srv/Recognise.srv"
+  "srv/DetectFaces.srv"
+  "srv/Vqa.srv"
   "srv/YoloPoseDetection.srv"
   "srv/YoloPoseDetection3D.srv"
 )
@@ -61,5 +64,5 @@ rosidl_generate_interfaces(${PROJECT_NAME}
 # Export dependencies
 ament_export_dependencies(rosidl_default_runtime)
 
-# This must be called after all targets and before any installation commands
+# Ensure correct build order
 ament_package()

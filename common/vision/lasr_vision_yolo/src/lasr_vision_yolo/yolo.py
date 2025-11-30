@@ -4,10 +4,7 @@ import cv2_img
 from ultralytics import YOLO
 
 from lasr_vision_interfaces.msg import Detection, Detection3D
-from lasr_vision_interfaces.srv import (
-    YoloDetection,
-    # YoloDetection3D,
-)
+from lasr_vision_interfaces.srv import YoloDetection  # , YoloDetection3D
 
 import tf2_ros as tf
 

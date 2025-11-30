@@ -18,6 +18,6 @@ setup(
             "bodypix_node = lasr_vision_bodypix.bodypix:main",
             "keypoint_relay = lasr_vision_bodypix.examples.keypoint_relay:main",
             "mask_relay = lasr_vision_bodypix.examples.mask_relay:main",
-        ],
+        ]
     },
 )

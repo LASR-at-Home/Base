@@ -17,7 +17,5 @@ setup(
     description="REceptionist task",
     license="MIT",
     tests_require=["pytest"],
-    entry_points={
-        "console_scripts": [],
-    },
+    entry_points={"console_scripts": []},
 )

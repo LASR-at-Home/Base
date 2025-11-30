@@ -1,24 +1,18 @@
 from typing import Union
 import rclpy
-import smach
+from ros_state import RosState
 from geometry_msgs.msg import Pose, PoseStamped
-from nav2_simple_commander.robot_navigator import BasicNavigator
+from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
 from std_msgs.msg import Header
 
 
-class GoToLocation(smach.State):
-    def __init__(
-        self,
-        location: Union[Pose, None] = None,
-    ):
+class GoToLocation(RosState):
+    def __init__(self, node, location: Union[Pose, None] = None):
         if location is not None is not None:
-            super().__init__(
-                outcomes=["succeeded", "failed"],
-            )
+            super().__init__(node, outcomes=["succeeded", "failed"])
         else:
             super().__init__(
-                outcomes=["succeeded", "failed"],
-                input_keys=["location"],
+                node, outcomes=["succeeded", "failed"], input_keys=["location"]
             )
 
         self.navigator = BasicNavigator()
@@ -39,4 +33,8 @@ class GoToLocation(smach.State):
         while not self.navigator.isTaskComplete():
             rclpy.spin_once(self.navigator)
 
-        return "succeeded" if self.navigator.getResult() == 2 else "failed"
+        return (
+            "succeeded"
+            if self.navigator.getResult() == TaskResult.SUCCEEDED
+            else "failed"
+        )

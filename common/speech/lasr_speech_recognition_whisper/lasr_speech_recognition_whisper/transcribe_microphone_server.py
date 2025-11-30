@@ -58,11 +58,7 @@ class TranscribeSpeechAction(Node):
     _feedback = TranscribeSpeech.Feedback()
     _result = TranscribeSpeech.Result()
 
-    def __init__(
-        self,
-        action_name: str,
-        model_params: speech_model_params,
-    ) -> None:
+    def __init__(self, action_name: str, model_params: speech_model_params) -> None:
         """Starts an action server for transcribing speech.
 
         Args:
@@ -119,8 +115,7 @@ class TranscribeSpeechAction(Node):
             for index, name in microphones:
                 if self._model_params.mic_device in name:
                     return sr.Microphone(
-                        device_index=index,
-                        sample_rate=self._model_params.sample_rate,
+                        device_index=index, sample_rate=self._model_params.sample_rate
                     )
             raise ValueError(
                 f"Could not find microphone with name: {self._model_params.mic_device}"
@@ -227,8 +222,7 @@ class TranscribeSpeechAction(Node):
         transcription_start_time = timer()
         # Cast to fp16 if using GPU
         phrase = self._model.transcribe(
-            float_data,
-            fp16=self._model_params.device == "cuda",
+            float_data, fp16=self._model_params.device == "cuda"
         )["text"]
         transcription_end_time = timer()
         self.get_logger().info(f"Transcription finished!")
@@ -293,16 +287,10 @@ def parse_args() -> dict:
         help="Maximum phrase duration after starting listening in seconds.",
     )
     parser.add_argument(
-        "--sample_rate",
-        type=int,
-        default=16000,
-        help="Sample rate of the microphone.",
+        "--sample_rate", type=int, default=16000, help="Sample rate of the microphone."
     )
     parser.add_argument(
-        "--mic_device",
-        type=str,
-        default=None,
-        help="Microphone device index or name",
+        "--mic_device", type=str, default=None, help="Microphone device index or name"
     )
     parser.add_argument(
         "--no_warmup",

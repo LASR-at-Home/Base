@@ -19,6 +19,6 @@ def generate_launch_description():
                         "frame_rate": 30,
                     }
                 ],
-            ),
+            )
         ]
     )

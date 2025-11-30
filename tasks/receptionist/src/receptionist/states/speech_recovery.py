@@ -13,12 +13,7 @@ from typing import List, Dict, Any
 
 
 class SpeechRecovery(smach.State):
-    def __init__(
-        self,
-        guest_id: int,
-        last_resort: bool,
-        input_type: str = "",
-    ):
+    def __init__(self, guest_id: int, last_resort: bool, input_type: str = ""):
         """Recover the correct name and / or drink by parsing the transcription.
 
         Args:
@@ -59,19 +54,8 @@ class SpeechRecovery(smach.State):
             "harrie",
             "peter",
         ]
-        self._available_single_drinks = [
-            "cola",
-            "water",
-            "milk",
-            "fanta",
-            "dubbelfris",
-        ]
-        self._available_double_drinks = [
-            "ice",
-            "tea",
-            "big",
-            "coke",
-        ]
+        self._available_single_drinks = ["cola", "water", "milk", "fanta", "dubbelfris"]
+        self._available_double_drinks = ["ice", "tea", "big", "coke"]
         self._double_drinks_dict = {
             "ice": "ice tea",
             "tea": "ice tea",

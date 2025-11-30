@@ -13,10 +13,7 @@ from lasr_vision_interfaces.msg import CDRequest
 class CheckSofa(smach.StateMachine):
     def __init__(self, sofa_area: ShapelyPolygon, max_people_on_sofa: int):
 
-        smach.StateMachine.__init__(
-            self,
-            outcomes=["has_free_space", "no_free_space"],
-        )
+        smach.StateMachine.__init__(self, outcomes=["has_free_space", "no_free_space"])
 
         self.sofa_area = sofa_area
         self.max_people_on_sofa = max_people_on_sofa
@@ -40,11 +37,7 @@ class CheckSofa(smach.StateMachine):
                                 polygons=[
                                     Polygon(
                                         points=[
-                                            Point(
-                                                x=point[0],
-                                                y=point[1],
-                                                z=0.0,
-                                            )
+                                            Point(x=point[0], y=point[1], z=0.0)
                                             for point in sofa_area.exterior.coords
                                         ]
                                     )

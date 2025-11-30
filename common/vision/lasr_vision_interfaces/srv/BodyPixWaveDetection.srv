@@ -1,8 +1,6 @@
 # Image to run inference on
 sensor_msgs/PointCloud2 pcl_msg
-
-# BodyPix model to use
-string dataset
+# sensor_msgs/Image image_raw
 
 # How certain the detection should be to include
 float32 confidence
