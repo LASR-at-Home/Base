@@ -39,8 +39,6 @@ import tf2_ros as tf
 from tf2_ros.buffer import Buffer
 from tf2_geometry_msgs.tf2_geometry_msgs import do_transform_point
 
-# TODO handle 3D detection service later on
-
 KEYPOINT_MAPPING: Dict[int, str] = {
     0: "nose",
     1: "left_eye",
