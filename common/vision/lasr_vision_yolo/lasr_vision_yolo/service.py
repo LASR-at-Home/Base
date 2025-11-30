@@ -120,7 +120,7 @@ class YOLOServiceNode:
         )
         self.node.get_logger().info("YOLO service started")
 
-    def _detect(self, req: YoloDetection.Request(), res: YoloDetection.Response()) -> YoloDetection.Response():
+    def _detect(self, req: YoloDetection.Request, res: YoloDetection.Response) -> YoloDetection.Response:
         response = YoloDetection.Response()
 
         self.node.get_logger().info("Decoding")
@@ -150,7 +150,7 @@ class YOLOServiceNode:
 
         return response
 
-    def _detect3d(self, req: YoloDetection3D.Request()) -> YoloDetection3D.Response():
+    def _detect3d(self, req: YoloDetection3D.Request, res: YoloDetection3D.Response) -> YoloDetection3D.Response:
         response = YoloDetection3D.Response()
 
         cv_im = self._bridge.imgmsg_to_cv2(req.image_raw, desired_encoding="bgr8")
@@ -239,8 +239,8 @@ class YOLOServiceNode:
         return response
 
     def _detect_keypoints(
-        self, req: YoloPoseDetection.Request()
-    ) -> YoloPoseDetection.Response():
+        self, req: YoloPoseDetection.Request, res: YoloPoseDetection.Response
+    ) -> YoloPoseDetection.Response:
         response = YoloPoseDetection.Response()
 
         cv_im = self._bridge.imgmsg_to_cv2(req.image_raw, desired_encoding="bgr8")
@@ -261,8 +261,8 @@ class YOLOServiceNode:
         return response
 
     def _detect_keypoints3d(
-        self, req: YoloPoseDetection3D.Request()
-    ) -> YoloPoseDetection3D.Response():
+        self, req: YoloPoseDetection3D.Request, res: YoloPoseDetection3D.Response
+    ) -> YoloPoseDetection3D.Response:
         response = YoloPoseDetection3D.Response()
 
         cv_im = self._bridge.imgmsg_to_cv2(req.image_raw, desired_encoding="bgr8")
