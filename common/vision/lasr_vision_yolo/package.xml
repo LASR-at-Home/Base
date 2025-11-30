@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-    <name>lasr_vision_yolov8</name>
+    <name>lasr_vision_yolo</name>
     <version>0.0.0</version>
-    <description>YOLOv8 object detection service</description>
+    <description>YOLO object detection service</description>
     <maintainer email="maayan.armony@gmail.com">maayan</maintainer>
     <license>MIT</license>
 
