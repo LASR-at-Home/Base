@@ -5,18 +5,16 @@
   <version>0.0.0</version>
   <description>TODO: Package description</description>
   <maintainer email="fadimostefai@gmail.com">fadi-mostefai</maintainer>
-  <license>TODO: License declaration</license>
+  <license>MIT</license>
 
-  <depend>std_msgs</depend>
-  <depend>geometry_msgs</depend>
   <depend>rclpy</depend>
+  <depend>sensor_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>lasr_vision_interfaces</depend>
 
-  <test_depend>ament_copyright</test_depend>
-  <test_depend>ament_flake8</test_depend>
-  <test_depend>ament_pep257</test_depend>
-  <test_depend>python3-pytest</test_depend>
 
   <export>
     <build_type>ament_python</build_type>
+    <pip_requirements>requirements.txt</pip_requirements>
   </export>
 </package>
