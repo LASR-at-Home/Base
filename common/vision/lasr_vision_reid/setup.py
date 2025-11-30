@@ -22,6 +22,6 @@ setup(
         ],
     },
     entry_points={
-        "console_scripts": [],
+        "console_scripts": ["service = lasr_vision_reid.service:main"],
     },
 )
