@@ -349,14 +349,14 @@ class YOLOServiceNode:
             image_publisher = self._image_publishers[req.model] = self.node.create_publisher(
                 Image,
                 f"/yolo/detect/{req.model}".replace("-", "_").replace(".", "_"),
-                queue_size=10,
+                10,
             )
 
         image_publisher.publish(
             self._bridge.cv2_to_imgmsg(results.plot(), encoding="bgr8")
         )
 
-        if isinstance(response, YoloDetection3D.Response()):
+        if isinstance(response, YoloDetection3D.Response):
 
             if req.model in self._marker_publishers:
                 marker_publisher = self._marker_publishers[req.model]
@@ -364,7 +364,7 @@ class YOLOServiceNode:
                 marker_publisher = self._marker_publishers[req.model] = self.node.create_publisher(
                     Marker,
                     f"/yolo/detect3d/{req.model}".replace("-", "_").replace(".", "_"),
-                    queue_size=10,
+                    10,
                 )
 
             for i, detection in enumerate(response.detected_objects):
@@ -391,14 +391,14 @@ class YOLOServiceNode:
 
                 marker_publisher.publish(marker)
 
-        elif isinstance(response, YoloPoseDetection3D.Response()):
+        elif isinstance(response, YoloPoseDetection3D.Response):
             if req.model in self._marker_publishers:
                 marker_publisher = self._marker_publishers[req.model]
             else:
                 marker_publisher = self._marker_publishers[req.model] = self.node.create_publisher(
                     MarkerArray,
                     f"/yolo/pose3d/{req.model}".replace("-", "_").replace(".", "_"),
-                    queue_size=10,
+                    10,
                 )
 
             marker_array = MarkerArray()

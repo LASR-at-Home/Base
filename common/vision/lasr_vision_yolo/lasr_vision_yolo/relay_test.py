@@ -34,7 +34,7 @@ class ImageListener(Node):
 
         req = YoloDetection.Request()
         req.image_raw = image
-        req.dataset = self.model
+        req.model = self.model
         req.confidence = 0.25
         req.nms = 0.4
 
@@ -55,6 +55,7 @@ class ImageListener(Node):
         if self.processing:
             return
 
+        self.get_logger().error(f"Running detection on received image")
         t = threading.Thread(target=self.detect, args=(image,))
         t.start()
 
@@ -62,13 +63,7 @@ class ImageListener(Node):
 def main(args=None):
     rclpy.init(args=args)
 
-    if len(sys.argv) < 2:
-        print(
-            "Usage: ros2 run lasr_vision_yolo relay <source_topic> [model.pt]"
-        )
-        return
-
-    listen_topic = sys.argv[1]
+    listen_topic = sys.argv[1] if len(sys.argv) >= 2 else "/image_raw"
     model = sys.argv[2] if len(sys.argv) >= 3 else "yolo11n.pt"
 
     node = ImageListener(listen_topic, model)
