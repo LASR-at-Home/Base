@@ -82,6 +82,7 @@ SKELETON_CONNECTIONS: List[Tuple[int, int]] = [
     (0, 6),  # nose to shoulders
 ]
 
+
 class YOLOServiceNode:
 
     _cache: Dict[str, ultralytics.YOLO]
@@ -109,18 +110,24 @@ class YOLOServiceNode:
         self._marker_publishers = {}
         self._bridge = CvBridge()
 
-        self._tf_buffer = Buffer(cache_time=Duration(seconds=10)) # was tf.Buffer()
-        self._tf_listener = tf.TransformListener(self._tf_buffer, self.node) # should be tf.transform_listener.TransformListener ??
+        self._tf_buffer = Buffer(cache_time=Duration(seconds=10))  # was tf.Buffer()
+        self._tf_listener = tf.TransformListener(
+            self._tf_buffer, self.node
+        )  # should be tf.transform_listener.TransformListener ??
 
         self.node.create_service(YoloDetection, "/yolo/detect", self._detect)
         self.node.create_service(YoloDetection3D, "/yolo/detect3d", self._detect3d)
-        self.node.create_service(YoloPoseDetection, "/yolo/detect_pose", self._detect_keypoints)
+        self.node.create_service(
+            YoloPoseDetection, "/yolo/detect_pose", self._detect_keypoints
+        )
         self.node.create_service(
             YoloPoseDetection3D, "/yolo/detect3d_pose", self._detect_keypoints3d
         )
         self.node.get_logger().info("YOLO service started")
 
-    def _detect(self, req: YoloDetection.Request, res: YoloDetection.Response) -> YoloDetection.Response:
+    def _detect(
+        self, req: YoloDetection.Request, res: YoloDetection.Response
+    ) -> YoloDetection.Response:
         response = YoloDetection.Response()
 
         self.node.get_logger().info("Decoding")
@@ -150,7 +157,9 @@ class YOLOServiceNode:
 
         return response
 
-    def _detect3d(self, req: YoloDetection3D.Request, res: YoloDetection3D.Response) -> YoloDetection3D.Response:
+    def _detect3d(
+        self, req: YoloDetection3D.Request, res: YoloDetection3D.Response
+    ) -> YoloDetection3D.Response:
         response = YoloDetection3D.Response()
 
         cv_im = self._bridge.imgmsg_to_cv2(req.image_raw, desired_encoding="bgr8")
@@ -346,10 +355,12 @@ class YOLOServiceNode:
         if req.model in self._image_publishers:
             image_publisher = self._image_publishers[req.model]
         else:
-            image_publisher = self._image_publishers[req.model] = self.node.create_publisher(
-                Image,
-                f"/yolo/detect/{req.model}".replace("-", "_").replace(".", "_"),
-                10,
+            image_publisher = self._image_publishers[req.model] = (
+                self.node.create_publisher(
+                    Image,
+                    f"/yolo/detect/{req.model}".replace("-", "_").replace(".", "_"),
+                    10,
+                )
             )
 
         image_publisher.publish(
@@ -361,10 +372,14 @@ class YOLOServiceNode:
             if req.model in self._marker_publishers:
                 marker_publisher = self._marker_publishers[req.model]
             else:
-                marker_publisher = self._marker_publishers[req.model] = self.node.create_publisher(
-                    Marker,
-                    f"/yolo/detect3d/{req.model}".replace("-", "_").replace(".", "_"),
-                    10,
+                marker_publisher = self._marker_publishers[req.model] = (
+                    self.node.create_publisher(
+                        Marker,
+                        f"/yolo/detect3d/{req.model}".replace("-", "_").replace(
+                            ".", "_"
+                        ),
+                        10,
+                    )
                 )
 
             for i, detection in enumerate(response.detected_objects):
@@ -373,7 +388,9 @@ class YOLOServiceNode:
                 marker.header.frame_id = (
                     req.target_frame or req.depth_image.header.frame_id
                 )
-                marker.header.stamp = self.node.get_clock().now().to_msg() # According to https://docs.ros.org/en/galactic/Tutorials/Intermediate/Tf2/Writing-A-Tf2-Broadcaster-Py.html
+                marker.header.stamp = (
+                    self.node.get_clock().now().to_msg()
+                )  # According to https://docs.ros.org/en/galactic/Tutorials/Intermediate/Tf2/Writing-A-Tf2-Broadcaster-Py.html
                 marker.id = i
                 marker.type = Marker.SPHERE
                 marker.action = Marker.ADD
@@ -395,10 +412,12 @@ class YOLOServiceNode:
             if req.model in self._marker_publishers:
                 marker_publisher = self._marker_publishers[req.model]
             else:
-                marker_publisher = self._marker_publishers[req.model] = self.node.create_publisher(
-                    MarkerArray,
-                    f"/yolo/pose3d/{req.model}".replace("-", "_").replace(".", "_"),
-                    10,
+                marker_publisher = self._marker_publishers[req.model] = (
+                    self.node.create_publisher(
+                        MarkerArray,
+                        f"/yolo/pose3d/{req.model}".replace("-", "_").replace(".", "_"),
+                        10,
+                    )
                 )
 
             marker_array = MarkerArray()
@@ -464,6 +483,7 @@ class YOLOServiceNode:
         )
         results = yolo(img, conf=conf, classes=filter_idx, verbose=False)[0]
         return results
+
 
 class AccessNode(Node):
     """

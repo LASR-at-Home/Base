@@ -41,7 +41,9 @@ class YoloServiceNode:
 
         yolo.start_tf_buffer()
         self.node.create_service(YoloDetection, "/yolo/detect", self._detect)
-        self.node.create_service(YoloPoseDetection, "/yolo/detect_pose", self._detect_keypoints)
+        self.node.create_service(
+            YoloPoseDetection, "/yolo/detect_pose", self._detect_keypoints
+        )
         self.node.get_logger().info("YOLO service started")
 
     def _detect(
