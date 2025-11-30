@@ -1,0 +1,7 @@
+tf-bodypix
+opencv-python
+Pillow
+matplotlib
+
+# The following was manually added and freezed into requirements.txt:
+tfjs-graph-converter

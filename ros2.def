@@ -1,0 +1,112 @@
+Bootstrap: docker
+From: ros:humble
+
+%post -c /bin/bash
+export ROS_DISTRO=humble
+
+# Install deps
+apt update
+export DEBIAN_FRONTEND=noninteractive
+apt upgrade -y
+apt install ros-$ROS_DISTRO-xacro -y # missing dependency
+apt install ros-$ROS_DISTRO-rqt* -y # missing dependency
+apt install ros-$ROS_DISTRO-usb-cam -y # to test camera
+apt install terminator wget git inetutils-ping -y
+apt install python3-pip -y
+
+# Dependencies for tf_pcl
+apt install ros-$ROS_DISTRO-sensor-msgs-py -y
+
+# Dependencies for Whisper
+apt install ffmpeg portaudio19-dev alsa-utils -y
+pip install -r $PWD/common/speech/lasr_speech_recognition_whisper/requirements.txt
+
+rm -f /etc/ros/rosdep/sources.list.d/20-default.list
+rosdep init
+rosdep update
+
+# Install and build PAL opensource packages
+source /opt/ros/$ROS_DISTRO/setup.bash
+
+mkdir -p /opt/tiago_public_ws/src
+cd /opt/tiago_public_ws
+vcs import --input https://raw.githubusercontent.com/pal-robotics/tiago_tutorials/humble-devel/tiago_public.repos src
+rosdep install --from-paths src -y --ignore-src --rosdistro humble
+colcon build --symlink-install
+echo "source /opt/tiago_public_ws/install/setup.bash" >> /opt/env.sh
+
+mkdir -p /opt/robocup_ws/src
+cd /opt/robocup_ws/src
+git clone https://github.com/ros/executive_smach.git
+cd executive_smach
+git checkout ros2
+cd /opt/robocup_ws
+colcon build
+echo "source /opt/robocup_ws/install/setup.bash" >> /opt/env.sh
+
+echo "if [ -f "\$HOME/.tiagorc" ]; then
+    . \$HOME/.tiagorc
+fi" >> /opt/env.sh
+
+echo "export PS1=\"(\[\033[31m\]\"\\\${ROS_MASTER_URI:7:-6}\"\[\033[0m\]) \[\033[01;32m\]Apptainer\[\033[00m\]:\[\033[01;33m\]\w\[\033[00m\]> \"" >> /.singularity.d/env/99-base.sh
+
+echo "echo 'I am in Apptainer/Singularity! (Built on $(date +'%d/%m/%Y %H:%M %Z'))'" >> /opt/env.sh
+
+# Fix users: https://groups.google.com/a/lbl.gov/g/singularity/c/FjaOxbeZJn0?pli=1
+sed -i 's/^\(user:x:\).*\(::.*\)/\11005:1005\2/g' /etc/passwd
+
+#### Terminator config
+echo -e "alias terminator='terminator -u --config /opt/terminator_config --title \"TIAGo $ROS_DISTRO Apptainer\" &>/dev/null &'" >> /opt/env.sh
+echo "export PROMPT_COMMAND='echo -en \"\033]0; Apptainer:\$(dirs)\a\"'" >> /opt/env.sh # Sets the split title in terminator to be the prompt (as it usually is)
+
+cat <<EOF > /opt/terminator_config
+[global_config]
+#title_transmit_bg_color = "#4e9a06" # Green
+#title_transmit_bg_color = "#c4a000"  # Yellow
+title_transmit_bg_color = "#ce5c00"  # Orange
+window_state = maximise
+[keybindings]
+[layouts]
+[[default]]
+    [[[child1]]]
+    parent = window0
+    profile = default
+    type = Terminal
+    [[[window0]]]
+    parent = ""
+    type = Window
+[plugins]
+[profiles]
+[[default]]
+    cursor_color = "#aaaaaa"
+    scrollback_infinite = True
+    custom_command = bash --init-file /opt/env.sh
+    use_custom_command = True
+EOF
+####
+
+%runscript
+#!/bin/bash
+if [ $# -eq 1 ]; then
+    if [[ $1 = "terminator" ]]; then
+        echo "Running terminator. This terminal will be unresponsive until terminator is closed."
+        exec terminator -u --config /opt/terminator_config --title "TIAGo $ROS_DISTRO OS Apptainer" &>/dev/null
+    else
+        exec bash --init-file /opt/env.sh
+    fi
+else
+    exec bash --init-file /opt/env.sh
+fi
+
+%help
+Apptainer/Singularity image for simulating TIAGo in ROS2 Humble.
+
+Usage:
+  apptainer run --nv --nvccli <terminator>
+
+  Suffixing with "terminator" launches terminator inside the container.
+
+Useful built-in commands:
+  - terminator - Starts a terminator instance from inside the container, so all splits will already have loaded the container.
+
+In order to load your own aliases, you can create a file called .tiagorc in $HOME (so in $HOME/.tiagorc) and this will be loaded when you load the container.
