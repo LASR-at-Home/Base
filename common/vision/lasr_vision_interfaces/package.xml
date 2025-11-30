@@ -18,6 +18,10 @@
     <build_depend>message_generation</build_depend>
     <exec_depend>message_runtime</exec_depend>
     <!-- Dependencies for sensor messages and built-in interfaces -->
+    <build_depend>std_msgs</build_depend>
+    <exec_depend>std_msgs</exec_depend>
+    <build_depend>geometry_msgs</build_depend>
+    <exec_depend>geometry_msgs</exec_depend>
     <build_depend>sensor_msgs</build_depend>
     <exec_depend>sensor_msgs</exec_depend>
     <build_depend>builtin_interfaces</build_depend>

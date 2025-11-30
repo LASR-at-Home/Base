@@ -19,4 +19,4 @@ float32 confidence
 string target_frame
 ---
 # Detection result
-lasr_vision_msgs/Keypoint3DList[] detections
+lasr_vision_interfaces/Keypoint3DList[] detections

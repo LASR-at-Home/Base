@@ -12,4 +12,4 @@ string target_frame
 
 ---
 # Detection result
-lasr_vision_msgs/KeypointList[] detections
+lasr_vision_interfaces/KeypointList[] detections

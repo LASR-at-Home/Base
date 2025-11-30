@@ -96,7 +96,7 @@ class YOLOServiceNode:
         self.node = AccessNode.get_node()
         self._cache = {}
         self.node.declare_parameter(
-            "~device", ["cuda:0" if torch.cuda.is_available() else "cpu"]
+            "~device", "cuda:0" if torch.cuda.is_available() else "cpu"
         )  # to have a default value.. maybe there is a cleaner way to do this
         self._device = self.node.get_parameter("~device").value
 
@@ -338,9 +338,9 @@ class YOLOServiceNode:
 
     def _publish_results(
         self,
-        req: Union[YoloDetection.Request(), YoloDetection3D.Request()],
+        req: Union[YoloDetection.Request, YoloDetection3D.Request],
         results: ultralytics.engine.results.Results,
-        response: Union[YoloDetection.Response(), YoloDetection3D.Response()],
+        response: Union[YoloDetection.Response, YoloDetection3D.Response],
     ) -> None:
 
         if req.model in self._image_publishers:
@@ -490,18 +490,6 @@ class AccessNode(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-
-    # Put ourselves in the model folder TODO required??
-    package_install = packages.get_package_prefix("lasr_vision_yolo")
-    package_path = os.path.abspath(
-        os.path.join(
-            package_install,
-            os.pardir,
-            os.pardir,
-            "common/vision/lasr_vision_yolo",
-        )
-    )
-    os.chdir(os.path.abspath(os.path.join(package_path, "models")))
 
     node = AccessNode.get_node()
     YOLOServiceNode()

@@ -22,4 +22,4 @@ string[] filter
 string target_frame
 ---
 # Detection result
-lasr_vision_msgs/Detection3D[] detected_objects
+lasr_vision_interfaces/Detection3D[] detected_objects
