@@ -144,3 +144,4 @@ mypy.ini
 # Pycharm extension setup files
 .idea/*
 /common/helpers/ros2_numpy
+/common/helpers/ament_virtualenv
