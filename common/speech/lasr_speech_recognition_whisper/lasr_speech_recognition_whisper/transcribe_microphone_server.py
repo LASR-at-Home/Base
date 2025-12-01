@@ -235,7 +235,9 @@ class TranscribeSpeechAction(Node):
         self.get_logger().info(
             f"Time taken: {transcription_end_time - transcription_start_time:.2f}s"
         )
-        self._transcription_server.publish(phrase)
+        msg = String()
+        msg.data = phrase
+        self._transcription_server.publish(msg)
         if goal_handle.is_cancel_requested:
             self._listening = False
             return
