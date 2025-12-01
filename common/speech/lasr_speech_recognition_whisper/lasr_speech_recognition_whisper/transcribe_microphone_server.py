@@ -217,7 +217,7 @@ class TranscribeSpeechAction(Node):
             / 32768.0
         )
 
-        if goal_handle.is_cancel_requested():
+        if goal_handle.is_cancel_requested:
             self._listening = False
             self.get_logger().info("Goal was cancelled during execution.")
             goal_handle.canceled()
@@ -236,7 +236,7 @@ class TranscribeSpeechAction(Node):
             f"Time taken: {transcription_end_time - transcription_start_time:.2f}s"
         )
         self._transcription_server.publish(phrase)
-        if goal_handle.is_cancel_requested():
+        if goal_handle.is_cancel_requested:
             self._listening = False
             return
 
