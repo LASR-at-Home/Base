@@ -27,10 +27,10 @@ def relay_3d(
         response = recognise.call_async(request)
         node.get_logger().info(response)
 
-    image_sub = message_filters.Subscriber(image_topic, Image)
-    depth_sub = message_filters.Subscriber(depth_topic, Image)
+    image_sub = message_filters.Subscriber(node, Image, image_topic)
+    depth_sub = message_filters.Subscriber(node, Image, depth_topic)
     depth_camera_info_sub = message_filters.Subscriber(
-        depth_camera_info_topic, CameraInfo
+        node, CameraInfo, depth_camera_info_topic
     )
     ts = message_filters.ApproximateTimeSynchronizer(
         [image_sub, depth_sub, depth_camera_info_sub], 10, 2.0
@@ -42,12 +42,13 @@ def main():
     rclpy.init(args=sys.argv)
     node = rclpy.create_node("lasr_vision_reid_relay")
 
-    camera = node.declare_parameter("~camera", "xtion").value
+    node.declare_parameter("camera", "xtion")
+    camera = node.get_parameter("camera").value
     image_topic = f"/{camera}/rgb/image_raw"
     depth_topic = f"/{camera}/depth_registered/image_raw"
     depth_camera_info_topic = f"/{camera}/depth_registered/camera_info"
 
-    relay_3d(node, image_topic, depth_topic, depth_camera_info_topic)
+    relay_3d(node=node, image_topic=image_topic, depth_topic=depth_topic, depth_camera_info_topic=depth_camera_info_topic)
 
     rclpy.spin(node)
     node.destroy_node()  # Added: Cleanup

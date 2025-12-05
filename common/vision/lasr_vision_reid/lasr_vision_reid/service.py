@@ -33,11 +33,12 @@ class ReID(Node):
     _recognise_service: rclpy.service.Service
 
     def __init__(self):
+        super().__init__("lasr_vision_reid_service")
         self._db = {}
 
         self._bridge = CvBridge()
         self._tf_buffer = tf.Buffer(cache_time=rclpy.duration.Duration(seconds=10))
-        self._tf_listener = tf.TransformListener(self._tf_buffer)
+        self._tf_listener = tf.TransformListener(self._tf_buffer, self)
 
         self._image_publisher = self.create_publisher(
             Image, "/lasr_vision_reid/recognise/detections", 10
@@ -98,7 +99,7 @@ class ReID(Node):
             tf.ExtrapolationException,
         ) as e:
             # TODO: Unsure what what exception?
-            raise rclpy.exceptions.Exception(str(e))
+            raise RuntimeError("ros service exception")
 
         try:
             # Get face embeddings and bounding boxes from DeepFace (face detection + embedding)
