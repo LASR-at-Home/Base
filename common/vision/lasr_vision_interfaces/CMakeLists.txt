@@ -9,9 +9,10 @@ endif()
 find_package(ament_cmake REQUIRED message_generation message_runtime sensor_msgs)
 find_package(rosidl_default_generators REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(std_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
 find_package(rclpy REQUIRED)
 find_package(builtin_interfaces REQUIRED)  # Needed for built-in ROS types like Time
-find_package(geometry_msgs REQUIRED)
 
 ################################################
 ## Declare ROS messages, services, and actions #
@@ -26,6 +27,10 @@ set(msg_files
   "msg/CDResponse.msg"
   "msg/Detection.msg"
   "msg/Detection3D.msg"
+  "msg/Keypoint.msg"
+  "msg/Keypoint3D.msg"
+  "msg/KeypointList.msg"
+  "msg/Keypoint3DList.msg"
 )
 
 # Specify service files
@@ -41,19 +46,15 @@ set(srv_files
   "srv/Recognise.srv"
   "srv/DetectFaces.srv"
   "srv/Vqa.srv"
+  "srv/YoloPoseDetection.srv"
+  "srv/YoloPoseDetection3D.srv"
 )
-
-
-# rosidl_generate_interfaces(${PROJECT_NAME}
-
-#   DEPENDENCIES sensor_msgs
-# )
 
 # Generate messages and services
 rosidl_generate_interfaces(${PROJECT_NAME}
   ${msg_files}
   ${srv_files}
-  DEPENDENCIES sensor_msgs builtin_interfaces geometry_msgs  # List all dependencies here
+  DEPENDENCIES std_msgs geometry_msgs sensor_msgs builtin_interfaces  # List all dependencies here
 )
 
 ###################################
