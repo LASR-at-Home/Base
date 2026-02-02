@@ -1,6 +1,6 @@
-# lasr_vision_yolov8
+# lasr_vision_yolo
 
-YOLOv8 object detection service
+YOLO object detection service
 
 This package is maintained by:
 
@@ -24,19 +24,19 @@ This package has 52 Python dependencies:
 
 ## Usage
 
-This package provides the `/yolov8/detect` service which uses the `YoloDetection` service definition from
+This package provides the `/yolo/detect` service which uses the `YoloDetection` service definition from
 `lasr_vision_interfaces`.
 
 ```python
 from lasr_vision_interfaces.srv import YoloDetection, YoloDetectionRequest
 
 # create service proxy
-detect_service = rospy.ServiceProxy('/yolov8/detect', YoloDetection)
+detect_service = rospy.ServiceProxy('/yolo/detect', YoloDetection)
 
 # create request
 request = YoloDetectionRequest()
 request.image_raw = image # sensor_msgs/Image
-request.dataset = "yolov8n.pt" # YOLOv8 model, auto-downloads
+request.dataset = "yolo11n.pt" # YOLO model, auto-downloads
 request.confidence = 0.0 # minimum confidence to include in results
 request.nms = 0.0 # non maximal supression
 
@@ -51,11 +51,11 @@ response = detect_service(request)
 
 To start the service:
 
-```python
+```bash
 # use the launch file:
-ros2 launch lasr_vision_yolov8 service.launch
+ros2 launch lasr_vision_yolo service.launch
 # .. optionally configure debug / preload:
-ros2 launch lasr_vision_yolov8 service.launch debug:=true preload:=["yolov8n-seg.pt"]
+ros2 launch lasr_vision_yolo service.launch debug:=true preload:=["yolo11n-seg.pt"]
 ```
 
 ## Example
@@ -68,10 +68,10 @@ ros2 launch lasr_vision_yolov8 service.launch debug:=true preload:=["yolov8n-seg
 2. Then launch the demo:
 
    ```bash
-   ros2 launch lasr_vision_yolov8 demo.launch file:=$HOME/v.mp4
+   ros2 launch lasr_vision_yolo demo.launch file:=$HOME/v.mp4
 
    # .. you can also try other models:
-   ros2 launch lasr_vision_yolov8 demo.launch model:=yolov8n.pt file:=$HOME/v.mp4
+   ros2 launch lasr_vision_yolo demo.launch model:=yolo11n.pt file:=$HOME/v.mp4
    ```
 
 ## Technical Overview
@@ -82,7 +82,7 @@ There are currently two components to this package:
 - The actual service node which uses IPC to communicate with the "server".
 
 This is a temporary solution to workaround the minimum Python requirements for the `ultralytics` Python package which
-wraps around YOLOv8 and provides an interface for running interface and collecting results.
+wraps around YOLO and provides an interface for running interface and collecting results.
 
 The actual YOLO detection routine works as follows:
 
@@ -101,7 +101,7 @@ The actual YOLO detection routine works as follows:
 
 - Load the appropriate YOLO model
 
-  Models are loaded from the `models` folder. Standard v8 models are loaded on-demand and saved to the directory as
+  Models are loaded from the `models` folder. Standard models are loaded on-demand and saved to the directory as
   well.
 
   > [!IMPORTANT]  
@@ -130,50 +130,50 @@ The actual YOLO detection routine works as follows:
 
 #### `service`
 
-Start the YOLOv8 service
+Start the YOLO service
 
 ```bash
-# YOLOv8 service
-ros2 launch lasr_vision_yolov8 service.launch 
+# YOLO service
+ros2 launch lasr_vision_yolo service.launch 
 
 # Preload models and enable debug topic
-ros2 launch lasr_vision_yolov8 service.launch debug:=true preload:=['yolov8n.pt','yolov8n-seg.pt']
+ros2 launch lasr_vision_yolo service.launch debug:=true preload:=['yolo11n.pt','yolo11n-seg.pt']
 ```
 
-| Argument | Default | Description                                          |
-|:--------:|:-------:|------------------------------------------------------|
-|  debug   |  false  | Whether to publish plotted images to /yolov8/debug   |
+| Argument | Default | Description                                        |
+|:--------:|:-------:|----------------------------------------------------|
+|  debug   |  false  | Whether to publish plotted images to /yolo/debug   |
 | preload  |   []    | Array of models to preload when starting the service |
 
 #### `camera`
 
-Run a YOLOv8 model using the camera
+Run a YOLO model using the camera
 
 ```bash
 # Run the demo
-ros2 launch lasr_vision_yolov8 camera.launch 
+ros2 launch lasr_vision_yolo camera.launch 
 
 # Run the demo with a different model
-ros2 launch lasr_vision_yolov8 camera.launch model:=yolov8n.pt
+ros2 launch lasr_vision_yolo camera.launch model:=yolo11n.pt
 ```
 
 | Argument |    Default     | Description               |
 |:--------:|:--------------:|---------------------------|
-|  model   | yolov8n-seg.pt | Model to use for the demo |
+|  model   | yolo11n-seg.pt | Model to use for the demo |
 
 #### `demo`
 
-Run a YOLOv8 model on a video file
+Run a YOLO model on a video file
 
 ```bash
 # Run the demo
-ros2 launch lasr_vision_yolov8 demo.launch file:=$HOME/video.mp4
+ros2 launch lasr_vision_yolo demo.launch file:=$HOME/video.mp4
 
 # Run the demo with a different model
-ros2 launch lasr_vision_yolov8 demo.launch model:=yolov8n.pt file:=$HOME/video.mp4
+ros2 launch lasr_vision_yolo demo.launch model:=yolo11n.pt file:=$HOME/video.mp4
 ```
 
 | Argument |    Default     | Description                    |
 |:--------:|:--------------:|--------------------------------|
-|  model   | yolov8n-seg.pt | Model to use for the demo      |
+|  model   | yolo11n-seg.pt | Model to use for the demo      |
 |   file   |                | Video file to run inference on |

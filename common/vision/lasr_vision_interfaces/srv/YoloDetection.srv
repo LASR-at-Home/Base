@@ -7,9 +7,13 @@ string model
 # Confidence threshold
 float32 confidence
 
-# Classes to filter, i.e. only detect these classes
-string[] filter
+# Non-maximum Supression
+#
+# Guiding value to remove overlapping bounding boxes
+float32 nms
 
+# Filter by specific classes
+string[] filter
 ---
 # Detection result
 lasr_vision_interfaces/Detection[] detected_objects
