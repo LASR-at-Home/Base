@@ -42,11 +42,14 @@ def main():
     rclpy.init(args=sys.argv)
     node = rclpy.create_node("lasr_vision_reid_relay")
 
-    node.declare_parameter("camera", "xtion")
+    node.declare_parameter("camera", "head_front_camera")
     camera = node.get_parameter("camera").value
     image_topic = f"/{camera}/rgb/image_raw"
-    depth_topic = f"/{camera}/depth_registered/image_raw"
-    depth_camera_info_topic = f"/{camera}/depth_registered/camera_info"
+    depth_topic = f"/{camera}/depth/image_raw"
+    depth_camera_info_topic = f"/{camera}/depth/camera_info"
+    node.get_logger().info(f"Image topic: {image_topic}")
+    node.get_logger().info(f"Depth topic: {depth_topic}")
+    node.get_logger().info(f"Depth camera info topic: {depth_camera_info_topic}")
 
     relay_3d(node=node, image_topic=image_topic, depth_topic=depth_topic, depth_camera_info_topic=depth_camera_info_topic)
 

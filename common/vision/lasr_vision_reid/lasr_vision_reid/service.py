@@ -82,7 +82,7 @@ class ReID(Node):
 
         h, w, _ = cv_im.shape
         target_frame = request.target_frame or request.depth_image.header.frame_id
-        K = request.depth_camera_info.K
+        K = request.depth_camera_info.k
         fx, fy = K[0], K[4]
         cx, cy = K[2], K[5]
 
