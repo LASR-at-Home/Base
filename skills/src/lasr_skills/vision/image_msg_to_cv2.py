@@ -1,4 +1,4 @@
-from ros_state import RosState
+from smach_ros import RosState
 import cv2_img
 import cv2_pcl
 
@@ -14,7 +14,6 @@ class ImageMsgToCv2(RosState):
     def __init__(self, node):
         super().__init__(
             # self, outcomes=["succeeded", "failed"], input_keys=["img_msg", "img"], output_keys=["img"]
-            self,
             node,
             outcomes=["succeeded", "failed"],
             input_keys=["img_msg"],
@@ -34,7 +33,6 @@ class PclMsgToCv2(RosState):
 
     def __init__(self, node):
         super().__init__(
-            self,
             node,
             outcomes=["succeeded", "failed"],
             input_keys=["img_msg_3d"],

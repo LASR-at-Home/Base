@@ -1,6 +1,6 @@
 from typing import Union
 import rclpy
-from ros_state import RosState
+from smach_ros import RosState
 from geometry_msgs.msg import Pose, PoseStamped
 from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
 from std_msgs.msg import Header

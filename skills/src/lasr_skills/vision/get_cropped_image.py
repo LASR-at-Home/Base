@@ -1,5 +1,6 @@
 import rclpy
-from ros_state import RosState
+import smach
+from smach_ros import RosState
 from lasr_vision_interfaces.msg import CDRequest
 from lasr_vision_interfaces.srv import CroppedDetection
 
@@ -21,7 +22,6 @@ class GetCroppedImage(RosState):
         yolo_nms_threshold: float = 0.3,
     ):
         super().__init__(
-            self,
             node,
             outcomes=["succeeded", "failed"],
             output_keys=["img_msg", "detection"],
@@ -67,8 +67,6 @@ class GetCroppedImage(RosState):
 
 
 if __name__ == "__main__":
-    import smach
-
     rclpy.init()
     node = rclpy.create_node("get_cropped_image")
 

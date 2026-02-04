@@ -1,7 +1,7 @@
 import cv2
 import cv2_img
 import rclpy
-from ros_state import RosState
+from smach_ros import RosState
 from sensor_msgs.msg import Image
 from lasr_vision_msgs.srv import YoloDetection
 
@@ -19,7 +19,6 @@ class Detect(RosState):
         debug_publisher: str = "/skills/detect/debug",
     ):
         super().__init__(
-            self,
             node,
             outcomes=["succeeded", "failed"],
             input_keys=["img_msg"],
