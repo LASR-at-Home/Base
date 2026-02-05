@@ -1,4 +1,4 @@
-from ros_state import RosState
+from smach_ros import RosState
 import rclpy
 import cv2
 import cv2_img
@@ -23,7 +23,6 @@ class DetectGesture(RosState):
         debug_publisher: str = "/skills/gesture_detection/debug",
     ):
         super().__init__(
-            self,
             node,
             outcomes=["succeeded", "failed"],
             input_keys=["img_msg"],
@@ -133,7 +132,6 @@ class DetectGesture(RosState):
 class ProcessPointingDirection(RosState):
     def __init__(self, node):
         super().__init__(
-            self,
             node,
             outcomes=["succeeded", "failed"],
             input_keys=["gesture_detected"],

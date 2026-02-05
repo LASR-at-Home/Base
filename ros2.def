@@ -34,6 +34,7 @@ git clone https://github.com/ros/executive_smach.git
 cd executive_smach
 git checkout ros2
 
+cd /opt/robocup_ws/src
 git clone https://github.com/locusrobotics/ament_virtualenv.git
 git clone https://github.com/Box-Robotics/ros2_numpy.git
 

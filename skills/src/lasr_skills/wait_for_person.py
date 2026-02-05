@@ -1,4 +1,4 @@
-from ros_state import RosState
+from smach_ros import RosState
 import smach
 from lasr_skills import Detect
 from lasr_skills.vision import GetImage
@@ -12,7 +12,6 @@ class WaitForPerson(smach.StateMachine):
         image_topic: str = "/xtion/rgb/image_raw",
     ):
         super().__init__(
-            self,
             outcomes=["succeeded", "failed"],
             output_keys=["detections"],
         )
@@ -40,8 +39,7 @@ class CheckForPerson(RosState):
         self,
         node,
     ):
-        super().__init__(
-            self, node, outcomes=["done", "not_done"], input_keys=["detections"]
+        super().__init__( node, outcomes=["done", "not_done"], input_keys=["detections"]
         )
 
     def execute(self, userdata):

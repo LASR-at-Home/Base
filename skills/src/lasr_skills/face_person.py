@@ -1,6 +1,6 @@
 import rclpy
 import smach
-from ros_state import RosState
+from smach_ros import RosState
 from lasr_vision_interfaces.srv import BodyPixKeypointDetection
 from .vision import GetCroppedImage
 from lasr_skills.play_motion import PlayMotion
@@ -54,7 +54,6 @@ class FacePerson(smach.StateMachine):
         init_state="u1m",
     ):
         super().__init__(
-            self,
             outcomes=["finished", "failed", "truncated"],
             input_keys=[],
             output_keys=[],
@@ -125,7 +124,6 @@ class DecideFacePerson(RosState):
         node,
     ):
         super().__init__(
-            self,
             node,
             outcomes=["finished", "failed", "truncated"] + positions,
             input_keys=["img_msg"],
