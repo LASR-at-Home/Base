@@ -1,7 +1,7 @@
 """Generic wait state for waiting a desired number of seconds"""
 
 import rclpy
-from ros_state import RosState
+from smach_ros import RosState
 from time import sleep
 
 
@@ -11,7 +11,7 @@ class Wait(RosState):
         Args:
             wait_time (int): Number of seconds to wait for and remain idle
         """
-        super().__init__(self, node, outcomes=["succeeded", "failed"])
+        super().__init__(node, outcomes=["succeeded", "failed"])
 
         if not rclpy.ok():
             rclpy.init()

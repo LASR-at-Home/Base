@@ -5,4 +5,5 @@
 - Setup.py
 - [Preemption](PREEMPTION.md)
 - Service
+- [SMACH](SMACH.md)
 - [Miscellaneous](MISC.md)

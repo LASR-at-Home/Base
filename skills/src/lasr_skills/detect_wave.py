@@ -1,4 +1,4 @@
-from ros_state import RosState
+from smach_ros import RosState
 from std_msgs.msg import Header
 from cv2_pcl import pcl_to_img_msg
 from lasr_vision_interfaces.srv import BodyPixKeypointDetection
