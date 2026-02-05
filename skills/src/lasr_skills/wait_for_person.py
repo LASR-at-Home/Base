@@ -39,8 +39,7 @@ class CheckForPerson(RosState):
         self,
         node,
     ):
-        super().__init__( node, outcomes=["done", "not_done"], input_keys=["detections"]
-        )
+        super().__init__(node, outcomes=["done", "not_done"], input_keys=["detections"])
 
     def execute(self, userdata):
         if len(userdata.detections.detected_objects):
