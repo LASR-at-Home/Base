@@ -9,5 +9,5 @@ class Listen(smach_ros.SimpleActionState):
         node,
     ):
         super().__init__(
-            self, node, "transcribe_speech", TranscribeSpeech, result_slots=["sequence"]
+            node, "transcribe_speech", TranscribeSpeech, result_slots=["sequence"]
         )

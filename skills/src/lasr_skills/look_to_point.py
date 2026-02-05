@@ -1,4 +1,4 @@
-from ros_state import RosState
+from smach_ros import RosState
 import rclpy
 from rclpy.action import ActionClient
 
@@ -17,7 +17,6 @@ class LookToPoint(RosState):
         pointstamped: Union[None, PointStamped] = None,
     ):
         super().__init__(
-            self,
             node,
             outcomes=["succeeded", "aborted", "timed_out"],
             input_keys=["pointstamped"] if pointstamped is None else [],

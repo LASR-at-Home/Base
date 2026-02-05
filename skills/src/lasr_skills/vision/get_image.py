@@ -1,4 +1,4 @@
-from ros_state import RosState
+from smach_ros import RosState
 import rclpy
 from rclpy.wait_for_message import wait_for_message
 from typing import Optional
@@ -12,7 +12,6 @@ class GetImage(RosState):
 
     def __init__(self, node, topic: Optional[str] = None):
         super().__init__(
-            self,
             node,
             outcomes=["succeeded", "failed"],
             output_keys=["img_msg"],
@@ -53,7 +52,6 @@ class GetPointCloud(RosState):
 
     def __init__(self, node, topic: Optional[str] = None):
         super().__init__(
-            self,
             node,
             outcomes=["succeeded", "failed"],
             output_keys=["pcl_msg"],
@@ -84,7 +82,6 @@ class GetPointCloud(RosState):
 class GetImageAndPointCloud(RosState):
     def __init__(self, node):
         super().__init__(
-            self,
             node,
             outcomes=["succeeded", "failed"],
             output_keys=["img_msg", "pcl_msg"],

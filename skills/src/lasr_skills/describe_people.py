@@ -1,6 +1,6 @@
 import rclpy
 import smach
-from ros_state import RosState
+from smach_ros import RosState
 from lasr_vision_interfaces.srv import Vqa
 from .vision import GetImage
 
@@ -35,7 +35,6 @@ class GetClipAttributes(RosState):
         node,
     ):
         super().__init__(
-            self,
             node,
             outcomes=["succeeded", "failed"],
             input_keys=["img_raw"],
