@@ -12,12 +12,13 @@ class InstallCommand(setuptools.command.install.install):
             scripts_base=self.install_scripts,
             install_base=self.install_base,
             package_name=package_name,
-            python_version='3'
+            python_version="3",
         )
         # instead of self.install_base we may also use:
         # self.config_vars['platbase'] or self.config_vars['base']
         # Exchange the python_version with '3' if your package uses Python3.
         return
+
 
 setup(
     name=package_name,
@@ -39,11 +40,11 @@ setup(
         ],
     },
     entry_points={
-        "console_scripts": ["service = lasr_vision_reid.service:main",
-                            "relay_3d = lasr_vision_reid.relay_3d:main",
-                            "add_face = lasr_vision_reid.add_face:main"],
+        "console_scripts": [
+            "service = lasr_vision_reid.service:main",
+            "relay_3d = lasr_vision_reid.relay_3d:main",
+            "add_face = lasr_vision_reid.add_face:main",
+        ],
     },
-    cmdclass={
-        'install': InstallCommand
-    }
+    cmdclass={"install": InstallCommand},
 )

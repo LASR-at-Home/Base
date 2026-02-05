@@ -51,7 +51,12 @@ def main():
     node.get_logger().info(f"Depth topic: {depth_topic}")
     node.get_logger().info(f"Depth camera info topic: {depth_camera_info_topic}")
 
-    relay_3d(node=node, image_topic=image_topic, depth_topic=depth_topic, depth_camera_info_topic=depth_camera_info_topic)
+    relay_3d(
+        node=node,
+        image_topic=image_topic,
+        depth_topic=depth_topic,
+        depth_camera_info_topic=depth_camera_info_topic,
+    )
 
     rclpy.spin(node)
     node.destroy_node()  # Added: Cleanup
