@@ -1,3 +1,5 @@
+import os
+
 import smach
 import rospy
 
@@ -9,7 +11,7 @@ import cv2_img
 import numpy as np
 
 from shapely.geometry import Point as ShapelyPoint
-from shapely.geometry.polygon import Polygon
+from shapely.geometry.polygon import Polygon as ShapelyPolygon
 
 
 class CheckTable(smach.State):
@@ -30,6 +32,29 @@ class CheckTable(smach.State):
 
     def estimate_pose(self, pcl_msg, detection):
         centroid_xyz = cv2_pcl.seg_to_centroid(pcl_msg, np.array(detection.xyseg))
+
+        """
+        # convert depth cloud to cv2 image to know real size
+        cv_im = cv2_pcl.pcl_to_cv2(pcl_msg)         # H x W
+        H, W = cv_im.shape[:2]
+
+        # figure out detection image size
+        det_w = getattr(detection, "img_width", W)
+        det_h = getattr(detection, "img_height", H)
+        sx, sy = float(W) / det_w, float(H) / det_h
+
+        # rescale polygon
+        poly_pix = np.array(detection.xyseg, dtype=float).reshape(-1, 2)
+        if poly_pix.max() <= 1.5:           
+            poly_pix[:, 0] *= W
+            poly_pix[:, 1] *= H
+        else:
+            poly_pix[:, 0] *= sx
+            poly_pix[:, 1] *= sy
+
+        # centroid from rescaled polygon
+        centroid_xyz = cv2_pcl.seg_to_centroid(pcl_msg, poly_pix)
+        """
         centroid = PointStamped()
         centroid.point = Point(*centroid_xyz)
         centroid.header = pcl_msg.header
@@ -65,7 +90,7 @@ class CheckTable(smach.State):
     def perform_detection(self, pcl_msg, polygon, filter, model):
         cv_im = cv2_pcl.pcl_to_cv2(pcl_msg)
         img_msg = cv2_img.cv2_img_to_msg(cv_im)
-        detections = self.context.yolo(img_msg, model, 0.3, 0.3)
+        detections = self.context.yolo(img_msg, model, 0.3, [])
         detections = [
             (det, self.estimate_pose(pcl_msg, det))
             for det in detections.detected_objects
@@ -73,7 +98,7 @@ class CheckTable(smach.State):
         ]
         rospy.loginfo(f"All: {[(det.name, pose) for det, pose in detections]}")
         rospy.loginfo(f"Boundary: {polygon}")
-        shapely_polygon = Polygon(polygon)
+        shapely_polygon = ShapelyPolygon(polygon)  # .buffer(0.10)
         satisfied_points = [
             shapely_polygon.contains(ShapelyPoint(pose[0], pose[1]))
             for _, pose in detections
@@ -109,17 +134,34 @@ class CheckTable(smach.State):
     def execute(self, userdata):
         self.context.stop_head_manager("head_manager")
 
-        self.context.voice_controller.async_tts("I am going to check the table")
+        self.context.say("I am going to check the table")
         self.object_debug_images = []
         self.people_debug_images = []
 
         rospy.loginfo(self.context.current_table)
+
+        """
         self.object_polygon = rospy.get_param(
             f"/tables/{self.context.current_table}/objects_cuboid"
         )
         self.person_polygon = rospy.get_param(
             f"/tables/{self.context.current_table}/persons_cuboid"
         )
+        """
+
+        self.object_polygon = rospy.get_param(
+            f"/coffee_shop/tables/{self.context.current_table}/table_area",
+            rospy.get_param(
+                f"/coffee_shop/tables/{self.context.current_table}/objects_cuboid"
+            ),
+        )
+        self.person_polygon = rospy.get_param(
+            f"/coffee_shop/tables/{self.context.current_table}/seating_area",
+            rospy.get_param(
+                f"/coffee_shop/tables/{self.context.current_table}/persons_cuboid"
+            ),
+        )
+
         self.detections_objects = []
         self.detections_people = []
 
@@ -166,7 +208,7 @@ class CheckTable(smach.State):
         people_text = "person" if people_count == 1 else "people"
         status_text = f"The status of this table is {status}."
         count_text = f"There {'is' if people_count == 1 else 'are'} {people_count} {people_text}."
-        self.context.voice_controller.sync_tts(f"{status_text} {count_text}")
+        self.context.say(f"{status_text} {count_text}")
 
         self.context.start_head_manager("head_manager", "")
 
@@ -186,11 +228,18 @@ class CheckTable(smach.State):
             if table["status"] == "needs serving"
         ]
 
-        if len(needs_serving_tables) > 0:
+        self.save_results(f"{os.getcwd()}/table_states.txt")
+        # TODO communicate automatically to MK digital hub??
+
+        if len(unvisited_tables) > 0:
+            return "not_finished"
+        elif len(needs_serving_tables) > 0:
             return "has_needs_serving_tables"
         elif len(free_tables) > 0:
             return "has_free_tables"
-        elif len(unvisited_tables) > 0:
-            return "not_finished"
         else:
             return "idle"
+
+    def save_results(self, output_file):
+        with open(output_file, "w") as f:
+            f.write(str(self.context.tables))

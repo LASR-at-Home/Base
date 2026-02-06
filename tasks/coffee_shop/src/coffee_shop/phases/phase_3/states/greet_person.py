@@ -11,7 +11,7 @@ class GreetPerson(smach.State):
 
     def execute(self, userdata):
         self.context.stop_head_manager("head_manager")
-        self.context.voice_controller.sync_tts(
+        self.context.say(
             "Hi there! My name is TIAGO. Please follow me, I'll guide you to a table."
         )
         pm_goal = PlayMotionGoal(motion_name="back_to_default", skip_planning=True)

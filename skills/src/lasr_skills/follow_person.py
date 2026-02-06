@@ -45,7 +45,8 @@ from lasr_person_tracking_filter.srv import (
     DualSensorPersonTrackingFilter,
     DualSensorPersonTrackingFilterRequest,
 )
-from leg_tracker.msg import PersonArray, Person
+
+# from leg_tracker.msg import PersonArray, Person
 import message_filters
 import numpy as np
 

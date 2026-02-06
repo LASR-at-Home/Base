@@ -34,13 +34,11 @@ class LookForPerson(smach.State):
         pm_goal = PlayMotionGoal(motion_name="back_to_default", skip_planning=True)
         self.context.play_motion_client.send_goal_and_wait(pm_goal)
 
-        corners = rospy.get_param("/wait/cuboid")
+        corners = rospy.get_param("/coffee_shop/wait/cuboid")
         pcl_msg = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
         cv_im = cv2_pcl.pcl_to_cv2(pcl_msg)
         img_msg = cv2_img.cv2_img_to_msg(cv_im)
-        detections = self.context.yolo(
-            img_msg, self.context.YOLO_person_model, 0.3, 0.3
-        )
+        detections = self.context.yolo(img_msg, self.context.YOLO_person_model, 0.3, [])
         detections = [
             (det, self.estimate_pose(pcl_msg, det))
             for det in detections.detected_objects

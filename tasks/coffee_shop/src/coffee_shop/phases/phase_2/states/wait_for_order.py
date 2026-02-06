@@ -17,28 +17,35 @@ class WaitForOrder(smach.State):
         self.tablet_pub = rospy.Publisher("/tablet/screen", String, queue_size=10)
 
     def listen(self):
-        resp = self.context.speech(True)
-        if not resp.success:
-            self.context.voice_controller.sync_tts(
-                self.context.get_random_retry_utterance()
-            )
+        resp = self.context.listen()
+        if resp is None:
+            self.context.say(self.context.get_random_retry_utterance())
             return self.listen()
-        resp = json.loads(resp.json_response)
-        rospy.loginfo(resp)
+        # resp = json.loads(resp)
+        # rospy.loginfo(resp)
         return resp
 
     def affirm(self):
         resp = self.listen()
+        resp = self.parse_affirmation(resp)
         if resp["intent"]["name"] not in ["affirm", "deny"]:
-            self.context.voice_controller.sync_tts(
-                self.context.get_random_retry_utterance()
-            )
+            self.context.say(self.context.get_random_retry_utterance())
             return self.affirm()
         return resp["intent"]["name"] == "affirm"
 
+    def parse_affirmation(self, resp: str):
+        response = {"intent": {"name": ""}}
+        if resp:
+            resp = resp.lower()
+            if "yes" in resp or "yeah" in resp or "yep" in resp or "correct" in resp:
+                response["intent"]["name"] = "affirm"
+            elif "no" in resp or "nope" in resp or "nah" in resp or "incorrect" in resp:
+                response["intent"]["name"] = "deny"
+        return response
+
     def execute(self, userdata):
         if self.context.tablet:
-            self.context.voice_controller.sync_tts(
+            self.context.say(
                 "Please press 'done' when you are ready for me to check the order."
             )
             if self.context.tablet_on_head:
@@ -76,8 +83,8 @@ class WaitForOrder(smach.State):
             self.context.play_motion_client.send_goal_and_wait(pm_goal)
             while True:
                 rospy.sleep(rospy.Duration(5.0))
-                self.context.voice_controller.sync_tts(
-                    "Is the order ready to be checked? Please answer with yes or no after the beep."
+                self.context.say(
+                    "Is the order ready to be checked? Please answer with yes or no."
                 )
                 if self.affirm():
                     return "done"

@@ -32,7 +32,7 @@ class LookForPersonLaser(smach.State):
         self.camera.fromCameraInfo(
             rospy.wait_for_message("/xtion/rgb/camera_info", CameraInfo)
         )
-        self.corners = rospy.get_param("/wait/cuboid")
+        self.corners = rospy.get_param("/coffee_shop/wait/cuboid")
 
     @timeit_rospy
     def get_points_and_pixels_from_laser(self, msg):
@@ -47,7 +47,10 @@ class LookForPersonLaser(smach.State):
         # First get the laser scan points, and then convert to camera frame
         pcl_msg = lg.LaserProjection().projectLaser(msg)
         pcl_points = [
-            p for p in pc2.read_points(pcl_msg, field_names=("x, y, z"), skip_nans=True)
+            p
+            for p in pc2.read_points(  # pc2.read_points(pcl_msg, field_names=("x, y, z"), skip_nans=True)
+                pcl_msg, field_names=("x", "y", "z"), skip_nans=True
+            )
         ]
 
         padded_points = []
@@ -61,8 +64,10 @@ class LookForPersonLaser(smach.State):
                     )
                 )
 
+        # tf_points = self.context.tf_point_list(padded_points, "base_laser_link", "xtion_rgb_optical_frame")
+
         tf_points = self.context.tf_point_list(
-            padded_points, "base_laser_link", "xtion_rgb_optical_frame"
+            padded_points, msg.header.frame_id, "xtion_rgb_optical_frame"
         )
 
         padded_converted_points = []
@@ -100,50 +105,64 @@ class LookForPersonLaser(smach.State):
         img_msg = rospy.wait_for_message("/xtion/rgb/image_raw", Image)
 
         points, pixels = self.get_points_and_pixels_from_laser(lsr_scan)
-        detections = self.context.yolo(
-            img_msg, self.context.YOLO_person_model, 0.3, 0.3
-        )
-        waiting_area = Polygon(self.corners)
+        detections = self.context.yolo(img_msg, self.context.YOLO_person_model, 0.3, [])
+        # waiting_area = Polygon(self.corners)
         pixels_2d = np.array(pixels).reshape(-1, 2)
 
         for detection in detections.detected_objects:
-            if detection.name == "person":
-                shapely_polygon = Polygon(np.array(detection.xyseg).reshape(-1, 2))
-                satisfied_points = [
-                    shapely_polygon.contains(ShapelyPoint(x, y)) for x, y in pixels_2d
+            if detection.name != "person":
+                continue
+
+            # --- scale detection polygon to raw image size ---
+            W, H = img_msg.width, img_msg.height
+            poly_pix = np.array(detection.xyseg, dtype=float).reshape(-1, 2)
+
+            # if normalized [0,1], scale to pixels
+            if poly_pix.max() <= 1.5:
+                poly_pix[:, 0] *= W
+                poly_pix[:, 1] *= H
+            else:
+                # if YOLO ran on a resized image, map to the raw image size
+                det_w = getattr(detection, "img_width", W)
+                det_h = getattr(detection, "img_height", H)
+                sx, sy = float(W) / det_w, float(H) / det_h
+                poly_pix[:, 0] *= sx
+                poly_pix[:, 1] *= sy
+
+            # person polygon in image space (softened edges)
+            person_poly = Polygon(poly_pix).buffer(0.10)
+
+            # projected laser pixels that fall inside the person polygon
+            satisfied = [person_poly.covers(ShapelyPoint(x, y)) for x, y in pixels_2d]
+            idx_hits = [i for i, ok in enumerate(satisfied) if ok]
+            if not idx_hits:
+                continue
+
+            # map-frame points for those hits
+            filtered_points = self.convert_points_to_map_frame(
+                [points[i] for i in idx_hits]
+            )
+
+            if self.corners is not None:
+                # waiting area polygon in MAP frame (softened, boundary-safe)
+                wait_poly = Polygon(self.corners).buffer(0.10)
+                in_area = [
+                    wait_poly.covers(ShapelyPoint(px, py))
+                    for (px, py, pz) in filtered_points
                 ]
-                idx = [idx for idx, el in enumerate(satisfied_points) if el]
-                filtered_points = self.convert_points_to_map_frame(
-                    [points[i] for i in idx]
-                )
-                if self.corners is not None:
-                    waiting_area_satisfied_points = [
-                        waiting_area.contains(ShapelyPoint(*point))
-                        for point in filtered_points
-                    ]
-                    idx = [
-                        idx
-                        for idx, el in enumerate(waiting_area_satisfied_points)
-                        if el
-                    ]
-                    points_inside_area = [filtered_points[i] for i in idx]
-                    if len(points_inside_area):
-                        point = np.mean(points_inside_area, axis=0)
-                        self.context.publish_person_pose(*point, "map")
-                        self.context.new_customer_pose = PointStamped(
-                            point=Point(*point)
-                        )
-                        self.context.new_customer_pose.header.frame_id = "map"
+                idx_area = [i for i, ok in enumerate(in_area) if ok]
+                if not idx_area:
+                    continue
+                points_inside_area = [filtered_points[i] for i in idx_area]
+                point = np.mean(points_inside_area, axis=0)
+            else:
+                point = np.mean(filtered_points, axis=0)
 
-                        return "found"
-                else:
-                    # mean of filtered points
-                    point = np.mean(filtered_points, axis=0)
-                    self.context.publish_person_pose(*point, "map")
-                    self.context.new_customer_pose = PointStamped(point=Point(*point))
-                    self.context.new_customer_pose.header.frame_id = "map"
-
-                    return "found"
+            # publish/store target and finish
+            self.context.publish_person_pose(*point, "map")
+            self.context.new_customer_pose = PointStamped(point=Point(*point))
+            self.context.new_customer_pose.header.frame_id = "map"
+            return "found"
 
         self.context.start_head_manager("head_manager", "")
 

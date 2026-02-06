@@ -44,5 +44,5 @@ from .point_at_person import PointAtPerson
 from .detect_gesture_3d import DetectGesture3D, DetectHandUp3D
 from .detect_door_opening import DetectDoorOpening
 from .follow_person import FollowPerson
+# from .follow_person import FollowPerson
 from .listen_for_wakeword import ListenForWakeword
-from .detect_door_opening import DetectDoorOpening

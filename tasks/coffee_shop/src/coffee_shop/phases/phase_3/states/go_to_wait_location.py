@@ -11,7 +11,7 @@ class GoToWaitLocation(smach.State):
         self.done = False
 
     def execute(self, userdata):
-        wait_location = rospy.get_param("/wait")
+        wait_location = rospy.get_param("/coffee_shop/wait")
         position, orientation = (
             wait_location["location"]["position"],
             wait_location["location"]["orientation"],
@@ -21,5 +21,6 @@ class GoToWaitLocation(smach.State):
         move_base_goal.target_pose.pose = Pose(
             position=Point(**position), orientation=Quaternion(**orientation)
         )
+        self.context.say("I am going to the waiting area.")
         self.context.move_base_client.send_goal_and_wait(move_base_goal)
         return "not done"

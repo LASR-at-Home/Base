@@ -15,6 +15,5 @@ vo_dict = {
     "vo_0099": ["submap_0", "pillar", x4, y4, 0.0],
 }
 
-
 for vo, params in vo_dict.items():
     rosparam.upload_params(f"mmap/vo/submap_0/{vo}", params)

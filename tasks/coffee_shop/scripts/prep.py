@@ -9,14 +9,12 @@ from aruco_service.srv import SaveNavigationPoint, GenerateTableCuboid
 if len(sys.argv) < 1:
     print("Usage: rosrun coffee_shop prep.py <config_name>")
 
-
 rospy.init_node("coffee_shop_prep")
 
 save_navigation_point = rospy.ServiceProxy(
     "/save_navigation_points", SaveNavigationPoint
 )
 save_table_cuboid = rospy.ServiceProxy("/generate_table_cuboid", GenerateTableCuboid)
-
 
 PKG_ROOT = rospkg.RosPack().get_path("coffee_shop")
 CONFIG_PATH = os.path.join(PKG_ROOT, "config")

@@ -10,10 +10,10 @@ class GoCloserToPerson(smach.State):
         self.context = context
 
     def execute(self, userdata):
-        self.context.voice_controller.async_tts(
+        self.context.say(
             "I think there is a customer waiting. I will go and investigate."
         )
-        location = rospy.get_param("/wait/approach1")
+        location = rospy.get_param("/coffee_shop/wait/approach1")
         position, orientation = location["position"], location["orientation"]
         move_base_goal = MoveBaseGoal()
         move_base_goal.target_pose.header.frame_id = "map"
