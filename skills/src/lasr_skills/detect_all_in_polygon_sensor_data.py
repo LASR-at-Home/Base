@@ -16,6 +16,9 @@ from sensor_msgs.msg import PointCloud2, Image
 from cv2_img import msg_to_cv2_img, cv2_img_to_msg
 from geometry_msgs.msg import Point, PointStamped
 from lasr_vision_msgs.msg import Detection3D
+from geometry_msgs.msg import Point, PointStamped, Polygon as ROSPolygon, PolygonStamped
+from sensor_msgs.msg import CameraInfo
+from image_geometry import PinholeCameraModel
 
 from lasr_skills import LookToPoint, Detect3DInArea
 
@@ -37,6 +40,7 @@ class ProcessDetections(smach.State):
                 "detected_objects",
                 "image_raw",
                 "debug_images",
+                "pcl",
             ],
             output_keys=["detected_objects", "debug_images"],
         )
@@ -56,7 +60,7 @@ class ProcessDetections(smach.State):
             """Calculates the Euclidean distance between two points."""
             return np.sqrt((point1.x - point2.x) ** 2 + (point1.y - point2.y) ** 2)
 
-        new_detections: List[Detection3D] = []
+        new_detections: List[Tuple[Detection3D, PointCloud2, Image]] = []
 
         try:
             for detection in userdata.detections_3d:
@@ -65,7 +69,7 @@ class ProcessDetections(smach.State):
 
                 # Check if the detection is a new object
                 is_new_object = True
-                for existing_detection in userdata.detected_objects:
+                for existing_detection, pcl, img in userdata.detected_objects:
                     if (
                         existing_detection.name == detection.name
                         and euclidean_distance(
@@ -80,7 +84,7 @@ class ProcessDetections(smach.State):
                         break
 
                 if is_new_object:
-                    new_detections.append(detection)
+                    new_detections.append((detection, userdata.pcl, userdata.image_raw))
 
             userdata.debug_images.append((userdata.image_raw, new_detections))
             userdata.detected_objects.extend(new_detections)
@@ -88,7 +92,7 @@ class ProcessDetections(smach.State):
                 f"Processed detections. Total detected objects: {len(userdata.detected_objects)}"
             )
             rospy.loginfo("Detected objects:")
-            for obj in userdata.detected_objects:
+            for obj, pcl, img in userdata.detected_objects:
                 rospy.loginfo(
                     f" - {obj.name} at ({obj.point.x}, {obj.point.y}, {obj.point.z})"
                 )
@@ -98,49 +102,46 @@ class ProcessDetections(smach.State):
             return "failed"
 
 
-import rospy
-import smach
-import tf2_ros
-import tf2_geometry_msgs
-import numpy as np
-
-from geometry_msgs.msg import Point, PointStamped, Polygon as ROSPolygon, PolygonStamped
-from shapely.geometry import (
-    Polygon as ShapelyPolygon,
-    Point as ShapelyPoint,
-    MultiPoint,
-)
-from shapely.affinity import translate
-from sensor_msgs.msg import CameraInfo
-from image_geometry import PinholeCameraModel
-from typing import List, Tuple
-
-
 class CalculateSweepPoints(smach.State):
     """
-    State to calculate the points to sweep based on the polygon and camera FOV.
+    State to calculate the points to sweep based on the polygon.
     """
+
+    _polygon: ShapelyPolygon
+    _min_coverage: float
+    _tf_buffer: tf.Buffer
+    _z_sweep_min: Optional[float]
+    _z_sweep_max: Optional[float]
 
     def __init__(
         self,
-        polygon: ShapelyPolygon,
+        z_sweep_min: Optional[float] = None,
+        z_sweep_max: Optional[float] = None,
+        polygon: Optional[ShapelyPolygon] = None,
         min_coverage: float = 0.8,
-        z_axis: float = 0.7,
         fov_depth: float = 2.0,
     ):
+        input_keys = ["sweep_points", "detected_objects"]
+        input_keys += ["polygon"] if polygon is None else []
+        input_keys += (
+            ["z_sweep_min", "z_sweep_max"]
+            if z_sweep_min is None and z_sweep_max is None
+            else []
+        )
         smach.State.__init__(
             self,
             outcomes=["succeeded", "failed"],
             output_keys=["sweep_points"],
-            input_keys=["sweep_points", "detected_objects"],
+            input_keys=input_keys,
         )
         self._polygon = polygon
         self._min_coverage = min_coverage
-        self._z_axis = z_axis
+        self._z_sweep_min = z_sweep_min
+        self._z_sweep_max = z_sweep_max
         self._fov_depth = fov_depth
 
-        self._tf_buffer = tf2_ros.Buffer(rospy.Duration(10.0))
-        self._tf_listener = tf2_ros.TransformListener(self._tf_buffer)
+        self._tf_buffer = tf.Buffer(cache_time=rospy.Duration(10))
+        tf.TransformListener(self._tf_buffer)
 
     def _get_camera_fov_polygon(self) -> ShapelyPolygon:
         """
@@ -182,6 +183,28 @@ class CalculateSweepPoints(smach.State):
 
         return ShapelyPolygon(transformed_points)
 
+    def _sample_points_in_polygon(
+        self, polygon: ShapelyPolygon, num_samples: float = 10
+    ) -> List[ShapelyPoint]:
+        """Randomly samples points within a polygon.
+
+        Args:
+            polygon (ShapelyPolygon): _description_
+            num_samples (float, optional): _description_. Defaults to 1000.
+
+        Returns:
+            _type_: _description_
+        """
+        minx, miny, maxx, maxy = polygon.bounds
+        samples: List[ShapelyPoint] = []
+        while len(samples) < num_samples:
+            p = ShapelyPoint(
+                np.random.uniform(minx, maxx), np.random.uniform(miny, maxy)
+            )
+            if polygon.contains(p):
+                samples.append(p)
+        return samples
+
     def _extract_relative_footprint(
         self, camera_hull: ShapelyPolygon
     ) -> ShapelyPolygon:
@@ -195,30 +218,16 @@ class CalculateSweepPoints(smach.State):
         """Translate relative hull to a new centroid position"""
         return translate(rel_hull, xoff=look_point.x, yoff=look_point.y)
 
-    def _sample_points_in_polygon(
-        self, polygon: ShapelyPolygon, num_samples: int = 1000
-    ) -> List[ShapelyPoint]:
-        """Randomly samples points within a polygon."""
-        minx, miny, maxx, maxy = polygon.bounds
-        samples = []
-        while len(samples) < num_samples:
-            p = ShapelyPoint(
-                np.random.uniform(minx, maxx),
-                np.random.uniform(miny, maxy),
-            )
-            if polygon.contains(p):
-                samples.append(p)
-        return samples
-
     def _greedy_coverage_min_overlap(
         self,
-        candidate_footprints: List[ShapelyPolygon],
-        coverage_goal: float = 0.9,
-        overlap_penalty: float = 0.5,
+        polygon: ShapelyPolygon,
+        candidate_footprints,
+        coverage_goal=0.9,
+        overlap_penalty=0.0,
     ) -> Tuple[List[ShapelyPolygon], ShapelyPolygon]:
         covered = ShapelyPolygon()
         selected = []
-        total_area = self._polygon.area
+        total_area = polygon.area
         remaining = candidate_footprints.copy()
 
         while covered.area / total_area < coverage_goal and remaining:
@@ -227,7 +236,7 @@ class CalculateSweepPoints(smach.State):
             best_intersection = None
 
             for fp in remaining:
-                intersection = fp.intersection(self._polygon)
+                intersection = fp.intersection(polygon)
                 new_area = intersection.difference(covered).area
                 overlap_area = intersection.intersection(covered).area
                 score = new_area - overlap_penalty * overlap_area
@@ -250,7 +259,9 @@ class CalculateSweepPoints(smach.State):
 
         return selected, covered
 
-    def _calculate_sweep_points(self) -> List[PointStamped]:
+    def _calculate_sweep_points(
+        self, polygon: ShapelyPolygon, z_sweep_min: float, z_sweep_max: float
+    ) -> List[PointStamped]:
         """
         Calculates the points to sweep based on the polygon and FOV projection.
 
@@ -276,12 +287,13 @@ class CalculateSweepPoints(smach.State):
         )
 
         rel_camera_hull = self._extract_relative_footprint(fov_polygon)
-        sampled_points = self._sample_points_in_polygon(self._polygon, num_samples=10)
+        sampled_points = self._sample_points_in_polygon(polygon, num_samples=10)
         candidate_footprints = [
             self._place_footprint_at_point(rel_camera_hull, p) for p in sampled_points
         ]
 
         selected_footprints, _ = self._greedy_coverage_min_overlap(
+            polygon,
             candidate_footprints,
             coverage_goal=self._min_coverage,
             overlap_penalty=0.0,
@@ -290,7 +302,9 @@ class CalculateSweepPoints(smach.State):
         sweep_points = [
             PointStamped(
                 header=rospy.Header(frame_id="map"),
-                point=Point(fp.centroid.x, fp.centroid.y, self._z_axis),
+                point=Point(
+                    fp.centroid.x, fp.centroid.y, (z_sweep_min + z_sweep_max) / 2
+                ),
             )
             for fp in selected_footprints
         ]
@@ -298,47 +312,77 @@ class CalculateSweepPoints(smach.State):
         return sweep_points
 
     def execute(self, userdata: smach.UserData) -> str:
-        """Main SMACH execution entrypoint"""
+        """Calculates the points to look to, in order to sweep the polygon.
+
+
+        Args:
+            userdata (smach.UserData): User data to store the sweep points.
+
+        Returns:
+            str: Outcome of the state, "succeeded" or "failed".
+        """
+
+        # Calculate the points to sweep based on the polygon
+        if self._polygon is None:
+            polygon = userdata.polygon
+        else:
+            polygon = self._polygon
+        if self._z_sweep_min is None:
+            z_sweep_min = userdata.z_sweep_min
+        else:
+            z_sweep_min = self._z_sweep_min
+        if self._z_sweep_max is None:
+            z_sweep_max = userdata.z_sweep_max
+        else:
+            z_sweep_max = self._z_sweep_max
         try:
-            userdata.sweep_points = self._calculate_sweep_points()
+            userdata.sweep_points = self._calculate_sweep_points(
+                polygon, z_sweep_min, z_sweep_max
+            )
             return "succeeded"
         except Exception as e:
             rospy.logerr(f"Failed to calculate sweep points: {e}")
             return "failed"
 
 
-class DetectAllInPolygon(smach.StateMachine):
+class DetectAllInPolygonSensorData(smach.StateMachine):
     """
     State machine to sweep and detect all objects within
     a given polygon. For now, the Z-axis is ignored, and we assume
     that the sweet is performed at a fixed height, across fixed points.
+    This version additionally returns sensor data corresponding to each detection.
     """
 
     _polygon: ShapelyPolygon
     _min_coverage: float
     _object_filter: Optional[List[str]]
-    _model: str
-    _models: Optional[List[str]]
     _min_confidence: float
     _min_new_object_dist: float
     _debug_publisher: rospy.Publisher
     _prompt: Optional[str]
+    _z_sweep_min: Optional[float]
+    _z_sweep_max: Optional[float]
+    _model: str
+    _models: Optional[List[str]]
 
     def __init__(
         self,
-        polygon: ShapelyPolygon,
+        polygon: Optional[ShapelyPolygon] = None,
         min_coverage: float = 0.8,
-        model: str = "yolo11n-seg.pt",
-        models: Optional[List[str]] = None,
         object_filter: Optional[List[str]] = None,
         min_confidence: float = 0.5,
         min_new_object_dist: float = 0.1,
         use_lang_sam: bool = False,
         prompt: Optional[str] = None,
+        z_sweep_min: Optional[float] = None,
+        z_sweep_max: Optional[float] = None,
+        model: str = "yolo11n-seg.pt",
+        models: Optional[List[str]] = None,
     ):
         """
         Args:
-            polygon (ShapelyPolygon): Polygon to sweep and detect objects in.
+            polygon (Optional[ShapelyPolygon]): Polygon to sweep and detect objects in.
+            If None, assumes the polygon comes from userdata.
 
             min_coverage (float, optional): Mininum coverage of the polygon from the sweep.
             Defaults to 0.8.
@@ -357,17 +401,29 @@ class DetectAllInPolygon(smach.StateMachine):
             if true, requires a prompt. Defaults to False, mneaning use YOLO instead.
 
             prompt (Optional[str], optional): Prompt for the LangSam model, if used.
-        """
 
+            z_sweep_min (float, optional): Minimum Z-axis value for the sweep.
+            Sweeps between min and max to allow for a 3D polygon.
+
+            z_sweep_max (float, optional): Maximum Z-axis value for the sweep.
+
+            model (str, optional): Model to use for detection. Defaults to "yolo11n-seg.pt".
+        """
+        input_keys = ["polygon"] if polygon is None else []
+        input_keys += (
+            ["z_sweep_min", "z_sweep_max"]
+            if z_sweep_min is None and z_sweep_max is None
+            else []
+        )
         super().__init__(
-            outcomes=["succeeded", "failed"], output_keys=["detected_objects"]
+            outcomes=["succeeded", "failed"],
+            input_keys=input_keys,
+            output_keys=["detected_objects"],
         )
 
         self._polygon = polygon
         self._min_coverage = min_coverage
         self._object_filter = object_filter
-        self._model = model
-        self._models = models
         self._min_confidence = min_confidence
         self._min_new_object_dist = min_new_object_dist
         self._debug_publisher = rospy.Publisher(
@@ -375,7 +431,11 @@ class DetectAllInPolygon(smach.StateMachine):
             Image,
             queue_size=10,
         )
+        self._z_sweep_min = z_sweep_min
+        self._z_sweep_max = z_sweep_max
         self._prompt = prompt
+        self._model = model
+        self._models = models
         if use_lang_sam:
             assert (
                 self._prompt is not None
@@ -415,7 +475,7 @@ class DetectAllInPolygon(smach.StateMachine):
         Returns:
             str: Outcome of the state, "succeeded".
         """
-        rospy.sleep(0.25)
+        rospy.sleep(1.0)
         return "succeeded"
 
     def _publish_detected_objects(self, userdata: smach.UserData) -> str:
@@ -437,7 +497,7 @@ class DetectAllInPolygon(smach.StateMachine):
             cv2_image = msg_to_cv2_img(image_raw)
             # Loop over each detection, annotate image with bounding boxes
             # tile images, and publish
-            for detection in detections:
+            for detection, pcl, img in detections:
                 xywh = detection.xywh
                 label = detection.name
                 confidence = detection.confidence
@@ -485,19 +545,27 @@ class DetectAllInPolygon(smach.StateMachine):
             CalculateSweepPoints(
                 polygon=self._polygon,
                 min_coverage=self._min_coverage,
+                z_sweep_min=self._z_sweep_min,
+                z_sweep_max=self._z_sweep_max,
             ),
             transitions={"succeeded": "LOOK_AND_DETECT", "failed": "failed"},
             remapping={"sweep_points": "sweep_points"},
         )
-
+        input_keys = [
+            "sweep_points",
+            "detected_objects",
+            "look_point",
+            "debug_images",
+        ]
+        input_keys += ["polygon"] if self._polygon is None else []
+        input_keys += (
+            ["z_sweep_min", "z_sweep_max"]
+            if self._z_sweep_min is None and self._z_sweep_max is None
+            else []
+        )
         look_and_detect_iterator = smach.Iterator(
             outcomes=["succeeded", "failed"],
-            input_keys=[
-                "sweep_points",
-                "detected_objects",
-                "look_point",
-                "debug_images",
-            ],
+            input_keys=input_keys,
             output_keys=["detected_objects", "debug_images"],
             it=lambda: range(0, len(self.userdata.sweep_points)),
             it_label="sweep_point_index",
@@ -507,13 +575,7 @@ class DetectAllInPolygon(smach.StateMachine):
         with look_and_detect_iterator:
             container_sm = smach.StateMachine(
                 outcomes=["continue", "failed", "succeeded"],
-                input_keys=[
-                    "sweep_points",
-                    "sweep_point_index",
-                    "detected_objects",
-                    "look_point",
-                    "debug_images",
-                ],
+                input_keys=input_keys + ["sweep_point_index"],
                 output_keys=[
                     "look_point",
                     "detections_3d",
@@ -559,35 +621,18 @@ class DetectAllInPolygon(smach.StateMachine):
                 )
                 if self._prompt is not None:
                     pass
-                    # smach.StateMachine.add(
-                    #     "DETECT_OBJECTS",
-                    #     Detect3DInAreaLangSam(
-                    #         area_polygon=self._polygon,
-                    #         box_threshold=self._min_confidence,
-                    #         text_threshold=self._min_confidence,
-                    #         target_frame="map",
-                    #         prompt=self._prompt,
-                    #     ),
-                    #     transitions={
-                    #         "succeeded": "PROCESS_DETECTIONS",
-                    #         "failed": "failed",
-                    #     },
-                    #     remapping={
-                    #         "lang_sam_detections_3d": "detections_3d",
-                    #         "image_raw": "image_raw",
-                    #     },
-                    # )
                 else:
                     smach.StateMachine.add(
                         "DETECT_OBJECTS",
                         Detect3DInArea(
                             area_polygon=self._polygon,
+                            z_min=self._z_sweep_min,
+                            z_max=self._z_sweep_max,
                             filter=self._object_filter,
+                            confidence=self._min_confidence,
+                            point_cloud_topic="/xtion/depth_registered/points",
                             model=self._model,
                             models=self._models,
-                            z_min=0.0,
-                            z_max=10.0,
-                            confidence=self._min_confidence,
                         ),
                         transitions={
                             "succeeded": "PROCESS_DETECTIONS",
@@ -639,22 +684,9 @@ class DetectAllInPolygon(smach.StateMachine):
             },
         )
 
-
-if __name__ == "__main__":
-    seat_area = [
-        [2.02766489982605, -2.7318179607391357],
-        [-0.8237523436546326, -2.8495190143585205],
-        [-0.7675997614860535, -1.3231755495071411],
-        [1.9695378541946411, -1.4235490560531616],
-    ]
-    seat_polygon = ShapelyPolygon(seat_area)
-    rospy.init_node("detect_all_in_polygon")
-    sm = DetectAllInPolygon(
-        seat_polygon,
-        object_filter=["person", "chair"],
-        min_coverage=1.0,
-        min_new_object_dist=0.40,
-        min_confidence=0.7,
-    )
-    outcome = sm.execute()
-    rospy.loginfo(f"State machine finished with outcome: {outcome}")
+    def execute(self, userdata):
+        self.userdata.sweep_points = []
+        self.userdata.detected_objects = []
+        self.userdata.debug_images = []
+        self.userdata.look_point = PointStamped()
+        return super().execute(userdata)

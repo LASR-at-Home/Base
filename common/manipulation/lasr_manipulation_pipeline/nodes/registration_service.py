@@ -19,6 +19,7 @@ from lasr_manipulation_msgs.srv import (
 from geometry_msgs.msg import Vector3Stamped, TransformStamped
 from sensor_msgs.msg import PointCloud2
 import sensor_msgs.point_cloud2 as point_cloud2
+from std_msgs.msg import Header
 
 
 def _quality_ok(
@@ -431,10 +432,9 @@ class RegistrationService:
         pcd.points = o3d.utility.Vector3dVector(np.array(points))
         return pcd
 
-    def _transform_to_ros(self, T: np.ndarray, frame_id) -> TransformStamped:
+    def _transform_to_ros(self, T: np.ndarray, header: Header) -> TransformStamped:
         transform = TransformStamped()
-        transform.header.stamp = rospy.Time.now()
-        transform.header.frame_id = frame_id
+        transform.header = header
 
         translation = T[:3, 3]
         rotation = tf.quaternion_from_matrix(T)
@@ -448,10 +448,9 @@ class RegistrationService:
         transform.transform.rotation.w = rotation[3]
         return transform
 
-    def _scale_to_ros(self, s: float, frame_id: str) -> Vector3Stamped:
+    def _scale_to_ros(self, s: float, header: Header) -> Vector3Stamped:
         vec = Vector3Stamped()
-        vec.header.stamp = rospy.Time.now()
-        vec.header.frame_id = frame_id
+        vec.header = header
         vec.vector.x = s
         vec.vector.y = s
         vec.vector.z = s
@@ -486,10 +485,10 @@ class RegistrationService:
                 source, target, scale=request.scale
             )
             response.transform = self._transform_to_ros(
-                best_T, request.segmented_pcl.header.frame_id
+                best_T, request.segmented_pcl.header
             )
             response.scale = self._scale_to_ros(
-                scale_factor, request.segmented_pcl.header.frame_id
+                scale_factor, request.segmented_pcl.header
             )
             response.success = True
         except Exception as e:

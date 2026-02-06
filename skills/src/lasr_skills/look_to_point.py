@@ -46,7 +46,7 @@ class LookToPoint(smach.State):
         self.client.send_goal(goal)
 
         # Wait for the result with a timeout of 7 seconds
-        finished_within_time = self.client.wait_for_result(rospy.Duration(2.0))
+        finished_within_time = self.client.wait_for_result(rospy.Duration(10.0))
 
         if finished_within_time:
             state = self.client.get_state()

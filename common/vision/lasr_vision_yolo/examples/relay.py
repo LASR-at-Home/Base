@@ -24,8 +24,7 @@ def topic_exists(topic_name: str):
     return any(topic == topic_name for topic, _ in published_topics)
 
 
-def relay_2d(image_topic: str, model_name: str):
-
+def relay_2d(image_topic: str, model_name: str, model_list: list):
     yolo = rospy.ServiceProxy("/yolo/detect", YoloDetection)
     yolo.wait_for_service()
 
@@ -33,7 +32,9 @@ def relay_2d(image_topic: str, model_name: str):
         req = YoloDetectionRequest(
             image_raw=image,
             model=model_name,
+            models=model_list,
             confidence=0.5,
+            filter=[],
         )
         response = yolo(req)
         rospy.loginfo(response)
@@ -42,9 +43,12 @@ def relay_2d(image_topic: str, model_name: str):
 
 
 def relay_3d(
-    image_topic: str, depth_topic: str, depth_camera_info_topic: str, model_name: str
+    image_topic: str,
+    depth_topic: str,
+    depth_camera_info_topic: str,
+    model_name: str,
+    model_list: list,
 ):
-
     yolo = rospy.ServiceProxy("/yolo/detect3d", YoloDetection3D)
     yolo.wait_for_service()
 
@@ -54,7 +58,9 @@ def relay_3d(
             depth_image=depth_image,
             depth_camera_info=depth_camera_info,
             model=model_name,
+            models=model_list,
             confidence=0.5,
+            filter=[],
             target_frame="map",
         )
         response = yolo(req)
@@ -71,7 +77,7 @@ def relay_3d(
     ts.registerCallback(detect_cb)
 
 
-def relay_keypoints_2d(image_topic: str, model_name: str):
+def relay_keypoints_2d(image_topic: str, model_name: str, model_list: list):
     yolo = rospy.ServiceProxy("/yolo/detect_pose", YoloPoseDetection)
     yolo.wait_for_service()
 
@@ -79,7 +85,9 @@ def relay_keypoints_2d(image_topic: str, model_name: str):
         req = YoloPoseDetectionRequest(
             image_raw=image,
             model=model_name,
+            models=model_list,
             confidence=0.5,
+            filter=[],
         )
         response = yolo(req)
         rospy.loginfo(response)
@@ -88,9 +96,12 @@ def relay_keypoints_2d(image_topic: str, model_name: str):
 
 
 def relay_keypoints_3d(
-    image_topic: str, depth_topic: str, depth_camera_info_topic: str, model_name: str
+    image_topic: str,
+    depth_topic: str,
+    depth_camera_info_topic: str,
+    model_name: str,
+    model_list: list,
 ):
-
     yolo = rospy.ServiceProxy("/yolo/detect3d_pose", YoloPoseDetection3D)
     yolo.wait_for_service()
 
@@ -100,7 +111,9 @@ def relay_keypoints_3d(
             depth_image=depth_image,
             depth_camera_info=depth_camera_info,
             model=model_name,
+            models=model_list,
             confidence=0.5,
+            filter=[],
         )
         response = yolo(req)
         rospy.loginfo(response)
@@ -121,32 +134,46 @@ if __name__ == "__main__":
 
     camera = rospy.get_param("~camera", "xtion")
     model_name = rospy.get_param("~model", "yolo11n-seg.pt")
+    model_list = rospy.get_param(
+        "~models", ["yolo11n-seg.pt", "lasr.pt"]
+    )  # Optional list of models
 
     image_topic = f"/{camera}/rgb/image_raw"
+    if not topic_exists(image_topic):
+        image_topic = f"/{camera}/image_raw"
     depth_topic = f"/{camera}/depth_registered/image_raw"
     depth_camera_info_topic = f"/{camera}/depth_registered/camera_info"
 
-    rospy.loginfo(model_name)
-    if model_name.endswith("pose.pt"):
+    rospy.loginfo(f"Using model: {model_name}")
+    rospy.loginfo(f"Using models list: {model_list}")
 
+    if model_name.endswith("pose.pt"):
         if topic_exists(depth_topic):
             relay_keypoints_3d(
-                image_topic, depth_topic, depth_camera_info_topic, model_name
+                image_topic,
+                depth_topic,
+                depth_camera_info_topic,
+                model_name,
+                model_list,
             )
         else:
             rospy.loginfo(
                 f"Topic {depth_topic} doesn't exist, so inference will be 2D."
             )
-            relay_keypoints_2d(image_topic, model_name)
-
+            relay_keypoints_2d(image_topic, model_name, model_list)
     else:
-
         if topic_exists(depth_topic):
-            relay_3d(image_topic, depth_topic, depth_camera_info_topic, model_name)
+            relay_3d(
+                image_topic,
+                depth_topic,
+                depth_camera_info_topic,
+                model_name,
+                model_list,
+            )
         else:
             rospy.loginfo(
                 f"Topic {depth_topic} doesn't exist, so inference will be 2D."
             )
-            relay_2d(image_topic, model_name)
+            relay_2d(image_topic, model_name, model_list)
 
     rospy.spin()

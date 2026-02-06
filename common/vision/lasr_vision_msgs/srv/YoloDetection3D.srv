@@ -20,6 +20,10 @@ string[] filter
 
 # target frame for 3D estimate
 string target_frame
+
+# Optional list of models to use
+string[] models
+
 ---
 # Detection result
 lasr_vision_msgs/Detection3D[] detected_objects

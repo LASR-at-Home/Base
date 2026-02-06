@@ -1,15 +1,11 @@
-from .wait_door_open import WaitDoorOpen
-
-from .choose_object import ChooseObject
-
-from .append_detections import AppendDetections
-
 from .select_object import SelectObject
-
-from .classify_category import ClassifyCategory
-
-from .say_dynamic import SayDynamic
-
-from .object_sorting_loop import ObjectSortingLoop
-
-from .pour_cereal import PourCereal
+from .segment_object import SegmentObject
+from .scan_shelves import ScanShelves
+from .add_shelves_to_planning_scene import AddShelvesToPlanningScene
+from .choose_shelf import ChooseShelf
+from .start import Start
+from .detect_objects import DetectObjects
+from .grasp_object import GraspObject
+from .get_approach_pose import ComputeApproach
+from .find_and_go_to_table import FindAndGoToTable
+from .select_and_visualise_object import SelectAndVisualiseObject

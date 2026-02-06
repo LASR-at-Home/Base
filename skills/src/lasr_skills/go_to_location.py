@@ -4,6 +4,7 @@ from typing import Union
 import rosparam
 import rospkg
 import rospy
+import rosservice
 import smach
 import smach_ros
 from geometry_msgs.msg import Point, Pose, PoseStamped, Quaternion
@@ -84,6 +85,11 @@ class GoToLocation(smach.StateMachine):
             )
             for param, ns in els:
                 rosparam.upload_params(ns, param)
+
+        IS_SIMULATION = (
+            "/pal_startup_control/start" not in rosservice.get_service_list()
+        )
+
         self._retry_attempts = retry_attempts
         with self:
             self.userdata.retry_count = 0
@@ -92,25 +98,31 @@ class GoToLocation(smach.StateMachine):
                     "LOWER_BASE",
                     PlayMotion("pre_navigation"),
                     transitions={
-                        "succeeded": "GO_TO_LOCATION",
+                        "succeeded": (
+                            "ENABLE_HEAD_MANAGER"
+                            if not IS_SIMULATION
+                            else "GO_TO_LOCATION"
+                        ),
                         "aborted": "failed",
                         "preempted": "failed",
                     },
                 )
 
-                # smach.StateMachine.add(
-                #     "ENABLE_HEAD_MANAGER",
-                #     smach_ros.ServiceState(
-                #         "/pal_startup_control/start",
-                #         StartupStart,
-                #         request=StartupStartRequest("head_manager", ""),
-                #     ),
-                #     transitions={
-                #         "succeeded": "GO_TO_LOCATION",
-                #         "preempted": "failed",
-                #         "aborted": "failed",
-                #     },
-                # )
+                if not IS_SIMULATION:
+
+                    smach.StateMachine.add(
+                        "ENABLE_HEAD_MANAGER",
+                        smach_ros.ServiceState(
+                            "/pal_startup_control/start",
+                            StartupStart,
+                            request=StartupStartRequest("head_manager", ""),
+                        ),
+                        transitions={
+                            "succeeded": "GO_TO_LOCATION",
+                            "preempted": "failed",
+                            "aborted": "failed",
+                        },
+                    )
 
             if location is not None:
                 smach.StateMachine.add(
@@ -125,7 +137,11 @@ class GoToLocation(smach.StateMachine):
                         ),
                     ),
                     transitions={
-                        "succeeded": "DISABLE_HEAD_MANAGER",
+                        "succeeded": (
+                            "DISABLE_HEAD_MANAGER"
+                            if not IS_SIMULATION
+                            else "RAISE_BASE"
+                        ),
                         "aborted": "failed",
                         "preempted": "failed",
                     },
@@ -153,7 +169,11 @@ class GoToLocation(smach.StateMachine):
                         ),
                     ),
                     transitions={
-                        "succeeded": "DISABLE_HEAD_MANAGER",
+                        "succeeded": (
+                            "DISABLE_HEAD_MANAGER"
+                            if not IS_SIMULATION
+                            else "RAISE_BASE"
+                        ),
                         "aborted": "failed",
                         "preempted": "failed",
                     },
@@ -172,7 +192,11 @@ class GoToLocation(smach.StateMachine):
                         input_keys=["location"],
                     ),
                     transitions={
-                        "succeeded": "DISABLE_HEAD_MANAGER",
+                        "succeeded": (
+                            "DISABLE_HEAD_MANAGER"
+                            if not IS_SIMULATION
+                            else "RAISE_BASE"
+                        ),
                         "aborted": "failed",
                         "preempted": "failed",
                     },
@@ -182,34 +206,36 @@ class GoToLocation(smach.StateMachine):
                 "CHECK_RETRY",
                 CheckRetry(self._retry_attempts),
                 transitions={
-                    "retry": "CLEAR_COST_MAPS",
+                    "retry": "GO_TO_LOCATION",
                     "done": "RAISE_BASE",
                 },
                 remapping={"retry_count": "retry_count"},
             )
 
-            smach.StateMachine.add(
-                "CLEAR_COST_MAPS",
-                ClearCostMaps(),
-                transitions={
-                    "succeeded": "GO_TO_LOCATION",
-                    "failed": "RAISE_BASE",
-                },
-            )
+            # smach.StateMachine.add(
+            #     "CLEAR_COST_MAPS",
+            #     ClearCostMaps(),
+            #     transitions={
+            #         "succeeded": "GO_TO_LOCATION",
+            #         "failed": "RAISE_BASE",
+            #     },
+            # )
 
-            smach.StateMachine.add(
-                "DISABLE_HEAD_MANAGER",
-                smach_ros.ServiceState(
-                    "/pal_startup_control/stop",
-                    StartupStop,
-                    request=StartupStopRequest("head_manager"),
-                ),
-                transitions={
-                    "succeeded": "RAISE_BASE",
-                    "aborted": "failed",
-                    "preempted": "failed",
-                },
-            )
+            if not IS_SIMULATION:
+
+                smach.StateMachine.add(
+                    "DISABLE_HEAD_MANAGER",
+                    smach_ros.ServiceState(
+                        "/pal_startup_control/stop",
+                        StartupStop,
+                        request=StartupStopRequest("head_manager"),
+                    ),
+                    transitions={
+                        "succeeded": "RAISE_BASE",
+                        "aborted": "failed",
+                        "preempted": "failed",
+                    },
+                )
 
             smach.StateMachine.add(
                 "RAISE_BASE",
