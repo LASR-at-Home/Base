@@ -28,6 +28,10 @@ setup(
             "get_image = lasr_skills.vision.get_image:main",
             "wait_state = lasr_skills.wait:main",
             "say = lasr_skills.say:main",
+
+            "detect_3d = lasr_skills.detect_3d:main",
+            "detect_all_in_polygon = lasr_skills.detect_all_in_polygon:main",
+            "crop_image_3d = lasr_skills.vision.crop_image_3d:main",
         ],
     },
 )

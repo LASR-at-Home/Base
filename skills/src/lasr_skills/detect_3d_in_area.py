@@ -7,10 +7,10 @@ from smach_ros import RosState
 from lasr_skills import Detect3D
 from typing import List, Union, Optional
 
+from std_msgs.msg import Header
 from geometry_msgs.msg import Polygon, Point, Point32, PolygonStamped
 from shapely.geometry import Point
 from shapely.geometry.polygon import Polygon as ShapelyPolygon
-from std_msgs.msg import Header
 
 
 class Detect3DInArea(smach.StateMachine):

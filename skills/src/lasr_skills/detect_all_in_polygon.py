@@ -19,7 +19,7 @@ from shapely.affinity import translate
 from sensor_msgs.msg import PointCloud2, Image
 from cv2_img import msg_to_cv2_img, cv2_img_to_msg
 from geometry_msgs.msg import Point, PointStamped
-from lasr_vision_msgs.msg import Detection3D
+from lasr_vision_interfaces.msg import Detection3D
 
 from lasr_skills import LookToPoint, Detect3DInArea
 
@@ -116,7 +116,6 @@ from smach_ros import RosState
 import tf2_ros
 import tf2_geometry_msgs
 import numpy as np
-from time import sleep
 
 from std_msgs.msg import Header
 from geometry_msgs.msg import Point, Point32, PointStamped, Polygon as ROSPolygon, PolygonStamped
@@ -166,7 +165,6 @@ class CalculateSweepPoints(RosState):
         Returns:
             ShapelyPolygon: Footprint of camera FOV in map frame.
         """
-        from geometry_msgs.msg import PointStamped
 
         camera_info = rclpy.wait_for_message(
             "/xtion/depth_registered/camera_info", CameraInfo
@@ -552,7 +550,7 @@ class DetectAllInPolygon(smach.StateMachine):
             with container_sm:
                 smach.StateMachine.add(
                     "GET_LOOK_POINT",
-                    smach.CBState(                  #TODO: Define own version
+                    smach.CBState(                 
                         self._get_look_point,
                         output_keys=["look_point"],
                         outcomes=["succeeded", "failed"],
@@ -577,7 +575,7 @@ class DetectAllInPolygon(smach.StateMachine):
                 )
                 smach.StateMachine.add(
                     "SLEEP",
-                    smach.CBState(  #TODO
+                    smach.CBState(  
                         self._nap,
                         outcomes=["succeeded"],
                         input_keys=["look_point"],
@@ -655,7 +653,7 @@ class DetectAllInPolygon(smach.StateMachine):
 
         self.add(
             "PUBLISH_DETECTED_OBJECTS",
-            smach.CBState(          #TODO
+            smach.CBState(
                 self._publish_detected_objects,
                 input_keys=["debug_images", "detected_objects"],
                 outcomes=["succeeded"],
