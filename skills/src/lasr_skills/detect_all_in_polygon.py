@@ -5,24 +5,24 @@ from rclpy.node import Node
 import smach
 from smach_ros import RosState
 
-import tf2_ros as tf
+#import tf2_ros as tf
 import numpy as np
 import cv2
-import sensor_msgs.point_cloud2 as pc2
 
-from tf_pcl import pcl_transform
+#from tf_pcl import pcl_transform
 from typing import List, Optional, Tuple
-from shapely import MultiPoint
+#from shapely import MultiPoint
 from shapely import Polygon as ShapelyPolygon
 from shapely import Point as ShapelyPoint
 from shapely.affinity import translate
-from sensor_msgs.msg import PointCloud2, Image
+from sensor_msgs.msg import Image #, PointCloud2 as pc2
 from cv2_img import msg_to_cv2_img, cv2_img_to_msg
 from geometry_msgs.msg import Point, PointStamped
 from lasr_vision_interfaces.msg import Detection3D
 
-from lasr_skills import LookToPoint, Detect3DInArea
-
+#from lasr_skills import LookToPoint, Detect3DInArea
+from .look_to_point import LookToPoint
+from .detect_3d_in_area import Detect3DInArea
 
 class ProcessDetections(RosState):
     """
@@ -114,7 +114,7 @@ import smach
 from smach_ros import RosState
 
 import tf2_ros
-import tf2_geometry_msgs
+#import tf2_geometry_msgs
 import numpy as np
 
 from std_msgs.msg import Header
@@ -122,7 +122,7 @@ from geometry_msgs.msg import Point, Point32, PointStamped, Polygon as ROSPolygo
 from shapely.geometry import (
     Polygon as ShapelyPolygon,
     Point as ShapelyPoint,
-    MultiPoint,
+    # MultiPoint,
 )
 from shapely.affinity import translate
 from sensor_msgs.msg import CameraInfo

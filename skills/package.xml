@@ -20,6 +20,7 @@
     <depend>geometry_msgs</depend>
     <depend>std_msgs</depend>
 
+    <depend>cv_bridge</depend>
     <depend>image_geometry</depend>
     <depend>message_filters</depend>
 
@@ -29,7 +30,9 @@
     <depend>cv2_img</depend>
     <depend>cv2_pcl</depend>
 
+    <build_depend>ament_virtualenv</build_depend>
     <export>
         <build_type>ament_python</build_type>
+        <pip_requirements>requirements.txt</pip_requirements>
     </export>
 </package>

@@ -12,7 +12,7 @@ import message_filters
 
 from sensor_msgs.msg import Image, CameraInfo, PointCloud2
 from lasr_vision_interfaces.srv import YoloDetection3D
-from std_msgs.msg import String
+# from std_msgs.msg import String
 
 '''
     TODO: 

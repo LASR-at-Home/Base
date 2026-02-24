@@ -4,7 +4,8 @@ from rclpy.node import Node
 import smach
 from smach_ros import RosState
 
-from lasr_skills import Detect3D
+# from lasr_skills import Detect3D
+from .detect_3d import Detect3D
 from typing import List, Union, Optional
 
 from std_msgs.msg import Header

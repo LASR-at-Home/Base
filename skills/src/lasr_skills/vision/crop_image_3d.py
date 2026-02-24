@@ -4,14 +4,14 @@ from rclpy.node import Node
 import smach
 from smach_ros import RosState
 
-import os
+# import os
 import cv2
 import numpy as np
 
 from typing import Optional, List
 
 from geometry_msgs.msg import PoseWithCovarianceStamped
-from lasr_vision_msgs.msg import Detection3D
+# from lasr_vision_interfaces.msg import Detection3D
 from cv_bridge import CvBridge
 from sensor_msgs.msg import Image
 
