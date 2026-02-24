@@ -5,24 +5,26 @@ from rclpy.node import Node
 import smach
 from smach_ros import RosState
 
-#import tf2_ros as tf
+# import tf2_ros as tf
 import numpy as np
 import cv2
 
-#from tf_pcl import pcl_transform
+# from tf_pcl import pcl_transform
 from typing import List, Optional, Tuple
-#from shapely import MultiPoint
+
+# from shapely import MultiPoint
 from shapely import Polygon as ShapelyPolygon
 from shapely import Point as ShapelyPoint
 from shapely.affinity import translate
-from sensor_msgs.msg import Image #, PointCloud2 as pc2
+from sensor_msgs.msg import Image  # , PointCloud2 as pc2
 from cv2_img import msg_to_cv2_img, cv2_img_to_msg
 from geometry_msgs.msg import Point, PointStamped
 from lasr_vision_interfaces.msg import Detection3D
 
-#from lasr_skills import LookToPoint, Detect3DInArea
+# from lasr_skills import LookToPoint, Detect3DInArea
 from .look_to_point import LookToPoint
 from .detect_3d_in_area import Detect3DInArea
+
 
 class ProcessDetections(RosState):
     """
@@ -32,7 +34,7 @@ class ProcessDetections(RosState):
 
     _min_new_object_dist: float
 
-    def __init__(self, node:Node, min_new_object_dist: float = 0.1):
+    def __init__(self, node: Node, min_new_object_dist: float = 0.1):
         RosState.__init__(
             self,
             node=node,
@@ -114,11 +116,18 @@ import smach
 from smach_ros import RosState
 
 import tf2_ros
-#import tf2_geometry_msgs
+
+# import tf2_geometry_msgs
 import numpy as np
 
 from std_msgs.msg import Header
-from geometry_msgs.msg import Point, Point32, PointStamped, Polygon as ROSPolygon, PolygonStamped
+from geometry_msgs.msg import (
+    Point,
+    Point32,
+    PointStamped,
+    Polygon as ROSPolygon,
+    PolygonStamped,
+)
 from shapely.geometry import (
     Polygon as ShapelyPolygon,
     Point as ShapelyPoint,
@@ -192,7 +201,9 @@ class CalculateSweepPoints(RosState):
             point_cam.point.z = ray[2] * self._fov_depth
 
             # Transform to map frame
-            point_map = self._tf_buffer.transform(point_cam, "map", Duration(seconds=1.0))
+            point_map = self._tf_buffer.transform(
+                point_cam, "map", Duration(seconds=1.0)
+            )
             transformed_points.append((point_map.point.x, point_map.point.y))
 
         return ShapelyPolygon(transformed_points)
@@ -277,12 +288,11 @@ class CalculateSweepPoints(RosState):
 
         # Optional: visualize FOV #TODO: Verify
 
-        qos = QoSProfile(depth=1, 
-                         durability=QoSDurabilityPolicy.TRANSIENT_LOCAL)    # Verify publisher durability profile (https://docs.ros.org/en/humble/Concepts/Intermediate/About-Quality-of-Service-Settings.html)
+        qos = QoSProfile(
+            depth=1, durability=QoSDurabilityPolicy.TRANSIENT_LOCAL
+        )  # Verify publisher durability profile (https://docs.ros.org/en/humble/Concepts/Intermediate/About-Quality-of-Service-Settings.html)
 
-        pub = self.node.create_publisher(      
-            PolygonStamped, "projected_fov_polygon", qos 
-        )
+        pub = self.node.create_publisher(PolygonStamped, "projected_fov_polygon", qos)
 
         pub.publish(
             PolygonStamped(
@@ -342,7 +352,7 @@ class DetectAllInPolygon(smach.StateMachine):
     _models: Optional[List[str]]
     _min_confidence: float
     _min_new_object_dist: float
-    _debug_publisher: Publisher 
+    _debug_publisher: Publisher
     _prompt: Optional[str]
 
     def __init__(
@@ -396,9 +406,7 @@ class DetectAllInPolygon(smach.StateMachine):
         self._min_confidence = min_confidence
         self._min_new_object_dist = min_new_object_dist
         self._debug_publisher = self.node.create_publisher(
-            Image,
-            "/detect_all_in_polygon/debug",
-            10
+            Image, "/detect_all_in_polygon/debug", 10
         )
         self._prompt = prompt
         if use_lang_sam:
@@ -550,7 +558,7 @@ class DetectAllInPolygon(smach.StateMachine):
             with container_sm:
                 smach.StateMachine.add(
                     "GET_LOOK_POINT",
-                    smach.CBState(                 
+                    smach.CBState(
                         self._get_look_point,
                         output_keys=["look_point"],
                         outcomes=["succeeded", "failed"],
@@ -575,7 +583,7 @@ class DetectAllInPolygon(smach.StateMachine):
                 )
                 smach.StateMachine.add(
                     "SLEEP",
-                    smach.CBState(  
+                    smach.CBState(
                         self._nap,
                         outcomes=["succeeded"],
                         input_keys=["look_point"],
@@ -626,7 +634,9 @@ class DetectAllInPolygon(smach.StateMachine):
                     )
                 smach.StateMachine.add(
                     "PROCESS_DETECTIONS",
-                    ProcessDetections(node=self._node, min_new_object_dist=self._min_new_object_dist),
+                    ProcessDetections(
+                        node=self._node, min_new_object_dist=self._min_new_object_dist
+                    ),
                     transitions={"succeeded": "continue", "failed": "failed"},
                     remapping={
                         "detections_3d": "detections_3d",
@@ -664,6 +674,7 @@ class DetectAllInPolygon(smach.StateMachine):
                 "detected_objects": "detected_objects",
             },
         )
+
 
 if __name__ == "__main__":
     seat_area = [

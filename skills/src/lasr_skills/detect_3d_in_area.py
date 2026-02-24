@@ -44,7 +44,9 @@ class Detect3DInArea(smach.StateMachine):
             self._z_min = z_min
             self._z_max = z_max
             self.area_polygon = area_polygon
-            self.debug_publisher = self.node.create_publisher(PolygonStamped, debug_publisher, 1)
+            self.debug_publisher = self.node.create_publisher(
+                PolygonStamped, debug_publisher, 1
+            )
 
         def execute(self, userdata):
             detected_objects = userdata["detections_3d"].detected_objects

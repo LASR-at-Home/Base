@@ -11,6 +11,7 @@ import numpy as np
 from typing import Optional, List
 
 from geometry_msgs.msg import PoseWithCovarianceStamped
+
 # from lasr_vision_interfaces.msg import Detection3D
 from cv_bridge import CvBridge
 from sensor_msgs.msg import Image
@@ -98,7 +99,9 @@ class CropImage3D(RosState):
         if self.filters:
             detections = [det for det in detections if det.name in self.filters]
             if not detections:
-                self.node.get_logger().warn("No detections match the specified filters.")
+                self.node.get_logger().warn(
+                    "No detections match the specified filters."
+                )
                 return "failed"
 
         # Sort detections based on the crop logic

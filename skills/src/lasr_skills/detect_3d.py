@@ -12,12 +12,14 @@ import message_filters
 
 from sensor_msgs.msg import Image, CameraInfo, PointCloud2
 from lasr_vision_interfaces.srv import YoloDetection3D
+
 # from std_msgs.msg import String
 
-'''
+"""
     TODO: 
         - message_filters subscribers
-'''
+"""
+
 
 class Detect3D(RosState):
     def __init__(
@@ -52,10 +54,14 @@ class Detect3D(RosState):
 
         image_sub = message_filters.Subscriber(self.node, self.image_topic, Image)
         depth_sub = message_filters.Subscriber(self.node, self.depth_image_topic, Image)
-        cam_info_sub = message_filters.Subscriber(self.node, self.depth_camera_info_topic, CameraInfo)
+        cam_info_sub = message_filters.Subscriber(
+            self.node, self.depth_camera_info_topic, CameraInfo
+        )
         subs = [image_sub, depth_sub, cam_info_sub]
         if point_cloud_topic:
-            point_cloud_sub = message_filters.Subscriber(self.node, self.point_cloud_topic, PointCloud2)
+            point_cloud_sub = message_filters.Subscriber(
+                self.node, self.point_cloud_topic, PointCloud2
+            )
             subs.append(point_cloud_sub)
 
         self.ts = message_filters.ApproximateTimeSynchronizer(
@@ -65,7 +71,9 @@ class Detect3D(RosState):
 
         self.yolo = self.node.create_client(YoloDetection3D, "/yolo/detect3d")
         while not self.yolo.wait_for_service(timeout_sec=1.0):
-            self.node.get_logger().info("'YoloDetection3D' service is not available... Waiting.")
+            self.node.get_logger().info(
+                "'YoloDetection3D' service is not available... Waiting."
+            )
 
     def execute(self, userdata):
 
