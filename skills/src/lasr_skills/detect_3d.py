@@ -52,15 +52,16 @@ class Detect3D(RosState):
         self.confidence = confidence
         self.target_frame = target_frame
 
-        image_sub = message_filters.Subscriber(self.node, self.image_topic, Image)
-        depth_sub = message_filters.Subscriber(self.node, self.depth_image_topic, Image)
+        # From: https://docs.ros.org/en/humble/p/message_filters/message_filters.html#message_filters.Subscriber
+        image_sub = message_filters.Subscriber(self.node, Image, self.image_topic)
+        depth_sub = message_filters.Subscriber(self.node, Image, self.depth_image_topic)
         cam_info_sub = message_filters.Subscriber(
-            self.node, self.depth_camera_info_topic, CameraInfo
+            self.node, CameraInfo, self.depth_camera_info_topic
         )
         subs = [image_sub, depth_sub, cam_info_sub]
         if point_cloud_topic:
             point_cloud_sub = message_filters.Subscriber(
-                self.node, self.point_cloud_topic, PointCloud2
+                self.node, PointCloud2, self.point_cloud_topic
             )
             subs.append(point_cloud_sub)
 
@@ -118,7 +119,7 @@ class Detect3D(RosState):
             return "failed"
 
 
-if __name__ == "__main__":
+def main():
     rclpy.init()
     node = rclpy.create_node("detect")
     while not rclpy.ok():
@@ -131,3 +132,7 @@ if __name__ == "__main__":
                 transitions={"succeeded": "succeeded", "failed": "failed"},
             )
         sm.execute()
+
+
+if __name__ == "__main__":
+    main()

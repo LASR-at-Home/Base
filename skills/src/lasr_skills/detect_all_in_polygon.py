@@ -165,7 +165,7 @@ class CalculateSweepPoints(RosState):
         self._fov_depth = fov_depth
 
         self._tf_buffer = tf2_ros.Buffer(Duration(seconds=10.0))
-        self._tf_listener = tf2_ros.TransformListener(self._tf_buffer, self)
+        self._tf_listener = tf2_ros.TransformListener(self._tf_buffer, self.node)
 
     def _get_camera_fov_polygon(self) -> ShapelyPolygon:
         """
@@ -405,7 +405,7 @@ class DetectAllInPolygon(smach.StateMachine):
         self._models = models
         self._min_confidence = min_confidence
         self._min_new_object_dist = min_new_object_dist
-        self._debug_publisher = self.node.create_publisher(
+        self._debug_publisher = self._node.create_publisher(
             Image, "/detect_all_in_polygon/debug", 10
         )
         self._prompt = prompt
@@ -430,7 +430,7 @@ class DetectAllInPolygon(smach.StateMachine):
         index = userdata.sweep_point_index
         if index < len(userdata.sweep_points):
             userdata.look_point = userdata.sweep_points[index]
-            self.node.get_logger().info(
+            self._node.get_logger().info(
                 f"Look point set to: {userdata.look_point.point.x}, {userdata.look_point.point.y}, {userdata.look_point.point.z}"
             )
             return "succeeded"
@@ -499,7 +499,7 @@ class DetectAllInPolygon(smach.StateMachine):
             image_msg = cv2_img_to_msg(tiled_image)
             # Publish the tiled image
             self._debug_publisher.publish(image_msg)
-            self.node.get_logger().info("Published debug images with detections.")
+            self._node.get_logger().info("Published debug images with detections.")
 
         return "succeeded"
 
@@ -516,6 +516,7 @@ class DetectAllInPolygon(smach.StateMachine):
         self.add(
             "CALCULATE_SWEEP_POINTS",
             CalculateSweepPoints(
+                node=self._node,
                 polygon=self._polygon,
                 min_coverage=self._min_coverage,
             ),
@@ -676,7 +677,7 @@ class DetectAllInPolygon(smach.StateMachine):
         )
 
 
-if __name__ == "__main__":
+def main():
     seat_area = [
         [2.02766489982605, -2.7318179607391357],
         [-0.8237523436546326, -2.8495190143585205],
@@ -697,3 +698,7 @@ if __name__ == "__main__":
     )
     outcome = sm.execute()
     node.get_logger().info(f"State machine finished with outcome: {outcome}")
+
+
+if __name__ == "__main__":
+    main()

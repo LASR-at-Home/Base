@@ -154,7 +154,7 @@ class CropImage3D(RosState):
         return "succeeded"
 
 
-if __name__ == "__main__":
+def main():
     from lasr_skills import Detect3D
 
     rclpy.init()
@@ -184,3 +184,7 @@ if __name__ == "__main__":
         pass
     finally:
         rclpy.shutdown()
+
+
+if __name__ == "__main__":
+    main()
