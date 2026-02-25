@@ -25,7 +25,7 @@ class LookToPoint(RosState):
         self._pointstamped = pointstamped
 
         self.client = ActionClient(
-            self, PointHead, "/head_controller/point_head_action"
+            self.node, PointHead, "/head_controller/point_head_action"
         )
         self.goal_future = None
         self.result_future = None
