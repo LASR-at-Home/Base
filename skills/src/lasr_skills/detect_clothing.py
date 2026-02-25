@@ -3,7 +3,7 @@ import rclpy
 from rclpy.node import Node
 from typing import Optional
 from lasr_vision_interfaces.srv import TorchFaceFeatureDetectionDescription
-from lasr_skills import DescribePeople
+from .describe_people import DescribePeople
 
 colour_list = ["blue", "yellow", "black", "white", "red", "orange", "gray"]
 cloth_list = ["t shirt", "shirt", "blouse", "sweater", "coat", "jacket"]
