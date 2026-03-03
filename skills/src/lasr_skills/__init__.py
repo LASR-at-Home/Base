@@ -7,8 +7,10 @@ from .wait import Wait
 
 # from .detect import Detect
 
-# from .detect_3d import Detect3D
-# from .detect_3d_in_area import Detect3DInArea
+from .detect_3d import Detect3D
+from .detect_3d_in_area import Detect3DInArea
+from .detect_all_in_polygon import DetectAllInPolygon
+
 # from .wait_for_person import WaitForPerson
 from .say import Say
 
@@ -20,7 +22,7 @@ from .play_motion import PlayMotion
 from .go_to_location import GoToLocation
 from .listen import Listen
 from .face_person import FacePerson
-from listen import Listen
+from .listen import Listen
 
 # from .listen_for import ListenFor
 # from .ask_and_listen import AskAndListen
