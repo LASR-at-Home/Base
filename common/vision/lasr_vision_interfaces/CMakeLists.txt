@@ -44,6 +44,7 @@ set(srv_files
   "srv/YoloDetection.srv"
   "srv/YoloDetection3D.srv"
   "srv/Recognise.srv"
+  "srv/TorchFaceFeatureDetectionDescription.srv"
   "srv/DetectFaces.srv"
   "srv/Vqa.srv"
   "srv/YoloPoseDetection.srv"
