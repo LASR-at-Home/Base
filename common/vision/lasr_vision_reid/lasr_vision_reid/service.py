@@ -1,3 +1,13 @@
+"""
+how to run reid:
+1) run the simulation, then run this service node:
+    ros2 run lasr_vision_reid service
+2) In a separate terminal, run the add_face node to detect faces:
+    ros2 run lasr_vision_reid add_face
+3) Then in another terminal run the relay node to display detections to the lasr_vision_reid topic:
+    ros2 run lasr_vision_reid relay_3d
+"""
+
 from typing import Dict, Tuple, Optional, List
 
 import rclpy
@@ -164,7 +174,10 @@ class ReID(Node):
             points = np.stack((x, y, z), axis=1)
             x, y, z = np.median(points, axis=0)
 
-            point = Point(x, y, z)
+            point = Point()
+            point.x = x
+            point.y = y
+            point.z = z
             point_stamped = PointStamped()
             point_stamped.header = request.depth_image.header
             point_stamped.point = point
@@ -200,7 +213,7 @@ class ReID(Node):
             results = DeepFace.represent(
                 img_path=cv_im,
                 model_name="VGG-Face",
-                enforce_detection=True,  # ensure face detected
+                enforce_detection=False,  # allow detection attempts even if uncertain
                 detector_backend="retinaface",
                 align=True,
                 max_faces=1,
@@ -259,7 +272,9 @@ class ReID(Node):
         for i, detection in enumerate(response.detections):
             marker = Marker()
             marker.header.frame_id = frame_id
-            marker.header.stamp = self.get_clock().now()  # TODO: double check
+            marker.header.stamp = (
+                self.get_clock().now().to_msg()
+            )  # Convert to message type
             marker.id = i
             marker.type = Marker.SPHERE
             marker.action = Marker.ADD

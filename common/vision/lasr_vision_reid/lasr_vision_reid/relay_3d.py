@@ -24,8 +24,8 @@ def relay_3d(
             threshold=0.5,
             target_frame="map",
         )
-        response = recognise.call_async(request)
-        node.get_logger().info(response)
+        response = recognise.call(request)
+        node.get_logger().info(str(response))
 
     image_sub = message_filters.Subscriber(node, Image, image_topic)
     depth_sub = message_filters.Subscriber(node, Image, depth_topic)

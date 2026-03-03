@@ -32,7 +32,7 @@ def add_face(node: Node, name: str, num_images: int, image_topic: str):
         req.name = name
 
         try:
-            resp = add_face_srv.call_async(req)
+            resp = add_face_srv.call(req)
             if resp.success:
                 images_collected += 1
                 last_processed_time = current_time
@@ -55,10 +55,22 @@ def add_face(node: Node, name: str, num_images: int, image_topic: str):
 def main():
     rclpy.init(args=sys.argv)
     node = rclpy.create_node("lasr_vision_reid_add_face")
-    camera = node.declare_parameter("~camera", "xtion").value
+
+    node.declare_parameter("camera", "head_front_camera")
+    camera = node.get_parameter("camera").value
+    image_topic = f"/{camera}/rgb/image_raw"
+    node.get_logger().info(f"Image topic: {image_topic}")
+
+    # camera = node.declare_parameter("~camera", "xtion").value
     name = node.declare_parameter("~name", "fadi").value  # originally jared
     num_images = node.declare_parameter("~num_images", 10).value
-    image_topic = f"/{camera}/rgb/image_raw"
+    # image_topic = f"/{camera}/rgb/image_raw"
+
+    node.declare_parameter("name", "fadi")
+    name = node.get_parameter("name").value
+
+    node.declare_parameter("num_images", 10)
+    num_images = node.get_parameter("num_images").value
 
     add_face(node, name, num_images, image_topic)
 

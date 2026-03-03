@@ -6,7 +6,6 @@ from rclpy.node import Node
 from lasr_vision_cropped_detection import process_detection_requests
 from lasr_vision_msgs.srv import CroppedDetection
 
-
 CroppedDetection_Request = CroppedDetection.Request()
 CroppedDetection_Response = CroppedDetection.Response()
 
