@@ -2,7 +2,6 @@ import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
 from lasr_vision_interfaces.srv import AddFace
-import time
 import sys
 
 
@@ -12,44 +11,62 @@ def add_face(node: Node, name: str, num_images: int, image_topic: str):
         node.get_logger().info("Service not available, waiting again...")
 
     images_collected = 0
-    last_processed_time = 0.0
+    requests_in_flight = 0
+    last_request_time_sec = 0.0
+    collection_complete = False
 
     def handle_image(image: Image):
-        nonlocal images_collected, last_processed_time
-        current_time = time.time()
-        if current_time - last_processed_time < 1.0:
+        nonlocal images_collected, requests_in_flight, last_request_time_sec, collection_complete
+
+        if collection_complete:
             return
 
-        if images_collected >= num_images:
-            node.get_logger().info(
-                "Collected required number of images. Unsubscribing."
-            )
-            node.destroy_subscription(image_sub)  # Changed: Use destroy_subscription
+        # Do not queue more requests than needed.
+        if images_collected + requests_in_flight >= num_images:
             return
 
-        req = AddFace.Request()  # Changed: Use .Request
+        current_time_sec = node.get_clock().now().nanoseconds / 1e9
+        if current_time_sec - last_request_time_sec < 1.0:
+            return
+
+        requests_in_flight += 1
+        last_request_time_sec = current_time_sec
+
+        def service_response_callback(future):
+            nonlocal images_collected, requests_in_flight, collection_complete
+            try:
+                resp = future.result()
+                if resp.success:
+                    images_collected += 1
+                    node.get_logger().info(
+                        f"Added face '{name}' for image {images_collected}/{num_images}"
+                    )
+                    if images_collected >= num_images:
+                        node.get_logger().info(
+                            "Collected required number of images. Stopping collection."
+                        )
+                        collection_complete = True
+                else:
+                    node.get_logger().warning("Failed to add face for this image.")
+            except Exception as e:
+                node.get_logger().error(f"Service call failed: {e}")
+            finally:
+                requests_in_flight = max(0, requests_in_flight - 1)
+
+        req = AddFace.Request()
         req.image_raw = image
         req.name = name
 
-        try:
-            resp = add_face_srv.call(req)
-            if resp.success:
-                images_collected += 1
-                last_processed_time = current_time
-                node.get_logger().info(
-                    f"Added face '{name}' for image {images_collected}/{num_images}"
-                )
-            else:
-                node.get_logger().warning("Failed to add face for this image.")
-        except (
-            Exception
-        ) as e:  # Changed: Generic exception instead of rospy.ServiceException
-            node.get_logger().error(f"Service call failed: {e}")
+        # Use call_async() instead of call() to avoid blocking the event loop
+        add_face_srv.call_async(req).add_done_callback(service_response_callback)
 
-    image_sub = node.create_subscription(
-        Image, image_topic, handle_image, 10
-    )  # Changed: Add QoS depth
-    rclpy.spin(node)
+    image_sub = node.create_subscription(Image, image_topic, handle_image, 10)
+
+    # Spin until collection is complete, checking in a loop to allow graceful exit
+    while not collection_complete and rclpy.ok():
+        rclpy.spin_once(node, timeout_sec=0.1)
+
+    node.destroy_subscription(image_sub)
 
 
 def main():
@@ -59,12 +76,13 @@ def main():
     node.declare_parameter("camera", "head_front_camera")
     camera = node.get_parameter("camera").value
     image_topic = f"/{camera}/rgb/image_raw"
-    node.get_logger().info(f"Image topic: {image_topic}")
 
     # camera = node.declare_parameter("~camera", "xtion").value
     name = node.declare_parameter("~name", "fadi").value  # originally jared
     num_images = node.declare_parameter("~num_images", 10).value
-    # image_topic = f"/{camera}/rgb/image_raw"
+    image_topic = "image_raw"
+
+    node.get_logger().info(f"Image topic: {image_topic}")
 
     node.declare_parameter("name", "fadi")
     name = node.get_parameter("name").value

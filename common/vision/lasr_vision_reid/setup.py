@@ -43,6 +43,7 @@ setup(
         "console_scripts": [
             "service = lasr_vision_reid.service:main",
             "relay_3d = lasr_vision_reid.relay_3d:main",
+            "relay_2d = lasr_vision_reid.relay_2d:main",
             "add_face = lasr_vision_reid.add_face:main",
         ],
     },

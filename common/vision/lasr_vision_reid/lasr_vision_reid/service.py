@@ -20,8 +20,8 @@ from cv_bridge import CvBridge
 import tf2_ros as tf
 from deepface import DeepFace
 
-from lasr_vision_interfaces.srv import Recognise3D, AddFace
-from lasr_vision_interfaces.msg import Detection3D
+from lasr_vision_interfaces.srv import Recognise3D, AddFace, Recognise
+from lasr_vision_interfaces.msg import Detection3D, Detection
 
 
 from geometry_msgs.msg import Point, PointStamped
@@ -38,9 +38,12 @@ class ReID(Node):
     _bridge: CvBridge
     _tf_buffer: tf.Buffer
     _tf_listener: tf.TransformListener
+    _tf_client: rclpy.client.Client
     _image_publisher: rclpy.publisher.Publisher
     _marker_publisher: rclpy.publisher.Publisher
-    _recognise_service: rclpy.service.Service
+    _recognise_3d_service: rclpy.service.Service
+    _recognise_2d_service: rclpy.service.Service
+    _add_face_service: rclpy.service.Service
 
     def __init__(self):
         super().__init__("lasr_vision_reid_service")
@@ -57,8 +60,11 @@ class ReID(Node):
             Marker, "/lasr_vision_reid/recognise/points", 10
         )
 
-        self._recognise_service = self.create_service(
-            Recognise3D, "/lasr_vision_reid/recognise", self._recognise
+        self._recognise_3d_service = self.create_service(
+            Recognise3D, "/lasr_vision_reid/recognise/threed", self._recognise_3d
+        )
+        self._recognise_2d_service = self.create_service(
+            Recognise, "/lasr_vision_reid/recognise/twod", self._recognise_2d
         )
         self._add_face_service = self.create_service(
             AddFace, "/lasr_vision_reid/add_face", self._add_face
@@ -69,12 +75,81 @@ class ReID(Node):
         Use DeepFace to extract an embedding of a face.
         """
         results = DeepFace.represent(
-            img_path=im, model_name="VGG-Face", enforce_detection=False
+            img_path=im, model_name="VGG-Face", enforce_detection=True
         )
         embeddings = [np.array(entry["embedding"]) for entry in results]
         return embeddings
 
-    def _recognise(
+    def _recognise_2d(
+        self, request: Recognise.Request, response: Recognise.Response
+    ) -> Recognise.Response:
+        response.detections = []
+
+        try:
+            cv_im = self._bridge.imgmsg_to_cv2(
+                request.image_raw, desired_encoding="rgb8"
+            )
+        except Exception as e:
+            self.get_logger().error(f"Failed to convert image: {e}")
+            return response
+
+        h, w, _ = cv_im.shape
+
+        try:
+            # Get face embeddings and bounding boxes from DeepFace (face detection + embedding)
+            results = DeepFace.represent(
+                img_path=cv_im,
+                model_name="VGG-Face",
+                enforce_detection=True,
+                detector_backend="retinaface",
+                align=True,
+                max_faces=None,
+            )
+        except Exception as e:
+            self.get_logger().warning(f"DeepFace representation failed: {e}")
+            return response
+
+        if not results:
+            self.get_logger().info("No faces detected.", once=True)
+            return response
+
+        for face_data in results:
+            embedding = np.array(face_data["embedding"])
+            region = face_data["facial_area"]
+            x1, y1 = region["x"], region["y"]
+            x2, y2 = x1 + region["w"], y1 + region["h"]
+
+            # Clamp bounding box within image
+            x1, y1 = max(0, x1), max(0, y1)
+            x2, y2 = min(w, x2), min(h, y2)
+
+            # Compare embedding with database entries
+            best_label = "unknown"
+            best_score = -1.0
+            for label, embeddings in self._db.items():
+                sims = [
+                    cosine_similarity([embedding], [db_emb])[0][0]
+                    for db_emb in embeddings
+                ]
+                avg_sim = np.mean(sims)
+                if avg_sim > best_score:
+                    best_score = avg_sim
+                    best_label = label
+
+            if best_score < request.confidence:
+                continue
+
+            detection = Detection()
+            detection.name = best_label
+            detection.confidence = best_score
+            detection.xywh = [x1, y1, x2 - x1, y2 - y1]
+
+            response.detections.append(detection)
+
+        self._publish_results_2d(response, cv_im, request.image_raw.header.frame_id)
+        return response
+
+    def _recognise_3d(
         self, request: Recognise3D.Request, response: Recognise3D.Response
     ) -> Recognise3D.Response:
         response.detections = []
@@ -96,27 +171,29 @@ class ReID(Node):
         fx, fy = K[0], K[4]
         cx, cy = K[2], K[5]
 
+        transform = None
         try:
             transform = self._tf_buffer.lookup_transform(
                 target_frame,
                 request.depth_image.header.frame_id,
                 request.depth_image.header.stamp,
-                rclpy.duration.Duration(seconds=1.0),
+                rclpy.duration.Duration(seconds=2.0),  # Longer timeout for async
             )
         except (
             tf.LookupException,
             tf.ConnectivityException,
             tf.ExtrapolationException,
         ) as e:
-            # TODO: Unsure what what exception?
-            raise RuntimeError("ros service exception")
+            self.get_logger().debug(
+                f"Transform lookup failed: {type(e).__name__}. Returning detections in camera frame."
+            )
 
         try:
             # Get face embeddings and bounding boxes from DeepFace (face detection + embedding)
             results = DeepFace.represent(
                 img_path=cv_im,
                 model_name="VGG-Face",
-                enforce_detection=False,
+                enforce_detection=True,
                 detector_backend="retinaface",
                 align=True,
                 max_faces=None,
@@ -182,16 +259,22 @@ class ReID(Node):
             point_stamped.header = request.depth_image.header
             point_stamped.point = point
 
-            try:
-                point_transformed = do_transform_point(point_stamped, transform)
-                detection.point = point_transformed.point
-            except Exception as e:
-                self.get_logger().warning(f"Failed to transform point: {e}")
-                continue
+            # Transform if available, otherwise use camera frame
+            if transform is not None:
+                try:
+                    point_transformed = do_transform_point(point_stamped, transform)
+                    detection.point = point_transformed.point
+                except Exception as e:
+                    self.get_logger().debug(
+                        f"Point transformation failed: {e}. Using camera frame."
+                    )
+                    detection.point = point
+            else:
+                detection.point = point
 
             response.detections.append(detection)
 
-        self._publish_results(response, cv_im, target_frame)
+        self._publish_results_3d(response, cv_im, target_frame)
         return response
 
     def _add_face(
@@ -213,7 +296,7 @@ class ReID(Node):
             results = DeepFace.represent(
                 img_path=cv_im,
                 model_name="VGG-Face",
-                enforce_detection=False,  # allow detection attempts even if uncertain
+                enforce_detection=True,  # allow detection attempts even if uncertain
                 detector_backend="retinaface",
                 align=True,
                 max_faces=1,
@@ -240,13 +323,34 @@ class ReID(Node):
         self._db[name].append(embedding)
         response.success = True
         self.get_logger().info(
-            f"Added face embedding for {name}, total samples: {len(self._db[name])}",
-            once=True,
+            f"Added face embedding for {name}, total samples: {len(self._db[name])}"
         )
 
         return response
 
-    def _publish_results(
+    def _publish_results_2d(
+        self, response: Recognise.Response, cv_im: Mat, frame_id: str
+    ) -> None:
+        annotated = cv_im.copy()
+        for detection in response.detections:
+            x, y, w, h = detection.xywh
+            cv2.rectangle(annotated, (x, y), (x + w, y + h), (0, 255, 0), 2)
+            label = f"{detection.name} ({detection.confidence:.2f})"
+            cv2.putText(
+                annotated,
+                label,
+                (x, y - 5),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.5,
+                (0, 255, 0),
+                2,
+            )
+
+        self._image_publisher.publish(
+            self._bridge.cv2_to_imgmsg(annotated, encoding="rgb8")
+        )
+
+    def _publish_results_3d(
         self, response: Recognise3D.Response, cv_im: Mat, frame_id: str
     ) -> None:
 
