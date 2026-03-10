@@ -4,7 +4,7 @@ sensor_msgs/Image image_raw
 # YOLO model to use
 string model
 
-# How certain the detection should be to include
+# Confidence threshold
 float32 confidence
 
 # Non-maximum Supression

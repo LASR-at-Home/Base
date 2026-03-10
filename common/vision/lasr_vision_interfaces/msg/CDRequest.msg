@@ -20,7 +20,7 @@ float32 yolo_model_confidence
 float32 yolo_nms_threshold
 
 # List of polygons to be used for 3D detections only
-geometry_msgs/Polygon[] polygons
+geometry_msgs/Polygon[] polygons        
 
 
 # Whether to return the img or pointcloud that inference was run on

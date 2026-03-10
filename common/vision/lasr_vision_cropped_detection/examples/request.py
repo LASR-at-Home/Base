@@ -3,7 +3,6 @@ import rospy
 from lasr_vision_msgs.msg import CDRequest
 from lasr_vision_msgs.srv import CroppedDetection, CroppedDetectionRequest
 
-
 if __name__ == "__main__":
     service = rospy.ServiceProxy("/vision/cropped_detection", CroppedDetection)
     service.wait_for_service()

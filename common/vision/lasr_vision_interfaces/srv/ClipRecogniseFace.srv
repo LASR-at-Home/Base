@@ -1,0 +1,13 @@
+# Raw image to run inference on 
+sensor_msgs/Image image_raw
+
+---
+
+# Name of face
+string name
+
+# Distance from detected face
+float32 distance
+
+# Face bounding box
+int32[] xywh

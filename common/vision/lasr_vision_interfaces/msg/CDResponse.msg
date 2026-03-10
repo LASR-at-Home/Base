@@ -22,4 +22,4 @@ uint8[] polygon_ids
 sensor_msgs/Image rgb_image
 
 # The pointcloud used for the 3D crop
-sensor_msgs/PointCloud2 pointcloud
+sensor_msgs/PointCloud2 pointcloud  
