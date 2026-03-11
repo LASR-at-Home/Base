@@ -1,0 +1,6 @@
+string[] sentences
+
+---
+
+string[] most_similar # Two most similar sentences
+float32 cosine_similarity
