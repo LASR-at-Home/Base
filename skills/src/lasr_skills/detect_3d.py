@@ -79,19 +79,16 @@ class Detect3D(RosState):
     def execute(self, userdata):
 
         if self.point_cloud_topic is not None:
-
             def callback(image_msg, depth_msg, cam_info_msg, pcl_msg):
                 self.data = (image_msg, depth_msg, cam_info_msg, pcl_msg)
-
         else:
-
             def callback(image_msg, depth_msg, cam_info_msg):
                 self.data = (image_msg, depth_msg, cam_info_msg)
 
         self.ts.registerCallback(callback)
 
         while not self.data:
-            time.sleep(0.1)
+            rclpy.spin_once(self.node, timeout_sec=0.1)
 
         if len(self.data) == 4:
             image_msg, depth_msg, cam_info_msg, pcl_msg = self.data
@@ -100,16 +97,29 @@ class Detect3D(RosState):
             pcl_msg = None
 
         try:
-            resp = self.yolo(
+            request = YoloDetection3D.Request(
                 image_raw=image_msg,
                 depth_image=depth_msg,
                 depth_camera_info=cam_info_msg,
                 model=self.model,
-                models=self.models,
+                # models=self.models,
                 confidence=self.confidence,
                 filter=self.filter,
                 target_frame=self.target_frame,
             )
+            future = self.yolo.call_async(request)
+            rclpy.spin_until_future_complete(self.node, future)
+            
+            resp = future.result()
+
+            self.node.get_logger().info(
+                f"Got {len(resp.detected_objects)} detections"
+            )
+            for det in resp.detected_objects:
+                self.node.get_logger().info(
+                    f"  {det.name} at ({det.point.x:.2f}, {det.point.y:.2f}, {det.point.z:.2f})"
+                )
+                
             userdata.detections_3d = resp
             userdata.image_raw = image_msg
             userdata.pcl = pcl_msg
@@ -122,7 +132,8 @@ class Detect3D(RosState):
 def main():
     rclpy.init()
     node = rclpy.create_node("detect")
-    while not rclpy.ok():
+
+    while rclpy.ok():
         detect = Detect3D(node=node, slop=10.0)
         sm = StateMachine(outcomes=["succeeded", "failed"])
         with sm:
@@ -133,6 +144,8 @@ def main():
             )
         sm.execute()
 
+    node.destroy_node()
+    rclpy.shutdown()
 
 if __name__ == "__main__":
     main()

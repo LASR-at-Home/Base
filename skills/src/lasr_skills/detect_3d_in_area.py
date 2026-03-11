@@ -72,7 +72,7 @@ class Detect3DInArea(smach.StateMachine):
                 PolygonStamped(polygon=polygon_msg, header=Header(frame_id="map"))
             )
             satisfied_points = [
-                area_polygon.contains(Point(object.point.x, object.point.y))
+                area_polygon.contains(Point(x=object.point.x, y=object.point.y))
                 for object in detected_objects
             ]
             filtered_detections = [
@@ -99,7 +99,7 @@ class Detect3DInArea(smach.StateMachine):
         depth_camera_info_topic: str = "/xtion/depth_registered/camera_info",
         point_cloud_topic: Optional[str] = None,
         model: str = "yolo11n-seg.pt",
-        models: Union[List[str], None] = None,
+        # models: Union[List[str], None] = None,
         filter: Union[List[str], None] = None,
         confidence: float = 0.5,
         target_frame: str = "map",
@@ -128,7 +128,7 @@ class Detect3DInArea(smach.StateMachine):
                     depth_camera_info_topic=depth_camera_info_topic,
                     point_cloud_topic=point_cloud_topic,
                     model=model,
-                    models=models,
+                    # models=models,
                     filter=filter,
                     confidence=confidence,
                     target_frame=target_frame,

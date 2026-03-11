@@ -1,5 +1,7 @@
 import rclpy
 from rclpy.node import Node
+from rclpy.wait_for_message import wait_for_message
+from rclpy.qos import QoSProfile, DurabilityPolicy
 
 import smach
 from smach_ros import RosState
@@ -65,7 +67,7 @@ class CropImage3D(RosState):
         self._bridge = CvBridge()
 
         self.debug_publisher = self.node.create_publisher(
-            Image, "/skills/crop_image_3d/debug", 1
+            Image, "/skills/crop_image_3d/debug", QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL)
         )
 
         if self.crop_type not in ["masked", "bbox"]:
@@ -82,9 +84,17 @@ class CropImage3D(RosState):
         if not detections:
             self.node.get_logger().warn("No 3D detections found.")
             return "failed"
-        robot_pose_msg = rclpy.wait_for_message(
-            self.robot_pose_topic, PoseWithCovarianceStamped
+        
+        # From: https://github.com/ros2/rclpy/blob/humble/rclpy/rclpy/wait_for_message.py 
+        success, robot_pose_msg = wait_for_message(
+            PoseWithCovarianceStamped,
+            self.node,
+            self.robot_pose_topic
         )
+        if not success:
+            self.node.get_logger().warn("Timed out waiting for robot pose.")
+            return "failed"
+        
         # Pose in map frame, same as detected objects
         robot_x, robot_y, robot_z = (
             robot_pose_msg.pose.pose.position.x,
@@ -96,6 +106,7 @@ class CropImage3D(RosState):
             userdata["image_raw"], desired_encoding="rgb8"
         )
 
+        # Keeps only the whitelisted detections in the list of all detections
         if self.filters:
             detections = [det for det in detections if det.name in self.filters]
             if not detections:
@@ -113,7 +124,7 @@ class CropImage3D(RosState):
         reverse = self.crop_logic == "farthest"
         detections.sort(key=eucl_dist, reverse=reverse)
 
-        cropped_images = {k: None for k in self.filters}
+        cropped_images = {k: None for k in self.filters} # Place holder for cropped images
         for det in detections:
             # Already have the closest/farthest detection for this class
             if cropped_images[det.name] is not None:
@@ -121,11 +132,18 @@ class CropImage3D(RosState):
 
             if self.crop_type == "masked":
                 # x,y coords of the detection
+                self.node.get_logger().info(f"Processing {det.name}:")
+                
+                if len(det.xyseg) == 0:
+                    self.node.get_logger().warn(f"No segmentation data for {det.name}, skipping")
+                    continue
                 # Taken from https://stackoverflow.com/questions/37912928/fill-the-outside-of-contours-opencv
-                mask = np.array(det.xyseg).reshape(-1, 2)
+                mask = np.array(det.xyseg, dtype=np.int32).reshape(-1, 2)
                 stencil = np.zeros(rgb_image.shape).astype(rgb_image.dtype)
                 colour = (255, 255, 255)
                 cv2.fillPoly(stencil, [mask], colour)
+                self.node.get_logger().info(f"  stencil filled pixels: {np.count_nonzero(stencil)} / {stencil.size}")
+
                 # Bitwise AND with 0s is 0s, hence we get the image only where the mask is
                 # with black elsewhere.
                 masked_image = cv2.bitwise_and(rgb_image, stencil)
@@ -144,8 +162,9 @@ class CropImage3D(RosState):
             cropped_images[det.name] = masked_image
 
         # Convert image to ROS Image message for debugging
-        if cropped_images:
-            debug_image = next(iter(cropped_images.values()))
+        debug_image = next((img for img in cropped_images.values() if img is not None), None)
+        if debug_image is not None:
+            # debug_image = next(iter(cropped_images.values()))
             debug_image_msg = self._bridge.cv2_to_imgmsg(debug_image, encoding="rgb8")
             self.debug_publisher.publish(debug_image_msg)
 
@@ -160,7 +179,7 @@ def main():
     rclpy.init()
     node = rclpy.create_node("crop_image_3d")
     try:
-        crop = CropImage3D(node)
+        crop = CropImage3D(node, filters=["person", "chair", "bench"]) # Update this to select what needs to be cropped
         detect = Detect3D(node)
         sm = smach.StateMachine(outcomes=["succeeded", "failed"])
         with sm:

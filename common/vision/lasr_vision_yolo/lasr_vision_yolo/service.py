@@ -167,7 +167,7 @@ class YOLOServiceNode:
         depth_im = self._bridge.imgmsg_to_cv2(
             req.depth_image, desired_encoding="passthrough"
         )
-        K = req.depth_camera_info.K
+        K = req.depth_camera_info.k
         fx, fy = K[0], K[4]
         cx, cy = K[2], K[5]
 
@@ -227,7 +227,7 @@ class YOLOServiceNode:
                 points = np.stack((x, y, z), axis=1)
                 x, y, z = np.median(points, axis=0)
 
-                point = Point(x, y, z)
+                point = Point(x=float(x), y=float(y), z=float(z))
                 point_stamped = PointStamped()
                 point_stamped.header = req.depth_image.header
                 point_stamped.point = point
@@ -260,7 +260,7 @@ class YOLOServiceNode:
                 y = result.keypoints.xy.squeeze()[idx, 1].round().int().item()
                 conf = result.keypoints.conf.squeeze()[idx].item()
                 if conf > 0.0:
-                    keypoints.keypoints.append(Keypoint(name, x, y))
+                    keypoints.keypoints.append(Keypoint(keypoint_name=name, x=x, y=y))
             response.detections.append(keypoints)
 
         self._publish_results(req, results, response)
@@ -277,7 +277,7 @@ class YOLOServiceNode:
         depth_im = self._bridge.imgmsg_to_cv2(
             req.depth_image, desired_encoding="passthrough"
         )
-        K = req.depth_camera_info.K
+        K = req.depth_camera_info.k
         fx, fy = K[0], K[4]
         cx, cy = K[2], K[5]
 
@@ -318,7 +318,7 @@ class YOLOServiceNode:
                     if np.isnan(x) or np.isnan(y) or np.isnan(z):
                         continue
 
-                    point = Point(x, y, z)
+                    point = Point(x=float(x), y=float(y), z=float(z))
                     point_stamped = PointStamped()
                     point_stamped.header = req.depth_image.header
                     point_stamped.point = point
@@ -327,7 +327,7 @@ class YOLOServiceNode:
                     )
                     point = point_stamped_transformed.point
 
-                    keypoints.keypoints.append(Keypoint3D(name, point))
+                    keypoints.keypoints.append(Keypoint3D(keypoint_name=name, point=point))
             response.detections.append(keypoints)
 
         self._publish_results(req, results, response)
