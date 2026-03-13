@@ -22,12 +22,14 @@ find_package(rclpy REQUIRED)
 # Specify message files
 set(msg_files
   "msg/ReceptionistResponse.msg"
+  "msg/HRITaskResponse.msg"
 )
 
 # Specify service files
 set(srv_files
   "srv/Llm.srv"
   "srv/ReceptionistQueryLlm.srv"
+  "srv/HRITaskQueryLlm.srv"
   "srv/SentenceEmbedding.srv"
   "srv/StoringGroceriesQueryLlm.srv"
 )
