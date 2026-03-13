@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import rclpy
 from rclpy.node import Node
+from rclpy.wait_for_message import wait_for_message
 
 import smach
 from smach_ros import RosState
@@ -8,6 +9,7 @@ from smach_ros import RosState
 # import tf2_ros as tf
 import numpy as np
 import cv2
+from threading import Thread
 
 # from tf_pcl import pcl_transform
 from typing import List, Optional, Tuple
@@ -25,6 +27,7 @@ from lasr_vision_interfaces.msg import Detection3D
 from .look_to_point import LookToPoint
 from .detect_3d_in_area import Detect3DInArea
 
+#TODO: 
 
 class ProcessDetections(RosState):
     """
@@ -175,9 +178,14 @@ class CalculateSweepPoints(RosState):
             ShapelyPolygon: Footprint of camera FOV in map frame.
         """
 
-        camera_info = rclpy.wait_for_message(
-            "/xtion/depth_registered/camera_info", CameraInfo
+        success, camera_info = wait_for_message(
+            CameraInfo,
+            self.node,
+            "/xtion/depth_registered/camera_info"
         )
+        if not success:
+            self.node.get_logger().warn("Timed out waiting for camera info")
+
         model = PinholeCameraModel()
         model.fromCameraInfo(camera_info)
 
@@ -289,7 +297,7 @@ class CalculateSweepPoints(RosState):
         # Optional: visualize FOV #TODO: Verify
 
         qos = QoSProfile(
-            depth=1, durability=QoSDurabilityPolicy.TRANSIENT_LOCAL
+            depth_registered=1, durability=QoSDurabilityPolicy.TRANSIENT_LOCAL
         )  # Verify publisher durability profile (https://docs.ros.org/en/humble/Concepts/Intermediate/About-Quality-of-Service-Settings.html)
 
         pub = self.node.create_publisher(PolygonStamped, "projected_fov_polygon", qos)
@@ -320,7 +328,7 @@ class CalculateSweepPoints(RosState):
         sweep_points = [
             PointStamped(
                 header=Header(frame_id="map"),
-                point=Point(fp.centroid.x, fp.centroid.y, self._z_axis),
+                point=Point(x=fp.centroid.x, y=fp.centroid.y, z=self._z_axis),
             )
             for fp in selected_footprints
         ]
@@ -448,7 +456,7 @@ class DetectAllInPolygon(smach.StateMachine):
         Returns:
             str: Outcome of the state, "succeeded".
         """
-        self._node.get_clock().sleep_for(Duration(seconds=0.25))
+        rclpy.spin_once(self._node, timeout_sec=0.25)
         return "succeeded"
 
     def _publish_detected_objects(self, userdata: smach.UserData) -> str:
@@ -688,6 +696,7 @@ def main():
 
     rclpy.init()
     node = rclpy.create_node("detect_all_in_polygon")
+    
     sm = DetectAllInPolygon(
         node,
         seat_polygon,

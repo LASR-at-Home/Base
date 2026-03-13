@@ -61,7 +61,7 @@ class CropImage3D(RosState):
             input_keys=["detections_3d", "image_raw"],
             output_keys=["cropped_images"],
         )
-        self.filters = filters or []
+        self.filters = filters
         self.crop_logic = crop_logic
         self.crop_type = crop_type
         self._bridge = CvBridge()
@@ -106,7 +106,7 @@ class CropImage3D(RosState):
             userdata["image_raw"], desired_encoding="rgb8"
         )
 
-        # Keeps only the whitelisted detections in the list of all detections
+        # If there are filters keep only those detections
         if self.filters:
             detections = [det for det in detections if det.name in self.filters]
             if not detections:
@@ -124,7 +124,11 @@ class CropImage3D(RosState):
         reverse = self.crop_logic == "farthest"
         detections.sort(key=eucl_dist, reverse=reverse)
 
-        cropped_images = {k: None for k in self.filters} # Place holder for cropped images
+        if self.filters:
+            cropped_images = {k: None for k in self.filters} # Place holder for cropped images
+        else:
+            cropped_images = {det.name: None for det in detections}
+
         for det in detections:
             # Already have the closest/farthest detection for this class
             if cropped_images[det.name] is not None:
@@ -179,7 +183,7 @@ def main():
     rclpy.init()
     node = rclpy.create_node("crop_image_3d")
     try:
-        crop = CropImage3D(node, filters=["person", "chair", "bench"]) # Update this to select what needs to be cropped
+        crop = CropImage3D(node)
         detect = Detect3D(node)
         sm = smach.StateMachine(outcomes=["succeeded", "failed"])
         with sm:
