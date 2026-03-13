@@ -7,7 +7,7 @@ from rclpy.node import Node
 import smach
 from smach import UserData
 from typing import List, Dict, Any
-from receptionist.states import SpeechRecovery
+from HRI.states import SpeechRecovery
 
 # TODO test this state
 

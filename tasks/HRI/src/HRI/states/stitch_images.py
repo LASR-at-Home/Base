@@ -3,7 +3,7 @@
 import rclpy
 from rclpy.node import Node
 import smach
-from receptionist.states import PointCloudSweep
+from HRI.states import PointCloudSweep
 from geometry_msgs.msg import Point
 from sensor_msgs.msg import Image
 from stitching import Stitcher
