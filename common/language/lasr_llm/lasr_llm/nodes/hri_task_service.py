@@ -10,6 +10,7 @@ from lasr_llm import (
     truncate_llm_output,
 )
 
+
 class HRITaskLLMService(Node):
     """
     Service for handling the HRI task queries to the LLM.
@@ -18,9 +19,7 @@ class HRITaskLLMService(Node):
 
     def __init__(self):
         super().__init__("hri_task_query_llm_service")
-        self.create_service(
-            HRITaskQueryLlm, "/hri_task/query_llm", self.query_llm
-        )
+        self.create_service(HRITaskQueryLlm, "/hri_task/query_llm", self.query_llm)
         config = ModelConfig(model_name="Qwen/Qwen2.5-1.5B", model_type="llm")
         self.llm_inference = LLMInference(config)
         self.get_logger().info("HRI Task Query LLM service started")
@@ -46,7 +45,9 @@ class HRITaskLLMService(Node):
                 fields=["Favourite drink"],
             )
         else:
-            self.get_logger().warning(f"Unsupported task: {task}, defaulting to extracting name")
+            self.get_logger().warning(
+                f"Unsupported task: {task}, defaulting to extracting name"
+            )
             task = "name"
             query = create_query(
                 text=request.llm_input,
@@ -60,10 +61,8 @@ class HRITaskLLMService(Node):
 
         response.response.llm_response = llm_output
         if task == "name":
-            parsed_output = parse_llm_output_to_dict(
-                llm_output, fields=["Name"]
-            )
-        else: # task == "drink"
+            parsed_output = parse_llm_output_to_dict(llm_output, fields=["Name"])
+        else:  # task == "drink"
             parsed_output = parse_llm_output_to_dict(
                 llm_output, fields=["Favourite drink"]
             )

@@ -53,6 +53,7 @@ models = {
     "DeepSeekQwen": "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B",  # terrible lol
 }
 
+
 class LLMInference:
     def __init__(self, model_config: ModelConfig):
         self.config = model_config
@@ -138,12 +139,15 @@ class LLMInference:
     def load_llm_model(self):
         if self.device == torch.device("cpu"):
             self.logger.warning("[LLMInference] CPU detected — skipping quantization.")
-            return AutoModelForCausalLM.from_pretrained(self.model_name, low_cpu_mem_usage= True)
+            return AutoModelForCausalLM.from_pretrained(
+                self.model_name, low_cpu_mem_usage=True
+            )
 
         kwargs = {"low_cpu_mem_usage": True}
 
         if self.config.quantize:
             from transformers import BitsAndBytesConfig
+
             try:
                 kwargs["quantization_config"] = BitsAndBytesConfig(
                     load_in_4bit=True,
@@ -168,8 +172,9 @@ class LLMInference:
         print(f"[LLMInference] Model {self.model_name} loaded successfully.")
         return model
 
-
-    def run_inference(self, query: str, context: Optional[str] = None, max_tokens=56) -> str:
+    def run_inference(
+        self, query: str, context: Optional[str] = None, max_tokens=56
+    ) -> str:
         result = None
         if self.config.model_type == "pipeline":
             if self.task == "question-answering":
@@ -179,7 +184,9 @@ class LLMInference:
             else:
                 result = self.pipe(query)
         elif self.config.model_type == "llm":
-            input_ids = self.tokenizer(query, return_tensors="pt") #.to(self.model.device)
+            input_ids = self.tokenizer(
+                query, return_tensors="pt"
+            )  # .to(self.model.device)
             with torch.inference_mode():
                 output_ids = self.model.generate(max_new_tokens=max_tokens, **input_ids)
             result = self.tokenizer.decode(output_ids[0], skip_special_tokens=True)
@@ -301,6 +308,7 @@ def link_category(object: str, category: list[str]) -> str:
     # print(response)
     parsed_response = truncate_llm_output(response[0])
     return parsed_response
+
 
 def extract_fields_llm(text: str, fields: List[str]) -> Dict:
     """
