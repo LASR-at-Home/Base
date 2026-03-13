@@ -4,35 +4,34 @@ to the guest data userdata
 """
 
 import rclpy
+from rclpy.node import Node
 
-import smach
-from smach import UserData
+from smach import UserData, StateMachine
 from smach_ros import RosState
 
 from typing import List, Dict, Any
 from receptionist.states import SpeechRecovery
-from lasr_llm_msgs.srv import Llm, LlmRequest
+from lasr_llm_interfaces.srv import Llm
 
-
-class GetDrink(smach.StateMachine):
+class GetDrink(StateMachine):
     def __init__(
-        self, node, guest_id: str, last_resort: bool, param_key: str = "/receptionist/priors"
+        self, node: Node, guest_id: str, last_resort: bool, param_key: str = "/receptionist/priors"
     ):
-        smach.StateMachine.__init__(
+        StateMachine.__init__(
             self,
             outcomes=["succeeded", "failed", "retry"],
             input_keys=["guest_transcription", "guest_data"],
             output_keys=["guest_data", "guest_transcription"],
         )
-
+        self.__node = node
         self._guest_id = guest_id
         self._param_key = param_key
         self._last_resort = last_resort
         with self:
-            smach.StateMachine.add(
+            StateMachine.add(
                 "PARSE_DRINK",
                 self.ParseDrink(
-                    node=node,
+                    node=self.__node,
                     guest_id=self._guest_id,
                     last_resort=self._last_resort,
                     param_key=self._param_key,
@@ -47,7 +46,7 @@ class GetDrink(smach.StateMachine):
     class ParseDrink(RosState):
         def __init__(
             self,
-            node,
+            node: Node,
             guest_id: str,
             last_resort: bool,
             param_key: str = "/receptionist/priors",
@@ -65,11 +64,13 @@ class GetDrink(smach.StateMachine):
                 input_keys=["guest_transcription", "guest_data"],
                 output_keys=["guest_data", "guest_transcription"],
             )
-            #TODO
-            self._llm = rospy.ServiceProxy("/lasr_llm/llm", Llm)
-            self._llm.wait_for_service()
+            
+            self._llm = self.node.create_client(Llm, "/lasr_llm/llm")
+            while not self._llm.wait_for_service(timeout_sec=1.0):
+                self.node.get_logger().info('LLM service not available, waiting again...')
+
             self._guest_id = guest_id
-            prior_data: Dict[str, List[str]] = rospy.get_param(param_key) #TODO
+            prior_data: Dict[str, List[str]] = self.node.get_parameter(param_key) 
             self._possible_drinks = [drink.lower() for drink in prior_data["drinks"]]
             self._last_resort = last_resort
 
@@ -95,24 +96,27 @@ class GetDrink(smach.StateMachine):
             )
 
             for drink in self._possible_drinks:
-                if drink in transcription:#TODO
-                    rospy.loginfo(
+                if drink in transcription:
+                    self.node.get_logger().info(
                         f"Matched drink in transcription: {drink} with transcription: {transcription}"
                     )
                     userdata.guest_data[self._guest_id]["drink"] = drink
-                    rospy.loginfo(f"Guest Drink identified as: {drink}")
+                    self.node.get_logger().info(f"Guest Drink identified as: {drink}")
                     return "succeeded"
             if not self._last_resort:
-                rospy.logwarn(
+                self.node.get_logger().warn(
                     f"Could not identify drink from transcription: {transcription}. Retrying..."
                 )
                 return "retry"
 
-            #TODO
-            request = LlmRequest()
+            request = Llm.Request()
             request.system_prompt = f"You are a robot acting as a party host. You are tasked with identifying the favourite drink belonging to a guest. The possible drinks are {','.join(self._possible_drinks)}. You will receive input such as 'my favourite drink is cola'. Output only the drink, which must exactly match one of the possible drinks. In the previous example this would be 'cola'. If you can't identify the drink, output 'None'."
             request.prompt = f"The user says: {transcription}"
             request.max_tokens = 3  # Limit to a single word response
+            future = self._llm.call_async(request)
+            rclpy.spin_until_future_complete(self.node, future)
+            response = future.result()
+
             response = self._llm(request)
             drink = response.output.strip()
 
@@ -120,24 +124,24 @@ class GetDrink(smach.StateMachine):
                 userdata.guest_data[self._guest_id]["drink"] = drink.lower()
             else:
                 userdata.guest_data[self._guest_id]["drink"] = "unknown"
-                rospy.logwarn(
+                self.node.get_logger().warn(
                     f"Could not identify drink from transcription: {transcription}"
                 )
                 return "failed"
 
-            rospy.loginfo(f"Guest Drink identified as: {drink}")
+            self.node.get_logger().info(f"Guest Drink identified as: {drink}")
             return "succeeded"
 
-    class PostRecoveryDecision(smach.State):#TODO
+    class PostRecoveryDecision(RosState):
         def __init__(self, guest_id: str, param_key: str = "/receptionist/priors"):
-            smach.State.__init__(
+            RosState.__init__(
                 self,
                 outcomes=["succeeded", "failed"],
                 input_keys=["guest_transcription", "guest_data"],
                 output_keys=["guest_data", "guest_transcription"],
             )
             self._guest_id = guest_id
-            prior_data: Dict[str, List[str]] = rospy.get_param(param_key)
+            prior_data: Dict[str, List[str]] = self.node.get_parameter(param_key)
             self._possible_drinks = [drink.lower() for drink in prior_data["drinks"]]
 
         def execute(self, userdata: UserData) -> str:

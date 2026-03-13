@@ -7,6 +7,15 @@
     <maintainer email="maayan.armony@gmail.com">maayan</maintainer>
     <license>MIT</license>
 
+    <depend>smach</depend>
+    <depend>smach_ros</depend>
+
+    <depend>skills</depend>
+    <depend>cv2_img</depend>
+    <depend>cv2_pcl</depend>
+
+    <depend>lasr_llm_interfaces</depend>
+
     <test_depend>ament_copyright</test_depend>
     <test_depend>ament_flake8</test_depend>
     <test_depend>ament_pep257</test_depend>

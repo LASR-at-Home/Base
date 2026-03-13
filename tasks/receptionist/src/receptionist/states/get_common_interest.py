@@ -4,13 +4,9 @@ from rclpy.node import Node
 import smach
 from smach_ros import RosState
 
-from lasr_skills import Say
-from lasr_llm_msgs.srv import SentenceEmbedding, Llm, LlmRequest
+from skills import Say
+from lasr_llm_interfaces.srv import SentenceEmbedding, Llm
 
-
-"""
-    TODO: update after LLM package is done (need Llm service )
-"""
 
 class GetInterest(RosState):
     """Prompts an LLM to find a common interest between the guests and the host."""
@@ -25,17 +21,14 @@ class GetInterest(RosState):
             input_keys=["guest_data"],
             output_keys=["interest_message", "guest_data"],
         )
-        self._sentence_embed_srv = self.node.create_client(
-            SentenceEmbedding, "/lasr_sentence_embedding/sentence_embedding"
-        )
+        self._sentence_embed_srv = self.node.create_client(SentenceEmbedding, "/lasr_sentence_embedding/sentence_embedding")
         while not self._sentence_embed_srv.wait_for_service(timeout_sec=1.0):
-            self.node.get_logger().info('service not available, waiting again...')
+            self.node.get_logger().info(' Sentence Embedding service not available, waiting again...')
 
         self._llm_srv = self.node.create_client(Llm, "/lasr_llm/llm")
         while not self._llm_srv.wait_for_service(timeout_sec=1.0):
-            self.node.get_logger().info('service not available, waiting again...')
+            self.node.get_logger().info('LLM service not available, waiting again...')
 
-    #TODO
     def execute(self, userdata):
         try:
             guest_ids = ["host", "guest1", "guest2"]
@@ -44,18 +37,25 @@ class GetInterest(RosState):
                 userdata.guest_data["guest1"]["interest"],
                 userdata.guest_data["guest2"]["interest"],
             ]
-            response = self._sentence_embed_srv(interests)  
-            most_similar_1, most_similar_2 = response.most_similar
+
+            embed_request = SentenceEmbedding.Request(sentences=interests)
+
+            embed_future = self._sentence_embed_srv.call_async(embed_request)  
+            rclpy.spin_until_future_complete(self.node, embed_future)
+            most_similar_1, most_similar_2 = embed_future.results().most_similar
 
             most_similar_1_name = guest_ids[interests.index(most_similar_1)]
             most_similar_2_name = guest_ids[interests.index(most_similar_2)]
 
-            llm_request = LlmRequest(
+            llm_request = Llm.Request(
                 system_prompt="Please give a single world to describe the similarities between two interests. For example, you may be given 'football, tennis', and you should output something like 'sports'. Please output only one word.",
                 prompt=f"{most_similar_1}, {most_similar_2}",
                 max_tokens=5,
             )
-            llm_response = self._llm_srv(llm_request)
+            llm_future = self._llm_srv.call_async(llm_request)
+            rclpy.spin_until_future_complete(self.node, llm_future)
+            llm_response = llm_future.result()
+            
             commonality = llm_response.output.strip()
             if commonality:
                 commonality = commonality.split(" ", 1)[0]

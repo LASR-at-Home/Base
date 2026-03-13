@@ -2,43 +2,49 @@
 State for parsing the transcription of the guests' name and favourite interest, and adding this
 to the guest data userdata
 """
-#TODO
-import rospy
-import smach
-from smach import UserData
+
+import rclpy
+from rclpy.node import Node
+
+from smach import UserData, StateMachine
+from smach_ros import RosState
+
 from typing import List, Dict, Any
+
 from receptionist.states import SpeechRecovery
-from lasr_llm_msgs.srv import Llm, LlmRequest
+from lasr_llm_interfaces.srv import Llm
 
 
-class GetNameAndInterest(smach.StateMachine):
+class GetNameAndInterest(StateMachine):
     def __init__(
-        self, guest_id: str, last_resort: bool, param_key: str = "/receptionist/priors"
+        self, node: Node, guest_id: str, last_resort: bool, param_key: str = "/receptionist/priors"
     ):
-
+        self.__node = node
         self._guest_id = guest_id
         self._param_key = param_key
         self._last_resort = last_resort
 
-        smach.StateMachine.__init__(
+        StateMachine.__init__(
             self,
             outcomes=["succeeded", "failed", "failed_interest", "failed_name"],
             input_keys=["guest_transcription", "guest_data"],
             output_keys=["guest_data", "guest_transcription"],
         )
         with self:
-            smach.StateMachine.add(
+            StateMachine.add(
                 "PARSE_NAME_AND_INTEREST",
                 self.ParseNameAndInterest(
+                    self.__node,
                     guest_id=self._guest_id,
                     last_resort=self._last_resort,
                     param_key=self._param_key,
                 ),
                 transitions={"succeeded": "succeeded", "failed": "RECOVERY_DECISION"},
             )
-            smach.StateMachine.add(
+            StateMachine.add(
                 "RECOVERY_DECISION",
                 self.RecoveryDecision(
+                    self.__node,
                     guest_id=self._guest_id,
                     last_resort=self._last_resort,
                     param_key=self._param_key,
@@ -49,9 +55,10 @@ class GetNameAndInterest(smach.StateMachine):
                     "failed": "RECOVER_BOTH_INTEREST",
                 },
             )
-            smach.StateMachine.add(
+            StateMachine.add(
                 "RECOVER_NAME",
                 self.RecoverName(
+                    self.__node,
                     guest_id=self._guest_id,
                     last_resort=self._last_resort,
                     param_key=self._param_key,
@@ -62,9 +69,10 @@ class GetNameAndInterest(smach.StateMachine):
                     "succeeded": "succeeded",
                 },
             )
-            smach.StateMachine.add(
+            StateMachine.add(
                 "SPEECH_RECOVERY_NAME_LLM",
                 SpeechRecovery(
+                    self.__node,
                     guest_id=self._guest_id,
                     last_resort=self._last_resort,
                     input_type="name",
@@ -77,9 +85,10 @@ class GetNameAndInterest(smach.StateMachine):
                 },
             )
 
-            smach.StateMachine.add(
+            StateMachine.add(
                 "SPEECH_RECOVERY_NAME_LLM_LAST_RESORT",
                 SpeechRecovery(
+                    self.__node,
                     guest_id=self._guest_id,
                     last_resort=self._last_resort,
                     input_type="name",
@@ -91,9 +100,10 @@ class GetNameAndInterest(smach.StateMachine):
                     "failed": "SPEECH_RECOVERY_NAME_TRANSCRIPTION_LAST_RESORT",
                 },
             )
-            smach.StateMachine.add(
+            StateMachine.add(
                 "SPEECH_RECOVERY_NAME_TRANSCRIPTION_LAST_RESORT",
                 SpeechRecovery(
+                    self.__node,
                     guest_id=self._guest_id,
                     last_resort=self._last_resort,
                     input_type="name",
@@ -105,9 +115,10 @@ class GetNameAndInterest(smach.StateMachine):
                     "failed": "POST_RECOVERY_DECISION",
                 },
             )
-            smach.StateMachine.add(
+            StateMachine.add(
                 "RECOVER_INTEREST",
                 self.RecoverInterest(
+                    self.__node,
                     guest_id=self._guest_id,
                     last_resort=self._last_resort,
                     param_key=self._param_key,
@@ -117,18 +128,20 @@ class GetNameAndInterest(smach.StateMachine):
                     "succeeded": "POST_RECOVERY_DECISION",
                 },
             )
-            smach.StateMachine.add(
+            StateMachine.add(
                 "RECOVER_BOTH_INTEREST",
                 self.RecoverInterest(
+                    self.__node,
                     guest_id=self._guest_id,
                     last_resort=self._last_resort,
                     param_key=self._param_key,
                 ),
                 transitions={"failed": "RECOVER_NAME", "succeeded": "RECOVER_NAME"},
             )
-            smach.StateMachine.add(
+            StateMachine.add(
                 "POST_RECOVERY_DECISION",
                 self.PostRecoveryDecision(
+                    self.__node,
                     guest_id=self._guest_id,
                     last_resort=self._last_resort,
                     param_key=self._param_key,
@@ -141,9 +154,10 @@ class GetNameAndInterest(smach.StateMachine):
                 },
             )
 
-    class ParseNameAndInterest(smach.State):
+    class ParseNameAndInterest(RosState):
         def __init__(
             self,
+            node: Node,
             guest_id: str,
             last_resort: bool,
             param_key: str = "/receptionist/priors",
@@ -154,16 +168,19 @@ class GetNameAndInterest(smach.StateMachine):
                 param_key (str, optional): Name of the parameter that contains the list of
                 prior knowledge . Defaults to "/receptionist/priors".
             """
-            smach.State.__init__(
+            RosState.__init__(
                 self,
+                node,
                 outcomes=["succeeded", "failed"],
                 input_keys=["guest_transcription", "guest_data"],
                 output_keys=["guest_data", "guest_transcription"],
             )
-            self._llm = rospy.ServiceProxy("/lasr_llm/llm", Llm)
-            self._llm.wait_for_service()
+            self._llm = node.create_client(Llm, '/lasr_llm/llm')
+            while not self._llm.wait_for_service(timeout_sec=1.0):
+                self.node.get_logger().info('service not available, waiting again...')
+
             self._guest_id = guest_id
-            prior_data: Dict[str, List[str]] = rospy.get_param(param_key)
+            prior_data: Dict[str, List[str]] = self.node.get_parameter(param_key)
             self._possible_names = [name.lower() for name in prior_data["names"]]
             self._last_resort = last_resort
 
@@ -180,7 +197,7 @@ class GetNameAndInterest(smach.StateMachine):
 
             guest = userdata.guest_data[self._guest_id]
 
-            request = LlmRequest()
+            request = Llm.Request()
             request.system_prompt = (
                 "You are a robot acting as a party host. You are tasked with identifying the name "
                 "and interest belonging to a guest."
@@ -191,17 +208,20 @@ class GetNameAndInterest(smach.StateMachine):
             request.prompt = transcription
             request.max_tokens = 10
 
-            response = self._llm(request)
+            future = self._llm.call_async(request)
+            rclpy.spin_until_future_complete(self.node, future)
+
             # Maxsplit in case the interest is more than one word.
             try:
+                response = future.result()
                 if not response:
-                    rospy.logwarn("LLM Response Empty")
+                    self.node.get_logger().warn("LLM Response Empty")
                     guest["name"] = "unknown"
                     guest["interest"] = "unknown"
                     return "failed"
                 llm_name, interest = response.output.strip().split(",", maxsplit=1)
             except:
-                rospy.logwarn("LLM Response Error")
+                self.node.get_logger().warn("LLM Response Error")
                 guest["name"] = "unknown"
                 guest["interest"] = "unknown"
                 return "failed"
@@ -225,7 +245,7 @@ class GetNameAndInterest(smach.StateMachine):
             guest["name"] = name
             guest["interest"] = interest
 
-            rospy.loginfo(
+            self.node.get_logger().info(
                 f"Parsed name: {name}, interest: {interest} from transcription: {transcription}"
             )
 
@@ -237,21 +257,23 @@ class GetNameAndInterest(smach.StateMachine):
 
             return "succeeded"
 
-    class RecoveryDecision(smach.State):
+    class RecoveryDecision(RosState):
         def __init__(
             self,
+            node: Node, 
             guest_id: str,
             last_resort: bool,
             param_key: str = "/receptionist/priors",
         ):
-            smach.State.__init__(
+            RosState.__init__(
                 self,
+                node,
                 outcomes=["failed_name", "failed_interest", "failed"],
                 input_keys=["guest_transcription", "guest_data"],
                 output_keys=["guest_data", "guest_transcription"],
             )
             self._guest_id = guest_id
-            prior_data: Dict[str, List[str]] = rospy.get_param(param_key)
+            prior_data: Dict[str, List[str]] = self.node.get_parameter(param_key)
             self._possible_names = [name.lower() for name in prior_data["names"]]
             self._last_resort = last_resort
 
@@ -284,21 +306,23 @@ class GetNameAndInterest(smach.StateMachine):
                     return True
             return False
 
-    class RecoverName(smach.State):
+    class RecoverName(RosState):
         def __init__(
             self,
+            node: Node,
             guest_id: str,
             last_resort: bool,
             param_key: str = "/receptionist/priors",
         ):
-            smach.State.__init__(
+            RosState.__init__(
                 self,
+                node,
                 outcomes=["failed", "failed_last_resort", "succeeded"],
                 input_keys=["guest_transcription", "guest_data"],
                 output_keys=["guest_data", "guest_transcription"],
             )
             self._guest_id = guest_id
-            prior_data: Dict[str, List[str]] = rospy.get_param(param_key)
+            prior_data: Dict[str, List[str]] = self.node.get_parameter(param_key)
             self._possible_names = [name.lower() for name in prior_data["names"]]
             self._last_resort = last_resort
 
@@ -310,32 +334,34 @@ class GetNameAndInterest(smach.StateMachine):
             for key_phrase in self._possible_names:
                 if key_phrase in transcription:
                     guest["name"] = key_phrase
-                    rospy.loginfo(f"Name identified as: {key_phrase}")
+                    self.node.get_logger().info(f"Name identified as: {key_phrase}")
                     information_found = True
                     break
             if not information_found:
-                rospy.loginfo(f"Name not found in transcription")
+                self.node.get_logger().info(f"Name not found in transcription")
                 if self._last_resort:
                     return "failed_last_resort"
                 else:
                     return "failed"
             return "succeeded"
 
-    class RecoverInterest(smach.State):
+    class RecoverInterest(RosState):
         def __init__(
             self,
+            node: Node,
             guest_id: str,
             last_resort: bool,
             param_key: str = "/receptionist/priors",
         ):
-            smach.State.__init__(
+            RosState.__init__(
                 self,
+                node,
                 outcomes=["failed", "succeeded"],
                 input_keys=["guest_transcription", "guest_data"],
                 output_keys=["guest_data", "guest_transcription"],
             )
             self._guest_id = guest_id
-            prior_data: Dict[str, List[str]] = rospy.get_param(param_key)
+            prior_data: Dict[str, List[str]] = self.node.get_parameter(param_key)
             self._possible_names = [name.lower() for name in prior_data["names"]]
             self._last_resort = last_resort
 
@@ -346,24 +372,26 @@ class GetNameAndInterest(smach.StateMachine):
             guest = userdata.guest_data[self._guest_id]
             guest["interest"] = "technology"
 
-            rospy.loginfo(f"Resort to recovering interest as technology")
+            self.node.get_logger().info(f"Resort to recovering interest as technology")
             return "succeeded"
 
-    class PostRecoveryDecision(smach.State):
+    class PostRecoveryDecision(RosState):
         def __init__(
             self,
+            node: Node,
             guest_id: str,
             last_resort: bool,
             param_key: str = "/receptionist/priors",
         ):
-            smach.State.__init__(
+            RosState.__init__(
                 self,
+                node,
                 outcomes=["succeeded", "failed", "failed_name", "failed_interest"],
                 input_keys=["guest_transcription", "guest_data"],
                 output_keys=["guest_data", "guest_transcription"],
             )
             self._guest_id = guest_id
-            prior_data: Dict[str, List[str]] = rospy.get_param(param_key)
+            prior_data: Dict[str, List[str]] = self.node.get_parameter(param_key)
             self._possible_names = [name.lower() for name in prior_data["names"]]
             self._last_resort = last_resort
 

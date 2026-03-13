@@ -2,20 +2,24 @@
 State for parsing the transcription of the guests' name and favourite interest, and adding this
 to the guest data userdata
 """
-#TODO
-import rospy
+
+import rclpy
+from rclpy.node import Node
+
 import smach
-from smach import UserData
+from smach import UserData, StateMachine
+from smach_ros import RosState
+
 from typing import List, Dict, Any
 from receptionist.states import SpeechRecovery
-from lasr_llm_msgs.srv import Llm, LlmRequest
+from lasr_llm_interfaces.srv import Llm
 
 
 class GetInterest(smach.StateMachine):
     def __init__(
-        self, guest_id: str, last_resort: bool, param_key: str = "/receptionist/priors"
+        self, node: Node, guest_id: str, last_resort: bool, param_key: str = "/receptionist/priors"
     ):
-
+        self.__node = node
         self._guest_id = guest_id
         self._param_key = param_key
         self._last_resort = last_resort
@@ -30,6 +34,7 @@ class GetInterest(smach.StateMachine):
             smach.StateMachine.add(
                 "PARSE_INTEREST",
                 self.ParseInterest(
+                    node=self.__node,
                     guest_id=self._guest_id,
                     last_resort=self._last_resort,
                     param_key=self._param_key,
@@ -39,6 +44,7 @@ class GetInterest(smach.StateMachine):
             smach.StateMachine.add(
                 "RECOVER_INTEREST",
                 self.RecoverInterest(
+                    node=self.__node,
                     guest_id=self._guest_id,
                     last_resort=self._last_resort,
                     param_key=self._param_key,
@@ -46,9 +52,10 @@ class GetInterest(smach.StateMachine):
                 transitions={"failed": "failed", "succeeded": "succeeded"},
             )
 
-    class ParseInterest(smach.State):
+    class ParseInterest(RosState):
         def __init__(
             self,
+            node: None, 
             guest_id: str,
             last_resort: bool,
             param_key: str = "/receptionist/priors",
@@ -59,16 +66,19 @@ class GetInterest(smach.StateMachine):
                 param_key (str, optional): Name of the parameter that contains the list of
                 prior knowledge . Defaults to "/receptionist/priors".
             """
-            smach.State.__init__(
+            RosState.__init__(
                 self,
+                node=node,
                 outcomes=["succeeded", "failed"],
                 input_keys=["guest_transcription", "guest_data"],
                 output_keys=["guest_data", "guest_transcription"],
             )
-            self._llm = rospy.ServiceProxy("/lasr_llm/llm", Llm)
-            self._llm.wait_for_service()
+            self._llm = self.node.create_client(Llm, "/lasr_llm/llm")
+            while not self._llm.wait_for_service(timeout_sec=1.0):
+                self.node.get_logger().info('Llm service not available, waiting again...')
+
             self._guest_id = guest_id
-            prior_data: Dict[str, List[str]] = rospy.get_param(param_key)
+            prior_data: Dict[str, List[str]] = self.node.get_parameter(param_key)
             self._possible_names = [name.lower() for name in prior_data["names"]]
             self._last_resort = last_resort
 
@@ -85,7 +95,7 @@ class GetInterest(smach.StateMachine):
 
             guest = userdata.guest_data[self._guest_id]
 
-            request = LlmRequest()
+            request = Llm.Request()
             request.system_prompt = (
                 "You are a robot acting as a party host. You are tasked with identifying "
                 "interest belonging to a guest."
@@ -95,16 +105,18 @@ class GetInterest(smach.StateMachine):
             request.prompt = transcription
             request.max_tokens = 10
 
-            response = self._llm(request)
+            future = self._llm.call_async(request)
+            rclpy.spin_until_future_complete(self.node, future)
+            response = future.result()
             # Maxsplit in case the interest is more than one word.
             try:
                 if not response:
-                    rospy.logwarn("LLM Response Empty")
+                    self.node.get_logger().warn("LLM Response Empty")
                     guest["interest"] = "unknown"
                     return "failed"
                 interest = response.output.strip()
             except:
-                rospy.logwarn("LLM Response Error")
+                self.node.get_logger().warn("LLM Response Error")
                 guest["interest"] = "unknown"
                 return "failed"
 
@@ -120,7 +132,7 @@ class GetInterest(smach.StateMachine):
 
             guest["interest"] = interest
 
-            rospy.loginfo(
+            self.node.get_logger().info(
                 f"Parsed  interest: {interest} from transcription: {transcription}"
             )
 
@@ -129,21 +141,23 @@ class GetInterest(smach.StateMachine):
                 return "failed"
             return "succeeded"
 
-    class RecoverInterest(smach.State):
+    class RecoverInterest(RosState):
         def __init__(
             self,
+            node: Node,
             guest_id: str,
             last_resort: bool,
             param_key: str = "/receptionist/priors",
         ):
-            smach.State.__init__(
+            RosState.__init__(
                 self,
+                node,
                 outcomes=["failed", "succeeded"],
                 input_keys=["guest_transcription", "guest_data"],
                 output_keys=["guest_data", "guest_transcription"],
             )
             self._guest_id = guest_id
-            prior_data: Dict[str, List[str]] = rospy.get_param(param_key)
+            prior_data: Dict[str, List[str]] = self.node.get_parameter(param_key)
             self._possible_names = [name.lower() for name in prior_data["names"]]
             self._last_resort = last_resort
 
@@ -154,5 +168,5 @@ class GetInterest(smach.StateMachine):
             guest = userdata.guest_data[self._guest_id]
             guest["interest"] = "technology"
 
-            rospy.loginfo(f"Resort to recovering interest as technology")
+            self.node.get_logger().info(f"Resort to recovering interest as technology")
             return "succeeded"

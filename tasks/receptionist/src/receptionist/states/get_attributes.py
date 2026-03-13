@@ -2,9 +2,8 @@ import smach
 from smach import UserData, StateMachine
 from smach_ros import RosState
 
-from lasr_skills import DescribePeople
+from skills import DescribePeople
 import json
-
 
 class GetGuestAttributes(StateMachine):
     class InitialiseDetectionFlag(RosState):
@@ -40,14 +39,12 @@ class GetGuestAttributes(StateMachine):
             self._guest_id: str = guest_id
 
         def execute(self, userdata: UserData) -> str:
-            userdata.guest_data[self._guest_id][
-                "attributes"
-            ] = userdata.clip_detection_dict
+            userdata.guest_data[self._guest_id]["attributes"] = userdata.clip_detection_dict
             userdata.guest_data[self._guest_id]["detection"] = True
             return "succeeded"
 
     def __init__(self, node, guest_id: str):
-        smach.StateMachine.__init__(
+        StateMachine.__init__(
             self,
             outcomes=["succeeded", "failed"],
             input_keys=["guest_data"],
@@ -57,7 +54,7 @@ class GetGuestAttributes(StateMachine):
         self.__node = node
 
         with self:
-            smach.StateMachine.add(
+            StateMachine.add(
                 "INITIALISE_DETECTION_FLAG",
                 self.InitialiseDetectionFlag(self.__node, self._guest_id),
                 transitions={
@@ -65,7 +62,7 @@ class GetGuestAttributes(StateMachine):
                     "failed": "GET_GUEST_ATTRIBUTES",
                 },
             )
-            smach.StateMachine.add(
+            StateMachine.add(
                 "GET_GUEST_ATTRIBUTES",
                 DescribePeople(self.__node),
                 transitions={
@@ -73,7 +70,7 @@ class GetGuestAttributes(StateMachine):
                     "failed": "failed",
                 },
             )
-            smach.StateMachine.add(
+            StateMachine.add(
                 "HANDLE_GUEST_ATTRIBUTES",
                 self.HandleGuestAttributes(self.__node, self._guest_id),
                 transitions={"succeeded": "succeeded", "failed": "failed"},
