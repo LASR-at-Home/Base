@@ -79,9 +79,12 @@ class Detect3D(RosState):
     def execute(self, userdata):
 
         if self.point_cloud_topic is not None:
+
             def callback(image_msg, depth_msg, cam_info_msg, pcl_msg):
                 self.data = (image_msg, depth_msg, cam_info_msg, pcl_msg)
+
         else:
+
             def callback(image_msg, depth_msg, cam_info_msg):
                 self.data = (image_msg, depth_msg, cam_info_msg)
 
@@ -109,17 +112,15 @@ class Detect3D(RosState):
             )
             future = self.yolo.call_async(request)
             rclpy.spin_until_future_complete(self.node, future)
-            
+
             resp = future.result()
 
-            self.node.get_logger().info(
-                f"Got {len(resp.detected_objects)} detections"
-            )
+            self.node.get_logger().info(f"Got {len(resp.detected_objects)} detections")
             for det in resp.detected_objects:
                 self.node.get_logger().info(
                     f"  {det.name} at ({det.point.x:.2f}, {det.point.y:.2f}, {det.point.z:.2f})"
                 )
-                
+
             userdata.detections_3d = resp
             userdata.image_raw = image_msg
             userdata.pcl = pcl_msg
@@ -146,6 +147,7 @@ def main():
 
     node.destroy_node()
     rclpy.shutdown()
+
 
 if __name__ == "__main__":
     main()

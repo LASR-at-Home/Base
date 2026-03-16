@@ -27,7 +27,8 @@ from lasr_vision_interfaces.msg import Detection3D
 from .look_to_point import LookToPoint
 from .detect_3d_in_area import Detect3DInArea
 
-#TODO: 
+# TODO: TEST SM WITH LOOK_TO_POINT
+
 
 class ProcessDetections(RosState):
     """
@@ -179,11 +180,9 @@ class CalculateSweepPoints(RosState):
         """
 
         success, camera_info = wait_for_message(
-            CameraInfo,
-            self.node,
-            "/xtion/depth_registered/camera_info"
+            CameraInfo, self.node, "/xtion/depth_registered/camera_info"
         )
-        if not success:
+        if not success or camera_info is None:
             self.node.get_logger().warn("Timed out waiting for camera info")
 
         model = PinholeCameraModel()
@@ -203,7 +202,7 @@ class CalculateSweepPoints(RosState):
             ray = model.projectPixelTo3dRay((u, v))
             point_cam = PointStamped()
             point_cam.header.frame_id = camera_info.header.frame_id
-            point_cam.header.stamp = Time()
+            point_cam.header.stamp = camera_info.header.stamp
             point_cam.point.x = ray[0] * self._fov_depth
             point_cam.point.y = ray[1] * self._fov_depth
             point_cam.point.z = ray[2] * self._fov_depth
@@ -294,17 +293,18 @@ class CalculateSweepPoints(RosState):
         self.node.get_logger().info("Waiting for camera info and TF to map frame...")
         fov_polygon = self._get_camera_fov_polygon()
 
-        # Optional: visualize FOV #TODO: Verify
-
+        # Optional: visualize FOV
         qos = QoSProfile(
-            depth_registered=1, durability=QoSDurabilityPolicy.TRANSIENT_LOCAL
-        )  # Verify publisher durability profile (https://docs.ros.org/en/humble/Concepts/Intermediate/About-Quality-of-Service-Settings.html)
+            depth=1, durability=QoSDurabilityPolicy.TRANSIENT_LOCAL
+        )  # TODO: Verify publisher durability profile (https://docs.ros.org/en/humble/Concepts/Intermediate/About-Quality-of-Service-Settings.html)
 
         pub = self.node.create_publisher(PolygonStamped, "projected_fov_polygon", qos)
 
         pub.publish(
             PolygonStamped(
-                header=Header(frame_id="map", stamp=self.node.get_clock().now()),
+                header=Header(
+                    frame_id="map", stamp=self.node.get_clock().now().to_msg()
+                ),
                 polygon=ROSPolygon(
                     points=[
                         Point32(x=x, y=y, z=0.0) for x, y in fov_polygon.exterior.coords
@@ -696,7 +696,10 @@ def main():
 
     rclpy.init()
     node = rclpy.create_node("detect_all_in_polygon")
-    
+
+    spin_thread = Thread(target=rclpy.spin, args=(node,))
+    spin_thread.start()
+
     sm = DetectAllInPolygon(
         node,
         seat_polygon,
