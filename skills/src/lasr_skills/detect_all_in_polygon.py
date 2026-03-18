@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import rclpy
 from rclpy.node import Node
+from rclpy.wait_for_message import wait_for_message
 
 import smach
 from smach_ros import RosState
@@ -8,6 +9,7 @@ from smach_ros import RosState
 # import tf2_ros as tf
 import numpy as np
 import cv2
+from threading import Thread
 
 # from tf_pcl import pcl_transform
 from typing import List, Optional, Tuple
@@ -111,11 +113,13 @@ from rclpy.duration import Duration
 from rclpy.time import Time
 from rclpy.qos import QoSProfile, QoSDurabilityPolicy
 from rclpy.publisher import Publisher
+from rclpy.executors import MultiThreadedExecutor
 
 import smach
 from smach_ros import RosState
 
 import tf2_ros
+from tf2_geometry_msgs.tf2_geometry_msgs import do_transform_point
 
 # import tf2_geometry_msgs
 import numpy as np
@@ -137,6 +141,7 @@ from shapely.affinity import translate
 from sensor_msgs.msg import CameraInfo
 from image_geometry import PinholeCameraModel
 from typing import List, Tuple
+import threading
 
 
 class CalculateSweepPoints(RosState):
@@ -175,9 +180,12 @@ class CalculateSweepPoints(RosState):
             ShapelyPolygon: Footprint of camera FOV in map frame.
         """
 
-        camera_info = rclpy.wait_for_message(
-            "/xtion/depth_registered/camera_info", CameraInfo
+        success, camera_info = wait_for_message(
+            CameraInfo, self.node, "/xtion/depth_registered/camera_info"
         )
+        if not success or camera_info is None:
+            self.node.get_logger().warn("Timed out waiting for camera info")
+
         model = PinholeCameraModel()
         model.fromCameraInfo(camera_info)
 
@@ -195,16 +203,25 @@ class CalculateSweepPoints(RosState):
             ray = model.projectPixelTo3dRay((u, v))
             point_cam = PointStamped()
             point_cam.header.frame_id = camera_info.header.frame_id
-            point_cam.header.stamp = Time()
+            point_cam.header.stamp = Time().to_msg()
             point_cam.point.x = ray[0] * self._fov_depth
             point_cam.point.y = ray[1] * self._fov_depth
             point_cam.point.z = ray[2] * self._fov_depth
 
             # Transform to map frame
-            point_map = self._tf_buffer.transform(
-                point_cam, "map", Duration(seconds=1.0)
-            )
-            transformed_points.append((point_map.point.x, point_map.point.y))
+            try:
+                transform = self._tf_buffer.lookup_transform(
+                    "map",
+                    camera_info.header.frame_id,
+                    Time(),
+                    timeout=Duration(seconds=1.0),
+                )
+                point_map = do_transform_point(point_cam, transform)
+                transformed_points.append((point_map.point.x, point_map.point.y))
+            except Exception as e:
+                self.node.get_logger().error(
+                    f"Transform failed with camera timestamp: {e}. Retrying with latest TF data."
+                )
 
         return ShapelyPolygon(transformed_points)
 
@@ -286,7 +303,7 @@ class CalculateSweepPoints(RosState):
         self.node.get_logger().info("Waiting for camera info and TF to map frame...")
         fov_polygon = self._get_camera_fov_polygon()
 
-        # Optional: visualize FOV #TODO: Verify
+        # Optional: visualize FOV
 
         qos = QoSProfile(
             depth=1, durability=QoSDurabilityPolicy.TRANSIENT_LOCAL
@@ -296,7 +313,9 @@ class CalculateSweepPoints(RosState):
 
         pub.publish(
             PolygonStamped(
-                header=Header(frame_id="map", stamp=self.node.get_clock().now()),
+                header=Header(
+                    frame_id="map", stamp=self.node.get_clock().now().to_msg()
+                ),
                 polygon=ROSPolygon(
                     points=[
                         Point32(x=x, y=y, z=0.0) for x, y in fov_polygon.exterior.coords
@@ -320,7 +339,7 @@ class CalculateSweepPoints(RosState):
         sweep_points = [
             PointStamped(
                 header=Header(frame_id="map"),
-                point=Point(fp.centroid.x, fp.centroid.y, self._z_axis),
+                point=Point(x=fp.centroid.x, y=fp.centroid.y, z=self._z_axis),
             )
             for fp in selected_footprints
         ]
@@ -448,7 +467,7 @@ class DetectAllInPolygon(smach.StateMachine):
         Returns:
             str: Outcome of the state, "succeeded".
         """
-        self._node.get_clock().sleep_for(Duration(seconds=0.25))
+        rclpy.spin_once(self._node, timeout_sec=0.25)
         return "succeeded"
 
     def _publish_detected_objects(self, userdata: smach.UserData) -> str:
@@ -688,6 +707,13 @@ def main():
 
     rclpy.init()
     node = rclpy.create_node("detect_all_in_polygon")
+
+    executor = MultiThreadedExecutor()
+    executor.add_node(node)
+
+    spin_thread = threading.Thread(target=executor.spin, daemon=True)
+    spin_thread.start()
+
     sm = DetectAllInPolygon(
         node,
         seat_polygon,
