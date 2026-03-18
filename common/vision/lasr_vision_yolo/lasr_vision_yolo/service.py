@@ -327,7 +327,9 @@ class YOLOServiceNode:
                     )
                     point = point_stamped_transformed.point
 
-                    keypoints.keypoints.append(Keypoint3D(keypoint_name=name, point=point))
+                    keypoints.keypoints.append(
+                        Keypoint3D(keypoint_name=name, point=point)
+                    )
             response.detections.append(keypoints)
 
         self._publish_results(req, results, response)

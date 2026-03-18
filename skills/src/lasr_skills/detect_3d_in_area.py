@@ -10,7 +10,7 @@ from typing import List, Union, Optional
 
 from std_msgs.msg import Header
 from geometry_msgs.msg import Polygon, Point, Point32, PolygonStamped
-from shapely.geometry import Point
+from shapely.geometry import Point as ShapelyPoint
 from shapely.geometry.polygon import Polygon as ShapelyPolygon
 
 
@@ -72,7 +72,7 @@ class Detect3DInArea(smach.StateMachine):
                 PolygonStamped(polygon=polygon_msg, header=Header(frame_id="map"))
             )
             satisfied_points = [
-                area_polygon.contains(Point(x=object.point.x, y=object.point.y))
+                area_polygon.contains(ShapelyPoint(object.point.x, object.point.y))
                 for object in detected_objects
             ]
             filtered_detections = [

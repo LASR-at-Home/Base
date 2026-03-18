@@ -6,6 +6,7 @@ import ament_virtualenv.install
 
 package_name = "lasr_vision_yolo"
 
+
 class InstallCommand(setuptools.command.install.install):
     def run(self):
         super().run()
@@ -13,9 +14,10 @@ class InstallCommand(setuptools.command.install.install):
             install_base=self.install_base,
             scripts_base=self.install_scripts,
             package_name=package_name,
-            python_version='3'
+            python_version="3",
         )
         return
+
 
 setup(
     name=package_name,
@@ -36,7 +38,7 @@ setup(
     description="YOLO object detection service",
     license="MIT",
     tests_require=["pytest"],
-    cmdclass={'install': InstallCommand},
+    cmdclass={"install": InstallCommand},
     entry_points={
         "console_scripts": [
             "yolo_service_node = lasr_vision_yolo.service:main",

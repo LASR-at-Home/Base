@@ -27,8 +27,6 @@ from lasr_vision_interfaces.msg import Detection3D
 from .look_to_point import LookToPoint
 from .detect_3d_in_area import Detect3DInArea
 
-# TODO: TEST SM WITH LOOK_TO_POINT
-
 
 class ProcessDetections(RosState):
     """
@@ -115,11 +113,13 @@ from rclpy.duration import Duration
 from rclpy.time import Time
 from rclpy.qos import QoSProfile, QoSDurabilityPolicy
 from rclpy.publisher import Publisher
+from rclpy.executors import MultiThreadedExecutor
 
 import smach
 from smach_ros import RosState
 
 import tf2_ros
+from tf2_geometry_msgs.tf2_geometry_msgs import do_transform_point
 
 # import tf2_geometry_msgs
 import numpy as np
@@ -141,6 +141,7 @@ from shapely.affinity import translate
 from sensor_msgs.msg import CameraInfo
 from image_geometry import PinholeCameraModel
 from typing import List, Tuple
+import threading
 
 
 class CalculateSweepPoints(RosState):
@@ -202,16 +203,25 @@ class CalculateSweepPoints(RosState):
             ray = model.projectPixelTo3dRay((u, v))
             point_cam = PointStamped()
             point_cam.header.frame_id = camera_info.header.frame_id
-            point_cam.header.stamp = camera_info.header.stamp
+            point_cam.header.stamp = Time().to_msg()
             point_cam.point.x = ray[0] * self._fov_depth
             point_cam.point.y = ray[1] * self._fov_depth
             point_cam.point.z = ray[2] * self._fov_depth
 
             # Transform to map frame
-            point_map = self._tf_buffer.transform(
-                point_cam, "map", Duration(seconds=1.0)
-            )
-            transformed_points.append((point_map.point.x, point_map.point.y))
+            try:
+                transform = self._tf_buffer.lookup_transform(
+                    "map",
+                    camera_info.header.frame_id,
+                    Time(),
+                    timeout=Duration(seconds=1.0),
+                )
+                point_map = do_transform_point(point_cam, transform)
+                transformed_points.append((point_map.point.x, point_map.point.y))
+            except Exception as e:
+                self.node.get_logger().error(
+                    f"Transform failed with camera timestamp: {e}. Retrying with latest TF data."
+                )
 
         return ShapelyPolygon(transformed_points)
 
@@ -294,9 +304,10 @@ class CalculateSweepPoints(RosState):
         fov_polygon = self._get_camera_fov_polygon()
 
         # Optional: visualize FOV
+
         qos = QoSProfile(
             depth=1, durability=QoSDurabilityPolicy.TRANSIENT_LOCAL
-        )  # TODO: Verify publisher durability profile (https://docs.ros.org/en/humble/Concepts/Intermediate/About-Quality-of-Service-Settings.html)
+        )  # Verify publisher durability profile (https://docs.ros.org/en/humble/Concepts/Intermediate/About-Quality-of-Service-Settings.html)
 
         pub = self.node.create_publisher(PolygonStamped, "projected_fov_polygon", qos)
 
@@ -697,7 +708,10 @@ def main():
     rclpy.init()
     node = rclpy.create_node("detect_all_in_polygon")
 
-    spin_thread = Thread(target=rclpy.spin, args=(node,))
+    executor = MultiThreadedExecutor()
+    executor.add_node(node)
+
+    spin_thread = threading.Thread(target=executor.spin, daemon=True)
     spin_thread.start()
 
     sm = DetectAllInPolygon(
