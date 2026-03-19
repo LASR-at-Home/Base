@@ -12,7 +12,7 @@ from std_msgs.msg import Header
 from geometry_msgs.msg import PointStamped, Point
 from sensor_msgs.msg import PointCloud2
 
-from lasr_skills import LookToPoint
+from skills import LookToPoint
 
 # TODO merge tf_pcl to this branch & test this SM
 
