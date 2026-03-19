@@ -11,13 +11,13 @@ from smach_ros import RosState
 
 from typing import List, Dict, Any
 
-from receptionist.states import SpeechRecovery
+from .speech_recovery import SpeechRecovery
 from lasr_llm_interfaces.srv import Llm
 
 
 class GetNameAndInterest(StateMachine):
     def __init__(
-        self, node: Node, guest_id: str, last_resort: bool, param_key: str = "/receptionist/priors"
+        self, node: Node, guest_id: str, last_resort: bool, param_key: str = "priors"
     ):
         self.__node = node
         self._guest_id = guest_id
@@ -72,7 +72,6 @@ class GetNameAndInterest(StateMachine):
             StateMachine.add(
                 "SPEECH_RECOVERY_NAME_LLM",
                 SpeechRecovery(
-                    self.__node,
                     guest_id=self._guest_id,
                     last_resort=self._last_resort,
                     input_type="name",
@@ -88,7 +87,6 @@ class GetNameAndInterest(StateMachine):
             StateMachine.add(
                 "SPEECH_RECOVERY_NAME_LLM_LAST_RESORT",
                 SpeechRecovery(
-                    self.__node,
                     guest_id=self._guest_id,
                     last_resort=self._last_resort,
                     input_type="name",
@@ -103,7 +101,6 @@ class GetNameAndInterest(StateMachine):
             StateMachine.add(
                 "SPEECH_RECOVERY_NAME_TRANSCRIPTION_LAST_RESORT",
                 SpeechRecovery(
-                    self.__node,
                     guest_id=self._guest_id,
                     last_resort=self._last_resort,
                     input_type="name",
@@ -166,7 +163,7 @@ class GetNameAndInterest(StateMachine):
 
             Args:
                 param_key (str, optional): Name of the parameter that contains the list of
-                prior knowledge . Defaults to "/receptionist/priors".
+                prior knowledge . Defaults to "priors".
             """
             RosState.__init__(
                 self,
@@ -180,8 +177,8 @@ class GetNameAndInterest(StateMachine):
                 self.node.get_logger().info('service not available, waiting again...')
 
             self._guest_id = guest_id
-            prior_data: Dict[str, List[str]] = self.node.get_parameter(param_key)
-            self._possible_names = [name.lower() for name in prior_data["names"]]
+            prior_data: List[str] = self.node.get_parameter(f"{param_key}.names").value
+            self._possible_names = [name.lower() for name in prior_data]
             self._last_resort = last_resort
 
         def execute(self, userdata: UserData) -> str:
@@ -263,7 +260,7 @@ class GetNameAndInterest(StateMachine):
             node: Node, 
             guest_id: str,
             last_resort: bool,
-            param_key: str = "/receptionist/priors",
+            param_key: str = "priors",
         ):
             RosState.__init__(
                 self,
@@ -273,8 +270,8 @@ class GetNameAndInterest(StateMachine):
                 output_keys=["guest_data", "guest_transcription"],
             )
             self._guest_id = guest_id
-            prior_data: Dict[str, List[str]] = self.node.get_parameter(param_key)
-            self._possible_names = [name.lower() for name in prior_data["names"]]
+            prior_data: List[str] = self.node.get_parameter(f"{param_key}.names").value
+            self._possible_names = [name.lower() for name in prior_data]
             self._last_resort = last_resort
 
         def execute(self, userdata: UserData) -> str:
@@ -312,7 +309,7 @@ class GetNameAndInterest(StateMachine):
             node: Node,
             guest_id: str,
             last_resort: bool,
-            param_key: str = "/receptionist/priors",
+            param_key: str = "priors",
         ):
             RosState.__init__(
                 self,
@@ -322,8 +319,8 @@ class GetNameAndInterest(StateMachine):
                 output_keys=["guest_data", "guest_transcription"],
             )
             self._guest_id = guest_id
-            prior_data: Dict[str, List[str]] = self.node.get_parameter(param_key)
-            self._possible_names = [name.lower() for name in prior_data["names"]]
+            prior_data: List[str] = self.node.get_parameter(f"{param_key}.names").value
+            self._possible_names = [name.lower() for name in prior_data]
             self._last_resort = last_resort
 
         def execute(self, userdata: UserData) -> str:
@@ -351,7 +348,7 @@ class GetNameAndInterest(StateMachine):
             node: Node,
             guest_id: str,
             last_resort: bool,
-            param_key: str = "/receptionist/priors",
+            param_key: str = "priors",
         ):
             RosState.__init__(
                 self,
@@ -361,8 +358,8 @@ class GetNameAndInterest(StateMachine):
                 output_keys=["guest_data", "guest_transcription"],
             )
             self._guest_id = guest_id
-            prior_data: Dict[str, List[str]] = self.node.get_parameter(param_key)
-            self._possible_names = [name.lower() for name in prior_data["names"]]
+            prior_data: List[str] = self.node.get_parameter(f"{param_key}.names").value
+            self._possible_names = [name.lower() for name in prior_data]
             self._last_resort = last_resort
 
         def execute(self, userdata: UserData) -> str:
@@ -381,7 +378,7 @@ class GetNameAndInterest(StateMachine):
             node: Node,
             guest_id: str,
             last_resort: bool,
-            param_key: str = "/receptionist/priors",
+            param_key: str = "priors",
         ):
             RosState.__init__(
                 self,
@@ -391,8 +388,8 @@ class GetNameAndInterest(StateMachine):
                 output_keys=["guest_data", "guest_transcription"],
             )
             self._guest_id = guest_id
-            prior_data: Dict[str, List[str]] = self.node.get_parameter(param_key)
-            self._possible_names = [name.lower() for name in prior_data["names"]]
+            prior_data: List[str] = self.node.get_parameter(f"{param_key}.names").value
+            self._possible_names = [name.lower() for name in prior_data]
             self._last_resort = last_resort
 
         def execute(self, userdata: UserData) -> str:

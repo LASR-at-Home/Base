@@ -8,7 +8,7 @@ import json
 class GetGuestAttributes(StateMachine):
     class InitialiseDetectionFlag(RosState):
         def __init__(self, node, guest_id: str):
-            smach.State.__init__(
+            RosState.__init__(
                 self,
                 node,
                 outcomes=["succeeded", "failed"],
@@ -28,7 +28,7 @@ class GetGuestAttributes(StateMachine):
 
     class HandleGuestAttributes(RosState):
         def __init__(self, node, guest_id: str):
-            smach.State.__init__(
+            RosState.__init__(
                 self,
                 node,
                 outcomes=["succeeded", "failed"],

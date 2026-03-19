@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-    <name>tasks</name>
+    <name>receptionist</name>
     <version>0.0.0</version>
     <description>Receptionist task</description>
     <maintainer email="maayan.armony@gmail.com">maayan</maintainer>
@@ -13,15 +13,19 @@
     <depend>skills</depend>
     <depend>cv2_img</depend>
     <depend>cv2_pcl</depend>
+    <depend>tf_pcl</depend>
 
     <depend>lasr_llm_interfaces</depend>
+    <depend>lasr_sentence_embedding</depend>
 
     <test_depend>ament_copyright</test_depend>
     <test_depend>ament_flake8</test_depend>
     <test_depend>ament_pep257</test_depend>
     <test_depend>python3-pytest</test_depend>
-
+    
+    <build_depend>ament_virtualenv</build_depend>
     <export>
         <build_type>ament_python</build_type>
+        <pip_requirements>requirements.txt</pip_requirements>
     </export>
 </package>

@@ -7,17 +7,17 @@ import rclpy
 from rclpy.node import Node
 
 import smach
-from smach import UserData, StateMachine
+from smach import UserData
 from smach_ros import RosState
 
 from typing import List, Dict, Any
-from receptionist.states import SpeechRecovery
+from .speech_recovery import SpeechRecovery
 from lasr_llm_interfaces.srv import Llm
 
 
 class GetInterest(smach.StateMachine):
     def __init__(
-        self, node: Node, guest_id: str, last_resort: bool, param_key: str = "/receptionist/priors"
+        self, node: Node, guest_id: str, last_resort: bool, param_key: str = "priors"
     ):
         self.__node = node
         self._guest_id = guest_id
@@ -55,16 +55,16 @@ class GetInterest(smach.StateMachine):
     class ParseInterest(RosState):
         def __init__(
             self,
-            node: None, 
+            node: Node, 
             guest_id: str,
             last_resort: bool,
-            param_key: str = "/receptionist/priors",
+            param_key: str = "priors",
         ):
             """Parses the transcription of the guests' name and interest.
 
             Args:
                 param_key (str, optional): Name of the parameter that contains the list of
-                prior knowledge . Defaults to "/receptionist/priors".
+                prior knowledge . Defaults to "priors".
             """
             RosState.__init__(
                 self,
@@ -78,8 +78,8 @@ class GetInterest(smach.StateMachine):
                 self.node.get_logger().info('Llm service not available, waiting again...')
 
             self._guest_id = guest_id
-            prior_data: Dict[str, List[str]] = self.node.get_parameter(param_key)
-            self._possible_names = [name.lower() for name in prior_data["names"]]
+            prior_data: List[str] = self.node.get_parameter(f"{param_key}.names").value
+            self._possible_names = [name.lower() for name in prior_data]
             self._last_resort = last_resort
 
         def execute(self, userdata: UserData) -> str:
@@ -147,7 +147,7 @@ class GetInterest(smach.StateMachine):
             node: Node,
             guest_id: str,
             last_resort: bool,
-            param_key: str = "/receptionist/priors",
+            param_key: str = "priors",
         ):
             RosState.__init__(
                 self,
@@ -157,8 +157,8 @@ class GetInterest(smach.StateMachine):
                 output_keys=["guest_data", "guest_transcription"],
             )
             self._guest_id = guest_id
-            prior_data: Dict[str, List[str]] = self.node.get_parameter(param_key)
-            self._possible_names = [name.lower() for name in prior_data["names"]]
+            prior_data: List[str] = self.node.get_parameter(f"{param_key}.names").value
+            self._possible_names = [name.lower() for name in prior_data]
             self._last_resort = last_resort
 
         def execute(self, userdata: UserData) -> str:

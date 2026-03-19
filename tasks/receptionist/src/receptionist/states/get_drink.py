@@ -10,12 +10,13 @@ from smach import UserData, StateMachine
 from smach_ros import RosState
 
 from typing import List, Dict, Any
-from receptionist.states import SpeechRecovery
+
+from .speech_recovery import SpeechRecovery
 from lasr_llm_interfaces.srv import Llm
 
 class GetDrink(StateMachine):
     def __init__(
-        self, node: Node, guest_id: str, last_resort: bool, param_key: str = "/receptionist/priors"
+        self, node: Node, guest_id: str, last_resort: bool, param_key: str = "priors"
     ):
         StateMachine.__init__(
             self,
@@ -49,7 +50,7 @@ class GetDrink(StateMachine):
             node: Node,
             guest_id: str,
             last_resort: bool,
-            param_key: str = "/receptionist/priors",
+            param_key: str = "priors"
         ):
             """Parses the transcription of the guests' favourite drink.
 
@@ -70,8 +71,8 @@ class GetDrink(StateMachine):
                 self.node.get_logger().info('LLM service not available, waiting again...')
 
             self._guest_id = guest_id
-            prior_data: Dict[str, List[str]] = self.node.get_parameter(param_key) 
-            self._possible_drinks = [drink.lower() for drink in prior_data["drinks"]]
+            prior_data: List[str] = self.node.get_parameter(f"{param_key}.drinks").value
+            self._possible_drinks = [drink.lower() for drink in prior_data]
             self._last_resort = last_resort
 
         def execute(self, userdata: UserData) -> str:
@@ -133,7 +134,7 @@ class GetDrink(StateMachine):
             return "succeeded"
 
     class PostRecoveryDecision(RosState):
-        def __init__(self, guest_id: str, param_key: str = "/receptionist/priors"):
+        def __init__(self, guest_id: str, param_key: str = "priors"):
             RosState.__init__(
                 self,
                 outcomes=["succeeded", "failed"],
@@ -141,8 +142,8 @@ class GetDrink(StateMachine):
                 output_keys=["guest_data", "guest_transcription"],
             )
             self._guest_id = guest_id
-            prior_data: Dict[str, List[str]] = self.node.get_parameter(param_key)
-            self._possible_drinks = [drink.lower() for drink in prior_data["drinks"]]
+            prior_data: List[str] = self.node.get_parameter(f"{param_key}.drinks").value
+            self._possible_drinks = [drink.lower() for drink in prior_data]
 
         def execute(self, userdata: UserData) -> str:
             if userdata.guest_data[self._guest_id]["drink"] == "unknown":

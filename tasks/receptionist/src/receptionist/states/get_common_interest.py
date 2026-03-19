@@ -14,7 +14,7 @@ class GetInterest(RosState):
     #_sentence_embed_srv: rospy.ServiceProxy
 
     def __init__(self, node:Node):
-        smach.State.__init__(
+        RosState.__init__(
             self,
             node,
             outcomes=["succeeded", "failed"],
