@@ -25,13 +25,22 @@ class LookToPoint(RosState):
         self._pointstamped = pointstamped
 
         self.client = ActionClient(
-            self.node, PointHead, "/head_controller/point_head_action"
+            self.node,
+            PointHead,
+            "/head_controller/point_head_action",  # TODO: Action server doesnt exist
         )
         self.goal_future = None
         self.result_future = None
-        self.node.get_logger().info("Created State")
+        self.node.get_logger().info("LookToPoint - Created State.")
 
-        self.client.wait_for_server()
+        if not self.client.wait_for_server(timeout_sec=1.0):
+            self.node.get_logger().warn(
+                "Head controller PointHead action server not found. Skipping..."
+            )
+        else:
+            self.node.get_logger().info(
+                "Head controller PointHead action server working."
+            )
 
     def execute(self, userdata):
         # Define the goal
@@ -47,16 +56,14 @@ class LookToPoint(RosState):
         )
 
         # Send the goal
-        self.node.get_logger().info("Sending goal")
-        future = self.client.send_goal_async(
-            goal
-        )  # can't call send_goal in cb because of deadlock
-        rclpy.spin_until_future_complete(self, future)
+        self.node.get_logger().info("Sending goal - PointHead")
+        future = self.client.send_goal_async(goal)
+        rclpy.spin_until_future_complete(self.node, future)
 
         # Wait for the result with a timeout of 2 seconds
         goal_handle = future.result()
         result_future = goal_handle.get_result_async()
-        rclpy.spin_until_future_complete(self, future, timeout_sec=2.0)
+        rclpy.spin_until_future_complete(self.node, result_future, timeout_sec=2.0)
 
         if result_future.done():
             state = result_future.result()
