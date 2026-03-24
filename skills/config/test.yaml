@@ -1,11 +1,11 @@
 # Used to test 
 
-go_to_location:   # the `go_to_location` Node's Parameters
+go_to_start:   # the `go_to_start` Node's Parameters
   ros__parameters:
     start_pose:
       position:
-        x: -9.6
-        y: 0.368
+        x: 2
+        y: 0.697
         z: 0.0
       orientation:
         x: 0.0
