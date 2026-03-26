@@ -65,7 +65,6 @@ class LLMInference:
                 bnb_4bit_compute_dtype=torch.bfloat16,
             )
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        print(f"Using device: {self.device}")
 
         self.model_name = self.config.model_name
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
@@ -139,11 +138,11 @@ class LLMInference:
     def load_llm_model(self):
         if self.device == torch.device("cpu"):
             self.logger.warning("[LLMInference] CPU detected — skipping quantization.")
-            return AutoModelForCausalLM.from_pretrained(
-                self.model_name, low_cpu_mem_usage=True
-            )
+            return AutoModelForCausalLM.from_pretrained(self.model_name)
 
-        kwargs = {"low_cpu_mem_usage": True}
+        device_map = "auto"
+        torch_dtype = torch.bfloat16
+        kwargs = {"device_map": device_map, "torch_dtype": torch_dtype}
 
         if self.config.quantize:
             from transformers import BitsAndBytesConfig
@@ -153,9 +152,7 @@ class LLMInference:
                     load_in_4bit=True,
                     bnb_4bit_quant_type="nf4",
                     bnb_4bit_compute_dtype=torch.bfloat16,
-                    bnb_4bit_use_double_quant=True,
                 )
-                kwargs["device_map"] = "auto"
             except Exception as e:
                 self.get_logger().error(
                     f"[LLMInference] Failed to create quant config: {e}"
@@ -163,18 +160,11 @@ class LLMInference:
                 self.get_logger().warning(
                     "[LLMInference] Falling back to full-precision model."
                 )
-        else:
-            kwargs["torch_dtype"] = torch.bfloat16
-            kwargs["device_map"] = {"": 0}
 
-        model = AutoModelForCausalLM.from_pretrained(self.model_name, **kwargs)
-        model.eval()
-        print(f"[LLMInference] Model {self.model_name} loaded successfully.")
-        return model
+        return AutoModelForCausalLM.from_pretrained(self.model_name, **kwargs)
 
-    def run_inference(
-        self, query: str, context: Optional[str] = None, max_tokens=56
-    ) -> str:
+    def run_inference(self, query: str, context: Optional[str] = None) -> str:
+
         result = None
         if self.config.model_type == "pipeline":
             if self.task == "question-answering":
@@ -184,11 +174,8 @@ class LLMInference:
             else:
                 result = self.pipe(query)
         elif self.config.model_type == "llm":
-            input_ids = self.tokenizer(
-                query, return_tensors="pt"
-            )  # .to(self.model.device)
-            with torch.inference_mode():
-                output_ids = self.model.generate(max_new_tokens=max_tokens, **input_ids)
+            input_ids = self.tokenizer(query, return_tensors="pt").to(self.model.device)
+            output_ids = self.model.generate(**input_ids, max_new_tokens=128)
             result = self.tokenizer.decode(output_ids[0], skip_special_tokens=True)
             print(f"LLM output: {result}")
         generated_text = re.sub(re.escape(query), "", result).strip()
@@ -308,6 +295,17 @@ def link_category(object: str, category: list[str]) -> str:
     # print(response)
     parsed_response = truncate_llm_output(response[0])
     return parsed_response
+
+
+# def extract_fields_llm(text: str, fields: list[str] = None):
+#     """
+#     A simple receptionist LLM inference function.
+#     :param text: The input sentence to process.
+#     :param fields: A list of fields to return.
+#     """
+#     config = ModelConfig(model_name=models["Qwen"], model_type="llm", quantize=True)
+#     if fields is None:
+#         fields = ["Name", "Favourite drink", "Interests"]  # all for receptionist
 
 
 def extract_fields_llm(text: str, fields: List[str]) -> Dict:
