@@ -22,11 +22,11 @@ class DetectDoorOpening(smach.State):
     def __init__(
         self,
         node: Node,
-        lasr_scan_topic: str = "/scan",
+        lasr_scan_topic: str = "/scan_raw",
         opened_delta: float = 0.5,
         timeout: float = 15.0,
     ):
-        super().__init__(outcomes=["door_opened"])
+        super().__init__(outcomes=["door_opened", "failed"])
 
         self._node = node
         self._scan_topic = lasr_scan_topic
@@ -36,6 +36,7 @@ class DetectDoorOpening(smach.State):
         self._timeout = timeout
         self._initial_mean_distance = None
 
+    @staticmethod
     def _compute_mean_distance(scan: LaserScan) -> float:
         range_data = np.array(scan.ranges, dtype=float)
         invalid_mask = (
@@ -100,14 +101,14 @@ class DetectDoorOpening(smach.State):
             self._node.get_logger().warn(
                 "No laser scan received while waiting for initial door state."
             )
-            return "door_opened"
+            return "failed"
 
         self._initial_mean_distance = self._compute_mean_distance(initial_scan)
         if np.isnan(self._initial_mean_distance):
             self._node.get_logger().warn(
-                "Initial laser scan mean distance is NaN. Assuming door opened."
+                "Initial laser scan mean distance is NaN. Failing door detection."
             )
-            return "door_opened"
+            return "failed"
 
         self._scan_subscriber = self._node.create_subscription(
             LaserScan,
@@ -128,7 +129,11 @@ class DetectDoorOpening(smach.State):
             self._node.destroy_subscription(self._scan_subscriber)
             self._scan_subscriber = None
 
-        return "door_opened"
+        if self._door_opened:
+            return "door_opened"
+
+        self._node.get_logger().warn("Door did not open before timeout.")
+        return "failed"
 
 
 def main(args=None):
@@ -142,7 +147,7 @@ def main(args=None):
             smach.StateMachine.add(
                 "DETECT_DOOR_OPENING",
                 detect,
-                transitions={"door_opened": "succeeded"},
+                transitions={"door_opened": "succeeded", "failed": "failed"},
             )
         sm.execute()
     finally:

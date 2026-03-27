@@ -5,10 +5,16 @@ from geometry_msgs.msg import Point, Quaternion, Pose, PoseStamped
 from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
 from std_msgs.msg import Header
 
-# INFO: individual file can be ran with .yamlusing command: --ros-args --params-file {path}.yaml 
+# INFO: individual file can be ran with .yamlusing command: --ros-args --params-file {path}.yaml
+
 
 class GoToLocation(RosState):
-    def __init__(self, node, location: Union[Pose, None] = None, location_param: Union[str, None] = None):
+    def __init__(
+        self,
+        node,
+        location: Union[Pose, None] = None,
+        location_param: Union[str, None] = None,
+    ):
 
         if location is not None or location_param is not None:
             super().__init__(node, outcomes=["succeeded", "failed"])
@@ -19,7 +25,9 @@ class GoToLocation(RosState):
 
         self.navigator = BasicNavigator()
         self.location = location
-        self.location_param = location_param    # the pose (eg. 'start_pose', 'wait_pose', ...)
+        self.location_param = (
+            location_param  # the pose (eg. 'start_pose', 'wait_pose', ...)
+        )
 
     def execute(self, userdata):
         if self.location:
@@ -27,16 +35,44 @@ class GoToLocation(RosState):
         elif self.location_param:
             goal_pose = Pose(
                 position=Point(
-                    x=float(self.node.get_parameter(f"{self.location_param}.position.x").value), 
-                    y=float(self.node.get_parameter(f"{self.location_param}.position.y").value), 
-                    z=float(self.node.get_parameter(f"{self.location_param}.position.z").value)
+                    x=float(
+                        self.node.get_parameter(
+                            f"{self.location_param}.position.x"
+                        ).value
                     ),
+                    y=float(
+                        self.node.get_parameter(
+                            f"{self.location_param}.position.y"
+                        ).value
+                    ),
+                    z=float(
+                        self.node.get_parameter(
+                            f"{self.location_param}.position.z"
+                        ).value
+                    ),
+                ),
                 orientation=Quaternion(
-                    x=float(self.node.get_parameter(f"{self.location_param}.orientation.x").value), 
-                    y=float(self.node.get_parameter(f"{self.location_param}.orientation.y").value), 
-                    z=float(self.node.get_parameter(f"{self.location_param}.orientation.z").value), 
-                    w=float(self.node.get_parameter(f"{self.location_param}.orientation.w").value)
-                    )
+                    x=float(
+                        self.node.get_parameter(
+                            f"{self.location_param}.orientation.x"
+                        ).value
+                    ),
+                    y=float(
+                        self.node.get_parameter(
+                            f"{self.location_param}.orientation.y"
+                        ).value
+                    ),
+                    z=float(
+                        self.node.get_parameter(
+                            f"{self.location_param}.orientation.z"
+                        ).value
+                    ),
+                    w=float(
+                        self.node.get_parameter(
+                            f"{self.location_param}.orientation.w"
+                        ).value
+                    ),
+                ),
             )
 
         elif "location" in userdata:
@@ -57,11 +93,16 @@ class GoToLocation(RosState):
             else "failed"
         )
 
+
 def main():
     rclpy.init()
 
     # Update Node name if loading from a .yaml config
-    node = rclpy.create_node("go_to_location", allow_undeclared_parameters=True, automatically_declare_parameters_from_overrides=True)
+    node = rclpy.create_node(
+        "go_to_location",
+        allow_undeclared_parameters=True,
+        automatically_declare_parameters_from_overrides=True,
+    )
 
     try:
         state = GoToLocation(node=node, location_param="start_pose")
