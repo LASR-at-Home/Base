@@ -4,7 +4,8 @@ import rclpy
 import smach
 import smach_ros
 from geometry_msgs.msg import Point, PointStamped, Pose
-#skills to be imported
+
+# skills to be imported
 # from lasr_skills import (
 # )
 
@@ -17,12 +18,10 @@ from Base.tasks.HRI.HRI.states.check_sofa import CheckSofa
 
 
 class HRI(smach.StateMachine):
-    def __init__(
-            self, node
-    ):
+    def __init__(self, node):
         smach.StateMachine.__init__(self, outcomes=["succeeded", "failed"])
 
-        #commented incase Detect Doorbell was not implemented
+        # commented incase Detect Doorbell was not implemented
         # smach.StateMachine.add(
         #     "DETECT DOORBELL",
         #     DetectDoorbell(node),
@@ -33,8 +32,7 @@ class HRI(smach.StateMachine):
         #     },
         # )
 
-        #start door state machine goes here (by Fadi and Aldrich)
-
+        # start door state machine goes here (by Fadi and Aldrich)
 
         smach.StateMachine.add(
             "APPROACH_GUEST",
@@ -46,7 +44,7 @@ class HRI(smach.StateMachine):
             },
         )
 
-        #face guest and greet them concurrently state machine (by Fadi)
+        # face guest and greet them concurrently state machine (by Fadi)
 
         smach.StateMachine.add(
             "GET_NAME_AND_DRINK",
