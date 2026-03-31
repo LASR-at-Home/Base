@@ -12,7 +12,7 @@ from smach_ros import RosState
 
 from typing import List, Dict, Any
 from .speech_recovery import SpeechRecovery
-from lasr_llm_interfaces.srv import Llm
+from lasr_llm_interfaces.srv import ReceptionistQueryLlm #HRITaskQueryLlm
 
 
 class GetInterest(smach.StateMachine):
@@ -73,7 +73,7 @@ class GetInterest(smach.StateMachine):
                 input_keys=["guest_transcription", "guest_data"],
                 output_keys=["guest_data", "guest_transcription"],
             )
-            self._llm = self.node.create_client(Llm, "/lasr_llm/llm")
+            self._llm = self.node.create_client(ReceptionistQueryLlm, "/receptionist/query_llm")
             while not self._llm.wait_for_service(timeout_sec=1.0):
                 self.node.get_logger().info('Llm service not available, waiting again...')
 
@@ -95,15 +95,17 @@ class GetInterest(smach.StateMachine):
 
             guest = userdata.guest_data[self._guest_id]
 
-            request = Llm.Request()
-            request.system_prompt = (
-                "You are a robot acting as a party host. You are tasked with identifying "
-                "interest belonging to a guest."
-                "You will receive input such as 'I like robotics' or 'My interest is robotics'. Output only the"
-                "interest, e.g. 'robotics'. Make sure that the interest is only one or two words. If you can't identify the interest, output 'unknown'."
-            )
-            request.prompt = transcription
-            request.max_tokens = 10
+            request = ReceptionistQueryLlm.Request()
+            request.llm_input = transcription
+            request.task = "name_and_interest"
+            # request.system_prompt = (
+            #     "You are a robot acting as a party host. You are tasked with identifying "
+            #     "interest belonging to a guest."
+            #     "You will receive input such as 'I like robotics' or 'My interest is robotics'. Output only the"
+            #     "interest, e.g. 'robotics'. Make sure that the interest is only one or two words. If you can't identify the interest, output 'unknown'."
+            # )
+            # request.prompt = transcription
+            # request.max_tokens = 10
 
             future = self._llm.call_async(request)
             rclpy.spin_until_future_complete(self.node, future)

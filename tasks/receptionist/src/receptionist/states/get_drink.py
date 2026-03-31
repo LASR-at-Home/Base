@@ -1,6 +1,6 @@
 """
 State for parsing the transcription of the guests' favourite drink, and adding this
-to the guest data userdata
+to the guest data userdata3
 """
 
 import rclpy
@@ -12,7 +12,7 @@ from smach_ros import RosState
 from typing import List, Dict, Any
 
 from .speech_recovery import SpeechRecovery
-from lasr_llm_interfaces.srv import Llm
+from lasr_llm_interfaces.srv import ReceptionistQueryLlm #HRITaskQueryLlm
 
 class GetDrink(StateMachine):
     def __init__(
@@ -66,7 +66,7 @@ class GetDrink(StateMachine):
                 output_keys=["guest_data", "guest_transcription"],
             )
             
-            self._llm = self.node.create_client(Llm, "/lasr_llm/llm")
+            self._llm = self.node.create_client(ReceptionistQueryLlm, "/receptionist/query_llm")
             while not self._llm.wait_for_service(timeout_sec=1.0):
                 self.node.get_logger().info('LLM service not available, waiting again...')
 
@@ -110,10 +110,13 @@ class GetDrink(StateMachine):
                 )
                 return "retry"
 
-            request = Llm.Request()
-            request.system_prompt = f"You are a robot acting as a party host. You are tasked with identifying the favourite drink belonging to a guest. The possible drinks are {','.join(self._possible_drinks)}. You will receive input such as 'my favourite drink is cola'. Output only the drink, which must exactly match one of the possible drinks. In the previous example this would be 'cola'. If you can't identify the drink, output 'None'."
-            request.prompt = f"The user says: {transcription}"
-            request.max_tokens = 3  # Limit to a single word response
+            request = ReceptionistQueryLlm.Request()
+            request.llm_input = transcription
+            request.task = "drink"
+            # request.system_prompt = f"You are a robot acting as a party host. You are tasked with identifying the favourite drink belonging to a guest. The possible drinks are {','.join(self._possible_drinks)}. You will receive input such as 'my favourite drink is cola'. Output only the drink, which must exactly match one of the possible drinks. In the previous example this would be 'cola'. If you can't identify the drink, output 'None'."
+            # request.prompt = f"The user says: {transcription}"
+            # request.max_tokens = 3  # Limit to a single word response
+
             future = self._llm.call_async(request)
             rclpy.spin_until_future_complete(self.node, future)
             response = future.result()

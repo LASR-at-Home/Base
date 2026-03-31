@@ -12,8 +12,9 @@ from smach_ros import RosState
 from typing import List, Dict, Any
 
 from .speech_recovery import SpeechRecovery
-from lasr_llm_interfaces.srv import Llm
+from lasr_llm_interfaces.srv import ReceptionistQueryLlm #HRITaskQueryLlm
 
+# ros2 run receptionist llm_test --ros-args --params-file src/receptionist/config/receptionist_params.yaml
 
 class GetNameAndInterest(StateMachine):
     def __init__(
@@ -74,9 +75,7 @@ class GetNameAndInterest(StateMachine):
                 SpeechRecovery(
                     guest_id=self._guest_id,
                     last_resort=self._last_resort,
-                    input_type="name",
-                    recover_from_llm=True,
-                    param_key=self._param_key,
+                    input_type="name"
                 ),
                 transitions={
                     "succeeded": "POST_RECOVERY_DECISION",
@@ -89,9 +88,7 @@ class GetNameAndInterest(StateMachine):
                 SpeechRecovery(
                     guest_id=self._guest_id,
                     last_resort=self._last_resort,
-                    input_type="name",
-                    recover_from_llm=True,
-                    param_key=self._param_key,
+                    input_type="name"
                 ),
                 transitions={
                     "succeeded": "POST_RECOVERY_DECISION",
@@ -103,9 +100,7 @@ class GetNameAndInterest(StateMachine):
                 SpeechRecovery(
                     guest_id=self._guest_id,
                     last_resort=self._last_resort,
-                    input_type="name",
-                    recover_from_llm=False,
-                    param_key=self._param_key,
+                    input_type="name"
                 ),
                 transitions={
                     "succeeded": "POST_RECOVERY_DECISION",
@@ -172,7 +167,8 @@ class GetNameAndInterest(StateMachine):
                 input_keys=["guest_transcription", "guest_data"],
                 output_keys=["guest_data", "guest_transcription"],
             )
-            self._llm = node.create_client(Llm, '/lasr_llm/llm')
+            # self._llm = node.create_client(HRITaskQueryLlm, '/hri_task/query_llm')
+            self._llm = node.create_client(ReceptionistQueryLlm, '/receptionist/query_llm')
             while not self._llm.wait_for_service(timeout_sec=1.0):
                 self.node.get_logger().info('service not available, waiting again...')
 
@@ -194,16 +190,18 @@ class GetNameAndInterest(StateMachine):
 
             guest = userdata.guest_data[self._guest_id]
 
-            request = Llm.Request()
-            request.system_prompt = (
-                "You are a robot acting as a party host. You are tasked with identifying the name "
-                "and interest belonging to a guest."
-                "You will receive input such as 'my name is john and I like robotics'. Output only the name "
-                "and interest, e.g. 'john,robotics'. Make sure that the interest is only one or two words. If you can't identify the name or interest, output 'unknown', e.g. 'john,unknown' or 'unknown,robotics'."
-                "If you can't identify both the name and the interest, output 'unknown,unknown'"
-            )
-            request.prompt = transcription
-            request.max_tokens = 10
+            request = ReceptionistQueryLlm.Request()
+            request.llm_input = transcription
+            request.task = "name_and_interest"
+            # request.system_prompt = (
+            #     "You are a robot acting as a party host. You are tasked with identifying the name "
+            #     "and interest belonging to a guest."
+            #     "You will receive input such as 'my name is john and I like robotics'. Output only the name "
+            #     "and interest, e.g. 'john,robotics'. Make sure that the interest is only one or two words. If you can't identify the name or interest, output 'unknown', e.g. 'john,unknown' or 'unknown,robotics'."
+            #     "If you can't identify both the name and the interest, output 'unknown,unknown'"
+            # )
+            # request.prompt = transcription
+            # request.max_tokens = 10
 
             future = self._llm.call_async(request)
             rclpy.spin_until_future_complete(self.node, future)
