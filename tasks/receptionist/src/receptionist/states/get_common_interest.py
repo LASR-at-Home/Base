@@ -5,15 +5,18 @@ import smach
 from smach_ros import RosState
 
 from lasr_skills.say import Say
-from lasr_llm_interfaces.srv import SentenceEmbedding, ReceptionistQueryLlm #HRITaskQueryLlm
+from lasr_llm_interfaces.srv import (
+    SentenceEmbedding,
+    ReceptionistQueryLlm,
+)  # HRITaskQueryLlm
 
 
 class GetInterest(RosState):
     """Prompts an LLM to find a common interest between the guests and the host."""
 
-    #_sentence_embed_srv: rospy.ServiceProxy
+    # _sentence_embed_srv: rospy.ServiceProxy
 
-    def __init__(self, node:Node):
+    def __init__(self, node: Node):
         RosState.__init__(
             self,
             node,
@@ -21,13 +24,19 @@ class GetInterest(RosState):
             input_keys=["guest_data"],
             output_keys=["interest_message", "guest_data"],
         )
-        self._sentence_embed_srv = self.node.create_client(SentenceEmbedding, "/lasr_sentence_embedding/sentence_embedding")
+        self._sentence_embed_srv = self.node.create_client(
+            SentenceEmbedding, "/lasr_sentence_embedding/sentence_embedding"
+        )
         while not self._sentence_embed_srv.wait_for_service(timeout_sec=1.0):
-            self.node.get_logger().info(' Sentence Embedding service not available, waiting again...')
+            self.node.get_logger().info(
+                " Sentence Embedding service not available, waiting again..."
+            )
 
-        self._llm_srv = self.node.create_client(ReceptionistQueryLlm, "/receptionist/query_llm")
+        self._llm_srv = self.node.create_client(
+            ReceptionistQueryLlm, "/receptionist/query_llm"
+        )
         while not self._llm_srv.wait_for_service(timeout_sec=1.0):
-            self.node.get_logger().info('LLM service not available, waiting again...')
+            self.node.get_logger().info("LLM service not available, waiting again...")
 
     def execute(self, userdata):
         try:
@@ -40,14 +49,14 @@ class GetInterest(RosState):
 
             embed_request = SentenceEmbedding.Request(sentences=interests)
 
-            embed_future = self._sentence_embed_srv.call_async(embed_request)  
+            embed_future = self._sentence_embed_srv.call_async(embed_request)
             rclpy.spin_until_future_complete(self.node, embed_future)
             most_similar_1, most_similar_2 = embed_future.result().most_similar
 
             most_similar_1_name = guest_ids[interests.index(most_similar_1)]
             most_similar_2_name = guest_ids[interests.index(most_similar_2)]
 
-            #TODO: Update and test this
+            # TODO: Update and test this
             llm_request = ReceptionistQueryLlm.Request()
             llm_request.llm_input = f"{most_similar_1}, {most_similar_2}"
             llm_request.task = "interest_commonality"
@@ -55,7 +64,7 @@ class GetInterest(RosState):
             llm_future = self._llm_srv.call_async(llm_request)
             rclpy.spin_until_future_complete(self.node, llm_future)
             llm_response = llm_future.result()
-            
+
             commonality = llm_response.response.interest_commonality.strip()
             if commonality:
                 commonality = commonality.split(" ", 1)[0]

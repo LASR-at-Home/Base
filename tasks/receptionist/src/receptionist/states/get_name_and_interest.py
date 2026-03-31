@@ -12,9 +12,10 @@ from smach_ros import RosState
 from typing import List, Dict, Any
 
 from .speech_recovery import SpeechRecovery
-from lasr_llm_interfaces.srv import ReceptionistQueryLlm #HRITaskQueryLlm
+from lasr_llm_interfaces.srv import ReceptionistQueryLlm  # HRITaskQueryLlm
 
 # ros2 run receptionist llm_test --ros-args --params-file src/receptionist/config/receptionist_params.yaml
+
 
 class GetNameAndInterest(StateMachine):
     def __init__(
@@ -75,7 +76,7 @@ class GetNameAndInterest(StateMachine):
                 SpeechRecovery(
                     guest_id=self._guest_id,
                     last_resort=self._last_resort,
-                    input_type="name"
+                    input_type="name",
                 ),
                 transitions={
                     "succeeded": "POST_RECOVERY_DECISION",
@@ -88,7 +89,7 @@ class GetNameAndInterest(StateMachine):
                 SpeechRecovery(
                     guest_id=self._guest_id,
                     last_resort=self._last_resort,
-                    input_type="name"
+                    input_type="name",
                 ),
                 transitions={
                     "succeeded": "POST_RECOVERY_DECISION",
@@ -100,7 +101,7 @@ class GetNameAndInterest(StateMachine):
                 SpeechRecovery(
                     guest_id=self._guest_id,
                     last_resort=self._last_resort,
-                    input_type="name"
+                    input_type="name",
                 ),
                 transitions={
                     "succeeded": "POST_RECOVERY_DECISION",
@@ -168,9 +169,11 @@ class GetNameAndInterest(StateMachine):
                 output_keys=["guest_data", "guest_transcription"],
             )
             # self._llm = node.create_client(HRITaskQueryLlm, '/hri_task/query_llm')
-            self._llm = node.create_client(ReceptionistQueryLlm, '/receptionist/query_llm')
+            self._llm = node.create_client(
+                ReceptionistQueryLlm, "/receptionist/query_llm"
+            )
             while not self._llm.wait_for_service(timeout_sec=1.0):
-                self.node.get_logger().info('service not available, waiting again...')
+                self.node.get_logger().info("service not available, waiting again...")
 
             self._guest_id = guest_id
             prior_data: List[str] = self.node.get_parameter(f"{param_key}.names").value
@@ -255,7 +258,7 @@ class GetNameAndInterest(StateMachine):
     class RecoveryDecision(RosState):
         def __init__(
             self,
-            node: Node, 
+            node: Node,
             guest_id: str,
             last_resort: bool,
             param_key: str = "priors",

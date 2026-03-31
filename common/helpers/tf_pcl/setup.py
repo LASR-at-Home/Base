@@ -4,6 +4,7 @@ import ament_virtualenv.install
 
 package_name = "tf_pcl"
 
+
 class InstallCommand(setuptools.command.install.install):
     def run(self):
         super().run()
@@ -11,10 +12,11 @@ class InstallCommand(setuptools.command.install.install):
             install_base=self.install_base,
             scripts_base=self.install_scripts,
             package_name=package_name,
-            python_version='3'
+            python_version="3",
         )
-        
+
         return
+
 
 setup(
     name=package_name,
@@ -28,6 +30,6 @@ setup(
     description="A ROS 2 package for point cloud transformations",
     license="Apache License 2.0",  # Update license as per your project
     tests_require=["pytest"],  # Add any test dependencies here
-    cmdclass={'install': InstallCommand},
+    cmdclass={"install": InstallCommand},
     entry_points={"console_scripts": ["pointcloud_transformer = tf_pcl.__init__:main"]},
 )

@@ -15,7 +15,8 @@ from .speech_recovery import SpeechRecovery
 
 # from tasks.receptionist.src.receptionist.states import SpeechRecovery
 
-#TODO: check get_parameters
+# TODO: check get_parameters
+
 
 class GetNameAndDrink(smach.StateMachine):
     class ParseNameAndDrink(RosState):
@@ -35,9 +36,17 @@ class GetNameAndDrink(smach.StateMachine):
             )
             self._guest_id = guest_id
 
-            self._possible_names = [name.lower() for name in self.node.get_parameter(f"{param_key}.names").value]
-            self._possible_drinks = [drink.lower() for drink in self.node.get_parameter(f"{param_key}.drinks").value]
-            self.node.get_logger().info(f"Initialized with {len(self._possible_names)} names from {param_key}")
+            self._possible_names = [
+                name.lower()
+                for name in self.node.get_parameter(f"{param_key}.names").value
+            ]
+            self._possible_drinks = [
+                drink.lower()
+                for drink in self.node.get_parameter(f"{param_key}.drinks").value
+            ]
+            self.node.get_logger().info(
+                f"Initialized with {len(self._possible_names)} names from {param_key}"
+            )
 
         def execute(self, userdata: UserData) -> str:
             """Parses the transcription of the guests' name and favourite drink.
@@ -94,8 +103,14 @@ class GetNameAndDrink(smach.StateMachine):
             )
             self._guest_id = guest_id
 
-            self._possible_names = [name.lower() for name in self.node.get_parameter(f"{param_key}.names").value]
-            self._possible_drinks = [drink.lower() for drink in self.node.get_parameter(f"{param_key}.drinks").value]
+            self._possible_names = [
+                name.lower()
+                for name in self.node.get_parameter(f"{param_key}.names").value
+            ]
+            self._possible_drinks = [
+                drink.lower()
+                for drink in self.node.get_parameter(f"{param_key}.drinks").value
+            ]
 
         def execute(self, userdata: UserData) -> str:
             if not self._recovery_name_and_drink_required(userdata):
@@ -120,7 +135,8 @@ class GetNameAndDrink(smach.StateMachine):
                 return False
 
     def __init__(
-        self, node: Node, guest_id: str, last_resort: bool, param_key: str = "priors"):
+        self, node: Node, guest_id: str, last_resort: bool, param_key: str = "priors"
+    ):
 
         self.__node = node
         self._guest_id = guest_id

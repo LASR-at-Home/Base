@@ -12,7 +12,8 @@ from smach_ros import RosState
 from typing import List, Dict, Any
 
 from .speech_recovery import SpeechRecovery
-from lasr_llm_interfaces.srv import ReceptionistQueryLlm #HRITaskQueryLlm
+from lasr_llm_interfaces.srv import ReceptionistQueryLlm  # HRITaskQueryLlm
+
 
 class GetDrink(StateMachine):
     def __init__(
@@ -50,7 +51,7 @@ class GetDrink(StateMachine):
             node: Node,
             guest_id: str,
             last_resort: bool,
-            param_key: str = "priors"
+            param_key: str = "priors",
         ):
             """Parses the transcription of the guests' favourite drink.
 
@@ -65,10 +66,14 @@ class GetDrink(StateMachine):
                 input_keys=["guest_transcription", "guest_data"],
                 output_keys=["guest_data", "guest_transcription"],
             )
-            
-            self._llm = self.node.create_client(ReceptionistQueryLlm, "/receptionist/query_llm")
+
+            self._llm = self.node.create_client(
+                ReceptionistQueryLlm, "/receptionist/query_llm"
+            )
             while not self._llm.wait_for_service(timeout_sec=1.0):
-                self.node.get_logger().info('LLM service not available, waiting again...')
+                self.node.get_logger().info(
+                    "LLM service not available, waiting again..."
+                )
 
             self._guest_id = guest_id
             prior_data: List[str] = self.node.get_parameter(f"{param_key}.drinks").value

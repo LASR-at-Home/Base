@@ -12,7 +12,7 @@ from smach_ros import RosState
 
 from typing import List, Dict, Any
 from .speech_recovery import SpeechRecovery
-from lasr_llm_interfaces.srv import ReceptionistQueryLlm #HRITaskQueryLlm
+from lasr_llm_interfaces.srv import ReceptionistQueryLlm  # HRITaskQueryLlm
 
 
 class GetInterest(smach.StateMachine):
@@ -55,7 +55,7 @@ class GetInterest(smach.StateMachine):
     class ParseInterest(RosState):
         def __init__(
             self,
-            node: Node, 
+            node: Node,
             guest_id: str,
             last_resort: bool,
             param_key: str = "priors",
@@ -73,9 +73,13 @@ class GetInterest(smach.StateMachine):
                 input_keys=["guest_transcription", "guest_data"],
                 output_keys=["guest_data", "guest_transcription"],
             )
-            self._llm = self.node.create_client(ReceptionistQueryLlm, "/receptionist/query_llm")
+            self._llm = self.node.create_client(
+                ReceptionistQueryLlm, "/receptionist/query_llm"
+            )
             while not self._llm.wait_for_service(timeout_sec=1.0):
-                self.node.get_logger().info('Llm service not available, waiting again...')
+                self.node.get_logger().info(
+                    "Llm service not available, waiting again..."
+                )
 
             self._guest_id = guest_id
             prior_data: List[str] = self.node.get_parameter(f"{param_key}.names").value

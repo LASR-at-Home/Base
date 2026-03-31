@@ -5,6 +5,7 @@ from smach_ros import RosState
 from skills import DescribePeople
 import json
 
+
 class GetGuestAttributes(StateMachine):
     class InitialiseDetectionFlag(RosState):
         def __init__(self, node, guest_id: str):
@@ -39,7 +40,9 @@ class GetGuestAttributes(StateMachine):
             self._guest_id: str = guest_id
 
         def execute(self, userdata: UserData) -> str:
-            userdata.guest_data[self._guest_id]["attributes"] = userdata.clip_detection_dict
+            userdata.guest_data[self._guest_id][
+                "attributes"
+            ] = userdata.clip_detection_dict
             userdata.guest_data[self._guest_id]["detection"] = True
             return "succeeded"
 

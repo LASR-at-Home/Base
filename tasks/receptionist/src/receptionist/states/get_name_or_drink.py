@@ -3,7 +3,6 @@ State for parsing the transcription of the guests' information (favourite drink 
 to the guest data userdata
 """
 
-
 import rclpy
 from rclpy.node import Node
 
@@ -20,7 +19,7 @@ from .speech_recovery import SpeechRecovery
 class GetNameOrDrink(smach.StateMachine):
     class ParseTranscribedInfo(RosState):
         def __init__(
-            self, node: Node, guest_id: str, info_type: str , param_key: str = "priors"
+            self, node: Node, guest_id: str, info_type: str, param_key: str = "priors"
         ):
             """Parses the transcription of the guests' information.
 
@@ -42,10 +41,16 @@ class GetNameOrDrink(smach.StateMachine):
             )
             self._guest_id = guest_id
             self._type = info_type
-            
-            possible_names = [name.lower() for name in self.node.get_parameter(f"{param_key}.names").value]
-            possible_drinks = [drink.lower() for drink in self.node.get_parameter(f"{param_key}.drinks").value]
-            
+
+            possible_names = [
+                name.lower()
+                for name in self.node.get_parameter(f"{param_key}.names").value
+            ]
+            possible_drinks = [
+                drink.lower()
+                for drink in self.node.get_parameter(f"{param_key}.drinks").value
+            ]
+
             self._possible_information = {
                 "drink": possible_drinks,
                 "name": possible_names,

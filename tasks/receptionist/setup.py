@@ -6,6 +6,7 @@ from glob import glob
 
 package_name = "receptionist"
 
+
 class InstallCommand(setuptools.command.install.install):
     def run(self):
         super().run()
@@ -13,9 +14,10 @@ class InstallCommand(setuptools.command.install.install):
             install_base=self.install_base,
             scripts_base=self.install_scripts,
             package_name=package_name,
-            python_version='3'
+            python_version="3",
         )
         return
+
 
 setup(
     name=package_name,
@@ -25,8 +27,8 @@ setup(
     data_files=[
         ("share/ament_index/resource_index/packages", ["resource/" + package_name]),
         ("share/" + package_name, ["package.xml"]),
-        (os.path.join('share', package_name, 'launch'), glob('launch/*')),
-        (os.path.join('share', package_name, 'config'), glob('config/*')),
+        (os.path.join("share", package_name, "launch"), glob("launch/*")),
+        (os.path.join("share", package_name, "config"), glob("config/*")),
     ],
     install_requires=["setuptools"],
     zip_safe=True,
@@ -35,10 +37,12 @@ setup(
     description="Receptionist task",
     license="MIT",
     tests_require=["pytest"],
-    cmdclass={'install': InstallCommand},
-    entry_points={"console_scripts": [
-        "llm_test = receptionist.states.test_llm:main",
-        "string_test = receptionist.states.test_string:main",
-        "llm_and_sentence_test = receptionist.states.test_llm_and_sentence:main",
-    ]},
+    cmdclass={"install": InstallCommand},
+    entry_points={
+        "console_scripts": [
+            "llm_test = receptionist.states.test_llm:main",
+            "string_test = receptionist.states.test_string:main",
+            "llm_and_sentence_test = receptionist.states.test_llm_and_sentence:main",
+        ]
+    },
 )
