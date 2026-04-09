@@ -18,7 +18,7 @@ from lasr_speech_recognition_interfaces.action import TranscribeSpeech
 from lasr_llm_interfaces.srv import ReceptionistQueryLlm
 
 
-class GetPersonLocationState(RosState):
+class GetPersonLocationState(RosState): # Done by detect3d
     """SMACH State to get a person's 3D point from ReID vision and store it globally."""
 
     def __init__(self, node):
@@ -115,7 +115,7 @@ class GetPersonLocationState(RosState):
             return "failed"
 
 
-class SpeakGreetingState(RosState):
+class SpeakGreetingState(RosState): # To be replaced by Say state
     """SMACH State to speak aloud using the system TTS."""
 
     def __init__(self, node):
@@ -127,11 +127,11 @@ class SpeakGreetingState(RosState):
         greeting_text = (
             "Hello guest! What is your name, and your favorite food and drink?"
         )
-        os.system(f'espeak "{greeting_text}"')
+        os.system(f'espeak "{greeting_text}"')  
         return "succeeded"
 
 
-class ParseReceptionistLLMState(RosState):
+class ParseReceptionistLLMState(RosState):  # Get name and Drink state
     """SMACH State to parse text speech into structured data using LLM service."""
 
     def __init__(self, node):
@@ -290,3 +290,11 @@ def main(args=None):
 
 if __name__ == "__main__":
     main()
+
+'''
+    Face Door (already done by GoToDoor)
+    ReID
+    Greet
+    GetName+Drink
+
+'''

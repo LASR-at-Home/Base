@@ -1,15 +1,20 @@
+from typing import Union
+
 import rclpy
 import smach
+
+from geometry_msgs.msg import Point, Quaternion, Pose, PoseStamped
+
 from skills import detect_door_opening, go_to_location
 
 
-class StartDoorSM(smach.StateMachine):
+class StartDoorSM(smach.StateMachine):  # Rename to start_task
 
     def __init__(
         self,
         node,
-        location=None,
-        location_param=None,
+        location: Union[Pose, None] = None,
+        location_param: Union[str, None] = "start_pose",
     ):
         super().__init__(
             outcomes=["succeeded", "failed"],
@@ -46,7 +51,7 @@ def main(args=None):
     )
 
     try:
-        sm = StartDoorSM(node=node, location_param="start_pose")
+        sm = StartDoorSM(node=node)
         outcome = sm.execute()
         node.get_logger().info(f"StartDoorSM outcome: {outcome}")
     finally:
