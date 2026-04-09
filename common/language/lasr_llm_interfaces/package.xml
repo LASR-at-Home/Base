@@ -23,6 +23,6 @@
 
   <export>
     <build_type>ament_cmake</build_type>
-    <pip_requirements>requirements.txt</pip_requirements>
+    <!--pip_requirements>requirements.txt</pip_requirements-->
   </export>
 </package>
