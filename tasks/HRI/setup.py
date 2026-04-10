@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-package_name = "receptionist"
+package_name = "HRI"
 
 setup(
     name=package_name,

@@ -4,9 +4,10 @@ import rclpy
 import smach
 import smach_ros
 from geometry_msgs.msg import Point, PointStamped, Pose
-from lasr_skills import (
 
-)
+# from lasr_skills import (
+
+# )
 
 from HRI.states import *
 
@@ -15,9 +16,7 @@ from std_msgs.msg import Empty
 
 
 class HRI(smach.StateMachine):
-    def __init__(
-        self, node
-    ):
+    def __init__(self, node):
         smach.StateMachine.__init__(self, outcomes=["succeeded", "failed"])
 
         smach.StateMachine.add(
@@ -81,61 +80,61 @@ class HRI(smach.StateMachine):
         )
 
         smach.StateMachine.add(
-                "OFFER_A_FREE_SEAT",
-                OfferFreeSeat(node),
-                transitions={
-                    "valid": "INTRODUCE_GUESTS_TO_EACHOTHER",
-                    "invalid": "OFFER_A_FREE_SEAT",
-                    "preempted": "OFFER_A_FREE_SEAT",
-                },
-            )
-        
-        smach.StateMachine.add(
-                "INTRODUCE_GUESTS_TO_EACHOTHER",
-                IntroduceGuestsToEachother(node),
-                transitions={
-                    "valid": "ASK_SECOND_GUEST_FOR_BAG_TO_HOST",
-                    "invalid": "INTRODUCE_GUESTS_TO_EACHOTHER",
-                    "preempted": "INTRODUCE_GUESTS_TO_EACHOTHER",
-                },
+            "OFFER_A_FREE_SEAT",
+            OfferFreeSeat(node),
+            transitions={
+                "valid": "INTRODUCE_GUESTS_TO_EACHOTHER",
+                "invalid": "OFFER_A_FREE_SEAT",
+                "preempted": "OFFER_A_FREE_SEAT",
+            },
         )
 
         smach.StateMachine.add(
-                "ASK_SECOND_GUEST_FOR_BAG_TO_HOST",
-                AskSecondGuestForBagToHost(node),
-                transitions={
-                    "valid": "PICK_UP_BAG",
-                    "invalid": "ASK_SECOND_GUEST_FOR_BAG_TO_HOST",
-                    "preempted": "ASK_SECOND_GUEST_FOR_BAG_TO_HOST",
-                },
+            "INTRODUCE_GUESTS_TO_EACHOTHER",
+            IntroduceGuestsToEachother(node),
+            transitions={
+                "valid": "ASK_SECOND_GUEST_FOR_BAG_TO_HOST",
+                "invalid": "INTRODUCE_GUESTS_TO_EACHOTHER",
+                "preempted": "INTRODUCE_GUESTS_TO_EACHOTHER",
+            },
         )
 
         smach.StateMachine.add(
-                "PICK_UP_BAG",
-                PickUpBag(node),
-                transitions={
-                    "valid": "FOLLOW_HOST",
-                    "invalid": "LISTEN_TO_HOST_DROP_INSTRUCTION",
-                    "preempted": "LISTEN_TO_HOST_DROP_INSTRUCTION",
-                },
+            "ASK_SECOND_GUEST_FOR_BAG_TO_HOST",
+            AskSecondGuestForBagToHost(node),
+            transitions={
+                "valid": "PICK_UP_BAG",
+                "invalid": "ASK_SECOND_GUEST_FOR_BAG_TO_HOST",
+                "preempted": "ASK_SECOND_GUEST_FOR_BAG_TO_HOST",
+            },
         )
 
         smach.StateMachine.add(
-                "LISTEN_TO_HOST_DROP_BAG_INSTRUCTION",
-                ListenToHostDropBagInstruction(node),
-                transitions={
-                    "valid": "DROP_BAG",
-                    "invalid": "LISTEN_TO_HOST_DROP_BAG_INSTRUCTION",
-                    "preempted": "LISTEN_TO_HOST_DROP_BAG_INSTRUCTION",
-                },
+            "PICK_UP_BAG",
+            PickUpBag(node),
+            transitions={
+                "valid": "FOLLOW_HOST",
+                "invalid": "LISTEN_TO_HOST_DROP_INSTRUCTION",
+                "preempted": "LISTEN_TO_HOST_DROP_INSTRUCTION",
+            },
         )
 
         smach.StateMachine.add(
-                "DROP_BAG",
-                DropBag(node),
-                transitions={
-                    "valid": "succeeded",
-                    "invalid": "DROP_BAG",
-                    "preempted": "DROP_BAG",
-                },
+            "LISTEN_TO_HOST_DROP_BAG_INSTRUCTION",
+            ListenToHostDropBagInstruction(node),
+            transitions={
+                "valid": "DROP_BAG",
+                "invalid": "LISTEN_TO_HOST_DROP_BAG_INSTRUCTION",
+                "preempted": "LISTEN_TO_HOST_DROP_BAG_INSTRUCTION",
+            },
+        )
+
+        smach.StateMachine.add(
+            "DROP_BAG",
+            DropBag(node),
+            transitions={
+                "valid": "succeeded",
+                "invalid": "DROP_BAG",
+                "preempted": "DROP_BAG",
+            },
         )
