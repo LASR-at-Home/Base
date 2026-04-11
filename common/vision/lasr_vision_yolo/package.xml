@@ -11,14 +11,16 @@
     <exec_depend>ros2launch</exec_depend>
     <exec_depend>cv2_img</exec_depend>
     <exec_depend>cv2_pcl</exec_depend>
-    <!--  <exec_depend>markers</exec_depend> uncomment for 3D detection -->
+    <exec_depend>markers</exec_depend>
 
     <test_depend>ament_copyright</test_depend>
     <test_depend>ament_flake8</test_depend>
     <test_depend>ament_pep257</test_depend>
     <test_depend>python3-pytest</test_depend>
 
+    <build_depend>ament_virtualenv</build_depend>
     <export>
         <build_type>ament_python</build_type>
+        <pip_requirements>requirements.txt</pip_requirements>
     </export>
 </package>
