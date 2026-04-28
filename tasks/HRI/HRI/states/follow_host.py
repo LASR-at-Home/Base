@@ -41,7 +41,10 @@ class FollowHost(smach.StateMachine):
 
             smach.StateMachine.add(
                 "ASK_FOR_GUIDANCE",
-                Say(node, text="Where should I put it? Please guide me to the destination."),
+                Say(
+                    node,
+                    text="Where should I put it? Please guide me to the destination.",
+                ),
                 transitions={
                     "succeeded": "ANNOUNCE_READY",
                     "aborted": "invalid",
@@ -53,13 +56,13 @@ class FollowHost(smach.StateMachine):
                 "ANNOUNCE_READY",
                 Say(node, text="I am ready to follow you."),
                 transitions={
-                    "succeeded": "FOLLOW_PLACEHOLDER",
+                    "succeeded": "FOLLOW",
                     "aborted": "invalid",
                     "preempted": "preempted",
                 },
             )
             smach.StateMachine.add(
-                "FOLLOW_PLACEHOLDER",
+                "FOLLOW",
                 Wait(node, 0),
                 transitions={
                     "succeeded": "valid",
