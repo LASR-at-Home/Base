@@ -6,13 +6,29 @@ to the guest data userdata
 from rclpy.node import Node
 import smach
 from smach import UserData
+from smach_ros import ServiceState
 from typing import List, Dict, Any
 from receptionist.states import SpeechRecovery
+from common.language.lasr_llm_interfaces.srv import HRITaskQueryLlm
 
 # from tasks.receptionist.src.receptionist.states import SpeechRecovery
 
 
 class GetNameAndDrink(smach.StateMachine):
+    class ParseNameAndDrinkV2(ServiceState):
+        def __init__(self, node):
+            super(node=node, 
+                  service_name="/hri_task/query_llm", 
+                  service_spec=HRITaskQueryLlm, 
+                  request_cb=self.create_req,
+                  input_keys=["guest_transcription", "guest_data"],
+                  output_keys=["guest_data"],
+                  )
+            
+        def create_req(self, userdata, request):
+            request = HRITaskQueryLlm(string=userdata.guest_transcription, task='name')
+            return request
+    
     class ParseNameAndDrink(smach.State, Node):
         def __init__(self, guest_id: str, param_key: str = "/receptionist/priors"):
             """Parses the transcription of the guests' name and favourite drink.
