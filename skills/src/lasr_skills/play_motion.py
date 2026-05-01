@@ -1,4 +1,7 @@
 import smach_ros
+
+from rclpy.node import Node
+
 from play_motion2_msgs.action import PlayMotion2
 
 # https://github.com/pal-robotics/play_motion2
@@ -9,9 +12,12 @@ from typing import Union, List
 
 
 class PlayMotion(smach_ros.SimpleActionState):
-    def _needs_planning(self, motion_name: str) -> bool:
-        joints_param = self.get_parameter(f"/play_motion2/motions/{motion_name}/joints")
-        joints: List[str] = joints_param.get_parameter_value().string_array_value
+    @staticmethod
+    def _needs_planning(node: Node, motion_name: str) -> bool:
+        joint_param: str = f"motions.{motion_name}.joints"
+        if not node.has_parameter(joint_param):
+            node.declare_parameter(joint_param, [""])
+        joints: List[str] = node.get_parameter(joint_param).value
         needs_planning: bool = any(
             "arm" in joint or "gripper" in joint for joint in joints
         )
@@ -31,7 +37,7 @@ class PlayMotion(smach_ros.SimpleActionState):
                 PlayMotion2,
                 goal=PlayMotion2.Goal(
                     motion_name=motion_name,
-                    skip_planning=not self._needs_planning(motion_name),
+                    skip_planning=not self._needs_planning(node, motion_name),
                 ),
                 result_cb=lambda _, __, ___: "succeeded",
             )
@@ -42,7 +48,7 @@ class PlayMotion(smach_ros.SimpleActionState):
                 PlayMotion2,
                 goal_cb=lambda ud, _: PlayMotion2.Goal(
                     motion_name=ud.motion_name,
-                    skip_planning=not self._needs_planning(ud.motion_name),
+                    skip_planning=not self._needs_planning(node, ud.motion_name),
                 ),
                 input_keys=["motion_name"],
                 result_cb=lambda _, __, ___: "succeeded",
