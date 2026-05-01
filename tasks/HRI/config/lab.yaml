@@ -1,0 +1,85 @@
+hri:   # the `hri` Node's Parameters
+  ros__parameters:
+    start_pose:
+      position:
+        x: 2
+        y: 0.697
+        z: 0.0
+      orientation:
+        x: 0.0
+        y: 0.0
+        z: 0.6909244042647134
+        w: 0.7229270140141748
+
+    door_pose:
+      position:
+        x: 2
+        y: 0.697
+        z: 0.0
+      orientation:
+        x: 0.0
+        y: 0.0
+        z: 0.6909244042647134
+        w: 0.7229270140141748
+
+    door_polygon:
+      top_left:     [4.043513298034668, 8.6455717086792]
+      top_right:    [4.958864212036133, 8.726411819458008]
+      bottom_right: [5.371414661407471, 6.953999042510986]
+      bottom_left:  [4.094511985778809, 6.809327125549316]
+      # [
+      #   [4.043513298034668, 8.6455717086792],
+      #   [4.958864212036133, 8.726411819458008],
+      #   [5.371414661407471, 6.953999042510986],
+      #   [4.094511985778809, 6.809327125549316],
+      # ]
+
+    # Where to position self for seating guests
+    seat_pose:
+      position:
+        x: 0.7253542411729228
+        y: -0.41696111136241965
+        z: 0.0
+      orientation:
+        x: 0.0
+        y: 0.0
+        z: -0.7903108029987692
+        w: 0.6127061568675809
+
+    # Where the robot looks at the general sofa
+    sofa_point:
+      x: 0.9771156311035156
+      y: -2.261979103088379
+      z: 0.899420976638794
+
+    # From robot POV: [top left, top right,bottom right, bottom left ]
+    # General area to perform detections in 
+    seat_area:
+      top_left:     [2.02766489982605, -2.7318179607391357]
+      top_right:    [-0.8237523436546326, -2.8495190143585205]
+      bottom_right: [-0.7675997614860535, -1.3231755495071411]
+      bottom_left:  [1.9695378541946411, -1.4235490560531616]
+    
+    # Max number of seats
+    max_people_on_sofa: 2
+
+    # Seatable area
+    sofa_area:
+      top_left:       [1.9835623502731323, -2.6544759273529053]
+      top_right:      [0.2850840091705322, -2.7918126583099365]
+      bottom_right:   [0.4612640142440796, -1.6183574199676514]
+      bottom_left:    [1.9188085794448853, -1.6660157442092896]
+
+    # TODO: remap this
+    # Which side of the sofa is the guest seated.
+    left_sofa_area:
+      top_left:     [2.02766489982605, -2.7318179607391357]
+      top_right:    [-0.8237523436546326, -2.8495190143585205]
+      bottom_right: [-0.7675997614860535, -1.3231755495071411]
+      bottom_left:  [1.9695378541946411, -1.4235490560531616]
+
+    right_sofa_area:
+      top_left:     [2.02766489982605, -2.7318179607391357]
+      top_right:    [-0.8237523436546326, -2.8495190143585205]
+      bottom_right: [-0.7675997614860535, -1.3231755495071411]
+      bottom_left:  [1.9695378541946411, -1.4235490560531616]
