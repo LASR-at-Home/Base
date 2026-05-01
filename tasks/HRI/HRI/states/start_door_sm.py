@@ -5,7 +5,7 @@ import smach
 
 from geometry_msgs.msg import Point, Quaternion, Pose, PoseStamped
 
-from skills import detect_door_opening, go_to_location
+from lasr_skills import detect_door_opening, go_to_location
 
 
 class StartDoorSM(smach.StateMachine):  # Rename to start_task
