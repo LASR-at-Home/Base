@@ -12,19 +12,6 @@ from typing import Union, List
 
 
 class PlayMotion(smach_ros.SimpleActionState):
-    @staticmethod
-    def _needs_planning(node: Node, motion_name: str) -> bool:
-        joint_param: str = f"motions.{motion_name}.joints"
-        if not node.has_parameter(joint_param):
-            node.declare_parameter(joint_param, [""])
-        joints: List[str] = node.get_parameter(joint_param).value
-        needs_planning: bool = any(
-            "arm" in joint or "gripper" in joint for joint in joints
-        )
-
-        print(f"Motion {motion_name} needs planning: {needs_planning}")
-
-        return needs_planning
 
     def __init__(self, node, motion_name: Union[str, None] = None):
         # TODO: the play motion action server is always returning 'aborted', figure out what's going on
@@ -33,22 +20,22 @@ class PlayMotion(smach_ros.SimpleActionState):
         if motion_name is not None:
             super().__init__(
                 node,
-                "play_motion",
+                "play_motion2",
                 PlayMotion2,
                 goal=PlayMotion2.Goal(
                     motion_name=motion_name,
-                    skip_planning=not self._needs_planning(node, motion_name),
+                    skip_planning=True,    # Executor automatically decides - (Change to False)
                 ),
                 result_cb=lambda _, __, ___: "succeeded",
             )
         else:
             super().__init__(
                 node,
-                "play_motion",
+                "play_motion2",
                 PlayMotion2,
                 goal_cb=lambda ud, _: PlayMotion2.Goal(
                     motion_name=ud.motion_name,
-                    skip_planning=not self._needs_planning(node, ud.motion_name),
+                    skip_planning=True,    # Executor automatically decides
                 ),
                 input_keys=["motion_name"],
                 result_cb=lambda _, __, ___: "succeeded",
