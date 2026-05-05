@@ -185,6 +185,8 @@ class TranscribeSpeechAction(Node):
         goal = goal_handle.request
 
         self.get_logger().info("Request Received")
+        self.get_logger().info(f"Energy threshold: {self.recogniser.energy_threshold}")
+        self.get_logger().info(f"Pause threshold: {self.recogniser.pause_threshold}")
         if goal_handle.is_cancel_requested:
             return
 
@@ -199,20 +201,28 @@ class TranscribeSpeechAction(Node):
                 pause_threshold=goal.max_phrase_limit
             )
 
-        with self._configure_microphone() as src:
-            self._listening = True
-            wav_data = self.recogniser.listen(
-                src,
-                timeout=self._model_params.start_timeout,
-                phrase_time_limit=self._model_params.phrase_duration,
-            ).get_wav_data()
+        self.get_logger().info("Listening for speech...")
+        try:
+            with self._configure_microphone() as src:
+                self._listening = True
+                wav_data = self.recogniser.listen(
+                    src,
+                    timeout=self._model_params.start_timeout,
+                    phrase_time_limit=self._model_params.phrase_duration,
+                ).get_wav_data()
+        except Exception:
+            self.get_logger().info("No audio received, retrying...")
+            self._listening = False
+            goal_handle.abort()
+            return self._result
+        self.get_logger().info(f"Audio captured: {len(wav_data)} bytes")
         # Magic number 32768.0 is the maximum value of a 16-bit signed integer
         float_data = (
             np.frombuffer(wav_data, dtype=np.int16).astype(np.float32, order="C")
             / 32768.0
         )
 
-        if goal_handle.is_cancel_requested():
+        if goal_handle.is_cancel_requested:
             self._listening = False
             self.get_logger().info("Goal was cancelled during execution.")
             goal_handle.canceled()
@@ -229,8 +239,9 @@ class TranscribeSpeechAction(Node):
         self.get_logger().info(
             f"Time taken: {transcription_end_time - transcription_start_time:.2f}s"
         )
-        self._transcription_server.publish(phrase)
-        if goal_handle.is_cancel_requested():
+        self.get_logger().info(f"Transcription: {phrase}")
+        self._transcription_server.publish(String(data=phrase))
+        if goal_handle.is_cancel_requested:
             self._listening = False
             return
 
@@ -242,7 +253,7 @@ class TranscribeSpeechAction(Node):
 
         # Have this at the very end to not disrupt the action server
         self._listening = False
-
+        
         return self._result
 
 
@@ -300,7 +311,7 @@ def parse_args() -> dict:
 
     parser.add_argument(
         "--energy_threshold",
-        type=Optional[int],
+        type=int,
         default=None,
         help="Energy threshold for silence detection. Using this disables automatic adjustment",
     )
@@ -341,8 +352,8 @@ def configure_model_params(config: dict) -> speech_model_params:
         model_params.mic_device = config["mic_device"]
     if config["no_warmup"]:
         model_params.warmup = False
-    # if config["energy_threshold"]:
-    #     model_params.energy_threshold = config["energy_threshold"]
+    if config["energy_threshold"]:
+        model_params.energy_threshold = config["energy_threshold"]
     if config["pause_threshold"]:
         model_params.pause_threshold = config["pause_threshold"]
 

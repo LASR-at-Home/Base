@@ -22,7 +22,14 @@ class InstallCommand(setuptools.command.install.install):
 setup(
     name=package_name,
     version="0.0.0",
-    packages=find_packages(exclude=["test"]),
+    packages=(
+        find_packages(exclude=["test", "src", "src.*"])
+        + ["yolo_src", "yolo_src.lasr_vision_yolo"]
+    ),
+    package_dir={
+        "yolo_src": "src",
+        "yolo_src.lasr_vision_yolo": "src/lasr_vision_yolo",
+    },
     data_files=[
         ("share/ament_index/resource_index/packages", ["resource/" + package_name]),
         ("share/" + package_name, ["package.xml"]),
@@ -42,7 +49,7 @@ setup(
     entry_points={
         "console_scripts": [
             "yolo_service_node = lasr_vision_yolo.service:main",
-            "yolo_node = src.lasr_vision_yolo.yolo:main",
+            "yolo_node = yolo_src.lasr_vision_yolo.yolo:main",
             "relay = lasr_vision_yolo.relay_test:main",
         ],
     },
