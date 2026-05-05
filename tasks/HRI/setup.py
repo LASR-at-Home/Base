@@ -25,7 +25,7 @@ setup(
     data_files=[
         ("share/ament_index/resource_index/packages", ["resource/" + package_name]),
         (os.path.join("share", package_name, "config"), glob("config/*.yaml")),
-        (os.path.join("share", package_name, "launch"), glob("HRI/launch/*")),
+        (os.path.join("share", package_name, "launch"), glob("launch/*")),
         ("share/" + package_name, ["package.xml"]),
     ],
     install_requires=["setuptools"],

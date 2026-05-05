@@ -117,6 +117,9 @@ class ProcessDetections(RosState):
             userdata.seated_guest_locs = seated_guest_locs[:2]
         else:
             userdata.seated_guest_locs = seated_guest_locs
+        self.node.get_logger().warn(
+                f"people on the sofa: {len(userdata.sofa_detections)} detected, max allowed is {self._max_people_on_sofa}."
+            )
         if len(userdata.sofa_detections) > self._max_people_on_sofa:
             self.node.get_logger().warn(
                 f"Too many people on the sofa: {len(userdata.sofa_detections)} detected, max allowed is {self._max_people_on_sofa}."
@@ -237,6 +240,8 @@ class SeatGuest(smach.StateMachine):
         seating_area_minus_sofa = seating_area.difference(sofa_area)
 
         with self:
+            self.userdata.z_sweep_min = 0.4 #TODO: Remove when testing on robot
+            self.userdata.z_sweep_max = 1.2 #TODO: Remove when testing on robot
             self.userdata.seated_guest_locs = []
             smach.StateMachine.add(
                 "SAY_FINDING_SEAT",
@@ -379,21 +384,21 @@ class SeatGuest(smach.StateMachine):
 
 def main():
     seat_area = [
-        [2.02766489982605, -2.7318179607391357],
-        [-0.8237523436546326, -2.8495190143585205],
-        [-0.7675997614860535, -1.3231755495071411],
-        [1.9695378541946411, -1.4235490560531616],
+        [3.559335708618164, 1.3495814800262451],
+        [3.5363903045654297, -1.7019412517547607],
+        [0.666893720626831, -1.5459266901016235],
+        [0.9254391193389893, 1.7120180130004883],
     ]
     seat_polygon = ShapelyPolygon(seat_area)
 
-    sofa_point = [0.9771156311035156, -2.261979103088379, 0.899420976638794]
+    sofa_point = [2.3416929244995117, 0.07656313478946686, -0.0012598037719726562]
     sofa_point = Point(x=sofa_point[0], y=sofa_point[1], z=sofa_point[2])
 
     sofa_area = {
-      "top_left":       np.array([1.9835623502731323, -2.6544759273529053]),
-      "top_right":      np.array([0.2850840091705322, -2.7918126583099365]),
-      "bottom_right":   np.array([0.4612640142440796, -1.6183574199676514]),
-      "bottom_left":    np.array([1.9188085794448853, -1.6660157442092896])
+      "top_left":       np.array([3.0941781997680664, 1.1541430950164795]),
+      "top_right":      np.array([3.091914653778076, -0.9371256828308105]),
+      "bottom_right":   np.array([2.128192901611328, -0.9390065670013428]),
+      "bottom_left":    np.array([2.3177337646484375, 0.8923218250274658])
     }
     
     #TODO: Check if number of section on sofa depends on number of  
