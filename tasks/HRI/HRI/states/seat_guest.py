@@ -206,7 +206,7 @@ class ProcessDetections(RosState):
 
         return "succeeded"
 
-class SeatGuest(smach.StateMachine):
+class SeatGuest(smach.StateMachine): #TODO: update so that it the params are optional and directly loaded from the params (overriden by param if provided)
     '''
     args:
         node (Node): a node.
@@ -383,22 +383,43 @@ class SeatGuest(smach.StateMachine):
 
 
 def main():
-    seat_area = [
-        [3.559335708618164, 1.3495814800262451],
-        [3.5363903045654297, -1.7019412517547607],
-        [0.666893720626831, -1.5459266901016235],
-        [0.9254391193389893, 1.7120180130004883],
-    ]
-    seat_polygon = ShapelyPolygon(seat_area)
 
-    sofa_point = [2.3416929244995117, 0.07656313478946686, -0.0012598037719726562]
-    sofa_point = Point(x=sofa_point[0], y=sofa_point[1], z=sofa_point[2])
+    rclpy.init()
+    node = rclpy.create_node("hri")
+        
+    node.declare_parameter('sofa_point.x', 0.0)
+    node.declare_parameter('sofa_point.y', 0.0)
+    node.declare_parameter('sofa_point.z', 0.0)
+
+    node.declare_parameter('seat_area.top_left', [3.559335708618164, 1.3495814800262451])
+    node.declare_parameter('seat_area.top_right', [3.5363903045654297, -1.7019412517547607])
+    node.declare_parameter('seat_area.bottom_right', [0.666893720626831, -1.5459266901016235])
+    node.declare_parameter('seat_area.bottom_left', [0.9254391193389893, 1.7120180130004883])
+
+    node.declare_parameter('sofa_area.top_left', [0.0, 0.0])
+    node.declare_parameter('sofa_area.top_right', [0.0, 0.0])
+    node.declare_parameter('sofa_area.bottom_right', [0.0, 0.0])
+    node.declare_parameter('sofa_area.bottom_left', [0.0, 0.0])
+
+    node.declare_parameter('max_people_on_sofa', 2)
+
+    seat_polygon = ShapelyPolygon([
+        node.get_parameter('seat_area.top_left').value,
+        node.get_parameter('seat_area.top_right').value,
+        node.get_parameter('seat_area.bottom_right').value,
+        node.get_parameter('seat_area.bottom_left').value
+    ])
+
+    sofa_point = Point(
+        x=node.get_parameter('sofa_point.x').value, 
+        y=node.get_parameter('sofa_point.y').value, 
+        z=node.get_parameter('sofa_point.z').value)
 
     sofa_area = {
-      "top_left":       np.array([3.0941781997680664, 1.1541430950164795]),
-      "top_right":      np.array([3.091914653778076, -0.9371256828308105]),
-      "bottom_right":   np.array([2.128192901611328, -0.9390065670013428]),
-      "bottom_left":    np.array([2.3177337646484375, 0.8923218250274658])
+      "top_left":       np.array(node.get_parameter('sofa_area.top_left').value),
+      "top_right":      np.array(node.get_parameter('sofa_area.top_right').value),
+      "bottom_right":   np.array(node.get_parameter('sofa_area.bottom_right').value),
+      "bottom_left":    np.array(node.get_parameter('sofa_area.bottom_left').value)
     }
     
     #TODO: Check if number of section on sofa depends on number of  
@@ -425,9 +446,6 @@ def main():
         sofa_middle_bottom,
     ])
 
-    rclpy.init()
-    node = rclpy.create_node("hri")
-
     executor = MultiThreadedExecutor()
     executor.add_node(node)
 
@@ -444,7 +462,7 @@ def main():
         left_sofa_area = left_sofa_polygon,  
         right_sofa_area = right_sofa_polygon,
 
-        max_people_on_sofa = 2,
+        max_people_on_sofa = int(node.get_parameter('max_people_on_sofa').value),
         learn_host = True,
     )
 
