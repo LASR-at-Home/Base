@@ -13,7 +13,6 @@ from common.language.lasr_llm_interfaces.srv import HRITaskQueryLlm
 
 # from tasks.receptionist.src.receptionist.states import SpeechRecovery
 
-
 class GetNameAndDrink(smach.StateMachine):
     class ParseNameAndDrink(ServiceState):
         def __init__(self, node, task, guest_id):

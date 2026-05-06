@@ -5,9 +5,10 @@ from geometry_msgs.msg import Pose, Point, Quaternion
 import rclpy
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
-from smach import StateMachine
+import smach
 
-from .states import go_to_location, detect_3d, detect_faces, detect_3d_in_area, face_person, say, get_name_and_drink, start_eye_tracker, listen, speech_recovery
+from ros2_ws.src.Base.skills.src.lasr_skills import FacePerson, Say, StartEyeTracker, Listen, WaitForPersonInArea, AskAndListen
+from states import GetNameAndDrink, GetGuestAttributes, HRILearnFaces, GetPersonPoint
 
 """
 Robot is already at door, since:
@@ -17,42 +18,110 @@ So Robot is at door and it:
     Faces person -> Start Eye tracker -> Greet guest -> Listen -> recognise name and drink -> listen loop
 """
 
-class ApproachGuest(StateMachine):
-    def __init__(self, 
+class LookAndGreetGuest(smach.StateMachine):
+    def __init__(self,
                  node,
-                 last_resort):
-        super().__init__(outcomes=['succeeded', 'failed'], input_keys=['guest_data'], output_keys=['guest_data'])
+                 last_resort, 
+                 guest_id):
+        super().__init__(outcomes=['succeeded', 'failed'], input_keys=['guest_data'], output_keys=['guest_data', 'person_detections', ''])
         
         with self:
-            super().add(
-                'LOOK_AT_PERSON',
-                face_person(node=node),
-                transitions={'finished': 'START_EYE_TRACKING', 'failed': 'LOOK_AT_PERSON', 'truncated': 'failed'}
+            conc_face_attribute = smach.Concurrence(outcomes=["succeeded", "failed", "failed_attributes", "failed_face"],
+                                                    default_outcome="failed",
+                                                    outcome_map={
+                                                        "succeeded": {
+                                                            "GET_ATTRIBUTES": "succeeded",
+                                                            "LEARN_FACE": "succeeded",
+                                                        },
+                                                        "failed": {"GET_ATTRIBUTES": "failed", "LEARN_FACE": "failed"},
+                                                        "failed_attributes": {
+                                                            "GET_ATTRIBUTES": "failed",
+                                                            "LEARN_FACE": "succeeded",
+                                                        },
+                                                        "failed_face": {
+                                                            "GET_ATTRIBUTES": "succeeded",
+                                                            "LEARN_FACE": "failed",
+                                                        },
+                                                    },
+                                                    input_keys=["guest_data"],
+                                                    output_keys=["guest_data"])
+            
+            conc_name_drink_face = smach.Concurrence(outcomes=['succeeded', 'failed', 'failed_vision', 'failed_attributes', 'failed_face'],
+                                                     default_outcome='failed',
+                                                     outcome_map={
+                                                         'succeeded': {
+                                                             'GET_NAME_DRINK': 'succeeded',
+                                                             'GET_FACE_ATTRIBUTES': 'succeeded',
+                                                         },
+                                                         'failed': {
+                                                             'GET_NAME_DRINK': 'failed',
+                                                             'GET_FACE_ATTRIBUTES': 'failed',
+                                                         },
+                                                         'failed_vision': {
+                                                             'GET_NAME_DRINK': 'succeeded',
+                                                             'GET_FACE_ATTRIBUTES': 'failed',
+                                                         },
+                                                         'failed_attributes': {
+                                                             'GET_NAME_DRINK': 'succeeded',
+                                                             'GET_FACE_ATTRIBUTES': 'failed_attributes',
+                                                         },
+                                                         'failed_face': {
+                                                             'GET_NAME_DRINK': 'succeeded',
+                                                             'GET_FACE_ATTRIBUTES': 'failed_face',
+                                                         }
+                                                     },
+                                                     input_keys=['guest_data', 'guest_transcription'],
+                                                     output_keys=['guest_data'])
+            
+            with conc_face_attribute:
+                conc_face_attribute.add(
+                    'GET_ATTRIBUTES',
+                    GetGuestAttributes(node=node, guest_id=guest_id)
+                )
+                conc_face_attribute.add(
+                    'LEARN_FACE',
+                    HRILearnFaces(node=node, guest_id=guest_id)
+                )
+            
+            with conc_name_drink_face:
+                conc_name_drink_face.add(
+                    'GET_NAME_DRINK',
+                    GetNameAndDrink(node=node, guest_id=guest_id, last_resort=last_resort)
+                )
+                conc_name_drink_face.add(
+                    'GET_FACE_ATTRIBUTES',
+                    conc_face_attribute
+                )
+            
+            self.add(
+                'SAY_WAITING_FOR_GUEST',
+                Say(node=node, text='I am waiting for a guest.'),
+                transitions={'succeeded': 'WAIT_FOR_GUEST', 'aborted': 'WAIT_FOR_GUEST', 'preempted': 'WAIT_FOR_GUEST'}
             )
-            #TODO: Bring in Aldrich code for learning face
-            super().add(
-                'START_EYE_TRACKING',
-                start_eye_tracker(node=node), #TODO: Bring Alanoud eye tracker code
-                transitions={'succeeded': 'GREET_GUEST', 'aborted': 'START_EYE_TRACKING', 'preempted': 'failed'}
+            self.add(
+                'WAIT_FOR_GUEST',
+                WaitForPersonInArea(node=node, area_polygon_param='door_polygon'),
+                transitions={'succeeded': 'GRAB_FACE', 'failed': 'SAY_WAITING_FOR_GUEST'},
+                remapping={'detections_3d': 'person_detections'}
             )
-            super().add(
-                'GREET_GUEST',
-                say(node=node, text="Hello there"),
-                transitions={'succeeded': 'LISTEN', 'aborted': 'LOOK_AT_PERSON', 'preempted': 'failed'}
+            self.add(
+                'GET_PERSON_POINT',
+                GetPersonPoint(node=node),
+                transitions={'succeeded': 'START_EYE_TRACKER', 'failed': 'SAY_WAIITNG_FOR_GUEST'}
+            ) 
+            self.add(
+                'START_EYE_TRACKER',
+                StartEyeTracker(node=node),
+                transitions={'succeeded': 'GREET_AND_ASK_GUEST', 'aborted': 'SAY_WAITING_FOR_GUEST', 'preempted': 'failed'}
             )
-            super().add(
-                'LISTEN',
-                listen(node=node),
-                transitions={'succeeded': 'RECOGNISE_NAME_DRINK', 'aborted': 'APOLOGISE', 'preempted': 'failed'},
-                remapping={'sequence': 'guest_transcription'}
+            self.add(
+                'GREET_AND_ASK_GUEST',
+                AskAndListen(node=node, tts_phrase="Please say 'Hi Tiago' for me to begin listening. What is your name and interest?"),
+                transitions={'succeeded': 'GET_NAME_DRINK_FACE', 'failed': 'GREET_AND_ASK_GUEST'},
+                remapping={'transcribed_speech': 'guest_transcription'}
             )
-            super().add(
-                'APOLOGISE',
-                say(node=node, text="Sorry, I didn't quite catch that"),
-                transitions={'succeeded': 'LISTEN', 'aborted': 'failed', 'preempted': 'failed'}
-            )
-            super().add(
-                'RECOGNISE_NAME_DRINK',
-                get_name_and_drink(node=node, guest_id="guest1", last_resort=last_resort), #REFACTOR STATE
-                transitions={}
+            self.add(
+                'GET_NAME_DRINK_FACE',
+                conc_name_drink_face,
+                transitions={'succeeded': 'suceeded', 'failed': 'failed', 'failed_vision': 'failed', 'failed_face': 'failed', 'failed_attributes': 'failed'}
             )

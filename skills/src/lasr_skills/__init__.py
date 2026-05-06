@@ -13,6 +13,7 @@ from .detect_all_in_polygon import DetectAllInPolygon
 
 # from .wait_for_person import WaitForPerson
 from .say import Say
+from .ask_and_listen import AskAndListen
 
 # from .wait_for_person_in_area import WaitForPersonInArea
 # from .describe_people import DescribePeople
@@ -32,6 +33,8 @@ from .handover_object import HandoverObject
 # from .ask_and_listen import AskAndListen
 # from .clip_vqa import QueryImage
 from .detect_faces import DetectFaces
+from .eye_tracker import StartEyeTracker, StopEyeTracker
+from .wait_for_person_in_area import WaitForPersonInArea
 
 # from .recognise import Recognise
 from .detect_gesture import DetectGesture
