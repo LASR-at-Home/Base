@@ -21,7 +21,7 @@ cd /opt/robocup_ws/src
 # Clone SMACH, ros2-numpy and ament-virtualenv
 
 cd /opt/robocup_ws/src
-git clone https://github.com/locusrobotics/ament_virtualenv.git
+git clone --branch 0.5.0 --depth 1 https://github.com/locusrobotics/ament_virtualenv.git
 git clone https://github.com/Box-Robotics/ros2_numpy.git
 
 # Dependencies for ament-virtualenv (TODO verify)
