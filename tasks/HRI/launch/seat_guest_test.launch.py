@@ -10,9 +10,9 @@ def generate_launch_description():
     load_motions = IncludeLaunchDescription(
         AnyLaunchDescriptionSource(
             os.path.join(
-                get_package_share_directory("skills"), 
+                get_package_share_directory("skills"),
                 "launch",
-                "load_motions.launch.py"
+                "load_motions.launch.py",
             )
         )
     )
@@ -20,9 +20,9 @@ def generate_launch_description():
     yolo_service = IncludeLaunchDescription(
         AnyLaunchDescriptionSource(
             os.path.join(
-                get_package_share_directory("lasr_vision_yolo"), 
+                get_package_share_directory("lasr_vision_yolo"),
                 "launch",
-                "service_launch.xml"
+                "service_launch.xml",
             )
         )
     )
@@ -41,15 +41,14 @@ def generate_launch_description():
                 package="HRI",
                 executable="seat_guest",
                 name="hri",
-                parameters=[os.path.join(get_package_share_directory("HRI"), "config", "lab.yaml")],
+                parameters=[
+                    os.path.join(
+                        get_package_share_directory("HRI"), "config", "lab.yaml"
+                    )
+                ],
                 output="screen",
             )
-        ]
+        ],
     )
 
-    return LaunchDescription([
-        load_motions,
-        yolo_service,
-        reid_service,
-        seat_guest  
-    ])
+    return LaunchDescription([load_motions, yolo_service, reid_service, seat_guest])

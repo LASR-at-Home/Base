@@ -7,6 +7,7 @@ from glob import glob
 
 package_name = "HRI"
 
+
 class InstallCommand(setuptools.command.install.install):
     def run(self):
         super().run()
@@ -17,6 +18,7 @@ class InstallCommand(setuptools.command.install.install):
             python_version="3",
         )
         return
+
 
 setup(
     name=package_name,
@@ -42,7 +44,7 @@ setup(
     entry_points={
         "console_scripts": [
             "seat_guest = HRI.states.seat_guest:main",
-            "process_detection_t = HRI.states.process_detection_t:main" #TODO: DELETE AFTER TESTING
+            "process_detection_t = HRI.states.process_detection_t:main",  # TODO: DELETE AFTER TESTING
         ],
     },
 )

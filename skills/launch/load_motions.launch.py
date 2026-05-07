@@ -14,18 +14,55 @@ def generate_launch_description():
         cmd=["ros2", "param", "load", "/play_motion2_mgr", motions_yaml],
         output="screen",
     )
-    deactivate  = ExecuteProcess(cmd=["ros2", "lifecycle", "set", "/play_motion2_mgr", "deactivate"],  output="screen")
-    cleanup     = ExecuteProcess(cmd=["ros2", "lifecycle", "set", "/play_motion2_mgr", "cleanup"],     output="screen")
-    configure   = ExecuteProcess(cmd=["ros2", "lifecycle", "set", "/play_motion2_mgr", "configure"],   output="screen")
-    activate    = ExecuteProcess(cmd=["ros2", "lifecycle", "set", "/play_motion2_mgr", "activate"],    output="screen")
+    deactivate = ExecuteProcess(
+        cmd=["ros2", "lifecycle", "set", "/play_motion2_mgr", "deactivate"],
+        output="screen",
+    )
+    cleanup = ExecuteProcess(
+        cmd=["ros2", "lifecycle", "set", "/play_motion2_mgr", "cleanup"],
+        output="screen",
+    )
+    configure = ExecuteProcess(
+        cmd=["ros2", "lifecycle", "set", "/play_motion2_mgr", "configure"],
+        output="screen",
+    )
+    activate = ExecuteProcess(
+        cmd=["ros2", "lifecycle", "set", "/play_motion2_mgr", "activate"],
+        output="screen",
+    )
 
-    return LaunchDescription([
-        param_load,
-        RegisterEventHandler(OnProcessExit(target_action=param_load, on_exit=[deactivate,
-            RegisterEventHandler(OnProcessExit(target_action=deactivate, on_exit=[cleanup,
-                RegisterEventHandler(OnProcessExit(target_action=cleanup, on_exit=[configure,
-                    RegisterEventHandler(OnProcessExit(target_action=configure, on_exit=[activate]))
-                ]))
-            ]))
-        ])),
-    ])
+    return LaunchDescription(
+        [
+            param_load,
+            RegisterEventHandler(
+                OnProcessExit(
+                    target_action=param_load,
+                    on_exit=[
+                        deactivate,
+                        RegisterEventHandler(
+                            OnProcessExit(
+                                target_action=deactivate,
+                                on_exit=[
+                                    cleanup,
+                                    RegisterEventHandler(
+                                        OnProcessExit(
+                                            target_action=cleanup,
+                                            on_exit=[
+                                                configure,
+                                                RegisterEventHandler(
+                                                    OnProcessExit(
+                                                        target_action=configure,
+                                                        on_exit=[activate],
+                                                    )
+                                                ),
+                                            ],
+                                        )
+                                    ),
+                                ],
+                            )
+                        ),
+                    ],
+                )
+            ),
+        ]
+    )

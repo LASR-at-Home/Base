@@ -10,9 +10,9 @@ from geometry_msgs.msg import PointStamped
 from .hri_learn_faces import HRILearnFaces
 from lasr_skills import LookToPoint
 
-'''
+"""
     This is used by seat_guest.py
-'''
+"""
 
 
 class GetLookPoint(RosState):
@@ -47,7 +47,7 @@ class LearnHostFace(smach.StateMachine):
             input_keys=["guest_data", "seated_guest_locs"],
             output_keys=["guest_data"],
         )
-        
+
         self.__node = node
 
         with self:

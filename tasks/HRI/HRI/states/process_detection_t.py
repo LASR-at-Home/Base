@@ -1,5 +1,5 @@
 """
-#TODO: DELETE AFTER TESTING (AI GENERATED) 
+#TODO: DELETE AFTER TESTING (AI GENERATED)
 Standalone test for ProcessDetections.
 Runs the state in isolation with fake Detection3D data — no robot, no full SM.
 
@@ -28,13 +28,15 @@ from shapely.geometry import Polygon as ShapelyPolygon
 
 # Import directly from your package — adjust the path if running outside colcon
 from lasr_vision_interfaces.msg import Detection3D
-from .seat_guest import ProcessDetections   # adjust if module path differs
+from .seat_guest import ProcessDetections  # adjust if module path differs
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
-def make_detection(name: str, x: float, y: float, z: float,
-                   xywh: list = None) -> Detection3D:
+
+def make_detection(
+    name: str, x: float, y: float, z: float, xywh: list = None
+) -> Detection3D:
     """Build a minimal Detection3D message."""
     d = Detection3D()
     d.name = name
@@ -47,7 +49,9 @@ def run_test(node: Node, scenario: str, scenarios_data: dict, geometry_data: dic
     """Runs a single test case for a given scenario."""
 
     if scenario not in scenarios_data:
-        print(f"Unknown scenario '{scenario}'. Choose from: {list(scenarios_data.keys())}")
+        print(
+            f"Unknown scenario '{scenario}'. Choose from: {list(scenarios_data.keys())}"
+        )
         return
 
     data = scenarios_data[scenario]
@@ -63,7 +67,7 @@ def run_test(node: Node, scenario: str, scenarios_data: dict, geometry_data: dic
 
     # Populate userdata manually
     ud = smach.UserData()
-    ud.sofa_detections     = data["sofa_detections"]
+    ud.sofa_detections = data["sofa_detections"]
     ud.non_sofa_detections = data["non_sofa_detections"]
 
     print(f"\n{'='*60}")
@@ -81,48 +85,59 @@ def run_test(node: Node, scenario: str, scenarios_data: dict, geometry_data: dic
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 
+
 def main():
     # ── Geometry (matches main() in seat_guest.py) ────────────────────────────
     sofa_area = {
-        "top_left":     np.array([3.0941781997680664,  1.1541430950164795]),
-        "top_right":    np.array([3.091914653778076,  -0.9371256828308105]),
-        "bottom_right": np.array([2.128192901611328,  -0.9390065670013428]),
-        "bottom_left":  np.array([2.3177337646484375,  0.8923218250274658]),
+        "top_left": np.array([3.0941781997680664, 1.1541430950164795]),
+        "top_right": np.array([3.091914653778076, -0.9371256828308105]),
+        "bottom_right": np.array([2.128192901611328, -0.9390065670013428]),
+        "bottom_left": np.array([2.3177337646484375, 0.8923218250274658]),
     }
-    sofa_middle_top    = (sofa_area["top_right"]    + sofa_area["top_left"])    / 2
-    sofa_middle_bottom = (sofa_area["bottom_left"]  + sofa_area["bottom_right"]) / 2
+    sofa_middle_top = (sofa_area["top_right"] + sofa_area["top_left"]) / 2
+    sofa_middle_bottom = (sofa_area["bottom_left"] + sofa_area["bottom_right"]) / 2
 
     geometry_data = {
-        "left_sofa_polygon": ShapelyPolygon([
-            sofa_area["top_left"], sofa_middle_top,
-            sofa_middle_bottom,    sofa_area["bottom_left"],
-        ]),
-        "right_sofa_polygon": ShapelyPolygon([
-            sofa_middle_top,       sofa_area["top_right"],
-            sofa_area["bottom_right"], sofa_middle_bottom,
-        ]),
-        "sofa_point": Point(x=2.3416929244995117, y=0.07656313478946686, z=-0.0012598037719726562)
+        "left_sofa_polygon": ShapelyPolygon(
+            [
+                sofa_area["top_left"],
+                sofa_middle_top,
+                sofa_middle_bottom,
+                sofa_area["bottom_left"],
+            ]
+        ),
+        "right_sofa_polygon": ShapelyPolygon(
+            [
+                sofa_middle_top,
+                sofa_area["top_right"],
+                sofa_area["bottom_right"],
+                sofa_middle_bottom,
+            ]
+        ),
+        "sofa_point": Point(
+            x=2.3416929244995117, y=0.07656313478946686, z=-0.0012598037719726562
+        ),
     }
 
     # ── Fake detections per scenario ──────────────────────────────────────────
     scenarios_data = {
         "empty_sofa": {
-            "sofa_detections":     [],
+            "sofa_detections": [],
             "non_sofa_detections": [],
         },
         "one_on_sofa_left": {
             # Person sitting in left polygon (high x, high y)
-            "sofa_detections":     [make_detection("person", 2.8, 0.9, 0.5)],
+            "sofa_detections": [make_detection("person", 2.8, 0.9, 0.5)],
             "non_sofa_detections": [],
         },
         "one_on_sofa_right": {
             # Person sitting in right polygon (high x, negative y)
-            "sofa_detections":     [make_detection("person", 2.8, -0.7, 0.5)],
+            "sofa_detections": [make_detection("person", 2.8, -0.7, 0.5)],
             "non_sofa_detections": [],
         },
         "full_sofa": {
             "sofa_detections": [
-                make_detection("person", 2.8,  0.9, 0.5),
+                make_detection("person", 2.8, 0.9, 0.5),
                 make_detection("person", 2.8, -0.7, 0.5),
             ],
             # One empty chair in non-sofa area
@@ -132,19 +147,19 @@ def main():
         },
         "full_sofa_no_chair": {
             "sofa_detections": [
-                make_detection("person", 2.8,  0.9, 0.5),
+                make_detection("person", 2.8, 0.9, 0.5),
                 make_detection("person", 2.8, -0.7, 0.5),
             ],
             "non_sofa_detections": [],
         },
         "chair_occupied": {
             "sofa_detections": [
-                make_detection("person", 2.8,  0.9, 0.5),
+                make_detection("person", 2.8, 0.9, 0.5),
                 make_detection("person", 2.8, -0.7, 0.5),
             ],
             # Chair with a person heavily overlapping it (>50%)
             "non_sofa_detections": [
-                make_detection("chair",  1.5, 0.0, 0.0, xywh=[100, 100, 80, 80]),
+                make_detection("chair", 1.5, 0.0, 0.0, xywh=[100, 100, 80, 80]),
                 make_detection("person", 1.5, 0.0, 0.5, xywh=[110, 110, 60, 60]),
             ],
         },

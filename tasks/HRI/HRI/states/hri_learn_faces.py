@@ -19,14 +19,19 @@ class HRILearnFaces(smach.StateMachine):
     class CheckEyes(RosState):
         """Checks if eyes are present in a given RGB image"""
 
-        #_yolo_service: rospy.ServiceProxy
+        # _yolo_service: rospy.ServiceProxy
 
         def __init__(self, node: Node):
             RosState.__init__(
-                self, node=node, outcomes=["succeeded", "failed"], input_keys=["image_raw"]
+                self,
+                node=node,
+                outcomes=["succeeded", "failed"],
+                input_keys=["image_raw"],
             )
 
-            self._yolo_service = self.node.create_client(YoloPoseDetection, "/yolo/detect_pose")
+            self._yolo_service = self.node.create_client(
+                YoloPoseDetection, "/yolo/detect_pose"
+            )
             while not self._yolo_service.wait_for_service(timeout_sec=1.0):
                 self.node.get_logger().info(
                     "'YoloPoseDetection' service is not available... Waiting."
@@ -38,11 +43,11 @@ class HRILearnFaces(smach.StateMachine):
             req = YoloPoseDetection.Request()
             req.image_raw = image_raw
             req.model = "yolo11n-pose.pt"
-            req.confidence = 0.5    
+            req.confidence = 0.5
             # may need req.target_frame
 
             try:
-                future = self.yolo.call_async(req)
+                future = self._yolo_service.call_async(req)
                 rclpy.spin_until_future_complete(self.node, future)
 
                 response = future.result()
@@ -74,17 +79,23 @@ class HRILearnFaces(smach.StateMachine):
             self._guest_id = guest_id
             self._bridge = CvBridge()
 
-            self._learn_face = self.node.create_client(AddFace, "/lasr_vision_reid/add_face")
+            self._learn_face = self.node.create_client(
+                AddFace, "/lasr_vision_reid/add_face"
+            )
             while not self._learn_face.wait_for_service(timeout_sec=1.0):
-                self.node.get_logger().info("'AddFace' service is not available... Waiting.")
+                self.node.get_logger().info(
+                    "'AddFace' service is not available... Waiting."
+                )
 
         def execute(self, userdata):
             try:
                 request = AddFace.Request()
-                request.image_raw = self._bridge.cv2_to_imgmsg(userdata.cropped_images["person"], encoding="rgb8")
-                request.name = self._guest_id,
+                request.image_raw = self._bridge.cv2_to_imgmsg(
+                    userdata.cropped_images["person"], encoding="rgb8"
+                )
+                request.name = self._guest_id
 
-                future = self.yolo.call_async(request)
+                future = self._learn_face.call_async(request)
                 rclpy.spin_until_future_complete(self.node, future)
                 response = future.result()
 
@@ -99,7 +110,10 @@ class HRILearnFaces(smach.StateMachine):
     class CheckDoneState(RosState):
         def __init__(self, dataset_size: int, node: Node):
             RosState.__init__(
-                self, node=node, outcomes=["succeeded", "failed"], input_keys=["num_images"]
+                self,
+                node=node,
+                outcomes=["succeeded", "failed"],
+                input_keys=["num_images"],
             )
             self._dataset_size = dataset_size
 
@@ -137,7 +151,10 @@ class HRILearnFaces(smach.StateMachine):
             smach.StateMachine.add(
                 "CROP_IMAGE_3D",
                 CropImage3D(
-                    filters=["person"], crop_logic="nearest", crop_type="masked", node=self.__node
+                    filters=["person"],
+                    crop_logic="nearest",
+                    crop_type="masked",
+                    node=self.__node,
                 ),
                 transitions={"succeeded": "LEARN_FACE", "failed": "failed"},
                 remapping={"cropped_images": "cropped_images"},
