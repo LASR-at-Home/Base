@@ -1,71 +1,97 @@
-from smach_ros import SimpleActionState
+from typing import Union
 
+import rclpy
+from rclpy.action import ActionClient
 from rclpy.node import Node
-from rclpy.duration import Duration
+from action_msgs.msg import GoalStatus
+
+from smach_ros import RosState
 
 from play_motion2_msgs.action import PlayMotion2
 
 # https://github.com/pal-robotics/play_motion2
 
-from typing import Union, List
 
-# TODO: test initialisation of states; check that PlayMotion2 is found
+class PlayMotion(RosState):
 
-
-class PlayMotion(SimpleActionState):
-
-    def __init__(self, node, motion_name: Union[str, None] = None):
-        # TODO: the play motion action server is always returning 'aborted', figure out what's going on
-        #  This is an issue from ROS1, check if it's been resolved in ROS2
-        # TODO: (From BEN) I think the previous code is wrong?
-        # if motion_name is not None:
-        #     super().__init__(
-        #         node,
-        #         "play_motion2",
-        #         PlayMotion2,
-        #         goal=PlayMotion2.Goal(
-        #             motion_name=motion_name,
-        #             skip_planning=True,    # Executor automatically decides - (Change to False)
-        #         ),
-        #         result_cb=lambda _, __, ___: "succeeded",
-        #     )
-        # else:
-        #     super().__init__(
-        #         node,
-        #         "play_motion2",
-        #         PlayMotion2,
-        #         goal_cb=lambda ud, _: PlayMotion2.Goal(
-        #             motion_name=ud.motion_name,
-        #             skip_planning=True,    # Executor automatically decides
-        #         ),
-        #         input_keys=["motion_name"],
-        #         result_cb=lambda _, __, ___: "succeeded",
-        #     )
-
+    def __init__(self, node: Node, motion_name: Union[str, None] = None):
         super().__init__(
             node=node,
-            action_name="/play_motion2",
-            action_spec=PlayMotion2,
-            goal_cb=self.create_goal,
-            result_cb=self.handle_result,
-            input_keys=["motion_name"]  if motion_name is None else [],
-            # server_wait_timeout=Duration(seconds=5.0),  #TODO: Ensure it works
-            exec_timeout=Duration(seconds=5.0),
+            outcomes=["succeeded", "aborted", "preempted"],
+            input_keys=["motion_name"] if motion_name is None else [],
         )
-        
+
         self.motion_name = motion_name
-                         
-                         
-    def create_goal(self, ud, goal):
+
+        self.action_client = ActionClient(
+            node,
+            PlayMotion2,
+            "/play_motion2",
+        )
+
+    def execute(self, ud):
+        if self.preempt_requested():
+            self.service_preempt()
+            return "preempted"
+
+        self.node.get_logger().info("Waiting for /play_motion2 action server...")
+
+        if not self.action_client.wait_for_server(timeout_sec=5.0):
+            self.node.get_logger().error("PlayMotion2 action server not available")
+            return "aborted"
+
+        goal = self.create_goal(ud)
+
+        send_goal_future = self.action_client.send_goal_async(goal)
+        rclpy.spin_until_future_complete(self.node, send_goal_future)
+
+        goal_handle = send_goal_future.result()
+
+        if goal_handle is None:
+            self.node.get_logger().error("Failed to send PlayMotion goal")
+            return "aborted"
+
+        if not goal_handle.accepted:
+            self.node.get_logger().warn("PlayMotion goal rejected")
+            return "aborted"
+
+        self.node.get_logger().info("PlayMotion goal accepted")
+
+        result_future = goal_handle.get_result_async()
+        rclpy.spin_until_future_complete(self.node, result_future)
+
+        result_response = result_future.result()
+
+        if result_response is None:
+            self.node.get_logger().error("Failed to get PlayMotion result")
+            return "aborted"
+
+        return self.handle_result(
+            result_response.status,
+            result_response.result,
+        )
+
+    def create_goal(self, ud):
+        goal = PlayMotion2.Goal()
+
         if self.motion_name is None:
             goal.motion_name = ud.motion_name
         else:
             goal.motion_name = self.motion_name
 
-        goal.skip_planning=False
+        goal.skip_planning = False
 
-        self.node.get_logger().warn(f"PlayMotion Goal sent: {goal} ")
+        self.node.get_logger().warn(f"PlayMotion Goal sent: {goal}")
+
         return goal
-    
-    def handle_result(self, ud, status, result):
-        self.node.get_logger().warn(f"PlayMotion Result: {result} ")
+
+    def handle_result(self, status, result):
+        self.node.get_logger().warn(f"PlayMotion Result: {result}")
+
+        if status == GoalStatus.STATUS_SUCCEEDED:
+            return "succeeded"
+
+        if status == GoalStatus.STATUS_CANCELED:
+            return "preempted"
+
+        return "aborted"

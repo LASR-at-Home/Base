@@ -38,7 +38,7 @@ class GetLookPoint(RosState):
 
 
 class LearnHostFace(smach.StateMachine):
-    """State machine to learn the host's face."""
+    """State machine to learn the host's face. Assumes seated guest is the host"""
 
     def __init__(self, node: Node):
         smach.StateMachine.__init__(

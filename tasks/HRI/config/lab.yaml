@@ -55,8 +55,8 @@ hri:   # the `hri` Node's Parameters
     # From robot POV: [top left, top right,bottom right, bottom left ]
     # General area to perform detections in 
     seat_area:
-      top_left:     [2.02766489982605, -2.7318179607391357]
-      top_right:    [-0.8237523436546326, -2.8495190143585205]
+      top_left:     [3.559335708618164, 1.3495814800262451]
+      top_right:    [3.5363903045654297, -1.7019412517547607]
       bottom_right: [-0.7675997614860535, -1.3231755495071411]
       bottom_left:  [1.9695378541946411, -1.4235490560531616]
     
