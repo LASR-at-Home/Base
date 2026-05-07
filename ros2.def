@@ -22,6 +22,9 @@ cd /opt/robocup_ws/src
 
 cd /opt/robocup_ws/src
 git clone --branch 0.5.0 --depth 1 https://github.com/locusrobotics/ament_virtualenv.git
+python3 -m pip install --upgrade virtualenv
+
+cd /opt/robocup_ws/src
 git clone https://github.com/Box-Robotics/ros2_numpy.git
 
 # Dependencies for ament-virtualenv (TODO verify)
