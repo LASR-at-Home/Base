@@ -18,7 +18,7 @@ class HRI(smach.StateMachine):
                  node,
                  host_data,
                  face_detection_confidence = 0.2):
-        super().__init__(self, outcomes=["succeeded", "failed"])
+        super().__init__(outcomes=["succeeded", "failed"])
         
         def wait_cb(ud, msg):
             node.get_logger().info("Received start signal")
@@ -43,8 +43,6 @@ class HRI(smach.StateMachine):
                 },
             }
             drink_detections = {
-                drink: {"detected": False, "location": "None"}
-                for drink in self.possible_drinks
             }
 
             self.userdata.drink_detections = drink_detections
@@ -63,7 +61,7 @@ class HRI(smach.StateMachine):
                      transitions={'succeeded': 'START_CON', 'failed': 'START_TIMER'})
         
             self.add('START_CON',
-                    self.setup(),
+                    self.setup(node=node),
                     transitions={"succeeded": "SAY_WAITING_GUEST_1", "failed": "SAY_WAITING_GUEST_1"})
             
             self.add('GREET',
@@ -187,7 +185,7 @@ class HRI(smach.StateMachine):
         # )
 
 
-    def setup(node):
+    def setup(self, node):
         start_con_sm = smach.Concurrence(
                 outcomes=["succeeded", "failed"],
                 default_outcome="failed",
@@ -209,7 +207,7 @@ class HRI(smach.StateMachine):
             )
 
             smach.Concurrence.add(
-                "START_SM", StartDoorSM(node=node)
+                "DOOR_START", StartDoorSM(node=node)
             )
             
         return start_con_sm
@@ -219,18 +217,16 @@ def main(args=None):
     rclpy.init(args=args)
 
     node = rclpy.create_node(
-        "hri",
+        node_name="hri",
         allow_undeclared_parameters=True,
         automatically_declare_parameters_from_overrides=True,
     )
 
-    try:
-        sm =HRI(node=node, host_data={})
-        outcome = sm.execute()
-        node.get_logger().info(f"StartSM outcome: {outcome}")
-    finally:
-        node.destroy_node()
-        rclpy.shutdown()
+    sm = HRI(node=node, host_data={})
+    outcome = sm.execute()
+    node.get_logger().info(f"StartSM outcome: {outcome}")
+    node.destroy_node()
+    rclpy.shutdown()
 
 
 if __name__ == "__main__":

@@ -4,7 +4,7 @@ import smach
 import rclpy
 import os
 
-HAS_TTS_MSGS: bool = True
+HAS_TTS_MSGS: bool = False
 
 
 try:
@@ -48,7 +48,7 @@ if not HAS_TTS_MSGS:
 
             self.text = text
             self.format_str = format_str
-            self.node.get_logger().info(
+            node.get_logger().info(
                 "tts_msgs not available, the Say skill will not work."
             )
 
@@ -73,11 +73,11 @@ else:
             format_str: Union[str, None] = None,
         ):
             if text is not None:
-                super(Say, self).__init__(
-                    node, "/tts_engine/tts", TTS, goal=TTS.Goal(input=text)
+                super().__init__(
+                    node=node, action_name="/tts_engine/tts", action_spec=TTS, goal=TTS.Goal(input=text)
                 )
             elif format_str is not None:
-                super(Say, self).__init__(
+                super().__init__(
                     node,
                     "/tts_engine/tts",
                     TTS,
@@ -91,7 +91,7 @@ else:
                     input_keys=["placeholders"],
                 )
             else:
-                super(Say, self).__init__(
+                super().__init__(
                     node,
                     "/tts_engine/tts",
                     TTS,

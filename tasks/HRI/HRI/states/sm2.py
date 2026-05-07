@@ -7,8 +7,8 @@ from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 import smach
 
-from ros2_ws.src.Base.skills.src.lasr_skills import FacePerson, Say, StartEyeTracker, Listen, WaitForPersonInArea, AskAndListen
-from states import GetNameAndDrink, GetGuestAttributes, HRILearnFaces, GetPersonPoint
+from lasr_skills import Say, StartEyeTracker, WaitForPersonInArea, AskAndListen
+from HRI.states import GetNameAndDrink, GetGuestAttributes, HRILearnFaces, GetPersonPoint
 
 """
 Robot is already at door, since:

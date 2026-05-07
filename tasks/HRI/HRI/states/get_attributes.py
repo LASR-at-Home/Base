@@ -1,7 +1,7 @@
 import smach
 import smach_ros
 from smach import UserData
-from skills.src.lasr_skills import DescribePeople
+from lasr_skills import DescribePeople
 import json
 
 
@@ -58,7 +58,7 @@ class GetGuestAttributes(smach.StateMachine):
         with self:
             self.add(
                 "INITIALISE_DETECTION_FLAG",
-                self.InitialiseDetectionFlag(self._guest_id),
+                self.InitialiseDetectionFlag(node=node, guest_id=self._guest_id),
                 transitions={
                     "succeeded": "GET_GUEST_ATTRIBUTES",
                     "failed": "GET_GUEST_ATTRIBUTES",
@@ -66,7 +66,7 @@ class GetGuestAttributes(smach.StateMachine):
             )
             self.add(
                 "GET_GUEST_ATTRIBUTES",
-                DescribePeople(),
+                DescribePeople(node=node),
                 transitions={
                     "succeeded": "HANDLE_GUEST_ATTRIBUTES",
                     "failed": "failed",
@@ -74,6 +74,6 @@ class GetGuestAttributes(smach.StateMachine):
             )
             self.add(
                 "HANDLE_GUEST_ATTRIBUTES",
-                self.HandleGuestAttributes(self._guest_id),
+                self.HandleGuestAttributes(node=node, guest_id=self._guest_id),
                 transitions={"succeeded": "succeeded", "failed": "failed"},
             )

@@ -26,6 +26,13 @@ def generate_launch_description():
             )
         )
     )
+    
+    vision_clip = Node(
+        package="lasr_vision_clip",
+        executable="vqa",
+        name="lasr_vision_clip_service",
+        output="screen",
+    )
 
     reid_service = Node(
         package="lasr_vision_reid",
@@ -46,4 +53,4 @@ def generate_launch_description():
         output="screen",
     )
 
-    return LaunchDescription([load_motions, yolo_service, reid_service, state_machine])
+    return LaunchDescription([load_motions, yolo_service, reid_service, vision_clip, state_machine])

@@ -8,7 +8,7 @@ class StartTimer(RosState):
 
     def __init__(self, node) -> None:
         super().__init__(
-            self, node=node, outcomes=["succeeded", "failed"], output_keys=["start_time"]
+            node=node, outcomes=["succeeded", "failed"], output_keys=["start_time"]
         )
 
     def execute(self, userdata):
@@ -27,7 +27,6 @@ class StopTimer(RosState):
 
     def __init__(self, node) -> None:
         super().__init__(
-            self,
             node=node,
             outcomes=["succeeded", "failed"],
             input_keys=["start_time"],
