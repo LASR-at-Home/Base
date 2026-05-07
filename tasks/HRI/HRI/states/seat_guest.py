@@ -9,6 +9,7 @@ from rclpy.executors import MultiThreadedExecutor
 import numpy as np
 import tf2_ros as tf
 import threading
+from typing import Optional
 
 from shapely.geometry import Polygon as ShapelyPolygon
 from shapely.geometry import Point as ShapelyPoint
@@ -225,13 +226,13 @@ class SeatGuest(
 
     def __init__(
         self,
-        node: Node,
-        seating_area: ShapelyPolygon,
-        sofa_area: ShapelyPolygon,
-        sofa_point: Point,
-        left_sofa_area: ShapelyPolygon,
-        right_sofa_area: ShapelyPolygon,
-        max_people_on_sofa: int = 2,
+        node: Node, # Currently doesn't use any other paramters
+        seating_area: Optional[ShapelyPolygon],
+        sofa_area: Optional[ShapelyPolygon],
+        sofa_point: Optional[Point],
+        left_sofa_area: Optional[ShapelyPolygon],
+        right_sofa_area: Optional[ShapelyPolygon],
+        max_people_on_sofa: Optional[int],
         learn_host: bool = False,
     ):
         smach.StateMachine.__init__(
@@ -240,8 +241,10 @@ class SeatGuest(
             input_keys=["guest_data"],
             output_keys=["guest_seat_point", "seated_guest_locs"],
         )
+        self.__node = node
+        self.__load_ros_parameters()
         
-        seating_area_minus_sofa = seating_area.difference(sofa_area)
+        seating_area_minus_sofa = self.seating_area.difference(self.sofa_area)
 
         with self:
             self.userdata.z_sweep_min = 0.4  # TODO: Remove when testing on robot
@@ -261,7 +264,7 @@ class SeatGuest(
                 LookToPoint(
                     node=node,
                     pointstamped=PointStamped(
-                        header=Header(frame_id="map"), point=sofa_point
+                        header=Header(frame_id="map"), point=self.sofa_point
                     ),
                 ),
                 transitions={
@@ -274,7 +277,7 @@ class SeatGuest(
                 "DETECT_SOFA",
                 Detect3DInArea(
                     node=node,
-                    area_polygon=sofa_area,
+                    area_polygon=self.sofa_area,
                     filter=["person"],
                     confidence=0.7,
                 ),
@@ -313,10 +316,10 @@ class SeatGuest(
                 "PROCESS_DETECTIONS",
                 ProcessDetections(
                     node=node,
-                    max_people_on_sofa=max_people_on_sofa,
-                    sofa_point=sofa_point,
-                    left_sofa_area=left_sofa_area,
-                    right_sofa_area=right_sofa_area,
+                    max_people_on_sofa=self.max_people_on_sofa,
+                    sofa_point=self.sofa_point,
+                    left_sofa_area=self.left_sofa_area,
+                    right_sofa_area=self.right_sofa_area,
                 ),
                 transitions={"succeeded": detection_transition, "failed": "failed"},
                 remapping={
@@ -394,88 +397,86 @@ class SeatGuest(
                     "preempted": "succeeded",
                 },
             )
+    
+    def __load_ros_parameters(self):
+        # Declare parameters
+        self.__node.declare_parameter("sofa_point.x", 0.0)
+        self.__node.declare_parameter("sofa_point.y", 0.0)
+        self.__node.declare_parameter("sofa_point.z", 0.0)
+
+        self.__node.declare_parameter("seat_area.top_left", [0.0, 0.0])
+        self.__node.declare_parameter("seat_area.top_right", [0.0, 0.0])
+        self.__node.declare_parameter("seat_area.bottom_right", [0.0, 0.0])
+        self.__node.declare_parameter("seat_area.bottom_left", [0.0, 0.0])
+
+        self.__node.declare_parameter("sofa_area.top_left", [0.0, 0.0])
+        self.__node.declare_parameter("sofa_area.top_right", [0.0, 0.0])
+        self.__node.declare_parameter("sofa_area.bottom_right", [0.0, 0.0])
+        self.__node.declare_parameter("sofa_area.bottom_left", [0.0, 0.0])
+
+        self.__node.declare_parameter("max_people_on_sofa", 2)
+
+        # Load parameters from file
+        self.seating_area = ShapelyPolygon(
+            [
+                self.__node.get_parameter("seat_area.top_left").value,
+                self.__node.get_parameter("seat_area.top_right").value,
+                self.__node.get_parameter("seat_area.bottom_right").value,
+                self.__node.get_parameter("seat_area.bottom_left").value,
+            ]
+        )
+
+        self.sofa_point = Point(
+            x=self.__node.get_parameter("sofa_point.x").value,
+            y=self.__node.get_parameter("sofa_point.y").value,
+            z=self.__node.get_parameter("sofa_point.z").value,
+        )
+
+        sofa_area = {
+            "top_left": np.array(self.__node.get_parameter("sofa_area.top_left").value),
+            "top_right": np.array(self.__node.get_parameter("sofa_area.top_right").value),
+            "bottom_right": np.array(self.__node.get_parameter("sofa_area.bottom_right").value),
+            "bottom_left": np.array(self.__node.get_parameter("sofa_area.bottom_left").value),
+        }
+
+        # TODO: Check if number of section on sofa depends on number of
+        sofa_middle_top = (sofa_area["top_right"] + sofa_area["top_left"]) / 2
+        sofa_middle_bottom = (sofa_area["bottom_left"] + sofa_area["bottom_right"]) / 2
+        
+        self.sofa_area = ShapelyPolygon(
+            [
+                sofa_area["top_left"],
+                sofa_area["top_right"],
+                sofa_area["bottom_right"],
+                sofa_area["bottom_left"],
+            ]
+        )
+
+        self.left_sofa_polygon = ShapelyPolygon(
+            [
+                sofa_area["top_left"],
+                sofa_middle_top,
+                sofa_middle_bottom,
+                sofa_area["bottom_left"],
+            ]
+        )
+
+        self.right_sofa_polygon = ShapelyPolygon(
+            [
+                sofa_middle_top,
+                sofa_area["top_right"],
+                sofa_area["bottom_right"],
+                sofa_middle_bottom,
+            ]
+        )
+
+        self.max_people_on_sofa = int(self.__node.get_parameter("max_people_on_sofa").value)
 
 
 def main():
 
     rclpy.init()
     node = rclpy.create_node("hri")
-
-    node.declare_parameter("sofa_point.x", 0.0)
-    node.declare_parameter("sofa_point.y", 0.0)
-    node.declare_parameter("sofa_point.z", 0.0)
-
-    node.declare_parameter(
-        "seat_area.top_left", [3.559335708618164, 1.3495814800262451]
-    )
-    node.declare_parameter(
-        "seat_area.top_right", [3.5363903045654297, -1.7019412517547607]
-    )
-    node.declare_parameter(
-        "seat_area.bottom_right", [0.666893720626831, -1.5459266901016235]
-    )
-    node.declare_parameter(
-        "seat_area.bottom_left", [0.9254391193389893, 1.7120180130004883]
-    )
-
-    node.declare_parameter("sofa_area.top_left", [0.0, 0.0])
-    node.declare_parameter("sofa_area.top_right", [0.0, 0.0])
-    node.declare_parameter("sofa_area.bottom_right", [0.0, 0.0])
-    node.declare_parameter("sofa_area.bottom_left", [0.0, 0.0])
-
-    node.declare_parameter("max_people_on_sofa", 2)
-
-    seat_polygon = ShapelyPolygon(
-        [
-            node.get_parameter("seat_area.top_left").value,
-            node.get_parameter("seat_area.top_right").value,
-            node.get_parameter("seat_area.bottom_right").value,
-            node.get_parameter("seat_area.bottom_left").value,
-        ]
-    )
-
-    sofa_point = Point(
-        x=node.get_parameter("sofa_point.x").value,
-        y=node.get_parameter("sofa_point.y").value,
-        z=node.get_parameter("sofa_point.z").value,
-    )
-
-    sofa_area = {
-        "top_left": np.array(node.get_parameter("sofa_area.top_left").value),
-        "top_right": np.array(node.get_parameter("sofa_area.top_right").value),
-        "bottom_right": np.array(node.get_parameter("sofa_area.bottom_right").value),
-        "bottom_left": np.array(node.get_parameter("sofa_area.bottom_left").value),
-    }
-
-    # TODO: Check if number of section on sofa depends on number of
-    sofa_middle_top = (sofa_area["top_right"] + sofa_area["top_left"]) / 2
-    sofa_middle_bottom = (sofa_area["bottom_left"] + sofa_area["bottom_right"]) / 2
-    sofa_polygon = ShapelyPolygon(
-        [
-            sofa_area["top_left"],
-            sofa_area["top_right"],
-            sofa_area["bottom_right"],
-            sofa_area["bottom_left"],
-        ]
-    )
-
-    left_sofa_polygon = ShapelyPolygon(
-        [
-            sofa_area["top_left"],
-            sofa_middle_top,
-            sofa_middle_bottom,
-            sofa_area["bottom_left"],
-        ]
-    )
-
-    right_sofa_polygon = ShapelyPolygon(
-        [
-            sofa_middle_top,
-            sofa_area["top_right"],
-            sofa_area["bottom_right"],
-            sofa_middle_bottom,
-        ]
-    )
 
     executor = MultiThreadedExecutor()
     executor.add_node(node)
@@ -485,12 +486,6 @@ def main():
 
     sm = SeatGuest(
         node=node,
-        seating_area=seat_polygon,
-        sofa_point=sofa_point,
-        sofa_area=sofa_polygon,
-        left_sofa_area=left_sofa_polygon,
-        right_sofa_area=right_sofa_polygon,
-        max_people_on_sofa=int(node.get_parameter("max_people_on_sofa").value),
         learn_host=True,
     )
 
