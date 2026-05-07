@@ -3,7 +3,7 @@ import rclpy
 from rclpy.action import ActionClient
 
 from control_msgs.action import PointHead
-from geometry_msgs.msg import Point, PointStamped
+from geometry_msgs.msg import Point, PointStamped, Vector3
 
 from typing import Union
 
@@ -46,7 +46,7 @@ class LookToPoint(RosState):
         # Define the goal
         goal = PointHead.Goal(
             pointing_frame="head_2_link",
-            pointing_axis=Point(x=1.0, y=0.0, z=0.0),
+            pointing_axis=Vector3(x=1.0, y=0.0, z=0.0),
             max_velocity=1.0,
             target=(
                 self._pointstamped
