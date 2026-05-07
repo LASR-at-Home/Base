@@ -5,14 +5,12 @@ import smach
 import smach_ros
 from geometry_msgs.msg import Point, PointStamped, Pose
 
-from skills.src.lasr_skills import Say, GoToLocation
+from lasr_skills import Say, GoToLocation
 
 from HRI.states import *
 
 from shapely.geometry import Polygon
 from std_msgs.msg import Empty
-
-from Base.tasks.HRI.HRI.states.check_sofa import CheckSofa
 
 
 class HRI(smach.StateMachine):
@@ -215,3 +213,25 @@ class HRI(smach.StateMachine):
             )
             
         return start_con_sm
+    
+    
+def main(args=None):
+    rclpy.init(args=args)
+
+    node = rclpy.create_node(
+        "hri",
+        allow_undeclared_parameters=True,
+        automatically_declare_parameters_from_overrides=True,
+    )
+
+    try:
+        sm =HRI(node=node, host_data={})
+        outcome = sm.execute()
+        node.get_logger().info(f"StartSM outcome: {outcome}")
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
+
+
+if __name__ == "__main__":
+    main()

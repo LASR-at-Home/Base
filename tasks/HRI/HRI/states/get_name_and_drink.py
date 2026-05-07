@@ -8,7 +8,7 @@ import smach
 from smach import UserData
 from smach_ros import ServiceState, RosState
 from typing import List, Dict, Any
-from receptionist.states import SpeechRecovery
+from states import SpeechRecovery
 from common.language.lasr_llm_interfaces.srv import HRITaskQueryLlm
 
 # from tasks.receptionist.src.receptionist.states import SpeechRecovery

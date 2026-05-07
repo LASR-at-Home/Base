@@ -46,7 +46,7 @@ setup(
     entry_points={
         "console_scripts": [
             "seat_guest = HRI.states.seat_guest:main",
-            "process_detection_t = HRI.states.process_detection_t:main",  # TODO: DELETE AFTER TESTING
+            "sm = HRI.state_machine:main"
         ],
     },
 )

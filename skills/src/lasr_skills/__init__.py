@@ -13,7 +13,7 @@ from .detect_all_in_polygon import DetectAllInPolygon
 
 # from .wait_for_person import WaitForPerson
 from .say import Say
-from .ask_and_listen import AskAndListen
+
 
 # from .wait_for_person_in_area import WaitForPersonInArea
 from .describe_people import DescribePeople
@@ -43,6 +43,8 @@ from .detect_gesture import DetectGesture
 # from .wait import Wait
 # from .guide import Guide
 from .detect_clothing import DetectClothing
+
+from .ask_and_listen import AskAndListen
 
 # from .detect_pose import DetectPose
 # from .find_person import FindPerson
