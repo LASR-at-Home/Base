@@ -240,8 +240,7 @@ class SeatGuest(
             input_keys=["guest_data"],
             output_keys=["guest_seat_point", "seated_guest_locs"],
         )
-
-        self.__node = node
+        
         seating_area_minus_sofa = seating_area.difference(sofa_area)
 
         with self:
@@ -250,7 +249,7 @@ class SeatGuest(
             self.userdata.seated_guest_locs = []
             smach.StateMachine.add(
                 "SAY_FINDING_SEAT",
-                Say(node=self.__node, text="I will now find a seat for you."),
+                Say(node=node, text="I will now find a seat for you."),
                 transitions={
                     "succeeded": "LOOK_TO_SOFA",
                     "aborted": "LOOK_TO_SOFA",
@@ -260,7 +259,7 @@ class SeatGuest(
             smach.StateMachine.add(
                 "LOOK_TO_SOFA",
                 LookToPoint(
-                    node=self.__node,
+                    node=node,
                     pointstamped=PointStamped(
                         header=Header(frame_id="map"), point=sofa_point
                     ),
@@ -274,7 +273,7 @@ class SeatGuest(
             smach.StateMachine.add(
                 "DETECT_SOFA",
                 Detect3DInArea(
-                    node=self.__node,
+                    node=node,
                     area_polygon=sofa_area,
                     filter=["person"],
                     confidence=0.7,
@@ -284,7 +283,7 @@ class SeatGuest(
             )
             smach.StateMachine.add(
                 "RESET_HEAD_1",
-                PlayMotion(node=self.__node, motion_name="look_centre"),
+                PlayMotion(node=node, motion_name="look_centre"),
                 transitions={
                     "succeeded": "DETECT_NON_SOFA",
                     "aborted": "failed",
@@ -295,7 +294,7 @@ class SeatGuest(
             smach.StateMachine.add(
                 "DETECT_NON_SOFA",
                 DetectAllInPolygon(
-                    node=self.__node,
+                    node=node,
                     polygon=seating_area_minus_sofa,  # TODO: Verify Potential type mismatch (BaseGeometry vs accepted ShapelyPolygon)
                     object_filter=["person", "chair"],
                     min_coverage=1.0,
@@ -313,7 +312,7 @@ class SeatGuest(
             smach.StateMachine.add(
                 "PROCESS_DETECTIONS",
                 ProcessDetections(
-                    node=self.__node,
+                    node=node,
                     max_people_on_sofa=max_people_on_sofa,
                     sofa_point=sofa_point,
                     left_sofa_area=left_sofa_area,
@@ -347,12 +346,12 @@ class SeatGuest(
                     smach.Concurrence.add(
                         "SAY_LEARN_HOST_FACE",
                         Say(
-                            node=self.__node,
+                            node=node,
                             text="I'm quickly remembering the host's face.",
                         ),
                     )
                     smach.Concurrence.add(
-                        "LEARN_HOST_FACE", LearnHostFace(node=self.__node)
+                        "LEARN_HOST_FACE", LearnHostFace(node=node)
                     )
                 smach.StateMachine.add(
                     "SAY_AND_LEARN_HOST_FACE",
@@ -362,7 +361,7 @@ class SeatGuest(
 
             smach.StateMachine.add(
                 "LOOK_TO_SEAT",
-                LookToPoint(node=self.__node),
+                LookToPoint(node=node),
                 transitions={
                     "succeeded": "SAY_SEAT_GUEST",
                     "aborted": "SAY_SEAT_GUEST",
@@ -372,7 +371,7 @@ class SeatGuest(
             )
             smach.StateMachine.add(
                 "SAY_SEAT_GUEST",
-                Say(node=self.__node),  # TODO: verify no text needed
+                Say(node=node),  # TODO: verify no text needed
                 transitions={
                     "succeeded": "WAIT_FOR_GUEST_TO_SEAT",
                     "aborted": "WAIT_FOR_GUEST_TO_SEAT",
@@ -382,13 +381,13 @@ class SeatGuest(
             )
             smach.StateMachine.add(
                 "WAIT_FOR_GUEST_TO_SEAT",
-                Wait(node=self.__node, wait_time=5.0),
+                Wait(node=node, wait_time=5.0),
                 transitions={"succeeded": "RESET_HEAD_2", "failed": "RESET_HEAD_2"},
             )
 
             smach.StateMachine.add(
                 "RESET_HEAD_2",
-                PlayMotion(node=self.__node, motion_name="look_centre"),
+                PlayMotion(node=node, motion_name="look_centre"),
                 transitions={
                     "succeeded": "succeeded",
                     "aborted": "succeeded",

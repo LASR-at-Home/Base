@@ -41,6 +41,7 @@ setup(
             "pytest",
         ],
     },
+    cmdclass={"install": InstallCommand},
     entry_points={
         "console_scripts": [
             "seat_guest = HRI.states.seat_guest:main",
