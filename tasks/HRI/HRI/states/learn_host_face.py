@@ -62,6 +62,7 @@ class LearnHostFace(smach.StateMachine):
                 transitions={
                     "succeeded": "LEARN_HOST_FACE",
                     "aborted": "failed",
+                    "preempted": "failed",
                     "timed_out": "failed",
                 },
                 remapping={"pointstamped": "pointstamped"},

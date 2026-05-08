@@ -23,7 +23,6 @@ from cv2_img import msg_to_cv2_img, cv2_img_to_msg
 from geometry_msgs.msg import Point, PointStamped
 from lasr_vision_interfaces.msg import Detection3D
 
-# from lasr_skills import LookToPoint, Detect3DInArea
 from .look_to_point import LookToPoint
 from .detect_3d_in_area import Detect3DInArea
 
@@ -598,6 +597,7 @@ class DetectAllInPolygon(smach.StateMachine):
                     transitions={
                         "succeeded": "SLEEP",
                         "aborted": "failed",
+                        "preempted": "failed",
                         "timed_out": "failed",
                     },
                 )

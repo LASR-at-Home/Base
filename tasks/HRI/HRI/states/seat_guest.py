@@ -270,6 +270,7 @@ class SeatGuest(
                 transitions={
                     "succeeded": "DETECT_SOFA",
                     "aborted": "failed",
+                    "preempted": "failed",
                     "timed_out": "failed",
                 },
             )
@@ -368,6 +369,7 @@ class SeatGuest(
                 transitions={
                     "succeeded": "SAY_SEAT_GUEST",
                     "aborted": "SAY_SEAT_GUEST",
+                    "preempted": "SAY_SEAT_GUEST",
                     "timed_out": "SAY_SEAT_GUEST",
                 },
                 remapping={"pointstamped": "guest_seat_point"},
