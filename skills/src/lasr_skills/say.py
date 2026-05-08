@@ -4,8 +4,7 @@ import smach
 import rclpy
 import os
 
-HAS_TTS_MSGS: bool = False
-
+HAS_TTS_MSGS: bool = True
 
 try:
     from tts_msgs.action import TTS
@@ -48,7 +47,7 @@ if not HAS_TTS_MSGS:
 
             self.text = text
             self.format_str = format_str
-            node.get_logger().info(
+            self.node.get_logger().info(
                 "tts_msgs not available, the Say skill will not work."
             )
 

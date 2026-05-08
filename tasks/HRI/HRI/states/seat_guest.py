@@ -227,12 +227,12 @@ class SeatGuest(
     def __init__(
         self,
         node: Node, # Currently doesn't use any other paramters
-        seating_area: Optional[ShapelyPolygon],
-        sofa_area: Optional[ShapelyPolygon],
-        sofa_point: Optional[Point],
-        left_sofa_area: Optional[ShapelyPolygon],
-        right_sofa_area: Optional[ShapelyPolygon],
-        max_people_on_sofa: Optional[int],
+        seating_area: Optional[ShapelyPolygon] = None,
+        sofa_area: Optional[ShapelyPolygon] = None,
+        sofa_point: Optional[Point] = None,
+        left_sofa_area: Optional[ShapelyPolygon] = None,
+        right_sofa_area: Optional[ShapelyPolygon] = None,
+        max_people_on_sofa: Optional[int] = None,
         learn_host: bool = False,
     ):
         smach.StateMachine.__init__(
@@ -452,7 +452,7 @@ class SeatGuest(
             ]
         )
 
-        self.left_sofa_polygon = ShapelyPolygon(
+        self.left_sofa_area = ShapelyPolygon(
             [
                 sofa_area["top_left"],
                 sofa_middle_top,
@@ -461,7 +461,7 @@ class SeatGuest(
             ]
         )
 
-        self.right_sofa_polygon = ShapelyPolygon(
+        self.right_sofa_area = ShapelyPolygon(
             [
                 sofa_middle_top,
                 sofa_area["top_right"],
