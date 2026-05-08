@@ -40,11 +40,18 @@ def generate_launch_description():
         name="lasr_vision_reid",
         output="screen",
     )
+    
+    eye_tracker = Node(
+        package="lasr_vision_eye_tracker",
+        executable="eye_tracker_action_server",
+        name="eye_tracker_action_server",
+        output='screen',
+    )
 
     state_machine = Node(
         package='HRI',
         executable='sm',
-        name='State_Machine',
+        name='hri',
         parameters=[
             os.path.join(
                 get_package_share_directory("HRI"), "config", "lab.yaml"
@@ -53,4 +60,4 @@ def generate_launch_description():
         output="screen",
     )
 
-    return LaunchDescription([load_motions, yolo_service, reid_service, vision_clip, state_machine])
+    return LaunchDescription([load_motions, yolo_service, reid_service, vision_clip, eye_tracker, state_machine])

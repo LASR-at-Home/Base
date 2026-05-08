@@ -101,13 +101,13 @@ class LookAndGreetGuest(smach.StateMachine):
             self.add(
                 'WAIT_FOR_GUEST',
                 WaitForPersonInArea(node=node, area_polygon_param='door_polygon'),
-                transitions={'succeeded': 'GRAB_FACE', 'failed': 'SAY_WAITING_FOR_GUEST'},
+                transitions={'succeeded': 'GET_PERSON_POINT', 'failed': 'SAY_WAITING_FOR_GUEST'},
                 remapping={'detections_3d': 'person_detections'}
             )
             self.add(
                 'GET_PERSON_POINT',
                 GetPersonPoint(node=node),
-                transitions={'succeeded': 'START_EYE_TRACKER', 'failed': 'SAY_WAIITNG_FOR_GUEST'}
+                transitions={'succeeded': 'START_EYE_TRACKER', 'failed': 'SAY_WAITING_FOR_GUEST'}
             ) 
             self.add(
                 'START_EYE_TRACKER',
@@ -116,12 +116,12 @@ class LookAndGreetGuest(smach.StateMachine):
             )
             self.add(
                 'GREET_AND_ASK_GUEST',
-                AskAndListen(node=node, tts_phrase="Please say 'Hi Tiago' for me to begin listening. What is your name and interest?"),
+                AskAndListen(node=node, tts_phrase="Please say 'Hi Tiago' for me to begin listening. What is your name and drink?"),
                 transitions={'succeeded': 'GET_NAME_DRINK_FACE', 'failed': 'GREET_AND_ASK_GUEST'},
                 remapping={'transcribed_speech': 'guest_transcription'}
             )
             self.add(
                 'GET_NAME_DRINK_FACE',
                 conc_name_drink_face,
-                transitions={'succeeded': 'suceeded', 'failed': 'failed', 'failed_vision': 'failed', 'failed_face': 'failed', 'failed_attributes': 'failed'}
+                transitions={'succeeded': 'succeeded', 'failed': 'failed', 'failed_vision': 'failed', 'failed_face': 'failed', 'failed_attributes': 'failed'}
             )

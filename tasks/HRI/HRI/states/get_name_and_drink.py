@@ -36,7 +36,6 @@ class GetNameAndDrink(smach.StateMachine):
     class PostRecoveryDecision(RosState):
         def __init__(self, node, guest_id: str):
             super().__init__(
-                self,
                 node=node,
                 outcomes=["succeeded", "failed", "failed_name", "failed_drink"],
                 input_keys=["guest_transcription", "guest_data"],

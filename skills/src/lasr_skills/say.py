@@ -6,6 +6,7 @@ import os
 
 HAS_TTS_MSGS: bool = True
 
+
 try:
     from tts_msgs.action import TTS
 except ImportError:

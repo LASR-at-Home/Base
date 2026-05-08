@@ -21,7 +21,6 @@ class HRI(smach.StateMachine):
         super().__init__(outcomes=["succeeded", "failed"])
         
         def wait_cb(ud, msg):
-            node.get_logger().info("Received start signal")
             return False
         
         with self:
@@ -30,14 +29,12 @@ class HRI(smach.StateMachine):
                 "guest1": {
                     "name": "",
                     "drink": "",
-                    "interest": "",
                     "detection": False,
                     "seating_detection": False,
                 },
                 "guest2": {
                     "name": "",
                     "drink": "",
-                    "interest": "",
                     "detection": False,
                     "seating_detection": False,
                 },
@@ -49,11 +46,10 @@ class HRI(smach.StateMachine):
             self.userdata.confidence = face_detection_confidence
             self.userdata.dataset = "receptionist"
             self.userdata.drink_position = PointStamped()
-            
-            
+        
             
             self.add('WAIT_START',
-                     smach_ros.MonitorState(node=node, topic='/receptionist/start', msg_type=Empty, cond_cb=wait_cb),
+                     smach_ros.MonitorState(node=node, topic='/receptionist/start', msg_type=Empty, cond_cb=wait_cb, max_checks=10),
                      transitions={'invalid': 'START_TIMER', 'valid': 'WAIT_START', 'preempted': 'WAIT_START'})
             
             self.add('START_TIMER',
@@ -62,7 +58,7 @@ class HRI(smach.StateMachine):
         
             self.add('START_CON',
                     self.setup(node=node),
-                    transitions={"succeeded": "SAY_WAITING_GUEST_1", "failed": "SAY_WAITING_GUEST_1"})
+                    transitions={"succeeded": "GREET", "failed": "GREET"})
             
             self.add('GREET',
                      LookAndGreetGuest(node=node, last_resort=False, guest_id='guest1'),

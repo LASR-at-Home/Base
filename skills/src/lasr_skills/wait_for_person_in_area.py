@@ -1,5 +1,6 @@
 import smach_ros
 import smach
+import rclpy
 
 from lasr_skills import Detect3DInArea
 
@@ -8,7 +9,7 @@ from shapely.geometry.polygon import Polygon
 class CheckForPerson(smach_ros.RosState):
     def __init__(self, node):
         super().__init__(
-            self, node=node, outcomes=["done", "not_done"], input_keys=["detections_3d"]
+            node=node, outcomes=["done", "not_done"], input_keys=["detections_3d"]
         )
 
     def execute(self, userdata):
@@ -19,16 +20,15 @@ class CheckForPerson(smach_ros.RosState):
 
 class WaitForPersonInArea(smach.StateMachine):
     def __init__(self, node, area_polygon_param: Polygon):
-        smach.StateMachine.__init__(
-            self,
+        super().__init__(
             outcomes=["succeeded", "failed"],
             output_keys=["detections_3d"],
         )
 
-        top_left = node.get_parameter('door_polygon').get_parameter_value('top_left')
-        top_right = node.get_parameter('door_polygon').get_parameter_value('top_right')
-        bottom_left = node.get_parameter('door_polygon').get_parameter_value('bottom_left')
-        bottom_right = node.get_parameter('door_polygon').get_parameter_value('bottom_right')
+        top_left = rclpy.parameter.parameter_value_to_python(node.get_parameter('door_polygon.top_left').get_parameter_value())
+        top_right = rclpy.parameter.parameter_value_to_python(node.get_parameter('door_polygon.top_right').get_parameter_value())
+        bottom_left = rclpy.parameter.parameter_value_to_python(node.get_parameter('door_polygon.bottom_left').get_parameter_value())
+        bottom_right = rclpy.parameter.parameter_value_to_python(node.get_parameter('door_polygon.bottom_right').get_parameter_value())
         
         door_polygon = Polygon([top_left, top_right, bottom_left, bottom_right])
 
@@ -40,6 +40,6 @@ class WaitForPersonInArea(smach.StateMachine):
             )
             self.add(
                 "CHECK_FOR_PERSON",
-                CheckForPerson(),
+                CheckForPerson(node=node),
                 transitions={"done": "succeeded", "not_done": "DETECT_PEOPLE_3D"},
             )
