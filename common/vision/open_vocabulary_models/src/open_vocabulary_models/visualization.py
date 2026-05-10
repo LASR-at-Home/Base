@@ -39,7 +39,9 @@ class DetectionVisualizer(Node):
         self.create_subscription(Image, '/head_front_camera/rgb/image_raw', self._rgb_callback, qos)
         self.create_subscription(Image, '/head_front_camera/depth/image_raw', self._depth_callback, qos)
         self.create_subscription(CameraInfo, '/head_front_camera/rgb/camera_info', self._camera_info_callback, qos)
-        self.create_subscription(String, '/trigger_detection', self._trigger_callback, 10)
+        detect_qos = QoSProfile(depth=1, reliability=ReliabilityPolicy.RELIABLE, history=HistoryPolicy.KEEP_LAST)
+        self.create_subscription(String, '/detect', self._trigger_callback, detect_qos)
+        self.get_logger().info('Detection node ready. Publish to /detect to trigger detection.')
 
     def _rgb_callback(self, msg):
         first = self.cached_rgb is None
@@ -86,16 +88,16 @@ class DetectionVisualizer(Node):
                 self.all_ready = True
 
     def _trigger_callback(self, msg: String):
+        if self._pending:
+            return
         queries = [q.strip() for q in msg.data.split(',')] if msg.data.strip() else \
                   ['can', 'bottle', 'table', 'person', 'wall', 'shelf', 'object', 'chair']
+        self.get_logger().info(f'Detection triggered for: {queries}')
         self._detect(queries)
 
     def _detect(self, queries):
         if not self.all_ready:
             self.get_logger().warn('Data not ready yet')
-            return
-        if self._pending:
-            self.get_logger().warn('Detection already in progress')
             return
         self._pending = True
         try:
@@ -111,8 +113,11 @@ class DetectionVisualizer(Node):
         req.box_threshold = 0.3
         req.text_threshold = 0.1
         future = self.cli.call_async(req)
-        future.add_done_callback(lambda f: self._on_detection(f, depth_image))
-        future.add_done_callback(lambda _: setattr(self, '_pending', False))
+        future.add_done_callback(lambda f: self._on_detection_done(f, depth_image))
+
+    def _on_detection_done(self, future, depth_image):
+        self._on_detection(future, depth_image)
+        self._pending = False
 
     def _on_detection(self, future, depth_image):
         try:

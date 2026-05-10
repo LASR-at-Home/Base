@@ -1,0 +1,10 @@
+manipulation_actions:
+  ros__parameters:
+    target_frame: 'base_footprint'
+    pregrasp_motion: 'pregrasp'
+    align_y_tolerance: 0.05
+    align_y_step_coarse: 0.15
+    align_y_step_fine: 0.10
+    align_max_iterations: 100
+    grasp_z: 0.77
+    retreat_z: 0.95
