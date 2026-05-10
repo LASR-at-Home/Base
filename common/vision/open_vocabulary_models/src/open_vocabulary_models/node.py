@@ -13,7 +13,7 @@ from transformers import AutoProcessor, AutoModelForZeroShotObjectDetection
 from PIL import Image
 from lasr_vision_interfaces.srv import OpenVocabDetect, OpenVocabDetectAndSegment
 from lasr_vision_interfaces.msg import Detection
-from .efficientvit_inference import SamEncoder, SamDecoder, SamResize
+from open_vocabulary_models.efficientvit_inference import SamEncoder, SamDecoder, SamResize
 
 
 class VitSam:
