@@ -1,0 +1,7 @@
+use_yoloworld: false
+use_grounding_dino: true
+yoloworld_weights: 'yolov8s-world.pt'
+model_device: 'cuda'
+use_sam: false
+sam_encoder_path: ''
+sam_decoder_path: ''

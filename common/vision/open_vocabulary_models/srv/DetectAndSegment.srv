@@ -1,0 +1,8 @@
+sensor_msgs/Image image
+string[] queries
+float32 box_threshold
+float32 text_threshold
+---
+open_vocabulary_models/Detection[] detections
+sensor_msgs/Image[] masks
+int32[] ids

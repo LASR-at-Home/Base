@@ -1,0 +1,6 @@
+sensor_msgs/Image image
+float32[] boxes
+int32 num_boxes
+---
+sensor_msgs/Image[] masks
+int32[] ids

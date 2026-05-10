@@ -1,0 +1,20 @@
+[metadata]
+name = open_vocabulary_models
+version = 0.1.0
+description = Open vocabulary models service wrapper
+
+[options]
+packages = find:
+install_requires =
+    rclpy
+    sensor_msgs
+    std_msgs
+    geometry_msgs
+    opencv-python
+    numpy
+    pillow
+    cv_bridge
+
+[options.entry_points]
+console_scripts =
+    open_vocabulary_node = open_vocabulary_models.node:main

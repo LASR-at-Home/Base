@@ -1,9 +1,10 @@
 import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import TimerAction, IncludeLaunchDescription
+from launch.actions import TimerAction, IncludeLaunchDescription, ExecuteProcess
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node
+import math
 
 
 def generate_launch_description():
@@ -16,6 +17,11 @@ def generate_launch_description():
 
     map_yaml = os.path.join(pkg_sim, 'maps', 'map.yaml')
     nav_params = os.path.join(pkg_sim, 'config', 'nav2_params_scan_raw.yaml')
+
+    # Initial pose of the robot in the map (x, y, yaw in radians)
+    INITIAL_POSE_X = "9.151"
+    INITIAL_POSE_Y = "-6.340"
+    INITIAL_POSE_YAW = "2.204"
 
     tiago = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
@@ -140,6 +146,7 @@ def generate_launch_description():
         ],
     )
 
+    rviz_config = os.path.join(pkg_sim, 'config', 'mapping.rviz')
     rviz = TimerAction(
         period=15.0,
         actions=[
@@ -147,8 +154,46 @@ def generate_launch_description():
                 package='rviz2',
                 executable='rviz2',
                 name='rviz2',
+                arguments=['-d', rviz_config],
                 parameters=[{'use_sim_time': True}],
                 output='screen',
+            )
+        ],
+    )
+
+    map_server_deactivate = TimerAction(
+        period=20.0,
+        actions=[ExecuteProcess(cmd=["ros2", "lifecycle", "set", "/map_server", "deactivate"], output="screen")]
+    )
+    map_server_cleanup = TimerAction(
+        period=21.0,
+        actions=[ExecuteProcess(cmd=["ros2", "lifecycle", "set", "/map_server", "cleanup"], output="screen")]
+    )
+    map_server_configure = TimerAction(
+        period=22.0,
+        actions=[ExecuteProcess(cmd=["ros2", "lifecycle", "set", "/map_server", "configure"], output="screen")]
+    )
+    map_server_activate = TimerAction(
+        period=23.0,
+        actions=[ExecuteProcess(cmd=["ros2", "lifecycle", "set", "/map_server", "activate"], output="screen")]
+    )
+
+    initial_pose = TimerAction(
+        period=24.0,
+        actions=[
+            ExecuteProcess(
+                cmd=[
+                    "ros2", "topic", "pub", "--once",
+                    "/initialpose",
+                    "geometry_msgs/msg/PoseWithCovarianceStamped",
+                    (
+                        '{"header": {"frame_id": "map"}, "pose": {"pose": {'
+                        f'"position": {{"x": {INITIAL_POSE_X}, "y": {INITIAL_POSE_Y}, "z": 0.0}}, '
+                        f'"orientation": {{"x": 0.0, "y": 0.0, "z": {round(math.sin(float(INITIAL_POSE_YAW)/2), 6)}, "w": {round(math.cos(float(INITIAL_POSE_YAW)/2), 6)}}}'
+                        '}, "covariance": [0.25,0,0,0,0,0, 0,0.25,0,0,0,0, 0,0,0,0,0,0, 0,0,0,0,0,0, 0,0,0,0,0,0, 0,0,0,0,0,0.068]}}'
+                    ),
+                ],
+                output="screen",
             )
         ],
     )
@@ -167,4 +212,9 @@ def generate_launch_description():
         velocity_smoother,
         navigation_lifecycle_manager,
         rviz,
+        map_server_deactivate,
+        map_server_cleanup,
+        map_server_configure,
+        map_server_activate,
+        initial_pose,
     ])
