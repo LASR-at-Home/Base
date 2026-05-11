@@ -219,14 +219,14 @@ class SeatGuest(
         sofa_area (ShapelyPolygon): The seatable sofa area.
         sofa_point (Point): The 3D coordinate where the robot initaily looks at sofa.
         left_sofa_area (ShapelyPolygon): An additional area.
-        right_sofa_area (ShapelyPolygon): Geometric sub-region for the right side of the sofa[cite: 1].
-        max_people_on_sofa (int): Maximum occupancy limit (default: 2)[cite: 1].
-        learn_host (bool): Whether to perform the host-learning routine (default: False)[cite: 1].
+        right_sofa_area (ShapelyPolygon): Geometric sub-region for the right side of the sofa.
+        max_people_on_sofa (int): Maximum occupancy limit (default: 2).
+        learn_host (bool): Whether to perform the host-learning routine (default: False).
     """
 
     def __init__(
         self,
-        node: Node, # Currently doesn't use any other paramters
+        node: Node, 
         seating_area: Optional[ShapelyPolygon] = None,
         sofa_area: Optional[ShapelyPolygon] = None,
         sofa_point: Optional[Point] = None,
@@ -237,12 +237,13 @@ class SeatGuest(
     ):
         smach.StateMachine.__init__(
             self,
-            outcomes=["succeeded", "failed"],
+            outcomes=["succeeded", "failed"],       # TODO: Verify keys 
             input_keys=["guest_data"],
             output_keys=["guest_seat_point", "seated_guest_locs"],
         )
         self.__node = node
         self.__load_ros_parameters()
+        #TODO: Update to allow local paramters overriding ros param
         
         seating_area_minus_sofa = self.seating_area.difference(self.sofa_area)
 

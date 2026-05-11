@@ -48,7 +48,7 @@ class HRI(smach.StateMachine):
             self.userdata.drink_position = PointStamped()
         
             
-            self.add('WAIT_START',
+            self.add('WAIT_START',  # Awaits start Signal for the task
                      smach_ros.MonitorState(node=node, topic='/receptionist/start', msg_type=Empty, cond_cb=wait_cb, max_checks=10),
                      transitions={'invalid': 'START_TIMER', 'valid': 'WAIT_START', 'preempted': 'WAIT_START'})
             
@@ -56,13 +56,21 @@ class HRI(smach.StateMachine):
                      StartTimer(node=node),
                      transitions={'succeeded': 'START_CON', 'failed': 'START_TIMER'})
         
-            self.add('START_CON',
+            self.add('START_CON',   # SM1: Waits for Door to open, then goes to start
                     self.setup(node=node),
                     transitions={"succeeded": "GREET", "failed": "GREET"})
             
-            self.add('GREET',
+            self.add('GREET',       # SM2: Greets guest
                      LookAndGreetGuest(node=node, last_resort=False, guest_id='guest1'),
-                     transitions={'succeeded': 'succeeded', 'failed': 'failed'})
+                     transitions={'succeeded': 'GUIDE_TO_SEAT', 'failed': 'failed'})
+            
+            self.add('GUIDE_TO_SEAT', # GUIDES GUEST TO SEATING AREA
+                     GoToLocation(node=node, location_param="seat_pose"),
+                     transitions={'succeeded': 'SEAT_GUEST', 'failed': 'failed'})
+            
+            self.add('SEAT_GUEST', # SM3: Locates and seats guest in free seat
+                     SeatGuest(node=node, learn_host=False),
+                     transitions={'succeeded': 'succeeded', 'failed': 'failed'}) 
         
         
         # commented incase Detect Doorbell was not implemented
