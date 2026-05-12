@@ -131,21 +131,19 @@ class HRILearnFaces(smach.StateMachine):
         smach.StateMachine.__init__(
             self, outcomes=["succeeded", "failed"], input_keys=["guest_data"]
         )
-        self.__node = node
         self._guest_id = guest_id
         self._dataset_size = dataset_size
-        # TODO:
-        # Should add a check for detecting eyes in image befor learning face.
+        # TODO: Should add a check for detecting eyes in image befor learning face.
         with self:
             self.userdata.num_images = 0
             smach.StateMachine.add(
                 "DETECT_3D",
-                Detect3D(filter=["person"], node=self.__node),
+                Detect3D(filter=["person"], node=node),
                 transitions={"succeeded": "CHECK_EYES", "failed": "failed"},
             )
             smach.StateMachine.add(
                 "CHECK_EYES",
-                self.CheckEyes(node=self.__node),
+                self.CheckEyes(node=node),
                 transitions={"succeeded": "CROP_IMAGE_3D", "failed": "DETECT_3D"},
             )
             smach.StateMachine.add(
@@ -154,7 +152,7 @@ class HRILearnFaces(smach.StateMachine):
                     filters=["person"],
                     crop_logic="nearest",
                     crop_type="masked",
-                    node=self.__node,
+                    node=node,
                 ),
                 transitions={"succeeded": "LEARN_FACE", "failed": "failed"},
                 remapping={"cropped_images": "cropped_images"},
@@ -162,11 +160,11 @@ class HRILearnFaces(smach.StateMachine):
 
             smach.StateMachine.add(
                 "LEARN_FACE",
-                self.LearnFaceState(self._guest_id, node=self.__node),
+                self.LearnFaceState(self._guest_id, node=node),
                 transitions={"succeeded": "CHECK_DONE", "failed": "failed"},
             )
             smach.StateMachine.add(
                 "CHECK_DONE",
-                self.CheckDoneState(self._dataset_size, node=self.__node),
+                self.CheckDoneState(self._dataset_size, node=node),
                 transitions={"succeeded": "succeeded", "failed": "DETECT_3D"},
             )

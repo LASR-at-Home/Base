@@ -598,7 +598,6 @@ class DetectAllInPolygon(smach.StateMachine):
                         "succeeded": "SLEEP",
                         "aborted": "failed",
                         "preempted": "failed",
-                        "timed_out": "failed",
                     },
                 )
                 smach.StateMachine.add(

@@ -48,28 +48,26 @@ class LearnHostFace(smach.StateMachine):
             output_keys=["guest_data"],
         )
 
-        self.__node = node
 
         with self:
             smach.StateMachine.add(
                 "GET_HOST_LOOK_POINT",
-                GetLookPoint(node=self.__node),
+                GetLookPoint(node=node),
                 transitions={"succeeded": "LOOK_TO_HOST", "failed": "failed"},
             )
             smach.StateMachine.add(
                 "LOOK_TO_HOST",
-                LookToPoint(node=self.__node),
+                LookToPoint(node=node),
                 transitions={
                     "succeeded": "LEARN_HOST_FACE",
                     "aborted": "failed",
                     "preempted": "failed",
-                    "timed_out": "failed",
                 },
                 remapping={"pointstamped": "pointstamped"},
             )
             smach.StateMachine.add(
                 "LEARN_HOST_FACE",
-                HRILearnFaces(node=self.__node, guest_id="host", dataset_size=5),
+                HRILearnFaces(node=node, guest_id="host", dataset_size=5),
                 transitions={"succeeded": "succeeded", "failed": "failed"},
                 remapping={"guest_data": "guest_data"},
             )

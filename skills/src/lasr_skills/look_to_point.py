@@ -17,9 +17,7 @@ class LookToPoint(SimpleActionState):
                          goal_cb=self._create_goal, 
                          result_cb=self._result_handle, 
                          input_keys=["pointstamped"] if pointstamped is None else [],
-                         exec_timeout=Duration(seconds=exec_timeout_sec),
-                         exec_timeout_cb=self._timeout_handle,)
-        
+                         exec_timeout=Duration(seconds=exec_timeout_sec))        
         self._pointstamped = pointstamped
         self.node.get_logger().info("LookToPoint - Created State.")
     
@@ -40,7 +38,3 @@ class LookToPoint(SimpleActionState):
         self.node.get_logger().info(
             f"PointHead received result with status: {result_status}"
         )
-    
-    def _timeout_handle(self, ud):
-        self.node.get_logger().warn("PointHead result timed out; goal canceled.")
-        return "timed_out"
