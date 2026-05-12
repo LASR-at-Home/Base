@@ -88,11 +88,11 @@ class GetImageAndPointCloud(RosState):
             input_keys=["img_msg", "pcl_msg"],
         )
 
-        self.topic1 = "/xtion/rgb/image_raw"
-        self.topic2 = "/xtion/depth_registered/points"
+        self.topic1 = "/head_front_camera/rgb/image_raw"
+        self.topic2 = "/head_front_camera/depth/points"
 
-        self.topic1 = "/xtion/rgb/image_raw"
-        self.topic2 = "/xtion/depth_registered/points"
+        self.topic1 = "/head_front_camera/rgb/image_raw"
+        self.topic2 = "/head_front_camera/depth/points"
 
     def execute(self, userdata):
         if not rclpy.ok():
@@ -150,7 +150,7 @@ class GetImageAndPointCloud(RosState):
 #             self, outcomes=["succeeded", "failed"], output_keys=["img_msg"], input_keys=["img_msg"]
 #         )
 
-#         self.topic = topic or "/xtion/rgb/image_raw"
+#         self.topic = topic or "/head_front_camera/rgb/image_raw"
 #         # self.topic = topic or "/image_raw"
 #         # TODO check if tiago is in environment
 #         #else "/usb_cam/image_raw", self.topic = topic
@@ -190,7 +190,7 @@ class GetImageAndPointCloud(RosState):
 #             self, outcomes=["succeeded", "failed"], output_keys=["pcl_msg"], input_keys=["pcl_msg"]
 #         )
 
-#         self.topic = topic or "/xtion/depth_registered/pints"
+#         self.topic = topic or "/head_front_camera/depth/pints"
 
 #     def execute(self, userdata):
 #         if not rclpy.ok():
@@ -219,11 +219,11 @@ class GetImageAndPointCloud(RosState):
 #             self, outcomes=["succeeded", "failed"], output_keys=["img_msg", "pcl_msg"], input_keys=["img_msg", "pcl_msg"]
 #         )
 
-#         self.topic1 = "/xtion/rgb/image_raw"
-#         self.topic2 = "/xtion/depth_registered/points"
+#         self.topic1 = "/head_front_camera/rgb/image_raw"
+#         self.topic2 = "/head_front_camera/depth/points"
 
-#         self.topic1 = "/xtion/rgb/image_raw"
-#         self.topic2 = "/xtion/depth_registered/points"
+#         self.topic1 = "/head_front_camera/rgb/image_raw"
+#         self.topic2 = "/head_front_camera/depth/points"
 
 #     def execute(self, userdata):
 #         if not rclpy.ok():

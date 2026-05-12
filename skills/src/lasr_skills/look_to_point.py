@@ -10,7 +10,7 @@ from typing import Union
 
 #TODO: Action completes but doesn't end and move on
 class LookToPoint(SimpleActionState):
-    def __init__(self, node, pointstamped: Union[None, PointStamped] = None, exec_timeout_sec: float = 2.0):
+    def __init__(self, node, pointstamped: Union[None, PointStamped] = None, exec_timeout_sec: float = 5.0):
         super().__init__(node=node, 
                          action_name='/head_controller/point_head_action', 
                          action_spec=PointHead, 

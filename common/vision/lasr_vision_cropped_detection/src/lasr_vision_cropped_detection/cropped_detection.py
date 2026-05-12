@@ -295,8 +295,8 @@ def filter_detections_by_polygon(
 def process_single_detection_request(
     node,
     request: CDRequest,
-    rgb_image_topic: str = "/xtion/rgb/image_raw",
-    depth_image_topic: str = "/xtion/depth_registered/points",
+    rgb_image_topic: str = "/head_front_camera/rgb/image_raw",
+    depth_image_topic: str = "/head_front_camera/depth/points",
     yolo_2d_service_name: str = "/yolov8/detect",
     yolo_3d_service_name: str = "/yolov8/detect3d",
     robot_pose_topic: str = "/robot_pose",
@@ -307,8 +307,8 @@ def process_single_detection_request(
 
     Args:
         request (CDRequest): The request to process.
-        rgb_image_topic (str, optional): The topic to get an RGB image from. Defaults to "/xtion/rgb/image_raw".
-        depth_image_topic (str, optional): The topic to getn an RGBD image from. Defaults to "/xtion/depth_registered/points".
+        rgb_image_topic (str, optional): The topic to get an RGB image from. Defaults to "/head_front_camera/rgb/image_raw".
+        depth_image_topic (str, optional): The topic to getn an RGBD image from. Defaults to "/head_front_camera/depth/points".
         yolo_2d_service_name (str, optional): Name of the 2D Yolo detection service. Defaults to "/yolov8/detect".
         yolo_3d_service_name (str, optional): Name of the 3D Yolo detection service. Defaults to "/yolov8/detect3d".
         robot_pose_topic (str, optional): Service to get the robot's current pose. Defaults to "/robot_pose".
@@ -508,8 +508,8 @@ def process_single_detection_request(
 def process_detection_requests(
     node,
     request: CroppedDetection_Request,
-    rgb_image_topic: str = "/xtion/rgb/image_raw",
-    depth_image_topic: str = "/xtion/depth_registered/points",
+    rgb_image_topic: str = "/head_front_camera/rgb/image_raw",
+    depth_image_topic: str = "/head_front_camera/depth/points",
     yolo_2d_service_name: str = "/yolov8/detect",
     yolo_3d_service_name: str = "/yolov8/detect3d",
     robot_pose_topic: str = "/robot_pose",
@@ -519,8 +519,8 @@ def process_detection_requests(
 
     Args:
         request (CroppedDetectionRequestSrv): The request to process.
-        rgb_image_topic (str, optional): The topic to get an RGB image from. Defaults to "/xtion/rgb/image_raw".
-        depth_image_topic (str, optional): The topic to getn an RGBD image from. Defaults to "/xtion/depth_registered/points".
+        rgb_image_topic (str, optional): The topic to get an RGB image from. Defaults to "/head_front_camera/rgb/image_raw".
+        depth_image_topic (str, optional): The topic to getn an RGBD image from. Defaults to "/head_front_camera/depth/points".
         yolo_2d_service_name (str, optional): Name of the 2D Yolo detection service. Defaults to "/yolov8/detect".
         yolo_3d_service_name (str, optional): Name of the 3D Yolo detection service. Defaults to "/yolov8/detect3d".
         robot_pose_topic (str, optional): Service to get the robot's current pose. Defaults to "/amcl_pose".

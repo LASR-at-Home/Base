@@ -77,7 +77,7 @@ def main():
     camera = node.get_parameter("camera").value
     image_topic = f"/{camera}/rgb/image_raw"
 
-    # camera = node.declare_parameter("~camera", "xtion").value
+    # camera = node.declare_parameter("~camera", "head_front_camera").value
     name = node.declare_parameter("~name", "fadi").value  # originally jared
     num_images = node.declare_parameter("~num_images", 10).value
     image_topic = "image_raw"
