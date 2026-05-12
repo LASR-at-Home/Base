@@ -8,7 +8,7 @@ from geometry_msgs.msg import Point, PointStamped, Vector3
 
 from typing import Union
 
-
+#TODO: Action completes but doesn't end and move on
 class LookToPoint(SimpleActionState):
     def __init__(self, node, pointstamped: Union[None, PointStamped] = None, exec_timeout_sec: float = 2.0):
         super().__init__(node=node, 
@@ -17,7 +17,7 @@ class LookToPoint(SimpleActionState):
                          goal_cb=self._create_goal, 
                          result_cb=self._result_handle, 
                          input_keys=["pointstamped"] if pointstamped is None else [],
-                         exec_timeout=Duration(seconds=exec_timeout_sec))        
+                         exec_timeout=Duration(seconds=exec_timeout_sec))         
         self._pointstamped = pointstamped
         self.node.get_logger().info("LookToPoint - Created State.")
     

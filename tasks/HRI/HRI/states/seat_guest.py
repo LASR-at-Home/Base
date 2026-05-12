@@ -241,15 +241,15 @@ class SeatGuest(
             input_keys=["guest_data"],
             output_keys=["guest_seat_point", "seated_guest_locs"],
         )
-        self.__node = node
+        self.node = node
         self.__load_ros_parameters()
         #TODO: Update to allow local paramters overriding ros param
         
         seating_area_minus_sofa = self.seating_area.difference(self.sofa_area)
 
         with self:
-            self.userdata.z_sweep_min = 0.4  # TODO: Remove when testing on robot
-            self.userdata.z_sweep_max = 1.2  # TODO: Remove when testing on robot
+            self.userdata.z_sweep_min = -0.5  # TODO: Remove when testing on robot move as paramter to detect3d...
+            self.userdata.z_sweep_max = 100  # TODO: Remove when testing on robot
             self.userdata.seated_guest_locs = []
             smach.StateMachine.add(
                 "SAY_FINDING_SEAT",
@@ -267,11 +267,12 @@ class SeatGuest(
                     pointstamped=PointStamped(
                         header=Header(frame_id="map"), point=self.sofa_point
                     ),
+                    exec_timeout_sec=5.0,
                 ),
                 transitions={
                     "succeeded": "DETECT_SOFA",
                     "aborted": "failed",
-                    "preempted": "failed",
+                    "preempted": "DETECT_SOFA",
                 },
             )
             smach.StateMachine.add(
@@ -365,7 +366,7 @@ class SeatGuest(
 
             smach.StateMachine.add(
                 "LOOK_TO_SEAT",
-                LookToPoint(node=node),
+                LookToPoint(node=node, exec_timeout_sec=5.0),
                 transitions={
                     "succeeded": "SAY_SEAT_GUEST",
                     "aborted": "SAY_SEAT_GUEST",
@@ -401,43 +402,43 @@ class SeatGuest(
     
     def __load_ros_parameters(self):
         # Declare parameters
-        self.__node.declare_parameter("sofa_point.x", 0.0)
-        self.__node.declare_parameter("sofa_point.y", 0.0)
-        self.__node.declare_parameter("sofa_point.z", 0.0)
+        self.node.declare_parameter("sofa_point.x", 0.0)
+        self.node.declare_parameter("sofa_point.y", 0.0)
+        self.node.declare_parameter("sofa_point.z", 0.0)
 
-        self.__node.declare_parameter("seat_area.top_left", [0.0, 0.0])
-        self.__node.declare_parameter("seat_area.top_right", [0.0, 0.0])
-        self.__node.declare_parameter("seat_area.bottom_right", [0.0, 0.0])
-        self.__node.declare_parameter("seat_area.bottom_left", [0.0, 0.0])
+        self.node.declare_parameter("seat_area.top_left", [0.0, 0.0])
+        self.node.declare_parameter("seat_area.top_right", [0.0, 0.0])
+        self.node.declare_parameter("seat_area.bottom_right", [0.0, 0.0])
+        self.node.declare_parameter("seat_area.bottom_left", [0.0, 0.0])
 
-        self.__node.declare_parameter("sofa_area.top_left", [0.0, 0.0])
-        self.__node.declare_parameter("sofa_area.top_right", [0.0, 0.0])
-        self.__node.declare_parameter("sofa_area.bottom_right", [0.0, 0.0])
-        self.__node.declare_parameter("sofa_area.bottom_left", [0.0, 0.0])
+        self.node.declare_parameter("sofa_area.top_left", [0.0, 0.0])
+        self.node.declare_parameter("sofa_area.top_right", [0.0, 0.0])
+        self.node.declare_parameter("sofa_area.bottom_right", [0.0, 0.0])
+        self.node.declare_parameter("sofa_area.bottom_left", [0.0, 0.0])
 
-        self.__node.declare_parameter("max_people_on_sofa", 2)
+        self.node.declare_parameter("max_people_on_sofa", 2)
 
         # Load parameters from file
         self.seating_area = ShapelyPolygon(
             [
-                self.__node.get_parameter("seat_area.top_left").value,
-                self.__node.get_parameter("seat_area.top_right").value,
-                self.__node.get_parameter("seat_area.bottom_right").value,
-                self.__node.get_parameter("seat_area.bottom_left").value,
+                self.node.get_parameter("seat_area.top_left").value,
+                self.node.get_parameter("seat_area.top_right").value,
+                self.node.get_parameter("seat_area.bottom_right").value,
+                self.node.get_parameter("seat_area.bottom_left").value,
             ]
         )
 
         self.sofa_point = Point(
-            x=self.__node.get_parameter("sofa_point.x").value,
-            y=self.__node.get_parameter("sofa_point.y").value,
-            z=self.__node.get_parameter("sofa_point.z").value,
+            x=self.node.get_parameter("sofa_point.x").value,
+            y=self.node.get_parameter("sofa_point.y").value,
+            z=self.node.get_parameter("sofa_point.z").value,
         )
 
         sofa_area = {
-            "top_left": np.array(self.__node.get_parameter("sofa_area.top_left").value),
-            "top_right": np.array(self.__node.get_parameter("sofa_area.top_right").value),
-            "bottom_right": np.array(self.__node.get_parameter("sofa_area.bottom_right").value),
-            "bottom_left": np.array(self.__node.get_parameter("sofa_area.bottom_left").value),
+            "top_left": np.array(self.node.get_parameter("sofa_area.top_left").value),
+            "top_right": np.array(self.node.get_parameter("sofa_area.top_right").value),
+            "bottom_right": np.array(self.node.get_parameter("sofa_area.bottom_right").value),
+            "bottom_left": np.array(self.node.get_parameter("sofa_area.bottom_left").value),
         }
 
         # TODO: Check if number of section on sofa depends on number of
@@ -471,7 +472,7 @@ class SeatGuest(
             ]
         )
 
-        self.max_people_on_sofa = int(self.__node.get_parameter("max_people_on_sofa").value)
+        self.max_people_on_sofa = int(self.node.get_parameter("max_people_on_sofa").value)
 
 
 def main():
