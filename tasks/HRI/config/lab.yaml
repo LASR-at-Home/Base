@@ -1,0 +1,71 @@
+hri:   # the `hri` Node's Parameters
+  ros__parameters:
+    start_pose:
+      position:
+        x: 2
+        y: 0.697
+        z: 0.0
+      orientation:
+        x: 0.0
+        y: 0.0
+        z: 0.6909244042647134
+        w: 0.7229270140141748
+
+    door_pose:
+      position:
+        x: 2
+        y: 0.697
+        z: 0.0
+      orientation:
+        x: 0.0
+        y: 0.0
+        z: 0.6909244042647134
+        w: 0.7229270140141748
+
+    door_polygon:
+      top_left:     [4.043513298034668, 8.6455717086792]
+      top_right:    [4.958864212036133, 8.726411819458008]
+      bottom_right: [5.371414661407471, 6.953999042510986]
+      bottom_left:  [4.094511985778809, 6.809327125549316]
+      # [
+      #   [4.043513298034668, 8.6455717086792],
+      #   [4.958864212036133, 8.726411819458008],
+      #   [5.371414661407471, 6.953999042510986],
+      #   [4.094511985778809, 6.809327125549316],
+      # ]
+
+    # Where to position self for seating guests
+    seat_pose:
+      position:
+        x: 0.7253542411729228
+        y: -0.41696111136241965
+        z: 0.0
+      orientation:
+        x: 0.0
+        y: 0.0
+        z: -0.7903108029987692
+        w: 0.6127061568675809
+
+    # Where the robot looks at the general sofa
+    sofa_point:
+      x:  1.6622629165649414
+      y: -0.05679227411746979
+      z: 0.75
+
+    # From robot POV: [top left, top right,bottom right, bottom left ]
+    # General area to perform detections in 
+    seat_area:
+      top_left:     [2.260225772857666, 1.446178674697876]
+      top_right:    [2.342136859893799, -0.8490455150604248]
+      bottom_right: [0.5737614631652832, -0.8957526683807373]
+      bottom_left:  [0.7276101112365723, 1.311692714691162]
+    
+    # Max number of seats
+    max_people_on_sofa: 2
+
+    # Seatable area
+    sofa_area:
+      top_left:     [2.146894693374634, 0.507433295249939]
+      top_right:    [2.0827789306640625, -0.6592016220092773]
+      bottom_right: [1.5455408096313477, -0.6746225357055664]
+      bottom_left:  [1.5304183959960938, 0.4496603012084961]

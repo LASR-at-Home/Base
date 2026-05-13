@@ -23,7 +23,6 @@ from cv2_img import msg_to_cv2_img, cv2_img_to_msg
 from geometry_msgs.msg import Point, PointStamped
 from lasr_vision_interfaces.msg import Detection3D
 
-# from lasr_skills import LookToPoint, Detect3DInArea
 from .look_to_point import LookToPoint
 from .detect_3d_in_area import Detect3DInArea
 
@@ -181,7 +180,7 @@ class CalculateSweepPoints(RosState):
         """
 
         success, camera_info = wait_for_message(
-            CameraInfo, self.node, "/xtion/depth_registered/camera_info"
+            CameraInfo, self.node, "/head_front_camera/depth/camera_info"
         )
         if not success or camera_info is None:
             self.node.get_logger().warn("Timed out waiting for camera info")
@@ -598,7 +597,7 @@ class DetectAllInPolygon(smach.StateMachine):
                     transitions={
                         "succeeded": "SLEEP",
                         "aborted": "failed",
-                        "timed_out": "failed",
+                        "preempted": "failed",
                     },
                 )
                 smach.StateMachine.add(
@@ -698,11 +697,12 @@ class DetectAllInPolygon(smach.StateMachine):
 
 def main():
     seat_area = [
-        [2.02766489982605, -2.7318179607391357],
-        [-0.8237523436546326, -2.8495190143585205],
-        [-0.7675997614860535, -1.3231755495071411],
-        [1.9695378541946411, -1.4235490560531616],
+        [2.260225772857666, 1.446178674697876],
+        [2.342136859893799, -0.8490455150604248],
+        [0.5737614631652832, -0.8957526683807373],
+        [0.7276101112365723, 1.311692714691162],
     ]
+
     seat_polygon = ShapelyPolygon(seat_area)
 
     rclpy.init()

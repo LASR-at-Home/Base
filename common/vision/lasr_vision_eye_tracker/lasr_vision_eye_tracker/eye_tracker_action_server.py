@@ -303,17 +303,17 @@ class EyeTracker(Node):
         image_sub = message_filters.Subscriber(
             self,
             Image,
-            "/xtion/rgb/image_raw",
+            "/head_front_camera/rgb/image_raw",
         )
         depth_sub = message_filters.Subscriber(
             self,
             Image,
-            "/xtion/depth_registered/image_raw",
+            "/head_front_camera/depth/image_raw",
         )
         depth_camera_info_sub = message_filters.Subscriber(
             self,
             CameraInfo,
-            "/xtion/depth_registered/camera_info",
+            "/head_front_camera/depth/camera_info",
         )
         ts = message_filters.ApproximateTimeSynchronizer(
             [image_sub, depth_sub, depth_camera_info_sub], 10, 0.1

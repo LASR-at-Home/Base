@@ -12,20 +12,22 @@ class DetectFaces(smach.State):
     def __init__(
         self,
         node: Node,
-        image_topic: str = "/xtion/rgb/image_raw",
+        image_topic: str = "/head_front_camera/rgb/image_raw",
     ):
         smach.State.__init__(
             self,
             outcomes=["succeeded", "failed"],
-            input_keys=["pcl_msg"],
+            input_keys=["pcl"],
             output_keys=["detections"],
         )
         self.node = node
         self._image_topic = image_topic
-        self._detect_faces = self.node.create_client(DetectFacesSrv, "/detect_faces")
+        self._detect_faces = self.node.create_client(
+            DetectFacesSrv, "/deepface/detect_faces"
+        )
 
         while not self._detect_faces.wait_for_service(timeout_sec=1.0):
-            self.node.get_logger().info("Waiting for /detect_faces service...")
+            self.node.get_logger().info("Waiting for /deepface/detect_faces service...")
 
     def execute(self, userdata):
         img_msg = pcl_to_img_msg(userdata.pcl_msg)

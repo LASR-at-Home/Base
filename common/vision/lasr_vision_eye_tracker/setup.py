@@ -24,7 +24,6 @@ setup(
     entry_points={
         "console_scripts": [
             "eye_tracker_action_server = lasr_vision_eye_tracker.eye_tracker_action_server:main",
-            "eye_tracker_action_client = lasr_vision_eye_tracker.example_client:main",
         ],
     },
 )

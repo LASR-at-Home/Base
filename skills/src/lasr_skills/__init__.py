@@ -25,13 +25,13 @@ from .face_person import FacePerson
 from .listen import Listen
 
 # from .listen_for import ListenFor
-# from .ask_and_listen import AskAndListen
 from .receive_object import ReceiveObject
 from .handover_object import HandoverObject
 
-# from .ask_and_listen import AskAndListen
 # from .clip_vqa import QueryImage
 from .detect_faces import DetectFaces
+from .eye_tracker import StartEyeTracker, StopEyeTracker
+from .wait_for_person_in_area import WaitForPersonInArea
 
 # from .recognise import Recognise
 from .detect_gesture import DetectGesture
@@ -40,6 +40,8 @@ from .detect_gesture import DetectGesture
 # from .wait import Wait
 # from .guide import Guide
 from .detect_clothing import DetectClothing
+
+from .ask_and_listen import AskAndListen
 
 # from .detect_pose import DetectPose
 # from .find_person import FindPerson

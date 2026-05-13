@@ -6,7 +6,7 @@ import ros2_numpy as rnp
 import numpy as np
 from geometry_msgs.msg import PointStamped, Point
 
-# pcl_msg = rospy.wait_for_message("/xtion/depth_registered/points", PointCloud2)
+# pcl_msg = rospy.wait_for_message("/head_front_camera/depth/points", PointCloud2)
 # cv_im = cv2_pcl.pcl_to_cv2(pcl_msg)
 # img_msg = cv2_img.cv2_img_to_msg(cv_im)
 
