@@ -22,7 +22,9 @@ class GetImage(RosState):
         self.topic = (
             topic
             if topic
-            else self.node.get_parameter("image_topic").get_parameter_value().string_value
+            else self.node.get_parameter("image_topic")
+            .get_parameter_value()
+            .string_value
         )
 
     def execute(self, userdata):

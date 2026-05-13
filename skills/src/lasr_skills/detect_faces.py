@@ -22,7 +22,9 @@ class DetectFaces(smach.State):
         )
         self.node = node
         self._image_topic = image_topic
-        self._detect_faces = self.node.create_client(DetectFacesSrv, "/deepface/detect_faces")
+        self._detect_faces = self.node.create_client(
+            DetectFacesSrv, "/deepface/detect_faces"
+        )
 
         while not self._detect_faces.wait_for_service(timeout_sec=1.0):
             self.node.get_logger().info("Waiting for /deepface/detect_faces service...")

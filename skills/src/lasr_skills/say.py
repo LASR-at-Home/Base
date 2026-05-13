@@ -74,7 +74,10 @@ else:
         ):
             if text is not None:
                 super().__init__(
-                    node=node, action_name="/tts_engine/tts", action_spec=TTS, goal=TTS.Goal(input=text)
+                    node=node,
+                    action_name="/tts_engine/tts",
+                    action_spec=TTS,
+                    goal=TTS.Goal(input=text),
                 )
             elif format_str is not None:
                 super().__init__(

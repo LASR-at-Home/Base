@@ -45,7 +45,7 @@ class GetGuestAttributes(smach.StateMachine):
                 return "succeeded"
             except Exception as e:
                 self.node.get_logger().error(f"Error: {e}")
-                return 'failed'
+                return "failed"
 
     def __init__(self, guest_id: str, node):
         super().__init__(

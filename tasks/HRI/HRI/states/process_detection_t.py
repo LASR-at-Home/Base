@@ -30,7 +30,6 @@ from shapely.geometry import Polygon as ShapelyPolygon
 from lasr_vision_interfaces.msg import Detection3D
 from .seat_guest import ProcessDetections  # adjust if module path differs
 
-
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
 

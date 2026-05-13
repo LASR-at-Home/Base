@@ -46,7 +46,7 @@ setup(
     entry_points={
         "console_scripts": [
             "seat_guest = HRI.states.seat_guest:main",
-            "sm = HRI.state_machine:main"
+            "sm = HRI.state_machine:main",
         ],
     },
 )

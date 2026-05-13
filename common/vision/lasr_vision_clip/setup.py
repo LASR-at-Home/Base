@@ -2,8 +2,8 @@ from setuptools import find_packages, setup
 import setuptools.command.install
 import ament_virtualenv.install
 
-
 package_name = "lasr_vision_clip"
+
 
 class InstallCommand(setuptools.command.install.install):
     def run(self):
@@ -15,6 +15,7 @@ class InstallCommand(setuptools.command.install.install):
             python_version="3",
         )
         return
+
 
 setup(
     name=package_name,

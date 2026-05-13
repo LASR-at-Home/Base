@@ -14,15 +14,12 @@ from std_msgs.msg import Empty
 
 
 class HRI(smach.StateMachine):
-    def __init__(self,
-                 node,
-                 host_data,
-                 face_detection_confidence = 0.2):
+    def __init__(self, node, host_data, face_detection_confidence=0.2):
         super().__init__(outcomes=["succeeded", "failed"])
-        
+
         def wait_cb(ud, msg):
             return False
-        
+
         with self:
             self.userdata.guest_data = {
                 "host": host_data,
@@ -39,40 +36,59 @@ class HRI(smach.StateMachine):
                     "seating_detection": False,
                 },
             }
-            drink_detections = {
-            }
+            drink_detections = {}
 
             self.userdata.drink_detections = drink_detections
             self.userdata.confidence = face_detection_confidence
             self.userdata.dataset = "receptionist"
             self.userdata.drink_position = PointStamped()
-        
-            
-            self.add('WAIT_START',  # Awaits start Signal for the task
-                     smach_ros.MonitorState(node=node, topic='/receptionist/start', msg_type=Empty, cond_cb=wait_cb, max_checks=10),
-                     transitions={'invalid': 'START_TIMER', 'valid': 'WAIT_START', 'preempted': 'WAIT_START'})
-            
-            self.add('START_TIMER',
-                     StartTimer(node=node),
-                     transitions={'succeeded': 'START_CON', 'failed': 'START_TIMER'})
-        
-            self.add('START_CON',   # SM1: Waits for Door to open, then goes to start
-                    self.setup(node=node),
-                    transitions={"succeeded": "GREET", "failed": "GREET"})
-            
-            self.add('GREET',       # SM2: Greets guest
-                     LookAndGreetGuest(node=node, last_resort=False, guest_id='guest1'),
-                     transitions={'succeeded': 'GUIDE_TO_SEAT', 'failed': 'failed'})
-            
-            self.add('GUIDE_TO_SEAT', # GUIDES GUEST TO SEATING AREA
-                     GoToLocation(node=node, location_param="seat_pose"),
-                     transitions={'succeeded': 'SEAT_GUEST', 'failed': 'failed'})
-            
-            self.add('SEAT_GUEST', # SM3: Locates and seats guest in free seat
-                     SeatGuest(node=node, learn_host=False),
-                     transitions={'succeeded': 'succeeded', 'failed': 'failed'}) 
-        
-        
+
+            self.add(
+                "WAIT_START",  # Awaits start Signal for the task
+                smach_ros.MonitorState(
+                    node=node,
+                    topic="/receptionist/start",
+                    msg_type=Empty,
+                    cond_cb=wait_cb,
+                    max_checks=10,
+                ),
+                transitions={
+                    "invalid": "START_TIMER",
+                    "valid": "WAIT_START",
+                    "preempted": "WAIT_START",
+                },
+            )
+
+            self.add(
+                "START_TIMER",
+                StartTimer(node=node),
+                transitions={"succeeded": "START_CON", "failed": "START_TIMER"},
+            )
+
+            self.add(
+                "START_CON",  # SM1: Waits for Door to open, then goes to start
+                self.setup(node=node),
+                transitions={"succeeded": "GREET", "failed": "GREET"},
+            )
+
+            self.add(
+                "GREET",  # SM2: Greets guest
+                LookAndGreetGuest(node=node, last_resort=False, guest_id="guest1"),
+                transitions={"succeeded": "GUIDE_TO_SEAT", "failed": "failed"},
+            )
+
+            self.add(
+                "GUIDE_TO_SEAT",  # GUIDES GUEST TO SEATING AREA
+                GoToLocation(node=node, location_param="seat_pose"),
+                transitions={"succeeded": "SEAT_GUEST", "failed": "failed"},
+            )
+
+            self.add(
+                "SEAT_GUEST",  # SM3: Locates and seats guest in free seat
+                SeatGuest(node=node, learn_host=False),
+                transitions={"succeeded": "succeeded", "failed": "failed"},
+            )
+
         # commented incase Detect Doorbell was not implemented
         # smach.StateMachine.add(
         #     "DETECT DOORBELL",
@@ -188,35 +204,32 @@ class HRI(smach.StateMachine):
         #     },
         # )
 
-
     def setup(self, node):
         start_con_sm = smach.Concurrence(
-                outcomes=["succeeded", "failed"],
-                default_outcome="failed",
-                outcome_map={
-                    "succeeded": {
-                        "SAY_START": "succeeded",
-                        "DOOR_START": "succeeded",
-                    },
-                    "failed": {
-                        "SAY_START": "aborted",
-                        "DOOR_START": "failed",
-                    },
+            outcomes=["succeeded", "failed"],
+            default_outcome="failed",
+            outcome_map={
+                "succeeded": {
+                    "SAY_START": "succeeded",
+                    "DOOR_START": "succeeded",
                 },
-            )
-            
+                "failed": {
+                    "SAY_START": "aborted",
+                    "DOOR_START": "failed",
+                },
+            },
+        )
+
         with start_con_sm:
             smach.Concurrence.add(
                 "SAY_START", Say(node=node, text="Start of HRI task.")
             )
 
-            smach.Concurrence.add(
-                "DOOR_START", StartDoorSM(node=node)
-            )
-            
+            smach.Concurrence.add("DOOR_START", StartDoorSM(node=node))
+
         return start_con_sm
-    
-    
+
+
 def main(args=None):
     rclpy.init(args=args)
 

@@ -48,7 +48,6 @@ class LearnHostFace(smach.StateMachine):
             output_keys=["guest_data"],
         )
 
-
         with self:
             smach.StateMachine.add(
                 "GET_HOST_LOOK_POINT",

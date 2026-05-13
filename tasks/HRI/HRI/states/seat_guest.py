@@ -226,7 +226,7 @@ class SeatGuest(
 
     def __init__(
         self,
-        node: Node, 
+        node: Node,
         seating_area: Optional[ShapelyPolygon] = None,
         sofa_area: Optional[ShapelyPolygon] = None,
         sofa_point: Optional[Point] = None,
@@ -237,18 +237,20 @@ class SeatGuest(
     ):
         smach.StateMachine.__init__(
             self,
-            outcomes=["succeeded", "failed"],       # TODO: Verify keys 
+            outcomes=["succeeded", "failed"],  # TODO: Verify keys
             input_keys=["guest_data"],
             output_keys=["guest_seat_point", "seated_guest_locs"],
         )
         self.node = node
         self.__load_ros_parameters()
-        #TODO: Update to allow local paramters overriding ros param
-        
+        # TODO: Update to allow local paramters overriding ros param
+
         seating_area_minus_sofa = self.seating_area.difference(self.sofa_area)
 
         with self:
-            self.userdata.z_sweep_min = -0.5  # TODO: Remove when testing on robot move as paramter to detect3d...
+            self.userdata.z_sweep_min = (
+                -0.5
+            )  # TODO: Remove when testing on robot move as paramter to detect3d...
             self.userdata.z_sweep_max = 100  # TODO: Remove when testing on robot
             self.userdata.seated_guest_locs = []
             smach.StateMachine.add(
@@ -355,9 +357,7 @@ class SeatGuest(
                             text="I'm quickly remembering the host's face.",
                         ),
                     )
-                    smach.Concurrence.add(
-                        "LEARN_HOST_FACE", LearnHostFace(node=node)
-                    )
+                    smach.Concurrence.add("LEARN_HOST_FACE", LearnHostFace(node=node))
                 smach.StateMachine.add(
                     "SAY_AND_LEARN_HOST_FACE",
                     sm_con,
@@ -399,7 +399,7 @@ class SeatGuest(
                     "preempted": "succeeded",
                 },
             )
-    
+
     def __load_ros_parameters(self):
         # Declare parameters
         self.node.declare_parameter("sofa_point.x", 0.0)
@@ -437,14 +437,18 @@ class SeatGuest(
         sofa_area = {
             "top_left": np.array(self.node.get_parameter("sofa_area.top_left").value),
             "top_right": np.array(self.node.get_parameter("sofa_area.top_right").value),
-            "bottom_right": np.array(self.node.get_parameter("sofa_area.bottom_right").value),
-            "bottom_left": np.array(self.node.get_parameter("sofa_area.bottom_left").value),
+            "bottom_right": np.array(
+                self.node.get_parameter("sofa_area.bottom_right").value
+            ),
+            "bottom_left": np.array(
+                self.node.get_parameter("sofa_area.bottom_left").value
+            ),
         }
 
         # TODO: Check if number of section on sofa depends on number of
         sofa_middle_top = (sofa_area["top_right"] + sofa_area["top_left"]) / 2
         sofa_middle_bottom = (sofa_area["bottom_left"] + sofa_area["bottom_right"]) / 2
-        
+
         self.sofa_area = ShapelyPolygon(
             [
                 sofa_area["top_left"],
@@ -472,7 +476,9 @@ class SeatGuest(
             ]
         )
 
-        self.max_people_on_sofa = int(self.node.get_parameter("max_people_on_sofa").value)
+        self.max_people_on_sofa = int(
+            self.node.get_parameter("max_people_on_sofa").value
+        )
 
 
 def main():

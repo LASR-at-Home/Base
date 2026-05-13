@@ -13,25 +13,35 @@ from lasr_llm_interfaces.srv import HRITaskQueryLlm
 
 # from tasks.receptionist.src.receptionist.states import SpeechRecovery
 
+
 class GetNameAndDrink(smach.StateMachine):
     class ParseNameAndDrink(ServiceState):
         def __init__(self, node, task, guest_id):
-            super().__init__(node=node, 
-                  service_name="/hri_task/query_llm", 
-                  service_spec=HRITaskQueryLlm, 
-                  request_cb=self.create_req,
-                  input_keys=["guest_transcription", "guest_data"],
-                  output_keys=["guest_data"],
-                  )
+            super().__init__(
+                node=node,
+                service_name="/hri_task/query_llm",
+                service_spec=HRITaskQueryLlm,
+                request_cb=self.create_req,
+                input_keys=["guest_transcription", "guest_data"],
+                output_keys=["guest_data"],
+            )
             self.task = task
             self.guest_id = guest_id
-            
+
         def create_req(self, userdata, request):
-            request = HRITaskQueryLlm(string=userdata.guest_transcription, task=self.task)
+            request = HRITaskQueryLlm(
+                string=userdata.guest_transcription, task=self.task
+            )
             return request
-        
+
         def handle_resp(self, userdata, result):
-            userdata.guest_data.update({self.guest_id: {"name": result.name}}) if self.task == "name" else userdata.guest_data.update({self.guest_id: {"drink": result.favoutrite_drink}})
+            (
+                userdata.guest_data.update({self.guest_id: {"name": result.name}})
+                if self.task == "name"
+                else userdata.guest_data.update(
+                    {self.guest_id: {"drink": result.favoutrite_drink}}
+                )
+            )
 
     class PostRecoveryDecision(RosState):
         def __init__(self, node, guest_id: str):
@@ -66,7 +76,10 @@ class GetNameAndDrink(smach.StateMachine):
                 return False
 
     def __init__(
-        self, node, guest_id: str, last_resort: bool,
+        self,
+        node,
+        guest_id: str,
+        last_resort: bool,
     ):
 
         self._guest_id = guest_id
@@ -84,14 +97,22 @@ class GetNameAndDrink(smach.StateMachine):
                 self.ParseNameAndDrink(
                     guest_id=self._guest_id, task="name", node=self.node
                 ),
-                transitions={"succeeded": "PARSE_DRINK", "aborted": "SPEECH_RECOVERY", "preempted": "failed"},
+                transitions={
+                    "succeeded": "PARSE_DRINK",
+                    "aborted": "SPEECH_RECOVERY",
+                    "preempted": "failed",
+                },
             )
             super().add(
                 "PARSE_DRINK",
                 self.ParseNameAndDrink(
                     guest_id=self._guest_id, task="drink", node=self.node
                 ),
-                transitions={"succeeded": "succeeded", "aborted": "SPEECH_RECOVERY", "preempted": "failed"}
+                transitions={
+                    "succeeded": "succeeded",
+                    "aborted": "SPEECH_RECOVERY",
+                    "preempted": "failed",
+                },
             )
             super().add(
                 "SPEECH_RECOVERY",
@@ -103,9 +124,7 @@ class GetNameAndDrink(smach.StateMachine):
             )
             super().add(
                 "POST_RECOVERY_DECISION",
-                self.PostRecoveryDecision(
-                    guest_id=self._guest_id, node=self.node
-                ),
+                self.PostRecoveryDecision(guest_id=self._guest_id, node=self.node),
                 transitions={
                     "failed": "failed",
                     "failed_name": "failed_name",
