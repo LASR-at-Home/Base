@@ -90,6 +90,11 @@ class DetectionVisualizer(Node):
     def _trigger_callback(self, msg: String):
         if self._pending:
             return
+        # Clear previous detections
+        clear_markers = MarkerArray()
+        clear_centroids = Detection3DArray()
+        self.pub_markers.publish(clear_markers)
+        self.pub_centroids.publish(clear_centroids)
         queries = [q.strip() for q in msg.data.split(',')] if msg.data.strip() else \
                   ['can', 'bottle', 'table', 'person', 'wall', 'shelf', 'object', 'chair']
         self.get_logger().info(f'Detection triggered for: {queries}')
@@ -133,12 +138,15 @@ class DetectionVisualizer(Node):
         markers = MarkerArray()
         centroids = Detection3DArray()
 
+        self.get_logger().info(f'Processing {len(resp.detections)} detections, depth image shape: {depth_image.shape}')
         for i, det in enumerate(resp.detections):
             x = int(np.clip(det.xywh[0], 0, depth_image.shape[1] - 1))
             y = int(np.clip(det.xywh[1], 0, depth_image.shape[0] - 1))
             depth = depth_image[y, x]
+            self.get_logger().info(f'  [{i}] {det.name} @ ({x},{y}) depth={depth:.3f}')
 
             if depth <= 0 or np.isnan(depth):
+                self.get_logger().warn(f'  [{i}] {det.name} skipped: invalid depth')
                 continue
 
             point_cam = PointStamped()

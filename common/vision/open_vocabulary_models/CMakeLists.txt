@@ -21,6 +21,12 @@ install(PROGRAMS
   RENAME detection_visualizer
 )
 
+install(PROGRAMS
+  scripts/test_detection.py
+  DESTINATION lib/${PROJECT_NAME}
+  RENAME test_detection
+)
+
 install(DIRECTORY launch config
   DESTINATION share/${PROJECT_NAME}
 )
