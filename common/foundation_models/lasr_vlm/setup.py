@@ -1,6 +1,19 @@
 from setuptools import find_packages, setup
+import setuptools.command.install
+import ament_virtualenv.install
 
 package_name = 'lasr_vlm'
+
+class InstallCommand(setuptools.command.install.install):
+    def run(self):
+        super().run()
+        ament_virtualenv.install.install_venv(
+            install_base=self.install_base,
+            scripts_base=self.install_scripts,
+            package_name=package_name,
+            python_version="3",
+        )
+        return
 
 setup(
     name=package_name,
@@ -15,7 +28,7 @@ setup(
     zip_safe=True,
     maintainer='maayan',
     maintainer_email='maayan.armony@gmail.com',
-    description='TODO: Package description',
+    description='Package for running inference with large vision-language models (VLMs) in LASR',
     license='Apache-2.0',
     extras_require={
         'test': [
