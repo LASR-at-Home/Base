@@ -8,14 +8,17 @@ from typing import Optional
 import base64
 from pathlib import Path
 
+
 @dataclass
 class ModelConfig:
     """
     Configuration class for the LLM or pipeline models.
     """
-    model_name: str = "gemma3:4b" #  qwen2.5vl:3b, llama3.2
+
+    model_name: str = "gemma3:4b"  #  qwen2.5vl:3b, llama3.2
     system_prompt: Optional[str] = None
     host: str = "http://localhost:11434"
+
 
 def ensure_model(model: str):
     available = [m.model for m in ollama.list().models]
@@ -27,6 +30,7 @@ def ensure_model(model: str):
                 print(f"\r{chunk.status} {pct}", end="", flush=True)
         print(f"\nDone.")
 
+
 class VLMInference:
     def __init__(self, model_config: ModelConfig, new_model=True):
         self.model_name = model_config.model_name
@@ -36,7 +40,9 @@ class VLMInference:
         if new_model:
             ensure_model(self.model_name)
 
-    def query_text(self, prompt: str, system_prompt: Optional[str] = None, force_json=False) -> str:
+    def query_text(
+        self, prompt: str, system_prompt: Optional[str] = None, force_json=False
+    ) -> str:
         """Send a text prompt to the VLM and return the response as text.
 
         Args:
@@ -60,8 +66,13 @@ class VLMInference:
         response = self.client.chat(**kwargs)
         return response["message"]["content"]
 
-
-    def query_vision(self, prompt: str, image_path: str, system_prompt: Optional[str] = None, force_json=False) -> str:
+    def query_vision(
+        self,
+        prompt: str,
+        image_path: str,
+        system_prompt: Optional[str] = None,
+        force_json=False,
+    ) -> str:
         """
         Send a prompt and an image to the VLM and return the response as text.
         Args:
@@ -76,11 +87,13 @@ class VLMInference:
             messages.append({"role": "system", "content": sp})
 
         image_data = base64.b64encode(Path(image_path).read_bytes()).decode("utf-8")
-        messages.append({
-            "role": "user",
-            "content": prompt,
-            "images": [image_data]  # list of base64 strings
-        })
+        messages.append(
+            {
+                "role": "user",
+                "content": prompt,
+                "images": [image_data],  # list of base64 strings
+            }
+        )
 
         kwargs = {"model": self.model_name, "messages": messages}
         if force_json:
@@ -105,6 +118,7 @@ def extract_name_and_drink(input_sentence, inference: VLMInference):
 
     return results
 
+
 def test_vlm_text_query(inference: VLMInference):
     first_sentence = "My name is Eloise and my favourite drink is coca cola."
     second_sentence = "Oh hi yeah, I'm John erm I drink tea usually green, and I am a robotics enthusiast."
@@ -115,17 +129,22 @@ def test_vlm_text_query(inference: VLMInference):
     print(f"First result: {first_result}")
     print(f"Second result: {second_result}")
 
+
 def visually_describe_people(input_image, inference: VLMInference) -> dict[str, str]:
     """
     Test VLM's ability to visually describe the person in the image.
     """
     attributes = ["hair_color", "hair_length", "glasses", "hat", "shirt color"]
 
-    user_query = (f"Visually describe the person in the image, using the following attributes:")
+    user_query = (
+        f"Visually describe the person in the image, using the following attributes:"
+    )
     for attr in attributes:
         user_query += f"\n- {attr}"
-    user_query_example = ("\n\n For example, if the person has short brown hair, is wearing glasses, does not wear a hat, and is wearing a red shirt, the response should be: "
-                            "'hair_color: brown, hair_length: short, glasses: True, hat: False, shirt color: red.'")
+    user_query_example = (
+        "\n\n For example, if the person has short brown hair, is wearing glasses, does not wear a hat, and is wearing a red shirt, the response should be: "
+        "'hair_color: brown, hair_length: short, glasses: True, hat: False, shirt color: red.'"
+    )
     user_query += user_query_example
 
     print("Running VLM inference query")
@@ -133,6 +152,7 @@ def visually_describe_people(input_image, inference: VLMInference) -> dict[str, 
     print(f"Raw VLM response: {response}")
 
     return parse_vlm_response(response, attributes)
+
 
 def parse_vlm_response(response, attributes) -> dict[str, str]:
     """
@@ -150,8 +170,9 @@ def parse_vlm_response(response, attributes) -> dict[str, str]:
             result[attr] = "unknown"
     return result
 
+
 def test_vlm_vision_query():
-    model_name = "moondream" # "gemma3:4b", "qwen2.5vl:3b", "llama3.2"
+    model_name = "moondream"  # "gemma3:4b", "qwen2.5vl:3b", "llama3.2"
     model_config = ModelConfig(model_name=model_name)
     ensure_model(model_name)
     inference = VLMInference(model_config, new_model=False)
@@ -159,8 +180,11 @@ def test_vlm_vision_query():
     image_dir = f"{os.getcwd()}/test_images"
     image_path = f"{image_dir}/person2.jpg"
 
-    response: dict[str, str] = visually_describe_people(input_image=image_path, inference=inference)
+    response: dict[str, str] = visually_describe_people(
+        input_image=image_path, inference=inference
+    )
     print(f"Vision response: {response}")
+
 
 if __name__ == "__main__":
     # model_config = ModelConfig(model_name="moondream") # gemma3:4b
