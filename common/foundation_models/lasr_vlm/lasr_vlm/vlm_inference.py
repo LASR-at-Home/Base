@@ -4,7 +4,6 @@ import os
 import ollama
 from dataclasses import dataclass
 from typing import Optional
-
 import re
 
 import base64
