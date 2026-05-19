@@ -28,12 +28,13 @@ def ensure_model(model: str):
         print(f"\nDone.")
 
 class VLMInference:
-    def __init__(self, model_config: ModelConfig):
+    def __init__(self, model_config: ModelConfig, new_model=True):
         self.model_name = model_config.model_name
         self.system_prompt = model_config.system_prompt
         self.client = ollama.Client(host=model_config.host)
 
-        ensure_model(self.model_name)
+        if new_model:
+            ensure_model(self.model_name)
 
     def query_text(self, prompt: str, system_prompt: Optional[str] = None, force_json=False) -> str:
         """Send a text prompt to the VLM and return the response as text.
@@ -89,12 +90,94 @@ class VLMInference:
         return response["message"]["content"]
 
 
-if __name__ == "__main__":
-    vlm_inference = VLMInference(ModelConfig(model_name="moondream")) # gemma3:4
-    text_response = vlm_inference.query_text("Please print Hello World")
-    print(text_response)
+def extract_name_and_drink(input_sentence, inference: VLMInference):
+    """
+    Test VLM's ability to extract the name and drink from the sentence.
+    """
+    fields = ["name", "drink"]
+    results = {}
+    for field in fields:
+        # system_query = f"Extract the following fields from the sentence:\n{field}\n\n For example, the sentence ' my favourite drink is coca cola' should have the field drink matched to 'coca cola'."
+        user_query = f"Extract the following fields from the sentence:\n{field}\n\n For example, the sentence 'my favourite drink is coca cola' should have the field drink matched to 'coca cola'. Sentence: {input_sentence}"
+
+        response = inference.query_text(prompt=user_query)
+        results[field] = response
+
+    return results
+
+def test_vlm_text_query(inference: VLMInference):
+    first_sentence = "My name is Eloise and my favourite drink is coca cola."
+    second_sentence = "Oh hi yeah, I'm John erm I drink tea usually green, and I am a robotics enthusiast."
+
+    first_result = extract_name_and_drink(first_sentence, inference)
+    second_result = extract_name_and_drink(second_sentence, inference)
+
+    print(f"First result: {first_result}")
+    print(f"Second result: {second_result}")
+
+def visually_describe_people(input_image, inference: VLMInference) -> dict[str, str]:
+    """
+    Test VLM's ability to visually describe the person in the image.
+    """
+    attributes = ["hair_color", "hair_length", "glasses", "hat", "shirt color"]
+
+    user_query = (f"Visually describe the person in the image, using the following attributes:")
+    for attr in attributes:
+        user_query += f"\n- {attr}"
+    user_query_example = ("\n\n For example, if the person has short brown hair, is wearing glasses, does not wear a hat, and is wearing a red shirt, the response should be: "
+                            "'hair_color: brown, hair_length: short, glasses: True, hat: False, shirt color: red.'")
+    user_query += user_query_example
+
+    print("Running VLM inference query")
+    response = inference.query_vision(prompt=user_query, image_path=input_image)
+    print(f"Raw VLM response: {response}")
+
+    return parse_vlm_response(response, attributes)
+
+def parse_vlm_response(response, attributes) -> dict[str, str]:
+    """
+    Parse the VLM response into a dictionary of attributes.
+    """
+    result = {}
+    for attr in attributes:
+        if attr in response.lower():
+            value = response.lower().split(attr)[-1].split(",")[0].strip()
+            value = value.replace(" ", "").replace(":", "").replace(".", "").strip()
+            value = True if value in ["true", "yes", "1"] else value
+            value = False if value in ["false", "no", "0"] else value
+            result[attr] = value
+        else:
+            result[attr] = "unknown"
+    return result
+
+def test_vlm_vision_query():
+    model_name = "moondream" # "gemma3:4b", "qwen2.5vl:3b", "llama3.2"
+    model_config = ModelConfig(model_name=model_name)
+    ensure_model(model_name)
+    inference = VLMInference(model_config, new_model=False)
 
     image_dir = f"{os.getcwd()}/test_images"
     image_path = f"{image_dir}/person2.jpg"
-    vision_response = vlm_inference.query_vision("What is in this image?", image_path)
-    print(vision_response)
+
+    response: dict[str, str] = visually_describe_people(input_image=image_path, inference=inference)
+    print(f"Vision response: {response}")
+
+if __name__ == "__main__":
+    # model_config = ModelConfig(model_name="moondream") # gemma3:4b
+    # # ensure_model(model_config.model_name)
+    # vlm_inference = VLMInference(model_config, new_model=False)
+
+    # Test name and drink
+    # test_vlm_text_query(vlm_inference)
+
+    # Test visually describing people
+    test_vlm_vision_query()
+
+    ### Generic testing
+    # text_response = vlm_inference.query_text("Please print Hello World")
+    # print(text_response)
+    #
+    # image_dir = f"{os.getcwd()}/test_images"
+    # image_path = f"{image_dir}/person2.jpg"
+    # vision_response = vlm_inference.query_vision("What is in this image?", image_path)
+    # print(vision_response)

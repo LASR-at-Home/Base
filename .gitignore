@@ -143,3 +143,4 @@ mypy.ini
 
 # Pycharm extension setup files
 .idea/*
+/common/foundation_models/lasr_vlm/lasr_vlm/test_images/
