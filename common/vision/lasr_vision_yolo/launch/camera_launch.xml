@@ -13,7 +13,7 @@
 
     <!-- start relay service (TODO should be relay?) -->
     <node name="service" pkg="lasr_vision_yolo" exec="yolo_service_node" respawn="false" output="screen"
-          args="/xtion/rgb/image_raw $(var model)"/>
+          args="/head_front_camera/rgb/image_raw $(var model)"/>
 
     <!-- launch video stream -->
     <!-- <include file="$(find video_stream_opencv)/launch/camera.launch">

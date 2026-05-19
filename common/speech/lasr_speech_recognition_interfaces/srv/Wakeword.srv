@@ -1,0 +1,6 @@
+string[] keywords
+float32 timeout
+float32 threshold
+---
+bool success
+string keyword

@@ -9,7 +9,7 @@ class WaitForPerson(smach.StateMachine):
     def __init__(
         self,
         node,
-        image_topic: str = "/xtion/rgb/image_raw",
+        image_topic: str = "/head_front_camera/rgb/image_raw",
     ):
         super().__init__(
             outcomes=["succeeded", "failed"],

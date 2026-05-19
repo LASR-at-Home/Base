@@ -1,0 +1,56 @@
+<?xml version="1.0"?>
+<sdf version="1.9">
+  <model name="sitting">
+
+    <static>true</static>
+
+    <link name="link">
+
+      <collision name="collision">
+        <geometry>
+          <box>
+            <!-- approximate bounding box: ~0.6m wide, 0.6m deep, 1.2m tall -->
+            <size>0.6 0.6 1.2</size>
+          </box>
+        </geometry>
+        <pose>0 0 0.6 0 0 0</pose>
+        <surface>
+          <friction><ode/></friction>
+          <bounce/>
+          <contact/>
+        </surface>
+      </collision>
+
+      <visual name="visual">
+        <geometry>
+          <mesh>
+            <uri>file:///root/exchange/src/robot_factory/models/sitting/meshes/sitting.dae</uri>
+            <!-- DAE is in centimeters, scale down to meters -->
+            <scale>0.01 0.01 0.01</scale>
+          </mesh>
+        </geometry>
+        <material>
+          <diffuse>1 1 1 1</diffuse>
+          <specular>0.2 0.2 0.2 1</specular>
+          <pbr>
+            <metal>
+              <albedo_map>file:///root/exchange/src/robot_factory/models/sitting/Ch21_1001_Diffuse.png</albedo_map>
+            </metal>
+          </pbr>
+        </material>
+      </visual>
+
+      <inertial>
+        <mass>70</mass>
+        <inertia>
+          <ixx>1</ixx><ixy>0</ixy><ixz>0</ixz>
+          <iyy>1</iyy><iyz>0</iyz><izz>1</izz>
+        </inertia>
+      </inertial>
+
+      <enable_wind>false</enable_wind>
+    </link>
+
+    <self_collide>false</self_collide>
+  </model>
+</sdf>

@@ -17,14 +17,14 @@ class DescribePeople(smach.StateMachine):
         with self:
             smach.StateMachine.add(
                 "GET_IMAGE",
-                GetImage(node),
+                GetImage(node=node),
                 transitions={"succeeded": "GET_CLIP_ATTRIBUTES", "failed": "failed"},
                 remapping={"img_msg": "img_raw"},
             )
 
             smach.StateMachine.add(
                 "GET_CLIP_ATTRIBUTES",
-                GetClipAttributes(node),
+                GetClipAttributes(node=node),
                 transitions={"succeeded": "succeeded", "failed": "failed"},
             )
 

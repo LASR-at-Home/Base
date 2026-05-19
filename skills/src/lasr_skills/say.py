@@ -73,11 +73,14 @@ else:
             format_str: Union[str, None] = None,
         ):
             if text is not None:
-                super(Say, self).__init__(
-                    node, "/tts_engine/tts", TTS, goal=TTS.Goal(input=text)
+                super().__init__(
+                    node=node,
+                    action_name="/tts_engine/tts",
+                    action_spec=TTS,
+                    goal=TTS.Goal(input=text),
                 )
             elif format_str is not None:
-                super(Say, self).__init__(
+                super().__init__(
                     node,
                     "/tts_engine/tts",
                     TTS,
@@ -91,7 +94,7 @@ else:
                     input_keys=["placeholders"],
                 )
             else:
-                super(Say, self).__init__(
+                super().__init__(
                     node,
                     "/tts_engine/tts",
                     TTS,

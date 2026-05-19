@@ -12,7 +12,7 @@ from std_msgs.msg import Header
 from geometry_msgs.msg import PointStamped, Point
 from sensor_msgs.msg import PointCloud2
 
-from lasr_skills import LookToPoint
+from skills import LookToPoint
 
 # TODO merge tf_pcl to this branch & test this SM
 
@@ -52,7 +52,7 @@ class PointCloudSweep(smach.StateMachine):
                     transitions={
                         "succeeded": f"GetTransformedPointcloud_{index}",
                         "aborted": "failed",
-                        "timed_out": f"GetTransformedPointcloud_{index}",
+                        "preempted": f"GetTransformedPointcloud_{index}",
                     },
                     remapping={"pointstamped": f"pointstamped_{index}"},
                 )
@@ -74,7 +74,9 @@ class PointCloudSweep(smach.StateMachine):
 
     class GetTransformedPointcloud(smach.State):
         def __init__(
-            self, depth_topic: str = "/xtion/depth_registered/points", node: Node = None
+            self,
+            depth_topic: str = "/head_front_camera/depth/points",
+            node: Node = None,
         ):
             smach.State.__init__(
                 self,
