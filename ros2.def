@@ -20,17 +20,20 @@ cd /opt/robocup_ws/src
 
 # Clone SMACH, ros2-numpy and ament-virtualenv
 
-cd /opt/robocup_ws/src
-git clone --branch 0.5.0 --depth 1 https://github.com/locusrobotics/ament_virtualenv.git
-python3 -m pip install --upgrade virtualenv
-
-cd /opt/robocup_ws/src
-git clone https://github.com/Box-Robotics/ros2_numpy.git
-
 # Dependencies for ament-virtualenv (TODO verify)
 ## apt update
 apt install -y python3-venv # missing dependency?
 python3 -m pip install --upgrade virtualenv # missing dependency?
+
+cd /opt/robocup_ws/src
+git clone --branch 0.5.0 --depth 1 https://github.com/locusrobotics/ament_virtualenv.git
+
+cd /opt/robocup_ws/src
+git clone https://github.com/Box-Robotics/ros2_numpy.git
+
+# Install Ollama
+apt install -y zstd
+sh -c "$(curl -fsSL https://ollama.com/install.sh)"
 
 # Build robocup ws
 source /opt/ros/$ROS_DISTRO/setup.bash
