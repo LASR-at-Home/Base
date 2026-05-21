@@ -4,6 +4,9 @@ from glob import glob
 import setuptools.command.install
 import ament_virtualenv.install
 
+
+_here = os.path.dirname(os.path.abspath(__file__))
+
 package_name = "lasr_vision_yolo"
 
 
@@ -15,6 +18,7 @@ class InstallCommand(setuptools.command.install.install):
             scripts_base=self.install_scripts,
             package_name=package_name,
             python_version="3",
+            source_dir=_here,
         )
         return
 
@@ -25,7 +29,7 @@ setup(
     packages=find_packages(exclude=["test"]),
     data_files=[
         ("share/ament_index/resource_index/packages", ["resource/" + package_name]),
-        ("share/" + package_name, ["package.xml"]),
+        ("share/" + package_name, ["package.xml", "requirements.txt"]),
         (os.path.join("share", package_name, "launch"), glob("launch/*")),
     ],
     install_requires=["setuptools"],
