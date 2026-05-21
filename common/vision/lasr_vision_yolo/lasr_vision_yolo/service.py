@@ -178,7 +178,7 @@ class YOLOServiceNode:
                 transform = self._tf_buffer.lookup_transform(
                     target_frame,
                     req.depth_image.header.frame_id,
-                    req.depth_image.header.stamp,
+                    rclpy.time.Time(),
                     Duration(seconds=1),
                 )
             except (
@@ -289,7 +289,7 @@ class YOLOServiceNode:
                 transform = self._tf_buffer.lookup_transform(
                     target_frame,
                     req.depth_image.header.frame_id,
-                    req.depth_image.header.stamp,
+                    rclpy.time.Time(),
                     Duration(seconds=1),
                 )
             except (

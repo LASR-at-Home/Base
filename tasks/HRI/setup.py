@@ -47,7 +47,7 @@ setup(
         "console_scripts": [
             "seat_guest = HRI.states.seat_guest:main",
             "sm = HRI.state_machine:main",
-            "introduce = HRI.introduce_test:"
+            "introduce = HRI.introduce_test:main",
         ],
     },
 )
