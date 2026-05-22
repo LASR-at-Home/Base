@@ -14,6 +14,11 @@ from sensor_msgs.msg import Image, CameraInfo
 from lasr_vision_interfaces.msg import Detection3D
 from lasr_vision_interfaces.srv import Recognise3D, YoloDetection3D
 
+# from rclpy.qos import QoSProfile, QosReliabilityPolicy
+from rclpy.qos import ReliabilityPolicy
+
+# qos = QoSProfile(depth=10, reliability=QosReliabilityPolicy.BEST_EFFORT)
+
 
 class Recognise(RosState):
 
@@ -131,13 +136,38 @@ class Recognise(RosState):
             self._depth_camera_info = depth_camera_info
 
         # --- ROS 2: message_filters.Subscriber(node, MsgType, topic) ---
-        image_sub = message_filters.Subscriber(self.node, Image, self._rgb_image_topic)
-        depth_sub = message_filters.Subscriber(self.node, Image, self._depth_image_topic)
-        depth_camera_info_sub = message_filters.Subscriber(
-            self.node, CameraInfo, self._depth_info_topic
+        image_sub = message_filters.Subscriber(
+            self.node,
+            Image,
+            self._rgb_image_topic,
+            ReliabilityPolicy.BEST_EFFORT,
         )
+        depth_sub = message_filters.Subscriber(
+            self.node,
+            Image,
+            self._depth_image_topic,
+            ReliabilityPolicy.BEST_EFFORT,
+        )
+        depth_camera_info_sub = message_filters.Subscriber(
+            self.node,
+            CameraInfo,
+            self._depth_info_topic,
+            ReliabilityPolicy.BEST_EFFORT,
+        )
+        # image_sub = message_filters.Subscriber(
+        #     self.node, Image, self._rgb_image_topic, qos_profile=qos
+        # )
+        # depth_sub = message_filters.Subscriber(
+        #     self.node, Image, self._depth_image_topic, qos_profile=qos
+        # )
+        # depth_camera_info_sub = message_filters.Subscriber(
+        #     self.node, CameraInfo, self._depth_info_topic, qos_profile=qos
+        # )
         ts = message_filters.ApproximateTimeSynchronizer(
-            [image_sub, depth_sub, depth_camera_info_sub], 10, 2.0
+            [image_sub, depth_sub, depth_camera_info_sub],
+            ReliabilityPolicy.BEST_EFFORT,
+            30,
+            5.0,
         )
         ts.registerCallback(get_images_cb)
 
@@ -147,6 +177,7 @@ class Recognise(RosState):
             or self._depth_image is None
             or self._depth_camera_info is None
         ):
+            self.node.get_logger().info("Waiting...")
             rclpy.spin_once(self.node, timeout_sec=0.05)
 
         # --- ROS 2: construct request via .Request(), then set fields ---

@@ -42,7 +42,7 @@ def main():
     # Sitting person (host)
     sm.userdata.seated_guest_locs = [
         # Point(x=7.573320, y=7.281600, z=1.2),
-        Point(x=1.5, y=-0.5, z=1.2),
+        Point(x=2.22, y=2.01, z=1.2),
     ]
 
     outcome = sm.execute()
