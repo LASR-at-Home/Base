@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(grep -n \"class SamResize\\\\|def __call__\\\\|def apply_image\\\\|def get_preprocess_shape\\\\|F.interpolate\" /tmp/empower/src/efficientvit/export_encoder.py | head -30)",
-      "Read(//tmp/empower/src/efficientvit/**)"
-    ]
-  }
-}
