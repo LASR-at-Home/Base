@@ -86,6 +86,12 @@ class HRI(smach.StateMachine):
             self.add(
                 "SEAT_GUEST",  # SM3: Locates and seats guest in free seat
                 SeatGuest(node=node, learn_host=False),
+                transitions={"succeeded": "INTRODUCE", "failed": "failed"},
+            )
+
+            self.add(
+                "INTRODUCE",
+                Introduce(node=node, guest_to_introduce="guest1"),
                 transitions={"succeeded": "succeeded", "failed": "failed"},
             )
 

@@ -48,6 +48,7 @@ setup(
             "seat_guest = HRI.states.seat_guest:main",
             "sm = HRI.state_machine:main",
             "introduce = HRI.introduce_test:main",
+            "register_face = HRI.register_face:main",
         ],
     },
 )
