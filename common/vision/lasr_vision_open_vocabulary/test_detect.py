@@ -23,6 +23,7 @@ from rclpy.node import Node
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
 from lasr_vision_interfaces.srv import OpenVocabDetect, OpenVocabDetectAndSegment
+from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
 
 
 class TestDetect(Node):
@@ -41,8 +42,9 @@ class TestDetect(Node):
             self.client = self.create_client(OpenVocabDetect, '/open_vocab/detect')
 
         if image_path is None:
+            camera_qos = QoSProfile(depth=10, reliability=ReliabilityPolicy.BEST_EFFORT, history=HistoryPolicy.KEEP_LAST)
             self.create_subscription(Image, '/head_front_camera/rgb/image_raw',
-                                     lambda msg: setattr(self, '_latest_image', msg), 1)
+                                     lambda msg: setattr(self, '_latest_image', msg), camera_qos)
 
     def _get_image(self):
         if self.image_path:

@@ -17,6 +17,7 @@ class OpenVocabNode(Node):
         self.declare_parameter('model', 'grounding_dino')  # 'grounding_dino' or 'yoloworld'
         self.declare_parameter('model_device', 'cuda')
         self.declare_parameter('yoloworld_weights', 'yolov8s-world.pt')
+        self.declare_parameter('grounding_dino_weights', '')
         self.declare_parameter('use_sam', False)
         self.declare_parameter('sam_encoder_path', '')
         self.declare_parameter('sam_decoder_path', '')
@@ -24,6 +25,7 @@ class OpenVocabNode(Node):
         model_name = self.get_parameter('model').value
         device = self.get_parameter('model_device').value
         weights = self.get_parameter('yoloworld_weights').value
+        gd_weights = self.get_parameter('grounding_dino_weights').value
         use_sam = self.get_parameter('use_sam').value
         encoder_path = self.get_parameter('sam_encoder_path').value
         decoder_path = self.get_parameter('sam_decoder_path').value
@@ -34,8 +36,9 @@ class OpenVocabNode(Node):
 
         if model_name == 'grounding_dino':
             try:
-                self.get_logger().info(f'Loading Grounding DINO on {device}')
-                self.detector = GroundingDinoDetector(device=device)
+                src = gd_weights or 'HuggingFace'
+                self.get_logger().info(f'Loading Grounding DINO from {src} on {device}')
+                self.detector = GroundingDinoDetector(device=device, weights_path=gd_weights)
                 self.get_logger().info('Grounding DINO loaded successfully')
             except Exception as e:
                 self.get_logger().error(f'Failed loading Grounding DINO: {e}')
