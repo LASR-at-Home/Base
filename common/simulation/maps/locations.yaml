@@ -1,0 +1,11 @@
+locations:
+  kitchen:
+    orientation:
+      w: 1.0
+      x: 0.0
+      y: 0.0
+      z: 0.0
+    position:
+      x: 2.233
+      y: -2.924
+      z: 0.0
