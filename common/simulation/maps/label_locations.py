@@ -13,13 +13,13 @@ import os
 from pathlib import Path
 
 import matplotlib
+
 matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
 from matplotlib.widgets import TextBox, Button
 import numpy as np
 import yaml
 from PIL import Image
-
 
 MAP_DIR = Path(__file__).parent
 MAP_IMAGE = MAP_DIR / "map.pgm"
@@ -78,7 +78,10 @@ def main():
     ax_undo = fig.add_axes([0.82, 0.03, 0.13, 0.05])
 
     ax.imshow(img, cmap="gray", origin="upper")
-    ax.set_title("Click on map → type name below → Enter or Confirm\n's'=save  'u'=undo  'q'=quit+save", fontsize=10)
+    ax.set_title(
+        "Click on map → type name below → Enter or Confirm\n's'=save  'u'=undo  'q'=quit+save",
+        fontsize=10,
+    )
 
     textbox = TextBox(ax_textbox, "Name: ", initial="")
     btn_confirm = Button(ax_confirm, "Confirm")
@@ -96,7 +99,9 @@ def main():
             wx, wy = loc["position"]["x"], loc["position"]["y"]
             px, py = world_to_pixel(wx, wy, img_height, resolution, origin)
             dot = ax.plot(px, py, "ro", markersize=8)[0]
-            txt = ax.text(px + 5, py - 5, name, color="red", fontsize=9, fontweight="bold")
+            txt = ax.text(
+                px + 5, py - 5, name, color="red", fontsize=9, fontweight="bold"
+            )
             markers[name] = [dot, txt]
         fig.canvas.draw_idle()
 
@@ -106,7 +111,9 @@ def main():
         name = name.strip()
         if not name or pending["px"] is None:
             return
-        wx, wy = pixel_to_world(pending["px"], pending["py"], img_height, resolution, origin)
+        wx, wy = pixel_to_world(
+            pending["px"], pending["py"], img_height, resolution, origin
+        )
         locations[name] = {
             "position": {"x": round(float(wx), 3), "y": round(float(wy), 3), "z": 0.0},
             "orientation": {"x": 0.0, "y": 0.0, "z": 0.0, "w": 1.0},
@@ -124,11 +131,15 @@ def main():
             return
         pending["px"] = event.xdata
         pending["py"] = event.ydata
-        wx, wy = pixel_to_world(pending["px"], pending["py"], img_height, resolution, origin)
+        wx, wy = pixel_to_world(
+            pending["px"], pending["py"], img_height, resolution, origin
+        )
         print(f"Pending: ({wx:.3f}, {wy:.3f}) — type a name and press Enter")
         if pending_marker[0]:
             pending_marker[0].remove()
-        pending_marker[0] = ax.plot(event.xdata, event.ydata, "b+", markersize=14, markeredgewidth=2)[0]
+        pending_marker[0] = ax.plot(
+            event.xdata, event.ydata, "b+", markersize=14, markeredgewidth=2
+        )[0]
         fig.canvas.draw_idle()
         # focus the textbox
         textbox.begin_typing(None)
