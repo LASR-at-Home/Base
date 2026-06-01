@@ -44,29 +44,34 @@ class VlmDescribePeopleService(Node):
         self.get_logger().info("Received request to describe person")
 
         try:
-            # Step 1: Convert ROS image message to OpenCV image
             cv_image = self.bridge.imgmsg_to_cv2(request.image_raw, "bgr8")
 
-            # Step 2: Save to a temp file (VLM needs a file path)
             with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as f:
                 tmp_path = f.name
             cv2.imwrite(tmp_path, cv_image)
 
-            # Step 3: Run Maayan's VLM function
             result = visually_describe_people(
                 input_image=tmp_path,
                 inference=self.vlm,
             )
 
-            # Step 4: Clean up temp file
             os.unlink(tmp_path)
 
-            # Step 5: Fill in the response fields
-            response.hair_color = str(result.get("hair_color", "unknown"))
-            response.hair_length = str(result.get("hair_length", "unknown"))
-            response.glasses = bool(result.get("glasses", False))
-            response.hat = bool(result.get("hat", False))
-            response.shirt_color = str(result.get("shirt color", "unknown"))
+            def _get(key, default):
+
+                val = result.get(key, [default])
+
+                return val[0] if isinstance(val, list) and val else default
+
+            response.hair_color = str(_get("hair_color", "unknown"))
+
+            response.hair_length = str(_get("hair_length", "unknown"))
+
+            response.glasses = bool(_get("glasses", False))
+
+            response.hat = bool(_get("hat", False))
+
+            response.shirt_color = str(_get("shirt color", "unknown"))
 
             self.get_logger().info(f"VLM result: {result}")
 

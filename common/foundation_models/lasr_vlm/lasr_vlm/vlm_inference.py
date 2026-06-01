@@ -4,6 +4,7 @@ import os
 import ollama
 from dataclasses import dataclass
 from typing import Optional
+import re
 
 import base64
 from pathlib import Path
@@ -130,7 +131,7 @@ def test_vlm_text_query(inference: VLMInference):
     print(f"Second result: {second_result}")
 
 
-def visually_describe_people(input_image, inference: VLMInference) -> dict[str, str]:
+def visually_describe_people(input_image, inference: VLMInference) -> dict[str, list]:
     """
     Test VLM's ability to visually describe the person in the image.
     """
@@ -141,9 +142,16 @@ def visually_describe_people(input_image, inference: VLMInference) -> dict[str, 
     )
     for attr in attributes:
         user_query += f"\n- {attr}"
+    # user_query_example = (
+    #     "\n\n The structure of the response should be a comma separated list of attribute: value pairs. For example, "
+    #     "'hair_color: _, hair_length: _, glasses: _, hat: _, shirt color: _', where the _ is replaced with the model's answer for that attribute. "
+    #     "For true or false attributes, the value should be simply true or false. For example, 'glasses: true' if the model thinks the person is wearing glasses, and 'hat: false' if the model thinks the person is not wearing a hat."
+    # )
     user_query_example = (
-        "\n\n For example, if the person has short brown hair, is wearing glasses, does not wear a hat, and is wearing a red shirt, the response should be: "
-        "'hair_color: brown, hair_length: short, glasses: True, hat: False, shirt color: red.'"
+        "\n\n The structure of the response should be a comma separated list of attribute: value pairs. For example, "
+        "'hair_color: _, hair_length: _, glasses: _, hat: _, shirt color: _', where the _ is replaced with the model's answer for that attribute. "
+        "For glasses and hat, only answer true if they are clearly and visibly present in the image. "
+        "If you are not sure, answer false. For example, 'glasses: false' means the person is definitely not wearing glasses."
     )
     user_query += user_query_example
 
@@ -154,21 +162,52 @@ def visually_describe_people(input_image, inference: VLMInference) -> dict[str, 
     return parse_vlm_response(response, attributes)
 
 
-def parse_vlm_response(response, attributes) -> dict[str, str]:
+def parse_vlm_response(response: str, attributes: list[str]) -> dict[str, list]:
     """
-    Parse the VLM response into a dictionary of attributes.
+    Parse the VLM response string into a dictionary of attribute values.
     """
     result = {}
     for attr in attributes:
-        if attr in response.lower():
-            value = response.lower().split(attr)[-1].split(",")[0].strip()
-            value = value.replace(" ", "").replace(":", "").replace(".", "").strip()
-            value = True if value in ["true", "yes", "1"] else value
-            value = False if value in ["false", "no", "0"] else value
-            result[attr] = value
-        else:
-            result[attr] = "unknown"
+        value = parse_attribute(response.lower(), attr)
+        result[attr] = value
+
     return result
+
+
+def parse_attribute(response: str, attr: str) -> list:
+    """
+    Extract and parse values for a single attribute from the response.
+    """
+    if attr not in response:
+        return []
+    # print(f"Parsing {attr} response: {response}")
+
+    raw = response.split(attr)[1].split(",")[0].lstrip(":").strip()
+    # print(f"Parsing attribute '{attr}' with raw value: '{raw}'")
+    values = raw.split(" and ") if " and " in raw else [raw]
+    return [postprocess_value(v) for v in values]
+
+
+def postprocess_value(value: str):
+    """
+    Postprocess the value by stripping whitespace and converting to lowercase.
+    """
+    STRIP_CHARS = str.maketrans("", "", " :.'")
+    NO_PATTERN = re.compile(r"\bno\s+\w+", re.IGNORECASE)
+
+    TRUE = {"true", "yes", "1"}
+    FALSE = {"false", "no", "0"}
+
+    if NO_PATTERN.match(value.strip()):
+        return False
+
+    cleaned = value.translate(STRIP_CHARS).strip()
+    if cleaned in TRUE:
+        return True
+    if cleaned in FALSE:
+        return False
+
+    return cleaned
 
 
 def test_vlm_vision_query():
@@ -178,9 +217,9 @@ def test_vlm_vision_query():
     inference = VLMInference(model_config, new_model=False)
 
     image_dir = f"{os.getcwd()}/test_images"
-    image_path = f"{image_dir}/person2.jpg"
+    image_path = f"{image_dir}/person1.jpg"
 
-    response: dict[str, str] = visually_describe_people(
+    response: dict[str, list] = visually_describe_people(
         input_image=image_path, inference=inference
     )
     print(f"Vision response: {response}")
