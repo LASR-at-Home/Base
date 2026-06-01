@@ -144,3 +144,5 @@ mypy.ini
 # Pycharm extension setup files
 .idea/*
 /common/foundation_models/lasr_vlm/lasr_vlm/test_images/
+common/vision/lasr_vision_open_vocabulary/lasr_vision_open_vocabulary/models/l2_decoder.onnx
+common/vision/lasr_vision_open_vocabulary/lasr_vision_open_vocabulary/models/l2_encoder.onnx

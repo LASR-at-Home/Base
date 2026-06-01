@@ -59,6 +59,8 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/ClipRecogniseFace.srv"
   "srv/GroundedSam.srv"
   "srv/LangSam.srv"
+  "srv/OpenVocabDetect.srv"
+  "srv/OpenVocabDetectAndSegment.srv"
   
   # Actions
   "action/EyeTracker.action"

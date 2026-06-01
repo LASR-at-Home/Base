@@ -1,0 +1,8 @@
+torch
+torchvision
+ultralytics
+transformers
+Pillow
+opencv-python
+numpy<2
+onnxruntime-gpu

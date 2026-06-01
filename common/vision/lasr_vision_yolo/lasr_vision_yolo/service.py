@@ -8,6 +8,7 @@ from typing import Dict, Union, List, Tuple
 import rclpy
 from rclpy.node import Node
 from rclpy.duration import Duration
+from rclpy.time import Time
 
 import ultralytics
 import torch
@@ -155,6 +156,19 @@ class YOLOServiceNode:
 
         return response
 
+    def _lookup_transform(self, target_frame, source_frame, stamp):
+        try:
+            return self._tf_buffer.lookup_transform(
+                target_frame, source_frame, stamp, Duration(seconds=0.5)
+            )
+        except Exception as e:
+            self.node.get_logger().warn(
+                f"TF {target_frame}<-{source_frame} at image stamp failed ({e}); using latest"
+            )
+        return self._tf_buffer.lookup_transform(
+            target_frame, source_frame, Time(), Duration(seconds=0.5)
+        )
+
     def _detect3d(
         self, req: YoloDetection3D.Request, res: YoloDetection3D.Response
     ) -> YoloDetection3D.Response:
@@ -173,22 +187,13 @@ class YOLOServiceNode:
 
         target_frame = req.target_frame or req.depth_image.header.frame_id
 
+        transform = None
         if results:
-            try:
-                transform = self._tf_buffer.lookup_transform(
-                    target_frame,
-                    req.depth_image.header.frame_id,
-                    rclpy.time.Time(),
-                    Duration(seconds=1),
-                )
-            except (
-                tf.LookupException,
-                tf.ConnectivityException,
-                tf.ExtrapolationException,
-            ) as e:
-                self.node.get_logger().error(f"Service failed: {e}")
-                response.detected_objects = []
-                return response
+            transform = self._lookup_transform(
+                target_frame,
+                req.depth_image.header.frame_id,
+                req.depth_image.header.stamp,
+            )
 
         for result in results:
             detection = Detection3D()
@@ -285,21 +290,11 @@ class YOLOServiceNode:
 
         transform = None
         if results:
-            try:
-                transform = self._tf_buffer.lookup_transform(
-                    target_frame,
-                    req.depth_image.header.frame_id,
-                    rclpy.time.Time(),
-                    Duration(seconds=1),
-                )
-            except (
-                tf.LookupException,
-                tf.ConnectivityException,
-                tf.ExtrapolationException,
-            ) as e:
-                self.node.get_logger().error(f"Service failed: {e}")
-                response.detected_objects = []
-                return response
+            transform = self._lookup_transform(
+                target_frame,
+                req.depth_image.header.frame_id,
+                req.depth_image.header.stamp,
+            )
 
         for result in results:
             keypoints = Keypoint3DList()
