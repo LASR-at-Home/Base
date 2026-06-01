@@ -5,10 +5,16 @@ object, named after the object, containing a few cropped example photos.**
 
 ```
 refs_example/
-├── bottle/          1.jpg  2.jpg        <- tight crops of a bottle
-├── crisps/          1.jpg  2.jpg
-└── fruit_smoothie/  1.jpg  2.jpg
+├── bottle/          1.jpg  2.jpg  3.jpg     <- tight crops of a bottle
+├── fruit_smoothie/  1.jpg  2.jpg  3.jpg
+├── crisps/          ...
+└── ... (one folder per object)
 ```
+
+It contains all 13 classes from our food dataset (biscuits, bottle, crisps,
+fruit_smoothie, kids_smoothie, large_cup, medium_cup, midium_cup, porridge,
+sandwich, small_cup, toastie, wrap), 3 example crops each — enough to run
+few-shot on that dataset directly, and to show the structure.
 
 The folder name is the class name (underscores or spaces both work, e.g.
 `fruit_smoothie` matches `--classes "fruit smoothie"`).
