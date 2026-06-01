@@ -1,10 +1,3 @@
-import threading
-from typing import Union
-from geometry_msgs.msg import Pose, Point, Quaternion
-
-import rclpy
-from rclpy.callback_groups import ReentrantCallbackGroup
-from rclpy.executors import MultiThreadedExecutor
 import smach
 
 from lasr_skills import Say, StartEyeTracker, WaitForPersonInArea, AskAndListen

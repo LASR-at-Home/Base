@@ -11,8 +11,9 @@ from glob import glob
 _here = os.path.dirname(os.path.abspath(__file__))
 
 package_name = "skills"
-# setup_args = generate_distutils_setup(packages=["lasr_skills"], package_dir={"": "src"})
 
+
+_here = os.path.dirname(os.path.abspath(__file__))
 
 class InstallCommand(setuptools.command.install.install):
     def run(self):
