@@ -21,7 +21,7 @@ class Detect3D(RosState):
         node: Node,
         image_topic: str = "/head_front_camera/rgb/image_raw",
         depth_image_topic: str = "/head_front_camera/depth/image_raw",
-        depth_camera_info_topic: str = "/head_front_camera/rgb/camera_info",
+        depth_camera_info_topic: str = "/head_front_camera/depth/camera_info",
         point_cloud_topic: Optional[str] = None,
         model: str = "yolo11n-seg.pt",
         models: Union[List[str], None] = None,
