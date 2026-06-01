@@ -24,8 +24,22 @@ USAGE
          --classes "fruit smoothie,crisps,bottle" \
          --source ./images --labels ./labelme_json
 
-Compare S vs M by running it twice with different --weights and reading the
-printed speed (and F1, if labels are given).
+  3) FEW-SHOT mode: instead of text, give a few example photos per class. Put one
+     folder per class (folder name = class name) of tightly-cropped example images:
+
+       refs/bottle/1.jpg refs/bottle/2.jpg   refs/cup/1.jpg ...
+
+       python yoloe_test.py \
+         --weights yoloe-v8m-seg.pt --device cuda \
+         --classes "bottle,cup" --refs ./refs \
+         --source ./images --save-dir ./out
+
+     With --refs the script uses the example photos as the prompt (visual/few-shot);
+     without it, it uses the class names as text (zero-shot). Few-shot is slower
+     (one model pass per class) but usually much more accurate on specific objects.
+
+Compare S vs M (or text vs few-shot) by running it again with different options
+and reading the printed speed and F1.
 """
 import argparse
 import collections
@@ -36,15 +50,58 @@ from pathlib import Path
 import cv2
 import numpy as np
 from ultralytics import YOLOE
+from ultralytics.models.yolo.yoloe import YOLOEVPSegPredictor  # for few-shot (visual prompts)
 
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".bmp"}
 
 
-def build_model(weights: str, device: str, classes: list):
+def build_model(weights: str, device: str, classes=None):
     model = YOLOE(weights)
     model.to(device)
-    model.set_classes(classes, model.get_text_pe(classes))  # YOLOE needs text embeddings
+    if classes is not None:                                   # text mode only
+        model.set_classes(classes, model.get_text_pe(classes))
     return model
+
+
+def build_composites(refs_dir, classes, save_dir, tile=512):
+    """Few-shot prompts. Expects one folder of example photos per class:
+        <refs_dir>/bottle/*.jpg, <refs_dir>/fruit_smoothie/*.jpg, ...
+    Each photo should be a tight crop of the object. For each class the crops are
+    pasted into one composite image (YOLOE takes a single reference image per call)
+    and their positions recorded as the prompt boxes.
+    Returns {class: (composite_path, boxes_array)}. Folder names are matched to the
+    --classes names ignoring case and underscores/spaces."""
+    folders = {_norm(p.name): p for p in Path(refs_dir).iterdir() if p.is_dir()}
+    out_dir = Path(save_dir) / "_refs"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    composites = {}
+    for cls in classes:
+        folder = folders.get(_norm(cls))
+        if folder is None:
+            print(f"  no reference folder for '{cls}' — skipping it")
+            continue
+        crops = [f for f in sorted(folder.iterdir()) if f.suffix.lower() in IMAGE_EXTS]
+        if not crops:
+            print(f"  no example images in {folder} — skipping '{cls}'")
+            continue
+        canvas = np.zeros((tile, tile * len(crops), 3), dtype=np.uint8)
+        boxes = []
+        for i, crop_path in enumerate(crops):
+            im = cv2.imread(str(crop_path))
+            if im is None:
+                continue
+            h, w = im.shape[:2]
+            scale = tile / max(h, w)
+            nh, nw = int(h * scale), int(w * scale)
+            im = cv2.resize(im, (nw, nh))
+            x_off, y_off = i * tile + (tile - nw) // 2, (tile - nh) // 2
+            canvas[y_off:y_off + nh, x_off:x_off + nw] = im
+            boxes.append([x_off, y_off, x_off + nw, y_off + nh])
+        path = out_dir / f"{_norm(cls).replace(' ', '_')}.jpg"
+        cv2.imwrite(str(path), canvas)
+        composites[cls] = (str(path), np.array(boxes, dtype=np.float32))
+        print(f"  '{cls}': {len(boxes)} example(s)")
+    return composites
 
 
 def gather_images(source: str) -> list:
@@ -98,6 +155,8 @@ def main():
     parser.add_argument("--source", required=True, help="image file or folder of images")
     parser.add_argument("--save-dir", default="./yoloe_out", help="where to write annotated images")
     parser.add_argument("--labels", default="", help="optional LabelMe .json dir -> compute F1")
+    parser.add_argument("--refs", default="", help="optional folder of example photos per class "
+                                                   "(<refs>/<class>/*.jpg) -> few-shot mode instead of text")
     parser.add_argument("--conf", type=float, default=0.25, help="confidence threshold")
     parser.add_argument("--iou-match", type=float, default=0.4, help="IoU for an F1 match (only with --labels)")
     args = parser.parse_args()
@@ -110,9 +169,16 @@ def main():
     save_dir = Path(args.save_dir)
     save_dir.mkdir(parents=True, exist_ok=True)
 
-    print(f"weights={args.weights}  device={args.device}  classes={classes}")
+    mode = "few-shot (visual)" if args.refs else "text (zero-shot)"
+    print(f"weights={args.weights}  device={args.device}  mode={mode}  classes={classes}")
     print(f"loading model ...")
-    model = build_model(args.weights, args.device, classes)
+    if args.refs:
+        model = build_model(args.weights, args.device)          # no text classes in few-shot
+        print("building few-shot prompts from example photos ...")
+        composites = build_composites(args.refs, classes, save_dir)
+    else:
+        model = build_model(args.weights, args.device, classes)  # text mode
+        composites = None
 
     ground_truth = load_labelme_boxes(args.labels, classes) if args.labels else {}
     stats = {c: {"tp": 0, "fp": 0, "fn": 0, "gt": 0} for c in classes} if ground_truth else None
@@ -124,19 +190,32 @@ def main():
         if image is None:
             continue
 
-        t0 = time.time()
-        result = model.predict(image, conf=args.conf, device=args.device, verbose=False)[0]
-        times.append(time.time() - t0)
-
-        names = result.names
         preds = []  # (class, score, box)
-        if result.boxes is not None:
-            for box, score, cls_idx in zip(
-                result.boxes.xyxy.tolist(),
-                result.boxes.conf.tolist(),
-                result.boxes.cls.tolist(),
-            ):
-                preds.append((names[int(cls_idx)], float(score), box))
+        t0 = time.time()
+        if composites is None:
+            # TEXT mode: one pass; the model already knows the classes by name.
+            result = model.predict(image, conf=args.conf, device=args.device, verbose=False)[0]
+            if result.boxes is not None:
+                for box, score, cls_idx in zip(
+                    result.boxes.xyxy.tolist(),
+                    result.boxes.conf.tolist(),
+                    result.boxes.cls.tolist(),
+                ):
+                    preds.append((result.names[int(cls_idx)], float(score), box))
+        else:
+            # FEW-SHOT mode: one pass per class, prompted by that class's example photos.
+            for cls in classes:
+                if cls not in composites:
+                    continue
+                comp_path, comp_boxes = composites[cls]
+                vp = dict(bboxes=comp_boxes, cls=np.zeros(len(comp_boxes), dtype=np.int32))
+                r = model.predict(image, refer_image=comp_path, visual_prompts=vp,
+                                  predictor=YOLOEVPSegPredictor, conf=args.conf,
+                                  device=args.device, verbose=False)[0]
+                if r.boxes is not None:
+                    for box, score in zip(r.boxes.xyxy.tolist(), r.boxes.conf.tolist()):
+                        preds.append((cls, float(score), box))
+        times.append(time.time() - t0)
 
         # save annotated image
         annotated = image.copy()
@@ -175,7 +254,7 @@ def main():
     # so nothing is lost when the terminal closes.
     lines = []
     mean_ms = 1000 * sum(times) / len(times)
-    lines.append(f"weights={args.weights}  device={args.device}  classes={classes}")
+    lines.append(f"weights={args.weights}  device={args.device}  mode={mode}  classes={classes}")
     lines.append(f"images={len(times)}  conf={args.conf}")
     lines.append(f"speed: {mean_ms:.1f} ms/image  ({1000 / mean_ms:.1f} FPS)  on {args.device}")
 
