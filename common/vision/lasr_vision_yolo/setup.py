@@ -4,7 +4,6 @@ from glob import glob
 import setuptools.command.install
 import ament_virtualenv.install
 
-
 _here = os.path.dirname(os.path.abspath(__file__))
 
 package_name = "lasr_vision_yolo"

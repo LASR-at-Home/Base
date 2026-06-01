@@ -46,7 +46,11 @@ class Detect3D(RosState):
         self.confidence = confidence
         self.target_frame = target_frame
 
-        camera_qos = QoSProfile(depth=10, reliability=ReliabilityPolicy.BEST_EFFORT, history=HistoryPolicy.KEEP_LAST)
+        camera_qos = QoSProfile(
+            depth=10,
+            reliability=ReliabilityPolicy.BEST_EFFORT,
+            history=HistoryPolicy.KEEP_LAST,
+        )
 
         cam_info_sub = message_filters.Subscriber(
             self.node, CameraInfo, self.depth_camera_info_topic, qos_profile=camera_qos
@@ -54,8 +58,12 @@ class Detect3D(RosState):
         # CameraInfo is latched: keep it in a cache, not in the time synchronizer.
         self.cam_info_cache = message_filters.Cache(cam_info_sub, 10)
 
-        image_sub = message_filters.Subscriber(self.node, Image, self.image_topic, qos_profile=camera_qos)
-        depth_sub = message_filters.Subscriber(self.node, Image, self.depth_image_topic, qos_profile=camera_qos)
+        image_sub = message_filters.Subscriber(
+            self.node, Image, self.image_topic, qos_profile=camera_qos
+        )
+        depth_sub = message_filters.Subscriber(
+            self.node, Image, self.depth_image_topic, qos_profile=camera_qos
+        )
         subs = [image_sub, depth_sub]
         if self.point_cloud_topic is not None:
             point_cloud_sub = message_filters.Subscriber(
@@ -107,7 +115,9 @@ class Detect3D(RosState):
                         f"Timed out waiting for camera info on {self.depth_camera_info_topic}"
                     )
                 else:
-                    self.node.get_logger().error("Timed out waiting for synced rgb/depth frames")
+                    self.node.get_logger().error(
+                        "Timed out waiting for synced rgb/depth frames"
+                    )
                 return "failed"
             rclpy.spin_once(self.node, timeout_sec=0.1)
 
