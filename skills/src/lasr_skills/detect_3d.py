@@ -1,11 +1,6 @@
-#!/usr/bin/env python3
-import threading
 from typing import List, Union, Optional
-import time
 
 import rclpy
-from rclpy.executors import MultiThreadedExecutor
-from rclpy.node import Node
 
 import yasmin
 from yasmin import Blackboard, StateMachine
@@ -14,9 +9,17 @@ from yasmin_viewer import YasminViewerPub
 
 import message_filters
 
+
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
+
 from sensor_msgs.msg import Image, CameraInfo, PointCloud2
 from lasr_vision_interfaces.srv import YoloDetection3D
+
+
+"""
+    TODO: 
+        - message_filters subscribers
+"""
 
 
 class Detect3D(ServiceState):
@@ -31,12 +34,11 @@ class Detect3D(ServiceState):
         confidence: float = 0.5,
         target_frame: str = "map",
         slop=1.0):
-        super().__init__(YoloDetection3D,
-                         '/yolo/detect3d',
-                         self._create_req,
-                         ['succeeded', 'failed'],
-                         self.response_handler,
-                         response_timeout=10.0)
+        super().__init__(srv_type=YoloDetection3D,
+                         srv_name='/yolo/detect3d',
+                         create_request_handler=self._create_req,
+                         outcomes=['succeeded', 'failed'],
+                         response_handler=self._handle_resp)
         self.set_description('Detects 3d objects using yolo')
         self.add_output_key('detections_3d')
         self.add_output_key('image_raw')
@@ -137,125 +139,6 @@ class Detect3D(ServiceState):
         blackboard['image_raw'] = self.image_msg
         
         return 'succeeded'
-
-# class Detect3D(State):
-#     def __init__(
-#         self,
-#         node: Node,
-#         image_topic: str = "/head_front_camera/rgb/image_raw",
-#         depth_image_topic: str = "/head_front_camera/depth/image_raw",
-#         depth_camera_info_topic: str = "/head_front_camera/depth/camera_info",
-#         point_cloud_topic: Optional[str] = None,
-#         model: str = "yolo11n-seg.pt",
-#         models: Union[List[str], None] = None,
-#         filter: Union[List[str], None] = None,
-#         confidence: float = 0.5,
-#         target_frame: str = "map",
-#         slop=1.0,
-#     ):
-#         super().__init__(
-#             outcomes=["succeeded", "failed"],
-#         )
-#         self.set_description(
-#             "Detects 3d objects using YOLO"
-#         )
-#         self.add_output_key(
-#             "detections_3d"
-#         )
-#         self.add_output_key(
-#             "image_raw"
-#         )
-#         self.add_output_key(
-#             "pcl"
-#         )
-#         self.image_topic = image_topic
-#         self.depth_image_topic = depth_image_topic
-#         self.depth_camera_info_topic = depth_camera_info_topic
-#         self.point_cloud_topic = point_cloud_topic
-#         self.model = model
-#         self.models = models
-#         self.filter = filter or []
-#         self.confidence = confidence
-#         self.target_frame = target_frame
-
-#         # From: https://docs.ros.org/en/humble/p/message_filters/message_filters.html#message_filters.Subscriber
-#         image_sub = message_filters.Subscriber(self.node, Image, self.image_topic)
-#         depth_sub = message_filters.Subscriber(self.node, Image, self.depth_image_topic)
-#         cam_info_sub = message_filters.Subscriber(
-#             self.node, CameraInfo, self.depth_camera_info_topic
-#         )
-#         subs = [image_sub, depth_sub, cam_info_sub]
-#         if point_cloud_topic:
-#             point_cloud_sub = message_filters.Subscriber(
-#                 self.node, PointCloud2, self.point_cloud_topic
-#             )
-#             subs.append(point_cloud_sub)
-
-#         self.ts = message_filters.ApproximateTimeSynchronizer(
-#             subs, queue_size=10, slop=slop
-#         )
-#         self.data = None
-
-#         self.yolo = self.node.create_client(YoloDetection3D, "/yolo/detect3d")
-#         while not self.yolo.wait_for_service(timeout_sec=1.0):
-#             self.node.get_logger().info(
-#                 "'YoloDetection3D' service is not available... Waiting."
-#             )
-
-#     def execute(self, blackboard):
-
-#         yasmin.YASMIN_LOG_INFO('Executing the')
-#         if self.point_cloud_topic is not None:
-
-#             def callback(image_msg, depth_msg, cam_info_msg, pcl_msg):
-#                 self.data = (image_msg, depth_msg, cam_info_msg, pcl_msg)
-
-#         else:
-
-#             def callback(image_msg, depth_msg, cam_info_msg):
-#                 self.data = (image_msg, depth_msg, cam_info_msg)
-
-#         self.ts.registerCallback(callback)
-
-#         while not self.data:
-#             rclpy.spin_once(self.node, timeout_sec=0.1)
-
-#         if len(self.data) == 4:
-#             image_msg, depth_msg, cam_info_msg, pcl_msg = self.data
-#         else:
-#             image_msg, depth_msg, cam_info_msg = self.data
-#             pcl_msg = None
-
-#         try:
-#             request = YoloDetection3D.Request(
-#                 image_raw=image_msg,
-#                 depth_image=depth_msg,
-#                 depth_camera_info=cam_info_msg,
-#                 model=self.model,
-#                 # models=self.models,
-#                 confidence=self.confidence,
-#                 filter=self.filter,
-#                 target_frame=self.target_frame,
-#             )
-#             future = self.yolo.call_async(request)
-#             rclpy.spin_until_future_complete(self.node, future)
-
-#             resp = future.result()
-
-#             self.node.get_logger().info(f"Got {len(resp.detected_objects)} detections")
-#             for det in resp.detected_objects:
-#                 self.node.get_logger().info(
-#                     f"  {det.name} at ({det.point.x:.2f}, {det.point.y:.2f}, {det.point.z:.2f})"
-#                 )
-
-#             userdata.detections_3d = resp
-#             userdata.image_raw = image_msg
-#             userdata.pcl = pcl_msg
-#             return "succeeded"
-#         except Exception as e:
-#             self.node.get_logger().error(f"Service call failed: {e}")
-#             return "failed"
-
 
 def main():
     rclpy.init()

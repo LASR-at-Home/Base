@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-import smach_ros
-import smach
+import yasmin
 import rclpy
 import os
 
@@ -18,33 +17,19 @@ from typing import Union
 
 if not HAS_TTS_MSGS:
 
-    class Say(smach_ros.RosState):
+    class Say(yasmin.State):
 
         text: Union[str, None] = None
         format_str: Union[str, None] = None
 
         def __init__(
             self,
-            node: rclpy.node.Node,
             text: Union[str, None] = "None",
             format_str: Union[str, None] = None,
         ):
-            if text is not None:
-                super(Say, self).__init__(
-                    node, outcomes=["succeeded", "aborted", "preempted"]
-                )
-            elif format_str is not None:
-                super(Say, self).__init__(
-                    node,
-                    outcomes=["succeeded", "aborted", "preempted"],
-                    input_keys=["placeholders"],
-                )
-            else:
-                super(Say, self).__init__(
-                    node,
-                    outcomes=["succeeded", "aborted", "preempted"],
-                    input_keys=["text"],
-                )
+            super().__init__(
+                outcomes=["succeeded", "aborted", "preempted"]
+            )
 
             self.text = text
             self.format_str = format_str
@@ -52,20 +37,13 @@ if not HAS_TTS_MSGS:
                 "tts_msgs not available, the Say skill will not work."
             )
 
-        def execute(self, userdata):
-            if self.text is not None:
-                self.node.get_logger().info(self.text)
-            elif self.format_str is not None:
-                self.node.get_logger().info(
-                    self.format_str.format(userdata.placeholders)
-                )
-            else:
-                self.node.get_logger().info(userdata.text)
+        def execute(self, blackboard):
+            self.node.get_logger().info(self.text)
             return "succeeded"
 
 else:
 
-    class Say(smach_ros.SimpleActionState):
+    class Say(yasmin_ros.SimpleActionState):
         def __init__(
             self,
             node: rclpy.node.Node,
