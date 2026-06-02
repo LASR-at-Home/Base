@@ -58,6 +58,8 @@ setup(
             "detect_3d = lasr_skills.detect_3d:main",
             "detect_all_in_polygon = lasr_skills.detect_all_in_polygon:main",
             "crop_image_3d = lasr_skills.vision.crop_image_3d:main",
+            "play_motion = lasr_skills.play_motion:main",
+            "look = lasr_skills.look_to_point:main"
         ],
     },
 )

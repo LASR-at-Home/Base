@@ -4,7 +4,7 @@
 ##
 
 Bootstrap: localimage
-From: /home/fadi/tiago_humble_os.sif
+From: ./tiago_humble_os.sif
 
 %post -c /bin/bash
 export ROS_DISTRO=humble
@@ -13,6 +13,7 @@ export ROS_DISTRO=humble
 apt update
 export DEBIAN_FRONTEND=noninteractive
 apt upgrade -Y
+apt install -y ros-${ROS_DISTRO}-example-interfaces
 
 
 mkdir -p /opt/robocup_ws/src
@@ -30,9 +31,6 @@ git clone https://github.com/locusrobotics/ament_virtualenv.git
 
 cd /opt/robocup_ws/src
 git clone https://github.com/Box-Robotics/ros2_numpy.git
-
-# yasmin_ros depends on example_interfaces at build time
-apt install -y ros-${ROS_DISTRO}-example-interfaces
 
 cd /opt/robocup_ws/src
 git clone https://github.com/uleroboticsgroup/yasmin.git
