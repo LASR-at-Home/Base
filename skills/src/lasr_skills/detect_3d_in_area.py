@@ -1,10 +1,9 @@
 import rclpy
 from rclpy.node import Node
 
-import smach
-from smach_ros import RosState
+import yasmin
+from yasmin_ros import set_ros_loggers, ActionState
 
-# from lasr_skills import Detect3D
 from .detect_3d import Detect3D
 from typing import List, Union, Optional
 
@@ -14,32 +13,26 @@ from shapely.geometry import Point as ShapelyPoint
 from shapely.geometry.polygon import Polygon as ShapelyPolygon
 
 
-class Detect3DInArea(smach.StateMachine):
-    class FilterDetections(RosState):
+class Detect3DInArea(yasmin.StateMachine):
+    class FilterDetections(yasmin.State):
         def __init__(
             self,
-            node: Node,
             area_polygon: Optional[ShapelyPolygon] = None,
             z_min: Optional[float] = None,
             z_max: Optional[float] = None,
             debug_publisher: str = "/skills/detect3d_in_area/debug",
         ):
-            input_keys = (
-                ["detections_3d", "polygon"]
-                if area_polygon is None
-                else ["detections_3d"]
-            )
-            input_keys += (
-                ["z_sweep_min", "z_sweep_max"]
-                if z_min is None and z_max is None
-                else []
-            )
-            RosState.__init__(
-                self,
-                node,
-                outcomes=["succeeded", "failed"],
-                input_keys=input_keys,
-                output_keys=["detections_3d"],
+            self.add_input_key("detections_3d")
+            if area_polygon is None:
+                self.add_input_key("polygon")
+            
+            if z_min is None and z_max is None:
+                self.add_input_key("z_sweep_min")
+                self.add_input_key("z_sweep_max")
+
+            self.add_output_key("detections_3d")
+            super().__init__(
+                outcomes=["succeeded", "failed"]
             )
             self._z_min = z_min
             self._z_max = z_max
@@ -48,22 +41,23 @@ class Detect3DInArea(smach.StateMachine):
                 PolygonStamped, debug_publisher, 1
             )
 
-        def execute(self, userdata):
-            detected_objects = userdata["detections_3d"].detected_objects
+        def execute(self, blackboard):
+            detected_objects = blackboard["detections_3d"].detected_objects
             # publish polygon for debugging
             if self._z_min is None:
-                z_sweep_min = userdata.z_sweep_min
+                z_sweep_min = blackboard["z_sweep_min"]
             else:
                 z_sweep_min = self._z_min
             if self._z_max is None:
-                z_sweep_max = userdata.z_sweep_max
+                z_sweep_max = blackboard["z_sweep_max"]
             else:
                 z_sweep_max = self._z_max
             polygon_msg = Polygon()
             if self.area_polygon is None:
-                area_polygon = userdata.polygon
+                area_polygon = blackboard["polygon"]
             else:
                 area_polygon = self.area_polygon
+
             polygon_msg.points = [
                 Point32(x=point[0], y=point[1], z=0.0)
                 for point in area_polygon.exterior.coords
@@ -87,12 +81,11 @@ class Detect3DInArea(smach.StateMachine):
                 and (detection.point.z <= z_sweep_max)
             ]
             # List of Detection3D msgs
-            userdata["detections_3d"] = filtered_detections
+            blackboard["detections_3d"] = filtered_detections
             return "succeeded"
 
     def __init__(
         self,
-        node: Node,
         area_polygon: Optional[ShapelyPolygon] = None,
         image_topic: str = "/head_front_camera/rgb/image_raw",
         depth_image_topic: str = "/head_front_camera/depth/image_raw",
@@ -106,37 +99,38 @@ class Detect3DInArea(smach.StateMachine):
         z_min: Optional[float] = None,
         z_max: Optional[float] = None,
     ):
-        input_keys = ["polygon"] if area_polygon is None else []
-        input_keys += (
-            ["z_sweep_min", "z_sweep_max"] if z_min is None and z_max is None else []
-        )
-        smach.StateMachine.__init__(
-            self,
-            outcomes=["succeeded", "failed"],
-            input_keys=input_keys,
-            output_keys=["detections_3d", "image_raw", "pcl"],
-        )
-        self.node = node
+        if area_polygon is None:
+            self.add_input_key("polygon")
+        if z_min is None and z_max is None:
+            self.add_input_key("z_sweep_min")
+            self.add_input_key("z_sweep_max")
 
-        with self:
-            smach.StateMachine.add(
-                "DETECT_OBJECTS_3D",
-                Detect3D(
-                    node=self.node,
-                    image_topic=image_topic,
-                    depth_image_topic=depth_image_topic,
-                    depth_camera_info_topic=depth_camera_info_topic,
-                    point_cloud_topic=point_cloud_topic,
-                    model=model,
-                    models=models,
-                    filter=filter,
-                    confidence=confidence,
-                    target_frame=target_frame,
-                ),
-                transitions={"succeeded": "FILTER_DETECTIONS", "failed": "failed"},
-            )
-            smach.StateMachine.add(
-                "FILTER_DETECTIONS",
-                self.FilterDetections(self.node, area_polygon, z_min, z_max),
-                transitions={"succeeded": "succeeded", "failed": "failed"},
-            )
+        self.add_output_key("detections_3d")
+        self.add_output_key("image_raw")
+        self.add_output_key("pcl")
+
+        super().__init__(
+            outcomes=["succeeded", "failed"],
+            handle_sigint=True
+        )
+
+        self.add_state(
+            "DETECT_OBJECTS_3D",
+            Detect3D(
+                image_topic=image_topic,
+                depth_image_topic=depth_image_topic,
+                depth_camera_info_topic=depth_camera_info_topic,
+                point_cloud_topic=point_cloud_topic,
+                model=model,
+                models=models,
+                filter=filter,
+                confidence=confidence,
+                target_frame=target_frame,
+            ),
+            transitions={"succeeded": "FILTER_DETECTIONS", "failed": "failed"},
+        )
+        self.add_state(
+            "FILTER_DETECTIONS",
+            self.FilterDetections(area_polygon, z_min, z_max),
+            transitions={"succeeded": "succeeded", "failed": "failed"},
+        )
