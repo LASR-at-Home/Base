@@ -40,9 +40,8 @@ class LearnHostFace(StateMachine):
     def __init__(self):
         super().__init__(
             outcomes=["succeeded", "failed"],
-            input_keys=["guest_data", "seated_guest_locs"],
-            output_keys=["guest_data"],
-        )
+            handle_sigint=True
+            )
         
         self.add_input_key("guest_data")
         self.add_input_key("seated_guest_locs")
