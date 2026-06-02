@@ -12,7 +12,7 @@ from lasr_vision_interfaces.srv import (
     AddFace,
     YoloPoseDetection,
 )
-from lasr_skills import CropImage3D
+from lasr_skills.vision import CropImage3D
 from lasr_skills import Detect3D
 from cv_bridge import CvBridge
 
@@ -90,7 +90,10 @@ class HRILearnFaces(StateMachine):
         def _handle_resp(self, blackboard, response):
             try:
                 if response.success:
-                    blackboard.get("num_images", 0)  += 1
+                    try:
+                        blackboard["num_images"]  += 1
+                    except:
+                        blackboard["num_images"] = 0
             except Exception as e:
                 yasmin.YASMIN_LOG_ERROR(f"Service call failed: {e}")
                 return "failed"
@@ -109,8 +112,9 @@ class HRILearnFaces(StateMachine):
                 yasmin.YASMIN_LOG_INFO("Collected enough images for the guest.")
                 return "succeeded"
             else:
+                num_images = blackboard['num_images']
                 yasmin.YASMIN_LOG_WARN(
-                    f"Not enough images collected for the guest: {blackboard.get("num_images", 0)}/{self._dataset_size}."
+                    f"Not enough images collected for the guest: {num_images}/{self._dataset_size}."
                 )
                 return "failed"
 

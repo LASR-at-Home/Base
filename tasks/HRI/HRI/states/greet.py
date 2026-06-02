@@ -1,5 +1,7 @@
 import smach
 
+import yasmin
+
 from lasr_skills import Say, StartEyeTracker, WaitForPersonInArea, AskAndListen
 from HRI.states import (
     GetNameAndDrink,
@@ -109,7 +111,7 @@ class LookAndGreetGuest(yasmin.StateMachine):
                 transitions={
                     "succeeded": "WAIT_FOR_GUEST",
                     "aborted": "WAIT_FOR_GUEST",
-                    "preempted": "WAIT_FOR_GUEST",
+                    "canceled": "WAIT_FOR_GUEST",
                 },
             )
             self.add(
@@ -135,7 +137,7 @@ class LookAndGreetGuest(yasmin.StateMachine):
                 transitions={
                     "succeeded": "GREET_AND_ASK_GUEST",
                     "aborted": "SAY_WAITING_FOR_GUEST",
-                    "preempted": "failed",
+                    "canceled": "failed",
                 },
             )
             self.add(

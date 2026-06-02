@@ -1,8 +1,6 @@
 import yasmin
 from yasmin import StateMachine, State, Concurrence
 import yasmin_ros
-from yasmin_ros.yasmin_node import YasminNode
-
 
 import rclpy
 from rclpy.node import Node
@@ -125,12 +123,13 @@ class ProcessDetections(State):
             blackboard["seated_guest_locs"] = seated_guest_locs[:2]
         else:
             blackboard["seated_guest_locs"] = seated_guest_locs
+        sofa_detections = blackboard['sofa_detections']
         yasmin.YASMIN_LOG_WARN(
-            f"people on the sofa: {len(blackboard["sofa_detections"])} detected, max allowed is {self._max_people_on_sofa}."
+            f"people on the sofa: {len(sofa_detections)} detected, max allowed is {self._max_people_on_sofa}."
         )
         if len(blackboard["sofa_detections"]) > self._max_people_on_sofa:
             yasmin.YASMIN_LOG_WARN(
-                f"Too many people on the sofa: {len(blackboard["sofa_detections"])} detected, max allowed is {self._max_people_on_sofa}."
+                f"Too many people on the sofa: {len(sofa_detections)} detected, max allowed is {self._max_people_on_sofa}."
             )
             seat_sofa = False
         elif len(blackboard["sofa_detections"]) == self._max_people_on_sofa:
@@ -231,7 +230,6 @@ class SeatGuest(StateMachine):
 
     def __init__(
         self,
-        node: Node,
         seating_area: Optional[ShapelyPolygon] = None,
         sofa_area: Optional[ShapelyPolygon] = None,
         sofa_point: Optional[Point] = None,
@@ -248,7 +246,8 @@ class SeatGuest(StateMachine):
         self.add_output_key("guest_seat_point")
         self.add_output_key("seated_guest_locs")
 
-        self._node = YasminNode.get_instance()
+        self._node = yasmin_ros.logger_node
+        self._node.get_logger().info('LOADED THE NODE INTO STATEMACHINE')
         self.__load_ros_parameters()
         # TODO: Update to allow local paramters overriding ros param
 
@@ -266,7 +265,7 @@ class SeatGuest(StateMachine):
             transitions={
                 "succeeded": "LOOK_TO_SOFA",
                 "aborted": "LOOK_TO_SOFA",
-                "preempted": "LOOK_TO_SOFA",
+                "canceled": "LOOK_TO_SOFA",
             },
         )
         self.add_state(
@@ -279,7 +278,7 @@ class SeatGuest(StateMachine):
             transitions={
                 "succeeded": "DETECT_SOFA",
                 "aborted": "failed",
-                "preempted": "DETECT_SOFA",
+                "canceled": "DETECT_SOFA",
             },
         )
         self.add_state(
@@ -298,7 +297,7 @@ class SeatGuest(StateMachine):
             transitions={
                 "succeeded": "DETECT_NON_SOFA",
                 "aborted": "failed",
-                "preempted": "failed",
+                "canceled": "failed",
             },
         )
 
@@ -363,11 +362,11 @@ class SeatGuest(StateMachine):
 
         self.add_state(
             "LOOK_TO_SEAT",
-            LookToPoint(node=node),
+            LookToPoint(),
             transitions={
                 "succeeded": "SAY_SEAT_GUEST",
                 "aborted": "SAY_SEAT_GUEST",
-                "preempted": "SAY_SEAT_GUEST",
+                "canceled": "SAY_SEAT_GUEST",
             },
             remapping={"pointstamped": "guest_seat_point"},
         )
@@ -377,7 +376,7 @@ class SeatGuest(StateMachine):
             transitions={
                 "succeeded": "WAIT_FOR_GUEST_TO_SEAT",
                 "aborted": "WAIT_FOR_GUEST_TO_SEAT",
-                "preempted": "WAIT_FOR_GUEST_TO_SEAT",
+                "canceled": "WAIT_FOR_GUEST_TO_SEAT",
             },
             remapping={"textsm_con": "seating_string"},
         )
@@ -393,7 +392,7 @@ class SeatGuest(StateMachine):
             transitions={
                 "succeeded": "succeeded",
                 "aborted": "succeeded",
-                "preempted": "succeeded",
+                "canceled": "succeeded",
             },
         )
 
@@ -481,6 +480,8 @@ class SeatGuest(StateMachine):
 def main():
 
     rclpy.init()
+    
+    yasmin_ros.set_ros_loggers()
 
     try:
         outcome = SeatGuest(learn_host=True)

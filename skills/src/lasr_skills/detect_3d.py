@@ -9,6 +9,7 @@ from yasmin_viewer import YasminViewerPub
 
 import message_filters
 
+from time import sleep
 
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
 
@@ -108,6 +109,7 @@ class Detect3D(ServiceState):
 
         while not self.data:
             yasmin.YASMIN_LOG_INFO('NO DATA')
+            sleep(1)
 
         if len(self.data) == 4:
             image_msg, depth_msg, cam_info_msg, pcl_msg = self.data
@@ -150,7 +152,7 @@ def main():
     sm.add_output_key('image_raw')
     sm.add_output_key('pcl')
     
-    sm.add_state('DETECT3D', Detect3D(filter=['person']), transitions={'succeeded': 'succeeded', 'failed': 'failed'})
+    sm.add_state('DETECT3D', Detect3D(filter=['person', 'chair'], target_frame='odom'), transitions={'succeeded': 'succeeded', 'failed': 'failed'})
     YasminViewerPub(sm, 'YASMIN_DETECT3D_CLIENT')
     try:
         outcome=sm()

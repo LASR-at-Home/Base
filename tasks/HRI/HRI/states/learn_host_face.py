@@ -59,7 +59,7 @@ class LearnHostFace(StateMachine):
             transitions={
                 "succeeded": "LEARN_HOST_FACE",
                 "aborted": "failed",
-                "preempted": "failed",
+                "canceled": "failed",
             }
         )
         self.add_state(

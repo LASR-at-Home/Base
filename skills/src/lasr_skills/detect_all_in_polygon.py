@@ -12,6 +12,8 @@ import numpy as np
 import cv2
 from threading import Thread
 
+from time import sleep
+
 # from tf_pcl import pcl_transform
 from typing import List, Optional, Tuple
 
@@ -186,8 +188,11 @@ class CalculateSweepPoints(yasmin.State):
         success, camera_info = wait_for_message(
             CameraInfo, yasmin_ros.logger_node, "/head_front_camera/depth/camera_info"
         )
-        if not success or camera_info is None:
-            yasmin_ros.logger_node.get_logger().warn("Timed out waiting for camera info")
+        
+        
+        while not success or camera_info is None:
+            yasmin.YASMIN_LOG_INFO("Waiting for camera info")
+            sleep(1)
 
 
         model = PinholeCameraModel()
@@ -215,10 +220,10 @@ class CalculateSweepPoints(yasmin.State):
             # Transform to map frame
             try:
                 transform = self._tf_buffer.lookup_transform(
-                    "map",
+                    "odom",
                     camera_info.header.frame_id,
                     Time(),
-                    timeout=Duration(seconds=1.0),
+                    timeout=Duration(seconds=5.0),
                 )
                 point_map = do_transform_point(point_cam, transform)
                 transformed_points.append((point_map.point.x, point_map.point.y))
@@ -318,7 +323,7 @@ class CalculateSweepPoints(yasmin.State):
         pub.publish(
             PolygonStamped(
                 header=Header(
-                    frame_id="map", stamp=yasmin_ros.logger_node.get_clock().now().to_msg()
+                    frame_id="odom", stamp=yasmin_ros.logger_node.get_clock().now().to_msg()
                 ),
                 polygon=ROSPolygon(
                     points=[
@@ -340,9 +345,10 @@ class CalculateSweepPoints(yasmin.State):
             overlap_penalty=0.0,
         )
 
+
         sweep_points = [
             PointStamped(
-                header=Header(frame_id="map"),
+                header=Header(frame_id="odom"),
                 point=Point(x=fp.centroid.x, y=fp.centroid.y, z=self._z_axis),
             )
             for fp in selected_footprints
@@ -380,7 +386,7 @@ class IterateThroughPoints(yasmin.StateMachine):
         self.add_state(
             'LOOK_POINT',
             LookToPoint(),
-            transitions={'succeeded': 'SLEEP', 'aborted': 'failed', 'canceled': 'failed'}
+            transitions={'succeeded': 'SLEEP', 'aborted': 'failed', 'canceled': 'failed', 'timeout': 'failed'}
         )
         self.add_state(
             'SLEEP',
@@ -397,6 +403,7 @@ class IterateThroughPoints(yasmin.StateMachine):
                             z_min=0.0,
                             z_max=10.0,
                             confidence=min_confidence,
+                            target_frame='odom'
                         ),
             transitions={'succeeded': 'PROCESS_DETECTIONS', 'failed': 'failed'}
         )
