@@ -1,6 +1,7 @@
 """Generic wait state for waiting a desired number of seconds"""
 
 import rclpy
+import yasmin
 from yasmin import State
 from time import sleep
 
@@ -14,13 +15,12 @@ class Wait(State):
         super().__init__(outcomes=["succeeded", "failed"])
 
         self._wait_time = wait_time
-        self._logger = rclpy.logging.get_logger("WaitState")
 
     def execute(self, blackboard):
         try:
-            self._logger.info(f"Waiting for {self._wait_time} seconds.")
+            yasmin.YASMIN_LOG_INFO(f"Waiting for {self._wait_time} seconds.")
             sleep(self._wait_time)
             return "succeeded"
         except:
-            self._logger.error("Waiting failed")
+            yasmin.YASMIN_LOG_ERROR("Waiting failed")
             return "failed"

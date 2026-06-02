@@ -1,94 +1,91 @@
-from smach_ros import RosState
+
+import yasmin_ros
+import yasmin
+from yasmin import State, StateMachine
+
 import rclpy
 from rclpy.wait_for_message import wait_for_message
+
 from typing import Optional
 from sensor_msgs.msg import Image, PointCloud2
 
 
-class GetImage(RosState):
+class GetImage(State):
     """
     State for reading an sensor_msgs Image message
     """
 
-    def __init__(self, node, topic: Optional[str] = None):
-        super().__init__(
-            node,
-            outcomes=["succeeded", "failed"],
-            output_keys=["img_msg"],
-            input_keys=["img_msg"],
-        )
+    def __init__(self, topic: Optional[str] = None):
+        super().__init__(outcomes=["succeeded", "failed"])
 
-        self.node.declare_parameter("image_topic", "/head_front_camera/rgb/image_raw")
+        self.add_input_key("img_msg")
+        self.add_output_key("img_msg")
+
+        yasmin_ros.logger_node.declare_parameter("image_topic", "/head_front_camera/rgb/image_raw")
         self.topic = (
-            topic
-            if topic
-            else self.node.get_parameter("image_topic")
-            .get_parameter_value()
-            .string_value
+            topic if topic else 
+            yasmin_ros.logger_node.get_parameter("image_topic").get_parameter_value().string_value
         )
 
-    def execute(self, userdata):
-        if not rclpy.ok():
-            rclpy.init()
+    def execute(self, blackboard):
+        # if not rclpy.ok():
+        #     rclpy.init()
 
         try:
-            msg = wait_for_message(Image, self.node, self.topic)
+            msg = wait_for_message(Image, yasmin_ros.logger_node, self.topic)
             if msg is not None:
-                userdata.img_msg = msg
+                blackboard["img_msg"] = msg
             else:
-                userdata.img_msg = None
-            if userdata.img_msg is None:
+                blackboard["img_msg"] = None
+            if blackboard["img_msg"] is None:
                 return "failed"
 
         except Exception as e:
-            self.node.get_logger().error(str(e))
+            yasmin.YASMIN_LOG_ERROR(str(e))
             return "failed"
-        print(userdata.img_msg)
         return "succeeded"
 
 
-class GetPointCloud(RosState):
+class GetPointCloud(State):
     """
     State for acquiring a PointCloud2 message.
     """
 
-    def __init__(self, node, topic: Optional[str] = None):
-        super().__init__(
-            node,
-            outcomes=["succeeded", "failed"],
-            output_keys=["pcl_msg"],
-            input_keys=["pcl_msg"],
-        )
+    def __init__(self, topic: Optional[str] = None):
+        super().__init__(outcomes=["succeeded", "failed"])
 
-        self.node.declare_parameter("image_topic", "/head_front_camera/rgb/image_raw")
+        self.add_input_key("pcl_msg")
+        self.add_output_key("pcl_msg")
+
+        yasmin_ros.logger_node.declare_parameter("image_topic", "/head_front_camera/rgb/image_raw")
         self.topic = (
             topic
             if topic
-            else self.get_parameter("image_topic").get_parameter_value().string_value
+            else yasmin_ros.logger_node.get_parameter("image_topic").get_parameter_value().string_value
         )
 
-    def execute(self, userdata):
-        if not rclpy.ok():
-            rclpy.init()
+    def execute(self, blackboard):
+        # if not rclpy.ok():
+        #     rclpy.init()
         try:
-            userdata.pcl_msg = None
-            userdata.pcl_msg = wait_for_message(PointCloud2, self.node, self.topic)
-            if userdata.pcl_msg is None:
+            blackboard["pcl_msg"] = None
+            blackboard["pcl_msg"] = wait_for_message(PointCloud2, yasmin_ros.logger_node, self.topic)
+            if blackboard["pcl_msg"] is None:
                 return "failed"
         except Exception as e:
-            self.node.get_logger().error(str(e))
+            yasmin.YASMIN_LOG_ERROR(str(e))
             return "failed"
         return "succeeded"
 
 
-class GetImageAndPointCloud(RosState):
-    def __init__(self, node):
-        super().__init__(
-            node,
-            outcomes=["succeeded", "failed"],
-            output_keys=["img_msg", "pcl_msg"],
-            input_keys=["img_msg", "pcl_msg"],
-        )
+class GetImageAndPointCloud(State):
+    def __init__(self):
+        super().__init__(outcomes=["succeeded", "failed"])
+        self.add_input_key("pcl_msg")
+        self.add_input_key("img_msg")
+
+        self.add_output_key("pcl_msg")
+        self.add_output_key("img_msg")
 
         self.topic1 = "/head_front_camera/rgb/image_raw"
         self.topic2 = "/head_front_camera/depth/points"
@@ -96,179 +93,17 @@ class GetImageAndPointCloud(RosState):
         self.topic1 = "/head_front_camera/rgb/image_raw"
         self.topic2 = "/head_front_camera/depth/points"
 
-    def execute(self, userdata):
-        if not rclpy.ok():
-            rclpy.init()
+    def execute(self, blackboard):
+        # if not rclpy.ok():
+        #     rclpy.init()
         try:
-            userdata.img_msg = wait_for_message(Image, self.node, self.topic1)
-            userdata.pcl_msg = wait_for_message(PointCloud2, self.node, self.topic2)
+            blackboard["img_msg"] = wait_for_message(Image, yasmin_ros.logger_node, self.topic1)
+            blackboard["pcl_msg"] = wait_for_message(PointCloud2, yasmin_ros.logger_node, self.topic2)
 
-            if userdata.img_msg is None or userdata.pcl_msg is None:
+            if blackboard["img_msg"] is None or blackboard["pcl_msg"] is None:
                 return "failed"
         except Exception as e:
-            self.node.get_logger().error(str(e))
+            yasmin.YASMIN_LOG_ERROR(str(e))
             return "failed"
 
         return "succeeded"
-
-
-# class ROS2HelperNode(Node):
-#     def __init__(self, name="ros2_helper_node"):
-#         super().__init__(name)
-
-#     def wait_for_message(self, topic, msg_type, timeout=5.0):
-#         """
-#         ROS2 does not provide wait_for_message
-#         Waits for a message with a Future object (More efficient).
-#         """
-#         future = Future()
-#         qos_profile = QoSProfile(depth=10, reliability=QoSReliabilityPolicy.RELIABLE)
-
-#         def callback(msg):
-#             if not future.done():
-#                 future.set_result(msg)
-
-#         self.subscriber = self.create_subscription(msg_type, topic, callback, qos_profile)
-#         # self.subscriber.append(sub)
-
-
-#         start_time = self.get_clock().now().nanoseconds / 1e9
-
-#         while not future.done():
-#             rclpy.spin_once(self, timeout_sec=0.1)
-#             elapsed_time = (self.get_clock().now().nanoseconds / 1e9) - start_time
-#             if elapsed_time > timeout:
-#                 return None
-
-#         return future.result()
-
-# class GetImage(smach.State):
-#     """
-#     State for reading an sensor_msgs Image message
-#     """
-
-#     def __init__(self, topic: Optional[str] = None):
-#         smach.State.__init__(
-#             self, outcomes=["succeeded", "failed"], output_keys=["img_msg"], input_keys=["img_msg"]
-#         )
-
-#         self.topic = topic or "/head_front_camera/rgb/image_raw"
-#         # self.topic = topic or "/image_raw"
-#         # TODO check if tiago is in environment
-#         #else "/usb_cam/image_raw", self.topic = topic
-
-#     def execute(self, userdata):
-#         if not rclpy.ok():
-#             rclpy.init()
-
-#         node = None
-
-#         try:
-#             node = ROS2HelperNode()
-#             msg = node.wait_for_message(self.topic, Image)
-#             if msg is not None:
-#                 userdata.img_msg = msg
-#             else:
-#                 userdata.img_msg = None
-#             if userdata.img_msg is None:
-#                 return "failed"
-
-#         except Exception as e:
-#             node.get_logger().error(str(e))
-#             return "failed"
-#         finally:
-#             if node is not None:
-#                 node.destroy_node()
-#         print(userdata.img_msg)
-#         return "succeeded"
-
-# class GetPointCloud(smach.State):
-#     """
-#     State for acquiring a PointCloud2 message.
-#     """
-
-#     def __init__(self, topic: Optional[str] = None):
-#         smach.State.__init__(
-#             self, outcomes=["succeeded", "failed"], output_keys=["pcl_msg"], input_keys=["pcl_msg"]
-#         )
-
-#         self.topic = topic or "/head_front_camera/depth/pints"
-
-#     def execute(self, userdata):
-#         if not rclpy.ok():
-#             rclpy.init()
-
-#         node = None
-
-#         try:
-#             node = ROS2HelperNode()
-#             userdata.pcl_msg = None
-#             userdata.pcl_msg = node.wait_for_message(self.topic, PointCloud2)
-#             if userdata.pcl_msg is None:
-#                 return "failed"
-#         except Exception as e:
-#             node.get_logger().error(str(e))
-#             return "failed"
-#         finally:
-#             if node is not None:
-#                 node.destroy_node()
-
-#         return "succeeded"
-
-# class GetImageAndPointCloud(smach.State):
-#     def __init__(self):
-#         smach.State.__init__(
-#             self, outcomes=["succeeded", "failed"], output_keys=["img_msg", "pcl_msg"], input_keys=["img_msg", "pcl_msg"]
-#         )
-
-#         self.topic1 = "/head_front_camera/rgb/image_raw"
-#         self.topic2 = "/head_front_camera/depth/points"
-
-#         self.topic1 = "/head_front_camera/rgb/image_raw"
-#         self.topic2 = "/head_front_camera/depth/points"
-
-#     def execute(self, userdata):
-#         if not rclpy.ok():
-#             rclpy.init()
-
-#         node = None
-
-#         try:
-#             node = ROS2HelperNode()
-
-#             userdata.img_msg = node.wait_for_message(self.topic1, Image)
-#             userdata.pcl_msg = node.wait_for_message(self.topic2, PointCloud2)
-
-#             if userdata.img_msg is None or userdata.pcl_msg is None:
-#                 return "failed"
-#         except Exception as e:
-#             node.get_logger().error(str(e))
-#             return "failed"
-#         finally:
-#             if node is not None:
-#                 node.destroy_node()
-
-#         return "succeeded"
-
-# def main(args=None):
-#     rclpy.init(args=args)
-
-#     # rclpy.init('smach_example_state_machine')
-
-#     sm = smach.StateMachine(outcomes=['failed','succeeded'])
-#     with sm:
-#         # smach.StateMachine.add('GetImage', GetImage(),
-#         #     transitions={'failed': 'failed', 'succeeded':'succeeded'},
-#         # )
-#         # smach.StateMachine.add('GetPointCloud', GetPointCloud(),
-#         #     transitions={'failed': 'failed', 'succeeded': 'succeeded'},
-#         # )
-#         smach.StateMachine.add('GetImageAndPointCloud', GetImageAndPointCloud(),
-#             transitions={'failed': 'failed', 'succeeded': 'succeeded'},
-#         )
-
-#     outcome = sm.execute()
-
-
-# if __name__ == '__main__':
-#     main()

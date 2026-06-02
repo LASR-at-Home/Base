@@ -3,8 +3,10 @@ from rclpy.node import Node
 from rclpy.wait_for_message import wait_for_message
 from rclpy.qos import QoSProfile, DurabilityPolicy, ReliabilityPolicy
 
-import smach
-from smach_ros import RosState
+import yasmin
+from yasmin import State, StateMachine
+import yasmin_ros
+from yasmin_ros import set_ros_loggers
 
 # import os
 import cv2
@@ -14,15 +16,13 @@ from typing import Optional, List
 
 from geometry_msgs.msg import PoseWithCovarianceStamped
 
-# from lasr_vision_interfaces.msg import Detection3D
 from cv_bridge import CvBridge
 from sensor_msgs.msg import Image
 
 
-class CropImage3D(RosState):
+class CropImage3D(State):
     def __init__(
         self,
-        node: Node,
         robot_pose_topic: str = "/amcl_pose",
         filters: Optional[List[str]] = None,
         crop_logic: str = "nearest",
@@ -30,7 +30,6 @@ class CropImage3D(RosState):
     ):
         """Returns cropped RGB images based on 3D detections. For example, cropping the RGB
         image around the closest person to the robot.
-
 
 
         Args:
@@ -54,19 +53,19 @@ class CropImage3D(RosState):
             match the filters, the dictionary will contain None for those classes.
         """
         self.robot_pose_topic = robot_pose_topic
-        RosState.__init__(
-            self,
-            node=node,
-            outcomes=["succeeded", "failed"],
-            input_keys=["detections_3d", "image_raw"],
-            output_keys=["cropped_images"],
-        )
+        super().__init__(outcomes=["succeeded", "failed"])
+
+        self.add_input_key("detections_3d")
+        self.add_input_key("image_raw")
+
+        self.add_output_key("cropped_images")
+
         self.filters = filters
         self.crop_logic = crop_logic
         self.crop_type = crop_type
         self._bridge = CvBridge()
 
-        self.debug_publisher = self.node.create_publisher(
+        self.debug_publisher = yasmin_ros.logger_node.create_publisher(
             Image,
             "/skills/crop_image_3d/debug",
             QoSProfile(
@@ -85,18 +84,18 @@ class CropImage3D(RosState):
                 f"Invalid crop_logic: {self.crop_logic}. Must be 'nearest' or 'farthest'."
             )
 
-    def execute(self, userdata):
-        detections = userdata["detections_3d"].detected_objects
+    def execute(self, blackboard):
+        detections = blackboard["detections_3d"].detected_objects
         if not detections:
-            self.node.get_logger().warn("No 3D detections found.")
+            yasmin.YASMIN_LOG_WARN("No 3D detections found.")
             return "failed"
 
         # From: https://github.com/ros2/rclpy/blob/humble/rclpy/rclpy/wait_for_message.py
         success, robot_pose_msg = wait_for_message(
-            PoseWithCovarianceStamped, self.node, self.robot_pose_topic
+            PoseWithCovarianceStamped, yasmin_ros.logger_node, self.robot_pose_topic
         )
         if not success:
-            self.node.get_logger().warn("Timed out waiting for robot pose.")
+            yasmin.YASMIN_LOG_WARN("Timed out waiting for robot pose.")
             return "failed"
 
         # Pose in map frame, same as detected objects
@@ -107,14 +106,14 @@ class CropImage3D(RosState):
         )
 
         rgb_image = self._bridge.imgmsg_to_cv2(
-            userdata["image_raw"], desired_encoding="rgb8"
+            blackboard["image_raw"], desired_encoding="rgb8"
         )
 
         # If there are filters keep only those detections
         if self.filters:
             detections = [det for det in detections if det.name in self.filters]
             if not detections:
-                self.node.get_logger().warn(
+                yasmin.YASMIN_LOG_WARN(
                     "No detections match the specified filters."
                 )
                 return "failed"
@@ -142,10 +141,10 @@ class CropImage3D(RosState):
 
             if self.crop_type == "masked":
                 # x,y coords of the detection
-                self.node.get_logger().info(f"Processing {det.name}:")
+                yasmin.YASMIN_LOG_INFO(f"Processing {det.name}:")
 
                 if len(det.xyseg) == 0:
-                    self.node.get_logger().warn(
+                    yasmin.YASMIN_LOG_WARN(
                         f"No segmentation data for {det.name}, skipping"
                     )
                     continue
@@ -154,7 +153,7 @@ class CropImage3D(RosState):
                 stencil = np.zeros(rgb_image.shape).astype(rgb_image.dtype)
                 colour = (255, 255, 255)
                 cv2.fillPoly(stencil, [mask], colour)
-                self.node.get_logger().info(
+                yasmin.YASMIN_LOG_INFO(
                     f"  stencil filled pixels: {np.count_nonzero(stencil)} / {stencil.size}"
                 )
 
@@ -184,7 +183,7 @@ class CropImage3D(RosState):
             debug_image_msg = self._bridge.cv2_to_imgmsg(debug_image, encoding="rgb8")
             self.debug_publisher.publish(debug_image_msg)
 
-        userdata["cropped_images"] = cropped_images
+        blackboard["cropped_images"] = cropped_images
 
         return "succeeded"
 
@@ -193,31 +192,28 @@ def main():
     from lasr_skills import Detect3D
 
     rclpy.init()
-    node = rclpy.create_node("crop_image_3d")
+    set_ros_loggers()
+
     try:
-        crop = CropImage3D(node)
-        detect = Detect3D(node)
-        sm = smach.StateMachine(outcomes=["succeeded", "failed"])
-        with sm:
-            smach.StateMachine.add(
-                "DETECT_3D",
-                detect,
-                transitions={"succeeded": "CROP_IMAGE_3D", "failed": "failed"},
-            )
-            smach.StateMachine.add(
-                "CROP_IMAGE_3D",
-                crop,
-                transitions={"succeeded": "succeeded", "failed": "failed"},
-            )
+        sm = StateMachine(outcomes=["succeeded", "failed"], handle_sigint=True)
+        sm.add_state(
+            "DETECT_3D",
+            Detect3D(),
+            transitions={"succeeded": "CROP_IMAGE_3D", "failed": "failed"},
+        )
+        sm.add_state(
+            "CROP_IMAGE_3D",
+            CropImage3D(),
+            transitions={"succeeded": "succeeded", "failed": "failed"},
+        )
 
         outcome = sm.execute()
-        node.get_logger().info(f"SMACH execution outcome: {outcome}")
-        rclpy.spin(node)
+        yasmin.YASMIN_LOG_INFO(f"SMACH execution outcome: {outcome}")
 
-        input("Press Enter to run again or Ctrl+C to exit...")
-    except KeyboardInterrupt:
-        pass
-    finally:
+    except Exception as e:
+        yasmin.YASMIN_LOG_WARN(e)
+    
+    if rclpy.ok():
         rclpy.shutdown()
 
 

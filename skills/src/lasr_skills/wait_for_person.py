@@ -3,7 +3,6 @@ from yasmin import StateMachine, State
 from lasr_skills.detect import Detect
 from lasr_skills.vision import GetImage
 
-
 class WaitForPerson(StateMachine):
 
     def __init__(
@@ -15,7 +14,6 @@ class WaitForPerson(StateMachine):
             handle_sigint=True,
         )
         self.add_output_key("detections")
-
 
         self.add_state(
             "GET_IMAGE",

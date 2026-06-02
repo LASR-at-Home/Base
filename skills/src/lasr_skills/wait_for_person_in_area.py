@@ -1,5 +1,6 @@
 import rclpy
 
+import yasmin_ros
 from yasmin import State, StateMachine
 
 from lasr_skills import Detect3DInArea
@@ -27,17 +28,19 @@ class WaitForPersonInArea(StateMachine):
         )
         self.add_output_key("detections_3d")
 
+        node = yasmin_ros.logger_node
+
         top_left = rclpy.parameter.parameter_value_to_python(
-            self._node.get_parameter("door_polygon.top_left").get_parameter_value()
+            node.get_parameter("door_polygon.top_left").get_parameter_value()
         )
         top_right = rclpy.parameter.parameter_value_to_python(
-            self._node.get_parameter("door_polygon.top_right").get_parameter_value()
+            node.get_parameter("door_polygon.top_right").get_parameter_value()
         )
         bottom_left = rclpy.parameter.parameter_value_to_python(
-            self._node.get_parameter("door_polygon.bottom_left").get_parameter_value()
+            node.get_parameter("door_polygon.bottom_left").get_parameter_value()
         )
         bottom_right = rclpy.parameter.parameter_value_to_python(
-            self._node.get_parameter("door_polygon.bottom_right").get_parameter_value()
+            node.get_parameter("door_polygon.bottom_right").get_parameter_value()
         )
 
         door_polygon = Polygon([top_left, top_right, bottom_left, bottom_right])
