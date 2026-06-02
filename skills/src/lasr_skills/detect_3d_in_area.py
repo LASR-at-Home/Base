@@ -2,6 +2,7 @@ import rclpy
 from rclpy.node import Node
 
 import yasmin
+import yasmin_ros
 from yasmin_ros import set_ros_loggers, ActionState
 
 from .detect_3d import Detect3D
@@ -37,7 +38,7 @@ class Detect3DInArea(yasmin.StateMachine):
             self._z_min = z_min
             self._z_max = z_max
             self.area_polygon = area_polygon
-            self.debug_publisher = self.node.create_publisher(
+            self.debug_publisher = yasmin_ros.logger_node.create_publisher(
                 PolygonStamped, debug_publisher, 1
             )
 

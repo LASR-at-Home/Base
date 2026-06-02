@@ -25,8 +25,7 @@ class LookToPoint(yasmin_ros.ActionState):
         )
         if pointstamped is None:
             self.add_input_key('pointstamped')
-        else:
-            self._pointstamped = pointstamped
+        self._pointstamped = pointstamped
         
 
     def _create_goal(self, blackboard):
@@ -35,7 +34,7 @@ class LookToPoint(yasmin_ros.ActionState):
         goal.pointing_axis = Vector3(x=1.0, y=0.0, z=0.0)
         goal.max_velocity = 1.0
         goal.target = (
-            self._pointstamped if self._pointstamped is not None else blackboard.pointstamped
+            self._pointstamped if self._pointstamped is not None else blackboard['pointstamped']
         )
         
         return goal

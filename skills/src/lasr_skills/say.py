@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import yasmin
+import yasmin_ros
 from yasmin_ros import set_ros_loggers
 import rclpy
 import os
@@ -44,7 +45,7 @@ if not HAS_TTS_MSGS:
 
 else:
 
-    class Say(yasmin_ros.SimpleActionState):
+    class Say(yasmin_ros.ActionState):
         def __init__(
             self,
             text: Union[str, None] = None,

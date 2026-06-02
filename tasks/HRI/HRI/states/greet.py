@@ -17,13 +17,16 @@ So Robot is at door and it:
 """
 
 
-class LookAndGreetGuest(smach.StateMachine):
+class LookAndGreetGuest(yasmin.StateMachine):
     def __init__(self, node, last_resort, guest_id):
         super().__init__(
             outcomes=["succeeded", "failed"],
             input_keys=["guest_data"],
             output_keys=["guest_data", "person_detections", ""],
         )
+        self.add_input_key('guest_data')
+        self.add_output_key('guest_data')
+        self.add_output_key('person_detections')
 
         with self:
             conc_face_attribute = smach.Concurrence(

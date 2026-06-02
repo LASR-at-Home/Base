@@ -38,7 +38,7 @@ class Detect3D(ServiceState):
                          srv_name='/yolo/detect3d',
                          create_request_handler=self._create_req,
                          outcomes=['succeeded', 'failed'],
-                         response_handler=self._handle_resp)
+                         response_handler=self.response_handler)
         self.set_description('Detects 3d objects using yolo')
         self.add_output_key('detections_3d')
         self.add_output_key('image_raw')
