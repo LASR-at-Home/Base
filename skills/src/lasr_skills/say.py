@@ -35,12 +35,12 @@ if not HAS_TTS_MSGS:
 
             self.text = text
             self.format_str = format_str
-            self.node.get_logger().info(
+            yasmin.YASMIN_LOG_INFO(
                 "tts_msgs not available, the Say skill will not work."
             )
 
         def execute(self, blackboard):
-            self.node.get_logger().info(self.text)
+            yasmin.YASMIN_LOG_INFO(self.text)
             return "succeeded"
 
 else:
@@ -57,9 +57,11 @@ else:
                 action_type=TTS,
                 create_goal_handler=self.create_goal,
             )
+            if self.text is None:
+                self.add_input_key('text')
         
         def create_goal(self, blackboard):
-            return TTS.Goal(input=self.text)
+            return TTS.Goal(input=self.text) if self.text is not None else TTS.Goal(input=blackboard['text'])
 
 
 

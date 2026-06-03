@@ -30,7 +30,7 @@ class GetLookPoint(State):
             yasmin.YASMIN_LOG_WARN("No seated guest locations provided.")
             return "failed"
         point = blackboard["seated_guest_locs"][0]
-        blackboard["pointstamped"] = PointStamped(header=Header(frame_id="map"), point=point)
+        blackboard["pointstamped"] = PointStamped(header=Header(frame_id="base_footprint"), point=point) #TODO: Change to 'map' when 2dnav is fixed
         return "succeeded"
 
 

@@ -373,14 +373,15 @@ class IterateThroughPoints(yasmin.StateMachine):
         self.add_state(
             'DETECT_OBJECTS',
             Detect3DInArea(
-                            area_polygon=polygon,
-                            filter=object_filter,
-                            model=model,
-                            models=models,
-                            z_min=0.0,
-                            z_max=10.0,
-                            confidence=min_confidence
-                        ),
+                area_polygon=polygon,
+                filter=object_filter,
+                model=model,
+                models=models,
+                z_min=-10,
+                z_max=50.0,
+                confidence=min_confidence,
+                target_frame='odom'
+            ),
             transitions={'succeeded': 'PROCESS_DETECTIONS', 'failed': 'failed'}
         )
         self.add_state(

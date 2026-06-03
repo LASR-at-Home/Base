@@ -50,8 +50,8 @@ class WaitForPersonInArea(StateMachine):
             Detect3DInArea(
                 area_polygon=door_polygon,
                 filter=["person"],
-                z_min=0.0,
-                z_max=1.0,
+                z_min=-10,
+                z_max=10.0,
             ),
             transitions={"succeeded": "CHECK_FOR_PERSON", "failed": "failed"},
         )

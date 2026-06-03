@@ -135,8 +135,19 @@ class Detect3D(ServiceState):
 
     def response_handler(self, blackboard, response):
         self._node.get_logger().info('HELLO')
-        yasmin.YASMIN_LOG_INFO('handling_response')
-        blackboard['detections_3d'] = response
+        yasmin.YASMIN_LOG_INFO('Handling Detection Response')
+
+        #TODO: Verify if changing frame changes the scale as well (currently base_footprint) 
+        resp = YoloDetection3D.Response()
+        for detection in response.detected_objects:
+            #yasmin.YASMIN_LOG_INFO(f"Before: {detection}")
+            detection.point.x /= 1000.0
+            detection.point.y /= 1000.0
+            detection.point.z /= 1000.0
+            #yasmin.YASMIN_LOG_INFO(f"After: {detection}")
+            resp.detected_objects.append(detection)
+        
+        blackboard['detections_3d'] = resp
         blackboard['pcl'] = self.pcl
         blackboard['image_raw'] = self.image_msg
         

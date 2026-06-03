@@ -19,6 +19,8 @@ class LookToPoint(yasmin_ros.ActionState):
             action_name="/head_controller/point_head_action",
             action_type=PointHead,
             create_goal_handler=self._create_goal,
+            response_timeout=10.0,
+            result_handler=self._result_handle,
         )
         if pointstamped is None:
             self.add_input_key('pointstamped')
@@ -45,6 +47,12 @@ class LookToPoint(yasmin_ros.ActionState):
         )
 
         return goal
+    
+    def _result_handle(self, blackboard, response):
+        self._node.get_logger().info(f"Received result with response: {response}")
+        if response == 'timeout':
+            return 'failed'
+        return 'succeeded'
     
 
 def main():

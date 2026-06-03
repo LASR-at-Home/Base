@@ -1,5 +1,5 @@
 import yasmin
-from yasmin import StateMachine, State, Concurrence
+from yasmin import StateMachine, State, Concurrence, Blackboard
 import yasmin_ros
 
 import rclpy
@@ -47,7 +47,7 @@ class ProcessDetections(State):
     ):
         super().__init__(outcomes=["succeeded", "failed"])
 
-        self._node = YasminNode.get_instance()
+        self._node = yasmin_ros.logger_node
 
         self.add_input_key("non_sofa_detections")
         self.add_input_key("sofa_detections")
@@ -183,12 +183,12 @@ class ProcessDetections(State):
                         ) / (chair_bbox[2] * chair_bbox[3])
                         overlap_pct = max(overlap_pct, overlap_pct_current)
                     if overlap_pct > 0.5:
-                        yasmin.YASMIN_LOG_.info(
+                        yasmin.YASMIN_LOG_INFO(
                             f"Detected a person sitting on a chair with bbox {chair_bbox}, with overlap percentage {overlap_pct:.2f}."
                         )
                         continue
                     else:
-                        yasmin.YASMIN_LOG_.info(
+                        yasmin.YASMIN_LOG_INFO(
                             f"No person detected sitting on chair with bbox {chair_bbox}."
                         )
                         blackboard["guest_seat_point"] = PointStamped(
@@ -272,13 +272,14 @@ class SeatGuest(StateMachine):
             "LOOK_TO_SOFA",
             LookToPoint(
                 pointstamped=PointStamped(
-                    header=Header(frame_id="map"), point=self.sofa_point
+                    header=Header(frame_id="base_footprint"), point=self.sofa_point #TODO: Change to 'map' when 2dnav is fixed
                 )
             ),
             transitions={
                 "succeeded": "DETECT_SOFA",
                 "aborted": "failed",
-                "canceled": "DETECT_SOFA",
+                "canceled": "failed",
+                "timeout": "DETECT_SOFA", #Sometimes completes action but still timesouts? 
             },
         )
         self.add_state(
@@ -286,10 +287,12 @@ class SeatGuest(StateMachine):
             Detect3DInArea(
                 area_polygon=self.sofa_area,
                 filter=["person"],
+                z_min=-10,
+                z_max=50.0,
                 confidence=0.7,
             ),
             transitions={"succeeded": "RESET_HEAD_1", "failed": "failed"},
-            remapping={"detections_3d": "sofa_detections"},
+            remappings={"detections_3d": "sofa_detections"},
         )
         self.add_state(
             "RESET_HEAD_1",
@@ -300,19 +303,31 @@ class SeatGuest(StateMachine):
                 "canceled": "failed",
             },
         )
-
         self.add_state(
             "DETECT_NON_SOFA",
-            DetectAllInPolygon(
-                polygon=seating_area_minus_sofa,  # TODO: Verify Potential type mismatch (BaseGeometry vs accepted ShapelyPolygon)
-                object_filter=["person", "chair"],
-                min_coverage=1.0,
-                min_new_object_dist=0.50,
-                min_confidence=0.5,
+            Detect3DInArea(
+                area_polygon=seating_area_minus_sofa,
+                filter=["person", "chair"],
+                z_min=-10,
+                z_max=50.0,
+                confidence=0.5,
             ),
             transitions={"succeeded": "PROCESS_DETECTIONS", "failed": "failed"},
-            remapping={"detected_objects": "non_sofa_detections"},
+            remappings={"detections_3d": "non_sofa_detections"},
         )
+
+        # self.add_state(
+        #     "DETECT_NON_SOFA",
+        #     DetectAllInPolygon(
+        #         polygon=seating_area_minus_sofa,  # TODO: Verify Potential type mismatch (BaseGeometry vs accepted ShapelyPolygon)
+        #         object_filter=["person", "chair"],
+        #         min_coverage=1.0,
+        #         min_new_object_dist=0.50,
+        #         min_confidence=0.5,
+        #     ),
+        #     transitions={"succeeded": "PROCESS_DETECTIONS", "failed": "failed"},
+        #     remappings={"detected_objects": "non_sofa_detections"},
+        # )
         # Process detections
         if learn_host:
             detection_transition = "SAY_AND_LEARN_HOST_FACE"
@@ -368,17 +383,17 @@ class SeatGuest(StateMachine):
                 "aborted": "SAY_SEAT_GUEST",
                 "canceled": "SAY_SEAT_GUEST",
             },
-            remapping={"pointstamped": "guest_seat_point"},
+            remappings={"pointstamped": "guest_seat_point"},
         )
         self.add_state(
             "SAY_SEAT_GUEST",
-            Say(),  # TODO: verify no text needed
+            Say(),
             transitions={
                 "succeeded": "WAIT_FOR_GUEST_TO_SEAT",
                 "aborted": "WAIT_FOR_GUEST_TO_SEAT",
                 "canceled": "WAIT_FOR_GUEST_TO_SEAT",
             },
-            remapping={"textsm_con": "seating_string"},
+            remappings={"text": "seating_string"},
         )
         self.add_state(
             "WAIT_FOR_GUEST_TO_SEAT",
@@ -480,17 +495,38 @@ class SeatGuest(StateMachine):
 def main():
 
     rclpy.init()
+    node = rclpy.create_node("HRI")
     
-    yasmin_ros.set_ros_loggers()
+    yasmin_ros.set_ros_loggers(node)
 
     try:
-        outcome = SeatGuest(learn_host=True)
+        sm = SeatGuest(learn_host=False)
+        bb = Blackboard()
+
+        bb["guest_data"] = {
+            "host": {
+                "name": "Fadi",
+                "drink": "Fanta",
+                "detection": False,
+                "seating_detection": False,
+            },
+            "guest1": {
+                "name": "Aldrich",
+                "drink": "Coke",
+                "detection": False,
+                "seating_detection": False,
+            }
+        }
+
+        outcome = sm(bb)
+
         yasmin.YASMIN_LOG_INFO(outcome)
     except Exception as e:
         yasmin.YASMIN_LOG_WARN(e)
 
     # Shutdown ROS 2 if it's running
     if rclpy.ok():
+        node.destroy_node()
         rclpy.shutdown()
 
 
