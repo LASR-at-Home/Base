@@ -154,7 +154,7 @@ def main():
     sm.add_output_key('image_raw')
     sm.add_output_key('pcl')
     
-    sm.add_state('DETECT3D', Detect3D(filter=['person', 'chair'], target_frame='odom'), transitions={'succeeded': 'succeeded', 'failed': 'failed'})
+    sm.add_state('DETECT3D', Detect3D(target_frame='odom'), transitions={'succeeded': 'succeeded', 'failed': 'failed'})
     YasminViewerPub(sm, 'YASMIN_DETECT3D_CLIENT')
     try:
         outcome=sm()

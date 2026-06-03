@@ -1,36 +1,46 @@
-#!/usr/bin/env python3
 import rclpy
 from rclpy.node import Node
-from rclpy.wait_for_message import wait_for_message
+from rclpy.duration import Duration
+from rclpy.time import Time
+from rclpy.qos import QoSProfile, DurabilityPolicy, ReliabilityPolicy, HistoryPolicy
+from rclpy.publisher import Publisher
 
 import yasmin
 import yasmin_ros
 from yasmin import Blackboard
+from yasmin_viewer import YasminViewerPub
 
-# import tf2_ros as tf
 import numpy as np
 import cv2
-from threading import Thread
+
+from typing import List, Optional, Tuple
 
 from time import sleep
 
-# from tf_pcl import pcl_transform
-from typing import List, Optional, Tuple
+import tf2_ros
+from tf2_geometry_msgs.tf2_geometry_msgs import do_transform_point
 
-# from shapely import MultiPoint
 from shapely import Polygon as ShapelyPolygon
 from shapely import Point as ShapelyPoint
 from shapely.affinity import translate
-from sensor_msgs.msg import Image  # , PointCloud2 as pc2
+from sensor_msgs.msg import Image, CameraInfo
+from image_geometry import PinholeCameraModel
+from std_msgs.msg import Header
 from cv2_img import msg_to_cv2_img, cv2_img_to_msg
-from geometry_msgs.msg import Point, PointStamped
+from geometry_msgs.msg import (
+    Point,
+    Point32,
+    PointStamped,
+    Polygon as ROSPolygon,
+    PolygonStamped,
+)
 from lasr_vision_interfaces.msg import Detection3D
 
 from .look_to_point import LookToPoint
 from .detect_3d_in_area import Detect3DInArea
 
 from .wait import Wait
-from yasmin_viewer import YasminViewerPub
+
 
 class ProcessDetections(yasmin.State):
     """
@@ -110,44 +120,6 @@ class ProcessDetections(yasmin.State):
             yasmin_ros.logger_node.get_logger().error(f"Failed to process detections: {e}")
             return "failed"
 
-
-import rclpy
-from rclpy.node import Node
-from rclpy.duration import Duration
-from rclpy.time import Time
-from rclpy.qos import QoSProfile, DurabilityPolicy, ReliabilityPolicy, HistoryPolicy
-from rclpy.publisher import Publisher
-from rclpy.executors import MultiThreadedExecutor
-
-import smach
-from smach_ros import RosState
-
-import tf2_ros
-from tf2_geometry_msgs.tf2_geometry_msgs import do_transform_point
-
-# import tf2_geometry_msgs
-import numpy as np
-
-from std_msgs.msg import Header
-from geometry_msgs.msg import (
-    Point,
-    Point32,
-    PointStamped,
-    Polygon as ROSPolygon,
-    PolygonStamped,
-)
-from shapely.geometry import (
-    Polygon as ShapelyPolygon,
-    Point as ShapelyPoint,
-    # MultiPoint,
-)
-from shapely.affinity import translate
-from sensor_msgs.msg import CameraInfo
-from image_geometry import PinholeCameraModel
-from typing import List, Tuple
-import threading
-
-
 class CalculateSweepPoints(yasmin.State):
     """
     State to calculate the points to sweep based on the polygon and camera FOV.
@@ -164,25 +136,19 @@ class CalculateSweepPoints(yasmin.State):
             outcomes=["succeeded", "failed"]
         )
         
-        self.add_input_key('sweep_points')
-        self.add_input_key('detected_objects')
-        
         self.add_output_key('sweep_points')
+        self.add_output_key('sweep_point_index')
         
         self._polygon = polygon
         self._min_coverage = min_coverage
         self._z_axis = z_axis
         self._fov_depth = fov_depth
 
-        self._tf_buffer = tf2_ros.Buffer(Duration(seconds=10.0))
-        self.camera_info = None
         self.node = yasmin_ros.logger_node
-        camera_qos = QoSProfile(depth=10, reliability=ReliabilityPolicy.BEST_EFFORT, history=HistoryPolicy.KEEP_LAST)
-        self.sub = self.node.create_subscription(CameraInfo, '/head_front_camera/depth/camera_info', self.camera_info_cb, camera_qos)
-        self._tf_listener = tf2_ros.TransformListener(self._tf_buffer, yasmin_ros.logger_node)
+
+        self._tf_buffer = tf2_ros.Buffer(Duration(seconds=10.0))
+        self._tf_listener = tf2_ros.TransformListener(self._tf_buffer, self.node)
         
-    def camera_info_cb(self, msg: CameraInfo):
-        self.camera_info = msg
 
     def _get_camera_fov_polygon(self) -> ShapelyPolygon:
         """
@@ -191,15 +157,17 @@ class CalculateSweepPoints(yasmin.State):
         Returns:
             ShapelyPolygon: Footprint of camera FOV in map frame.
         """
-        
-        
-        while self.camera_info is None:
-            True
-            
-        self.node.destroy_subscription(self.sub)
+
+        qos = QoSProfile(history=HistoryPolicy.KEEP_LAST, durability=DurabilityPolicy.VOLATILE, reliability=ReliabilityPolicy.BEST_EFFORT, depth=10)
+
+        success, msg = rclpy.wait_for_message.wait_for_message(msg_type=CameraInfo, node=self.node, topic='/head_front_camera/depth/camera_info', qos_profile=qos, time_to_wait=5)
+
+        if success is False:
+            yasmin.YASMIN_LOG_INFO('No camera info received, ending state')
+            self.cancel_state()
 
         model = PinholeCameraModel()
-        model.fromCameraInfo(self.camera_info)
+        model.fromCameraInfo(msg)
 
         # Define pixel corners (image boundaries)
         corners = [
@@ -214,7 +182,7 @@ class CalculateSweepPoints(yasmin.State):
         for u, v in corners:
             ray = model.projectPixelTo3dRay((u, v))
             point_cam = PointStamped()
-            point_cam.header.frame_id = self.camera_info.header.frame_id
+            point_cam.header.frame_id = msg.header.frame_id
             point_cam.header.stamp = Time().to_msg()
             point_cam.point.x = ray[0] * self._fov_depth
             point_cam.point.y = ray[1] * self._fov_depth
@@ -224,14 +192,14 @@ class CalculateSweepPoints(yasmin.State):
             try:
                 transform = self._tf_buffer.lookup_transform(
                     "map",
-                    self.camera_info.header.frame_id,
+                    msg.header.frame_id,
                     Time(),
                     timeout=Duration(seconds=5.0),
                 )
                 point_map = do_transform_point(point_cam, transform)
                 transformed_points.append((point_map.point.x, point_map.point.y))
             except Exception as e:
-                yasmin_ros.logger_node.get_logger().error(
+                yasmin.YASMIN_LOG_ERROR(
                     f"Transform failed with camera timestamp: {e}. Retrying with latest TF data."
                 )
 
@@ -299,7 +267,7 @@ class CalculateSweepPoints(yasmin.State):
             covered = covered.union(best_intersection)
             remaining.remove(best_fp)
 
-            yasmin_ros.logger_node.get_logger().info(
+            yasmin.YASMIN_LOG_INFO(
                 f"Selected new footprint, total coverage: {covered.area / total_area:.2%}, score: {best_score:.2f}"
             )
 
@@ -312,7 +280,7 @@ class CalculateSweepPoints(yasmin.State):
         Returns:
             List[PointStamped]: List of sweep points in map frame.
         """
-        yasmin_ros.logger_node.get_logger().info("Waiting for camera info and TF to map frame...")
+        yasmin.YASMIN_LOG_INFO("Waiting for camera info and TF to map frame...")
         fov_polygon = self._get_camera_fov_polygon()
 
         # Optional: visualize FOV
@@ -321,12 +289,12 @@ class CalculateSweepPoints(yasmin.State):
             depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL
         )  # Verify publisher durability profile (https://docs.ros.org/en/humble/Concepts/Intermediate/About-Quality-of-Service-Settings.html)
 
-        pub = yasmin_ros.logger_node.create_publisher(PolygonStamped, "projected_fov_polygon", qos)
+        pub = self.node.create_publisher(PolygonStamped, "projected_fov_polygon", qos)
 
         pub.publish(
             PolygonStamped(
                 header=Header(
-                    frame_id="map", stamp=yasmin_ros.logger_node.get_clock().now().to_msg()
+                    frame_id="map", stamp=self.node.get_clock().now().to_msg()
                 ),
                 polygon=ROSPolygon(
                     points=[
@@ -348,7 +316,6 @@ class CalculateSweepPoints(yasmin.State):
             overlap_penalty=0.0,
         )
 
-
         sweep_points = [
             PointStamped(
                 header=Header(frame_id="map"),
@@ -356,13 +323,20 @@ class CalculateSweepPoints(yasmin.State):
             )
             for fp in selected_footprints
         ]
-        yasmin_ros.logger_node.get_logger().info(f"Calculated {len(sweep_points)} sweep points.")
+        yasmin.YASMIN_LOG_INFO(f"Calculated {len(sweep_points)} sweep points.")
         return sweep_points
 
     def execute(self, blackboard) -> str:
-        """Main SMACH execution entrypoint"""
-        blackboard['sweep_points'] = self._calculate_sweep_points()
-        return "succeeded"
+        """Main execution entrypoint."""
+        try:
+            blackboard['sweep_points'] = self._calculate_sweep_points()
+            blackboard['sweep_point_index'] = 0
+            return "succeeded"
+        except Exception as e:
+            yasmin_ros.logger_node.get_logger().error(
+                f"Failed to calculate sweep points: {e}"
+            )
+            return "failed"
 
 class IterateThroughPoints(yasmin.StateMachine):
     def __init__(self, 
@@ -370,15 +344,15 @@ class IterateThroughPoints(yasmin.StateMachine):
                 model: str = "yolo11n-seg.pt",
                 models: Optional[List[str]] = None,
                 object_filter: Optional[List[str]] = None,
-                min_confidence: float = 0.5):
+                min_confidence: float = 0.5,
+                min_new_object_dist: float = 0.1):
         super().__init__(outcomes=['succeeded', 'failed'], handle_sigint=True)
         
-        input_keys=["sweep_points", "sweep_point_index", "detected_objects", "pointstamped"]
-        
         get_point_state = yasmin.CbState(outcomes=['succeeded', 'failed', 'continue'], callback=self._get_look_point)
-        for key in input_keys:
-            get_point_state.add_input_key(key)
+        get_point_state.add_input_key('sweep_points')
+        get_point_state.add_input_key('sweep_point_index')
         get_point_state.add_output_key('pointstamped')
+        get_point_state.add_output_key('sweep_point_index')
         
         
         self.add_state(
@@ -389,7 +363,7 @@ class IterateThroughPoints(yasmin.StateMachine):
         self.add_state(
             'LOOK_POINT',
             LookToPoint(),
-            transitions={'succeeded': 'DETECT_OBJECTS', 'aborted': 'failed', 'canceled': 'failed', 'timeout': 'failed'}
+            transitions={'succeeded': 'DETECT_OBJECTS', 'aborted': 'failed', 'canceled': 'failed'}
         )
         # self.add_state(
         #     'SLEEP',
@@ -411,7 +385,7 @@ class IterateThroughPoints(yasmin.StateMachine):
         )
         self.add_state(
             'PROCESS_DETECTIONS',
-            ProcessDetections(),
+            ProcessDetections(min_new_object_dist=min_new_object_dist),
             transitions={'succeeded': 'GET_LOOK_POINT', 'failed': 'failed'}
         )
         
@@ -432,11 +406,9 @@ class IterateThroughPoints(yasmin.StateMachine):
             blackboard['sweep_point_index'] += 1
             return "continue"
         else:
-            yasmin_ros.logger_node.get_logger().error("Index out of bounds for sweep points.")
+            yasmin.YASMIN_LOG_INFO("Finished iterating through sweep points.")
             return "succeeded"
         
-        
-
 class DetectAllInPolygon(yasmin.StateMachine):
     """
     State machine to sweep and detect all objects within
@@ -511,30 +483,21 @@ class DetectAllInPolygon(yasmin.StateMachine):
 
         self.build_state_machine()
 
-    def _publish_detected_objects(self, blackboard) -> str:
-        """
-        Callback to publish the detected objects.
-
-        Args:
-            userdata (smach.UserData): User data containing the detected objects.
-
-        Returns:
-            str: Outcome of the state, "succeeded".
-        """
+    def _publish_detected_objects(self, blackboard) -> Image:
+        """Create the debug image that PublisherState will publish."""
         images_for_tiling = []
         for image_raw, detections in blackboard['debug_images']:
-            print(f"Processing {len(detections)} detections for image.")
+            yasmin_ros.logger_node.get_logger().info(
+                f"Processing {len(detections)} detections for debug image."
+            )
             if not detections:
-                yasmin_ros.logger_node.get_logger().warn("No detections to publish.")
                 continue
+
             cv2_image = msg_to_cv2_img(image_raw)
-            # Loop over each detection, annotate image with bounding boxes
-            # tile images, and publish
             for detection in detections:
                 xywh = detection.xywh
                 label = detection.name
                 confidence = detection.confidence
-                # Annotate the image with bounding box and label
                 cv2.rectangle(
                     cv2_image,
                     (int(xywh[0]), int(xywh[1])),
@@ -552,16 +515,18 @@ class DetectAllInPolygon(yasmin.StateMachine):
                     2,
                 )
             images_for_tiling.append(cv2_image)
-        if images_for_tiling:
-            # Create a tiled image from the list of images
-            tiled_image = cv2.hconcat(images_for_tiling)
-            # Convert to ROS Image message
-            image_msg = cv2_img_to_msg(tiled_image)
-            # Publish the tiled image
-            self._debug_publisher.publish(image_msg)
-            yasmin_ros.logger_node.get_logger().info("Published debug images with detections.")
 
-        return "succeeded"
+        if not images_for_tiling:
+            yasmin_ros.logger_node.get_logger().warn(
+                "No debug images with detections to publish."
+            )
+            return Image()
+
+        tiled_image = cv2.hconcat(images_for_tiling)
+        yasmin_ros.logger_node.get_logger().info(
+            "Created debug image with detections."
+        )
+        return cv2_img_to_msg(tiled_image)
 
     def build_state_machine(self):
         """
@@ -584,7 +549,14 @@ class DetectAllInPolygon(yasmin.StateMachine):
             transitions={"succeeded": "LOOK_AND_DETECT", "failed": "failed"},
         )
         self.add_state('LOOK_AND_DETECT',
-                       IterateThroughPoints(polygon=self._polygon, object_filter=self._object_filter),
+                       IterateThroughPoints(
+                           polygon=self._polygon,
+                           model=self._model,
+                           models=self._models,
+                           object_filter=self._object_filter,
+                           min_confidence=self._min_confidence,
+                           min_new_object_dist=self._min_new_object_dist,
+                       ),
                        transitions={'succeeded': 'PUBLISH_DETECTED_OBJECTS', 'failed': 'failed'})
 
         self.add_state(
@@ -593,43 +565,45 @@ class DetectAllInPolygon(yasmin.StateMachine):
             transitions={"succeeded": "succeeded"}
         )
 
-
 def main():
     seat_area = [
-        [1.6339980363845825, -1.0644755363464355],
-        [1.416628360748291, -1.2992608547210693],
-        [0.6099638938903809, -0.8733057975769043],
-        [0.9320377707481384, -0.49591076374053955],
+        [0.7480791807174683, -1.7565855979919434],
+        [0.018826855346560478, -1.126090168952942],
+        [-0.26876330375671387, -1.4711215496063232],
+        [0.5074905157089233, -2.084648609161377],
     ]
 
     seat_polygon = ShapelyPolygon(seat_area)
 
     rclpy.init()
     
-    yasmin_ros.set_ros_loggers()
+    node = Node('Detect_All_In_Polygon')
+    
+    yasmin_ros.set_ros_loggers(node)
     
     bb = Blackboard()
     bb['sweep_points'] = []
     bb['detected_objects'] = []
     bb['debug_images'] = []
-    bb['look_point'] = PointStamped()
+    bb['pointstamped'] = PointStamped()
     bb['sweep_point_index'] = 0
     
     sm = yasmin.StateMachine(outcomes=['succeeded', 'failed'], handle_sigint=True)
     sm.add_state(
         'DETECT_ALL_IN_POLYGON',
-        DetectAllInPolygon(polygon=seat_polygon, object_filter=['person', 'chair']),
+        DetectAllInPolygon(polygon=seat_polygon, object_filter=['person', 'chair'], min_coverage=1.0, min_new_object_dist=0.40, min_confidence=0.7),
         transitions={'succeeded': 'succeeded', 'failed': 'failed'}
     )
     
     YasminViewerPub(sm, "YASMIN_MULTIPLE_STATES_DEMO")
-    
-    outcome = sm(bb)
-    yasmin.YASMIN_LOG_INFO(f'SM finished with outcome: {outcome}')
+    try:
+        outcome = sm(bb)
+        yasmin.YASMIN_LOG_INFO(f'SM finished with outcome: {outcome}')
+    except Exception as e:
+        yasmin.YASMIN_LOG_WARN(e)
         
     if rclpy.ok():
         rclpy.shutdown()
-
 
 if __name__ == "__main__":
     main()
