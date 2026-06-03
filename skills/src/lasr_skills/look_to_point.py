@@ -1,9 +1,6 @@
 import yasmin
 import yasmin_ros
 import rclpy
-from rclpy.duration import Duration
-from rclpy.action import ActionClient
-
 from control_msgs.action import PointHead
 from geometry_msgs.msg import Point, PointStamped, Vector3
 from std_msgs.msg import Header
@@ -22,7 +19,7 @@ class LookToPoint(yasmin_ros.ActionState):
             action_name="/head_controller/point_head_action",
             action_type=PointHead,
             create_goal_handler=self._create_goal,
-            response_timeout=10.0
+            response_timeout=5.0,
         )
         if pointstamped is None:
             self.add_input_key('pointstamped')
@@ -37,6 +34,9 @@ class LookToPoint(yasmin_ros.ActionState):
         goal.target = (
             self._pointstamped if self._pointstamped is not None else blackboard['pointstamped']
         )
+        
+        yasmin.YASMIN_LOG_INFO(str(goal.target))
+        
         
         return goal
     

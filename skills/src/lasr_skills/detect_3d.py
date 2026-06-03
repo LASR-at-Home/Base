@@ -140,6 +140,8 @@ class Detect3D(ServiceState):
         blackboard['pcl'] = self.pcl
         blackboard['image_raw'] = self.image_msg
         
+        yasmin.YASMIN_LOG_INFO(str(response))
+        
         return 'succeeded'
 
 def main():
