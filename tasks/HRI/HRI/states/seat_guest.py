@@ -30,6 +30,8 @@ from lasr_skills import (
     DetectAllInPolygon,
 )
 
+from yasmin_viewer import YasminViewerPub
+
 
 class ProcessDetections(State):
 
@@ -498,6 +500,7 @@ def main():
     node = rclpy.create_node("HRI")
     
     yasmin_ros.set_ros_loggers(node)
+    
 
     try:
         sm = SeatGuest(learn_host=False)
@@ -517,6 +520,8 @@ def main():
                 "seating_detection": False,
             }
         }
+
+        YasminViewerPub(sm, "HRI_SM3")
 
         outcome = sm(bb)
 
