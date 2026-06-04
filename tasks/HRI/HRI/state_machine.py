@@ -1,6 +1,7 @@
 from typing import List, Tuple, Dict
 
 import rclpy
+
 import yasmin
 import yasmin_ros
 
@@ -22,78 +23,77 @@ class HRI(yasmin.StateMachine):
             yasmin.YASMIN_LOG_INFO('RECEIVED START SIGNAL')
             return 'succeeded'
 
-        with self:
-            self.blackboard["guest_data"] = {
-                "host": host_data,
-                "guest1": {
-                    "name": "",
-                    "drink": "",
-                    "detection": False,
-                    "seating_detection": False,
-                },
-                "guest2": {
-                    "name": "",
-                    "drink": "",
-                    "detection": False,
-                    "seating_detection": False,
-                },
-            }
-            drink_detections = {}
+        self.blackboard["guest_data"] = {
+            "host": host_data,
+            "guest1": {
+                "name": "",
+                "drink": "",
+                "detection": False,
+                "seating_detection": False,
+            },
+            "guest2": {
+                "name": "",
+                "drink": "",
+                "detection": False,
+                "seating_detection": False,
+            },
+        }
+        drink_detections = {}
 
-            self.blackboard["drink_detections"] = drink_detections
-            self.blackboard["confidence"] = face_detection_confidence
-            self.blackboard["dataset"] = "receptionist"
-            self.blackboard["drink_position"] = PointStamped()
+        self.blackboard["drink_detections"] = drink_detections
+        self.blackboard["confidence"] = face_detection_confidence
+        self.blackboard["dataset"] = "receptionist"
+        self.blackboard["drink_position"] = PointStamped()
 
-            self.add_state(
-                "WAIT_START",  # Awaits start Signal for the task
-                yasmin_ros.MonitorState(
-                    topic="/receptionist/start",
-                    outcomes=['succeeded', 'failed'],
-                    monitor_handler=wait_cb,
-                    msg_type=Empty,
-                ),
-                transitions={
-                    "succeeded": "START_TIMER",
-                    "failed": "WAIT_START",
-                },
-            )
+        self.add_state(
+            "WAIT_START",  # Awaits start Signal for the task
+            yasmin_ros.MonitorState(
+                topic="/receptionist/start",
+                outcomes=['succeeded', 'failed'],
+                monitor_handler=wait_cb,
+                msg_type=Empty,
+            ),
+            transitions={
+                "succeeded": "START_TIMER",
+                "failed": "WAIT_START",
+            },
+        )
 
-            self.add_state(
-                "START_TIMER",
-                StartTimer(),
-                transitions={"succeeded": "START_CON", "failed": "START_TIMER"},
-            )
+        self.add_state(
+            "START_TIMER",
+            StartTimer(),
+            transitions={"succeeded": "START_CON", "failed": "START_TIMER"},
+        )
 
-            self.add_state(
-                "START_CON",  # SM1: Waits for Door to open, then goes to start
-                self.setup(),
-                transitions={"succeeded": "GREET", "failed": "START_CON"},
-            )
+        self.add_state(
+            "START_CON",  # SM1: Waits for Door to open, then goes to start
+            self.setup(),
+            transitions={"succeeded": "GREET", "failed": "START_CON"},
+        )
 
-            self.add(
-                "GREET",  # SM2: Greets guest
-                LookAndGreetGuest(node=node, last_resort=False, guest_id="guest1"),
-                transitions={"succeeded": "GUIDE_TO_SEAT", "failed": "failed"},
-            )
+        self.add_state(
+            "GREET",  # SM2: Greets guest
+            LookAndGreetGuest(last_resort=False, guest_id="guest1"),
+            transitions={"succeeded": "GUIDE_TO_SEAT", "failed": "failed"},
+        )
 
-            self.add(
-                "GUIDE_TO_SEAT",  # GUIDES GUEST TO SEATING AREA
-                GoToLocation(node=node, location_param="seat_pose"),
-                transitions={"succeeded": "SEAT_GUEST", "failed": "failed"},
-            )
+        self.add_state(
+            "GUIDE_TO_SEAT",  # GUIDES GUEST TO SEATING AREA
+            GoToLocation(location_param="seat_pose"),
+            transitions={"succeeded": "SEAT_GUEST", "failed": "failed"},
+        )
 
-            self.add(
-                "SEAT_GUEST",  # SM3: Locates and seats guest in free seat
-                SeatGuest(node=node, learn_host=False),
-                transitions={"succeeded": "succeeded", "failed": "failed"},
-            )
+        self.add_state(
+            "SEAT_GUEST",  # SM3: Locates and seats guest in free seat
+            SeatGuest(learn_host=False),
+            transitions={"succeeded": "succeeded", "failed": "failed"},
+        )
 
-    def setup(self, node):
+    def setup(self):
         start_con_sm = yasmin.Concurrence(
             states={
-                "SAY_START": Say(node=node, text="Start of HRI task."),
-                "DOOR_START": StartDoorSM(node=node),
+                "SAY_START": Say(text="Start of HRI task."),
+                "DOOR_START": StartDoorSM(),
             },
             default_outcome="failed",
             outcome_map={
@@ -111,20 +111,27 @@ class HRI(yasmin.StateMachine):
         return start_con_sm
 
 
-def main(args=None):
-    rclpy.init(args=args)
+def main():
+    rclpy.init()
 
-    node = rclpy.create_node(
-        node_name="hri",
-        allow_undeclared_parameters=True,
-        automatically_declare_parameters_from_overrides=True,
-    )
+    node = rclpy.create_node("hri")
+    yasmin_ros.set_ros_loggers(node)
 
-    sm = HRI(node=node, host_data={})
-    outcome = sm.execute()
-    node.get_logger().info(f"StartSM outcome: {outcome}")
-    node.destroy_node()
-    rclpy.shutdown()
+    try: 
+        sm = HRI(host_data={})
+        bb = yasmin.Blackboard()
+
+        # YasminViewerPub(sm, "HRI_SM3")
+
+        outcome = sm(bb)
+
+        yasmin.YASMIN_LOG_INFO(outcome)
+    except Exception as e:
+        yasmin.YASMIN_LOG_WARN(e)
+    
+    if rclpy.ok():
+        node.destroy_node()
+        rclpy.shutdown()
 
 
 if __name__ == "__main__":

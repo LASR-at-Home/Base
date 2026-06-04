@@ -51,7 +51,6 @@ setup(
     cmdclass={"install": InstallCommand},
     entry_points={
         "console_scripts": [
-            # "look_to_point = src.lasr_skills.look_to_point:main",
             "get_image = lasr_skills.vision.get_image:main",
             "wait_state = lasr_skills.wait:main",
             "say = lasr_skills.say:main",
@@ -59,7 +58,8 @@ setup(
             "detect_all_in_polygon = lasr_skills.detect_all_in_polygon:main",
             "crop_image_3d = lasr_skills.vision.crop_image_3d:main",
             "play_motion = lasr_skills.play_motion:main",
-            "look = lasr_skills.look_to_point:main"
+            "look = lasr_skills.look_to_point:main",
+            "go_to_location = lasr_skills.go_to_location:main"
         ],
     },
 )

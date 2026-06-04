@@ -1,6 +1,7 @@
 import yasmin
 from yasmin import StateMachine, State, Concurrence, Blackboard
 import yasmin_ros
+from yasmin_viewer import YasminViewerPub
 
 import rclpy
 from rclpy.node import Node
@@ -497,7 +498,7 @@ class SeatGuest(StateMachine):
 def main():
 
     rclpy.init()
-    node = rclpy.create_node("HRI")
+    node = rclpy.create_node("hri")
     
     yasmin_ros.set_ros_loggers(node)
     
