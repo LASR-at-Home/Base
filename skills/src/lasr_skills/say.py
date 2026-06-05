@@ -51,17 +51,35 @@ else:
             text: Union[str, None] = None,
             format_str: Union[str, None] = None,
         ):
-            self.text = text
             super().__init__(
                 action_name="/tts_engine/tts",
                 action_type=TTS,
                 create_goal_handler=self.create_goal,
             )
-            if self.text is None:
-                self.add_input_key('text')
+            
+            self.add_input_key('placeholders')
+            self.add_input_key('text')
+            
+            self.format_str = format_str
+            self.text = text
         
         def create_goal(self, blackboard):
-            return TTS.Goal(input=self.text) if self.text is not None else TTS.Goal(input=blackboard['text'])
+            goal = TTS.Goal()
+            goal.locale="en_GB"
+            if self.text is None:
+                if self.format_str is not None:
+                    if isinstance(blackboard['placeholders'], (list, tuple)):
+                        goal.input = self.format_str.format(*blackboard['placeholders'])
+                    else:
+                        goal.input = self.format_str.format(blackboard['placeholders'])
+                else:
+                    goal.input = blackboard['text']
+            else:
+                goal.input = self.text
+                goal.locale="en_GB"
+            
+            return goal
+                
 
 
 

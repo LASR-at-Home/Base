@@ -11,7 +11,7 @@ class StartTimer(yasmin.State):
         super().__init__(
             outcomes=["succeeded", "failed"],
         )
-        self.add_output_keys('start_time')
+        self.add_output_key('start_time')
 
     def execute(self, blackboard):
         try:

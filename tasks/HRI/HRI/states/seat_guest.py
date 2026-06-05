@@ -250,7 +250,6 @@ class SeatGuest(StateMachine):
         self.add_output_key("seated_guest_locs")
 
         self._node = yasmin_ros.logger_node
-        self._node.get_logger().info('LOADED THE NODE INTO STATEMACHINE')
         self.__load_ros_parameters()
         # TODO: Update to allow local paramters overriding ros param
 
@@ -416,21 +415,21 @@ class SeatGuest(StateMachine):
 
     def __load_ros_parameters(self):
         # Declare parameters
-        self._node.declare_parameter("sofa_point.x", 0.0)
-        self._node.declare_parameter("sofa_point.y", 0.0)
-        self._node.declare_parameter("sofa_point.z", 0.0)
+        # self._node.declare_parameter("sofa_point.x", 0.0)
+        # self._node.declare_parameter("sofa_point.y", 0.0)
+        # self._node.declare_parameter("sofa_point.z", 0.0)
 
-        self._node.declare_parameter("seat_area.top_left", [0.0, 0.0])
-        self._node.declare_parameter("seat_area.top_right", [0.0, 0.0])
-        self._node.declare_parameter("seat_area.bottom_right", [0.0, 0.0])
-        self._node.declare_parameter("seat_area.bottom_left", [0.0, 0.0])
+        # self._node.declare_parameter("seat_area.top_left", [0.0, 0.0])
+        # self._node.declare_parameter("seat_area.top_right", [0.0, 0.0])
+        # self._node.declare_parameter("seat_area.bottom_right", [0.0, 0.0])
+        # self._node.declare_parameter("seat_area.bottom_left", [0.0, 0.0])
 
-        self._node.declare_parameter("sofa_area.top_left", [0.0, 0.0])
-        self._node.declare_parameter("sofa_area.top_right", [0.0, 0.0])
-        self._node.declare_parameter("sofa_area.bottom_right", [0.0, 0.0])
-        self._node.declare_parameter("sofa_area.bottom_left", [0.0, 0.0])
+        # self._node.declare_parameter("sofa_area.top_left", [0.0, 0.0])
+        # self._node.declare_parameter("sofa_area.top_right", [0.0, 0.0])
+        # self._node.declare_parameter("sofa_area.bottom_right", [0.0, 0.0])
+        # self._node.declare_parameter("sofa_area.bottom_left", [0.0, 0.0])
 
-        self._node.declare_parameter("max_people_on_sofa", 2)
+        # self._node.declare_parameter("max_people_on_sofa", 2)
 
         # Load parameters from file
         self.seating_area = ShapelyPolygon(

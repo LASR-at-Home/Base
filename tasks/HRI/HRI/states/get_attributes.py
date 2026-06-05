@@ -1,79 +1,79 @@
-import smach
-import smach_ros
-from smach import UserData
+import yasmin
 from lasr_skills import DescribePeople
 import json
 
 
-class GetGuestAttributes(smach.StateMachine):
-    class InitialiseDetectionFlag(smach_ros.RosState):
-        def __init__(self, guest_id: str, node):
+class GetGuestAttributes(yasmin.StateMachine):
+    class InitialiseDetectionFlag(yasmin.State):
+        def __init__(self, guest_id: str):
             super().__init__(
-                node=node,
                 outcomes=["succeeded", "failed"],
-                input_keys=["guest_data"],
-                output_keys=["guest_data"],
             )
+
+            self.add_input_key('guest_data')
+            self.add_output_key('guest_data')
 
             self._guest_id: str = guest_id
 
-        def execute(self, userdata: UserData) -> str:
+        def execute(self, blackboard) -> str:
             try:
-                userdata.guest_data[self._guest_id]["detection"] = False
+                blackboard['guest_data'][self._guest_id]["detection"] = False
                 return "succeeded"
             except Exception as e:
-                self.node.get_logger().error(f"Error: {e}")
+                yasmin.YASMIN_LOG_ERROR(e)
                 return "failed"
 
-    class HandleGuestAttributes(smach_ros.RosState):
-        def __init__(self, guest_id: str, node):
+    class HandleGuestAttributes(yasmin.State):
+        def __init__(self, guest_id: str):
             super().__init__(
-                node=node,
                 outcomes=["succeeded", "failed"],
-                input_keys=["guest_data", "clip_detection_dict"],
-                output_keys=["guest_data"],
             )
+
+            self.add_input_key('guest_data')
+            self.add_input_key('clip_detection_dict')
+            self.add_output_key('guest_data')
 
             self._guest_id: str = guest_id
 
-        def execute(self, userdata: UserData) -> str:
+        def execute(self, blackboard) -> str:
             try:
-                userdata.guest_data[self._guest_id][
+                blackboard['guest_data'][self._guest_id][
                     "attributes"
-                ] = userdata.clip_detection_dict
-                userdata.guest_data[self._guest_id]["detection"] = True
+                ] = blackboard['clip_detection_dict']
+                blackboard['guest_data'][self._guest_id]["detection"] = True
                 return "succeeded"
             except Exception as e:
-                self.node.get_logger().error(f"Error: {e}")
+                yasmin.YASMIN_LOG_ERROR(e)
                 return "failed"
 
-    def __init__(self, guest_id: str, node):
+    def __init__(self, guest_id: str):
         super().__init__(
             outcomes=["succeeded", "failed"],
-            input_keys=["guest_data"],
-            output_keys=["guest_data"],
         )
+        
+        self.add_input_key('guest_data')
+        self.add_output_key('guest_data')
+        
         self._guest_id: str = guest_id
 
-        with self:
-            self.add(
-                "INITIALISE_DETECTION_FLAG",
-                self.InitialiseDetectionFlag(node=node, guest_id=self._guest_id),
-                transitions={
-                    "succeeded": "GET_GUEST_ATTRIBUTES",
-                    "failed": "GET_GUEST_ATTRIBUTES",
-                },
-            )
-            self.add(
-                "GET_GUEST_ATTRIBUTES",
-                DescribePeople(node=node),
-                transitions={
-                    "succeeded": "HANDLE_GUEST_ATTRIBUTES",
-                    "failed": "failed",
-                },
-            )
-            self.add(
-                "HANDLE_GUEST_ATTRIBUTES",
-                self.HandleGuestAttributes(node=node, guest_id=self._guest_id),
-                transitions={"succeeded": "succeeded", "failed": "failed"},
-            )
+        self.add_state(
+            "INITIALISE_DETECTION_FLAG",
+            self.InitialiseDetectionFlag(guest_id=self._guest_id),
+            transitions={
+                "succeeded": "GET_GUEST_ATTRIBUTES",
+                "failed": "GET_GUEST_ATTRIBUTES",
+            },
+        )
+        self.add_state(
+            "GET_GUEST_ATTRIBUTES",
+            DescribePeople(),
+            transitions={
+                "succeeded": "HANDLE_GUEST_ATTRIBUTES",
+                "failed": "failed",
+            },
+        )
+        self.add_state(
+            "HANDLE_GUEST_ATTRIBUTES",
+            self.HandleGuestAttributes(guest_id=self._guest_id),
+            transitions={"succeeded": "succeeded", "failed": "failed"},
+        )

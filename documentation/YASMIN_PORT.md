@@ -88,7 +88,7 @@ When running the state machine, your main() must look similar to this:
 def main():
     rclpy.init()
 
-    yasmin_ros.set_ros_loggers() # You can pass a node as an argument in order to keep your own name, for now leave like this, as this is still being investigated
+    yasmin_ros.set_ros_loggers() # This will create a node with a randomly generated name for the node
     
     sm = MyStateMachine() 
     # or if just for a state do:
@@ -117,3 +117,28 @@ def main():
         rclpy.shutdown()
 ```
 
+If using a **custom** node name due to parameters, please do the following:
+```
+from rclpy.node import Node
+from threading import Thread
+try:
+    from rclpy.executors import EventsExecutor as Executor
+except ImportError:
+    from rclpy.executors import MultiThreadedExecutor as Executor
+
+class MyNode(Node):
+    def __init__(self):
+        super().__init__(node_name='name_goes_here', allow_undeclared_parameters=True, automatically_declare_parameters_from_overrides=True)
+
+        self._executor = Executor()
+        self._executor.add_node(self)
+        self._spin_thread = Thread(target=self._executor.spin)
+        self._spin_thread.start()
+
+def main():
+    rclpy.init()
+    node = MyNode()
+    yasmin_ros.set_ros_loggers(node)
+
+    # rest of the main() method
+```
