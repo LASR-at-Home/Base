@@ -5,6 +5,11 @@ from rclpy.time import Time
 from rclpy.qos import QoSProfile, DurabilityPolicy, ReliabilityPolicy, HistoryPolicy
 from rclpy.publisher import Publisher
 
+try:
+    from rclpy.executors import EventsExecutor as Executor
+except ImportError:
+    from rclpy.executors import MultiThreadedExecutor as Executor
+
 import yasmin
 import yasmin_ros
 from yasmin import Blackboard
@@ -16,6 +21,8 @@ import cv2
 from typing import List, Optional, Tuple
 
 from time import sleep
+
+from threading import Thread, RLock
 
 import tf2_ros
 from tf2_geometry_msgs.tf2_geometry_msgs import do_transform_point
@@ -172,10 +179,14 @@ class CalculateSweepPoints(yasmin.State):
         # Define pixel corners (image boundaries)
         corners = [
             (0, 0),  # top-left
-            (model.width, 0),  # top-right
-            (model.width, model.height),  # bottom-right
-            (0, model.height),  # bottom-left
+            (model.width - 1, 0),  # top-right
+            (model.width - 1, model.height - 1),  # bottom-right
+            (0, model.height - 1),  # bottom-left
         ]
+        
+        qos_test = QoSProfile(history=HistoryPolicy.KEEP_ALL)
+        
+        pub = self.node.create_publisher(PointStamped, "fov_corners", qos_test)
 
         # Transform pixel rays to map frame
         transformed_points = []
@@ -187,6 +198,8 @@ class CalculateSweepPoints(yasmin.State):
             point_cam.point.x = ray[0] * self._fov_depth
             point_cam.point.y = ray[1] * self._fov_depth
             point_cam.point.z = ray[2] * self._fov_depth
+            
+            pub.publish(point_cam)
 
             # Transform to map frame
             try:
@@ -323,6 +336,14 @@ class CalculateSweepPoints(yasmin.State):
             )
             for fp in selected_footprints
         ]
+        
+        qos_test = QoSProfile(history=HistoryPolicy.KEEP_ALL)
+        
+        point_pub = self.node.create_publisher(PointStamped, '/sweep_points', qos_test)
+        
+        for point in sweep_points:
+            point_pub.publish(point)
+        
         yasmin.YASMIN_LOG_INFO(f"Calculated {len(sweep_points)} sweep points.")
         return sweep_points
 
@@ -363,7 +384,7 @@ class IterateThroughPoints(yasmin.StateMachine):
         self.add_state(
             'LOOK_POINT',
             LookToPoint(),
-            transitions={'succeeded': 'DETECT_OBJECTS', 'aborted': 'failed', 'canceled': 'failed'}
+            transitions={'succeeded': 'DETECT_OBJECTS', 'aborted': 'DETECT_OBJECTS', 'canceled': 'failed', 'timeout': 'DETECT_OBJECTS'}
         )
         # self.add_state(
         #     'SLEEP',
@@ -378,9 +399,9 @@ class IterateThroughPoints(yasmin.StateMachine):
                 model=model,
                 models=models,
                 z_min=-10,
-                z_max=50.0,
+                z_max=10.0,
                 confidence=min_confidence,
-                target_frame='odom'
+                target_frame='map'
             ),
             transitions={'succeeded': 'PROCESS_DETECTIONS', 'failed': 'failed'}
         )
@@ -568,19 +589,26 @@ class DetectAllInPolygon(yasmin.StateMachine):
 
 def main():
     seat_area = [
-        [0.7480791807174683, -1.7565855979919434],
-        [0.018826855346560478, -1.126090168952942],
-        [-0.26876330375671387, -1.4711215496063232],
-        [0.5074905157089233, -2.084648609161377],
+        [0.9422937035560608, -1.9376981258392334],
+        [-0.01625092327594757, -1.1312360763549805],
+        [-0.5108118057250977, -1.6913851499557495],
+        [0.4300234913825989, -2.5222253799438477],
     ]
 
     seat_polygon = ShapelyPolygon(seat_area)
 
     rclpy.init()
     
-    node = Node('Detect_All_In_Polygon')
+    # node = Node('Detect_All_In_Polygon')
+    # executor = Executor()
+    # executor.add_node(node)
     
-    yasmin_ros.set_ros_loggers(node)
+    # thread = Thread(target=executor.spin())
+    # thread.start()
+    yasmin_ros.set_ros_loggers()
+    
+    
+    
     
     bb = Blackboard()
     bb['sweep_points'] = []
@@ -592,13 +620,14 @@ def main():
     sm = yasmin.StateMachine(outcomes=['succeeded', 'failed'], handle_sigint=True)
     sm.add_state(
         'DETECT_ALL_IN_POLYGON',
-        DetectAllInPolygon(polygon=seat_polygon, object_filter=['person', 'chair'], min_coverage=1.0, min_new_object_dist=0.40, min_confidence=0.7),
+        DetectAllInPolygon(polygon=seat_polygon, min_coverage=1.0, min_new_object_dist=0.40, min_confidence=0.7, object_filter=['person', 'chair']),
         transitions={'succeeded': 'succeeded', 'failed': 'failed'}
     )
     
     YasminViewerPub(sm, "YASMIN_MULTIPLE_STATES_DEMO")
     try:
         outcome = sm(bb)
+        
         yasmin.YASMIN_LOG_INFO(f'SM finished with outcome: {outcome}')
     except Exception as e:
         yasmin.YASMIN_LOG_WARN(e)

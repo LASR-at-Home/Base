@@ -185,7 +185,9 @@ class YOLOServiceNode:
         fx, fy = K[0], K[4]
         cx, cy = K[2], K[5]
 
-        target_frame = req.target_frame or req.depth_image.header.frame_id
+        # target_frame = req.target_frame or req.depth_image.header.frame_id
+        
+        target_frame = req.depth_image.header.frame_id
         
         transform = None
         if results:
@@ -239,8 +241,8 @@ class YOLOServiceNode:
                 point_stamped = PointStamped()
                 point_stamped.header = req.depth_image.header
                 point_stamped.point = point
-                point_stamped_transformed = do_transform_point(point_stamped, transform)
-                detection.point = point_stamped_transformed.point
+                # point_stamped_transformed = do_transform_point(point_stamped, transform)
+                detection.point = point_stamped.point
 
             else:
                 self.node.get_logger().warn(

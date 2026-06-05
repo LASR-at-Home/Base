@@ -1,5 +1,6 @@
 import rclpy
 from rclpy.node import Node
+from rclpy.time import Time
 
 import yasmin
 import yasmin_ros
@@ -9,7 +10,7 @@ from .detect_3d import Detect3D
 from typing import List, Union, Optional
 
 from std_msgs.msg import Header
-from geometry_msgs.msg import Polygon, Point, Point32, PolygonStamped
+from geometry_msgs.msg import Polygon, Point, Point32, PolygonStamped, PointStamped
 from shapely.geometry import Point as ShapelyPoint
 from shapely.geometry.polygon import Polygon as ShapelyPolygon
 
@@ -66,6 +67,15 @@ class Detect3DInArea(yasmin.StateMachine):
             self.debug_publisher.publish(
                 PolygonStamped(polygon=polygon_msg, header=Header(frame_id="map"))
             )
+            
+            pub = yasmin_ros.logger_node.create_publisher(PointStamped, 'objects_points', 10)
+            
+            for detection in detected_objects:
+                if detection.point.x == 'nan':
+                    continue
+                yasmin.YASMIN_LOG_INFO(f'Detected a {detection.name} at x:{detection.point.x}, y:{detection.point.y}, z:{detection.point.z}')
+                pub.publish(PointStamped(header=Header(frame_id='head_front_camera_color_optical_frame', stamp=Time().to_msg()), point=Point(x=detection.point.x, y=detection.point.y, z=detection.point.z)))
+            
             satisfied_points = [
                 area_polygon.contains(ShapelyPoint(object.point.x, object.point.y))
                 for object in detected_objects

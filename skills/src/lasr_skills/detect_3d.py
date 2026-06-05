@@ -80,7 +80,6 @@ class Detect3D(ServiceState):
         self.pcl = None
         
     def _create_req(self, blackboard):
-        yasmin.YASMIN_LOG_INFO('creating_req')
         self.data = None
         self.image_msg = None
         self.pcl = None
@@ -127,14 +126,12 @@ class Detect3D(ServiceState):
                 filter=self.filter,
                 target_frame=self.target_frame,
             )
-        yasmin.YASMIN_LOG_INFO('REQUEST-CREATED')
         self.image_msg = image_msg
         self.pcl = pcl_msg
         
         return req
 
     def response_handler(self, blackboard, response):
-        self._node.get_logger().info('HELLO')
         yasmin.YASMIN_LOG_INFO('Handling Detection Response')
 
         #TODO: Verify if changing frame changes the scale as well (currently base_footprint) 
@@ -147,11 +144,10 @@ class Detect3D(ServiceState):
             #yasmin.YASMIN_LOG_INFO(f"After: {detection}")
             resp.detected_objects.append(detection)
         
-        blackboard['detections_3d'] = resp
+        blackboard['detections_3d'] = response
         blackboard['pcl'] = self.pcl
         blackboard['image_raw'] = self.image_msg
         
-        yasmin.YASMIN_LOG_INFO(str(response))
         
         return 'succeeded'
 
