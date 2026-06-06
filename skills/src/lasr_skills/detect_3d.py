@@ -10,15 +10,9 @@ from smach import StateMachine
 
 import message_filters
 
+from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
 from sensor_msgs.msg import Image, CameraInfo, PointCloud2
 from lasr_vision_interfaces.srv import YoloDetection3D
-
-# from std_msgs.msg import String
-
-"""
-    TODO: 
-        - message_filters subscribers
-"""
 
 
 class Detect3D(RosState):
@@ -52,16 +46,28 @@ class Detect3D(RosState):
         self.confidence = confidence
         self.target_frame = target_frame
 
-        # From: https://docs.ros.org/en/humble/p/message_filters/message_filters.html#message_filters.Subscriber
-        image_sub = message_filters.Subscriber(self.node, Image, self.image_topic)
-        depth_sub = message_filters.Subscriber(self.node, Image, self.depth_image_topic)
-        cam_info_sub = message_filters.Subscriber(
-            self.node, CameraInfo, self.depth_camera_info_topic
+        camera_qos = QoSProfile(
+            depth=10,
+            reliability=ReliabilityPolicy.BEST_EFFORT,
+            history=HistoryPolicy.KEEP_LAST,
         )
-        subs = [image_sub, depth_sub, cam_info_sub]
-        if point_cloud_topic:
+
+        cam_info_sub = message_filters.Subscriber(
+            self.node, CameraInfo, self.depth_camera_info_topic, qos_profile=camera_qos
+        )
+        # CameraInfo is latched: keep it in a cache, not in the time synchronizer.
+        self.cam_info_cache = message_filters.Cache(cam_info_sub, 10)
+
+        image_sub = message_filters.Subscriber(
+            self.node, Image, self.image_topic, qos_profile=camera_qos
+        )
+        depth_sub = message_filters.Subscriber(
+            self.node, Image, self.depth_image_topic, qos_profile=camera_qos
+        )
+        subs = [image_sub, depth_sub]
+        if self.point_cloud_topic is not None:
             point_cloud_sub = message_filters.Subscriber(
-                self.node, PointCloud2, self.point_cloud_topic
+                self.node, PointCloud2, self.point_cloud_topic, qos_profile=camera_qos
             )
             subs.append(point_cloud_sub)
 
@@ -77,20 +83,42 @@ class Detect3D(RosState):
             )
 
     def execute(self, userdata):
+        self.data = None
 
         if self.point_cloud_topic is not None:
 
-            def callback(image_msg, depth_msg, cam_info_msg, pcl_msg):
+            def callback(image_msg, depth_msg, pcl_msg):
+                if self.data is not None:
+                    return
+                cam_info_msg = self.cam_info_cache.getLast()
+                if cam_info_msg is None:
+                    return
                 self.data = (image_msg, depth_msg, cam_info_msg, pcl_msg)
 
         else:
 
-            def callback(image_msg, depth_msg, cam_info_msg):
+            def callback(image_msg, depth_msg):
+                if self.data is not None:
+                    return
+                cam_info_msg = self.cam_info_cache.getLast()
+                if cam_info_msg is None:
+                    return
                 self.data = (image_msg, depth_msg, cam_info_msg)
 
         self.ts.registerCallback(callback)
 
+        deadline = time.time() + 30.0
         while not self.data:
+            if time.time() > deadline:
+                if self.cam_info_cache.getLast() is None:
+                    self.node.get_logger().error(
+                        f"Timed out waiting for camera info on {self.depth_camera_info_topic}"
+                    )
+                else:
+                    self.node.get_logger().error(
+                        "Timed out waiting for synced rgb/depth frames"
+                    )
+                return "failed"
             rclpy.spin_once(self.node, timeout_sec=0.1)
 
         if len(self.data) == 4:
@@ -105,7 +133,6 @@ class Detect3D(RosState):
                 depth_image=depth_msg,
                 depth_camera_info=cam_info_msg,
                 model=self.model,
-                # models=self.models,
                 confidence=self.confidence,
                 filter=self.filter,
                 target_frame=self.target_frame,
@@ -133,18 +160,15 @@ class Detect3D(RosState):
 def main():
     rclpy.init()
     node = rclpy.create_node("detect")
-
-    while rclpy.ok():
-        detect = Detect3D(node=node, slop=10.0)
-        sm = StateMachine(outcomes=["succeeded", "failed"])
-        with sm:
-            StateMachine.add(
-                "DETECT",
-                detect,
-                transitions={"succeeded": "succeeded", "failed": "failed"},
-            )
-        sm.execute()
-
+    detect = Detect3D(node=node, slop=10.0, filter=["person"])
+    sm = StateMachine(outcomes=["succeeded", "failed"])
+    with sm:
+        StateMachine.add(
+            "DETECT",
+            detect,
+            transitions={"succeeded": "succeeded", "failed": "failed"},
+        )
+    sm.execute()
     node.destroy_node()
     rclpy.shutdown()
 

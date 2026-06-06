@@ -19,10 +19,12 @@ from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
 
 class DetectionVisualizer(Node):
     def __init__(self):
-        super().__init__('detection_visualizer')
-        self.cli = self.create_client(OpenVocabDetect, 'open_vocab/detect')
-        self.pub_markers = self.create_publisher(MarkerArray, '/detection_markers', 10)
-        self.pub_centroids = self.create_publisher(Detection3DArray, '/object_centroids', 10)
+        super().__init__("detection_visualizer")
+        self.cli = self.create_client(OpenVocabDetect, "open_vocab/detect")
+        self.pub_markers = self.create_publisher(MarkerArray, "/detection_markers", 10)
+        self.pub_centroids = self.create_publisher(
+            Detection3DArray, "/object_centroids", 10
+        )
 
         self.tf_buffer = tf2_ros.Buffer(cache_time=ROS2Duration(seconds=30))
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, self)
@@ -35,13 +37,32 @@ class DetectionVisualizer(Node):
         self.all_ready = False
         self._pending = False
 
-        qos = QoSProfile(depth=10, reliability=ReliabilityPolicy.BEST_EFFORT, history=HistoryPolicy.KEEP_LAST)
-        self.create_subscription(Image, '/head_front_camera/rgb/image_raw', self._rgb_callback, qos)
-        self.create_subscription(Image, '/head_front_camera/depth/image_raw', self._depth_callback, qos)
-        self.create_subscription(CameraInfo, '/head_front_camera/rgb/camera_info', self._camera_info_callback, qos)
-        detect_qos = QoSProfile(depth=1, reliability=ReliabilityPolicy.RELIABLE, history=HistoryPolicy.KEEP_LAST)
-        self.create_subscription(String, '/detect', self._trigger_callback, detect_qos)
-        self.get_logger().info('Detection node ready. Publish to /detect to trigger detection.')
+        qos = QoSProfile(
+            depth=10,
+            reliability=ReliabilityPolicy.BEST_EFFORT,
+            history=HistoryPolicy.KEEP_LAST,
+        )
+        self.create_subscription(
+            Image, "/head_front_camera/rgb/image_raw", self._rgb_callback, qos
+        )
+        self.create_subscription(
+            Image, "/head_front_camera/depth/image_raw", self._depth_callback, qos
+        )
+        self.create_subscription(
+            CameraInfo,
+            "/head_front_camera/rgb/camera_info",
+            self._camera_info_callback,
+            qos,
+        )
+        detect_qos = QoSProfile(
+            depth=1,
+            reliability=ReliabilityPolicy.RELIABLE,
+            history=HistoryPolicy.KEEP_LAST,
+        )
+        self.create_subscription(String, "/detect", self._trigger_callback, detect_qos)
+        self.get_logger().info(
+            "Detection node ready. Publish to /detect to trigger detection."
+        )
 
     def _rgb_callback(self, msg):
         first = self.cached_rgb is None
@@ -68,8 +89,10 @@ class DetectionVisualizer(Node):
             return
         try:
             transform = self.tf_buffer.lookup_transform(
-                'map', self.cached_rgb.header.frame_id,
-                ROS2Time(seconds=0), timeout=ROS2Duration(seconds=0.01)
+                "map",
+                self.cached_rgb.header.frame_id,
+                ROS2Time(seconds=0),
+                timeout=ROS2Duration(seconds=0.01),
             )
             first = self.cached_transform is None
             self.cached_transform = transform
@@ -77,12 +100,19 @@ class DetectionVisualizer(Node):
                 self.get_logger().info("Transform received")
                 self._check_all_ready()
         except Exception as e:
-            if not hasattr(self, '_transform_error_logged'):
+            if not hasattr(self, "_transform_error_logged"):
                 self.get_logger().warn(f"Transform not available: {e}")
                 self._transform_error_logged = True
 
     def _check_all_ready(self):
-        if all([self.cached_rgb, self.cached_depth, self.cached_camera_info, self.cached_transform]):
+        if all(
+            [
+                self.cached_rgb,
+                self.cached_depth,
+                self.cached_camera_info,
+                self.cached_transform,
+            ]
+        ):
             if not self.all_ready:
                 self.get_logger().info("All data ready")
                 self.all_ready = True
@@ -95,20 +125,34 @@ class DetectionVisualizer(Node):
         clear_centroids = Detection3DArray()
         self.pub_markers.publish(clear_markers)
         self.pub_centroids.publish(clear_centroids)
-        queries = [q.strip() for q in msg.data.split(',')] if msg.data.strip() else \
-                  ['can', 'bottle', 'table', 'person', 'wall', 'shelf', 'object', 'chair']
-        self.get_logger().info(f'Detection triggered for: {queries}')
+        queries = (
+            [q.strip() for q in msg.data.split(",")]
+            if msg.data.strip()
+            else [
+                "can",
+                "bottle",
+                "table",
+                "person",
+                "wall",
+                "shelf",
+                "object",
+                "chair",
+            ]
+        )
+        self.get_logger().info(f"Detection triggered for: {queries}")
         self._detect(queries)
 
     def _detect(self, queries):
         if not self.all_ready:
-            self.get_logger().warn('Data not ready yet')
+            self.get_logger().warn("Data not ready yet")
             return
         self._pending = True
         try:
-            depth_image = self.bridge.imgmsg_to_cv2(self.cached_depth, desired_encoding='32FC1')
+            depth_image = self.bridge.imgmsg_to_cv2(
+                self.cached_depth, desired_encoding="32FC1"
+            )
         except Exception as e:
-            self.get_logger().error(f'Image conversion failed: {e}')
+            self.get_logger().error(f"Image conversion failed: {e}")
             self._pending = False
             return
 
@@ -128,7 +172,7 @@ class DetectionVisualizer(Node):
         try:
             resp = future.result()
         except Exception as e:
-            self.get_logger().error(f'Detection failed: {e}')
+            self.get_logger().error(f"Detection failed: {e}")
             return
 
         K = self.cached_camera_info.k
@@ -144,33 +188,38 @@ class DetectionVisualizer(Node):
         # ~tens of cm at typical object distances).
         try:
             current_transform = self.tf_buffer.lookup_transform(
-                'map', camera_frame,
+                "map",
+                camera_frame,
                 self.cached_rgb.header.stamp,
-                timeout=ROS2Duration(seconds=0.5)
+                timeout=ROS2Duration(seconds=0.5),
             )
         except Exception as e:
             self.get_logger().warn(
-                f'Fresh TF map<-{camera_frame} at image stamp failed ({e}); '
-                f'falling back to latest available')
+                f"Fresh TF map<-{camera_frame} at image stamp failed ({e}); "
+                f"falling back to latest available"
+            )
             try:
                 current_transform = self.tf_buffer.lookup_transform(
-                    'map', camera_frame,
+                    "map",
+                    camera_frame,
                     ROS2Time(seconds=0),
-                    timeout=ROS2Duration(seconds=0.5)
+                    timeout=ROS2Duration(seconds=0.5),
                 )
             except Exception as e2:
-                self.get_logger().error(f'TF lookup failed entirely: {e2}')
+                self.get_logger().error(f"TF lookup failed entirely: {e2}")
                 return
 
-        self.get_logger().info(f'Processing {len(resp.detections)} detections, depth image shape: {depth_image.shape}')
+        self.get_logger().info(
+            f"Processing {len(resp.detections)} detections, depth image shape: {depth_image.shape}"
+        )
         for i, det in enumerate(resp.detections):
             x = int(np.clip(det.xywh[0], 0, depth_image.shape[1] - 1))
             y = int(np.clip(det.xywh[1], 0, depth_image.shape[0] - 1))
             depth = depth_image[y, x]
-            self.get_logger().info(f'  [{i}] {det.name} @ ({x},{y}) depth={depth:.3f}')
+            self.get_logger().info(f"  [{i}] {det.name} @ ({x},{y}) depth={depth:.3f}")
 
             if depth <= 0 or np.isnan(depth):
-                self.get_logger().warn(f'  [{i}] {det.name} skipped: invalid depth')
+                self.get_logger().warn(f"  [{i}] {det.name} skipped: invalid depth")
                 continue
 
             point_cam = PointStamped()
@@ -183,7 +232,7 @@ class DetectionVisualizer(Node):
             try:
                 point_map = do_transform_point(point_cam, current_transform)
             except Exception as e:
-                self.get_logger().warn(f'Transform failed for {det.name}: {e}')
+                self.get_logger().warn(f"Transform failed for {det.name}: {e}")
                 continue
 
             # Publish centroid
@@ -199,7 +248,7 @@ class DetectionVisualizer(Node):
             r, g, b = colorsys.hsv_to_rgb(hue, 0.8, det.confidence)
 
             marker = Marker()
-            marker.header.frame_id = 'map'
+            marker.header.frame_id = "map"
             marker.header.stamp = stamp
             marker.id = i
             marker.type = Marker.CUBE
@@ -218,8 +267,10 @@ class DetectionVisualizer(Node):
             text_marker.pose.position = point_map.point
             text_marker.pose.position.z += 0.15
             text_marker.scale.z = 0.1
-            text_marker.color.r = text_marker.color.g = text_marker.color.b = text_marker.color.a = 1.0
-            text_marker.text = f'{det.name}\n{det.confidence:.2f}'
+            text_marker.color.r = text_marker.color.g = text_marker.color.b = (
+                text_marker.color.a
+            ) = 1.0
+            text_marker.text = f"{det.name}\n{det.confidence:.2f}"
 
             markers.markers.extend([marker, text_marker])
 
@@ -235,5 +286,5 @@ def main(args=None):
     rclpy.spin(node)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

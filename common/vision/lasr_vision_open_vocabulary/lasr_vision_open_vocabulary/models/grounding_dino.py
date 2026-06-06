@@ -2,6 +2,7 @@ from typing import List, Tuple
 
 import cv2
 import numpy as np
+import os
 import torch
 from PIL import Image
 from transformers import AutoProcessor, AutoModelForZeroShotObjectDetection
@@ -12,17 +13,35 @@ from .base import BaseDetector
 class GroundingDinoDetector(BaseDetector):
     MODEL_ID = "IDEA-Research/grounding-dino-base"
 
-    def __init__(self, device: str = "cuda"):
+    def __init__(self, device: str = "cuda", weights_path: str = ""):
         self.device = device
-        self.processor = AutoProcessor.from_pretrained(self.MODEL_ID)
-        self.model = AutoModelForZeroShotObjectDetection.from_pretrained(self.MODEL_ID).to(device)
+        model_id = weights_path or self.MODEL_ID
+        local_only = bool(weights_path)
+        if weights_path and not os.path.isdir(weights_path):
+            raise FileNotFoundError(
+                f"Grounding DINO weights path not found: {weights_path}"
+            )
+        self.processor = AutoProcessor.from_pretrained(
+            model_id, local_files_only=local_only
+        )
+        self.model = AutoModelForZeroShotObjectDetection.from_pretrained(
+            model_id, local_files_only=local_only
+        ).to(device)
 
-    def detect(self, image: np.ndarray, queries: List[str], box_threshold: float, text_threshold: float) -> List[Tuple]:
+    def detect(
+        self,
+        image: np.ndarray,
+        queries: List[str],
+        box_threshold: float,
+        text_threshold: float,
+    ) -> List[Tuple]:
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         image_pil = Image.fromarray(image_rgb)
         text_queries = " ".join([q.lower().strip() + "." for q in queries])
 
-        inputs = self.processor(images=image_pil, text=text_queries, return_tensors="pt").to(self.device)
+        inputs = self.processor(
+            images=image_pil, text=text_queries, return_tensors="pt"
+        ).to(self.device)
         with torch.no_grad():
             outputs = self.model(**inputs)
 
@@ -35,7 +54,10 @@ class GroundingDinoDetector(BaseDetector):
         )[0]
 
         detections = []
-        for box, score, label in zip(results.get("boxes", []), results.get("scores", []), results.get("text_labels", [])):
+        labels = results.get("text_labels") or results.get("labels") or []
+        for box, score, label in zip(
+            results.get("boxes", []), results.get("scores", []), labels
+        ):
             x1, y1, x2, y2 = box.tolist()
             detections.append((label, float(score), x1, y1, x2, y2))
         return detections

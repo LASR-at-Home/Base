@@ -1,8 +1,9 @@
 lasr_vision_open_vocabulary:
   ros__parameters:
-    model: 'grounding_dino'       # 'grounding_dino' or 'yoloworld'
+    model: 'grounding_dino'
     model_device: 'cuda'
+    grounding_dino_weights: '/home/michele/Desktop/Projects/lasr/branch_new/Base/common/vision/lasr_vision_open_vocabulary/models/grounding-dino-base'
     yoloworld_weights: 'yolov8s-world.pt'
-    use_sam: true
-    sam_encoder_path: '/home/michele/Desktop/Projects/lasr/branch_new/Base/common/vision/lasr_vision_open_vocabulary/lasr_vision_open_vocabulary/models/l2_encoder.onnx'
-    sam_decoder_path: '/home/michele/Desktop/Projects/lasr/branch_new/Base/common/vision/lasr_vision_open_vocabulary/lasr_vision_open_vocabulary/models/l2_decoder.onnx'
+    use_sam: false
+    sam_encoder_path: ''
+    sam_decoder_path: ''

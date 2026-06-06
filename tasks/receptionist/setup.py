@@ -4,7 +4,6 @@ import ament_virtualenv.install
 import os
 from glob import glob
 
-
 _here = os.path.dirname(os.path.abspath(__file__))
 
 package_name = "receptionist"
