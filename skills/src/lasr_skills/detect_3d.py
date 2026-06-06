@@ -11,7 +11,7 @@ from smach import StateMachine
 import message_filters
 
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
-from sensor_msgs.msg import Image, CameraInfo, PointCloud2
+from sensor_msgs.msg import Image, CameraInfo
 from lasr_vision_interfaces.srv import YoloDetection3D
 
 
@@ -22,26 +22,22 @@ class Detect3D(RosState):
         image_topic: str = "/head_front_camera/rgb/image_raw",
         depth_image_topic: str = "/head_front_camera/depth/image_raw",
         depth_camera_info_topic: str = "/head_front_camera/depth/camera_info",
-        point_cloud_topic: Optional[str] = None,
         model: str = "yolo11n-seg.pt",
-        models: Union[List[str], None] = None,
         filter: Union[List[str], None] = None,
         confidence: float = 0.5,
         target_frame: str = "map",
-        slop=1.0,
+        slop=0.2,
     ):
         RosState.__init__(
             self,
             node,
             outcomes=["succeeded", "failed"],
-            output_keys=["detections_3d", "image_raw", "pcl"],
+            output_keys=["detections_3d", "image_raw"],
         )
         self.image_topic = image_topic
         self.depth_image_topic = depth_image_topic
         self.depth_camera_info_topic = depth_camera_info_topic
-        self.point_cloud_topic = point_cloud_topic
         self.model = model
-        self.models = models
         self.filter = filter or []
         self.confidence = confidence
         self.target_frame = target_frame
@@ -52,11 +48,13 @@ class Detect3D(RosState):
             history=HistoryPolicy.KEEP_LAST,
         )
 
-        cam_info_sub = message_filters.Subscriber(
-            self.node, CameraInfo, self.depth_camera_info_topic, qos_profile=camera_qos
+        self.cam_info = None
+        self.node.create_subscription(
+            CameraInfo,
+            self.depth_camera_info_topic,
+            self._cache_camera_info,
+            qos_profile=camera_qos,
         )
-        # CameraInfo is latched: keep it in a cache, not in the time synchronizer.
-        self.cam_info_cache = message_filters.Cache(cam_info_sub, 10)
 
         image_sub = message_filters.Subscriber(
             self.node, Image, self.image_topic, qos_profile=camera_qos
@@ -64,15 +62,9 @@ class Detect3D(RosState):
         depth_sub = message_filters.Subscriber(
             self.node, Image, self.depth_image_topic, qos_profile=camera_qos
         )
-        subs = [image_sub, depth_sub]
-        if self.point_cloud_topic is not None:
-            point_cloud_sub = message_filters.Subscriber(
-                self.node, PointCloud2, self.point_cloud_topic, qos_profile=camera_qos
-            )
-            subs.append(point_cloud_sub)
 
         self.ts = message_filters.ApproximateTimeSynchronizer(
-            subs, queue_size=10, slop=slop
+            [image_sub, depth_sub], queue_size=30, slop=slop
         )
         self.data = None
 
@@ -82,50 +74,41 @@ class Detect3D(RosState):
                 "'YoloDetection3D' service is not available... Waiting."
             )
 
+    def _cache_camera_info(self, msg: CameraInfo) -> None:
+        if self.cam_info is None:
+            self.cam_info = msg
+
     def execute(self, userdata):
+        if self.cam_info is None:
+            deadline = time.time() + 5.0
+            while self.cam_info is None and time.time() < deadline:
+                rclpy.spin_once(self.node, timeout_sec=0.1)
+            if self.cam_info is None:
+                self.node.get_logger().error(
+                    f"Timed out waiting for camera info on {self.depth_camera_info_topic}"
+                )
+                return "failed"
+
         self.data = None
 
-        if self.point_cloud_topic is not None:
-
-            def callback(image_msg, depth_msg, pcl_msg):
-                if self.data is not None:
-                    return
-                cam_info_msg = self.cam_info_cache.getLast()
-                if cam_info_msg is None:
-                    return
-                self.data = (image_msg, depth_msg, cam_info_msg, pcl_msg)
-
-        else:
-
-            def callback(image_msg, depth_msg):
-                if self.data is not None:
-                    return
-                cam_info_msg = self.cam_info_cache.getLast()
-                if cam_info_msg is None:
-                    return
-                self.data = (image_msg, depth_msg, cam_info_msg)
+        def callback(image_msg, depth_msg):
+            if self.data is not None:
+                return
+            self.data = (image_msg, depth_msg, self.cam_info)
 
         self.ts.registerCallback(callback)
 
         deadline = time.time() + 30.0
         while not self.data:
             if time.time() > deadline:
-                if self.cam_info_cache.getLast() is None:
-                    self.node.get_logger().error(
-                        f"Timed out waiting for camera info on {self.depth_camera_info_topic}"
-                    )
-                else:
-                    self.node.get_logger().error(
-                        "Timed out waiting for synced rgb/depth frames"
-                    )
+                self.node.get_logger().error(
+                    f"Timed out waiting for synced rgb/depth frames. "
+                    f"Check that {self.image_topic} and {self.depth_image_topic} are publishing and roughly synchronized."
+                )
                 return "failed"
             rclpy.spin_once(self.node, timeout_sec=0.1)
 
-        if len(self.data) == 4:
-            image_msg, depth_msg, cam_info_msg, pcl_msg = self.data
-        else:
-            image_msg, depth_msg, cam_info_msg = self.data
-            pcl_msg = None
+        image_msg, depth_msg, cam_info_msg = self.data
 
         try:
             request = YoloDetection3D.Request(
@@ -150,7 +133,6 @@ class Detect3D(RosState):
 
             userdata.detections_3d = resp
             userdata.image_raw = image_msg
-            userdata.pcl = pcl_msg
             return "succeeded"
         except Exception as e:
             self.node.get_logger().error(f"Service call failed: {e}")

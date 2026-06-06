@@ -97,9 +97,7 @@ class Detect3DInArea(smach.StateMachine):
         image_topic: str = "/head_front_camera/rgb/image_raw",
         depth_image_topic: str = "/head_front_camera/depth/image_raw",
         depth_camera_info_topic: str = "/head_front_camera/depth/camera_info",
-        point_cloud_topic: Optional[str] = None,
         model: str = "yolo11n-seg.pt",
-        models: Union[List[str], None] = None,
         filter: Union[List[str], None] = None,
         confidence: float = 0.5,
         target_frame: str = "map",
@@ -114,7 +112,7 @@ class Detect3DInArea(smach.StateMachine):
             self,
             outcomes=["succeeded", "failed"],
             input_keys=input_keys,
-            output_keys=["detections_3d", "image_raw", "pcl"],
+            output_keys=["detections_3d", "image_raw"],
         )
         self.node = node
 
@@ -126,9 +124,7 @@ class Detect3DInArea(smach.StateMachine):
                     image_topic=image_topic,
                     depth_image_topic=depth_image_topic,
                     depth_camera_info_topic=depth_camera_info_topic,
-                    point_cloud_topic=point_cloud_topic,
                     model=model,
-                    models=models,
                     filter=filter,
                     confidence=confidence,
                     target_frame=target_frame,

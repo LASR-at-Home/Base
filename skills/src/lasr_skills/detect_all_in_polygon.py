@@ -6,19 +6,16 @@ from rclpy.wait_for_message import wait_for_message
 import smach
 from smach_ros import RosState
 
-# import tf2_ros as tf
 import numpy as np
 import cv2
 from threading import Thread
 
-# from tf_pcl import pcl_transform
 from typing import List, Optional, Tuple
 
-# from shapely import MultiPoint
 from shapely import Polygon as ShapelyPolygon
 from shapely import Point as ShapelyPoint
 from shapely.affinity import translate
-from sensor_msgs.msg import Image  # , PointCloud2 as pc2
+from sensor_msgs.msg import Image
 from cv2_img import msg_to_cv2_img, cv2_img_to_msg
 from geometry_msgs.msg import Point, PointStamped
 from lasr_vision_interfaces.msg import Detection3D
@@ -110,7 +107,7 @@ import rclpy
 from rclpy.node import Node
 from rclpy.duration import Duration
 from rclpy.time import Time
-from rclpy.qos import QoSProfile, QoSDurabilityPolicy
+from rclpy.qos import QoSProfile, QoSDurabilityPolicy, ReliabilityPolicy, HistoryPolicy
 from rclpy.publisher import Publisher
 from rclpy.executors import MultiThreadedExecutor
 
@@ -306,7 +303,7 @@ class CalculateSweepPoints(RosState):
 
         qos = QoSProfile(
             depth=1, durability=QoSDurabilityPolicy.TRANSIENT_LOCAL
-        )  # Verify publisher durability profile (https://docs.ros.org/en/humble/Concepts/Intermediate/About-Quality-of-Service-Settings.html)
+        )
 
         pub = self.node.create_publisher(PolygonStamped, "projected_fov_polygon", qos)
 
@@ -379,7 +376,6 @@ class DetectAllInPolygon(smach.StateMachine):
         polygon: ShapelyPolygon,
         min_coverage: float = 0.8,
         model: str = "yolo11n-seg.pt",
-        models: Optional[List[str]] = None,
         object_filter: Optional[List[str]] = None,
         min_confidence: float = 0.5,
         min_new_object_dist: float = 0.1,
@@ -420,11 +416,15 @@ class DetectAllInPolygon(smach.StateMachine):
         self._min_coverage = min_coverage
         self._object_filter = object_filter
         self._model = model
-        self._models = models
         self._min_confidence = min_confidence
         self._min_new_object_dist = min_new_object_dist
+        image_qos = QoSProfile(
+            depth=10,
+            reliability=ReliabilityPolicy.BEST_EFFORT,
+            history=HistoryPolicy.KEEP_LAST,
+        )
         self._debug_publisher = self._node.create_publisher(
-            Image, "/detect_all_in_polygon/debug", 10
+            Image, "/detect_all_in_polygon/debug", image_qos
         )
         self._prompt = prompt
         if use_lang_sam:
@@ -637,7 +637,6 @@ class DetectAllInPolygon(smach.StateMachine):
                             area_polygon=self._polygon,
                             filter=self._object_filter,
                             model=self._model,
-                            models=self._models,
                             z_min=0.0,
                             z_max=10.0,
                             confidence=self._min_confidence,

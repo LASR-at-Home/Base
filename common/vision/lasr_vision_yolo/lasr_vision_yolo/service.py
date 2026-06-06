@@ -35,6 +35,7 @@ from cv_bridge import CvBridge
 from sensor_msgs.msg import Image
 from geometry_msgs.msg import Point, PointStamped
 from visualization_msgs.msg import Marker, MarkerArray
+from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
 
 import tf2_ros as tf
 from tf2_ros.buffer import Buffer
@@ -88,19 +89,18 @@ class YOLOServiceNode:
     _image_publishers: Dict[str, rclpy.node.Publisher]
     _marker_publishers: Dict[str, rclpy.node.Publisher]
     _bridge: CvBridge
-    # _tf_buffer: tf.Buffer
     _tf_buffer: Buffer
     _tf_listener: tf.TransformListener
 
-    def __init__(self):
-        self.node = AccessNode.get_node()
+    def __init__(self, node: Node):
+        self.node = node
         self._cache = {}
         self.node.declare_parameter(
             "~device", "cuda:0" if torch.cuda.is_available() else "cpu"
-        )  # to have a default value.. maybe there is a cleaner way to do this
+        )
         self._device = self.node.get_parameter("~device").value
 
-        self.node.declare_parameter("~preload", ["yolo11n.pt"])
+        self.node.declare_parameter("~preload", ["yolo11n-seg.pt"])
         self.preload_param_list = self.node.get_parameter("~preload").value
         for model in self.preload_param_list:
             self._maybe_load_model(model)
@@ -109,10 +109,16 @@ class YOLOServiceNode:
         self._marker_publishers = {}
         self._bridge = CvBridge()
 
-        self._tf_buffer = Buffer(cache_time=Duration(seconds=10))  # was tf.Buffer()
+        self._image_qos = QoSProfile(
+            depth=10,
+            reliability=ReliabilityPolicy.BEST_EFFORT,
+            history=HistoryPolicy.KEEP_LAST,
+        )
+
+        self._tf_buffer = Buffer(cache_time=Duration(seconds=10))
         self._tf_listener = tf.TransformListener(
             self._tf_buffer, self.node
-        )  # should be tf.transform_listener.TransformListener ??
+        )
 
         self.node.create_service(YoloDetection, "/yolo/detect", self._detect)
         self.node.create_service(YoloDetection3D, "/yolo/detect3d", self._detect3d)
@@ -156,18 +162,54 @@ class YOLOServiceNode:
 
         return response
 
+    def _project_mask_to_3d(
+        self, mask_xy: np.ndarray, depth_im: np.ndarray, fx: float, fy: float, cx: float, cy: float
+    ) -> tuple:
+        """Project segmentation mask to 3D using depth image and camera intrinsics.
+
+        Uses standard pinhole camera model:
+        x = (u - cx) * z / fx
+        y = (v - cy) * z / fy
+
+        Assumes depth_im is in millimeters.
+        Returns: (x, y, z) median point in camera frame, in meters.
+        """
+        contours = np.array(mask_xy, dtype=np.int32).reshape(-1, 2)
+        mask = np.zeros(depth_im.shape[:2], dtype=np.uint8)
+        cv2.fillPoly(mask, [contours], color=255)
+        roi = cv2.bitwise_and(depth_im, depth_im, mask=mask)
+
+        v, u = np.where(roi)
+        z = depth_im[v, u] / 1000.0  # convert mm to meters
+        valid = z > 0
+        z = z[valid]
+        u = u[valid]
+        v = v[valid]
+
+        x = z * (u - cx) / fx
+        y = z * (v - cy) / fy
+        points = np.stack((x, y, z), axis=1)
+
+        return np.median(points, axis=0)
+
     def _lookup_transform(self, target_frame, source_frame, stamp):
         try:
             return self._tf_buffer.lookup_transform(
-                target_frame, source_frame, stamp, Duration(seconds=0.5)
+                target_frame, source_frame, stamp, Duration(seconds=1.0)
             )
         except Exception as e:
-            self.node.get_logger().warn(
+            self.node.get_logger().debug(
                 f"TF {target_frame}<-{source_frame} at image stamp failed ({e}); using latest"
             )
-        return self._tf_buffer.lookup_transform(
-            target_frame, source_frame, Time(), Duration(seconds=0.5)
-        )
+        try:
+            return self._tf_buffer.lookup_transform(
+                target_frame, source_frame, Time(), Duration(seconds=1.0)
+            )
+        except Exception as e:
+            self.node.get_logger().error(
+                f"TF {target_frame}<-{source_frame} lookup failed: {e}"
+            )
+            raise
 
     def _detect3d(
         self, req: YoloDetection3D.Request, res: YoloDetection3D.Response
@@ -185,10 +227,11 @@ class YOLOServiceNode:
         fx, fy = K[0], K[4]
         cx, cy = K[2], K[5]
 
-        target_frame = req.target_frame or req.depth_image.header.frame_id
+        target_frame = req.target_frame or "map"
 
         transform = None
-        if results:
+        has_detections = len(results.boxes) > 0 if hasattr(results, 'boxes') else False
+        if has_detections:
             transform = self._lookup_transform(
                 target_frame,
                 req.depth_image.header.frame_id,
@@ -199,10 +242,6 @@ class YOLOServiceNode:
             detection = Detection3D()
             detection.name = result.names[result.boxes.cls.int().item()]
             detection.confidence = result.boxes.conf.item()
-            # x, y, w, h = (
-            #     result.boxes.xywh.round().int().squeeze().cpu().numpy().tolist()
-            # )
-            # detection.xywh = [x, y, w, h]
             bbox = result.boxes.xyxy[0].cpu().numpy()
             x1, y1, x2, y2 = bbox
             detection.xywh = [
@@ -217,27 +256,17 @@ class YOLOServiceNode:
                 detection.xyseg = (
                     np.array(result.masks.xy).flatten().round().astype(int).tolist()
                 )
-                contours = np.array(detection.xyseg).reshape(-1, 2)
-                mask = np.zeros(depth_im.shape[:2], dtype=np.uint8)
-                cv2.fillPoly(mask, [contours], color=255)
-                roi = cv2.bitwise_and(depth_im, depth_im, mask=mask)
-                v, u = np.where(roi)
-                z = depth_im[v, u]
-                valid = z > 0
-                z = z[valid]
-                u = u[valid]
-                v = v[valid]
-                x = z * (u - cx) / fx
-                y = z * (v - cy) / fy
-                points = np.stack((x, y, z), axis=1)
-                x, y, z = np.median(points, axis=0)
+                x, y, z = self._project_mask_to_3d(detection.xyseg, depth_im, fx, fy, cx, cy)
 
                 point = Point(x=float(x), y=float(y), z=float(z))
                 point_stamped = PointStamped()
                 point_stamped.header = req.depth_image.header
                 point_stamped.point = point
-                point_stamped_transformed = do_transform_point(point_stamped, transform)
-                detection.point = point_stamped_transformed.point
+                if transform is not None:
+                    point_stamped_transformed = do_transform_point(point_stamped, transform)
+                    detection.point = point_stamped_transformed.point
+                else:
+                    detection.point = point
 
             else:
                 self.node.get_logger().warn(
@@ -286,10 +315,11 @@ class YOLOServiceNode:
         fx, fy = K[0], K[4]
         cx, cy = K[2], K[5]
 
-        target_frame = req.target_frame or req.depth_image.header.frame_id
+        target_frame = req.target_frame or "map"
 
         transform = None
-        if results:
+        has_detections = len(results.boxes) > 0 if hasattr(results, 'boxes') else False
+        if has_detections:
             transform = self._lookup_transform(
                 target_frame,
                 req.depth_image.header.frame_id,
@@ -307,7 +337,7 @@ class YOLOServiceNode:
 
                 conf = result.keypoints.conf.squeeze()[idx].item()
                 if conf > 0.0:
-                    z = depth_im[v, u]
+                    z = depth_im[v, u] / 1000.0  # convert mm to meters
                     x = z * (u - cx) / fx
                     y = z * (v - cy) / fy
                     if np.isnan(x) or np.isnan(y) or np.isnan(z):
@@ -317,10 +347,11 @@ class YOLOServiceNode:
                     point_stamped = PointStamped()
                     point_stamped.header = req.depth_image.header
                     point_stamped.point = point
-                    point_stamped_transformed = do_transform_point(
-                        point_stamped, transform
-                    )
-                    point = point_stamped_transformed.point
+                    if transform is not None:
+                        point_stamped_transformed = do_transform_point(
+                            point_stamped, transform
+                        )
+                        point = point_stamped_transformed.point
 
                     keypoints.keypoints.append(
                         Keypoint3D(keypoint_name=name, point=point)
@@ -354,13 +385,14 @@ class YOLOServiceNode:
                 self.node.create_publisher(
                     Image,
                     f"/yolo/detect/{req.model}".replace("-", "_").replace(".", "_"),
-                    10,
+                    self._image_qos,
                 )
             )
 
-        image_publisher.publish(
-            self._bridge.cv2_to_imgmsg(results.plot(), encoding="bgr8")
-        )
+        image_msg = self._bridge.cv2_to_imgmsg(results.plot(), encoding="bgr8")
+        image_msg.header.stamp = req.image_raw.header.stamp
+        image_msg.header.frame_id = req.image_raw.header.frame_id
+        image_publisher.publish(image_msg)
 
         if isinstance(response, YoloDetection3D.Response):
 
@@ -380,12 +412,9 @@ class YOLOServiceNode:
             for i, detection in enumerate(response.detected_objects):
 
                 marker = Marker()
-                marker.header.frame_id = (
-                    req.target_frame or req.depth_image.header.frame_id
-                )
-                marker.header.stamp = (
-                    self.node.get_clock().now().to_msg()
-                )  # According to https://docs.ros.org/en/galactic/Tutorials/Intermediate/Tf2/Writing-A-Tf2-Broadcaster-Py.html
+                target_frame = req.target_frame or "map"
+                marker.header.frame_id = target_frame
+                marker.header.stamp = req.depth_image.header.stamp
                 marker.id = i
                 marker.type = Marker.SPHERE
                 marker.action = Marker.ADD
@@ -480,41 +509,17 @@ class YOLOServiceNode:
         return results
 
 
-class AccessNode(Node):
-    """
-    Class to  create and access the node to avoid duplications
-    """
-
-    _node = None  # Static variable to hold the node instance
-
-    @staticmethod
-    def get_node():
-        """Returns the singleton ROS 2 node instance, creating it if necessary."""
-        if AccessNode._node is None:
-            AccessNode._node = Node("yolo_access_node")
-        return AccessNode._node
-
-    @staticmethod
-    def shutdown():
-        """Shuts down the singleton node properly."""
-        if AccessNode._node is not None:
-            AccessNode._node.destroy_node()
-            AccessNode._node = None
-            AccessNode.shutdown()
-
-
 def main(args=None):
     rclpy.init(args=args)
 
-    node = AccessNode.get_node()
-    YOLOServiceNode()
+    node = Node("yolo_service")
+    YOLOServiceNode(node)
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:
         pass
     finally:
         node.destroy_node()
-        # rclpy.shutdown()
 
 
 if __name__ == "__main__":
