@@ -1,13 +1,20 @@
-#!/usr/bin/env python3
-import smach_ros
+import yasmin_ros
 from lasr_speech_recognition_interfaces.action import TranscribeSpeech
 
 
-class Listen(smach_ros.SimpleActionState):
-    def __init__(
-        self,
-        node,
-    ):
+class Listen(yasmin_ros.ActionState):
+    def __init__(self):
         super().__init__(
-            node, "transcribe_speech", TranscribeSpeech, result_slots=["sequence"]
+            action_name="transcribe_speech",
+            action_type=TranscribeSpeech,
+            result_handler=self.handle_resp,
+            create_goal_handler=self.create_goal,
         )
+
+    def create_goal(self, blackboard):
+        goal = TranscribeSpeech.Goal()
+        return goal
+
+    def handle_resp(self, blackboard, response):
+        blackboard["sequence"] = response.sequence
+        return "succeeded"

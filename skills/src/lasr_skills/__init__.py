@@ -43,6 +43,8 @@ from .look_to_point import LookToPoint
 
 # from .ask_and_listen import AskAndListen
 
+from .detect_door_opening import DetectDoorOpening
+
 # from .detect_pose import DetectPose
 # from .find_person import FindPerson
 # from .xml_question_answer import XmlQuestionAnswer

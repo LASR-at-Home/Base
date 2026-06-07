@@ -1,8 +1,13 @@
 from typing import List, Tuple, Dict
 
+from threading import Thread
+
 import rclpy
-import smach
-import smach_ros
+from rclpy.node import Node
+
+import yasmin
+import yasmin_ros
+
 from geometry_msgs.msg import Point, PointStamped, Pose
 
 from lasr_skills import Say, GoToLocation
@@ -12,53 +17,42 @@ from HRI.states import *
 from shapely.geometry import Polygon
 from std_msgs.msg import Empty
 
+try:
+    from rclpy.executors import EventsExecutor as Executor
+except ImportError:
+    from rclpy.executors import MultiThreadedExecutor as Executor
 
-class HRI(smach.StateMachine):
-    def __init__(self, node, host_data, face_detection_confidence=0.2):
-        super().__init__(outcomes=["succeeded", "failed"])
 
-        def wait_cb(ud, msg):
-            return False
+class HRI(yasmin.StateMachine):
+    def __init__(self):
+        super().__init__(outcomes=["succeeded", "failed"], handle_sigint=True)
 
-        with self:
-            self.userdata.guest_data = {
-                "host": host_data,
-                "guest1": {
-                    "name": "",
-                    "drink": "",
-                    "detection": False,
-                    "seating_detection": False,
-                },
-                "guest2": {
-                    "name": "",
-                    "drink": "",
-                    "detection": False,
-                    "seating_detection": False,
-                },
-            }
-            drink_detections = {}
+        def wait_cb(blackboard, msg):
+            yasmin.YASMIN_LOG_INFO("RECEIVED START SIGNAL")
+            return "succeeded"
 
-            self.userdata.drink_detections = drink_detections
-            self.userdata.confidence = face_detection_confidence
-            self.userdata.dataset = "receptionist"
-            self.userdata.drink_position = PointStamped()
+        self.add_state(
+            "WAIT_START",  # Awaits start Signal for the task
+            yasmin_ros.MonitorState(
+                topic_name="/receptionist/start",
+                outcomes=["succeeded", "failed"],
+                monitor_handler=wait_cb,
+                msg_type=Empty,
+            ),
+            transitions={
+                "succeeded": "START_TIMER",
+                "failed": "WAIT_START",
+                "canceled": "failed",
+            },
+        )
 
-            self.add(
-                "WAIT_START",  # Awaits start Signal for the task
-                smach_ros.MonitorState(
-                    node=node,
-                    topic="/receptionist/start",
-                    msg_type=Empty,
-                    cond_cb=wait_cb,
-                    max_checks=10,
-                ),
-                transitions={
-                    "invalid": "START_TIMER",
-                    "valid": "WAIT_START",
-                    "preempted": "WAIT_START",
-                },
-            )
+        self.add_state(
+            "START_TIMER",
+            StartTimer(),
+            transitions={"succeeded": "GREET", "failed": "START_TIMER"},
+        )
 
+<<<<<<< HEAD
             self.add(
                 "START_TIMER",
                 StartTimer(node=node),
@@ -104,115 +98,38 @@ class HRI(smach.StateMachine):
         #         "invalid": "DETECT_DOORBELL",
         #         "preempted": "DETECT_DOORBELL",
         #     },
+=======
+        # self.add_state(
+        #     "START_CON",  # SM1: Waits for Door to open, then goes to start
+        #     self.setup(),
+        #     transitions={"succeeded": "GREET", "failed": "START_CON"},
+>>>>>>> upstream/ros2
         # )
 
-        # start door state machine goes here (by Fadi and Aldrich)
+        self.add_state(
+            "GREET",  # SM2: Greets guest
+            LookAndGreetGuest(last_resort=False, guest_id="guest1"),
+            transitions={"succeeded": "SEAT_GUEST", "failed": "failed"},
+        )
 
-        # smach.StateMachine.add(
-        #     "APPROACH_GUEST",
-        #     ApproachGuest(node),
-        #     transitions={
-        #         "valid": "FACE_GUEST",
-        #         "invalid": "GREET_GUEST",
-        #         "preempted": "GREET_GUEST",
-        #     },
+        # self.add_state(
+        #     "GUIDE_TO_SEAT",  # GUIDES GUEST TO SEATING AREA
+        #     GoToLocation(location_param="seat_pose"),
+        #     transitions={"succeeded": "SEAT_GUEST", "failed": "failed"},
         # )
 
-        # # face guest and greet them concurrently state machine (by Fadi)
+        self.add_state(
+            "SEAT_GUEST",  # SM3: Locates and seats guest in free seat
+            SeatGuest(learn_host=False),
+            transitions={"succeeded": "succeeded", "failed": "failed"},
+        )
 
-        # smach.StateMachine.add(
-        #     "GET_NAME_AND_DRINK",
-        #     GetNameAndDrink(node),
-        #     transitions={
-        #         "valid": "GUIDE_GUEST_TO_LIVING_ROOM",
-        #         "invalid": "GET_NAME_AND_DRINK",
-        #         "preempted": "GET_NAME_AND_DRINK",
-        #     },
-        # )
-
-        # smach.StateMachine.add(
-        #     "GUIDE_GUEST_TO_LIVING_ROOM",
-        #     GuideGuestsToLivingroom(node),
-        #     transitions={
-        #         "valid": "OFFER_A_FREE_SEAT",
-        #         "invalid": "GUIDE_GUEST_TO_LIVING_ROOM",
-        #         "preempted": "GUIDE_GUEST_TO_LIVING_ROOM",
-        #     },
-        # )
-
-        # smach.StateMachine.add(
-        #     "CHECK_SOFA",
-        #     CheckSofa(node),
-        #     transitions={
-        #         "valid": "OFFER_A_FREE_SEAT",
-        #         "invalid": "CHECK_SOFA",
-        #         "preempted": "CHECK_SOFA",
-        #     },
-        # )
-
-        # smach.StateMachine.add(
-        #     "OFFER_A_FREE_SEAT",
-        #     OfferFreeSeat(node),
-        #     transitions={
-        #         "valid": "INTRODUCE_GUESTS_TO_EACHOTHER",
-        #         "invalid": "OFFER_A_FREE_SEAT",
-        #         "preempted": "OFFER_A_FREE_SEAT",
-        #     },
-        # )
-
-        # smach.StateMachine.add(
-        #     "INTRODUCE_GUESTS_TO_EACHOTHER",
-        #     IntroduceGuestsToEachother(node),
-        #     transitions={
-        #         "valid": "ASK_SECOND_GUEST_FOR_BAG_TO_HOST",
-        #         "invalid": "INTRODUCE_GUESTS_TO_EACHOTHER",
-        #         "preempted": "INTRODUCE_GUESTS_TO_EACHOTHER",
-        #     },
-        # )
-
-        # smach.StateMachine.add(
-        #     "ASK_SECOND_GUEST_FOR_BAG_TO_HOST",
-        #     AskSecondGuestForBagToHost(node),
-        #     transitions={
-        #         "valid": "PICK_UP_BAG",
-        #         "invalid": "ASK_SECOND_GUEST_FOR_BAG_TO_HOST",
-        #         "preempted": "ASK_SECOND_GUEST_FOR_BAG_TO_HOST",
-        #     },
-        # )
-
-        # smach.StateMachine.add(
-        #     "PICK_UP_BAG",
-        #     PickUpBag(node),
-        #     transitions={
-        #         "valid": "FOLLOW_HOST",
-        #         "invalid": "LISTEN_TO_HOST_DROP_INSTRUCTION",
-        #         "preempted": "LISTEN_TO_HOST_DROP_INSTRUCTION",
-        #     },
-        # )
-
-        # smach.StateMachine.add(
-        #     "LISTEN_TO_HOST_DROP_BAG_INSTRUCTION",
-        #     ListenToHostDropBagInstruction(node),
-        #     transitions={
-        #         "valid": "DROP_BAG",
-        #         "invalid": "LISTEN_TO_HOST_DROP_BAG_INSTRUCTION",
-        #         "preempted": "LISTEN_TO_HOST_DROP_BAG_INSTRUCTION",
-        #     },
-        # )
-
-        # smach.StateMachine.add(
-        #     "DROP_BAG",
-        #     DropBag(node),
-        #     transitions={
-        #         "valid": "succeeded",
-        #         "invalid": "DROP_BAG",
-        #         "preempted": "DROP_BAG",
-        #     },
-        # )
-
-    def setup(self, node):
-        start_con_sm = smach.Concurrence(
-            outcomes=["succeeded", "failed"],
+    def setup(self):
+        start_con_sm = yasmin.Concurrence(
+            states={
+                "SAY_START": Say(text="Start of HRI task."),
+                "DOOR_START": StartDoorSM(),
+            },
             default_outcome="failed",
             outcome_map={
                 "succeeded": {
@@ -226,30 +143,69 @@ class HRI(smach.StateMachine):
             },
         )
 
-        with start_con_sm:
-            smach.Concurrence.add(
-                "SAY_START", Say(node=node, text="Start of HRI task.")
-            )
-
-            smach.Concurrence.add("DOOR_START", StartDoorSM(node=node))
-
         return start_con_sm
 
 
-def main(args=None):
-    rclpy.init(args=args)
+class HRI_node(Node):
+    def __init__(self):
+        super().__init__(
+            node_name="hri",
+            allow_undeclared_parameters=True,
+            automatically_declare_parameters_from_overrides=True,
+        )
 
-    node = rclpy.create_node(
-        node_name="hri",
-        allow_undeclared_parameters=True,
-        automatically_declare_parameters_from_overrides=True,
-    )
+        self._executor = Executor()
+        self._executor.add_node(self)
+        self._spin_thread = Thread(target=self._executor.spin)
+        self._spin_thread.start()
 
-    sm = HRI(node=node, host_data={})
-    outcome = sm.execute()
-    node.get_logger().info(f"StartSM outcome: {outcome}")
-    node.destroy_node()
-    rclpy.shutdown()
+
+def main():
+    rclpy.init()
+
+    node = HRI_node()
+
+    yasmin_ros.set_ros_loggers(node)
+
+    sm = HRI()
+    bb = yasmin.Blackboard()
+
+    host_data = {}
+    face_detection_confidence = 0.2
+
+    bb["guest_data"] = {
+        "host": host_data,
+        "guest1": {
+            "name": "",
+            "drink": "",
+            "detection": False,
+            "seating_detection": False,
+        },
+        "guest2": {
+            "name": "",
+            "drink": "",
+            "detection": False,
+            "seating_detection": False,
+        },
+    }
+
+    drink_detections = {}
+
+    bb["drink_detections"] = drink_detections
+    bb["confidence"] = face_detection_confidence
+    bb["dataset"] = "hri"
+    bb["drink_position"] = PointStamped()
+
+    outcome = sm(bb)
+
+    yasmin.YASMIN_LOG_INFO(f"State machine has ended with outcome {outcome}")
+
+    # except Exception as e:
+    #     yasmin.YASMIN_LOG_WARN(e)
+
+    if rclpy.ok():
+        node.destroy_node()
+        rclpy.shutdown()
 
 
 if __name__ == "__main__":

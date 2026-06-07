@@ -18,7 +18,7 @@ import speech_recognition as sr  # type: ignore
 from lasr_speech_recognition_interfaces.action import TranscribeSpeech  # type: ignore
 from rclpy.executors import ExternalShutdownException
 from std_msgs.msg import String  # type: ignore
-from src import ModelCache  # type: ignore
+from lasr_speech_recognition_whisper.cache import ModelCache  # type: ignore
 
 # TODO: argpars -> ROS2 params, test behaviour of preemption
 
@@ -212,7 +212,7 @@ class TranscribeSpeechAction(Node):
             / 32768.0
         )
 
-        if goal_handle.is_cancel_requested():
+        if goal_handle.is_cancel_requested:
             self._listening = False
             self.get_logger().info("Goal was cancelled during execution.")
             goal_handle.canceled()
@@ -229,8 +229,10 @@ class TranscribeSpeechAction(Node):
         self.get_logger().info(
             f"Time taken: {transcription_end_time - transcription_start_time:.2f}s"
         )
-        self._transcription_server.publish(phrase)
-        if goal_handle.is_cancel_requested():
+        from std_msgs.msg import String as StringMsg
+
+        self._transcription_server.publish(StringMsg(data=phrase))
+        if goal_handle.is_cancel_requested:
             self._listening = False
             return
 

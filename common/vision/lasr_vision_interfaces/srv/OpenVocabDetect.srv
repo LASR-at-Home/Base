@@ -1,0 +1,6 @@
+sensor_msgs/Image image
+string[] queries
+float32 box_threshold
+float32 text_threshold
+---
+lasr_vision_interfaces/Detection[] detections

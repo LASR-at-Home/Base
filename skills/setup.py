@@ -7,8 +7,12 @@ import ament_virtualenv.install
 import os
 from glob import glob
 
+_here = os.path.dirname(os.path.abspath(__file__))
+
 package_name = "skills"
-# setup_args = generate_distutils_setup(packages=["lasr_skills"], package_dir={"": "src"})
+
+
+_here = os.path.dirname(os.path.abspath(__file__))
 
 
 class InstallCommand(setuptools.command.install.install):
@@ -19,6 +23,7 @@ class InstallCommand(setuptools.command.install.install):
             scripts_base=self.install_scripts,
             package_name=package_name,
             python_version="3",
+            source_dir=_here,
         )
         # If you get a 'scripts_base' error uncomment the line above.
         return
@@ -34,7 +39,7 @@ setup(
         ("share/ament_index/resource_index/packages", ["resource/" + package_name]),
         (os.path.join("share", package_name, "config"), glob("config/*.yaml")),
         (os.path.join("share", package_name, "launch"), glob("launch/*")),
-        ("share/" + package_name, ["package.xml"]),
+        ("share/" + package_name, ["package.xml", "requirements.txt"]),
     ],
     install_requires=["setuptools"],
     zip_safe=True,
@@ -46,13 +51,15 @@ setup(
     cmdclass={"install": InstallCommand},
     entry_points={
         "console_scripts": [
-            # "look_to_point = src.lasr_skills.look_to_point:main",
             "get_image = lasr_skills.vision.get_image:main",
             "wait_state = lasr_skills.wait:main",
             "say = lasr_skills.say:main",
             "detect_3d = lasr_skills.detect_3d:main",
             "detect_all_in_polygon = lasr_skills.detect_all_in_polygon:main",
             "crop_image_3d = lasr_skills.vision.crop_image_3d:main",
+            "play_motion = lasr_skills.play_motion:main",
+            "look = lasr_skills.look_to_point:main",
+            "go_to_location = lasr_skills.go_to_location:main",
         ],
     },
 )
