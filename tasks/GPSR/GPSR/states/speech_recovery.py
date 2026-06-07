@@ -25,9 +25,25 @@ class SpeechRecovery(smach.State):
         self._last_resort = last_resort
         self._input_type = input_type
         self._available_names = [
-            "sophie", "julia", "emma", "sara", "laura", "hayley", "susan",
-            "fleur", "gabrielle", "robin", "john", "liam", "lucas",
-            "william", "kevin", "jesse", "noah", "harrie", "peter",
+            "sophie",
+            "julia",
+            "emma",
+            "sara",
+            "laura",
+            "hayley",
+            "susan",
+            "fleur",
+            "gabrielle",
+            "robin",
+            "john",
+            "liam",
+            "lucas",
+            "william",
+            "kevin",
+            "jesse",
+            "noah",
+            "harrie",
+            "peter",
         ]
         self._available_single_drinks = ["cola", "water", "milk", "fanta", "dubbelfris"]
         self._available_double_drinks = ["ice", "tea", "big", "coke"]
@@ -41,7 +57,16 @@ class SpeechRecovery(smach.State):
             set(self._available_single_drinks).union(set(self._available_double_drinks))
         )
         self._excluded_words = [
-            "my", "name", "is", "and", "favourite", "drink", "you", "can", "call", "me",
+            "my",
+            "name",
+            "is",
+            "and",
+            "favourite",
+            "drink",
+            "you",
+            "can",
+            "call",
+            "me",
         ]
 
     def execute(self, userdata: UserData) -> str:
@@ -97,7 +122,9 @@ class SpeechRecovery(smach.State):
             return result
         result = self._handle_similar_spelt(sentence_list, self._available_drinks, 1)
         if result == "unknown":
-            result = self._handle_similar_sound(sentence_list, self._available_drinks, 0)
+            result = self._handle_similar_sound(
+                sentence_list, self._available_drinks, 0
+            )
         if result != "unknown":
             if result in self._available_single_drinks:
                 return result
@@ -107,27 +134,41 @@ class SpeechRecovery(smach.State):
             return "unknown"
         if self._recover_dubbelfris(sentence_list):
             return "dubbelfris"
-        closest_spelt = self._handle_closest_spelt(sentence_list, self._available_drinks)
+        closest_spelt = self._handle_closest_spelt(
+            sentence_list, self._available_drinks
+        )
         if closest_spelt in self._available_single_drinks:
             return closest_spelt
         sentence_list.append(closest_spelt)
         return self._infer_second_drink(sentence_list)
 
     def _handle_similar_spelt(
-        self, sentence_list: List[str], available_words: List[str], distance_threshold: int
+        self,
+        sentence_list: List[str],
+        available_words: List[str],
+        distance_threshold: int,
     ) -> str:
         for input_word in sentence_list:
             for available_word in available_words:
-                if self._get_damerau_levenshtein_distance(input_word, available_word) <= distance_threshold:
+                if (
+                    self._get_damerau_levenshtein_distance(input_word, available_word)
+                    <= distance_threshold
+                ):
                     return available_word
         return "unknown"
 
     def _handle_similar_sound(
-        self, sentence_list: List[str], available_words: List[str], distance_threshold: int
+        self,
+        sentence_list: List[str],
+        available_words: List[str],
+        distance_threshold: int,
     ) -> str:
         for input_word in sentence_list:
             for available_word in available_words:
-                if self._get_levenshtein_soundex_distance(input_word, available_word) <= distance_threshold:
+                if (
+                    self._get_levenshtein_soundex_distance(input_word, available_word)
+                    <= distance_threshold
+                ):
                     return available_word
         return "unknown"
 
@@ -138,12 +179,16 @@ class SpeechRecovery(smach.State):
                     return self._double_drinks_dict[input_word]
         return "unknown"
 
-    def _handle_closest_spelt(self, sentence_list: List[str], choices: List[str]) -> str:
+    def _handle_closest_spelt(
+        self, sentence_list: List[str], choices: List[str]
+    ) -> str:
         closest_distance = float("inf")
         closest_word = None
         for input_word in sentence_list:
             for available_word in choices:
-                distance = self._get_damerau_levenshtein_distance(input_word, available_word)
+                distance = self._get_damerau_levenshtein_distance(
+                    input_word, available_word
+                )
                 if distance < closest_distance:
                     closest_distance = distance
                     closest_word = available_word

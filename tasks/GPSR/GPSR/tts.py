@@ -23,12 +23,13 @@ def _say_gtts(text: str):
     try:
         from gtts import gTTS
         from pydub import AudioSegment
-        tts = gTTS(text=text, lang='en')
-        with tempfile.NamedTemporaryFile(suffix='.mp3', delete=False) as f:
+
+        tts = gTTS(text=text, lang="en")
+        with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as f:
             mp3_path = f.name
         tts.save(mp3_path)
-        wav_path = mp3_path.replace('.mp3', '.wav')
-        AudioSegment.from_mp3(mp3_path).export(wav_path, format='wav')
+        wav_path = mp3_path.replace(".mp3", ".wav")
+        AudioSegment.from_mp3(mp3_path).export(wav_path, format="wav")
         subprocess.run(["aplay", wav_path], check=False)
     except Exception as e:
         print(f"[TTS] gtts error: {e}", flush=True)
@@ -39,6 +40,7 @@ def _say_robot(node: rclpy.node.Node, text: str):
         from tts_msgs.action import TTS
         from rclpy.action import ActionClient
         import threading
+
         client = ActionClient(node, TTS, "/tts_engine/tts")
         if not client.wait_for_server(timeout_sec=3.0):
             node.get_logger().error("TTS action server not available")
@@ -48,7 +50,9 @@ def _say_robot(node: rclpy.node.Node, text: str):
         goal.locale = "en_GB"
         done = threading.Event()
         client.send_goal_async(goal).add_done_callback(
-            lambda f: f.result().get_result_async().add_done_callback(lambda _: done.set())
+            lambda f: f.result()
+            .get_result_async()
+            .add_done_callback(lambda _: done.set())
         )
         done.wait(timeout=15.0)
     except Exception as e:

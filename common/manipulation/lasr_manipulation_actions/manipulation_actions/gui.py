@@ -18,6 +18,7 @@ import threading
 import numpy as np
 import time
 
+
 class GraspGUI:
     def __init__(self, root):
         self.root = root
@@ -44,7 +45,9 @@ class GraspGUI:
         self.right_frame = tk.Frame(root)
         self.right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, padx=5, pady=5)
 
-        tk.Label(self.right_frame, text="Detected Objects", font=("Arial", 12, "bold")).pack()
+        tk.Label(
+            self.right_frame, text="Detected Objects", font=("Arial", 12, "bold")
+        ).pack()
 
         # Listbox for objects
         self.object_frame = tk.Frame(self.right_frame)
@@ -53,14 +56,22 @@ class GraspGUI:
         scrollbar = tk.Scrollbar(self.object_frame)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
-        self.object_listbox = tk.Listbox(self.object_frame, yscrollcommand=scrollbar.set, font=("Arial", 10))
+        self.object_listbox = tk.Listbox(
+            self.object_frame, yscrollcommand=scrollbar.set, font=("Arial", 10)
+        )
         self.object_listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         scrollbar.config(command=self.object_listbox.yview)
 
         # Command buttons
-        tk.Label(self.right_frame, text="Commands", font=("Arial", 12, "bold")).pack(pady=(10, 5))
+        tk.Label(self.right_frame, text="Commands", font=("Arial", 12, "bold")).pack(
+            pady=(10, 5)
+        )
 
-        tk.Label(self.right_frame, text="Detection queries (comma separated):", font=("Arial", 10)).pack(anchor=tk.W)
+        tk.Label(
+            self.right_frame,
+            text="Detection queries (comma separated):",
+            font=("Arial", 10),
+        ).pack(anchor=tk.W)
         self.detect_entry = tk.Entry(self.right_frame, font=("Arial", 10))
         self.detect_entry.insert(0, "bottle,cup,object")
         self.detect_entry.pack(fill=tk.X, pady=(2, 5))
@@ -68,29 +79,75 @@ class GraspGUI:
         self.button_frame = tk.Frame(self.right_frame)
         self.button_frame.pack(fill=tk.X, pady=5)
 
-        tk.Button(self.button_frame, text="Detect", font=("Arial", 11), command=self.cmd_detect, bg="#9C27B0", fg="white").pack(fill=tk.X, pady=2)
-        tk.Button(self.button_frame, text="Home", font=("Arial", 11), command=self.cmd_home, bg="#4CAF50", fg="white").pack(fill=tk.X, pady=2)
-        tk.Button(self.button_frame, text="Init Grasp", font=("Arial", 11), command=self.cmd_init_grasp, bg="#2196F3", fg="white").pack(fill=tk.X, pady=2)
+        tk.Button(
+            self.button_frame,
+            text="Detect",
+            font=("Arial", 11),
+            command=self.cmd_detect,
+            bg="#9C27B0",
+            fg="white",
+        ).pack(fill=tk.X, pady=2)
+        tk.Button(
+            self.button_frame,
+            text="Home",
+            font=("Arial", 11),
+            command=self.cmd_home,
+            bg="#4CAF50",
+            fg="white",
+        ).pack(fill=tk.X, pady=2)
+        tk.Button(
+            self.button_frame,
+            text="Init Grasp",
+            font=("Arial", 11),
+            command=self.cmd_init_grasp,
+            bg="#2196F3",
+            fg="white",
+        ).pack(fill=tk.X, pady=2)
 
-        tk.Label(self.right_frame, text="Grasp Object", font=("Arial", 11, "bold")).pack(pady=(10, 5))
-        self.grasp_button = tk.Button(self.right_frame, text="Grasp Selected", font=("Arial", 11), command=self.cmd_grasp, bg="#FF9800", fg="white", state=tk.DISABLED)
+        tk.Label(
+            self.right_frame, text="Grasp Object", font=("Arial", 11, "bold")
+        ).pack(pady=(10, 5))
+        self.grasp_button = tk.Button(
+            self.right_frame,
+            text="Grasp Selected",
+            font=("Arial", 11),
+            command=self.cmd_grasp,
+            bg="#FF9800",
+            fg="white",
+            state=tk.DISABLED,
+        )
         self.grasp_button.pack(fill=tk.X, pady=2)
 
-        tk.Label(self.right_frame, text="Head Control (Use arrow keys)", font=("Arial", 11, "bold")).pack(pady=(10, 5))
-        self.head_info = tk.Label(self.right_frame, text="Pan: 0.0  Tilt: 0.0", font=("Arial", 10))
+        tk.Label(
+            self.right_frame,
+            text="Head Control (Use arrow keys)",
+            font=("Arial", 11, "bold"),
+        ).pack(pady=(10, 5))
+        self.head_info = tk.Label(
+            self.right_frame, text="Pan: 0.0  Tilt: 0.0", font=("Arial", 10)
+        )
         self.head_info.pack(fill=tk.X, pady=5)
 
-        tk.Label(self.right_frame, text="Status", font=("Arial", 11, "bold")).pack(pady=(10, 5))
-        self.status_label = tk.Label(self.right_frame, text="Initializing...", font=("Arial", 10), fg="blue", justify=tk.LEFT, wraplength=250)
+        tk.Label(self.right_frame, text="Status", font=("Arial", 11, "bold")).pack(
+            pady=(10, 5)
+        )
+        self.status_label = tk.Label(
+            self.right_frame,
+            text="Initializing...",
+            font=("Arial", 10),
+            fg="blue",
+            justify=tk.LEFT,
+            wraplength=250,
+        )
         self.status_label.pack(fill=tk.BOTH, expand=True)
 
-        self.object_listbox.bind('<<ListboxSelect>>', self.on_object_select)
+        self.object_listbox.bind("<<ListboxSelect>>", self.on_object_select)
 
         # Bind arrow keys for head control
-        self.root.bind('<Left>', lambda e: self.move_head_pan(-0.1))
-        self.root.bind('<Right>', lambda e: self.move_head_pan(0.1))
-        self.root.bind('<Up>', lambda e: self.move_head_tilt(0.1))
-        self.root.bind('<Down>', lambda e: self.move_head_tilt(-0.1))
+        self.root.bind("<Left>", lambda e: self.move_head_pan(-0.1))
+        self.root.bind("<Right>", lambda e: self.move_head_pan(0.1))
+        self.root.bind("<Up>", lambda e: self.move_head_tilt(0.1))
+        self.root.bind("<Down>", lambda e: self.move_head_tilt(-0.1))
 
         # Start ROS2 node in background thread
         self.thread = threading.Thread(target=self.ros_thread, daemon=True)
@@ -101,15 +158,29 @@ class GraspGUI:
 
     def ros_thread(self):
         rclpy.init()
-        self.node = Node('grasp_gui')
-        self.command_pub = self.node.create_publisher(String, '/command', 10)
-        self.detect_pub = self.node.create_publisher(String, '/detect', 10)
-        self.head_traj_pub = self.node.create_publisher(JointTrajectory, '/head_controller/command', 10)
-        self.head_action_client = ActionClient(self.node, FollowJointTrajectory, '/head_controller/follow_joint_trajectory')
-        camera_qos = QoSProfile(depth=10, reliability=ReliabilityPolicy.BEST_EFFORT, history=HistoryPolicy.KEEP_LAST)
-        self.node.create_subscription(Image, '/head_front_camera/rgb/image_raw', self.on_rgb, camera_qos)
-        self.node.create_subscription(Detection3DArray, '/object_centroids', self.on_detections, 10)
-        self.node.create_subscription(JointState, '/joint_states', self.on_joint_state, 10)
+        self.node = Node("grasp_gui")
+        self.command_pub = self.node.create_publisher(String, "/command", 10)
+        self.detect_pub = self.node.create_publisher(String, "/detect", 10)
+        self.head_traj_pub = self.node.create_publisher(
+            JointTrajectory, "/head_controller/command", 10
+        )
+        self.head_action_client = ActionClient(
+            self.node, FollowJointTrajectory, "/head_controller/follow_joint_trajectory"
+        )
+        camera_qos = QoSProfile(
+            depth=10,
+            reliability=ReliabilityPolicy.BEST_EFFORT,
+            history=HistoryPolicy.KEEP_LAST,
+        )
+        self.node.create_subscription(
+            Image, "/head_front_camera/rgb/image_raw", self.on_rgb, camera_qos
+        )
+        self.node.create_subscription(
+            Detection3DArray, "/object_centroids", self.on_detections, 10
+        )
+        self.node.create_subscription(
+            JointState, "/joint_states", self.on_joint_state, 10
+        )
         self.update_status("Ready")
         rclpy.spin(self.node)
 
@@ -124,9 +195,9 @@ class GraspGUI:
 
     def on_joint_state(self, msg):
         for name, pos in zip(msg.name, msg.position):
-            if name == 'head_1_joint':
+            if name == "head_1_joint":
                 self.head_pan = pos
-            elif name == 'head_2_joint':
+            elif name == "head_2_joint":
                 self.head_tilt = pos
 
     def update_gui(self):
@@ -147,15 +218,15 @@ class GraspGUI:
 
         for det in self.latest_detections.detections:
             x, y, bw, bh = det.xywh
-            x1, y1 = int(x - bw/2), int(y - bh/2)
-            x2, y2 = int(x + bw/2), int(y + bh/2)
+            x1, y1 = int(x - bw / 2), int(y - bh / 2)
+            x2, y2 = int(x + bw / 2), int(y + bh / 2)
 
             x1, y1 = max(0, x1), max(0, y1)
             x2, y2 = min(w, x2), min(h, y2)
 
             draw.rectangle([x1, y1, x2, y2], outline="lime", width=2)
             label = f"{det.name} ({det.confidence:.2f})"
-            draw.text((x1, y1-10), label, fill="lime", font=None)
+            draw.text((x1, y1 - 10), label, fill="lime", font=None)
 
         # Resize for display
         pil_img.thumbnail((600, 600), PILImage.Resampling.LANCZOS)
@@ -165,7 +236,10 @@ class GraspGUI:
 
     def update_object_list(self):
         current = self.object_listbox.get(0, tk.END)
-        new_objects = [(det.name, f"{det.confidence:.2f}") for det in self.latest_detections.detections]
+        new_objects = [
+            (det.name, f"{det.confidence:.2f}")
+            for det in self.latest_detections.detections
+        ]
         new_text = [f"{name} ({conf})" for name, conf in new_objects]
 
         if set(current) != set(new_text):
@@ -219,20 +293,24 @@ class GraspGUI:
         self.head_pan += delta
         self.head_pan = max(-1.57, min(1.57, self.head_pan))
         self.send_head_trajectory(self.head_pan, self.head_tilt)
-        self.head_info.config(text=f"Pan: {self.head_pan:.2f}  Tilt: {self.head_tilt:.2f}")
+        self.head_info.config(
+            text=f"Pan: {self.head_pan:.2f}  Tilt: {self.head_tilt:.2f}"
+        )
 
     def move_head_tilt(self, delta):
         self.head_tilt += delta
         self.head_tilt = max(-0.8, min(0.8, self.head_tilt))
         self.send_head_trajectory(self.head_pan, self.head_tilt)
-        self.head_info.config(text=f"Pan: {self.head_pan:.2f}  Tilt: {self.head_tilt:.2f}")
+        self.head_info.config(
+            text=f"Pan: {self.head_pan:.2f}  Tilt: {self.head_tilt:.2f}"
+        )
 
     def send_head_trajectory(self, pan, tilt):
         if not self.head_traj_pub or not self.head_action_client:
             return
 
         traj = JointTrajectory()
-        traj.joint_names = ['head_1_joint', 'head_2_joint']
+        traj.joint_names = ["head_1_joint", "head_2_joint"]
         pt = JointTrajectoryPoint()
         pt.positions = [pan, tilt]
         pt.time_from_start = Duration(sec=1)
@@ -255,11 +333,13 @@ class GraspGUI:
         rclpy.shutdown()
         self.root.destroy()
 
+
 def main():
     root = tk.Tk()
     gui = GraspGUI(root)
     root.protocol("WM_DELETE_WINDOW", gui.on_closing)
     root.mainloop()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

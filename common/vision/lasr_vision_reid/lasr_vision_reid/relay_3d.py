@@ -56,8 +56,12 @@ def relay_3d(
         history=HistoryPolicy.KEEP_LAST,
     )
 
-    image_sub = message_filters.Subscriber(node, Image, image_topic, qos_profile=camera_qos)
-    depth_sub = message_filters.Subscriber(node, Image, depth_topic, qos_profile=camera_qos)
+    image_sub = message_filters.Subscriber(
+        node, Image, image_topic, qos_profile=camera_qos
+    )
+    depth_sub = message_filters.Subscriber(
+        node, Image, depth_topic, qos_profile=camera_qos
+    )
     ts = message_filters.ApproximateTimeSynchronizer(
         [image_sub, depth_sub], queue_size=30, slop=0.2
     )

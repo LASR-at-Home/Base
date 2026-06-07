@@ -83,7 +83,7 @@ class Detect3D(ServiceState):
     def _cache_camera_info(self, msg: CameraInfo) -> None:
         if self.cam_info is None:
             self.cam_info = msg
-    
+
     def _create_req(self, blackboard):
         if self.cam_info is None:
             deadline = time.time() + 5.0

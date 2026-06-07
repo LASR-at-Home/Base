@@ -230,6 +230,7 @@ class TranscribeSpeechAction(Node):
             f"Time taken: {transcription_end_time - transcription_start_time:.2f}s"
         )
         from std_msgs.msg import String as StringMsg
+
         self._transcription_server.publish(StringMsg(data=phrase))
         if goal_handle.is_cancel_requested:
             self._listening = False

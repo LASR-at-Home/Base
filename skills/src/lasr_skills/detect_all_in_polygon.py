@@ -307,9 +307,7 @@ class CalculateSweepPoints(yasmin.State):
 
         # Optional: visualize FOV
 
-        qos = QoSProfile(
-            depth=1, durability=QoSDurabilityPolicy.TRANSIENT_LOCAL
-        )
+        qos = QoSProfile(depth=1, durability=QoSDurabilityPolicy.TRANSIENT_LOCAL)
 
         pub = self.node.create_publisher(PolygonStamped, "projected_fov_polygon", qos)
 

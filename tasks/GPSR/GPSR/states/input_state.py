@@ -11,7 +11,5 @@ def create_input_state(node):
     if mode in ("mic", "microphone"):
         return ListenState(node)
 
-    node.get_logger().warn(
-        f"Unknown input_mode '{mode}', falling back to microphone"
-    )
+    node.get_logger().warn(f"Unknown input_mode '{mode}', falling back to microphone")
     return ListenState(node)
