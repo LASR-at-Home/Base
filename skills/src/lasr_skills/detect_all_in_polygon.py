@@ -307,7 +307,9 @@ class CalculateSweepPoints(yasmin.State):
 
         # Optional: visualize FOV
 
-        qos = QoSProfile(depth=1, durability=QoSDurabilityPolicy.TRANSIENT_LOCAL)
+        qos = QoSProfile(
+            depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL
+        )
 
         pub = self.node.create_publisher(PolygonStamped, "projected_fov_polygon", qos)
 
@@ -399,17 +401,17 @@ class IterateThroughPoints(yasmin.StateMachine):
             "LOOK_POINT",
             LookToPoint(),
             transitions={
-                "succeeded": "DETECT_OBJECTS",
-                "aborted": "DETECT_OBJECTS",
+                "succeeded": "SLEEP",
+                "aborted": "SLEEP",
                 "canceled": "failed",
-                "timeout": "DETECT_OBJECTS",
+                "timeout": "SLEEP",
             },
         )
-        # self.add_state(
-        #     'SLEEP',
-        #     Wait(wait_time=4),
-        #     transitions={'succeeded': 'DETECT_OBJECTS', 'failed': 'failed'}
-        # )
+        self.add_state(
+            'SLEEP',
+            Wait(wait_time=2),
+            transitions={'succeeded': 'DETECT_OBJECTS', 'failed': 'failed'}
+        )
         self.add_state(
             "DETECT_OBJECTS",
             Detect3DInArea(
@@ -512,6 +514,7 @@ class DetectAllInPolygon(yasmin.StateMachine):
         self._model = model
         self._min_confidence = min_confidence
         self._min_new_object_dist = min_new_object_dist
+        self._node = yasmin_ros.logger_node
         image_qos = QoSProfile(
             depth=10,
             reliability=ReliabilityPolicy.BEST_EFFORT,
@@ -612,26 +615,32 @@ class DetectAllInPolygon(yasmin.StateMachine):
             transitions={"succeeded": "succeeded"},
         )
 
+class Detect_node(Node):
+    def __init__(self):
+        super().__init__(
+            node_name="detect_all_in_polygon",
+        )
+
+        self._executor = Executor()
+        self._executor.add_node(self)
+        self._spin_thread = Thread(target=self._executor.spin)
+        self._spin_thread.start()
 
 def main():
     seat_area = [
-        [0.9422937035560608, -1.9376981258392334],
-        [-0.01625092327594757, -1.1312360763549805],
-        [-0.5108118057250977, -1.6913851499557495],
-        [0.4300234913825989, -2.5222253799438477],
+        [2.9871275424957275, -1.9937974214553833],
+        [2.0820069313049316, -2.199618339538574],
+        [2.155684471130371, -2.7175190448760986],
+        [3.1166439056396484, -2.457406997680664],
     ]
 
     seat_polygon = ShapelyPolygon(seat_area)
 
     rclpy.init()
-
-    # node = Node('Detect_All_In_Polygon')
-    # executor = Executor()
-    # executor.add_node(node)
-
-    # thread = Thread(target=executor.spin())
-    # thread.start()
-    yasmin_ros.set_ros_loggers()
+    
+    node = Detect_node()
+    
+    yasmin_ros.set_ros_loggers(node)
 
     bb = Blackboard()
     bb["sweep_points"] = []
@@ -660,9 +669,12 @@ def main():
         yasmin.YASMIN_LOG_INFO(f"SM finished with outcome: {outcome}")
     except Exception as e:
         yasmin.YASMIN_LOG_WARN(e)
-
-    if rclpy.ok():
+        node.destroy_node()
         rclpy.shutdown()
+
+    
+    node.destroy_node()
+    rclpy.shutdown()
 
 
 if __name__ == "__main__":

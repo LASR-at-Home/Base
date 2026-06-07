@@ -48,6 +48,13 @@ def generate_launch_description():
         output="screen",
     )
 
+    transcribe_speech = Node(
+        package='lasr_speech_recognition_whisper',
+        executable='transcribe_microphone_server',
+        name='whisper_mic_server',
+        output='screen'
+    )
+
     state_machine = Node(
         package="HRI",
         executable="sm",
@@ -66,5 +73,6 @@ def generate_launch_description():
             vision_clip,
             eye_tracker,
             state_machine,
+            transcribe_speech,
         ]
     )

@@ -24,7 +24,7 @@ class LookToPoint(yasmin_ros.ActionState):
             create_goal_handler=self._create_goal,
             response_timeout=5.0,
             callback_group=ros_client_group,
-            maximum_retry=1,
+            maximum_retry=0,
         )
         if pointstamped is None:
             self.add_input_key("pointstamped")

@@ -155,9 +155,8 @@ def main():
     # except Exception as e:
     #     yasmin.YASMIN_LOG_WARN(e)
 
-    if rclpy.ok():
-        node.destroy_node()
-        rclpy.shutdown()
+    node.destroy_node()
+    rclpy.shutdown()
 
 
 if __name__ == "__main__":

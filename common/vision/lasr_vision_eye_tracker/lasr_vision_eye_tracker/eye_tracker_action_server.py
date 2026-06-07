@@ -5,6 +5,7 @@ from rclpy.callback_groups import (
     MutuallyExclusiveCallbackGroup,
     ReentrantCallbackGroup,
 )
+from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy, DurabilityPolicy
 from rclpy.executors import MultiThreadedExecutor
 import message_filters
 import threading
@@ -30,6 +31,7 @@ from geometry_msgs.msg import (
     PointStamped,
     Point,
     PoseWithCovarianceStamped,
+    Vector3,
 )
 from sensor_msgs.msg import Image, CameraInfo
 from std_msgs.msg import Header
@@ -50,11 +52,25 @@ class EyeTracker(Node):
         self._max_eye_distance: float = max_eye_distance
         self._move_up_count: float = 0.0
         self._max_move_up_count: int = 2
+        
+        self.camera_qos = QoSProfile(
+            depth=10,
+            reliability=ReliabilityPolicy.BEST_EFFORT,
+            history=HistoryPolicy.KEEP_LAST,
+        )
+        
+        amcl_qos = QoSProfile(
+            depth=1,
+            reliability=ReliabilityPolicy.RELIABLE,
+            durability=DurabilityPolicy.TRANSIENT_LOCAL,
+            history=HistoryPolicy.KEEP_LAST,
+        )
+        
         self._robot_pose_sub = self.create_subscription(
             PoseWithCovarianceStamped,
-            "/robot_pose",
+            "/amcl_pose",
             self._robot_pose_callback,
-            qos_profile=10,
+            qos_profile=amcl_qos,
             callback_group=self._work_cb_group,
         )
         self._yolo_keypoint_client = self.create_client(
@@ -217,8 +233,8 @@ class EyeTracker(Node):
 
         g = PointHead.Goal(
             pointing_frame="head_2_link",
-            pointing_axis=Point(x=1.0, y=0.0, z=0.0),
-            max_velocity=1.0,
+            pointing_axis=Vector3(x=1.0, y=0.0, z=0.0),
+            max_velocity=2.0,
             target=PointStamped(
                 header=Header(frame_id="map"),
                 point=goal.person_point,
@@ -304,16 +320,20 @@ class EyeTracker(Node):
             self,
             Image,
             "/head_front_camera/rgb/image_raw",
+            self.camera_qos
+            
         )
         depth_sub = message_filters.Subscriber(
             self,
             Image,
             "/head_front_camera/depth/image_raw",
+            self.camera_qos
         )
         depth_camera_info_sub = message_filters.Subscriber(
             self,
             CameraInfo,
             "/head_front_camera/depth/camera_info",
+            self.camera_qos
         )
         ts = message_filters.ApproximateTimeSynchronizer(
             [image_sub, depth_sub, depth_camera_info_sub], 10, 0.1
@@ -331,8 +351,8 @@ class EyeTracker(Node):
             else:
                 g = PointHead.Goal(
                     pointing_frame="head_2_link",
-                    pointing_axis=Point(x=1.0, y=0.0, z=0.0),
-                    max_velocity=1.0,
+                    pointing_axis=Vector3(x=1.0, y=0.0, z=0.0),
+                    max_velocity=2.0,
                     target=PointStamped(
                         header=Header(frame_id="map"),
                         point=self._eyes,
