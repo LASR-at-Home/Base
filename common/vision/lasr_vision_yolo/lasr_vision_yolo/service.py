@@ -173,7 +173,7 @@ class YOLOServiceNode:
         self, req: YoloDetection3D.Request, res: YoloDetection3D.Response
     ) -> YoloDetection3D.Response:
         response = YoloDetection3D.Response()
-
+        self.node.get_logger().info("GOT REQUEST IN SERVICE")
         cv_im = self._bridge.imgmsg_to_cv2(req.image_raw, desired_encoding="bgr8")
         results = self._yolo(
             cv_im, req.model, req.confidence, [cls for cls in req.filter]
@@ -195,7 +195,9 @@ class YOLOServiceNode:
                 req.depth_image.header.stamp,
             )
 
+        self.node.get_logger().info(str(len(results)))
         for result in results:
+            self.node.get_logger().info("CHECKING RESULTS")
             detection = Detection3D()
             detection.name = result.names[result.boxes.cls.int().item()]
             detection.confidence = result.boxes.conf.item()
@@ -236,8 +238,8 @@ class YOLOServiceNode:
                 point_stamped = PointStamped()
                 point_stamped.header = req.depth_image.header
                 point_stamped.point = point
-                point_stamped_transformed = do_transform_point(point_stamped, transform)
-                detection.point = point_stamped_transformed.point
+                # point_stamped_transformed = do_transform_point(point_stamped, transform)
+                detection.point = point_stamped.point
 
             else:
                 self.node.get_logger().warn(
@@ -246,7 +248,10 @@ class YOLOServiceNode:
 
             response.detected_objects.append(detection)
 
+        self.node.get_logger().info("RESULTS LOOPED THROUGH")
         self._publish_results(req, results, response)
+        self.node.get_logger().info("RESULTS PUBLISHED")
+        self.node.get_logger().info(str(response))
 
         return response
 

@@ -3,16 +3,15 @@ State for recovering the speech transcribed via whisper (name and drink) by usin
 the spelling and pronounciation of a word.
 """
 
-import smach
+import yasmin
 import string
 import jellyfish as jf
-from smach import UserData
 from typing import List, Dict, Any
 
 # TODO test this state
 
 
-class SpeechRecovery(smach.State):
+class SpeechRecovery(yasmin.State):
     def __init__(self, guest_id: int, last_resort: bool, input_type: str = ""):
         """Recover the correct name and / or drink by parsing the transcription.
 
@@ -23,12 +22,14 @@ class SpeechRecovery(smach.State):
             (drink or name)
         """
 
-        smach.State.__init__(
-            self,
+        super().__init__(
             outcomes=["succeeded", "failed"],
-            input_keys=["guest_transcription", "guest_data"],
-            output_keys=["guest_data", "guest_transcription"],
         )
+
+        self.add_input_key("guest_transcription")
+        self.add_input_key("guest_data")
+        self.add_output_key("guest_transcription")
+        self.add_output_key("guest_data")
 
         self._guest_id = guest_id
         self._last_resort = last_resort
@@ -93,7 +94,7 @@ class SpeechRecovery(smach.State):
             "me",
         ]
 
-    def execute(self, userdata: UserData) -> str:
+    def execute(self, blackboard) -> str:
         """Optimise the transcription, then attempt to recover the drink or / and name.
 
         Args:
@@ -105,8 +106,10 @@ class SpeechRecovery(smach.State):
             str: state outcome. Updates the userdata with the parsed information (drink or name), under
             the parameter "guest_data".
         """
-        filtered_sentence = userdata.guest_transcription.lower().translate(
-            str.maketrans("", "", string.punctuation)
+        filtered_sentence = (
+            blackboard["guest_transcription"]
+            .lower()
+            .translate(str.maketrans("", "", string.punctuation))
         )
         sentence_split = filtered_sentence.split()
         sentence_list = list(set(sentence_split) - set(self._excluded_words))
@@ -116,7 +119,7 @@ class SpeechRecovery(smach.State):
         if self._input_type == "name":
             final_name = self._handle_name(sentence_list, self._last_resort)
             if final_name != "unknown":
-                userdata.guest_data[self._guest_id]["name"] = final_name
+                blackboard["guest_data"][self._guest_id]["name"] = final_name
                 print(f"Recovered name: {final_name} ")
                 return "succeeded"
             else:
@@ -124,23 +127,23 @@ class SpeechRecovery(smach.State):
         elif self._input_type == "drink":
             final_drink = self._handle_drink(sentence_list, self._last_resort)
             if final_drink != "unknown":
-                userdata.guest_data[self._guest_id]["drink"] = final_drink
+                blackboard["guest_data"][self._guest_id]["drink"] = final_drink
                 print(f"Recovered drink: {final_drink} ")
                 return "succeeded"
             else:
                 return "failed"
         else:
-            if userdata.guest_data[self._guest_id]["name"] == "unknown":
+            if blackboard["guest_data"][self._guest_id]["name"] == "unknown":
                 final_name = self._handle_name(sentence_list, self._last_resort)
-                userdata.guest_data[self._guest_id]["name"] = final_name
+                blackboard["guest_data"][self._guest_id]["name"] = final_name
                 print(f"Recovered name: {final_name} ")
-            if userdata.guest_data[self._guest_id]["drink"] == "unknown":
+            if blackboard["guest_data"][self._guest_id]["drink"] == "unknown":
                 final_drink = self._handle_drink(sentence_list, self._last_resort)
                 userdata.guest_data[self._guest_id]["drink"] = final_drink
                 print(f"Recovered drink: {final_drink} ")
             if (
-                userdata.guest_data[self._guest_id]["name"] == "unknown"
-                or userdata.guest_data[self._guest_id]["drink"] == "unknown"
+                blackboard["guest_data"][self._guest_id]["name"] == "unknown"
+                or blackboard["guest_data"][self._guest_id]["drink"] == "unknown"
             ):
                 return "failed"
             else:

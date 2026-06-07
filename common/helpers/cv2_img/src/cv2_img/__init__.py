@@ -48,7 +48,7 @@ def msg_to_pillow_img(msg: SensorImage):
         bgr_img = cv2.cvtColor(yuy2_data, cv2.COLOR_YUV2BGR_YUY2)
         img = Image.fromarray(cv2.cvtColor(bgr_img, cv2.COLOR_BGR2RGB))
     elif msg.encoding in ["bgr8", "8UC3"]:
-        img = Image.frombytes("RGB", size, msg.data, "raw")
+        img = Image.frombytes("RGB", size, bytes(msg.data), "raw")
         # BGR => RGB
         img = Image.fromarray(np.array(img)[:, :, ::-1])
     elif msg.encoding == "rgb8":

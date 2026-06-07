@@ -1,93 +1,80 @@
-import smach
+import yasmin
 from lasr_skills import Listen
 from lasr_skills import Say
 
 from typing import Union
 
 
-class AskAndListen(smach.StateMachine):
+class AskAndListen(yasmin.StateMachine):
     def __init__(
         self,
-        node,
         tts_phrase: Union[str, None] = None,
         tts_phrase_format_str: Union[str, None] = None,
     ):
+        super().__init__(outcomes=["succeeded", "failed"], handle_sigint=True)
+        self.add_output_key("transcribed_speech")
         if tts_phrase is not None:
-            super().__init__(
-                outcomes=["succeeded", "failed"],
-                output_keys=["transcribed_speech"],
+            self.add_state(
+                "SAY",
+                Say(text=tts_phrase),
+                transitions={
+                    "succeeded": "LISTEN",
+                    "aborted": "failed",
+                    "canceled": "failed",
+                },
             )
-            with self:
-                self.add(
-                    "SAY",
-                    Say(node=node, text=tts_phrase),
-                    transitions={
-                        "succeeded": "LISTEN",
-                        "aborted": "failed",
-                        "preempted": "failed",
-                    },
-                )
-                self.add(
-                    "LISTEN",
-                    Listen(node=node),
-                    transitions={
-                        "succeeded": "succeeded",
-                        "aborted": "failed",
-                        "preempted": "failed",
-                    },
-                    remapping={"sequence": "transcribed_speech"},
-                )
+            self.add_state(
+                "LISTEN",
+                Listen(),
+                transitions={
+                    "succeeded": "succeeded",
+                    "aborted": "failed",
+                    "canceled": "failed",
+                },
+                remappings={"sequence": "transcribed_speech"},
+            )
         elif tts_phrase_format_str is not None:
-            super().__init__(
-                outcomes=["succeeded", "failed"],
-                output_keys=["transcribed_speech"],
-                input_keys=["tts_phrase_placeholders"],
+            self.add_input_key("tts_phrase_placeholders")
+
+            self.add_state(
+                "SAY",
+                Say(format_str=tts_phrase_format_str),
+                transitions={
+                    "succeeded": "LISTEN",
+                    "aborted": "failed",
+                    "preempted": "failed",
+                },
+                remappings={"placeholders": "tts_phrase_placeholders"},
             )
-            with self:
-                self.add(
-                    "SAY",
-                    Say(node=node, format_str=tts_phrase_format_str),
-                    transitions={
-                        "succeeded": "LISTEN",
-                        "aborted": "failed",
-                        "preempted": "failed",
-                    },
-                    remapping={"placeholders": "tts_phrase_placeholders"},
-                )
-                self.add(
-                    "LISTEN",
-                    Listen(node=node),
-                    transitions={
-                        "succeeded": "succeeded",
-                        "aborted": "failed",
-                        "preempted": "failed",
-                    },
-                    remapping={"sequence": "transcribed_speech"},
-                )
+            self.add_state(
+                "LISTEN",
+                Listen(),
+                transitions={
+                    "succeeded": "succeeded",
+                    "aborted": "failed",
+                    "preempted": "failed",
+                },
+                remappings={"sequence": "transcribed_speech"},
+            )
         else:
-            super.__init__(
-                outcomes=["succeeded", "failed"],
-                output_keys=["transcribed_speech"],
-                input_keys=["tts_phrase"],
+            self.add_input_key("tts_phrase")
+            self.add_state(
+                "SAY",
+                Say(),
+                transitions={
+                    "succeeded": "LISTEN",
+                    "aborted": "failed",
+                    "preempted": "failed",
+                },
+                remapping={"text": "tts_phrase"},
             )
-            with self:
-                self.add(
-                    "SAY",
-                    Say(node=node),
-                    transitions={
-                        "succeeded": "LISTEN",
-                        "aborted": "failed",
-                        "preempted": "failed",
-                    },
-                    remapping={"text": "tts_phrase"},
-                )
-                self.add(
-                    "LISTEN",
-                    Listen(node=node),
-                    transitions={
-                        "succeeded": "succeeded",
-                        "aborted": "failed",
-                        "preempted": "failed",
-                    },
-                    remapping={"sequence": "transcribed_speech"},
-                )
+            self.add(
+                "LISTEN",
+                Listen(),
+                transitions={
+                    "succeeded": "succeeded",
+                    "aborted": "failed",
+                    "preempted": "failed",
+                },
+                remapping={"sequence": "transcribed_speech"},
+            )
