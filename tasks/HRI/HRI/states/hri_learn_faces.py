@@ -29,8 +29,9 @@ class HRILearnFaces(StateMachine):
                 srv_name="/yolo/detect_pose",
                 create_request_handler=self._create_request,
                 outcomes=["succeeded", "failed"],
-                response_handler=self._handle_resp)
-            
+                response_handler=self._handle_resp,
+            )
+
             self.add_input_key("image_raw")
 
         def _create_request(self, blackboard):
@@ -43,7 +44,7 @@ class HRILearnFaces(StateMachine):
             # may need req.target_frame
 
             return req
-        
+
         def _handle_resp(self, blackboard, response):
             try:
                 if not response.detections:
@@ -53,7 +54,7 @@ class HRILearnFaces(StateMachine):
                         for keypoint in keypoint_detection.keypoints:
                             if "eye" in keypoint.keypoint_name.lower():
                                 return "succeeded"
-                                
+
             except Exception as e:
                 yasmin.YASMIN_LOG_ERROR(f"Service call failed: {e}")
                 return "failed"
@@ -67,7 +68,7 @@ class HRILearnFaces(StateMachine):
                 srv_name="/lasr_vision_reid/add_face",
                 create_request_handler=self._create_request,
                 outcomes=["succeeded", "failed"],
-                response_handler=self._handle_resp
+                response_handler=self._handle_resp,
             )
 
             self.add_input_key("cropped_images")
@@ -78,7 +79,6 @@ class HRILearnFaces(StateMachine):
             self._guest_id = guest_id
             self._bridge = CvBridge()
 
-
         def _create_request(self, blackboard):
             request = AddFace.Request()
             request.image_raw = self._bridge.cv2_to_imgmsg(
@@ -86,12 +86,12 @@ class HRILearnFaces(StateMachine):
             )
             request.name = self._guest_id
             return request
-        
+
         def _handle_resp(self, blackboard, response):
             try:
                 if response.success:
                     try:
-                        blackboard["num_images"]  += 1
+                        blackboard["num_images"] += 1
                     except:
                         blackboard["num_images"] = 0
             except Exception as e:
@@ -112,17 +112,14 @@ class HRILearnFaces(StateMachine):
                 yasmin.YASMIN_LOG_INFO("Collected enough images for the guest.")
                 return "succeeded"
             else:
-                num_images = blackboard['num_images']
+                num_images = blackboard["num_images"]
                 yasmin.YASMIN_LOG_WARN(
                     f"Not enough images collected for the guest: {num_images}/{self._dataset_size}."
                 )
                 return "failed"
 
     def __init__(self, guest_id: str, dataset_size: int = 3):
-        super().__init__(
-            outcomes=["succeeded", "failed"],
-            handle_sigint=True
-        )
+        super().__init__(outcomes=["succeeded", "failed"], handle_sigint=True)
 
         self.add_input_key("guest_data")
 
@@ -146,7 +143,7 @@ class HRILearnFaces(StateMachine):
                 crop_logic="nearest",
                 crop_type="masked",
             ),
-            transitions={"succeeded": "LEARN_FACE", "failed": "failed"}
+            transitions={"succeeded": "LEARN_FACE", "failed": "failed"},
         )
 
         self.add_state(

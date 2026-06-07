@@ -30,7 +30,9 @@ class GetLookPoint(State):
             yasmin.YASMIN_LOG_WARN("No seated guest locations provided.")
             return "failed"
         point = blackboard["seated_guest_locs"][0]
-        blackboard["pointstamped"] = PointStamped(header=Header(frame_id="base_footprint"), point=point) #TODO: Change to 'map' when 2dnav is fixed
+        blackboard["pointstamped"] = PointStamped(
+            header=Header(frame_id="base_footprint"), point=point
+        )  # TODO: Change to 'map' when 2dnav is fixed
         return "succeeded"
 
 
@@ -38,11 +40,8 @@ class LearnHostFace(StateMachine):
     """State machine to learn the host's face. Assumes seated guest is the host"""
 
     def __init__(self):
-        super().__init__(
-            outcomes=["succeeded", "failed"],
-            handle_sigint=True
-            )
-        
+        super().__init__(outcomes=["succeeded", "failed"], handle_sigint=True)
+
         self.add_input_key("guest_data")
         self.add_input_key("seated_guest_locs")
 
@@ -60,10 +59,10 @@ class LearnHostFace(StateMachine):
                 "succeeded": "LEARN_HOST_FACE",
                 "aborted": "failed",
                 "canceled": "failed",
-            }
+            },
         )
         self.add_state(
             "LEARN_HOST_FACE",
             HRILearnFaces(guest_id="host", dataset_size=5),
-            transitions={"succeeded": "succeeded", "failed": "failed"}
+            transitions={"succeeded": "succeeded", "failed": "failed"},
         )

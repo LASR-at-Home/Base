@@ -19,17 +19,15 @@ So Robot is at door and it:
 
 class LookAndGreetGuest(yasmin.StateMachine):
     def __init__(self, last_resort, guest_id):
-        super().__init__(
-            outcomes=["succeeded", "failed"], handle_sigint=True
-        )
-        self.add_input_key('guest_data')
-        self.add_output_key('guest_data')
-        self.add_output_key('person_detections')
+        super().__init__(outcomes=["succeeded", "failed"], handle_sigint=True)
+        self.add_input_key("guest_data")
+        self.add_output_key("guest_data")
+        self.add_output_key("person_detections")
 
         conc_face_attribute = yasmin.Concurrence(
             states={
-                'GET_ATTRIBUTES': GetGuestAttributes(guest_id=guest_id),
-                'LEARN_FACE': HRILearnFaces(guest_id=guest_id),
+                "GET_ATTRIBUTES": GetGuestAttributes(guest_id=guest_id),
+                "LEARN_FACE": HRILearnFaces(guest_id=guest_id),
             },
             default_outcome="failed",
             outcome_map={
@@ -48,14 +46,16 @@ class LookAndGreetGuest(yasmin.StateMachine):
                 },
             },
         )
-        
-        conc_face_attribute.add_input_key('guest_data')
-        conc_face_attribute.add_output_key('guest_data')
+
+        conc_face_attribute.add_input_key("guest_data")
+        conc_face_attribute.add_output_key("guest_data")
 
         conc_name_drink_face = yasmin.Concurrence(
             states={
-                'GET_NAME_DRINK': GetNameAndDrink(guest_id=guest_id, last_resort=last_resort),
-                'GET_FACE_ATTRIBUTES': conc_face_attribute,
+                "GET_NAME_DRINK": GetNameAndDrink(
+                    guest_id=guest_id, last_resort=last_resort
+                ),
+                "GET_FACE_ATTRIBUTES": conc_face_attribute,
             },
             default_outcome="failed",
             outcome_map={
@@ -81,10 +81,10 @@ class LookAndGreetGuest(yasmin.StateMachine):
                 },
             },
         )
-        
-        conc_name_drink_face.add_input_key('guest_data')
-        conc_name_drink_face.add_input_key('guest_data')
-        conc_name_drink_face.add_output_key('guest_data')
+
+        conc_name_drink_face.add_input_key("guest_data")
+        conc_name_drink_face.add_input_key("guest_data")
+        conc_name_drink_face.add_output_key("guest_data")
 
         self.add_state(
             "SAY_WAITING_FOR_GUEST",
@@ -143,4 +143,3 @@ class LookAndGreetGuest(yasmin.StateMachine):
                 "failed_attributes": "failed",
             },
         )
-    

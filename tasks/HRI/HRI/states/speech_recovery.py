@@ -25,11 +25,11 @@ class SpeechRecovery(yasmin.State):
         super().__init__(
             outcomes=["succeeded", "failed"],
         )
-        
-        self.add_input_key('guest_transcription')
-        self.add_input_key('guest_data')
-        self.add_output_key('guest_transcription')
-        self.add_output_key('guest_data')
+
+        self.add_input_key("guest_transcription")
+        self.add_input_key("guest_data")
+        self.add_output_key("guest_transcription")
+        self.add_output_key("guest_data")
 
         self._guest_id = guest_id
         self._last_resort = last_resort
@@ -106,8 +106,10 @@ class SpeechRecovery(yasmin.State):
             str: state outcome. Updates the userdata with the parsed information (drink or name), under
             the parameter "guest_data".
         """
-        filtered_sentence = blackboard['guest_transcription'].lower().translate(
-            str.maketrans("", "", string.punctuation)
+        filtered_sentence = (
+            blackboard["guest_transcription"]
+            .lower()
+            .translate(str.maketrans("", "", string.punctuation))
         )
         sentence_split = filtered_sentence.split()
         sentence_list = list(set(sentence_split) - set(self._excluded_words))
@@ -117,7 +119,7 @@ class SpeechRecovery(yasmin.State):
         if self._input_type == "name":
             final_name = self._handle_name(sentence_list, self._last_resort)
             if final_name != "unknown":
-                blackboard['guest_data'][self._guest_id]["name"] = final_name
+                blackboard["guest_data"][self._guest_id]["name"] = final_name
                 print(f"Recovered name: {final_name} ")
                 return "succeeded"
             else:
@@ -125,23 +127,23 @@ class SpeechRecovery(yasmin.State):
         elif self._input_type == "drink":
             final_drink = self._handle_drink(sentence_list, self._last_resort)
             if final_drink != "unknown":
-                blackboard['guest_data'][self._guest_id]["drink"] = final_drink
+                blackboard["guest_data"][self._guest_id]["drink"] = final_drink
                 print(f"Recovered drink: {final_drink} ")
                 return "succeeded"
             else:
                 return "failed"
         else:
-            if blackboard['guest_data'][self._guest_id]["name"] == "unknown":
+            if blackboard["guest_data"][self._guest_id]["name"] == "unknown":
                 final_name = self._handle_name(sentence_list, self._last_resort)
-                blackboard['guest_data'][self._guest_id]["name"] = final_name
+                blackboard["guest_data"][self._guest_id]["name"] = final_name
                 print(f"Recovered name: {final_name} ")
-            if blackboard['guest_data'][self._guest_id]["drink"] == "unknown":
+            if blackboard["guest_data"][self._guest_id]["drink"] == "unknown":
                 final_drink = self._handle_drink(sentence_list, self._last_resort)
                 userdata.guest_data[self._guest_id]["drink"] = final_drink
                 print(f"Recovered drink: {final_drink} ")
             if (
-                blackboard['guest_data'][self._guest_id]["name"] == "unknown"
-                or blackboard['guest_data'][self._guest_id]["drink"] == "unknown"
+                blackboard["guest_data"][self._guest_id]["name"] == "unknown"
+                or blackboard["guest_data"][self._guest_id]["drink"] == "unknown"
             ):
                 return "failed"
             else:

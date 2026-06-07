@@ -11,12 +11,13 @@ from typing import Union
 
 ros_client_group = ReentrantCallbackGroup()
 
+
 class LookToPoint(yasmin_ros.ActionState):
     def __init__(
         self,
         pointstamped: Union[None, PointStamped] = None,
     ):
-        
+
         super().__init__(
             action_name="/head_controller/point_head_action",
             action_type=PointHead,
@@ -26,14 +27,14 @@ class LookToPoint(yasmin_ros.ActionState):
             maximum_retry=1,
         )
         if pointstamped is None:
-            self.add_input_key('pointstamped')
+            self.add_input_key("pointstamped")
         self._pointstamped = pointstamped
 
     def _create_goal(self, blackboard):
         target = (
             self._pointstamped
             if self._pointstamped is not None
-            else blackboard['pointstamped']
+            else blackboard["pointstamped"]
         )
 
         goal = PointHead.Goal()
@@ -50,24 +51,35 @@ class LookToPoint(yasmin_ros.ActionState):
         )
 
         return goal
-    
-    
+
 
 def main():
     rclpy.init()
-    
+
     yasmin_ros.set_ros_loggers()
-    
-    sm = yasmin.StateMachine(outcomes=['succeeded', 'failed'], handle_sigint=True)
-    
-    sm.add_state('LOOK', LookToPoint(pointstamped=PointStamped(header=Header(frame_id="base_link"), point=Point(x=2.170, y=0.536, z=0.700))), transitions={'succeeded': 'succeeded', 'aborted': 'failed', 'canceled': 'failed'})
-    
+
+    sm = yasmin.StateMachine(outcomes=["succeeded", "failed"], handle_sigint=True)
+
+    sm.add_state(
+        "LOOK",
+        LookToPoint(
+            pointstamped=PointStamped(
+                header=Header(frame_id="base_link"),
+                point=Point(x=2.170, y=0.536, z=0.700),
+            )
+        ),
+        transitions={
+            "succeeded": "succeeded",
+            "aborted": "failed",
+            "canceled": "failed",
+        },
+    )
+
     try:
         outcome = sm()
         yasmin.YASMIN_LOG_INFO(f"State machine finished with outcome {outcome}")
     except Exception as e:
         yasmin.YASMIN_LOG_WARN(e)
-        
+
     if rclpy.ok():
         rclpy.shutdown()
-            

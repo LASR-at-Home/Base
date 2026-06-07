@@ -113,9 +113,7 @@ class CropImage3D(State):
         if self.filters:
             detections = [det for det in detections if det.name in self.filters]
             if not detections:
-                yasmin.YASMIN_LOG_WARN(
-                    "No detections match the specified filters."
-                )
+                yasmin.YASMIN_LOG_WARN("No detections match the specified filters.")
                 return "failed"
 
         # Sort detections based on the crop logic
@@ -212,7 +210,7 @@ def main():
 
     except Exception as e:
         yasmin.YASMIN_LOG_WARN(e)
-    
+
     if rclpy.ok():
         rclpy.shutdown()
 

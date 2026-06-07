@@ -7,13 +7,13 @@ import ament_virtualenv.install
 import os
 from glob import glob
 
-
 _here = os.path.dirname(os.path.abspath(__file__))
 
 package_name = "skills"
 
 
 _here = os.path.dirname(os.path.abspath(__file__))
+
 
 class InstallCommand(setuptools.command.install.install):
     def run(self):
@@ -59,7 +59,7 @@ setup(
             "crop_image_3d = lasr_skills.vision.crop_image_3d:main",
             "play_motion = lasr_skills.play_motion:main",
             "look = lasr_skills.look_to_point:main",
-            "go_to_location = lasr_skills.go_to_location:main"
+            "go_to_location = lasr_skills.go_to_location:main",
         ],
     },
 )

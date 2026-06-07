@@ -27,15 +27,13 @@ class Detect3DInArea(yasmin.StateMachine):
             self.add_input_key("detections_3d")
             if area_polygon is None:
                 self.add_input_key("polygon")
-            
+
             if z_min is None and z_max is None:
                 self.add_input_key("z_sweep_min")
                 self.add_input_key("z_sweep_max")
 
             self.add_output_key("detections_3d")
-            super().__init__(
-                outcomes=["succeeded", "failed"]
-            )
+            super().__init__(outcomes=["succeeded", "failed"])
             self._z_min = z_min
             self._z_max = z_max
             self.area_polygon = area_polygon
@@ -67,15 +65,31 @@ class Detect3DInArea(yasmin.StateMachine):
             self.debug_publisher.publish(
                 PolygonStamped(polygon=polygon_msg, header=Header(frame_id="map"))
             )
-            
-            pub = yasmin_ros.logger_node.create_publisher(PointStamped, 'objects_points', 10)
-            
+
+            pub = yasmin_ros.logger_node.create_publisher(
+                PointStamped, "objects_points", 10
+            )
+
             for detection in detected_objects:
-                if detection.point.x == 'nan':
+                if detection.point.x == "nan":
                     continue
-                yasmin.YASMIN_LOG_INFO(f'Detected a {detection.name} at x:{detection.point.x}, y:{detection.point.y}, z:{detection.point.z}')
-                pub.publish(PointStamped(header=Header(frame_id='head_front_camera_color_optical_frame', stamp=Time().to_msg()), point=Point(x=detection.point.x, y=detection.point.y, z=detection.point.z)))
-            
+                yasmin.YASMIN_LOG_INFO(
+                    f"Detected a {detection.name} at x:{detection.point.x}, y:{detection.point.y}, z:{detection.point.z}"
+                )
+                pub.publish(
+                    PointStamped(
+                        header=Header(
+                            frame_id="head_front_camera_color_optical_frame",
+                            stamp=Time().to_msg(),
+                        ),
+                        point=Point(
+                            x=detection.point.x,
+                            y=detection.point.y,
+                            z=detection.point.z,
+                        ),
+                    )
+                )
+
             satisfied_points = [
                 area_polygon.contains(ShapelyPoint(object.point.x, object.point.y))
                 for object in detected_objects
@@ -120,10 +134,7 @@ class Detect3DInArea(yasmin.StateMachine):
         self.add_output_key("image_raw")
         self.add_output_key("pcl")
 
-        super().__init__(
-            outcomes=["succeeded", "failed"],
-            handle_sigint=True
-        )
+        super().__init__(outcomes=["succeeded", "failed"], handle_sigint=True)
 
         self.add_state(
             "DETECT_OBJECTS_3D",

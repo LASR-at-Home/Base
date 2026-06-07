@@ -1,4 +1,3 @@
-
 import yasmin_ros
 import yasmin
 from yasmin import State, StateMachine
@@ -21,10 +20,15 @@ class GetImage(State):
         self.add_input_key("img_msg")
         self.add_output_key("img_msg")
 
-        yasmin_ros.logger_node.declare_parameter("image_topic", "/head_front_camera/rgb/image_raw")
+        yasmin_ros.logger_node.declare_parameter(
+            "image_topic", "/head_front_camera/rgb/image_raw"
+        )
         self.topic = (
-            topic if topic else 
-            yasmin_ros.logger_node.get_parameter("image_topic").get_parameter_value().string_value
+            topic
+            if topic
+            else yasmin_ros.logger_node.get_parameter("image_topic")
+            .get_parameter_value()
+            .string_value
         )
 
     def execute(self, blackboard):
@@ -57,11 +61,15 @@ class GetPointCloud(State):
         self.add_input_key("pcl_msg")
         self.add_output_key("pcl_msg")
 
-        yasmin_ros.logger_node.declare_parameter("image_topic", "/head_front_camera/rgb/image_raw")
+        yasmin_ros.logger_node.declare_parameter(
+            "image_topic", "/head_front_camera/rgb/image_raw"
+        )
         self.topic = (
             topic
             if topic
-            else yasmin_ros.logger_node.get_parameter("image_topic").get_parameter_value().string_value
+            else yasmin_ros.logger_node.get_parameter("image_topic")
+            .get_parameter_value()
+            .string_value
         )
 
     def execute(self, blackboard):
@@ -69,7 +77,9 @@ class GetPointCloud(State):
         #     rclpy.init()
         try:
             blackboard["pcl_msg"] = None
-            blackboard["pcl_msg"] = wait_for_message(PointCloud2, yasmin_ros.logger_node, self.topic)
+            blackboard["pcl_msg"] = wait_for_message(
+                PointCloud2, yasmin_ros.logger_node, self.topic
+            )
             if blackboard["pcl_msg"] is None:
                 return "failed"
         except Exception as e:
@@ -97,8 +107,12 @@ class GetImageAndPointCloud(State):
         # if not rclpy.ok():
         #     rclpy.init()
         try:
-            blackboard["img_msg"] = wait_for_message(Image, yasmin_ros.logger_node, self.topic1)
-            blackboard["pcl_msg"] = wait_for_message(PointCloud2, yasmin_ros.logger_node, self.topic2)
+            blackboard["img_msg"] = wait_for_message(
+                Image, yasmin_ros.logger_node, self.topic1
+            )
+            blackboard["pcl_msg"] = wait_for_message(
+                PointCloud2, yasmin_ros.logger_node, self.topic2
+            )
 
             if blackboard["img_msg"] is None or blackboard["pcl_msg"] is None:
                 return "failed"

@@ -29,9 +29,7 @@ if not HAS_TTS_MSGS:
             text: Union[str, None] = "None",
             format_str: Union[str, None] = None,
         ):
-            super().__init__(
-                outcomes=["succeeded", "aborted", "canceled"]
-            )
+            super().__init__(outcomes=["succeeded", "aborted", "canceled"])
 
             self.text = text
             self.format_str = format_str
@@ -56,45 +54,52 @@ else:
                 action_type=TTS,
                 create_goal_handler=self.create_goal,
             )
-            
-            self.add_input_key('placeholders')
-            self.add_input_key('text')
-            
+
+            self.add_input_key("placeholders")
+            self.add_input_key("text")
+
             self.format_str = format_str
             self.text = text
-        
+
         def create_goal(self, blackboard):
             goal = TTS.Goal()
-            goal.locale="en_GB"
+            goal.locale = "en_GB"
             if self.text is None:
                 if self.format_str is not None:
-                    if isinstance(blackboard['placeholders'], (list, tuple)):
-                        goal.input = self.format_str.format(*blackboard['placeholders'])
+                    if isinstance(blackboard["placeholders"], (list, tuple)):
+                        goal.input = self.format_str.format(*blackboard["placeholders"])
                     else:
-                        goal.input = self.format_str.format(blackboard['placeholders'])
+                        goal.input = self.format_str.format(blackboard["placeholders"])
                 else:
-                    goal.input = blackboard['text']
+                    goal.input = blackboard["text"]
             else:
                 goal.input = self.text
-                goal.locale="en_GB"
-            
+                goal.locale = "en_GB"
+
             return goal
-                
-
-
 
 
 def main(args=None):
     rclpy.init(args=args)
     set_ros_loggers()
-    sm = yasmin.StateMachine(outcomes=['succeeded', 'failed'])
-    sm.add_state('SAY', Say(text='hello', transitions={'succeeded':'succeeded', 'aborted':'failed', 'canceled':'failed'}))
+    sm = yasmin.StateMachine(outcomes=["succeeded", "failed"])
+    sm.add_state(
+        "SAY",
+        Say(
+            text="hello",
+            transitions={
+                "succeeded": "succeeded",
+                "aborted": "failed",
+                "canceled": "failed",
+            },
+        ),
+    )
     try:
-        outcome=sm()
+        outcome = sm()
         yasmin.YASMIN_LOG_INFO(outcome)
     except Exception as e:
         yasmin.YASMIN_LOG_WARN(e)
-        
+
     if rclpy.ok():
         rclpy.shutdown()
 

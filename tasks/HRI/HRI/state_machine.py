@@ -28,21 +28,21 @@ class HRI(yasmin.StateMachine):
         super().__init__(outcomes=["succeeded", "failed"], handle_sigint=True)
 
         def wait_cb(blackboard, msg):
-            yasmin.YASMIN_LOG_INFO('RECEIVED START SIGNAL')
-            return 'succeeded'
+            yasmin.YASMIN_LOG_INFO("RECEIVED START SIGNAL")
+            return "succeeded"
 
         self.add_state(
             "WAIT_START",  # Awaits start Signal for the task
             yasmin_ros.MonitorState(
                 topic_name="/receptionist/start",
-                outcomes=['succeeded', 'failed'],
+                outcomes=["succeeded", "failed"],
                 monitor_handler=wait_cb,
                 msg_type=Empty,
             ),
             transitions={
                 "succeeded": "START_TIMER",
                 "failed": "WAIT_START",
-                'canceled': 'failed'
+                "canceled": "failed",
             },
         )
 
@@ -94,35 +94,37 @@ class HRI(yasmin.StateMachine):
                 },
             },
         )
-        
+
         return start_con_sm
 
 
 class HRI_node(Node):
     def __init__(self):
-        super().__init__(node_name='hri', allow_undeclared_parameters=True, automatically_declare_parameters_from_overrides=True)
-        
+        super().__init__(
+            node_name="hri",
+            allow_undeclared_parameters=True,
+            automatically_declare_parameters_from_overrides=True,
+        )
+
         self._executor = Executor()
         self._executor.add_node(self)
         self._spin_thread = Thread(target=self._executor.spin)
         self._spin_thread.start()
-        
 
 
 def main():
     rclpy.init()
 
     node = HRI_node()
-    
+
     yasmin_ros.set_ros_loggers(node)
 
-    
     sm = HRI()
     bb = yasmin.Blackboard()
-    
-    host_data={}
-    face_detection_confidence=0.2
-    
+
+    host_data = {}
+    face_detection_confidence = 0.2
+
     bb["guest_data"] = {
         "host": host_data,
         "guest1": {
@@ -138,7 +140,7 @@ def main():
             "seating_detection": False,
         },
     }
-    
+
     drink_detections = {}
 
     bb["drink_detections"] = drink_detections
@@ -148,11 +150,11 @@ def main():
 
     outcome = sm(bb)
 
-    yasmin.YASMIN_LOG_INFO(f'State machine has ended with outcome {outcome}')
-        
+    yasmin.YASMIN_LOG_INFO(f"State machine has ended with outcome {outcome}")
+
     # except Exception as e:
     #     yasmin.YASMIN_LOG_WARN(e)
-    
+
     if rclpy.ok():
         node.destroy_node()
         rclpy.shutdown()

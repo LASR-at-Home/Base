@@ -11,12 +11,12 @@ class StartEyeTracker(yasmin_ros.ActionState):
             action_name="/lasr_vision_eye_tacker/track_eyes",
             action_type=EyeTrackerAction,
             create_goal_handler=self.create_goal,
-            response_timeout=1.0
+            response_timeout=1.0,
         )
 
     def create_goal(self, blackboard):
         goal_msg = EyeTrackerAction.Goal()
-        goal_msg.person_point = blackboard['person_point']
+        goal_msg.person_point = blackboard["person_point"]
 
         return goal_msg
 
@@ -29,6 +29,5 @@ class StopEyeTracker(yasmin_ros.ActionState):
             goal_cb=self.create_goal,
             create_goal_handler=self.cancel_goal,
         )
-        
+
         super().cancel_state()
-        

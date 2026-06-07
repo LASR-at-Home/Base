@@ -126,7 +126,7 @@ class ProcessDetections(State):
             blackboard["seated_guest_locs"] = seated_guest_locs[:2]
         else:
             blackboard["seated_guest_locs"] = seated_guest_locs
-        sofa_detections = blackboard['sofa_detections']
+        sofa_detections = blackboard["sofa_detections"]
         yasmin.YASMIN_LOG_WARN(
             f"people on the sofa: {len(sofa_detections)} detected, max allowed is {self._max_people_on_sofa}."
         )
@@ -144,9 +144,13 @@ class ProcessDetections(State):
                 header=Header(frame_id="map"), point=self._sofa_point
             )
             if len(blackboard["sofa_detections"]) == 0:
-                blackboard["seating_string"] = "The sofa that I'm looking at is empty. Please take a seat anywhere on the sofa."
+                blackboard["seating_string"] = (
+                    "The sofa that I'm looking at is empty. Please take a seat anywhere on the sofa."
+                )
             elif len(blackboard["sofa_detections"]) == 1:
-                seating_side = self._determine_side_of_sofa(blackboard["sofa_detections"][0])
+                seating_side = self._determine_side_of_sofa(
+                    blackboard["sofa_detections"][0]
+                )
                 blackboard["seating_string"] = (
                     "The sofa that I'm looking at is occupied by one person. "
                     f"Please take a seat next to them on the {seating_side} side of the sofa."
@@ -202,11 +206,15 @@ class ProcessDetections(State):
                                 z=detection.point.z,
                             ),
                         )
-                        blackboard["seating_string"] = "The sofa is full, but I have found a chair for you. Please take a seat on the chair that I'm looking at."
+                        blackboard["seating_string"] = (
+                            "The sofa is full, but I have found a chair for you. Please take a seat on the chair that I'm looking at."
+                        )
                         done = True
 
             if not done:
-                blackboard["seating_string"] = "Uh oh, I couldn't find a seat for you. Please take a seat anywhere in the seating area."
+                blackboard["seating_string"] = (
+                    "Uh oh, I couldn't find a seat for you. Please take a seat anywhere in the seating area."
+                )
                 blackboard["guest_seat_point"] = PointStamped(
                     header=Header(frame_id="map"),
                     point=Point(
@@ -241,10 +249,7 @@ class SeatGuest(StateMachine):
         max_people_on_sofa: Optional[int] = None,
         learn_host: bool = False,
     ):
-        super().__init__(
-            outcomes=["succeeded", "failed"],
-            handle_sigint=True
-        )
+        super().__init__(outcomes=["succeeded", "failed"], handle_sigint=True)
         self.add_input_key("guest_data")
         self.add_output_key("guest_seat_point")
         self.add_output_key("seated_guest_locs")
@@ -274,14 +279,15 @@ class SeatGuest(StateMachine):
             "LOOK_TO_SOFA",
             LookToPoint(
                 pointstamped=PointStamped(
-                    header=Header(frame_id="base_footprint"), point=self.sofa_point #TODO: Change to 'map' when 2dnav is fixed
+                    header=Header(frame_id="base_footprint"),
+                    point=self.sofa_point,  # TODO: Change to 'map' when 2dnav is fixed
                 )
             ),
             transitions={
                 "succeeded": "DETECT_SOFA",
                 "aborted": "failed",
                 "canceled": "failed",
-                "timeout": "DETECT_SOFA", #Sometimes completes action but still timesouts? 
+                "timeout": "DETECT_SOFA",  # Sometimes completes action but still timesouts?
             },
         )
         self.add_state(
@@ -343,13 +349,15 @@ class SeatGuest(StateMachine):
                 left_sofa_area=self.left_sofa_area,
                 right_sofa_area=self.right_sofa_area,
             ),
-            transitions={"succeeded": detection_transition, "failed": "failed"}
+            transitions={"succeeded": detection_transition, "failed": "failed"},
         )
         if learn_host:
             # Look to the only person detection and learn the host's face.
             sm_con = Concurrence(
                 states={
-                    "SAY_LEARN_HOST_FACE": Say(text="I'm quickly remembering the host's face."),
+                    "SAY_LEARN_HOST_FACE": Say(
+                        text="I'm quickly remembering the host's face."
+                    ),
                     "LEARN_HOST_FACE": LearnHostFace(),
                 },
                 default_outcome="failed",
@@ -369,7 +377,6 @@ class SeatGuest(StateMachine):
             sm_con.add_input_key("seated_guest_locs")
             sm_con.add_output_key("guest_data")
             sm_con.add_output_key("seated_guest_locs")
-
 
             self.add_state(
                 "SAY_AND_LEARN_HOST_FACE",
@@ -449,7 +456,9 @@ class SeatGuest(StateMachine):
 
         sofa_area = {
             "top_left": np.array(self._node.get_parameter("sofa_area.top_left").value),
-            "top_right": np.array(self._node.get_parameter("sofa_area.top_right").value),
+            "top_right": np.array(
+                self._node.get_parameter("sofa_area.top_right").value
+            ),
             "bottom_right": np.array(
                 self._node.get_parameter("sofa_area.bottom_right").value
             ),
@@ -498,9 +507,8 @@ def main():
 
     rclpy.init()
     node = rclpy.create_node("hri")
-    
+
     yasmin_ros.set_ros_loggers(node)
-    
 
     try:
         sm = SeatGuest(learn_host=False)
@@ -518,7 +526,7 @@ def main():
                 "drink": "Coke",
                 "detection": False,
                 "seating_detection": False,
-            }
+            },
         }
 
         YasminViewerPub(sm, "HRI_SM3")

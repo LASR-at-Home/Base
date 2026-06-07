@@ -48,41 +48,27 @@ class GoToLocation(State):
             goal_pose = Pose(
                 position=Point(
                     x=float(
-                        node.get_parameter(
-                            f"{self.location_param}.position.x"
-                        ).value
+                        node.get_parameter(f"{self.location_param}.position.x").value
                     ),
                     y=float(
-                        node.get_parameter(
-                            f"{self.location_param}.position.y"
-                        ).value
+                        node.get_parameter(f"{self.location_param}.position.y").value
                     ),
                     z=float(
-                        node.get_parameter(
-                            f"{self.location_param}.position.z"
-                        ).value
+                        node.get_parameter(f"{self.location_param}.position.z").value
                     ),
                 ),
                 orientation=Quaternion(
                     x=float(
-                        node.get_parameter(
-                            f"{self.location_param}.orientation.x"
-                        ).value
+                        node.get_parameter(f"{self.location_param}.orientation.x").value
                     ),
                     y=float(
-                        node.get_parameter(
-                            f"{self.location_param}.orientation.y"
-                        ).value
+                        node.get_parameter(f"{self.location_param}.orientation.y").value
                     ),
                     z=float(
-                        node.get_parameter(
-                            f"{self.location_param}.orientation.z"
-                        ).value
+                        node.get_parameter(f"{self.location_param}.orientation.z").value
                     ),
                     w=float(
-                        node.get_parameter(
-                            f"{self.location_param}.orientation.w"
-                        ).value
+                        node.get_parameter(f"{self.location_param}.orientation.w").value
                     ),
                 ),
             )
@@ -120,7 +106,7 @@ def main():
             GoToLocation(location_param="start_pose"),
             transitions={"succeeded": "succeeded", "failed": "failed"},
         )
-        
+
         bb = Blackboard()
         outcome = sm(bb)
 
