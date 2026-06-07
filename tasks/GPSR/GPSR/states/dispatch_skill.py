@@ -1,19 +1,20 @@
-import smach
+import yasmin
 from geometry_msgs.msg import Point, Pose, Quaternion
 
 from GPSR.states.query_llm import load_locations
-from lasr_skills import GoToLocation, Say
+from GPSR.tts import say
+from lasr_skills import GoToLocation
 
 
-class DispatchSkill(smach.State):
-    """SMACH state that executes a skill chosen by the LLM."""
+class DispatchSkill(yasmin.State):
+    """YASMIN state that executes a skill chosen by the LLM."""
 
     def __init__(self, node):
-        smach.State.__init__(
-            self,
-            outcomes=["succeeded", "failed"],
-            input_keys=["skill", "skill_args"],
-        )
+        super().__init__(outcomes=["succeeded", "failed"])
+        self.add_input_key("skill")
+        self.add_input_key("skill_args")
+        self.add_input_key("steps")
+        self.add_input_key("plan_description")
         self.node = node
         self.locations = load_locations(node)
 
@@ -21,10 +22,8 @@ class DispatchSkill(smach.State):
         if not text:
             return "succeeded"
         self.node.get_logger().info(f"Saying: {text}")
-        outcome = Say(node=self.node, text=text).execute({})
-        if outcome != "succeeded":
-            self.node.get_logger().warn(f"Say skill finished with outcome: {outcome}")
-        return "succeeded" if outcome == "succeeded" else "failed"
+        say(self.node, text)
+        return "succeeded"
 
     def _go_to_location(self, location_name):
         if location_name not in self.locations:
@@ -46,18 +45,26 @@ class DispatchSkill(smach.State):
             ),
         )
         self.node.get_logger().info(f"Navigating to '{location_name}'")
-        state = GoToLocation(node=self.node, location=pose)
-        return state.execute(userdata={})
+        bb = yasmin.Blackboard()
+        return GoToLocation(location=pose)(bb)
 
-    def execute(self, userdata):
-        skill = userdata.skill
-        args = userdata.skill_args
-
+    def _execute_step(self, skill, args):
         if skill == "say":
             return self._say(args.get("text", ""))
         if skill == "go_to_location":
             return self._go_to_location(args.get("location", ""))
-
         self.node.get_logger().warn(f"Unknown skill: {skill}")
         self._say(f"I don't know how to {skill}")
         return "failed"
+
+    def execute(self, blackboard):
+        steps = blackboard["steps"] if "steps" in blackboard else None
+
+        if steps:
+            for step in steps:
+                outcome = self._execute_step(step["skill"], step.get("args", {}))
+                if outcome == "failed":
+                    return "failed"
+            return "succeeded"
+
+        return self._execute_step(blackboard["skill"], blackboard["skill_args"])

@@ -8,8 +8,6 @@
   <license>MIT</license>
 
   <depend>rclpy</depend>
-  <depend>smach</depend>
-  <depend>smach_ros</depend>
   <depend>geometry_msgs</depend>
   <depend>skills</depend>
   <depend>simulation</depend>

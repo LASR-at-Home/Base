@@ -1,7 +1,7 @@
 import json
 import os
 
-import smach
+import yasmin
 import yaml
 from ament_index_python.packages import get_package_share_directory
 
@@ -12,12 +12,24 @@ SYSTEM_PROMPT = """You are a robot assistant. Given a voice command, output ONLY
 Available skills:
 - go_to_location: navigate to a named location. Args: {{"location": "<name>"}}
 - say: speak a sentence. Args: {{"text": "<sentence>"}}
+- find_object: find an object in a location. Args: {{"object": "<name>", "location": "<name>"}}
+- pick_up: pick up an object. Args: {{"object": "<name>"}}
+- give_to_person: give an object to a person. Args: {{"object": "<name>"}}
 
 Known locations: {locations}
 
+Output format:
+{{
+  "plan_description": "<natural language description of the full plan, spoken in first person as the robot>",
+  "steps": [
+    {{"skill": "<skill_name>", "args": {{...}}}},
+    ...
+  ]
+}}
+
 Examples:
-  "go to the kitchen" -> {{"skill": "go_to_location", "args": {{"location": "kitchen"}}}}
-  "say hello" -> {{"skill": "say", "args": {{"text": "hello"}}}}
+  "go to the kitchen" -> {{"plan_description": "I will navigate to the kitchen.", "steps": [{{"skill": "go_to_location", "args": {{"location": "kitchen"}}}}]}}
+  "find a pear in the bathroom then fetch it and bring it to the person raising their right arm in the bedroom" -> {{"plan_description": "I will go to the bathroom to find the pear, pick it up, then go to the bedroom and give it to the person raising their right arm.", "steps": [{{"skill": "go_to_location", "args": {{"location": "bathroom"}}}}, {{"skill": "find_object", "args": {{"object": "pear", "location": "bathroom"}}}}, {{"skill": "pick_up", "args": {{"object": "pear"}}}}, {{"skill": "go_to_location", "args": {{"location": "bedroom"}}}}, {{"skill": "give_to_person", "args": {{"object": "pear"}}}}]}}
 
 Command: """
 
@@ -37,16 +49,16 @@ def load_locations(node):
     return data.get("locations", {})
 
 
-class QueryLLM(smach.State):
-    """SMACH state that turns a transcribed phrase into a structured skill call."""
+class QueryLLM(yasmin.State):
+    """YASMIN state that turns a transcribed phrase into a structured skill call."""
 
     def __init__(self, node):
-        smach.State.__init__(
-            self,
-            outcomes=["succeeded", "failed"],
-            input_keys=["sequence"],
-            output_keys=["skill", "skill_args"],
-        )
+        super().__init__(outcomes=["succeeded", "failed"])
+        self.add_input_key("sequence")
+        self.add_output_key("skill")
+        self.add_output_key("skill_args")
+        self.add_output_key("plan_description")
+        self.add_output_key("steps")
         self.node = node
         locations = load_locations(node)
         location_names = list(locations.keys()) if locations else []
@@ -60,8 +72,8 @@ class QueryLLM(smach.State):
         )
         self.node.get_logger().info("Agent ready.")
 
-    def execute(self, userdata):
-        command = userdata.sequence.strip()
+    def execute(self, blackboard):
+        command = blackboard["sequence"].strip()
         self.node.get_logger().info(f"LLM query: '{command}'")
 
         try:
@@ -78,15 +90,21 @@ class QueryLLM(smach.State):
             if start == -1 or end == 0:
                 raise ValueError("No JSON found in LLM output")
             parsed = json.loads(raw[start:end])
-            skill = parsed["skill"]
-            skill_args = parsed.get("args", {})
+            steps = parsed.get("steps", [])
+            plan_description = parsed.get("plan_description", "")
+            if not steps:
+                raise ValueError("No steps in plan")
         except (ValueError, KeyError, json.JSONDecodeError) as e:
             self.node.get_logger().warn(f"LLM parse error: {e}")
-            userdata.skill = "say"
-            userdata.skill_args = {"text": "I did not understand that command"}
+            blackboard["skill"] = "say"
+            blackboard["skill_args"] = {"text": "I did not understand that command"}
+            blackboard["plan_description"] = ""
+            blackboard["steps"] = []
             return "succeeded"
 
-        userdata.skill = skill
-        userdata.skill_args = skill_args
-        self.node.get_logger().info(f"Skill: {skill}, Args: {skill_args}")
+        blackboard["plan_description"] = plan_description
+        blackboard["steps"] = steps
+        blackboard["skill"] = steps[0]["skill"]
+        blackboard["skill_args"] = steps[0].get("args", {})
+        self.node.get_logger().info(f"Plan: {plan_description}, Steps: {steps}")
         return "succeeded"

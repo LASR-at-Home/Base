@@ -1,10 +1,11 @@
-GPSR:
+gpsr:
   ros__parameters:
     llm_model: "llama3.2"
     llm_host: "http://localhost:11434"
     locations_package: "GPSR"
     locations_file: "config/locations.yaml"
-    input_mode: "keyboard"   # "keyboard" or "mic"
+    simulation: false            # true = use gtts on PC, false = use robot TTS
+    input_mode: "mic"        # "keyboard" or "mic"
     input_prompt: "Enter command: "
     initial_pose:
       x: 9.151

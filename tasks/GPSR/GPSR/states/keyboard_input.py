@@ -1,18 +1,15 @@
-import smach
+import yasmin
 
 
-class KeyboardInputState(smach.State):
+class KeyboardInputState(yasmin.State):
     """Read a voice command from stdin instead of the microphone action server."""
 
     def __init__(self, node):
-        smach.State.__init__(
-            self,
-            outcomes=["succeeded", "aborted", "preempted"],
-            output_keys=["sequence"],
-        )
+        super().__init__(outcomes=["succeeded", "aborted"])
+        self.add_output_key("sequence")
         self.node = node
 
-    def execute(self, userdata):
+    def execute(self, blackboard):
         prompt = self.node.get_parameter("input_prompt").value
         self.node.get_logger().info(f"Keyboard input mode — {prompt}")
 
@@ -26,6 +23,6 @@ class KeyboardInputState(smach.State):
             self.node.get_logger().warn("Empty keyboard input")
             return "aborted"
 
-        userdata.sequence = text
+        blackboard["sequence"] = text
         self.node.get_logger().info(f"Command received: '{text}'")
         return "succeeded"
