@@ -308,8 +308,8 @@ class CalculateSweepPoints(yasmin.State):
         # Optional: visualize FOV
 
         qos = QoSProfile(
-            depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL
-        )  # Verify publisher durability profile (https://docs.ros.org/en/humble/Concepts/Intermediate/About-Quality-of-Service-Settings.html)
+            depth=1, durability=QoSDurabilityPolicy.TRANSIENT_LOCAL
+        )
 
         pub = self.node.create_publisher(PolygonStamped, "projected_fov_polygon", qos)
 
@@ -374,7 +374,6 @@ class IterateThroughPoints(yasmin.StateMachine):
         self,
         polygon: ShapelyPolygon,
         model: str = "yolo11n-seg.pt",
-        models: Optional[List[str]] = None,
         object_filter: Optional[List[str]] = None,
         min_confidence: float = 0.5,
         min_new_object_dist: float = 0.1,
@@ -419,7 +418,6 @@ class IterateThroughPoints(yasmin.StateMachine):
                 area_polygon=polygon,
                 filter=object_filter,
                 model=model,
-                models=models,
                 z_min=-10,
                 z_max=10.0,
                 confidence=min_confidence,
@@ -476,7 +474,6 @@ class DetectAllInPolygon(yasmin.StateMachine):
         polygon: ShapelyPolygon,
         min_coverage: float = 0.8,
         model: str = "yolo11n-seg.pt",
-        models: Optional[List[str]] = None,
         object_filter: Optional[List[str]] = None,
         min_confidence: float = 0.5,
         min_new_object_dist: float = 0.1,
@@ -515,9 +512,16 @@ class DetectAllInPolygon(yasmin.StateMachine):
         self._min_coverage = min_coverage
         self._object_filter = object_filter
         self._model = model
-        self._models = models
         self._min_confidence = min_confidence
         self._min_new_object_dist = min_new_object_dist
+        image_qos = QoSProfile(
+            depth=10,
+            reliability=ReliabilityPolicy.BEST_EFFORT,
+            history=HistoryPolicy.KEEP_LAST,
+        )
+        self._debug_publisher = self._node.create_publisher(
+            Image, "/detect_all_in_polygon/debug", image_qos
+        )
         self._prompt = prompt
         if use_lang_sam:
             assert (
@@ -597,7 +601,6 @@ class DetectAllInPolygon(yasmin.StateMachine):
             IterateThroughPoints(
                 polygon=self._polygon,
                 model=self._model,
-                models=self._models,
                 object_filter=self._object_filter,
                 min_confidence=self._min_confidence,
                 min_new_object_dist=self._min_new_object_dist,

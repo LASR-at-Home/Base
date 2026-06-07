@@ -115,9 +115,7 @@ class Detect3DInArea(yasmin.StateMachine):
         image_topic: str = "/head_front_camera/rgb/image_raw",
         depth_image_topic: str = "/head_front_camera/depth/image_raw",
         depth_camera_info_topic: str = "/head_front_camera/depth/camera_info",
-        point_cloud_topic: Optional[str] = None,
         model: str = "yolo11n-seg.pt",
-        models: Union[List[str], None] = None,
         filter: Union[List[str], None] = None,
         confidence: float = 0.5,
         target_frame: str = "map",
@@ -132,7 +130,6 @@ class Detect3DInArea(yasmin.StateMachine):
 
         self.add_output_key("detections_3d")
         self.add_output_key("image_raw")
-        self.add_output_key("pcl")
 
         super().__init__(outcomes=["succeeded", "failed"], handle_sigint=True)
 
@@ -142,9 +139,7 @@ class Detect3DInArea(yasmin.StateMachine):
                 image_topic=image_topic,
                 depth_image_topic=depth_image_topic,
                 depth_camera_info_topic=depth_camera_info_topic,
-                point_cloud_topic=point_cloud_topic,
                 model=model,
-                models=models,
                 filter=filter,
                 confidence=confidence,
                 target_frame=target_frame,
