@@ -116,6 +116,7 @@ class Detect3D(ServiceState):
 
         self.ts.registerCallback(callback)
 
+        deadline = time.time() + 30.0
         while not self.data:
             yasmin.YASMIN_LOG_INFO("NO DATA")
             sleep(1)

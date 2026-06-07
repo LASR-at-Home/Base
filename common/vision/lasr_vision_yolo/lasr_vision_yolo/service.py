@@ -185,9 +185,7 @@ class YOLOServiceNode:
         fx, fy = K[0], K[4]
         cx, cy = K[2], K[5]
 
-        # target_frame = req.target_frame or req.depth_image.header.frame_id
-
-        target_frame = req.depth_image.header.frame_id
+        target_frame = req.target_frame or req.depth_image.header.frame_id
 
         transform = None
         if results:
@@ -196,7 +194,6 @@ class YOLOServiceNode:
                 req.depth_image.header.frame_id,
                 req.depth_image.header.stamp,
             )
-            self.node.get_logger().info("RESULT")
 
         self.node.get_logger().info(str(len(results)))
         for result in results:
