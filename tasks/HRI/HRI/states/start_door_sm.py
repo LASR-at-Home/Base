@@ -1,18 +1,22 @@
 from typing import Union
+import traceback
 
 import rclpy
-import smach
+
+import yasmin
+from yasmin import StateMachine, State, Concurrence, Blackboard
+import yasmin_ros
+from yasmin_viewer import YasminViewerPub
 
 from geometry_msgs.msg import Point, Quaternion, Pose, PoseStamped
 
-from lasr_skills import detect_door_opening, go_to_location
+from lasr_skills import DetectDoorOpening, GoToLocation
 
 
-class StartDoorSM(smach.StateMachine):  # Rename to start_task
+class StartDoorSM(StateMachine):  # TODO: Rename to start_task and move to Skills
 
     def __init__(
         self,
-        node,
         location: Union[Pose, None] = None,
         location_param: Union[str, None] = "start_pose",
     ):
@@ -20,41 +24,38 @@ class StartDoorSM(smach.StateMachine):  # Rename to start_task
             outcomes=["succeeded", "failed"],
         )
 
-        with self:
-            smach.StateMachine.add(
-                "DETECT_DOOR_OPENING",
-                detect_door_opening.DetectDoorOpening(node),
-                transitions={"door_opened": "GO_TO_START", "failed": "failed"},
-            )
-            smach.StateMachine.add(
-                "GO_TO_START",
-                go_to_location.GoToLocation(
-                    node,
-                    location=location,
-                    location_param=location_param,
-                ),
-                transitions={"succeeded": "succeeded", "failed": "failed"},
-            )
+        self.add_state(
+            "DETECT_DOOR_OPENING",
+            DetectDoorOpening(),
+            transitions={"door_opened": "GO_TO_START", "failed": "failed"},
+        )
+        self.add_state(
+            "GO_TO_START",
+            GoToLocation(
+                location=location,
+                location_param=location_param,
+            ),
+            transitions={"succeeded": "succeeded", "failed": "failed"},
+        )
 
 
-def main(args=None):
-    rclpy.init(args=args)
-
-    # Keep node name aligned with existing YAML section:
-    # go_to_location:
-    #   ros__parameters:
-    #     start_pose: ...
-    node = rclpy.create_node(
-        "go_to_start",
-        allow_undeclared_parameters=True,
-        automatically_declare_parameters_from_overrides=True,
-    )
+def main():
+    rclpy.init()
+    node = rclpy.create_node("hri")
+    yasmin_ros.set_ros_loggers(node)
 
     try:
-        sm = StartDoorSM(node=node)
-        outcome = sm.execute()
-        node.get_logger().info(f"StartDoorSM outcome: {outcome}")
-    finally:
+        sm = StartDoorSM()
+        bb = Blackboard()
+
+        outcome = sm(bb)
+
+        yasmin.YASMIN_LOG_INFO(f"StartDoorSM outcome: {outcome}")
+    except Exception as e:
+        yasmin.YASMIN_LOG_WARN(e)
+        traceback.print_exc()
+
+    if rclpy.ok():
         node.destroy_node()
         rclpy.shutdown()
 

@@ -12,7 +12,8 @@ export ROS_DISTRO=humble
 # Install deps
 apt update
 export DEBIAN_FRONTEND=noninteractive
-apt upgrade -y
+apt upgrade -Y
+apt install -y ros-${ROS_DISTRO}-example-interfaces
 
 
 mkdir -p /opt/robocup_ws/src
@@ -31,6 +32,12 @@ git clone https://github.com/locusrobotics/ament_virtualenv.git
 cd /opt/robocup_ws/src
 git clone https://github.com/Box-Robotics/ros2_numpy.git
 
+cd /opt/robocup_ws/src
+git clone https://github.com/uleroboticsgroup/yasmin.git
+cd /opt/robocup_ws
+rosdep install --from-paths src --ignore-src -r -y
+
+cd /opt/robocup_ws/src
 # Install Ollama
 apt install -y zstd
 sh -c "$(curl -fsSL https://ollama.com/install.sh)"
@@ -40,7 +47,8 @@ source /opt/ros/$ROS_DISTRO/setup.bash
 source /opt/pal/alum/setup.bash
 
 cd /opt/robocup_ws
-colcon build --symlink-install
+colcon build
+source install/setup.bash
 echo "source /opt/robocup_ws/install/setup.bash" >> /opt/env.sh
 
 

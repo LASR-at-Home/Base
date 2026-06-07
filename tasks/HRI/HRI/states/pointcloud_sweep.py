@@ -52,7 +52,7 @@ class PointCloudSweep(smach.StateMachine):
                     transitions={
                         "succeeded": f"GetTransformedPointcloud_{index}",
                         "aborted": "failed",
-                        "preempted": f"GetTransformedPointcloud_{index}",
+                        "canceled": f"GetTransformedPointcloud_{index}",
                     },
                     remapping={"pointstamped": f"pointstamped_{index}"},
                 )

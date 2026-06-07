@@ -24,8 +24,9 @@
     <depend>image_geometry</depend>
     <depend>message_filters</depend>
 
-    <depend>smach</depend>
-    <depend>smach_ros</depend>
+    <depend>yasmin</depend>
+    <depend>yasmin_ros</depend>
+    <depend>yasmin_viewer</depend>
 
     <depend>cv2_img</depend>
     <depend>cv2_pcl</depend>
