@@ -1,0 +1,17 @@
+gpsr:
+  ros__parameters:
+    llm_model: "llama3.2"
+    llm_host: "http://localhost:11434"
+    locations_package: "GPSR"
+    locations_file: "config/locations.yaml"
+    simulation: false            # true = use gtts on PC, false = use robot TTS
+    input_mode: "mic"        # "keyboard" or "mic"
+    input_prompt: "Enter command: "
+    initial_pose:
+      x: 9.151
+      y: -6.340
+      yaw: 2.204
+    whisper:
+      energy_threshold: 6500
+      device: "cpu"
+    state_machine_delay_sec: 30.0

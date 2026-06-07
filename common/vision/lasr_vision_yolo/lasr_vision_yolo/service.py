@@ -116,9 +116,7 @@ class YOLOServiceNode:
         )
 
         self._tf_buffer = Buffer(cache_time=Duration(seconds=10))
-        self._tf_listener = tf.TransformListener(
-            self._tf_buffer, self.node
-        )
+        self._tf_listener = tf.TransformListener(self._tf_buffer, self.node)
 
         self.node.create_service(YoloDetection, "/yolo/detect", self._detect)
         self.node.create_service(YoloDetection3D, "/yolo/detect3d", self._detect3d)
@@ -163,7 +161,13 @@ class YOLOServiceNode:
         return response
 
     def _project_mask_to_3d(
-        self, mask_xy: np.ndarray, depth_im: np.ndarray, fx: float, fy: float, cx: float, cy: float
+        self,
+        mask_xy: np.ndarray,
+        depth_im: np.ndarray,
+        fx: float,
+        fy: float,
+        cx: float,
+        cy: float,
     ) -> tuple:
         """Project segmentation mask to 3D using depth image and camera intrinsics.
 
@@ -230,7 +234,7 @@ class YOLOServiceNode:
         target_frame = req.target_frame or "map"
 
         transform = None
-        has_detections = len(results.boxes) > 0 if hasattr(results, 'boxes') else False
+        has_detections = len(results.boxes) > 0 if hasattr(results, "boxes") else False
         if has_detections:
             transform = self._lookup_transform(
                 target_frame,
@@ -256,14 +260,18 @@ class YOLOServiceNode:
                 detection.xyseg = (
                     np.array(result.masks.xy).flatten().round().astype(int).tolist()
                 )
-                x, y, z = self._project_mask_to_3d(detection.xyseg, depth_im, fx, fy, cx, cy)
+                x, y, z = self._project_mask_to_3d(
+                    detection.xyseg, depth_im, fx, fy, cx, cy
+                )
 
                 point = Point(x=float(x), y=float(y), z=float(z))
                 point_stamped = PointStamped()
                 point_stamped.header = req.depth_image.header
                 point_stamped.point = point
                 if transform is not None:
-                    point_stamped_transformed = do_transform_point(point_stamped, transform)
+                    point_stamped_transformed = do_transform_point(
+                        point_stamped, transform
+                    )
                     detection.point = point_stamped_transformed.point
                 else:
                     detection.point = point
@@ -318,7 +326,7 @@ class YOLOServiceNode:
         target_frame = req.target_frame or "map"
 
         transform = None
-        has_detections = len(results.boxes) > 0 if hasattr(results, 'boxes') else False
+        has_detections = len(results.boxes) > 0 if hasattr(results, "boxes") else False
         if has_detections:
             transform = self._lookup_transform(
                 target_frame,

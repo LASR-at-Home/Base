@@ -83,7 +83,7 @@ class Detect3D(ServiceState):
     def _cache_camera_info(self, msg: CameraInfo) -> None:
         if self.cam_info is None:
             self.cam_info = msg
-    
+
     def _create_req(self, blackboard):
         if self.cam_info is None:
             deadline = time.time() + 5.0
@@ -131,12 +131,11 @@ class Detect3D(ServiceState):
         return req
 
     def response_handler(self, blackboard, response):
-        yasmin.YASMIN_LOG_INFO(f"Got {len(resp.detected_objects)} detections")
-            for det in resp.detected_objects:
-                self.node.get_logger().info(
-                    f"  {det.name} at ({det.point.x:.2f}, {det.point.y:.2f}, {det.point.z:.2f})"
-                )
-
+        yasmin.YASMIN_LOG_INFO(f"Got {len(response.detected_objects)} detections")
+        for det in response.detected_objects:
+            yasmin.YASMIN_LOG_INFO(
+                f"  {det.name} at ({det.point.x:.2f}, {det.point.y:.2f}, {det.point.z:.2f})"
+            )
         blackboard["detections_3d"] = response
         blackboard["image_raw"] = self.image_msg
 
