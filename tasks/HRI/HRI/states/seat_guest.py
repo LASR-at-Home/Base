@@ -10,7 +10,6 @@ from rclpy.executors import MultiThreadedExecutor
 
 import numpy as np
 import tf2_ros as tf
-import threading
 from typing import Optional
 
 from shapely.geometry import Polygon as ShapelyPolygon
@@ -103,6 +102,7 @@ class ProcessDetections(State):
             blackboard["sofa_detections"] (List[Detection3D]): List of detected objects on the sofa
         """
 
+        yasmin.YASMIN_LOG_WARN("Finding seat in seat guest")
         seat_sofa = True
         seated_guests_loc = [
             detection.point
@@ -279,7 +279,7 @@ class SeatGuest(StateMachine):
             "LOOK_TO_SOFA",
             LookToPoint(
                 pointstamped=PointStamped(
-                    header=Header(frame_id="base_footprint"),
+                    header=Header(frame_id="map"),
                     point=self.sofa_point,  # TODO: Change to 'map' when 2dnav is fixed
                 )
             ),
@@ -311,31 +311,31 @@ class SeatGuest(StateMachine):
                 "canceled": "failed",
             },
         )
-        self.add_state(
-            "DETECT_NON_SOFA",
-            Detect3DInArea(
-                area_polygon=seating_area_minus_sofa,
-                filter=["person", "chair"],
-                z_min=-10,
-                z_max=50.0,
-                confidence=0.5,
-            ),
-            transitions={"succeeded": "PROCESS_DETECTIONS", "failed": "failed"},
-            remappings={"detections_3d": "non_sofa_detections"},
-        )
-
         # self.add_state(
         #     "DETECT_NON_SOFA",
-        #     DetectAllInPolygon(
-        #         polygon=seating_area_minus_sofa,  # TODO: Verify Potential type mismatch (BaseGeometry vs accepted ShapelyPolygon)
-        #         object_filter=["person", "chair"],
-        #         min_coverage=1.0,
-        #         min_new_object_dist=0.50,
-        #         min_confidence=0.5,
+        #     Detect3DInArea(
+        #         area_polygon=seating_area_minus_sofa,
+        #         filter=["person", "chair"],
+        #         z_min=-10,
+        #         z_max=50.0,
+        #         confidence=0.5,
         #     ),
         #     transitions={"succeeded": "PROCESS_DETECTIONS", "failed": "failed"},
-        #     remappings={"detected_objects": "non_sofa_detections"},
+        #     remappings={"detections_3d": "non_sofa_detections"},
         # )
+
+        self.add_state(
+            "DETECT_NON_SOFA",
+            DetectAllInPolygon(
+                polygon=seating_area_minus_sofa,  # TODO: Verify Potential type mismatch (BaseGeometry vs accepted ShapelyPolygon)
+                object_filter=["person", "chair"],
+                min_coverage=1.0,
+                min_new_object_dist=0.50,
+                min_confidence=0.5,
+            ),
+            transitions={"succeeded": "PROCESS_DETECTIONS", "failed": "failed"},
+            remappings={"detected_objects": "non_sofa_detections"},
+        )
         # Process detections
         if learn_host:
             detection_transition = "SAY_AND_LEARN_HOST_FACE"
@@ -391,6 +391,7 @@ class SeatGuest(StateMachine):
                 "succeeded": "SAY_SEAT_GUEST",
                 "aborted": "SAY_SEAT_GUEST",
                 "canceled": "SAY_SEAT_GUEST",
+                "timeout": "SAY_SEAT_GUEST"
             },
             remappings={"pointstamped": "guest_seat_point"},
         )
@@ -502,15 +503,34 @@ class SeatGuest(StateMachine):
             self._node.get_parameter("max_people_on_sofa").value
         )
 
+try:
+    from rclpy.executors import EventsExecutor as Executor
+except ImportError:
+    from rclpy.executors import MultiThreadedExecutor as Executor
+from threading import Thread
+
+class HRI_node(Node):
+    def __init__(self):
+        super().__init__(
+            node_name="hri",
+            allow_undeclared_parameters=True,
+            automatically_declare_parameters_from_overrides=True,
+        )
+
+        self._executor = Executor()
+        self._executor.add_node(self)
+        self._spin_thread = Thread(target=self._executor.spin)
+        self._spin_thread.start()
 
 def main():
 
     rclpy.init()
-    node = rclpy.create_node("hri")
+    node = HRI_node()
 
     yasmin_ros.set_ros_loggers(node)
 
     try:
+        #TODO: Try with learn_host=True
         sm = SeatGuest(learn_host=False)
         bb = Blackboard()
 
@@ -527,8 +547,15 @@ def main():
                 "detection": False,
                 "seating_detection": False,
             },
+            "guest2": {
+                "name": "",
+                "drink": "",
+                "detection": False,
+                "seating_detection": False,
+            },
         }
 
+        
         YasminViewerPub(sm, "HRI_SM3")
 
         outcome = sm(bb)

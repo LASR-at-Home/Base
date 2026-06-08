@@ -175,7 +175,7 @@ class CalculateSweepPoints(yasmin.State):
             node=self.node,
             topic="/head_front_camera/depth/camera_info",
             qos_profile=qos,
-            time_to_wait=5,
+            time_to_wait=10,
         )
 
         if success is False:
@@ -424,11 +424,21 @@ class IterateThroughPoints(yasmin.StateMachine):
                 target_frame="map",
             ),
             transitions={"succeeded": "PROCESS_DETECTIONS", "failed": "failed"},
+            remappings={
+                "detections_3d": "detections_3d",
+                "image_raw": "image_raw",
+            },
         )
         self.add_state(
             "PROCESS_DETECTIONS",
             ProcessDetections(min_new_object_dist=min_new_object_dist),
             transitions={"succeeded": "GET_LOOK_POINT", "failed": "failed"},
+            remappings={
+                "detections_3d": "detections_3d",
+                "detected_objects": "detected_objects",
+                "image_raw": "image_raw",
+                "debug_images": "debug_images",
+            },
         )
 
     def _get_look_point(self, blackboard) -> str:
@@ -589,6 +599,20 @@ class DetectAllInPolygon(yasmin.StateMachine):
         for input in ["debug_images", "detected_objects"]:
             publish_detected_objects.add_input_key(input)
 
+        def _init_bb(blackboard):
+            blackboard["detected_objects"] = []
+            blackboard["debug_images"] = []
+            return "succeeded"
+
+        init_state = yasmin.CbState(outcomes=["succeeded"], callback=_init_bb)
+        init_state.add_output_key("detected_objects")
+        init_state.add_output_key("debug_images")
+        self.add_state(
+            "INIT_BLACKBOARD",
+            init_state,
+            transitions={"succeeded": "CALCULATE_SWEEP_POINTS"},
+        )
+
         self.add_state(
             "CALCULATE_SWEEP_POINTS",
             CalculateSweepPoints(
@@ -596,6 +620,7 @@ class DetectAllInPolygon(yasmin.StateMachine):
                 min_coverage=self._min_coverage,
             ),
             transitions={"succeeded": "LOOK_AND_DETECT", "failed": "failed"},
+            remappings={"sweep_points": "sweep_points"},
         )
         self.add_state(
             "LOOK_AND_DETECT",
@@ -607,12 +632,20 @@ class DetectAllInPolygon(yasmin.StateMachine):
                 min_new_object_dist=self._min_new_object_dist,
             ),
             transitions={"succeeded": "PUBLISH_DETECTED_OBJECTS", "failed": "failed"},
+            remappings={
+                "sweep_points": "sweep_points",
+                "detected_objects": "detected_objects",
+            },
         )
 
         self.add_state(
             "PUBLISH_DETECTED_OBJECTS",
             publish_detected_objects,
             transitions={"succeeded": "succeeded"},
+            remappings={
+                "debug_images": "debug_images",
+                "detected_objects": "detected_objects",
+            },
         )
 
 class Detect_node(Node):
@@ -628,10 +661,10 @@ class Detect_node(Node):
 
 def main():
     seat_area = [
-        [2.9871275424957275, -1.9937974214553833],
-        [2.0820069313049316, -2.199618339538574],
-        [2.155684471130371, -2.7175190448760986],
-        [3.1166439056396484, -2.457406997680664],
+        [0.37787461280822754, -3.057680130004883],
+        [-1.3188365697860718, -1.687604546546936],
+        [-0.07020854949951172, -0.43113774061203003],
+        [1.5865206718444824, -1.74715256690979],
     ]
 
     seat_polygon = ShapelyPolygon(seat_area)
@@ -644,8 +677,6 @@ def main():
 
     bb = Blackboard()
     bb["sweep_points"] = []
-    bb["detected_objects"] = []
-    bb["debug_images"] = []
     bb["pointstamped"] = PointStamped()
     bb["sweep_point_index"] = 0
 
