@@ -122,11 +122,9 @@ def main():
     sm = HRI()
     bb = yasmin.Blackboard()
 
-    host_data = {}
     face_detection_confidence = 0.2
 
     bb["guest_data"] = {
-        "host": host_data,
         "guest1": {
             "name": "",
             "drink": "",

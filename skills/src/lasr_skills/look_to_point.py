@@ -23,7 +23,6 @@ class LookToPoint(yasmin_ros.ActionState):
             action_type=PointHead,
             create_goal_handler=self._create_goal,
             response_timeout=5.0,
-            callback_group=ros_client_group,
             maximum_retry=0,
         )
         if pointstamped is None:
@@ -38,8 +37,8 @@ class LookToPoint(yasmin_ros.ActionState):
         )
 
         goal = PointHead.Goal()
-        goal.pointing_frame = "head_front_camera_depth_optical_frame"
-        goal.pointing_axis = Vector3(x=0.0, y=0.0, z=1.0)
+        goal.pointing_frame = "head_2_link"
+        goal.pointing_axis = Vector3(x=1.0, y=0.0, z=0.0)
         goal.max_velocity = 1.0
         goal.target = target
 

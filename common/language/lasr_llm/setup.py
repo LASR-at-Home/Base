@@ -3,7 +3,9 @@ from setuptools import find_packages, setup
 import setuptools.command.install
 import ament_virtualenv.install
 
+
 _here = os.path.dirname(os.path.abspath(__file__))
+
 
 package_name = "lasr_llm"
 
@@ -22,9 +24,9 @@ class InstallCommand(setuptools.command.install.install):
 
 setup(
     name=package_name,
-    cmdclass={"install": InstallCommand},
     version="0.0.0",
     packages=find_packages(exclude=["test"]),
+    cmdclass={"install": InstallCommand},
     data_files=[
         ("share/ament_index/resource_index/packages", ["resource/" + package_name]),
         ("share/" + package_name, ["package.xml", "requirements.txt"]),

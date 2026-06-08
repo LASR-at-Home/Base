@@ -260,11 +260,21 @@ class SeatGuest(StateMachine):
 
         seating_area_minus_sofa = self.seating_area.difference(self.sofa_area)
 
+        def check(blackboard):
+            detections = blackboard['guest_data']
+            yasmin.YASMIN_LOG_INFO(str(detections))
+            
+            return 'succeeded'
+        
         # self.userdata.z_sweep_min = (
         #     -0.5
         # )  # TODO: Remove when testing on robot move as paramter to detect3d...
         # self.userdata.z_sweep_max = 100  # TODO: Remove when testing on robot
         # self.blackboard["seated_guest_locs"] = []
+
+        self.add_state('CHECK', yasmin.CbState(outcomes=['succeeded'], callback=check), transitions={'succeeded': 'SAY_FINDING_SEAT'})
+
+        ### ADD IN STOP EYE TRACKER
 
         self.add_state(
             "SAY_FINDING_SEAT",

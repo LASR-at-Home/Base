@@ -93,7 +93,7 @@ class HRILearnFaces(StateMachine):
                     try:
                         blackboard["num_images"] += 1
                     except:
-                        blackboard["num_images"] = 0
+                        blackboard["num_images"] = 1
             except Exception as e:
                 yasmin.YASMIN_LOG_ERROR(f"Service call failed: {e}")
                 return "failed"
@@ -108,7 +108,7 @@ class HRILearnFaces(StateMachine):
             self._dataset_size = dataset_size
 
         def execute(self, blackboard):
-            if blackboard.get("num_images", 0) >= self._dataset_size:
+            if blackboard['num_images'] >= self._dataset_size:
                 yasmin.YASMIN_LOG_INFO("Collected enough images for the guest.")
                 return "succeeded"
             else:
