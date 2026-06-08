@@ -7,6 +7,7 @@ _here = os.path.dirname(os.path.abspath(__file__))
 
 package_name = "lasr_llm"
 
+
 class InstallCommand(setuptools.command.install.install):
     def run(self):
         super().run()
@@ -17,9 +18,6 @@ class InstallCommand(setuptools.command.install.install):
             python_version="3",
             source_dir=_here,
         )
-        # instead of self.install_base we may also use:
-        # self.config_vars['platbase'] or self.config_vars['base']
-        # Exchange the python_version with '3' if your package uses Python3.
         return
 
 setup(
@@ -44,7 +42,6 @@ setup(
     },
     entry_points={
         "console_scripts": [
-            "llm = lasr_llm.nodes.llm:main",
             "receptionist_service = lasr_llm.nodes.receptionist_service:main",
             "hri_task_service = lasr_llm.nodes.hri_task_service:main",
             "storing_groceries_service = lasr_llm.nodes.storing_groceries_service:main",
