@@ -7,7 +7,9 @@ from sensor_msgs.msg import Image, CameraInfo
 from geometry_msgs.msg import PointStamped
 from std_msgs.msg import Header
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
+from rclpy.time import Time
 from lasr_vision_interfaces.srv import YoloPoseDetection3D
+from visualization_msgs.msg import Marker
 
 
 class DetectWave(ServiceState):
@@ -18,7 +20,8 @@ class DetectWave(ServiceState):
         camera_info_topic="/head_front_camera/depth/camera_info",
         model="yolo11n-pose.pt",
         confidence=0.5,
-        target_frame="base_footprint",
+        target_frame="map",
+        max_arm=0.9,
     ):
         super().__init__(
             srv_type=YoloPoseDetection3D,
@@ -33,6 +36,8 @@ class DetectWave(ServiceState):
         self.model = model
         self.confidence = confidence
         self.target_frame = target_frame
+        self._marker_pub = self._node.create_publisher(Marker, "/wave_debug_marker", 1)
+        self.max_arm = max_arm
 
         qos = QoSProfile(
             depth=10,
@@ -84,22 +89,34 @@ class DetectWave(ServiceState):
         best_point, best_dist = None, None
         for det in response.detections:
             kp = {k.keypoint_name: k.point for k in det.keypoints}
-            shoulder = None
+            shoulder = wrist = None
+            yasmin.YASMIN_LOG_INFO(f"kp: {kp}")
+
             if (
                 "left_wrist" in kp
                 and "left_shoulder" in kp
                 and kp["left_wrist"].z > kp["left_shoulder"].z
             ):
-                shoulder = kp["left_shoulder"]
+                shoulder, wrist = kp["left_shoulder"], kp["left_wrist"]
             elif (
                 "right_wrist" in kp
                 and "right_shoulder" in kp
                 and kp["right_wrist"].z > kp["right_shoulder"].z
             ):
-                shoulder = kp["right_shoulder"]
+                shoulder, wrist = kp["right_shoulder"], kp["right_wrist"]
             if shoulder is None:
                 continue
-            d = shoulder.x**2 + shoulder.y**2  # найближчий, хто махає
+
+            arm = (
+                (wrist.x - shoulder.x) ** 2
+                + (wrist.y - shoulder.y) ** 2
+                + (wrist.z - shoulder.z) ** 2
+            ) ** 0.5
+            if arm > self.max_arm:
+                yasmin.YASMIN_LOG_WARN(f"rejected: arm={arm:.2f}m (mis-grouped?)")
+                continue
+
+            d = shoulder.x**2 + shoulder.y**2
             if best_dist is None or d < best_dist:
                 best_dist, best_point = d, shoulder
 
@@ -115,6 +132,16 @@ class DetectWave(ServiceState):
         blackboard["wave_position"] = PointStamped(
             header=Header(frame_id=self.target_frame), point=best_point
         )
+        marker = Marker()
+        marker.header.frame_id = self.target_frame
+        marker.header.stamp = Time().to_msg()
+        marker.ns, marker.id = "wave", 0
+        marker.type = Marker.SPHERE
+        marker.action = Marker.ADD
+        marker.pose.position = best_point
+        marker.scale.x = marker.scale.y = marker.scale.z = 0.3
+        marker.color.r, marker.color.a = 1.0, 1.0
+        self._marker_pub.publish(marker)
         return "waving"
 
 

@@ -4,11 +4,11 @@ import yasmin_ros
 from std_msgs.msg import Empty
 from lasr_skills import Say, GoToLocation, PlayMotion
 
-from restaurant.states import Survey
+from restaurant.states import Survey, ApproachPerson
 
 
 class Restaurant(yasmin.StateMachine):
-    def __init__(self, node, face_detection_confidence=0.2):
+    def __init__(self, node):
         super().__init__(outcomes=["succeeded", "failed"], handle_sigint=True)
 
         def start_cb(blackboard, msg):
@@ -18,7 +18,7 @@ class Restaurant(yasmin.StateMachine):
         self.add_state(
             "WAIT_START",
             yasmin_ros.MonitorState(
-                topic="/restaurant/start",
+                topic_name="/restaurant/start",
                 outcomes=["succeeded", "failed"],
                 monitor_handler=start_cb,
                 msg_type=Empty,
@@ -49,16 +49,19 @@ class Restaurant(yasmin.StateMachine):
         self.add_state(
             "SURVEY",
             Survey(node=node),
-            transitions={
-                "customer_found": "GO_TO_TABLE",
-                "customer_not_found": "FACE_TABLES",
-            },
+            transitions={"customer_found": "APPROACH"},
+        )
+
+        self.add_state(
+            "APPROACH",
+            ApproachPerson(),
+            transitions={"succeeded": "GO_TO_TABLE", "failed": "SURVEY"},
         )
 
         self.add_state(
             "GO_TO_TABLE",
             GoToLocation(),
-            transitions={"succeeded": "TAKE_ORDER", "failed": "failed"},
+            transitions={"succeeded": "TAKE_ORDER", "failed": "SURVEY"},
         )
 
         self.add_state(
@@ -78,8 +81,8 @@ class Restaurant(yasmin.StateMachine):
         )
 
         self.add_state(
-            "SURVE",
-            Say(text="Here's your order"),
+            "SERVE",
+            Say(text="Here's your order."),
             transitions={
                 "succeeded": "FACE_TABLES",
                 "aborted": "FACE_TABLES",
@@ -90,14 +93,13 @@ class Restaurant(yasmin.StateMachine):
 
 def main(args=None):
     rclpy.init(args=args)
-
     node = rclpy.create_node(
         node_name="restaurant",
         allow_undeclared_parameters=True,
         automatically_declare_parameters_from_overrides=True,
     )
-
-    sm = Restaurant(node=node, host_data={})
+    yasmin_ros.set_ros_loggers(node)
+    sm = Restaurant(node=node)
     outcome = sm(yasmin.Blackboard())
     node.get_logger().info(f"Restaurant outcome: {outcome}")
     node.destroy_node()
