@@ -1,19 +1,19 @@
-import smach
-from smach import UserData
+import yasmin
+from yasmin import Blackboard
 
-class ClearSeatingDetections(smach.State):
+
+class ClearSeatingDetections(yasmin.State):
+    """
+    Clears the seating detection for all guests in the guest data.
+    This is to ensure that we can re-detect guests when they are seated.
+    """
+
     def __init__(self):
-        super().__init__(
-            outcomes=["succeeded", "failed"],
-            input_keys=["guest_data"],
-            output_keys=["guest_data"],
-        )
+        super().__init__(outcomes=["succeeded", "failed"])
+        self.add_input_key("guest_data")
+        self.add_output_key("guest_data")
 
-    def execute(self, userdata: UserData) -> str:
-        """
-        Clears the seating detection for all guests in the guest data.
-        This is to ensure that we can re-detect guests when they are seated.
-        """
-        for guest_id in userdata.guest_data:
-            userdata.guest_data[guest_id]["seating_detection"] = False
+    def execute(self, blackboard: Blackboard) -> str:
+        for guest_id in blackboard["guest_data"]:
+            blackboard["guest_data"][guest_id]["seating_detection"] = False
         return "succeeded"

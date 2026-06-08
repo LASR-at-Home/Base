@@ -1,22 +1,21 @@
 #!/usr/bin/env python3
-
 import rclpy
-
+import yasmin
+import yasmin_ros
 from geometry_msgs.msg import Point, PointStamped
-
 from std_msgs.msg import Header
-
 from HRI.states.introduce import Introduce
 
 
 def main():
     rclpy.init()
+    yasmin_ros.set_ros_loggers()
 
-    node = rclpy.create_node("introduce_test_node")
+    sm = Introduce(guest_to_introduce="guest1")
 
-    sm = Introduce(node=node, guest_to_introduce="guest1")
+    bb = yasmin.Blackboard()
 
-    sm.userdata.guest_data = {
+    bb["guest_data"] = {
         "host": {
             "name": "Sophie",
             "drink": "cola",
@@ -34,22 +33,23 @@ def main():
     # Standing person (guest1)
     header = Header()
     header.frame_id = "map"
-    sm.userdata.guest_seat_point = PointStamped(
+    bb["guest_seat_point"] = PointStamped(
         header=header,
         point=Point(x=6.654674, y=7.160965, z=1.5),
     )
 
     # Sitting person (host)
-    sm.userdata.seated_guest_locs = [
-        # Point(x=7.573320, y=7.281600, z=1.2),
+    bb["seated_guest_locs"] = [
         Point(x=1.5, y=-0.5, z=1.2),
     ]
 
-    outcome = sm.execute()
+    bb["person_index"] = 0
 
-    node.get_logger().info(f"Introduce finished with outcome: {outcome}")
+    outcome = sm(bb)
+    yasmin.YASMIN_LOG_INFO(f"Introduce finished with outcome: {outcome}")
 
-    rclpy.shutdown()
+    if rclpy.ok():
+        rclpy.shutdown()
 
 
 if __name__ == "__main__":

@@ -52,58 +52,10 @@ class HRI(yasmin.StateMachine):
             transitions={"succeeded": "GREET", "failed": "START_TIMER"},
         )
 
-<<<<<<< HEAD
-            self.add(
-                "START_TIMER",
-                StartTimer(node=node),
-                transitions={"succeeded": "START_CON", "failed": "START_TIMER"},
-            )
-
-            self.add(
-                "START_CON",  # SM1: Waits for Door to open, then goes to start
-                self.setup(node=node),
-                transitions={"succeeded": "GREET", "failed": "GREET"},
-            )
-
-            self.add(
-                "GREET",  # SM2: Greets guest
-                LookAndGreetGuest(node=node, last_resort=False, guest_id="guest1"),
-                transitions={"succeeded": "GUIDE_TO_SEAT", "failed": "failed"},
-            )
-
-            self.add(
-                "GUIDE_TO_SEAT",  # GUIDES GUEST TO SEATING AREA
-                GoToLocation(node=node, location_param="seat_pose"),
-                transitions={"succeeded": "SEAT_GUEST", "failed": "failed"},
-            )
-
-            self.add(
-                "SEAT_GUEST",  # SM3: Locates and seats guest in free seat
-                SeatGuest(node=node, learn_host=False),
-                transitions={"succeeded": "INTRODUCE", "failed": "failed"},
-            )
-
-            self.add(
-                "INTRODUCE",
-                Introduce(node=node, guest_to_introduce="guest1"),
-                transitions={"succeeded": "succeeded", "failed": "failed"},
-            )
-
-        # commented incase Detect Doorbell was not implemented
-        # smach.StateMachine.add(
-        #     "DETECT DOORBELL",
-        #     DetectDoorbell(node),
-        #     transitions={
-        #         "valid": "APPROACH_GUEST",
-        #         "invalid": "DETECT_DOORBELL",
-        #         "preempted": "DETECT_DOORBELL",
-        #     },
-=======
         # self.add_state(
         #     "START_CON",  # SM1: Waits for Door to open, then goes to start
         #     self.setup(),
         #     transitions={"succeeded": "GREET", "failed": "START_CON"},
->>>>>>> upstream/ros2
         # )
 
         self.add_state(
@@ -121,6 +73,12 @@ class HRI(yasmin.StateMachine):
         self.add_state(
             "SEAT_GUEST",  # SM3: Locates and seats guest in free seat
             SeatGuest(learn_host=False),
+            transitions={"succeeded": "INTRODUCE", "failed": "failed"},
+        )
+
+        self.add_state(
+            "INTRODUCE",
+            Introduce(guest_to_introduce="guest1"),
             transitions={"succeeded": "succeeded", "failed": "failed"},
         )
 
@@ -195,7 +153,8 @@ def main():
     bb["confidence"] = face_detection_confidence
     bb["dataset"] = "hri"
     bb["drink_position"] = PointStamped()
-
+    bb["person_index"] = 0
+    
     outcome = sm(bb)
 
     yasmin.YASMIN_LOG_INFO(f"State machine has ended with outcome {outcome}")

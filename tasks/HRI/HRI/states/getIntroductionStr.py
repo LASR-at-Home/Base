@@ -1,25 +1,23 @@
-import smach
-from smach import UserData
+import yasmin
+from yasmin import Blackboard
 
 
-class GetIntroductionStr(smach.State):
+class GetIntroductionStr(yasmin.State):
+
     def __init__(self):
-        super().__init__(
-            outcomes=["succeeded", "failed"],
-            input_keys=["relevant_guest_data", "introduce_to"],
-            output_keys=["introduction_str"],
-        )
+        super().__init__(outcomes=["succeeded", "failed"])
+        self.add_input_key("relevant_guest_data")
+        self.add_input_key("introduce_to")
+        self.add_output_key("introduction_str")
 
-    def execute(self, userdata: UserData) -> str:
+    def execute(self, blackboard: Blackboard) -> str:
+        guest_to_introduce_data = blackboard["relevant_guest_data"]
+        guest_to_introduce_to = blackboard["introduce_to"]
 
-        guest_to_introduce_data = userdata.relevant_guest_data
-        guest_to_introduce_to = userdata.introduce_to
-
-        introduction_str = (
+        blackboard["introduction_str"] = (
             f"Hello {guest_to_introduce_to}, "
             f"this is {guest_to_introduce_data['name']}. "
             f"Their favourite drink is {guest_to_introduce_data['drink']}, "
             f"and their interest is {guest_to_introduce_data['interest']}."
         )
-        userdata.introduction_str = introduction_str
         return "succeeded"

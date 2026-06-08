@@ -2,16 +2,17 @@
 State machine that introduces the greeted guest to all other guests/host present in the
 seating area.
 
+Ported from SMACH to YASMIN.
 """
 
-import smach
-from rclpy.node import Node
+import yasmin
+import yasmin_ros
+from yasmin import Blackboard
 from std_msgs.msg import Header
 from geometry_msgs.msg import PointStamped
 
-from lasr_skills.look_to_point import LookToPoint
-from lasr_skills.say import Say
 from lasr_skills.wait import Wait
+from lasr_skills.say import Say
 
 from .clearSeatingDetections import ClearSeatingDetections
 from .getGuestData import GetGuestData
@@ -19,236 +20,210 @@ from .getIntroductionStr import GetIntroductionStr
 from .recognise import Recognise
 
 
-class Introduce(smach.StateMachine):
+class GetLookPoint(yasmin.State):
+    """
+    Builds a PointStamped from seated_guest_locs[person_index] and stores
+    it in the blackboard.
+    Replaces the smach.CBState that did the same in the SMACH version.
+    """
 
-    _guest_to_introduce: str
+    def __init__(self):
+        super().__init__(outcomes=["succeeded", "failed"])
+        self.add_input_key("seated_guest_locs")
+        self.add_input_key("person_index")
+        self.add_output_key("look_point")
+        self.node = yasmin_ros.logger_node
 
-    def _get_look_point(self, userdata: smach.UserData) -> str:
-        """
-        Callback to get the look point based on the current person detection index.
-
-        Args:
-            userdata (smach.UserData): User data containing the people detections and index.
-
-        Returns:
-            str: Outcome of the state, "succeeded".
-        """
-        index = userdata.person_index
-        if index < len(userdata.seated_guest_locs):
+    def execute(self, blackboard: Blackboard) -> str:
+        index = blackboard["person_index"]
+        if index < len(blackboard["seated_guest_locs"]):
             header = Header()
             header.frame_id = "map"
             look_point = PointStamped(
-                header=header, point=userdata.seated_guest_locs[index]
+                header=header,
+                point=blackboard["seated_guest_locs"][index],
             )
-            userdata.look_point = look_point
-            self._node.get_logger().info(
+            blackboard["look_point"] = look_point
+            yasmin.YASMIN_LOG_INFO(
                 f"Look point set to: {look_point.point.x}, "
                 f"{look_point.point.y}, {look_point.point.z}"
             )
             return "succeeded"
         else:
-            self._node.get_logger().error("Index out of bounds for people detection points.")
+            yasmin.YASMIN_LOG_ERROR("Index out of bounds for seated_guest_locs.")
             return "failed"
 
-    def __init__(self, node: Node, guest_to_introduce: str, can_detect_second_guest: bool = False):
-        super().__init__(
-            outcomes=["succeeded", "failed"],
-            input_keys=["guest_data", "guest_seat_point", "seated_guest_locs"],
+
+class CheckDone(yasmin.State):
+    """
+    Replaces the smach.Iterator exhausted_outcome logic.
+    Increments person_index and loops back or exits when all guests introduced.
+    """
+
+    def __init__(self):
+        super().__init__(outcomes=["continue", "done"])
+        self.add_input_key("person_index")
+        self.add_input_key("seated_guest_locs")
+        self.add_output_key("person_index")
+
+    def execute(self, blackboard: Blackboard) -> str:
+        next_index = blackboard["person_index"] + 1
+        if next_index < len(blackboard["seated_guest_locs"]):
+            blackboard["person_index"] = next_index
+            return "continue"
+        return "done"
+
+
+class _PassthroughState(yasmin.State):
+    """
+    Replaces smach.CBState(lambda ud: 'succeeded') passthrough.
+    Used for LOOK_TO_GUEST_1 and LOOK_TO_GUEST_2 in simulation
+    where the PointHead action server is not available.
+    Replace with LookToPoint when testing on the real robot.
+    """
+
+    def __init__(self):
+        super().__init__(outcomes=["succeeded"])
+
+    def execute(self, blackboard: Blackboard) -> str:
+        return "succeeded"
+
+
+class Introduce(yasmin.StateMachine):
+    """
+    State machine that introduces a guest to all other guests/host present in
+    the seating area.
+
+    Replaces smach.Iterator with a CheckDone loop pattern.
+
+    Blackboard keys required before calling sm():
+        - guest_data: Dict of all guests keyed by id
+        - guest_seat_point: PointStamped of the incoming guest's seat
+        - seated_guest_locs: List of Point locations of all seated guests
+        - person_index: Set to 0 before calling sm()
+    """
+
+    def __init__(self, guest_to_introduce: str, can_detect_second_guest: bool = False):
+        super().__init__(outcomes=["succeeded", "failed"])
+        self.add_input_key("guest_data")
+        self.add_input_key("guest_seat_point")
+        self.add_input_key("seated_guest_locs")
+
+        # Builds look point from seated_guest_locs[person_index]
+        self.add_state(
+            "GET_LOOK_POINT_1",
+            GetLookPoint(),
+            transitions={
+                "succeeded": "LOOK_TO_GUEST_1",
+                "failed": "failed",
+            },
         )
-        self._node = node
-        self._guest_to_introduce = guest_to_introduce
-        with self:
-            introduction_iterator = smach.Iterator(
-                it=lambda: range(len(self.userdata.seated_guest_locs)),
-                it_label="person_index",
-                input_keys=[
-                    "seated_guest_locs",
-                    "guest_data",
-                    "guest_seat_point",
-                    "look_point",
-                ],
-                output_keys=["look_point", "relevant_guest_data", "introduce_to"],
-                exhausted_outcome="succeeded",
-                outcomes=["succeeded", "failed"],
-            )
-            with introduction_iterator:
-                container_sm = smach.StateMachine(
-                    outcomes=["continue", "succeeded", "failed"],
-                    input_keys=[
-                        "guest_data",
-                        "guest_seat_point",
-                        "seated_guest_locs",
-                        "person_index",
-                        "look_point",
-                        "introduce_to",
-                        "relevant_guest_data",
-                        "named_guest_detection",
-                    ],
-                    output_keys=[
-                        "guest_data",
-                        "guest_seat_point",
-                        "seated_guest_locs",
-                        "person_index",
-                        "look_point",
-                        "introduce_to",
-                        "relevant_guest_data",
-                        "named_guest_detection",
-                    ],
-                )
-                with container_sm:
-                    smach.StateMachine.add(
-                        "GET_LOOK_POINT_1",
-                        smach.CBState(
-                            self._get_look_point,
-                            input_keys=[
-                                "seated_guest_locs",
-                                "person_index",
-                                "look_point",
-                            ],
-                            output_keys=["look_point"],
-                            outcomes=["succeeded", "failed"],
-                        ),
-                        transitions={
-                            "succeeded": "LOOK_TO_GUEST_1",
-                            "failed": "failed",
-                        },
-                        remapping={"look_point": "pointstamped"},
-                    )
-                    """
-                    smach.StateMachine.add(
-                        "LOOK_TO_GUEST_1",
-                        LookToPoint(node),
-                        transitions={
-                            "succeeded": "WAIT",
-                            "aborted": "failed",
-                            "timed_out": "failed",
-                        },
-                    )
-                    """
-                    smach.StateMachine.add(
-                        "LOOK_TO_GUEST_1",
-                        smach.CBState(
-                        lambda ud: "succeeded",
-                        outcomes=["succeeded"],
-                        ),
-                        transitions={"succeeded": "WAIT"},
-                    )
-                    smach.StateMachine.add(
-                        "WAIT",
-                        Wait(node, 0.25),
-                        transitions={"succeeded": "RECOGNISE", "failed": "failed"},
-                    )
-                    smach.StateMachine.add(
-                        "RECOGNISE",
-                        Recognise(
-                            node=node,
-                            can_detect_second_guest=can_detect_second_guest,
-                        ),
-                        transitions={
-                            "succeeded": "GET_GUEST_DATA_1",
-                            "failed": "failed",
-                        },
-                        remapping={
-                            "guest_data": "guest_data",
-                            "guest_seat_point": "guest_seat_point",
-                            "named_guest_detection": "named_guest_detection",
-                        },
-                    )
-                    smach.StateMachine.add(
-                        "GET_GUEST_DATA_1",
-                        GetGuestData(guest_to_introduce=self._guest_to_introduce),
-                        transitions={
-                            "succeeded": "GET_INTRODUCTION_STR_1",
-                            "failed": "failed",
-                        },
-                        remapping={"relevant_guest_data": "relevant_guest_data"},
-                    )
 
-                    smach.StateMachine.add(
-                        "GET_INTRODUCTION_STR_1",
-                        GetIntroductionStr(),
-                        transitions={
-                            "succeeded": "SAY_INTRODUCTION",
-                            "failed": "failed",
-                        },
-                        remapping={"introduction_str": "text"},
-                    )
-                    smach.StateMachine.add(
-                        "SAY_INTRODUCTION",
-                        Say(node),
-                        transitions={
-                            "succeeded": "LOOK_TO_GUEST_2",
-                            "aborted": "failed",
-                            "preempted": "failed",
-                        },
-                        remapping={"text": "text"},
-                    )
-                    smach.StateMachine.add(
-                        "LOOK_TO_GUEST_2",
-                        smach.CBState(
-                        lambda ud: "succeeded",
-                        outcomes=["succeeded"],
-                        ),
-                        transitions={"succeeded": "GET_GUEST_DATA_2"},
-                    )
-                    """
-                    smach.StateMachine.add(
-                        "LOOK_TO_GUEST_2",
-                        LookToPoint(node),
-                        transitions={
-                            "succeeded": "GET_GUEST_DATA_2",
-                            "aborted": "failed",
-                            "timed_out": "failed",
-                        },
-                        remapping={"pointstamped": "guest_seat_point"},
-                    )
-                    """
-                    smach.StateMachine.add(
-                        "GET_GUEST_DATA_2",
-                        GetGuestData(guest_to_introduce_to=self._guest_to_introduce),
-                        transitions={
-                            "succeeded": "GET_INTRODUCTION_STR_2",
-                            "failed": "failed",
-                        },
-                        remapping={
-                            "relevant_guest_data": "relevant_guest_data",
-                            "introduce_to": "introduce_to",
-                        },
-                    )
-                    smach.StateMachine.add(
-                        "GET_INTRODUCTION_STR_2",
-                        GetIntroductionStr(),
-                        transitions={
-                            "succeeded": "SAY_INTRODUCTION_2",
-                            "failed": "failed",
-                        },
-                        remapping={"introduction_str": "text"},
-                    )
-                    smach.StateMachine.add(
-                        "SAY_INTRODUCTION_2",
-                        Say(node),
-                        transitions={
-                            "succeeded": "continue",
-                            "aborted": "failed",
-                            "preempted": "failed",
-                        },
-                        remapping={"text": "text"},
-                    )
-                smach.Iterator.set_contained_state(
-                    "CONTAINER_SM", container_sm, loop_outcomes=["continue"]
-                )
-            self.add(
-                "INTRODUCTION_ITERATOR",
-                introduction_iterator,
-                transitions={
-                    "succeeded": "CLEAR_SEATING_DETECTIONS",
-                    "failed": "CLEAR_SEATING_DETECTIONS",
-                },
-            )
+        # Simulation bypass — replace with LookToPoint on real robot
+        self.add_state(
+            "LOOK_TO_GUEST_1",
+            _PassthroughState(),
+            transitions={"succeeded": "WAIT"},
+        )
 
-            self.add(
-                "CLEAR_SEATING_DETECTIONS",
-                ClearSeatingDetections(),
-                transitions={"succeeded": "succeeded", "failed": "failed"},
-                remapping={"guest_data": "guest_data"},
-            )
+        self.add_state(
+            "WAIT",
+            Wait(0.25),
+            transitions={
+                "succeeded": "RECOGNISE",
+                "failed": "failed",
+            },
+        )
+
+        self.add_state(
+            "RECOGNISE",
+            Recognise(can_detect_second_guest=can_detect_second_guest),
+            transitions={
+                "succeeded": "GET_GUEST_DATA_1",
+                "failed": "failed",
+            },
+        )
+
+        self.add_state(
+            "GET_GUEST_DATA_1",
+            GetGuestData(guest_to_introduce=guest_to_introduce),
+            transitions={
+                "succeeded": "GET_INTRODUCTION_STR_1",
+                "failed": "failed",
+            },
+        )
+
+        self.add_state(
+            "GET_INTRODUCTION_STR_1",
+            GetIntroductionStr(),
+            transitions={
+                "succeeded": "SAY_INTRODUCTION",
+                "failed": "failed",
+            },
+            remappings={"introduction_str": "text"},
+        )
+
+        self.add_state(
+            "SAY_INTRODUCTION",
+            Say(),
+            transitions={
+                "succeeded": "LOOK_TO_GUEST_2",
+                "aborted": "failed",
+                "canceled": "failed",
+            },
+        )
+
+        # Simulation bypass — replace with LookToPoint on real robot
+        self.add_state(
+            "LOOK_TO_GUEST_2",
+            _PassthroughState(),
+            transitions={"succeeded": "GET_GUEST_DATA_2"},
+        )
+
+        self.add_state(
+            "GET_GUEST_DATA_2",
+            GetGuestData(guest_to_introduce_to=guest_to_introduce),
+            transitions={
+                "succeeded": "GET_INTRODUCTION_STR_2",
+                "failed": "failed",
+            },
+        )
+
+        self.add_state(
+            "GET_INTRODUCTION_STR_2",
+            GetIntroductionStr(),
+            transitions={
+                "succeeded": "SAY_INTRODUCTION_2",
+                "failed": "failed",
+            },
+            remappings={"introduction_str": "text"},
+        )
+
+        self.add_state(
+            "SAY_INTRODUCTION_2",
+            Say(),
+            transitions={
+                "succeeded": "CHECK_DONE",
+                "aborted": "failed",
+                "canceled": "failed",
+            },
+        )
+
+        # Replaces smach.Iterator exhausted_outcome
+        self.add_state(
+            "CHECK_DONE",
+            CheckDone(),
+            transitions={
+                "continue": "GET_LOOK_POINT_1",
+                "done": "CLEAR_SEATING_DETECTIONS",
+            },
+        )
+
+        self.add_state(
+            "CLEAR_SEATING_DETECTIONS",
+            ClearSeatingDetections(),
+            transitions={
+                "succeeded": "succeeded",
+                "failed": "failed",
+            },
+        )

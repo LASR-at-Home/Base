@@ -1,61 +1,59 @@
 from typing import Optional
+import yasmin
+from yasmin import Blackboard
 
-import smach
-from smach import UserData
 
-class GetGuestData(smach.State):
+class GetGuestData(yasmin.State):
+
     _guest_to_introduce: Optional[str]
     _guest_to_introduce_to: Optional[str]
 
     def __init__(
-            self,
-            guest_to_introduce: Optional[str] = None,
-            guest_to_introduce_to: Optional[str] = None,
+        self,
+        guest_to_introduce: Optional[str] = None,
+        guest_to_introduce_to: Optional[str] = None,
     ):
-        super().__init__(
-            outcomes=["succeeded", "failed"],
-            input_keys=["guest_data", "named_guest_detection"],
-            output_keys=["relevant_guest_data", "introduce_to"],
-        )
+        super().__init__(outcomes=["succeeded", "failed"])
+        self.add_input_key("guest_data")
+        self.add_input_key("named_guest_detection")
+        self.add_output_key("relevant_guest_data")
+        self.add_output_key("introduce_to")
 
         """
-        Input keys are :
-         - guest_data: A dictionary containing the data of all guests, where the keys are
-           the ids (host, guest1, guest2) of the guests and the values are dictionaries with 
-           their data (name, drink, interest).
-         - named_guest_detection: The detection of the guest to introduce, which contains
-           the id of the guest to introduce.
+        Blackboard keys:
+         - guest_data: Dictionary of all guests keyed by id (host, guest1, guest2)
+           each containing name, drink, and interest.
+         - named_guest_detection: Detection result containing the recognised guest id.
 
-
-        Output keys are :
-         - relevant_guest_data: The data of the guest to introduce, a dictionary
-           containing their name, drink, and interest.
-         - introduce_to: The name (string) of the guest to introduce the guest to.
+        Output keys:
+         - relevant_guest_data: Data dictionary for the guest being introduced.
+         - introduce_to: Display name (str) of the guest being introduced to.
         """
-        # If this is None, we assume we have to infer the guest to introduce
-        # based on the named detection
+
         self._guest_to_introduce = guest_to_introduce
         self._guest_to_introduce_to = guest_to_introduce_to
 
-    def execute(self, userdata: UserData) -> str:
+    def execute(self, blackboard: Blackboard) -> str:
         if self._guest_to_introduce is not None:
-            userdata.relevant_guest_data = userdata.guest_data[self._guest_to_introduce]
-
-            introduce_to_reid = userdata.named_guest_detection.name
-            if introduce_to_reid not in userdata.guest_data:
-                userdata.introduce_to = userdata.guest_data["host"]["name"]
+            blackboard["relevant_guest_data"] = blackboard["guest_data"][
+                self._guest_to_introduce
+            ]
+            introduce_to_reid = blackboard["named_guest_detection"].name
+            if introduce_to_reid not in blackboard["guest_data"]:
+                blackboard["introduce_to"] = blackboard["guest_data"]["host"]["name"]
             else:
-                userdata.introduce_to = userdata.guest_data[introduce_to_reid]["name"]
+                blackboard["introduce_to"] = blackboard["guest_data"][
+                    introduce_to_reid
+                ]["name"]
         else:
-            guest_to_introduce_reid = userdata.named_guest_detection.name
-            if guest_to_introduce_reid not in userdata.guest_data:
-                userdata.relevant_guest_data = userdata.guest_data["host"]
+            guest_to_introduce_reid = blackboard["named_guest_detection"].name
+            if guest_to_introduce_reid not in blackboard["guest_data"]:
+                blackboard["relevant_guest_data"] = blackboard["guest_data"]["host"]
             else:
-                userdata.relevant_guest_data = userdata.guest_data[
+                blackboard["relevant_guest_data"] = blackboard["guest_data"][
                     guest_to_introduce_reid
                 ]
-
-            userdata.introduce_to = userdata.guest_data[
+            blackboard["introduce_to"] = blackboard["guest_data"][
                 self._guest_to_introduce_to
             ].get("name", "unknown")
 
