@@ -1,5 +1,7 @@
 from typing import List, Dict, Optional
 
+ 
+
 import rclpy
 import yasmin
 import yasmin_ros
@@ -9,13 +11,16 @@ import cv2
 from yasmin import Blackboard
 from cv_bridge import CvBridge
 from sensor_msgs.msg import Image, CameraInfo
-from rclpy.qos import QoSProfile, QoSReliabilityPolicy
+
+ 
 
 from lasr_vision_interfaces.msg import Detection3D
 from lasr_vision_interfaces.srv import Recognise3D, YoloDetection3D
+ 
 
+class Recognise(RosState):
 
-class Recognise(yasmin.State):
+ 
 
     _rgb_image_topic: str
     _depth_image_topic: str
@@ -59,6 +64,7 @@ class Recognise(yasmin.State):
         closest_distance = float("inf")
         closest_detection = None
 
+
         for detection in person_detections:
             x, y, w, h = detection.xywh
             bbox_centre_x = x + w // 2
@@ -70,30 +76,41 @@ class Recognise(yasmin.State):
                 closest_distance = distance_to_centre
                 closest_detection = detection
 
+
         assert closest_detection is not None, "No person detection found to crop."
+
 
         # Use bounding box instead of segmentation mask
         x, y, w, h = closest_detection.xywh
         rgb_image_raw = self._bridge.imgmsg_to_cv2(rgb_image, desired_encoding="rgb8")
+        cropped = rgb_image_raw[y : y + h, x : x + w]
         cropped = rgb_image_raw[y : y + h, x : x + w]
         return self._bridge.cv2_to_imgmsg(cropped, encoding="rgb8")
 
     def execute(self, blackboard: Blackboard) -> str:
 
         recognise_client = self.node.create_client(
+
             Recognise3D, "/lasr_vision_reid/recognise/threed"
+
         )
+
         yolo_client = self.node.create_client(YoloDetection3D, "/yolo/detect3d")
 
         if not recognise_client.wait_for_service(timeout_sec=5.0):
             yasmin.YASMIN_LOG_ERROR(
                 "Recognise3D service /lasr_vision_reid/recognise/threed not available"
+
             )
+
             return "failed"
+
         if not yolo_client.wait_for_service(timeout_sec=5.0):
             yasmin.YASMIN_LOG_ERROR(
                 "YoloDetection3D service /yolo/detect3d not available"
+
             )
+
             return "failed"
 
         # Reset images
@@ -141,28 +158,39 @@ class Recognise(yasmin.State):
         depth_camera_info = self._depth_camera_info
 
         yolo_request = YoloDetection3D.Request()
+
         yolo_request.image_raw = rgb_image
+
         yolo_request.model = "yolo11n-seg.pt"
+
         yolo_request.depth_image = depth_image
+
         yolo_request.depth_camera_info = depth_camera_info
+
         yolo_request.filter = ["person"]
+
         yolo_request.target_frame = "map"
 
         yolo_future = yolo_client.call_async(yolo_request)
+
         rclpy.spin_until_future_complete(self.node, yolo_future)
+
         yolo_response = yolo_future.result()
 
         # Service call failed entirely, no response to work with
+
         if yolo_response is None:
             yasmin.YASMIN_LOG_WARN("YOLO detection service call failed.")
             return "failed"
 
         # Service succeeded but no people detected, fall back to undetected guest assignment
+
         if len(yolo_response.detected_objects) == 0:
             yasmin.YASMIN_LOG_WARN("No persons detected by YOLO.")
             blackboard["named_guest_detection"] = self._handle_no_detections(
                 blackboard["guest_data"]
             )
+
             return "succeeded"
 
         yasmin.YASMIN_LOG_INFO(
@@ -182,15 +210,23 @@ class Recognise(yasmin.State):
         yasmin.YASMIN_LOG_INFO("Cropped RGB image saved for debugging.")
 
         recognise_request = Recognise3D.Request()
+
         recognise_request.image_raw = cropped_rgb_image
+
         recognise_request.depth_image = depth_image
+
         recognise_request.depth_camera_info = depth_camera_info
+
         recognise_request.threshold = 0.5
+
         recognise_request.target_frame = "map"
 
         try:
+
             recognise_future = recognise_client.call_async(recognise_request)
+
             rclpy.spin_until_future_complete(self.node, recognise_future)
+
             response = recognise_future.result()
 
             if response is None:
@@ -200,28 +236,37 @@ class Recognise(yasmin.State):
             if len(response.detections) == 0:
                 yasmin.YASMIN_LOG_INFO(
                     "No recognitions returned; falling back to _handle_no_detections."
+
                 )
                 named_guest_detection = self._handle_no_detections(
                     blackboard["guest_data"]
                 )
             else:
+
                 detection_id = response.detections[0].name
                 if blackboard["guest_data"].get(detection_id, {}).get(
                     "seating_detection", False
+
                 ):
                     yasmin.YASMIN_LOG_INFO(
                         f"Guest '{detection_id}' already detected; falling back."
+
                     )
+
                     named_guest_detection = self._handle_no_detections(
                         blackboard["guest_data"]
                     )
+
                 else:
+
                     named_guest_detection = response.detections[0]
                     blackboard["guest_data"][named_guest_detection.name][
                         "seating_detection"
+
                     ] = True
                     yasmin.YASMIN_LOG_INFO(
                         f"Recognised guest: {named_guest_detection.name}"
+
                     )
 
             blackboard["named_guest_detection"] = named_guest_detection
@@ -231,3 +276,4 @@ class Recognise(yasmin.State):
             return "failed"
 
         return "succeeded"
+    
