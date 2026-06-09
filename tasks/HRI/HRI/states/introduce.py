@@ -160,7 +160,6 @@ class Introduce(yasmin.StateMachine):
                 "succeeded": "SAY_INTRODUCTION",
                 "failed": "failed",
             },
-            remappings={"introduction_str": "text"},
         )
 
         self.add_state(
@@ -196,7 +195,6 @@ class Introduce(yasmin.StateMachine):
                 "succeeded": "SAY_INTRODUCTION_2",
                 "failed": "failed",
             },
-            remappings={"introduction_str": "text"},
         )
 
         self.add_state(

@@ -80,7 +80,6 @@ def main():
     # camera = node.declare_parameter("~camera", "head_front_camera").value
     name = node.declare_parameter("~name", "fadi").value  # originally jared
     num_images = node.declare_parameter("~num_images", 10).value
-    image_topic = "image_raw"
 
     node.get_logger().info(f"Image topic: {image_topic}")
 

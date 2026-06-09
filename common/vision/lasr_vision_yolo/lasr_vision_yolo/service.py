@@ -234,24 +234,8 @@ class YOLOServiceNode:
         target_frame = req.target_frame or "map"
 
         transform = None
-        if results:
-<<<<<<<<< Temporary merge branch 1
-            try:
-                transform = self._tf_buffer.lookup_transform(
-                    target_frame,
-                    req.depth_image.header.frame_id,
-                    rclpy.time.Time(),
-                    Duration(seconds=1),
-                )
-            except (
-                tf.LookupException,
-                tf.ConnectivityException,
-                tf.ExtrapolationException,
-            ) as e:
-                self.node.get_logger().error(f"Service failed: {e}")
-                response.detected_objects = []
-                return response
-=========
+        has_detections = len(results.boxes) > 0 if hasattr(results, "boxes") else False
+        if has_detections:
             transform = self._lookup_transform(
                 target_frame,
                 req.depth_image.header.frame_id,
