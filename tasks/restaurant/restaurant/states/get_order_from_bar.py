@@ -11,22 +11,38 @@ Announce order
 import rclpy
 import yasmin
 import yasmin_ros
-from geometry_msgs.msg import Pose
-from lasr_skills import GoToLocation, Say, Wait, FacePerson
+from geometry_msgs.msg import Pose, Point, Quaternion
+from lasr_skills import GoToLocation, Say, Wait
 
 
-def dict_to_pose(data: dict) -> Pose:
-    """Convert a dictionary with position and orientation to a Pose message."""
-    pose = Pose()
-    if "position" in data:
-        pose.position.x = data["position"]["x"]
-        pose.position.y = data["position"]["y"]
-        pose.position.z = data["position"]["z"]
-    if "orientation" in data:
-        pose.orientation.x = data["orientation"]["x"]
-        pose.orientation.y = data["orientation"]["y"]
-        pose.orientation.z = data["orientation"]["z"]
-        pose.orientation.w = data["orientation"]["w"]
+def get_pose(key):
+    pose = Pose(
+        position=Point(
+            x=float(
+                node.get_parameter(f"{key}.position.x").value
+            ),
+            y=float(
+                node.get_parameter(f"{key}.position.y").value
+            ),
+            z=float(
+                node.get_parameter(f"{key}.position.z").value
+            ),
+        ),
+        orientation=Quaternion(
+            x=float(
+                node.get_parameter(f"{key}.orientation.x").value
+            ),
+            y=float(
+                node.get_parameter(f"{key}.orientation.y").value
+            ),
+            z=float(
+                node.get_parameter(f"{key}.orientation.z").value
+            ),
+            w=float(
+                node.get_parameter(f"{key}.orientation.w").value
+            ),
+        ),
+    )
     return pose
 
 
@@ -38,58 +54,53 @@ class GetOrderFromBar(yasmin.StateMachine):
         )
         self.node = node
         
-        bar_location_dict = node.get_parameter("get_order_from_bar.bar_location").value
-        barman_location_dict = node.get_parameter("get_order_from_bar.barman_location").value
-        table_location_dict = node.get_parameter("get_order_from_bar.table_location").value
-        ordered_food = node.get_parameter("get_order_from_bar.ordered_food").value
-        guest_location_dict = node.get_parameter("get_order_from_bar.guest_location").value
-
-        wait_duration = node.get_parameter("get_order_from_bar.wait_duration").value
-        
-        # Convert dictionaries to Pose objects
-        bar_location = dict_to_pose(bar_location_dict)
-        barman_location = dict_to_pose(barman_location_dict)
-        table_location = dict_to_pose(table_location_dict)
-        guest_location = dict_to_pose(guest_location_dict)
+        parameters = {
+            "bar": get_pose("get_order_from_bar.bar_location"),
+            "barman": get_pose("get_order_from_bar.barman_location"),
+            "table": get_pose("get_order_from_bar.table_location"),
+            "guest": get_pose("get_order_from_bar.guest_location"),
+            "wait_duration": get_pose("get_order_from_bar.wait_duration"),
+            "ordered_food": get_pose("get_order_from_bar.ordered_food")
+        }
 
         self.add_state(
             "GO_TO_BAR",
-            GoToLocation(location=bar_location),
+            GoToLocation(location=parameters["bar"]),
             transitions={"succeeded": "FACE_BARMAN", "failed": "failed"}
         )
         
         self.add_state(
             "FACE_BARMAN",
-            GoToLocation(location=barman_location),
+            GoToLocation(location=parameters["barman"]),
             transitions={"succeeded": "PLACE_ORDER", "failed": "failed"}
         )
         self.add_state(
             "PLACE_ORDER",
-            Say(text=f"I would like to order {', '.join(ordered_food)}"),
+            Say(text=f"I would like to order {', '.join(parameters['ordered_food'])}"),
             transitions={"succeeded": "WAIT_FOR_ORDER", "failed": "failed"}
         )
         
         self.add_state(
             "WAIT_FOR_ORDER",
-            Wait(duration=wait_duration),
+            Wait(duration=parameters["wait_duration"]),
             transitions={"succeeded": "succeeded", "failed": "failed"}
         )
         
         self.add_state(
             "GO_TO_TABLE",
-            GoToLocation(location=table_location),
+            GoToLocation(location=parameters["table"]),
             transitions={"succeeded": "ANNOUNCE_ORDER", "failed": "failed"}
         )
         
         self.add_state(
             "FACE_GUESTS",
-            GoToLocation(location=guest_location),
+            GoToLocation(location=parameters["guest"]),
             transitions={"succeeded": "ANNOUNCE_ORDER", "failed": "failed"}
         )
         
         self.add_state(
             "ANNOUNCE_ORDER",
-            Say(text=f"Your order of {', '.join(ordered_food)} is ready!"),
+            Say(text=f"Your order of {', '.join(parameters['ordered_food'])} is ready!"),
             transitions={"succeeded": "succeeded", "failed": "failed"}
         )
     

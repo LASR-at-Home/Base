@@ -2,16 +2,44 @@ restaurant:
   ros__parameters:
     get_order_from_bar:
       bar_location:
-        position: {x: 0.0, y: 0.0, z: 0.0}
-        orientation: {x: 0.0, y: 0.0, z: 0.0, w: 1.0}
+        position: 
+          x: 0.0, 
+          y: 0.0, 
+          z: 0.0
+        orientation: 
+          x: 0.0,
+          y: 0.0,
+          z: 0.0,
+          w: 1.0
       barman_location:
-        position: {x: 1.0, y: 1.0, z: 0.0}
-        orientation: {x: 0.0, y: 0.0, z: 0.0, w: 1.0}
+        position: 
+          x: 1.0, 
+          y: 1.0, 
+          z: 0.0
+        orientation: 
+          x: 0.0,
+          y: 0.0,
+          z: 0.0,
+          w: 1.0
       table_location:
-        position: {x: -1.0, y: -1.0, z: 0.0}
-        orientation: {x: 0.0, y: 0.0, z: 0.0, w: 1.0}
+        position: 
+          x: -1.0, 
+          y: -1.0, 
+          z: 0.0
+        orientation: 
+          x: 0.0,
+          y: 0.0,
+          z: 0.0,
+          w: 1.0
       guest_location:
-        position: {x: -2.0, y: -2.0, z: 0.0}
-        orientation: {x: 0.0, y: 0.0, z: 0.0, w: 1.0}
+        position: 
+          x: -2.0, 
+          y: -2.0, 
+          z: 0.0
+        orientation: 
+          x: 0.0,
+          y: 0.0,
+          z: 0.0,
+          w: 1.0
       ordered_food: ["pizza", "soda"]
       wait_duration: 30
