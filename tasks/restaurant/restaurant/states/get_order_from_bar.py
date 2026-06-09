@@ -10,22 +10,48 @@ Announce order
 
 import rclpy
 import yasmin
+import yasmin_ros
 from geometry_msgs.msg import Pose
 from lasr_skills import GoToLocation, Say, Wait, FacePerson
 
-class GetOrderFromBar(StateMachine):
 
-    def __init__(
-        self,
-        bar_location: Pose,
-        barman_location: Pose,
-        ordered_food: list[str],
-        table_location: Pose
-    ):
+def dict_to_pose(data: dict) -> Pose:
+    """Convert a dictionary with position and orientation to a Pose message."""
+    pose = Pose()
+    if "position" in data:
+        pose.position.x = data["position"]["x"]
+        pose.position.y = data["position"]["y"]
+        pose.position.z = data["position"]["z"]
+    if "orientation" in data:
+        pose.orientation.x = data["orientation"]["x"]
+        pose.orientation.y = data["orientation"]["y"]
+        pose.orientation.z = data["orientation"]["z"]
+        pose.orientation.w = data["orientation"]["w"]
+    return pose
+
+
+class GetOrderFromBar(yasmin.StateMachine):
+
+    def __init__(self, node):
         super().__init__(
-            outcomes=["succeeded", "failed"],
-                         handle_sigint=True
-                         )
+            outcomes=["succeeded", "failed"], handle_sigint=True
+        )
+        self.node = node
+        
+        bar_location_dict = node.get_parameter("get_order_from_bar.bar_location").value
+        barman_location_dict = node.get_parameter("get_order_from_bar.barman_location").value
+        table_location_dict = node.get_parameter("get_order_from_bar.table_location").value
+        ordered_food = node.get_parameter("get_order_from_bar.ordered_food").value
+        guest_location_dict = node.get_parameter("get_order_from_bar.guest_location").value
+
+        wait_duration = node.get_parameter("get_order_from_bar.wait_duration").value
+        
+        # Convert dictionaries to Pose objects
+        bar_location = dict_to_pose(bar_location_dict)
+        barman_location = dict_to_pose(barman_location_dict)
+        table_location = dict_to_pose(table_location_dict)
+        guest_location = dict_to_pose(guest_location_dict)
+
         self.add_state(
             "GO_TO_BAR",
             GoToLocation(location=bar_location),
@@ -45,7 +71,7 @@ class GetOrderFromBar(StateMachine):
         
         self.add_state(
             "WAIT_FOR_ORDER",
-            Wait(duration=30),  # Assuming a constant wait time of 30 seconds
+            Wait(duration=wait_duration),
             transitions={"succeeded": "succeeded", "failed": "failed"}
         )
         
@@ -57,7 +83,7 @@ class GetOrderFromBar(StateMachine):
         
         self.add_state(
             "FACE_GUESTS",
-            FacePerson(node=self.node),
+            GoToLocation(location=guest_location),
             transitions={"succeeded": "ANNOUNCE_ORDER", "failed": "failed"}
         )
         
@@ -67,22 +93,29 @@ class GetOrderFromBar(StateMachine):
             transitions={"succeeded": "succeeded", "failed": "failed"}
         )
     
-def main():
-    rclpy.init()
+def main(args=None):
+    rclpy.init(args=args)
     
-    sm = GetOrderFromBar(
-        bar_location=Pose(),
-        barman_location=Pose(),
-        ordered_food=["pizza", "soda"],
-        table_location=Pose()
+    node = rclpy.create_node(
+        node_name="get_order_from_bar",
+        allow_undeclared_parameters=True,
+        automatically_declare_parameters_from_overrides=True,
     )
+    
+    sm = GetOrderFromBar(node=node)
+    yasmin_ros.set_ros_loggers(node)
 
-    try:
-        outcome=sm()
+    try:        
+        bb = yasmin.Blackboard()
+        outcome = sm(bb)
         yasmin.YASMIN_LOG_INFO(f"GetOrderFromBar finished with outcome {outcome}")
 
     except Exception as e:
         yasmin.YASMIN_LOG_WARN(e)
 
     if rclpy.ok():
+        node.destroy_node()
         rclpy.shutdown()
+        
+if __name__ == "__main__":
+    main()
