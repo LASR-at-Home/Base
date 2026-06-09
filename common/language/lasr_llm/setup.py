@@ -23,7 +23,7 @@ setup(
     },
     entry_points={
         "console_scripts": [
-            "llm = lasr_llm.nodes.llm:main",
+            # "llm = lasr_llm.nodes.llm:main",
             "receptionist_service = lasr_llm.nodes.receptionist_service:main",
             "hri_task_service = lasr_llm.nodes.hri_task_service:main",
             "storing_groceries_service = lasr_llm.nodes.storing_groceries_service:main",
