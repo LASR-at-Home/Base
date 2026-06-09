@@ -37,7 +37,8 @@ class Detect3DInArea(yasmin.StateMachine):
             self._z_min = z_min
             self._z_max = z_max
             self.area_polygon = area_polygon
-            self.debug_publisher = yasmin_ros.logger_node.create_publisher(
+            self.node = yasmin_ros.logger_node
+            self.debug_publisher = self.node.create_publisher(
                 PolygonStamped, debug_publisher, 1
             )
 
@@ -79,7 +80,7 @@ class Detect3DInArea(yasmin.StateMachine):
                 pub.publish(
                     PointStamped(
                         header=Header(
-                            frame_id="head_front_camera_color_optical_frame",
+                            frame_id="map",
                             stamp=Time().to_msg(),
                         ),
                         point=Point(

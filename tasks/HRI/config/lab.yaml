@@ -23,10 +23,10 @@ hri:   # the `hri` Node's Parameters
         w: 0.8375911044123998
 
     door_polygon:
-      top_left:     [0.6513739824295044, 0.6461964249610901]
-      top_right:    [1.5877039432525635, -0.14666156470775604]
-      bottom_right: [2.010641574859619, 0.6358721256256104]
-      bottom_left:  [1.1054649353027344, 1.3228563070297241]
+      top_left:     [2.565998077392578, -0.5245494842529297]
+      top_right:    [2.1353719234466553, -1.3906874656677246]
+      bottom_right: [0.9952375888824463, -0.7686729431152344]
+      bottom_left:  [1.384078025817871, 0.08977162837982178]
 
     # Where to position self for seating guests
     seat_pose:
@@ -49,10 +49,10 @@ hri:   # the `hri` Node's Parameters
     # From robot POV: [top left, top right,bottom right, bottom left ]
     # General area to perform detections in 
     seat_area:
-      top_left:     [2.9270116806030273, 0.9738638401031494]
-      top_right:    [2.923091411590576, -1.54178786277771]
-      bottom_right: [0.4543781280517578, -1.3588223457336426]
-      bottom_left:  [0.9297175407409668,1.0230729579925537]
+      top_left:     [1.8483556509017944, 0.7650331854820251]
+      top_right:    [2.1753768920898438, 0.05751645565032959]
+      bottom_right: [2.8799538612365723, 0.3364943861961365]
+      bottom_left:  [2.374444007873535, 1.0547375679016113]
     
     # Max number of seats
     max_people_on_sofa: 2
