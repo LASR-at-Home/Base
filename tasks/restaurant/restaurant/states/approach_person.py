@@ -17,7 +17,7 @@ class ApproachPerson(State):
         self._tf = tf2_ros.TransformListener(self._buf, self._node)
 
     def execute(self, blackboard):
-        p = blackboard["wave_position"].point  # у map
+        p = blackboard["wave_position"].point
         try:
             t = self._buf.lookup_transform(
                 "map", "base_footprint", rclpy.time.Time(), Duration(seconds=3.0)
@@ -33,7 +33,7 @@ class ApproachPerson(State):
             f"robot(map)=({rx:.2f},{ry:.2f}) person(map)=({p.x:.2f},{p.y:.2f}) dist={dist:.2f}"
         )
 
-        if dist < 0.5:  # надто близько → хибна детекція (guard ТУТ)
+        if dist < 0.5:
             yasmin.YASMIN_LOG_WARN("rejected: person too close (<0.5m)")
             return "failed"
 

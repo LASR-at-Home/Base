@@ -4,7 +4,7 @@ import yasmin_ros
 from std_msgs.msg import Empty
 from lasr_skills import Say, GoToLocation, PlayMotion
 
-from restaurant.states import Survey, ApproachPerson
+from restaurant.states import Survey, ApproachPerson, FaceCustomer
 
 
 class Restaurant(yasmin.StateMachine):
@@ -61,32 +61,35 @@ class Restaurant(yasmin.StateMachine):
         self.add_state(
             "GO_TO_TABLE",
             GoToLocation(),
-            transitions={"succeeded": "TAKE_ORDER", "failed": "SURVEY"},
+            transitions={"succeeded": "FACE_CUSTOMER", "failed": "SURVEY"},
         )
 
         self.add_state(
-            "TAKE_ORDER",
-            Say(text="Hello. What would you like to order?"),
+            "FACE_CUSTOMER",
+            FaceCustomer(),
+            transitions={"succeeded": "LOOK_AT_CUSTOMER", "failed": "LOOK_AT_CUSTOMER"},
+        )
+
+        self.add_state(
+            "LOOK_AT_CUSTOMER",
+            PlayMotion(motion_name="look_centre"),
             transitions={
-                "succeeded": "GO_TO_BAR",
-                "aborted": "GO_TO_BAR",
-                "canceled": "GO_TO_BAR",
+                "succeeded": "GREET",
+                "aborted": "GREET",
+                "canceled": "GREET",
             },
         )
 
         self.add_state(
-            "GO_TO_BAR",
-            Say(text="Going to the bar."),
-            transitions={"succeeded": "SERVE", "aborted": "SERVE", "canceled": "SERVE"},
-        )
-
-        self.add_state(
-            "SERVE",
-            Say(text="Here's your order."),
+            "GREET",
+            Say(
+                text="Hello, my name is Rexy. I'm going to serve you today."
+                "What would you like to order?"
+            ),
             transitions={
-                "succeeded": "FACE_TABLES",
-                "aborted": "FACE_TABLES",
-                "canceled": "FACE_TABLES",
+                "succeeded": "succeeded",
+                "aborted": "succeeded",
+                "canceled": "succeeded",
             },
         )
 
