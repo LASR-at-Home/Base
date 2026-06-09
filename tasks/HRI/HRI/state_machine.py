@@ -122,11 +122,9 @@ def main():
     sm = HRI()
     bb = yasmin.Blackboard()
 
-    host_data = {}
     face_detection_confidence = 0.2
 
     bb["guest_data"] = {
-        "host": host_data,
         "guest1": {
             "name": "",
             "drink": "",
@@ -155,9 +153,8 @@ def main():
     # except Exception as e:
     #     yasmin.YASMIN_LOG_WARN(e)
 
-    if rclpy.ok():
-        node.destroy_node()
-        rclpy.shutdown()
+    node.destroy_node()
+    rclpy.shutdown()
 
 
 if __name__ == "__main__":

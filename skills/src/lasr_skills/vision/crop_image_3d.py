@@ -1,7 +1,7 @@
 import rclpy
 from rclpy.node import Node
 from rclpy.wait_for_message import wait_for_message
-from rclpy.qos import QoSProfile, DurabilityPolicy, ReliabilityPolicy
+from rclpy.qos import QoSProfile, DurabilityPolicy, ReliabilityPolicy, HistoryPolicy
 
 import yasmin
 from yasmin import State, StateMachine
@@ -64,8 +64,10 @@ class CropImage3D(State):
         self.crop_logic = crop_logic
         self.crop_type = crop_type
         self._bridge = CvBridge()
+        
+        self.node = yasmin_ros.logger_node
 
-        self.debug_publisher = yasmin_ros.logger_node.create_publisher(
+        self.debug_publisher = self.node.create_publisher(
             Image,
             "/skills/crop_image_3d/debug",
             QoSProfile(
@@ -85,15 +87,23 @@ class CropImage3D(State):
             )
 
     def execute(self, blackboard):
+        yasmin.YASMIN_LOG_INFO('CROPPING OUR 3D HEHEHE')
         detections = blackboard["detections_3d"].detected_objects
         if not detections:
             yasmin.YASMIN_LOG_WARN("No 3D detections found.")
             return "failed"
 
         # From: https://github.com/ros2/rclpy/blob/humble/rclpy/rclpy/wait_for_message.py
+        yasmin.YASMIN_LOG_INFO('WAITING FOR MSG')
+        qos = QoSProfile(depth=1, history=HistoryPolicy.KEEP_LAST, reliability=ReliabilityPolicy.RELIABLE, durability=DurabilityPolicy.TRANSIENT_LOCAL)
         success, robot_pose_msg = wait_for_message(
-            PoseWithCovarianceStamped, yasmin_ros.logger_node, self.robot_pose_topic
+            msg_type=PoseWithCovarianceStamped,
+            node=self.node,
+            topic="/amcl_pose",
+            qos_profile=qos,
+            time_to_wait=10,
         )
+        yasmin.YASMIN_LOG_INFO('MSG RECEIVED')
         if not success:
             yasmin.YASMIN_LOG_WARN("Timed out waiting for robot pose.")
             return "failed"

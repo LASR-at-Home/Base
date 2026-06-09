@@ -60,6 +60,7 @@ setup(
             "play_motion = lasr_skills.play_motion:main",
             "look = lasr_skills.look_to_point:main",
             "go_to_location = lasr_skills.go_to_location:main",
+            "ask_and_listen = lasr_skills.ask_and_listen:main"
         ],
     },
 )
