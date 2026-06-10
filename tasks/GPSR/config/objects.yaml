@@ -1,0 +1,28 @@
+# Grabbable/manipulable items the robot knows about.
+# NOT listed here: rooms (see locations.yaml), furniture, surfaces, appliances.
+# e.g. sofa, refrigerator, waste basket, coatrack → locations (unknown if not in locations.yaml).
+
+objects:
+  apple:
+    category: fruit
+    location: kitchen
+    description: A red apple on the kitchen counter.
+    grabbable: true
+    size: small
+    aliases: []
+
+  cola:
+    category: drink
+    location: living room
+    description: A cola can on the living room table.
+    grabbable: true
+    size: small
+    aliases: [coke, soda]
+
+  mustard:
+    category: food
+    location: bedroom
+    description: A jar of mustard on the bedroom shelf.
+    grabbable: true
+    size: small
+    aliases: []

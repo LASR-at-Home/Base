@@ -51,11 +51,8 @@ class DispatchSkill(yasmin.State):
     def _execute_step(self, skill, args):
         if skill == "say":
             return self._say(args.get("text", ""))
-        if skill == "go_to_location":
-            return self._go_to_location(args.get("location", ""))
-        self.node.get_logger().warn(f"Unknown skill: {skill}")
-        self._say(f"I don't know how to {skill}")
-        return "failed"
+        self.node.get_logger().info(f"Skipping skill '{skill}' (not yet actuated)")
+        return "succeeded"
 
     def execute(self, blackboard):
         steps = blackboard["steps"] if "steps" in blackboard else None

@@ -1,0 +1,10 @@
+people:
+  emma:
+    gender: female
+    description: "A woman named Emma."
+  john:
+    gender: male
+    description: "A man named John."
+  robin:
+    gender: neutral
+    description: "A person named Robin."

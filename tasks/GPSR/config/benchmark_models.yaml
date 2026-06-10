@@ -1,0 +1,9 @@
+# Models to compare when running test_planner_output.py without --models.
+# All fit in ~4 GB VRAM (Q4 quantization).
+models:
+  - qwen2.5:3b
+  - qwen3:4b
+  - qwen3.5:4b
+  - gemma3:4b
+  - llama3.2:latest
+  - phi4-mini
