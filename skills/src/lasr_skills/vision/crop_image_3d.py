@@ -87,21 +87,19 @@ class CropImage3D(State):
             )
 
     def execute(self, blackboard):
-        yasmin.YASMIN_LOG_INFO('CROPPING OUR 3D HEHEHE')
         detections = blackboard["detections_3d"].detected_objects
         if not detections:
             yasmin.YASMIN_LOG_WARN("No 3D detections found.")
             return "failed"
 
         # From: https://github.com/ros2/rclpy/blob/humble/rclpy/rclpy/wait_for_message.py
-        yasmin.YASMIN_LOG_INFO('WAITING FOR MSG')
         qos = QoSProfile(depth=1, history=HistoryPolicy.KEEP_LAST, reliability=ReliabilityPolicy.RELIABLE, durability=DurabilityPolicy.TRANSIENT_LOCAL)
         success, robot_pose_msg = wait_for_message(
             msg_type=PoseWithCovarianceStamped,
             node=self.node,
             topic="/amcl_pose",
             qos_profile=qos,
-            time_to_wait=10,
+            time_to_wait=5,
         )
         yasmin.YASMIN_LOG_INFO('MSG RECEIVED')
         if not success:

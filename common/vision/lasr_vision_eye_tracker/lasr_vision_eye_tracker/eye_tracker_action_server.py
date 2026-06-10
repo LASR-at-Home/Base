@@ -220,6 +220,14 @@ class EyeTracker(Node):
         self.get_logger().info("Beginning eye tracking...")
 
         goal = goal_handle.request
+        
+        if goal.cancel:
+            self.get_logger().info('Cancelling eye tracker')
+            self._done = True
+            goal_handle.succeed()
+            # self.destroy_node()
+            return EyeTrackerAction.Result()
+        
         if self._robot_point is None:
             self.get_logger().warn(
                 "No /robot_pose received yet; continuing and waiting asynchronously."
@@ -382,9 +390,7 @@ class EyeTracker(Node):
             self.get_clock().sleep_for(rclpy.duration.Duration(seconds=0.25))
 
         goal_handle.succeed()
-        image_sub.unregister()
-        depth_sub.unregister()
-        depth_camera_info_sub.unregister()
+        ts.unregisterCallback(0)
         return EyeTrackerAction.Result()
 
 
@@ -396,7 +402,7 @@ def main(args=None):
     eye_tracker = EyeTracker()
 
     # This allows the action server to handle concurrent goals
-    executor = MultiThreadedExecutor(num_threads=4)
+    executor = MultiThreadedExecutor()
     executor.add_node(eye_tracker)
 
     try:

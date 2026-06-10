@@ -37,14 +37,6 @@ class GoToLocation(State):
 
             node = yasmin_ros.logger_node
 
-            node.declare_parameter(f"{self.location_param}.position.x", 0.0)
-            node.declare_parameter(f"{self.location_param}.position.y", 0.0)
-            node.declare_parameter(f"{self.location_param}.position.z", 0.0)
-            node.declare_parameter(f"{self.location_param}.orientation.x", 0.0)
-            node.declare_parameter(f"{self.location_param}.orientation.y", 0.0)
-            node.declare_parameter(f"{self.location_param}.orientation.z", 0.0)
-            node.declare_parameter(f"{self.location_param}.orientation.w", 0.0)
-
             goal_pose = Pose(
                 position=Point(
                     x=float(

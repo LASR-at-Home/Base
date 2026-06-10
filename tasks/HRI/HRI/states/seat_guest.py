@@ -28,6 +28,7 @@ from lasr_skills import (
     Say,
     Wait,
     DetectAllInPolygon,
+    StopEyeTracker
 )
 
 from yasmin_viewer import YasminViewerPub
@@ -261,21 +262,20 @@ class SeatGuest(StateMachine):
         seating_area_minus_sofa = self.seating_area.difference(self.sofa_area)
 
         def check(blackboard):
-            detections = blackboard['guest_data']
-            yasmin.YASMIN_LOG_INFO(str(detections))
+            guest1 = blackboard['guest_data']['guest1']
+            
+            for key in guest1.keys():
+                value = guest1[key]
+                
+                yasmin.YASMIN_LOG_INFO(f'{key}: {value}')
             
             return 'succeeded'
-        
-        # self.userdata.z_sweep_min = (
-        #     -0.5
-        # )  # TODO: Remove when testing on robot move as paramter to detect3d...
-        # self.userdata.z_sweep_max = 100  # TODO: Remove when testing on robot
-        # self.blackboard["seated_guest_locs"] = []
 
-        self.add_state('CHECK', yasmin.CbState(outcomes=['succeeded'], callback=check), transitions={'succeeded': 'SAY_FINDING_SEAT'})
+        self.add_state('CHECK', 
+                       yasmin.CbState(outcomes=['succeeded'], callback=check), 
+                       transitions={'succeeded': 'SAY_FINDING_SEAT'})
 
-        ### ADD IN STOP EYE TRACKER
-
+    
         self.add_state(
             "SAY_FINDING_SEAT",
             Say(text="I will now find a seat for you."),

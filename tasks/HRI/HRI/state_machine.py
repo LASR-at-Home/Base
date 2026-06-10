@@ -10,7 +10,7 @@ import yasmin_ros
 
 from geometry_msgs.msg import Point, PointStamped, Pose
 
-from lasr_skills import Say, GoToLocation
+from lasr_skills import Say, GoToLocation, StopEyeTracker
 
 from HRI.states import *
 
@@ -49,7 +49,13 @@ class HRI(yasmin.StateMachine):
         self.add_state(
             "START_TIMER",
             StartTimer(),
-            transitions={"succeeded": "GREET", "failed": "START_TIMER"},
+            transitions={"succeeded": "SAY_START", "failed": "START_TIMER"},
+        )
+        
+        self.add_state(
+            "SAY_START",
+            Say(text='Start of h r i task'),
+            transitions={'succeeded': 'GO_TO_START', 'aborted': 'failed', 'canceled': 'failed'}
         )
 
         # self.add_state(
@@ -59,16 +65,42 @@ class HRI(yasmin.StateMachine):
         # )
 
         self.add_state(
-            "GREET",  # SM2: Greets guest
-            LookAndGreetGuest(last_resort=False, guest_id="guest1"),
-            transitions={"succeeded": "SEAT_GUEST", "failed": "failed"},
+            "GO_TO_START",  
+            GoToLocation(location_param="start_pose"),
+            transitions={"succeeded": "GO_TO_DOOR", "failed": "failed"},
+        )
+        
+        
+        
+        self.add_state(
+            "GO_TO_DOOR", 
+            GoToLocation(location_param="door_pose"),
+            transitions={"succeeded": "GREET", "failed": "failed"},
         )
 
-        # self.add_state(
-        #     "GUIDE_TO_SEAT",  # GUIDES GUEST TO SEATING AREA
-        #     GoToLocation(location_param="seat_pose"),
-        #     transitions={"succeeded": "SEAT_GUEST", "failed": "failed"},
-        # )
+        self.add_state(
+            "GREET",  # SM2: Greets guest
+            LookAndGreetGuest(last_resort=False, guest_id="guest1"),
+            transitions={"succeeded": "STOP_EYE_TRACKER", "failed": "failed"},
+        )
+
+        self.add_state('STOP_EYE_TRACKER',
+                       StopEyeTracker(),
+                       transitions={'succeeded': 'SAY_FOLLOW', 'aborted': 'SAY_FOLLOW', 'canceled': 'SAY_FOLLOW', 'timeout': 'SAY_FOLLOW'})
+
+        self.add_state('SAY_FOLLOW',
+                       Say(text='Welcome. Follow me to the seating area.'),
+                       transitions={
+                            "succeeded": "GUIDE_TO_SEAT",
+                            "aborted": "GUIDE_TO_SEAT",
+                            "canceled": "GUIDE_TO_SEAT",
+                        })
+
+        self.add_state(
+            "GUIDE_TO_SEAT",  # GUIDES GUEST TO SEATING AREA
+            GoToLocation(location_param="seat_pose"),
+            transitions={"succeeded": "SEAT_GUEST", "failed": "failed"},
+        )
 
         self.add_state(
             "SEAT_GUEST",  # SM3: Locates and seats guest in free seat
