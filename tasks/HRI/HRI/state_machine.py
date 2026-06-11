@@ -10,7 +10,7 @@ import yasmin_ros
 
 from geometry_msgs.msg import Point, PointStamped, Pose
 
-from lasr_skills import Say, GoToLocation, StopEyeTracker
+from lasr_skills import Say, GoToLocation, StopEyeTracker, PlayMotion
 
 from HRI.states import *
 
@@ -26,6 +26,8 @@ except ImportError:
 class HRI(yasmin.StateMachine):
     def __init__(self):
         super().__init__(outcomes=["succeeded", "failed"], handle_sigint=True)
+
+        self.guest_id = 1
 
         def wait_cb(blackboard, msg):
             yasmin.YASMIN_LOG_INFO("RECEIVED START SIGNAL")
@@ -49,52 +51,57 @@ class HRI(yasmin.StateMachine):
         self.add_state(
             "START_TIMER",
             StartTimer(),
-            transitions={"succeeded": "SAY_START", "failed": "START_TIMER"},
-        )
-        
-        self.add_state(
-            "SAY_START",
-            Say(text='Start of h r i task'),
-            transitions={'succeeded': 'GO_TO_START', 'aborted': 'failed', 'canceled': 'failed'}
+            transitions={"succeeded": "START_CON", "failed": "START_TIMER"},
         )
 
-        # self.add_state(
-        #     "START_CON",  # SM1: Waits for Door to open, then goes to start
-        #     self.setup(),
-        #     transitions={"succeeded": "GREET", "failed": "START_CON"},
-        # )
+        self.add_state(
+            "START_CON",  # SM1: Waits for Door to open, then goes to start
+            self.setup(),
+            transitions={"succeeded": "GO_TO_DOOR", "failed": "START_CON"},
+        )
 
         self.add_state(
-            "GO_TO_START",  
-            GoToLocation(location_param="start_pose"),
-            transitions={"succeeded": "GO_TO_DOOR", "failed": "failed"},
-        )
-        
-        
-        
-        self.add_state(
-            "GO_TO_DOOR", 
+            "GO_TO_DOOR",
             GoToLocation(location_param="door_pose"),
             transitions={"succeeded": "GREET", "failed": "failed"},
         )
 
         self.add_state(
             "GREET",  # SM2: Greets guest
-            LookAndGreetGuest(last_resort=False, guest_id="guest1"),
+            LookAndGreetGuest(last_resort=False, guest_id=f"guest{self.guest_id}"),
             transitions={"succeeded": "STOP_EYE_TRACKER", "failed": "failed"},
         )
 
-        self.add_state('STOP_EYE_TRACKER',
-                       StopEyeTracker(),
-                       transitions={'succeeded': 'SAY_FOLLOW', 'aborted': 'SAY_FOLLOW', 'canceled': 'SAY_FOLLOW', 'timeout': 'SAY_FOLLOW'})
+        self.add_state(
+            "STOP_EYE_TRACKER",
+            StopEyeTracker(),
+            transitions={
+                "succeeded": "LOOK_CENTRE",
+                "aborted": "failed",
+                "canceled": "failed",
+                "timeout": "failed",
+            },
+        )
 
-        self.add_state('SAY_FOLLOW',
-                       Say(text='Welcome. Follow me to the seating area.'),
-                       transitions={
-                            "succeeded": "GUIDE_TO_SEAT",
-                            "aborted": "GUIDE_TO_SEAT",
-                            "canceled": "GUIDE_TO_SEAT",
-                        })
+        self.add_state(
+            "LOOK_CENTRE",
+            PlayMotion("look_centre"),
+            transitions={
+                "succeeded": "SAY_FOLLOW_1",
+                "aborted": "failed",
+                "canceled": "failed",
+            },
+        )
+
+        self.add_state(
+            "SAY_FOLLOW",
+            Say(text="Welcome. Follow me to the seating area."),
+            transitions={
+                "succeeded": "GUIDE_TO_SEAT",
+                "aborted": "failed",
+                "canceled": "failed",
+            },
+        )
 
         self.add_state(
             "GUIDE_TO_SEAT",  # GUIDES GUEST TO SEATING AREA
@@ -105,13 +112,32 @@ class HRI(yasmin.StateMachine):
         self.add_state(
             "SEAT_GUEST",  # SM3: Locates and seats guest in free seat
             SeatGuest(learn_host=False),
-            transitions={"succeeded": "succeeded", "failed": "failed"},
+            transitions={"succeeded": "CHECK", "failed": "failed"},
+        )
+
+        def check(blackboard):
+            guest = blackboard["guest_data"][f"guest{self.guest_id}"]
+
+            for key in guest.keys():
+                value = guest[key]
+
+                yasmin.YASMIN_LOG_INFO(f"{key}: {value}")
+
+            self.guest_id += 1
+            return "succeeded"
+
+        transition = "GO_TO_DOOR" if self.guest_id == 2 else "succeeded"
+
+        self.add_state(
+            "CHECK",
+            yasmin.CbState(outcomes=["succeeded"], callback=check),
+            transitions={"succeeded": transition},
         )
 
     def setup(self):
         start_con_sm = yasmin.Concurrence(
             states={
-                "SAY_START": Say(text="Start of HRI task."),
+                "SAY_START": Say(text="Start of H R I task."),
                 "DOOR_START": StartDoorSM(),
             },
             default_outcome="failed",

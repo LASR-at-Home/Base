@@ -260,21 +260,6 @@ class SeatGuest(StateMachine):
         # TODO: Update to allow local paramters overriding ros param
 
         seating_area_minus_sofa = self.seating_area.difference(self.sofa_area)
-
-        def check(blackboard):
-            guest1 = blackboard['guest_data']['guest1']
-            
-            for key in guest1.keys():
-                value = guest1[key]
-                
-                yasmin.YASMIN_LOG_INFO(f'{key}: {value}')
-            
-            return 'succeeded'
-
-        self.add_state('CHECK', 
-                       yasmin.CbState(outcomes=['succeeded'], callback=check), 
-                       transitions={'succeeded': 'SAY_FINDING_SEAT'})
-
     
         self.add_state(
             "SAY_FINDING_SEAT",

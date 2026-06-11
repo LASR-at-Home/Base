@@ -149,11 +149,23 @@ class CalculateSweepPoints(yasmin.State):
         self._min_coverage = min_coverage
         self._z_axis = z_axis
         self._fov_depth = fov_depth
+        
+        qos = QoSProfile(
+            history=HistoryPolicy.KEEP_LAST,
+            durability=DurabilityPolicy.VOLATILE,
+            reliability=ReliabilityPolicy.BEST_EFFORT,
+            depth=10,
+        )
 
         self.node = yasmin_ros.logger_node
+        self.msg = None
+        self.node.create_subscription(CameraInfo, "/head_front_camera/depth/camera_info", self.info_cb, qos_profile=qos)
 
         self._tf_buffer = tf2_ros.Buffer(Duration(seconds=10.0))
         self._tf_listener = tf2_ros.TransformListener(self._tf_buffer, self.node)
+
+    def info_cb(self, msg):
+        self.msg = msg
 
     def _get_camera_fov_polygon(self) -> ShapelyPolygon:
         """
@@ -163,27 +175,17 @@ class CalculateSweepPoints(yasmin.State):
             ShapelyPolygon: Footprint of camera FOV in map frame.
         """
 
-        qos = QoSProfile(
-            history=HistoryPolicy.KEEP_LAST,
-            durability=DurabilityPolicy.VOLATILE,
-            reliability=ReliabilityPolicy.BEST_EFFORT,
-            depth=10,
-        )
-
-        success, msg = rclpy.wait_for_message.wait_for_message(
-            msg_type=CameraInfo,
-            node=self.node,
-            topic="/head_front_camera/depth/camera_info",
-            qos_profile=qos,
-            time_to_wait=10,
-        )
-
-        if success is False:
-            yasmin.YASMIN_LOG_INFO("No camera info received, ending state")
-            self.cancel_state()
+        attempt = 0
+        while self.msg is None:
+            if attempt < 5:
+                sleep(0.5)
+                attempt += 0.5
+            else:
+                yasmin.YASMIN_LOG_INFO("No camera info received, ending state")
+                self.cancel_state()
 
         model = PinholeCameraModel()
-        model.fromCameraInfo(msg)
+        model.fromCameraInfo(self.msg)
 
         # Define pixel corners (image boundaries)
         corners = [
@@ -202,7 +204,7 @@ class CalculateSweepPoints(yasmin.State):
         for u, v in corners:
             ray = model.projectPixelTo3dRay((u, v))
             point_cam = PointStamped()
-            point_cam.header.frame_id = msg.header.frame_id
+            point_cam.header.frame_id = self.msg.header.frame_id
             point_cam.header.stamp = Time().to_msg()
             point_cam.point.x = ray[0] * self._fov_depth
             point_cam.point.y = ray[1] * self._fov_depth
@@ -214,7 +216,7 @@ class CalculateSweepPoints(yasmin.State):
             try:
                 transform = self._tf_buffer.lookup_transform(
                     "map",
-                    msg.header.frame_id,
+                    self.msg.header.frame_id,
                     Time(),
                     timeout=Duration(seconds=5.0),
                 )

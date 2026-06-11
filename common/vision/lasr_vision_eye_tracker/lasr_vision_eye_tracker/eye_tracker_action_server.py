@@ -390,7 +390,6 @@ class EyeTracker(Node):
             self.get_clock().sleep_for(rclpy.duration.Duration(seconds=0.25))
 
         goal_handle.succeed()
-        ts.unregisterCallback(0)
         return EyeTrackerAction.Result()
 
 

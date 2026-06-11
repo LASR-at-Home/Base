@@ -67,7 +67,6 @@ class DetectDoorOpening(State):
             yasmin.YASMIN_LOG_WARN("Laser scan mean distance is NaN.")
             return
 
-        yasmin.YASMIN_LOG_INFO(f"Current mean distance: {mean_distance:.2f}")
         if mean_distance - self._initial_mean_distance > self._opened_delta:
             yasmin.YASMIN_LOG_INFO("Door has been opened.")
             self._door_opened = True

@@ -33,7 +33,6 @@ class Detect3D(ServiceState):
         filter: Union[List[str], None] = None,
         confidence: float = 0.5,
         target_frame: str = "map",
-        slop=0.2,
     ):
         super().__init__(
             srv_type=YoloDetection3D,
@@ -56,7 +55,7 @@ class Detect3D(ServiceState):
 
         self.node = yasmin_ros.logger_node
 
-        camera_qos = QoSProfile(
+        self.camera_qos = QoSProfile(
             depth=10,
             reliability=ReliabilityPolicy.BEST_EFFORT,
             history=HistoryPolicy.KEEP_LAST,
@@ -67,27 +66,37 @@ class Detect3D(ServiceState):
             CameraInfo,
             self.depth_camera_info_topic,
             self._cache_camera_info,
-            qos_profile=camera_qos,
+            qos_profile=self.camera_qos,
         )   #CHECK:  SAme qos for CameraInfo as Image? 
-
-        image_sub = message_filters.Subscriber(
-            self.node, Image, self.image_topic, qos_profile=camera_qos
-        )
-        depth_sub = message_filters.Subscriber(
-            self.node, Image, self.depth_image_topic, qos_profile=camera_qos
-        )
-
-        self.ts = message_filters.ApproximateTimeSynchronizer(
-            [image_sub, depth_sub], queue_size=30, slop=slop
-        )
+        
+        
         self.data = None
         self.image_msg = None
+        
+    def callback(self, image_msg, depth_msg):
+        if self.data is None:
+            return
+        self.data = (image_msg, depth_msg, self.cam_info)
 
     def _cache_camera_info(self, msg: CameraInfo) -> None:
         if self.cam_info is None:
             self.cam_info = msg
 
     def _create_req(self, blackboard):
+        
+        image_sub = message_filters.Subscriber(
+            self.node, Image, self.image_topic, qos_profile=self.camera_qos
+        )
+        depth_sub = message_filters.Subscriber(
+            self.node, Image, self.depth_image_topic, qos_profile=self.camera_qos
+        )
+        
+        self.ts = message_filters.ApproximateTimeSynchronizer(
+            [image_sub, depth_sub], queue_size=30, slop=0.1
+        )
+    
+        self.ts.registerCallback(self.callback)
+        
         if self.cam_info is None:
             deadline = time.time() + 5.0
             while self.cam_info is None and time.time() < deadline:
@@ -98,15 +107,6 @@ class Detect3D(ServiceState):
                 )
                 return "failed"
 
-        self.data = None
-
-        def callback(image_msg, depth_msg):
-            if self.data is not None:
-                return
-            self.data = (image_msg, depth_msg, self.cam_info)
-
-        self.ts.registerCallback(callback)
-
         deadline = time.time() + 30.0
         while not self.data:
             if time.time() > deadline:
@@ -115,7 +115,7 @@ class Detect3D(ServiceState):
                     f"Check that {self.image_topic} and {self.depth_image_topic} are publishing and roughly synchronized."
                 )
                 return "failed"
-            time.sleep(1)
+            time.sleep(0.25)
 
         image_msg, depth_msg, cam_info_msg = self.data
 
@@ -129,6 +129,7 @@ class Detect3D(ServiceState):
             target_frame=self.target_frame,
         )
         self.image_msg = image_msg
+        
 
         return req
 
