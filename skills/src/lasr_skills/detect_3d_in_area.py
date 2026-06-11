@@ -69,12 +69,12 @@ class Detect3DInArea(yasmin.StateMachine):
                 PolygonStamped(polygon=polygon_msg, header=Header(frame_id="map"))
             )
 
-            pub = yasmin_ros.logger_node.create_publisher(  #CHECK:  New publisher each time? declare in __init__ instead?
+            pub = yasmin_ros.logger_node.create_publisher(   
                 PointStamped, "objects_points", 10
             )
 
             for detection in detected_objects:
-                if detection.point.x == "nan": #CHECK:  Potential broken? float vs string? 
+                if detection.point.x == "nan":  
                     yasmin.YASMIN_LOG_WARN("NAN detection check work")  # Remove line if works
                     continue
                 yasmin.YASMIN_LOG_INFO(

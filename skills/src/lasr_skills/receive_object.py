@@ -180,7 +180,7 @@ class ReceiveObject(StateMachine):
         # Alternatively: 
         #   1. https://docs.pal-robotics.com/sdk/24.09/actions/advanced_grasping-grasp.html but verify Fruity has the action server
         #   2. /gripper_controller/incrementer service or
-        #   3. /gripper_controller/ action server
+        #   3. /gripper_controller/ action server        - NOT AVAILABLE | use lasr_manipulation
 
         # self.add_state(
         #     "CLOSE_GRIPPER",
