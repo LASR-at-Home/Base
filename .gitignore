@@ -150,3 +150,5 @@ common/vision/lasr_vision_open_vocabulary/lasr_vision_open_vocabulary/models/l2_
 common/vision/lasr_vision_open_vocabulary/models/*
 common/vision/lasr_vision_open_vocabulary/yolo*.pt
 yolo*.pt
+tasks/GPSR/tasks/*
+tasks/GPSR/test/output/
