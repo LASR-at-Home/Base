@@ -8,7 +8,7 @@ def generate_launch_description():
     get_order_from_bar = Node(
         package="restaurant",
         executable="get_order_from_bar",
-        name="get_order_from_bar",
+        name="restaurant",
         parameters=[
             os.path.join(
                 get_package_share_directory("restaurant"), "config", "lab.yaml"

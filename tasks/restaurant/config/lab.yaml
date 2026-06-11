@@ -1,45 +1,45 @@
 restaurant:
   ros__parameters:
-    get_order_from_bar:
-      bar_location:
-        position: 
-          x: 0.0, 
-          y: 0.0, 
-          z: 0.0
-        orientation: 
-          x: 0.0,
-          y: 0.0,
-          z: 0.0,
-          w: 1.0
-      barman_location:
-        position: 
-          x: 1.0, 
-          y: 1.0, 
-          z: 0.0
-        orientation: 
-          x: 0.0,
-          y: 0.0,
-          z: 0.0,
-          w: 1.0
-      table_location:
-        position: 
-          x: -1.0, 
-          y: -1.0, 
-          z: 0.0
-        orientation: 
-          x: 0.0,
-          y: 0.0,
-          z: 0.0,
-          w: 1.0
-      guest_location:
-        position: 
-          x: -2.0, 
-          y: -2.0, 
-          z: 0.0
-        orientation: 
-          x: 0.0,
-          y: 0.0,
-          z: 0.0,
-          w: 1.0
-      ordered_food: ["pizza", "soda"]
-      wait_duration: 30
+    bar_pose:
+      position:
+        x: 5.594959259033203
+        y: 3.1830201148986816
+        z: 0.005863189697265625
+
+      orientation:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+        w: 1
+    barman_pose:
+      position: 
+        x: 1.8916821479797363
+        y: 4.536820888519287
+        z: 0.002986907958984375
+      orientation: 
+        x: 0.0
+        y: 0.0
+        z: 0.0
+        w: 1
+    table_pose:
+      position: 
+        x: 2.5181798934936523
+        y: -2.8840084075927734
+        z: 0.00669097900390625
+      orientation: 
+        x: 0.0
+        y: 0.0
+        z: 0.0
+        w: 1.0
+    guest_pose:
+      position: 
+        x: -0.571894645690918
+        y: -3.7425570487976074
+        z: 0.0032062530517578125
+      orientation: 
+        x: 0.0
+        y: 0.0
+        z: 0.0
+        w: 1.0
+    ordered_food: ["pizza", "soda"]
+    wait_duration: 10

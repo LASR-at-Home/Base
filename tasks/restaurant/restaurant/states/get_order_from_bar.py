@@ -23,13 +23,15 @@ class GetOrderFromBar(yasmin.StateMachine):
         self.node = yasmin_ros.logger_node
 
         parameters = {
-            "bar": self.get_pose("get_order_from_bar.bar_location"),
-            "barman": self.get_pose("get_order_from_bar.barman_location"),
-            "table": self.get_pose("get_order_from_bar.table_location"),
-            "guest": self.get_pose("get_order_from_bar.guest_location"),
-            "wait_duration": self.get_pose("get_order_from_bar.wait_duration"),
-            "ordered_food": self.get_pose("get_order_from_bar.ordered_food"),
+            "bar": self.get_pose("bar_pose"),
+            "barman": self.get_pose("barman_pose"),
+            "table": self.get_pose("table_pose"),
+            "guest": self.get_pose("guest_pose"),
+            "wait_duration": self.get_value("wait_duration"),
+            "ordered_food": self.get_value("ordered_food"),
         }
+
+        yasmin.YASMIN_LOG_INFO(f"parameters {parameters}")
 
         self.add_state(
             "GO_TO_BAR",
@@ -42,22 +44,28 @@ class GetOrderFromBar(yasmin.StateMachine):
             GoToLocation(location=parameters["barman"]),
             transitions={"succeeded": "PLACE_ORDER", "failed": "failed"},
         )
+
+        tts_text = f"I would like to order {', '.join(parameters['ordered_food'])}"
         self.add_state(
             "PLACE_ORDER",
-            Say(text=f"I would like to order {', '.join(parameters['ordered_food'])}"),
-            transitions={"succeeded": "WAIT_FOR_ORDER", "failed": "failed"},
+            Say(text=tts_text),
+            transitions={
+                "succeeded": "WAIT_FOR_ORDER",
+                "aborted": "failed",
+                "canceled": "failed",
+            },
         )
 
         self.add_state(
             "WAIT_FOR_ORDER",
-            Wait(duration=parameters["wait_duration"]),
-            transitions={"succeeded": "succeeded", "failed": "failed"},
+            Wait(wait_time=parameters["wait_duration"]),
+            transitions={"succeeded": "GO_TO_TABLE", "failed": "failed"},
         )
 
         self.add_state(
             "GO_TO_TABLE",
             GoToLocation(location=parameters["table"]),
-            transitions={"succeeded": "ANNOUNCE_ORDER", "failed": "failed"},
+            transitions={"succeeded": "FACE_GUESTS", "failed": "failed"},
         )
 
         self.add_state(
@@ -71,24 +79,31 @@ class GetOrderFromBar(yasmin.StateMachine):
             Say(
                 text=f"Your order of {', '.join(parameters['ordered_food'])} is ready!"
             ),
-            transitions={"succeeded": "succeeded", "failed": "failed"},
+            transitions={
+                "succeeded": "succeeded",
+                "aborted": "failed",
+                "canceled": "failed",
+            },
         )
 
-    def get_pose(self, key):
+    def get_pose(self, pose_key):
         pose = Pose(
             position=Point(
-                x=float(self.node.get_parameter(f"{key}.position.x").value),
-                y=float(self.node.get_parameter(f"{key}.position.y").value),
-                z=float(self.node.get_parameter(f"{key}.position.z").value),
+                x=float(self.get_value(f"{pose_key}.position.x")),
+                y=float(self.get_value(f"{pose_key}.position.y")),
+                z=float(self.get_value(f"{pose_key}.position.z")),
             ),
             orientation=Quaternion(
-                x=float(self.node.get_parameter(f"{key}.orientation.x").value),
-                y=float(self.node.get_parameter(f"{key}.orientation.y").value),
-                z=float(self.node.get_parameter(f"{key}.orientation.z").value),
-                w=float(self.node.get_parameter(f"{key}.orientation.w").value),
+                x=float(self.get_value(f"{pose_key}.orientation.x")),
+                y=float(self.get_value(f"{pose_key}.orientation.y")),
+                z=float(self.get_value(f"{pose_key}.orientation.z")),
+                w=float(self.get_value(f"{pose_key}.orientation.w")),
             ),
         )
         return pose
+
+    def get_value(self, key):
+        return self.node.get_parameter(key).value
 
 
 try:
@@ -129,7 +144,7 @@ def main():
     except Exception as e:
         yasmin.YASMIN_LOG_WARN(e)
 
-    if rclpy.ok():
+    finally:
         node.destroy_node()
         rclpy.shutdown()
 
