@@ -63,12 +63,12 @@ class Detect3D(ServiceState):
         )
 
         self.cam_info = None
-        self.node.create_subscription(
+        self.node.create_subscription(          #CHECK: Save to variable? https://docs.ros.org/en/humble/Tutorials/Beginner-Client-Libraries/Writing-A-Simple-Py-Publisher-And-Subscriber.html#id4
             CameraInfo,
             self.depth_camera_info_topic,
             self._cache_camera_info,
             qos_profile=camera_qos,
-        )
+        )   #CHECK:  SAme qos for CameraInfo as Image? 
 
         image_sub = message_filters.Subscriber(
             self.node, Image, self.image_topic, qos_profile=camera_qos

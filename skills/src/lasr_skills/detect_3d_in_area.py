@@ -24,6 +24,8 @@ class Detect3DInArea(yasmin.StateMachine):
             z_max: Optional[float] = None,
             debug_publisher: str = "/skills/detect3d_in_area/debug",
         ):
+            super().__init__(outcomes=["succeeded", "failed"])
+
             self.add_input_key("detections_3d")
             if area_polygon is None:
                 self.add_input_key("polygon")
@@ -33,7 +35,7 @@ class Detect3DInArea(yasmin.StateMachine):
                 self.add_input_key("z_sweep_max")
 
             self.add_output_key("detections_3d")
-            super().__init__(outcomes=["succeeded", "failed"])
+
             self._z_min = z_min
             self._z_max = z_max
             self.area_polygon = area_polygon
@@ -67,12 +69,13 @@ class Detect3DInArea(yasmin.StateMachine):
                 PolygonStamped(polygon=polygon_msg, header=Header(frame_id="map"))
             )
 
-            pub = yasmin_ros.logger_node.create_publisher(
+            pub = yasmin_ros.logger_node.create_publisher(  #CHECK:  New publisher each time? declare in __init__ instead?
                 PointStamped, "objects_points", 10
             )
 
             for detection in detected_objects:
-                if detection.point.x == "nan":
+                if detection.point.x == "nan": #CHECK:  Potential broken? float vs string? 
+                    yasmin.YASMIN_LOG_WARN("NAN detection check work")  # Remove line if works
                     continue
                 yasmin.YASMIN_LOG_INFO(
                     f"Detected a {detection.name} at x:{detection.point.x}, y:{detection.point.y}, z:{detection.point.z}"
@@ -123,6 +126,8 @@ class Detect3DInArea(yasmin.StateMachine):
         z_min: Optional[float] = None,
         z_max: Optional[float] = None,
     ):
+        
+        super().__init__(outcomes=["succeeded", "failed"], handle_sigint=True)
         if area_polygon is None:
             self.add_input_key("polygon")
         if z_min is None and z_max is None:
@@ -131,8 +136,6 @@ class Detect3DInArea(yasmin.StateMachine):
 
         self.add_output_key("detections_3d")
         self.add_output_key("image_raw")
-
-        super().__init__(outcomes=["succeeded", "failed"], handle_sigint=True)
 
         self.add_state(
             "DETECT_OBJECTS_3D",

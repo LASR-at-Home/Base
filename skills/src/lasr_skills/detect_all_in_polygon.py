@@ -525,11 +525,13 @@ class DetectAllInPolygon(yasmin.StateMachine):
         self._min_confidence = min_confidence
         self._min_new_object_dist = min_new_object_dist
         self._node = yasmin_ros.logger_node
+        
         image_qos = QoSProfile(
             depth=10,
             reliability=ReliabilityPolicy.BEST_EFFORT,
             history=HistoryPolicy.KEEP_LAST,
         )
+
         self._debug_publisher = self._node.create_publisher(
             Image, "/detect_all_in_polygon/debug", image_qos
         )
