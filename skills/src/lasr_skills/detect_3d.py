@@ -62,6 +62,10 @@ class Detect3D(ServiceState):
         )
 
         self.cam_info = None
+        # self.data = None
+        self.image_msg = None
+        self.depth_msg = None
+        
         self.node.create_subscription(          #CHECK: Save to variable? https://docs.ros.org/en/humble/Tutorials/Beginner-Client-Libraries/Writing-A-Simple-Py-Publisher-And-Subscriber.html#id4
             CameraInfo,
             self.depth_camera_info_topic,
@@ -69,38 +73,47 @@ class Detect3D(ServiceState):
             qos_profile=self.camera_qos,
         )   #CHECK:  SAme qos for CameraInfo as Image? 
         
+        self.node.create_subscription(
+            Image, self.image_topic, self.rgb_cb, qos_profile=self.camera_qos
+        )
+        self.node.create_subscription(
+            Image, self.depth_image_topic, self.depth_cb, qos_profile=self.camera_qos
+        )
         
-        self.data = None
-        self.image_msg = None
+        # self.ts = message_filters.ApproximateTimeSynchronizer(
+        #     [image_sub, depth_sub], queue_size=30, slop=0.1
+        # )
         
-    def callback(self, image_msg, depth_msg):
-        if self.data is None:
-            return
-        self.data = (image_msg, depth_msg, self.cam_info)
+        
+        
+    def rgb_cb(self, msg):
+        if self.image_msg is None:
+            self.image_msg = msg
+            
+    def depth_cb(self, msg):
+        if self.depth_msg is None:
+            self.depth_msg = msg
+        
+    # def callback(self, image_msg, depth_msg):
+    #     if self.data is None:
+    #         return
+    #     self.data = (image_msg, depth_msg, self.cam_info)
 
     def _cache_camera_info(self, msg: CameraInfo) -> None:
         if self.cam_info is None:
             self.cam_info = msg
 
     def _create_req(self, blackboard):
-        
-        image_sub = message_filters.Subscriber(
-            self.node, Image, self.image_topic, qos_profile=self.camera_qos
-        )
-        depth_sub = message_filters.Subscriber(
-            self.node, Image, self.depth_image_topic, qos_profile=self.camera_qos
-        )
-        
-        self.ts = message_filters.ApproximateTimeSynchronizer(
-            [image_sub, depth_sub], queue_size=30, slop=0.1
-        )
+        # self.data = None
+        self.image_msg = None
+        self.depth_msg = None
     
-        self.ts.registerCallback(self.callback)
+        # self.ts.registerCallback(self.callback)
         
         if self.cam_info is None:
             deadline = time.time() + 5.0
             while self.cam_info is None and time.time() < deadline:
-                time.sleep(1)
+                time.sleep(0.25)
             if self.cam_info is None:
                 yasmin.YASMIN_LOG_ERROR(
                     f"Timed out waiting for camera info on {self.depth_camera_info_topic}"
@@ -108,7 +121,7 @@ class Detect3D(ServiceState):
                 return "failed"
 
         deadline = time.time() + 30.0
-        while not self.data:
+        while self.image_msg is None and self.depth_msg is None:
             if time.time() > deadline:
                 self.node.get_logger().error(
                     f"Timed out waiting for synced rgb/depth frames. "
@@ -117,18 +130,16 @@ class Detect3D(ServiceState):
                 return "failed"
             time.sleep(0.25)
 
-        image_msg, depth_msg, cam_info_msg = self.data
-
         req = YoloDetection3D.Request(
-            image_raw=image_msg,
-            depth_image=depth_msg,
-            depth_camera_info=cam_info_msg,
+            image_raw=self.image_msg,
+            depth_image=self.depth_msg,
+            depth_camera_info=self.cam_info,
             model=self.model,
             confidence=self.confidence,
             filter=self.filter,
             target_frame=self.target_frame,
         )
-        self.image_msg = image_msg
+        # self.image_msg = image_msg
         
 
         return req
