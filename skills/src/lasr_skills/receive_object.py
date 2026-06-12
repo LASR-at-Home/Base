@@ -24,12 +24,23 @@ class ClearOctomap(ServiceState):
         return Empty.Request()
 
 #TODO: Do we need to detect object or just assume that the second guest is holding a bag. 
+# If detecting object we can use moveit to get arm close enough to the bag. 
 class ReceiveObject(StateMachine):
     def __init__(self, object_name: Union[str, None] = None, vertical: bool = True):
 
         super().__init__(outcomes=["succeeded", "failed"], handle_sigint=True)
         if object_name is None:
             self.add_input_key("object_name")
+
+        self.add_state(
+            "ACKNOWLEDGE_BAG",
+            Say(text="I can see you have a bag. I can take it from you now."),
+            transitions={
+                "succeeded": "CLEAR_OCTOMAP",
+                "aborted": "CLEAR_OCTOMAP",
+                "canceled": "CLEAR_OCTOMAP",
+            },
+        )
 
         self.add_state(
             "CLEAR_OCTOMAP",
