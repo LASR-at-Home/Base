@@ -29,3 +29,13 @@ locations:
       x: 7.546
       y: 0.722
       z: 0.0
+  office:
+    orientation:
+      w: 1.0
+      x: 0.0
+      y: 0.0
+      z: 0.0
+    position:
+      x: 3.2
+      y: 4.1
+      z: 0.0

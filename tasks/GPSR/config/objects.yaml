@@ -1,28 +1,152 @@
-# Grabbable/manipulable items the robot knows about.
-# NOT listed here: rooms (see locations.yaml), furniture, surfaces, appliances.
-# e.g. sofa, refrigerator, waste basket, coatrack → locations (unknown if not in locations.yaml).
-
 objects:
-  apple:
-    category: fruit
+  # --- drinks (cabinet in kitchen) ---
+  cola:
+    category: drink
     location: kitchen
-    description: A red apple on the kitchen counter.
+    grabbable: true
+    size: small
+    aliases: [coke, soda]
+  milk:
+    category: drink
+    location: kitchen
+    grabbable: true
+    size: small
+    aliases: []
+  orange juice:
+    category: drink
+    location: kitchen
+    grabbable: true
+    size: small
+    aliases: [oj]
+  juice pack:
+    category: drink
+    location: kitchen
     grabbable: true
     size: small
     aliases: []
 
-  cola:
-    category: drink
-    location: living room
-    description: A cola can on the living room table.
+  # --- fruits (desk in office) ---
+  apple:
+    category: fruit
+    location: office
     grabbable: true
     size: small
-    aliases: [coke, soda]
+    aliases: []
+  banana:
+    category: fruit
+    location: office
+    grabbable: true
+    size: small
+    aliases: []
+  orange:
+    category: fruit
+    location: office
+    grabbable: true
+    size: small
+    aliases: []
+  pear:
+    category: fruit
+    location: office
+    grabbable: true
+    size: small
+    aliases: []
 
+  # --- food (pantry in kitchen) ---
   mustard:
     category: food
+    location: kitchen
+    grabbable: true
+    size: small
+    aliases: []
+  tuna:
+    category: food
+    location: kitchen
+    grabbable: true
+    size: small
+    aliases: []
+  sugar:
+    category: food
+    location: kitchen
+    grabbable: true
+    size: small
+    aliases: []
+  spam:
+    category: food
+    location: kitchen
+    grabbable: true
+    size: small
+    aliases: []
+
+  # --- snacks (side tables in living room) ---
+  pringles:
+    category: snack
+    location: living room
+    grabbable: true
+    size: small
+    aliases: []
+  cornflakes:
+    category: snack
+    location: living room
+    grabbable: true
+    size: small
+    aliases: []
+  cheezit:
+    category: snack
+    location: living room
+    grabbable: true
+    size: small
+    aliases: [cheez-it]
+
+  # --- dishes (kitchen table) ---
+  cup:
+    category: dish
+    location: kitchen
+    grabbable: true
+    size: small
+    aliases: []
+  bowl:
+    category: dish
+    location: kitchen
+    grabbable: true
+    size: small
+    aliases: []
+  plate:
+    category: dish
+    location: kitchen
+    grabbable: true
+    size: small
+    aliases: []
+
+  # --- toys (bookshelf in living room) ---
+  tennis ball:
+    category: toy
+    location: living room
+    grabbable: true
+    size: small
+    aliases: []
+  rubiks cube:
+    category: toy
+    location: living room
+    grabbable: true
+    size: small
+    aliases: [rubik cube]
+  dice:
+    category: toy
+    location: living room
+    grabbable: true
+    size: small
+    aliases: []
+
+  # --- cleaning supplies (shelf in bedroom) ---
+  cleanser:
+    category: cleaning supply
     location: bedroom
-    description: A jar of mustard on the bedroom shelf.
+    grabbable: true
+    size: small
+    aliases: []
+  sponge:
+    category: cleaning supply
+    location: bedroom
     grabbable: true
     size: small
     aliases: []

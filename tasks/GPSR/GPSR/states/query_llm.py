@@ -4,6 +4,7 @@ import time
 import yasmin
 
 from GPSR.agent import Agent
+from GPSR.prompts import SKILL_SELECTOR_PROMPT, SKILL_REFINER_PROMPT, PLANNER_PROMPT, parse_json as _parse_json
 from GPSR.world import (
     compact_skill_lines,
     format_objects,
@@ -15,90 +16,6 @@ from GPSR.world import (
     load_skills_text,
     selected_skill_lines,
 )
-
-SKILL_SELECTOR_PROMPT = """You are the skill selector for a robot.
-Given a command, pick which skills from the list below are needed to execute it.
-Output ONLY JSON. No explanation.
-
-Available skills:
-{skill_lines}
-
-Output schema:
-{{
-  "can_do": true,
-  "reason": "<one sentence why>",
-  "selected_skills": ["skill_name", ...]
-}}
-
-If no skill can handle the command: can_do=false, selected_skills=[].
-Any question or request for information: can_do=true, selected_skills=["say"].
-
-Command: {command}
-JSON: """
-
-PLANNER_PROMPT = """You are a robot planner.
-General knowledge: {general_knowledge}
-Produce a JSON plan using ONLY the selected skills and known world below.
-
-Selected skills:
-{selected_skill_lines}
-
-Known locations: {locations}
-Known objects: {objects}
-Known people: {people}
-
-Rules:
-- Use ONLY the selected skills.
-- If the command needs a location/object/person NOT in the known lists, emit a single say step refusing politely.
-- For say steps: "text" is only the spoken words.
-- Output ONE JSON: {{"plan_description": "...", "steps": [{{"skill": "...", "args": {{...}}}}]}}
-
-EXAMPLES:
-
-Command: go to the kitchen
-Selected: go_to_location(location) — navigate to a room
-Known locations: kitchen, living room, bedroom
-Plan: {{"plan_description": "I will go to the kitchen.", "steps": [{{"skill": "go_to_location", "args": {{"location": "kitchen"}}}}]}}
-
-Command: go to the bathroom
-Selected: go_to_location(location) — navigate to a room
-Known locations: kitchen, living room, bedroom
-Plan: {{"plan_description": "I cannot go to the bathroom.", "steps": [{{"skill": "say", "args": {{"text": "I'm sorry, the bathroom is not a place I know."}}}}]}}
-
-Command: find the apple in the kitchen and bring it to emma
-Selected: go_to_location(location), find_object(object, location), pick_up(object), give_to_person(object, name)
-Known locations: kitchen, living room, bedroom | Known objects: apple (fruit, kitchen) | Known people: emma
-Plan: {{"plan_description": "I will fetch the apple and give it to Emma.", "steps": [{{"skill": "go_to_location", "args": {{"location": "kitchen"}}}}, {{"skill": "find_object", "args": {{"object": "apple", "location": "kitchen"}}}}, {{"skill": "pick_up", "args": {{"object": "apple"}}}}, {{"skill": "give_to_person", "args": {{"object": "apple", "name": "emma"}}}}]}}
-
-Command: locate the standing person and say hi
-Selected: find_person(description), say(text)
-Known locations: — | Known objects: — | Known people: - 
-Plan: {{"plan_description": "I will find the standing person and say hi.", "
-steps": [{{"skill": "find_person", "args": {{"description": "standing person"}}}}, {{"skill": "say", "args": {{"text": "Hi there!"}}}}]}}
-
-HINT: 
-[standing person is a person who is standing and locate is an action that means to find where someone is]
-locate or find means that the robot shoudl find something or someone in the environment so you cannot produce something telling taht is not in the known list because the robot can find it using its sensors with the right action.
-
-Command: 
-
-Command: what is your team affiliation?
-Selected: say(text) — speak aloud
-Known locations: — | Known objects: — | Known people: —
-Plan: {{"plan_description": "I will state my affiliation.", "steps": [{{"skill": "say", "args": {{"text": "I am from King's College London."}}}}]}}
-
-Command: {command}
-Selected: {selected_skill_lines}
-Known locations: {locations} | Known objects: {objects} | Known people: {people}
-Plan: """
-
-
-def _parse_json(raw: str) -> dict:
-    start = raw.find("{")
-    end = raw.rfind("}") + 1
-    if start == -1 or end == 0:
-        return {}
-    return json.loads(raw[start:end])
 
 
 class QueryLLM(yasmin.State):
@@ -158,12 +75,28 @@ class QueryLLM(yasmin.State):
             self._fail_safe(blackboard, reason or "I'm sorry, I don't know how to do that.")
             return "succeeded"
 
-        # Stage 2 — planner
+        # Stage 2 — skill refiner
+        try:
+            raw = self.agent.query_json(
+                SKILL_REFINER_PROMPT.format(
+                    command=command,
+                    selected_skills=json.dumps(skills),
+                ),
+                max_tokens=256,
+            )
+            refined = _parse_json(raw)
+            skills = refined.get("refined_skills", skills)
+            self.node.get_logger().info(f"Refined skills: {skills}")
+        except Exception as e:
+            self.node.get_logger().warn(f"Skill refiner failed, using raw skills: {e}")
+
+        # Stage 3 — planner
         try:
             raw = self.agent.query_json(
                 PLANNER_PROMPT.format(
                     general_knowledge=self.general_knowledge,
                     selected_skill_lines=selected_skill_lines(skills, self.skill_lines),
+                    selected_skill_names=", ".join(skills),
                     locations=", ".join(self.locations.keys()) or "none",
                     objects=format_objects(self.objects),
                     people=format_people(self.people),
