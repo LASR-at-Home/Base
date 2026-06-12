@@ -1,6 +1,7 @@
 import rclpy
 import yasmin
 import yasmin_ros
+from yasmin_ros.yasmin_node import YasminNode
 
 from geometry_msgs.msg import Point, PointStamped
 from std_msgs.msg import Header
@@ -47,7 +48,7 @@ class ScanShelves(yasmin.State):
         super().__init__(outcomes=["succeeded", "failed"])
         self.add_output_key("shelf_data")
 
-        self.node = yasmin_ros.get_node()
+        self.node = yasmin_ros.logger_node
 
         # ClassifyCategory instance reused for each shelf
         self._classifier = ClassifyCategory(task="shelf")
@@ -74,8 +75,9 @@ class ScanShelves(yasmin.State):
             return "failed"
 
         if not shelf_ids:
-            yasmin.YASMIN_LOG_ERROR("No shelf IDs found in parameters.")
-            return "failed"
+            yasmin.YASMIN_LOG_WARN("No shelf IDs — skipping shelf scan.")
+            blackboard["shelf_data"] = {}
+            return "succeeded"
 
         for shelf_id in shelf_ids:
             yasmin.YASMIN_LOG_INFO(f"Scanning shelf: {shelf_id}")

@@ -1,19 +1,16 @@
-pick_and_place:
-  table:
-    # Robot standing in front of table (approaching from +y side)
-    pose:
-      position: {x: 6.33, y: 5.9, z: 0.0}
-      orientation: {x: 0.0, y: 0.0, z: -0.707, w: 0.707}
-
-    # Table surface centre
-    look_point: [6.55, 4.82, 0.75]
-
-    # Tight polygon matching actual table dimensions
-    polygon: [5.80, 4.37, 7.30, 4.37, 7.30, 5.27, 5.80, 5.27]
-
-    # Larger search polygon for FindAndGoToTable
-    search_polygon: [5.3, 3.8, 7.8, 3.8, 7.8, 5.9, 5.3, 5.9]
-
-    # z bounds for detection
-    z_min: 0.7
-    z_max: 1.5
+/**:
+  ros__parameters:
+    pick_and_place:
+      table:
+        pose:
+          position: {x: 4.65, y: 2.5, z: 0.0}
+          orientation: {x: 0.0, y: 0.0, z: -0.9565, w: 0.2919}
+        look_point: [5.25, 2.27, 0.75]
+        polygon: [3.5, 1.0, 5.5, 1.0, 5.5, 3.5, 3.5, 3.5]
+        search_polygon: [5.3, 3.8, 7.8, 3.8, 7.8, 5.9, 5.3, 5.9]
+        z_min: 0.7
+        z_max: 1.5
+      cabinet:
+        pose:
+          position: {x: 0.0, y: 0.0, z: 0.0}
+          orientation: {x: 0.0, y: 0.0, z: 0.0, w: 1.0}

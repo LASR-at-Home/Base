@@ -49,6 +49,15 @@ class ChooseShelf(yasmin.State):
         )
         yasmin.YASMIN_LOG_INFO(f"Current shelf data: {shelf_data}")
 
+        if not shelf_data:
+            blackboard["chosen_shelf"]     = f"the {object_category} shelf"
+            blackboard["chosen_shelf_str"] = f"the shelf for {object_category} items"
+            yasmin.YASMIN_LOG_WARN(
+                f"No shelf data (scan skipped) — defaulting to "
+                f"the {object_category} shelf."
+            )
+            return "succeeded"
+        
         chosen_shelf      = None
         chosen_shelf_str  = ""
         max_count         = -1

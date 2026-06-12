@@ -53,8 +53,8 @@ class Start(yasmin.StateMachine):
             Say(text="Start of Pick and Place task."),
             transitions={
                 "succeeded": "SAY_WAITING",
-                "failed":    "SAY_WAITING",
                 "aborted":   "SAY_WAITING",
+                "canceled":    "SAY_WAITING",
             },
         )
 
@@ -63,9 +63,9 @@ class Start(yasmin.StateMachine):
             "SAY_WAITING",
             Say(text="Waiting for the door to open."),
             transitions={
-                "succeeded": "WAIT_FOR_DOOR",
-                "failed":    "WAIT_FOR_DOOR",
-                "aborted":   "WAIT_FOR_DOOR",
+                "succeeded": "SAY_GOING_TO_TABLE",
+                "aborted":   "SAY_GOING_TO_TABLE",
+                "canceled":    "SAY_GOING_TO_TABLE",
             },
         )
 
@@ -85,8 +85,8 @@ class Start(yasmin.StateMachine):
             Say(text="I am going to the table."),
             transitions={
                 "succeeded": "GO_TO_TABLE",
-                "failed":    "GO_TO_TABLE",
                 "aborted":   "GO_TO_TABLE",
+                "canceled":    "GO_TO_TABLE",
             },
         )
 
@@ -110,7 +110,8 @@ class Start(yasmin.StateMachine):
             ),
             transitions={
                 "succeeded": "succeeded",
-                "failed":    "succeeded",
                 "aborted":   "succeeded",
+                "canceled": "succeeded",
+
             },
         )

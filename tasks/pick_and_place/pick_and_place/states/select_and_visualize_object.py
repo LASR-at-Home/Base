@@ -1,10 +1,11 @@
 import cv2
 import yasmin
 import yasmin_ros
+from yasmin_ros.yasmin_node import YasminNode
 import rclpy
 from cv_bridge import CvBridge
 from sensor_msgs.msg import Image
-from rclpy.qos import QoSProfile, DurabilityPolicy
+from rclpy.qos import QoSProfile, DurabilityPolicy, ReliabilityPolicy, HistoryPolicy
 
 
 class SelectAndVisualiseObject(yasmin.State):
@@ -32,8 +33,8 @@ class SelectAndVisualiseObject(yasmin.State):
         self.add_input_key("detected_objects")
         self.add_output_key("selected_object")
         self.add_output_key("selected_object_name")
-
-        self.node = yasmin_ros.get_node()
+        self.add_output_key("object_name")
+        self.node = yasmin_ros.logger_node
         self._bridge = CvBridge()
 
         # Latched publisher so the referee view stays visible after publish
@@ -42,6 +43,18 @@ class SelectAndVisualiseObject(yasmin.State):
             durability=DurabilityPolicy.TRANSIENT_LOCAL,
         )
         self._referee_pub = self.node.create_publisher(Image, "/referee_view", qos)
+        self._last_image = None
+        cam_qos = QoSProfile(depth=1, reliability=ReliabilityPolicy.BEST_EFFORT,
+                             history=HistoryPolicy.KEEP_LAST)
+        self.node.create_subscription(
+            Image, "/head_front_camera/rgb/image_raw", self._on_image, cam_qos)
+
+
+    def _on_image(self, msg):
+        self._last_image = msg
+
+
+
 
     def execute(self, blackboard) -> str:
         # ── 1. Select object ─────────────────────────────────────────────────
@@ -55,7 +68,7 @@ class SelectAndVisualiseObject(yasmin.State):
         selected = detected[0]
         blackboard["selected_object"]      = selected
         blackboard["selected_object_name"] = selected.name
-
+        blackboard["object_name"] = selected.name
         yasmin.YASMIN_LOG_INFO(f"Selected object: {selected.name}")
 
         # ── 2. Announce to referee ───────────────────────────────────────────

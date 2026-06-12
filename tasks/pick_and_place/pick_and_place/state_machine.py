@@ -21,11 +21,7 @@ from pick_and_place.states import (
     InstructPlace,
 )
 
-try:
-    from rclpy.executors import EventsExecutor as Executor
-except ImportError:
-    from rclpy.executors import MultiThreadedExecutor as Executor
-
+from rclpy.executors import MultiThreadedExecutor as Executor
 
 class PickAndPlace(yasmin.StateMachine):
     """
@@ -68,7 +64,7 @@ class PickAndPlace(yasmin.StateMachine):
             "SCAN_SHELVES",
             ScanShelves(),
             transitions={
-                "succeeded": "FIND_AND_GO_TO_TABLE",
+                "succeeded": "DETECT_OBJECTS",
                 "failed":    "failed",
             },
         )
@@ -165,15 +161,13 @@ class PickAndPlace(yasmin.StateMachine):
             },
         )
 
-
 class PickAndPlaceNode(Node):
     def __init__(self):
         super().__init__(
             node_name="pick_and_place",
             allow_undeclared_parameters=True,
-            automatically_declare_parameters_from_overrides=True,
+            automatically_declare_parameters_from_overrides=True,   # ← ПОВЕРНУТИ
         )
-
         self._executor = Executor()
         self._executor.add_node(self)
         self._spin_thread = Thread(target=self._executor.spin)
