@@ -87,7 +87,7 @@ class HRI(yasmin.StateMachine):
             "LOOK_CENTRE",
             PlayMotion("look_centre"),
             transitions={
-                "succeeded": "SAY_FOLLOW_1",
+                "succeeded": "SAY_FOLLOW",
                 "aborted": "failed",
                 "canceled": "failed",
             },
@@ -126,7 +126,7 @@ class HRI(yasmin.StateMachine):
             self.guest_id += 1
             return "succeeded"
 
-        transition = "GO_TO_DOOR" if self.guest_id == 2 else "succeeded"
+        transition = "GO_TO_DOOR" if self.guest_id == 1 else "succeeded"
 
         self.add_state(
             "CHECK",

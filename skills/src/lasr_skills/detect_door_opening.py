@@ -26,7 +26,7 @@ class DetectDoorOpening(State):
 
     def __init__(
         self,
-        lasr_scan_topic: str = "/scan_raw",
+        lasr_scan_topic: str = "/scan",
         opened_delta: float = 0.5,
         timeout: float = 15.0,
     ):
@@ -90,7 +90,7 @@ class DetectDoorOpening(State):
         while (
             rclpy.ok() and initial_scan is None and (time.time() - start_time) < timeout
         ):
-            rclpy.spin_once(self._node, timeout_sec=0.1)
+            time.sleep(0.1)
 
         self._node.destroy_subscription(temp_sub)
         return initial_scan
@@ -126,7 +126,7 @@ class DetectDoorOpening(State):
             and (not self._door_opened)
             and ((time.time() - start_time) < self._timeout)
         ):
-            rclpy.spin_once(self._node, timeout_sec=0.1)
+            time.sleep(1)
 
         if self._scan_subscriber is not None:
             self._node.destroy_subscription(self._scan_subscriber)
