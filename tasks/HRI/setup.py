@@ -5,6 +5,8 @@ import ament_virtualenv.install
 import os
 from glob import glob
 
+_here = os.path.dirname(os.path.abspath(__file__))
+
 package_name = "HRI"
 
 
@@ -16,6 +18,7 @@ class InstallCommand(setuptools.command.install.install):
             install_base=self.install_base,
             package_name=package_name,
             python_version="3",
+            source_dir=_here,
         )
         return
 
@@ -28,7 +31,7 @@ setup(
         ("share/ament_index/resource_index/packages", ["resource/" + package_name]),
         (os.path.join("share", package_name, "config"), glob("config/*.yaml")),
         (os.path.join("share", package_name, "launch"), glob("launch/*")),
-        ("share/" + package_name, ["package.xml"]),
+        ("share/" + package_name, ["package.xml", "requirements.txt"]),
         (os.path.join("share", package_name, "config"), glob("config/*")),
     ],
     install_requires=["setuptools"],
@@ -47,6 +50,7 @@ setup(
         "console_scripts": [
             "seat_guest = HRI.states.seat_guest:main",
             "sm = HRI.state_machine:main",
+            "start_sm = HRI.states.start_door_sm:main",
         ],
     },
 )

@@ -1,15 +1,20 @@
 import time
 from typing import Optional
-
 import numpy as np
+from time import sleep
+
 import rclpy
-import smach
 from rclpy.node import Node
 from rclpy.subscription import Subscription
+
+import yasmin
+from yasmin import StateMachine, State, Blackboard
+import yasmin_ros
+
 from sensor_msgs.msg import LaserScan
 
 
-class DetectDoorOpening(smach.State):
+class DetectDoorOpening(State):
     """State to detect when a door has been opened using LIDAR data."""
 
     _scan_topic: str
@@ -21,14 +26,13 @@ class DetectDoorOpening(smach.State):
 
     def __init__(
         self,
-        node: Node,
-        lasr_scan_topic: str = "/scan_raw",
+        lasr_scan_topic: str = "/scan",
         opened_delta: float = 0.5,
         timeout: float = 15.0,
     ):
         super().__init__(outcomes=["door_opened", "failed"])
 
-        self._node = node
+        self._node = yasmin_ros.logger_node
         self._scan_topic = lasr_scan_topic
         self._scan_subscriber = None
         self._door_opened = False
@@ -54,18 +58,17 @@ class DetectDoorOpening(smach.State):
         mean_distance = self._compute_mean_distance(msg)
 
         if self._initial_mean_distance is None:
-            self._node.get_logger().warn(
+            yasmin.YASMIN_LOG_WARN(
                 "Initial mean distance not set. Cannot determine if door is opened."
             )
             return
 
         if np.isnan(mean_distance):
-            self._node.get_logger().warn("Laser scan mean distance is NaN.")
+            yasmin.YASMIN_LOG_WARN("Laser scan mean distance is NaN.")
             return
 
-        self._node.get_logger().info(f"Current mean distance: {mean_distance:.2f}")
         if mean_distance - self._initial_mean_distance > self._opened_delta:
-            self._node.get_logger().info("Door has been opened.")
+            yasmin.YASMIN_LOG_INFO("Door has been opened.")
             self._door_opened = True
 
     def _wait_for_initial_scan(self, timeout: float = 5.0) -> Optional[LaserScan]:
@@ -87,25 +90,25 @@ class DetectDoorOpening(smach.State):
         while (
             rclpy.ok() and initial_scan is None and (time.time() - start_time) < timeout
         ):
-            rclpy.spin_once(self._node, timeout_sec=0.1)
+            time.sleep(0.1)
 
         self._node.destroy_subscription(temp_sub)
         return initial_scan
 
-    def execute(self, userdata):
-        self._node.get_logger().info("Waiting for door to open...")
+    def execute(self, blackboard):
+        yasmin.YASMIN_LOG_INFO("Waiting for door to open...")
         self._door_opened = False
 
         initial_scan = self._wait_for_initial_scan(timeout=5.0)
         if initial_scan is None:
-            self._node.get_logger().warn(
+            yasmin.YASMIN_LOG_WARN(
                 "No laser scan received while waiting for initial door state."
             )
             return "failed"
 
         self._initial_mean_distance = self._compute_mean_distance(initial_scan)
         if np.isnan(self._initial_mean_distance):
-            self._node.get_logger().warn(
+            yasmin.YASMIN_LOG_WARN(
                 "Initial laser scan mean distance is NaN. Failing door detection."
             )
             return "failed"
@@ -123,7 +126,7 @@ class DetectDoorOpening(smach.State):
             and (not self._door_opened)
             and ((time.time() - start_time) < self._timeout)
         ):
-            rclpy.spin_once(self._node, timeout_sec=0.1)
+            time.sleep(1)
 
         if self._scan_subscriber is not None:
             self._node.destroy_subscription(self._scan_subscriber)
@@ -132,25 +135,29 @@ class DetectDoorOpening(smach.State):
         if self._door_opened:
             return "door_opened"
 
-        self._node.get_logger().warn("Door did not open before timeout.")
+        yasmin.YASMIN_LOG_WARN("Door did not open before timeout.")
         return "failed"
 
 
-def main(args=None):
-    rclpy.init(args=args)
-    node = rclpy.create_node("detect_door_opening")
+def main():
+    rclpy.init()
+    node = rclpy.create_node("hri")
+    yasmin_ros.set_ros_loggers(node)
 
     try:
-        detect = DetectDoorOpening(node=node)
-        sm = smach.StateMachine(outcomes=["succeeded", "failed"])
-        with sm:
-            smach.StateMachine.add(
-                "DETECT_DOOR_OPENING",
-                detect,
-                transitions={"door_opened": "succeeded", "failed": "failed"},
-            )
-        sm.execute()
-    finally:
+        sm = StateMachine(outcomes=["succeeded", "failed"])
+        sm.add_state(
+            "DETECT_DOOR_OPENING",
+            DetectDoorOpening(),
+            transitions={"door_opened": "succeeded", "failed": "failed"},
+        )
+        bb = Blackboard()
+        outcome = sm(bb)
+        yasmin.YASMIN_LOG_INFO(outcome)
+    except Exception as e:
+        yasmin.YASMIN_LOG_WARN(e)
+
+    if rclpy.ok():
         node.destroy_node()
         rclpy.shutdown()
 

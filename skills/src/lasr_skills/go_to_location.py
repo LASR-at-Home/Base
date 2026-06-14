@@ -1,27 +1,28 @@
 from typing import Union
 import rclpy
-from smach_ros import RosState
+
+import yasmin
+from yasmin import StateMachine, State, Blackboard
+import yasmin_ros
+import time
+
 from geometry_msgs.msg import Point, Quaternion, Pose, PoseStamped
 from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
 from std_msgs.msg import Header
 
-# INFO: individual file can be ran with .yamlusing command: --ros-args --params-file {path}.yaml
+# INFO: individual file can be ran with .yaml using command: --ros-args --params-file {path}.yaml
 
 
-class GoToLocation(RosState):
+class GoToLocation(State):
     def __init__(
         self,
-        node,
         location: Union[Pose, None] = None,
         location_param: Union[str, None] = None,
     ):
 
-        if location is not None or location_param is not None:
-            super().__init__(node, outcomes=["succeeded", "failed"])
-        else:
-            super().__init__(
-                node, outcomes=["succeeded", "failed"], input_keys=["location"]
-            )
+        super().__init__(outcomes=["succeeded", "failed"])
+        if not (location is not None or location_param is not None):
+            self.add_input_key("location")
 
         self.navigator = BasicNavigator()
         self.location = location
@@ -29,54 +30,43 @@ class GoToLocation(RosState):
             location_param  # the pose (eg. 'start_pose', 'wait_pose', ...)
         )
 
-    def execute(self, userdata):
+    def execute(self, blackboard):
         if self.location:
             goal_pose = self.location
         elif self.location_param:
+
+            node = yasmin_ros.logger_node
+
             goal_pose = Pose(
                 position=Point(
                     x=float(
-                        self.node.get_parameter(
-                            f"{self.location_param}.position.x"
-                        ).value
+                        node.get_parameter(f"{self.location_param}.position.x").value
                     ),
                     y=float(
-                        self.node.get_parameter(
-                            f"{self.location_param}.position.y"
-                        ).value
+                        node.get_parameter(f"{self.location_param}.position.y").value
                     ),
                     z=float(
-                        self.node.get_parameter(
-                            f"{self.location_param}.position.z"
-                        ).value
+                        node.get_parameter(f"{self.location_param}.position.z").value
                     ),
                 ),
                 orientation=Quaternion(
                     x=float(
-                        self.node.get_parameter(
-                            f"{self.location_param}.orientation.x"
-                        ).value
+                        node.get_parameter(f"{self.location_param}.orientation.x").value
                     ),
                     y=float(
-                        self.node.get_parameter(
-                            f"{self.location_param}.orientation.y"
-                        ).value
+                        node.get_parameter(f"{self.location_param}.orientation.y").value
                     ),
                     z=float(
-                        self.node.get_parameter(
-                            f"{self.location_param}.orientation.z"
-                        ).value
+                        node.get_parameter(f"{self.location_param}.orientation.z").value
                     ),
                     w=float(
-                        self.node.get_parameter(
-                            f"{self.location_param}.orientation.w"
-                        ).value
+                        node.get_parameter(f"{self.location_param}.orientation.w").value
                     ),
                 ),
             )
 
-        elif "location" in userdata:
-            goal_pose = userdata.location
+        elif "location" in blackboard.keys():
+            goal_pose = blackboard["location"]
         else:
             return "failed"
 
@@ -85,7 +75,7 @@ class GoToLocation(RosState):
         self.navigator.goToPose(goal_stamped)
 
         while not self.navigator.isTaskComplete():
-            rclpy.spin_once(self.navigator)
+            time.sleep(1)
 
         return (
             "succeeded"
@@ -98,17 +88,25 @@ def main():
     rclpy.init()
 
     # Update Node name if loading from a .yaml config
-    node = rclpy.create_node(
-        "go_to_location",
-        allow_undeclared_parameters=True,
-        automatically_declare_parameters_from_overrides=True,
-    )
+    node = rclpy.create_node("hri")
+    yasmin_ros.set_ros_loggers(node)
 
     try:
-        state = GoToLocation(node=node, location_param="start_pose")
-        outcome = state.execute(userdata={})
-        node.get_logger().info(f"GoToLocation outcome: {outcome}")
-    finally:
+        sm = StateMachine(outcomes=["succeeded", "failed"])
+        sm.add_state(
+            "GO_TO_START",
+            GoToLocation(location_param="start_pose"),
+            transitions={"succeeded": "succeeded", "failed": "failed"},
+        )
+
+        bb = Blackboard()
+        outcome = sm(bb)
+
+        yasmin.YASMIN_LOG_INFO(outcome)
+    except Exception as e:
+        yasmin.YASMIN_LOG_WARN(e)
+
+    if rclpy.ok():
         node.destroy_node()
         rclpy.shutdown()
 

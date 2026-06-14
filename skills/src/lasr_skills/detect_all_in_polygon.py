@@ -1,33 +1,55 @@
-#!/usr/bin/env python3
 import rclpy
 from rclpy.node import Node
-from rclpy.wait_for_message import wait_for_message
+from rclpy.duration import Duration
+from rclpy.time import Time
+from rclpy.qos import QoSProfile, DurabilityPolicy, ReliabilityPolicy, HistoryPolicy
+from rclpy.publisher import Publisher
 
-import smach
-from smach_ros import RosState
+try:
+    from rclpy.executors import EventsExecutor as Executor
+except ImportError:
+    from rclpy.executors import MultiThreadedExecutor as Executor
 
-# import tf2_ros as tf
+import yasmin
+import yasmin_ros
+from yasmin import Blackboard
+from yasmin_viewer import YasminViewerPub
+
 import numpy as np
 import cv2
-from threading import Thread
 
-# from tf_pcl import pcl_transform
 from typing import List, Optional, Tuple
 
-# from shapely import MultiPoint
+from time import sleep
+
+from threading import Thread, RLock
+
+import tf2_ros
+from tf2_geometry_msgs.tf2_geometry_msgs import do_transform_point
+
 from shapely import Polygon as ShapelyPolygon
 from shapely import Point as ShapelyPoint
 from shapely.affinity import translate
-from sensor_msgs.msg import Image  # , PointCloud2 as pc2
+from sensor_msgs.msg import Image, CameraInfo
+from image_geometry import PinholeCameraModel
+from std_msgs.msg import Header
 from cv2_img import msg_to_cv2_img, cv2_img_to_msg
-from geometry_msgs.msg import Point, PointStamped
+from geometry_msgs.msg import (
+    Point,
+    Point32,
+    PointStamped,
+    Polygon as ROSPolygon,
+    PolygonStamped,
+)
 from lasr_vision_interfaces.msg import Detection3D
 
 from .look_to_point import LookToPoint
 from .detect_3d_in_area import Detect3DInArea
 
+from .wait import Wait
 
-class ProcessDetections(RosState):
+
+class ProcessDetections(yasmin.State):
     """
     State to process the detected objects and filter them based on the
     minimum distance between objects of the same class.
@@ -35,22 +57,20 @@ class ProcessDetections(RosState):
 
     _min_new_object_dist: float
 
-    def __init__(self, node: Node, min_new_object_dist: float = 0.1):
-        RosState.__init__(
-            self,
-            node=node,
-            outcomes=["succeeded", "failed"],
-            input_keys=[
-                "detections_3d",
-                "detected_objects",
-                "image_raw",
-                "debug_images",
-            ],
-            output_keys=["detected_objects", "debug_images"],
-        )
+    def __init__(self, min_new_object_dist: float = 0.1):
+        super().__init__(outcomes=["succeeded", "failed"])
+
+        self.add_input_key("detections_3d")
+        self.add_input_key("detected_objects")
+        self.add_input_key("image_raw")
+        self.add_input_key("debug_images")
+
+        self.add_output_key("detected_objects")
+        self.add_output_key("debug_images")
+
         self._min_new_object_dist = min_new_object_dist
 
-    def execute(self, userdata: smach.UserData) -> str:
+    def execute(self, blackboard) -> str:
         """Processes the detected objects and filters them based on the minimum distance.
 
         Args:
@@ -67,13 +87,13 @@ class ProcessDetections(RosState):
         new_detections: List[Detection3D] = []
 
         try:
-            for detection in userdata.detections_3d:
-                if detection in userdata.detected_objects:
+            for detection in blackboard["detections_3d"]:
+                if detection in blackboard["detected_objects"]:
                     continue
 
                 # Check if the detection is a new object
                 is_new_object = True
-                for existing_detection in userdata.detected_objects:
+                for existing_detection in blackboard["detected_objects"]:
                     if (
                         existing_detection.name == detection.name
                         and euclidean_distance(
@@ -81,7 +101,7 @@ class ProcessDetections(RosState):
                         )
                         < self._min_new_object_dist
                     ):
-                        self.node.get_logger().info(
+                        yasmin_ros.logger_node.get_logger().info(
                             f"Detected object {detection.name} is too close to existing object {existing_detection.name}. Not counting as new."
                         )
                         is_new_object = False
@@ -90,86 +110,62 @@ class ProcessDetections(RosState):
                 if is_new_object:
                     new_detections.append(detection)
 
-            userdata.debug_images.append((userdata.image_raw, new_detections))
-            userdata.detected_objects.extend(new_detections)
-            self.node.get_logger().info(
-                f"Processed detections. Total detected objects: {len(userdata.detected_objects)}"
+            blackboard["debug_images"].append((blackboard["image_raw"], new_detections))
+            blackboard["detected_objects"].extend(new_detections)
+            yasmin_ros.logger_node.get_logger().info(
+                f"Processed detections. Total detected objects: {len(blackboard['detected_objects'])}"
             )
-            self.node.get_logger().info("Detected objects:")
-            for obj in userdata.detected_objects:
-                self.node.get_logger().info(
+            yasmin_ros.logger_node.get_logger().info("Detected objects:")
+            for obj in blackboard["detected_objects"]:
+                yasmin_ros.logger_node.get_logger().info(
                     f" - {obj.name} at ({obj.point.x}, {obj.point.y}, {obj.point.z})"
                 )
             return "succeeded"
         except Exception as e:
-            self.node.get_logger().error(f"Failed to process detections: {e}")
+            yasmin_ros.logger_node.get_logger().error(
+                f"Failed to process detections: {e}"
+            )
             return "failed"
 
 
-import rclpy
-from rclpy.node import Node
-from rclpy.duration import Duration
-from rclpy.time import Time
-from rclpy.qos import QoSProfile, QoSDurabilityPolicy
-from rclpy.publisher import Publisher
-from rclpy.executors import MultiThreadedExecutor
-
-import smach
-from smach_ros import RosState
-
-import tf2_ros
-from tf2_geometry_msgs.tf2_geometry_msgs import do_transform_point
-
-# import tf2_geometry_msgs
-import numpy as np
-
-from std_msgs.msg import Header
-from geometry_msgs.msg import (
-    Point,
-    Point32,
-    PointStamped,
-    Polygon as ROSPolygon,
-    PolygonStamped,
-)
-from shapely.geometry import (
-    Polygon as ShapelyPolygon,
-    Point as ShapelyPoint,
-    # MultiPoint,
-)
-from shapely.affinity import translate
-from sensor_msgs.msg import CameraInfo
-from image_geometry import PinholeCameraModel
-from typing import List, Tuple
-import threading
-
-
-class CalculateSweepPoints(RosState):
+class CalculateSweepPoints(yasmin.State):
     """
     State to calculate the points to sweep based on the polygon and camera FOV.
     """
 
     def __init__(
         self,
-        node: Node,
         polygon: ShapelyPolygon,
         min_coverage: float = 0.8,
         z_axis: float = 0.7,
         fov_depth: float = 2.0,
     ):
-        RosState.__init__(
-            self,
-            node=node,
-            outcomes=["succeeded", "failed"],
-            output_keys=["sweep_points"],
-            input_keys=["sweep_points", "detected_objects"],
-        )
+        super().__init__(outcomes=["succeeded", "failed"])
+
+        self.add_output_key("sweep_points")
+        self.add_output_key("sweep_point_index")
+
         self._polygon = polygon
         self._min_coverage = min_coverage
         self._z_axis = z_axis
         self._fov_depth = fov_depth
+        
+        qos = QoSProfile(
+            history=HistoryPolicy.KEEP_LAST,
+            durability=DurabilityPolicy.VOLATILE,
+            reliability=ReliabilityPolicy.BEST_EFFORT,
+            depth=10,
+        )
+
+        self.node = yasmin_ros.logger_node
+        self.msg = None
+        self.node.create_subscription(CameraInfo, "/head_front_camera/depth/camera_info", self.info_cb, qos_profile=qos)
 
         self._tf_buffer = tf2_ros.Buffer(Duration(seconds=10.0))
         self._tf_listener = tf2_ros.TransformListener(self._tf_buffer, self.node)
+
+    def info_cb(self, msg):
+        self.msg = msg
 
     def _get_camera_fov_polygon(self) -> ShapelyPolygon:
         """
@@ -179,46 +175,55 @@ class CalculateSweepPoints(RosState):
             ShapelyPolygon: Footprint of camera FOV in map frame.
         """
 
-        success, camera_info = wait_for_message(
-            CameraInfo, self.node, "/head_front_camera/depth/camera_info"
-        )
-        if not success or camera_info is None:
-            self.node.get_logger().warn("Timed out waiting for camera info")
+        attempt = 0
+        while self.msg is None:
+            if attempt < 5:
+                sleep(0.5)
+                attempt += 0.5
+            else:
+                yasmin.YASMIN_LOG_INFO("No camera info received, ending state")
+                self.cancel_state()
 
         model = PinholeCameraModel()
-        model.fromCameraInfo(camera_info)
+        model.fromCameraInfo(self.msg)
 
         # Define pixel corners (image boundaries)
         corners = [
             (0, 0),  # top-left
-            (model.width, 0),  # top-right
-            (model.width, model.height),  # bottom-right
-            (0, model.height),  # bottom-left
+            (model.width - 1, 0),  # top-right
+            (model.width - 1, model.height - 1),  # bottom-right
+            (0, model.height - 1),  # bottom-left
         ]
+
+        qos_test = QoSProfile(history=HistoryPolicy.KEEP_ALL)
+
+        pub = self.node.create_publisher(PointStamped, "fov_corners", qos_test)
 
         # Transform pixel rays to map frame
         transformed_points = []
         for u, v in corners:
             ray = model.projectPixelTo3dRay((u, v))
             point_cam = PointStamped()
-            point_cam.header.frame_id = camera_info.header.frame_id
+            point_cam.header.frame_id = self.msg.header.frame_id
             point_cam.header.stamp = Time().to_msg()
             point_cam.point.x = ray[0] * self._fov_depth
             point_cam.point.y = ray[1] * self._fov_depth
             point_cam.point.z = ray[2] * self._fov_depth
 
+            pub.publish(point_cam)
+
             # Transform to map frame
             try:
                 transform = self._tf_buffer.lookup_transform(
                     "map",
-                    camera_info.header.frame_id,
+                    self.msg.header.frame_id,
                     Time(),
-                    timeout=Duration(seconds=1.0),
+                    timeout=Duration(seconds=5.0),
                 )
                 point_map = do_transform_point(point_cam, transform)
                 transformed_points.append((point_map.point.x, point_map.point.y))
             except Exception as e:
-                self.node.get_logger().error(
+                yasmin.YASMIN_LOG_ERROR(
                     f"Transform failed with camera timestamp: {e}. Retrying with latest TF data."
                 )
 
@@ -286,7 +291,7 @@ class CalculateSweepPoints(RosState):
             covered = covered.union(best_intersection)
             remaining.remove(best_fp)
 
-            self.node.get_logger().info(
+            yasmin.YASMIN_LOG_INFO(
                 f"Selected new footprint, total coverage: {covered.area / total_area:.2%}, score: {best_score:.2f}"
             )
 
@@ -299,14 +304,14 @@ class CalculateSweepPoints(RosState):
         Returns:
             List[PointStamped]: List of sweep points in map frame.
         """
-        self.node.get_logger().info("Waiting for camera info and TF to map frame...")
+        yasmin.YASMIN_LOG_INFO("Waiting for camera info and TF to map frame...")
         fov_polygon = self._get_camera_fov_polygon()
 
         # Optional: visualize FOV
 
         qos = QoSProfile(
-            depth=1, durability=QoSDurabilityPolicy.TRANSIENT_LOCAL
-        )  # Verify publisher durability profile (https://docs.ros.org/en/humble/Concepts/Intermediate/About-Quality-of-Service-Settings.html)
+            depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL
+        )
 
         pub = self.node.create_publisher(PolygonStamped, "projected_fov_polygon", qos)
 
@@ -342,27 +347,130 @@ class CalculateSweepPoints(RosState):
             )
             for fp in selected_footprints
         ]
-        self.node.get_logger().info(f"Calculated {len(sweep_points)} sweep points.")
+
+        qos_test = QoSProfile(history=HistoryPolicy.KEEP_ALL)
+
+        point_pub = self.node.create_publisher(PointStamped, "/sweep_points", qos_test)
+
+        for point in sweep_points:
+            point_pub.publish(point)
+
+        yasmin.YASMIN_LOG_INFO(f"Calculated {len(sweep_points)} sweep points.")
         return sweep_points
 
-    def execute(self, userdata: smach.UserData) -> str:
-        """Main SMACH execution entrypoint"""
+    def execute(self, blackboard) -> str:
+        """Main execution entrypoint."""
         try:
-            userdata.sweep_points = self._calculate_sweep_points()
+            blackboard["sweep_points"] = self._calculate_sweep_points()
+            blackboard["sweep_point_index"] = 0
             return "succeeded"
         except Exception as e:
-            self.node.get_logger().error(f"Failed to calculate sweep points: {e}")
+            yasmin_ros.logger_node.get_logger().error(
+                f"Failed to calculate sweep points: {e}"
+            )
             return "failed"
 
 
-class DetectAllInPolygon(smach.StateMachine):
+class IterateThroughPoints(yasmin.StateMachine):
+    def __init__(
+        self,
+        polygon: ShapelyPolygon,
+        model: str = "yolo11n-seg.pt",
+        object_filter: Optional[List[str]] = None,
+        min_confidence: float = 0.5,
+        min_new_object_dist: float = 0.1,
+    ):
+        super().__init__(outcomes=["succeeded", "failed"], handle_sigint=True)
+
+        get_point_state = yasmin.CbState(
+            outcomes=["succeeded", "failed", "continue"], callback=self._get_look_point
+        )
+        get_point_state.add_input_key("sweep_points")
+        get_point_state.add_input_key("sweep_point_index")
+        get_point_state.add_output_key("pointstamped")
+        get_point_state.add_output_key("sweep_point_index")
+
+        self.add_state(
+            "GET_LOOK_POINT",
+            get_point_state,
+            transitions={
+                "succeeded": "succeeded",
+                "continue": "LOOK_POINT",
+                "failed": "failed",
+            },
+        )
+        self.add_state(
+            "LOOK_POINT",
+            LookToPoint(),
+            transitions={
+                "succeeded": "SLEEP",
+                "aborted": "SLEEP",
+                "canceled": "failed",
+                "timeout": "SLEEP",
+            },
+        )
+        self.add_state(
+            'SLEEP',
+            Wait(wait_time=2),
+            transitions={'succeeded': 'DETECT_OBJECTS', 'failed': 'failed'}
+        )
+        self.add_state(
+            "DETECT_OBJECTS",
+            Detect3DInArea(
+                area_polygon=polygon,
+                filter=object_filter,
+                model=model,
+                z_min=-10,
+                z_max=10.0,
+                confidence=min_confidence,
+                target_frame="map",
+            ),
+            transitions={"succeeded": "PROCESS_DETECTIONS", "failed": "failed"},
+            remappings={
+                "detections_3d": "detections_3d",
+                "image_raw": "image_raw",
+            },
+        )
+        self.add_state(
+            "PROCESS_DETECTIONS",
+            ProcessDetections(min_new_object_dist=min_new_object_dist),
+            transitions={"succeeded": "GET_LOOK_POINT", "failed": "failed"},
+            remappings={
+                "detections_3d": "detections_3d",
+                "detected_objects": "detected_objects",
+                "image_raw": "image_raw",
+                "debug_images": "debug_images",
+            },
+        )
+
+    def _get_look_point(self, blackboard) -> str:
+        """
+        Callback to get the look point based on the current sweep point index.
+
+        Args:
+            userdata (smach.UserData): User data containing the sweep points and index.
+
+        Returns:
+            str: Outcome of the state, "succeeded".
+        """
+        index = blackboard["sweep_point_index"]
+        yasmin.YASMIN_LOG_INFO(index)
+        if index < len(blackboard["sweep_points"]):
+            blackboard["pointstamped"] = blackboard["sweep_points"][index]
+            blackboard["sweep_point_index"] += 1
+            return "continue"
+        else:
+            yasmin.YASMIN_LOG_INFO("Finished iterating through sweep points.")
+            return "succeeded"
+
+
+class DetectAllInPolygon(yasmin.StateMachine):
     """
     State machine to sweep and detect all objects within
     a given polygon. For now, the Z-axis is ignored, and we assume
     that the sweet is performed at a fixed height, across fixed points.
     """
 
-    _node: Node
     _polygon: ShapelyPolygon
     _min_coverage: float
     _object_filter: Optional[List[str]]
@@ -375,11 +483,9 @@ class DetectAllInPolygon(smach.StateMachine):
 
     def __init__(
         self,
-        node: Node,
         polygon: ShapelyPolygon,
         min_coverage: float = 0.8,
         model: str = "yolo11n-seg.pt",
-        models: Optional[List[str]] = None,
         object_filter: Optional[List[str]] = None,
         min_confidence: float = 0.5,
         min_new_object_dist: float = 0.1,
@@ -388,7 +494,6 @@ class DetectAllInPolygon(smach.StateMachine):
     ):
         """
         Args:
-            node: A rclpy node.
 
             polygon (ShapelyPolygon): Polygon to sweep and detect objects in.
 
@@ -411,20 +516,26 @@ class DetectAllInPolygon(smach.StateMachine):
             prompt (Optional[str], optional): Prompt for the LangSam model, if used.
         """
 
-        super().__init__(
-            outcomes=["succeeded", "failed"], output_keys=["detected_objects"]
-        )
+        super().__init__(outcomes=["succeeded", "failed"], handle_sigint=True)
 
-        self._node = node
+        self.add_output_key("detected_objects")
+
         self._polygon = polygon
         self._min_coverage = min_coverage
         self._object_filter = object_filter
         self._model = model
-        self._models = models
         self._min_confidence = min_confidence
         self._min_new_object_dist = min_new_object_dist
+        self._node = yasmin_ros.logger_node
+        
+        image_qos = QoSProfile(
+            depth=10,
+            reliability=ReliabilityPolicy.BEST_EFFORT,
+            history=HistoryPolicy.KEEP_LAST,
+        )
+
         self._debug_publisher = self._node.create_publisher(
-            Image, "/detect_all_in_polygon/debug", 10
+            Image, "/detect_all_in_polygon/debug", image_qos
         )
         self._prompt = prompt
         if use_lang_sam:
@@ -432,67 +543,23 @@ class DetectAllInPolygon(smach.StateMachine):
                 self._prompt is not None
             ), "Prompt must be provided for LangSam model."
 
-        with self:
-            self.build_state_machine()
+        self.build_state_machine()
 
-    def _get_look_point(self, userdata: smach.UserData) -> str:
-        """
-        Callback to get the look point based on the current sweep point index.
-
-        Args:
-            userdata (smach.UserData): User data containing the sweep points and index.
-
-        Returns:
-            str: Outcome of the state, "succeeded".
-        """
-        index = userdata.sweep_point_index
-        if index < len(userdata.sweep_points):
-            userdata.look_point = userdata.sweep_points[index]
-            self._node.get_logger().info(
-                f"Look point set to: {userdata.look_point.point.x}, {userdata.look_point.point.y}, {userdata.look_point.point.z}"
-            )
-            return "succeeded"
-        else:
-            self._node.get_logger().error("Index out of bounds for sweep points.")
-            return "failed"
-
-    def _nap(self, userdata) -> str:
-        """
-        Callback to sleep for a given duration.
-
-        Args:
-            duration (float, optional): Duration to sleep in seconds. Defaults to 1.0.
-
-        Returns:
-            str: Outcome of the state, "succeeded".
-        """
-        rclpy.spin_once(self._node, timeout_sec=0.25)
-        return "succeeded"
-
-    def _publish_detected_objects(self, userdata: smach.UserData) -> str:
-        """
-        Callback to publish the detected objects.
-
-        Args:
-            userdata (smach.UserData): User data containing the detected objects.
-
-        Returns:
-            str: Outcome of the state, "succeeded".
-        """
+    def _publish_detected_objects(self, blackboard) -> Image:
+        """Create the debug image that PublisherState will publish."""
         images_for_tiling = []
-        for image_raw, detections in userdata.debug_images:
-            print(f"Processing {len(detections)} detections for image.")
+        for image_raw, detections in blackboard["debug_images"]:
+            yasmin_ros.logger_node.get_logger().info(
+                f"Processing {len(detections)} detections for debug image."
+            )
             if not detections:
-                self._node.get_logger().warn("No detections to publish.")
                 continue
+
             cv2_image = msg_to_cv2_img(image_raw)
-            # Loop over each detection, annotate image with bounding boxes
-            # tile images, and publish
             for detection in detections:
                 xywh = detection.xywh
                 label = detection.name
                 confidence = detection.confidence
-                # Annotate the image with bounding box and label
                 cv2.rectangle(
                     cv2_image,
                     (int(xywh[0]), int(xywh[1])),
@@ -510,16 +577,16 @@ class DetectAllInPolygon(smach.StateMachine):
                     2,
                 )
             images_for_tiling.append(cv2_image)
-        if images_for_tiling:
-            # Create a tiled image from the list of images
-            tiled_image = cv2.hconcat(images_for_tiling)
-            # Convert to ROS Image message
-            image_msg = cv2_img_to_msg(tiled_image)
-            # Publish the tiled image
-            self._debug_publisher.publish(image_msg)
-            self._node.get_logger().info("Published debug images with detections.")
 
-        return "succeeded"
+        if not images_for_tiling:
+            yasmin_ros.logger_node.get_logger().warn(
+                "No debug images with detections to publish."
+            )
+            return Image()
+
+        tiled_image = cv2.hconcat(images_for_tiling)
+        yasmin_ros.logger_node.get_logger().info("Created debug image with detections.")
+        return cv2_img_to_msg(tiled_image)
 
     def build_state_machine(self):
         """
@@ -527,203 +594,122 @@ class DetectAllInPolygon(smach.StateMachine):
         """
 
         # State to calculate the points to sweep
-        self.userdata.sweep_points = []
-        self.userdata.detected_objects = []
-        self.userdata.debug_images = []
-        self.userdata.look_point = PointStamped()
-        self.add(
+
+        publish_detected_objects = yasmin_ros.PublisherState(
+            msg_type=Image,
+            topic_name="/detect_all_in_polygon/debug",
+            create_message_handler=self._publish_detected_objects,
+        )
+        for input in ["debug_images", "detected_objects"]:
+            publish_detected_objects.add_input_key(input)
+
+        def _init_bb(blackboard):
+            blackboard["detected_objects"] = []
+            blackboard["debug_images"] = []
+            return "succeeded"
+
+        init_state = yasmin.CbState(outcomes=["succeeded"], callback=_init_bb)
+        init_state.add_output_key("detected_objects")
+        init_state.add_output_key("debug_images")
+        self.add_state(
+            "INIT_BLACKBOARD",
+            init_state,
+            transitions={"succeeded": "CALCULATE_SWEEP_POINTS"},
+        )
+
+        self.add_state(
             "CALCULATE_SWEEP_POINTS",
             CalculateSweepPoints(
-                node=self._node,
                 polygon=self._polygon,
                 min_coverage=self._min_coverage,
             ),
             transitions={"succeeded": "LOOK_AND_DETECT", "failed": "failed"},
-            remapping={"sweep_points": "sweep_points"},
+            remappings={"sweep_points": "sweep_points"},
         )
-
-        look_and_detect_iterator = smach.Iterator(
-            outcomes=["succeeded", "failed"],
-            input_keys=[
-                "sweep_points",
-                "detected_objects",
-                "look_point",
-                "debug_images",
-            ],
-            output_keys=["detected_objects", "debug_images"],
-            it=lambda: range(0, len(self.userdata.sweep_points)),
-            it_label="sweep_point_index",
-            exhausted_outcome="succeeded",
-        )
-
-        with look_and_detect_iterator:
-            container_sm = smach.StateMachine(
-                outcomes=["continue", "failed", "succeeded"],
-                input_keys=[
-                    "sweep_points",
-                    "sweep_point_index",
-                    "detected_objects",
-                    "look_point",
-                    "debug_images",
-                ],
-                output_keys=[
-                    "look_point",
-                    "detections_3d",
-                    "image_raw",
-                    "detected_objects",
-                    "debug_images",
-                ],
-            )
-            with container_sm:
-                smach.StateMachine.add(
-                    "GET_LOOK_POINT",
-                    smach.CBState(
-                        self._get_look_point,
-                        output_keys=["look_point"],
-                        outcomes=["succeeded", "failed"],
-                        input_keys=[
-                            "sweep_points",
-                            "sweep_point_index",
-                            "detected_objects",
-                            "look_point",
-                        ],
-                    ),
-                    transitions={"succeeded": "LOOK_POINT", "failed": "failed"},
-                    remapping={"look_point": "pointstamped"},
-                )
-                smach.StateMachine.add(
-                    "LOOK_POINT",
-                    LookToPoint(self._node),
-                    transitions={
-                        "succeeded": "SLEEP",
-                        "aborted": "failed",
-                        "preempted": "failed",
-                    },
-                )
-                smach.StateMachine.add(
-                    "SLEEP",
-                    smach.CBState(
-                        self._nap,
-                        outcomes=["succeeded"],
-                        input_keys=["look_point"],
-                    ),
-                    transitions={"succeeded": "DETECT_OBJECTS"},
-                )
-                if self._prompt is not None:
-                    pass
-                    # smach.StateMachine.add(
-                    #     "DETECT_OBJECTS",
-                    #     Detect3DInAreaLangSam(
-                    #         area_polygon=self._polygon,
-                    #         box_threshold=self._min_confidence,
-                    #         text_threshold=self._min_confidence,
-                    #         target_frame="map",
-                    #         prompt=self._prompt,
-                    #     ),
-                    #     transitions={
-                    #         "succeeded": "PROCESS_DETECTIONS",
-                    #         "failed": "failed",
-                    #     },
-                    #     remapping={
-                    #         "lang_sam_detections_3d": "detections_3d",
-                    #         "image_raw": "image_raw",
-                    #     },
-                    # )
-                else:
-                    smach.StateMachine.add(
-                        "DETECT_OBJECTS",
-                        Detect3DInArea(
-                            node=self._node,
-                            area_polygon=self._polygon,
-                            filter=self._object_filter,
-                            model=self._model,
-                            models=self._models,
-                            z_min=0.0,
-                            z_max=10.0,
-                            confidence=self._min_confidence,
-                        ),
-                        transitions={
-                            "succeeded": "PROCESS_DETECTIONS",
-                            "failed": "failed",
-                        },
-                        remapping={
-                            "detections_3d": "detections_3d",
-                            "image_raw": "image_raw",
-                        },
-                    )
-                smach.StateMachine.add(
-                    "PROCESS_DETECTIONS",
-                    ProcessDetections(
-                        node=self._node, min_new_object_dist=self._min_new_object_dist
-                    ),
-                    transitions={"succeeded": "continue", "failed": "failed"},
-                    remapping={
-                        "detections_3d": "detections_3d",
-                        "detected_objects": "detected_objects",
-                    },
-                )
-            smach.Iterator.set_contained_state(
-                "CONTAINER_SM",
-                container_sm,
-                loop_outcomes=["continue"],
-            )
-        self.add(
+        self.add_state(
             "LOOK_AND_DETECT",
-            look_and_detect_iterator,
-            transitions={
-                "succeeded": "PUBLISH_DETECTED_OBJECTS",
-                "failed": "failed",
-            },
-            remapping={
+            IterateThroughPoints(
+                polygon=self._polygon,
+                model=self._model,
+                object_filter=self._object_filter,
+                min_confidence=self._min_confidence,
+                min_new_object_dist=self._min_new_object_dist,
+            ),
+            transitions={"succeeded": "PUBLISH_DETECTED_OBJECTS", "failed": "failed"},
+            remappings={
                 "sweep_points": "sweep_points",
                 "detected_objects": "detected_objects",
             },
         )
 
-        self.add(
+        self.add_state(
             "PUBLISH_DETECTED_OBJECTS",
-            smach.CBState(
-                self._publish_detected_objects,
-                input_keys=["debug_images", "detected_objects"],
-                outcomes=["succeeded"],
-            ),
+            publish_detected_objects,
             transitions={"succeeded": "succeeded"},
-            remapping={
+            remappings={
                 "debug_images": "debug_images",
                 "detected_objects": "detected_objects",
             },
         )
 
+class Detect_node(Node):
+    def __init__(self):
+        super().__init__(
+            node_name="detect_all_in_polygon",
+        )
+
+        self._executor = Executor()
+        self._executor.add_node(self)
+        self._spin_thread = Thread(target=self._executor.spin)
+        self._spin_thread.start()
 
 def main():
     seat_area = [
-        [2.260225772857666, 1.446178674697876],
-        [2.342136859893799, -0.8490455150604248],
-        [0.5737614631652832, -0.8957526683807373],
-        [0.7276101112365723, 1.311692714691162],
+        [0.37787461280822754, -3.057680130004883],
+        [-1.3188365697860718, -1.687604546546936],
+        [-0.07020854949951172, -0.43113774061203003],
+        [1.5865206718444824, -1.74715256690979],
     ]
 
     seat_polygon = ShapelyPolygon(seat_area)
 
     rclpy.init()
-    node = rclpy.create_node("detect_all_in_polygon")
+    
+    node = Detect_node()
+    
+    yasmin_ros.set_ros_loggers(node)
 
-    executor = MultiThreadedExecutor()
-    executor.add_node(node)
+    bb = Blackboard()
+    bb["sweep_points"] = []
+    bb["pointstamped"] = PointStamped()
+    bb["sweep_point_index"] = 0
 
-    spin_thread = threading.Thread(target=executor.spin, daemon=True)
-    spin_thread.start()
-
-    sm = DetectAllInPolygon(
-        node,
-        seat_polygon,
-        object_filter=["person", "chair"],
-        min_coverage=1.0,
-        min_new_object_dist=0.40,
-        min_confidence=0.7,
+    sm = yasmin.StateMachine(outcomes=["succeeded", "failed"], handle_sigint=True)
+    sm.add_state(
+        "DETECT_ALL_IN_POLYGON",
+        DetectAllInPolygon(
+            polygon=seat_polygon,
+            min_coverage=1.0,
+            min_new_object_dist=0.40,
+            min_confidence=0.7,
+            object_filter=["person", "chair"],
+        ),
+        transitions={"succeeded": "succeeded", "failed": "failed"},
     )
-    outcome = sm.execute()
-    node.get_logger().info(f"State machine finished with outcome: {outcome}")
+
+    YasminViewerPub(sm, "YASMIN_MULTIPLE_STATES_DEMO")
+    try:
+        outcome = sm(bb)
+
+        yasmin.YASMIN_LOG_INFO(f"SM finished with outcome: {outcome}")
+    except Exception as e:
+        yasmin.YASMIN_LOG_WARN(e)
+        node.destroy_node()
+        rclpy.shutdown()
+
+    
+    node.destroy_node()
+    rclpy.shutdown()
 
 
 if __name__ == "__main__":

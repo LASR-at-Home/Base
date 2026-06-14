@@ -17,7 +17,20 @@ def relay_3d(
         node.get_logger().info("Service not available, waiting again...")
     node.get_logger().info("Service is ready!")
 
-    def detect_cb(image: Image, depth_image: Image, depth_camera_info: CameraInfo):
+    cam_info = None
+
+    def cache_camera_info(msg: CameraInfo) -> None:
+        nonlocal cam_info
+        if cam_info is None:
+            cam_info = msg
+
+    node.create_subscription(CameraInfo, depth_camera_info_topic, cache_camera_info, 10)
+
+    def detect_cb(image: Image, depth_image: Image):
+        if cam_info is None:
+            node.get_logger().warn("Camera info not yet available")
+            return
+
         def response_callback(future):
             try:
                 response = future.result()
@@ -28,20 +41,29 @@ def relay_3d(
         request = Recognise3D.Request(
             image_raw=image,
             depth_image=depth_image,
-            depth_camera_info=depth_camera_info,
+            depth_camera_info=cam_info,
             threshold=0.5,
             target_frame="map",
         )
         # Use async with threading - callback executes in spin thread where TF is updated
         recognise.call_async(request).add_done_callback(response_callback)
 
-    image_sub = message_filters.Subscriber(node, Image, image_topic)
-    depth_sub = message_filters.Subscriber(node, Image, depth_topic)
-    depth_camera_info_sub = message_filters.Subscriber(
-        node, CameraInfo, depth_camera_info_topic
+    from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
+
+    camera_qos = QoSProfile(
+        depth=10,
+        reliability=ReliabilityPolicy.BEST_EFFORT,
+        history=HistoryPolicy.KEEP_LAST,
+    )
+
+    image_sub = message_filters.Subscriber(
+        node, Image, image_topic, qos_profile=camera_qos
+    )
+    depth_sub = message_filters.Subscriber(
+        node, Image, depth_topic, qos_profile=camera_qos
     )
     ts = message_filters.ApproximateTimeSynchronizer(
-        [image_sub, depth_sub, depth_camera_info_sub], 10, 2.0
+        [image_sub, depth_sub], queue_size=30, slop=0.1
     )
     ts.registerCallback(detect_cb)
 
