@@ -8,7 +8,6 @@ from lasr_skills import Detect3DInArea
 from shapely import Polygon as ShapelyPolygon
 
 
-
 class CheckForPerson(State):
     def __init__(self):
         super().__init__(outcomes=["done", "not_done"])

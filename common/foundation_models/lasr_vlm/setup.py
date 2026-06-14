@@ -22,9 +22,7 @@ class InstallCommand(setuptools.command.install.install):
 
 
 setup(
-    cmdclass={
-        'install': InstallCommand
-    },
+    cmdclass={"install": InstallCommand},
     name=package_name,
     version="0.0.0",
     packages=find_packages(exclude=["test"]),

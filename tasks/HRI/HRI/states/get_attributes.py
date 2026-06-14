@@ -37,7 +37,9 @@ class GetGuestAttributes(yasmin.StateMachine):
 
         def execute(self, blackboard) -> str:
             try:
-                blackboard["guest_data"][self._guest_id]["attributes"] = blackboard["clip_detection_dict"]
+                blackboard["guest_data"][self._guest_id]["attributes"] = blackboard[
+                    "clip_detection_dict"
+                ]
                 blackboard["guest_data"][self._guest_id]["detection"] = True
                 return "succeeded"
             except Exception as e:
