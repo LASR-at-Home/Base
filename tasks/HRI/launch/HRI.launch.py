@@ -27,10 +27,10 @@ def generate_launch_description():
         )
     )
 
-    vision_clip = Node(
-        package="lasr_vision_clip",
-        executable="vqa",
-        name="lasr_vision_clip_service",
+    vlm = Node(
+        package="lasr_vlm",
+        executable="vlm_service",
+        name="lasr_vlm_service",
         output="screen",
     )
 
@@ -74,10 +74,10 @@ def generate_launch_description():
             load_motions,
             yolo_service,
             reid_service,
-            vision_clip,
+            vlm,
             eye_tracker,
-            state_machine,
             transcribe_speech,
             llm_service,
+            state_machine
         ]
     )
