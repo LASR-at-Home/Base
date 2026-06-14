@@ -5,11 +5,13 @@ from shapely.geometry.point import Point as ShapelyPoint
 from shapely.geometry.polygon import Polygon as ShapelyPolygon
 from shapely.validation import explain_validity
 import rospy
-from rclpy.wait_for_message import wait_for_message
 from cv2_img import cv2_img_to_msg, msg_to_cv2_img
 from cv2_pcl import pcl_to_cv2
 from sensor_msgs.msg import Image, PointCloud2
 from geometry_msgs.msg import Point, Polygon, PoseWithCovarianceStamped
+
+from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy, DurabilityPolicy
+
 
 from lasr_vision_interfaces.msg import CDRequest, CDResponse, Detection, Detection3D
 from lasr_vision_interfaces.srv import (
@@ -296,10 +298,10 @@ def process_single_detection_request(
     node,
     request: CDRequest,
     rgb_image_topic: str = "/head_front_camera/rgb/image_raw",
-    depth_image_topic: str = "/head_front_camera/depth/points",
+    depth_image_topic: str = "/head_front_camera/depth/image_raw",
     yolo_2d_service_name: str = "/yolov8/detect",
     yolo_3d_service_name: str = "/yolov8/detect3d",
-    robot_pose_topic: str = "/robot_pose",
+    robot_pose_topic: str = "/amcl_pose",
     debug_topic: str = "/lasr_vision/cropped_detection/debug",
 ) -> CDResponse:
     """Dispatches a detection request to the appropriate bounding box/mask 2D or 3D cropped
@@ -324,6 +326,40 @@ def process_single_detection_request(
         "top-most",
         "bottom-most",
     ]
+    
+    rgb_image = None
+    robot_pose = None
+    pointcloud_msg = None
+    
+    camera_qos = QoSProfile(
+            depth=10,
+            reliability=ReliabilityPolicy.BEST_EFFORT,
+            history=HistoryPolicy.KEEP_LAST,
+        )
+    
+    pose_qos = QoSProfile(
+            depth=1,
+            reliability=ReliabilityPolicy.RELIABLE,
+            durability=DurabilityPolicy.TRANSIENT_LOCAL,
+            history=HistoryPolicy.KEEP_LAST,
+        )
+    
+    def camera_cb(msg):
+        global rgb_image
+        rgb_image = msg
+        
+    def pose_cb(msg):
+        global robot_pose
+        robot_pose = msg
+        
+    def point_cb(msg):
+        global pointcloud_msg
+        pointcloud_msg = msg
+    
+    node.create_subscription(Image, rgb_image_topic, camera_cb, qos_profile=camera_qos)
+    node.create_subscription(PoseWithCovarianceStamped, robot_pose_topic, pose_cb, qos_profile=pose_qos)
+    node.create_subscription(PointCloud2, depth_image_topic, point_cb, 10)
+    
     valid_3d_crop_methods = ["closest", "furthest"]
     response = CDResponse()
     combined_mask = None
@@ -343,8 +379,7 @@ def process_single_detection_request(
         if request.rgb_image.data:
             rgb_image = request.rgb_image
         else:
-            success, rgb_image = wait_for_message(Image, node, rgb_image_topic)
-            if not success:
+            if rgb_image is None:
                 node.get_logger().error(
                     f"Failed to receive rgb image from {rgb_image_topic}"
                 )
@@ -389,10 +424,7 @@ def process_single_detection_request(
 
         yolo_3d_client = yolo_client_cache[key]
 
-        success, robot_pose = wait_for_message(
-            PoseWithCovarianceStamped, node, robot_pose_topic
-        )
-        if not success:
+        if robot_pose is None:
             node.get_logger().error(
                 f"Failed to receive robot pose from {robot_pose_topic}"
             )
@@ -402,10 +434,7 @@ def process_single_detection_request(
         if request.pointcloud.data:
             pointcloud_msg = request.pointcloud
         else:
-            success, pointcloud_msg = wait_for_message(
-                PointCloud2, node, depth_image_topic
-            )
-            if not success:
+            if pointcloud_msg is None:
                 node.get_logger().error(
                     f"Failed to receive pointcloud from {depth_image_topic}"
                 )

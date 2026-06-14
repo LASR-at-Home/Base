@@ -19,7 +19,6 @@ from transformers import (
 )
 import torch
 
-import os
 import json
 from datetime import datetime
 
@@ -28,6 +27,10 @@ from .utils import (
     truncate_llm_output,
     parse_llm_output_to_dict,
 )
+
+import os
+
+here = os.path.dirname(os.path.abspath(__file__))
 
 
 @dataclass
@@ -67,7 +70,8 @@ class LLMInference:
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         self.model_name = self.config.model_name
-        self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
+        cache_dir='/home/fadi/.cache/huggingface/hub'
+        self.tokenizer = AutoTokenizer.from_pretrained(self.model_name, local_files_only=True)
 
         self.logger = logging.getLogger(__name__)
 
@@ -138,7 +142,9 @@ class LLMInference:
     def load_llm_model(self):
         if self.device == torch.device("cpu"):
             self.logger.warning("[LLMInference] CPU detected — skipping quantization.")
-            return AutoModelForCausalLM.from_pretrained(self.model_name)
+            return AutoModelForCausalLM.from_pretrained(
+                self.model_name, low_cpu_mem_usage=True, local_files_only=True
+            )
 
         device_map = "auto"
         torch_dtype = torch.bfloat16

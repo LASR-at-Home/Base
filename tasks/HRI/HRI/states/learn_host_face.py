@@ -31,7 +31,7 @@ class GetLookPoint(State):
             return "failed"
         point = blackboard["seated_guest_locs"][0]
         blackboard["pointstamped"] = PointStamped(
-            header=Header(frame_id="base_footprint"), point=point
+            header=Header(frame_id="map"), point=point
         )  # TODO: Change to 'map' when 2dnav is fixed
         return "succeeded"
 
