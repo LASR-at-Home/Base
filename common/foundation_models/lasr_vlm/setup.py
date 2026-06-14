@@ -22,6 +22,7 @@ class InstallCommand(setuptools.command.install.install):
 
 
 setup(
+    cmdclass={"install": InstallCommand},
     name=package_name,
     version="0.0.0",
     packages=find_packages(exclude=["test"]),
@@ -42,6 +43,6 @@ setup(
         ],
     },
     entry_points={
-        "console_scripts": [],
+        "console_scripts": ["vlm_service = lasr_vlm.nodes.vlm_service:main"],
     },
 )

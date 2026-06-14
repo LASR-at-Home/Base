@@ -28,7 +28,7 @@ from lasr_skills import (
     Say,
     Wait,
     DetectAllInPolygon,
-    StopEyeTracker
+    StopEyeTracker,
 )
 
 from yasmin_viewer import YasminViewerPub
@@ -260,7 +260,7 @@ class SeatGuest(StateMachine):
         # TODO: Update to allow local paramters overriding ros param
 
         seating_area_minus_sofa = self.seating_area.difference(self.sofa_area)
-    
+
         self.add_state(
             "SAY_FINDING_SEAT",
             Say(text="I will now find a seat for you."),
@@ -386,7 +386,7 @@ class SeatGuest(StateMachine):
                 "succeeded": "SAY_SEAT_GUEST",
                 "aborted": "SAY_SEAT_GUEST",
                 "canceled": "SAY_SEAT_GUEST",
-                "timeout": "SAY_SEAT_GUEST"
+                "timeout": "SAY_SEAT_GUEST",
             },
             remappings={"pointstamped": "guest_seat_point"},
         )
@@ -498,11 +498,13 @@ class SeatGuest(StateMachine):
             self._node.get_parameter("max_people_on_sofa").value
         )
 
+
 try:
     from rclpy.executors import EventsExecutor as Executor
 except ImportError:
     from rclpy.executors import MultiThreadedExecutor as Executor
 from threading import Thread
+
 
 class HRI_node(Node):
     def __init__(self):
@@ -517,6 +519,7 @@ class HRI_node(Node):
         self._spin_thread = Thread(target=self._executor.spin)
         self._spin_thread.start()
 
+
 def main():
 
     rclpy.init()
@@ -525,7 +528,7 @@ def main():
     yasmin_ros.set_ros_loggers(node)
 
     try:
-        #TODO: Try with learn_host=True
+        # TODO: Try with learn_host=True
         sm = SeatGuest(learn_host=False)
         bb = Blackboard()
 
@@ -550,7 +553,6 @@ def main():
             },
         }
 
-        
         YasminViewerPub(sm, "HRI_SM3")
 
         outcome = sm(bb)

@@ -14,8 +14,8 @@ class StartEyeTracker(yasmin_ros.ActionState):
             response_timeout=1.0,
             maximum_retry=0,
         )
-        
-        self.add_input_key('person_point')
+
+        self.add_input_key("person_point")
 
     def create_goal(self, blackboard):
         goal_msg = EyeTrackerAction.Goal()
@@ -33,9 +33,6 @@ class StopEyeTracker(yasmin_ros.ActionState):
             response_timeout=1.0,
             maximum_retry=0,
         )
-        
-        
+
     def _create_goal(self, blackboard):
         return EyeTrackerAction.Goal(cancel=True)
-        
-        

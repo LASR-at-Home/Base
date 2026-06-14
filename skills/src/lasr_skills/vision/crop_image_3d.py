@@ -65,7 +65,7 @@ class CropImage3D(State):
         self.crop_logic = crop_logic
         self.crop_type = crop_type
         self._bridge = CvBridge()
-        
+
         self.node = yasmin_ros.logger_node
 
         self.debug_publisher = self.node.create_publisher(
@@ -77,17 +77,19 @@ class CropImage3D(State):
                 reliability=ReliabilityPolicy.BEST_EFFORT,
             ),
         )
-        
+
         amcl_qos = QoSProfile(
             depth=1,
             reliability=ReliabilityPolicy.RELIABLE,
             durability=DurabilityPolicy.TRANSIENT_LOCAL,
             history=HistoryPolicy.KEEP_LAST,
         )
-        
+
         self.robot_pose_msg = None
-        
-        self.node.create_subscription(PoseWithCovarianceStamped, 'amcl_pose', self.pose_cb, qos_profile=amcl_qos)
+
+        self.node.create_subscription(
+            PoseWithCovarianceStamped, "amcl_pose", self.pose_cb, qos_profile=amcl_qos
+        )
 
         if self.crop_type not in ["masked", "bbox"]:
             raise ValueError(
@@ -106,7 +108,7 @@ class CropImage3D(State):
         if not detections:
             yasmin.YASMIN_LOG_WARN("No 3D detections found.")
             return "failed"
-        
+
         attempt = 0
         while self.robot_pose_msg is None:
             if attempt > 5:

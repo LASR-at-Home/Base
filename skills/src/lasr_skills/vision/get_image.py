@@ -15,7 +15,7 @@ class GetImage(State):
     State for reading an sensor_msgs Image message
     """
 
-    def __init__(self, topic = 'head_front_camera/rgb/image_raw'):
+    def __init__(self, topic="head_front_camera/rgb/image_raw"):
         super().__init__(outcomes=["succeeded", "failed"])
 
         self.add_input_key("img_msg")
@@ -26,12 +26,14 @@ class GetImage(State):
             reliability=ReliabilityPolicy.BEST_EFFORT,
             history=HistoryPolicy.KEEP_LAST,
         )
-        
+
         self.node = yasmin_ros.logger_node
-        
+
         self.msg = None
-        
-        self.node.create_subscription(Image, topic, self.image_cb, qos_profile=self.camera_qos)
+
+        self.node.create_subscription(
+            Image, topic, self.image_cb, qos_profile=self.camera_qos
+        )
 
     def image_cb(self, msg):
         self.msg = msg
@@ -40,13 +42,14 @@ class GetImage(State):
 
         try:
             blackboard["img_msg"] = self.msg
-            return 'failed' if self.msg is None else 'succeeded'
+            return "failed" if self.msg is None else "succeeded"
         except Exception as e:
             yasmin.YASMIN_LOG_ERROR(str(e))
             return "failed"
 
 
 # UNUSED THROUGHOUT WHOLE REPO, MAYBE DELETE?????
+
 
 class GetPointCloud(State):
     """
@@ -58,7 +61,7 @@ class GetPointCloud(State):
 
         self.add_input_key("pcl_msg")
         self.add_output_key("pcl_msg")
-        
+
         self.camera_qos = QoSProfile(
             depth=10,
             reliability=ReliabilityPolicy.BEST_EFFORT,
@@ -82,7 +85,10 @@ class GetPointCloud(State):
         try:
             blackboard["pcl_msg"] = None
             blackboard["pcl_msg"] = wait_for_message(
-                PointCloud2, yasmin_ros.logger_node, self.topic, qos_profile=self.camera_qos
+                PointCloud2,
+                yasmin_ros.logger_node,
+                self.topic,
+                qos_profile=self.camera_qos,
             )
             if blackboard["pcl_msg"] is None:
                 return "failed"
@@ -101,7 +107,7 @@ class GetImageAndPointCloud(State):
 
         self.add_output_key("pcl_msg")
         self.add_output_key("img_msg")
-        
+
         self.camera_qos = QoSProfile(
             depth=10,
             reliability=ReliabilityPolicy.BEST_EFFORT,
