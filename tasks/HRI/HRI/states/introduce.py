@@ -20,6 +20,7 @@ from .getIntroductionStr import GetIntroductionStr
 from .recognise import Recognise
 from lasr_skills.look_to_point import LookToPoint
 
+
 class GetLookPoint(yasmin.State):
     """
     Builds a PointStamped from seated_guest_locs[person_index] and stores
@@ -170,8 +171,8 @@ class Introduce(yasmin.StateMachine):
             Say(),
             transitions={
                 "succeeded": "LOOK_TO_GUEST_2",
-                "aborted": "failed",
-                "canceled": "failed",
+                "aborted": "LOOK_TO_GUEST_2",
+                "canceled": "LOOK_TO_GUEST_2",
             },
         )
 
@@ -181,6 +182,7 @@ class Introduce(yasmin.StateMachine):
             transitions={
                 "succeeded": "GET_GUEST_DATA_2",
                 "aborted": "failed",
+                "timeout": "GET_GUEST_DATA_2",
             },
             remappings={"pointstamped": "guest_seat_point"},
         )
