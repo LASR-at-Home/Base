@@ -17,7 +17,6 @@ class GetIntroductionStr(yasmin.State):
         blackboard["text"] = (
             f"Hello {guest_to_introduce_to}, "
             f"this is {guest_to_introduce_data['name']}. "
-            f"Their favourite drink is {guest_to_introduce_data['drink']}, "
-            f"and their interest is {guest_to_introduce_data['interest']}."
+            f"Their favourite drink is {guest_to_introduce_data['drink']} "
         )
         return "succeeded"

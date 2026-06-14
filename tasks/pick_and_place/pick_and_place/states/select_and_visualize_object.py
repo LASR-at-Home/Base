@@ -33,7 +33,7 @@ class SelectAndVisualiseObject(yasmin.State):
         self.add_output_key("selected_object")
         self.add_output_key("selected_object_name")
 
-        self.node = yasmin_ros.get_node()
+        self.node = yasmin_ros.logger_node
         self._bridge = CvBridge()
 
         # Latched publisher so the referee view stays visible after publish

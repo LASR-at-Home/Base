@@ -3,7 +3,9 @@ from rclpy.node import Node
 from sensor_msgs.msg import Image
 from lasr_vision_interfaces.srv import AddFace
 import sys
+from rclpy.qos import QoSProfile, QoSReliabilityPolicy
 
+qos = QoSProfile(depth=10, reliability=QoSReliabilityPolicy.BEST_EFFORT)
 
 def add_face(node: Node, name: str, num_images: int, image_topic: str):
     add_face_srv = node.create_client(AddFace, "/lasr_vision_reid/add_face")
@@ -60,7 +62,8 @@ def add_face(node: Node, name: str, num_images: int, image_topic: str):
         # Use call_async() instead of call() to avoid blocking the event loop
         add_face_srv.call_async(req).add_done_callback(service_response_callback)
 
-    image_sub = node.create_subscription(Image, image_topic, handle_image, 10)
+    #image_sub = node.create_subscription(Image, image_topic, handle_image, 10)
+    image_sub = node.create_subscription(Image, image_topic, handle_image, qos)
 
     # Spin until collection is complete, checking in a loop to allow graceful exit
     while not collection_complete and rclpy.ok():

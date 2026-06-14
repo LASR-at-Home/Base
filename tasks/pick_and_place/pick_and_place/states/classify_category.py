@@ -84,7 +84,7 @@ class ClassifyCategory(yasmin.State):
             self.add_input_key("object_names")
             self.add_output_key("shelf_category")
 
-        self.node = yasmin_ros.get_node()
+        self.node = yasmin_ros.logger_node
         self._llm_client = self.node.create_client(Llm, "/lasr_llm/llm")
 
     def execute(self, blackboard) -> str:

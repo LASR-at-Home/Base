@@ -15,35 +15,36 @@ def main():
 
     bb = yasmin.Blackboard()
 
+    # Simulates what GREET would populate
     bb["guest_data"] = {
         "host": {
             "name": "Sophie",
             "drink": "cola",
-            "interest": "reading",
+            "detection": False,
             "seating_detection": False,
         },
         "guest1": {
             "name": "John",
             "drink": "water",
-            "interest": "cycling",
+            "detection": False,
             "seating_detection": False,
         },
     }
 
-    # Standing person (guest1)
+    # Simulates what SEAT_GUEST would populate
     header = Header()
     header.frame_id = "map"
+
+    # Where guest1 is sitting — robot looks here for second introduction
     bb["guest_seat_point"] = PointStamped(
         header=header,
-        point=Point(x=6.654674, y=7.160965, z=1.5),
+        point=Point(x=1.98, y=0.546, z=0.00247),
     )
 
-    # Sitting person (host)
+    # Where the host is sitting — robot looks here to recognise and introduce to
     bb["seated_guest_locs"] = [
-        Point(x=1.5, y=-0.5, z=1.2),
+        Point(x=2.0, y=-0.337, z=-0.00143),
     ]
-
-    bb["person_index"] = 0
 
     outcome = sm(bb)
     yasmin.YASMIN_LOG_INFO(f"Introduce finished with outcome: {outcome}")

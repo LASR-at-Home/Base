@@ -18,7 +18,7 @@ from .clearSeatingDetections import ClearSeatingDetections
 from .getGuestData import GetGuestData
 from .getIntroductionStr import GetIntroductionStr
 from .recognise import Recognise
-
+from lasr_skills.look_to_point import LookToPoint
 
 class GetLookPoint(yasmin.State):
     """
@@ -74,18 +74,13 @@ class CheckDone(yasmin.State):
         return "done"
 
 
-class _PassthroughState(yasmin.State):
-    """
-    Replaces smach.CBState(lambda ud: 'succeeded') passthrough.
-    Used for LOOK_TO_GUEST_1 and LOOK_TO_GUEST_2 in simulation
-    where the PointHead action server is not available.
-    Replace with LookToPoint when testing on the real robot.
-    """
-
+class ResetIndex(yasmin.State):
     def __init__(self):
         super().__init__(outcomes=["succeeded"])
+        self.add_output_key("person_index")
 
     def execute(self, blackboard: Blackboard) -> str:
+        blackboard["person_index"] = 0
         return "succeeded"
 
 
@@ -109,6 +104,11 @@ class Introduce(yasmin.StateMachine):
         self.add_input_key("guest_seat_point")
         self.add_input_key("seated_guest_locs")
 
+        self.add_state(
+            "RESET_INDEX",
+            ResetIndex(),
+            transitions={"succeeded": "GET_LOOK_POINT_1"},
+        )
         # Builds look point from seated_guest_locs[person_index]
         self.add_state(
             "GET_LOOK_POINT_1",
@@ -119,11 +119,14 @@ class Introduce(yasmin.StateMachine):
             },
         )
 
-        # Simulation bypass — replace with LookToPoint on real robot
         self.add_state(
             "LOOK_TO_GUEST_1",
-            _PassthroughState(),
-            transitions={"succeeded": "WAIT"},
+            LookToPoint(),
+            transitions={
+                "succeeded": "WAIT",
+                "aborted": "failed",
+            },
+            remappings={"pointstamped": "look_point"},
         )
 
         self.add_state(
@@ -172,11 +175,14 @@ class Introduce(yasmin.StateMachine):
             },
         )
 
-        # Simulation bypass — replace with LookToPoint on real robot
         self.add_state(
             "LOOK_TO_GUEST_2",
-            _PassthroughState(),
-            transitions={"succeeded": "GET_GUEST_DATA_2"},
+            LookToPoint(),
+            transitions={
+                "succeeded": "GET_GUEST_DATA_2",
+                "aborted": "failed",
+            },
+            remappings={"pointstamped": "guest_seat_point"},
         )
 
         self.add_state(
