@@ -61,7 +61,7 @@ class GetGuestAttributes(yasmin.StateMachine):
             self.InitialiseDetectionFlag(guest_id=self._guest_id),
             transitions={
                 "succeeded": "GET_GUEST_ATTRIBUTES",
-                "failed": "GET_GUEST_ATTRIBUTES",
+                "failed": "failed",
             },
         )
         self.add_state(

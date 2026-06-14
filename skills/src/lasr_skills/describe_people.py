@@ -16,7 +16,7 @@ class DescribePeople(yasmin.StateMachine):
         self.add_state(
             "GET_IMAGE",
             GetImage(),
-            transitions={"succeeded": "GET_CLIP_ATTRIBUTES", "failed": "failed"},
+            transitions={"succeeded": "LOOP_ATTR_STATE", "failed": "failed"},
         )
 
         loop_state = yasmin.CbState(
@@ -39,14 +39,16 @@ class DescribePeople(yasmin.StateMachine):
         )
 
     def _get_attr(self, blackboard):
-        if blackboard["clip_index"] is None:
+        try:
+            if blackboard["clip_index"] < 3:
+                blackboard["clip_index"] += 1
+                return "continue"
+            else:
+                return "succeeded"
+        except RuntimeError:
             blackboard["clip_index"] = 0
+            blackboard["clip_detection_dict"] = {}
             return "continue"
-        elif blackboard["clip_index"] < 3:
-            blackboard["clip_index"] += 1
-            return "continue"
-        else:
-            return "succeeded"
 
 
 class GetClipAttributes(yasmin_ros.ServiceState):
@@ -58,7 +60,7 @@ class GetClipAttributes(yasmin_ros.ServiceState):
             response_handler=self._handle_resp,
         )
 
-        self.add_input_key("img_raw")
+        self.add_input_key("image_raw")
         self.add_output_key("clip_detection_dict")
 
         self.glasses_questions = [
@@ -82,42 +84,42 @@ class GetClipAttributes(yasmin_ros.ServiceState):
         if blackboard["clip_index"] == 0:
             glasses_request = Vqa.Request()
             glasses_request.possible_answers = self.glasses_questions
-            glasses_request.image_raw = blackboard["img_raw"]
+            glasses_request.image_raw = blackboard["image_raw"]
             return glasses_request
         elif blackboard["clip_index"] == 1:
             hat_request = Vqa.Request()
             hat_request.possible_answers = self.hat_questions
-            hat_request.image_raw = blackboard["img_raw"]
+            hat_request.image_raw = blackboard["image_raw"]
             return hat_request
         elif blackboard["clip_index"] == 2:
             hair_request = Vqa.Request()
             hair_request.possible_answers = self.hair_questions
-            hair_request.image_raw = blackboard["img_raw"]
+            hair_request.image_raw = blackboard["image_raw"]
             return hair_request
         elif blackboard["clip_index"] == 3:
             t_shirt_request = Vqa.Request()
             t_shirt_request.possible_answers = self.t_shirt_questions
-            t_shirt_request.image_raw = blackboard["img_raw"]
+            t_shirt_request.image_raw = blackboard["image_raw"]
             return t_shirt_request
 
     def _handle_resp(self, blackboard, response):
         if blackboard["clip_index"] == 0:
-            yasmin.YASMIN_LOG_INFO(f"Glasses: {response.answer}")
+            # yasmin.YASMIN_LOG_INFO(f"Glasses: {response.answer}")
             glasses_bool = response.answer == "a person wearing glasses"
             blackboard["clip_detection_dict"].update({"glasses": glasses_bool})
             return "succeeded"
         elif blackboard["clip_index"] == 1:
-            yasmin.YASMIN_LOG_INFO(f"Hat: {response.answer}")
+            # yasmin.YASMIN_LOG_INFO(f"Hat: {response.answer}")
             hat_bool = response.answer == "a person wearing a hat"
             blackboard["clip_detection_dict"].update({"hat": hat_bool})
             return "succeeded"
         elif blackboard["clip_index"] == 2:
-            yasmin.YASMIN_LOG_INFO(f"Hair: {response.answer}")
+            # yasmin.YASMIN_LOG_INFO(f"Hair: {response.answer}")
             hair_bool = response.answer == "a person with long hair"
             blackboard["clip_detection_dict"].update({"long_hair": hair_bool})
             return "succeeded"
         elif blackboard["clip_index"] == 3:
-            yasmin.YASMIN_LOG_INFO(f"T-shirt: {response.answer}")
+            # yasmin.YASMIN_LOG_INFO(f"T-shirt: {response.answer}")
             t_shirt_bool = response.answer == "a person wearing a short-sleeve t-shirt"
             blackboard["clip_detection_dict"].update(
                 {"short_sleeve_t_shirt": t_shirt_bool}

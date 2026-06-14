@@ -97,7 +97,7 @@ class LookAndGreetGuest(yasmin.StateMachine):
         )
         self.add_state(
             "WAIT_FOR_GUEST",
-            WaitForPersonInArea(area_polygon_param="door_polygon"),
+            WaitForPersonInArea(),
             transitions={
                 "succeeded": "GET_PERSON_POINT",
                 "failed": "SAY_WAITING_FOR_GUEST",
@@ -119,6 +119,7 @@ class LookAndGreetGuest(yasmin.StateMachine):
                 "succeeded": "GREET_AND_ASK_GUEST",
                 "aborted": "SAY_WAITING_FOR_GUEST",
                 "canceled": "failed",
+                "timeout": "GREET_AND_ASK_GUEST",
             },
         )
         self.add_state(
