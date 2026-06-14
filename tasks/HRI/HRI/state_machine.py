@@ -68,7 +68,7 @@ class HRI(yasmin.StateMachine):
 
         self.add_state(
             "GREET",  # SM2: Greets guest
-            LookAndGreetGuest(last_resort=False, guest_id=f"guest{self.guest_id}"),
+            LookAndGreetGuest(last_resort=False, guest_id="guest1"),
             transitions={"succeeded": "STOP_EYE_TRACKER", "failed": "failed"},
         )
 
@@ -114,25 +114,35 @@ class HRI(yasmin.StateMachine):
             SeatGuest(learn_host=False),
             transitions={"succeeded": "CHECK", "failed": "failed"},
         )
-
-        def check(blackboard):
-            guest = blackboard["guest_data"][f"guest{self.guest_id}"]
-
-            for key in guest.keys():
-                value = guest[key]
-
-                yasmin.YASMIN_LOG_INFO(f"{key}: {value}")
-
-            self.guest_id += 1
-            return "succeeded"
-
-        transition = "GO_TO_DOOR" if self.guest_id == 1 else "succeeded"
-
+        
         self.add_state(
             "CHECK",
-            yasmin.CbState(outcomes=["succeeded"], callback=check),
-            transitions={"succeeded": transition},
+            yasmin.CbState(outcomes=["succeeded", 'GO_TO_DOOR_2'], callback=self.check),
+            transitions={"succeeded": 'succeeded', 'GO_TO_DOOR_2': 'GO_TO_DOOR_2'},
         )
+        
+        self.add_state(
+            "GO_TO_DOOR_2",
+            GoToLocation(location_param="door_pose"),
+            transitions={"succeeded": "GREET_2", "failed": "failed"},
+        )
+        
+        self.add_state(
+            "GREET_2",  # SM2: Greets guest
+            LookAndGreetGuest(last_resort=False, guest_id="guest2"),
+            transitions={"succeeded": "STOP_EYE_TRACKER", "failed": "failed"},
+        )
+
+    def check(self, blackboard):
+        guest = blackboard["guest_data"][f"guest{self.guest_id}"]
+        yasmin.YASMIN_LOG_INFO(f'{self.guest_id}')
+
+        for key in guest.keys():
+            value = guest[key]
+            yasmin.YASMIN_LOG_INFO(f"{key}: {value}")
+
+        self.guest_id += 1
+        return "GO_TO_DOOR_2" if self.guest_id == 2 else 'succeeded'
 
     def setup(self):
         start_con_sm = yasmin.Concurrence(
@@ -203,6 +213,8 @@ def main():
     bb["confidence"] = face_detection_confidence
     bb["dataset"] = "hri"
     bb["drink_position"] = PointStamped()
+
+    
 
     outcome = sm(bb)
 

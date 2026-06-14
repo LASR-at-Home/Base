@@ -60,7 +60,7 @@ class GetNameAndDrink(yasmin.StateMachine):
 
         def execute(self, blackboard) -> str:
             if not self._recovery_name_and_drink_required(blackboard):
-                if blackboard["guest_data"][self._guest_id]["name"] == "unknown":
+                if blackboard["guest_data"][self._guest_id]["name"] == "":
                     outcome = "failed_name"
                 else:
                     outcome = "failed_drink"
@@ -76,8 +76,8 @@ class GetNameAndDrink(yasmin.StateMachine):
             """
 
             return (
-                blackboard["guest_data"][self._guest_id]["name"] == "unknown"
-                and blackboard["guest_data"][self._guest_id]["drink"] == "unknown"
+                blackboard["guest_data"][self._guest_id]["name"] == ""
+                and blackboard["guest_data"][self._guest_id]["drink"] == ""
             )
 
     def __init__(
