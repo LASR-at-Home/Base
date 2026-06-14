@@ -204,12 +204,14 @@ def main():
             "drink": "",
             "detection": False,
             "seating_detection": False,
+            "attributes": {},
         },
         "guest2": {
             "name": "",
             "drink": "",
             "detection": False,
             "seating_detection": False,
+            "attributes": {},
         },
     }
 
