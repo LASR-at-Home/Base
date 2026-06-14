@@ -1,55 +1,23 @@
-import json
 import time
 
 import yasmin
 
 from GPSR.agent import Agent
-from GPSR.prompts import SKILL_SELECTOR_PROMPT, SKILL_REFINER_PROMPT, PLANNER_PROMPT, parse_json as _parse_json
-from GPSR.world import (
-    compact_skill_lines,
-    format_objects,
-    format_people,
-    load_general_knowledge,
-    load_locations,
-    load_objects,
-    load_people,
-    load_skills_text,
-    selected_skill_lines,
-)
+from GPSR.planner import SkillSelectorError
+from GPSR.world import build_world
 
 
 class QueryLLM(yasmin.State):
-    """Two-stage pipeline: skill selector → planner."""
+    """Skill selector → refiner → planner (+ optional announce)."""
 
     def __init__(self, node):
         super().__init__(outcomes=["succeeded", "failed"])
         self.add_input_key("sequence")
-        self.add_output_key("skill")
-        self.add_output_key("skill_args")
-        self.add_output_key("plan_description")
         self.add_output_key("steps")
         self.node = node
-
-        self.locations = load_locations(node)
-        self.objects = load_objects(node)
-        self.people = load_people(node)
-        self.general_knowledge = load_general_knowledge(node)
-        skills_text = load_skills_text(node)
-        self.skill_lines = compact_skill_lines(skills_text)
-
-        model = node.get_parameter("llm_model").value
-        host = node.get_parameter("llm_host").value
-        self.agent = Agent(model=model, host=host)
-
-        self.node.get_logger().info(f"Loading model: {model}")
-        self.agent.warmup()
-        self.node.get_logger().info("QueryLLM ready (skill selector + planner).")
-
-    def _fail_safe(self, blackboard, text="I could not generate a plan for that command."):
-        blackboard["skill"] = "say"
-        blackboard["skill_args"] = {"text": text}
-        blackboard["plan_description"] = text
-        blackboard["steps"] = [{"skill": "say", "args": {"text": text}}]
+        self.world = build_world(node)
+        self.agent = Agent.from_node(node, log=self.node.get_logger().info)
+        self.node.get_logger().info("QueryLLM ready (skill selector + refiner + planner).")
 
     def execute(self, blackboard):
         t0 = time.perf_counter()
@@ -57,68 +25,36 @@ class QueryLLM(yasmin.State):
         self.node.get_logger().info(f"Query: '{command}'")
 
         # Stage 1 — skill selector
+        # Stage 2 — skill refiner
+        # Stage 3 — planner
+        # (agent.plan runs all three; cloud + local in parallel)
         try:
-            raw = self.agent.query_json(
-                SKILL_SELECTOR_PROMPT.format(skill_lines=self.skill_lines, command=command),
-                max_tokens=256,
+            plan = self.agent.plan(
+                self.world,
+                command,
+                log=lambda msg: self.node.get_logger().info(msg),
             )
-            selection = _parse_json(raw)
-            can_do = selection.get("can_do", True)
-            reason = selection.get("reason", "")
-            skills = selection.get("selected_skills", [])
-            self.node.get_logger().info(f"Skills: {skills} | can_do={can_do}")
-        except Exception as e:
-            self.node.get_logger().error(f"Skill selector failed: {e}")
+        except SkillSelectorError as e:
+            self.node.get_logger().error(f"Planner failed: {e}")
             return "failed"
 
-        if not can_do:
-            self._fail_safe(blackboard, reason or "I'm sorry, I don't know how to do that.")
-            return "succeeded"
+        source = plan.get("source", "local")
+        steps = plan["steps"]
 
-        # Stage 2 — skill refiner
-        try:
-            raw = self.agent.query_json(
-                SKILL_REFINER_PROMPT.format(
-                    command=command,
-                    selected_skills=json.dumps(skills),
-                ),
-                max_tokens=256,
+        # Announce plan: LLM generates spoken summary as first say step
+        if not (len(steps) == 1 and steps[0].get("skill") == "say"):
+            announcement = self.agent.announce(
+                command, plan["plan_description"], steps, source,
+                log=lambda msg: self.node.get_logger().info(msg),
             )
-            refined = _parse_json(raw)
-            skills = refined.get("refined_skills", skills)
-            self.node.get_logger().info(f"Refined skills: {skills}")
-        except Exception as e:
-            self.node.get_logger().warn(f"Skill refiner failed, using raw skills: {e}")
+            if announcement:
+                steps = [{"skill": "say", "args": {"text": announcement}}] + steps
 
-        # Stage 3 — planner
-        try:
-            raw = self.agent.query_json(
-                PLANNER_PROMPT.format(
-                    general_knowledge=self.general_knowledge,
-                    selected_skill_lines=selected_skill_lines(skills, self.skill_lines),
-                    selected_skill_names=", ".join(skills),
-                    locations=", ".join(self.locations.keys()) or "none",
-                    objects=format_objects(self.objects),
-                    people=format_people(self.people),
-                    command=command,
-                ),
-                max_tokens=1024,
-            )
-            parsed = _parse_json(raw)
-            steps = parsed.get("steps", [])
-            plan_description = parsed.get("plan_description", "")
-            if not steps:
-                raise ValueError("empty steps")
-        except Exception as e:
-            self.node.get_logger().warn(f"Planner failed: {e}")
-            self._fail_safe(blackboard)
-            return "succeeded"
-
-        blackboard["plan_description"] = plan_description
         blackboard["steps"] = steps
-        blackboard["skill"] = steps[0]["skill"]
-        blackboard["skill_args"] = steps[0].get("args", {})
+
+        label = "CLOUD" if source == "cloud" else "LOCAL"
         self.node.get_logger().info(
-            f"Plan: {plan_description} | {len(steps)} steps | {time.perf_counter()-t0:.1f}s"
+            f"=== PLAN SOURCE: {label} === | {plan['plan_description']} | "
+            f"{len(steps)} steps | {time.perf_counter() - t0:.1f}s"
         )
         return "succeeded"

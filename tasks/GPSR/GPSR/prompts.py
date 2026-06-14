@@ -1,5 +1,9 @@
 import json
 
+# TODO: add memory to the examples
+# TODO: Reduce the number of examples to the most important ones now with the local LLM is the good solution they are good when we provide a lot of examples but 
+# with memory and in case of CLOUD LLM we can reduce the number of examples. a test should be done to check the performance reducing the number of examples with gemma3.
+
 SKILL_SELECTOR_PROMPT = """You are the skill selector for a robot.
 Given a command, pick which skills from the list below are needed to execute it.
 Output ONLY JSON. No explanation.
@@ -15,9 +19,9 @@ Output schema:
 }}
 
 RULES:
-- selected_skills contains ONLY the bare skill name (e.g. "find_object"), never arguments or signatures (never "find_object(apple, kitchen)").
+- selected_skills contains ONLY the skill names (e.g. "find_object", "go_to_location"), never arguments or signatures (never "find_object(apple, kitchen)").
 - can_do=false ONLY when NO skill matches the kind of action (e.g. cooking, flying).
-- Missing locations/objects/people are NOT a reason for can_do=false — the planner handles those.
+- Missing locations/objects/people are NOT a reason for can_do=false — the planner handles those and manages the different cases.
 - Any question, greeting, or request for information: can_do=true, selected_skills=["say"].
 - If the command needs navigation AND another action, include "go_to_location" in selected_skills.
 
@@ -56,11 +60,12 @@ Command: introduce yourself
 JSON: {{"can_do": true, "reason": "just speak", "selected_skills": ["say"]}}
 
 Command: make me a sandwich
-JSON: {{"can_do": false, "reason": "no skill for cooking", "selected_skills": []}}
+JSON: {{"can_do": false, "reason": "no skill for cooking on the available skills", "selected_skills": []}}
 
 Command: {command}
 JSON: """
 
+# To add some rules on the plan a pick up action should be followed by a go to location and a place object action. a give to person action should be followed by a go to location action.
 SKILL_REFINER_PROMPT = """You are a robot skill checker.
 You receive a list of skills chosen for a command and must fix missing dependencies.
 Output ONLY JSON. No explanation.
@@ -126,6 +131,7 @@ Command: {command}
 Input skills: {selected_skills}
 JSON: """
 
+# TODO: check the rules when we will have the final files
 PLANNER_PROMPT = """You are a robot planner. Output ONE JSON plan using only the given skills.
 General knowledge: {general_knowledge}
 Known locations: {locations}
@@ -191,6 +197,40 @@ Plan: {{"plan_description": "guide charlie to living room", "steps": [{{"skill":
 
 Command: {command} | Skills: {selected_skill_names} | Known locations: {locations}
 Plan: """
+
+# JUST TO REPRAHSE THE PLAN IN A NATURAL WAY BEFORE EXECUTING IT
+ANNOUNCE_PLAN_PROMPT = """You are a robot assistant.
+Turn the plan below into ONE spoken announcement listing every step in order.
+Start with "Here is my plan." then say Step 1, Step 2, ... Step N — one short phrase per step derived from the skill and args.
+Use only words that will be spoken aloud. No bullet points or JSON in the announcement.
+
+User command: {command}
+Plan summary: {plan_description}
+Steps: {steps_json}
+
+Output ONLY JSON:
+{{"announcement": "<full spoken announcement>"}}
+
+EXAMPLES:
+Command: bring the cola from the kitchen to the bedroom
+Plan summary: fetch cola and bring to bedroom
+Steps: [{{"skill": "go_to_location", "args": {{"location": "kitchen"}}}}, {{"skill": "find_object", "args": {{"object": "cola", "location": "kitchen"}}}}, {{"skill": "pick_up", "args": {{"object": "cola"}}}}, {{"skill": "go_to_location", "args": {{"location": "bedroom"}}}}, {{"skill": "place_object", "args": {{"location": "bedroom"}}}}]
+JSON: {{"announcement": "Here is my plan. Step 1: go to the kitchen. Step 2: find the cola. Step 3: pick up the cola. Step 4: go to the bedroom. Step 5: place the cola in the bedroom."}}
+
+Command: go to the kitchen
+Plan summary: go to kitchen
+Steps: [{{"skill": "go_to_location", "args": {{"location": "kitchen"}}}}]
+JSON: {{"announcement": "Here is my plan. Step 1: go to the kitchen."}}
+
+Command: locate the standing person in the office
+Plan summary: go to office and find standing person
+Steps: [{{"skill": "go_to_location", "args": {{"location": "office"}}}}, {{"skill": "find_person", "args": {{"pose": "standing", "location": "office"}}}}]
+JSON: {{"announcement": "Here is my plan. Step 1: go to the office. Step 2: find the standing person."}}
+
+Command: {command}
+Plan summary: {plan_description}
+Steps: {steps_json}
+JSON: """
 
 
 def parse_json(raw: str) -> dict:

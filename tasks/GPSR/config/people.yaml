@@ -2,30 +2,9 @@ people:
   adel:
     gender: neutral
     description: "A person named Adel."
-  angel:
-    gender: neutral
-    description: "A person named Angel."
   axel:
     gender: male
     description: "A man named Axel."
   charlie:
     gender: neutral
     description: "A person named Charlie."
-  jane:
-    gender: female
-    description: "A woman named Jane."
-  jules:
-    gender: neutral
-    description: "A person named Jules."
-  morgan:
-    gender: neutral
-    description: "A person named Morgan."
-  paris:
-    gender: neutral
-    description: "A person named Paris."
-  robin:
-    gender: neutral
-    description: "A person named Robin."
-  simone:
-    gender: neutral
-    description: "A person named Simone."
