@@ -3,7 +3,6 @@ from setuptools import find_packages, setup
 import setuptools.command.install
 import ament_virtualenv.install
 
-
 _here = os.path.dirname(os.path.abspath(__file__))
 
 
@@ -21,6 +20,7 @@ class InstallCommand(setuptools.command.install.install):
             source_dir=_here,
         )
         return
+
 
 setup(
     name=package_name,

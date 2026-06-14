@@ -149,7 +149,7 @@ class CalculateSweepPoints(yasmin.State):
         self._min_coverage = min_coverage
         self._z_axis = z_axis
         self._fov_depth = fov_depth
-        
+
         qos = QoSProfile(
             history=HistoryPolicy.KEEP_LAST,
             durability=DurabilityPolicy.VOLATILE,
@@ -159,7 +159,12 @@ class CalculateSweepPoints(yasmin.State):
 
         self.node = yasmin_ros.logger_node
         self.msg = None
-        self.node.create_subscription(CameraInfo, "/head_front_camera/depth/camera_info", self.info_cb, qos_profile=qos)
+        self.node.create_subscription(
+            CameraInfo,
+            "/head_front_camera/depth/camera_info",
+            self.info_cb,
+            qos_profile=qos,
+        )
 
         self._tf_buffer = tf2_ros.Buffer(Duration(seconds=10.0))
         self._tf_listener = tf2_ros.TransformListener(self._tf_buffer, self.node)
@@ -309,9 +314,7 @@ class CalculateSweepPoints(yasmin.State):
 
         # Optional: visualize FOV
 
-        qos = QoSProfile(
-            depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL
-        )
+        qos = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL)
 
         pub = self.node.create_publisher(PolygonStamped, "projected_fov_polygon", qos)
 
@@ -410,9 +413,9 @@ class IterateThroughPoints(yasmin.StateMachine):
             },
         )
         self.add_state(
-            'SLEEP',
+            "SLEEP",
             Wait(wait_time=2),
-            transitions={'succeeded': 'DETECT_OBJECTS', 'failed': 'failed'}
+            transitions={"succeeded": "DETECT_OBJECTS", "failed": "failed"},
         )
         self.add_state(
             "DETECT_OBJECTS",
@@ -527,7 +530,7 @@ class DetectAllInPolygon(yasmin.StateMachine):
         self._min_confidence = min_confidence
         self._min_new_object_dist = min_new_object_dist
         self._node = yasmin_ros.logger_node
-        
+
         image_qos = QoSProfile(
             depth=10,
             reliability=ReliabilityPolicy.BEST_EFFORT,
@@ -652,6 +655,7 @@ class DetectAllInPolygon(yasmin.StateMachine):
             },
         )
 
+
 class Detect_node(Node):
     def __init__(self):
         super().__init__(
@@ -662,6 +666,7 @@ class Detect_node(Node):
         self._executor.add_node(self)
         self._spin_thread = Thread(target=self._executor.spin)
         self._spin_thread.start()
+
 
 def main():
     seat_area = [
@@ -674,9 +679,9 @@ def main():
     seat_polygon = ShapelyPolygon(seat_area)
 
     rclpy.init()
-    
+
     node = Detect_node()
-    
+
     yasmin_ros.set_ros_loggers(node)
 
     bb = Blackboard()
@@ -707,7 +712,6 @@ def main():
         node.destroy_node()
         rclpy.shutdown()
 
-    
     node.destroy_node()
     rclpy.shutdown()
 

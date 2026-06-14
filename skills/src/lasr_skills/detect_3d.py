@@ -64,28 +64,28 @@ class Detect3D(ServiceState):
         self.cam_info = None
         self.data = None
         self.image_msg = None
-        
+
         self.node.create_subscription(
             CameraInfo,
             self.depth_camera_info_topic,
             self._cache_camera_info,
             qos_profile=camera_qos,
         )
-        
+
         image_sub = message_filters.Subscriber(
             self.node, Image, self.image_topic, qos_profile=camera_qos
         )
-        
+
         depth_sub = message_filters.Subscriber(
             self.node, Image, self.depth_image_topic, qos_profile=camera_qos
         )
-        
+
         self.ts = message_filters.ApproximateTimeSynchronizer(
             [image_sub, depth_sub], queue_size=10, slop=0.1
         )
-        
+
         self.ts.registerCallback(self.callback)
-        
+
     def callback(self, image_msg, depth_msg):
         if self.data is None:
             self.data = (image_msg, depth_msg)
@@ -97,7 +97,7 @@ class Detect3D(ServiceState):
     def _create_req(self, blackboard):
         self.data = None
         self.image_msg = None
-        
+
         if self.cam_info is None:
             deadline = time.time() + 5.0
             while self.cam_info is None and time.time() < deadline:
@@ -117,7 +117,7 @@ class Detect3D(ServiceState):
                 )
                 return "failed"
             time.sleep(0.25)
-            
+
         image_msg, depth_msg = self.data
 
         req = YoloDetection3D.Request(
@@ -130,7 +130,6 @@ class Detect3D(ServiceState):
             target_frame=self.target_frame,
         )
         self.image_msg = image_msg
-        
 
         return req
 

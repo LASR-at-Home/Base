@@ -8,6 +8,7 @@ _here = os.path.dirname(os.path.abspath(__file__))
 
 package_name = "lasr_vision_yolo"
 
+
 class InstallCommand(setuptools.command.install.install):
     def run(self):
         super().run()
@@ -19,6 +20,7 @@ class InstallCommand(setuptools.command.install.install):
             source_dir=_here,
         )
         return
+
 
 setup(
     name=package_name,

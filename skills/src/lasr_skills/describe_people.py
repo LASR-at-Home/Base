@@ -40,15 +40,15 @@ class DescribePeople(yasmin.StateMachine):
 
     def _get_attr(self, blackboard):
         try:
-            if blackboard['clip_index'] < 3:
-                blackboard['clip_index'] += 1
-                return 'continue'
+            if blackboard["clip_index"] < 3:
+                blackboard["clip_index"] += 1
+                return "continue"
             else:
-                return 'succeeded'
+                return "succeeded"
         except RuntimeError:
-            blackboard['clip_index'] = 0
-            blackboard['clip_detection_dict'] = {}
-            return 'continue'
+            blackboard["clip_index"] = 0
+            blackboard["clip_detection_dict"] = {}
+            return "continue"
 
 
 class GetClipAttributes(yasmin_ros.ServiceState):

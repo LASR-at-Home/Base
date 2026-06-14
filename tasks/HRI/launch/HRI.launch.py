@@ -40,12 +40,9 @@ def generate_launch_description():
         name="lasr_vision_reid",
         output="screen",
     )
-    
+
     llm_service = Node(
-        package='lasr_llm',
-        executable='hri_task_service',
-        name='llm',
-        output='screen'
+        package="lasr_llm", executable="hri_task_service", name="llm", output="screen"
     )
 
     eye_tracker = Node(
@@ -56,11 +53,10 @@ def generate_launch_description():
     )
 
     transcribe_speech = Node(
-        package='lasr_speech_recognition_whisper',
-        executable='transcribe_microphone_server',
-        name='whisper_mic_server',
-        output='screen',
-        
+        package="lasr_speech_recognition_whisper",
+        executable="transcribe_microphone_server",
+        name="whisper_mic_server",
+        output="screen",
     )
 
     state_machine = Node(
