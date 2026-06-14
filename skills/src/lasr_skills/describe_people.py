@@ -40,19 +40,19 @@ class GetClipAttributes(yasmin_ros.ServiceState):
 
     def _create_request(self, blackboard):
         request = VlmDescribePeople.Request()
-        request.image_raw = blackboard['image_raw']
-        
+        request.image_raw = blackboard["image_raw"]
+
         return request
 
     def _handle_resp(self, blackboard, response):
-        
+
         dict = {
-            'hair_color': response.hair_color,
-            'hair_length': response.hair_length,
-            'glasses': response.glasses,
-            'shirt_color': response.shirt_color,
+            "hair_color": response.hair_color,
+            "hair_length": response.hair_length,
+            "glasses": response.glasses,
+            "shirt_color": response.shirt_color,
         }
-        
-        blackboard['attributes'] = dict
-        
-        return 'succeeded'
+
+        blackboard["attributes"] = dict
+
+        return "succeeded"

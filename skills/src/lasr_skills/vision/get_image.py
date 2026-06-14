@@ -43,14 +43,14 @@ class GetImage(State):
 
     def execute(self, blackboard):
         self.msg = None
-        
+
         while self.msg is None:
-            yasmin.YASMIN_LOG_INFO('Waiting for rgb frame')
+            yasmin.YASMIN_LOG_INFO("Waiting for rgb frame")
             time.sleep(1)
 
         try:
             blackboard["img_msg"] = self.msg
-            return 'succeeded'
+            return "succeeded"
         except Exception as e:
             yasmin.YASMIN_LOG_ERROR(str(e))
             return "failed"

@@ -198,14 +198,14 @@ def main():
             "drink": "",
             "detection": False,
             "seating_detection": False,
-            'attributes': {}
+            "attributes": {},
         },
         "guest2": {
             "name": "",
             "drink": "",
             "detection": False,
             "seating_detection": False,
-            'attributes': {}
+            "attributes": {},
         },
     }
 

@@ -78,6 +78,6 @@ def generate_launch_description():
             eye_tracker,
             transcribe_speech,
             llm_service,
-            state_machine
+            state_machine,
         ]
     )
