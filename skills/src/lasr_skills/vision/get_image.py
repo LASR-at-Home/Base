@@ -9,6 +9,8 @@ from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy, DurabilityPo
 from typing import Optional
 from sensor_msgs.msg import Image, PointCloud2
 
+import time
+
 
 class GetImage(State):
     """
@@ -36,13 +38,19 @@ class GetImage(State):
         )
 
     def image_cb(self, msg):
-        self.msg = msg
+        if self.msg is None:
+            self.msg = msg
 
     def execute(self, blackboard):
+        self.msg = None
+
+        while self.msg is None:
+            yasmin.YASMIN_LOG_INFO("Waiting for rgb frame")
+            time.sleep(1)
 
         try:
             blackboard["img_msg"] = self.msg
-            return "failed" if self.msg is None else "succeeded"
+            return "succeeded"
         except Exception as e:
             yasmin.YASMIN_LOG_ERROR(str(e))
             return "failed"
