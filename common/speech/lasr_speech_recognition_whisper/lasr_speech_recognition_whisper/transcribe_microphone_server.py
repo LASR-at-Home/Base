@@ -48,7 +48,7 @@ class speech_model_params:
     sample_rate: int = 16000
     mic_device: Optional[str] = None
     timer_duration: Optional[int] = 20
-    warmup: bool = True
+    warmup: bool = False
     energy_threshold: Optional[int] = None
     pause_threshold: Optional[float] = 2.0
 

@@ -5,7 +5,8 @@ from yasmin import State, StateMachine
 
 from lasr_skills import Detect3DInArea
 
-from shapely.geometry.polygon import Polygon
+from shapely import Polygon as ShapelyPolygon
+
 
 
 class CheckForPerson(State):
@@ -21,7 +22,7 @@ class CheckForPerson(State):
 
 
 class WaitForPersonInArea(StateMachine):
-    def __init__(self, area_polygon_param: Polygon):
+    def __init__(self):
         super().__init__(outcomes=["succeeded", "failed"], handle_sigint=True)
         self.add_output_key("detections_3d")
 
@@ -40,7 +41,7 @@ class WaitForPersonInArea(StateMachine):
             node.get_parameter("door_polygon.bottom_right").get_parameter_value()
         )
 
-        door_polygon = Polygon([top_left, top_right, bottom_left, bottom_right])
+        door_polygon = ShapelyPolygon([top_left, top_right, bottom_right, bottom_left])
 
         self.add_state(
             "DETECT_PEOPLE_3D",
