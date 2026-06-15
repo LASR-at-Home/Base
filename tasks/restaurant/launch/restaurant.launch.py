@@ -39,15 +39,17 @@ def generate_launch_description():
     llm_service = Node(
         package="lasr_llm",
         executable="restaurant_service",
-        name="restaurant_query_llm_service",
+        name="restaurant_llm",
         output="screen",
+        additional_env={"CUDA_VISIBLE_DEVICES": ""},  # ← Qwen на CPU, звільняє 3ГБ
     )
 
     speech_recognition = Node(
         package="lasr_speech_recognition_whisper",
-        executable="transcribe_speech",
+        executable="transcribe_microphone_server",
         name="transcribe_speech",
         output="screen",
+        additional_env={"CUDA_VISIBLE_DEVICES": ""},
     )
 
     restaurant = TimerAction(
