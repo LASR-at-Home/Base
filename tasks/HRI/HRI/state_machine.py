@@ -117,8 +117,8 @@ class HRI(yasmin.StateMachine):
 
         self.add_state(
             "CHECK",
-            yasmin.CbState(outcomes=["succeeded", "GO_TO_DOOR_2"], callback=self.check),
-            transitions={"succeeded": "succeeded", "GO_TO_DOOR_2": "GO_TO_DOOR_2"},
+            yasmin.CbState(outcomes=["succeeded", 'GO_TO_DOOR_2'], callback=self.check),
+            transitions={"succeeded": 'INTRODUCE', 'GO_TO_DOOR_2': 'GO_TO_DOOR_2'},
         )
 
         self.add_state(
@@ -131,6 +131,12 @@ class HRI(yasmin.StateMachine):
             "GREET_2",  # SM2: Greets guest
             LookAndGreetGuest(last_resort=False, guest_id="guest2"),
             transitions={"succeeded": "STOP_EYE_TRACKER", "failed": "failed"},
+        )
+        
+        self.add_state(
+            "INTRODUCE",
+            Introduce(guest_to_introduce="guest1"),
+            transitions={"succeeded": "succeeded", "failed": "failed"},
         )
 
     def check(self, blackboard):
@@ -215,6 +221,7 @@ def main():
     bb["confidence"] = face_detection_confidence
     bb["dataset"] = "hri"
     bb["drink_position"] = PointStamped()
+    bb["person_index"] = 0
 
     outcome = sm(bb)
 
