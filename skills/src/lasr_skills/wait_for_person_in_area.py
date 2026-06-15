@@ -8,6 +8,7 @@ from yasmin import State, StateMachine
 from lasr_skills import Detect3DInArea, Wait
 
 from shapely import Polygon as ShapelyPolygon
+from shapely import Polygon as ShapelyPolygon
 
 
 class CheckForPerson(State):

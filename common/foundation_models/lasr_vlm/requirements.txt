@@ -4,6 +4,7 @@
 #
 #    pip-compile requiremenets.in
 #
+numpy<2.0
 annotated-types==0.7.0
     # via pydantic
 anyio==4.13.0

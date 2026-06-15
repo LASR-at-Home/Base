@@ -4,7 +4,7 @@ import rclpy
 import yasmin
 from yasmin import StateMachine, State, Blackboard
 import yasmin_ros
-
+import time
 
 from geometry_msgs.msg import Point, Quaternion, Pose, PoseStamped
 from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult

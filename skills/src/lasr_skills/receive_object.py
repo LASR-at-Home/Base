@@ -6,6 +6,12 @@ from yasmin import StateMachine, Blackboard
 import yasmin_ros
 from yasmin_ros import ServiceState, ActionState
 
+
+import yasmin
+from yasmin import StateMachine, Blackboard
+import yasmin_ros
+from yasmin_ros import ServiceState, ActionState
+
 from std_srvs.srv import Empty
 
 from lasr_skills import Say, PlayMotion, Wait
@@ -69,7 +75,25 @@ class ReceiveObject(StateMachine):
                 "canceled": "failed",
             },
         )
+        self.add_state(
+            "LOOK_DOWN_LEFT",
+            PlayMotion(motion_name="look_down_left"),
+            transitions={
+                "succeeded": "LOOK_RIGHT",
+                "aborted": "failed",
+                "canceled": "failed",
+            },
+        )
 
+        self.add_state(
+            "LOOK_RIGHT",
+            PlayMotion(motion_name="look_right"),
+            transitions={
+                "succeeded": "LOOK_DOWN_RIGHT",
+                "aborted": "failed",
+                "canceled": "failed",
+            },
+        )
         self.add_state(
             "LOOK_RIGHT",
             PlayMotion(motion_name="look_right"),
@@ -99,6 +123,25 @@ class ReceiveObject(StateMachine):
                 "canceled": "failed",
             },
         )
+        self.add_state(
+            "LOOK_DOWN_RIGHT",
+            PlayMotion(motion_name="look_down_right"),
+            transitions={
+                "succeeded": "LOOK_DOWN_CENTRE",
+                "aborted": "failed",
+                "canceled": "failed",
+            },
+        )
+
+        self.add_state(
+            "LOOK_DOWN_CENTRE",
+            PlayMotion(motion_name="look_centre"),
+            transitions={
+                "succeeded": "LOOK_CENTRE",
+                "aborted": "failed",
+                "canceled": "failed",
+            },
+        )
 
         self.add_state(
             "LOOK_CENTRE",
@@ -109,7 +152,25 @@ class ReceiveObject(StateMachine):
                 "canceled": "failed",
             },
         )
+        self.add_state(
+            "LOOK_CENTRE",
+            PlayMotion(motion_name="look_centre"),
+            transitions={
+                "succeeded": "SAY_REACH_ARM",
+                "aborted": "failed",
+                "canceled": "failed",
+            },
+        )
 
+        self.add_state(
+            "SAY_REACH_ARM",
+            Say(text="Please step back, I am going to reach my arm out."),
+            transitions={
+                "succeeded": "REACH_ARM",
+                "aborted": "REACH_ARM",
+                "canceled": "REACH_ARM",
+            },
+        )
         self.add_state(
             "SAY_REACH_ARM",
             Say(text="Please step back, I am going to reach my arm out."),
@@ -140,6 +201,26 @@ class ReceiveObject(StateMachine):
                     "canceled": "failed",
                 },
             )
+        if vertical:
+            self.add_state(
+                "REACH_ARM",
+                PlayMotion(motion_name="reach_arm_vertical_gripper"),
+                transitions={
+                    "succeeded": "OPEN_GRIPPER",
+                    "aborted": "failed",
+                    "canceled": "failed",
+                },
+            )
+        else:
+            self.add_state(
+                "REACH_ARM",
+                PlayMotion(motion_name="reach_arm_horizontal_gripper"),
+                transitions={
+                    "succeeded": "OPEN_GRIPPER",
+                    "aborted": "failed",
+                    "canceled": "failed",
+                },
+            )
 
         self.add_state(
             "OPEN_GRIPPER",
@@ -150,7 +231,41 @@ class ReceiveObject(StateMachine):
                 "canceled": "failed",
             },
         )
+        self.add_state(
+            "OPEN_GRIPPER",
+            PlayMotion(motion_name="open_gripper"),
+            transitions={
+                "succeeded": "SAY_PLACE",
+                "aborted": "failed",
+                "canceled": "failed",
+            },
+        )
 
+        if object_name is not None:
+            self.add_state(
+                "SAY_PLACE",
+                Say(
+                    text=f"Please place the {object_name} in my hand. I will wait for a few seconds.",
+                ),
+                transitions={
+                    "succeeded": "WAIT_5",
+                    "aborted": "failed",
+                    "canceled": "failed",
+                },
+            )
+        else:
+            self.add_state(
+                "SAY_PLACE",
+                Say(
+                    format_str="Please place the {} in my hand. I will wait for a few seconds.",
+                ),
+                transitions={
+                    "succeeded": "WAIT_5",
+                    "aborted": "failed",
+                    "canceled": "failed",
+                },
+                remapping={"placeholders": "object_name"},
+            )
         if object_name is not None:
             self.add_state(
                 "SAY_PLACE",
@@ -244,4 +359,5 @@ def main():
 
 
 if __name__ == "__main__":
+    main()
     main()
