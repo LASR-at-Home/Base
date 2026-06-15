@@ -93,6 +93,13 @@ class Restaurant(yasmin.StateMachine):
             },
         )
 
+        self.add_state(
+            "TAKE_ORDER",
+            TakeOrderSM(node=node),
+            transitions={"succeeded": "succeeded", 
+                        "failed": "failed"},
+        )
+
 
 def main(args=None):
     rclpy.init(args=args)
