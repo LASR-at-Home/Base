@@ -7,41 +7,41 @@ from .wait import Wait
 
 # from .detect import Detect
 
-# from .detect_3d import Detect3D
-# from .detect_3d_in_area import Detect3DInArea
-# from .detect_all_in_polygon import DetectAllInPolygon
+from .detect_3d import Detect3D
+from .detect_3d_in_area import Detect3DInArea
+from .detect_all_in_polygon import DetectAllInPolygon
 
 # from .wait_for_person import WaitForPerson
 from .say import Say
 
 # from .wait_for_person_in_area import WaitForPersonInArea
-# from .describe_people import DescribePeople
+from .describe_people import DescribePeople
 from .look_to_point import LookToPoint
 
-# from .play_motion import PlayMotion
-# from .go_to_location import GoToLocation
-# from .listen import Listen
-# from .face_person import FacePerson
-# from .listen import Listen
+from .play_motion import PlayMotion
+from .go_to_location import GoToLocation
+from .listen import Listen
+from .face_person import FacePerson
+from .listen import Listen
 
 # from .listen_for import ListenFor
-# from .receive_object import ReceiveObject
-# from .handover_object import HandoverObject
+from .receive_object import ReceiveObject
+from .handover_object import HandoverObject
 
 # from .clip_vqa import QueryImage
-# from .detect_faces import DetectFaces
-# from .eye_tracker import StartEyeTracker, StopEyeTracker
-# from .wait_for_person_in_area import WaitForPersonInArea
+from .detect_faces import DetectFaces
+from .eye_tracker import StartEyeTracker, StopEyeTracker
+from .wait_for_person_in_area import WaitForPersonInArea
 
 # from .recognise import Recognise
-# from .detect_gesture import DetectGesture
+from .detect_gesture import DetectGesture
 
 # from .look_at_person import LookAtPerson
 # from .wait import Wait
 # from .guide import Guide
-# from .detect_clothing import DetectClothing
+from .detect_clothing import DetectClothing
 
-# from .ask_and_listen import AskAndListen
+from .ask_and_listen import AskAndListen
 
 from .detect_door_opening import DetectDoorOpening
 
