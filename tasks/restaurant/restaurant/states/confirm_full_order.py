@@ -1,19 +1,14 @@
 import yasmin
+from lasr_skills import AskAndListen
 
 CONFIRM_KEYWORDS = ["yes", "correct", "right", "yeah", "yep", "sure", "ok", "okay"]
 REJECT_KEYWORDS = ["no", "wrong", "incorrect", "nope", "not"]
 
-# MOCK response for testing
-# TODO: replace with real Listen when speech recognition is available
-# Options to test different flows:
-#   "yes"  → confirmed → succeeded
-#   "no"   → re_ask   → back to ADD_DISH (redo second item only)
-#   "hmm"  → retry    → back to CONFIRM_FULL_ORDER
-MOCK_RESPONSE = "no"
 
-class ConfirmFullOrder(yasmin.State):
+class ConfirmFullOrder(yasmin.StateMachine):
     """
-    Confirms the full order (both items) with the customer.
+    Sub state machine that confirms the full order (both items) with the customer.
+    Says the full order back and listens for yes/no response.
 
     Inputs (from blackboard):
         order (list[str]): full order list e.g. ["coffee", "cola"]
@@ -32,39 +27,80 @@ class ConfirmFullOrder(yasmin.State):
         super().__init__(outcomes=["confirmed", "retry", "re_ask", "failed"])
         self.add_input_key("order")
 
-    def execute(self, blackboard):
-        # Build full order string e.g. ["coffee", "cola"] → "coffee and cola"
-        order = blackboard["order"]
-        order_str = " and ".join(order)
+        # 1. Build the full order phrase
+        self.add_state(
+            "BUILD_PHRASE",
+            self.BuildPhrase(),
+            transitions={
+                "succeeded": "ASK_AND_LISTEN",
+                "failed":    "failed",
+            },
+        )
 
-        # MOCK: print instead of speaking
-        # TODO: replace with AskAndListen when TTS is working:
-        #   from lasr_skills import AskAndListen
-        #   ask_and_listen = AskAndListen(
-        #       tts_phrase=f"You ordered {order_str}. Is that correct? Please say yes or no."
-        #   )
-        #   outcome = ask_and_listen(blackboard)
-        #   if outcome != "succeeded": return "failed"
-        #   transcription = blackboard["transcribed_speech"].lower().strip()
-        print(f"[MOCK] ConfirmFullOrder says: 'You ordered {order_str}. Is that correct? Please say yes or no.'")
+        # 2. Say the full order back and listen for response
+        self.add_state(
+            "ASK_AND_LISTEN",
+            AskAndListen(tts_phrase_format_str="You ordered {}. Is that correct? Please say yes or no."),
+            transitions={
+                "succeeded": "CHECK_RESPONSE",
+                "failed":    "failed",
+            },
+            remappings={"transcribed_speech": "transcribed_speech"},
+        )
 
-        # MOCK: hardcoded response for testing
-        transcription = MOCK_RESPONSE
-        print(f"[MOCK] ConfirmFullOrder heard: '{transcription}'")
+        # 3. Check the response
+        self.add_state(
+            "CHECK_RESPONSE",
+            self.CheckResponse(),
+            transitions={
+                "confirmed": "confirmed",
+                "retry":     "retry",
+                "re_ask":    "re_ask",
+                "failed":    "failed",
+            },
+        )
 
-        # Keyword matching
-        for word in CONFIRM_KEYWORDS:
-            if word in transcription:
-                print(f"[MATCH] Full order confirmed with: '{word}'")
-                return "confirmed"
+    class BuildPhrase(yasmin.State):
+        """Builds the full order confirmation phrase."""
 
-        for word in REJECT_KEYWORDS:
-            if word in transcription:
-                print(f"[MATCH] Full order rejected with: '{word}' — redoing second item")
-                # Remove second item from order so ADD_DISH starts fresh
-                blackboard["order"] = [blackboard["order"][0]]
-                return "re_ask"
+        def __init__(self):
+            super().__init__(outcomes=["succeeded", "failed"])
+            self.add_input_key("order")
+            self.add_output_key("tts_phrase_placeholders")
 
-        # Unclear response
-        print(f"[UNCLEAR] Could not match response: '{transcription}'")
-        return "retry"
+        def execute(self, blackboard):
+            order = blackboard["order"]
+            order_str = " and ".join(order)
+            blackboard["tts_phrase_placeholders"] = order_str
+            return "succeeded"
+
+    class CheckResponse(yasmin.State):
+        """
+        Keyword matches the customer's response.
+        If rejected, removes second item so ADD_DISH starts fresh.
+        """
+
+        def __init__(self):
+            super().__init__(outcomes=["confirmed", "retry", "re_ask", "failed"])
+            self.add_input_key("transcribed_speech")
+            self.add_input_key("order")
+            self.add_output_key("order")
+
+        def execute(self, blackboard):
+            transcription = blackboard["transcribed_speech"].lower().strip()
+            print(f"[ConfirmFullOrder] heard: '{transcription}'")
+
+            for word in CONFIRM_KEYWORDS:
+                if word in transcription:
+                    print(f"[MATCH] Full order confirmed with: '{word}'")
+                    return "confirmed"
+
+            for word in REJECT_KEYWORDS:
+                if word in transcription:
+                    print(f"[MATCH] Full order rejected with: '{word}' — redoing second item")
+                    # Remove second item so ADD_DISH starts fresh
+                    blackboard["order"] = [blackboard["order"][0]]
+                    return "re_ask"
+
+            print(f"[UNCLEAR] Could not match: '{transcription}'")
+            return "retry"
