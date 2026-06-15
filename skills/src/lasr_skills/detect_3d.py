@@ -4,12 +4,14 @@ import rclpy
 
 import yasmin
 import yasmin_ros
+import yasmin_ros
 from yasmin import Blackboard, StateMachine
 from yasmin_ros import set_ros_loggers, ServiceState
 from yasmin_viewer import YasminViewerPub
 
 import message_filters
 
+import time
 import time
 
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
@@ -52,6 +54,8 @@ class Detect3D(ServiceState):
         self.filter = filter or []
         self.confidence = confidence
         self.target_frame = target_frame
+
+        self.node = yasmin_ros.logger_node
 
         self.node = yasmin_ros.logger_node
 
@@ -104,6 +108,7 @@ class Detect3D(ServiceState):
                 time.sleep(0.25)
             if self.cam_info is None:
                 yasmin.YASMIN_LOG_ERROR(
+                yasmin.YASMIN_LOG_ERROR(
                     f"Timed out waiting for camera info on {self.depth_camera_info_topic}"
                 )
                 return "failed"
@@ -137,8 +142,10 @@ class Detect3D(ServiceState):
         yasmin.YASMIN_LOG_INFO(f"Got {len(response.detected_objects)} detections")
         for det in response.detected_objects:
             self.node.get_logger().info(
+            self.node.get_logger().info(
                 f"  {det.name} at ({det.point.x:.2f}, {det.point.y:.2f}, {det.point.z:.2f})"
             )
+
 
         blackboard["detections_3d"] = response
         blackboard["image_raw"] = self.image_msg

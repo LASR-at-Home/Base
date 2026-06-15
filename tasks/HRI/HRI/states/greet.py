@@ -98,6 +98,7 @@ class LookAndGreetGuest(yasmin.StateMachine):
         self.add_state(
             "WAIT_FOR_GUEST",
             WaitForPersonInArea(),
+            WaitForPersonInArea(),
             transitions={
                 "succeeded": "GET_PERSON_POINT",
                 "failed": "SAY_WAITING_FOR_GUEST",

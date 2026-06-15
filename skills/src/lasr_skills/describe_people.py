@@ -36,6 +36,7 @@ class GetClipAttributes(yasmin_ros.ServiceState):
         )
 
         self.add_input_key("image_raw")
+        self.add_input_key("image_raw")
         self.add_output_key("clip_detection_dict")
 
     def _create_request(self, blackboard):

@@ -22,6 +22,7 @@ class CheckForPerson(State):
 
 class WaitForPersonInArea(StateMachine):
     def __init__(self):
+    def __init__(self):
         super().__init__(outcomes=["succeeded", "failed"], handle_sigint=True)
         self.add_output_key("detections_3d")
 
@@ -40,6 +41,7 @@ class WaitForPersonInArea(StateMachine):
             node.get_parameter("door_polygon.bottom_right").get_parameter_value()
         )
 
+        door_polygon = ShapelyPolygon([top_left, top_right, bottom_right, bottom_left])
         door_polygon = ShapelyPolygon([top_left, top_right, bottom_right, bottom_left])
 
         self.add_state(

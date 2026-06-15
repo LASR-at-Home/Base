@@ -31,6 +31,7 @@ class GetNameAndDrink(yasmin.StateMachine):
             self.guest_id = guest_id
 
         def _create_req(self, blackboard):
+        def _create_req(self, blackboard):
             request = HRITaskQueryLlm.Request(
                 llm_input=blackboard["guest_transcription"], task=self.task
             )

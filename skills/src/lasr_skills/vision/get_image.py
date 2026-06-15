@@ -134,8 +134,10 @@ class GetImageAndPointCloud(State):
         try:
             blackboard["img_msg"] = wait_for_message(
                 Image, yasmin_ros.logger_node, self.topic1, self.camera_qos
+                Image, yasmin_ros.logger_node, self.topic1, self.camera_qos
             )
             blackboard["pcl_msg"] = wait_for_message(
+                PointCloud2, yasmin_ros.logger_node, self.topic2, self.camera_qos
                 PointCloud2, yasmin_ros.logger_node, self.topic2, self.camera_qos
             )
 

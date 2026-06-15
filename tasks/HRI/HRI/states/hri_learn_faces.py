@@ -94,6 +94,7 @@ class HRILearnFaces(StateMachine):
                         blackboard["num_images"] += 1
                     except:
                         blackboard["num_images"] = 1
+                        blackboard["num_images"] = 1
             except Exception as e:
                 yasmin.YASMIN_LOG_ERROR(f"Service call failed: {e}")
                 return "failed"

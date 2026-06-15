@@ -32,6 +32,10 @@ import os
 
 here = os.path.dirname(os.path.abspath(__file__))
 
+import os
+
+here = os.path.dirname(os.path.abspath(__file__))
+
 
 @dataclass
 class ModelConfig:

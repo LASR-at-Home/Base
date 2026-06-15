@@ -5,8 +5,8 @@ from .detect_wave import DetectWave
 
 
 class Survey(yasmin.StateMachine):
-    def __init__(self, node):
-        super().__init__(outcomes=["customer_found", "customer_not_found"])
+    def __init__(self, node, target_frame="map"):
+        super().__init__(outcomes=["customer_found"])
         self.node = node
 
         self.add_state(
@@ -20,7 +20,7 @@ class Survey(yasmin.StateMachine):
         )
         self.add_state(
             "DETECT_LEFT",
-            DetectWave(),
+            DetectWave(target_frame=target_frame),
             transitions={
                 "waving": "customer_found",
                 "not_waving": "LOOK_CENTRE",
@@ -37,10 +37,9 @@ class Survey(yasmin.StateMachine):
                 "canceled": "LOOK_RIGHT",
             },
         )
-
         self.add_state(
             "DETECT_CENTRE",
-            DetectWave(),
+            DetectWave(target_frame=target_frame),
             transitions={
                 "waving": "customer_found",
                 "not_waving": "LOOK_RIGHT",
@@ -53,18 +52,17 @@ class Survey(yasmin.StateMachine):
             PlayMotion(motion_name="look_right"),
             transitions={
                 "succeeded": "DETECT_RIGHT",
-                "aborted": "customer_not_found",
-                "canceled": "customer_not_found",
+                "aborted": "LOOK_LEFT",
+                "canceled": "LOOK_LEFT",
             },
         )
-
         self.add_state(
             "DETECT_RIGHT",
-            DetectWave(),
+            DetectWave(target_frame=target_frame),
             transitions={
                 "waving": "customer_found",
-                "not_waving": "customer_not_found",
-                "failed": "customer_not_found",
+                "not_waving": "LOOK_LEFT",
+                "failed": "LOOK_LEFT",
             },
         )
 
@@ -76,7 +74,7 @@ def main(args=None):
         allow_undeclared_parameters=True,
         automatically_declare_parameters_from_overrides=True,
     )
-    sm = Survey(node=node)
+    sm = Survey(node=node, target_frame="odom")
     outcome = sm(yasmin.Blackboard())
     node.get_logger().info(f"Survey outcome: {outcome}")
     node.destroy_node()

@@ -104,6 +104,7 @@ class ProcessDetections(State):
         """
 
         yasmin.YASMIN_LOG_WARN("Finding seat in seat guest")
+        yasmin.YASMIN_LOG_WARN("Finding seat in seat guest")
         seat_sofa = True
         seated_guests_loc = [
             detection.point
@@ -275,6 +276,7 @@ class SeatGuest(StateMachine):
             LookToPoint(
                 pointstamped=PointStamped(
                     header=Header(frame_id="map"),
+                    header=Header(frame_id="map"),
                     point=self.sofa_point,  # TODO: Change to 'map' when 2dnav is fixed
                 )
             ),
@@ -314,8 +316,29 @@ class SeatGuest(StateMachine):
         #         z_min=-10,
         #         z_max=50.0,
         #         confidence=0.5,
+        #     Detect3DInArea(
+        #         area_polygon=seating_area_minus_sofa,
+        #         filter=["person", "chair"],
+        #         z_min=-10,
+        #         z_max=50.0,
+        #         confidence=0.5,
         #     ),
         #     transitions={"succeeded": "PROCESS_DETECTIONS", "failed": "failed"},
+        #     remappings={"detections_3d": "non_sofa_detections"},
+        # )
+
+        self.add_state(
+            "DETECT_NON_SOFA",
+            DetectAllInPolygon(
+                polygon=seating_area_minus_sofa,  # TODO: Verify Potential type mismatch (BaseGeometry vs accepted ShapelyPolygon)
+                object_filter=["person", "chair"],
+                min_coverage=1.0,
+                min_new_object_dist=0.50,
+                min_confidence=0.5,
+            ),
+            transitions={"succeeded": "PROCESS_DETECTIONS", "failed": "failed"},
+            remappings={"detected_objects": "non_sofa_detections"},
+        )
         #     remappings={"detections_3d": "non_sofa_detections"},
         # )
 
@@ -524,6 +547,7 @@ def main():
 
     rclpy.init()
     node = HRI_node()
+    node = HRI_node()
 
     yasmin_ros.set_ros_loggers(node)
 
@@ -551,8 +575,15 @@ def main():
                 "detection": False,
                 "seating_detection": False,
             },
+            "guest2": {
+                "name": "",
+                "drink": "",
+                "detection": False,
+                "seating_detection": False,
+            },
         }
 
+        
         YasminViewerPub(sm, "HRI_SM3")
 
         outcome = sm(bb)

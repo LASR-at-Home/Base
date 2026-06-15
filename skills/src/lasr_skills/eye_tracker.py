@@ -9,9 +9,11 @@ class StartEyeTracker(yasmin_ros.ActionState):
     def __init__(self):
         super().__init__(
             action_name="/lasr_vision_eye_tracker/track_eyes",
+            action_name="/lasr_vision_eye_tracker/track_eyes",
             action_type=EyeTrackerAction,
             create_goal_handler=self.create_goal,
             response_timeout=1.0,
+            maximum_retry=0,
             maximum_retry=0,
         )
 

@@ -1,6 +1,8 @@
 import yasmin
 import rclpy
 import yasmin_ros
+import rclpy
+import yasmin_ros
 from lasr_skills import Listen
 from lasr_skills import Say
 

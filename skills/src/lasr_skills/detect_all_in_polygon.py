@@ -408,7 +408,10 @@ class IterateThroughPoints(yasmin.StateMachine):
             transitions={
                 "succeeded": "SLEEP",
                 "aborted": "SLEEP",
+                "succeeded": "SLEEP",
+                "aborted": "SLEEP",
                 "canceled": "failed",
+                "timeout": "SLEEP",
                 "timeout": "SLEEP",
             },
         )
@@ -433,11 +436,21 @@ class IterateThroughPoints(yasmin.StateMachine):
                 "detections_3d": "detections_3d",
                 "image_raw": "image_raw",
             },
+            remappings={
+                "detections_3d": "detections_3d",
+                "image_raw": "image_raw",
+            },
         )
         self.add_state(
             "PROCESS_DETECTIONS",
             ProcessDetections(min_new_object_dist=min_new_object_dist),
             transitions={"succeeded": "GET_LOOK_POINT", "failed": "failed"},
+            remappings={
+                "detections_3d": "detections_3d",
+                "detected_objects": "detected_objects",
+                "image_raw": "image_raw",
+                "debug_images": "debug_images",
+            },
             remappings={
                 "detections_3d": "detections_3d",
                 "detected_objects": "detected_objects",
@@ -620,6 +633,20 @@ class DetectAllInPolygon(yasmin.StateMachine):
             transitions={"succeeded": "CALCULATE_SWEEP_POINTS"},
         )
 
+        def _init_bb(blackboard):
+            blackboard["detected_objects"] = []
+            blackboard["debug_images"] = []
+            return "succeeded"
+
+        init_state = yasmin.CbState(outcomes=["succeeded"], callback=_init_bb)
+        init_state.add_output_key("detected_objects")
+        init_state.add_output_key("debug_images")
+        self.add_state(
+            "INIT_BLACKBOARD",
+            init_state,
+            transitions={"succeeded": "CALCULATE_SWEEP_POINTS"},
+        )
+
         self.add_state(
             "CALCULATE_SWEEP_POINTS",
             CalculateSweepPoints(
@@ -627,6 +654,7 @@ class DetectAllInPolygon(yasmin.StateMachine):
                 min_coverage=self._min_coverage,
             ),
             transitions={"succeeded": "LOOK_AND_DETECT", "failed": "failed"},
+            remappings={"sweep_points": "sweep_points"},
             remappings={"sweep_points": "sweep_points"},
         )
         self.add_state(
@@ -639,6 +667,10 @@ class DetectAllInPolygon(yasmin.StateMachine):
                 min_new_object_dist=self._min_new_object_dist,
             ),
             transitions={"succeeded": "PUBLISH_DETECTED_OBJECTS", "failed": "failed"},
+            remappings={
+                "sweep_points": "sweep_points",
+                "detected_objects": "detected_objects",
+            },
             remappings={
                 "sweep_points": "sweep_points",
                 "detected_objects": "detected_objects",
@@ -670,6 +702,10 @@ class Detect_node(Node):
 
 def main():
     seat_area = [
+        [0.37787461280822754, -3.057680130004883],
+        [-1.3188365697860718, -1.687604546546936],
+        [-0.07020854949951172, -0.43113774061203003],
+        [1.5865206718444824, -1.74715256690979],
         [0.37787461280822754, -3.057680130004883],
         [-1.3188365697860718, -1.687604546546936],
         [-0.07020854949951172, -0.43113774061203003],

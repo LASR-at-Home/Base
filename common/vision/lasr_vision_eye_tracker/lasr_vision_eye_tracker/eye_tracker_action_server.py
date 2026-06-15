@@ -6,6 +6,7 @@ from rclpy.callback_groups import (
     ReentrantCallbackGroup,
 )
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy, DurabilityPolicy
+from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy, DurabilityPolicy
 from rclpy.executors import MultiThreadedExecutor
 import message_filters
 import threading
@@ -31,6 +32,7 @@ from geometry_msgs.msg import (
     PointStamped,
     Point,
     PoseWithCovarianceStamped,
+    Vector3,
     Vector3,
 )
 from sensor_msgs.msg import Image, CameraInfo
@@ -69,7 +71,9 @@ class EyeTracker(Node):
         self._robot_pose_sub = self.create_subscription(
             PoseWithCovarianceStamped,
             "/amcl_pose",
+            "/amcl_pose",
             self._robot_pose_callback,
+            qos_profile=amcl_qos,
             qos_profile=amcl_qos,
             callback_group=self._work_cb_group,
         )
@@ -243,6 +247,8 @@ class EyeTracker(Node):
             pointing_frame="head_2_link",
             pointing_axis=Vector3(x=1.0, y=0.0, z=0.0),
             max_velocity=2.0,
+            pointing_axis=Vector3(x=1.0, y=0.0, z=0.0),
+            max_velocity=2.0,
             target=PointStamped(
                 header=Header(frame_id="map"),
                 point=goal.person_point,
@@ -349,6 +355,8 @@ class EyeTracker(Node):
             else:
                 g = PointHead.Goal(
                     pointing_frame="head_2_link",
+                    pointing_axis=Vector3(x=1.0, y=0.0, z=0.0),
+                    max_velocity=2.0,
                     pointing_axis=Vector3(x=1.0, y=0.0, z=0.0),
                     max_velocity=2.0,
                     target=PointStamped(
