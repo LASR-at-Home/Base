@@ -40,10 +40,11 @@ setup(
     extras_require={"test": ["pytest"]},
     cmdclass={"install": InstallCommand},
     entry_points={
-        "console_scripts": [
-            "sm = restaurant.state_machine:main",
-            "survey = restaurant.states.survey:main",
-            "detect_wave = restaurant.states.detect_wave:main",
+    "console_scripts": [
+        "sm = restaurant.state_machine:main",
+        "survey = restaurant.states.survey:main",
+        "detect_wave = restaurant.states.detect_wave:main",
+        "take_order_sm = restaurant.states.take_order_sm:main", 
         ],
     },
-)
+)   
