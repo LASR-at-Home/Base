@@ -5,21 +5,21 @@ CONFIRM_KEYWORDS = ["yes", "correct", "right", "yeah", "yep", "sure", "ok", "oka
 REJECT_KEYWORDS = ["no", "wrong", "incorrect", "nope", "not"]
 
 
-class ConfirmOrder(yasmin.StateMachine):
+class ConfirmFullOrder(yasmin.StateMachine):
     """
-    Sub state machine that confirms the first item with the customer.
-    Says the order back and listens for yes/no response.
+    Sub state machine that confirms the full order (both items) with the customer.
+    Says the full order back and listens for yes/no response.
 
     Inputs (from blackboard):
-        order (list[str]): current order list e.g. ["coffee"]
+        order (list[str]): full order list e.g. ["coffee", "cola"]
 
     Outputs (to blackboard):
         none
 
     Outcomes:
-        confirmed — customer said yes/correct
-        retry     — customer was unclear, ask again
-        re_ask    — customer said no/wrong, retake order
+        confirmed — customer confirmed full order
+        retry     — customer was unclear, confirm again
+        re_ask    — customer said no, redo second item only (back to ADD_DISH)
         failed    — technical error
     """
 
@@ -27,7 +27,7 @@ class ConfirmOrder(yasmin.StateMachine):
         super().__init__(outcomes=["confirmed", "retry", "re_ask", "failed"])
         self.add_input_key("order")
 
-        # 1. Build the phrase and set it on blackboard
+        # 1. Build the full order phrase
         self.add_state(
             "BUILD_PHRASE",
             self.BuildPhrase(),
@@ -37,7 +37,7 @@ class ConfirmOrder(yasmin.StateMachine):
             },
         )
 
-        # 2. Say the order back and listen for response
+        # 2. Say the full order back and listen for response
         self.add_state(
             "ASK_AND_LISTEN",
             AskAndListen(tts_phrase_format_str="You ordered {}. Is that correct? Please say yes or no."),
@@ -61,7 +61,7 @@ class ConfirmOrder(yasmin.StateMachine):
         )
 
     class BuildPhrase(yasmin.State):
-        """Builds the confirmation phrase from the order list."""
+        """Builds the full order confirmation phrase."""
 
         def __init__(self):
             super().__init__(outcomes=["succeeded", "failed"])
@@ -70,32 +70,36 @@ class ConfirmOrder(yasmin.StateMachine):
 
         def execute(self, blackboard):
             order = blackboard["order"]
-            if len(order) == 1:
-                order_str = order[0]
-            else:
-                order_str = " and ".join(order)
+            order_str = " and ".join(order)
             blackboard["tts_phrase_placeholders"] = order_str
             return "succeeded"
 
     class CheckResponse(yasmin.State):
-        """Keyword matches the customer's response."""
+        """
+        Keyword matches the customer's response.
+        If rejected, removes second item so ADD_DISH starts fresh.
+        """
 
         def __init__(self):
             super().__init__(outcomes=["confirmed", "retry", "re_ask", "failed"])
             self.add_input_key("transcribed_speech")
+            self.add_input_key("order")
+            self.add_output_key("order")
 
         def execute(self, blackboard):
             transcription = blackboard["transcribed_speech"].lower().strip()
-            print(f"[ConfirmOrder] heard: '{transcription}'")
+            print(f"[ConfirmFullOrder] heard: '{transcription}'")
 
             for word in CONFIRM_KEYWORDS:
                 if word in transcription:
-                    print(f"[MATCH] Confirmed with: '{word}'")
+                    print(f"[MATCH] Full order confirmed with: '{word}'")
                     return "confirmed"
 
             for word in REJECT_KEYWORDS:
                 if word in transcription:
-                    print(f"[MATCH] Rejected with: '{word}'")
+                    print(f"[MATCH] Full order rejected with: '{word}' — redoing second item")
+                    # Remove second item so ADD_DISH starts fresh
+                    blackboard["order"] = [blackboard["order"][0]]
                     return "re_ask"
 
             print(f"[UNCLEAR] Could not match: '{transcription}'")

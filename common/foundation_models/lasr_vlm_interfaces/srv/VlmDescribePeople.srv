@@ -1,0 +1,7 @@
+sensor_msgs/Image image_raw
+---
+string hair_color             
+string hair_length
+bool glasses                   
+bool hat                       
+string shirt_color

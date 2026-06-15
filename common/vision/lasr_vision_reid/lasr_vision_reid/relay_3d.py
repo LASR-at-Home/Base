@@ -63,7 +63,7 @@ def relay_3d(
         node, Image, depth_topic, qos_profile=camera_qos
     )
     ts = message_filters.ApproximateTimeSynchronizer(
-        [image_sub, depth_sub], queue_size=30, slop=0.2
+        [image_sub, depth_sub], queue_size=30, slop=0.1
     )
     ts.registerCallback(detect_cb)
 

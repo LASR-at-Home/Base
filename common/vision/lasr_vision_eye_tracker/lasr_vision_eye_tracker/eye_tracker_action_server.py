@@ -52,20 +52,20 @@ class EyeTracker(Node):
         self._max_eye_distance: float = max_eye_distance
         self._move_up_count: float = 0.0
         self._max_move_up_count: int = 2
-        
+
         self.camera_qos = QoSProfile(
             depth=10,
             reliability=ReliabilityPolicy.BEST_EFFORT,
             history=HistoryPolicy.KEEP_LAST,
         )
-        
+
         amcl_qos = QoSProfile(
             depth=1,
             reliability=ReliabilityPolicy.RELIABLE,
             durability=DurabilityPolicy.TRANSIENT_LOCAL,
             history=HistoryPolicy.KEEP_LAST,
         )
-        
+
         self._robot_pose_sub = self.create_subscription(
             PoseWithCovarianceStamped,
             "/amcl_pose",
@@ -220,6 +220,14 @@ class EyeTracker(Node):
         self.get_logger().info("Beginning eye tracking...")
 
         goal = goal_handle.request
+
+        if goal.cancel:
+            self.get_logger().info("Cancelling eye tracker")
+            self._done = True
+            goal_handle.succeed()
+            # self.destroy_node()
+            return EyeTrackerAction.Result()
+
         if self._robot_point is None:
             self.get_logger().warn(
                 "No /robot_pose received yet; continuing and waiting asynchronously."
@@ -317,23 +325,13 @@ class EyeTracker(Node):
                 self._eyes = closest_eye_midpoint
 
         image_sub = message_filters.Subscriber(
-            self,
-            Image,
-            "/head_front_camera/rgb/image_raw",
-            self.camera_qos
-            
+            self, Image, "/head_front_camera/rgb/image_raw", self.camera_qos
         )
         depth_sub = message_filters.Subscriber(
-            self,
-            Image,
-            "/head_front_camera/depth/image_raw",
-            self.camera_qos
+            self, Image, "/head_front_camera/depth/image_raw", self.camera_qos
         )
         depth_camera_info_sub = message_filters.Subscriber(
-            self,
-            CameraInfo,
-            "/head_front_camera/depth/camera_info",
-            self.camera_qos
+            self, CameraInfo, "/head_front_camera/depth/camera_info", self.camera_qos
         )
         ts = message_filters.ApproximateTimeSynchronizer(
             [image_sub, depth_sub, depth_camera_info_sub], 10, 0.1
@@ -382,9 +380,6 @@ class EyeTracker(Node):
             self.get_clock().sleep_for(rclpy.duration.Duration(seconds=0.25))
 
         goal_handle.succeed()
-        image_sub.unregister()
-        depth_sub.unregister()
-        depth_camera_info_sub.unregister()
         return EyeTrackerAction.Result()
 
 
@@ -396,7 +391,7 @@ def main(args=None):
     eye_tracker = EyeTracker()
 
     # This allows the action server to handle concurrent goals
-    executor = MultiThreadedExecutor(num_threads=4)
+    executor = MultiThreadedExecutor()
     executor.add_node(eye_tracker)
 
     try:

@@ -1,46 +1,29 @@
 cmake_minimum_required(VERSION 3.8)
-project(lasr_llm_interfaces)
+project(lasr_vlm_interfaces)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
 # find dependencies
-find_package(ament_cmake REQUIRED message_generation message_runtime)
+find_package(ament_cmake REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 find_package(std_msgs REQUIRED)
-find_package(rclpy REQUIRED)
-
-# uncomment the following section in order to fill in
-# further dependencies manually.
-# find_package(<dependency> REQUIRED)
-
-################################################
-## Declare ROS messages, services, and actions #
-################################################
-
-# Specify message files
-set(msg_files
-  "msg/ReceptionistResponse.msg"
-  "msg/HRITaskResponse.msg"
-)
+find_package(sensor_msgs REQUIRED)
 
 # Specify service files
 set(srv_files
-  "srv/ReceptionistQueryLlm.srv"
-  "srv/HRITaskQueryLlm.srv"
-  "srv/SentenceEmbedding.srv"
-  "srv/StoringGroceriesQueryLlm.srv"
-  "srv/RestaurantQueryLlm.srv"
+  "srv/VlmDescribePeople.srv"
 )
 
-
-# Generate messages and services
+# Generate interfaces
 rosidl_generate_interfaces(${PROJECT_NAME}
-  ${msg_files}
   ${srv_files}
-  DEPENDENCIES std_msgs builtin_interfaces  # List all dependencies here
+  DEPENDENCIES std_msgs sensor_msgs builtin_interfaces
 )
+
+# Export dependencies
+ament_export_dependencies(rosidl_default_runtime)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -53,9 +36,5 @@ if(BUILD_TESTING)
   set(ament_cmake_cpplint_FOUND TRUE)
   ament_lint_auto_find_test_dependencies()
 endif()
-
-# Export dependencies
-ament_export_dependencies(rosidl_default_runtime)
-
 
 ament_package()
