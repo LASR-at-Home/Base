@@ -4,7 +4,7 @@ import yasmin_ros
 from std_msgs.msg import Empty
 from lasr_skills import Say, GoToLocation, PlayMotion
 
-from restaurant.states import Survey, ApproachPerson, FaceCustomer
+from restaurant.states import Survey, ApproachPerson, FaceCustomer TakeOrderSM
 
 
 class Restaurant(yasmin.StateMachine):

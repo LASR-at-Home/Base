@@ -46,7 +46,7 @@ class AskAndListen(yasmin.StateMachine):
                 transitions={
                     "succeeded": "LISTEN",
                     "aborted": "failed",
-                    "preempted": "failed",
+                    "canceled": "failed",
                 },
                 remappings={"placeholders": "tts_phrase_placeholders"},
             )
@@ -56,7 +56,7 @@ class AskAndListen(yasmin.StateMachine):
                 transitions={
                     "succeeded": "succeeded",
                     "aborted": "failed",
-                    "preempted": "failed",
+                    "canceled": "failed",
                 },
                 remappings={"sequence": "transcribed_speech"},
             )
@@ -68,7 +68,7 @@ class AskAndListen(yasmin.StateMachine):
                 transitions={
                     "succeeded": "LISTEN",
                     "aborted": "failed",
-                    "preempted": "failed",
+                    "canceled": "failed",
                 },
                 remapping={"text": "tts_phrase"},
             )
@@ -78,7 +78,7 @@ class AskAndListen(yasmin.StateMachine):
                 transitions={
                     "succeeded": "succeeded",
                     "aborted": "failed",
-                    "preempted": "failed",
+                    "canceled": "failed",
                 },
                 remapping={"sequence": "transcribed_speech"},
             )
