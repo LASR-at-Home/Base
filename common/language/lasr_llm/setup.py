@@ -47,6 +47,7 @@ setup(
             "receptionist_service = lasr_llm.nodes.receptionist_service:main",
             "hri_task_service = lasr_llm.nodes.hri_task_service:main",
             "storing_groceries_service = lasr_llm.nodes.storing_groceries_service:main",
+            "restaurant_service = lasr_llm.nodes.restaurant_service:main",
         ],
     },
 )

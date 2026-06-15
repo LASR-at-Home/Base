@@ -1,23 +1,21 @@
 import rclpy
 import yasmin
-
 from .ask_for_order import AskForOrder
 from .confirm_order import ConfirmOrder
-from .repeat_order import RepeatOrder
 from .add_dish import AddDish
-from .anything_else import AnythingElse
+from .confirm_full_order import ConfirmFullOrder
 
 
 class TakeOrderSM(yasmin.StateMachine):
     """
     Sub state machine that handles the full order-taking flow:
-    Ask for order → Confirm order → Repeat? → Anything else? → Add dish (loop)
+    Ask for order → Confirm order → Add dish → Confirm full order → succeeded
 
     Inputs (from blackboard):
         none
 
     Outputs (to blackboard):
-        order (list[str]): finalised list of items ordered
+        order (list[str]): finalised list of 2 items ordered
     """
 
     def __init__(self, node):
@@ -32,57 +30,57 @@ class TakeOrderSM(yasmin.StateMachine):
             AskForOrder(node=node),
             transitions={
                 "succeeded": "CONFIRM_ORDER",
-                "failed": "failed",
+                "failed":    "failed",
             },
         )
 
-        # 2. Confirm order — robot reads back what it heard
+        # 2. Confirm first item — say it back, listen for yes/no
+        #    confirmed → ADD_DISH (get second item)
+        #    retry     → CONFIRM_ORDER (unclear, ask again)
+        #    re_ask    → ASK_FOR_ORDER (wrong, retake first item)
+        #    failed    → failed
         self.add_state(
             "CONFIRM_ORDER",
             ConfirmOrder(),
             transitions={
-                "succeeded": "REPEAT_ORDER",
-                "failed": "failed",
+                "confirmed": "ADD_DISH",
+                "retry":     "CONFIRM_ORDER",
+                "re_ask":    "ASK_FOR_ORDER",
+                "failed":    "failed",
             },
         )
 
-        # 3. Repeat order? — did the customer say yes/correct or no/repeat?
-        self.add_state(
-            "REPEAT_ORDER",
-            RepeatOrder(),
-            transitions={
-                "correct": "ANYTHING_ELSE",
-                "repeat": "CONFIRM_ORDER",
-                "failed": "failed",
-            },
-        )
-
-        # 4. Anything else? — does the customer want to add anything?
-        self.add_state(
-            "ANYTHING_ELSE",
-            AnythingElse(),
-            transitions={
-                "nothing": "succeeded",
-                "add_dish": "ADD_DISH",
-                "failed": "failed",
-            },
-        )
-
-        # 5. Add dish — listen for the second item and append to order
+        # 3. Add dish — ask for second item and append to order
         self.add_state(
             "ADD_DISH",
             AddDish(node=node),
             transitions={
-                "succeeded": "CONFIRM_ORDER",
-                "failed": "failed",
+                "succeeded": "CONFIRM_FULL_ORDER",
+                "failed":    "failed",
             },
         )
 
- 
+        # 4. Confirm full order — confirm both items, done
+        #    confirmed → succeeded
+        #    retry     → CONFIRM_FULL_ORDER (unclear)
+        #    re_ask    → ADD_DISH (wrong second item)
+        #    failed    → failed
+        self.add_state(
+            "CONFIRM_FULL_ORDER",
+            ConfirmFullOrder(),
+            transitions={
+                "confirmed": "succeeded",
+                "retry":     "CONFIRM_FULL_ORDER",
+                "re_ask":    "ADD_DISH",
+                "failed":    "failed",
+            },
+        )
+
+
 def main(args=None):
     rclpy.init(args=args)
     node = rclpy.create_node(
-        node_name="take_order_sm",
+        node_name="restaurant",  
         allow_undeclared_parameters=True,
         automatically_declare_parameters_from_overrides=True,
     )

@@ -1,10 +1,9 @@
 import rclpy
 import yasmin
-from lasr_llm_interfaces.srv import Llm
+from lasr_llm_interfaces.srv import RestaurantQueryLlm
 
 # MOCK sentence for testing (replace with AskAndListen when TTS is working)
-MOCK_TRANSCRIPTION = "I would like a coffee please"
-
+MOCK_TRANSCRIPTION = "I would like a lemonade please"
 
 class AskForOrder(yasmin.State):
     """
@@ -31,10 +30,13 @@ class AskForOrder(yasmin.State):
         self._node = node
 
         # Get the list of possible items from the config
-        self._possible_items = node.get_parameter("priors.items").value
+        self._possible_items = node.get_parameter("priors.items").value or []
+        print(f"[DEBUG] possible_items loaded: {self._possible_items}")
 
-        # Create the LLM service client
-        self._llm_client = node.create_client(Llm, "/lasr_llm/llm")
+        # Create the restaurant LLM service client
+        self._llm_client = node.create_client(
+            RestaurantQueryLlm, "/restaurant/query_llm"
+        )
         self._llm_client.wait_for_service()
 
     def execute(self, blackboard):
@@ -45,24 +47,24 @@ class AskForOrder(yasmin.State):
         #   outcome = self._ask_and_listen(blackboard)
         #   if outcome != "succeeded": return "failed"
         #   transcription = blackboard["transcribed_speech"].lower()
-        transcription = MOCK_TRANSCRIPTION
+        transcription = MOCK_TRANSCRIPTION.lower()
         print(f"[MOCK] AskForOrder heard: '{transcription}'")
 
-        # Call the LLM to parse the item
-        request = Llm.Request()
-        request.system_prompt = (
-            "You are a robot acting as a waiter in a restaurant. "
-            "You are tasked with identifying a single item from a customer's order. "
-            f"The possible items are: {', '.join(self._possible_items)}. "
-            "You will receive input such as 'I would like a coffee please'. "
-            "You should output only the single item name, for example: 'coffee'. "
-            "Do not output anything else. "
-            "If you cannot identify an item, output 'none'."
-        )
-        request.prompt = transcription
-        request.max_tokens = 20
+        # Step 1: keyword matching first — fast, no LLM needed
+        for item in self._possible_items:
+            if item.lower() in transcription:
+                print(f"[KEYWORD] AskForOrder matched: '{item}'")
+                blackboard["transcribed_speech"] = transcription
+                blackboard["order"] = [item.lower()]
+                return "succeeded"
 
-        # Send the request — use spin_once loop (safer inside YASMIN state)
+        # Step 2: fallback to LLM if keyword matching fails
+        print("[LLM] No keyword match, calling LLM...")
+        request = RestaurantQueryLlm.Request()
+        request.llm_input = transcription
+        request.possible_items = self._possible_items
+
+        
         future = self._llm_client.call_async(request)
         while not future.done():
             rclpy.spin_once(self._node, timeout_sec=0.1)
@@ -70,14 +72,12 @@ class AskForOrder(yasmin.State):
         if future.result() is None:
             return "failed"
 
-        response = future.result().output.strip().lower()
-        print(f"[LLM] AskForOrder parsed: '{response}'")
+        item = future.result().item.strip().lower()
+        print(f"[LLM] AskForOrder parsed: '{item}'")
 
-        if response == "none":
+        if not item:
             return "failed"
 
-        # Store results on blackboard
         blackboard["transcribed_speech"] = transcription
-        blackboard["order"] = [response]
-
+        blackboard["order"] = [item]
         return "succeeded"

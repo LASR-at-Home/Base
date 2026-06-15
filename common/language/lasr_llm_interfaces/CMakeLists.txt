@@ -31,6 +31,7 @@ set(srv_files
   "srv/HRITaskQueryLlm.srv"
   "srv/SentenceEmbedding.srv"
   "srv/StoringGroceriesQueryLlm.srv"
+  "srv/RestaurantQueryLlm.srv"
 )
 
 
