@@ -180,7 +180,7 @@ class EvaluateDetections(State):
     Handles data association matching, stationary counting, and updating Nav2 blackboard targets.
     """
 
-    def __init__(self, safe_distance=1.5):
+    def __init__(self, safe_distance=1):
         # Outcomes mapping perfectly back to your TrackPerson state machine
         super().__init__(
             outcomes=["updated", "paused", "person_stationary", "person_lost"]
@@ -314,7 +314,7 @@ class EvaluateDetections(State):
             self.p_old = blackboard["p_old"]
 
 
-        detections = blackboard.get("detections_3d", [])
+        detections = blackboard['detections_3d']
         if self.p_old is None:
             if len(detections) > 0:
                 self.node.get_logger().info("First detection found. Initializing p_old.")
@@ -326,7 +326,7 @@ class EvaluateDetections(State):
         if len(detections) == 0:
 
             # Threshold where it is worth moving
-            threshold = 0.6
+            threshold = 0.5
             if (
                 self.calc_distance_between_points(self.current_robot_point, self.p_old)
                 > threshold
@@ -380,7 +380,7 @@ class EvaluateDetections(State):
             self.p_old = personPoint
             self.stationary_count += 1
             self.node.get_logger().warn(f"PERSON FOUND BUT STATIONARY: {self.stationary_count}/3")
-            if self.stationary_count >= 3:
+            if self.stationary_count >= 10:
                 self.node.get_logger().warn(f"PERSON STATIONARY")
                 return "person_stationary"
             return "paused"
@@ -478,49 +478,49 @@ class FollowPerson(StateMachine):
             },
         )
 
-        # # TRACK-NAV concur goes here
-        # self.add_state(
-        #     "TRACK_AND_NAVIGATE",
-        #     Concurrence(
-        #         states={
-        #             "tracker": TrackPerson(),
-        #             "navigator": Navigator(),
-        #         },
-        #         default_outcome="failed",
-        #         outcome_map={
-        #             "person_stationary": {
-        #                 "tracker": "person_stationary",
-        #             },
-        #             "person_lost": {
-        #                 "tracker": "person_lost",
-        #             },
-        #             "failed": {
-        #                 "tracker": "failed",
-        #                 "navigator": "failed",
-        #             },
-        #         },
-        #     ),
-        #     transitions={
-        #         "person_stationary": "succeeded",
-        #         "person_lost": "succeeded",
-        #         "failed": "failed",
-        #     },
-        # )
+        # TRACK-NAV concur goes here
+        self.add_state(
+            "TRACK_AND_NAVIGATE",
+            Concurrence(
+                states={
+                    "tracker": TrackPerson(),
+                    "navigator": Navigator(),
+                },
+                default_outcome="failed",
+                outcome_map={
+                    "person_stationary": {
+                        "tracker": "person_stationary",
+                    },
+                    "person_lost": {
+                        "tracker": "person_lost",
+                    },
+                    "failed": {
+                        "tracker": "failed",
+                        "navigator": "failed",
+                    },
+                },
+            ),
+            transitions={
+                "person_stationary": "succeeded",
+                "person_lost": "succeeded",
+                "failed": "failed",
+            },
+        )
 
-        # # LOST_RECOVERY: Lose Person recovery (HEAD_TOUR + DETECT) if found person, approach and ask (if they are not the host add thier positon to a blacklist)
+        # LOST_RECOVERY: Lose Person recovery (HEAD_TOUR + DETECT) if found person, approach and ask (if they are not the host add thier positon to a blacklist)
 
-        # # Stationay Person
-        # self.add_state(
-        #     "ASK_IF_ARRIVED",
-        #     AskAndListen(
-        #         tts_phrase="Say YES if we have arrived. NO if we have not.",
-        #     ),
-        #     transitions={
-        #         "succeeded": "succeeded",  # Update to HANDLE_RESPONSE
-        #         "failed": "ASK_IF_ARRIVED",
-        #     },
-        #     remappings={"transcribed_speech": "guest_transcription"},
-        # )
+        # Stationay Person
+        self.add_state(
+            "ASK_IF_ARRIVED",
+            AskAndListen(
+                tts_phrase="Say YES if we have arrived. NO if we have not.",
+            ),
+            transitions={
+                "succeeded": "succeeded",  # Update to HANDLE_RESPONSE
+                "failed": "ASK_IF_ARRIVED",
+            },
+            remappings={"transcribed_speech": "guest_transcription"},
+        )
 
         # Callback which parses the resposne and returns "succeeded" or "SAY_FOLLOW"
 

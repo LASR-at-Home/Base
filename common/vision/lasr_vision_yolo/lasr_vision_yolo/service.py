@@ -184,7 +184,7 @@ class YOLOServiceNode:
         roi = cv2.bitwise_and(depth_im, depth_im, mask=mask)
 
         v, u = np.where(roi)
-        z = depth_im[v, u] / 1000.0  # convert mm to meters
+        z = depth_im[v, u] #/ 1000.0  # convert mm to meters
         valid = z > 0
         z = z[valid]
         u = u[valid]
@@ -345,7 +345,7 @@ class YOLOServiceNode:
 
                 conf = result.keypoints.conf.squeeze()[idx].item()
                 if conf > 0.0:
-                    z = depth_im[v, u] / 1000.0  # convert mm to meters
+                    z = depth_im[v, u] #/ 1000.0  # convert mm to meters
                     x = z * (u - cx) / fx
                     y = z * (v - cy) / fy
                     if np.isnan(x) or np.isnan(y) or np.isnan(z):
