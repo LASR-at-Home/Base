@@ -57,11 +57,11 @@ class ComputeApproach(yasmin.State):
         approach_poses: List[Pose] = []
 
         for table_point in table_candidates:
-            point_samples  = self._sample_points(table_point)
+            point_samples = self._sample_points(table_point)
             candidate_poses = self._calculate_poses(table_point, point_samples)
 
             closest_distance = float("inf")
-            closest_pose     = None
+            closest_pose = None
 
             for pose in candidate_poses:
                 if self._can_reach_pose(pose):
@@ -71,7 +71,7 @@ class ComputeApproach(yasmin.State):
                     )
                     if distance < closest_distance:
                         closest_distance = distance
-                        closest_pose     = pose
+                        closest_pose = pose
 
             if closest_pose is not None:
                 approach_poses.append(closest_pose)
@@ -83,12 +83,12 @@ class ComputeApproach(yasmin.State):
 
         if approach_poses:
             blackboard["table_approach_poses"] = approach_poses
-            yasmin.YASMIN_LOG_INFO(
-                f"Computed {len(approach_poses)} approach poses."
-            )
+            yasmin.YASMIN_LOG_INFO(f"Computed {len(approach_poses)} approach poses.")
             return "succeeded"
 
-        yasmin.YASMIN_LOG_WARN("No reachable approach poses found for any table candidate.")
+        yasmin.YASMIN_LOG_WARN(
+            "No reachable approach poses found for any table candidate."
+        )
         return "failed"
 
     # ── Private helpers ───────────────────────────────────────────────────────
@@ -137,14 +137,14 @@ class ComputeApproach(yasmin.State):
         """
         poses = []
         for point in point_samples:
-            dx    = target_point.x - point.x
-            dy    = target_point.y - point.y
+            dx = target_point.x - point.x
+            dy = target_point.y - point.y
             angle = np.arctan2(dy, dx)
 
-            pose                   = Pose()
-            pose.position          = point
-            pose.orientation.z     = np.sin(angle / 2)
-            pose.orientation.w     = np.cos(angle / 2)
+            pose = Pose()
+            pose.position = point
+            pose.orientation.z = np.sin(angle / 2)
+            pose.orientation.w = np.cos(angle / 2)
             poses.append(pose)
         return poses
 
@@ -178,10 +178,7 @@ class ComputeApproach(yasmin.State):
             rclpy.spin_until_future_complete(self.node, result_future, timeout_sec=5.0)
             result = result_future.result()
 
-            return (
-                result is not None
-                and len(result.result.path.poses) > 0
-            )
+            return result is not None and len(result.result.path.poses) > 0
         except Exception as e:
             yasmin.YASMIN_LOG_WARN(f"Path planning check failed: {e}")
             return False

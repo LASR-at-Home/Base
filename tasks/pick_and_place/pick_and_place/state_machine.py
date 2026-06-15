@@ -59,7 +59,7 @@ class PickAndPlace(yasmin.StateMachine):
             Start(),
             transitions={
                 "succeeded": "SCAN_SHELVES",
-                "failed":    "failed",
+                "failed": "failed",
             },
         )
 
@@ -69,7 +69,7 @@ class PickAndPlace(yasmin.StateMachine):
             ScanShelves(),
             transitions={
                 "succeeded": "FIND_AND_GO_TO_TABLE",
-                "failed":    "failed",
+                "failed": "failed",
             },
         )
 
@@ -79,7 +79,7 @@ class PickAndPlace(yasmin.StateMachine):
             FindAndGoToTable(),
             transitions={
                 "succeeded": "DETECT_OBJECTS",
-                "failed":    "DETECT_OBJECTS",  # proceed even if table not found
+                "failed": "DETECT_OBJECTS",  # proceed even if table not found
             },
         )
 
@@ -90,7 +90,7 @@ class PickAndPlace(yasmin.StateMachine):
             DetectObjects(),
             transitions={
                 "succeeded": "SELECT_OBJECT",
-                "failed":    "DETECT_OBJECTS",  # retry until objects found
+                "failed": "DETECT_OBJECTS",  # retry until objects found
             },
         )
 
@@ -100,7 +100,7 @@ class PickAndPlace(yasmin.StateMachine):
             SelectAndVisualiseObject(),
             transitions={
                 "succeeded": "CLASSIFY_CATEGORY",
-                "failed":    "DETECT_OBJECTS",  # re-scan if nothing to select
+                "failed": "DETECT_OBJECTS",  # re-scan if nothing to select
             },
         )
 
@@ -110,8 +110,8 @@ class PickAndPlace(yasmin.StateMachine):
             ClassifyCategory(task="object"),
             transitions={
                 "succeeded": "CHOOSE_SHELF",
-                "failed":    "CHOOSE_SHELF",   # proceed with unknown category
-                "empty":     "DETECT_OBJECTS", # nothing to classify, re-scan
+                "failed": "CHOOSE_SHELF",  # proceed with unknown category
+                "empty": "DETECT_OBJECTS",  # nothing to classify, re-scan
             },
         )
 
@@ -121,7 +121,7 @@ class PickAndPlace(yasmin.StateMachine):
             ChooseShelf(),
             transitions={
                 "succeeded": "INSTRUCT_PICK",
-                "failed":    "DETECT_OBJECTS",
+                "failed": "DETECT_OBJECTS",
             },
         )
 
@@ -131,7 +131,7 @@ class PickAndPlace(yasmin.StateMachine):
             InstructPick(),
             transitions={
                 "succeeded": "GO_TO_CABINET",
-                "failed":    "INSTRUCT_PICK",  # retry instruction
+                "failed": "INSTRUCT_PICK",  # retry instruction
             },
         )
 
@@ -141,7 +141,7 @@ class PickAndPlace(yasmin.StateMachine):
             GoToLocation(location_param="pick_and_place.cabinet.pose"),
             transitions={
                 "succeeded": "INSTRUCT_PLACE",
-                "failed":    "GO_TO_CABINET",  # retry navigation
+                "failed": "GO_TO_CABINET",  # retry navigation
             },
         )
 
@@ -151,7 +151,7 @@ class PickAndPlace(yasmin.StateMachine):
             InstructPlace(),
             transitions={
                 "succeeded": "GO_TO_TABLE",
-                "failed":    "INSTRUCT_PLACE",  # retry instruction
+                "failed": "INSTRUCT_PLACE",  # retry instruction
             },
         )
 
@@ -161,7 +161,7 @@ class PickAndPlace(yasmin.StateMachine):
             GoToLocation(location_param="pick_and_place.table.pose"),
             transitions={
                 "succeeded": "DETECT_OBJECTS",  # loop back for next object
-                "failed":    "GO_TO_TABLE",      # retry navigation
+                "failed": "GO_TO_TABLE",  # retry navigation
             },
         )
 
@@ -194,16 +194,16 @@ def main():
     bb = yasmin.Blackboard()
 
     # Initialise all blackboard keys used across the machine
-    bb["detected_objects"]     = []
-    bb["selected_object"]      = None
+    bb["detected_objects"] = []
+    bb["selected_object"] = None
     bb["selected_object_name"] = ""
-    bb["object_name"]          = ""
-    bb["object_category"]      = ""
-    bb["shelf_data"]           = {}
-    bb["chosen_shelf"]         = ""
-    bb["chosen_shelf_str"]     = ""
-    bb["table_pose"]           = None
-    bb["debug_images"]         = []
+    bb["object_name"] = ""
+    bb["object_category"] = ""
+    bb["shelf_data"] = {}
+    bb["chosen_shelf"] = ""
+    bb["chosen_shelf_str"] = ""
+    bb["table_pose"] = None
+    bb["debug_images"] = []
 
     try:
         outcome = sm(bb)

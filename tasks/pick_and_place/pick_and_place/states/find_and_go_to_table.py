@@ -62,8 +62,8 @@ class FindAndGoToTable(yasmin.StateMachine):
             Say(text="I am looking for the table."),
             transitions={
                 "succeeded": "DETECT_TABLE",
-                "failed":    "DETECT_TABLE",
-                "aborted":   "DETECT_TABLE",
+                "failed": "DETECT_TABLE",
+                "aborted": "DETECT_TABLE",
             },
         )
 
@@ -76,7 +76,7 @@ class FindAndGoToTable(yasmin.StateMachine):
             ),
             transitions={
                 "succeeded": "GET_TABLE_POSE",
-                "failed":    "DETECT_TABLE",   # retry on failure
+                "failed": "DETECT_TABLE",  # retry on failure
             },
         )
 
@@ -93,7 +93,7 @@ class FindAndGoToTable(yasmin.StateMachine):
             get_table_pose_cb,
             transitions={
                 "succeeded": "COMPUTE_APPROACH",
-                "failed":    "DETECT_TABLE",
+                "failed": "DETECT_TABLE",
             },
         )
 
@@ -102,7 +102,7 @@ class FindAndGoToTable(yasmin.StateMachine):
             ComputeApproach(),
             transitions={
                 "succeeded": "GO_TO_TABLE",
-                "failed":    "DETECT_TABLE",
+                "failed": "DETECT_TABLE",
             },
         )
 
@@ -120,7 +120,7 @@ class FindAndGoToTable(yasmin.StateMachine):
             go_to_table_cb,
             transitions={
                 "succeeded": "succeeded",
-                "failed":    "DETECT_TABLE",
+                "failed": "DETECT_TABLE",
             },
         )
 
@@ -139,9 +139,7 @@ class FindAndGoToTable(yasmin.StateMachine):
 
         if table_points:
             blackboard["table_candidate_poses"] = table_points
-            yasmin.YASMIN_LOG_INFO(
-                f"Found {len(table_points)} table candidate(s)."
-            )
+            yasmin.YASMIN_LOG_INFO(f"Found {len(table_points)} table candidate(s).")
             return "succeeded"
 
         yasmin.YASMIN_LOG_WARN("No dining table or tv detected in polygon.")
@@ -197,7 +195,9 @@ class FindAndGoToTable(yasmin.StateMachine):
                 goal_handle = future.result()
 
                 if not goal_handle or not goal_handle.accepted:
-                    yasmin.YASMIN_LOG_WARN("Navigation goal rejected, trying next pose.")
+                    yasmin.YASMIN_LOG_WARN(
+                        "Navigation goal rejected, trying next pose."
+                    )
                     continue
 
                 result_future = goal_handle.get_result_async()
@@ -208,7 +208,9 @@ class FindAndGoToTable(yasmin.StateMachine):
                 return "succeeded"
 
             except Exception as e:
-                yasmin.YASMIN_LOG_WARN(f"Navigation attempt failed: {e}. Trying next pose.")
+                yasmin.YASMIN_LOG_WARN(
+                    f"Navigation attempt failed: {e}. Trying next pose."
+                )
                 continue
 
         yasmin.YASMIN_LOG_WARN("All approach poses exhausted.")

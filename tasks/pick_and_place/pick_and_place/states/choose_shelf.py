@@ -40,19 +40,19 @@ class ChooseShelf(yasmin.State):
         self.add_output_key("shelf_data")
 
     def execute(self, blackboard) -> str:
-        object_name     = blackboard["selected_object_name"]
+        object_name = blackboard["selected_object_name"]
         object_category = blackboard["object_category"]
-        shelf_data      = blackboard["shelf_data"]
+        shelf_data = blackboard["shelf_data"]
 
         yasmin.YASMIN_LOG_INFO(
             f"Choosing shelf for '{object_name}' (category: '{object_category}')."
         )
         yasmin.YASMIN_LOG_INFO(f"Current shelf data: {shelf_data}")
 
-        chosen_shelf      = None
-        chosen_shelf_str  = ""
-        max_count         = -1
-        fallback_shelf    = None
+        chosen_shelf = None
+        chosen_shelf_str = ""
+        max_count = -1
+        fallback_shelf = None
         min_total_objects = float("inf")
 
         # ── Pass 1: find best matching shelf ─────────────────────────────────
@@ -69,7 +69,7 @@ class ChooseShelf(yasmin.State):
             # Priority 2: shelf with the most items of this category
             count = shelf_info.get("category_counts", {}).get(object_category, 0)
             if count > max_count:
-                max_count    = count
+                max_count = count
                 chosen_shelf = shelf_name
                 yasmin.YASMIN_LOG_INFO(
                     f"Best category count so far ({count}) on '{shelf_name}'."
@@ -79,7 +79,7 @@ class ChooseShelf(yasmin.State):
             total_objects = len(shelf_info.get("objects", []))
             if total_objects < min_total_objects:
                 min_total_objects = total_objects
-                fallback_shelf    = shelf_name
+                fallback_shelf = shelf_name
 
         # ── Pass 2: try an empty shelf ────────────────────────────────────────
         if chosen_shelf is None or max_count == 0:
@@ -102,7 +102,7 @@ class ChooseShelf(yasmin.State):
         if chosen_shelf:
             shelf_info = shelf_data[chosen_shelf]
 
-            was_empty                   = shelf_info["category"] == "empty"
+            was_empty = shelf_info["category"] == "empty"
             category_previously_present = object_category in shelf_info.get(
                 "category_counts", {}
             )
@@ -122,9 +122,9 @@ class ChooseShelf(yasmin.State):
             else:
                 chosen_shelf_str = ""
 
-            blackboard["chosen_shelf"]     = chosen_shelf
+            blackboard["chosen_shelf"] = chosen_shelf
             blackboard["chosen_shelf_str"] = chosen_shelf_str
-            blackboard["shelf_data"]       = shelf_data
+            blackboard["shelf_data"] = shelf_data
 
             yasmin.YASMIN_LOG_INFO(
                 f"Chose shelf '{chosen_shelf}'. "

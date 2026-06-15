@@ -56,12 +56,14 @@ class DetectObjects(yasmin.State):
             )
 
         try:
-            self._polygon = ShapelyPolygon([
-                self.node.get_parameter("table.polygon.top_left").value,
-                self.node.get_parameter("table.polygon.top_right").value,
-                self.node.get_parameter("table.polygon.bottom_right").value,
-                self.node.get_parameter("table.polygon.bottom_left").value,
-            ])
+            self._polygon = ShapelyPolygon(
+                [
+                    self.node.get_parameter("table.polygon.top_left").value,
+                    self.node.get_parameter("table.polygon.top_right").value,
+                    self.node.get_parameter("table.polygon.bottom_right").value,
+                    self.node.get_parameter("table.polygon.bottom_left").value,
+                ]
+            )
         except Exception as e:
             yasmin.YASMIN_LOG_WARN(
                 f"Could not load table polygon from params: {e}. "
@@ -101,7 +103,7 @@ class DetectObjects(yasmin.State):
 
             # DetectAllInPolygon needs these keys initialised
             blackboard["detected_objects"] = []
-            blackboard["debug_images"]     = []
+            blackboard["debug_images"] = []
 
             outcome = detector.execute(blackboard)
 
@@ -110,7 +112,7 @@ class DetectObjects(yasmin.State):
                 return "failed"
 
             detected = blackboard["detected_objects"]
-            labels   = [obj.name for obj in detected]
+            labels = [obj.name for obj in detected]
             yasmin.YASMIN_LOG_INFO(
                 f"Detected {len(detected)} object(s) on table: {labels}."
             )

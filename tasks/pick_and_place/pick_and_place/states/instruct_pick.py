@@ -24,10 +24,7 @@ class InstructPick(yasmin.State):
 
         yasmin.YASMIN_LOG_INFO(f"Instructing pick: {name}")
 
-        text = (
-            f"I have selected the {name}. "
-            f"Please pick it up and hold it ready."
-        )
+        text = f"I have selected the {name}. " f"Please pick it up and hold it ready."
 
         say = Say(text=text)
         outcome = say.execute(blackboard)

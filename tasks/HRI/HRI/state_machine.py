@@ -154,7 +154,7 @@ def main():
     bb["dataset"] = "hri"
     bb["drink_position"] = PointStamped()
     bb["person_index"] = 0
-    
+
     outcome = sm(bb)
 
     yasmin.YASMIN_LOG_INFO(f"State machine has ended with outcome {outcome}")

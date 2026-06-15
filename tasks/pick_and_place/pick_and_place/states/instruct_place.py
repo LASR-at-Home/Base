@@ -25,8 +25,8 @@ class InstructPlace(yasmin.State):
         self.add_input_key("chosen_shelf_str")
 
     def execute(self, blackboard) -> str:
-        name             = blackboard["selected_object_name"]
-        chosen_shelf     = blackboard["chosen_shelf"]
+        name = blackboard["selected_object_name"]
+        chosen_shelf = blackboard["chosen_shelf"]
         chosen_shelf_str = blackboard["chosen_shelf_str"]
 
         yasmin.YASMIN_LOG_INFO(

@@ -4,10 +4,10 @@ from launch import LaunchDescription
 from launch_ros.actions import Node
 from launch.actions import IncludeLaunchDescription, TimerAction, ExecuteProcess
 from launch.launch_description_sources import AnyLaunchDescriptionSource
- 
- 
+
+
 def generate_launch_description():
- 
+
     # YOLO detection service
     yolo_service = IncludeLaunchDescription(
         AnyLaunchDescriptionSource(
@@ -18,7 +18,7 @@ def generate_launch_description():
             )
         )
     )
- 
+
     # ReID service
     reid_service = Node(
         package="lasr_vision_reid",
@@ -26,7 +26,7 @@ def generate_launch_description():
         name="lasr_vision_reid",
         output="screen",
     )
- 
+
     # TTS engine
     tts_engine = Node(
         package="tts_engine",
@@ -34,7 +34,7 @@ def generate_launch_description():
         name="tts_engine",
         output="screen",
     )
- 
+
     # Configure TTS after 15 seconds to give it time to start
     tts_configure = TimerAction(
         period=15.0,
@@ -45,7 +45,7 @@ def generate_launch_description():
             )
         ],
     )
- 
+
     # Activate TTS after configure
     tts_activate = TimerAction(
         period=18.0,
@@ -56,7 +56,7 @@ def generate_launch_description():
             )
         ],
     )
- 
+
     # Introduce test node — delayed to give all services time to start
     introduce_test = TimerAction(
         period=25.0,
@@ -69,7 +69,7 @@ def generate_launch_description():
             )
         ],
     )
- 
+
     return LaunchDescription(
         [
             yolo_service,
