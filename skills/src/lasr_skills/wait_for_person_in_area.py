@@ -77,14 +77,8 @@ class WaitForPersonInArea(StateMachine):
         self.add_state(
             "CHECK_FOR_PERSON",
             CheckForPerson(),
-            transitions={"done": "succeeded", "not_done": "WAIT_TICK"},
+            transitions={"done": "succeeded", "not_done": "DETECT_PEOPLE_3D"},
         )
-        self.add_state(
-            "WAIT_TICK",
-            Wait(1),
-            transitions={"succeeded": "DETECT_PEOPLE_3D", "failed": "DETECT_PEOPLE_3D"},
-        )
-
     def check(self, blackboard):
         try:
             if "polygon" in blackboard.keys():  # Update polygon

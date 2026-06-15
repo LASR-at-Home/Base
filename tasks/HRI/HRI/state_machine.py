@@ -144,23 +144,6 @@ class HRI(yasmin.StateMachine):
         self.guest_id += 1
         return "GO_TO_DOOR_2" if self.guest_id == 2 else "succeeded"
 
-        self.add_state(
-            "GREET_2",  # SM2: Greets guest
-            LookAndGreetGuest(last_resort=False, guest_id="guest2"),
-            transitions={"succeeded": "STOP_EYE_TRACKER", "failed": "failed"},
-        )
-
-    def check(self, blackboard):
-        guest = blackboard["guest_data"][f"guest{self.guest_id}"]
-        yasmin.YASMIN_LOG_INFO(f"{self.guest_id}")
-
-        for key in guest.keys():
-            value = guest[key]
-            yasmin.YASMIN_LOG_INFO(f"{key}: {value}")
-
-        self.guest_id += 1
-        return "GO_TO_DOOR_2" if self.guest_id == 2 else "succeeded"
-
     def setup(self):
         start_con_sm = yasmin.Concurrence(
             states={

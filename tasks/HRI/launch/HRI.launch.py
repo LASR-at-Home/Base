@@ -79,7 +79,6 @@ def generate_launch_description():
             transcribe_speech,
             llm_service,
             state_machine,
-            transcribe_speech,
-            llm_service,
+
         ]
     )

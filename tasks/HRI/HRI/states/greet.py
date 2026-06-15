@@ -120,7 +120,6 @@ class LookAndGreetGuest(yasmin.StateMachine):
                 "aborted": "SAY_WAITING_FOR_GUEST",
                 "canceled": "failed",
                 "timeout": "GREET_AND_ASK_GUEST",
-                "timeout": "GREET_AND_ASK_GUEST",
             },
         )
         self.add_state(

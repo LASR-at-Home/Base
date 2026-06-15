@@ -69,11 +69,11 @@ class Detect3D(ServiceState):
             CameraInfo,
             self.depth_camera_info_topic,
             self._cache_camera_info,
-            qos_profile=self.camera_qos,
+            qos_profile=camera_qos,
         )
 
-        self.node.create_subscription(
-            Image, self.image_topic, self.rgb_cb, qos_profile=self.camera_qos
+        image_sub = message_filters.Subscriber(
+            self.node, Image, self.image_topic, qos_profile=camera_qos
         )
 
         depth_sub = message_filters.Subscriber(
