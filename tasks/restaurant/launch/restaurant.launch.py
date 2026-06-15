@@ -27,6 +27,20 @@ def generate_launch_description():
         )
     )
 
+    llm_service = Node(
+        package="lasr_llm",
+        executable="restaurant_service",
+        name="restaurant_query_llm_service",
+        output="screen",
+    )
+
+    speech_recognition = Node(
+        package="lasr_speech_recognition_whisper",
+        executable="transcribe_speech",
+        name="transcribe_speech",
+        output="screen",
+    )
+
     yolo_service = IncludeLaunchDescription(
         AnyLaunchDescriptionSource(
             os.path.join(
@@ -58,6 +72,8 @@ def generate_launch_description():
         [
             load_motions,
             yolo_service,
+            llm_service,        
+            speech_recognition,
             restaurant,
         ]
     )
