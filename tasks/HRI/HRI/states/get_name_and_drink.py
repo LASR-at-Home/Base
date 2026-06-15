@@ -32,15 +32,16 @@ class GetNameAndDrink(yasmin.StateMachine):
 
         def _create_req(self, blackboard):
             request = HRITaskQueryLlm.Request(
-                llm_input=blackboard['guest_transcription'], task=self.task
+                llm_input=blackboard["guest_transcription"], task=self.task
             )
 
             return request
 
         def _handle_resp(self, blackboard, result):
             result = result.response
-            blackboard["guest_data"][self.guest_id][self.task] = result.name if self.task == "name" else result.favourite_drink
-        
+            blackboard["guest_data"][self.guest_id][self.task] = (
+                result.name if self.task == "name" else result.favourite_drink
+            )
 
             return "succeeded"
 

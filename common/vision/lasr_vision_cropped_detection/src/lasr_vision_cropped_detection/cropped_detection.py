@@ -326,40 +326,42 @@ def process_single_detection_request(
         "top-most",
         "bottom-most",
     ]
-    
+
     rgb_image = None
     robot_pose = None
     pointcloud_msg = None
-    
+
     camera_qos = QoSProfile(
-            depth=10,
-            reliability=ReliabilityPolicy.BEST_EFFORT,
-            history=HistoryPolicy.KEEP_LAST,
-        )
-    
+        depth=10,
+        reliability=ReliabilityPolicy.BEST_EFFORT,
+        history=HistoryPolicy.KEEP_LAST,
+    )
+
     pose_qos = QoSProfile(
-            depth=1,
-            reliability=ReliabilityPolicy.RELIABLE,
-            durability=DurabilityPolicy.TRANSIENT_LOCAL,
-            history=HistoryPolicy.KEEP_LAST,
-        )
-    
+        depth=1,
+        reliability=ReliabilityPolicy.RELIABLE,
+        durability=DurabilityPolicy.TRANSIENT_LOCAL,
+        history=HistoryPolicy.KEEP_LAST,
+    )
+
     def camera_cb(msg):
         global rgb_image
         rgb_image = msg
-        
+
     def pose_cb(msg):
         global robot_pose
         robot_pose = msg
-        
+
     def point_cb(msg):
         global pointcloud_msg
         pointcloud_msg = msg
-    
+
     node.create_subscription(Image, rgb_image_topic, camera_cb, qos_profile=camera_qos)
-    node.create_subscription(PoseWithCovarianceStamped, robot_pose_topic, pose_cb, qos_profile=pose_qos)
+    node.create_subscription(
+        PoseWithCovarianceStamped, robot_pose_topic, pose_cb, qos_profile=pose_qos
+    )
     node.create_subscription(PointCloud2, depth_image_topic, point_cb, 10)
-    
+
     valid_3d_crop_methods = ["closest", "furthest"]
     response = CDResponse()
     combined_mask = None

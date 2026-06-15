@@ -69,13 +69,15 @@ class Detect3DInArea(yasmin.StateMachine):
                 PolygonStamped(polygon=polygon_msg, header=Header(frame_id="map"))
             )
 
-            pub = yasmin_ros.logger_node.create_publisher(   
+            pub = yasmin_ros.logger_node.create_publisher(
                 PointStamped, "objects_points", 10
             )
 
             for detection in detected_objects:
-                if detection.point.x == "nan":  
-                    yasmin.YASMIN_LOG_WARN("NAN detection check work")  # Remove line if works
+                if detection.point.x == "nan":
+                    yasmin.YASMIN_LOG_WARN(
+                        "NAN detection check work"
+                    )  # Remove line if works
                     continue
                 yasmin.YASMIN_LOG_INFO(
                     f"Detected a {detection.name} at x:{detection.point.x}, y:{detection.point.y}, z:{detection.point.z}"
@@ -126,7 +128,7 @@ class Detect3DInArea(yasmin.StateMachine):
         z_min: Optional[float] = None,
         z_max: Optional[float] = None,
     ):
-        
+
         super().__init__(outcomes=["succeeded", "failed"], handle_sigint=True)
         if area_polygon is None:
             self.add_input_key("polygon")

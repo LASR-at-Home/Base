@@ -71,8 +71,10 @@ class LLMInference:
         print(f"Using device: {self.device}")
 
         self.model_name = self.config.model_name
-        cache_dir='/home/fadi/.cache/huggingface/hub'
-        self.tokenizer = AutoTokenizer.from_pretrained(self.model_name, local_files_only=True)
+        cache_dir = "/home/fadi/.cache/huggingface/hub"
+        self.tokenizer = AutoTokenizer.from_pretrained(
+            self.model_name, local_files_only=True
+        )
 
         self.logger = logging.getLogger(__name__)
 

@@ -22,6 +22,7 @@ class InstallCommand(setuptools.command.install.install):
         )
         return
 
+
 setup(
     name=package_name,
     version="0.0.0",

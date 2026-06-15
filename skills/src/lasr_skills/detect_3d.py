@@ -65,35 +65,33 @@ class Detect3D(ServiceState):
         # self.data = None
         self.image_msg = None
         self.depth_msg = None
-        
-        self.node.create_subscription(        
+
+        self.node.create_subscription(
             CameraInfo,
             self.depth_camera_info_topic,
             self._cache_camera_info,
             qos_profile=self.camera_qos,
-        )  
-        
+        )
+
         self.node.create_subscription(
             Image, self.image_topic, self.rgb_cb, qos_profile=self.camera_qos
         )
         self.node.create_subscription(
             Image, self.depth_image_topic, self.depth_cb, qos_profile=self.camera_qos
         )
-        
+
         # self.ts = message_filters.ApproximateTimeSynchronizer(
         #     [image_sub, depth_sub], queue_size=30, slop=0.1
         # )
-        
-        
-        
+
     def rgb_cb(self, msg):
         if self.image_msg is None:
             self.image_msg = msg
-            
+
     def depth_cb(self, msg):
         if self.depth_msg is None:
             self.depth_msg = msg
-        
+
     # def callback(self, image_msg, depth_msg):
     #     if self.data is None:
     #         return
@@ -107,9 +105,9 @@ class Detect3D(ServiceState):
         # self.data = None
         self.image_msg = None
         self.depth_msg = None
-    
+
         # self.ts.registerCallback(self.callback)
-        
+
         if self.cam_info is None:
             deadline = time.time() + 5.0
             while self.cam_info is None and time.time() < deadline:
@@ -140,7 +138,6 @@ class Detect3D(ServiceState):
             target_frame=self.target_frame,
         )
         # self.image_msg = image_msg
-        
 
         return req
 

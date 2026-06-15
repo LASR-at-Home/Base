@@ -27,7 +27,7 @@ from lasr_skills import (
     AskAndListen,
     Say,
     Wait,
-    WaitForPersonInArea
+    WaitForPersonInArea,
 )
 
 from HRI.states import (
@@ -45,7 +45,9 @@ class RequestHostForGuiding(StateMachine):
 
         self.add_state(
             "ACKNOWLEDGE_BAG",
-            Say(text="I have a bag for the host. Can the host stand in front of me? I will wait for you."),
+            Say(
+                text="I have a bag for the host. Can the host stand in front of me? I will wait for you."
+            ),
             transitions={
                 "succeeded": "WAIT_FOR_HOST",
                 "aborted": "WAIT_FOR_HOST",
@@ -58,8 +60,6 @@ class RequestHostForGuiding(StateMachine):
             FollowPerson(),
             transitions={
                 "succeeded": "succeeded",
-                "failed": "failed",         # If failed we should try to drop bag anyway? or have person raise hand as secondary recovery
+                "failed": "failed",  # If failed we should try to drop bag anyway? or have person raise hand as secondary recovery
             },
         )
-    
-        

@@ -5,45 +5,67 @@ from rclpy.time import Time
 import traceback
 
 import yasmin
-from yasmin import State, Blackboard, StateMachine,Concurrence
+from yasmin import State, Blackboard, StateMachine, Concurrence
 import yasmin_ros
 from yasmin_viewer import YasminViewerPub
 
 import tf2_ros
 from rclpy.qos import QoSProfile, DurabilityPolicy, ReliabilityPolicy, HistoryPolicy
 
-from geometry_msgs.msg import PointStamped, PoseWithCovarianceStamped, Pose, PoseStamped, PolygonStamped, Polygon, Point32
+from geometry_msgs.msg import (
+    PointStamped,
+    PoseWithCovarianceStamped,
+    Pose,
+    PoseStamped,
+    PolygonStamped,
+    Polygon,
+    Point32,
+)
 from tf2_geometry_msgs.tf2_geometry_msgs import do_transform_point
 from shapely.geometry import Polygon as ShapelyPolygon
 
-from lasr_skills import Detect3DInArea, Wait,Say,GoToLocation, WaitForPersonInArea, AskAndListen
+from lasr_skills import (
+    Detect3DInArea,
+    Wait,
+    Say,
+    GoToLocation,
+    WaitForPersonInArea,
+    AskAndListen,
+)
 
 from nav2_simple_commander.robot_navigator import BasicNavigator
 
-#-----------------------------------------------
-'''
+# -----------------------------------------------
+"""
     NAVIGATION LOGIC
 
-'''
+"""
+
+
 class WaitForNavGoal(State):
     """
-    Acts as a safe idle buffer. Waits until the tracker provides a NEW goal 
+    Acts as a safe idle buffer. Waits until the tracker provides a NEW goal
     and explicitly removes the stop request before allowing navigation to proceed.
     """
+
     def __init__(self):
         super().__init__(outcomes=["start_navigating", "failed"])
         self.node = yasmin_ros.logger_node
         self.last_goal = None
 
     def execute(self, blackboard: Blackboard):
-        rate = self.node.create_rate(5.0) # 5 Hz polling
+        rate = self.node.create_rate(5.0)  # 5 Hz polling
 
         while not self.is_canceled():
             stop_requested = blackboard.get("stop_robot_requested", False)
             current_goal = blackboard.get("location")
 
             # Only proceed if we aren't told to stop, AND the goal is actually new
-            if not stop_requested and current_goal is not None and current_goal != self.last_goal:
+            if (
+                not stop_requested
+                and current_goal is not None
+                and current_goal != self.last_goal
+            ):
                 self.last_goal = current_goal
                 return "start_navigating"
 
@@ -51,44 +73,48 @@ class WaitForNavGoal(State):
                 rate.sleep()
             except Exception:
                 break
-                
+
         return "failed"
+
 
 class Navigator(StateMachine):
     """
-    The concurrent navigation loop. 
+    The concurrent navigation loop.
     Bounces safely between waiting for clearance and driving.
     """
+
     def __init__(self):
         super().__init__(outcomes=["succeeded", "failed"], handle_sigint=True)
-        
+
         self.add_state(
             "WAIT_FOR_COMMAND",
             WaitForNavGoal(),
-            transitions={
-                "start_navigating": "DRIVE_TO_GOAL",
-                "failed": "failed"
-            }
+            transitions={"start_navigating": "DRIVE_TO_GOAL", "failed": "failed"},
         )
-        
+
         self.add_state(
             "DRIVE_TO_GOAL",
-            GoToLocation(), # Uses your cleanly updated script!
+            GoToLocation(),  # Uses your cleanly updated script!
             transitions={
-                "succeeded": "WAIT_FOR_COMMAND", # Arrived naturally? Wait for next command.
-                "failed": "WAIT_FOR_COMMAND"     # Canceled by dynamic preemption? Loop back and check.
-            }
+                "succeeded": "WAIT_FOR_COMMAND",  # Arrived naturally? Wait for next command.
+                "failed": "WAIT_FOR_COMMAND",  # Canceled by dynamic preemption? Loop back and check.
+            },
         )
-#-----------------------------------------------
-'''
+
+
+# -----------------------------------------------
+"""
     TRACKER LOGIC
 
-'''
+"""
+
+
 class UpdateDetectionPolygon(State):
     """
     Transforms baselink coordinates into new map polygon after the robot moves.
     Writes: blackboard["polygon"]
     """
+
     def __init__(self):
         super().__init__(outcomes=["succeeded", "failed"])
         self.add_output_key("polygon")
@@ -105,18 +131,20 @@ class UpdateDetectionPolygon(State):
             [0.5, 0.5],
         ]
 
-        self.debug_pub = self.node.create_publisher(PolygonStamped, '/person_follow/debug/polygon', 10)
-        
+        self.debug_pub = self.node.create_publisher(
+            PolygonStamped, "/person_follow/debug/polygon", 10
+        )
+
     def execute(self, blackboard):
-        
-        try: 
+
+        try:
             transform = self.tf_buffer.lookup_transform(
-                'map',              # Target frame 
-                'base_footprint',   # Source frame 
+                "map",  # Target frame
+                "base_footprint",  # Source frame
                 rclpy.time.Time(),
-                timeout=rclpy.duration.Duration(seconds=5.0)
+                timeout=rclpy.duration.Duration(seconds=5.0),
             )
-            
+
             debug_polygon = PolygonStamped()
             debug_polygon.header.frame_id = "map"
             debug_polygon.header.stamp = Time().to_msg()
@@ -129,7 +157,7 @@ class UpdateDetectionPolygon(State):
                 point_stamped.point.x = pt[0]
                 point_stamped.point.y = pt[1]
                 point_stamped.point.z = 0.0
-                
+
                 # Multiply the point by the transform matrix to get map coordinates
                 mapped_point = do_transform_point(point_stamped, transform)
                 transformed_polygon.append([mapped_point.point.x, mapped_point.point.y])
@@ -139,55 +167,65 @@ class UpdateDetectionPolygon(State):
 
             blackboard["polygon"] = ShapelyPolygon(transformed_polygon)
 
-            
             self.debug_pub.publish(debug_polygon)
             return "succeeded"
-        except Exception as e: 
+        except Exception as e:
             yasmin.YASMIN_LOG_WARN(f"TF transform failed: {e}")
             return "failed"
 
 
 class EvaluateDetections(State):
     """
-    Evaluates people detected in the polygon frame. 
+    Evaluates people detected in the polygon frame.
     Handles data association matching, stationary counting, and updating Nav2 blackboard targets.
     """
+
     def __init__(self, safe_distance=1.5):
         # Outcomes mapping perfectly back to your TrackPerson state machine
-        super().__init__(outcomes=["updated", "paused", "person_stationary", "person_lost"])
-        
+        super().__init__(
+            outcomes=["updated", "paused", "person_stationary", "person_lost"]
+        )
+
         # Pulls detections from the blackboard populated by Detect3DInArea
         self.add_input_key("detections_3d")
-        self.add_input_key("p_old") # if using getpersonpoint after wait for person in area pass and remap
+        self.add_input_key(
+            "p_old"
+        )  # if using getpersonpoint after wait for person in area pass and remap
 
         self.add_output_key("location")
 
         self.node = yasmin_ros.logger_node
         self.safe_distance = safe_distance
-        
+
         # Internal Loop Memory Tracking
         self.stationary_count = 0
-        self.p_old = None          # Stores the last known (x, y) map coordinate of the host
-        self.blacklist = []         #TODO:  Add later as an improvement but assume closest person is the correct one
+        self.p_old = None  # Stores the last known (x, y) map coordinate of the host
+        self.blacklist = (
+            []
+        )  # TODO:  Add later as an improvement but assume closest person is the correct one
 
         # Setup AMCL Pose Subscriber
         self.robot_pose_sub = self.node.create_subscription(
             PoseWithCovarianceStamped,
-            '/amcl_pose',
+            "/amcl_pose",
             self.robot_point_cb,
             QoSProfile(
                 depth=1,
                 reliability=ReliabilityPolicy.RELIABLE,
                 durability=DurabilityPolicy.TRANSIENT_LOCAL,
                 history=HistoryPolicy.KEEP_LAST,
-            )
+            ),
         )
-        yasmin.YASMIN_LOG_INFO("EvaluateDetections initialized. Listening to /amcl_pose...")
+        yasmin.YASMIN_LOG_INFO(
+            "EvaluateDetections initialized. Listening to /amcl_pose..."
+        )
 
-    def create_goal_pose(self, rx: float, ry: float, tx: float, ty: float, offset: bool = False) -> Pose:
+    def create_goal_pose(
+        self, rx: float, ry: float, tx: float, ty: float, offset: bool = False
+    ) -> Pose:
         """
         Unified goal constructor for both active pursuit and lost-target hunting.
-        
+
         :param rx, ry: Current coordinates of the robot base.
         :param tx, ty: Coordinates of the target (either current or historical).
         :param offset: If True, offsets the goal by self.safe_distance. If False, targets point exactly.
@@ -200,9 +238,11 @@ class EvaluateDetections(State):
         # Goal Point
         goal_x = tx
         goal_y = ty
-        # If moving to a person stop before reaching thier point. 
+        # If moving to a person stop before reaching thier point.
         if offset and distance > self.safe_distance:
-            ratio = (distance - self.safe_distance) / distance # Distance to maintain safe distance
+            ratio = (
+                distance - self.safe_distance
+            ) / distance  # Distance to maintain safe distance
             goal_x = rx + (dx * ratio)
             goal_y = ry + (dy * ratio)
 
@@ -214,28 +254,28 @@ class EvaluateDetections(State):
         goal_pose.position.x = goal_x
         goal_pose.position.y = goal_y
         goal_pose.position.z = 0.0
-        
+
         goal_pose.orientation.x = 0.0
         goal_pose.orientation.y = 0.0
         goal_pose.orientation.z = math.sin(theta / 2.0)
         goal_pose.orientation.w = math.cos(theta / 2.0)
 
         return goal_pose
-        
+
     def robot_point_cb(self, msg: PoseWithCovarianceStamped):
-        """ Stores the raw underlying Pose data on message arrival """
+        """Stores the raw underlying Pose data on message arrival"""
         self.current_robot_point = msg.pose.pose.position
 
     def calc_distance_between_points(self, pointOne, pointTwo):
-        """ Calculates Eculidian distance between 2 given point """
+        """Calculates Eculidian distance between 2 given point"""
         return math.sqrt(
-            (float(pointOne.x)-float(pointTwo.x))**2 + 
-            (float(pointOne.y)-float(pointTwo.y))**2
-            )
+            (float(pointOne.x) - float(pointTwo.x)) ** 2
+            + (float(pointOne.y) - float(pointTwo.y)) ** 2
+        )
 
-    def get_closest_person(self, detections): 
-        """ Iterates through points and finds best person to go to. """
-        return detections[0].point  #TODO: temp
+    def get_closest_person(self, detections):
+        """Iterates through points and finds best person to go to."""
+        return detections[0].point  # TODO: temp
         # I believe the first point is the closest one but double check
         # For each point check if in blacklist, if not choose point closest to p_old.
 
@@ -244,56 +284,74 @@ class EvaluateDetections(State):
         #     self.p_old = self.current_robot_point
         #     blackboard["p_old"] = self.current_robot_point
         if self.p_old is None:
-                return "paused"
-        
-        detections = blackboard["detections_3d"] #ros_ws/src/Base/common/vision/lasr_vision_interfaces/msg/Detection3D.msg
+            return "paused"
+
+        detections = blackboard[
+            "detections_3d"
+        ]  # ros_ws/src/Base/common/vision/lasr_vision_interfaces/msg/Detection3D.msg
 
         if len(detections) == 0:
 
             # Threshold where it is worth moving
             threshold = 0.6
-            if self.calc_distance_between_points(self.current_robot_point, self.p_old) > threshold:
+            if (
+                self.calc_distance_between_points(self.current_robot_point, self.p_old)
+                > threshold
+            ):
                 blackboard["location"] = self.create_goal_pose(
-                    self.current_robot_point.x, self.current_robot_point.y, 
-                    self.p_old.x, self.p_old.y, 
-                    offset=False)
+                    self.current_robot_point.x,
+                    self.current_robot_point.y,
+                    self.p_old.x,
+                    self.p_old.y,
+                    offset=False,
+                )
                 blackboard["stop_robot_requested"] = False
                 self.stationary_count = 0
                 return "updated"
-            else: 
+            else:
                 return "person_lost"
-                
+
         # handling people still in polygon
         if len(detections) > 1:
-            personPoint = self.get_closest_person(detections) # Get closest person to p_old 
+            personPoint = self.get_closest_person(
+                detections
+            )  # Get closest person to p_old
 
-            if personPoint==None:   # If all detected people are 'blacklisted'
+            if personPoint == None:  # If all detected people are 'blacklisted'
                 return "person_lost"
         else:
             personPoint = detections[0].point
 
         # handle person
-        if self.calc_distance_between_points(personPoint, self.current_robot_point) > self.safe_distance: 
+        if (
+            self.calc_distance_between_points(personPoint, self.current_robot_point)
+            > self.safe_distance
+        ):
             blackboard["location"] = self.create_goal_pose(
-                self.current_robot_point.x, self.current_robot_point.y, 
-                personPoint.x, personPoint.y, 
-                offset=True)
+                self.current_robot_point.x,
+                self.current_robot_point.y,
+                personPoint.x,
+                personPoint.y,
+                offset=True,
+            )
             blackboard["stop_robot_requested"] = False
             self.p_old = personPoint
             self.stationary_count = 0
             return "updated"
-        else: # If person is too close or in same location 
+        else:  # If person is too close or in same location
             blackboard["stop_robot_requested"] = True
             self.p_old = personPoint
             if self.stationary_count >= 3:
                 return "person_stationary"
             return "paused"
-        
+
 
 class TrackPerson(StateMachine):
     def __init__(self):
         # Outcomes align perfectly with your main locate_and_follow_host.py plan
-        super().__init__(outcomes=["person_stationary", "person_lost", "failed"], handle_sigint=True)
+        super().__init__(
+            outcomes=["person_stationary", "person_lost", "failed"], handle_sigint=True
+        )
 
         # 1. Update the Map Area
         self.add_state(
@@ -304,46 +362,45 @@ class TrackPerson(StateMachine):
                 "failed": "failed",
             },
         )
-        
+
         # 2. Scan the Area
         self.add_state(
             "DETECT_3D",
-            Detect3DInArea(
-                filter=["person"]
-            ),  
+            Detect3DInArea(filter=["person"]),
             transitions={
-                "succeeded": "EVALUATE_DETECTIONS", 
-                "failed": "EVALUATE_DETECTIONS" # Go to evaluate anyway so the timeout logic can handle the empty list
-            }
+                "succeeded": "EVALUATE_DETECTIONS",
+                "failed": "EVALUATE_DETECTIONS",  # Go to evaluate anyway so the timeout logic can handle the empty list
+            },
         )
-        
+
         # 3. Process Math & Blackboard Updates
         self.add_state(
             "EVALUATE_DETECTIONS",
             EvaluateDetections(safe_distance=1.5),
             transitions={
-                "updated": "WAIT_TICK",            # Goal changed, pause briefly
-                "paused": "WAIT_TICK",             # Too close, pause briefly
-                "person_stationary": "person_stationary", # Breakout: Reached destination
-                "person_lost": "person_lost",             # Breakout: Host vanished
+                "updated": "WAIT_TICK",  # Goal changed, pause briefly
+                "paused": "WAIT_TICK",  # Too close, pause briefly
+                "person_stationary": "person_stationary",  # Breakout: Reached destination
+                "person_lost": "person_lost",  # Breakout: Host vanished
             },
         )
-        
+
         # 4. Short Loop Buffer
         self.add_state(
             "WAIT_TICK",
-            Wait(1), # 0.5s is usually perfect for fluid tracking without overwhelming CPU
-            transitions={
-                "succeeded": "UPDATE_POLYGON", 
-                "failed": "UPDATE_POLYGON"
-            }
+            Wait(
+                1
+            ),  # 0.5s is usually perfect for fluid tracking without overwhelming CPU
+            transitions={"succeeded": "UPDATE_POLYGON", "failed": "UPDATE_POLYGON"},
         )
 
 
-#-----------------------------------------------
-'''
+# -----------------------------------------------
+"""
     Overall Following Logic
-'''
+"""
+
+
 class FollowPerson(StateMachine):
     def __init__(self):
         # Outcomes align perfectly with your main locate_and_follow_host.py plan
@@ -363,11 +420,13 @@ class FollowPerson(StateMachine):
             transitions={
                 "succeeded": "GET_PERSON_POINT",  # Host is infront of the robot
                 "failed": "WAIT_FOR_HOST",  # Still waiting on host
-            }
+            },
         )
         self.add_state(
             "GET_PERSON_POINT",
-            yasmin.CbState(outcomes=["succeeded", "failed"], callback=self.get_person_point),
+            yasmin.CbState(
+                outcomes=["succeeded", "failed"], callback=self.get_person_point
+            ),
             transitions={"succeeded": "SAY_FOLLOW", "failed": "WAIT_FOR_HOST"},
         )
 
@@ -380,7 +439,7 @@ class FollowPerson(StateMachine):
                 "canceled": "TRACK_AND_NAVIGATE",
             },
         )
-        
+
         # TRACK-NAV concur goes here
         self.add_state(
             "TRACK_AND_NAVIGATE",
@@ -419,7 +478,7 @@ class FollowPerson(StateMachine):
                 tts_phrase="Say YES if we have arrived. NO if we have not.",
             ),
             transitions={
-                "succeeded": "succeeded",       # Update to HANDLE_RESPONSE
+                "succeeded": "succeeded",  # Update to HANDLE_RESPONSE
                 "failed": "ASK_IF_ARRIVED",
             },
             remappings={"transcribed_speech": "guest_transcription"},
@@ -427,7 +486,9 @@ class FollowPerson(StateMachine):
 
         # Callback which parses the resposne and returns "succeeded" or "SAY_FOLLOW"
 
-    def get_person_point(self, blackboard): # will probably throw an error related to blackboard
+    def get_person_point(
+        self, blackboard
+    ):  # will probably throw an error related to blackboard
         try:
             if not blackboard["detections_3d"]:
                 return "failed"
@@ -437,6 +498,7 @@ class FollowPerson(StateMachine):
         except Exception as e:
             yasmin.YASMIN_LOG_ERROR(f"The following error occured: {e}")
             return "failed"
+
 
 def main():
     rclpy.init()
@@ -448,7 +510,7 @@ def main():
         bb = Blackboard()
         bb["z_sweep_min"] = -10
         bb["z_sweep_max"] = 50
-        
+
         YasminViewerPub(sm, "HRI_SM3")
 
         outcome = sm(bb)
@@ -462,7 +524,7 @@ def main():
     finally:
         if node:
             node.destroy_node()
-            
+
         if rclpy.ok():
             rclpy.shutdown()
 

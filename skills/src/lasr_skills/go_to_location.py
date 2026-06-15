@@ -26,9 +26,7 @@ class GoToLocation(State):
 
         self.navigator = BasicNavigator()
         self.location = location
-        self.location_param = (
-            location_param  # the pose (eg. 'start_pose', 'wait_pose', 
-        )
+        self.location_param = location_param  # the pose (eg. 'start_pose', 'wait_pose',
 
     def execute(self, blackboard):
         if self.location:
@@ -74,19 +72,26 @@ class GoToLocation(State):
         self.navigator.goToPose(goal_stamped)
 
         rate = node.create_rate(5.0)
-        while not self.navigator.isTaskComplete():  # Update to make it check if the goal has been updated? (blackboard["location"] is different)
+        while (
+            not self.navigator.isTaskComplete()
+        ):  # Update to make it check if the goal has been updated? (blackboard["location"] is different)
             if self.is_canceled():
                 if not self.navigator.isTaskComplete():
                     self.navigator.cancelTask()
 
                 return "failed"
-            
-            if not (self.location or self.location_param) and "location" in blackboard.keys():
+
+            if (
+                not (self.location or self.location_param)
+                and "location" in blackboard.keys()
+            ):
                 new_goal = blackboard["location"]
-                
+
                 if new_goal and new_goal != goal_pose:
                     goal_pose = new_goal
-                    goal_stamped = PoseStamped(pose=goal_pose, header=Header(frame_id="map"))
+                    goal_stamped = PoseStamped(
+                        pose=goal_pose, header=Header(frame_id="map")
+                    )
                     self.navigator.goToPose(goal_stamped)
 
             rate.sleep()
