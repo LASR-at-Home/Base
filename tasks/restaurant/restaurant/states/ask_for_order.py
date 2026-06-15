@@ -31,7 +31,7 @@ class AskForOrder(yasmin.State):
 
         # Get the list of possible items from the config
         self._possible_items = node.get_parameter("priors.items").value or []
-        print(f"[DEBUG] possible_items loaded: {self._possible_items}")
+        # print(f"[DEBUG] possible_items loaded: {self._possible_items}")
 
         # Create the restaurant LLM service client
         self._llm_client = node.create_client(

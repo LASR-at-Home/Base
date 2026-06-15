@@ -71,9 +71,10 @@ class LLMInference:
         print(f"Using device: {self.device}")
 
         self.model_name = self.config.model_name
-        # cache_dir='/home/fadi/.cache/huggingface/hub'
-        # self.tokenizer = AutoTokenizer.from_pretrained(self.model_name, local_files_only=True)
-        self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
+        cache_dir = "/home/fadi/.cache/huggingface/hub"
+        self.tokenizer = AutoTokenizer.from_pretrained(
+            self.model_name, local_files_only=True
+        )
 
         self.logger = logging.getLogger(__name__)
 
@@ -145,7 +146,7 @@ class LLMInference:
         if self.device == torch.device("cpu"):
             self.logger.warning("[LLMInference] CPU detected — skipping quantization.")
             return AutoModelForCausalLM.from_pretrained(
-                self.model_name, low_cpu_mem_usage=True
+                self.model_name, low_cpu_mem_usage=True, local_files_only=True
             )
 
         kwargs = {"low_cpu_mem_usage": True}

@@ -1,225 +1,236 @@
 #!/usr/bin/env python3
-import smach
-import smach_ros
 import rclpy
-from rclpy.node import Node
+
+import yasmin
+from yasmin import StateMachine, Blackboard
+import yasmin_ros
+from yasmin_ros import ServiceState, ActionState
+
 from std_srvs.srv import Empty
 
 from lasr_skills import Say, PlayMotion, Wait
 
-from ament_index_python.packages import get_package_share_directory
-import yaml
-import os
-
 from typing import Union
 
 
-class ReceiveObject(smach.StateMachine):
-    def __init__(
-        self, node: Node, object_name: Union[str, None] = None, vertical: bool = True
-    ):
+class ClearOctomap(ServiceState):
+    def __init__(self):
+        super().__init__(
+            srv_type=Empty,
+            srv_name="/clear_octomap",
+            create_request_handler=self._create_request,
+        )
+
+    def _create_request(self, blackboard):
+        return Empty.Request()
+
+
+# TODO: Do we need to detect object or just assume that the second guest is holding a bag.
+class ReceiveObject(StateMachine):
+    def __init__(self, object_name: Union[str, None] = None, vertical: bool = True):
+
+        super().__init__(outcomes=["succeeded", "failed"], handle_sigint=True)
+        if object_name is None:
+            self.add_input_key("object_name")
+
+        self.add_state(
+            "CLEAR_OCTOMAP",
+            ClearOctomap(),
+            transitions={"succeeded": "LOOK_LEFT", "aborted": "failed"},
+        )
+
+        self.add_state(
+            "LOOK_LEFT",
+            PlayMotion(motion_name="look_left"),
+            transitions={
+                "succeeded": "LOOK_DOWN_LEFT",
+                "aborted": "failed",
+                "canceled": "failed",
+            },
+        )
+
+        self.add_state(
+            "LOOK_DOWN_LEFT",
+            PlayMotion(motion_name="look_down_left"),
+            transitions={
+                "succeeded": "LOOK_RIGHT",
+                "aborted": "failed",
+                "canceled": "failed",
+            },
+        )
+
+        self.add_state(
+            "LOOK_RIGHT",
+            PlayMotion(motion_name="look_right"),
+            transitions={
+                "succeeded": "LOOK_DOWN_RIGHT",
+                "aborted": "failed",
+                "canceled": "failed",
+            },
+        )
+
+        self.add_state(
+            "LOOK_DOWN_RIGHT",
+            PlayMotion(motion_name="look_down_right"),
+            transitions={
+                "succeeded": "LOOK_DOWN_CENTRE",
+                "aborted": "failed",
+                "canceled": "failed",
+            },
+        )
+
+        self.add_state(
+            "LOOK_DOWN_CENTRE",
+            PlayMotion(motion_name="look_centre"),
+            transitions={
+                "succeeded": "LOOK_CENTRE",
+                "aborted": "failed",
+                "canceled": "failed",
+            },
+        )
+
+        self.add_state(
+            "LOOK_CENTRE",
+            PlayMotion(motion_name="look_centre"),
+            transitions={
+                "succeeded": "SAY_REACH_ARM",
+                "aborted": "failed",
+                "canceled": "failed",
+            },
+        )
+
+        self.add_state(
+            "SAY_REACH_ARM",
+            Say(text="Please step back, I am going to reach my arm out."),
+            transitions={
+                "succeeded": "REACH_ARM",
+                "aborted": "REACH_ARM",
+                "canceled": "REACH_ARM",
+            },
+        )
+
+        if vertical:
+            self.add_state(
+                "REACH_ARM",
+                PlayMotion(motion_name="reach_arm_vertical_gripper"),
+                transitions={
+                    "succeeded": "OPEN_GRIPPER",
+                    "aborted": "failed",
+                    "canceled": "failed",
+                },
+            )
+        else:
+            self.add_state(
+                "REACH_ARM",
+                PlayMotion(motion_name="reach_arm_horizontal_gripper"),
+                transitions={
+                    "succeeded": "OPEN_GRIPPER",
+                    "aborted": "failed",
+                    "canceled": "failed",
+                },
+            )
+
+        self.add_state(
+            "OPEN_GRIPPER",
+            PlayMotion(motion_name="open_gripper"),
+            transitions={
+                "succeeded": "SAY_PLACE",
+                "aborted": "failed",
+                "canceled": "failed",
+            },
+        )
 
         if object_name is not None:
-            super(ReceiveObject, self).__init__(outcomes=["succeeded", "failed"])
-        else:
-            smach.StateMachine.__init__(
-                self, outcomes=["succeeded", "failed"], input_keys=["object_name"]
-            )
-        self.node = node
-        self.load_motion_params()
-        """
-        r = rospkg.RosPack()
-        els = rosparam.load_file(
-            os.path.join(r.get_path("lasr_skills"), "config", "motions.yaml")
-        )
-        for param, ns in els:
-            rosparam.upload_params(ns, param)
-        """
-        with self:
-
-            smach.StateMachine.add(
-                "CLEAR_OCTOMAP",
-                smach_ros.ServiceState("clear_octomap", Empty),
-                transitions={
-                    "succeeded": "LOOK_LEFT",
-                    "aborted": "failed",
-                    "preempted": "failed",
-                },
-            )
-
-            smach.StateMachine.add(
-                "LOOK_LEFT",
-                PlayMotion(node=Node, motion_name="look_left"),
-                transitions={
-                    "succeeded": "LOOK_DOWN_LEFT",
-                    "aborted": "failed",
-                    "preempted": "failed",
-                },
-            )
-
-            smach.StateMachine.add(
-                "LOOK_DOWN_LEFT",
-                PlayMotion(node=Node, motion_name="look_down_left"),
-                transitions={
-                    "succeeded": "LOOK_RIGHT",
-                    "aborted": "failed",
-                    "preempted": "failed",
-                },
-            )
-
-            smach.StateMachine.add(
-                "LOOK_RIGHT",
-                PlayMotion(motion_name="look_right"),
-                transitions={
-                    "succeeded": "LOOK_DOWN_RIGHT",
-                    "aborted": "failed",
-                    "preempted": "failed",
-                },
-            )
-
-            smach.StateMachine.add(
-                "LOOK_DOWN_RIGHT",
-                PlayMotion(node=Node, motion_name="look_down_right"),
-                transitions={
-                    "succeeded": "LOOK_DOWN_CENTRE",
-                    "aborted": "failed",
-                    "preempted": "failed",
-                },
-            )
-            # TODO: check whether the motion name for state LOOK_DOWN_CENTRE in ROS1 was look_centre is not look_down_centre on purpose and not just a mistake
-            smach.StateMachine.add(
-                "LOOK_DOWN_CENTRE",
-                PlayMotion(node=Node, motion_name="look_centre"),
-                transitions={
-                    "succeeded": "LOOK_CENTRE",
-                    "aborted": "failed",
-                    "preempted": "failed",
-                },
-            )
-
-            smach.StateMachine.add(
-                "LOOK_CENTRE",
-                PlayMotion(node=Node, motion_name="look_centre"),
-                transitions={
-                    "succeeded": "SAY_REACH_ARM",
-                    "aborted": "failed",
-                    "preempted": "failed",
-                },
-            )
-
-            smach.StateMachine.add(
-                "SAY_REACH_ARM",
+            self.add_state(
+                "SAY_PLACE",
                 Say(
-                    node=Node, text="Please step back, I am going to reach my arm out."
+                    text=f"Please place the {object_name} in my hand. I will wait for a few seconds.",
                 ),
                 transitions={
-                    "succeeded": "REACH_ARM",
-                    "aborted": "REACH_ARM",
-                    "preempted": "REACH_ARM",
-                },
-            )
-
-            if vertical:
-                smach.StateMachine.add(
-                    "REACH_ARM",
-                    PlayMotion(node=Node, motion_name="reach_arm_vertical_gripper"),
-                    transitions={
-                        "succeeded": "OPEN_GRIPPER",
-                        "aborted": "failed",
-                        "preempted": "failed",
-                    },
-                )
-            else:
-                smach.StateMachine.add(
-                    "REACH_ARM",
-                    PlayMotion(node=Node, motion_name="reach_arm_horizontal_gripper"),
-                    transitions={
-                        "succeeded": "OPEN_GRIPPER",
-                        "aborted": "failed",
-                        "preempted": "failed",
-                    },
-                )
-
-            smach.StateMachine.add(
-                "OPEN_GRIPPER",
-                PlayMotion(node=Node, motion_name="open_gripper"),
-                transitions={
-                    "succeeded": "SAY_PLACE",
+                    "succeeded": "WAIT_5",
                     "aborted": "failed",
-                    "preempted": "failed",
+                    "canceled": "failed",
                 },
             )
-
-            if object_name is not None:
-                smach.StateMachine.add(
-                    "SAY_PLACE",
-                    Say(
-                        node=Node,
-                        text=f"Please place the {object_name} in my hand. I will wait for a few seconds.",
-                    ),
-                    transitions={
-                        "succeeded": "WAIT_5",
-                        "aborted": "failed",
-                        "preempted": "failed",
-                    },
-                )
-            else:
-                smach.StateMachine.add(
-                    "SAY_PLACE",
-                    Say(
-                        node=Node,
-                        format_str="Please place the {} in my hand. I will wait for a few seconds.",
-                    ),
-                    transitions={
-                        "succeeded": "WAIT_5",
-                        "aborted": "failed",
-                        "preempted": "failed",
-                    },
-                    remapping={"placeholders": "object_name"},
-                )
-
-            smach.StateMachine.add(
-                "WAIT_5",
-                Wait(5),
+        else:
+            self.add_state(
+                "SAY_PLACE",
+                Say(
+                    format_str="Please place the {} in my hand. I will wait for a few seconds.",
+                ),
                 transitions={
-                    "succeeded": "CLOSE_GRIPPER",
-                    "failed": "CLOSE_GRIPPER",
-                },
-            )
-
-            smach.StateMachine.add(
-                "CLOSE_GRIPPER",
-                smach_ros.ServiceState("parallel_gripper_controller/grasp", Empty),
-                transitions={
-                    "succeeded": "FOLD_ARM",
+                    "succeeded": "WAIT_5",
                     "aborted": "failed",
-                    "preempted": "failed",
+                    "canceled": "failed",
                 },
-            )
-            smach.StateMachine.add(
-                "FOLD_ARM",
-                PlayMotion(node=Node, motion_name="cml_arm_away"),
-                transitions={
-                    "succeeded": "succeeded",
-                    "aborted": "failed",
-                    "preempted": "failed",
-                },
+                remapping={"placeholders": "object_name"},
             )
 
-    def load_motion_params(self):
-        package_path = get_package_share_directory("lasr_skills")
-        config_path = os.path.join(package_path, "config", "motion.yaml")
-        if os.path.exists(config_path):
-            with open(config_path, "r") as f:
-                params = yaml.safe_load(f)
-                for key, value in params.items():
-                    self.node.declare_parameters(key, value)
+        self.add_state(
+            "WAIT_5",
+            Wait(5),
+            transitions={
+                "succeeded": "CLOSE_HALF_GRIPPER",
+                "failed": "CLOSE_HALF_GRIPPER",
+            },
+        )
+
+        # TODO: No longer a gripper server for this  smach_ros.ServiceState("/parallel_gripper_controller/grasp", Empty)
+        # Alternatively:
+        #   1. https://docs.pal-robotics.com/sdk/24.09/actions/advanced_grasping-grasp.html but verify Fruity has the action server
+        #   2. /gripper_controller/incrementer service or
+        #   3. /gripper_controller/ action server
+
+        # self.add_state(
+        #     "CLOSE_GRIPPER",
+        #     smach_ros.ServiceState("parallel_gripper_controller/grasp", Empty),
+        #     transitions={
+        #         "succeeded": "FOLD_ARM",
+        #         "aborted": "failed",
+        #         "canceled": "failed",
+        #     },
+        # )
+        self.add_state(
+            "CLOSE_HALF_GRIPPER",  # TEMPORARY REPLACEMENT - using half to not jam an item between gripper
+            PlayMotion(motion_name="close_half"),
+            transitions={
+                "succeeded": "FOLD_ARM",
+                "aborted": "failed",
+                "canceled": "failed",
+            },
+        )
+
+        self.add_state(
+            "FOLD_ARM",
+            PlayMotion(motion_name="cml_arm_away"),
+            transitions={
+                "succeeded": "succeeded",
+                "aborted": "failed",
+                "canceled": "failed",
+            },
+        )
+
+
+def main():
+
+    rclpy.init()
+
+    yasmin_ros.set_ros_loggers()
+
+    try:
+        sm = ReceiveObject(object_name="bag")
+        bb = Blackboard()
+
+        outcome = sm(bb)
+
+        yasmin.YASMIN_LOG_INFO(outcome)
+    except Exception as e:
+        yasmin.YASMIN_LOG_WARN(e)
+
+    # Shutdown ROS 2 if it's running
+    if rclpy.ok():
+        rclpy.shutdown()
 
 
 if __name__ == "__main__":
-    rclpy.init()
-    node = rclpy.create_node("receive_object")
-    sm = ReceiveObject(node=node, object_name="cola", vertical=True)
-    outcome = sm.execute()
-    node.get_logger().info(f"Outcome: {outcome}")
-    rclpy.shutdown()
+    main()
