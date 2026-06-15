@@ -36,6 +36,19 @@ def generate_launch_description():
             )
         )
     )
+    llm_service = Node(
+        package="lasr_llm",
+        executable="restaurant_service",
+        name="restaurant_query_llm_service",
+        output="screen",
+    )
+
+    speech_recognition = Node(
+        package="lasr_speech_recognition_whisper",
+        executable="transcribe_speech",
+        name="transcribe_speech",
+        output="screen",
+    )
 
     restaurant = TimerAction(
         period=10.0,
@@ -59,5 +72,7 @@ def generate_launch_description():
             load_motions,
             yolo_service,
             restaurant,
+            llm_service,
+            speech_recognition,
         ]
     )

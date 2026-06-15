@@ -78,7 +78,7 @@ class TakeOrderSM(yasmin.StateMachine):
             },
         )
 
- 
+
 def main(args=None):
     rclpy.init(args=args)
     node = rclpy.create_node(
