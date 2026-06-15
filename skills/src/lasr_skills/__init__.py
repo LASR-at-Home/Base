@@ -14,7 +14,6 @@ from .detect_all_in_polygon import DetectAllInPolygon
 # from .wait_for_person import WaitForPerson
 from .say import Say
 
-# from .wait_for_person_in_area import WaitForPersonInArea
 from .describe_people import DescribePeople
 from .look_to_point import LookToPoint
 
