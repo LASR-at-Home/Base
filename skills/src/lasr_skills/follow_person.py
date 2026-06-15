@@ -204,21 +204,25 @@ class EvaluateDetections(State):
         # TODO:  Add later as an improvement but assume closest person is the correct one
 
         # Setup AMCL Pose Subscriber
+        # self.current_robot_point = None
+        # self.robot_pose_sub = self.node.create_subscription(
+        #     PoseWithCovarianceStamped,
+        #     "/amcl_pose",
+        #     self.robot_point_cb,
+        #     QoSProfile(
+        #         depth=1,
+        #         reliability=ReliabilityPolicy.RELIABLE,
+        #         durability=DurabilityPolicy.TRANSIENT_LOCAL,
+        #         history=HistoryPolicy.KEEP_LAST,
+        #     ),
+        # )
+        # yasmin.YASMIN_LOG_INFO(
+        #     "EvaluateDetections initialized. Listening to /amcl_pose..."
+        # )
+
+        self.tf_buffer = tf2_ros.Buffer()
+        self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, self.node)
         self.current_robot_point = None
-        self.robot_pose_sub = self.node.create_subscription(
-            PoseWithCovarianceStamped,
-            "/amcl_pose",
-            self.robot_point_cb,
-            QoSProfile(
-                depth=1,
-                reliability=ReliabilityPolicy.RELIABLE,
-                durability=DurabilityPolicy.TRANSIENT_LOCAL,
-                history=HistoryPolicy.KEEP_LAST,
-            ),
-        )
-        yasmin.YASMIN_LOG_INFO(
-            "EvaluateDetections initialized. Listening to /amcl_pose..."
-        )
 
     def create_goal_pose(
         self, rx: float, ry: float, tx: float, ty: float, offset: bool = False
@@ -275,24 +279,49 @@ class EvaluateDetections(State):
 
     def get_closest_person(self, detections):
         """Iterates through points and finds best person to go to."""
-        return detections[0].point  # TODO: temp
+        #return detections[0].point  # TODO: temp
+        if self.p_old is None:
+            return detections[0].point
+
+        best_person = None
+        min_dist = float('inf')
+
+        for d in detections:
+            dist = self.calc_distance_between_points(d.point, self.p_old)
+            if dist < min_dist:
+                min_dist = dist
+                best_person = d.point
+
+        return best_person
         # I believe the first point is the closest one but double check
         # For each point check if in blacklist, if not choose point closest to p_old.
 
     def execute(self, blackboard: Blackboard):
-        if self.current_robot_point is None:
-            self.node.get_logger().warn("Robot pose not available yet, waiting...")
-            return "paused" # or time.sleep(0.1) and continue in a loop
+        try:
+            transform = self.tf_buffer.lookup_transform(
+                "map",  
+                "base_footprint",  
+                rclpy.time.Time(),
+                timeout=rclpy.duration.Duration(seconds=1.0),
+            )
+            # transform.transform.translation acts perfectly as a 3D point (has .x and .y)
+            self.current_robot_point = transform.transform.translation
+        except Exception as e:
+            self.node.get_logger().warn(f"Waiting for map->base_footprint TF: {e}")
+            return "paused"
 
         if "p_old" in blackboard.keys() and self.p_old is None:
             self.p_old = blackboard["p_old"]
 
-        if self.p_old is None:
-            return "paused"
 
-        detections = blackboard[
-            "detections_3d"
-        ]  # ros_ws/src/Base/common/vision/lasr_vision_interfaces/msg/Detection3D.msg
+        detections = blackboard.get("detections_3d", [])
+        if self.p_old is None:
+            if len(detections) > 0:
+                self.node.get_logger().info("First detection found. Initializing p_old.")
+                self.p_old = detections[0].point
+            else:
+                self.node.get_logger().warn("Waiting for first person detection...")
+                return "paused"
 
         if len(detections) == 0:
 
