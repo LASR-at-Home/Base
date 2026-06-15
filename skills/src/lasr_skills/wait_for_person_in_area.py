@@ -8,18 +8,24 @@ from yasmin import State, StateMachine
 from lasr_skills import Detect3DInArea, Wait
 
 from shapely import Polygon as ShapelyPolygon
-from shapely import Polygon as ShapelyPolygon
 
 
 class CheckForPerson(State):
     def __init__(self):
-        super().__init__(outcomes=["done", "not_done"])
+        super().__init__(outcomes=["done", "not_done", "canceled"])
         self.add_input_key("detections_3d")
 
     def execute(self, blackboard):
+        yasmin.YASMIN_LOG_INFO(f"CHECKING FOR PERSON: {blackboard['detections_3d']}")
+        if self.is_canceled():
+            yasmin.YASMIN_LOG_INFO("CHECK CANCELLED")
+            return "canceled"
+            
         if len(blackboard["detections_3d"]):
+            yasmin.YASMIN_LOG_INFO("FOUND DETECTIONS OF PEOPLE")
             return "done"
         else:
+            yasmin.YASMIN_LOG_INFO("NO DETECTIONS FOUND")
             return "not_done"
 
 
@@ -29,7 +35,7 @@ class WaitForPersonInArea(StateMachine):
         polygon: Union[ShapelyPolygon, None] = None,
         polygon_param: Union[str, None] = None,
     ):
-        super().__init__(outcomes=["succeeded", "failed"], handle_sigint=True)
+        super().__init__(outcomes=["succeeded", "failed"])
         self.add_input_key("polygon")
         self.add_output_key("detections_3d")
 
@@ -67,24 +73,27 @@ class WaitForPersonInArea(StateMachine):
         self.add_state(
             "DETECT_PEOPLE_3D",
             Detect3DInArea(
-                area_polygon=self.detection_polygon,
                 filter=["person"],
                 z_min=-10,
                 z_max=10.0,
             ),
             transitions={"succeeded": "CHECK_FOR_PERSON", "failed": "failed"},
+            remappings={"detections_3d": "detections_3d"}
         )
         self.add_state(
             "CHECK_FOR_PERSON",
             CheckForPerson(),
-            transitions={"done": "succeeded", "not_done": "DETECT_PEOPLE_3D"},
+            transitions={"done": "succeeded", "not_done": "DETECT_PEOPLE_3D", "canceled":"failed"},
         )
+
     def check(self, blackboard):
         try:
+            yasmin.YASMIN_LOG_INFO(f"2. CHECKING FOR UPDATED POLYGON: {blackboard['polygon']} ")
             if "polygon" in blackboard.keys():  # Update polygon
                 self.detection_polygon = blackboard["polygon"]
                 return "succeeded"
             elif self.detection_polygon:  # If a polygon is already defined
+                blackboard["polygon"] = self.detection_polygon
                 return "succeeded"
             else:  # No polygon defined
                 return "failed"

@@ -1,7 +1,7 @@
 import math
 import rclpy
 from rclpy.time import Time
-
+import time
 import traceback
 
 import yasmin
@@ -54,9 +54,8 @@ class WaitForNavGoal(State):
         self.last_goal = None
 
     def execute(self, blackboard: Blackboard):
-        rate = self.node.create_rate(5.0)  # 5 Hz polling
 
-        while not self.is_canceled():
+        while not self.is_canceled() and rclpy.ok():
             stop_requested = blackboard.get("stop_robot_requested", False)
             current_goal = blackboard.get("location")
 
@@ -70,7 +69,7 @@ class WaitForNavGoal(State):
                 return "start_navigating"
 
             try:
-                rate.sleep()
+                time.sleep(0.5)
             except Exception:
                 break
 
@@ -84,7 +83,7 @@ class Navigator(StateMachine):
     """
 
     def __init__(self):
-        super().__init__(outcomes=["succeeded", "failed"], handle_sigint=True)
+        super().__init__(outcomes=["succeeded", "failed"])
 
         self.add_state(
             "WAIT_FOR_COMMAND",
@@ -94,7 +93,7 @@ class Navigator(StateMachine):
 
         self.add_state(
             "DRIVE_TO_GOAL",
-            GoToLocation(),  # Uses your cleanly updated script!
+            GoToLocation(),
             transitions={
                 "succeeded": "WAIT_FOR_COMMAND",  # Arrived naturally? Wait for next command.
                 "failed": "WAIT_FOR_COMMAND",  # Canceled by dynamic preemption? Loop back and check.
@@ -165,9 +164,10 @@ class UpdateDetectionPolygon(State):
                 p = Point32(x=mapped_point.point.x, y=mapped_point.point.y, z=0.0)
                 debug_polygon.polygon.points.append(p)
 
-            blackboard["polygon"] = ShapelyPolygon(transformed_polygon)
+            blackboard["polygon"] = ShapelyPolygon(transformed_polygon).buffer(0.05)
 
             self.debug_pub.publish(debug_polygon)
+            yasmin.YASMIN_LOG_INFO("1. UPDATED POLYGON")
             return "succeeded"
         except Exception as e:
             yasmin.YASMIN_LOG_WARN(f"TF transform failed: {e}")
@@ -200,11 +200,11 @@ class EvaluateDetections(State):
         # Internal Loop Memory Tracking
         self.stationary_count = 0
         self.p_old = None  # Stores the last known (x, y) map coordinate of the host
-        self.blacklist = (
-            []
-        )  # TODO:  Add later as an improvement but assume closest person is the correct one
+        self.blacklist = []
+        # TODO:  Add later as an improvement but assume closest person is the correct one
 
         # Setup AMCL Pose Subscriber
+        self.current_robot_point = None
         self.robot_pose_sub = self.node.create_subscription(
             PoseWithCovarianceStamped,
             "/amcl_pose",
@@ -280,9 +280,13 @@ class EvaluateDetections(State):
         # For each point check if in blacklist, if not choose point closest to p_old.
 
     def execute(self, blackboard: Blackboard):
-        # if "p_old" not in blackboard.keys() or self.p_old == None:
-        #     self.p_old = self.current_robot_point
-        #     blackboard["p_old"] = self.current_robot_point
+        if self.current_robot_point is None:
+            self.node.get_logger().warn("Robot pose not available yet, waiting...")
+            return "paused" # or time.sleep(0.1) and continue in a loop
+
+        if "p_old" in blackboard.keys() and self.p_old is None:
+            self.p_old = blackboard["p_old"]
+
         if self.p_old is None:
             return "paused"
 
@@ -307,8 +311,10 @@ class EvaluateDetections(State):
                 )
                 blackboard["stop_robot_requested"] = False
                 self.stationary_count = 0
+                self.node.get_logger().warn("NO PERSON BUT NAV GOAL AVAILABLE")
                 return "updated"
             else:
+                self.node.get_logger().warn("NO POSE OR PERSON FOUND")
                 return "person_lost"
 
         # handling people still in polygon
@@ -316,10 +322,11 @@ class EvaluateDetections(State):
             personPoint = self.get_closest_person(
                 detections
             )  # Get closest person to p_old
-
+            self.node.get_logger().warn("MORE THAN ONE PERSON FOUND")
             if personPoint == None:  # If all detected people are 'blacklisted'
                 return "person_lost"
         else:
+            self.node.get_logger().warn("ONE PERSON FOUND")
             personPoint = detections[0].point
 
         # handle person
@@ -337,11 +344,15 @@ class EvaluateDetections(State):
             blackboard["stop_robot_requested"] = False
             self.p_old = personPoint
             self.stationary_count = 0
+            self.node.get_logger().warn("PERSON FOUND AND SETTING GOAL")
             return "updated"
         else:  # If person is too close or in same location
             blackboard["stop_robot_requested"] = True
             self.p_old = personPoint
+            self.stationary_count += 1
+            self.node.get_logger().warn(f"PERSON FOUND BUT STATIONARY: {self.stationary_count}/3")
             if self.stationary_count >= 3:
+                self.node.get_logger().warn(f"PERSON STATIONARY")
                 return "person_stationary"
             return "paused"
 
@@ -349,9 +360,7 @@ class EvaluateDetections(State):
 class TrackPerson(StateMachine):
     def __init__(self):
         # Outcomes align perfectly with your main locate_and_follow_host.py plan
-        super().__init__(
-            outcomes=["person_stationary", "person_lost", "failed"], handle_sigint=True
-        )
+        super().__init__(outcomes=["person_stationary", "person_lost", "failed"])
 
         # 1. Update the Map Area
         self.add_state(
@@ -419,7 +428,7 @@ class FollowPerson(StateMachine):
             WaitForPersonInArea(),  # Empty to use blackboard polygon
             transitions={
                 "succeeded": "GET_PERSON_POINT",  # Host is infront of the robot
-                "failed": "WAIT_FOR_HOST",  # Still waiting on host
+                "failed": "failed",  # Still waiting on host
             },
         )
         self.add_state(
@@ -434,55 +443,55 @@ class FollowPerson(StateMachine):
             "SAY_FOLLOW",
             Say(text="I will now follow you. "),
             transitions={
-                "succeeded": "TRACK_AND_NAVIGATE",
-                "aborted": "TRACK_AND_NAVIGATE",
-                "canceled": "TRACK_AND_NAVIGATE",
+                "succeeded": "succeeded",
+                "aborted": "failed",
+                "canceled": "failed",
             },
         )
 
-        # TRACK-NAV concur goes here
-        self.add_state(
-            "TRACK_AND_NAVIGATE",
-            Concurrence(
-                states={
-                    "tracker": TrackPerson(),
-                    "navigator": Navigator(),
-                },
-                default_outcome="failed",
-                outcome_map={
-                    "person_stationary": {
-                        "tracker": "person_stationary",
-                    },
-                    "person_lost": {
-                        "tracker": "person_lost",
-                    },
-                    "failed": {
-                        "tracker": "failed",
-                        "navigator": "failed",
-                    },
-                },
-            ),
-            transitions={
-                "person_stationary": "succeeded",
-                "person_lost": "succeeded",
-                "failed": "failed",
-            },
-        )
+        # # TRACK-NAV concur goes here
+        # self.add_state(
+        #     "TRACK_AND_NAVIGATE",
+        #     Concurrence(
+        #         states={
+        #             "tracker": TrackPerson(),
+        #             "navigator": Navigator(),
+        #         },
+        #         default_outcome="failed",
+        #         outcome_map={
+        #             "person_stationary": {
+        #                 "tracker": "person_stationary",
+        #             },
+        #             "person_lost": {
+        #                 "tracker": "person_lost",
+        #             },
+        #             "failed": {
+        #                 "tracker": "failed",
+        #                 "navigator": "failed",
+        #             },
+        #         },
+        #     ),
+        #     transitions={
+        #         "person_stationary": "succeeded",
+        #         "person_lost": "succeeded",
+        #         "failed": "failed",
+        #     },
+        # )
 
-        # LOST_RECOVERY: Lose Person recovery (HEAD_TOUR + DETECT) if found person, approach and ask (if they are not the host add thier positon to a blacklist)
+        # # LOST_RECOVERY: Lose Person recovery (HEAD_TOUR + DETECT) if found person, approach and ask (if they are not the host add thier positon to a blacklist)
 
-        # Stationay Person
-        self.add_state(
-            "ASK_IF_ARRIVED",
-            AskAndListen(
-                tts_phrase="Say YES if we have arrived. NO if we have not.",
-            ),
-            transitions={
-                "succeeded": "succeeded",  # Update to HANDLE_RESPONSE
-                "failed": "ASK_IF_ARRIVED",
-            },
-            remappings={"transcribed_speech": "guest_transcription"},
-        )
+        # # Stationay Person
+        # self.add_state(
+        #     "ASK_IF_ARRIVED",
+        #     AskAndListen(
+        #         tts_phrase="Say YES if we have arrived. NO if we have not.",
+        #     ),
+        #     transitions={
+        #         "succeeded": "succeeded",  # Update to HANDLE_RESPONSE
+        #         "failed": "ASK_IF_ARRIVED",
+        #     },
+        #     remappings={"transcribed_speech": "guest_transcription"},
+        # )
 
         # Callback which parses the resposne and returns "succeeded" or "SAY_FOLLOW"
 
@@ -490,6 +499,7 @@ class FollowPerson(StateMachine):
         self, blackboard
     ):  # will probably throw an error related to blackboard
         try:
+            yasmin.YASMIN_LOG_INFO(f"ENTERED PERSON POINT CALLBACK WITH DETECTIONS: {blackboard['detections_3d']}")
             if not blackboard["detections_3d"]:
                 return "failed"
             # Assuming the first detection is the point of interest
@@ -506,19 +516,17 @@ def main():
 
     node = yasmin_ros.logger_node
     try:
-        sm = FollowPerson()
+        sm = TrackPerson()
+        #sm = TrackPerson()
         bb = Blackboard()
         bb["z_sweep_min"] = -10
         bb["z_sweep_max"] = 50
 
-        YasminViewerPub(sm, "HRI_SM3")
+        YasminViewerPub(sm, "Follow_Person")
 
         outcome = sm(bb)
 
         yasmin.YASMIN_LOG_INFO(outcome)
-    except KeyboardInterrupt:
-        # Catch the Ctrl+C explicitly at the top level
-        yasmin.YASMIN_LOG_WARN("KeyboardInterrupt caught! Forcing shutdown...")
     except Exception as e:
         yasmin.YASMIN_LOG_WARN(f"Exception in execution: {e}")
     finally:
@@ -527,6 +535,7 @@ def main():
 
         if rclpy.ok():
             rclpy.shutdown()
+
 
 
 if __name__ == "__main__":

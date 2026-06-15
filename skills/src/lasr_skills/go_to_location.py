@@ -71,9 +71,8 @@ class GoToLocation(State):
         goal_stamped = PoseStamped(pose=goal_pose, header=Header(frame_id="map"))
         self.navigator.goToPose(goal_stamped)
 
-        rate = node.create_rate(5.0)
         while (
-            not self.navigator.isTaskComplete()
+            not self.navigator.isTaskComplete() and rclpy.ok()
         ):  # Update to make it check if the goal has been updated? (blackboard["location"] is different)
             if self.is_canceled():
                 if not self.navigator.isTaskComplete():
@@ -94,7 +93,10 @@ class GoToLocation(State):
                     )
                     self.navigator.goToPose(goal_stamped)
 
-            rate.sleep()
+            time.sleep(1)
+
+        if not rclpy.ok() or self.is_canceled():
+            return "failed"
 
         return (
             "succeeded"
