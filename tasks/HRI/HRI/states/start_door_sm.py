@@ -20,7 +20,7 @@ class StartDoorSM(StateMachine):  # TODO: Rename to start_task and move to Skill
         location: Union[Pose, None] = None,
         location_param: Union[str, None] = "start_pose",
     ):
-        super().__init__(outcomes=["succeeded", "failed"], handle_sigint=True)
+        super().__init__(outcomes=["succeeded", "failed"])
 
         self.add_state(
             "DETECT_DOOR_OPENING",

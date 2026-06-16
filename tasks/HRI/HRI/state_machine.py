@@ -95,7 +95,7 @@ class HRI(yasmin.StateMachine):
 
         self.add_state(
             "SAY_FOLLOW",
-            Say(text="Welcome. Follow me to the seating area."),
+            Say(format_str="Welcome {}. Follow me to the seating area."),
             transitions={
                 "succeeded": "GUIDE_TO_SEAT",
                 "aborted": "failed",
@@ -135,7 +135,7 @@ class HRI(yasmin.StateMachine):
         
         self.add_state(
             "INTRODUCE",
-            Introduce(guest_to_introduce="guest1"),
+            Introduce(),
             transitions={"succeeded": "succeeded", "failed": "failed"},
         )
 

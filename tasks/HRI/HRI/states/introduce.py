@@ -99,7 +99,7 @@ class Introduce(yasmin.StateMachine):
         - person_index: Set to 0 before calling sm()
     """
 
-    def __init__(self, guest_to_introduce: str, can_detect_second_guest: bool = False):
+    def __init__(self, can_detect_second_guest: bool = True):
         super().__init__(outcomes=["succeeded", "failed"])
         self.add_input_key("guest_data")
         self.add_input_key("guest_seat_point")
@@ -150,7 +150,7 @@ class Introduce(yasmin.StateMachine):
 
         self.add_state(
             "GET_GUEST_DATA_1",
-            GetGuestData(guest_to_introduce=guest_to_introduce),
+            GetGuestData(guest_to_introduce='guest2', guest_to_introduce_to='guest1'),
             transitions={
                 "succeeded": "GET_INTRODUCTION_STR_1",
                 "failed": "failed",
@@ -189,7 +189,7 @@ class Introduce(yasmin.StateMachine):
 
         self.add_state(
             "GET_GUEST_DATA_2",
-            GetGuestData(guest_to_introduce_to=guest_to_introduce),
+            GetGuestData(guest_to_introduce='guest1', guest_to_introduce_to='guest2'),
             transitions={
                 "succeeded": "GET_INTRODUCTION_STR_2",
                 "failed": "failed",

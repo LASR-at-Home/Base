@@ -75,7 +75,7 @@ class ReID(Node):
         Use DeepFace to extract an embedding of a face.
         """
         results = DeepFace.represent(
-            img_path=im, model_name="VGG-Face", enforce_detection=True
+            img_path=im, model_name="VGG-Face", enforce_detection=False
         )
         embeddings = [np.array(entry["embedding"]) for entry in results]
         return embeddings
@@ -100,7 +100,7 @@ class ReID(Node):
             results = DeepFace.represent(
                 img_path=cv_im,
                 model_name="VGG-Face",
-                enforce_detection=True,
+                enforce_detection=False,
                 detector_backend="retinaface",
                 align=True,
                 max_faces=None,
@@ -193,7 +193,7 @@ class ReID(Node):
             results = DeepFace.represent(
                 img_path=cv_im,
                 model_name="VGG-Face",
-                enforce_detection=True,
+                enforce_detection=False,
                 detector_backend="retinaface",
                 align=True,
                 max_faces=None,
@@ -296,7 +296,7 @@ class ReID(Node):
             results = DeepFace.represent(
                 img_path=cv_im,
                 model_name="VGG-Face",
-                enforce_detection=True,  # allow detection attempts even if uncertain
+                enforce_detection=False,  # allow detection attempts even if uncertain
                 detector_backend="retinaface",
                 align=True,
                 max_faces=1,

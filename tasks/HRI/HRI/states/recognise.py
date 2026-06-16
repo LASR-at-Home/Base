@@ -49,6 +49,9 @@ class Recognise(yasmin.State):
             detection = Detection3D()
             detection.name = guest_id
             guest_data[guest_id]["seating_detection"] = True
+            
+            yasmin.YASMIN_LOG_INFO(detection)
+            
             return detection
         return None
 
