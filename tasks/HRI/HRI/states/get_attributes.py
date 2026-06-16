@@ -30,7 +30,7 @@ class GetGuestAttributes(yasmin.StateMachine):
             )
 
             self.add_input_key("guest_data")
-            self.add_input_key("clip_detection_dict")
+            self.add_input_key("attributes")
             self.add_output_key("guest_data")
 
             self._guest_id: str = guest_id
@@ -38,7 +38,7 @@ class GetGuestAttributes(yasmin.StateMachine):
         def execute(self, blackboard) -> str:
             try:
                 blackboard["guest_data"][self._guest_id]["attributes"] = blackboard[
-                    "clip_detection_dict"
+                    "attributes"
                 ]
                 blackboard["guest_data"][self._guest_id]["detection"] = True
                 return "succeeded"

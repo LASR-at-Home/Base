@@ -3,8 +3,8 @@ import os
 import tempfile
 
 import cv2
+import numpy as np
 import rclpy
-from cv_bridge import CvBridge
 from rclpy.node import Node
 
 from lasr_vlm_interfaces.srv import VlmDescribePeople
@@ -31,10 +31,25 @@ class VlmDescribePeopleService(Node):
         )
 
         model_config = ModelConfig(model_name="moondream")
-        self.vlm = VLMInference(model_config, new_model=True)
-
-        self.bridge = CvBridge()
+        self.vlm = VLMInference(model_config, new_model=False)
         self.get_logger().info("VLM Describe People service started")
+
+    def _image_msg_to_bgr8(self, image_msg):
+        """Convert a ROS Image message to an OpenCV BGR image without cv_bridge."""
+        if image_msg.encoding not in ("bgr8", "rgb8", "mono8"):
+            raise ValueError(f"Unsupported image encoding: {image_msg.encoding}")
+
+        image = np.frombuffer(image_msg.data, dtype=np.uint8)
+
+        if image_msg.encoding == "mono8":
+            image = image.reshape((image_msg.height, image_msg.width))
+            return cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
+
+        image = image.reshape((image_msg.height, image_msg.width, 3))
+        if image_msg.encoding == "rgb8":
+            return cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+
+        return image
 
     def describe_people_callback(self, request, response):
         """
@@ -44,7 +59,7 @@ class VlmDescribePeopleService(Node):
         self.get_logger().info("Received request to describe person")
 
         try:
-            cv_image = self.bridge.imgmsg_to_cv2(request.image_raw, "bgr8")
+            cv_image = self._image_msg_to_bgr8(request.image_raw)
 
             with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as f:
                 tmp_path = f.name

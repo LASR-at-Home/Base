@@ -15,6 +15,8 @@ Usage:
 import sys
 import argparse
 
+import numpy as np
+
 # ─── Layer 1: unit-test the parser ────────────────────────────────────────────
 
 
@@ -93,14 +95,22 @@ def test_service(image_path: str):
     import cv2
     import rclpy
     from rclpy.node import Node
-    from cv_bridge import CvBridge
+    from sensor_msgs.msg import Image
     from lasr_vlm_interfaces.srv import VlmDescribePeople
 
     class VlmTestClient(Node):
         def __init__(self):
             super().__init__("vlm_test_client")
-            self.bridge = CvBridge()
             self.client = self.create_client(VlmDescribePeople, "/vlm/describe_people")
+
+        def _cv2_to_image_msg(self, cv_image):
+            image_msg = Image()
+            image_msg.height, image_msg.width = cv_image.shape[:2]
+            image_msg.encoding = "bgr8"
+            image_msg.is_bigendian = False
+            image_msg.step = cv_image.shape[1] * cv_image.shape[2]
+            image_msg.data = np.ascontiguousarray(cv_image).tobytes()
+            return image_msg
 
         def run(self, image_path: str):
             self.get_logger().info("Waiting for /vlm/describe_people...")
@@ -116,7 +126,7 @@ def test_service(image_path: str):
             self.get_logger().info(f"Image loaded: {cv_image.shape} from {image_path}")
 
             request = VlmDescribePeople.Request()
-            request.image_raw = self.bridge.cv2_to_imgmsg(cv_image, encoding="bgr8")
+            request.image_raw = self._cv2_to_image_msg(cv_image)
 
             self.get_logger().info(
                 "Sending request (Ollama inference may take ~10-30s)..."
