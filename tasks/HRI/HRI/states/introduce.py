@@ -32,7 +32,7 @@ class GetLookPoint(yasmin.State):
         super().__init__(outcomes=["succeeded", "failed"])
         self.add_input_key("seated_guest_locs")
         self.add_input_key("person_index")
-        self.add_output_key("look_point")
+        self.add_output_key("pointstamped")
         self.node = yasmin_ros.logger_node
 
     def execute(self, blackboard: Blackboard) -> str:
@@ -44,7 +44,7 @@ class GetLookPoint(yasmin.State):
                 header=header,
                 point=blackboard["seated_guest_locs"][index],
             )
-            blackboard["look_point"] = look_point
+            blackboard["pointstamped"] = look_point
             yasmin.YASMIN_LOG_INFO(
                 f"Look point set to: {look_point.point.x}, "
                 f"{look_point.point.y}, {look_point.point.z}"
@@ -127,7 +127,7 @@ class Introduce(yasmin.StateMachine):
                 "succeeded": "WAIT",
                 "aborted": "failed",
             },
-            remappings={"pointstamped": "look_point"},
+            # remappings={"look_point": "pointstamped"},
         )
 
         self.add_state(
@@ -184,7 +184,7 @@ class Introduce(yasmin.StateMachine):
                 "aborted": "failed",
                 "timeout": "GET_GUEST_DATA_2",
             },
-            remappings={"pointstamped": "guest_seat_point"},
+            # remappings={"pointstamped": "guest_seat_point"},
         )
 
         self.add_state(

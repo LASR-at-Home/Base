@@ -34,23 +34,29 @@ class GetGuestData(yasmin.State):
         self._guest_to_introduce_to = guest_to_introduce_to
 
     def execute(self, blackboard: Blackboard) -> str:
-    guest_data = blackboard["guest_data"]
+        guest_data = blackboard["guest_data"]
 
-    # Who we are speaking about
-    if self._guest_to_introduce is not None:
-        blackboard["relevant_guest_data"] = guest_data[self._guest_to_introduce]
-    else:
-        reid = blackboard["named_guest_detection"].name
-        blackboard["relevant_guest_data"] = guest_data.get(reid, guest_data["host"])
-
-    # Who we are speaking to
-    if self._guest_to_introduce_to is not None:
-        blackboard["introduce_to"] = guest_data[self._guest_to_introduce_to]["name"]
-    else:
-        reid = blackboard["named_guest_detection"].name
-        if reid not in guest_data:
-            blackboard["introduce_to"] = guest_data["host"]["name"]
+        # Who we are speaking about
+        if self._guest_to_introduce is not None:
+            blackboard["relevant_guest_data"] = guest_data[self._guest_to_introduce]
         else:
-            blackboard["introduce_to"] = guest_data[reid]["name"]
+            reid = blackboard["named_guest_detection"].name
+            blackboard["relevant_guest_data"] = guest_data.get(reid, guest_data["host"])
 
-    return "succeeded"
+        # Who we are speaking to
+        if self._guest_to_introduce_to is not None:
+            blackboard["introduce_to"] = guest_data[self._guest_to_introduce_to]["name"]
+        else:
+            reid = blackboard["named_guest_detection"].name
+            if reid not in guest_data:
+                blackboard["introduce_to"] = guest_data["host"]["name"]
+            else:
+                blackboard["introduce_to"] = guest_data[reid]["name"]
+
+        yasmin.YASMIN_LOG_INFO(f'Introducing: {self._guest_to_introduce}, to {self._guest_to_introduce_to}')
+        string = blackboard["introduce_to"]
+        test = blackboard["relevant_guest_data"]
+        yasmin.YASMIN_LOG_INFO("We 'introduce_to': \n" + str(string))
+        yasmin.YASMIN_LOG_INFO("The relevant guest data: \n" + str(test))
+
+        return "succeeded"
