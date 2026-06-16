@@ -10,26 +10,25 @@ from rclpy.qos import QoSProfile, DurabilityPolicy, ReliabilityPolicy, HistoryPo
 
 class SelectAndVisualiseObject(yasmin.State):
     """
-    Selects the first object from the detected_objects list, announces it
-    via TTS, and publishes a debug image with a bounding box to /referee_view
-    so the referee can confirm the robot's selection.
+    Pops the next object from the detected_objects list, announces it, and
+    publishes a debug image with a bounding box to /referee_view so the referee
+    can confirm the robot's selection.
 
-    Ported from ROS 1 SMACH SelectAndVisualiseObject. The three-state machine
-    (SELECT_OBJECT → SAY_OBJECT → VIS_OBJECT) collapses into a single
-    yasmin.State since there is no branching between them.
+    Announce-only: nothing is physically removed from the table, so the loop
+    iterates the detected list (pop) instead of re-detecting each round. When the
+    list is empty, every object has been processed → outcome "finished".
 
     Blackboard inputs:
         detected_objects : List[Detection3D]
-            Output of DetectAllInPolygon — each item has .name, .xywh,
-            .confidence, and the raw image stored at index [2].
 
     Blackboard outputs:
-        selected_object      : Detection3D  — the chosen object
-        selected_object_name : str          — its label, for use in Say format_str
+        selected_object      : Detection3D
+        selected_object_name : str
+        object_name          : str
     """
 
     def __init__(self):
-        super().__init__(outcomes=["succeeded", "failed"])
+        super().__init__(outcomes=["succeeded", "finished"])
         self.add_input_key("detected_objects")
         self.add_output_key("selected_object")
         self.add_output_key("selected_object_name")
@@ -61,27 +60,27 @@ class SelectAndVisualiseObject(yasmin.State):
         detected = blackboard["detected_objects"]
 
         if not detected:
-            yasmin.YASMIN_LOG_WARN("No detected objects to select from.")
-            return "failed"
+            # Announce-only mode: nothing is physically removed from the table,
+            # so the loop iterates this list instead of re-detecting. Empty list
+            # means every detected object has been processed → we are done.
+            yasmin.YASMIN_LOG_INFO("No objects left to process — finished.")
+            return "finished"
 
-        # Always pick the first object — same behaviour as ROS 1 version
-        selected = detected[0]
+        # Pop the next object so the loop advances on each iteration.
+        selected = detected.pop(0)
+        blackboard["detected_objects"]     = detected
         blackboard["selected_object"]      = selected
         blackboard["selected_object_name"] = selected.name
         blackboard["object_name"] = selected.name
-        yasmin.YASMIN_LOG_INFO(f"Selected object: {selected.name}")
+        yasmin.YASMIN_LOG_INFO(
+            f"Selected object: {selected.name} ({len(detected)} remaining)."
+        )
 
         # ── 2. Announce to referee ───────────────────────────────────────────
-        # Say skill expects blackboard["text"] or is constructed with text=
-        # Using the node's TTS directly here to avoid needing a sub-state
-        # TODO: replace with Say skill call if your team prefers consistency
         yasmin.YASMIN_LOG_INFO(
             "[TTS] I have selected an object, and it is displayed on my screen. "
             "Please take a look."
         )
-        # TODO: call Say skill — e.g.
-        # say = Say(text="I have selected an object...")
-        # say.execute(blackboard)
 
         # ── 3. Publish visualisation ─────────────────────────────────────────
         self._publish_visualisation(selected)

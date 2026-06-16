@@ -4,6 +4,7 @@ from .find_and_go_to_table import FindAndGoToTable
 from .detect_objects import DetectObjects
 from .select_and_visualize_object import SelectAndVisualiseObject
 from .classify_category import ClassifyCategory
+from .decide_destination import DecideDestination
 from .choose_shelf import ChooseShelf
 from .instruct_pick import InstructPick
 from .instruct_place import InstructPlace
