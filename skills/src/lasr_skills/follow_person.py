@@ -94,7 +94,7 @@ class Navigator(StateMachine):
         super().__init__(outcomes=["succeeded", "failed"])
 
         self.add_state(
-            "WAIT_FOR_COMMAND",
+            "WAIT_FOR_NAV_GOAL",
             WaitForNavGoal(),
             transitions={"start_navigating": "DRIVE_TO_GOAL", "failed": "failed"},
         )
@@ -103,8 +103,8 @@ class Navigator(StateMachine):
             "DRIVE_TO_GOAL",
             GoToLocation(updatable=True),
             transitions={
-                "succeeded": "WAIT_FOR_COMMAND",  # Arrived naturally? Wait for next command.
-                "failed": "WAIT_FOR_COMMAND",  # Canceled by dynamic preemption? Loop back and check.
+                "succeeded": "WAIT_FOR_NAV_GOAL",  # Arrived naturally? Wait for next command.
+                "failed": "WAIT_FOR_NAV_GOAL",  # Canceled by dynamic preemption? Loop back and check.
             },
         )
 
@@ -175,7 +175,6 @@ class UpdateDetectionPolygon(State):
             blackboard["polygon"] = ShapelyPolygon(transformed_polygon).buffer(0.05)
 
             self.debug_pub.publish(debug_polygon)
-            yasmin.YASMIN_LOG_INFO("1. UPDATED POLYGON")
             return "succeeded"
         except Exception as e:
             yasmin.YASMIN_LOG_WARN(f"TF transform failed: {e}")
@@ -188,7 +187,7 @@ class EvaluateDetections(State):
     Handles data association matching, stationary counting, and updating Nav2 blackboard targets.
     """
 
-    def __init__(self, safe_distance=1):
+    def __init__(self, safe_distance=1, threshold=0.5, max_stationary=10):
         # Outcomes mapping perfectly back to your TrackPerson state machine
         super().__init__(
             outcomes=["updated", "paused", "person_stationary", "person_lost"]
@@ -196,20 +195,19 @@ class EvaluateDetections(State):
 
         # Pulls detections from the blackboard populated by Detect3DInArea
         self.add_input_key("detections_3d")
-        self.add_input_key(
-            "p_old"
-        )  # if using getpersonpoint after wait for person in area pass and remap
+        self.add_input_key("p_old")  
+        # if using getpersonpoint after wait for person in area pass and remap
 
         self.add_output_key("location")
 
         self.node = yasmin_ros.logger_node
         self.safe_distance = safe_distance
+        self.threshold = threshold
+        self.max_stationary = max_stationary
 
         # Internal Loop Memory Tracking
         self.stationary_count = 0
         self.p_old = None  # Stores the last known (x, y) map coordinate of the host
-        self.blacklist = []
-        # TODO:  Add later as an improvement but assume closest person is the correct one
 
         # Setup AMCL Pose Subscriber
         # self.current_robot_point = None
@@ -287,7 +285,6 @@ class EvaluateDetections(State):
 
     def get_closest_person(self, detections):
         """Iterates through points and finds best person to go to."""
-        #return detections[0].point  # TODO: temp
         if self.p_old is None:
             return detections[0].point
 
@@ -301,10 +298,10 @@ class EvaluateDetections(State):
                 best_person = d.point
 
         return best_person
-        # I believe the first point is the closest one but double check
-        # For each point check if in blacklist, if not choose point closest to p_old.
+
 
     def execute(self, blackboard: Blackboard):
+        # retrive robot's location in map
         try:
             transform = self.tf_buffer.lookup_transform(
                 "map",  
@@ -315,12 +312,12 @@ class EvaluateDetections(State):
             # transform.transform.translation acts perfectly as a 3D point (has .x and .y)
             self.current_robot_point = transform.transform.translation
         except Exception as e:
-            self.node.get_logger().warn(f"Waiting for map->base_footprint TF: {e}")
+            self.node.get_logger().warn(f"Waiting for map-base_footprint TF: {e}")
             return "paused"
 
+        # Handle blackboard data
         if "p_old" in blackboard.keys() and self.p_old is None:
             self.p_old = blackboard["p_old"]
-
 
         detections = blackboard['detections_3d']
         if self.p_old is None:
@@ -330,15 +327,13 @@ class EvaluateDetections(State):
             else:
                 self.node.get_logger().warn("Waiting for first person detection...")
                 return "paused"
-
+            
+        
+        distance_old_from_robot = self.calc_distance_between_points(self.p_old, self.current_robot_point)
         if len(detections) == 0:
 
             # Threshold where it is worth moving
-            threshold = 0.5
-            if (
-                self.calc_distance_between_points(self.current_robot_point, self.p_old)
-                > threshold
-            ):
+            if (distance_old_from_robot > self.threshold):
                 blackboard["location"] = self.create_goal_pose(
                     self.current_robot_point.x,
                     self.current_robot_point.y,
@@ -348,49 +343,52 @@ class EvaluateDetections(State):
                 )
                 blackboard["stop_robot_requested"] = False
                 self.stationary_count = 0
-                self.node.get_logger().warn("NO PERSON BUT NAV GOAL AVAILABLE")
+                self.node.get_logger().warn("NO PERSON BUT NAV GOAL IS VALID")
                 return "updated"
             else:
-                self.node.get_logger().warn("NO POSE OR PERSON FOUND")
+                self.node.get_logger().warn("NO PERSON FOUND. NO AVAILABLE GOAL")
+                blackboard["stop_robot_requested"] = True
                 return "person_lost"
 
         # handling people still in polygon
         if len(detections) > 1:
-            personPoint = self.get_closest_person(
-                detections
-            )  # Get closest person to p_old
+            personPoint = self.get_closest_person(detections)  # Get closest person to p_old
             self.node.get_logger().warn("MORE THAN ONE PERSON FOUND")
             if personPoint == None:  # If all detected people are 'blacklisted'
+                blackboard["stop_robot_requested"] = True
                 return "person_lost"
         else:
             self.node.get_logger().warn("ONE PERSON FOUND")
             personPoint = detections[0].point
 
-        # handle person
-        if (
-            self.calc_distance_between_points(personPoint, self.current_robot_point)
-            > self.safe_distance
-        ):
+        # Handle person
+        distance_person_moved = self.calc_distance_between_points(personPoint, self.p_old)
+
+        if distance_person_moved > self.threshold:
+            self.p_old = personPoint
+            self.stationary_count = 0  # Only reset if they actually walked away
+        else:
+            self.stationary_count += 1 # They are lingering in the same spot
+
+        distance_robot_from_person = self.calc_distance_between_points(self.p_old, self.current_robot_point)
+        if self.stationary_count >= self.max_stationary:
+            self.node.get_logger().warn(f"PERSON FOUND BUT STATIONARY: {self.stationary_count}/{self.max_stationary}")
+            return "person_stationary"
+        
+        if distance_robot_from_person > self.safe_distance:
             blackboard["location"] = self.create_goal_pose(
                 self.current_robot_point.x,
                 self.current_robot_point.y,
-                personPoint.x,
-                personPoint.y,
+                self.p_old.x, 
+                self.p_old.y,
                 offset=True,
             )
             blackboard["stop_robot_requested"] = False
-            self.p_old = personPoint
-            self.stationary_count = 0
-            self.node.get_logger().warn("PERSON FOUND AND SETTING GOAL")
+            self.node.get_logger().warn("PERSON FOUND UPDATING NEW GOAL")
             return "updated"
-        else:  # If person is too close or in same location
+        else:  # Robot is too close
             blackboard["stop_robot_requested"] = True
-            self.p_old = personPoint
-            self.stationary_count += 1
-            self.node.get_logger().warn(f"PERSON FOUND BUT STATIONARY: {self.stationary_count}/3")
-            if self.stationary_count >= 10:
-                self.node.get_logger().warn(f"PERSON STATIONARY")
-                return "person_stationary"
+            self.node.get_logger().warn(f"PERSON TOO CLOSE TO NAVIGATE")
             return "paused"
 
 
@@ -485,7 +483,6 @@ class FollowPerson(StateMachine):
             },
         )
 
-        # TRACK-NAV concur goes here
         self.add_state(
             "TRACK_AND_NAVIGATE",
             Concurrence(
@@ -535,7 +532,6 @@ class FollowPerson(StateMachine):
         self, blackboard
     ):  # will probably throw an error related to blackboard
         try:
-            yasmin.YASMIN_LOG_INFO(f"ENTERED PERSON POINT CALLBACK WITH DETECTIONS: {blackboard['detections_3d']}")
             if not blackboard["detections_3d"]:
                 return "failed"
             # Assuming the first detection is the point of interest

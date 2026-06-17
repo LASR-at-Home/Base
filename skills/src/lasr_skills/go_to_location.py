@@ -24,6 +24,7 @@ class GoToLocation(State):
         super().__init__(outcomes=["succeeded", "failed"])
         if not (location is not None or location_param is not None):
             self.add_input_key("location")
+        self.node = yasmin_ros.logger_node
 
         self.navigator = BasicNavigator()
         self.location = location
@@ -35,32 +36,30 @@ class GoToLocation(State):
             goal_pose = self.location
         elif self.location_param:
 
-            node = yasmin_ros.logger_node
-
             goal_pose = Pose(
                 position=Point(
                     x=float(
-                        node.get_parameter(f"{self.location_param}.position.x").value
+                        self.node.get_parameter(f"{self.location_param}.position.x").value
                     ),
                     y=float(
-                        node.get_parameter(f"{self.location_param}.position.y").value
+                        self.node.get_parameter(f"{self.location_param}.position.y").value
                     ),
                     z=float(
-                        node.get_parameter(f"{self.location_param}.position.z").value
+                        self.node.get_parameter(f"{self.location_param}.position.z").value
                     ),
                 ),
                 orientation=Quaternion(
                     x=float(
-                        node.get_parameter(f"{self.location_param}.orientation.x").value
+                        self.node.get_parameter(f"{self.location_param}.orientation.x").value
                     ),
                     y=float(
-                        node.get_parameter(f"{self.location_param}.orientation.y").value
+                        self.node.get_parameter(f"{self.location_param}.orientation.y").value
                     ),
                     z=float(
-                        node.get_parameter(f"{self.location_param}.orientation.z").value
+                        self.node.get_parameter(f"{self.location_param}.orientation.z").value
                     ),
                     w=float(
-                        node.get_parameter(f"{self.location_param}.orientation.w").value
+                        self.node.get_parameter(f"{self.location_param}.orientation.w").value
                     ),
                 ),
             )
@@ -80,7 +79,7 @@ class GoToLocation(State):
 
             if "stop_robot_requested" in blackboard.keys() and blackboard["stop_robot_requested"]:
                 self.navigator.cancelTask()
-                yasmin.YASMIN_LOG_WARN("Safety trigger: Person too close! Canceling Nav2 Task.")
+                self.node.get_logger().warn("Safety trigger: Person too close! Canceling Nav2 Task.")
                 return "failed"
             
             if self.is_canceled():
@@ -106,6 +105,7 @@ class GoToLocation(State):
 
                     # Only preempt Nav2 if the person has moved more than 0.25 meters
                     if distance_moved > 0.25:
+                        yasmin.YASMIN_LOG_INFO(f"Updated new goal {distance_moved}m away. ")
                         goal_pose = new_goal
                         goal_stamped = PoseStamped(
                             pose=goal_pose, header=Header(frame_id="map")

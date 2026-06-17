@@ -76,9 +76,6 @@ class Detect3DInArea(yasmin.StateMachine):
 
             for detection in detected_objects:
                 if math.isnan(detection.point.x):  # CHECK:  Potential broken? float vs string?
-                    yasmin.YASMIN_LOG_WARN(
-                        "NAN detection check work"
-                    )  # Remove line if works
                     continue
                 yasmin.YASMIN_LOG_INFO(
                     f"Detected a {detection.name} at x:{detection.point.x}, y:{detection.point.y}, z:{detection.point.z}"
@@ -113,8 +110,6 @@ class Detect3DInArea(yasmin.StateMachine):
                 and (detection.point.z <= z_sweep_max)
             ]
             # List of Detection3D msgs
-            yasmin.YASMIN_LOG_INFO(f"PRE-FILTERED DETECTIONS: {detected_objects}")
-            yasmin.YASMIN_LOG_INFO(f"POST-FILTERED DETECTIONS: {filtered_detections}")
             blackboard["detections_3d"] = filtered_detections
             return "succeeded"
 
