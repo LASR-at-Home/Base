@@ -7,79 +7,11 @@ Ported from SMACH to YASMIN.
 
 import yasmin
 import yasmin_ros
-from yasmin import Blackboard
-from std_msgs.msg import Header
-from geometry_msgs.msg import PointStamped
+from shapely.geometry import Polygon as ShapelyPolygon
 
-from lasr_skills.wait import Wait
-from lasr_skills.say import Say
+from lasr_skills import Say, DetectAllInPolygon, StartEyeTracker, StopEyeTracker
 
 from HRI.states import ClearSeatingDetections, GetGuestData, GetIntroductionStr, Recognise
-from lasr_skills.look_to_point import LookToPoint
-
-
-class GetLookPoint(yasmin.State):
-    """
-    Builds a PointStamped from seated_guest_locs[person_index] and stores
-    it in the blackboard.
-    Replaces the smach.CBState that did the same in the SMACH version.
-    """
-
-    def __init__(self):
-        super().__init__(outcomes=["succeeded", "failed"])
-        self.add_input_key("seated_guest_locs")
-        self.add_input_key("person_index")
-        self.add_output_key("pointstamped")
-        self.node = yasmin_ros.logger_node
-
-    def execute(self, blackboard: Blackboard) -> str:
-        index = blackboard["person_index"]
-        if index < len(blackboard["seated_guest_locs"]):
-            header = Header()
-            header.frame_id = "map"
-            look_point = PointStamped(
-                header=header,
-                point=blackboard["seated_guest_locs"][index],
-            )
-            blackboard["pointstamped"] = look_point
-            yasmin.YASMIN_LOG_INFO(
-                f"Look point set to: {look_point.point.x}, "
-                f"{look_point.point.y}, {look_point.point.z}"
-            )
-            return "succeeded"
-        else:
-            yasmin.YASMIN_LOG_ERROR("Index out of bounds for seated_guest_locs.")
-            return "failed"
-
-
-class CheckDone(yasmin.State):
-    """
-    Replaces the smach.Iterator exhausted_outcome logic.
-    Increments person_index and loops back or exits when all guests introduced.
-    """
-
-    def __init__(self):
-        super().__init__(outcomes=["continue", "done"])
-        self.add_input_key("person_index")
-        self.add_input_key("seated_guest_locs")
-        self.add_output_key("person_index")
-
-    def execute(self, blackboard: Blackboard) -> str:
-        next_index = blackboard["person_index"] + 1
-        if next_index < len(blackboard["seated_guest_locs"]):
-            blackboard["person_index"] = next_index
-            return "continue"
-        return "done"
-
-
-class ResetIndex(yasmin.State):
-    def __init__(self):
-        super().__init__(outcomes=["succeeded"])
-        self.add_output_key("person_index")
-
-    def execute(self, blackboard: Blackboard) -> str:
-        blackboard["guest_id"] = 'guest1'
-        return "succeeded"
 
 
 class Introduce(yasmin.StateMachine):
@@ -96,137 +28,163 @@ class Introduce(yasmin.StateMachine):
         - person_index: Set to 0 before calling sm()
     """
 
-    def __init__(self, can_detect_second_guest: bool = True):
+    def __init__(self):
         super().__init__(outcomes=["succeeded", "failed"])
         self.add_input_key("guest_data")
         self.add_input_key("guest_seat_point")
         self.add_input_key("seated_guest_locs")
-
-        self.add_state(
-            "RESET_INDEX",
-            ResetIndex(),
-            transitions={"succeeded": "GET_LOOK_POINT_1"},
+        
+        self._node = yasmin_ros.logger_node
+        
+        self.seating_area = ShapelyPolygon(
+            [
+                self._node.get_parameter("seat_area.top_left").value,
+                self._node.get_parameter("seat_area.top_right").value,
+                self._node.get_parameter("seat_area.bottom_right").value,
+                self._node.get_parameter("seat_area.bottom_left").value,
+            ]
         )
-        # Builds look point from seated_guest_locs[person_index]
+        
+        
+        loop_state = yasmin.CbState(outcomes=['succeeded', 'continue'], callback=self._loop_person_index)
+        loop_state.add_input_key('person_index')
+        loop_state.add_input_key('people_detected')
+        loop_state.add_input_key('guest_data')
+        loop_state.add_output_key('person_index') 
+        loop_state.add_output_key('person_point') 
+        
+        guest_loop = yasmin.CbState(outcomes=['succeeded', 'continue'], callback=self._loop_guest)
+        guest_loop.add_input_key('guest_data')
+        guest_loop.add_output_key('guest_data')
+        
+        
         self.add_state(
-            "GET_LOOK_POINT_1",
-            GetLookPoint(),
-            transitions={
-                "succeeded": "LOOK_TO_GUEST_1",
-                "failed": "failed",
-            },
+            'RESET_SEATING_DETECTIONS',
+            ClearSeatingDetections(),
+            transitions={'succeeded': 'FIND_PEOPLE', 'failed': 'failed'}
         )
-
+        
         self.add_state(
-            "LOOK_TO_GUEST_1",
-            LookToPoint(),
-            transitions={
-                "succeeded": "WAIT",
-                "aborted": "failed",
-            },
-            # remappings={"look_point": "pointstamped"},
+            'FIND_PEOPLE',
+            DetectAllInPolygon(
+                polygon=self.seating_area,
+                object_filter=['person'],
+                min_coverage=1.0,
+                min_new_object_dist=0.50,
+                min_confidence=0.5,
+            ),
+            transitions = {'succeeded': 'LOOP_PERSON_STATE', 'failed': 'failed'},
+            remappings={'detected_objects': 'people_detected'}
         )
-
+        
         self.add_state(
-            "WAIT",
-            Wait(0.25),
+            'LOOP_PERSON_STATE',
+            loop_state,
+            transitions={'succeeded': 'GRAB_GUEST_POINT', 'continue': 'LOOK_AT_PERSON'}
+        )
+        
+        self.add_state(
+            'LOOK_AT_PERSON',
+            StartEyeTracker(),
             transitions={
                 "succeeded": "RECOGNISE",
-                "failed": "failed",
-            },
-        )
-
-        self.add_state(
-            "RECOGNISE",
-            Recognise(can_detect_second_guest=can_detect_second_guest),
-            transitions={
-                "succeeded": "GET_GUEST_DATA_1",
-                "failed": "failed",
-            },
-        )
-
-        self.add_state(
-            "GET_GUEST_DATA_1",
-            GetGuestData(guest_to_introduce='guest2', guest_to_introduce_to='guest1'),
-            transitions={
-                "succeeded": "GET_INTRODUCTION_STR_1",
-                "failed": "failed",
-            },
-        )
-
-        self.add_state(
-            "GET_INTRODUCTION_STR_1",
-            GetIntroductionStr(),
-            transitions={
-                "succeeded": "SAY_INTRODUCTION",
-                "failed": "failed",
-            },
-        )
-
-        self.add_state(
-            "SAY_INTRODUCTION",
-            Say(),
-            transitions={
-                "succeeded": "LOOK_TO_GUEST_2",
-                "aborted": "LOOK_TO_GUEST_2",
-                "canceled": "LOOK_TO_GUEST_2",
-            },
-        )
-
-        self.add_state(
-            "LOOK_TO_GUEST_2",
-            LookToPoint(),
-            transitions={
-                "succeeded": "GET_GUEST_DATA_2",
-                "aborted": "failed",
-                "timeout": "GET_GUEST_DATA_2",
-            },
-            # remappings={"pointstamped": "guest_seat_point"},
-        )
-
-        self.add_state(
-            "GET_GUEST_DATA_2",
-            GetGuestData(guest_to_introduce='guest1', guest_to_introduce_to='guest2'),
-            transitions={
-                "succeeded": "GET_INTRODUCTION_STR_2",
-                "failed": "failed",
-            },
-        )
-
-        self.add_state(
-            "GET_INTRODUCTION_STR_2",
-            GetIntroductionStr(),
-            transitions={
-                "succeeded": "SAY_INTRODUCTION_2",
-                "failed": "failed",
-            },
-        )
-
-        self.add_state(
-            "SAY_INTRODUCTION_2",
-            Say(),
-            transitions={
-                "succeeded": "CHECK_DONE",
                 "aborted": "failed",
                 "canceled": "failed",
+                "timeout": "RECOGNISE",
+            }
+        )
+        
+        self.add_state(
+            'RECOGNISE',
+            Recognise(),
+            transitions={
+                'succeeded': 'STOP_LOOK_AT_PERSON',
+                'aborted': 'failed',
+                'no_detections': 'STOP_LOOK_AT_PERSON'
+            }
+        )
+        
+        self.add_state(
+            'STOP_LOOK_AT_PERSON',
+            StopEyeTracker(),
+            transitions={
+                "succeeded": "LOOP_PERSON_STATE",
+                "aborted": "failed",
+                "canceled": "failed",
+                "timeout": "failed",
+            },
+        )
+        
+        self.add_state(
+            'GRAB_GUEST_POINT',
+            guest_loop,
+            transitions={'succeeded': 'succeeded', 'continue': 'START_EYE_TRACKING_GUEST'}
+        )
+        
+        self.add_state(
+            'START_EYE_TRACKING_GUEST',
+            StartEyeTracker(),
+            transitions={
+                "succeeded": "RECOGNISE",
+                "aborted": "failed",
+                "canceled": "failed",
+                "timeout": "RECOGNISE",
+            },
+            remappings={'person_point': 'guest_point'}
+        )
+        
+        self.add_state(
+            'GET_INTRODUCTION_STR',
+            GetIntroductionStr(),
+            transitions={
+                'succeeded': 'SAY_INTRODUCTION',
+                'failed': 'failed'
+            }
+        )
+        
+        self.add_state(
+            'SAY_INTRODUCTION',
+            Say(),
+            transitions={
+                "succeeded": "STOP_EYE_TRACKING",
+                "aborted": "STOP_EYE_TRACKING",
+                "canceled": "STOP_EYE_TRACKING",
+            },
+        )
+        
+        self.add_state(
+            'STOP_EYE_TRACKING',
+            StopEyeTracker(),
+            transitions={
+                "succeeded": "GRAB_GUEST_POINT",
+                "aborted": "failed",
+                "canceled": "failed",
+                "timeout": "failed",
             },
         )
 
-        # Replaces smach.Iterator exhausted_outcome
-        self.add_state(
-            "CHECK_DONE",
-            CheckDone(),
-            transitions={
-                "continue": "GET_LOOK_POINT_1",
-                "done": "CLEAR_SEATING_DETECTIONS",
-            },
-        )
-
-        self.add_state(
-            "CLEAR_SEATING_DETECTIONS",
-            ClearSeatingDetections(),
-            transitions={
-                "succeeded": "succeeded",
-                "failed": "failed",
-            },
-        )
+    def _loop_person_index(self, blackboard):
+        if blackboard['guest_data']['guest1']['seated_point'] is not None and blackboard['guest_data']['guest2']['seated_point'] is not None:
+            return 'succeeded'
+        elif blackboard['person_index'] is None:
+            blackboard['person_index'] = 0
+        elif blackboard['person_index'] < len(blackboard['people_detected']) - 1:
+            blackboard['person_index'] += 1
+        else:
+            return 'succeeded'
+        
+        index = blackboard['person_index']
+        blackboard['person_point'] = blackboard['people_detected'][index].point
+        return 'continue'
+    
+    def _loop_guest(self, blackboard):
+        if blackboard['guest_data']['guest1']['seating_detection'] and blackboard['guest_data']['guest2']['seating_detection']:
+            return 'succeeded'
+        
+        id = 'guest1' if not blackboard['guest_data']['guest1']['seating_detection'] else 'guest2'
+        
+        blackboard['guest_point'] = blackboard['guest_data'][id]['seated_point'] 
+        blackboard['guest_data'][id]['seating_detection'] = True
+        blackboard['introduce_to'] = id
+        blackboard['relevant_guest_data'] = blackboard['guest_data']['guest2'] if id == 'guest1' else blackboard['guest_data']['guest1']
+        return 'continue'

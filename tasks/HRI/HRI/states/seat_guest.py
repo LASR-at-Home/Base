@@ -66,36 +66,6 @@ class ProcessDetections(State):
         self._tf_buffer = tf.Buffer(cache_time=Duration(seconds=10.0))
         self._tf_listener = tf.TransformListener(self._tf_buffer, self._node)
 
-    def _determine_side_of_sofa(self, sofa_detection: Detection3D) -> str:
-        """Determines which side of the sofa is empty, in order to seat
-        the guest there.
-
-        Args:
-            sofa_detection (Detection3D): Detection of the other
-            guest who is already sat on the sofa.
-
-        Returns:
-            str: "left" or "right" - which side of the sofa is empty.
-        """
-        sofa_guest_point = sofa_detection.point
-
-        if self._left_sofa_area.contains(
-            ShapelyPoint(sofa_guest_point.x, sofa_guest_point.y)
-        ):
-            result = "right"
-        elif self._right_sofa_area.contains(
-            ShapelyPoint(sofa_guest_point.x, sofa_guest_point.y)
-        ):
-            result = "left"
-        else:
-            yasmin.YASMIN_LOG_WARN(
-                "Sofa guest point is not within the left or right sofa area. "
-                "Defaulting to 'right'."
-            )
-            result = "right"
-
-        return result
-
     def execute(self, blackboard):
         """
         Input:
@@ -191,7 +161,7 @@ class SeatGuest(StateMachine):
             "RESET_HEAD_1",
             PlayMotion(motion_name="look_centre"),
             transitions={
-                "succeeded": "DETECT_NON_SOFA",
+                "succeeded": "DETECT_ALL_PEOPLE_SEATS",
                 "aborted": "failed",
                 "canceled": "failed",
             },

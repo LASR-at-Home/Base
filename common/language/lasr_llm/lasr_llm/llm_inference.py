@@ -16,7 +16,7 @@ import torch
 import json
 from datetime import datetime
 
-from utils import (
+from .utils import (
     create_query,
     truncate_llm_output,
     parse_llm_output_to_dict,
@@ -39,7 +39,7 @@ class ModelConfig:
     )
     task: Optional[str] = None  # For pipeline models
     quantize: bool = True
-    ollama_host: str = "http://localhost:11434"  # Ollama host for LLMs
+    ollama_host: str = "http://127.0.0.1:11434"  # Ollama host for LLMs
 
 
 models = {
@@ -55,7 +55,7 @@ class LLMInference:
     def __init__(self, model_config: ModelConfig):
         self.config = model_config
         self.logger = logging.getLogger(__name__)
-        self.model_name = self.config.model_name
+        self.model_name = models["Qwen"]
 
         self.num_gpu = self._detect_gpu_layers()
         self.client = Client(host=self.config.ollama_host)

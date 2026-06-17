@@ -53,8 +53,6 @@ class Detect3D(ServiceState):
         self.confidence = confidence
         self.target_frame = target_frame
 
-        self.node = yasmin_ros.logger_node
-
         camera_qos = QoSProfile(
             depth=10,
             reliability=ReliabilityPolicy.BEST_EFFORT,
@@ -65,7 +63,7 @@ class Detect3D(ServiceState):
         self.data = None
         self.image_msg = None
 
-        self.node.create_subscription(
+        self._node.create_subscription(
             CameraInfo,
             self.depth_camera_info_topic,
             self._cache_camera_info,
@@ -73,11 +71,11 @@ class Detect3D(ServiceState):
         )
 
         image_sub = message_filters.Subscriber(
-            self.node, Image, self.image_topic, qos_profile=camera_qos
+            self._node, Image, self.image_topic, qos_profile=camera_qos
         )
 
         depth_sub = message_filters.Subscriber(
-            self.node, Image, self.depth_image_topic, qos_profile=camera_qos
+            self._node, Image, self.depth_image_topic, qos_profile=camera_qos
         )
 
         self.ts = message_filters.ApproximateTimeSynchronizer(
@@ -111,7 +109,7 @@ class Detect3D(ServiceState):
         deadline = time.time() + 30.0
         while self.data is None:
             if time.time() > deadline:
-                self.node.get_logger().error(
+                yasmin.YASMIN_LOG_ERROR(
                     f"Timed out waiting for synced rgb/depth frames. "
                     f"Check that {self.image_topic} and {self.depth_image_topic} are publishing and roughly synchronized."
                 )
@@ -136,7 +134,7 @@ class Detect3D(ServiceState):
     def response_handler(self, blackboard, response):
         yasmin.YASMIN_LOG_INFO(f"Got {len(response.detected_objects)} detections")
         for det in response.detected_objects:
-            self.node.get_logger().info(
+            yasmin.YASMIN_LOG_INFO(
                 f"  {det.name} at ({det.point.x:.2f}, {det.point.y:.2f}, {det.point.z:.2f})"
             )
 
