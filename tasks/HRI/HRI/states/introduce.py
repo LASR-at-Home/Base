@@ -14,10 +14,7 @@ from geometry_msgs.msg import PointStamped
 from lasr_skills.wait import Wait
 from lasr_skills.say import Say
 
-from .clearSeatingDetections import ClearSeatingDetections
-from .getGuestData import GetGuestData
-from .getIntroductionStr import GetIntroductionStr
-from .recognise import Recognise
+from HRI.states import ClearSeatingDetections, GetGuestData, GetIntroductionStr, Recognise
 from lasr_skills.look_to_point import LookToPoint
 
 
@@ -81,7 +78,7 @@ class ResetIndex(yasmin.State):
         self.add_output_key("person_index")
 
     def execute(self, blackboard: Blackboard) -> str:
-        blackboard["person_index"] = 0
+        blackboard["guest_id"] = 'guest1'
         return "succeeded"
 
 

@@ -140,7 +140,7 @@ class LookAndGreetGuest(yasmin.StateMachine):
             "GET_NAME_DRINK_FACE",
             conc_name_drink_face,
             transitions={
-                'succeeded': 'succeeded',
+                'succeeded': transition,
                 "failed": "failed",
                 "failed_vision": "failed",
                 "failed_face": "failed",
@@ -150,7 +150,7 @@ class LookAndGreetGuest(yasmin.StateMachine):
         
         self.add_state(
             'SAY_BAG',
-            Say(text='I see you have a bag, I am going to grab the bag.'),
+            Say(text='I see you have a bag for me.'),
             transitions={
                 "succeeded": "STOP_EYE_TRACKING",
                 "aborted": "STOP_EYE_TRACKING",

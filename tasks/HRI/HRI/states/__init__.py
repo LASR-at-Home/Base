@@ -10,3 +10,8 @@ from .get_attributes import GetGuestAttributes
 from .get_person_point import GetPersonPoint
 from .greet import LookAndGreetGuest
 from .introduce import Introduce
+
+from .clearSeatingDetections import ClearSeatingDetections
+from .getGuestData import GetGuestData
+from .getIntroductionStr import GetIntroductionStr
+from .recognise import Recognise
