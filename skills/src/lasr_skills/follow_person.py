@@ -53,11 +53,19 @@ class WaitForNavGoal(State):
         self.node = yasmin_ros.logger_node
         self.last_goal = None
 
-    def execute(self, blackboard: Blackboard):
+        self.add_input_key("stop_robot_requested")
+        self.add_input_key("location")
 
+    def execute(self, blackboard: Blackboard):
+        if "stop_robot_requested" not in blackboard.keys() or not blackboard["stop_robot_requested"]:
+            blackboard["stop_robot_requested"] = False
+        if "location" not in blackboard.keys() or not blackboard["location"]:
+            blackboard["location"] = None
+            
         while not self.is_canceled() and rclpy.ok():
-            stop_requested = blackboard.get("stop_robot_requested", False)
-            current_goal = blackboard.get("location")
+            stop_requested = False
+            stop_requested = blackboard['stop_robot_requested']
+            current_goal = blackboard['location']
 
             # Only proceed if we aren't told to stop, AND the goal is actually new
             if (
@@ -93,7 +101,7 @@ class Navigator(StateMachine):
 
         self.add_state(
             "DRIVE_TO_GOAL",
-            GoToLocation(),
+            GoToLocation(updatable=True),
             transitions={
                 "succeeded": "WAIT_FOR_COMMAND",  # Arrived naturally? Wait for next command.
                 "failed": "WAIT_FOR_COMMAND",  # Canceled by dynamic preemption? Loop back and check.
@@ -407,7 +415,7 @@ class TrackPerson(StateMachine):
             Detect3DInArea(filter=["person"]),
             transitions={
                 "succeeded": "EVALUATE_DETECTIONS",
-                "failed": "EVALUATE_DETECTIONS",  # Go to evaluate anyway so the timeout logic can handle the empty list
+                "failed": "failed",
             },
         )
 
@@ -426,10 +434,9 @@ class TrackPerson(StateMachine):
         # 4. Short Loop Buffer
         self.add_state(
             "WAIT_TICK",
-            Wait(
-                1
-            ),  # 0.5s is usually perfect for fluid tracking without overwhelming CPU
-            transitions={"succeeded": "UPDATE_POLYGON", "failed": "UPDATE_POLYGON"},
+            Wait(1),  
+            # 0.5s is usually perfect for fluid tracking without overwhelming CPU
+            transitions={"succeeded": "UPDATE_POLYGON", "failed": "failed"},
         )
 
 
@@ -472,9 +479,9 @@ class FollowPerson(StateMachine):
             "SAY_FOLLOW",
             Say(text="I will now follow you. "),
             transitions={
-                "succeeded": "succeeded",
-                "aborted": "failed",
-                "canceled": "failed",
+                "succeeded": "TRACK_AND_NAVIGATE",
+                "aborted": "TRACK_AND_NAVIGATE",
+                "canceled": "TRACK_AND_NAVIGATE",
             },
         )
 
@@ -539,31 +546,40 @@ class FollowPerson(StateMachine):
             return "failed"
 
 
+from rclpy.node import Node
+try:
+    from rclpy.executors import EventsExecutor as Executor
+except ImportError:
+    from rclpy.executors import MultiThreadedExecutor as Executor
+from threading import Thread
+class Follow_node(Node):
+    def __init__(self):
+        super().__init__("follow_test")
+
+        self._executor = Executor()
+        self._executor.add_node(self)
+        self._spin_thread = Thread(target=self._executor.spin)
+        self._spin_thread.start()
+
 def main():
     rclpy.init()
-    yasmin_ros.set_ros_loggers()
 
-    node = yasmin_ros.logger_node
-    try:
-        sm = TrackPerson()
-        #sm = TrackPerson()
-        bb = Blackboard()
-        bb["z_sweep_min"] = -10
-        bb["z_sweep_max"] = 50
+    node = Follow_node()
+    yasmin_ros.set_ros_loggers(node)
 
-        YasminViewerPub(sm, "Follow_Person")
+    sm = FollowPerson()
+    bb = Blackboard()
+    bb["z_sweep_min"] = -10
+    bb["z_sweep_max"] = 50
 
-        outcome = sm(bb)
+    YasminViewerPub(sm, "Follow_Person")
 
-        yasmin.YASMIN_LOG_INFO(outcome)
-    except Exception as e:
-        yasmin.YASMIN_LOG_WARN(f"Exception in execution: {e}")
-    finally:
-        if node:
-            node.destroy_node()
+    outcome = sm(bb)
 
-        if rclpy.ok():
-            rclpy.shutdown()
+    yasmin.YASMIN_LOG_INFO(outcome)
+
+    node.destroy_node()
+    rclpy.shutdown()
 
 
 

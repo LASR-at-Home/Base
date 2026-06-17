@@ -17,7 +17,7 @@ class CheckForPerson(State):
 
     def execute(self, blackboard):
         yasmin.YASMIN_LOG_INFO(f"CHECKING FOR PERSON: {blackboard['detections_3d']}")
-        if self.is_canceled():
+        if self.is_canceled() or not rclpy.ok():
             yasmin.YASMIN_LOG_INFO("CHECK CANCELLED")
             return "canceled"
             

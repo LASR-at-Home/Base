@@ -18,6 +18,7 @@ class GoToLocation(State):
         self,
         location: Union[Pose, None] = None,
         location_param: Union[str, None] = None,
+        updatable: bool = False,
     ):
 
         super().__init__(outcomes=["succeeded", "failed"])
@@ -27,6 +28,7 @@ class GoToLocation(State):
         self.navigator = BasicNavigator()
         self.location = location
         self.location_param = location_param  # the pose (eg. 'start_pose', 'wait_pose',
+        self.updatable = updatable
 
     def execute(self, blackboard):
         if self.location:
@@ -74,11 +76,21 @@ class GoToLocation(State):
         while (
             not self.navigator.isTaskComplete() and rclpy.ok()
         ):  # Update to make it check if the goal has been updated? (blackboard["location"] is different)
+            time.sleep(0.2)
+
+            if "stop_robot_requested" in blackboard.keys() and blackboard["stop_robot_requested"]:
+                self.navigator.cancelTask()
+                yasmin.YASMIN_LOG_WARN("Safety trigger: Person too close! Canceling Nav2 Task.")
+                return "failed"
+            
             if self.is_canceled():
                 if not self.navigator.isTaskComplete():
                     self.navigator.cancelTask()
 
                 return "failed"
+            
+            if not self.updatable:
+                continue
 
             if (
                 not (self.location or self.location_param)
@@ -86,18 +98,28 @@ class GoToLocation(State):
             ):
                 new_goal = blackboard["location"]
 
-                if new_goal and new_goal != goal_pose:
-                    goal_pose = new_goal
-                    goal_stamped = PoseStamped(
-                        pose=goal_pose, header=Header(frame_id="map")
-                    )
-                    self.navigator.goToPose(goal_stamped)
+                if new_goal:
+                    # Calculate physical distance between the current goal and the new goal
+                    dx = new_goal.position.x - goal_pose.position.x
+                    dy = new_goal.position.y - goal_pose.position.y
+                    distance_moved = (dx**2 + dy**2)**0.5
 
-            time.sleep(1)
+                    # Only preempt Nav2 if the person has moved more than 0.25 meters
+                    if distance_moved > 0.25:
+                        goal_pose = new_goal
+                        goal_stamped = PoseStamped(
+                            pose=goal_pose, header=Header(frame_id="map")
+                        )
+                        self.navigator.goToPose(goal_stamped)
 
         if not rclpy.ok() or self.is_canceled():
+            if not self.navigator.isTaskComplete():
+                self.navigator.cancelTask()
+                time.sleep(0.2)
             return "failed"
 
+        if self.is_canceled():
+            return "failed"
         return (
             "succeeded"
             if self.navigator.getResult() == TaskResult.SUCCEEDED
