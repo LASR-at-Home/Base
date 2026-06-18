@@ -383,7 +383,7 @@ class IterateThroughPoints(yasmin.StateMachine):
         min_confidence: float = 0.5,
         min_new_object_dist: float = 0.1,
     ):
-        super().__init__(outcomes=["succeeded", "failed"], handle_sigint=True)
+        super().__init__(outcomes=["succeeded", "failed"])
 
         get_point_state = yasmin.CbState(
             outcomes=["succeeded", "failed", "continue"], callback=self._get_look_point

@@ -5,7 +5,7 @@ from yasmin_ros import set_ros_loggers
 import rclpy
 import os
 
-HAS_TTS_MSGS: bool = False
+HAS_TTS_MSGS: bool = True
 
 
 try:

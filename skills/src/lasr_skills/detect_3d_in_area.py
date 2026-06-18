@@ -127,7 +127,7 @@ class Detect3DInArea(yasmin.StateMachine):
         z_max: Optional[float] = None,
     ):
 
-        super().__init__(outcomes=["succeeded", "failed"], handle_sigint=True)
+        super().__init__(outcomes=["succeeded", "failed"])
         if area_polygon is None:
             self.add_input_key("polygon")
         if z_min is None and z_max is None:
