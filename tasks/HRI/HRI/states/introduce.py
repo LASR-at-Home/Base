@@ -9,7 +9,10 @@ import yasmin
 import yasmin_ros
 from shapely.geometry import Polygon as ShapelyPolygon
 
-from lasr_skills import Say, DetectAllInPolygon, StartEyeTracker, StopEyeTracker, PlayMotion
+from lasr_skills import Say, DetectAllInPolygon, StartEyeTracker, StopEyeTracker, PlayMotion, Wait, LookToPoint
+
+from geometry_msgs.msg import Point, PointStamped, Pose
+from std_msgs.msg import Header
 
 from HRI.states import ClearSeatingDetections, GetGuestData, GetIntroductionStr, Recognise
 
@@ -85,34 +88,24 @@ class Introduce(yasmin.StateMachine):
         
         self.add_state(
             'LOOK_AT_PERSON',
-            StartEyeTracker(),
+            LookToPoint(),
             transitions={
                 "succeeded": "RECOGNISE",
-                "aborted": "failed",
+                "aborted": "RECOGNISE",
                 "canceled": "failed",
                 "timeout": "RECOGNISE",
-            }
+            },
+            remappings={'pointstamped': 'person_point_stamped'}
         )
         
         self.add_state(
             'RECOGNISE',
             Recognise(),
             transitions={
-                'succeeded': 'STOP_LOOK_AT_PERSON',
+                'succeeded': 'RESET_HEAD_1',
                 'aborted': 'failed',
-                'no_detections': 'STOP_LOOK_AT_PERSON'
+                'no_detections': 'RESET_HEAD_1'
             }
-        )
-        
-        self.add_state(
-            'STOP_LOOK_AT_PERSON',
-            StopEyeTracker(),
-            transitions={
-                "succeeded": "RESET_HEAD_1",
-                "aborted": "failed",
-                "canceled": "failed",
-                "timeout": "failed",
-            },
         )
         
         self.add_state(
@@ -128,48 +121,37 @@ class Introduce(yasmin.StateMachine):
         self.add_state(
             'GRAB_GUEST_POINT',
             guest_loop,
-            transitions={'succeeded': 'succeeded', 'continue': 'START_EYE_TRACKING_GUEST'}
-        )
-        
-        self.add_state(
-            'START_EYE_TRACKING_GUEST',
-            StartEyeTracker(),
-            transitions={
-                "succeeded": "GET_INTRODUCTION_STR",
-                "aborted": "failed",
-                "canceled": "failed",
-                "timeout": "GET_INTRODUCTION_STR",
-            },
-            remappings={'person_point': 'guest_point'}
+            transitions={'succeeded': 'succeeded', 'continue': 'GET_INTRODUCTION_STR'}
         )
         
         self.add_state(
             'GET_INTRODUCTION_STR',
             GetIntroductionStr(),
             transitions={
-                'succeeded': 'SAY_INTRODUCTION',
+                'succeeded': 'LOOK_AT_GUEST',
                 'failed': 'failed'
             }
+        )        
+        
+        self.add_state(
+            'LOOK_AT_GUEST',
+            LookToPoint(),
+            transitions={
+                "succeeded": "SAY_INTRODUCTION",
+                "aborted": "SAY_INTRODUCTION",
+                "canceled": "failed",
+                "timeout": "SAY_INTRODUCTION",
+            },
+            remappings={'pointstamped': 'guest_point_stamped'}
         )
         
         self.add_state(
             'SAY_INTRODUCTION',
             Say(),
             transitions={
-                "succeeded": "STOP_EYE_TRACKING",
-                "aborted": "STOP_EYE_TRACKING",
-                "canceled": "STOP_EYE_TRACKING",
-            },
-        )
-        
-        self.add_state(
-            'STOP_EYE_TRACKING',
-            StopEyeTracker(),
-            transitions={
                 "succeeded": "RESET_HEAD_2",
-                "aborted": "failed",
-                "canceled": "failed",
-                "timeout": "failed",
+                "aborted": "RESET_HEAD_2",
+                "canceled": "RESET_HEAD_2",
             },
         )
         
@@ -195,10 +177,12 @@ class Introduce(yasmin.StateMachine):
 
         if guest1point is not None and guest2point is not None:
             return 'succeeded'
-        elif index < people_detected - 1:
-            blackboard['person_index'] = index
-            blackboard['person_point'] = blackboard['people_detected'][index].point
+        elif index < people_detected:
+            point = blackboard['people_detected'][index].point
+            point_stamped = PointStamped(header=Header(frame_id='map'), point=point)
+            blackboard['person_point_stamped'] = point_stamped
             index += 1
+            blackboard['person_index'] = index
             return 'continue'
         
         return 'failed'
@@ -209,7 +193,10 @@ class Introduce(yasmin.StateMachine):
         
         id = 'guest1' if not blackboard['guest_data']['guest1']['seating_detection'] else 'guest2'
         
-        blackboard['guest_point'] = blackboard['guest_data'][id]['seated_point'] 
+        point = blackboard['guest_data'][id]['seated_point']
+        blackboard['guest_point_stamped'] = PointStamped(header=Header(frame_id='map'), point=point)
+        yasmin.YASMIN_LOG_INFO(id)
+        yasmin.yasmin_LOG_INFO(str(point))
         blackboard['guest_data'][id]['seating_detection'] = True
         blackboard['introduce_to'] = blackboard['guest_data'][id]['name']
         blackboard['relevant_guest_data'] = blackboard['guest_data']['guest2'] if id == 'guest1' else blackboard['guest_data']['guest1']

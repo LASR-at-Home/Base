@@ -59,16 +59,14 @@ class Detect3D(ServiceState):
             history=HistoryPolicy.KEEP_LAST,
         )
 
-        self.cam_info = None
         self.data = None
         self.image_msg = None
 
-        self._node.create_subscription(
-            CameraInfo,
-            self.depth_camera_info_topic,
-            self._cache_camera_info,
-            qos_profile=camera_qos,
+        cam_info = message_filters.Subscriber(
+            self._node, CameraInfo, self.depth_camera_info_topic, qos_profile=camera_qos
         )
+        
+        self.cache = message_filters.Cache(cam_info)
 
         image_sub = message_filters.Subscriber(
             self._node, Image, self.image_topic, qos_profile=camera_qos
@@ -88,23 +86,9 @@ class Detect3D(ServiceState):
         if self.data is None:
             self.data = (image_msg, depth_msg)
 
-    def _cache_camera_info(self, msg: CameraInfo) -> None:
-        if self.cam_info is None:
-            self.cam_info = msg
-
     def _create_req(self, blackboard):
         self.data = None
         self.image_msg = None
-
-        if self.cam_info is None:
-            deadline = time.time() + 5.0
-            while self.cam_info is None and time.time() < deadline:
-                time.sleep(0.25)
-            if self.cam_info is None:
-                yasmin.YASMIN_LOG_ERROR(
-                    f"Timed out waiting for camera info on {self.depth_camera_info_topic}"
-                )
-                return "failed"
 
         deadline = time.time() + 30.0
         while self.data is None:
@@ -121,7 +105,7 @@ class Detect3D(ServiceState):
         req = YoloDetection3D.Request(
             image_raw=image_msg,
             depth_image=depth_msg,
-            depth_camera_info=self.cam_info,
+            depth_camera_info=self.cache.getLast(),
             model=self.model,
             confidence=self.confidence,
             filter=self.filter,

@@ -82,11 +82,10 @@ class Recognise(yasmin_ros.ServiceState):
             for detection in response.detections:
                 if detection.name == 'unknown':
                     continue
-                if detection.name == 'guest1' or detection.name == 'guest2':
-                    yasmin.YASMIN_LOG_INFO(detection.name)
-                    yasmin.YASMIN_LOG_INFO(str(detection.point))
-                    blackboard['guest_data'][detection.name]['seated_point'] = detection.point
-                    return 'succeeded'
+                yasmin.YASMIN_LOG_INFO(detection.name)
+                yasmin.YASMIN_LOG_INFO(str(detection.point))
+                blackboard['guest_data'][detection.name]['seated_point'] = detection.point
+                return 'succeeded'
         
         return 'aborted'
         

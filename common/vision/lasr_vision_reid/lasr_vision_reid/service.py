@@ -374,24 +374,25 @@ class ReID(Node):
         )
 
         for i, detection in enumerate(response.detections):
-            marker = Marker()
-            marker.header.frame_id = frame_id
-            marker.header.stamp = (
-                self.get_clock().now().to_msg()
-            )  # Convert to message type
-            marker.id = i
-            marker.type = Marker.SPHERE
-            marker.action = Marker.ADD
-            marker.pose.position = detection.point
-            marker.scale.x = 0.1
-            marker.scale.y = 0.1
-            marker.scale.z = 0.1
-            marker.color.r = 0.0
-            marker.color.g = 0.5
-            marker.color.b = 1.0
-            marker.color.a = 1.0
+            if detection.name == 'guest1' or detection.name =='guest2':
+                marker = Marker()
+                marker.header.frame_id = frame_id
+                marker.header.stamp = (
+                    self.get_clock().now().to_msg()
+                )  # Convert to message type
+                marker.id = i
+                marker.type = Marker.SPHERE
+                marker.action = Marker.ADD
+                marker.pose.position = detection.point
+                marker.scale.x = 0.1
+                marker.scale.y = 0.1
+                marker.scale.z = 0.1
+                marker.color.r = 0.0
+                marker.color.g = 0.5
+                marker.color.b = 1.0
+                marker.color.a = 1.0
 
-            self._marker_publisher.publish(marker)
+                self._marker_publisher.publish(marker)
 
 
 def main():
