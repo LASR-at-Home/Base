@@ -1,6 +1,13 @@
 import yasmin
 
-from lasr_skills import Say, StartEyeTracker, WaitForPersonInArea, AskAndListen, ReceiveObject, StopEyeTracker
+from lasr_skills import (
+    Say,
+    StartEyeTracker,
+    WaitForPersonInArea,
+    AskAndListen,
+    ReceiveObject,
+    StopEyeTracker,
+)
 from HRI.states import (
     GetNameAndDrink,
     GetGuestAttributes,
@@ -133,33 +140,33 @@ class LookAndGreetGuest(yasmin.StateMachine):
             },
             remappings={"transcribed_speech": "guest_transcription"},
         )
-        
-        transition = 'SAY_BAG' if guest_id == 'guest2' else 'succeeded'
-        
+
+        transition = "SAY_BAG" if guest_id == "guest2" else "succeeded"
+
         self.add_state(
             "GET_NAME_DRINK_FACE",
             conc_name_drink_face,
             transitions={
-                'succeeded': transition,
+                "succeeded": transition,
                 "failed": "failed",
                 "failed_vision": "failed",
                 "failed_face": "failed",
                 "failed_attributes": "failed",
             },
         )
-        
+
         self.add_state(
-            'SAY_BAG',
-            Say(text='I see you have a bag for me.'),
+            "SAY_BAG",
+            Say(text="I see you have a bag for me."),
             transitions={
                 "succeeded": "STOP_EYE_TRACKING",
                 "aborted": "STOP_EYE_TRACKING",
                 "canceled": "STOP_EYE_TRACKING",
             },
         )
-        
+
         self.add_state(
-            'STOP_EYE_TRACKING',
+            "STOP_EYE_TRACKING",
             StopEyeTracker(),
             transitions={
                 "succeeded": "GRAB_BAG",
@@ -168,12 +175,9 @@ class LookAndGreetGuest(yasmin.StateMachine):
                 "timeout": "failed",
             },
         )
-        
+
         self.add_state(
-            'GRAB_BAG',
-            ReceiveObject(object_name='bag'),
-            transitions={
-                'succeeded': 'succeeded',
-                'failed': 'failed'
-            }
+            "GRAB_BAG",
+            ReceiveObject(object_name="bag"),
+            transitions={"succeeded": "succeeded", "failed": "failed"},
         )

@@ -65,7 +65,7 @@ class Detect3D(ServiceState):
         cam_info = message_filters.Subscriber(
             self._node, CameraInfo, self.depth_camera_info_topic, qos_profile=camera_qos
         )
-        
+
         self.cache = message_filters.Cache(cam_info)
 
         image_sub = message_filters.Subscriber(

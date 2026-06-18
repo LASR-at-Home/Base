@@ -23,6 +23,7 @@ def _label_pattern(label: str) -> str:
     words = re.split(r"[\s_]+", label.strip())
     return r"[\s_]+".join(re.escape(word) for word in words if word)
 
+
 def parse_llm_output_to_dict(output: str, fields: List[str]) -> Dict:
     field_dict = {field: None for field in fields}
     separator = re.compile(r"\s*(?:[:=]|\s+-\s+)\s*")
@@ -33,15 +34,15 @@ def parse_llm_output_to_dict(output: str, fields: List[str]) -> Dict:
         if not sep_match:
             continue
 
-
-        key = line[:sep_match.start()].strip().strip("\"'`")
-        value = line[sep_match.end():].strip().strip(" \t\r\n,;:-\"'`")
+        key = line[: sep_match.start()].strip().strip("\"'`")
+        value = line[sep_match.end() :].strip().strip(" \t\r\n,;:-\"'`")
 
         for field in fields:
             if any(key.lower() == alias.lower() for alias in _field_aliases(field)):
                 field_dict[field] = value
                 break
     return field_dict
+
 
 def truncate_llm_output(output: str) -> str:
     """
@@ -71,7 +72,7 @@ def create_query(text: str, task: str, fields: Optional[List[str]] = None):
         assert (
             fields is not None
         ), "Fields must be provided for the 'extract_fields' task."
-        field_str = "\n".join([f"- {field}" for field in fields]) # "\n- Name"
+        field_str = "\n".join([f"- {field}" for field in fields])  # "\n- Name"
         query = (
             "Extract the following fields from the sentence:\n"
             f"{field_str}\n\n"

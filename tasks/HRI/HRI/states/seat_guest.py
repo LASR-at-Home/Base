@@ -78,9 +78,11 @@ class ProcessDetections(State):
         right_sofa_occupied = False
         unseated_sofa_persons = []
         non_sofa_chairs = {}
-        
-        for detection in blackboard['seat_detections']:
-            detection_point = ShapelyPoint(detection.point.x, detection.point.y, detection.point.z)
+
+        for detection in blackboard["seat_detections"]:
+            detection_point = ShapelyPoint(
+                detection.point.x, detection.point.y, detection.point.z
+            )
             if detection.name == "person":
                 if self._left_sofa_area.contains(detection_point):
                     left_sofa_occupied = True
@@ -88,39 +90,48 @@ class ProcessDetections(State):
                     right_sofa_occupied = True
                 else:
                     unseated_sofa_persons.append(detection_point)
-            elif detection.name == 'chair' and not self._right_sofa_area.contains(detection_point) and not self._left_sofa_area.contains(detection_point):
+            elif (
+                detection.name == "chair"
+                and not self._right_sofa_area.contains(detection_point)
+                and not self._left_sofa_area.contains(detection_point)
+            ):
                 non_sofa_chairs.update({detection_point: False})
-                
+
         for chair_detection in non_sofa_chairs.keys():
             for person_detection in unseated_sofa_persons:
                 if chair_detection.distance(person_detection) < 0.2:
-                    non_sofa_chairs[chair_detection] = True # Chair is occupied
+                    non_sofa_chairs[chair_detection] = True  # Chair is occupied
                     break
-        
+
         if left_sofa_occupied != right_sofa_occupied:
-            seating_side = 'left' if right_sofa_occupied else 'right'
+            seating_side = "left" if right_sofa_occupied else "right"
             blackboard["seating_string"] = (
                 "The sofa that I'm looking at is occupied by one person. "
                 f"Please take a seat next to them on the {seating_side} side of the sofa."
             )
-            blackboard['guest_seat_point'] = PointStamped(
+            blackboard["guest_seat_point"] = PointStamped(
                 header=Header(frame_id="map"), point=self._sofa_point
             )
         elif left_sofa_occupied and right_sofa_occupied:
             for chair in non_sofa_chairs.keys():
                 if not non_sofa_chairs[chair]:
-                    blackboard['seating_string'] = "The sofa that I'm looking at is at full capacity. I have found an extra seat for you. Please take sit down in the seat I am looking at."
-                    blackboard['guest_seat_point'] = PointStamped(
-                        header=Header(frame_id="map"), point=Point(x=chair.x, y=chair.y, z=chair.z)
+                    blackboard["seating_string"] = (
+                        "The sofa that I'm looking at is at full capacity. I have found an extra seat for you. Please take sit down in the seat I am looking at."
+                    )
+                    blackboard["guest_seat_point"] = PointStamped(
+                        header=Header(frame_id="map"),
+                        point=Point(x=chair.x, y=chair.y, z=chair.z),
                     )
                     break
         else:
-            blackboard['seating_string'] = "The sofa that I'm looking at is empty. Please take a seat anywhere on the sofa."
-            blackboard['guest_seat_point'] = PointStamped(
+            blackboard["seating_string"] = (
+                "The sofa that I'm looking at is empty. Please take a seat anywhere on the sofa."
+            )
+            blackboard["guest_seat_point"] = PointStamped(
                 header=Header(frame_id="map"), point=self._sofa_point
             )
-                    
-        return 'succeeded'
+
+        return "succeeded"
 
 
 class SeatGuest(StateMachine):
@@ -156,7 +167,7 @@ class SeatGuest(StateMachine):
                 "canceled": "failed",
             },
         )
-        
+
         self.add_state(
             "RESET_HEAD_1",
             PlayMotion(motion_name="look_centre"),
@@ -179,7 +190,7 @@ class SeatGuest(StateMachine):
             transitions={"succeeded": "PROCESS_DETECTIONS", "failed": "failed"},
             remappings={"detected_objects": "seat_detections"},
         )
-        
+
         self.add_state(
             "PROCESS_DETECTIONS",
             ProcessDetections(
@@ -227,7 +238,6 @@ class SeatGuest(StateMachine):
                 "canceled": "succeeded",
             },
         )
-        
 
     def __load_ros_parameters(self):
 

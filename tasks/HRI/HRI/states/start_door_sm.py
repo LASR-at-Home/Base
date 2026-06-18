@@ -27,17 +27,17 @@ class StartDoorSM(StateMachine):  # TODO: Rename to start_task and move to Skill
             DetectDoorOpening(),
             transitions={"door_opened": "PRE_NAV", "failed": "failed"},
         )
-        
+
         self.add_state(
-            'PRE_NAV',
-            PlayMotion('pre_navigation'),
+            "PRE_NAV",
+            PlayMotion("pre_navigation"),
             transitions={
-            "succeeded": "GO_TO_START",
-            "aborted": "failed",
-            "canceled": "failed",
+                "succeeded": "GO_TO_START",
+                "aborted": "failed",
+                "canceled": "failed",
             },
         )
-        
+
         self.add_state(
             "GO_TO_START",
             GoToLocation(

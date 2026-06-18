@@ -374,7 +374,7 @@ class ReID(Node):
         )
 
         for i, detection in enumerate(response.detections):
-            if detection.name == 'guest1' or detection.name =='guest2':
+            if detection.name == "guest1" or detection.name == "guest2":
                 marker = Marker()
                 marker.header.frame_id = frame_id
                 marker.header.stamp = (

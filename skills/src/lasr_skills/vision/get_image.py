@@ -22,19 +22,19 @@ class GetImage(State):
 
         self.add_input_key("img_msg")
         self.add_output_key("img_msg")
-        
+
         self.node = yasmin_ros.logger_node
-        
+
         camera_qos = QoSProfile(
             depth=10,
             reliability=ReliabilityPolicy.BEST_EFFORT,
             history=HistoryPolicy.KEEP_LAST,
         )
-        
+
         self.image_sub = message_filters.Subscriber(
-            self.node, Image, 'head_front_camera/rgb/image_raw', camera_qos
-        )   
-        
+            self.node, Image, "head_front_camera/rgb/image_raw", camera_qos
+        )
+
         self.cache = message_filters.Cache(self.image_sub)
 
     def execute(self, blackboard):

@@ -53,7 +53,9 @@ class GetGuestData(yasmin.State):
             else:
                 blackboard["introduce_to"] = guest_data[reid]["name"]
 
-        yasmin.YASMIN_LOG_INFO(f'Introducing: {self._guest_to_introduce}, to {self._guest_to_introduce_to}')
+        yasmin.YASMIN_LOG_INFO(
+            f"Introducing: {self._guest_to_introduce}, to {self._guest_to_introduce_to}"
+        )
         string = blackboard["introduce_to"]
         test = blackboard["relevant_guest_data"]
         yasmin.YASMIN_LOG_INFO("We 'introduce_to': \n" + str(string))

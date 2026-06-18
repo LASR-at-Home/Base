@@ -51,6 +51,7 @@ models = {
     # "DeepSeekQwen": "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B",  # terrible lol
 }
 
+
 class LLMInference:
     def __init__(self, model_config: ModelConfig):
         self.config = model_config
@@ -115,7 +116,9 @@ class LLMInference:
                 self.logger.info("[LLMInference] No GPU detected — running on CPU.")
                 return 0
         except ImportError:
-            self.logger.warning("[LLMInference] torch not available — defaulting to CPU.")
+            self.logger.warning(
+                "[LLMInference] torch not available — defaulting to CPU."
+            )
             return 0
 
     def _ensure_model_available(self):
@@ -135,10 +138,13 @@ class LLMInference:
                 f"Run with connectivity first so the model can be downloaded and cached."
             )
 
-        self.logger.info(f"[LLMInference] Pulling '{self.model_name}' (this only happens once)...")
+        self.logger.info(
+            f"[LLMInference] Pulling '{self.model_name}' (this only happens once)..."
+        )
         self.client.pull(self.model_name)
-        self.logger.info(f"[LLMInference] '{self.model_name}' saved locally — offline use enabled.")
-
+        self.logger.info(
+            f"[LLMInference] '{self.model_name}' saved locally — offline use enabled."
+        )
 
     def infer_task(self) -> str:
         name = self.model_name.lower()

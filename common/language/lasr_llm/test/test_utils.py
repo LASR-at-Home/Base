@@ -15,7 +15,6 @@
 import importlib.util
 from pathlib import Path
 
-
 UTILS_PATH = Path(__file__).resolve().parents[1] / "lasr_llm" / "utils.py"
 SPEC = importlib.util.spec_from_file_location("lasr_llm_utils", UTILS_PATH)
 UTILS = importlib.util.module_from_spec(SPEC)

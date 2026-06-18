@@ -60,7 +60,7 @@ class Detect3DInArea(yasmin.StateMachine):
                 area_polygon = blackboard["polygon"]
             else:
                 area_polygon = self.area_polygon
-                
+
             assert isinstance(area_polygon, ShapelyPolygon), (
                 f"Expected a Polygon but got {type(area_polygon).__name__}. "
                 "Check the source geometry."
