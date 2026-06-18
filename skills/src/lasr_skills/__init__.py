@@ -1,7 +1,4 @@
-import rclpy
-from rclpy.node import Node
-from rclpy.task import Future
-from rclpy.qos import QoSProfile, QoSReliabilityPolicy
+
 
 from .wait import Wait
 
@@ -19,6 +16,7 @@ from .look_to_point import LookToPoint
 
 from .play_motion import PlayMotion
 from .go_to_location import GoToLocation
+from .continuous_go_to_location import ContinuousGoToLocation
 from .listen import Listen
 from .face_person import FacePerson
 from .listen import Listen

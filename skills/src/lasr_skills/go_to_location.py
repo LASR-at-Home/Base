@@ -18,48 +18,49 @@ class GoToLocation(State):
         self,
         location: Union[Pose, None] = None,
         location_param: Union[str, None] = None,
-        updatable: bool = False,
     ):
 
         super().__init__(outcomes=["succeeded", "failed"])
         if not (location is not None or location_param is not None):
             self.add_input_key("location")
-        self.node = yasmin_ros.logger_node
 
         self.navigator = BasicNavigator()
         self.location = location
-        self.location_param = location_param  # the pose (eg. 'start_pose', 'wait_pose',
-        self.updatable = updatable
+        self.location_param = (
+            location_param  # the pose (eg. 'start_pose', 'wait_pose', ...)
+        )
 
     def execute(self, blackboard):
         if self.location:
             goal_pose = self.location
         elif self.location_param:
 
+            node = yasmin_ros.logger_node
+
             goal_pose = Pose(
                 position=Point(
                     x=float(
-                        self.node.get_parameter(f"{self.location_param}.position.x").value
+                        node.get_parameter(f"{self.location_param}.position.x").value
                     ),
                     y=float(
-                        self.node.get_parameter(f"{self.location_param}.position.y").value
+                        node.get_parameter(f"{self.location_param}.position.y").value
                     ),
                     z=float(
-                        self.node.get_parameter(f"{self.location_param}.position.z").value
+                        node.get_parameter(f"{self.location_param}.position.z").value
                     ),
                 ),
                 orientation=Quaternion(
                     x=float(
-                        self.node.get_parameter(f"{self.location_param}.orientation.x").value
+                        node.get_parameter(f"{self.location_param}.orientation.x").value
                     ),
                     y=float(
-                        self.node.get_parameter(f"{self.location_param}.orientation.y").value
+                        node.get_parameter(f"{self.location_param}.orientation.y").value
                     ),
                     z=float(
-                        self.node.get_parameter(f"{self.location_param}.orientation.z").value
+                        node.get_parameter(f"{self.location_param}.orientation.z").value
                     ),
                     w=float(
-                        self.node.get_parameter(f"{self.location_param}.orientation.w").value
+                        node.get_parameter(f"{self.location_param}.orientation.w").value
                     ),
                 ),
             )
@@ -70,56 +71,12 @@ class GoToLocation(State):
             return "failed"
 
         goal_stamped = PoseStamped(pose=goal_pose, header=Header(frame_id="map"))
+
         self.navigator.goToPose(goal_stamped)
 
-        while (
-            not self.navigator.isTaskComplete() and rclpy.ok()
-        ):  # Update to make it check if the goal has been updated? (blackboard["location"] is different)
-            time.sleep(0.2)
+        while not self.navigator.isTaskComplete():
+            time.sleep(1)
 
-            if "stop_robot_requested" in blackboard.keys() and blackboard["stop_robot_requested"]:
-                self.navigator.cancelTask()
-                self.node.get_logger().warn("Safety trigger: Person too close! Canceling Nav2 Task.")
-                return "failed"
-            
-            if self.is_canceled():
-                if not self.navigator.isTaskComplete():
-                    self.navigator.cancelTask()
-
-                return "failed"
-            
-            if not self.updatable:
-                continue
-
-            if (
-                not (self.location or self.location_param)
-                and "location" in blackboard.keys()
-            ):
-                new_goal = blackboard["location"]
-
-                if new_goal:
-                    # Calculate physical distance between the current goal and the new goal
-                    dx = new_goal.position.x - goal_pose.position.x
-                    dy = new_goal.position.y - goal_pose.position.y
-                    distance_moved = (dx**2 + dy**2)**0.5
-
-                    # Only preempt Nav2 if the person has moved more than 0.25 meters
-                    if distance_moved > 0.25:
-                        yasmin.YASMIN_LOG_INFO(f"Updated new goal {distance_moved}m away. ")
-                        goal_pose = new_goal
-                        goal_stamped = PoseStamped(
-                            pose=goal_pose, header=Header(frame_id="map")
-                        )
-                        self.navigator.goToPose(goal_stamped)
-
-        if not rclpy.ok() or self.is_canceled():
-            if not self.navigator.isTaskComplete():
-                self.navigator.cancelTask()
-                time.sleep(0.2)
-            return "failed"
-
-        if self.is_canceled():
-            return "failed"
         return (
             "succeeded"
             if self.navigator.getResult() == TaskResult.SUCCEEDED
