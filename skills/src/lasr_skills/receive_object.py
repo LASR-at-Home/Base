@@ -31,8 +31,6 @@ class ClearOctomap(ServiceState):
         return Empty.Request()
 
 
-# TODO: Do we need to detect object or just assume that the second guest is holding a bag.
-# If detecting object we can use moveit to get arm close enough to the bag.
 class ReceiveObject(StateMachine):
     def __init__(self, object_name: Union[str, None] = None, vertical: bool = True):
 
@@ -41,120 +39,14 @@ class ReceiveObject(StateMachine):
             self.add_input_key("object_name")
 
         self.add_state(
-            "ACKNOWLEDGE_BAG",
-            Say(text="I can see you have a bag. I can take it from you now."),
-            transitions={
-                "succeeded": "CLEAR_OCTOMAP",
-                "aborted": "CLEAR_OCTOMAP",
-                "canceled": "CLEAR_OCTOMAP",
-            },
-        )
-
-        self.add_state(
             "CLEAR_OCTOMAP",
             ClearOctomap(),
             transitions={"succeeded": "LOOK_LEFT", "aborted": "failed"},
         )
 
         self.add_state(
-            "LOOK_LEFT",
-            PlayMotion(motion_name="look_left"),
-            transitions={
-                "succeeded": "LOOK_DOWN_LEFT",
-                "aborted": "failed",
-                "canceled": "failed",
-            },
-        )
-
-        self.add_state(
-            "LOOK_DOWN_LEFT",
-            PlayMotion(motion_name="look_down_left"),
-            transitions={
-                "succeeded": "LOOK_RIGHT",
-                "aborted": "failed",
-                "canceled": "failed",
-            },
-        )
-        self.add_state(
-            "LOOK_DOWN_LEFT",
-            PlayMotion(motion_name="look_down_left"),
-            transitions={
-                "succeeded": "LOOK_RIGHT",
-                "aborted": "failed",
-                "canceled": "failed",
-            },
-        )
-
-        self.add_state(
-            "LOOK_RIGHT",
-            PlayMotion(motion_name="look_right"),
-            transitions={
-                "succeeded": "LOOK_DOWN_RIGHT",
-                "aborted": "failed",
-                "canceled": "failed",
-            },
-        )
-        self.add_state(
-            "LOOK_RIGHT",
-            PlayMotion(motion_name="look_right"),
-            transitions={
-                "succeeded": "LOOK_DOWN_RIGHT",
-                "aborted": "failed",
-                "canceled": "failed",
-            },
-        )
-
-        self.add_state(
-            "LOOK_DOWN_RIGHT",
-            PlayMotion(motion_name="look_down_right"),
-            transitions={
-                "succeeded": "LOOK_DOWN_CENTRE",
-                "aborted": "failed",
-                "canceled": "failed",
-            },
-        )
-
-        self.add_state(
-            "LOOK_DOWN_CENTRE",
-            PlayMotion(motion_name="look_centre"),
-            transitions={
-                "succeeded": "LOOK_CENTRE",
-                "aborted": "failed",
-                "canceled": "failed",
-            },
-        )
-        self.add_state(
-            "LOOK_DOWN_RIGHT",
-            PlayMotion(motion_name="look_down_right"),
-            transitions={
-                "succeeded": "LOOK_DOWN_CENTRE",
-                "aborted": "failed",
-                "canceled": "failed",
-            },
-        )
-
-        self.add_state(
-            "LOOK_DOWN_CENTRE",
-            PlayMotion(motion_name="look_centre"),
-            transitions={
-                "succeeded": "LOOK_CENTRE",
-                "aborted": "failed",
-                "canceled": "failed",
-            },
-        )
-
-        self.add_state(
-            "LOOK_CENTRE",
-            PlayMotion(motion_name="look_centre"),
-            transitions={
-                "succeeded": "SAY_REACH_ARM",
-                "aborted": "failed",
-                "canceled": "failed",
-            },
-        )
-        self.add_state(
-            "LOOK_CENTRE",
-            PlayMotion(motion_name="look_centre"),
+            "LOOK_AROUND",
+            PlayMotion(motion_name="head_tour"),
             transitions={
                 "succeeded": "SAY_REACH_ARM",
                 "aborted": "failed",
@@ -162,15 +54,6 @@ class ReceiveObject(StateMachine):
             },
         )
 
-        self.add_state(
-            "SAY_REACH_ARM",
-            Say(text="Please step back, I am going to reach my arm out."),
-            transitions={
-                "succeeded": "REACH_ARM",
-                "aborted": "REACH_ARM",
-                "canceled": "REACH_ARM",
-            },
-        )
         self.add_state(
             "SAY_REACH_ARM",
             Say(text="Please step back, I am going to reach my arm out."),
@@ -201,26 +84,6 @@ class ReceiveObject(StateMachine):
                     "canceled": "failed",
                 },
             )
-        if vertical:
-            self.add_state(
-                "REACH_ARM",
-                PlayMotion(motion_name="reach_arm_vertical_gripper"),
-                transitions={
-                    "succeeded": "OPEN_GRIPPER",
-                    "aborted": "failed",
-                    "canceled": "failed",
-                },
-            )
-        else:
-            self.add_state(
-                "REACH_ARM",
-                PlayMotion(motion_name="reach_arm_horizontal_gripper"),
-                transitions={
-                    "succeeded": "OPEN_GRIPPER",
-                    "aborted": "failed",
-                    "canceled": "failed",
-                },
-            )
 
         self.add_state(
             "OPEN_GRIPPER",
@@ -231,16 +94,6 @@ class ReceiveObject(StateMachine):
                 "canceled": "failed",
             },
         )
-        self.add_state(
-            "OPEN_GRIPPER",
-            PlayMotion(motion_name="open_gripper"),
-            transitions={
-                "succeeded": "SAY_PLACE",
-                "aborted": "failed",
-                "canceled": "failed",
-            },
-        )
-
         if object_name is not None:
             self.add_state(
                 "SAY_PLACE",
@@ -266,32 +119,6 @@ class ReceiveObject(StateMachine):
                 },
                 remapping={"placeholders": "object_name"},
             )
-        if object_name is not None:
-            self.add_state(
-                "SAY_PLACE",
-                Say(
-                    text=f"Please place the {object_name} in my hand. I will wait for a few seconds.",
-                ),
-                transitions={
-                    "succeeded": "WAIT_5",
-                    "aborted": "failed",
-                    "canceled": "failed",
-                },
-            )
-        else:
-            self.add_state(
-                "SAY_PLACE",
-                Say(
-                    format_str="Please place the {} in my hand. I will wait for a few seconds.",
-                ),
-                transitions={
-                    "succeeded": "WAIT_5",
-                    "aborted": "failed",
-                    "canceled": "failed",
-                },
-                remapping={"placeholders": "object_name"},
-            )
-
         self.add_state(
             "WAIT_5",
             Wait(5),
