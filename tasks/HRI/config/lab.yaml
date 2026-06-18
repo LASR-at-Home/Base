@@ -33,14 +33,14 @@ hri:   # the `hri` Node's Parameters
     # Where to position self for seating guests
     seat_pose:
       position:
-        x: 0.8981837363115528
-        y: -0.46742038149391557
+        x: 0.9213618469463302
+        y: -0.4120509862872547
         z: 0.0
       orientation:
         x: 0.0
         y: 0.0
-        z: -0.7829319181903331
-        w: 0.6221073954541977
+        z: -0.7740871501568952
+        w: 0.6330790503262419
 
     # Where the robot looks at the general sofa
     sofa_point:

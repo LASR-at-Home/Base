@@ -252,9 +252,9 @@ class ReID(Node):
             x, y, z = np.median(points, axis=0)
 
             point = Point()
-            point.x = x
-            point.y = y
-            point.z = z
+            point.x = x / 1000
+            point.y = y / 1000
+            point.z = z / 1000
             point_stamped = PointStamped()
             point_stamped.header = request.depth_image.header
             point_stamped.point = point

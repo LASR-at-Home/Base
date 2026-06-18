@@ -82,12 +82,12 @@ def main():
     image_topic = f"/{camera}/rgb/image_raw"
 
     # camera = node.declare_parameter("~camera", "head_front_camera").value
-    name = node.declare_parameter("~name", "fadi").value  # originally jared
+    name = node.declare_parameter("~name", "guest1").value  # originally jared
     num_images = node.declare_parameter("~num_images", 10).value
 
     node.get_logger().info(f"Image topic: {image_topic}")
 
-    node.declare_parameter("name", "fadi")
+    node.declare_parameter("name", "guest1")
     name = node.get_parameter("name").value
 
     node.declare_parameter("num_images", 10)

@@ -9,7 +9,7 @@ import yasmin
 import yasmin_ros
 from shapely.geometry import Polygon as ShapelyPolygon
 
-from lasr_skills import Say, DetectAllInPolygon, StartEyeTracker, StopEyeTracker
+from lasr_skills import Say, DetectAllInPolygon, StartEyeTracker, StopEyeTracker, PlayMotion
 
 from HRI.states import ClearSeatingDetections, GetGuestData, GetIntroductionStr, Recognise
 
@@ -46,7 +46,7 @@ class Introduce(yasmin.StateMachine):
         )
         
         
-        loop_state = yasmin.CbState(outcomes=['succeeded', 'continue'], callback=self._loop_person_index)
+        loop_state = yasmin.CbState(outcomes=['succeeded', 'continue', 'failed'], callback=self._loop_person_index)
         loop_state.add_input_key('person_index')
         loop_state.add_input_key('people_detected')
         loop_state.add_input_key('guest_data')
@@ -80,7 +80,7 @@ class Introduce(yasmin.StateMachine):
         self.add_state(
             'LOOP_PERSON_STATE',
             loop_state,
-            transitions={'succeeded': 'GRAB_GUEST_POINT', 'continue': 'LOOK_AT_PERSON'}
+            transitions={'succeeded': 'GRAB_GUEST_POINT', 'continue': 'LOOK_AT_PERSON', 'failed': 'failed'}
         )
         
         self.add_state(
@@ -108,11 +108,21 @@ class Introduce(yasmin.StateMachine):
             'STOP_LOOK_AT_PERSON',
             StopEyeTracker(),
             transitions={
-                "succeeded": "LOOP_PERSON_STATE",
+                "succeeded": "RESET_HEAD_1",
                 "aborted": "failed",
                 "canceled": "failed",
                 "timeout": "failed",
             },
+        )
+        
+        self.add_state(
+            'RESET_HEAD_1',
+            PlayMotion('look_centre'),
+            transitions={
+                "succeeded": "LOOP_PERSON_STATE",
+                "aborted": "failed",
+                "canceled": "failed",
+            }
         )
         
         self.add_state(
@@ -125,10 +135,10 @@ class Introduce(yasmin.StateMachine):
             'START_EYE_TRACKING_GUEST',
             StartEyeTracker(),
             transitions={
-                "succeeded": "RECOGNISE",
+                "succeeded": "GET_INTRODUCTION_STR",
                 "aborted": "failed",
                 "canceled": "failed",
-                "timeout": "RECOGNISE",
+                "timeout": "GET_INTRODUCTION_STR",
             },
             remappings={'person_point': 'guest_point'}
         )
@@ -156,26 +166,42 @@ class Introduce(yasmin.StateMachine):
             'STOP_EYE_TRACKING',
             StopEyeTracker(),
             transitions={
-                "succeeded": "GRAB_GUEST_POINT",
+                "succeeded": "RESET_HEAD_2",
                 "aborted": "failed",
                 "canceled": "failed",
                 "timeout": "failed",
             },
         )
+        
+        self.add_state(
+            'RESET_HEAD_2',
+            PlayMotion('look_centre'),
+            transitions={
+                "succeeded": "GRAB_GUEST_POINT",
+                "aborted": "failed",
+                "canceled": "failed",
+            }
+        )
 
     def _loop_person_index(self, blackboard):
-        if blackboard['guest_data']['guest1']['seated_point'] is not None and blackboard['guest_data']['guest2']['seated_point'] is not None:
-            return 'succeeded'
-        elif blackboard['person_index'] is None:
-            blackboard['person_index'] = 0
-        elif blackboard['person_index'] < len(blackboard['people_detected']) - 1:
-            blackboard['person_index'] += 1
-        else:
-            return 'succeeded'
-        
+        guest1point = blackboard['guest_data']['guest1']['seated_point']
+        guest2point = blackboard['guest_data']['guest2']['seated_point']
+        people_detected = len(blackboard['people_detected'])
         index = blackboard['person_index']
-        blackboard['person_point'] = blackboard['people_detected'][index].point
-        return 'continue'
+        yasmin.YASMIN_LOG_INFO(str(index))
+        yasmin.YASMIN_LOG_INFO(str(guest1point))
+        yasmin.YASMIN_LOG_INFO(str(guest2point))
+        yasmin.YASMIN_LOG_INFO(str(people_detected))
+
+        if guest1point is not None and guest2point is not None:
+            return 'succeeded'
+        elif index < people_detected - 1:
+            blackboard['person_index'] = index
+            blackboard['person_point'] = blackboard['people_detected'][index].point
+            index += 1
+            return 'continue'
+        
+        return 'failed'
     
     def _loop_guest(self, blackboard):
         if blackboard['guest_data']['guest1']['seating_detection'] and blackboard['guest_data']['guest2']['seating_detection']:
@@ -185,6 +211,6 @@ class Introduce(yasmin.StateMachine):
         
         blackboard['guest_point'] = blackboard['guest_data'][id]['seated_point'] 
         blackboard['guest_data'][id]['seating_detection'] = True
-        blackboard['introduce_to'] = id
+        blackboard['introduce_to'] = blackboard['guest_data'][id]['name']
         blackboard['relevant_guest_data'] = blackboard['guest_data']['guest2'] if id == 'guest1' else blackboard['guest_data']['guest1']
         return 'continue'

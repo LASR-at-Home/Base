@@ -22,6 +22,8 @@ class Recognise(yasmin_ros.ServiceState):
     def __init__(self):
         super().__init__(srv_type=Recognise3D, srv_name="/lasr_vision_reid/recognise/threed", create_request_handler=self._create_request, response_handler=self._handle_resp, outcomes=['no_detections'])
         
+        self.add_output_key('guest_data')
+        
         camera_qos = QoSProfile(
             depth=10,
             reliability=ReliabilityPolicy.BEST_EFFORT,
@@ -80,6 +82,57 @@ class Recognise(yasmin_ros.ServiceState):
             for detection in response.detections:
                 if detection.name == 'unknown':
                     continue
-                yasmin.YASMIN_LOG_INFO(detection.name)
-                blackboard['guest_data'][detection.name]['seated_point'] = detection.point
-            return 'succeeded'
+                if detection.name == 'guest1' or detection.name == 'guest2':
+                    yasmin.YASMIN_LOG_INFO(detection.name)
+                    yasmin.YASMIN_LOG_INFO(str(detection.point))
+                    blackboard['guest_data'][detection.name]['seated_point'] = detection.point
+                    return 'succeeded'
+        
+        return 'aborted'
+        
+def check(blackboard):
+    dict = blackboard['guest_data']
+    yasmin.YASMIN_LOG_INFO(str(dict))
+    return 'succeeded'
+        
+def main():
+    global check
+    rclpy.init()
+    
+    yasmin_ros.set_ros_loggers()
+    
+    sm = yasmin.StateMachine(outcomes=['succeeded', 'failed'], handle_sigint=True)
+    
+    check = yasmin.CbState(outcomes=['succeeded'], callback=check)
+    
+    sm.add_state(
+        'RECOGNISE',
+        Recognise(),
+        transitions={
+            'succeeded': 'CHECK',
+            'aborted': 'failed',
+            'no_detections': 'failed'
+        }
+    )
+    
+    sm.add_state(
+        'CHECK',
+        check,
+        transitions={'succeeded': 'succeeded'}
+    )
+    
+    bb = Blackboard()
+    bb["guest_data"] = {
+        "guest1": {
+            "name": "",
+            "drink": "",
+            "detection": False,
+            "seating_detection": False,
+            "attributes": {},
+            "seated_point": None,
+        }
+    }
+    
+    outcome = sm(bb)
+    
+    rclpy.shutdown()
