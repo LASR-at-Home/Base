@@ -98,7 +98,7 @@ class ReceiveObject(StateMachine):
             self.add_state(
                 "SAY_PLACE",
                 Say(
-                    text=f"Please place the {object_name} in my hand. I will wait for a few seconds.",
+                    text=f"I am ready to recieve the {object_name} in my hand. I will wait for a few seconds.",
                 ),
                 transitions={
                     "succeeded": "WAIT_5",
@@ -110,7 +110,7 @@ class ReceiveObject(StateMachine):
             self.add_state(
                 "SAY_PLACE",
                 Say(
-                    format_str="Please place the {} in my hand. I will wait for a few seconds.",
+                    format_str="I am ready to recieve the {} in my hand. I will wait for a few seconds.",
                 ),
                 transitions={
                     "succeeded": "WAIT_5",
@@ -144,7 +144,7 @@ class ReceiveObject(StateMachine):
         #     },
         # )
         self.add_state(
-            "CLOSE_HALF_GRIPPER",  # TEMPORARY REPLACEMENT - using half to not jam an item between gripper
+            "CLOSE_HALF_GRIPPER",  # TEMPORARY REPLACEMENT
             PlayMotion(motion_name="close_half"),
             transitions={
                 "succeeded": "FOLD_ARM",
