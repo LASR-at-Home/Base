@@ -10,15 +10,12 @@ import yasmin_ros
 from yasmin_viewer import YasminViewerPub
 
 import tf2_ros
-from rclpy.qos import QoSProfile, DurabilityPolicy, ReliabilityPolicy, HistoryPolicy
 
 from geometry_msgs.msg import (
     PointStamped,
     PoseWithCovarianceStamped,
     Pose,
-    PoseStamped,
     PolygonStamped,
-    Polygon,
     Point32,
 )
 from tf2_geometry_msgs.tf2_geometry_msgs import do_transform_point
@@ -27,87 +24,12 @@ from shapely.geometry import Polygon as ShapelyPolygon
 from lasr_skills import (
     Detect3DInArea,
     Wait,
+    PlayMotion,
     Say,
-    GoToLocation,
+    ContinuousGoToLocation,
     WaitForPersonInArea,
     AskAndListen,
 )
-
-from nav2_simple_commander.robot_navigator import BasicNavigator
-
-# -----------------------------------------------
-"""
-    NAVIGATION LOGIC
-
-"""
-
-
-class WaitForNavGoal(State):
-    """
-    Acts as a safe idle buffer. Waits until the tracker provides a NEW goal
-    and explicitly removes the stop request before allowing navigation to proceed.
-    """
-
-    def __init__(self):
-        super().__init__(outcomes=["start_navigating", "failed"])
-        self.node = yasmin_ros.logger_node
-        self.last_goal = None
-
-        self.add_input_key("stop_robot_requested")
-        self.add_input_key("location")
-
-    def execute(self, blackboard: Blackboard):
-        if "stop_robot_requested" not in blackboard.keys() or not blackboard["stop_robot_requested"]:
-            blackboard["stop_robot_requested"] = False
-        if "location" not in blackboard.keys() or not blackboard["location"]:
-            blackboard["location"] = None
-            
-        while not self.is_canceled() and rclpy.ok():
-            stop_requested = False
-            stop_requested = blackboard['stop_robot_requested']
-            current_goal = blackboard['location']
-
-            # Only proceed if we aren't told to stop, AND the goal is actually new
-            if (
-                not stop_requested
-                and current_goal is not None
-                and current_goal != self.last_goal
-            ):
-                self.last_goal = current_goal
-                return "start_navigating"
-
-            try:
-                time.sleep(0.5)
-            except Exception:
-                break
-
-        return "failed"
-
-
-class Navigator(StateMachine):
-    """
-    The concurrent navigation loop.
-    Bounces safely between waiting for clearance and driving.
-    """
-
-    def __init__(self):
-        super().__init__(outcomes=["succeeded", "failed"])
-
-        self.add_state(
-            "WAIT_FOR_NAV_GOAL",
-            WaitForNavGoal(),
-            transitions={"start_navigating": "DRIVE_TO_GOAL", "failed": "failed"},
-        )
-
-        self.add_state(
-            "DRIVE_TO_GOAL",
-            GoToLocation(updatable=True),
-            transitions={
-                "succeeded": "WAIT_FOR_NAV_GOAL",  # Arrived naturally? Wait for next command.
-                "failed": "WAIT_FOR_NAV_GOAL",  # Canceled by dynamic preemption? Loop back and check.
-            },
-        )
-
 
 # -----------------------------------------------
 """
@@ -132,10 +54,10 @@ class UpdateDetectionPolygon(State):
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, self.node)
 
         self.base_footprint_polygon = [
-            [3.5, 1.5],
-            [3.5, -1.5],
-            [0.5, -0.5],
-            [0.5, 0.5],
+            [3.5, 1.5],         # Top Left
+            [3.5, -1.5],        # Top Right
+            [-0.2, -1.75],        # Bottom Right
+            [-0.2, 1.75],         # Bottom Left
         ]
 
         self.debug_pub = self.node.create_publisher(
@@ -187,7 +109,7 @@ class EvaluateDetections(State):
     Handles data association matching, stationary counting, and updating Nav2 blackboard targets.
     """
 
-    def __init__(self, safe_distance=1, threshold=0.5, max_stationary=10):
+    def __init__(self, safe_distance=1, threshold=0.25, max_stationary=5):
         # Outcomes mapping perfectly back to your TrackPerson state machine
         super().__init__(
             outcomes=["updated", "paused", "person_stationary", "person_lost"]
@@ -195,7 +117,7 @@ class EvaluateDetections(State):
 
         # Pulls detections from the blackboard populated by Detect3DInArea
         self.add_input_key("detections_3d")
-        self.add_input_key("p_old")  
+        self.add_input_key("last_known")  
         # if using getpersonpoint after wait for person in area pass and remap
 
         self.add_output_key("location")
@@ -207,24 +129,8 @@ class EvaluateDetections(State):
 
         # Internal Loop Memory Tracking
         self.stationary_count = 0
-        self.p_old = None  # Stores the last known (x, y) map coordinate of the host
+        self.last_known = None  # Stores the last known (x, y) map coordinate of the person
 
-        # Setup AMCL Pose Subscriber
-        # self.current_robot_point = None
-        # self.robot_pose_sub = self.node.create_subscription(
-        #     PoseWithCovarianceStamped,
-        #     "/amcl_pose",
-        #     self.robot_point_cb,
-        #     QoSProfile(
-        #         depth=1,
-        #         reliability=ReliabilityPolicy.RELIABLE,
-        #         durability=DurabilityPolicy.TRANSIENT_LOCAL,
-        #         history=HistoryPolicy.KEEP_LAST,
-        #     ),
-        # )
-        # yasmin.YASMIN_LOG_INFO(
-        #     "EvaluateDetections initialized. Listening to /amcl_pose..."
-        # )
 
         self.tf_buffer = tf2_ros.Buffer()
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, self.node)
@@ -233,13 +139,6 @@ class EvaluateDetections(State):
     def create_goal_pose(
         self, rx: float, ry: float, tx: float, ty: float, offset: bool = False
     ) -> Pose:
-        """
-        Unified goal constructor for both active pursuit and lost-target hunting.
-
-        :param rx, ry: Current coordinates of the robot base.
-        :param tx, ty: Coordinates of the target (either current or historical).
-        :param offset: If True, offsets the goal by self.safe_distance. If False, targets point exactly.
-        """
         # Calculate directional delta vectors
         dx = tx - rx
         dy = ty - ry
@@ -250,11 +149,8 @@ class EvaluateDetections(State):
         goal_y = ty
         # If moving to a person stop before reaching thier point.
         if offset and distance > self.safe_distance:
-            ratio = (
-                distance - self.safe_distance
-            ) / distance  # Distance to maintain safe distance
-            goal_x = rx + (dx * ratio)
-            goal_y = ry + (dy * ratio)
+            goal_x = tx - (dx / distance) * self.safe_distance
+            goal_y = ty - (dy / distance) * self.safe_distance
 
         # Calculate 2D planar heading angle (yaw) so the robot faces the target point
         theta = math.atan2(dy, dx)
@@ -263,10 +159,6 @@ class EvaluateDetections(State):
         goal_pose = Pose()
         goal_pose.position.x = goal_x
         goal_pose.position.y = goal_y
-        goal_pose.position.z = 0.0
-
-        goal_pose.orientation.x = 0.0
-        goal_pose.orientation.y = 0.0
         goal_pose.orientation.z = math.sin(theta / 2.0)
         goal_pose.orientation.w = math.cos(theta / 2.0)
 
@@ -285,17 +177,14 @@ class EvaluateDetections(State):
 
     def get_closest_person(self, detections):
         """Iterates through points and finds best person to go to."""
-        if self.p_old is None:
-            return detections[0].point
-
         best_person = None
-        min_dist = float('inf')
+        closest_d = float('inf')
 
-        for d in detections:
-            dist = self.calc_distance_between_points(d.point, self.p_old)
-            if dist < min_dist:
-                min_dist = dist
-                best_person = d.point
+        for person in detections:
+            distance = self.calc_distance_between_points(person.point, self.last_known)
+            if distance < closest_d:
+                closest_d = distance
+                best_person = person.point
 
         return best_person
 
@@ -309,87 +198,185 @@ class EvaluateDetections(State):
                 rclpy.time.Time(),
                 timeout=rclpy.duration.Duration(seconds=1.0),
             )
-            # transform.transform.translation acts perfectly as a 3D point (has .x and .y)
             self.current_robot_point = transform.transform.translation
         except Exception as e:
             self.node.get_logger().warn(f"Waiting for map-base_footprint TF: {e}")
             return "paused"
 
         # Handle blackboard data
-        if "p_old" in blackboard.keys() and self.p_old is None:
-            self.p_old = blackboard["p_old"]
+        if "last_known" in blackboard.keys() and self.last_known != blackboard["last_known"]:
+            self.last_known = blackboard["last_known"]
 
         detections = blackboard['detections_3d']
-        if self.p_old is None:
+        if self.last_known is None:
             if len(detections) > 0:
-                self.node.get_logger().info("First detection found. Initializing p_old.")
-                self.p_old = detections[0].point
+                self.node.get_logger().info("First detection found. Initializing last_known.")
+                self.last_known = detections[0].point
             else:
                 self.node.get_logger().warn("Waiting for first person detection...")
                 return "paused"
             
-        
-        distance_old_from_robot = self.calc_distance_between_points(self.p_old, self.current_robot_point)
-        if len(detections) == 0:
-
-            # Threshold where it is worth moving
-            if (distance_old_from_robot > self.threshold):
-                blackboard["location"] = self.create_goal_pose(
-                    self.current_robot_point.x,
-                    self.current_robot_point.y,
-                    self.p_old.x,
-                    self.p_old.y,
-                    offset=False,
-                )
-                blackboard["stop_robot_requested"] = False
-                self.stationary_count = 0
-                self.node.get_logger().warn("NO PERSON BUT NAV GOAL IS VALID")
-                return "updated"
+        # People found in frame
+        if len(detections) > 0:
+            personPoint = self.get_closest_person(detections)
+            
+            if len(detections) > 1:
+                self.node.get_logger().warn("Multiple people in polygon. Tracking closest to last known.")
             else:
-                self.node.get_logger().warn("NO PERSON FOUND. NO AVAILABLE GOAL")
-                blackboard["stop_robot_requested"] = True
-                return "person_lost"
-
-        # handling people still in polygon
-        if len(detections) > 1:
-            personPoint = self.get_closest_person(detections)  # Get closest person to p_old
-            self.node.get_logger().warn("MORE THAN ONE PERSON FOUND")
-            if personPoint == None:  # If all detected people are 'blacklisted'
-                blackboard["stop_robot_requested"] = True
-                return "person_lost"
-        else:
-            self.node.get_logger().warn("ONE PERSON FOUND")
-            personPoint = detections[0].point
-
-        # Handle person
-        distance_person_moved = self.calc_distance_between_points(personPoint, self.p_old)
-
-        if distance_person_moved > self.threshold:
-            self.p_old = personPoint
-            self.stationary_count = 0  # Only reset if they actually walked away
-        else:
-            self.stationary_count += 1 # They are lingering in the same spot
-
-        distance_robot_from_person = self.calc_distance_between_points(self.p_old, self.current_robot_point)
-        if self.stationary_count >= self.max_stationary:
-            self.node.get_logger().warn(f"PERSON FOUND BUT STATIONARY: {self.stationary_count}/{self.max_stationary}")
-            return "person_stationary"
-        
-        if distance_robot_from_person > self.safe_distance:
+                self.node.get_logger().info("Target locked.")
+ 
+            blackboard["person_lost"] = False
+ 
+            distance_person_moved = self.calc_distance_between_points(personPoint, self.last_known)
+            distance_robot_from_person = self.calc_distance_between_points(personPoint, self.current_robot_point)
+ 
+            if distance_person_moved > self.threshold:
+                # Person is actively moving — reset stationary counter and chase
+                self.last_known = personPoint
+                blackboard["last_known"] = personPoint
+                self.stationary_count = 0
+ 
+                if distance_robot_from_person > (self.safe_distance + 0.2):
+                    blackboard["location"] = self.create_goal_pose(
+                        self.current_robot_point.x,
+                        self.current_robot_point.y,
+                        self.last_known.x,
+                        self.last_known.y,
+                        offset=True,
+                    )
+                    blackboard["stop_robot_requested"] = False
+                    self.node.get_logger().warn("PERSON FOUND: UPDATING NAV GOAL")
+                    return "updated"
+                else:
+                    # Robot is already within safe_distance of the person
+                    blackboard["stop_robot_requested"] = True
+                    self.node.get_logger().warn("PERSON TOO CLOSE TO NAVIGATE")
+                    return "paused"
+            else:
+                # Person has not moved significantly this tick
+                self.last_known = personPoint
+                blackboard["last_known"] = personPoint
+ 
+                if distance_robot_from_person <= (self.safe_distance + 0.2):
+                    # Robot is close and person is stationary → count up
+                    self.stationary_count += 1
+                    blackboard["stop_robot_requested"] = True
+                    self.node.get_logger().warn(
+                        f"PERSON STATIONARY: {self.stationary_count}/{self.max_stationary}"
+                    )
+                else:
+                    # Person hasn't moved but robot hasn't caught up yet — keep following
+                    self.stationary_count = 0
+                    blackboard["location"] = self.create_goal_pose(
+                        self.current_robot_point.x,
+                        self.current_robot_point.y,
+                        self.last_known.x,
+                        self.last_known.y,
+                        offset=True,
+                    )
+                    blackboard["stop_robot_requested"] = False
+ 
+            if self.stationary_count >= self.max_stationary:
+                self.node.get_logger().warn(
+                    f"PERSON CONFIRMED STATIONARY AFTER {self.stationary_count} TICKS"
+                )
+                return "person_stationary"
+ 
+            return "paused"
+ 
+        distance_old_from_robot = self.calc_distance_between_points(
+            self.last_known, self.current_robot_point
+        )
+        if distance_old_from_robot > self.threshold + 0.3:
+            # Robot hasn't reached the last known position yet — keep driving
             blackboard["location"] = self.create_goal_pose(
                 self.current_robot_point.x,
                 self.current_robot_point.y,
-                self.p_old.x, 
-                self.p_old.y,
-                offset=True,
+                self.last_known.x,
+                self.last_known.y,
+                offset=False,
             )
             blackboard["stop_robot_requested"] = False
-            self.node.get_logger().warn("PERSON FOUND UPDATING NEW GOAL")
+            self.node.get_logger().warn("NO PERSON: MOVING TO LAST KNOWN POSITION.")
             return "updated"
-        else:  # Robot is too close
+        else:
+            self.node.get_logger().warn("NO PERSON FOUND. ALREADY AT LAST KNOWN.")
             blackboard["stop_robot_requested"] = True
-            self.node.get_logger().warn(f"PERSON TOO CLOSE TO NAVIGATE")
-            return "paused"
+            return "person_lost"
+
+
+class ScanForPerson(StateMachine):
+    def __init__(self, direction: str="center"):
+        super().__init__(outcomes=["succeeded", "failed"])
+        self.add_output_key("last_known")
+        
+        self.add_state(
+            "PLAYMOTION",
+            PlayMotion(f"look_{direction}"),
+            transitions={
+                "succeeded": "DETECT_3D",
+                "aborted": "failed",
+                "canceled": "failed",
+            },
+        )
+        self.add_state(
+            "DETECT_3D",
+            Detect3DInArea(filter=["person"]),
+            transitions={
+                "succeeded": "GET_PERSON_POINT",
+                "failed": "failed",
+            },
+        )
+        self.add_state(
+            "GET_PERSON_POINT",
+            GetPersonPoint(),
+            transitions={
+                "succeeded": "succeeded", 
+                "failed": "failed"
+            },
+        )
+
+class InitialRecovery(StateMachine):
+    def __init__(self, ):
+        super().__init__(outcomes=["succeeded", "failed"])
+        self.add_output_key("last_known")
+        
+        self.add_state(
+            "SAY_RECOVERING",
+            Say(text="I have lost you."),
+            transitions={
+                "succeeded": "DETECT_3D_CENTER",
+                "aborted": "DETECT_3D_CENTER",
+                "canceled": "DETECT_3D_CENTER",
+            },
+        )
+
+        self.add_state(
+            "DETECT_3D_CENTER",
+            ScanForPerson("center"),
+            transitions={
+                "succeeded": "succeeded",
+                "failed": "DETECT_3D_LEFT",
+            },
+        )
+
+        self.add_state(
+            "DETECT_3D_LEFT",
+            ScanForPerson("left"),
+            transitions={
+                "succeeded": "succeeded",
+                "failed": "DETECT_3D_RIGHT",
+            },
+        )
+
+        self.add_state(
+            "DETECT_3D_RIGHT",
+            ScanForPerson("right"),
+            transitions={
+                "succeeded": "succeeded",
+                "failed": "failed",
+            },
+        )
 
 
 class TrackPerson(StateMachine):
@@ -406,8 +393,6 @@ class TrackPerson(StateMachine):
                 "failed": "failed",
             },
         )
-
-        # 2. Scan the Area
         self.add_state(
             "DETECT_3D",
             Detect3DInArea(filter=["person"]),
@@ -420,21 +405,29 @@ class TrackPerson(StateMachine):
         # 3. Process Math & Blackboard Updates
         self.add_state(
             "EVALUATE_DETECTIONS",
-            EvaluateDetections(safe_distance=1.5),
+            EvaluateDetections(),
             transitions={
                 "updated": "WAIT_TICK",  # Goal changed, pause briefly
                 "paused": "WAIT_TICK",  # Too close, pause briefly
                 "person_stationary": "person_stationary",  # Breakout: Reached destination
-                "person_lost": "person_lost",  # Breakout: Host vanished
+                "person_lost": "BASIC_RECOVERY",  # Breakout: Host vanished
             },
         )
 
         # 4. Short Loop Buffer
         self.add_state(
             "WAIT_TICK",
-            Wait(1),  
-            # 0.5s is usually perfect for fluid tracking without overwhelming CPU
+            Wait(0.2),  
             transitions={"succeeded": "UPDATE_POLYGON", "failed": "failed"},
+        )
+
+        self.add_state(
+            "BASIC_RECOVERY",
+            InitialRecovery(),
+            transitions={
+                "succeeded": "EVALUATE_DETECTIONS", 
+                "failed": "person_lost"
+            },
         )
 
 
@@ -443,12 +436,31 @@ class TrackPerson(StateMachine):
     Overall Following Logic
 """
 
+class GetPersonPoint(State):
+    def __init__(self):
+        # Outcomes mapping perfectly back to your TrackPerson state machine
+        super().__init__(outcomes=["succeeded", "failed"])
+        self.add_input_key("detections_3d")
+        self.add_output_key("last_known")  
+
+    def execute(self, blackboard):
+        
+        try:
+            if not blackboard["detections_3d"]:
+                return "failed"
+            # Assuming the first detection is the point of interest
+            blackboard["last_known"] = blackboard["detections_3d"][0].point
+            return "succeeded"
+        except Exception as e:
+            yasmin.YASMIN_LOG_ERROR(f"The following error occured: {e}")
+            return "failed"
 
 class FollowPerson(StateMachine):
     def __init__(self):
         # Outcomes align perfectly with your main locate_and_follow_host.py plan
         super().__init__(outcomes=["succeeded", "failed"], handle_sigint=True)
 
+        # Start of following
         self.add_state(
             "UPDATE_POLYGON",
             UpdateDetectionPolygon(),
@@ -467,15 +479,16 @@ class FollowPerson(StateMachine):
         )
         self.add_state(
             "GET_PERSON_POINT",
-            yasmin.CbState(
-                outcomes=["succeeded", "failed"], callback=self.get_person_point
-            ),
-            transitions={"succeeded": "SAY_FOLLOW", "failed": "WAIT_FOR_HOST"},
+            GetPersonPoint(),
+            transitions={
+                "succeeded": "SAY_FOLLOW", 
+                "failed": "WAIT_FOR_HOST"
+            },
         )
 
         self.add_state(
             "SAY_FOLLOW",
-            Say(text="I will now follow you. "),
+            Say(text="I will now follow you. Lead the way slowly. "),
             transitions={
                 "succeeded": "TRACK_AND_NAVIGATE",
                 "aborted": "TRACK_AND_NAVIGATE",
@@ -483,12 +496,13 @@ class FollowPerson(StateMachine):
             },
         )
 
+        # Tracking and Navigate
         self.add_state(
             "TRACK_AND_NAVIGATE",
             Concurrence(
                 states={
                     "tracker": TrackPerson(),
-                    "navigator": Navigator(),
+                    "navigator": ContinuousGoToLocation(),
                 },
                 default_outcome="failed",
                 outcome_map={
@@ -498,20 +512,24 @@ class FollowPerson(StateMachine):
                     "person_lost": {
                         "tracker": "person_lost",
                     },
-                    "failed": {
-                        "tracker": "failed",
-                        "navigator": "failed",
-                    },
                 },
             ),
             transitions={
-                "person_stationary": "succeeded",
-                "person_lost": "succeeded",
+                "person_stationary": "ASK_IF_ARRIVED",
+                "person_lost": "CALL_LOST_PERSON_BACK",
                 "failed": "failed",
             },
         )
 
-        # LOST_RECOVERY: Lose Person recovery (HEAD_TOUR + DETECT) if found person, approach and ask (if they are not the host add thier positon to a blacklist)
+        self.add_state(
+            "CALL_LOST_PERSON_BACK",
+            Say(text="I seam to have lost track of you. I will wait until you are back infront of me. "),
+            transitions={
+                "succeeded": "UPDATE_POLYGON",
+                "aborted": "UPDATE_POLYGON",
+                "canceled": "UPDATE_POLYGON",
+            },
+        )
 
         # Stationay Person
         self.add_state(
@@ -520,48 +538,44 @@ class FollowPerson(StateMachine):
                 tts_phrase="Say YES if we have arrived. NO if we have not.",
             ),
             transitions={
-                "succeeded": "succeeded",  # Update to HANDLE_RESPONSE
+                "succeeded": "PROCESS_RESPONSE",
                 "failed": "ASK_IF_ARRIVED",
+            }
+        )
+        self.add_state(
+            "PROCESS_RESPONSE",
+            yasmin.CbState(outcomes=["yes", "unknown", "no"], callback=self.parse_arrival_confirmation),
+            transitions={
+                "yes": "succeeded", 
+                "unknown": "FEEDBACK_RESPONSE",
+                "no": "SAY_FOLLOW",
             },
-            remappings={"transcribed_speech": "guest_transcription"},
+        )
+        self.add_state(
+            "FEEDBACK_RESPONSE",
+            Say(text="I didn't quite understand that. "),
+            transitions={
+                "succeeded": "ASK_IF_ARRIVED",
+                "aborted": "ASK_IF_ARRIVED",
+                "canceled": "ASK_IF_ARRIVED",
+            },
         )
 
-        # Callback which parses the resposne and returns "succeeded" or "SAY_FOLLOW"
+    def parse_arrival_confirmation(self, blackboard):
+        response = str(blackboard["transcribed_speech"]).lower()
+        yasmin.YASMIN_LOG_INFO(f"Recieved response: {response}")
 
-    def get_person_point(
-        self, blackboard
-    ):  # will probably throw an error related to blackboard
-        try:
-            if not blackboard["detections_3d"]:
-                return "failed"
-            # Assuming the first detection is the point of interest
-            blackboard["p_old"] = blackboard["detections_3d"][0].point
-            return "succeeded"
-        except Exception as e:
-            yasmin.YASMIN_LOG_ERROR(f"The following error occured: {e}")
-            return "failed"
-
-
-from rclpy.node import Node
-try:
-    from rclpy.executors import EventsExecutor as Executor
-except ImportError:
-    from rclpy.executors import MultiThreadedExecutor as Executor
-from threading import Thread
-class Follow_node(Node):
-    def __init__(self):
-        super().__init__("follow_test")
-
-        self._executor = Executor()
-        self._executor.add_node(self)
-        self._spin_thread = Thread(target=self._executor.spin)
-        self._spin_thread.start()
+        if "yes" in response:
+            return "yes" 
+        elif "no" in response:
+            return "no" 
+        else:
+            return "unknown"
 
 def main():
     rclpy.init()
 
-    node = Follow_node()
-    yasmin_ros.set_ros_loggers(node)
+    yasmin_ros.set_ros_loggers()
 
     sm = FollowPerson()
     bb = Blackboard()
@@ -574,7 +588,6 @@ def main():
 
     yasmin.YASMIN_LOG_INFO(outcome)
 
-    node.destroy_node()
     rclpy.shutdown()
 
 

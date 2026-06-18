@@ -1,5 +1,6 @@
 from typing import Union
 import rclpy
+from rclpy.time import Time
 
 import yasmin
 from yasmin import StateMachine, State, Blackboard
@@ -49,7 +50,7 @@ class ContinuousGoToLocation(State):
             if self.last_goal is None or self.isMoveableDistance(current_goal, self.last_goal):
                 
                 self.node.get_logger().info("Nav2: Sending updated goal...")
-                goal_stamped = PoseStamped(pose=current_goal, header=Header(frame_id="map"))
+                goal_stamped = PoseStamped(pose=current_goal, header=Header(frame_id="map", stamp=Time().to_msg()))
                 
                 self.navigator.goToPose(goal_stamped)
                 self.last_goal = current_goal
