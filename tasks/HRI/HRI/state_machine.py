@@ -63,7 +63,17 @@ class HRI(yasmin.StateMachine):
         self.add_state(
             "GO_TO_DOOR",
             GoToLocation(location_param="door_pose"),
-            transitions={"succeeded": "GREET", "failed": "failed"},
+            transitions={"succeeded": "POST_NAV", "failed": "failed"},
+        )
+
+        self.add_state(
+            "POST_NAV",
+            PlayMotion("post_navigation"),
+            transitions={
+                "succeeded": "GREET",
+                "aborted": "failed",
+                "canceled": "failed",
+            },
         )
 
         self.add_state(
@@ -95,7 +105,17 @@ class HRI(yasmin.StateMachine):
 
         self.add_state(
             "SAY_FOLLOW",
-            Say(text="Welcome. Follow me to the seating area."),
+            Say(format_str="Welcome {}. Follow me to the seating area."),
+            transitions={
+                "succeeded": "PRE_NAV_2",
+                "aborted": "failed",
+                "canceled": "failed",
+            },
+        )
+
+        self.add_state(
+            "PRE_NAV_2",
+            PlayMotion("pre_navigation"),
             transitions={
                 "succeeded": "GUIDE_TO_SEAT",
                 "aborted": "failed",
@@ -106,7 +126,17 @@ class HRI(yasmin.StateMachine):
         self.add_state(
             "GUIDE_TO_SEAT",  # GUIDES GUEST TO SEATING AREA
             GoToLocation(location_param="seat_pose"),
-            transitions={"succeeded": "SEAT_GUEST", "failed": "failed"},
+            transitions={"succeeded": "POST_NAV_2", "failed": "failed"},
+        )
+
+        self.add_state(
+            "POST_NAV_2",
+            PlayMotion("post_navigation"),
+            transitions={
+                "succeeded": "SEAT_GUEST",
+                "aborted": "failed",
+                "canceled": "failed",
+            },
         )
 
         self.add_state(
@@ -118,19 +148,45 @@ class HRI(yasmin.StateMachine):
         self.add_state(
             "CHECK",
             yasmin.CbState(outcomes=["succeeded", "GO_TO_DOOR_2"], callback=self.check),
-            transitions={"succeeded": "succeeded", "GO_TO_DOOR_2": "GO_TO_DOOR_2"},
+            transitions={"succeeded": "INTRODUCE", "GO_TO_DOOR_2": "PRE_NAV_3"},
+        )
+
+        self.add_state(
+            "PRE_NAV_3",
+            PlayMotion("pre_navigation"),
+            transitions={
+                "succeeded": "GO_TO_DOOR_2",
+                "aborted": "failed",
+                "canceled": "failed",
+            },
         )
 
         self.add_state(
             "GO_TO_DOOR_2",
             GoToLocation(location_param="door_pose"),
-            transitions={"succeeded": "GREET_2", "failed": "failed"},
+            transitions={"succeeded": "POST_NAV_3", "failed": "failed"},
+        )
+
+        self.add_state(
+            "POST_NAV_3",
+            PlayMotion("post_navigation"),
+            transitions={
+                "succeeded": "GREET_2",
+                "aborted": "failed",
+                "canceled": "failed",
+            },
         )
 
         self.add_state(
             "GREET_2",  # SM2: Greets guest
             LookAndGreetGuest(last_resort=False, guest_id="guest2"),
             transitions={"succeeded": "STOP_EYE_TRACKER", "failed": "failed"},
+        )
+
+        self.add_state(
+            "INTRODUCE",
+            Introduce(),
+            transitions={"succeeded": "succeeded", "failed": "failed"},
         )
 
     def check(self, blackboard):
@@ -199,6 +255,7 @@ def main():
             "detection": False,
             "seating_detection": False,
             "attributes": {},
+            "seated_point": None,
         },
         "guest2": {
             "name": "",
@@ -206,6 +263,7 @@ def main():
             "detection": False,
             "seating_detection": False,
             "attributes": {},
+            "seated_point": None,
         },
     }
 
@@ -215,6 +273,7 @@ def main():
     bb["confidence"] = face_detection_confidence
     bb["dataset"] = "hri"
     bb["drink_position"] = PointStamped()
+    bb["person_index"] = 0
 
     outcome = sm(bb)
 
