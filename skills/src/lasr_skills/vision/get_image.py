@@ -5,7 +5,7 @@ from yasmin import State, StateMachine
 import rclpy
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy, DurabilityPolicy
 
-
+import message_filters
 from typing import Optional
 from sensor_msgs.msg import Image, PointCloud2
 
@@ -23,33 +23,23 @@ class GetImage(State):
         self.add_input_key("img_msg")
         self.add_output_key("img_msg")
 
-        self.camera_qos = QoSProfile(
+        self.node = yasmin_ros.logger_node
+
+        camera_qos = QoSProfile(
             depth=10,
             reliability=ReliabilityPolicy.BEST_EFFORT,
             history=HistoryPolicy.KEEP_LAST,
         )
 
-        self.node = yasmin_ros.logger_node
-
-        self.msg = None
-
-        self.node.create_subscription(
-            Image, topic, self.image_cb, qos_profile=self.camera_qos
+        self.image_sub = message_filters.Subscriber(
+            self.node, Image, "head_front_camera/rgb/image_raw", camera_qos
         )
 
-    def image_cb(self, msg):
-        if self.msg is None:
-            self.msg = msg
+        self.cache = message_filters.Cache(self.image_sub)
 
     def execute(self, blackboard):
-        self.msg = None
-
-        while self.msg is None:
-            yasmin.YASMIN_LOG_INFO("Waiting for rgb frame")
-            time.sleep(1)
-
         try:
-            blackboard["img_msg"] = self.msg
+            blackboard["img_msg"] = self.cache.getLast()
             return "succeeded"
         except Exception as e:
             yasmin.YASMIN_LOG_ERROR(str(e))

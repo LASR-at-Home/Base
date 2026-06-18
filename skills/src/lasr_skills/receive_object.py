@@ -29,7 +29,7 @@ class ClearOctomap(ServiceState):
 class ReceiveObject(StateMachine):
     def __init__(self, object_name: Union[str, None] = None, vertical: bool = True):
 
-        super().__init__(outcomes=["succeeded", "failed"], handle_sigint=True)
+        super().__init__(outcomes=["succeeded", "failed"])
         if object_name is None:
             self.add_input_key("object_name")
 

@@ -1,0 +1,72 @@
+pick_and_place:
+  ros__parameters:
+    table:
+      pose:
+        position:
+          x: 6.33
+          y: 5.9
+          z: 0.0
+        orientation:
+          x: 0.0
+          y: 0.0
+          z: -0.707
+          w: 0.707
+      look_point:
+        x: 6.55
+        y: 4.82
+        z: 0.75
+      polygon:
+        top_left:     [5.80, 5.27]
+        top_right:    [7.30, 5.27]
+        bottom_right: [7.30, 4.37]
+        bottom_left:  [5.80, 4.37]
+      search_polygon:
+        top_left:     [5.3, 5.9]
+        top_right:    [7.8, 5.9]
+        bottom_right: [7.8, 3.8]
+        bottom_left:  [5.3, 3.8]
+      z_min: 0.7
+      z_max: 1.5
+    cabinet:
+      pose:
+        position:
+          x: 0.0
+          y: 0.0
+          z: 0.0
+        orientation:
+          x: 0.0
+          y: 0.0
+          z: 0.0
+          w: 1.0
+      shelves:
+        top:
+          torso_lift_joint: 0.35
+          look_point:
+            x: 0.0
+            y: 0.0
+            z: 1.2
+          polygon:
+            top_left:     [0.0, 1.0]
+            top_right:    [1.0, 1.0]
+            bottom_right: [1.0, 0.0]
+            bottom_left:  [0.0, 0.0]
+          z_min: 1.0
+          z_max: 1.4
+        bottom:
+          torso_lift_joint: 0.1
+          look_point:
+            x: 0.0
+            y: 0.0
+            z: 0.6
+          polygon:
+            top_left:     [0.0, 1.0]
+            top_right:    [1.0, 1.0]
+            bottom_right: [1.0, 0.0]
+            bottom_left:  [0.0, 0.0]
+          z_min: 0.4
+          z_max: 0.8
+    objects:
+      cocacola:
+        category: "drinks"
+      sprite:
+        category: "drinks"

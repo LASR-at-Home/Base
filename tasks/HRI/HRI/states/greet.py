@@ -1,6 +1,13 @@
 import yasmin
 
-from lasr_skills import Say, StartEyeTracker, WaitForPersonInArea, AskAndListen
+from lasr_skills import (
+    Say,
+    StartEyeTracker,
+    WaitForPersonInArea,
+    AskAndListen,
+    ReceiveObject,
+    StopEyeTracker,
+)
 from HRI.states import (
     GetNameAndDrink,
     GetGuestAttributes,
@@ -19,7 +26,7 @@ So Robot is at door and it:
 
 class LookAndGreetGuest(yasmin.StateMachine):
     def __init__(self, last_resort, guest_id):
-        super().__init__(outcomes=["succeeded", "failed"], handle_sigint=True)
+        super().__init__(outcomes=["succeeded", "failed"])
         self.add_input_key("guest_data")
         self.add_output_key("guest_data")
         self.add_output_key("person_detections")
@@ -129,18 +136,48 @@ class LookAndGreetGuest(yasmin.StateMachine):
             ),
             transitions={
                 "succeeded": "GET_NAME_DRINK_FACE",
-                "failed": "GREET_AND_ASK_GUEST",
+                "failed": "failed",
             },
             remappings={"transcribed_speech": "guest_transcription"},
         )
+
+        transition = "SAY_BAG" if guest_id == "guest2" else "succeeded"
+
         self.add_state(
             "GET_NAME_DRINK_FACE",
             conc_name_drink_face,
             transitions={
-                "succeeded": "succeeded",
+                "succeeded": transition,
                 "failed": "failed",
                 "failed_vision": "failed",
                 "failed_face": "failed",
                 "failed_attributes": "failed",
             },
+        )
+
+        self.add_state(
+            "SAY_BAG",
+            Say(text="I see you have a bag for me."),
+            transitions={
+                "succeeded": "STOP_EYE_TRACKING",
+                "aborted": "STOP_EYE_TRACKING",
+                "canceled": "STOP_EYE_TRACKING",
+            },
+        )
+
+        self.add_state(
+            "STOP_EYE_TRACKING",
+            StopEyeTracker(),
+            transitions={
+                "succeeded": "GRAB_BAG",
+                "aborted": "failed",
+                "canceled": "failed",
+                "timeout": "failed",
+            },
+        )
+
+        self.add_state(
+            "GRAB_BAG",
+            ReceiveObject(object_name="bag"),
+            transitions={"succeeded": "succeeded", "failed": "failed"},
         )
