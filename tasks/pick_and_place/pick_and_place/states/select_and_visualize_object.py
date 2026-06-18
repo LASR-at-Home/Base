@@ -1,113 +1,89 @@
 import cv2
 import yasmin
 import yasmin_ros
-from yasmin_ros.yasmin_node import YasminNode
-import rclpy
 from cv_bridge import CvBridge
 from sensor_msgs.msg import Image
-from rclpy.qos import QoSProfile, DurabilityPolicy, ReliabilityPolicy, HistoryPolicy
+from rclpy.qos import QoSProfile, DurabilityPolicy
 
 
 class SelectAndVisualiseObject(yasmin.State):
     """
-    Selects the first object from the detected_objects list, announces it
-    via TTS, and publishes a debug image with a bounding box to /referee_view
-    so the referee can confirm the robot's selection.
+    Selects an object from the detected_objects list and publishes a
+    debug image with a bounding box to /referee_view so the referee can
+    confirm the robot's selection.
 
-    Ported from ROS 1 SMACH SelectAndVisualiseObject. The three-state machine
-    (SELECT_OBJECT → SAY_OBJECT → VIS_OBJECT) collapses into a single
-    yasmin.State since there is no branching between them.
+    Without a target_name, selects the first detected object — used by
+    the table/extra-surface cleanup loops where order doesn't matter.
+    With a target_name, selects the specific named object from the list
+    — used by breakfast setup, where DetectObjects(queries=["bowl","spoon"])
+    can return either order and a specific one needs to be picked out.
+    Reuses the cached image set on the blackboard by DetectObjects
+    ("last_rgb_image") rather than re-fetching a fresh camera frame,
+    so the visualisation matches exactly what was detected.
 
+    Constructor args:
+        target_name : str | None — object name to search for; None
+
+                                    selects the first detection
     Blackboard inputs:
         detected_objects : List[Detection3D]
-            Output of DetectAllInPolygon — each item has .name, .xywh,
-            .confidence, and the raw image stored at index [2].
+        last_rgb_image    : Image — set by DetectObjects
 
     Blackboard outputs:
-        selected_object      : Detection3D  — the chosen object
-        selected_object_name : str          — its label, for use in Say format_str
+        selected_object      : Detection3D
+        selected_object_name : str
     """
 
-    def __init__(self):
+    def __init__(self, target_name: str = None):
         super().__init__(outcomes=["succeeded", "failed"])
+
         self.add_input_key("detected_objects")
         self.add_output_key("selected_object")
         self.add_output_key("selected_object_name")
-        self.add_output_key("object_name")
+        self._target_name = target_name
         self.node = yasmin_ros.logger_node
         self._bridge = CvBridge()
-
-        # Latched publisher so the referee view stays visible after publish
-        qos = QoSProfile(
-            depth=1,
-            durability=DurabilityPolicy.TRANSIENT_LOCAL,
-        )
+        qos = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL)
         self._referee_pub = self.node.create_publisher(Image, "/referee_view", qos)
-        self._last_image = None
-        cam_qos = QoSProfile(depth=1, reliability=ReliabilityPolicy.BEST_EFFORT,
-                             history=HistoryPolicy.KEEP_LAST)
-        self.node.create_subscription(
-            Image, "/head_front_camera/rgb/image_raw", self._on_image, cam_qos)
-
-
-    def _on_image(self, msg):
-        self._last_image = msg
-
-
-
 
     def execute(self, blackboard) -> str:
-        # ── 1. Select object ─────────────────────────────────────────────────
         detected = blackboard["detected_objects"]
-
         if not detected:
             yasmin.YASMIN_LOG_WARN("No detected objects to select from.")
             return "failed"
 
-        # Always pick the first object — same behaviour as ROS 1 version
-        selected = detected[0]
-        blackboard["selected_object"]      = selected
+        if self._target_name is not None:
+            selected = next(
+                (obj for obj in detected if obj.name == self._target_name), None
+            )
+            if selected is None:
+                yasmin.YASMIN_LOG_WARN(
+                    f"'{self._target_name}' not found in detected_objects."
+                )
+                return "failed"
+        else:
+            # Default behaviour for cleanup loops — always take the first
+            selected = detected[0]
+
+        blackboard["selected_object"] = selected
         blackboard["selected_object_name"] = selected.name
-        blackboard["object_name"] = selected.name
         yasmin.YASMIN_LOG_INFO(f"Selected object: {selected.name}")
-
-        # ── 2. Announce to referee ───────────────────────────────────────────
-        # Say skill expects blackboard["text"] or is constructed with text=
-        # Using the node's TTS directly here to avoid needing a sub-state
-        # TODO: replace with Say skill call if your team prefers consistency
-        yasmin.YASMIN_LOG_INFO(
-            "[TTS] I have selected an object, and it is displayed on my screen. "
-            "Please take a look."
-        )
-        # TODO: call Say skill — e.g.
-        # say = Say(text="I have selected an object...")
-        # say.execute(blackboard)
-
-        # ── 3. Publish visualisation ─────────────────────────────────────────
-        self._publish_visualisation(selected)
-
+        self._publish_visualisation(selected, blackboard)
         return "succeeded"
 
-    def _publish_visualisation(self, detection) -> None:
+    def _publish_visualisation(self, detection, blackboard) -> None:
+        """
+        Draws a bounding box and label on the cached detection-time image
+        and publishes it to /referee_view, satisfying rule 16's perception
+        communication requirement.
+        """
         try:
-            # Grab the latest RGB image directly from the camera topic
-            success, image_msg = rclpy.wait_for_message.wait_for_message(
-                msg_type=Image,
-                node=self.node,
-                topic="/head_front_camera/rgb/image_raw",
-                time_to_wait=5.0,
-            )
-
-            if not success:
-                yasmin.YASMIN_LOG_WARN("Could not get camera image for visualisation.")
+            image_msg = blackboard.get("last_rgb_image")
+            if image_msg is None:
+                yasmin.YASMIN_LOG_WARN("No cached image available for visualisation.")
                 return
-
-            label      = detection.name
-            xywh       = detection.xywh
-            confidence = detection.confidence
-
             cv_im = self._bridge.imgmsg_to_cv2(image_msg, desired_encoding="rgb8")
-
+            xywh = detection.xywh  # top-left format from DetectObjects
             cv2.rectangle(
                 cv_im,
                 (int(xywh[0]), int(xywh[1])),
@@ -115,16 +91,16 @@ class SelectAndVisualiseObject(yasmin.State):
                 (0, 255, 0),
                 2,
             )
+
             cv2.putText(
                 cv_im,
-                f"{label} {confidence:.2f}",
+                f"{detection.name} {detection.confidence:.2f}",
                 (int(xywh[0]), int(xywh[1] - 10)),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 0.5,
                 (0, 255, 0),
                 2,
             )
-
             self._referee_pub.publish(
                 self._bridge.cv2_to_imgmsg(cv_im, encoding="rgb8")
             )

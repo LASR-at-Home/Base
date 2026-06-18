@@ -7,3 +7,4 @@ from .classify_category import ClassifyCategory
 from .choose_shelf import ChooseShelf
 from .instruct_pick import InstructPick
 from .instruct_place import InstructPlace
+from .serve_breakfast import ServeBreakfast

@@ -51,26 +51,28 @@ class DetectObjects(yasmin.State):
     INFO_TOPIC = "/head_front_camera/rgb/camera_info"
 
     DEFAULT_QUERIES = ["cup", "can", "bottle", "bowl", "box"]
-    BOX_THRESHOLD = 0.25       # low — open-vocab scores are modest on sim models
+    BOX_THRESHOLD = 0.25  # low — open-vocab scores are modest on sim models
     TEXT_THRESHOLD = 0.10
     NMS_IOU = 0.5
 
-    def __init__(self):
+    def __init__(self, queries: list = None):
         super().__init__(outcomes=["succeeded", "failed"])
         self.add_output_key("detected_objects")
 
         self.node = yasmin_ros.logger_node
         self.bridge = CvBridge()
-
-        try:
-            q = list(
-                self.node.get_parameter("pick_and_place.objects")
-                .get_parameter_value()
-                .string_array_value
-            )
-            self._queries = q or list(self.DEFAULT_QUERIES)
-        except Exception:
-            self._queries = list(self.DEFAULT_QUERIES)
+        if queries is not None:
+            self._queries = queries
+        else:
+            try:
+                q = list(
+                    self.node.get_parameter("pick_and_place.objects")
+                    .get_parameter_value()
+                    .string_array_value
+                )
+                self._queries = q or list(self.DEFAULT_QUERIES)
+            except Exception:
+                self._queries = list(self.DEFAULT_QUERIES)
 
         self._rgb = None
         self._depth = None
@@ -91,7 +93,8 @@ class DetectObjects(yasmin.State):
 
         self._ovd = self.node.create_client(OpenVocabDetect, "open_vocab/detect")
         self._head = ActionClient(
-            self.node, FollowJointTrajectory,
+            self.node,
+            FollowJointTrajectory,
             "/head_controller/follow_joint_trajectory",
         )
 
@@ -144,12 +147,22 @@ class DetectObjects(yasmin.State):
 
     @staticmethod
     def _iou(a, b):  # a,b = (cx,cy,w,h) midpoint format
-        ax1, ay1, ax2, ay2 = a[0]-a[2]/2, a[1]-a[3]/2, a[0]+a[2]/2, a[1]+a[3]/2
-        bx1, by1, bx2, by2 = b[0]-b[2]/2, b[1]-b[3]/2, b[0]+b[2]/2, b[1]+b[3]/2
+        ax1, ay1, ax2, ay2 = (
+            a[0] - a[2] / 2,
+            a[1] - a[3] / 2,
+            a[0] + a[2] / 2,
+            a[1] + a[3] / 2,
+        )
+        bx1, by1, bx2, by2 = (
+            b[0] - b[2] / 2,
+            b[1] - b[3] / 2,
+            b[0] + b[2] / 2,
+            b[1] + b[3] / 2,
+        )
         iw = max(0.0, min(ax2, bx2) - max(ax1, bx1))
         ih = max(0.0, min(ay2, by2) - max(ay1, by1))
         inter = iw * ih
-        union = a[2]*a[3] + b[2]*b[3] - inter
+        union = a[2] * a[3] + b[2] * b[3] - inter
         return inter / union if union > 0 else 0.0
 
     def _nms(self, dets):  # class-agnostic, keep highest-confidence per region
@@ -183,13 +196,17 @@ class DetectObjects(yasmin.State):
         ps.point.z = d
         try:
             tr = self._tf.lookup_transform(
-                "map", cam_frame, self._rgb.header.stamp,
+                "map",
+                cam_frame,
+                self._rgb.header.stamp,
                 timeout=ROS2Duration(seconds=0.5),
             )
         except Exception:
             try:
                 tr = self._tf.lookup_transform(
-                    "map", cam_frame, ROS2Time(seconds=0),
+                    "map",
+                    cam_frame,
+                    ROS2Time(seconds=0),
                     timeout=ROS2Duration(seconds=0.5),
                 )
             except Exception:
@@ -250,6 +267,7 @@ class DetectObjects(yasmin.State):
                 d3.point = pt
             detected.append(d3)
 
+        blackboard["last_rgb_image"] = self._rgb
         blackboard["detected_objects"] = detected
         yasmin.YASMIN_LOG_INFO(
             f"Detected {len(detected)} object(s): "
