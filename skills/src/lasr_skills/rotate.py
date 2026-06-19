@@ -22,14 +22,14 @@ class Rotate(StateMachine):
     class GetRotatedPose(State):
         def __init__(self, angle: Optional[float] = None):
             super().__init__(outcomes=["succeeded"])
-            if angle in None:
+            if angle is None:
                 self.add_input_key("angle")
             self.add_output_key("target_pose")
             self.angle = angle
 
 
             self.current_robot_point = None
-            self.robot_pose_sub = self.node.create_subscription(
+            self.robot_pose_sub = yasmin_ros.logger_node.create_subscription(
                 PoseWithCovarianceStamped,
                 "/amcl_pose",
                 self.robot_point_cb,
@@ -58,9 +58,16 @@ class Rotate(StateMachine):
             new_rot_matrix = rot_matrix * R.from_euler(
                 "z", blackboard["angle"] if self.angle is None else self.angle, degrees=True
             )
+
+            matrix = new_rot_matrix.as_quat()
             new_pose = Pose(
                 position=self.robot_pose.pose.pose.position,
-                orientation=Quaternion(*new_rot_matrix.as_quat()),
+                orientation=Quaternion(
+                    x=matrix[0],
+                    y=matrix[1],
+                    z=matrix[2],
+                    w=matrix[3],
+                ),
             )
 
             blackboard["target_pose"] = new_pose
@@ -69,10 +76,9 @@ class Rotate(StateMachine):
 
     def __init__(self, angle: Optional[float] = None):
         super().__init__(outcomes=["succeeded", "failed"])
-        if angle in None:
+        if angle is None:
             self.add_input_key("angle")
         self.angle = angle
-
     
         self.add_state(
             "GET_ROTATED_POSE",
@@ -83,5 +89,23 @@ class Rotate(StateMachine):
             "ROTATE",
             GoToLocation(),
             transitions={"succeeded": "succeeded", "failed": "failed"},
-            remapping={"location": "target_pose"},
+            remappings={"location": "target_pose"},
         )
+
+def main():
+    rclpy.init()
+
+    yasmin_ros.set_ros_loggers()
+
+    sm = Rotate(180)
+    sm.set_sigint_handler(True)
+    bb = Blackboard()
+
+    outcome = sm(bb)
+
+    yasmin.YASMIN_LOG_INFO(outcome)
+
+    rclpy.shutdown()
+
+if __name__ == "__main__":
+    main()

@@ -27,6 +27,13 @@ def generate_launch_description():
         )
     )
 
+    transcribe_speech = Node(
+        package="lasr_speech_recognition_whisper",
+        executable="transcribe_microphone_server",
+        name="whisper_mic_server",
+        output="screen",
+    )
+
     follow_person = TimerAction(
         period=10.0,
         actions=[
@@ -39,4 +46,4 @@ def generate_launch_description():
         ],
     )
 
-    return LaunchDescription([load_motions, yolo_service, follow_person])
+    return LaunchDescription([load_motions, yolo_service, follow_person, transcribe_speech])

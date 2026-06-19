@@ -19,27 +19,40 @@ class ContinuousGoToLocation(State):
     """
     def __init__(self):
         # This state only exits if the Concurrence kills it or Nav2 crashes
-        super().__init__(outcomes=["succeeded", "failed"])
+        super().__init__(outcomes=["succeeded", "canceled", "aborted"])
         self.node = yasmin_ros.logger_node
         self.navigator = BasicNavigator()
         self.last_goal = None
+
+        self.add_input_key("location")
+        self.add_input_key("cancel_nav")
+        self.add_input_key("stop_robot_requested")
+
+        self.add_output_key("stop_robot_requested")
 
     def execute(self, blackboard: Blackboard):
         if "stop_robot_requested" not in blackboard.keys():
             blackboard["stop_robot_requested"] = False
         if "location" not in blackboard.keys():
             blackboard["location"] = None
+        if "cancel_nav" not in blackboard.keys():
+            blackboard["cancel_nav"] = False
+
         while not self.is_canceled() and rclpy.ok():
-            stop_requested = blackboard["stop_robot_requested"]
             current_goal = blackboard["location"]
 
+            if blackboard["cancel_nav"]:
+                blackboard["stop_robot_requested"] = True
+                self.cancel_state()
+
             # Handle Idling or stop requests
-            if stop_requested:
+            if blackboard["stop_robot_requested"]:
                 if not self.navigator.isTaskComplete():
                     self.navigator.cancelTask()
-                    self.node.get_logger().warn("Safety trigger: Brakes applied. Waiting...")
+                    self.node.get_logger().warn("Stop Requested")
                 time.sleep(0.2)
                 continue  
+
 
             # Handle missing Goals
             if current_goal is None:
@@ -61,7 +74,10 @@ class ContinuousGoToLocation(State):
         # Cleanup if the Concurrence cancels this state
         if not self.navigator.isTaskComplete():
             self.navigator.cancelTask()
-            
+        
+        if self.is_canceled():
+            return "canceled"
+
         return "succeeded"
 
     def isMoveableDistance(self, new_pose: Pose, old_pose: Pose) -> bool:

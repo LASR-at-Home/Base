@@ -11,6 +11,7 @@ from yasmin_viewer import YasminViewerPub
 
 import tf2_ros
 
+from std_msgs.msg import Header
 from geometry_msgs.msg import (
     PointStamped,
     PoseWithCovarianceStamped,
@@ -28,6 +29,7 @@ from lasr_skills import (
     Say,
     ContinuousGoToLocation,
     WaitForPersonInArea,
+    LookToPoint,
     AskAndListen,
 )
 
@@ -54,8 +56,8 @@ class UpdateDetectionPolygon(State):
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, self.node)
 
         self.base_footprint_polygon = [
-            [3.5, 1.5],         # Top Left
-            [3.5, -1.5],        # Top Right
+            [3.5, 1.25],         # Top Left
+            [3.5, -1.25],        # Top Right
             [-0.2, -1.75],        # Bottom Right
             [-0.2, 1.75],         # Bottom Left
         ]
@@ -121,6 +123,7 @@ class EvaluateDetections(State):
         # if using getpersonpoint after wait for person in area pass and remap
 
         self.add_output_key("location")
+        self.add_output_key("cancel_nav")
 
         self.node = yasmin_ros.logger_node
         self.safe_distance = safe_distance
@@ -185,7 +188,6 @@ class EvaluateDetections(State):
             if distance < closest_d:
                 closest_d = distance
                 best_person = person.point
-
         return best_person
 
 
@@ -215,6 +217,9 @@ class EvaluateDetections(State):
             else:
                 self.node.get_logger().warn("Waiting for first person detection...")
                 return "paused"
+            
+        if "cancel_nav" not in blackboard.keys():
+            blackboard["cancel_nav"] = False
             
         # People found in frame
         if len(detections) > 0:
@@ -280,6 +285,7 @@ class EvaluateDetections(State):
                 self.node.get_logger().warn(
                     f"PERSON CONFIRMED STATIONARY AFTER {self.stationary_count} TICKS"
                 )
+                blackboard["cancel_nav"] = True
                 return "person_stationary"
  
             return "paused"
@@ -304,46 +310,45 @@ class EvaluateDetections(State):
             blackboard["stop_robot_requested"] = True
             return "person_lost"
 
-
-class ScanForPerson(StateMachine):
-    def __init__(self, direction: str="center"):
-        super().__init__(outcomes=["succeeded", "failed"])
-        self.add_output_key("last_known")
-        
-        self.add_state(
-            "PLAYMOTION",
-            PlayMotion(f"look_{direction}"),
-            transitions={
-                "succeeded": "DETECT_3D",
-                "aborted": "failed",
-                "canceled": "failed",
-            },
-        )
-        self.add_state(
-            "DETECT_3D",
-            Detect3DInArea(filter=["person"]),
-            transitions={
-                "succeeded": "GET_PERSON_POINT",
-                "failed": "failed",
-            },
-        )
-        self.add_state(
-            "GET_PERSON_POINT",
-            GetPersonPoint(),
-            transitions={
-                "succeeded": "succeeded", 
-                "failed": "failed"
-            },
-        )
-
 class InitialRecovery(StateMachine):
-    def __init__(self, ):
+    class ScanForPerson(StateMachine):
+        def __init__(self, direction: str="center"):
+            super().__init__(outcomes=["succeeded", "failed"])
+            self.add_output_key("last_known")
+            
+            self.add_state(
+                "PLAYMOTION",
+                PlayMotion(f"look_{direction}"),
+                transitions={
+                    "succeeded": "DETECT_3D",
+                    "aborted": "failed",
+                    "canceled": "failed",
+                },
+            )
+            self.add_state(
+                "DETECT_3D",
+                Detect3DInArea(filter=["person"]),
+                transitions={
+                    "succeeded": "GET_PERSON_POINT",
+                    "failed": "failed",
+                },
+            )
+            self.add_state(
+                "GET_PERSON_POINT",
+                GetPersonPoint(),
+                transitions={
+                    "succeeded": "succeeded", 
+                    "failed": "failed"
+                },
+        )
+    
+    def __init__(self):
         super().__init__(outcomes=["succeeded", "failed"])
         self.add_output_key("last_known")
         
         self.add_state(
             "SAY_RECOVERING",
-            Say(text="I have lost you."),
+            Say(text="I can't see you."),
             transitions={
                 "succeeded": "DETECT_3D_CENTER",
                 "aborted": "DETECT_3D_CENTER",
@@ -353,7 +358,7 @@ class InitialRecovery(StateMachine):
 
         self.add_state(
             "DETECT_3D_CENTER",
-            ScanForPerson("center"),
+            self.ScanForPerson("center"),
             transitions={
                 "succeeded": "succeeded",
                 "failed": "DETECT_3D_LEFT",
@@ -362,7 +367,7 @@ class InitialRecovery(StateMachine):
 
         self.add_state(
             "DETECT_3D_LEFT",
-            ScanForPerson("left"),
+            self.ScanForPerson("left"),
             transitions={
                 "succeeded": "succeeded",
                 "failed": "DETECT_3D_RIGHT",
@@ -371,7 +376,7 @@ class InitialRecovery(StateMachine):
 
         self.add_state(
             "DETECT_3D_RIGHT",
-            ScanForPerson("right"),
+            self.ScanForPerson("right"),
             transitions={
                 "succeeded": "succeeded",
                 "failed": "failed",
@@ -414,6 +419,18 @@ class TrackPerson(StateMachine):
             },
         )
 
+        self.add_state(
+            "LOOK",
+            LookToPoint(),
+            transitions={
+                "succeeded": "succeeded",
+                "aborted": "failed",
+                "canceled": "failed",
+            },
+            remappings={"pointstamped": "last_known_stamped"}
+        )
+
+
         # 4. Short Loop Buffer
         self.add_state(
             "WAIT_TICK",
@@ -441,7 +458,8 @@ class GetPersonPoint(State):
         # Outcomes mapping perfectly back to your TrackPerson state machine
         super().__init__(outcomes=["succeeded", "failed"])
         self.add_input_key("detections_3d")
-        self.add_output_key("last_known")  
+        self.add_output_key("last_known") 
+        self.add_output_key("last_known_stamped")  
 
     def execute(self, blackboard):
         
@@ -449,7 +467,17 @@ class GetPersonPoint(State):
             if not blackboard["detections_3d"]:
                 return "failed"
             # Assuming the first detection is the point of interest
-            blackboard["last_known"] = blackboard["detections_3d"][0].point
+            last_known = blackboard["detections_3d"][0].point
+            blackboard["last_known"] = last_known
+
+            blackboard["last_known_stamped"] = PointStamped(
+                header=Header(
+                    frame_id="map",
+                    stamp=Time().to_msg(),
+                ),
+                point=last_known
+            )
+
             return "succeeded"
         except Exception as e:
             yasmin.YASMIN_LOG_ERROR(f"The following error occured: {e}")
@@ -508,9 +536,11 @@ class FollowPerson(StateMachine):
                 outcome_map={
                     "person_stationary": {
                         "tracker": "person_stationary",
+                        "navigator": "canceled",
                     },
                     "person_lost": {
                         "tracker": "person_lost",
+                        "navigator": "canceled",
                     },
                 },
             ),
@@ -590,8 +620,6 @@ def main():
     yasmin.YASMIN_LOG_INFO(outcome)
 
     rclpy.shutdown()
-
-
 
 if __name__ == "__main__":
     main()

@@ -63,6 +63,7 @@ setup(
             "ask_and_listen = lasr_skills.ask_and_listen:main",
             "receive_object = lasr_skills.receive_object:main",
             "follow_person = lasr_skills.follow_person:main",
+            "rotate = lasr_skills.rotate:main",
         ],
     },
 )
