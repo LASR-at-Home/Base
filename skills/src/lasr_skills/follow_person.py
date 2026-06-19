@@ -345,6 +345,7 @@ class InitialRecovery(StateMachine):
     def __init__(self):
         super().__init__(outcomes=["succeeded", "failed"])
         self.add_output_key("last_known")
+        self.add_output_key("cancel_nav")
         
         self.add_state(
             "SAY_RECOVERING",
@@ -379,9 +380,21 @@ class InitialRecovery(StateMachine):
             self.ScanForPerson("right"),
             transitions={
                 "succeeded": "succeeded",
-                "failed": "failed",
+                "failed": "CANCEL_NAV",
             },
         )
+
+        self.add_state(
+            "CANCEL_NAV",
+            yasmin.CbState(outcomes=["done"], callback=self.cancel_nav),
+            transitions={
+                "done":"failed",
+            },
+        )
+
+    def cancel_nav(self, blackboard):
+        blackboard["cancel_nav"] = True
+        return "done"
 
 
 class TrackPerson(StateMachine):
@@ -402,9 +415,28 @@ class TrackPerson(StateMachine):
             "DETECT_3D",
             Detect3DInArea(filter=["person"]),
             transitions={
-                "succeeded": "EVALUATE_DETECTIONS",
+                "succeeded": "GET_PERSON_POINT",
                 "failed": "failed",
             },
+        )
+        self.add_state(
+            "GET_PERSON_POINT",
+            GetPersonPoint(),
+            transitions={
+                "succeeded": "LOOK_AT_LAST_KNOWN", 
+                "failed": "EVALUATE_DETECTIONS"
+            }
+        )
+        self.add_state(
+            "LOOK_AT_LAST_KNOWN",
+            LookToPoint(),
+            transitions={
+                "succeeded": "EVALUATE_DETECTIONS",
+                "aborted": "EVALUATE_DETECTIONS",
+                "canceled": "EVALUATE_DETECTIONS",
+                "timeout": "EVALUATE_DETECTIONS"
+            },
+            remappings={"pointstamped": "last_known_stamped"}
         )
 
         # 3. Process Math & Blackboard Updates
@@ -412,28 +444,16 @@ class TrackPerson(StateMachine):
             "EVALUATE_DETECTIONS",
             EvaluateDetections(),
             transitions={
-                "updated": "WAIT_TICK",  # Goal changed, pause briefly
-                "paused": "WAIT_TICK",  # Too close, pause briefly
+                "updated": "WAIT",  # Goal changed, pause briefly
+                "paused": "WAIT",  # Too close, pause briefly
                 "person_stationary": "person_stationary",  # Breakout: Reached destination
                 "person_lost": "BASIC_RECOVERY",  # Breakout: Host vanished
             },
         )
 
-        self.add_state(
-            "LOOK",
-            LookToPoint(),
-            transitions={
-                "succeeded": "succeeded",
-                "aborted": "failed",
-                "canceled": "failed",
-            },
-            remappings={"pointstamped": "last_known_stamped"}
-        )
-
-
         # 4. Short Loop Buffer
         self.add_state(
-            "WAIT_TICK",
+            "WAIT",
             Wait(0.2),  
             transitions={"succeeded": "UPDATE_POLYGON", "failed": "failed"},
         )
@@ -469,7 +489,7 @@ class GetPersonPoint(State):
             # Assuming the first detection is the point of interest
             last_known = blackboard["detections_3d"][0].point
             blackboard["last_known"] = last_known
-
+            yasmin.YASMIN_LOG_WARN(f"DETECTIONS: {[detection.point for detection in blackboard['detections_3d']]} -- LAST_KNOWN: {last_known}")
             blackboard["last_known_stamped"] = PointStamped(
                 header=Header(
                     frame_id="map",
