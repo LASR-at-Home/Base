@@ -183,7 +183,7 @@ class SeatGuest(StateMachine):
             DetectAllInPolygon(
                 polygon=self.seating_area,
                 object_filter=["person", "chair"],
-                min_coverage=1.0,
+                min_coverage=0.7,
                 min_new_object_dist=0.50,
                 min_confidence=0.5,
             ),

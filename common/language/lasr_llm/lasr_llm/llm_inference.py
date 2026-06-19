@@ -141,10 +141,19 @@ class LLMInference:
         self.logger.info(
             f"[LLMInference] Pulling '{self.model_name}' (this only happens once)..."
         )
-        self.client.pull(self.model_name)
+        self.pull_model()
         self.logger.info(
             f"[LLMInference] '{self.model_name}' saved locally — offline use enabled."
         )
+        
+    def pull_model(model_name):
+        available = [m.model for m in ollama.list().models]
+        if model_name not in available:
+            for chunk in ollama.pull(model_name, stream=True):
+                if chunk.status == 'pulling manifest' or chunk.completed:
+                    pct = f"{chunk.completed/chunk.total*100:.1f}%" if chunk.total else ""
+                    print(f"\r{chunk.status} {pct}", end="", flush=True)
+            print(f"\nDone.")
 
     def infer_task(self) -> str:
         name = self.model_name.lower()

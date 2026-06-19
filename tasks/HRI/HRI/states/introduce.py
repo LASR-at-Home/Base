@@ -88,7 +88,7 @@ class Introduce(yasmin.StateMachine):
             DetectAllInPolygon(
                 polygon=self.seating_area,
                 object_filter=["person"],
-                min_coverage=1.0,
+                min_coverage=0.7,
                 min_new_object_dist=0.50,
                 min_confidence=0.5,
             ),
@@ -188,9 +188,9 @@ class Introduce(yasmin.StateMachine):
         people_detected = len(blackboard["people_detected"])
         index = blackboard["person_index"]
         yasmin.YASMIN_LOG_INFO(str(index))
-        yasmin.YASMIN_LOG_INFO(str(guest1point))
-        yasmin.YASMIN_LOG_INFO(str(guest2point))
-        yasmin.YASMIN_LOG_INFO(str(people_detected))
+        yasmin.YASMIN_LOG_INFO("Guest1 point: " + str(guest1point))
+        yasmin.YASMIN_LOG_INFO("Guest2 point: " + str(guest2point))
+        yasmin.YASMIN_LOG_INFO("People detected: " + str(people_detected))
 
         if guest1point is not None and guest2point is not None:
             return "succeeded"
@@ -201,7 +201,21 @@ class Introduce(yasmin.StateMachine):
             index += 1
             blackboard["person_index"] = index
             return "continue"
-
+        elif guest1point is not None and people_detected == 2:
+            index = blackboard['seat_indexes']['guest1']
+            index = 1 if index == 0 else 0
+            blackboard['guest_data']['guest2']['seated_point'] = blackboard["people_detected"][index].point
+            guest2point = blackboard["guest_data"]["guest2"]["seated_point"]
+            yasmin.YASMIN_LOG_INFO("Fallback Guest2 point: " + str(guest2point))
+            return 'succeeded'
+        elif guest2point is not None and people_detected == 2:
+            index = blackboard['seat_indexes']['guest2']
+            index = 1 if index == 0 else 0
+            blackboard['guest_data']['guest1']['seated_point'] = blackboard["people_detected"][index].point
+            guest1point = blackboard["guest_data"]["guest1"]["seated_point"]
+            yasmin.YASMIN_LOG_INFO("Fallback Guest1 point: " + str(guest1point))
+            return 'succeeded'
+        
         return "failed"
 
     def _loop_guest(self, blackboard):
