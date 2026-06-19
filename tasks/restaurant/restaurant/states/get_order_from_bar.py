@@ -12,7 +12,8 @@ import rclpy
 import yasmin
 import yasmin_ros
 from geometry_msgs.msg import Pose, Point, Quaternion
-from lasr_skills import GoToLocation, Say, Wait
+from lasr_skills import GoToLocation, Say, Wait, PlayMotion
+from restaurant.states import FaceCustomer, BuildPlaceOrderPhrase, BuildAnnounceOrderPhrase
 from rclpy.node import Node
 
 
@@ -20,13 +21,13 @@ class GetOrderFromBar(yasmin.StateMachine):
 
     def __init__(self):
         super().__init__(outcomes=["succeeded", "failed"], handle_sigint=True)
+        self.add_input_key("order")
+        self.add_input_key("bar_pose")
+
         self.node = yasmin_ros.logger_node
 
         parameters = {
-            "bar": self.get_pose("bar_pose"),
             "barman": self.get_pose("barman_pose"),
-            "table": self.get_pose("table_pose"),
-            "guest": self.get_pose("guest_pose"),
             "wait_duration": self.get_value("wait_duration"),
             "ordered_food": self.get_value("ordered_food"),
         }
@@ -35,8 +36,9 @@ class GetOrderFromBar(yasmin.StateMachine):
 
         self.add_state(
             "GO_TO_BAR",
-            GoToLocation(location=parameters["bar"]),
+            GoToLocation(),
             transitions={"succeeded": "FACE_BARMAN", "failed": "failed"},
+            remappings={"location": "bar_pose"},
         )
 
         self.add_state(
@@ -44,16 +46,22 @@ class GetOrderFromBar(yasmin.StateMachine):
             GoToLocation(location=parameters["barman"]),
             transitions={"succeeded": "PLACE_ORDER", "failed": "failed"},
         )
+        
+        self.add_state(
+            "BUILD_PLACE_ORDER",
+            BuildPlaceOrderPhrase(),
+            transitions={"succeeded": "PLACE_ORDER", "failed": "failed"},
+        )
 
-        tts_text = f"I would like to order {', '.join(parameters['ordered_food'])}"
         self.add_state(
             "PLACE_ORDER",
-            Say(text=tts_text),
+            Say(),
             transitions={
                 "succeeded": "WAIT_FOR_ORDER",
                 "aborted": "failed",
                 "canceled": "failed",
             },
+            remappings={"text": "place_order_phrase"},
         )
 
         self.add_state(
@@ -64,26 +72,42 @@ class GetOrderFromBar(yasmin.StateMachine):
 
         self.add_state(
             "GO_TO_TABLE",
-            GoToLocation(location=parameters["table"]),
-            transitions={"succeeded": "FACE_GUESTS", "failed": "failed"},
+            GoToLocation(),
+            transitions={"succeeded": "FACE_CUSTOMER", "failed": "SURVEY"},
+            remappings={"location": "location"},
         )
 
         self.add_state(
-            "FACE_GUESTS",
-            GoToLocation(location=parameters["guest"]),
+            "FACE_CUSTOMER",
+            FaceCustomer(),
+            transitions={"succeeded": "LOOK_AT_CUSTOMER", "failed": "LOOK_AT_CUSTOMER"},
+        )
+
+        self.add_state(
+            "LOOK_AT_CUSTOMER",
+            PlayMotion(motion_name="look_centre"),
+            transitions={
+                "succeeded": "GREET",
+                "aborted": "GREET",
+                "canceled": "GREET",
+            },
+        )
+
+        self.add_state(
+            "BUILD_ANNOUNCE_ORDER_PHRASE",
+            BuildAnnounceOrderPhrase(),
             transitions={"succeeded": "ANNOUNCE_ORDER", "failed": "failed"},
         )
 
         self.add_state(
             "ANNOUNCE_ORDER",
-            Say(
-                text=f"Your order of {', '.join(parameters['ordered_food'])} is ready!"
-            ),
+            Say(),
             transitions={
                 "succeeded": "succeeded",
                 "aborted": "failed",
                 "canceled": "failed",
             },
+            remappings={"text": "announce_order_phrase"},
         )
 
     def get_pose(self, pose_key):

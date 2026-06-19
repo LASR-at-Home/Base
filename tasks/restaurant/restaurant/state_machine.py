@@ -4,8 +4,7 @@ import yasmin_ros
 from std_msgs.msg import Empty
 from lasr_skills import Say, GoToLocation, PlayMotion
 
-from restaurant.states import Survey, ApproachPerson, FaceCustomer, TakeOrderSM
-
+from restaurant.states import Survey, ApproachPerson, FaceCustomer, TakeOrderSM, GetOrderFromBar, SaveBarPose
 
 class Restaurant(yasmin.StateMachine):
     def __init__(self, node):
@@ -30,9 +29,18 @@ class Restaurant(yasmin.StateMachine):
             "SAY_START",
             Say(text="Start of the restaurant task."),
             transitions={
+                "succeeded": "SAVE_BAR_POSE",
+                "aborted": "SAVE_BAR_POSE",
+                "canceled": "SAVE_BAR_POSE",
+            },
+        )
+
+        self.add_state(
+            "SAVE_BAR_POSE",
+            SaveBarPose(node=node),
+            transitions={
                 "succeeded": "FACE_TABLES",
-                "aborted": "FACE_TABLES",
-                "canceled": "FACE_TABLES",
+                "failed": "FACE_TABLES",
             },
         )
 
@@ -96,6 +104,15 @@ class Restaurant(yasmin.StateMachine):
         self.add_state(
             "TAKE_ORDER",
             TakeOrderSM(node=node),
+            transitions={
+                "succeeded": "succeeded",
+                "failed": "failed",
+            },
+        )
+        
+        self.add_state(
+            "GET_ORDER_FROM_BAR",
+            GetOrderFromBar(node=node),
             transitions={
                 "succeeded": "succeeded",
                 "failed": "failed",
