@@ -13,7 +13,8 @@ import yasmin
 import yasmin_ros
 from geometry_msgs.msg import Pose, Point, Quaternion
 from lasr_skills import GoToLocation, Say, Wait, PlayMotion
-from restaurant.states import FaceCustomer, BuildPlaceOrderPhrase, BuildAnnounceOrderPhrase
+from restaurant.states import FaceCustomer
+from restaurant.states.build_phrases import BuildPlaceOrderPhrase, BuildAnnounceOrderPhrase
 from rclpy.node import Node
 
 
@@ -73,7 +74,7 @@ class GetOrderFromBar(yasmin.StateMachine):
         self.add_state(
             "GO_TO_TABLE",
             GoToLocation(),
-            transitions={"succeeded": "FACE_CUSTOMER", "failed": "SURVEY"},
+            transitions={"succeeded": "FACE_CUSTOMER", "failed": "failed"},
             remappings={"location": "location"},
         )
 
@@ -87,9 +88,9 @@ class GetOrderFromBar(yasmin.StateMachine):
             "LOOK_AT_CUSTOMER",
             PlayMotion(motion_name="look_centre"),
             transitions={
-                "succeeded": "GREET",
-                "aborted": "GREET",
-                "canceled": "GREET",
+                "succeeded": "BUILD_ANNOUNCE_ORDER_PHRASE",
+                "aborted": "BUILD_ANNOUNCE_ORDER_PHRASE",
+                "canceled": "BUILD_ANNOUNCE_ORDER_PHRASE",
             },
         )
 

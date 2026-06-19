@@ -112,7 +112,7 @@ class Restaurant(yasmin.StateMachine):
         
         self.add_state(
             "GET_ORDER_FROM_BAR",
-            GetOrderFromBar(node=node),
+            GetOrderFromBar(),
             transitions={
                 "succeeded": "succeeded",
                 "failed": "failed",
