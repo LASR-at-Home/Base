@@ -1,4 +1,5 @@
 import cv2
+import rclpy
 import yasmin
 import yasmin_ros
 from cv_bridge import CvBridge
@@ -27,10 +28,10 @@ class SelectAndVisualiseObject(yasmin.State):
 
     def __init__(self, target_name: str = None):
         super().__init__(outcomes=["succeeded", "finished"])
-
         self.add_input_key("detected_objects")
         self.add_output_key("selected_object")
         self.add_output_key("selected_object_name")
+        self.add_output_key("object_name")
         self._target_name = target_name
         self.node = yasmin_ros.logger_node
         self._bridge = CvBridge()
@@ -54,11 +55,13 @@ class SelectAndVisualiseObject(yasmin.State):
                 yasmin.YASMIN_LOG_WARN(
                     f"'{self._target_name}' not found in detected_objects."
                 )
-                return "failed"
+                return "finished"
+            detected.remove(selected)
         else:
             # Default behaviour for cleanup loops — always take the first
-            selected = detected[0]
+            selected = detected.pop(0)
 
+        blackboard["detected_objects"] = detected
         blackboard["selected_object"] = selected
         blackboard["selected_object_name"] = selected.name
         blackboard["object_name"] = selected.name
@@ -77,19 +80,26 @@ class SelectAndVisualiseObject(yasmin.State):
 
         return "succeeded"
 
-    def _publish_visualisation(self, detection, blackboard) -> None:
-        """
-        Draws a bounding box and label on the cached detection-time image
-        and publishes it to /referee_view, satisfying rule 16's perception
-        communication requirement.
-        """
+    def _publish_visualisation(self, detection) -> None:
         try:
-            image_msg = blackboard.get("last_rgb_image")
-            if image_msg is None:
-                yasmin.YASMIN_LOG_WARN("No cached image available for visualisation.")
+            # Grab the latest RGB image directly from the camera topic
+            success, image_msg = rclpy.wait_for_message.wait_for_message(
+                msg_type=Image,
+                node=self.node,
+                topic="/head_front_camera/rgb/image_raw",
+                time_to_wait=5.0,
+            )
+
+            if not success:
+                yasmin.YASMIN_LOG_WARN("Could not get camera image for visualisation.")
                 return
+
+            label = detection.name
+            xywh = detection.xywh
+            confidence = detection.confidence
+
             cv_im = self._bridge.imgmsg_to_cv2(image_msg, desired_encoding="rgb8")
-            xywh = detection.xywh  # top-left format from DetectObjects
+
             cv2.rectangle(
                 cv_im,
                 (int(xywh[0]), int(xywh[1])),
@@ -97,16 +107,16 @@ class SelectAndVisualiseObject(yasmin.State):
                 (0, 255, 0),
                 2,
             )
-
             cv2.putText(
                 cv_im,
-                f"{detection.name} {detection.confidence:.2f}",
+                f"{label} {confidence:.2f}",
                 (int(xywh[0]), int(xywh[1] - 10)),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 0.5,
                 (0, 255, 0),
                 2,
             )
+
             self._referee_pub.publish(
                 self._bridge.cv2_to_imgmsg(cv_im, encoding="rgb8")
             )

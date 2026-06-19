@@ -10,48 +10,45 @@ class ServeBreakfast(yasmin.StateMachine):
     """
     Sets up breakfast on the dining table after table cleanup is complete.
 
-    Bowl and spoon are detected on a designated surface, cereal and milk
-    are detected in the cabinet next to their respective categories.
-
-    Detection uses open-vocabulary DetectObjects with a custom query list
-    per stop, and SelectAndVisualiseObject picks each named item out of
-    the detected pair via target_name. Every pick and place is delegated
-    to the human operator -- detection is used purely for recognition
-    scoring and referee visualisation, not for any manipulation.
+    Each item is detected and instructed individually so that if one
+    item fails to be detected, only that item's detection is retried —
+    not the whole group.
 
     Sequence:
         GO_TO_BREAKFAST_SURFACE
-        -> DETECT_BOWL_SPOON          (queries=["bowl", "spoon"])
-        -> SELECT_BOWL -> INSTRUCT_PICK_BOWL
-        -> SELECT_SPOON -> INSTRUCT_PICK_SPOON
+        -> DETECT_BOWL -> SELECT_BOWL -> INSTRUCT_PICK_BOWL
+        -> DETECT_SPOON -> SELECT_SPOON -> INSTRUCT_PICK_SPOON
         -> GO_TO_TABLE
-        -> INSTRUCT_PLACE_BOWL    (centre of table)
-        -> INSTRUCT_PLACE_SPOON   (next to bowl)
+        -> INSTRUCT_PLACE_BOWL
+        -> INSTRUCT_PLACE_SPOON
         -> GO_TO_CABINET
-        -> DETECT_CEREAL_MILK         (queries=["cereal", "milk"])
-        -> SELECT_CEREAL -> INSTRUCT_PICK_CEREAL
-        -> SELECT_MILK -> INSTRUCT_PICK_MILK
+        -> DETECT_CEREAL -> SELECT_CEREAL -> INSTRUCT_PICK_CEREAL
+        -> DETECT_MILK -> SELECT_MILK -> INSTRUCT_PICK_MILK
         -> GO_TO_TABLE
-        -> INSTRUCT_PLACE_CEREAL  (next to bowl, with clearance)
-        -> INSTRUCT_PLACE_MILK    (next to cereal, with clearance)
+        -> INSTRUCT_PLACE_CEREAL
+        -> INSTRUCT_PLACE_MILK
     """
 
     def __init__(self):
         super().__init__(outcomes=["succeeded", "failed"], handle_sigint=True)
+
+        # # Navigate to breakfast surface
+        # self.add_state(
+        #     "GO_TO_BREAKFAST_SURFACE",
+        #     GoToLocation(location_param="pick_and_place.breakfast_surface.pose"),
+        #     transitions={
+        #         "succeeded": "DETECT_BOWL",
+        #         "failed": "GO_TO_BREAKFAST_SURFACE",
+        #     },
+        # )
+
+        # Bowl
         self.add_state(
-            "GO_TO_BREAKFAST_SURFACE",
-            GoToLocation(location_param="pick_and_place.breakfast_surface.pose"),
-            transitions={
-                "succeeded": "DETECT_BOWL_SPOON",
-                "failed": "GO_TO_BREAKFAST_SURFACE",
-            },
-        )
-        self.add_state(
-            "DETECT_BOWL_SPOON",
-            DetectObjects(queries=["bowl", "spoon"]),
+            "DETECT_BOWL",
+            DetectObjects(queries=["bowl"]),
             transitions={
                 "succeeded": "SELECT_BOWL",
-                "failed": "DETECT_BOWL_SPOON",
+                "failed": "DETECT_BOWL",
             },
         )
         self.add_state(
@@ -59,15 +56,25 @@ class ServeBreakfast(yasmin.StateMachine):
             SelectAndVisualiseObject(target_name="bowl"),
             transitions={
                 "succeeded": "INSTRUCT_PICK_BOWL",
-                "failed": "DETECT_BOWL_SPOON",
+                "finished": "DETECT_BOWL",  # not found, retry detection
             },
         )
         self.add_state(
             "INSTRUCT_PICK_BOWL",
             InstructPick(),
             transitions={
-                "succeeded": "SELECT_SPOON",
+                "succeeded": "DETECT_SPOON",
                 "failed": "INSTRUCT_PICK_BOWL",
+            },
+        )
+
+        # Spoon
+        self.add_state(
+            "DETECT_SPOON",
+            DetectObjects(queries=["spoon"]),
+            transitions={
+                "succeeded": "SELECT_SPOON",
+                "failed": "DETECT_SPOON",
             },
         )
         self.add_state(
@@ -75,25 +82,27 @@ class ServeBreakfast(yasmin.StateMachine):
             SelectAndVisualiseObject(target_name="spoon"),
             transitions={
                 "succeeded": "INSTRUCT_PICK_SPOON",
-                "failed": "DETECT_BOWL_SPOON",
+                "finished": "DETECT_SPOON",  # not found, retry detection
             },
         )
         self.add_state(
             "INSTRUCT_PICK_SPOON",
             InstructPick(),
             transitions={
-                "succeeded": "GO_TO_TABLE_1",
+                "succeeded": "INSTRUCT_PLACE_BOWL",
                 "failed": "INSTRUCT_PICK_SPOON",
             },
         )
-        self.add_state(
-            "GO_TO_TABLE_1",
-            GoToLocation(location_param="pick_and_place.table.pose"),
-            transitions={
-                "succeeded": "INSTRUCT_PLACE_BOWL",
-                "failed": "GO_TO_TABLE_1",
-            },
-        )
+
+        # # Navigate to table, place bowl and spoon
+        # self.add_state(
+        #     "GO_TO_TABLE_1",
+        #     GoToLocation(location_param="pick_and_place.table.pose"),
+        #     transitions={
+        #         "succeeded": "INSTRUCT_PLACE_BOWL",
+        #         "failed": "GO_TO_TABLE_1",
+        #     },
+        # )
         self.add_state(
             "INSTRUCT_PLACE_BOWL",
             Say(text="Please place the bowl in the centre of the table."),
@@ -107,25 +116,29 @@ class ServeBreakfast(yasmin.StateMachine):
             "INSTRUCT_PLACE_SPOON",
             Say(text="Please place the spoon next to the bowl."),
             transitions={
-                "succeeded": "GO_TO_CABINET",
-                "aborted": "GO_TO_CABINET",
-                "canceled": "GO_TO_CABINET",
+                "succeeded": "DETECT_CEREAL",
+                "aborted": "DETECT_CEREAL",
+                "canceled": "DETECT_CEREAL",
             },
         )
+
+        # # Navigate to cabinet
+        # self.add_state(
+        #     "GO_TO_CABINET",
+        #     GoToLocation(location_param="pick_and_place.cabinet.pose"),
+        #     transitions={
+        #         "succeeded": "DETECT_CEREAL",
+        #         "failed": "GO_TO_CABINET",
+        #     },
+        # )
+
+        # Cereal
         self.add_state(
-            "GO_TO_CABINET",
-            GoToLocation(location_param="pick_and_place.cabinet.pose"),
-            transitions={
-                "succeeded": "DETECT_CEREAL_MILK",
-                "failed": "GO_TO_CABINET",
-            },
-        )
-        self.add_state(
-            "DETECT_CEREAL_MILK",
-            DetectObjects(queries=["box", "bottle"]),
+            "DETECT_CEREAL",
+            DetectObjects(queries=["box"]),
             transitions={
                 "succeeded": "SELECT_CEREAL",
-                "failed": "DETECT_CEREAL_MILK",
+                "failed": "DETECT_CEREAL",
             },
         )
         self.add_state(
@@ -133,15 +146,25 @@ class ServeBreakfast(yasmin.StateMachine):
             SelectAndVisualiseObject(target_name="box"),
             transitions={
                 "succeeded": "INSTRUCT_PICK_CEREAL",
-                "failed": "DETECT_CEREAL_MILK",
+                "finished": "DETECT_CEREAL",  # not found, retry detection
             },
         )
         self.add_state(
             "INSTRUCT_PICK_CEREAL",
             InstructPick(),
             transitions={
-                "succeeded": "SELECT_MILK",
+                "succeeded": "DETECT_MILK",
                 "failed": "INSTRUCT_PICK_CEREAL",
+            },
+        )
+
+        # Milk
+        self.add_state(
+            "DETECT_MILK",
+            DetectObjects(queries=["bottle"]),
+            transitions={
+                "succeeded": "SELECT_MILK",
+                "failed": "DETECT_MILK",
             },
         )
         self.add_state(
@@ -149,30 +172,32 @@ class ServeBreakfast(yasmin.StateMachine):
             SelectAndVisualiseObject(target_name="bottle"),
             transitions={
                 "succeeded": "INSTRUCT_PICK_MILK",
-                "failed": "DETECT_CEREAL_MILK",
+                "finished": "DETECT_MILK",  # not found, retry detection
             },
         )
         self.add_state(
             "INSTRUCT_PICK_MILK",
             InstructPick(),
             transitions={
-                "succeeded": "GO_TO_TABLE_2",
+                "succeeded": "INSTRUCT_PLACE_CEREAL",
                 "failed": "INSTRUCT_PICK_MILK",
             },
         )
-        self.add_state(
-            "GO_TO_TABLE_2",
-            GoToLocation(location_param="pick_and_place.table.pose"),
-            transitions={
-                "succeeded": "INSTRUCT_PLACE_CEREAL",
-                "failed": "GO_TO_TABLE_2",
-            },
-        )
+
+        # Navigate to table, place cereal and milk
+        # self.add_state(
+        #     "GO_TO_TABLE_2",
+        #     GoToLocation(location_param="pick_and_place.table.pose"),
+        #     transitions={
+        #         "succeeded": "INSTRUCT_PLACE_CEREAL",
+        #         "failed": "GO_TO_TABLE_2",
+        #     },
+        # )
         self.add_state(
             "INSTRUCT_PLACE_CEREAL",
             Say(
                 text="Please place the cereal next to the bowl, "
-                "leaving at least five centimetres of clear space."
+                "with sufficient space between them."
             ),
             transitions={
                 "succeeded": "INSTRUCT_PLACE_MILK",
@@ -184,7 +209,7 @@ class ServeBreakfast(yasmin.StateMachine):
             "INSTRUCT_PLACE_MILK",
             Say(
                 text="Please place the milk next to the cereal, "
-                "leaving at least five centimetres of clear space."
+                "with sufficient space between them."
             ),
             transitions={
                 "succeeded": "succeeded",
