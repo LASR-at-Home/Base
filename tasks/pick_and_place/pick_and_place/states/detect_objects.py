@@ -23,6 +23,8 @@ from control_msgs.action import FollowJointTrajectory
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 from builtin_interfaces.msg import Duration as DurationMsg
 
+from pick_and_place.vlm_classifier import classify_crop
+
 
 class DetectObjects(yasmin.State):
     """
@@ -33,7 +35,8 @@ class DetectObjects(yasmin.State):
     2. Call open_vocab/detect with configured grocery queries + low thresholds.
     3. Clean labels: map returned phrase ("cup box") → matching query ("cup").
     4. Class-agnostic NMS: drop overlapping duplicates (kills stacked boxes).
-    5. Project each kept box centre → 3D via depth + TF (for manipulation later).
+    5. VLM naming: a local VLM (Ollama) names each kept crop (replaces CLIP).
+    6. Project each kept box centre → 3D via depth + TF (for manipulation later).
 
     ROS 2 params:
         pick_and_place.objects — query words (COMMON NOUNS). Empty → default.
@@ -50,10 +53,17 @@ class DetectObjects(yasmin.State):
     DEPTH_TOPIC = "/head_front_camera/depth/image_raw"
     INFO_TOPIC = "/head_front_camera/rgb/camera_info"
 
-    DEFAULT_QUERIES = ["cup", "can", "bottle", "bowl", "box", "iced tea", "apple"]
+    DEFAULT_QUERIES = ["cup", "can", "bottle", "bowl", "apple"]
     BOX_THRESHOLD = 0.25
     TEXT_THRESHOLD = 0.10
     NMS_IOU = 0.5
+
+    # ── VLM naming (Ollama). DINO finds the boxes; the VLM says what each is.
+    #    Run clip_rerank:=false in the launch — the VLM replaces CLIP here.
+    VLM_ENABLE = True
+    VLM_MODEL = "moondream"
+    VLM_HOST = "http://localhost:11434"
+    VLM_TIMEOUT = 60.0
 
     def __init__(self):
         super().__init__(outcomes=["succeeded", "failed"])
@@ -238,8 +248,27 @@ class DetectObjects(yasmin.State):
         cleaned = [(self._clean_label(n), c, b) for n, c, b in raw]
         kept = self._nms(cleaned)
 
+        # VLM naming: convert the RGB once, then let the VLM name each kept crop.
+        rgb_cv = None
+        if self.VLM_ENABLE:
+            try:
+                rgb_cv = self.bridge.imgmsg_to_cv2(self._rgb, "bgr8")
+            except Exception as e:
+                yasmin.YASMIN_LOG_WARN(
+                    f"VLM: cannot convert RGB ({e}); keeping DINO labels."
+                )
+
         detected = []
         for name, conf, (cx, cy, w, h) in kept:
+            if rgb_cv is not None:
+                vlm_name = classify_crop(
+                    rgb_cv, (cx, cy, w, h),
+                    model=self.VLM_MODEL, host=self.VLM_HOST, timeout=self.VLM_TIMEOUT,
+                )
+                if vlm_name and vlm_name != name:
+                    yasmin.YASMIN_LOG_INFO(f"VLM: '{name}' -> '{vlm_name}'")
+                    name = vlm_name
+
             d3 = Detection3D()
             d3.name = name
             d3.confidence = float(conf)
