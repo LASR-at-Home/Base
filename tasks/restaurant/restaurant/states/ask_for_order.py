@@ -2,7 +2,7 @@ import rclpy
 import yasmin
 from lasr_skills import AskAndListen
 from lasr_llm_interfaces.srv import RestaurantQueryLlm
-
+import time
 
 class AskForOrder(yasmin.StateMachine):
     """

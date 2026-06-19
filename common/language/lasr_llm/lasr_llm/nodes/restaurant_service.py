@@ -45,8 +45,8 @@ class RestaurantLlmService(Node):
 
         item = llm_output.strip().lower()
         item = re.split(r"[\n\.,!?]", item)[0].strip()
-        for filler in ["the", "a", "an", "is", "item:", "output:", "field:"]:
-            item = item.replace(filler, "").strip()
+        # for filler in ["the", "a", "an", "is", "item:", "output:", "field:"]:
+        #     item = item.replace(filler, "").strip()
 
         self.get_logger().info(f"Parsed item: {item}")
         response.item = item

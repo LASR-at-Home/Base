@@ -2,6 +2,7 @@ import rclpy
 import yasmin
 from lasr_skills import AskAndListen
 from lasr_llm_interfaces.srv import RestaurantQueryLlm
+import time
 
 
 class AddDish(yasmin.StateMachine):
@@ -88,7 +89,6 @@ class AddDish(yasmin.StateMachine):
             future = self._llm_client.call_async(request)
             while not future.done():
                 rclpy.spin_once(self._node, timeout_sec=0.1)
-
             if future.result() is None:
                 return "failed"
 

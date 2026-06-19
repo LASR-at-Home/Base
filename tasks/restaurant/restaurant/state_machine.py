@@ -8,7 +8,7 @@ from restaurant.states import Survey, ApproachPerson, FaceCustomer, TakeOrderSM,
 
 class Restaurant(yasmin.StateMachine):
     def __init__(self, node):
-        super().__init__(outcomes=["succeeded", "failed"], handle_sigint=True)
+        super().__init__(outcomes=["succeeded", "failed"])
 
         def start_cb(blackboard, msg):
             yasmin.YASMIN_LOG_INFO("RECEIVED START SIGNAL")
@@ -92,7 +92,6 @@ class Restaurant(yasmin.StateMachine):
             "GREET",
             Say(
                 text="Hello, my name is Rexy. I'm going to serve you today."
-                "What would you like to order?"
             ),
             transitions={
                 "succeeded": "TAKE_ORDER",
@@ -105,14 +104,14 @@ class Restaurant(yasmin.StateMachine):
             "TAKE_ORDER",
             TakeOrderSM(node=node),
             transitions={
-                "succeeded": "succeeded",
+                "succeeded": "GET_ORDER_FROM_BAR",
                 "failed": "failed",
             },
         )
         
         self.add_state(
             "GET_ORDER_FROM_BAR",
-            GetOrderFromBar(node=node),
+            GetOrderFromBar(),
             transitions={
                 "succeeded": "succeeded",
                 "failed": "failed",
@@ -129,6 +128,7 @@ def main(args=None):
     )
     yasmin_ros.set_ros_loggers(node)
     sm = Restaurant(node=node)
+    sm.set_sigint_handler(True)
     outcome = sm(yasmin.Blackboard())
     node.get_logger().info(f"Restaurant outcome: {outcome}")
     node.destroy_node()
