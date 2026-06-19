@@ -10,7 +10,7 @@ import yasmin_ros
 
 from geometry_msgs.msg import Point, PointStamped, Pose
 
-from lasr_skills import Say, GoToLocation, StopEyeTracker, PlayMotion
+from lasr_skills import Say, GoToLocation, StopEyeTracker, PlayMotion, Rotate, FollowPerson
 
 from HRI.states import *
 
@@ -186,7 +186,32 @@ class HRI(yasmin.StateMachine):
         self.add_state(
             "INTRODUCE",
             Introduce(),
-            transitions={"succeeded": "succeeded", "failed": "failed"},
+            transitions={"succeeded": "ROTATE", "failed": "failed"},
+        )
+
+        self.add_state(
+            "ROTATE",
+            Rotate(angle=180),
+            transitions={"succeeded": "CALL_HOST", "failed": "failed"},
+        )
+
+        self.add_state(
+            "CALL_HOST",
+            Say(text="I have a bag. Can the host stand infront of me to lead the way."),
+            transitions={
+                "succeeded": "FOLLOW_HOST",
+                "aborted": "failed",
+                "canceled": "failed",
+            },
+        )
+
+        self.add_state(
+            "FOLLOW_HOST",
+            FollowPerson(),
+            transitions={
+                "succeeded": "succeeded",
+                "failed": "failed",
+            },
         )
 
     def check(self, blackboard):

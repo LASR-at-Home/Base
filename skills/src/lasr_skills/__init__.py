@@ -16,6 +16,7 @@ from .look_to_point import LookToPoint
 
 from .play_motion import PlayMotion
 from .go_to_location import GoToLocation
+from .rotate import Rotate
 from .continuous_go_to_location import ContinuousGoToLocation
 from .listen import Listen
 from .face_person import FacePerson
@@ -23,7 +24,6 @@ from .listen import Listen
 
 # from .listen_for import ListenFor
 from .receive_object import ReceiveObject
-from .handover_object import HandoverObject
 
 # from .clip_vqa import QueryImage
 from .detect_faces import DetectFaces

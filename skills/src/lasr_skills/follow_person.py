@@ -458,7 +458,7 @@ class GetPersonPoint(State):
 class FollowPerson(StateMachine):
     def __init__(self):
         # Outcomes align perfectly with your main locate_and_follow_host.py plan
-        super().__init__(outcomes=["succeeded", "failed"], handle_sigint=True)
+        super().__init__(outcomes=["succeeded", "failed"])
 
         # Start of following
         self.add_state(
@@ -578,6 +578,7 @@ def main():
     yasmin_ros.set_ros_loggers()
 
     sm = FollowPerson()
+    sm.set_sigint_handler(True)
     bb = Blackboard()
     bb["z_sweep_min"] = -10
     bb["z_sweep_max"] = 50
