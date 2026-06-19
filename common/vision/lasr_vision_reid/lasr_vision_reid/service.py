@@ -75,7 +75,7 @@ class ReID(Node):
         Use DeepFace to extract an embedding of a face.
         """
         results = DeepFace.represent(
-            img_path=im, model_name="VGG-Face", enforce_detection=True
+            img_path=im, model_name="VGG-Face", enforce_detection=False
         )
         embeddings = [np.array(entry["embedding"]) for entry in results]
         return embeddings
@@ -100,7 +100,7 @@ class ReID(Node):
             results = DeepFace.represent(
                 img_path=cv_im,
                 model_name="VGG-Face",
-                enforce_detection=True,
+                enforce_detection=False,
                 detector_backend="retinaface",
                 align=True,
                 max_faces=None,
@@ -193,7 +193,7 @@ class ReID(Node):
             results = DeepFace.represent(
                 img_path=cv_im,
                 model_name="VGG-Face",
-                enforce_detection=True,
+                enforce_detection=False,
                 detector_backend="retinaface",
                 align=True,
                 max_faces=None,
@@ -252,9 +252,9 @@ class ReID(Node):
             x, y, z = np.median(points, axis=0)
 
             point = Point()
-            point.x = x
-            point.y = y
-            point.z = z
+            point.x = x / 1000
+            point.y = y / 1000
+            point.z = z / 1000
             point_stamped = PointStamped()
             point_stamped.header = request.depth_image.header
             point_stamped.point = point
@@ -296,7 +296,7 @@ class ReID(Node):
             results = DeepFace.represent(
                 img_path=cv_im,
                 model_name="VGG-Face",
-                enforce_detection=True,  # allow detection attempts even if uncertain
+                enforce_detection=False,  # allow detection attempts even if uncertain
                 detector_backend="retinaface",
                 align=True,
                 max_faces=1,
@@ -374,24 +374,25 @@ class ReID(Node):
         )
 
         for i, detection in enumerate(response.detections):
-            marker = Marker()
-            marker.header.frame_id = frame_id
-            marker.header.stamp = (
-                self.get_clock().now().to_msg()
-            )  # Convert to message type
-            marker.id = i
-            marker.type = Marker.SPHERE
-            marker.action = Marker.ADD
-            marker.pose.position = detection.point
-            marker.scale.x = 0.1
-            marker.scale.y = 0.1
-            marker.scale.z = 0.1
-            marker.color.r = 0.0
-            marker.color.g = 0.5
-            marker.color.b = 1.0
-            marker.color.a = 1.0
+            if detection.name == "guest1" or detection.name == "guest2":
+                marker = Marker()
+                marker.header.frame_id = frame_id
+                marker.header.stamp = (
+                    self.get_clock().now().to_msg()
+                )  # Convert to message type
+                marker.id = i
+                marker.type = Marker.SPHERE
+                marker.action = Marker.ADD
+                marker.pose.position = detection.point
+                marker.scale.x = 0.1
+                marker.scale.y = 0.1
+                marker.scale.z = 0.1
+                marker.color.r = 0.0
+                marker.color.g = 0.5
+                marker.color.b = 1.0
+                marker.color.a = 1.0
 
-            self._marker_publisher.publish(marker)
+                self._marker_publisher.publish(marker)
 
 
 def main():

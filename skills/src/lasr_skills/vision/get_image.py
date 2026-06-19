@@ -5,10 +5,11 @@ from yasmin import State, StateMachine
 import rclpy
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy, DurabilityPolicy
 
-from rclpy.wait_for_message import wait_for_message
-
+import message_filters
 from typing import Optional
 from sensor_msgs.msg import Image, PointCloud2
+
+import time
 
 
 class GetImage(State):
@@ -16,46 +17,36 @@ class GetImage(State):
     State for reading an sensor_msgs Image message
     """
 
-    def __init__(self, topic: Optional[str] = None):
+    def __init__(self, topic="head_front_camera/rgb/image_raw"):
         super().__init__(outcomes=["succeeded", "failed"])
 
         self.add_input_key("img_msg")
         self.add_output_key("img_msg")
 
-        self.camera_qos = QoSProfile(
+        self.node = yasmin_ros.logger_node
+
+        camera_qos = QoSProfile(
             depth=10,
             reliability=ReliabilityPolicy.BEST_EFFORT,
             history=HistoryPolicy.KEEP_LAST,
         )
-        
-        yasmin_ros.logger_node.declare_parameter(
-            "image_topic", "/head_front_camera/rgb/image_raw"
+
+        self.image_sub = message_filters.Subscriber(
+            self.node, Image, "head_front_camera/rgb/image_raw", camera_qos
         )
-        self.topic = (
-            topic
-            if topic
-            else yasmin_ros.logger_node.get_parameter("image_topic")
-            .get_parameter_value()
-            .string_value
-        )
+
+        self.cache = message_filters.Cache(self.image_sub)
 
     def execute(self, blackboard):
-        # if not rclpy.ok():
-        #     rclpy.init()
-
         try:
-            msg = wait_for_message(Image, yasmin_ros.logger_node, self.topic, qos_profile=self.camera_qos)
-            if msg is not None:
-                blackboard["img_msg"] = msg
-            else:
-                blackboard["img_msg"] = None
-            if blackboard["img_msg"] is None:
-                return "failed"
-
+            blackboard["img_msg"] = self.cache.getLast()
+            return "succeeded"
         except Exception as e:
             yasmin.YASMIN_LOG_ERROR(str(e))
             return "failed"
-        return "succeeded"
+
+
+# UNUSED THROUGHOUT WHOLE REPO, MAYBE DELETE?????
 
 
 class GetPointCloud(State):
@@ -68,7 +59,7 @@ class GetPointCloud(State):
 
         self.add_input_key("pcl_msg")
         self.add_output_key("pcl_msg")
-        
+
         self.camera_qos = QoSProfile(
             depth=10,
             reliability=ReliabilityPolicy.BEST_EFFORT,
@@ -92,7 +83,10 @@ class GetPointCloud(State):
         try:
             blackboard["pcl_msg"] = None
             blackboard["pcl_msg"] = wait_for_message(
-                PointCloud2, yasmin_ros.logger_node, self.topic, qos_profile=self.camera_qos
+                PointCloud2,
+                yasmin_ros.logger_node,
+                self.topic,
+                qos_profile=self.camera_qos,
             )
             if blackboard["pcl_msg"] is None:
                 return "failed"
@@ -102,6 +96,7 @@ class GetPointCloud(State):
         return "succeeded"
 
 
+# ALSO NEVER USED, MAYBE DELETE AS WELL????
 class GetImageAndPointCloud(State):
     def __init__(self):
         super().__init__(outcomes=["succeeded", "failed"])
@@ -110,7 +105,7 @@ class GetImageAndPointCloud(State):
 
         self.add_output_key("pcl_msg")
         self.add_output_key("img_msg")
-        
+
         self.camera_qos = QoSProfile(
             depth=10,
             reliability=ReliabilityPolicy.BEST_EFFORT,

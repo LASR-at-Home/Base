@@ -108,7 +108,7 @@ class HRILearnFaces(StateMachine):
             self._dataset_size = dataset_size
 
         def execute(self, blackboard):
-            if blackboard['num_images'] >= self._dataset_size:
+            if blackboard["num_images"] >= self._dataset_size:
                 yasmin.YASMIN_LOG_INFO("Collected enough images for the guest.")
                 return "succeeded"
             else:
@@ -119,7 +119,7 @@ class HRILearnFaces(StateMachine):
                 return "failed"
 
     def __init__(self, guest_id: str, dataset_size: int = 3):
-        super().__init__(outcomes=["succeeded", "failed"], handle_sigint=True)
+        super().__init__(outcomes=["succeeded", "failed"])
 
         self.add_input_key("guest_data")
 

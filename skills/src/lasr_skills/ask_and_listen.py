@@ -13,7 +13,7 @@ class AskAndListen(yasmin.StateMachine):
         tts_phrase: Union[str, None] = None,
         tts_phrase_format_str: Union[str, None] = None,
     ):
-        super().__init__(outcomes=["succeeded", "failed"], handle_sigint=True)
+        super().__init__(outcomes=["succeeded", "failed"])
         self.add_output_key("transcribed_speech")
         if tts_phrase is not None:
             self.add_state(
@@ -84,15 +84,13 @@ class AskAndListen(yasmin.StateMachine):
 
 def main():
     rclpy.init()
-    
+
     yasmin_ros.set_ros_loggers()
-    
-    sm = AskAndListen('PLease say hi tiago then say your name and favourite drink')
-    
+
+    sm = AskAndListen("PLease say hi tiago then say your name and favourite drink")
+
     outcome = sm()
-    
-    yasmin.YASMIN_LOG_INFO(f'SM FINISHED WITH OUTCOME {outcome}')
-    
+
+    yasmin.YASMIN_LOG_INFO(f"SM FINISHED WITH OUTCOME {outcome}")
+
     rclpy.shutdown()
-    
-    

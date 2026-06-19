@@ -8,7 +8,6 @@ from lasr_skills import Detect3DInArea
 from shapely import Polygon as ShapelyPolygon
 
 
-
 class CheckForPerson(State):
     def __init__(self):
         super().__init__(outcomes=["done", "not_done"])
@@ -23,7 +22,7 @@ class CheckForPerson(State):
 
 class WaitForPersonInArea(StateMachine):
     def __init__(self):
-        super().__init__(outcomes=["succeeded", "failed"], handle_sigint=True)
+        super().__init__(outcomes=["succeeded", "failed"])
         self.add_output_key("detections_3d")
 
         node = yasmin_ros.logger_node

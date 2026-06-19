@@ -20,7 +20,9 @@ class HRITaskLLMService(Node):
     def __init__(self):
         super().__init__("hri_task_query_llm_service")
         self.create_service(HRITaskQueryLlm, "/hri_task/query_llm", self.query_llm)
-        config = ModelConfig(model_name="Qwen/Qwen2.5-1.5B", model_type="llm", quantize=False)
+        config = ModelConfig(
+            model_name="Qwen/Qwen2.5-1.5B", model_type="llm", quantize=False
+        )
         self.llm_inference = LLMInference(config)
         self.get_logger().info("HRI Task Query LLM service started")
 
@@ -29,7 +31,9 @@ class HRITaskLLMService(Node):
         Handle the query to the LLM.
         This function processes the request and returns a response.
         """
-        self.get_logger().info(f"Received query: {request.llm_input}")
+        self.get_logger().info(
+            f"Received query: {request.llm_input}, and task is {request.task}"
+        )
         task = request.task
 
         if task == "name":
