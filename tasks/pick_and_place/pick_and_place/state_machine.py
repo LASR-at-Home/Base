@@ -11,39 +11,52 @@ from lasr_skills import Say, GoToLocation
 
 from pick_and_place.states import (
     Start,
-    ScanShelves,
-    FindAndGoToTable,
     DetectObjects,
     SelectAndVisualiseObject,
     ClassifyCategory,
+    DecideDestination,
     ChooseShelf,
     InstructPick,
     InstructPlace,
+    AddTableCollision,  
+    GraspObject, 
+    ApproachTable
 )
 
 from rclpy.executors import MultiThreadedExecutor as Executor
 
 class PickAndPlace(yasmin.StateMachine):
     """
-    Main state machine for the Pick and Place task.
+    Main state machine for the Pick and Place task (announce-only).
 
-    Physical manipulation is delegated to a human operator
-    via verbal instructions — the robot perceives, reasons, and speaks.
+    Physical manipulation is delegated to a human operator via verbal
+    instructions — the robot perceives, reasons, routes, and speaks.
+
+    Each detected table object is routed to one of THREE destinations
+    (the task-planning core of the challenge):
+        - tableware / cutlery  → dishwasher
+        - the trash category   → trash bin
+        - everything else      → cabinet (matched to a shelf)
 
     Flow:
-        START
-            → SCAN_SHELVES          (build shelf category map)
-            → FIND_AND_GO_TO_TABLE  (locate and navigate to table)
-            → DETECT_OBJECTS        (detect all objects on table)
-            → SELECT_OBJECT         (pick first object, visualise for referee)
-            → CLASSIFY_CATEGORY     (determine object category)
-            → CHOOSE_SHELF          (match object to correct shelf)
-            → INSTRUCT_PICK         (tell operator to pick up object)
-            → GO_TO_CABINET         (navigate to cabinet)
-            → INSTRUCT_PLACE        (tell operator which shelf to place on)
-            → GO_TO_TABLE           (navigate back to table)
-            → DETECT_OBJECTS        (re-scan, loop until table empty)
+        START                       (start signal, door, drive to table)
+            → DETECT_OBJECTS        (open-vocab detect all table objects, ONCE)
+            ┌→ SELECT_OBJECT        (pop next object; empty → FINISH)
+            │   → CLASSIFY_CATEGORY (determine object category)
+            │   → DECIDE_DESTINATION(dishwasher / trash bin / cabinet)
+            │        ├ cabinet → CHOOSE_SHELF
+            │        └ other   ─────────────┐
+            │   → INSTRUCT_PICK  ←───────────┘
+            │   → GO_TO_DESTINATION (drive to chosen destination pose)
+            │   → INSTRUCT_PLACE
+            │   → GO_TO_TABLE       (drive back to table)
+            └───(loop)
+            → FINISH                (announce completion)
         → succeeded
+
+    NOTE: ScanShelves (perceiving the cabinet shelves and announcing their
+    categories) is added in the next iteration; until then shelf_data is {}
+    and ChooseShelf uses its category-name fallback.
     """
 
     def __init__(self):
@@ -54,33 +67,29 @@ class PickAndPlace(yasmin.StateMachine):
             "START",
             Start(),
             transitions={
-                "succeeded": "SCAN_SHELVES",
+                "succeeded": "ADD_TABLE_COLLISION",
                 "failed":    "failed",
             },
         )
 
-        # ── Scan cabinet shelves (done once) ──────────────────────────────────
         self.add_state(
-            "SCAN_SHELVES",
-            ScanShelves(),
+            "ADD_TABLE_COLLISION",
+            AddTableCollision(head_tilt=-0.6),     # детект усього столу здалеку
             transitions={
-                "succeeded": "DETECT_OBJECTS",
-                "failed":    "failed",
+                "succeeded": "GO_TO_TABLE_FOR_PICK",   # було "DETECT_OBJECTS"
             },
         )
 
-        # ── Find and navigate to table ────────────────────────────────────────
         self.add_state(
-            "FIND_AND_GO_TO_TABLE",
-            FindAndGoToTable(),
+            "GO_TO_TABLE_FOR_PICK",
+            GoToLocation(location_param="pick_and_place.table.pose"),
             transitions={
                 "succeeded": "DETECT_OBJECTS",
-                "failed":    "DETECT_OBJECTS",  # proceed even if table not found
+                "failed":    "DETECT_OBJECTS",   # все одно пробуємо детект
             },
         )
 
-        # ── Detect all objects on table ───────────────────────────────────────
-        # Re-entered at the top of every loop iteration
+        # ── Detect all objects on the table (done ONCE) ───────────────────────
         self.add_state(
             "DETECT_OBJECTS",
             DetectObjects(),
@@ -90,13 +99,13 @@ class PickAndPlace(yasmin.StateMachine):
             },
         )
 
-        # ── Select object and visualise for referee ───────────────────────────
+        # ── Select next object and visualise for referee ──────────────────────
         self.add_state(
             "SELECT_OBJECT",
             SelectAndVisualiseObject(),
             transitions={
                 "succeeded": "CLASSIFY_CATEGORY",
-                "failed":    "DETECT_OBJECTS",  # re-scan if nothing to select
+                "finished":  "FINISH",          # all objects processed
             },
         )
 
@@ -105,19 +114,29 @@ class PickAndPlace(yasmin.StateMachine):
             "CLASSIFY_CATEGORY",
             ClassifyCategory(task="object"),
             transitions={
-                "succeeded": "CHOOSE_SHELF",
-                "failed":    "CHOOSE_SHELF",   # proceed with unknown category
-                "empty":     "DETECT_OBJECTS", # nothing to classify, re-scan
+                "succeeded": "DECIDE_DESTINATION",
+                "failed":    "DECIDE_DESTINATION",  # proceed with unknown category
+                "empty":     "SELECT_OBJECT",       # nothing to classify, next object
             },
         )
 
-        # ── Choose which shelf to place object on ─────────────────────────────
+        # ── Decide destination: dishwasher / trash bin / cabinet ──────────────
+        self.add_state(
+            "DECIDE_DESTINATION",
+            DecideDestination(),
+            transitions={
+                "cabinet": "CHOOSE_SHELF",
+                "other":   "INSTRUCT_PICK",
+            },
+        )
+
+        # ── Choose which cabinet shelf to place object on ─────────────────────
         self.add_state(
             "CHOOSE_SHELF",
             ChooseShelf(),
             transitions={
                 "succeeded": "INSTRUCT_PICK",
-                "failed":    "DETECT_OBJECTS",
+                "failed":    "INSTRUCT_PICK",  # announce anyway
             },
         )
 
@@ -126,18 +145,21 @@ class PickAndPlace(yasmin.StateMachine):
             "INSTRUCT_PICK",
             InstructPick(),
             transitions={
-                "succeeded": "GO_TO_CABINET",
+                "succeeded": "GRASP",
                 "failed":    "INSTRUCT_PICK",  # retry instruction
             },
         )
-
-        # ── Navigate to cabinet ───────────────────────────────────────────────
         self.add_state(
-            "GO_TO_CABINET",
-            GoToLocation(location_param="pick_and_place.cabinet.pose"),
+            "GRASP", GraspObject(),
+            transitions={"succeeded": "GO_TO_DESTINATION", "failed": "GO_TO_DESTINATION"},
+        )
+        # ── Navigate to the chosen destination (pose set by DecideDestination)─
+        self.add_state(
+            "GO_TO_DESTINATION",
+            GoToLocation(),  # reads blackboard["location"]
             transitions={
                 "succeeded": "INSTRUCT_PLACE",
-                "failed":    "GO_TO_CABINET",  # retry navigation
+                "failed":    "INSTRUCT_PLACE",  # announce even if nav failed
             },
         )
 
@@ -156,8 +178,22 @@ class PickAndPlace(yasmin.StateMachine):
             "GO_TO_TABLE",
             GoToLocation(location_param="pick_and_place.table.pose"),
             transitions={
-                "succeeded": "DETECT_OBJECTS",  # loop back for next object
-                "failed":    "GO_TO_TABLE",      # retry navigation
+                "succeeded": "SELECT_OBJECT",  # loop back for next object
+                "failed":    "GO_TO_TABLE",     # retry navigation
+            },
+        )
+
+        # ── Done ──────────────────────────────────────────────────────────────
+        self.add_state(
+            "FINISH",
+            Say(
+                text="I have sorted all the objects I could see on the table. "
+                     "Pick and place complete."
+            ),
+            transitions={
+                "succeeded": "succeeded",
+                "aborted":   "succeeded",
+                "canceled":  "succeeded",
             },
         )
 
@@ -166,7 +202,7 @@ class PickAndPlaceNode(Node):
         super().__init__(
             node_name="pick_and_place",
             allow_undeclared_parameters=True,
-            automatically_declare_parameters_from_overrides=True,   # ← ПОВЕРНУТИ
+            automatically_declare_parameters_from_overrides=True,
         )
         self._executor = Executor()
         self._executor.add_node(self)
@@ -181,7 +217,7 @@ def main():
     yasmin_ros.set_ros_loggers(node)
 
     sm = PickAndPlace()
-
+  
     # Uncomment to visualise the state machine in RViz/browser
     # YasminViewerPub(sm)
 
@@ -196,6 +232,9 @@ def main():
     bb["shelf_data"]           = {}
     bb["chosen_shelf"]         = ""
     bb["chosen_shelf_str"]     = ""
+    bb["destination"]          = ""
+    bb["destination_str"]      = ""
+    bb["location"]             = None
     bb["table_pose"]           = None
     bb["debug_images"]         = []
 

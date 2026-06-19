@@ -1,6 +1,8 @@
 from typing import Union
 import rclpy
 
+import time
+
 import yasmin
 from yasmin import StateMachine, State, Blackboard
 import yasmin_ros
@@ -81,7 +83,7 @@ class GoToLocation(State):
         self.navigator.goToPose(goal_stamped)
 
         while not self.navigator.isTaskComplete():
-            rclpy.spin_once(self.navigator)
+            time.sleep(1)
 
         return (
             "succeeded"

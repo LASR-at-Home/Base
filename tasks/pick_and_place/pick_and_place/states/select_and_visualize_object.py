@@ -8,34 +8,25 @@ from rclpy.qos import QoSProfile, DurabilityPolicy
 
 class SelectAndVisualiseObject(yasmin.State):
     """
-    Selects an object from the detected_objects list and publishes a
-    debug image with a bounding box to /referee_view so the referee can
-    confirm the robot's selection.
+    Pops the next object from the detected_objects list, announces it, and
+    publishes a debug image with a bounding box to /referee_view so the referee
+    can confirm the robot's selection.
 
-    Without a target_name, selects the first detected object — used by
-    the table/extra-surface cleanup loops where order doesn't matter.
-    With a target_name, selects the specific named object from the list
-    — used by breakfast setup, where DetectObjects(queries=["bowl","spoon"])
-    can return either order and a specific one needs to be picked out.
-    Reuses the cached image set on the blackboard by DetectObjects
-    ("last_rgb_image") rather than re-fetching a fresh camera frame,
-    so the visualisation matches exactly what was detected.
+    Announce-only: nothing is physically removed from the table, so the loop
+    iterates the detected list (pop) instead of re-detecting each round. When the
+    list is empty, every object has been processed → outcome "finished".
 
-    Constructor args:
-        target_name : str | None — object name to search for; None
-
-                                    selects the first detection
     Blackboard inputs:
         detected_objects : List[Detection3D]
-        last_rgb_image    : Image — set by DetectObjects
 
     Blackboard outputs:
         selected_object      : Detection3D
         selected_object_name : str
+        object_name          : str
     """
 
     def __init__(self, target_name: str = None):
-        super().__init__(outcomes=["succeeded", "failed"])
+        super().__init__(outcomes=["succeeded", "finished"])
 
         self.add_input_key("detected_objects")
         self.add_output_key("selected_object")
@@ -49,8 +40,11 @@ class SelectAndVisualiseObject(yasmin.State):
     def execute(self, blackboard) -> str:
         detected = blackboard["detected_objects"]
         if not detected:
-            yasmin.YASMIN_LOG_WARN("No detected objects to select from.")
-            return "failed"
+            # Announce-only mode: nothing is physically removed from the table,
+            # so the loop iterates this list instead of re-detecting. Empty list
+            # means every detected object has been processed → we are done.
+            yasmin.YASMIN_LOG_INFO("No objects left to process — finished.")
+            return "finished"
 
         if self._target_name is not None:
             selected = next(
@@ -67,8 +61,20 @@ class SelectAndVisualiseObject(yasmin.State):
 
         blackboard["selected_object"] = selected
         blackboard["selected_object_name"] = selected.name
-        yasmin.YASMIN_LOG_INFO(f"Selected object: {selected.name}")
-        self._publish_visualisation(selected, blackboard)
+        blackboard["object_name"] = selected.name
+        yasmin.YASMIN_LOG_INFO(
+            f"Selected object: {selected.name} ({len(detected)} remaining)."
+        )
+
+        # ── 2. Announce to referee ───────────────────────────────────────────
+        yasmin.YASMIN_LOG_INFO(
+            "[TTS] I have selected an object, and it is displayed on my screen. "
+            "Please take a look."
+        )
+
+        # ── 3. Publish visualisation ─────────────────────────────────────────
+        self._publish_visualisation(selected)
+
         return "succeeded"
 
     def _publish_visualisation(self, detection, blackboard) -> None:

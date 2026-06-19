@@ -44,14 +44,14 @@ class DetectObjects(yasmin.State):
 
     HEAD_PAN_JOINT = "head_1_joint"
     HEAD_TILT_JOINT = "head_2_joint"
-    HEAD_TILT_DOWN = -0.4
+    HEAD_TILT_DOWN = -0.65
 
     RGB_TOPIC = "/head_front_camera/rgb/image_raw"
     DEPTH_TOPIC = "/head_front_camera/depth/image_raw"
     INFO_TOPIC = "/head_front_camera/rgb/camera_info"
 
-    DEFAULT_QUERIES = ["cup", "can", "bottle", "bowl", "box"]
-    BOX_THRESHOLD = 0.25  # low — open-vocab scores are modest on sim models
+    DEFAULT_QUERIES = ["cup", "can", "bottle", "bowl", "box", "iced tea", "apple"]
+    BOX_THRESHOLD = 0.25
     TEXT_THRESHOLD = 0.10
     NMS_IOU = 0.5
 
@@ -260,7 +260,6 @@ class DetectObjects(yasmin.State):
             d3 = Detection3D()
             d3.name = name
             d3.confidence = float(conf)
-            # store TOP-LEFT xywh so SelectAndVisualise draws the box correctly
             d3.xywh = [int(cx - w / 2), int(cy - h / 2), int(w), int(h)]
             pt = self._project_3d(cx, cy)
             if pt is not None:

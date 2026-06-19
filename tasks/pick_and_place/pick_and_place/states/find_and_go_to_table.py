@@ -16,7 +16,6 @@ from pick_and_place.states.compute_approach import ComputeApproach
 
 
 def _wait_future(future, timeout):
-    """Чекає future, який ЗАВЕРШИТЬ фоновий екзекютор (без повторного spin)."""
     deadline = time.time() + timeout
     while not future.done() and time.time() < deadline:
         time.sleep(0.02)
@@ -134,7 +133,7 @@ class FindAndGoToTable(yasmin.StateMachine):
                 if result is None:
                     yasmin.YASMIN_LOG_WARN("Navigation timed out, trying next pose.")
                     continue
-                if result.status != 4:           # 4 = SUCCEEDED (action_msgs/GoalStatus)
+                if result.status != 4:
                     yasmin.YASMIN_LOG_WARN(f"Nav failed (status {result.status}), next pose.")
                     continue
 

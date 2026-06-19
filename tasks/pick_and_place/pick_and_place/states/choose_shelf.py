@@ -51,7 +51,7 @@ class ChooseShelf(yasmin.State):
 
         if not shelf_data:
             blackboard["chosen_shelf"]     = f"the {object_category} shelf"
-            blackboard["chosen_shelf_str"] = f"the shelf for {object_category} items"
+            blackboard["chosen_shelf_str"] = ""
             yasmin.YASMIN_LOG_WARN(
                 f"No shelf data (scan skipped) — defaulting to "
                 f"the {object_category} shelf."

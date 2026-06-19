@@ -7,31 +7,17 @@
       trash_category: "snack"
 
       # Open-vocab query words for table detection (common nouns).
-      objects: ["cup", "can", "bottle", "bowl", "box", "spoon"]
+      objects: ["cup", "can", "bottle", "bowl", "box", "apple"]
 
       table:
         pose:
-          position: {x: 3.0, y: -2.7, z: 0.0}
-          orientation: {x: 0.0, y: 0.0, z: -0.9565, w: 0.23}
-        look_point: [5.25, 2.27, 0.78]
+          position: {x: 4.65, y: 2.5, z: 0.0}
+          orientation: {x: 0.0, y: 0.0, z: -0.9565, w: 0.2919}
+        look_point: [5.25, 2.27, 0.75]
         polygon: [3.5, 1.0, 5.5, 1.0, 5.5, 3.5, 3.5, 3.5]
         search_polygon: [5.3, 3.8, 7.8, 3.8, 7.8, 5.9, 5.3, 5.9]
         z_min: 0.7
         z_max: 1.5
-
-      # ── DESTINATION 1: dishwasher (tableware + cutlery) ──
-      dishwasher:
-        pose:
-          position: {x: 1.1, y: 3.0, z: 0.0}              # <-- ВСТАВ pose (ros2 topic echo --once /amcl_pose)
-          orientation: {x: 0.0, y: 0.0, z: -0.62, w: 0.78}
-
-      # ── DESTINATION 2: trash bin ──
-      trash_bin:
-        pose:
-          position: {x: 6.0, y: -2.23, z: 0.0}              # <-- ВСТАВ pose
-          orientation: {x: 0.0, y: 0.0, z: -0.91, w: 0.41}
-
-      # ── DESTINATION 3: cabinet (fake: boxes with objects) ──
       cabinet:
         pose:
           position: {x: -4.9, y: 2.7, z: 0.0}              # <-- ВСТАВ pose
@@ -60,6 +46,12 @@
             polygon: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
             z_min: 0.3
             z_max: 0.6
+      grasp:
+        enable: false
+        reach: 0.80
+        use_moveit: true
+        publish_box: true
+        
       # ── BREAKFAST SURFACE (bowl and spoon pickup location) ──
       breakfast_surface:
         pose:
