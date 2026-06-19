@@ -10,7 +10,7 @@ package_name = "restaurant"
 class InstallCommand(setuptools.command.install.install):
     def run(self):
         super().run()
-        import ament_virtualenv.install  # ← було зверху, тепер тут
+        import ament_virtualenv.install
 
         ament_virtualenv.install.install_venv(
             scripts_base=self.install_scripts,
@@ -44,7 +44,8 @@ setup(
             "sm = restaurant.state_machine:main",
             "survey = restaurant.states.survey:main",
             "detect_wave = restaurant.states.detect_wave:main",
+            "take_order_sm = restaurant.states.take_order_sm:main", 
             "get_order_from_bar = restaurant.states.get_order_from_bar:main",
-        ],
+            ],
     },
-)
+)   

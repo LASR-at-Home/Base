@@ -45,3 +45,5 @@ restaurant:
         w: 1.0
     ordered_food: ["pizza", "soda"]
     wait_duration: 10
+    priors:
+      items: ["cola", "water", "juice", "coffee", "tea", "sandwich", "cookie", "chips"]

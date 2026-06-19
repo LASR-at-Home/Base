@@ -142,10 +142,16 @@ def visually_describe_people(input_image, inference: VLMInference) -> dict[str, 
     )
     for attr in attributes:
         user_query += f"\n- {attr}"
+    # user_query_example = (
+    #     "\n\n The structure of the response should be a comma separated list of attribute: value pairs. For example, "
+    #     "'hair_color: _, hair_length: _, glasses: _, hat: _, shirt color: _', where the _ is replaced with the model's answer for that attribute. "
+    #     "For true or false attributes, the value should be simply true or false. For example, 'glasses: true' if the model thinks the person is wearing glasses, and 'hat: false' if the model thinks the person is not wearing a hat."
+    # )
     user_query_example = (
         "\n\n The structure of the response should be a comma separated list of attribute: value pairs. For example, "
         "'hair_color: _, hair_length: _, glasses: _, hat: _, shirt color: _', where the _ is replaced with the model's answer for that attribute. "
-        "For true or false attributes, the value should be simply true or false. For example, 'glasses: true' if the model thinks the person is wearing glasses, and 'hat: false' if the model thinks the person is not wearing a hat."
+        "For glasses and hat, only answer true if they are clearly and visibly present in the image. "
+        "If you are not sure, answer false. For example, 'glasses: false' means the person is definitely not wearing glasses."
     )
     user_query += user_query_example
 
