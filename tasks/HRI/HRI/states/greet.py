@@ -30,11 +30,16 @@ class LookAndGreetGuest(yasmin.StateMachine):
         self.add_input_key("guest_data")
         self.add_output_key("guest_data")
         self.add_output_key("person_detections")
+        
+        attribute = yasmin.CbState(outcomes=['succeeded', 'failed'], callback=self.get_guest1_attributes)
+        
+        attribute.add_input_key('guest_data')
+        attribute.add_output_key('text')
 
         conc_face_attribute = yasmin.Concurrence(
             states={
                 "GET_ATTRIBUTES": GetGuestAttributes(guest_id=guest_id),
-                "LEARN_FACE": HRILearnFaces(guest_id=guest_id),
+                "LEARN_FACE": HRILearnFaces(guest_id=guest_id, dataset_size=10),
             },
             default_outcome="failed",
             outcome_map={
@@ -141,7 +146,7 @@ class LookAndGreetGuest(yasmin.StateMachine):
             remappings={"transcribed_speech": "guest_transcription"},
         )
 
-        transition = "SAY_BAG" if guest_id == "guest2" else "succeeded"
+        transition = "GET_ATTRIBUTE_STR" if guest_id == "guest2" else "SAY_WELCOME"
 
         self.add_state(
             "GET_NAME_DRINK_FACE",
@@ -154,15 +159,34 @@ class LookAndGreetGuest(yasmin.StateMachine):
                 "failed_attributes": "failed",
             },
         )
-
+        
         self.add_state(
-            "SAY_BAG",
-            Say(text="I see you have a bag for me."),
+            'SAY_WELCOME',
+            Say(format_str='Welcome to the party {}. Please follow me to be seated.'),
+            transitions={
+                "succeeded": "succeeded",
+                "aborted": "failed",
+                "canceled": "failed",
+            }
+        )
+        
+        self.add_state(
+            'GET_ATTRIBUTE_STR',
+            attribute,
+            transitions={
+                'succeeded': 'SAY_ATTRIBUTE',
+                'failed': 'failed'
+            }
+        )
+        
+        self.add_state(
+            'SAY_ATTRIBUTE',
+            Say(),
             transitions={
                 "succeeded": "STOP_EYE_TRACKING",
-                "aborted": "STOP_EYE_TRACKING",
-                "canceled": "STOP_EYE_TRACKING",
-            },
+                "aborted": "failed",
+                "canceled": "failed",
+            }
         )
 
         self.add_state(
@@ -181,3 +205,30 @@ class LookAndGreetGuest(yasmin.StateMachine):
             ReceiveObject(object_name="bag"),
             transitions={"succeeded": "succeeded", "failed": "failed"},
         )
+        
+    def get_guest1_attributes(self, blackboard):
+        attribute_str = ""
+        attributes = blackboard['guest_data']['guest1']['attributes']
+        guest2_name = blackboard['guest_data']['guest2']['name']
+        guest1_name = blackboard['guest_data']['guest1']['name']
+        
+        for attribute in attributes.keys():
+            value = attributes[attribute]
+            if attribute == 'hair_color':
+                attribute_str += f' have {value} coloured hair'
+            elif attribute == 'hair_length':
+                attribute_str += f' have {value} hair'
+            elif attribute == 'glasses':
+                attribute_str += ' are wearing glasses' if value else ' are not wearing glasses'
+            elif attribute == 'hat': 
+                attribute_str += ' are wearing a hat' if value else ' are not wearing a hat'
+            elif attribute == 'shirt_color':
+                attribute_str += f' are wearing a {value} coloured shirt'
+            else:
+                yasmin.YASMIN_LOG_ERROR(f'The attribute {attribute} is not handled currently.')
+                return 'failed'
+        
+        text = f"Hello {guest2_name}, welcome to the party! {guest1_name} has already arrived and is sitting down. They " + attribute_str
+        
+        blackboard['text'] = text
+        return 'succeeded'
