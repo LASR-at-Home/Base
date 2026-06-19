@@ -21,7 +21,7 @@ class HRITaskLLMService(Node):
         super().__init__("hri_task_query_llm_service")
         self.create_service(HRITaskQueryLlm, "/hri_task/query_llm", self.query_llm)
         config = ModelConfig(
-            model_name="Qwen/Qwen2.5-1.5B", model_type="llm", quantize=False
+            model_name="Qwen/Qwen2.5-1.5B", model_type="llm"
         )
         self.llm_inference = LLMInference(config)
         self.get_logger().info("HRI Task Query LLM service started")

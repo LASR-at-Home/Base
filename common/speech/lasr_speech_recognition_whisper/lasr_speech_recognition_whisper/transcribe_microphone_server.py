@@ -267,7 +267,7 @@ def parse_args() -> dict:
     parser.add_argument(
         "--model_name",
         type=str,
-        default="medium.en",
+        default="small.en",
         help="Name of the speech recognition model.",
     )
     parser.add_argument(
