@@ -7,7 +7,7 @@
       trash_category: "snack"
 
       # Open-vocab query words for table detection (common nouns).
-      objects: ["cup", "can", "bottle", "bowl", "box"]
+      objects: ["cup", "can", "bottle", "bowl", "box", "spoon"]
 
       table:
         pose:
@@ -63,5 +63,5 @@
       # ── BREAKFAST SURFACE (bowl and spoon pickup location) ──
       breakfast_surface:
         pose:
-          position: {x: 1.62, y: -3.68, z: 0.0063}    # TODO: get from Gazebo
+          position: {x: 2.8, y: -3.8, z: 0.0063}
           orientation: {x: 0.0, y: 0.0, z: -0.9565, w: 0.23}

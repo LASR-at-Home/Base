@@ -122,7 +122,7 @@ class ServeBreakfast(yasmin.StateMachine):
         )
         self.add_state(
             "DETECT_CEREAL_MILK",
-            DetectObjects(queries=["cereal", "milk"]),
+            DetectObjects(queries=["box", "bottle"]),
             transitions={
                 "succeeded": "SELECT_CEREAL",
                 "failed": "DETECT_CEREAL_MILK",
@@ -130,7 +130,7 @@ class ServeBreakfast(yasmin.StateMachine):
         )
         self.add_state(
             "SELECT_CEREAL",
-            SelectAndVisualiseObject(target_name="cereal"),
+            SelectAndVisualiseObject(target_name="box"),
             transitions={
                 "succeeded": "INSTRUCT_PICK_CEREAL",
                 "failed": "DETECT_CEREAL_MILK",
@@ -146,7 +146,7 @@ class ServeBreakfast(yasmin.StateMachine):
         )
         self.add_state(
             "SELECT_MILK",
-            SelectAndVisualiseObject(target_name="milk"),
+            SelectAndVisualiseObject(target_name="bottle"),
             transitions={
                 "succeeded": "INSTRUCT_PICK_MILK",
                 "failed": "DETECT_CEREAL_MILK",
