@@ -2,40 +2,39 @@ import os
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument
 from launch.conditions import IfCondition
-from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
+
+# CLIP recognition candidates: the open-vocab detector LOCALISES objects (boxes),
+# then CLIP re-labels each crop against THIS list (fixes "Pringles -> cup"). Names
+# must be CATEGORY_MAP-friendly so routing works (see classify_category.py).
+CLIP_CANDIDATES = [
+    "pringles", "iced tea", "apple", "bottle", "can", "coke", "cup", "sprite", "water bottle", "banana",
+]
 
 def generate_launch_description():
     """
     One-shot launch for the Pick and Place task.
 
-    Brings up everything that used to be started in separate terminals EXCEPT
-    the robot platform itself:
-        - open-vocabulary detection service  (open_vocab/detect)  ← required
-        - detection visualiser               (comes with the above)
-        - LLM category-fallback service      (optional, use_llm:=true)
-        - the task state machine             (state_machine)
-        - point-head stub                    (/head_controller/point_head_action)
+    Perception = open-vocab detection (localisation) + CLIP rerank (recognition),
+    both inside the lasr_vision_open_vocabulary node (its venv already has
+    transformers/torch — CLIP comes for free, no new deps).
 
-    Still launch SEPARATELY (the platform, unchanged between runs):
-        - the simulator / robot bringup (camera, TF, controllers)
-        - nav2 + localisation (map, /amcl_pose) — GoToLocation needs this
+    Still launch SEPARATELY: simulator / robot bringup + nav2 + localisation.
 
-    Start the task after open_vocab has finished loading its model:
+    Start after the model has loaded:
         ros2 topic pub --once /pick_and_place/start std_msgs/msg/Empty {}
     """
-
     pkg_pp = get_package_share_directory("pick_and_place")
     config = os.path.join(pkg_pp, "config", "config.yaml")
 
-    open_vocab_launch = os.path.join(
+    ov_params = os.path.join(
         get_package_share_directory("lasr_vision_open_vocabulary"),
-        "launch",
-        "open_vocab.launch.py",
+        "config",
+        "params.yaml",
     )
 
     use_llm = LaunchConfiguration("use_llm")
@@ -45,16 +44,25 @@ def generate_launch_description():
             "use_llm",
             default_value="false",
             description="Also start the storing_groceries LLM service "
-                        "(category fallback). Forced onto CPU to avoid GPU OOM. "
-                        "Most groceries resolve via CATEGORY_MAP, so default off.",
+                        "(category fallback). Forced onto CPU. Default off.",
         ),
 
-        # ── Perception: open-vocabulary detection (open_vocab/detect) ─────────
-        # Reuses lasr_vision_open_vocabulary's own params.yaml (model / device /
-        # weights). Keep your local fix there: grounding_dino_weights: '' and
-        # model_device set for your GPU.
-        IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(open_vocab_launch),
+        # ── Perception: open-vocab detection + CLIP recognition rerank ────────
+        Node(
+            package="lasr_vision_open_vocabulary",
+            executable="open_vocabulary_node",
+            name="lasr_vision_open_vocabulary",
+            output="screen",
+            parameters=[
+                ov_params,
+                {"clip_rerank": True, "clip_candidates": CLIP_CANDIDATES},
+            ],
+        ),
+        Node(
+            package="lasr_vision_open_vocabulary",
+            executable="detection_visualizer",
+            name="detection_visualizer",
+            output="screen",
         ),
 
         # ── Optional: LLM category-fallback service (CPU-forced) ─────────────
@@ -76,7 +84,7 @@ def generate_launch_description():
             parameters=[config],
         ),
 
-        # ── Head stub: serves /head_controller/point_head_action ─────────────
+        # ── Head stub ────────────────────────────────────────────────────────
         Node(
             package="pick_and_place",
             executable="point_head_stub",

@@ -46,7 +46,6 @@ class InstructPlace(yasmin.State):
 
         text = (
             f"Please place the {name} in {destination_str}{hint}. "
-            f"I will give you 5 seconds. 5.. 4.. 3.. 2.. 1.."
         )
 
         say = Say(text=text)

@@ -18,6 +18,9 @@ from pick_and_place.states import (
     ChooseShelf,
     InstructPick,
     InstructPlace,
+    AddTableCollision,  
+    GraspObject, 
+    ApproachTable
 )
 
 from rclpy.executors import MultiThreadedExecutor as Executor
@@ -64,8 +67,25 @@ class PickAndPlace(yasmin.StateMachine):
             "START",
             Start(),
             transitions={
-                "succeeded": "DETECT_OBJECTS",
+                "succeeded": "ADD_TABLE_COLLISION",
                 "failed":    "failed",
+            },
+        )
+
+        self.add_state(
+            "ADD_TABLE_COLLISION",
+            AddTableCollision(head_tilt=-0.6),     # детект усього столу здалеку
+            transitions={
+                "succeeded": "GO_TO_TABLE_FOR_PICK",   # було "DETECT_OBJECTS"
+            },
+        )
+
+        self.add_state(
+            "GO_TO_TABLE_FOR_PICK",
+            GoToLocation(location_param="pick_and_place.table.pose"),
+            transitions={
+                "succeeded": "DETECT_OBJECTS",
+                "failed":    "DETECT_OBJECTS",   # все одно пробуємо детект
             },
         )
 
@@ -125,11 +145,14 @@ class PickAndPlace(yasmin.StateMachine):
             "INSTRUCT_PICK",
             InstructPick(),
             transitions={
-                "succeeded": "GO_TO_DESTINATION",
+                "succeeded": "GRASP",
                 "failed":    "INSTRUCT_PICK",  # retry instruction
             },
         )
-
+        self.add_state(
+            "GRASP", GraspObject(),
+            transitions={"succeeded": "GO_TO_DESTINATION", "failed": "GO_TO_DESTINATION"},
+        )
         # ── Navigate to the chosen destination (pose set by DecideDestination)─
         self.add_state(
             "GO_TO_DESTINATION",
@@ -194,7 +217,7 @@ def main():
     yasmin_ros.set_ros_loggers(node)
 
     sm = PickAndPlace()
-
+  
     # Uncomment to visualise the state machine in RViz/browser
     # YasminViewerPub(sm)
 

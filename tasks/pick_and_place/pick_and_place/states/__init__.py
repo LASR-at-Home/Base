@@ -8,3 +8,6 @@ from .decide_destination import DecideDestination
 from .choose_shelf import ChooseShelf
 from .instruct_pick import InstructPick
 from .instruct_place import InstructPlace
+from .add_table_collision import AddTableCollision 
+from .grasp_object import GraspObject          
+from .approach_table import ApproachTable

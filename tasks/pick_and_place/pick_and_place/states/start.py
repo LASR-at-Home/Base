@@ -93,7 +93,7 @@ class Start(yasmin.StateMachine):
         # 6. Navigate to table
         self.add_state(
             "GO_TO_TABLE",
-            GoToLocation(location_param="pick_and_place.table.pose"),
+            GoToLocation(location_param="pick_and_place.table.observe_pose"),
             transitions={
                 "succeeded": "ASK_OPEN_CABINET",
                 "failed":    "ASK_OPEN_CABINET",
@@ -104,9 +104,7 @@ class Start(yasmin.StateMachine):
         self.add_state(
             "ASK_OPEN_CABINET",
             Say(
-                text="Referee, I am unable to open the cabinet doors. "
-                     "Please open them for me. "
-                     "I will give you 5 seconds. 5.. 4.. 3.. 2.. 1.."
+                text=""
             ),
             transitions={
                 "succeeded": "succeeded",

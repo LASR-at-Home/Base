@@ -7,35 +7,43 @@
       trash_category: "snack"
 
       # Open-vocab query words for table detection (common nouns).
-      objects: ["cup", "can", "bottle", "bowl", "box"]
+      objects: ["cup", "can", "bottle", "bowl", "box", "apple"]
 
       table:
         pose:
-          position: {x: 3.0, y: -2.7, z: 0.0}
-          orientation: {x: 0.0, y: 0.0, z: -0.9565, w: 0.23}
+          position: {x: 0.2685513414272136, y: -1.0408096690305066, z: 0.0}
+          orientation: {x: 0.0, y: 0.0, z: 0.9975020239235763, w: 0.07063789541293575}
+        observe_pose:
+          position: {x: 0.5876252953308133, y: -1.0687492206833655, z: 0.0}
+          orientation: {x: 0.0, y: 0.0, z: 0.996990359390238, w: 0.07752562984538826}
         look_point: [5.25, 2.27, 0.78]
         polygon: [3.5, 1.0, 5.5, 1.0, 5.5, 3.5, 3.5, 3.5]
         search_polygon: [5.3, 3.8, 7.8, 3.8, 7.8, 5.9, 5.3, 5.9]
         z_min: 0.7
         z_max: 1.5
+        collision:
+          detect: true
+          frame_id: map
+          size: [1.02, 1.2, 0.9]
+          position: [1.2, -3.9, 0.37]
 
       # ── DESTINATION 1: dishwasher (tableware + cutlery) ──
       dishwasher:
         pose:
-          position: {x: 1.1, y: 3.0, z: 0.0}              # <-- ВСТАВ pose (ros2 topic echo --once /amcl_pose)
-          orientation: {x: 0.0, y: 0.0, z: -0.62, w: 0.78}
+          position: {x: -0.369876712341527, y: 1.1809765765046163, z: 0.0}              # <-- ВСТАВ pose (ros2 topic echo --once /amcl_pose)
+          orientation: {x: 0.0, y: 0.0, z: 0.9920314752902727, w: 0.1259902854723536}
 
       # ── DESTINATION 2: trash bin ──
       trash_bin:
         pose:
-          position: {x: 6.0, y: -2.23, z: 0.0}              # <-- ВСТАВ pose
-          orientation: {x: 0.0, y: 0.0, z: -0.91, w: 0.41}
+          position: {x: 2.1755595062984496, y: 0.9536759374323881, z: 0.0}              # <-- ВСТАВ pose
+          orientation: {x: 0.0, y: 0.0, z: 0.6918191579917108, w: 0.7220708086023423}
 
       # ── DESTINATION 3: cabinet (fake: boxes with objects) ──
       cabinet:
         pose:
-          position: {x: -4.9, y: 2.7, z: 0.0}              # <-- ВСТАВ pose
-          orientation: {x: 0.0, y: 0.0, z: -0.97, w: 0.23}
+          position: {x: -0.6363920463255814, y: -2.107459083686513, z: 0.0}              # <-- ВСТАВ pose
+          orientation: {x: 0.0, y: 0.0, z: -0.8431441386528592, w: 0.5376876058226823}
 
         # Shelves — used by ScanShelves in the NEXT deliverable.
         # shelf_order is the iteration list; shelves.<id> holds per-shelf config.
@@ -60,3 +68,9 @@
             polygon: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
             z_min: 0.3
             z_max: 0.6
+
+      grasp:
+        enable: false
+        reach: 0.80
+        use_moveit: true
+        publish_box: true

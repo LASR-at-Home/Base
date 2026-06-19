@@ -3,37 +3,37 @@ import yasmin_ros
 from yasmin_ros.yasmin_node import YasminNode
 import rclpy
 import time
-from lasr_llm_interfaces.srv import StoringGroceriesQueryLlm
+# NOTE: lasr_llm_interfaces is imported LAZILY inside _classify_with_llm so that a
+# broken/stale typesupport (.so) never crashes state-machine construction. The LLM
+# is only a 3rd-tier fallback after param lookup + CATEGORY_MAP.
 
 
 
 CATEGORY_MAP = {
     "fruit": {
-        "apple", "banana", "orange", "grape", "pineapple", "lemon",
-        "lime", "peach", "plum", "pear", "mango", "watermelon",
-        "strawberry", "blueberry",
+        "apple", "banana", "orange",
     },
     "vegetable": {
         "carrot", "tomato", "cucumber", "lettuce", "onion", "broccoli",
         "cabbage", "pepper", "zucchini", "radish", "corn", "potato", "garlic",
     },
     "beverage": {
-        "bottle", "can", "water bottle", "juice box", "milk carton",
-        "soda can", "coffee cup", "energy drink", "thermos",
+        "bottle", "water bottle", "juice", "milk",
+        "soda can", "coffee cup", "energy drink", "thermos", "coke", "red bull", "iced tea",
     },
     "snack": {
         "chips", "crackers", "candy", "chocolate bar", "cookie",
-        "snack bag", "biscuit", "granola bar", "popcorn",
+        "snack bag", "biscuit", "granola bar", "popcorn", "pringles", "crisps",
     },
     "cleaning": {
         "soap", "sponge", "brush", "cleaner", "detergent", "tissue box",
-        "toilet paper", "broom", "mop", "spray bottle", "bucket",
+        "toilet paper", "broom", "mop", "spray bottle", "bucket", "toothpaste",
     },
     "cereal": {
         "cereal", "cereal box", "oats", "muesli",
     },
     "dish": {
-        "fork", "knife", "spoon", "plate", "bowl", "cup", "wine glass",
+        "fork", "knife", "spoon", "plate", "bowl", "wine glass",
         "mug", "chopsticks",
     },
 }
@@ -52,7 +52,7 @@ class ClassifyCategory(yasmin.State):
     Classification priority:
         1. ROS 2 param lookup  (pick_and_place.objects.<name>.category)
         2. Hardcoded CATEGORY_MAP
-        3. LLM fallback via /lasr_llm/llm
+        3. LLM fallback via /storing_groceries/query_llm
 
     Blackboard inputs:
         object_name  : str        — single object name (used when task="object")
@@ -84,7 +84,9 @@ class ClassifyCategory(yasmin.State):
             self.add_output_key("shelf_category")
 
         self.node = yasmin_ros.logger_node
-        self._llm_client = self.node.create_client(StoringGroceriesQueryLlm, "/storing_groceries/query_llm")
+        # Created lazily on first LLM use (see _classify_with_llm).
+        self._llm_client = None
+        self._llm_srv_type = None
 
     def execute(self, blackboard) -> str:
         if self._task == "object":
@@ -173,12 +175,28 @@ class ClassifyCategory(yasmin.State):
         return self._classify_with_llm(name)
 
     def _classify_with_llm(self, name: str) -> str | None:
+        # Lazily import the interface + create the client on first use only.
+        # BOTH the import AND create_client are wrapped: the typesupport error
+        # for a broken lasr_llm_interfaces fires at create_client, so it must be
+        # inside the try. On any failure we skip the LLM tier instead of crashing.
+        if self._llm_client is None:
+            try:
+                from lasr_llm_interfaces.srv import StoringGroceriesQueryLlm
+                self._llm_srv_type = StoringGroceriesQueryLlm
+                self._llm_client = self.node.create_client(
+                    StoringGroceriesQueryLlm, "/storing_groceries/query_llm"
+                )
+            except Exception as e:
+                yasmin.YASMIN_LOG_WARN(
+                    f"lasr_llm_interfaces unavailable — skipping LLM tier ({e})."
+                )
+                return None
 
         if not self._llm_client.wait_for_service(timeout_sec=5.0):
             yasmin.YASMIN_LOG_WARN("LLM service not available — skipping LLM tier.")
             return None
 
-        req = StoringGroceriesQueryLlm.Request()
+        req = self._llm_srv_type.Request()
         req.llm_input = [name]
         req.task = "ClassifyObject"
 

@@ -28,6 +28,7 @@ setup(
             "state_machine = pick_and_place.state_machine:main",
             "test_detect = pick_and_place.test_detect:main",
             "point_head_stub = pick_and_place.point_head_stub:main",
+            "detect_tuner = pick_and_place.detect_tuner:main",
         ],
     },
 )
