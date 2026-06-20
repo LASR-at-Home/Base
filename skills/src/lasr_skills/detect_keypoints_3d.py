@@ -71,28 +71,20 @@ class DetectKeypoints3D(ServiceState):
             self.node, CameraInfo, self.depth_camera_info_topic, qos_profile=camera_qos
         )
 
+        self.cache = message_filters.Cache(cam_info_sub)
+
         self.ts = message_filters.ApproximateTimeSynchronizer(
-            [image_sub, depth_sub, cam_info_sub], queue_size=10, slop=slop
+            [image_sub, depth_sub], queue_size=10, slop=slop
         )
         
         self.ts.registerCallback(self.callback)
 
-    def callback(self, image_msg, depth_msg, cam_info_msg):
-            self.data = (image_msg, depth_msg, cam_info_msg)
+    def callback(self, image_msg, depth_msg):
+        self.data = (image_msg, depth_msg)
 
     def _create_req(self, blackboard):
         self.data = None
         self.image_msg = None
-
-        if self.cam_info is None:
-            deadline = time.time() + 5.0
-            while self.cam_info is None and time.time() < deadline:
-                time.sleep(0.25)
-            if self.cam_info is None:
-                yasmin.YASMIN_LOG_ERROR(
-                    f"Timed out waiting for camera info on {self.depth_camera_info_topic}"
-                )
-                return "failed"
 
         deadline = time.time() + 30.0
         while self.data is None:
@@ -109,7 +101,7 @@ class DetectKeypoints3D(ServiceState):
         req = YoloPoseDetection3D.Request(
             image_raw=image_msg,
             depth_image=depth_msg,
-            depth_camera_info=self.cam_info,
+            depth_camera_info=self.cache.getLast(),
             model=self.model,
             confidence=self.confidence,
             target_frame=self.target_frame,
@@ -120,10 +112,13 @@ class DetectKeypoints3D(ServiceState):
 
     def response_handler(self, blackboard, response):
         yasmin.YASMIN_LOG_INFO(f"Got {len(response.detections)} detections")
-        for det in response.detections:
-            self.node.get_logger().info(
-                f"  {det.keypoint_name} at ({det.point.x:.2f}, {det.point.y:.2f}, {det.point.z:.2f})"
-            )
+        if len(response.detections) == 0:
+            return "failed"
+
+        for x, detection in enumerate(response.detections):
+            yasmin.YASMIN_LOG_INFO(f"Detection {x}")
+            for keypoint in detection.keypoints:
+                yasmin.YASMIN_LOG_INFO(f"keypoint: {keypoint.keypoint_name}, point: {keypoint.point}")
 
         blackboard["keypoint_detections_3d"] = response 
         blackboard["image_raw"] = self.image_msg
@@ -137,21 +132,35 @@ def main():
 
     yasmin.YASMIN_LOG_INFO("yasmin_detect3d_pose_test")
     sm = StateMachine(outcomes=["succeeded", "failed"], handle_sigint=True)
-    sm.add_output_key("keypoint_detections_3d")
-    sm.add_output_key("image_raw")
-    sm.add_output_key("pcl")
+    bb = Blackboard()
+
+    # def printKeypoints(blackboard):
+    #     if len(blackboard["keypoint_detections_3d"].detections) == 0:
+    #         return "failed"
+        
+    #     for x, detection in enumerate(blackboard["keypoint_detections_3d"].detections):
+    #             yasmin.YASMIN_LOG_INFO(f"Detection {x}")
+    #             for keypoint in detection.keypoints:
+    #                 yasmin.YASMIN_LOG_INFO(f"keypoint: {keypoint.keypoint_name}, point: {keypoint.point}")
+    #     return "succeeded"
 
     sm.add_state(
         "DETECT3D_POSE",
-        DetectKeypoints3D(target_frame="odom"),
+        DetectKeypoints3D(),
         transitions={"succeeded": "succeeded", "failed": "failed"},
     )
-    YasminViewerPub(sm, "YASMIN_DETECT3D_CLIENT")
-    try:
-        outcome = sm()
-        yasmin.YASMIN_LOG_INFO(outcome)
-    except Exception as e:
-        yasmin.YASMIN_LOG_WARN(e)
+    # sm.add_state(
+    #     "PROCESS_RESPONSE",
+    #     yasmin.CbState(
+    #         outcomes=["succeeded", "failed"], 
+    #         callback=printKeypoints),
+    #     transitions={
+    #         "succeeded": "succeeded", 
+    #         "failed": "failed",
+    #     },
+    # )
+    outcome = sm(bb)
+    yasmin.YASMIN_LOG_INFO(outcome)
 
     if rclpy.ok():
         rclpy.shutdown()
