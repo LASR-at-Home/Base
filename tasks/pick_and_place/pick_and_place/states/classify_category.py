@@ -4,38 +4,92 @@ import rclpy
 
 from lasr_llm_msgs.srv import Llm
 
-
 # Hardcoded category map as fallback when params are unavailable.
 # Mirrors the category_map from the ROS 1 ClassifyCategory.
 # Ideally these live in your config yaml under pick_and_place.objects.<name>.category
 CATEGORY_MAP = {
     "fruit": {
-        "apple", "banana", "orange", "grape", "pineapple", "lemon",
-        "lime", "peach", "plum", "pear", "mango", "watermelon",
-        "strawberry", "blueberry",
+        "apple",
+        "banana",
+        "orange",
+        "grape",
+        "pineapple",
+        "lemon",
+        "lime",
+        "peach",
+        "plum",
+        "pear",
+        "mango",
+        "watermelon",
+        "strawberry",
+        "blueberry",
     },
     "vegetable": {
-        "carrot", "tomato", "cucumber", "lettuce", "onion", "broccoli",
-        "cabbage", "pepper", "zucchini", "radish", "corn", "potato", "garlic",
+        "carrot",
+        "tomato",
+        "cucumber",
+        "lettuce",
+        "onion",
+        "broccoli",
+        "cabbage",
+        "pepper",
+        "zucchini",
+        "radish",
+        "corn",
+        "potato",
+        "garlic",
     },
     "beverage": {
-        "bottle", "can", "water bottle", "juice box", "milk carton",
-        "soda can", "coffee cup", "energy drink", "thermos",
+        "bottle",
+        "can",
+        "water bottle",
+        "juice box",
+        "milk carton",
+        "soda can",
+        "coffee cup",
+        "energy drink",
+        "thermos",
     },
     "snack": {
-        "chips", "crackers", "candy", "chocolate bar", "cookie",
-        "snack bag", "biscuit", "granola bar", "popcorn",
+        "chips",
+        "crackers",
+        "candy",
+        "chocolate bar",
+        "cookie",
+        "snack bag",
+        "biscuit",
+        "granola bar",
+        "popcorn",
     },
     "cleaning": {
-        "soap", "sponge", "brush", "cleaner", "detergent", "tissue box",
-        "toilet paper", "broom", "mop", "spray bottle", "bucket",
+        "soap",
+        "sponge",
+        "brush",
+        "cleaner",
+        "detergent",
+        "tissue box",
+        "toilet paper",
+        "broom",
+        "mop",
+        "spray bottle",
+        "bucket",
     },
     "cereal": {
-        "cereal", "cereal box", "oats", "muesli",
+        "cereal",
+        "cereal box",
+        "oats",
+        "muesli",
     },
     "dish": {
-        "fork", "knife", "spoon", "plate", "bowl", "cup", "wine glass",
-        "mug", "chopsticks",
+        "fork",
+        "knife",
+        "spoon",
+        "plate",
+        "bowl",
+        "cup",
+        "wine glass",
+        "mug",
+        "chopsticks",
     },
 }
 
@@ -72,8 +126,10 @@ class ClassifyCategory(yasmin.State):
         """
         super().__init__(outcomes=["succeeded", "failed", "empty"])
 
-        assert task in ("object", "shelf"), \
-            f"ClassifyCategory task must be 'object' or 'shelf', got '{task}'"
+        assert task in (
+            "object",
+            "shelf",
+        ), f"ClassifyCategory task must be 'object' or 'shelf', got '{task}'"
 
         self._task = task
 
@@ -122,6 +178,7 @@ class ClassifyCategory(yasmin.State):
             return "succeeded"
 
         from collections import Counter
+
         category_counts = Counter()
 
         for name in names:
@@ -154,9 +211,7 @@ class ClassifyCategory(yasmin.State):
         # 1. Param lookup
         try:
             category = (
-                self.node.get_parameter(
-                    f"pick_and_place.objects.{name}.category"
-                )
+                self.node.get_parameter(f"pick_and_place.objects.{name}.category")
                 .get_parameter_value()
                 .string_value
             )

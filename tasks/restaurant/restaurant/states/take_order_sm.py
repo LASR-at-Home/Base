@@ -30,7 +30,7 @@ class TakeOrderSM(yasmin.StateMachine):
             AskForOrder(node=node),
             transitions={
                 "succeeded": "CONFIRM_ORDER",
-                "failed":    "failed",
+                "failed": "failed",
             },
         )
 
@@ -44,9 +44,9 @@ class TakeOrderSM(yasmin.StateMachine):
             ConfirmOrder(),
             transitions={
                 "confirmed": "ADD_DISH",
-                "retry":     "CONFIRM_ORDER",
-                "re_ask":    "ASK_FOR_ORDER",
-                "failed":    "failed",
+                "retry": "CONFIRM_ORDER",
+                "re_ask": "ASK_FOR_ORDER",
+                "failed": "failed",
             },
         )
 
@@ -56,7 +56,7 @@ class TakeOrderSM(yasmin.StateMachine):
             AddDish(node=node),
             transitions={
                 "succeeded": "CONFIRM_FULL_ORDER",
-                "failed":    "failed",
+                "failed": "failed",
             },
         )
 
@@ -70,9 +70,9 @@ class TakeOrderSM(yasmin.StateMachine):
             ConfirmFullOrder(),
             transitions={
                 "confirmed": "succeeded",
-                "retry":     "CONFIRM_FULL_ORDER",
-                "re_ask":    "ADD_DISH",
-                "failed":    "failed",
+                "retry": "CONFIRM_FULL_ORDER",
+                "re_ask": "ADD_DISH",
+                "failed": "failed",
             },
         )
 
@@ -80,7 +80,7 @@ class TakeOrderSM(yasmin.StateMachine):
 def main(args=None):
     rclpy.init(args=args)
     node = rclpy.create_node(
-        node_name="restaurant",  
+        node_name="restaurant",
         allow_undeclared_parameters=True,
         automatically_declare_parameters_from_overrides=True,
     )

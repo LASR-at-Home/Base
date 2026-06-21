@@ -345,14 +345,15 @@ class YOLOServiceNode:
 
                 conf = result.keypoints.conf.squeeze()[idx].item()
                 if conf > 0.0:
-                    z = depth_im[v, u]  #(already in mm) for 32FC1 - in simulation 
-                    if req.depth_image.encoding == "16UC1": #(needs m -> mm) - for real robot)
+                    z = depth_im[v, u]  # (already in mm) for 32FC1 - in simulation
+                    if (
+                        req.depth_image.encoding == "16UC1"
+                    ):  # (needs m -> mm) - for real robot)
                         z = z / 1000.0
                     x = z * (u - cx) / fx
                     y = z * (v - cy) / fy
                     if np.isnan(x) or np.isnan(y) or np.isnan(z):
                         continue
-
 
                     point = Point(x=float(x), y=float(y), z=float(z))
                     point_stamped = PointStamped()

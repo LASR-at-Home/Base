@@ -42,8 +42,8 @@ class Start(yasmin.StateMachine):
             ),
             transitions={
                 "succeeded": "SAY_START",
-                "failed":    "WAIT_START",
-                "canceled":  "failed",
+                "failed": "WAIT_START",
+                "canceled": "failed",
             },
         )
 
@@ -53,8 +53,8 @@ class Start(yasmin.StateMachine):
             Say(text="Start of Pick and Place task."),
             transitions={
                 "succeeded": "SAY_WAITING",
-                "failed":    "SAY_WAITING",
-                "aborted":   "SAY_WAITING",
+                "failed": "SAY_WAITING",
+                "aborted": "SAY_WAITING",
             },
         )
 
@@ -64,8 +64,8 @@ class Start(yasmin.StateMachine):
             Say(text="Waiting for the door to open."),
             transitions={
                 "succeeded": "WAIT_FOR_DOOR",
-                "failed":    "WAIT_FOR_DOOR",
-                "aborted":   "WAIT_FOR_DOOR",
+                "failed": "WAIT_FOR_DOOR",
+                "aborted": "WAIT_FOR_DOOR",
             },
         )
 
@@ -75,7 +75,7 @@ class Start(yasmin.StateMachine):
             DetectDoorOpening(timeout=1.0),
             transitions={
                 "door_opened": "SAY_GOING_TO_TABLE",
-                "failed":      "WAIT_FOR_DOOR",
+                "failed": "WAIT_FOR_DOOR",
             },
         )
 
@@ -85,8 +85,8 @@ class Start(yasmin.StateMachine):
             Say(text="I am going to the table."),
             transitions={
                 "succeeded": "GO_TO_TABLE",
-                "failed":    "GO_TO_TABLE",
-                "aborted":   "GO_TO_TABLE",
+                "failed": "GO_TO_TABLE",
+                "aborted": "GO_TO_TABLE",
             },
         )
 
@@ -96,7 +96,7 @@ class Start(yasmin.StateMachine):
             GoToLocation(location_param="pick_and_place.table.pose"),
             transitions={
                 "succeeded": "ASK_OPEN_CABINET",
-                "failed":    "ASK_OPEN_CABINET",
+                "failed": "ASK_OPEN_CABINET",
             },
         )
 
@@ -105,12 +105,12 @@ class Start(yasmin.StateMachine):
             "ASK_OPEN_CABINET",
             Say(
                 text="Referee, I am unable to open the cabinet doors. "
-                     "Please open them for me. "
-                     "I will give you 5 seconds. 5.. 4.. 3.. 2.. 1.."
+                "Please open them for me. "
+                "I will give you 5 seconds. 5.. 4.. 3.. 2.. 1.."
             ),
             transitions={
                 "succeeded": "succeeded",
-                "failed":    "succeeded",
-                "aborted":   "succeeded",
+                "failed": "succeeded",
+                "aborted": "succeeded",
             },
         )

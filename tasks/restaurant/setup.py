@@ -44,8 +44,8 @@ setup(
             "sm = restaurant.state_machine:main",
             "survey = restaurant.states.survey:main",
             "detect_wave = restaurant.states.detect_wave:main",
-            "take_order_sm = restaurant.states.take_order_sm:main", 
+            "take_order_sm = restaurant.states.take_order_sm:main",
             "get_order_from_bar = restaurant.states.get_order_from_bar:main",
-            ],
+        ],
     },
-)   
+)

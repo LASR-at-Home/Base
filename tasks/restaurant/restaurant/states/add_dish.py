@@ -34,7 +34,7 @@ class AddDish(yasmin.StateMachine):
             AskAndListen(tts_phrase="What else would you like?"),
             transitions={
                 "succeeded": "PARSE_DISH",
-                "failed":    "failed",
+                "failed": "failed",
             },
             remappings={"transcribed_speech": "transcribed_speech"},
         )
@@ -45,7 +45,7 @@ class AddDish(yasmin.StateMachine):
             self.ParseDish(node=node),
             transitions={
                 "succeeded": "succeeded",
-                "failed":    "failed",
+                "failed": "failed",
             },
         )
 

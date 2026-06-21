@@ -33,17 +33,19 @@ class ConfirmOrder(yasmin.StateMachine):
             self.BuildPhrase(),
             transitions={
                 "succeeded": "ASK_AND_LISTEN",
-                "failed":    "failed",
+                "failed": "failed",
             },
         )
 
         # 2. Say the order back and listen for response
         self.add_state(
             "ASK_AND_LISTEN",
-            AskAndListen(tts_phrase_format_str="You ordered {}. Is that correct? Please say yes or no."),
+            AskAndListen(
+                tts_phrase_format_str="You ordered {}. Is that correct? Please say yes or no."
+            ),
             transitions={
                 "succeeded": "CHECK_RESPONSE",
-                "failed":    "failed",
+                "failed": "failed",
             },
             remappings={"transcribed_speech": "transcribed_speech"},
         )
@@ -54,9 +56,9 @@ class ConfirmOrder(yasmin.StateMachine):
             self.CheckResponse(),
             transitions={
                 "confirmed": "confirmed",
-                "retry":     "retry",
-                "re_ask":    "re_ask",
-                "failed":    "failed",
+                "retry": "retry",
+                "re_ask": "re_ask",
+                "failed": "failed",
             },
         )
 

@@ -110,7 +110,7 @@ class DetectObjects(yasmin.State):
 
             # DetectAllInPolygon needs these keys initialised
             blackboard["detected_objects"] = []
-            blackboard["debug_images"]     = []
+            blackboard["debug_images"] = []
 
             outcome = detector.execute(blackboard)
 
@@ -119,7 +119,7 @@ class DetectObjects(yasmin.State):
                 return "failed"
 
             detected = blackboard["detected_objects"]
-            labels   = [obj.name for obj in detected]
+            labels = [obj.name for obj in detected]
             yasmin.YASMIN_LOG_INFO(
                 f"Detected {len(detected)} object(s) on table: {labels}."
             )

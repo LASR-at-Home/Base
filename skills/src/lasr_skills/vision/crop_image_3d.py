@@ -104,7 +104,7 @@ class CropImage3D(State):
         self.robot_pose_msg = msg
 
     def execute(self, blackboard):
-        yasmin.YASMIN_LOG_INFO('CROPPING OUR 3D HEHEHE')
+        yasmin.YASMIN_LOG_INFO("CROPPING OUR 3D HEHEHE")
         detections = blackboard["detections_3d"].detected_objects
         if not detections:
             yasmin.YASMIN_LOG_WARN("No 3D detections found.")

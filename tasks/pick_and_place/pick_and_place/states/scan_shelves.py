@@ -112,7 +112,7 @@ class ScanShelves(yasmin.State):
                 shelf_category = blackboard["shelf_category"]
 
             shelf_data[shelf_id] = {
-                "objects":  object_names,
+                "objects": object_names,
                 "category": shelf_category,
             }
 
@@ -200,7 +200,7 @@ class ScanShelves(yasmin.State):
 
             # DetectAllInPolygon needs these keys initialised
             blackboard["detected_objects"] = []
-            blackboard["debug_images"]     = []
+            blackboard["debug_images"] = []
 
             outcome = detector.execute(blackboard)
 

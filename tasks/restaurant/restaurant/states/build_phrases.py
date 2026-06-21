@@ -1,5 +1,6 @@
 import yasmin
 
+
 def build_sentence_from_list(order):
     """
     Builds an 'and' separated list.
@@ -26,6 +27,7 @@ class BuildPlaceOrderPhrase(yasmin.State):
         blackboard["place_order_phrase"] = f"I would like to order {order_str}."
         return "succeeded"
 
+
 class BuildAnnounceOrderPhrase(yasmin.State):
     def __init__(self):
         super().__init__(outcomes=["succeeded", "failed"])
@@ -36,5 +38,7 @@ class BuildAnnounceOrderPhrase(yasmin.State):
         order = blackboard["order"]
 
         order_str = build_sentence_from_list(order)
-        blackboard["announce_order_phrase"] = f"Your order is ready. Please collect {order_str}. Enjoy!"
+        blackboard["announce_order_phrase"] = (
+            f"Your order is ready. Please collect {order_str}. Enjoy!"
+        )
         return "succeeded"

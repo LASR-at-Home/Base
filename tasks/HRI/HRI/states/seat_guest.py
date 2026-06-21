@@ -553,7 +553,6 @@ def main():
             },
         }
 
-        
         YasminViewerPub(sm, "HRI_SM3")
 
         outcome = sm(bb)

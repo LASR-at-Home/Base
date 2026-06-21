@@ -53,7 +53,7 @@ class SelectAndVisualiseObject(yasmin.State):
 
         # Always pick the first object — same behaviour as ROS 1 version
         selected = detected[0]
-        blackboard["selected_object"]      = selected
+        blackboard["selected_object"] = selected
         blackboard["selected_object_name"] = selected.name
 
         yasmin.YASMIN_LOG_INFO(f"Selected object: {selected.name}")
@@ -89,8 +89,8 @@ class SelectAndVisualiseObject(yasmin.State):
                 yasmin.YASMIN_LOG_WARN("Could not get camera image for visualisation.")
                 return
 
-            label      = detection.name
-            xywh       = detection.xywh
+            label = detection.name
+            xywh = detection.xywh
             confidence = detection.confidence
 
             cv_im = self._bridge.imgmsg_to_cv2(image_msg, desired_encoding="rgb8")

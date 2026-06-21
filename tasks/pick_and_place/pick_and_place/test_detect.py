@@ -3,6 +3,7 @@ import yasmin
 import yasmin_ros
 from pick_and_place.states.detect_objects import DetectObjects
 
+
 def main():
     rclpy.init()
     yasmin_ros.set_ros_loggers()
@@ -20,6 +21,7 @@ def main():
         print(f"  - {obj.name} (confidence: {obj.confidence:.2f})")
 
     rclpy.shutdown()
+
 
 if __name__ == "__main__":
     main()

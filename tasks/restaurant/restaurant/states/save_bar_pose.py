@@ -2,6 +2,7 @@ import message_filters
 import yasmin
 from geometry_msgs.msg import PoseWithCovarianceStamped
 
+
 class SaveBarPose(yasmin.State):
     def __init__(self, node, topic: str = "/amcl_pose"):
         super().__init__(outcomes=["succeeded", "failed"])
@@ -21,5 +22,7 @@ class SaveBarPose(yasmin.State):
             yasmin.YASMIN_LOG_INFO("Saved bar pose to blackboard.")
             return "succeeded"
         else:
-            yasmin.YASMIN_LOG_ERROR("Failed to save bar pose. No pose message received.")
+            yasmin.YASMIN_LOG_ERROR(
+                "Failed to save bar pose. No pose message received."
+            )
             return "failed"

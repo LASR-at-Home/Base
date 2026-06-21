@@ -4,6 +4,7 @@ from lasr_skills import AskAndListen
 from lasr_llm_interfaces.srv import RestaurantQueryLlm
 import time
 
+
 class AskForOrder(yasmin.StateMachine):
     """
     Sub state machine that asks the customer what they would like to order,
@@ -32,7 +33,7 @@ class AskForOrder(yasmin.StateMachine):
             AskAndListen(tts_phrase="What would you like to order?"),
             transitions={
                 "succeeded": "PARSE_ORDER",
-                "failed":    "failed",
+                "failed": "failed",
             },
             remappings={"transcribed_speech": "transcribed_speech"},
         )
@@ -43,7 +44,7 @@ class AskForOrder(yasmin.StateMachine):
             self.ParseOrder(node=node),
             transitions={
                 "succeeded": "succeeded",
-                "failed":    "failed",
+                "failed": "failed",
             },
         )
 

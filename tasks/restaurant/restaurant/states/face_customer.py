@@ -39,10 +39,10 @@ class FaceCustomer(State):
             target_yaw = math.atan2(p.y - ry, p.x - rx)
             err = math.atan2(
                 math.sin(target_yaw - robot_yaw), math.cos(target_yaw - robot_yaw)
-            ) 
+            )
 
             if abs(err) < self.tol:
-                self._cmd.publish(Twist()) 
+                self._cmd.publish(Twist())
                 yasmin.YASMIN_LOG_INFO(f"facing customer (err={err:.2f})")
                 return "succeeded"
 

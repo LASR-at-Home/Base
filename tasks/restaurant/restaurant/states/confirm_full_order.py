@@ -33,17 +33,19 @@ class ConfirmFullOrder(yasmin.StateMachine):
             self.BuildPhrase(),
             transitions={
                 "succeeded": "ASK_AND_LISTEN",
-                "failed":    "failed",
+                "failed": "failed",
             },
         )
 
         # 2. Say the full order back and listen for response
         self.add_state(
             "ASK_AND_LISTEN",
-            AskAndListen(tts_phrase_format_str="You ordered {}. Is that correct? Please say yes or no."),
+            AskAndListen(
+                tts_phrase_format_str="You ordered {}. Is that correct? Please say yes or no."
+            ),
             transitions={
                 "succeeded": "CHECK_RESPONSE",
-                "failed":    "failed",
+                "failed": "failed",
             },
             remappings={"transcribed_speech": "transcribed_speech"},
         )
@@ -54,9 +56,9 @@ class ConfirmFullOrder(yasmin.StateMachine):
             self.CheckResponse(),
             transitions={
                 "confirmed": "confirmed",
-                "retry":     "retry",
-                "re_ask":    "re_ask",
-                "failed":    "failed",
+                "retry": "retry",
+                "re_ask": "re_ask",
+                "failed": "failed",
             },
         )
 
@@ -97,7 +99,9 @@ class ConfirmFullOrder(yasmin.StateMachine):
 
             for word in REJECT_KEYWORDS:
                 if word in transcription:
-                    print(f"[MATCH] Full order rejected with: '{word}' — redoing second item")
+                    print(
+                        f"[MATCH] Full order rejected with: '{word}' — redoing second item"
+                    )
                     # Remove second item so ADD_DISH starts fresh
                     blackboard["order"] = [blackboard["order"][0]]
                     return "re_ask"
