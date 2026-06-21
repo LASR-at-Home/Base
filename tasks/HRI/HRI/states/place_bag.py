@@ -20,6 +20,7 @@ from geometry_msgs.msg import (
     PolygonStamped,
     Point
 )
+from visualization_msgs.msg import Marker
 from tf2_geometry_msgs.tf2_geometry_msgs import do_transform_point
 from shapely.geometry import Polygon as ShapelyPolygon
 
@@ -33,14 +34,20 @@ from lasr_skills import (
     LookToPoint,
     AskAndListen,
 )
+import random
 
-class CalculateDropPoint(ServiceState):
+class CalculateDropPoint(State):
     def __init__(self):
         super().__init__(outcomes=["valid_point", "invalid_point", "failed"])
         self.add_input_key("keypoint_detections_3d")
         self.add_output_key("drop_point") 
-         
-        self.required_keypoints = ["right_elbow", "right_wrist"]
+        
+        self.node = yasmin_ros.logger_node 
+        self.debug_pub = self.node.create_publisher(
+            Marker,
+            "/place_bag/debug/drop_point",
+            10,
+        ) 
 
     def calcuate_point(self, elbow_point, wrist_point, angle_max=70.0):
         """ Returns (valid point, Point) """
@@ -66,7 +73,28 @@ class CalculateDropPoint(ServiceState):
         if v_z >= 0 or angle > angle_max:
             yasmin.YASMIN_LOG_INFO("Not Pointing at floor")
             return False, drop_point
+        
 
+        # DEBUG
+        marker = Marker()
+        marker.header.frame_id = "map"
+        marker.header.stamp = self.node.get_clock().now().to_msg()
+        marker.id = 1
+        marker.type = Marker.SPHERE
+        marker.action = Marker.ADD
+
+        marker.pose.position = drop_point
+
+        marker.scale.x = 0.1
+        marker.scale.y = 0.1
+        marker.scale.z = 0.1
+
+        marker.color.r = 1.0
+        marker.color.g = 0.0
+        marker.color.b = 0.0
+        marker.color.a = 1.0
+
+        self.debug_pub.publish(marker)
 
         return True, drop_point
         
@@ -110,7 +138,7 @@ class CalculateDropPoint(ServiceState):
 class PlaceBag(StateMachine):
     def __init__(self):
         # Outcomes align perfectly with your main locate_and_follow_host.py plan
-        super().__init__(outcomes=["succedded", "failed"])
+        super().__init__(outcomes=["succeeded", "failed"])
 
         self.add_state(
             "REQUEST_DROP_POINT",
@@ -148,7 +176,9 @@ class PlaceBag(StateMachine):
                 "canceled": "failed",
             },
             remappings={"pointstamped": "drop_point"}
-        )
+        ) 
+
+        #TODO:  Add a 3d detect in area check to ensure area is empty
 
         self.add_state(
             "REQUEST_NEW_POINT",
@@ -176,26 +206,36 @@ class PlaceBag(StateMachine):
             transitions={"succeeded": "READY_TO_PLACE", "failed": "failed"},
         )
 
-        ## Navigate close to the point
+        #TODO:  Navigate close to the point
 
         self.add_state(
             "READY_TO_PLACE",
-            PlayMotion("unfold_arm"), # Motion goes heres
+            PlayMotion("reach_arm_vertical_gripper"), # Motion goes heres
             transitions={
-                "succeeded": "RELEASE_BAG",
+                "succeeded": "PLAYMOTION_BREAK_1",
                 "aborted": "failed",
                 "canceled": "failed",
             },
+        )
+        self.add_state(
+            "PLAYMOTION_BREAK_1",
+            Wait(1),  
+            transitions={"succeeded": "RELEASE_BAG", "failed": "failed"},
         )
 
         self.add_state(
             "RELEASE_BAG",
             PlayMotion("open"), # Motion goes heres
             transitions={
-                "succeeded": "RESET",
+                "succeeded": "PLAYMOTION_BREAK_2",
                 "aborted": "failed",
                 "canceled": "failed",
             },
+        )
+        self.add_state(
+            "PLAYMOTION_BREAK_2",
+            Wait(1),  
+            transitions={"succeeded": "RESET", "failed": "failed"},
         )
         self.add_state(
             "RESET",
@@ -229,3 +269,24 @@ class PlaceBag(StateMachine):
 
 '''
 ## Later can adapt to check if they want to drop on table/ chair and if it is low enough ok if not request floor. 
+def main():
+    rclpy.init()
+
+    yasmin_ros.set_ros_loggers()
+
+    sm = PlaceBag()
+    sm.set_sigint_handler(True)
+    bb = Blackboard()
+    bb["z_sweep_min"] = -10
+    bb["z_sweep_max"] = 50
+
+    YasminViewerPub(sm, "Follow_Person")
+
+    outcome = sm(bb)
+
+    yasmin.YASMIN_LOG_INFO(outcome)
+
+    rclpy.shutdown()
+
+if __name__ == "__main__":
+    main()
