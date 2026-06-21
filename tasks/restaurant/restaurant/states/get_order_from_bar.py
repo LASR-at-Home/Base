@@ -35,12 +35,12 @@ class GetOrderFromBar(yasmin.StateMachine):
 
         yasmin.YASMIN_LOG_INFO(f"parameters {parameters}")
 
-        # self.add_state(
-        #     "GO_TO_BAR",
-        #     GoToLocation(),
-        #     transitions={"succeeded": "FACE_BARMAN", "failed": "failed"},
-        #     remappings={"location": "bar_pose"},
-        # )
+        self.add_state(
+            "GO_TO_BAR",
+            GoToLocation(),
+            transitions={"succeeded": "FACE_BARMAN", "failed": "failed"},
+            remappings={"location": "bar_pose"},
+        )
 
         self.add_state(
             "FACE_BARMAN",
