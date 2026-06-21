@@ -215,20 +215,20 @@ class LookAndGreetGuest(yasmin.StateMachine):
         for attribute in attributes.keys():
             value = attributes[attribute]
             if attribute == 'hair_color':
-                attribute_str += f' have {value} coloured hair'
+                attribute_str += f' have {value} coloured hair.'
             elif attribute == 'hair_length':
-                attribute_str += f' have {value} hair'
+                attribute_str += f' have {value} hair.'
             elif attribute == 'glasses':
-                attribute_str += ' are wearing glasses' if value else ' are not wearing glasses'
+                attribute_str += ' are wearing glasses.' if value else ' are not wearing glasses.'
             elif attribute == 'hat': 
-                attribute_str += ' are wearing a hat' if value else ' are not wearing a hat'
+                attribute_str += ' are wearing a hat.' if value else ' are not wearing a hat.'
             elif attribute == 'shirt_color':
-                attribute_str += f' are wearing a {value} coloured shirt'
+                attribute_str += f' are wearing a {value} coloured shirt.'
             else:
                 yasmin.YASMIN_LOG_ERROR(f'The attribute {attribute} is not handled currently.')
                 return 'failed'
         
         text = f"Hello {guest2_name}, welcome to the party! {guest1_name} has already arrived and is sitting down. They " + attribute_str
-        
+        yasmin.YASMIN_LOG_INFO(f'Attribute string: {text}')
         blackboard['text'] = text
         return 'succeeded'

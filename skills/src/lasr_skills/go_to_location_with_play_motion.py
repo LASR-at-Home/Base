@@ -4,7 +4,7 @@ import yasmin
 
 class SafeGoToLocation(yasmin.StateMachine):
     def __init__(self, location_pose = None, location_param = None):
-        super().__init__(outcomes=['succeded', 'failed'])
+        super().__init__(outcomes=['succeeded', 'failed'])
         
         self.add_input_key('location')
         self.add_input_key('motion_name')

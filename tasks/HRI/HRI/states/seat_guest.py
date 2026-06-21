@@ -116,7 +116,7 @@ class ProcessDetections(State):
             for chair in non_sofa_chairs.keys():
                 if not non_sofa_chairs[chair]:
                     blackboard["seating_string"] = (
-                        "The sofa that I'm looking at is at full capacity. I have found an extra seat for you. Please take sit down in the seat I am looking at."
+                        "The sofa that I'm looking at is at full capacity. I have found an extra seat for you. Please sit down in the seat I am looking at."
                     )
                     blackboard["guest_seat_point"] = PointStamped(
                         header=Header(frame_id="map"),

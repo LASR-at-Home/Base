@@ -141,12 +141,12 @@ class LLMInference:
         self.logger.info(
             f"[LLMInference] Pulling '{self.model_name}' (this only happens once)..."
         )
-        self.pull_model()
+        self.pull_model(self.model_name)
         self.logger.info(
             f"[LLMInference] '{self.model_name}' saved locally — offline use enabled."
         )
         
-    def pull_model(model_name):
+    def pull_model(self, model_name):
         available = [m.model for m in ollama.list().models]
         if model_name not in available:
             for chunk in ollama.pull(model_name, stream=True):
