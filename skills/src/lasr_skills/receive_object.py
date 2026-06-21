@@ -29,7 +29,7 @@ class ClearOctomap(ServiceState):
 class ReceiveObject(StateMachine):
     def __init__(self, object_name: Union[str, None] = None, vertical: bool = True):
 
-        super().__init__(outcomes=["succeeded", "failed"], handle_sigint=True)
+        super().__init__(outcomes=["succeeded", "failed"])
         if object_name is None:
             self.add_input_key("object_name")
 
@@ -101,7 +101,7 @@ class ReceiveObject(StateMachine):
 
         self.add_state(
             "SAY_REACH_ARM",
-            Say(text="Please step back, I am going to reach my arm out."),
+            Say(text="I see you have a bag. Please step back, I am going to reach my arm out."),
             transitions={
                 "succeeded": "REACH_ARM",
                 "aborted": "REACH_ARM",

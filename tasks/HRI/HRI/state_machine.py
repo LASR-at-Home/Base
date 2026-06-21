@@ -10,7 +10,7 @@ import yasmin_ros
 
 from geometry_msgs.msg import Point, PointStamped, Pose
 
-from lasr_skills import Say, GoToLocation, StopEyeTracker, PlayMotion
+from lasr_skills import Say, SafeGoToLocation, StopEyeTracker, PlayMotion, StartDoorSM
 
 from HRI.states import *
 
@@ -62,7 +62,7 @@ class HRI(yasmin.StateMachine):
 
         self.add_state(
             "GO_TO_DOOR",
-            GoToLocation(location_param="door_pose"),
+            SafeGoToLocation(location_param="door_pose"),
             transitions={"succeeded": "GREET", "failed": "failed"},
         )
 
@@ -87,16 +87,6 @@ class HRI(yasmin.StateMachine):
             "LOOK_CENTRE",
             PlayMotion("look_centre"),
             transitions={
-                "succeeded": "SAY_FOLLOW",
-                "aborted": "failed",
-                "canceled": "failed",
-            },
-        )
-
-        self.add_state(
-            "SAY_FOLLOW",
-            Say(text="Welcome. Follow me to the seating area."),
-            transitions={
                 "succeeded": "GUIDE_TO_SEAT",
                 "aborted": "failed",
                 "canceled": "failed",
@@ -105,7 +95,7 @@ class HRI(yasmin.StateMachine):
 
         self.add_state(
             "GUIDE_TO_SEAT",  # GUIDES GUEST TO SEATING AREA
-            GoToLocation(location_param="seat_pose"),
+            SafeGoToLocation(location_param="seat_pose"),
             transitions={"succeeded": "SEAT_GUEST", "failed": "failed"},
         )
 
@@ -117,13 +107,13 @@ class HRI(yasmin.StateMachine):
 
         self.add_state(
             "CHECK",
-            yasmin.CbState(outcomes=["succeeded", "GO_TO_DOOR_2"], callback=self.check),
-            transitions={"succeeded": "succeeded", "GO_TO_DOOR_2": "GO_TO_DOOR_2"},
+            yasmin.CbState(outcomes=["succeeded", "continue"], callback=self.check),
+            transitions={"succeeded": "INTRODUCE", "continue": "GO_TO_DOOR_2"},
         )
 
         self.add_state(
             "GO_TO_DOOR_2",
-            GoToLocation(location_param="door_pose"),
+            SafeGoToLocation(location_param="door_pose"),
             transitions={"succeeded": "GREET_2", "failed": "failed"},
         )
 
@@ -131,6 +121,12 @@ class HRI(yasmin.StateMachine):
             "GREET_2",  # SM2: Greets guest
             LookAndGreetGuest(last_resort=False, guest_id="guest2"),
             transitions={"succeeded": "STOP_EYE_TRACKER", "failed": "failed"},
+        )
+
+        self.add_state(
+            "INTRODUCE",
+            Introduce(),
+            transitions={"succeeded": "succeeded", "failed": "failed"},
         )
 
     def check(self, blackboard):
@@ -142,7 +138,7 @@ class HRI(yasmin.StateMachine):
             yasmin.YASMIN_LOG_INFO(f"{key}: {value}")
 
         self.guest_id += 1
-        return "GO_TO_DOOR_2" if self.guest_id == 2 else "succeeded"
+        return "continue" if self.guest_id == 2 else "succeeded"
 
     def setup(self):
         start_con_sm = yasmin.Concurrence(
@@ -199,6 +195,7 @@ def main():
             "detection": False,
             "seating_detection": False,
             "attributes": {},
+            "seated_point": None,
         },
         "guest2": {
             "name": "",
@@ -206,6 +203,7 @@ def main():
             "detection": False,
             "seating_detection": False,
             "attributes": {},
+            "seated_point": None,
         },
     }
 
@@ -215,6 +213,7 @@ def main():
     bb["confidence"] = face_detection_confidence
     bb["dataset"] = "hri"
     bb["drink_position"] = PointStamped()
+    bb["person_index"] = 0
 
     outcome = sm(bb)
 

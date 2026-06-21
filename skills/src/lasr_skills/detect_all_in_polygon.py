@@ -24,6 +24,8 @@ from time import sleep
 
 from threading import Thread, RLock
 
+import message_filters
+
 import tf2_ros
 from tf2_geometry_msgs.tf2_geometry_msgs import do_transform_point
 
@@ -142,6 +144,8 @@ class CalculateSweepPoints(yasmin.State):
     ):
         super().__init__(outcomes=["succeeded", "failed"])
 
+        self.node = yasmin_ros.logger_node
+
         self.add_output_key("sweep_points")
         self.add_output_key("sweep_point_index")
 
@@ -157,20 +161,14 @@ class CalculateSweepPoints(yasmin.State):
             depth=10,
         )
 
-        self.node = yasmin_ros.logger_node
-        self.msg = None
-        self.node.create_subscription(
-            CameraInfo,
-            "/head_front_camera/depth/camera_info",
-            self.info_cb,
-            qos_profile=qos,
+        info_sub = message_filters.Subscriber(
+            self.node, CameraInfo, "/head_front_camera/depth/camera_info", qos_profile=qos
         )
+        
+        self.cache = message_filters.Cache(info_sub)
 
         self._tf_buffer = tf2_ros.Buffer(Duration(seconds=10.0))
         self._tf_listener = tf2_ros.TransformListener(self._tf_buffer, self.node)
-
-    def info_cb(self, msg):
-        self.msg = msg
 
     def _get_camera_fov_polygon(self) -> ShapelyPolygon:
         """
@@ -180,14 +178,7 @@ class CalculateSweepPoints(yasmin.State):
             ShapelyPolygon: Footprint of camera FOV in map frame.
         """
 
-        attempt = 0
-        while self.msg is None:
-            if attempt < 5:
-                sleep(0.5)
-                attempt += 0.5
-            else:
-                yasmin.YASMIN_LOG_INFO("No camera info received, ending state")
-                self.cancel_state()
+        self.msg = self.cache.getLast()
 
         model = PinholeCameraModel()
         model.fromCameraInfo(self.msg)
@@ -200,10 +191,6 @@ class CalculateSweepPoints(yasmin.State):
             (0, model.height - 1),  # bottom-left
         ]
 
-        qos_test = QoSProfile(history=HistoryPolicy.KEEP_ALL)
-
-        pub = self.node.create_publisher(PointStamped, "fov_corners", qos_test)
-
         # Transform pixel rays to map frame
         transformed_points = []
         for u, v in corners:
@@ -214,8 +201,6 @@ class CalculateSweepPoints(yasmin.State):
             point_cam.point.x = ray[0] * self._fov_depth
             point_cam.point.y = ray[1] * self._fov_depth
             point_cam.point.z = ray[2] * self._fov_depth
-
-            pub.publish(point_cam)
 
             # Transform to map frame
             try:

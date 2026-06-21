@@ -2,29 +2,52 @@ import re
 from typing import Optional, List, Dict
 
 
+def _normalise_field_name(field: str) -> str:
+    field = field.lower().replace("_", " ").replace("favorite", "favourite")
+    return " ".join(field.split())
+
+
+def _field_aliases(field: str) -> List[str]:
+    aliases = [field]
+    normalised = _normalise_field_name(field)
+
+    if normalised == "favourite drink":
+        aliases += ["Favorite drink", "Favourite_drink", "Favorite_drink", "Drink"]
+    elif normalised == "interests":
+        aliases.append("Interest")
+
+    return sorted(set(aliases), key=len, reverse=True)
+
+
+def _label_pattern(label: str) -> str:
+    words = re.split(r"[\s_]+", label.strip())
+    return r"[\s_]+".join(re.escape(word) for word in words if word)
+
+
 def parse_llm_output_to_dict(output: str, fields: List[str]) -> Dict:
-    """
-    Parse the llm response to get the requested fields into a dict where the keys are the field names,
-    and the values are the result from the response.
-    :param output: llm response
-    :param fields: the fields requested to extract
-    :return: dictionary of field names and their values
-    """
     field_dict = {field: None for field in fields}
-    for field in fields:
-        field_pattern = field.replace(" ", "[_ ]")
-        pattern = re.compile(
-            rf"{field_pattern}:\s*(.*?)(?:\n|$)", re.IGNORECASE
-        )  # field: value
-        match = pattern.search(output)
-        if match:
-            field_dict[field] = match.group(1).strip()
+    separator = re.compile(r"\s*(?:[:=]|\s+-\s+)\s*")
+    # print(f"DEBUG: Parsing LLM output:\n{output}")
+
+    for line in output.splitlines():
+        sep_match = separator.search(line)
+        if not sep_match:
+            continue
+
+        key = line[: sep_match.start()].strip().strip("\"'`")
+        value = line[sep_match.end() :].strip().strip(" \t\r\n,;:-\"'`")
+
+        for field in fields:
+            if any(key.lower() == alias.lower() for alias in _field_aliases(field)):
+                field_dict[field] = value
+                break
     return field_dict
 
 
 def truncate_llm_output(output: str) -> str:
     """
-    If the output is too long, truncate it to a reasonable length, after the first sentence.
+    If the output is too long, truncate it after the first sentence.
+
     :param output: the output from the LLM
     :return: the parsed output
     """
@@ -49,14 +72,38 @@ def create_query(text: str, task: str, fields: Optional[List[str]] = None):
         assert (
             fields is not None
         ), "Fields must be provided for the 'extract_fields' task."
-        field_str = "\n".join([f"- {field}" for field in fields])
-        query = f"Extract the following fields from the sentence:\n{field_str}\n\n For example, the sentence ' my favourite drink is coca cola' should have the field favourite_drink matched to 'coca cola' \n\n Sentence: {text}."
+        field_str = "\n".join([f"- {field}" for field in fields])  # "\n- Name"
+        query = (
+            "Extract the following fields from the sentence:\n"
+            f"{field_str}\n\n"
+            "Return only one line per requested field using this format:\n"
+            "Field: value\n"
+            "Do not list the requested fields. If a value is missing, leave "
+            "it empty after the colon.\n\n"
+            "For example, the sentence 'my favourite drink is coca cola' "
+            "should return:\n"
+            "Favourite drink: coca cola\n\n"
+            f"Sentence: {text}."
+        )
+        # print(f"DEBUG query sent to LLM: {query}")
     elif task == "interest_commonality":
-        query = f"Extract the commonality (if it exists) of the following interests of two people:\n\nSentences: {text}. \n\n For example, the sentences 'I like football' and 'I like basketball' should have the commonality 'you both like sports'. If there is no common interest, say 'you have no common interests'\n\n"
-        # query = f"Extract the commonality (if it exists) of the following interests:\n\nInterests: {text}.\nFormat it as a sentence: 'you both have interests which are...'"
+        query = (
+            "Extract the commonality (if it exists) of the following "
+            f"interests of two people:\n\nSentences: {text}.\n\n"
+            "For example, the sentences 'I like football' and 'I like "
+            "basketball' should have the commonality 'you both like sports'. "
+            "If there is no common interest, say 'you have no common "
+            "interests'\n\n"
+        )
+        # query = (
+        #     "Extract the commonality (if it exists) of the following "
+        #     f"interests:\n\nInterests: {text}.\nFormat it as a sentence: "
+        #     "'you both have interests which are...'"
+        # )
     else:
         raise ValueError(
-            f"Unknown task: {task}. Supported tasks are 'extract_fields' and 'interest_commonality'."
+            f"Unknown task: {task}. Supported tasks are 'extract_fields' and "
+            "'interest_commonality'."
         )
 
     return query

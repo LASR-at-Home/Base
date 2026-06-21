@@ -32,7 +32,7 @@ class ComputeApproach(yasmin.State):
         self.add_input_key("table_candidate_poses")
         self.add_output_key("table_approach_poses")
 
-        self.node = yasmin_ros.get_node()
+        self.node = yasmin_ros.logger_node
         self._map_frame_min_distance = map_frame_min_distance
         self.n_samples = n_samples
 

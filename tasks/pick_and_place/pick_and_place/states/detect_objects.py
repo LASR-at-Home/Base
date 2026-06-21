@@ -5,7 +5,7 @@ from geometry_msgs.msg import Point, PointStamped
 from std_msgs.msg import Header
 from shapely import Polygon as ShapelyPolygon
 
-from lasr_skills import DetectAllInPolygon
+from lasr_skills.detect_all_in_polygon import DetectAllInPolygon
 
 
 class DetectObjects(yasmin.State):
@@ -33,20 +33,15 @@ class DetectObjects(yasmin.State):
         super().__init__(outcomes=["succeeded", "failed"])
         self.add_output_key("detected_objects")
 
-        self.node = yasmin_ros.get_node()
+        self.node = yasmin_ros.logger_node
 
-        # Load params at construction time so errors surface early
+        # Load params
         try:
-            look_pt_param = (
-                self.node.get_parameter("pick_and_place.table.look_point")
-                .get_parameter_value()
-                .double_array_value
-            )
             self._look_point = PointStamped(
                 point=Point(
-                    x=look_pt_param[0],
-                    y=look_pt_param[1],
-                    z=look_pt_param[2],
+                    x=self.node.get_parameter("table.look_point.x").value,
+                    y=self.node.get_parameter("table.look_point.y").value,
+                    z=self.node.get_parameter("table.look_point.z").value,
                 ),
                 header=Header(frame_id="map"),
             )
@@ -61,13 +56,14 @@ class DetectObjects(yasmin.State):
             )
 
         try:
-            polygon_flat = (
-                self.node.get_parameter("pick_and_place.table.polygon")
-                .get_parameter_value()
-                .double_array_value
+            self._polygon = ShapelyPolygon(
+                [
+                    self.node.get_parameter("table.polygon.top_left").value,
+                    self.node.get_parameter("table.polygon.top_right").value,
+                    self.node.get_parameter("table.polygon.bottom_right").value,
+                    self.node.get_parameter("table.polygon.bottom_left").value,
+                ]
             )
-            coords = list(zip(polygon_flat[::2], polygon_flat[1::2]))
-            self._polygon = ShapelyPolygon(coords)
         except Exception as e:
             yasmin.YASMIN_LOG_WARN(
                 f"Could not load table polygon from params: {e}. "
@@ -76,11 +72,8 @@ class DetectObjects(yasmin.State):
             self._polygon = ShapelyPolygon()
 
         try:
-            self._object_filter = list(
-                self.node.get_parameter("pick_and_place.objects")
-                .get_parameter_value()
-                .string_array_value
-            )
+            objects_param = self.node.get_parameter("objects").value
+            self._object_filter = list(objects_param) if objects_param else None
         except Exception as e:
             yasmin.YASMIN_LOG_WARN(
                 f"Could not load object filter from params: {e}. "

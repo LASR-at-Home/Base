@@ -47,7 +47,7 @@ class ScanShelves(yasmin.State):
         super().__init__(outcomes=["succeeded", "failed"])
         self.add_output_key("shelf_data")
 
-        self.node = yasmin_ros.get_node()
+        self.node = yasmin_ros.logger_node
 
         # ClassifyCategory instance reused for each shelf
         self._classifier = ClassifyCategory(task="shelf")

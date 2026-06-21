@@ -3,6 +3,9 @@ from rclpy.node import Node
 from sensor_msgs.msg import Image
 from lasr_vision_interfaces.srv import AddFace
 import sys
+from rclpy.qos import QoSProfile, QoSReliabilityPolicy
+
+qos = QoSProfile(depth=10, reliability=QoSReliabilityPolicy.BEST_EFFORT)
 
 
 def add_face(node: Node, name: str, num_images: int, image_topic: str):
@@ -60,7 +63,8 @@ def add_face(node: Node, name: str, num_images: int, image_topic: str):
         # Use call_async() instead of call() to avoid blocking the event loop
         add_face_srv.call_async(req).add_done_callback(service_response_callback)
 
-    image_sub = node.create_subscription(Image, image_topic, handle_image, 10)
+    # image_sub = node.create_subscription(Image, image_topic, handle_image, 10)
+    image_sub = node.create_subscription(Image, image_topic, handle_image, qos)
 
     # Spin until collection is complete, checking in a loop to allow graceful exit
     while not collection_complete and rclpy.ok():
@@ -78,13 +82,13 @@ def main():
     image_topic = f"/{camera}/rgb/image_raw"
 
     # camera = node.declare_parameter("~camera", "head_front_camera").value
-    name = node.declare_parameter("~name", "fadi").value  # originally jared
+    name = node.declare_parameter("~name", "guest1").value  # originally jared
     num_images = node.declare_parameter("~num_images", 10).value
-    image_topic = "image_raw"
+    image_topic = "/image_raw"
 
     node.get_logger().info(f"Image topic: {image_topic}")
 
-    node.declare_parameter("name", "fadi")
+    node.declare_parameter("name", "guest1")
     name = node.get_parameter("name").value
 
     node.declare_parameter("num_images", 10)

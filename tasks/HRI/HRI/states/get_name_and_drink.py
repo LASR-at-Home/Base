@@ -26,6 +26,7 @@ class GetNameAndDrink(yasmin.StateMachine):
             self.add_input_key("guest_transcription")
             self.add_input_key("guest_data")
             self.add_output_key("guest_data")
+            self.add_output_key("placeholders")
 
             self.task = task
             self.guest_id = guest_id
@@ -42,6 +43,9 @@ class GetNameAndDrink(yasmin.StateMachine):
             blackboard["guest_data"][self.guest_id][self.task] = (
                 result.name if self.task == "name" else result.favourite_drink
             )
+
+            if self.task == "name":
+                blackboard["placeholders"] = result.name
 
             return "succeeded"
 
@@ -87,8 +91,7 @@ class GetNameAndDrink(yasmin.StateMachine):
         last_resort: bool,
     ):
         super().__init__(
-            outcomes=["succeeded", "failed", "failed_name", "failed_drink"],
-            handle_sigint=True,
+            outcomes=["succeeded", "failed", "failed_name", "failed_drink"]
         )
 
         self.add_input_key("guest_transcription")

@@ -13,7 +13,7 @@ class AskAndListen(yasmin.StateMachine):
         tts_phrase: Union[str, None] = None,
         tts_phrase_format_str: Union[str, None] = None,
     ):
-        super().__init__(outcomes=["succeeded", "failed"], handle_sigint=True)
+        super().__init__(outcomes=["succeeded", "failed"])
         self.add_output_key("transcribed_speech")
         if tts_phrase is not None:
             self.add_state(
