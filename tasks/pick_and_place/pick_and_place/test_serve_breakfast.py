@@ -27,7 +27,7 @@ def main():
 
     # Add these three for InstructPick/InstructPlace
 
-    bb["object_category"] = "breakfast item"
+    bb["object_category"] = "breakfast"
 
     bb["destination_str"] = "the dining table"
 

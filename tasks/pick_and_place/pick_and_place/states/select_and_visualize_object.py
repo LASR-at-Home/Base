@@ -4,7 +4,7 @@ import yasmin
 import yasmin_ros
 from cv_bridge import CvBridge
 from sensor_msgs.msg import Image
-from rclpy.qos import QoSProfile, DurabilityPolicy
+from rclpy.qos import QoSProfile, DurabilityPolicy, ReliabilityPolicy, HistoryPolicy
 
 
 class SelectAndVisualiseObject(yasmin.State):
@@ -37,6 +37,19 @@ class SelectAndVisualiseObject(yasmin.State):
         self._bridge = CvBridge()
         qos = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL)
         self._referee_pub = self.node.create_publisher(Image, "/referee_view", qos)
+
+        self._last_image = None
+        cam_qos = QoSProfile(
+            depth=1,
+            reliability=ReliabilityPolicy.BEST_EFFORT,
+            history=HistoryPolicy.KEEP_LAST,
+        )
+        self.node.create_subscription(
+            Image, "/head_front_camera/rgb/image_raw", self._on_image, cam_qos
+        )
+
+    def _on_image(self, msg):
+        self._last_image = msg
 
     def execute(self, blackboard) -> str:
         detected = blackboard["detected_objects"]
@@ -82,15 +95,15 @@ class SelectAndVisualiseObject(yasmin.State):
 
     def _publish_visualisation(self, detection) -> None:
         try:
-            # Grab the latest RGB image directly from the camera topic
-            success, image_msg = rclpy.wait_for_message.wait_for_message(
-                msg_type=Image,
-                node=self.node,
-                topic="/head_front_camera/rgb/image_raw",
-                time_to_wait=5.0,
-            )
+            # # Grab the latest RGB image directly from the camera topic
+            # success, image_msg = rclpy.wait_for_message.wait_for_message(
+            #     msg_type=Image,
+            #     node=self.node,
+            #     topic="/head_front_camera/rgb/image_raw",
+            #     time_to_wait=5.0,
+            # )
 
-            if not success:
+            if self._last_image is None:
                 yasmin.YASMIN_LOG_WARN("Could not get camera image for visualisation.")
                 return
 
@@ -98,7 +111,9 @@ class SelectAndVisualiseObject(yasmin.State):
             xywh = detection.xywh
             confidence = detection.confidence
 
-            cv_im = self._bridge.imgmsg_to_cv2(image_msg, desired_encoding="rgb8")
+            cv_im = self._bridge.imgmsg_to_cv2(
+                self._last_image, desired_encoding="rgb8"
+            )
 
             cv2.rectangle(
                 cv_im,

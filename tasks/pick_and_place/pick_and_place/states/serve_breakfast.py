@@ -33,14 +33,14 @@ class ServeBreakfast(yasmin.StateMachine):
         super().__init__(outcomes=["succeeded", "failed"], handle_sigint=True)
 
         # # Navigate to breakfast surface
-        # self.add_state(
-        #     "GO_TO_BREAKFAST_SURFACE",
-        #     GoToLocation(location_param="pick_and_place.breakfast_surface.pose"),
-        #     transitions={
-        #         "succeeded": "DETECT_BOWL",
-        #         "failed": "GO_TO_BREAKFAST_SURFACE",
-        #     },
-        # )
+        self.add_state(
+            "GO_TO_BREAKFAST_SURFACE",
+            GoToLocation(location_param="pick_and_place.breakfast_surface.pose"),
+            transitions={
+                "succeeded": "DETECT_BOWL",
+                "failed": "GO_TO_BREAKFAST_SURFACE",
+            },
+        )
 
         # Bowl
         self.add_state(
@@ -51,6 +51,7 @@ class ServeBreakfast(yasmin.StateMachine):
                 "failed": "DETECT_BOWL",
             },
         )
+
         self.add_state(
             "SELECT_BOWL",
             SelectAndVisualiseObject(target_name="bowl"),
@@ -59,6 +60,7 @@ class ServeBreakfast(yasmin.StateMachine):
                 "finished": "DETECT_BOWL",  # not found, retry detection
             },
         )
+
         self.add_state(
             "INSTRUCT_PICK_BOWL",
             InstructPick(),
@@ -77,6 +79,7 @@ class ServeBreakfast(yasmin.StateMachine):
                 "failed": "DETECT_SPOON",
             },
         )
+
         self.add_state(
             "SELECT_SPOON",
             SelectAndVisualiseObject(target_name="spoon"),
@@ -85,24 +88,26 @@ class ServeBreakfast(yasmin.StateMachine):
                 "finished": "DETECT_SPOON",  # not found, retry detection
             },
         )
+
         self.add_state(
             "INSTRUCT_PICK_SPOON",
             InstructPick(),
             transitions={
-                "succeeded": "INSTRUCT_PLACE_BOWL",
+                "succeeded": "INSTRUCT_PICK_SPOON",
                 "failed": "INSTRUCT_PICK_SPOON",
             },
         )
 
-        # # Navigate to table, place bowl and spoon
-        # self.add_state(
-        #     "GO_TO_TABLE_1",
-        #     GoToLocation(location_param="pick_and_place.table.pose"),
-        #     transitions={
-        #         "succeeded": "INSTRUCT_PLACE_BOWL",
-        #         "failed": "GO_TO_TABLE_1",
-        #     },
-        # )
+        # Navigate to table, place bowl and spoon
+        self.add_state(
+            "GO_TO_TABLE_1",
+            GoToLocation(location_param="pick_and_place.table.pose"),
+            transitions={
+                "succeeded": "INSTRUCT_PLACE_BOWL",
+                "failed": "GO_TO_TABLE_1",
+            },
+        )
+
         self.add_state(
             "INSTRUCT_PLACE_BOWL",
             Say(text="Please place the bowl in the centre of the table."),
@@ -116,21 +121,21 @@ class ServeBreakfast(yasmin.StateMachine):
             "INSTRUCT_PLACE_SPOON",
             Say(text="Please place the spoon next to the bowl."),
             transitions={
-                "succeeded": "DETECT_CEREAL",
-                "aborted": "DETECT_CEREAL",
-                "canceled": "DETECT_CEREAL",
+                "succeeded": "GO_TO_CABINET",
+                "aborted": "GO_TO_CABINET",
+                "canceled": "GO_TO_CABINET",
             },
         )
 
-        # # Navigate to cabinet
-        # self.add_state(
-        #     "GO_TO_CABINET",
-        #     GoToLocation(location_param="pick_and_place.cabinet.pose"),
-        #     transitions={
-        #         "succeeded": "DETECT_CEREAL",
-        #         "failed": "GO_TO_CABINET",
-        #     },
-        # )
+        # Navigate to cabinet
+        self.add_state(
+            "GO_TO_CABINET",
+            GoToLocation(location_param="pick_and_place.cabinet.pose"),
+            transitions={
+                "succeeded": "DETECT_CEREAL",
+                "failed": "GO_TO_CABINET",
+            },
+        )
 
         # Cereal
         self.add_state(
@@ -179,20 +184,21 @@ class ServeBreakfast(yasmin.StateMachine):
             "INSTRUCT_PICK_MILK",
             InstructPick(),
             transitions={
-                "succeeded": "INSTRUCT_PLACE_CEREAL",
+                "succeeded": "GO_TO_TABLE_2",
                 "failed": "INSTRUCT_PICK_MILK",
             },
         )
 
         # Navigate to table, place cereal and milk
-        # self.add_state(
-        #     "GO_TO_TABLE_2",
-        #     GoToLocation(location_param="pick_and_place.table.pose"),
-        #     transitions={
-        #         "succeeded": "INSTRUCT_PLACE_CEREAL",
-        #         "failed": "GO_TO_TABLE_2",
-        #     },
-        # )
+        self.add_state(
+            "GO_TO_TABLE_2",
+            GoToLocation(location_param="pick_and_place.table.pose"),
+            transitions={
+                "succeeded": "INSTRUCT_PLACE_CEREAL",
+                "failed": "GO_TO_TABLE_2",
+            },
+        )
+
         self.add_state(
             "INSTRUCT_PLACE_CEREAL",
             Say(

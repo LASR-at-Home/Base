@@ -11,8 +11,8 @@
 
       table:
         pose:
-          position: {x: 4.65, y: 2.5, z: 0.0}
-          orientation: {x: 0.0, y: 0.0, z: -0.9565, w: 0.2919}
+          position: {x: 0.41411805152893066, y: -1.4740591049194336, z: 0.002471923828125}
+          orientation: {x: 0.0, y: 0.0, z: -0.788207, w: 0.615411}
         look_point: [5.25, 2.27, 0.75]
         polygon: [3.5, 1.0, 5.5, 1.0, 5.5, 3.5, 3.5, 3.5]
         search_polygon: [5.3, 3.8, 7.8, 3.8, 7.8, 5.9, 5.3, 5.9]
@@ -20,8 +20,8 @@
         z_max: 1.5
       cabinet:
         pose:
-          position: {x: -4.9, y: 2.7, z: 0.0}              # <-- ВСТАВ pose
-          orientation: {x: 0.0, y: 0.0, z: -0.97, w: 0.23}
+          position: {x: 1.2077007293701172, y: -2.136275053024292, z: 0.2945556640625}              # <-- ВСТАВ pose
+          orientation: {x: 0.0, y: 0.0, z: -0.178426, w: 0.983953}
 
         # Shelves — used by ScanShelves in the NEXT deliverable.
         # shelf_order is the iteration list; shelves.<id> holds per-shelf config.
@@ -55,5 +55,5 @@
       # ── BREAKFAST SURFACE (bowl and spoon pickup location) ──
       breakfast_surface:
         pose:
-          position: {x: 2.8, y: -3.8, z: 0.0063}
-          orientation: {x: 0.0, y: 0.0, z: -0.9565, w: 0.23}
+          position: {x: 0.10039059072732925, y: -0.8091638684272766, z: -0.001434326171875}
+          orientation: {x: 0.0, y: 0.0, z: 0.999945, w: 0.0104897}
