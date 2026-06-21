@@ -24,6 +24,9 @@ from deepface import DeepFace
 from lasr_vision_interfaces.srv import Recognise3D, AddFace, Recognise
 from lasr_vision_interfaces.msg import Detection3D, Detection
 
+import tensorflow as tfl
+from tensorflow.compat.v1 import ConfigProto
+from tensorflow.compat.v1 import InteractiveSession
 
 from geometry_msgs.msg import Point, PointStamped
 from sensor_msgs.msg import Image
@@ -31,6 +34,10 @@ from visualization_msgs.msg import Marker
 from tf2_geometry_msgs import do_transform_point
 
 Mat = np.ndarray
+
+print("TensorFlow:", tfl.__version__)
+print("GPUs:", tfl.config.list_physical_devices("GPU"))
+
 
 
 class ReID(Node):
@@ -300,6 +307,10 @@ class ReID(Node):
 
 def main():
     rclpy.init()
+
+    config = ConfigProto()
+    config.gpu_options.per_process_gpu_memory_fraction = 0.20
+    session = InteractiveSession(config=config)
 
     reid = ReID()
     reid.get_logger().info("Vision reid service is ready!", once=True)

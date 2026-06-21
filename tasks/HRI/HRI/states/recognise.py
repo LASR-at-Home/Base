@@ -23,7 +23,7 @@ class Recognise(yasmin_ros.ServiceState):
     def __init__(self):
         super().__init__(
             srv_type=Recognise3D,
-            srv_name="/lasr_vision_reid/recognise/threed",
+            srv_name="/lasr_vision_reid/recognise",
             create_request_handler=self._create_request,
             response_handler=self._handle_resp,
             outcomes=["no_detections"],

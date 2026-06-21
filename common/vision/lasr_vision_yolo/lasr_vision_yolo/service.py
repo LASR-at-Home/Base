@@ -115,7 +115,7 @@ class YOLOServiceNode:
             history=HistoryPolicy.KEEP_LAST,
         )
 
-        self._tf_buffer = Buffer(cache_time=Duration(seconds=10))
+        self._tf_buffer = Buffer(cache_time=Duration(seconds=20))
         self._tf_listener = tf.TransformListener(self._tf_buffer, self.node)
 
         self.node.create_service(YoloDetection, "/yolo/detect", self._detect)
@@ -202,7 +202,7 @@ class YOLOServiceNode:
                 target_frame, source_frame, stamp, Duration(seconds=1.0)
             )
         except Exception as e:
-            self.node.get_logger().debug(
+            self.node.get_logger().error(
                 f"TF {target_frame}<-{source_frame} at image stamp failed ({e}); using latest"
             )
         try:

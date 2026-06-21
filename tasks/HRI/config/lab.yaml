@@ -45,24 +45,24 @@ hri:   # the `hri` Node's Parameters
 
     # Where the robot looks at the general sofa
     sofa_point:
-      x: 0.5353118777275085
-      y: -2.735560417175293
+      x: 0.4271498918533325
+      y: -2.619997978210449
       z: 0.5
 
     # From robot POV: [top left, top right,bottom right, bottom left ]
     # General area to perform detections in 
     seat_area:
-      top_left:     [1.0377328395843506, -3.0713024139404297]
-      top_right:    [-0.6096499562263489, -2.674661874771118]
-      bottom_right: [-0.20907312631607056, -1.2965306043624878]
-      bottom_left:  [1.4041924476623535, -1.6029856204986572]
+      top_left:     [0.9494496583938599, -3.0636677742004395]
+      top_right:    [-0.7870132327079773, -2.5979042053222656]
+      bottom_right: [-0.3085177540779114, -1.1853952407836914]
+      bottom_left:  [1.4148540496826172, -1.7602463960647583]
     
     # Max number of seats
     max_people_on_sofa: 2
 
     # Seatable area
     sofa_area:
-      top_left:     [1.004127025604248, -3.027700424194336]
-      top_right:    [-0.05495929718017578, -2.633639335632324]
-      bottom_right: [0.14211857318878174, -2.199918031692505]
-      bottom_left:  [1.1283936500549316, -2.5002880096435547]
+      top_left:     [0.9576625823974609, -2.9661824703216553]
+      top_right:    [-0.12112653255462646, -2.571563720703125]
+      bottom_right: [-0.002137422561645508, -2.1182358264923096]
+      bottom_left:  [1.0786051750183105, -2.4874391555786133]

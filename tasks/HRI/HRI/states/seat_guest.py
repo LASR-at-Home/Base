@@ -78,12 +78,16 @@ class ProcessDetections(State):
         right_sofa_occupied = False
         unseated_sofa_persons = []
         non_sofa_chairs = {}
+        people = []
+
+        yasmin.YASMIN_LOG_INFO("Saving seat_detections")
 
         for detection in blackboard["seat_detections"]:
             detection_point = ShapelyPoint(
                 detection.point.x, detection.point.y, detection.point.z
             )
             if detection.name == "person":
+                people.append(detection)
                 if self._left_sofa_area.contains(detection_point):
                     left_sofa_occupied = True
                 elif self._right_sofa_area.contains(detection_point):
@@ -96,6 +100,8 @@ class ProcessDetections(State):
                 and not self._left_sofa_area.contains(detection_point)
             ):
                 non_sofa_chairs.update({detection_point: False})
+
+        blackboard['introduce_detections'] = people
 
         for chair_detection in non_sofa_chairs.keys():
             for person_detection in unseated_sofa_persons:
