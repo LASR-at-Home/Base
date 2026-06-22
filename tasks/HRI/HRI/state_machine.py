@@ -209,6 +209,15 @@ class HRI(yasmin.StateMachine):
             "FOLLOW_HOST",
             FollowPerson(),
             transitions={
+                "succeeded": "PLACE_BAG",
+                "failed": "failed",
+            },
+        )
+
+        self.add_state(
+            "PLACE_BAG",
+            PlaceBag(),
+            transitions={
                 "succeeded": "succeeded",
                 "failed": "failed",
             },

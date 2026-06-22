@@ -510,6 +510,16 @@ class FollowPerson(StateMachine):
 
         # Start of following
         self.add_state(
+            "POST_NAV_1",
+            PlayMotion("post_navigation"),
+            transitions={
+                "succeeded": "UPDATE_POLYGON",
+                "aborted": "failed",
+                "canceled": "failed",
+            },
+        )
+        
+        self.add_state(
             "UPDATE_POLYGON",
             UpdateDetectionPolygon(),
             transitions={
@@ -538,9 +548,19 @@ class FollowPerson(StateMachine):
             "SAY_FOLLOW",
             Say(text="I will now follow you. Lead the way slowly. "),
             transitions={
+                "succeeded": "PRE_NAV",
+                "aborted": "PRE_NAV",
+                "canceled": "PRE_NAV",
+            },
+        )
+
+        self.add_state(
+            "PRE_NAV_1",
+            PlayMotion("pre_navigation"),
+            transitions={
                 "succeeded": "TRACK_AND_NAVIGATE",
-                "aborted": "TRACK_AND_NAVIGATE",
-                "canceled": "TRACK_AND_NAVIGATE",
+                "aborted": "failed",
+                "canceled": "failed",
             },
         )
 
@@ -565,7 +585,7 @@ class FollowPerson(StateMachine):
                 },
             ),
             transitions={
-                "person_stationary": "ASK_IF_ARRIVED",
+                "person_stationary": "POST_NAV_2",
                 "person_lost": "CALL_LOST_PERSON_BACK",
                 "failed": "failed",
             },
@@ -575,9 +595,20 @@ class FollowPerson(StateMachine):
             "CALL_LOST_PERSON_BACK",
             Say(text="I seam to have lost track of you. I will wait until you are back infront of me. "),
             transitions={
-                "succeeded": "UPDATE_POLYGON",
-                "aborted": "UPDATE_POLYGON",
-                "canceled": "UPDATE_POLYGON",
+                "succeeded": "POST_NAV_1",
+                "aborted": "POST_NAV_1",
+                "canceled": "POST_NAV_1",
+            },
+        )
+
+        # BEFORE ASKING DO POSTNAV AND LOOK AT PERSON
+        self.add_state(
+            "POST_NAV_2",
+            PlayMotion("post_navigation"),
+            transitions={
+                "succeeded": "ASK_IF_ARRIVED",
+                "aborted": "failed",
+                "canceled": "failed",
             },
         )
 
@@ -596,9 +627,9 @@ class FollowPerson(StateMachine):
             "PROCESS_RESPONSE",
             yasmin.CbState(outcomes=["yes", "unknown", "no"], callback=self.parse_arrival_confirmation),
             transitions={
-                "yes": "succeeded", 
+                "yes": "succeeded",     
                 "unknown": "FEEDBACK_RESPONSE",
-                "no": "SAY_FOLLOW",
+                "no": "PRE_NAV_2",
             },
         )
         self.add_state(
@@ -608,6 +639,15 @@ class FollowPerson(StateMachine):
                 "succeeded": "ASK_IF_ARRIVED",
                 "aborted": "ASK_IF_ARRIVED",
                 "canceled": "ASK_IF_ARRIVED",
+            },
+        )
+        self.add_state(
+            "PRE_NAV_2",
+            PlayMotion("pre_navigation"),
+            transitions={
+                "succeeded": "SAY_FOLLOW",
+                "aborted": "failed",
+                "canceled": "failed",
             },
         )
 

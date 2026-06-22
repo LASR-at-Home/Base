@@ -1,6 +1,9 @@
 import math
 import rclpy
 from rclpy.time import Time
+from rclpy.qos import QoSProfile, DurabilityPolicy, ReliabilityPolicy, HistoryPolicy
+
+
 import time
 import traceback
 
@@ -29,8 +32,8 @@ from lasr_skills import (
     Wait,
     PlayMotion,
     Say,
-    ContinuousGoToLocation,
-    WaitForPersonInArea,
+    Rotate,
+    FollowPerson,
     LookToPoint,
     AskAndListen,
 )
@@ -125,7 +128,7 @@ class CalculateDropPoint(State):
                 return "invalid_point"
 
             point_stamped = PointStamped()
-            point_stamped.header.frame_id = "maP"
+            point_stamped.header.frame_id = "map"
             point_stamped.header.stamp = Time().to_msg()
             point_stamped.point = drop_point
             blackboard["drop_point"] = point_stamped
@@ -134,82 +137,44 @@ class CalculateDropPoint(State):
         except Exception as e:
             yasmin.YASMIN_LOG_ERROR(f"The following error occured: {e}")
             return "failed"
-        
-class PlaceBag(StateMachine):
-    def __init__(self):
-        # Outcomes align perfectly with your main locate_and_follow_host.py plan
-        super().__init__(outcomes=["succeeded", "failed"])
+
+
+class PlacingMotion(StateMachine):
+    def __init__(self, outcomes=["succeeded", "failed"]):
+        self.add_input_key("drop_point")
 
         self.add_state(
-            "REQUEST_DROP_POINT",
-            Say(text="With your right hand, please point where on the floor I should place the bag. "),
+            "PRE_NAV",
+            PlayMotion("pre_navigation"),
             transitions={
-                "succeeded": "DETECT3D_POSE",
-                "aborted": "DETECT3D_POSE",
-                "canceled": "DETECT3D_POSE",
+                "succeeded": "FACE_DROP_POINT",
+                "aborted": "failed",
+                "canceled": "failed",
             },
         )
+
         self.add_state(
-            "DETECT3D_POSE",
-            DetectKeypoints3D(),
-            transitions={
-                "succeeded": "FIND_DROP_POINT", 
-                "failed": "failed" # Some recovery then return back
-            },
-        )
-        self.add_state(
-            "FIND_DROP_POINT",
-            CalculateDropPoint(),
-            transitions={
-                "valid_point": "LOOK_AT_DROP_POINT",
-                "invalid_point": "REQUEST_NEW_POINT",
-                "failed": "failed",
-            },
+            "FACE_DROP_POINT",
+            Rotate(mode="point"),
+            transitions={"succeeded": "LOOK_AT_DROP_POINT", "failed": "failed"},
+            remappings={"target_point": "drop_point"}
         )
 
         self.add_state(
             "LOOK_AT_DROP_POINT",
             LookToPoint(),
             transitions={
-                "succeeded": "ASK_TO_STEP_AWAY",
+                "succeeded": "PLACE_MOTION",
                 "aborted": "failed",
                 "canceled": "failed",
+                "timeout": "failed",
             },
             remappings={"pointstamped": "drop_point"}
         ) 
 
-        #TODO:  Add a 3d detect in area check to ensure area is empty
 
         self.add_state(
-            "REQUEST_NEW_POINT",
-            Say(text="I cannot place the bag there. Please point somewhere on the floor. "),
-            transitions={
-                "succeeded": "DETECT3D_POSE",
-                "aborted": "DETECT3D_POSE",
-                "canceled": "DETECT3D_POSE",
-            },
-        )
-
-        self.add_state(
-            "ASK_TO_STEP_AWAY",
-            Say(text="Please step away. I will now place the bag."),
-            transitions={
-                "succeeded": "WAIT",
-                "aborted": "WAIT",
-                "canceled": "WAIT",
-            },
-        )
-
-        self.add_state(
-            "WAIT",
-            Wait(5),  
-            transitions={"succeeded": "READY_TO_PLACE", "failed": "failed"},
-        )
-
-        #TODO:  Navigate close to the point
-
-        self.add_state(
-            "READY_TO_PLACE",
+            "PLACE_MOTION",
             PlayMotion("reach_arm_vertical_gripper"), # Motion goes heres
             transitions={
                 "succeeded": "PLAYMOTION_BREAK_1",
@@ -241,10 +206,135 @@ class PlaceBag(StateMachine):
             "RESET",
             PlayMotion("home"), # Motion goes heres
             transitions={
-                "succeeded": "FINISH",
+                "succeeded": "CLOSE_GRIPPER",
                 "aborted": "failed",
                 "canceled": "failed",
             },
+        )
+        self.add_state(
+            "CLOSE_GRIPPER",
+            PlayMotion("close"), # Motion goes heres
+            transitions={
+                "succeeded": "LOOK_CENTER",
+                "aborted": "failed",
+                "canceled": "failed",
+            },
+        )
+        self.add_state(
+            "LOOK_CENTER",
+            PlayMotion("look_center"), # Motion goes heres
+            transitions={
+                "succeeded": "succeeded",
+                "aborted": "failed",
+                "canceled": "failed",
+            },
+        )
+
+class PlaceBag(StateMachine):
+    def __init__(self):
+        # Outcomes align perfectly with your main locate_and_follow_host.py plan
+        super().__init__(outcomes=["succeeded", "failed"])
+
+        self.add_state(
+            "POST_NAV",
+            PlayMotion("post_navigation"),
+            transitions={
+                "succeeded": "REQUEST_DROP_POINT",
+                "aborted": "failed",
+                "canceled": "failed",
+            },
+        )
+
+        self.add_state(
+            "REQUEST_DROP_POINT",
+            Say(text="With your right hand, please point where on the floor I should place the bag. "),
+            transitions={
+                "succeeded": "WAIT_FOR_POINT",
+                "aborted": "WAIT_FOR_POINT",
+                "canceled": "WAIT_FOR_POINT",
+            },
+        )
+        self.add_state(
+            "WAIT_FOR_POINT",
+            Wait(3),  
+            transitions={"succeeded": "DETECT3D_POSE", "failed": "failed"},
+        )
+        self.add_state(
+            "DETECT3D_POSE",
+            DetectKeypoints3D(),
+            transitions={
+                "succeeded": "FIND_DROP_POINT", 
+                "failed": "NO_POSE_FOUND" # Some recovery then return back
+            },
+        )
+        self.add_state(
+            "NO_POSE_FOUND",
+            Say(text="I can't see where you are pointing properly. I will try again. "),
+            transitions={
+                "succeeded": "WAIT_FOR_POINT",
+                "aborted": "WAIT_FOR_POINT",
+                "canceled": "WAIT_FOR_POINT",
+            },
+        )
+
+        self.add_state(
+            "FIND_DROP_POINT",
+            CalculateDropPoint(),
+            transitions={
+                "valid_point": "LOOK_AT_DROP_POINT_1",
+                "invalid_point": "REQUEST_NEW_POINT",
+                "failed": "failed",
+            },
+        )
+
+        self.add_state(
+            "LOOK_AT_DROP_POINT_1",
+            LookToPoint(),
+            transitions={
+                "succeeded": "ASK_TO_STEP_AWAY",
+                "aborted": "failed",
+                "canceled": "failed",
+                "timeout": "failed",
+            },
+            remappings={"pointstamped": "drop_point"}
+        ) 
+
+        #TODO:  Add a 3d detect in area check to ensure area is empty
+
+        self.add_state(
+            "REQUEST_NEW_POINT",
+            Say(text="I cannot place the bag there. Please point somewhere on the floor. "),
+            transitions={
+                "succeeded": "DETECT3D_POSE",
+                "aborted": "DETECT3D_POSE",
+                "canceled": "DETECT3D_POSE",
+            },
+        )
+
+        self.add_state(
+            "ASK_TO_STEP_AWAY",
+            Say(text="Please step away. I will wait a few seconds, then place the bag."),
+            transitions={
+                "succeeded": "WAIT",
+                "aborted": "WAIT",
+                "canceled": "WAIT",
+            },
+        )
+
+        self.add_state(
+            "WAIT",
+            Wait(3),  
+            transitions={"succeeded": "PLACE_BAG_MOTION", "failed": "failed"},
+        )
+
+        # Add a sweep here and make a seperate SM for this
+
+        #TODO:  Navigate close to the point
+
+        self.add_state(
+            "PLACE_BAG_MOTION",
+            PlacingMotion(),
+            transitions={"succeeded": "FINISH", "failed": "failed"}
         )
 
         self.add_state(
@@ -269,11 +359,40 @@ class PlaceBag(StateMachine):
 
 '''
 ## Later can adapt to check if they want to drop on table/ chair and if it is low enough ok if not request floor. 
+
 def main():
     rclpy.init()
 
     yasmin_ros.set_ros_loggers()
 
+    # sm = StateMachine(outcomes=["succeeded", "failed"])
+    # sm.add_state(
+    #     "CALL_HOST",
+    #     Say(text="I have a bag. Can the host stand infront of me to lead the way."),
+    #     transitions={
+    #         "succeeded": "FOLLOW_HOST",
+    #         "aborted": "failed",
+    #         "canceled": "failed",
+    #     },
+    # )
+
+    # sm.add_state(
+    #     "FOLLOW_HOST",
+    #     FollowPerson(),
+    #     transitions={
+    #         "succeeded": "PLACE_BAG",
+    #         "failed": "failed",
+    #     },
+    # )
+
+    # sm.add_state(
+    #     "PLACE_BAG",
+    #     PlaceBag(),
+    #     transitions={
+    #         "succeeded": "succeeded",
+    #         "failed": "failed",
+    #     },
+    # )
     sm = PlaceBag()
     sm.set_sigint_handler(True)
     bb = Blackboard()
