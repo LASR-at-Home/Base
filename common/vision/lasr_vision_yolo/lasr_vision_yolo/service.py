@@ -115,7 +115,7 @@ class YOLOServiceNode:
             history=HistoryPolicy.KEEP_LAST,
         )
 
-        self._tf_buffer = Buffer(cache_time=Duration(seconds=20))
+        self._tf_buffer = Buffer(cache_time=Duration(seconds=30))
         self._tf_listener = tf.TransformListener(self._tf_buffer, self.node)
 
         self.node.create_service(YoloDetection, "/yolo/detect", self._detect)

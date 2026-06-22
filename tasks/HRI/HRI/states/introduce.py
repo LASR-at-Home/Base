@@ -236,7 +236,7 @@ class Introduce(yasmin.StateMachine):
             header=Header(frame_id="map"), point=point
         )
         yasmin.YASMIN_LOG_INFO(id)
-        yasmin.yasmin_LOG_INFO(str(point))
+        yasmin.YASMIN_LOG_INFO(str(point))
         blackboard["guest_data"][id]["seating_detection"] = True
         blackboard["introduce_to"] = blackboard["guest_data"][id]["name"]
         blackboard["relevant_guest_data"] = (

@@ -203,7 +203,17 @@ class LookAndGreetGuest(yasmin.StateMachine):
         self.add_state(
             "GRAB_BAG",
             ReceiveObject(object_name="bag"),
-            transitions={"succeeded": "succeeded", "failed": "failed"},
+            transitions={"succeeded": "SAY_WELCOME_2", "failed": "failed"},
+        )
+
+        self.add_state(
+            'SAY_WELCOME_2',
+            Say(text='Please follow me to be seated.'),
+            transitions={
+                "succeeded": "succeeded",
+                "aborted": "failed",
+                "canceled": "failed",
+            }
         )
         
     def get_guest1_attributes(self, blackboard):

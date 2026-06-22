@@ -80,7 +80,7 @@ class ProcessDetections(State):
         non_sofa_chairs = {}
         people = []
 
-        yasmin.YASMIN_LOG_INFO("Saving seat_detections")
+        yasmin.YASMIN_LOG_INFO("Saving seat_detections for introduce")
 
         for detection in blackboard["seat_detections"]:
             detection_point = ShapelyPoint(
