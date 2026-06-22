@@ -519,7 +519,7 @@ class DetectAllInPolygon(yasmin.StateMachine):
             prompt (Optional[str], optional): Prompt for the LangSam model, if used.
         """
 
-        super().__init__(outcomes=["succeeded", "failed"], handle_sigint=True)
+        super().__init__(outcomes=["succeeded", "failed"])
 
         self.add_output_key("detected_objects")
 

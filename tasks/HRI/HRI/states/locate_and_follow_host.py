@@ -39,7 +39,7 @@ from yasmin_viewer import YasminViewerPub
 
 class RequestHostForGuiding(StateMachine):
     def __init__(self):
-        super().__init__(outcomes=["succeeded", "failed"], handle_sigint=True)
+        super().__init__(outcomes=["succeeded", "failed"])
 
         self._node = yasmin_ros.logger_node
 

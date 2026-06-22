@@ -40,7 +40,7 @@ class LearnHostFace(StateMachine):
     """State machine to learn the host's face. Assumes seated guest is the host"""
 
     def __init__(self):
-        super().__init__(outcomes=["succeeded", "failed"], handle_sigint=True)
+        super().__init__(outcomes=["succeeded", "failed"])
 
         self.add_input_key("guest_data")
         self.add_input_key("seated_guest_locs")
