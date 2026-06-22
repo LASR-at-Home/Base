@@ -15,16 +15,61 @@ from HRI.states import (
     GetPersonPoint,
 )
 
-"""
-Robot is already at door, since:
-    SM1 detects door ---(door opening)---> robot goes through door to waiting area ---(waits a few seconds)---> robot goes back to door area
-    
-So Robot is at door and it:
-    Faces person -> Start Eye tracker -> Greet guest -> Listen -> recognise name and drink -> listen loop
-"""
-
-
 class LookAndGreetGuest(yasmin.StateMachine):
+    def __init__(self, guest_id):
+        super().__init__(outcomes=['succeeded', 'failed'])
+        self.add_input_key("guest_data")
+        self.add_output_key("guest_data")
+        self.add_output_key("person_detections")
+        
+        look_and_greet = yasmin.Concurrence(
+            states = {
+                'GREET_ONLY': GreetGuest(last_resort=False, guest_id=guest_id),
+                'EYE_TRACKER': StartEyeTracker(),
+            },
+            default_outcome='failed',
+            outcome_map={
+                'succeeded': {
+                    'GREET_ONLY': 'succeeded',
+                    'EYE_TRACKER': 'canceled',
+                }
+            }
+        )
+        
+        self.add_state(
+            "SAY_WAITING_FOR_GUEST",
+            Say(text="I am waiting for a guest."),
+            transitions={
+                "succeeded": "WAIT_FOR_GUEST",
+                "aborted": "WAIT_FOR_GUEST",
+                "canceled": "WAIT_FOR_GUEST",
+            },
+        )
+        self.add_state(
+            "WAIT_FOR_GUEST",
+            WaitForPersonInArea(),
+            transitions={
+                "succeeded": "GET_PERSON_POINT",
+                "failed": "SAY_WAITING_FOR_GUEST",
+            },
+            remappings={"detections_3d": "person_detections"},
+        )
+        self.add_state(
+            "GET_PERSON_POINT",
+            GetPersonPoint(),
+            transitions={
+                "succeeded": "LOOK_AND_GREET",
+                "failed": "SAY_WAITING_FOR_GUEST",
+            },
+        )
+        
+        self.add_state(
+            'LOOK_AND_GREET',
+            look_and_greet,
+            transitions={'succeeded': 'succeeded', 'failed': 'failed'}
+        )
+
+class GreetGuest(yasmin.StateMachine):
     def __init__(self, last_resort, guest_id):
         super().__init__(outcomes=["succeeded", "failed"])
         self.add_input_key("guest_data")
@@ -97,43 +142,7 @@ class LookAndGreetGuest(yasmin.StateMachine):
         conc_name_drink_face.add_input_key("guest_data")
         conc_name_drink_face.add_input_key("guest_data")
         conc_name_drink_face.add_output_key("guest_data")
-
-        self.add_state(
-            "SAY_WAITING_FOR_GUEST",
-            Say(text="I am waiting for a guest."),
-            transitions={
-                "succeeded": "WAIT_FOR_GUEST",
-                "aborted": "WAIT_FOR_GUEST",
-                "canceled": "WAIT_FOR_GUEST",
-            },
-        )
-        self.add_state(
-            "WAIT_FOR_GUEST",
-            WaitForPersonInArea(),
-            transitions={
-                "succeeded": "GET_PERSON_POINT",
-                "failed": "SAY_WAITING_FOR_GUEST",
-            },
-            remappings={"detections_3d": "person_detections"},
-        )
-        self.add_state(
-            "GET_PERSON_POINT",
-            GetPersonPoint(),
-            transitions={
-                "succeeded": "START_EYE_TRACKER",
-                "failed": "SAY_WAITING_FOR_GUEST",
-            },
-        )
-        self.add_state(
-            "START_EYE_TRACKER",
-            StartEyeTracker(),
-            transitions={
-                "succeeded": "GREET_AND_ASK_GUEST",
-                "aborted": "SAY_WAITING_FOR_GUEST",
-                "canceled": "failed",
-                "timeout": "GREET_AND_ASK_GUEST",
-            },
-        )
+        
         self.add_state(
             "GREET_AND_ASK_GUEST",
             AskAndListen(
@@ -164,10 +173,19 @@ class LookAndGreetGuest(yasmin.StateMachine):
             'SAY_WELCOME',
             Say(format_str='Welcome to the party {}. Please follow me to be seated.'),
             transitions={
-                "succeeded": "succeeded",
+                "succeeded": "STOP_EYE_TRACKING_1",
                 "aborted": "failed",
                 "canceled": "failed",
             }
+        )
+        
+        self.add_state(
+            "STOP_EYE_TRACKING_1",
+            StopEyeTracker(),
+            transitions={
+                "succeeded": "succeeded",
+                "failed": "failed",
+            },
         )
         
         self.add_state(
@@ -183,20 +201,18 @@ class LookAndGreetGuest(yasmin.StateMachine):
             'SAY_ATTRIBUTE',
             Say(),
             transitions={
-                "succeeded": "STOP_EYE_TRACKING",
+                "succeeded": "STOP_EYE_TRACKING_2",
                 "aborted": "failed",
                 "canceled": "failed",
             }
         )
 
         self.add_state(
-            "STOP_EYE_TRACKING",
+            "STOP_EYE_TRACKING_2",
             StopEyeTracker(),
             transitions={
                 "succeeded": "GRAB_BAG",
-                "aborted": "failed",
-                "canceled": "failed",
-                "timeout": "failed",
+                "failed": "failed",
             },
         )
 

@@ -51,46 +51,25 @@ class HRI(yasmin.StateMachine):
         self.add_state(
             "START_TIMER",
             StartTimer(),
-            transitions={"succeeded": "START_CON", "failed": "START_TIMER"},
+            transitions={"succeeded": "GREET", "failed": "START_TIMER"},
         )
 
-        self.add_state(
-            "START_CON",  # SM1: Waits for Door to open, then goes to start
-            self.setup(),
-            transitions={"succeeded": "GO_TO_DOOR", "failed": "START_CON"},
-        )
+        # self.add_state(
+        #     "START_CON",  # SM1: Waits for Door to open, then goes to start
+        #     self.setup(),
+        #     transitions={"succeeded": "GO_TO_DOOR", "failed": "START_CON"},
+        # )
 
-        self.add_state(
-            "GO_TO_DOOR",
-            SafeGoToLocation(location_param="door_pose"),
-            transitions={"succeeded": "GREET", "failed": "failed"},
-        )
+        # self.add_state(
+        #     "GO_TO_DOOR",
+        #     SafeGoToLocation(location_param="door_pose"),
+        #     transitions={"succeeded": "GREET", "failed": "failed"},
+        # )
 
         self.add_state(
             "GREET",  # SM2: Greets guest
-            LookAndGreetGuest(last_resort=False, guest_id="guest1"),
-            transitions={"succeeded": "STOP_EYE_TRACKER", "failed": "failed"},
-        )
-
-        self.add_state(
-            "STOP_EYE_TRACKER",
-            StopEyeTracker(),
-            transitions={
-                "succeeded": "LOOK_CENTRE",
-                "aborted": "failed",
-                "canceled": "failed",
-                "timeout": "failed",
-            },
-        )
-
-        self.add_state(
-            "LOOK_CENTRE",
-            PlayMotion("look_centre"),
-            transitions={
-                "succeeded": "GUIDE_TO_SEAT",
-                "aborted": "failed",
-                "canceled": "failed",
-            },
+            LookAndGreetGuest(guest_id="guest1"),
+            transitions={"succeeded": "GUIDE_TO_SEAT", "failed": "failed"},
         )
 
         self.add_state(
@@ -119,8 +98,8 @@ class HRI(yasmin.StateMachine):
 
         self.add_state(
             "GREET_2",  # SM2: Greets guest
-            LookAndGreetGuest(last_resort=False, guest_id="guest2"),
-            transitions={"succeeded": "STOP_EYE_TRACKER", "failed": "failed"},
+            LookAndGreetGuest(guest_id="guest2"),
+            transitions={"succeeded": "GUIDE_TO_SEAT", "failed": "failed"},
         )
 
         self.add_state(
