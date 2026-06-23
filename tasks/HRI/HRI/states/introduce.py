@@ -66,7 +66,7 @@ class Introduce(yasmin.StateMachine):
             callback=self._loop_person_index,
         )
         loop_state.add_input_key("person_index")
-        loop_state.add_input_key("people_detected")
+        loop_state.add_input_key("seat_detections")
         loop_state.add_input_key("guest_data")
         loop_state.add_output_key("person_index")
         loop_state.add_output_key("person_point")
@@ -80,21 +80,21 @@ class Introduce(yasmin.StateMachine):
         self.add_state(
             "RESET_SEATING_DETECTIONS",
             ClearSeatingDetections(),
-            transitions={"succeeded": "FIND_PEOPLE", "failed": "failed"},
+            transitions={"succeeded": "LOOP_PERSON_STATE", "failed": "failed"},
         )
 
-        self.add_state(
-            "FIND_PEOPLE",
-            DetectAllInPolygon(
-                polygon=self.seating_area,
-                object_filter=["person"],
-                min_coverage=1.0,
-                min_new_object_dist=0.50,
-                min_confidence=0.5,
-            ),
-            transitions={"succeeded": "LOOP_PERSON_STATE", "failed": "failed"},
-            remappings={"detected_objects": "people_detected"},
-        )
+        # self.add_state(
+        #     "FIND_PEOPLE",
+        #     DetectAllInPolygon(
+        #         polygon=self.seating_area,
+        #         object_filter=["person"],
+        #         min_coverage=0.7,
+        #         min_new_object_dist=0.50,
+        #         min_confidence=0.5,
+        #     ),
+        #     transitions={"succeeded": "LOOP_PERSON_STATE", "failed": "failed"},
+        #     remappings={"detected_objects": "people_detected"},
+        # )
 
         self.add_state(
             "LOOP_PERSON_STATE",
@@ -185,22 +185,53 @@ class Introduce(yasmin.StateMachine):
     def _loop_person_index(self, blackboard):
         guest1point = blackboard["guest_data"]["guest1"]["seated_point"]
         guest2point = blackboard["guest_data"]["guest2"]["seated_point"]
-        people_detected = len(blackboard["people_detected"])
+        host = blackboard["guest_data"]["host"]["seated_point"]
+        seat_detections = len(blackboard["seat_detections"])
         index = blackboard["person_index"]
-        yasmin.YASMIN_LOG_INFO(str(index))
-        yasmin.YASMIN_LOG_INFO(str(guest1point))
-        yasmin.YASMIN_LOG_INFO(str(guest2point))
-        yasmin.YASMIN_LOG_INFO(str(people_detected))
 
-        if guest1point is not None and guest2point is not None:
+        indexes = [i for i in range(seat_detections)]
+
+        yasmin.YASMIN_LOG_INFO(str(index))
+        yasmin.YASMIN_LOG_INFO("Guest1 point: " + str(guest1point))
+        yasmin.YASMIN_LOG_INFO("Guest2 point: " + str(guest2point))
+        yasmin.YASMIN_LOG_INFO("Host point: " + str(host))
+        yasmin.YASMIN_LOG_INFO(
+            "Total detections (seats + people): " + str(seat_detections)
+        )
+
+        if guest1point is not None and guest2point is not None and host is not None:
             return "succeeded"
-        elif index < people_detected:
-            point = blackboard["people_detected"][index].point
+        elif index < seat_detections:
+            point = blackboard["seat_detections"][index].point
             point_stamped = PointStamped(header=Header(frame_id="map"), point=point)
             blackboard["person_point_stamped"] = point_stamped
             index += 1
             blackboard["person_index"] = index
             return "continue"
+        elif guest2point is not None and host is not None:
+            index2 = blackboard["seat_indexes"]["guest2"]
+            indexh = blackboard["seat_indexes"]["host"]
+            for i in indexes:
+                if i != index2 and i != indexh:
+                    index = i
+            blackboard["guest_data"]["guest1"]["seated_point"] = blackboard[
+                "seat_detections"
+            ][index].point
+            guest2point = blackboard["guest_data"]["guest1"]["seated_point"]
+            yasmin.YASMIN_LOG_INFO("Fallback Guest2 point: " + str(guest2point))
+            return "succeeded"
+        elif guest1point is not None and host is not None:
+            index2 = blackboard["seat_indexes"]["guest1"]
+            indexh = blackboard["seat_indexes"]["host"]
+            for i in indexes:
+                if i != index2 and i != indexh:
+                    index = i
+            blackboard["guest_data"]["guest2"]["seated_point"] = blackboard[
+                "seat_detections"
+            ][index].point
+            guest2point = blackboard["guest_data"]["guest2"]["seated_point"]
+            yasmin.YASMIN_LOG_INFO("Fallback Guest2 point: " + str(guest2point))
+            return "succeeded"
 
         return "failed"
 
@@ -222,7 +253,7 @@ class Introduce(yasmin.StateMachine):
             header=Header(frame_id="map"), point=point
         )
         yasmin.YASMIN_LOG_INFO(id)
-        yasmin.yasmin_LOG_INFO(str(point))
+        yasmin.YASMIN_LOG_INFO(str(point))
         blackboard["guest_data"][id]["seating_detection"] = True
         blackboard["introduce_to"] = blackboard["guest_data"][id]["name"]
         blackboard["relevant_guest_data"] = (

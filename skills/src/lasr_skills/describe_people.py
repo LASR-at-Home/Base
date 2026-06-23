@@ -50,6 +50,7 @@ class GetClipAttributes(yasmin_ros.ServiceState):
             "hair_color": response.hair_color,
             "hair_length": response.hair_length,
             "glasses": response.glasses,
+            "hat": response.hat,
             "shirt_color": response.shirt_color,
         }
 

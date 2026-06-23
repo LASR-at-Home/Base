@@ -10,7 +10,7 @@ import yasmin_ros
 
 from geometry_msgs.msg import Point, PointStamped, Pose
 
-from lasr_skills import Say, GoToLocation, StopEyeTracker, PlayMotion, Rotate, FollowPerson
+from lasr_skills import Say, SafeGoToLocation, StopEyeTracker, PlayMotion, StartDoorSM, Rotate, FollowPerson
 
 from HRI.states import *
 
@@ -62,81 +62,20 @@ class HRI(yasmin.StateMachine):
 
         self.add_state(
             "GO_TO_DOOR",
-            GoToLocation(location_param="door_pose"),
-            transitions={"succeeded": "POST_NAV", "failed": "failed"},
-        )
-
-        self.add_state(
-            "POST_NAV",
-            PlayMotion("post_navigation"),
-            transitions={
-                "succeeded": "GREET",
-                "aborted": "failed",
-                "canceled": "failed",
-            },
+            SafeGoToLocation(location_param="door_pose"),
+            transitions={"succeeded": "GREET", "failed": "failed"},
         )
 
         self.add_state(
             "GREET",  # SM2: Greets guest
-            LookAndGreetGuest(last_resort=False, guest_id="guest1"),
-            transitions={"succeeded": "STOP_EYE_TRACKER", "failed": "failed"},
-        )
-
-        self.add_state(
-            "STOP_EYE_TRACKER",
-            StopEyeTracker(),
-            transitions={
-                "succeeded": "LOOK_CENTRE",
-                "aborted": "failed",
-                "canceled": "failed",
-                "timeout": "failed",
-            },
-        )
-
-        self.add_state(
-            "LOOK_CENTRE",
-            PlayMotion("look_centre"),
-            transitions={
-                "succeeded": "SAY_FOLLOW",
-                "aborted": "failed",
-                "canceled": "failed",
-            },
-        )
-
-        self.add_state(
-            "SAY_FOLLOW",
-            Say(format_str="Welcome {}. Follow me to the seating area."),
-            transitions={
-                "succeeded": "PRE_NAV_2",
-                "aborted": "failed",
-                "canceled": "failed",
-            },
-        )
-
-        self.add_state(
-            "PRE_NAV_2",
-            PlayMotion("pre_navigation"),
-            transitions={
-                "succeeded": "GUIDE_TO_SEAT",
-                "aborted": "failed",
-                "canceled": "failed",
-            },
+            LookAndGreetGuest(guest_id="guest1"),
+            transitions={"succeeded": "GUIDE_TO_SEAT", "failed": "failed"},
         )
 
         self.add_state(
             "GUIDE_TO_SEAT",  # GUIDES GUEST TO SEATING AREA
-            GoToLocation(location_param="seat_pose"),
-            transitions={"succeeded": "POST_NAV_2", "failed": "failed"},
-        )
-
-        self.add_state(
-            "POST_NAV_2",
-            PlayMotion("post_navigation"),
-            transitions={
-                "succeeded": "SEAT_GUEST",
-                "aborted": "failed",
-                "canceled": "failed",
-            },
+            SafeGoToLocation(location_param="seat_pose"),
+            transitions={"succeeded": "SEAT_GUEST", "failed": "failed"},
         )
 
         self.add_state(
@@ -147,40 +86,26 @@ class HRI(yasmin.StateMachine):
 
         self.add_state(
             "CHECK",
-            yasmin.CbState(outcomes=["succeeded", "GO_TO_DOOR_2"], callback=self.check),
-            transitions={"succeeded": "INTRODUCE", "GO_TO_DOOR_2": "PRE_NAV_3"},
-        )
-
-        self.add_state(
-            "PRE_NAV_3",
-            PlayMotion("pre_navigation"),
-            transitions={
-                "succeeded": "GO_TO_DOOR_2",
-                "aborted": "failed",
-                "canceled": "failed",
-            },
+            yasmin.CbState(outcomes=["succeeded", "continue"], callback=self.check),
+            transitions={"succeeded": "INTRODUCE", "continue": "GO_TO_DOOR_2"},
         )
 
         self.add_state(
             "GO_TO_DOOR_2",
-            GoToLocation(location_param="door_pose"),
-            transitions={"succeeded": "POST_NAV_3", "failed": "failed"},
-        )
-
-        self.add_state(
-            "POST_NAV_3",
-            PlayMotion("post_navigation"),
-            transitions={
-                "succeeded": "GREET_2",
-                "aborted": "failed",
-                "canceled": "failed",
-            },
+            SafeGoToLocation(location_param="door_pose"),
+            transitions={"succeeded": "GREET_2", "failed": "failed"},
         )
 
         self.add_state(
             "GREET_2",  # SM2: Greets guest
-            LookAndGreetGuest(last_resort=False, guest_id="guest2"),
-            transitions={"succeeded": "STOP_EYE_TRACKER", "failed": "failed"},
+            LookAndGreetGuest(guest_id="guest2"),
+            transitions={"succeeded": "GUIDE_TO_SEAT", "failed": "failed"},
+        )
+
+        self.add_state(
+            "INTRODUCE",
+            Introduce(),
+            transitions={"succeeded": "succeeded", "failed": "failed"},
         )
 
         self.add_state(
@@ -232,7 +157,7 @@ class HRI(yasmin.StateMachine):
             yasmin.YASMIN_LOG_INFO(f"{key}: {value}")
 
         self.guest_id += 1
-        return "GO_TO_DOOR_2" if self.guest_id == 2 else "succeeded"
+        return "continue" if self.guest_id == 2 else "succeeded"
 
     def setup(self):
         start_con_sm = yasmin.Concurrence(
@@ -283,6 +208,7 @@ def main():
     face_detection_confidence = 0.2
 
     bb["guest_data"] = {
+        "host": {"seated_point": None, "seating_detection": False},
         "guest1": {
             "name": "",
             "drink": "",
