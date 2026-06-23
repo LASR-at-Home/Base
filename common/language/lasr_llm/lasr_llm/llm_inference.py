@@ -55,21 +55,8 @@ models = {
 class LLMInference:
     def __init__(self, model_config: ModelConfig):
         self.config = model_config
-        if self.config.quantize:
-            # Quantize the model - for using 1/4 (or 1/8) of the GPU RAM. Full example in the models' HugginFace docs
-            self.quantization_config = BitsAndBytesConfig(
-                load_in_4bit=True,
-                bnb_4bit_quant_type="nf4",
-                bnb_4bit_compute_dtype=torch.bfloat16,
-            )
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         print(f"Using device: {self.device}")
-
-        self.model_name = self.config.model_name
-        cache_dir = "/home/robocup/.cache/huggingface/hub"
-        self.tokenizer = AutoTokenizer.from_pretrained(
-            self.model_name, local_files_only=True
-        )
 
         self.logger = logging.getLogger(__name__)
         self.model_name = models["Qwen"]
@@ -161,13 +148,15 @@ class LLMInference:
         self.logger.info(
             f"[LLMInference] '{self.model_name}' saved locally — offline use enabled."
         )
-        
+
     def pull_model(self, model_name):
         available = [m.model for m in ollama.list().models]
         if model_name not in available:
             for chunk in ollama.pull(model_name, stream=True):
-                if chunk.status == 'pulling manifest' or chunk.completed:
-                    pct = f"{chunk.completed/chunk.total*100:.1f}%" if chunk.total else ""
+                if chunk.status == "pulling manifest" or chunk.completed:
+                    pct = (
+                        f"{chunk.completed/chunk.total*100:.1f}%" if chunk.total else ""
+                    )
                     print(f"\r{chunk.status} {pct}", end="", flush=True)
             print(f"\nDone.")
 
