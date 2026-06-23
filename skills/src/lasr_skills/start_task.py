@@ -25,7 +25,7 @@ class StartDoorSM(StateMachine):  # TODO: Rename to start_task and move to Skill
         self.add_state(
             "DETECT_DOOR_OPENING",
             DetectDoorOpening(),
-            transitions={"door_opened": "GO_TO_START", "failed": "failed"},
+            transitions={"door_opened": "PRE_NAV", "failed": "failed"},
         )
 
         self.add_state(

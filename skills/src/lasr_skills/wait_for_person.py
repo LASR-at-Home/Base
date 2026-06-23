@@ -11,8 +11,7 @@ class WaitForPerson(StateMachine):
         image_topic: str = "/head_front_camera/rgb/image_raw",
     ):
         super().__init__(
-            outcomes=["succeeded", "failed"],
-            handle_sigint=True,
+            outcomes=["succeeded", "failed"]
         )
         self.add_output_key("detections")
 

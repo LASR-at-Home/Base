@@ -227,7 +227,7 @@ class ReID(Node):
             results = DeepFace.represent(
                 img_path=cv_im,
                 model_name="VGG-Face",
-                enforce_detection=True,  # allow detection attempts even if uncertain
+                enforce_detection=False,  # allow detection attempts even if uncertain
                 detector_backend="retinaface",
                 align=True,
                 max_faces=1,

@@ -15,3 +15,5 @@ from .getIntroductionStr import GetIntroductionStr
 from .recognise import Recognise
 
 from .introduce import Introduce
+
+from .place_bag import PlaceBag
