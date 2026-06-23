@@ -6,7 +6,7 @@ from launch.actions import DeclareLaunchArgument
 from launch.conditions import IfCondition
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
-
+from launch.actions import ExecuteProcess
 
 # CLIP recognition candidates: the open-vocab detector LOCALISES objects (boxes),
 # then CLIP re-labels each crop against THIS list (fixes "Pringles -> cup"). Names
@@ -55,7 +55,7 @@ def generate_launch_description():
             output="screen",
             parameters=[
                 ov_params,
-                {"clip_rerank": True, "clip_candidates": CLIP_CANDIDATES},
+                {"clip_rerank": False, "clip_candidates": CLIP_CANDIDATES},
             ],
         ),
         Node(
@@ -89,6 +89,14 @@ def generate_launch_description():
             package="pick_and_place",
             executable="point_head_stub",
             name="point_head_stub",
+            output="screen",
+        ),
+        ExecuteProcess(
+            cmd=["bash", "-c",
+                 "curl -sf localhost:11434/api/tags >/dev/null 2>&1 "
+                 "&& echo 'ollama already running' "
+                 "|| exec ollama serve"],
+            name="ollama_serve",
             output="screen",
         ),
     ])

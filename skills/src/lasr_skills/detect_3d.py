@@ -33,7 +33,6 @@ class Detect3D(ServiceState):
         filter: Union[List[str], None] = None,
         confidence: float = 0.5,
         target_frame: str = "map",
-        slop=0.2,
     ):
         super().__init__(
             srv_type=YoloDetection3D,
@@ -54,75 +53,59 @@ class Detect3D(ServiceState):
         self.confidence = confidence
         self.target_frame = target_frame
 
-        self.node = yasmin_ros.logger_node
-
         camera_qos = QoSProfile(
             depth=10,
             reliability=ReliabilityPolicy.BEST_EFFORT,
             history=HistoryPolicy.KEEP_LAST,
         )
 
-        self.cam_info = None
-        self.node.create_subscription(
-            CameraInfo,
-            self.depth_camera_info_topic,
-            self._cache_camera_info,
-            qos_profile=camera_qos,
-        )
-
-        image_sub = message_filters.Subscriber(
-            self.node, Image, self.image_topic, qos_profile=camera_qos
-        )
-        depth_sub = message_filters.Subscriber(
-            self.node, Image, self.depth_image_topic, qos_profile=camera_qos
-        )
-
-        self.ts = message_filters.ApproximateTimeSynchronizer(
-            [image_sub, depth_sub], queue_size=30, slop=slop
-        )
         self.data = None
         self.image_msg = None
 
-    def _cache_camera_info(self, msg: CameraInfo) -> None:
-        if self.cam_info is None:
-            self.cam_info = msg
+        cam_info = message_filters.Subscriber(
+            self._node, CameraInfo, self.depth_camera_info_topic, qos_profile=camera_qos
+        )
+
+        self.cache = message_filters.Cache(cam_info)
+
+        image_sub = message_filters.Subscriber(
+            self._node, Image, self.image_topic, qos_profile=camera_qos
+        )
+
+        depth_sub = message_filters.Subscriber(
+            self._node, Image, self.depth_image_topic, qos_profile=camera_qos
+        )
+
+        self.ts = message_filters.ApproximateTimeSynchronizer(
+            [image_sub, depth_sub], queue_size=10, slop=0.1
+        )
+
+        self.ts.registerCallback(self.callback)
+
+    def callback(self, image_msg, depth_msg):
+        if self.data is None:
+            self.data = (image_msg, depth_msg)
 
     def _create_req(self, blackboard):
-        if self.cam_info is None:
-            deadline = time.time() + 5.0
-            while self.cam_info is None and time.time() < deadline:
-                time.sleep(1)
-            if self.cam_info is None:
-                yasmin.YASMIN_LOG_ERROR(
-                    f"Timed out waiting for camera info on {self.depth_camera_info_topic}"
-                )
-                return "failed"
-
         self.data = None
-
-        def callback(image_msg, depth_msg):
-            if self.data is not None:
-                return
-            self.data = (image_msg, depth_msg, self.cam_info)
-
-        self.ts.registerCallback(callback)
+        self.image_msg = None
 
         deadline = time.time() + 30.0
-        while not self.data:
+        while self.data is None:
             if time.time() > deadline:
-                self.node.get_logger().error(
+                yasmin.YASMIN_LOG_ERROR(
                     f"Timed out waiting for synced rgb/depth frames. "
                     f"Check that {self.image_topic} and {self.depth_image_topic} are publishing and roughly synchronized."
                 )
                 return "failed"
-            time.sleep(1)
+            time.sleep(0.25)
 
-        image_msg, depth_msg, cam_info_msg = self.data
+        image_msg, depth_msg = self.data
 
         req = YoloDetection3D.Request(
             image_raw=image_msg,
             depth_image=depth_msg,
-            depth_camera_info=cam_info_msg,
+            depth_camera_info=self.cache.getLast(),
             model=self.model,
             confidence=self.confidence,
             filter=self.filter,
@@ -135,7 +118,7 @@ class Detect3D(ServiceState):
     def response_handler(self, blackboard, response):
         yasmin.YASMIN_LOG_INFO(f"Got {len(response.detected_objects)} detections")
         for det in response.detected_objects:
-            self.node.get_logger().info(
+            yasmin.YASMIN_LOG_INFO(
                 f"  {det.name} at ({det.point.x:.2f}, {det.point.y:.2f}, {det.point.z:.2f})"
             )
 

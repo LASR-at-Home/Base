@@ -1,12 +1,10 @@
 from typing import Union
 import rclpy
 
-import time
-
 import yasmin
 from yasmin import StateMachine, State, Blackboard
 import yasmin_ros
-
+import time
 
 from geometry_msgs.msg import Point, Quaternion, Pose, PoseStamped
 from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
@@ -38,12 +36,6 @@ class GoToLocation(State):
         elif self.location_param:
 
             node = yasmin_ros.logger_node
-
-            for _c in ("position.x", "position.y", "position.z",
-                       "orientation.x", "orientation.y", "orientation.z", "orientation.w"):
-                _p = f"{self.location_param}.{_c}"
-                if not node.has_parameter(_p):
-                    node.declare_parameter(_p, 0.0)
 
             goal_pose = Pose(
                 position=Point(
