@@ -140,7 +140,8 @@ class CalculateDropPoint(State):
 
 
 class PlacingMotion(StateMachine):
-    def __init__(self, outcomes=["succeeded", "failed"]):
+    def __init__(self):
+        super().__init__(outcomes=["succeeded", "failed"])
         self.add_input_key("drop_point")
 
         self.add_state(
@@ -365,35 +366,35 @@ def main():
 
     yasmin_ros.set_ros_loggers()
 
-    # sm = StateMachine(outcomes=["succeeded", "failed"])
-    # sm.add_state(
-    #     "CALL_HOST",
-    #     Say(text="I have a bag. Can the host stand infront of me to lead the way."),
-    #     transitions={
-    #         "succeeded": "FOLLOW_HOST",
-    #         "aborted": "failed",
-    #         "canceled": "failed",
-    #     },
-    # )
+    sm = StateMachine(outcomes=["succeeded", "failed"])
+    sm.add_state(
+        "CALL_HOST",
+        Say(text="I have a bag. Can the host stand infront of me to lead the way."),
+        transitions={
+            "succeeded": "FOLLOW_HOST",
+            "aborted": "failed",
+            "canceled": "failed",
+        },
+    )
 
-    # sm.add_state(
-    #     "FOLLOW_HOST",
-    #     FollowPerson(),
-    #     transitions={
-    #         "succeeded": "PLACE_BAG",
-    #         "failed": "failed",
-    #     },
-    # )
+    sm.add_state(
+        "FOLLOW_HOST",
+        FollowPerson(),
+        transitions={
+            "succeeded": "PLACE_BAG",
+            "failed": "failed",
+        },
+    )
 
-    # sm.add_state(
-    #     "PLACE_BAG",
-    #     PlaceBag(),
-    #     transitions={
-    #         "succeeded": "succeeded",
-    #         "failed": "failed",
-    #     },
-    # )
-    sm = PlaceBag()
+    sm.add_state(
+        "PLACE_BAG",
+        PlaceBag(),
+        transitions={
+            "succeeded": "succeeded",
+            "failed": "failed",
+        },
+    )
+    #sm = PlaceBag()
     sm.set_sigint_handler(True)
     bb = Blackboard()
     bb["z_sweep_min"] = -10

@@ -229,9 +229,7 @@ class EvaluateDetections(State):
                 self.node.get_logger().warn("Multiple people in polygon. Tracking closest to last known.")
             else:
                 self.node.get_logger().info("Target locked.")
- 
-            blackboard["person_lost"] = False
- 
+  
             distance_person_moved = self.calc_distance_between_points(personPoint, self.last_known)
             distance_robot_from_person = self.calc_distance_between_points(personPoint, self.current_robot_point)
  
@@ -475,20 +473,41 @@ class TrackPerson(StateMachine):
 
 class GetPersonPoint(State):
     def __init__(self):
-        # Outcomes mapping perfectly back to your TrackPerson state machine
         super().__init__(outcomes=["succeeded", "failed"])
         self.add_input_key("detections_3d")
+        self.add_input_key("last_known") 
+
         self.add_output_key("last_known") 
         self.add_output_key("last_known_stamped")  
+
+        self.node = yasmin_ros.logger_node
+
+    def calc_distance_between_points(self, pointOne, pointTwo):
+        """Calculates Eculidian distance between 2 given point"""
+        return math.sqrt(
+            (float(pointOne.x) - float(pointTwo.x)) ** 2
+            + (float(pointOne.y) - float(pointTwo.y)) ** 2
+        )
 
     def execute(self, blackboard):
         
         try:
             if not blackboard["detections_3d"]:
                 return "failed"
-            # Assuming the first detection is the point of interest
-            last_known = blackboard["detections_3d"][0].point
-            blackboard["last_known"] = last_known
+            
+            if "last_known" in blackboard.keys() and blackboard["last_known"] is not None:
+                last_known = blackboard["last_known"]
+            else:
+                last_known = blackboard["detections_3d"][0].point
+            
+            closest_distance = float('inf')
+            for person in blackboard["detections_3d"]:
+                distance = self.calc_distance_between_points(person.point, last_known)
+                if distance < closest_distance:
+                    closest_distance = distance
+                    blackboard["last_known"] = person.point
+
+
             yasmin.YASMIN_LOG_WARN(f"DETECTIONS: {[detection.point for detection in blackboard['detections_3d']]} -- LAST_KNOWN: {last_known}")
             blackboard["last_known_stamped"] = PointStamped(
                 header=Header(
@@ -539,18 +558,8 @@ class FollowPerson(StateMachine):
             "GET_PERSON_POINT",
             GetPersonPoint(),
             transitions={
-                "succeeded": "SAY_FOLLOW", 
+                "succeeded": "PRE_NAV_1", 
                 "failed": "WAIT_FOR_HOST"
-            },
-        )
-
-        self.add_state(
-            "SAY_FOLLOW",
-            Say(text="I will now follow you. Lead the way slowly. "),
-            transitions={
-                "succeeded": "PRE_NAV",
-                "aborted": "PRE_NAV",
-                "canceled": "PRE_NAV",
             },
         )
 
@@ -558,9 +567,19 @@ class FollowPerson(StateMachine):
             "PRE_NAV_1",
             PlayMotion("pre_navigation"),
             transitions={
-                "succeeded": "TRACK_AND_NAVIGATE",
+                "succeeded": "SAY_FOLLOW",
                 "aborted": "failed",
                 "canceled": "failed",
+            },
+        )
+
+        self.add_state( # Do PRE_NAV_1 Before
+            "SAY_FOLLOW",
+            Say(text="I will now follow you. Lead the way slowly. "),
+            transitions={
+                "succeeded": "TRACK_AND_NAVIGATE",
+                "aborted": "TRACK_AND_NAVIGATE",
+                "canceled": "TRACK_AND_NAVIGATE",
             },
         )
 
@@ -629,7 +648,7 @@ class FollowPerson(StateMachine):
             transitions={
                 "yes": "succeeded",     
                 "unknown": "FEEDBACK_RESPONSE",
-                "no": "PRE_NAV_2",
+                "no": "PRE_NAV_1",
             },
         )
         self.add_state(
@@ -639,15 +658,6 @@ class FollowPerson(StateMachine):
                 "succeeded": "ASK_IF_ARRIVED",
                 "aborted": "ASK_IF_ARRIVED",
                 "canceled": "ASK_IF_ARRIVED",
-            },
-        )
-        self.add_state(
-            "PRE_NAV_2",
-            PlayMotion("pre_navigation"),
-            transitions={
-                "succeeded": "SAY_FOLLOW",
-                "aborted": "failed",
-                "canceled": "failed",
             },
         )
 

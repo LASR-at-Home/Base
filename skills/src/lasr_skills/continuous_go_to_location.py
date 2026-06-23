@@ -59,6 +59,7 @@ class ContinuousGoToLocation(State):
                 time.sleep(0.2)
                 continue
 
+
             # Update Goal
             if self.last_goal is None or self.isMoveableDistance(current_goal, self.last_goal):
                 
@@ -67,6 +68,19 @@ class ContinuousGoToLocation(State):
                 
                 self.navigator.goToPose(goal_stamped)
                 self.last_goal = current_goal
+
+            # Kill early as long as well are close enough to the goal.
+            if not self.navigator.isTaskComplete():
+                feedback = self.navigator.getFeedback()
+                if feedback and hasattr(feedback, 'distance_remaining'):
+                    if feedback.distance_remaining <= 0.15:
+                        self.node.get_logger().info(
+                            f"Nav2: Roughly at goal ({feedback.distance_remaining:.2f}m). Canceling exact approach."
+                        )
+                        self.navigator.cancelTask()
+                        # Tell the state machine we are idling now so it doesn't immediately resend
+                        blackboard["stop_robot_requested"] = True
+                        self.last_goal = None
 
             # Rest briefly before checking blackboard again
             time.sleep(0.2)
