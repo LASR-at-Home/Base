@@ -50,13 +50,13 @@ class ContinuousGoToLocation(State):
                 if not self.navigator.isTaskComplete():
                     self.navigator.cancelTask()
                     self.node.get_logger().warn("Stop Requested")
-                time.sleep(0.2)
+                time.sleep(0.1)
                 continue  
 
 
             # Handle missing Goals
             if current_goal is None:
-                time.sleep(0.2)
+                time.sleep(0.1)
                 continue
 
 
@@ -69,21 +69,7 @@ class ContinuousGoToLocation(State):
                 self.navigator.goToPose(goal_stamped)
                 self.last_goal = current_goal
 
-            # Kill early as long as well are close enough to the goal.
-            if not self.navigator.isTaskComplete():
-                feedback = self.navigator.getFeedback()
-                if feedback and hasattr(feedback, 'distance_remaining'):
-                    if feedback.distance_remaining <= 0.15:
-                        self.node.get_logger().info(
-                            f"Nav2: Roughly at goal ({feedback.distance_remaining:.2f}m). Canceling exact approach."
-                        )
-                        self.navigator.cancelTask()
-                        # Tell the state machine we are idling now so it doesn't immediately resend
-                        blackboard["stop_robot_requested"] = True
-                        self.last_goal = None
-
-            # Rest briefly before checking blackboard again
-            time.sleep(0.2)
+            time.sleep(0.1)
 
         # Cleanup if the Concurrence cancels this state
         if not self.navigator.isTaskComplete():
@@ -94,10 +80,10 @@ class ContinuousGoToLocation(State):
 
         return "succeeded"
 
-    def isMoveableDistance(self, new_pose: Pose, old_pose: Pose) -> bool:
+    def isMoveableDistance(self, new_pose: Pose, old_pose: Pose, threshold:float=0.15) -> bool:
         dx = new_pose.position.x - old_pose.position.x
         dy = new_pose.position.y - old_pose.position.y
-        return (dx**2 + dy**2)**0.5 > 0.25
+        return (dx**2 + dy**2)**0.5 > threshold
 
 
 def main():

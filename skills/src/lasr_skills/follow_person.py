@@ -73,7 +73,7 @@ class UpdateDetectionPolygon(State):
                 "map",  # Target frame
                 "base_footprint",  # Source frame
                 rclpy.time.Time(),
-                timeout=rclpy.duration.Duration(seconds=5.0),
+                timeout=rclpy.duration.Duration(seconds=1.0),
             )
 
             debug_polygon = PolygonStamped()
@@ -239,7 +239,7 @@ class EvaluateDetections(State):
                 blackboard["last_known"] = personPoint
                 self.stationary_count = 0
  
-                if distance_robot_from_person > (self.safe_distance + 0.2):
+                if distance_robot_from_person > (self.safe_distance + 0.3):
                     blackboard["location"] = self.create_goal_pose(
                         self.current_robot_point.x,
                         self.current_robot_point.y,
@@ -260,7 +260,7 @@ class EvaluateDetections(State):
                 self.last_known = personPoint
                 blackboard["last_known"] = personPoint
  
-                if distance_robot_from_person <= (self.safe_distance + 0.2):
+                if distance_robot_from_person <= (self.safe_distance + 0.3):
                     # Robot is close and person is stationary → count up
                     self.stationary_count += 1
                     blackboard["stop_robot_requested"] = True
@@ -310,7 +310,7 @@ class EvaluateDetections(State):
 
 class InitialRecovery(StateMachine):
     class ScanForPerson(StateMachine):
-        def __init__(self, direction: str="center"):
+        def __init__(self, direction: str="centre"):
             super().__init__(outcomes=["succeeded", "failed"])
             self.add_output_key("last_known")
             
@@ -505,10 +505,11 @@ class GetPersonPoint(State):
                 distance = self.calc_distance_between_points(person.point, last_known)
                 if distance < closest_distance:
                     closest_distance = distance
-                    blackboard["last_known"] = person.point
+                    last_known = person.point
 
 
             yasmin.YASMIN_LOG_WARN(f"DETECTIONS: {[detection.point for detection in blackboard['detections_3d']]} -- LAST_KNOWN: {last_known}")
+            blackboard["last_known"] = last_known
             blackboard["last_known_stamped"] = PointStamped(
                 header=Header(
                     frame_id="map",

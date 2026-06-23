@@ -1,1 +1,0 @@
-# Placehold for Bag dropping statemachine
