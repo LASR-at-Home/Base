@@ -59,6 +59,7 @@ def generate_launch_description():
         output="screen",
     )
 
+
     state_machine = Node(
         package="HRI",
         executable="sm",
@@ -79,6 +80,5 @@ def generate_launch_description():
             transcribe_speech,
             llm_service,
             state_machine,
-
         ]
     )

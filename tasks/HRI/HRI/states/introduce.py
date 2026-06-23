@@ -77,6 +77,14 @@ class Introduce(yasmin.StateMachine):
         guest_loop.add_input_key("guest_data")
         guest_loop.add_output_key("guest_data")
 
+        host_point = yasmin.CbState(
+            outcomes=['succeeded', 'failed'],
+            callback=self._get_host,
+        )
+        
+        host_point.add_input_key('guest_data')
+        host_point.add_output_key('host_point')
+
         self.add_state(
             "RESET_SEATING_DETECTIONS",
             ClearSeatingDetections(),
@@ -181,6 +189,41 @@ class Introduce(yasmin.StateMachine):
                 "canceled": "failed",
             },
         )
+        
+        self.add_state(
+            "GET_HOST",
+            host_point,
+            transitions={
+                'succeeded': 'LOOK_AT_HOST',
+                'failed': 'failed',
+            }
+        )
+        
+        self.add_state(
+            "LOOK_AT_HOST",
+            LookToPoint(),
+            transitions={
+                "succeeded": "SAY_INTRODUCTION",
+                "aborted": "SAY_INTRODUCTION",
+                "canceled": "failed",
+                "timeout": "SAY_INTRODUCTION",
+            },
+            remappings={'pointstamped': 'guest_point'}
+        )
+        
+        self.add_state(
+            'SAY_HOST',
+            Say(text='Hello host! I have a bag for you. Can you stand in front of me to lead the way.'),
+            transitions={
+                "succeeded": "succeeded",
+                "aborted": "succeeded",
+                "canceled": "succeeded",
+            }
+        )
+        
+        
+        
+        
 
     def _loop_person_index(self, blackboard):
         guest1point = blackboard["guest_data"]["guest1"]["seated_point"]
@@ -218,7 +261,7 @@ class Introduce(yasmin.StateMachine):
                 "seat_detections"
             ][index].point
             guest2point = blackboard["guest_data"]["guest1"]["seated_point"]
-            yasmin.YASMIN_LOG_INFO("Fallback Guest2 point: " + str(guest2point))
+            yasmin.YASMIN_LOG_INFO("Fallback Guest1 point: " + str(guest2point))
             return "succeeded"
         elif guest1point is not None and host is not None:
             index2 = blackboard["seat_indexes"]["guest1"]
@@ -234,6 +277,14 @@ class Introduce(yasmin.StateMachine):
             return "succeeded"
 
         return "failed"
+    
+    def _get_host(self, blackboard):
+        if blackboard['guest_data']['host']['seated_point']:
+            blackboard['host_point'] = blackboard['guest_data']['host']['seated_point']
+            return 'succeeded'
+        else:
+            yasmin.YASMIN_LOG_INFO(f'No host')
+            return 'failed'
 
     def _loop_guest(self, blackboard):
         if (

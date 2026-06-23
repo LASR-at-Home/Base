@@ -48,7 +48,7 @@ class LookAndGreetGuest(yasmin.StateMachine):
         )
         self.add_state(
             "WAIT_FOR_GUEST",
-            WaitForPersonInArea(),
+            WaitForPersonInArea(polygon_param='door_polygon'),
             transitions={
                 "succeeded": "GET_PERSON_POINT",
                 "failed": "SAY_WAITING_FOR_GUEST",
@@ -259,7 +259,6 @@ class GreetGuest(yasmin.StateMachine):
                 yasmin.YASMIN_LOG_ERROR(
                     f"The attribute {attribute} is not handled currently."
                 )
-                return "failed"
 
         text = (
             f"Hello {guest2_name}, welcome to the party! {guest1_name} has already arrived and is sitting down. They "

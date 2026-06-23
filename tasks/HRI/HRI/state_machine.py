@@ -1,5 +1,3 @@
-from typing import List, Tuple, Dict
-
 from threading import Thread
 
 import rclpy
@@ -8,9 +6,9 @@ from rclpy.node import Node
 import yasmin
 import yasmin_ros
 
-from geometry_msgs.msg import Point, PointStamped, Pose
+from geometry_msgs.msg import PointStamped
 
-from lasr_skills import Say, SafeGoToLocation, StopEyeTracker, PlayMotion, StartDoorSM, Rotate, FollowPerson
+from lasr_skills import Say, SafeGoToLocation, StartDoorSM, Rotate, FollowPerson
 
 from HRI.states import *
 
@@ -80,7 +78,7 @@ class HRI(yasmin.StateMachine):
 
         self.add_state(
             "SEAT_GUEST",  # SM3: Locates and seats guest in free seat
-            SeatGuest(learn_host=False),
+            SeatGuest(guest_id='guest1'),
             transitions={"succeeded": "CHECK", "failed": "failed"},
         )
 
@@ -101,11 +99,17 @@ class HRI(yasmin.StateMachine):
             LookAndGreetGuest(guest_id="guest2"),
             transitions={"succeeded": "GUIDE_TO_SEAT", "failed": "failed"},
         )
-
+        
         self.add_state(
-            "INTRODUCE",
-            Introduce(),
-            transitions={"succeeded": "succeeded", "failed": "failed"},
+            "GUIDE_TO_SEAT_2",  # GUIDES GUEST TO SEATING AREA
+            SafeGoToLocation(location_param="seat_pose"),
+            transitions={"succeeded": "SEAT_GUEST_2", "failed": "failed"},
+        )
+        
+        self.add_state(
+            "SEAT_GUEST_2",  # SM3: Locates and seats guest in free seat
+            SeatGuest(guest_id='guest2'),
+            transitions={"succeeded": "CHECK", "failed": "failed"},
         )
 
         self.add_state(
@@ -117,17 +121,7 @@ class HRI(yasmin.StateMachine):
         self.add_state(
             "ROTATE",
             Rotate(angle=180),
-            transitions={"succeeded": "CALL_HOST", "failed": "failed"},
-        )
-
-        self.add_state(
-            "CALL_HOST",
-            Say(text="I have a bag. Can the host stand infront of me to lead the way."),
-            transitions={
-                "succeeded": "FOLLOW_HOST",
-                "aborted": "failed",
-                "canceled": "failed",
-            },
+            transitions={"succeeded": "FOLLOW_HOST", "failed": "failed"},
         )
 
         self.add_state(
@@ -147,14 +141,45 @@ class HRI(yasmin.StateMachine):
                 "failed": "failed",
             },
         )
+        
+        self.add_state(
+            'STOP_TIMER',
+            StopTimer(),
+            transitions={
+                'succeeded': 'SAY_STOP'
+            }
+        )
+        
+        self.add_state(
+            'SAY_STOP',
+            Say(),
+            transitions={
+                'succeeded': 'succeeded',
+                'aborted': 'failed',
+                'canceled': 'failed',
+            },
+            remappings={'text': 'time_text'}
+        )
 
     def check(self, blackboard):
-        guest = blackboard["guest_data"][f"guest{self.guest_id}"]
+        guest1 = blackboard["guest_data"]["guest1"]
         yasmin.YASMIN_LOG_INFO(f"{self.guest_id}")
 
-        for key in guest.keys():
-            value = guest[key]
-            yasmin.YASMIN_LOG_INFO(f"{key}: {value}")
+        if self.guest_id == 2:
+            guest2 = blackboard["guest_data"]["guest2"]
+            yasmin.YASMIN_LOG_INFO('Guest1: ')
+            for key in guest1.keys():
+                value = guest1[key]
+                yasmin.YASMIN_LOG_INFOf(f'{key}: {value}')
+            yasmin.YASMIN_LOG_INFO('Guest2: ')
+            for key in guest2.keys():
+                value = guest1[key]
+                yasmin.YASMIN_LOG_INFOf(f'{key}: {value}')
+        else:
+            yasmin.YASMIN_LOG_INFO('Guest1: ')
+            for key in guest1.keys():
+                value = guest1[key]
+                yasmin.YASMIN_LOG_INFO(f"{key}: {value}")
 
         self.guest_id += 1
         return "continue" if self.guest_id == 2 else "succeeded"

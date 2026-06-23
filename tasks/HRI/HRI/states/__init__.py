@@ -1,6 +1,5 @@
 from .speech_recovery import SpeechRecovery
 
-from .learn_host_face import LearnHostFace
 from .hri_learn_faces import HRILearnFaces
 from .seat_guest import SeatGuest
 from .get_name_and_drink import GetNameAndDrink

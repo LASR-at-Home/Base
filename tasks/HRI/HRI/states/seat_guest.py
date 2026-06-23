@@ -35,11 +35,6 @@ from HRI.states import HRILearnFaces
 from yasmin_viewer import YasminViewerPub
 
 
-class LearnHost(StateMachine):
-    def __init__(self):
-        super().__init__(outcomes=["succeeded", "failed"])
-
-
 class ProcessDetections(State):
 
     _max_people_on_sofa: int
@@ -374,14 +369,12 @@ class HRI_node(Node):
 
 
 def main():
-
     rclpy.init()
     node = HRI_node()
 
     yasmin_ros.set_ros_loggers(node)
 
     try:
-        # TODO: Try with learn_host=True
         sm = SeatGuest(learn_host=False)
         bb = Blackboard()
 
