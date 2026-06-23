@@ -162,9 +162,12 @@ class CalculateSweepPoints(yasmin.State):
         )
 
         info_sub = message_filters.Subscriber(
-            self.node, CameraInfo, "/head_front_camera/depth/camera_info", qos_profile=qos
+            self.node,
+            CameraInfo,
+            "/head_front_camera/depth/camera_info",
+            qos_profile=qos,
         )
-        
+
         self.cache = message_filters.Cache(info_sub)
 
         self._tf_buffer = tf2_ros.Buffer(Duration(seconds=10.0))

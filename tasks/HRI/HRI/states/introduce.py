@@ -127,7 +127,6 @@ class Introduce(yasmin.StateMachine):
                 "no_detections": "RESET_HEAD_1",
             },
         )
-        
 
         self.add_state(
             "RESET_HEAD_1",
@@ -186,7 +185,7 @@ class Introduce(yasmin.StateMachine):
     def _loop_person_index(self, blackboard):
         guest1point = blackboard["guest_data"]["guest1"]["seated_point"]
         guest2point = blackboard["guest_data"]["guest2"]["seated_point"]
-        host = blackboard['guest_data']['host']['seated_point']
+        host = blackboard["guest_data"]["host"]["seated_point"]
         seat_detections = len(blackboard["seat_detections"])
         index = blackboard["person_index"]
 
@@ -196,7 +195,9 @@ class Introduce(yasmin.StateMachine):
         yasmin.YASMIN_LOG_INFO("Guest1 point: " + str(guest1point))
         yasmin.YASMIN_LOG_INFO("Guest2 point: " + str(guest2point))
         yasmin.YASMIN_LOG_INFO("Host point: " + str(host))
-        yasmin.YASMIN_LOG_INFO("Total detections (seats + people): " + str(seat_detections))
+        yasmin.YASMIN_LOG_INFO(
+            "Total detections (seats + people): " + str(seat_detections)
+        )
 
         if guest1point is not None and guest2point is not None and host is not None:
             return "succeeded"
@@ -208,26 +209,30 @@ class Introduce(yasmin.StateMachine):
             blackboard["person_index"] = index
             return "continue"
         elif guest2point is not None and host is not None:
-            index2 = blackboard['seat_indexes']['guest2']
-            indexh = blackboard['seat_indexes']['host']
+            index2 = blackboard["seat_indexes"]["guest2"]
+            indexh = blackboard["seat_indexes"]["host"]
             for i in indexes:
                 if i != index2 and i != indexh:
                     index = i
-            blackboard['guest_data']['guest1']['seated_point'] = blackboard["seat_detections"][index].point
+            blackboard["guest_data"]["guest1"]["seated_point"] = blackboard[
+                "seat_detections"
+            ][index].point
             guest2point = blackboard["guest_data"]["guest1"]["seated_point"]
             yasmin.YASMIN_LOG_INFO("Fallback Guest2 point: " + str(guest2point))
-            return 'succeeded'
+            return "succeeded"
         elif guest1point is not None and host is not None:
-            index2 = blackboard['seat_indexes']['guest1']
-            indexh = blackboard['seat_indexes']['host']
+            index2 = blackboard["seat_indexes"]["guest1"]
+            indexh = blackboard["seat_indexes"]["host"]
             for i in indexes:
                 if i != index2 and i != indexh:
                     index = i
-            blackboard['guest_data']['guest2']['seated_point'] = blackboard["seat_detections"][index].point
+            blackboard["guest_data"]["guest2"]["seated_point"] = blackboard[
+                "seat_detections"
+            ][index].point
             guest2point = blackboard["guest_data"]["guest2"]["seated_point"]
             yasmin.YASMIN_LOG_INFO("Fallback Guest2 point: " + str(guest2point))
-            return 'succeeded'
-        
+            return "succeeded"
+
         return "failed"
 
     def _loop_guest(self, blackboard):

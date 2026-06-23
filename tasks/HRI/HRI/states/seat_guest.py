@@ -34,11 +34,10 @@ from HRI.states import HRILearnFaces
 
 from yasmin_viewer import YasminViewerPub
 
+
 class LearnHost(StateMachine):
     def __init__(self):
-        super().__init__(outcomes=['succeeded', 'failed'])
-
-    
+        super().__init__(outcomes=["succeeded", "failed"])
 
 
 class ProcessDetections(State):
@@ -108,10 +107,14 @@ class ProcessDetections(State):
             ):
                 non_sofa_chairs.update({detection_point: False})
 
-        yasmin.YASMIN_LOG_INFO("Detected this many people in sweep: " + str(len(people)))
+        yasmin.YASMIN_LOG_INFO(
+            "Detected this many people in sweep: " + str(len(people))
+        )
 
         if len(people) == 1:
-            blackboard['pointstamped'] = PointStamped(header=Header(frame_id='map'), point=people[0])
+            blackboard["pointstamped"] = PointStamped(
+                header=Header(frame_id="map"), point=people[0]
+            )
 
         for chair_detection in non_sofa_chairs.keys():
             for person_detection in unseated_sofa_persons:
@@ -206,8 +209,8 @@ class SeatGuest(StateMachine):
             transitions={"succeeded": "PROCESS_DETECTIONS", "failed": "failed"},
             remappings={"detected_objects": "seat_detections"},
         )
-        
-        transition = 'LOOK_HOST' if guest_id == 'guest1' else 'LOOK_TO_SEAT'
+
+        transition = "LOOK_HOST" if guest_id == "guest1" else "LOOK_TO_SEAT"
 
         self.add_state(
             "PROCESS_DETECTIONS",
@@ -221,7 +224,7 @@ class SeatGuest(StateMachine):
         )
 
         self.add_state(
-            'LOOK_HOST',
+            "LOOK_HOST",
             LookToPoint(),
             transitions={
                 "succeeded": "SAY_HOST",
@@ -232,7 +235,7 @@ class SeatGuest(StateMachine):
         )
 
         self.add_state(
-            'SAY_HOST',
+            "SAY_HOST",
             Say(text="I am going to quickly learn the host's face."),
             transitions={
                 "succeeded": "LEARN_HOST",
@@ -242,12 +245,9 @@ class SeatGuest(StateMachine):
         )
 
         self.add_state(
-            'LEARN_HOST',
-            HRILearnFaces(guest_id='host', dataset_size=10),
-            transitions={
-                'succeeded': 'LOOK_TO_SEAT',
-                'failed': 'failed'
-            }
+            "LEARN_HOST",
+            HRILearnFaces(guest_id="host", dataset_size=10),
+            transitions={"succeeded": "LOOK_TO_SEAT", "failed": "failed"},
         )
 
         self.add_state(

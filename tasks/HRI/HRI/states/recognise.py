@@ -97,8 +97,10 @@ class Recognise(yasmin_ros.ServiceState):
                     continue
                 yasmin.YASMIN_LOG_INFO(detection.name)
                 yasmin.YASMIN_LOG_INFO(str(detection.point))
-                blackboard["guest_data"][detection.name]["seated_point"] = detection.point
-                blackboard['seat_indexes'][detection.name] = blackboard['person_index']
+                blackboard["guest_data"][detection.name][
+                    "seated_point"
+                ] = detection.point
+                blackboard["seat_indexes"][detection.name] = blackboard["person_index"]
                 return "succeeded"
 
         return "aborted"
