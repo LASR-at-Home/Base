@@ -168,6 +168,10 @@ def main():
     face_detection_confidence = 0.2
 
     bb["guest_data"] = {
+        "host": {
+            'seated_point': None,
+            'seating_detection': False
+        },
         "guest1": {
             "name": "",
             "drink": "",
