@@ -15,7 +15,7 @@ from restaurant.states import (
 
 
 class Restaurant(yasmin.StateMachine):
-    def __init__(self, node):
+    def __init__(self):
         super().__init__(outcomes=["succeeded", "failed"])
 
         def start_cb(blackboard, msg):
@@ -33,19 +33,19 @@ class Restaurant(yasmin.StateMachine):
         #     transitions={"succeeded": "SAY_START", "failed": "WAIT_START"},
         # )
 
-        self.add_state(
-            "SAY_START",
-            Say(text="Start of the restaurant task."),
-            transitions={
-                "succeeded": "SAVE_BAR_POSE",
-                "aborted": "SAVE_BAR_POSE",
-                "canceled": "SAVE_BAR_POSE",
-            },
-        )
+        # self.add_state(
+        #     "SAY_START",
+        #     Say(text="Start of the restaurant task."),
+        #     transitions={
+        #         "succeeded": "SAVE_BAR_POSE",
+        #         "aborted": "SAVE_BAR_POSE",
+        #         "canceled": "SAVE_BAR_POSE",
+        #     },
+        # )
 
         self.add_state(
             "SAVE_BAR_POSE",
-            SaveBarPose(node=node),
+            SaveBarPose(),
             transitions={
                 "succeeded": "succeeded",
                 "failed": "failed",
@@ -129,19 +129,12 @@ class Restaurant(yasmin.StateMachine):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = rclpy.create_node(
-        node_name="restaurant",
-        allow_undeclared_parameters=True,
-        automatically_declare_parameters_from_overrides=True,
-    )
-    yasmin_ros.set_ros_loggers(node)
-    sm = Restaurant(node=node)
+    yasmin_ros.set_ros_loggers()
+    sm = Restaurant()
     sm.set_sigint_handler(True)
     outcome = sm(yasmin.Blackboard())
-    node.get_logger().info(f"Restaurant outcome: {outcome}")
-    node.destroy_node()
+    yasmin_ros.logger_node.destroy_node()
     rclpy.shutdown()
-
 
 if __name__ == "__main__":
     main()
