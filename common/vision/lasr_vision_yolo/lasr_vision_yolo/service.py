@@ -115,7 +115,7 @@ class YOLOServiceNode:
             history=HistoryPolicy.KEEP_LAST,
         )
 
-        self._tf_buffer = Buffer(cache_time=Duration(seconds=30))
+        self._tf_buffer = Buffer(cache_time=Duration(seconds=10.0))
         self._tf_listener = tf.TransformListener(self._tf_buffer, self.node)
 
         self.node.create_service(YoloDetection, "/yolo/detect", self._detect)
@@ -203,17 +203,9 @@ class YOLOServiceNode:
             )
         except Exception as e:
             self.node.get_logger().error(
-                f"TF {target_frame}<-{source_frame} at image stamp failed ({e}); using latest"
+                f"TF {target_frame}<-{source_frame} at image stamp failed ({e})"
             )
-        try:
-            return self._tf_buffer.lookup_transform(
-                target_frame, source_frame, Time(), Duration(seconds=1.0)
-            )
-        except Exception as e:
-            self.node.get_logger().error(
-                f"TF {target_frame}<-{source_frame} lookup failed: {e}"
-            )
-            raise
+            return None
 
     def _detect3d(
         self, req: YoloDetection3D.Request, res: YoloDetection3D.Response
@@ -241,6 +233,8 @@ class YOLOServiceNode:
                 req.depth_image.header.frame_id,
                 req.depth_image.header.stamp,
             )
+            if transform is None:
+                return response
 
         for result in results:
             detection = Detection3D()
@@ -333,6 +327,8 @@ class YOLOServiceNode:
                 req.depth_image.header.frame_id,
                 req.depth_image.header.stamp,
             )
+            if transform is None:
+                return response
 
         for result in results:
             keypoints = Keypoint3DList()
@@ -517,17 +513,25 @@ class YOLOServiceNode:
         return results
 
 
+from rclpy.executors import MultiThreadedExecutor
+
 def main(args=None):
     rclpy.init(args=args)
 
     node = Node("yolo_service")
     YOLOServiceNode(node)
+
+    executor = MultiThreadedExecutor()
+    executor.add_node(node)
+
     try:
-        rclpy.spin(node)
+        executor.spin()
     except KeyboardInterrupt:
         pass
     finally:
+        executor.shutdown()
         node.destroy_node()
+        rclpy.shutdown()
 
 
 if __name__ == "__main__":

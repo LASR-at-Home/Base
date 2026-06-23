@@ -4,6 +4,7 @@ import yasmin
 from rclpy.action import ActionClient
 
 from lasr_vision_interfaces.action import EyeTracker as EyeTrackerAction
+from rclpy.callback_groups import ReentrantCallbackGroup
 
 
 class StartEyeTracker(yasmin_ros.ActionState):
@@ -13,6 +14,7 @@ class StartEyeTracker(yasmin_ros.ActionState):
             action_type=EyeTrackerAction,
             create_goal_handler=self.create_goal,
             feedback_handler=self.handle_feedback,
+            callback_group=ReentrantCallbackGroup()
         )
 
         self.add_input_key("person_point")

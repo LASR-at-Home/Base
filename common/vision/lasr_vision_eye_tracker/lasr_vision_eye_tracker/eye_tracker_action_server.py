@@ -1,10 +1,7 @@
 import rclpy
 from rclpy.node import Node
 from rclpy.action import ActionServer, ActionClient, CancelResponse, GoalResponse
-from rclpy.callback_groups import (
-    MutuallyExclusiveCallbackGroup,
-    ReentrantCallbackGroup,
-)
+from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy, DurabilityPolicy
 from rclpy.executors import MultiThreadedExecutor
 import message_filters
@@ -336,6 +333,8 @@ class EyeTracker(Node):
             [self.image_sub, self.depth_sub], 10, 0.1
         )
 
+        self.subs = [self.image_sub, self.depth_sub, self.depth_camera_info_sub]
+
         wait = WaitForFuture()
         wait.set()
 
@@ -395,10 +394,13 @@ class EyeTracker(Node):
                     "Eye Tracker Action Server canceled, stopping tracking."
                 )
                 self._look_centre()
-                goal_handle.canceled()
                 for sub in self.subs:
-                    sub.sub.unsubscribe()
+                    self.destroy_subscription(sub.sub)
                 self._done = True
+                goal_handle.canceled()
+
+                self.get_logger().info('Canceled EYE TRACKER')
+
                 return EyeTrackerAction.Result()
             
             time.sleep(0.25)
