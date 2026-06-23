@@ -189,6 +189,9 @@ class Introduce(yasmin.StateMachine):
         host = blackboard['guest_data']['host']['seated_point']
         seat_detections = len(blackboard["seat_detections"])
         index = blackboard["person_index"]
+
+        indexes = [i for i in range(seat_detections)]
+
         yasmin.YASMIN_LOG_INFO(str(index))
         yasmin.YASMIN_LOG_INFO("Guest1 point: " + str(guest1point))
         yasmin.YASMIN_LOG_INFO("Guest2 point: " + str(guest2point))
@@ -204,19 +207,25 @@ class Introduce(yasmin.StateMachine):
             index += 1
             blackboard["person_index"] = index
             return "continue"
-        elif guest1point is not None:
-            index = blackboard['seat_indexes']['guest1']
-            index = 1 if index == 0 else 0
+        elif guest2point is not None and host is not None:
+            index2 = blackboard['seat_indexes']['guest2']
+            indexh = blackboard['seat_indexes']['host']
+            for i in indexes:
+                if i != index2 and i != indexh:
+                    index = i
+            blackboard['guest_data']['guest1']['seated_point'] = blackboard["seat_detections"][index].point
+            guest2point = blackboard["guest_data"]["guest1"]["seated_point"]
+            yasmin.YASMIN_LOG_INFO("Fallback Guest2 point: " + str(guest2point))
+            return 'succeeded'
+        elif guest1point is not None and host is not None:
+            index2 = blackboard['seat_indexes']['guest1']
+            indexh = blackboard['seat_indexes']['host']
+            for i in indexes:
+                if i != index2 and i != indexh:
+                    index = i
             blackboard['guest_data']['guest2']['seated_point'] = blackboard["seat_detections"][index].point
             guest2point = blackboard["guest_data"]["guest2"]["seated_point"]
             yasmin.YASMIN_LOG_INFO("Fallback Guest2 point: " + str(guest2point))
-            return 'succeeded'
-        elif guest2point is not None:
-            index = blackboard['seat_indexes']['guest2']
-            index = 1 if index == 0 else 0
-            blackboard['guest_data']['guest1']['seated_point'] = blackboard["seat_detections"][index].point
-            guest1point = blackboard["guest_data"]["guest1"]["seated_point"]
-            yasmin.YASMIN_LOG_INFO("Fallback Guest1 point: " + str(guest1point))
             return 'succeeded'
         
         return "failed"
