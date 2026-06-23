@@ -2,7 +2,7 @@ import rclpy
 import yasmin
 from lasr_skills import AskAndListen
 from lasr_llm_interfaces.srv import RestaurantQueryLlm
-import time
+import yasmin_ros
 
 
 class AskForOrder(yasmin.StateMachine):
@@ -22,7 +22,7 @@ class AskForOrder(yasmin.StateMachine):
         failed    — could not understand or LLM failed
     """
 
-    def __init__(self, node):
+    def __init__(self):
         super().__init__(outcomes=["succeeded", "failed"])
         self.add_output_key("order")
         self.add_output_key("transcribed_speech")
@@ -41,7 +41,7 @@ class AskForOrder(yasmin.StateMachine):
         # 2. Parse order — keyword match or LLM fallback
         self.add_state(
             "PARSE_ORDER",
-            self.ParseOrder(node=node),
+            self.ParseOrder(),
             transitions={
                 "succeeded": "succeeded",
                 "failed": "failed",
@@ -54,21 +54,21 @@ class AskForOrder(yasmin.StateMachine):
         Uses keyword matching first, falls back to LLM.
         """
 
-        def __init__(self, node):
+        def __init__(self):
             super().__init__(outcomes=["succeeded", "failed"])
             self.add_input_key("transcribed_speech")
             self.add_output_key("order")
 
-            self._node = node
-            self._possible_items = node.get_parameter("priors.items").value or []
-            print(f"[DEBUG] possible_items loaded: {self._possible_items}")
-
-            self._llm_client = node.create_client(
+            self.node = yasmin_ros.logger_node
+            self._possible_items = self.node.get_parameter("priors.items").value or []
+            self._llm_client = self.node.create_client(
                 RestaurantQueryLlm, "/restaurant/query_llm"
             )
             self._llm_client.wait_for_service()
 
         def execute(self, blackboard):
+            print(f"[DEBUG] possible_items loaded: {self._possible_items}")
+
             transcription = blackboard["transcribed_speech"].lower()
             print(f"[AskForOrder] heard: '{transcription}'")
 

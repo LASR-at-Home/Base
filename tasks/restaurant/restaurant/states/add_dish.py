@@ -2,7 +2,7 @@ import rclpy
 import yasmin
 from lasr_skills import AskAndListen
 from lasr_llm_interfaces.srv import RestaurantQueryLlm
-import time
+import yasmin_ros
 
 
 class AddDish(yasmin.StateMachine):
@@ -22,7 +22,7 @@ class AddDish(yasmin.StateMachine):
         failed    — could not understand or LLM failed
     """
 
-    def __init__(self, node):
+    def __init__(self):
         super().__init__(outcomes=["succeeded", "failed"])
         self.add_input_key("order")
         self.add_output_key("order")
@@ -42,7 +42,7 @@ class AddDish(yasmin.StateMachine):
         # 2. Parse dish — keyword match or LLM fallback
         self.add_state(
             "PARSE_DISH",
-            self.ParseDish(node=node),
+            self.ParseDish(),
             transitions={
                 "succeeded": "succeeded",
                 "failed": "failed",
@@ -55,16 +55,16 @@ class AddDish(yasmin.StateMachine):
         and appends it to the order list.
         """
 
-        def __init__(self, node):
+        def __init__(self):
             super().__init__(outcomes=["succeeded", "failed"])
             self.add_input_key("transcribed_speech")
             self.add_input_key("order")
             self.add_output_key("order")
 
-            self._node = node
-            self._possible_items = node.get_parameter("priors.items").value or []
+            self._node = yasmin_ros.logger_node
+            self._possible_items = self._node.get_parameter("priors.items").value or []
 
-            self._llm_client = node.create_client(
+            self._llm_client = self._node.create_client(
                 RestaurantQueryLlm, "/restaurant/query_llm"
             )
             self._llm_client.wait_for_service()

@@ -1,5 +1,6 @@
 import rclpy
 import yasmin
+import yasmin_ros
 from .ask_for_order import AskForOrder
 from .confirm_order import ConfirmOrder
 from .add_dish import AddDish
@@ -18,7 +19,7 @@ class TakeOrderSM(yasmin.StateMachine):
         order (list[str]): finalised list of 2 items ordered
     """
 
-    def __init__(self, node):
+    def __init__(self):
         super().__init__(outcomes=["succeeded", "failed"])
 
         # Keys written to the blackboard
@@ -27,7 +28,7 @@ class TakeOrderSM(yasmin.StateMachine):
         # 1. Ask for order — ask customer what they want and listen
         self.add_state(
             "ASK_FOR_ORDER",
-            AskForOrder(node=node),
+            AskForOrder(),
             transitions={
                 "succeeded": "CONFIRM_ORDER",
                 "failed": "failed",
@@ -53,7 +54,7 @@ class TakeOrderSM(yasmin.StateMachine):
         # 3. Add dish — ask for second item and append to order
         self.add_state(
             "ADD_DISH",
-            AddDish(node=node),
+            AddDish(),
             transitions={
                 "succeeded": "CONFIRM_FULL_ORDER",
                 "failed": "failed",
@@ -84,7 +85,7 @@ def main(args=None):
         allow_undeclared_parameters=True,
         automatically_declare_parameters_from_overrides=True,
     )
-    sm = TakeOrderSM(node=node)
+    sm = TakeOrderSM()
     outcome = sm(yasmin.Blackboard())
     node.get_logger().info(f"TakeOrderSM outcome: {outcome}")
     node.destroy_node()

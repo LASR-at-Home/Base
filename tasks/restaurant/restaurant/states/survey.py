@@ -5,9 +5,8 @@ from .detect_wave import DetectWave
 
 
 class Survey(yasmin.StateMachine):
-    def __init__(self, node, target_frame="map"):
+    def __init__(self, target_frame="map"):
         super().__init__(outcomes=["customer_found"])
-        self.node = node
 
         self.add_state(
             "LOOK_LEFT",
@@ -74,7 +73,7 @@ def main(args=None):
         allow_undeclared_parameters=True,
         automatically_declare_parameters_from_overrides=True,
     )
-    sm = Survey(node=node, target_frame="odom")
+    sm = Survey(target_frame="odom")
     outcome = sm(yasmin.Blackboard())
     node.get_logger().info(f"Survey outcome: {outcome}")
     node.destroy_node()

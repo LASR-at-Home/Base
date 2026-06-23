@@ -55,8 +55,6 @@ models = {
 class LLMInference:
     def __init__(self, model_config: ModelConfig):
         self.config = model_config
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        print(f"Using device: {self.device}")
 
         self.logger = logging.getLogger(__name__)
         self.model_name = models["Qwen"]

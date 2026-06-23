@@ -52,21 +52,16 @@ def generate_launch_description():
         additional_env={"CUDA_VISIBLE_DEVICES": ""},
     )
 
-    restaurant = TimerAction(
-        period=10.0,
-        actions=[
-            Node(
-                package="restaurant",
-                executable="sm",
-                name="restaurant",
-                parameters=[
-                    os.path.join(
-                        get_package_share_directory("restaurant"), "config", "lab.yaml"
-                    )
-                ],
-                output="screen",
+    restaurant = Node(
+        package="restaurant",
+        executable="sm",
+        name="restaurant",
+        parameters=[
+            os.path.join(
+                get_package_share_directory("restaurant"), "config", "lab.yaml"
             )
         ],
+        output="screen",
     )
 
     return LaunchDescription(

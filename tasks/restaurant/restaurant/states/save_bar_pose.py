@@ -5,6 +5,7 @@ from rclpy.qos import QoSProfile, DurabilityPolicy, ReliabilityPolicy, HistoryPo
 
 import time
 
+
 class SaveBarPose(yasmin.State):
     def __init__(self, topic: str = "/amcl_pose"):
         super().__init__(outcomes=["succeeded", "failed"])
@@ -26,9 +27,9 @@ class SaveBarPose(yasmin.State):
             ),
         )
         time.sleep(1)
-        
+
     def robot_point_cb(self, msg: PoseWithCovarianceStamped):
-        self.robot_pose = msg
+        self.robot_pose = msg.pose.pose
 
     def execute(self, blackboard):
         msg = self.robot_pose
