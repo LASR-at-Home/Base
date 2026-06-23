@@ -51,20 +51,20 @@ class HRI(yasmin.StateMachine):
         self.add_state(
             "START_TIMER",
             StartTimer(),
-            transitions={"succeeded": "GREET", "failed": "START_TIMER"},
+            transitions={"succeeded": "START_CON", "failed": "START_TIMER"},
         )
 
-        # self.add_state(
-        #     "START_CON",  # SM1: Waits for Door to open, then goes to start
-        #     self.setup(),
-        #     transitions={"succeeded": "GO_TO_DOOR", "failed": "START_CON"},
-        # )
+        self.add_state(
+            "START_CON",  # SM1: Waits for Door to open, then goes to start
+            self.setup(),
+            transitions={"succeeded": "GO_TO_DOOR", "failed": "START_CON"},
+        )
 
-        # self.add_state(
-        #     "GO_TO_DOOR",
-        #     SafeGoToLocation(location_param="door_pose"),
-        #     transitions={"succeeded": "GREET", "failed": "failed"},
-        # )
+        self.add_state(
+            "GO_TO_DOOR",
+            SafeGoToLocation(location_param="door_pose"),
+            transitions={"succeeded": "GREET", "failed": "failed"},
+        )
 
         self.add_state(
             "GREET",  # SM2: Greets guest

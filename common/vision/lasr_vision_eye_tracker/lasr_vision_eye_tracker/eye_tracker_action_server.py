@@ -2,6 +2,7 @@ import rclpy
 from rclpy.node import Node
 from rclpy.action import ActionServer, ActionClient, CancelResponse, GoalResponse
 from rclpy.callback_groups import (
+    MutuallyExclusiveCallbackGroup,
     ReentrantCallbackGroup,
 )
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy, DurabilityPolicy
@@ -37,6 +38,35 @@ from std_msgs.msg import Header
 
 import time
 
+class WaitForFuture():
+    def __init__(self):
+        self.event = Event()
+        self.lock = RLock()
+        self.response = None
+        self.result = None
+        self.status = None
+        self.handle = None
+
+    def set(self):
+        self.event.clear()
+    
+    def handle_goal(self, future):
+        with self.lock:
+            self.handle = future.result()
+            get_result_future = self.handle.get_result_async()
+            get_result_future.add_done_callback(self.handle_result)
+
+    def handle_result(self, future):
+        self.result = future.result().result
+        self.status = future.result().status
+        self.event.set()
+
+    def handle_resp(self, future):
+        self.response = future.result()
+        self.event.set()
+
+        
+
 class EyeTracker(Node):
     def __init__(self, max_eye_distance: float = 1.5):
         super().__init__("eye_tracker_action_server")
@@ -50,14 +80,9 @@ class EyeTracker(Node):
         self._max_eye_distance: float = max_eye_distance
         self._move_up_count: int = 0
         self._max_move_up_count: int = 2
-        
-        self._action_done_event = Event()
-        self._response_received_event = Event()
-        self._goal_handle_lock = RLock()
-        self._response = None
-        self._action_result = None
-        self._action_status = None
-        self._goal_handle = None
+
+        self._action_cb_group = ReentrantCallbackGroup()
+        self._work_cb_group = ReentrantCallbackGroup()
 
         self.camera_qos = QoSProfile(
             depth=10,
@@ -77,31 +102,36 @@ class EyeTracker(Node):
             "/amcl_pose",
             self._robot_pose_callback,
             qos_profile=amcl_qos,
+            callback_group=self._work_cb_group
         )
         
         self._yolo_keypoint_client = self.create_client(
             YoloPoseDetection3D,
             "/yolo/detect3d_pose",
+            callback_group=self._work_cb_group
         )
 
         self._head_state_client = self.create_client(
             QueryTrajectoryState,
             "/head_controller/query_state",
+            callback_group=self._work_cb_group
         )
 
         self._head_action_client = ActionClient(
             self,
             FollowJointTrajectory,
             "/head_controller/follow_joint_trajectory",
+            callback_group=self._work_cb_group
         )
 
         self._head_point_action_client = ActionClient(
             self,
             PointHead,
             "/head_controller/point_head_action",
+            callback_group=self._work_cb_group
         )
         
-        while not self._head_point_action_client.wait_for_server(timeout_sec=1.0) and not self._head_action_client.wait_for_server(timeout_sec=1.0) and not self._yolo_keypoint_client.wait_for_service(timeout_sec=1.0) and not self._head_action_client.wait_for_service(timeout_sec=1.0):
+        while not self._head_point_action_client.wait_for_server(timeout_sec=1.0) or not self._head_action_client.wait_for_server(timeout_sec=1.0) or not self._yolo_keypoint_client.wait_for_service(timeout_sec=1.0) or not self._head_action_client.wait_for_server(timeout_sec=1.0):
             self.get_logger().info("Waiting for point head action server, and head action client and yolo to all be ready...")
 
         self._action_server = ActionServer(
@@ -111,7 +141,7 @@ class EyeTracker(Node):
             goal_callback=self._goal_callback,
             cancel_callback=self._cancel_callback,
             execute_callback=self._execute_callback,
-            callback_group=ReentrantCallbackGroup(),
+            callback_group=self._action_cb_group,
         )
         
         self.get_logger().info("Eye Tracker Action Server started.")
@@ -135,49 +165,19 @@ class EyeTracker(Node):
         request = QueryTrajectoryState.Request()
         request.time = self.get_clock().now().to_msg()
 
-        self.reset_service_stuff()
+        wait = WaitForFuture()
+        wait.set()
 
         future = self._head_state_client.call_async(request)
-        future.add_done_callback(self._handle_resp)
+        future.add_done_callback(wait.handle_resp)
         self.get_logger().warn('Waiting for response from get head join values')
-        while not self._response_received_event.wait():
+        while not wait.event.wait():
             pass
             
-        if len(self._response.position) < 2:
+        if len(wait.response.position) < 2:
             self.get_logger().warn("Head state response was empty or invalid.")
             return None
-        return (self._response.position[0], self._response.position[1])
-        
-    def reset_action_stuff(self):
-        self._action_done_event = Event()
-        
-        self._action_result = None
-        self._action_status = None
-        self._goal_handle = None
-        
-        self._action_done_event.clear()
-      
-    def reset_service_stuff(self):
-        self._response_received_event = Event()
-        
-        self._response = None
-        
-        self._response_received_event.clear()
-        
-    def _handle_goal(self, future):
-        with self._goal_handle_lock:
-            self._goal_handle = future.result()
-            get_result_future = self._goal_handle.get_result_async()
-            get_result_future.add_done_callback(self._handle_result)
-            
-    def _handle_result(self, future):
-        self._action_result = future.result().result
-        self._action_status = future.result().status
-        self._action_done_event.set()
-
-    def _handle_resp(self, future):
-        self._response = future.result()
-        self._response_received_event.set()
+        return (wait.response.position[0], wait.response.position[1])
 
     def _look_centre(self) -> None:
         """Moves the head to look at the centre position."""
@@ -187,14 +187,16 @@ class EyeTracker(Node):
         point.positions = [0.0, 0.0]  # Look Center
         point.time_from_start = rclpy.duration.Duration(seconds=1.0).to_msg()
         goal.trajectory.points.append(point)
+
+        wait = WaitForFuture()
+        wait.set()
+
         send_goal_future = self._head_action_client.send_goal_async(goal)
-        goal_handle = self._wait_for_future_result(
-            send_goal_future,
-            timeout_sec=2.0,
-            what="centre head goal response",
-        )
-        if goal_handle is None or not goal_handle.accepted:
+        send_goal_future.add_done_callback(wait.handle_goal)
+        self.get_logger().info('Waiting for response from look centre')
+        while not wait.event.wait(0.5):
             self.get_logger().warn("Centre head goal was not accepted.")
+            break
 
     def _move_head_up(
         self, current_head_position: Tuple[float, float], y_delta: float = 0.25
@@ -219,12 +221,13 @@ class EyeTracker(Node):
         point.time_from_start = rclpy.duration.Duration(seconds=2.0).to_msg()
         goal.trajectory.points.append(point)
         
-        self.reset_action_stuff()
+        wait = WaitForFuture()
+        wait.set()
 
         send_goal_future = self._head_action_client.send_goal_async(goal)
-        send_goal_future.add_done_callback(self._handle_goal)
+        send_goal_future.add_done_callback(wait.handle_goal)
         self.get_logger().info('Waiting for move head up to be finished')
-        while not self._action_done_event.wait(1.0):
+        while not wait.event.wait(0.5):
             self.get_logger().warn('Timed out for head movement, assuming finished')
             break
 
@@ -244,15 +247,16 @@ class EyeTracker(Node):
                 target_frame="map",
             )
             
-            self.reset_service_stuff()
+            wait = WaitForFuture()
+            wait.set()
             
             future = self._yolo_keypoint_client.call_async(req)
-            future.add_done_callback(self._handle_resp)
-            self.get_logger().info('Waiting for yolo response in detect cb')
-            while not self._response_received_event.wait():
+            future.add_done_callback(wait.handle_resp)
+            # self.get_logger().info('Waiting for yolo response in detect cb')
+            while not wait.event.wait():
                 pass
 
-            detected_keypoints = self._response.detections
+            detected_keypoints = wait.response.detections
             left_eye_point = None
             right_eye_point = None
             if not detected_keypoints:
@@ -331,12 +335,9 @@ class EyeTracker(Node):
         self.ts = message_filters.ApproximateTimeSynchronizer(
             [self.image_sub, self.depth_sub], 10, 0.1
         )
-        
-        
-        self.subs = [self.image_sub, self.depth_camera_info_sub, self.depth_sub]
-        
-        
-        self.reset_action_stuff()
+
+        wait = WaitForFuture()
+        wait.set()
 
         g = PointHead.Goal(
             pointing_frame="head_2_link",
@@ -350,9 +351,9 @@ class EyeTracker(Node):
 
         # Send point head goal and wait
         send_goal_future = self._head_point_action_client.send_goal_async(g)
-        send_goal_future.add_done_callback(self._handle_goal)
+        send_goal_future.add_done_callback(wait.handle_goal)
         
-        while not self._action_done_event.wait(1.0):
+        while not wait.event.wait(0.5):
             self.get_logger().warn("Timed out waiting for head controller to return a goal result, assuming it executed correctly")
             break
         
@@ -379,12 +380,13 @@ class EyeTracker(Node):
                     ),
                 )
                 
-                self.reset_action_stuff()
+                wait = WaitForFuture()
+                wait.set()
                 
                 send_goal_future = self._head_point_action_client.send_goal_async(g)
-                send_goal_future.add_done_callback(self._handle_goal)
+                send_goal_future.add_done_callback(wait.handle_goal)
                 self.get_logger().info('Waiting point head action result')
-                while self._action_done_event.wait(2.0):
+                while wait.event.wait(0.5):
                     self.get_logger().warn('Timed out for point head action, assuming it finished')
                     break
 
