@@ -48,12 +48,8 @@ class DispatchSkill(yasmin.State):
     def _execute_step(self, skill, args):
         if skill == "say":
             return self._say(args.get("text", ""))
-        #TODO: Add other skills
-        """
-        example: 
         if skill == "go_to_location":
             return self._go_to_location(args.get("location", ""))
-        """
         self.node.get_logger().info(f"Skipping skill '{skill}' (not yet actuated)")
         return "succeeded"
 
