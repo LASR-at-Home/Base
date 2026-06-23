@@ -22,7 +22,7 @@ class CheckForPerson(State):
 
 class WaitForPersonInArea(StateMachine):
     def __init__(self):
-        super().__init__(outcomes=["succeeded", "failed"], handle_sigint=True)
+        super().__init__(outcomes=["succeeded", "failed"])
         self.add_output_key("detections_3d")
 
         node = yasmin_ros.logger_node

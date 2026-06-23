@@ -61,6 +61,11 @@ class Detect3DInArea(yasmin.StateMachine):
             else:
                 area_polygon = self.area_polygon
 
+            assert isinstance(area_polygon, ShapelyPolygon), (
+                f"Expected a Polygon but got {type(area_polygon).__name__}. "
+                "Check the source geometry."
+            )
+
             polygon_msg.points = [
                 Point32(x=point[0], y=point[1], z=0.0)
                 for point in area_polygon.exterior.coords
@@ -131,7 +136,7 @@ class Detect3DInArea(yasmin.StateMachine):
         z_max: Optional[float] = None,
     ):
 
-        super().__init__(outcomes=["succeeded", "failed"], handle_sigint=True)
+        super().__init__(outcomes=["succeeded", "failed"])
         if area_polygon is None:
             self.add_input_key("polygon")
         if z_min is None and z_max is None:

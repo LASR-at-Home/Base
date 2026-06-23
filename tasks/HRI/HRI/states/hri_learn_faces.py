@@ -119,7 +119,7 @@ class HRILearnFaces(StateMachine):
                 return "failed"
 
     def __init__(self, guest_id: str, dataset_size: int = 3):
-        super().__init__(outcomes=["succeeded", "failed"], handle_sigint=True)
+        super().__init__(outcomes=["succeeded", "failed"])
 
         self.add_input_key("guest_data")
 
