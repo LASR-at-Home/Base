@@ -216,14 +216,14 @@ class PlacingMotion(StateMachine):
             "CLOSE_GRIPPER",
             PlayMotion("close"), # Motion goes heres
             transitions={
-                "succeeded": "LOOK_CENTER",
+                "succeeded": "LOOK_CENTRE",
                 "aborted": "failed",
                 "canceled": "failed",
             },
         )
         self.add_state(
-            "LOOK_CENTER",
-            PlayMotion("look_center"), # Motion goes heres
+            "LOOK_CENTRE",
+            PlayMotion("look_centre"), # Motion goes heres
             transitions={
                 "succeeded": "succeeded",
                 "aborted": "failed",

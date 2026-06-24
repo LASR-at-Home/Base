@@ -217,7 +217,7 @@ class Introduce(yasmin.StateMachine):
                 "canceled": "failed",
                 "timeout": "SAY_INTRODUCTION",
             },
-            remappings={'pointstamped': 'host_point'}
+            remappings={'pointstamped': 'host_pointstamped'}
         )
         
         self.add_state(
@@ -289,7 +289,8 @@ class Introduce(yasmin.StateMachine):
     
     def _get_host(self, blackboard):
         if blackboard['guest_data']['host']['seated_point']:
-            blackboard['host_point'] = blackboard['guest_data']['host']['seated_point']
+            poinstamped = PointStamped(header=Header(frame_id='map'), point=blackboard['guest_data']['host']['seated_point'])
+            blackboard['host_pointstamped'] = poinstamped
             return 'succeeded'
         else:
             yasmin.YASMIN_LOG_INFO(f'No host')
