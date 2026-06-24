@@ -16,6 +16,7 @@ from GPSR.world import format_objects, format_people, selected_skill_lines
 class SkillSelectorError(Exception):
     """Stage 1 failed — no plan available."""
 
+
 def _fail_safe(text: str = "I could not generate a plan for that command.") -> dict:
     return {
         "skill": "say",
@@ -38,7 +39,6 @@ def run_planner(backend, world: dict, command: str) -> dict:
         selection = _parse_json(raw)
     except Exception as e:
         raise SkillSelectorError(str(e)) from e
-
 
     can_do = selection.get("can_do", True)
     reason = selection.get("reason", "")

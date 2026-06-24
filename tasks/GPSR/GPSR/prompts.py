@@ -1,7 +1,7 @@
 import json
 
 # TODO: add memory to the examples
-# TODO: Reduce the number of examples to the most important ones now with the local LLM is the good solution they are good when we provide a lot of examples but 
+# TODO: Reduce the number of examples to the most important ones now with the local LLM is the good solution they are good when we provide a lot of examples but
 # with memory and in case of CLOUD LLM we can reduce the number of examples. a test should be done to check the performance reducing the number of examples with gemma3.
 
 SKILL_SELECTOR_PROMPT = """You are the skill selector for a robot.

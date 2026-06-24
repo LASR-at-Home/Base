@@ -17,7 +17,9 @@ class QueryLLM(yasmin.State):
         self.node = node
         self.world = build_world(node)
         self.agent = Agent.from_node(node, log=self.node.get_logger().info)
-        self.node.get_logger().info("QueryLLM ready (skill selector + refiner + planner).")
+        self.node.get_logger().info(
+            "QueryLLM ready (skill selector + refiner + planner)."
+        )
 
     def execute(self, blackboard):
         t0 = time.perf_counter()
@@ -44,7 +46,10 @@ class QueryLLM(yasmin.State):
         # Announce plan: LLM generates spoken summary as first say step
         if not (len(steps) == 1 and steps[0].get("skill") == "say"):
             announcement = self.agent.announce(
-                command, plan["plan_description"], steps, source,
+                command,
+                plan["plan_description"],
+                steps,
+                source,
                 log=lambda msg: self.node.get_logger().info(msg),
             )
             if announcement:

@@ -41,17 +41,23 @@ def compact_skill_lines(skills_text: str) -> str:
 
 def format_objects(objects: dict) -> str:
     """Format the objects dict as a single line for the planner prompt."""
-    return ", ".join(
-        f"{name} ({obj.get('category', '?')} in {obj.get('location', '?')})"
-        for name, obj in objects.items()
-    ) or "none"
+    return (
+        ", ".join(
+            f"{name} ({obj.get('category', '?')} in {obj.get('location', '?')})"
+            for name, obj in objects.items()
+        )
+        or "none"
+    )
 
 
 def format_people(people: dict) -> str:
     """Format the people dict as a single line for the planner prompt."""
-    return ", ".join(
-        f"{name} ({info.get('gender', '?')})" for name, info in people.items()
-    ) or "none"
+    return (
+        ", ".join(
+            f"{name} ({info.get('gender', '?')})" for name, info in people.items()
+        )
+        or "none"
+    )
 
 
 def selected_skill_lines(selected_skills: list, all_skill_lines: str) -> str:

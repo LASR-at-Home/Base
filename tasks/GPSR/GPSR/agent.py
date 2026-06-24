@@ -132,7 +132,9 @@ class Agent:
                 remaining = deadline - time.monotonic()
                 if remaining <= 0:
                     break
-                done, pending = wait(pending, timeout=remaining, return_when=FIRST_COMPLETED)
+                done, pending = wait(
+                    pending, timeout=remaining, return_when=FIRST_COMPLETED
+                )
                 for future in done:
                     if future is cloud_f:
                         try:
@@ -147,7 +149,9 @@ class Agent:
                             break
                         plan["source"] = "cloud"
                         if log:
-                            log(f"Cloud planner finished in {time.monotonic() - t0:.1f}s")
+                            log(
+                                f"Cloud planner finished in {time.monotonic() - t0:.1f}s"
+                            )
                         return plan
                     try:
                         local_plan = future.result()
@@ -156,7 +160,9 @@ class Agent:
                                 plan = cloud_f.result()
                                 plan["source"] = "cloud"
                                 if log:
-                                    log(f"Cloud planner finished in {time.monotonic() - t0:.1f}s")
+                                    log(
+                                        f"Cloud planner finished in {time.monotonic() - t0:.1f}s"
+                                    )
                                 return plan
                             except Exception as e:
                                 cloud_failed = True
@@ -170,7 +176,9 @@ class Agent:
                             local_plan["source"] = "local"
                             return local_plan
                         if log:
-                            log("Local planner finished first — waiting for cloud until timeout")
+                            log(
+                                "Local planner finished first — waiting for cloud until timeout"
+                            )
                     except Exception as e:
                         if log:
                             log(f"Local planner failed: {e}")

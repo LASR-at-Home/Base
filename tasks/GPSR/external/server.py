@@ -33,7 +33,10 @@ def _query(prompt: str, system_prompt: str = "") -> str:
 
 class Handler(socketserver.StreamRequestHandler):
     def handle(self) -> None:
-        print(f"Client connected: {self.client_address[0]}:{self.client_address[1]}", flush=True)
+        print(
+            f"Client connected: {self.client_address[0]}:{self.client_address[1]}",
+            flush=True,
+        )
         while True:
             line = self.rfile.readline()
             if not line:
