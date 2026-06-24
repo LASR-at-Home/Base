@@ -33,14 +33,14 @@ hri:   # the `hri` Node's Parameters
     # Where to position self for seating guests
     seat_pose:
       position:
-        x: 0.7949100699014642
-        y: -0.9632486105744108
+        x: 0.9241805428867255
+        y: -0.37066992922907555
         z: 0.0
       orientation:
         x: 0.0
         y: 0.0
-        z: -0.8003784965302616
-        w: 0.5994950060608994
+        z: -0.798049181701085
+        w: 0.6025923195546294
 
 
 

@@ -32,6 +32,10 @@ class Recognise(yasmin_ros.ServiceState):
 
         self.add_output_key("guest_data")
 
+        self.image_pub = self._node.create_publisher(
+            Image, 'recognise/image', 10
+        )
+
         camera_qos = QoSProfile(
             depth=10,
             reliability=ReliabilityPolicy.BEST_EFFORT,
@@ -81,15 +85,18 @@ class Recognise(yasmin_ros.ServiceState):
 
         image, depth = self.data
 
+        self.image_pub.publish(image)
+
         request.image_raw = image
         request.depth_image = depth
         request.depth_camera_info = self.cache.getLast()
-        request.threshold = 0.5
+        request.threshold = 0.2
         request.target_frame = "map"
 
         return request
 
     def _handle_resp(self, blackboard, response):
+        detected = False
         if len(response.detections) == 0:
             return "no_detections"
         else:
@@ -101,10 +108,10 @@ class Recognise(yasmin_ros.ServiceState):
                 blackboard["guest_data"][detection.name][
                     "seated_point"
                 ] = detection.point
-                # blackboard["seat_indexes"][detection.name] = blackboard["person_index"]
-                return "succeeded"
+                blackboard["seat_indexes"][detection.name] = blackboard["person_index"]
+                detected = True
 
-        return "aborted"
+        return "aborted" if not detected else 'succeeded'
 
 
 def check(blackboard):

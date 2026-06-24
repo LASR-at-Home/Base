@@ -81,8 +81,6 @@ class ProcessDetections(State):
         non_sofa_chairs = {}
         people = []
 
-        yasmin.YASMIN_LOG_INFO("Saving seat_detections for introduce")
-
         for detection in blackboard["seat_detections"]:
             detection_point = ShapelyPoint(
                 detection.point.x, detection.point.y, detection.point.z
@@ -110,6 +108,8 @@ class ProcessDetections(State):
             blackboard["pointstamped"] = PointStamped(
                 header=Header(frame_id="map"), point=people[0].point
             )
+        else:
+            blackboard['people_det'] = people
 
         for chair_detection in non_sofa_chairs.keys():
             for person_detection in unseated_sofa_persons:
