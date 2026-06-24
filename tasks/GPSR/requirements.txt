@@ -1,3 +1,5 @@
 ollama
 jellyfish
 PyYAML
+gtts
+pydub

@@ -1,8 +1,10 @@
 import yasmin
 
+INPUT_PROMPT = "Enter command: "
+
 
 class KeyboardInputState(yasmin.State):
-    """Read a voice command from stdin instead of the microphone action server."""
+    """Read a command from keyboard instead of the microphone action server."""
 
     def __init__(self, node):
         super().__init__(outcomes=["succeeded", "aborted"])
@@ -10,7 +12,7 @@ class KeyboardInputState(yasmin.State):
         self.node = node
 
     def execute(self, blackboard):
-        prompt = self.node.get_parameter("input_prompt").value
+        prompt = INPUT_PROMPT
         self.node.get_logger().info(f"Keyboard input mode — {prompt}")
 
         try:
