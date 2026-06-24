@@ -9,6 +9,7 @@ how to run reid:
 """
 
 from typing import Dict, Tuple, Optional, List
+import os
 
 import rclpy
 from rclpy.node import Node
@@ -24,7 +25,6 @@ from deepface import DeepFace
 from lasr_vision_interfaces.srv import Recognise3D, AddFace, Recognise
 from lasr_vision_interfaces.msg import Detection3D, Detection
 
-import tensorflow as tfl
 from tensorflow.compat.v1 import ConfigProto
 from tensorflow.compat.v1 import InteractiveSession
 
@@ -34,9 +34,6 @@ from visualization_msgs.msg import Marker
 from tf2_geometry_msgs import do_transform_point
 
 Mat = np.ndarray
-
-print("TensorFlow:", tfl.__version__)
-print("GPUs:", tfl.config.list_physical_devices("GPU"))
 
 
 class ReID(Node):

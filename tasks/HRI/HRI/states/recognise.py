@@ -17,6 +17,7 @@ import message_filters
 
 from lasr_vision_interfaces.msg import Detection3D
 from lasr_vision_interfaces.srv import Recognise3D, YoloDetection3D
+from . import HRILearnFaces
 
 
 class Recognise(yasmin_ros.ServiceState):
@@ -100,7 +101,7 @@ class Recognise(yasmin_ros.ServiceState):
                 blackboard["guest_data"][detection.name][
                     "seated_point"
                 ] = detection.point
-                blackboard["seat_indexes"][detection.name] = blackboard["person_index"]
+                # blackboard["seat_indexes"][detection.name] = blackboard["person_index"]
                 return "succeeded"
 
         return "aborted"
@@ -121,6 +122,15 @@ def main():
     sm = yasmin.StateMachine(outcomes=["succeeded", "failed"], handle_sigint=True)
 
     check = yasmin.CbState(outcomes=["succeeded"], callback=check)
+
+    sm.add_state(
+        "ADD_FACE",
+        HRILearnFaces(guest_id='guest1', dataset_size=10),
+        transitions={
+            'succeeded': 'RECOGNISE',
+            'failed': 'failed'
+        }
+    )
 
     sm.add_state(
         "RECOGNISE",

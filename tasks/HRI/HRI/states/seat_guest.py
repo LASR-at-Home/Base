@@ -108,7 +108,7 @@ class ProcessDetections(State):
 
         if len(people) == 1:
             blackboard["pointstamped"] = PointStamped(
-                header=Header(frame_id="map"), point=people[0]
+                header=Header(frame_id="map"), point=people[0].point
             )
 
         for chair_detection in non_sofa_chairs.keys():

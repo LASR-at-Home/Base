@@ -41,7 +41,7 @@ class ReceiveObject(StateMachine):
         self.add_state(
             "CLEAR_OCTOMAP",
             ClearOctomap(),
-            transitions={"succeeded": "LOOK_LEFT", "aborted": "failed"},
+            transitions={"succeeded": "LOOK_AROUND", "aborted": "failed"},
         )
 
         self.add_state(

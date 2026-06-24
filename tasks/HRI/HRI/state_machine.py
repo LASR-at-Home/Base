@@ -97,7 +97,7 @@ class HRI(yasmin.StateMachine):
         self.add_state(
             "GREET_2",  # SM2: Greets guest
             LookAndGreetGuest(guest_id="guest2"),
-            transitions={"succeeded": "GUIDE_TO_SEAT", "failed": "failed"},
+            transitions={"succeeded": "GUIDE_TO_SEAT_2", "failed": "failed"},
         )
         
         self.add_state(
@@ -170,11 +170,11 @@ class HRI(yasmin.StateMachine):
             yasmin.YASMIN_LOG_INFO('Guest1: ')
             for key in guest1.keys():
                 value = guest1[key]
-                yasmin.YASMIN_LOG_INFOf(f'{key}: {value}')
+                yasmin.YASMIN_LOG_INFO(f'{key}: {value}')
             yasmin.YASMIN_LOG_INFO('Guest2: ')
             for key in guest2.keys():
-                value = guest1[key]
-                yasmin.YASMIN_LOG_INFOf(f'{key}: {value}')
+                value = guest2[key]
+                yasmin.YASMIN_LOG_INFO(f'{key}: {value}')
         else:
             yasmin.YASMIN_LOG_INFO('Guest1: ')
             for key in guest1.keys():

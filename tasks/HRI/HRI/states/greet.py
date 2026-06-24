@@ -7,6 +7,7 @@ from lasr_skills import (
     AskAndListen,
     ReceiveObject,
     StopEyeTracker,
+    Wait
 )
 from HRI.states import (
     GetNameAndDrink,
@@ -212,9 +213,18 @@ class GreetGuest(yasmin.StateMachine):
             "STOP_EYE_TRACKING_2",
             StopEyeTracker(),
             transitions={
-                "succeeded": "GRAB_BAG",
+                "succeeded": "WAIT",
                 "failed": "failed",
             },
+        )
+
+        self.add_state(
+            'WAIT',
+            Wait(2),
+            transitions={
+                'succeeded': 'GRAB_BAG',
+                'failed': 'failed'
+            }
         )
 
         self.add_state(

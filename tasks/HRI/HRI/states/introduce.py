@@ -149,7 +149,7 @@ class Introduce(yasmin.StateMachine):
         self.add_state(
             "GRAB_GUEST_POINT",
             guest_loop,
-            transitions={"succeeded": "succeeded", "continue": "GET_INTRODUCTION_STR"},
+            transitions={"succeeded": "GET_HOST", "continue": "GET_INTRODUCTION_STR"},
         )
 
         self.add_state(
@@ -208,7 +208,7 @@ class Introduce(yasmin.StateMachine):
                 "canceled": "failed",
                 "timeout": "SAY_INTRODUCTION",
             },
-            remappings={'pointstamped': 'guest_point'}
+            remappings={'pointstamped': 'host_point'}
         )
         
         self.add_state(

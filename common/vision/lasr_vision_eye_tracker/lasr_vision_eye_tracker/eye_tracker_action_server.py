@@ -174,7 +174,6 @@ class EyeTracker(Node):
 
         future = self._head_state_client.call_async(request)
         future.add_done_callback(wait.handle_resp)
-        self.get_logger().warn("Waiting for response from get head join values")
         while not wait.event.wait():
             pass
 
@@ -197,9 +196,7 @@ class EyeTracker(Node):
 
         send_goal_future = self._head_action_client.send_goal_async(goal)
         send_goal_future.add_done_callback(wait.handle_goal)
-        self.get_logger().info("Waiting for response from look centre")
         while not wait.event.wait(0.5):
-            self.get_logger().warn("Centre head goal was not accepted.")
             break
 
     def _move_head_up(
@@ -230,14 +227,8 @@ class EyeTracker(Node):
 
         send_goal_future = self._head_action_client.send_goal_async(goal)
         send_goal_future.add_done_callback(wait.handle_goal)
-        self.get_logger().info("Waiting for move head up to be finished")
         while not wait.event.wait(0.5):
-            self.get_logger().warn("Timed out for head movement, assuming finished")
             break
-
-        self.get_logger().info(str(self._move_up_count))
-        self.get_logger().info(str(self._max_move_up_count))
-        # self.get_logger().info(self._move_up_count)
         self._move_up_count += 1
 
     def detect_cb(self, image: Image, depth_image: Image):
@@ -256,7 +247,6 @@ class EyeTracker(Node):
 
         future = self._yolo_keypoint_client.call_async(req)
         future.add_done_callback(wait.handle_resp)
-        # self.get_logger().info('Waiting for yolo response in detect cb')
         while not wait.event.wait():
             pass
 
@@ -360,9 +350,6 @@ class EyeTracker(Node):
         send_goal_future.add_done_callback(wait.handle_goal)
 
         while not wait.event.wait(0.5):
-            self.get_logger().warn(
-                "Timed out waiting for head controller to return a goal result, assuming it executed correctly"
-            )
             break
 
         self.ts.registerCallback(self.detect_cb)
@@ -393,11 +380,7 @@ class EyeTracker(Node):
 
                 send_goal_future = self._head_point_action_client.send_goal_async(g)
                 send_goal_future.add_done_callback(wait.handle_goal)
-                self.get_logger().info("Waiting point head action result")
                 while wait.event.wait(0.5):
-                    self.get_logger().warn(
-                        "Timed out for point head action, assuming it finished"
-                    )
                     break
 
             if goal_handle.is_cancel_requested:

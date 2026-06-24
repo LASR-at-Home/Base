@@ -302,7 +302,7 @@ def parse_args() -> dict:
 
     parser.add_argument(
         "--energy_threshold",
-        type=Optional[int],
+        type=int,
         default=None,
         help="Energy threshold for silence detection. Using this disables automatic adjustment",
     )
