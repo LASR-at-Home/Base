@@ -38,7 +38,7 @@ class Restaurant(yasmin.StateMachine):
 
         self.add_state(
             "SAY_START",
-            Say(text="Start of the restaurant task."),
+            Say(text="Start of the restaurant task. Put your hand up straight to notify me when you're ready to order."),
             transitions={
                 "succeeded": "SAVE_BAR_POSE",
                 "aborted": "SAVE_BAR_POSE",

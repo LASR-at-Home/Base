@@ -39,14 +39,8 @@ class GetOrderFromBar(yasmin.StateMachine):
         self.add_state(
             "GO_TO_BAR",
             GoToLocation(),
-            transitions={"succeeded": "FACE_BARMAN", "failed": "failed"},
-            remappings={"location": "bar_pose"},
-        )
-
-        self.add_state(
-            "FACE_BARMAN",
-            GoToLocation(location=parameters["barman"]),
             transitions={"succeeded": "BUILD_PLACE_ORDER", "failed": "failed"},
+            remappings={"location": "bar_pose"},
         )
 
         self.add_state(
@@ -105,7 +99,7 @@ class GetOrderFromBar(yasmin.StateMachine):
             "ANNOUNCE_ORDER",
             Say(),
             transitions={
-                "succeeded": "succeeded",
+                "succeeded": "GO_TO_BAR",
                 "aborted": "failed",
                 "canceled": "failed",
             },
