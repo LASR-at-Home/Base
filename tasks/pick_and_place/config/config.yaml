@@ -45,6 +45,11 @@
           position: {x: -0.6363920463255814, y: -2.107459083686513, z: 0.0}              # <-- ВСТАВ pose
           orientation: {x: 0.0, y: 0.0, z: -0.8431441386528592, w: 0.5376876058226823}
 
+      extra_surface:
+        pose:
+          position: {x: 0.2685513414272136, y: -1.0408096690305066, z: 0.0}
+          orientation: {x: 0.0, y: 0.0, z: 0.9975020239235763, w: 0.07063789541293575}
+
         # Shelves — used by ScanShelves in the NEXT deliverable.
         # shelf_order is the iteration list; shelves.<id> holds per-shelf config.
         # (Tune look_point / polygon / z when the fake cabinet is built.)
