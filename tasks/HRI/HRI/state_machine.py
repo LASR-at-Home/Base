@@ -115,7 +115,7 @@ class HRI(yasmin.StateMachine):
         self.add_state(
             "INTRODUCE",
             Introduce(),
-            transitions={"succeeded": "ROTATE", "failed": "failed"},
+            transitions={"succeeded": "ROTATE", "failed": "ROTATE"},
         )
 
         self.add_state(
