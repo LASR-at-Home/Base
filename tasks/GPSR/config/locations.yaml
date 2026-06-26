@@ -6,8 +6,8 @@ locations:
       y: 0.0
       z: 0.0
     position:
-      x: -0.765
-      y: 2.524
+      x: -0.21985836327075958
+      y: -0.3910328149795532
       z: 0.0
   kitchen:
     orientation:
@@ -16,8 +16,8 @@ locations:
       y: 0.0
       z: 0.0
     position:
-      x: 1.717
-      y: -1.3
+      x: 0.09475485235452652
+      y: -1.5902152061462402
       z: 0.0
   living room:
     orientation:
@@ -26,8 +26,8 @@ locations:
       y: 0.0
       z: 0.0
     position:
-      x: 7.546
-      y: 0.722
+      x: 1.4500606060028076
+      y: -1.735890507698059
       z: 0.0
   office:
     orientation:
@@ -36,6 +36,6 @@ locations:
       y: 0.0
       z: 0.0
     position:
-      x: 3.2
-      y: 4.1
+      x: 1.7903468608856201
+      y: -0.8167726993560791
       z: 0.0
