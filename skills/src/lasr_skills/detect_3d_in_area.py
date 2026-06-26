@@ -14,6 +14,8 @@ from geometry_msgs.msg import Polygon, Point, Point32, PolygonStamped, PointStam
 from shapely.geometry import Point as ShapelyPoint
 from shapely.geometry.polygon import Polygon as ShapelyPolygon
 
+import math
+
 
 class Detect3DInArea(yasmin.StateMachine):
     class FilterDetections(yasmin.State):
@@ -79,12 +81,9 @@ class Detect3DInArea(yasmin.StateMachine):
             )
 
             for detection in detected_objects:
-                if (
-                    detection.point.x == "nan"
+                if math.isnan(
+                    detection.point.x
                 ):  # CHECK:  Potential broken? float vs string?
-                    yasmin.YASMIN_LOG_WARN(
-                        "NAN detection check work"
-                    )  # Remove line if works
                     continue
                 yasmin.YASMIN_LOG_INFO(
                     f"Detected a {detection.name} at x:{detection.point.x}, y:{detection.point.y}, z:{detection.point.z}"

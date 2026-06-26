@@ -1,6 +1,7 @@
 gpsr:
   ros__parameters:
     llm_model: "gemma3"
+    llm_model: "gemma3"
     llm_host: "http://localhost:11434"
     cloud_host: "127.0.0.1"          # server.py;
     cloud_port: 8765
