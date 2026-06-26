@@ -1,5 +1,3 @@
-
-
 from .wait import Wait
 
 from .detect_3d import Detect3D
@@ -38,7 +36,6 @@ from .go_to_location_with_play_motion import SafeGoToLocation
 from .start_task import StartDoorSM
 
 from .follow_person import FollowPerson
-
 
 # from .detect_pose import DetectPose
 # from .find_person import FindPerson

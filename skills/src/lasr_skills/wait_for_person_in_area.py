@@ -17,12 +17,13 @@ class CheckForPerson(State):
 
     def execute(self, blackboard):
         people = len(blackboard["detections_3d"])
-            
+
         if people:
             yasmin.YASMIN_LOG_INFO(f"Found {people} people in wait area.")
             return "done"
-        
-        return 'not_done'
+
+        return "not_done"
+
 
 class WaitForPersonInArea(StateMachine):
     def __init__(
@@ -59,7 +60,7 @@ class WaitForPersonInArea(StateMachine):
             self.detection_polygon = ShapelyPolygon(
                 [top_left, top_right, bottom_right, bottom_left]
             )
-        
+
         self.add_state(
             "DETECT_PEOPLE_3D",
             Detect3DInArea(
@@ -69,10 +70,10 @@ class WaitForPersonInArea(StateMachine):
                 z_max=10.0,
             ),
             transitions={"succeeded": "CHECK_FOR_PERSON", "failed": "failed"},
-            remappings={"detections_3d": "detections_3d"}
+            remappings={"detections_3d": "detections_3d"},
         )
         self.add_state(
             "CHECK_FOR_PERSON",
             CheckForPerson(),
-            transitions={"done": "succeeded", "not_done": "DETECT_PEOPLE_3D"}
+            transitions={"done": "succeeded", "not_done": "DETECT_PEOPLE_3D"},
         )

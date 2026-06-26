@@ -7,7 +7,7 @@ from lasr_skills import (
     AskAndListen,
     ReceiveObject,
     StopEyeTracker,
-    Wait
+    Wait,
 )
 from HRI.states import (
     GetNameAndDrink,
@@ -49,7 +49,7 @@ class LookAndGreetGuest(yasmin.StateMachine):
         )
         self.add_state(
             "WAIT_FOR_GUEST",
-            WaitForPersonInArea(polygon_param='door_polygon'),
+            WaitForPersonInArea(polygon_param="door_polygon"),
             transitions={
                 "succeeded": "GET_PERSON_POINT",
                 "failed": "SAY_WAITING_FOR_GUEST",
@@ -219,12 +219,7 @@ class GreetGuest(yasmin.StateMachine):
         )
 
         self.add_state(
-            'WAIT',
-            Wait(2),
-            transitions={
-                'succeeded': 'GRAB_BAG',
-                'failed': 'failed'
-            }
+            "WAIT", Wait(2), transitions={"succeeded": "GRAB_BAG", "failed": "failed"}
         )
 
         self.add_state(

@@ -59,7 +59,6 @@ def generate_launch_description():
         output="screen",
     )
 
-
     state_machine = Node(
         package="HRI",
         executable="sm",

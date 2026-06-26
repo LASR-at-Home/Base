@@ -12,7 +12,14 @@ from yasmin import Blackboard, StateMachine, State
 from yasmin_ros import set_ros_loggers, ServiceState
 from yasmin_viewer import YasminViewerPub
 
-from geometry_msgs.msg import Pose, PoseStamped, PoseWithCovarianceStamped, Quaternion, Point, PointStamped
+from geometry_msgs.msg import (
+    Pose,
+    PoseStamped,
+    PoseWithCovarianceStamped,
+    Quaternion,
+    Point,
+    PointStamped,
+)
 from lasr_skills import GoToLocation
 from scipy.spatial.transform import Rotation as R
 import numpy as np
@@ -22,11 +29,11 @@ import math
 class Rotate(StateMachine):
     class GetRotatedPose(State):
         def __init__(
-                self,
-                angle: Optional[float] = None,
-                target_point: Optional[Point] = None,
-                mode: Optional[str] = None,  # "angle" or "point"
-            ):
+            self,
+            angle: Optional[float] = None,
+            target_point: Optional[Point] = None,
+            mode: Optional[str] = None,  # "angle" or "point"
+        ):
 
             super().__init__(outcomes=["succeeded", "failed"])
 
@@ -38,7 +45,7 @@ class Rotate(StateMachine):
                 self.add_input_key("target_point")
             self.target_point = target_point
 
-            self.mode = mode   
+            self.mode = mode
 
             self.add_output_key("target_pose")
 
@@ -54,6 +61,7 @@ class Rotate(StateMachine):
                     history=HistoryPolicy.KEEP_LAST,
                 ),
             )
+
         def robot_point_cb(self, msg: PoseWithCovarianceStamped):
             self.robot_pose = msg
 
@@ -69,8 +77,7 @@ class Rotate(StateMachine):
             )
 
             rot_matrix = R.from_quat(current_orientation)
-            new_rot_matrix = rot_matrix * R.from_euler("z", self.angle, degrees=True
-            )
+            new_rot_matrix = rot_matrix * R.from_euler("z", self.angle, degrees=True)
 
             matrix = new_rot_matrix.as_quat()
             return Pose(
@@ -82,7 +89,7 @@ class Rotate(StateMachine):
                     w=matrix[3],
                 ),
             )
-        
+
         def calculate_pose_from_point(self):
             rx = self.robot_pose.pose.pose.position.x
             ry = self.robot_pose.pose.pose.position.y
@@ -91,7 +98,7 @@ class Rotate(StateMachine):
             dy = self.target_point.y - ry
             target_yaw = math.atan2(dy, dx)
 
-            new_rot_matrix = R.from_euler('z', target_yaw, degrees=False)
+            new_rot_matrix = R.from_euler("z", target_yaw, degrees=False)
             matrix = new_rot_matrix.as_quat()
 
             return Pose(
@@ -103,17 +110,21 @@ class Rotate(StateMachine):
                     w=matrix[3],
                 ),
             )
-        
+
         def execute(self, blackboard):
 
-            if ("angle" in blackboard.keys() 
-                and blackboard["angle"] is not None 
-                and self.angle is None):
+            if (
+                "angle" in blackboard.keys()
+                and blackboard["angle"] is not None
+                and self.angle is None
+            ):
                 self.angle = blackboard["angle"]
 
-            if ("target_point" in blackboard.keys() 
-                and blackboard["target_point"] is not None 
-                and self.target_point is None):
+            if (
+                "target_point" in blackboard.keys()
+                and blackboard["target_point"] is not None
+                and self.target_point is None
+            ):
                 if isinstance(blackboard["target_point"], PointStamped):
                     self.target_point = blackboard["target_point"].point
                 else:
@@ -121,17 +132,21 @@ class Rotate(StateMachine):
 
             goal = None
 
-            if self.mode == "angle" and self.angle is not None:      # Rotate using angle
+            if self.mode == "angle" and self.angle is not None:  # Rotate using angle
                 goal = self.calcuate_pose_from_angle()
-            elif self.mode == "point" and self.target_point is not None:    # Rotate to face point
+            elif (
+                self.mode == "point" and self.target_point is not None
+            ):  # Rotate to face point
                 goal = self.calculate_pose_from_point()
-            else:                           # Not Specified
+            else:  # Not Specified
                 if self.angle is not None:
                     goal = self.calcuate_pose_from_angle()
                 elif self.target_point is not None:
                     goal = self.calculate_pose_from_point()
                 else:
-                    yasmin.YASMIN_LOG_INFO("Rotation angle or target point not Specified")
+                    yasmin.YASMIN_LOG_INFO(
+                        "Rotation angle or target point not Specified"
+                    )
                     return "failed"
 
             if goal is not None:
@@ -142,10 +157,11 @@ class Rotate(StateMachine):
                 return "failed"
 
     def __init__(
-            self, 
-            angle: Optional[float] = None, 
-            target_point: Optional[Point] = None, 
-            mode: Optional[str] = None):
+        self,
+        angle: Optional[float] = None,
+        target_point: Optional[Point] = None,
+        mode: Optional[str] = None,
+    ):
         super().__init__(outcomes=["succeeded", "failed"])
 
         self.add_input_key("target_point")
@@ -163,6 +179,7 @@ class Rotate(StateMachine):
             remappings={"location": "target_pose"},
         )
 
+
 def main():
     rclpy.init()
 
@@ -177,6 +194,7 @@ def main():
     yasmin.YASMIN_LOG_INFO(outcome)
 
     rclpy.shutdown()
+
 
 if __name__ == "__main__":
     main()

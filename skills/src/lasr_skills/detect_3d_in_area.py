@@ -16,6 +16,7 @@ from shapely.geometry.polygon import Polygon as ShapelyPolygon
 
 import math
 
+
 class Detect3DInArea(yasmin.StateMachine):
     class FilterDetections(yasmin.State):
         def __init__(
@@ -80,7 +81,9 @@ class Detect3DInArea(yasmin.StateMachine):
             )
 
             for detection in detected_objects:
-                if math.isnan(detection.point.x):  # CHECK:  Potential broken? float vs string?
+                if math.isnan(
+                    detection.point.x
+                ):  # CHECK:  Potential broken? float vs string?
                     continue
                 yasmin.YASMIN_LOG_INFO(
                     f"Detected a {detection.name} at x:{detection.point.x}, y:{detection.point.y}, z:{detection.point.z}"

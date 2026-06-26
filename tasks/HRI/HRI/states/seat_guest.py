@@ -109,7 +109,7 @@ class ProcessDetections(State):
                 header=Header(frame_id="map"), point=people[0].point
             )
         else:
-            blackboard['people_det'] = people
+            blackboard["people_det"] = people
 
         for chair_detection in non_sofa_chairs.keys():
             for person_detection in unseated_sofa_persons:

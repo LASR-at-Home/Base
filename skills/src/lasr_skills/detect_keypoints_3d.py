@@ -76,7 +76,7 @@ class DetectKeypoints3D(ServiceState):
         self.ts = message_filters.ApproximateTimeSynchronizer(
             [image_sub, depth_sub], queue_size=10, slop=slop
         )
-        
+
         self.ts.registerCallback(self.callback)
 
     def callback(self, image_msg, depth_msg):
@@ -118,9 +118,11 @@ class DetectKeypoints3D(ServiceState):
         for x, detection in enumerate(response.detections):
             yasmin.YASMIN_LOG_INFO(f"Detection {x}")
             for keypoint in detection.keypoints:
-                yasmin.YASMIN_LOG_INFO(f"keypoint: {keypoint.keypoint_name}, point: {keypoint.point}")
+                yasmin.YASMIN_LOG_INFO(
+                    f"keypoint: {keypoint.keypoint_name}, point: {keypoint.point}"
+                )
 
-        blackboard["keypoint_detections_3d"] = response 
+        blackboard["keypoint_detections_3d"] = response
         blackboard["image_raw"] = self.image_msg
 
         return "succeeded"
@@ -137,7 +139,7 @@ def main():
     # def printKeypoints(blackboard):
     #     if len(blackboard["keypoint_detections_3d"].detections) == 0:
     #         return "failed"
-        
+
     #     for x, detection in enumerate(blackboard["keypoint_detections_3d"].detections):
     #             yasmin.YASMIN_LOG_INFO(f"Detection {x}")
     #             for keypoint in detection.keypoints:
@@ -152,10 +154,10 @@ def main():
     # sm.add_state(
     #     "PROCESS_RESPONSE",
     #     yasmin.CbState(
-    #         outcomes=["succeeded", "failed"], 
+    #         outcomes=["succeeded", "failed"],
     #         callback=printKeypoints),
     #     transitions={
-    #         "succeeded": "succeeded", 
+    #         "succeeded": "succeeded",
     #         "failed": "failed",
     #     },
     # )

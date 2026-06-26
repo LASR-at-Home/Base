@@ -78,7 +78,7 @@ class HRI(yasmin.StateMachine):
 
         self.add_state(
             "SEAT_GUEST",  # SM3: Locates and seats guest in free seat
-            SeatGuest(guest_id='guest1'),
+            SeatGuest(guest_id="guest1"),
             transitions={"succeeded": "CHECK", "failed": "failed"},
         )
 
@@ -99,16 +99,16 @@ class HRI(yasmin.StateMachine):
             LookAndGreetGuest(guest_id="guest2"),
             transitions={"succeeded": "GUIDE_TO_SEAT_2", "failed": "failed"},
         )
-        
+
         self.add_state(
             "GUIDE_TO_SEAT_2",  # GUIDES GUEST TO SEATING AREA
             SafeGoToLocation(location_param="seat_pose"),
             transitions={"succeeded": "SEAT_GUEST_2", "failed": "failed"},
         )
-        
+
         self.add_state(
             "SEAT_GUEST_2",  # SM3: Locates and seats guest in free seat
-            SeatGuest(guest_id='guest2'),
+            SeatGuest(guest_id="guest2"),
             transitions={"succeeded": "CHECK", "failed": "failed"},
         )
 
@@ -141,24 +141,18 @@ class HRI(yasmin.StateMachine):
                 "failed": "failed",
             },
         )
-        
+
+        self.add_state("STOP_TIMER", StopTimer(), transitions={"succeeded": "SAY_STOP"})
+
         self.add_state(
-            'STOP_TIMER',
-            StopTimer(),
-            transitions={
-                'succeeded': 'SAY_STOP'
-            }
-        )
-        
-        self.add_state(
-            'SAY_STOP',
+            "SAY_STOP",
             Say(),
             transitions={
-                'succeeded': 'succeeded',
-                'aborted': 'failed',
-                'canceled': 'failed',
+                "succeeded": "succeeded",
+                "aborted": "failed",
+                "canceled": "failed",
             },
-            remappings={'text': 'time_text'}
+            remappings={"text": "time_text"},
         )
 
     def check(self, blackboard):
@@ -167,16 +161,16 @@ class HRI(yasmin.StateMachine):
 
         if self.guest_id == 2:
             guest2 = blackboard["guest_data"]["guest2"]
-            yasmin.YASMIN_LOG_INFO('Guest1: ')
+            yasmin.YASMIN_LOG_INFO("Guest1: ")
             for key in guest1.keys():
                 value = guest1[key]
-                yasmin.YASMIN_LOG_INFO(f'{key}: {value}')
-            yasmin.YASMIN_LOG_INFO('Guest2: ')
+                yasmin.YASMIN_LOG_INFO(f"{key}: {value}")
+            yasmin.YASMIN_LOG_INFO("Guest2: ")
             for key in guest2.keys():
                 value = guest2[key]
-                yasmin.YASMIN_LOG_INFO(f'{key}: {value}')
+                yasmin.YASMIN_LOG_INFO(f"{key}: {value}")
         else:
-            yasmin.YASMIN_LOG_INFO('Guest1: ')
+            yasmin.YASMIN_LOG_INFO("Guest1: ")
             for key in guest1.keys():
                 value = guest1[key]
                 yasmin.YASMIN_LOG_INFO(f"{key}: {value}")

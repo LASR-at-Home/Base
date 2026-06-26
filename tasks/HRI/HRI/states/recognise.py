@@ -32,9 +32,7 @@ class Recognise(yasmin_ros.ServiceState):
 
         self.add_output_key("guest_data")
 
-        self.image_pub = self._node.create_publisher(
-            Image, 'recognise/image', 10
-        )
+        self.image_pub = self._node.create_publisher(Image, "recognise/image", 10)
 
         camera_qos = QoSProfile(
             depth=10,
@@ -111,7 +109,7 @@ class Recognise(yasmin_ros.ServiceState):
                 blackboard["seat_indexes"][detection.name] = blackboard["person_index"]
                 detected = True
 
-        return "aborted" if not detected else 'succeeded'
+        return "aborted" if not detected else "succeeded"
 
 
 def check(blackboard):
@@ -132,11 +130,8 @@ def main():
 
     sm.add_state(
         "ADD_FACE",
-        HRILearnFaces(guest_id='guest1', dataset_size=10),
-        transitions={
-            'succeeded': 'RECOGNISE',
-            'failed': 'failed'
-        }
+        HRILearnFaces(guest_id="guest1", dataset_size=10),
+        transitions={"succeeded": "RECOGNISE", "failed": "failed"},
     )
 
     sm.add_state(

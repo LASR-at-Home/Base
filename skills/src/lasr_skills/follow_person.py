@@ -56,10 +56,10 @@ class UpdateDetectionPolygon(State):
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, self.node)
 
         self.base_footprint_polygon = [
-            [3.5, 1.25],         # Top Left
-            [3.5, -1.25],        # Top Right
-            [-0.2, -1.75],        # Bottom Right
-            [-0.2, 1.75],         # Bottom Left
+            [3.5, 1.25],  # Top Left
+            [3.5, -1.25],  # Top Right
+            [-0.2, -1.75],  # Bottom Right
+            [-0.2, 1.75],  # Bottom Left
         ]
 
         self.debug_pub = self.node.create_publisher(
@@ -119,7 +119,7 @@ class EvaluateDetections(State):
 
         # Pulls detections from the blackboard populated by Detect3DInArea
         self.add_input_key("detections_3d")
-        self.add_input_key("last_known")  
+        self.add_input_key("last_known")
         # if using getpersonpoint after wait for person in area pass and remap
 
         self.add_output_key("location")
@@ -132,8 +132,9 @@ class EvaluateDetections(State):
 
         # Internal Loop Memory Tracking
         self.stationary_count = 0
-        self.last_known = None  # Stores the last known (x, y) map coordinate of the person
-
+        self.last_known = (
+            None  # Stores the last known (x, y) map coordinate of the person
+        )
 
         self.tf_buffer = tf2_ros.Buffer()
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, self.node)
@@ -181,7 +182,7 @@ class EvaluateDetections(State):
     def get_closest_person(self, detections):
         """Iterates through points and finds best person to go to."""
         best_person = None
-        closest_d = float('inf')
+        closest_d = float("inf")
 
         for person in detections:
             distance = self.calc_distance_between_points(person.point, self.last_known)
@@ -190,13 +191,12 @@ class EvaluateDetections(State):
                 best_person = person.point
         return best_person
 
-
     def execute(self, blackboard: Blackboard):
         # retrive robot's location in map
         try:
             transform = self.tf_buffer.lookup_transform(
-                "map",  
-                "base_footprint",  
+                "map",
+                "base_footprint",
                 rclpy.time.Time(),
                 timeout=rclpy.duration.Duration(seconds=1.0),
             )
@@ -206,39 +206,50 @@ class EvaluateDetections(State):
             return "paused"
 
         # Handle blackboard data
-        if "last_known" in blackboard.keys() and self.last_known != blackboard["last_known"]:
+        if (
+            "last_known" in blackboard.keys()
+            and self.last_known != blackboard["last_known"]
+        ):
             self.last_known = blackboard["last_known"]
 
-        detections = blackboard['detections_3d']
+        detections = blackboard["detections_3d"]
         if self.last_known is None:
             if len(detections) > 0:
-                self.node.get_logger().info("First detection found. Initializing last_known.")
+                self.node.get_logger().info(
+                    "First detection found. Initializing last_known."
+                )
                 self.last_known = detections[0].point
             else:
                 self.node.get_logger().warn("Waiting for first person detection...")
                 return "paused"
-            
+
         if "cancel_nav" not in blackboard.keys():
             blackboard["cancel_nav"] = False
-            
+
         # People found in frame
         if len(detections) > 0:
             personPoint = self.get_closest_person(detections)
-            
+
             if len(detections) > 1:
-                self.node.get_logger().warn("Multiple people in polygon. Tracking closest to last known.")
+                self.node.get_logger().warn(
+                    "Multiple people in polygon. Tracking closest to last known."
+                )
             else:
                 self.node.get_logger().info("Target locked.")
-  
-            distance_person_moved = self.calc_distance_between_points(personPoint, self.last_known)
-            distance_robot_from_person = self.calc_distance_between_points(personPoint, self.current_robot_point)
- 
+
+            distance_person_moved = self.calc_distance_between_points(
+                personPoint, self.last_known
+            )
+            distance_robot_from_person = self.calc_distance_between_points(
+                personPoint, self.current_robot_point
+            )
+
             if distance_person_moved > self.threshold:
                 # Person is actively moving — reset stationary counter and chase
                 self.last_known = personPoint
                 blackboard["last_known"] = personPoint
                 self.stationary_count = 0
- 
+
                 if distance_robot_from_person > (self.safe_distance + 0.3):
                     blackboard["location"] = self.create_goal_pose(
                         self.current_robot_point.x,
@@ -259,7 +270,7 @@ class EvaluateDetections(State):
                 # Person has not moved significantly this tick
                 self.last_known = personPoint
                 blackboard["last_known"] = personPoint
- 
+
                 if distance_robot_from_person <= (self.safe_distance + 0.3):
                     # Robot is close and person is stationary → count up
                     self.stationary_count += 1
@@ -278,16 +289,16 @@ class EvaluateDetections(State):
                         offset=True,
                     )
                     blackboard["stop_robot_requested"] = False
- 
+
             if self.stationary_count >= self.max_stationary:
                 self.node.get_logger().warn(
                     f"PERSON CONFIRMED STATIONARY AFTER {self.stationary_count} TICKS"
                 )
                 blackboard["cancel_nav"] = True
                 return "person_stationary"
- 
+
             return "paused"
- 
+
         distance_old_from_robot = self.calc_distance_between_points(
             self.last_known, self.current_robot_point
         )
@@ -308,12 +319,13 @@ class EvaluateDetections(State):
             blackboard["stop_robot_requested"] = True
             return "person_lost"
 
+
 class InitialRecovery(StateMachine):
     class ScanForPerson(StateMachine):
-        def __init__(self, direction: str="centre"):
+        def __init__(self, direction: str = "centre"):
             super().__init__(outcomes=["succeeded", "failed"])
             self.add_output_key("last_known")
-            
+
             self.add_state(
                 "PLAYMOTION",
                 PlayMotion(f"look_{direction}"),
@@ -334,17 +346,14 @@ class InitialRecovery(StateMachine):
             self.add_state(
                 "GET_PERSON_POINT",
                 GetPersonPoint(),
-                transitions={
-                    "succeeded": "succeeded", 
-                    "failed": "failed"
-                },
-        )
-    
+                transitions={"succeeded": "succeeded", "failed": "failed"},
+            )
+
     def __init__(self):
         super().__init__(outcomes=["succeeded", "failed"])
         self.add_output_key("last_known")
         self.add_output_key("cancel_nav")
-        
+
         self.add_state(
             "SAY_RECOVERING",
             Say(text="I can't see you."),
@@ -386,7 +395,7 @@ class InitialRecovery(StateMachine):
             "CANCEL_NAV",
             yasmin.CbState(outcomes=["done"], callback=self.cancel_nav),
             transitions={
-                "done":"failed",
+                "done": "failed",
             },
         )
 
@@ -421,9 +430,9 @@ class TrackPerson(StateMachine):
             "GET_PERSON_POINT",
             GetPersonPoint(),
             transitions={
-                "succeeded": "LOOK_AT_LAST_KNOWN", 
-                "failed": "EVALUATE_DETECTIONS"
-            }
+                "succeeded": "LOOK_AT_LAST_KNOWN",
+                "failed": "EVALUATE_DETECTIONS",
+            },
         )
         self.add_state(
             "LOOK_AT_LAST_KNOWN",
@@ -432,9 +441,9 @@ class TrackPerson(StateMachine):
                 "succeeded": "EVALUATE_DETECTIONS",
                 "aborted": "EVALUATE_DETECTIONS",
                 "canceled": "EVALUATE_DETECTIONS",
-                "timeout": "EVALUATE_DETECTIONS"
+                "timeout": "EVALUATE_DETECTIONS",
             },
-            remappings={"pointstamped": "last_known_stamped"}
+            remappings={"pointstamped": "last_known_stamped"},
         )
 
         # 3. Process Math & Blackboard Updates
@@ -452,17 +461,14 @@ class TrackPerson(StateMachine):
         # 4. Short Loop Buffer
         self.add_state(
             "WAIT",
-            Wait(0.2),  
+            Wait(0.2),
             transitions={"succeeded": "UPDATE_POLYGON", "failed": "failed"},
         )
 
         self.add_state(
             "BASIC_RECOVERY",
             InitialRecovery(),
-            transitions={
-                "succeeded": "EVALUATE_DETECTIONS", 
-                "failed": "person_lost"
-            },
+            transitions={"succeeded": "EVALUATE_DETECTIONS", "failed": "person_lost"},
         )
 
 
@@ -471,14 +477,15 @@ class TrackPerson(StateMachine):
     Overall Following Logic
 """
 
+
 class GetPersonPoint(State):
     def __init__(self):
         super().__init__(outcomes=["succeeded", "failed"])
         self.add_input_key("detections_3d")
-        self.add_input_key("last_known") 
+        self.add_input_key("last_known")
 
-        self.add_output_key("last_known") 
-        self.add_output_key("last_known_stamped")  
+        self.add_output_key("last_known")
+        self.add_output_key("last_known_stamped")
 
         self.node = yasmin_ros.logger_node
 
@@ -490,38 +497,43 @@ class GetPersonPoint(State):
         )
 
     def execute(self, blackboard):
-        
+
         try:
             if not blackboard["detections_3d"]:
                 return "failed"
-            
-            if "last_known" in blackboard.keys() and blackboard["last_known"] is not None:
+
+            if (
+                "last_known" in blackboard.keys()
+                and blackboard["last_known"] is not None
+            ):
                 last_known = blackboard["last_known"]
             else:
                 last_known = blackboard["detections_3d"][0].point
-            
-            closest_distance = float('inf')
+
+            closest_distance = float("inf")
             for person in blackboard["detections_3d"]:
                 distance = self.calc_distance_between_points(person.point, last_known)
                 if distance < closest_distance:
                     closest_distance = distance
                     last_known = person.point
 
-
-            yasmin.YASMIN_LOG_WARN(f"DETECTIONS: {[detection.point for detection in blackboard['detections_3d']]} -- LAST_KNOWN: {last_known}")
+            yasmin.YASMIN_LOG_WARN(
+                f"DETECTIONS: {[detection.point for detection in blackboard['detections_3d']]} -- LAST_KNOWN: {last_known}"
+            )
             blackboard["last_known"] = last_known
             blackboard["last_known_stamped"] = PointStamped(
                 header=Header(
                     frame_id="map",
                     stamp=Time().to_msg(),
                 ),
-                point=last_known
+                point=last_known,
             )
 
             return "succeeded"
         except Exception as e:
             yasmin.YASMIN_LOG_ERROR(f"The following error occured: {e}")
             return "failed"
+
 
 class FollowPerson(StateMachine):
     def __init__(self):
@@ -538,7 +550,7 @@ class FollowPerson(StateMachine):
                 "canceled": "failed",
             },
         )
-        
+
         self.add_state(
             "UPDATE_POLYGON",
             UpdateDetectionPolygon(),
@@ -558,10 +570,7 @@ class FollowPerson(StateMachine):
         self.add_state(
             "GET_PERSON_POINT",
             GetPersonPoint(),
-            transitions={
-                "succeeded": "PRE_NAV_1", 
-                "failed": "WAIT_FOR_HOST"
-            },
+            transitions={"succeeded": "PRE_NAV_1", "failed": "WAIT_FOR_HOST"},
         )
 
         self.add_state(
@@ -574,7 +583,7 @@ class FollowPerson(StateMachine):
             },
         )
 
-        self.add_state( # Do PRE_NAV_1 Before
+        self.add_state(  # Do PRE_NAV_1 Before
             "SAY_FOLLOW",
             Say(text="I will now follow you. Lead the way slowly. "),
             transitions={
@@ -613,7 +622,9 @@ class FollowPerson(StateMachine):
 
         self.add_state(
             "CALL_LOST_PERSON_BACK",
-            Say(text="I seam to have lost track of you. I will wait until you are back infront of me. "),
+            Say(
+                text="I seam to have lost track of you. I will wait until you are back infront of me. "
+            ),
             transitions={
                 "succeeded": "POST_NAV_1",
                 "aborted": "POST_NAV_1",
@@ -641,13 +652,16 @@ class FollowPerson(StateMachine):
             transitions={
                 "succeeded": "PROCESS_RESPONSE",
                 "failed": "ASK_IF_ARRIVED",
-            }
+            },
         )
         self.add_state(
             "PROCESS_RESPONSE",
-            yasmin.CbState(outcomes=["yes", "unknown", "no"], callback=self.parse_arrival_confirmation),
+            yasmin.CbState(
+                outcomes=["yes", "unknown", "no"],
+                callback=self.parse_arrival_confirmation,
+            ),
             transitions={
-                "yes": "succeeded",     
+                "yes": "succeeded",
                 "unknown": "FEEDBACK_RESPONSE",
                 "no": "PRE_NAV_1",
             },
@@ -667,11 +681,12 @@ class FollowPerson(StateMachine):
         yasmin.YASMIN_LOG_INFO(f"Recieved response: {response}")
 
         if "yes" in response:
-            return "yes" 
+            return "yes"
         elif "no" in response:
-            return "no" 
+            return "no"
         else:
             return "unknown"
+
 
 def main():
     rclpy.init()
@@ -691,6 +706,7 @@ def main():
     yasmin.YASMIN_LOG_INFO(outcome)
 
     rclpy.shutdown()
+
 
 if __name__ == "__main__":
     main()

@@ -46,4 +46,6 @@ def generate_launch_description():
         ],
     )
 
-    return LaunchDescription([load_motions, yolo_service, follow_person, transcribe_speech])
+    return LaunchDescription(
+        [load_motions, yolo_service, follow_person, transcribe_speech]
+    )
