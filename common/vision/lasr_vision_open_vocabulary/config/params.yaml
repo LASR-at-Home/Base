@@ -2,7 +2,7 @@ lasr_vision_open_vocabulary:
   ros__parameters:
     model: 'grounding_dino'
     model_device: 'cuda'
-    grounding_dino_weights: '/home/robocup/Yara_ws/src/Base/common/vision/lasr_vision_open_vocabulary/models/grounding-dino-base'
+    grounding_dino_weights: ''
     yoloworld_weights: 'yolov8s-world.pt'
     use_sam: false
     sam_encoder_path: ''

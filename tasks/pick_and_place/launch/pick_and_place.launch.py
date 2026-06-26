@@ -12,7 +12,7 @@ from launch.actions import ExecuteProcess
 # then CLIP re-labels each crop against THIS list (fixes "Pringles -> cup"). Names
 # must be CATEGORY_MAP-friendly so routing works (see classify_category.py).
 CLIP_CANDIDATES = [
-    "pringles", "iced tea", "apple", "bottle", "can", "coke", "cup", "sprite", "water bottle", "banana",
+    "pringles", "iced tea", "apple", "milk", "can", "coke", "cup", "sprite","bowl", "spoon", "water bottle", "banana", "cereal"
 ]
 
 def generate_launch_description():
@@ -48,16 +48,16 @@ def generate_launch_description():
         ),
 
         # ── Perception: open-vocab detection + CLIP recognition rerank ────────
-        Node(
-            package="lasr_vision_open_vocabulary",
-            executable="open_vocabulary_node",
-            name="lasr_vision_open_vocabulary",
-            output="screen",
-            parameters=[
-                ov_params,
-                {"clip_rerank": False, "clip_candidates": CLIP_CANDIDATES},
-            ],
-        ),
+        # Node(
+        #     package="lasr_vision_open_vocabulary",
+        #     executable="open_vocabulary_node",
+        #     name="lasr_vision_open_vocabulary",
+        #     output="screen",
+        #     parameters=[
+        #         ov_params,
+        #         {"clip_rerank": True, "clip_candidates": CLIP_CANDIDATES},
+        #     ],
+        # ),
         Node(
             package="lasr_vision_open_vocabulary",
             executable="detection_visualizer",
@@ -66,14 +66,14 @@ def generate_launch_description():
         ),
 
         # ── Optional: LLM category-fallback service (CPU-forced) ─────────────
-        Node(
-            condition=IfCondition(use_llm),
-            package="lasr_llm",
-            executable="storing_groceries_service",
-            name="storing_groceries_query_llm_service",
-            output="screen",
-            additional_env={"CUDA_VISIBLE_DEVICES": ""},
-        ),
+        # Node(
+        #     condition=IfCondition(use_llm),
+        #     package="lasr_llm",
+        #     executable="storing_groceries_service",
+        #     name="storing_groceries_query_llm_service",
+        #     output="screen",
+        #     additional_env={"CUDA_VISIBLE_DEVICES": ""},
+        # ),
 
         # ── Task: state machine ──────────────────────────────────────────────
         Node(

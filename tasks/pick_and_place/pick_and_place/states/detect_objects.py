@@ -60,17 +60,18 @@ class DetectObjects(yasmin.State):
 
     # ── VLM naming (Ollama). DINO finds the boxes; the VLM says what each is.
     #    Run clip_rerank:=false in the launch — the VLM replaces CLIP here.
-    VLM_ENABLE = True
+    VLM_ENABLE = False
     VLM_MODEL = "moondream"
     VLM_HOST = "http://localhost:11434"
     VLM_TIMEOUT = 60.0
 
-    def __init__(self):
+    def __init__(self, queries:list = None):
         super().__init__(outcomes=["succeeded", "failed"])
         self.add_output_key("detected_objects")
 
         self.node = yasmin_ros.logger_node
         self.bridge = CvBridge()
+
         if queries is not None:
             self._queries = queries
         else:

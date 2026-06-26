@@ -19,8 +19,9 @@ from pick_and_place.states import (
     InstructPick,
     InstructPlace,
     AddTableCollision,  
-    GraspObject, 
-    ApproachTable
+    # GraspObject, 
+    ApproachTable,
+    ServeBreakfast
 )
 
 from rclpy.executors import MultiThreadedExecutor as Executor
@@ -76,18 +77,18 @@ class PickAndPlace(yasmin.StateMachine):
             "ADD_TABLE_COLLISION",
             AddTableCollision(head_tilt=-0.6),     # детект усього столу здалеку
             transitions={
-                "succeeded": "GO_TO_TABLE_FOR_PICK",   # було "DETECT_OBJECTS"
+                "succeeded": "DETECT_OBJECTS",   # було "DETECT_OBJECTS"
             },
         )
 
-        self.add_state(
-            "GO_TO_TABLE_FOR_PICK",
-            GoToLocation(location_param="pick_and_place.table.pose"),
-            transitions={
-                "succeeded": "DETECT_OBJECTS",
-                "failed":    "DETECT_OBJECTS",   # все одно пробуємо детект
-            },
-        )
+        # self.add_state(
+        #     "GO_TO_TABLE_FOR_PICK",
+        #     GoToLocation(location_param="pick_and_place.table.pose"),
+        #     transitions={
+        #         "succeeded": "DETECT_OBJECTS",
+        #         "failed":    "DETECT_OBJECTS",   # все одно пробуємо детект
+        #     },
+        # )
 
         # ── Detect all objects on the table (done ONCE) ───────────────────────
         self.add_state(
@@ -125,70 +126,72 @@ class PickAndPlace(yasmin.StateMachine):
             "DECIDE_DESTINATION",
             DecideDestination(),
             transitions={
-                "cabinet": "CHOOSE_SHELF",
+                "cabinet": "INSTRUCT_PICK",
                 "other":   "INSTRUCT_PICK",
             },
         )
 
         # ── Choose which cabinet shelf to place object on ─────────────────────
-        self.add_state(
-            "CHOOSE_SHELF",
-            ChooseShelf(),
-            transitions={
-                "succeeded": "INSTRUCT_PICK",
-                "failed":    "INSTRUCT_PICK",  # announce anyway
-            },
-        )
+        # self.add_state(
+        #     "CHOOSE_SHELF",
+        #     ChooseShelf(),
+        #     transitions={
+        #         "succeeded": "INSTRUCT_PICK",
+        #         "failed":    "INSTRUCT_PICK",  # announce anyway
+        #     },
+        # )
 
         # ── Instruct operator to pick up object ───────────────────────────────
         self.add_state(
             "INSTRUCT_PICK",
             InstructPick(),
             transitions={
-                "succeeded": "GRASP",
+                "succeeded": "INSTRUCT_PLACE",
                 "failed":    "INSTRUCT_PICK",  # retry instruction
             },
         )
-        self.add_state(
-            "GRASP", GraspObject(),
-            transitions={"succeeded": "GO_TO_DESTINATION", "failed": "GO_TO_DESTINATION"},
-        )
+
+        # self.add_state(
+        #     "GRASP", GraspObject(),
+        #     transitions={"succeeded": "GO_TO_DESTINATION", "failed": "GO_TO_DESTINATION"},
+        # )
+
         # ── Navigate to the chosen destination (pose set by DecideDestination)─
-        self.add_state(
-            "GO_TO_DESTINATION",
-            GoToLocation(),  # reads blackboard["location"]
-            transitions={
-                "succeeded": "INSTRUCT_PLACE",
-                "failed":    "INSTRUCT_PLACE",  # announce even if nav failed
-            },
-        )
+        # self.add_state(
+        #     "GO_TO_DESTINATION",
+        #     GoToLocation(),  # reads blackboard["location"]
+        #     transitions={
+        #         "succeeded": "INSTRUCT_PLACE",
+        #         "failed":    "INSTRUCT_PLACE",  # announce even if nav failed
+        #     },
+        # )
 
         # ── Instruct operator where to place object ───────────────────────────
         self.add_state(
             "INSTRUCT_PLACE",
             InstructPlace(),
             transitions={
-                "succeeded": "GO_TO_TABLE",
+                "succeeded": "FINISH",
                 "failed":    "INSTRUCT_PLACE",  # retry instruction
             },
         )
 
         # ── Navigate back to table for next object ────────────────────────────
-        self.add_state(
-            "GO_TO_TABLE",
-            GoToLocation(location_param="pick_and_place.table.pose"),
-            transitions={
-                "succeeded": "SELECT_OBJECT",  # loop back for next object
-                "failed":    "GO_TO_TABLE",     # retry navigation
-            },
-        )
+        # self.add_state(
+        #     "GO_TO_TABLE",
+        #     GoToLocation(location_param="pick_and_place.table.pose"),
+        #     transitions={
+        #         "succeeded": "SELECT_OBJECT",  # loop back for next object
+        #         "failed":    "GO_TO_TABLE",     # retry navigation
+        #     },
+        # )
 
         # ── Done ──────────────────────────────────────────────────────────────
         self.add_state(
             "FINISH",
             Say(
                 text="I have sorted all the objects I could see on the table. "
-                     "Pick and place complete."
+                     "I will now set up breakfast."
             ),
             transitions={
                 "succeeded": "succeeded",
@@ -196,6 +199,15 @@ class PickAndPlace(yasmin.StateMachine):
                 "canceled":  "succeeded",
             },
         )
+
+        # self.add_state(
+        #     "SERVE_BREAKFAST",
+        #     ServeBreakfast(),
+        #     transitions={
+        #         "succeeded": "succeeded",
+        #         "failed":   "succeeded",
+        #     },
+        # )
 
 class PickAndPlaceNode(Node):
     def __init__(self):

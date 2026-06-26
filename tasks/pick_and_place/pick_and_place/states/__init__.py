@@ -13,3 +13,4 @@ from .add_table_collision import AddTableCollision
 
 # from .grasp_object import GraspObject
 from .approach_table import ApproachTable
+from .serve_breakfast import ServeBreakfast

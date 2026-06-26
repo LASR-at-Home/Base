@@ -4,24 +4,46 @@
 
       # Category the referee designates as trash (announced on Setup Days).
       # Objects of this category are routed to the trash bin. "" disables it.
-      trash_category: "snack"
+      trash_category: "trash"
 
       # Open-vocab query words for table detection (common nouns).
-      objects: ["cup", "can", "bottle", "bowl", "box", "apple"]
+      objects: ["cup", "can", "bottle", "dish", "box", "fruit", "utensil", "snack", "carton", "food" ]
 
       table:
         pose:
-          position: {x: 0.5154840308921795, y: -3.297018781464196, z: 0.0}
-          orientation: {x: 0.0, y: 0.0, z: -0.7230045994832588, w: 0.6908432160237608}
-        look_point: [5.25, 2.27, 0.75]
+          position: {x: 0.5444910497763044, y: -2.4412505621588583, z: 0.0}           
+          orientation: {x: 0.0, y: 0.0, z: -0.7912741117828641, w: 6114615932519716}
+        observe_pose:
+          position: {x: 0.5876252953308133, y: -1.0687492206833655, z: 0.0}
+          orientation: {x: 0.0, y: 0.0, z: 0.996990359390238, w: 0.07752562984538826}
+        look_point: [5.25, 2.27, 0.78]
         polygon: [3.5, 1.0, 5.5, 1.0, 5.5, 3.5, 3.5, 3.5]
         search_polygon: [5.3, 3.8, 7.8, 3.8, 7.8, 5.9, 5.3, 5.9]
         z_min: 0.7
         z_max: 1.5
+        collision:
+          detect: true
+          frame_id: map
+          size: [1.02, 1.2, 0.9]
+          position: [1.2, -3.9, 0.37]
+
+      # ── DESTINATION 1: dishwasher (tableware + cutlery) ──
+      dishwasher:
+        pose:
+          position: {x: 0.8212924899016142, y: 0.299479767042867, z: 0.0}     
+          orientation: {x: 0.0, y: 0.0, z: -0.7527398351858691, w: 0.6583181149902764}
+
+      # ── DESTINATION 2: trash bin ──
+      trash_bin:
+        pose:
+          position: {x: 0.8212924899016142, y: 0.299479767042867, z: 0.0}              # <-- ВСТАВ pose
+          orientation: {x: 0.0, y: 0.0, z: -0.7527398351858691, w: 0.6583181149902764}
+
+      # ── DESTINATION 3: cabinet (fake: boxes with objects) ──
       cabinet:
         pose:
-          position: {x: -0.13809676070081464, y: -0.30871316659971554, z: 0.0}              # <-- ВСТАВ pose
-          orientation: {x: 0.0, y: 0.0, z: 0.9938913879096476, w: 0.11036262519093311}
+          position: {x: -0.24395824472217295, y: -1.7992161774429396, z: 0.0}              # <-- ВСТАВ pose
+          orientation: {x: 0.0, y: 0.0, z: 0.9801022379942061, w: 0.13519825869117716}
 
         # Shelves — used by ScanShelves in the NEXT deliverable.
         # shelf_order is the iteration list; shelves.<id> holds per-shelf config.
@@ -46,6 +68,7 @@
             polygon: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
             z_min: 0.3
             z_max: 0.6
+
       grasp:
         enable: false
         reach: 0.80
@@ -55,5 +78,5 @@
       # ── BREAKFAST SURFACE (bowl and spoon pickup location) ──
       breakfast_surface:
         pose:
-          position: {x: -0.5679924129320376, y: -2.8240229666620253, z: 0.0}
-          orientation: {x: 0.0, y: 0.0, z: 0.9940136153079541, w: 0.10925627022011415}
+          position: {x: 0.5444910497763044, y: -2.4412505621588583, z: 0.0}
+          orientation: {x: 0.0, y: 0.0, z: -0.7912741117828641, w: 0.6114615932519716}

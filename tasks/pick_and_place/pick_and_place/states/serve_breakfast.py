@@ -32,7 +32,7 @@ class ServeBreakfast(yasmin.StateMachine):
     def __init__(self):
         super().__init__(outcomes=["succeeded", "failed"], handle_sigint=True)
 
-        # # Navigate to breakfast surface
+        # Navigate to breakfast surface
         self.add_state(
             "GO_TO_BREAKFAST_SURFACE",
             GoToLocation(location_param="pick_and_place.breakfast_surface.pose"),
@@ -93,7 +93,7 @@ class ServeBreakfast(yasmin.StateMachine):
             "INSTRUCT_PICK_SPOON",
             InstructPick(),
             transitions={
-                "succeeded": "INSTRUCT_PICK_SPOON",
+                "succeeded": "GO_TO_TABLE_1",
                 "failed": "INSTRUCT_PICK_SPOON",
             },
         )
@@ -140,7 +140,7 @@ class ServeBreakfast(yasmin.StateMachine):
         # Cereal
         self.add_state(
             "DETECT_CEREAL",
-            DetectObjects(queries=["box"]),
+            DetectObjects(queries=["cereal"]),
             transitions={
                 "succeeded": "SELECT_CEREAL",
                 "failed": "DETECT_CEREAL",
@@ -148,7 +148,7 @@ class ServeBreakfast(yasmin.StateMachine):
         )
         self.add_state(
             "SELECT_CEREAL",
-            SelectAndVisualiseObject(target_name="box"),
+            SelectAndVisualiseObject(target_name="cereal"),
             transitions={
                 "succeeded": "INSTRUCT_PICK_CEREAL",
                 "finished": "DETECT_CEREAL",  # not found, retry detection
@@ -166,7 +166,7 @@ class ServeBreakfast(yasmin.StateMachine):
         # Milk
         self.add_state(
             "DETECT_MILK",
-            DetectObjects(queries=["bottle"]),
+            DetectObjects(queries=["milk"]),
             transitions={
                 "succeeded": "SELECT_MILK",
                 "failed": "DETECT_MILK",
@@ -174,7 +174,7 @@ class ServeBreakfast(yasmin.StateMachine):
         )
         self.add_state(
             "SELECT_MILK",
-            SelectAndVisualiseObject(target_name="bottle"),
+            SelectAndVisualiseObject(target_name="milk"),
             transitions={
                 "succeeded": "INSTRUCT_PICK_MILK",
                 "finished": "DETECT_MILK",  # not found, retry detection
