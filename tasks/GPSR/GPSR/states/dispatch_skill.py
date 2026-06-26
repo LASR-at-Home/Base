@@ -1,7 +1,7 @@
 import yasmin
 from geometry_msgs.msg import Point, Pose, Quaternion
 
-from GPSR.states.query_llm import load_locations
+from GPSR.world import load_locations
 from GPSR.tts import say
 from lasr_skills import GoToLocation
 
@@ -11,10 +11,7 @@ class DispatchSkill(yasmin.State):
 
     def __init__(self, node):
         super().__init__(outcomes=["succeeded", "failed"])
-        self.add_input_key("skill")
-        self.add_input_key("skill_args")
         self.add_input_key("steps")
-        self.add_input_key("plan_description")
         self.node = node
         self.locations = load_locations(node)
 
@@ -53,18 +50,12 @@ class DispatchSkill(yasmin.State):
             return self._say(args.get("text", ""))
         if skill == "go_to_location":
             return self._go_to_location(args.get("location", ""))
-        self.node.get_logger().warn(f"Unknown skill: {skill}")
-        self._say(f"I don't know how to {skill}")
-        return "failed"
+        self.node.get_logger().info(f"Skipping skill '{skill}' (not yet actuated)")
+        return "succeeded"
 
     def execute(self, blackboard):
-        steps = blackboard["steps"] if "steps" in blackboard else None
-
-        if steps:
-            for step in steps:
-                outcome = self._execute_step(step["skill"], step.get("args", {}))
-                if outcome == "failed":
-                    return "failed"
-            return "succeeded"
-
-        return self._execute_step(blackboard["skill"], blackboard["skill_args"])
+        for step in blackboard["steps"]:
+            outcome = self._execute_step(step["skill"], step.get("args", {}))
+            if outcome == "failed":
+                return "failed"
+        return "succeeded"

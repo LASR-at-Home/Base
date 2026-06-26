@@ -155,6 +155,12 @@ class HRI(yasmin.StateMachine):
             remappings={"text": "time_text"},
         )
 
+        self.add_state(
+            "INTRODUCE",
+            Introduce(),
+            transitions={"succeeded": "succeeded", "failed": "failed"},
+        )
+
     def check(self, blackboard):
         guest1 = blackboard["guest_data"]["guest1"]
         yasmin.YASMIN_LOG_INFO(f"{self.guest_id}")
