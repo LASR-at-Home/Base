@@ -1,9 +1,14 @@
 """Load robot world config from yaml and format it for the LLM planner."""
 
 import os
+from pathlib import Path
 
 import yaml
-from ament_index_python.packages import get_package_share_directory
+
+try:
+    from ament_index_python.packages import get_package_share_directory
+except ImportError:  # pragma: no cover - non-ROS/macOS fallback
+    get_package_share_directory = None
 
 __all__ = [
     "build_world",
@@ -74,7 +79,12 @@ def selected_skill_lines(selected_skills: list, all_skill_lines: str) -> str:
 
 def _pkg_config(node, filename):
     """Absolute path to a file under share/GPSR/config/."""
-    return os.path.join(get_package_share_directory("GPSR"), "config", filename)
+    if get_package_share_directory is not None:
+        try:
+            return os.path.join(get_package_share_directory("GPSR"), "config", filename)
+        except Exception:
+            pass
+    return str(Path(__file__).resolve().parents[1] / "config" / filename)
 
 
 def load_skills_text(node):
