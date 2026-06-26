@@ -12,6 +12,7 @@ from launch.launch_description_sources import AnyLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
+
 def generate_launch_description():
     input_mode = LaunchConfiguration("input_mode")
 

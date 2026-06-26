@@ -14,7 +14,14 @@ from GPSR.states import DispatchSkill, KeyboardInputState, ListenState, QueryLLM
 
 from std_msgs.msg import Empty
 
-from lasr_skills import Say, GoToLocation, StopEyeTracker, PlayMotion, StartDoorSM, Listen
+from lasr_skills import (
+    Say,
+    GoToLocation,
+    StopEyeTracker,
+    PlayMotion,
+    StartDoorSM,
+    Listen,
+)
 
 
 def _ensure_params_file() -> None:
@@ -23,11 +30,12 @@ def _ensure_params_file() -> None:
     params = os.path.join(get_package_share_directory("GPSR"), "config", "params.yaml")
     sys.argv.extend(["--ros-args", "--params-file", params])
 
+
 class GPSR(yasmin.StateMachine):
     def __init__(self, node):
         super().__init__(outcomes=["succeeded", "failed"])
 
-        self.instruction_count = 1 
+        self.instruction_count = 1
         self.understand_attempts = 0
 
         # Wait for Start signal at the door
@@ -52,7 +60,7 @@ class GPSR(yasmin.StateMachine):
             transitions={"succeeded": "GO_TO_INSTRUCT_POINT", "failed": "START_CON"},
         )
 
-        # Main Task loop: 
+        # Main Task loop:
         self.add_state(
             "GO_TO_INSTRUCT_POINT",
             GoToLocation(location_param="instruction_point"),
@@ -75,7 +83,7 @@ class GPSR(yasmin.StateMachine):
             transitions={"next": "REQUEST_INTRUCTION", "finish": "succeeded"},
         )
 
-        self.add_state(     # Swap for ask and listen? then check then count number of requests/ if want to exit
+        self.add_state(  # Swap for ask and listen? then check then count number of requests/ if want to exit
             "REQUEST_INTRUCTION",
             Say(),
             transitions={
@@ -122,13 +130,22 @@ class GPSR(yasmin.StateMachine):
         )
         self.add_state(
             "CHECK_OUTCOME",
-            yasmin.CbState(outcomes=["succeeded", "failed", "no_command"], callback=self.checkOutcome),
-            transitions={"succeeded": "SAY_COMPLETE", "failed":"UNABLE_TO_UNDERSTAND",  "no_command":"GO_TO_INSTRUCT_POINT"},
+            yasmin.CbState(
+                outcomes=["succeeded", "failed", "no_command"],
+                callback=self.checkOutcome,
+            ),
+            transitions={
+                "succeeded": "SAY_COMPLETE",
+                "failed": "UNABLE_TO_UNDERSTAND",
+                "no_command": "GO_TO_INSTRUCT_POINT",
+            },
         )
 
         self.add_state(
             "SAY_COMPLETE",
-            Say(text="I have finished doing the task. I will go back to the instruction point."),
+            Say(
+                text="I have finished doing the task. I will go back to the instruction point."
+            ),
             transitions={
                 "succeeded": "GO_TO_INSTRUCT_POINT",
                 "aborted": "failed",
@@ -146,11 +163,9 @@ class GPSR(yasmin.StateMachine):
             },
         )
 
-
-
     def wait_cb(self, blackboard, msg):
-            yasmin.YASMIN_LOG_INFO("RECEIVED START SIGNAL")
-            return "succeeded"
+        yasmin.YASMIN_LOG_INFO("RECEIVED START SIGNAL")
+        return "succeeded"
 
     def setup(self):
         start_con_sm = yasmin.Concurrence(
@@ -172,7 +187,7 @@ class GPSR(yasmin.StateMachine):
         )
 
         return start_con_sm
-        
+
     def checkRequest(self, blackboard):
         if self.instruction_count == 1:
             blackboard["text"] = "I am ready for the first command. "
@@ -182,42 +197,45 @@ class GPSR(yasmin.StateMachine):
             blackboard["text"] = "I am ready for the last command. "
         else:
             return "finish"
-        
-        return "next"
-    
 
-        # Callback to check the blackboard["steps"] 
+        return "next"
+
+        # Callback to check the blackboard["steps"]
         #  - if it is only 1 say and the say is one of the fails then dont increment intructs but fail count
         #  - if say but a "no command given" ignore
         #  - if full plan: reset fails and increment intruction
 
-        #TODO: Check if plan is possible/ conductable - Skill may be to just say something (like time or description)
+        # TODO: Check if plan is possible/ conductable - Skill may be to just say something (like time or description)
         # if len(steps) == 1 and steps[0].get("skill") == "say":
         #     if (plan["plan_description"] == "I could not generate a plan for that command." or
         #         plan["plan_description"] == "I'm sorry, I don't know how to do that."):
-    def checkOutcome(self, blackboard):        
-        steps = blackboard['steps']
+
+    def checkOutcome(self, blackboard):
+        steps = blackboard["steps"]
         yasmin.YASMIN_LOG_INFO(f"{steps}")
 
         if len(steps) == 1 and steps[0].get("skill") == "say":
             say_text = steps[0].get("args").get("text")
-            if  say_text == "no command given" or say_text == ".":
+            if say_text == "no command given" or say_text == ".":
                 return "no_outcome"
-            
+
             # If there is only 1 skill then assume it wasndidnt understand and ask for a rephrase/ repeat
-            if (say_text == "I could not generate a plan for that command." or
-                say_text == "I'm sorry, I don't know how to do that."):
+            if (
+                say_text == "I could not generate a plan for that command."
+                or say_text == "I'm sorry, I don't know how to do that."
+            ):
                 self.understand_attempts += 1
 
                 if self.understand_attempts > 3:
                     return "failed"
-                
-                return "success"    # Don't increment
-            
+
+                return "success"  # Don't increment
+
         self.instruction_count += 1
         self.understand_attempts = 0
 
         return "succeeded"
+
 
 class GPSRNode(Node):
     def __init__(self):
