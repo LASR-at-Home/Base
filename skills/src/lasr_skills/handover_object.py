@@ -40,7 +40,7 @@ class HandoverObject(StateMachine):
             self.add_input_key("object_name")
 
         self.object_name = object_name
-        self.verticle = vertical 
+        self.vertical = vertical 
 
         if can_hold:
             self.createHoldable()
@@ -53,7 +53,7 @@ class HandoverObject(StateMachine):
             self.add_state(
                 "REQUEST",
                 Say(
-                    text=f"Please take the {self.object_name} from my basket.",
+                    text=f"Please take the {self.object_name} from my basket.  I will wait a few seconds.",
                 ),
                 transitions={
                     "succeeded": "LOWER_TORSO",
@@ -65,7 +65,7 @@ class HandoverObject(StateMachine):
             self.add_state(
                 "REQUEST",
                 Say(
-                    format_str="Please take the {} from my basket.",
+                    format_str="Please take the {} from my basket.  I will wait a few seconds.",
                 ),
                 transitions={
                     "succeeded": "LOWER_TORSO",
@@ -159,7 +159,7 @@ class HandoverObject(StateMachine):
             self.add_state(
                 "SAY_GRAB",
                 Say(
-                    text=f"Please grab the {self.object_name} in my hand. I will wait for a few seconds, before releasing the item.",
+                    text=f"Please grab the {self.object_name} in my hand. I will wait for a few seconds before releasing it.",
                 ),
                 transitions={
                     "succeeded": "WAIT_5",
@@ -171,7 +171,7 @@ class HandoverObject(StateMachine):
             self.add_state(
                 "SAY_GRAB",
                 Say(
-                    format_str="Please grab the {} in my hand. I will wait for a few seconds, before releasing the item.",
+                    format_str="Please grab the {} in my hand. I will wait for a few seconds before releasing it.",
                 ),
                 transitions={
                     "succeeded": "WAIT_5",
@@ -216,6 +216,15 @@ class HandoverObject(StateMachine):
             "HOME",
             PlayMotion(motion_name="home"),
             transitions={
+                "succeeded": "CLOSE_GRIPPER",
+                "aborted": "failed",
+                "canceled": "failed",
+            },
+        )
+        self.add_state(
+            "CLOSE_GRIPPER",
+            PlayMotion(motion_name="close"),
+            transitions={
                 "succeeded": "succeeded",
                 "aborted": "failed",
                 "canceled": "failed",
@@ -230,7 +239,7 @@ def main():
     yasmin_ros.set_ros_loggers()
 
     try:
-        sm = HandoverObject(object_name="bag")
+        sm = HandoverObject(object_name="bag", can_hold=True)
         bb = Blackboard()
 
         outcome = sm(bb)

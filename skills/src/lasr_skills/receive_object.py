@@ -39,7 +39,7 @@ class ReceiveObject(StateMachine):
             self.add_input_key("object_name")
 
         self.object_name = object_name
-        self.verticle = vertical 
+        self.vertical = vertical 
 
         if can_hold:
             self.createHoldable()
@@ -51,7 +51,7 @@ class ReceiveObject(StateMachine):
             self.add_state(
                 "REQUEST",
                 Say(
-                    text=f"I cannot grab the {self.object_name} in my hand. Can you please place it in my basket.",
+                    text=f"I cannot grab the {self.object_name} in my hand. Can you please place it in my basket. I will wait a few seconds.",
                 ),
                 transitions={
                     "succeeded": "LOWER_TORSO",
@@ -63,7 +63,7 @@ class ReceiveObject(StateMachine):
             self.add_state(
                 "REQUEST",
                 Say(
-                    format_str="I cannot grab the {} in my hand. Can you please place it in my basket.",
+                    format_str="I cannot grab the {} in my hand. Can you please place it in my basket. I will wait a few seconds.",
                 ),
                 transitions={
                     "succeeded": "LOWER_TORSO",
@@ -240,7 +240,7 @@ def main():
     yasmin_ros.set_ros_loggers()
 
     try:
-        sm = ReceiveObject(object_name="bag")
+        sm = ReceiveObject(object_name="bag", can_hold=True)
         bb = Blackboard()
 
         outcome = sm(bb)

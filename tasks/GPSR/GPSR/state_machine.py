@@ -20,7 +20,7 @@ from std_msgs.msg import Empty
 from lasr_skills import (
     Say,
     GoToLocation,
-    StopEyeTracker,
+    AskAndListen,
     PlayMotion,
     StartDoorSM,
     Listen,
@@ -47,7 +47,7 @@ class GPSR(yasmin.StateMachine):
             yasmin_ros.MonitorState(
                 topic_name="/gpsr/start",
                 outcomes=["succeeded", "failed"],
-                monitor_handler=self.wait_cb,
+                monitor_handler=self.start_cb,
                 msg_type=Empty,
             ),
             transitions={
@@ -67,7 +67,22 @@ class GPSR(yasmin.StateMachine):
         self.add_state(
             "GO_TO_INSTRUCT_POINT",
             GoToLocation(location_param="instruction_point"),
-            transitions={"succeeded": "POST_NAV", "failed": "failed"},
+            transitions={"succeeded": "WAIT_FOR_NEXT_COMMAND", "failed": "failed"},
+        )
+
+        self.add_state(
+            "WAIT_FOR_NEXT_COMMAND",  # Awaits for next task. Can later be updated to use tablet
+            yasmin_ros.MonitorState(
+                topic_name="/gpsr/next_task",
+                outcomes=["succeeded", "failed"],
+                monitor_handler=self.wait_cb,
+                msg_type=Empty,
+            ),
+            transitions={
+                "succeeded": "POST_NAV",
+                "failed": "WAIT_FOR_NEXT_COMMAND",
+                "canceled": "failed",
+            },
         )
 
         self.add_state(
@@ -96,7 +111,7 @@ class GPSR(yasmin.StateMachine):
             },
         )
 
-        self.add_state(
+        self.add_state( # Change to ask and listen then check if ready
             "WAIT_FOR_COMMAND",
             Listen(),
             transitions={
@@ -104,6 +119,9 @@ class GPSR(yasmin.StateMachine):
                 "aborted": "WAIT_FOR_COMMAND",
             },
         )
+
+        # Add a seconday ask and listen to double check command
+
         self.add_state(
             "QUERY_LLM",
             QueryLLM(node),
@@ -134,11 +152,12 @@ class GPSR(yasmin.StateMachine):
         self.add_state(
             "CHECK_OUTCOME",
             yasmin.CbState(
-                outcomes=["succeeded", "failed", "no_command"],
+                outcomes=["succeeded", "failed", "request_rephrase","no_command"],
                 callback=self.checkOutcome,
             ),
             transitions={
                 "succeeded": "SAY_COMPLETE",
+                "request_rephrase": "REQUEST_REPHRASE",
                 "failed": "UNABLE_TO_UNDERSTAND",
                 "no_command": "GO_TO_INSTRUCT_POINT",
             },
@@ -155,10 +174,20 @@ class GPSR(yasmin.StateMachine):
                 "canceled": "failed",
             },
         )
+        self.add_state(
+            "REQUEST_REPHRASE",
+            Say(text="Im sorry could you rephrase the command."),
+            transitions={
+                "succeeded": "GO_TO_INSTRUCT_POINT",
+                "aborted": "failed",
+                "canceled": "failed",
+            },
+        )
+        #REQUEST OPERATOR ARTER FIRST 3 TIMES
 
         self.add_state(
             "UNABLE_TO_UNDERSTAND",
-            Say(text="I cannot understand that task."),
+            Say(text="I cannot understand or do that currently. Please move on to the next command. "),
             transitions={
                 "succeeded": "GO_TO_INSTRUCT_POINT",
                 "aborted": "failed",
@@ -166,8 +195,12 @@ class GPSR(yasmin.StateMachine):
             },
         )
 
-    def wait_cb(self, blackboard, msg):
+    def start_cb(self, blackboard, msg):
         yasmin.YASMIN_LOG_INFO("RECEIVED START SIGNAL")
+        return "succeeded"
+    
+    def wait_cb(self, blackboard, msg):
+        yasmin.YASMIN_LOG_INFO("RECEIVED SIGNAL FOR NEXT TASK")
         return "succeeded"
 
     def setup(self):
@@ -220,19 +253,17 @@ class GPSR(yasmin.StateMachine):
         if len(steps) == 1 and steps[0].get("skill") == "say":
             say_text = steps[0].get("args").get("text")
             if say_text == "no command given" or say_text == ".":
-                return "no_outcome"
+                return "no_command"
 
             # If there is only 1 skill then assume it wasndidnt understand and ask for a rephrase/ repeat
-            if (
-                say_text == "I could not generate a plan for that command."
-                or say_text == "I'm sorry, I don't know how to do that."
-            ):
+            else:
                 self.understand_attempts += 1
 
                 if self.understand_attempts > 3:
+                    self.instruction_count += 1
                     return "failed"
-
-                return "success"  # Don't increment
+                
+                return "request_rephrase"
 
         self.instruction_count += 1
         self.understand_attempts = 0
