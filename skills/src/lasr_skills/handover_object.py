@@ -30,8 +30,9 @@ class ClearOctomap(ServiceState):
     def _create_request(self, blackboard):
         return Empty.Request()
 
-# Update to take new param which dictates if the object is to be held (placed in gripper) or place in basket
-class ReceiveObject(StateMachine):
+
+# PORT BACK TO YASMIN AND COPY SAME PREMISE AS RECIEVE AND ADD isheld
+class HandoverObject(StateMachine):
     def __init__(self, object_name: Union[str, None] = None, vertical: bool = True, can_hold: bool=False):
 
         super().__init__(outcomes=["succeeded", "failed"])
@@ -44,14 +45,15 @@ class ReceiveObject(StateMachine):
         if can_hold:
             self.createHoldable()
         else:
-            self.requestPlaceInBasket()       
+            self.requestPlaceInBasket()
+
     
     def requestPlaceInBasket(self):
         if self.object_name is not None:
             self.add_state(
                 "REQUEST",
                 Say(
-                    text=f"I cannot grab the {self.object_name} in my hand. Can you please place it in my basket.",
+                    text=f"Please take the {self.object_name} from my basket.",
                 ),
                 transitions={
                     "succeeded": "LOWER_TORSO",
@@ -63,7 +65,7 @@ class ReceiveObject(StateMachine):
             self.add_state(
                 "REQUEST",
                 Say(
-                    format_str="I cannot grab the {} in my hand. Can you please place it in my basket.",
+                    format_str="Please take the {} from my basket.",
                 ),
                 transitions={
                     "succeeded": "LOWER_TORSO",
@@ -102,9 +104,8 @@ class ReceiveObject(StateMachine):
             },
         )
 
-
-    
     def createHoldable(self):
+
         self.add_state(
             "CLEAR_OCTOMAP",
             ClearOctomap(),
@@ -115,14 +116,14 @@ class ReceiveObject(StateMachine):
             "LOOK_AROUND",
             PlayMotion(motion_name="head_tour"),
             transitions={
-                "succeeded": "REQUEST",
+                "succeeded": "SAY_REACH_ARM",
                 "aborted": "failed",
                 "canceled": "failed",
             },
         )
 
         self.add_state(
-            "REQUEST",
+            "SAY_REACH_ARM",
             Say(
                 text="Please step back, I am going to reach my arm out."
             ),
@@ -138,7 +139,7 @@ class ReceiveObject(StateMachine):
                 "REACH_ARM",
                 PlayMotion(motion_name="reach_arm_vertical_gripper"),
                 transitions={
-                    "succeeded": "OPEN_GRIPPER",
+                    "succeeded": "SAY_GRAB",
                     "aborted": "failed",
                     "canceled": "failed",
                 },
@@ -148,26 +149,17 @@ class ReceiveObject(StateMachine):
                 "REACH_ARM",
                 PlayMotion(motion_name="reach_arm_horizontal_gripper"),
                 transitions={
-                    "succeeded": "OPEN_GRIPPER",
+                    "succeeded": "SAY_GRAB",
                     "aborted": "failed",
                     "canceled": "failed",
                 },
             )
 
-        self.add_state(
-            "OPEN_GRIPPER",
-            PlayMotion(motion_name="open"),
-            transitions={
-                "succeeded": "SAY_PLACE",
-                "aborted": "failed",
-                "canceled": "failed",
-            },
-        )
         if self.object_name is not None:
             self.add_state(
-                "SAY_PLACE",
+                "SAY_GRAB",
                 Say(
-                    text=f"I am ready to recieve the {self.object_name} in my hand. I will wait for a few seconds.",
+                    text=f"Please grab the {self.object_name} in my hand. I will wait for a few seconds, before releasing the item.",
                 ),
                 transitions={
                     "succeeded": "WAIT_5",
@@ -177,9 +169,9 @@ class ReceiveObject(StateMachine):
             )
         else:
             self.add_state(
-                "SAY_PLACE",
+                "SAY_GRAB",
                 Say(
-                    format_str="I am ready to recieve the {} in my hand. I will wait for a few seconds.",
+                    format_str="Please grab the {} in my hand. I will wait for a few seconds, before releasing the item.",
                 ),
                 transitions={
                     "succeeded": "WAIT_5",
@@ -192,39 +184,37 @@ class ReceiveObject(StateMachine):
             "WAIT_5",
             Wait(5),
             transitions={
-                "succeeded": "CLOSE_HALF_GRIPPER",
-                "failed": "CLOSE_HALF_GRIPPER",
+                "succeeded": "OPEN_GRIPPER",
+                "failed": "OPEN_GRIPPER",
             },
         )
 
-        # TODO: No longer a gripper server for this  smach_ros.ServiceState("/parallel_gripper_controller/grasp", Empty)
-        # Alternatively:
-        #   1. https://docs.pal-robotics.com/sdk/24.09/actions/advanced_grasping-grasp.html but verify Fruity has the action server
-        #   2. /gripper_controller/incrementer service or
-        #   3. /gripper_controller/ action server        - NOT AVAILABLE | use lasr_manipulation
-
-        # self.add_state(
-        #     "CLOSE_GRIPPER",
-        #     smach_ros.ServiceState("parallel_gripper_controller/grasp", Empty),
-        #     transitions={
-        #         "succeeded": "FOLD_ARM",
-        #         "aborted": "failed",
-        #         "canceled": "failed",
-        #     },
-        # )
+    
         self.add_state(
-            "CLOSE_HALF_GRIPPER",  # TEMPORARY REPLACEMENT
-            PlayMotion(motion_name="close_half"),
+            "OPEN_GRIPPER",
+            PlayMotion(motion_name="open"),
             transitions={
-                "succeeded": "FOLD_ARM",
+                "succeeded": "ASK_TO_STEP_AWAY",
                 "aborted": "failed",
                 "canceled": "failed",
             },
         )
 
         self.add_state(
-            "FOLD_ARM",
-            PlayMotion(motion_name="cml_arm_away"),
+            "ASK_TO_STEP_AWAY",
+            Say(
+                text="Please step back. I will put my arm away."
+            ),
+            transitions={
+                "succeeded": "HOME",
+                "aborted": "HOME",
+                "canceled": "HOME",
+            },
+        )
+
+        self.add_state(
+            "HOME",
+            PlayMotion(motion_name="home"),
             transitions={
                 "succeeded": "succeeded",
                 "aborted": "failed",
@@ -240,7 +230,7 @@ def main():
     yasmin_ros.set_ros_loggers()
 
     try:
-        sm = ReceiveObject(object_name="bag")
+        sm = HandoverObject(object_name="bag")
         bb = Blackboard()
 
         outcome = sm(bb)

@@ -43,7 +43,6 @@ setup(
         "console_scripts": [
             "sm = restaurant.state_machine:main",
             "survey = restaurant.states.survey:main",
-            "detect_wave = restaurant.states.detect_wave:main",
         ],
     },
 )

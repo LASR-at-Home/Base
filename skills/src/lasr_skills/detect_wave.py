@@ -1,120 +1,145 @@
-from smach_ros import RosState
+import rclpy
+import yasmin
+from yasmin_ros import ServiceState
+from time import sleep
+import message_filters
+from sensor_msgs.msg import Image, CameraInfo
+from geometry_msgs.msg import PointStamped
 from std_msgs.msg import Header
-from cv2_pcl import pcl_to_img_msg
-from lasr_vision_interfaces.srv import BodyPixKeypointDetection
-import ros2_numpy as rnp
-import numpy as np
-from geometry_msgs.msg import PointStamped, Point
-
-# pcl_msg = rospy.wait_for_message("/head_front_camera/depth/points", PointCloud2)
-# cv_im = cv2_pcl.pcl_to_cv2(pcl_msg)
-# img_msg = cv2_img.cv2_img_to_msg(cv_im)
+from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
+from lasr_vision_interfaces.srv import YoloPoseDetection3D
 
 
-class DetectWave(RosState):
-    def __init__(self, node, confidence: float):
+class DetectWave(ServiceState):
+    def __init__(
+        self,
+        image_topic="/head_front_camera/rgb/image_raw",
+        depth_topic="/head_front_camera/depth/image_raw",
+        camera_info_topic="/head_front_camera/depth/camera_info",
+        model="yolo11n-pose.pt",
+        confidence=0.5,
+        target_frame="base_footprint",
+    ):
         super().__init__(
-            node,
-            outcomes=["succeeded", "failed"],
-            input_keys=["pcl_msg"],
-            output_keys=["wave_detected", "wave_position"],
+            srv_type=YoloPoseDetection3D,
+            srv_name="/yolo/detect3d_pose",
+            create_request_handler=self._create_req,
+            outcomes=["waving", "not_waving", "failed"],
+            response_handler=self._response_handler,
         )
+        self.set_description("Detect a waving customer via YOLO 3D pose")
+        self.add_output_key("wave_detected")
+        self.add_output_key("wave_position")
+        self.model = model
         self.confidence = confidence
+        self.target_frame = target_frame
 
-        # Set up the service client
-        self.detect_service_client = self.create_client(
-            BodyPixKeypointDetection, "/bodypix/keypoint_detection"
+        qos = QoSProfile(
+            depth=10,
+            reliability=ReliabilityPolicy.BEST_EFFORT,
+            history=HistoryPolicy.KEEP_LAST,
         )
-        while not self.detect_service_client.wait_for_service(timeout_sec=1.0):
-            self.node.get_logger().info("Service not available, waiting...")
-        self.keypoint_response = None
+        img_sub = message_filters.Subscriber(
+            self._node, Image, image_topic, qos_profile=qos
+        )
+        depth_sub = message_filters.Subscriber(
+            self._node, Image, depth_topic, qos_profile=qos
+        )
+        info_sub = message_filters.Subscriber(
+            self._node, CameraInfo, camera_info_topic, qos_profile=qos
+        )
+        self._info_cache = message_filters.Cache(info_sub, 10)
+        self._ts = message_filters.ApproximateTimeSynchronizer(
+            [img_sub, depth_sub], queue_size=10, slop=1.0
+        )
+        self._data = None
 
-    def detect_callback(self, future):
-        try:
-            self.keypoint_response = future.result()
-            self.node.get_logger().info(f"Detection response: {self.keypoint_response}")
-        except Exception as e:
-            self.node.get_logger().error(f"Service call failed: {e}")
-        finally:
-            self.processing = False
+    def _create_req(self, blackboard):
+        self._data = None
 
-    def execute(self, userdata):
-        if not "pcl_msg" in userdata:
-            self.node.get_logger().error(f"PCL message doesn't exist!")
-        pcl_msg = userdata.pcl_msg
+        def cb(img, depth):
+            if self._data is not None:
+                return
+            info = self._info_cache.getLast()
+            if info is None:
+                return
+            self._data = (img, depth, info)
 
-        try:
-            # Prepare request for keypoint detection
-            bp_req = BodyPixKeypointDetection.Request()
-            bp_req.image_raw = pcl_to_img_msg(pcl_msg)
-            # bp_req.image_raw = request.image_raw
-            bp_req.confidence = self.confidence
+        self._ts.registerCallback(cb)
+        while self._data is None:
+            yasmin.YASMIN_LOG_INFO("waiting for camera")
+            sleep(0.5)
 
-            # Call BodyPix keypoint detection
-            future = self.detect_service_client.call_async(bp_req)
-            future.add_done_callback(self.detect_callback)
+        img, depth, info = self._data
+        req = YoloPoseDetection3D.Request()
+        req.image_raw = img
+        req.depth_image = depth
+        req.depth_camera_info = info
+        req.model = self.model
+        req.confidence = self.confidence
+        req.target_frame = self.target_frame
+        return req
 
-            # take out the detected keypoints
-            detected_keypoints = self.detect_callback.keypoints
+    def _response_handler(self, blackboard, response):
+        best_point, best_dist = None, None
+        for det in response.detections:
+            kp = {k.keypoint_name: k.point for k in det.keypoints}
+            shoulder = None
+            if (
+                "left_wrist" in kp
+                and "left_shoulder" in kp
+                and kp["left_wrist"].z > kp["left_shoulder"].z
+            ):
+                shoulder = kp["left_shoulder"]
+            elif (
+                "right_wrist" in kp
+                and "right_shoulder" in kp
+                and kp["right_wrist"].z > kp["right_shoulder"].z
+            ):
+                shoulder = kp["right_shoulder"]
+            if shoulder is None:
+                continue
+            d = shoulder.x**2 + shoulder.y**2  # найближчий, хто махає
+            if best_dist is None or d < best_dist:
+                best_dist, best_point = d, shoulder
 
-            gesture_to_detect = None
-            keypoint_info = {
-                keypoint.keypoint_name: {"x": keypoint.x, "y": keypoint.y}
-                for keypoint in detected_keypoints
-            }
+        if best_point is None:
+            blackboard["wave_detected"] = False
+            blackboard["wave_position"] = PointStamped()
+            return "not_waving"
 
-            if "leftShoulder" in keypoint_info and "leftWrist" in keypoint_info:
-                if keypoint_info["leftWrist"]["y"] < keypoint_info["leftShoulder"]["y"]:
-                    gesture_to_detect = "raising_left_arm"
-            if "rightShoulder" in keypoint_info and "rightWrist" in keypoint_info:
-                if (
-                    keypoint_info["rightWrist"]["y"]
-                    < keypoint_info["rightShoulder"]["y"]
-                ):
-                    gesture_to_detect = "raising_right_arm"
+        yasmin.YASMIN_LOG_INFO(
+            f"Waving customer at ({best_point.x:.2f}, {best_point.y:.2f})"
+        )
+        blackboard["wave_detected"] = True
+        blackboard["wave_position"] = PointStamped(
+            header=Header(frame_id=self.target_frame), point=best_point
+        )
+        return "waving"
 
-            if gesture_to_detect is not None:
-                self.node.get_logger().info(f"Detected gesture: {gesture_to_detect}")
 
-            # Process wave point in point cloud
-            wave_point = keypoint_info.get(
-                "leftShoulder"
-                if gesture_to_detect == "raising_left_arm"
-                else "rightShoulder"
-            )
-            pcl_xyz = rnp.point_cloud2.pointcloud2_to_xyz_array(
-                pcl_msg, remove_nans=False
-            )
+def main(args=None):
+    rclpy.init(args=args)
+    node = rclpy.create_node(
+        node_name="detect_wave",
+        allow_undeclared_parameters=True,
+        automatically_declare_parameters_from_overrides=True,
+    )
+    sm = yasmin.StateMachine(outcomes=["waving", "not_waving", "failed"])
+    sm.add_state(
+        "DETECT",
+        DetectWave(),
+        transitions={
+            "waving": "waving",
+            "not_waving": "not_waving",
+            "failed": "failed",
+        },
+    )
+    outcome = sm(yasmin.Blackboard())
+    node.get_logger().info(f"DetectWave outcome: {outcome}")
+    node.destroy_node()
+    rclpy.shutdown()
 
-            wave_position = np.zeros(3)
-            for i in range(-5, 5):
-                for j in range(-5, 5):
-                    if np.any(
-                        np.isnan(
-                            pcl_xyz[int(wave_point["y"]) + i][int(wave_point["x"]) + j]
-                        )
-                    ):
-                        self.node.get_logger().warn("NaN point in PCL")
-                        continue
-                    wave_position += pcl_xyz[int(wave_point["y"]) + i][
-                        int(wave_point["x"]) + j
-                    ]
-            wave_position /= 100
-            wave_position_msg = PointStamped(
-                point=Point(*wave_position),
-                header=Header(frame_id=pcl_msg.header.frame_id),
-            )
-            self.node.get_logger().info(f"Wave point: {wave_position_msg}")
 
-            is_waving = gesture_to_detect is not None
-
-            userdata.wave_detected = is_waving
-            userdata.wave_position = wave_position_msg
-
-        except Exception as e:
-            self.node.get_logger().error(f"Error detecting keypoints: {e}")
-            userdata.wave_detected = False
-            userdata.wave_position = PointStamped()
-            return "failed"
-
-        return "succeeded"
+if __name__ == "__main__":
+    main()

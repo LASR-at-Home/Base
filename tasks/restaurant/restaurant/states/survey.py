@@ -1,7 +1,6 @@
 import rclpy
 import yasmin
-from lasr_skills import PlayMotion
-from .detect_wave import DetectWave
+from lasr_skills import PlayMotion, DetectWave
 
 
 class Survey(yasmin.StateMachine):
