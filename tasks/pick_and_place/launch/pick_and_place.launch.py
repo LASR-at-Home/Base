@@ -8,13 +8,6 @@ from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from launch.actions import ExecuteProcess
 
-# CLIP recognition candidates: the open-vocab detector LOCALISES objects (boxes),
-# then CLIP re-labels each crop against THIS list (fixes "Pringles -> cup"). Names
-# must be CATEGORY_MAP-friendly so routing works (see classify_category.py).
-CLIP_CANDIDATES = [
-    "pringles", "iced tea", "apple", "milk", "can", "coke", "cup", "sprite","bowl", "spoon", "water bottle", "banana", "cereal"
-]
-
 def generate_launch_description():
     """
     One-shot launch for the Pick and Place task.
@@ -58,6 +51,7 @@ def generate_launch_description():
         #         {"clip_rerank": True, "clip_candidates": CLIP_CANDIDATES},
         #     ],
         # ),
+        
         Node(
             package="lasr_vision_open_vocabulary",
             executable="detection_visualizer",

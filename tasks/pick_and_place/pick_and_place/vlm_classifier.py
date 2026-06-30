@@ -9,8 +9,8 @@ import cv2
 
 # Specific product labels the VLM must choose from — EDIT for your items.
 CANDIDATES = [
-    "water bottle", "iced tea", "coke can", "sprite can", "pringles",
-    "red bull", "apple", "banana", "cup", "mug", "bowl", "sponge", "unknown",
+    "iced tea", "water bottle", "coke can", "sprite can", "pringles", "fork", "knife", "spoon",
+    "red bull", "apple", "banana", "cup", "mug", "cereal", "bowl", "sponge", "unknown",
 ]
 
 _PROMPT = (
@@ -20,13 +20,12 @@ _PROMPT = (
     "If none clearly fits, reply 'unknown'."
 )
 
-
 def classify_crop(
     rgb_bgr,
     box_xywh_center,
     candidates=None,
     *,
-    model="moondream",
+    model="gemma3:4b",
     host="http://localhost:11434",
     timeout=60.0,
     pad=0.12,
@@ -43,12 +42,6 @@ def classify_crop(
     if x2 <= x1 or y2 <= y1:
         return None
     crop = rgb_bgr[y1:y2, x1:x2]
-
-    import os
-    debug_dir = "/tmp/vlm_crops"
-    os.makedirs(debug_dir, exist_ok=True)
-    debug_count = len(os.listdir(debug_dir))
-    cv2.imwrite(f"{debug_dir}/crop_{debug_count}.jpg", crop)
 
     ok, buf = cv2.imencode(".jpg", crop)
     if not ok:

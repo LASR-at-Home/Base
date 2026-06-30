@@ -2,196 +2,121 @@ from threading import Thread
 
 import rclpy
 from rclpy.node import Node
+from std_msgs.msg import Empty
 
 import yasmin
 import yasmin_ros
 from yasmin_viewer import YasminViewerPub
 
-from lasr_skills import Say, GoToLocation
+from lasr_skills import Say
 
 from pick_and_place.states import (
     Start,
-    DetectObjects,
-    SelectAndVisualiseObject,
-    ClassifyCategory,
-    DecideDestination,
-    ChooseShelf,
-    InstructPick,
-    InstructPlace,
-    AddTableCollision,  
-    # GraspObject, 
-    ApproachTable,
-    ServeBreakfast
+    TableCleanup,
+    ServeBreakfast,
+    ExtraSurfaceCleanup,
 )
 
 from rclpy.executors import MultiThreadedExecutor as Executor
 
+
 class PickAndPlace(yasmin.StateMachine):
     """
-    Main state machine for the Pick and Place task (announce-only).
+    Top-level state machine for the Pick and Place task.
 
-    Physical manipulation is delegated to a human operator via verbal
-    instructions — the robot perceives, reasons, routes, and speaks.
-
-    Each detected table object is routed to one of THREE destinations
-    (the task-planning core of the challenge):
-        - tableware / cutlery  → dishwasher
-        - the trash category   → trash bin
-        - everything else      → cabinet (matched to a shelf)
+    Orchestrates three independent sub-machines in the rulebook's
+    suggested order: clean the dining table, serve breakfast, then
+    clean the extra surface. Each sub-machine is self-contained and
+    can be tested in isolation.
 
     Flow:
-        START                       (start signal, door, drive to table)
-            → DETECT_OBJECTS        (open-vocab detect all table objects, ONCE)
-            ┌→ SELECT_OBJECT        (pop next object; empty → FINISH)
-            │   → CLASSIFY_CATEGORY (determine object category)
-            │   → DECIDE_DESTINATION(dishwasher / trash bin / cabinet)
-            │        ├ cabinet → CHOOSE_SHELF
-            │        └ other   ─────────────┐
-            │   → INSTRUCT_PICK  ←───────────┘
-            │   → GO_TO_DESTINATION (drive to chosen destination pose)
-            │   → INSTRUCT_PLACE
-            │   → GO_TO_TABLE       (drive back to table)
-            └───(loop)
-            → FINISH                (announce completion)
-        → succeeded
-
-    NOTE: ScanShelves (perceiving the cabinet shelves and announcing their
-    categories) is added in the next iteration; until then shelf_data is {}
-    and ChooseShelf uses its category-name fallback.
+        WAIT_START -> SAY_START -> START                  (door, drive to table)
+            -> SAY_STARTING_CLEANUP -> TABLE_CLEANUP       (TableCleanup)
+            -> SAY_STARTING_BREAKFAST -> SERVE_BREAKFAST   (ServeBreakfast)
+            -> SAY_STARTING_EXTRA_SURFACE -> EXTRA_SURFACE_CLEANUP
+            -> SAY_TASK_COMPLETE
+        -> succeeded
     """
 
     def __init__(self):
         super().__init__(outcomes=["succeeded", "failed"], handle_sigint=True)
 
-        # ── Entry ─────────────────────────────────────────────────────────────
+        # ── Entry: door wait, drive to table ──────────────────────────────────────
         self.add_state(
             "START",
             Start(),
             transitions={
-                "succeeded": "ADD_TABLE_COLLISION",
+                "succeeded": "SAY_STARTING_CLEANUP",
                 "failed":    "failed",
             },
         )
 
+        # Phase 1: table cleanup
         self.add_state(
-            "ADD_TABLE_COLLISION",
-            AddTableCollision(head_tilt=-0.6),     # детект усього столу здалеку
+            "SAY_STARTING_CLEANUP",
+            Say(text="I will now clean up the dining table."),
             transitions={
-                "succeeded": "DETECT_OBJECTS",   # було "DETECT_OBJECTS"
+                "succeeded": "TABLE_CLEANUP",
+                "aborted":   "TABLE_CLEANUP",
+                "canceled":  "TABLE_CLEANUP",
             },
         )
 
-        # self.add_state(
-        #     "GO_TO_TABLE_FOR_PICK",
-        #     GoToLocation(location_param="pick_and_place.table.pose"),
-        #     transitions={
-        #         "succeeded": "DETECT_OBJECTS",
-        #         "failed":    "DETECT_OBJECTS",   # все одно пробуємо детект
-        #     },
-        # )
-
-        # ── Detect all objects on the table (done ONCE) ───────────────────────
         self.add_state(
-            "DETECT_OBJECTS",
-            DetectObjects(),
+            "TABLE_CLEANUP",
+            TableCleanup(),
             transitions={
-                "succeeded": "SELECT_OBJECT",
-                "failed":    "DETECT_OBJECTS",  # retry until objects found
+                "succeeded": "SAY_STARTING_BREAKFAST",
+                "failed":    "SAY_STARTING_BREAKFAST",  # continue regardless
             },
         )
 
-        # ── Select next object and visualise for referee ──────────────────────
+        # Phase 2: serve breakfast
         self.add_state(
-            "SELECT_OBJECT",
-            SelectAndVisualiseObject(),
+            "SAY_STARTING_BREAKFAST",
+            Say(text="I will now set up breakfast."),
             transitions={
-                "succeeded": "CLASSIFY_CATEGORY",
-                "finished":  "FINISH",          # all objects processed
+                "succeeded": "SERVE_BREAKFAST",
+                "aborted":   "SERVE_BREAKFAST",
+                "canceled":  "SERVE_BREAKFAST",
             },
         )
 
-        # ── Classify selected object into a category ──────────────────────────
         self.add_state(
-            "CLASSIFY_CATEGORY",
-            ClassifyCategory(task="object"),
+            "SERVE_BREAKFAST",
+            ServeBreakfast(),
             transitions={
-                "succeeded": "DECIDE_DESTINATION",
-                "failed":    "DECIDE_DESTINATION",  # proceed with unknown category
-                "empty":     "SELECT_OBJECT",       # nothing to classify, next object
+                "succeeded": "SAY_STARTING_EXTRA_SURFACE",
+                "failed":    "SAY_STARTING_EXTRA_SURFACE",
             },
         )
 
-        # ── Decide destination: dishwasher / trash bin / cabinet ──────────────
+        # Phase 3: extra surface cleanup
         self.add_state(
-            "DECIDE_DESTINATION",
-            DecideDestination(),
+            "SAY_STARTING_EXTRA_SURFACE",
+            Say(text="I will now check the extra surface."),
             transitions={
-                "cabinet": "INSTRUCT_PICK",
-                "other":   "INSTRUCT_PICK",
+                "succeeded": "EXTRA_SURFACE_CLEANUP",
+                "aborted":   "EXTRA_SURFACE_CLEANUP",
+                "canceled":  "EXTRA_SURFACE_CLEANUP",
             },
         )
 
-        # ── Choose which cabinet shelf to place object on ─────────────────────
-        # self.add_state(
-        #     "CHOOSE_SHELF",
-        #     ChooseShelf(),
-        #     transitions={
-        #         "succeeded": "INSTRUCT_PICK",
-        #         "failed":    "INSTRUCT_PICK",  # announce anyway
-        #     },
-        # )
-
-        # ── Instruct operator to pick up object ───────────────────────────────
         self.add_state(
-            "INSTRUCT_PICK",
-            InstructPick(),
+            "EXTRA_SURFACE_CLEANUP",
+            ExtraSurfaceCleanup(),
             transitions={
-                "succeeded": "INSTRUCT_PLACE",
-                "failed":    "INSTRUCT_PICK",  # retry instruction
+                "succeeded": "SAY_TASK_COMPLETE",
+                "failed":    "SAY_TASK_COMPLETE",
             },
         )
 
-        # self.add_state(
-        #     "GRASP", GraspObject(),
-        #     transitions={"succeeded": "GO_TO_DESTINATION", "failed": "GO_TO_DESTINATION"},
-        # )
-
-        # ── Navigate to the chosen destination (pose set by DecideDestination)─
-        # self.add_state(
-        #     "GO_TO_DESTINATION",
-        #     GoToLocation(),  # reads blackboard["location"]
-        #     transitions={
-        #         "succeeded": "INSTRUCT_PLACE",
-        #         "failed":    "INSTRUCT_PLACE",  # announce even if nav failed
-        #     },
-        # )
-
-        # ── Instruct operator where to place object ───────────────────────────
+        # Done
         self.add_state(
-            "INSTRUCT_PLACE",
-            InstructPlace(),
-            transitions={
-                "succeeded": "FINISH",
-                "failed":    "INSTRUCT_PLACE",  # retry instruction
-            },
-        )
-
-        # ── Navigate back to table for next object ────────────────────────────
-        # self.add_state(
-        #     "GO_TO_TABLE",
-        #     GoToLocation(location_param="pick_and_place.table.pose"),
-        #     transitions={
-        #         "succeeded": "SELECT_OBJECT",  # loop back for next object
-        #         "failed":    "GO_TO_TABLE",     # retry navigation
-        #     },
-        # )
-
-        # ── Done ──────────────────────────────────────────────────────────────
-        self.add_state(
-            "FINISH",
+            "SAY_TASK_COMPLETE",
             Say(
-                text="I have sorted all the objects I could see on the table. "
-                     "I will now set up breakfast."
+                text="I have completed the pick and place task. "
+                     "The table is clean and breakfast is ready."
             ),
             transitions={
                 "succeeded": "succeeded",
@@ -200,14 +125,6 @@ class PickAndPlace(yasmin.StateMachine):
             },
         )
 
-        # self.add_state(
-        #     "SERVE_BREAKFAST",
-        #     ServeBreakfast(),
-        #     transitions={
-        #         "succeeded": "succeeded",
-        #         "failed":   "succeeded",
-        #     },
-        # )
 
 class PickAndPlaceNode(Node):
     def __init__(self):
@@ -229,7 +146,7 @@ def main():
     yasmin_ros.set_ros_loggers(node)
 
     sm = PickAndPlace()
-  
+
     # Uncomment to visualise the state machine in RViz/browser
     # YasminViewerPub(sm)
 
@@ -249,6 +166,7 @@ def main():
     bb["location"]             = None
     bb["table_pose"]           = None
     bb["debug_images"]         = []
+    bb["last_rgb_image"]       = None
 
     try:
         outcome = sm(bb)

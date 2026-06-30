@@ -1,22 +1,23 @@
 #!/usr/bin/env python3
 
+import os
+import sys
+
 import rclpy
 import yasmin
 import yasmin_ros
+from ament_index_python.packages import get_package_share_directory
 from rclpy.node import Node
 from threading import Thread
-
-try:
-    from rclpy.executors import EventsExecutor as Executor
-except ImportError:
-    from rclpy.executors import MultiThreadedExecutor as Executor
-
-from GPSR.states import AnnouncePlan, DispatchSkill, QueryLLM, create_input_state
+from rclpy.executors import MultiThreadedExecutor as Executor
+from GPSR.states import DispatchSkill, KeyboardInputState, ListenState, QueryLLM
 
 
-def _declare_param_if_needed(node, name, default):
-    if not node.has_parameter(name):
-        node.declare_parameter(name, default)
+def _ensure_params_file() -> None:
+    if any(a == "--params-file" for a in sys.argv):
+        return
+    params = os.path.join(get_package_share_directory("GPSR"), "config", "params.yaml")
+    sys.argv.extend(["--ros-args", "--params-file", params])
 
 
 class GPSRNode(Node):
@@ -33,22 +34,20 @@ class GPSRNode(Node):
 
 
 def main(args=None):
+    _ensure_params_file()
     rclpy.init(args=args)
     node = GPSRNode()
 
-    _declare_param_if_needed(node, "llm_model", "llama3.2")
-    _declare_param_if_needed(node, "llm_host", "http://localhost:11434")
-    _declare_param_if_needed(node, "locations_package", "GPSR")
-    _declare_param_if_needed(node, "locations_file", "config/locations.yaml")
-    _declare_param_if_needed(node, "simulation", False)
-    _declare_param_if_needed(node, "input_mode", "keyboard")
-    _declare_param_if_needed(node, "input_prompt", "Enter command: ")
-
-    input_mode = node.get_parameter("input_mode").value
+    input_mode = node.get_parameter("input_mode").value.strip().lower()
     simulation = node.get_parameter("simulation").value
     node.get_logger().info(
         f"Starting GPSR state machine (input_mode={input_mode}, simulation={simulation})..."
     )
+
+    if input_mode == "keyboard":
+        wait_for_command = KeyboardInputState(node)
+    elif input_mode in ("mic", "microphone"):
+        wait_for_command = ListenState(node)
 
     yasmin_ros.set_ros_loggers(node)
 
@@ -56,7 +55,7 @@ def main(args=None):
 
     sm.add_state(
         "WAIT_FOR_COMMAND",
-        create_input_state(node),
+        wait_for_command,
         transitions={
             "succeeded": "QUERY_LLM",
             "aborted": "WAIT_FOR_COMMAND",
@@ -66,15 +65,8 @@ def main(args=None):
         "QUERY_LLM",
         QueryLLM(node),
         transitions={
-            "succeeded": "ANNOUNCE_PLAN",
-            "failed": "WAIT_FOR_COMMAND",
-        },
-    )
-    sm.add_state(
-        "ANNOUNCE_PLAN",
-        AnnouncePlan(node),
-        transitions={
             "succeeded": "DISPATCH_SKILL",
+            "failed": "WAIT_FOR_COMMAND",
         },
     )
     sm.add_state(

@@ -58,21 +58,10 @@ class Start(yasmin.StateMachine):
             },
         )
 
-        # 3. Say waiting for door
-        self.add_state(
-            "SAY_WAITING",
-            Say(text="Waiting for the door to open."),
-            transitions={
-                "succeeded": "SAY_GOING_TO_TABLE",
-                "aborted":   "SAY_GOING_TO_TABLE",
-                "canceled":    "SAY_GOING_TO_TABLE",
-            },
-        )
-
         # 4. Detect door opening
         self.add_state(
             "WAIT_FOR_DOOR",
-            DetectDoorOpening(timeout=1.0),
+            StartDoorSM(),
             transitions={
                 "door_opened": "SAY_GOING_TO_TABLE",
                 "failed":      "WAIT_FOR_DOOR",

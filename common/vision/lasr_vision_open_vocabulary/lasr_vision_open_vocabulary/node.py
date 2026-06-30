@@ -14,10 +14,6 @@ from lasr_vision_open_vocabulary.models import (
     VitSam,
 )
 
-CLIP_CANDIDATES = [
-    "pringles", "iced tea", "apple", "milk", "can", "coke", "cup", "sprite", "water bottle", "banana", "bowl", "cereal", 
-]
-
 class OpenVocabNode(Node):
     def __init__(self):
         super().__init__("lasr_vision_open_vocabulary")
@@ -39,11 +35,9 @@ class OpenVocabNode(Node):
         encoder_path = self.get_parameter("sam_encoder_path").value
         decoder_path = self.get_parameter("sam_decoder_path").value
 
-        # CLIP recognition rerank: detector localises (boxes), CLIP re-labels each
-        # crop against a candidate list. OFF by default - enabled per-task via
-        # params (e.g. pick_and_place passes clip_rerank:=true + clip_candidates).
+        # CLIP bounding box.
         self.declare_parameter("clip_rerank", True)
-        self.declare_parameter("clip_candidates", CLIP_CANDIDATES)
+        self.declare_parameter("clip_candidates", [])
         self.declare_parameter("clip_model", "openai/clip-vit-base-patch32")
         self.declare_parameter("clip_prompt_template", "a photo of a {}")
         self._clip_rerank = bool(self.get_parameter("clip_rerank").value)

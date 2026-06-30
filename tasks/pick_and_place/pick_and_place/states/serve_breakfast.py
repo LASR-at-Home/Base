@@ -63,7 +63,7 @@ class ServeBreakfast(yasmin.StateMachine):
 
         self.add_state(
             "INSTRUCT_PICK_BOWL",
-            InstructPick(),
+            Say(text="I have detected a bowl. Please pick it up and hold it ready."),
             transitions={
                 "succeeded": "DETECT_SPOON",
                 "failed": "INSTRUCT_PICK_BOWL",
@@ -91,7 +91,7 @@ class ServeBreakfast(yasmin.StateMachine):
 
         self.add_state(
             "INSTRUCT_PICK_SPOON",
-            InstructPick(),
+            Say(text="I have detected a spoon. Please pick it up and hold it ready."),
             transitions={
                 "succeeded": "GO_TO_TABLE_1",
                 "failed": "INSTRUCT_PICK_SPOON",
@@ -156,7 +156,7 @@ class ServeBreakfast(yasmin.StateMachine):
         )
         self.add_state(
             "INSTRUCT_PICK_CEREAL",
-            InstructPick(),
+            Say(text="I have detected cereal. Please pick it up and hold it ready."),
             transitions={
                 "succeeded": "DETECT_MILK",
                 "failed": "INSTRUCT_PICK_CEREAL",
@@ -182,7 +182,7 @@ class ServeBreakfast(yasmin.StateMachine):
         )
         self.add_state(
             "INSTRUCT_PICK_MILK",
-            InstructPick(),
+            Say(text="I have detected milk. Please pick it up and hold it ready."),
             transitions={
                 "succeeded": "GO_TO_TABLE_2",
                 "failed": "INSTRUCT_PICK_MILK",
