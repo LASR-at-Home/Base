@@ -1,0 +1,116 @@
+import yasmin
+import yasmin_ros
+
+from std_msgs.msg import Empty
+from lasr_skills import Say, GoToLocation, DetectDoorOpening
+
+
+class Start(yasmin.StateMachine):
+    """
+    Entry sequence for the  Doing Laundry  task.
+
+    Ported from ROS 1 SMACH Start. The five-state sequence collapses
+    into a YASMIN StateMachine using lasr_skills states directly.
+
+    Sequence:
+        1. Wait for start signal on /doing_laundry/start
+        2. Say "Start of Doing Laundry task"
+        3. Say "Waiting for the door to open"
+        4. Detect door opening
+        5. Navigate to the table
+        6. Ask referee to open cabinet doors
+
+    Blackboard outputs:
+        (none — all navigation targets loaded from params)
+    """
+
+    def __init__(self):
+        super().__init__(outcomes=["succeeded", "failed"], handle_sigint=True)
+
+        # 1. Wait for start signal
+        def wait_cb(blackboard, msg):
+            yasmin.YASMIN_LOG_INFO("Received start signal.")
+            return "succeeded"
+
+        self.add_state(
+            "WAIT_START",
+            yasmin_ros.MonitorState(
+                topic_name="/doing_laundry/start",
+                msg_type=Empty,
+                monitor_handler=wait_cb,
+                outcomes=["succeeded", "failed"],
+            ),
+            transitions={
+                "succeeded": "SAY_START",
+                "failed": "WAIT_START",
+                "canceled": "failed",
+            },
+        )
+
+        # 2. Announce start
+        self.add_state(
+            "SAY_START",
+            Say(text="Start of Doing Laundry task."),
+            transitions={
+                "succeeded": "SAY_WAITING",
+                "failed": "SAY_WAITING",
+                "aborted": "SAY_WAITING",
+            },
+        )
+
+        # 3. Say waiting for door
+        self.add_state(
+            "SAY_WAITING",
+            Say(text="Waiting for the door to open."),
+            transitions={
+                "succeeded": "WAIT_FOR_DOOR",
+                "failed": "WAIT_FOR_DOOR",
+                "aborted": "WAIT_FOR_DOOR",
+            },
+        )
+
+        # 4. Detect door opening
+        self.add_state(
+            "WAIT_FOR_DOOR",
+            DetectDoorOpening(timeout=1.0),
+            transitions={
+                "door_opened": "SAY_GOING_TO_TABLE",
+                "failed": "WAIT_FOR_DOOR",
+            },
+        )
+
+        # 5. Announce navigation
+        self.add_state(
+            "SAY_GOING_TO_TABLE",
+            Say(text="I am going to the table."),
+            transitions={
+                "succeeded": "GO_TO_TABLE",
+                "failed": "GO_TO_TABLE",
+                "aborted": "GO_TO_TABLE",
+            },
+        )
+
+        # 6. Navigate to table
+        self.add_state(
+            "GO_TO_TABLE",
+            GoToLocation(location_param="doing_laundry.table.pose"),
+            transitions={
+                "succeeded": "ASK_OPEN_CABINET",
+                "failed": "ASK_OPEN_CABINET",
+            },
+        )
+
+        # 7. Ask referee to open cabinet
+        self.add_state(
+            "ASK_OPEN_CABINET",
+            Say(
+                text="Referee, I am unable to open the cabinet doors. "
+                "Please open them for me. "
+                "I will give you 5 seconds. 5.. 4.. 3.. 2.. 1.."
+            ),
+            transitions={
+                "succeeded": "succeeded",
+                "failed": "succeeded",
+                "aborted": "succeeded",
+            },
+        )
