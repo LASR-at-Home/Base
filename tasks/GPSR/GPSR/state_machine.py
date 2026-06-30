@@ -93,7 +93,7 @@ class GPSR(yasmin.StateMachine):
                 'succeeded': 'QUERY_LLM',
                 'failed': 'REQUEST_AND_WAIT_FOR_COMMAND'
             },
-            remappings={'tts_phrase': 'text'}
+            remappings={'tts_phrase': 'instruction_text'}
         )
 
         # Add a seconday ask and listen to double check command
@@ -103,7 +103,7 @@ class GPSR(yasmin.StateMachine):
             QueryLLM(node),
             transitions={
                 "succeeded": "PRE_NAV",
-                "failed": "WAIT_FOR_COMMAND",
+                "failed": "REQUEST_AND_WAIT_FOR_COMMAND",
             },
         )
 
@@ -198,13 +198,15 @@ class GPSR(yasmin.StateMachine):
 
     def checkRequest(self, blackboard):
         if self.instruction_count == 1:
-            blackboard["text"] = "I am ready for the first command. "
+            blackboard["instruction_text"] = "I am ready for the first command. "
         elif self.instruction_count == 2:
-            blackboard["text"] = "I am ready for the second command. "
+            blackboard["instruction_text"] = "I am ready for the second command. "
         elif self.instruction_count == 3:
-            blackboard["text"] = "I am ready for the last command. "
+            blackboard["instruction_text"] = "I am ready for the last command. "
         else:
             return "finish"
+        
+        yasmin.YASMIN_LOG_INFO(f"blackboard['instruction_text']")
 
         return "next"
 

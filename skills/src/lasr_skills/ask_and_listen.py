@@ -14,7 +14,7 @@ class AskAndListen(yasmin.StateMachine):
         tts_phrase_format_str: Union[str, None] = None,
     ):
         super().__init__(outcomes=["succeeded", "failed"])
-        self.add_output_key("transcribed_speech")
+        self.add_output_key("transcribed_speech")        
         if tts_phrase is not None:
             self.add_state(
                 "SAY",
@@ -44,7 +44,7 @@ class AskAndListen(yasmin.StateMachine):
                 transitions={
                     "succeeded": "LISTEN",
                     "aborted": "failed",
-                    "preempted": "failed",
+                    "canceled": "failed",
                 },
                 remappings={"placeholders": "tts_phrase_placeholders"},
             )
@@ -54,7 +54,7 @@ class AskAndListen(yasmin.StateMachine):
                 transitions={
                     "succeeded": "succeeded",
                     "aborted": "failed",
-                    "preempted": "failed",
+                    "canceled": "failed",
                 },
                 remappings={"sequence": "transcribed_speech"},
             )
@@ -66,19 +66,19 @@ class AskAndListen(yasmin.StateMachine):
                 transitions={
                     "succeeded": "LISTEN",
                     "aborted": "failed",
-                    "preempted": "failed",
+                    "canceled": "failed",
                 },
-                remapping={"text": "tts_phrase"},
+                remappings={"text": "tts_phrase"},
             )
-            self.add(
+            self.add_state(
                 "LISTEN",
                 Listen(),
                 transitions={
                     "succeeded": "succeeded",
                     "aborted": "failed",
-                    "preempted": "failed",
+                    "canceled": "failed",
                 },
-                remapping={"sequence": "transcribed_speech"},
+                remappings={"sequence": "transcribed_speech"},
             )
 
 

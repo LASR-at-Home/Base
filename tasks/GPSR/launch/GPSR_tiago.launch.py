@@ -29,6 +29,15 @@ def generate_launch_description():
             )
         )
     )
+    robot_ui = IncludeLaunchDescription(
+        AnyLaunchDescriptionSource(
+            os.path.join(
+                get_package_share_directory("robot_ui"),
+                "launch",
+                "robot_ui.launch.py",
+            )
+        )
+    )
 
     whisper_server = Node(
         package="lasr_speech_recognition_whisper",
@@ -61,7 +70,9 @@ def generate_launch_description():
                 description='Command input source: "keyboard" or "mic"',
             ),
             load_motions,
+            robot_ui,
             whisper_server,
             state_machine,
+
         ]
     )

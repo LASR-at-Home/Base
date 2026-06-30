@@ -12,7 +12,7 @@ class QueryLLM(yasmin.State):
 
     def __init__(self, node):
         super().__init__(outcomes=["succeeded", "failed"])
-        self.add_input_key("sequence")
+        self.add_input_key("transcribed_speech")
         self.add_output_key("steps")
         self.node = node
         self.world = build_world(node)
@@ -23,7 +23,7 @@ class QueryLLM(yasmin.State):
 
     def execute(self, blackboard):
         t0 = time.perf_counter()
-        command = blackboard["sequence"].strip()
+        command = blackboard["transcribed_speech"].strip()
         self.node.get_logger().info(f"Query: '{command}'")
 
         # Stage 1 — skill selector
