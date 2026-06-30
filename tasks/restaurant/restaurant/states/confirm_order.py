@@ -41,7 +41,7 @@ class ConfirmOrder(yasmin.StateMachine):
         self.add_state(
             "ASK_AND_LISTEN",
             AskAndListen(
-                tts_phrase_format_str="You ordered {}. Is that correct? Please say yes or no."
+                tts_phrase_format_str="You ordered {}. Is that correct, please say yes or no?"
             ),
             transitions={
                 "succeeded": "CHECK_RESPONSE",

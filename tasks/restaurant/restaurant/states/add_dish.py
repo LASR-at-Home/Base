@@ -95,8 +95,5 @@ class AddDish(yasmin.StateMachine):
             item = future.result().item.strip().lower()
             print(f"[LLM] parsed: '{item}'")
 
-            if not item:
-                return "failed"
-
             blackboard["order"] = blackboard["order"] + [item]
             return "succeeded"

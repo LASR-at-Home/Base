@@ -2,8 +2,10 @@ import rclpy
 import yasmin
 import yasmin_ros
 from std_msgs.msg import Empty
+from geometry_msgs.msg import Point, Pose
 from lasr_skills import Say, GoToLocation, PlayMotion
 
+import tf2_ros
 
 from rclpy.node import Node
 
@@ -13,13 +15,14 @@ from restaurant.states import (
     FaceCustomer,
     TakeOrderSM,
     GetOrderFromBar,
-    SaveBarPose,
 )
 
 
 class Restaurant(yasmin.StateMachine):
     def __init__(self):
         super().__init__(outcomes=["succeeded", "failed"])
+        self.tf_buffer = tf2_ros.Buffer()
+        self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, yasmin_ros.logger_node)
 
         def start_cb(blackboard, msg):
             yasmin.YASMIN_LOG_INFO("RECEIVED START SIGNAL")
@@ -135,13 +138,17 @@ class Restaurant(yasmin.StateMachine):
                 rclpy.time.Time(),
                 timeout=rclpy.duration.Duration(seconds=1.0),
             )
-            current_robot_point = transform.transform.translation
-            self.node.get_logger().info(f"Pose is: {current_robot_point}")
-            blackboard["bar_pose"] = current_robot_point
+            transform_point = transform.transform
+            vector = transform_point.translation
+            point = Point(x = vector.x, y = vector.y, z = vector.z)
+            orientation = transform_point.rotation
+            current_robot_pose = Pose(position=point, orientation=orientation)
+            yasmin_ros.logger_node.get_logger().info(f"Pose is: {current_robot_pose}")
+            blackboard["bar_pose"] = current_robot_pose
             return "succeeded"
 
         except Exception as e:
-            self.node.get_logger().warn(f"Waiting for map-base_footprint TF: {e}")
+            yasmin_ros.logger_node.get_logger().info(f"Waiting for map-base_footprint TF: {e}")
             return "failed"
 
 try:
