@@ -104,7 +104,7 @@ class HRILearnFaces(StateMachine):
         def __init__(self, dataset_size: int):
             super().__init__(outcomes=["succeeded", "failed"])
             self.add_input_key("num_images")
-            self.add_output_key('num_images')
+            self.add_output_key("num_images")
 
             self._dataset_size = dataset_size
 
@@ -120,7 +120,7 @@ class HRILearnFaces(StateMachine):
                     )
                     return "failed"
             except Exception as e:
-                blackboard['num_images'] = 0
+                blackboard["num_images"] = 0
                 yasmin.YASMIN_LOG_WARN(f"An error was raised: {e}")
 
     def __init__(self, guest_id: str, dataset_size: int = 3):

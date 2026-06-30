@@ -23,7 +23,9 @@ class Restaurant(yasmin.StateMachine):
     def __init__(self, use_tablet: bool = False):
         super().__init__(outcomes=["succeeded", "failed"])
         self.tf_buffer = tf2_ros.Buffer()
-        self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, yasmin_ros.logger_node)
+        self.tf_listener = tf2_ros.TransformListener(
+            self.tf_buffer, yasmin_ros.logger_node
+        )
 
         def start_cb(blackboard, msg):
             yasmin.YASMIN_LOG_INFO("RECEIVED START SIGNAL")
@@ -42,7 +44,9 @@ class Restaurant(yasmin.StateMachine):
 
         self.add_state(
             "SAY_START",
-            Say(text="Start of the restaurant task. Put your hand up straight to notify me when you're ready to order."),
+            Say(
+                text="Start of the restaurant task. Put your hand up straight to notify me when you're ready to order."
+            ),
             transitions={
                 "succeeded": "SAVE_BAR_POSE",
                 "aborted": "SAVE_BAR_POSE",
@@ -52,11 +56,10 @@ class Restaurant(yasmin.StateMachine):
 
         self.add_state(
             "SAVE_BAR_POSE",
-            yasmin.CbState(outcomes=["succeeded", "failed"], callback=self.save_bar_pose),
-            transitions={
-                "succeeded": "FACE_TABLES",
-                "failed" : "SAVE_BAR_POSE"
-            },
+            yasmin.CbState(
+                outcomes=["succeeded", "failed"], callback=self.save_bar_pose
+            ),
+            transitions={"succeeded": "FACE_TABLES", "failed": "SAVE_BAR_POSE"},
         )
 
         self.add_state(
@@ -141,7 +144,7 @@ class Restaurant(yasmin.StateMachine):
             )
             transform_point = transform.transform
             vector = transform_point.translation
-            point = Point(x = vector.x, y = vector.y, z = vector.z)
+            point = Point(x=vector.x, y=vector.y, z=vector.z)
             orientation = transform_point.rotation
             current_robot_pose = Pose(position=point, orientation=orientation)
             yasmin_ros.logger_node.get_logger().info(f"Pose is: {current_robot_pose}")
@@ -149,8 +152,11 @@ class Restaurant(yasmin.StateMachine):
             return "succeeded"
 
         except Exception as e:
-            yasmin_ros.logger_node.get_logger().info(f"Waiting for map-base_footprint TF: {e}")
+            yasmin_ros.logger_node.get_logger().info(
+                f"Waiting for map-base_footprint TF: {e}"
+            )
             return "failed"
+
 
 try:
     from rclpy.executors import EventsExecutor as Executor

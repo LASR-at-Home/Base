@@ -330,7 +330,7 @@ def configure_model_params(config: dict) -> speech_model_params:
     """
     model_params = speech_model_params()
     if config["model_name"]:
-        model_params.model_name = 'small.en'
+        model_params.model_name = "small.en"
     if config["device"]:
         model_params.device = config["device"]
     if config["start_timeout"]:

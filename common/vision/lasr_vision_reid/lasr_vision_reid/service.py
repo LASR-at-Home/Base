@@ -64,7 +64,7 @@ class ReID(Node):
         self._recognise_service = self.create_service(
             Recognise3D, "/lasr_vision_reid/recognise", self._recognise
         )
-        
+
         self._add_face_service = self.create_service(
             AddFace, "/lasr_vision_reid/add_face", self._add_face
         )
@@ -113,7 +113,9 @@ class ReID(Node):
             tf.ConnectivityException,
             tf.ExtrapolationException,
         ) as e:
-            self.get_logger().error(f"Failed to find transform between {request.depth_image.header.frame_id}, and the target frame {target_frame}")
+            self.get_logger().error(
+                f"Failed to find transform between {request.depth_image.header.frame_id}, and the target frame {target_frame}"
+            )
             return response
 
         try:
@@ -186,15 +188,13 @@ class ReID(Node):
             point_stamped = PointStamped()
             point_stamped.header = request.depth_image.header
             point_stamped.point = point
-            
+
             try:
                 point_transformed = do_transform_point(point_stamped, transform)
                 detection.point = point_transformed.point
             except Exception as e:
                 self.get_logger().warning
-                (
-                    f"Point transformation failed: {e}."
-                )
+                (f"Point transformation failed: {e}.")
                 continue
 
             response.detections.append(detection)

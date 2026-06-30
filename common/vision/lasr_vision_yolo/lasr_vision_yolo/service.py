@@ -100,7 +100,9 @@ class YOLOServiceNode:
         )
         self._device = self.node.get_parameter("~device").value
 
-        self.node.declare_parameter("~preload", ["yolo11n-seg.pt", 'yolo11n.pt', 'yolo11n-pose.pt'])
+        self.node.declare_parameter(
+            "~preload", ["yolo11n-seg.pt", "yolo11n.pt", "yolo11n-pose.pt"]
+        )
         self.preload_param_list = self.node.get_parameter("~preload").value
         for model in self.preload_param_list:
             self._maybe_load_model(model)

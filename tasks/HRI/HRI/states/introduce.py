@@ -202,20 +202,24 @@ class Introduce(yasmin.StateMachine):
             blackboard["person_index"] = index
             return "continue"
         elif guest1point is not None and people_detected == 2:
-            index = blackboard['seat_indexes']['guest1']
+            index = blackboard["seat_indexes"]["guest1"]
             index = 1 if index == 0 else 0
-            blackboard['guest_data']['guest2']['seated_point'] = blackboard["people_detected"][index].point
+            blackboard["guest_data"]["guest2"]["seated_point"] = blackboard[
+                "people_detected"
+            ][index].point
             guest2point = blackboard["guest_data"]["guest2"]["seated_point"]
             yasmin.YASMIN_LOG_INFO("Fallback Guest2 point: " + str(guest2point))
-            return 'succeeded'
+            return "succeeded"
         elif guest2point is not None and people_detected == 2:
-            index = blackboard['seat_indexes']['guest2']
+            index = blackboard["seat_indexes"]["guest2"]
             index = 1 if index == 0 else 0
-            blackboard['guest_data']['guest1']['seated_point'] = blackboard["people_detected"][index].point
+            blackboard["guest_data"]["guest1"]["seated_point"] = blackboard[
+                "people_detected"
+            ][index].point
             guest1point = blackboard["guest_data"]["guest1"]["seated_point"]
             yasmin.YASMIN_LOG_INFO("Fallback Guest1 point: " + str(guest1point))
-            return 'succeeded'
-        
+            return "succeeded"
+
         return "failed"
 
     def _loop_guest(self, blackboard):
