@@ -23,7 +23,7 @@ class ChangeNavParam(yasmin_ros.ServiceState):
     def __init__(self):
         super().__init__(
             srv_type=SetParameters,
-            srv_name='/global_costmap/global_costmap/set_parameters_atomically',
+            srv_name='/global_costmap/global_costmap/set_parameters',
             create_request_handler=self._create_request,
             response_handler=self._handle_resp
         )
@@ -40,7 +40,7 @@ class ChangeNavParam(yasmin_ros.ServiceState):
         return request
     
     def _handle_resp(self, blackboard, response):
-        return 'succeeded' if response.result.successful else 'aborted'
+        return 'succeeded' if response.results[0].successful else 'aborted'
     
 class WaitState(yasmin.State):
     def __init__(self):
@@ -121,36 +121,11 @@ class SafetySM(yasmin.StateMachine):
             'GO_TO_START_POINT',
             SafeGoToLocation(location_param='start_point'),
             transitions={
-                'succeeded': 'WAIT_FOR_MIDDLE_POINT', 'failed': 'failed'
+                'succeeded': 'WAIT_FOR_END_POINT', 'failed': 'GO_TO_START_POINT'
             }
         )
         
-        self.add_state(
-            'WAIT_FOR_MIDDLE_POINT',
-            WaitState(),
-            transitions={
-                'succeeded': 'SAY_GO_MIDDLE_POINT',
-                'failed': 'failed'
-            }
-        )
         
-        self.add_state(
-            'SAY_GO_MIDDLE_POINT',
-            Say(text='I am now going to the point.'),
-            transitions={
-                'succeeded': 'GO_TO_MIDDLE_POINT',
-                'aborted': 'failed',
-                'canceled': 'failed'
-            }
-        )
-        
-        self.add_state(
-            'GO_TO_MIDDLE_POINT',
-            SafeGoToLocation(location_param='middle_point'),
-            transitions={
-                'succeeded': 'WAIT_FOR_END_POINT', 'failed': 'failed'
-            }
-        )
         
         self.add_state(
             'WAIT_FOR_END_POINT',
@@ -175,7 +150,7 @@ class SafetySM(yasmin.StateMachine):
             'GO_TO_END_POINT',
             SafeGoToLocation(location_param='end_point'),
             transitions={
-                'succeeded': 'succeeded', 'failed': 'failed'
+                'succeeded': 'succeeded', 'failed': 'GO_TO_END_POINT'
             }
         )
         
