@@ -1,17 +1,5 @@
 hri:   # the `hri` Node's Parameters
   ros__parameters:
-  # Start location after door 
-    start_pose:
-      position:
-        x: 2.620011965794007
-        y: 0.4284228083916832
-        z: 0.0
-      orientation:
-        x: 0.0
-        y: 0.0
-        z: -0.9676446468413096
-        w: 0.25231693847095826
-
     # Where to wait for guests
     door_pose:
       position:
@@ -41,25 +29,9 @@ hri:   # the `hri` Node's Parameters
         y: 0.0
         z: -0.798049181701085
         w: 0.6025923195546294
-
-
-
-    # Where the robot looks at the general sofa
-    sofa_point:
-      x: 0.31079837679862976
-      y: -2.7174582481384277
-      z: 0.5
-
-    # From robot POV: [top left, top right,bottom right, bottom left ]
-    # General area to perform detections in 
-    seat_area:
-      top_left:     [0.7725991010665894, -3.1269145011901855]
-      top_right:    [-0.8415073156356812, -2.6533150672912598]
-      bottom_right: [-0.5009860992431641, -1.2560838460922241]
-      bottom_left:  [1.1633232831954956, -1.7793333530426025]
     
     # Max number of seats
-    max_people_on_sofa: 2
+    max_people_on_sofa: 3
 
     # Seatable area
     sofa_area:

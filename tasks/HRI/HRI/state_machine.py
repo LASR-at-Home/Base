@@ -49,12 +49,12 @@ class HRI(yasmin.StateMachine):
         self.add_state(
             "START_TIMER",
             StartTimer(),
-            transitions={"succeeded": "START_CON", "failed": "START_TIMER"},
+            transitions={"succeeded": "SAY_START", "failed": "START_TIMER"},
         )
 
         self.add_state(
-            "START_CON",  # SM1: Waits for Door to open, then goes to start
-            self.setup(),
+            "SAY_START",  # SM1: Waits for Door to open, then goes to start
+            Say(text='Start of H R I task.'),
             transitions={"succeeded": "GO_TO_DOOR", "failed": "START_CON"},
         )
 
@@ -183,27 +183,6 @@ class HRI(yasmin.StateMachine):
 
         self.guest_id += 1
         return "continue" if self.guest_id == 2 else "succeeded"
-
-    def setup(self):
-        start_con_sm = yasmin.Concurrence(
-            states={
-                "SAY_START": Say(text="Start of H R I task."),
-                "DOOR_START": StartDoorSM(),
-            },
-            default_outcome="failed",
-            outcome_map={
-                "succeeded": {
-                    "SAY_START": "succeeded",
-                    "DOOR_START": "succeeded",
-                },
-                "failed": {
-                    "SAY_START": "aborted",
-                    "DOOR_START": "failed",
-                },
-            },
-        )
-
-        return start_con_sm
 
 
 class HRI_node(Node):
