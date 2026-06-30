@@ -1,0 +1,14 @@
+#!/usr/bin/env python3
+from ament_index_python.packages import get_package_share_directory
+import os
+import subprocess
+
+pkg_dir = get_package_share_directory("robot_ui")
+ui_dir = os.path.join(pkg_dir, "robot-interface")
+os.chdir(ui_dir)
+
+if not os.path.exists(os.path.join(ui_dir, ".next", "BUILD_ID")):
+    print("Run the build script first!")
+    exit(1)
+
+subprocess.call("npm install && chmod +x node_modules/.bin/next && node_modules/.bin/next start", shell=True)
