@@ -44,7 +44,6 @@ setup(
             "sm = restaurant.state_machine:main",
             "survey = restaurant.states.survey:main",
             "detect_wave = restaurant.states.detect_wave:main",
-            "detect_waving_person_rgb = restaurant.states.detect_waving_person_rgb:main",
         ],
     },
 )

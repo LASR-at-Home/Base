@@ -100,7 +100,7 @@ class YOLOServiceNode:
         )
         self._device = self.node.get_parameter("~device").value
 
-        self.node.declare_parameter("~preload", ["yolo11n-pose.pt"])
+        self.node.declare_parameter("~preload", ["yolo11n-seg.pt"])
         self.preload_param_list = self.node.get_parameter("~preload").value
         for model in self.preload_param_list:
             self._maybe_load_model(model)
@@ -210,10 +210,10 @@ class YOLOServiceNode:
                 target_frame, source_frame, Time(), Duration(seconds=1.0)
             )
         except Exception as e:
-            self.node.get_logger().warn(
-                f"TF {target_frame}<-{source_frame} lookup failed ({e}); continuing without transform"
+            self.node.get_logger().error(
+                f"TF {target_frame}<-{source_frame} lookup failed: {e}"
             )
-            return None
+            raise
 
     def _detect3d(
         self, req: YoloDetection3D.Request, res: YoloDetection3D.Response
@@ -241,14 +241,7 @@ class YOLOServiceNode:
                 req.depth_image.header.frame_id,
                 req.depth_image.header.stamp,
             )
-            if transform is None:
-                self.node.get_logger().warn(
-                    f"Cannot transform detections to {target_frame}; "
-                    f"returning detections in {req.depth_image.header.frame_id} frame instead"
-                )
 
-        # TODO: Make Detection3D response stamped with frame_id so callers can detect
-        # TF failures externally instead of relying on log warnings
         for result in results:
             detection = Detection3D()
             detection.name = result.names[result.boxes.cls.int().item()]
@@ -320,6 +313,7 @@ class YOLOServiceNode:
         self, req: YoloPoseDetection3D.Request, res: YoloPoseDetection3D.Response
     ) -> YoloPoseDetection3D.Response:
         response = YoloPoseDetection3D.Response()
+
         cv_im = self._bridge.imgmsg_to_cv2(req.image_raw, desired_encoding="bgr8")
         results = self._yolo(cv_im, req.model, req.confidence, [])
         depth_im = self._bridge.imgmsg_to_cv2(
@@ -339,14 +333,7 @@ class YOLOServiceNode:
                 req.depth_image.header.frame_id,
                 req.depth_image.header.stamp,
             )
-            if transform is None:
-                self.node.get_logger().warn(
-                    f"Cannot transform keypoints to {target_frame}; "
-                    f"returning detections in {req.depth_image.header.frame_id} frame instead"
-                )
 
-        # TODO: Make Keypoint3D response stamped with frame_id so callers can detect
-        # TF failures externally instead of relying on log warnings
         for result in results:
             keypoints = Keypoint3DList()
             for idx, name in KEYPOINT_MAPPING.items():
@@ -358,12 +345,7 @@ class YOLOServiceNode:
 
                 conf = result.keypoints.conf.squeeze()[idx].item()
                 if conf > 0.0:
-                    z_mm = depth_im[v, u]
-                    z = z_mm / 1000.0  # convert mm to meters
-                    # Skip invalid/near-camera depths (< 100mm)
-                    # Allow up to 20m for distant detections (will use laser fallback if needed)
-                    if z <= 0.1 or z > 20.0:
-                        continue
+                    z = depth_im[v, u] / 1000.0  # convert mm to meters
                     x = z * (u - cx) / fx
                     y = z * (v - cy) / fy
                     if np.isnan(x) or np.isnan(y) or np.isnan(z):
@@ -385,6 +367,7 @@ class YOLOServiceNode:
             response.detections.append(keypoints)
 
         self._publish_results(req, results, response)
+
         return response
 
     def _maybe_load_model(self, model_name: str) -> ultralytics.YOLO:
