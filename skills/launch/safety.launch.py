@@ -12,9 +12,9 @@ def generate_launch_description():
         executable='safety',
         name='safety',
         parameters=[
-            os.path.join(get_package_share_directory('skills', 'config', 'safety.yaml'))
+            os.path.join(get_package_share_directory('skills'), 'config', 'safety.yaml')
         ],
         output='screen'
     )
     
-    return LaunchDescription(state_machine)
+    return LaunchDescription([state_machine])

@@ -23,7 +23,7 @@ class ChangeNavParam(yasmin_ros.ServiceState):
     def __init__(self):
         super().__init__(
             srv_type=SetParameters,
-            srv_name='/global_costmap/global_costmap/set_parameters',
+            srv_name='/global_costmap/global_costmap/set_parameters_atomically',
             create_request_handler=self._create_request,
             response_handler=self._handle_resp
         )
@@ -31,7 +31,7 @@ class ChangeNavParam(yasmin_ros.ServiceState):
     def _create_request(self, blackboard):
         request = SetParameters.Request()
         
-        value = ParameterValue(double_value=0.70) # Originally 0.55
+        value = ParameterValue(double_value=0.70, type=3) # Originally 0.55
         
         param = Parameter(name='inflation_layer.inflation_radius', value=value)
         
@@ -40,7 +40,7 @@ class ChangeNavParam(yasmin_ros.ServiceState):
         return request
     
     def _handle_resp(self, blackboard, response):
-        return 'succeeded' if response.results.successful else 'aborted'
+        return 'succeeded' if response.result.successful else 'aborted'
     
 class WaitState(yasmin.State):
     def __init__(self):
@@ -67,7 +67,7 @@ class SafetySM(yasmin.StateMachine):
             outcome_map={
                 "succeeded": {
                     "SAY_START": "succeeded",
-                    "DOOR_START": "succeeded",
+                    "DOOR_START": "door_opened",
                 },
             },
         )
