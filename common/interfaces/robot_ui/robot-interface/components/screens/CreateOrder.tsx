@@ -98,9 +98,9 @@ function EditMode({
   totalItems: number;
   confirm: () => void;
 }) {
-  const [activeCategory, setActiveCategory] = useState<Category | "all">("all");
+  const [activeCategory, setActiveCategory] = useState<Category>("drinks");
 
-  const visible = activeCategory === "all" ? ITEMS : ITEMS.filter((i) => i.category === activeCategory);
+  const visible = ITEMS.filter((i) => i.category === activeCategory);
 
   const inc = (id: string) => setQty((prev) => ({ ...prev, [id]: (prev[id] ?? 0) + 1 }));
   const dec = (id: string) =>
@@ -115,7 +115,7 @@ function EditMode({
     <>
       {/* Category tabs */}
       <div className="flex flex-row bg-slate-700 shrink-0">
-        {(["all", ...CATEGORIES] as const).map((cat) => (
+        {CATEGORIES.map((cat) => (
           <button
             key={cat}
             className={
@@ -124,7 +124,7 @@ function EditMode({
             }
             onClick={() => setActiveCategory(cat)}
           >
-            {cat === "all" ? "All" : `${CATEGORY_EMOJI[cat]} ${cat}`}
+            {`${CATEGORY_EMOJI[cat]} ${cat}`}
           </button>
         ))}
       </div>
