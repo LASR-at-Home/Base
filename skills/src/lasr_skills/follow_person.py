@@ -168,9 +168,9 @@ class EvaluateDetections(State):
 
         return goal_pose
 
-    def robot_point_cb(self, msg: PoseWithCovarianceStamped):
-        """Stores the raw underlying Pose data on message arrival"""
-        self.current_robot_point = msg.pose.pose.position
+    # def robot_point_cb(self, msg: PoseWithCovarianceStamped):
+    #     """Stores the raw underlying Pose data on message arrival"""
+    #     self.current_robot_point = msg.pose.pose.position
 
     def calc_distance_between_points(self, pointOne, pointTwo):
         """Calculates Eculidian distance between 2 given point"""

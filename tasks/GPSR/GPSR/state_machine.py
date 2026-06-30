@@ -51,16 +51,10 @@ class GPSR(yasmin.StateMachine):
                 msg_type=Empty,
             ),
             transitions={
-                "succeeded": "START_CON",
+                "succeeded": "GO_TO_INSTRUCT_POINT",
                 "failed": "WAIT_START",
                 "canceled": "failed",
             },
-        )
-
-        self.add_state(
-            "START_CON",  # SM1: Waits for Door to open, then goes to start
-            self.setup(),
-            transitions={"succeeded": "WAIT_FOR_NEXT_COMMAND", "failed": "START_CON"},
         )
 
         # Main Task loop:
