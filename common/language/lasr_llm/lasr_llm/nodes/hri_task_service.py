@@ -29,7 +29,9 @@ class HRITaskLLMService(Node):
         Handle the query to the LLM.
         This function processes the request and returns a response.
         """
-        self.get_logger().info(f"Received query: {request.llm_input}")
+        self.get_logger().info(
+            f"Received query: {request.llm_input}, and task is {request.task}"
+        )
         task = request.task
 
         if task == "name":

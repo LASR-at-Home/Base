@@ -3,23 +3,16 @@
 from dataclasses import dataclass
 from typing import Optional, List, Dict
 import re
-import rclpy
 import logging
 import numpy as np
 
-print(f"Numpy version: {np.__version__}")  # For debugging purposes
+import os
+import ollama
+from ollama import Client
+import socket
 
-from transformers import (
-    pipeline,
-    AutoModelForCausalLM,
-    AutoTokenizer,
-    BitsAndBytesConfig,
-    AutoModelForTokenClassification,
-    AutoModelForQuestionAnswering,
-)
 import torch
 
-import os
 import json
 from datetime import datetime
 
@@ -28,6 +21,10 @@ from .utils import (
     truncate_llm_output,
     parse_llm_output_to_dict,
 )
+
+import os
+
+here = os.path.dirname(os.path.abspath(__file__))
 
 
 @dataclass
@@ -42,70 +39,123 @@ class ModelConfig:
     )
     task: Optional[str] = None  # For pipeline models
     quantize: bool = True
+    ollama_host: str = "http://127.0.0.1:11434"  # Ollama host for LLMs
 
 
 models = {
-    "BERT-ner": "dslim/bert-base-NER",  # NER so mainly names
-    "Qwen": "Qwen/Qwen2.5-1.5B",  # perfect
-    "QCode": "Qwen/Qwen2.5-Coder-1.5B",  # perfect
-    "Mistral": "mistralai/Mistral-7B-v0.1",  # empty output
-    "Gemma": "google/gemma-2b",  # nope
-    "DeepSeekQwen": "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B",  # terrible lol
+    # "BERT-ner": "dslim/bert-base-NER",  # NER so mainly names
+    "Qwen": "qwen2.5:3b",
+    # "QCode": "Qwen/Qwen2.5-Coder-1.5B",  # perfect
+    # "Mistral": "mistralai/Mistral-7B-v0.1",  # empty output
+    # "Gemma": "google/gemma-2b",  # nope
+    # "DeepSeekQwen": "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B",  # terrible lol
 }
 
 
 class LLMInference:
     def __init__(self, model_config: ModelConfig):
         self.config = model_config
-        if self.config.quantize:
-            # Quantize the model - for using 1/4 (or 1/8) of the GPU RAM. Full example in the models' HugginFace docs
-            self.quantization_config = BitsAndBytesConfig(
-                load_in_4bit=True,
-                bnb_4bit_quant_type="nf4",
-                bnb_4bit_compute_dtype=torch.bfloat16,
-            )
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        print(f"Using device: {self.device}")
-
-        self.model_name = self.config.model_name
-        self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
-
         self.logger = logging.getLogger(__name__)
+        self.model_name = models["Qwen"]
 
-        if self.config.model_type == "pipeline":
-            if self.config.task:
-                self.task = self.config.task
+        self.num_gpu = self._detect_gpu_layers()
+        self.client = Client(host=self.config.ollama_host)
+        self._ensure_model_available()
+
+    def run_inference(
+        self, query: str, context: Optional[str] = None, max_tokens: int = 56
+    ) -> str:
+        messages = []
+
+        if context:
+            messages.append({"role": "system", "content": context})
+
+        messages.append({"role": "user", "content": query})
+
+        try:
+            response = self.client.chat(
+                model=self.model_name,
+                messages=messages,
+                options={
+                    "num_predict": max_tokens,
+                    "num_gpu": self.num_gpu,
+                },
+            )
+            result = response.message.content.strip()
+            # Strip the input query from the result if echoed back, matching original behaviour
+            generated_text = re.sub(re.escape(query), "", result).strip()
+            return generated_text
+
+        except Exception as e:
+            raise RuntimeError(f"[LLMInference] Inference failed: {e}")
+
+    def _is_online(self) -> bool:
+        """Check internet connectivity."""
+        try:
+            socket.setdefaulttimeout(3)
+            socket.create_connection(("8.8.8.8", 53))
+            return True
+        except OSError:
+            return False
+
+    def _model_is_local(self) -> bool:
+        """Return True if the model is already pulled locally."""
+        local_models = [m.model for m in self.client.list().models]
+        return self.model_name.split(":")[0] in [m.split(":")[0] for m in local_models]
+
+    def _detect_gpu_layers(self) -> int:
+        try:
+            if torch.cuda.is_available():
+                free_vram_gb = torch.cuda.mem_get_info(0)[0] / 1e9
+                self.logger.info(f"[LLMInference] Free VRAM: {free_vram_gb:.1f} GB.")
+                if free_vram_gb >= 4:
+                    return -1  # full GPU offload
+                else:
+                    return 8  # Partial offload, rest to CPU
             else:
-                self.infer_task()
-            self.model = self.load_pipeline_model()
-            self.pipe = pipeline(
-                task=self.task, model=self.model, tokenizer=self.tokenizer
-            )  # , device=self.device)
+                self.logger.info("[LLMInference] No GPU detected — running on CPU.")
+                return 0
+        except ImportError:
+            self.logger.warning(
+                "[LLMInference] torch not available — defaulting to CPU."
+            )
+            return 0
 
-        elif self.config.model_type == "llm":
-            self.model = self.load_llm_model()
-        else:
-            raise ValueError(
-                f"Model type {self.config.model_type} is unknown or not supported."
+    def _ensure_model_available(self):
+        """
+        Ensure the model is available locally, pulling it if necessary.
+        If no internet connection is available, raise an error.
+        """
+        if self._model_is_local():
+            self.logger.info(f"[LLMInference] Model '{self.model_name}' found locally.")
+            return
+
+        # Model not local — need internet to pull it
+        if not self._is_online():
+            raise RuntimeError(
+                f"[LLMInference] Model '{self.model_name}' is not available locally "
+                f"and there is no internet connection to pull it. "
+                f"Run with connectivity first so the model can be downloaded and cached."
             )
 
-    def process_query(self, query):
-        """
-        Process the query to ensure it is in the correct format.
-        param query: str, list, or file path
-        """
-        if isinstance(query, str):
-            # If file path is provided, read the file
-            if os.path.isfile(query):
-                with open(query, "r") as file:
-                    query = file.read()
-            return [query]
-        elif isinstance(query, list):
-            return query
-        else:
-            raise ValueError(
-                "Unsupported query type. Use 'string', 'list' or provide a file to a path containing text."
-            )
+        self.logger.info(
+            f"[LLMInference] Pulling '{self.model_name}' (this only happens once)..."
+        )
+        self.pull_model(self.model_name)
+        self.logger.info(
+            f"[LLMInference] '{self.model_name}' saved locally — offline use enabled."
+        )
+
+    def pull_model(self, model_name):
+        available = [m.model for m in ollama.list().models]
+        if model_name not in available:
+            for chunk in ollama.pull(model_name, stream=True):
+                if chunk.status == "pulling manifest" or chunk.completed:
+                    pct = (
+                        f"{chunk.completed/chunk.total*100:.1f}%" if chunk.total else ""
+                    )
+                    print(f"\r{chunk.status} {pct}", end="", flush=True)
+            print(f"\nDone.")
 
     def infer_task(self) -> str:
         name = self.model_name.lower()
@@ -117,83 +167,6 @@ class LLMInference:
             raise ValueError(
                 f"Cannot infer task from model name: {self.model_name}. Please specify manually in model config."
             )
-
-    def load_pipeline_model(self):
-        # device_map = "auto" if self.device != "cpu" else "cpu"
-        torch_dtype = torch.bfloat16 if self.device != "cpu" else torch.float32
-        kwargs = {"torch_dtype": torch_dtype}
-        if self.config.quantize:
-            kwargs["quantization_config"] = self.quantization_config
-
-        if self.task == "token-classification":
-            # Bert models for token classification do not support device_map
-            model_class = AutoModelForTokenClassification
-        elif self.task == "question-answering":
-            kwargs["device_map"] = "auto" if self.device != "cpu" else "cpu"
-            model_class = AutoModelForQuestionAnswering
-        else:
-            raise ValueError(f"Unsupported task: {self.task}")
-
-        return model_class.from_pretrained(self.model_name, **kwargs)
-
-    def load_llm_model(self):
-        if self.device == torch.device("cpu"):
-            self.logger.warning("[LLMInference] CPU detected — skipping quantization.")
-            return AutoModelForCausalLM.from_pretrained(
-                self.model_name, low_cpu_mem_usage=True
-            )
-
-        kwargs = {"low_cpu_mem_usage": True}
-
-        if self.config.quantize:
-            from transformers import BitsAndBytesConfig
-
-            try:
-                kwargs["quantization_config"] = BitsAndBytesConfig(
-                    load_in_4bit=True,
-                    bnb_4bit_quant_type="nf4",
-                    bnb_4bit_compute_dtype=torch.bfloat16,
-                    bnb_4bit_use_double_quant=True,
-                )
-                kwargs["device_map"] = "auto"
-            except Exception as e:
-                self.get_logger().error(
-                    f"[LLMInference] Failed to create quant config: {e}"
-                )
-                self.get_logger().warning(
-                    "[LLMInference] Falling back to full-precision model."
-                )
-        else:
-            kwargs["torch_dtype"] = torch.bfloat16
-            kwargs["device_map"] = {"": 0}
-
-        model = AutoModelForCausalLM.from_pretrained(self.model_name, **kwargs)
-        model.eval()
-        print(f"[LLMInference] Model {self.model_name} loaded successfully.")
-        return model
-
-    def run_inference(
-        self, query: str, context: Optional[str] = None, max_tokens=56
-    ) -> str:
-        result = None
-        if self.config.model_type == "pipeline":
-            if self.task == "question-answering":
-                if not context:
-                    raise ValueError("Question Answering task requires context.")
-                result = self.pipe(question=query, context=context)
-            else:
-                result = self.pipe(query)
-        elif self.config.model_type == "llm":
-            input_ids = self.tokenizer(
-                query, return_tensors="pt"
-            )  # .to(self.model.device)
-            with torch.inference_mode():
-                output_ids = self.model.generate(max_new_tokens=max_tokens, **input_ids)
-            result = self.tokenizer.decode(output_ids[0], skip_special_tokens=True)
-            print(f"LLM output: {result}")
-        generated_text = re.sub(re.escape(query), "", result).strip()
-
-        return generated_text
 
     def serialise_output(self, output):
         """
@@ -245,7 +218,7 @@ def interest_commonality_llm(interests: list[str]) -> str:
     :param interests: a list of interests
     :return: a sentence describing the commonalities
     """
-    config = ModelConfig(model_name=models["Qwen"], model_type="llm", quantize=False)
+    config = ModelConfig(model_name=models["Qwen"], model_type="llm")
     sentence = ", ".join(interests)
     query = create_query(
         sentence,
@@ -262,7 +235,7 @@ def introduce_llm(name: str, drink: str, interests: str) -> str:
     """
     Create a sentence introducing a person using the given name, drink, and interests.
     """
-    config = ModelConfig(model_name=models["Qwen"], model_type="llm", quantize=False)
+    config = ModelConfig(model_name=models["Qwen"], model_type="llm")
     input_summary = f"Name: {name}, Favorite drink: {drink}, Interests: {interests}"
     prompt = f"Create a sentence that introduces a person named {name}, mentioning their favorite drink ({drink}) and their interest in {interests}."
 
@@ -280,31 +253,31 @@ def classify_category(objects: List[str]) -> str:
     :param objects: a list of interests
     :return: category
     """
-    config = ModelConfig(model_name=models["Qwen"], model_type="llm", quantize=False)
+    config = ModelConfig(model_name=models["Qwen"], model_type="llm")
     sentence = ", ".join(objects)
     query = create_query(
         sentence, "Detect which category these or a object belongs to."
     )
-    inference = LLMInference(config, query)
-    response = inference.run_inference()
+    inference = LLMInference(config)
+    response = inference.run_inference(query)
     # print(response)
     parsed_response = truncate_llm_output(response[0])
     return parsed_response
 
 
-def link_category(object: str, category: list[str]) -> str:
+def link_category(object: str, categories: list[str]) -> str:
     """
     Classify category between a list of objects.
     :param objects: a list of interests
     :return: category
     """
-    config = ModelConfig(model_name=models["Qwen"], model_type="llm", quantize=False)
+    config = ModelConfig(model_name=models["Qwen"], model_type="llm")
+    categories_str = ", ".join(categories)
     query = create_query(
-        category,
-        "Detect which category {object} belongs to the most. If not appropreate category to go return 'new'",
+        f"Detect which category {object} belongs to the most from the following categories: {categories_str}. If not appropriate category to go return 'new'",
     )
-    inference = LLMInference(config, query)
-    response = inference.run_inference()
+    inference = LLMInference(config)
+    response = inference.run_inference(query)
     # print(response)
     parsed_response = truncate_llm_output(response[0])
     return parsed_response
@@ -315,17 +288,17 @@ def extract_fields_llm(text: str, fields: List[str]) -> Dict:
     Extracts structured information from a sentence using an LLM.
     Returns a dictionary with all fields — missing ones are filled with 'Unknown'.
     """
-    config = ModelConfig(model_name=models["Qwen"], model_type="llm", quantize=False)
+    config = ModelConfig(model_name=models["Qwen"], model_type="llm")
 
     if fields is None:
         fields = ["Name", "Favourite drink", "Interests"]
 
     query = create_query(text, "extract_fields", fields)
-    inference = LLMInference(config, query)
-    response = inference.run_inference()
+    inference = LLMInference(config)
+    response = inference.run_inference(query)
 
     # Parse the model response
-    parsed = parse_llm_output_to_dict(response[0], fields)
+    parsed = parse_llm_output_to_dict(response, fields)
 
     # Fill missing or empty fields with "Unknown"
     result = {field: parsed.get(field, "Unknown") or "Unknown" for field in fields}
@@ -335,7 +308,7 @@ def extract_fields_llm(text: str, fields: List[str]) -> Dict:
 
 def main():
     # # Examples for testing
-    # config = ModelConfig(model_name=models["Qwen"], model_type="llm", quantize=True)
+    # config = ModelConfig(model_name=models["Qwen"], model_type="llm")
 
     # # sentence = "My name is John, my favourite drink is green tea, and my interests are robotics."
     # # sentence = "I am John, I usually drink green tea, and I really like robotics. I also like to play chess and watch movies."
@@ -348,31 +321,33 @@ def main():
     # print(response)
     # inference.log_output(response)
 
-    print("\n🔍 TEST: extract_fields_llm")
-    sentence = "Oh hi yeah, I'm John erm I drink tea usually green, and I am a robotics enthusiast. I also like to play chess and watch movies when I can."
-    extracted = extract_fields_llm(sentence, ["Name", "Favourite drink", "Interests"])
+    # print("\n🔍 TEST: extract_fields_llm")
+    # sentence = "Oh hi yeah, I'm John erm and I drink tea usually green."
+    sentence = "Hi Tiago, My name is Hayeong and my favourite drink is matcha."
+    print(f"Input sentence: {sentence}")
+    extracted = extract_fields_llm(sentence, ["Name", "Favourite drink"])
     print("Extracted fields:", extracted)
 
-    print("\n🔍 TEST: interest_commonality_llm")
-    interests = ["robotics", "chess"]
-    commonality = interest_commonality_llm(interests)
-    print("Commonality summary:", commonality)
-
-    print("\n🔍 TEST: introduce_llm")
-    intro = introduce_llm(name="Eunice", drink="green tea", interests="swimming")
-    print("Introduction:", intro)
-
-    print("\n🔍 TEST: classify_category")
-    category = classify_category(["apple"])  # FIXED: must pass a list
-    print("Classified category:", category)
-
-    print("\n🔍 TEST: link_category for 'apple'")
-    linked_apple = link_category("apple", ["fruit", "drink", "new"])
-    print("Linked category:", linked_apple)
-
-    print("\n🔍 TEST: link_category for 'basketball'")
-    linked_basketball = link_category("basketball", ["fruit", "drink", "new"])
-    print("Linked category:", linked_basketball)
+    # print("\n🔍 TEST: interest_commonality_llm")
+    # interests = ["robotics", "chess"]
+    # commonality = interest_commonality_llm(interests)
+    # print("Commonality summary:", commonality)
+    #
+    # print("\n🔍 TEST: introduce_llm")
+    # intro = introduce_llm(name="Eunice", drink="green tea", interests="swimming")
+    # print("Introduction:", intro)
+    #
+    # print("\n🔍 TEST: classify_category")
+    # category = classify_category(["apple"])  # FIXED: must pass a list
+    # print("Classified category:", category)
+    #
+    # print("\n🔍 TEST: link_category for 'apple'")
+    # linked_apple = link_category("apple", ["fruit", "drink", "new"])
+    # print("Linked category:", linked_apple)
+    #
+    # print("\n🔍 TEST: link_category for 'basketball'")
+    # linked_basketball = link_category("basketball", ["fruit", "drink", "new"])
+    # print("Linked category:", linked_basketball)
 
 
 if __name__ == "__main__":

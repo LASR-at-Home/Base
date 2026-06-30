@@ -100,7 +100,9 @@ class YOLOServiceNode:
         )
         self._device = self.node.get_parameter("~device").value
 
-        self.node.declare_parameter("~preload", ["yolo11n-pose.pt"])
+        self.node.declare_parameter(
+            "~preload", ["yolo11n-seg.pt", "yolo11n.pt", "yolo11n-pose.pt"]
+        )
         self.preload_param_list = self.node.get_parameter("~preload").value
         for model in self.preload_param_list:
             self._maybe_load_model(model)
@@ -115,7 +117,7 @@ class YOLOServiceNode:
             history=HistoryPolicy.KEEP_LAST,
         )
 
-        self._tf_buffer = Buffer(cache_time=Duration(seconds=10))
+        self._tf_buffer = Buffer(cache_time=Duration(seconds=10.0))
         self._tf_listener = tf.TransformListener(self._tf_buffer, self.node)
 
         self.node.create_service(YoloDetection, "/yolo/detect", self._detect)
@@ -202,16 +204,8 @@ class YOLOServiceNode:
                 target_frame, source_frame, stamp, Duration(seconds=1.0)
             )
         except Exception as e:
-            self.node.get_logger().debug(
-                f"TF {target_frame}<-{source_frame} at image stamp failed ({e}); using latest"
-            )
-        try:
-            return self._tf_buffer.lookup_transform(
-                target_frame, source_frame, Time(), Duration(seconds=1.0)
-            )
-        except Exception as e:
-            self.node.get_logger().warn(
-                f"TF {target_frame}<-{source_frame} lookup failed ({e}); continuing without transform"
+            self.node.get_logger().error(
+                f"TF {target_frame}<-{source_frame} at image stamp failed ({e})"
             )
             return None
 
@@ -242,10 +236,7 @@ class YOLOServiceNode:
                 req.depth_image.header.stamp,
             )
             if transform is None:
-                self.node.get_logger().warn(
-                    f"Cannot transform detections to {target_frame}; "
-                    f"returning detections in {req.depth_image.header.frame_id} frame instead"
-                )
+                return response
 
         # TODO: Make Detection3D response stamped with frame_id so callers can detect
         # TF failures externally instead of relying on log warnings
@@ -340,10 +331,7 @@ class YOLOServiceNode:
                 req.depth_image.header.stamp,
             )
             if transform is None:
-                self.node.get_logger().warn(
-                    f"Cannot transform keypoints to {target_frame}; "
-                    f"returning detections in {req.depth_image.header.frame_id} frame instead"
-                )
+                return response
 
         # TODO: Make Keypoint3D response stamped with frame_id so callers can detect
         # TF failures externally instead of relying on log warnings
@@ -534,17 +522,26 @@ class YOLOServiceNode:
         return results
 
 
+from rclpy.executors import MultiThreadedExecutor
+
+
 def main(args=None):
     rclpy.init(args=args)
 
     node = Node("yolo_service")
     YOLOServiceNode(node)
+
+    executor = MultiThreadedExecutor()
+    executor.add_node(node)
+
     try:
-        rclpy.spin(node)
+        executor.spin()
     except KeyboardInterrupt:
         pass
     finally:
+        executor.shutdown()
         node.destroy_node()
+        rclpy.shutdown()
 
 
 if __name__ == "__main__":

@@ -27,7 +27,6 @@ set(msg_files
 
 # Specify service files
 set(srv_files
-  "srv/Llm.srv"
   "srv/ReceptionistQueryLlm.srv"
   "srv/HRITaskQueryLlm.srv"
   "srv/SentenceEmbedding.srv"

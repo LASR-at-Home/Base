@@ -41,14 +41,14 @@ class speech_model_params:
         pause_threshold (Optional[float]): Seconds of non-speaking audio before a phrase is considered complete. Defaults to 0.8 seconds.
     """
 
-    model_name: str = "medium.en"
+    model_name: str = "small.en"
     device: str = "cuda" if torch.cuda.is_available() else "cpu"
     start_timeout: float = 5.0
     phrase_duration: Optional[float] = 10
     sample_rate: int = 16000
     mic_device: Optional[str] = None
     timer_duration: Optional[int] = 20
-    warmup: bool = True
+    warmup: bool = False
     energy_threshold: Optional[int] = None
     pause_threshold: Optional[float] = 2.0
 
@@ -267,7 +267,7 @@ def parse_args() -> dict:
     parser.add_argument(
         "--model_name",
         type=str,
-        default="medium.en",
+        default="small.en",
         help="Name of the speech recognition model.",
     )
     parser.add_argument(
@@ -302,7 +302,7 @@ def parse_args() -> dict:
 
     parser.add_argument(
         "--energy_threshold",
-        type=Optional[int],
+        type=int,
         default=None,
         help="Energy threshold for silence detection. Using this disables automatic adjustment",
     )
@@ -330,7 +330,7 @@ def configure_model_params(config: dict) -> speech_model_params:
     """
     model_params = speech_model_params()
     if config["model_name"]:
-        model_params.model_name = config["model_name"]
+        model_params.model_name = "small.en"
     if config["device"]:
         model_params.device = config["device"]
     if config["start_timeout"]:

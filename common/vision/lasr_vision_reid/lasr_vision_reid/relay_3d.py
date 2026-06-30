@@ -12,7 +12,7 @@ def relay_3d(
     node: Node, image_topic: str, depth_topic: str, depth_camera_info_topic: str
 ) -> None:
 
-    recognise = node.create_client(Recognise3D, "/lasr_vision_reid/recognise/threed")
+    recognise = node.create_client(Recognise3D, "/lasr_vision_reid/recognise")
     while not recognise.wait_for_service(timeout_sec=1.0):
         node.get_logger().info("Service not available, waiting again...")
     node.get_logger().info("Service is ready!")
@@ -63,7 +63,7 @@ def relay_3d(
         node, Image, depth_topic, qos_profile=camera_qos
     )
     ts = message_filters.ApproximateTimeSynchronizer(
-        [image_sub, depth_sub], queue_size=30, slop=0.2
+        [image_sub, depth_sub], queue_size=30, slop=0.1
     )
     ts.registerCallback(detect_cb)
 

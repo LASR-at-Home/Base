@@ -10,7 +10,7 @@ from yasmin_viewer import YasminViewerPub
 
 from geometry_msgs.msg import Point, Quaternion, Pose, PoseStamped
 
-from lasr_skills import DetectDoorOpening, GoToLocation
+from lasr_skills import DetectDoorOpening, SafeGoToLocation, PlayMotion
 
 
 class StartDoorSM(StateMachine):  # TODO: Rename to start_task and move to Skills
@@ -20,19 +20,18 @@ class StartDoorSM(StateMachine):  # TODO: Rename to start_task and move to Skill
         location: Union[Pose, None] = None,
         location_param: Union[str, None] = "start_pose",
     ):
-        super().__init__(
-            outcomes=["succeeded", "failed"],
-        )
+        super().__init__(outcomes=["succeeded", "failed"])
 
         self.add_state(
             "DETECT_DOOR_OPENING",
             DetectDoorOpening(),
             transitions={"door_opened": "GO_TO_START", "failed": "failed"},
         )
+
         self.add_state(
             "GO_TO_START",
-            GoToLocation(
-                location=location,
+            SafeGoToLocation(
+                location_pose=location,
                 location_param=location_param,
             ),
             transitions={"succeeded": "succeeded", "failed": "failed"},

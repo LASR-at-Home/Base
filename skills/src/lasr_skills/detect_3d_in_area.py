@@ -14,6 +14,8 @@ from geometry_msgs.msg import Polygon, Point, Point32, PolygonStamped, PointStam
 from shapely.geometry import Point as ShapelyPoint
 from shapely.geometry.polygon import Polygon as ShapelyPolygon
 
+import math
+
 
 class Detect3DInArea(yasmin.StateMachine):
     class FilterDetections(yasmin.State):
@@ -24,6 +26,8 @@ class Detect3DInArea(yasmin.StateMachine):
             z_max: Optional[float] = None,
             debug_publisher: str = "/skills/detect3d_in_area/debug",
         ):
+            super().__init__(outcomes=["succeeded", "failed"])
+
             self.add_input_key("detections_3d")
             if area_polygon is None:
                 self.add_input_key("polygon")
@@ -33,11 +37,12 @@ class Detect3DInArea(yasmin.StateMachine):
                 self.add_input_key("z_sweep_max")
 
             self.add_output_key("detections_3d")
-            super().__init__(outcomes=["succeeded", "failed"])
+
             self._z_min = z_min
             self._z_max = z_max
             self.area_polygon = area_polygon
-            self.debug_publisher = yasmin_ros.logger_node.create_publisher(
+            self.node = yasmin_ros.logger_node
+            self.debug_publisher = self.node.create_publisher(
                 PolygonStamped, debug_publisher, 1
             )
 
@@ -58,6 +63,11 @@ class Detect3DInArea(yasmin.StateMachine):
             else:
                 area_polygon = self.area_polygon
 
+            assert isinstance(area_polygon, ShapelyPolygon), (
+                f"Expected a Polygon but got {type(area_polygon).__name__}. "
+                "Check the source geometry."
+            )
+
             polygon_msg.points = [
                 Point32(x=point[0], y=point[1], z=0.0)
                 for point in area_polygon.exterior.coords
@@ -66,12 +76,14 @@ class Detect3DInArea(yasmin.StateMachine):
                 PolygonStamped(polygon=polygon_msg, header=Header(frame_id="map"))
             )
 
-            pub = yasmin_ros.logger_node.create_publisher(
+            pub = yasmin_ros.logger_node.create_publisher(  # CHECK:  New publisher each time? declare in __init__ instead?
                 PointStamped, "objects_points", 10
             )
 
             for detection in detected_objects:
-                if detection.point.x == "nan":
+                if math.isnan(
+                    detection.point.x
+                ):  # CHECK:  Potential broken? float vs string?
                     continue
                 yasmin.YASMIN_LOG_INFO(
                     f"Detected a {detection.name} at x:{detection.point.x}, y:{detection.point.y}, z:{detection.point.z}"
@@ -79,7 +91,7 @@ class Detect3DInArea(yasmin.StateMachine):
                 pub.publish(
                     PointStamped(
                         header=Header(
-                            frame_id="head_front_camera_color_optical_frame",
+                            frame_id="map",
                             stamp=Time().to_msg(),
                         ),
                         point=Point(
@@ -122,6 +134,8 @@ class Detect3DInArea(yasmin.StateMachine):
         z_min: Optional[float] = None,
         z_max: Optional[float] = None,
     ):
+
+        super().__init__(outcomes=["succeeded", "failed"])
         if area_polygon is None:
             self.add_input_key("polygon")
         if z_min is None and z_max is None:
@@ -130,8 +144,6 @@ class Detect3DInArea(yasmin.StateMachine):
 
         self.add_output_key("detections_3d")
         self.add_output_key("image_raw")
-
-        super().__init__(outcomes=["succeeded", "failed"], handle_sigint=True)
 
         self.add_state(
             "DETECT_OBJECTS_3D",

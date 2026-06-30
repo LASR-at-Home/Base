@@ -1,7 +1,6 @@
 import rclpy
 from rclpy.node import Node
-from rclpy.wait_for_message import wait_for_message
-from rclpy.qos import QoSProfile, DurabilityPolicy, ReliabilityPolicy
+from rclpy.qos import QoSProfile, DurabilityPolicy, ReliabilityPolicy, HistoryPolicy
 
 import yasmin
 from yasmin import State, StateMachine
@@ -13,6 +12,8 @@ import cv2
 import numpy as np
 
 from typing import Optional, List
+
+import time
 
 from geometry_msgs.msg import PoseWithCovarianceStamped
 
@@ -65,7 +66,9 @@ class CropImage3D(State):
         self.crop_type = crop_type
         self._bridge = CvBridge()
 
-        self.debug_publisher = yasmin_ros.logger_node.create_publisher(
+        self.node = yasmin_ros.logger_node
+
+        self.debug_publisher = self.node.create_publisher(
             Image,
             "/skills/crop_image_3d/debug",
             QoSProfile(
@@ -73,6 +76,19 @@ class CropImage3D(State):
                 durability=DurabilityPolicy.TRANSIENT_LOCAL,
                 reliability=ReliabilityPolicy.BEST_EFFORT,
             ),
+        )
+
+        amcl_qos = QoSProfile(
+            depth=1,
+            reliability=ReliabilityPolicy.RELIABLE,
+            durability=DurabilityPolicy.TRANSIENT_LOCAL,
+            history=HistoryPolicy.KEEP_LAST,
+        )
+
+        self.robot_pose_msg = None
+
+        self.node.create_subscription(
+            PoseWithCovarianceStamped, "amcl_pose", self.pose_cb, qos_profile=amcl_qos
         )
 
         if self.crop_type not in ["masked", "bbox"]:
@@ -84,25 +100,29 @@ class CropImage3D(State):
                 f"Invalid crop_logic: {self.crop_logic}. Must be 'nearest' or 'farthest'."
             )
 
+    def pose_cb(self, msg):
+        self.robot_pose_msg = msg
+
     def execute(self, blackboard):
         detections = blackboard["detections_3d"].detected_objects
         if not detections:
             yasmin.YASMIN_LOG_WARN("No 3D detections found.")
             return "failed"
 
-        # From: https://github.com/ros2/rclpy/blob/humble/rclpy/rclpy/wait_for_message.py
-        success, robot_pose_msg = wait_for_message(
-            PoseWithCovarianceStamped, yasmin_ros.logger_node, self.robot_pose_topic
-        )
-        if not success:
-            yasmin.YASMIN_LOG_WARN("Timed out waiting for robot pose.")
-            return "failed"
+        attempt = 0
+        while self.robot_pose_msg is None:
+            if attempt > 5:
+                time.sleep(0.5)
+                attempt += 0.5
+            else:
+                yasmin.YASMIN_LOG_WARN("Timed out waiting for robot pose.")
+                return "failed"
 
         # Pose in map frame, same as detected objects
         robot_x, robot_y, robot_z = (
-            robot_pose_msg.pose.pose.position.x,
-            robot_pose_msg.pose.pose.position.y,
-            robot_pose_msg.pose.pose.position.z,
+            self.robot_pose_msg.pose.pose.position.x,
+            self.robot_pose_msg.pose.pose.position.y,
+            self.robot_pose_msg.pose.pose.position.z,
         )
 
         rgb_image = self._bridge.imgmsg_to_cv2(

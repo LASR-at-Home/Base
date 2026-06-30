@@ -26,25 +26,26 @@ class GetNameAndDrink(yasmin.StateMachine):
             self.add_input_key("guest_transcription")
             self.add_input_key("guest_data")
             self.add_output_key("guest_data")
+            self.add_output_key("placeholders")
 
             self.task = task
             self.guest_id = guest_id
 
-        def _create_req(self, userdata, request):
+        def _create_req(self, blackboard):
             request = HRITaskQueryLlm.Request(
-                string=userdata.guest_transcription, task=self.task
+                llm_input=blackboard["guest_transcription"], task=self.task
             )
 
             return request
 
         def _handle_resp(self, blackboard, result):
-            (
-                blackboard["guest_data"].update({self.guest_id: {"name": result.name}})
-                if self.task == "name"
-                else blackboard["guest_data"].update(
-                    {self.guest_id: {"drink": result.favoutrite_drink}}
-                )
+            result = result.response
+            blackboard["guest_data"][self.guest_id][self.task] = (
+                result.name if self.task == "name" else result.favourite_drink
             )
+
+            if self.task == "name":
+                blackboard["placeholders"] = result.name
 
             return "succeeded"
 
@@ -64,7 +65,7 @@ class GetNameAndDrink(yasmin.StateMachine):
 
         def execute(self, blackboard) -> str:
             if not self._recovery_name_and_drink_required(blackboard):
-                if blackboard["guest_data"][self._guest_id]["name"] == "unknown":
+                if blackboard["guest_data"][self._guest_id]["name"] == "":
                     outcome = "failed_name"
                 else:
                     outcome = "failed_drink"
@@ -80,8 +81,8 @@ class GetNameAndDrink(yasmin.StateMachine):
             """
 
             return (
-                blackboard["guest_data"][self._guest_id]["name"] == "unknown"
-                and blackboard["guest_data"][self._guest_id]["drink"] == "unknown"
+                blackboard["guest_data"][self._guest_id]["name"] == ""
+                and blackboard["guest_data"][self._guest_id]["drink"] == ""
             )
 
     def __init__(
@@ -90,8 +91,7 @@ class GetNameAndDrink(yasmin.StateMachine):
         last_resort: bool,
     ):
         super().__init__(
-            outcomes=["succeeded", "failed", "failed_name", "failed_drink"],
-            handle_sigint=True,
+            outcomes=["succeeded", "failed", "failed_name", "failed_drink"]
         )
 
         self.add_input_key("guest_transcription")

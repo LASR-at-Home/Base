@@ -4,7 +4,7 @@ import rclpy
 import yasmin
 from yasmin import StateMachine, State, Blackboard
 import yasmin_ros
-
+import time
 
 from geometry_msgs.msg import Point, Quaternion, Pose, PoseStamped
 from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
@@ -36,14 +36,6 @@ class GoToLocation(State):
         elif self.location_param:
 
             node = yasmin_ros.logger_node
-
-            node.declare_parameter(f"{self.location_param}.position.x", 0.0)
-            node.declare_parameter(f"{self.location_param}.position.y", 0.0)
-            node.declare_parameter(f"{self.location_param}.position.z", 0.0)
-            node.declare_parameter(f"{self.location_param}.orientation.x", 0.0)
-            node.declare_parameter(f"{self.location_param}.orientation.y", 0.0)
-            node.declare_parameter(f"{self.location_param}.orientation.z", 0.0)
-            node.declare_parameter(f"{self.location_param}.orientation.w", 0.0)
 
             goal_pose = Pose(
                 position=Point(
@@ -83,7 +75,7 @@ class GoToLocation(State):
         self.navigator.goToPose(goal_stamped)
 
         while not self.navigator.isTaskComplete():
-            rclpy.spin_once(self.navigator)
+            time.sleep(1)
 
         return (
             "succeeded"
