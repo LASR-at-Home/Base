@@ -48,10 +48,10 @@ class Restaurant(yasmin.StateMachine):
 
         self.add_state(
             "SAVE_BAR_POSE",
-            SaveBarPose(),
+            yasmin.CbState(outcomes=["succeeded", "failed"], callback=self.save_bar_pose),
             transitions={
                 "succeeded": "FACE_TABLES",
-                "failed": "SAVE_BAR_POSE",
+                "failed" : "SAVE_BAR_POSE"
             },
         )
 
@@ -127,6 +127,22 @@ class Restaurant(yasmin.StateMachine):
             },
         )
 
+    def save_bar_pose(self, blackboard):
+        try:
+            transform = self.tf_buffer.lookup_transform(
+                "map",
+                "base_footprint",
+                rclpy.time.Time(),
+                timeout=rclpy.duration.Duration(seconds=1.0),
+            )
+            current_robot_point = transform.transform.translation
+            self.node.get_logger().info(f"Pose is: {current_robot_point}")
+            blackboard["bar_pose"] = current_robot_point
+            return "succeeded"
+
+        except Exception as e:
+            self.node.get_logger().warn(f"Waiting for map-base_footprint TF: {e}")
+            return "failed"
 
 try:
     from rclpy.executors import EventsExecutor as Executor
