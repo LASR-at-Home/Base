@@ -22,36 +22,26 @@ const CATEGORY_EMOJI: Record<Category, string> = {
 const RAW = "https://raw.githubusercontent.com/RoboCupAtHome/Incheon2026/main/objects/known_objects";
 
 const ITEMS: Item[] = [
-  // Drinks (.jpg, folder drinks!drink)
-  { id: "juice_pack",       name: "Juice Pack",      category: "drinks", image: `${RAW}/drinks!drink/juice_pack.jpg` },
-  { id: "cola",             name: "Cola",             category: "drinks", image: `${RAW}/drinks!drink/cola.jpg` },
-  { id: "milk",             name: "Milk",             category: "drinks", image: `${RAW}/drinks!drink/milk.jpg` },
-  { id: "orange_juice",     name: "Orange Juice",     category: "drinks", image: `${RAW}/drinks!drink/orange_juice.jpg` },
-  { id: "tropical_juice",   name: "Tropical Juice",   category: "drinks", image: `${RAW}/drinks!drink/tropical_juice.jpg` },
-  { id: "red_wine",         name: "Red Wine",         category: "drinks", image: `${RAW}/drinks!drink/red_wine.jpg` },
-  { id: "iced_tea",         name: "Iced Tea",         category: "drinks", image: `${RAW}/drinks!drink/iced_tea.jpg` },
-  // Fruits (.png, folder fruits!fruit)
-  { id: "orange",           name: "Orange",           category: "fruits", image: `${RAW}/fruits!fruit/orange.png` },
-  { id: "pear",             name: "Pear",             category: "fruits", image: `${RAW}/fruits!fruit/pear.png` },
-  { id: "peach",            name: "Peach",            category: "fruits", image: `${RAW}/fruits!fruit/peach.png` },
-  { id: "strawberry",       name: "Strawberry",       category: "fruits", image: `${RAW}/fruits!fruit/strawberry.png` },
-  { id: "apple",            name: "Apple",            category: "fruits", image: `${RAW}/fruits!fruit/apple.png` },
-  { id: "lemon",            name: "Lemon",            category: "fruits", image: `${RAW}/fruits!fruit/lemon.png` },
-  { id: "banana",           name: "Banana",           category: "fruits", image: `${RAW}/fruits!fruit/banana.png` },
-  { id: "plum",             name: "Plum",             category: "fruits", image: `${RAW}/fruits!fruit/plum.png` },
-  // Snacks (mixed formats, folder snacks!snack)
-  { id: "cornflakes",       name: "Cornflakes",       category: "snacks", image: `${RAW}/snacks!snack/cornflakes.jpg` },
-  { id: "pringles",         name: "Pringles",         category: "snacks", image: `${RAW}/snacks!snack/pringles.png` },
-  { id: "cheezit",          name: "Cheez-It",         category: "snacks", image: `${RAW}/snacks!snack/cheezit.png` },
-  // Food (.png, folder food)
-  { id: "chocolate_jello",  name: "Chocolate Jello",  category: "food",   image: `${RAW}/food/chocolate_jello.png` },
-  { id: "coffee_grounds",   name: "Coffee Grounds",   category: "food",   image: `${RAW}/food/coffee_grounds.png` },
-  { id: "mustard",          name: "Mustard",          category: "food",   image: `${RAW}/food/mustard.png` },
-  { id: "tomato_soup",      name: "Tomato Soup",      category: "food",   image: `${RAW}/food/tomato_soup.png` },
-  { id: "tuna",             name: "Tuna",             category: "food",   image: `${RAW}/food/tuna.png` },
-  { id: "strawberry_jello", name: "Strawberry Jello", category: "food",   image: `${RAW}/food/strawberry_jello.png` },
-  { id: "spam",             name: "Spam",             category: "food",   image: `${RAW}/food/spam.png` },
-  { id: "sugar",            name: "Sugar",            category: "food",   image: `${RAW}/food/sugar.png` },
+  // Drinks
+  { id: "coke_can",          name: "Coca-Cola",          category: "drinks",  image: `${RAW}/drinks!drink/coke_can.jpeg` },
+  { id: "coke_zero_can",     name: "Coke Zero",          category: "drinks",  image: `${RAW}/drinks!drink/coke_zero_can.jpeg` },
+  { id: "milk",              name: "Milk",               category: "drinks",  image: `${RAW}/drinks!drink/milk.jpeg` },
+  { id: "pepsi",             name: "Pepsi",              category: "drinks",  image: `${RAW}/drinks!drink/pepsi.jpeg` },
+  { id: "red_bull",          name: "Red Bull",           category: "drinks",  image: `${RAW}/drinks!drink/red_bull.jpeg` },
+  { id: "soju",              name: "Soju",               category: "drinks",  image: `${RAW}/drinks!drink/soju.jpeg` },
+  // Fruits
+  { id: "apple",             name: "Apple",              category: "fruits",  image: `${RAW}/fruits!fruit/apple.jpeg` },
+  { id: "lemon",             name: "Lemon",              category: "fruits",  image: `${RAW}/fruits!fruit/lemon.jpeg` },
+  { id: "mangostane",        name: "Mangosteen",         category: "fruits",  image: `${RAW}/fruits!fruit/mangostane.jpeg` },
+  { id: "peach",             name: "Peach",              category: "fruits",  image: `${RAW}/fruits!fruit/peach.jpeg` },
+  { id: "red_bellpepper",    name: "Red Bell Pepper",    category: "fruits",  image: `${RAW}/fruits!fruit/red_bellpepper.jpeg` },
+  { id: "yellow_bellpepper", name: "Yellow Bell Pepper", category: "fruits",  image: `${RAW}/fruits!fruit/yellow_bellpepper.jpeg` },
+  // Snacks
+  { id: "pringles",          name: "Pringles",           category: "snacks",  image: `${RAW}/snacks!snack/pringles.jpeg` },
+  { id: "seaweed",           name: "Seaweed",            category: "snacks",  image: `${RAW}/snacks!snack/seaweed.jpeg` },
+  // Food
+  { id: "cornflakes_2",      name: "Cornflakes",         category: "food",    image: `${RAW}/food/cornflakes_2.jpeg` },
+  { id: "instant_noodles",   name: "Instant Noodles",    category: "food",    image: `${RAW}/food/instant_noodles.jpeg` },
 ];
 
 const CATEGORIES: Category[] = ["drinks", "fruits", "snacks", "food"];
