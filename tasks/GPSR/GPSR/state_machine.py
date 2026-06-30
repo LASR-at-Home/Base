@@ -19,7 +19,7 @@ from std_msgs.msg import Empty
 
 from lasr_skills import (
     Say,
-    GoToLocation,
+    SafeGoToLocation,
     AskAndListen,
     PlayMotion,
     StartDoorSM,
@@ -60,13 +60,13 @@ class GPSR(yasmin.StateMachine):
         self.add_state(
             "START_CON",  # SM1: Waits for Door to open, then goes to start
             self.setup(),
-            transitions={"succeeded": "GO_TO_INSTRUCT_POINT", "failed": "START_CON"},
+            transitions={"succeeded": "WAIT_FOR_NEXT_COMMAND", "failed": "START_CON"},
         )
 
         # Main Task loop:
         self.add_state(
             "GO_TO_INSTRUCT_POINT",
-            GoToLocation(location_param="instruction_point"),
+            SafeGoToLocation(location_param="instruction_point"),
             transitions={"succeeded": "WAIT_FOR_NEXT_COMMAND", "failed": "failed"},
         )
 
@@ -79,18 +79,8 @@ class GPSR(yasmin.StateMachine):
                 msg_type=Empty,
             ),
             transitions={
-                "succeeded": "POST_NAV",
-                "failed": "WAIT_FOR_NEXT_COMMAND",
-                "canceled": "failed",
-            },
-        )
-
-        self.add_state(
-            "POST_NAV",
-            PlayMotion("post_navigation"),
-            transitions={
                 "succeeded": "CHECK_INSTRUCTION",
-                "aborted": "failed",
+                "failed": "WAIT_FOR_NEXT_COMMAND",
                 "canceled": "failed",
             },
         )
@@ -98,26 +88,17 @@ class GPSR(yasmin.StateMachine):
         self.add_state(
             "CHECK_INSTRUCTION",
             yasmin.CbState(outcomes=["next", "finish"], callback=self.checkRequest),
-            transitions={"next": "REQUEST_INTRUCTION", "finish": "succeeded"},
+            transitions={"next": "REQUEST_AND_WAIT_FOR_COMMAND", "finish": "succeeded"},
         )
-
-        self.add_state(  # Swap for ask and listen? then check then count number of requests/ if want to exit
-            "REQUEST_INTRUCTION",
-            Say(),
+        
+        self.add_state(
+            "REQUEST_AND_WAIT_FOR_COMMAND",
+            AskAndListen(),
             transitions={
-                "succeeded": "WAIT_FOR_COMMAND",
-                "aborted": "failed",
-                "canceled": "failed",
+                'succeeded': 'QUERY_LLM',
+                'failed': 'REQUEST_AND_WAIT_FOR_COMMAND'
             },
-        )
-
-        self.add_state( # Change to ask and listen then check if ready
-            "WAIT_FOR_COMMAND",
-            Listen(),
-            transitions={
-                "succeeded": "QUERY_LLM",
-                "aborted": "WAIT_FOR_COMMAND",
-            },
+            remappings={'tts_phrase': 'text'}
         )
 
         # Add a seconday ask and listen to double check command
