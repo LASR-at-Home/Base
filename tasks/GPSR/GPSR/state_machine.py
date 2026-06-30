@@ -13,7 +13,7 @@ from ament_index_python.packages import get_package_share_directory
 from rclpy.node import Node
 from threading import Thread
 from rclpy.executors import MultiThreadedExecutor as Executor
-from GPSR.states import DispatchSkill, KeyboardInputState, ListenState, QueryLLM
+from GPSR.states import DispatchSkill, KeyboardInputState, ListenState, QueryLLM, WaitForTabletReady
 
 from std_msgs.msg import Empty
 
@@ -61,28 +61,29 @@ class GPSR(yasmin.StateMachine):
         self.add_state(
             "GO_TO_INSTRUCT_POINT",
             SafeGoToLocation(location_param="instruction_point"),
-            transitions={"succeeded": "WAIT_FOR_NEXT_COMMAND", "failed": "failed"},
-        )
-
-        self.add_state(
-            "WAIT_FOR_NEXT_COMMAND",  # Awaits for next task. Can later be updated to use tablet
-            yasmin_ros.MonitorState(
-                topic_name="/gpsr/next_task",
-                outcomes=["succeeded", "failed"],
-                monitor_handler=self.wait_cb,
-                msg_type=Empty,
-            ),
-            transitions={
-                "succeeded": "CHECK_INSTRUCTION",
-                "failed": "WAIT_FOR_NEXT_COMMAND",
-                "canceled": "failed",
-            },
+            transitions={"succeeded": "CHECK_INSTRUCTION", "failed": "failed"},
         )
 
         self.add_state(
             "CHECK_INSTRUCTION",
             yasmin.CbState(outcomes=["next", "finish"], callback=self.checkRequest),
-            transitions={"next": "REQUEST_AND_WAIT_FOR_COMMAND", "finish": "succeeded"},
+            transitions={"next": "SAY_PRESS_READY", "finish": "succeeded"},
+        )
+
+        self.add_state(
+            "SAY_PRESS_READY",
+            Say(text="Please press ready on the tablet when you are ready to state the command."),
+            transitions={
+                "succeeded": "WAIT_TABLET_READY",
+                "aborted": "WAIT_TABLET_READY",
+                "canceled": "WAIT_TABLET_READY",
+            },
+        )
+
+        self.add_state(
+            "WAIT_TABLET_READY",
+            WaitForTabletReady(),
+            transitions={"succeeded": "REQUEST_AND_WAIT_FOR_COMMAND"},
         )
         
         self.add_state(
@@ -174,10 +175,6 @@ class GPSR(yasmin.StateMachine):
         yasmin.YASMIN_LOG_INFO("RECEIVED START SIGNAL")
         return "succeeded"
     
-    def wait_cb(self, blackboard, msg):
-        yasmin.YASMIN_LOG_INFO("RECEIVED SIGNAL FOR NEXT TASK")
-        return "succeeded"
-
     def setup(self):
         start_con_sm = yasmin.Concurrence(
             states={
