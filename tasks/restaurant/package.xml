@@ -13,6 +13,7 @@
   <depend>lasr_vision_interfaces</depend>
   <depend>std_msgs</depend>
   <depend>geometry_msgs</depend>
+  <depend>robot_ui</depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>

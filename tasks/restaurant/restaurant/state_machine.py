@@ -14,12 +14,13 @@ from restaurant.states import (
     ApproachPerson,
     FaceCustomer,
     TakeOrderSM,
+    TakeOrderTablet,
     GetOrderFromBar,
 )
 
 
 class Restaurant(yasmin.StateMachine):
-    def __init__(self):
+    def __init__(self, use_tablet: bool = False):
         super().__init__(outcomes=["succeeded", "failed"])
         self.tf_buffer = tf2_ros.Buffer()
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, yasmin_ros.logger_node)
@@ -114,7 +115,7 @@ class Restaurant(yasmin.StateMachine):
 
         self.add_state(
             "TAKE_ORDER",
-            TakeOrderSM(),
+            TakeOrderTablet() if use_tablet else TakeOrderSM(),
             transitions={
                 "succeeded": "GET_ORDER_FROM_BAR",
                 "failed": "failed",
@@ -179,7 +180,10 @@ def main():
 
     yasmin_ros.set_ros_loggers(node)
 
-    sm = Restaurant()
+    use_tablet = node.get_parameter("use_tablet").value or False
+    yasmin.YASMIN_LOG_INFO(f"Order mode: {'tablet' if use_tablet else 'speech'}")
+
+    sm = Restaurant(use_tablet=use_tablet)
 
     try:
         bb = yasmin.Blackboard()
