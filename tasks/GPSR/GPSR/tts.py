@@ -8,10 +8,7 @@ def say(node: rclpy.node.Node, text: str):
     if not text:
         return
     node.get_logger().info(text)
-    try:
-        simulation = node.get_parameter("simulation").value
-    except Exception:
-        simulation = False
+    simulation = node.get_parameter("simulation").get_parameter_value().bool_value
 
     if simulation:
         _say_gtts(text)

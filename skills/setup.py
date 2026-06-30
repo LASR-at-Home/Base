@@ -62,6 +62,9 @@ setup(
             "go_to_location = lasr_skills.go_to_location:main",
             "ask_and_listen = lasr_skills.ask_and_listen:main",
             "receive_object = lasr_skills.receive_object:main",
+            "follow_person = lasr_skills.follow_person:main",
+            "rotate = lasr_skills.rotate:main",
+            "detect_keypoints_3d = lasr_skills.detect_keypoints_3d:main",
         ],
     },
 )

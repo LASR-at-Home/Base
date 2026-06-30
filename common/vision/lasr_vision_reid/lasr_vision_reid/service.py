@@ -9,6 +9,7 @@ how to run reid:
 """
 
 from typing import Dict, Tuple, Optional, List
+import os
 
 import rclpy
 from rclpy.node import Node
@@ -24,6 +25,8 @@ from deepface import DeepFace
 from lasr_vision_interfaces.srv import Recognise3D, AddFace, Recognise
 from lasr_vision_interfaces.msg import Detection3D, Detection
 
+from tensorflow.compat.v1 import ConfigProto
+from tensorflow.compat.v1 import InteractiveSession
 
 from geometry_msgs.msg import Point, PointStamped
 from sensor_msgs.msg import Image
@@ -300,6 +303,10 @@ class ReID(Node):
 
 def main():
     rclpy.init()
+
+    config = ConfigProto()
+    config.gpu_options.per_process_gpu_memory_fraction = 0.20
+    session = InteractiveSession(config=config)
 
     reid = ReID()
     reid.get_logger().info("Vision reid service is ready!", once=True)

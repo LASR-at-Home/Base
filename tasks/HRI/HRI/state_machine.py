@@ -1,5 +1,3 @@
-from typing import List, Tuple, Dict
-
 from threading import Thread
 
 import rclpy
@@ -8,9 +6,9 @@ from rclpy.node import Node
 import yasmin
 import yasmin_ros
 
-from geometry_msgs.msg import Point, PointStamped, Pose
+from geometry_msgs.msg import PointStamped
 
-from lasr_skills import Say, SafeGoToLocation, StopEyeTracker, PlayMotion, StartDoorSM
+from lasr_skills import Say, SafeGoToLocation, StartDoorSM, Rotate, FollowPerson
 
 from HRI.states import *
 
@@ -68,29 +66,8 @@ class HRI(yasmin.StateMachine):
 
         self.add_state(
             "GREET",  # SM2: Greets guest
-            LookAndGreetGuest(last_resort=False, guest_id="guest1"),
-            transitions={"succeeded": "STOP_EYE_TRACKER", "failed": "failed"},
-        )
-
-        self.add_state(
-            "STOP_EYE_TRACKER",
-            StopEyeTracker(),
-            transitions={
-                "succeeded": "LOOK_CENTRE",
-                "aborted": "failed",
-                "canceled": "failed",
-                "timeout": "failed",
-            },
-        )
-
-        self.add_state(
-            "LOOK_CENTRE",
-            PlayMotion("look_centre"),
-            transitions={
-                "succeeded": "GUIDE_TO_SEAT",
-                "aborted": "failed",
-                "canceled": "failed",
-            },
+            LookAndGreetGuest(guest_id="guest1"),
+            transitions={"succeeded": "GUIDE_TO_SEAT", "failed": "failed"},
         )
 
         self.add_state(
@@ -101,7 +78,7 @@ class HRI(yasmin.StateMachine):
 
         self.add_state(
             "SEAT_GUEST",  # SM3: Locates and seats guest in free seat
-            SeatGuest(learn_host=False),
+            SeatGuest(guest_id="guest1"),
             transitions={"succeeded": "CHECK", "failed": "failed"},
         )
 
@@ -119,8 +96,63 @@ class HRI(yasmin.StateMachine):
 
         self.add_state(
             "GREET_2",  # SM2: Greets guest
-            LookAndGreetGuest(last_resort=False, guest_id="guest2"),
-            transitions={"succeeded": "STOP_EYE_TRACKER", "failed": "failed"},
+            LookAndGreetGuest(guest_id="guest2"),
+            transitions={"succeeded": "GUIDE_TO_SEAT_2", "failed": "failed"},
+        )
+
+        self.add_state(
+            "GUIDE_TO_SEAT_2",  # GUIDES GUEST TO SEATING AREA
+            SafeGoToLocation(location_param="seat_pose"),
+            transitions={"succeeded": "SEAT_GUEST_2", "failed": "failed"},
+        )
+
+        self.add_state(
+            "SEAT_GUEST_2",  # SM3: Locates and seats guest in free seat
+            SeatGuest(guest_id="guest2"),
+            transitions={"succeeded": "CHECK", "failed": "failed"},
+        )
+
+        self.add_state(
+            "INTRODUCE",
+            Introduce(),
+            transitions={"succeeded": "ROTATE", "failed": "ROTATE"},
+        )
+
+        self.add_state(
+            "ROTATE",
+            Rotate(angle=180),
+            transitions={"succeeded": "FOLLOW_HOST", "failed": "failed"},
+        )
+
+        self.add_state(
+            "FOLLOW_HOST",
+            FollowPerson(),
+            transitions={
+                "succeeded": "PLACE_BAG",
+                "failed": "failed",
+            },
+        )
+
+        self.add_state(
+            "PLACE_BAG",
+            PlaceBag(),
+            transitions={
+                "succeeded": "succeeded",
+                "failed": "failed",
+            },
+        )
+
+        self.add_state("STOP_TIMER", StopTimer(), transitions={"succeeded": "SAY_STOP"})
+
+        self.add_state(
+            "SAY_STOP",
+            Say(),
+            transitions={
+                "succeeded": "succeeded",
+                "aborted": "failed",
+                "canceled": "failed",
+            },
+            remappings={"text": "time_text"},
         )
 
         self.add_state(
@@ -130,12 +162,24 @@ class HRI(yasmin.StateMachine):
         )
 
     def check(self, blackboard):
-        guest = blackboard["guest_data"][f"guest{self.guest_id}"]
+        guest1 = blackboard["guest_data"]["guest1"]
         yasmin.YASMIN_LOG_INFO(f"{self.guest_id}")
 
-        for key in guest.keys():
-            value = guest[key]
-            yasmin.YASMIN_LOG_INFO(f"{key}: {value}")
+        if self.guest_id == 2:
+            guest2 = blackboard["guest_data"]["guest2"]
+            yasmin.YASMIN_LOG_INFO("Guest1: ")
+            for key in guest1.keys():
+                value = guest1[key]
+                yasmin.YASMIN_LOG_INFO(f"{key}: {value}")
+            yasmin.YASMIN_LOG_INFO("Guest2: ")
+            for key in guest2.keys():
+                value = guest2[key]
+                yasmin.YASMIN_LOG_INFO(f"{key}: {value}")
+        else:
+            yasmin.YASMIN_LOG_INFO("Guest1: ")
+            for key in guest1.keys():
+                value = guest1[key]
+                yasmin.YASMIN_LOG_INFO(f"{key}: {value}")
 
         self.guest_id += 1
         return "continue" if self.guest_id == 2 else "succeeded"
@@ -189,6 +233,7 @@ def main():
     face_detection_confidence = 0.2
 
     bb["guest_data"] = {
+        "host": {"seated_point": None, "seating_detection": False},
         "guest1": {
             "name": "",
             "drink": "",

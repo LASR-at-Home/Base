@@ -1,0 +1,10 @@
+people:
+  adel:
+    gender: neutral
+    description: "A person named Adel."
+  axel:
+    gender: male
+    description: "A man named Axel."
+  charlie:
+    gender: neutral
+    description: "A person named Charlie."

@@ -19,7 +19,6 @@ from std_msgs.msg import Header
 from geometry_msgs.msg import Point, PointStamped
 from tf2_geometry_msgs.tf2_geometry_msgs import do_transform_point
 
-from .learn_host_face import LearnHostFace
 from lasr_vision_interfaces.msg import Detection3D
 from lasr_skills import (
     PlayMotion,
@@ -30,6 +29,8 @@ from lasr_skills import (
     DetectAllInPolygon,
     StopEyeTracker,
 )
+
+from HRI.states import HRILearnFaces
 
 from yasmin_viewer import YasminViewerPub
 
@@ -78,12 +79,14 @@ class ProcessDetections(State):
         right_sofa_occupied = False
         unseated_sofa_persons = []
         non_sofa_chairs = {}
+        people = []
 
         for detection in blackboard["seat_detections"]:
             detection_point = ShapelyPoint(
                 detection.point.x, detection.point.y, detection.point.z
             )
             if detection.name == "person":
+                people.append(detection)
                 if self._left_sofa_area.contains(detection_point):
                     left_sofa_occupied = True
                 elif self._right_sofa_area.contains(detection_point):
@@ -96,6 +99,17 @@ class ProcessDetections(State):
                 and not self._left_sofa_area.contains(detection_point)
             ):
                 non_sofa_chairs.update({detection_point: False})
+
+        yasmin.YASMIN_LOG_INFO(
+            "Detected this many people in sweep: " + str(len(people))
+        )
+
+        if len(people) == 1:
+            blackboard["pointstamped"] = PointStamped(
+                header=Header(frame_id="map"), point=people[0].point
+            )
+        else:
+            blackboard["people_det"] = people
 
         for chair_detection in non_sofa_chairs.keys():
             for person_detection in unseated_sofa_persons:
@@ -149,7 +163,7 @@ class SeatGuest(StateMachine):
 
     def __init__(
         self,
-        learn_host: bool = False,
+        guest_id: str,
     ):
         super().__init__(outcomes=["succeeded", "failed"])
         self.add_input_key("guest_data")
@@ -191,6 +205,8 @@ class SeatGuest(StateMachine):
             remappings={"detected_objects": "seat_detections"},
         )
 
+        transition = "LOOK_HOST" if guest_id == "guest1" else "LOOK_TO_SEAT"
+
         self.add_state(
             "PROCESS_DETECTIONS",
             ProcessDetections(
@@ -199,6 +215,33 @@ class SeatGuest(StateMachine):
                 left_sofa_area=self.left_sofa_area,
                 right_sofa_area=self.right_sofa_area,
             ),
+            transitions={"succeeded": transition, "failed": "failed"},
+        )
+
+        self.add_state(
+            "LOOK_HOST",
+            LookToPoint(),
+            transitions={
+                "succeeded": "SAY_HOST",
+                "aborted": "SAY_HOST",
+                "canceled": "SAY_HOST",
+                "timeout": "SAY_HOST",
+            },
+        )
+
+        self.add_state(
+            "SAY_HOST",
+            Say(text="I am going to quickly learn the host's face."),
+            transitions={
+                "succeeded": "LEARN_HOST",
+                "aborted": "LEARN_HOST",
+                "canceled": "LEARN_HOST",
+            },
+        )
+
+        self.add_state(
+            "LEARN_HOST",
+            HRILearnFaces(guest_id="host", dataset_size=10),
             transitions={"succeeded": "LOOK_TO_SEAT", "failed": "failed"},
         )
 
@@ -326,14 +369,12 @@ class HRI_node(Node):
 
 
 def main():
-
     rclpy.init()
     node = HRI_node()
 
     yasmin_ros.set_ros_loggers(node)
 
     try:
-        # TODO: Try with learn_host=True
         sm = SeatGuest(learn_host=False)
         bb = Blackboard()
 
