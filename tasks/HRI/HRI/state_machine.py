@@ -7,6 +7,7 @@ import yasmin
 import yasmin_ros
 
 from geometry_msgs.msg import PointStamped
+from std_msgs.msg import String
 
 from lasr_skills import Say, SafeGoToLocation, StartDoorSM, Rotate, FollowPerson
 
@@ -30,11 +31,26 @@ class HRI(yasmin.StateMachine):
         def wait_cb(blackboard, msg):
             yasmin.YASMIN_LOG_INFO("RECEIVED START SIGNAL")
             return "succeeded"
+        
+        def create_msg(blackboard):
+            return String(data='ready')
+        
+        self.add_state(
+            'START_TABLET',
+            yasmin_ros.PublisherState(
+                msg_type=String,
+                topic_name='/tablet/screen',
+                create_message_handler=create_msg
+            ),
+            transitions={
+                'succeeded': 'WAIT_START'
+            }
+        )
 
         self.add_state(
             "WAIT_START",  # Awaits start Signal for the task
             yasmin_ros.MonitorState(
-                topic_name="/hri/start",
+                topic_name="/tablet/ready",
                 outcomes=["succeeded", "failed"],
                 monitor_handler=wait_cb,
                 msg_type=Empty,
