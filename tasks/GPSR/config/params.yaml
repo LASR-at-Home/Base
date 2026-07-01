@@ -6,8 +6,8 @@ gpsr:
     cloud_host: "127.0.0.1"          # server.py;
     cloud_port: 8765
     cloud_timeout_sec: 10.0
-    simulation: false              # true = use gtts on PC, false = use robot TTS
-    input_mode: "mic"        # "keyboard" or "mic"
+    simulation: true              # true = use gtts on PC, false = use robot TTS
+    input_mode: "keyboard"        # "keyboard" or "mic"
     whisper:
       energy_threshold: 400   
       phrase_duration: 10.0
