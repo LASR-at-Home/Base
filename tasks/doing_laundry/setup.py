@@ -24,7 +24,6 @@ setup(
     entry_points={
         "console_scripts": [
             "state_machine = doing_laundry.state_machine:main",
-            "test_detect = doing_laundry.test_detect:main",
         ],
     },
 )
