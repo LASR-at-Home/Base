@@ -29,6 +29,22 @@ hri:   # the `hri` Node's Parameters
         y: 0.0
         z: -0.798049181701085
         w: 0.6025923195546294
+
+    # Where the robot looks at the general sofa
+    left_sofa_point:
+      x: 0.31079837679862976
+      y: -2.7174582481384277
+      z: 0.5
+
+    middle_sofa_point:
+      x: 0.31079837679862976
+      y: -2.7174582481384277
+      z: 0.5
+
+    right_sofa_point:
+      x: 0.31079837679862976
+      y: -2.7174582481384277
+      z: 0.5
     
     # Max number of seats
     max_people_on_sofa: 3

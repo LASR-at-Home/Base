@@ -55,7 +55,7 @@ class HRI(yasmin.StateMachine):
         self.add_state(
             "SAY_START",  # SM1: Waits for Door to open, then goes to start
             Say(text='Start of H R I task.'),
-            transitions={"succeeded": "GO_TO_DOOR", "failed": "START_CON"},
+            transitions={"succeeded": "GO_TO_DOOR", "canceled": "failed", 'aborted': 'failed'},
         )
 
         self.add_state(
@@ -78,7 +78,7 @@ class HRI(yasmin.StateMachine):
 
         self.add_state(
             "SEAT_GUEST",  # SM3: Locates and seats guest in free seat
-            SeatGuest(guest_id="guest1"),
+            SeatGuest(),
             transitions={"succeeded": "CHECK", "failed": "failed"},
         )
 
@@ -97,19 +97,7 @@ class HRI(yasmin.StateMachine):
         self.add_state(
             "GREET_2",  # SM2: Greets guest
             LookAndGreetGuest(guest_id="guest2"),
-            transitions={"succeeded": "GUIDE_TO_SEAT_2", "failed": "failed"},
-        )
-
-        self.add_state(
-            "GUIDE_TO_SEAT_2",  # GUIDES GUEST TO SEATING AREA
-            SafeGoToLocation(location_param="seat_pose"),
-            transitions={"succeeded": "SEAT_GUEST_2", "failed": "failed"},
-        )
-
-        self.add_state(
-            "SEAT_GUEST_2",  # SM3: Locates and seats guest in free seat
-            SeatGuest(guest_id="guest2"),
-            transitions={"succeeded": "CHECK", "failed": "failed"},
+            transitions={"succeeded": "GUIDE_TO_SEAT", "failed": "failed"},
         )
 
         self.add_state(
@@ -121,7 +109,17 @@ class HRI(yasmin.StateMachine):
         self.add_state(
             "ROTATE",
             Rotate(angle=180),
-            transitions={"succeeded": "FOLLOW_HOST", "failed": "failed"},
+            transitions={"succeeded": "ASK_FOR_HOST", "failed": "failed"},
+        )
+        
+        self.add_state(
+            'ASK_FOR_HOST',
+            Say(text='Can the host please stand in front of me to lead the way.'),
+            transitions={
+                'succeeded': 'FOLLOW_HOST',
+                'aborted': 'failed',
+                'canceled': 'failed'
+            }
         )
 
         self.add_state(
@@ -137,7 +135,7 @@ class HRI(yasmin.StateMachine):
             "PLACE_BAG",
             PlaceBag(),
             transitions={
-                "succeeded": "succeeded",
+                "succeeded": "STOP_TIMER",
                 "failed": "failed",
             },
         )
@@ -148,17 +146,21 @@ class HRI(yasmin.StateMachine):
             "SAY_STOP",
             Say(),
             transitions={
-                "succeeded": "succeeded",
+                "succeeded": "SAY_END",
                 "aborted": "failed",
                 "canceled": "failed",
             },
             remappings={"text": "time_text"},
         )
-
+        
         self.add_state(
-            "INTRODUCE",
-            Introduce(),
-            transitions={"succeeded": "succeeded", "failed": "failed"},
+            "SAY_END",
+            Say(text='End of h r i task.'),
+            transitions={
+                "succeeded": "succeeded",
+                "aborted": "failed",
+                "canceled": "failed",
+            }
         )
 
     def check(self, blackboard):

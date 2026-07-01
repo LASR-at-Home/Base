@@ -44,6 +44,9 @@ class ProcessDetections(State):
 
     def __init__(
         self,
+        left_sofa_point: ShapelyPoint,
+        right_sofa_point: ShapelyPoint,
+        middle_sofa_point: ShapelyPoint,
         left_sofa_area: ShapelyPolygon,
         middle_sofa_area: ShapelyPolygon,
         right_sofa_area: ShapelyPolygon,
@@ -56,9 +59,13 @@ class ProcessDetections(State):
         self.add_input_key("sofa_detections")
 
         self.add_output_key("guest_seat_point")
-        self.add_output_key("seated_guest_locs")
+        self.add_output_key("guest2_seat")
         self.add_output_key("seating_string")
 
+
+        self.left_sofa_point = left_sofa_point
+        self.right_sofa_point = right_sofa_point
+        self.middle_sofa_point = middle_sofa_point
         self._left_sofa_area = left_sofa_area
         self._middle_sofa_area = middle_sofa_area
         self._right_sofa_area = right_sofa_area
@@ -109,14 +116,17 @@ class ProcessDetections(State):
             blackboard["seating_string"] = (
                 'The sofa is currently occupied by two people. Please take a seat on the left side of the sofa.'
             )
+            blackboard['guest2_seat'] = self.left_sofa_point
         elif not right_sofa_occupied and left_sofa_occupied and middle_sofa_occupied:
             blackboard["seating_string"] = (
                 'The sofa is currently occupied by two people. Please take a seat on the right side of the sofa.'
             )
+            blackboard['guest2_seat'] = self.right_sofa_point
         elif not middle_sofa_occupied and left_sofa_occupied and right_sofa_occupied:
             blackboard["seating_string"] = (
                 'The sofa is currently occupied by two people. Please take a seat in the middle of the sofa.'
             )
+            blackboard['guest2_seat'] = self.middle_sofa_point
 
         return "succeeded"
 
@@ -167,7 +177,7 @@ class SeatGuest(StateMachine):
         self.add_state(
             "DETECT_ALL_PEOPLE_SOFA",
             Detect3DInArea(
-                polygon=self.sofa_area,
+                area_polygon=self.sofa_area,
                 filter=["person"],
                 model='yolo11n-seg.pt',
                 z_min=-10,
@@ -182,6 +192,9 @@ class SeatGuest(StateMachine):
         self.add_state(
             "PROCESS_DETECTIONS",
             ProcessDetections(
+                left_sofa_point=self.left_sofa_point,
+                right_sofa_point=self.right_sofa_point,
+                middle_sofa_point=self.middle_sofa_point,
                 left_sofa_area=self.left_sofa_area,
                 middle_sofa_area=self.middle_sofa_area,
                 right_sofa_area=self.right_sofa_area,
@@ -202,12 +215,30 @@ class SeatGuest(StateMachine):
         self.add_state(
             "WAIT_FOR_GUEST_TO_SEAT",
             Wait(wait_time=5.0),
-            transitions={"succeeded": "succeeded", "failed": "RESET_HEAD_2"},
+            transitions={"succeeded": "succeeded", "failed": "failed"},
         )
 
     def __load_ros_parameters(self):
 
         # Load parameters from file
+        
+        self.left_sofa_point = Point(
+            x=self._node.get_parameter("left_sofa_point.x").value,
+            y=self._node.get_parameter("left_sofa_point.y").value,
+            z=self._node.get_parameter("left_sofa_point.z").value,
+        )
+        
+        self.middle_sofa_point = Point(
+            x=self._node.get_parameter("middle_sofa_point.x").value,
+            y=self._node.get_parameter("middle_sofa_point.y").value,
+            z=self._node.get_parameter("middle_sofa_point.z").value,
+        )
+        
+        self.right_sofa_point = Point(
+            x=self._node.get_parameter("right_sofa_point.x").value,
+            y=self._node.get_parameter("right_sofa_point.y").value,
+            z=self._node.get_parameter("right_sofa_point.z").value,
+        )
 
         sofa_area = {
             "top_left": np.array(self._node.get_parameter("sofa_area.top_left").value),
