@@ -2,81 +2,187 @@
   ros__parameters:
     pick_and_place:
 
-      # Category the referee designates as trash (announced on Setup Days).
-      # Objects of this category are routed to the trash bin. "" disables it.
+      # Category the referee designates as trash.
       trash_category: "trash"
 
-      # Open-vocab query words for table detection (common nouns).
-      objects: ["cup", "can", "bottle", "dish", "box", "fruit", "utensil", "snack", "carton", "food" ]
+      # objects: ["cup", "can", "bottle", "bowl", "box", "apple", "fork",
+      #           "knife", "spoon", "plate"]
 
+      # DINING TABLE
       table:
+        # Where the robot stands to pick objects from the table
         pose:
-          position: {x: 0.5444910497763044, y: -2.4412505621588583, z: 0.0}           
-          orientation: {x: 0.0, y: 0.0, z: -0.7912741117828641, w: 6114615932519716}
-        observe_pose:
-          position: {x: 0.5876252953308133, y: -1.0687492206833655, z: 0.0}
-          orientation: {x: 0.0, y: 0.0, z: 0.996990359390238, w: 0.07752562984538826}
-        look_point: [5.25, 2.27, 0.78]
-        polygon: [3.5, 1.0, 5.5, 1.0, 5.5, 3.5, 3.5, 3.5]
-        search_polygon: [5.3, 3.8, 7.8, 3.8, 7.8, 5.9, 5.3, 5.9]
+          position: {x: 0.5444910497763044, y: -2.4412505621588583, z: 0.0}
+          orientation: {x: 0.0, y: 0.0, z: -0.7912741117828641, w: 0.6114615932519716}
+
+        # # Where the robot stands to observe/detect the full table
+        # observe_pose:
+        #   position: {x: 0.5876252953308133, y: -1.0687492206833655, z: 0.0}
+        #   orientation: {x: 0.0, y: 0.0, z: 0.996990359390238, w: 0.07752562984538826}
+
+        # Detection polygon — rectangle around the table top in map frame
+        polygon:
+          top_left:     [3.5, 3.5]
+          top_right:    [5.5, 3.5]
+          bottom_right: [5.5, 1.0]
+          bottom_left:  [3.5, 1.0]
+
+        # # Search polygon for FindAndGoToTable — larger than detection polygon
+        # search_polygon:
+        #   top_left:     [5.3, 5.9]
+        #   top_right:    [7.8, 5.9]
+        #   bottom_right: [7.8, 3.8]
+        #   bottom_left:  [5.3, 3.8]
+
+        # Z height range for detection filtering
         z_min: 0.7
         z_max: 1.5
+
+        # MoveIt collision box for the table
         collision:
           detect: true
           frame_id: map
           size: [1.02, 1.2, 0.9]
           position: [1.2, -3.9, 0.37]
 
-      # ── DESTINATION 1: dishwasher (tableware + cutlery) ──
+      # DESTINATION 1: dishwasher
       dishwasher:
         pose:
-          position: {x: 0.8212924899016142, y: 0.299479767042867, z: 0.0}     
+          position: {x: 0.821, y: 0.299, z: 0.0}   # update with real pose
           orientation: {x: 0.0, y: 0.0, z: -0.7527398351858691, w: 0.6583181149902764}
 
-      # ── DESTINATION 2: trash bin ──
+      # DESTINATION 2: trash bin
       trash_bin:
         pose:
-          position: {x: 0.8212924899016142, y: 0.299479767042867, z: 0.0}              # <-- ВСТАВ pose
-          orientation: {x: 0.0, y: 0.0, z: -0.7527398351858691, w: 0.6583181149902764}
+          position: {x: 0.0, y: 0.0, z: 0.0}       # update with real pose
+          orientation: {x: 0.0, y: 0.0, z: 0.0, w: 1.0}
 
-      # ── DESTINATION 3: cabinet (fake: boxes with objects) ──
+      # DESTINATION 3: cabinet
       cabinet:
         pose:
-          position: {x: -0.24395824472217295, y: -1.7992161774429396, z: 0.0}              # <-- ВСТАВ pose
+          position: {x: -0.24395824472217295, y: -1.7992161774429396, z: 0.0}
           orientation: {x: 0.0, y: 0.0, z: 0.9801022379942061, w: 0.13519825869117716}
 
-        # Shelves — used by ScanShelves in the NEXT deliverable.
-        # shelf_order is the iteration list; shelves.<id> holds per-shelf config.
-        # (Tune look_point / polygon / z when the fake cabinet is built.)
+        # Detection polygon for cereal/milk detection inside cabinet
+        polygon:
+          top_left:     [0.0, 0.0]
+          top_right:    [1.0, 0.0]
+          bottom_right: [1.0, 1.0]
+          bottom_left:  [0.0, 1.0]
+
+        # Shelves — used by ScanShelves
         shelf_order: ["top", "middle", "bottom"]
         shelves:
           top:
             torso_lift_joint: 0.30
             look_point: [0.0, 0.0, 1.0]
-            polygon: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+            polygon:
+              top_left:     [0.0, 0.0]
+              top_right:    [1.0, 0.0]
+              bottom_right: [1.0, 1.0]
+              bottom_left:  [0.0, 1.0]
             z_min: 0.9
             z_max: 1.3
           middle:
             torso_lift_joint: 0.15
             look_point: [0.0, 0.0, 0.7]
-            polygon: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+            polygon:
+              top_left:     [0.0, 0.0]
+              top_right:    [1.0, 0.0]
+              bottom_right: [1.0, 1.0]
+              bottom_left:  [0.0, 1.0]
             z_min: 0.6
             z_max: 0.9
           bottom:
             torso_lift_joint: 0.0
             look_point: [0.0, 0.0, 0.4]
-            polygon: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+            polygon:
+              top_left:     [0.0, 0.0]
+              top_right:    [1.0, 0.0]
+              bottom_right: [1.0, 1.0]
+              bottom_left:  [0.0, 1.0]
             z_min: 0.3
             z_max: 0.6
 
-      grasp:
-        enable: false
-        reach: 0.80
-        use_moveit: true
-        publish_box: true
-        
-      # ── BREAKFAST SURFACE (bowl and spoon pickup location) ──
+      # BREAKFAST SURFACE (bowl and spoon pickup location)
       breakfast_surface:
         pose:
           position: {x: 0.5444910497763044, y: -2.4412505621588583, z: 0.0}
           orientation: {x: 0.0, y: 0.0, z: -0.7912741117828641, w: 0.6114615932519716}
+        # update with real coordinates
+        polygon:
+          top_left:     [0.0, 0.0]
+          top_right:    [1.0, 0.0]
+          bottom_right: [1.0, 1.0]
+          bottom_left:  [0.0, 1.0]
+
+      # EXTRA SURFACE (two common objects for cleanup)
+      extra_surface:
+        pose:
+          position: {x: 0.0, y: 0.0, z: 0.0}       # update with real pose
+          orientation: {x: 0.0, y: 0.0, z: 0.0, w: 1.0}
+        # update with real coordinates
+        polygon:
+          top_left:     [0.0, 0.0]
+          top_right:    [1.0, 0.0]
+          bottom_right: [1.0, 1.0]
+          bottom_left:  [0.0, 1.0]
+
+      # GRASP (not used without manipulation)
+      grasp:
+        enable: false
+        reach: 0.80
+        use_moveit: false
+        publish_box: false
+
+objects:
+  cup:
+    category: "dish"
+  coke:
+    category: "drink"
+  bowl:
+    category: "dish"
+  apple:
+    category: "fruit"
+  fork:
+    category: "dishe"
+  knife:
+    category: "dish"
+  spoon:
+    category: "dish"
+  plate:
+    category: "dish"
+  cornflakes:
+    category: "food"
+  instant_noodles:
+    category: "food"
+  milk:
+    category: "drink"
+  pepsi:
+    category: "drink"
+  rubiks_cube:
+    category: "toys"
+  dishwasher_tab:
+    category: "cleaning_supplies"
+  toothpaste:
+    category: "cleaning_supplies"
+  sponge:
+    category: "sponge"
+  red_bull:
+    category: "drink"
+  soju:
+    category: "drink" 
+  peach:
+    category: "fruit"
+  red_bellpepper:
+    category: "fruit"
+  yellow_bellpepper:
+    category: "fruit"
+  lemon:
+    category: "fruit"
+  mangostane:
+    category: "fruit"
+  seaweed:
+    category: "snack"
+  pringles:
+    category: "snack"

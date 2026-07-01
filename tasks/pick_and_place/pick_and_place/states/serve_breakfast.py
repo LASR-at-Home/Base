@@ -45,7 +45,7 @@ class ServeBreakfast(yasmin.StateMachine):
         # Bowl
         self.add_state(
             "DETECT_BOWL",
-            DetectObjects(queries=["bowl"]),
+            DetectObjects(location_param="breakfast_surface", object_filter=["bowl"], model="yolo11n-seg.pt"),
             transitions={
                 "succeeded": "SELECT_BOWL",
                 "failed": "DETECT_BOWL",
@@ -73,7 +73,7 @@ class ServeBreakfast(yasmin.StateMachine):
         # Spoon
         self.add_state(
             "DETECT_SPOON",
-            DetectObjects(queries=["spoon"]),
+            DetectObjects(location_param="breakfast_surface", object_filter=["spoon"], model="yolo11n-seg.pt"),
             transitions={
                 "succeeded": "SELECT_SPOON",
                 "failed": "DETECT_SPOON",
@@ -140,7 +140,7 @@ class ServeBreakfast(yasmin.StateMachine):
         # Cereal
         self.add_state(
             "DETECT_CEREAL",
-            DetectObjects(queries=["cereal"]),
+            DetectObjects(location_param="cabinet", object_filter=["cereal"], model="yolo11n-seg.pt"),
             transitions={
                 "succeeded": "SELECT_CEREAL",
                 "failed": "DETECT_CEREAL",
@@ -166,7 +166,7 @@ class ServeBreakfast(yasmin.StateMachine):
         # Milk
         self.add_state(
             "DETECT_MILK",
-            DetectObjects(queries=["milk"]),
+            DetectObjects(location_param="cabinet", object_filter=["milk"], model="yolo11n-seg.pt"),
             transitions={
                 "succeeded": "SELECT_MILK",
                 "failed": "DETECT_MILK",

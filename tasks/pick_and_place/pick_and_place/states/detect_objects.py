@@ -1,305 +1,158 @@
-import time
-import numpy as np
-
 import yasmin
 import yasmin_ros
 
-from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
-from rclpy.duration import Duration as ROS2Duration
-from rclpy.time import Time as ROS2Time
-from rclpy.action import ActionClient
+from geometry_msgs.msg import Point, PointStamped
+from std_msgs.msg import Header
+from shapely import Polygon as ShapelyPolygon
 
-import tf2_ros
-from tf2_geometry_msgs import do_transform_point
-from cv_bridge import CvBridge
-
-from sensor_msgs.msg import Image, CameraInfo
-from geometry_msgs.msg import PointStamped
-
-from lasr_vision_interfaces.srv import OpenVocabDetect
-from lasr_vision_interfaces.msg import Detection3D
-
-from control_msgs.action import FollowJointTrajectory
-from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
-from builtin_interfaces.msg import Duration as DurationMsg
-
-from pick_and_place.vlm_classifier import classify_crop
+from lasr_skills import DetectAllInPolygon
 
 
 class DetectObjects(yasmin.State):
     """
-    Detects groceries on the table using OPEN-VOCABULARY detection
-    (lasr_vision_open_vocabulary) instead of closed COCO-YOLO.
+    Looks at a configured surface and detects objects within its polygon
+    using YOLO, replacing the open-vocabulary detection approach.
 
-    1. Tilt head down so the camera sees the table.
-    2. Call open_vocab/detect with configured grocery queries + low thresholds.
-    3. Clean labels: map returned phrase ("cup box") → matching query ("cup").
-    4. Class-agnostic NMS: drop overlapping duplicates (kills stacked boxes).
-    5. VLM naming: a local VLM (Ollama) names each kept crop (replaces CLIP).
-    6. Project each kept box centre → 3D via depth + TF (for manipulation later).
+    Uses DetectAllInPolygon (already ported to ROS 2 YASMIN in lasr_skills)
+    with a custom or generic YOLO model specified at construction time.
 
-    ROS 2 params:
-        pick_and_place.objects — query words (COMMON NOUNS). Empty → default.
+    The polygon is loaded from ROS 2 params.
+
+    Constructor args:
+        location_param : str         — config prefix, e.g. "table",
+                                       "extra_surface", "breakfast_surface"
+        object_filter  : list | None — object class names to filter for.
+                                       None detects all known objects from
+                                       pick_and_place.objects param.
+        model          : str         — YOLO model filename, e.g. "robocup.pt"
+                                       or "yolo11n-seg.pt" for generic COCO
+        min_confidence : float       — minimum detection confidence
 
     Blackboard outputs:
         detected_objects : List[Detection3D]
     """
 
-    HEAD_PAN_JOINT = "head_1_joint"
-    HEAD_TILT_JOINT = "head_2_joint"
-    HEAD_TILT_DOWN = -0.65
-
-    RGB_TOPIC = "/head_front_camera/rgb/image_raw"
-    DEPTH_TOPIC = "/head_front_camera/depth/image_raw"
-    INFO_TOPIC = "/head_front_camera/rgb/camera_info"
-
-    DEFAULT_QUERIES = ["cup", "can", "bottle", "bowl", "apple"]
-    BOX_THRESHOLD = 0.25
-    TEXT_THRESHOLD = 0.10
-    NMS_IOU = 0.5
-
-    # ── VLM naming (Ollama). DINO finds the boxes; the VLM says what each is.
-    #    Run clip_rerank:=false in the launch — the VLM replaces CLIP here.
-    VLM_ENABLE = False
-    VLM_MODEL = "moondream"
-    VLM_HOST = "http://localhost:11434"
-    VLM_TIMEOUT = 60.0
-
-    def __init__(self, queries:list = None):
+    def __init__(
+        self,
+        location_param: str = "table",
+        object_filter: list = None,
+        model: str = "yolo11n-seg.pt",
+        min_confidence: float = 0.1,
+    ):
         super().__init__(outcomes=["succeeded", "failed"])
         self.add_output_key("detected_objects")
 
         self.node = yasmin_ros.logger_node
-        self.bridge = CvBridge()
+        self._model = model
+        self._min_confidence = min_confidence
 
-        if queries is not None:
-            self._queries = queries
+        # Load polygon from config
+        try:
+            polygon_points = [
+                self.node.get_parameter(
+                    f"pick_and_place.{location_param}.polygon.top_left"
+                ).value,
+                self.node.get_parameter(
+                    f"pick_and_place.{location_param}.polygon.top_right"
+                ).value,
+                self.node.get_parameter(
+                    f"pick_and_place.{location_param}.polygon.bottom_right"
+                ).value,
+                self.node.get_parameter(
+                    f"pick_and_place.{location_param}.polygon.bottom_left"
+                ).value,
+            ]
+            self._polygon = ShapelyPolygon(polygon_points)
+            yasmin.YASMIN_LOG_INFO(
+                f"Loaded polygon for '{location_param}': {coords}"
+            )
+        except Exception as e:
+            yasmin.YASMIN_LOG_WARN(
+                f"Could not load polygon for '{location_param}': {e}. "
+                "Using empty polygon — detections will be unconstrained."
+            )
+            self._polygon = ShapelyPolygon()
+
+        # Load look point from config
+        try:
+            lp = self.node.get_parameter(
+                f"pick_and_place.{location_param}.look_point"
+            ).value
+            self._look_point = PointStamped(
+                point=Point(x=float(lp[0]), y=float(lp[1]), z=float(lp[2])),
+                header=Header(frame_id="map"),
+            )
+        except Exception as e:
+            yasmin.YASMIN_LOG_WARN(
+                f"Could not load look_point for '{location_param}': {e}. "
+                "Skipping head orientation."
+            )
+            self._look_point = None
+
+        # ── Load object filter from config or use passed-in list ───────────────
+        if object_filter is not None:
+            self._object_filter = object_filter
         else:
             try:
-                q = list(
+                self._object_filter = list(
                     self.node.get_parameter("pick_and_place.objects")
                     .get_parameter_value()
                     .string_array_value
                 )
-                self._queries = q or list(self.DEFAULT_QUERIES)
             except Exception:
-                self._queries = list(self.DEFAULT_QUERIES)
-
-        self._rgb = None
-        self._depth = None
-        self._info = None
-        cam_qos = QoSProfile(
-            depth=10,
-            reliability=ReliabilityPolicy.BEST_EFFORT,
-            history=HistoryPolicy.KEEP_LAST,
-        )
-        self.node.create_subscription(Image, self.RGB_TOPIC, self._rgb_cb, cam_qos)
-        self.node.create_subscription(Image, self.DEPTH_TOPIC, self._depth_cb, cam_qos)
-        self.node.create_subscription(
-            CameraInfo, self.INFO_TOPIC, self._info_cb, cam_qos
-        )
-
-        self._tf = tf2_ros.Buffer(cache_time=ROS2Duration(seconds=30))
-        self._tf_listener = tf2_ros.TransformListener(self._tf, self.node)
-
-        self._ovd = self.node.create_client(OpenVocabDetect, "open_vocab/detect")
-        self._head = ActionClient(
-            self.node,
-            FollowJointTrajectory,
-            "/head_controller/follow_joint_trajectory",
-        )
-
-    # ── camera callbacks ──
-    def _rgb_cb(self, m):
-        self._rgb = m
-
-    def _depth_cb(self, m):
-        self._depth = m
-
-    def _info_cb(self, m):
-        self._info = m
-
-    # ── head ──
-    def _look_down(self):
-        if not self._head.wait_for_server(timeout_sec=5.0):
-            yasmin.YASMIN_LOG_WARN("head controller unavailable; skipping look-down")
-            return
-        pt = JointTrajectoryPoint()
-        pt.positions = [0.0, self.HEAD_TILT_DOWN]
-        pt.time_from_start = DurationMsg(sec=2)
-        traj = JointTrajectory()
-        traj.joint_names = [self.HEAD_PAN_JOINT, self.HEAD_TILT_JOINT]
-        traj.points = [pt]
-        goal = FollowJointTrajectory.Goal()
-        goal.trajectory = traj
-        self._head.send_goal_async(goal)
-        yasmin.YASMIN_LOG_INFO("Tilting head down to look at the table…")
-        time.sleep(3.0)
-
-    # ── helpers ──
-    @staticmethod
-    def _wait_future(future, timeout=30.0):
-        start = time.time()
-        while not future.done():
-            if time.time() - start > timeout:
-                return None
-            time.sleep(0.05)
-        try:
-            return future.result()
-        except Exception:
-            return None
-
-    def _clean_label(self, phrase):
-        p = phrase.lower()
-        for q in self._queries:
-            if q.lower() in p:
-                return q
-        return phrase
-
-    @staticmethod
-    def _iou(a, b):  # a,b = (cx,cy,w,h) midpoint format
-        ax1, ay1, ax2, ay2 = (
-            a[0] - a[2] / 2,
-            a[1] - a[3] / 2,
-            a[0] + a[2] / 2,
-            a[1] + a[3] / 2,
-        )
-        bx1, by1, bx2, by2 = (
-            b[0] - b[2] / 2,
-            b[1] - b[3] / 2,
-            b[0] + b[2] / 2,
-            b[1] + b[3] / 2,
-        )
-        iw = max(0.0, min(ax2, bx2) - max(ax1, bx1))
-        ih = max(0.0, min(ay2, by2) - max(ay1, by1))
-        inter = iw * ih
-        union = a[2] * a[3] + b[2] * b[3] - inter
-        return inter / union if union > 0 else 0.0
-
-    def _nms(self, dets):  # class-agnostic, keep highest-confidence per region
-        kept = []
-        for d in sorted(dets, key=lambda x: x[1], reverse=True):
-            if all(self._iou(d[2], k[2]) < self.NMS_IOU for k in kept):
-                kept.append(d)
-        return kept
-
-    def _project_3d(self, cx, cy):
-        if self._depth is None or self._info is None or self._rgb is None:
-            return None
-        try:
-            depth_img = self.bridge.imgmsg_to_cv2(self._depth, "32FC1")
-        except Exception:
-            return None
-        h, w = depth_img.shape[:2]
-        px = int(np.clip(cx, 0, w - 1))
-        py = int(np.clip(cy, 0, h - 1))
-        d = float(depth_img[py, px])
-        if d <= 0.0 or np.isnan(d):
-            return None
-        K = self._info.k
-        fx, fy, cxp, cyp = K[0], K[4], K[2], K[5]
-        cam_frame = self._rgb.header.frame_id
-        ps = PointStamped()
-        ps.header.frame_id = cam_frame
-        ps.header.stamp = self._rgb.header.stamp
-        ps.point.x = (px - cxp) * d / fx
-        ps.point.y = (py - cyp) * d / fy
-        ps.point.z = d
-        try:
-            tr = self._tf.lookup_transform(
-                "map",
-                cam_frame,
-                self._rgb.header.stamp,
-                timeout=ROS2Duration(seconds=0.5),
-            )
-        except Exception:
-            try:
-                tr = self._tf.lookup_transform(
-                    "map",
-                    cam_frame,
-                    ROS2Time(seconds=0),
-                    timeout=ROS2Duration(seconds=0.5),
-                )
-            except Exception:
-                return None
-        try:
-            return do_transform_point(ps, tr).point
-        except Exception:
-            return None
-
-    # ── main ──
-    def execute(self, blackboard):
-        self._look_down()
-
-        t0 = time.time()
-        while (self._rgb is None or self._info is None) and time.time() - t0 < 5.0:
-            time.sleep(0.1)
-        if self._rgb is None or self._info is None:
-            yasmin.YASMIN_LOG_ERROR("No camera image/info available.")
-            return "failed"
-
-        if not self._ovd.wait_for_service(timeout_sec=10.0):
-            yasmin.YASMIN_LOG_ERROR("open_vocab/detect service not available.")
-            return "failed"
-
-        req = OpenVocabDetect.Request()
-        req.image = self._rgb
-        req.queries = list(self._queries)
-        req.box_threshold = float(self.BOX_THRESHOLD)
-        req.text_threshold = float(self.TEXT_THRESHOLD)
-        yasmin.YASMIN_LOG_INFO(f"open_vocab queries: {self._queries}")
-
-        resp = self._wait_future(self._ovd.call_async(req), timeout=30.0)
-        if resp is None:
-            yasmin.YASMIN_LOG_ERROR("open_vocab/detect failed or timed out.")
-            return "failed"
-
-        raw = [
-            (d.name, float(d.confidence), (d.xywh[0], d.xywh[1], d.xywh[2], d.xywh[3]))
-            for d in resp.detections
-            if len(d.xywh) >= 4
-        ]
-        yasmin.YASMIN_LOG_INFO(f"Raw open-vocab detections ({len(raw)}):")
-        for n, c, b in raw:
-            yasmin.YASMIN_LOG_INFO(f"   {n}: {c:.2f} cxywh={b}")
-
-        cleaned = [(self._clean_label(n), c, b) for n, c, b in raw]
-        kept = self._nms(cleaned)
-
-        # VLM naming: convert the RGB once, then let the VLM name each kept crop.
-        rgb_cv = None
-        if self.VLM_ENABLE:
-            try:
-                rgb_cv = self.bridge.imgmsg_to_cv2(self._rgb, "bgr8")
-            except Exception as e:
                 yasmin.YASMIN_LOG_WARN(
-                    f"VLM: cannot convert RGB ({e}); keeping DINO labels."
+                    "Could not load object filter from params. "
+                    "Detecting all objects."
                 )
+                self._object_filter = None
 
-        detected = []
-        for name, conf, (cx, cy, w, h) in kept:
-            if rgb_cv is not None:
-                vlm_name = classify_crop(
-                    rgb_cv, (cx, cy, w, h),
-                    model=self.VLM_MODEL, host=self.VLM_HOST, timeout=self.VLM_TIMEOUT,
-                )
-                if vlm_name and vlm_name != name:
-                    yasmin.YASMIN_LOG_INFO(f"VLM: '{name}' -> '{vlm_name}'")
-                    name = vlm_name
+    def execute(self, blackboard) -> str:
+        # 1. Look at configured point
+        if self._look_point is not None:
+            # TODO: call LookToPoint with self._look_point
+            # from lasr_skills import LookToPoint
+            # look = LookToPoint(pointstamped=self._look_point)
+            # look.execute(blackboard)
+            yasmin.YASMIN_LOG_INFO(
+                f"[TODO] LookToPoint at "
+                f"({self._look_point.point.x:.2f}, "
+                f"{self._look_point.point.y:.2f}, "
+                f"{self._look_point.point.z:.2f})"
+            )
 
-            d3 = Detection3D()
-            d3.name = name
-            d3.confidence = float(conf)
-            d3.xywh = [int(cx - w / 2), int(cy - h / 2), int(w), int(h)]
-            pt = self._project_3d(cx, cy)
-            if pt is not None:
-                d3.point = pt
-            detected.append(d3)
+        # 2. Detect objects within the polygon
+        try:
+            detector = DetectAllInPolygon(
+                polygon=self._polygon,
+                object_filter=self._object_filter,
+                min_confidence=self._min_confidence,
+                model=self._model,
+            )
 
-        blackboard["last_rgb_image"] = self._rgb
-        blackboard["detected_objects"] = detected
-        yasmin.YASMIN_LOG_INFO(
-            f"Detected {len(detected)} object(s): "
-            f"{[(d.name, round(d.confidence, 2)) for d in detected]}"
-        )
-        return "succeeded" if detected else "failed"
+            blackboard["detected_objects"] = []
+            blackboard["debug_images"]     = []
+
+            outcome = detector.execute(blackboard)
+
+            if outcome == "failed":
+                yasmin.YASMIN_LOG_WARN("DetectAllInPolygon failed.")
+                return "failed"
+
+            detected = blackboard["detected_objects"]
+
+            if not detected:
+                yasmin.YASMIN_LOG_INFO("No objects detected.")
+                return "failed"
+
+            labels = [
+                f"{obj.name} ({obj.confidence:.2f})"
+                for obj in detected
+            ]
+            yasmin.YASMIN_LOG_INFO(
+                f"Detected {len(detected)} object(s): {', '.join(labels)}"
+            )
+            return "succeeded"
+
+        except Exception as e:
+            yasmin.YASMIN_LOG_ERROR(f"Detection failed: {e}")
+            return "failed"

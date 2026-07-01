@@ -59,7 +59,7 @@ class TableCleanup(yasmin.StateMachine):
         # Detect all objects on the table (done ONCE)
         self.add_state(
             "DETECT_OBJECTS",
-            DetectObjects(),
+            DetectObjects(location_param="table", model="yolo11n-seg.pt"),
             transitions={
                 "succeeded": "SELECT_OBJECT",
                 "failed":    "DETECT_OBJECTS",
@@ -174,7 +174,7 @@ class TableCleanup(yasmin.StateMachine):
             "DETECT_FLOOR_TRASH",
             DetectFloorTrash(),
             transitions={
-                "succeeded": "SELECT_FLOOR_TRASH",
+                "succeeded": "SET_FLOOR_TRASH_CONTEXT",
                 "failed":    "succeeded",   # nothing found, floor trash optional
             },
         )
@@ -188,6 +188,20 @@ class TableCleanup(yasmin.StateMachine):
             },
         )
 
+        self.add_state(
+            "SET_FLOOR_TRASH_CONTEXT",
+            yasmin.CbState(
+                outcomes=["succeeded"],
+                callback=lambda bb: [
+                    bb.__setitem__("object_category", "trash"),
+                    bb.__setitem__("destination_str", "the trash bin"),
+                    bb.__setitem__("chosen_shelf", ""),
+                    bb.__setitem__("chosen_shelf_str", ""),
+                ] and "succeeded",
+            ),
+            transitions={"succeeded": "INSTRUCT_PICK_FLOOR"},
+        )
+        
         self.add_state(
             "INSTRUCT_PICK_FLOOR",
             InstructPick(),

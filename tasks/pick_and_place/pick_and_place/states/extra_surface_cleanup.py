@@ -59,7 +59,7 @@ class ExtraSurfaceCleanup(yasmin.StateMachine):
         # Detect both objects on the extra surface
         self.add_state(
             "DETECT_OBJECTS",
-            DetectObjects(),
+            DetectObjects(location_param="extra_surface", model="yolo11n-seg.pt"),
             transitions={
                 "succeeded": "SELECT_OBJECT",
                 "failed":    "DETECT_OBJECTS",

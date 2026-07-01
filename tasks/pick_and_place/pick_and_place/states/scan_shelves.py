@@ -61,12 +61,9 @@ class ScanShelves(yasmin.State):
 
     def execute(self, blackboard) -> str:
         shelf_data = {}
-
-        # Load shelf IDs from params
-        # TODO: confirm param name matches your yaml
         try:
             shelf_ids = (
-                self.node.get_parameter("pick_and_place.cabinet.shelves")
+                self.node.get_parameter("pick_and_place.cabinet.shelf_order")
                 .get_parameter_value()
                 .string_array_value
             )
@@ -149,13 +146,13 @@ class ScanShelves(yasmin.State):
                 header=Header(frame_id="map"),
             )
 
-            polygon_flat = (
-                self.node.get_parameter(f"{prefix}.polygon")
-                .get_parameter_value()
-                .double_array_value
-            )
-            coords = list(zip(polygon_flat[::2], polygon_flat[1::2]))
-            self._current_polygon = ShapelyPolygon(coords)
+            polygon_points = [
+            self.node.get_parameter(f"{prefix}.polygon.top_left").value,
+            self.node.get_parameter(f"{prefix}.polygon.top_right").value,
+            self.node.get_parameter(f"{prefix}.polygon.bottom_right").value,
+            self.node.get_parameter(f"{prefix}.polygon.bottom_left").value,
+            ]
+            self._current_polygon = ShapelyPolygon(polygon_points)
 
             self._current_z_min = (
                 self.node.get_parameter(f"{prefix}.z_min")

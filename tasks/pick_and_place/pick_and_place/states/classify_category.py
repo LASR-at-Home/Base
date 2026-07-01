@@ -17,7 +17,7 @@ CATEGORY_MAP = {
         "carrot", "tomato", "cucumber", "lettuce", "onion", "broccoli",
         "cabbage", "pepper", "zucchini", "radish", "corn", "potato", "garlic",
     },
-    "beverage": {
+    "drink": {
         "bottle", "water bottle", "juice", "milk",
         "soda can", "coffee cup", "energy drink", "thermos", "coke", "red bull", "iced tea",
     },
@@ -34,7 +34,7 @@ CATEGORY_MAP = {
     },
     "dish": {
         "fork", "knife", "spoon", "plate", "bowl", "wine glass",
-        "mug", "chopsticks",
+        "mug", "chopsticks", "cup",
     },
 }
 
