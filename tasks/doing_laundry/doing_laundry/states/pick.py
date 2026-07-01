@@ -60,7 +60,9 @@ class Pick(State):
                  floor_stop=0.02, step=0.05,
                  wall_shrink=0.0,           # shrink walls inward (m) if padding blocks entry
                  add_walls=True,
-                 rim_z_min=0.15, rim_z_max=0.45):
+                 rim_z_min=0.15, rim_z_max=0.45,
+                 vel_scale=0.1, acc_scale=0.1
+                 ):
         super().__init__(outcomes=['succeeded', 'failed'])
         self.gripper_joints = gripper_joints
         self.open_pos, self.close_pos = open_pos, close_pos
@@ -69,6 +71,8 @@ class Pick(State):
         self.add_walls = add_walls
         self.rim_z_min, self.rim_z_max = rim_z_min, rim_z_max
         self.base_link = base_link
+        self.moveit2.max_velocity = vel_scale
+        self.moveit2.max_acceleration = acc_scale
 
         from yasmin_ros.yasmin_node import YasminNode
         from pymoveit2 import MoveIt2
