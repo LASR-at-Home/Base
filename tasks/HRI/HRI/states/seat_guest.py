@@ -253,10 +253,13 @@ class SeatGuest(StateMachine):
             ),
         }
         
-        sofa_middle_top_left = (sofa_area["top_right"] + sofa_area["top_left"]) / 3
-        sofa_middle_top_right = ((sofa_area["top_right"] + sofa_area["top_left"]) / 3) * 2
-        sofa_middle_bottom_left = (sofa_area["bottom_left"] + sofa_area["bottom_right"]) / 3
-        sofa_middle_bottom_right = ((sofa_area["bottom_left"] + sofa_area["bottom_right"]) / 3) * 2
+        dist_top = sofa_area['top_right'] + sofa_area['top_left']
+        dist_bot = sofa_area['bottom_right'] + sofa_area['bottom_left']
+        
+        sofa_middle_top_left = dist_top / 3
+        sofa_middle_top_right = (dist_top / 3) * 2
+        sofa_middle_bottom_left = dist_bot / 3
+        sofa_middle_bottom_right = (dist_bot / 3) * 2
 
         self.sofa_area = ShapelyPolygon(
             [

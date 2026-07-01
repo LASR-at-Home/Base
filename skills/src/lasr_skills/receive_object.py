@@ -60,9 +60,9 @@ class ReceiveObject(StateMachine):
                 text="I see you have a bag. Please step back, I am going to reach my arm out."
             ),
             transitions={
-                "succeeded": "REACH_ARM",
-                "aborted": "REACH_ARM",
-                "canceled": "REACH_ARM",
+                "succeeded": "succeeded",
+                "aborted": "succeeded",
+                "canceled": "succeeded",
             },
         )
 
