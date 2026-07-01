@@ -9,8 +9,9 @@ from sensor_msgs.msg import Image
 from GPSR.world import load_locations
 from GPSR.tts import say
 from lasr_vision_interfaces.srv import BodyPixKeypointDetection, DetectFaces as DetectFacesSrv
-from lasr_skills import AskAndListen, DescribePeople, GoToLocation, HandoverObject, ReceiveObject, DetectWave, Rotate, FollowPerson
+from lasr_skills import AskAndListen, DescribePeople, GoToLocation, HandoverObject, ReceiveObject, DetectWave, Rotate, FollowPerson, Wait
 
+import time
 
 class DispatchSkill(yasmin.State):
     """YASMIN state that executes a skill chosen by the LLM."""
@@ -225,6 +226,8 @@ class DispatchSkill(yasmin.State):
                     return "succeeded"
                 
         #TODO:  Ask for person to move infront of you. then wait
+        self._say("I cannot see you. Can you please step infront of me. ")
+        time.sleep(2)
 
         # detections = self._detect_faces() 
         # if detections:
@@ -236,13 +239,6 @@ class DispatchSkill(yasmin.State):
 
         self._say("I could not find a person.")
         return "failed"
-    
-    def _scan_room(self, location_name):
-        if location_name not in self.locations:
-            self.node.get_logger().error(f"Unknown location: {location_name}")
-            self._say(f"I don't know where {location_name} is")
-            return "failed"
-        loc = self.locations[location_name]
 
     def _get_person_info(self, args: dict[str, Any]):
         location = self._first_arg(args, "location")
@@ -295,6 +291,15 @@ class DispatchSkill(yasmin.State):
             self._say(f"I'm sorry. I am unable to follow you.")
             return "failed"
         return outcome
+    
+    def _find_object(self):
+        try:
+            outcome = FollowPerson().execute()
+        except Exception as exc:
+            self.node.get_logger().error(f"FollowPerson failed: {exc}")
+            self._say(f"I'm sorry. I am unable to follow you.")
+            return "failed"
+        return outcome
 
     def _execute_step(self, skill, args):
         if skill == "say":  # CHECKED
@@ -325,4 +330,5 @@ class DispatchSkill(yasmin.State):
             outcome = self._execute_step(step["skill"], step.get("args", {}))
             if outcome == "failed":
                 self._execute_step(skill="say", args={"text": "I couldn't complete that step. Moving to the next part of the plan."})
+            time.sleep(0.5)
         return "succeeded"

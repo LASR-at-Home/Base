@@ -214,7 +214,7 @@ class ReceiveObject(StateMachine):
         # )
         self.add_state(
             "CLOSE_HALF_GRIPPER",  # TEMPORARY REPLACEMENT
-            PlayMotion(motion_name="close_half"),
+            PlayMotion(motion_name="close"),
             transitions={
                 "succeeded": "FOLD_ARM",
                 "aborted": "failed",
