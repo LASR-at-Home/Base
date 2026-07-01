@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>pick_and_place</name>
+  <name>doing_laundry</name>
   <version>0.0.0</version>
   <description>TODO: Package description</description>
   <maintainer email="yaralkhelaiwi@gmail.com">yara</maintainer>
@@ -10,8 +10,18 @@
   <depend>rclpy</depend>
   <depend>yasmin</depend>
   <depend>yasmin_ros</depend>
-  <depend>lasr_vision_yolo</depend>
-  <depend>lasr_speech</depend>
+  <exec_depend>yasmin_viewer</exec_depend>
+  <exec_depend>gazebo_ros</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>tf2_ros</exec_depend>
+  <exec_depend>cv_bridge</exec_depend>
+  <exec_depend>control_msgs</exec_depend>
+  <exec_depend>trajectory_msgs</exec_depend>
+  <exec_depend>python3-opencv</exec_depend>
+  <exec_depend>python3-numpy</exec_depend>
+  <exec_depend>python3-sklearn</exec_depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>

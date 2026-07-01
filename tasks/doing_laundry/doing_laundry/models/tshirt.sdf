@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<!-- 티셔츠 대용. 바구니 안에 놓일 파란 천 덩어리(밑판 + 위로 솟은 혹 = 주름).
+     바구니와 같은 위치에 스폰하면 내부 pose로 알맞은 높이에 앉는다. -->
+<sdf version="1.6">
+  <model name="tshirt">
+    <static>true</static>
+    <link name="base">
+      <pose>0 0 0.04 0 0 0</pose>
+      <collision name="c"><geometry><box><size>0.22 0.18 0.06</size></box></geometry></collision>
+      <visual name="v"><geometry><box><size>0.22 0.18 0.06</size></box></geometry>
+        <material><ambient>0.1 0.2 0.8 1</ambient><diffuse>0.1 0.2 0.8 1</diffuse></material></visual>
+    </link>
+    <link name="bump">
+      <pose>0.03 0.0 0.085 0 0 0</pose>
+      <collision name="c"><geometry><box><size>0.08 0.08 0.05</size></box></geometry></collision>
+      <visual name="v"><geometry><box><size>0.08 0.08 0.05</size></box></geometry>
+        <material><ambient>0.1 0.2 0.8 1</ambient><diffuse>0.1 0.2 0.8 1</diffuse></material></visual>
+    </link>
+  </model>
+</sdf>
