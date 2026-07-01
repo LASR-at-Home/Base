@@ -9,7 +9,7 @@ from launch_ros.actions import Node
 def generate_launch_description():
     ros_ip_arg = DeclareLaunchArgument(
         "ros_ip",
-        default_value="127.0.0.1",
+        default_value="10.68.0.140",
         description="IP address rosbridge will bind to (also passed to the Next.js UI as ROS_IP)",
     )
 
@@ -43,7 +43,7 @@ def generate_launch_description():
         period=2.0,
         actions=[
             ExecuteProcess(
-                cmd=["bash", "-c", "npm install && chmod +x node_modules/.bin/next && node_modules/.bin/next build && node_modules/.bin/next start"],
+                cmd=["bash", "-c", "npm install && chmod +x node_modules/.bin/next && node_modules/.bin/next build && node_modules/.bin/next start -p 3002"],
                 cwd=ui_dir,
                 additional_env={"ROS_IP": ros_ip},
                 output="screen",
