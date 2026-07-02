@@ -23,7 +23,7 @@ from std_msgs.msg import Empty
 
 from lasr_skills import (
     Say,
-    SafeGoToLocation,
+    GoToLocation,
     AskAndListen,
     PlayMotion,
     DetectDoorOpening,
@@ -53,32 +53,32 @@ class GPSR(yasmin.StateMachine):
         self.plans = []
         self.exec_index = 0
 
-        # self.add_state(
-        #     "WAIT_START",
-        #     yasmin_ros.MonitorState(
-        #         topic_name="/gpsr/start",
-        #         outcomes=["succeeded", "failed"],
-        #         monitor_handler=self.start_cb,
-        #         msg_type=Empty,
-        #     ),
-        #     transitions={
-        #         "succeeded": "START_CON",
-        #         "failed": "WAIT_START",
-        #         "canceled": "failed",
-        #     },
-        # )
+        self.add_state(
+            "WAIT_START",
+            yasmin_ros.MonitorState(
+                topic_name="/gpsr/start",
+                outcomes=["succeeded", "failed"],
+                monitor_handler=self.start_cb,
+                msg_type=Empty,
+            ),
+            transitions={
+                "succeeded": "START_CON",
+                "failed": "WAIT_START",
+                "canceled": "failed",
+            },
+        )
 
-        # self.add_state(
-        #     "START_CON",
-        #     self.setup(),
-        #     transitions={"succeeded": "GO_TO_INSTRUCT_POINT", "failed": "START_CON"},
-        # )
+        self.add_state(
+            "START_CON",
+            self.setup(),
+            transitions={"succeeded": "GO_TO_INSTRUCT_POINT", "failed": "START_CON"},
+        )
 
-        # self.add_state(
-        #     "GO_TO_INSTRUCT_POINT",
-        #     SafeGoToLocation(location_param="instruction_point"),
-        #     transitions={"succeeded": "CHECK_INSTRUCTION", "failed": "failed"},
-        # )
+        self.add_state(
+            "GO_TO_INSTRUCT_POINT",
+            GoToLocation(location_param="instruction_point"),
+            transitions={"succeeded": "CHECK_INSTRUCTION", "failed": "failed"},
+        )
 
         self.add_state(
             "CHECK_INSTRUCTION",
@@ -247,7 +247,7 @@ class GPSR(yasmin.StateMachine):
         # the next stored plan.
         self.add_state(
             "RETURN_TO_INSTRUCT_POINT",
-            SafeGoToLocation(location_param="instruction_point"),
+            GoToLocation(location_param="instruction_point"),
             transitions={"succeeded": "NEXT_PLAN", "failed": "NEXT_PLAN"},
         )
         self.add_state(
