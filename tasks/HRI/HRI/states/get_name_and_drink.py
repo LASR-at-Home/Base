@@ -9,6 +9,7 @@ import yasmin_ros
 from typing import List, Dict, Any
 from HRI.states import SpeechRecovery
 from lasr_llm_interfaces.srv import HRITaskQueryLlm
+import rclpy
 
 # from tasks.receptionist.src.receptionist.states import SpeechRecovery
 
@@ -40,6 +41,8 @@ class GetNameAndDrink(yasmin.StateMachine):
 
         def _handle_resp(self, blackboard, result):
             result = result.response
+            if result.name == '' and result.favourite_drink == '':
+                return 'aborted'
             blackboard["guest_data"][self.guest_id][self.task] = (
                 result.name if self.task == "name" else result.favourite_drink
             )
@@ -67,10 +70,16 @@ class GetNameAndDrink(yasmin.StateMachine):
             if not self._recovery_name_and_drink_required(blackboard):
                 if blackboard["guest_data"][self._guest_id]["name"] == "":
                     outcome = "failed_name"
+                    blackboard["guest_data"][self._guest_id]["name"] = 'John'
                 else:
+                    blackboard["guest_data"][self._guest_id]["drink"] = 'Coke'
                     outcome = "failed_drink"
             else:
+                blackboard["guest_data"][self._guest_id]["name"] = 'John'
+                blackboard["guest_data"][self._guest_id]["drink"] = 'Coke'
                 outcome = "failed"
+                
+            yasmin.YASMIN_LOG_INFO(str(blackboard['guest_data']))
             return outcome
 
         def _recovery_name_and_drink_required(self, blackboard) -> bool:
@@ -115,20 +124,56 @@ class GetNameAndDrink(yasmin.StateMachine):
                 "aborted": "SPEECH_RECOVERY",
             },
         )
+        # self.add_state(
+        #     "SPEECH_RECOVERY",
+        #     SpeechRecovery(guest_id, last_resort),
+        #     transitions={
+        #         "succeeded": "succeeded",
+        #         "failed": "POST_RECOVERY_DECISION",
+        #     },
+        # )
         self.add_state(
             "SPEECH_RECOVERY",
-            SpeechRecovery(guest_id, last_resort),
-            transitions={
-                "succeeded": "succeeded",
-                "failed": "POST_RECOVERY_DECISION",
-            },
-        )
-        self.add_state(
-            "POST_RECOVERY_DECISION",
             self.PostRecoveryDecision(guest_id=guest_id),
             transitions={
-                "failed": "failed",
-                "failed_name": "failed_name",
-                "failed_drink": "failed_drink",
+                "failed": "succeeded",
+                "failed_name": "succeeded",
+                "failed_drink": "succeeded",
             },
         )
+
+
+def main():
+    rclpy.init()
+    
+    yasmin_ros.set_ros_loggers()
+    
+    sm = yasmin.StateMachine(outcomes=['succeeded', 'failed'], handle_sigint=True)
+    
+    sm.add_state(
+        'NAME_DRINK', 
+        GetNameAndDrink(guest_id='guest1', last_resort=False), 
+        transitions={
+            'succeeded': 'succeeded',
+            'failed': 'failed',
+            'failed_name': 'failed',
+            'failed_drink': 'failed',
+        }
+    )
+    
+    bb = yasmin.Blackboard()
+    bb['guest_transcription'] = 'John'
+    bb['guest_data'] = {
+        'guest1': {
+            "name": "",
+            "drink": "",
+            "detection": False,
+            "seating_detection": False,
+            "attributes": {},
+            "seated_point": None,
+        }
+    }
+    
+    outcome = sm(bb)
+    
+    rclpy.shutdown()

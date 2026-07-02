@@ -94,7 +94,7 @@ class HRI(yasmin.StateMachine):
 
         self.add_state(
             "SEAT_GUEST",  # SM3: Locates and seats guest in free seat
-            SeatGuest(),
+            SeatGuest(id='guest1'),
             transitions={"succeeded": "CHECK", "failed": "failed"},
         )
 
@@ -113,7 +113,19 @@ class HRI(yasmin.StateMachine):
         self.add_state(
             "GREET_2",  # SM2: Greets guest
             LookAndGreetGuest(guest_id="guest2"),
-            transitions={"succeeded": "GUIDE_TO_SEAT", "failed": "failed"},
+            transitions={"succeeded": "GUIDE_TO_SEAT_2", "failed": "failed"},
+        )
+        
+        self.add_state(
+            "GUIDE_TO_SEAT_2",  # GUIDES GUEST TO SEATING AREA
+            SafeGoToLocation(location_param="seat_pose"),
+            transitions={"succeeded": "SEAT_GUEST_2", "failed": "failed"},
+        )
+
+        self.add_state(
+            "SEAT_GUEST_2",  # SM3: Locates and seats guest in free seat
+            SeatGuest(id='guest2'),
+            transitions={"succeeded": "CHECK", "failed": "failed"},
         )
 
         self.add_state(

@@ -224,29 +224,9 @@ class GreetGuest(yasmin.StateMachine):
             "STOP_EYE_TRACKING_2",
             StopEyeTracker(),
             transitions={
-                "succeeded": "WAIT",
+                "succeeded": "SAY_WELCOME_2",
                 "failed": "failed",
             },
-        )
-
-        self.add_state(
-            "WAIT", Wait(3), transitions={"succeeded": "GO_TO_GRAB_POSE", "failed": "failed"}
-        )
-
-        self.add_state(
-            'GO_TO_GRAB_POSE',
-            SafeGoToLocation(location_param='grab_pose'),
-            transitions={
-                'succeeded': 'GRAB_BAG',
-                'failed': 'failed'
-            }
-
-        )
-
-        self.add_state(
-            "GRAB_BAG",
-            ReceiveObject(object_name="bag"),
-            transitions={"succeeded": "SAY_WELCOME_2", "failed": "failed"},
         )
 
         self.add_state(
