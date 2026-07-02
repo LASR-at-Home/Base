@@ -10,8 +10,7 @@ from pick_and_place.states.decide_destination import DecideDestination
 from pick_and_place.states.choose_shelf import ChooseShelf
 from pick_and_place.states.instruct_pick import InstructPick
 from pick_and_place.states.instruct_place import InstructPlace
-from pick_and_place.states.detect_floor_trash import DetectFloorTrash
-
+from pick_and_place.states.detect_trash_floor import DetectFloorTrash
 
 class TableCleanup(yasmin.StateMachine):
     """

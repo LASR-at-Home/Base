@@ -14,7 +14,7 @@ from geometry_msgs.msg import Point, PointStamped
 from std_msgs.msg import Header
 
 from lasr_skills import LookToPoint
-from lasr_vision_yolo.srv import YoloDetection3D
+from lasr_vision_interfaces.srv import YoloDetection3D
 
 
 class DetectFloorTrash(yasmin.State):

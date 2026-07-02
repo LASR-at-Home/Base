@@ -1,10 +1,10 @@
 import yasmin
 import yasmin_ros
-
+import os
 from geometry_msgs.msg import Point, PointStamped
 from std_msgs.msg import Header
 from shapely import Polygon as ShapelyPolygon
-
+from ament_index_python.packages import get_package_share_directory
 from lasr_skills import DetectAllInPolygon
 
 _MODEL_PATH = os.path.join(

@@ -2,7 +2,7 @@ import yasmin
 import yasmin_ros
 
 from std_msgs.msg import Empty
-from lasr_skills import Say, GoToLocation, DetectDoorOpening
+from lasr_skills import Say, GoToLocation, StartDoorSM
 
 
 class Start(yasmin.StateMachine):
@@ -52,9 +52,9 @@ class Start(yasmin.StateMachine):
             "SAY_START",
             Say(text="Start of Pick and Place task."),
             transitions={
-                "succeeded": "SAY_WAITING",
-                "aborted":   "SAY_WAITING",
-                "canceled":    "SAY_WAITING",
+                "succeeded": "WAIT_FOR_DOOR",
+                "aborted":   "WAIT_FOR_DOOR",
+                "canceled":    "WAIT_FOR_DOOR",
             },
         )
 
@@ -63,7 +63,7 @@ class Start(yasmin.StateMachine):
             "WAIT_FOR_DOOR",
             StartDoorSM(),
             transitions={
-                "door_opened": "SAY_GOING_TO_TABLE",
+                "succeeded": "SAY_GOING_TO_TABLE",
                 "failed":      "WAIT_FOR_DOOR",
             },
         )

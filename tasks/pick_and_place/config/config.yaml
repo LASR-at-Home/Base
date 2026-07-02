@@ -1,4 +1,4 @@
-/**:
+pick_and_place:
   ros__parameters:
     pick_and_place:
 
@@ -58,49 +58,49 @@
         # Shelves — used by ScanShelves also from real
         shelf_order: ["top", "middle", "bottom", "extra_bottom"]
         shelves:
-        top:
-          torso_lift_joint: 0.30
-          look_point: [-10.44567584991455, 21.501087188720703, 1.1]
-          polygon:
-            top_left:     [-9.97590446472168, 21.317359924316406]
-            top_right:    [-10.988214492797852, 21.317359924316406]   # fix this
-            bottom_right: [-10.830141067504883, 21.885536193847656]
-            bottom_left:  [-9.953857421875, 21.592342376708984]
-          z_min: 1.05
-          z_max: 1.40
+          top:
+            torso_lift_joint: 0.30
+            look_point: [-10.44567584991455, 21.501087188720703, 1.1333880424499519]
+            polygon:
+              top_left:     [-9.97590446472168, 21.317359924316406]
+              top_right:    [-10.988214492797852, 21.317359924316406]   # fix this
+              bottom_right: [-10.830141067504883, 21.885536193847656]
+              bottom_left:  [-9.953857421875, 21.592342376708984]
+            z_min: 1.05
+            z_max: 1.40
 
-        middle:
-          torso_lift_joint: 0.15
-          look_point: [-10.44567584991455, 21.501087188720703, 0.72]
-          polygon:
-            top_left:     [-9.97590446472168, 21.317359924316406]
-            top_right:    [-10.988214492797852, 21.317359924316406]   # fix this
-            bottom_right: [-10.830141067504883, 21.885536193847656]
-            bottom_left:  [-9.953857421875, 21.592342376708984]
-          z_min: 0.60
-          z_max: 0.95
+          middle:
+            torso_lift_joint: 0.15
+            look_point: [-10.44567584991455, 21.501087188720703, 0.72]
+            polygon:
+              top_left:     [-9.97590446472168, 21.317359924316406]
+              top_right:    [-10.988214492797852, 21.317359924316406]   # fix this
+              bottom_right: [-10.830141067504883, 21.885536193847656]
+              bottom_left:  [-9.953857421875, 21.592342376708984]
+            z_min: 0.60
+            z_max: 0.95
 
-        bottom:
-          torso_lift_joint: 0.0
-          look_point: [-10.44567584991455, 21.501087188720703, 0.38]
-          polygon:
-            top_left:     [-9.97590446472168, 21.317359924316406]
-            top_right:    [-10.988214492797852, 21.317359924316406]   # fix this
-            bottom_right: [-10.830141067504883, 21.885536193847656]
-            bottom_left:  [-9.953857421875, 21.592342376708984]
-          z_min: 0.25
-          z_max: 0.60
+          bottom:
+            torso_lift_joint: 0.0
+            look_point: [-10.44567584991455, 21.501087188720703, 0.38]
+            polygon:
+              top_left:     [-9.97590446472168, 21.317359924316406]
+              top_right:    [-10.988214492797852, 21.317359924316406]   # fix this
+              bottom_right: [-10.830141067504883, 21.885536193847656]
+              bottom_left:  [-9.953857421875, 21.592342376708984]
+            z_min: 0.25
+            z_max: 0.60
 
-        extra_bottom:
-          torso_lift_joint: 0.0
-          look_point: [-10.44567584991455, 21.501087188720703, 0.12]
-          polygon:
-            top_left:     [-9.97590446472168, 21.317359924316406]
-            top_right:    [-10.988214492797852, 21.317359924316406]   # fix this
-            bottom_right: [-10.830141067504883, 21.885536193847656]
-            bottom_left:  [-9.953857421875, 21.592342376708984]
-          z_min: 0.0
-          z_max: 0.25
+          extra_bottom:
+            torso_lift_joint: 0.0
+            look_point: [-10.44567584991455, 21.501087188720703, 0.12]
+            polygon:
+              top_left:     [-9.97590446472168, 21.317359924316406]
+              top_right:    [-10.988214492797852, 21.317359924316406]   # fix this
+              bottom_right: [-10.830141067504883, 21.885536193847656]
+              bottom_left:  [-9.953857421875, 21.592342376708984]
+            z_min: 0.0
+            z_max: 0.25
 
       # BREAKFAST SURFACE (bowl and spoon pickup location)
       breakfast_surface:
@@ -133,54 +133,54 @@
         use_moveit: false
         publish_box: false
 
-objects:
-  cup:
-    category: "dish"
-  coke:
-    category: "drink"
-  bowl:
-    category: "dish"
-  apple:
-    category: "fruit"
-  fork:
-    category: "dish"
-  knife:
-    category: "dish"
-  spoon:
-    category: "dish"
-  plate:
-    category: "dish"
-  cornflakes:
-    category: "food"
-  instant_noodles:
-    category: "food"
-  milk:
-    category: "drink"
-  pepsi:
-    category: "drink"
-  rubiks_cube:
-    category: "toys"
-  dishwasher_tab:
-    category: "cleaning_supplies"
-  toothpaste:
-    category: "cleaning_supplies"
-  sponge:
-    category: "sponge"
-  red_bull:
-    category: "drink"
-  soju:
-    category: "drink" 
-  peach:
-    category: "fruit"
-  red_bellpepper:
-    category: "fruit"
-  yellow_bellpepper:
-    category: "fruit"
-  lemon:
-    category: "fruit"
-  mangostane:
-    category: "fruit"
-  seaweed:
-    category: "snack"
-  pringles:
-    category: "snack"
+      objects:
+        cup:
+          category: "dish"
+        coke:
+          category: "drink"
+        bowl:
+          category: "dish"
+        apple:
+          category: "fruit"
+        fork:
+          category: "dish"
+        knife:
+          category: "dish"
+        spoon:
+          category: "dish"
+        plate:
+          category: "dish"
+        cornflakes:
+          category: "food"
+        instant_noodles:
+          category: "food"
+        milk:
+          category: "drink"
+        pepsi:
+          category: "drink"
+        rubiks_cube:
+          category: "toys"
+        dishwasher_tab:
+          category: "cleaning_supplies"
+        toothpaste:
+          category: "cleaning_supplies"
+        sponge:
+          category: "sponge"
+        red_bull:
+          category: "drink"
+        soju:
+          category: "drink" 
+        peach:
+          category: "fruit"
+        red_bellpepper:
+          category: "fruit"
+        yellow_bellpepper:
+          category: "fruit"
+        lemon:
+          category: "fruit"
+        mangostane:
+          category: "fruit"
+        seaweed:
+          category: "snack"
+        pringles:
+          category: "snack"
