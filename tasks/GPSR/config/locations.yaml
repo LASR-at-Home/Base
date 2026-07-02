@@ -230,7 +230,6 @@ locations:
 
 
   kitchen trash bin:
-    orientation:
     position:
       x: -9.321074485778809
       y: 23.57362174987793

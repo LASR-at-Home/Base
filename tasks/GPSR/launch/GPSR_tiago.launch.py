@@ -46,22 +46,6 @@ def generate_launch_description():
         output="screen",
     )
 
-    state_machine = TimerAction(
-        period=30.0,
-        actions=[
-            Node(
-                package="GPSR",
-                executable="sm",
-                name="gpsr",
-                output="screen",
-                parameters=[
-                    params,
-                    {"input_mode": input_mode},
-                ],
-            )
-        ],
-    )
-
     return LaunchDescription(
         [
             DeclareLaunchArgument(
@@ -69,10 +53,9 @@ def generate_launch_description():
                 default_value="mic",
                 description='Command input source: "keyboard" or "mic"',
             ),
+            whisper_server,
             load_motions,
             robot_ui,
-            whisper_server,
-            state_machine,
-
         ]
     )
+ #ros2 run GPSR sm --ros-args --params-file src/Base/tasks/GPSR/config/params.yaml

@@ -2,9 +2,7 @@
 
 import os
 import sys
-
-import os
-import sys
+import string
 
 import rclpy
 import yasmin
@@ -22,7 +20,7 @@ from lasr_skills import (
     SafeGoToLocation,
     AskAndListen,
     PlayMotion,
-    StartDoorSM,
+    DetectDoorOpening,
     Listen,
 )
 
@@ -40,6 +38,8 @@ class GPSR(yasmin.StateMachine):
 
         self.instruction_count = 1
         self.understand_attempts = 0
+        self.operator_attempts = 0
+
 
         # Wait for Start signal at the door
         self.add_state(
@@ -91,7 +91,7 @@ class GPSR(yasmin.StateMachine):
             WaitForTabletReady(),
             transitions={"succeeded": "REQUEST_AND_WAIT_FOR_COMMAND"},
         )
-        
+            
         self.add_state(
             "REQUEST_AND_WAIT_FOR_COMMAND",
             AskAndListen(),
@@ -100,6 +100,18 @@ class GPSR(yasmin.StateMachine):
                 'failed': 'REQUEST_AND_WAIT_FOR_COMMAND'
             },
             remappings={'tts_phrase': 'instruction_text'}
+        )
+
+        self.add_state(
+            "CHECK_TRANSCRIPT",
+            yasmin.CbState(
+                outcomes=["valid", "invalid"],
+                callback=self.checkTranscript,
+            ),
+            transitions={
+                "valid": "QUERY_LLM",
+                "invalid": "REQUEST_AND_WAIT_FOR_COMMAND",
+            },
         )
 
         # Add a seconday ask and listen to double check command
@@ -134,12 +146,13 @@ class GPSR(yasmin.StateMachine):
         self.add_state(
             "CHECK_OUTCOME",
             yasmin.CbState(
-                outcomes=["succeeded", "failed", "request_rephrase","no_command"],
+                outcomes=["succeeded", "failed", "request_rephrase", "request_operator", "no_command"],
                 callback=self.checkOutcome,
             ),
             transitions={
                 "succeeded": "SAY_COMPLETE",
                 "request_rephrase": "REQUEST_REPHRASE",
+                "request_operator": "REQUEST_OPERATOR",
                 "failed": "UNABLE_TO_UNDERSTAND",
                 "no_command": "GO_TO_INSTRUCT_POINT",
             },
@@ -165,7 +178,16 @@ class GPSR(yasmin.StateMachine):
                 "canceled": "failed",
             },
         )
-        #REQUEST OPERATOR ARTER FIRST 3 TIMES
+        
+        self.add_state(
+            "REQUEST_OPERATOR",
+            Say(text="I am having trouble understanding. Could the operator please state the command for me?"),
+            transitions={
+                "succeeded": "GO_TO_INSTRUCT_POINT",
+                "aborted": "failed",
+                "canceled": "failed",
+            },
+        )
 
         self.add_state(
             "UNABLE_TO_UNDERSTAND",
@@ -185,13 +207,13 @@ class GPSR(yasmin.StateMachine):
         start_con_sm = yasmin.Concurrence(
             states={
                 "SAY_START": Say(text="Start of G P S R task."),
-                "DOOR_START": StartDoorSM(location_param="instruction_point"),
+                "DOOR_START": DetectDoorOpening(),
             },
             default_outcome="failed",
             outcome_map={
                 "succeeded": {
                     "SAY_START": "succeeded",
-                    "DOOR_START": "succeeded",
+                    "DOOR_START": "door_opened",
                 },
                 "failed": {
                     "SAY_START": "aborted",
@@ -235,21 +257,44 @@ class GPSR(yasmin.StateMachine):
             if say_text == "no command given" or say_text == ".":
                 return "no_command"
 
-            # If there is only 1 skill then assume it wasndidnt understand and ask for a rephrase/ repeat
-            else:
-                self.understand_attempts += 1
+            self.understand_attempts += 1
 
-                if self.understand_attempts > 3:
-                    self.instruction_count += 1
-                    return "failed"
-                
+            if self.understand_attempts <= 3:
                 return "request_rephrase"
+
+            # First 3 self-listening attempts exhausted — escalate to operator
+            self.operator_attempts += 1
+
+            if self.operator_attempts <= 3:
+                return "request_operator"
+
+            # Operator attempts also exhausted — give up on this instruction
+            self.instruction_count += 1
+            self.understand_attempts = 0
+            self.operator_attempts = 0
+            return "failed"
 
         self.instruction_count += 1
         self.understand_attempts = 0
+        self.operator_attempts = 0
 
         return "succeeded"
+    
+    def checkTranscript(self, blackboard):
+        try:
+            text = str(blackboard["transcribed_speech"])
+            if not text:
+                return "invalid"
+            
+            for ch in "!,.;:?\"'-":
+                text = text.replace(ch, "")
 
+            if len(text.split()) < 3:
+                return "invalid"
+
+            return "valid"
+        except: 
+            return "invalid"
 
 class GPSRNode(Node):
     def __init__(self):
