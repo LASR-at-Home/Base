@@ -204,6 +204,10 @@ Turn the plan below into ONE spoken announcement listing every step in order.
 Start with "Here is my plan." then say Step 1, Step 2, ... Step N — one short phrase per step derived from the skill and args.
 Use only words that will be spoken aloud. No bullet points or JSON in the announcement.
 
+PERSPECTIVE RULE: The operator gives commands in first person ("bring it to me", "tell me", "show me").
+When describing what you will do, reframe these as second person: "bring it to you", "tell you", "show you".
+Never say "bring it to me" or "tell me" in the announcement — always say "you" when referring to the operator.
+
 User command: {command}
 Plan summary: {plan_description}
 Steps: {steps_json}
@@ -216,6 +220,16 @@ Command: bring the cola from the kitchen to the bedroom
 Plan summary: fetch cola and bring to bedroom
 Steps: [{{"skill": "go_to_location", "args": {{"location": "kitchen"}}}}, {{"skill": "find_object", "args": {{"object": "cola", "location": "kitchen"}}}}, {{"skill": "pick_up", "args": {{"object": "cola"}}}}, {{"skill": "go_to_location", "args": {{"location": "bedroom"}}}}, {{"skill": "place_object", "args": {{"location": "bedroom"}}}}]
 JSON: {{"announcement": "Here is my plan. Step 1: go to the kitchen. Step 2: find the cola. Step 3: pick up the cola. Step 4: go to the bedroom. Step 5: place the cola in the bedroom."}}
+
+Command: bring me an apple from the kitchen
+Plan summary: fetch apple and bring to operator
+Steps: [{{"skill": "go_to_location", "args": {{"location": "kitchen"}}}}, {{"skill": "find_object", "args": {{"object": "apple", "location": "kitchen"}}}}, {{"skill": "pick_up", "args": {{"object": "apple"}}}}, {{"skill": "give_to_person", "args": {{"name": "operator"}}}}]
+JSON: {{"announcement": "Here is my plan. Step 1: go to the kitchen. Step 2: find the apple. Step 3: pick up the apple. Step 4: bring it to you."}}
+
+Command: tell me how many people are in the living room
+Plan summary: count people in living room and report
+Steps: [{{"skill": "go_to_location", "args": {{"location": "living room"}}}}, {{"skill": "count_people", "args": {{"location": "living room"}}}}, {{"skill": "say", "args": {{"text": "there are N people in the living room"}}}}]
+JSON: {{"announcement": "Here is my plan. Step 1: go to the living room. Step 2: count the people. Step 3: tell you how many there are."}}
 
 Command: go to the kitchen
 Plan summary: go to kitchen
