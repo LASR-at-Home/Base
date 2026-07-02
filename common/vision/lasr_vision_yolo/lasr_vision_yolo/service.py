@@ -2,7 +2,7 @@
 
 import os
 from ament_index_python import packages
-
+from ament_index_python.packages import get_package_share_directory
 from typing import Dict, Union, List, Tuple
 
 import rclpy
@@ -96,14 +96,14 @@ class YOLOServiceNode:
         self.node = node
         self._cache = {}
         self.node.declare_parameter(
-            "~device", "cuda:0" if torch.cuda.is_available() else "cpu"
+            "device", "cuda:0" if torch.cuda.is_available() else "cpu"
         )
-        self._device = self.node.get_parameter("~device").value
+        self._device = self.node.get_parameter("device").value
 
         self.node.declare_parameter(
-            "~preload", ["yolo11n-seg.pt", "yolo11n.pt", "yolo11n-pose.pt"]
+            "preload", ["/home/yara/ros2_ws/src/Base/common/vision/lasr_vision_yolo/models/best.pt"]
         )
-        self.preload_param_list = self.node.get_parameter("~preload").value
+        self.preload_param_list = self.node.get_parameter("preload").value
         for model in self.preload_param_list:
             self._maybe_load_model(model)
 
@@ -371,13 +371,30 @@ class YOLOServiceNode:
 
         return response
 
-    def _maybe_load_model(self, model_name: str) -> ultralytics.YOLO:
+    # def _maybe_load_model(self, model_name: str) -> ultralytics.YOLO:
+    #     if model_name in self._cache:
+    #         return self._cache[model_name]
+
+    #     model = self._cache[model_name] = ultralytics.YOLO(model_name).to(self._device)
+
+    #     self.node.get_logger().info(f"Loaded {model_name} model on {self._device}")
+    #     return model
+
+    def _maybe_load_model(self, model_name: str):
         if model_name in self._cache:
             return self._cache[model_name]
 
-        model = self._cache[model_name] = ultralytics.YOLO(model_name).to(self._device)
+        # If already an absolute path, keep it
+        if os.path.isabs(model_name):
+            model_path = model_name
+        else:
+            package_share = get_package_share_directory("lasr_vision_yolo")
+            model_path = os.path.join(package_share, "models", model_name)
 
-        self.node.get_logger().info(f"Loaded {model_name} model on {self._device}")
+        self.node.get_logger().info(f"Loading model from: {model_path}")
+
+        model = ultralytics.YOLO(model_path).to(self._device)
+        self._cache[model_name] = model
         return model
 
     def _publish_results(

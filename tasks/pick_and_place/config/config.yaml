@@ -3,36 +3,21 @@
     pick_and_place:
 
       # Category the referee designates as trash.
-      trash_category: "trash"
-
-      # objects: ["cup", "can", "bottle", "bowl", "box", "apple", "fork",
-      #           "knife", "spoon", "plate"]
+      trash_category: "fruit"
 
       # DINING TABLE
       table:
-        # Where the robot stands to pick objects from the table
+        # Where the robot stands to pick objects from the table yes
         pose:
-          position: {x: 0.5444910497763044, y: -2.4412505621588583, z: 0.0}
-          orientation: {x: 0.0, y: 0.0, z: -0.7912741117828641, w: 0.6114615932519716}
+          position: {x: -8.146629333496094, y: 21.995290756225586, z: 0.0}
+          orientation: {x: 0.0, y: 0.0, z: 0.598939, w: 0.800795}
 
-        # # Where the robot stands to observe/detect the full table
-        # observe_pose:
-        #   position: {x: 0.5876252953308133, y: -1.0687492206833655, z: 0.0}
-        #   orientation: {x: 0.0, y: 0.0, z: 0.996990359390238, w: 0.07752562984538826}
-
-        # Detection polygon — rectangle around the table top in map frame
+        # Detection polygon — rectangle around the table top in map frame yes
         polygon:
-          top_left:     [3.5, 3.5]
-          top_right:    [5.5, 3.5]
-          bottom_right: [5.5, 1.0]
-          bottom_left:  [3.5, 1.0]
-
-        # # Search polygon for FindAndGoToTable — larger than detection polygon
-        # search_polygon:
-        #   top_left:     [5.3, 5.9]
-        #   top_right:    [7.8, 5.9]
-        #   bottom_right: [7.8, 3.8]
-        #   bottom_left:  [5.3, 3.8]
+          top_left:     [-8.301767349243164, 23.88897705078125]
+          top_right:    [-7.104084014892578, 23.345989227294922]
+          bottom_right: [-7.559137344360352, 22.08161163330078]
+          bottom_left:  [-8.659490585327148, 22.590110778808594]
 
         # Z height range for detection filtering
         z_min: 0.7
@@ -45,88 +30,101 @@
           size: [1.02, 1.2, 0.9]
           position: [1.2, -3.9, 0.37]
 
-      # DESTINATION 1: dishwasher
+      # DESTINATION 1: dishwasher yes
       dishwasher:
         pose:
-          position: {x: 0.821, y: 0.299, z: 0.0}   # update with real pose
-          orientation: {x: 0.0, y: 0.0, z: -0.7527398351858691, w: 0.6583181149902764}
+          position: {x: -5.7190327644348145, y: 23.41750144958496, z: 0.0}
+          orientation: {x: 0.0, y: 0.0, z: 0.611978, w: 0.790875}
 
-      # DESTINATION 2: trash bin
+      # DESTINATION 2: trash bin yes
       trash_bin:
         pose:
-          position: {x: 0.0, y: 0.0, z: 0.0}       # update with real pose
-          orientation: {x: 0.0, y: 0.0, z: 0.0, w: 1.0}
+          position: {x: -6.85477, y: 22.4255, z: 0.0}
+          orientation: {x: 0.0, y: 0.0, z: 0.599564, w: 0.800327}
 
-      # DESTINATION 3: cabinet
+      # DESTINATION 3: cabinet yes
       cabinet:
         pose:
-          position: {x: -0.24395824472217295, y: -1.7992161774429396, z: 0.0}
-          orientation: {x: 0.0, y: 0.0, z: 0.9801022379942061, w: 0.13519825869117716}
+          position: {x: -9.75769329071045, y: 22.429922103881836, z: 0.0}
+          orientation: {x: 0.0, y: 0.0, z: -0.792694, w: 0.60962}
 
-        # Detection polygon for cereal/milk detection inside cabinet
+        # Detection polygon for cereal/milk detection inside cabinet (from real)
         polygon:
-          top_left:     [0.0, 0.0]
-          top_right:    [1.0, 0.0]
-          bottom_right: [1.0, 1.0]
-          bottom_left:  [0.0, 1.0]
+          top_left:     [-9.97590446472168, 21.317359924316406]
+          top_right:    [-10.988214492797852, 21.317359924316406]
+          bottom_right: [-10.830141067504883, 21.885536193847656]
+          bottom_left:  [-9.953857421875, 21.592342376708984]
 
-        # Shelves — used by ScanShelves
-        shelf_order: ["top", "middle", "bottom"]
+        # Shelves — used by ScanShelves also from real
+        shelf_order: ["top", "middle", "bottom", "extra_bottom"]
         shelves:
-          top:
-            torso_lift_joint: 0.30
-            look_point: [0.0, 0.0, 1.0]
-            polygon:
-              top_left:     [0.0, 0.0]
-              top_right:    [1.0, 0.0]
-              bottom_right: [1.0, 1.0]
-              bottom_left:  [0.0, 1.0]
-            z_min: 0.9
-            z_max: 1.3
-          middle:
-            torso_lift_joint: 0.15
-            look_point: [0.0, 0.0, 0.7]
-            polygon:
-              top_left:     [0.0, 0.0]
-              top_right:    [1.0, 0.0]
-              bottom_right: [1.0, 1.0]
-              bottom_left:  [0.0, 1.0]
-            z_min: 0.6
-            z_max: 0.9
-          bottom:
-            torso_lift_joint: 0.0
-            look_point: [0.0, 0.0, 0.4]
-            polygon:
-              top_left:     [0.0, 0.0]
-              top_right:    [1.0, 0.0]
-              bottom_right: [1.0, 1.0]
-              bottom_left:  [0.0, 1.0]
-            z_min: 0.3
-            z_max: 0.6
+        top:
+          torso_lift_joint: 0.30
+          look_point: [-10.44567584991455, 21.501087188720703, 1.1]
+          polygon:
+            top_left:     [-9.97590446472168, 21.317359924316406]
+            top_right:    [-10.988214492797852, 21.317359924316406]   # fix this
+            bottom_right: [-10.830141067504883, 21.885536193847656]
+            bottom_left:  [-9.953857421875, 21.592342376708984]
+          z_min: 1.05
+          z_max: 1.40
+
+        middle:
+          torso_lift_joint: 0.15
+          look_point: [-10.44567584991455, 21.501087188720703, 0.72]
+          polygon:
+            top_left:     [-9.97590446472168, 21.317359924316406]
+            top_right:    [-10.988214492797852, 21.317359924316406]   # fix this
+            bottom_right: [-10.830141067504883, 21.885536193847656]
+            bottom_left:  [-9.953857421875, 21.592342376708984]
+          z_min: 0.60
+          z_max: 0.95
+
+        bottom:
+          torso_lift_joint: 0.0
+          look_point: [-10.44567584991455, 21.501087188720703, 0.38]
+          polygon:
+            top_left:     [-9.97590446472168, 21.317359924316406]
+            top_right:    [-10.988214492797852, 21.317359924316406]   # fix this
+            bottom_right: [-10.830141067504883, 21.885536193847656]
+            bottom_left:  [-9.953857421875, 21.592342376708984]
+          z_min: 0.25
+          z_max: 0.60
+
+        extra_bottom:
+          torso_lift_joint: 0.0
+          look_point: [-10.44567584991455, 21.501087188720703, 0.12]
+          polygon:
+            top_left:     [-9.97590446472168, 21.317359924316406]
+            top_right:    [-10.988214492797852, 21.317359924316406]   # fix this
+            bottom_right: [-10.830141067504883, 21.885536193847656]
+            bottom_left:  [-9.953857421875, 21.592342376708984]
+          z_min: 0.0
+          z_max: 0.25
 
       # BREAKFAST SURFACE (bowl and spoon pickup location)
       breakfast_surface:
         pose:
-          position: {x: 0.5444910497763044, y: -2.4412505621588583, z: 0.0}
-          orientation: {x: 0.0, y: 0.0, z: -0.7912741117828641, w: 0.6114615932519716}
+          position: {x: -6.90986967086792, y: 21.280567169189453, z: 0.0}
+          orientation: {x: 0.0, y: 0.0, z: -0.125551, w: 0.992087}
         # update with real coordinates
         polygon:
-          top_left:     [0.0, 0.0]
-          top_right:    [1.0, 0.0]
-          bottom_right: [1.0, 1.0]
-          bottom_left:  [0.0, 1.0]
+          top_left:     [-5.61154317855835, 21.451658248901367]
+          top_right:    [-5.85907506942749, 20.46249008178711]
+          bottom_right: [-6.411557197570801, 20.629091262817383]
+          bottom_left:  [-6.269176006317139, 21.64197540283203]
 
       # EXTRA SURFACE (two common objects for cleanup)
       extra_surface:
         pose:
-          position: {x: 0.0, y: 0.0, z: 0.0}       # update with real pose
-          orientation: {x: 0.0, y: 0.0, z: 0.0, w: 1.0}
+          position: {x: -6.90986967086792, y: 21.280567169189453, z: 0.0}       # update with real pose
+          orientation: {x: 0.0, y: 0.0, z: -0.125551, w: 0.992087}
         # update with real coordinates
         polygon:
-          top_left:     [0.0, 0.0]
-          top_right:    [1.0, 0.0]
-          bottom_right: [1.0, 1.0]
-          bottom_left:  [0.0, 1.0]
+          top_left:     [-5.61154317855835, 21.451658248901367]
+          top_right:    [-5.85907506942749, 20.46249008178711]
+          bottom_right: [-6.411557197570801, 20.629091262817383]
+          bottom_left:  [-6.269176006317139, 21.64197540283203]
 
       # GRASP (not used without manipulation)
       grasp:
@@ -145,7 +143,7 @@ objects:
   apple:
     category: "fruit"
   fork:
-    category: "dishe"
+    category: "dish"
   knife:
     category: "dish"
   spoon:

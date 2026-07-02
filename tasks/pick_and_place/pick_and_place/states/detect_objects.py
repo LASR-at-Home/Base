@@ -7,7 +7,11 @@ from shapely import Polygon as ShapelyPolygon
 
 from lasr_skills import DetectAllInPolygon
 
-
+_MODEL_PATH = os.path.join(
+    get_package_share_directory("lasr_vision_yolo"),
+    "models",
+    "best.pt"
+)
 class DetectObjects(yasmin.State):
     """
     Looks at a configured surface and detects objects within its polygon
@@ -36,7 +40,7 @@ class DetectObjects(yasmin.State):
         self,
         location_param: str = "table",
         object_filter: list = None,
-        model: str = "yolo11n-seg.pt",
+        model: str = _MODEL_PATH,
         min_confidence: float = 0.1,
     ):
         super().__init__(outcomes=["succeeded", "failed"])
