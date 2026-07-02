@@ -3,7 +3,7 @@ from threading import Thread
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Empty
-
+import signal
 import yasmin
 import yasmin_ros
 from yasmin_viewer import YasminViewerPub
@@ -135,7 +135,7 @@ class PickAndPlaceNode(Node):
         )
         self._executor = Executor()
         self._executor.add_node(self)
-        self._spin_thread = Thread(target=self._executor.spin)
+        self._spin_thread = Thread(target=self._executor.spin, daemon=True)
         self._spin_thread.start()
 
 
@@ -168,15 +168,28 @@ def main():
     bb["debug_images"]         = []
     bb["last_rgb_image"]       = None
 
+    def shutdown(sig=None, frame=None):
+        yasmin.YASMIN_LOG_INFO("Shutting down Pick and Place...")
+        node._executor.shutdown(wait=False)
+        if rclpy.ok():
+            node.destroy_node()
+            rclpy.shutdown()
+
+    signal.signal(signal.SIGINT, shutdown)
+    signal.signal(signal.SIGTERM, shutdown)
+
     try:
         outcome = sm(bb)
         yasmin.YASMIN_LOG_INFO(f"Pick and Place finished with outcome: {outcome}")
     except Exception as e:
         yasmin.YASMIN_LOG_WARN(str(e))
-
-    if rclpy.ok():
-        node.destroy_node()
-        rclpy.shutdown()
+    finally:
+        # Stop the executor spin thread cleanly
+        node._executor.shutdown()
+        node._spin_thread.join()
+        if rclpy.ok():
+            node.destroy_node()
+            rclpy.shutdown()
 
 
 if __name__ == "__main__":
