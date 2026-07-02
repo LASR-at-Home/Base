@@ -66,7 +66,7 @@ class Start(yasmin.StateMachine):
         # 4. Detect door opening — long timeout for testing
         self.add_state(
             "WAIT_FOR_DOOR",
-            DetectDoorOpening(lasr_scan_topic="/scan_raw", timeout=999.0),
+            DetectDoorOpening(lasr_scan_topic="/scan", timeout=999.0),
             transitions={
                 "door_opened": "GO_TO_LAUNDRY_AREA",
                 "failed": "WAIT_FOR_DOOR",
