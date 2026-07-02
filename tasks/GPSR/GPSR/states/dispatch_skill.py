@@ -9,7 +9,7 @@ from sensor_msgs.msg import Image
 from GPSR.world import load_locations
 from GPSR.tts import say
 from lasr_vision_interfaces.srv import BodyPixKeypointDetection, DetectFaces as DetectFacesSrv
-from lasr_skills import AskAndListen, DescribePeople, GoToLocation, HandoverObject, ReceiveObject, DetectWave, Rotate, FollowPerson, Wait
+from lasr_skills import AskAndListen, DescribePeople, GoToLocation, HandoverObject, ReceiveObject, DetectWave, Rotate, FollowPerson, Wait, Detect3D, LookToPoint, Say
 
 import time
 
@@ -292,9 +292,25 @@ class DispatchSkill(yasmin.State):
             return "failed"
         return outcome
     
-    def _find_object(self):
+    def _find_object(self, object):
         try:
-            outcome = FollowPerson().execute()
+            sm = yasmin.StateMachine(outcomes=["succeeded", "failed"])
+            sm.add_state(
+                "DETECT3D",
+                Detect3D(model="best.pt", filter=[object]),
+                transitions={"succeeded": "LOOK_AT_OBJECT", "failed": "failed"},
+            )
+            sm.add_state(
+                "LOOK_AT_OBJECT",
+                LookToPoint(),
+                transitions={"succeeded": "CONFIRM", "failed": "failed"},
+            )
+            sm.add_state(
+                "CONFIRM",
+                Say(text=f"I can see the {object}."),
+                transitions={"succeeded": "succeeded", "failed": "failed"},
+            )
+            outcome = Detect3D(model="best.pt", filter=[object]).execute()
         except Exception as exc:
             self.node.get_logger().error(f"FollowPerson failed: {exc}")
             self._say(f"I'm sorry. I am unable to follow you.")
@@ -320,6 +336,8 @@ class DispatchSkill(yasmin.State):
             return self._give_to_person(args)
         if skill == "follow_person":   # SHOULD WORK
             return self._follow_person()
+        if skill == "find_object":   # SHOULD WORK
+            return self._find_object(args.get("object", ""))
         
         # CAN ADD follow_person, find_object
         self.node.get_logger().info(f"Skipping skill '{skill}' (not yet actuated)")
