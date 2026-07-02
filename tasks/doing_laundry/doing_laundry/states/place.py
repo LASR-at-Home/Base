@@ -72,8 +72,7 @@ class Place(State):
             end_effector_name=ee_link,
             group_name=group_name,
             callback_group=cb)
-        self.grip = ActionClient(self.node, FollowJointTrajectory, gripper_action,
-                                 callback_group=cb)
+        self.grip_pub = self.node.create_publisher(JointTrajectory, '/gripper_controller/joint_trajectory', 10)
 
     def _wait(self, future, timeout=15.0):
         t0 = time.time()
@@ -93,19 +92,15 @@ class Place(State):
             return False
 
     def _open(self):
-        if not self.grip.wait_for_server(timeout_sec=5.0):
-            self.node.get_logger().error('[Place] gripper action unavailable')
-            return False
-        goal = FollowJointTrajectory.Goal()
-        goal.trajectory = JointTrajectory(
+        msg = JointTrajectory(
             joint_names=list(self.gripper_joints),
             points=[JointTrajectoryPoint(
                 positions=[float(self.open_pos)] * len(self.gripper_joints),
                 time_from_start=Duration(sec=1))])
-        gh = self._wait(self.grip.send_goal_async(goal))
-        if gh is None or not gh.accepted:
-            return False
-        self._wait(gh.get_result_async())
+        for _ in range(3):
+            self.grip_pub.publish(msg)
+            time.sleep(0.1)
+        time.sleep(1.5)
         return True
 
     def execute(self, blackboard):

@@ -121,7 +121,7 @@ def _pca_yaw(xy):
 
 
 def _quat_top_down(yaw):
-    qx = (0.0, 0.7071068, 0.0, 0.7071068)
+    qx = (1.0, 0.0, 0.0, 0.0)
     half = yaw / 2.0
     qz = (0.0, 0.0, math.sin(half), math.cos(half))
     x1, y1, z1, w1 = qz
@@ -180,8 +180,7 @@ def _fit_opening(rim2d, c0, yaw0, tol=0.02):
 
 
 def _split_handle(interior, rim_z):
-    return interior[:0], interior
-    
+    return interior[:0], interior   # HANDLE OFF
     # Handle (up-arch or folded-across) projects to a thin long line in XY;
     # cloth fills area. Detect the line by shape, then carve a corridor across
     # all z so descent/grasp avoid it regardless of handle height.
@@ -383,8 +382,8 @@ class BasketPerception:
                                frame=base, rim_z=rim_z)
 
         rim_band = best[(best[:, 2] > rim_z - 0.04) & (best[:, 2] < rim_z + 0.02)]
-        cx, cy, yaw, conf, clean = _fit_opening(rim_band[:, :2], c0, yaw0)
-        if conf < 0.12:
+        cx, cy, yaw, conf, clean = _fit_opening(rim_band[:, :2], c0, yaw0, tol=0.04)
+        if conf < 0.05:
             return GraspResult('failed', 'opening fit low-confidence (draped/occluded), re-view',
                                frame=base, basket_xy=(cx, cy), basket_yaw=yaw, rim_z=rim_z)
 
@@ -397,10 +396,7 @@ class BasketPerception:
         if interior.shape[0] == 0:
             return GraspResult('empty', 'interior empty', frame=base,
                                basket_xy=(cx, cy), basket_yaw=yaw, rim_z=rim_z)
-        if getattr(self, 'use_handle', True):
-            handle, cloth = _split_handle(interior, rim_z)
-        else:
-            handle, cloth = interior[:0], interior
+        handle, cloth = _split_handle(interior, rim_z)
 
         # --- empty vs occupied ---
         if cloth.shape[0] < EMPTY_MIN_PTS:
@@ -437,7 +433,7 @@ class BasketPerception:
             if zmax - zmed > WRINKLE_THRESH:
                 gz = zmax - PINCH_BELOW
             else:
-                gz = zmed - PRESS_DEPTH
+                gz = zmed
             gz = max(gz, floor_z + 0.01)
             if handle.shape[0]:
                 hd = np.linalg.norm(handle[:, :2] - np.array([gx, gy]), axis=1)
@@ -453,6 +449,8 @@ class BasketPerception:
                                frame=base, basket_xy=(cx, cy), basket_yaw=yaw, rim_z=rim_z)
 
         gx, gy, gz, gyaw = chosen
+        gz = gz + 0.12   # gripper_grasping_frame -> fingertip offset
+        self.node.get_logger().info(f'[grasp] xy=({gx:.3f},{gy:.3f}) z={gz:.3f} floor={floor_z:.3f} rim={rim_z:.3f}')
         return GraspResult(
             'grasp_ready', 'ok', frame=base,
             basket_xy=(cx, cy), basket_yaw=yaw, rim_z=rim_z,

@@ -66,7 +66,7 @@ class DoingLaundry(yasmin.StateMachine):
             transitions={
                 "grasp_ready": "PICK",
                 "empty": "succeeded",
-                "no_basket": "failed",
+                "no_basket": "DETECT_BASKET",
                 "failed": "failed",
             })
 
