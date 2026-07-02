@@ -5,9 +5,9 @@ export function Ready({ ready }: { ready: () => void }) {
     <div className="fixed w-full h-full top-0 left-0 grid place-items-center">
       <div
         onClick={ready}
-        className="grid place-items-center w-[40vw] rounded-full aspect-square bg-blue-400 hover:bg-blue-300 text-white text-8xl"
+        className="grid place-items-center w-[60vw] rounded-full aspect-square bg-red-600 hover:bg-red-500 text-white text-6xl font-bold text-center"
       >
-        Ready
+        Click here to start
       </div>
     </div>
   );

@@ -9,3 +9,4 @@ setuptools
 numba>=0.60.0
 coverage>=7.0
 silero-vad
+soundfile

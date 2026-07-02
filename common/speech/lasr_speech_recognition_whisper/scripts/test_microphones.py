@@ -1,71 +1,55 @@
-#!/usr/bin python3
+#!/usr/bin/env python3
+"""Record a single utterance and save it as a WAV file for testing."""
 
-import os
 import argparse
-import speech_recognition as sr
-import rclpy
-import sounddevice  # needed to remove ALSA error messages
+import numpy as np
+import sounddevice as sd
+import soundfile as sf
 
-# TODO argparse -> ROS params
+SAMPLE_RATE = 16000
+DURATION = 10.0  # seconds
 
 
-def parse_args() -> dict:
-    """Parse command line arguments into a dictionary.
-
-    Returns:
-        dict: name: value pairs of command line arguments
-    """
-
-    parser = argparse.ArgumentParser(description="Test microphones")
-    parser.add_argument(
-        "-m", "--microphone", type=int, help="Microphone index", default=None
-    )
-    parser.add_argument(
-        "-o", "--output_dir", type=str, help="Directory to save audio files"
-    )
-
-    # return vars(parser.parse_args())
+def parse_args():
+    parser = argparse.ArgumentParser(description="Test microphone recording")
+    parser.add_argument("-m", "--microphone", type=str, default=None,
+                        help="Microphone name substring or index (default: system default)")
+    parser.add_argument("-o", "--output", type=str, default="/tmp/microphone_test.wav",
+                        help="Output WAV file path")
+    parser.add_argument("-d", "--duration", type=float, default=DURATION,
+                        help="Recording duration in seconds")
     args, _ = parser.parse_known_args()
-    return vars(args)
+    return args
 
 
-def main(args: dict = None) -> None:
-    """Generate audio files from microphone input.
+def resolve_device(mic):
+    if mic is None:
+        return None
+    if mic.isdigit():
+        return int(mic)
+    for idx, info in enumerate(sd.query_devices()):
+        if mic in info["name"]:
+            return idx
+    raise ValueError(f"Could not find microphone: {mic}")
 
-    Args:
-        args (dict): dictionary of command line arguments.
-    """
 
-    # Adapted from https://github.com/Uberi/speech_recognition/blob/master/examples/write_audio.py
+def main():
+    args = parse_args()
+    device = resolve_device(args.microphone)
 
-    rclpy.init(args=args)
+    print(f"Recording {args.duration}s at {SAMPLE_RATE}Hz... speak now!")
+    audio = sd.rec(
+        int(args.duration * SAMPLE_RATE),
+        samplerate=SAMPLE_RATE,
+        channels=1,
+        dtype="float32",
+        device=device,
+    )
+    sd.wait()
+    print("Done.")
 
-    parser_args = parse_args()
-
-    mic_index = parser_args["microphone"]
-    output_dir = parser_args["output_dir"]
-
-    r = sr.Recognizer()
-    r.pause_threshold = 2
-    microphone = sr.Microphone(device_index=mic_index, sample_rate=16000)
-    with microphone as source:
-        print("Say something!")
-        audio = r.listen(source, timeout=5, phrase_time_limit=10)
-        print("Finished listening")
-
-    with open(os.path.join(output_dir, "microphone.raw"), "wb") as f:
-        f.write(audio.get_raw_data())
-
-    with open(os.path.join(output_dir, "microphone.wav"), "wb") as f:
-        f.write(audio.get_wav_data())
-
-    with open(os.path.join(output_dir, "microphone.flac"), "wb") as f:
-        f.write(audio.get_flac_data())
-
-    with open(os.path.join(output_dir, "microphone.aiff"), "wb") as f:
-        f.write(audio.get_aiff_data())
-
-    rclpy.shutdown()
+    sf.write(args.output, audio, SAMPLE_RATE, subtype="PCM_16")
+    print(f"Saved to {args.output}")
 
 
 if __name__ == "__main__":
