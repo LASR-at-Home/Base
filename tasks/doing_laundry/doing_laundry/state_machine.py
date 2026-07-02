@@ -51,11 +51,6 @@ class DoingLaundry(yasmin.StateMachine):
             transitions={"succeeded": "TUCK_ARM", "failed": "TUCK_ARM"})
 
         self.add_state(
-            "TUCK_ARM",
-            TuckArm(),
-            transitions={"succeeded": "LOOK_DOWN", "failed": "LOOK_DOWN"})
-
-        self.add_state(
             "LOOK_DOWN",
             LookDown(tilt=-0.9),
             transitions={"succeeded": "DETECT_BASKET", "failed": "DETECT_BASKET"})
@@ -79,6 +74,11 @@ class DoingLaundry(yasmin.StateMachine):
             transitions={"succeeded": "PLACE", "failed": "failed"})
         self.add_state(
             "PLACE", Place(x=0.6, y=-0.3, z=0.95),
+            transitions={"succeeded": "TUCK_ARM", "failed": "TUCK_ARM"})
+
+        self.add_state(
+            "TUCK_ARM",
+            TuckArm(),
             transitions={"succeeded": "succeeded", "failed": "failed"})
 
 
