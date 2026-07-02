@@ -24,22 +24,23 @@ RULES:
 - Missing locations/objects/people are NOT a reason for can_do=false — the planner handles those and manages the different cases.
 - Any question, greeting, or request for information: can_do=true, selected_skills=["say"].
 - If the command needs navigation AND another action, include "go_to_location" in selected_skills.
+- If the result of a skill must be reported back to the operator (count, name, description, property), always include "say" in selected_skills.
 
 EXAMPLES:
 Command: find the apple in the kitchen
 JSON: {{"can_do": true, "reason": "need to navigate and search", "selected_skills": ["go_to_location", "find_object"]}}
 
 Command: count the people in the living room
-JSON: {{"can_do": true, "reason": "need to navigate and count", "selected_skills": ["go_to_location", "count_people"]}}
+JSON: {{"can_do": true, "reason": "need to navigate, count, and report back", "selected_skills": ["go_to_location", "count_people", "say"]}}
 
 Command: how many drinks are in the kitchen
-JSON: {{"can_do": true, "reason": "need to navigate and count objects", "selected_skills": ["go_to_location", "count_objects"]}}
+JSON: {{"can_do": true, "reason": "need to navigate, count objects, and report back", "selected_skills": ["go_to_location", "count_objects", "say"]}}
 
 Command: tell me the name of the person in the bedroom
-JSON: {{"can_do": true, "reason": "need to navigate and get info", "selected_skills": ["go_to_location", "get_person_info"]}}
+JSON: {{"can_do": true, "reason": "need to navigate, get info, and report back", "selected_skills": ["go_to_location", "get_person_info", "say"]}}
 
 Command: what is the biggest object on the table
-JSON: {{"can_do": true, "reason": "need to navigate and find by property", "selected_skills": ["go_to_location", "find_object_by_property"]}}
+JSON: {{"can_do": true, "reason": "need to navigate, find by property, and report back", "selected_skills": ["go_to_location", "find_object_by_property", "say"]}}
 
 Command: follow the person until they stop
 JSON: {{"can_do": true, "reason": "follow skill", "selected_skills": ["follow_person"]}}
@@ -145,6 +146,7 @@ RULES:
 - find_object and find_person can search for ANY object/person, even if not in the known lists — do NOT refuse for unknown objects when find_object is selected.
 - Fill args from the command and known world.
 - say text contains only the spoken words.
+- ALWAYS complete the task end-to-end. If the robot gathers information (count, name, description, property) it MUST return to the instruction point and report the result with a say step. If the robot fetches an object for the operator it MUST deliver it with give_to_person. Never leave the result unreported.
 
 Skills available for this command:
 {selected_skill_lines}
@@ -171,17 +173,20 @@ Plan: {{"plan_description": "waste basket and refrigerator are not known locatio
 Command: lead Simone from the coatrack to the bathroom | Skills: guide_person | Known locations: bedroom, kitchen, living room, office
 Plan: {{"plan_description": "coatrack and bathroom are not known locations", "steps": [{{"skill": "say", "args": {{"text": "I'm sorry, the coatrack and bathroom are not on my map."}}}}]}}
 
-Command: find a pizza in the kitchen | Skills: go_to_location, find_object | Known locations: bedroom, kitchen, living room, office
-Plan: {{"plan_description": "go to kitchen and search for pizza", "steps": [{{"skill": "go_to_location", "args": {{"location": "kitchen"}}}}, {{"skill": "find_object", "args": {{"object": "pizza", "location": "kitchen"}}}}]}}
+Command: find a pizza in the kitchen | Skills: go_to_location, find_object, say | Known locations: bedroom, kitchen, living room, office
+Plan: {{"plan_description": "go to kitchen, search for pizza, report back", "steps": [{{"skill": "go_to_location", "args": {{"location": "kitchen"}}}}, {{"skill": "find_object", "args": {{"object": "pizza", "location": "kitchen"}}}}, {{"skill": "go_to_location", "args": {{"location": "instruction point"}}}}, {{"skill": "say", "args": {{"text": "I found the pizza in the kitchen."}}}}]}}
 
-Command: find the cola in the kitchen | Skills: go_to_location, find_object | Known locations: bedroom, kitchen, living room, office
-Plan: {{"plan_description": "go to kitchen and find cola", "steps": [{{"skill": "go_to_location", "args": {{"location": "kitchen"}}}}, {{"skill": "find_object", "args": {{"object": "cola", "location": "kitchen"}}}}]}}
+Command: find the cola in the kitchen | Skills: go_to_location, find_object, say | Known locations: bedroom, kitchen, living room, office
+Plan: {{"plan_description": "go to kitchen, find cola, report back", "steps": [{{"skill": "go_to_location", "args": {{"location": "kitchen"}}}}, {{"skill": "find_object", "args": {{"object": "cola", "location": "kitchen"}}}}, {{"skill": "go_to_location", "args": {{"location": "instruction point"}}}}, {{"skill": "say", "args": {{"text": "I found the cola in the kitchen."}}}}]}}
 
-Command: count the apples in the office | Skills: go_to_location, count_objects | Known locations: bedroom, kitchen, living room, office
-Plan: {{"plan_description": "go to office and count apples", "steps": [{{"skill": "go_to_location", "args": {{"location": "office"}}}}, {{"skill": "count_objects", "args": {{"object": "apple", "location": "office"}}}}]}}
+Command: count the apples in the office | Skills: go_to_location, count_objects, say | Known locations: bedroom, kitchen, living room, office
+Plan: {{"plan_description": "go to office, count apples, return and report", "steps": [{{"skill": "go_to_location", "args": {{"location": "office"}}}}, {{"skill": "count_objects", "args": {{"object": "apple", "location": "office"}}}}, {{"skill": "go_to_location", "args": {{"location": "instruction point"}}}}, {{"skill": "say", "args": {{"text": "I counted the apples in the office."}}}}]}}
 
-Command: how many people waving in the living room | Skills: go_to_location, count_people | Known locations: bedroom, kitchen, living room, office
-Plan: {{"plan_description": "go to living room and count people", "steps": [{{"skill": "go_to_location", "args": {{"location": "living room"}}}}, {{"skill": "count_people", "args": {{"gesture": "waving", "location": "living room"}}}}]}}
+Command: how many people waving in the living room | Skills: go_to_location, count_people, say | Known locations: bedroom, kitchen, living room, office
+Plan: {{"plan_description": "go to living room, count waving people, return and report", "steps": [{{"skill": "go_to_location", "args": {{"location": "living room"}}}}, {{"skill": "count_people", "args": {{"gesture": "waving", "location": "living room"}}}}, {{"skill": "go_to_location", "args": {{"location": "instruction point"}}}}, {{"skill": "say", "args": {{"text": "I counted the waving people in the living room."}}}}]}}
+
+Command: tell me the name of the person in the bedroom | Skills: go_to_location, get_person_info, say | Known locations: bedroom, kitchen, living room, office
+Plan: {{"plan_description": "go to bedroom, get person name, return and report", "steps": [{{"skill": "go_to_location", "args": {{"location": "bedroom"}}}}, {{"skill": "get_person_info", "args": {{"info": "name", "location": "bedroom"}}}}, {{"skill": "go_to_location", "args": {{"location": "instruction point"}}}}, {{"skill": "say", "args": {{"text": "The name of the person in the bedroom is unknown."}}}}]}}
 
 Command: bring the cola from the kitchen to the bedroom | Skills: go_to_location, find_object, pick_up, place_object | Known locations: bedroom, kitchen, living room, office
 Plan: {{"plan_description": "fetch cola and bring to bedroom", "steps": [{{"skill": "go_to_location", "args": {{"location": "kitchen"}}}}, {{"skill": "find_object", "args": {{"object": "cola", "location": "kitchen"}}}}, {{"skill": "pick_up", "args": {{"object": "cola"}}}}, {{"skill": "go_to_location", "args": {{"location": "bedroom"}}}}, {{"skill": "place_object", "args": {{"location": "bedroom"}}}}]}}

@@ -111,8 +111,8 @@ class GPSR(yasmin.StateMachine):
             "REQUEST_AND_WAIT_FOR_COMMAND",
             AskAndListen(),
             transitions={
-                "succeeded": "QUERY_LLM",
-                "failed": "REQUEST_AND_WAIT_FOR_COMMAND",
+                "succeeded": "CHECK_TRANSCRIPT",
+                "failed": "CHECK_TRANSCRIPT",
             },
             remappings={"tts_phrase": "instruction_text"},
         )
@@ -124,8 +124,23 @@ class GPSR(yasmin.StateMachine):
                 callback=self.checkTranscript,
             ),
             transitions={
-                "valid": "QUERY_LLM",
+                "valid": "CONFIRM_TRANSCRIPT",
                 "invalid": "COUNT_SPEECH_FAILURE",
+            },
+        )
+
+        self.add_state(
+            "CONFIRM_TRANSCRIPT",
+            yasmin.CbState(outcomes=["succeeded"], callback=self.confirmTranscript),
+            transitions={"succeeded": "WAIT_TRANSCRIPT_CONFIRM"},
+        )
+
+        self.add_state(
+            "WAIT_TRANSCRIPT_CONFIRM",
+            WaitForConfirm(),
+            transitions={
+                "yes": "QUERY_LLM",
+                "no": "COUNT_SPEECH_FAILURE",
             },
         )
 
@@ -159,7 +174,7 @@ class GPSR(yasmin.StateMachine):
             plan_con,
             transitions={
                 "succeeded": "CHECK_OUTCOME",
-                "failed": "REQUEST_AND_WAIT_FOR_COMMAND",
+                "failed": "COUNT_SPEECH_FAILURE",
             },
         )
 
@@ -205,16 +220,7 @@ class GPSR(yasmin.StateMachine):
         self.add_state(
             "READBACK",
             yasmin.CbState(outcomes=["succeeded"], callback=self.readback),
-            transitions={"succeeded": "WAIT_CONFIRM"},
-        )
-
-        self.add_state(
-            "WAIT_CONFIRM",
-            WaitForConfirm(),
-            transitions={
-                "yes": "STORE_PLAN",
-                "no": "REQUEST_AND_WAIT_FOR_COMMAND",
-            },
+            transitions={"succeeded": "STORE_PLAN"},
         )
 
         # Store the accepted plan; collect the next command until we have
@@ -423,20 +429,38 @@ class GPSR(yasmin.StateMachine):
         return "succeeded"
 
     def readback(self, blackboard):
-        transcription = blackboard.get("transcribed_speech", "").strip()
-        steps = blackboard.get("steps", [])
-
-        announcement = ""
-        if steps and steps[0].get("skill") == "say":
-            announcement = steps[0].get("args", {}).get("text", "")
-
-        text = f"I heard: {transcription}."
-        if announcement:
-            text += f" {announcement}"
-        text += " Is that correct?"
-
-        say(self.node, text)
+        try:
+            steps = blackboard["steps"]
+            if steps and steps[0].get("skill") == "say":
+                announcement = steps[0]["args"]["text"]
+                say(self.node, announcement)
+        except Exception:
+            pass
         return "succeeded"
+
+    def confirmTranscript(self, blackboard):
+        try:
+            transcription = str(blackboard["transcribed_speech"]).strip()
+        except Exception:
+            transcription = ""
+        say(self.node, f"I heard: {transcription}. Is that correct?")
+        return "succeeded"
+
+    def countSpeechFailure(self, blackboard):
+        self.understand_attempts += 1
+
+        if self.understand_attempts <= 3:
+            return "request_rephrase"
+
+        self.operator_attempts += 1
+
+        if self.operator_attempts <= 3:
+            return "request_operator"
+
+        self.instruction_count += 1
+        self.understand_attempts = 0
+        self.operator_attempts = 0
+        return "failed"
 
     def storePlan(self, blackboard):
         # Store the accepted plan and advance to the next instruction slot.
@@ -451,12 +475,14 @@ class GPSR(yasmin.StateMachine):
         return "collect_next"
 
     def announceAll(self, blackboard):
-        # Speak the leading announcement 'say' step of every collected plan.
-        for steps in self.plans:
-            if steps and steps[0].get("skill") == "say":
-                text = steps[0].get("args", {}).get("text", "")
-                if text:
-                    say(self.node, text)
+        for i, steps in enumerate(self.plans, start=1):
+            try:
+                if steps and steps[0].get("skill") == "say":
+                    text = steps[0]["args"]["text"]
+                    if text:
+                        say(self.node, f"Plan {i}: {text}")
+            except Exception:
+                pass
         return "succeeded"
 
     def nextPlan(self, blackboard):
@@ -473,19 +499,20 @@ class GPSR(yasmin.StateMachine):
 
     def checkTranscript(self, blackboard):
         try:
-            text = str(blackboard["transcribed_speech"])
-            if not text:
-                return "invalid"
-
-            for ch in "!,.;:?\"'-":
-                text = text.replace(ch, "")
-
-            if len(text.split()) < 3:
-                return "invalid"
-
-            return "valid"
-        except:
+            text = str(blackboard["transcribed_speech"]).strip()
+        except Exception:
             return "invalid"
+
+        if not text:
+            return "invalid"
+
+        for ch in "!,.;:?\"'-":
+            text = text.replace(ch, "")
+
+        if len(text.split()) < 3:
+            return "invalid"
+
+        return "valid"
 
 
 class GPSRNode(Node):
