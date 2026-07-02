@@ -197,4 +197,4 @@ objects:
     location: dishwasher
     grabbable: true
     size: small
-    aliases:
+    aliases: []

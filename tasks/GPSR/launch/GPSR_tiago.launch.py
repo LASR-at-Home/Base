@@ -20,6 +20,16 @@ def generate_launch_description():
 
     params = os.path.join(pkg_gpsr, "config", "params.yaml")
 
+    yolo_service = IncludeLaunchDescription(
+        AnyLaunchDescriptionSource(
+            os.path.join(
+                get_package_share_directory("lasr_vision_yolo"),
+                "launch",
+                "service_launch.xml",
+            )
+        )
+    )
+
     load_motions = IncludeLaunchDescription(
         AnyLaunchDescriptionSource(
             os.path.join(
@@ -55,6 +65,7 @@ def generate_launch_description():
             ),
             whisper_server,
             load_motions,
+            yolo_service,
             robot_ui,
         ]
     )
