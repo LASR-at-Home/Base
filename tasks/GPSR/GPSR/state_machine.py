@@ -111,8 +111,8 @@ class GPSR(yasmin.StateMachine):
             "REQUEST_AND_WAIT_FOR_COMMAND",
             AskAndListen(),
             transitions={
-                "succeeded": "CHECK_TRANSCRIPT",
-                "failed": "CHECK_TRANSCRIPT",
+                "succeeded": "QUERY_LLM",
+                "failed": "REQUEST_AND_WAIT_FOR_COMMAND",
             },
             remappings={"tts_phrase": "instruction_text"},
         )
@@ -345,11 +345,17 @@ class GPSR(yasmin.StateMachine):
 
     def checkRequest(self, blackboard):
         if self.instruction_count == 1:
-            blackboard["instruction_text"] = "Please state the first command."
+            blackboard["instruction_text"] = (
+                "I am ready for the first command. Please state it."
+            )
         elif self.instruction_count == 2:
-            blackboard["instruction_text"] = "Please state the second command."
+            blackboard["instruction_text"] = (
+                "I am ready for the second command. Please state it."
+            )
         elif self.instruction_count == 3:
-            blackboard["instruction_text"] = "Please state the third command."
+            blackboard["instruction_text"] = (
+                "I am ready for the last command. Please state it."
+            )
         else:
             return "finish"
 
@@ -417,19 +423,19 @@ class GPSR(yasmin.StateMachine):
         return "succeeded"
 
     def readback(self, blackboard):
-        try:
-            steps = blackboard["steps"]
-        except Exception:
-            steps = []
+        transcription = blackboard.get("transcribed_speech", "").strip()
+        steps = blackboard.get("steps", [])
 
         announcement = ""
         if steps and steps[0].get("skill") == "say":
-            announcement = steps[0].get("args", "").get("text", "")
+            announcement = steps[0].get("args", {}).get("text", "")
 
-        say(
-            self.node,
-            f"{announcement} Is that correct?" if announcement else "Is that correct?",
-        )
+        text = f"I heard: {transcription}."
+        if announcement:
+            text += f" {announcement}"
+        text += " Is that correct?"
+
+        say(self.node, text)
         return "succeeded"
 
     def storePlan(self, blackboard):
@@ -467,20 +473,19 @@ class GPSR(yasmin.StateMachine):
 
     def checkTranscript(self, blackboard):
         try:
-            text = str(blackboard["transcribed_speech"]).strip()
-        except Exception:
+            text = str(blackboard["transcribed_speech"])
+            if not text:
+                return "invalid"
+
+            for ch in "!,.;:?\"'-":
+                text = text.replace(ch, "")
+
+            if len(text.split()) < 3:
+                return "invalid"
+
+            return "valid"
+        except:
             return "invalid"
-
-        if not text:
-            return "invalid"
-
-        for ch in "!,.;:?\"'-":
-            text = text.replace(ch, "")
-
-        if len(text.split()) < 3:
-            return "invalid"
-
-        return "valid"
 
 
 class GPSRNode(Node):
