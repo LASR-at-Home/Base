@@ -22,6 +22,7 @@ import math
 import time
 from dataclasses import dataclass
 
+from rclpy.qos import qos_profile_sensor_data
 import numpy as np
 import cv2
 import rclpy
@@ -240,9 +241,9 @@ class BasketPerception:
         self.tf_buffer = tf2_ros.Buffer()
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, node)
 
-        node.create_subscription(Image, depth_topic, self._depth_cb, 1)
-        node.create_subscription(CameraInfo, info_topic, self._cam_cb, 1)
-        node.create_subscription(Image, rgb_topic, self._rgb_cb, 1)
+        node.create_subscription(Image, depth_topic, self._depth_cb, qos_profile_sensor_data)
+        node.create_subscription(CameraInfo, info_topic, self._cam_cb, qos_profile_sensor_data)
+        node.create_subscription(Image, rgb_topic, self._rgb_cb, qos_profile_sensor_data)
         self.basket_pub = node.create_publisher(PoseStamped, '/basket_grasp/basket_pose', 10)
         self.grasp_pub = node.create_publisher(PoseStamped, '/basket_grasp/grasp_pose', 10)
         self.path_pub = node.create_publisher(PoseArray, '/basket_grasp/path', 10)
