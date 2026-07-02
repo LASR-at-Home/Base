@@ -2,7 +2,7 @@ from typing import Union
 import traceback
 
 import rclpy
-
+ 
 import yasmin
 from yasmin import StateMachine, State, Concurrence, Blackboard
 import yasmin_ros

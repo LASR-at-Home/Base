@@ -3,8 +3,8 @@ doing_laundry:
     laundry_area:
       pose:
         position:
-          x: -14.250353
-          y: 20.145838
+          x: 2.884166
+          y: -3.119925
           z: 0.0
         orientation:
           x: 0.0

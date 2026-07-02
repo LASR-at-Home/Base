@@ -6,8 +6,7 @@ from rclpy.node import Node
 import yasmin
 import yasmin_ros
 from yasmin_viewer import YasminViewerPub
-
-from doing_laundry.states import Start
+from doing_laundry.states import Start, LookForBasket
 try:
     from rclpy.executors import EventsExecutor as Executor
 except ImportError:
@@ -40,8 +39,17 @@ class DoingLaundry(yasmin.StateMachine):
             "START",
             Start(),
             transitions={
-                "succeeded": "succeeded",
+                "succeeded": "LOOK_FOR_BASKET",
                 "failed": "failed",
+            },
+        )
+
+        self.add_state(
+            "LOOK_FOR_BASKET",
+            LookForBasket(),
+            transitions={
+                "found": "succeeded",
+                "not_found": "succeeded",  # proceed anyway for now
             },
         )
 
