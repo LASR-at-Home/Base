@@ -11,7 +11,14 @@ from ament_index_python.packages import get_package_share_directory
 from rclpy.node import Node
 from threading import Thread
 from rclpy.executors import MultiThreadedExecutor as Executor
-from GPSR.states import DispatchSkill, KeyboardInputState, ListenState, QueryLLM, WaitForTabletReady
+from GPSR.states import (
+    DispatchSkill,
+    KeyboardInputState,
+    ListenState,
+    QueryLLM,
+    WaitForTabletReady,
+    WaitForConfirm,
+)
 from GPSR.tts import say
 
 from std_msgs.msg import Empty
@@ -46,7 +53,6 @@ class GPSR(yasmin.StateMachine):
         # the index of the plan currently being executed.
         self.plans = []
         self.exec_index = 0
-
 
         # Wait for Start signal at the door
         self.add_state(
@@ -85,7 +91,9 @@ class GPSR(yasmin.StateMachine):
 
         self.add_state(
             "SAY_PRESS_READY",
-            Say(text="Please press ready on the tablet when you are ready to state the command."),
+            Say(
+                text="Please press ready on the tablet when you are ready to state the command. Please state one command at a time as I request them."
+            ),
             transitions={
                 "succeeded": "WAIT_TABLET_READY",
                 "aborted": "WAIT_TABLET_READY",
@@ -98,15 +106,15 @@ class GPSR(yasmin.StateMachine):
             WaitForTabletReady(),
             transitions={"succeeded": "REQUEST_AND_WAIT_FOR_COMMAND"},
         )
-            
+
         self.add_state(
             "REQUEST_AND_WAIT_FOR_COMMAND",
             AskAndListen(),
             transitions={
-                'succeeded': 'CHECK_TRANSCRIPT',
-                'failed': 'REQUEST_AND_WAIT_FOR_COMMAND'
+                "succeeded": "QUERY_LLM",
+                "failed": "REQUEST_AND_WAIT_FOR_COMMAND",
             },
-            remappings={'tts_phrase': 'instruction_text'}
+            remappings={"tts_phrase": "instruction_text"},
         )
 
         self.add_state(
@@ -153,15 +161,36 @@ class GPSR(yasmin.StateMachine):
         self.add_state(
             "CHECK_OUTCOME",
             yasmin.CbState(
-                outcomes=["succeeded", "failed", "request_rephrase", "request_operator", "no_command"],
+                outcomes=[
+                    "succeeded",
+                    "failed",
+                    "request_rephrase",
+                    "request_operator",
+                    "no_command",
+                ],
                 callback=self.checkOutcome,
             ),
             transitions={
-                "succeeded": "STORE_PLAN",
+                "succeeded": "READBACK",
                 "request_rephrase": "REQUEST_REPHRASE",
                 "request_operator": "REQUEST_OPERATOR",
                 "failed": "UNABLE_TO_UNDERSTAND",
                 "no_command": "CHECK_INSTRUCTION",
+            },
+        )
+
+        self.add_state(
+            "READBACK",
+            yasmin.CbState(outcomes=["succeeded"], callback=self.readback),
+            transitions={"succeeded": "WAIT_CONFIRM"},
+        )
+
+        self.add_state(
+            "WAIT_CONFIRM",
+            WaitForConfirm(),
+            transitions={
+                "yes": "STORE_PLAN",
+                "no": "REQUEST_AND_WAIT_FOR_COMMAND",
             },
         )
 
@@ -231,10 +260,12 @@ class GPSR(yasmin.StateMachine):
                 "canceled": "failed",
             },
         )
-        
+
         self.add_state(
             "REQUEST_OPERATOR",
-            Say(text="I am having trouble understanding. Could the operator please state the command for me?"),
+            Say(
+                text="I am having trouble understanding. Could the operator please state the command for me?"
+            ),
             transitions={
                 "succeeded": "REQUEST_AND_WAIT_FOR_COMMAND",
                 "aborted": "failed",
@@ -244,7 +275,9 @@ class GPSR(yasmin.StateMachine):
 
         self.add_state(
             "UNABLE_TO_UNDERSTAND",
-            Say(text="I cannot understand or do that currently. Please move on to the next command. "),
+            Say(
+                text="I cannot understand or do that currently. Please move on to the next command. "
+            ),
             transitions={
                 "succeeded": "CHECK_INSTRUCTION",
                 "aborted": "failed",
@@ -265,7 +298,7 @@ class GPSR(yasmin.StateMachine):
     def start_cb(self, blackboard, msg):
         yasmin.YASMIN_LOG_INFO("RECEIVED START SIGNAL")
         return "succeeded"
-    
+
     def setup(self):
         start_con_sm = yasmin.Concurrence(
             states={
@@ -289,11 +322,17 @@ class GPSR(yasmin.StateMachine):
 
     def checkRequest(self, blackboard):
         if self.instruction_count == 1:
-            blackboard["instruction_text"] = "I am ready for the first command. "
+            blackboard["instruction_text"] = (
+                "I am ready for the first command. Please state it."
+            )
         elif self.instruction_count == 2:
-            blackboard["instruction_text"] = "I am ready for the second command. "
+            blackboard["instruction_text"] = (
+                "I am ready for the second command. Please state it."
+            )
         elif self.instruction_count == 3:
-            blackboard["instruction_text"] = "I am ready for the last command. "
+            blackboard["instruction_text"] = (
+                "I am ready for the last command. Please state it."
+            )
         else:
             return "finish"
 
@@ -344,6 +383,22 @@ class GPSR(yasmin.StateMachine):
 
         return "succeeded"
 
+    def readback(self, blackboard):
+        transcription = blackboard.get("transcribed_speech", "").strip()
+        steps = blackboard.get("steps", [])
+
+        announcement = ""
+        if steps and steps[0].get("skill") == "say":
+            announcement = steps[0].get("args", {}).get("text", "")
+
+        text = f"I heard: {transcription}."
+        if announcement:
+            text += f" {announcement}"
+        text += " Is that correct?"
+
+        say(self.node, text)
+        return "succeeded"
+
     def storePlan(self, blackboard):
         # Store the accepted plan and advance to the next instruction slot.
         self.plans.append(blackboard["steps"])
@@ -382,7 +437,7 @@ class GPSR(yasmin.StateMachine):
             text = str(blackboard["transcribed_speech"])
             if not text:
                 return "invalid"
-            
+
             for ch in "!,.;:?\"'-":
                 text = text.replace(ch, "")
 
@@ -390,8 +445,9 @@ class GPSR(yasmin.StateMachine):
                 return "invalid"
 
             return "valid"
-        except: 
+        except:
             return "invalid"
+
 
 class GPSRNode(Node):
     def __init__(self):
@@ -469,3 +525,14 @@ def main(args=None):
 
 if __name__ == "__main__":
     main()
+
+
+# TODO: logic
+# When operator is ready to give command they click the button on the tablet (for now "Ready", but this might change)
+# Robot then says it will listen
+# listens for command, generates plan
+# REpeats heard command to operator and then generated plan
+# Then asks for confirmation that the command was correctly understood.
+# If yes, saves plan, if no, asks for command to be rephrased
+# this is repeated until 3 plans are acquired, or the corresponding rephrase limits are reached.
+# THEN the commands are executed
