@@ -164,7 +164,6 @@ class Introduce(yasmin.StateMachine):
 
     def _loop_person_index(self, blackboard):
         guest1point = blackboard["guest_data"]["guest1"]["seated_point"]
-        host = True if blackboard['seat_indexes']['host'] else False
         people_det = len(blackboard["people_det"])
         index = blackboard["person_index"]
 
@@ -176,7 +175,7 @@ class Introduce(yasmin.StateMachine):
         yasmin.YASMIN_LOG_INFO("Total people: " + str(people_det))
 
         
-        if guest1point is not None and host:
+        if guest1point is not None:
             shapely_point = blackboard['guest2_seat']
             point = Point(x=shapely_point.x, y=shapely_point.y, z=shapely_point.z)
             blackboard["guest_data"]["guest2"]["seated_point"] = point

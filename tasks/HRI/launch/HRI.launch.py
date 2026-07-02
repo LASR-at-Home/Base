@@ -59,16 +59,6 @@ def generate_launch_description():
         output="screen",
     )
 
-    state_machine = Node(
-        package="HRI",
-        executable="sm",
-        name="hri",
-        parameters=[
-            os.path.join(get_package_share_directory("HRI"), "config", "lab_arena2.yaml")
-        ],
-        output="screen",
-    )
-
     return LaunchDescription(
         [
             load_motions,
@@ -78,6 +68,5 @@ def generate_launch_description():
             eye_tracker,
             transcribe_speech,
             llm_service,
-            state_machine,
         ]
     )

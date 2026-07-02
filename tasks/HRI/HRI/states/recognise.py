@@ -100,9 +100,7 @@ class Recognise(yasmin_ros.ServiceState):
         else:
             for detection in response.detections:
                 if detection.name == "unknown":
-                    yasmin.YASMIN_LOG_INFO('Unkown detection, assuming this is the host')
-                    blackboard['seat_indexes']['host'] = blackboard['person_index']
-                    detected = True
+                    continue
                 yasmin.YASMIN_LOG_INFO(detection.name)
                 yasmin.YASMIN_LOG_INFO(str(detection.point))
                 blackboard["guest_data"][detection.name][

@@ -257,6 +257,9 @@ def main():
     bb["drink_position"] = PointStamped()
     bb["person_index"] = 0
 
+    bb['z_min'] = -10,
+    bb['z_max'] = 10
+
     outcome = sm(bb)
 
     yasmin.YASMIN_LOG_INFO(f"State machine has ended with outcome {outcome}")

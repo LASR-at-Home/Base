@@ -8,6 +8,7 @@ from lasr_skills import (
     ReceiveObject,
     StopEyeTracker,
     Wait,
+    SafeGoToLocation
 )
 from HRI.states import (
     GetNameAndDrink,
@@ -154,13 +155,23 @@ class GreetGuest(yasmin.StateMachine):
                 tts_phrase="Please say 'Hi Tiago' for me to begin listening. What is your name and drink?",
             ),
             transitions={
-                "succeeded": "GET_NAME_DRINK_FACE",
+                "succeeded": "SAY_WAIT",
                 "failed": "failed",
             },
             remappings={"transcribed_speech": "guest_transcription"},
         )
 
         transition = "GET_ATTRIBUTE_STR" if guest_id == "guest2" else "SAY_WELCOME"
+
+        self.add_state(
+            "SAY_WAIT",
+            Say(text='Give me some time to learn your face and attributes. Please wait here.'),
+            transitions={
+                'succeeded': 'GET_NAME_DRINK_FACE',
+                'aborted': 'failed',
+                'canceled': 'failed'
+            }
+        )
 
         self.add_state(
             "GET_NAME_DRINK_FACE",
@@ -219,7 +230,17 @@ class GreetGuest(yasmin.StateMachine):
         )
 
         self.add_state(
-            "WAIT", Wait(2), transitions={"succeeded": "GRAB_BAG", "failed": "failed"}
+            "WAIT", Wait(3), transitions={"succeeded": "GO_TO_GRAB_POSE", "failed": "failed"}
+        )
+
+        self.add_state(
+            'GO_TO_GRAB_POSE',
+            SafeGoToLocation(location_param='grab_pose'),
+            transitions={
+                'succeeded': 'GRAB_BAG',
+                'failed': 'failed'
+            }
+
         )
 
         self.add_state(
@@ -255,9 +276,10 @@ class GreetGuest(yasmin.StateMachine):
                     " are wearing glasses." if value else " are not wearing glasses."
                 )
             elif attribute == "hat":
-                attribute_str += (
-                    " are wearing a hat." if value else " are not wearing a hat."
-                )
+                # attribute_str += (
+                #     " are wearing a hat." if value else " are not wearing a hat."
+                # )
+                pass
             elif attribute == "shirt_color":
                 attribute_str += f" are wearing a {value} coloured shirt."
             else:
