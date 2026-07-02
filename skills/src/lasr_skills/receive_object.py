@@ -51,10 +51,10 @@ class ReceiveObject(StateMachine):
             self.add_state(
                 "REQUEST",
                 Say(
-                    text=f"I cannot grab the {self.object_name} in my hand. Can you please place it in my basket. I will wait a few seconds.",
+                    text=f"Can you please hold the {self.object_name} in my gripper. I will wait a few seconds before closing it.",
                 ),
                 transitions={
-                    "succeeded": "LOWER_TORSO",
+                    "succeeded": "OPEN_GRIPPER",
                     "aborted": "failed",
                     "canceled": "failed",
                 },
@@ -63,10 +63,10 @@ class ReceiveObject(StateMachine):
             self.add_state(
                 "REQUEST",
                 Say(
-                    format_str="I cannot grab the {} in my hand. Can you please place it in my basket. I will wait a few seconds.",
+                    format_str="Can you please hold the {} in my gripper. I will wait a few seconds before closing it.",
                 ),
                 transitions={
-                    "succeeded": "LOWER_TORSO",
+                    "succeeded": "OPEN_GRIPPER",
                     "aborted": "failed",
                     "canceled": "failed",
                 },
@@ -74,8 +74,8 @@ class ReceiveObject(StateMachine):
             )
         
         self.add_state(
-            "LOWER_TORSO",
-            PlayMotion(motion_name="pre_navigation"),
+            "OPEN_GRIPPER",
+            PlayMotion(motion_name="open"),
             transitions={
                 "succeeded": "WAIT_5",
                 "aborted": "failed",
@@ -86,15 +86,24 @@ class ReceiveObject(StateMachine):
             "WAIT_5",
             Wait(5),
             transitions={
-                "succeeded": "FINISH",
-                "failed": "FINISH",
+                "succeeded": "WARN_CLOSE",
+                "failed": "WARN_CLOSE",
             },
         )
         self.add_state(
-            "FINISH",
+            "WARN_CLOSE",
             Say(
-                text=f"Thank you.",
+                text=f"I will now close my gripper. Please mind your fingers.",
             ),
+            transitions={
+                "succeeded": "CLOSE_GRIPPER",
+                "aborted": "failed",
+                "canceled": "failed",
+            },
+        )
+        self.add_state(
+            "CLOSE_GRIPPER",
+            PlayMotion(motion_name="close"),
             transitions={
                 "succeeded": "succeeded",
                 "aborted": "failed",
