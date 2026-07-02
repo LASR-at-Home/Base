@@ -103,7 +103,7 @@ class GPSR(yasmin.StateMachine):
             "REQUEST_AND_WAIT_FOR_COMMAND",
             AskAndListen(),
             transitions={
-                'succeeded': 'QUERY_LLM',
+                'succeeded': 'CHECK_TRANSCRIPT',
                 'failed': 'REQUEST_AND_WAIT_FOR_COMMAND'
             },
             remappings={'tts_phrase': 'instruction_text'}
@@ -199,7 +199,7 @@ class GPSR(yasmin.StateMachine):
             ),
             transitions={
                 "execute": "PRE_NAV",
-                "finish": "succeeded",
+                "finish": "SAY_TASK_OVER",
             },
         )
 
@@ -249,6 +249,16 @@ class GPSR(yasmin.StateMachine):
                 "succeeded": "CHECK_INSTRUCTION",
                 "aborted": "failed",
                 "canceled": "failed",
+            },
+        )
+
+        self.add_state(
+            "SAY_TASK_OVER",
+            Say(text="I have finished all the tasks. "),
+            transitions={
+                "succeeded": "succeeded",
+                "aborted": "succeeded",
+                "canceled": "succeeded",
             },
         )
 

@@ -13,13 +13,25 @@ gpsr:
       phrase_duration: 10.0
       device: "cuda"
 
-    instruction_point: 
+    instruction_point:
       position:
-        x: -12.471647262573242
-        y: 23.508214950561523
+        x: -8.38438606262207
+        y: 19.69700813293457
         z: 0.0
       orientation:
         x: 0.0
         y: 0.0
-        z: 0.854307
-        w: 0.519769
+        z: -0.059068792531931
+        w: 0.9982539144670657
+
+
+    # instruction_point: # REAL
+    #   position:
+    #     x: -12.471647262573242
+    #     y: 23.508214950561523
+    #     z: 0.0
+    #   orientation:
+    #     x: 0.0
+    #     y: 0.0
+    #     z: 0.854307
+    #     w: 0.519769
