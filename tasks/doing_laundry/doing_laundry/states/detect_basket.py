@@ -32,7 +32,28 @@ from cv_bridge import CvBridge
 import tf2_ros
 
 try:
-    from sklearn.cluster import DBSCAN
+    from scipy.spatial import cKDTree
+    def DBSCAN_labels(pts2d, eps, min_samples):
+        n = len(pts2d)
+        if n == 0:
+            return np.array([], dtype=int)
+        tree = cKDTree(pts2d)
+        neigh = tree.query_ball_point(pts2d, eps)
+        labels = np.full(n, -1, dtype=int)
+        cid = 0
+        for i in range(n):
+            if labels[i] != -1 or len(neigh[i]) < min_samples:
+                continue
+            stack, labels[i] = [i], cid
+            while stack:
+                p = stack.pop()
+                if len(neigh[p]) >= min_samples:
+                    for q in neigh[p]:
+                        if labels[q] == -1:
+                            labels[q] = cid
+                            stack.append(q)
+            cid += 1
+        return labels
     SKLEARN = True
 except ImportError:
     SKLEARN = False
@@ -159,6 +180,8 @@ def _fit_opening(rim2d, c0, yaw0, tol=0.02):
 
 
 def _split_handle(interior, rim_z):
+    return interior[:0], interior
+    
     # Handle (up-arch or folded-across) projects to a thin long line in XY;
     # cloth fills area. Detect the line by shape, then carve a corridor across
     # all z so descent/grasp avoid it regardless of handle height.
@@ -167,7 +190,7 @@ def _split_handle(interior, rim_z):
     elev = interior[interior[:, 2] > rim_z - 0.02]
     line = None
     if elev.shape[0] >= 8 and SKLEARN:
-        lbl = DBSCAN(eps=0.03, min_samples=8).fit(elev[:, :2]).labels_
+        lbl = DBSCAN_labels(elev[:, :2], 0.03, 8)
         for k in set(lbl) - {-1}:
             c = elev[lbl == k][:, :2]
             yaw_l, _ = _pca_yaw(c)
@@ -329,7 +352,7 @@ class BasketPerception:
         band = pts[(z > floor_z + 0.04) & (z < floor_z + self.search_z_max)]
         if band.shape[0] < 50:
             return GraspResult('no_basket', 'nothing standing on floor', frame=base, rim_z=floor_z + BASKET_H)
-        labels = DBSCAN(eps=DBSCAN_EPS, min_samples=DBSCAN_MIN).fit(band[:, :2]).labels_
+        labels = DBSCAN_labels(band[:, :2], DBSCAN_EPS, DBSCAN_MIN)
         best, best_rect, best_n = None, None, 0
         for lab in set(labels) - {-1}:
             cl = band[labels == lab]

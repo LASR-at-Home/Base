@@ -71,13 +71,20 @@ class Pick(State):
         self.add_walls = add_walls
         self.rim_z_min, self.rim_z_max = rim_z_min, rim_z_max
         self.base_link = base_link
-        self.moveit2.max_velocity = vel_scale
-        self.moveit2.max_acceleration = acc_scale
 
         from yasmin_ros.yasmin_node import YasminNode
         from pymoveit2 import MoveIt2
         self.node = YasminNode.get_instance()
         cb = ReentrantCallbackGroup()
+        
+        self.moveit2 = MoveIt2(
+            node=self.node, joint_names=joint_names or ARM_TORSO_JOINTS,
+            base_link_name=base_link, end_effector_name=ee_link,
+            group_name=group_name, callback_group=cb)
+        self.moveit2.max_velocity = vel_scale
+        self.moveit2.max_acceleration = acc_scale
+
+        
         self.moveit2 = MoveIt2(
             node=self.node, joint_names=joint_names or ARM_TORSO_JOINTS,
             base_link_name=base_link, end_effector_name=ee_link,
