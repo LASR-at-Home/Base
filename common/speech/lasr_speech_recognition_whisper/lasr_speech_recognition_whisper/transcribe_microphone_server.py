@@ -1,373 +1,218 @@
-#!/usr/bin python3
+#!/usr/bin/env python3
 import os
-import sounddevice  # needed to remove ALSA error messages
-import argparse
-from typing import Optional
-from dataclasses import dataclass
+import queue
 from pathlib import Path
 from timeit import default_timer as timer
+from typing import Optional
 
 import numpy as np
 import torch
+import whisper
+import sounddevice as sd
 
 import rclpy
 from rclpy.node import Node
 from rclpy.action.server import ActionServer, CancelResponse
-
-import speech_recognition as sr  # type: ignore
-from lasr_speech_recognition_interfaces.action import TranscribeSpeech  # type: ignore
 from rclpy.executors import ExternalShutdownException
-from std_msgs.msg import String  # type: ignore
-from lasr_speech_recognition_whisper.cache import ModelCache  # type: ignore
 
-# TODO: argpars -> ROS2 params, test behaviour of preemption
+from lasr_speech_recognition_interfaces.action import TranscribeSpeech
+from std_msgs.msg import String
 
-
-@dataclass
-class speech_model_params:
-    """Class for storing speech recognition model parameters.
-
-    Args:
-        model_name (str, optional): Name of the speech recognition model. Defaults to "medium.en".
-        Must be a valid Whisper model name.
-        device (str, optional): Device to run the model on. Defaults to "cuda" if available, otherwise "cpu".
-        start_timeout (float): Max number of seconds of silence when starting listening before stopping. Defaults to 5.0.
-        phrase_duration (Optional[float]): Max number of seconds of the phrase. Defaults to 10 seconds.
-        sample_rate (int): Sample rate of the microphone. Defaults to 16000Hz.
-        mic_device (Optional[str]): Microphone device index or name. Defaults to None.
-        timer_duration (Optional[int]): Duration of the timer for adjusting the microphone for ambient noise. Defaults to 20 seconds.
-        warmup (bool): Whether to warmup the model by running inference on a test file. Defaults to True.
-        energy_threshold (Optional[int]): Energy threshold for silence detection. Using this disables automatic adjustment. Defaults to None.
-        pause_threshold (Optional[float]): Seconds of non-speaking audio before a phrase is considered complete. Defaults to 0.8 seconds.
-    """
-
-    model_name: str = "small.en"
-    device: str = "cuda" if torch.cuda.is_available() else "cpu"
-    start_timeout: float = 5.0
-    phrase_duration: Optional[float] = 10
-    sample_rate: int = 16000
-    mic_device: Optional[str] = None
-    timer_duration: Optional[int] = 20
-    warmup: bool = False
-    energy_threshold: Optional[int] = None
-    pause_threshold: Optional[float] = 2.0
+CHUNK_SIZE = 512
+SAMPLE_RATE = 16000
+MAX_PHRASE_CHUNKS = int(15.0 * SAMPLE_RATE / CHUNK_SIZE)
 
 
 class TranscribeSpeechAction(Node):
-    # create messages that are used to publish feedback/result
-    _feedback = TranscribeSpeech.Feedback()
     _result = TranscribeSpeech.Result()
 
-    def __init__(self, action_name: str, model_params: speech_model_params) -> None:
-        """Starts an action server for transcribing speech.
+    def __init__(self) -> None:
+        super().__init__("transcribe_speech_action")
 
-        Args:
-            action_name (str): Name of the action server.
-        """
-        Node.__init__(self, "transcribe_speech_action")
-        self._action_name = action_name
-        self._model_params = model_params
-        self._transcription_server = self.create_publisher(
+        self.declare_parameter("model", "small.en")
+        self.declare_parameter("device", "cuda" if torch.cuda.is_available() else "cpu")
+        self.declare_parameter("mic_device", "")
+        self.declare_parameter("start_timeout", 5.0)
+        self.declare_parameter("pause_threshold", 2.0)
+
+        self._model_name = self.get_parameter("model").value
+        self._device = self.get_parameter("device").value
+        self._mic_device = self.get_parameter("mic_device").value or None
+        self._start_timeout = self.get_parameter("start_timeout").value
+        self._pause_threshold = self.get_parameter("pause_threshold").value
+
+        self._transcription_pub = self.create_publisher(
             String, "/live_speech_transcription", 10
         )
 
-        model_cache = ModelCache()
-        self._model = model_cache.load_model(
-            self._model_params.model_name,
-            self._model_params.device,
-            self._model_params.warmup,
+        self.get_logger().info(
+            f"Loading Whisper model '{self._model_name}' on {self._device}..."
         )
-        # Configure the speech recogniser object and adjust for ambient noise
-        self.recogniser = self._configure_recogniser()
+        self._model = whisper.load_model(self._model_name, device=self._device)
+        self.get_logger().info("Warming up Whisper...")
+        self._model.transcribe(
+            np.zeros(SAMPLE_RATE, dtype=np.float32), fp16=self._device == "cuda"
+        )
 
-        # Set up the action server and register execution callback
+        from silero_vad import load_silero_vad
+
+        self._vad_model = load_silero_vad()
+
+        self._audio_queue: queue.Queue = queue.Queue()
+        self._collecting = False
+
+        self._stream = sd.InputStream(
+            samplerate=SAMPLE_RATE,
+            channels=1,
+            dtype="float32",
+            blocksize=CHUNK_SIZE,
+            device=self._resolve_mic_device(),
+            callback=self._audio_callback,
+        )
+        self._stream.start()
+
         self._action_server = ActionServer(
             self,
             TranscribeSpeech,
-            self._action_name,
+            "transcribe_speech",
             execute_callback=self.execute_cb,
             cancel_callback=self.cancel_cb,
-            # auto_start=False,  # not required in ROS2 ?? (cb is async)
         )
-        self._action_server.register_cancel_callback(self.cancel_cb)
-        self._listening = False
 
-        # self._action_server.start()  # not required in ROS2
-        self.get_logger().info(f"Speech Action server {self._action_name} started")
+        self.get_logger().info(
+            f"Whisper server ready (model={self._model_name}, device={self._device})"
+        )
 
-    def _configure_microphone(self) -> sr.Microphone:
-        """Configures the microphone for listening to speech based on the
-        microphone device index or name.
+    def _resolve_mic_device(self) -> Optional[int]:
+        if self._mic_device is None:
+            return None
+        if self._mic_device.isdigit():
+            return int(self._mic_device)
+        for idx, info in enumerate(sd.query_devices()):
+            if self._mic_device in info["name"]:
+                return idx
+        raise ValueError(f"Could not find microphone: {self._mic_device}")
 
-        Returns: microphone object
-        """
-
-        if self._model_params.mic_device is None:
-            # If no microphone device is specified, use the system default microphone
-            return sr.Microphone(sample_rate=self._model_params.sample_rate)
-        elif self._model_params.mic_device.isdigit():
-            return sr.Microphone(
-                device_index=int(self._model_params.mic_device),
-                sample_rate=self._model_params.sample_rate,
-            )
-        else:
-            microphones = enumerate(sr.Microphone.list_microphone_names())
-            for index, name in microphones:
-                if self._model_params.mic_device in name:
-                    return sr.Microphone(
-                        device_index=index, sample_rate=self._model_params.sample_rate
-                    )
-            raise ValueError(
-                f"Could not find microphone with name: {self._model_params.mic_device}"
-            )
-
-    def _configure_recogniser(
-        self,
-        energy_threshold: Optional[float] = None,
-        pause_threshold: Optional[float] = None,
-    ) -> sr.Recognizer:
-        """Configures the speech recogniser object.
-
-        Args:
-            energy_threshold (float): Energy threshold for silence detection. Using this disables automatic adjustment.
-            pause_threshold (float): Seconds of non-speaking audio before a phrase is considered complete.
-
-        Returns:
-            sr.Recognizer: speech recogniser object.
-        """
-        self._listening = True
-        recogniser = sr.Recognizer()
-
-        if pause_threshold:
-            recogniser.pause_threshold = pause_threshold
-
-        elif self._model_params.pause_threshold:
-            recogniser.pause_threshold = self._model_params.pause_threshold
-
-        if energy_threshold:
-            recogniser.dynamic_energy_threshold = False
-            recogniser.energy_threshold = energy_threshold
-            return recogniser
-
-        if self._model_params.energy_threshold:
-            recogniser.dynamic_energy_threshold = False
-            recogniser.energy_threshold = self._model_params.energy_threshold
-            return recogniser
-
-        with self._configure_microphone() as source:
-            recogniser.adjust_for_ambient_noise(source)
-        self._listening = False
-        return recogniser
+    def _audio_callback(
+        self, indata: np.ndarray, frames: int, time_info, status
+    ) -> None:
+        if self._collecting:
+            self._audio_queue.put_nowait(indata[:, 0].copy())
 
     def cancel_cb(self, goal_handle) -> CancelResponse:
-        """Callback for cancelling the action server.
-        Sets server to 'canceled' state.
-        """
-        cancel_str = f"{self._action_name} has been cancelled"
-        self.get_logger().info(cancel_str)
-        self._result.sequence = cancel_str
+        self.get_logger().info("Goal cancelled")
+        self._collecting = False
+        return CancelResponse.ACCEPT
 
-        # self._action_server.set_preempted(result=self._result, text=cancel_str)
-        goal_handle.canceled()
-
-        return CancelResponse.ACCEPT  # TODO decide if always accept cancellation
-
-    async def execute_cb(self, goal_handle) -> None:
-        """Callback for executing the action server.
-
-        Checks for cancellation before listening and before and after transcribing, returning
-        if cancellation is requested.
-
-        Args:
-            :param goal_handle: handles the goal request, and provides access to the goal parameters
-        """
-
+    def execute_cb(self, goal_handle):
         goal = goal_handle.request
-
-        self.get_logger().info("Request Received")
-        if goal_handle.is_cancel_requested:
-            return
-
-        if goal.energy_threshold > 0.0 and goal.max_phrase_limit > 0.0:
-            self.recogniser = self._configure_recogniser(
-                goal.energy_threshold, goal.max_phrase_limit
-            )
-        elif goal.energy_threshold > 0.0:
-            self.recogniser = self._configure_recogniser(goal.energy_threshold)
-        elif goal.max_phrase_limit > 0.0:
-            self.recogniser = self._configure_recogniser(
-                pause_threshold=goal.max_phrase_limit
-            )
-
-        with self._configure_microphone() as src:
-            self._listening = True
-            wav_data = self.recogniser.listen(
-                src,
-                timeout=self._model_params.start_timeout,
-                phrase_time_limit=self._model_params.phrase_duration,
-            ).get_wav_data()
-        # Magic number 32768.0 is the maximum value of a 16-bit signed integer
-        float_data = (
-            np.frombuffer(wav_data, dtype=np.int16).astype(np.float32, order="C")
-            / 32768.0
+        pause_threshold = (
+            goal.max_phrase_limit
+            if goal.max_phrase_limit > 0.0
+            else self._pause_threshold
         )
+        max_silent_chunks = int(pause_threshold * SAMPLE_RATE / CHUNK_SIZE)
+        max_start_chunks = int(self._start_timeout * SAMPLE_RATE / CHUNK_SIZE)
 
-        if goal_handle.is_cancel_requested:
-            self._listening = False
-            self.get_logger().info("Goal was cancelled during execution.")
-            goal_handle.canceled()
+        self._vad_model.reset_states()
+        self._audio_queue = queue.Queue()
+        self._collecting = True
+
+        speech_started = False
+        silent_chunks = 0
+        start_chunks_elapsed = 0
+        collected_chunks = []
+
+        try:
+            while True:
+                if goal_handle.is_cancel_requested:
+                    self._collecting = False
+                    goal_handle.canceled()
+                    self._result.sequence = ""
+                    return self._result
+
+                try:
+                    chunk = self._audio_queue.get(timeout=CHUNK_SIZE / SAMPLE_RATE)
+                except queue.Empty:
+                    continue
+
+                is_speech = (
+                    self._vad_model(
+                        torch.from_numpy(chunk).unsqueeze(0), SAMPLE_RATE
+                    ).item()
+                    > 0.5
+                )
+
+                if not speech_started:
+                    start_chunks_elapsed += 1
+                    if start_chunks_elapsed > max_start_chunks:
+                        self.get_logger().warn("Start timeout — no speech detected.")
+                        self._collecting = False
+                        self._result.sequence = ""
+                        goal_handle.succeed()
+                        return self._result
+                    if is_speech:
+                        speech_started = True
+                        collected_chunks.append(chunk)
+                else:
+                    collected_chunks.append(chunk)
+                    if is_speech:
+                        silent_chunks = 0
+                    else:
+                        silent_chunks += 1
+                        if silent_chunks >= max_silent_chunks:
+                            break
+                    if len(collected_chunks) >= MAX_PHRASE_CHUNKS:
+                        self.get_logger().warn("Max phrase duration reached.")
+                        break
+
+        except Exception as e:
+            self.get_logger().error(f"Audio collection error: {e}")
+            self._collecting = False
+            self._result.sequence = ""
+            goal_handle.abort()
+            return self._result
+        finally:
+            self._collecting = False
+
+        try:
+            float_data = np.concatenate(collected_chunks)
+            start = timer()
+            phrase = self._model.transcribe(float_data, fp16=self._device == "cuda")[
+                "text"
+            ].strip()
+            self.get_logger().info(f"Transcribed in {timer() - start:.2f}s: '{phrase}'")
+        except Exception as e:
+            self.get_logger().error(f"Whisper error: {e}")
+            self._result.sequence = ""
+            goal_handle.abort()
             return self._result
 
-        self.get_logger().info(f"Transcribing phrase with Whisper...")
-        transcription_start_time = timer()
-        # Cast to fp16 if using GPU
-        phrase = self._model.transcribe(
-            float_data, fp16=self._model_params.device == "cuda"
-        )["text"]
-        transcription_end_time = timer()
-        self.get_logger().info(f"Transcription finished!")
-        self.get_logger().info(
-            f"Time taken: {transcription_end_time - transcription_start_time:.2f}s"
-        )
-        from std_msgs.msg import String as StringMsg
+        if phrase.lower() in {"", "you", "thank you.", "thanks.", "."}:
+            self.get_logger().warn(f"Hallucination filtered: '{phrase}'")
+            phrase = ""
 
-        self._transcription_server.publish(StringMsg(data=phrase))
-        if goal_handle.is_cancel_requested:
-            self._listening = False
-            return
-
+        self._transcription_pub.publish(String(data=phrase))
         self._result.sequence = phrase
-        self.get_logger().info(f"Transcribed phrase: {phrase}")
-        self.get_logger().info(f"{self._action_name} has succeeded")
-
         goal_handle.succeed()
-
-        # Have this at the very end to not disrupt the action server
-        self._listening = False
-
         return self._result
 
-
-def parse_args() -> dict:
-    """Parses the command line arguments into a name: value dictinoary.
-
-    Returns:
-        dict: Dictionary of name: value pairs of command line arguments.
-    """
-    parser = argparse.ArgumentParser(
-        description="Starts an action server for transcribing speech."
-    )
-
-    parser.add_argument(
-        "--action_name",
-        type=str,
-        default="transcribe_speech",
-        help="Name of the action server.",
-    )
-    parser.add_argument(
-        "--model_name",
-        type=str,
-        default="small.en",
-        help="Name of the speech recognition model.",
-    )
-    parser.add_argument(
-        "--device",
-        type=str,
-        default="cuda" if torch.cuda.is_available() else "cpu",
-        help="Device to run the model on.",
-    )
-    parser.add_argument(
-        "--start_timeout",
-        type=float,
-        default=5.0,
-        help="Timeout for listening for the start of a phrase.",
-    )
-    parser.add_argument(
-        "--phrase_duration",
-        type=float,
-        default=10,
-        help="Maximum phrase duration after starting listening in seconds.",
-    )
-    parser.add_argument(
-        "--sample_rate", type=int, default=16000, help="Sample rate of the microphone."
-    )
-    parser.add_argument(
-        "--mic_device", type=str, default=None, help="Microphone device index or name"
-    )
-    parser.add_argument(
-        "--no_warmup",
-        action="store_true",
-        help="Disable warming up the model by running inference on a test file.",
-    )
-
-    parser.add_argument(
-        "--energy_threshold",
-        type=int,
-        default=None,
-        help="Energy threshold for silence detection. Using this disables automatic adjustment",
-    )
-
-    parser.add_argument(
-        "--pause_threshold",
-        type=float,
-        default=2.0,
-        help="Seconds of non-speaking audio before a phrase is considered complete.",
-    )
-
-    args, unknown = parser.parse_known_args()
-    return vars(args)
-
-
-def configure_model_params(config: dict) -> speech_model_params:
-    """Configures the speech model parameters based on the provided
-    command line parameters.
-
-    Args:
-        config (dict): Command line parameters parsed in dictionary form.
-
-    Returns:
-        speech_model_params: dataclass containing the speech model parameters
-    """
-    model_params = speech_model_params()
-    if config["model_name"]:
-        model_params.model_name = "small.en"
-    if config["device"]:
-        model_params.device = config["device"]
-    if config["start_timeout"]:
-        model_params.start_timeout = config["start_timeout"]
-    if config["phrase_duration"]:
-        model_params.phrase_duration = config["phrase_duration"]
-    if config["sample_rate"]:
-        model_params.sample_rate = config["sample_rate"]
-    if config["mic_device"]:
-        model_params.mic_device = config["mic_device"]
-    if config["no_warmup"]:
-        model_params.warmup = False
-    # if config["energy_threshold"]:
-    #     model_params.energy_threshold = config["energy_threshold"]
-    if config["pause_threshold"]:
-        model_params.pause_threshold = config["pause_threshold"]
-
-    return model_params
-
-
-def configure_whisper_cache() -> None:
-    """Configures the whisper cache directory."""
-    whisper_cache = os.path.join(str(Path.home()), ".cache", "whisper")
-    os.makedirs(whisper_cache, exist_ok=True)
-    # Environmental variable required to run whisper locally
-    os.environ["TIKTOKEN_CACHE_DIR"] = whisper_cache
+    def destroy_node(self):
+        self._stream.stop()
+        self._stream.close()
+        super().destroy_node()
 
 
 def main(args=None):
+    whisper_cache = os.path.join(str(Path.home()), ".cache", "whisper")
+    os.makedirs(whisper_cache, exist_ok=True)
+    os.environ["TIKTOKEN_CACHE_DIR"] = whisper_cache
+
     rclpy.init(args=args)
-
-    configure_whisper_cache()
-    config = parse_args()
-
-    server = TranscribeSpeechAction("transcribe_speech", configure_model_params(config))
-
+    server = TranscribeSpeechAction()
     try:
         rclpy.spin(server)
     except (KeyboardInterrupt, ExternalShutdownException):
         pass
+    finally:
+        server.destroy_node()
