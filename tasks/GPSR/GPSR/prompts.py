@@ -25,6 +25,7 @@ RULES:
 - Any question, greeting, or request for information: can_do=true, selected_skills=["say"].
 - If the command needs navigation AND another action, include "go_to_location" in selected_skills.
 - If the result of a skill must be reported back to the operator (count, name, description, property), always include "say" in selected_skills.
+- If the command involves bringing/fetching/delivering an object TO a person (including "me", "the operator", or a named person), use "give_to_person" as the final delivery skill, NOT "place_object". Use "place_object" only when placing at a location with no person recipient.
 
 EXAMPLES:
 Command: find the apple in the kitchen
@@ -60,6 +61,12 @@ JSON: {{"can_do": true, "reason": "answer with known info", "selected_skills": [
 Command: introduce yourself
 JSON: {{"can_do": true, "reason": "just speak", "selected_skills": ["say"]}}
 
+Command: bring me the apple from the kitchen
+JSON: {{"can_do": true, "reason": "fetch object and deliver to operator", "selected_skills": ["go_to_location", "find_object", "pick_up", "give_to_person"]}}
+
+Command: fetch the cola and give it to charlie
+JSON: {{"can_do": true, "reason": "fetch object and give to named person", "selected_skills": ["go_to_location", "find_object", "pick_up", "find_person", "give_to_person"]}}
+
 Command: make me a sandwich
 JSON: {{"can_do": false, "reason": "no skill for cooking on the available skills", "selected_skills": []}}
 
@@ -80,6 +87,7 @@ DEPENDENCY RULES (apply all):
 6. Output skills in correct execution order.
 7. Never remove a skill from the input list — only add missing dependencies.
 8. Keep skill names exactly as given (bare names, no arguments).
+9. Any plan that picks up an object must end with either give_to_person (if delivering to a person) or place_object (if placing at a location) — never leave the object undelivered.  
 
 Output schema:
 {{
@@ -90,7 +98,7 @@ EXAMPLES:
 
 Command: pick up the apple
 Input skills: ["pick_up"]
-JSON: {{"refined_skills": ["go_to_location", "find_object", "pick_up"]}}
+JSON: {{"refined_skills": ["go_to_location", "find_object", "pick_up", "go_to_location", "give_to_person"]}}
 
 Command: bring the cola from the kitchen to the bedroom
 Input skills: ["go_to_location", "pick_up", "place_object"]
@@ -143,10 +151,11 @@ RULES:
 - Known locations are ONLY: {locations}. Furniture, appliances, and fixtures (sofa, bathroom, waste basket, refrigerator, coatrack, garage, sink, shelf, etc.) are NOT valid locations.
 - FIRST check every room/place mentioned in the command. If ANY of them is NOT in known locations: output ONLY a single say step refusing. Do not plan any other steps.
 - Only after confirming all locations are known: use ALL selected skills in the plan.
-- find_object and find_person can search for ANY object/person, even if not in the known lists — do NOT refuse for unknown objects when find_object is selected.
+- Every object is in the known objects list with format "name (category at sub-location in room)". When navigating to find an object, ALWAYS go to the room first, then the sub-location: go_to_location(room) → go_to_location(sub-location) → find_object.
 - Fill args from the command and known world.
 - say text contains only the spoken words.
-- ALWAYS complete the task end-to-end. If the robot gathers information (count, name, description, property) it MUST return to the instruction point and report the result with a say step. If the robot fetches an object for the operator it MUST deliver it with give_to_person. Never leave the result unreported.
+- ALWAYS complete the task end-to-end. If the robot gathers information (count, name, description, property) it MUST return to the instruction point and report the result with a say step. Never leave the result unreported.
+- If the command involves bringing/fetching/delivering an object TO a person (including "me", "the operator", or a named person), the final step MUST be give_to_person, NOT place_object. place_object is only for placing objects at a location (e.g. on a table, in a room with no recipient person).
 
 Skills available for this command:
 {selected_skill_lines}
@@ -173,11 +182,14 @@ Plan: {{"plan_description": "waste basket and refrigerator are not known locatio
 Command: lead Simone from the coatrack to the bathroom | Skills: guide_person | Known locations: bedroom, kitchen, living room, office
 Plan: {{"plan_description": "coatrack and bathroom are not known locations", "steps": [{{"skill": "say", "args": {{"text": "I'm sorry, the coatrack and bathroom are not on my map."}}}}]}}
 
-Command: find a pizza in the kitchen | Skills: go_to_location, find_object, say | Known locations: bedroom, kitchen, living room, office
-Plan: {{"plan_description": "go to kitchen, search for pizza, report back", "steps": [{{"skill": "go_to_location", "args": {{"location": "kitchen"}}}}, {{"skill": "find_object", "args": {{"object": "pizza", "location": "kitchen"}}}}, {{"skill": "go_to_location", "args": {{"location": "instruction point"}}}}, {{"skill": "say", "args": {{"text": "I found the pizza in the kitchen."}}}}]}}
+Command: find a pizza | Skills: go_to_location, find_object, say | Known locations: bedroom, kitchen, living room, dinner table | Objects: pizza (food at dinner table in kitchen)
+Plan: {{"plan_description": "go to kitchen then dinner table, search for pizza, report back", "steps": [{{"skill": "go_to_location", "args": {{"location": "kitchen"}}}}, {{"skill": "go_to_location", "args": {{"location": "dinner table"}}}}, {{"skill": "find_object", "args": {{"object": "pizza", "location": "dinner table"}}}}, {{"skill": "go_to_location", "args": {{"location": "instruction point"}}}}, {{"skill": "say", "args": {{"text": "I found the pizza on the dinner table."}}}}]}}
 
-Command: find the cola in the kitchen | Skills: go_to_location, find_object, say | Known locations: bedroom, kitchen, living room, office
-Plan: {{"plan_description": "go to kitchen, find cola, report back", "steps": [{{"skill": "go_to_location", "args": {{"location": "kitchen"}}}}, {{"skill": "find_object", "args": {{"object": "cola", "location": "kitchen"}}}}, {{"skill": "go_to_location", "args": {{"location": "instruction point"}}}}, {{"skill": "say", "args": {{"text": "I found the cola in the kitchen."}}}}]}}
+Command: find the pepsi | Skills: go_to_location, find_object, say | Known locations: bedroom, kitchen, living room, cabinet | Objects: pepsi (drink at cabinet in kitchen)
+Plan: {{"plan_description": "go to kitchen then cabinet, find pepsi, report back", "steps": [{{"skill": "go_to_location", "args": {{"location": "kitchen"}}}}, {{"skill": "go_to_location", "args": {{"location": "cabinet"}}}}, {{"skill": "find_object", "args": {{"object": "pepsi", "location": "cabinet"}}}}, {{"skill": "go_to_location", "args": {{"location": "instruction point"}}}}, {{"skill": "say", "args": {{"text": "I found the pepsi in the cabinet."}}}}]}}
+
+Command: bring me the pepsi | Skills: go_to_location, find_object, pick_up, give_to_person | Known locations: bedroom, kitchen, living room, cabinet | Objects: pepsi (drink at cabinet in kitchen)
+Plan: {{"plan_description": "fetch pepsi from cabinet and give to operator", "steps": [{{"skill": "go_to_location", "args": {{"location": "kitchen"}}}}, {{"skill": "go_to_location", "args": {{"location": "cabinet"}}}}, {{"skill": "find_object", "args": {{"object": "pepsi", "location": "cabinet"}}}}, {{"skill": "pick_up", "args": {{"object": "pepsi"}}}}, {{"skill": "go_to_location", "args": {{"location": "instruction point"}}}}, {{"skill": "give_to_person", "args": {{"person": "operator"}}}}]}}
 
 Command: count the apples in the office | Skills: go_to_location, count_objects, say | Known locations: bedroom, kitchen, living room, office
 Plan: {{"plan_description": "go to office, count apples, return and report", "steps": [{{"skill": "go_to_location", "args": {{"location": "office"}}}}, {{"skill": "count_objects", "args": {{"object": "apple", "location": "office"}}}}, {{"skill": "go_to_location", "args": {{"location": "instruction point"}}}}, {{"skill": "say", "args": {{"text": "I counted the apples in the office."}}}}]}}
@@ -188,8 +200,14 @@ Plan: {{"plan_description": "go to living room, count waving people, return and 
 Command: tell me the name of the person in the bedroom | Skills: go_to_location, get_person_info, say | Known locations: bedroom, kitchen, living room, office
 Plan: {{"plan_description": "go to bedroom, get person name, return and report", "steps": [{{"skill": "go_to_location", "args": {{"location": "bedroom"}}}}, {{"skill": "get_person_info", "args": {{"info": "name", "location": "bedroom"}}}}, {{"skill": "go_to_location", "args": {{"location": "instruction point"}}}}, {{"skill": "say", "args": {{"text": "The name of the person in the bedroom is unknown."}}}}]}}
 
-Command: bring the cola from the kitchen to the bedroom | Skills: go_to_location, find_object, pick_up, place_object | Known locations: bedroom, kitchen, living room, office
-Plan: {{"plan_description": "fetch cola and bring to bedroom", "steps": [{{"skill": "go_to_location", "args": {{"location": "kitchen"}}}}, {{"skill": "find_object", "args": {{"object": "cola", "location": "kitchen"}}}}, {{"skill": "pick_up", "args": {{"object": "cola"}}}}, {{"skill": "go_to_location", "args": {{"location": "bedroom"}}}}, {{"skill": "place_object", "args": {{"location": "bedroom"}}}}]}}
+Command: bring the cola from the kitchen to the bedroom | Skills: go_to_location, find_object, pick_up, place_object | Known locations: bedroom, kitchen, living room, cabinet | Objects: cola (drink at cabinet in kitchen)
+Plan: {{"plan_description": "fetch cola from cabinet and bring to bedroom", "steps": [{{"skill": "go_to_location", "args": {{"location": "kitchen"}}}}, {{"skill": "go_to_location", "args": {{"location": "cabinet"}}}}, {{"skill": "find_object", "args": {{"object": "cola", "location": "cabinet"}}}}, {{"skill": "pick_up", "args": {{"object": "cola"}}}}, {{"skill": "go_to_location", "args": {{"location": "bedroom"}}}}, {{"skill": "place_object", "args": {{"location": "bedroom"}}}}]}}
+
+Command: bring me the apple from the kitchen | Skills: go_to_location, find_object, pick_up, give_to_person | Known locations: bedroom, kitchen, living room, dinner table | Objects: apple (fruit at dinner table in kitchen)
+Plan: {{"plan_description": "fetch apple from dinner table and give to operator", "steps": [{{"skill": "go_to_location", "args": {{"location": "kitchen"}}}}, {{"skill": "go_to_location", "args": {{"location": "dinner table"}}}}, {{"skill": "find_object", "args": {{"object": "apple", "location": "dinner table"}}}}, {{"skill": "pick_up", "args": {{"object": "apple"}}}}, {{"skill": "go_to_location", "args": {{"location": "instruction point"}}}}, {{"skill": "give_to_person", "args": {{"person": "operator"}}}}]}}
+
+Command: fetch the cola and give it to charlie | Skills: go_to_location, find_object, pick_up, find_person, give_to_person | Known locations: kitchen, living room, cabinet | Objects: cola (drink at cabinet in kitchen)
+Plan: {{"plan_description": "fetch cola from cabinet and give to charlie", "steps": [{{"skill": "go_to_location", "args": {{"location": "kitchen"}}}}, {{"skill": "go_to_location", "args": {{"location": "cabinet"}}}}, {{"skill": "find_object", "args": {{"object": "cola", "location": "cabinet"}}}}, {{"skill": "pick_up", "args": {{"object": "cola"}}}}, {{"skill": "find_person", "args": {{"name": "charlie"}}}}, {{"skill": "give_to_person", "args": {{"person": "charlie"}}}}]}}
 
 Command: meet Jane in the kitchen and escort her to the bedroom | Skills: go_to_location, find_person, guide_person | Known locations: bedroom, kitchen, living room, office
 Plan: {{"plan_description": "find Jane in kitchen then escort to bedroom", "steps": [{{"skill": "go_to_location", "args": {{"location": "kitchen"}}}}, {{"skill": "find_person", "args": {{"name": "jane", "location": "kitchen"}}}}, {{"skill": "guide_person", "args": {{"name": "jane", "start": "kitchen", "end": "bedroom"}}}}]}}

@@ -10,11 +10,53 @@ from GPSR.prompts import (
     SKILL_SELECTOR_PROMPT,
     parse_json as _parse_json,
 )
-from GPSR.world import format_objects, format_people, selected_skill_lines
+from GPSR.world import format_objects, format_people, selected_skill_lines, SUBLOCATION_ROOM
 
 
 class SkillSelectorError(Exception):
     """Stage 1 failed — no plan available."""
+
+
+def _inject_sublocations(steps: list, objects: dict) -> list:
+    """Ensure find_object steps are preceded by go_to_location(room) then go_to_location(sub-location)."""
+    # Build object→sublocation lookup
+    obj_subloc = {name: obj.get("location") for name, obj in objects.items()}
+
+    result = []
+    for step in steps:
+        if step.get("skill") == "find_object":
+            obj_name = step.get("args", {}).get("object", "")
+            subloc = obj_subloc.get(obj_name)
+            if subloc:
+                room = SUBLOCATION_ROOM.get(subloc)
+                # Check what the previous step navigated to
+                prev_loc = result[-1].get("args", {}).get("location") if result and result[-1].get("skill") == "go_to_location" else None
+                # Inject room nav if not already there
+                if room and prev_loc != room and prev_loc != subloc:
+                    result.append({"skill": "go_to_location", "args": {"location": room}})
+                # Inject sub-location nav if not already there
+                if prev_loc != subloc:
+                    result.append({"skill": "go_to_location", "args": {"location": subloc}})
+                # Update find_object args to use correct sub-location
+                step = {**step, "args": {**step.get("args", {}), "location": subloc}}
+        result.append(step)
+    return result
+
+
+def _inject_give_to_operator(steps: list) -> list:
+    """If the plan picks up an object but doesn't end with give_to_person, add return + give."""
+    skills = [s.get("skill") for s in steps]
+    if "pick_up" not in skills:
+        return steps
+    if "give_to_person" in skills:
+        return steps
+    # Missing the delivery — append return to instruction point and give to operator
+    steps = list(steps)
+    last_loc = steps[-1].get("args", {}).get("location") if steps[-1].get("skill") == "go_to_location" else None
+    if last_loc != "instruction point":
+        steps.append({"skill": "go_to_location", "args": {"location": "instruction point"}})
+    steps.append({"skill": "give_to_person", "args": {"person": "operator"}})
+    return steps
 
 
 def _fail_safe(text: str = "I could not generate a plan for that command.") -> dict:
@@ -79,6 +121,8 @@ def run_planner(backend, world: dict, command: str) -> dict:
         plan_description = parsed.get("plan_description", "")
         if not steps:
             raise ValueError("empty steps")
+        steps = _inject_sublocations(steps, world["objects"])
+        steps = _inject_give_to_operator(steps)
     except Exception:
         result = _fail_safe()
         result["elapsed_sec"] = round(time.perf_counter() - t0, 2)

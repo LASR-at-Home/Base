@@ -44,15 +44,36 @@ def compact_skill_lines(skills_text: str) -> str:
     return "\n".join(lines)
 
 
+SUBLOCATION_ROOM = {
+    "laundry table": "laundry",
+    "washing machine": "laundry",
+    "shelf": "laundry",
+    "laundry trash bin": "laundry",
+    "bed": "bedroom",
+    "bedside table": "bedroom",
+    "coat rack": "bedroom",
+    "tv stand": "living room",
+    "sofa": "living room",
+    "coffee table": "living room",
+    "cabinet": "kitchen",
+    "refrigerator": "kitchen",
+    "counter": "kitchen",
+    "sink": "kitchen",
+    "cooking table": "kitchen",
+    "dishwasher": "kitchen",
+    "kitchen trash bin": "kitchen",
+    "dinner table": "kitchen",
+}
+
+
 def format_objects(objects: dict) -> str:
     """Format the objects dict as a single line for the planner prompt."""
-    return (
-        ", ".join(
-            f"{name} ({obj.get('category', '?')} in {obj.get('location', '?')})"
-            for name, obj in objects.items()
-        )
-        or "none"
-    )
+    parts = []
+    for name, obj in objects.items():
+        subloc = obj.get("location", "?")
+        room = SUBLOCATION_ROOM.get(subloc, "?")
+        parts.append(f"{name} ({obj.get('category', '?')} at {subloc} in {room})")
+    return ", ".join(parts) or "none"
 
 
 def format_people(people: dict) -> str:

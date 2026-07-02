@@ -53,32 +53,32 @@ class GPSR(yasmin.StateMachine):
         self.plans = []
         self.exec_index = 0
 
-        self.add_state(
-            "WAIT_START",
-            yasmin_ros.MonitorState(
-                topic_name="/gpsr/start",
-                outcomes=["succeeded", "failed"],
-                monitor_handler=self.start_cb,
-                msg_type=Empty,
-            ),
-            transitions={
-                "succeeded": "START_CON",
-                "failed": "WAIT_START",
-                "canceled": "failed",
-            },
-        )
+        # self.add_state(
+        #     "WAIT_START",
+        #     yasmin_ros.MonitorState(
+        #         topic_name="/gpsr/start",
+        #         outcomes=["succeeded", "failed"],
+        #         monitor_handler=self.start_cb,
+        #         msg_type=Empty,
+        #     ),
+        #     transitions={
+        #         "succeeded": "START_CON",
+        #         "failed": "WAIT_START",
+        #         "canceled": "failed",
+        #     },
+        # )
 
-        self.add_state(
-            "START_CON",
-            self.setup(),
-            transitions={"succeeded": "GO_TO_INSTRUCT_POINT", "failed": "START_CON"},
-        )
+        # self.add_state(
+        #     "START_CON",
+        #     self.setup(),
+        #     transitions={"succeeded": "GO_TO_INSTRUCT_POINT", "failed": "START_CON"},
+        # )
 
-        self.add_state(
-            "GO_TO_INSTRUCT_POINT",
-            GoToLocation(location_param="instruction_point"),
-            transitions={"succeeded": "CHECK_INSTRUCTION", "failed": "failed"},
-        )
+        # self.add_state(
+        #     "GO_TO_INSTRUCT_POINT",
+        #     GoToLocation(location_param="instruction_point"),
+        #     transitions={"succeeded": "CHECK_INSTRUCTION", "failed": "failed"},
+        # )
 
         self.add_state(
             "CHECK_INSTRUCTION",
@@ -124,7 +124,7 @@ class GPSR(yasmin.StateMachine):
         plan_con = yasmin.Concurrence(
             states={
                 "QUERY_LLM": QueryLLM(node),
-                "SAY_PLANNING": Say(text="One moment, I am planning."),
+                "SAY_PLANNING": Say(format_str="Command heard: {}. Give me a moment, I am planning."),
             },
             default_outcome="failed",
             outcome_map={
@@ -474,6 +474,7 @@ class GPSR(yasmin.StateMachine):
         if len(text.split()) < 3:
             return "invalid"
 
+        blackboard["placeholders"] = text
         return "valid"
 
 
