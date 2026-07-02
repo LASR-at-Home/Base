@@ -16,8 +16,6 @@ from GPSR.states import (
     KeyboardInputState,
     ListenState,
     QueryLLM,
-    WaitForTabletReady,
-    WaitForConfirm,
 )
 from GPSR.tts import say
 
@@ -30,6 +28,7 @@ from lasr_skills import (
     PlayMotion,
     DetectDoorOpening,
     Listen,
+    Wait,
 )
 
 
@@ -54,57 +53,37 @@ class GPSR(yasmin.StateMachine):
         self.plans = []
         self.exec_index = 0
 
-        # Wait for Start signal at the door
-        self.add_state(
-            "WAIT_START",  # Awaits start Signal for the task
-            yasmin_ros.MonitorState(
-                topic_name="/gpsr/start",
-                outcomes=["succeeded", "failed"],
-                monitor_handler=self.start_cb,
-                msg_type=Empty,
-            ),
-            transitions={
-                "succeeded": "START_CON",
-                "failed": "WAIT_START",
-                "canceled": "failed",
-            },
-        )
+        # self.add_state(
+        #     "WAIT_START",
+        #     yasmin_ros.MonitorState(
+        #         topic_name="/gpsr/start",
+        #         outcomes=["succeeded", "failed"],
+        #         monitor_handler=self.start_cb,
+        #         msg_type=Empty,
+        #     ),
+        #     transitions={
+        #         "succeeded": "START_CON",
+        #         "failed": "WAIT_START",
+        #         "canceled": "failed",
+        #     },
+        # )
 
-        self.add_state(
-            "START_CON",  # SM1: Waits for Door to open, then goes to start
-            self.setup(),
-            transitions={"succeeded": "GO_TO_INSTRUCT_POINT", "failed": "START_CON"},
-        )
+        # self.add_state(
+        #     "START_CON",
+        #     self.setup(),
+        #     transitions={"succeeded": "GO_TO_INSTRUCT_POINT", "failed": "START_CON"},
+        # )
 
-        # Main Task loop:
-        self.add_state(
-            "GO_TO_INSTRUCT_POINT",
-            SafeGoToLocation(location_param="instruction_point"),
-            transitions={"succeeded": "CHECK_INSTRUCTION", "failed": "failed"},
-        )
+        # self.add_state(
+        #     "GO_TO_INSTRUCT_POINT",
+        #     SafeGoToLocation(location_param="instruction_point"),
+        #     transitions={"succeeded": "CHECK_INSTRUCTION", "failed": "failed"},
+        # )
 
         self.add_state(
             "CHECK_INSTRUCTION",
             yasmin.CbState(outcomes=["next", "finish"], callback=self.checkRequest),
-            transitions={"next": "SAY_PRESS_READY", "finish": "NEXT_PLAN"},
-        )
-
-        self.add_state(
-            "SAY_PRESS_READY",
-            Say(
-                text="Please press ready on the tablet when you are ready to state the command. Please state one command at a time as I request them."
-            ),
-            transitions={
-                "succeeded": "WAIT_TABLET_READY",
-                "aborted": "WAIT_TABLET_READY",
-                "canceled": "WAIT_TABLET_READY",
-            },
-        )
-
-        self.add_state(
-            "WAIT_TABLET_READY",
-            WaitForTabletReady(),
-            transitions={"succeeded": "REQUEST_AND_WAIT_FOR_COMMAND"},
+            transitions={"next": "REQUEST_AND_WAIT_FOR_COMMAND", "finish": "NEXT_PLAN"},
         )
 
         self.add_state(
@@ -124,23 +103,8 @@ class GPSR(yasmin.StateMachine):
                 callback=self.checkTranscript,
             ),
             transitions={
-                "valid": "CONFIRM_TRANSCRIPT",
+                "valid": "QUERY_LLM",
                 "invalid": "COUNT_SPEECH_FAILURE",
-            },
-        )
-
-        self.add_state(
-            "CONFIRM_TRANSCRIPT",
-            yasmin.CbState(outcomes=["succeeded"], callback=self.confirmTranscript),
-            transitions={"succeeded": "WAIT_TRANSCRIPT_CONFIRM"},
-        )
-
-        self.add_state(
-            "WAIT_TRANSCRIPT_CONFIRM",
-            WaitForConfirm(),
-            transitions={
-                "yes": "QUERY_LLM",
-                "no": "COUNT_SPEECH_FAILURE",
             },
         )
 
@@ -220,7 +184,13 @@ class GPSR(yasmin.StateMachine):
         self.add_state(
             "READBACK",
             yasmin.CbState(outcomes=["succeeded"], callback=self.readback),
-            transitions={"succeeded": "STORE_PLAN"},
+            transitions={"succeeded": "WAIT_BEFORE_NEXT"},
+        )
+
+        self.add_state(
+            "WAIT_BEFORE_NEXT",
+            Wait(5),
+            transitions={"succeeded": "STORE_PLAN", "failed": "STORE_PLAN"},
         )
 
         # Store the accepted plan; collect the next command until we have
@@ -436,14 +406,6 @@ class GPSR(yasmin.StateMachine):
                 say(self.node, announcement)
         except Exception:
             pass
-        return "succeeded"
-
-    def confirmTranscript(self, blackboard):
-        try:
-            transcription = str(blackboard["transcribed_speech"]).strip()
-        except Exception:
-            transcription = ""
-        say(self.node, f"I heard: {transcription}. Is that correct?")
         return "succeeded"
 
     def countSpeechFailure(self, blackboard):
