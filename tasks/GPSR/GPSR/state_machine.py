@@ -12,6 +12,7 @@ from rclpy.node import Node
 from threading import Thread
 from rclpy.executors import MultiThreadedExecutor as Executor
 from GPSR.states import DispatchSkill, KeyboardInputState, ListenState, QueryLLM, WaitForTabletReady
+from GPSR.tts import say
 
 from std_msgs.msg import Empty
 
@@ -36,9 +37,15 @@ class GPSR(yasmin.StateMachine):
     def __init__(self, node):
         super().__init__(outcomes=["succeeded", "failed"])
 
+        self.node = node
         self.instruction_count = 1
         self.understand_attempts = 0
         self.operator_attempts = 0
+
+        # Collected plans (one steps-list per accepted command) and
+        # the index of the plan currently being executed.
+        self.plans = []
+        self.exec_index = 0
 
 
         # Wait for Start signal at the door
@@ -73,7 +80,7 @@ class GPSR(yasmin.StateMachine):
         self.add_state(
             "CHECK_INSTRUCTION",
             yasmin.CbState(outcomes=["next", "finish"], callback=self.checkRequest),
-            transitions={"next": "SAY_PRESS_READY", "finish": "succeeded"},
+            transitions={"next": "SAY_PRESS_READY", "finish": "NEXT_PLAN"},
         )
 
         self.add_state(
@@ -120,7 +127,7 @@ class GPSR(yasmin.StateMachine):
             "QUERY_LLM",
             QueryLLM(node),
             transitions={
-                "succeeded": "PRE_NAV",
+                "succeeded": "CHECK_OUTCOME",
                 "failed": "REQUEST_AND_WAIT_FOR_COMMAND",
             },
         )
@@ -139,8 +146,8 @@ class GPSR(yasmin.StateMachine):
             "DISPATCH_SKILL",
             DispatchSkill(node),
             transitions={
-                "succeeded": "CHECK_OUTCOME",
-                "failed": "CHECK_OUTCOME",
+                "succeeded": "SAY_COMPLETE",
+                "failed": "SAY_COMPLETE",
             },
         )
         self.add_state(
@@ -150,11 +157,49 @@ class GPSR(yasmin.StateMachine):
                 callback=self.checkOutcome,
             ),
             transitions={
-                "succeeded": "SAY_COMPLETE",
+                "succeeded": "STORE_PLAN",
                 "request_rephrase": "REQUEST_REPHRASE",
                 "request_operator": "REQUEST_OPERATOR",
                 "failed": "UNABLE_TO_UNDERSTAND",
-                "no_command": "GO_TO_INSTRUCT_POINT",
+                "no_command": "CHECK_INSTRUCTION",
+            },
+        )
+
+        # Store the accepted plan; collect the next command until we have
+        # gathered all requested instructions, then move on to execution.
+        self.add_state(
+            "STORE_PLAN",
+            yasmin.CbState(
+                outcomes=["collect_next", "execute"],
+                callback=self.storePlan,
+            ),
+            transitions={
+                "collect_next": "CHECK_INSTRUCTION",
+                "execute": "ANNOUNCE_ALL",
+            },
+        )
+
+        # Announce all collected plans before starting execution.
+        self.add_state(
+            "ANNOUNCE_ALL",
+            yasmin.CbState(
+                outcomes=["succeeded"],
+                callback=self.announceAll,
+            ),
+            transitions={"succeeded": "NEXT_PLAN"},
+        )
+
+        # Execution phase: load one stored plan at a time into the blackboard
+        # and run it via PRE_NAV -> DISPATCH_SKILL.
+        self.add_state(
+            "NEXT_PLAN",
+            yasmin.CbState(
+                outcomes=["execute", "finish"],
+                callback=self.nextPlan,
+            ),
+            transitions={
+                "execute": "PRE_NAV",
+                "finish": "succeeded",
             },
         )
 
@@ -164,16 +209,24 @@ class GPSR(yasmin.StateMachine):
                 text="I have finished doing the task. I will go back to the instruction point."
             ),
             transitions={
-                "succeeded": "GO_TO_INSTRUCT_POINT",
+                "succeeded": "RETURN_TO_INSTRUCT_POINT",
                 "aborted": "failed",
                 "canceled": "failed",
             },
+        )
+
+        # Return to the instruction point between executed plans, then load
+        # the next stored plan.
+        self.add_state(
+            "RETURN_TO_INSTRUCT_POINT",
+            SafeGoToLocation(location_param="instruction_point"),
+            transitions={"succeeded": "NEXT_PLAN", "failed": "NEXT_PLAN"},
         )
         self.add_state(
             "REQUEST_REPHRASE",
             Say(text="Im sorry could you rephrase the command."),
             transitions={
-                "succeeded": "GO_TO_INSTRUCT_POINT",
+                "succeeded": "REQUEST_AND_WAIT_FOR_COMMAND",
                 "aborted": "failed",
                 "canceled": "failed",
             },
@@ -183,7 +236,7 @@ class GPSR(yasmin.StateMachine):
             "REQUEST_OPERATOR",
             Say(text="I am having trouble understanding. Could the operator please state the command for me?"),
             transitions={
-                "succeeded": "GO_TO_INSTRUCT_POINT",
+                "succeeded": "REQUEST_AND_WAIT_FOR_COMMAND",
                 "aborted": "failed",
                 "canceled": "failed",
             },
@@ -193,7 +246,7 @@ class GPSR(yasmin.StateMachine):
             "UNABLE_TO_UNDERSTAND",
             Say(text="I cannot understand or do that currently. Please move on to the next command. "),
             transitions={
-                "succeeded": "GO_TO_INSTRUCT_POINT",
+                "succeeded": "CHECK_INSTRUCTION",
                 "aborted": "failed",
                 "canceled": "failed",
             },
@@ -233,8 +286,8 @@ class GPSR(yasmin.StateMachine):
             blackboard["instruction_text"] = "I am ready for the last command. "
         else:
             return "finish"
-        
-        yasmin.YASMIN_LOG_INFO(f"blackboard['instruction_text']")
+
+        yasmin.YASMIN_LOG_INFO(f"{blackboard['instruction_text']}")
 
         return "next"
 
@@ -274,12 +327,46 @@ class GPSR(yasmin.StateMachine):
             self.operator_attempts = 0
             return "failed"
 
-        self.instruction_count += 1
+        # Valid plan: reset attempt counters. The instruction counter is
+        # advanced in storePlan once the plan has actually been stored.
         self.understand_attempts = 0
         self.operator_attempts = 0
 
         return "succeeded"
-    
+
+    def storePlan(self, blackboard):
+        # Store the accepted plan and advance to the next instruction slot.
+        self.plans.append(blackboard["steps"])
+        self.instruction_count += 1
+        yasmin.YASMIN_LOG_INFO(
+            f"Stored plan {len(self.plans)} (instruction {self.instruction_count - 1})."
+        )
+
+        if self.instruction_count > 3:
+            return "execute"
+        return "collect_next"
+
+    def announceAll(self, blackboard):
+        # Speak the leading announcement 'say' step of every collected plan.
+        for steps in self.plans:
+            if steps and steps[0].get("skill") == "say":
+                text = steps[0].get("args", {}).get("text", "")
+                if text:
+                    say(self.node, text)
+        return "succeeded"
+
+    def nextPlan(self, blackboard):
+        # Load the next stored plan into the blackboard for execution.
+        if self.exec_index >= len(self.plans):
+            return "finish"
+
+        blackboard["steps"] = self.plans[self.exec_index]
+        yasmin.YASMIN_LOG_INFO(
+            f"Executing plan {self.exec_index + 1} of {len(self.plans)}."
+        )
+        self.exec_index += 1
+        return "execute"
+
     def checkTranscript(self, blackboard):
         try:
             text = str(blackboard["transcribed_speech"])
