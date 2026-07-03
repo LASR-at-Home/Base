@@ -152,6 +152,7 @@ class SeatGuest(StateMachine):
         super().__init__(outcomes=["succeeded", "failed"])
         self.add_input_key("guest_data")
         self.add_output_key("people_detections")
+        self.guest_id = id
 
         self._node = yasmin_ros.logger_node
         self.__load_ros_parameters()
@@ -214,16 +215,13 @@ class SeatGuest(StateMachine):
             },
             remappings={"text": "seating_string"},
         )
+
         self.add_state(
             "WAIT_FOR_GUEST_TO_SEAT",
             Wait(wait_time=5.0),
-            transitions={"succeeded": "GRAB_BAG", "failed": "failed"},
+            transitions={"succeeded": 'succeeded', "failed": "failed"},
         )
-        self.add_state(
-            "GRAB_BAG",
-            ReceiveObject(object_name="bag"),
-            transitions={"succeeded": "SAY_WELCOME_2", "failed": "failed"},
-        )
+        
 
     def __load_ros_parameters(self):
 

@@ -35,10 +35,10 @@ class TranscribeSpeechAction(Node):
 
         self.declare_parameter("model", "small.en")
         self.declare_parameter("device", "cuda" if torch.cuda.is_available() else "cpu")
-        self.declare_parameter("mic_device", "sysdefault")
+        self.declare_parameter("mic_device", "default")
         self.declare_parameter("start_timeout", 5.0)
         self.declare_parameter("pause_threshold", 2.0)
-        self.declare_parameter("save_audio", False)
+        self.declare_parameter("save_audio", True)
         self.declare_parameter("save_audio_dir", "/tmp/whisper_recordings")
 
         self._model_name = self.get_parameter("model").value

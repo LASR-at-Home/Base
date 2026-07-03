@@ -71,12 +71,14 @@ class GetNameAndDrink(yasmin.StateMachine):
                 if blackboard["guest_data"][self._guest_id]["name"] == "":
                     outcome = "failed_name"
                     blackboard["guest_data"][self._guest_id]["name"] = 'John'
+                    blackboard["placeholders"] = 'John'
                 else:
                     blackboard["guest_data"][self._guest_id]["drink"] = 'Coke'
                     outcome = "failed_drink"
             else:
                 blackboard["guest_data"][self._guest_id]["name"] = 'John'
                 blackboard["guest_data"][self._guest_id]["drink"] = 'Coke'
+                blackboard["placeholders"] = 'John'
                 outcome = "failed"
                 
             yasmin.YASMIN_LOG_INFO(str(blackboard['guest_data']))

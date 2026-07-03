@@ -171,7 +171,6 @@ class Introduce(yasmin.StateMachine):
 
         yasmin.YASMIN_LOG_INFO(str(index))
         yasmin.YASMIN_LOG_INFO("Guest1 point: " + str(guest1point))
-        yasmin.YASMIN_LOG_INFO("Host detected: " + str(host))
         yasmin.YASMIN_LOG_INFO("Total people: " + str(people_det))
 
         

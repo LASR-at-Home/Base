@@ -9,7 +9,7 @@ import yasmin_ros
 from geometry_msgs.msg import PointStamped
 from std_msgs.msg import String
 
-from lasr_skills import Say, SafeGoToLocation, StartDoorSM, Rotate, FollowPerson
+from lasr_skills import Say, SafeGoToLocation, StartDoorSM, Rotate, FollowPerson, ReceiveObject
 
 from HRI.states import *
 
@@ -125,6 +125,12 @@ class HRI(yasmin.StateMachine):
         self.add_state(
             "SEAT_GUEST_2",  # SM3: Locates and seats guest in free seat
             SeatGuest(id='guest2'),
+            transitions={"succeeded": "GRAB_BAG", "failed": "failed"},
+        )
+
+        self.add_state(
+            "GRAB_BAG",
+            ReceiveObject(object_name="bag"),
             transitions={"succeeded": "CHECK", "failed": "failed"},
         )
 
