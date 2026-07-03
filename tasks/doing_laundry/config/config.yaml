@@ -1,13 +1,28 @@
 doing_laundry:
   ros__parameters:
-    laundry_area:
+    start_point:
       pose:
         position:
-          x: -14.250353
-          y: 20.145838
+          x: 6.001558303833008
+          y: -0.566650390625
           z: 0.0
         orientation:
           x: 0.0
           y: 0.0
           z: 0.0
           w: 1.0
+    laundry_area:
+      pose:
+        position:
+          x: 1.364694595336914
+          y: -2.101895332336426
+          z: 0.0
+        orientation:
+          x: 0.0
+          y: 0.0
+          z: 0.0
+          w: 1.0
+
+    
+
+   

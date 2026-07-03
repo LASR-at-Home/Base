@@ -28,6 +28,16 @@ def generate_launch_description():
         )
     )
 
+    open_vocab = IncludeLaunchDescription(
+        AnyLaunchDescriptionSource(
+            os.path.join(
+                get_package_share_directory("lasr_vision_open_vocabulary"),
+                "launch",
+                "open_vocab.launch.py",
+            )
+        )
+    )
+
     state_machine = TimerAction(
         period=10.0,
         actions=[
@@ -47,4 +57,4 @@ def generate_launch_description():
         ],
     )
 
-    return LaunchDescription([load_motions, yolo_service, state_machine])
+    return LaunchDescription([load_motions, yolo_service, open_vocab, state_machine])
