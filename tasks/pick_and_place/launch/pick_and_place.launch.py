@@ -1,25 +1,22 @@
 import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
 from launch.conditions import IfCondition
+from launch.launch_description_sources import AnyLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
 
 def generate_launch_description():
-    """
-    Launch file for the Pick and Place task using YOLO detection.
-
-    Launch SEPARATELY before running this:
-        - Simulator / robot bringup
-        - Nav2 + localisation
-
-    Start the task after everything is ready:
-        ros2 topic pub --once /pick_and_place/start std_msgs/msg/Empty {}
-    """
     pkg_pp = get_package_share_directory("pick_and_place")
     config = os.path.join(pkg_pp, "config", "config.yaml")
+
+    yolo_launch = os.path.join(
+        get_package_share_directory("lasr_vision_yolo"),
+        "launch",
+        "service_launch.xml"
+    )
 
     use_sim = LaunchConfiguration("use_sim")
 
@@ -31,17 +28,12 @@ def generate_launch_description():
                         "to disable the point_head_stub.",
         ),
 
-        # ── Perception: YOLO detection ────────────────────────────────────────
-        Node(
-            package="lasr_vision_yolo",
-            executable="yolo_service_node",
-            name="lasr_vision_yolo",
-            output="screen",
-            parameters=[{
-        "preload": ["/path/to/lasr_vision_yolo/models/best.pt"]}],
+        # ── Perception: YOLO detection ────────────────────────────────────
+        IncludeLaunchDescription(
+            AnyLaunchDescriptionSource(yolo_launch),
         ),
 
-        # ── Task: state machine ───────────────────────────────────────────────
+        # ── Task: state machine ───────────────────────────────────────────
         Node(
             package="pick_and_place",
             executable="state_machine",
@@ -50,10 +42,9 @@ def generate_launch_description():
             parameters=[config],
         ),
 
-        # ── Head stub (simulation only) ───────────────────────────────────────
-        # Remove this when testing on the real robot by passing use_sim:=false
+        # ── Head stub (simulation only) ───────────────────────────────────
         Node(
-            condition=IfCondition(False),
+            condition=IfCondition(use_sim),
             package="pick_and_place",
             executable="point_head_stub",
             name="point_head_stub",
