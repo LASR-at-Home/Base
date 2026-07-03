@@ -200,7 +200,7 @@ class CalculateSweepPoints(yasmin.State):
             ray = model.projectPixelTo3dRay((u, v))
             point_cam = PointStamped()
             point_cam.header.frame_id = self.msg.header.frame_id
-            point_cam.header.stamp = Time().to_msg()
+            point_cam.header.stamp = self.msg.header.stamp            
             point_cam.point.x = ray[0] * self._fov_depth
             point_cam.point.y = ray[1] * self._fov_depth
             point_cam.point.z = ray[2] * self._fov_depth
