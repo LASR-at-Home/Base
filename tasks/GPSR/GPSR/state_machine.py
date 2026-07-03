@@ -427,20 +427,8 @@ class GPSR(yasmin.StateMachine):
     def readback(self, blackboard):
         try:
             steps = blackboard["steps"]
-            non_say = [s for s in steps if s.get("skill") != "say"]
-            if len(non_say) == 0:
-                say(
-                    self.node,
-                    "I will tell you that information after collecting all commands.",
-                )
-            elif steps[0].get("skill") == "say":
+            if steps and steps[0].get("skill") == "say":
                 say(self.node, steps[0]["args"]["text"])
-            else:
-                # Announce failed — generate a simple fallback from the step skills
-                skill_names = ", ".join(
-                    s.get("skill", "").replace("_", " ") for s in steps
-                )
-                say(self.node, f"Here is my plan: {skill_names}.")
         except Exception:
             pass
         return "succeeded"
@@ -462,7 +450,6 @@ class GPSR(yasmin.StateMachine):
         return "failed"
 
     def storePlan(self, blackboard):
-        # Store the accepted plan and advance to the next instruction slot.
         self.plans.append(blackboard["steps"])
         self.instruction_count += 1
         yasmin.YASMIN_LOG_INFO(
@@ -474,14 +461,6 @@ class GPSR(yasmin.StateMachine):
         return "collect_next"
 
     def announceAll(self, blackboard):
-        for i, steps in enumerate(self.plans, start=1):
-            try:
-                if steps and steps[0].get("skill") == "say":
-                    text = steps[0]["args"]["text"]
-                    if text:
-                        say(self.node, f"Plan {i}: {text}")
-            except Exception:
-                pass
         return "succeeded"
 
     def nextPlan(self, blackboard):
@@ -489,10 +468,14 @@ class GPSR(yasmin.StateMachine):
         if self.exec_index >= len(self.plans):
             return "finish"
 
-        blackboard["steps"] = self.plans[self.exec_index]
-        yasmin.YASMIN_LOG_INFO(
-            f"Executing plan {self.exec_index + 1} of {len(self.plans)}."
-        )
+        idx = self.exec_index
+        steps = self.plans[idx]
+        # Strip the leading announce say step — it was already spoken during collection
+        if steps and steps[0].get("skill") == "say" and len(steps) > 1:
+            steps = steps[1:]
+        blackboard["steps"] = steps
+        say(self.node, f"Executing command {idx + 1}.")
+        yasmin.YASMIN_LOG_INFO(f"Executing plan {idx + 1} of {len(self.plans)}.")
         self.exec_index += 1
         return "execute"
 

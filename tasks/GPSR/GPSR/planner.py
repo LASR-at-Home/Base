@@ -19,17 +19,7 @@ class SkillSelectorError(Exception):
 
 
 def _inject_sublocations(steps: list, objects: dict) -> list:
-    """For every go_to_location that targets a sub-location, prepend a go_to_location for its room.
-
-    Also corrects find_object location args to match the object's known sub-location from world data,
-    overriding whatever location the LLM may have hallucinated.
-    """
-    # Build object → sub-location lookup (both snake_case and space-separated)
-    obj_subloc = {}
-    for name, obj in objects.items():
-        obj_subloc[name] = obj.get("location")
-        obj_subloc[name.replace("_", " ")] = obj.get("location")
-
+    """For every go_to_location that targets a known sub-location, prepend its parent room."""
     def _prev_loc(result):
         """Return the location arg of the last go_to_location step, or None."""
         for step in reversed(result):
@@ -41,15 +31,6 @@ def _inject_sublocations(steps: list, objects: dict) -> list:
     for step in steps:
         skill = step.get("skill")
         args  = step.get("args", {})
-
-        # Correct find_object location to the object's actual sub-location.
-        # The LLM sometimes uses "name" instead of "object" as the arg key, so check both.
-        if skill == "find_object":
-            obj_name = args.get("object") or args.get("name") or ""
-            known_subloc = obj_subloc.get(obj_name)
-            if known_subloc:
-                args = {**args, "location": known_subloc}
-                step = {**step, "args": args}
 
         # For any go_to_location pointing at a known sub-location,
         # ensure the parent room is visited first.

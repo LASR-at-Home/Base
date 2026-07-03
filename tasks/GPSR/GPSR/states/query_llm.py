@@ -47,7 +47,6 @@ class QueryLLM(yasmin.State):
         source = plan.get("source", "local")
         steps = plan["steps"]
 
-        # Announce plan: LLM generates spoken summary as first say step
         announcement = self.agent.announce(
             command,
             plan["plan_description"],
@@ -57,7 +56,6 @@ class QueryLLM(yasmin.State):
         )
         if announcement:
             announcement = re.sub(r'[{}\[\]"]', '', announcement).strip()
-            # Truncate after the last "Step N:" sentence to strip leaked prompt text
             matches = list(re.finditer(r'Step \d+:[^.]+\.', announcement))
             if matches:
                 announcement = announcement[:matches[-1].end()].strip()
