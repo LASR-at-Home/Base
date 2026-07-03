@@ -57,12 +57,12 @@ class ReceiveObject(StateMachine):
         self.add_state(
             "SAY_REACH_ARM",
             Say(
-                text="I see you have a bag. Please step back, I am going to reach my arm out."
+                text="I see you have a bag. I am going to reach my arm out."
             ),
             transitions={
-                "succeeded": "succeeded",
-                "aborted": "succeeded",
-                "canceled": "succeeded",
+                "succeeded": "REACH_ARM",
+                "aborted": "REACH_ARM",
+                "canceled": "REACH_ARM",
             },
         )
 

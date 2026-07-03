@@ -71,16 +71,15 @@ class GetNameAndDrink(yasmin.StateMachine):
                 if blackboard["guest_data"][self._guest_id]["name"] == "":
                     outcome = "failed_name"
                     blackboard["guest_data"][self._guest_id]["name"] = 'John'
-                    blackboard["placeholders"] = 'John'
                 else:
                     blackboard["guest_data"][self._guest_id]["drink"] = 'Coke'
                     outcome = "failed_drink"
             else:
                 blackboard["guest_data"][self._guest_id]["name"] = 'John'
                 blackboard["guest_data"][self._guest_id]["drink"] = 'Coke'
-                blackboard["placeholders"] = 'John'
                 outcome = "failed"
-                
+            
+            blackboard["placeholders"] = 'John'
             yasmin.YASMIN_LOG_INFO(str(blackboard['guest_data']))
             return outcome
 
@@ -102,7 +101,7 @@ class GetNameAndDrink(yasmin.StateMachine):
         last_resort: bool,
     ):
         super().__init__(
-            outcomes=["succeeded", "failed", "failed_name", "failed_drink"]
+            outcomes=["succeeded", "failed"]
         )
 
         self.add_input_key("guest_transcription")
@@ -138,9 +137,9 @@ class GetNameAndDrink(yasmin.StateMachine):
             "SPEECH_RECOVERY",
             self.PostRecoveryDecision(guest_id=guest_id),
             transitions={
-                "failed": "succeeded",
-                "failed_name": "succeeded",
-                "failed_drink": "succeeded",
+                "failed": "failed",
+                "failed_name": "failed",
+                "failed_drink": "failed",
             },
         )
 

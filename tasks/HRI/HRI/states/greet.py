@@ -126,10 +126,6 @@ class GreetGuest(yasmin.StateMachine):
                     "GET_NAME_DRINK": "succeeded",
                     "GET_FACE_ATTRIBUTES": "succeeded",
                 },
-                "failed": {
-                    "GET_NAME_DRINK": "failed",
-                    "GET_FACE_ATTRIBUTES": "failed",
-                },
                 "failed_speech": {
                     "GET_NAME_DRINK": "failed",
                     "GET_FACE_ATTRIBUTES": "succeeded",

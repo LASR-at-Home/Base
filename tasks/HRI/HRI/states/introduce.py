@@ -9,11 +9,11 @@ import yasmin
 import yasmin_ros
 from shapely.geometry import Polygon as ShapelyPolygon
 
+import numpy as np
+
 from lasr_skills import (
     Say,
-    DetectAllInPolygon,
-    StartEyeTracker,
-    StopEyeTracker,
+    Detect3DInArea,
     PlayMotion,
     Wait,
     LookToPoint,
@@ -48,14 +48,24 @@ class Introduce(yasmin.StateMachine):
         super().__init__(outcomes=["succeeded", "failed"])
         self.add_input_key("guest_data")
         self.add_input_key("guest_seat_point")
+        
+        self._node = yasmin_ros.get_ros_loggers
+        self.flag = True
 
+        self.sofa_area = ShapelyPolygon(
+            [
+                np.array(self._node.get_parameter("sofa_area.top_left").value),
+                np.array(self._node.get_parameter("sofa_area.top_right").value),
+                np.array(self._node.get_parameter("sofa_area.bottom_right").value),
+                np.array(self._node.get_parameter("sofa_area.bottom_left").value)
+            ]
+        )
 
         loop_state = yasmin.CbState(
             outcomes=["succeeded", "continue", "failed"],
             callback=self._loop_person_index,
         )
         loop_state.add_input_key("person_index")
-        loop_state.add_input_key("people_det")
         loop_state.add_input_key("guest_data")
         loop_state.add_output_key("person_index")
         loop_state.add_output_key("person_point")
@@ -65,11 +75,35 @@ class Introduce(yasmin.StateMachine):
         )
         guest_loop.add_input_key("guest_data")
         guest_loop.add_output_key("guest_data")
+        
+        fallback_loop = yasmin.CbState(
+            outcomes=['succeeded', 'continue'], callback=self._loop_str
+        )
+        
+        fallback_loop.add_input_key('guest_data')
+        fallback_loop.add_output_key('guest_data')
 
         self.add_state(
             "RESET_SEATING_DETECTIONS",
             ClearSeatingDetections(),
-            transitions={"succeeded": "LOOP_PERSON_STATE", "failed": "failed"},
+            transitions={"succeeded": "DETECT_PEOPLE", "failed": "failed"},
+        )
+        
+        self.add_state(yasmin
+            'DETECT_PEOPLE',
+            Detect3DInArea(
+                area_polygon=self.sofa_area,
+                filter=['person'],
+                z_min=-10,
+                z_max=10
+            ),
+            transitions={
+                'succeeded': 'LOOP_PERSON_STATE',
+                'failed': 'failed'
+            },
+            remappings={
+                'detections_3d', 'introduce_detections'
+            }
         )
 
         self.add_state(
@@ -117,6 +151,34 @@ class Introduce(yasmin.StateMachine):
                 "canceled": "failed",
             },
         )
+        
+        self.add_state(
+            'FALLBACK_SPEECH',
+            fallback_loop,
+            transitions={
+                'succeeded': 'succeeded',
+                'continue': 'GET_FALLBACK_STR'
+            }
+        )
+        
+        self.add_state(
+            'GET_FALLBACK_STR',
+            GetIntroductionStr(),
+            transitions={
+                'succeeded': 'SAY_FALLBACK',
+                'failed': 'failed'
+            }
+        )
+        
+        self.add_state(
+            'SAY_FALLBACK',
+            Say(),
+            transitions={
+                'succeeded': 'FALLBACK_SPEECH',
+                'aborted': 'FALLBACK_SPEECH',
+                'canceled': 'FALLBACK_SPEECH'
+            }
+        )
 
         self.add_state(
             "GRAB_GUEST_POINT",
@@ -163,32 +225,52 @@ class Introduce(yasmin.StateMachine):
         )
 
     def _loop_person_index(self, blackboard):
-        guest1point = blackboard["guest_data"]["guest1"]["seated_point"]
-        people_det = len(blackboard["people_det"])
-        index = blackboard["person_index"]
+        try:
+            guest1point = blackboard["guest_data"]["guest1"]["seated_point"]
+            guest2point = blackboard["guest_data"]["guest2"]["seated_point"]
+            people_det = len(blackboard["introduce_detections"])
+            index = blackboard["person_index"]
 
-        indexes = [i for i in range(people_det)]
+            yasmin.YASMIN_LOG_INFO(str(index))
+            yasmin.YASMIN_LOG_INFO("Guest1 point: " + str(guest1point))
+            yasmin.YASMIN_LOG_INFO("Guest2 point: " + str(guest2point))
+            yasmin.YASMIN_LOG_INFO("Total people: " + str(people_det))
 
-        yasmin.YASMIN_LOG_INFO(str(index))
-        yasmin.YASMIN_LOG_INFO("Guest1 point: " + str(guest1point))
-        yasmin.YASMIN_LOG_INFO("Total people: " + str(people_det))
+            
+            if guest1point is not None and guest2point is not None:
+                return "succeeded"
+            elif index < people_det:
+                point = blackboard["introduce_detections"][index].point
+                point_stamped = PointStamped(header=Header(frame_id="map"), point=point)
+                blackboard["person_point_stamped"] = point_stamped
+                index += 1
+                blackboard["person_index"] = index
+                return "continue"
 
-        
-        if guest1point is not None:
-            shapely_point = blackboard['guest2_seat']
-            point = Point(x=shapely_point.x, y=shapely_point.y, z=shapely_point.z)
-            blackboard["guest_data"]["guest2"]["seated_point"] = point
-            yasmin.YASMIN_LOG_INFO("Fallback Guest2 point: " + str(point))
-            return "succeeded"
-        elif index < people_det:
-            point = blackboard["people_det"][index].point
-            point_stamped = PointStamped(header=Header(frame_id="map"), point=point)
-            blackboard["person_point_stamped"] = point_stamped
-            index += 1
-            blackboard["person_index"] = index
-            return "continue"
+            return "failed"
+        except Exception as e:
+            yasmin.YASMIN_LOG_INFO(f'An error has occured with loop_person_index: {e}')
+            return 'failed'
 
-        return "failed"
+    def _loop_str(self, blackboard):
+        yasmin.YASMIN_LOG_INFO('Flag is: ' + str(self.flag))
+        if self.flag and isinstance(self.flag, bool):
+            blackboard["introduce_to"] = blackboard["guest_data"]['guest1']["name"]
+            blackboard["relevant_guest_data"] = (
+                blackboard["guest_data"]["guest2"]
+            )
+            self.flag = False
+            return 'continue'
+        elif not self.flag and isinstance(self.flag, bool):
+            blackboard["introduce_to"] = blackboard["guest_data"]['guest2']["name"]
+            blackboard["relevant_guest_data"] = (
+                blackboard["guest_data"]["guest1"]
+            )
+            self.flag = None
+            return 'continue'
+        else:
+            yasmin.YASMIN_LOG_INFO('Introduction finished')
+            return 'succeeded'
 
     def _loop_guest(self, blackboard):
         if (

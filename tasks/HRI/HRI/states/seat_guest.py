@@ -51,6 +51,7 @@ class ProcessDetections(State):
         left_sofa_area: ShapelyPolygon,
         middle_sofa_area: ShapelyPolygon,
         right_sofa_area: ShapelyPolygon,
+        id
     ):
         super().__init__(outcomes=["succeeded", "failed"])
 
@@ -70,6 +71,7 @@ class ProcessDetections(State):
         self._left_sofa_area = left_sofa_area
         self._middle_sofa_area = middle_sofa_area
         self._right_sofa_area = right_sofa_area
+        self.guest_id = id
         self._tf_buffer = tf.Buffer(cache_time=Duration(seconds=10.0))
         self._tf_listener = tf.TransformListener(self._tf_buffer, self._node)
 
@@ -201,6 +203,7 @@ class SeatGuest(StateMachine):
                 left_sofa_area=self.left_sofa_area,
                 middle_sofa_area=self.middle_sofa_area,
                 right_sofa_area=self.right_sofa_area,
+                id=self.guest_id
             ),
             transitions={"succeeded": "SAY_SEAT_GUEST", "failed": "failed"},
         )

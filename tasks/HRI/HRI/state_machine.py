@@ -125,19 +125,19 @@ class HRI(yasmin.StateMachine):
         self.add_state(
             "SEAT_GUEST_2",  # SM3: Locates and seats guest in free seat
             SeatGuest(id='guest2'),
-            transitions={"succeeded": "GRAB_BAG", "failed": "failed"},
-        )
-
-        self.add_state(
-            "GRAB_BAG",
-            ReceiveObject(object_name="bag"),
-            transitions={"succeeded": "CHECK", "failed": "failed"},
+            transitions={"succeeded": "INTRODUCE", "failed": "failed"},
         )
 
         self.add_state(
             "INTRODUCE",
             Introduce(),
-            transitions={"succeeded": "ROTATE", "failed": "ROTATE"},
+            transitions={"succeeded": "GRAB_BAG", "failed": "GRAB_BAG"},
+        )
+        
+        self.add_state(
+            "GRAB_BAG",
+            ReceiveObject(object_name="bag"),
+            transitions={"succeeded": "CHECK", "failed": "failed"},
         )
 
         self.add_state(
