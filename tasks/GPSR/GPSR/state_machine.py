@@ -71,13 +71,27 @@ class GPSR(yasmin.StateMachine):
         self.add_state(
             "START_CON",
             self.setup(),
-            transitions={"succeeded": "GO_TO_INSTRUCT_POINT", "failed": "START_CON"},
+            transitions={"succeeded": "WAIT_3", "failed": "START_CON"},
+        )
+        self.add_state(
+            "WAIT_3",
+            Wait(3),
+            transitions={
+                "succeeded": "ENTER_DOOR",
+                "failed": "ENTER_DOOR",
+            },
+        )
+
+        self.add_state(
+            "ENTER_DOOR",
+            GoToLocation(location_param="entrance_point"),
+            transitions={"succeeded": "GO_TO_INSTRUCT_POINT", "failed": "ENTER_DOOR"},
         )
 
         self.add_state(
             "GO_TO_INSTRUCT_POINT",
             GoToLocation(location_param="instruction_point"),
-            transitions={"succeeded": "CHECK_INSTRUCTION", "failed": "failed"},
+            transitions={"succeeded": "CHECK_INSTRUCTION", "failed": "GO_TO_INSTRUCT_POINT"},
         )
 
         self.add_state(
