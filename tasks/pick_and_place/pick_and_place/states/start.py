@@ -2,8 +2,7 @@ import yasmin
 import yasmin_ros
 
 from std_msgs.msg import Empty
-from lasr_skills import Say, GoToLocation, StartDoorSM
-
+from lasr_skills import Say, GoToLocation, DetectDoorOpening
 
 class Start(yasmin.StateMachine):
     """
@@ -58,13 +57,21 @@ class Start(yasmin.StateMachine):
             },
         )
 
-        # 4. Detect door opening
         self.add_state(
             "WAIT_FOR_DOOR",
-            StartDoorSM(),
+            DetectDoorOpening(lasr_scan_topic="/scan_raw", timeout=999.0),
+            transitions={
+                "door_opened": "GO_TO_START_AREA",
+                "failed": "WAIT_FOR_DOOR",
+            },
+        )
+
+        self.add_state(
+            "GO_TO_START_AREA",
+            GoToLocation(location_param="pick_and_place.start_area.pose"),
             transitions={
                 "succeeded": "SAY_GOING_TO_TABLE",
-                "failed": "SAY_GOING_TO_TABLE",  # FIX THIS ON THE REAL ROBOT
+                "failed": "SAY_GOING_TO_TABLE",
             },
         )
 
@@ -73,16 +80,16 @@ class Start(yasmin.StateMachine):
             "SAY_GOING_TO_TABLE",
             Say(text="I am going to the table."),
             transitions={
-                "succeeded": "ASK_OPEN_CABINET",
-                "aborted": "ASK_OPEN_CABINET",
-                "canceled": "ASK_OPEN_CABINET",
+                "succeeded": "GO_TO_TABLE",
+                "aborted": "GO_TO_TABLE",
+                "canceled": "GO_TO_TABLE",
             },
         )
 
         # # 6. Navigate to table
         self.add_state(
             "GO_TO_TABLE",
-            GoToLocation(location_param="pick_and_place.table.pose"),
+            GoToLocation(location_param="pick_and_place.start_area.pose"),
             transitions={
                 "succeeded": "ASK_OPEN_CABINET",
                 "failed": "ASK_OPEN_CABINET",
