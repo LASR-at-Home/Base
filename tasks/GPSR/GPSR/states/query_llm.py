@@ -54,6 +54,10 @@ class QueryLLM(yasmin.State):
         )
         if announcement:
             announcement = re.sub(r'[{}\[\]"]', '', announcement).strip()
+            # Truncate after the last "Step N:" sentence to strip leaked prompt text
+            matches = list(re.finditer(r'Step \d+:[^.]+\.', announcement))
+            if matches:
+                announcement = announcement[:matches[-1].end()].strip()
             steps = [{"skill": "say", "args": {"text": announcement}}] + steps
 
         blackboard["steps"] = steps

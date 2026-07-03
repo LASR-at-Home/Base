@@ -26,6 +26,7 @@ RULES:
 - If the command needs navigation AND another action, include "go_to_location" in selected_skills.
 - If the result of a skill must be reported back to the operator (count, name, description, property), always include "say" in selected_skills.
 - If the command involves bringing/fetching/delivering an object TO a person (including "me", "the operator", or a named person), use "give_to_person" as the final delivery skill, NOT "place_object". Use "place_object" only when placing at a location with no person recipient.
+- get_person_info is ONLY for learning information ABOUT a person (their name, age, pose, gesture). If the command is about saying or reporting something TO a person, use find_person + say instead — never get_person_info.
 
 EXAMPLES:
 Command: find the apple in the kitchen
@@ -66,6 +67,9 @@ JSON: {{"can_do": true, "reason": "fetch object and deliver to operator", "selec
 
 Command: fetch the cola and give it to charlie
 JSON: {{"can_do": true, "reason": "fetch object and give to named person", "selected_skills": ["go_to_location", "find_object", "pick_up", "find_person", "give_to_person"]}}
+
+Command: find john in the bedroom and tell him your affiliation
+JSON: {{"can_do": true, "reason": "navigate to person and say information to them", "selected_skills": ["go_to_location", "find_person", "say"]}}
 
 Command: make me a sandwich
 JSON: {{"can_do": false, "reason": "no skill for cooking on the available skills", "selected_skills": []}}
@@ -157,6 +161,7 @@ RULES:
 - ALWAYS complete the task end-to-end. If the robot gathers information (count, name, description, property) it MUST return to the instruction point and report the result with a say step. Never leave the result unreported.
 - If the plan is a single say step (e.g. answering a question), the text MUST be a direct factual answer using ONLY information from General knowledge above. Do not invent facts. The answer must be specific and complete — never vague or generic. If the answer cannot be found in the general knowledge, output a say step saying "I'm sorry, I don't have that information."
 - If the command involves bringing/fetching/delivering an object TO a person (including "me", "the operator", or a named person), the final step MUST be give_to_person, NOT place_object. place_object is only for placing objects at a location (e.g. on a table, in a room with no recipient person).
+- get_person_info is ONLY for learning information ABOUT a person. If the command is about saying something TO a person, use find_person then say — never get_person_info.
 
 Skills available for this command:
 {selected_skill_lines}
@@ -213,6 +218,9 @@ Plan: {{"plan_description": "fetch cola from cabinet and give to charlie", "step
 Command: meet Jane in the kitchen and escort her to the bedroom | Skills: go_to_location, find_person, guide_person | Known locations: bedroom, kitchen, living room, office
 Plan: {{"plan_description": "find Jane in kitchen then escort to bedroom", "steps": [{{"skill": "go_to_location", "args": {{"location": "kitchen"}}}}, {{"skill": "find_person", "args": {{"name": "jane", "location": "kitchen"}}}}, {{"skill": "guide_person", "args": {{"name": "jane", "start": "kitchen", "end": "bedroom"}}}}]}}
 
+Command: find john in the bedroom and tell him your teams affiliation | Skills: go_to_location, find_person, say | Known locations: bedroom, kitchen, living room, office
+Plan: {{"plan_description": "go to bedroom, find john, tell him team affiliation", "steps": [{{"skill": "go_to_location", "args": {{"location": "bedroom"}}}}, {{"skill": "find_person", "args": {{"name": "john", "location": "bedroom"}}}}, {{"skill": "say", "args": {{"text": "My team is LASR, affiliated with King's College London."}}}}]}}
+
 Command: find a person in the kitchen and say hi | Skills: go_to_location, find_person, say | Known locations: bedroom, kitchen, living room, office
 Plan: {{"plan_description": "go to kitchen find person and say hi", "steps": [{{"skill": "go_to_location", "args": {{"location": "kitchen"}}}}, {{"skill": "find_person", "args": {{"location": "kitchen"}}}}, {{"skill": "say", "args": {{"text": "Hi!"}}}}]}}
 
@@ -231,6 +239,7 @@ Use only words that will be spoken aloud. No bullet points or JSON in the announ
 PERSPECTIVE RULE: The operator gives commands in first person ("bring it to me", "tell me", "show me").
 When describing what you will do, reframe these as second person: "bring it to you", "tell you", "show you".
 Never say "bring it to me" or "tell me" in the announcement — always say "you" when referring to the operator.
+When the robot is reporting or saying something about itself (its team, affiliation, name, etc.), use "my" — e.g. "report my affiliation", "say my team name".
 
 User command: {command}
 Plan summary: {plan_description}

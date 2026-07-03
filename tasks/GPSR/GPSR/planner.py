@@ -142,11 +142,12 @@ def run_planner(backend, world: dict, command: str) -> dict:
 
 def run_announce(backend, command: str, plan_description: str, steps: list) -> str:
     """One LLM call: turn a plan into a spoken announcement sentence."""
+    steps_json = json.dumps(steps).replace("'", "")
     raw = backend.query_json(
         ANNOUNCE_PLAN_PROMPT.format(
             command=command,
             plan_description=plan_description,
-            steps_json=json.dumps(steps),
+            steps_json=steps_json,
         ),
     )
     parsed = _parse_json(raw)

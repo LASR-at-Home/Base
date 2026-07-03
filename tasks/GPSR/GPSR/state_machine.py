@@ -414,9 +414,15 @@ class GPSR(yasmin.StateMachine):
     def readback(self, blackboard):
         try:
             steps = blackboard["steps"]
-            if steps and steps[0].get("skill") == "say":
-                announcement = steps[0]["args"]["text"]
-                say(self.node, announcement)
+            non_say = [s for s in steps if s.get("skill") != "say"]
+            if len(non_say) == 0:
+                say(self.node, "I will tell you that information after collecting all commands.")
+            elif steps[0].get("skill") == "say":
+                say(self.node, steps[0]["args"]["text"])
+            else:
+                # Announce failed — generate a simple fallback from the step skills
+                skill_names = ", ".join(s.get("skill", "").replace("_", " ") for s in steps)
+                say(self.node, f"Here is my plan: {skill_names}.")
         except Exception:
             pass
         return "succeeded"
