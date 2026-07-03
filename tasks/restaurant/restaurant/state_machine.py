@@ -3,7 +3,7 @@ import yasmin
 import yasmin_ros
 from std_msgs.msg import Empty
 from geometry_msgs.msg import Point, Pose
-from lasr_skills import Say, GoToLocation, PlayMotion
+from lasr_skills import Say, SafeGoToLocation, PlayMotion
 
 import tf2_ros
 
@@ -30,6 +30,16 @@ class Restaurant(yasmin.StateMachine):
         def start_cb(blackboard, msg):
             yasmin.YASMIN_LOG_INFO("RECEIVED START SIGNAL")
             return "succeeded"
+
+        self.add_state(
+            "TORSO_GO_UP",
+            PlayMotion("post_navigation"),
+            transitions={
+                "succeeded": "WAIT_START",
+                "aborted": "failed",
+                "canceled": "failed",
+            },
+        )
 
         self.add_state(
             "WAIT_START",
@@ -86,8 +96,9 @@ class Restaurant(yasmin.StateMachine):
 
         self.add_state(
             "GO_TO_TABLE",
-            GoToLocation(),
+            SafeGoToLocation(),
             transitions={"succeeded": "FACE_CUSTOMER", "failed": "SURVEY"},
+            remappings={"location_param": "location"},
         )
 
         self.add_state(
@@ -129,7 +140,7 @@ class Restaurant(yasmin.StateMachine):
             "GET_ORDER_FROM_BAR",
             GetOrderFromBar(),
             transitions={
-                "succeeded": "succeeded",
+                "succeeded": "FACE_TABLES",
                 "failed": "failed",
             },
         )

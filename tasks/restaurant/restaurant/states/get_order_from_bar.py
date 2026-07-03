@@ -11,7 +11,7 @@ Announce order
 import yasmin
 import yasmin_ros
 from geometry_msgs.msg import Pose, Point, Quaternion
-from lasr_skills import GoToLocation, Say, Wait, PlayMotion
+from lasr_skills import SafeGoToLocation, Say, Wait, PlayMotion
 from restaurant.states import FaceCustomer
 from restaurant.states.build_phrases import (
     BuildPlaceOrderPhrase,
@@ -29,7 +29,6 @@ class GetOrderFromBar(yasmin.StateMachine):
         self.node = yasmin_ros.logger_node
 
         parameters = {
-            "barman": self.get_pose("barman_pose"),
             "wait_duration": self.get_value("wait_duration"),
             "ordered_food": self.get_value("ordered_food"),
         }
@@ -38,9 +37,9 @@ class GetOrderFromBar(yasmin.StateMachine):
 
         self.add_state(
             "GO_TO_BAR",
-            GoToLocation(),
+            SafeGoToLocation(),
             transitions={"succeeded": "BUILD_PLACE_ORDER", "failed": "failed"},
-            remappings={"location": "bar_pose"},
+            remappings={"location_param": "bar_pose"},
         )
 
         self.add_state(
@@ -53,11 +52,27 @@ class GetOrderFromBar(yasmin.StateMachine):
             "PLACE_ORDER",
             Say(),
             transitions={
-                "succeeded": "WAIT_FOR_ORDER",
+                "succeeded": "SAY_ROTATE_GET_ORDER",
                 "aborted": "failed",
                 "canceled": "failed",
             },
             remappings={"text": "place_order_phrase"},
+        )
+
+        self.add_state(
+            "SAY_ROTATE_GET_ORDER",
+            Say(text="I will now rotate so you put the items in the basket and then wait for 10 seconds."),
+            transitions={
+                "succeeded": "ROTATE_GET_ORDER",
+                "aborted": "failed",
+                "canceled": "failed",
+            }
+        )
+
+        self.add_state(
+            "ROTATE_GET_ORDER",
+            Rotate(angle=180),
+            transitions={"succeeded": "WAIT_FOR_ORDER", "failed": "failed"},
         )
 
         self.add_state(
@@ -68,9 +83,9 @@ class GetOrderFromBar(yasmin.StateMachine):
 
         self.add_state(
             "GO_TO_TABLE",
-            GoToLocation(),
+            SafeGoToLocation(),
             transitions={"succeeded": "FACE_CUSTOMER", "failed": "failed"},
-            remappings={"location": "location"},
+            remappings={"location_param": "location"},
         )
 
         self.add_state(
@@ -99,28 +114,34 @@ class GetOrderFromBar(yasmin.StateMachine):
             "ANNOUNCE_ORDER",
             Say(),
             transitions={
-                "succeeded": "GO_TO_BAR",
+                "succeeded": "SAY_ROTATE_COLLECT_ORDER",
                 "aborted": "failed",
                 "canceled": "failed",
             },
             remappings={"text": "announce_order_phrase"},
         )
 
-    def get_pose(self, pose_key):
-        pose = Pose(
-            position=Point(
-                x=float(self.get_value(f"{pose_key}.position.x")),
-                y=float(self.get_value(f"{pose_key}.position.y")),
-                z=float(self.get_value(f"{pose_key}.position.z")),
-            ),
-            orientation=Quaternion(
-                x=float(self.get_value(f"{pose_key}.orientation.x")),
-                y=float(self.get_value(f"{pose_key}.orientation.y")),
-                z=float(self.get_value(f"{pose_key}.orientation.z")),
-                w=float(self.get_value(f"{pose_key}.orientation.w")),
-            ),
+        self.add_state(
+            "SAY_ROTATE_COLLECT_ORDER",
+            Say(text="I will now rotate so you can collect it within 10 seconds"),
+            transitions={
+                "succeeded": "ROTATE_COLLECT_ORDER",
+                "aborted": "failed",
+                "canceled": "failed",
+            }
         )
-        return pose
+
+        self.add_state(
+            "ROTATE_COLLECT_ORDER",
+            Rotate(angle=180),
+            transitions={"succeeded": "WAIT_FOR_COLLECTION", "failed": "failed"},
+        )
+
+        self.add_state(
+            "WAIT_FOR_COLLECTION",
+            Wait(wait_time=parameters["wait_duration"]),
+            transitions={"succeeded": "succeeded", "failed": "failed"},
+        )
 
     def get_value(self, key):
         return self.node.get_parameter(key).value

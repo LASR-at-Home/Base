@@ -39,6 +39,6 @@ class BuildAnnounceOrderPhrase(yasmin.State):
 
         order_str = build_sentence_from_list(order)
         blackboard["announce_order_phrase"] = (
-            f"Your order is ready. Please collect {order_str}. Enjoy!"
+            f"Your order of {order_str} is ready."
         )
         return "succeeded"
