@@ -42,13 +42,13 @@ class DoingLaundry(yasmin.StateMachine):
     def __init__(self):
         super().__init__(outcomes=["succeeded", "failed"], handle_sigint=True)
 
-        basket_sdf = os.path.join(
-            get_package_share_directory("doing_laundry"), "models", "basket.sdf")
+        # basket_sdf = os.path.join(
+        #     get_package_share_directory("doing_laundry"), "models", "basket.sdf")
 
-        self.add_state(
-            "SPAWN",
-            Spawn(model_path=basket_sdf, x=0.6, y=0.0, z=0.0, settle=1.5),
-            transitions={"succeeded": "TUCK_ARM", "failed": "TUCK_ARM"})
+        # self.add_state(
+        #     "SPAWN",
+        #     Spawn(model_path=basket_sdf, x=0.6, y=0.0, z=0.0, settle=1.5),
+        #     transitions={"succeeded": "TUCK_ARM", "failed": "TUCK_ARM"})
 
         self.add_state(
             "LOOK_DOWN",
@@ -76,10 +76,10 @@ class DoingLaundry(yasmin.StateMachine):
             "PLACE", Place(x=0.6, y=-0.3, z=0.95),
             transitions={"succeeded": "TUCK_ARM", "failed": "TUCK_ARM"})
 
-        self.add_state(
-            "TUCK_ARM",
-            TuckArm(),
-            transitions={"succeeded": "succeeded", "failed": "failed"})
+        # self.add_state(
+        #     "TUCK_ARM",
+        #     TuckArm(),
+        #     transitions={"succeeded": "succeeded", "failed": "failed"})
 
 
 class DoingLaundryNode(Node):
