@@ -1,23 +1,3 @@
-"""Template-matching planner: instead of free-form planning, classify the
-command back into the gpsr_commands.py template that generated it.
-
-GPSR commands are produced by CommandGenerator from a closed set of templates
-+ followups + slot values, so recognition is the inverse problem: one LLM call
-that picks the template, the followup (if any), and fills the slots.
-
-Output example:
-{
-  "template": "takeObjFromPlcmt",
-  "followup": "deliverObjToPrsInRoom",
-  "slots": {"obj": "apple", "plcmtLoc": "dinner table",
-            "gestPers": "waving person", "room": "kitchen"}
-}
-
-Standalone, no ROS required — calls ollama directly.
-
-Run: python3 simple_planner2.py "grab the apple from the dinner table and bring it to the waving person in the kitchen"
-"""
-
 import json
 import sys
 
@@ -43,9 +23,35 @@ def _query(prompt: str) -> dict:
     return _parse_json(response["message"]["content"])
 
 
-# Templates and followups mirror CommandGenerator in
-# CommandGenerator/src/robocupathome_generator/gpsr_commands.py — keep in sync.
-MATCH_PROMPT = """You are a RoboCup@Home GPSR command classifier.
+# -----------------------------------------------------------------------
+# CALL 1 — split the task into its actions
+# -----------------------------------------------------------------------
+SPLIT_PROMPT = """Split this robot command into its separate actions, in order.
+Split on connectors like "then"/"and" when they join actions. Keep each action's
+own words (objects, people, places) inside it. Never drop or merge actions.
+
+Output ONLY JSON: {{"actions": ["<action 1>", "<action 2>", ...]}}
+
+Examples:
+- "go to the kitchen then find an apple and take it and bring it to me"
+  -> {{"actions": ["go to the kitchen", "find an apple", "take it", "bring it to me"]}}
+- "locate a standing person in the living room and follow them to the laundry table"
+  -> {{"actions": ["locate a standing person in the living room", "follow them to the laundry table"]}}
+- "tell me how many fruits there are on the tv stand"
+  -> {{"actions": ["tell me how many fruits there are on the tv stand"]}}
+
+Command: {command}
+JSON: """
+
+
+def split_actions(command: str) -> list:
+    return _query(SPLIT_PROMPT.format(command=command)).get("actions", [command])
+
+
+# -----------------------------------------------------------------------
+# CALL 2 — classify: template for action 1, one followup per later action
+# -----------------------------------------------------------------------
+MATCH_PROMPT = """You are a command classifier
 Every command was generated from exactly ONE of these templates (shown with their slot placeholders):
 
 goToLoc: "go to the {{loc|room}} then <FOLLOWUP>"
@@ -94,272 +100,55 @@ gestPersPlur/posePersPlur = plural descriptors | persInfo = name/pose/gesture
 objComp = biggest/largest/smallest/heaviest/lightest/thinnest | talk = phrase to say
 colorClothe(s) = color + garment (e.g. "grey shirt")
 
-Classify the command. Output ONLY JSON:
-{{"template": "<template_name>", "followup": "<full followup chain joined by '>', or empty string>", "slots": {{"<slot>": "<value>", ...}}}}
+The command has already been split into its actions (one per line, in order).
+Classify: the FIRST action is the template; EVERY following action is exactly ONE followup.
+The number of followups MUST equal the number of actions after the first — never drop one.
 
-IMPORTANT: followup must list the FULL chain of followups, one per clause after the
-template, joined by '>'. Followups containing <FOLLOWUP> (findObj, findPrs, meetName,
-takeObj) are ALWAYS followed by another followup in the chain — never end the chain there.
-Examples:
-- "go to the X then find a Y and take it and throw it in the trash" -> template goToLoc, followup "findObj>takeObj>putObjInTrash"
-- "take a Y from the X and bring it to me" -> template takeObjFromPlcmt, followup "deliverObjToMe"
-- "find a Y in the X then take it and place it on the Z" -> template findObjInRoom, followup "takeObj>placeObjOnPlcmt"
-- "meet NAME in the X and follow them" -> template meetPrsAtBeac, followup "followPrs"
-- "meet NAME in the X and tell something about yourself" -> template meetPrsAtBeac, followup "talkInfo"
+Output ONLY JSON:
+{{"template": "<template_name>", "followup": "<one followup per remaining action joined by '>', or empty string>", "slots": {{"<slot>": "<value>", ...}}}}
 
-NEVER add a followup for an action that is not in the command: each followup must match
-an actual clause. If the command's last clause is covered by talkInfo/followPrs/putObjInTrash/etc.,
-the chain ENDS there — do not append extra followups.
+CRITICAL: fill the slots for the template AND for every followup, using the slot names
+shown in their placeholders. Every {{placeholder}} of the chosen template/followups that
+appears in the actions MUST have a slot. Use the exact slot names (posePers for
+sitting/standing/lying person, gestPers for waving/pointing/raising person, loc2/room2
+for the destination of followPrsToRoom/guidePrsToBeacon, plcmtLoc2 for placeObjOnPlcmt).
 
-Only include slots actually present in the command. Verbs are synonyms
+Examples (with slots):
+- actions: ["go to the kitchen", "find an apple", "take it", "throw it in the trash"]
+  -> {{"template": "goToLoc", "followup": "findObj>takeObj>putObjInTrash", "slots": {{"loc": "kitchen", "obj": "apple"}}}}
+- actions: ["take a coke from the desk", "bring it to me"]
+  -> {{"template": "takeObjFromPlcmt", "followup": "deliverObjToMe", "slots": {{"obj": "coke", "plcmtLoc": "desk"}}}}
+- actions: ["find a toy in the kitchen", "take it", "place it on the shelf"]
+  -> {{"template": "findObjInRoom", "followup": "takeObj>placeObjOnPlcmt", "slots": {{"obj": "toy", "room": "kitchen", "plcmtLoc2": "shelf"}}}}
+- actions: ["locate a standing person in the living room", "follow them to the laundry table"]
+  -> {{"template": "findPrsInRoom", "followup": "followPrsToRoom", "slots": {{"posePers": "standing person", "room": "living room", "loc2": "laundry table"}}}}
+- actions: ["meet Jane in the office", "follow them"]
+  -> {{"template": "meetPrsAtBeac", "followup": "followPrs", "slots": {{"name": "Jane", "room": "office"}}}}
+- actions: ["greet the waving person in the bedroom", "guide them to the sofa"]
+  -> {{"template": "findPrsInRoom", "followup": "guidePrsToBeacon", "slots": {{"gestPers": "waving person", "room": "bedroom", "loc2": "sofa"}}}}
+- actions: ["bring me a soju from the cabinet"]
+  -> {{"template": "bringMeObjFromPlcmt", "followup": "", "slots": {{"obj": "soju", "plcmtLoc": "cabinet"}}}}
+
+Only include slots actually present in the actions. Verbs are synonyms
 (grab/take/get/fetch, bring/give/deliver, go/navigate, find/locate/look for, etc.).
 
-Command: {command}
+Actions:
+{actions}
 JSON: """
 
 
-def match_template(command: str) -> dict:
-    return _query(MATCH_PROMPT.format(command=command))
-
-
-# -----------------------------------------------------------------------
-# Deterministic expansion: template/followup + slots -> skill steps
-# (skill names/args from config/skills.yaml, executed by dispatch_skill.py)
-# -----------------------------------------------------------------------
-# Each entry is a list of (skill, {arg: slot_or_literal}) — "$x" pulls slot x,
-# "$x|y" tries slot x then y. Missing slots resolve to "".
-TEMPLATE_STEPS = {
-    "goToLoc": [("go_to_location", {"location": "$loc|room"})],
-    "takeObjFromPlcmt": [
-        ("go_to_location", {"location": "$plcmtLoc"}),
-        ("find_object", {"object": "$obj|singCat", "location": "$plcmtLoc"}),
-        ("pick_up", {"object": "$obj|singCat"}),
-    ],
-    "findPrsInRoom": [
-        ("go_to_location", {"location": "$room"}),
-        ("find_person", {"gesture": "$gestPers|posePers|gestPers_posePers", "location": "$room"}),
-    ],
-    "findObjInRoom": [
-        ("go_to_location", {"location": "$room"}),
-        ("find_object", {"object": "$obj|singCat", "location": "$room"}),
-    ],
-    "meetPrsAtBeac": [
-        ("go_to_location", {"location": "$room"}),
-        ("find_person", {"name": "$name", "location": "$room"}),
-    ],
-    "countObjOnPlcmt": [
-        ("go_to_location", {"location": "$plcmtLoc"}),
-        ("count_objects", {"object": "$plurCat|plurcat|obj|singCat", "location": "$plcmtLoc"}),
-        ("go_to_location", {"location": "instruction point"}),
-        ("say", {"text": "The number of $plurCat|plurcat|obj|singCat on the $plcmtLoc is [result]."}),
-    ],
-    "countPrsInRoom": [
-        ("go_to_location", {"location": "$room"}),
-        ("count_people", {"pose": "$posePersPlur", "gesture": "$gestPersPlur", "location": "$room"}),
-        ("go_to_location", {"location": "instruction point"}),
-        ("say", {"text": "The number of people in the $room is [result]."}),
-    ],
-    "tellPrsInfoInLoc": [
-        ("go_to_location", {"location": "$room|loc"}),
-        ("get_person_info", {"info": "$persInfo", "location": "$room|loc"}),
-        ("go_to_location", {"location": "instruction point"}),
-        ("say", {"text": "The $persInfo of the person is [result]."}),
-    ],
-    "tellObjPropOnPlcmt": [
-        ("go_to_location", {"location": "$plcmtLoc"}),
-        ("find_object_by_property", {"property": "$objComp", "location": "$plcmtLoc"}),
-        ("go_to_location", {"location": "instruction point"}),
-        ("say", {"text": "The $objComp object on the $plcmtLoc is [result]."}),
-    ],
-    "talkInfoToGestPrsInRoom": [
-        ("go_to_location", {"location": "$room"}),
-        ("find_person", {"gesture": "$gestPers|posePers|gestPers_posePers", "location": "$room"}),
-        ("say", {"text": "$talk"}),
-    ],
-    "followNameFromBeacToRoom": [
-        ("go_to_location", {"location": "$loc"}),
-        ("find_person", {"name": "$name", "location": "$loc"}),
-        ("follow_person", {}),
-    ],
-    "guideNameFromBeacToBeac": [
-        ("guide_person", {"name": "$name", "start": "$loc", "end": "$loc2|room"}),
-    ],
-    "guidePrsFromBeacToBeac": [
-        ("go_to_location", {"location": "$loc"}),
-        ("find_person", {"gesture": "$gestPers|posePers|gestPers_posePers", "location": "$loc"}),
-        ("guide_person", {"start": "$loc", "end": "$loc2|room"}),
-    ],
-    "guideClothPrsFromBeacToBeac": [
-        ("go_to_location", {"location": "$loc"}),
-        ("find_person", {"clothes": "$colorClothe", "location": "$loc"}),
-        ("guide_person", {"start": "$loc", "end": "$loc2|room"}),
-    ],
-    "bringMeObjFromPlcmt": [
-        ("go_to_location", {"location": "$plcmtLoc"}),
-        ("find_object", {"object": "$obj", "location": "$plcmtLoc"}),
-        ("pick_up", {"object": "$obj"}),
-        ("go_to_location", {"location": "instruction point"}),
-        ("give_to_person", {"object": "$obj"}),
-    ],
-    "tellCatPropOnPlcmt": [
-        ("go_to_location", {"location": "$plcmtLoc"}),
-        ("find_object_by_property", {"property": "$objComp", "object": "$singCat", "location": "$plcmtLoc"}),
-        ("go_to_location", {"location": "instruction point"}),
-        ("say", {"text": "The $objComp $singCat on the $plcmtLoc is [result]."}),
-    ],
-    "greetClothDscInRm": [
-        ("go_to_location", {"location": "$room"}),
-        ("find_person", {"clothes": "$colorClothe", "location": "$room"}),
-        ("say", {"text": "Hello!"}),
-    ],
-    "greetNameInRm": [
-        ("go_to_location", {"location": "$room"}),
-        ("find_person", {"name": "$name", "location": "$room"}),
-        ("say", {"text": "Hello $name!"}),
-    ],
-    "meetNameAtLocThenFindInRm": [
-        ("go_to_location", {"location": "$loc"}),
-        ("find_person", {"name": "$name", "location": "$loc"}),
-        ("go_to_location", {"location": "$room"}),
-        ("find_person", {"name": "$name", "location": "$room"}),
-    ],
-    "countClothPrsInRoom": [
-        ("go_to_location", {"location": "$room"}),
-        ("count_people", {"clothes": "$colorClothes", "location": "$room"}),
-        ("go_to_location", {"location": "instruction point"}),
-        ("say", {"text": "The number of people wearing $colorClothes in the $room is [result]."}),
-    ],
-    "tellPrsInfoAtLocToPrsAtLoc": [
-        ("go_to_location", {"location": "$loc"}),
-        ("get_person_info", {"info": "$persInfo", "location": "$loc"}),
-        ("go_to_location", {"location": "$loc2"}),
-        ("find_person", {"location": "$loc2"}),
-        ("say", {"text": "The $persInfo of the person at the $loc is [result]."}),
-    ],
-    "followPrsAtLoc": [
-        ("go_to_location", {"location": "$room|loc"}),
-        ("find_person", {"gesture": "$gestPers|posePers|gestPers_posePers", "location": "$room|loc"}),
-        ("follow_person", {}),
-    ],
-}
-
-FOLLOWUP_STEPS = {
-    "findObj": [("find_object", {"object": "$obj|singCat", "location": "$loc|room"})],
-    "findPrs": [("find_person", {"gesture": "$gestPers|posePers|gestPers_posePers", "location": "$loc|room"})],
-    "meetName": [("find_person", {"name": "$name", "location": "$loc|room"})],
-    "placeObjOnPlcmt": [
-        ("go_to_location", {"location": "$plcmtLoc2"}),
-        ("place_object", {"object": "$obj|singCat", "location": "$plcmtLoc2"}),
-    ],
-    "putObjInTrash": [
-        ("go_to_location", {"location": "trash bin"}),
-        ("place_object", {"object": "$obj|singCat", "location": "trash bin"}),
-    ],
-    "deliverObjToMe": [
-        ("go_to_location", {"location": "instruction point"}),
-        ("give_to_person", {"object": "$obj|singCat"}),
-    ],
-    "deliverObjToPrsInRoom": [
-        ("go_to_location", {"location": "$room"}),
-        ("find_person", {"gesture": "$gestPers|posePers|gestPers_posePers", "location": "$room"}),
-        ("give_to_person", {"object": "$obj|singCat"}),
-    ],
-    "deliverObjToNameAtBeac": [
-        ("go_to_location", {"location": "$room"}),
-        ("find_person", {"name": "$name", "location": "$room"}),
-        ("give_to_person", {"object": "$obj|singCat"}),
-    ],
-    "talkInfo": [("say", {"text": "$talk"})],
-    "followPrs": [("follow_person", {})],
-    "followPrsToRoom": [("follow_person", {})],
-    "guidePrsToBeacon": [("guide_person", {"end": "$loc2|room2"})],
-    "takeObj": [("pick_up", {"object": "$obj|singCat"})],
-}
-
-
-import re as _re
-
-
-def _fill(value: str, slots: dict) -> str:
-    """Resolve "$a|b" slot references (whole-value or inline in literals)."""
-
-    def resolve(ref: str) -> str:
-        for key in ref.split("|"):
-            if slots.get(key):
-                return str(slots[key])
-        return ""
-
-    if value.startswith("$") and _re.fullmatch(r"\$\w+(\|\w+)*", value):
-        return resolve(value[1:])
-    return _re.sub(r"\$(\w+(?:\|\w+)*)", lambda m: resolve(m.group(1)), value)
-
-
-def expand(match: dict) -> list:
-    """Template match -> executable skill steps."""
-    import difflib
-
-    slots = match.get("slots", {})
-
-    # LLMs sometimes invent near-miss template names — snap to the closest real one
-    template = match.get("template", "")
-    if template not in TEMPLATE_STEPS:
-        close = difflib.get_close_matches(template, TEMPLATE_STEPS, n=1, cutoff=0.6)
-        template = close[0] if close else ""
-
-    followup = match.get("followup", "") or ""
-    # drop followup names that don't exist (keep the valid rest of the chain)
-    chain = [f for f in followup.split(">") if f in FOLLOWUP_STEPS]
-
-    # a terminal followup ends the command — anything after it is LLM noise
-    NON_TERMINAL = {"findObj", "findPrs", "meetName", "takeObj"}
-    for j, f in enumerate(chain):
-        if f not in NON_TERMINAL:
-            chain = chain[: j + 1]
-            break
-
-    parts = [template] + chain
-
-    # followups that hand the object over — require it to be in hand first
-    DELIVERY_PARTS = {"placeObjOnPlcmt", "putObjInTrash", "deliverObjToMe",
-                      "deliverObjToPrsInRoom", "deliverObjToNameAtBeac"}
-
-    steps = []
-    for i, part in enumerate(parts):
-        table = TEMPLATE_STEPS if i == 0 else FOLLOWUP_STEPS
-
-        # repair chains where the LLM skipped the takeObj followup: the object
-        # must be found and picked up (where it is) before any delivery part
-        if part in DELIVERY_PARTS:
-            done = {s["skill"] for s in steps}
-            obj = _fill("$obj|singCat", slots)
-            if "find_object" not in done:
-                steps.append({"skill": "find_object", "args": {"object": obj}})
-            if "pick_up" not in done:
-                steps.append({"skill": "pick_up", "args": {"object": obj}})
-
-        for skill, arg_spec in table.get(part, []):
-            args = {k: _fill(v, slots) for k, v in arg_spec.items()}
-            args = {k: v for k, v in args.items() if v}
-            # skip duplicate consecutive navigation to the same place
-            if (skill == "go_to_location" and steps
-                    and steps[-1]["skill"] == "go_to_location"
-                    and steps[-1]["args"] == args):
-                continue
-            steps.append({"skill": skill, "args": args})
-    return steps
+def match_template(actions: list) -> dict:
+    actions_text = "\n".join(f"{i}. {a}" for i, a in enumerate(actions, 1))
+    return _query(MATCH_PROMPT.format(actions=actions_text))
 
 
 if __name__ == "__main__":
     task = " ".join(sys.argv[1:]) or "grab the apple from the dinner table and bring it to the waving person in the kitchen"
-    result = match_template(task)
-    print("=== TEMPLATE MATCH (LLM) ===")
-    print(json.dumps(result, indent=2))
 
-    steps = expand(result)
-    print("\n=== SKILL STEPS (deterministic) ===")
-    print(json.dumps({
-        "skill": steps[0]["skill"] if steps else "say",
-        "skill_args": steps[0]["args"] if steps else {"text": "I could not parse that command."},
-        "plan_description": task,
-        "steps": steps,
-    }, indent=2))
+    actions = split_actions(task)
+    print("=== CALL 1: ACTIONS ===")
+    print(json.dumps(actions, indent=2))
+
+    result = match_template(actions)
+    print("\n=== CALL 2: TEMPLATE MATCH ===")
+    print(json.dumps(result, indent=2))
