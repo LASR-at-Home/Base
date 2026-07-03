@@ -1,3 +1,4 @@
+import re
 import time
 
 import yasmin
@@ -44,16 +45,16 @@ class QueryLLM(yasmin.State):
         steps = plan["steps"]
 
         # Announce plan: LLM generates spoken summary as first say step
-        if not (len(steps) == 1 and steps[0].get("skill") == "say"):
-            announcement = self.agent.announce(
-                command,
-                plan["plan_description"],
-                steps,
-                source,
-                log=lambda msg: self.node.get_logger().info(msg),
-            )
-            if announcement:
-                steps = [{"skill": "say", "args": {"text": announcement}}] + steps
+        announcement = self.agent.announce(
+            command,
+            plan["plan_description"],
+            steps,
+            source,
+            log=lambda msg: self.node.get_logger().info(msg),
+        )
+        if announcement:
+            announcement = re.sub(r'[{}\[\]"]', '', announcement).strip()
+            steps = [{"skill": "say", "args": {"text": announcement}}] + steps
 
         blackboard["steps"] = steps
 

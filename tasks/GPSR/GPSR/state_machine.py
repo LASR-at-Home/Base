@@ -370,26 +370,26 @@ class GPSR(yasmin.StateMachine):
         yasmin.YASMIN_LOG_INFO(f"{steps}")
 
         if len(steps) == 1 and steps[0].get("skill") == "say":
-            say_text = steps[0].get("args").get("text")
-            if say_text == "no command given" or say_text == ".":
+            say_text = (steps[0].get("args") or {}).get("text", "")
+            if say_text in ("no command given", "."):
                 return "no_command"
 
-            self.understand_attempts += 1
+            # If the say text looks like a refusal/apology it's a planning failure
+            refusal_phrases = {"sorry", "cannot", "can't", "unable", "not on my map", "don't know", "i don't", "don't have that information", "do not have that information"}
+            if any(p in say_text.lower() for p in refusal_phrases):
+                self.understand_attempts += 1
+                if self.understand_attempts <= 3:
+                    return "request_rephrase"
+                self.operator_attempts += 1
+                if self.operator_attempts <= 3:
+                    return "request_operator"
+                self.instruction_count += 1
+                self.understand_attempts = 0
+                self.operator_attempts = 0
+                return "failed"
 
-            if self.understand_attempts <= 3:
-                return "request_rephrase"
-
-            # First 3 self-listening attempts exhausted — escalate to operator
-            self.operator_attempts += 1
-
-            if self.operator_attempts <= 3:
-                return "request_operator"
-
-            # Operator attempts also exhausted — give up on this instruction
-            self.instruction_count += 1
-            self.understand_attempts = 0
-            self.operator_attempts = 0
-            return "failed"
+            # Legitimate say-only response — treat as a normal plan
+            return "succeeded"
 
         # Valid plan: reset attempt counters. The instruction counter is
         # advanced in storePlan once the plan has actually been stored.

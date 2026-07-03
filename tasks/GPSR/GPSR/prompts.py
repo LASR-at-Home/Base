@@ -155,6 +155,7 @@ RULES:
 - Fill args from the command and known world.
 - say text contains only the spoken words.
 - ALWAYS complete the task end-to-end. If the robot gathers information (count, name, description, property) it MUST return to the instruction point and report the result with a say step. Never leave the result unreported.
+- If the plan is a single say step (e.g. answering a question), the text MUST be a direct factual answer using ONLY information from General knowledge above. Do not invent facts. The answer must be specific and complete — never vague or generic. If the answer cannot be found in the general knowledge, output a say step saying "I'm sorry, I don't have that information."
 - If the command involves bringing/fetching/delivering an object TO a person (including "me", "the operator", or a named person), the final step MUST be give_to_person, NOT place_object. place_object is only for placing objects at a location (e.g. on a table, in a room with no recipient person).
 
 Skills available for this command:
@@ -192,13 +193,13 @@ Command: bring me the pepsi | Skills: go_to_location, find_object, pick_up, give
 Plan: {{"plan_description": "fetch pepsi from cabinet and give to operator", "steps": [{{"skill": "go_to_location", "args": {{"location": "kitchen"}}}}, {{"skill": "go_to_location", "args": {{"location": "cabinet"}}}}, {{"skill": "find_object", "args": {{"object": "pepsi", "location": "cabinet"}}}}, {{"skill": "pick_up", "args": {{"object": "pepsi"}}}}, {{"skill": "go_to_location", "args": {{"location": "instruction point"}}}}, {{"skill": "give_to_person", "args": {{"person": "operator"}}}}]}}
 
 Command: count the apples in the office | Skills: go_to_location, count_objects, say | Known locations: bedroom, kitchen, living room, office
-Plan: {{"plan_description": "go to office, count apples, return and report", "steps": [{{"skill": "go_to_location", "args": {{"location": "office"}}}}, {{"skill": "count_objects", "args": {{"object": "apple", "location": "office"}}}}, {{"skill": "go_to_location", "args": {{"location": "instruction point"}}}}, {{"skill": "say", "args": {{"text": "I counted the apples in the office."}}}}]}}
+Plan: {{"plan_description": "go to office, count apples, return and report", "steps": [{{"skill": "go_to_location", "args": {{"location": "office"}}}}, {{"skill": "count_objects", "args": {{"object": "apple", "location": "office"}}}}, {{"skill": "go_to_location", "args": {{"location": "instruction point"}}}}, {{"skill": "say", "args": {{"text": "The number of apples in the office is [result]."}}}}]}}
 
 Command: how many people waving in the living room | Skills: go_to_location, count_people, say | Known locations: bedroom, kitchen, living room, office
-Plan: {{"plan_description": "go to living room, count waving people, return and report", "steps": [{{"skill": "go_to_location", "args": {{"location": "living room"}}}}, {{"skill": "count_people", "args": {{"gesture": "waving", "location": "living room"}}}}, {{"skill": "go_to_location", "args": {{"location": "instruction point"}}}}, {{"skill": "say", "args": {{"text": "I counted the waving people in the living room."}}}}]}}
+Plan: {{"plan_description": "go to living room, count waving people, return and report", "steps": [{{"skill": "go_to_location", "args": {{"location": "living room"}}}}, {{"skill": "count_people", "args": {{"gesture": "waving", "location": "living room"}}}}, {{"skill": "go_to_location", "args": {{"location": "instruction point"}}}}, {{"skill": "say", "args": {{"text": "The number of waving people in the living room is [result]."}}}}]}}
 
 Command: tell me the name of the person in the bedroom | Skills: go_to_location, get_person_info, say | Known locations: bedroom, kitchen, living room, office
-Plan: {{"plan_description": "go to bedroom, get person name, return and report", "steps": [{{"skill": "go_to_location", "args": {{"location": "bedroom"}}}}, {{"skill": "get_person_info", "args": {{"info": "name", "location": "bedroom"}}}}, {{"skill": "go_to_location", "args": {{"location": "instruction point"}}}}, {{"skill": "say", "args": {{"text": "The name of the person in the bedroom is unknown."}}}}]}}
+Plan: {{"plan_description": "go to bedroom, get person name, return and report", "steps": [{{"skill": "go_to_location", "args": {{"location": "bedroom"}}}}, {{"skill": "get_person_info", "args": {{"info": "name", "location": "bedroom"}}}}, {{"skill": "go_to_location", "args": {{"location": "instruction point"}}}}, {{"skill": "say", "args": {{"text": "The name of the person in the bedroom is [result]."}}}}]}}
 
 Command: bring the cola from the kitchen to the bedroom | Skills: go_to_location, find_object, pick_up, place_object | Known locations: bedroom, kitchen, living room, cabinet | Objects: cola (drink at cabinet in kitchen)
 Plan: {{"plan_description": "fetch cola from cabinet and bring to bedroom", "steps": [{{"skill": "go_to_location", "args": {{"location": "kitchen"}}}}, {{"skill": "go_to_location", "args": {{"location": "cabinet"}}}}, {{"skill": "find_object", "args": {{"object": "cola", "location": "cabinet"}}}}, {{"skill": "pick_up", "args": {{"object": "cola"}}}}, {{"skill": "go_to_location", "args": {{"location": "bedroom"}}}}, {{"skill": "place_object", "args": {{"location": "bedroom"}}}}]}}
@@ -225,7 +226,7 @@ Plan: """
 ANNOUNCE_PLAN_PROMPT = """You are a robot assistant.
 Turn the plan below into ONE spoken announcement listing every step in order.
 Start with "Here is my plan." then say Step 1, Step 2, ... Step N — one short phrase per step derived from the skill and args.
-Use only words that will be spoken aloud. No bullet points or JSON in the announcement.
+Use only words that will be spoken aloud. No bullet points or JSON in the announcement. The announcement should not execute the plan as provided in the examples.
 
 PERSPECTIVE RULE: The operator gives commands in first person ("bring it to me", "tell me", "show me").
 When describing what you will do, reframe these as second person: "bring it to you", "tell you", "show you".
@@ -263,6 +264,17 @@ Command: locate the standing person in the office
 Plan summary: go to office and find standing person
 Steps: [{{"skill": "go_to_location", "args": {{"location": "office"}}}}, {{"skill": "find_person", "args": {{"pose": "standing", "location": "office"}}}}]
 JSON: {{"announcement": "Here is my plan. Step 1: go to the office. Step 2: find the standing person."}}
+
+DO NOT SAY THE TEXT OF THE SKILL IN THE ANNOUNCMENT WITH THE ARGUMENT FOR EXAMPLES SUCH AS THE FOLLOWING!!
+Command: what is your teams affiliation
+Plan summary: answer question about team affiliation
+Steps: [{{"skill": "say", "args": {{"text": "My team is LASR, affiliated with King's College London."}}}}]
+JSON: {{"announcement": "I will tell you my team's affiliation."}}
+
+Command: what day is today
+Plan summary: answer question about today's date
+Steps: [{{"skill": "say", "args": {{"text": "Today is Thursday, 2nd July 2026."}}}}]
+JSON: {{"announcement": "I will tell you today's date."}}
 
 Command: {command}
 Plan summary: {plan_description}

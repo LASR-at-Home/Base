@@ -149,13 +149,29 @@ def load_people(node):
 
 
 def load_general_knowledge(node):
-    """Load general_knowledge.yaml → free-text string for the planner."""
+    """Load general_knowledge.yaml and append live date/time."""
+    import datetime
     path = _pkg_config(node, "general_knowledge.yaml")
     if not os.path.exists(path):
-        return ""
-    with open(path) as f:
-        data = yaml.safe_load(f) or {}
-    return data.get("info", "")
+        base = ""
+    else:
+        with open(path) as f:
+            data = yaml.safe_load(f) or {}
+        base = data.get("info", "")
+
+    now = datetime.datetime.now()
+    date_str = now.strftime("%-d %B %Y")
+    day_of_week = now.strftime("%A")
+    day_of_month = now.strftime("%-d")
+    time_str = now.strftime("%H:%M")
+    dynamic = (
+        f" The current date is {date_str}."
+        f" The day of the week is {day_of_week}."
+        f" The day of the month is {day_of_month}."
+        f" The current time is {time_str}."
+        f" Tomorrow is {(now + datetime.timedelta(days=1)).strftime('%A')}."
+    )
+    return base + dynamic
 
 
 def build_world(node) -> dict:

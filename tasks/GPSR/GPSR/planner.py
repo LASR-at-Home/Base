@@ -18,9 +18,16 @@ class SkillSelectorError(Exception):
 
 
 def _inject_sublocations(steps: list, objects: dict) -> list:
-    """Ensure find_object steps are preceded by go_to_location(room) then go_to_location(sub-location)."""
-    # Build object→sublocation lookup
-    obj_subloc = {name: obj.get("location") for name, obj in objects.items()}
+    """Ensure find_object steps (in fetch flows only) are preceded by room then sub-location nav."""
+    # Only applies when the plan actually picks up an object
+    if not any(s.get("skill") == "pick_up" for s in steps):
+        return steps
+
+    # Build lookup with both exact name and space-normalised name
+    obj_subloc = {}
+    for name, obj in objects.items():
+        obj_subloc[name] = obj.get("location")
+        obj_subloc[name.replace("_", " ")] = obj.get("location")
 
     result = []
     for step in steps:
@@ -29,15 +36,11 @@ def _inject_sublocations(steps: list, objects: dict) -> list:
             subloc = obj_subloc.get(obj_name)
             if subloc:
                 room = SUBLOCATION_ROOM.get(subloc)
-                # Check what the previous step navigated to
                 prev_loc = result[-1].get("args", {}).get("location") if result and result[-1].get("skill") == "go_to_location" else None
-                # Inject room nav if not already there
                 if room and prev_loc != room and prev_loc != subloc:
                     result.append({"skill": "go_to_location", "args": {"location": room}})
-                # Inject sub-location nav if not already there
                 if prev_loc != subloc:
                     result.append({"skill": "go_to_location", "args": {"location": subloc}})
-                # Update find_object args to use correct sub-location
                 step = {**step, "args": {**step.get("args", {}), "location": subloc}}
         result.append(step)
     return result
