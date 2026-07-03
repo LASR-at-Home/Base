@@ -12,6 +12,7 @@ from .look_to_point import LookToPoint
 
 from .play_motion import PlayMotion
 from .go_to_location import GoToLocation
+from .set_initial_pose import SetInitialPose
 from .rotate import Rotate
 from .continuous_go_to_location import ContinuousGoToLocation
 from .listen import Listen
