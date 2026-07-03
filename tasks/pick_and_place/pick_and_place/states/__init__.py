@@ -17,3 +17,4 @@ from .serve_breakfast import ServeBreakfast
 from .table_cleanup import TableCleanup
 from .extra_surface_cleanup import ExtraSurfaceCleanup
 from .detect_trash_floor import DetectFloorTrash
+from .scan_shelves_if_needed import ScanShelvesIfNeeded

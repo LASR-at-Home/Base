@@ -11,6 +11,8 @@ from pick_and_place.states.choose_shelf import ChooseShelf
 from pick_and_place.states.instruct_pick import InstructPick
 from pick_and_place.states.instruct_place import InstructPlace
 from pick_and_place.states.detect_trash_floor import DetectFloorTrash
+from pick_and_place.states.scan_shelves_if_needed import ScanShelvesIfNeeded
+
 
 class TableCleanup(yasmin.StateMachine):
     """
@@ -51,17 +53,17 @@ class TableCleanup(yasmin.StateMachine):
             GoToLocation(location_param="pick_and_place.table.pose"),
             transitions={
                 "succeeded": "DETECT_OBJECTS",
-                "failed":    "DETECT_OBJECTS",
+                "failed": "DETECT_OBJECTS",
             },
         )
 
         # Detect all objects on the table (done ONCE)
         self.add_state(
             "DETECT_OBJECTS",
-            DetectObjects(location_param="table", model="yolo11n-seg.pt"),
+            DetectObjects(location_param="table", model="best.pt"),
             transitions={
                 "succeeded": "SELECT_OBJECT",
-                "failed":    "DETECT_OBJECTS",
+                "failed": "DETECT_OBJECTS",
             },
         )
 
@@ -71,7 +73,17 @@ class TableCleanup(yasmin.StateMachine):
             SelectAndVisualiseObject(),
             transitions={
                 "succeeded": "CLASSIFY_CATEGORY",
-                "finished":  "SAY_CLEANUP_DONE",
+                "finished": "CLOSE_DISHWASHER_IF_OPENED",  # ← change from SAY_CLEANUP_DONE
+            },
+        )
+
+        # Close dishwasher if it was opened
+        self.add_state(
+            "CLOSE_DISHWASHER_IF_OPENED",
+            CloseDishwasherIfOpened(),
+            transitions={
+                "succeeded": "SAY_CLEANUP_DONE",
+                "skipped": "SAY_CLEANUP_DONE",
             },
         )
 
@@ -81,8 +93,8 @@ class TableCleanup(yasmin.StateMachine):
             ClassifyCategory(task="object"),
             transitions={
                 "succeeded": "DECIDE_DESTINATION",
-                "failed":    "DECIDE_DESTINATION",
-                "empty":     "SELECT_OBJECT",
+                "failed": "DECIDE_DESTINATION",
+                "empty": "SELECT_OBJECT",
             },
         )
 
@@ -92,7 +104,7 @@ class TableCleanup(yasmin.StateMachine):
             DecideDestination(),
             transitions={
                 "cabinet": "CHOOSE_SHELF",
-                "other":   "INSTRUCT_PICK",
+                "other": "INSTRUCT_PICK",
             },
         )
 
@@ -102,7 +114,7 @@ class TableCleanup(yasmin.StateMachine):
             ChooseShelf(),
             transitions={
                 "succeeded": "INSTRUCT_PICK",
-                "failed":    "INSTRUCT_PICK",
+                "failed": "INSTRUCT_PICK",
             },
         )
 
@@ -112,17 +124,37 @@ class TableCleanup(yasmin.StateMachine):
             InstructPick(),
             transitions={
                 "succeeded": "GO_TO_DESTINATION",
-                "failed":    "INSTRUCT_PICK",
+                "failed": "INSTRUCT_PICK",
             },
         )
 
-        # Navigate to the chosen destination (pose set by DecideDestination)
+        # Navigate to the chosen destination
         self.add_state(
             "GO_TO_DESTINATION",
             GoToLocation(),  # reads blackboard["location"]
             transitions={
+                "succeeded": "OPEN_DISHWASHER_IF_NEEDED",
+                "failed": "OPEN_DISHWASHER_IF_NEEDED",
+            },
+        )
+
+        # Open dishwasher on first dish visit
+        self.add_state(
+            "OPEN_DISHWASHER_IF_NEEDED",
+            OpenDishwasherIfNeeded(),
+            transitions={
+                "succeeded": "SCAN_SHELVES_IF_NEEDED",
+                "skipped": "SCAN_SHELVES_IF_NEEDED",
+            },
+        )
+
+        # Scan shelves on first cabinet visit
+        self.add_state(
+            "SCAN_SHELVES_IF_NEEDED",
+            ScanShelvesIfNeeded(),
+            transitions={
                 "succeeded": "INSTRUCT_PLACE",
-                "failed":    "INSTRUCT_PLACE",
+                "skipped": "INSTRUCT_PLACE",
             },
         )
 
@@ -132,7 +164,7 @@ class TableCleanup(yasmin.StateMachine):
             InstructPlace(),
             transitions={
                 "succeeded": "GO_TO_TABLE",
-                "failed":    "INSTRUCT_PLACE",
+                "failed": "INSTRUCT_PLACE",
             },
         )
 
@@ -142,7 +174,7 @@ class TableCleanup(yasmin.StateMachine):
             GoToLocation(location_param="pick_and_place.table.pose"),
             transitions={
                 "succeeded": "SELECT_OBJECT",
-                "failed":    "GO_TO_TABLE",
+                "failed": "GO_TO_TABLE",
             },
         )
 
@@ -151,12 +183,12 @@ class TableCleanup(yasmin.StateMachine):
             "SAY_CLEANUP_DONE",
             Say(
                 text="I have finished cleaning the table. "
-                     "Let me check the floor near the trash bin."
+                "Let me check the floor near the trash bin."
             ),
             transitions={
                 "succeeded": "GO_TO_TRASH_BIN_FLOOR",
-                "aborted":   "GO_TO_TRASH_BIN_FLOOR",
-                "canceled":  "GO_TO_TRASH_BIN_FLOOR",
+                "aborted": "GO_TO_TRASH_BIN_FLOOR",
+                "canceled": "GO_TO_TRASH_BIN_FLOOR",
             },
         )
 
@@ -165,7 +197,7 @@ class TableCleanup(yasmin.StateMachine):
             GoToLocation(location_param="pick_and_place.trash_bin.pose"),
             transitions={
                 "succeeded": "DETECT_FLOOR_TRASH",
-                "failed":    "DETECT_FLOOR_TRASH",
+                "failed": "DETECT_FLOOR_TRASH",
             },
         )
 
@@ -174,7 +206,7 @@ class TableCleanup(yasmin.StateMachine):
             DetectFloorTrash(),
             transitions={
                 "succeeded": "SET_FLOOR_TRASH_CONTEXT",
-                "failed":    "succeeded",   # nothing found, floor trash optional
+                "failed": "succeeded",  # nothing found, floor trash optional
             },
         )
 
@@ -183,7 +215,7 @@ class TableCleanup(yasmin.StateMachine):
             SelectAndVisualiseObject(),
             transitions={
                 "succeeded": "INSTRUCT_PICK_FLOOR",
-                "finished":  "succeeded",
+                "finished": "succeeded",
             },
         )
 
@@ -196,17 +228,18 @@ class TableCleanup(yasmin.StateMachine):
                     bb.__setitem__("destination_str", "the trash bin"),
                     bb.__setitem__("chosen_shelf", ""),
                     bb.__setitem__("chosen_shelf_str", ""),
-                ] and "succeeded",
+                ]
+                and "succeeded",
             ),
             transitions={"succeeded": "INSTRUCT_PICK_FLOOR"},
         )
-        
+
         self.add_state(
             "INSTRUCT_PICK_FLOOR",
             InstructPick(),
             transitions={
                 "succeeded": "INSTRUCT_PLACE_FLOOR",
-                "failed":    "INSTRUCT_PICK_FLOOR",
+                "failed": "INSTRUCT_PICK_FLOOR",
             },
         )
 
@@ -215,7 +248,40 @@ class TableCleanup(yasmin.StateMachine):
             Say(text="Please place it in the trash bin."),
             transitions={
                 "succeeded": "succeeded",
-                "aborted":   "succeeded",
-                "canceled":  "succeeded",
+                "aborted": "succeeded",
+                "canceled": "succeeded",
             },
         )
+
+
+class OpenDishwasherIfNeeded(yasmin.State):
+    """Says open dishwasher only on first dish item visit."""
+
+    def __init__(self):
+        super().__init__(outcomes=["succeeded", "skipped"])
+        self.add_input_key("destination")
+        self.add_input_key("dishwasher_opened")
+        self.add_output_key("dishwasher_opened")
+
+    def execute(self, blackboard) -> str:
+        if blackboard["destination"] != "dishwasher":
+            return "skipped"
+        if blackboard["dishwasher_opened"]:
+            return "skipped"
+        say = Say(text="Please open the dishwasher.")
+        say.execute(blackboard)
+        blackboard["dishwasher_opened"] = True
+        return "succeeded"
+
+
+class CloseDishwasherIfOpened(yasmin.State):
+    def __init__(self):
+        super().__init__(outcomes=["succeeded", "skipped"])
+        self.add_input_key("dishwasher_opened")
+
+    def execute(self, blackboard) -> str:
+        if not blackboard["dishwasher_opened"]:
+            return "skipped"
+        say = Say(text="Please close the dishwasher.")
+        say.execute(blackboard)
+        return "succeeded"

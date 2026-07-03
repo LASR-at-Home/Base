@@ -9,7 +9,7 @@ from shapely import Polygon as ShapelyPolygon
 
 from lasr_skills import DetectAllInPolygon
 from pick_and_place.states.classify_category import ClassifyCategory
-
+import time 
 
 class ScanShelves(yasmin.State):
     """
@@ -111,8 +111,9 @@ class ScanShelves(yasmin.State):
                 shelf_category = blackboard["shelf_category"]
 
             shelf_data[shelf_id] = {
-                "objects":  object_names,
-                "category": shelf_category,
+                "objects":         [],
+                "category":        "empty",
+                "category_counts": {},
             }
 
             yasmin.YASMIN_LOG_INFO(
@@ -147,10 +148,10 @@ class ScanShelves(yasmin.State):
             )
 
             polygon_points = [
-            self.node.get_parameter(f"{prefix}.polygon.top_left").value,
-            self.node.get_parameter(f"{prefix}.polygon.top_right").value,
-            self.node.get_parameter(f"{prefix}.polygon.bottom_right").value,
-            self.node.get_parameter(f"{prefix}.polygon.bottom_left").value,
+                self.node.get_parameter(f"{prefix}.polygon.top_left").value,
+                self.node.get_parameter(f"{prefix}.polygon.top_right").value,
+                self.node.get_parameter(f"{prefix}.polygon.bottom_right").value,
+                self.node.get_parameter(f"{prefix}.polygon.bottom_left").value,
             ]
             self._current_polygon = ShapelyPolygon(polygon_points)
 
@@ -194,14 +195,16 @@ class ScanShelves(yasmin.State):
                 polygon=self._current_polygon,
                 min_confidence=0.1,
                 # TODO: switch to robocup.pt or your competition model
-                model="yolo11n-seg.pt",
+                model="best.pt",
             )
+
+            time.sleep(2.0) 
 
             # DetectAllInPolygon needs these keys initialised
             blackboard["detected_objects"] = []
-            blackboard["debug_images"]     = []
+            blackboard["debug_images"] = []
 
-            outcome = detector.execute(blackboard)
+            outcome = detector(blackboard)
 
             if outcome == "failed":
                 yasmin.YASMIN_LOG_WARN(

@@ -45,7 +45,11 @@ class ServeBreakfast(yasmin.StateMachine):
         # Bowl
         self.add_state(
             "DETECT_BOWL",
-            DetectObjects(location_param="breakfast_surface", object_filter=["bowl"], model="yolo11n-seg.pt"),
+            DetectObjects(
+                location_param="breakfast_surface",
+                object_filter=["bowl"],
+                model="best.pt",
+            ),
             transitions={
                 "succeeded": "SELECT_BOWL",
                 "failed": "DETECT_BOWL",
@@ -74,7 +78,11 @@ class ServeBreakfast(yasmin.StateMachine):
         # Spoon
         self.add_state(
             "DETECT_SPOON",
-            DetectObjects(location_param="breakfast_surface", object_filter=["spoon"], model="yolo11n-seg.pt"),
+            DetectObjects(
+                location_param="breakfast_surface",
+                object_filter=["spoon"],
+                model="best.pt",
+            ),
             transitions={
                 "succeeded": "SELECT_SPOON",
                 "failed": "DETECT_SPOON",
@@ -141,7 +149,11 @@ class ServeBreakfast(yasmin.StateMachine):
         # Cereal
         self.add_state(
             "DETECT_CEREAL",
-            DetectObjects(location_param="cabinet", object_filter=["cereal"], model="yolo11n-seg.pt"),
+            DetectObjects(
+                location_param="cabinet",
+                object_filter=["cereal"],
+                model="best.pt",
+            ),
             transitions={
                 "succeeded": "SELECT_CEREAL",
                 "failed": "DETECT_CEREAL",
@@ -167,7 +179,9 @@ class ServeBreakfast(yasmin.StateMachine):
         # Milk
         self.add_state(
             "DETECT_MILK",
-            DetectObjects(location_param="cabinet", object_filter=["milk"], model="yolo11n-seg.pt"),
+            DetectObjects(
+                location_param="cabinet", object_filter=["milk"], model="best.pt"
+            ),
             transitions={
                 "succeeded": "SELECT_MILK",
                 "failed": "DETECT_MILK",

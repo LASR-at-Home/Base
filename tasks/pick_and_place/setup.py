@@ -30,6 +30,7 @@ setup(
             "test_serve_breakfast = pick_and_place.test_serve_breakfast:main",
             "point_head_stub = pick_and_place.point_head_stub:main",
             "detect_tuner = pick_and_place.detect_tuner:main",
+            "test_shelf_logic = pick_and_place.shelf:main",
         ],
     },
 )

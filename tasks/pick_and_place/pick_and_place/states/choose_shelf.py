@@ -1,6 +1,13 @@
 import yasmin
 import yasmin_ros
 
+SHELF_POSITION_NAMES = {
+    "extra_bottom": "first shelf from the bottom",
+    "bottom": "second shelf from the bottom",
+    "middle": "third shelf from the bottom",
+    "top": "fourth shelf from the bottom",
+}
+
 
 class ChooseShelf(yasmin.State):
     """
@@ -40,9 +47,9 @@ class ChooseShelf(yasmin.State):
         self.add_output_key("shelf_data")
 
     def execute(self, blackboard) -> str:
-        object_name     = blackboard["selected_object_name"]
+        object_name = blackboard["selected_object_name"]
         object_category = blackboard["object_category"]
-        shelf_data      = blackboard["shelf_data"]
+        shelf_data = blackboard["shelf_data"]
 
         yasmin.YASMIN_LOG_INFO(
             f"Choosing shelf for '{object_name}' (category: '{object_category}')."
@@ -50,18 +57,19 @@ class ChooseShelf(yasmin.State):
         yasmin.YASMIN_LOG_INFO(f"Current shelf data: {shelf_data}")
 
         if not shelf_data:
-            blackboard["chosen_shelf"]     = f"the {object_category} shelf"
-            blackboard["chosen_shelf_str"] = ""
+            blackboard["chosen_shelf"] = "second shelf from the bottom"
+            blackboard["chosen_shelf_str"] = (
+                f"near the {object_category} items if possible"
+            )
             yasmin.YASMIN_LOG_WARN(
-                f"No shelf data (scan skipped) — defaulting to "
-                f"the {object_category} shelf."
+                "No shelf data (scan skipped) — defaulting to second shelf from the bottom."
             )
             return "succeeded"
-        
-        chosen_shelf      = None
-        chosen_shelf_str  = ""
-        max_count         = -1
-        fallback_shelf    = None
+
+        chosen_shelf = None
+        chosen_shelf_str = ""
+        max_count = -1
+        fallback_shelf = None
         min_total_objects = float("inf")
 
         # ── Pass 1: find best matching shelf ─────────────────────────────────
@@ -78,7 +86,7 @@ class ChooseShelf(yasmin.State):
             # Priority 2: shelf with the most items of this category
             count = shelf_info.get("category_counts", {}).get(object_category, 0)
             if count > max_count:
-                max_count    = count
+                max_count = count
                 chosen_shelf = shelf_name
                 yasmin.YASMIN_LOG_INFO(
                     f"Best category count so far ({count}) on '{shelf_name}'."
@@ -88,7 +96,7 @@ class ChooseShelf(yasmin.State):
             total_objects = len(shelf_info.get("objects", []))
             if total_objects < min_total_objects:
                 min_total_objects = total_objects
-                fallback_shelf    = shelf_name
+                fallback_shelf = shelf_name
 
         # ── Pass 2: try an empty shelf ────────────────────────────────────────
         if chosen_shelf is None or max_count == 0:
@@ -111,14 +119,14 @@ class ChooseShelf(yasmin.State):
         if chosen_shelf:
             shelf_info = shelf_data[chosen_shelf]
 
-            was_empty                   = shelf_info["category"] == "empty"
+            was_empty = shelf_info["category"] == "empty"
             category_previously_present = object_category in shelf_info.get(
                 "category_counts", {}
             )
 
             shelf_info.setdefault("objects", []).append(object_name)
             shelf_info.setdefault("category_counts", {})[object_category] = (
-                shelf_info["category_counts"].get(object_category, 0) + 1
+            shelf_info.get("category_counts", {}).get(object_category, 0) + 1
             )
 
             new_dominant = max(
@@ -131,9 +139,14 @@ class ChooseShelf(yasmin.State):
             else:
                 chosen_shelf_str = ""
 
-            blackboard["chosen_shelf"]     = chosen_shelf
-            blackboard["chosen_shelf_str"] = chosen_shelf_str
-            blackboard["shelf_data"]       = shelf_data
+            # Convert internal shelf ID to human-readable position name
+            position_name = SHELF_POSITION_NAMES.get(chosen_shelf, chosen_shelf)
+
+            blackboard["chosen_shelf"] = (
+                position_name  # e.g. "second shelf from the bottom"
+            )
+            blackboard["chosen_shelf_str"] = chosen_shelf_str  # e.g. "near the drinks"
+            blackboard["shelf_data"] = shelf_data
 
             yasmin.YASMIN_LOG_INFO(
                 f"Chose shelf '{chosen_shelf}'. "

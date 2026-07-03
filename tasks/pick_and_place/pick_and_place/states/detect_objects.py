@@ -8,10 +8,10 @@ from ament_index_python.packages import get_package_share_directory
 from lasr_skills import DetectAllInPolygon
 
 _MODEL_PATH = os.path.join(
-    get_package_share_directory("lasr_vision_yolo"),
-    "models",
-    "best.pt"
+    get_package_share_directory("lasr_vision_yolo"), "models", "best.pt"
 )
+
+
 class DetectObjects(yasmin.State):
     """
     Looks at a configured surface and detects objects within its polygon
@@ -68,7 +68,7 @@ class DetectObjects(yasmin.State):
             ]
             self._polygon = ShapelyPolygon(polygon_points)
             yasmin.YASMIN_LOG_INFO(
-                f"Loaded polygon for '{location_param}': {coords}"
+                f"Loaded polygon for '{location_param}': {polygon_points}"
             )
         except Exception as e:
             yasmin.YASMIN_LOG_WARN(
@@ -134,9 +134,9 @@ class DetectObjects(yasmin.State):
             )
 
             blackboard["detected_objects"] = []
-            blackboard["debug_images"]     = []
+            blackboard["debug_images"] = []
 
-            outcome = detector.execute(blackboard)
+            outcome = detector(blackboard)
 
             if outcome == "failed":
                 yasmin.YASMIN_LOG_WARN("DetectAllInPolygon failed.")
@@ -148,10 +148,7 @@ class DetectObjects(yasmin.State):
                 yasmin.YASMIN_LOG_INFO("No objects detected.")
                 return "failed"
 
-            labels = [
-                f"{obj.name} ({obj.confidence:.2f})"
-                for obj in detected
-            ]
+            labels = [f"{obj.name} ({obj.confidence:.2f})" for obj in detected]
             yasmin.YASMIN_LOG_INFO(
                 f"Detected {len(detected)} object(s): {', '.join(labels)}"
             )

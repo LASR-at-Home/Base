@@ -42,8 +42,8 @@ class Start(yasmin.StateMachine):
             ),
             transitions={
                 "succeeded": "SAY_START",
-                "failed":    "WAIT_START",
-                "canceled":  "failed",
+                "failed": "WAIT_START",
+                "canceled": "failed",
             },
         )
 
@@ -53,8 +53,8 @@ class Start(yasmin.StateMachine):
             Say(text="Start of Pick and Place task."),
             transitions={
                 "succeeded": "WAIT_FOR_DOOR",
-                "aborted":   "WAIT_FOR_DOOR",
-                "canceled":    "WAIT_FOR_DOOR",
+                "aborted": "WAIT_FOR_DOOR",
+                "canceled": "WAIT_FOR_DOOR",
             },
         )
 
@@ -64,41 +64,38 @@ class Start(yasmin.StateMachine):
             StartDoorSM(),
             transitions={
                 "succeeded": "SAY_GOING_TO_TABLE",
-                "failed":      "WAIT_FOR_DOOR",
+                "failed": "SAY_GOING_TO_TABLE",  # FIX THIS ON THE REAL ROBOT
             },
         )
 
-        # 5. Announce navigation
+        # 5. Announce navigatGO_TO_TRASH_BIN_FLOORion
         self.add_state(
             "SAY_GOING_TO_TABLE",
             Say(text="I am going to the table."),
             transitions={
-                "succeeded": "GO_TO_TABLE",
-                "aborted":   "GO_TO_TABLE",
-                "canceled":    "GO_TO_TABLE",
+                "succeeded": "ASK_OPEN_CABINET",
+                "aborted": "ASK_OPEN_CABINET",
+                "canceled": "ASK_OPEN_CABINET",
             },
         )
 
-        # 6. Navigate to table
+        # # 6. Navigate to table
         self.add_state(
             "GO_TO_TABLE",
-            GoToLocation(location_param="pick_and_place.table.observe_pose"),
+            GoToLocation(location_param="pick_and_place.table.pose"),
             transitions={
                 "succeeded": "ASK_OPEN_CABINET",
-                "failed":    "ASK_OPEN_CABINET",
+                "failed": "ASK_OPEN_CABINET",
             },
         )
 
         # 7. Ask referee to open cabinet
         self.add_state(
             "ASK_OPEN_CABINET",
-            Say(
-                text=""
-            ),
+            Say(text=""),
             transitions={
                 "succeeded": "succeeded",
-                "aborted":   "succeeded",
+                "aborted": "succeeded",
                 "canceled": "succeeded",
-
             },
         )

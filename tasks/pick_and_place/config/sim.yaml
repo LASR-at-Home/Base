@@ -1,0 +1,185 @@
+pick_and_place:
+  ros__parameters:
+    pick_and_place:
+
+      # Category the referee designates as trash.
+      trash_category: "fruit"
+
+      # DINING TABLE
+      table:
+        # Where the robot stands to pick objects from the table yes
+        pose:
+          position: {x: 2.0604363441467285, y: -3.2225301551818848, z: 0.0}
+          orientation: {x: 0.0, y: 0.0, z: -0.951549, w: 0.307496}
+
+        # Detection polygon — rectangle around the table top in map frame yes
+        polygon:
+          top_left:     [1.6, -2.8]
+          top_right:    [2.5, -2.8]
+          bottom_right: [2.5, -3.7]
+          bottom_left:  [1.6, -3.7]
+        # Z height range for detection filtering
+        z_min: 0.7
+        z_max: 1.5
+
+        # MoveIt collision box for the table
+        collision:
+          detect: true
+          frame_id: map
+          size: [1.02, 1.2, 0.9]
+          position: [1.2, -3.9, 0.37]
+
+      # DESTINATION 1: dishwasher yes
+      dishwasher:
+        pose:
+          position: {x: 5.870972633361816, y: -3.6086063385009766, z: 0.0}
+          orientation: {x: 0.0, y: 0.0, z: -0.46432, w: 0.885668}
+
+      # DESTINATION 2: trash bin yes
+      trash_bin:
+        pose:
+          position: {x: 1.288726806640625, y: 1.04266834259033203, z: 0.0}
+          orientation: {x: 0.0, y: 0.0, z: -0.46432, w: 0.885668}
+
+      # DESTINATION 3: cabinet yes
+      cabinet:
+        pose:
+          position: {x: -4.844698905944824, y: 1.6842019081115723, z: 0.0}
+          orientation: {x: 0.0, y: 0.0, z: -0.951549, w: 0.307496}
+
+        # Detection polygon for cereal/milk detection inside cabinet (from real)
+        polygon:
+          top_left:     [-6.120231628417969, 1.5627683401107788]
+          top_right:    [-6.419377326965332, 2.451091766357422]
+          bottom_right: [-6.020194053649902, 2.8703858852386475]
+          bottom_left:  [-5.440605163574219, 1.8351893424987793]
+
+        # Shelves — used by ScanShelves also from real
+        shelf_order: ["top", "middle", "bottom", "extra_bottom"]
+        shelves:
+          top:
+            torso_lift_joint: 0.30
+            look_point: [-10.44567584991455, 21.501087188720703, 1.1333880424499519]
+            polygon:
+              top_left:     [-6.120231628417969, 1.5627683401107788]
+              top_right:    [-6.419377326965332, 2.451091766357422]
+              bottom_right: [-6.020194053649902, 2.8703858852386475]
+              bottom_left:  [-5.440605163574219, 1.8351893424987793]
+            z_min: 1.05
+            z_max: 1.40
+
+          middle:
+            torso_lift_joint: 0.15
+            look_point: [-10.44567584991455, 21.501087188720703, 0.72]
+            polygon:
+              top_left:     [-6.120231628417969, 1.5627683401107788]
+              top_right:    [-6.419377326965332, 2.451091766357422]
+              bottom_right: [-6.020194053649902, 2.8703858852386475]
+              bottom_left:  [-5.440605163574219, 1.8351893424987793]
+            z_min: 0.60
+            z_max: 0.95
+
+          bottom:
+            torso_lift_joint: 0.0
+            look_point: [-10.44567584991455, 21.501087188720703, 0.38]
+            polygon:
+              top_left:     [-6.120231628417969, 1.5627683401107788]
+              top_right:    [-6.419377326965332, 2.451091766357422]
+              bottom_right: [-6.020194053649902, 2.8703858852386475]
+              bottom_left:  [-5.440605163574219, 1.8351893424987793]
+            z_min: 0.25
+            z_max: 0.60
+
+          extra_bottom:
+            torso_lift_joint: 0.0
+            look_point: [-10.44567584991455, 21.501087188720703, 0.12]
+            polygon:
+              top_left:     [-6.120231628417969, 1.5627683401107788]
+              top_right:    [-6.419377326965332, 2.451091766357422]
+              bottom_right: [-6.020194053649902, 2.8703858852386475]
+              bottom_left:  [-5.440605163574219, 1.8351893424987793]
+            z_min: 0.0
+            z_max: 0.25
+
+      # BREAKFAST SURFACE (bowl and spoon pickup location)
+      breakfast_surface:
+        pose:
+          position: {x: 3.5734567642211914, y: 0.6986422538757324, z: 0.0}
+          orientation: {x: 0.0, y: 0.0, z: 0.840512, w: 0.541793}
+        # update with real coordinates
+        polygon:
+          top_left:     [1.103219985961914, 2.7031068801879883]
+          top_right:    [2.8933119773864746, 3.8241472244262695]
+          bottom_right: [4.074957847595215, 1.7860803604125977]
+          bottom_left:  [2.7978620529174805, 0.6587891578674316]
+
+      # EXTRA SURFACE (two common objects for cleanup)
+      extra_surface:
+        pose:
+          position: {x: 3.5734567642211914, y: 0.6986422538757324, z: 0.0}
+          orientation: {x: 0.0, y: 0.0, z: 0.840512, w: 0.541793}
+        # update with real coordinates
+        polygon:
+          top_left:     [4.103219985961914, 1.7031068801879883]
+          top_right:    [5.8933119773864746, 0.8241472244262695]
+          bottom_right: [4.074957847595215, 1.7860803604125977]
+          bottom_left:  [3.7978620529174805, 0.6587891578674316]
+
+      # GRASP (not used without manipulation)
+      grasp:
+        enable: false
+        reach: 0.80
+        use_moveit: false
+        publish_box: false
+
+      objects:
+        cup:
+          category: "dish"
+        coke:
+          category: "drink"
+        bowl:
+          category: "dish"
+        apple:
+          category: "fruit"
+        fork:
+          category: "dish"
+        knife:
+          category: "dish"
+        spoon:
+          category: "dish"
+        plate:
+          category: "dish"
+        cornflakes:
+          category: "food"
+        instant_noodles:
+          category: "food"
+        milk:
+          category: "drink"
+        pepsi:
+          category: "drink"
+        rubiks_cube:
+          category: "toys"
+        dishwasher_tab:
+          category: "cleaning_supplies"
+        toothpaste:
+          category: "cleaning_supplies"
+        sponge:
+          category: "sponge"
+        red_bull:
+          category: "drink"
+        soju:
+          category: "drink" 
+        peach:
+          category: "fruit"
+        red_bellpepper:
+          category: "fruit"
+        yellow_bellpepper:
+          category: "fruit"
+        lemon:
+          category: "fruit"
+        mangostane:
+          category: "fruit"
+        seaweed:
+          category: "snack"
+        pringles:
+          category: "snack"

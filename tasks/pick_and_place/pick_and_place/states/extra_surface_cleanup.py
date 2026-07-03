@@ -42,8 +42,8 @@ class ExtraSurfaceCleanup(yasmin.StateMachine):
             Say(text="I am now going to check the extra surface."),
             transitions={
                 "succeeded": "GO_TO_EXTRA_SURFACE",
-                "aborted":   "GO_TO_EXTRA_SURFACE",
-                "canceled":  "GO_TO_EXTRA_SURFACE",
+                "aborted": "GO_TO_EXTRA_SURFACE",
+                "canceled": "GO_TO_EXTRA_SURFACE",
             },
         )
 
@@ -52,17 +52,17 @@ class ExtraSurfaceCleanup(yasmin.StateMachine):
             GoToLocation(location_param="pick_and_place.extra_surface.pose"),
             transitions={
                 "succeeded": "DETECT_OBJECTS",
-                "failed":    "DETECT_OBJECTS",
+                "failed": "DETECT_OBJECTS",
             },
         )
 
         # Detect both objects on the extra surface
         self.add_state(
             "DETECT_OBJECTS",
-            DetectObjects(location_param="extra_surface", model="yolo11n-seg.pt"),
+            DetectObjects(location_param="extra_surface", model="best.pt"),
             transitions={
                 "succeeded": "SELECT_OBJECT",
-                "failed":    "DETECT_OBJECTS",
+                "failed": "DETECT_OBJECTS",
             },
         )
 
@@ -72,7 +72,7 @@ class ExtraSurfaceCleanup(yasmin.StateMachine):
             SelectAndVisualiseObject(),
             transitions={
                 "succeeded": "CLASSIFY_CATEGORY",
-                "finished":  "succeeded",   # both objects processed
+                "finished": "succeeded",  # both objects processed
             },
         )
 
@@ -82,8 +82,8 @@ class ExtraSurfaceCleanup(yasmin.StateMachine):
             ClassifyCategory(task="object"),
             transitions={
                 "succeeded": "CHOOSE_SHELF",
-                "failed":    "CHOOSE_SHELF",   # proceed with unknown category
-                "empty":     "SELECT_OBJECT",  # nothing to classify, next object
+                "failed": "CHOOSE_SHELF",  # proceed with unknown category
+                "empty": "SELECT_OBJECT",  # nothing to classify, next object
             },
         )
 
@@ -93,7 +93,7 @@ class ExtraSurfaceCleanup(yasmin.StateMachine):
             ChooseShelf(),
             transitions={
                 "succeeded": "INSTRUCT_PICK",
-                "failed":    "INSTRUCT_PICK",  # announce anyway
+                "failed": "INSTRUCT_PICK",  # announce anyway
             },
         )
 
@@ -103,7 +103,7 @@ class ExtraSurfaceCleanup(yasmin.StateMachine):
             InstructPick(),
             transitions={
                 "succeeded": "GO_TO_CABINET",
-                "failed":    "INSTRUCT_PICK",
+                "failed": "INSTRUCT_PICK",
             },
         )
 
@@ -113,7 +113,7 @@ class ExtraSurfaceCleanup(yasmin.StateMachine):
             GoToLocation(location_param="pick_and_place.cabinet.pose"),
             transitions={
                 "succeeded": "INSTRUCT_PLACE",
-                "failed":    "INSTRUCT_PLACE",  # announce even if nav failed
+                "failed": "INSTRUCT_PLACE",  # announce even if nav failed
             },
         )
 
@@ -123,7 +123,7 @@ class ExtraSurfaceCleanup(yasmin.StateMachine):
             InstructPlace(),
             transitions={
                 "succeeded": "GO_TO_EXTRA_SURFACE_LOOP",
-                "failed":    "INSTRUCT_PLACE",
+                "failed": "INSTRUCT_PLACE",
             },
         )
 
@@ -132,7 +132,7 @@ class ExtraSurfaceCleanup(yasmin.StateMachine):
             "GO_TO_EXTRA_SURFACE_LOOP",
             GoToLocation(location_param="pick_and_place.extra_surface.pose"),
             transitions={
-                "succeeded": "SELECT_OBJECT",        # loop back for next object
-                "failed":    "GO_TO_EXTRA_SURFACE_LOOP",
+                "succeeded": "SELECT_OBJECT",  # loop back for next object
+                "failed": "GO_TO_EXTRA_SURFACE_LOOP",
             },
         )

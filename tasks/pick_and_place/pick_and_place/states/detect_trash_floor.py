@@ -38,13 +38,13 @@ class DetectFloorTrash(yasmin.State):
         detected_objects : List[Detection3D]
     """
 
-    FLOOR_Z_MAX        = 0.3   # anything below this height counts as floor-level
-    SWEEP_RADIUS       = 0.6   # metres around the trash bin to look at
-    SWEEP_POINTS_COUNT = 4     # how many points around the bin to check
+    FLOOR_Z_MAX = 0.3  # anything below this height counts as floor-level
+    SWEEP_RADIUS = 0.6  # metres around the trash bin to look at
+    SWEEP_POINTS_COUNT = 4  # how many points around the bin to check
 
-    RGB_TOPIC   = "/head_front_camera/rgb/image_raw"
+    RGB_TOPIC = "/head_front_camera/rgb/image_raw"
     DEPTH_TOPIC = "/head_front_camera/depth/image_raw"
-    INFO_TOPIC  = "/head_front_camera/rgb/camera_info"
+    INFO_TOPIC = "/head_front_camera/rgb/camera_info"
 
     def __init__(self):
         super().__init__(outcomes=["succeeded", "failed"])
@@ -54,10 +54,12 @@ class DetectFloorTrash(yasmin.State):
 
         # ── Object query list from nested config dict ──────────────────────────
         try:
-            objects_params = self.node.get_parameters_by_prefix("pick_and_place.objects")
-            self._queries = list(set(
-                key.split(".")[0] for key in objects_params.keys()
-            ))
+            objects_params = self.node.get_parameters_by_prefix(
+                "pick_and_place.objects"
+            )
+            self._queries = list(
+                set(key.split(".")[0] for key in objects_params.keys())
+            )
             if not self._queries:
                 raise ValueError("Empty object list")
         except Exception:
@@ -87,9 +89,15 @@ class DetectFloorTrash(yasmin.State):
             history=HistoryPolicy.KEEP_LAST,
         )
 
-        img_sub   = message_filters.Subscriber(self.node, Image, self.RGB_TOPIC, qos_profile=cam_qos)
-        depth_sub = message_filters.Subscriber(self.node, Image, self.DEPTH_TOPIC, qos_profile=cam_qos)
-        info_sub  = message_filters.Subscriber(self.node, CameraInfo, self.INFO_TOPIC, qos_profile=cam_qos)
+        img_sub = message_filters.Subscriber(
+            self.node, Image, self.RGB_TOPIC, qos_profile=cam_qos
+        )
+        depth_sub = message_filters.Subscriber(
+            self.node, Image, self.DEPTH_TOPIC, qos_profile=cam_qos
+        )
+        info_sub = message_filters.Subscriber(
+            self.node, CameraInfo, self.INFO_TOPIC, qos_profile=cam_qos
+        )
 
         self._info_cache = message_filters.Cache(info_sub, 10)
         self._ts = message_filters.ApproximateTimeSynchronizer(
@@ -165,12 +173,12 @@ class DetectFloorTrash(yasmin.State):
             return []
 
         req = YoloDetection3D.Request()
-        req.image_raw    = rgb
-        req.depth_image  = depth
-        req.camera_info  = info
-        req.dataset      = "robocup.pt"  # TODO: update to your trained model name
-        req.confidence   = 0.25
-        req.nms          = 0.3
+        req.image_raw = rgb
+        req.depth_image = depth
+        req.depth_camera_info = info
+        req.model = "best.pt"  # TODO: update to your trained model name
+        req.confidence = 0.25
+        req.nms = 0.3
 
         resp = self._wait_future(self._yolo.call_async(req), timeout=15.0)
         if resp is None:
@@ -178,8 +186,7 @@ class DetectFloorTrash(yasmin.State):
 
         # Filter to floor-level objects only via z-height
         floor_objects = [
-            d for d in resp.detected_objects
-            if d.point.z < self.FLOOR_Z_MAX
+            d for d in resp.detected_objects if d.point.z < self.FLOOR_Z_MAX
         ]
         return floor_objects
 

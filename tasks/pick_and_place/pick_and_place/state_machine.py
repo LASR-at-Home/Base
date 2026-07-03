@@ -47,7 +47,7 @@ class PickAndPlace(yasmin.StateMachine):
             Start(),
             transitions={
                 "succeeded": "SAY_STARTING_CLEANUP",
-                "failed":    "failed",
+                "failed": "failed",
             },
         )
 
@@ -57,8 +57,8 @@ class PickAndPlace(yasmin.StateMachine):
             Say(text="I will now clean up the dining table."),
             transitions={
                 "succeeded": "TABLE_CLEANUP",
-                "aborted":   "TABLE_CLEANUP",
-                "canceled":  "TABLE_CLEANUP",
+                "aborted": "TABLE_CLEANUP",
+                "canceled": "TABLE_CLEANUP",
             },
         )
 
@@ -67,7 +67,7 @@ class PickAndPlace(yasmin.StateMachine):
             TableCleanup(),
             transitions={
                 "succeeded": "SAY_STARTING_BREAKFAST",
-                "failed":    "SAY_STARTING_BREAKFAST",  # continue regardless
+                "failed": "SAY_STARTING_BREAKFAST",  # continue regardless
             },
         )
 
@@ -77,8 +77,8 @@ class PickAndPlace(yasmin.StateMachine):
             Say(text="I will now set up breakfast."),
             transitions={
                 "succeeded": "SERVE_BREAKFAST",
-                "aborted":   "SERVE_BREAKFAST",
-                "canceled":  "SERVE_BREAKFAST",
+                "aborted": "SERVE_BREAKFAST",
+                "canceled": "SERVE_BREAKFAST",
             },
         )
 
@@ -87,7 +87,7 @@ class PickAndPlace(yasmin.StateMachine):
             ServeBreakfast(),
             transitions={
                 "succeeded": "SAY_STARTING_EXTRA_SURFACE",
-                "failed":    "SAY_STARTING_EXTRA_SURFACE",
+                "failed": "SAY_STARTING_EXTRA_SURFACE",
             },
         )
 
@@ -97,8 +97,8 @@ class PickAndPlace(yasmin.StateMachine):
             Say(text="I will now check the extra surface."),
             transitions={
                 "succeeded": "EXTRA_SURFACE_CLEANUP",
-                "aborted":   "EXTRA_SURFACE_CLEANUP",
-                "canceled":  "EXTRA_SURFACE_CLEANUP",
+                "aborted": "EXTRA_SURFACE_CLEANUP",
+                "canceled": "EXTRA_SURFACE_CLEANUP",
             },
         )
 
@@ -107,7 +107,7 @@ class PickAndPlace(yasmin.StateMachine):
             ExtraSurfaceCleanup(),
             transitions={
                 "succeeded": "SAY_TASK_COMPLETE",
-                "failed":    "SAY_TASK_COMPLETE",
+                "failed": "SAY_TASK_COMPLETE",
             },
         )
 
@@ -116,12 +116,12 @@ class PickAndPlace(yasmin.StateMachine):
             "SAY_TASK_COMPLETE",
             Say(
                 text="I have completed the pick and place task. "
-                     "The table is clean and breakfast is ready."
+                "The table is clean and breakfast is ready."
             ),
             transitions={
                 "succeeded": "succeeded",
-                "aborted":   "succeeded",
-                "canceled":  "succeeded",
+                "aborted": "succeeded",
+                "canceled": "succeeded",
             },
         )
 
@@ -153,20 +153,21 @@ def main():
     bb = yasmin.Blackboard()
 
     # Initialise all blackboard keys used across the machine
-    bb["detected_objects"]     = []
-    bb["selected_object"]      = None
+    bb["detected_objects"] = []
+    bb["selected_object"] = None
     bb["selected_object_name"] = ""
-    bb["object_name"]          = ""
-    bb["object_category"]      = ""
-    bb["shelf_data"]           = {}
-    bb["chosen_shelf"]         = ""
-    bb["chosen_shelf_str"]     = ""
-    bb["destination"]          = ""
-    bb["destination_str"]      = ""
-    bb["location"]             = None
-    bb["table_pose"]           = None
-    bb["debug_images"]         = []
-    bb["last_rgb_image"]       = None
+    bb["object_name"] = ""
+    bb["object_category"] = ""
+    bb["shelf_data"] = {}
+    bb["chosen_shelf"] = ""
+    bb["chosen_shelf_str"] = ""
+    bb["destination"] = ""
+    bb["destination_str"] = ""
+    bb["location"] = None
+    bb["table_pose"] = None
+    bb["debug_images"] = []
+    bb["last_rgb_image"] = None
+    bb["dishwasher_opened"] = False
 
     def shutdown(sig=None, frame=None):
         yasmin.YASMIN_LOG_INFO("Shutting down Pick and Place...")
