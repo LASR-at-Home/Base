@@ -1,48 +1,29 @@
 """Local LLM + cloud LLM dispatch."""
 
-import asyncio
-import json
 import time
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from typing import Callable, Optional
 
-import ollama
+from openai import OpenAI
 
 from GPSR.planner import run_planner, run_announce
 
 
-def _cloud_query(
-    prompt: str,
-    system_prompt: str,
-    host: str,
-    port: int,
-    timeout_sec: float = 10.0,
-) -> str:
-    async def _go():
-        reader, writer = await asyncio.wait_for(
-            asyncio.open_connection(host, port),
-            timeout=timeout_sec,
-        )
-        try:
-            msg = {"type": "query", "prompt": prompt}
-            if system_prompt:
-                msg["system_prompt"] = system_prompt
-            writer.write((json.dumps(msg) + "\n").encode())
-            await writer.drain()
-            while True:
-                line = await asyncio.wait_for(reader.readline(), timeout=timeout_sec)
-                if not line:
-                    raise ConnectionError("server closed connection")
-                resp = json.loads(line.decode().strip())
-                if resp.get("type") == "answer":
-                    return resp["text"]
-                if resp.get("type") == "error":
-                    raise RuntimeError(resp.get("text", "cloud error"))
-        finally:
-            writer.close()
-            await writer.wait_closed()
+def _normalize_url(host: str, port: int | None = None) -> str:
+    host = (host or "").strip()
+    if not host:
+        return ""
+    if host.startswith("http://") or host.startswith("https://"):
+        return host
+    if ":" in host and host.count(":") == 1:
+        return f"http://{host}"
+    if port is None:
+        return f"http://{host}"
+    return f"http://{host.rstrip('/')}:{port}"
 
-    return asyncio.run(_go())
+
+def _make_client(base_url: str, timeout_sec: float = 300.0) -> OpenAI:
+    return OpenAI(base_url=base_url, timeout=timeout_sec)
 
 
 class Agent:
@@ -58,12 +39,17 @@ class Agent:
     ):
         self._model = model
         self._host = host
-        self._system_prompt = system_prompt
         self._cloud_host = cloud_host.strip()
         self._cloud_port = cloud_port
+        self._local_url = _normalize_url(host)
+        self._cloud_url = _normalize_url(cloud_host, cloud_port)
+        self._system_prompt = system_prompt
         self._cloud_timeout = cloud_timeout_sec
         self._use_cloud = use_cloud
-        self._client = None if use_cloud else ollama.Client(host=host, timeout=300.0)
+        self._client = _make_client(
+            self._cloud_url if use_cloud else self._local_url,
+            timeout_sec=300.0,
+        )
 
     @property
     def cloud_enabled(self) -> bool:
@@ -79,22 +65,24 @@ class Agent:
             cloud_timeout_sec=node.get_parameter("cloud_timeout_sec").value,
         )
         if log:
-            cloud = "off" if not agent.cloud_enabled else agent._cloud_host
+            cloud = "off" if not agent.cloud_enabled else agent._cloud_url
             log(f"Agent ready | local={agent._model} | cloud={cloud}")
         return agent
 
     def query_json(self, prompt: str, system_prompt: Optional[str] = None) -> str:
         sp = system_prompt or self._system_prompt or ""
-        if self._use_cloud:
-            return _cloud_query(
-                prompt, sp, self._cloud_host, self._cloud_port, self._cloud_timeout
-            )
-        response = self._client.chat(
+        messages = []
+        if sp:
+            messages.append({"role": "system", "content": sp})
+        messages.append({"role": "user", "content": prompt})
+
+        response = self._client.chat.completions.create(
             model=self._model,
-            messages=[{"role": "user", "content": prompt}],
-            format="json",
+            messages=messages,
         )
-        return response["message"]["content"]
+        choice = response.choices[0]
+        message = getattr(choice, "message", None) or choice["message"]
+        return (message.content or message["content"]).strip()
 
     def _clone(self, use_cloud: bool) -> "Agent":
         return Agent(
