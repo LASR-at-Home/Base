@@ -39,7 +39,6 @@ class Introduce(yasmin.StateMachine):
 
     Blackboard keys required before calling sm():
         - guest_data: Dict of all guests keyed by id
-        - guest_seat_point: PointStamped of the incoming guest's seat
         - seated_guest_locs: List of Point locations of all seated guests
         - person_index: Set to 0 before calling sm()
     """
@@ -47,7 +46,6 @@ class Introduce(yasmin.StateMachine):
     def __init__(self):
         super().__init__(outcomes=["succeeded", "failed"])
         self.add_input_key("guest_data")
-        self.add_input_key("guest_seat_point")
         
         self._node = yasmin_ros.logger_node
         self.flag = True
@@ -67,21 +65,26 @@ class Introduce(yasmin.StateMachine):
         )
         loop_state.add_input_key("person_index")
         loop_state.add_input_key("guest_data")
+        loop_state.add_input_key("introduce_detections")
         loop_state.add_output_key("person_index")
-        loop_state.add_output_key("person_point")
+        loop_state.add_output_key("person_point_stamped")
 
         guest_loop = yasmin.CbState(
             outcomes=["succeeded", "continue"], callback=self._loop_guest
         )
         guest_loop.add_input_key("guest_data")
         guest_loop.add_output_key("guest_data")
+        guest_loop.add_output_key("guest_point_stamped")
+        guest_loop.add_output_key("introduce_to")
+        guest_loop.add_output_key("relevant_guest_data")
         
         fallback_loop = yasmin.CbState(
             outcomes=['succeeded', 'continue'], callback=self._loop_str
         )
         
         fallback_loop.add_input_key('guest_data')
-        fallback_loop.add_output_key('guest_data')
+        fallback_loop.add_output_key('introduce_to')
+        fallback_loop.add_output_key('relevant_guest_data')
 
         self.add_state(
             "RESET_SEATING_DETECTIONS",
@@ -137,7 +140,7 @@ class Introduce(yasmin.StateMachine):
             Recognise(),
             transitions={
                 "succeeded": "RESET_HEAD_1",
-                "aborted": "failed",
+                "aborted": "RESET_HEAD_1",
                 "no_detections": "RESET_HEAD_1",
             },
         )

@@ -51,17 +51,13 @@ class ProcessDetections(State):
         left_sofa_area: ShapelyPolygon,
         middle_sofa_area: ShapelyPolygon,
         right_sofa_area: ShapelyPolygon,
-        id
     ):
         super().__init__(outcomes=["succeeded", "failed"])
 
         self._node = yasmin_ros.logger_node
 
-        self.add_input_key("non_sofa_detections")
-        self.add_input_key("sofa_detections")
+        self.add_input_key("people_detections")
 
-        self.add_output_key("guest_seat_point")
-        self.add_output_key("guest2_seat")
         self.add_output_key("seating_string")
 
 
@@ -71,65 +67,65 @@ class ProcessDetections(State):
         self._left_sofa_area = left_sofa_area
         self._middle_sofa_area = middle_sofa_area
         self._right_sofa_area = right_sofa_area
-        self.guest_id = id
         self._tf_buffer = tf.Buffer(cache_time=Duration(seconds=10.0))
         self._tf_listener = tf.TransformListener(self._tf_buffer, self._node)
 
     def execute(self, blackboard):
         """
         Input:
-            blackboard["non_sofa_detections"] (List[Detection3D]): List of detected objects that are not on the sofa
-            blackboard["sofa_detections"] (List[Detection3D]): List of detected objects on the sofa
+            blackboard["people_detections"] (List[Detection3D]): List of detected people on the sofa
         """
         
         left_sofa_occupied = False
         middle_sofa_occupied = False
         right_sofa_occupied = False
+        free_seat_point = None
 
         for detection in blackboard["people_detections"]:
             detection_point = ShapelyPoint(
-                detection.point.x, detection.point.y, detection.point.z
+                detection.point.x, detection.point.y
             )
-            if self._left_sofa_area.contains(detection_point):
+            if self._left_sofa_area.covers(detection_point):
                 left_sofa_occupied = True
-            elif self._middle_sofa_area.contains(detection_point):
+            elif self._middle_sofa_area.covers(detection_point):
                 middle_sofa_occupied = True
-            elif self._right_sofa_area.contains(detection_point):
+            elif self._right_sofa_area.covers(detection_point):
                 right_sofa_occupied = True
                 
         blackboard['people_det'] = blackboard['people_detections']
                 
         if not left_sofa_occupied and not right_sofa_occupied and not middle_sofa_occupied:
             blackboard["seating_string"] = (
-                "The sofa that I'm looking at is empty. Please take a seat anywhere on the sofa."
+                "The sofa that I'm looking at is empty. Please take a seat in the middle of the sofa."
             )
         elif not left_sofa_occupied and not right_sofa_occupied and middle_sofa_occupied:
             blackboard["seating_string"] = (
-                'The sofa is currently occupied by one person. Please take a seat in the left side or right side of the sofa.'
+                'The sofa is currently occupied by one person. Please take a seat on the left side of the sofa.'
             )
         elif not left_sofa_occupied and not middle_sofa_occupied and right_sofa_occupied:
             blackboard["seating_string"] = (
-                'The sofa is currently occupied by one person. Please take a seat in the middle or left side of the sofa.'
+                'The sofa is currently occupied by one person. Please take a seat in the middle of the sofa.'
             )
         elif not right_sofa_occupied and not middle_sofa_occupied and left_sofa_occupied:
             blackboard["seating_string"] = (
-                'The sofa is currently occupied by one person. Please take a seat in the middle or right side of the sofa.'
+                'The sofa is currently occupied by one person. Please take a seat in the middle of the sofa.'
             )
         elif not left_sofa_occupied and right_sofa_occupied and middle_sofa_occupied:
             blackboard["seating_string"] = (
                 'The sofa is currently occupied by two people. Please take a seat on the left side of the sofa.'
             )
-            blackboard['guest2_seat'] = self.left_sofa_point
         elif not right_sofa_occupied and left_sofa_occupied and middle_sofa_occupied:
             blackboard["seating_string"] = (
                 'The sofa is currently occupied by two people. Please take a seat on the right side of the sofa.'
             )
-            blackboard['guest2_seat'] = self.right_sofa_point
         elif not middle_sofa_occupied and left_sofa_occupied and right_sofa_occupied:
             blackboard["seating_string"] = (
                 'The sofa is currently occupied by two people. Please take a seat in the middle of the sofa.'
             )
-            blackboard['guest2_seat'] = self.middle_sofa_point
+        else:
+            blackboard["seating_string"] = (
+                "The sofa that I'm looking at appears to be full. I cannot find a free seat."
+            )
 
         return "succeeded"
 
@@ -203,7 +199,6 @@ class SeatGuest(StateMachine):
                 left_sofa_area=self.left_sofa_area,
                 middle_sofa_area=self.middle_sofa_area,
                 right_sofa_area=self.right_sofa_area,
-                id=self.guest_id
             ),
             transitions={"succeeded": "SAY_SEAT_GUEST", "failed": "failed"},
         )
@@ -261,29 +256,31 @@ class SeatGuest(StateMachine):
             ),
         }
         
-        dist_top = sofa_area['top_right'] + sofa_area['top_left']
-        dist_bot = sofa_area['bottom_right'] + sofa_area['bottom_left']
-        
-        sofa_middle_top_left = dist_top / 3
-        sofa_middle_top_right = (dist_top / 3) * 2
-        sofa_middle_bottom_left = dist_bot / 3
-        sofa_middle_bottom_right = (dist_bot / 3) * 2
+        top_left = sofa_area["top_left"]
+        top_right = sofa_area["top_right"]
+        bottom_right = sofa_area["bottom_right"]
+        bottom_left = sofa_area["bottom_left"]
+
+        sofa_middle_top_left = top_left + (top_right - top_left) / 3.0
+        sofa_middle_top_right = top_left + 2.0 * (top_right - top_left) / 3.0
+        sofa_middle_bottom_left = bottom_left + (bottom_right - bottom_left) / 3.0
+        sofa_middle_bottom_right = bottom_left + 2.0 * (bottom_right - bottom_left) / 3.0
 
         self.sofa_area = ShapelyPolygon(
             [
-                sofa_area["top_left"],
-                sofa_area["top_right"],
-                sofa_area["bottom_right"],
-                sofa_area["bottom_left"],
+                top_left,
+                top_right,
+                bottom_right,
+                bottom_left,
             ]
         )
 
         self.left_sofa_area = ShapelyPolygon(
             [
-                sofa_area["top_left"],
+                top_left,
                 sofa_middle_top_left,
                 sofa_middle_bottom_left,
-                sofa_area["bottom_left"],
+                bottom_left,
             ]
         )
         
@@ -291,16 +288,16 @@ class SeatGuest(StateMachine):
             [
                 sofa_middle_top_left,
                 sofa_middle_top_right,
+                sofa_middle_bottom_right,
                 sofa_middle_bottom_left,
-                sofa_middle_bottom_right
             ]
         )
 
         self.right_sofa_area = ShapelyPolygon(
             [
                 sofa_middle_top_right,
-                sofa_area["top_right"],
-                sofa_area["bottom_right"],
+                top_right,
+                bottom_right,
                 sofa_middle_bottom_right,
             ]
         )

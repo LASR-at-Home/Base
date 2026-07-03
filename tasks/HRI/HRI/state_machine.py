@@ -125,7 +125,7 @@ class HRI(yasmin.StateMachine):
         self.add_state(
             "SEAT_GUEST_2",  # SM3: Locates and seats guest in free seat
             SeatGuest(id='guest2'),
-            transitions={"succeeded": "INTRODUCE", "failed": "failed"},
+            transitions={"succeeded": "CHECK", "failed": "failed"},
         )
 
         self.add_state(
@@ -137,7 +137,7 @@ class HRI(yasmin.StateMachine):
         self.add_state(
             "GRAB_BAG",
             ReceiveObject(object_name="bag"),
-            transitions={"succeeded": "CHECK", "failed": "failed"},
+            transitions={"succeeded": "ROTATE", "failed": "failed"},
         )
 
         self.add_state(
@@ -174,7 +174,11 @@ class HRI(yasmin.StateMachine):
             },
         )
 
-        self.add_state("STOP_TIMER", StopTimer(), transitions={"succeeded": "SAY_STOP"})
+        self.add_state(
+            "STOP_TIMER",
+            StopTimer(),
+            transitions={"succeeded": "SAY_STOP", "failed": "failed"},
+        )
 
         self.add_state(
             "SAY_STOP",
@@ -275,7 +279,7 @@ def main():
     bb["drink_position"] = PointStamped()
     bb["person_index"] = 0
 
-    bb['z_min'] = -10,
+    bb['z_min'] = -10
     bb['z_max'] = 10
 
     outcome = sm(bb)
