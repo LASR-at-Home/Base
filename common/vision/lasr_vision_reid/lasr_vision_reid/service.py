@@ -71,6 +71,7 @@ class ReID(Node):
         self._add_face_service = self.create_service(
             AddFace, "/lasr_vision_reid/add_face", self._add_face
         )
+        _ = DeepFace.build_model("VGG-Face")
 
     def _extract_embeddings(self, im: np.ndarray) -> List[np.ndarray]:
         """
