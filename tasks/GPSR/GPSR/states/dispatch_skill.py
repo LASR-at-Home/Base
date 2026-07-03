@@ -2,6 +2,9 @@ from typing import Any
 
 import rclpy
 import yasmin
+from yasmin import Blackboard
+import yasmin_ros
+
 from geometry_msgs.msg import Point, Pose, Quaternion
 from rclpy.wait_for_message import wait_for_message
 from sensor_msgs.msg import Image
@@ -12,6 +15,7 @@ from lasr_vision_interfaces.srv import BodyPixKeypointDetection, DetectFaces as 
 from lasr_skills import AskAndListen, DescribePeople, GoToLocation, HandoverObject, ReceiveObject, DetectWave, Rotate, FollowPerson, Wait, Detect3D, LookToPoint, Say
 
 import time
+from typing import List, Union, Optional
 
 class DispatchSkill(yasmin.State):
     """YASMIN state that executes a skill chosen by the LLM."""
@@ -29,52 +33,16 @@ class DispatchSkill(yasmin.State):
             BodyPixKeypointDetection, "/bodypix/keypoint_detection"
         )
 
-    def _say(self, text):
-        if not text:
-            return "succeeded"
-        self.node.get_logger().info(f"Saying: {text}")
-        say(self.node, text)
-        return "succeeded"
+        self.task_bb = None
 
+    # --- Support Methods
     def _first_arg(self, args: dict[str, Any], *names: str) -> str:
         for name in names:
             value = args.get(name)
             if isinstance(value, str) and value.strip():
                 return value.strip()
         return ""
-
-    def _go_to_location(self, location_name):
-        if location_name not in self.locations:
-            self.node.get_logger().error(f"Unknown location: {location_name}")
-            self._say(f"I don't know where {location_name} is")
-            return "failed"
-        loc = self.locations[location_name]
-        pose = Pose(
-            position=Point(
-                x=float(loc["position"]["x"]),
-                y=float(loc["position"]["y"]),
-                z=float(loc["position"].get("z", 0.0)),
-            ),
-            orientation=Quaternion(
-                x=float(loc["orientation"]["x"]),
-                y=float(loc["orientation"]["y"]),
-                z=float(loc["orientation"]["z"]),
-                w=float(loc["orientation"]["w"]),
-            ),
-        )
-        self.node.get_logger().info(f"Navigating to '{location_name}'")
-        bb = yasmin.Blackboard()
-        return GoToLocation(location=pose)(bb)
-
-    def _ask_and_listen(self, prompt: str) -> str:
-        self.node.get_logger().info(f"Asking: {prompt}")
-        try:
-            outcome = AskAndListen(tts_phrase=prompt)(yasmin.Blackboard())
-        except Exception as exc:
-            self.node.get_logger().error(f"Ask/listen failed: {exc}")
-            return "failed"
-        return outcome
-
+    
     def _latest_image(self):
         try:
             return wait_for_message(
@@ -86,62 +54,7 @@ class DispatchSkill(yasmin.State):
         except Exception as exc:
             self.node.get_logger().error(f"Failed to get camera image: {exc}")
             return None
-
-    def _detect_faces(self):    # Redundent as is replaced by REiD and spin breaks code. 
-        try:
-            outcome = DetectWave()(yasmin.Blackboard())
-            if outcome == "waving":
-                return True
-            
-        except Exception as exc:
-            self.node.get_logger().error(f"Detect faces (placeholder with detect_wave) failed: {exc}")
-            return False
         
-        return False
-        # if not self._detect_faces_client.wait_for_service(timeout_sec=2.0):
-        #     self.node.get_logger().warning("Face detection service is not available.")
-        #     return []
-        # img_msg = self._latest_image()
-        # if img_msg is None:
-        #     return []
-        # req = DetectFacesSrv.Request()
-        # req.image_raw = img_msg
-        # future = self._detect_faces_client.call_async(req)
-        # rclpy.spin_until_future_complete(self.node, future)
-        # try:
-        #     response = future.result()
-        # except Exception as exc:
-        #     self.node.get_logger().error(f"Face detection failed: {exc}")
-        #     return []
-        # return list(response.detections) if response else []
-
-    def _detect_waving_person(self) -> bool:
-        try:
-            outcome = DetectWave()(yasmin.Blackboard())
-            if outcome == "waving":
-                return True
-            
-        except Exception as exc:
-            self.node.get_logger().error(f"Ask/listen failed: {exc}")
-            return False
-        
-        return False
-
-    def _describe_person(self):
-        try:
-            bb = yasmin.Blackboard()
-            outcome = DescribePeople()(bb)
-        except Exception as exc:
-            self.node.get_logger().error(f"Person description failed: {exc}")
-            return None
-
-        if outcome != "succeeded":
-            self.node.get_logger().warning(
-                f"Person description returned outcome '{outcome}'."
-            )
-            return None
-        return bb.get("attributes")
-
     def _format_person_description(self, attributes: dict[str, Any] | None) -> str:
         if not attributes:
             return "I see a person."
@@ -168,6 +81,96 @@ class DispatchSkill(yasmin.State):
         if not parts:
             return "I see a person."
         return f"I see a person with {', '.join(parts)}."
+    
+    def _get_person_info(self, args: dict[str, Any]):
+        location = self._first_arg(args, "location")
+        if location:
+            if self._go_to_location(location) == "failed":
+                return "failed"
+        attributes = self._describe_person()
+        if attributes is None:
+            self._say("I could not inspect the person right now.")
+            return "failed"
+        self._say(self._format_person_description(attributes))
+        return "succeeded"
+
+    # --- LASR SKILLS
+    def _say(self, text): # NEED Blackboard?
+        if not text:
+            return "succeeded"
+        self.node.get_logger().info(f"Saying: {text}")
+        say(self.node, text, self.task_bb)
+        return "succeeded"
+
+    def _go_to_location(self, location_name):
+        if location_name not in self.locations:
+            self.node.get_logger().error(f"Unknown location: {location_name}")
+            self._say(f"I don't know where {location_name} is")
+            return "failed"
+        loc = self.locations[location_name]
+        pose = Pose(
+            position=Point(
+                x=float(loc["position"]["x"]),
+                y=float(loc["position"]["y"]),
+                z=float(loc["position"].get("z", 0.0)),
+            ),
+            orientation=Quaternion(
+                x=float(loc["orientation"]["x"]),
+                y=float(loc["orientation"]["y"]),
+                z=float(loc["orientation"]["z"]),
+                w=float(loc["orientation"]["w"]),
+            ),
+        )
+        self.node.get_logger().info(f"Navigating to '{location_name}'")
+        return GoToLocation(location=pose)(self.task_bb)
+
+    def _ask_and_listen(self, prompt: str) -> str:
+        self.node.get_logger().info(f"Asking: {prompt}")
+        try:
+            outcome = AskAndListen(tts_phrase=prompt)(self.task_bb)
+        except Exception as exc:
+            self.node.get_logger().error(f"Ask/listen failed: {exc}")
+            return "failed"
+        return outcome
+
+    def _detect_faces(self): #TODO: Use Yolo to detect people then choose closest --- Update to find people faces   # Redundent as is replaced by REiD and spin breaks code. 
+        try:
+            outcome = Detect3D(model="best.pt", filter=["person"])
+
+            if outcome == "succeeded" and self.task_bb.get("detections_3d"):
+                return True
+
+        except Exception as exc:
+            self.node.get_logger().error(f"Detect faces (placeholder with detect_wave) failed: {exc}")
+            return False
+        
+        return False
+
+    def _detect_waving_person(self) -> bool:
+        try:
+            outcome = DetectWave()(self.task_bb)
+            if outcome == "waving":
+                return True
+            
+        except Exception as exc:
+            self.node.get_logger().error(f"Ask/listen failed: {exc}")
+            return False
+        
+        return False
+
+    def _describe_person(self):
+        try:
+            outcome = DescribePeople()(self.task_bb)
+        except Exception as exc:
+            self.node.get_logger().error(f"Person description failed: {exc}")
+            return None
+
+        if outcome != "succeeded":
+            self.node.get_logger().warning(
+                f"Person description returned outcome '{outcome}'."
+            )
+            return None
+        return self.task_bb.get("attributes")
 
     def _guide_person(self, args: dict[str, Any]):
         start = self._first_arg(args, "start")
@@ -226,36 +229,21 @@ class DispatchSkill(yasmin.State):
                     return "succeeded"
                 
         #TODO:  Ask for person to move infront of you. then wait
-        self._say("I cannot see you. Can you please step infront of me. ")
-        time.sleep(2)
+        self._say("I cannot see you so can you please step infront of me. I will wait a few seconds")
+        time.sleep(3)
 
-        # detections = self._detect_faces() 
-        # if detections:
-        #     if name:
-        #         self._say(f"I found a person who may be {name}.")
-        #     else:
-        #         self._say("I found a person.")
-        #     return "succeeded"
+        detections = self._detect_faces()
+        if detections:
+            self._say("I found a person.")
+            return "succeeded"
 
         self._say("I could not find a person.")
         return "failed"
 
-    def _get_person_info(self, args: dict[str, Any]):
-        location = self._first_arg(args, "location")
-        if location:
-            if self._go_to_location(location) == "failed":
-                return "failed"
-        attributes = self._describe_person()
-        if attributes is None:
-            self._say("I could not inspect the person right now.")
-            return "failed"
-        self._say(self._format_person_description(attributes))
-        return "succeeded"
-
     def _pick_up(self, args: dict[str, Any]):
         obj = self._first_arg(args, "object") or "object"
         try:
-            outcome = ReceiveObject(object_name=obj)(yasmin.Blackboard())
+            outcome = ReceiveObject(object_name=obj)(self.task_bb)
         except Exception as exc:
             self.node.get_logger().error(f"ReceiveObject failed: {exc}")
             return "failed"
@@ -310,14 +298,14 @@ class DispatchSkill(yasmin.State):
                 Say(text=f"I can see the {object}."),
                 transitions={"succeeded": "succeeded", "failed": "failed"},
             )
-            outcome = Detect3D(model="best.pt", filter=[object]).execute()
+            outcome = sm(self.task_bb)
         except Exception as exc:
             self.node.get_logger().error(f"FollowPerson failed: {exc}")
             self._say(f"I'm sorry. I am unable to follow you.")
             return "failed"
         return outcome
 
-    def _execute_step(self, skill, args):
+    def _execute_step(self, skill, args: Optional[Blackboard] = None):
         if skill == "say":  # CHECKED
             return self._say(args.get("text", ""))
         if skill == "go_to_location":   #CHECKED
@@ -344,9 +332,55 @@ class DispatchSkill(yasmin.State):
         return "succeeded"
 
     def execute(self, blackboard):
+
+        self.task_bb = yasmin.Blackboard()  # Create new shared Blackboard for the task
         for step in blackboard["steps"]:
             outcome = self._execute_step(step["skill"], step.get("args", {}))
             if outcome == "failed":
                 self._execute_step(skill="say", args={"text": "I couldn't complete that step. Moving to the next part of the plan."})
             time.sleep(0.5)
         return "succeeded"
+
+
+
+from rclpy.node import Node
+from threading import Thread
+from rclpy.executors import MultiThreadedExecutor as Executor
+class GPSRNode(Node):
+    def __init__(self):
+        super().__init__(
+            node_name="gpsr",
+            allow_undeclared_parameters=True,
+            automatically_declare_parameters_from_overrides=True,
+        )
+        self._executor = Executor()
+        self._executor.add_node(self)
+        self._spin_thread = Thread(target=self._executor.spin)
+        self._spin_thread.start()
+
+def main():
+    rclpy.init()
+    node = GPSRNode()
+
+    input_mode = node.get_parameter("input_mode").value.strip().lower()
+    simulation = node.get_parameter("simulation").value
+    node.get_logger().info(
+        f"Starting GPSR state machine (input_mode={input_mode}, simulation={simulation})..."
+    )
+
+    try:
+        bb = Blackboard()
+        bb["steps"] = [{'skill': 'go_to_location', 'args': {'location': 'living room'}}, {'skill': 'go_to_location', 'args': {'location': 'coffee table'}}, {'skill': 'find_object', 'args': {'name': "Rubik's Cube", 'location': 'coffee table'}}, {'skill': 'pick_up', 'args': {'object': "Rubik's Cube"}}, {'skill': 'go_to_person', 'args': {'person': 'me'}}, {'skill': 'go_to_location', 'args': {'location': 'instruction point'}}, {'skill': 'give_to_person', 'args': {'person': 'operator'}}]
+        outcome = DispatchSkill(node)(bb)
+
+        yasmin.YASMIN_LOG_INFO(outcome)
+    except Exception as e:
+        yasmin.YASMIN_LOG_WARN(e)
+
+    if rclpy.ok():
+        node.destroy_node()
+        rclpy.shutdown()
+
+
+if __name__ == "__main__":
+    main()

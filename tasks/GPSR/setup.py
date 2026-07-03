@@ -49,6 +49,7 @@ setup(
     entry_points={
         "console_scripts": [
             "sm = GPSR.state_machine:main",
+            "dispatch_skill = GPSR.states.dispatch_skill:main",
         ],
     },
 )
