@@ -3,3 +3,7 @@ jellyfish
 PyYAML
 gtts
 pydub
+numpy
+csv
+tensorflow
+kagglehub
