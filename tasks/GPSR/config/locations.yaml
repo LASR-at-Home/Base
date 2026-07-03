@@ -67,8 +67,9 @@ locations:
       bottom_right: [20.73634147644043, 10.809008598327637]
       bottom_left:  [15.893077850341797, 11.796217918395996]
 
-  # --- Sub-Location ---
+  # --- Sub-Locations (laundry) ---
   laundry table:
+    placeable: true
     position:
       x: 13.844345092773438
       y: 13.543657302856445
@@ -81,6 +82,7 @@ locations:
 
 
   washing machine:
+    placeable: true
     position:
       x: 14.387063026428223
       y: 14.979351997375488
@@ -92,6 +94,7 @@ locations:
       w: 0.10183124159153398
 
   shelf:
+    placeable: true
     position:
       x: 14.104889869689941
       y: 13.032051086425781
@@ -103,6 +106,7 @@ locations:
       w: 0.970202948364679
 
   laundry trash bin:
+    placeable: true
     position:
       x: 14.423962593078613
       y: 13.953401565551758
@@ -113,7 +117,9 @@ locations:
       z: -0.26511797607989773
       w: 0.9642159813855498
 
+  # --- Sub-Locations (bedroom) ---
   bed:
+    placeable: true
     position:
       x: 14.872960090637207
       y: 18.606975555419922
@@ -124,7 +130,33 @@ locations:
       z: -0.3712970435198397
       w: 0.9285141385425567
 
+  bedside table:
+    placeable: true
+    position:
+      x: -12.96707820892334
+      y: 25.071151733398438
+      z: 0.0
+    orientation:
+      x: 0.0
+      y: 0.0
+      z: -0.5361665803262938
+      w: 0.8441121952330791
+
+  coat rack:
+    placeable: false
+    position:
+      x: -12.96707820892334
+      y: 25.071151733398438
+      z: 0.0
+    orientation:
+      x: 0.0
+      y: 0.0
+      z: -0.5361665803262938
+      w: 0.8441121952330791
+
+  # --- Sub-Locations (living room) ---
   tv stand:
+    placeable: true
     position:
       x: 17.528377532958984
       y: 12.509462356567383
@@ -136,6 +168,7 @@ locations:
       w: 0.09527953358854795
 
   sofa:
+    placeable: true
     position:
       x: 18.633939743041992
       y: 13.393060684204102
@@ -147,6 +180,7 @@ locations:
       w: 0.9911305604191689
 
   coffee table:
+    placeable: true
     position:
       x: 19.336400985717773
       y: 14.467615127563477
@@ -157,8 +191,9 @@ locations:
       z: 0.008172414022097271
       w: 0.9999666052669216
 
-
+  # --- Sub-Locations (kitchen) ---
   cabinet:
+    placeable: true
     position:
       x: 17.53240966796875
       y: 17.293787002563477
@@ -169,8 +204,8 @@ locations:
       z: -0.7789955917743608
       w: 0.6270293996266152
 
-
   refrigerator:
+    placeable: false
     position:
       x: 18.100011825561523
       y: 18.649662017822266
@@ -181,8 +216,8 @@ locations:
       z: 0.674236312380381
       w: 0.7385156701571777
 
-
   counter:
+    placeable: true
     position:
       x: 20.356666564941406
       y: 16.294708251953125
@@ -193,8 +228,8 @@ locations:
       z: -0.21898749159234587
       w: 0.9757276661682256
 
-
   sink:
+    placeable: false
     position:
       x: 20.340957641601562
       y: 16.32349395751953
@@ -205,8 +240,8 @@ locations:
       z: -0.040567985644059966
       w: 0.9991767804251575
 
-
   cooking table:
+    placeable: true
     position:
       x: 20.32651138305664
       y: 16.521093368530273
@@ -217,8 +252,8 @@ locations:
       z: 0.058775517418422296
       w: 0.9982712249445022
 
-
   dishwasher:
+    placeable: true
     position:
       x: 20.88599967956543
       y: 18.918628692626953
@@ -229,8 +264,8 @@ locations:
       z: -0.1597492888047489
       w: 0.9871576189881619
 
-
   kitchen trash bin:
+    placeable: false
     position:
       x: 18.51608657836914
       y: 18.914108276367188
@@ -241,8 +276,8 @@ locations:
       z: 0.4632177623226843
       w: 0.8862444948594971
 
-
   dinner table:
+    placeable: true
     position:
       x: 18.41706657409668
       y: 17.178850173950195
@@ -266,6 +301,7 @@ locations:
 
 
   entrance:
+    placeable: false
     position:
       x: 17.990318298339844
       y: 12.518738746643066
@@ -276,8 +312,8 @@ locations:
       z: -0.7776911805051465
       w: 0.6286465046148842
 
-
   exit:
+    placeable: false
     position:
       x: 13.661191940307617
       y: 13.331613540649414

@@ -25,6 +25,6 @@ class KeyboardInputState(yasmin.State):
             self.node.get_logger().warn("Empty keyboard input")
             return "aborted"
 
-        blackboard["sequence"] = text
+        blackboard["transcribed_speech"] = text
         self.node.get_logger().info(f"Command received: '{text}'")
         return "succeeded"

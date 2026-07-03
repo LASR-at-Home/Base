@@ -4,7 +4,7 @@ import time
 import yasmin
 
 from GPSR.agent import Agent
-from GPSR.planner import SkillSelectorError
+from GPSR.planner import SkillSelectorError, clean_transcription
 from GPSR.world import build_world
 
 
@@ -24,7 +24,10 @@ class QueryLLM(yasmin.State):
 
     def execute(self, blackboard):
         t0 = time.perf_counter()
-        command = blackboard["transcribed_speech"].strip()
+        raw_command = blackboard["transcribed_speech"].strip()
+        command, original = clean_transcription(self.agent, self.world, raw_command)
+        if command != original:
+            self.node.get_logger().info(f"Transcription cleaned: '{original}' → '{command}'")
         self.node.get_logger().info(f"Query: '{command}'")
 
         # Stage 1 — skill selector

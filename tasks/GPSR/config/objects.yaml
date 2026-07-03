@@ -37,7 +37,7 @@ objects:
 
   # --- toy (bed in bedroom) ---
   rubiks_cube:
-    category: fabric
+    category: toy
     location: bed
     grabbable: true
     size: small
@@ -141,22 +141,22 @@ objects:
     size: small
     aliases: []
 
-  # --- cleaning supplies (counter in Kitchen) ---
+  # --- cleaning supplies (cooking table in kitchen) ---
   dishwasher_tab:
     category: cleaning supply
-    location: laundry table
+    location: cooking table
     grabbable: true
     size: small
     aliases: []
   sponge:
     category: cleaning supply
-    location: laundry table
+    location: cooking table
     grabbable: true
     size: small
     aliases: []
-  sponge:
+  toothpaste:
     category: cleaning supply
-    location: laundry table
+    location: cooking table
     grabbable: true
     size: small
     aliases: []

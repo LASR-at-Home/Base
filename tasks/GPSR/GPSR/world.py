@@ -16,6 +16,7 @@ __all__ = [
     "format_objects",
     "format_people",
     "load_locations",
+    "placeable_locations",
     "selected_skill_lines",
 ]
 
@@ -119,13 +120,18 @@ def load_skills_text(node):
 
 
 def load_locations(node):
-    """Load locations.yaml → {name: {position, orientation}}."""
+    """Load locations.yaml → {name: {position, orientation, placeable, ...}}."""
     path = _pkg_config(node, "locations.yaml")
     if not os.path.exists(path):
         return {}
     with open(path) as f:
         data = yaml.safe_load(f) or {}
     return data.get("locations", {})
+
+
+def placeable_locations(locations: dict) -> list:
+    """Return names of locations where place_object is allowed (placeable: true)."""
+    return [name for name, info in locations.items() if info.get("placeable", False)]
 
 
 def load_objects(node):
@@ -177,8 +183,10 @@ def load_general_knowledge(node):
 def build_world(node) -> dict:
     """Load all config yaml and return the world dict passed to the planner."""
     skills_text = load_skills_text(node)
+    locations = load_locations(node)
     return {
-        "locations": load_locations(node),
+        "locations": locations,
+        "placement_locations": placeable_locations(locations),
         "objects": load_objects(node),
         "people": load_people(node),
         "general_knowledge": load_general_knowledge(node),

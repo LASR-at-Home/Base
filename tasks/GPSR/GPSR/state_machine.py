@@ -71,20 +71,7 @@ class GPSR(yasmin.StateMachine):
         self.add_state(
             "START_CON",
             self.setup(),
-            transitions={"succeeded": "WAIT_FOR_DOOR", "failed": "START_CON"},
-        )
-
-        self.add_state(
-            "WAIT_FOR_DOOR",
-            Wait(3),
-            transitions={"succeeded": "ENTER_DOORWAY", "failed": "ENTER_DOORWAY"},
-        )
-
-        # Pre-Start
-        self.add_state(
-            "ENTER_DOORWAY",
-            GoToLocation(location_param="entrance_point"),
-            transitions={"succeeded": "GO_TO_INSTRUCT_POINT", "failed": "failed"},
+            transitions={"succeeded": "GO_TO_INSTRUCT_POINT", "failed": "START_CON"},
         )
 
         self.add_state(
@@ -137,7 +124,9 @@ class GPSR(yasmin.StateMachine):
         plan_con = yasmin.Concurrence(
             states={
                 "QUERY_LLM": QueryLLM(node),
-                "SAY_PLANNING": Say(format_str="Command heard: {}. Give me a moment, I am planning."),
+                "SAY_PLANNING": Say(
+                    format_str="Command heard: {}. Give me a moment, I am planning."
+                ),
             },
             default_outcome="failed",
             outcome_map={
@@ -388,7 +377,17 @@ class GPSR(yasmin.StateMachine):
                 return "no_command"
 
             # If the say text looks like a refusal/apology it's a planning failure
-            refusal_phrases = {"sorry", "cannot", "can't", "unable", "not on my map", "don't know", "i don't", "don't have that information", "do not have that information"}
+            refusal_phrases = {
+                "sorry",
+                "cannot",
+                "can't",
+                "unable",
+                "not on my map",
+                "don't know",
+                "i don't",
+                "don't have that information",
+                "do not have that information",
+            }
             if any(p in say_text.lower() for p in refusal_phrases):
                 self.understand_attempts += 1
                 if self.understand_attempts <= 3:
@@ -416,12 +415,17 @@ class GPSR(yasmin.StateMachine):
             steps = blackboard["steps"]
             non_say = [s for s in steps if s.get("skill") != "say"]
             if len(non_say) == 0:
-                say(self.node, "I will tell you that information after collecting all commands.")
+                say(
+                    self.node,
+                    "I will tell you that information after collecting all commands.",
+                )
             elif steps[0].get("skill") == "say":
                 say(self.node, steps[0]["args"]["text"])
             else:
                 # Announce failed — generate a simple fallback from the step skills
-                skill_names = ", ".join(s.get("skill", "").replace("_", " ") for s in steps)
+                skill_names = ", ".join(
+                    s.get("skill", "").replace("_", " ") for s in steps
+                )
                 say(self.node, f"Here is my plan: {skill_names}.")
         except Exception:
             pass
