@@ -71,7 +71,13 @@ class GPSR(yasmin.StateMachine):
         self.add_state(
             "START_CON",
             self.setup(),
-            transitions={"succeeded": "ENTER_DOORWAY", "failed": "START_CON"},
+            transitions={"succeeded": "WAIT_FOR_DOOR", "failed": "START_CON"},
+        )
+
+        self.add_state(
+            "WAIT_FOR_DOOR",
+            Wait(3),
+            transitions={"succeeded": "ENTER_DOORWAY", "failed": "ENTER_DOORWAY"},
         )
 
         # Pre-Start

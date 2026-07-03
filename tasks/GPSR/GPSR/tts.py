@@ -51,6 +51,6 @@ def _say_robot(node: rclpy.node.Node, text: str):
             .get_result_async()
             .add_done_callback(lambda _: done.set())
         )
-        done.wait(timeout=15.0)
+        done.wait()
     except Exception as e:
         node.get_logger().error(f"Robot TTS error: {e}")

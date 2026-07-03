@@ -50,12 +50,12 @@ class AskAndListen(yasmin.StateMachine):
                 transitions={
                     "succeeded": "LISTEN",
                     "aborted": "failed",
-                    "preempted": "failed",
+                    "canceled": "failed",
                 },
                 remappings={"placeholders": "tts_phrase_placeholders"},
             )
             self._add_listen_with_retries(
-                hard_failure_outcome="preempted",
+                hard_failure_outcome="canceled",
             )
         else:
             self.add_input_key("tts_phrase")
@@ -65,12 +65,12 @@ class AskAndListen(yasmin.StateMachine):
                 transitions={
                     "succeeded": "LISTEN",
                     "aborted": "failed",
-                    "preempted": "failed",
+                    "canceled": "failed",
                 },
-                remapping={"text": "tts_phrase"},
+                remappings={"text": "tts_phrase"},
             )
             self._add_listen_with_retries(
-                hard_failure_outcome="preempted",
+                hard_failure_outcome="canceled",
             )
 
     def _add_listen_with_retries(
@@ -82,7 +82,7 @@ class AskAndListen(yasmin.StateMachine):
         which checks transcribed_speech for emptiness and asks the user to
         repeat themselves, with an escalating phrase, if nothing was heard.
 
-        hard_failure_outcome: "canceled" or "preempted" outcomes from Say or Listen
+        hard_failure_outcome: "canceled" or "canceled" outcomes from Say or Listen
         """
         retry_phrases = [RETRY_PHRASE_1, RETRY_PHRASE_2]
         num_attempts = len(retry_phrases) + 1
