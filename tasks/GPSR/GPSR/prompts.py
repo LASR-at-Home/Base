@@ -61,6 +61,7 @@ Output schema:
 RULES:
 - selected_skills contains ONLY the skill names (e.g. "find_object", "go_to_location"), never arguments or signatures (never "find_object(apple, kitchen)").
 - can_do=false ONLY when NO skill matches the kind of action (e.g. cooking, flying).
+- pick_up and place_object are ONLY for inanimate objects. If the command explicitly asks to physically pick up or place a PERSON as if they were an object (e.g. "pick up the person", "put the person on the sofa"), set can_do=false. Moving, escorting, transporting, or taking a person to a location is guide_person — never can_do=false.
 - Missing locations/objects/people are NOT a reason for can_do=false — the planner handles those and manages the different cases.
 - Any question, greeting, or request for information: can_do=true, selected_skills=["say"].
 - If the result of a skill must be reported back to the operator (count, name, description, property), always include "say" in selected_skills.
@@ -185,6 +186,12 @@ JSON: {{"can_do": false, "reason": "no skill for answering a door", "selected_sk
 
 Command: make me a sandwich
 JSON: {{"can_do": false, "reason": "no skill for cooking on the available skills", "selected_skills": []}}
+
+Command: pick up the person from the sofa and bring them to the kitchen
+JSON: {{"can_do": false, "reason": "pick_up cannot be used on a person — use guide_person to escort people between locations", "selected_skills": []}}
+
+Command: navigate to the kitchen find the lying person and export them to the dishwasher
+JSON: {{"can_do": true, "reason": "export=guide_person, escort person from kitchen to dishwasher", "selected_skills": ["go_to_location", "find_person", "guide_person"]}}
 
 Command: {command}
 JSON: """
