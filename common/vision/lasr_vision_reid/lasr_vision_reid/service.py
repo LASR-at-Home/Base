@@ -128,7 +128,7 @@ class ReID(Node):
                 img_path=cv_im,
                 model_name="VGG-Face",
                 enforce_detection=False,
-                detector_backend="retinaface",
+                detector_backend="opencv",
                 align=True,
                 max_faces=None,
             )
@@ -226,7 +226,7 @@ class ReID(Node):
                 img_path=cv_im,
                 model_name="VGG-Face",
                 enforce_detection=False,  # allow detection attempts even if uncertain
-                detector_backend="retinaface",
+                detector_backend="opencv",
                 align=True,
                 max_faces=1,
             )

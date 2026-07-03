@@ -1,27 +1,18 @@
 hri:   # the `hri` Node's Parameters
   ros__parameters:
-    start_point:
-      position:
-        x: 3.3452657257275886
-        y: 20.2394151214915
-        z: 0.0
-      orientation:
-        x: 0.0
-        y: 0.0
-        z: -0.6117855918819467
-        w: 0.7910236340120668
 
     # Where to wait for guests
     door_pose:
       position:
-        x: 4.776998299336934
-        y: 17.53306140106577
+        x: 4.717383410491155
+        y: 17.660128284836173
         z: 0.0
       orientation:
         x: 0.0
         y: 0.0
-        z: -0.646568543769806
-        w: 0.7628558960953192
+        z: -0.683215101396084
+        w: 0.7302171767524637
+
 
 
 
@@ -34,14 +25,16 @@ hri:   # the `hri` Node's Parameters
     # Where to position self for seating guests
     seat_pose:
       position:
-        x: 4.972251100136972
-        y: 19.403068150340097
+        x: 4.549217894686861
+        y: 19.28592747571654
         z: 0.0
       orientation:
         x: 0.0
         y: 0.0
-        z: 0.03325434593350366
-        w: 0.9994469212902378
+        z: 0.0003515287885379022
+        w: 0.9999999382137535
+
+
 
 
     # Where the robot looks at the general sofa
@@ -65,7 +58,7 @@ hri:   # the `hri` Node's Parameters
 
     # Seatable area
     sofa_area:
-      top_left:     [7.526777744293213, 20.779077529907227]
-      top_right:    [7.842678070068359, 18.35787582397461]
-      bottom_right: [6.760924339294434, 18.166479110717773]
-      bottom_left:  [6.406731605529785, 20.769512176513672]
+      top_left:     [7.55566930770874, 20.925668716430664]
+      top_right:    [7.937021255493164, 18.18181037902832]
+      bottom_right: [6.665816307067871, 18.077146530151367]
+      bottom_left:  [6.448974132537842, 20.768667221069336]

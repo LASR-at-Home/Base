@@ -33,7 +33,7 @@ class TranscribeSpeechAction(Node):
     def __init__(self) -> None:
         super().__init__("transcribe_speech_action")
 
-        self.declare_parameter("model", "small.en")
+        self.declare_parameter("model", "base.en")
         self.declare_parameter("device", "cuda" if torch.cuda.is_available() else "cpu")
         self.declare_parameter("mic_device", "default")
         self.declare_parameter("start_timeout", 5.0)

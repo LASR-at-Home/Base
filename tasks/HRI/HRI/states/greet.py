@@ -202,8 +202,8 @@ class GreetGuest(yasmin.StateMachine):
             "GET_NAME_DRINK",
             GetNameAndDrink(guest_id=guest_id, last_resort=last_resort),
             transitions={
-                "succeeded": "SAY_WELCOME",
-                "failed": "SAY_WELCOME",
+                "succeeded": transition,
+                "failed": transition,
             },
         )
 

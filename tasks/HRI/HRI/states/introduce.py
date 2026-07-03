@@ -49,7 +49,7 @@ class Introduce(yasmin.StateMachine):
         self.add_input_key("guest_data")
         self.add_input_key("guest_seat_point")
         
-        self._node = yasmin_ros.get_ros_loggers
+        self._node = yasmin_ros.logger_node
         self.flag = True
 
         self.sofa_area = ShapelyPolygon(
@@ -89,7 +89,7 @@ class Introduce(yasmin.StateMachine):
             transitions={"succeeded": "DETECT_PEOPLE", "failed": "failed"},
         )
         
-        self.add_state(yasmin
+        self.add_state(
             'DETECT_PEOPLE',
             Detect3DInArea(
                 area_polygon=self.sofa_area,
@@ -102,7 +102,7 @@ class Introduce(yasmin.StateMachine):
                 'failed': 'failed'
             },
             remappings={
-                'detections_3d', 'introduce_detections'
+                'detections_3d': 'introduce_detections'
             }
         )
 
@@ -112,7 +112,7 @@ class Introduce(yasmin.StateMachine):
             transitions={
                 "succeeded": "GRAB_GUEST_POINT",
                 "continue": "LOOK_AT_PERSON",
-                "failed": "failed",
+                "failed": "FALLBACK_SPEECH",
             },
         )
 
