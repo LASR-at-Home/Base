@@ -13,13 +13,24 @@ gpsr:
       phrase_duration: 10.0
       device: "cuda"
 
-    instruction_point:
-      position:
-        x: -12.579115075456754
-        y: 23.4477239370538
+    entrance_point: # An intermediate pose beyond the door
+      point:
+        point:
+        x: 18.117420196533203
+        y: 12.300548553466797
         z: 0.0
       orientation:
         x: 0.0
         y: 0.0
-        z: 0.9721881139570718
-        w: 0.23420134730737904
+        z: 0.6642848268994833
+        w: 0.7474795440352354
+    instruction_point: # The intruction point
+      position:
+        x: 15.222902297973633
+        y: 18.3010196685791
+        z: 0.0
+      orientation:
+        x: 0.0
+        y: 0.0
+        z: 0.9939120465019274
+        w: 0.11017642133573904

@@ -53,32 +53,39 @@ class GPSR(yasmin.StateMachine):
         self.plans = []
         self.exec_index = 0
 
-        # self.add_state(
-        #     "WAIT_START",
-        #     yasmin_ros.MonitorState(
-        #         topic_name="/gpsr/start",
-        #         outcomes=["succeeded", "failed"],
-        #         monitor_handler=self.start_cb,
-        #         msg_type=Empty,
-        #     ),
-        #     transitions={
-        #         "succeeded": "START_CON",
-        #         "failed": "WAIT_START",
-        #         "canceled": "failed",
-        #     },
-        # )
+        self.add_state(
+            "WAIT_START",
+            yasmin_ros.MonitorState(
+                topic_name="/gpsr/start",
+                outcomes=["succeeded", "failed"],
+                monitor_handler=self.start_cb,
+                msg_type=Empty,
+            ),
+            transitions={
+                "succeeded": "START_CON",
+                "failed": "WAIT_START",
+                "canceled": "failed",
+            },
+        )
 
-        # self.add_state(
-        #     "START_CON",
-        #     self.setup(),
-        #     transitions={"succeeded": "GO_TO_INSTRUCT_POINT", "failed": "START_CON"},
-        # )
+        self.add_state(
+            "START_CON",
+            self.setup(),
+            transitions={"succeeded": "ENTER_DOORWAY", "failed": "START_CON"},
+        )
 
-        # self.add_state(
-        #     "GO_TO_INSTRUCT_POINT",
-        #     GoToLocation(location_param="instruction_point"),
-        #     transitions={"succeeded": "CHECK_INSTRUCTION", "failed": "failed"},
-        # )
+        # Pre-Start
+        self.add_state(
+            "ENTER_DOORWAY",
+            GoToLocation(location_param="entrance_point"),
+            transitions={"succeeded": "GO_TO_INSTRUCT_POINT", "failed": "failed"},
+        )
+
+        self.add_state(
+            "GO_TO_INSTRUCT_POINT",
+            GoToLocation(location_param="instruction_point"),
+            transitions={"succeeded": "CHECK_INSTRUCTION", "failed": "failed"},
+        )
 
         self.add_state(
             "CHECK_INSTRUCTION",
