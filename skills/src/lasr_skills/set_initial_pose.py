@@ -7,7 +7,7 @@ from yasmin import StateMachine, State, Blackboard
 import yasmin_ros
 
 from geometry_msgs.msg import Point, Quaternion, Pose, PoseWithCovarianceStamped
-from nav2_simple_commander.robot_navigator import BasicNavigator
+from rclpy.qos import QoSProfile, DurabilityPolicy, ReliabilityPolicy, HistoryPolicy
 from std_msgs.msg import Header
 
 # INFO: individual file can be ran with .yaml using command: --ros-args --params-file {path}.yaml
@@ -45,7 +45,7 @@ class SetInitialPose(State):
         ):
             self.add_input_key("location")
 
-        self.navigator = BasicNavigator()
+        self.node = yasmin_ros.logger_node
         self.location = location
         self.location_param = (
             location_param  # the pose (eg. 'start_pose', 'wait_pose', ...)
@@ -104,11 +104,22 @@ class SetInitialPose(State):
         else:
             return "failed"
 
-        initial_pose = PoseWithCovarianceStamped(header=Header(frame_id="map"))
+        initial_pose = PoseWithCovarianceStamped(
+            header=Header(frame_id="map", stamp=self.node.get_clock().now().to_msg())
+        )
         initial_pose.pose.pose = pose
         initial_pose.pose.covariance = self.covariance
 
-        self.navigator.setInitialPose(initial_pose)
+        qos = QoSProfile(
+            depth=1,
+            durability=DurabilityPolicy.TRANSIENT_LOCAL,
+            reliability=ReliabilityPolicy.RELIABLE,
+            history=HistoryPolicy.KEEP_LAST,
+        )
+        publisher = self.node.create_publisher(
+            PoseWithCovarianceStamped, "/initialpose", qos
+        )
+        publisher.publish(initial_pose)
 
         return "succeeded"
 
@@ -116,15 +127,29 @@ class SetInitialPose(State):
 def main():
     rclpy.init()
 
-    # Update Node name if loading from a .yaml config
-    node = rclpy.create_node("hri")
+    node = rclpy.create_node(
+        "set_initial_pose",
+        allow_undeclared_parameters=True,
+        automatically_declare_parameters_from_overrides=True,
+    )
     yasmin_ros.set_ros_loggers(node)
+
+    x = node.get_parameter_or("x", None)
+    y = node.get_parameter_or("y", None)
+    yaw = node.get_parameter_or("yaw", None)
+    x = x.value if x is not None else None
+    y = y.value if y is not None else None
+    yaw = yaw.value if yaw is not None else 0.0
 
     try:
         sm = StateMachine(outcomes=["succeeded", "failed"])
+        if x is not None and y is not None:
+            state = SetInitialPose(x=x, y=y, yaw=yaw)
+        else:
+            state = SetInitialPose(location_param="start_pose")
         sm.add_state(
             "SET_INITIAL_POSE",
-            SetInitialPose(location_param="start_pose"),
+            state,
             transitions={"succeeded": "succeeded", "failed": "failed"},
         )
 
