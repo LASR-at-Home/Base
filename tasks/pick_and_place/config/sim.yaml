@@ -2,6 +2,18 @@ pick_and_place:
   ros__parameters:
     pick_and_place:
 
+      start_area:
+        pose:
+          position:
+            x: 5.484560489654541
+            y: -0.023354530334472656
+            z: 0.0
+          orientation:
+            x: 0.0
+            y: 0.0
+            z: 0.0
+            w: 1.0
+ 
       # Category the referee designates as trash.
       trash_category: "fruit"
 

@@ -101,7 +101,7 @@ class YOLOServiceNode:
         self._device = self.node.get_parameter("device").value
 
         self.node.declare_parameter(
-            "preload", ["/home/yara/ros2_ws/src/Base/common/vision/lasr_vision_yolo/models/best.pt"]
+            "preload", ["/home/alanoud/Downloads/robocupws/Base/common/vision/lasr_vision_yolo/models/best.pt"]
         )
         self.preload_param_list = self.node.get_parameter("preload").value
         for model in self.preload_param_list:
