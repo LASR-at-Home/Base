@@ -73,9 +73,9 @@ class Start(yasmin.StateMachine):
             "SAY_GOING_TO_TABLE",
             Say(text="I am going to the table."),
             transitions={
-                "succeeded": "ASK_OPEN_CABINET",
-                "aborted": "ASK_OPEN_CABINET",
-                "canceled": "ASK_OPEN_CABINET",
+                "succeeded": "GO_TO_TABLE",
+                "aborted": "GO_TO_TABLE",
+                "canceled": "GO_TO_TABLE",
             },
         )
 
