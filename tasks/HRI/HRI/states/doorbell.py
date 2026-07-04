@@ -18,7 +18,7 @@ class DetectDoorbell(yasmin.State):
     HARDWARE_RATE = 44100  # Change this to match your hardware's supported rate (e.g., 44100 or 48000)
     CHUNK_SIZE = 1024
     REQUIRED_SAMPLES = 15600  # ~0.975s segments required by YAMNet
-    WAIT_FOR_DOORBELL_TIMEOUT = 30
+    WAIT_FOR_DOORBELL_TIMEOUT = 15
 
     def __init__(
         self, device_id="default", score_threshold=0.20,
