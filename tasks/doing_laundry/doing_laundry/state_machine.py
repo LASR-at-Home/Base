@@ -6,6 +6,7 @@ from rclpy.node import Node
 
 import yasmin
 import yasmin_ros
+
 try:
     from yasmin_viewer import YasminViewerPub
 except Exception:
@@ -42,19 +43,22 @@ class DoingLaundry(yasmin.StateMachine):
     def __init__(self):
         super().__init__(outcomes=["succeeded", "failed"], handle_sigint=True)
 
-        # basket_sdf = os.path.join(
-        #     get_package_share_directory("doing_laundry"), "models", "basket.sdf")
+        basket_sdf = os.path.join(
+            get_package_share_directory("doing_laundry"), "models", "basket.sdf"
+        )
 
-        # self.add_state(
-        #     "SPAWN",
-        #     Spawn(model_path=basket_sdf, x=0.6, y=0.0, z=0.0, settle=1.5),
-        #     transitions={"succeeded": "TUCK_ARM", "failed": "TUCK_ARM"})
+        self.add_state(
+            "SPAWN",
+            Spawn(model_path=basket_sdf, x=0.6, y=0.0, z=0.0, settle=1.5),
+            transitions={"succeeded": "LOOK_DOWN", "failed": "LOOK_DOWN"},
+        )
 
         self.add_state(
             "LOOK_DOWN",
             LookDown(tilt=-0.9),
-            transitions={"succeeded": "DETECT_BASKET", "failed": "DETECT_BASKET"})
-        
+            transitions={"succeeded": "DETECT_BASKET", "failed": "DETECT_BASKET"},
+        )
+
         self.add_state(
             "DETECT_BASKET",
             DetectBasket(gripper_half=0.07, safe_margin=0.02),
@@ -63,23 +67,31 @@ class DoingLaundry(yasmin.StateMachine):
                 "empty": "succeeded",
                 "no_basket": "DETECT_BASKET",
                 "failed": "failed",
-            })
+            },
+        )
 
         # ── Full manipulation flow (needs MoveIt + pymoveit2 running) ────────
         self.add_state(
-            "PICK", Pick(),
-            transitions={"succeeded": "MOVE_TO_DESK", "failed": "DETECT_BASKET"})
+            "PICK",
+            Pick(),
+            transitions={"succeeded": "MOVE_TO_DESK", "failed": "DETECT_BASKET"},
+        )
         self.add_state(
-            "MOVE_TO_DESK", Move(x=0.6, y=-0.3, z=0.95),
-            transitions={"succeeded": "PLACE", "failed": "failed"})
+            "MOVE_TO_DESK",
+            Move(x=0.6, y=-0.3, z=0.95),
+            transitions={"succeeded": "PLACE", "failed": "failed"},
+        )
         self.add_state(
-            "PLACE", Place(x=0.6, y=-0.3, z=0.95),
-            transitions={"succeeded": "TUCK_ARM", "failed": "TUCK_ARM"})
+            "PLACE",
+            Place(x=0.6, y=-0.3, z=0.95),
+            transitions={"succeeded": "TUCK_ARM", "failed": "TUCK_ARM"},
+        )
 
-        # self.add_state(
-        #     "TUCK_ARM",
-        #     TuckArm(),
-        #     transitions={"succeeded": "succeeded", "failed": "failed"})
+        self.add_state(
+            "TUCK_ARM",
+            TuckArm(),
+            transitions={"succeeded": "succeeded", "failed": "failed"},
+        )
 
 
 class DoingLaundryNode(Node):

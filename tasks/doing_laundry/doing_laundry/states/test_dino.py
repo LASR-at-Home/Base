@@ -1,4 +1,6 @@
 import os
+
+os.environ["PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION"] = "python"
 import cv2
 import torch
 
@@ -9,14 +11,14 @@ from groundingdino.util.inference import load_model, load_image, predict, annota
 # 1. PATH CONFIGURATION
 # ==========================================
 # The config file already exists inside the cloned repository
-model_config_path = "/home/hayeonglee/ros_ws/src/GroundingDINO/groundingdino/config/GroundingDINO_SwinT_OGC.py"
+model_config_path = "/home/robocup/ewan/ros_ws/src/GroundingDINO/groundingdino/config/GroundingDINO_SwinT_OGC.py"
 
 # The 690MB weights file you downloaded manually
-model_checkpoint_path = "/home/hayeonglee/ros_ws/src/Base/tasks/doing_laundry/doing_laundry/weights/groundingdino_swint_ogc.pth"
+model_checkpoint_path = "/home/robocup/ewan/ros_ws/src/Base/tasks/doing_laundry/doing_laundry/weights/groundingdino_swint_ogc.pth"
 
 # Your input image and desired output file name
-image_path = "/home/hayeonglee/test_img/basket.jpeg"  
-output_path = "result_dino.png"
+image_path = "/home/robocup/test_img/white.jpeg"
+output_path = "/home/robocup/test_img/result_dino.png"
 
 # ==========================================
 # 2. DEVICE SETUP
@@ -38,12 +40,12 @@ try:
     # ==========================================
     # 4. INFERENCE SETTINGS
     # ==========================================
-    TEXT_PROMPT = "basket"
+    TEXT_PROMPT = "face"
     BOX_THRESHOLD = 0.35  # Confidence threshold for the bounding box (0.0 to 1.0)
-    TEXT_THRESHOLD = 0.25 # Confidence threshold for the text label
+    TEXT_THRESHOLD = 0.25  # Confidence threshold for the text label
 
     print(f"Searching for '{TEXT_PROMPT}' in the image...")
-    
+
     # Run the model to find the object
     boxes, logits, phrases = predict(
         model=model,
@@ -51,23 +53,25 @@ try:
         caption=TEXT_PROMPT,
         box_threshold=BOX_THRESHOLD,
         text_threshold=TEXT_THRESHOLD,
-        device=device
+        device=device,
     )
 
     # ==========================================
     # 5. PROCESS & SAVE RESULTS
     # ==========================================
     print(f"Found {len(boxes)} object(s).")
-    
+
     if len(boxes) > 0:
         # Draw the bounding boxes on the image
         print("Annotating image...")
-        annotated_frame = annotate(image_source=image_source, boxes=boxes, logits=logits, phrases=phrases)
-        
+        annotated_frame = annotate(
+            image_source=image_source, boxes=boxes, logits=logits, phrases=phrases
+        )
+
         # Save the result
         cv2.imwrite(output_path, annotated_frame)
         print(f"Success! Result saved to '{output_path}'")
-        
+
         # Print out the exact box coordinates for your robot arm logic
         # boxes are returned in normalized format: [center_x, center_y, width, height]
         print("\n--- Detection Details ---")
@@ -76,7 +80,9 @@ try:
             print(f"Confidence: {logit:.2f}")
             print(f"Bounding Box (cx, cy, w, h): {box.tolist()}\n")
     else:
-        print(f"Could not find any '{TEXT_PROMPT}' in the image with the current thresholds.")
+        print(
+            f"Could not find any '{TEXT_PROMPT}' in the image with the current thresholds."
+        )
 
 except FileNotFoundError as e:
     print(f"\n[ERROR] File not found. Please double-check your paths:\n{e}")
